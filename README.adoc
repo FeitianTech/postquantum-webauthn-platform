@@ -1,4 +1,7 @@
-== python-fido2
+== python-fido2 with PQC support
+
+(RUN OQS Setup to install ML-DSA Tools)
+
 image:https://github.com/Yubico/python-fido2/workflows/build/badge.svg["Github actions build", link="https://github.com/Yubico/python-fido2/actions"]
 
 Provides library functionality for communicating with a FIDO device over USB as
@@ -21,6 +24,8 @@ These links related to WebAuthn and FIDO2 can help you get started:
 * Yubico WebAuthn/FIDO2 guide: https://developers.yubico.com/FIDO2/
 * W3C WebAuthn specification: https://www.w3.org/TR/webauthn/
 * FIDO specifications: https://fidoalliance.org/specifications/download/
+* PQC https://doi.org/10.6028/NIST.FIPS.204
+* OQS https://openquantumsafe.org/
 
 
 === License
