@@ -32,7 +32,7 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec, rsa, padding, ed25519, types
 from typing import Sequence, Type, Mapping, Any, TypeVar
-
+import oqs
 
 class CoseKey(dict):
     """A COSE formatted public key.
@@ -105,6 +105,8 @@ class CoseKey(dict):
             PS256,
             RS256,
             ES256K,
+            MLDSA65,
+            MLDSA44,
         ]
         return [cls.ALGORITHM for cls in algs]
 
@@ -115,6 +117,45 @@ T_CoseKey = TypeVar("T_CoseKey", bound=CoseKey)
 class UnsupportedKey(CoseKey):
     """A COSE key with an unsupported algorithm."""
 
+class MLDSA65(CoseKey):
+    ALGORITHM = -49
+    _HASH_ALG = hashes.SHA256()
+
+    def verify(self, message, signature):
+        if self[1] != 7:
+            raise ValueError("Unsupported ML-DSA-65 Param")
+        verifier=oqs.Signature('ML-DSA-65')
+        assert verifier.verify(message, signature, self[-1])
+
+    @classmethod
+    def from_cryptography_key(cls, public_key):        
+        return cls(
+            {
+                1: 7,
+                3: cls.ALGORITHM,
+                -1: public_key,
+            }
+        )
+
+class MLDSA44(CoseKey):
+    ALGORITHM = -48
+    _HASH_ALG = hashes.SHA256()
+
+    def verify(self, message, signature):
+        if self[1] != 7:
+            raise ValueError("Unsupported ML-DSA-44 Param")
+        verifier=oqs.Signature('ML-DSA-44')
+        assert verifier.verify(message, signature, self[-1])
+
+    @classmethod
+    def from_cryptography_key(cls, public_key):        
+        return cls(
+            {
+                1: 7,
+                3: cls.ALGORITHM,
+                -1: public_key,
+            }
+        )
 
 class ES256(CoseKey):
     ALGORITHM = -7
