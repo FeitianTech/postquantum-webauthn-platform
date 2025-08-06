@@ -39,6 +39,7 @@ from flask import Flask, session, request, redirect, abort, jsonify
 
 import os
 import fido2.features
+import base64
 
 fido2.features.webauthn_json_mapping.enabled = True
 
@@ -89,7 +90,21 @@ def register_complete():
 
     credentials.append(auth_data.credential_data)
     print("REGISTERED CREDENTIAL:", auth_data.credential_data)
-    return jsonify({"status": "OK"})
+    print("ALGO", auth_data.credential_data.public_key[3])
+    algo=auth_data.credential_data.public_key[3]
+    algoname=''
+    if algo==-49:
+        algoname='ML-DSA-65 (PQC)'
+    elif algo==-48:
+        algoname='ML-DSA-44 (PQC)'
+    elif algo==-7:
+        algoname='ES256 (ECDSA)'
+    elif algo==-257:
+        algoname='RS256 (RSA)'
+    else:
+        algoname='Other (Classical)'
+    
+    return jsonify({"status": "OK", 'algo': algoname})
 
 
 @app.route("/api/authenticate/begin", methods=["POST"])
@@ -115,6 +130,7 @@ def authenticate_complete():
         credentials,
         response,
     )
+
     print("ASSERTION OK")
     return jsonify({"status": "OK"})
 

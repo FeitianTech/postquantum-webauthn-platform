@@ -25,7 +25,11 @@
       });
 
       let stat = result.ok ? 'successful' : 'unsuccessful';
-      alert('Registration ' + stat + ' More details in server log...');
+      alert('Registration ' + stat);
+      let alg=await result.json()
+      console.log(alg);
+      alert('Algorithm used' +alg.algo);
+
       window.location = '/';
     }
 
