@@ -35,7 +35,7 @@ Navigate to http://localhost:5000 in a supported web browser.
 """
 from fido2.webauthn import PublicKeyCredentialRpEntity, PublicKeyCredentialUserEntity
 from fido2.server import Fido2Server
-from flask import Flask, request, redirect, abort, jsonify, session
+from flask import Flask, request, redirect, abort, jsonify, session, send_file
 
 import os
 import fido2.features
@@ -56,10 +56,12 @@ basepath='.'
 
 
 def savekey(name, key):
+    name=name+'_credential_data.pkl'
     with open(os.path.join(basepath, name), 'wb') as f:
         f.write(pickle.dumps(key))
 
 def readkey(name):
+    name=name+'_credential_data.pkl'
     try:
         with open(os.path.join(basepath, name), 'rb') as f:
             creds=pickle.loads(f.read())
@@ -68,6 +70,7 @@ def readkey(name):
         return []
     
 def delkey(name):
+    name=name+'_credential_data.pkl'
     try:
         os.remove(os.path.join(basepath, name))
     except:
@@ -167,6 +170,12 @@ def deletepub():
     email=response['email']
     delkey(email)
     return jsonify({"status": "OK"})
+
+@app.route("/api/downloadcred", methods=["GET"])
+def downloadcred():
+    name=request.args.get('email')
+    name=name+'_credential_data.pkl'
+    send_file(os.path.join(basepath, name), as_attachment=True, download_name=name)
 
 def main():
     print(__doc__)
