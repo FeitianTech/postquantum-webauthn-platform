@@ -1,0 +1,19 @@
+<html>
+    <body>
+        <script>
+            email=prompt("Enter email id");
+            let result = await fetch('/api/deletepub', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+	body: JSON.stringify({"email": email}),
+      });
+
+      let stat = result.ok ? 'successful' : 'unsuccessful';
+      alert('Pub key deleted');
+      
+
+      window.location = '/';
+    }
+        </script>
+    </body>
+</html>

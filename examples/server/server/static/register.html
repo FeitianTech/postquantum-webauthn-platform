@@ -9,7 +9,8 @@
     } from '/webauthn-json.browser-ponyfill.js';
 
     async function start() {
-      let request = await fetch('/api/register/begin', {
+      let email=prompt("Enter your email")
+      let request = await fetch('/api/register/begin?email='+email, {
         method: 'POST',
       });
       let json = await request.json();
@@ -18,7 +19,7 @@
       document.getElementById('started').style.display = 'block';
 
       let response = await create(options);
-      let result = await fetch('/api/register/complete', {
+      let result = await fetch('/api/register/complete?email='+email, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
 	body: JSON.stringify(response),
@@ -28,7 +29,7 @@
       alert('Registration ' + stat);
       let alg=await result.json()
       console.log(alg);
-      alert('Algorithm used' +alg.algo);
+      alert('Algorithm used ' +alg.algo);
 
       window.location = '/';
     }

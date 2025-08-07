@@ -9,7 +9,10 @@
     } from '/webauthn-json.browser-ponyfill.js';
 
     async function start() {
-      let request = await fetch('/api/authenticate/begin', {
+      
+      let email=prompt("Enter your email")
+
+      let request = await fetch('/api/authenticate/begin?email='+email, {
         method: 'POST',
       });
       if(!request.ok) {
@@ -19,7 +22,7 @@
       let options = parseRequestOptionsFromJSON(json);
 
       let response = await get(options);
-      let result = await fetch('/api/authenticate/complete', {
+      let result = await fetch('/api/authenticate/complete?email='+email, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
 	body: JSON.stringify(response),

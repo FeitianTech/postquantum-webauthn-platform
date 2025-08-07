@@ -35,12 +35,12 @@ Navigate to http://localhost:5000 in a supported web browser.
 """
 from fido2.webauthn import PublicKeyCredentialRpEntity, PublicKeyCredentialUserEntity
 from fido2.server import Fido2Server
-from flask import Flask, session, request, redirect, abort, jsonify
+from flask import Flask, request, redirect, abort, jsonify, session
 
 import os
 import fido2.features
 import base64
-
+import pickle
 fido2.features.webauthn_json_mapping.enabled = True
 
 
@@ -50,10 +50,29 @@ app.secret_key = os.urandom(32)  # Used for session.
 rp = PublicKeyCredentialRpEntity(name="Demo server", id="localhost")
 server = Fido2Server(rp)
 
-
+basepath='.'
 # Registered credentials are stored globally, in memory only. Single user
 # support, state is lost when the server terminates.
-credentials = []
+
+
+def savekey(name, key):
+    with open(os.path.join(basepath, name), 'wb') as f:
+        f.write(pickle.dumps(key))
+
+def readkey(name):
+    try:
+        with open(os.path.join(basepath, name), 'rb') as f:
+            creds=pickle.loads(f.read())
+            return creds
+    except:
+        return []
+    
+def delkey(name):
+    try:
+        os.remove(os.path.join(basepath, name))
+    except:
+        pass
+
 
 
 @app.route("/")
@@ -63,6 +82,8 @@ def index():
 
 @app.route("/api/register/begin", methods=["POST"])
 def register_begin():
+    uname=request.args.get('email')
+    credentials=readkey(uname)
     options, state = server.register_begin(
         PublicKeyCredentialUserEntity(
             id=b"user_id",
@@ -84,6 +105,8 @@ def register_begin():
 
 @app.route("/api/register/complete", methods=["POST"])
 def register_complete():
+    uname=request.args.get('email')
+    credentials=readkey(uname)
     response = request.json
     print("RegistrationResponse:", response)
     auth_data = server.register_complete(session["state"], response)
@@ -109,6 +132,8 @@ def register_complete():
 
 @app.route("/api/authenticate/begin", methods=["POST"])
 def authenticate_begin():
+    uname=request.args.get('email')
+    credentials=readkey(uname)
     if not credentials:
         abort(404)
 
@@ -120,6 +145,8 @@ def authenticate_begin():
 
 @app.route("/api/authenticate/complete", methods=["POST"])
 def authenticate_complete():
+    uname=request.args.get('email')
+    credentials=readkey(uname)
     if not credentials:
         abort(404)
 
@@ -134,6 +161,12 @@ def authenticate_complete():
     print("ASSERTION OK")
     return jsonify({"status": "OK"})
 
+@app.route("/api/deletepub", methods=["POST"])
+def deletepub():
+    response=request.json
+    email=response['email']
+    delkey(email)
+    return jsonify({"status": "OK"})
 
 def main():
     print(__doc__)
