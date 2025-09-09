@@ -16,3 +16,6 @@ htmlcov/
 .tox/
 .coverage
 .coverage.*
+
+# Registration data for authenticators
+*.pkl
