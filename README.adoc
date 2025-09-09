@@ -132,3 +132,35 @@ poetry install
 #Verifying the environment: 
 poetry run python -c "import fido2; print('fido2 OK')"
 ```
+
+## 5) Install and use pytest
+
+Pytest is used to run unit tests. If your local clone includes a `tests/` folder (or you add your own tests), these commands will discover and run them.
+
+- pip + venv
+```bash
+pip install --upgrade pip
+pip install pytest
+pytest
+```
+
+- Poetry (installs as a dev dependency)
+```bash
+poetry add --group dev pytest
+poetry run pytest
+```
+Useful pytest options:
+- `-q` quiet output, `-s` show print statements, `-k <expr>` filter tests by name.
+- Examples:
+  - `pytest -q -k webauthn`
+  - `pytest -q tests/test_example.py::test_specific_case -s`
+
+---
+
+## 6) Run the example scripts (no PQC)
+
+Common example entry points in this repo (or in similar layouts). Use the one that exists in your clone:
+
+    - `python examples/server.py`
+    - `python examples/flask_app.py`
+    - `python examples/ctap2/credential.py`
