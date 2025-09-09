@@ -1,118 +1,134 @@
-== python-fido2 with PQC support
+# python-fido2-webauthn-test — Local setup (without PQC)
 
-(RUN OQS Setup to install ML-DSA Tools)
+This guide shows how to clone the repository and set up a working local environment for WebAuthn with Python FIDO2 on Windows, macOS, and Linux.
 
-## Demo https://youtu.be/qAKDtAn4LVg?si=P9v7KEMAkNYpWoLS
+Scope
+- Includes: Python, virtual environment, Flask, python-fido2, optional PC/SC extras.
+- Excludes: Post‑Quantum Crypto (PQC). PQC set up will be added later. 
 
-image:https://github.com/Yubico/python-fido2/workflows/build/badge.svg["Github actions build", link="https://github.com/Yubico/python-fido2/actions"]
+---
 
-Provides library functionality for communicating with a FIDO device over USB as
-well as verifying attestation and assertion signatures.
+## Supported platforms
 
-This library aims to support the FIDO U2F and FIDO 2 protocols for
-communicating with a USB authenticator via the Client-to-Authenticator Protocol
-(CTAP 1 and 2). In addition to this low-level device access, classes defined in
-the `fido2.client` and `fido2.server` modules implement higher level operations
-which are useful when interfacing with an Authenticator, or when implementing
-WebAuthn support for a Relying Party.
+- Windows 10/11 (64‑bit)
+- macOS (Intel or Apple Silicon)
+- Linux (Ubuntu/Debian/Fedora/Arch, etc.)
 
-For usage, see the `examples/` directory and
-link:https://developers.yubico.com/python-fido2/API_Documentation/[API documentation].
+A modern browser (eg. Edge, Chrome, Safari, Firefox) with WebAuthn support is required. 
 
+---
 
-=== References
-These links related to WebAuthn and FIDO2 can help you get started:
+## 1) Prerequisites
 
-* Yubico WebAuthn/FIDO2 guide: https://developers.yubico.com/FIDO2/
-* W3C WebAuthn specification: https://www.w3.org/TR/webauthn/
-* FIDO specifications: https://fidoalliance.org/specifications/download/
-* PQC https://doi.org/10.6028/NIST.FIPS.204
-* OQS https://openquantumsafe.org/
+- Git: install from [git-scm.com](https://git-scm.com/)
+- Python 3.12+ (64‑bit) with pip
+  - Windows: Install from [python.org](https://www.python.org/downloads/windows/) and check “Add Python to PATH.”
+  - macOS: Install via [python.org](https://www.python.org/downloads/macos/) or Homebrew.
+  - Linux: Install via your distro or [python.org](https://www.python.org/downloads/source/).
 
+Optional tools (choose as you like; not required):
+- Poetry (project dependency manager)
+- Conda/Miniforge (environment manager)
 
-=== License
-This project, with the exception of the files mentioned below, is licensed
-under the BSD 2-clause license.
-See the _COPYING_ file for the full license text.
+---
 
-This project contains source code from pyu2f (https://github.com/google/pyu2f)
-which is licensed under the Apache License, version 2.0.
-These files are located in `fido2/hid/`.
-See http://www.apache.org/licenses/LICENSE-2.0,
-or the _COPYING.APLv2_ file for the full license text.
+## 2) Clone the repository
 
-This project also bundles the public suffix list (https://publicsuffix.org)
-which is licensed under the Mozilla Public License, version 2.0.
-This file is stored as `fido2/public_suffix_list.dat`.
-See https://mozilla.org/MPL/2.0/,
-or the _COPYING.MPLv2_ file for the full license text.
+```bash
+git clone https://github.com/rainzhang05/python-fido2-webauthn-test.git
+cd python-fido2-webauthn-test
+```
 
+---
 
-=== Requirements
-fido2 is compatible with Python 3.7 and later, and is tested on Windows, MacOS,
-and Linux. Support for OpenBSD, FreeBSD, and NetBSD is provided as-is and
-relies on community contributions.
+## 3) Recommended setup — pip + venv (no PQC)
 
+Create a project‑local virtual environment and install only the runtime dependencies needed for WebAuthn demos.
 
-=== Installation
+### Windows (PowerShell)
 
-fido2 is installable by running the following command:
+```powershell
+# Create and activate a virtual environment using Python 3.12
+py -3.12 -m venv .venv
+.\.venv\Scripts\Activate.ps1
 
-  pip install fido2
+# Upgrade pip and install runtime dependencies
+python -m pip install --upgrade pip
+pip install fido2 flask
 
-To install the dependencies required for communication with NFC authenticators,
-instead use:
+# Optional: if you need PC/SC smart card extras (pyscard)
+pip install "fido2[pcsc]"
+```
 
-  pip install fido2[pcsc]
+### macOS and Linux (bash/zsh)
 
-Under Windows 10 (1903 or later) access to FIDO devices is restricted and
-requires running as Administrator. This library can still be used when running
-as non-administrator, via the  `fido.client.WindowsClient` class. An example of
-this is included in the file `examples/credential.py`.
+```bash
+# Create and activate a virtual environment
+python3 -m venv .venv
+source .venv/bin/activate
 
+# Upgrade pip and install runtime dependencies
+python -m pip install --upgrade pip
+pip install fido2 flask
 
-Under Linux you will need to add a Udev rule to be able to access the FIDO
-device, or run as root. For example, the Udev rule may contain the following:
+# Optional: if you need PC/SC smart card extras (pyscard)
+pip install "fido2[pcsc]"
+```
 
-----
-#Udev rule for allowing HID access to Yubico devices for FIDO support.
+Verifying the environment:
 
-KERNEL=="hidraw*", SUBSYSTEM=="hidraw", \
-  MODE="0664", GROUP="plugdev", ATTRS{idVendor}=="1050"
-----
+```bash
+python -c "import fido2, flask; print('fido2 OK, flask OK')"
+```
 
-There may be a package already available for your distribution that does this
-for you, see:
-https://support.yubico.com/hc/en-us/articles/360013708900-Using-Your-U2F-YubiKey-with-Linux
+---
 
-Under FreeBSD you will either need to run as root or add rules for your device
-to /etc/devd.conf, which can be automated by installing security/u2f-devd:
+## 4) Optional setup — Poetry (instead of pip/venv)
 
-  # pkg install u2f-devd
+Use Poetry if you prefer its workflow. It will create `.venv` inside the project.
 
-==== Dependencies
-This project depends on Cryptography. For instructions on installing this
-dependency, see https://cryptography.io/en/latest/installation/.
+### Install Poetry
 
-NFC support is optionally available via PC/SC, using the pyscard library. For
-instructions on installing this dependency, see
-https://github.com/LudovicRousseau/pyscard/blob/master/INSTALL.md.
+- Windows (PowerShell):
 
+```powershell
+# Install pipx for isolated CLI apps (user-level)
+py -3.12 -m pip install --user pipx
+py -3.12 -m pipx ensurepath
+# Open a NEW PowerShell window so PATH changes apply
 
-=== Development
-For development of the library  we use https://python-poetry.org/[poetry]. To
-set up the dev environment, run this command in the root directory of the
-repository:
+# Install Poetry via pipx
+pipx install poetry
 
-  poetry install
+# If 'poetry' still isn't found, either open a new terminal or add to PATH for this session:
+# $env:Path += ";$env:USERPROFILE\.local\bin;$env:USERPROFILE\AppData\Roaming\Python\Python312\Scripts"
+poetry --version
+```
 
-We also use https://pre-commit.com/[pre-commit] to run some scans on the code
-prior to committing.
+- macOS/Linux (bash/zsh):
 
+```bash
+python3 -m pip install --user pipx
+python3 -m pipx ensurepath
+# Open a NEW terminal
+pipx install poetry
+poetry --version
+```
 
-==== Running tests
-While many tests can run on their own, some require a connected U2F or FIDO2
-device to run.
+### Use Poetry in this project
 
-  poetry run pytest
+```bash
+# From the repo root
+poetry config virtualenvs.in-project true
 
+# Point Poetry to your Python (choose one):
+poetry env use 3.12
+# OR give an absolute path if needed:
+# poetry env use "/usr/bin/python3"                # macOS/Linux example
+# poetry env use "C:\Path\To\Python312\python.exe" # Windows example
+
+poetry install
+
+#Verifying the environment: 
+poetry run python -c "import fido2; print('fido2 OK')"
+```
