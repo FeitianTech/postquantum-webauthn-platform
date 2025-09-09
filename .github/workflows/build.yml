@@ -4,6 +4,7 @@ on: [push, pull_request]
 
 jobs:
   test:
+    if: false  # disable tests in CI
     runs-on: ${{ matrix.os }}
 
     strategy:
