@@ -32,7 +32,7 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec, rsa, padding, ed25519, types
 from typing import Sequence, Type, Mapping, Any, TypeVar
-import oqs
+# import oqs
 
 class CoseKey(dict):
     """A COSE formatted public key.
