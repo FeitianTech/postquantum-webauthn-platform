@@ -41,8 +41,15 @@ import os
 import fido2.features
 import base64
 import pickle
-fido2.features.webauthn_json_mapping.enabled = True
 
+# Enable webauthn-json mapping if available (compatible across fido2 versions)
+try:
+    fido2.features.webauthn_json_mapping.enabled = True
+except Exception:
+    try:
+        fido2.features.webauthn_json.enabled = True
+    except Exception:
+        pass
 
 app = Flask(__name__, static_url_path="")
 app.secret_key = os.urandom(32)  # Used for session.
@@ -50,43 +57,38 @@ app.secret_key = os.urandom(32)  # Used for session.
 rp = PublicKeyCredentialRpEntity(name="Demo server", id="localhost")
 server = Fido2Server(rp)
 
-basepath='.'
-# Registered credentials are stored globally, in memory only. Single user
-# support, state is lost when the server terminates.
-
+# Save credentials next to this server.py file, regardless of CWD.
+basepath = os.path.abspath(os.path.dirname(__file__))
 
 def savekey(name, key):
-    name=name+'_credential_data.pkl'
-    with open(os.path.join(basepath, name), 'wb') as f:
+    name = name + "_credential_data.pkl"
+    with open(os.path.join(basepath, name), "wb") as f:
         f.write(pickle.dumps(key))
 
 def readkey(name):
-    name=name+'_credential_data.pkl'
+    name = name + "_credential_data.pkl"
     try:
-        with open(os.path.join(basepath, name), 'rb') as f:
-            creds=pickle.loads(f.read())
+        with open(os.path.join(basepath, name), "rb") as f:
+            creds = pickle.loads(f.read())
             return creds
-    except:
+    except Exception:
         return []
-    
+
 def delkey(name):
-    name=name+'_credential_data.pkl'
+    name = name + "_credential_data.pkl"
     try:
         os.remove(os.path.join(basepath, name))
-    except:
+    except Exception:
         pass
-
-
 
 @app.route("/")
 def index():
     return redirect("/index.html")
 
-
 @app.route("/api/register/begin", methods=["POST"])
 def register_begin():
-    uname=request.args.get('email')
-    credentials=readkey(uname)
+    uname = request.args.get("email")
+    credentials = readkey(uname)
     options, state = server.register_begin(
         PublicKeyCredentialUserEntity(
             id=b"user_id",
@@ -105,38 +107,39 @@ def register_begin():
 
     return jsonify(dict(options))
 
-
 @app.route("/api/register/complete", methods=["POST"])
 def register_complete():
-    uname=request.args.get('email')
-    credentials=readkey(uname)
+    uname = request.args.get("email")
+    credentials = readkey(uname)
     response = request.json
     print("RegistrationResponse:", response)
     auth_data = server.register_complete(session["state"], response)
 
     credentials.append(auth_data.credential_data)
+    # Persist the updated credentials list so authenticate can find it.
+    savekey(uname, credentials)
+
     print("REGISTERED CREDENTIAL:", auth_data.credential_data)
     print("ALGO", auth_data.credential_data.public_key[3])
-    algo=auth_data.credential_data.public_key[3]
-    algoname=''
-    if algo==-49:
-        algoname='ML-DSA-65 (PQC)'
-    elif algo==-48:
-        algoname='ML-DSA-44 (PQC)'
-    elif algo==-7:
-        algoname='ES256 (ECDSA)'
-    elif algo==-257:
-        algoname='RS256 (RSA)'
+    algo = auth_data.credential_data.public_key[3]
+    algoname = ""
+    if algo == -49:
+        algoname = "ML-DSA-65 (PQC)"
+    elif algo == -48:
+        algoname = "ML-DSA-44 (PQC)"
+    elif algo == -7:
+        algoname = "ES256 (ECDSA)"
+    elif algo == -257:
+        algoname = "RS256 (RSA)"
     else:
-        algoname='Other (Classical)'
-    
-    return jsonify({"status": "OK", 'algo': algoname})
+        algoname = "Other (Classical)"
 
+    return jsonify({"status": "OK", "algo": algoname})
 
 @app.route("/api/authenticate/begin", methods=["POST"])
 def authenticate_begin():
-    uname=request.args.get('email')
-    credentials=readkey(uname)
+    uname = request.args.get("email")
+    credentials = readkey(uname)
     if not credentials:
         abort(404)
 
@@ -145,11 +148,10 @@ def authenticate_begin():
 
     return jsonify(dict(options))
 
-
 @app.route("/api/authenticate/complete", methods=["POST"])
 def authenticate_complete():
-    uname=request.args.get('email')
-    credentials=readkey(uname)
+    uname = request.args.get("email")
+    credentials = readkey(uname)
     if not credentials:
         abort(404)
 
@@ -166,16 +168,16 @@ def authenticate_complete():
 
 @app.route("/api/deletepub", methods=["POST"])
 def deletepub():
-    response=request.json
-    email=response['email']
+    response = request.json
+    email = response["email"]
     delkey(email)
     return jsonify({"status": "OK"})
 
 @app.route("/api/downloadcred", methods=["GET"])
 def downloadcred():
-    name=request.args.get('email')
-    name=name+'_credential_data.pkl'
-    send_file(os.path.join(basepath, name), as_attachment=True, download_name=name)
+    name = request.args.get("email")
+    name = name + "_credential_data.pkl"
+    return send_file(os.path.join(basepath, name), as_attachment=True, download_name=name)
 
 def main():
     print(__doc__)
@@ -183,7 +185,6 @@ def main():
     # not allow Webauthn in case of TLS certificate errors.
     # See https://lists.w3.org/Archives/Public/public-webauthn/2022Nov/0135.html
     app.run(host="localhost", debug=False)
-
 
 if __name__ == "__main__":
     main()
