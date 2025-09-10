@@ -213,6 +213,11 @@
             grid-template-columns: 1fr 1fr 300px;
             gap: 2rem;
             margin-top: 1rem;
+            align-items: start;
+        }
+
+        .three-column > div {
+            align-self: start;
         }
 
         .sub-tabs {
@@ -252,6 +257,7 @@
             border: 1px solid #dee2e6;
             border-radius: 4px;
             padding: 1rem;
+            min-height: 600px;
             max-height: 600px;
             overflow-y: auto;
         }
@@ -418,14 +424,14 @@
             font-family: 'Monaco', 'Consolas', monospace;
             font-size: 0.9rem;
             line-height: 1.4;
-            min-height: 300px;
+            min-height: 600px;
             white-space: pre-wrap;
         }
 
         .json-editor textarea {
             width: 100%;
             height: 100%;
-            min-height: 300px;
+            min-height: 600px;
             background: transparent;
             border: none;
             outline: none;
@@ -477,6 +483,9 @@
         }
 
         select.form-control {
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
             background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
             background-position: right 0.5rem center;
             background-repeat: no-repeat;
@@ -497,7 +506,44 @@
             border-color: #b6effb;
         }
 
-        @media (max-width: 768px) {
+        .refresh-icon {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #325F74;
+            border-top: 2px solid transparent;
+            border-radius: 50%;
+            background: none;
+            padding: 0;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+
+        .refresh-icon:hover {
+            transform: rotate(180deg);
+        }
+
+        .btn.refresh-icon {
+            min-width: auto;
+            width: 32px;
+            height: 32px;
+            border: 2px solid #325F74;
+            border-top: 2px solid transparent;
+            border-radius: 50%;
+            background: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn.refresh-icon:hover {
+            background: #f8f9fa;
+            transform: rotate(180deg);
+        }
+
+        .btn.refresh-icon:before {
+            content: '';
+        }
             .container {
                 padding: 1rem;
             }
@@ -590,10 +636,14 @@
                                 </div>
                                 <div id="user-identity" class="section-content expanded">
                                     <div class="form-group">
+                                        <label for="adv-email">Email (Required)</label>
+                                        <input type="email" id="adv-email" class="form-control" placeholder="Enter email address" required>
+                                    </div>
+                                    <div class="form-group">
                                         <label for="user-id">User ID (hex)</label>
                                         <div class="input-with-button">
                                             <input type="text" id="user-id" class="form-control" placeholder="Auto-generated hex value">
-                                            <button class="btn btn-small" onclick="randomizeUserId()" title="Generate new random User ID">🔄</button>
+                                            <button class="btn btn-small refresh-icon" onclick="randomizeUserId()" title="Generate new random User ID"></button>
                                         </div>
                                         <div id="user-id-error" class="error-message">Invalid hex value</div>
                                     </div>
@@ -674,7 +724,7 @@
                                         <label for="challenge-reg">Challenge (hex)</label>
                                         <div class="input-with-button">
                                             <input type="text" id="challenge-reg" class="form-control" placeholder="Auto-generated hex value">
-                                            <button class="btn btn-small" onclick="randomizeChallenge('reg')" title="Generate new random challenge">🔄</button>
+                                            <button class="btn btn-small refresh-icon" onclick="randomizeChallenge('reg')" title="Generate new random challenge"></button>
                                         </div>
                                         <div id="challenge-reg-error" class="error-message">Invalid hex value or less than 16 bytes</div>
                                     </div>
@@ -771,7 +821,7 @@
                                         <label for="prf-eval-first-reg">prf eval first</label>
                                         <div class="input-with-button">
                                             <input type="text" id="prf-eval-first-reg" class="form-control" placeholder="Hex value">
-                                            <button class="btn btn-small" onclick="randomizePrfEval('first', 'reg')" title="Generate random PRF evaluation data">🔄</button>
+                                            <button class="btn btn-small refresh-icon" onclick="randomizePrfEval('first', 'reg')" title="Generate random PRF evaluation data"></button>
                                         </div>
                                         <div id="prf-eval-first-reg-error" class="error-message">Invalid hex value</div>
                                     </div>
@@ -779,7 +829,7 @@
                                         <label for="prf-eval-second-reg">prf eval second</label>
                                         <div class="input-with-button">
                                             <input type="text" id="prf-eval-second-reg" class="form-control" placeholder="Hex value" disabled>
-                                            <button class="btn btn-small" onclick="randomizePrfEval('second', 'reg')" disabled title="Generate random PRF evaluation data">🔄</button>
+                                            <button class="btn btn-small refresh-icon" onclick="randomizePrfEval('second', 'reg')" disabled title="Generate random PRF evaluation data"></button>
                                         </div>
                                         <div id="prf-eval-second-reg-error" class="error-message">Invalid hex value</div>
                                     </div>
@@ -795,6 +845,11 @@
                         <div id="authentication-form" class="sub-tab-content">
                             <div class="form-group">
                                 <button class="btn btn-secondary btn-small" onclick="resetAuthenticationForm()">Reset</button>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="auth-email">Email (Required)</label>
+                                <input type="email" id="auth-email" class="form-control" placeholder="Enter email address" required>
                             </div>
 
                             <!-- Credential Selection Section -->
@@ -838,7 +893,7 @@
                                         <label for="challenge-auth">Challenge (hex)</label>
                                         <div class="input-with-button">
                                             <input type="text" id="challenge-auth" class="form-control" placeholder="Auto-generated hex value">
-                                            <button class="btn btn-small" onclick="randomizeChallenge('auth')" title="Generate new random challenge">🔄</button>
+                                            <button class="btn btn-small refresh-icon" onclick="randomizeChallenge('auth')" title="Generate new random challenge"></button>
                                         </div>
                                         <div id="challenge-auth-error" class="error-message">Invalid hex value or less than 16 bytes</div>
                                     </div>
@@ -885,7 +940,7 @@
                                         <label for="large-blob-write">largeBlob write</label>
                                         <div class="input-with-button">
                                             <input type="text" id="large-blob-write" class="form-control" placeholder="Hex value" disabled>
-                                            <button class="btn btn-small" onclick="randomizeLargeBlobWrite()" disabled title="Generate random large blob data">🔄</button>
+                                            <button class="btn btn-small refresh-icon" onclick="randomizeLargeBlobWrite()" disabled title="Generate random large blob data"></button>
                                         </div>
                                         <div id="large-blob-write-error" class="error-message">Invalid hex value</div>
                                     </div>
@@ -893,7 +948,7 @@
                                         <label for="prf-eval-first-auth">prf eval first</label>
                                         <div class="input-with-button">
                                             <input type="text" id="prf-eval-first-auth" class="form-control" placeholder="Hex value">
-                                            <button class="btn btn-small" onclick="randomizePrfEval('first', 'auth')" title="Generate random PRF evaluation data">🔄</button>
+                                            <button class="btn btn-small refresh-icon" onclick="randomizePrfEval('first', 'auth')" title="Generate random PRF evaluation data"></button>
                                         </div>
                                         <div id="prf-eval-first-auth-error" class="error-message">Invalid hex value</div>
                                     </div>
@@ -901,7 +956,7 @@
                                         <label for="prf-eval-second-auth">prf eval second</label>
                                         <div class="input-with-button">
                                             <input type="text" id="prf-eval-second-auth" class="form-control" placeholder="Hex value" disabled>
-                                            <button class="btn btn-small" onclick="randomizePrfEval('second', 'auth')" disabled title="Generate random PRF evaluation data">🔄</button>
+                                            <button class="btn btn-small refresh-icon" onclick="randomizePrfEval('second', 'auth')" disabled title="Generate random PRF evaluation data"></button>
                                         </div>
                                         <div id="prf-eval-second-auth-error" class="error-message">Invalid hex value</div>
                                     </div>
@@ -1878,19 +1933,19 @@
         function getAdvancedCreateOptions() {
             return {
                 email: document.getElementById('adv-email').value,
-                username: document.getElementById('adv-username').value || document.getElementById('adv-email').value,
-                displayName: document.getElementById('adv-display-name').value || document.getElementById('adv-username').value || document.getElementById('adv-email').value,
-                attestation: document.getElementById('adv-attestation').value,
-                userVerification: document.getElementById('adv-user-verification').value,
-                authenticatorAttachment: document.getElementById('adv-authenticator-attachment').value || undefined,
-                residentKey: document.getElementById('adv-resident-key').value
+                username: document.getElementById('user-name').value || document.getElementById('adv-email').value,
+                displayName: document.getElementById('user-display-name').value || document.getElementById('user-name').value || document.getElementById('adv-email').value,
+                attestation: document.getElementById('attestation').value,
+                userVerification: document.getElementById('user-verification-reg').value,
+                authenticatorAttachment: document.getElementById('authenticator-attachment').value || undefined,
+                residentKey: document.getElementById('resident-key').value
             };
         }
 
         function getAdvancedAssertOptions() {
             return {
-                email: document.getElementById('adv-email').value,
-                userVerification: document.getElementById('assert-user-verification').value
+                email: document.getElementById('auth-email').value,
+                userVerification: document.getElementById('user-verification-auth').value
             };
         }
 
