@@ -1,0 +1,1020 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebAuthn FIDO2 Test Application</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f5f5f5;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #325F74 0%, #4a7b8e 100%);
+            color: white;
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 2rem;
+            font-weight: 300;
+        }
+
+        .header p {
+            margin: 0.5rem 0 0 0;
+            opacity: 0.9;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .nav-tabs {
+            display: flex;
+            background: white;
+            border-radius: 8px 8px 0 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .nav-tab {
+            flex: 1;
+            padding: 1rem 2rem;
+            background: #e9ecef;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+            color: #6c757d;
+            transition: all 0.3s ease;
+            border-right: 1px solid #dee2e6;
+        }
+
+        .nav-tab:last-child {
+            border-right: none;
+        }
+
+        .nav-tab.active {
+            background: white;
+            color: #325F74;
+            font-weight: 500;
+        }
+
+        .nav-tab:hover:not(.active) {
+            background: #f8f9fa;
+            color: #495057;
+        }
+
+        .content {
+            background: white;
+            border-radius: 0 0 8px 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 2rem;
+            min-height: 600px;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .section {
+            margin-bottom: 2rem;
+        }
+
+        .section h2 {
+            color: #325F74;
+            margin-bottom: 1rem;
+            font-size: 1.5rem;
+            font-weight: 500;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: #495057;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #325F74;
+            box-shadow: 0 0 0 3px rgba(50, 95, 116, 0.1);
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 0.75rem 1.5rem;
+            background: #325F74;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            margin-right: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .btn:hover {
+            background: #2a4e5f;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+        }
+
+        .btn-secondary:hover {
+            background: #545b62;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+        }
+
+        .btn-success {
+            background: #28a745;
+        }
+
+        .btn-success:hover {
+            background: #218838;
+        }
+
+        .status {
+            padding: 1rem;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+            display: none;
+        }
+
+        .status.success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+
+        .status.info {
+            background: #cce7ff;
+            border: 1px solid #b3d7ff;
+            color: #004085;
+        }
+
+        .two-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            align-items: start;
+        }
+
+        .json-editor {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 1rem;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 0.9rem;
+            line-height: 1.4;
+            min-height: 300px;
+            white-space: pre-wrap;
+        }
+
+        .json-editor textarea {
+            width: 100%;
+            height: 100%;
+            min-height: 300px;
+            background: transparent;
+            border: none;
+            outline: none;
+            resize: vertical;
+            font-family: inherit;
+            font-size: inherit;
+            line-height: inherit;
+        }
+
+        .checkbox-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .progress {
+            display: none;
+            padding: 1rem;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            text-align: center;
+            margin-top: 1rem;
+        }
+
+        .progress.show {
+            display: block;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(50, 95, 116, 0.3);
+            border-radius: 50%;
+            border-top-color: #325F74;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 0.5rem;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        select.form-control {
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+            background-position: right 0.5rem center;
+            background-repeat: no-repeat;
+            background-size: 1.5em 1.5em;
+            padding-right: 2.5rem;
+        }
+
+        .alert {
+            padding: 0.75rem 1rem;
+            margin-bottom: 1rem;
+            border: 1px solid transparent;
+            border-radius: 0.25rem;
+        }
+
+        .alert-info {
+            color: #055160;
+            background-color: #cff4fc;
+            border-color: #b6effb;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+
+            .two-column {
+                grid-template-columns: 1fr;
+            }
+
+            .nav-tabs {
+                flex-direction: column;
+            }
+
+            .nav-tab {
+                border-right: none;
+                border-bottom: 1px solid #dee2e6;
+            }
+
+            .nav-tab:last-child {
+                border-bottom: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>WebAuthn FIDO2 Test Application</h1>
+        <p>Complete testing suite for WebAuthn authentication with simple and advanced options</p>
+    </div>
+
+    <div class="container">
+        <nav class="nav-tabs">
+            <button class="nav-tab active" onclick="switchTab('simple')">Simple Authentication</button>
+            <button class="nav-tab" onclick="switchTab('advanced')">Advanced Authentication</button>
+            <button class="nav-tab" onclick="switchTab('decoder')">Decoder</button>
+        </nav>
+
+        <div class="content">
+            <!-- Simple Authentication Tab -->
+            <div id="simple-tab" class="tab-content active">
+                <div class="section">
+                    <h2>Simple Authentication</h2>
+                    <p>Basic WebAuthn operations with minimal configuration - same functionality as the original demo.</p>
+                    
+                    <div class="status" id="simple-status"></div>
+
+                    <div class="form-group">
+                        <label for="simple-email">Email (User Identifier)</label>
+                        <input type="email" id="simple-email" class="form-control" placeholder="Enter your email">
+                    </div>
+
+                    <div class="form-group">
+                        <button class="btn" onclick="simpleRegister()">Register Passkey</button>
+                        <button class="btn btn-secondary" onclick="simpleAuthenticate()">Authenticate</button>
+                        <button class="btn btn-danger" onclick="simpleDelete()">Delete Credential</button>
+                    </div>
+
+                    <div class="progress" id="simple-progress">
+                        <div class="spinner"></div>
+                        <span id="simple-progress-text">Processing...</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Advanced Authentication Tab -->
+            <div id="advanced-tab" class="tab-content">
+                <div class="section">
+                    <h2>Advanced Authentication</h2>
+                    <p>Comprehensive WebAuthn configuration with full control over registration and assertion options.</p>
+                    
+                    <div class="status" id="advanced-status"></div>
+
+                    <div class="two-column">
+                        <div>
+                            <h3>Create (Registration)</h3>
+                            <div class="form-group">
+                                <label for="adv-email">Email (User Identifier)</label>
+                                <input type="email" id="adv-email" class="form-control" placeholder="Enter your email">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="adv-username">Username</label>
+                                <input type="text" id="adv-username" class="form-control" placeholder="Enter username">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="adv-display-name">Display Name</label>
+                                <input type="text" id="adv-display-name" class="form-control" placeholder="Enter display name">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="adv-attestation">Attestation Conveyance</label>
+                                <select id="adv-attestation" class="form-control">
+                                    <option value="none">None</option>
+                                    <option value="indirect">Indirect</option>
+                                    <option value="direct">Direct</option>
+                                    <option value="enterprise">Enterprise</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="adv-user-verification">User Verification</label>
+                                <select id="adv-user-verification" class="form-control">
+                                    <option value="preferred">Preferred</option>
+                                    <option value="required">Required</option>
+                                    <option value="discouraged">Discouraged</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="adv-authenticator-attachment">Authenticator Attachment</label>
+                                <select id="adv-authenticator-attachment" class="form-control">
+                                    <option value="">Any</option>
+                                    <option value="platform">Platform</option>
+                                    <option value="cross-platform">Cross-Platform</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="adv-resident-key">Resident Key Requirement</label>
+                                <select id="adv-resident-key" class="form-control">
+                                    <option value="preferred">Preferred</option>
+                                    <option value="required">Required</option>
+                                    <option value="discouraged">Discouraged</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <button class="btn" onclick="advancedRegister()">Create Credential</button>
+                                <button class="btn btn-secondary" onclick="editCreateOptions()">Edit JSON</button>
+                            </div>
+
+                            <h3 style="margin-top: 2rem;">Assert (Authentication)</h3>
+                            
+                            <div class="form-group">
+                                <label for="assert-user-verification">User Verification</label>
+                                <select id="assert-user-verification" class="form-control">
+                                    <option value="preferred">Preferred</option>
+                                    <option value="required">Required</option>
+                                    <option value="discouraged">Discouraged</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <button class="btn btn-secondary" onclick="advancedAuthenticate()">Assert Credential</button>
+                                <button class="btn btn-secondary" onclick="editAssertOptions()">Edit JSON</button>
+                            </div>
+
+                            <div class="form-group">
+                                <button class="btn btn-danger" onclick="advancedDelete()">Delete Credential</button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <h3>JSON Editor</h3>
+                            <div id="json-editor-container" class="json-editor">
+                                <textarea id="json-editor" placeholder="Select 'Edit JSON' to modify options..."></textarea>
+                            </div>
+                            <div class="form-group" style="margin-top: 1rem;">
+                                <button class="btn btn-success" onclick="applyJsonChanges()" style="display: none;" id="apply-json">Apply Changes</button>
+                                <button class="btn btn-secondary" onclick="cancelJsonEdit()" style="display: none;" id="cancel-json">Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="progress" id="advanced-progress">
+                        <div class="spinner"></div>
+                        <span id="advanced-progress-text">Processing...</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Decoder Tab -->
+            <div id="decoder-tab" class="tab-content">
+                <div class="section">
+                    <h2>WebAuthn Response Decoder</h2>
+                    <p>Decode and analyze WebAuthn authentication responses, credential data, and attestation objects.</p>
+                    
+                    <div class="status" id="decoder-status"></div>
+
+                    <div class="form-group">
+                        <label for="decoder-input">Paste WebAuthn Response JSON</label>
+                        <textarea id="decoder-input" class="form-control" rows="10" placeholder="Paste your WebAuthn registration or authentication response here..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <button class="btn" onclick="decodeResponse()">Decode Response</button>
+                        <button class="btn btn-secondary" onclick="clearDecoder()">Clear</button>
+                    </div>
+
+                    <div id="decoder-output" style="display: none;">
+                        <h3>Decoded Information</h3>
+                        <div id="decoded-content" class="json-editor">
+                            <!-- Decoded output will be displayed here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import {
+            create,
+            get,
+            parseCreationOptionsFromJSON,
+            parseRequestOptionsFromJSON,
+        } from '/webauthn-json.browser-ponyfill.js';
+
+        // Make functions globally available
+        window.create = create;
+        window.get = get;
+        window.parseCreationOptionsFromJSON = parseCreationOptionsFromJSON;
+        window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
+    </script>
+
+    <script>
+        let currentJsonMode = null;
+        let currentJsonData = {};
+
+        // Tab switching functionality
+        function switchTab(tab) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.querySelectorAll('.nav-tab').forEach(navTab => {
+                navTab.classList.remove('active');
+            });
+
+            // Show selected tab
+            document.getElementById(tab + '-tab').classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        // Utility functions
+        function showStatus(tabId, message, type) {
+            const statusEl = document.getElementById(tabId + '-status');
+            statusEl.className = 'status ' + type;
+            statusEl.textContent = message;
+            statusEl.style.display = 'block';
+        }
+
+        function hideStatus(tabId) {
+            document.getElementById(tabId + '-status').style.display = 'none';
+        }
+
+        function showProgress(tabId, message) {
+            const progressEl = document.getElementById(tabId + '-progress');
+            const textEl = document.getElementById(tabId + '-progress-text');
+            textEl.textContent = message;
+            progressEl.classList.add('show');
+        }
+
+        function hideProgress(tabId) {
+            document.getElementById(tabId + '-progress').classList.remove('show');
+        }
+
+        // Simple Authentication Functions
+        async function simpleRegister() {
+            const email = document.getElementById('simple-email').value;
+            if (!email) {
+                showStatus('simple', 'Please enter an email address', 'error');
+                return;
+            }
+
+            try {
+                hideStatus('simple');
+                showProgress('simple', 'Starting registration...');
+
+                const request = await fetch(`/api/register/begin?email=${encodeURIComponent(email)}`, {
+                    method: 'POST',
+                });
+
+                if (!request.ok) {
+                    throw new Error(`HTTP ${request.status}: ${request.statusText}`);
+                }
+
+                const json = await request.json();
+                const options = parseCreationOptionsFromJSON(json);
+                
+                showProgress('simple', 'Touch your authenticator device...');
+
+                const response = await create(options);
+                
+                showProgress('simple', 'Completing registration...');
+
+                const result = await fetch(`/api/register/complete?email=${encodeURIComponent(email)}`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(response),
+                });
+
+                if (result.ok) {
+                    const data = await result.json();
+                    showStatus('simple', `Registration successful! Algorithm used: ${data.algo}`, 'success');
+                } else {
+                    throw new Error('Registration failed');
+                }
+            } catch (error) {
+                console.error('Registration error:', error);
+                showStatus('simple', `Registration failed: ${error.message}`, 'error');
+            } finally {
+                hideProgress('simple');
+            }
+        }
+
+        async function simpleAuthenticate() {
+            const email = document.getElementById('simple-email').value;
+            if (!email) {
+                showStatus('simple', 'Please enter an email address', 'error');
+                return;
+            }
+
+            try {
+                hideStatus('simple');
+                showProgress('simple', 'Starting authentication...');
+
+                const request = await fetch(`/api/authenticate/begin?email=${encodeURIComponent(email)}`, {
+                    method: 'POST',
+                });
+
+                if (!request.ok) {
+                    if (request.status === 404) {
+                        throw new Error('No credentials found for this email. Please register first.');
+                    }
+                    throw new Error(`HTTP ${request.status}: ${request.statusText}`);
+                }
+
+                const json = await request.json();
+                const options = parseRequestOptionsFromJSON(json);
+                
+                showProgress('simple', 'Touch your authenticator device...');
+
+                const response = await get(options);
+                
+                showProgress('simple', 'Completing authentication...');
+
+                const result = await fetch(`/api/authenticate/complete?email=${encodeURIComponent(email)}`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(response),
+                });
+
+                if (result.ok) {
+                    showStatus('simple', 'Authentication successful!', 'success');
+                } else {
+                    throw new Error('Authentication failed');
+                }
+            } catch (error) {
+                console.error('Authentication error:', error);
+                showStatus('simple', `Authentication failed: ${error.message}`, 'error');
+            } finally {
+                hideProgress('simple');
+            }
+        }
+
+        async function simpleDelete() {
+            const email = document.getElementById('simple-email').value;
+            if (!email) {
+                showStatus('simple', 'Please enter an email address', 'error');
+                return;
+            }
+
+            if (!confirm(`Are you sure you want to delete all credentials for ${email}?`)) {
+                return;
+            }
+
+            try {
+                hideStatus('simple');
+                showProgress('simple', 'Deleting credentials...');
+
+                const result = await fetch('/api/deletepub', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({"email": email}),
+                });
+
+                if (result.ok) {
+                    showStatus('simple', 'Credentials deleted successfully!', 'success');
+                } else {
+                    throw new Error('Deletion failed');
+                }
+            } catch (error) {
+                console.error('Deletion error:', error);
+                showStatus('simple', `Deletion failed: ${error.message}`, 'error');
+            } finally {
+                hideProgress('simple');
+            }
+        }
+
+        // Advanced Authentication Functions
+        function getAdvancedCreateOptions() {
+            return {
+                email: document.getElementById('adv-email').value,
+                username: document.getElementById('adv-username').value || document.getElementById('adv-email').value,
+                displayName: document.getElementById('adv-display-name').value || document.getElementById('adv-username').value || document.getElementById('adv-email').value,
+                attestation: document.getElementById('adv-attestation').value,
+                userVerification: document.getElementById('adv-user-verification').value,
+                authenticatorAttachment: document.getElementById('adv-authenticator-attachment').value || undefined,
+                residentKey: document.getElementById('adv-resident-key').value
+            };
+        }
+
+        function getAdvancedAssertOptions() {
+            return {
+                email: document.getElementById('adv-email').value,
+                userVerification: document.getElementById('assert-user-verification').value
+            };
+        }
+
+        async function advancedRegister() {
+            const options = getAdvancedCreateOptions();
+            if (!options.email) {
+                showStatus('advanced', 'Please enter an email address', 'error');
+                return;
+            }
+
+            try {
+                hideStatus('advanced');
+                showProgress('advanced', 'Starting advanced registration...');
+
+                const response = await fetch('/api/advanced/register/begin', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(options)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const json = await response.json();
+                const createOptions = parseCreationOptionsFromJSON(json);
+                
+                showProgress('advanced', 'Touch your authenticator device...');
+
+                const credential = await create(createOptions);
+                
+                showProgress('advanced', 'Completing registration...');
+
+                const result = await fetch('/api/advanced/register/complete', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        ...options,
+                        response: credential
+                    }),
+                });
+
+                if (result.ok) {
+                    const data = await result.json();
+                    showStatus('advanced', `Advanced registration successful! Algorithm: ${data.algo || 'Unknown'}`, 'success');
+                } else {
+                    throw new Error('Advanced registration failed');
+                }
+            } catch (error) {
+                console.error('Advanced registration error:', error);
+                showStatus('advanced', `Advanced registration failed: ${error.message}`, 'error');
+            } finally {
+                hideProgress('advanced');
+            }
+        }
+
+        async function advancedAuthenticate() {
+            const options = getAdvancedAssertOptions();
+            if (!options.email) {
+                showStatus('advanced', 'Please enter an email address', 'error');
+                return;
+            }
+
+            try {
+                hideStatus('advanced');
+                showProgress('advanced', 'Starting advanced authentication...');
+
+                const response = await fetch('/api/advanced/authenticate/begin', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(options)
+                });
+
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        throw new Error('No credentials found for this email. Please register first.');
+                    }
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const json = await response.json();
+                const assertOptions = parseRequestOptionsFromJSON(json);
+                
+                showProgress('advanced', 'Touch your authenticator device...');
+
+                const assertion = await get(assertOptions);
+                
+                showProgress('advanced', 'Completing authentication...');
+
+                const result = await fetch('/api/advanced/authenticate/complete', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        ...options,
+                        response: assertion
+                    }),
+                });
+
+                if (result.ok) {
+                    showStatus('advanced', 'Advanced authentication successful!', 'success');
+                } else {
+                    throw new Error('Advanced authentication failed');
+                }
+            } catch (error) {
+                console.error('Advanced authentication error:', error);
+                showStatus('advanced', `Advanced authentication failed: ${error.message}`, 'error');
+            } finally {
+                hideProgress('advanced');
+            }
+        }
+
+        async function advancedDelete() {
+            const email = document.getElementById('adv-email').value;
+            if (!email) {
+                showStatus('advanced', 'Please enter an email address', 'error');
+                return;
+            }
+
+            if (!confirm(`Are you sure you want to delete all credentials for ${email}?`)) {
+                return;
+            }
+
+            try {
+                hideStatus('advanced');
+                showProgress('advanced', 'Deleting credentials...');
+
+                const result = await fetch('/api/deletepub', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({"email": email}),
+                });
+
+                if (result.ok) {
+                    showStatus('advanced', 'Credentials deleted successfully!', 'success');
+                } else {
+                    throw new Error('Deletion failed');
+                }
+            } catch (error) {
+                console.error('Deletion error:', error);
+                showStatus('advanced', `Deletion failed: ${error.message}`, 'error');
+            } finally {
+                hideProgress('advanced');
+            }
+        }
+
+        // JSON Editor Functions
+        function editCreateOptions() {
+            const options = getAdvancedCreateOptions();
+            currentJsonMode = 'create';
+            currentJsonData = options;
+            
+            document.getElementById('json-editor').value = JSON.stringify(options, null, 2);
+            document.getElementById('apply-json').style.display = 'inline-block';
+            document.getElementById('cancel-json').style.display = 'inline-block';
+        }
+
+        function editAssertOptions() {
+            const options = getAdvancedAssertOptions();
+            currentJsonMode = 'assert';
+            currentJsonData = options;
+            
+            document.getElementById('json-editor').value = JSON.stringify(options, null, 2);
+            document.getElementById('apply-json').style.display = 'inline-block';
+            document.getElementById('cancel-json').style.display = 'inline-block';
+        }
+
+        function applyJsonChanges() {
+            try {
+                const jsonText = document.getElementById('json-editor').value;
+                const parsed = JSON.parse(jsonText);
+                
+                if (currentJsonMode === 'create') {
+                    // Update create form fields
+                    if (parsed.email) document.getElementById('adv-email').value = parsed.email;
+                    if (parsed.username) document.getElementById('adv-username').value = parsed.username;
+                    if (parsed.displayName) document.getElementById('adv-display-name').value = parsed.displayName;
+                    if (parsed.attestation) document.getElementById('adv-attestation').value = parsed.attestation;
+                    if (parsed.userVerification) document.getElementById('adv-user-verification').value = parsed.userVerification;
+                    if (parsed.authenticatorAttachment !== undefined) document.getElementById('adv-authenticator-attachment').value = parsed.authenticatorAttachment || '';
+                    if (parsed.residentKey) document.getElementById('adv-resident-key').value = parsed.residentKey;
+                } else if (currentJsonMode === 'assert') {
+                    // Update assert form fields
+                    if (parsed.email) document.getElementById('adv-email').value = parsed.email;
+                    if (parsed.userVerification) document.getElementById('assert-user-verification').value = parsed.userVerification;
+                }
+                
+                showStatus('advanced', 'JSON changes applied successfully!', 'success');
+                cancelJsonEdit();
+            } catch (error) {
+                showStatus('advanced', `Invalid JSON: ${error.message}`, 'error');
+            }
+        }
+
+        function cancelJsonEdit() {
+            document.getElementById('json-editor').value = '';
+            document.getElementById('apply-json').style.display = 'none';
+            document.getElementById('cancel-json').style.display = 'none';
+            currentJsonMode = null;
+            currentJsonData = {};
+        }
+
+        // Decoder Functions
+        function decodeResponse() {
+            const input = document.getElementById('decoder-input').value;
+            if (!input.trim()) {
+                showStatus('decoder', 'Please paste a WebAuthn response to decode', 'error');
+                return;
+            }
+
+            try {
+                const parsed = JSON.parse(input);
+                const decoded = analyzeWebAuthnResponse(parsed);
+                
+                document.getElementById('decoded-content').innerHTML = 
+                    `<pre>${JSON.stringify(decoded, null, 2)}</pre>`;
+                document.getElementById('decoder-output').style.display = 'block';
+                showStatus('decoder', 'Response decoded successfully!', 'success');
+            } catch (error) {
+                showStatus('decoder', `Decoding failed: ${error.message}`, 'error');
+            }
+        }
+
+        function clearDecoder() {
+            document.getElementById('decoder-input').value = '';
+            document.getElementById('decoder-output').style.display = 'none';
+            hideStatus('decoder');
+        }
+
+        function analyzeWebAuthnResponse(response) {
+            const analysis = {
+                type: 'Unknown',
+                rawResponse: response,
+                decodedFields: {}
+            };
+
+            // Detect if it's a registration or authentication response
+            if (response.response && response.response.attestationObject) {
+                analysis.type = 'Registration Response';
+                analysis.decodedFields = {
+                    credentialId: response.id,
+                    credentialType: response.type,
+                    authenticatorAttachment: response.authenticatorAttachment,
+                    clientDataJSON: tryDecodeBase64Url(response.response.clientDataJSON),
+                    attestationObject: 'Base64URL encoded - contains authenticator data and attestation statement'
+                };
+            } else if (response.response && response.response.authenticatorData) {
+                analysis.type = 'Authentication Response';
+                analysis.decodedFields = {
+                    credentialId: response.id,
+                    credentialType: response.type,
+                    authenticatorAttachment: response.authenticatorAttachment,
+                    clientDataJSON: tryDecodeBase64Url(response.response.clientDataJSON),
+                    authenticatorData: 'Base64URL encoded - contains RP ID hash, flags, counter, etc.',
+                    signature: 'Base64URL encoded signature'
+                };
+            }
+
+            return analysis;
+        }
+
+        function tryDecodeBase64Url(encoded) {
+            try {
+                const decoded = atob(encoded.replace(/-/g, '+').replace(/_/g, '/'));
+                return JSON.parse(decoded);
+            } catch (error) {
+                return 'Could not decode as JSON: ' + encoded;
+            }
+        }
+
+        // Update JSON editor when form fields change
+        document.addEventListener('DOMContentLoaded', function() {
+            const formFields = [
+                'adv-email', 'adv-username', 'adv-display-name', 'adv-attestation',
+                'adv-user-verification', 'adv-authenticator-attachment', 'adv-resident-key',
+                'assert-user-verification'
+            ];
+
+            formFields.forEach(fieldId => {
+                const field = document.getElementById(fieldId);
+                if (field) {
+                    field.addEventListener('input', updateJsonFromForm);
+                    field.addEventListener('change', updateJsonFromForm);
+                }
+            });
+        });
+
+        function updateJsonFromForm() {
+            if (currentJsonMode) {
+                if (currentJsonMode === 'create') {
+                    const options = getAdvancedCreateOptions();
+                    document.getElementById('json-editor').value = JSON.stringify(options, null, 2);
+                } else if (currentJsonMode === 'assert') {
+                    const options = getAdvancedAssertOptions();
+                    document.getElementById('json-editor').value = JSON.stringify(options, null, 2);
+                }
+            }
+        }
+
+        // Make functions globally available
+        window.switchTab = switchTab;
+        window.simpleRegister = simpleRegister;
+        window.simpleAuthenticate = simpleAuthenticate;
+        window.simpleDelete = simpleDelete;
+        window.advancedRegister = advancedRegister;
+        window.advancedAuthenticate = advancedAuthenticate;
+        window.advancedDelete = advancedDelete;
+        window.editCreateOptions = editCreateOptions;
+        window.editAssertOptions = editAssertOptions;
+        window.applyJsonChanges = applyJsonChanges;
+        window.cancelJsonEdit = cancelJsonEdit;
+        window.decodeResponse = decodeResponse;
+        window.clearDecoder = clearDecoder;
+    </script>
+</body>
+</html>
