@@ -220,18 +220,17 @@ def list_credentials():
 @app.route("/api/advanced/register/begin", methods=["POST"])
 def advanced_register_begin():
     data = request.json
-    email = data.get("email")
-    username = data.get("username", email)
+    username = data.get("username")
     display_name = data.get("displayName", username)
     attestation = data.get("attestation", "none")
     user_verification = data.get("userVerification", "preferred")
     authenticator_attachment = data.get("authenticatorAttachment")
     resident_key = data.get("residentKey", "preferred")
     
-    if not email:
-        return jsonify({"error": "Email is required"}), 400
+    if not username:
+        return jsonify({"error": "Username is required"}), 400
     
-    credentials = readkey(email)
+    credentials = readkey(username)
     
     # Import required classes
     from fido2.webauthn import (
@@ -267,7 +266,7 @@ def advanced_register_begin():
     
     options, state = server.register_begin(
         PublicKeyCredentialUserEntity(
-            id=email.encode('utf-8'),
+            id=username.encode('utf-8'),
             name=username,
             display_name=display_name,
         ),
@@ -283,18 +282,18 @@ def advanced_register_begin():
 @app.route("/api/advanced/register/complete", methods=["POST"])
 def advanced_register_complete():
     data = request.json
-    email = data.get("email")
+    username = data.get("username")
     response = data.get("response")
     
-    if not email or not response:
-        return jsonify({"error": "Email and response are required"}), 400
+    if not username or not response:
+        return jsonify({"error": "Username and response are required"}), 400
     
-    credentials = readkey(email)
+    credentials = readkey(username)
     
     try:
         auth_data = server.register_complete(session.pop("advanced_state"), response)
         credentials.append(auth_data.credential_data)
-        savekey(email, credentials)
+        savekey(username, credentials)
         
         # Get algorithm info
         algo = auth_data.credential_data.public_key[3]
@@ -317,13 +316,13 @@ def advanced_register_complete():
 @app.route("/api/advanced/authenticate/begin", methods=["POST"])
 def advanced_authenticate_begin():
     data = request.json
-    email = data.get("email")
+    username = data.get("username")
     user_verification = data.get("userVerification", "preferred")
     
-    if not email:
-        return jsonify({"error": "Email is required"}), 400
+    if not username:
+        return jsonify({"error": "Username is required"}), 400
     
-    credentials = readkey(email)
+    credentials = readkey(username)
     if not credentials:
         return jsonify({"error": "No credentials found"}), 404
     
@@ -346,13 +345,13 @@ def advanced_authenticate_begin():
 @app.route("/api/advanced/authenticate/complete", methods=["POST"])
 def advanced_authenticate_complete():
     data = request.json
-    email = data.get("email")
+    username = data.get("username")
     response = data.get("response")
     
-    if not email or not response:
-        return jsonify({"error": "Email and response are required"}), 400
+    if not username or not response:
+        return jsonify({"error": "Username and response are required"}), 400
     
-    credentials = readkey(email)
+    credentials = readkey(username)
     if not credentials:
         return jsonify({"error": "No credentials found"}), 404
     

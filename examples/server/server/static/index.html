@@ -178,9 +178,29 @@
 
         .status {
             padding: 1rem;
-            border-radius: 4px;
+            border-radius: 12px;
             margin-bottom: 1rem;
             display: none;
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            min-width: 300px;
+            max-width: 90vw;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            animation: slideDown 0.3s ease-out;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateX(-50%) translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
         }
 
         .status.success {
@@ -214,15 +234,18 @@
             gap: 2rem;
             margin-top: 1rem;
             align-items: start;
+            width: 100%;
         }
 
         .three-column > div {
             align-self: start;
+            min-width: 0; /* Prevent grid overflow */
         }
 
         .form-column, .json-editor-column, .credentials-column {
             display: flex;
             flex-direction: column;
+            width: 100%;
         }
 
         .form-column h3, .json-editor-column h3, .credentials-column h3 {
@@ -1006,6 +1029,7 @@
                             </div>
                         </div>
                     </div>
+                    </div>
 
                     <div class="progress" id="advanced-progress">
                         <div class="spinner"></div>
@@ -1042,7 +1066,6 @@
             </div>
         </div>
     </div>
-    </div>
 
     <script type="module">
         import {
@@ -1062,6 +1085,8 @@
     <script>
         let currentSubTab = 'registration';
         let storedCredentials = [];
+        let currentJsonMode = null;
+        let currentJsonData = null;
 
         // Utility functions for hex validation and generation
         function isValidHex(str) {
@@ -1733,74 +1758,7 @@
             }
         }
 
-        // Decoder Functions (keeping existing functionality)
-        function decodeResponse() {
-            const input = document.getElementById('decoder-input').value;
-            if (!input.trim()) {
-                showStatus('decoder', 'Please paste a WebAuthn response to decode', 'error');
-                return;
-            }
 
-            try {
-                const parsed = JSON.parse(input);
-                const decoded = analyzeWebAuthnResponse(parsed);
-                
-                document.getElementById('decoded-content').innerHTML = 
-                    `<pre>${JSON.stringify(decoded, null, 2)}</pre>`;
-                
-                document.getElementById('decoder-output').style.display = 'block';
-                showStatus('decoder', 'Response decoded successfully!', 'success');
-            } catch (error) {
-                showStatus('decoder', `Invalid JSON: ${error.message}`, 'error');
-                document.getElementById('decoder-output').style.display = 'none';
-            }
-        }
-
-        function clearDecoder() {
-            document.getElementById('decoder-input').value = '';
-            document.getElementById('decoder-output').style.display = 'none';
-            hideStatus('decoder');
-        }
-
-        function analyzeWebAuthnResponse(response) {
-            const analysis = {
-                responseType: 'Unknown',
-                rawResponse: response,
-                decodedFields: {}
-            };
-
-            if (response.response && response.response.attestationObject) {
-                analysis.type = 'Registration Response';
-                analysis.decodedFields = {
-                    credentialId: response.id,
-                    credentialType: response.type,
-                    authenticatorAttachment: response.authenticatorAttachment,
-                    clientDataJSON: tryDecodeBase64Url(response.response.clientDataJSON),
-                    attestationObject: 'CBOR encoded - contains authData, fmt, attStmt'
-                };
-            } else if (response.response && response.response.authenticatorData) {
-                analysis.type = 'Authentication Response';
-                analysis.decodedFields = {
-                    credentialId: response.id,
-                    credentialType: response.type,
-                    authenticatorAttachment: response.authenticatorAttachment,
-                    clientDataJSON: tryDecodeBase64Url(response.response.clientDataJSON),
-                    authenticatorData: 'Base64URL encoded - contains RP ID hash, flags, counter, etc.',
-                    signature: 'Base64URL encoded signature'
-                };
-            }
-
-            return analysis;
-        }
-
-        function tryDecodeBase64Url(encoded) {
-            try {
-                const decoded = atob(encoded.replace(/-/g, '+').replace(/_/g, '/'));
-                return JSON.parse(decoded);
-            } catch (error) {
-                return 'Could not decode as JSON: ' + encoded;
-            }
-        }
 
         // Event listeners and initialization
         document.addEventListener('DOMContentLoaded', function() {
@@ -2042,6 +2000,7 @@
 
         function getAdvancedAssertOptions() {
             return {
+                username: document.getElementById('user-name').value,
                 userVerification: document.getElementById('user-verification-auth').value
             };
         }
@@ -2160,7 +2119,7 @@
 
                 if (!response.ok) {
                     if (response.status === 404) {
-                        throw new Error('No credentials found for this email. Please register first.');
+                        throw new Error('No credentials found for this username. Please register first.');
                     }
                     const errorText = await response.text();
                     throw new Error(`Server error: ${errorText}`);
