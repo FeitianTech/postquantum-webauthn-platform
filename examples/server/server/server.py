@@ -179,6 +179,43 @@ def downloadcred():
     name = name + "_credential_data.pkl"
     return send_file(os.path.join(basepath, name), as_attachment=True, download_name=name)
 
+@app.route("/api/credentials", methods=["GET"])
+def list_credentials():
+    """List all saved credentials from PKL files"""
+    credentials = []
+    
+    try:
+        # Get all .pkl files in the server directory
+        pkl_files = [f for f in os.listdir(basepath) if f.endswith('_credential_data.pkl')]
+        
+        for pkl_file in pkl_files:
+            # Extract email from filename
+            email = pkl_file.replace('_credential_data.pkl', '')
+            
+            try:
+                # Load credentials for this email
+                user_creds = readkey(email)
+                for cred in user_creds:
+                    credential_info = {
+                        'email': email,
+                        'credentialId': base64.b64encode(cred.credential_id).decode('utf-8'),
+                        'userName': getattr(cred, 'user_name', email),
+                        'displayName': getattr(cred, 'display_name', email),
+                        'algorithm': getattr(cred, 'algorithm', 'Unknown'),
+                        'type': 'WebAuthn',
+                        'createdAt': getattr(cred, 'created_at', None),
+                        'signCount': getattr(cred, 'sign_count', 0)
+                    }
+                    credentials.append(credential_info)
+            except Exception as e:
+                print(f"Error reading credentials for {email}: {e}")
+                continue
+                
+    except Exception as e:
+        print(f"Error listing credential files: {e}")
+    
+    return jsonify(credentials)
+
 # Advanced Authentication Endpoints
 @app.route("/api/advanced/register/begin", methods=["POST"])
 def advanced_register_begin():
