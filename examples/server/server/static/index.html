@@ -1065,8 +1065,226 @@
             } else {
                 content.classList.add('expanded');
                 header.classList.add('expanded');
-                icon.classList.add('rotated');
             }
+        }
+
+        // Randomization functions
+        function randomizeUserId() {
+            const userId = generateRandomHex(32);
+            document.getElementById('user-id').value = userId;
+            updateJsonEditor();
+        }
+
+        function randomizeChallenge(type) {
+            const challenge = generateRandomHex(32);
+            document.getElementById('challenge-' + type).value = challenge;
+            updateJsonEditor();
+        }
+
+        function randomizePrfEval(evalType, formType) {
+            const prfValue = generateRandomHex(32);
+            document.getElementById('prf-eval-' + evalType + '-' + formType).value = prfValue;
+            
+            // Enable/disable second PRF eval based on first
+            if (evalType === 'first') {
+                const secondInput = document.getElementById('prf-eval-second-' + formType);
+                const secondButton = secondInput.nextElementSibling;
+                if (prfValue) {
+                    secondInput.disabled = false;
+                    secondButton.disabled = false;
+                } else {
+                    secondInput.disabled = true;
+                    secondButton.disabled = true;
+                    secondInput.value = '';
+                }
+            }
+            
+            updateJsonEditor();
+        }
+
+        function randomizeLargeBlobWrite() {
+            const blobValue = generateRandomHex(64);
+            document.getElementById('large-blob-write').value = blobValue;
+            updateJsonEditor();
+        }
+
+        // Reset functions
+        function resetRegistrationForm() {
+            // Reset User Identity
+            document.getElementById('user-id').value = generateRandomHex(32);
+            document.getElementById('user-name').value = '';
+            document.getElementById('user-display-name').value = '';
+            
+            // Reset Authenticator Selection
+            document.getElementById('authenticator-attachment').value = '';
+            document.getElementById('resident-key').value = 'discouraged';
+            document.getElementById('user-verification-reg').value = 'preferred';
+            document.getElementById('attestation').value = 'none';
+            document.getElementById('exclude-credentials').checked = true;
+            document.getElementById('fake-cred-length-reg').value = '128';
+            
+            // Reset Other Options
+            document.getElementById('challenge-reg').value = generateRandomHex(32);
+            document.getElementById('timeout-reg').value = '90000';
+            document.getElementById('param-eddsa').checked = true;
+            document.getElementById('param-es256').checked = true;
+            document.getElementById('param-rs256').checked = true;
+            document.getElementById('param-ps256').checked = false;
+            document.getElementById('hint-client-device').checked = false;
+            document.getElementById('hint-hybrid').checked = false;
+            document.getElementById('hint-security-key').checked = false;
+            
+            // Reset Extensions
+            document.getElementById('cred-props').checked = true;
+            document.getElementById('min-pin-length').checked = false;
+            document.getElementById('cred-protect').value = '';
+            document.getElementById('enforce-cred-protect').checked = true;
+            document.getElementById('enforce-cred-protect').disabled = true;
+            document.getElementById('large-blob-reg').value = '';
+            document.getElementById('prf-reg').checked = true;
+            document.getElementById('prf-eval-first-reg').value = '';
+            document.getElementById('prf-eval-second-reg').value = '';
+            document.getElementById('prf-eval-second-reg').disabled = true;
+            
+            updateJsonEditor();
+        }
+
+        function resetAuthenticationForm() {
+            // Reset Credential Selection
+            document.getElementById('user-verification-auth').value = 'preferred';
+            document.getElementById('allow-credentials').value = 'all';
+            document.getElementById('fake-cred-length-auth').value = '256';
+            
+            // Reset Other Options
+            document.getElementById('challenge-auth').value = generateRandomHex(32);
+            document.getElementById('timeout-auth').value = '90000';
+            document.getElementById('hint-client-device-auth').checked = false;
+            document.getElementById('hint-hybrid-auth').checked = false;
+            document.getElementById('hint-security-key-auth').checked = false;
+            
+            // Reset Extensions
+            document.getElementById('large-blob-auth').value = '';
+            document.getElementById('large-blob-write').value = '';
+            document.getElementById('large-blob-write').disabled = true;
+            document.getElementById('prf-eval-first-auth').value = '';
+            document.getElementById('prf-eval-second-auth').value = '';
+            document.getElementById('prf-eval-second-auth').disabled = true;
+            
+            updateJsonEditor();
+        }
+
+        // JSON Editor update function
+        function updateJsonEditor() {
+            let options = {};
+            
+            if (currentSubTab === 'registration') {
+                options = getRegistrationOptions();
+            } else if (currentSubTab === 'authentication') {
+                options = getAuthenticationOptions();
+            }
+            
+            const jsonEditor = document.getElementById('json-editor');
+            if (jsonEditor) {
+                jsonEditor.value = JSON.stringify(options, null, 2);
+            }
+        }
+
+        // Get registration options from form
+        function getRegistrationOptions() {
+            const options = {
+                user: {
+                    id: document.getElementById('user-id')?.value || '',
+                    name: document.getElementById('user-name')?.value || '',
+                    displayName: document.getElementById('user-display-name')?.value || ''
+                },
+                authenticatorSelection: {
+                    authenticatorAttachment: document.getElementById('authenticator-attachment')?.value || undefined,
+                    residentKey: document.getElementById('resident-key')?.value || 'discouraged',
+                    userVerification: document.getElementById('user-verification-reg')?.value || 'preferred'
+                },
+                attestation: document.getElementById('attestation')?.value || 'none',
+                excludeCredentials: document.getElementById('exclude-credentials')?.checked || false,
+                fakeCredentialLength: parseInt(document.getElementById('fake-cred-length-reg')?.value) || 128,
+                challenge: document.getElementById('challenge-reg')?.value || '',
+                timeout: parseInt(document.getElementById('timeout-reg')?.value) || 90000,
+                pubKeyCredParams: [],
+                hints: [],
+                extensions: {}
+            };
+
+            // Add selected algorithms
+            if (document.getElementById('param-eddsa')?.checked) options.pubKeyCredParams.push('EdDSA');
+            if (document.getElementById('param-es256')?.checked) options.pubKeyCredParams.push('ES256');
+            if (document.getElementById('param-rs256')?.checked) options.pubKeyCredParams.push('RS256');
+            if (document.getElementById('param-ps256')?.checked) options.pubKeyCredParams.push('PS256');
+
+            // Add selected hints
+            if (document.getElementById('hint-client-device')?.checked) options.hints.push('client-device');
+            if (document.getElementById('hint-hybrid')?.checked) options.hints.push('hybrid');
+            if (document.getElementById('hint-security-key')?.checked) options.hints.push('security-key');
+
+            // Add extensions
+            if (document.getElementById('cred-props')?.checked) options.extensions.credProps = true;
+            if (document.getElementById('min-pin-length')?.checked) options.extensions.minPinLength = true;
+            
+            const credProtect = document.getElementById('cred-protect')?.value;
+            if (credProtect) {
+                options.extensions.credProtect = credProtect;
+                if (document.getElementById('enforce-cred-protect')?.checked) {
+                    options.extensions.enforceCredProtect = true;
+                }
+            }
+            
+            const largeBlobReg = document.getElementById('large-blob-reg')?.value;
+            if (largeBlobReg) options.extensions.largeBlob = largeBlobReg;
+            
+            if (document.getElementById('prf-reg')?.checked) {
+                options.extensions.prf = {};
+                const prfFirst = document.getElementById('prf-eval-first-reg')?.value;
+                const prfSecond = document.getElementById('prf-eval-second-reg')?.value;
+                if (prfFirst) options.extensions.prf.evalFirst = prfFirst;
+                if (prfSecond) options.extensions.prf.evalSecond = prfSecond;
+            }
+
+            return options;
+        }
+
+        // Get authentication options from form
+        function getAuthenticationOptions() {
+            const options = {
+                userVerification: document.getElementById('user-verification-auth')?.value || 'preferred',
+                allowCredentials: document.getElementById('allow-credentials')?.value || 'all',
+                fakeCredentialLength: parseInt(document.getElementById('fake-cred-length-auth')?.value) || 256,
+                challenge: document.getElementById('challenge-auth')?.value || '',
+                timeout: parseInt(document.getElementById('timeout-auth')?.value) || 90000,
+                hints: [],
+                extensions: {}
+            };
+
+            // Add selected hints
+            if (document.getElementById('hint-client-device-auth')?.checked) options.hints.push('client-device');
+            if (document.getElementById('hint-hybrid-auth')?.checked) options.hints.push('hybrid');
+            if (document.getElementById('hint-security-key-auth')?.checked) options.hints.push('security-key');
+
+            // Add extensions
+            const largeBlobAuth = document.getElementById('large-blob-auth')?.value;
+            if (largeBlobAuth) {
+                options.extensions.largeBlob = largeBlobAuth;
+                if (largeBlobAuth === 'write') {
+                    const largeBlobWrite = document.getElementById('large-blob-write')?.value;
+                    if (largeBlobWrite) options.extensions.largeBlobWrite = largeBlobWrite;
+                }
+            }
+            
+            const prfFirst = document.getElementById('prf-eval-first-auth')?.value;
+            const prfSecond = document.getElementById('prf-eval-second-auth')?.value;
+            if (prfFirst || prfSecond) {
+                options.extensions.prf = {};
+                if (prfFirst) options.extensions.prf.evalFirst = prfFirst;
+                if (prfSecond) options.extensions.prf.evalSecond = prfSecond;
+            }
+
+            return options;
         }
 
         // Utility functions
@@ -1080,6 +1298,440 @@
         function hideStatus(tabId) {
             document.getElementById(tabId + '-status').style.display = 'none';
         }
+
+        function showProgress(tabId, message) {
+            const progressEl = document.getElementById(tabId + '-progress');
+            const textEl = document.getElementById(tabId + '-progress-text');
+            textEl.textContent = message;
+            progressEl.classList.add('show');
+        }
+
+        function hideProgress(tabId) {
+            document.getElementById(tabId + '-progress').classList.remove('show');
+        }
+
+        // Simple authentication functions (keeping existing functionality)
+        async function simpleRegister() {
+            const email = document.getElementById('simple-email').value;
+            if (!email) {
+                showStatus('simple', 'Please enter an email address', 'error');
+                return;
+            }
+
+            try {
+                hideStatus('simple');
+                showProgress('simple', 'Starting registration...');
+
+                const response = await fetch('/api/register/begin', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({email: email}),
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const json = await response.json();
+                const createOptions = parseCreationOptionsFromJSON(json);
+
+                showProgress('simple', 'Touch your authenticator device...');
+
+                const credential = await create(createOptions);
+                
+                showProgress('simple', 'Completing registration...');
+
+                const result = await fetch('/api/register/complete', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        email: email,
+                        response: credential
+                    }),
+                });
+
+                if (result.ok) {
+                    const data = await result.json();
+                    showStatus('simple', `Registration successful! Algorithm: ${data.algo || 'Unknown'}`, 'success');
+                    
+                    // Add to credentials list
+                    addCredentialToList({
+                        type: 'simple',
+                        email: email,
+                        credentialId: credential.id,
+                        algorithm: data.algo || 'Unknown'
+                    });
+                } else {
+                    throw new Error('Registration failed');
+                }
+            } catch (error) {
+                console.error('Registration error:', error);
+                showStatus('simple', `Registration failed: ${error.message}`, 'error');
+            } finally {
+                hideProgress('simple');
+            }
+        }
+
+        async function simpleAuthenticate() {
+            const email = document.getElementById('simple-email').value;
+            if (!email) {
+                showStatus('simple', 'Please enter an email address', 'error');
+                return;
+            }
+
+            try {
+                hideStatus('simple');
+                showProgress('simple', 'Starting authentication...');
+
+                const response = await fetch('/api/authenticate/begin', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({email: email}),
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const json = await response.json();
+                const getOptions = parseRequestOptionsFromJSON(json);
+
+                showProgress('simple', 'Touch your authenticator device...');
+
+                const assertion = await get(getOptions);
+                
+                showProgress('simple', 'Completing authentication...');
+
+                const result = await fetch('/api/authenticate/complete', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        email: email,
+                        response: assertion
+                    }),
+                });
+
+                if (result.ok) {
+                    showStatus('simple', 'Authentication successful!', 'success');
+                } else {
+                    throw new Error('Authentication failed');
+                }
+            } catch (error) {
+                console.error('Authentication error:', error);
+                showStatus('simple', `Authentication failed: ${error.message}`, 'error');
+            } finally {
+                hideProgress('simple');
+            }
+        }
+
+        // Advanced registration function (adapted for new structure)
+        async function advancedRegister() {
+            const options = getRegistrationOptions();
+            
+            if (!options.user.id || !options.user.name) {
+                showStatus('advanced', 'Please enter user ID and name', 'error');
+                return;
+            }
+
+            try {
+                hideStatus('advanced');
+                showProgress('advanced', 'Starting advanced registration...');
+
+                const response = await fetch('/api/advanced/register/begin', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(options)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const json = await response.json();
+                const createOptions = parseCreationOptionsFromJSON(json);
+
+                showProgress('advanced', 'Touch your authenticator device...');
+
+                const credential = await create(createOptions);
+                
+                showProgress('advanced', 'Completing registration...');
+
+                const result = await fetch('/api/advanced/register/complete', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        ...options,
+                        response: credential
+                    }),
+                });
+
+                if (result.ok) {
+                    const data = await result.json();
+                    showStatus('advanced', `Advanced registration successful! Algorithm: ${data.algo || 'Unknown'}`, 'success');
+                    
+                    // Add to credentials list with advanced details
+                    addCredentialToList({
+                        type: 'advanced',
+                        userId: options.user.id,
+                        userName: options.user.name,
+                        displayName: options.user.displayName,
+                        credentialId: credential.id,
+                        algorithm: data.algo || 'Unknown',
+                        rawData: data // Store additional credential data
+                    });
+                } else {
+                    throw new Error('Advanced registration failed');
+                }
+            } catch (error) {
+                console.error('Advanced registration error:', error);
+                showStatus('advanced', `Advanced registration failed: ${error.message}`, 'error');
+            } finally {
+                hideProgress('advanced');
+            }
+        }
+
+        // Advanced authentication function (adapted for new structure)
+        async function advancedAuthenticate() {
+            const options = getAuthenticationOptions();
+
+            try {
+                hideStatus('advanced');
+                showProgress('advanced', 'Starting advanced authentication...');
+
+                const response = await fetch('/api/advanced/authenticate/begin', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(options)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const json = await response.json();
+                const getOptions = parseRequestOptionsFromJSON(json);
+
+                showProgress('advanced', 'Touch your authenticator device...');
+
+                const assertion = await get(getOptions);
+                
+                showProgress('advanced', 'Completing authentication...');
+
+                const result = await fetch('/api/advanced/authenticate/complete', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        ...options,
+                        response: assertion
+                    }),
+                });
+
+                if (result.ok) {
+                    showStatus('advanced', 'Advanced authentication successful!', 'success');
+                } else {
+                    throw new Error('Advanced authentication failed');
+                }
+            } catch (error) {
+                console.error('Advanced authentication error:', error);
+                showStatus('advanced', `Advanced authentication failed: ${error.message}`, 'error');
+            } finally {
+                hideProgress('advanced');
+            }
+        }
+
+        // Credentials management
+        function addCredentialToList(credential) {
+            storedCredentials.push(credential);
+            updateCredentialsList();
+        }
+
+        function updateCredentialsList() {
+            const list = document.getElementById('credentials-list');
+            
+            if (storedCredentials.length === 0) {
+                list.innerHTML = '<p style="color: #6c757d; font-style: italic;">No credentials registered yet.</p>';
+                return;
+            }
+
+            list.innerHTML = '';
+            storedCredentials.forEach((cred, index) => {
+                const credItem = document.createElement('div');
+                credItem.className = 'credential-item';
+                credItem.onclick = () => toggleCredentialDetails(index);
+                
+                let summary = '';
+                if (cred.type === 'simple') {
+                    summary = cred.email;
+                } else {
+                    summary = `${cred.userName || cred.userId}`;
+                    if (cred.displayName) summary += `\n${cred.displayName}`;
+                }
+                
+                credItem.innerHTML = `
+                    <div class="credential-summary">${summary}</div>
+                    <div class="credential-details">
+                        ${generateCredentialDetails(cred)}
+                        <button class="credential-delete" onclick="deleteCredential(${index}); event.stopPropagation();">Delete</button>
+                    </div>
+                `;
+                
+                list.appendChild(credItem);
+            });
+        }
+
+        function generateCredentialDetails(cred) {
+            if (cred.type === 'simple') {
+                return `
+                    <strong>Type:</strong> Simple Authentication<br>
+                    <strong>Email:</strong> ${cred.email}<br>
+                    <strong>Credential ID:</strong> ${cred.credentialId}<br>
+                    <strong>Algorithm:</strong> ${cred.algorithm}
+                `;
+            } else {
+                return `
+                    <strong>Type:</strong> Advanced Authentication<br>
+                    <strong>User ID:</strong> ${cred.userId}<br>
+                    <strong>User Name:</strong> ${cred.userName}<br>
+                    <strong>Display Name:</strong> ${cred.displayName || 'N/A'}<br>
+                    <strong>Credential ID:</strong> ${cred.credentialId}<br>
+                    <strong>Algorithm:</strong> ${cred.algorithm}
+                `;
+            }
+        }
+
+        function toggleCredentialDetails(index) {
+            const credItems = document.querySelectorAll('.credential-item');
+            const item = credItems[index];
+            
+            if (item.classList.contains('expanded')) {
+                item.classList.remove('expanded');
+            } else {
+                // Close all others
+                credItems.forEach(item => item.classList.remove('expanded'));
+                // Open this one
+                item.classList.add('expanded');
+            }
+        }
+
+        function deleteCredential(index) {
+            const cred = storedCredentials[index];
+            
+            if (confirm(`Are you sure you want to delete credential for ${cred.type === 'simple' ? cred.email : cred.userName}?`)) {
+                storedCredentials.splice(index, 1);
+                updateCredentialsList();
+            }
+        }
+
+        // Decoder Functions (keeping existing functionality)
+        function decodeResponse() {
+            const input = document.getElementById('decoder-input').value;
+            if (!input.trim()) {
+                showStatus('decoder', 'Please paste a WebAuthn response to decode', 'error');
+                return;
+            }
+
+            try {
+                const parsed = JSON.parse(input);
+                const decoded = analyzeWebAuthnResponse(parsed);
+                
+                document.getElementById('decoded-content').innerHTML = 
+                    `<pre>${JSON.stringify(decoded, null, 2)}</pre>`;
+                
+                document.getElementById('decoder-output').style.display = 'block';
+                showStatus('decoder', 'Response decoded successfully!', 'success');
+            } catch (error) {
+                showStatus('decoder', `Invalid JSON: ${error.message}`, 'error');
+                document.getElementById('decoder-output').style.display = 'none';
+            }
+        }
+
+        function clearDecoder() {
+            document.getElementById('decoder-input').value = '';
+            document.getElementById('decoder-output').style.display = 'none';
+            hideStatus('decoder');
+        }
+
+        function analyzeWebAuthnResponse(response) {
+            const analysis = {
+                responseType: 'Unknown',
+                rawResponse: response,
+                decodedFields: {}
+            };
+
+            if (response.response && response.response.attestationObject) {
+                analysis.type = 'Registration Response';
+                analysis.decodedFields = {
+                    credentialId: response.id,
+                    credentialType: response.type,
+                    authenticatorAttachment: response.authenticatorAttachment,
+                    clientDataJSON: tryDecodeBase64Url(response.response.clientDataJSON),
+                    attestationObject: 'CBOR encoded - contains authData, fmt, attStmt'
+                };
+            } else if (response.response && response.response.authenticatorData) {
+                analysis.type = 'Authentication Response';
+                analysis.decodedFields = {
+                    credentialId: response.id,
+                    credentialType: response.type,
+                    authenticatorAttachment: response.authenticatorAttachment,
+                    clientDataJSON: tryDecodeBase64Url(response.response.clientDataJSON),
+                    authenticatorData: 'Base64URL encoded - contains RP ID hash, flags, counter, etc.',
+                    signature: 'Base64URL encoded signature'
+                };
+            }
+
+            return analysis;
+        }
+
+        function tryDecodeBase64Url(encoded) {
+            try {
+                const decoded = atob(encoded.replace(/-/g, '+').replace(/_/g, '/'));
+                return JSON.parse(decoded);
+            } catch (error) {
+                return 'Could not decode as JSON: ' + encoded;
+            }
+        }
+
+        // Event listeners and initialization
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize with random values
+            setTimeout(() => {
+                randomizeUserId();
+                randomizeChallenge('reg');
+                randomizeChallenge('auth');
+            }, 100);
+            
+            // Set up form field listeners for auto-sync
+            setTimeout(() => {
+                const allInputs = document.querySelectorAll('#advanced-tab input, #advanced-tab select, #advanced-tab input[type="checkbox"]');
+                allInputs.forEach(input => {
+                    input.addEventListener('input', updateJsonEditor);
+                    input.addEventListener('change', updateJsonEditor);
+                });
+            }, 100);
+            
+            // Initialize JSON editor
+            setTimeout(updateJsonEditor, 200);
+        });
+
+        // Make functions globally available
+        window.switchTab = switchTab;
+        window.switchSubTab = switchSubTab;
+        window.toggleSection = toggleSection;
+        window.randomizeUserId = randomizeUserId;
+        window.randomizeChallenge = randomizeChallenge;
+        window.randomizePrfEval = randomizePrfEval;
+        window.randomizeLargeBlobWrite = randomizeLargeBlobWrite;
+        window.resetRegistrationForm = resetRegistrationForm;
+        window.resetAuthenticationForm = resetAuthenticationForm;
+        window.simpleRegister = simpleRegister;
+        window.simpleAuthenticate = simpleAuthenticate;
+        window.advancedRegister = advancedRegister;
+        window.advancedAuthenticate = advancedAuthenticate;
+        window.decodeResponse = decodeResponse;
+        window.clearDecoder = clearDecoder;
+    </script>
+</body>
+</html>
 
         function showProgress(tabId, message) {
             const progressEl = document.getElementById(tabId + '-progress');
@@ -1539,21 +2191,6 @@
                 }
             }
         }
-
-        // Make functions globally available
-        window.switchTab = switchTab;
-        window.simpleRegister = simpleRegister;
-        window.simpleAuthenticate = simpleAuthenticate;
-        window.simpleDelete = simpleDelete;
-        window.advancedRegister = advancedRegister;
-        window.advancedAuthenticate = advancedAuthenticate;
-        window.advancedDelete = advancedDelete;
-        window.editCreateOptions = editCreateOptions;
-        window.editAssertOptions = editAssertOptions;
-        window.applyJsonChanges = applyJsonChanges;
-        window.cancelJsonEdit = cancelJsonEdit;
-        window.decodeResponse = decodeResponse;
-        window.clearDecoder = clearDecoder;
     </script>
 </body>
 </html>
