@@ -37,7 +37,7 @@
         }
 
         .container {
-            max-width: 1200px;
+            width: 100%;
             margin: 0 auto;
             padding: 2rem;
         }
@@ -593,7 +593,7 @@
                                         <label for="user-id">User ID (hex)</label>
                                         <div class="input-with-button">
                                             <input type="text" id="user-id" class="form-control" placeholder="Auto-generated hex value">
-                                            <button class="btn btn-small" onclick="randomizeUserId()">Randomize</button>
+                                            <button class="btn btn-small" onclick="randomizeUserId()" title="Generate new random User ID">🔄</button>
                                         </div>
                                         <div id="user-id-error" class="error-message">Invalid hex value</div>
                                     </div>
@@ -674,7 +674,7 @@
                                         <label for="challenge-reg">Challenge (hex)</label>
                                         <div class="input-with-button">
                                             <input type="text" id="challenge-reg" class="form-control" placeholder="Auto-generated hex value">
-                                            <button class="btn btn-small" onclick="randomizeChallenge('reg')">Randomize</button>
+                                            <button class="btn btn-small" onclick="randomizeChallenge('reg')" title="Generate new random challenge">🔄</button>
                                         </div>
                                         <div id="challenge-reg-error" class="error-message">Invalid hex value or less than 16 bytes</div>
                                     </div>
@@ -771,7 +771,7 @@
                                         <label for="prf-eval-first-reg">prf eval first</label>
                                         <div class="input-with-button">
                                             <input type="text" id="prf-eval-first-reg" class="form-control" placeholder="Hex value">
-                                            <button class="btn btn-small" onclick="randomizePrfEval('first', 'reg')">Randomize</button>
+                                            <button class="btn btn-small" onclick="randomizePrfEval('first', 'reg')" title="Generate random PRF evaluation data">🔄</button>
                                         </div>
                                         <div id="prf-eval-first-reg-error" class="error-message">Invalid hex value</div>
                                     </div>
@@ -779,7 +779,7 @@
                                         <label for="prf-eval-second-reg">prf eval second</label>
                                         <div class="input-with-button">
                                             <input type="text" id="prf-eval-second-reg" class="form-control" placeholder="Hex value" disabled>
-                                            <button class="btn btn-small" onclick="randomizePrfEval('second', 'reg')" disabled>Randomize</button>
+                                            <button class="btn btn-small" onclick="randomizePrfEval('second', 'reg')" disabled title="Generate random PRF evaluation data">🔄</button>
                                         </div>
                                         <div id="prf-eval-second-reg-error" class="error-message">Invalid hex value</div>
                                     </div>
@@ -838,7 +838,7 @@
                                         <label for="challenge-auth">Challenge (hex)</label>
                                         <div class="input-with-button">
                                             <input type="text" id="challenge-auth" class="form-control" placeholder="Auto-generated hex value">
-                                            <button class="btn btn-small" onclick="randomizeChallenge('auth')">Randomize</button>
+                                            <button class="btn btn-small" onclick="randomizeChallenge('auth')" title="Generate new random challenge">🔄</button>
                                         </div>
                                         <div id="challenge-auth-error" class="error-message">Invalid hex value or less than 16 bytes</div>
                                     </div>
@@ -885,7 +885,7 @@
                                         <label for="large-blob-write">largeBlob write</label>
                                         <div class="input-with-button">
                                             <input type="text" id="large-blob-write" class="form-control" placeholder="Hex value" disabled>
-                                            <button class="btn btn-small" onclick="randomizeLargeBlobWrite()" disabled>Randomize</button>
+                                            <button class="btn btn-small" onclick="randomizeLargeBlobWrite()" disabled title="Generate random large blob data">🔄</button>
                                         </div>
                                         <div id="large-blob-write-error" class="error-message">Invalid hex value</div>
                                     </div>
@@ -893,7 +893,7 @@
                                         <label for="prf-eval-first-auth">prf eval first</label>
                                         <div class="input-with-button">
                                             <input type="text" id="prf-eval-first-auth" class="form-control" placeholder="Hex value">
-                                            <button class="btn btn-small" onclick="randomizePrfEval('first', 'auth')">Randomize</button>
+                                            <button class="btn btn-small" onclick="randomizePrfEval('first', 'auth')" title="Generate random PRF evaluation data">🔄</button>
                                         </div>
                                         <div id="prf-eval-first-auth-error" class="error-message">Invalid hex value</div>
                                     </div>
@@ -901,7 +901,7 @@
                                         <label for="prf-eval-second-auth">prf eval second</label>
                                         <div class="input-with-button">
                                             <input type="text" id="prf-eval-second-auth" class="form-control" placeholder="Hex value" disabled>
-                                            <button class="btn btn-small" onclick="randomizePrfEval('second', 'auth')" disabled>Randomize</button>
+                                            <button class="btn btn-small" onclick="randomizePrfEval('second', 'auth')" disabled title="Generate random PRF evaluation data">🔄</button>
                                         </div>
                                         <div id="prf-eval-second-auth-error" class="error-message">Invalid hex value</div>
                                     </div>
@@ -1729,9 +1729,6 @@
         window.advancedAuthenticate = advancedAuthenticate;
         window.decodeResponse = decodeResponse;
         window.clearDecoder = clearDecoder;
-    </script>
-</body>
-</html>
 
         function showProgress(tabId, message) {
             const progressEl = document.getElementById(tabId + '-progress');
