@@ -100,9 +100,7 @@ py -3.12 -m pipx ensurepath
 # Install Poetry via pipx
 pipx install poetry
 
-# If 'poetry' still isn't found, either open a new terminal or add to PATH for this session:
-# $env:Path += ";$env:USERPROFILE\.local\bin;$env:USERPROFILE\AppData\Roaming\Python\Python312\Scripts"
-poetry --version
+
 ```
 
 - macOS/Linux (bash/zsh):
@@ -149,11 +147,6 @@ pytest
 poetry add --group dev pytest
 poetry run pytest
 ```
-Useful pytest options:
-- `-q` quiet output, `-s` show print statements, `-k <expr>` filter tests by name.
-- Examples:
-  - `pytest -q -k webauthn`
-  - `pytest -q tests/test_example.py::test_specific_case -s`
 
 ---
 
