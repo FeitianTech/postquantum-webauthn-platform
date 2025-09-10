@@ -206,16 +206,6 @@ def advanced_register_begin():
     )
     
     # Convert string values to enum values
-    attestation_pref = None
-    if attestation == "direct":
-        attestation_pref = AttestationConveyancePreference.DIRECT
-    elif attestation == "indirect":
-        attestation_pref = AttestationConveyancePreference.INDIRECT
-    elif attestation == "enterprise":
-        attestation_pref = AttestationConveyancePreference.ENTERPRISE
-    else:
-        attestation_pref = AttestationConveyancePreference.NONE
-    
     uv_req = None
     if user_verification == "required":
         uv_req = UserVerificationRequirement.REQUIRED
@@ -248,7 +238,6 @@ def advanced_register_begin():
         user_verification=uv_req,
         authenticator_attachment=auth_attachment,
         resident_key_requirement=rk_req,
-        attestation=attestation_pref,
     )
     
     session["advanced_state"] = state
