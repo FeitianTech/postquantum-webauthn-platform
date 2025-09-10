@@ -157,10 +157,68 @@ Useful pytest options:
 
 ---
 
-## 6) Run the example scripts (no PQC)
 
-Common example entry points in this repo (or in similar layouts). Use the one that exists in your clone:
 
-    - `python examples/server.py`
-    - `python examples/flask_app.py`
-    - `python examples/ctap2/credential.py`
+
+  
+# Quickstart: create a virtual environment, run the demo server, and use the authenticator
+
+Note: Your server entry point is a Python file. Use:
+- python examples/server/server/server.py
+
+## Requirements
+- Python 3.7 or newer installed and on your PATH
+- A supported web browser (Chrome/Edge ≥ 108, Safari ≥ 17, Firefox ≥ 117)
+- An authenticator: platform (Windows Hello, Touch ID) or a security key
+
+---
+
+## 1) Create and activate a virtual environment
+
+Run these from the repository root.
+
+### Windows PowerShell
+```powershell
+# Create venv in the project root (only the first time is required)
+py -3 -m venv .venv
+
+# Activate it (required everytime you use the authenticator)
+.\.venv\Scripts\Activate.ps1
+```
+
+### macOS / Linux
+```bash
+# Create venv in the project root (only the first time is required)
+python3 -m venv .venv
+
+# Activate it (required everytime you use the authenticator)
+source .venv/bin/activate
+```
+
+Deactivate later with:
+```bash
+deactivate
+```
+
+---
+
+## 2) Install dependencies
+
+```bash
+python -m pip install --upgrade pip
+pip install flask fido2
+```
+
+---
+
+## 3) Run the demo server
+
+From the repository root:
+```bash
+python examples/server/server/server.py
+```
+
+You should see Flask start and a line similar to:
+```
+Running on http://localhost:5000/ (Press CTRL+C to quit)
+```
