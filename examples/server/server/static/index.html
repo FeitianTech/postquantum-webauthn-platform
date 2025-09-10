@@ -45,7 +45,7 @@
         .nav-tabs {
             display: flex;
             background: white;
-            border-radius: 8px 8px 0 0;
+            border-radius: 12px 12px 0 0;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             overflow: hidden;
         }
@@ -79,7 +79,7 @@
 
         .content {
             background: white;
-            border-radius: 0 0 8px 8px;
+            border-radius: 0 0 12px 12px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             padding: 2rem;
             min-height: 600px;
@@ -119,7 +119,7 @@
             width: 100%;
             padding: 0.75rem;
             border: 1px solid #dee2e6;
-            border-radius: 4px;
+            border-radius: 12px;
             font-size: 1rem;
             transition: border-color 0.3s ease, box-shadow 0.3s ease;
         }
@@ -136,7 +136,7 @@
             background: #325F74;
             color: white;
             border: none;
-            border-radius: 4px;
+            border-radius: 12px;
             cursor: pointer;
             font-size: 1rem;
             font-weight: 500;
@@ -235,7 +235,7 @@
         .sub-tabs {
             display: flex;
             background: #f8f9fa;
-            border-radius: 4px;
+            border-radius: 12px;
             margin-bottom: 1rem;
             overflow: hidden;
             border: 1px solid #dee2e6;
@@ -279,7 +279,7 @@
         .credentials-panel {
             background: #f8f9fa;
             border: 1px solid #dee2e6;
-            border-radius: 4px;
+            border-radius: 12px;
             padding: 1rem;
             min-height: 600px;
             max-height: 600px;
@@ -295,7 +295,7 @@
         .credential-item {
             background: white;
             border: 1px solid #dee2e6;
-            border-radius: 4px;
+            border-radius: 12px;
             padding: 0.75rem;
             margin-bottom: 0.75rem;
             cursor: pointer;
@@ -443,7 +443,7 @@
         .json-editor {
             background: #f8f9fa;
             border: 1px solid #dee2e6;
-            border-radius: 4px;
+            border-radius: 12px;
             padding: 1rem;
             font-family: 'Monaco', 'Consolas', monospace;
             font-size: 0.9rem;
@@ -521,7 +521,7 @@
             padding: 0.75rem 1rem;
             margin-bottom: 1rem;
             border: 1px solid transparent;
-            border-radius: 0.25rem;
+            border-radius: 12px;
         }
 
         .alert-info {
@@ -661,10 +661,6 @@
                                     <span class="expand-icon">▼</span>
                                 </div>
                                 <div id="user-identity" class="section-content expanded">
-                                    <div class="form-group">
-                                        <label for="adv-email">Email (Required)</label>
-                                        <input type="email" id="adv-email" class="form-control" placeholder="Enter email address" required>
-                                    </div>
                                     <div class="form-group">
                                         <label for="user-id">User ID (hex)</label>
                                         <div class="input-with-button">
@@ -871,11 +867,6 @@
                             <div id="authentication-form" class="sub-tab-content">
                             <div class="form-group">
                                 <button class="btn btn-secondary btn-small" onclick="resetAuthenticationForm()">Reset</button>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="auth-email">Email (Required)</label>
-                                <input type="email" id="auth-email" class="form-control" placeholder="Enter email address" required>
                             </div>
 
                             <!-- Credential Selection Section -->
@@ -1296,7 +1287,7 @@
                         <span class="credential-type">${cred.type || 'WebAuthn'}</span>
                     </div>
                     <div class="credential-details">
-                        <p><strong>Email:</strong> ${cred.email || 'N/A'}</p>
+                        <p><strong>Username:</strong> ${cred.username || cred.email || 'N/A'}</p>
                         <p><strong>Credential ID:</strong> <code>${cred.credentialId?.substring(0, 16) || 'Unknown'}...</code></p>
                         <p><strong>Algorithm:</strong> ${cred.algorithm || 'Unknown'}</p>
                         <p><strong>Created:</strong> ${cred.createdAt ? new Date(cred.createdAt).toLocaleString() : 'Unknown'}</p>
@@ -1796,7 +1787,7 @@
                 
                 let summary = '';
                 if (cred.type === 'simple') {
-                    summary = cred.email;
+                    summary = cred.email || cred.username;
                 } else {
                     summary = `${cred.userName || cred.userId}`;
                     if (cred.displayName) summary += `\n${cred.displayName}`;
@@ -1818,7 +1809,7 @@
             if (cred.type === 'simple') {
                 return `
                     <strong>Type:</strong> Simple Authentication<br>
-                    <strong>Email:</strong> ${cred.email}<br>
+                    <strong>User:</strong> ${cred.email || cred.username}<br>
                     <strong>Credential ID:</strong> ${cred.credentialId}<br>
                     <strong>Algorithm:</strong> ${cred.algorithm}
                 `;
@@ -1851,7 +1842,7 @@
         function deleteCredential(index) {
             const cred = storedCredentials[index];
             
-            if (confirm(`Are you sure you want to delete credential for ${cred.type === 'simple' ? cred.email : cred.userName}?`)) {
+            if (confirm(`Are you sure you want to delete credential for ${cred.type === 'simple' ? (cred.email || cred.username) : cred.userName}?`)) {
                 storedCredentials.splice(index, 1);
                 updateCredentialsList();
             }
@@ -2155,9 +2146,8 @@
         // Advanced Authentication Functions
         function getAdvancedCreateOptions() {
             return {
-                email: document.getElementById('adv-email').value,
-                username: document.getElementById('user-name').value || document.getElementById('adv-email').value,
-                displayName: document.getElementById('user-display-name').value || document.getElementById('user-name').value || document.getElementById('adv-email').value,
+                username: document.getElementById('user-name').value,
+                displayName: document.getElementById('user-display-name').value || document.getElementById('user-name').value,
                 attestation: document.getElementById('attestation').value,
                 userVerification: document.getElementById('user-verification-reg').value,
                 authenticatorAttachment: document.getElementById('authenticator-attachment').value || undefined,
@@ -2167,7 +2157,6 @@
 
         function getAdvancedAssertOptions() {
             return {
-                email: document.getElementById('auth-email').value,
                 userVerification: document.getElementById('user-verification-auth').value
             };
         }
@@ -2184,8 +2173,8 @@
             }
 
             const options = getAdvancedCreateOptions();
-            if (!options.email) {
-                showStatus('advanced', 'Please enter an email address', 'error');
+            if (!options.username) {
+                showStatus('advanced', 'Please enter a username', 'error');
                 return;
             }
 
@@ -2229,7 +2218,7 @@
                     // Add to saved credentials
                     savedCredentials.push({
                         type: 'advanced',
-                        email: options.email,
+                        username: options.username,
                         credentialId: credential.id,
                         algorithm: data.algo || 'Unknown',
                         displayName: options.displayName,
@@ -2273,10 +2262,6 @@
             }
 
             const options = getAdvancedAssertOptions();
-            if (!options.email) {
-                showStatus('advanced', 'Please enter an email address', 'error');
-                return;
-            }
 
             try {
                 hideStatus('advanced');
@@ -2340,13 +2325,13 @@
         }
 
         async function advancedDelete() {
-            const email = document.getElementById('adv-email').value;
-            if (!email) {
-                showStatus('advanced', 'Please enter an email address', 'error');
+            const username = document.getElementById('user-name').value;
+            if (!username) {
+                showStatus('advanced', 'Please enter a username', 'error');
                 return;
             }
 
-            if (!confirm(`Are you sure you want to delete all credentials for ${email}?`)) {
+            if (!confirm(`Are you sure you want to delete all credentials for ${username}?`)) {
                 return;
             }
 
@@ -2357,7 +2342,7 @@
                 const result = await fetch('/api/deletepub', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({"email": email}),
+                    body: JSON.stringify({"username": username}),
                 });
 
                 if (result.ok) {
@@ -2401,17 +2386,15 @@
                 
                 if (currentJsonMode === 'create') {
                     // Update create form fields
-                    if (parsed.email) document.getElementById('adv-email').value = parsed.email;
-                    if (parsed.username) document.getElementById('adv-username').value = parsed.username;
-                    if (parsed.displayName) document.getElementById('adv-display-name').value = parsed.displayName;
-                    if (parsed.attestation) document.getElementById('adv-attestation').value = parsed.attestation;
-                    if (parsed.userVerification) document.getElementById('adv-user-verification').value = parsed.userVerification;
-                    if (parsed.authenticatorAttachment !== undefined) document.getElementById('adv-authenticator-attachment').value = parsed.authenticatorAttachment || '';
-                    if (parsed.residentKey) document.getElementById('adv-resident-key').value = parsed.residentKey;
+                    if (parsed.username) document.getElementById('user-name').value = parsed.username;
+                    if (parsed.displayName) document.getElementById('user-display-name').value = parsed.displayName;
+                    if (parsed.attestation) document.getElementById('attestation').value = parsed.attestation;
+                    if (parsed.userVerification) document.getElementById('user-verification-reg').value = parsed.userVerification;
+                    if (parsed.authenticatorAttachment !== undefined) document.getElementById('authenticator-attachment').value = parsed.authenticatorAttachment || '';
+                    if (parsed.residentKey) document.getElementById('resident-key').value = parsed.residentKey;
                 } else if (currentJsonMode === 'assert') {
                     // Update assert form fields
-                    if (parsed.email) document.getElementById('adv-email').value = parsed.email;
-                    if (parsed.userVerification) document.getElementById('assert-user-verification').value = parsed.userVerification;
+                    if (parsed.userVerification) document.getElementById('user-verification-auth').value = parsed.userVerification;
                 }
                 
                 showStatus('advanced', 'JSON changes applied successfully!', 'success');
@@ -2500,9 +2483,9 @@
         // Update JSON editor when form fields change
         document.addEventListener('DOMContentLoaded', function() {
             const formFields = [
-                'adv-email', 'adv-username', 'adv-display-name', 'adv-attestation',
-                'adv-user-verification', 'adv-authenticator-attachment', 'adv-resident-key',
-                'assert-user-verification'
+                'user-name', 'user-display-name', 'attestation',
+                'user-verification-reg', 'authenticator-attachment', 'resident-key',
+                'user-verification-auth'
             ];
 
             formFields.forEach(fieldId => {
