@@ -210,7 +210,7 @@
 
         .three-column {
             display: grid;
-            grid-template-columns: 1fr 1fr 300px;
+            grid-template-columns: 1fr 1fr 1fr;
             gap: 2rem;
             margin-top: 1rem;
             align-items: start;
@@ -569,7 +569,7 @@
             content: '';
         }
 
-        @media (max-width: 768px) {
+        @media (max-width: 480px) {
             .container {
                 padding: 1rem;
             }
@@ -590,6 +590,13 @@
 
             .nav-tab:last-child {
                 border-bottom: none;
+            }
+        }
+
+        @media (max-width: 768px) and (min-width: 481px) {
+            .three-column {
+                grid-template-columns: 1fr 1fr;
+                gap: 1rem;
             }
         }
     </style>
@@ -652,10 +659,6 @@
                         <div class="form-column">
                             <!-- Registration Form -->
                             <div id="registration-form" class="sub-tab-content active">
-                                <div class="form-group">
-                                    <button class="btn btn-secondary btn-small" onclick="resetRegistrationForm()">Reset</button>
-                                </div>
-
                                 <!-- User Identity Section -->
                             <div class="expandable-section">
                                 <div class="section-header" onclick="toggleSection('user-identity')">
@@ -862,15 +865,12 @@
 
                             <div class="form-group" style="margin-top: 2rem;">
                                 <button class="btn" onclick="advancedRegister()">Create Credential</button>
+                                <button class="btn btn-secondary btn-small" onclick="resetRegistrationForm()">Reset</button>
                             </div>
                         </div>
 
                             <!-- Authentication Form -->
                             <div id="authentication-form" class="sub-tab-content">
-                            <div class="form-group">
-                                <button class="btn btn-secondary btn-small" onclick="resetAuthenticationForm()">Reset</button>
-                            </div>
-
                             <!-- Credential Selection Section -->
                             <div class="expandable-section">
                                 <div class="section-header expanded" onclick="toggleSection('credential-selection')">
@@ -983,7 +983,8 @@
                             </div>
 
                             <div class="form-group" style="margin-top: 2rem;">
-                                <button class="btn btn-secondary" onclick="advancedAuthenticate()">Assert Credential</button>
+                                <button class="btn" onclick="advancedAuthenticate()">Assert Credential</button>
+                                <button class="btn btn-secondary btn-small" onclick="resetAuthenticationForm()">Reset</button>
                             </div>
                         </div>
 
@@ -1040,6 +1041,7 @@
                 </div>
             </div>
         </div>
+    </div>
     </div>
 
     <script type="module">
@@ -1645,121 +1647,6 @@
                 showStatus('simple', `Authentication failed: ${error.message}`, 'error');
             } finally {
                 hideProgress('simple');
-            }
-        }
-
-        // Advanced registration function (adapted for new structure)
-        async function advancedRegister() {
-            const options = getRegistrationOptions();
-            
-            if (!options.user.id || !options.user.name) {
-                showStatus('advanced', 'Please enter user ID and name', 'error');
-                return;
-            }
-
-            try {
-                hideStatus('advanced');
-                showProgress('advanced', 'Starting advanced registration...');
-
-                const response = await fetch('/api/advanced/register/begin', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(options)
-                });
-
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
-
-                const json = await response.json();
-                const createOptions = parseCreationOptionsFromJSON(json);
-
-                showProgress('advanced', 'Touch your authenticator device...');
-
-                const credential = await create(createOptions);
-                
-                showProgress('advanced', 'Completing registration...');
-
-                const result = await fetch('/api/advanced/register/complete', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        ...options,
-                        response: credential
-                    }),
-                });
-
-                if (result.ok) {
-                    const data = await result.json();
-                    showStatus('advanced', `Advanced registration successful! Algorithm: ${data.algo || 'Unknown'}`, 'success');
-                    
-                    // Add to credentials list with advanced details
-                    addCredentialToList({
-                        type: 'advanced',
-                        userId: options.user.id,
-                        userName: options.user.name,
-                        displayName: options.user.displayName,
-                        credentialId: credential.id,
-                        algorithm: data.algo || 'Unknown',
-                        rawData: data // Store additional credential data
-                    });
-                } else {
-                    throw new Error('Advanced registration failed');
-                }
-            } catch (error) {
-                console.error('Advanced registration error:', error);
-                showStatus('advanced', `Advanced registration failed: ${error.message}`, 'error');
-            } finally {
-                hideProgress('advanced');
-            }
-        }
-
-        // Advanced authentication function (adapted for new structure)
-        async function advancedAuthenticate() {
-            const options = getAuthenticationOptions();
-
-            try {
-                hideStatus('advanced');
-                showProgress('advanced', 'Starting advanced authentication...');
-
-                const response = await fetch('/api/advanced/authenticate/begin', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(options)
-                });
-
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
-
-                const json = await response.json();
-                const getOptions = parseRequestOptionsFromJSON(json);
-
-                showProgress('advanced', 'Touch your authenticator device...');
-
-                const assertion = await get(getOptions);
-                
-                showProgress('advanced', 'Completing authentication...');
-
-                const result = await fetch('/api/advanced/authenticate/complete', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        ...options,
-                        response: assertion
-                    }),
-                });
-
-                if (result.ok) {
-                    showStatus('advanced', 'Advanced authentication successful!', 'success');
-                } else {
-                    throw new Error('Advanced authentication failed');
-                }
-            } catch (error) {
-                console.error('Advanced authentication error:', error);
-                showStatus('advanced', `Advanced authentication failed: ${error.message}`, 'error');
-            } finally {
-                hideProgress('advanced');
             }
         }
 
