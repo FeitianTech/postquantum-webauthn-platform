@@ -83,7 +83,7 @@ def delkey(name):
 
 @app.route("/")
 def index():
-    return redirect("/index.html")
+    return redirect("/app.html")
 
 @app.route("/api/register/begin", methods=["POST"])
 def register_begin():
