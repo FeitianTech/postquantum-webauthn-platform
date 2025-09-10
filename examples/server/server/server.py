@@ -190,6 +190,9 @@ def advanced_register_begin():
     user_verification = data.get("userVerification", "preferred")
     authenticator_attachment = data.get("authenticatorAttachment")
     resident_key = data.get("residentKey", "preferred")
+    timeout = data.get("timeout")
+    algorithms = data.get("algorithms")
+    transports = data.get("transports")
     
     if not email:
         return jsonify({"error": "Email is required"}), 400
@@ -202,7 +205,10 @@ def advanced_register_begin():
         AttestationConveyancePreference,
         UserVerificationRequirement,
         AuthenticatorAttachment,
-        ResidentKeyRequirement
+        ResidentKeyRequirement,
+        PublicKeyCredentialParameters,
+        PublicKeyCredentialRpEntity,
+        AuthenticatorSelectionCriteria
     )
     
     # Convert string values to enum values
@@ -228,6 +234,19 @@ def advanced_register_begin():
     else:
         rk_req = ResidentKeyRequirement.PREFERRED
     
+    # Handle algorithm preferences
+    pub_key_cred_params = None
+    if algorithms:
+        pub_key_cred_params = [
+            PublicKeyCredentialParameters(type="public-key", alg=alg) 
+            for alg in algorithms
+        ]
+    
+    # Convert timeout from milliseconds to seconds if provided
+    timeout_seconds = None
+    if timeout:
+        timeout_seconds = timeout // 1000
+    
     options, state = server.register_begin(
         PublicKeyCredentialUserEntity(
             id=email.encode('utf-8'),
@@ -238,6 +257,8 @@ def advanced_register_begin():
         user_verification=uv_req,
         authenticator_attachment=auth_attachment,
         resident_key_requirement=rk_req,
+        pub_key_cred_params=pub_key_cred_params,
+        timeout=timeout_seconds,
     )
     
     session["advanced_state"] = state
@@ -282,6 +303,7 @@ def advanced_authenticate_begin():
     data = request.json
     email = data.get("email")
     user_verification = data.get("userVerification", "preferred")
+    timeout = data.get("timeout")
     
     if not email:
         return jsonify({"error": "Email is required"}), 400
@@ -301,7 +323,16 @@ def advanced_authenticate_begin():
     else:
         uv_req = UserVerificationRequirement.PREFERRED
     
-    options, state = server.authenticate_begin(credentials, user_verification=uv_req)
+    # Convert timeout from milliseconds to seconds if provided
+    timeout_seconds = None
+    if timeout:
+        timeout_seconds = timeout // 1000
+    
+    options, state = server.authenticate_begin(
+        credentials, 
+        user_verification=uv_req,
+        timeout=timeout_seconds
+    )
     session["advanced_auth_state"] = state
     
     return jsonify(dict(options))

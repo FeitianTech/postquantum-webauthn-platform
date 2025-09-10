@@ -423,6 +423,55 @@
                             </div>
 
                             <div class="form-group">
+                                <label for="adv-timeout">Timeout (seconds)</label>
+                                <input type="number" id="adv-timeout" class="form-control" placeholder="Default (60)" min="10" max="600" value="">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="adv-algorithms">Preferred Algorithms</label>
+                                <div class="checkbox-group">
+                                    <div class="checkbox-item">
+                                        <input type="checkbox" id="alg-es256" value="-7" checked>
+                                        <label for="alg-es256">ES256 (ECDSA)</label>
+                                    </div>
+                                    <div class="checkbox-item">
+                                        <input type="checkbox" id="alg-rs256" value="-257">
+                                        <label for="alg-rs256">RS256 (RSA)</label>
+                                    </div>
+                                    <div class="checkbox-item">
+                                        <input type="checkbox" id="alg-mldsa65" value="-49">
+                                        <label for="alg-mldsa65">ML-DSA-65 (PQC)</label>
+                                    </div>
+                                    <div class="checkbox-item">
+                                        <input type="checkbox" id="alg-mldsa44" value="-48">
+                                        <label for="alg-mldsa44">ML-DSA-44 (PQC)</label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="adv-transports">Preferred Transports</label>
+                                <div class="checkbox-group">
+                                    <div class="checkbox-item">
+                                        <input type="checkbox" id="transport-usb" value="usb" checked>
+                                        <label for="transport-usb">USB</label>
+                                    </div>
+                                    <div class="checkbox-item">
+                                        <input type="checkbox" id="transport-nfc" value="nfc">
+                                        <label for="transport-nfc">NFC</label>
+                                    </div>
+                                    <div class="checkbox-item">
+                                        <input type="checkbox" id="transport-ble" value="ble">
+                                        <label for="transport-ble">Bluetooth LE</label>
+                                    </div>
+                                    <div class="checkbox-item">
+                                        <input type="checkbox" id="transport-internal" value="internal" checked>
+                                        <label for="transport-internal">Internal/Platform</label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
                                 <button class="btn" onclick="advancedRegister()">Create Credential</button>
                                 <button class="btn btn-secondary" onclick="editCreateOptions()">Edit JSON</button>
                             </div>
@@ -436,6 +485,11 @@
                                     <option value="required">Required</option>
                                     <option value="discouraged">Discouraged</option>
                                 </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="assert-timeout">Timeout (seconds)</label>
+                                <input type="number" id="assert-timeout" class="form-control" placeholder="Default (60)" min="10" max="600" value="">
                             </div>
 
                             <div class="form-group">
@@ -688,6 +742,22 @@
 
         // Advanced Authentication Functions
         function getAdvancedCreateOptions() {
+            // Get selected algorithms
+            const algorithms = [];
+            document.querySelectorAll('input[id^="alg-"]:checked').forEach(checkbox => {
+                algorithms.push(parseInt(checkbox.value));
+            });
+
+            // Get selected transports  
+            const transports = [];
+            document.querySelectorAll('input[id^="transport-"]:checked').forEach(checkbox => {
+                transports.push(checkbox.value);
+            });
+
+            // Get timeout value
+            const timeoutValue = document.getElementById('adv-timeout').value;
+            const timeout = timeoutValue ? parseInt(timeoutValue) * 1000 : undefined; // Convert to milliseconds
+
             return {
                 email: document.getElementById('adv-email').value,
                 username: document.getElementById('adv-username').value || document.getElementById('adv-email').value,
@@ -695,14 +765,22 @@
                 attestation: document.getElementById('adv-attestation').value,
                 userVerification: document.getElementById('adv-user-verification').value,
                 authenticatorAttachment: document.getElementById('adv-authenticator-attachment').value || undefined,
-                residentKey: document.getElementById('adv-resident-key').value
+                residentKey: document.getElementById('adv-resident-key').value,
+                timeout: timeout,
+                algorithms: algorithms.length > 0 ? algorithms : undefined,
+                transports: transports.length > 0 ? transports : undefined
             };
         }
 
         function getAdvancedAssertOptions() {
+            // Get timeout value
+            const timeoutValue = document.getElementById('assert-timeout').value;
+            const timeout = timeoutValue ? parseInt(timeoutValue) * 1000 : undefined; // Convert to milliseconds
+
             return {
                 email: document.getElementById('adv-email').value,
-                userVerification: document.getElementById('assert-user-verification').value
+                userVerification: document.getElementById('assert-user-verification').value,
+                timeout: timeout
             };
         }
 
@@ -883,10 +961,26 @@
                     if (parsed.userVerification) document.getElementById('adv-user-verification').value = parsed.userVerification;
                     if (parsed.authenticatorAttachment !== undefined) document.getElementById('adv-authenticator-attachment').value = parsed.authenticatorAttachment || '';
                     if (parsed.residentKey) document.getElementById('adv-resident-key').value = parsed.residentKey;
+                    if (parsed.timeout !== undefined) document.getElementById('adv-timeout').value = parsed.timeout ? parsed.timeout / 1000 : '';
+                    
+                    // Handle algorithms
+                    if (parsed.algorithms) {
+                        document.querySelectorAll('input[id^="alg-"]').forEach(checkbox => {
+                            checkbox.checked = parsed.algorithms.includes(parseInt(checkbox.value));
+                        });
+                    }
+                    
+                    // Handle transports
+                    if (parsed.transports) {
+                        document.querySelectorAll('input[id^="transport-"]').forEach(checkbox => {
+                            checkbox.checked = parsed.transports.includes(checkbox.value);
+                        });
+                    }
                 } else if (currentJsonMode === 'assert') {
                     // Update assert form fields
                     if (parsed.email) document.getElementById('adv-email').value = parsed.email;
                     if (parsed.userVerification) document.getElementById('assert-user-verification').value = parsed.userVerification;
+                    if (parsed.timeout !== undefined) document.getElementById('assert-timeout').value = parsed.timeout ? parsed.timeout / 1000 : '';
                 }
                 
                 showStatus('advanced', 'JSON changes applied successfully!', 'success');
@@ -977,7 +1071,7 @@
             const formFields = [
                 'adv-email', 'adv-username', 'adv-display-name', 'adv-attestation',
                 'adv-user-verification', 'adv-authenticator-attachment', 'adv-resident-key',
-                'assert-user-verification'
+                'adv-timeout', 'assert-user-verification', 'assert-timeout'
             ];
 
             formFields.forEach(fieldId => {
@@ -986,6 +1080,11 @@
                     field.addEventListener('input', updateJsonFromForm);
                     field.addEventListener('change', updateJsonFromForm);
                 }
+            });
+
+            // Also add listeners for algorithm and transport checkboxes
+            document.querySelectorAll('input[id^="alg-"], input[id^="transport-"]').forEach(checkbox => {
+                checkbox.addEventListener('change', updateJsonFromForm);
             });
         });
 
