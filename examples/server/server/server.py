@@ -316,15 +316,25 @@ def advanced_register_complete():
 @app.route("/api/advanced/authenticate/begin", methods=["POST"])
 def advanced_authenticate_begin():
     data = request.json
-    username = data.get("username")
     user_verification = data.get("userVerification", "preferred")
     
-    if not username:
-        return jsonify({"error": "Username is required"}), 400
+    # Get all credentials from all users
+    all_credentials = []
+    try:
+        pkl_files = [f for f in os.listdir(basepath) if f.endswith('_credential_data.pkl')]
+        for pkl_file in pkl_files:
+            email = pkl_file.replace('_credential_data.pkl', '')
+            try:
+                user_creds = readkey(email)
+                all_credentials.extend(user_creds)
+            except Exception as e:
+                print(f"Error reading credentials for {email}: {e}")
+                continue
+    except Exception as e:
+        print(f"Error listing credential files: {e}")
     
-    credentials = readkey(username)
-    if not credentials:
-        return jsonify({"error": "No credentials found"}), 404
+    if not all_credentials:
+        return jsonify({"error": "No credentials found. Please register first."}), 404
     
     # Import required classes
     from fido2.webauthn import UserVerificationRequirement
@@ -337,7 +347,7 @@ def advanced_authenticate_begin():
     else:
         uv_req = UserVerificationRequirement.PREFERRED
     
-    options, state = server.authenticate_begin(credentials, user_verification=uv_req)
+    options, state = server.authenticate_begin(all_credentials, user_verification=uv_req)
     session["advanced_auth_state"] = state
     
     return jsonify(dict(options))
@@ -345,20 +355,33 @@ def advanced_authenticate_begin():
 @app.route("/api/advanced/authenticate/complete", methods=["POST"])
 def advanced_authenticate_complete():
     data = request.json
-    username = data.get("username")
     response = data.get("response")
     
-    if not username or not response:
-        return jsonify({"error": "Username and response are required"}), 400
+    if not response:
+        return jsonify({"error": "Response is required"}), 400
     
-    credentials = readkey(username)
-    if not credentials:
+    # Get all credentials from all users to find the matching one
+    all_credentials = []
+    try:
+        pkl_files = [f for f in os.listdir(basepath) if f.endswith('_credential_data.pkl')]
+        for pkl_file in pkl_files:
+            email = pkl_file.replace('_credential_data.pkl', '')
+            try:
+                user_creds = readkey(email)
+                all_credentials.extend(user_creds)
+            except Exception as e:
+                print(f"Error reading credentials for {email}: {e}")
+                continue
+    except Exception as e:
+        print(f"Error listing credential files: {e}")
+        
+    if not all_credentials:
         return jsonify({"error": "No credentials found"}), 404
     
     try:
         server.authenticate_complete(
             session.pop("advanced_auth_state"),
-            credentials,
+            all_credentials,
             response,
         )
         return jsonify({"status": "OK"})

@@ -230,7 +230,7 @@
 
         .three-column {
             display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
+            grid-template-columns: 1fr 2fr 0.8fr;
             gap: 2rem;
             margin-top: 1rem;
             align-items: start;
@@ -467,7 +467,7 @@
             background: #f8f9fa;
             border: 1px solid #dee2e6;
             border-radius: 12px;
-            padding: 1rem;
+            padding: 0.5rem;
             font-family: 'Monaco', 'Consolas', monospace;
             font-size: 0.9rem;
             line-height: 1.4;
@@ -632,6 +632,85 @@
                 border-bottom: none;
             }
         }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 2rem;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 600px;
+            position: relative;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .modal-title {
+            font-size: 1.5rem;
+            font-weight: 500;
+            color: #325F74;
+            margin: 0;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #6c757d;
+            padding: 0;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-close:hover {
+            color: #495057;
+        }
+
+        .modal-body {
+            line-height: 1.6;
+        }
+
+        .modal-body p {
+            margin-bottom: 0.75rem;
+        }
+
+        .modal-body strong {
+            color: #495057;
+        }
+
+        .modal-body code {
+            background: #f8f9fa;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 0.85rem;
+            word-break: break-all;
+        }
     </style>
 </head>
 <body>
@@ -714,7 +793,7 @@
                                     </div>
                                     <div class="form-group">
                                         <label for="user-display-name">Display Name</label>
-                                        <input type="text" id="user-display-name" class="form-control" placeholder="Enter display name">
+                                        <input type="text" id="user-display-name" class="form-control" placeholder="Auto-generated from username" readonly style="background-color: #f8f9fa; color: #6c757d;">
                                     </div>
                                 </div>
                             </div>
@@ -1378,20 +1457,68 @@
                 return;
             }
 
-            credentialsList.innerHTML = storedCredentials.map(cred => `
-                <div class="credential-item">
-                    <div class="credential-header">
-                        <strong>${cred.displayName || cred.userName || 'Unknown User'}</strong>
-                        <span class="credential-type">${cred.type || 'WebAuthn'}</span>
+            credentialsList.innerHTML = storedCredentials.map((cred, index) => `
+                <div class="credential-item" style="display: flex; align-items: center; justify-content: space-between; padding: 0.75rem; background: white; border: 1px solid #dee2e6; border-radius: 8px; margin-bottom: 0.5rem;">
+                    <div style="flex: 1; min-width: 0;">
+                        <div style="font-weight: 500; color: #495057; font-size: 0.9rem; margin-bottom: 0.25rem;">${cred.email || cred.username || 'Unknown User'}</div>
+                        <div style="font-size: 0.75rem; color: #6c757d;">
+                            ${cred.algorithm || 'Unknown'} • ${cred.createdAt ? new Date(cred.createdAt).toLocaleDateString() : 'Unknown date'}
+                        </div>
                     </div>
-                    <div class="credential-details">
-                        <p><strong>Username:</strong> ${cred.username || cred.email || 'N/A'}</p>
-                        <p><strong>Credential ID:</strong> <code>${cred.credentialId?.substring(0, 16) || 'Unknown'}...</code></p>
-                        <p><strong>Algorithm:</strong> ${cred.algorithm || 'Unknown'}</p>
-                        <p><strong>Created:</strong> ${cred.createdAt ? new Date(cred.createdAt).toLocaleString() : 'Unknown'}</p>
+                    <div style="display: flex; gap: 0.5rem; flex-shrink: 0;">
+                        <button class="btn-small" onclick="showCredentialDetails(${index})" style="background: #325F74; color: white; border: none; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; cursor: pointer;">Details</button>
+                        <button class="btn-small btn-danger" onclick="deleteCredential('${cred.email || cred.username}', ${index})" style="background: #dc3545; color: white; border: none; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; cursor: pointer;">Delete</button>
                     </div>
                 </div>
             `).join('');
+        }
+
+        function showCredentialDetails(index) {
+            const cred = storedCredentials[index];
+            if (!cred) return;
+
+            const modalBody = document.getElementById('modalBody');
+            modalBody.innerHTML = `
+                <p><strong>Username:</strong> ${cred.email || cred.username || 'N/A'}</p>
+                <p><strong>Display Name:</strong> ${cred.displayName || cred.userName || cred.email || cred.username || 'N/A'}</p>
+                <p><strong>Credential ID:</strong><br><code>${cred.credentialId || 'Unknown'}</code></p>
+                <p><strong>Algorithm:</strong> ${cred.algorithm || 'Unknown'}</p>
+                <p><strong>Type:</strong> ${cred.type || 'WebAuthn'}</p>
+                <p><strong>Sign Count:</strong> ${cred.signCount || 0}</p>
+                <p><strong>Created:</strong> ${cred.createdAt ? new Date(cred.createdAt).toLocaleString() : 'Unknown'}</p>
+            `;
+
+            document.getElementById('credentialModal').style.display = 'block';
+        }
+
+        function closeCredentialModal() {
+            document.getElementById('credentialModal').style.display = 'none';
+        }
+
+        async function deleteCredential(username, index) {
+            if (!confirm(`Are you sure you want to delete the credential for ${username}? This action cannot be undone.`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/deletepub', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({"email": username})
+                });
+
+                if (response.ok) {
+                    // Remove from local array
+                    storedCredentials.splice(index, 1);
+                    updateCredentialsDisplay();
+                    showStatus('advanced', 'Credential deleted successfully!', 'success');
+                } else {
+                    throw new Error('Failed to delete credential from server');
+                }
+            } catch (error) {
+                console.error('Error deleting credential:', error);
+                showStatus('advanced', `Failed to delete credential: ${error.message}`, 'error');
+            }
         }
 
         function randomizeLargeBlobWrite() {
@@ -2096,6 +2223,8 @@
                 randomizeChallenge('auth');
                 // Auto-generate large blob write value on page load
                 randomizeLargeBlobWrite();
+                // Load saved credentials
+                loadSavedCredentials();
             }, 100);
             
             // Set up form field listeners for auto-sync
@@ -2105,6 +2234,26 @@
                     input.addEventListener('input', updateJsonEditor);
                     input.addEventListener('change', updateJsonEditor);
                 });
+
+                // Set up display name sync with username
+                const usernameInput = document.getElementById('user-name');
+                const displayNameInput = document.getElementById('user-display-name');
+                if (usernameInput && displayNameInput) {
+                    usernameInput.addEventListener('input', () => {
+                        displayNameInput.value = usernameInput.value;
+                        updateJsonEditor();
+                    });
+                }
+
+                // Set up modal close on outside click
+                const modal = document.getElementById('credentialModal');
+                if (modal) {
+                    modal.addEventListener('click', (e) => {
+                        if (e.target === modal) {
+                            closeCredentialModal();
+                        }
+                    });
+                }
                 
                 // Set up specific PRF validation listeners
                 const prfFirstInputs = ['prf-eval-first-reg', 'prf-eval-first-auth'];
@@ -2329,7 +2478,6 @@
 
         function getAdvancedAssertOptions() {
             return {
-                username: document.getElementById('user-name').value,
                 userVerification: document.getElementById('user-verification-auth').value
             };
         }
@@ -2388,18 +2536,6 @@
                     const data = await result.json();
                     showStatus('advanced', `Advanced registration successful! Algorithm: ${data.algo || 'Unknown'}`, 'success');
                     
-                    // Add to saved credentials
-                    savedCredentials.push({
-                        type: 'advanced',
-                        username: options.username,
-                        credentialId: credential.id,
-                        algorithm: data.algo || 'Unknown',
-                        displayName: options.displayName,
-                        userName: options.username,
-                        createdAt: new Date().toISOString()
-                    });
-                    updateCredentialsDisplay();
-                    
                     // Reload credentials from server to get the latest
                     setTimeout(loadSavedCredentials, 1000);
                 } else {
@@ -2438,7 +2574,7 @@
 
             try {
                 hideStatus('advanced');
-                showProgress('advanced', 'Starting advanced authentication...');
+                showProgress('advanced', 'Detecting credentials...');
 
                 const response = await fetch('/api/advanced/authenticate/begin', {
                     method: 'POST',
@@ -2448,7 +2584,7 @@
 
                 if (!response.ok) {
                     if (response.status === 404) {
-                        throw new Error('No credentials found for this username. Please register first.');
+                        throw new Error('No credentials detected. Please register a credential first.');
                     }
                     const errorText = await response.text();
                     throw new Error(`Server error: ${errorText}`);
@@ -2467,14 +2603,13 @@
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({
-                        ...options,
                         response: assertion
                     }),
                 });
 
                 if (result.ok) {
                     const data = await result.json();
-                    showStatus('advanced', `Advanced authentication successful! Sign count: ${data.sign_count || 'Unknown'}`, 'success');
+                    showStatus('advanced', 'Advanced authentication successful!', 'success');
                 } else {
                     const errorText = await result.text();
                     throw new Error(`Authentication failed: ${errorText}`);
@@ -2484,7 +2619,7 @@
                 
                 let errorMessage = error.message;
                 if (error.name === 'NotAllowedError') {
-                    errorMessage = 'User cancelled or authenticator not available';
+                    errorMessage = 'User cancelled or no compatible authenticator detected';
                 } else if (error.name === 'InvalidStateError') {
                     errorMessage = 'Invalid authenticator state - please try again';
                 } else if (error.name === 'SecurityError') {
@@ -2682,5 +2817,18 @@
             }
         }
     </script>
+
+    <!-- Credential Details Modal -->
+    <div id="credentialModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Credential Details</h2>
+                <button class="modal-close" onclick="closeCredentialModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <!-- Content will be populated by JavaScript -->
+            </div>
+        </div>
+    </div>
 </body>
 </html>
