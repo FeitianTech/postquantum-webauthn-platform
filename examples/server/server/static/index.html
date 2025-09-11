@@ -633,42 +633,7 @@
             }
         }
 
-        /* Decoder-specific CSS to ensure proper layout */
-        #decoder-tab {
-            position: relative;
-            width: 100%;
-            height: auto;
-            min-height: 200px;
-            overflow: visible;
-        }
 
-        #decoder-tab.active {
-            display: block;
-        }
-
-        #decoder-tab .section {
-            position: relative;
-            width: 100%;
-            height: auto;
-            overflow: visible;
-            margin-bottom: 2rem;
-        }
-
-        /* Ensure decoder content is visible */
-        #decoder-tab h2,
-        #decoder-tab p,
-        #decoder-tab .form-group,
-        #decoder-tab .form-control,
-        #decoder-tab .btn {
-            display: block;
-            visibility: visible;
-            opacity: 1;
-        }
-
-        #decoder-tab .btn {
-            display: inline-block;
-            margin-right: 0.5rem;
-        }
 
         /* Modal Styles */
         .modal {
@@ -1533,6 +1498,11 @@
 
         // Tab switching functionality
         function switchTab(tab) {
+            // Debug logging with fallback
+            if (window.console && console.log) {
+                console.log('Switching to tab:', tab);
+            }
+            
             // Hide all tabs
             document.querySelectorAll('.tab-content').forEach(content => {
                 content.classList.remove('active');
@@ -1545,17 +1515,26 @@
             const targetTab = document.getElementById(tab + '-tab');
             if (targetTab) {
                 targetTab.classList.add('active');
+                if (window.console && console.log) {
+                    console.log('Activated tab:', targetTab.id);
+                }
+            } else {
+                if (window.console && console.error) {
+                    console.error('Tab not found:', tab + '-tab');
+                }
             }
             
-            // Activate the corresponding nav button
+            // Activate the corresponding nav button - use a more direct approach
             const navButtons = document.querySelectorAll('.nav-tab');
-            navButtons.forEach((button, index) => {
-                if ((tab === 'simple' && index === 0) || 
-                    (tab === 'advanced' && index === 1) || 
-                    (tab === 'decoder' && index === 2)) {
-                    button.classList.add('active');
+            const tabNames = ['simple', 'advanced', 'decoder'];
+            const tabIndex = tabNames.indexOf(tab);
+            
+            if (tabIndex !== -1 && navButtons[tabIndex]) {
+                navButtons[tabIndex].classList.add('active');
+                if (window.console && console.log) {
+                    console.log('Activated nav button:', tabIndex);
                 }
-            });
+            }
             
             // Update JSON editor if in advanced tab
             if (tab === 'advanced') {
@@ -2806,6 +2785,26 @@
             
             // Load saved credentials
             setTimeout(loadSavedCredentials, 300);
+            
+            // Ensure decoder tab functionality is properly initialized
+            setTimeout(() => {
+                // Verify decoder elements exist
+                const decoderTab = document.getElementById('decoder-tab');
+                const decoderInput = document.getElementById('decoder-input');
+                const decoderOutput = document.getElementById('decoder-output');
+                
+                if (window.console && console.log) {
+                    console.log('Decoder tab elements check:');
+                    console.log('decoder-tab:', !!decoderTab);
+                    console.log('decoder-input:', !!decoderInput);
+                    console.log('decoder-output:', !!decoderOutput);
+                }
+                
+                // Test switchTab function with decoder
+                if (window.console && console.log) {
+                    console.log('Testing decoder tab activation...');
+                }
+            }, 500);
         });
 
         // Make functions globally available
@@ -3235,28 +3234,51 @@
 
         // Decoder Functions
         function decodeResponse() {
-            const input = document.getElementById('decoder-input').value;
-            if (!input.trim()) {
+            const input = document.getElementById('decoder-input');
+            if (!input) {
+                if (window.console && console.error) {
+                    console.error('Decoder input element not found');
+                }
+                return;
+            }
+            
+            const inputValue = input.value;
+            if (!inputValue.trim()) {
                 showStatus('decoder', 'Please paste a WebAuthn response to decode', 'error');
                 return;
             }
 
             try {
-                const parsed = JSON.parse(input);
+                const parsed = JSON.parse(inputValue);
                 const decoded = analyzeWebAuthnResponse(parsed);
                 
-                document.getElementById('decoded-content').innerHTML = 
-                    `<pre>${JSON.stringify(decoded, null, 2)}</pre>`;
-                document.getElementById('decoder-output').style.display = 'block';
-                showStatus('decoder', 'Response decoded successfully!', 'success');
+                const decodedContent = document.getElementById('decoded-content');
+                const decoderOutput = document.getElementById('decoder-output');
+                
+                if (decodedContent && decoderOutput) {
+                    decodedContent.innerHTML = `<pre>${JSON.stringify(decoded, null, 2)}</pre>`;
+                    decoderOutput.style.display = 'block';
+                    showStatus('decoder', 'Response decoded successfully!', 'success');
+                } else {
+                    if (window.console && console.error) {
+                        console.error('Decoder output elements not found');
+                    }
+                }
             } catch (error) {
                 showStatus('decoder', `Decoding failed: ${error.message}`, 'error');
             }
         }
 
         function clearDecoder() {
-            document.getElementById('decoder-input').value = '';
-            document.getElementById('decoder-output').style.display = 'none';
+            const input = document.getElementById('decoder-input');
+            const output = document.getElementById('decoder-output');
+            
+            if (input) {
+                input.value = '';
+            }
+            if (output) {
+                output.style.display = 'none';
+            }
             hideStatus('decoder');
         }
 
