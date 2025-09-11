@@ -592,6 +592,23 @@
             content: '';
         }
 
+        /* For screens above 600px - three columns */
+        @media (min-width: 601px) {
+            .three-column {
+                grid-template-columns: 1fr 1fr 1fr;
+                gap: 2rem;
+            }
+        }
+
+        /* For screens 481px to 600px - two columns */
+        @media (max-width: 600px) and (min-width: 481px) {
+            .three-column {
+                grid-template-columns: 1fr 1fr;
+                gap: 1rem;
+            }
+        }
+
+        /* For screens below 480px - single column */
         @media (max-width: 480px) {
             .container {
                 padding: 1rem;
@@ -613,13 +630,6 @@
 
             .nav-tab:last-child {
                 border-bottom: none;
-            }
-        }
-
-        @media (max-width: 600px) and (min-width: 481px) {
-            .three-column {
-                grid-template-columns: 1fr 1fr;
-                gap: 1rem;
             }
         }
     </style>
