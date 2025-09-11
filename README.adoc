@@ -4,6 +4,8 @@ A test server and web UI for WebAuthn/FIDO2 registration and authentication. It 
 
 Built on python-fido2-PQC, which is built on Yubico’s python-fido2. Classical algorithms work by default; PQC (ML‑DSA‑44/65) is supported when available.
 
+---
+
 # Local setup (without PQC)
 
 This guide shows how to clone the repository and set up a working local environment for WebAuthn with Python FIDO2 on Windows, macOS, and Linux.
