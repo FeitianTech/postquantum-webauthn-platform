@@ -785,7 +785,7 @@
                                             <input type="text" id="user-id" class="form-control" placeholder="Auto-generated hex value">
                                             <button class="btn btn-small refresh-icon" onclick="randomizeUserId()" title="Generate new random User ID"></button>
                                         </div>
-                                        <div id="user-id-error" class="error-message">Invalid hex value</div>
+                                        <div id="user-id-error" class="error-message">Invalid hex value (1-64 bytes required)</div>
                                     </div>
                                     <div class="form-group">
                                         <label for="user-name">User Name</label>
@@ -866,7 +866,7 @@
                                             <input type="text" id="challenge-reg" class="form-control" placeholder="Auto-generated hex value">
                                             <button class="btn btn-small refresh-icon" onclick="randomizeChallenge('reg')" title="Generate new random challenge"></button>
                                         </div>
-                                        <div id="challenge-reg-error" class="error-message">Invalid hex value or less than 16 bytes</div>
+                                        <div id="challenge-reg-error" class="error-message">Invalid hex value (minimum 16 bytes required)</div>
                                     </div>
                                     <div class="form-group">
                                         <label for="timeout-reg">Timeout (milliseconds)</label>
@@ -979,7 +979,7 @@
                                             <input type="text" id="prf-eval-first-reg" class="form-control" placeholder="Hex value">
                                             <button class="btn btn-small refresh-icon" onclick="randomizePrfEval('first', 'reg')" title="Generate random PRF evaluation data"></button>
                                         </div>
-                                        <div id="prf-eval-first-reg-error" class="error-message">Invalid hex value</div>
+                                        <div id="prf-eval-first-reg-error" class="error-message">Invalid hex value (exactly 32 bytes required)</div>
                                     </div>
                                     <div class="form-group">
                                         <label for="prf-eval-second-reg">prf eval second</label>
@@ -987,7 +987,7 @@
                                             <input type="text" id="prf-eval-second-reg" class="form-control" placeholder="Hex value" disabled>
                                             <button class="btn btn-small refresh-icon" onclick="randomizePrfEval('second', 'reg')" disabled title="Generate random PRF evaluation data"></button>
                                         </div>
-                                        <div id="prf-eval-second-reg-error" class="error-message">Invalid hex value</div>
+                                        <div id="prf-eval-second-reg-error" class="error-message">Invalid hex value (exactly 32 bytes required)</div>
                                     </div>
                                 </div>
                             </div>
@@ -1043,7 +1043,7 @@
                                             <input type="text" id="challenge-auth" class="form-control" placeholder="Auto-generated hex value">
                                             <button class="btn btn-small refresh-icon" onclick="randomizeChallenge('auth')" title="Generate new random challenge"></button>
                                         </div>
-                                        <div id="challenge-auth-error" class="error-message">Invalid hex value or less than 16 bytes</div>
+                                        <div id="challenge-auth-error" class="error-message">Invalid hex value (minimum 16 bytes required)</div>
                                     </div>
                                     <div class="form-group">
                                         <label for="timeout-auth">Timeout (milliseconds)</label>
@@ -1099,7 +1099,7 @@
                                             <input type="text" id="prf-eval-first-auth" class="form-control" placeholder="Hex value">
                                             <button class="btn btn-small refresh-icon" onclick="randomizePrfEval('first', 'auth')" title="Generate random PRF evaluation data"></button>
                                         </div>
-                                        <div id="prf-eval-first-auth-error" class="error-message">Invalid hex value</div>
+                                        <div id="prf-eval-first-auth-error" class="error-message">Invalid hex value (exactly 32 bytes required)</div>
                                     </div>
                                     <div class="form-group">
                                         <label for="prf-eval-second-auth">prf eval second</label>
@@ -1107,7 +1107,7 @@
                                             <input type="text" id="prf-eval-second-auth" class="form-control" placeholder="Hex value" disabled>
                                             <button class="btn btn-small refresh-icon" onclick="randomizePrfEval('second', 'auth')" disabled title="Generate random PRF evaluation data"></button>
                                         </div>
-                                        <div id="prf-eval-second-auth-error" class="error-message">Invalid hex value</div>
+                                        <div id="prf-eval-second-auth-error" class="error-message">Invalid hex value (exactly 32 bytes required)</div>
                                     </div>
                                 </div>
                             </div>
@@ -1215,6 +1215,11 @@
         function hexToBase64Url(hexString) {
             if (!hexString) return '';
             
+            // Ensure hex string has even length
+            if (hexString.length % 2 !== 0) {
+                hexString = '0' + hexString;
+            }
+            
             // Convert hex to bytes
             const bytes = new Uint8Array(hexString.match(/.{2}/g).map(byte => parseInt(byte, 16)));
             
@@ -1246,6 +1251,37 @@
             
             // Convert bytes to hex
             return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        // Convert base64 to base64url
+        function base64ToBase64Url(base64) {
+            if (!base64) return '';
+            return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+        }
+
+        // Convert hex to regular base64
+        function hexToBase64(hexString) {
+            if (!hexString) return '';
+            
+            // Convert hex to bytes
+            const bytes = new Uint8Array(hexString.match(/.{2}/g).map(byte => parseInt(byte, 16)));
+            
+            // Convert to base64
+            return btoa(String.fromCharCode(...bytes));
+        }
+
+        // Convert hex to GUID format (for AAGUID display)
+        function hexToGuid(hexString) {
+            if (!hexString || hexString.length !== 32) return '';
+            
+            // Format as GUID: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+            return [
+                hexString.substring(0, 8),
+                hexString.substring(8, 12),
+                hexString.substring(12, 16),
+                hexString.substring(16, 20),
+                hexString.substring(20, 32)
+            ].join('-');
         }
 
         function validateHexInput(inputId, errorId, minBytes = 0) {
@@ -1328,13 +1364,13 @@
         }
 
         function randomizeChallenge(type) {
-            const challenge = generateRandomHex(16);  // 16 bytes = 32 hex chars
+            const challenge = generateRandomHex(32);  // 32 bytes = 64 hex chars
             document.getElementById('challenge-' + type).value = challenge;
             updateJsonEditor();
         }
 
         function randomizePrfEval(evalType, formType) {
-            const prfValue = generateRandomHex(16);  // 16 bytes = 32 hex chars
+            const prfValue = generateRandomHex(32);  // 32 bytes = 64 hex chars
             document.getElementById('prf-eval-' + evalType + '-' + formType).value = prfValue;
             
             // Enable/disable second PRF eval based on first
@@ -1396,7 +1432,7 @@
 
         function validateUserIdInput() {
             const userIdInput = document.getElementById('user-id');
-            return validateHexInput(userIdInput, 16, 64);
+            return validateHexInput(userIdInput, 2, 128); // 1-64 bytes = 2-128 hex chars
         }
 
         function validateChallengeInputs() {
@@ -1404,8 +1440,8 @@
             const challengeAuthInput = document.getElementById('challenge-auth');
             
             let valid = true;
-            if (challengeRegInput) valid &= validateHexInput(challengeRegInput, 32, 64);
-            if (challengeAuthInput) valid &= validateHexInput(challengeAuthInput, 32, 64);
+            if (challengeRegInput) valid &= validateHexInput(challengeRegInput, 32, 128); // At least 16 bytes = 32 hex chars, max 64 bytes = 128 hex chars
+            if (challengeAuthInput) valid &= validateHexInput(challengeAuthInput, 32, 128); // At least 16 bytes = 32 hex chars, max 64 bytes = 128 hex chars
             
             return valid;
         }
@@ -1422,7 +1458,7 @@
             prfInputs.forEach(inputId => {
                 const input = document.getElementById(inputId);
                 if (input && !input.disabled) {
-                    valid &= validateHexInput(input, 32, 64);
+                    valid &= validateHexInput(input, 64, 64); // Exactly 32 bytes = 64 hex chars
                 }
             });
             
@@ -1540,16 +1576,155 @@
             if (!cred) return;
 
             const modalBody = document.getElementById('modalBody');
-            modalBody.innerHTML = `
-                <p><strong>Username:</strong> ${cred.email || cred.username || 'N/A'}</p>
-                <p><strong>Display Name:</strong> ${cred.displayName || cred.userName || cred.email || cred.username || 'N/A'}</p>
-                <p><strong>Credential ID:</strong><br><code>${cred.credentialId || 'Unknown'}</code></p>
-                <p><strong>Algorithm:</strong> ${cred.algorithm || 'Unknown'}</p>
-                <p><strong>Type:</strong> ${cred.type || 'WebAuthn'}</p>
-                <p><strong>Sign Count:</strong> ${cred.signCount || 0}</p>
-                <p><strong>Created:</strong> ${cred.createdAt ? new Date(cred.createdAt).toLocaleString() : 'Unknown'}</p>
-            `;
-
+            
+            // Construct the detailed credential information in the specified format
+            let detailsHtml = '';
+            
+            if (cred.credentialId) {
+                const credIdHex = base64UrlToHex(cred.credentialId);
+                const credIdB64 = hexToBase64(credIdHex);
+                const credIdB64u = base64ToBase64Url(credIdB64);
+                
+                detailsHtml += `
+                <div style="margin-bottom: 1.5rem;">
+                    <h4 style="color: #325F74; margin-bottom: 0.5rem;">Credential Id</h4>
+                    <div style="font-family: 'Courier New', monospace; font-size: 0.9rem; line-height: 1.4;">
+                        <div><strong>b64</strong></div>
+                        <div style="word-break: break-all; background: #f8f9fa; padding: 0.25rem; border-radius: 4px; margin-bottom: 0.5rem;">${credIdB64}</div>
+                        <div><strong>b64u</strong></div>
+                        <div style="word-break: break-all; background: #f8f9fa; padding: 0.25rem; border-radius: 4px; margin-bottom: 0.5rem;">${credIdB64u}</div>
+                        <div><strong>hex</strong></div>
+                        <div style="word-break: break-all; background: #f8f9fa; padding: 0.25rem; border-radius: 4px;">${credIdHex}</div>
+                    </div>
+                </div>`;
+            }
+            
+            // Add AAGUID section if available (usually would be in authenticator data)
+            // For demo purposes, we'll show a placeholder or skip if not available
+            if (cred.aaguid) {
+                const aaguidHex = cred.aaguid;
+                const aaguidB64 = hexToBase64(aaguidHex);
+                const aaguidB64u = base64ToBase64Url(aaguidB64);
+                const aaguidGuid = hexToGuid(aaguidHex);
+                
+                detailsHtml += `
+                <div style="margin-bottom: 1.5rem;">
+                    <h4 style="color: #325F74; margin-bottom: 0.5rem;">AAGUID</h4>
+                    <div style="font-family: 'Courier New', monospace; font-size: 0.9rem; line-height: 1.4;">
+                        <div><strong>b64</strong></div>
+                        <div style="background: #f8f9fa; padding: 0.25rem; border-radius: 4px; margin-bottom: 0.5rem;">${aaguidB64}</div>
+                        <div><strong>b64u</strong></div>
+                        <div style="background: #f8f9fa; padding: 0.25rem; border-radius: 4px; margin-bottom: 0.5rem;">${aaguidB64u}</div>
+                        <div><strong>guid</strong></div>
+                        <div style="background: #f8f9fa; padding: 0.25rem; border-radius: 4px; margin-bottom: 0.5rem;">${aaguidGuid}</div>
+                        <div><strong>hex</strong></div>
+                        <div style="background: #f8f9fa; padding: 0.25rem; border-radius: 4px;">${aaguidHex}</div>
+                    </div>
+                </div>`;
+            }
+            
+            // User info at creation
+            detailsHtml += `
+            <div style="margin-bottom: 1.5rem;">
+                <h4 style="color: #325F74; margin-bottom: 0.5rem;">User info at creation</h4>
+                <div style="font-size: 0.9rem; line-height: 1.4;">
+                    <div><strong>Name:</strong> ${cred.email || cred.username || 'N/A'}</div>
+                    <div style="margin-bottom: 0.5rem;"><strong>Display name:</strong> ${cred.displayName || cred.userName || cred.email || cred.username || 'N/A'}</div>
+                </div>`;
+            
+            // User handle section if available
+            if (cred.userHandle) {
+                const userHandleHex = base64UrlToHex(cred.userHandle);
+                const userHandleB64 = hexToBase64(userHandleHex);
+                const userHandleB64u = base64ToBase64Url(userHandleB64);
+                
+                detailsHtml += `
+                <div style="margin-top: 0.5rem;">
+                    <div><strong>User handle:</strong></div>
+                    <div style="font-family: 'Courier New', monospace; font-size: 0.9rem; margin-left: 1rem;">
+                        <div><strong>b64</strong></div>
+                        <div style="background: #f8f9fa; padding: 0.25rem; border-radius: 4px; margin-bottom: 0.25rem;">${userHandleB64}</div>
+                        <div><strong>b64u</strong></div>
+                        <div style="background: #f8f9fa; padding: 0.25rem; border-radius: 4px; margin-bottom: 0.25rem;">${userHandleB64u}</div>
+                        <div><strong>hex</strong></div>
+                        <div style="background: #f8f9fa; padding: 0.25rem; border-radius: 4px;">${userHandleHex}</div>
+                    </div>
+                </div>`;
+            }
+            
+            detailsHtml += `</div>`;
+            
+            // Properties section
+            detailsHtml += `
+            <div style="margin-bottom: 1.5rem;">
+                <h4 style="color: #325F74; margin-bottom: 0.5rem;">Properties</h4>
+                <div style="font-size: 0.9rem; line-height: 1.4;">
+                    <div><strong>Discoverable (resident key):</strong> ${cred.residentKey || 'false'}</div>
+                    <div><strong>Supports largeBlob:</strong> ${cred.largeBlob || 'false'}</div>
+                </div>
+            </div>`;
+            
+            // Attestation Format
+            if (cred.attestationFormat) {
+                detailsHtml += `
+                <div style="margin-bottom: 1.5rem;">
+                    <h4 style="color: #325F74; margin-bottom: 0.5rem;">Attestation Format</h4>
+                    <div style="font-size: 0.9rem;">${cred.attestationFormat}</div>
+                </div>`;
+            }
+            
+            // Authenticator Data (registration)
+            if (cred.authenticatorData) {
+                detailsHtml += `
+                <div style="margin-bottom: 1.5rem;">
+                    <h4 style="color: #325F74; margin-bottom: 0.5rem;">Authenticator Data (registration)</h4>
+                    <div style="font-size: 0.9rem; line-height: 1.4;">
+                        <div><strong>AT:</strong> ${cred.authenticatorData.at || 'false'}, <strong>BE:</strong> ${cred.authenticatorData.be || 'false'}, <strong>BS:</strong> ${cred.authenticatorData.bs || 'false'}, <strong>ED:</strong> ${cred.authenticatorData.ed || 'false'}, <strong>UP:</strong> ${cred.authenticatorData.up || 'true'}, <strong>UV:</strong> ${cred.authenticatorData.uv || 'true'}</div>
+                        <div><strong>Signature Counter:</strong> ${cred.signCount || 0}</div>
+                    </div>
+                </div>`;
+            }
+            
+            // Client extension outputs
+            if (cred.clientExtensionOutputs) {
+                detailsHtml += `
+                <div style="margin-bottom: 1.5rem;">
+                    <h4 style="color: #325F74; margin-bottom: 0.5rem;">Client extension outputs (registration)</h4>
+                    <div style="font-family: 'Courier New', monospace; font-size: 0.9rem; background: #f8f9fa; padding: 0.5rem; border-radius: 4px; white-space: pre-wrap;">${JSON.stringify(cred.clientExtensionOutputs, null, 2)}</div>
+                </div>`;
+            }
+            
+            // Public Key section
+            if (cred.algorithm) {
+                let algorithmName = 'Unknown';
+                if (cred.algorithm === -7) algorithmName = 'ES256 (-7)';
+                else if (cred.algorithm === -257) algorithmName = 'RS256 (-257)';
+                else if (cred.algorithm === -37) algorithmName = 'PS256 (-37)';
+                else if (cred.algorithm === -48) algorithmName = 'ML-DSA-44 (PQC) (-48)';
+                else if (cred.algorithm === -49) algorithmName = 'ML-DSA-65 (PQC) (-49)';
+                else algorithmName = `Unknown (${cred.algorithm})`;
+                
+                detailsHtml += `
+                <div style="margin-bottom: 1.5rem;">
+                    <h4 style="color: #325F74; margin-bottom: 0.5rem;">Public Key</h4>
+                    <div style="font-size: 0.9rem;">
+                        <div><strong>Algorithm:</strong> ${algorithmName}</div>
+                    </div>
+                </div>`;
+            }
+            
+            // Additional info that's commonly available
+            if (cred.createdAt) {
+                detailsHtml += `
+                <div style="margin-bottom: 1.5rem;">
+                    <h4 style="color: #325F74; margin-bottom: 0.5rem;">Registration Info</h4>
+                    <div style="font-size: 0.9rem;">
+                        <div><strong>Created:</strong> ${new Date(cred.createdAt).toLocaleString()}</div>
+                    </div>
+                </div>`;
+            }
+            
+            modalBody.innerHTML = detailsHtml;
             document.getElementById('credentialModal').style.display = 'block';
         }
 
@@ -1584,7 +1759,7 @@
         }
 
         function randomizeLargeBlobWrite() {
-            const blobValue = generateRandomHex(16);  // 16 bytes = 32 hex chars
+            const blobValue = generateRandomHex(32);  // 32 bytes = 64 hex chars
             document.getElementById('large-blob-write').value = blobValue;
             updateJsonEditor();
         }
@@ -1605,7 +1780,7 @@
             document.getElementById('fake-cred-length-reg').value = '128';
             
             // Reset Other Options
-            document.getElementById('challenge-reg').value = generateRandomHex(16);  // 16 bytes = 32 hex chars
+            document.getElementById('challenge-reg').value = generateRandomHex(32);  // 32 bytes = 64 hex chars
             document.getElementById('timeout-reg').value = '90000';
             document.getElementById('param-eddsa').checked = true;
             document.getElementById('param-es256').checked = true;
@@ -1641,7 +1816,7 @@
             document.getElementById('fake-cred-length-auth').value = '256';
             
             // Reset Other Options
-            document.getElementById('challenge-auth').value = generateRandomHex(16);  // 16 bytes = 32 hex chars
+            document.getElementById('challenge-auth').value = generateRandomHex(32);  // 32 bytes = 64 hex chars
             document.getElementById('timeout-auth').value = '90000';
             document.getElementById('hint-client-device-auth').checked = false;
             document.getElementById('hint-hybrid-auth').checked = false;
@@ -1860,7 +2035,7 @@
             const userId = document.getElementById('user-id')?.value || generateRandomHex(32);
             const userName = document.getElementById('user-name')?.value || 'testuser';
             const userDisplayName = document.getElementById('user-display-name')?.value || 'Test User';
-            const challenge = document.getElementById('challenge-reg')?.value || generateRandomHex(16);
+            const challenge = document.getElementById('challenge-reg')?.value || generateRandomHex(32);
             
             // Build publicKey object
             const publicKey = {
@@ -1977,7 +2152,7 @@
 
         // Get CredentialRequestOptions from form (WebAuthn standard format)
         function getCredentialRequestOptions() {
-            const challenge = document.getElementById('challenge-auth')?.value || generateRandomHex(16);
+            const challenge = document.getElementById('challenge-auth')?.value || generateRandomHex(32);
             
             // Build publicKey object  
             const publicKey = {
