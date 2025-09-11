@@ -2209,6 +2209,35 @@
             }
         }
 
+        // Convert current format value to the appropriate JSON format
+        function currentFormatToJsonFormat(value) {
+            if (!value) return '';
+            const format = getCurrentBinaryFormat();
+            
+            switch (format) {
+                case 'hex':
+                    return {
+                        "$hex": value
+                    };
+                case 'b64':
+                    return {
+                        "$base64": value
+                    };
+                case 'b64u':
+                    return {
+                        "$base64url": value
+                    };
+                case 'js':
+                    return {
+                        "$js": value
+                    };
+                default:
+                    return {
+                        "$base64url": currentFormatToBase64Url(value)
+                    };
+            }
+        }
+
         // Convert current format value to base64url for JSON
         function currentFormatToBase64Url(value) {
             if (!value) return '';
@@ -2231,15 +2260,11 @@
                     id: window.location.hostname
                 },
                 user: {
-                    id: {
-                        "$base64": currentFormatToBase64Url(userId)
-                    },
+                    id: currentFormatToJsonFormat(userId),
                     name: userName,
                     displayName: userDisplayName
                 },
-                challenge: {
-                    "$base64": currentFormatToBase64Url(challenge)
-                },
+                challenge: currentFormatToJsonFormat(challenge),
                 pubKeyCredParams: [],
                 timeout: parseInt(document.getElementById('timeout-reg')?.value) || 90000,
                 authenticatorSelection: {},
@@ -2288,7 +2313,7 @@
                 publicKey.excludeCredentials = storedCredentials.map(cred => ({
                     type: "public-key",
                     id: {
-                        "$base64": hexToBase64Url(cred.credentialId)
+                        "$base64url": hexToBase64Url(cred.credentialId)
                     }
                 }));
             }
@@ -2314,15 +2339,11 @@
                 if (prfFirst) {
                     publicKey.extensions.prf = {
                         eval: {
-                            first: {
-                                "$base64": currentFormatToBase64Url(prfFirst)
-                            }
+                            first: currentFormatToJsonFormat(prfFirst)
                         }
                     };
                     if (prfSecond) {
-                        publicKey.extensions.prf.eval.second = {
-                            "$base64": currentFormatToBase64Url(prfSecond)
-                        };
+                        publicKey.extensions.prf.eval.second = currentFormatToJsonFormat(prfSecond);
                     }
                 }
             }
@@ -2343,9 +2364,7 @@
             
             // Build publicKey object  
             const publicKey = {
-                challenge: {
-                    "$base64": currentFormatToBase64Url(challenge)
-                },
+                challenge: currentFormatToJsonFormat(challenge),
                 timeout: parseInt(document.getElementById('timeout-auth')?.value) || 90000,
                 rpId: window.location.hostname,
                 allowCredentials: [],
@@ -2362,7 +2381,7 @@
                 publicKey.allowCredentials = storedCredentials.map(cred => ({
                     type: "public-key",
                     id: {
-                        "$base64": hexToBase64Url(cred.credentialId)
+                        "$base64url": hexToBase64Url(cred.credentialId)
                     }
                 }));
             }
@@ -2376,9 +2395,7 @@
                     const largeBlobWrite = document.getElementById('large-blob-write')?.value;
                     if (largeBlobWrite) {
                         publicKey.extensions.largeBlob = {
-                            write: {
-                                "$base64": currentFormatToBase64Url(largeBlobWrite)
-                            }
+                            write: currentFormatToJsonFormat(largeBlobWrite)
                         };
                     }
                 }
@@ -2389,15 +2406,11 @@
             if (prfFirst) {
                 publicKey.extensions.prf = {
                     eval: {
-                        first: {
-                            "$base64": currentFormatToBase64Url(prfFirst)
-                        }
+                        first: currentFormatToJsonFormat(prfFirst)
                     }
                 };
                 if (prfSecond) {
-                    publicKey.extensions.prf.eval.second = {
-                        "$base64": currentFormatToBase64Url(prfSecond)
-                    };
+                    publicKey.extensions.prf.eval.second = currentFormatToJsonFormat(prfSecond);
                 }
             }
 
@@ -2637,15 +2650,15 @@
             window.currentBinaryFormat = 'hex';
             updateFieldLabels('hex');
             
-            // Initialize with empty values as requested
+            // Initialize with default hex values as requested
             setTimeout(() => {
-                // Set empty defaults instead of random values
-                document.getElementById('user-id').value = '';
+                // Generate default hex values for userid, challenge, and largeblob write
+                document.getElementById('user-id').value = generateRandomHex(32);
                 document.getElementById('user-name').value = '';
                 document.getElementById('user-display-name').value = '';
-                document.getElementById('challenge-reg').value = '';
-                document.getElementById('challenge-auth').value = '';
-                document.getElementById('large-blob-write').value = '';
+                document.getElementById('challenge-reg').value = generateRandomHex(32);
+                document.getElementById('challenge-auth').value = generateRandomHex(32);
+                document.getElementById('large-blob-write').value = generateRandomHex(32);
                 document.getElementById('prf-eval-first-reg').value = '';
                 document.getElementById('prf-eval-second-reg').value = '';
                 document.getElementById('prf-eval-first-auth').value = '';
@@ -2653,6 +2666,9 @@
                 
                 // Load saved credentials
                 loadSavedCredentials();
+                
+                // Update JSON editor with initial values
+                updateJsonEditor();
             }, 100);
             
             // Set up form field listeners for auto-sync
