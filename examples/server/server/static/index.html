@@ -1133,6 +1133,15 @@
 
                         <!-- Right Column: Credentials Panel -->
                         <div class="credentials-column">
+                            <div class="form-group" style="margin-bottom: 1rem;">
+                                <label for="binary-format">Binary Format</label>
+                                <select id="binary-format" class="form-control" onchange="changeBinaryFormat()">
+                                    <option value="hex">hex</option>
+                                    <option value="b64">b64</option>
+                                    <option value="b64u">b64u</option>
+                                    <option value="js">js</option>
+                                </select>
+                            </div>
                             <h3>Saved Credentials</h3>
                             <div class="credentials-panel">
                                 <div id="credentials-list">
@@ -1284,12 +1293,197 @@
             ].join('-');
         }
 
+        // Convert hex to JavaScript Uint8Array format
+        function hexToJs(hexString) {
+            if (!hexString) return '';
+            
+            // Convert hex to bytes
+            const bytes = [];
+            for (let i = 0; i < hexString.length; i += 2) {
+                bytes.push(parseInt(hexString.substr(i, 2), 16));
+            }
+            
+            return `new Uint8Array([${bytes.join(', ')}])`;
+        }
+
+        // Convert base64 to hex
+        function base64ToHex(base64) {
+            if (!base64) return '';
+            
+            // Decode base64 to bytes
+            const binaryString = atob(base64);
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            
+            // Convert bytes to hex
+            return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        // Convert base64url to hex
+        function base64UrlToHexFixed(base64url) {
+            if (!base64url) return '';
+            
+            // Convert base64url to regular base64
+            let base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
+            
+            // Add padding if needed
+            while (base64.length % 4) {
+                base64 += '=';
+            }
+            
+            return base64ToHex(base64);
+        }
+
+        // Convert JavaScript Uint8Array format to hex
+        function jsToHex(jsString) {
+            if (!jsString) return '';
+            
+            // Extract numbers from the Uint8Array string
+            const match = jsString.match(/new Uint8Array\(\[([0-9, ]+)\]\)/);
+            if (!match) return '';
+            
+            const numbers = match[1].split(',').map(n => parseInt(n.trim()));
+            return numbers.map(n => n.toString(16).padStart(2, '0')).join('');
+        }
+
+        // Convert value from one format to another
+        function convertFormat(value, fromFormat, toFormat) {
+            if (!value || fromFormat === toFormat) return value;
+            
+            // First convert to hex as intermediate format
+            let hexValue = '';
+            switch (fromFormat) {
+                case 'hex':
+                    hexValue = value;
+                    break;
+                case 'b64':
+                    hexValue = base64ToHex(value);
+                    break;
+                case 'b64u':
+                    hexValue = base64UrlToHexFixed(value);
+                    break;
+                case 'js':
+                    hexValue = jsToHex(value);
+                    break;
+            }
+            
+            // Then convert from hex to target format
+            switch (toFormat) {
+                case 'hex':
+                    return hexValue;
+                case 'b64':
+                    return hexToBase64(hexValue);
+                case 'b64u':
+                    return hexToBase64Url(hexValue);
+                case 'js':
+                    return hexToJs(hexValue);
+                default:
+                    return hexValue;
+            }
+        }
+
+        // Get current binary format
+        function getCurrentBinaryFormat() {
+            return document.getElementById('binary-format').value;
+        }
+
+        // Change binary format for all relevant fields
+        function changeBinaryFormat() {
+            const newFormat = getCurrentBinaryFormat();
+            const oldFormat = window.currentBinaryFormat || 'hex';
+            
+            // Update all hex input fields
+            const fieldIds = [
+                'user-id', 'challenge-reg', 'challenge-auth',
+                'prf-eval-first-reg', 'prf-eval-second-reg',
+                'prf-eval-first-auth', 'prf-eval-second-auth',
+                'large-blob-write'
+            ];
+            
+            fieldIds.forEach(fieldId => {
+                const input = document.getElementById(fieldId);
+                if (input && input.value) {
+                    const convertedValue = convertFormat(input.value, oldFormat, newFormat);
+                    input.value = convertedValue;
+                }
+            });
+            
+            // Update field labels
+            updateFieldLabels(newFormat);
+            
+            // Update JSON editor
+            updateJsonEditor();
+            
+            // Store current format for next change
+            window.currentBinaryFormat = newFormat;
+        }
+
+        // Update field labels to show current format
+        function updateFieldLabels(format) {
+            const labelMappings = [
+                { id: 'user-id', text: `User ID (${format})` },
+                { id: 'challenge-reg', text: `Challenge (${format})` },
+                { id: 'challenge-auth', text: `Challenge (${format})` },
+                { id: 'prf-eval-first-reg', text: `prf eval first (${format})` },
+                { id: 'prf-eval-second-reg', text: `prf eval second (${format})` },
+                { id: 'prf-eval-first-auth', text: `prf eval first (${format})` },
+                { id: 'prf-eval-second-auth', text: `prf eval second (${format})` },
+                { id: 'large-blob-write', text: `largeBlob write (${format})` }
+            ];
+            
+            labelMappings.forEach(mapping => {
+                const input = document.getElementById(mapping.id);
+                if (input) {
+                    const label = document.querySelector(`label[for="${mapping.id}"]`);
+                    if (label) {
+                        label.textContent = mapping.text;
+                    }
+                }
+            });
+        }
+
         function validateHexInput(inputId, errorId, minBytes = 0) {
             const input = document.getElementById(inputId);
             const error = document.getElementById(errorId);
             const value = input.value.trim();
+            const format = getCurrentBinaryFormat();
             
-            if (value && (!isValidHex(value) || value.length < minBytes * 2)) {
+            if (!value) {
+                error.style.display = 'none';
+                input.classList.remove('error');
+                return true;
+            }
+            
+            let isValid = false;
+            let hexValue = '';
+            
+            try {
+                // Convert to hex for validation
+                switch (format) {
+                    case 'hex':
+                        isValid = /^[0-9a-fA-F]+$/.test(value) && value.length >= minBytes * 2;
+                        hexValue = value;
+                        break;
+                    case 'b64':
+                        hexValue = base64ToHex(value);
+                        isValid = hexValue.length >= minBytes * 2;
+                        break;
+                    case 'b64u':
+                        hexValue = base64UrlToHexFixed(value);
+                        isValid = hexValue.length >= minBytes * 2;
+                        break;
+                    case 'js':
+                        hexValue = jsToHex(value);
+                        isValid = hexValue.length >= minBytes * 2;
+                        break;
+                }
+            } catch (e) {
+                isValid = false;
+            }
+            
+            if (!isValid) {
                 error.style.display = 'block';
                 input.classList.add('error');
                 return false;
@@ -1359,25 +1553,31 @@
         // Randomization functions
         function randomizeUserId() {
             const userId = generateRandomHex(32);
-            document.getElementById('user-id').value = userId;
+            const format = getCurrentBinaryFormat();
+            const formattedValue = convertFormat(userId, 'hex', format);
+            document.getElementById('user-id').value = formattedValue;
             updateJsonEditor();
         }
 
         function randomizeChallenge(type) {
             const challenge = generateRandomHex(32);  // 32 bytes = 64 hex chars
-            document.getElementById('challenge-' + type).value = challenge;
+            const format = getCurrentBinaryFormat();
+            const formattedValue = convertFormat(challenge, 'hex', format);
+            document.getElementById('challenge-' + type).value = formattedValue;
             updateJsonEditor();
         }
 
         function randomizePrfEval(evalType, formType) {
             const prfValue = generateRandomHex(32);  // 32 bytes = 64 hex chars
-            document.getElementById('prf-eval-' + evalType + '-' + formType).value = prfValue;
+            const format = getCurrentBinaryFormat();
+            const formattedValue = convertFormat(prfValue, 'hex', format);
+            document.getElementById('prf-eval-' + evalType + '-' + formType).value = formattedValue;
             
             // Enable/disable second PRF eval based on first
             if (evalType === 'first') {
                 const secondInput = document.getElementById('prf-eval-second-' + formType);
                 const secondButton = secondInput.nextElementSibling;
-                if (prfValue) {
+                if (formattedValue) {
                     secondInput.disabled = false;
                     secondButton.disabled = false;
                 } else {
@@ -1387,6 +1587,14 @@
                 }
             }
             
+            updateJsonEditor();
+        }
+
+        function randomizeLargeBlobWrite() {
+            const blobValue = generateRandomHex(32);  // 32 bytes = 64 hex chars
+            const format = getCurrentBinaryFormat();
+            const formattedValue = convertFormat(blobValue, 'hex', format);
+            document.getElementById('large-blob-write').value = formattedValue;
             updateJsonEditor();
         }
 
@@ -1407,41 +1615,17 @@
             updateJsonEditor();
         }
 
-        // Input validation functions
-        function validateHexInput(input, minLength = 16, maxLength = 128) {
-            const value = input.value.trim();
-            const errorElement = document.getElementById(input.id + '-error');
-            
-            if (value === '') {
-                errorElement.style.display = 'none';
-                input.classList.remove('error');
-                return true;
-            }
-            
-            const hexPattern = /^[0-9a-fA-F]+$/;
-            if (!hexPattern.test(value) || value.length < minLength || value.length > maxLength) {
-                errorElement.style.display = 'block';
-                input.classList.add('error');
-                return false;
-            } else {
-                errorElement.style.display = 'none';
-                input.classList.remove('error');
-                return true;
-            }
-        }
-
         function validateUserIdInput() {
-            const userIdInput = document.getElementById('user-id');
-            return validateHexInput(userIdInput, 2, 128); // 1-64 bytes = 2-128 hex chars
+            return validateHexInput('user-id', 'user-id-error', 1); // 1-64 bytes
         }
 
         function validateChallengeInputs() {
+            let valid = true;
             const challengeRegInput = document.getElementById('challenge-reg');
             const challengeAuthInput = document.getElementById('challenge-auth');
             
-            let valid = true;
-            if (challengeRegInput) valid &= validateHexInput(challengeRegInput, 32, 128); // At least 16 bytes = 32 hex chars, max 64 bytes = 128 hex chars
-            if (challengeAuthInput) valid &= validateHexInput(challengeAuthInput, 32, 128); // At least 16 bytes = 32 hex chars, max 64 bytes = 128 hex chars
+            if (challengeRegInput) valid &= validateHexInput('challenge-reg', 'challenge-reg-error', 16); // min 16 bytes
+            if (challengeAuthInput) valid &= validateHexInput('challenge-auth', 'challenge-auth-error', 16); // min 16 bytes
             
             return valid;
         }
@@ -1457,8 +1641,8 @@
             let valid = true;
             prfInputs.forEach(inputId => {
                 const input = document.getElementById(inputId);
-                if (input && !input.disabled) {
-                    valid &= validateHexInput(input, 64, 64); // Exactly 32 bytes = 64 hex chars
+                if (input && !input.disabled && input.value.trim()) {
+                    valid &= validateHexInput(inputId, inputId + '-error', 32); // exactly 32 bytes
                 }
             });
             
@@ -1466,12 +1650,11 @@
         }
 
         function validateLargeBlobWriteInput() {
-            const largeBlobWriteInput = document.getElementById('large-blob-write');
-            if (!largeBlobWriteInput || largeBlobWriteInput.disabled) {
-                return true; // If disabled or not found, consider it valid
+            const input = document.getElementById('large-blob-write');
+            if (input && !input.disabled && input.value.trim()) {
+                return validateHexInput('large-blob-write', 'large-blob-write-error', 1); // at least 1 byte
             }
-            
-            return validateHexInput(largeBlobWriteInput, 2, 2048); // At least 1 byte, max 1024 bytes (2048 hex chars)
+            return true;
         }
 
         function checkLargeBlobCapability() {
@@ -1758,16 +1941,12 @@
             }
         }
 
-        function randomizeLargeBlobWrite() {
-            const blobValue = generateRandomHex(32);  // 32 bytes = 64 hex chars
-            document.getElementById('large-blob-write').value = blobValue;
-            updateJsonEditor();
-        }
+
 
         // Reset functions
         function resetRegistrationForm() {
             // Reset User Identity
-            document.getElementById('user-id').value = generateRandomHex(32);
+            document.getElementById('user-id').value = '';
             document.getElementById('user-name').value = '';
             document.getElementById('user-display-name').value = '';
             
@@ -1780,7 +1959,7 @@
             document.getElementById('fake-cred-length-reg').value = '128';
             
             // Reset Other Options
-            document.getElementById('challenge-reg').value = generateRandomHex(32);  // 32 bytes = 64 hex chars
+            document.getElementById('challenge-reg').value = '';
             document.getElementById('timeout-reg').value = '90000';
             document.getElementById('param-eddsa').checked = true;
             document.getElementById('param-es256').checked = true;
@@ -1816,7 +1995,7 @@
             document.getElementById('fake-cred-length-auth').value = '256';
             
             // Reset Other Options
-            document.getElementById('challenge-auth').value = generateRandomHex(32);  // 32 bytes = 64 hex chars
+            document.getElementById('challenge-auth').value = '';
             document.getElementById('timeout-auth').value = '90000';
             document.getElementById('hint-client-device-auth').checked = false;
             document.getElementById('hint-hybrid-auth').checked = false;
@@ -2030,12 +2209,20 @@
             }
         }
 
+        // Convert current format value to base64url for JSON
+        function currentFormatToBase64Url(value) {
+            if (!value) return '';
+            const format = getCurrentBinaryFormat();
+            const hexValue = convertFormat(value, format, 'hex');
+            return hexToBase64Url(hexValue);
+        }
+
         // Get CredentialCreationOptions from form (WebAuthn standard format)
         function getCredentialCreationOptions() {
-            const userId = document.getElementById('user-id')?.value || generateRandomHex(32);
-            const userName = document.getElementById('user-name')?.value || 'testuser';
-            const userDisplayName = document.getElementById('user-display-name')?.value || 'Test User';
-            const challenge = document.getElementById('challenge-reg')?.value || generateRandomHex(32);
+            const userId = document.getElementById('user-id')?.value || '';
+            const userName = document.getElementById('user-name')?.value || '';
+            const userDisplayName = document.getElementById('user-display-name')?.value || '';
+            const challenge = document.getElementById('challenge-reg')?.value || '';
             
             // Build publicKey object
             const publicKey = {
@@ -2045,13 +2232,13 @@
                 },
                 user: {
                     id: {
-                        "$base64": hexToBase64Url(userId)
+                        "$base64": currentFormatToBase64Url(userId)
                     },
                     name: userName,
                     displayName: userDisplayName
                 },
                 challenge: {
-                    "$base64": hexToBase64Url(challenge)
+                    "$base64": currentFormatToBase64Url(challenge)
                 },
                 pubKeyCredParams: [],
                 timeout: parseInt(document.getElementById('timeout-reg')?.value) || 90000,
@@ -2128,13 +2315,13 @@
                     publicKey.extensions.prf = {
                         eval: {
                             first: {
-                                "$base64": hexToBase64Url(prfFirst)
+                                "$base64": currentFormatToBase64Url(prfFirst)
                             }
                         }
                     };
                     if (prfSecond) {
                         publicKey.extensions.prf.eval.second = {
-                            "$base64": hexToBase64Url(prfSecond)
+                            "$base64": currentFormatToBase64Url(prfSecond)
                         };
                     }
                 }
@@ -2152,12 +2339,12 @@
 
         // Get CredentialRequestOptions from form (WebAuthn standard format)
         function getCredentialRequestOptions() {
-            const challenge = document.getElementById('challenge-auth')?.value || generateRandomHex(32);
+            const challenge = document.getElementById('challenge-auth')?.value || '';
             
             // Build publicKey object  
             const publicKey = {
                 challenge: {
-                    "$base64": hexToBase64Url(challenge)
+                    "$base64": currentFormatToBase64Url(challenge)
                 },
                 timeout: parseInt(document.getElementById('timeout-auth')?.value) || 90000,
                 rpId: window.location.hostname,
@@ -2190,7 +2377,7 @@
                     if (largeBlobWrite) {
                         publicKey.extensions.largeBlob = {
                             write: {
-                                "$base64": hexToBase64Url(largeBlobWrite)
+                                "$base64": currentFormatToBase64Url(largeBlobWrite)
                             }
                         };
                     }
@@ -2203,13 +2390,13 @@
                 publicKey.extensions.prf = {
                     eval: {
                         first: {
-                            "$base64": hexToBase64Url(prfFirst)
+                            "$base64": currentFormatToBase64Url(prfFirst)
                         }
                     }
                 };
                 if (prfSecond) {
                     publicKey.extensions.prf.eval.second = {
-                        "$base64": hexToBase64Url(prfSecond)
+                        "$base64": currentFormatToBase64Url(prfSecond)
                     };
                 }
             }
@@ -2277,7 +2464,7 @@
                 const json = await response.json();
                 const createOptions = parseCreationOptionsFromJSON(json);
 
-                showProgress('simple', 'Touch your authenticator device...');
+                showProgress('simple', 'Connecting your authenticator device...');
 
                 const credential = await create(createOptions);
                 
@@ -2338,7 +2525,7 @@
                 const json = await response.json();
                 const getOptions = parseRequestOptionsFromJSON(json);
 
-                showProgress('simple', 'Touch your authenticator device...');
+                showProgress('simple', 'Connecting your authenticator device...');
 
                 const assertion = await get(getOptions);
                 
@@ -2446,13 +2633,24 @@
 
         // Event listeners and initialization
         document.addEventListener('DOMContentLoaded', function() {
-            // Initialize with random values
+            // Initialize binary format system
+            window.currentBinaryFormat = 'hex';
+            updateFieldLabels('hex');
+            
+            // Initialize with empty values as requested
             setTimeout(() => {
-                randomizeUserId();
-                randomizeChallenge('reg');
-                randomizeChallenge('auth');
-                // Auto-generate large blob write value on page load
-                randomizeLargeBlobWrite();
+                // Set empty defaults instead of random values
+                document.getElementById('user-id').value = '';
+                document.getElementById('user-name').value = '';
+                document.getElementById('user-display-name').value = '';
+                document.getElementById('challenge-reg').value = '';
+                document.getElementById('challenge-auth').value = '';
+                document.getElementById('large-blob-write').value = '';
+                document.getElementById('prf-eval-first-reg').value = '';
+                document.getElementById('prf-eval-second-reg').value = '';
+                document.getElementById('prf-eval-first-auth').value = '';
+                document.getElementById('prf-eval-second-auth').value = '';
+                
                 // Load saved credentials
                 loadSavedCredentials();
             }, 100);
@@ -2561,6 +2759,12 @@
         window.advancedAuthenticate = advancedAuthenticate;
         window.decodeResponse = decodeResponse;
         window.clearDecoder = clearDecoder;
+        window.changeBinaryFormat = changeBinaryFormat;
+        window.saveJsonEditor = saveJsonEditor;
+        window.resetJsonEditor = resetJsonEditor;
+        window.showCredentialDetails = showCredentialDetails;
+        window.closeCredentialModal = closeCredentialModal;
+        window.deleteCredential = deleteCredential;
 
         function showProgress(tabId, message) {
             const progressEl = document.getElementById(tabId + '-progress');
@@ -2596,7 +2800,7 @@
                 const json = await request.json();
                 const options = parseCreationOptionsFromJSON(json);
                 
-                showProgress('simple', 'Touch your authenticator device...');
+                showProgress('simple', 'Connecting your authenticator device...');
 
                 const response = await create(options);
                 
@@ -2647,7 +2851,7 @@
                 const json = await request.json();
                 const options = parseRequestOptionsFromJSON(json);
                 
-                showProgress('simple', 'Touch your authenticator device...');
+                showProgress('simple', 'Connecting your authenticator device...');
 
                 const response = await get(options);
                 
@@ -2760,7 +2964,7 @@
                 const json = await response.json();
                 const createOptions = parseCreationOptionsFromJSON(json);
                 
-                showProgress('advanced', 'Touch your authenticator device...');
+                showProgress('advanced', 'Connecting your authenticator device...');
 
                 const credential = await create(createOptions);
                 
@@ -2837,7 +3041,7 @@
                 const json = await response.json();
                 const assertOptions = parseRequestOptionsFromJSON(json);
                 
-                showProgress('advanced', 'Touch your authenticator device...');
+                showProgress('advanced', 'Connecting your authenticator device...');
 
                 const assertion = await get(assertOptions);
                 
