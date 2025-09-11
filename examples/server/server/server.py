@@ -227,74 +227,108 @@ def list_credentials():
                 # Load credentials for this email
                 user_creds = readkey(email)
                 for cred in user_creds:
-                    # Handle both old format (just AttestedCredentialData) and new format (dict with comprehensive data)
-                    if isinstance(cred, dict):
-                        # New format with comprehensive data
-                        cred_data = cred['credential_data']
-                        auth_data = cred['auth_data']
-                        user_info = cred['user_info']
-                        
-                        # Extract detailed information
-                        credential_info = {
-                            'email': email,
-                            'credentialId': base64.b64encode(cred_data.credential_id).decode('utf-8'),
-                            'userName': user_info.get('name', email),
-                            'displayName': user_info.get('display_name', email),
-                            'userHandle': base64.b64encode(user_info.get('user_handle', cred_data.credential_id)).decode('utf-8') if user_info.get('user_handle') else None,
-                            'algorithm': cred_data.public_key[3] if hasattr(cred_data, 'public_key') and len(cred_data.public_key) > 3 else 'Unknown',
-                            'type': 'WebAuthn',
-                            'createdAt': cred.get('registration_time'),
-                            'signCount': auth_data.counter if hasattr(auth_data, 'counter') else 0,
+                    try:
+                        # Handle both old format (just AttestedCredentialData) and new format (dict with comprehensive data)
+                        if isinstance(cred, dict) and 'credential_data' in cred:
+                            # New format with comprehensive data
+                            if isinstance(cred['credential_data'], dict):
+                                # Simple dict format for testing
+                                cred_data = cred['credential_data']
+                                auth_data = cred['auth_data']
+                                user_info = cred['user_info']
+                                
+                                credential_info = {
+                                    'email': email,
+                                    'credentialId': base64.b64encode(cred_data['credential_id']).decode('utf-8'),
+                                    'userName': user_info.get('name', email),
+                                    'displayName': user_info.get('display_name', email),
+                                    'userHandle': base64.b64encode(user_info.get('user_handle', cred_data['credential_id'])).decode('utf-8') if user_info.get('user_handle') else None,
+                                    'algorithm': cred_data.get('public_key', {}).get(3, 'Unknown'),
+                                    'type': 'WebAuthn',
+                                    'createdAt': cred.get('registration_time'),
+                                    'signCount': auth_data.get('counter', 0),
+                                    
+                                    # Detailed WebAuthn data
+                                    'aaguid': cred_data.get('aaguid'),
+                                    'flags': auth_data.get('flags', {}),
+                                    'clientExtensionOutputs': cred.get('client_extension_outputs', {}),
+                                    'attestationFormat': cred.get('attestation_object', 'none'),
+                                    'publicKeyAlgorithm': cred_data.get('public_key', {}).get(3),
+                                    
+                                    # Properties
+                                    'residentKey': auth_data.get('flags', {}).get('be', False),
+                                    'largeBlob': cred.get('client_extension_outputs', {}).get('largeBlob', {}).get('supported', False),
+                                }
+                            else:
+                                # New format with real FIDO2 objects
+                                cred_data = cred['credential_data']
+                                auth_data = cred['auth_data']
+                                user_info = cred['user_info']
+                                
+                                # Extract detailed information
+                                credential_info = {
+                                    'email': email,
+                                    'credentialId': base64.b64encode(cred_data.credential_id).decode('utf-8'),
+                                    'userName': user_info.get('name', email),
+                                    'displayName': user_info.get('display_name', email),
+                                    'userHandle': base64.b64encode(user_info.get('user_handle', cred_data.credential_id)).decode('utf-8') if user_info.get('user_handle') else None,
+                                    'algorithm': cred_data.public_key[3] if hasattr(cred_data, 'public_key') and len(cred_data.public_key) > 3 else 'Unknown',
+                                    'type': 'WebAuthn',
+                                    'createdAt': cred.get('registration_time'),
+                                    'signCount': auth_data.counter if hasattr(auth_data, 'counter') else 0,
+                                    
+                                    # Detailed WebAuthn data
+                                    'aaguid': cred_data.aaguid.hex() if hasattr(cred_data, 'aaguid') and cred_data.aaguid else None,
+                                    'flags': {
+                                        'up': bool(auth_data.flags & auth_data.FLAG.UP) if hasattr(auth_data, 'flags') else True,
+                                        'uv': bool(auth_data.flags & auth_data.FLAG.UV) if hasattr(auth_data, 'flags') else True,
+                                        'at': bool(auth_data.flags & auth_data.FLAG.AT) if hasattr(auth_data, 'flags') else True,
+                                        'ed': bool(auth_data.flags & auth_data.FLAG.ED) if hasattr(auth_data, 'flags') else False,
+                                        'be': bool(auth_data.flags & auth_data.FLAG.BE) if hasattr(auth_data, 'flags') else False,
+                                        'bs': bool(auth_data.flags & auth_data.FLAG.BS) if hasattr(auth_data, 'flags') else False,
+                                    },
+                                    'clientExtensionOutputs': cred.get('client_extension_outputs', {}),
+                                    'attestationFormat': getattr(cred.get('attestation_object'), 'fmt', 'none') if cred.get('attestation_object') else 'none',
+                                    'publicKeyAlgorithm': cred_data.public_key[3] if hasattr(cred_data, 'public_key') and len(cred_data.public_key) > 3 else None,
+                                    
+                                    # Properties that would be determined from extensions/capabilities
+                                    'residentKey': bool(auth_data.flags & auth_data.FLAG.BE) if hasattr(auth_data, 'flags') else False,  # Backup Eligibility indicates resident key capability
+                                    'largeBlob': cred.get('client_extension_outputs', {}).get('largeBlob', {}).get('supported', False),
+                                }
+                        else:
+                            # Old format (just AttestedCredentialData)
+                            credential_info = {
+                                'email': email,
+                                'credentialId': base64.b64encode(cred.credential_id).decode('utf-8'),
+                                'userName': email,
+                                'displayName': email,
+                                'userHandle': None,
+                                'algorithm': cred.public_key[3] if hasattr(cred, 'public_key') and len(cred.public_key) > 3 else 'Unknown',
+                                'type': 'WebAuthn',
+                                'createdAt': None,
+                                'signCount': 0,
+                                
+                                # Limited data available for old format
+                                'aaguid': cred.aaguid.hex() if hasattr(cred, 'aaguid') and cred.aaguid else None,
+                                'flags': {
+                                    'up': True,  # Default assumptions for old data
+                                    'uv': True,
+                                    'at': True,
+                                    'ed': False,
+                                    'be': False,
+                                    'bs': False,
+                                },
+                                'clientExtensionOutputs': {},
+                                'attestationFormat': 'none',
+                                'publicKeyAlgorithm': cred.public_key[3] if hasattr(cred, 'public_key') and len(cred.public_key) > 3 else None,
+                                'residentKey': False,
+                                'largeBlob': False,
+                            }
                             
-                            # Detailed WebAuthn data
-                            'aaguid': cred_data.aaguid.hex() if hasattr(cred_data, 'aaguid') and cred_data.aaguid else None,
-                            'flags': {
-                                'up': bool(auth_data.flags & auth_data.FLAG.UP) if hasattr(auth_data, 'flags') else True,
-                                'uv': bool(auth_data.flags & auth_data.FLAG.UV) if hasattr(auth_data, 'flags') else True,
-                                'at': bool(auth_data.flags & auth_data.FLAG.AT) if hasattr(auth_data, 'flags') else True,
-                                'ed': bool(auth_data.flags & auth_data.FLAG.ED) if hasattr(auth_data, 'flags') else False,
-                                'be': bool(auth_data.flags & auth_data.FLAG.BE) if hasattr(auth_data, 'flags') else False,
-                                'bs': bool(auth_data.flags & auth_data.FLAG.BS) if hasattr(auth_data, 'flags') else False,
-                            },
-                            'clientExtensionOutputs': cred.get('client_extension_outputs', {}),
-                            'attestationFormat': getattr(cred.get('attestation_object'), 'fmt', 'none') if cred.get('attestation_object') else 'none',
-                            'publicKeyAlgorithm': cred_data.public_key[3] if hasattr(cred_data, 'public_key') and len(cred_data.public_key) > 3 else None,
-                            
-                            # Properties that would be determined from extensions/capabilities
-                            'residentKey': bool(auth_data.flags & auth_data.FLAG.BE) if hasattr(auth_data, 'flags') else False,  # Backup Eligibility indicates resident key capability
-                            'largeBlob': cred.get('client_extension_outputs', {}).get('largeBlob', {}).get('supported', False),
-                        }
-                    else:
-                        # Old format (just AttestedCredentialData)
-                        credential_info = {
-                            'email': email,
-                            'credentialId': base64.b64encode(cred.credential_id).decode('utf-8'),
-                            'userName': email,
-                            'displayName': email,
-                            'userHandle': None,
-                            'algorithm': cred.public_key[3] if hasattr(cred, 'public_key') and len(cred.public_key) > 3 else 'Unknown',
-                            'type': 'WebAuthn',
-                            'createdAt': None,
-                            'signCount': 0,
-                            
-                            # Limited data available for old format
-                            'aaguid': cred.aaguid.hex() if hasattr(cred, 'aaguid') and cred.aaguid else None,
-                            'flags': {
-                                'up': True,  # Default assumptions for old data
-                                'uv': True,
-                                'at': True,
-                                'ed': False,
-                                'be': False,
-                                'bs': False,
-                            },
-                            'clientExtensionOutputs': {},
-                            'attestationFormat': 'none',
-                            'publicKeyAlgorithm': cred.public_key[3] if hasattr(cred, 'public_key') and len(cred.public_key) > 3 else None,
-                            'residentKey': False,
-                            'largeBlob': False,
-                        }
-                        
-                    credentials.append(credential_info)
+                        credentials.append(credential_info)
+                    except Exception as e:
+                        print(f"Error processing credential: {e}")
+                        continue
             except Exception as e:
                 print(f"Error reading credentials for {email}: {e}")
                 continue
