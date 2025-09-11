@@ -1684,16 +1684,28 @@
             return true;
         }
 
+        function validateLargeBlobDependency() {
+            const largeBlobReg = document.getElementById('large-blob-reg')?.value;
+            const residentKey = document.getElementById('resident-key')?.value;
+            
+            // If largeBlob is set to preferred or required, resident key must be required
+            if (largeBlobReg && (largeBlobReg === 'preferred' || largeBlobReg === 'required')) {
+                if (residentKey !== 'required') {
+                    showStatus('advanced', 'LargeBlob extensions require resident key to be set to "Required"', 'error');
+                    return false;
+                }
+            }
+            return true;
+        }
+
         function checkLargeBlobCapability() {
-            // Check if any saved credentials support large blob
+            // Check if any saved credentials actually support large blob
             let hasLargeBlobCapability = false;
             
-            // For now, we'll assume that credentials created with largeBlob support in registration 
-            // would have this capability. In a real implementation, you'd check the credential data.
-            // Since we don't have this info readily available, we'll enable it if there are any credentials
-            // and assume they might support it. A more robust implementation would check the actual 
-            // credential metadata.
-            hasLargeBlobCapability = storedCredentials.length > 0;
+            // Check actual credential data for largeBlob support
+            if (storedCredentials && storedCredentials.length > 0) {
+                hasLargeBlobCapability = storedCredentials.some(cred => cred.largeBlob === true);
+            }
             
             const largeBlobSelect = document.getElementById('large-blob-auth');
             const largeBlobWriteInput = document.getElementById('large-blob-write');
@@ -1823,29 +1835,6 @@
             
             // Construct the detailed credential information in the exact format requested
             let detailsHtml = '';
-            
-            // AAGUID section
-            if (cred.aaguid) {
-                const aaguidHex = cred.aaguid;
-                const aaguidB64 = hexToBase64(aaguidHex);
-                const aaguidB64u = base64ToBase64Url(aaguidB64);
-                const aaguidGuid = hexToGuid(aaguidHex);
-                
-                detailsHtml += `
-                <div style="margin-bottom: 1.5rem;">
-                    <h4 style="color: #325F74; margin-bottom: 0.5rem;">AAGUID</h4>
-                    <div style="font-family: 'Courier New', monospace; font-size: 0.9rem; line-height: 1.4;">
-                        <div><strong>b64</strong></div>
-                        <div style="background: #f8f9fa; padding: 0.25rem; border-radius: 4px; margin-bottom: 0.5rem;">${aaguidB64}</div>
-                        <div><strong>b64u</strong></div>
-                        <div style="background: #f8f9fa; padding: 0.25rem; border-radius: 4px; margin-bottom: 0.5rem;">${aaguidB64u}</div>
-                        <div><strong>guid</strong></div>
-                        <div style="background: #f8f9fa; padding: 0.25rem; border-radius: 4px; margin-bottom: 0.5rem;">${aaguidGuid}</div>
-                        <div><strong>hex</strong></div>
-                        <div style="background: #f8f9fa; padding: 0.25rem; border-radius: 4px;">${aaguidHex}</div>
-                    </div>
-                </div>`;
-            }
             
             // User info at creation
             detailsHtml += `
@@ -2729,6 +2718,23 @@
                     });
                 }
 
+                // Set up resident key dependency for largeBlob
+                const residentKeySelect = document.getElementById('resident-key');
+                const largeBlobRegSelect = document.getElementById('large-blob-reg');
+                if (residentKeySelect && largeBlobRegSelect) {
+                    residentKeySelect.addEventListener('change', () => {
+                        const residentKey = residentKeySelect.value;
+                        if (residentKey !== 'required') {
+                            // If resident key is not required, disable largeBlob preferred/required options
+                            const largeBlobValue = largeBlobRegSelect.value;
+                            if (largeBlobValue === 'preferred' || largeBlobValue === 'required') {
+                                largeBlobRegSelect.value = ''; // Reset to unspecified
+                            }
+                        }
+                        updateJsonEditor();
+                    });
+                }
+
                 // Set up modal close on outside click
                 const modal = document.getElementById('credentialModal');
                 if (modal) {
@@ -3104,8 +3110,9 @@
             const isChallengeValid = validateChallengeInputs();
             const isPrfValid = validatePrfEvalInputs();
             const isLargeBlobValid = validateLargeBlobWriteInput();
+            const isLargeBlobDependencyValid = validateLargeBlobDependency();
             
-            if (!isUserIdValid || !isChallengeValid || !isPrfValid || !isLargeBlobValid) {
+            if (!isUserIdValid || !isChallengeValid || !isPrfValid || !isLargeBlobValid || !isLargeBlobDependencyValid) {
                 showStatus('advanced', 'Please fix the validation errors above', 'error');
                 return;
             }

@@ -315,15 +315,8 @@ def list_credentials():
                                     'publicKeyAlgorithm': cred_data.public_key[3] if hasattr(cred_data, 'public_key') and len(cred_data.public_key) > 3 else None,
                                     
                                     # Properties determined from actual extension results and request params
-                                    'residentKey': cred.get('client_extension_outputs', {}).get('credProps', {}).get('rk', 
-                                        # Fallback: check if resident key was requested and backup eligible flag is set
-                                        cred.get('request_params', {}).get('resident_key') == 'required' and 
-                                        bool(auth_data.flags & auth_data.FLAG.BE) if hasattr(auth_data, 'flags') else False
-                                    ),
-                                    'largeBlob': cred.get('client_extension_outputs', {}).get('largeBlob', {}).get('supported', 
-                                        # Fallback: if largeBlob was requested but no extension result, assume false
-                                        False
-                                    ),
+                                    'residentKey': cred.get('client_extension_outputs', {}).get('credProps', {}).get('rk', False),
+                                    'largeBlob': cred.get('client_extension_outputs', {}).get('largeBlob', {}).get('supported', False),
                                     
                                     # Add original request parameters for debugging/verification
                                     'requestParams': cred.get('request_params', {}),
@@ -493,7 +486,8 @@ def advanced_register_begin():
     # Prepare exclude list
     exclude_list = []
     if exclude_credentials and credentials:
-        exclude_list = credentials
+        # Extract credential data in compatible format for exclusion
+        exclude_list = [extract_credential_data(cred) for cred in credentials]
     
     # Add fake credential if requested
     if fake_cred_length > 0:
@@ -515,7 +509,10 @@ def advanced_register_begin():
     # Process extensions
     processed_extensions = {}
     
-    # credProps extension
+    # Always request credProps extension to detect resident key support
+    processed_extensions["credProps"] = True
+    
+    # credProps extension (explicit request)
     if extensions.get("credProps"):
         processed_extensions["credProps"] = True
     
@@ -585,12 +582,18 @@ def advanced_register_begin():
     
     # Debug: Print the generated options to see what's actually being sent
     print("\n=== ADVANCED REGISTRATION OPTIONS DEBUG ===")
+    print(f"User ID provided: {user_id}")
     print(f"User verification requested: {user_verification} -> {uv_req}")
     print(f"Attestation requested: {attestation} -> {temp_server.attestation}")
     print(f"Resident key requested: {resident_key} -> {rk_req}")
     print(f"Timeout requested: {timeout}")
     print(f"Extensions requested: {processed_extensions}")
-    print(f"Generated options: {dict(options)}")
+    print(f"Exclude credentials enabled: {exclude_credentials}")
+    print(f"Exclude list size: {len(exclude_list) if exclude_list else 0}")
+    print(f"Generated options user ID: {dict(options).get('user', {}).get('id')}")
+    print(f"Generated options attestation: {dict(options).get('attestation')}")
+    print(f"Generated options authenticatorSelection: {dict(options).get('authenticatorSelection')}")
+    print(f"Generated options extensions: {dict(options).get('extensions')}")
     print("=========================================\n")
     
     return jsonify(dict(options))
