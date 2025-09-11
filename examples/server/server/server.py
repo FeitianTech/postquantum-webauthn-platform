@@ -152,6 +152,15 @@ def register_complete():
         'attestation_object': response.get('attestationObject', ''),
         'attestation_format': attestation_format,  # Store parsed attestation format
         'client_extension_outputs': response.get('clientExtensionResults', {}),
+        # Store request parameters for simple registration (defaults)
+        'request_params': {
+            'user_verification': 'discouraged',
+            'authenticator_attachment': 'cross-platform',
+            'attestation': 'none',
+            'resident_key': None,
+            'extensions': {},
+            'timeout': 90000
+        }
     }
     
     credentials.append(credential_info)
@@ -305,9 +314,19 @@ def list_credentials():
                                     'attestationFormat': cred.get('attestation_format', 'none'),  # Use stored attestation format
                                     'publicKeyAlgorithm': cred_data.public_key[3] if hasattr(cred_data, 'public_key') and len(cred_data.public_key) > 3 else None,
                                     
-                                    # Properties determined from actual extension results or credProps
-                                    'residentKey': cred.get('client_extension_outputs', {}).get('credProps', {}).get('rk', False),  # Use credProps extension result
-                                    'largeBlob': cred.get('client_extension_outputs', {}).get('largeBlob', {}).get('supported', False),
+                                    # Properties determined from actual extension results and request params
+                                    'residentKey': cred.get('client_extension_outputs', {}).get('credProps', {}).get('rk', 
+                                        # Fallback: check if resident key was requested and backup eligible flag is set
+                                        cred.get('request_params', {}).get('resident_key') == 'required' and 
+                                        bool(auth_data.flags & auth_data.FLAG.BE) if hasattr(auth_data, 'flags') else False
+                                    ),
+                                    'largeBlob': cred.get('client_extension_outputs', {}).get('largeBlob', {}).get('supported', 
+                                        # Fallback: if largeBlob was requested but no extension result, assume false
+                                        False
+                                    ),
+                                    
+                                    # Add original request parameters for debugging/verification
+                                    'requestParams': cred.get('request_params', {}),
                                 }
                         else:
                             # Old format (just AttestedCredentialData)
@@ -408,11 +427,13 @@ def advanced_register_begin():
         temp_server.attestation = AttestationConveyancePreference.NONE
     
     # Set allowed algorithms based on pubKeyCredParams
+    algorithm_map = {
+        "EdDSA": -8, "ES256": -7, "RS256": -257, "ES384": -35, 
+        "ES512": -36, "RS384": -258, "RS512": -259, "RS1": -65535
+    }
+    
     if pub_key_cred_params:
-        algorithm_map = {
-            "EdDSA": -8, "ES256": -7, "RS256": -257, "ES384": -35, 
-            "ES512": -36, "RS384": -258, "RS512": -259, "RS1": -65535
-        }
+        # Use selected algorithms
         allowed_algorithms = []
         for param in pub_key_cred_params:
             if param in algorithm_map:
@@ -424,6 +445,12 @@ def advanced_register_begin():
                 )
         if allowed_algorithms:
             temp_server.allowed_algorithms = allowed_algorithms
+    else:
+        # If no algorithms specified, provide common defaults to avoid compatibility issues
+        temp_server.allowed_algorithms = [
+            PublicKeyCredentialParameters(PublicKeyCredentialType.PUBLIC_KEY, -7),  # ES256
+            PublicKeyCredentialParameters(PublicKeyCredentialType.PUBLIC_KEY, -257),  # RS256
+        ]
     
     # Convert string values to enum values
     uv_req = None
@@ -556,6 +583,16 @@ def advanced_register_begin():
     session["advanced_state"] = state
     session["advanced_hints"] = hints  # Store hints for potential client processing
     
+    # Debug: Print the generated options to see what's actually being sent
+    print("\n=== ADVANCED REGISTRATION OPTIONS DEBUG ===")
+    print(f"User verification requested: {user_verification} -> {uv_req}")
+    print(f"Attestation requested: {attestation} -> {temp_server.attestation}")
+    print(f"Resident key requested: {resident_key} -> {rk_req}")
+    print(f"Timeout requested: {timeout}")
+    print(f"Extensions requested: {processed_extensions}")
+    print(f"Generated options: {dict(options)}")
+    print("=========================================\n")
+    
     return jsonify(dict(options))
 
 @app.route("/api/advanced/register/complete", methods=["POST"])
@@ -576,6 +613,18 @@ def advanced_register_complete():
     try:
         auth_data = server.register_complete(session.pop("advanced_state"), response)
         
+        # Debug: Print what we received from the authenticator
+        print("\n=== ADVANCED REGISTRATION COMPLETE DEBUG ===")
+        print(f"Username: {username}")
+        print(f"Display name: {display_name}")
+        print(f"Original user ID: {user_id}")
+        print(f"Response clientExtensionResults: {response.get('clientExtensionResults', {})}")
+        print(f"Auth data flags: {auth_data.flags if hasattr(auth_data, 'flags') else 'N/A'}")
+        print(f"Auth data counter: {auth_data.counter if hasattr(auth_data, 'counter') else 'N/A'}")
+        if hasattr(auth_data, 'attestation_object') and auth_data.attestation_object:
+            print(f"Attestation format: {auth_data.attestation_object.fmt}")
+        print("==========================================\n")
+        
         # Determine the user handle to store - use original user ID if provided, otherwise credential ID
         user_handle = None
         if user_id:
@@ -594,7 +643,8 @@ def advanced_register_complete():
             elif response.get('attestationObject'):
                 # Try to parse attestation object from response
                 import cbor2
-                attestation_object = cbor2.loads(base64.b64decode(response['attestationObject']))
+                attestation_object_bytes = base64.b64decode(response['attestationObject'])
+                attestation_object = cbor2.loads(attestation_object_bytes)
                 attestation_format = attestation_object.get('fmt', 'none')
         except Exception as e:
             print(f"Could not extract attestation format: {e}")
@@ -614,8 +664,17 @@ def advanced_register_complete():
             'attestation_format': attestation_format,  # Store parsed attestation format
             'client_extension_outputs': response.get('clientExtensionResults', {}),
             # Store original request parameters for verification
-            'original_user_id': user_id,
-            'original_display_name': display_name,
+            'request_params': {
+                'user_id': user_id,
+                'display_name': display_name,
+                'user_verification': data.get("userVerification"),
+                'resident_key': data.get("residentKey"),
+                'attestation': data.get("attestation"),
+                'authenticator_attachment': data.get("authenticatorAttachment"),
+                'extensions': data.get("extensions", {}),
+                'timeout': data.get("timeout"),
+                'pub_key_cred_params': data.get("pubKeyCredParams", [])
+            }
         }
         
         credentials.append(credential_info)
