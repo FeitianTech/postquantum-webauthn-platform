@@ -154,15 +154,15 @@ poetry run pytest
 
 
   
-# Quickstart: create a virtual environment, run the demo server, and use the authenticator
+# Quickstart: create a virtual environment, run the demo server, and use the test app
 
 Note: Your server entry point is a Python file. Use:
 - python examples/server/server/server.py
 
 ## Requirements
-- Python 3.7 or newer installed and on your PATH
-- A supported web browser (Chrome/Edge ≥ 108, Safari ≥ 17, Firefox ≥ 117)
-- An authenticator: platform (Windows Hello, Touch ID) or a security key
+- Python 3.8 or newer installed and on your path
+- A supported web browser (eg. Safari, Edge, Chrome, Firefox)
+- An authenticator: platform (eg. Windows Hello, Touch ID) or cross-platform (eg. ePass FIDO Key, a phone, or other external devices)
 
 ---
 
@@ -188,11 +188,6 @@ python3 -m venv .venv
 source .venv/bin/activate
 ```
 
-Deactivate later with:
-```bash
-deactivate
-```
-
 ---
 
 ## 2) Install dependencies
@@ -215,3 +210,5 @@ You should see Flask start and a line similar to:
 ```
 Running on http://localhost:5000/
 ```
+
+By clicking on the localhost link, the test app will be launched in a browser tab. 
