@@ -125,6 +125,19 @@ def register_complete():
     print("RegistrationResponse:", response)
     auth_data = server.register_complete(session["state"], response)
 
+    # Extract attestation format from attestation object
+    attestation_format = "none"  # Default
+    try:
+        if hasattr(auth_data, 'attestation_object') and auth_data.attestation_object:
+            attestation_format = auth_data.attestation_object.fmt
+        elif response.get('attestationObject'):
+            # Try to parse attestation object from response
+            import cbor2
+            attestation_object = cbor2.loads(base64.b64decode(response['attestationObject']))
+            attestation_format = attestation_object.get('fmt', 'none')
+    except Exception as e:
+        print(f"Could not extract attestation format: {e}")
+
     # Store comprehensive credential data (same format as advanced)
     credential_info = {
         'credential_data': auth_data.credential_data,  # AttestedCredentialData
@@ -132,11 +145,12 @@ def register_complete():
         'user_info': {
             'name': uname,
             'display_name': uname,
-            'user_handle': auth_data.credential_data.credential_id  # Use credential_id as user_handle for demo
+            'user_handle': uname.encode('utf-8')  # Use username as user_handle for simple registration
         },
         'registration_time': time.time(),
         'client_data_json': response.get('clientDataJSON', ''),
         'attestation_object': response.get('attestationObject', ''),
+        'attestation_format': attestation_format,  # Store parsed attestation format
         'client_extension_outputs': response.get('clientExtensionResults', {}),
     }
     
@@ -271,7 +285,7 @@ def list_credentials():
                                     'credentialId': base64.b64encode(cred_data.credential_id).decode('utf-8'),
                                     'userName': user_info.get('name', email),
                                     'displayName': user_info.get('display_name', email),
-                                    'userHandle': base64.b64encode(user_info.get('user_handle', cred_data.credential_id)).decode('utf-8') if user_info.get('user_handle') else None,
+                                    'userHandle': base64.b64encode(user_info.get('user_handle')).decode('utf-8') if user_info.get('user_handle') else None,
                                     'algorithm': cred_data.public_key[3] if hasattr(cred_data, 'public_key') and len(cred_data.public_key) > 3 else 'Unknown',
                                     'type': 'WebAuthn',
                                     'createdAt': cred.get('registration_time'),
@@ -288,11 +302,11 @@ def list_credentials():
                                         'bs': bool(auth_data.flags & auth_data.FLAG.BS) if hasattr(auth_data, 'flags') else False,
                                     },
                                     'clientExtensionOutputs': cred.get('client_extension_outputs', {}),
-                                    'attestationFormat': getattr(cred.get('attestation_object'), 'fmt', 'none') if cred.get('attestation_object') else 'none',
+                                    'attestationFormat': cred.get('attestation_format', 'none'),  # Use stored attestation format
                                     'publicKeyAlgorithm': cred_data.public_key[3] if hasattr(cred_data, 'public_key') and len(cred_data.public_key) > 3 else None,
                                     
-                                    # Properties that would be determined from extensions/capabilities
-                                    'residentKey': bool(auth_data.flags & auth_data.FLAG.BE) if hasattr(auth_data, 'flags') else False,  # Backup Eligibility indicates resident key capability
+                                    # Properties determined from actual extension results or credProps
+                                    'residentKey': cred.get('client_extension_outputs', {}).get('credProps', {}).get('rk', False),  # Use credProps extension result
                                     'largeBlob': cred.get('client_extension_outputs', {}).get('largeBlob', {}).get('supported', False),
                                 }
                         else:
@@ -399,15 +413,17 @@ def advanced_register_begin():
             "EdDSA": -8, "ES256": -7, "RS256": -257, "ES384": -35, 
             "ES512": -36, "RS384": -258, "RS512": -259, "RS1": -65535
         }
-        temp_server.allowed_algorithms = []
+        allowed_algorithms = []
         for param in pub_key_cred_params:
             if param in algorithm_map:
-                temp_server.allowed_algorithms.append(
+                allowed_algorithms.append(
                     PublicKeyCredentialParameters(
                         PublicKeyCredentialType.PUBLIC_KEY, 
                         algorithm_map[param]
                     )
                 )
+        if allowed_algorithms:
+            temp_server.allowed_algorithms = allowed_algorithms
     
     # Convert string values to enum values
     uv_req = None
@@ -548,6 +564,10 @@ def advanced_register_complete():
     username = data.get("username")
     response = data.get("response")
     
+    # Get original user parameters from the request data
+    display_name = data.get("displayName", username)
+    user_id = data.get("userId")  # Original hex user ID from settings
+    
     if not username or not response:
         return jsonify({"error": "Username and response are required"}), 400
     
@@ -556,19 +576,46 @@ def advanced_register_complete():
     try:
         auth_data = server.register_complete(session.pop("advanced_state"), response)
         
-        # Store comprehensive credential data
+        # Determine the user handle to store - use original user ID if provided, otherwise credential ID
+        user_handle = None
+        if user_id:
+            try:
+                user_handle = bytes.fromhex(user_id)  # Convert back from hex to bytes
+            except ValueError:
+                user_handle = auth_data.credential_data.credential_id
+        else:
+            user_handle = username.encode('utf-8')  # Use username as bytes if no custom user ID
+        
+        # Extract attestation format from attestation object
+        attestation_format = "none"  # Default
+        try:
+            if hasattr(auth_data, 'attestation_object') and auth_data.attestation_object:
+                attestation_format = auth_data.attestation_object.fmt
+            elif response.get('attestationObject'):
+                # Try to parse attestation object from response
+                import cbor2
+                attestation_object = cbor2.loads(base64.b64decode(response['attestationObject']))
+                attestation_format = attestation_object.get('fmt', 'none')
+        except Exception as e:
+            print(f"Could not extract attestation format: {e}")
+        
+        # Store comprehensive credential data with original user parameters
         credential_info = {
             'credential_data': auth_data.credential_data,  # AttestedCredentialData
             'auth_data': auth_data,  # Full AuthenticatorData for flags, counter, etc.
             'user_info': {
                 'name': username,
-                'display_name': username,
-                'user_handle': auth_data.credential_data.credential_id  # Use credential_id as user_handle for demo
+                'display_name': display_name,  # Use original display name from settings
+                'user_handle': user_handle  # Use original user ID from settings
             },
             'registration_time': time.time(),
             'client_data_json': response.get('clientDataJSON', ''),
             'attestation_object': response.get('attestationObject', ''),
+            'attestation_format': attestation_format,  # Store parsed attestation format
             'client_extension_outputs': response.get('clientExtensionResults', {}),
+            # Store original request parameters for verification
+            'original_user_id': user_id,
+            'original_display_name': display_name,
         }
         
         credentials.append(credential_info)

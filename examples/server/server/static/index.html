@@ -1824,26 +1824,6 @@
             // Construct the detailed credential information in the exact format requested
             let detailsHtml = '';
             
-            // Credential Id section
-            if (cred.credentialId) {
-                const credIdB64 = cred.credentialId;  // Already in base64 format
-                const credIdB64u = base64ToBase64Url(credIdB64);
-                const credIdHex = base64UrlToHex(credIdB64u);
-                
-                detailsHtml += `
-                <div style="margin-bottom: 1.5rem;">
-                    <h4 style="color: #325F74; margin-bottom: 0.5rem;">Credential Id</h4>
-                    <div style="font-family: 'Courier New', monospace; font-size: 0.9rem; line-height: 1.4;">
-                        <div><strong>b64</strong></div>
-                        <div style="word-break: break-all; background: #f8f9fa; padding: 0.25rem; border-radius: 4px; margin-bottom: 0.5rem;">${credIdB64}</div>
-                        <div><strong>b64u</strong></div>
-                        <div style="word-break: break-all; background: #f8f9fa; padding: 0.25rem; border-radius: 4px; margin-bottom: 0.5rem;">${credIdB64u}</div>
-                        <div><strong>hex</strong></div>
-                        <div style="word-break: break-all; background: #f8f9fa; padding: 0.25rem; border-radius: 4px;">${credIdHex}</div>
-                    </div>
-                </div>`;
-            }
-            
             // AAGUID section
             if (cred.aaguid) {
                 const aaguidHex = cred.aaguid;
