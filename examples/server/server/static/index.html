@@ -1083,6 +1083,7 @@
                                             <option value="read">Read</option>
                                             <option value="write">Write</option>
                                         </select>
+                                        <div id="large-blob-capability-message" class="error-message" style="color: #6c757d; display: none;">No largeBlob capable credentials available</div>
                                     </div>
                                     <div class="form-group">
                                         <label for="large-blob-write">largeBlob write</label>
@@ -1428,6 +1429,63 @@
             return valid;
         }
 
+        function validateLargeBlobWriteInput() {
+            const largeBlobWriteInput = document.getElementById('large-blob-write');
+            if (!largeBlobWriteInput || largeBlobWriteInput.disabled) {
+                return true; // If disabled or not found, consider it valid
+            }
+            
+            return validateHexInput(largeBlobWriteInput, 2, 2048); // At least 1 byte, max 1024 bytes (2048 hex chars)
+        }
+
+        function checkLargeBlobCapability() {
+            // Check if any saved credentials support large blob
+            let hasLargeBlobCapability = false;
+            
+            // For now, we'll assume that credentials created with largeBlob support in registration 
+            // would have this capability. In a real implementation, you'd check the credential data.
+            // Since we don't have this info readily available, we'll enable it if there are any credentials
+            // and assume they might support it. A more robust implementation would check the actual 
+            // credential metadata.
+            hasLargeBlobCapability = storedCredentials.length > 0;
+            
+            const largeBlobSelect = document.getElementById('large-blob-auth');
+            const largeBlobWriteInput = document.getElementById('large-blob-write');
+            const largeBlobWriteButton = largeBlobWriteInput?.nextElementSibling;
+            const messageElement = document.getElementById('large-blob-capability-message');
+            const readOption = largeBlobSelect?.querySelector('option[value="read"]');
+            const writeOption = largeBlobSelect?.querySelector('option[value="write"]');
+            
+            if (hasLargeBlobCapability) {
+                // Enable largeBlob read/write options
+                if (readOption) readOption.disabled = false;
+                if (writeOption) writeOption.disabled = false;
+                if (messageElement) messageElement.style.display = 'none';
+                
+                // Enable/disable write input based on selection
+                const currentValue = largeBlobSelect?.value;
+                if (largeBlobWriteInput && largeBlobWriteButton) {
+                    if (currentValue === 'write') {
+                        largeBlobWriteInput.disabled = false;
+                        largeBlobWriteButton.disabled = false;
+                    } else {
+                        largeBlobWriteInput.disabled = true;
+                        largeBlobWriteButton.disabled = true;
+                    }
+                }
+            } else {
+                // Disable largeBlob read/write options
+                if (readOption) readOption.disabled = true;
+                if (writeOption) writeOption.disabled = true;
+                if (largeBlobWriteInput) largeBlobWriteInput.disabled = true;
+                if (largeBlobWriteButton) largeBlobWriteButton.disabled = true;
+                if (messageElement) messageElement.style.display = 'block';
+                
+                // Reset selection to default
+                if (largeBlobSelect) largeBlobSelect.value = '';
+            }
+        }
+
         // Auto-detect and load PKL credentials
         async function loadSavedCredentials() {
             try {
@@ -1454,6 +1512,7 @@
             
             if (storedCredentials.length === 0) {
                 credentialsList.innerHTML = '<p style="color: #6c757d; font-style: italic;">No credentials registered yet.</p>';
+                checkLargeBlobCapability(); // Check capability when no credentials
                 return;
             }
 
@@ -1471,6 +1530,9 @@
                     </div>
                 </div>
             `).join('');
+            
+            // Check large blob capability after updating display
+            checkLargeBlobCapability();
         }
 
         function showCredentialDetails(index) {
@@ -2203,14 +2265,7 @@
             }
         }
 
-        function deleteCredential(index) {
-            const cred = storedCredentials[index];
-            
-            if (confirm(`Are you sure you want to delete credential for ${cred.type === 'simple' ? (cred.email || cred.username) : cred.userName}?`)) {
-                storedCredentials.splice(index, 1);
-                updateCredentialsList();
-            }
-        }
+
 
 
 
@@ -2241,6 +2296,15 @@
                 if (usernameInput && displayNameInput) {
                     usernameInput.addEventListener('input', () => {
                         displayNameInput.value = usernameInput.value;
+                        updateJsonEditor();
+                    });
+                }
+
+                // Set up large blob select listener
+                const largeBlobSelect = document.getElementById('large-blob-auth');
+                if (largeBlobSelect) {
+                    largeBlobSelect.addEventListener('change', () => {
+                        checkLargeBlobCapability(); // Re-check to enable/disable write input
                         updateJsonEditor();
                     });
                 }
@@ -2277,7 +2341,8 @@
                 const hexInputs = [
                     'user-id', 'challenge-reg', 'challenge-auth',
                     'prf-eval-first-reg', 'prf-eval-second-reg',
-                    'prf-eval-first-auth', 'prf-eval-second-auth'
+                    'prf-eval-first-auth', 'prf-eval-second-auth',
+                    'large-blob-write'
                 ];
                 hexInputs.forEach(inputId => {
                     const input = document.getElementById(inputId);
@@ -2286,11 +2351,13 @@
                             if (inputId === 'user-id') validateUserIdInput();
                             else if (inputId.includes('challenge')) validateChallengeInputs();
                             else if (inputId.includes('prf-eval')) validatePrfEvalInputs();
+                            else if (inputId === 'large-blob-write') validateLargeBlobWriteInput();
                         });
                         input.addEventListener('blur', () => {
                             if (inputId === 'user-id') validateUserIdInput();
                             else if (inputId.includes('challenge')) validateChallengeInputs();
                             else if (inputId.includes('prf-eval')) validatePrfEvalInputs();
+                            else if (inputId === 'large-blob-write') validateLargeBlobWriteInput();
                         });
                     }
                 });
@@ -2487,8 +2554,9 @@
             const isUserIdValid = validateUserIdInput();
             const isChallengeValid = validateChallengeInputs();
             const isPrfValid = validatePrfEvalInputs();
+            const isLargeBlobValid = validateLargeBlobWriteInput();
             
-            if (!isUserIdValid || !isChallengeValid || !isPrfValid) {
+            if (!isUserIdValid || !isChallengeValid || !isPrfValid || !isLargeBlobValid) {
                 showStatus('advanced', 'Please fix the validation errors above', 'error');
                 return;
             }
@@ -2564,8 +2632,9 @@
             // Validate all inputs first
             const isChallengeValid = validateChallengeInputs();
             const isPrfValid = validatePrfEvalInputs();
+            const isLargeBlobValid = validateLargeBlobWriteInput();
             
-            if (!isChallengeValid || !isPrfValid) {
+            if (!isChallengeValid || !isPrfValid || !isLargeBlobValid) {
                 showStatus('advanced', 'Please fix the validation errors above', 'error');
                 return;
             }
