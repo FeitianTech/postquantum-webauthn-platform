@@ -1045,6 +1045,10 @@
                             <div id="json-editor-container" class="json-editor">
                                 <textarea id="json-editor" placeholder="JSON representation will appear here automatically..."></textarea>
                             </div>
+                            <div class="json-editor-buttons" style="margin-top: 0.5rem;">
+                                <button class="btn" onclick="saveJsonEditor()" title="Save JSON changes to settings">Save</button>
+                                <button class="btn btn-secondary" onclick="resetJsonEditor()" title="Reset JSON to match current settings">Reset</button>
+                            </div>
                         </div>
 
                         <!-- Right Column: Credentials Panel -->
@@ -1125,6 +1129,43 @@
             const array = new Uint8Array(bytes);
             crypto.getRandomValues(array);
             return Array.from(array).map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        // Convert hex string to base64url format for WebAuthn JSON
+        function hexToBase64Url(hexString) {
+            if (!hexString) return '';
+            
+            // Convert hex to bytes
+            const bytes = new Uint8Array(hexString.match(/.{2}/g).map(byte => parseInt(byte, 16)));
+            
+            // Convert to base64
+            const base64 = btoa(String.fromCharCode(...bytes));
+            
+            // Convert to base64url (URL-safe base64)
+            return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+        }
+
+        // Convert base64url back to hex string
+        function base64UrlToHex(base64url) {
+            if (!base64url) return '';
+            
+            // Convert base64url to regular base64
+            let base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
+            
+            // Add padding if needed
+            while (base64.length % 4) {
+                base64 += '=';
+            }
+            
+            // Decode base64 to bytes
+            const binaryString = atob(base64);
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            
+            // Convert bytes to hex
+            return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
         }
 
         function validateHexInput(inputId, errorId, minBytes = 0) {
@@ -1318,7 +1359,7 @@
 
                 if (response.ok) {
                     const credentials = await response.json();
-                    savedCredentials = credentials;
+                    storedCredentials = credentials;
                     updateCredentialsDisplay();
                     updateJsonEditor(); // Update JSON editor in case allowCredentials needs updating
                 } else {
@@ -1332,12 +1373,12 @@
         function updateCredentialsDisplay() {
             const credentialsList = document.getElementById('credentials-list');
             
-            if (savedCredentials.length === 0) {
+            if (storedCredentials.length === 0) {
                 credentialsList.innerHTML = '<p style="color: #6c757d; font-style: italic;">No credentials registered yet.</p>';
                 return;
             }
 
-            credentialsList.innerHTML = savedCredentials.map(cred => `
+            credentialsList.innerHTML = storedCredentials.map(cred => `
                 <div class="credential-item">
                     <div class="credential-header">
                         <strong>${cred.displayName || cred.userName || 'Unknown User'}</strong>
@@ -1431,16 +1472,197 @@
         // JSON Editor update function
         function updateJsonEditor() {
             let options = {};
+            let title = 'JSON Editor';
             
             if (currentSubTab === 'registration') {
                 options = getCredentialCreationOptions();
+                title = 'JSON Editor (CredentialCreationOptions)';
             } else if (currentSubTab === 'authentication') {
                 options = getCredentialRequestOptions();
+                title = 'JSON Editor (CredentialRequestOptions)';
             }
             
             const jsonEditor = document.getElementById('json-editor');
             if (jsonEditor) {
                 jsonEditor.value = JSON.stringify(options, null, 2);
+            }
+            
+            // Update the title
+            const titleElement = document.querySelector('.json-editor-column h3');
+            if (titleElement) {
+                titleElement.textContent = title;
+            }
+        }
+
+        // Save JSON Editor changes to settings
+        function saveJsonEditor() {
+            try {
+                const jsonText = document.getElementById('json-editor').value;
+                const parsed = JSON.parse(jsonText);
+                
+                // Validate the structure
+                if (!parsed.publicKey) {
+                    throw new Error('Invalid JSON structure: Missing "publicKey" property');
+                }
+                
+                const publicKey = parsed.publicKey;
+                
+                if (currentSubTab === 'registration') {
+                    // Validate CredentialCreationOptions structure
+                    if (!publicKey.rp || !publicKey.user || !publicKey.challenge) {
+                        throw new Error('Invalid CredentialCreationOptions: Missing required properties (rp, user, challenge)');
+                    }
+                    
+                    // Update form fields from JSON
+                    updateRegistrationFormFromJson(publicKey);
+                } else if (currentSubTab === 'authentication') {
+                    // Validate CredentialRequestOptions structure
+                    if (!publicKey.challenge) {
+                        throw new Error('Invalid CredentialRequestOptions: Missing required challenge property');
+                    }
+                    
+                    // Update form fields from JSON
+                    updateAuthenticationFormFromJson(publicKey);
+                }
+                
+                // Show success message
+                const statusDiv = document.querySelector('#advanced-tab .status') || 
+                                document.querySelector('#advanced-status');
+                if (statusDiv) {
+                    statusDiv.textContent = 'JSON changes saved successfully!';
+                    statusDiv.className = 'status success';
+                    statusDiv.style.display = 'block';
+                    setTimeout(() => {
+                        statusDiv.style.display = 'none';
+                    }, 3000);
+                }
+                
+            } catch (error) {
+                // Show error message
+                const statusDiv = document.querySelector('#advanced-tab .status') || 
+                                document.querySelector('#advanced-status');
+                if (statusDiv) {
+                    statusDiv.textContent = `JSON validation failed: ${error.message}`;
+                    statusDiv.className = 'status error';
+                    statusDiv.style.display = 'block';
+                    setTimeout(() => {
+                        statusDiv.style.display = 'none';
+                    }, 5000);
+                }
+            }
+        }
+
+        // Reset JSON Editor to match current settings
+        function resetJsonEditor() {
+            updateJsonEditor();
+            
+            // Show reset confirmation
+            const statusDiv = document.querySelector('#advanced-tab .status') || 
+                            document.querySelector('#advanced-status');
+            if (statusDiv) {
+                statusDiv.textContent = 'JSON editor reset to current settings';
+                statusDiv.className = 'status info';
+                statusDiv.style.display = 'block';
+                setTimeout(() => {
+                    statusDiv.style.display = 'none';
+                }, 2000);
+            }
+        }
+
+        // Update registration form fields from JSON
+        function updateRegistrationFormFromJson(publicKey) {
+            // Update user fields
+            if (publicKey.user) {
+                if (publicKey.user.id && publicKey.user.id.$base64) {
+                    document.getElementById('user-id').value = base64UrlToHex(publicKey.user.id.$base64);
+                }
+                if (publicKey.user.name) {
+                    document.getElementById('user-name').value = publicKey.user.name;
+                }
+                if (publicKey.user.displayName) {
+                    document.getElementById('user-display-name').value = publicKey.user.displayName;
+                }
+            }
+            
+            // Update challenge
+            if (publicKey.challenge && publicKey.challenge.$base64) {
+                document.getElementById('challenge-reg').value = base64UrlToHex(publicKey.challenge.$base64);
+            }
+            
+            // Update timeout
+            if (publicKey.timeout) {
+                document.getElementById('timeout-reg').value = publicKey.timeout.toString();
+            }
+            
+            // Update attestation
+            if (publicKey.attestation) {
+                document.getElementById('attestation').value = publicKey.attestation;
+            }
+            
+            // Update authenticator selection
+            if (publicKey.authenticatorSelection) {
+                if (publicKey.authenticatorSelection.authenticatorAttachment) {
+                    document.getElementById('authenticator-attachment').value = publicKey.authenticatorSelection.authenticatorAttachment;
+                }
+                if (publicKey.authenticatorSelection.residentKey) {
+                    document.getElementById('resident-key').value = publicKey.authenticatorSelection.residentKey;
+                }
+                if (publicKey.authenticatorSelection.userVerification) {
+                    document.getElementById('user-verification-reg').value = publicKey.authenticatorSelection.userVerification;
+                }
+            }
+            
+            // Update extensions
+            if (publicKey.extensions) {
+                if (publicKey.extensions.prf && publicKey.extensions.prf.eval) {
+                    if (publicKey.extensions.prf.eval.first && publicKey.extensions.prf.eval.first.$base64) {
+                        document.getElementById('prf-eval-first-reg').value = base64UrlToHex(publicKey.extensions.prf.eval.first.$base64);
+                    }
+                    if (publicKey.extensions.prf.eval.second && publicKey.extensions.prf.eval.second.$base64) {
+                        document.getElementById('prf-eval-second-reg').value = base64UrlToHex(publicKey.extensions.prf.eval.second.$base64);
+                    }
+                }
+            }
+        }
+
+        // Update authentication form fields from JSON
+        function updateAuthenticationFormFromJson(publicKey) {
+            // Update challenge
+            if (publicKey.challenge && publicKey.challenge.$base64) {
+                document.getElementById('challenge-auth').value = base64UrlToHex(publicKey.challenge.$base64);
+            }
+            
+            // Update timeout
+            if (publicKey.timeout) {
+                document.getElementById('timeout-auth').value = publicKey.timeout.toString();
+            }
+            
+            // Update user verification
+            if (publicKey.userVerification) {
+                document.getElementById('user-verification-auth').value = publicKey.userVerification;
+            }
+            
+            // Update extensions
+            if (publicKey.extensions) {
+                if (publicKey.extensions.prf && publicKey.extensions.prf.eval) {
+                    if (publicKey.extensions.prf.eval.first && publicKey.extensions.prf.eval.first.$base64) {
+                        document.getElementById('prf-eval-first-auth').value = base64UrlToHex(publicKey.extensions.prf.eval.first.$base64);
+                    }
+                    if (publicKey.extensions.prf.eval.second && publicKey.extensions.prf.eval.second.$base64) {
+                        document.getElementById('prf-eval-second-auth').value = base64UrlToHex(publicKey.extensions.prf.eval.second.$base64);
+                    }
+                }
+                
+                if (publicKey.extensions.largeBlob) {
+                    if (publicKey.extensions.largeBlob.read) {
+                        document.getElementById('large-blob-auth').value = 'read';
+                    } else if (publicKey.extensions.largeBlob.write) {
+                        document.getElementById('large-blob-auth').value = 'write';
+                        if (publicKey.extensions.largeBlob.write.$base64) {
+                            document.getElementById('large-blob-write').value = base64UrlToHex(publicKey.extensions.largeBlob.write.$base64);
+                        }
+                    }
+                }
             }
         }
 
@@ -1451,94 +1673,128 @@
             const userDisplayName = document.getElementById('user-display-name')?.value || 'Test User';
             const challenge = document.getElementById('challenge-reg')?.value || generateRandomHex(16);
             
-            const options = {
+            // Build publicKey object
+            const publicKey = {
                 rp: {
                     name: "WebAuthn FIDO2 Test Application",
                     id: window.location.hostname
                 },
                 user: {
-                    id: userId,
+                    id: {
+                        "$base64": hexToBase64Url(userId)
+                    },
                     name: userName,
                     displayName: userDisplayName
                 },
-                challenge: challenge,
+                challenge: {
+                    "$base64": hexToBase64Url(challenge)
+                },
                 pubKeyCredParams: [],
                 timeout: parseInt(document.getElementById('timeout-reg')?.value) || 90000,
                 authenticatorSelection: {},
                 attestation: document.getElementById('attestation')?.value || 'none',
-                excludeCredentials: document.getElementById('exclude-credentials')?.checked,
                 extensions: {}
             };
 
             // Add selected algorithms
             if (document.getElementById('param-eddsa')?.checked) {
-                options.pubKeyCredParams.push({type: "public-key", alg: -8}); // EdDSA
+                publicKey.pubKeyCredParams.push({type: "public-key", alg: -8}); // EdDSA
             }
             if (document.getElementById('param-es256')?.checked) {
-                options.pubKeyCredParams.push({type: "public-key", alg: -7}); // ES256
+                publicKey.pubKeyCredParams.push({type: "public-key", alg: -7}); // ES256
             }
             if (document.getElementById('param-rs256')?.checked) {
-                options.pubKeyCredParams.push({type: "public-key", alg: -257}); // RS256
+                publicKey.pubKeyCredParams.push({type: "public-key", alg: -257}); // RS256
             }
             if (document.getElementById('param-es384')?.checked) {
-                options.pubKeyCredParams.push({type: "public-key", alg: -35}); // ES384
+                publicKey.pubKeyCredParams.push({type: "public-key", alg: -35}); // ES384
             }
             if (document.getElementById('param-es512')?.checked) {
-                options.pubKeyCredParams.push({type: "public-key", alg: -36}); // ES512
+                publicKey.pubKeyCredParams.push({type: "public-key", alg: -36}); // ES512
             }
             if (document.getElementById('param-rs384')?.checked) {
-                options.pubKeyCredParams.push({type: "public-key", alg: -258}); // RS384
+                publicKey.pubKeyCredParams.push({type: "public-key", alg: -258}); // RS384
             }
             if (document.getElementById('param-rs512')?.checked) {
-                options.pubKeyCredParams.push({type: "public-key", alg: -259}); // RS512
+                publicKey.pubKeyCredParams.push({type: "public-key", alg: -259}); // RS512
             }
             if (document.getElementById('param-rs1')?.checked) {
-                options.pubKeyCredParams.push({type: "public-key", alg: -65535}); // RS1
+                publicKey.pubKeyCredParams.push({type: "public-key", alg: -65535}); // RS1
             }
 
             // Authenticator selection
             const authAttachment = document.getElementById('authenticator-attachment')?.value;
-            if (authAttachment) options.authenticatorSelection.authenticatorAttachment = authAttachment;
+            if (authAttachment) publicKey.authenticatorSelection.authenticatorAttachment = authAttachment;
             
             const residentKey = document.getElementById('resident-key')?.value;
-            if (residentKey && residentKey !== 'discouraged') options.authenticatorSelection.residentKey = residentKey;
+            if (residentKey && residentKey !== 'discouraged') publicKey.authenticatorSelection.residentKey = residentKey;
             
             const userVerification = document.getElementById('user-verification-reg')?.value;
-            if (userVerification) options.authenticatorSelection.userVerification = userVerification;
+            if (userVerification) publicKey.authenticatorSelection.userVerification = userVerification;
+
+            // Exclude credentials
+            if (document.getElementById('exclude-credentials')?.checked && storedCredentials.length > 0) {
+                publicKey.excludeCredentials = storedCredentials.map(cred => ({
+                    type: "public-key",
+                    id: {
+                        "$base64": hexToBase64Url(cred.credentialId)
+                    }
+                }));
+            }
 
             // Extensions
-            if (document.getElementById('cred-props')?.checked) options.extensions.credProps = true;
-            if (document.getElementById('min-pin-length')?.checked) options.extensions.minPinLength = true;
+            if (document.getElementById('cred-props')?.checked) publicKey.extensions.credProps = true;
+            if (document.getElementById('min-pin-length')?.checked) publicKey.extensions.minPinLength = true;
             
             const credProtect = document.getElementById('cred-protect')?.value;
             if (credProtect) {
-                options.extensions.credProtect = credProtect;
+                publicKey.extensions.credProtect = credProtect;
                 if (document.getElementById('enforce-cred-protect')?.checked) {
-                    options.extensions.enforceCredProtect = true;
+                    publicKey.extensions.enforceCredProtect = true;
                 }
             }
             
             const largeBlobReg = document.getElementById('large-blob-reg')?.value;
-            if (largeBlobReg) options.extensions.largeBlob = {support: largeBlobReg};
+            if (largeBlobReg) publicKey.extensions.largeBlob = {support: largeBlobReg};
             
             if (document.getElementById('prf-reg')?.checked) {
                 const prfFirst = document.getElementById('prf-eval-first-reg')?.value;
                 const prfSecond = document.getElementById('prf-eval-second-reg')?.value;
                 if (prfFirst) {
-                    options.extensions.prf = {eval: {first: prfFirst}};
-                    if (prfSecond) options.extensions.prf.eval.second = prfSecond;
+                    publicKey.extensions.prf = {
+                        eval: {
+                            first: {
+                                "$base64": hexToBase64Url(prfFirst)
+                            }
+                        }
+                    };
+                    if (prfSecond) {
+                        publicKey.extensions.prf.eval.second = {
+                            "$base64": hexToBase64Url(prfSecond)
+                        };
+                    }
                 }
             }
 
-            return options;
+            // Add hints if any are selected
+            const hints = [];
+            if (document.getElementById('hint-client-device')?.checked) hints.push('client-device');
+            if (document.getElementById('hint-hybrid')?.checked) hints.push('hybrid');
+            if (document.getElementById('hint-security-key')?.checked) hints.push('security-key');
+            if (hints.length > 0) publicKey.hints = hints;
+
+            return { publicKey };
         }
 
         // Get CredentialRequestOptions from form (WebAuthn standard format)
         function getCredentialRequestOptions() {
             const challenge = document.getElementById('challenge-auth')?.value || generateRandomHex(16);
             
-            const options = {
-                challenge: challenge,
+            // Build publicKey object  
+            const publicKey = {
+                challenge: {
+                    "$base64": hexToBase64Url(challenge)
+                },
                 timeout: parseInt(document.getElementById('timeout-auth')?.value) || 90000,
                 rpId: window.location.hostname,
                 allowCredentials: [],
@@ -1549,13 +1805,14 @@
             // Allow credentials handling
             const allowCreds = document.getElementById('allow-credentials')?.value;
             if (allowCreds === 'empty') {
-                options.allowCredentials = [];
+                publicKey.allowCredentials = [];
             } else {
                 // For real implementation, this would be populated with actual credential IDs
-                options.allowCredentials = savedCredentials.map(cred => ({
+                publicKey.allowCredentials = storedCredentials.map(cred => ({
                     type: "public-key",
-                    id: cred.credentialId,
-                    transports: ["usb", "nfc", "ble", "internal"]
+                    id: {
+                        "$base64": hexToBase64Url(cred.credentialId)
+                    }
                 }));
             }
 
@@ -1563,11 +1820,15 @@
             const largeBlobAuth = document.getElementById('large-blob-auth')?.value;
             if (largeBlobAuth) {
                 if (largeBlobAuth === 'read') {
-                    options.extensions.largeBlob = {read: true};
+                    publicKey.extensions.largeBlob = {read: true};
                 } else if (largeBlobAuth === 'write') {
                     const largeBlobWrite = document.getElementById('large-blob-write')?.value;
                     if (largeBlobWrite) {
-                        options.extensions.largeBlob = {write: largeBlobWrite};
+                        publicKey.extensions.largeBlob = {
+                            write: {
+                                "$base64": hexToBase64Url(largeBlobWrite)
+                            }
+                        };
                     }
                 }
             }
@@ -1575,11 +1836,28 @@
             const prfFirst = document.getElementById('prf-eval-first-auth')?.value;
             const prfSecond = document.getElementById('prf-eval-second-auth')?.value;
             if (prfFirst) {
-                options.extensions.prf = {eval: {first: prfFirst}};
-                if (prfSecond) options.extensions.prf.eval.second = prfSecond;
+                publicKey.extensions.prf = {
+                    eval: {
+                        first: {
+                            "$base64": hexToBase64Url(prfFirst)
+                        }
+                    }
+                };
+                if (prfSecond) {
+                    publicKey.extensions.prf.eval.second = {
+                        "$base64": hexToBase64Url(prfSecond)
+                    };
+                }
             }
 
-            return options;
+            // Add hints if any are selected
+            const hints = [];
+            if (document.getElementById('hint-client-device-auth')?.checked) hints.push('client-device');
+            if (document.getElementById('hint-hybrid-auth')?.checked) hints.push('hybrid');  
+            if (document.getElementById('hint-security-key-auth')?.checked) hints.push('security-key');
+            if (hints.length > 0) publicKey.hints = hints;
+
+            return { publicKey };
         }
 
         // Utility functions
