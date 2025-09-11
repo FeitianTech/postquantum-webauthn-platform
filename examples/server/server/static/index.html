@@ -809,8 +809,24 @@
                                                 <label for="param-rs256">RS256</label>
                                             </div>
                                             <div class="checkbox-item">
-                                                <input type="checkbox" id="param-ps256">
-                                                <label for="param-ps256">PS256</label>
+                                                <input type="checkbox" id="param-es384">
+                                                <label for="param-es384">ES384</label>
+                                            </div>
+                                            <div class="checkbox-item">
+                                                <input type="checkbox" id="param-es512">
+                                                <label for="param-es512">ES512</label>
+                                            </div>
+                                            <div class="checkbox-item">
+                                                <input type="checkbox" id="param-rs384">
+                                                <label for="param-rs384">RS384</label>
+                                            </div>
+                                            <div class="checkbox-item">
+                                                <input type="checkbox" id="param-rs512">
+                                                <label for="param-rs512">RS512</label>
+                                            </div>
+                                            <div class="checkbox-item">
+                                                <input type="checkbox" id="param-rs1">
+                                                <label for="param-rs1">RS1</label>
                                             </div>
                                         </div>
                                     </div>
@@ -1191,13 +1207,13 @@
         }
 
         function randomizeChallenge(type) {
-            const challenge = generateRandomHex(32);
+            const challenge = generateRandomHex(16);  // 16 bytes = 32 hex chars
             document.getElementById('challenge-' + type).value = challenge;
             updateJsonEditor();
         }
 
         function randomizePrfEval(evalType, formType) {
-            const prfValue = generateRandomHex(32);
+            const prfValue = generateRandomHex(16);  // 16 bytes = 32 hex chars
             document.getElementById('prf-eval-' + evalType + '-' + formType).value = prfValue;
             
             // Enable/disable second PRF eval based on first
@@ -1338,7 +1354,7 @@
         }
 
         function randomizeLargeBlobWrite() {
-            const blobValue = generateRandomHex(64);
+            const blobValue = generateRandomHex(16);  // 16 bytes = 32 hex chars
             document.getElementById('large-blob-write').value = blobValue;
             updateJsonEditor();
         }
@@ -1359,12 +1375,16 @@
             document.getElementById('fake-cred-length-reg').value = '128';
             
             // Reset Other Options
-            document.getElementById('challenge-reg').value = generateRandomHex(32);
+            document.getElementById('challenge-reg').value = generateRandomHex(16);  // 16 bytes = 32 hex chars
             document.getElementById('timeout-reg').value = '90000';
             document.getElementById('param-eddsa').checked = true;
             document.getElementById('param-es256').checked = true;
             document.getElementById('param-rs256').checked = true;
-            document.getElementById('param-ps256').checked = false;
+            document.getElementById('param-es384').checked = false;
+            document.getElementById('param-es512').checked = false;
+            document.getElementById('param-rs384').checked = false;
+            document.getElementById('param-rs512').checked = false;
+            document.getElementById('param-rs1').checked = false;
             document.getElementById('hint-client-device').checked = false;
             document.getElementById('hint-hybrid').checked = false;
             document.getElementById('hint-security-key').checked = false;
@@ -1391,7 +1411,7 @@
             document.getElementById('fake-cred-length-auth').value = '256';
             
             // Reset Other Options
-            document.getElementById('challenge-auth').value = generateRandomHex(32);
+            document.getElementById('challenge-auth').value = generateRandomHex(16);  // 16 bytes = 32 hex chars
             document.getElementById('timeout-auth').value = '90000';
             document.getElementById('hint-client-device-auth').checked = false;
             document.getElementById('hint-hybrid-auth').checked = false;
@@ -1429,7 +1449,7 @@
             const userId = document.getElementById('user-id')?.value || generateRandomHex(32);
             const userName = document.getElementById('user-name')?.value || 'testuser';
             const userDisplayName = document.getElementById('user-display-name')?.value || 'Test User';
-            const challenge = document.getElementById('challenge-reg')?.value || generateRandomHex(32);
+            const challenge = document.getElementById('challenge-reg')?.value || generateRandomHex(16);
             
             const options = {
                 rp: {
@@ -1460,8 +1480,20 @@
             if (document.getElementById('param-rs256')?.checked) {
                 options.pubKeyCredParams.push({type: "public-key", alg: -257}); // RS256
             }
-            if (document.getElementById('param-ps256')?.checked) {
-                options.pubKeyCredParams.push({type: "public-key", alg: -37}); // PS256
+            if (document.getElementById('param-es384')?.checked) {
+                options.pubKeyCredParams.push({type: "public-key", alg: -35}); // ES384
+            }
+            if (document.getElementById('param-es512')?.checked) {
+                options.pubKeyCredParams.push({type: "public-key", alg: -36}); // ES512
+            }
+            if (document.getElementById('param-rs384')?.checked) {
+                options.pubKeyCredParams.push({type: "public-key", alg: -258}); // RS384
+            }
+            if (document.getElementById('param-rs512')?.checked) {
+                options.pubKeyCredParams.push({type: "public-key", alg: -259}); // RS512
+            }
+            if (document.getElementById('param-rs1')?.checked) {
+                options.pubKeyCredParams.push({type: "public-key", alg: -65535}); // RS1
             }
 
             // Authenticator selection
@@ -1503,7 +1535,7 @@
 
         // Get CredentialRequestOptions from form (WebAuthn standard format)
         function getCredentialRequestOptions() {
-            const challenge = document.getElementById('challenge-auth')?.value || generateRandomHex(32);
+            const challenge = document.getElementById('challenge-auth')?.value || generateRandomHex(16);
             
             const options = {
                 challenge: challenge,
@@ -1784,6 +1816,8 @@
                 randomizeUserId();
                 randomizeChallenge('reg');
                 randomizeChallenge('auth');
+                // Auto-generate large blob write value on page load
+                randomizeLargeBlobWrite();
             }, 100);
             
             // Set up form field listeners for auto-sync
