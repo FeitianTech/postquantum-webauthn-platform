@@ -633,6 +633,43 @@
             }
         }
 
+        /* Decoder-specific CSS to ensure proper layout */
+        #decoder-tab {
+            position: relative;
+            width: 100%;
+            height: auto;
+            min-height: 200px;
+            overflow: visible;
+        }
+
+        #decoder-tab.active {
+            display: block;
+        }
+
+        #decoder-tab .section {
+            position: relative;
+            width: 100%;
+            height: auto;
+            overflow: visible;
+            margin-bottom: 2rem;
+        }
+
+        /* Ensure decoder content is visible */
+        #decoder-tab h2,
+        #decoder-tab p,
+        #decoder-tab .form-group,
+        #decoder-tab .form-control,
+        #decoder-tab .btn {
+            display: block;
+            visibility: visible;
+            opacity: 1;
+        }
+
+        #decoder-tab .btn {
+            display: inline-block;
+            margin-right: 0.5rem;
+        }
+
         /* Modal Styles */
         .modal {
             display: none;
@@ -1505,8 +1542,20 @@
             });
 
             // Show selected tab
-            document.getElementById(tab + '-tab').classList.add('active');
-            event.target.classList.add('active');
+            const targetTab = document.getElementById(tab + '-tab');
+            if (targetTab) {
+                targetTab.classList.add('active');
+            }
+            
+            // Activate the corresponding nav button
+            const navButtons = document.querySelectorAll('.nav-tab');
+            navButtons.forEach((button, index) => {
+                if ((tab === 'simple' && index === 0) || 
+                    (tab === 'advanced' && index === 1) || 
+                    (tab === 'decoder' && index === 2)) {
+                    button.classList.add('active');
+                }
+            });
             
             // Update JSON editor if in advanced tab
             if (tab === 'advanced') {
