@@ -1787,13 +1787,48 @@
 
             const modalBody = document.getElementById('modalBody');
             
-            // Construct the detailed credential information in the specified format
+            // Helper functions for format conversion
+            function base64UrlToHex(base64url) {
+                try {
+                    // Convert base64url to regular base64
+                    let base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
+                    while (base64.length % 4) {
+                        base64 += '=';
+                    }
+                    // Convert to bytes and then to hex
+                    const bytes = atob(base64);
+                    return Array.from(bytes, byte => byte.charCodeAt(0).toString(16).padStart(2, '0')).join('');
+                } catch (e) {
+                    return 'Invalid data';
+                }
+            }
+            
+            function hexToBase64(hex) {
+                try {
+                    const bytes = hex.match(/.{2}/g).map(byte => String.fromCharCode(parseInt(byte, 16))).join('');
+                    return btoa(bytes);
+                } catch (e) {
+                    return 'Invalid data';
+                }
+            }
+            
+            function base64ToBase64Url(base64) {
+                return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+            }
+            
+            function hexToGuid(hex) {
+                if (hex.length !== 32) return 'Invalid GUID';
+                return `${hex.substr(0,8)}-${hex.substr(8,4)}-${hex.substr(12,4)}-${hex.substr(16,4)}-${hex.substr(20,12)}`;
+            }
+            
+            // Construct the detailed credential information in the exact format requested
             let detailsHtml = '';
             
+            // Credential Id section
             if (cred.credentialId) {
-                const credIdHex = base64UrlToHex(cred.credentialId);
-                const credIdB64 = hexToBase64(credIdHex);
+                const credIdB64 = cred.credentialId;  // Already in base64 format
                 const credIdB64u = base64ToBase64Url(credIdB64);
+                const credIdHex = base64UrlToHex(credIdB64u);
                 
                 detailsHtml += `
                 <div style="margin-bottom: 1.5rem;">
@@ -1809,8 +1844,7 @@
                 </div>`;
             }
             
-            // Add AAGUID section if available (usually would be in authenticator data)
-            // For demo purposes, we'll show a placeholder or skip if not available
+            // AAGUID section
             if (cred.aaguid) {
                 const aaguidHex = cred.aaguid;
                 const aaguidB64 = hexToBase64(aaguidHex);
@@ -1838,19 +1872,19 @@
             <div style="margin-bottom: 1.5rem;">
                 <h4 style="color: #325F74; margin-bottom: 0.5rem;">User info at creation</h4>
                 <div style="font-size: 0.9rem; line-height: 1.4;">
-                    <div><strong>Name:</strong> ${cred.email || cred.username || 'N/A'}</div>
-                    <div style="margin-bottom: 0.5rem;"><strong>Display name:</strong> ${cred.displayName || cred.userName || cred.email || cred.username || 'N/A'}</div>
+                    <div><strong>Name:</strong> ${cred.userName || cred.email || 'N/A'}</div>
+                    <div style="margin-bottom: 0.5rem;"><strong>Display name:</strong> ${cred.displayName || cred.userName || cred.email || 'N/A'}</div>
                 </div>`;
             
-            // User handle section if available
+            // User handle (User ID) section
             if (cred.userHandle) {
-                const userHandleHex = base64UrlToHex(cred.userHandle);
-                const userHandleB64 = hexToBase64(userHandleHex);
+                const userHandleB64 = cred.userHandle;
                 const userHandleB64u = base64ToBase64Url(userHandleB64);
+                const userHandleHex = base64UrlToHex(userHandleB64u);
                 
                 detailsHtml += `
                 <div style="margin-top: 0.5rem;">
-                    <div><strong>User handle:</strong></div>
+                    <div><strong>User handle (User ID):</strong></div>
                     <div style="font-family: 'Courier New', monospace; font-size: 0.9rem; margin-left: 1rem;">
                         <div><strong>b64</strong></div>
                         <div style="background: #f8f9fa; padding: 0.25rem; border-radius: 4px; margin-bottom: 0.25rem;">${userHandleB64}</div>
@@ -1869,34 +1903,32 @@
             <div style="margin-bottom: 1.5rem;">
                 <h4 style="color: #325F74; margin-bottom: 0.5rem;">Properties</h4>
                 <div style="font-size: 0.9rem; line-height: 1.4;">
-                    <div><strong>Discoverable (resident key):</strong> ${cred.residentKey || 'false'}</div>
-                    <div><strong>Supports largeBlob:</strong> ${cred.largeBlob || 'false'}</div>
+                    <div><strong>Discoverable (resident key):</strong> ${cred.residentKey || false}</div>
+                    <div><strong>Supports largeBlob:</strong> ${cred.largeBlob || false}</div>
                 </div>
             </div>`;
             
             // Attestation Format
-            if (cred.attestationFormat) {
-                detailsHtml += `
-                <div style="margin-bottom: 1.5rem;">
-                    <h4 style="color: #325F74; margin-bottom: 0.5rem;">Attestation Format</h4>
-                    <div style="font-size: 0.9rem;">${cred.attestationFormat}</div>
-                </div>`;
-            }
+            detailsHtml += `
+            <div style="margin-bottom: 1.5rem;">
+                <h4 style="color: #325F74; margin-bottom: 0.5rem;">Attestation Format</h4>
+                <div style="font-size: 0.9rem;">${cred.attestationFormat || 'none'}</div>
+            </div>`;
             
             // Authenticator Data (registration)
-            if (cred.authenticatorData) {
+            if (cred.flags) {
                 detailsHtml += `
                 <div style="margin-bottom: 1.5rem;">
                     <h4 style="color: #325F74; margin-bottom: 0.5rem;">Authenticator Data (registration)</h4>
                     <div style="font-size: 0.9rem; line-height: 1.4;">
-                        <div><strong>AT:</strong> ${cred.authenticatorData.at || 'false'}, <strong>BE:</strong> ${cred.authenticatorData.be || 'false'}, <strong>BS:</strong> ${cred.authenticatorData.bs || 'false'}, <strong>ED:</strong> ${cred.authenticatorData.ed || 'false'}, <strong>UP:</strong> ${cred.authenticatorData.up || 'true'}, <strong>UV:</strong> ${cred.authenticatorData.uv || 'true'}</div>
+                        <div><strong>AT:</strong> ${cred.flags.at}, <strong>BE:</strong> ${cred.flags.be}, <strong>BS:</strong> ${cred.flags.bs}, <strong>ED:</strong> ${cred.flags.ed}, <strong>UP:</strong> ${cred.flags.up}, <strong>UV:</strong> ${cred.flags.uv}</div>
                         <div><strong>Signature Counter:</strong> ${cred.signCount || 0}</div>
                     </div>
                 </div>`;
             }
             
-            // Client extension outputs
-            if (cred.clientExtensionOutputs) {
+            // Client extension outputs (registration)
+            if (cred.clientExtensionOutputs && Object.keys(cred.clientExtensionOutputs).length > 0) {
                 detailsHtml += `
                 <div style="margin-bottom: 1.5rem;">
                     <h4 style="color: #325F74; margin-bottom: 0.5rem;">Client extension outputs (registration)</h4>
@@ -1905,31 +1937,23 @@
             }
             
             // Public Key section
-            if (cred.algorithm) {
+            if (cred.publicKeyAlgorithm || cred.algorithm) {
+                const algo = cred.publicKeyAlgorithm || cred.algorithm;
                 let algorithmName = 'Unknown';
-                if (cred.algorithm === -7) algorithmName = 'ES256 (-7)';
-                else if (cred.algorithm === -257) algorithmName = 'RS256 (-257)';
-                else if (cred.algorithm === -37) algorithmName = 'PS256 (-37)';
-                else if (cred.algorithm === -48) algorithmName = 'ML-DSA-44 (PQC) (-48)';
-                else if (cred.algorithm === -49) algorithmName = 'ML-DSA-65 (PQC) (-49)';
-                else algorithmName = `Unknown (${cred.algorithm})`;
+                if (algo === -7) algorithmName = 'ES256 (-7)';
+                else if (algo === -257) algorithmName = 'RS256 (-257)';
+                else if (algo === -37) algorithmName = 'PS256 (-37)';
+                else if (algo === -8) algorithmName = 'EdDSA (-8)';
+                else if (algo === -48) algorithmName = 'ML-DSA-44 (PQC) (-48)';
+                else if (algo === -49) algorithmName = 'ML-DSA-65 (PQC) (-49)';
+                else if (typeof algo === 'number') algorithmName = `Algorithm (${algo})`;
+                else algorithmName = algo;
                 
                 detailsHtml += `
                 <div style="margin-bottom: 1.5rem;">
                     <h4 style="color: #325F74; margin-bottom: 0.5rem;">Public Key</h4>
                     <div style="font-size: 0.9rem;">
                         <div><strong>Algorithm:</strong> ${algorithmName}</div>
-                    </div>
-                </div>`;
-            }
-            
-            // Additional info that's commonly available
-            if (cred.createdAt) {
-                detailsHtml += `
-                <div style="margin-bottom: 1.5rem;">
-                    <h4 style="color: #325F74; margin-bottom: 0.5rem;">Registration Info</h4>
-                    <div style="font-size: 0.9rem;">
-                        <div><strong>Created:</strong> ${new Date(cred.createdAt).toLocaleString()}</div>
                     </div>
                 </div>`;
             }
