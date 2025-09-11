@@ -222,10 +222,18 @@ def advanced_register_begin():
     data = request.json
     username = data.get("username")
     display_name = data.get("displayName", username)
+    user_id = data.get("userId")  # Custom user ID (hex string)
     attestation = data.get("attestation", "none")
     user_verification = data.get("userVerification", "preferred")
     authenticator_attachment = data.get("authenticatorAttachment")
     resident_key = data.get("residentKey", "preferred")
+    exclude_credentials = data.get("excludeCredentials", True)
+    fake_cred_length = data.get("fakeCredLength", 0)
+    challenge = data.get("challenge")  # Custom challenge (hex string)
+    timeout = data.get("timeout", 90000)
+    pub_key_cred_params = data.get("pubKeyCredParams", [])
+    hints = data.get("hints", [])
+    extensions = data.get("extensions", {})
     
     if not username:
         return jsonify({"error": "Username is required"}), 400
@@ -238,8 +246,46 @@ def advanced_register_begin():
         AttestationConveyancePreference,
         UserVerificationRequirement,
         AuthenticatorAttachment,
-        ResidentKeyRequirement
+        ResidentKeyRequirement,
+        PublicKeyCredentialParameters,
+        PublicKeyCredentialType,
+        PublicKeyCredentialDescriptor
     )
+    from fido2.cose import CoseKey
+    from fido2.server import Fido2Server
+    import secrets
+    
+    # Create a temporary server instance with custom settings
+    temp_server = Fido2Server(rp)
+    
+    # Set timeout
+    temp_server.timeout = timeout
+    
+    # Set attestation
+    if attestation == "direct":
+        temp_server.attestation = AttestationConveyancePreference.DIRECT
+    elif attestation == "indirect":
+        temp_server.attestation = AttestationConveyancePreference.INDIRECT
+    elif attestation == "enterprise":
+        temp_server.attestation = AttestationConveyancePreference.ENTERPRISE
+    else:
+        temp_server.attestation = AttestationConveyancePreference.NONE
+    
+    # Set allowed algorithms based on pubKeyCredParams
+    if pub_key_cred_params:
+        algorithm_map = {
+            "EdDSA": -8, "ES256": -7, "RS256": -257, "ES384": -35, 
+            "ES512": -36, "RS384": -258, "RS512": -259, "RS1": -65535
+        }
+        temp_server.allowed_algorithms = []
+        for param in pub_key_cred_params:
+            if param in algorithm_map:
+                temp_server.allowed_algorithms.append(
+                    PublicKeyCredentialParameters(
+                        PublicKeyCredentialType.PUBLIC_KEY, 
+                        algorithm_map[param]
+                    )
+                )
     
     # Convert string values to enum values
     uv_req = None
@@ -247,7 +293,7 @@ def advanced_register_begin():
         uv_req = UserVerificationRequirement.REQUIRED
     elif user_verification == "discouraged":
         uv_req = UserVerificationRequirement.DISCOURAGED
-    else:
+    elif user_verification == "preferred":
         uv_req = UserVerificationRequirement.PREFERRED
     
     auth_attachment = None
@@ -261,22 +307,113 @@ def advanced_register_begin():
         rk_req = ResidentKeyRequirement.REQUIRED
     elif resident_key == "discouraged":
         rk_req = ResidentKeyRequirement.DISCOURAGED
-    else:
+    elif resident_key == "preferred":
         rk_req = ResidentKeyRequirement.PREFERRED
     
-    options, state = server.register_begin(
-        PublicKeyCredentialUserEntity(
-            id=username.encode('utf-8'),
-            name=username,
-            display_name=display_name,
-        ),
-        credentials,
+    # Prepare user entity with custom user ID if provided
+    if user_id:
+        try:
+            user_id_bytes = bytes.fromhex(user_id)
+        except ValueError:
+            return jsonify({"error": "Invalid user ID hex format"}), 400
+    else:
+        user_id_bytes = username.encode('utf-8')
+    
+    user_entity = PublicKeyCredentialUserEntity(
+        id=user_id_bytes,
+        name=username,
+        display_name=display_name,
+    )
+    
+    # Prepare exclude list
+    exclude_list = []
+    if exclude_credentials and credentials:
+        exclude_list = credentials
+    
+    # Add fake credential if requested
+    if fake_cred_length > 0:
+        fake_cred_id = secrets.token_bytes(fake_cred_length)
+        fake_descriptor = PublicKeyCredentialDescriptor(
+            type=PublicKeyCredentialType.PUBLIC_KEY,
+            id=fake_cred_id
+        )
+        exclude_list = list(exclude_list) + [fake_descriptor]
+    
+    # Parse custom challenge
+    challenge_bytes = None
+    if challenge:
+        try:
+            challenge_bytes = bytes.fromhex(challenge)
+        except ValueError:
+            return jsonify({"error": "Invalid challenge hex format"}), 400
+    
+    # Process extensions
+    processed_extensions = {}
+    
+    # credProps extension
+    if extensions.get("credProps"):
+        processed_extensions["credProps"] = True
+    
+    # minPinLength extension
+    if extensions.get("minPinLength"):
+        processed_extensions["minPinLength"] = True
+    
+    # credProtect extension
+    cred_protect = extensions.get("credProtect")
+    if cred_protect and cred_protect != "unspecified":
+        protect_map = {
+            "userVerificationOptional": 1,
+            "userVerificationOptionalWithCredentialIDList": 2, 
+            "userVerificationRequired": 3
+        }
+        if cred_protect in protect_map:
+            processed_extensions["credProtect"] = protect_map[cred_protect]
+            if extensions.get("enforceCredProtect"):
+                processed_extensions["enforceCredProtect"] = True
+    
+    # largeBlob extension
+    large_blob = extensions.get("largeBlob")
+    if large_blob and large_blob != "unspecified":
+        if large_blob == "required":
+            processed_extensions["largeBlob"] = {"support": "required"}
+        elif large_blob == "preferred":
+            processed_extensions["largeBlob"] = {"support": "preferred"}
+    
+    # prf extension
+    if extensions.get("prf"):
+        prf_ext = {"eval": {}}
+        prf_first = extensions.get("prfEvalFirst")
+        prf_second = extensions.get("prfEvalSecond")
+        
+        if prf_first:
+            try:
+                prf_ext["eval"]["first"] = bytes.fromhex(prf_first)
+            except ValueError:
+                return jsonify({"error": "Invalid prf eval first hex format"}), 400
+        
+        if prf_second:
+            try:
+                prf_ext["eval"]["second"] = bytes.fromhex(prf_second)
+            except ValueError:
+                return jsonify({"error": "Invalid prf eval second hex format"}), 400
+        
+        if prf_ext["eval"]:
+            processed_extensions["prf"] = prf_ext
+    
+    options, state = temp_server.register_begin(
+        user_entity,
+        exclude_list,
         user_verification=uv_req,
         authenticator_attachment=auth_attachment,
         resident_key_requirement=rk_req,
+        challenge=challenge_bytes,
+        extensions=processed_extensions if processed_extensions else None,
     )
     
+    # Store additional data in session for potential use in complete
     session["advanced_state"] = state
+    session["advanced_hints"] = hints  # Store hints for potential client processing
+    
     return jsonify(dict(options))
 
 @app.route("/api/advanced/register/complete", methods=["POST"])
@@ -317,37 +454,144 @@ def advanced_register_complete():
 def advanced_authenticate_begin():
     data = request.json
     user_verification = data.get("userVerification", "preferred")
+    allow_credentials = data.get("allowCredentials", "all")
+    specific_credential_id = data.get("specificCredentialId")  # For selecting specific credential
+    fake_cred_length = data.get("fakeCredLength", 0)
+    challenge = data.get("challenge")  # Custom challenge (hex string)
+    timeout = data.get("timeout", 90000)
+    extensions = data.get("extensions", {})
     
-    # Get all credentials from all users
-    all_credentials = []
-    try:
-        pkl_files = [f for f in os.listdir(basepath) if f.endswith('_credential_data.pkl')]
-        for pkl_file in pkl_files:
-            email = pkl_file.replace('_credential_data.pkl', '')
-            try:
-                user_creds = readkey(email)
-                all_credentials.extend(user_creds)
-            except Exception as e:
-                print(f"Error reading credentials for {email}: {e}")
-                continue
-    except Exception as e:
-        print(f"Error listing credential files: {e}")
+    # Get credentials based on allowCredentials setting
+    selected_credentials = []
     
-    if not all_credentials:
+    if allow_credentials == "empty":
+        # Empty allowCredentials for discoverable credentials only
+        selected_credentials = None
+    elif allow_credentials == "all":
+        # Get all credentials from all users
+        try:
+            pkl_files = [f for f in os.listdir(basepath) if f.endswith('_credential_data.pkl')]
+            for pkl_file in pkl_files:
+                email = pkl_file.replace('_credential_data.pkl', '')
+                try:
+                    user_creds = readkey(email)
+                    selected_credentials.extend(user_creds)
+                except Exception as e:
+                    print(f"Error reading credentials for {email}: {e}")
+                    continue
+        except Exception as e:
+            print(f"Error listing credential files: {e}")
+            selected_credentials = []
+    elif specific_credential_id:
+        # Find specific credential by ID
+        try:
+            cred_id_bytes = base64.b64decode(specific_credential_id)
+            pkl_files = [f for f in os.listdir(basepath) if f.endswith('_credential_data.pkl')]
+            for pkl_file in pkl_files:
+                email = pkl_file.replace('_credential_data.pkl', '')
+                try:
+                    user_creds = readkey(email)
+                    for cred in user_creds:
+                        if cred.credential_id == cred_id_bytes:
+                            selected_credentials = [cred]
+                            break
+                    if selected_credentials:
+                        break
+                except Exception as e:
+                    print(f"Error reading credentials for {email}: {e}")
+                    continue
+        except Exception as e:
+            print(f"Error processing specific credential ID: {e}")
+            selected_credentials = []
+    
+    if allow_credentials != "empty" and not selected_credentials:
         return jsonify({"error": "No credentials found. Please register first."}), 404
     
     # Import required classes
-    from fido2.webauthn import UserVerificationRequirement
+    from fido2.webauthn import (
+        UserVerificationRequirement,
+        PublicKeyCredentialDescriptor,
+        PublicKeyCredentialType
+    )
+    from fido2.server import Fido2Server
+    import secrets
     
+    # Create temporary server with custom timeout
+    temp_server = Fido2Server(rp)
+    temp_server.timeout = timeout
+    
+    # Convert string values to enum values
     uv_req = None
     if user_verification == "required":
         uv_req = UserVerificationRequirement.REQUIRED
     elif user_verification == "discouraged":
         uv_req = UserVerificationRequirement.DISCOURAGED
-    else:
+    elif user_verification == "preferred":
         uv_req = UserVerificationRequirement.PREFERRED
     
-    options, state = server.authenticate_begin(all_credentials, user_verification=uv_req)
+    # Prepare credentials list with fake credential if requested
+    final_credentials = selected_credentials
+    if fake_cred_length > 0 and final_credentials is not None:
+        fake_cred_id = secrets.token_bytes(fake_cred_length)
+        fake_descriptor = PublicKeyCredentialDescriptor(
+            type=PublicKeyCredentialType.PUBLIC_KEY,
+            id=fake_cred_id
+        )
+        final_credentials = list(final_credentials) + [fake_descriptor]
+    
+    # Parse custom challenge
+    challenge_bytes = None
+    if challenge:
+        try:
+            challenge_bytes = bytes.fromhex(challenge)
+        except ValueError:
+            return jsonify({"error": "Invalid challenge hex format"}), 400
+    
+    # Process extensions
+    processed_extensions = {}
+    
+    # largeBlob extension for authentication
+    large_blob = extensions.get("largeBlob")
+    if large_blob:
+        if large_blob == "read":
+            processed_extensions["largeBlob"] = {"read": True}
+        elif large_blob == "write":
+            large_blob_data = extensions.get("largeBlobWrite")
+            if large_blob_data:
+                try:
+                    blob_bytes = bytes.fromhex(large_blob_data)
+                    processed_extensions["largeBlob"] = {"write": blob_bytes}
+                except ValueError:
+                    return jsonify({"error": "Invalid largeBlob write hex format"}), 400
+    
+    # prf extension for authentication
+    if extensions.get("prf"):
+        prf_ext = {"eval": {}}
+        prf_first = extensions.get("prfEvalFirst")
+        prf_second = extensions.get("prfEvalSecond")
+        
+        if prf_first:
+            try:
+                prf_ext["eval"]["first"] = bytes.fromhex(prf_first)
+            except ValueError:
+                return jsonify({"error": "Invalid prf eval first hex format"}), 400
+        
+        if prf_second:
+            try:
+                prf_ext["eval"]["second"] = bytes.fromhex(prf_second)
+            except ValueError:
+                return jsonify({"error": "Invalid prf eval second hex format"}), 400
+        
+        if prf_ext["eval"]:
+            processed_extensions["prf"] = prf_ext
+    
+    options, state = temp_server.authenticate_begin(
+        final_credentials,
+        user_verification=uv_req,
+        challenge=challenge_bytes,
+        extensions=processed_extensions if processed_extensions else None,
+    )
+    
     session["advanced_auth_state"] = state
     
     return jsonify(dict(options))

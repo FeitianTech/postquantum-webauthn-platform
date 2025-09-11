@@ -2975,20 +2975,123 @@
 
         // Advanced Authentication Functions
         function getAdvancedCreateOptions() {
-            return {
+            // Collect basic user information
+            const options = {
                 username: document.getElementById('user-name').value,
                 displayName: document.getElementById('user-display-name').value || document.getElementById('user-name').value,
+                userId: document.getElementById('user-id').value,
+                
+                // Authenticator selection
                 attestation: document.getElementById('attestation').value,
                 userVerification: document.getElementById('user-verification-reg').value,
                 authenticatorAttachment: document.getElementById('authenticator-attachment').value || undefined,
-                residentKey: document.getElementById('resident-key').value
+                residentKey: document.getElementById('resident-key').value,
+                
+                // Credential management
+                excludeCredentials: document.getElementById('exclude-credentials').checked,
+                fakeCredLength: parseInt(document.getElementById('fake-cred-length-reg').value) || 0,
+                
+                // Other options
+                challenge: document.getElementById('challenge-reg').value,
+                timeout: parseInt(document.getElementById('timeout-reg').value) || 90000,
+                
+                // Public key credential parameters
+                pubKeyCredParams: [],
+                
+                // Hints
+                hints: [],
+                
+                // Extensions
+                extensions: {}
             };
+            
+            // Collect selected algorithms
+            if (document.getElementById('param-eddsa')?.checked) options.pubKeyCredParams.push('EdDSA');
+            if (document.getElementById('param-es256')?.checked) options.pubKeyCredParams.push('ES256');
+            if (document.getElementById('param-rs256')?.checked) options.pubKeyCredParams.push('RS256');
+            if (document.getElementById('param-es384')?.checked) options.pubKeyCredParams.push('ES384');
+            if (document.getElementById('param-es512')?.checked) options.pubKeyCredParams.push('ES512');
+            if (document.getElementById('param-rs384')?.checked) options.pubKeyCredParams.push('RS384');
+            if (document.getElementById('param-rs512')?.checked) options.pubKeyCredParams.push('RS512');
+            if (document.getElementById('param-rs1')?.checked) options.pubKeyCredParams.push('RS1');
+            
+            // Collect hints
+            if (document.getElementById('hint-client-device')?.checked) options.hints.push('client-device');
+            if (document.getElementById('hint-hybrid')?.checked) options.hints.push('hybrid');
+            if (document.getElementById('hint-security-key')?.checked) options.hints.push('security-key');
+            
+            // Collect extensions
+            if (document.getElementById('cred-props')?.checked) {
+                options.extensions.credProps = true;
+            }
+            
+            if (document.getElementById('min-pin-length')?.checked) {
+                options.extensions.minPinLength = true;
+            }
+            
+            const credProtect = document.getElementById('cred-protect')?.value;
+            if (credProtect && credProtect !== '') {
+                options.extensions.credProtect = credProtect;
+                if (document.getElementById('enforce-cred-protect')?.checked) {
+                    options.extensions.enforceCredProtect = true;
+                }
+            }
+            
+            const largeBlob = document.getElementById('large-blob-reg')?.value;
+            if (largeBlob && largeBlob !== '') {
+                options.extensions.largeBlob = largeBlob;
+            }
+            
+            if (document.getElementById('prf-reg')?.checked) {
+                options.extensions.prf = true;
+                const prfFirst = document.getElementById('prf-eval-first-reg')?.value;
+                const prfSecond = document.getElementById('prf-eval-second-reg')?.value;
+                if (prfFirst) options.extensions.prfEvalFirst = prfFirst;
+                if (prfSecond) options.extensions.prfEvalSecond = prfSecond;
+            }
+            
+            return options;
         }
 
         function getAdvancedAssertOptions() {
-            return {
-                userVerification: document.getElementById('user-verification-auth').value
+            const options = {
+                userVerification: document.getElementById('user-verification-auth').value,
+                allowCredentials: document.getElementById('allow-credentials').value,
+                fakeCredLength: parseInt(document.getElementById('fake-cred-length-auth').value) || 0,
+                challenge: document.getElementById('challenge-auth').value,
+                timeout: parseInt(document.getElementById('timeout-auth').value) || 90000,
+                extensions: {}
             };
+            
+            // Handle specific credential selection
+            const allowCreds = document.getElementById('allow-credentials').value;
+            if (allowCreds !== 'all' && allowCreds !== 'empty') {
+                // This would be a specific credential ID
+                options.specificCredentialId = allowCreds;
+            }
+            
+            // Collect extensions for authentication
+            const largeBlob = document.getElementById('large-blob-auth')?.value;
+            if (largeBlob && largeBlob !== '') {
+                options.extensions.largeBlob = largeBlob;
+                if (largeBlob === 'write') {
+                    const largeBlobWrite = document.getElementById('large-blob-write')?.value;
+                    if (largeBlobWrite) {
+                        options.extensions.largeBlobWrite = largeBlobWrite;
+                    }
+                }
+            }
+            
+            // Check if we have prf inputs for authentication
+            const prfFirst = document.getElementById('prf-eval-first-auth')?.value;
+            const prfSecond = document.getElementById('prf-eval-second-auth')?.value;
+            if (prfFirst || prfSecond) {
+                options.extensions.prf = true;
+                if (prfFirst) options.extensions.prfEvalFirst = prfFirst;
+                if (prfSecond) options.extensions.prfEvalSecond = prfSecond;
+            }
+            
+            return options;
         }
 
         async function advancedRegister() {
