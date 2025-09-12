@@ -58,7 +58,7 @@ Create a project‑local virtual environment and install only the runtime depend
 ```powershell
 # Create and activate a virtual environment using Python 3.12
 py -3.12 -m venv .venv
-.\.venv\Scripts\Activate.ps1
+.\.venv\scripts\activate
 
 # Upgrade pip and install runtime dependencies
 python -m pip install --upgrade pip
