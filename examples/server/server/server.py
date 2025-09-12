@@ -127,14 +127,15 @@ def register_complete():
 
     # Extract attestation format from attestation object
     attestation_format = "none"  # Default
+    attestation_statement = None
     try:
-        if hasattr(auth_data, 'attestation_object') and auth_data.attestation_object:
-            attestation_format = auth_data.attestation_object.fmt
-        elif response.get('attestationObject'):
+        if response.get('attestationObject'):
             # Try to parse attestation object from response
             import cbor2
-            attestation_object = cbor2.loads(base64.b64decode(response['attestationObject']))
+            attestation_object_bytes = base64.b64decode(response['attestationObject'])
+            attestation_object = cbor2.loads(attestation_object_bytes)
             attestation_format = attestation_object.get('fmt', 'none')
+            attestation_statement = attestation_object.get('attStmt', {})
     except Exception as e:
         print(f"Could not extract attestation format: {e}")
 
@@ -151,6 +152,7 @@ def register_complete():
         'client_data_json': response.get('clientDataJSON', ''),
         'attestation_object': response.get('attestationObject', ''),
         'attestation_format': attestation_format,  # Store parsed attestation format
+        'attestation_statement': attestation_statement,  # Store attestation statement for details
         'client_extension_outputs': response.get('clientExtensionResults', {}),
         # Store request parameters for simple registration (defaults)
         'request_params': {
@@ -325,6 +327,7 @@ def list_credentials():
                                     },
                                     'clientExtensionOutputs': cred.get('client_extension_outputs', {}),
                                     'attestationFormat': cred.get('attestation_format', 'none'),  # Use stored attestation format
+                                    'attestationStatement': cred.get('attestation_statement', {}),  # Include attestation statement if available
                                     'publicKeyAlgorithm': cred_data.public_key[3] if hasattr(cred_data, 'public_key') and len(cred_data.public_key) > 3 else None,
                                     
                                     # Properties determined from multiple sources for best accuracy
@@ -359,6 +362,7 @@ def list_credentials():
                                 },
                                 'clientExtensionOutputs': {},
                                 'attestationFormat': 'none',
+                                'attestationStatement': {},  # No attestation statement for old format
                                 'publicKeyAlgorithm': cred.public_key[3] if hasattr(cred, 'public_key') and len(cred.public_key) > 3 else None,
                                 'residentKey': False,
                                 'largeBlob': False,
@@ -419,8 +423,8 @@ def advanced_register_begin():
     # Create a temporary server instance with custom settings
     temp_server = Fido2Server(rp)
     
-    # Set timeout
-    temp_server.timeout = timeout
+    # Set timeout (convert to seconds as the library expects seconds, not milliseconds)
+    temp_server.timeout = timeout / 1000.0 if timeout else None
     
     # Set attestation
     if attestation == "direct":
@@ -599,7 +603,7 @@ def advanced_register_begin():
     print(f"User verification requested: {user_verification} -> {uv_req}")
     print(f"Attestation requested: {attestation} -> {temp_server.attestation}")
     print(f"Resident key requested: {resident_key} -> {rk_req}")
-    print(f"Timeout requested: {timeout}")
+    print(f"Timeout requested: {timeout} ms -> {temp_server.timeout} seconds")
     print(f"Extensions requested: {processed_extensions}")
     print(f"Exclude credentials enabled: {exclude_credentials}")
     print(f"Exclude list size: {len(exclude_list) if exclude_list else 0}")
@@ -653,19 +657,26 @@ def advanced_register_complete():
         else:
             user_handle = username.encode('utf-8')  # Use username as bytes if no custom user ID
         
-        # Extract attestation format from attestation object
+        # Extract attestation format and other attestation information from attestation object
         attestation_format = "none"  # Default
+        attestation_statement = None
         try:
-            if hasattr(auth_data, 'attestation_object') and auth_data.attestation_object:
-                attestation_format = auth_data.attestation_object.fmt
-            elif response.get('attestationObject'):
-                # Try to parse attestation object from response
+            if response.get('attestationObject'):
+                # Parse attestation object from response
                 import cbor2
                 attestation_object_bytes = base64.b64decode(response['attestationObject'])
                 attestation_object = cbor2.loads(attestation_object_bytes)
                 attestation_format = attestation_object.get('fmt', 'none')
+                attestation_statement = attestation_object.get('attStmt', {})
+                
+                print(f"=== ATTESTATION DEBUG ===")
+                print(f"Attestation format extracted: {attestation_format}")
+                print(f"Attestation statement keys: {list(attestation_statement.keys()) if attestation_statement else 'None'}")
+                print(f"Full attestation object keys: {list(attestation_object.keys())}")
+                print("========================")
         except Exception as e:
             print(f"Could not extract attestation format: {e}")
+            print(f"Raw attestationObject available: {bool(response.get('attestationObject'))}")
         
         # Store comprehensive credential data with original user parameters
         credential_info = {
@@ -680,6 +691,7 @@ def advanced_register_complete():
             'client_data_json': response.get('clientDataJSON', ''),
             'attestation_object': response.get('attestationObject', ''),
             'attestation_format': attestation_format,  # Store parsed attestation format
+            'attestation_statement': attestation_statement,  # Store attestation statement for details
             'client_extension_outputs': response.get('clientExtensionResults', {}),
             # Store original request parameters for verification
             'request_params': {
@@ -794,7 +806,8 @@ def advanced_authenticate_begin():
     
     # Create temporary server with custom timeout
     temp_server = Fido2Server(rp)
-    temp_server.timeout = timeout
+    # Convert timeout to seconds as the library expects seconds, not milliseconds
+    temp_server.timeout = timeout / 1000.0 if timeout else None
     
     # Convert string values to enum values
     uv_req = None
@@ -888,6 +901,9 @@ def advanced_authenticate_begin():
     print(f"Specific credential ID: {specific_credential_id}")
     print(f"Selected credentials count: {len(selected_credentials) if selected_credentials else 'None (resident key mode)'}")
     print(f"Final credentials count: {len(final_credentials) if final_credentials else 'None (resident key mode)'}")
+    print(f"User verification requested: {user_verification} -> {uv_req}")
+    print(f"Timeout requested: {timeout} ms -> {temp_server.timeout} seconds")
+    print(f"Extensions processed: {processed_extensions}")
     print(f"User verification requested: {user_verification} -> {uv_req}")
     print(f"Extensions requested: {processed_extensions}")
     if final_credentials:
