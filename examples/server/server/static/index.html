@@ -1024,6 +1024,9 @@
                                             <option value="all">All credentials</option>
                                             <option value="empty">Empty (resident key only)</option>
                                         </select>
+                                        <div class="alert alert-info" style="margin-top: 0.5rem; font-size: 0.875rem;">
+                                            <strong>Note:</strong> When using "Empty (resident key only)", if multiple resident key credentials exist on your authenticator from previous registrations, you may still be prompted to select one. This is because web applications cannot delete credentials from authenticators directly. To test true discoverable credential authentication, you may need to reset your authenticator or use device-specific management tools to clear old credentials.
+                                        </div>
                                     </div>
                                     <div class="form-group">
                                         <label for="fake-cred-length-auth">Fake credential ID length</label>
@@ -1210,108 +1213,8 @@
         let currentJsonMode = null;
         let currentJsonData = null;
 
-        // Diagnostic function to test resident key authentication
-        async function testResidentKeyAuthentication() {
-            console.log('=== RESIDENT KEY DIAGNOSTIC TEST ===');
-            
-            // Show progress to user
-            showProgress('advanced', 'Testing resident key support...');
-            hideStatus('advanced');
-            
-            try {
-                // Generate a proper random challenge
-                const challenge = new Uint8Array(32);
-                crypto.getRandomValues(challenge);
-                
-                // Make a minimal request with no allowCredentials to test resident key mode
-                const testOptions = {
-                    publicKey: {
-                        challenge: challenge,
-                        timeout: 60000,
-                        rpId: window.location.hostname,
-                        userVerification: 'preferred'
-                        // Deliberately omitting allowCredentials to enable resident key mode
-                    }
-                };
-                
-                console.log('Testing with minimal options (no allowCredentials):', testOptions);
-                
-                // This should work if there are any resident key credentials
-                const result = await navigator.credentials.get(testOptions);
-                console.log('SUCCESS: Resident key authentication worked!', result);
-                
-                // Show success message to user
-                showStatus('advanced', 
-                    '✅ Resident key authentication test PASSED! Your device supports discoverable credentials and has resident key credentials available.', 
-                    'success'
-                );
-                
-                return true;
-                
-            } catch (error) {
-                console.log('FAILED: Resident key authentication failed:', error);
-                console.log('This suggests either:');
-                console.log('1. No resident key credentials are stored');
-                console.log('2. The authenticator does not support discoverable credentials');
-                console.log('3. Browser/OS limitations prevent resident key authentication');
-                
-                // Show detailed error message to user
-                let errorMessage = '❌ Resident key authentication test FAILED. ';
-                
-                if (error.name === 'NotAllowedError') {
-                    errorMessage += 'No resident key credentials found or user cancelled. To fix: register a credential with Resident Key set to "Required".';
-                } else if (error.name === 'SecurityError') {
-                    errorMessage += 'Security error - your authenticator may not support discoverable credentials.';
-                } else if (error.name === 'NotSupportedError') {
-                    errorMessage += 'Your browser or platform does not support resident key authentication.';
-                } else {
-                    errorMessage += `Error: ${error.message}. This may indicate lack of resident key support or no stored credentials.`;
-                }
-                
-                showStatus('advanced', errorMessage, 'error');
-                return false;
-            } finally {
-                hideProgress('advanced');
-            }
-        }
-        
-        // Make diagnostic function globally accessible
-        window.testResidentKeyAuthentication = testResidentKeyAuthentication;
-        function addDiagnosticButton() {
-            // Target the authentication form's main button group
-            const authForm = document.getElementById('authentication-form');
-            const mainButtonGroup = authForm ? authForm.querySelector('.form-group:last-child') : null;
-            
-            if (mainButtonGroup && !document.getElementById('diagnostic-button')) {
-                // Create a new form group for the diagnostic button
-                const diagnosticGroup = document.createElement('div');
-                diagnosticGroup.className = 'form-group';
-                diagnosticGroup.style.marginTop = '1rem';
-                diagnosticGroup.style.borderTop = '1px solid #dee2e6';
-                diagnosticGroup.style.paddingTop = '1rem';
-                
-                const diagnosticButton = document.createElement('button');
-                diagnosticButton.type = 'button';
-                diagnosticButton.id = 'diagnostic-button';
-                diagnosticButton.className = 'btn btn-secondary';
-                diagnosticButton.onclick = testResidentKeyAuthentication;
-                diagnosticButton.innerHTML = '🔍 Test Resident Key Support';
-                diagnosticButton.title = 'This diagnostic test checks if resident key authentication works on your device';
-                
-                const helpText = document.createElement('small');
-                helpText.className = 'form-text';
-                helpText.style.color = '#6c757d';
-                helpText.style.display = 'block';
-                helpText.style.marginTop = '0.5rem';
-                helpText.textContent = 'This diagnostic test checks if resident key authentication works on your device.';
-                
-                diagnosticGroup.appendChild(diagnosticButton);
-                diagnosticGroup.appendChild(helpText);
-                
-                // Insert after the main button group
-                mainButtonGroup.parentNode.insertBefore(diagnosticGroup, mainButtonGroup.nextSibling);
-            }
-        }
+
+
         function isValidHex(str) {
             return /^[0-9a-fA-F]*$/.test(str) && str.length > 0;
         }
@@ -2091,7 +1994,15 @@
                     // Remove from local array
                     storedCredentials.splice(index, 1);
                     updateCredentialsDisplay();
-                    showStatus('advanced', 'Credential deleted successfully!', 'success');
+                    
+                    // Show success message with important note about authenticator credentials
+                    showStatus('advanced', 
+                        'Credential deleted from server successfully! ' +
+                        'Note: This only removes the credential from our application. ' +
+                        'The credential remains on your authenticator device and may still appear during resident key authentication. ' +
+                        'To fully remove credentials, you may need to reset your authenticator or use device-specific management tools.', 
+                        'success'
+                    );
                 } else {
                     throw new Error('Failed to delete credential from server');
                 }
@@ -2964,9 +2875,6 @@
             // Load saved credentials
             setTimeout(loadSavedCredentials, 300);
             
-            // Add diagnostic button
-            setTimeout(addDiagnosticButton, 400);
-            
             // Ensure decoder tab functionality is properly initialized
             setTimeout(() => {
                 // Verify decoder elements exist
@@ -3143,7 +3051,13 @@
                 });
 
                 if (result.ok) {
-                    showStatus('simple', 'Credentials deleted successfully!', 'success');
+                    showStatus('simple', 
+                        'Credentials deleted from server successfully! ' +
+                        'Note: This only removes credentials from our application. ' +
+                        'Resident key credentials remain on your authenticator device. ' +
+                        'To fully remove credentials, you may need to reset your authenticator.', 
+                        'success'
+                    );
                 } else {
                     throw new Error('Deletion failed');
                 }
@@ -3494,7 +3408,13 @@
                 });
 
                 if (result.ok) {
-                    showStatus('advanced', 'Credentials deleted successfully!', 'success');
+                    showStatus('advanced', 
+                        'Credentials deleted from server successfully! ' +
+                        'Note: This only removes credentials from our application. ' +
+                        'Resident key credentials remain on your authenticator device. ' +
+                        'To fully remove credentials, you may need to reset your authenticator.', 
+                        'success'
+                    );
                 } else {
                     throw new Error('Deletion failed');
                 }
