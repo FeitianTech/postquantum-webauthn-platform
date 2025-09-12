@@ -971,7 +971,14 @@
                                         </div>
                                     </div>
                                     <div class="form-group">
-                                        <label for="fake-cred-length-reg">Fake credential ID length</label>
+                                        <div class="label-with-info">
+                                            <label for="fake-cred-length-reg">Fake credential ID length</label>
+                                            <div class="info-icon" onclick="toggleInfoPopup(this)">
+                                                <div class="info-popup">
+                                                    Add a random credential ID of the given length to excludeCredentials. May be useful for testing edge cases and conformance.
+                                                </div>
+                                            </div>
+                                        </div>
                                         <input type="number" id="fake-cred-length-reg" class="form-control" value="128" min="1">
                                     </div>
                                 </div>
@@ -985,7 +992,14 @@
                                 </div>
                                 <div id="other-options-reg" class="section-content">
                                     <div class="form-group">
-                                        <label for="challenge-reg">Challenge (hex)</label>
+                                        <div class="label-with-info">
+                                            <label for="challenge-reg">Challenge (hex)</label>
+                                            <div class="info-icon" onclick="toggleInfoPopup(this)">
+                                                <div class="info-popup">
+                                                    The cryptographic challenge to be signed by the authenticator, used to prevent replay attacks.
+                                                </div>
+                                            </div>
+                                        </div>
                                         <div class="input-with-button">
                                             <input type="text" id="challenge-reg" class="form-control" placeholder="Auto-generated hex value">
                                             <button class="btn btn-small refresh-icon" onclick="randomizeChallenge('reg')" title="Generate new random challenge"></button>
@@ -993,11 +1007,25 @@
                                         <div id="challenge-reg-error" class="error-message">Invalid hex value (minimum 16 bytes required)</div>
                                     </div>
                                     <div class="form-group">
-                                        <label for="timeout-reg">Timeout (milliseconds)</label>
+                                        <div class="label-with-info">
+                                            <label for="timeout-reg">Timeout (milliseconds)</label>
+                                            <div class="info-icon" onclick="toggleInfoPopup(this)">
+                                                <div class="info-popup">
+                                                    How long the Relying Party (RP) is willing to wait for the registration ceremony to complete. If the registration ceremony takes longer than this (or the adjusted value, in case the client overrides it), the ceremony will be aborted with a timeout message shown to the user. This may be silently overridden by the client.
+                                                </div>
+                                            </div>
+                                        </div>
                                         <input type="number" id="timeout-reg" class="form-control" value="90000" min="1">
                                     </div>
                                     <div class="form-group">
-                                        <label>Public Key Credential Parameters</label>
+                                        <div class="label-with-info">
+                                            <label>Public Key Credential Parameters</label>
+                                            <div class="info-icon" onclick="toggleInfoPopup(this)">
+                                                <div class="info-popup">
+                                                    The signature algorithms supported by the Relying Party (RP). The authenticator will be choosing the most preferred algorithm that it supports. It is recommended to include at least ES256, EdDSA and RS256.
+                                                </div>
+                                            </div>
+                                        </div>
                                         <div class="checkbox-group">
                                             <div class="checkbox-item">
                                                 <input type="checkbox" id="param-eddsa" checked>
@@ -1034,7 +1062,15 @@
                                         </div>
                                     </div>
                                     <div class="form-group">
-                                        <label>Hints</label>
+                                        <div class="label-with-info">
+                                            <label>Hints</label>
+                                            <div class="info-icon" onclick="toggleInfoPopup(this)">
+                                                <div class="info-popup">
+                                                    Registration hints to guide the user-agent in interacting with the user.<br><br>
+                                                    Hints are suggestions that help guide the user experience. They're not required, and the system prioritizes them in order of preference. If hints conflict, the first one takes priority. Hints can also overlap, allowing for both specific and general suggestions to be sent. If hints contradict other information, the hints take precedence.
+                                                </div>
+                                            </div>
+                                        </div>
                                         <div class="checkbox-group">
                                             <div class="checkbox-item">
                                                 <input type="checkbox" id="hint-client-device">
@@ -1061,17 +1097,38 @@
                                 </div>
                                 <div id="extensions-reg" class="section-content">
                                     <div class="form-group">
-                                        <label>
-                                            <input type="checkbox" id="cred-props" checked> credProps
-                                        </label>
+                                        <div class="label-with-info">
+                                            <label>
+                                                <input type="checkbox" id="cred-props" checked> credProps
+                                            </label>
+                                            <div class="info-icon" onclick="toggleInfoPopup(this)">
+                                                <div class="info-popup">
+                                                    Request the Credential Properties (credProps) extension. This extension may report properties such as whether a discoverable or non-discoverable credential was created.
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                     <div class="form-group">
-                                        <label>
-                                            <input type="checkbox" id="min-pin-length"> minPinLength
-                                        </label>
+                                        <div class="label-with-info">
+                                            <label>
+                                                <input type="checkbox" id="min-pin-length"> minPinLength
+                                            </label>
+                                            <div class="info-icon" onclick="toggleInfoPopup(this)">
+                                                <div class="info-popup">
+                                                    Request the Minimum PIN Length Extension (minPinLength). This extension may report the authenticator's currently configured minimum PIN length if the Relying Party (RP) is authorized to receive this value.
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                     <div class="form-group">
-                                        <label for="cred-protect">credProtect</label>
+                                        <div class="label-with-info">
+                                            <label for="cred-protect">credProtect</label>
+                                            <div class="info-icon" onclick="toggleInfoPopup(this)">
+                                                <div class="info-popup">
+                                                    Request the Credential protection (credProtect) extension. This extension sets whether the authenticator requires user verification (UV) before revealing the existence of a credential. If it does, that also means that the authenticator requires UV before allowing authentication using that credential.
+                                                </div>
+                                            </div>
+                                        </div>
                                         <select id="cred-protect" class="form-control">
                                             <option value="">Unspecified (default)</option>
                                             <option value="userVerificationOptional">userVerificationOptional</option>
