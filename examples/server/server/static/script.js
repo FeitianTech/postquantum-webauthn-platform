@@ -19,33 +19,26 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
 
         // Info popup functionality
         function showInfoPopup(iconElement) {
-            console.log('showInfoPopup called', iconElement);
             const popup = iconElement.querySelector('.info-popup');
             if (!popup) {
-                console.error('Info popup element not found');
                 return;
             }
             // Hide all other popups first
             document.querySelectorAll('.info-popup.show').forEach(p => p.classList.remove('show'));
             // Show this popup
             popup.classList.add('show');
-            console.log('Info popup shown');
         }
         
         function hideInfoPopup(iconElement) {
-            console.log('hideInfoPopup called', iconElement);
             const popup = iconElement.querySelector('.info-popup');
             if (!popup) {
-                console.error('Info popup element not found');
                 return;
             }
             popup.classList.remove('show');
-            console.log('Info popup hidden');
         }
 
         // Language toggle functionality
         function toggleLanguage(toggleElement) {
-            console.log('toggleLanguage called', toggleElement);
             const popup = toggleElement.closest('.info-popup');
             const enText = popup.querySelector('.text-en');
             const zhText = popup.querySelector('.text-zh');
@@ -355,11 +348,6 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
 
         // Tab switching functionality
         function switchTab(tab) {
-            // Debug logging with fallback
-            if (window.console && console.log) {
-                console.log('Switching to tab:', tab);
-            }
-            
             // Hide all tabs
             document.querySelectorAll('.tab-content').forEach(content => {
                 content.classList.remove('active');
@@ -372,13 +360,6 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             const targetTab = document.getElementById(tab + '-tab');
             if (targetTab) {
                 targetTab.classList.add('active');
-                if (window.console && console.log) {
-                    console.log('Activated tab:', targetTab.id);
-                }
-            } else {
-                if (window.console && console.error) {
-                    console.error('Tab not found:', tab + '-tab');
-                }
             }
             
             // Activate the corresponding nav button - use a more direct approach
@@ -388,9 +369,6 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             
             if (tabIndex !== -1 && navButtons[tabIndex]) {
                 navButtons[tabIndex].classList.add('active');
-                if (window.console && console.log) {
-                    console.log('Activated nav button:', tabIndex);
-                }
             }
             
             // Update JSON editor if in advanced tab
@@ -602,6 +580,137 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             }
         }
 
+        // Console debug output functions for credential information
+        function printRegistrationDebug(credential, createOptions, serverResponse) {
+            console.log('=== REGISTRATION DEBUG INFO ===');
+            
+            // Extract actual values from credential response and server data
+            const clientExtensions = credential.clientExtensionResults || {};
+            const serverData = serverResponse || {};
+            
+            // Resident key - check from client extension results first, then server
+            const residentKey = clientExtensions.credProps?.rk || 
+                               (createOptions.publicKey.authenticatorSelection?.residentKey === 'required') ||
+                               false;
+            console.log('Resident key:', residentKey);
+            
+            // Attestation format from server response or default to 'none'
+            const attestationFormat = serverData.attestationFormat || 'none';
+            const attestationRetrieved = attestationFormat !== 'none';
+            console.log('Attestation (retrieve or not, plus the format):', `${attestationRetrieved}, ${attestationFormat}`);
+            
+            // Exclude credentials - check if excludeCredentials was used
+            const excludeCredentials = createOptions.publicKey.excludeCredentials?.length > 0 || false;
+            console.log('exclude credentials:', excludeCredentials);
+            
+            // Fake credential ID length - from our internal tracking
+            const fakeCredLength = window.lastFakeCredLength || 0;
+            console.log('fake credential id length:', fakeCredLength);
+            
+            // Challenge hex code - convert from base64url to hex
+            let challengeHex = '';
+            if (typeof createOptions.publicKey.challenge === 'string') {
+                challengeHex = base64UrlToHex(createOptions.publicKey.challenge);
+            }
+            console.log('challenge hex code:', challengeHex);
+            
+            // pubKeyCredParams used - extract actual algorithms
+            const pubKeyCredParams = createOptions.publicKey.pubKeyCredParams?.map(p => p.alg) || [];
+            console.log('pubkeycredparam used:', pubKeyCredParams);
+            
+            // Hints from create options
+            const hints = createOptions.publicKey.hints || [];
+            console.log('hints:', hints);
+            
+            // credProps extension
+            const credPropsRequested = createOptions.publicKey.extensions?.credProps === true;
+            console.log('credprops (requested or not):', credPropsRequested);
+            
+            // minPinLength extension
+            const minPinLengthRequested = createOptions.publicKey.extensions?.minPinLength === true;
+            console.log('minpinlength (requested or not):', minPinLengthRequested);
+            
+            // credProtect setting
+            const credProtectSetting = createOptions.publicKey.extensions?.credProtect || 'none';
+            console.log('credprotect setting:', credProtectSetting);
+            
+            // enforce credProtect
+            const enforceCredProtect = createOptions.publicKey.extensions?.enforceCredProtect || false;
+            console.log('enforce credprotect:', enforceCredProtect);
+            
+            // largeBlob
+            const largeBlob = createOptions.publicKey.extensions?.largeBlob?.support || 'none';
+            console.log('largeblob:', largeBlob);
+            
+            // prf
+            const prfEnabled = createOptions.publicKey.extensions?.prf !== undefined;
+            console.log('prf:', prfEnabled);
+            
+            // prf eval first hex code
+            const prfFirstHex = createOptions.publicKey.extensions?.prf?.eval?.first ? 
+                               extractHexFromJsonFormat(createOptions.publicKey.extensions.prf.eval.first) : '';
+            console.log('prf eval first hex code:', prfFirstHex);
+            
+            // prf eval second hex code
+            const prfSecondHex = createOptions.publicKey.extensions?.prf?.eval?.second ? 
+                                extractHexFromJsonFormat(createOptions.publicKey.extensions.prf.eval.second) : '';
+            console.log('prf eval second hex code:', prfSecondHex);
+            
+            console.log('=== END REGISTRATION DEBUG ===');
+        }
+        
+        function printAuthenticationDebug(assertion, requestOptions, serverResponse) {
+            console.log('=== AUTHENTICATION DEBUG INFO ===');
+            
+            // Fake credential ID length - from our internal tracking
+            const fakeCredLength = window.lastFakeCredLength || 0;
+            console.log('Fake credential ID length:', fakeCredLength);
+            
+            // Challenge hex code - convert from base64url to hex
+            let challengeHex = '';
+            if (typeof requestOptions.publicKey.challenge === 'string') {
+                challengeHex = base64UrlToHex(requestOptions.publicKey.challenge);
+            }
+            console.log('challenge hex code:', challengeHex);
+            
+            // Hints from request options
+            const hints = requestOptions.publicKey.hints || [];
+            console.log('hints:', hints);
+            
+            // largeBlob extension
+            const largeBlobRead = requestOptions.publicKey.extensions?.largeBlob?.read || false;
+            const largeBlobWrite = requestOptions.publicKey.extensions?.largeBlob?.write !== undefined;
+            const largeBlobType = largeBlobWrite ? 'write' : (largeBlobRead ? 'read' : 'none');
+            console.log('largeblob:', largeBlobType);
+            
+            // largeBlob write hex code
+            const largeBlobWriteHex = requestOptions.publicKey.extensions?.largeBlob?.write ? 
+                                     extractHexFromJsonFormat(requestOptions.publicKey.extensions.largeBlob.write) : '';
+            console.log('largeblob write hex code:', largeBlobWriteHex);
+            
+            // prf eval first hex code
+            const prfFirstHex = requestOptions.publicKey.extensions?.prf?.eval?.first ? 
+                               extractHexFromJsonFormat(requestOptions.publicKey.extensions.prf.eval.first) : '';
+            console.log('prf eval first hex code:', prfFirstHex);
+            
+            // prf eval second hex code
+            const prfSecondHex = requestOptions.publicKey.extensions?.prf?.eval?.second ? 
+                                extractHexFromJsonFormat(requestOptions.publicKey.extensions.prf.eval.second) : '';
+            console.log('prf eval second hex code:', prfSecondHex);
+            
+            console.log('=== END AUTHENTICATION DEBUG ===');
+        }
+        
+        // Helper function to extract hex from JSON format objects
+        function extractHexFromJsonFormat(jsonValue) {
+            if (!jsonValue) return '';
+            if (jsonValue.$hex) return jsonValue.$hex;
+            if (jsonValue.$base64url) return base64UrlToHex(jsonValue.$base64url);
+            if (jsonValue.$base64) return base64ToHex(jsonValue.$base64);
+            if (typeof jsonValue === 'string') return base64UrlToHex(jsonValue);
+            return '';
+        }
+
         // Auto-detect and load PKL credentials
         async function loadSavedCredentials() {
             try {
@@ -615,11 +724,9 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                     storedCredentials = credentials;
                     updateCredentialsDisplay();
                     updateJsonEditor(); // Update JSON editor in case allowCredentials needs updating
-                } else {
-                    console.warn('Failed to load saved credentials');
                 }
             } catch (error) {
-                console.error('Error loading saved credentials:', error);
+                // Silently fail credential loading
             }
         }
 
@@ -843,7 +950,6 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                     throw new Error('Failed to delete credential from server');
                 }
             } catch (error) {
-                console.error('Error deleting credential:', error);
                 showStatus('advanced', `Failed to delete credential: ${error.message}`, 'error');
             }
         }
@@ -1545,11 +1651,12 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                 const json = await response.json();
                 const createOptions = parseCreationOptionsFromJSON(json);
 
+                // Track fake credential length
+                window.lastFakeCredLength = 0; // Simple auth doesn't use fake credentials
+
                 showProgress('simple', 'Connecting your authenticator device...');
 
                 const credential = await create(createOptions);
-                
-                console.log('Simple Registration - Created credential:', credential);
                 
                 showProgress('simple', 'Completing registration...');
 
@@ -1562,6 +1669,10 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
 
                 if (result.ok) {
                     const data = await result.json();
+                    
+                    // Print debug information from actual credential data
+                    printRegistrationDebug(credential, createOptions, data);
+                    
                     showStatus('simple', `Registration successful! Algorithm: ${data.algo || 'Unknown'}`, 'success');
                     
                     // Reload credentials from server to get the latest
@@ -1572,8 +1683,6 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                 }
 
             } catch (error) {
-                console.error('Simple registration error:', error);
-                
                 let errorMessage = error.message;
                 if (error.name === 'NotAllowedError') {
                     errorMessage = 'User cancelled or authenticator not available';
@@ -1619,6 +1728,9 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                 const json = await response.json();
                 const getOptions = parseRequestOptionsFromJSON(json);
 
+                // Track fake credential length
+                window.lastFakeCredLength = 0; // Simple auth doesn't use fake credentials
+
                 showProgress('simple', 'Connecting your authenticator device...');
 
                 const assertion = await get(getOptions);
@@ -1633,6 +1745,11 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                 });
 
                 if (result.ok) {
+                    const data = await result.json();
+                    
+                    // Print debug information from actual assertion data
+                    printAuthenticationDebug(assertion, getOptions, data);
+                    
                     showStatus('simple', 'Authentication successful! You have been verified.', 'success');
                 } else {
                     const errorText = await result.text();
@@ -1640,8 +1757,6 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                 }
 
             } catch (error) {
-                console.error('Simple authentication error:', error);
-                
                 let errorMessage = error.message;
                 if (error.name === 'NotAllowedError') {
                     errorMessage = 'User cancelled or authenticator not available';
@@ -1878,22 +1993,10 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             
             // Ensure decoder tab functionality is properly initialized
             setTimeout(() => {
-                // Verify decoder elements exist
+                // Test decoder elements initialization
                 const decoderTab = document.getElementById('decoder-tab');
                 const decoderInput = document.getElementById('decoder-input');
                 const decoderOutput = document.getElementById('decoder-output');
-                
-                if (window.console && console.log) {
-                    console.log('Decoder tab elements check:');
-                    console.log('decoder-tab:', !!decoderTab);
-                    console.log('decoder-input:', !!decoderInput);
-                    console.log('decoder-output:', !!decoderOutput);
-                }
-                
-                // Test switchTab function with decoder
-                if (window.console && console.log) {
-                    console.log('Testing decoder tab activation...');
-                }
             }, 500);
         });
 
@@ -1961,7 +2064,6 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                     throw new Error('Deletion failed');
                 }
             } catch (error) {
-                console.error('Deletion error:', error);
                 showStatus('simple', `Deletion failed: ${error.message}`, 'error');
             } finally {
                 hideProgress('simple');
@@ -2050,8 +2152,6 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
 
         function getAdvancedAssertOptions() {
             const allowCreds = document.getElementById('allow-credentials').value;
-            console.log('=== FRONTEND AUTHENTICATION OPTIONS DEBUG ===');
-            console.log('Allow credentials dropdown value:', allowCreds);
             
             const options = {
                 userVerification: document.getElementById('user-verification-auth').value,
@@ -2066,11 +2166,6 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             if (allowCreds !== 'all' && allowCreds !== 'empty') {
                 // This is a specific credential ID
                 options.specificCredentialId = allowCreds;
-                console.log('Specific credential ID selected:', allowCreds);
-            } else if (allowCreds === 'empty') {
-                console.log('*** EMPTY allowCredentials selected - this should enable resident key mode ***');
-            } else {
-                console.log('All credentials selected');
             }
             
             // Collect extensions for authentication
@@ -2133,6 +2228,9 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
 
                 const json = await response.json();
                 const createOptions = parseCreationOptionsFromJSON(json);
+
+                // Track fake credential length from form
+                window.lastFakeCredLength = parseInt(document.getElementById('fake-cred-length-reg').value) || 0;
                 
                 showProgress('advanced', 'Connecting your authenticator device...');
 
@@ -2151,6 +2249,10 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
 
                 if (result.ok) {
                     const data = await result.json();
+                    
+                    // Print debug information from actual credential data
+                    printRegistrationDebug(credential, createOptions, data);
+                    
                     showStatus('advanced', `Advanced registration successful! Algorithm: ${data.algo || 'Unknown'}`, 'success');
                     
                     // Reload credentials from server to get the latest
@@ -2160,8 +2262,6 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                     throw new Error(`Registration failed: ${errorText}`);
                 }
             } catch (error) {
-                console.error('Advanced registration error:', error);
-                
                 let errorMessage = error.message;
                 if (error.name === 'NotAllowedError') {
                     errorMessage = 'User cancelled or authenticator not available';
@@ -2204,12 +2304,9 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                     );
                     return;
                 }
-                
-                console.log('Resident key authentication mode - found compatible credentials');
             }
 
             const options = getAdvancedAssertOptions();
-            console.log('Final options being sent to server:', JSON.stringify(options, null, 2));
 
             try {
                 hideStatus('advanced');
@@ -2230,21 +2327,15 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                 }
 
                 const json = await response.json();
-                console.log('Server response for authentication options:', JSON.stringify(json, null, 2));
-                
                 const assertOptions = parseRequestOptionsFromJSON(json);
-                console.log('Parsed assertOptions for WebAuthn API:', JSON.stringify(assertOptions, null, 2));
-                console.log('allowCredentials in assertOptions:', assertOptions.allowCredentials);
-                console.log('allowCredentials type:', typeof assertOptions.allowCredentials);
-                console.log('allowCredentials is undefined:', assertOptions.allowCredentials === undefined);
                 
                 // CRITICAL FIX: Ensure allowCredentials is completely omitted for resident key authentication
-                // The webauthn-json library might be adding an empty array even when the server omits the parameter
                 if (options.allowCredentials === 'empty' && assertOptions.allowCredentials !== undefined) {
-                    console.log('*** FIXING: webauthn-json added allowCredentials, removing it for resident key mode ***');
                     delete assertOptions.allowCredentials;
-                    console.log('After fix - allowCredentials in assertOptions:', assertOptions.allowCredentials);
                 }
+
+                // Track fake credential length from form
+                window.lastFakeCredLength = parseInt(document.getElementById('fake-cred-length-auth').value) || 0;
                 
                 showProgress('advanced', 'Connecting your authenticator device...');
 
@@ -2262,14 +2353,16 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
 
                 if (result.ok) {
                     const data = await result.json();
+                    
+                    // Print debug information from actual assertion data
+                    printAuthenticationDebug(assertion, assertOptions, data);
+                    
                     showStatus('advanced', 'Advanced authentication successful!', 'success');
                 } else {
                     const errorText = await result.text();
                     throw new Error(`Authentication failed: ${errorText}`);
                 }
             } catch (error) {
-                console.error('Advanced authentication error:', error);
-                
                 let errorMessage = error.message;
                 if (error.name === 'NotAllowedError') {
                     errorMessage = 'User cancelled or no compatible authenticator detected';
@@ -2318,7 +2411,6 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                     throw new Error('Deletion failed');
                 }
             } catch (error) {
-                console.error('Deletion error:', error);
                 showStatus('advanced', `Deletion failed: ${error.message}`, 'error');
             } finally {
                 hideProgress('advanced');
@@ -2383,9 +2475,6 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
         function decodeResponse() {
             const input = document.getElementById('decoder-input');
             if (!input) {
-                if (window.console && console.error) {
-                    console.error('Decoder input element not found');
-                }
                 return;
             }
             
@@ -2406,10 +2495,6 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                     decodedContent.innerHTML = `<pre>${JSON.stringify(decoded, null, 2)}</pre>`;
                     decoderOutput.style.display = 'block';
                     showStatus('decoder', 'Response decoded successfully!', 'success');
-                } else {
-                    if (window.console && console.error) {
-                        console.error('Decoder output elements not found');
-                    }
                 }
             } catch (error) {
                 showStatus('decoder', `Decoding failed: ${error.message}`, 'error');
