@@ -2434,8 +2434,9 @@
             // Allow credentials handling
             const allowCreds = document.getElementById('allow-credentials')?.value;
             if (allowCreds === 'empty') {
-                // Empty allowCredentials array for resident key authentication
-                publicKey.allowCredentials = [];
+                // Omit allowCredentials parameter entirely for resident key authentication
+                // This enables discoverable credential authentication
+                delete publicKey.allowCredentials;
             } else if (allowCreds === 'all') {
                 // Include all stored credentials
                 publicKey.allowCredentials = storedCredentials.map(cred => ({
@@ -3260,6 +3261,26 @@
             if (!isChallengeValid || !isPrfValid || !isLargeBlobValid) {
                 showStatus('advanced', 'Please fix the validation errors above', 'error');
                 return;
+            }
+
+            // Check for resident key authentication without resident key credentials
+            const allowCreds = document.getElementById('allow-credentials')?.value;
+            if (allowCreds === 'empty') {
+                const hasResidentKeyCredentials = storedCredentials && storedCredentials.some(cred => 
+                    cred.residentKey === true || 
+                    (cred.clientExtensionOutputs && cred.clientExtensionOutputs.credProps && cred.clientExtensionOutputs.credProps.rk === true)
+                );
+                
+                if (!hasResidentKeyCredentials) {
+                    showStatus('advanced', 
+                        'Warning: Resident key authentication selected but no resident key credentials found. ' +
+                        'Please register a credential with Resident Key set to "Required" first, or select a specific credential instead.', 
+                        'error'
+                    );
+                    return;
+                }
+                
+                console.log('Resident key authentication mode - found compatible credentials');
             }
 
             const options = getAdvancedAssertOptions();

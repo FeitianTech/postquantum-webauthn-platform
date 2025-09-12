@@ -865,6 +865,34 @@ def advanced_authenticate_begin():
     print(f"Extensions requested: {processed_extensions}")
     if final_credentials:
         print(f"Credential IDs in allowCredentials: {[base64.b64encode(cred.credential_id).decode() if hasattr(cred, 'credential_id') else str(cred) for cred in final_credentials[:3]]}")
+    else:
+        print("*** RESIDENT KEY MODE ACTIVATED - allowCredentials will be omitted ***")
+    
+    # Check if we have any stored credentials and their resident key status
+    if allow_credentials == "empty":
+        print("\n--- RESIDENT KEY CREDENTIAL CHECK ---")
+        try:
+            pkl_files = [f for f in os.listdir(basepath) if f.endswith('_credential_data.pkl')]
+            resident_key_count = 0
+            for pkl_file in pkl_files:
+                email = pkl_file.replace('_credential_data.pkl', '')
+                try:
+                    user_creds = readkey(email)
+                    for cred in user_creds:
+                        if isinstance(cred, dict) and 'client_extension_outputs' in cred:
+                            rk_status = cred.get('client_extension_outputs', {}).get('credProps', {}).get('rk', False)
+                            if rk_status:
+                                resident_key_count += 1
+                                print(f"Found resident key credential for {email}: {base64.b64encode(extract_credential_data(cred).credential_id).decode()[:20]}...")
+                except Exception as e:
+                    print(f"Error checking credentials for {email}: {e}")
+            print(f"Total resident key credentials found: {resident_key_count}")
+            if resident_key_count == 0:
+                print("*** WARNING: No resident key credentials found! Authentication may fail. ***")
+        except Exception as e:
+            print(f"Error checking resident key credentials: {e}")
+        print("----------------------------------------")
+    
     print("=========================================\n")
     
     return jsonify(dict(options))
