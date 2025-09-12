@@ -621,9 +621,10 @@
         /* Info popup styles */
         .info-popup {
             position: absolute;
-            top: 25px;
-            left: 50%;
-            transform: translateX(-50%);
+            top: 50%;
+            left: 100%;
+            transform: translateY(-50%);
+            margin-left: 8px;
             background: white;
             border: 1px solid #dee2e6;
             border-radius: 8px;
@@ -646,27 +647,27 @@
         .info-popup::before {
             content: '';
             position: absolute;
-            top: -8px;
-            left: 50%;
-            transform: translateX(-50%);
+            top: 50%;
+            left: -8px;
+            transform: translateY(-50%);
             width: 0;
             height: 0;
-            border-left: 8px solid transparent;
-            border-right: 8px solid transparent;
-            border-bottom: 8px solid white;
+            border-top: 8px solid transparent;
+            border-bottom: 8px solid transparent;
+            border-right: 8px solid white;
         }
 
         .info-popup::after {
             content: '';
             position: absolute;
-            top: -9px;
-            left: 50%;
-            transform: translateX(-50%);
+            top: 50%;
+            left: -9px;
+            transform: translateY(-50%);
             width: 0;
             height: 0;
-            border-left: 9px solid transparent;
-            border-right: 9px solid transparent;
-            border-bottom: 9px solid #dee2e6;
+            border-top: 9px solid transparent;
+            border-bottom: 9px solid transparent;
+            border-right: 9px solid #dee2e6;
         }
 
         .label-with-info {
@@ -1137,12 +1138,28 @@
                                         </select>
                                     </div>
                                     <div class="form-group">
-                                        <label>
-                                            <input type="checkbox" id="enforce-cred-protect" checked disabled> Enforce credProtect
-                                        </label>
+                                        <div class="label-with-info">
+                                            <label>
+                                                <input type="checkbox" id="enforce-cred-protect" checked disabled> Enforce credProtect
+                                            </label>
+                                            <div class="info-icon" onclick="toggleInfoPopup(this)">
+                                                <div class="info-popup">
+                                                    Whether to enforce the selected credProtect policy, if any, meaning the registration should fail rather than create a credential that does not satisfy the credProtect policy.<br><br>
+                                                    If this is checked and credProtect is set to userVerificationOptionalWithCredentialIDList or userVerificationRequired, and the authenticator cannot satisfy that policy, then the registration will fail. If this is not checked, the registration MAY proceed even if the authenticator cannot satisfy the chosen policy.
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                     <div class="form-group">
-                                        <label for="large-blob-reg">largeBlob</label>
+                                        <div class="label-with-info">
+                                            <label for="large-blob-reg">largeBlob</label>
+                                            <div class="info-icon" onclick="toggleInfoPopup(this)">
+                                                <div class="info-popup">
+                                                    Request the Large blob storage (largeBlob) extension. This extension may be used to store arbitrary data with the credential.<br><br>
+                                                    If the authenticator supports the extension, an extension output of largeBlob: { supported: true } will be returned. Use the largeBlob extension during an authentication ceremony to read or write the BLOB value.
+                                                </div>
+                                            </div>
+                                        </div>
                                         <select id="large-blob-reg" class="form-control">
                                             <option value="">Unspecified (default)</option>
                                             <option value="preferred">Preferred</option>
@@ -1150,12 +1167,29 @@
                                         </select>
                                     </div>
                                     <div class="form-group">
-                                        <label>
-                                            <input type="checkbox" id="prf-reg" checked> prf
-                                        </label>
+                                        <div class="label-with-info">
+                                            <label>
+                                                <input type="checkbox" id="prf-reg" checked> prf
+                                            </label>
+                                            <div class="info-icon" onclick="toggleInfoPopup(this)">
+                                                <div class="info-popup">
+                                                    Request the Pseudo-random function (prf) extension. This extension may be used to derive deterministically-random values to use as key material, for example.<br><br>
+                                                    With CTAP authenticators, this requires that the authenticator supports the hmac-secret extension.<br><br>
+                                                    Many authenticators support evaluating the PRF only in authentication ceremonies, in which case the PRF extension output is just prf: { enabled: true } without any PRF outputs. To evaluate the PRF, perform an authentication ceremony with the same PRF inputs.
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                     <div class="form-group">
-                                        <label for="prf-eval-first-reg">prf eval first</label>
+                                        <div class="label-with-info">
+                                            <label for="prf-eval-first-reg">prf eval first</label>
+                                            <div class="info-icon" onclick="toggleInfoPopup(this)">
+                                                <div class="info-popup">
+                                                    The first prf extension input to evaluate. If set, the client extension outputs will include a prf.results.first output if the client and authenticator both support the extension.<br><br>
+                                                    Many authenticators support evaluating the PRF only in authentication ceremonies, in which case the PRF extension output is just prf: { enabled: true } without any PRF outputs. To evaluate the PRF, perform an authentication ceremony with the same PRF inputs.
+                                                </div>
+                                            </div>
+                                        </div>
                                         <div class="input-with-button">
                                             <input type="text" id="prf-eval-first-reg" class="form-control" placeholder="Hex value">
                                             <button class="btn btn-small refresh-icon" onclick="randomizePrfEval('first', 'reg')" title="Generate random PRF evaluation data"></button>
@@ -1163,7 +1197,15 @@
                                         <div id="prf-eval-first-reg-error" class="error-message">Invalid hex value (exactly 32 bytes required)</div>
                                     </div>
                                     <div class="form-group">
-                                        <label for="prf-eval-second-reg">prf eval second</label>
+                                        <div class="label-with-info">
+                                            <label for="prf-eval-second-reg">prf eval second</label>
+                                            <div class="info-icon" onclick="toggleInfoPopup(this)">
+                                                <div class="info-popup">
+                                                    The second prf extension input to evaluate. If set, the client extension outputs will include a prf.results.second output if the client and authenticator both support the extension.<br><br>
+                                                    This is optional and can be used alongside the first PRF evaluation input for additional key derivation capabilities.
+                                                </div>
+                                            </div>
+                                        </div>
                                         <div class="input-with-button">
                                             <input type="text" id="prf-eval-second-reg" class="form-control" placeholder="Hex value" disabled>
                                             <button class="btn btn-small refresh-icon" onclick="randomizePrfEval('second', 'reg')" disabled title="Generate random PRF evaluation data"></button>
