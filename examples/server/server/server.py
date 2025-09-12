@@ -240,6 +240,17 @@ def downloadcred():
     name = name + "_credential_data.pkl"
     return send_file(os.path.join(basepath, name), as_attachment=True, download_name=name)
 
+def convert_bytes_for_json(obj):
+    """Recursively convert bytes objects to base64 strings for JSON serialization"""
+    if isinstance(obj, bytes):
+        return base64.b64encode(obj).decode('utf-8')
+    elif isinstance(obj, dict):
+        return {k: convert_bytes_for_json(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [convert_bytes_for_json(item) for item in obj]
+    else:
+        return obj
+
 @app.route("/api/credentials", methods=["GET"])
 def list_credentials():
     """List all saved credentials from PKL files with comprehensive details"""
@@ -279,10 +290,11 @@ def list_credentials():
                                     'signCount': auth_data.get('counter', 0),
                                     
                                     # Detailed WebAuthn data
-                                    'aaguid': cred_data.get('aaguid'),
+                                    'aaguid': cred_data.get('aaguid').hex() if cred_data.get('aaguid') and isinstance(cred_data.get('aaguid'), bytes) else cred_data.get('aaguid'),
                                     'flags': auth_data.get('flags', {}),
                                     'clientExtensionOutputs': cred.get('client_extension_outputs', {}),
-                                    'attestationFormat': cred.get('attestation_object', 'none'),
+                                    'attestationFormat': cred.get('attestation_format', 'none'),  # Fixed: use attestation_format not attestation_object
+                                    'attestationStatement': convert_bytes_for_json(cred.get('attestation_statement', {})),  # Convert bytes for JSON
                                     'publicKeyAlgorithm': cred_data.get('public_key', {}).get(3),
                                     
                                     # Properties
@@ -332,7 +344,7 @@ def list_credentials():
                                     },
                                     'clientExtensionOutputs': cred.get('client_extension_outputs', {}),
                                     'attestationFormat': cred.get('attestation_format', 'none'),  # Use stored attestation format
-                                    'attestationStatement': cred.get('attestation_statement', {}),  # Include attestation statement if available
+                                    'attestationStatement': convert_bytes_for_json(cred.get('attestation_statement', {})),  # Include attestation statement with bytes converted
                                     'publicKeyAlgorithm': cred_data.public_key[3] if hasattr(cred_data, 'public_key') and len(cred_data.public_key) > 3 else None,
                                     
                                     # Properties determined from multiple sources for best accuracy
