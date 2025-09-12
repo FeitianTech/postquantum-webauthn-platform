@@ -43,6 +43,30 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             console.log('Info popup hidden');
         }
 
+        // Language toggle functionality
+        function toggleLanguage(toggleElement) {
+            console.log('toggleLanguage called', toggleElement);
+            const popup = toggleElement.closest('.info-popup');
+            const enText = popup.querySelector('.text-en');
+            const zhText = popup.querySelector('.text-zh');
+            
+            if (enText.classList.contains('active')) {
+                // Switch to Chinese
+                enText.classList.remove('active');
+                enText.classList.add('hidden');
+                zhText.classList.remove('hidden');
+                zhText.classList.add('active');
+                toggleElement.textContent = '中';
+            } else {
+                // Switch to English
+                zhText.classList.remove('active');
+                zhText.classList.add('hidden');
+                enText.classList.remove('hidden');
+                enText.classList.add('active');
+                toggleElement.textContent = 'ENG';
+            }
+        }
+
 
 
         function isValidHex(str) {
@@ -1049,6 +1073,51 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                 document.getElementById('attestation').value = publicKey.attestation;
             }
             
+            // Update pubKeyCredParams (algorithms)
+            if (publicKey.pubKeyCredParams && Array.isArray(publicKey.pubKeyCredParams)) {
+                // First clear all algorithm checkboxes
+                document.getElementById('param-eddsa').checked = false;
+                document.getElementById('param-es256').checked = false;
+                document.getElementById('param-rs256').checked = false;
+                document.getElementById('param-es384').checked = false;
+                document.getElementById('param-es512').checked = false;
+                document.getElementById('param-rs384').checked = false;
+                document.getElementById('param-rs512').checked = false;
+                document.getElementById('param-rs1').checked = false;
+                
+                // Then set the ones specified in the JSON
+                publicKey.pubKeyCredParams.forEach(param => {
+                    if (param.alg) {
+                        switch(param.alg) {
+                            case -8:
+                                document.getElementById('param-eddsa').checked = true;
+                                break;
+                            case -7:
+                                document.getElementById('param-es256').checked = true;
+                                break;
+                            case -257:
+                                document.getElementById('param-rs256').checked = true;
+                                break;
+                            case -35:
+                                document.getElementById('param-es384').checked = true;
+                                break;
+                            case -36:
+                                document.getElementById('param-es512').checked = true;
+                                break;
+                            case -258:
+                                document.getElementById('param-rs384').checked = true;
+                                break;
+                            case -259:
+                                document.getElementById('param-rs512').checked = true;
+                                break;
+                            case -65535:
+                                document.getElementById('param-rs1').checked = true;
+                                break;
+                        }
+                    }
+                });
+            }
+            
             // Update authenticator selection
             if (publicKey.authenticatorSelection) {
                 if (publicKey.authenticatorSelection.authenticatorAttachment) {
@@ -1834,6 +1903,7 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
         window.toggleSection = toggleSection;
         window.showInfoPopup = showInfoPopup;
         window.hideInfoPopup = hideInfoPopup;
+        window.toggleLanguage = toggleLanguage;
         window.randomizeUserId = randomizeUserId;
         window.randomizeChallenge = randomizeChallenge;
         window.randomizePrfEval = randomizePrfEval;

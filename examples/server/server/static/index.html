@@ -29,8 +29,8 @@
                     <div class="status" id="simple-status"></div>
 
                     <div class="form-group">
-                        <label for="simple-email">Email (User Identifier)</label>
-                        <input type="email" id="simple-email" class="form-control" placeholder="Enter your email">
+                        <label for="simple-email">Username</label>
+                        <input type="text" id="simple-email" class="form-control" placeholder="Enter username">
                     </div>
 
                     <div class="form-group">
@@ -103,8 +103,15 @@
                                             <label for="authenticator-attachment">Authenticator Attachment</label>
                                             <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
                                                 <div class="info-popup">
-                                                    Select whether an authenticator integrated into the client platform ("platform") or an external device ("cross-platform") should be used.<br><br>
-                                                    If unspecified (the default), either kind of authenticator is allowed.
+                                                    <div class="language-toggle" onclick="toggleLanguage(this)">ENG</div>
+                                                    <div class="text-en active">
+                                                        Select whether an authenticator integrated into the client platform ("platform") or an external device ("cross-platform") should be used.<br><br>
+                                                        If unspecified (the default), either kind of authenticator is allowed.
+                                                    </div>
+                                                    <div class="text-zh hidden">
+                                                        选择是使用集成到客户端平台的认证器（"platform"）还是外部设备（"cross-platform"）。<br><br>
+                                                        如果未指定（默认），则允许任何类型的认证器。
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -119,8 +126,15 @@
                                             <label for="resident-key">Resident Key</label>
                                             <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
                                                 <div class="info-popup">
-                                                    A resident key can be used for "username-less" authentication, i.e., with an empty allowCredentials parameter.<br><br>
-                                                    If "discouraged", a non-resident key will be created if possible. If "preferred", a resident key will be created if possible. If "required", a resident key will be created and the user is shown an error if this fails. If unspecified, the default is "discouraged".
+                                                    <div class="language-toggle" onclick="toggleLanguage(this)">ENG</div>
+                                                    <div class="text-en active">
+                                                        A resident key can be used for "username-less" authentication, i.e., with an empty allowCredentials parameter.<br><br>
+                                                        If "discouraged", a non-resident key will be created if possible. If "preferred", a resident key will be created if possible. If "required", a resident key will be created and the user is shown an error if this fails. If unspecified, the default is "discouraged".
+                                                    </div>
+                                                    <div class="text-zh hidden">
+                                                        常驻密钥可用于"无用户名"身份验证，即使用空的 allowCredentials 参数。<br><br>
+                                                        如果设为"discouraged"，在可能的情况下将创建非常驻密钥。如果设为"preferred"，在可能的情况下将创建常驻密钥。如果设为"required"，将创建常驻密钥，失败时向用户显示错误。如果未指定，默认为"discouraged"。
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -136,8 +150,15 @@
                                             <label for="user-verification-reg">User Verification</label>
                                             <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
                                                 <div class="info-popup">
-                                                    Select whether user verification (UV), for example a PIN or biometric, should be used.<br><br>
-                                                    If "discouraged", UV will not be used if possible. If "preferred", UV will be used if possible. If "required", UV will be used and the user is shown an error if this fails. If unspecified, the default is "preferred".
+                                                    <div class="language-toggle" onclick="toggleLanguage(this)">ENG</div>
+                                                    <div class="text-en active">
+                                                        Select whether user verification (UV), for example a PIN or biometric, should be used.<br><br>
+                                                        If "discouraged", UV will not be used if possible. If "preferred", UV will be used if possible. If "required", UV will be used and the user is shown an error if this fails. If unspecified, the default is "preferred".
+                                                    </div>
+                                                    <div class="text-zh hidden">
+                                                        选择是否应使用用户验证（UV），例如 PIN 或生物识别。<br><br>
+                                                        如果设为"discouraged"，在可能的情况下不会使用 UV。如果设为"preferred"，在可能的情况下会使用 UV。如果设为"required"，会使用 UV，失败时向用户显示错误。如果未指定，默认为"preferred"。
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>

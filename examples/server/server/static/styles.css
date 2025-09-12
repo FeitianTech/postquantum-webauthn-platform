@@ -467,16 +467,17 @@ body {
     font-size: 0.9rem;
     line-height: 1.4;
     min-height: 600px;
-    height: calc(100vh - 300px); /* Dynamic height based on viewport */
-    max-height: 1200px; /* Prevent from getting too tall */
+    height: auto; /* Allow height to expand with content */
+    max-height: none; /* Remove height limit to allow full expansion */
     white-space: pre-wrap;
+    display: flex;
+    flex-direction: column;
 }
 
 .json-editor textarea {
     width: 100%;
-    height: 100%;
+    height: auto;
     min-height: 600px;
-    max-height: 1200px; /* Match parent max-height */
     background: transparent;
     border: none;
     outline: none;
@@ -484,6 +485,7 @@ body {
     font-family: inherit;
     font-size: inherit;
     line-height: inherit;
+    flex: 1; /* Allow textarea to expand to fill available space */
 }
 
 .checkbox-group {
@@ -668,6 +670,47 @@ select.form-control {
     border-top: 9px solid transparent;
     border-bottom: 9px solid transparent;
     border-right: 9px solid #dee2e6;
+}
+
+/* Language toggle for info popups */
+.language-toggle {
+    position: absolute;
+    top: 8px;
+    right: 12px;
+    background: rgba(50, 95, 116, 0.8);
+    border: 1px solid rgba(50, 95, 116, 0.9);
+    border-radius: 12px;
+    padding: 2px 6px;
+    font-size: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: #fff;
+    pointer-events: auto;
+    z-index: 10000;
+}
+
+.language-toggle:hover {
+    background: rgba(50, 95, 116, 1);
+}
+
+.text-en, .text-zh {
+    display: block;
+}
+
+.text-zh {
+    display: none;
+}
+
+.text-zh.active {
+    display: block;
+}
+
+.text-en.active {
+    display: block;
+}
+
+.text-en.hidden, .text-zh.hidden {
+    display: none;
 }
 
 .label-with-info {
