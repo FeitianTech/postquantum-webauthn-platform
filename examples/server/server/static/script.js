@@ -580,125 +580,128 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             }
         }
 
-        // Console debug output functions for credential information
+        // Console debug output functions for credential information from actual credential data
         function printRegistrationDebug(credential, createOptions, serverResponse) {
-            console.log('=== REGISTRATION DEBUG INFO ===');
-            
-            // Extract actual values from credential response and server data
+            // Extract actual values from credential response and server data (not request options)
             const clientExtensions = credential.clientExtensionResults || {};
             const serverData = serverResponse || {};
             
-            // Resident key - check from client extension results first, then server
-            const residentKey = clientExtensions.credProps?.rk || 
-                               (createOptions.publicKey.authenticatorSelection?.residentKey === 'required') ||
-                               false;
+            // Resident key - from actual client extension results or server-detected RK flag
+            const residentKey = clientExtensions.credProps?.rk || serverData.actualResidentKey || false;
             console.log('Resident key:', residentKey);
             
-            // Attestation format from server response or default to 'none'
+            // Attestation format from actual server response
             const attestationFormat = serverData.attestationFormat || 'none';
             const attestationRetrieved = attestationFormat !== 'none';
             console.log('Attestation (retrieve or not, plus the format):', `${attestationRetrieved}, ${attestationFormat}`);
             
-            // Exclude credentials - check if excludeCredentials was used
-            const excludeCredentials = createOptions.publicKey.excludeCredentials?.length > 0 || false;
+            // Exclude credentials - from actual server processing
+            const excludeCredentials = serverData.excludeCredentialsUsed || false;
             console.log('exclude credentials:', excludeCredentials);
             
-            // Fake credential ID length - from our internal tracking
+            // Fake credential ID length - from our actual setting
             const fakeCredLength = window.lastFakeCredLength || 0;
             console.log('fake credential id length:', fakeCredLength);
             
-            // Challenge hex code - convert from base64url to hex
+            // Challenge hex code - from actual response
             let challengeHex = '';
-            if (typeof createOptions.publicKey.challenge === 'string') {
-                challengeHex = base64UrlToHex(createOptions.publicKey.challenge);
+            if (credential.response && credential.response.clientDataJSON) {
+                try {
+                    const clientData = JSON.parse(atob(credential.response.clientDataJSON));
+                    challengeHex = base64UrlToHex(clientData.challenge);
+                } catch (e) {
+                    // Fallback to empty if parsing fails
+                }
             }
             console.log('challenge hex code:', challengeHex);
             
-            // pubKeyCredParams used - extract actual algorithms
-            const pubKeyCredParams = createOptions.publicKey.pubKeyCredParams?.map(p => p.alg) || [];
+            // pubKeyCredParams used - from actual server processing
+            const pubKeyCredParams = serverData.algorithmsUsed || [];
             console.log('pubkeycredparam used:', pubKeyCredParams);
             
-            // Hints from create options
-            const hints = createOptions.publicKey.hints || [];
+            // Hints - from actual server processing
+            const hints = serverData.hintsUsed || [];
             console.log('hints:', hints);
             
-            // credProps extension
-            const credPropsRequested = createOptions.publicKey.extensions?.credProps === true;
+            // credProps extension - from actual client extension results
+            const credPropsRequested = clientExtensions.credProps !== undefined;
             console.log('credprops (requested or not):', credPropsRequested);
             
-            // minPinLength extension
-            const minPinLengthRequested = createOptions.publicKey.extensions?.minPinLength === true;
+            // minPinLength extension - from actual client extension results
+            const minPinLengthRequested = clientExtensions.minPinLength !== undefined;
             console.log('minpinlength (requested or not):', minPinLengthRequested);
             
-            // credProtect setting
-            const credProtectSetting = createOptions.publicKey.extensions?.credProtect || 'none';
+            // credProtect setting - from actual server processing
+            const credProtectSetting = serverData.credProtectUsed || 'none';
             console.log('credprotect setting:', credProtectSetting);
             
-            // enforce credProtect
-            const enforceCredProtect = createOptions.publicKey.extensions?.enforceCredProtect || false;
+            // enforce credProtect - from actual server processing
+            const enforceCredProtect = serverData.enforceCredProtectUsed || false;
             console.log('enforce credprotect:', enforceCredProtect);
             
-            // largeBlob
-            const largeBlob = createOptions.publicKey.extensions?.largeBlob?.support || 'none';
+            // largeBlob - from actual client extension results
+            const largeBlob = clientExtensions.largeBlob?.supported || 'none';
             console.log('largeblob:', largeBlob);
             
-            // prf
-            const prfEnabled = createOptions.publicKey.extensions?.prf !== undefined;
+            // prf - from actual client extension results
+            const prfEnabled = clientExtensions.prf !== undefined;
             console.log('prf:', prfEnabled);
             
-            // prf eval first hex code
-            const prfFirstHex = createOptions.publicKey.extensions?.prf?.eval?.first ? 
-                               extractHexFromJsonFormat(createOptions.publicKey.extensions.prf.eval.first) : '';
+            // prf eval first hex code - from actual client extension results
+            const prfFirstHex = clientExtensions.prf?.results?.first ? 
+                               extractHexFromJsonFormat(clientExtensions.prf.results.first) : '';
             console.log('prf eval first hex code:', prfFirstHex);
             
-            // prf eval second hex code
-            const prfSecondHex = createOptions.publicKey.extensions?.prf?.eval?.second ? 
-                                extractHexFromJsonFormat(createOptions.publicKey.extensions.prf.eval.second) : '';
+            // prf eval second hex code - from actual client extension results
+            const prfSecondHex = clientExtensions.prf?.results?.second ? 
+                                extractHexFromJsonFormat(clientExtensions.prf.results.second) : '';
             console.log('prf eval second hex code:', prfSecondHex);
-            
-            console.log('=== END REGISTRATION DEBUG ===');
         }
         
         function printAuthenticationDebug(assertion, requestOptions, serverResponse) {
-            console.log('=== AUTHENTICATION DEBUG INFO ===');
+            const clientExtensions = assertion.clientExtensionResults || {};
+            const serverData = serverResponse || {};
             
-            // Fake credential ID length - from our internal tracking
+            // Fake credential ID length - from our actual setting
             const fakeCredLength = window.lastFakeCredLength || 0;
             console.log('Fake credential ID length:', fakeCredLength);
             
-            // Challenge hex code - convert from base64url to hex
+            // Challenge hex code - from actual assertion response
             let challengeHex = '';
-            if (typeof requestOptions.publicKey.challenge === 'string') {
-                challengeHex = base64UrlToHex(requestOptions.publicKey.challenge);
+            if (assertion.response && assertion.response.clientDataJSON) {
+                try {
+                    const clientData = JSON.parse(atob(assertion.response.clientDataJSON));
+                    challengeHex = base64UrlToHex(clientData.challenge);
+                } catch (e) {
+                    // Fallback to empty if parsing fails
+                }
             }
             console.log('challenge hex code:', challengeHex);
             
-            // Hints from request options
-            const hints = requestOptions.publicKey.hints || [];
+            // Hints - from actual server processing
+            const hints = serverData.hintsUsed || [];
             console.log('hints:', hints);
             
-            // largeBlob extension
-            const largeBlobRead = requestOptions.publicKey.extensions?.largeBlob?.read || false;
-            const largeBlobWrite = requestOptions.publicKey.extensions?.largeBlob?.write !== undefined;
+            // largeBlob - from actual client extension results
+            const largeBlobRead = clientExtensions.largeBlob?.blob !== undefined;
+            const largeBlobWrite = clientExtensions.largeBlob?.written !== undefined;
             const largeBlobType = largeBlobWrite ? 'write' : (largeBlobRead ? 'read' : 'none');
             console.log('largeblob:', largeBlobType);
             
-            // largeBlob write hex code
-            const largeBlobWriteHex = requestOptions.publicKey.extensions?.largeBlob?.write ? 
-                                     extractHexFromJsonFormat(requestOptions.publicKey.extensions.largeBlob.write) : '';
+            // largeBlob write hex code - from actual extension results
+            const largeBlobWriteHex = clientExtensions.largeBlob?.blob ? 
+                                     extractHexFromJsonFormat(clientExtensions.largeBlob.blob) : '';
             console.log('largeblob write hex code:', largeBlobWriteHex);
             
-            // prf eval first hex code
-            const prfFirstHex = requestOptions.publicKey.extensions?.prf?.eval?.first ? 
-                               extractHexFromJsonFormat(requestOptions.publicKey.extensions.prf.eval.first) : '';
+            // prf eval first hex code - from actual client extension results
+            const prfFirstHex = clientExtensions.prf?.results?.first ? 
+                               extractHexFromJsonFormat(clientExtensions.prf.results.first) : '';
             console.log('prf eval first hex code:', prfFirstHex);
             
-            // prf eval second hex code
-            const prfSecondHex = requestOptions.publicKey.extensions?.prf?.eval?.second ? 
-                                extractHexFromJsonFormat(requestOptions.publicKey.extensions.prf.eval.second) : '';
+            // prf eval second hex code - from actual client extension results
+            const prfSecondHex = clientExtensions.prf?.results?.second ? 
+                                extractHexFromJsonFormat(clientExtensions.prf.results.second) : '';
             console.log('prf eval second hex code:', prfSecondHex);
-            
-            console.log('=== END AUTHENTICATION DEBUG ===');
         }
         
         // Helper function to extract hex from JSON format objects

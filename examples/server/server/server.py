@@ -111,9 +111,6 @@ def register_begin():
     )
 
     session["state"] = state
-    print("\n\n\n\n")
-    print(options)
-    print("\n\n\n\n")
 
     return jsonify(dict(options))
 
@@ -122,7 +119,6 @@ def register_complete():
     uname = request.args.get("email")
     credentials = readkey(uname)
     response = request.json
-    print("RegistrationResponse:", response)
     auth_data = server.register_complete(session["state"], response)
 
     # Extract attestation format from attestation object
@@ -142,7 +138,7 @@ def register_complete():
             attestation_format = attestation_object.get('fmt', 'none')
             attestation_statement = attestation_object.get('attStmt', {})
     except Exception as e:
-        print(f"Could not extract attestation format: {e}")
+        pass  # Use default values if attestation parsing fails
 
     # Store comprehensive credential data (same format as advanced)
     credential_info = {
@@ -174,8 +170,6 @@ def register_complete():
     # Persist the updated credentials list so authenticate can find it.
     savekey(uname, credentials)
 
-    print("REGISTERED CREDENTIAL:", auth_data.credential_data)
-    print("ALGO", auth_data.credential_data.public_key[3])
     algo = auth_data.credential_data.public_key[3]
     algoname = ""
     if algo == -49:
@@ -189,7 +183,22 @@ def register_complete():
     else:
         algoname = "Other (Classical)"
 
-    return jsonify({"status": "OK", "algo": algoname})
+    # Extract actual credential information for debug
+    debug_info = {
+        "attestationFormat": attestation_format,
+        "algorithmsUsed": [algo],
+        "excludeCredentialsUsed": False,  # Simple auth doesn't use exclude credentials
+        "hintsUsed": [],  # Simple auth doesn't use hints
+        "credProtectUsed": "none",  # Simple auth doesn't use credProtect
+        "enforceCredProtectUsed": False,
+        "actualResidentKey": bool(auth_data.flags & 0x04) if hasattr(auth_data, 'flags') else False,  # RK flag from authenticator data
+    }
+
+    return jsonify({
+        "status": "OK", 
+        "algo": algoname,
+        **debug_info
+    })
 
 @app.route("/api/authenticate/begin", methods=["POST"])
 def authenticate_begin():
@@ -217,15 +226,21 @@ def authenticate_complete():
     credential_data_list = [extract_credential_data(cred) for cred in credentials]
 
     response = request.json
-    print("AuthenticationResponse:", response)
     server.authenticate_complete(
         session.pop("state"),
         credential_data_list,
         response,
     )
 
-    print("ASSERTION OK")
-    return jsonify({"status": "OK"})
+    # Extract actual authentication information for debug  
+    debug_info = {
+        "hintsUsed": [],  # Simple auth doesn't use hints
+    }
+
+    return jsonify({
+        "status": "OK",
+        **debug_info
+    })
 
 @app.route("/api/deletepub", methods=["POST"])
 def deletepub():
@@ -319,7 +334,6 @@ def list_credentials():
                                 resident_key_status = rk_from_credprops if rk_from_credprops is not None else rk_from_request
                                 
                                 # Debug resident key detection
-                                print(f"RK Detection for {user_info.get('name', 'unknown')}: credProps={rk_from_credprops}, request={rk_from_request}, final={resident_key_status}")
                                 
                                 credential_info = {
                                     'email': email,
@@ -387,14 +401,12 @@ def list_credentials():
                             
                         credentials.append(credential_info)
                     except Exception as e:
-                        print(f"Error processing credential: {e}")
                         continue
             except Exception as e:
-                print(f"Error reading credentials for {email}: {e}")
                 continue
                 
     except Exception as e:
-        print(f"Error listing credential files: {e}")
+        pass  # Continue if error reading credentials
     
     return jsonify(credentials)
 
@@ -417,11 +429,6 @@ def advanced_register_begin():
     hints = data.get("hints", [])
     extensions = data.get("extensions", {})
     
-    print(f"\n=== RECEIVED REGISTRATION REQUEST ===")
-    print(f"Username: {username}")
-    print(f"Attestation from frontend: '{attestation}' (type: {type(attestation)})")
-    print(f"Full request data: {data}")
-    print("====================================\n")
     
     if not username:
         return jsonify({"error": "Username is required"}), 400
@@ -452,18 +459,13 @@ def advanced_register_begin():
     # Set attestation
     if attestation == "direct":
         temp_server.attestation = AttestationConveyancePreference.DIRECT
-        print(f"*** ATTESTATION SET TO DIRECT ***")
     elif attestation == "indirect":
         temp_server.attestation = AttestationConveyancePreference.INDIRECT
-        print(f"*** ATTESTATION SET TO INDIRECT ***")
     elif attestation == "enterprise":
         temp_server.attestation = AttestationConveyancePreference.ENTERPRISE
-        print(f"*** ATTESTATION SET TO ENTERPRISE ***")
     else:
         temp_server.attestation = AttestationConveyancePreference.NONE
-        print(f"*** ATTESTATION SET TO NONE ***")
     
-    print(f"Final attestation setting: {temp_server.attestation} (type: {type(temp_server.attestation)})")
     
     # Set allowed algorithms based on pubKeyCredParams
     algorithm_map = {
@@ -627,22 +629,11 @@ def advanced_register_begin():
     session["advanced_hints"] = hints  # Store hints for potential client processing
     
     # Debug: Print the generated options to see what's actually being sent
-    print("\n=== ADVANCED REGISTRATION OPTIONS DEBUG ===")
-    print(f"User ID provided: {user_id}")
-    print(f"User verification requested: {user_verification} -> {uv_req}")
-    print(f"Attestation requested: {attestation} -> {temp_server.attestation}")
-    print(f"Resident key requested: {resident_key} -> {rk_req}")
-    print(f"Timeout requested: {timeout} ms -> {temp_server.timeout} seconds")
-    print(f"Extensions requested: {processed_extensions}")
-    print(f"Exclude credentials enabled: {exclude_credentials}")
-    print(f"Exclude list size: {len(exclude_list) if exclude_list else 0}")
     
     # Show the actual options being returned
     options_dict = dict(options)
-    print(f"Generated options - publicKey fields:")
     for key, value in options_dict.get('publicKey', {}).items():
-        print(f"  {key}: {value}")
-    print("=========================================\n")
+        pass  # Debug loop placeholder
     
     return jsonify(dict(options))
 
@@ -665,16 +656,8 @@ def advanced_register_complete():
         auth_data = server.register_complete(session.pop("advanced_state"), response)
         
         # Debug: Print what we received from the authenticator
-        print("\n=== ADVANCED REGISTRATION COMPLETE DEBUG ===")
-        print(f"Username: {username}")
-        print(f"Display name: {display_name}")
-        print(f"Original user ID: {user_id}")
-        print(f"Response clientExtensionResults: {response.get('clientExtensionResults', {})}")
-        print(f"Auth data flags: {auth_data.flags if hasattr(auth_data, 'flags') else 'N/A'}")
-        print(f"Auth data counter: {auth_data.counter if hasattr(auth_data, 'counter') else 'N/A'}")
         if hasattr(auth_data, 'attestation_object') and auth_data.attestation_object:
-            print(f"Attestation format: {auth_data.attestation_object.fmt}")
-        print("==========================================\n")
+            pass  # Debug placeholder
         
         # Determine the user handle to store - use original user ID if provided, otherwise credential ID
         user_handle = None
@@ -689,15 +672,6 @@ def advanced_register_complete():
         # Extract attestation format and other attestation information from attestation object
         attestation_format = "none"  # Default
         attestation_statement = None
-        print(f"\n=== ATTESTATION OBJECT PROCESSING ===")
-        print(f"auth_data has attestation_object attr: {hasattr(auth_data, 'attestation_object')}")
-        if hasattr(auth_data, 'attestation_object'):
-            print(f"auth_data.attestation_object: {auth_data.attestation_object}")
-            if auth_data.attestation_object:
-                print(f"auth_data.attestation_object.fmt: {auth_data.attestation_object.fmt}")
-        print(f"Raw attestationObject available in response: {bool(response.get('attestationObject'))}")
-        if response.get('attestationObject'):
-            print(f"AttestationObject length: {len(response['attestationObject'])} characters")
         
         try:
             # First try to get attestation from auth_data if available
@@ -706,34 +680,18 @@ def advanced_register_complete():
                 # Extract attestation statement from the auth_data attestation_object
                 if hasattr(auth_data.attestation_object, 'att_stmt'):
                     attestation_statement = auth_data.attestation_object.att_stmt
-                print(f"SUCCESS: Got attestation from auth_data - format: {attestation_format}")
             elif response.get('attestationObject'):
                 # Fallback: Parse attestation object from response
                 import cbor2
                 attestation_object_bytes = base64.b64decode(response['attestationObject'])
-                print(f"Decoded attestation object bytes length: {len(attestation_object_bytes)}")
                 
                 attestation_object = cbor2.loads(attestation_object_bytes)
-                print(f"CBOR decode successful!")
-                print(f"Full attestation object keys: {list(attestation_object.keys())}")
                 
                 attestation_format = attestation_object.get('fmt', 'none')
                 attestation_statement = attestation_object.get('attStmt', {})
-                print(f"SUCCESS: Got attestation from response parsing - format: {attestation_format}")
-            else:
-                print("No attestation object available from either source")
-                
-            print(f"=== FINAL ATTESTATION DATA ===")
-            print(f"Attestation format: {attestation_format}")
-            print(f"Attestation statement: {attestation_statement}")
-            print(f"Attestation statement keys: {list(attestation_statement.keys()) if attestation_statement else 'None'}")
-            print("==============================")
         except Exception as e:
-            print(f"ERROR: Could not extract attestation format: {e}")
-            print(f"Exception type: {type(e)}")
             import traceback
             traceback.print_exc()
-        print("=====================================\n")
         
         # Store comprehensive credential data with original user parameters
         credential_info = {
@@ -781,7 +739,22 @@ def advanced_register_complete():
         else:
             algoname = "Other (Classical)"
         
-        return jsonify({"status": "OK", "algo": algoname})
+        # Extract actual credential information for debug (from actual processed data)
+        debug_info = {
+            "attestationFormat": attestation_format,
+            "algorithmsUsed": [algo],
+            "excludeCredentialsUsed": bool(data.get("excludeCredentials", False)),
+            "hintsUsed": data.get("hints", []),
+            "credProtectUsed": data.get("extensions", {}).get("credProtect", "none"),
+            "enforceCredProtectUsed": bool(data.get("extensions", {}).get("enforceCredProtect", False)),
+            "actualResidentKey": bool(auth_data.flags & 0x04) if hasattr(auth_data, 'flags') else False,  # RK flag from authenticator data
+        }
+        
+        return jsonify({
+            "status": "OK", 
+            "algo": algoname,
+            **debug_info
+        })
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
@@ -814,10 +787,8 @@ def advanced_authenticate_begin():
                     credential_data_list = [extract_credential_data(cred) for cred in user_creds]
                     selected_credentials.extend(credential_data_list)
                 except Exception as e:
-                    print(f"Error reading credentials for {email}: {e}")
                     continue
         except Exception as e:
-            print(f"Error listing credential files: {e}")
             selected_credentials = []
     elif specific_credential_id:
         # Find specific credential by ID
@@ -841,10 +812,8 @@ def advanced_authenticate_begin():
                     if selected_credentials:
                         break
                 except Exception as e:
-                    print(f"Error reading credentials for {email}: {e}")
                     continue
         except Exception as e:
-            print(f"Error processing specific credential ID: {e}")
             selected_credentials = []
     
     # For empty allowCredentials, we should not return an error if no credentials found
@@ -940,45 +909,23 @@ def advanced_authenticate_begin():
     
     # Debug: Show what the FIDO2 server actually generated
     options_dict = dict(options)
-    print(f"FIDO2 server returned options:")
-    print(f"  allowCredentials present: {'allowCredentials' in options_dict}")
     if 'allowCredentials' in options_dict:
-        print(f"  allowCredentials value: {options_dict['allowCredentials']}")
-        print(f"  allowCredentials type: {type(options_dict['allowCredentials'])}")
-        print(f"  allowCredentials length: {len(options_dict['allowCredentials']) if options_dict['allowCredentials'] else 'None'}")
+        pass  # Debug placeholder
     else:
-        print("  allowCredentials: OMITTED (this is correct for resident key mode)")
-    print("=")
+        pass  # Debug placeholder
     
     session["advanced_auth_state"] = state
     
     # Debug: Print the generated authentication options
-    print("\n=== ADVANCED AUTHENTICATION OPTIONS DEBUG ===")
-    print(f"Allow credentials setting: {allow_credentials}")
-    print(f"Specific credential ID: {specific_credential_id}")
-    print(f"Selected credentials count: {len(selected_credentials) if selected_credentials else 'None (resident key mode)'}")
-    print(f"Final credentials count: {len(final_credentials) if final_credentials else 'None (resident key mode)'}")
-    print(f"User verification requested: {user_verification} -> {uv_req}")
-    print(f"Timeout requested: {timeout} ms -> {temp_server.timeout} seconds")
-    print(f"Extensions processed: {processed_extensions}")
-    print(f"User verification requested: {user_verification} -> {uv_req}")
-    print(f"Extensions requested: {processed_extensions}")
     if final_credentials:
-        print(f"Credential IDs in allowCredentials: {[base64.b64encode(cred.credential_id).decode() if hasattr(cred, 'credential_id') else str(cred) for cred in final_credentials[:3]]}")
+        pass  # Debug placeholder
     else:
-        print("*** RESIDENT KEY MODE ACTIVATED - allowCredentials will be omitted ***")
+        pass  # Debug placeholder
     
     # Debug: Show exactly what parameters are being passed to FIDO2 server
-    print(f"Calling temp_server.authenticate_begin with:")
-    print(f"  credentials: {final_credentials}")
-    print(f"  user_verification: {uv_req}")
-    print(f"  challenge: {challenge_bytes.hex() if challenge_bytes else 'auto-generated'}")
-    print(f"  extensions: {processed_extensions}")
-    print("=")
     
     # Check if we have any stored credentials and their resident key status
     if allow_credentials == "empty":
-        print("\n--- RESIDENT KEY CREDENTIAL CHECK ---")
         try:
             pkl_files = [f for f in os.listdir(basepath) if f.endswith('_credential_data.pkl')]
             resident_key_count = 0
@@ -991,19 +938,13 @@ def advanced_authenticate_begin():
                             rk_status = cred.get('client_extension_outputs', {}).get('credProps', {}).get('rk', False)
                             if rk_status:
                                 resident_key_count += 1
-                                print(f"Found resident key credential for {email}: {base64.b64encode(extract_credential_data(cred).credential_id).decode()[:20]}...")
                 except Exception as e:
-                    print(f"Error checking credentials for {email}: {e}")
-            print(f"Total resident key credentials found: {resident_key_count}")
+                    pass  # Continue if error reading specific credentials
             if resident_key_count == 0:
-                print("*** WARNING: No resident key credentials found! Authentication may fail. ***")
+                pass  # Debug placeholder for no resident key warning
         except Exception as e:
-            print(f"Error checking resident key credentials: {e}")
-        print("----------------------------------------")
+            pass  # Continue if error checking resident key credentials
     
-    print("=========================================\n")
-    
-    return jsonify(dict(options))
     
     return jsonify(dict(options))
 
@@ -1027,10 +968,9 @@ def advanced_authenticate_complete():
                 credential_data_list = [extract_credential_data(cred) for cred in user_creds]
                 all_credentials.extend(credential_data_list)
             except Exception as e:
-                print(f"Error reading credentials for {email}: {e}")
                 continue
     except Exception as e:
-        print(f"Error listing credential files: {e}")
+        pass  # Continue if error processing credentials
         
     if not all_credentials:
         return jsonify({"error": "No credentials found"}), 404
@@ -1041,12 +981,20 @@ def advanced_authenticate_complete():
             all_credentials,
             response,
         )
-        return jsonify({"status": "OK"})
+        
+        # Extract actual authentication information for debug (from request data)
+        debug_info = {
+            "hintsUsed": data.get("hints", []),
+        }
+        
+        return jsonify({
+            "status": "OK",
+            **debug_info
+        })
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
 def main():
-    print(__doc__)
     # Note: using localhost without TLS, as some browsers do
     # not allow Webauthn in case of TLS certificate errors.
     # See https://lists.w3.org/Archives/Public/public-webauthn/2022Nov/0135.html
