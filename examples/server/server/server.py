@@ -289,6 +289,19 @@ def list_credentials():
                                 user_info = cred['user_info']
                                 
                                 # Extract detailed information
+                                # Properties determined from multiple sources for best accuracy
+                                # 1. First check credProps extension result (most reliable)
+                                rk_from_credprops = cred.get('client_extension_outputs', {}).get('credProps', {}).get('rk', None)
+                                
+                                # 2. Check request parameters as fallback
+                                rk_from_request = cred.get('request_params', {}).get('resident_key') == 'required'
+                                
+                                # 3. Use credProps if available, otherwise fall back to request params
+                                resident_key_status = rk_from_credprops if rk_from_credprops is not None else rk_from_request
+                                
+                                # Debug resident key detection
+                                print(f"RK Detection for {user_info.get('name', 'unknown')}: credProps={rk_from_credprops}, request={rk_from_request}, final={resident_key_status}")
+                                
                                 credential_info = {
                                     'email': email,
                                     'credentialId': base64.b64encode(cred_data.credential_id).decode('utf-8'),
@@ -314,8 +327,8 @@ def list_credentials():
                                     'attestationFormat': cred.get('attestation_format', 'none'),  # Use stored attestation format
                                     'publicKeyAlgorithm': cred_data.public_key[3] if hasattr(cred_data, 'public_key') and len(cred_data.public_key) > 3 else None,
                                     
-                                    # Properties determined from actual extension results and request params
-                                    'residentKey': cred.get('client_extension_outputs', {}).get('credProps', {}).get('rk', False),
+                                    # Properties determined from multiple sources for best accuracy
+                                    'residentKey': resident_key_status,
                                     'largeBlob': cred.get('client_extension_outputs', {}).get('largeBlob', {}).get('supported', False),
                                     
                                     # Add original request parameters for debugging/verification

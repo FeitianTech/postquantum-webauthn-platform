@@ -1210,7 +1210,58 @@
         let currentJsonMode = null;
         let currentJsonData = null;
 
-        // Utility functions for hex validation and generation
+        // Diagnostic function to test resident key authentication
+        async function testResidentKeyAuthentication() {
+            console.log('=== RESIDENT KEY DIAGNOSTIC TEST ===');
+            
+            try {
+                // Make a minimal request with no allowCredentials to test resident key mode
+                const testOptions = {
+                    publicKey: {
+                        challenge: new Uint8Array(32), // Dummy challenge
+                        timeout: 60000,
+                        rpId: window.location.hostname,
+                        userVerification: 'preferred'
+                        // Deliberately omitting allowCredentials to enable resident key mode
+                    }
+                };
+                
+                console.log('Testing with minimal options (no allowCredentials):', testOptions);
+                
+                // This should work if there are any resident key credentials
+                const result = await navigator.credentials.get(testOptions);
+                console.log('SUCCESS: Resident key authentication worked!', result);
+                return true;
+                
+            } catch (error) {
+                console.log('FAILED: Resident key authentication failed:', error);
+                console.log('This suggests either:');
+                console.log('1. No resident key credentials are stored');
+                console.log('2. The authenticator does not support discoverable credentials');
+                console.log('3. Browser/OS limitations prevent resident key authentication');
+                return false;
+            }
+        }
+        
+        // Make diagnostic function globally accessible
+        window.testResidentKeyAuthentication = testResidentKeyAuthentication;
+        function addDiagnosticButton() {
+            const authSection = document.querySelector('#advanced-authentication');
+            if (authSection && !document.getElementById('diagnostic-button')) {
+                const diagnosticDiv = document.createElement('div');
+                diagnosticDiv.innerHTML = `
+                    <div class="form-group">
+                        <button type="button" id="diagnostic-button" class="btn btn-secondary" onclick="testResidentKeyAuthentication()">
+                            🔍 Test Resident Key Support
+                        </button>
+                        <small class="form-text text-muted">
+                            This diagnostic test checks if resident key authentication works on your device.
+                        </small>
+                    </div>
+                `;
+                authSection.appendChild(diagnosticDiv);
+            }
+        }
         function isValidHex(str) {
             return /^[0-9a-fA-F]*$/.test(str) && str.length > 0;
         }
@@ -2863,6 +2914,9 @@
             // Load saved credentials
             setTimeout(loadSavedCredentials, 300);
             
+            // Add diagnostic button
+            setTimeout(addDiagnosticButton, 400);
+            
             // Ensure decoder tab functionality is properly initialized
             setTimeout(() => {
                 // Verify decoder elements exist
@@ -3318,6 +3372,16 @@
                 const assertOptions = parseRequestOptionsFromJSON(json);
                 console.log('Parsed assertOptions for WebAuthn API:', JSON.stringify(assertOptions, null, 2));
                 console.log('allowCredentials in assertOptions:', assertOptions.allowCredentials);
+                console.log('allowCredentials type:', typeof assertOptions.allowCredentials);
+                console.log('allowCredentials is undefined:', assertOptions.allowCredentials === undefined);
+                
+                // CRITICAL FIX: Ensure allowCredentials is completely omitted for resident key authentication
+                // The webauthn-json library might be adding an empty array even when the server omits the parameter
+                if (options.allowCredentials === 'empty' && assertOptions.allowCredentials !== undefined) {
+                    console.log('*** FIXING: webauthn-json added allowCredentials, removing it for resident key mode ***');
+                    delete assertOptions.allowCredentials;
+                    console.log('After fix - allowCredentials in assertOptions:', assertOptions.allowCredentials);
+                }
                 
                 showProgress('advanced', 'Connecting your authenticator device...');
 
