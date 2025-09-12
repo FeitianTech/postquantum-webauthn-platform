@@ -4,7 +4,7 @@ import {
     get,
     parseCreationOptionsFromJSON,
     parseRequestOptionsFromJSON,
-} from '/webauthn-json.browser-ponyfill.js';
+} from './webauthn-json.browser-ponyfill.js';
 
 // Make functions globally available
 window.create = create;
