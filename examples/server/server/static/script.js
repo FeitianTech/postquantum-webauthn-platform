@@ -661,38 +661,9 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             const modalBody = document.getElementById('modalBody');
             
             // Helper functions for format conversion
-            function base64UrlToHex(base64url) {
-                try {
-                    // Convert base64url to regular base64
-                    let base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
-                    while (base64.length % 4) {
-                        base64 += '=';
-                    }
-                    // Convert to bytes and then to hex
-                    const bytes = atob(base64);
-                    return Array.from(bytes, byte => byte.charCodeAt(0).toString(16).padStart(2, '0')).join('');
-                } catch (e) {
-                    return 'Invalid data';
-                }
-            }
             
-            function hexToBase64(hex) {
-                try {
-                    const bytes = hex.match(/.{2}/g).map(byte => String.fromCharCode(parseInt(byte, 16))).join('');
-                    return btoa(bytes);
-                } catch (e) {
-                    return 'Invalid data';
-                }
-            }
             
-            function base64ToBase64Url(base64) {
-                return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
-            }
             
-            function hexToGuid(hex) {
-                if (hex.length !== 32) return 'Invalid GUID';
-                return `${hex.substr(0,8)}-${hex.substr(8,4)}-${hex.substr(12,4)}-${hex.substr(16,4)}-${hex.substr(20,12)}`;
-            }
             
             // Construct the detailed credential information in the exact format requested
             let detailsHtml = '';
@@ -1748,3 +1719,578 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
         window.closeCredentialModal = closeCredentialModal;
         window.deleteCredential = deleteCredential;
 
+
+
+        // Simple Authentication Functions
+
+
+        async function simpleDelete() {
+            const email = document.getElementById('simple-email').value;
+            if (!email) {
+                showStatus('simple', 'Please enter an email address', 'error');
+                return;
+            }
+
+            if (!confirm(`Are you sure you want to delete all credentials for ${email}?`)) {
+                return;
+            }
+
+            try {
+                hideStatus('simple');
+                showProgress('simple', 'Deleting credentials...');
+
+                const result = await fetch('/api/deletepub', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({"email": email}),
+                });
+
+                if (result.ok) {
+                    showStatus('simple', 
+                        'Credentials deleted from server successfully! ' +
+                        'Note: This only removes credentials from our application. ' +
+                        'Resident key credentials remain on your authenticator device. ' +
+                        'To fully remove credentials, you may need to reset your authenticator.', 
+                        'success'
+                    );
+                } else {
+                    throw new Error('Deletion failed');
+                }
+            } catch (error) {
+                console.error('Deletion error:', error);
+                showStatus('simple', `Deletion failed: ${error.message}`, 'error');
+            } finally {
+                hideProgress('simple');
+            }
+        }
+
+        // Advanced Authentication Functions
+        function getAdvancedCreateOptions() {
+            // Collect basic user information
+            const options = {
+                username: document.getElementById('user-name').value,
+                displayName: document.getElementById('user-display-name').value || document.getElementById('user-name').value,
+                userId: document.getElementById('user-id').value,
+                
+                // Authenticator selection
+                attestation: document.getElementById('attestation').value,
+                userVerification: document.getElementById('user-verification-reg').value,
+                authenticatorAttachment: document.getElementById('authenticator-attachment').value || undefined,
+                residentKey: document.getElementById('resident-key').value,
+                
+                // Credential management
+                excludeCredentials: document.getElementById('exclude-credentials').checked,
+                fakeCredLength: parseInt(document.getElementById('fake-cred-length-reg').value) || 0,
+                
+                // Other options
+                challenge: document.getElementById('challenge-reg').value,
+                timeout: parseInt(document.getElementById('timeout-reg').value) || 90000,
+                
+                // Public key credential parameters
+                pubKeyCredParams: [],
+                
+                // Hints
+                hints: [],
+                
+                // Extensions
+                extensions: {}
+            };
+            
+            // Collect selected algorithms
+            if (document.getElementById('param-eddsa')?.checked) options.pubKeyCredParams.push('EdDSA');
+            if (document.getElementById('param-es256')?.checked) options.pubKeyCredParams.push('ES256');
+            if (document.getElementById('param-rs256')?.checked) options.pubKeyCredParams.push('RS256');
+            if (document.getElementById('param-es384')?.checked) options.pubKeyCredParams.push('ES384');
+            if (document.getElementById('param-es512')?.checked) options.pubKeyCredParams.push('ES512');
+            if (document.getElementById('param-rs384')?.checked) options.pubKeyCredParams.push('RS384');
+            if (document.getElementById('param-rs512')?.checked) options.pubKeyCredParams.push('RS512');
+            if (document.getElementById('param-rs1')?.checked) options.pubKeyCredParams.push('RS1');
+            
+            // Collect hints
+            if (document.getElementById('hint-client-device')?.checked) options.hints.push('client-device');
+            if (document.getElementById('hint-hybrid')?.checked) options.hints.push('hybrid');
+            if (document.getElementById('hint-security-key')?.checked) options.hints.push('security-key');
+            
+            // Collect extensions
+            if (document.getElementById('cred-props')?.checked) {
+                options.extensions.credProps = true;
+            }
+            
+            if (document.getElementById('min-pin-length')?.checked) {
+                options.extensions.minPinLength = true;
+            }
+            
+            const credProtect = document.getElementById('cred-protect')?.value;
+            if (credProtect && credProtect !== '') {
+                options.extensions.credProtect = credProtect;
+                if (document.getElementById('enforce-cred-protect')?.checked) {
+                    options.extensions.enforceCredProtect = true;
+                }
+            }
+            
+            const largeBlob = document.getElementById('large-blob-reg')?.value;
+            if (largeBlob && largeBlob !== '') {
+                options.extensions.largeBlob = largeBlob;
+            }
+            
+            if (document.getElementById('prf-reg')?.checked) {
+                options.extensions.prf = true;
+                const prfFirst = document.getElementById('prf-eval-first-reg')?.value;
+                const prfSecond = document.getElementById('prf-eval-second-reg')?.value;
+                if (prfFirst) options.extensions.prfEvalFirst = prfFirst;
+                if (prfSecond) options.extensions.prfEvalSecond = prfSecond;
+            }
+            
+            return options;
+        }
+
+        function getAdvancedAssertOptions() {
+            const allowCreds = document.getElementById('allow-credentials').value;
+            console.log('=== FRONTEND AUTHENTICATION OPTIONS DEBUG ===');
+            console.log('Allow credentials dropdown value:', allowCreds);
+            
+            const options = {
+                userVerification: document.getElementById('user-verification-auth').value,
+                allowCredentials: allowCreds,
+                fakeCredLength: parseInt(document.getElementById('fake-cred-length-auth').value) || 0,
+                challenge: document.getElementById('challenge-auth').value,
+                timeout: parseInt(document.getElementById('timeout-auth').value) || 90000,
+                extensions: {}
+            };
+            
+            // Handle specific credential selection
+            if (allowCreds !== 'all' && allowCreds !== 'empty') {
+                // This is a specific credential ID
+                options.specificCredentialId = allowCreds;
+                console.log('Specific credential ID selected:', allowCreds);
+            } else if (allowCreds === 'empty') {
+                console.log('*** EMPTY allowCredentials selected - this should enable resident key mode ***');
+            } else {
+                console.log('All credentials selected');
+            }
+            
+            // Collect extensions for authentication
+            const largeBlob = document.getElementById('large-blob-auth')?.value;
+            if (largeBlob && largeBlob !== '') {
+                options.extensions.largeBlob = largeBlob;
+                if (largeBlob === 'write') {
+                    const largeBlobWrite = document.getElementById('large-blob-write')?.value;
+                    if (largeBlobWrite) {
+                        options.extensions.largeBlobWrite = largeBlobWrite;
+                    }
+                }
+            }
+            
+            // Check if we have prf inputs for authentication
+            const prfFirst = document.getElementById('prf-eval-first-auth')?.value;
+            const prfSecond = document.getElementById('prf-eval-second-auth')?.value;
+            if (prfFirst || prfSecond) {
+                options.extensions.prf = true;
+                if (prfFirst) options.extensions.prfEvalFirst = prfFirst;
+                if (prfSecond) options.extensions.prfEvalSecond = prfSecond;
+            }
+            
+            return options;
+        }
+
+        async function advancedRegister() {
+            // Validate all inputs first
+            const isUserIdValid = validateUserIdInput();
+            const isChallengeValid = validateChallengeInputs();
+            const isPrfValid = validatePrfEvalInputs();
+            const isLargeBlobValid = validateLargeBlobWriteInput();
+            const isLargeBlobDependencyValid = validateLargeBlobDependency();
+            
+            if (!isUserIdValid || !isChallengeValid || !isPrfValid || !isLargeBlobValid || !isLargeBlobDependencyValid) {
+                showStatus('advanced', 'Please fix the validation errors above', 'error');
+                return;
+            }
+
+            const options = getAdvancedCreateOptions();
+            if (!options.username) {
+                showStatus('advanced', 'Please enter a username', 'error');
+                return;
+            }
+
+            try {
+                hideStatus('advanced');
+                showProgress('advanced', 'Starting advanced registration...');
+
+                const response = await fetch('/api/advanced/register/begin', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(options)
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`Server error: ${errorText}`);
+                }
+
+                const json = await response.json();
+                const createOptions = parseCreationOptionsFromJSON(json);
+                
+                showProgress('advanced', 'Connecting your authenticator device...');
+
+                const credential = await create(createOptions);
+                
+                showProgress('advanced', 'Completing registration...');
+
+                const result = await fetch('/api/advanced/register/complete', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        ...options,
+                        response: credential
+                    }),
+                });
+
+                if (result.ok) {
+                    const data = await result.json();
+                    showStatus('advanced', `Advanced registration successful! Algorithm: ${data.algo || 'Unknown'}`, 'success');
+                    
+                    // Reload credentials from server to get the latest
+                    setTimeout(loadSavedCredentials, 1000);
+                } else {
+                    const errorText = await result.text();
+                    throw new Error(`Registration failed: ${errorText}`);
+                }
+            } catch (error) {
+                console.error('Advanced registration error:', error);
+                
+                let errorMessage = error.message;
+                if (error.name === 'NotAllowedError') {
+                    errorMessage = 'User cancelled or authenticator not available';
+                } else if (error.name === 'InvalidStateError') {
+                    errorMessage = 'Authenticator is already registered for this account';
+                } else if (error.name === 'SecurityError') {
+                    errorMessage = 'Security error - check your connection and try again';
+                }
+                
+                showStatus('advanced', `Advanced registration failed: ${errorMessage}`, 'error');
+            } finally {
+                hideProgress('advanced');
+            }
+        }
+
+        async function advancedAuthenticate() {
+            // Validate all inputs first
+            const isChallengeValid = validateChallengeInputs();
+            const isPrfValid = validatePrfEvalInputs();
+            const isLargeBlobValid = validateLargeBlobWriteInput();
+            
+            if (!isChallengeValid || !isPrfValid || !isLargeBlobValid) {
+                showStatus('advanced', 'Please fix the validation errors above', 'error');
+                return;
+            }
+
+            // Check for resident key authentication without resident key credentials
+            const allowCreds = document.getElementById('allow-credentials')?.value;
+            if (allowCreds === 'empty') {
+                const hasResidentKeyCredentials = storedCredentials && storedCredentials.some(cred => 
+                    cred.residentKey === true || 
+                    (cred.clientExtensionOutputs && cred.clientExtensionOutputs.credProps && cred.clientExtensionOutputs.credProps.rk === true)
+                );
+                
+                if (!hasResidentKeyCredentials) {
+                    showStatus('advanced', 
+                        'Warning: Resident key authentication selected but no resident key credentials found. ' +
+                        'Please register a credential with Resident Key set to "Required" first, or select a specific credential instead.', 
+                        'error'
+                    );
+                    return;
+                }
+                
+                console.log('Resident key authentication mode - found compatible credentials');
+            }
+
+            const options = getAdvancedAssertOptions();
+            console.log('Final options being sent to server:', JSON.stringify(options, null, 2));
+
+            try {
+                hideStatus('advanced');
+                showProgress('advanced', 'Detecting credentials...');
+
+                const response = await fetch('/api/advanced/authenticate/begin', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(options)
+                });
+
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        throw new Error('No credentials detected. Please register a credential first.');
+                    }
+                    const errorText = await response.text();
+                    throw new Error(`Server error: ${errorText}`);
+                }
+
+                const json = await response.json();
+                console.log('Server response for authentication options:', JSON.stringify(json, null, 2));
+                
+                const assertOptions = parseRequestOptionsFromJSON(json);
+                console.log('Parsed assertOptions for WebAuthn API:', JSON.stringify(assertOptions, null, 2));
+                console.log('allowCredentials in assertOptions:', assertOptions.allowCredentials);
+                console.log('allowCredentials type:', typeof assertOptions.allowCredentials);
+                console.log('allowCredentials is undefined:', assertOptions.allowCredentials === undefined);
+                
+                // CRITICAL FIX: Ensure allowCredentials is completely omitted for resident key authentication
+                // The webauthn-json library might be adding an empty array even when the server omits the parameter
+                if (options.allowCredentials === 'empty' && assertOptions.allowCredentials !== undefined) {
+                    console.log('*** FIXING: webauthn-json added allowCredentials, removing it for resident key mode ***');
+                    delete assertOptions.allowCredentials;
+                    console.log('After fix - allowCredentials in assertOptions:', assertOptions.allowCredentials);
+                }
+                
+                showProgress('advanced', 'Connecting your authenticator device...');
+
+                const assertion = await get(assertOptions);
+                
+                showProgress('advanced', 'Completing authentication...');
+
+                const result = await fetch('/api/advanced/authenticate/complete', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        response: assertion
+                    }),
+                });
+
+                if (result.ok) {
+                    const data = await result.json();
+                    showStatus('advanced', 'Advanced authentication successful!', 'success');
+                } else {
+                    const errorText = await result.text();
+                    throw new Error(`Authentication failed: ${errorText}`);
+                }
+            } catch (error) {
+                console.error('Advanced authentication error:', error);
+                
+                let errorMessage = error.message;
+                if (error.name === 'NotAllowedError') {
+                    errorMessage = 'User cancelled or no compatible authenticator detected';
+                } else if (error.name === 'InvalidStateError') {
+                    errorMessage = 'Invalid authenticator state - please try again';
+                } else if (error.name === 'SecurityError') {
+                    errorMessage = 'Security error - check your connection and try again';
+                }
+                
+                showStatus('advanced', `Advanced authentication failed: ${errorMessage}`, 'error');
+            } finally {
+                hideProgress('advanced');
+            }
+        }
+
+        async function advancedDelete() {
+            const username = document.getElementById('user-name').value;
+            if (!username) {
+                showStatus('advanced', 'Please enter a username', 'error');
+                return;
+            }
+
+            if (!confirm(`Are you sure you want to delete all credentials for ${username}?`)) {
+                return;
+            }
+
+            try {
+                hideStatus('advanced');
+                showProgress('advanced', 'Deleting credentials...');
+
+                const result = await fetch('/api/deletepub', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({"username": username}),
+                });
+
+                if (result.ok) {
+                    showStatus('advanced', 
+                        'Credentials deleted from server successfully! ' +
+                        'Note: This only removes credentials from our application. ' +
+                        'Resident key credentials remain on your authenticator device. ' +
+                        'To fully remove credentials, you may need to reset your authenticator.', 
+                        'success'
+                    );
+                } else {
+                    throw new Error('Deletion failed');
+                }
+            } catch (error) {
+                console.error('Deletion error:', error);
+                showStatus('advanced', `Deletion failed: ${error.message}`, 'error');
+            } finally {
+                hideProgress('advanced');
+            }
+        }
+
+        // JSON Editor Functions
+        function editCreateOptions() {
+            const options = getAdvancedCreateOptions();
+            currentJsonMode = 'create';
+            currentJsonData = options;
+            
+            document.getElementById('json-editor').value = JSON.stringify(options, null, 2);
+            document.getElementById('apply-json').style.display = 'inline-block';
+            document.getElementById('cancel-json').style.display = 'inline-block';
+        }
+
+        function editAssertOptions() {
+            const options = getAdvancedAssertOptions();
+            currentJsonMode = 'assert';
+            currentJsonData = options;
+            
+            document.getElementById('json-editor').value = JSON.stringify(options, null, 2);
+            document.getElementById('apply-json').style.display = 'inline-block';
+            document.getElementById('cancel-json').style.display = 'inline-block';
+        }
+
+        function applyJsonChanges() {
+            try {
+                const jsonText = document.getElementById('json-editor').value;
+                const parsed = JSON.parse(jsonText);
+                
+                if (currentJsonMode === 'create') {
+                    // Update create form fields
+                    if (parsed.username) document.getElementById('user-name').value = parsed.username;
+                    if (parsed.displayName) document.getElementById('user-display-name').value = parsed.displayName;
+                    if (parsed.attestation) document.getElementById('attestation').value = parsed.attestation;
+                    if (parsed.userVerification) document.getElementById('user-verification-reg').value = parsed.userVerification;
+                    if (parsed.authenticatorAttachment !== undefined) document.getElementById('authenticator-attachment').value = parsed.authenticatorAttachment || '';
+                    if (parsed.residentKey) document.getElementById('resident-key').value = parsed.residentKey;
+                } else if (currentJsonMode === 'assert') {
+                    // Update assert form fields
+                    if (parsed.userVerification) document.getElementById('user-verification-auth').value = parsed.userVerification;
+                }
+                
+                showStatus('advanced', 'JSON changes applied successfully!', 'success');
+                cancelJsonEdit();
+            } catch (error) {
+                showStatus('advanced', `Invalid JSON: ${error.message}`, 'error');
+            }
+        }
+
+        function cancelJsonEdit() {
+            document.getElementById('json-editor').value = '';
+            document.getElementById('apply-json').style.display = 'none';
+            document.getElementById('cancel-json').style.display = 'none';
+            currentJsonMode = null;
+            currentJsonData = {};
+        }
+
+        // Decoder Functions
+        function decodeResponse() {
+            const input = document.getElementById('decoder-input');
+            if (!input) {
+                if (window.console && console.error) {
+                    console.error('Decoder input element not found');
+                }
+                return;
+            }
+            
+            const inputValue = input.value;
+            if (!inputValue.trim()) {
+                showStatus('decoder', 'Please paste a WebAuthn response to decode', 'error');
+                return;
+            }
+
+            try {
+                const parsed = JSON.parse(inputValue);
+                const decoded = analyzeWebAuthnResponse(parsed);
+                
+                const decodedContent = document.getElementById('decoded-content');
+                const decoderOutput = document.getElementById('decoder-output');
+                
+                if (decodedContent && decoderOutput) {
+                    decodedContent.innerHTML = `<pre>${JSON.stringify(decoded, null, 2)}</pre>`;
+                    decoderOutput.style.display = 'block';
+                    showStatus('decoder', 'Response decoded successfully!', 'success');
+                } else {
+                    if (window.console && console.error) {
+                        console.error('Decoder output elements not found');
+                    }
+                }
+            } catch (error) {
+                showStatus('decoder', `Decoding failed: ${error.message}`, 'error');
+            }
+        }
+
+        function clearDecoder() {
+            const input = document.getElementById('decoder-input');
+            const output = document.getElementById('decoder-output');
+            
+            if (input) {
+                input.value = '';
+            }
+            if (output) {
+                output.style.display = 'none';
+            }
+            hideStatus('decoder');
+        }
+
+        function analyzeWebAuthnResponse(response) {
+            const analysis = {
+                type: 'Unknown',
+                rawResponse: response,
+                decodedFields: {}
+            };
+
+            // Detect if it's a registration or authentication response
+            if (response.response && response.response.attestationObject) {
+                analysis.type = 'Registration Response';
+                analysis.decodedFields = {
+                    credentialId: response.id,
+                    credentialType: response.type,
+                    authenticatorAttachment: response.authenticatorAttachment,
+                    clientDataJSON: tryDecodeBase64Url(response.response.clientDataJSON),
+                    attestationObject: 'Base64URL encoded - contains authenticator data and attestation statement'
+                };
+            } else if (response.response && response.response.authenticatorData) {
+                analysis.type = 'Authentication Response';
+                analysis.decodedFields = {
+                    credentialId: response.id,
+                    credentialType: response.type,
+                    authenticatorAttachment: response.authenticatorAttachment,
+                    clientDataJSON: tryDecodeBase64Url(response.response.clientDataJSON),
+                    authenticatorData: 'Base64URL encoded - contains RP ID hash, flags, counter, etc.',
+                    signature: 'Base64URL encoded signature'
+                };
+            }
+
+            return analysis;
+        }
+
+        function tryDecodeBase64Url(encoded) {
+            try {
+                const decoded = atob(encoded.replace(/-/g, '+').replace(/_/g, '/'));
+                return JSON.parse(decoded);
+            } catch (error) {
+                return 'Could not decode as JSON: ' + encoded;
+            }
+        }
+
+        // Update JSON editor when form fields change
+        document.addEventListener('DOMContentLoaded', function() {
+            const formFields = [
+                'user-name', 'user-display-name', 'attestation',
+                'user-verification-reg', 'authenticator-attachment', 'resident-key',
+                'user-verification-auth'
+            ];
+
+            formFields.forEach(fieldId => {
+                const field = document.getElementById(fieldId);
+                if (field) {
+                    field.addEventListener('input', updateJsonFromForm);
+                    field.addEventListener('change', updateJsonFromForm);
+                }
+            });
+        });
+
+        function updateJsonFromForm() {
+            if (currentJsonMode) {
+                if (currentJsonMode === 'create') {
+                    const options = getAdvancedCreateOptions();
+                    document.getElementById('json-editor').value = JSON.stringify(options, null, 2);
+                } else if (currentJsonMode === 'assert') {
+                    const options = getAdvancedAssertOptions();
+                    document.getElementById('json-editor').value = JSON.stringify(options, null, 2);
+                }
+            }
+        }

@@ -1,8 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WebAuthn FIDO2 Test Application</title>
     <link rel="stylesheet" href="/styles.css">
 </head>
@@ -595,7 +593,8 @@
                                             <label for="prf-eval-first-auth">prf eval first</label>
                                             <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
                                                 <div class="info-popup">
-                                                    The first prf extension input to evaluate. If set, the client extension outputs will include a prf.results.first output if the client and authenticator both support the extension.
+                                                    Request the Pseudo-random function (prf) extension and set the first prf extension input to evaluate. This extension may be used to derive deterministically-random values to use as key material, for example.<br><br>
+                                                    If set, the client extension outputs will include a prf.results.first output if the client and authenticator both support the extension.
                                                 </div>
                                             </div>
                                         </div>
@@ -610,7 +609,8 @@
                                             <label for="prf-eval-second-auth">prf eval second</label>
                                             <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
                                                 <div class="info-popup">
-                                                    The second prf extension input to evaluate. If set, the client extension outputs will include a prf.results.second output if the client and authenticator both support the extension.
+                                                    The second prf extension input to evaluate. If set, the client extension outputs will include a prf.results.second output if the client and authenticator both support the extension.<br><br>
+                                                    A second output may be useful to rotate key material via a single WebAuthn ceremony.
                                                 </div>
                                             </div>
                                         </div>
@@ -624,50 +624,49 @@
                             </div>
 
                             <div class="form-group" style="margin-top: 2rem;">
-                                <button class="btn" onclick="advancedAuthenticate()">Authenticate</button>
+                                <button class="btn" onclick="advancedAuthenticate()">Assert Credential</button>
                                 <button class="btn btn-secondary" onclick="resetAuthenticationForm()">Reset</button>
                             </div>
                         </div>
-
                         </div>
 
                         <!-- Middle Column: JSON Editor -->
                         <div class="json-editor-column">
-                            <h3 id="json-editor-title">JSON Editor (CredentialCreationOptions)</h3>
-                            <div class="json-editor">
+                            <h3>JSON Editor</h3>
+                            <div id="json-editor-container" class="json-editor">
                                 <textarea id="json-editor" placeholder="JSON representation will appear here automatically..."></textarea>
                             </div>
-                            <div class="form-group">
-                                <button id="save-json" class="btn btn-small" onclick="saveJsonEditor()">Save</button>
-                                <button id="reset-json" class="btn btn-small btn-secondary" onclick="resetJsonEditor()">Reset</button>
+                            <div class="json-editor-buttons" style="margin-top: 0.5rem;">
+                                <button class="btn" onclick="saveJsonEditor()" title="Save JSON changes to settings">Save</button>
+                                <button class="btn btn-secondary" onclick="resetJsonEditor()" title="Reset JSON to match current settings">Reset</button>
                             </div>
                         </div>
 
-                        <!-- Right Column: Binary Format and Credentials -->
+                        <!-- Right Column: Credentials Panel -->
                         <div class="credentials-column">
-                            <div class="form-group">
+                            <div class="form-group" style="margin-bottom: 1rem;">
                                 <label for="binary-format">Binary Format</label>
-                                <select id="binary-format" class="form-control" onchange="changeBinaryFormat(this.value)">
+                                <select id="binary-format" class="form-control" onchange="changeBinaryFormat()">
                                     <option value="hex">hex</option>
                                     <option value="b64">b64</option>
                                     <option value="b64u">b64u</option>
                                     <option value="js">js</option>
                                 </select>
                             </div>
+                            <h3>Saved Credentials</h3>
                             <div class="credentials-panel">
-                                <h3>Saved Credentials</h3>
                                 <div id="credentials-list">
                                     <p style="color: #6c757d; font-style: italic;">No credentials registered yet.</p>
                                 </div>
                             </div>
                         </div>
                     </div>
+                </div>
 
-                    <div class="progress" id="advanced-progress">
+                <div class="progress" id="advanced-progress">
                         <div class="spinner"></div>
                         <span id="advanced-progress-text">Processing...</span>
                     </div>
-                </div>
             </div>
 
             <!-- Decoder Tab -->
@@ -680,7 +679,7 @@
 
                     <div class="form-group">
                         <label for="decoder-input">Paste WebAuthn Response JSON</label>
-                        <textarea id="decoder-input" class="form-control" placeholder="Paste your WebAuthn response JSON here..." rows="8"></textarea>
+                        <textarea id="decoder-input" class="form-control" rows="10" placeholder="Paste your WebAuthn registration or authentication response here..."></textarea>
                     </div>
 
                     <div class="form-group">
@@ -699,6 +698,8 @@
         </div>
     </div>
 
+
+
     <!-- Credential Details Modal -->
     <div id="credentialModal" class="modal">
         <div class="modal-content">
@@ -711,7 +712,6 @@
             </div>
         </div>
     </div>
-
     <script type="module" src="/script.js"></script>
 </body>
 </html>
