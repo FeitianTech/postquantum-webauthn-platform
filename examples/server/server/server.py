@@ -129,8 +129,13 @@ def register_complete():
     attestation_format = "none"  # Default
     attestation_statement = None
     try:
-        if response.get('attestationObject'):
-            # Try to parse attestation object from response
+        # First try to get attestation from auth_data if available
+        if hasattr(auth_data, 'attestation_object') and auth_data.attestation_object:
+            attestation_format = auth_data.attestation_object.fmt
+            if hasattr(auth_data.attestation_object, 'att_stmt'):
+                attestation_statement = auth_data.attestation_object.att_stmt
+        elif response.get('attestationObject'):
+            # Fallback: Try to parse attestation object from response
             import cbor2
             attestation_object_bytes = base64.b64decode(response['attestationObject'])
             attestation_object = cbor2.loads(attestation_object_bytes)
@@ -400,6 +405,12 @@ def advanced_register_begin():
     hints = data.get("hints", [])
     extensions = data.get("extensions", {})
     
+    print(f"\n=== RECEIVED REGISTRATION REQUEST ===")
+    print(f"Username: {username}")
+    print(f"Attestation from frontend: '{attestation}' (type: {type(attestation)})")
+    print(f"Full request data: {data}")
+    print("====================================\n")
+    
     if not username:
         return jsonify({"error": "Username is required"}), 400
     
@@ -429,12 +440,18 @@ def advanced_register_begin():
     # Set attestation
     if attestation == "direct":
         temp_server.attestation = AttestationConveyancePreference.DIRECT
+        print(f"*** ATTESTATION SET TO DIRECT ***")
     elif attestation == "indirect":
         temp_server.attestation = AttestationConveyancePreference.INDIRECT
+        print(f"*** ATTESTATION SET TO INDIRECT ***")
     elif attestation == "enterprise":
         temp_server.attestation = AttestationConveyancePreference.ENTERPRISE
+        print(f"*** ATTESTATION SET TO ENTERPRISE ***")
     else:
         temp_server.attestation = AttestationConveyancePreference.NONE
+        print(f"*** ATTESTATION SET TO NONE ***")
+    
+    print(f"Final attestation setting: {temp_server.attestation} (type: {type(temp_server.attestation)})")
     
     # Set allowed algorithms based on pubKeyCredParams
     algorithm_map = {
@@ -660,23 +677,51 @@ def advanced_register_complete():
         # Extract attestation format and other attestation information from attestation object
         attestation_format = "none"  # Default
         attestation_statement = None
+        print(f"\n=== ATTESTATION OBJECT PROCESSING ===")
+        print(f"auth_data has attestation_object attr: {hasattr(auth_data, 'attestation_object')}")
+        if hasattr(auth_data, 'attestation_object'):
+            print(f"auth_data.attestation_object: {auth_data.attestation_object}")
+            if auth_data.attestation_object:
+                print(f"auth_data.attestation_object.fmt: {auth_data.attestation_object.fmt}")
+        print(f"Raw attestationObject available in response: {bool(response.get('attestationObject'))}")
+        if response.get('attestationObject'):
+            print(f"AttestationObject length: {len(response['attestationObject'])} characters")
+        
         try:
-            if response.get('attestationObject'):
-                # Parse attestation object from response
+            # First try to get attestation from auth_data if available
+            if hasattr(auth_data, 'attestation_object') and auth_data.attestation_object:
+                attestation_format = auth_data.attestation_object.fmt
+                # Extract attestation statement from the auth_data attestation_object
+                if hasattr(auth_data.attestation_object, 'att_stmt'):
+                    attestation_statement = auth_data.attestation_object.att_stmt
+                print(f"SUCCESS: Got attestation from auth_data - format: {attestation_format}")
+            elif response.get('attestationObject'):
+                # Fallback: Parse attestation object from response
                 import cbor2
                 attestation_object_bytes = base64.b64decode(response['attestationObject'])
+                print(f"Decoded attestation object bytes length: {len(attestation_object_bytes)}")
+                
                 attestation_object = cbor2.loads(attestation_object_bytes)
+                print(f"CBOR decode successful!")
+                print(f"Full attestation object keys: {list(attestation_object.keys())}")
+                
                 attestation_format = attestation_object.get('fmt', 'none')
                 attestation_statement = attestation_object.get('attStmt', {})
+                print(f"SUCCESS: Got attestation from response parsing - format: {attestation_format}")
+            else:
+                print("No attestation object available from either source")
                 
-                print(f"=== ATTESTATION DEBUG ===")
-                print(f"Attestation format extracted: {attestation_format}")
-                print(f"Attestation statement keys: {list(attestation_statement.keys()) if attestation_statement else 'None'}")
-                print(f"Full attestation object keys: {list(attestation_object.keys())}")
-                print("========================")
+            print(f"=== FINAL ATTESTATION DATA ===")
+            print(f"Attestation format: {attestation_format}")
+            print(f"Attestation statement: {attestation_statement}")
+            print(f"Attestation statement keys: {list(attestation_statement.keys()) if attestation_statement else 'None'}")
+            print("==============================")
         except Exception as e:
-            print(f"Could not extract attestation format: {e}")
-            print(f"Raw attestationObject available: {bool(response.get('attestationObject'))}")
+            print(f"ERROR: Could not extract attestation format: {e}")
+            print(f"Exception type: {type(e)}")
+            import traceback
+            traceback.print_exc()
+        print("=====================================\n")
         
         # Store comprehensive credential data with original user parameters
         credential_info = {
