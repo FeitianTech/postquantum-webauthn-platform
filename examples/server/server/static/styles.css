@@ -599,10 +599,11 @@ select.form-control {
     border-radius: 50%;
     font-size: 10px;
     font-weight: bold;
-    cursor: pointer;
+    cursor: help;
     margin-left: 8px;
     position: relative;
     transition: background-color 0.3s ease;
+    flex-shrink: 0; /* Prevent shrinking */
 }
 
 .info-icon:hover {
@@ -625,7 +626,7 @@ select.form-control {
     border-radius: 8px;
     padding: 16px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    z-index: 1000;
+    z-index: 9999;
     max-width: 500px;
     min-width: 350px;
     font-size: 13px;
@@ -633,6 +634,7 @@ select.form-control {
     color: #333;
     display: none;
     word-wrap: break-word;
+    pointer-events: none; /* Prevent interfering with mouse events */
 }
 
 .info-popup.show {

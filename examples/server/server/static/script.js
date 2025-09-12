@@ -19,16 +19,28 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
 
         // Info popup functionality
         function showInfoPopup(iconElement) {
+            console.log('showInfoPopup called', iconElement);
             const popup = iconElement.querySelector('.info-popup');
+            if (!popup) {
+                console.error('Info popup element not found');
+                return;
+            }
             // Hide all other popups first
             document.querySelectorAll('.info-popup.show').forEach(p => p.classList.remove('show'));
             // Show this popup
             popup.classList.add('show');
+            console.log('Info popup shown');
         }
         
         function hideInfoPopup(iconElement) {
+            console.log('hideInfoPopup called', iconElement);
             const popup = iconElement.querySelector('.info-popup');
+            if (!popup) {
+                console.error('Info popup element not found');
+                return;
+            }
             popup.classList.remove('show');
+            console.log('Info popup hidden');
         }
 
 
@@ -987,8 +999,20 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
         function updateRegistrationFormFromJson(publicKey) {
             // Update user fields
             if (publicKey.user) {
-                if (publicKey.user.id && publicKey.user.id.$base64) {
-                    document.getElementById('user-id').value = base64UrlToHex(publicKey.user.id.$base64);
+                if (publicKey.user.id) {
+                    let userIdValue = '';
+                    if (publicKey.user.id.$base64) {
+                        userIdValue = base64UrlToHex(publicKey.user.id.$base64);
+                    } else if (publicKey.user.id.$base64url) {
+                        userIdValue = base64UrlToHex(publicKey.user.id.$base64url);
+                    } else if (publicKey.user.id.$hex) {
+                        userIdValue = publicKey.user.id.$hex;
+                    } else if (typeof publicKey.user.id === 'string') {
+                        userIdValue = base64UrlToHex(publicKey.user.id);
+                    }
+                    if (userIdValue) {
+                        document.getElementById('user-id').value = userIdValue;
+                    }
                 }
                 if (publicKey.user.name) {
                     document.getElementById('user-name').value = publicKey.user.name;
@@ -999,8 +1023,20 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             }
             
             // Update challenge
-            if (publicKey.challenge && publicKey.challenge.$base64) {
-                document.getElementById('challenge-reg').value = base64UrlToHex(publicKey.challenge.$base64);
+            if (publicKey.challenge) {
+                let challengeValue = '';
+                if (publicKey.challenge.$base64) {
+                    challengeValue = base64UrlToHex(publicKey.challenge.$base64);
+                } else if (publicKey.challenge.$base64url) {
+                    challengeValue = base64UrlToHex(publicKey.challenge.$base64url);
+                } else if (publicKey.challenge.$hex) {
+                    challengeValue = publicKey.challenge.$hex;
+                } else if (typeof publicKey.challenge === 'string') {
+                    challengeValue = base64UrlToHex(publicKey.challenge);
+                }
+                if (challengeValue) {
+                    document.getElementById('challenge-reg').value = challengeValue;
+                }
             }
             
             // Update timeout
@@ -1029,11 +1065,35 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             // Update extensions
             if (publicKey.extensions) {
                 if (publicKey.extensions.prf && publicKey.extensions.prf.eval) {
-                    if (publicKey.extensions.prf.eval.first && publicKey.extensions.prf.eval.first.$base64) {
-                        document.getElementById('prf-eval-first-reg').value = base64UrlToHex(publicKey.extensions.prf.eval.first.$base64);
+                    if (publicKey.extensions.prf.eval.first) {
+                        let prfFirstValue = '';
+                        if (publicKey.extensions.prf.eval.first.$base64) {
+                            prfFirstValue = base64UrlToHex(publicKey.extensions.prf.eval.first.$base64);
+                        } else if (publicKey.extensions.prf.eval.first.$base64url) {
+                            prfFirstValue = base64UrlToHex(publicKey.extensions.prf.eval.first.$base64url);
+                        } else if (publicKey.extensions.prf.eval.first.$hex) {
+                            prfFirstValue = publicKey.extensions.prf.eval.first.$hex;
+                        } else if (typeof publicKey.extensions.prf.eval.first === 'string') {
+                            prfFirstValue = base64UrlToHex(publicKey.extensions.prf.eval.first);
+                        }
+                        if (prfFirstValue) {
+                            document.getElementById('prf-eval-first-reg').value = prfFirstValue;
+                        }
                     }
-                    if (publicKey.extensions.prf.eval.second && publicKey.extensions.prf.eval.second.$base64) {
-                        document.getElementById('prf-eval-second-reg').value = base64UrlToHex(publicKey.extensions.prf.eval.second.$base64);
+                    if (publicKey.extensions.prf.eval.second) {
+                        let prfSecondValue = '';
+                        if (publicKey.extensions.prf.eval.second.$base64) {
+                            prfSecondValue = base64UrlToHex(publicKey.extensions.prf.eval.second.$base64);
+                        } else if (publicKey.extensions.prf.eval.second.$base64url) {
+                            prfSecondValue = base64UrlToHex(publicKey.extensions.prf.eval.second.$base64url);
+                        } else if (publicKey.extensions.prf.eval.second.$hex) {
+                            prfSecondValue = publicKey.extensions.prf.eval.second.$hex;
+                        } else if (typeof publicKey.extensions.prf.eval.second === 'string') {
+                            prfSecondValue = base64UrlToHex(publicKey.extensions.prf.eval.second);
+                        }
+                        if (prfSecondValue) {
+                            document.getElementById('prf-eval-second-reg').value = prfSecondValue;
+                        }
                     }
                 }
             }
@@ -1042,8 +1102,20 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
         // Update authentication form fields from JSON
         function updateAuthenticationFormFromJson(publicKey) {
             // Update challenge
-            if (publicKey.challenge && publicKey.challenge.$base64) {
-                document.getElementById('challenge-auth').value = base64UrlToHex(publicKey.challenge.$base64);
+            if (publicKey.challenge) {
+                let challengeValue = '';
+                if (publicKey.challenge.$base64) {
+                    challengeValue = base64UrlToHex(publicKey.challenge.$base64);
+                } else if (publicKey.challenge.$base64url) {
+                    challengeValue = base64UrlToHex(publicKey.challenge.$base64url);
+                } else if (publicKey.challenge.$hex) {
+                    challengeValue = publicKey.challenge.$hex;
+                } else if (typeof publicKey.challenge === 'string') {
+                    challengeValue = base64UrlToHex(publicKey.challenge);
+                }
+                if (challengeValue) {
+                    document.getElementById('challenge-auth').value = challengeValue;
+                }
             }
             
             // Update timeout
@@ -1059,11 +1131,35 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             // Update extensions
             if (publicKey.extensions) {
                 if (publicKey.extensions.prf && publicKey.extensions.prf.eval) {
-                    if (publicKey.extensions.prf.eval.first && publicKey.extensions.prf.eval.first.$base64) {
-                        document.getElementById('prf-eval-first-auth').value = base64UrlToHex(publicKey.extensions.prf.eval.first.$base64);
+                    if (publicKey.extensions.prf.eval.first) {
+                        let prfFirstValue = '';
+                        if (publicKey.extensions.prf.eval.first.$base64) {
+                            prfFirstValue = base64UrlToHex(publicKey.extensions.prf.eval.first.$base64);
+                        } else if (publicKey.extensions.prf.eval.first.$base64url) {
+                            prfFirstValue = base64UrlToHex(publicKey.extensions.prf.eval.first.$base64url);
+                        } else if (publicKey.extensions.prf.eval.first.$hex) {
+                            prfFirstValue = publicKey.extensions.prf.eval.first.$hex;
+                        } else if (typeof publicKey.extensions.prf.eval.first === 'string') {
+                            prfFirstValue = base64UrlToHex(publicKey.extensions.prf.eval.first);
+                        }
+                        if (prfFirstValue) {
+                            document.getElementById('prf-eval-first-auth').value = prfFirstValue;
+                        }
                     }
-                    if (publicKey.extensions.prf.eval.second && publicKey.extensions.prf.eval.second.$base64) {
-                        document.getElementById('prf-eval-second-auth').value = base64UrlToHex(publicKey.extensions.prf.eval.second.$base64);
+                    if (publicKey.extensions.prf.eval.second) {
+                        let prfSecondValue = '';
+                        if (publicKey.extensions.prf.eval.second.$base64) {
+                            prfSecondValue = base64UrlToHex(publicKey.extensions.prf.eval.second.$base64);
+                        } else if (publicKey.extensions.prf.eval.second.$base64url) {
+                            prfSecondValue = base64UrlToHex(publicKey.extensions.prf.eval.second.$base64url);
+                        } else if (publicKey.extensions.prf.eval.second.$hex) {
+                            prfSecondValue = publicKey.extensions.prf.eval.second.$hex;
+                        } else if (typeof publicKey.extensions.prf.eval.second === 'string') {
+                            prfSecondValue = base64UrlToHex(publicKey.extensions.prf.eval.second);
+                        }
+                        if (prfSecondValue) {
+                            document.getElementById('prf-eval-second-auth').value = prfSecondValue;
+                        }
                     }
                 }
                 
@@ -1072,8 +1168,18 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                         document.getElementById('large-blob-auth').value = 'read';
                     } else if (publicKey.extensions.largeBlob.write) {
                         document.getElementById('large-blob-auth').value = 'write';
+                        let largeBlobValue = '';
                         if (publicKey.extensions.largeBlob.write.$base64) {
-                            document.getElementById('large-blob-write').value = base64UrlToHex(publicKey.extensions.largeBlob.write.$base64);
+                            largeBlobValue = base64UrlToHex(publicKey.extensions.largeBlob.write.$base64);
+                        } else if (publicKey.extensions.largeBlob.write.$base64url) {
+                            largeBlobValue = base64UrlToHex(publicKey.extensions.largeBlob.write.$base64url);
+                        } else if (publicKey.extensions.largeBlob.write.$hex) {
+                            largeBlobValue = publicKey.extensions.largeBlob.write.$hex;
+                        } else if (typeof publicKey.extensions.largeBlob.write === 'string') {
+                            largeBlobValue = base64UrlToHex(publicKey.extensions.largeBlob.write);
+                        }
+                        if (largeBlobValue) {
+                            document.getElementById('large-blob-write').value = largeBlobValue;
                         }
                     }
                 }
@@ -1394,18 +1500,25 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
 
                 const credential = await create(createOptions);
                 
+                console.log('Simple Registration - Created credential:', credential);
+                
                 showProgress('simple', 'Registration successful!');
 
                 // Store credential info locally
                 const credentialInfo = {
-                    id: credential.id, // already in base64url format
+                    id: credential.id, // already in base64url format from webauthn-json
+                    rawId: credential.rawId, // backup for debugging
                     email: email,
                     timestamp: new Date().toISOString()
                 };
                 
+                console.log('Simple Registration - Storing credential info:', credentialInfo);
+                
                 let storedCreds = JSON.parse(localStorage.getItem('webauthn-simple-creds') || '[]');
                 storedCreds.push(credentialInfo);
                 localStorage.setItem('webauthn-simple-creds', JSON.stringify(storedCreds));
+                
+                console.log('Simple Registration - All stored credentials:', storedCreds);
 
                 showStatus('simple', 'Registration successful! You can now authenticate with this passkey.', 'success');
                 
@@ -1461,13 +1574,16 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                         timeout: 60000,
                         rpId: window.location.hostname || "localhost",
                         allowCredentials: userCreds.map(cred => ({
-                            id: cred.id, // already in base64url format
+                            id: cred.id, // already in base64url format from webauthn-json
                             type: 'public-key',
                             transports: ['usb', 'nfc', 'ble', 'smart-card', 'hybrid', 'internal']
                         })),
                         userVerification: "discouraged" // No PIN required
                     }
                 };
+
+                console.log('Simple Auth - Stored credentials:', userCreds);
+                console.log('Simple Auth - Authentication options:', getOptions);
 
                 showProgress('simple', 'Touch your authenticator device...');
 
@@ -1733,6 +1849,8 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
         window.switchTab = switchTab;
         window.switchSubTab = switchSubTab;
         window.toggleSection = toggleSection;
+        window.showInfoPopup = showInfoPopup;
+        window.hideInfoPopup = hideInfoPopup;
         window.randomizeUserId = randomizeUserId;
         window.randomizeChallenge = randomizeChallenge;
         window.randomizePrfEval = randomizePrfEval;
