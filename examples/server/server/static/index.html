@@ -894,7 +894,7 @@
                                     <div class="form-group">
                                         <div class="label-with-info">
                                             <label for="authenticator-attachment">Authenticator Attachment</label>
-                                            <div class="info-icon" onclick="toggleInfoPopup(this)">
+                                            <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
                                                 <div class="info-popup">
                                                     Select whether an authenticator integrated into the client platform ("platform") or an external device ("cross-platform") should be used.<br><br>
                                                     If unspecified (the default), either kind of authenticator is allowed.
@@ -910,7 +910,7 @@
                                     <div class="form-group">
                                         <div class="label-with-info">
                                             <label for="resident-key">Resident Key</label>
-                                            <div class="info-icon" onclick="toggleInfoPopup(this)">
+                                            <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
                                                 <div class="info-popup">
                                                     A resident key can be used for "username-less" authentication, i.e., with an empty allowCredentials parameter.<br><br>
                                                     If "discouraged", a non-resident key will be created if possible. If "preferred", a resident key will be created if possible. If "required", a resident key will be created and the user is shown an error if this fails. If unspecified, the default is "discouraged".
@@ -927,7 +927,7 @@
                                     <div class="form-group">
                                         <div class="label-with-info">
                                             <label for="user-verification-reg">User Verification</label>
-                                            <div class="info-icon" onclick="toggleInfoPopup(this)">
+                                            <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
                                                 <div class="info-popup">
                                                     Select whether user verification (UV), for example a PIN or biometric, should be used.<br><br>
                                                     If "discouraged", UV will not be used if possible. If "preferred", UV will be used if possible. If "required", UV will be used and the user is shown an error if this fails. If unspecified, the default is "preferred".
@@ -944,7 +944,7 @@
                                     <div class="form-group">
                                         <div class="label-with-info">
                                             <label for="attestation">Attestation</label>
-                                            <div class="info-icon" onclick="toggleInfoPopup(this)">
+                                            <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
                                                 <div class="info-popup">
                                                     Select whether the Relying Party (RP) requires authenticator attestation. Attestation is a way to prove what kind of authenticator is used.<br><br>
                                                     If "none", no authenticator attestation will be returned. If "indirect", some kind of attestation will be returned if possible, but it may be anonymized by an attestation proxy. If "direct", the authenticator's original attestation will be returned, if any. If "enterprise", the authenticator is requested to produce an individually identifying attestation. If unspecified, the default is "none".
@@ -964,7 +964,7 @@
                                             <label>
                                                 <input type="checkbox" id="exclude-credentials" checked> Exclude Credentials
                                             </label>
-                                            <div class="info-icon" onclick="toggleInfoPopup(this)">
+                                            <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
                                                 <div class="info-popup">
                                                     Whether to include an excludeCredentials argument. This is used to prevent creating multiple credentials for the same account by excluding already registered credentials during registration.
                                                 </div>
@@ -974,7 +974,7 @@
                                     <div class="form-group">
                                         <div class="label-with-info">
                                             <label for="fake-cred-length-reg">Fake credential ID length</label>
-                                            <div class="info-icon" onclick="toggleInfoPopup(this)">
+                                            <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
                                                 <div class="info-popup">
                                                     Add a random credential ID of the given length to excludeCredentials. May be useful for testing edge cases and conformance.
                                                 </div>
@@ -995,7 +995,7 @@
                                     <div class="form-group">
                                         <div class="label-with-info">
                                             <label for="challenge-reg">Challenge (hex)</label>
-                                            <div class="info-icon" onclick="toggleInfoPopup(this)">
+                                            <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
                                                 <div class="info-popup">
                                                     The cryptographic challenge to be signed by the authenticator, used to prevent replay attacks.
                                                 </div>
@@ -1010,7 +1010,7 @@
                                     <div class="form-group">
                                         <div class="label-with-info">
                                             <label for="timeout-reg">Timeout (milliseconds)</label>
-                                            <div class="info-icon" onclick="toggleInfoPopup(this)">
+                                            <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
                                                 <div class="info-popup">
                                                     How long the Relying Party (RP) is willing to wait for the registration ceremony to complete. If the registration ceremony takes longer than this (or the adjusted value, in case the client overrides it), the ceremony will be aborted with a timeout message shown to the user. This may be silently overridden by the client.
                                                 </div>
@@ -1021,7 +1021,7 @@
                                     <div class="form-group">
                                         <div class="label-with-info">
                                             <label>Public Key Credential Parameters</label>
-                                            <div class="info-icon" onclick="toggleInfoPopup(this)">
+                                            <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
                                                 <div class="info-popup">
                                                     The signature algorithms supported by the Relying Party (RP). The authenticator will be choosing the most preferred algorithm that it supports. It is recommended to include at least ES256, EdDSA and RS256.
                                                 </div>
@@ -1065,7 +1065,7 @@
                                     <div class="form-group">
                                         <div class="label-with-info">
                                             <label>Hints</label>
-                                            <div class="info-icon" onclick="toggleInfoPopup(this)">
+                                            <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
                                                 <div class="info-popup">
                                                     Registration hints to guide the user-agent in interacting with the user.<br><br>
                                                     Hints are suggestions that help guide the user experience. They're not required, and the system prioritizes them in order of preference. If hints conflict, the first one takes priority. Hints can also overlap, allowing for both specific and general suggestions to be sent. If hints contradict other information, the hints take precedence.
@@ -1102,7 +1102,7 @@
                                             <label>
                                                 <input type="checkbox" id="cred-props" checked> credProps
                                             </label>
-                                            <div class="info-icon" onclick="toggleInfoPopup(this)">
+                                            <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
                                                 <div class="info-popup">
                                                     Request the Credential Properties (credProps) extension. This extension may report properties such as whether a discoverable or non-discoverable credential was created.
                                                 </div>
@@ -1114,7 +1114,7 @@
                                             <label>
                                                 <input type="checkbox" id="min-pin-length"> minPinLength
                                             </label>
-                                            <div class="info-icon" onclick="toggleInfoPopup(this)">
+                                            <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
                                                 <div class="info-popup">
                                                     Request the Minimum PIN Length Extension (minPinLength). This extension may report the authenticator's currently configured minimum PIN length if the Relying Party (RP) is authorized to receive this value.
                                                 </div>
@@ -1124,7 +1124,7 @@
                                     <div class="form-group">
                                         <div class="label-with-info">
                                             <label for="cred-protect">credProtect</label>
-                                            <div class="info-icon" onclick="toggleInfoPopup(this)">
+                                            <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
                                                 <div class="info-popup">
                                                     Request the Credential protection (credProtect) extension. This extension sets whether the authenticator requires user verification (UV) before revealing the existence of a credential. If it does, that also means that the authenticator requires UV before allowing authentication using that credential.
                                                 </div>
@@ -1142,7 +1142,7 @@
                                             <label>
                                                 <input type="checkbox" id="enforce-cred-protect" checked disabled> Enforce credProtect
                                             </label>
-                                            <div class="info-icon" onclick="toggleInfoPopup(this)">
+                                            <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
                                                 <div class="info-popup">
                                                     Whether to enforce the selected credProtect policy, if any, meaning the registration should fail rather than create a credential that does not satisfy the credProtect policy.<br><br>
                                                     If this is checked and credProtect is set to userVerificationOptionalWithCredentialIDList or userVerificationRequired, and the authenticator cannot satisfy that policy, then the registration will fail. If this is not checked, the registration MAY proceed even if the authenticator cannot satisfy the chosen policy.
@@ -1153,7 +1153,7 @@
                                     <div class="form-group">
                                         <div class="label-with-info">
                                             <label for="large-blob-reg">largeBlob</label>
-                                            <div class="info-icon" onclick="toggleInfoPopup(this)">
+                                            <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
                                                 <div class="info-popup">
                                                     Request the Large blob storage (largeBlob) extension. This extension may be used to store arbitrary data with the credential.<br><br>
                                                     If the authenticator supports the extension, an extension output of largeBlob: { supported: true } will be returned. Use the largeBlob extension during an authentication ceremony to read or write the BLOB value.
@@ -1171,7 +1171,7 @@
                                             <label>
                                                 <input type="checkbox" id="prf-reg" checked> prf
                                             </label>
-                                            <div class="info-icon" onclick="toggleInfoPopup(this)">
+                                            <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
                                                 <div class="info-popup">
                                                     Request the Pseudo-random function (prf) extension. This extension may be used to derive deterministically-random values to use as key material, for example.<br><br>
                                                     With CTAP authenticators, this requires that the authenticator supports the hmac-secret extension.<br><br>
@@ -1183,7 +1183,7 @@
                                     <div class="form-group">
                                         <div class="label-with-info">
                                             <label for="prf-eval-first-reg">prf eval first</label>
-                                            <div class="info-icon" onclick="toggleInfoPopup(this)">
+                                            <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
                                                 <div class="info-popup">
                                                     The first prf extension input to evaluate. If set, the client extension outputs will include a prf.results.first output if the client and authenticator both support the extension.<br><br>
                                                     Many authenticators support evaluating the PRF only in authentication ceremonies, in which case the PRF extension output is just prf: { enabled: true } without any PRF outputs. To evaluate the PRF, perform an authentication ceremony with the same PRF inputs.
@@ -1199,7 +1199,7 @@
                                     <div class="form-group">
                                         <div class="label-with-info">
                                             <label for="prf-eval-second-reg">prf eval second</label>
-                                            <div class="info-icon" onclick="toggleInfoPopup(this)">
+                                            <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
                                                 <div class="info-popup">
                                                     The second prf extension input to evaluate. If set, the client extension outputs will include a prf.results.second output if the client and authenticator both support the extension.<br><br>
                                                     This is optional and can be used alongside the first PRF evaluation input for additional key derivation capabilities.
@@ -1233,7 +1233,7 @@
                                     <div class="form-group">
                                         <div class="label-with-info">
                                             <label for="user-verification-auth">User Verification</label>
-                                            <div class="info-icon" onclick="toggleInfoPopup(this)">
+                                            <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
                                                 <div class="info-popup">
                                                     Select whether user verification (UV), for example a PIN or biometric, should be used.<br><br>
                                                     If "discouraged", UV will not be used if possible. If "preferred", UV will be used if possible. If "required", UV will be used and the user is shown an error if this fails. If unspecified, the default is "preferred".
@@ -1250,7 +1250,7 @@
                                     <div class="form-group">
                                         <div class="label-with-info">
                                             <label for="allow-credentials">Allow Credentials</label>
-                                            <div class="info-icon" onclick="toggleInfoPopup(this)">
+                                            <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
                                                 <div class="info-popup">
                                                     Choose how to set the allowCredentials argument. This is used to select which credentials are eligible for this assertion, and to provide key handles for server-side credentials. This typically means that the user needs to be identified before issuing the WebAuthn challenge, so that the Relying Party (RP) can retrieve the correct allowCredentials values.<br><br>
                                                     Select "All" to include all credentials registered in the session (see the pane on the right).<br><br>
@@ -1270,7 +1270,7 @@
                                     <div class="form-group">
                                         <div class="label-with-info">
                                             <label for="fake-cred-length-auth">Fake credential ID length</label>
-                                            <div class="info-icon" onclick="toggleInfoPopup(this)">
+                                            <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
                                                 <div class="info-popup">
                                                     Add a random credential ID of the given length to allowCredentials. May be useful for testing edge cases and conformance.
                                                 </div>
@@ -1291,7 +1291,7 @@
                                     <div class="form-group">
                                         <div class="label-with-info">
                                             <label for="challenge-auth">Challenge (hex)</label>
-                                            <div class="info-icon" onclick="toggleInfoPopup(this)">
+                                            <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
                                                 <div class="info-popup">
                                                     The cryptographic challenge to be signed by the authenticator, used to prevent replay attacks.
                                                 </div>
@@ -1306,7 +1306,7 @@
                                     <div class="form-group">
                                         <div class="label-with-info">
                                             <label for="timeout-auth">Timeout (milliseconds)</label>
-                                            <div class="info-icon" onclick="toggleInfoPopup(this)">
+                                            <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
                                                 <div class="info-popup">
                                                     How long the Relying Party (RP) is willing to wait for the authentication ceremony to complete. If the authentication ceremony takes longer than this (or the adjusted value, in case the client overrides it), the ceremony will be aborted with a timeout message shown to the user. This may be silently overridden by the client.
                                                 </div>
@@ -1317,7 +1317,7 @@
                                     <div class="form-group">
                                         <div class="label-with-info">
                                             <label>Hints</label>
-                                            <div class="info-icon" onclick="toggleInfoPopup(this)">
+                                            <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
                                                 <div class="info-popup">
                                                     Authentication hints to guide the user-agent in interacting with the user.<br><br>
                                                     Hints are suggestions that help guide the user experience. They're not required, and the system prioritizes them in order of preference. If hints conflict, the first one takes priority. Hints can also overlap, allowing for both specific and general suggestions to be sent. If hints contradict other information, the hints take precedence.
@@ -1352,7 +1352,7 @@
                                     <div class="form-group">
                                         <div class="label-with-info">
                                             <label for="large-blob-auth">largeBlob</label>
-                                            <div class="info-icon" onclick="toggleInfoPopup(this)">
+                                            <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
                                                 <div class="info-popup">
                                                     Request the Large blob storage (largeBlob) extension. This extension may be used to store arbitrary data with the credential.<br><br>
                                                     If set to "read", the output will be of the form largeBlob: { blob: ArrayBuffer } if both client and authenticator support the extension and the authenticator contains a matching BLOB value. Otherwise the output will be largeBlob: {} if the client supports the extension.<br><br>
@@ -1369,7 +1369,14 @@
                                         <div id="large-blob-capability-message" class="error-message" style="color: #6c757d; display: none;">No largeBlob capable credentials available</div>
                                     </div>
                                     <div class="form-group">
-                                        <label for="large-blob-write">largeBlob write</label>
+                                        <div class="label-with-info">
+                                            <label for="large-blob-write">largeBlob write</label>
+                                            <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
+                                                <div class="info-popup">
+                                                    The BLOB value to write to the authenticator.
+                                                </div>
+                                            </div>
+                                        </div>
                                         <div class="input-with-button">
                                             <input type="text" id="large-blob-write" class="form-control" placeholder="Hex value" disabled>
                                             <button class="btn btn-small refresh-icon" onclick="randomizeLargeBlobWrite()" disabled title="Generate random large blob data"></button>
@@ -1377,7 +1384,15 @@
                                         <div id="large-blob-write-error" class="error-message">Invalid hex value</div>
                                     </div>
                                     <div class="form-group">
-                                        <label for="prf-eval-first-auth">prf eval first</label>
+                                        <div class="label-with-info">
+                                            <label for="prf-eval-first-auth">prf eval first</label>
+                                            <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
+                                                <div class="info-popup">
+                                                    Request the Pseudo-random function (prf) extension and set the first prf extension input to evaluate. This extension may be used to derive deterministically-random values to use as key material, for example.<br><br>
+                                                    If set, the client extension outputs will include a prf.results.first output if the client and authenticator both support the extension.
+                                                </div>
+                                            </div>
+                                        </div>
                                         <div class="input-with-button">
                                             <input type="text" id="prf-eval-first-auth" class="form-control" placeholder="Hex value">
                                             <button class="btn btn-small refresh-icon" onclick="randomizePrfEval('first', 'auth')" title="Generate random PRF evaluation data"></button>
@@ -1385,7 +1400,15 @@
                                         <div id="prf-eval-first-auth-error" class="error-message">Invalid hex value (exactly 32 bytes required)</div>
                                     </div>
                                     <div class="form-group">
-                                        <label for="prf-eval-second-auth">prf eval second</label>
+                                        <div class="label-with-info">
+                                            <label for="prf-eval-second-auth">prf eval second</label>
+                                            <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
+                                                <div class="info-popup">
+                                                    The second prf extension input to evaluate. If set, the client extension outputs will include a prf.results.second output if the client and authenticator both support the extension.<br><br>
+                                                    A second output may be useful to rotate key material via a single WebAuthn ceremony.
+                                                </div>
+                                            </div>
+                                        </div>
                                         <div class="input-with-button">
                                             <input type="text" id="prf-eval-second-auth" class="form-control" placeholder="Hex value" disabled>
                                             <button class="btn btn-small refresh-icon" onclick="randomizePrfEval('second', 'auth')" disabled title="Generate random PRF evaluation data"></button>
@@ -1492,27 +1515,17 @@
         let currentJsonData = null;
 
         // Info popup functionality
-        function toggleInfoPopup(iconElement) {
+        function showInfoPopup(iconElement) {
             const popup = iconElement.querySelector('.info-popup');
-            const isCurrentlyVisible = popup.classList.contains('show');
-            
-            // Hide all other popups
+            // Hide all other popups first
             document.querySelectorAll('.info-popup.show').forEach(p => p.classList.remove('show'));
-            
-            // Toggle current popup
-            if (!isCurrentlyVisible) {
-                popup.classList.add('show');
-                
-                // Close popup when clicking elsewhere
-                setTimeout(() => {
-                    document.addEventListener('click', function closePopup(e) {
-                        if (!iconElement.contains(e.target)) {
-                            popup.classList.remove('show');
-                            document.removeEventListener('click', closePopup);
-                        }
-                    });
-                }, 10);
-            }
+            // Show this popup
+            popup.classList.add('show');
+        }
+        
+        function hideInfoPopup(iconElement) {
+            const popup = iconElement.querySelector('.info-popup');
+            popup.classList.remove('show');
         }
 
 
