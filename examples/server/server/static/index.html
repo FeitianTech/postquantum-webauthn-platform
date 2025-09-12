@@ -592,6 +592,87 @@
             content: '';
         }
 
+        /* Info icon styles */
+        .info-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 16px;
+            height: 16px;
+            background: #6c757d;
+            color: white;
+            border-radius: 50%;
+            font-size: 10px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-left: 8px;
+            position: relative;
+            transition: background-color 0.3s ease;
+        }
+
+        .info-icon:hover {
+            background: #495057;
+        }
+
+        .info-icon::before {
+            content: 'i';
+        }
+
+        /* Info popup styles */
+        .info-popup {
+            position: absolute;
+            top: 25px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 1000;
+            max-width: 300px;
+            font-size: 13px;
+            line-height: 1.4;
+            color: #333;
+            display: none;
+        }
+
+        .info-popup.show {
+            display: block;
+        }
+
+        .info-popup::before {
+            content: '';
+            position: absolute;
+            top: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 8px solid transparent;
+            border-right: 8px solid transparent;
+            border-bottom: 8px solid white;
+        }
+
+        .info-popup::after {
+            content: '';
+            position: absolute;
+            top: -9px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 9px solid transparent;
+            border-right: 9px solid transparent;
+            border-bottom: 9px solid #dee2e6;
+        }
+
+        .label-with-info {
+            display: flex;
+            align-items: center;
+            position: relative;
+        }
+
         /* For screens above 600px - three columns */
         @media (min-width: 601px) {
             .three-column {
@@ -808,7 +889,15 @@
                                 </div>
                                 <div id="authenticator-selection" class="section-content">
                                     <div class="form-group">
-                                        <label for="authenticator-attachment">Authenticator Attachment</label>
+                                        <div class="label-with-info">
+                                            <label for="authenticator-attachment">Authenticator Attachment</label>
+                                            <div class="info-icon" onclick="toggleInfoPopup(this)">
+                                                <div class="info-popup">
+                                                    Select whether an authenticator integrated into the client platform ("platform") or an external device ("cross-platform") should be used.<br><br>
+                                                    If unspecified (the default), either kind of authenticator is allowed.
+                                                </div>
+                                            </div>
+                                        </div>
                                         <select id="authenticator-attachment" class="form-control">
                                             <option value="">Unspecified (default)</option>
                                             <option value="cross-platform">Cross-platform</option>
@@ -816,7 +905,15 @@
                                         </select>
                                     </div>
                                     <div class="form-group">
-                                        <label for="resident-key">Resident Key</label>
+                                        <div class="label-with-info">
+                                            <label for="resident-key">Resident Key</label>
+                                            <div class="info-icon" onclick="toggleInfoPopup(this)">
+                                                <div class="info-popup">
+                                                    A resident key can be used for "username-less" authentication, i.e., with an empty allowCredentials parameter.<br><br>
+                                                    If "discouraged", a non-resident key will be created if possible. If "preferred", a resident key will be created if possible. If "required", a resident key will be created and the user is shown an error if this fails. If unspecified, the default is "discouraged".
+                                                </div>
+                                            </div>
+                                        </div>
                                         <select id="resident-key" class="form-control">
                                             <option value="discouraged">Discouraged (default)</option>
                                             <option value="preferred">Preferred</option>
@@ -825,7 +922,15 @@
                                         </select>
                                     </div>
                                     <div class="form-group">
-                                        <label for="user-verification-reg">User Verification</label>
+                                        <div class="label-with-info">
+                                            <label for="user-verification-reg">User Verification</label>
+                                            <div class="info-icon" onclick="toggleInfoPopup(this)">
+                                                <div class="info-popup">
+                                                    Select whether user verification (UV), for example a PIN or biometric, should be used.<br><br>
+                                                    If "discouraged", UV will not be used if possible. If "preferred", UV will be used if possible. If "required", UV will be used and the user is shown an error if this fails. If unspecified, the default is "preferred".
+                                                </div>
+                                            </div>
+                                        </div>
                                         <select id="user-verification-reg" class="form-control">
                                             <option value="preferred">Preferred (default)</option>
                                             <option value="discouraged">Discouraged</option>
@@ -834,7 +939,15 @@
                                         </select>
                                     </div>
                                     <div class="form-group">
-                                        <label for="attestation">Attestation</label>
+                                        <div class="label-with-info">
+                                            <label for="attestation">Attestation</label>
+                                            <div class="info-icon" onclick="toggleInfoPopup(this)">
+                                                <div class="info-popup">
+                                                    Select whether the Relying Party (RP) requires authenticator attestation. Attestation is a way to prove what kind of authenticator is used.<br><br>
+                                                    If "none", no authenticator attestation will be returned. If "indirect", some kind of attestation will be returned if possible, but it may be anonymized by an attestation proxy. If "direct", the authenticator's original attestation will be returned, if any. If "enterprise", the authenticator is requested to produce an individually identifying attestation. If unspecified, the default is "none".
+                                                </div>
+                                            </div>
+                                        </div>
                                         <select id="attestation" class="form-control">
                                             <option value="none">None (default)</option>
                                             <option value="indirect">Indirect</option>
@@ -844,9 +957,16 @@
                                         </select>
                                     </div>
                                     <div class="form-group">
-                                        <label>
-                                            <input type="checkbox" id="exclude-credentials" checked> Exclude Credentials
-                                        </label>
+                                        <div class="label-with-info">
+                                            <label>
+                                                <input type="checkbox" id="exclude-credentials" checked> Exclude Credentials
+                                            </label>
+                                            <div class="info-icon" onclick="toggleInfoPopup(this)">
+                                                <div class="info-popup">
+                                                    Whether to include an excludeCredentials argument. This is used to prevent creating multiple credentials for the same account by excluding already registered credentials during registration.
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                     <div class="form-group">
                                         <label for="fake-cred-length-reg">Fake credential ID length</label>
@@ -1212,6 +1332,30 @@
         let storedCredentials = [];
         let currentJsonMode = null;
         let currentJsonData = null;
+
+        // Info popup functionality
+        function toggleInfoPopup(iconElement) {
+            const popup = iconElement.querySelector('.info-popup');
+            const isCurrentlyVisible = popup.classList.contains('show');
+            
+            // Hide all other popups
+            document.querySelectorAll('.info-popup.show').forEach(p => p.classList.remove('show'));
+            
+            // Toggle current popup
+            if (!isCurrentlyVisible) {
+                popup.classList.add('show');
+                
+                // Close popup when clicking elsewhere
+                setTimeout(() => {
+                    document.addEventListener('click', function closePopup(e) {
+                        if (!iconElement.contains(e.target)) {
+                            popup.classList.remove('show');
+                            document.removeEventListener('click', closePopup);
+                        }
+                    });
+                }, 10);
+            }
+        }
 
 
 
