@@ -1231,7 +1231,15 @@
                                 </div>
                                 <div id="credential-selection" class="section-content expanded">
                                     <div class="form-group">
-                                        <label for="user-verification-auth">User Verification</label>
+                                        <div class="label-with-info">
+                                            <label for="user-verification-auth">User Verification</label>
+                                            <div class="info-icon" onclick="toggleInfoPopup(this)">
+                                                <div class="info-popup">
+                                                    Select whether user verification (UV), for example a PIN or biometric, should be used.<br><br>
+                                                    If "discouraged", UV will not be used if possible. If "preferred", UV will be used if possible. If "required", UV will be used and the user is shown an error if this fails. If unspecified, the default is "preferred".
+                                                </div>
+                                            </div>
+                                        </div>
                                         <select id="user-verification-auth" class="form-control">
                                             <option value="preferred">Preferred (default)</option>
                                             <option value="discouraged">Discouraged</option>
@@ -1240,7 +1248,17 @@
                                         </select>
                                     </div>
                                     <div class="form-group">
-                                        <label for="allow-credentials">Allow Credentials</label>
+                                        <div class="label-with-info">
+                                            <label for="allow-credentials">Allow Credentials</label>
+                                            <div class="info-icon" onclick="toggleInfoPopup(this)">
+                                                <div class="info-popup">
+                                                    Choose how to set the allowCredentials argument. This is used to select which credentials are eligible for this assertion, and to provide key handles for server-side credentials. This typically means that the user needs to be identified before issuing the WebAuthn challenge, so that the Relying Party (RP) can retrieve the correct allowCredentials values.<br><br>
+                                                    Select "All" to include all credentials registered in the session (see the pane on the right).<br><br>
+                                                    Select "Empty" to remove the allowCredentials argument. This means that only discoverable credentials can be used for the assertion.<br><br>
+                                                    Select a saved credential option to include only the specific chosen credential.
+                                                </div>
+                                            </div>
+                                        </div>
                                         <select id="allow-credentials" class="form-control">
                                             <option value="all">All credentials</option>
                                             <option value="empty">Empty (resident key only)</option>
@@ -1250,7 +1268,14 @@
                                         </div>
                                     </div>
                                     <div class="form-group">
-                                        <label for="fake-cred-length-auth">Fake credential ID length</label>
+                                        <div class="label-with-info">
+                                            <label for="fake-cred-length-auth">Fake credential ID length</label>
+                                            <div class="info-icon" onclick="toggleInfoPopup(this)">
+                                                <div class="info-popup">
+                                                    Add a random credential ID of the given length to allowCredentials. May be useful for testing edge cases and conformance.
+                                                </div>
+                                            </div>
+                                        </div>
                                         <input type="number" id="fake-cred-length-auth" class="form-control" value="256" min="1">
                                     </div>
                                 </div>
@@ -1264,7 +1289,14 @@
                                 </div>
                                 <div id="other-options-auth" class="section-content">
                                     <div class="form-group">
-                                        <label for="challenge-auth">Challenge (hex)</label>
+                                        <div class="label-with-info">
+                                            <label for="challenge-auth">Challenge (hex)</label>
+                                            <div class="info-icon" onclick="toggleInfoPopup(this)">
+                                                <div class="info-popup">
+                                                    The cryptographic challenge to be signed by the authenticator, used to prevent replay attacks.
+                                                </div>
+                                            </div>
+                                        </div>
                                         <div class="input-with-button">
                                             <input type="text" id="challenge-auth" class="form-control" placeholder="Auto-generated hex value">
                                             <button class="btn btn-small refresh-icon" onclick="randomizeChallenge('auth')" title="Generate new random challenge"></button>
@@ -1272,11 +1304,26 @@
                                         <div id="challenge-auth-error" class="error-message">Invalid hex value (minimum 16 bytes required)</div>
                                     </div>
                                     <div class="form-group">
-                                        <label for="timeout-auth">Timeout (milliseconds)</label>
+                                        <div class="label-with-info">
+                                            <label for="timeout-auth">Timeout (milliseconds)</label>
+                                            <div class="info-icon" onclick="toggleInfoPopup(this)">
+                                                <div class="info-popup">
+                                                    How long the Relying Party (RP) is willing to wait for the authentication ceremony to complete. If the authentication ceremony takes longer than this (or the adjusted value, in case the client overrides it), the ceremony will be aborted with a timeout message shown to the user. This may be silently overridden by the client.
+                                                </div>
+                                            </div>
+                                        </div>
                                         <input type="number" id="timeout-auth" class="form-control" value="90000" min="1">
                                     </div>
                                     <div class="form-group">
-                                        <label>Hints</label>
+                                        <div class="label-with-info">
+                                            <label>Hints</label>
+                                            <div class="info-icon" onclick="toggleInfoPopup(this)">
+                                                <div class="info-popup">
+                                                    Authentication hints to guide the user-agent in interacting with the user.<br><br>
+                                                    Hints are suggestions that help guide the user experience. They're not required, and the system prioritizes them in order of preference. If hints conflict, the first one takes priority. Hints can also overlap, allowing for both specific and general suggestions to be sent. If hints contradict other information, the hints take precedence.
+                                                </div>
+                                            </div>
+                                        </div>
                                         <div class="checkbox-group">
                                             <div class="checkbox-item">
                                                 <input type="checkbox" id="hint-client-device-auth">
@@ -1303,7 +1350,17 @@
                                 </div>
                                 <div id="extensions-auth" class="section-content">
                                     <div class="form-group">
-                                        <label for="large-blob-auth">largeBlob</label>
+                                        <div class="label-with-info">
+                                            <label for="large-blob-auth">largeBlob</label>
+                                            <div class="info-icon" onclick="toggleInfoPopup(this)">
+                                                <div class="info-popup">
+                                                    Request the Large blob storage (largeBlob) extension. This extension may be used to store arbitrary data with the credential.<br><br>
+                                                    If set to "read", the output will be of the form largeBlob: { blob: ArrayBuffer } if both client and authenticator support the extension and the authenticator contains a matching BLOB value. Otherwise the output will be largeBlob: {} if the client supports the extension.<br><br>
+                                                    If set to "write", the output will be largeBlob: { written: true } if the BLOB was successfully written to the authenticator, and otherwise largeBlob: { written: false } if the client supports the extension.<br><br>
+                                                    If the client does not support the extension, no largeBlob output will be present.
+                                                </div>
+                                            </div>
+                                        </div>
                                         <select id="large-blob-auth" class="form-control">
                                             <option value="">Unspecified (default)</option>
                                             <option value="read">Read</option>
