@@ -60,7 +60,35 @@
                     <p>Comprehensive WebAuthn configuration with full control over registration and assertion options.</p>
                     
                     <div class="status" id="advanced-status"></div>
-                    <p>Advanced features coming soon...</p>
+
+                    <div class="alert alert-info">
+                        <strong>Coming Soon:</strong> Full advanced authentication functionality with comprehensive WebAuthn options including:
+                        <ul style="margin-top: 0.5rem; margin-bottom: 0;">
+                            <li>User Identity configuration (User ID, Display Name)</li>
+                            <li>Authenticator Selection (Platform, Cross-platform, Resident Keys)</li>
+                            <li>Extensions (credProps, minPinLength, largeBlob, PRF)</li>
+                            <li>JSON Editor for real-time option visualization</li>
+                            <li>Credential management and advanced debugging tools</li>
+                        </ul>
+                    </div>
+
+                    <div class="form-group">
+                        <button class="btn" onclick="advancedRegister()">Advanced Register (Coming Soon)</button>
+                        <button class="btn btn-secondary" onclick="advancedAuthenticate()">Advanced Authenticate (Coming Soon)</button>
+                    </div>
+
+                    <!-- Advanced Credentials List -->
+                    <div class="section">
+                        <h3>Advanced Credentials</h3>
+                        <div id="advanced-credentials-list">
+                            <!-- Advanced credentials will be displayed here -->
+                        </div>
+                    </div>
+
+                    <div class="progress" id="advanced-progress">
+                        <div class="spinner"></div>
+                        <span id="advanced-progress-text">Processing...</span>
+                    </div>
                 </div>
             </div>
 
@@ -112,6 +140,7 @@
     <!-- Load application modules -->
     <script src="app.js"></script>
     <script src="simple-auth.js"></script>
+    <script src="advanced-auth.js"></script>
     <script src="decoder.js"></script>
 
     <script>
@@ -120,8 +149,9 @@
             // Initialize default tab
             switchTab('simple');
             
-            // Initialize credentials list
+            // Initialize credentials lists
             updateCredentialsList();
+            updateCredentialsDisplay();
         });
     </script>
 </body>
