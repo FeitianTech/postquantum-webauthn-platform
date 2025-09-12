@@ -716,7 +716,7 @@ def advanced_authenticate_begin():
     selected_credentials = []
     
     if allow_credentials == "empty":
-        # Empty allowCredentials for discoverable credentials only
+        # Empty allowCredentials for discoverable credentials only - set to None to omit parameter
         selected_credentials = None
     elif allow_credentials == "all":
         # Get all credentials from all users
@@ -738,7 +738,12 @@ def advanced_authenticate_begin():
     elif specific_credential_id:
         # Find specific credential by ID
         try:
-            cred_id_bytes = base64.b64decode(specific_credential_id)
+            # Convert from base64 if needed
+            if isinstance(specific_credential_id, str) and not specific_credential_id.startswith('b64'):
+                cred_id_bytes = base64.urlsafe_b64decode(specific_credential_id + '==')
+            else:
+                cred_id_bytes = base64.b64decode(specific_credential_id)
+            
             pkl_files = [f for f in os.listdir(basepath) if f.endswith('_credential_data.pkl')]
             for pkl_file in pkl_files:
                 email = pkl_file.replace('_credential_data.pkl', '')
@@ -758,6 +763,8 @@ def advanced_authenticate_begin():
             print(f"Error processing specific credential ID: {e}")
             selected_credentials = []
     
+    # For empty allowCredentials, we should not return an error if no credentials found
+    # because this enables resident key authentication
     if allow_credentials != "empty" and not selected_credentials:
         return jsonify({"error": "No credentials found. Please register first."}), 404
     
@@ -847,6 +854,20 @@ def advanced_authenticate_begin():
     )
     
     session["advanced_auth_state"] = state
+    
+    # Debug: Print the generated authentication options
+    print("\n=== ADVANCED AUTHENTICATION OPTIONS DEBUG ===")
+    print(f"Allow credentials setting: {allow_credentials}")
+    print(f"Specific credential ID: {specific_credential_id}")
+    print(f"Selected credentials count: {len(selected_credentials) if selected_credentials else 'None (resident key mode)'}")
+    print(f"Final credentials count: {len(final_credentials) if final_credentials else 'None (resident key mode)'}")
+    print(f"User verification requested: {user_verification} -> {uv_req}")
+    print(f"Extensions requested: {processed_extensions}")
+    if final_credentials:
+        print(f"Credential IDs in allowCredentials: {[base64.b64encode(cred.credential_id).decode() if hasattr(cred, 'credential_id') else str(cred) for cred in final_credentials[:3]]}")
+    print("=========================================\n")
+    
+    return jsonify(dict(options))
     
     return jsonify(dict(options))
 

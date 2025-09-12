@@ -1022,7 +1022,7 @@
                                         <label for="allow-credentials">Allow Credentials</label>
                                         <select id="allow-credentials" class="form-control">
                                             <option value="all">All credentials</option>
-                                            <option value="empty">Empty</option>
+                                            <option value="empty">Empty (resident key only)</option>
                                         </select>
                                     </div>
                                     <div class="form-group">
@@ -1771,6 +1771,7 @@
             if (storedCredentials.length === 0) {
                 credentialsList.innerHTML = '<p style="color: #6c757d; font-style: italic;">No credentials registered yet.</p>';
                 checkLargeBlobCapability(); // Check capability when no credentials
+                updateAllowCredentialsDropdown(); // Update dropdown when no credentials
                 return;
             }
 
@@ -1791,6 +1792,44 @@
             
             // Check large blob capability after updating display
             checkLargeBlobCapability();
+            
+            // Update allow credentials dropdown with individual credentials
+            updateAllowCredentialsDropdown();
+        }
+
+        function updateAllowCredentialsDropdown() {
+            const allowCredentialsSelect = document.getElementById('allow-credentials');
+            if (!allowCredentialsSelect) return;
+            
+            // Store current selection
+            const currentValue = allowCredentialsSelect.value;
+            
+            // Clear existing options except the default ones
+            allowCredentialsSelect.innerHTML = `
+                <option value="all">All credentials</option>
+                <option value="empty">Empty (resident key only)</option>
+            `;
+            
+            // Add individual credential options
+            if (storedCredentials && storedCredentials.length > 0) {
+                storedCredentials.forEach((cred, index) => {
+                    const credName = cred.userName || cred.email || `Credential ${index + 1}`;
+                    const option = document.createElement('option');
+                    option.value = cred.credentialId;
+                    option.textContent = `${credName} (${cred.algorithm || 'Unknown'})`;
+                    allowCredentialsSelect.appendChild(option);
+                });
+            }
+            
+            // Restore selection if it's still valid
+            if (currentValue && Array.from(allowCredentialsSelect.options).some(opt => opt.value === currentValue)) {
+                allowCredentialsSelect.value = currentValue;
+            } else {
+                allowCredentialsSelect.value = 'all'; // Default to all if current selection is invalid
+            }
+            
+            // Update JSON editor when dropdown is updated
+            updateJsonEditor();
         }
 
         function showCredentialDetails(index) {
@@ -2395,15 +2434,35 @@
             // Allow credentials handling
             const allowCreds = document.getElementById('allow-credentials')?.value;
             if (allowCreds === 'empty') {
+                // Empty allowCredentials array for resident key authentication
                 publicKey.allowCredentials = [];
-            } else {
-                // For real implementation, this would be populated with actual credential IDs
+            } else if (allowCreds === 'all') {
+                // Include all stored credentials
                 publicKey.allowCredentials = storedCredentials.map(cred => ({
                     type: "public-key",
                     id: {
                         "$base64url": hexToBase64Url(cred.credentialId)
                     }
                 }));
+            } else {
+                // Specific credential selected - find it by credential ID
+                const selectedCred = storedCredentials.find(cred => cred.credentialId === allowCreds);
+                if (selectedCred) {
+                    publicKey.allowCredentials = [{
+                        type: "public-key",
+                        id: {
+                            "$base64url": hexToBase64Url(selectedCred.credentialId)
+                        }
+                    }];
+                } else {
+                    // Fallback to all credentials if specific one not found
+                    publicKey.allowCredentials = storedCredentials.map(cred => ({
+                        type: "public-key",
+                        id: {
+                            "$base64url": hexToBase64Url(cred.credentialId)
+                        }
+                    }));
+                }
             }
 
             // Extensions
@@ -2714,6 +2773,14 @@
                 if (largeBlobSelect) {
                     largeBlobSelect.addEventListener('change', () => {
                         checkLargeBlobCapability(); // Re-check to enable/disable write input
+                        updateJsonEditor();
+                    });
+                }
+
+                // Set up allow credentials dropdown listener
+                const allowCredentialsSelect = document.getElementById('allow-credentials');
+                if (allowCredentialsSelect) {
+                    allowCredentialsSelect.addEventListener('change', () => {
                         updateJsonEditor();
                     });
                 }
@@ -3076,7 +3143,7 @@
             // Handle specific credential selection
             const allowCreds = document.getElementById('allow-credentials').value;
             if (allowCreds !== 'all' && allowCreds !== 'empty') {
-                // This would be a specific credential ID
+                // This is a specific credential ID
                 options.specificCredentialId = allowCreds;
             }
             
