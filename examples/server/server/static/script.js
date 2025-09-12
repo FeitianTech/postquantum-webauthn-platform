@@ -1462,83 +1462,61 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                 hideStatus('simple');
                 showProgress('simple', 'Starting registration...');
 
-                // Generate a random challenge
-                const challenge = new Uint8Array(32);
-                crypto.getRandomValues(challenge);
+                // Call server to begin registration
+                const response = await fetch(`/api/register/begin?email=${encodeURIComponent(email)}`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'}
+                });
 
-                // Convert email to user ID
-                const userId = new TextEncoder().encode(email);
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`Server error: ${errorText}`);
+                }
 
-                // Create registration options for simple authentication (no PIN required)
-                const createOptions = {
-                    publicKey: {
-                        challenge: challenge,
-                        rp: {
-                            name: "WebAuthn FIDO2 Test App",
-                            id: window.location.hostname || "localhost"
-                        },
-                        user: {
-                            id: userId,
-                            name: email,
-                            displayName: email
-                        },
-                        pubKeyCredParams: [
-                            { alg: -7, type: "public-key" },  // ES256
-                            { alg: -257, type: "public-key" } // RS256
-                        ],
-                        authenticatorSelection: {
-                            authenticatorAttachment: "cross-platform",
-                            userVerification: "discouraged", // No PIN required
-                            requireResidentKey: false
-                        },
-                        timeout: 60000,
-                        attestation: "none"
-                    }
-                };
+                const json = await response.json();
+                const createOptions = parseCreationOptionsFromJSON(json);
 
-                showProgress('simple', 'Touch your authenticator device...');
+                showProgress('simple', 'Connecting your authenticator device...');
 
                 const credential = await create(createOptions);
                 
                 console.log('Simple Registration - Created credential:', credential);
                 
-                showProgress('simple', 'Registration successful!');
+                showProgress('simple', 'Completing registration...');
 
-                // Store credential info locally
-                const credentialInfo = {
-                    id: credential.id, // already in base64url format from webauthn-json
-                    rawId: credential.rawId, // backup for debugging
-                    email: email,
-                    timestamp: new Date().toISOString()
-                };
-                
-                console.log('Simple Registration - Storing credential info:', credentialInfo);
-                
-                let storedCreds = JSON.parse(localStorage.getItem('webauthn-simple-creds') || '[]');
-                storedCreds.push(credentialInfo);
-                localStorage.setItem('webauthn-simple-creds', JSON.stringify(storedCreds));
-                
-                console.log('Simple Registration - All stored credentials:', storedCreds);
-
-                showStatus('simple', 'Registration successful! You can now authenticate with this passkey.', 'success');
-                
-                // Add to credentials list display
-                addCredentialToList({
-                    type: 'simple',
-                    email: email,
-                    credentialId: credential.id,
-                    algorithm: 'ES256/RS256'
+                // Complete registration with server
+                const result = await fetch(`/api/register/complete?email=${encodeURIComponent(email)}`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(credential)
                 });
 
-            } catch (error) {
-                console.error('Registration error:', error);
-                if (error.name === 'NotAllowedError') {
-                    showStatus('simple', 'Registration was cancelled or not allowed', 'error');
-                } else if (error.name === 'NotSupportedError') {
-                    showStatus('simple', 'WebAuthn is not supported in this browser', 'error');
+                if (result.ok) {
+                    const data = await result.json();
+                    showStatus('simple', `Registration successful! Algorithm: ${data.algo || 'Unknown'}`, 'success');
+                    
+                    // Reload credentials from server to get the latest
+                    setTimeout(loadSavedCredentials, 1000);
                 } else {
-                    showStatus('simple', `Registration failed: ${error.message}`, 'error');
+                    const errorText = await result.text();
+                    throw new Error(`Registration failed: ${errorText}`);
                 }
+
+            } catch (error) {
+                console.error('Simple registration error:', error);
+                
+                let errorMessage = error.message;
+                if (error.name === 'NotAllowedError') {
+                    errorMessage = 'User cancelled or authenticator not available';
+                } else if (error.name === 'InvalidStateError') {
+                    errorMessage = 'Authenticator is already registered for this account';
+                } else if (error.name === 'SecurityError') {
+                    errorMessage = 'Security error - check your connection and try again';
+                } else if (error.name === 'NotSupportedError') {
+                    errorMessage = 'WebAuthn is not supported in this browser';
+                }
+
+                showStatus('simple', errorMessage, 'error');
             } finally {
                 hideProgress('simple');
             }
@@ -1555,53 +1533,58 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                 hideStatus('simple');
                 showProgress('simple', 'Starting authentication...');
 
-                // Check if user has registered credentials
-                const storedCreds = JSON.parse(localStorage.getItem('webauthn-simple-creds') || '[]');
-                const userCreds = storedCreds.filter(cred => cred.email === email);
-                
-                if (userCreds.length === 0) {
-                    throw new Error('No credentials found for this email. Please register first.');
+                // Call server to begin authentication
+                const response = await fetch(`/api/authenticate/begin?email=${encodeURIComponent(email)}`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'}
+                });
+
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        throw new Error('No credentials found for this email. Please register first.');
+                    }
+                    const errorText = await response.text();
+                    throw new Error(`Server error: ${errorText}`);
                 }
 
-                // Generate a random challenge
-                const challenge = new Uint8Array(32);
-                crypto.getRandomValues(challenge);
+                const json = await response.json();
+                const getOptions = parseRequestOptionsFromJSON(json);
 
-                // Create authentication options (no PIN required)
-                const getOptions = {
-                    publicKey: {
-                        challenge: challenge,
-                        timeout: 60000,
-                        rpId: window.location.hostname || "localhost",
-                        allowCredentials: userCreds.map(cred => ({
-                            id: cred.id, // already in base64url format from webauthn-json
-                            type: 'public-key',
-                            transports: ['usb', 'nfc', 'ble', 'smart-card', 'hybrid', 'internal']
-                        })),
-                        userVerification: "discouraged" // No PIN required
-                    }
-                };
-
-                console.log('Simple Auth - Stored credentials:', userCreds);
-                console.log('Simple Auth - Authentication options:', getOptions);
-
-                showProgress('simple', 'Touch your authenticator device...');
+                showProgress('simple', 'Connecting your authenticator device...');
 
                 const assertion = await get(getOptions);
                 
-                showProgress('simple', 'Authentication successful!');
+                showProgress('simple', 'Completing authentication...');
 
-                showStatus('simple', 'Authentication successful! You have been verified.', 'success');
+                // Complete authentication with server
+                const result = await fetch(`/api/authenticate/complete?email=${encodeURIComponent(email)}`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(assertion)
+                });
+
+                if (result.ok) {
+                    showStatus('simple', 'Authentication successful! You have been verified.', 'success');
+                } else {
+                    const errorText = await result.text();
+                    throw new Error(`Authentication failed: ${errorText}`);
+                }
 
             } catch (error) {
-                console.error('Authentication error:', error);
+                console.error('Simple authentication error:', error);
+                
+                let errorMessage = error.message;
                 if (error.name === 'NotAllowedError') {
-                    showStatus('simple', 'Authentication was cancelled or not allowed', 'error');
+                    errorMessage = 'User cancelled or authenticator not available';
+                } else if (error.name === 'InvalidStateError') {
+                    errorMessage = 'Authenticator error or invalid credential';
+                } else if (error.name === 'SecurityError') {
+                    errorMessage = 'Security error - check your connection and try again';
                 } else if (error.name === 'NotSupportedError') {
-                    showStatus('simple', 'WebAuthn is not supported in this browser', 'error');
-                } else {
-                    showStatus('simple', `Authentication failed: ${error.message}`, 'error');
+                    errorMessage = 'WebAuthn is not supported in this browser';
                 }
+
+                showStatus('simple', errorMessage, 'error');
             } finally {
                 hideProgress('simple');
             }
