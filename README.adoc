@@ -1,12 +1,12 @@
-# WebAuthn FIDO2 Test Application
+# WebAuthn FIDO2 Test Application (With PQC Support)
 
 A test server and web UI for WebAuthn/FIDO2 registration and authentication. It displays the selected algorithm, authenticator flags (UP/UV/AT/ED/BE/BS), sign counter, and extension results (credProps, PRF, largeBlob) for validation.
 
-Built on python-fido2-PQC, which is built on Yubico’s python-fido2. Classical algorithms work by default; PQC (ML‑DSA‑44/65) is supported when available.
+Built on python-fido2-PQC, which is built on Yubico’s python-fido2. Classical algorithms work by default;
 
 ---
 
-# 💻 Local setup (without PQC)
+# 💻 Local setup
 
 This guide shows how to clone the repository and set up a working local environment for WebAuthn with Python FIDO2 on Windows, macOS, and Linux.
 
@@ -158,7 +158,24 @@ poetry run pytest
 
 ---
 
+## PQC Setup
 
+### 1. Activate Your Python Virtual Environment
+
+If not already activated:
+```powershell
+.\.venv\Scripts\Activate
+```
+
+---
+
+### 2. Install PQC Cryptography Libraries
+
+```powershell
+pip install oqs pqcrypto
+```
+
+---
 
 
   
