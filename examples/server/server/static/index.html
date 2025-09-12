@@ -3132,9 +3132,13 @@
         }
 
         function getAdvancedAssertOptions() {
+            const allowCreds = document.getElementById('allow-credentials').value;
+            console.log('=== FRONTEND AUTHENTICATION OPTIONS DEBUG ===');
+            console.log('Allow credentials dropdown value:', allowCreds);
+            
             const options = {
                 userVerification: document.getElementById('user-verification-auth').value,
-                allowCredentials: document.getElementById('allow-credentials').value,
+                allowCredentials: allowCreds,
                 fakeCredLength: parseInt(document.getElementById('fake-cred-length-auth').value) || 0,
                 challenge: document.getElementById('challenge-auth').value,
                 timeout: parseInt(document.getElementById('timeout-auth').value) || 90000,
@@ -3142,10 +3146,14 @@
             };
             
             // Handle specific credential selection
-            const allowCreds = document.getElementById('allow-credentials').value;
             if (allowCreds !== 'all' && allowCreds !== 'empty') {
                 // This is a specific credential ID
                 options.specificCredentialId = allowCreds;
+                console.log('Specific credential ID selected:', allowCreds);
+            } else if (allowCreds === 'empty') {
+                console.log('*** EMPTY allowCredentials selected - this should enable resident key mode ***');
+            } else {
+                console.log('All credentials selected');
             }
             
             // Collect extensions for authentication
@@ -3284,6 +3292,7 @@
             }
 
             const options = getAdvancedAssertOptions();
+            console.log('Final options being sent to server:', JSON.stringify(options, null, 2));
 
             try {
                 hideStatus('advanced');
@@ -3304,7 +3313,11 @@
                 }
 
                 const json = await response.json();
+                console.log('Server response for authentication options:', JSON.stringify(json, null, 2));
+                
                 const assertOptions = parseRequestOptionsFromJSON(json);
+                console.log('Parsed assertOptions for WebAuthn API:', JSON.stringify(assertOptions, null, 2));
+                console.log('allowCredentials in assertOptions:', assertOptions.allowCredentials);
                 
                 showProgress('advanced', 'Connecting your authenticator device...');
 

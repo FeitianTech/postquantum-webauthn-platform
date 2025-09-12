@@ -590,10 +590,12 @@ def advanced_register_begin():
     print(f"Extensions requested: {processed_extensions}")
     print(f"Exclude credentials enabled: {exclude_credentials}")
     print(f"Exclude list size: {len(exclude_list) if exclude_list else 0}")
-    print(f"Generated options user ID: {dict(options).get('user', {}).get('id')}")
-    print(f"Generated options attestation: {dict(options).get('attestation')}")
-    print(f"Generated options authenticatorSelection: {dict(options).get('authenticatorSelection')}")
-    print(f"Generated options extensions: {dict(options).get('extensions')}")
+    
+    # Show the actual options being returned
+    options_dict = dict(options)
+    print(f"Generated options - publicKey fields:")
+    for key, value in options_dict.get('publicKey', {}).items():
+        print(f"  {key}: {value}")
     print("=========================================\n")
     
     return jsonify(dict(options))
@@ -853,6 +855,18 @@ def advanced_authenticate_begin():
         extensions=processed_extensions if processed_extensions else None,
     )
     
+    # Debug: Show what the FIDO2 server actually generated
+    options_dict = dict(options)
+    print(f"FIDO2 server returned options:")
+    print(f"  allowCredentials present: {'allowCredentials' in options_dict}")
+    if 'allowCredentials' in options_dict:
+        print(f"  allowCredentials value: {options_dict['allowCredentials']}")
+        print(f"  allowCredentials type: {type(options_dict['allowCredentials'])}")
+        print(f"  allowCredentials length: {len(options_dict['allowCredentials']) if options_dict['allowCredentials'] else 'None'}")
+    else:
+        print("  allowCredentials: OMITTED (this is correct for resident key mode)")
+    print("=")
+    
     session["advanced_auth_state"] = state
     
     # Debug: Print the generated authentication options
@@ -867,6 +881,14 @@ def advanced_authenticate_begin():
         print(f"Credential IDs in allowCredentials: {[base64.b64encode(cred.credential_id).decode() if hasattr(cred, 'credential_id') else str(cred) for cred in final_credentials[:3]]}")
     else:
         print("*** RESIDENT KEY MODE ACTIVATED - allowCredentials will be omitted ***")
+    
+    # Debug: Show exactly what parameters are being passed to FIDO2 server
+    print(f"Calling temp_server.authenticate_begin with:")
+    print(f"  credentials: {final_credentials}")
+    print(f"  user_verification: {uv_req}")
+    print(f"  challenge: {challenge_bytes.hex() if challenge_bytes else 'auto-generated'}")
+    print(f"  extensions: {processed_extensions}")
+    print("=")
     
     # Check if we have any stored credentials and their resident key status
     if allow_credentials == "empty":
