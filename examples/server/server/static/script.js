@@ -1713,10 +1713,10 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             statusEl.textContent = message;
             statusEl.style.display = 'block';
             
-            // Auto-dismiss after 5 seconds
+            // Auto-dismiss after 10 seconds
             setTimeout(() => {
                 hideStatus(tabId);
-            }, 5000);
+            }, 10000);
         }
 
         function hideStatus(tabId) {

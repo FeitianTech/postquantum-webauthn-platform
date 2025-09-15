@@ -217,7 +217,10 @@ def authenticate_begin():
     # Extract credential data in compatible format
     credential_data_list = [extract_credential_data(cred) for cred in credentials]
     
-    options, state = server.authenticate_begin(credential_data_list)
+    options, state = server.authenticate_begin(
+        credential_data_list,
+        user_verification="discouraged"
+    )
     session["state"] = state
 
     return jsonify(dict(options))
