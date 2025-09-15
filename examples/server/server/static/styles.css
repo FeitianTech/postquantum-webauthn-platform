@@ -639,7 +639,7 @@ select.form-control {
     color: #333;
     display: none;
     word-wrap: break-word;
-    pointer-events: none; /* Prevent interfering with mouse events */
+    pointer-events: auto; /* Allow interactions with language toggle */
 }
 
 .info-popup.show {
@@ -675,7 +675,7 @@ select.form-control {
 /* Language toggle for info popups */
 .language-toggle {
     position: absolute;
-    top: 8px;
+    bottom: 8px;
     right: 12px;
     background: rgba(50, 95, 116, 0.8);
     border: 1px solid rgba(50, 95, 116, 0.9);

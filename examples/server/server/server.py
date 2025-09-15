@@ -133,12 +133,19 @@ def register_complete():
         elif response.get('attestationObject'):
             # Fallback: Try to parse attestation object from response
             import cbor2
+            import base64
             attestation_object_bytes = base64.b64decode(response['attestationObject'])
             attestation_object = cbor2.loads(attestation_object_bytes)
             attestation_format = attestation_object.get('fmt', 'none')
             attestation_statement = attestation_object.get('attStmt', {})
+            
+            # Debug print to check what we're getting
+            print(f"[DEBUG] Parsed attestation format: {attestation_format}")
+            print(f"[DEBUG] Attestation statement keys: {list(attestation_statement.keys()) if attestation_statement else 'None'}")
     except Exception as e:
-        pass  # Use default values if attestation parsing fails
+        print(f"[DEBUG] Attestation parsing error: {e}")
+        import traceback
+        traceback.print_exc()
 
     # Store comprehensive credential data (same format as advanced)
     credential_info = {
@@ -689,7 +696,12 @@ def advanced_register_complete():
                 
                 attestation_format = attestation_object.get('fmt', 'none')
                 attestation_statement = attestation_object.get('attStmt', {})
+                
+                # Debug print to check what we're getting  
+                print(f"[DEBUG] Advanced - Parsed attestation format: {attestation_format}")
+                print(f"[DEBUG] Advanced - Attestation statement keys: {list(attestation_statement.keys()) if attestation_statement else 'None'}")
         except Exception as e:
+            print(f"[DEBUG] Advanced - Attestation parsing error: {e}")
             import traceback
             traceback.print_exc()
         

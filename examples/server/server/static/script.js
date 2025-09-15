@@ -27,6 +27,15 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             document.querySelectorAll('.info-popup.show').forEach(p => p.classList.remove('show'));
             // Show this popup
             popup.classList.add('show');
+            
+            // Add event listener to keep popup open when hovering over it
+            popup.addEventListener('mouseenter', () => {
+                popup.classList.add('show');
+            });
+            
+            popup.addEventListener('mouseleave', () => {
+                popup.classList.remove('show');
+            });
         }
         
         function hideInfoPopup(iconElement) {
@@ -34,7 +43,12 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             if (!popup) {
                 return;
             }
-            popup.classList.remove('show');
+            // Add a small delay to allow moving cursor to popup
+            setTimeout(() => {
+                if (!popup.matches(':hover')) {
+                    popup.classList.remove('show');
+                }
+            }, 100);
         }
 
         // Language toggle functionality
@@ -855,22 +869,20 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                 </div>
             </div>`;
             
-            // Attestation Format - only show if not 'none'
-            if (cred.attestationFormat && cred.attestationFormat !== 'none') {
+            // Attestation Format - always show
+            detailsHtml += `
+            <div style="margin-bottom: 1.5rem;">
+                <h4 style="color: #325F74; margin-bottom: 0.5rem;">Attestation Format</h4>
+                <div style="font-size: 0.9rem;">${cred.attestationFormat || 'none'}</div>
+            </div>`;
+            
+            // Show attestation statement if available and not empty
+            if (cred.attestationStatement && Object.keys(cred.attestationStatement).length > 0) {
                 detailsHtml += `
                 <div style="margin-bottom: 1.5rem;">
-                    <h4 style="color: #325F74; margin-bottom: 0.5rem;">Attestation Format</h4>
-                    <div style="font-size: 0.9rem;">${cred.attestationFormat}</div>
+                    <h4 style="color: #325F74; margin-bottom: 0.5rem;">Attestation Statement</h4>
+                    <div style="font-size: 0.8rem; font-family: monospace; background: #f8f9fa; padding: 0.5rem; border-radius: 4px; white-space: pre-wrap;">${JSON.stringify(cred.attestationStatement, null, 2)}</div>
                 </div>`;
-                
-                // Show attestation statement if available
-                if (cred.attestationStatement && Object.keys(cred.attestationStatement).length > 0) {
-                    detailsHtml += `
-                    <div style="margin-bottom: 1.5rem;">
-                        <h4 style="color: #325F74; margin-bottom: 0.5rem;">Attestation Statement</h4>
-                        <div style="font-size: 0.8rem; font-family: monospace; background: #f8f9fa; padding: 0.5rem; border-radius: 4px; white-space: pre-wrap;">${JSON.stringify(cred.attestationStatement, null, 2)}</div>
-                    </div>`;
-                }
             }
             
             // Authenticator Data (registration)
