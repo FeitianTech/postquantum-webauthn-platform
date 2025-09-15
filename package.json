@@ -1,0 +1,22 @@
+{
+  "name": "python-fido2-webauthn-test",
+  "version": "1.0.0",
+  "description": "WebAuthn FIDO2 Test Application for Vercel",
+  "main": "api/index.py",
+  "scripts": {
+    "dev": "vercel dev",
+    "deploy": "vercel --prod"
+  },
+  "keywords": [
+    "webauthn",
+    "fido2",
+    "authentication",
+    "biometric",
+    "security"
+  ],
+  "author": "WebAuthn FIDO2 Test Team",
+  "license": "MIT",
+  "engines": {
+    "node": ">=14.x"
+  }
+}

@@ -1,0 +1,9 @@
+# WebAuthn FIDO2 Test Application Dependencies
+Flask>=2.0,<4.0
+cryptography>=2.6,!=35,<45
+
+# Additional dependencies for web application
+werkzeug>=2.0,<4.0
+jinja2>=3.0,<4.0
+
+# Note: fido2 package is included locally in the repository
