@@ -72,9 +72,20 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
 
         // Language toggle functionality
         function toggleLanguage(toggleElement) {
-            const popup = toggleElement.closest('.info-popup');
+            // Handle both .info-popup and .alert containers
+            const popup = toggleElement.closest('.info-popup') || toggleElement.closest('.alert');
+            if (!popup) {
+                console.error('Could not find parent container for language toggle');
+                return;
+            }
+            
             const enText = popup.querySelector('.text-en');
             const zhText = popup.querySelector('.text-zh');
+            
+            if (!enText || !zhText) {
+                console.error('Could not find text elements for language toggle');
+                return;
+            }
             
             if (enText.classList.contains('active')) {
                 // Switch to Chinese

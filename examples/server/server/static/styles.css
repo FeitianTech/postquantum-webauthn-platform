@@ -695,7 +695,7 @@ select.form-control {
 
 .text-en, .text-zh {
     display: block;
-    min-height: 1.5em; /* Maintain consistent height */
+    min-height: 3em; /* Increased minimum height for better consistency */
     line-height: 1.5;
 }
 
@@ -718,6 +718,16 @@ select.form-control {
 /* Ensure popup maintains consistent size */
 .info-popup {
     min-height: 150px; /* Minimum height to prevent jumping */
+}
+
+/* Ensure alert notes also maintain consistent size */
+.alert {
+    min-height: 80px; /* Minimum height for alert notes */
+}
+
+.alert .text-en, .alert .text-zh {
+    min-height: 4em; /* Larger minimum height for alert text areas */
+    padding-bottom: 20px; /* Extra padding to accommodate language toggle */
 }
 
 .label-with-info {
