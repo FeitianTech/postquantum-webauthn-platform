@@ -1,14 +1,39 @@
 {
   "version": 2,
-  "routes": [
-    { "src": "/api/(.*)", "dest": "api/index.py" },
-    { "src": "/(.*)", "dest": "public/$1" },
-    { "src": "/", "dest": "public/index.html" }
-  ],
   "functions": {
     "api/index.py": {
-      "runtime": "python3.9",
-      "maxDuration": 30
+      "runtime": "python@3.9",
+      "maxDuration": 30,
+      "maxLambdaSize": "50mb"
     }
-  }
+  },
+  "routes": [
+    {
+      "src": "/static/(.*)",
+      "dest": "/public/$1"
+    },
+    {
+      "src": "/",
+      "dest": "/api/index.py"
+    },
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/index.py"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/api/index.py"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        }
+      ]
+    }
+  ]
 }
