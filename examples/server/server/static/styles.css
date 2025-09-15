@@ -695,6 +695,8 @@ select.form-control {
 
 .text-en, .text-zh {
     display: block;
+    min-height: 1.5em; /* Maintain consistent height */
+    line-height: 1.5;
 }
 
 .text-zh {
@@ -711,6 +713,11 @@ select.form-control {
 
 .text-en.hidden, .text-zh.hidden {
     display: none;
+}
+
+/* Ensure popup maintains consistent size */
+.info-popup {
+    min-height: 150px; /* Minimum height to prevent jumping */
 }
 
 .label-with-info {

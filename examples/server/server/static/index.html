@@ -282,7 +282,13 @@
                                             <label>Public Key Credential Parameters</label>
                                             <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
                                                 <div class="info-popup">
-                                                    The signature algorithms supported by the Relying Party (RP). The authenticator will be choosing the most preferred algorithm that it supports. It is recommended to include at least ES256, EdDSA and RS256.
+                                                    <div class="language-toggle" onclick="toggleLanguage(this)">ENG</div>
+                                                    <div class="text-en active">
+                                                        The signature algorithms supported by the Relying Party (RP). The authenticator will be choosing the most preferred algorithm that it supports. It is recommended to include at least ES256, EdDSA and RS256.
+                                                    </div>
+                                                    <div class="text-zh hidden">
+                                                        依赖方（RP）支持的签名算法。认证器将选择它支持的最优先算法。建议至少包括 ES256、EdDSA 和 RS256。
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -326,8 +332,15 @@
                                             <label>Hints</label>
                                             <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
                                                 <div class="info-popup">
-                                                    Registration hints to guide the user-agent in interacting with the user.<br><br>
-                                                    Hints are suggestions that help guide the user experience. They're not required, and the system prioritizes them in order of preference. If hints conflict, the first one takes priority. Hints can also overlap, allowing for both specific and general suggestions to be sent. If hints contradict other information, the hints take precedence.
+                                                    <div class="language-toggle" onclick="toggleLanguage(this)">ENG</div>
+                                                    <div class="text-en active">
+                                                        Registration hints to guide the user-agent in interacting with the user.<br><br>
+                                                        Hints are suggestions that help guide the user experience. They're not required, and the system prioritizes them in order of preference. If hints conflict, the first one takes priority. Hints can also overlap, allowing for both specific and general suggestions to be sent. If hints contradict other information, the hints take precedence.
+                                                    </div>
+                                                    <div class="text-zh hidden">
+                                                        注册提示，用于指导用户代理与用户的交互。<br><br>
+                                                        提示是帮助指导用户体验的建议。它们不是必需的，系统按优先级顺序对它们进行优先排序。如果提示冲突，第一个优先。提示也可以重叠，允许发送特定和一般建议。如果提示与其他信息矛盾，提示优先。
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -397,7 +410,13 @@
                                             <label for="cred-protect">credProtect</label>
                                             <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
                                                 <div class="info-popup">
-                                                    Request the Credential protection (credProtect) extension. This extension sets whether the authenticator requires user verification (UV) before revealing the existence of a credential. If it does, that also means that the authenticator requires UV before allowing authentication using that credential.
+                                                    <div class="language-toggle" onclick="toggleLanguage(this)">ENG</div>
+                                                    <div class="text-en active">
+                                                        Request the Credential protection (credProtect) extension. This extension sets whether the authenticator requires user verification (UV) before revealing the existence of a credential. If it does, that also means that the authenticator requires UV before allowing authentication using that credential.
+                                                    </div>
+                                                    <div class="text-zh hidden">
+                                                        请求凭据保护（credProtect）扩展。此扩展设置认证器在显示凭据存在之前是否需要用户验证（UV）。如果需要，这也意味着认证器在允许使用该凭据进行身份验证之前需要 UV。
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -415,8 +434,15 @@
                                             </label>
                                             <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
                                                 <div class="info-popup">
-                                                    Whether to enforce the selected credProtect policy, if any, meaning the registration should fail rather than create a credential that does not satisfy the credProtect policy.<br><br>
-                                                    If this is checked and credProtect is set to userVerificationOptionalWithCredentialIDList or userVerificationRequired, and the authenticator cannot satisfy that policy, then the registration will fail. If this is not checked, the registration MAY proceed even if the authenticator cannot satisfy the chosen policy.
+                                                    <div class="language-toggle" onclick="toggleLanguage(this)">ENG</div>
+                                                    <div class="text-en active">
+                                                        Whether to enforce the selected credProtect policy, if any, meaning the registration should fail rather than create a credential that does not satisfy the credProtect policy.<br><br>
+                                                        If this is checked and credProtect is set to userVerificationOptionalWithCredentialIDList or userVerificationRequired, and the authenticator cannot satisfy that policy, then the registration will fail. If this is not checked, the registration MAY proceed even if the authenticator cannot satisfy the chosen policy.
+                                                    </div>
+                                                    <div class="text-zh hidden">
+                                                        是否强制执行所选的 credProtect 策略（如果有），意味着注册应该失败而不是创建不满足 credProtect 策略的凭据。<br><br>
+                                                        如果选中此项且 credProtect 设置为 userVerificationOptionalWithCredentialIDList 或 userVerificationRequired，并且认证器无法满足该策略，则注册将失败。如果未选中，即使认证器无法满足所选策略，注册也可能继续。
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -471,8 +497,15 @@
                                             <label for="prf-eval-first-reg">prf eval first</label>
                                             <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
                                                 <div class="info-popup">
-                                                    The first prf extension input to evaluate. If set, the client extension outputs will include a prf.results.first output if the client and authenticator both support the extension.<br><br>
-                                                    Many authenticators support evaluating the PRF only in authentication ceremonies, in which case the PRF extension output is just prf: { enabled: true } without any PRF outputs. To evaluate the PRF, perform an authentication ceremony with the same PRF inputs.
+                                                    <div class="language-toggle" onclick="toggleLanguage(this)">ENG</div>
+                                                    <div class="text-en active">
+                                                        The first prf extension input to evaluate. If set, the client extension outputs will include a prf.results.first output if the client and authenticator both support the extension.<br><br>
+                                                        Many authenticators support evaluating the PRF only in authentication ceremonies, in which case the PRF extension output is just prf: { enabled: true } without any PRF outputs. To evaluate the PRF, perform an authentication ceremony with the same PRF inputs.
+                                                    </div>
+                                                    <div class="text-zh hidden">
+                                                        要评估的第一个 prf 扩展输入。如果设置，如果客户端和认证器都支持该扩展，客户端扩展输出将包含 prf.results.first 输出。<br><br>
+                                                        许多认证器仅支持在身份验证仪式中评估 PRF，在这种情况下，PRF 扩展输出只是 prf: { enabled: true }，没有任何 PRF 输出。要评估 PRF，请使用相同的 PRF 输入执行身份验证仪式。
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -487,8 +520,15 @@
                                             <label for="prf-eval-second-reg">prf eval second</label>
                                             <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
                                                 <div class="info-popup">
-                                                    The second prf extension input to evaluate. If set, the client extension outputs will include a prf.results.second output if the client and authenticator both support the extension.<br><br>
-                                                    This is optional and can be used alongside the first PRF evaluation input for additional key derivation capabilities.
+                                                    <div class="language-toggle" onclick="toggleLanguage(this)">ENG</div>
+                                                    <div class="text-en active">
+                                                        The second prf extension input to evaluate. If set, the client extension outputs will include a prf.results.second output if the client and authenticator both support the extension.<br><br>
+                                                        This is optional and can be used alongside the first PRF evaluation input for additional key derivation capabilities.
+                                                    </div>
+                                                    <div class="text-zh hidden">
+                                                        要评估的第二个 prf 扩展输入。如果设置，如果客户端和认证器都支持该扩展，客户端扩展输出将包含 prf.results.second 输出。<br><br>
+                                                        这是可选的，可以与第一个 PRF 评估输入一起使用，以获得额外的密钥派生功能。
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -521,8 +561,15 @@
                                             <label for="user-verification-auth">User Verification</label>
                                             <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
                                                 <div class="info-popup">
-                                                    Select whether user verification (UV), for example a PIN or biometric, should be used.<br><br>
-                                                    If "discouraged", UV will not be used if possible. If "preferred", UV will be used if possible. If "required", UV will be used and the user is shown an error if this fails. If unspecified, the default is "preferred".
+                                                    <div class="language-toggle" onclick="toggleLanguage(this)">ENG</div>
+                                                    <div class="text-en active">
+                                                        Select whether user verification (UV), for example a PIN or biometric, should be used.<br><br>
+                                                        If "discouraged", UV will not be used if possible. If "preferred", UV will be used if possible. If "required", UV will be used and the user is shown an error if this fails. If unspecified, the default is "preferred".
+                                                    </div>
+                                                    <div class="text-zh hidden">
+                                                        选择是否应使用用户验证（UV），例如 PIN 或生物识别。<br><br>
+                                                        如果设为"discouraged"，在可能的情况下不会使用 UV。如果设为"preferred"，在可能的情况下会使用 UV。如果设为"required"，将使用 UV，失败时向用户显示错误。如果未指定，默认为"preferred"。
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -538,10 +585,19 @@
                                             <label for="allow-credentials">Allow Credentials</label>
                                             <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
                                                 <div class="info-popup">
-                                                    Choose how to set the allowCredentials argument. This is used to select which credentials are eligible for this assertion, and to provide key handles for server-side credentials. This typically means that the user needs to be identified before issuing the WebAuthn challenge, so that the Relying Party (RP) can retrieve the correct allowCredentials values.<br><br>
-                                                    Select "All" to include all credentials registered in the session (see the pane on the right).<br><br>
-                                                    Select "Empty" to remove the allowCredentials argument. This means that only discoverable credentials can be used for the assertion.<br><br>
-                                                    Select a saved credential option to include only the specific chosen credential.
+                                                    <div class="language-toggle" onclick="toggleLanguage(this)">ENG</div>
+                                                    <div class="text-en active">
+                                                        Choose how to set the allowCredentials argument. This is used to select which credentials are eligible for this assertion, and to provide key handles for server-side credentials. This typically means that the user needs to be identified before issuing the WebAuthn challenge, so that the Relying Party (RP) can retrieve the correct allowCredentials values.<br><br>
+                                                        Select "All" to include all credentials registered in the session (see the pane on the right).<br><br>
+                                                        Select "Empty" to remove the allowCredentials argument. This means that only discoverable credentials can be used for the assertion.<br><br>
+                                                        Select a saved credential option to include only the specific chosen credential.
+                                                    </div>
+                                                    <div class="text-zh hidden">
+                                                        选择如何设置 allowCredentials 参数。这用于选择哪些凭据符合此断言条件，并为服务器端凭据提供密钥句柄。这通常意味着在发出 WebAuthn 挑战之前需要识别用户，以便依赖方（RP）可以检索正确的 allowCredentials 值。<br><br>
+                                                        选择"All"以包含会话中注册的所有凭据（请参见右侧窗格）。<br><br>
+                                                        选择"Empty"以删除 allowCredentials 参数。这意味着只有可发现的凭据可用于断言。<br><br>
+                                                        选择保存的凭据选项以仅包含特定选择的凭据。
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -549,8 +605,14 @@
                                             <option value="all">All credentials</option>
                                             <option value="empty">Empty (resident key only)</option>
                                         </select>
-                                        <div class="alert alert-info" style="margin-top: 0.5rem; font-size: 0.875rem;">
-                                            <strong>Note:</strong> When using "Empty (resident key only)", if multiple resident key credentials exist on your authenticator from previous registrations, you may still be prompted to select one. This is because web applications cannot delete credentials from authenticators directly. To test true discoverable credential authentication, you may need to reset your authenticator or use device-specific management tools to clear old credentials.
+                                        <div class="alert alert-info" style="margin-top: 0.5rem; font-size: 0.875rem; position: relative;">
+                                            <div class="language-toggle" onclick="toggleLanguage(this)" style="position: absolute; bottom: 8px; right: 8px; background: rgba(50, 95, 116, 0.8); color: white; border: none; border-radius: 4px; padding: 2px 6px; font-size: 10px; cursor: pointer; z-index: 1000;">ENG</div>
+                                            <div class="text-en active">
+                                                <strong>Note:</strong> When using "Empty (resident key only)", if multiple resident key credentials exist on your authenticator from previous registrations, you may still be prompted to select one. This is because web applications cannot delete credentials from authenticators directly. To test true discoverable credential authentication, you may need to reset your authenticator or use device-specific management tools to clear old credentials.
+                                            </div>
+                                            <div class="text-zh hidden">
+                                                <strong>注意：</strong> 当使用"Empty (resident key only)"时，如果您的认证器中存在来自先前注册的多个常驻密钥凭据，您可能仍会被提示选择一个。这是因为 Web 应用程序无法直接从认证器中删除凭据。要测试真正的可发现凭据身份验证，您可能需要重置认证器或使用设备特定的管理工具来清除旧凭据。
+                                            </div>
                                         </div>
                                     </div>
                                     <div class="form-group">
@@ -558,7 +620,13 @@
                                             <label for="fake-cred-length-auth">Fake credential ID length</label>
                                             <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
                                                 <div class="info-popup">
-                                                    Add a random credential ID of the given length to allowCredentials. May be useful for testing edge cases and conformance.
+                                                    <div class="language-toggle" onclick="toggleLanguage(this)">ENG</div>
+                                                    <div class="text-en active">
+                                                        Add a random credential ID of the given length to allowCredentials. May be useful for testing edge cases and conformance.
+                                                    </div>
+                                                    <div class="text-zh hidden">
+                                                        向 allowCredentials 添加给定长度的随机凭据 ID。可能对测试边缘情况和合规性有用。
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -579,7 +647,13 @@
                                             <label for="challenge-auth">Challenge (hex)</label>
                                             <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
                                                 <div class="info-popup">
-                                                    The cryptographic challenge to be signed by the authenticator, used to prevent replay attacks.
+                                                    <div class="language-toggle" onclick="toggleLanguage(this)">ENG</div>
+                                                    <div class="text-en active">
+                                                        The cryptographic challenge to be signed by the authenticator, used to prevent replay attacks.
+                                                    </div>
+                                                    <div class="text-zh hidden">
+                                                        要由认证器签名的加密挑战，用于防止重放攻击。
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -594,7 +668,13 @@
                                             <label for="timeout-auth">Timeout (milliseconds)</label>
                                             <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
                                                 <div class="info-popup">
-                                                    How long the Relying Party (RP) is willing to wait for the authentication ceremony to complete. If the authentication ceremony takes longer than this (or the adjusted value, in case the client overrides it), the ceremony will be aborted with a timeout message shown to the user. This may be silently overridden by the client.
+                                                    <div class="language-toggle" onclick="toggleLanguage(this)">ENG</div>
+                                                    <div class="text-en active">
+                                                        How long the Relying Party (RP) is willing to wait for the authentication ceremony to complete. If the authentication ceremony takes longer than this (or the adjusted value, in case the client overrides it), the ceremony will be aborted with a timeout message shown to the user. This may be silently overridden by the client.
+                                                    </div>
+                                                    <div class="text-zh hidden">
+                                                        依赖方（RP）愿意等待身份验证仪式完成的时间。如果身份验证仪式时间超过此值（或调整后的值，如果客户端覆盖），仪式将被中止，并向用户显示超时消息。这可能会被客户端静默覆盖。
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -605,8 +685,15 @@
                                             <label>Hints</label>
                                             <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
                                                 <div class="info-popup">
-                                                    Authentication hints to guide the user-agent in interacting with the user.<br><br>
-                                                    Hints are suggestions that help guide the user experience. They're not required, and the system prioritizes them in order of preference. If hints conflict, the first one takes priority. Hints can also overlap, allowing for both specific and general suggestions to be sent. If hints contradict other information, the hints take precedence.
+                                                    <div class="language-toggle" onclick="toggleLanguage(this)">ENG</div>
+                                                    <div class="text-en active">
+                                                        Authentication hints to guide the user-agent in interacting with the user.<br><br>
+                                                        Hints are suggestions that help guide the user experience. They're not required, and the system prioritizes them in order of preference. If hints conflict, the first one takes priority. Hints can also overlap, allowing for both specific and general suggestions to be sent. If hints contradict other information, the hints take precedence.
+                                                    </div>
+                                                    <div class="text-zh hidden">
+                                                        身份验证提示，用于指导用户代理与用户的交互。<br><br>
+                                                        提示是帮助指导用户体验的建议。它们不是必需的，系统按优先级顺序对它们进行优先排序。如果提示冲突，第一个优先。提示也可以重叠，允许发送特定和一般建议。如果提示与其他信息矛盾，提示优先。
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -640,10 +727,19 @@
                                             <label for="large-blob-auth">largeBlob</label>
                                             <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
                                                 <div class="info-popup">
-                                                    Request the Large blob storage (largeBlob) extension. This extension may be used to store arbitrary data with the credential.<br><br>
-                                                    If set to "read", the output will be of the form largeBlob: { blob: ArrayBuffer } if both client and authenticator support the extension and the authenticator contains a matching BLOB value. Otherwise the output will be largeBlob: {} if the client supports the extension.<br><br>
-                                                    If set to "write", the output will be largeBlob: { written: true } if the BLOB was successfully written to the authenticator, and otherwise largeBlob: { written: false } if the client supports the extension.<br><br>
-                                                    If the client does not support the extension, no largeBlob output will be present.
+                                                    <div class="language-toggle" onclick="toggleLanguage(this)">ENG</div>
+                                                    <div class="text-en active">
+                                                        Request the Large blob storage (largeBlob) extension. This extension may be used to store arbitrary data with the credential.<br><br>
+                                                        If set to "read", the output will be of the form largeBlob: { blob: ArrayBuffer } if both client and authenticator support the extension and the authenticator contains a matching BLOB value. Otherwise the output will be largeBlob: {} if the client supports the extension.<br><br>
+                                                        If set to "write", the output will be largeBlob: { written: true } if the BLOB was successfully written to the authenticator, and otherwise largeBlob: { written: false } if the client supports the extension.<br><br>
+                                                        If the client does not support the extension, no largeBlob output will be present.
+                                                    </div>
+                                                    <div class="text-zh hidden">
+                                                        请求大型 blob 存储（largeBlob）扩展。此扩展可用于与凭据一起存储任意数据。<br><br>
+                                                        如果设置为"read"，如果客户端和认证器都支持该扩展且认证器包含匹配的 BLOB 值，输出将为 largeBlob: { blob: ArrayBuffer }。否则，如果客户端支持该扩展，输出将为 largeBlob: {}。<br><br>
+                                                        如果设置为"write"，如果 BLOB 成功写入认证器，输出将为 largeBlob: { written: true }，否则如果客户端支持该扩展，将为 largeBlob: { written: false }。<br><br>
+                                                        如果客户端不支持该扩展，将不存在 largeBlob 输出。
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -659,7 +755,13 @@
                                             <label for="large-blob-write">largeBlob write</label>
                                             <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
                                                 <div class="info-popup">
-                                                    The BLOB value to write to the authenticator.
+                                                    <div class="language-toggle" onclick="toggleLanguage(this)">ENG</div>
+                                                    <div class="text-en active">
+                                                        The BLOB value to write to the authenticator.
+                                                    </div>
+                                                    <div class="text-zh hidden">
+                                                        要写入认证器的 BLOB 值。
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -674,8 +776,15 @@
                                             <label for="prf-eval-first-auth">prf eval first</label>
                                             <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
                                                 <div class="info-popup">
-                                                    Request the Pseudo-random function (prf) extension and set the first prf extension input to evaluate. This extension may be used to derive deterministically-random values to use as key material, for example.<br><br>
-                                                    If set, the client extension outputs will include a prf.results.first output if the client and authenticator both support the extension.
+                                                    <div class="language-toggle" onclick="toggleLanguage(this)">ENG</div>
+                                                    <div class="text-en active">
+                                                        Request the Pseudo-random function (prf) extension and set the first prf extension input to evaluate. This extension may be used to derive deterministically-random values to use as key material, for example.<br><br>
+                                                        If set, the client extension outputs will include a prf.results.first output if the client and authenticator both support the extension.
+                                                    </div>
+                                                    <div class="text-zh hidden">
+                                                        请求伪随机函数（prf）扩展并设置要评估的第一个 prf 扩展输入。例如，此扩展可用于派生确定性随机值作为密钥材料。<br><br>
+                                                        如果设置，如果客户端和认证器都支持该扩展，客户端扩展输出将包含 prf.results.first 输出。
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -690,8 +799,15 @@
                                             <label for="prf-eval-second-auth">prf eval second</label>
                                             <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
                                                 <div class="info-popup">
-                                                    The second prf extension input to evaluate. If set, the client extension outputs will include a prf.results.second output if the client and authenticator both support the extension.<br><br>
-                                                    A second output may be useful to rotate key material via a single WebAuthn ceremony.
+                                                    <div class="language-toggle" onclick="toggleLanguage(this)">ENG</div>
+                                                    <div class="text-en active">
+                                                        The second prf extension input to evaluate. If set, the client extension outputs will include a prf.results.second output if the client and authenticator both support the extension.<br><br>
+                                                        A second output may be useful to rotate key material via a single WebAuthn ceremony.
+                                                    </div>
+                                                    <div class="text-zh hidden">
+                                                        要评估的第二个 prf 扩展输入。如果设置，如果客户端和认证器都支持该扩展，客户端扩展输出将包含 prf.results.second 输出。<br><br>
+                                                        第二个输出可能有助于通过单个 WebAuthn 仪式轮换密钥材料。
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>

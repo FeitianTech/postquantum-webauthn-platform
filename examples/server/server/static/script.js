@@ -18,24 +18,43 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
         let currentJsonData = null;
 
         // Info popup functionality
+        let hideTimeout;
+        
         function showInfoPopup(iconElement) {
             const popup = iconElement.querySelector('.info-popup');
             if (!popup) {
                 return;
             }
+            
+            // Clear any pending hide timeout
+            if (hideTimeout) {
+                clearTimeout(hideTimeout);
+                hideTimeout = null;
+            }
+            
             // Hide all other popups first
             document.querySelectorAll('.info-popup.show').forEach(p => p.classList.remove('show'));
             // Show this popup
             popup.classList.add('show');
             
-            // Add event listener to keep popup open when hovering over it
-            popup.addEventListener('mouseenter', () => {
-                popup.classList.add('show');
-            });
-            
-            popup.addEventListener('mouseleave', () => {
-                popup.classList.remove('show');
-            });
+            // Add event listeners if not already added
+            if (!popup.hasAttribute('data-listeners-added')) {
+                popup.addEventListener('mouseenter', () => {
+                    if (hideTimeout) {
+                        clearTimeout(hideTimeout);
+                        hideTimeout = null;
+                    }
+                    popup.classList.add('show');
+                });
+                
+                popup.addEventListener('mouseleave', () => {
+                    hideTimeout = setTimeout(() => {
+                        popup.classList.remove('show');
+                    }, 200);
+                });
+                
+                popup.setAttribute('data-listeners-added', 'true');
+            }
         }
         
         function hideInfoPopup(iconElement) {
@@ -43,12 +62,12 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             if (!popup) {
                 return;
             }
-            // Add a small delay to allow moving cursor to popup
-            setTimeout(() => {
-                if (!popup.matches(':hover')) {
+            // Add a delay to allow moving cursor to popup
+            hideTimeout = setTimeout(() => {
+                if (!popup.matches(':hover') && !iconElement.matches(':hover')) {
                     popup.classList.remove('show');
                 }
-            }, 100);
+            }, 200);
         }
 
         // Language toggle functionality
@@ -757,20 +776,31 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                 return;
             }
 
-            credentialsList.innerHTML = storedCredentials.map((cred, index) => `
+            credentialsList.innerHTML = storedCredentials.map((cred, index) => {
+                // Determine what features this credential supports
+                const features = [];
+                if (cred.residentKey === true || cred.discoverable === true) {
+                    features.push('Discoverable');
+                }
+                if (cred.largeBlob === true || cred.largeBlobSupported === true) {
+                    features.push('largeBlob');
+                }
+                
+                const featureText = features.length > 0 ? features.join(' • ') : '';
+                
+                return `
                 <div class="credential-item" style="display: flex; align-items: center; justify-content: space-between; padding: 0.75rem; background: white; border: 1px solid #dee2e6; border-radius: 8px; margin-bottom: 0.5rem;">
                     <div style="flex: 1; min-width: 0;">
                         <div style="font-weight: 500; color: #495057; font-size: 0.9rem; margin-bottom: 0.25rem;">${cred.email || cred.username || 'Unknown User'}</div>
-                        <div style="font-size: 0.75rem; color: #6c757d;">
-                            ${cred.algorithm || 'Unknown'} • ${cred.createdAt ? new Date(cred.createdAt).toLocaleDateString() : 'Unknown date'}
-                        </div>
+                        ${featureText ? `<div style="font-size: 0.75rem; color: #6c757d;">${featureText}</div>` : ''}
                     </div>
                     <div style="display: flex; gap: 0.5rem; flex-shrink: 0;">
                         <button class="btn-small" onclick="showCredentialDetails(${index})" style="background: #325F74; color: white; border: none; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; cursor: pointer;">Details</button>
                         <button class="btn-small btn-danger" onclick="deleteCredential('${cred.email || cred.username}', ${index})" style="background: #dc3545; color: white; border: none; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; cursor: pointer;">Delete</button>
                     </div>
                 </div>
-            `).join('');
+                `;
+            }).join('');
             
             // Check large blob capability after updating display
             checkLargeBlobCapability();
