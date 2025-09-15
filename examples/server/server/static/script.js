@@ -2283,41 +2283,154 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             return options;
         }
 
+        // Transform CredentialCreationOptions from JSON editor format to backend format
+        async function transformCredentialCreationOptionsForBackend(parsedJson) {
+            const publicKey = parsedJson.publicKey;
+            
+            // Extract basic information
+            const options = {
+                username: publicKey.user.name || '',
+                displayName: publicKey.user.displayName || publicKey.user.name || '',
+                userId: extractBinaryValue(publicKey.user.id) || '',
+                attestation: publicKey.attestation || 'none',
+                userVerification: publicKey.authenticatorSelection?.userVerification || 'preferred',
+                authenticatorAttachment: publicKey.authenticatorSelection?.authenticatorAttachment || undefined,
+                residentKey: publicKey.authenticatorSelection?.residentKey || 'preferred',
+                challenge: extractBinaryValue(publicKey.challenge) || '',
+                timeout: publicKey.timeout || 90000,
+                
+                // Extract pubKeyCredParams
+                pubKeyCredParams: [],
+                
+                // Extract hints
+                hints: publicKey.hints || [],
+                
+                // Extract extensions
+                extensions: publicKey.extensions || {},
+                
+                // Handle excludeCredentials
+                excludeCredentials: false,
+                fakeCredLength: 0
+            };
+            
+            // Transform pubKeyCredParams from WebAuthn format to backend format
+            if (publicKey.pubKeyCredParams && Array.isArray(publicKey.pubKeyCredParams)) {
+                for (const param of publicKey.pubKeyCredParams) {
+                    if (param.alg === -7) options.pubKeyCredParams.push('ES256');
+                    else if (param.alg === -8) options.pubKeyCredParams.push('EdDSA');
+                    else if (param.alg === -257) options.pubKeyCredParams.push('RS256');
+                    else if (param.alg === -35) options.pubKeyCredParams.push('ES384');
+                    else if (param.alg === -36) options.pubKeyCredParams.push('ES512');
+                }
+            }
+            
+            // Handle excludeCredentials if present
+            if (publicKey.excludeCredentials && Array.isArray(publicKey.excludeCredentials)) {
+                options.excludeCredentials = true;
+            }
+            
+            return options;
+        }
+
+        // Transform CredentialRequestOptions from JSON editor format to backend format  
+        async function transformCredentialRequestOptionsForBackend(parsedJson) {
+            const publicKey = parsedJson.publicKey;
+            
+            const options = {
+                userVerification: publicKey.userVerification || 'preferred',
+                allowCredentials: 'all', // Default
+                challenge: extractBinaryValue(publicKey.challenge) || '',
+                timeout: publicKey.timeout || 90000,
+                extensions: publicKey.extensions || {},
+                fakeCredLength: 0
+            };
+            
+            // Handle allowCredentials
+            if (!publicKey.allowCredentials || publicKey.allowCredentials.length === 0) {
+                options.allowCredentials = 'empty';
+            } else if (publicKey.allowCredentials.length === 1) {
+                // Single credential - extract its ID
+                const credId = extractBinaryValue(publicKey.allowCredentials[0].id);
+                if (credId) {
+                    options.specificCredentialId = credId;
+                    options.allowCredentials = credId;
+                }
+            }
+            
+            // Transform extensions if needed
+            if (publicKey.extensions) {
+                const ext = publicKey.extensions;
+                
+                // Handle largeBlob extension
+                if (ext.largeBlob) {
+                    if (ext.largeBlob.read) {
+                        options.extensions.largeBlob = 'read';
+                    } else if (ext.largeBlob.write) {
+                        options.extensions.largeBlob = 'write';
+                        options.extensions.largeBlobWrite = extractBinaryValue(ext.largeBlob.write) || '';
+                    }
+                }
+                
+                // Handle prf extension
+                if (ext.prf && ext.prf.eval) {
+                    options.extensions.prf = true;
+                    if (ext.prf.eval.first) {
+                        options.extensions.prfEvalFirst = extractBinaryValue(ext.prf.eval.first) || '';
+                    }
+                    if (ext.prf.eval.second) {
+                        options.extensions.prfEvalSecond = extractBinaryValue(ext.prf.eval.second) || '';
+                    }
+                }
+            }
+            
+            return options;
+        }
+
+        // Helper function to extract binary values from various formats
+        function extractBinaryValue(value) {
+            if (!value) return '';
+            
+            if (typeof value === 'string') {
+                return value;
+            }
+            
+            if (typeof value === 'object') {
+                if (value.$hex) return value.$hex;
+                if (value.$base64) return base64ToHex(value.$base64);
+                if (value.$base64url) return base64UrlToHex(value.$base64url);
+                if (value.$js) return value.$js;
+            }
+            
+            return '';
+        }
+
         async function advancedRegister() {
-            // Validate all inputs first
-            const isUserIdValid = validateUserIdInput();
-            const isChallengeValid = validateChallengeInputs();
-            const isPrfValid = validatePrfEvalInputs();
-            const isLargeBlobValid = validateLargeBlobWriteInput();
-            const isLargeBlobDependencyValid = validateLargeBlobDependency();
-            
-            // Check for specific largeblob dependency error first to provide helpful message
-            if (!isLargeBlobDependencyValid) {
-                // The validateLargeBlobDependency function already shows the specific message
-                return;
-            }
-            
-            if (!isUserIdValid || !isChallengeValid || !isPrfValid || !isLargeBlobValid) {
-                showStatus('advanced', 'Please fix the validation errors above', 'error');
-                return;
-            }
-
-            const options = getAdvancedCreateOptions();
-            if (!options.username) {
-                showStatus('advanced', 'Please generate or enter a username. ', 'error');
-                return;
-            }
-
-            if (!options.userId) {
-                showStatus('advanced', 'Please generate or enter a user ID. ', 'error');
-                return;
-            }
-
-            if (!options.challenge) {
-                showStatus('advanced', 'Please generate or enter a challenge. ', 'error');
-            }
-
             try {
+                // Parse JSON from editor as primary source of truth
+                const jsonText = document.getElementById('json-editor').value;
+                const parsed = JSON.parse(jsonText);
+                
+                // Validate JSON structure for CredentialCreationOptions
+                if (!parsed.publicKey) {
+                    throw new Error('Invalid JSON structure: Missing "publicKey" property');
+                }
+                
+                const publicKey = parsed.publicKey;
+                
+                // Validate required CredentialCreationOptions properties
+                if (!publicKey.rp) {
+                    throw new Error('Invalid CredentialCreationOptions: Missing required "rp" property');
+                }
+                if (!publicKey.user) {
+                    throw new Error('Invalid CredentialCreationOptions: Missing required "user" property');
+                }
+                if (!publicKey.challenge) {
+                    throw new Error('Invalid CredentialCreationOptions: Missing required "challenge" property');
+                }
+                
+                // Transform JSON to backend-expected format
+                const options = await transformCredentialCreationOptionsForBackend(parsed);
+                
                 hideStatus('advanced');
                 showProgress('advanced', 'Starting advanced registration...');
 
@@ -2384,37 +2497,26 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
         }
 
         async function advancedAuthenticate() {
-            // Validate all inputs first
-            const isChallengeValid = validateChallengeInputs();
-            const isPrfValid = validatePrfEvalInputs();
-            const isLargeBlobValid = validateLargeBlobWriteInput();
-            
-            if (!isChallengeValid || !isPrfValid || !isLargeBlobValid) {
-                showStatus('advanced', 'Please fix the validation errors above', 'error');
-                return;
-            }
-
-            // Check for resident key authentication without resident key credentials
-            const allowCreds = document.getElementById('allow-credentials')?.value;
-            if (allowCreds === 'empty') {
-                const hasResidentKeyCredentials = storedCredentials && storedCredentials.some(cred => 
-                    cred.residentKey === true || 
-                    (cred.clientExtensionOutputs && cred.clientExtensionOutputs.credProps && cred.clientExtensionOutputs.credProps.rk === true)
-                );
-                
-                if (!hasResidentKeyCredentials) {
-                    showStatus('advanced', 
-                        'Warning: Resident key authentication selected but no resident key credentials found. ' +
-                        'Please register a credential with Resident Key set to "Required" first, or select a specific credential instead.', 
-                        'error'
-                    );
-                    return;
-                }
-            }
-
-            const options = getAdvancedAssertOptions();
-
             try {
+                // Parse JSON from editor as primary source of truth
+                const jsonText = document.getElementById('json-editor').value;
+                const parsed = JSON.parse(jsonText);
+                
+                // Validate JSON structure for CredentialRequestOptions
+                if (!parsed.publicKey) {
+                    throw new Error('Invalid JSON structure: Missing "publicKey" property');
+                }
+                
+                const publicKey = parsed.publicKey;
+                
+                // Validate required CredentialRequestOptions properties
+                if (!publicKey.challenge) {
+                    throw new Error('Invalid CredentialRequestOptions: Missing required "challenge" property');
+                }
+                
+                // Transform JSON to backend-expected format
+                const options = await transformCredentialRequestOptionsForBackend(parsed);
+
                 hideStatus('advanced');
                 showProgress('advanced', 'Detecting credentials...');
 
