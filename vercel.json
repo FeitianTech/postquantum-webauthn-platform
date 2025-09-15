@@ -1,16 +1,16 @@
 {
   "version": 2,
   "builds": [
-    { "src": "examples/server/server/static/**/*", "use": "@vercel/static" },
-    { "src": "api/server.py", "use": "@vercel/python" }
+    { "src": "public/**/*", "use": "@vercel/static" },
+    { "src": "api/index.py", "use": "@vercel/python" }
   ],
   "routes": [
-    { "src": "/api/(.*)", "dest": "api/server.py" },
-    { "src": "/(.*)", "dest": "examples/server/server/static/$1" },
-    { "src": "/", "dest": "examples/server/server/static/index.html" }
+    { "src": "/api/(.*)", "dest": "api/index.py" },
+    { "src": "/(.*)", "dest": "public/$1" },
+    { "src": "/", "dest": "public/index.html" }
   ],
   "functions": {
-    "api/server.py": {
+    "api/index.py": {
       "maxDuration": 30
     }
   }
