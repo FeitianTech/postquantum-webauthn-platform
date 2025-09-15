@@ -959,7 +959,21 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                 <h4 style="color: #325F74; margin-bottom: 0.5rem;">Properties</h4>
                 <div style="font-size: 0.9rem; line-height: 1.4;">
                     <div><strong>Discoverable (resident key):</strong> ${cred.residentKey || false}</div>
-                    <div><strong>Supports largeBlob:</strong> ${cred.largeBlob || false}</div>
+                    <div><strong>Supports largeBlob:</strong> ${cred.largeBlob || false}</div>`;
+            
+            // Add new properties if available
+            if (cred.properties) {
+                detailsHtml += `
+                    <div style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid #dee2e6;">
+                        <div><strong>Exclude credentials sent count:</strong> ${cred.properties.excludeCredentialsSentCount !== undefined ? cred.properties.excludeCredentialsSentCount : 'N/A'}</div>
+                        <div><strong>Exclude credentials used:</strong> ${cred.properties.excludeCredentialsUsed !== undefined ? cred.properties.excludeCredentialsUsed : 'N/A'}</div>
+                        <div><strong>Credential ID length (actual):</strong> ${cred.properties.credentialIdLength !== undefined ? cred.properties.credentialIdLength : 'N/A'} bytes</div>
+                        <div><strong>Fake credential ID length (requested):</strong> ${cred.properties.fakeCredentialIdLengthRequested !== undefined && cred.properties.fakeCredentialIdLengthRequested !== null ? cred.properties.fakeCredentialIdLengthRequested : 'N/A'}</div>
+                        <div><strong>Hints sent:</strong> ${cred.properties.hintsSent && cred.properties.hintsSent.length > 0 ? JSON.stringify(cred.properties.hintsSent) : '[]'}</div>
+                    </div>`;
+            }
+            
+            detailsHtml += `
                 </div>
             </div>`;
             

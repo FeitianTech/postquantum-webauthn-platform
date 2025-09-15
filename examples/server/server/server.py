@@ -170,6 +170,14 @@ def register_complete():
             'resident_key': None,
             'extensions': {},
             'timeout': 90000
+        },
+        # Properties section - detailed credential information
+        'properties': {
+            'excludeCredentialsSentCount': 0,  # Simple auth doesn't use exclude credentials
+            'excludeCredentialsUsed': False,   # Simple auth doesn't use exclude credentials
+            'credentialIdLength': len(auth_data.credential_data.credential_id),
+            'fakeCredentialIdLengthRequested': None,  # Simple auth doesn't use fake credentials
+            'hintsSent': []  # Simple auth doesn't use hints
         }
     }
     
@@ -325,6 +333,9 @@ def list_credentials():
                                     # Properties
                                     'residentKey': auth_data.get('flags', {}).get('be', False),
                                     'largeBlob': cred.get('client_extension_outputs', {}).get('largeBlob', {}).get('supported', False),
+                                    
+                                    # Properties section - detailed credential information
+                                    'properties': cred.get('properties', {}),
                                 }
                             else:
                                 # New format with real FIDO2 objects
@@ -377,6 +388,9 @@ def list_credentials():
                                     
                                     # Add original request parameters for debugging/verification
                                     'requestParams': cred.get('request_params', {}),
+                                    
+                                    # Properties section - detailed credential information
+                                    'properties': cred.get('properties', {}),
                                 }
                         else:
                             # Old format (just AttestedCredentialData)
@@ -407,6 +421,9 @@ def list_credentials():
                                 'publicKeyAlgorithm': cred.public_key[3] if hasattr(cred, 'public_key') and len(cred.public_key) > 3 else None,
                                 'residentKey': False,
                                 'largeBlob': False,
+                                
+                                # Properties section - empty for old format
+                                'properties': {},
                             }
                             
                         credentials.append(credential_info)
@@ -733,7 +750,15 @@ def advanced_register_complete():
             'attestation_statement': attestation_statement,
             'client_extension_outputs': response.get('clientExtensionResults', {}),
             # Store complete original WebAuthn request for full traceability
-            'original_webauthn_request': original_request
+            'original_webauthn_request': original_request,
+            # Properties section - detailed credential information
+            'properties': {
+                'excludeCredentialsSentCount': len(public_key.get('excludeCredentials', [])),
+                'excludeCredentialsUsed': False,  # Successful registration means exclusion didn't trigger
+                'credentialIdLength': len(auth_data.credential_data.credential_id),
+                'fakeCredentialIdLengthRequested': None,  # Extract from original request if present
+                'hintsSent': public_key.get('hints', [])
+            }
         }
         
         credentials.append(credential_info)
