@@ -37,6 +37,29 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             // Show this popup
             popup.classList.add('show');
             
+            // Store English dimensions on first show (when English is active by default)
+            if (!popup.hasAttribute('data-english-dimensions')) {
+                // Wait for next frame to ensure popup is fully rendered
+                requestAnimationFrame(() => {
+                    const enText = popup.querySelector('.text-en.active');
+                    if (enText) {
+                        const enComputedStyle = window.getComputedStyle(enText);
+                        const popupComputedStyle = window.getComputedStyle(popup);
+                        
+                        popup.setAttribute('data-english-width', popupComputedStyle.width);
+                        popup.setAttribute('data-english-height', popupComputedStyle.height);
+                        popup.setAttribute('data-english-text-height', enComputedStyle.height);
+                        popup.setAttribute('data-english-dimensions', 'true');
+                        
+                        // Apply fixed dimensions to maintain consistency
+                        popup.style.width = popupComputedStyle.width;
+                        popup.style.minWidth = popupComputedStyle.width;
+                        popup.style.height = popupComputedStyle.height;
+                        popup.style.minHeight = popupComputedStyle.height;
+                    }
+                });
+            }
+            
             // Add event listeners if not already added
             if (!popup.hasAttribute('data-listeners-added')) {
                 popup.addEventListener('mouseenter', () => {
@@ -87,6 +110,22 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                 return;
             }
             
+            // Store English dimensions on first toggle if not already stored
+            if (!popup.hasAttribute('data-english-dimensions')) {
+                const enComputedStyle = window.getComputedStyle(enText);
+                const popupComputedStyle = window.getComputedStyle(popup);
+                
+                popup.setAttribute('data-english-width', popupComputedStyle.width);
+                popup.setAttribute('data-english-height', popupComputedStyle.height);
+                popup.setAttribute('data-english-text-height', enComputedStyle.height);
+                popup.setAttribute('data-english-dimensions', 'true');
+                
+                // Apply fixed dimensions to maintain consistency
+                popup.style.width = popupComputedStyle.width;
+                popup.style.height = popupComputedStyle.height;
+                popup.style.minHeight = popupComputedStyle.height;
+            }
+            
             if (enText.classList.contains('active')) {
                 // Switch to Chinese
                 enText.classList.remove('active');
@@ -94,6 +133,13 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                 zhText.classList.remove('hidden');
                 zhText.classList.add('active');
                 toggleElement.textContent = '中';
+                
+                // Ensure Chinese text uses same dimensions as English
+                const storedHeight = popup.getAttribute('data-english-text-height');
+                if (storedHeight) {
+                    zhText.style.height = storedHeight;
+                    zhText.style.minHeight = storedHeight;
+                }
             } else {
                 // Switch to English
                 zhText.classList.remove('active');
@@ -101,6 +147,13 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                 enText.classList.remove('hidden');
                 enText.classList.add('active');
                 toggleElement.textContent = 'ENG';
+                
+                // Restore English text dimensions
+                const storedHeight = popup.getAttribute('data-english-text-height');
+                if (storedHeight) {
+                    enText.style.height = storedHeight;
+                    enText.style.minHeight = storedHeight;
+                }
             }
         }
 
@@ -571,7 +624,7 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             // If largeBlob is set to preferred or required, resident key must be required
             if (largeBlobReg && (largeBlobReg === 'preferred' || largeBlobReg === 'required')) {
                 if (residentKey !== 'required') {
-                    showStatus('advanced', 'LargeBlob extensions require resident key to be set to "Required"', 'error');
+                    showStatus('advanced', 'Resident key must be set to "Required" for largeBlob to be enabled. Please change the Resident Key setting to "Required" before proceeding.', 'error');
                     return false;
                 }
             }

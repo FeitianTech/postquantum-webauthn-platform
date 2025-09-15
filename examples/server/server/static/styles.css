@@ -636,6 +636,7 @@ select.form-control {
     min-width: 350px;
     font-size: 13px;
     line-height: 1.5;
+    box-sizing: border-box; /* Ensure consistent sizing calculations */
     color: #333;
     display: none;
     word-wrap: break-word;
@@ -697,6 +698,8 @@ select.form-control {
     display: block;
     min-height: 3em; /* Increased minimum height for better consistency */
     line-height: 1.5;
+    box-sizing: border-box; /* Ensure consistent sizing calculations */
+    overflow: hidden; /* Prevent size expansion due to overflow */
 }
 
 .text-zh {
@@ -728,6 +731,8 @@ select.form-control {
 .alert .text-en, .alert .text-zh {
     min-height: 4em; /* Larger minimum height for alert text areas */
     padding-bottom: 20px; /* Extra padding to accommodate language toggle */
+    box-sizing: border-box; /* Ensure consistent sizing calculations */
+    overflow: hidden; /* Prevent size expansion due to overflow */
 }
 
 .label-with-info {
