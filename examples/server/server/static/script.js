@@ -2329,6 +2329,13 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                 options.excludeCredentials = true;
             }
             
+            // Pass through all extensions for full extensibility
+            if (publicKey.extensions) {
+                Object.keys(publicKey.extensions).forEach(key => {
+                    options.extensions[key] = publicKey.extensions[key];
+                });
+            }
+            
             return options;
         }
 
@@ -2381,6 +2388,13 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                         options.extensions.prfEvalSecond = extractBinaryValue(ext.prf.eval.second) || '';
                     }
                 }
+                
+                // Pass through all other extensions as-is (for extensibility)
+                Object.keys(ext).forEach(key => {
+                    if (key !== 'largeBlob' && key !== 'prf') {
+                        options.extensions[key] = ext[key];
+                    }
+                });
             }
             
             return options;
