@@ -1,0 +1,67 @@
+# Version control
+.git
+.gitignore
+
+# Build artifacts
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Testing
+.pytest_cache/
+.tox/
+.coverage
+htmlcov/
+.nyc_output
+coverage/
+
+# Development
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Documentation
+docs/
+*.md
+*.adoc
+README*
+RELEASE*
+NEWS
+COPYING*
+
+# Example files not needed for deployment
+examples/
+tests/
+poetry.lock
+pyproject.toml
+examples/server/pyproject.toml
+examples/server/poetry.lock
+
+# Configuration files for local development
+.pre-commit-config.yaml
+.bandit
+.flake8
+mypy.ini
+oqs-install.sh
+
+# PDF files
+*.pdf
