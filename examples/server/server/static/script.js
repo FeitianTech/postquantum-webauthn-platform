@@ -1067,8 +1067,8 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
 
         // Reset functions
         function resetRegistrationForm() {
-            // Reset User Identity
-            document.getElementById('user-id').value = '';
+            // Reset User Identity - randomize userid but clear name fields
+            randomizeUserId();
             document.getElementById('user-name').value = '';
             document.getElementById('user-display-name').value = '';
             
@@ -1080,8 +1080,8 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             document.getElementById('exclude-credentials').checked = true;
             document.getElementById('fake-cred-length-reg').value = '128';
             
-            // Reset Other Options
-            document.getElementById('challenge-reg').value = '';
+            // Reset Other Options - randomize challenge
+            randomizeChallenge('reg');
             document.getElementById('timeout-reg').value = '90000';
             document.getElementById('param-eddsa').checked = true;
             document.getElementById('param-es256').checked = true;
@@ -1116,8 +1116,8 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             document.getElementById('allow-credentials').value = 'all';
             document.getElementById('fake-cred-length-auth').value = '256';
             
-            // Reset Other Options
-            document.getElementById('challenge-auth').value = '';
+            // Reset Other Options - randomize challenge
+            randomizeChallenge('auth');
             document.getElementById('timeout-auth').value = '90000';
             document.getElementById('hint-client-device-auth').checked = false;
             document.getElementById('hint-hybrid-auth').checked = false;
@@ -1967,6 +1967,9 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             window.currentBinaryFormat = 'hex';
             updateFieldLabels('hex');
             
+            // Initialize simple authentication with random username
+            document.getElementById('simple-email').value = generateRandom10DigitUsername();
+            
             // Initialize with default hex values as requested
             setTimeout(() => {
                 // Generate default hex values for userid, challenge, and largeblob write
@@ -2122,6 +2125,7 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
         window.randomizeLargeBlobWrite = randomizeLargeBlobWrite;
         window.resetRegistrationForm = resetRegistrationForm;
         window.resetAuthenticationForm = resetAuthenticationForm;
+        window.randomizeSimpleUsername = randomizeSimpleUsername;
         window.simpleRegister = simpleRegister;
         window.simpleAuthenticate = simpleAuthenticate;
         window.advancedRegister = advancedRegister;
@@ -2138,6 +2142,21 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
 
 
         // Simple Authentication Functions
+
+        // Generate a random 10-digit username with letters and numbers
+        function generateRandom10DigitUsername() {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+            let result = '';
+            for (let i = 0; i < 10; i++) {
+                result += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return result;
+        }
+
+        function randomizeSimpleUsername() {
+            const randomUsername = generateRandom10DigitUsername();
+            document.getElementById('simple-email').value = randomUsername;
+        }
 
 
         async function simpleDelete() {

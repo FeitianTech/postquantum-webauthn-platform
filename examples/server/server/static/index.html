@@ -30,7 +30,10 @@
 
                     <div class="form-group">
                         <label for="simple-email">Username</label>
-                        <input type="text" id="simple-email" class="form-control" placeholder="Enter username">
+                        <div class="input-with-button">
+                            <input type="text" id="simple-email" class="form-control" placeholder="Enter username">
+                            <button type="button" class="btn-randomize" onclick="randomizeSimpleUsername()" title="Generate random username">🔄</button>
+                        </div>
                     </div>
 
                     <div class="form-group">
@@ -605,15 +608,6 @@
                                             <option value="all">All credentials</option>
                                             <option value="empty">Empty (resident key only)</option>
                                         </select>
-                                        <div class="alert alert-info" style="margin-top: 0.5rem; font-size: 0.875rem; position: relative;">
-                                            <div class="language-toggle" onclick="toggleLanguage(this)" style="position: absolute; bottom: 8px; right: 8px; background: rgba(50, 95, 116, 0.8); color: white; border: none; border-radius: 4px; padding: 2px 6px; font-size: 10px; cursor: pointer; z-index: 1000;">ENG</div>
-                                            <div class="text-en active">
-                                                <strong>Note:</strong> When using "Empty (resident key only)", if multiple resident key credentials exist on your authenticator from previous registrations, you may still be prompted to select one. This is because web applications cannot delete credentials from authenticators directly. To test true discoverable credential authentication, you may need to reset your authenticator or use device-specific management tools to clear old credentials.
-                                            </div>
-                                            <div class="text-zh hidden">
-                                                <strong>注意：</strong> 当使用"Empty (resident key only)"时，如果您的认证器中存在来自先前注册的多个常驻密钥凭据，您可能仍会被提示选择一个。这是因为 Web 应用程序无法直接从认证器中删除凭据。要测试真正的可发现凭据身份验证，您可能需要重置认证器或使用设备特定的管理工具来清除旧凭据。
-                                            </div>
-                                        </div>
                                     </div>
                                     <div class="form-group">
                                         <div class="label-with-info">

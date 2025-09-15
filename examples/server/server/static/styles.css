@@ -426,6 +426,25 @@ body {
     font-size: 0.85rem;
 }
 
+.btn-randomize {
+    background: #6c757d;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 0.75rem;
+    font-size: 1rem;
+    cursor: pointer;
+    min-width: 45px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.3s;
+}
+
+.btn-randomize:hover {
+    background: #545b62;
+}
+
 .error-message {
     color: #dc3545;
     font-size: 0.8rem;
