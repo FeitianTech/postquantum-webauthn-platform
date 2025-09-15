@@ -1401,7 +1401,39 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             
             // Update extensions
             if (publicKey.extensions) {
+                // Handle credProps extension
+                if (publicKey.extensions.credProps) {
+                    document.getElementById('cred-props').checked = true;
+                }
+                
+                // Handle minPinLength extension
+                if (publicKey.extensions.minPinLength) {
+                    document.getElementById('min-pin-length').checked = true;
+                }
+                
+                // Handle credentialProtectionPolicy (new format) or credProtect (old format) extension
+                if (publicKey.extensions.credentialProtectionPolicy) {
+                    document.getElementById('cred-protect').value = publicKey.extensions.credentialProtectionPolicy;
+                    if (publicKey.extensions.enforceCredentialProtectionPolicy) {
+                        document.getElementById('enforce-cred-protect').checked = true;
+                    }
+                } else if (publicKey.extensions.credProtect) {
+                    // Backwards compatibility
+                    document.getElementById('cred-protect').value = publicKey.extensions.credProtect;
+                    if (publicKey.extensions.enforceCredProtect) {
+                        document.getElementById('enforce-cred-protect').checked = true;
+                    }
+                }
+                
+                // Handle largeBlob extension
+                if (publicKey.extensions.largeBlob && publicKey.extensions.largeBlob.support) {
+                    document.getElementById('large-blob-reg').value = publicKey.extensions.largeBlob.support;
+                }
+                
+                // Handle prf extension
                 if (publicKey.extensions.prf && publicKey.extensions.prf.eval) {
+                    document.getElementById('prf-reg').checked = true;
+                    
                     if (publicKey.extensions.prf.eval.first) {
                         let prfFirstValue = '';
                         if (publicKey.extensions.prf.eval.first.$base64) {
@@ -1617,7 +1649,11 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             if (authAttachment) publicKey.authenticatorSelection.authenticatorAttachment = authAttachment;
             
             const residentKey = document.getElementById('resident-key')?.value;
-            if (residentKey && residentKey !== 'discouraged') publicKey.authenticatorSelection.residentKey = residentKey;
+            if (residentKey && residentKey !== 'discouraged') {
+                publicKey.authenticatorSelection.residentKey = residentKey;
+                // Add requireResidentKey for compatibility with Yubico format
+                publicKey.authenticatorSelection.requireResidentKey = (residentKey === 'required');
+            }
             
             const userVerification = document.getElementById('user-verification-reg')?.value;
             if (userVerification) publicKey.authenticatorSelection.userVerification = userVerification;
@@ -1627,7 +1663,7 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                 publicKey.excludeCredentials = storedCredentials.map(cred => ({
                     type: "public-key",
                     id: {
-                        "$base64url": hexToBase64Url(cred.credentialId)
+                        "$base64": hexToBase64(cred.credentialId)
                     }
                 }));
             }
@@ -1638,9 +1674,9 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             
             const credProtect = document.getElementById('cred-protect')?.value;
             if (credProtect) {
-                publicKey.extensions.credProtect = credProtect;
+                publicKey.extensions.credentialProtectionPolicy = credProtect;
                 if (document.getElementById('enforce-cred-protect')?.checked) {
-                    publicKey.extensions.enforceCredProtect = true;
+                    publicKey.extensions.enforceCredentialProtectionPolicy = true;
                 }
             }
             
@@ -1697,7 +1733,7 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                 publicKey.allowCredentials = storedCredentials.map(cred => ({
                     type: "public-key",
                     id: {
-                        "$base64url": hexToBase64Url(cred.credentialId)
+                        "$base64": hexToBase64(cred.credentialId)
                     }
                 }));
             } else {
@@ -1707,7 +1743,7 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                     publicKey.allowCredentials = [{
                         type: "public-key",
                         id: {
-                            "$base64url": hexToBase64Url(selectedCred.credentialId)
+                            "$base64": hexToBase64(selectedCred.credentialId)
                         }
                     }];
                 } else {
@@ -1715,7 +1751,7 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                     publicKey.allowCredentials = storedCredentials.map(cred => ({
                         type: "public-key",
                         id: {
-                            "$base64url": hexToBase64Url(cred.credentialId)
+                            "$base64": hexToBase64(cred.credentialId)
                         }
                     }));
                 }
@@ -2273,9 +2309,9 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             
             const credProtect = document.getElementById('cred-protect')?.value;
             if (credProtect && credProtect !== '') {
-                options.extensions.credProtect = credProtect;
+                options.extensions.credentialProtectionPolicy = credProtect;
                 if (document.getElementById('enforce-cred-protect')?.checked) {
-                    options.extensions.enforceCredProtect = true;
+                    options.extensions.enforceCredentialProtectionPolicy = true;
                 }
             }
             
