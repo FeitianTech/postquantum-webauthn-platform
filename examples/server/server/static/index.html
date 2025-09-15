@@ -363,7 +363,13 @@
                                             </label>
                                             <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
                                                 <div class="info-popup">
-                                                    Request the Credential Properties (credProps) extension. This extension may report properties such as whether a discoverable or non-discoverable credential was created.
+                                                    <div class="language-toggle" onclick="toggleLanguage(this)">ENG</div>
+                                                    <div class="text-en active">
+                                                        Request the Credential Properties (credProps) extension. This extension may report properties such as whether a discoverable or non-discoverable credential was created.
+                                                    </div>
+                                                    <div class="text-zh hidden">
+                                                        请求凭据属性（credProps）扩展。此扩展可能报告属性，例如是否创建了可发现或不可发现的凭据。
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -375,7 +381,13 @@
                                             </label>
                                             <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
                                                 <div class="info-popup">
-                                                    Request the Minimum PIN Length Extension (minPinLength). This extension may report the authenticator's currently configured minimum PIN length if the Relying Party (RP) is authorized to receive this value.
+                                                    <div class="language-toggle" onclick="toggleLanguage(this)">ENG</div>
+                                                    <div class="text-en active">
+                                                        Request the Minimum PIN Length Extension (minPinLength). This extension may report the authenticator's currently configured minimum PIN length if the Relying Party (RP) is authorized to receive this value.
+                                                    </div>
+                                                    <div class="text-zh hidden">
+                                                        请求最小 PIN 长度扩展（minPinLength）。如果依赖方（RP）被授权接收此值，此扩展可能报告认证器当前配置的最小 PIN 长度。
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -414,8 +426,15 @@
                                             <label for="large-blob-reg">largeBlob</label>
                                             <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
                                                 <div class="info-popup">
-                                                    Request the Large blob storage (largeBlob) extension. This extension may be used to store arbitrary data with the credential.<br><br>
-                                                    If the authenticator supports the extension, an extension output of largeBlob: { supported: true } will be returned. Use the largeBlob extension during an authentication ceremony to read or write the BLOB value.
+                                                    <div class="language-toggle" onclick="toggleLanguage(this)">ENG</div>
+                                                    <div class="text-en active">
+                                                        Request the Large blob storage (largeBlob) extension. This extension may be used to store arbitrary data with the credential.<br><br>
+                                                        If the authenticator supports the extension, an extension output of largeBlob: { supported: true } will be returned. Use the largeBlob extension during an authentication ceremony to read or write the BLOB value.
+                                                    </div>
+                                                    <div class="text-zh hidden">
+                                                        请求大型 blob 存储（largeBlob）扩展。此扩展可用于在凭据中存储任意数据。<br><br>
+                                                        如果认证器支持此扩展，将返回 largeBlob: { supported: true } 的扩展输出。在身份验证仪式期间使用 largeBlob 扩展来读取或写入 BLOB 值。
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -432,9 +451,17 @@
                                             </label>
                                             <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
                                                 <div class="info-popup">
-                                                    Request the Pseudo-random function (prf) extension. This extension may be used to derive deterministically-random values to use as key material, for example.<br><br>
-                                                    With CTAP authenticators, this requires that the authenticator supports the hmac-secret extension.<br><br>
-                                                    Many authenticators support evaluating the PRF only in authentication ceremonies, in which case the PRF extension output is just prf: { enabled: true } without any PRF outputs. To evaluate the PRF, perform an authentication ceremony with the same PRF inputs.
+                                                    <div class="language-toggle" onclick="toggleLanguage(this)">ENG</div>
+                                                    <div class="text-en active">
+                                                        Request the Pseudo-random function (prf) extension. This extension may be used to derive deterministically-random values to use as key material, for example.<br><br>
+                                                        With CTAP authenticators, this requires that the authenticator supports the hmac-secret extension.<br><br>
+                                                        Many authenticators support evaluating the PRF only in authentication ceremonies, in which case the PRF extension output is just prf: { enabled: true } without any PRF outputs. To evaluate the PRF, perform an authentication ceremony with the same PRF inputs.
+                                                    </div>
+                                                    <div class="text-zh hidden">
+                                                        请求伪随机函数（prf）扩展。例如，此扩展可用于派生确定性随机值作为密钥材料。<br><br>
+                                                        对于 CTAP 认证器，这要求认证器支持 hmac-secret 扩展。<br><br>
+                                                        许多认证器仅支持在身份验证仪式中评估 PRF，在这种情况下，PRF 扩展输出只是 prf: { enabled: true }，没有任何 PRF 输出。要评估 PRF，请使用相同的 PRF 输入执行身份验证仪式。
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
