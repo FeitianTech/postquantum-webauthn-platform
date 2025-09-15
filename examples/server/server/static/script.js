@@ -2283,124 +2283,7 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             return options;
         }
 
-        // Transform CredentialCreationOptions from JSON editor format to backend format
-        async function transformCredentialCreationOptionsForBackend(parsedJson) {
-            const publicKey = parsedJson.publicKey;
-            
-            // Extract basic information
-            const options = {
-                username: publicKey.user.name || '',
-                displayName: publicKey.user.displayName || publicKey.user.name || '',
-                userId: extractBinaryValue(publicKey.user.id) || '',
-                attestation: publicKey.attestation || 'none',
-                userVerification: publicKey.authenticatorSelection?.userVerification || 'preferred',
-                authenticatorAttachment: publicKey.authenticatorSelection?.authenticatorAttachment || undefined,
-                residentKey: publicKey.authenticatorSelection?.residentKey || 'preferred',
-                challenge: extractBinaryValue(publicKey.challenge) || '',
-                timeout: publicKey.timeout || 90000,
-                
-                // Extract pubKeyCredParams
-                pubKeyCredParams: [],
-                
-                // Extract hints
-                hints: publicKey.hints || [],
-                
-                // Extract extensions
-                extensions: publicKey.extensions || {},
-                
-                // Handle excludeCredentials
-                excludeCredentials: false,
-                fakeCredLength: 0
-            };
-            
-            // Transform pubKeyCredParams from WebAuthn format to backend format
-            if (publicKey.pubKeyCredParams && Array.isArray(publicKey.pubKeyCredParams)) {
-                for (const param of publicKey.pubKeyCredParams) {
-                    if (param.alg === -7) options.pubKeyCredParams.push('ES256');
-                    else if (param.alg === -8) options.pubKeyCredParams.push('EdDSA');
-                    else if (param.alg === -257) options.pubKeyCredParams.push('RS256');
-                    else if (param.alg === -35) options.pubKeyCredParams.push('ES384');
-                    else if (param.alg === -36) options.pubKeyCredParams.push('ES512');
-                }
-            }
-            
-            // Handle excludeCredentials if present
-            if (publicKey.excludeCredentials && Array.isArray(publicKey.excludeCredentials)) {
-                options.excludeCredentials = true;
-            }
-            
-            // Pass through all extensions for full extensibility
-            if (publicKey.extensions) {
-                Object.keys(publicKey.extensions).forEach(key => {
-                    options.extensions[key] = publicKey.extensions[key];
-                });
-            }
-            
-            return options;
-        }
-
-        // Transform CredentialRequestOptions from JSON editor format to backend format  
-        async function transformCredentialRequestOptionsForBackend(parsedJson) {
-            const publicKey = parsedJson.publicKey;
-            
-            const options = {
-                userVerification: publicKey.userVerification || 'preferred',
-                allowCredentials: 'all', // Default
-                challenge: extractBinaryValue(publicKey.challenge) || '',
-                timeout: publicKey.timeout || 90000,
-                extensions: publicKey.extensions || {},
-                fakeCredLength: 0
-            };
-            
-            // Handle allowCredentials
-            if (!publicKey.allowCredentials || publicKey.allowCredentials.length === 0) {
-                options.allowCredentials = 'empty';
-            } else if (publicKey.allowCredentials.length === 1) {
-                // Single credential - extract its ID
-                const credId = extractBinaryValue(publicKey.allowCredentials[0].id);
-                if (credId) {
-                    options.specificCredentialId = credId;
-                    options.allowCredentials = credId;
-                }
-            }
-            
-            // Transform extensions if needed
-            if (publicKey.extensions) {
-                const ext = publicKey.extensions;
-                
-                // Handle largeBlob extension
-                if (ext.largeBlob) {
-                    if (ext.largeBlob.read) {
-                        options.extensions.largeBlob = 'read';
-                    } else if (ext.largeBlob.write) {
-                        options.extensions.largeBlob = 'write';
-                        options.extensions.largeBlobWrite = extractBinaryValue(ext.largeBlob.write) || '';
-                    }
-                }
-                
-                // Handle prf extension
-                if (ext.prf && ext.prf.eval) {
-                    options.extensions.prf = true;
-                    if (ext.prf.eval.first) {
-                        options.extensions.prfEvalFirst = extractBinaryValue(ext.prf.eval.first) || '';
-                    }
-                    if (ext.prf.eval.second) {
-                        options.extensions.prfEvalSecond = extractBinaryValue(ext.prf.eval.second) || '';
-                    }
-                }
-                
-                // Pass through all other extensions as-is (for extensibility)
-                Object.keys(ext).forEach(key => {
-                    if (key !== 'largeBlob' && key !== 'prf') {
-                        options.extensions[key] = ext[key];
-                    }
-                });
-            }
-            
-            return options;
-        }
-
-        // Helper function to extract binary values from various formats
+        // Helper function to extract binary values from various formats (for backward compatibility)
         function extractBinaryValue(value) {
             if (!value) return '';
             
@@ -2442,16 +2325,15 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                     throw new Error('Invalid CredentialCreationOptions: Missing required "challenge" property');
                 }
                 
-                // Transform JSON to backend-expected format
-                const options = await transformCredentialCreationOptionsForBackend(parsed);
-                
+                // Send the complete parsed JSON directly to backend - NO TRANSFORMATION
+                // This preserves all custom extensions and enables full extensibility
                 hideStatus('advanced');
                 showProgress('advanced', 'Starting advanced registration...');
 
                 const response = await fetch('/api/advanced/register/begin', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(options)
+                    body: JSON.stringify(parsed)  // Send complete JSON as-is
                 });
 
                 if (!response.ok) {
@@ -2462,7 +2344,7 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                 const json = await response.json();
                 const createOptions = parseCreationOptionsFromJSON(json);
 
-                // Track fake credential length from form
+                // Track fake credential length from form (for debugging info only)
                 window.lastFakeCredLength = parseInt(document.getElementById('fake-cred-length-reg').value) || 0;
                 
                 showProgress('advanced', 'Connecting your authenticator device...');
@@ -2475,7 +2357,7 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({
-                        ...options,
+                        credentialCreationOptions: parsed,  // Send original options
                         response: credential
                     }),
                 });
@@ -2528,16 +2410,15 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                     throw new Error('Invalid CredentialRequestOptions: Missing required "challenge" property');
                 }
                 
-                // Transform JSON to backend-expected format
-                const options = await transformCredentialRequestOptionsForBackend(parsed);
-
+                // Send the complete parsed JSON directly to backend - NO TRANSFORMATION
+                // This preserves all custom extensions and enables full extensibility
                 hideStatus('advanced');
                 showProgress('advanced', 'Detecting credentials...');
 
                 const response = await fetch('/api/advanced/authenticate/begin', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(options)
+                    body: JSON.stringify(parsed)  // Send complete JSON as-is
                 });
 
                 if (!response.ok) {
@@ -2551,12 +2432,7 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                 const json = await response.json();
                 const assertOptions = parseRequestOptionsFromJSON(json);
                 
-                // CRITICAL FIX: Ensure allowCredentials is completely omitted for resident key authentication
-                if (options.allowCredentials === 'empty' && assertOptions.allowCredentials !== undefined) {
-                    delete assertOptions.allowCredentials;
-                }
-
-                // Track fake credential length from form
+                // Track fake credential length from form (for debugging info only)
                 window.lastFakeCredLength = parseInt(document.getElementById('fake-cred-length-auth').value) || 0;
                 
                 showProgress('advanced', 'Connecting your authenticator device...');
@@ -2569,6 +2445,7 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({
+                        credentialRequestOptions: parsed,  // Send original options
                         response: assertion
                     }),
                 });
