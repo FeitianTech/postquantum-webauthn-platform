@@ -971,6 +971,47 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                         <div><strong>Fake credential ID length (requested):</strong> ${cred.properties.fakeCredentialIdLengthRequested !== undefined && cred.properties.fakeCredentialIdLengthRequested !== null ? cred.properties.fakeCredentialIdLengthRequested : 'N/A'}</div>
                         <div><strong>Hints sent:</strong> ${cred.properties.hintsSent && cred.properties.hintsSent.length > 0 ? JSON.stringify(cred.properties.hintsSent) : '[]'}</div>
                     </div>`;
+                
+                // Enhanced largeBlob debugging section
+                if (cred.properties.largeBlobRequested !== undefined || cred.properties.largeBlobClientOutput !== undefined) {
+                    detailsHtml += `
+                        <div style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid #dee2e6;">
+                            <div style="color: #325F74; font-weight: bold; margin-bottom: 0.3rem;">largeBlob Debug Information:</div>
+                            <div><strong>Requested:</strong> ${JSON.stringify(cred.properties.largeBlobRequested || {})}</div>
+                            <div><strong>Client output:</strong> ${JSON.stringify(cred.properties.largeBlobClientOutput || {})}</div>
+                            <div><strong>Resident key requested:</strong> ${cred.properties.residentKeyRequested || 'N/A'}</div>
+                            <div><strong>Resident key required:</strong> ${cred.properties.residentKeyRequired !== undefined ? cred.properties.residentKeyRequired : 'N/A'}</div>`;
+                    
+                    // Analysis of why largeBlob might not be working
+                    const largeBlobSupported = cred.properties.largeBlobClientOutput?.supported === true;
+                    const largeBlobRequested = cred.properties.largeBlobRequested?.support;
+                    const residentKeyRequired = cred.properties.residentKeyRequired;
+                    
+                    if (largeBlobRequested && !largeBlobSupported) {
+                        detailsHtml += `
+                            <div style="margin-top: 0.3rem; padding: 0.5rem; background-color: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px;">
+                                <div style="color: #856404; font-weight: bold;">largeBlob Analysis:</div>`;
+                        
+                        if (!residentKeyRequired) {
+                            detailsHtml += `<div style="color: #856404;">⚠️ Resident key must be "required" for largeBlob to work</div>`;
+                        }
+                        
+                        if (largeBlobRequested === 'required') {
+                            detailsHtml += `<div style="color: #856404;">❌ largeBlob "required" but authenticator doesn't support it</div>`;
+                        } else if (largeBlobRequested === 'preferred') {
+                            detailsHtml += `<div style="color: #856404;">ℹ️ largeBlob "preferred" but authenticator doesn't support it</div>`;
+                        }
+                        
+                        detailsHtml += `</div>`;
+                    } else if (largeBlobSupported) {
+                        detailsHtml += `
+                            <div style="margin-top: 0.3rem; padding: 0.5rem; background-color: #d4edda; border: 1px solid #c3e6cb; border-radius: 4px;">
+                                <div style="color: #155724;">✅ largeBlob is supported by this credential</div>
+                            </div>`;
+                    }
+                    
+                    detailsHtml += `</div>`;
+                }
             }
             
             detailsHtml += `

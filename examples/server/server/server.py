@@ -177,7 +177,12 @@ def register_complete():
             'excludeCredentialsUsed': False,   # Simple auth doesn't use exclude credentials
             'credentialIdLength': len(auth_data.credential_data.credential_id),
             'fakeCredentialIdLengthRequested': None,  # Simple auth doesn't use fake credentials
-            'hintsSent': []  # Simple auth doesn't use hints
+            'hintsSent': [],  # Simple auth doesn't use hints
+            # Enhanced largeBlob debugging information (simple auth defaults)
+            'largeBlobRequested': {},  # Simple auth doesn't use largeBlob
+            'largeBlobClientOutput': response.get('clientExtensionResults', {}).get('largeBlob', {}),
+            'residentKeyRequested': None,  # Simple auth defaults
+            'residentKeyRequired': False  # Simple auth defaults
         }
     }
     
@@ -651,6 +656,15 @@ def advanced_register_begin():
         extensions=processed_extensions if processed_extensions else None,
     )
     
+    # Debug logging for largeBlob extension
+    if "largeBlob" in processed_extensions:
+        print(f"[DEBUG] largeBlob extension sent to Fido2Server: {processed_extensions['largeBlob']}")
+        options_dict = dict(options)
+        if 'extensions' in options_dict.get('publicKey', {}):
+            print(f"[DEBUG] largeBlob extension in server response: {options_dict['publicKey'].get('extensions', {}).get('largeBlob')}")
+        else:
+            print(f"[DEBUG] No extensions in server response")
+    
     # Store state and original request for completion
     session["advanced_state"] = state
     session["advanced_original_request"] = data
@@ -690,6 +704,18 @@ def advanced_register_complete():
     try:
         # Complete registration using stored state
         auth_data = server.register_complete(session.pop("advanced_state"), response)
+        
+        # Debug logging for largeBlob extension results
+        client_extension_results = response.get('clientExtensionResults', {})
+        if 'largeBlob' in client_extension_results:
+            print(f"[DEBUG] largeBlob client extension results: {client_extension_results['largeBlob']}")
+        else:
+            print(f"[DEBUG] No largeBlob extension results in client response")
+            
+        if hasattr(auth_data, 'extensions'):
+            print(f"[DEBUG] Server auth_data extensions: {auth_data.extensions}")
+        else:
+            print(f"[DEBUG] No extensions in auth_data")
         
         # Helper function to extract binary values
         def extract_binary_value(value):
@@ -757,7 +783,12 @@ def advanced_register_complete():
                 'excludeCredentialsUsed': False,  # Successful registration means exclusion didn't trigger
                 'credentialIdLength': len(auth_data.credential_data.credential_id),
                 'fakeCredentialIdLengthRequested': None,  # Extract from original request if present
-                'hintsSent': public_key.get('hints', [])
+                'hintsSent': public_key.get('hints', []),
+                # Enhanced largeBlob debugging information
+                'largeBlobRequested': public_key.get('extensions', {}).get('largeBlob', {}),
+                'largeBlobClientOutput': response.get('clientExtensionResults', {}).get('largeBlob', {}),
+                'residentKeyRequested': public_key.get('authenticatorSelection', {}).get('residentKey'),
+                'residentKeyRequired': public_key.get('authenticatorSelection', {}).get('residentKey') == 'required'
             }
         }
         
