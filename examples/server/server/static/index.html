@@ -30,10 +30,7 @@
 
                     <div class="form-group">
                         <label for="simple-email">Username</label>
-                        <div class="input-with-button">
-                            <input type="text" id="simple-email" class="form-control" placeholder="Enter username">
-                            <button type="button" class="btn-randomize" onclick="randomizeSimpleUsername()" title="Generate random username">🔄</button>
-                        </div>
+                        <input type="text" id="simple-email" class="form-control" placeholder="Enter username">
                     </div>
 
                     <div class="form-group">
@@ -85,7 +82,10 @@
                                     </div>
                                     <div class="form-group">
                                         <label for="user-name">User Name</label>
-                                        <input type="text" id="user-name" class="form-control" placeholder="Enter username">
+                                        <div class="input-with-button">
+                                            <input type="text" id="user-name" class="form-control" placeholder="Enter username">
+                                            <button class="btn btn-small refresh-icon" onclick="randomizeUsername()" title="Generate new random username"></button>
+                                        </div>
                                     </div>
                                     <div class="form-group">
                                         <label for="user-display-name">Display Name</label>

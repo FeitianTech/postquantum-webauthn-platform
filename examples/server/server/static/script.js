@@ -1967,9 +1967,6 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             window.currentBinaryFormat = 'hex';
             updateFieldLabels('hex');
             
-            // Initialize simple authentication with random username
-            document.getElementById('simple-email').value = generateRandom10DigitUsername();
-            
             // Initialize with default hex values as requested
             setTimeout(() => {
                 // Generate default hex values for userid, challenge, and largeblob write
@@ -2125,7 +2122,7 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
         window.randomizeLargeBlobWrite = randomizeLargeBlobWrite;
         window.resetRegistrationForm = resetRegistrationForm;
         window.resetAuthenticationForm = resetAuthenticationForm;
-        window.randomizeSimpleUsername = randomizeSimpleUsername;
+        window.randomizeUsername = randomizeUsername;
         window.simpleRegister = simpleRegister;
         window.simpleAuthenticate = simpleAuthenticate;
         window.advancedRegister = advancedRegister;
@@ -2153,9 +2150,12 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             return result;
         }
 
-        function randomizeSimpleUsername() {
+        function randomizeUsername() {
             const randomUsername = generateRandom10DigitUsername();
-            document.getElementById('simple-email').value = randomUsername;
+            document.getElementById('user-name').value = randomUsername;
+            // Auto-update display name
+            document.getElementById('user-display-name').value = randomUsername;
+            updateJsonEditor();
         }
 
 
@@ -2200,11 +2200,14 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
 
         // Advanced Authentication Functions
         function getAdvancedCreateOptions() {
+            // Get current format for conversion
+            const currentFormat = getCurrentBinaryFormat();
+            
             // Collect basic user information
             const options = {
                 username: document.getElementById('user-name').value,
                 displayName: document.getElementById('user-display-name').value || document.getElementById('user-name').value,
-                userId: document.getElementById('user-id').value,
+                userId: convertFormat(document.getElementById('user-id').value, currentFormat, 'hex'),
                 
                 // Authenticator selection
                 attestation: document.getElementById('attestation').value,
@@ -2217,7 +2220,7 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                 fakeCredLength: parseInt(document.getElementById('fake-cred-length-reg').value) || 0,
                 
                 // Other options
-                challenge: document.getElementById('challenge-reg').value,
+                challenge: convertFormat(document.getElementById('challenge-reg').value, currentFormat, 'hex'),
                 timeout: parseInt(document.getElementById('timeout-reg').value) || 90000,
                 
                 // Public key credential parameters
@@ -2271,8 +2274,8 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                 options.extensions.prf = true;
                 const prfFirst = document.getElementById('prf-eval-first-reg')?.value;
                 const prfSecond = document.getElementById('prf-eval-second-reg')?.value;
-                if (prfFirst) options.extensions.prfEvalFirst = prfFirst;
-                if (prfSecond) options.extensions.prfEvalSecond = prfSecond;
+                if (prfFirst) options.extensions.prfEvalFirst = convertFormat(prfFirst, currentFormat, 'hex');
+                if (prfSecond) options.extensions.prfEvalSecond = convertFormat(prfSecond, currentFormat, 'hex');
             }
             
             return options;
@@ -2280,12 +2283,13 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
 
         function getAdvancedAssertOptions() {
             const allowCreds = document.getElementById('allow-credentials').value;
+            const currentFormat = getCurrentBinaryFormat();
             
             const options = {
                 userVerification: document.getElementById('user-verification-auth').value,
                 allowCredentials: allowCreds,
                 fakeCredLength: parseInt(document.getElementById('fake-cred-length-auth').value) || 0,
-                challenge: document.getElementById('challenge-auth').value,
+                challenge: convertFormat(document.getElementById('challenge-auth').value, currentFormat, 'hex'),
                 timeout: parseInt(document.getElementById('timeout-auth').value) || 90000,
                 extensions: {}
             };
@@ -2303,7 +2307,7 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                 if (largeBlob === 'write') {
                     const largeBlobWrite = document.getElementById('large-blob-write')?.value;
                     if (largeBlobWrite) {
-                        options.extensions.largeBlobWrite = largeBlobWrite;
+                        options.extensions.largeBlobWrite = convertFormat(largeBlobWrite, currentFormat, 'hex');
                     }
                 }
             }
@@ -2313,8 +2317,8 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             const prfSecond = document.getElementById('prf-eval-second-auth')?.value;
             if (prfFirst || prfSecond) {
                 options.extensions.prf = true;
-                if (prfFirst) options.extensions.prfEvalFirst = prfFirst;
-                if (prfSecond) options.extensions.prfEvalSecond = prfSecond;
+                if (prfFirst) options.extensions.prfEvalFirst = convertFormat(prfFirst, currentFormat, 'hex');
+                if (prfSecond) options.extensions.prfEvalSecond = convertFormat(prfSecond, currentFormat, 'hex');
             }
             
             return options;
