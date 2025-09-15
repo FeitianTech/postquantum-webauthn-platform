@@ -1067,10 +1067,11 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
 
         // Reset functions
         function resetRegistrationForm() {
-            // Reset User Identity - randomize userid but clear name fields
+            // Reset User Identity - randomize userid and username fields
             randomizeUserId();
-            document.getElementById('user-name').value = '';
-            document.getElementById('user-display-name').value = '';
+            const randomUsername = generateRandom10DigitUsername();
+            document.getElementById('user-name').value = randomUsername;
+            document.getElementById('user-display-name').value = randomUsername;
             
             // Reset Authenticator Selection
             document.getElementById('authenticator-attachment').value = '';
@@ -1971,8 +1972,10 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             setTimeout(() => {
                 // Generate default hex values for userid, challenge, and largeblob write
                 document.getElementById('user-id').value = generateRandomHex(32);
-                document.getElementById('user-name').value = '';
-                document.getElementById('user-display-name').value = '';
+                // Generate random username by default
+                const randomUsername = generateRandom10DigitUsername();
+                document.getElementById('user-name').value = randomUsername;
+                document.getElementById('user-display-name').value = randomUsername;
                 document.getElementById('challenge-reg').value = generateRandomHex(32);
                 document.getElementById('challenge-auth').value = generateRandomHex(32);
                 document.getElementById('large-blob-write').value = generateRandomHex(32);
