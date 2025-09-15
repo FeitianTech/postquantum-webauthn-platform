@@ -1,17 +1,37 @@
 {
   "version": 2,
-  "builds": [
-    { "src": "examples/server/server/static/**/*", "use": "@vercel/static" },
-    { "src": "api/server.py", "use": "@vercel/python" }
-  ],
-  "routes": [
-    { "src": "/api/(.*)", "dest": "api/server.py" },
-    { "src": "/(.*)", "dest": "examples/server/server/static/$1" },
-    { "src": "/", "dest": "examples/server/server/static/index.html" }
-  ],
   "functions": {
-    "api/server.py": {
+    "api/index.py": {
       "maxDuration": 30
     }
-  }
+  },
+  "rewrites": [
+    {
+      "source": "/static/(.*)",
+      "destination": "/public/$1"
+    },
+    {
+      "source": "/",
+      "destination": "/api/index.py"
+    },
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/index.py"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/api/index.py"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        }
+      ]
+    }
+  ]
 }
