@@ -237,3 +237,6 @@ Running on http://localhost:5000/
 ```
 
 By clicking on the localhost link, the test app will be launched in a browser tab. 
+
+
+#### Note: Credentials are saved in your local repository's examples/server/server as pkl files, deleting credentials in the test app will also delete the corresponding pkl file in your local path. 
