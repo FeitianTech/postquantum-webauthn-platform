@@ -3,8 +3,7 @@
   "functions": {
     "api/index.py": {
       "runtime": "python@3.9",
-      "maxDuration": 30,
-      "maxLambdaSize": "50mb"
+      "maxDuration": 30
     }
   },
   "routes": [
