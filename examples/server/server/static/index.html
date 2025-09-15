@@ -9,7 +9,7 @@
 <body>
     <div class="header">
         <h1>WebAuthn FIDO2 Test Application</h1>
-        <p>Complete testing suite for WebAuthn authentication with simple and advanced options</p>
+        <p>Complete Testing Suite for WebAuthn Authentication with FIDO2 and PQC</p>
     </div>
 
     <div class="container">
@@ -24,7 +24,6 @@
             <div id="simple-tab" class="tab-content active">
                 <div class="section">
                     <h2>Simple Authentication</h2>
-                    <p>Basic WebAuthn operations with minimal configuration - same functionality as the original demo.</p>
                     
                     <div class="status" id="simple-status"></div>
 
@@ -49,8 +48,6 @@
             <div id="advanced-tab" class="tab-content">
                 <div class="section">
                     <h2>Advanced Authentication</h2>
-                    <p>Comprehensive WebAuthn configuration with full control over registration and assertion options.</p>
-                    
                     <div class="status" id="advanced-status"></div>
 
                     <!-- Sub-tabs for Registration and Authentication -->
@@ -112,8 +109,8 @@
                                                         If unspecified (the default), either kind of authenticator is allowed.
                                                     </div>
                                                     <div class="text-zh hidden">
-                                                        选择是使用集成到客户端平台的认证器（"platform"）还是外部设备（"cross-platform"）。<br><br>
-                                                        如果未指定（默认），则允许任何类型的认证器。
+                                                        选择使用客户端平台的认证器（"platform"）还是外部设备（"cross-platform"）。<br><br>
+                                                        如果未指定（默认选项），则允许任何类型的认证器。
                                                     </div>
                                                 </div>
                                             </div>
@@ -135,8 +132,8 @@
                                                         If "discouraged", a non-resident key will be created if possible. If "preferred", a resident key will be created if possible. If "required", a resident key will be created and the user is shown an error if this fails. If unspecified, the default is "discouraged".
                                                     </div>
                                                     <div class="text-zh hidden">
-                                                        常驻密钥可用于"无用户名"身份验证，即使用空的 allowCredentials 参数。<br><br>
-                                                        如果设为"discouraged"，在可能的情况下将创建非常驻密钥。如果设为"preferred"，在可能的情况下将创建常驻密钥。如果设为"required"，将创建常驻密钥，失败时向用户显示错误。如果未指定，默认为"discouraged"。
+                                                        常驻密钥可用于“无用户名”身份验证，即使用空的 allowCredentials 参数。<br><br>
+                                                        如果设为"discouraged"，在可能的情况下将创建非常驻密钥。如果设为"preferred"，在可能的情况下将创建常驻密钥。如果设为"required"，将创建常驻密钥，失败时向用户显示错误。如果未指定（选择unspecified），将默认为"discouraged"。
                                                     </div>
                                                 </div>
                                             </div>
@@ -160,7 +157,7 @@
                                                     </div>
                                                     <div class="text-zh hidden">
                                                         选择是否应使用用户验证（UV），例如 PIN 或生物识别。<br><br>
-                                                        如果设为"discouraged"，在可能的情况下不会使用 UV。如果设为"preferred"，在可能的情况下会使用 UV。如果设为"required"，会使用 UV，失败时向用户显示错误。如果未指定，默认为"preferred"。
+                                                        如果设为"discouraged"，在可能的情况下不会使用 UV。如果设为"preferred"，在可能的情况下会使用 UV。如果设为"required"，会使用 UV，失败时向用户显示错误。如果未指定（选择unspecified），默认为"preferred"。
                                                     </div>
                                                 </div>
                                             </div>
@@ -184,7 +181,7 @@
                                                     </div>
                                                     <div class="text-zh hidden">
                                                         选择依赖方（RP）是否需要认证器证明。证明是一种证明使用何种认证器的方式。<br><br>
-                                                        如果选择"none"，将不返回认证器证明。如果选择"indirect"，在可能的情况下会返回某种证明，但可能被证明代理匿名化。如果选择"direct"，将返回认证器的原始证明（如果有）。如果选择"enterprise"，请求认证器产生个别标识证明。如果未指定，默认为"none"。
+                                                        如果选择"none"，将不返回认证器证明。如果选择"indirect"，在可能的情况下会返回某种证明，但可能被证明代理匿名化。如果选择"direct"，将返回认证器的原始证明（如果有）。如果选择"enterprise"，请求认证器产生个别标识证明。如果未指定（选择unspecified），则默认为"none"。
                                                     </div>
                                                 </div>
                                             </div>
@@ -225,7 +222,7 @@
                                                         Add a random credential ID of the given length to excludeCredentials. May be useful for testing edge cases and conformance.
                                                     </div>
                                                     <div class="text-zh hidden">
-                                                        向 excludeCredentials 添加指定长度的随机凭据 ID。可能对测试边界情况和一致性有用。
+                                                        向 excludeCredentials 添加指定长度的随机凭据 ID。可能对测试个别情况和一致性有用。
                                                     </div>
                                                 </div>
                                             </div>
@@ -273,7 +270,7 @@
                                                         How long the Relying Party (RP) is willing to wait for the registration ceremony to complete. If the registration ceremony takes longer than this (or the adjusted value, in case the client overrides it), the ceremony will be aborted with a timeout message shown to the user. This may be silently overridden by the client.
                                                     </div>
                                                     <div class="text-zh hidden">
-                                                        依赖方（RP）愿意等待注册仪式完成的时间。如果注册仪式超过此时间（或客户端覆盖的调整值），仪式将被中止并向用户显示超时消息。客户端可能会静默覆盖此设置。
+                                                        依赖方（RP）等待注册完成的时间。如果注册仪式超过此时间，注册将被中止并向用户显示超时消息。客户端可能会覆盖此设置。
                                                     </div>
                                                 </div>
                                             </div>
@@ -461,7 +458,7 @@
                                                         If the authenticator supports the extension, an extension output of largeBlob: { supported: true } will be returned. Use the largeBlob extension during an authentication ceremony to read or write the BLOB value.
                                                     </div>
                                                     <div class="text-zh hidden">
-                                                        请求大型 blob 存储（largeBlob）扩展。此扩展可用于在凭据中存储任意数据。<br><br>
+                                                        请求Large blob 存储（largeBlob）扩展。此扩展可用于在凭据中存储任意数据。<br><br>
                                                         如果认证器支持此扩展，将返回 largeBlob: { supported: true } 的扩展输出。在身份验证仪式期间使用 largeBlob 扩展来读取或写入 BLOB 值。
                                                     </div>
                                                 </div>
@@ -571,7 +568,7 @@
                                                     </div>
                                                     <div class="text-zh hidden">
                                                         选择是否应使用用户验证（UV），例如 PIN 或生物识别。<br><br>
-                                                        如果设为"discouraged"，在可能的情况下不会使用 UV。如果设为"preferred"，在可能的情况下会使用 UV。如果设为"required"，将使用 UV，失败时向用户显示错误。如果未指定，默认为"preferred"。
+                                                        如果设为"discouraged"，在可能的情况下不会使用 UV。如果设为"preferred"，在可能的情况下会使用 UV。如果设为"required"，将使用 UV，失败时向用户显示错误。如果未指定（选择unspecified），默认为"preferred"。
                                                     </div>
                                                 </div>
                                             </div>
@@ -667,7 +664,7 @@
                                                         How long the Relying Party (RP) is willing to wait for the authentication ceremony to complete. If the authentication ceremony takes longer than this (or the adjusted value, in case the client overrides it), the ceremony will be aborted with a timeout message shown to the user. This may be silently overridden by the client.
                                                     </div>
                                                     <div class="text-zh hidden">
-                                                        依赖方（RP）愿意等待身份验证仪式完成的时间。如果身份验证仪式时间超过此值（或调整后的值，如果客户端覆盖），仪式将被中止，并向用户显示超时消息。这可能会被客户端静默覆盖。
+                                                        依赖方（RP）等待身份验证完成的时间。如果身份验证时间超过此值，验证过程将被中止，并向用户显示超时消息。时间数值可能会被客户端静默覆盖。
                                                     </div>
                                                 </div>
                                             </div>
@@ -729,7 +726,7 @@
                                                         If the client does not support the extension, no largeBlob output will be present.
                                                     </div>
                                                     <div class="text-zh hidden">
-                                                        请求大型 blob 存储（largeBlob）扩展。此扩展可用于与凭据一起存储任意数据。<br><br>
+                                                        请求Large blob 存储（largeBlob）扩展。此扩展可用于与凭据一起存储任意数据。<br><br>
                                                         如果设置为"read"，如果客户端和认证器都支持该扩展且认证器包含匹配的 BLOB 值，输出将为 largeBlob: { blob: ArrayBuffer }。否则，如果客户端支持该扩展，输出将为 largeBlob: {}。<br><br>
                                                         如果设置为"write"，如果 BLOB 成功写入认证器，输出将为 largeBlob: { written: true }，否则如果客户端支持该扩展，将为 largeBlob: { written: false }。<br><br>
                                                         如果客户端不支持该扩展，将不存在 largeBlob 输出。
@@ -847,7 +844,7 @@
                             <h3>Saved Credentials</h3>
                             <div class="credentials-panel">
                                 <div id="credentials-list">
-                                    <p style="color: #6c757d; font-style: italic;">No credentials registered yet.</p>
+                                    <p style="color: #6c757d;">No credentials registered yet.</p>
                                 </div>
                             </div>
                         </div>
@@ -864,17 +861,14 @@
             <div id="decoder-tab" class="tab-content">
                 <div class="section">
                     <h2>WebAuthn Response Decoder</h2>
-                    <p>Decode and analyze WebAuthn authentication responses, credential data, and attestation objects.</p>
-                    
                     <div class="status" id="decoder-status"></div>
 
                     <div class="form-group">
-                        <label for="decoder-input">Paste WebAuthn Response JSON</label>
-                        <textarea id="decoder-input" class="form-control" rows="10" placeholder="Paste your WebAuthn registration or authentication response here..."></textarea>
+                        <textarea id="decoder-input" class="form-control" rows="10" placeholder="Paste something here to decode..."></textarea>
                     </div>
 
                     <div class="form-group">
-                        <button class="btn" onclick="decodeResponse()">Decode Response</button>
+                        <button class="btn" onclick="decodeResponse()">Decode</button>
                         <button class="btn btn-secondary" onclick="clearDecoder()">Clear</button>
                     </div>
 

@@ -834,7 +834,7 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             const credentialsList = document.getElementById('credentials-list');
             
             if (storedCredentials.length === 0) {
-                credentialsList.innerHTML = '<p style="color: #6c757d; font-style: italic;">No credentials registered yet.</p>';
+                credentialsList.innerHTML = '<p style="color: #6c757d; font-style: normal;">No credentials registered yet.</p>';
                 checkLargeBlobCapability(); // Check capability when no credentials
                 updateAllowCredentialsDropdown(); // Update dropdown when no credentials
                 return;
@@ -1049,10 +1049,7 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                     
                     // Show success message with important note about authenticator credentials
                     showStatus('advanced', 
-                        'Credential deleted from server successfully! ' +
-                        'Note: This only removes the credential from our application. ' +
-                        'The credential remains on your authenticator device and may still appear during resident key authentication. ' +
-                        'To fully remove credentials, you may need to reset your authenticator or use device-specific management tools.', 
+                        'Credential deleted from server successfully! ',
                         'success'
                     );
                 } else {
@@ -1739,7 +1736,7 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
         async function simpleRegister() {
             const email = document.getElementById('simple-email').value;
             if (!email) {
-                showStatus('simple', 'Please enter an email address', 'error');
+                showStatus('simple', 'Please enter a username.', 'error');
                 return;
             }
 
@@ -1813,7 +1810,7 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
         async function simpleAuthenticate() {
             const email = document.getElementById('simple-email').value;
             if (!email) {
-                showStatus('simple', 'Please enter an email address', 'error');
+                showStatus('simple', 'Please enter a username. ', 'error');
                 return;
             }
 
@@ -1894,7 +1891,7 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             const list = document.getElementById('credentials-list');
             
             if (storedCredentials.length === 0) {
-                list.innerHTML = '<p style="color: #6c757d; font-style: italic;">No credentials registered yet.</p>';
+                list.innerHTML = '<p style="color: #6c757d; font-style: normal">No credentials registered yet.</p>';
                 return;
             }
 
@@ -2160,48 +2157,7 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             document.getElementById('user-display-name').value = randomUsername;
             updateJsonEditor();
         }
-
-
-        async function simpleDelete() {
-            const email = document.getElementById('simple-email').value;
-            if (!email) {
-                showStatus('simple', 'Please enter an email address', 'error');
-                return;
-            }
-
-            if (!confirm(`Are you sure you want to delete all credentials for ${email}?`)) {
-                return;
-            }
-
-            try {
-                hideStatus('simple');
-                showProgress('simple', 'Deleting credentials...');
-
-                const result = await fetch('/api/deletepub', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({"email": email}),
-                });
-
-                if (result.ok) {
-                    showStatus('simple', 
-                        'Credentials deleted from server successfully! ' +
-                        'Note: This only removes credentials from our application. ' +
-                        'Resident key credentials remain on your authenticator device. ' +
-                        'To fully remove credentials, you may need to reset your authenticator.', 
-                        'success'
-                    );
-                } else {
-                    throw new Error('Deletion failed');
-                }
-            } catch (error) {
-                showStatus('simple', `Deletion failed: ${error.message}`, 'error');
-            } finally {
-                hideProgress('simple');
-            }
-        }
-
-        // Advanced Authentication Functions
+// Advanced Authentication Functions
         function getAdvancedCreateOptions() {
             // Get current format for conversion
             const currentFormat = getCurrentBinaryFormat();
@@ -2348,8 +2304,17 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
 
             const options = getAdvancedCreateOptions();
             if (!options.username) {
-                showStatus('advanced', 'Please enter a username', 'error');
+                showStatus('advanced', 'Please generate or enter a username. ', 'error');
                 return;
+            }
+
+            if (!options.userId) {
+                showStatus('advanced', 'Please generate or enter a user ID. ', 'error');
+                return;
+            }
+
+            if (!options.challenge) {
+                showStatus('advanced', 'Please generate or enter a challenge. ', 'error');
             }
 
             try {
@@ -2412,7 +2377,7 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                     errorMessage = 'Security error - check your connection and try again';
                 }
                 
-                showStatus('advanced', `Advanced registration failed: ${errorMessage}`, 'error');
+                showStatus('advanced', `Credential registration failed: ${errorMessage}`, 'error');
             } finally {
                 hideProgress('advanced');
             }
@@ -2518,47 +2483,7 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                 hideProgress('advanced');
             }
         }
-
-        async function advancedDelete() {
-            const username = document.getElementById('user-name').value;
-            if (!username) {
-                showStatus('advanced', 'Please enter a username', 'error');
-                return;
-            }
-
-            if (!confirm(`Are you sure you want to delete all credentials for ${username}?`)) {
-                return;
-            }
-
-            try {
-                hideStatus('advanced');
-                showProgress('advanced', 'Deleting credentials...');
-
-                const result = await fetch('/api/deletepub', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({"username": username}),
-                });
-
-                if (result.ok) {
-                    showStatus('advanced', 
-                        'Credentials deleted from server successfully! ' +
-                        'Note: This only removes credentials from our application. ' +
-                        'Resident key credentials remain on your authenticator device. ' +
-                        'To fully remove credentials, you may need to reset your authenticator.', 
-                        'success'
-                    );
-                } else {
-                    throw new Error('Deletion failed');
-                }
-            } catch (error) {
-                showStatus('advanced', `Deletion failed: ${error.message}`, 'error');
-            } finally {
-                hideProgress('advanced');
-            }
-        }
-
-        // JSON Editor Functions
+// JSON Editor Functions
         function editCreateOptions() {
             const options = getAdvancedCreateOptions();
             currentJsonMode = 'create';
@@ -2621,7 +2546,7 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             
             const inputValue = input.value;
             if (!inputValue.trim()) {
-                showStatus('decoder', 'Please paste a WebAuthn response to decode', 'error');
+                showStatus('decoder', 'Decoder is empty. Please paste something to decode. ', 'error');
                 return;
             }
 
