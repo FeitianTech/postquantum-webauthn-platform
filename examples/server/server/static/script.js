@@ -2309,7 +2309,13 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             const isLargeBlobValid = validateLargeBlobWriteInput();
             const isLargeBlobDependencyValid = validateLargeBlobDependency();
             
-            if (!isUserIdValid || !isChallengeValid || !isPrfValid || !isLargeBlobValid || !isLargeBlobDependencyValid) {
+            // Check for specific largeblob dependency error first to provide helpful message
+            if (!isLargeBlobDependencyValid) {
+                // The validateLargeBlobDependency function already shows the specific message
+                return;
+            }
+            
+            if (!isUserIdValid || !isChallengeValid || !isPrfValid || !isLargeBlobValid) {
                 showStatus('advanced', 'Please fix the validation errors above', 'error');
                 return;
             }
