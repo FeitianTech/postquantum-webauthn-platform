@@ -2353,12 +2353,15 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                 
                 showProgress('advanced', 'Completing registration...');
 
+                // Send the complete JSON editor content as primary source of truth
+                // The entire JSON editor content is spread as the main request object
+                // Only the credential response is added as a special field
                 const result = await fetch('/api/advanced/register/complete', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({
-                        credentialCreationOptions: parsed,  // Send original options
-                        response: credential
+                        ...parsed,  // Spread the complete JSON editor content as primary data
+                        __credential_response: credential  // Add credential response with special key
                     }),
                 });
 
@@ -2441,12 +2444,15 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                 
                 showProgress('advanced', 'Completing authentication...');
 
+                // Send the complete JSON editor content as primary source of truth
+                // The entire JSON editor content is spread as the main request object
+                // Only the assertion response is added as a special field
                 const result = await fetch('/api/advanced/authenticate/complete', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({
-                        credentialRequestOptions: parsed,  // Send original options
-                        response: assertion
+                        ...parsed,  // Spread the complete JSON editor content as primary data
+                        __assertion_response: assertion  // Add assertion response with special key
                     }),
                 });
 

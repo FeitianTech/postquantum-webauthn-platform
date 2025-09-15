@@ -643,29 +643,30 @@ def advanced_register_begin():
 @app.route("/api/advanced/register/complete", methods=["POST"])
 def advanced_register_complete():
     """
-    Complete registration using the credential response and original WebAuthn options.
+    Complete registration using the JSON editor content as primary source with credential response.
+    The complete JSON editor content is now sent as the main object structure.
     """
     data = request.json
-    response = data.get("response")
-    original_request = data.get("credentialCreationOptions")
     
+    # Extract credential response from special field
+    response = data.get("__credential_response")
     if not response:
         return jsonify({"error": "Credential response is required"}), 400
     
-    if not original_request or not original_request.get("publicKey"):
-        # Fallback to session stored request
-        original_request = session.get("advanced_original_request")
-        if not original_request:
-            return jsonify({"error": "Original request data not found"}), 400
+    # The rest of the data IS the original JSON editor content (primary source of truth)
+    original_request = {key: value for key, value in data.items() if not key.startswith("__")}
     
-    # Extract user information from the original request
+    if not original_request.get("publicKey"):
+        return jsonify({"error": "Invalid request: Missing publicKey in JSON editor content"}), 400
+    
+    # Extract user information from the JSON editor content
     public_key = original_request["publicKey"]
     user_info = public_key.get("user", {})
     username = user_info.get("name", "")
     display_name = user_info.get("displayName", username)
     
     if not username:
-        return jsonify({"error": "Username is required in original request"}), 400
+        return jsonify({"error": "Username is required in user.name"}), 400
     
     credentials = readkey(username)
     
@@ -686,7 +687,7 @@ def advanced_register_complete():
                     return base64.urlsafe_b64decode(value["$base64url"] + "==")
             return value
         
-        # Determine user handle from original request
+        # Determine user handle from JSON editor content
         user_id_value = user_info.get("id", "")
         if user_id_value:
             try:
@@ -937,20 +938,21 @@ def advanced_authenticate_begin():
 @app.route("/api/advanced/authenticate/complete", methods=["POST"])
 def advanced_authenticate_complete():
     """
-    Complete authentication using the assertion response and original WebAuthn options.
+    Complete authentication using the JSON editor content as primary source with assertion response.
+    The complete JSON editor content is now sent as the main object structure.
     """
     data = request.json
-    response = data.get("response")
-    original_request = data.get("credentialRequestOptions")
     
+    # Extract assertion response from special field
+    response = data.get("__assertion_response")
     if not response:
         return jsonify({"error": "Assertion response is required"}), 400
     
-    if not original_request:
-        # Fallback to session stored request
-        original_request = session.get("advanced_original_auth_request")
-        if not original_request:
-            return jsonify({"error": "Original request data not found"}), 400
+    # The rest of the data IS the original JSON editor content (primary source of truth)
+    original_request = {key: value for key, value in data.items() if not key.startswith("__")}
+    
+    if not original_request.get("publicKey"):
+        return jsonify({"error": "Invalid request: Missing publicKey in JSON editor content"}), 400
     
     # Get all credentials from all users to find the matching one
     all_credentials = []
