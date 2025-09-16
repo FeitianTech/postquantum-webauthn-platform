@@ -112,7 +112,18 @@ def register_begin():
 
     session["state"] = state
 
-    return jsonify(dict(options))
+    # For serverless environments, also provide state as a token
+    # that can be sent back by the client
+    import pickle
+    import base64
+    try:
+        state_token = base64.b64encode(pickle.dumps(state)).decode('ascii')
+        options_dict = dict(options)
+        options_dict["_stateToken"] = state_token
+        return jsonify(options_dict)
+    except Exception:
+        # Fallback to session-based approach
+        return jsonify(dict(options))
 
 @app.route("/api/register/complete", methods=["POST"])
 def register_complete():
@@ -120,14 +131,33 @@ def register_complete():
     credentials = readkey(uname)
     response = request.json
     
-    # Handle missing session state (common in serverless environments)
-    if "state" not in session:
+    # Try to get state from various sources (serverless-compatible)
+    state = None
+    
+    # First try: Check if state token is provided in the request
+    state_token = response.get("_stateToken") if response else None
+    if state_token:
+        try:
+            import pickle
+            import base64
+            state = pickle.loads(base64.b64decode(state_token.encode('ascii')))
+        except Exception as e:
+            return jsonify({
+                "error": f"Invalid state token: {str(e)}"
+            }), 400
+    
+    # Second try: Check session (for backward compatibility)
+    elif "state" in session:
+        state = session["state"]
+    
+    # If no state found, return error
+    if state is None:
         return jsonify({
-            "error": "Session state not found. In serverless environments, session state may not persist between requests. Please try the registration flow again or use the advanced registration which handles this differently."
+            "error": "Session state not found. In serverless environments, please ensure the state token from the begin response is included in the request as '_stateToken'."
         }), 400
     
     try:
-        auth_data = server.register_complete(session["state"], response)
+        auth_data = server.register_complete(state, response)
     except Exception as e:
         return jsonify({
             "error": f"Registration completion failed: {str(e)}"
@@ -248,7 +278,18 @@ def authenticate_begin():
     )
     session["state"] = state
 
-    return jsonify(dict(options))
+    # For serverless environments, also provide state as a token
+    # that can be sent back by the client
+    import pickle
+    import base64
+    try:
+        state_token = base64.b64encode(pickle.dumps(state)).decode('ascii')
+        options_dict = dict(options)
+        options_dict["_stateToken"] = state_token
+        return jsonify(options_dict)
+    except Exception:
+        # Fallback to session-based approach
+        return jsonify(dict(options))
 
 @app.route("/api/authenticate/complete", methods=["POST"])
 def authenticate_complete():
@@ -262,15 +303,34 @@ def authenticate_complete():
 
     response = request.json
     
-    # Handle missing session state (common in serverless environments)
-    if "state" not in session:
+    # Try to get state from various sources (serverless-compatible)
+    state = None
+    
+    # First try: Check if state token is provided in the request
+    state_token = response.get("_stateToken") if response else None
+    if state_token:
+        try:
+            import pickle
+            import base64
+            state = pickle.loads(base64.b64decode(state_token.encode('ascii')))
+        except Exception as e:
+            return jsonify({
+                "error": f"Invalid state token: {str(e)}"
+            }), 400
+    
+    # Second try: Check session (for backward compatibility)
+    elif "state" in session:
+        state = session.pop("state")
+    
+    # If no state found, return error
+    if state is None:
         return jsonify({
-            "error": "Session state not found. In serverless environments, session state may not persist between requests. Please try the authentication flow again or use the advanced authentication which handles this differently."
+            "error": "Session state not found. In serverless environments, please ensure the state token from the begin response is included in the request as '_stateToken'."
         }), 400
     
     try:
         server.authenticate_complete(
-            session.pop("state"),
+            state,
             credential_data_list,
             response,
         )
@@ -693,7 +753,18 @@ def advanced_register_begin():
     session["advanced_state"] = state
     session["advanced_original_request"] = data
     
-    return jsonify(dict(options))
+    # For serverless environments, also provide state as a token
+    # that can be sent back by the client
+    import pickle
+    import base64
+    try:
+        state_token = base64.b64encode(pickle.dumps(state)).decode('ascii')
+        options_dict = dict(options)
+        options_dict["_stateToken"] = state_token
+        return jsonify(options_dict)
+    except Exception:
+        # Fallback to session-based approach
+        return jsonify(dict(options))
 
 @app.route("/api/advanced/register/complete", methods=["POST"])
 def advanced_register_complete():
@@ -1019,7 +1090,18 @@ def advanced_authenticate_begin():
     session["advanced_auth_state"] = state
     session["advanced_original_auth_request"] = data
     
-    return jsonify(dict(options))
+    # For serverless environments, also provide state as a token
+    # that can be sent back by the client
+    import pickle
+    import base64
+    try:
+        state_token = base64.b64encode(pickle.dumps(state)).decode('ascii')
+        options_dict = dict(options)
+        options_dict["_stateToken"] = state_token
+        return jsonify(options_dict)
+    except Exception:
+        # Fallback to session-based approach
+        return jsonify(dict(options))
 
 @app.route("/api/advanced/authenticate/complete", methods=["POST"])
 def advanced_authenticate_complete():
@@ -1058,16 +1140,35 @@ def advanced_authenticate_complete():
     if not all_credentials:
         return jsonify({"error": "No credentials found"}), 404
     
-    # Handle missing session state (common in serverless environments)
-    if "advanced_auth_state" not in session:
+    # Try to get state from various sources (serverless-compatible)
+    state = None
+    
+    # First try: Check if state token is provided in the request
+    state_token = data.get("_stateToken") if data else None
+    if state_token:
+        try:
+            import pickle
+            import base64
+            state = pickle.loads(base64.b64decode(state_token.encode('ascii')))
+        except Exception as e:
+            return jsonify({
+                "error": f"Invalid state token: {str(e)}"
+            }), 400
+    
+    # Second try: Check session (for backward compatibility)
+    elif "advanced_auth_state" in session:
+        state = session.pop("advanced_auth_state")
+    
+    # If no state found, return error
+    if state is None:
         return jsonify({
-            "error": "Session state not found. In serverless environments, session state may not persist between requests. Please try refreshing the page and starting the authentication flow again."
+            "error": "Session state not found. In serverless environments, please ensure the state token from the begin response is included in the request as '_stateToken'."
         }), 400
     
     try:
         # Complete authentication using stored state
         auth_result = server.authenticate_complete(
-            session.pop("advanced_auth_state"),
+            state,
             all_credentials,
             response,
         )
