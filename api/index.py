@@ -41,15 +41,35 @@ class DynamicFido2Server:
         from flask import request, has_request_context
         
         if has_request_context():
-            # Try to get host from Vercel headers
+            # Try to get host from Vercel headers in order of preference
             host = (request.headers.get('X-Forwarded-Host') or 
                    request.headers.get('Host') or 
                    request.headers.get('X-Original-Host'))
             if host:
-                return host.split(':')[0]  # Remove port if present
+                # Remove port if present and clean the host
+                clean_host = host.split(':')[0].strip()
+                if clean_host and clean_host != 'localhost':
+                    return clean_host
         
-        # Fallback to environment variable or localhost
-        return os.environ.get('VERCEL_URL', 'localhost').replace('https://', '').replace('http://', '')
+        # Try environment variables that Vercel might set
+        vercel_url = os.environ.get('VERCEL_URL')
+        if vercel_url:
+            # Clean the URL - remove protocol and trailing paths
+            clean_url = vercel_url.replace('https://', '').replace('http://', '').split('/')[0].strip()
+            if clean_url and clean_url != 'localhost':
+                return clean_url
+        
+        # Check for other common environment variables
+        host_vars = ['VERCEL_PROJECT_PRODUCTION_URL', 'VERCEL_BRANCH_URL', 'VERCEL_DEPLOYMENT_URL']
+        for var in host_vars:
+            url = os.environ.get(var)
+            if url:
+                clean_url = url.replace('https://', '').replace('http://', '').split('/')[0].strip()
+                if clean_url and clean_url != 'localhost':
+                    return clean_url
+        
+        # Fallback to localhost for local development
+        return 'localhost'
     
     def _get_server(self):
         """Get Fido2Server instance with correct RP ID for current request"""
@@ -62,16 +82,32 @@ class DynamicFido2Server:
             
         return self._cached_server
     
+    @property
+    def rp(self):
+        """Get the RP entity from the current server instance"""
+        return self._get_server().rp
+    
     def __getattr__(self, name):
         """Delegate all calls to the dynamic server instance"""
-        return getattr(self._get_server(), name)
+        server_instance = self._get_server()
+        attr = getattr(server_instance, name)
+        
+        # If it's a method, we need to make sure it gets called with the right context
+        if callable(attr):
+            def wrapper(*args, **kwargs):
+                # Ensure we have the latest server instance in case host changed
+                current_server = self._get_server()
+                method = getattr(current_server, name)
+                return method(*args, **kwargs)
+            return wrapper
+        else:
+            return attr
 
 # Replace the global server variable with our dynamic wrapper
 import server.server as server_module
 server_module.server = DynamicFido2Server(server_module.server)
 
 # Override the basepath for credential storage to use /tmp in serverless environment
-import server.server as server_module
 server_module.basepath = os.environ.get('CREDENTIAL_STORAGE_PATH', '/tmp')
 
 # Override static file serving to use the public directory
