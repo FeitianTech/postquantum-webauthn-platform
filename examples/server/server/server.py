@@ -1055,7 +1055,7 @@ def main():
     # Note: using localhost without TLS, as some browsers do
     # not allow Webauthn in case of TLS certificate errors.
     # See https://lists.w3.org/Archives/Public/public-webauthn/2022Nov/0135.html
-    app.run(host="localhost", debug=False)
+    app.run(host="localhost", port=5000, ssl_context=("cert.pem", "key.pem"), debug=False)
 
 if __name__ == "__main__":
     main()
