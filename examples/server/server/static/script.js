@@ -1401,38 +1401,99 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             
             // Update extensions
             if (publicKey.extensions) {
-                if (publicKey.extensions.prf && publicKey.extensions.prf.eval) {
-                    if (publicKey.extensions.prf.eval.first) {
-                        let prfFirstValue = '';
-                        if (publicKey.extensions.prf.eval.first.$base64) {
-                            prfFirstValue = base64UrlToHex(publicKey.extensions.prf.eval.first.$base64);
-                        } else if (publicKey.extensions.prf.eval.first.$base64url) {
-                            prfFirstValue = base64UrlToHex(publicKey.extensions.prf.eval.first.$base64url);
-                        } else if (publicKey.extensions.prf.eval.first.$hex) {
-                            prfFirstValue = publicKey.extensions.prf.eval.first.$hex;
-                        } else if (typeof publicKey.extensions.prf.eval.first === 'string') {
-                            prfFirstValue = base64UrlToHex(publicKey.extensions.prf.eval.first);
+                // Reset all extension checkboxes first
+                document.getElementById('cred-props').checked = false;
+                document.getElementById('min-pin-length').checked = false;
+                document.getElementById('prf-reg').checked = false;
+                document.getElementById('cred-protect').value = '';
+                document.getElementById('enforce-cred-protect').checked = false;
+                document.getElementById('large-blob-reg').value = '';
+                
+                // Update based on JSON content
+                if (publicKey.extensions.credProps) {
+                    document.getElementById('cred-props').checked = true;
+                }
+                if (publicKey.extensions.minPinLength) {
+                    document.getElementById('min-pin-length').checked = true;
+                }
+                
+                // Handle both old and new parameter names for credProtect
+                if (publicKey.extensions.credentialProtectionPolicy || publicKey.extensions.credProtect) {
+                    const credProtectValue = publicKey.extensions.credentialProtectionPolicy || publicKey.extensions.credProtect;
+                    document.getElementById('cred-protect').value = credProtectValue;
+                }
+                
+                // Handle both old and new parameter names for enforceCredProtect
+                if (publicKey.extensions.enforceCredentialProtectionPolicy || publicKey.extensions.enforceCredProtect) {
+                    document.getElementById('enforce-cred-protect').checked = true;
+                }
+                
+                // Handle largeBlob extension
+                if (publicKey.extensions.largeBlob && publicKey.extensions.largeBlob.support) {
+                    document.getElementById('large-blob-reg').value = publicKey.extensions.largeBlob.support;
+                }
+                
+                // Handle prf extension
+                if (publicKey.extensions.prf) {
+                    document.getElementById('prf-reg').checked = true;
+                    
+                    if (publicKey.extensions.prf.eval) {
+                        if (publicKey.extensions.prf.eval.first) {
+                            let prfFirstValue = '';
+                            if (publicKey.extensions.prf.eval.first.$base64) {
+                                prfFirstValue = base64UrlToHex(publicKey.extensions.prf.eval.first.$base64);
+                            } else if (publicKey.extensions.prf.eval.first.$base64url) {
+                                prfFirstValue = base64UrlToHex(publicKey.extensions.prf.eval.first.$base64url);
+                            } else if (publicKey.extensions.prf.eval.first.$hex) {
+                                prfFirstValue = publicKey.extensions.prf.eval.first.$hex;
+                            } else if (typeof publicKey.extensions.prf.eval.first === 'string') {
+                                prfFirstValue = base64UrlToHex(publicKey.extensions.prf.eval.first);
+                            }
+                            if (prfFirstValue) {
+                                document.getElementById('prf-eval-first-reg').value = prfFirstValue;
+                            }
                         }
-                        if (prfFirstValue) {
-                            document.getElementById('prf-eval-first-reg').value = prfFirstValue;
-                        }
-                    }
-                    if (publicKey.extensions.prf.eval.second) {
-                        let prfSecondValue = '';
-                        if (publicKey.extensions.prf.eval.second.$base64) {
-                            prfSecondValue = base64UrlToHex(publicKey.extensions.prf.eval.second.$base64);
-                        } else if (publicKey.extensions.prf.eval.second.$base64url) {
-                            prfSecondValue = base64UrlToHex(publicKey.extensions.prf.eval.second.$base64url);
-                        } else if (publicKey.extensions.prf.eval.second.$hex) {
-                            prfSecondValue = publicKey.extensions.prf.eval.second.$hex;
-                        } else if (typeof publicKey.extensions.prf.eval.second === 'string') {
-                            prfSecondValue = base64UrlToHex(publicKey.extensions.prf.eval.second);
-                        }
-                        if (prfSecondValue) {
-                            document.getElementById('prf-eval-second-reg').value = prfSecondValue;
+                        if (publicKey.extensions.prf.eval.second) {
+                            let prfSecondValue = '';
+                            if (publicKey.extensions.prf.eval.second.$base64) {
+                                prfSecondValue = base64UrlToHex(publicKey.extensions.prf.eval.second.$base64);
+                            } else if (publicKey.extensions.prf.eval.second.$base64url) {
+                                prfSecondValue = base64UrlToHex(publicKey.extensions.prf.eval.second.$base64url);
+                            } else if (publicKey.extensions.prf.eval.second.$hex) {
+                                prfSecondValue = publicKey.extensions.prf.eval.second.$hex;
+                            } else if (typeof publicKey.extensions.prf.eval.second === 'string') {
+                                prfSecondValue = base64UrlToHex(publicKey.extensions.prf.eval.second);
+                            }
+                            if (prfSecondValue) {
+                                document.getElementById('prf-eval-second-reg').value = prfSecondValue;
+                            }
                         }
                     }
                 }
+            }
+            
+            // Update excludeCredentials checkbox
+            if (publicKey.excludeCredentials !== undefined) {
+                document.getElementById('exclude-credentials').checked = true;
+            }
+            
+            // Update hints checkboxes
+            if (publicKey.hints && Array.isArray(publicKey.hints)) {
+                // Reset all hint checkboxes first
+                document.getElementById('hint-client-device').checked = false;
+                document.getElementById('hint-hybrid').checked = false;
+                document.getElementById('hint-security-key').checked = false;
+                
+                // Set based on JSON content
+                publicKey.hints.forEach(hint => {
+                    if (hint === 'client-device') {
+                        document.getElementById('hint-client-device').checked = true;
+                    } else if (hint === 'hybrid') {
+                        document.getElementById('hint-hybrid').checked = true;
+                    } else if (hint === 'security-key') {
+                        document.getElementById('hint-security-key').checked = true;
+                    }
+                });
             }
         }
 
@@ -1560,6 +1621,22 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             return hexToBase64Url(hexValue);
         }
 
+        // Helper function to sort object properties alphabetically while preserving arrays
+        function sortObjectAlphabetically(obj) {
+            if (Array.isArray(obj)) {
+                // For arrays, preserve order but sort any objects within them
+                return obj.map(item => sortObjectAlphabetically(item));
+            } else if (obj !== null && typeof obj === 'object') {
+                // For objects, sort keys alphabetically
+                const sorted = {};
+                Object.keys(obj).sort().forEach(key => {
+                    sorted[key] = sortObjectAlphabetically(obj[key]);
+                });
+                return sorted;
+            }
+            return obj;
+        }
+
         // Get CredentialCreationOptions from form (WebAuthn standard format)
         function getCredentialCreationOptions() {
             const userId = document.getElementById('user-id')?.value || '';
@@ -1612,24 +1689,39 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                 publicKey.pubKeyCredParams.push({type: "public-key", alg: -65535}); // RS1
             }
 
-            // Authenticator selection
+            // Authenticator selection - always include residentKey and requireResidentKey
             const authAttachment = document.getElementById('authenticator-attachment')?.value;
             if (authAttachment) publicKey.authenticatorSelection.authenticatorAttachment = authAttachment;
             
-            const residentKey = document.getElementById('resident-key')?.value;
-            if (residentKey && residentKey !== 'discouraged') publicKey.authenticatorSelection.residentKey = residentKey;
+            const residentKey = document.getElementById('resident-key')?.value || 'discouraged';
+            // Always include residentKey parameter
+            publicKey.authenticatorSelection.residentKey = residentKey;
+            
+            // Always include requireResidentKey parameter
+            publicKey.authenticatorSelection.requireResidentKey = (residentKey === 'required');
             
             const userVerification = document.getElementById('user-verification-reg')?.value;
             if (userVerification) publicKey.authenticatorSelection.userVerification = userVerification;
 
-            // Exclude credentials
-            if (document.getElementById('exclude-credentials')?.checked && storedCredentials.length > 0) {
-                publicKey.excludeCredentials = storedCredentials.map(cred => ({
-                    type: "public-key",
-                    id: {
-                        "$base64url": hexToBase64Url(cred.credentialId)
-                    }
-                }));
+            // Exclude credentials - always include if checked, even if empty
+            if (document.getElementById('exclude-credentials')?.checked) {
+                if (storedCredentials.length > 0) {
+                    // Find credentials with the same user ID (username) as the current user
+                    const currentUserName = userName;
+                    const matchingCredentials = storedCredentials.filter(cred => 
+                        cred.email === currentUserName || cred.userName === currentUserName
+                    );
+                    
+                    publicKey.excludeCredentials = matchingCredentials.map(cred => ({
+                        type: "public-key",
+                        id: {
+                            "$hex": cred.credentialId
+                        }
+                    }));
+                } else {
+                    // Empty array if no credentials
+                    publicKey.excludeCredentials = [];
+                }
             }
 
             // Extensions
@@ -1638,9 +1730,9 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             
             const credProtect = document.getElementById('cred-protect')?.value;
             if (credProtect) {
-                publicKey.extensions.credProtect = credProtect;
+                publicKey.extensions.credentialProtectionPolicy = credProtect;
                 if (document.getElementById('enforce-cred-protect')?.checked) {
-                    publicKey.extensions.enforceCredProtect = true;
+                    publicKey.extensions.enforceCredentialProtectionPolicy = true;
                 }
             }
             
@@ -1669,7 +1761,8 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             if (document.getElementById('hint-security-key')?.checked) hints.push('security-key');
             if (hints.length > 0) publicKey.hints = hints;
 
-            return { publicKey };
+            // Apply alphabetical sorting to object properties while preserving arrays
+            return sortObjectAlphabetically({ publicKey });
         }
 
         // Get CredentialRequestOptions from form (WebAuthn standard format)
@@ -1756,7 +1849,8 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             if (document.getElementById('hint-security-key-auth')?.checked) hints.push('security-key');
             if (hints.length > 0) publicKey.hints = hints;
 
-            return { publicKey };
+            // Apply alphabetical sorting to object properties while preserving arrays
+            return sortObjectAlphabetically({ publicKey });
         }
 
         // Utility functions

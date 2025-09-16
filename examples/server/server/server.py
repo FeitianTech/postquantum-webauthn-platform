@@ -624,7 +624,8 @@ def advanced_register_begin():
             processed_extensions["credProps"] = bool(ext_value)
         elif ext_name == "minPinLength":
             processed_extensions["minPinLength"] = bool(ext_value)
-        elif ext_name == "credProtect":
+        elif ext_name == "credProtect" or ext_name == "credentialProtectionPolicy":
+            # Handle both old and new parameter names
             if isinstance(ext_value, str):
                 protect_map = {
                     "userVerificationOptional": 1,
@@ -634,7 +635,8 @@ def advanced_register_begin():
                 processed_extensions["credProtect"] = protect_map.get(ext_value, ext_value)
             else:
                 processed_extensions["credProtect"] = ext_value
-        elif ext_name == "enforceCredProtect":
+        elif ext_name == "enforceCredProtect" or ext_name == "enforceCredentialProtectionPolicy":
+            # Handle both old and new parameter names
             processed_extensions["enforceCredProtect"] = bool(ext_value)
         elif ext_name == "largeBlob":
             processed_extensions["largeBlob"] = ext_value
