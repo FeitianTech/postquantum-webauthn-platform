@@ -13,77 +13,23 @@ server_dir = os.path.join(project_root, 'examples', 'server')
 sys.path.insert(0, project_root)
 sys.path.insert(0, server_dir)
 
+# Set environment variable to indicate we're in Vercel
+os.environ['VERCEL'] = 'true'
+
 try:
-    # First, we need to patch the server module BEFORE importing it
-    # to avoid route conflicts
-    import server.server as server_module
-    from fido2.webauthn import PublicKeyCredentialRpEntity
-    from fido2.server import Fido2Server
-    from flask import request
-    
-    # Function to get the correct host for this deployment
-    def get_current_host():
-        try:
-            if request and hasattr(request, 'headers'):
-                host = (request.headers.get('X-Forwarded-Host') or 
-                        request.headers.get('Host'))
-                if host:
-                    return host.split(':')[0]
-        except:
-            pass
-        
-        # Fallback to environment or localhost
-        vercel_url = os.environ.get('VERCEL_URL', 'localhost')
-        if '://' in vercel_url:
-            vercel_url = vercel_url.split('://')[1]
-        return vercel_url.split('/')[0]
-    
-    # Create a dynamic server class that creates the right RP per request
-    class VercelFido2Server:
-        def __init__(self):
-            self._cached_server = None
-            self._cached_host = None
-        
-        def _get_server(self):
-            current_host = get_current_host()
-            if self._cached_server is None or self._cached_host != current_host:
-                rp = PublicKeyCredentialRpEntity(name="WebAuthn FIDO2 Test App", id=current_host)
-                self._cached_server = Fido2Server(rp)
-                self._cached_host = current_host
-            return self._cached_server
-        
-        def __getattr__(self, name):
-            return getattr(self._get_server(), name)
-        
-        @property
-        def rp(self):
-            return self._get_server().rp
-    
-    # Replace the server variable before importing the rest
-    server_module.server = VercelFido2Server()
-    
-    # Also update the RP
-    def get_dynamic_rp():
-        current_host = get_current_host()
-        return PublicKeyCredentialRpEntity(name="WebAuthn FIDO2 Test App", id=current_host)
-    
-    server_module.rp = get_dynamic_rp()
-    
-    # Now import all the functionality with our patched server
-    from server.server import *
-    from flask import request, jsonify, session, abort, send_from_directory
-    import time
+    # Import the Flask application
+    from server.server import app
+    from flask import send_from_directory
     
     # Configure app for Vercel serverless environment  
     app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'vercel-webauthn-secret-key')
-    
-    # Override the app secret key to ensure session consistency in serverless environment
     app.secret_key = app.config['SECRET_KEY']
     
-    # Override the basepath for credential storage
-    server_module.basepath = os.environ.get('CREDENTIAL_STORAGE_PATH', '/tmp')
+    # Override the basepath for credential storage in serverless environment
+    import server.server as server_module
+    server_module.basepath = '/tmp'
     
-    # Override static file serving
+    # Override static file serving for Vercel
     @app.route('/static/<path:filename>')
     def static_files_override(filename):
         """Serve static files from public directory for Vercel"""
@@ -95,23 +41,63 @@ except Exception as e:
     from flask import Flask, jsonify
     app = Flask(__name__)
     
-    @app.route('/<path:path>')
+    @app.route('/<path:path>', methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'])
     def error_handler(path):
         return jsonify({
             "error": f"Import error: {str(e)}",
-            "path": path
+            "path": path,
+            "method": request.method if 'request' in globals() else 'unknown',
+            "sys_path": sys.path[:3]  # Show first 3 paths for debugging
         }), 500
+
+# Add debugging route to understand what's happening
+@app.route('/api/debug', methods=['GET', 'POST', 'PUT', 'DELETE', 'PATCH'])
+def debug_endpoint():
+    """Debug endpoint to understand request handling"""
+    from flask import request, jsonify
+    return jsonify({
+        "method": request.method,
+        "path": request.path,
+        "args": dict(request.args),
+        "headers": dict(request.headers),
+        "content_type": request.content_type,
+        "data": request.get_data(as_text=True)[:200] if request.get_data() else None,
+        "available_routes": [str(rule) for rule in app.url_map.iter_rules()][:10],
+        "environment": "vercel" if os.environ.get('VERCEL') else "local"
+    })
+
+# Add explicit error handling for common routes
+@app.errorhandler(405)
+def method_not_allowed(error):
+    """Handle 405 Method Not Allowed errors"""
+    from flask import request, jsonify
+    return jsonify({
+        "error": "Method Not Allowed",
+        "method": request.method,
+        "path": request.path,
+        "allowed_methods": [method for method in ['GET', 'POST', 'PUT', 'DELETE'] if hasattr(error, 'allowed_methods')],
+        "message": "This endpoint might not support the requested HTTP method",
+        "suggestion": "Try using POST for registration/authentication endpoints"
+    }), 405
+
+@app.errorhandler(404)
+def not_found(error):
+    """Handle 404 Not Found errors"""
+    from flask import request, jsonify
+    return jsonify({
+        "error": "Not Found",
+        "method": request.method,
+        "path": request.path,
+        "message": "The requested endpoint was not found",
+        "available_endpoints": [rule.rule for rule in app.url_map.iter_rules() if '/api/' in rule.rule][:10]
+    }), 404
+
+# The Flask app is automatically served by Vercel's Python runtime
 
 # For Vercel, the app object needs to be available at module level
 
-# Override static file serving to use the public directory
-@app.route('/static/<path:filename>')
-def static_files_override(filename):
-    """Serve static files from public directory for Vercel"""
-    public_dir = os.path.join(project_root, 'public')
-    return send_from_directory(public_dir, filename)
-
-# Note: The original index route from server.py is preserved
+# Note: The static file override is already defined above
+# The original index route from server.py is preserved
 # No need to override it as it already serves index.html correctly
 
 # For Vercel, the app object needs to be available at module level

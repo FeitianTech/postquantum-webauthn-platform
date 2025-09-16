@@ -55,8 +55,71 @@ except Exception:
 app = Flask(__name__, static_url_path="")
 app.secret_key = os.urandom(32)  # Used for session.
 
-rp = PublicKeyCredentialRpEntity(name="Demo server", id="localhost")
-server = Fido2Server(rp)
+# Dynamic RP and server configuration for production deployments
+def get_current_host():
+    """Get the current host from request headers or environment"""
+    try:
+        # Check if we're in a request context
+        if request and hasattr(request, 'headers'):
+            # Try various headers that might contain the actual host
+            host = (request.headers.get('X-Forwarded-Host') or 
+                   request.headers.get('Host') or
+                   request.headers.get('X-Original-Host'))
+            if host:
+                return host.split(':')[0]
+    except:
+        pass
+    
+    # Fallback to environment variables or localhost
+    host = (os.environ.get('VERCEL_URL') or 
+           os.environ.get('RAILWAY_STATIC_URL') or
+           os.environ.get('HOST') or
+           os.environ.get('DOMAIN') or
+           'localhost')
+    
+    # Clean up the host (remove protocol if present)
+    if '://' in host:
+        host = host.split('://')[1]
+    
+    return host.split('/')[0]
+
+# Check if we're in a production environment
+is_production = os.environ.get('VERCEL') or os.environ.get('RAILWAY_ENVIRONMENT') or os.environ.get('DOCKER_CONTAINER')
+
+if is_production:
+    # Use dynamic server for production
+    class DynamicFido2Server:
+        def __init__(self):
+            self._cached_server = None
+            self._cached_host = None
+        
+        def _get_server(self):
+            current_host = get_current_host()
+            if self._cached_server is None or self._cached_host != current_host:
+                rp = PublicKeyCredentialRpEntity(name="WebAuthn FIDO2 Test App", id=current_host)
+                self._cached_server = Fido2Server(rp)
+                self._cached_host = current_host
+            return self._cached_server
+        
+        def __getattr__(self, name):
+            return getattr(self._get_server(), name)
+        
+        @property
+        def rp(self):
+            return self._get_server().rp
+    
+    server = DynamicFido2Server()
+    
+    # Dynamic RP for production
+    def get_dynamic_rp():
+        current_host = get_current_host()
+        return PublicKeyCredentialRpEntity(name="WebAuthn FIDO2 Test App", id=current_host)
+    
+    rp = get_dynamic_rp()
+else:
+    # Use localhost for development
+    rp = PublicKeyCredentialRpEntity(name="Demo server", id="localhost")
+    server = Fido2Server(rp)
 
 # Save credentials next to this server.py file, regardless of CWD.
 basepath = os.path.abspath(os.path.dirname(__file__))
@@ -95,7 +158,7 @@ def delkey(name):
 def index():
     return redirect("/index.html")
 
-@app.route("/api/register/begin", methods=["POST"])
+@app.route("/api/register/begin", methods=["GET", "POST"])
 def register_begin():
     uname = request.args.get("email")
     credentials = readkey(uname)
@@ -112,14 +175,56 @@ def register_begin():
 
     session["state"] = state
 
-    return jsonify(dict(options))
+    # For serverless environments, also provide state as a token
+    # that can be sent back by the client
+    import pickle
+    import base64
+    try:
+        state_token = base64.b64encode(pickle.dumps(state)).decode('ascii')
+        options_dict = dict(options)
+        options_dict["_stateToken"] = state_token
+        return jsonify(options_dict)
+    except Exception:
+        # Fallback to session-based approach
+        return jsonify(dict(options))
 
 @app.route("/api/register/complete", methods=["POST"])
 def register_complete():
     uname = request.args.get("email")
     credentials = readkey(uname)
     response = request.json
-    auth_data = server.register_complete(session["state"], response)
+    
+    # Try to get state from various sources (serverless-compatible)
+    state = None
+    
+    # First try: Check if state token is provided in the request
+    state_token = response.get("_stateToken") if response else None
+    if state_token:
+        try:
+            import pickle
+            import base64
+            state = pickle.loads(base64.b64decode(state_token.encode('ascii')))
+        except Exception as e:
+            return jsonify({
+                "error": f"Invalid state token: {str(e)}"
+            }), 400
+    
+    # Second try: Check session (for backward compatibility)
+    elif "state" in session:
+        state = session["state"]
+    
+    # If no state found, return error
+    if state is None:
+        return jsonify({
+            "error": "Session state not found. In serverless environments, please ensure the state token from the begin response is included in the request as '_stateToken'."
+        }), 400
+    
+    try:
+        auth_data = server.register_complete(state, response)
+    except Exception as e:
+        return jsonify({
+            "error": f"Registration completion failed: {str(e)}"
+        }), 400
 
     # Extract attestation format from attestation object
     attestation_format = "none"  # Default
@@ -220,7 +325,7 @@ def register_complete():
         **debug_info
     })
 
-@app.route("/api/authenticate/begin", methods=["POST"])
+@app.route("/api/authenticate/begin", methods=["GET", "POST"])
 def authenticate_begin():
     uname = request.args.get("email")
     credentials = readkey(uname)
@@ -236,7 +341,18 @@ def authenticate_begin():
     )
     session["state"] = state
 
-    return jsonify(dict(options))
+    # For serverless environments, also provide state as a token
+    # that can be sent back by the client
+    import pickle
+    import base64
+    try:
+        state_token = base64.b64encode(pickle.dumps(state)).decode('ascii')
+        options_dict = dict(options)
+        options_dict["_stateToken"] = state_token
+        return jsonify(options_dict)
+    except Exception:
+        # Fallback to session-based approach
+        return jsonify(dict(options))
 
 @app.route("/api/authenticate/complete", methods=["POST"])
 def authenticate_complete():
@@ -249,11 +365,42 @@ def authenticate_complete():
     credential_data_list = [extract_credential_data(cred) for cred in credentials]
 
     response = request.json
-    server.authenticate_complete(
-        session.pop("state"),
-        credential_data_list,
-        response,
-    )
+    
+    # Try to get state from various sources (serverless-compatible)
+    state = None
+    
+    # First try: Check if state token is provided in the request
+    state_token = response.get("_stateToken") if response else None
+    if state_token:
+        try:
+            import pickle
+            import base64
+            state = pickle.loads(base64.b64decode(state_token.encode('ascii')))
+        except Exception as e:
+            return jsonify({
+                "error": f"Invalid state token: {str(e)}"
+            }), 400
+    
+    # Second try: Check session (for backward compatibility)
+    elif "state" in session:
+        state = session.pop("state")
+    
+    # If no state found, return error
+    if state is None:
+        return jsonify({
+            "error": "Session state not found. In serverless environments, please ensure the state token from the begin response is included in the request as '_stateToken'."
+        }), 400
+    
+    try:
+        server.authenticate_complete(
+            state,
+            credential_data_list,
+            response,
+        )
+    except Exception as e:
+        return jsonify({
+            "error": f"Authentication completion failed: {str(e)}"
+        }), 400
 
     # Extract actual authentication information for debug  
     debug_info = {
@@ -669,7 +816,18 @@ def advanced_register_begin():
     session["advanced_state"] = state
     session["advanced_original_request"] = data
     
-    return jsonify(dict(options))
+    # For serverless environments, also provide state as a token
+    # that can be sent back by the client
+    import pickle
+    import base64
+    try:
+        state_token = base64.b64encode(pickle.dumps(state)).decode('ascii')
+        options_dict = dict(options)
+        options_dict["_stateToken"] = state_token
+        return jsonify(options_dict)
+    except Exception:
+        # Fallback to session-based approach
+        return jsonify(dict(options))
 
 @app.route("/api/advanced/register/complete", methods=["POST"])
 def advanced_register_complete():
@@ -700,6 +858,12 @@ def advanced_register_complete():
         return jsonify({"error": "Username is required in user.name"}), 400
     
     credentials = readkey(username)
+    
+    # Handle missing session state (common in serverless environments)
+    if "advanced_state" not in session:
+        return jsonify({
+            "error": "Session state not found. In serverless environments, session state may not persist between requests. Please try refreshing the page and starting the registration flow again."
+        }), 400
     
     try:
         # Complete registration using stored state
@@ -989,7 +1153,18 @@ def advanced_authenticate_begin():
     session["advanced_auth_state"] = state
     session["advanced_original_auth_request"] = data
     
-    return jsonify(dict(options))
+    # For serverless environments, also provide state as a token
+    # that can be sent back by the client
+    import pickle
+    import base64
+    try:
+        state_token = base64.b64encode(pickle.dumps(state)).decode('ascii')
+        options_dict = dict(options)
+        options_dict["_stateToken"] = state_token
+        return jsonify(options_dict)
+    except Exception:
+        # Fallback to session-based approach
+        return jsonify(dict(options))
 
 @app.route("/api/advanced/authenticate/complete", methods=["POST"])
 def advanced_authenticate_complete():
@@ -1028,10 +1203,35 @@ def advanced_authenticate_complete():
     if not all_credentials:
         return jsonify({"error": "No credentials found"}), 404
     
+    # Try to get state from various sources (serverless-compatible)
+    state = None
+    
+    # First try: Check if state token is provided in the request
+    state_token = data.get("_stateToken") if data else None
+    if state_token:
+        try:
+            import pickle
+            import base64
+            state = pickle.loads(base64.b64decode(state_token.encode('ascii')))
+        except Exception as e:
+            return jsonify({
+                "error": f"Invalid state token: {str(e)}"
+            }), 400
+    
+    # Second try: Check session (for backward compatibility)
+    elif "advanced_auth_state" in session:
+        state = session.pop("advanced_auth_state")
+    
+    # If no state found, return error
+    if state is None:
+        return jsonify({
+            "error": "Session state not found. In serverless environments, please ensure the state token from the begin response is included in the request as '_stateToken'."
+        }), 400
+    
     try:
         # Complete authentication using stored state
         auth_result = server.authenticate_complete(
-            session.pop("advanced_auth_state"),
+            state,
             all_credentials,
             response,
         )

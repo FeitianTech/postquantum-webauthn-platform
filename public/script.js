@@ -1799,11 +1799,29 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                 hideStatus('simple');
                 showProgress('simple', 'Starting registration...');
 
-                // Call server to begin registration
-                const response = await fetch(`/api/register/begin?email=${encodeURIComponent(email)}`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'}
-                });
+                // Call server to begin registration - try POST first, then GET if 405 error
+                let response;
+                try {
+                    response = await fetch(`/api/register/begin?email=${encodeURIComponent(email)}`, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'}
+                    });
+                } catch (error) {
+                    throw new Error(`Network error: ${error.message}`);
+                }
+
+                // If POST fails with 405, try GET method
+                if (response.status === 405) {
+                    console.log('POST failed with 405, trying GET method...');
+                    try {
+                        response = await fetch(`/api/register/begin?email=${encodeURIComponent(email)}`, {
+                            method: 'GET',
+                            headers: {'Content-Type': 'application/json'}
+                        });
+                    } catch (error) {
+                        throw new Error(`Network error on GET fallback: ${error.message}`);
+                    }
+                }
 
                 if (!response.ok) {
                     const errorText = await response.text();
@@ -1812,6 +1830,9 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
 
                 const json = await response.json();
                 const createOptions = parseCreationOptionsFromJSON(json);
+
+                // Capture state token for serverless environments
+                const stateToken = json._stateToken;
 
                 // Track fake credential length
                 window.lastFakeCredLength = 0; // Simple auth doesn't use fake credentials
@@ -1823,10 +1844,16 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                 showProgress('simple', 'Completing registration...');
 
                 // Complete registration with server
+                // Include state token for serverless compatibility
+                const completeBody = {...credential};
+                if (stateToken) {
+                    completeBody._stateToken = stateToken;
+                }
+                
                 const result = await fetch(`/api/register/complete?email=${encodeURIComponent(email)}`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(credential)
+                    body: JSON.stringify(completeBody)
                 });
 
                 if (result.ok) {
@@ -1873,11 +1900,29 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                 hideStatus('simple');
                 showProgress('simple', 'Starting authentication...');
 
-                // Call server to begin authentication
-                const response = await fetch(`/api/authenticate/begin?email=${encodeURIComponent(email)}`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'}
-                });
+                // Call server to begin authentication - try POST first, then GET if 405 error
+                let response;
+                try {
+                    response = await fetch(`/api/authenticate/begin?email=${encodeURIComponent(email)}`, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'}
+                    });
+                } catch (error) {
+                    throw new Error(`Network error: ${error.message}`);
+                }
+
+                // If POST fails with 405, try GET method
+                if (response.status === 405) {
+                    console.log('POST failed with 405, trying GET method...');
+                    try {
+                        response = await fetch(`/api/authenticate/begin?email=${encodeURIComponent(email)}`, {
+                            method: 'GET',
+                            headers: {'Content-Type': 'application/json'}
+                        });
+                    } catch (error) {
+                        throw new Error(`Network error on GET fallback: ${error.message}`);
+                    }
+                }
 
                 if (!response.ok) {
                     if (response.status === 404) {
@@ -1890,6 +1935,9 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                 const json = await response.json();
                 const getOptions = parseRequestOptionsFromJSON(json);
 
+                // Capture state token for serverless environments
+                const stateToken = json._stateToken;
+
                 // Track fake credential length
                 window.lastFakeCredLength = 0; // Simple auth doesn't use fake credentials
 
@@ -1900,10 +1948,16 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                 showProgress('simple', 'Completing authentication...');
 
                 // Complete authentication with server
+                // Include state token for serverless compatibility
+                const completeBody = {...assertion};
+                if (stateToken) {
+                    completeBody._stateToken = stateToken;
+                }
+                
                 const result = await fetch(`/api/authenticate/complete?email=${encodeURIComponent(email)}`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(assertion)
+                    body: JSON.stringify(completeBody)
                 });
 
                 if (result.ok) {
@@ -2399,6 +2453,9 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                 const json = await response.json();
                 const createOptions = parseCreationOptionsFromJSON(json);
 
+                // Capture state token for serverless environments
+                const stateToken = json._stateToken;
+
                 // Track fake credential length from form (for debugging info only)
                 window.lastFakeCredLength = parseInt(document.getElementById('fake-cred-length-reg').value) || 0;
                 
@@ -2411,13 +2468,20 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                 // Send the complete JSON editor content as primary source of truth
                 // The entire JSON editor content is spread as the main request object
                 // Only the credential response is added as a special field
+                const completeBody = {
+                    ...parsed,  // Spread the complete JSON editor content as primary data
+                    __credential_response: credential  // Add credential response with special key
+                };
+                
+                // Include state token for serverless compatibility
+                if (stateToken) {
+                    completeBody._stateToken = stateToken;
+                }
+                
                 const result = await fetch('/api/advanced/register/complete', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        ...parsed,  // Spread the complete JSON editor content as primary data
-                        __credential_response: credential  // Add credential response with special key
-                    }),
+                    body: JSON.stringify(completeBody),
                 });
 
                 if (result.ok) {
@@ -2490,6 +2554,9 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                 const json = await response.json();
                 const assertOptions = parseRequestOptionsFromJSON(json);
                 
+                // Capture state token for serverless environments
+                const stateToken = json._stateToken;
+                
                 // Track fake credential length from form (for debugging info only)
                 window.lastFakeCredLength = parseInt(document.getElementById('fake-cred-length-auth').value) || 0;
                 
@@ -2502,13 +2569,20 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                 // Send the complete JSON editor content as primary source of truth
                 // The entire JSON editor content is spread as the main request object
                 // Only the assertion response is added as a special field
+                const completeBody = {
+                    ...parsed,  // Spread the complete JSON editor content as primary data
+                    __assertion_response: assertion  // Add assertion response with special key
+                };
+                
+                // Include state token for serverless compatibility
+                if (stateToken) {
+                    completeBody._stateToken = stateToken;
+                }
+                
                 const result = await fetch('/api/advanced/authenticate/complete', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        ...parsed,  // Spread the complete JSON editor content as primary data
-                        __assertion_response: assertion  // Add assertion response with special key
-                    }),
+                    body: JSON.stringify(completeBody),
                 });
 
                 if (result.ok) {
