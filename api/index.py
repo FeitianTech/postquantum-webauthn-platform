@@ -14,24 +14,15 @@ sys.path.insert(0, project_root)
 sys.path.insert(0, server_dir)
 
 try:
-    # Import all the functionality from the server module
-    from server.server import *
-    from flask import request, jsonify, session, abort
-    import time
-    
-    # Configure app for Vercel serverless environment  
-    app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'vercel-webauthn-secret-key')
-    
-    # Override the app secret key to ensure session consistency in serverless environment
-    app.secret_key = app.config['SECRET_KEY']
-    
-    # Simple fix: Create a new RP and server with dynamic host detection
+    # First, we need to patch the server module BEFORE importing it
+    # to avoid route conflicts
+    import server.server as server_module
     from fido2.webauthn import PublicKeyCredentialRpEntity
     from fido2.server import Fido2Server
+    from flask import request
     
-    # Function to get the correct host
+    # Function to get the correct host for this deployment
     def get_current_host():
-        from flask import request
         try:
             if request and hasattr(request, 'headers'):
                 host = (request.headers.get('X-Forwarded-Host') or 
@@ -47,134 +38,52 @@ try:
             vercel_url = vercel_url.split('://')[1]
         return vercel_url.split('/')[0]
     
-    # Override the endpoints to use dynamic RP
-    original_register_begin = globals().get('register_begin')
-    original_register_complete = globals().get('register_complete')
-    original_authenticate_begin = globals().get('authenticate_begin')
-    original_authenticate_complete = globals().get('authenticate_complete')
+    # Create a dynamic server class that creates the right RP per request
+    class VercelFido2Server:
+        def __init__(self):
+            self._cached_server = None
+            self._cached_host = None
+        
+        def _get_server(self):
+            current_host = get_current_host()
+            if self._cached_server is None or self._cached_host != current_host:
+                rp = PublicKeyCredentialRpEntity(name="WebAuthn FIDO2 Test App", id=current_host)
+                self._cached_server = Fido2Server(rp)
+                self._cached_host = current_host
+            return self._cached_server
+        
+        def __getattr__(self, name):
+            return getattr(self._get_server(), name)
+        
+        @property
+        def rp(self):
+            return self._get_server().rp
     
-    @app.route("/api/register/begin", methods=["POST"])
-    def register_begin_fixed():
-        # Create server with correct RP ID for this request
-        current_host = get_current_host()
-        rp = PublicKeyCredentialRpEntity(name="WebAuthn FIDO2 Test App", id=current_host)
-        request_server = Fido2Server(rp)
-        
-        uname = request.args.get("email")
-        credentials = readkey(uname)
-        options, state = request_server.register_begin(
-            PublicKeyCredentialUserEntity(
-                id=b"user_id",
-                name="a_user",
-                display_name="A. User",
-            ),
-            credentials,
-            user_verification="discouraged",
-            authenticator_attachment="cross-platform",
-        )
-        
-        session["state"] = state
-        return jsonify(dict(options))
+    # Replace the server variable before importing the rest
+    server_module.server = VercelFido2Server()
     
-    @app.route("/api/register/complete", methods=["POST"])
-    def register_complete_fixed():
-        # Create server with correct RP ID for this request
+    # Also update the RP
+    def get_dynamic_rp():
         current_host = get_current_host()
-        rp = PublicKeyCredentialRpEntity(name="WebAuthn FIDO2 Test App", id=current_host)
-        request_server = Fido2Server(rp)
-        
-        uname = request.args.get("email")
-        credentials = readkey(uname)
-        response = request.json
-        auth_data = request_server.register_complete(session["state"], response)
-        
-        # Rest of the original logic...
-        attestation_format = "none"
-        attestation_statement = None
-        try:
-            if hasattr(auth_data, 'attestation_object') and auth_data.attestation_object:
-                attestation_format = auth_data.attestation_object.fmt
-                if hasattr(auth_data.attestation_object, 'att_stmt'):
-                    attestation_statement = auth_data.attestation_object.att_stmt
-        except Exception:
-            pass
-        
-        # Store the credential data
-        cred_data = {
-            'credential_data': auth_data.credential_data,
-            'attestation_format': attestation_format,
-            'attestation_statement': attestation_statement,
-            'timestamp': int(time.time()),
-        }
-        
-        credentials.append(cred_data)
-        savekey(uname, credentials)
-        
-        info = {
-            "aaguid": auth_data.credential_data.aaguid.hex() if auth_data.credential_data.aaguid else None,
-            "attestation_format": attestation_format,
-            "algorithm": auth_data.credential_data.public_key.ALGORITHM,
-        }
-        
-        return jsonify(info)
+        return PublicKeyCredentialRpEntity(name="WebAuthn FIDO2 Test App", id=current_host)
     
-    @app.route("/api/authenticate/begin", methods=["POST"])
-    def authenticate_begin_fixed():
-        # Create server with correct RP ID for this request
-        current_host = get_current_host()
-        rp = PublicKeyCredentialRpEntity(name="WebAuthn FIDO2 Test App", id=current_host)
-        request_server = Fido2Server(rp)
-        
-        uname = request.args.get("email")
-        credentials = readkey(uname)
-        if not credentials:
-            abort(404)
-        
-        # Extract credential data in compatible format
-        credential_data_list = [extract_credential_data(cred) for cred in credentials]
-        
-        options, state = request_server.authenticate_begin(
-            credential_data_list,
-            user_verification="discouraged"
-        )
-        session["state"] = state
-        
-        return jsonify(dict(options))
+    server_module.rp = get_dynamic_rp()
     
-    @app.route("/api/authenticate/complete", methods=["POST"])
-    def authenticate_complete_fixed():
-        # Create server with correct RP ID for this request
-        current_host = get_current_host()
-        rp = PublicKeyCredentialRpEntity(name="WebAuthn FIDO2 Test App", id=current_host)
-        request_server = Fido2Server(rp)
-        
-        uname = request.args.get("email")
-        credentials = readkey(uname)
-        
-        # Extract credential data in compatible format
-        credential_data_list = [extract_credential_data(cred) for cred in credentials]
-        
-        response = request.json
-        request_server.authenticate_complete(
-            session.pop("state"),
-            credential_data_list,
-            response,
-        )
-        
-        # Extract authentication information for debug  
-        debug_info = {
-            "hintsUsed": [],  # Simple auth doesn't use hints
-        }
-        
-        return jsonify(debug_info)
+    # Now import all the functionality with our patched server
+    from server.server import *
+    from flask import request, jsonify, session, abort, send_from_directory
+    import time
+    
+    # Configure app for Vercel serverless environment  
+    app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'vercel-webauthn-secret-key')
+    
+    # Override the app secret key to ensure session consistency in serverless environment
+    app.secret_key = app.config['SECRET_KEY']
     
     # Override the basepath for credential storage
-    import server.server as server_module
     server_module.basepath = os.environ.get('CREDENTIAL_STORAGE_PATH', '/tmp')
     
     # Override static file serving
-    from flask import send_from_directory
-    
     @app.route('/static/<path:filename>')
     def static_files_override(filename):
         """Serve static files from public directory for Vercel"""
