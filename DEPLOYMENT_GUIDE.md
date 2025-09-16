@@ -13,7 +13,7 @@ This guide provides multiple deployment options for the WebAuthn FIDO2 test appl
 
 ### Changes Made
 
-1. **Simplified Vercel Configuration**: Updated `vercel.json` to use proper builds and routes
+1. **Fixed Vercel Configuration**: Updated `vercel.json` to use the correct serverless functions approach with `functions` and `rewrites`
 2. **Dynamic Host Detection**: The application now automatically detects the deployment domain and sets the RP ID accordingly
 3. **Production Environment Detection**: Server automatically switches between localhost (development) and dynamic domain (production)
 4. **State Token System**: Maintains WebAuthn security in serverless environments
