@@ -283,7 +283,7 @@ python examples/server/server/server.py
 
 You should see Flask start and a line similar to:
 ```
-Running on http://localhost:5000/
+Running on https://localhost:5000/
 ```
 
 By clicking on the localhost link, the test app will be launched in a browser tab. 
