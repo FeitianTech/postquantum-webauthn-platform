@@ -32,7 +32,13 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec, rsa, padding, ed25519, types
 from typing import Sequence, Type, Mapping, Any, TypeVar
-# import oqs
+
+# Post-Quantum Cryptography support - optional import
+try:
+    import oqs
+    _OQS_AVAILABLE = True
+except ImportError:
+    _OQS_AVAILABLE = False
 
 class CoseKey(dict):
     """A COSE formatted public key.
@@ -122,6 +128,8 @@ class MLDSA65(CoseKey):
     _HASH_ALG = hashes.SHA256()
 
     def verify(self, message, signature):
+        if not _OQS_AVAILABLE:
+            raise ImportError("oqs library is required for ML-DSA-65 signature verification. Install with: pip install oqs")
         if self[1] != 7:
             raise ValueError("Unsupported ML-DSA-65 Param")
         verifier=oqs.Signature('ML-DSA-65')
@@ -142,6 +150,8 @@ class MLDSA44(CoseKey):
     _HASH_ALG = hashes.SHA256()
 
     def verify(self, message, signature):
+        if not _OQS_AVAILABLE:
+            raise ImportError("oqs library is required for ML-DSA-44 signature verification. Install with: pip install oqs")
         if self[1] != 7:
             raise ValueError("Unsupported ML-DSA-44 Param")
         verifier=oqs.Signature('ML-DSA-44')
