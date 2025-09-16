@@ -119,33 +119,39 @@ def register_complete():
     uname = request.args.get("email")
     credentials = readkey(uname)
     response = request.json
-    auth_data = server.register_complete(session["state"], response)
-
-    # Extract attestation format from attestation object
+    
+    # Parse the registration response to extract attestation information BEFORE calling register_complete
+    from fido2.webauthn import RegistrationResponse
     attestation_format = "none"  # Default
     attestation_statement = None
+    client_extension_results = {}  # Default
     try:
-        # First try to get attestation from auth_data if available
-        if hasattr(auth_data, 'attestation_object') and auth_data.attestation_object:
-            attestation_format = auth_data.attestation_object.fmt
-            if hasattr(auth_data.attestation_object, 'att_stmt'):
-                attestation_statement = auth_data.attestation_object.att_stmt
-        elif response.get('attestationObject'):
-            # Fallback: Try to parse attestation object from response
-            import cbor2
-            import base64
-            attestation_object_bytes = base64.b64decode(response['attestationObject'])
-            attestation_object = cbor2.loads(attestation_object_bytes)
-            attestation_format = attestation_object.get('fmt', 'none')
-            attestation_statement = attestation_object.get('attStmt', {})
-            
-            # Debug print to check what we're getting
-            print(f"[DEBUG] Parsed attestation format: {attestation_format}")
-            print(f"[DEBUG] Attestation statement keys: {list(attestation_statement.keys()) if attestation_statement else 'None'}")
+        # Parse the response using the fido2 library's RegistrationResponse
+        registration = RegistrationResponse.from_dict(response)
+        attestation_object = registration.response.attestation_object
+        attestation_format = attestation_object.fmt
+        attestation_statement = attestation_object.att_stmt
+        
+        # Also extract client extension results from parsed response (preferred)
+        if registration.client_extension_results:
+            client_extension_results = dict(registration.client_extension_results)
+        else:
+            # Fallback to raw response data
+            client_extension_results = response.get('clientExtensionResults', {})
+        
+        # Debug print to check what we're getting
+        print(f"[DEBUG] Parsed attestation format: {attestation_format}")
+        print(f"[DEBUG] Attestation statement keys: {list(attestation_statement.keys()) if attestation_statement else 'None'}")
+        print(f"[DEBUG] Client extension results: {client_extension_results}")
     except Exception as e:
         print(f"[DEBUG] Attestation parsing error: {e}")
         import traceback
         traceback.print_exc()
+        # Fallback to raw response data
+        client_extension_results = response.get('clientExtensionResults', {})
+    
+    # Now complete the registration
+    auth_data = server.register_complete(session["state"], response)
 
     # Store comprehensive credential data (same format as advanced)
     credential_info = {
@@ -161,7 +167,7 @@ def register_complete():
         'attestation_object': response.get('attestationObject', ''),
         'attestation_format': attestation_format,  # Store parsed attestation format
         'attestation_statement': attestation_statement,  # Store attestation statement for details
-        'client_extension_outputs': response.get('clientExtensionResults', {}),
+        'client_extension_outputs': client_extension_results,
         # Store request parameters for simple registration (defaults)
         'request_params': {
             'user_verification': 'discouraged',
@@ -180,7 +186,7 @@ def register_complete():
             'hintsSent': [],  # Simple auth doesn't use hints
             # Enhanced largeBlob debugging information (simple auth defaults)
             'largeBlobRequested': {},  # Simple auth doesn't use largeBlob
-            'largeBlobClientOutput': response.get('clientExtensionResults', {}).get('largeBlob', {}),
+            'largeBlobClientOutput': client_extension_results.get('largeBlob', {}),
             'residentKeyRequested': None,  # Simple auth defaults
             'residentKeyRequired': False  # Simple auth defaults
         }
@@ -701,8 +707,40 @@ def advanced_register_complete():
     
     credentials = readkey(username)
     
+    # Initialize default values
+    attestation_format = "none"
+    attestation_statement = None
+    client_extension_results = {}  # Default
+    
     try:
+        # Parse the registration response to extract attestation information BEFORE calling register_complete
+        from fido2.webauthn import RegistrationResponse
+        registration = RegistrationResponse.from_dict(response)
+        attestation_object = registration.response.attestation_object
+        attestation_format = attestation_object.fmt
+        attestation_statement = attestation_object.att_stmt
+        
+        # Also extract client extension results from parsed response (preferred)
+        if registration.client_extension_results:
+            client_extension_results = dict(registration.client_extension_results)
+        else:
+            # Fallback to raw response data
+            client_extension_results = response.get('clientExtensionResults', {})
+        
+        # Debug print to check what we're getting
+        print(f"[DEBUG] Advanced - Parsed attestation format: {attestation_format}")
+        print(f"[DEBUG] Advanced - Attestation statement keys: {list(attestation_statement.keys()) if attestation_statement else 'None'}")
+        print(f"[DEBUG] Advanced - Client extension results: {client_extension_results}")
+        
         # Complete registration using stored state
+        auth_data = server.register_complete(session.pop("advanced_state"), response)
+    except Exception as e:
+        print(f"[DEBUG] Advanced - Registration parsing error: {e}")
+        import traceback
+        traceback.print_exc()
+        # Fallback to raw response data
+        client_extension_results = response.get('clientExtensionResults', {})
+        # Try to complete registration even if parsing failed
         auth_data = server.register_complete(session.pop("advanced_state"), response)
         
         # Debug logging for largeBlob extension results
@@ -742,23 +780,8 @@ def advanced_register_complete():
         else:
             user_handle = username.encode('utf-8')
         
-        # Extract attestation information
-        attestation_format = "none"
-        attestation_statement = None
-        
-        try:
-            if hasattr(auth_data, 'attestation_object') and auth_data.attestation_object:
-                attestation_format = auth_data.attestation_object.fmt
-                if hasattr(auth_data.attestation_object, 'att_stmt'):
-                    attestation_statement = auth_data.attestation_object.att_stmt
-            elif response.get('attestationObject'):
-                import cbor2
-                attestation_object_bytes = base64.b64decode(response['attestationObject'])
-                attestation_object = cbor2.loads(attestation_object_bytes)
-                attestation_format = attestation_object.get('fmt', 'none')
-                attestation_statement = attestation_object.get('attStmt', {})
-        except Exception as e:
-            print(f"[DEBUG] Advanced - Attestation parsing error: {e}")
+        # Extract attestation information (already extracted above)
+        # attestation_format and attestation_statement are already set from parsing
         
         # Store comprehensive credential data
         credential_info = {
@@ -774,7 +797,7 @@ def advanced_register_complete():
             'attestation_object': response.get('attestationObject', ''),
             'attestation_format': attestation_format,
             'attestation_statement': attestation_statement,
-            'client_extension_outputs': response.get('clientExtensionResults', {}),
+            'client_extension_outputs': client_extension_results,
             # Store complete original WebAuthn request for full traceability
             'original_webauthn_request': original_request,
             # Properties section - detailed credential information
@@ -786,7 +809,7 @@ def advanced_register_complete():
                 'hintsSent': public_key.get('hints', []),
                 # Enhanced largeBlob debugging information
                 'largeBlobRequested': public_key.get('extensions', {}).get('largeBlob', {}),
-                'largeBlobClientOutput': response.get('clientExtensionResults', {}).get('largeBlob', {}),
+                'largeBlobClientOutput': client_extension_results.get('largeBlob', {}),
                 'residentKeyRequested': public_key.get('authenticatorSelection', {}).get('residentKey'),
                 'residentKeyRequired': public_key.get('authenticatorSelection', {}).get('residentKey') == 'required'
             }
