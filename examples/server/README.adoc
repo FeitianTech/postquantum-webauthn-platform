@@ -16,14 +16,27 @@ Once the environment has been created, you can run the server by running:
 
   $ poetry run server
 
-When the server is running, use a browser supporting WebAuthn and open
-http://localhost:5000 to access the website.
+Or directly with Python:
 
-NOTE: Webauthn requires a secure context (HTTPS), which involves
-obtaining a valid TLS certificate. However, most browsers also treat
-http://localhost as a secure context. This example runs without TLS
-as a demo, but otherwise you should always use HTTPS with a valid
-certificate when using Webauthn.
+  $ python server/server.py
+
+=== HTTPS Setup for Advanced Features
+
+This server now supports HTTPS to enable advanced WebAuthn features like 
+attestation and extensions. To set up HTTPS:
+
+  $ ./generate_cert.sh
+
+This creates self-signed certificates for localhost. You'll need to trust
+the certificate in your browser for a seamless experience. See `HTTPS_SETUP.md`
+for detailed instructions.
+
+When the server is running, use a browser supporting WebAuthn and open
+https://localhost:5000 to access the website.
+
+NOTE: While most browsers treat http://localhost as a secure context for 
+basic WebAuthn functionality, some advanced features require true HTTPS.
+The server is now configured to use HTTPS by default for full compatibility.
 
 === Using the website
 The site allows you to register a WebAuthn credential, and to authenticate it.

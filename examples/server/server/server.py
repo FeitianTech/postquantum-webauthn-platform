@@ -38,6 +38,7 @@ from fido2.server import Fido2Server
 from flask import Flask, request, redirect, abort, jsonify, session, send_file
 
 import os
+import sys
 import fido2.features
 import base64
 import pickle
@@ -1052,10 +1053,57 @@ def advanced_authenticate_complete():
         return jsonify({"error": str(e)}), 400
 
 def main():
-    # Note: using localhost without TLS, as some browsers do
-    # not allow Webauthn in case of TLS certificate errors.
-    # See https://lists.w3.org/Archives/Public/public-webauthn/2022Nov/0135.html
-    app.run(host="localhost", port=5000, ssl_context=("cert.pem", "key.pem"), debug=False)
+    # Check for command line arguments
+    use_http = len(sys.argv) > 1 and sys.argv[1] == "--http"
+    
+    if use_http:
+        print("Starting WebAuthn FIDO2 test server with HTTP...")
+        print("Visit: http://localhost:5000")
+        print()
+        print("NOTE: HTTP mode has limited WebAuthn functionality.")
+        print("For full features, use HTTPS mode: python server.py")
+        print()
+        
+        app.run(host="localhost", port=5000, debug=False)
+        return
+    
+    # HTTPS mode (default)
+    cert_path = "cert.pem"
+    key_path = "key.pem"
+    
+    if not os.path.exists(cert_path) or not os.path.exists(key_path):
+        print("=" * 80)
+        print("HTTPS CERTIFICATES NOT FOUND")
+        print("=" * 80)
+        print(f"Missing files: {cert_path} and/or {key_path}")
+        print()
+        print("To generate self-signed certificates for HTTPS development:")
+        print("  ./generate_cert.sh")
+        print()
+        print("To run with HTTP instead (limited WebAuthn features):")
+        print("  python server/server.py --http")
+        print()
+        print("For more details, see HTTPS_SETUP.md")
+        print("=" * 80)
+        return
+    
+    try:
+        print("Starting WebAuthn FIDO2 test server with HTTPS...")
+        print("Visit: https://localhost:5000")
+        print()
+        print("If you see certificate warnings in your browser:")
+        print("1. Import cert.pem into your browser's trusted certificates")
+        print("2. Or see HTTPS_SETUP.md for alternative approaches")
+        print("3. Or run with --http flag for basic functionality")
+        print()
+        
+        # Note: Using HTTPS for full WebAuthn functionality including advanced features
+        # like attestation and extensions. See HTTPS_SETUP.md for setup instructions.
+        app.run(host="localhost", port=5000, ssl_context=(cert_path, key_path), debug=False)
+    except Exception as e:
+        print(f"Failed to start HTTPS server: {e}")
+        print("See HTTPS_SETUP.md for troubleshooting steps")
+        print("Or try: python server/server.py --http")
 
 if __name__ == "__main__":
     main()
