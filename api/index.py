@@ -5,8 +5,6 @@ This serves the Flask application from examples/server in a serverless environme
 
 import sys
 import os
-import tempfile
-from flask import Flask, send_from_directory
 
 # Add the project paths to Python path
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -15,100 +13,187 @@ server_dir = os.path.join(project_root, 'examples', 'server')
 sys.path.insert(0, project_root)
 sys.path.insert(0, server_dir)
 
-# Import all the functionality from the server module
-from server.server import *
-
-# Configure app for Vercel serverless environment  
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'vercel-webauthn-secret-key')
-
-# Override the app secret key to ensure session consistency in serverless environment
-app.secret_key = app.config['SECRET_KEY']
-
-# Fix Relying Party ID for Vercel deployment
-# The original server.py hardcodes RP ID to "localhost" which fails in production
-from fido2.webauthn import PublicKeyCredentialRpEntity
-from fido2.server import Fido2Server
-
-# Create a wrapper that dynamically determines the RP ID based on the deployment environment
-class DynamicFido2Server:
-    def __init__(self, fallback_server):
-        self.fallback_server = fallback_server
-        self._cached_server = None
-        self._cached_host = None
+try:
+    # Import all the functionality from the server module
+    from server.server import *
+    from flask import request, jsonify, session, abort
+    import time
     
-    def _get_current_host(self):
-        """Get current host from environment or request"""
-        from flask import request, has_request_context
-        
-        if has_request_context():
-            # Try to get host from Vercel headers in order of preference
-            host = (request.headers.get('X-Forwarded-Host') or 
-                   request.headers.get('Host') or 
-                   request.headers.get('X-Original-Host'))
-            if host:
-                # Remove port if present and clean the host
-                clean_host = host.split(':')[0].strip()
-                if clean_host and clean_host != 'localhost':
-                    return clean_host
-        
-        # Try environment variables that Vercel might set
-        vercel_url = os.environ.get('VERCEL_URL')
-        if vercel_url:
-            # Clean the URL - remove protocol and trailing paths
-            clean_url = vercel_url.replace('https://', '').replace('http://', '').split('/')[0].strip()
-            if clean_url and clean_url != 'localhost':
-                return clean_url
-        
-        # Check for other common environment variables
-        host_vars = ['VERCEL_PROJECT_PRODUCTION_URL', 'VERCEL_BRANCH_URL', 'VERCEL_DEPLOYMENT_URL']
-        for var in host_vars:
-            url = os.environ.get(var)
-            if url:
-                clean_url = url.replace('https://', '').replace('http://', '').split('/')[0].strip()
-                if clean_url and clean_url != 'localhost':
-                    return clean_url
-        
-        # Fallback to localhost for local development
-        return 'localhost'
+    # Configure app for Vercel serverless environment  
+    app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'vercel-webauthn-secret-key')
     
-    def _get_server(self):
-        """Get Fido2Server instance with correct RP ID for current request"""
-        current_host = self._get_current_host()
-        
-        if self._cached_server is None or self._cached_host != current_host:
-            rp = PublicKeyCredentialRpEntity(name="WebAuthn FIDO2 Test App", id=current_host)
-            self._cached_server = Fido2Server(rp)
-            self._cached_host = current_host
-            
-        return self._cached_server
+    # Override the app secret key to ensure session consistency in serverless environment
+    app.secret_key = app.config['SECRET_KEY']
     
-    @property
-    def rp(self):
-        """Get the RP entity from the current server instance"""
-        return self._get_server().rp
+    # Simple fix: Create a new RP and server with dynamic host detection
+    from fido2.webauthn import PublicKeyCredentialRpEntity
+    from fido2.server import Fido2Server
     
-    def __getattr__(self, name):
-        """Delegate all calls to the dynamic server instance"""
-        server_instance = self._get_server()
-        attr = getattr(server_instance, name)
+    # Function to get the correct host
+    def get_current_host():
+        from flask import request
+        try:
+            if request and hasattr(request, 'headers'):
+                host = (request.headers.get('X-Forwarded-Host') or 
+                        request.headers.get('Host'))
+                if host:
+                    return host.split(':')[0]
+        except:
+            pass
         
-        # If it's a method, we need to make sure it gets called with the right context
-        if callable(attr):
-            def wrapper(*args, **kwargs):
-                # Ensure we have the latest server instance in case host changed
-                current_server = self._get_server()
-                method = getattr(current_server, name)
-                return method(*args, **kwargs)
-            return wrapper
-        else:
-            return attr
+        # Fallback to environment or localhost
+        vercel_url = os.environ.get('VERCEL_URL', 'localhost')
+        if '://' in vercel_url:
+            vercel_url = vercel_url.split('://')[1]
+        return vercel_url.split('/')[0]
+    
+    # Override the endpoints to use dynamic RP
+    original_register_begin = globals().get('register_begin')
+    original_register_complete = globals().get('register_complete')
+    original_authenticate_begin = globals().get('authenticate_begin')
+    original_authenticate_complete = globals().get('authenticate_complete')
+    
+    @app.route("/api/register/begin", methods=["POST"])
+    def register_begin_fixed():
+        # Create server with correct RP ID for this request
+        current_host = get_current_host()
+        rp = PublicKeyCredentialRpEntity(name="WebAuthn FIDO2 Test App", id=current_host)
+        request_server = Fido2Server(rp)
+        
+        uname = request.args.get("email")
+        credentials = readkey(uname)
+        options, state = request_server.register_begin(
+            PublicKeyCredentialUserEntity(
+                id=b"user_id",
+                name="a_user",
+                display_name="A. User",
+            ),
+            credentials,
+            user_verification="discouraged",
+            authenticator_attachment="cross-platform",
+        )
+        
+        session["state"] = state
+        return jsonify(dict(options))
+    
+    @app.route("/api/register/complete", methods=["POST"])
+    def register_complete_fixed():
+        # Create server with correct RP ID for this request
+        current_host = get_current_host()
+        rp = PublicKeyCredentialRpEntity(name="WebAuthn FIDO2 Test App", id=current_host)
+        request_server = Fido2Server(rp)
+        
+        uname = request.args.get("email")
+        credentials = readkey(uname)
+        response = request.json
+        auth_data = request_server.register_complete(session["state"], response)
+        
+        # Rest of the original logic...
+        attestation_format = "none"
+        attestation_statement = None
+        try:
+            if hasattr(auth_data, 'attestation_object') and auth_data.attestation_object:
+                attestation_format = auth_data.attestation_object.fmt
+                if hasattr(auth_data.attestation_object, 'att_stmt'):
+                    attestation_statement = auth_data.attestation_object.att_stmt
+        except Exception:
+            pass
+        
+        # Store the credential data
+        cred_data = {
+            'credential_data': auth_data.credential_data,
+            'attestation_format': attestation_format,
+            'attestation_statement': attestation_statement,
+            'timestamp': int(time.time()),
+        }
+        
+        credentials.append(cred_data)
+        savekey(uname, credentials)
+        
+        info = {
+            "aaguid": auth_data.credential_data.aaguid.hex() if auth_data.credential_data.aaguid else None,
+            "attestation_format": attestation_format,
+            "algorithm": auth_data.credential_data.public_key.ALGORITHM,
+        }
+        
+        return jsonify(info)
+    
+    @app.route("/api/authenticate/begin", methods=["POST"])
+    def authenticate_begin_fixed():
+        # Create server with correct RP ID for this request
+        current_host = get_current_host()
+        rp = PublicKeyCredentialRpEntity(name="WebAuthn FIDO2 Test App", id=current_host)
+        request_server = Fido2Server(rp)
+        
+        uname = request.args.get("email")
+        credentials = readkey(uname)
+        if not credentials:
+            abort(404)
+        
+        # Extract credential data in compatible format
+        credential_data_list = [extract_credential_data(cred) for cred in credentials]
+        
+        options, state = request_server.authenticate_begin(
+            credential_data_list,
+            user_verification="discouraged"
+        )
+        session["state"] = state
+        
+        return jsonify(dict(options))
+    
+    @app.route("/api/authenticate/complete", methods=["POST"])
+    def authenticate_complete_fixed():
+        # Create server with correct RP ID for this request
+        current_host = get_current_host()
+        rp = PublicKeyCredentialRpEntity(name="WebAuthn FIDO2 Test App", id=current_host)
+        request_server = Fido2Server(rp)
+        
+        uname = request.args.get("email")
+        credentials = readkey(uname)
+        
+        # Extract credential data in compatible format
+        credential_data_list = [extract_credential_data(cred) for cred in credentials]
+        
+        response = request.json
+        request_server.authenticate_complete(
+            session.pop("state"),
+            credential_data_list,
+            response,
+        )
+        
+        # Extract authentication information for debug  
+        debug_info = {
+            "hintsUsed": [],  # Simple auth doesn't use hints
+        }
+        
+        return jsonify(debug_info)
+    
+    # Override the basepath for credential storage
+    import server.server as server_module
+    server_module.basepath = os.environ.get('CREDENTIAL_STORAGE_PATH', '/tmp')
+    
+    # Override static file serving
+    from flask import send_from_directory
+    
+    @app.route('/static/<path:filename>')
+    def static_files_override(filename):
+        """Serve static files from public directory for Vercel"""
+        public_dir = os.path.join(project_root, 'public')
+        return send_from_directory(public_dir, filename)
 
-# Replace the global server variable with our dynamic wrapper
-import server.server as server_module
-server_module.server = DynamicFido2Server(server_module.server)
+except Exception as e:
+    # If there's any import error, create a minimal error handler
+    from flask import Flask, jsonify
+    app = Flask(__name__)
+    
+    @app.route('/<path:path>')
+    def error_handler(path):
+        return jsonify({
+            "error": f"Import error: {str(e)}",
+            "path": path
+        }), 500
 
-# Override the basepath for credential storage to use /tmp in serverless environment
-server_module.basepath = os.environ.get('CREDENTIAL_STORAGE_PATH', '/tmp')
+# For Vercel, the app object needs to be available at module level
 
 # Override static file serving to use the public directory
 @app.route('/static/<path:filename>')
