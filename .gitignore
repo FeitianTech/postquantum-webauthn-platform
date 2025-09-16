@@ -19,3 +19,6 @@ htmlcov/
 
 # Registration data for authenticators
 *.pkl
+
+# SSL keys
+*.pem
