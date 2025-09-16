@@ -178,6 +178,56 @@ pip install oqs pqcrypto
 ---
 
 
+## Local HTTPS Setup for Flask (FIDO2/WebAuthn Testing)
+
+Creating and use `cert.pem` and `key.pem` for local HTTPS development, enabling WebAuthn/FIDO2 features in your Flask app.
+- Some WebAuthn features and settings requires your site to be served over HTTPS and won't work on HTTP (except for `localhost`).
+
+---
+
+### Step 1: Install OpenSSL
+
+- **Windows:** Download and install [Win32 OpenSSL](https://slproweb.com/products/Win32OpenSSL.html).
+- **macOS:** Open Terminal. OpenSSL is usually pre-installed.
+- **Linux:** OpenSSL is usually pre-installed. If not, install it with:
+  ```sh
+  sudo apt-get install openssl
+  sudo yum install openssl
+  ```
+
+---
+
+### Step 2: Open Your Project Directory
+
+Open your terminal (PowerShell, CMD, bash, etc.) with administrator access, and cd to your project directory: 
+
+- **Windows (PowerShell or CMD):**
+  ```powershell
+  cd path\to\your\project
+  ```
+- **macOS/Linux (Terminal):**
+  ```sh
+  cd /path/to/your/project
+  ```
+---
+
+### Step 3: Generate Certificate and Key
+
+Run the following command to create both files:
+
+- **Windows (PowerShell or CMD):**
+  ```powershell
+  openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365 -nodes -subj "/CN=localhost"
+  ```
+- **macOS/Linux (Terminal):**
+  ```sh
+  openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365 -nodes -subj "/CN=localhost"
+  ```
+
+This will create the twon files below in your root directory:
+- `cert.pem` — the SSL certificate file
+- `key.pem` — the private key file
+
   
 # 🚀 Quickstart: create a virtual environment, run the demo server, and use the test app
 
