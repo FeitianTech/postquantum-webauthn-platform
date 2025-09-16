@@ -1,4 +1,4 @@
-# WebAuthn FIDO2 Test Application Dependencies
+# Minimal requirements for Vercel deployment
 # Core web framework
 Flask>=2.0,<4.0
 
@@ -12,21 +12,8 @@ blinker>=1.9.0
 itsdangerous>=2.2.0
 click>=8.1.3
 
-# Standard library support for Python versions
-importlib-metadata>=4.0.0; python_version < "3.10"
-
-# FIDO2 WebAuthn library - install from PyPI for full Vercel compatibility
-# Note: Local fido2 library also exists in ./fido2/ directory for development
+# FIDO2 WebAuthn library - essential for WebAuthn functionality
 fido2>=1.1.0,<2.0.0
 
-# Optional dependencies (now enabled):
-# PC/SC smart card support - requires system libraries
-# pyscard>=1.9.0,<3.0.0
-
-# Post-Quantum Cryptography support - required dependencies
-# Note: These packages are needed for ML-DSA-44 and ML-DSA-65 signature verification
-oqs>=0.8.0
-pqcrypto>=0.1.0
-
-# Development and testing (not needed for production)
-# pytest>=7.0,<8.0
+# Standard library support for Python versions
+importlib-metadata>=4.0.0; python_version < "3.10"
