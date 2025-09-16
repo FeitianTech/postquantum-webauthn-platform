@@ -5,6 +5,7 @@ This serves the Flask application from examples/server in a serverless environme
 
 import sys
 import os
+import json
 
 # Add the project paths to Python path
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -19,7 +20,7 @@ os.environ['VERCEL'] = 'true'
 try:
     # Import the Flask application
     from server.server import app
-    from flask import send_from_directory
+    from flask import send_from_directory, jsonify, request
     
     # Configure app for Vercel serverless environment  
     app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'vercel-webauthn-secret-key')
@@ -28,6 +29,60 @@ try:
     # Override the basepath for credential storage in serverless environment
     import server.server as server_module
     server_module.basepath = '/tmp'
+    
+    # Add global error handler to ensure JSON responses for API endpoints
+    @app.errorhandler(500)
+    def internal_error(error):
+        """Handle 500 errors with JSON response for API endpoints"""
+        import traceback
+        if request.path.startswith('/api/'):
+            # Get the actual exception details
+            tb = traceback.format_exc()
+            return jsonify({
+                "error": "Internal server error occurred during request processing",
+                "path": request.path,
+                "method": request.method,
+                "message": "Please check the server logs for more details",
+                "traceback": tb[-1000:] if tb else None  # Last 1000 chars of traceback
+            }), 500
+        else:
+            # For non-API requests, return default error
+            return error
+            
+    # Add error handler for all exceptions to ensure JSON responses
+    @app.errorhandler(Exception)
+    def handle_exception(e):
+        """Handle all exceptions with JSON response for API endpoints"""
+        import traceback
+        if request.path.startswith('/api/'):
+            tb = traceback.format_exc()
+            return jsonify({
+                "error": f"Unhandled exception: {str(e)}",
+                "path": request.path,
+                "method": request.method,
+                "exception_type": type(e).__name__,
+                "traceback": tb[-1000:] if tb else None
+            }), 500
+        else:
+            # For non-API requests, re-raise the exception
+            raise e
+            
+    # Override Flask's error handling for WebAuthn-specific endpoints
+    def wrap_webauthn_endpoint(func):
+        """Wrapper to ensure WebAuthn endpoints return JSON errors"""
+        def wrapper(*args, **kwargs):
+            try:
+                return func(*args, **kwargs)
+            except Exception as e:
+                return jsonify({
+                    "error": f"WebAuthn operation failed: {str(e)}",
+                    "endpoint": request.path,
+                    "method": request.method
+                }), 500
+        wrapper.__name__ = func.__name__
+        return wrapper
+    
+    # Apply wrapper to WebAuthn endpoints after import
     
     # Override static file serving for Vercel
     @app.route('/static/<path:filename>')
@@ -38,16 +93,31 @@ try:
 
 except Exception as e:
     # If there's any import error, create a minimal error handler
-    from flask import Flask, jsonify
+    from flask import Flask, jsonify, request
     app = Flask(__name__)
+    
+    # Set a secret key even for the error app
+    app.secret_key = os.environ.get('SECRET_KEY', 'vercel-webauthn-error-key')
     
     @app.route('/<path:path>', methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'])
     def error_handler(path):
         return jsonify({
             "error": f"Import error: {str(e)}",
             "path": path,
-            "method": request.method if 'request' in globals() else 'unknown',
-            "sys_path": sys.path[:3]  # Show first 3 paths for debugging
+            "method": request.method,
+            "sys_path": sys.path[:3],  # Show first 3 paths for debugging
+            "current_dir": current_dir,
+            "project_root": project_root,
+            "server_dir": server_dir,
+            "vercel_env": os.environ.get('VERCEL', 'false')
+        }), 500
+        
+    @app.route('/api/debug', methods=['GET', 'POST'])
+    def debug_error():
+        return jsonify({
+            "status": "error_mode",
+            "import_error": str(e),
+            "environment": "vercel" if os.environ.get('VERCEL') else "local"
         }), 500
 
 # Add debugging route to understand what's happening
@@ -63,8 +133,50 @@ def debug_endpoint():
         "content_type": request.content_type,
         "data": request.get_data(as_text=True)[:200] if request.get_data() else None,
         "available_routes": [str(rule) for rule in app.url_map.iter_rules()][:10],
-        "environment": "vercel" if os.environ.get('VERCEL') else "local"
+        "environment": "vercel" if os.environ.get('VERCEL') else "local",
+        "secret_key_set": bool(app.secret_key),
+        "basepath": getattr(server_module, 'basepath', 'not set')
     })
+
+# Add health check endpoint
+@app.route('/api/health', methods=['GET'])
+def health_check():
+    """Health check endpoint for Vercel"""
+    try:
+        # Test basic functionality
+        import server.server as server_module
+        
+        # Check if we're using the dynamic server
+        server_info = {}
+        if hasattr(server_module, 'server'):
+            server_info['server_type'] = type(server_module.server).__name__
+            if hasattr(server_module.server, 'rp'):
+                server_info['rp_id'] = server_module.server.rp.id
+                server_info['rp_name'] = server_module.server.rp.name
+        
+        # Check current host detection
+        try:
+            current_host = server_module.get_current_host()
+            server_info['detected_host'] = current_host
+        except Exception as e:
+            server_info['host_detection_error'] = str(e)
+            
+        return jsonify({
+            "status": "healthy",
+            "environment": "vercel" if os.environ.get('VERCEL') else "local",
+            "basepath": getattr(server_module, 'basepath', 'not set'),
+            "server_available": hasattr(server_module, 'server'),
+            "rp_available": hasattr(server_module, 'rp'),
+            "server_info": server_info,
+            "is_production": getattr(server_module, 'is_production', False)
+        })
+    except Exception as e:
+        import traceback
+        return jsonify({
+            "status": "unhealthy",
+            "error": str(e),
+            "traceback": traceback.format_exc()[-500:]
+        }), 500
 
 # Add explicit error handling for common routes
 @app.errorhandler(405)
@@ -101,4 +213,70 @@ def not_found(error):
 # No need to override it as it already serves index.html correctly
 
 # For Vercel, the app object needs to be available at module level
-# This will be the WSGI application
+# This will be the WSGI application that Vercel will invoke
+
+# Also add a handler function for serverless compatibility
+def handler(request):
+    """Vercel serverless function handler (alternative invocation method)"""
+    try:
+        from flask import request as flask_request
+        
+        # Extract request data for Vercel format
+        method = request.get('httpMethod', request.get('method', 'GET'))
+        path = request.get('path', '/')
+        query = request.get('queryStringParameters', {}) or {}
+        headers = request.get('headers', {})
+        body = request.get('body', '')
+        
+        # Convert query parameters to proper format
+        query_string = []
+        for key, value in query.items():
+            if isinstance(value, list):
+                for v in value:
+                    query_string.append(f"{key}={v}")
+            else:
+                query_string.append(f"{key}={value}")
+        query_str = '&'.join(query_string)
+        
+        # Process request through Flask
+        with app.test_request_context(
+            path=path,
+            method=method, 
+            query_string=query_str,
+            headers=headers,
+            data=body,
+            content_type=headers.get('content-type', 'application/json')
+        ):
+            try:
+                response = app.full_dispatch_request()
+                return {
+                    'statusCode': response.status_code,
+                    'headers': {
+                        'Content-Type': response.content_type,
+                        'Access-Control-Allow-Origin': '*',
+                        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+                        'Access-Control-Allow-Headers': 'Content-Type',
+                        **dict(response.headers)
+                    },
+                    'body': response.get_data(as_text=True)
+                }
+            except Exception as e:
+                return {
+                    'statusCode': 500,
+                    'headers': {'Content-Type': 'application/json'},
+                    'body': json.dumps({
+                        'error': f'Flask dispatch error: {str(e)}',
+                        'path': path,
+                        'method': method
+                    })
+                }
+                
+    except Exception as e:
+        return {
+            'statusCode': 500,
+            'headers': {'Content-Type': 'application/json'},
+            'body': json.dumps({
+                'error': f'Handler error: {str(e)}',
+                'request_keys': list(request.keys()) if isinstance(request, dict) else 'not_dict'
+            })
+        }
