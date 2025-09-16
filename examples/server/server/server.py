@@ -110,12 +110,9 @@ if is_production:
     
     server = DynamicFido2Server()
     
-    # Dynamic RP for production
-    def get_dynamic_rp():
-        current_host = get_current_host()
-        return PublicKeyCredentialRpEntity(name="WebAuthn FIDO2 Test App", id=current_host)
-    
-    rp = get_dynamic_rp()
+    # For the module-level rp, use a safe default that will be updated dynamically
+    # This avoids calling get_current_host() during module import
+    rp = PublicKeyCredentialRpEntity(name="WebAuthn FIDO2 Test App", id="localhost")
 else:
     # Use localhost for development
     rp = PublicKeyCredentialRpEntity(name="Demo server", id="localhost")
