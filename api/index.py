@@ -83,6 +83,49 @@ try:
         return wrapper
     
     # Apply wrapper to WebAuthn endpoints after import
+    # Also add a safety check to ensure the server has a valid RP ID
+    @app.before_request
+    def ensure_valid_rp():
+        """Ensure the server has a valid RP ID before processing requests"""
+        if request.path.startswith('/api/') and request.path not in ['/api/debug', '/api/health']:
+            try:
+                import server.server as server_module
+                
+                # For production environments, ensure the server is properly configured
+                if getattr(server_module, 'is_production', False):
+                    # Get current host for this request
+                    current_host = None
+                    
+                    # Try to get host from request headers
+                    if request and hasattr(request, 'headers'):
+                        current_host = (request.headers.get('X-Forwarded-Host') or 
+                                      request.headers.get('Host') or
+                                      request.headers.get('X-Original-Host'))
+                        if current_host:
+                            current_host = current_host.split(':')[0]
+                    
+                    # Fallback to environment variables
+                    if not current_host:
+                        current_host = (os.environ.get('VERCEL_URL') or 
+                                      os.environ.get('RAILWAY_STATIC_URL') or
+                                      os.environ.get('HOST') or
+                                      os.environ.get('DOMAIN') or
+                                      'localhost')
+                        if '://' in current_host:
+                            current_host = current_host.split('://')[1]
+                        current_host = current_host.split('/')[0]
+                    
+                    # Ensure server is configured with the correct RP ID
+                    if hasattr(server_module.server, '_cached_host'):
+                        if server_module.server._cached_host != current_host:
+                            # Force refresh of the server instance with correct host
+                            server_module.server._cached_server = None
+                            server_module.server._cached_host = None
+                    
+            except Exception as e:
+                # If there's an error in the before_request, log it but don't fail the request
+                print(f"Warning: RP ID validation failed: {e}")
+                pass
     
     # Override static file serving for Vercel
     @app.route('/static/<path:filename>')
@@ -174,6 +217,98 @@ def health_check():
         import traceback
         return jsonify({
             "status": "unhealthy",
+            "error": str(e),
+            "traceback": traceback.format_exc()[-500:]
+        }), 500
+
+# Add test endpoint for WebAuthn registration flow
+@app.route('/api/test-registration', methods=['POST'])
+def test_registration():
+    """Test WebAuthn registration flow to help debug issues"""
+    try:
+        import server.server as server_module
+        from fido2.webauthn import PublicKeyCredentialUserEntity
+        
+        # Test the registration begin flow
+        test_user = PublicKeyCredentialUserEntity(
+            id=b"test_user_id",
+            name="test_user",
+            display_name="Test User",
+        )
+        
+        # Try to call register_begin with test user
+        options, state = server_module.server.register_begin(
+            test_user,
+            [],  # No existing credentials
+            user_verification="discouraged",
+            authenticator_attachment="cross-platform",
+        )
+        
+        return jsonify({
+            "status": "success",
+            "message": "Registration begin flow working correctly",
+            "options_available": bool(options),
+            "state_available": bool(state),
+            "rp_id": server_module.server.rp.id,
+            "rp_name": server_module.server.rp.name,
+            "challenge_length": len(options.challenge) if hasattr(options, 'challenge') else 0
+        })
+        
+    except Exception as e:
+        import traceback
+        return jsonify({
+            "status": "error",
+            "error": str(e),
+            "traceback": traceback.format_exc()[-1000:]
+        }), 500
+
+# Add test endpoint for file system operations
+@app.route('/api/test-filesystem', methods=['GET'])
+def test_filesystem():
+    """Test file system operations for credential storage"""
+    try:
+        import server.server as server_module
+        import tempfile
+        import os
+        
+        # Test writing to basepath
+        basepath = getattr(server_module, 'basepath', '/tmp')
+        
+        test_results = {
+            "basepath": basepath,
+            "basepath_exists": os.path.exists(basepath),
+            "basepath_writable": os.access(basepath, os.W_OK),
+            "tmp_writable": os.access('/tmp', os.W_OK),
+        }
+        
+        # Try to write a test file
+        try:
+            test_file = os.path.join(basepath, 'test_write.txt')
+            with open(test_file, 'w') as f:
+                f.write('test')
+            test_results["write_test"] = "success"
+            
+            # Try to read it back
+            with open(test_file, 'r') as f:
+                content = f.read()
+            test_results["read_test"] = "success" if content == 'test' else "failed"
+            
+            # Clean up
+            os.remove(test_file)
+            test_results["cleanup_test"] = "success"
+            
+        except Exception as e:
+            test_results["write_test"] = f"failed: {str(e)}"
+        
+        return jsonify({
+            "status": "success",
+            "test_results": test_results
+        })
+        
+    except Exception as e:
+        import traceback
+        return jsonify({
+            "status": "error",
             "error": str(e),
             "traceback": traceback.format_exc()[-500:]
         }), 500
@@ -280,3 +415,6 @@ def handler(request):
                 'request_keys': list(request.keys()) if isinstance(request, dict) else 'not_dict'
             })
         }
+
+# Make sure app is available at module level for Vercel WSGI
+# This is the primary way Vercel will invoke the Flask application
