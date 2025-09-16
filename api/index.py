@@ -87,7 +87,7 @@ try:
     @app.before_request
     def ensure_valid_rp():
         """Ensure the server has a valid RP ID before processing requests"""
-        if request.path.startswith('/api/') and request.path not in ['/api/debug', '/api/health']:
+        if request.path.startswith('/api/') and request.path not in ['/api/debug', '/api/health', '/api/test-filesystem', '/api/test-registration']:
             try:
                 import server.server as server_module
                 
@@ -96,24 +96,36 @@ try:
                     # Get current host for this request
                     current_host = None
                     
-                    # Try to get host from request headers
+                    # Try to get host from request headers (prioritize X-Forwarded-Host for Vercel)
                     if request and hasattr(request, 'headers'):
                         current_host = (request.headers.get('X-Forwarded-Host') or 
                                       request.headers.get('Host') or
-                                      request.headers.get('X-Original-Host'))
+                                      request.headers.get('X-Original-Host') or
+                                      request.headers.get('X-Vercel-Forwarded-Host'))
                         if current_host:
                             current_host = current_host.split(':')[0]
                     
-                    # Fallback to environment variables
+                    # Fallback to environment variables with better Vercel handling
                     if not current_host:
-                        current_host = (os.environ.get('VERCEL_URL') or 
-                                      os.environ.get('RAILWAY_STATIC_URL') or
-                                      os.environ.get('HOST') or
-                                      os.environ.get('DOMAIN') or
-                                      'localhost')
-                        if '://' in current_host:
-                            current_host = current_host.split('://')[1]
+                        vercel_url = os.environ.get('VERCEL_URL', '')
+                        if vercel_url:
+                            # VERCEL_URL is just the domain without protocol
+                            current_host = vercel_url
+                        else:
+                            current_host = (os.environ.get('RAILWAY_STATIC_URL') or
+                                          os.environ.get('HOST') or
+                                          os.environ.get('DOMAIN') or
+                                          'localhost')
+                            if '://' in current_host:
+                                current_host = current_host.split('://')[1]
                         current_host = current_host.split('/')[0]
+                    
+                    # For Vercel, also try to detect from request URL if available
+                    if current_host == 'localhost' and request.url:
+                        from urllib.parse import urlparse
+                        parsed = urlparse(request.url)
+                        if parsed.hostname and parsed.hostname != 'localhost':
+                            current_host = parsed.hostname
                     
                     # Ensure server is configured with the correct RP ID
                     if hasattr(server_module.server, '_cached_host'):
@@ -121,6 +133,15 @@ try:
                             # Force refresh of the server instance with correct host
                             server_module.server._cached_server = None
                             server_module.server._cached_host = None
+                    
+                    # Also update the module-level rp for non-dynamic access
+                    if hasattr(server_module, 'rp') and hasattr(server_module.rp, 'id'):
+                        if server_module.rp.id != current_host:
+                            from fido2.webauthn import PublicKeyCredentialRpEntity
+                            server_module.rp = PublicKeyCredentialRpEntity(
+                                name="WebAuthn FIDO2 Test App", 
+                                id=current_host
+                            )
                     
             except Exception as e:
                 # If there's an error in the before_request, log it but don't fail the request
@@ -201,6 +222,21 @@ def health_check():
         try:
             current_host = server_module.get_current_host()
             server_info['detected_host'] = current_host
+            
+            # Also test request-based host detection
+            if request and hasattr(request, 'headers'):
+                request_host = (request.headers.get('X-Forwarded-Host') or 
+                              request.headers.get('Host') or
+                              request.headers.get('X-Original-Host') or
+                              request.headers.get('X-Vercel-Forwarded-Host'))
+                server_info['request_host_header'] = request_host
+                
+                # Test URL-based detection
+                if request.url:
+                    from urllib.parse import urlparse
+                    parsed = urlparse(request.url)
+                    server_info['request_url_host'] = parsed.hostname
+                    
         except Exception as e:
             server_info['host_detection_error'] = str(e)
             
