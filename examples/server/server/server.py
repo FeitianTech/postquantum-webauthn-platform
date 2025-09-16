@@ -55,7 +55,17 @@ except Exception:
 app = Flask(__name__, static_url_path="")
 app.secret_key = os.urandom(32)  # Used for session.
 
-rp = PublicKeyCredentialRpEntity(name="Demo server", id="localhost")
+# Configure RP ID based on environment to support both HTTP localhost and HTTPS 127.0.0.1
+# For HTTPS mode with 127.0.0.1, use 127.0.0.1 as RP ID
+# For HTTP mode with localhost, use localhost as RP ID
+import sys
+RP_ID = "127.0.0.1"  # Default to 127.0.0.1 for HTTPS compatibility
+
+# Allow override via command line argument for HTTP mode
+if len(sys.argv) > 1 and sys.argv[1] == "--http":
+    RP_ID = "localhost"
+
+rp = PublicKeyCredentialRpEntity(name="Demo server", id=RP_ID)
 server = Fido2Server(rp)
 
 # Save credentials next to this server.py file, regardless of CWD.
@@ -1052,10 +1062,53 @@ def advanced_authenticate_complete():
         return jsonify({"error": str(e)}), 400
 
 def main():
-    # Note: using localhost without TLS, as some browsers do
-    # not allow Webauthn in case of TLS certificate errors.
-    # See https://lists.w3.org/Archives/Public/public-webauthn/2022Nov/0135.html
-    app.run(ssl_context=("localhost+1.pem", "localhost+1-key.pem"))
+    import sys
+    
+    # Check for HTTP mode flag
+    if len(sys.argv) > 1 and sys.argv[1] == "--http":
+        # HTTP mode for localhost (original behavior)
+        print("Starting server in HTTP mode at http://localhost:5000")
+        print("Note: Some WebAuthn features may not work in HTTP mode")
+        app.run(host="localhost", port=5000, debug=False)
+    else:
+        # HTTPS mode for 127.0.0.1 (for full WebAuthn compatibility)
+        print("Starting server in HTTPS mode at https://127.0.0.1:5000")
+        print("Note: Requires SSL certificates (localhost+1.pem and localhost+1-key.pem)")
+        print("      Install mkcert and run: mkcert localhost 127.0.0.1 ::1")
+        
+        # Check if certificates exist
+        cert_files = ["localhost+1.pem", "localhost+1-key.pem"]
+        missing_certs = []
+        for cert_file in cert_files:
+            if not os.path.exists(os.path.join(basepath, cert_file)):
+                missing_certs.append(cert_file)
+        
+        if missing_certs:
+            print(f"\nERROR: Missing SSL certificate files: {', '.join(missing_certs)}")
+            print("\nTo fix this issue:")
+            print("1. Install mkcert: https://github.com/FiloSottile/mkcert")
+            print("2. Run: mkcert localhost 127.0.0.1 ::1")
+            print("3. Copy the generated files to the server directory:")
+            print(f"   cp localhost+1.pem localhost+1-key.pem {basepath}/")
+            print("\nAlternatively, run with --http flag for HTTP mode:")
+            print("   python server.py --http")
+            sys.exit(1)
+        
+        try:
+            app.run(
+                host="127.0.0.1", 
+                port=5000, 
+                debug=False,
+                ssl_context=(
+                    os.path.join(basepath, "localhost+1.pem"),
+                    os.path.join(basepath, "localhost+1-key.pem")
+                )
+            )
+        except Exception as e:
+            print(f"\nERROR starting HTTPS server: {e}")
+            print("\nTry running with --http flag for HTTP mode:")
+            print("   python server.py --http")
+            sys.exit(1)
 
 if __name__ == "__main__":
     main()
