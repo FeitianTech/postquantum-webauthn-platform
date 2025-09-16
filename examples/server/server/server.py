@@ -55,8 +55,71 @@ except Exception:
 app = Flask(__name__, static_url_path="")
 app.secret_key = os.urandom(32)  # Used for session.
 
-rp = PublicKeyCredentialRpEntity(name="Demo server", id="localhost")
-server = Fido2Server(rp)
+# Dynamic RP and server configuration for production deployments
+def get_current_host():
+    """Get the current host from request headers or environment"""
+    try:
+        # Check if we're in a request context
+        if request and hasattr(request, 'headers'):
+            # Try various headers that might contain the actual host
+            host = (request.headers.get('X-Forwarded-Host') or 
+                   request.headers.get('Host') or
+                   request.headers.get('X-Original-Host'))
+            if host:
+                return host.split(':')[0]
+    except:
+        pass
+    
+    # Fallback to environment variables or localhost
+    host = (os.environ.get('VERCEL_URL') or 
+           os.environ.get('RAILWAY_STATIC_URL') or
+           os.environ.get('HOST') or
+           os.environ.get('DOMAIN') or
+           'localhost')
+    
+    # Clean up the host (remove protocol if present)
+    if '://' in host:
+        host = host.split('://')[1]
+    
+    return host.split('/')[0]
+
+# Check if we're in a production environment
+is_production = os.environ.get('VERCEL') or os.environ.get('RAILWAY_ENVIRONMENT') or os.environ.get('DOCKER_CONTAINER')
+
+if is_production:
+    # Use dynamic server for production
+    class DynamicFido2Server:
+        def __init__(self):
+            self._cached_server = None
+            self._cached_host = None
+        
+        def _get_server(self):
+            current_host = get_current_host()
+            if self._cached_server is None or self._cached_host != current_host:
+                rp = PublicKeyCredentialRpEntity(name="WebAuthn FIDO2 Test App", id=current_host)
+                self._cached_server = Fido2Server(rp)
+                self._cached_host = current_host
+            return self._cached_server
+        
+        def __getattr__(self, name):
+            return getattr(self._get_server(), name)
+        
+        @property
+        def rp(self):
+            return self._get_server().rp
+    
+    server = DynamicFido2Server()
+    
+    # Dynamic RP for production
+    def get_dynamic_rp():
+        current_host = get_current_host()
+        return PublicKeyCredentialRpEntity(name="WebAuthn FIDO2 Test App", id=current_host)
+    
+    rp = get_dynamic_rp()
+else:
+    # Use localhost for development
+    rp = PublicKeyCredentialRpEntity(name="Demo server", id="localhost")
+    server = Fido2Server(rp)
 
 # Save credentials next to this server.py file, regardless of CWD.
 basepath = os.path.abspath(os.path.dirname(__file__))
