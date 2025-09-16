@@ -234,10 +234,16 @@ For full WebAuthn support including advanced features, run in HTTPS mode:
 python examples/server/server/server.py
 ```
 
-**First time setup for HTTPS:**
+**Quick setup with convenience script:**
+```bash
+./setup_https.sh
+```
+
+**Manual setup for HTTPS:**
 1. Install mkcert: https://github.com/FiloSottile/mkcert
-2. Generate certificates: `mkcert localhost 127.0.0.1 ::1`
-3. Copy certificates to server directory:
+2. Install the local CA: `mkcert -install`
+3. Generate certificates: `mkcert localhost 127.0.0.1 ::1`
+4. Copy certificates to server directory:
    ```bash
    cp localhost+1.pem localhost+1-key.pem examples/server/server/
    ```
@@ -264,7 +270,32 @@ Starting server in HTTP mode at http://localhost:5000
 
 Open http://localhost:5000 in your browser.
 
-**Note:** Some WebAuthn features may not work in HTTP mode due to browser security restrictions. 
+**Note:** Some WebAuthn features may not work in HTTP mode due to browser security restrictions.
+
+---
+
+## Troubleshooting
+
+### "Security error - check your connection and try again"
+
+This error occurs when there's a mismatch between the WebAuthn Relying Party ID and the server's hostname:
+
+- **For HTTPS mode:** Use `https://127.0.0.1:5000` (not `localhost`)
+- **For HTTP mode:** Use `http://localhost:5000` with the `--http` flag
+
+### SSL Certificate Issues
+
+If you see SSL certificate errors:
+
+1. Ensure you're using the exact hostname `127.0.0.1` in the browser
+2. Use the provided `setup_https.sh` script for automatic certificate generation
+3. Make sure mkcert CA is installed: `mkcert -install`
+
+### Browser Compatibility
+
+- Modern browsers support WebAuthn (Chrome, Firefox, Safari, Edge)
+- Some features require HTTPS for security reasons
+- Platform authenticators (Windows Hello, Touch ID) may have additional requirements 
 
 
 #### Note: Credentials are saved in your local repository's examples/server/server as pkl files, deleting credentials in the test app will also delete the corresponding pkl file in your local path. 
