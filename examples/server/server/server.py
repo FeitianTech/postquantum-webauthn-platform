@@ -119,7 +119,19 @@ def register_complete():
     uname = request.args.get("email")
     credentials = readkey(uname)
     response = request.json
-    auth_data = server.register_complete(session["state"], response)
+    
+    # Handle missing session state (common in serverless environments)
+    if "state" not in session:
+        return jsonify({
+            "error": "Session state not found. In serverless environments, session state may not persist between requests. Please try the registration flow again or use the advanced registration which handles this differently."
+        }), 400
+    
+    try:
+        auth_data = server.register_complete(session["state"], response)
+    except Exception as e:
+        return jsonify({
+            "error": f"Registration completion failed: {str(e)}"
+        }), 400
 
     # Extract attestation format from attestation object
     attestation_format = "none"  # Default
@@ -249,11 +261,23 @@ def authenticate_complete():
     credential_data_list = [extract_credential_data(cred) for cred in credentials]
 
     response = request.json
-    server.authenticate_complete(
-        session.pop("state"),
-        credential_data_list,
-        response,
-    )
+    
+    # Handle missing session state (common in serverless environments)
+    if "state" not in session:
+        return jsonify({
+            "error": "Session state not found. In serverless environments, session state may not persist between requests. Please try the authentication flow again or use the advanced authentication which handles this differently."
+        }), 400
+    
+    try:
+        server.authenticate_complete(
+            session.pop("state"),
+            credential_data_list,
+            response,
+        )
+    except Exception as e:
+        return jsonify({
+            "error": f"Authentication completion failed: {str(e)}"
+        }), 400
 
     # Extract actual authentication information for debug  
     debug_info = {
@@ -701,6 +725,12 @@ def advanced_register_complete():
     
     credentials = readkey(username)
     
+    # Handle missing session state (common in serverless environments)
+    if "advanced_state" not in session:
+        return jsonify({
+            "error": "Session state not found. In serverless environments, session state may not persist between requests. Please try refreshing the page and starting the registration flow again."
+        }), 400
+    
     try:
         # Complete registration using stored state
         auth_data = server.register_complete(session.pop("advanced_state"), response)
@@ -1027,6 +1057,12 @@ def advanced_authenticate_complete():
         
     if not all_credentials:
         return jsonify({"error": "No credentials found"}), 404
+    
+    # Handle missing session state (common in serverless environments)
+    if "advanced_auth_state" not in session:
+        return jsonify({
+            "error": "Session state not found. In serverless environments, session state may not persist between requests. Please try refreshing the page and starting the authentication flow again."
+        }), 400
     
     try:
         # Complete authentication using stored state

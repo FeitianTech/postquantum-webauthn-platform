@@ -104,14 +104,8 @@ except Exception as e:
 
 # For Vercel, the app object needs to be available at module level
 
-# Override static file serving to use the public directory
-@app.route('/static/<path:filename>')
-def static_files_override(filename):
-    """Serve static files from public directory for Vercel"""
-    public_dir = os.path.join(project_root, 'public')
-    return send_from_directory(public_dir, filename)
-
-# Note: The original index route from server.py is preserved
+# Note: The static file override is already defined above
+# The original index route from server.py is preserved
 # No need to override it as it already serves index.html correctly
 
 # For Vercel, the app object needs to be available at module level
