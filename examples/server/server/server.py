@@ -158,7 +158,7 @@ def delkey(name):
 def index():
     return redirect("/index.html")
 
-@app.route("/api/register/begin", methods=["POST"])
+@app.route("/api/register/begin", methods=["GET", "POST"])
 def register_begin():
     uname = request.args.get("email")
     credentials = readkey(uname)
@@ -325,7 +325,7 @@ def register_complete():
         **debug_info
     })
 
-@app.route("/api/authenticate/begin", methods=["POST"])
+@app.route("/api/authenticate/begin", methods=["GET", "POST"])
 def authenticate_begin():
     uname = request.args.get("email")
     credentials = readkey(uname)

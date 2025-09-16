@@ -41,13 +41,56 @@ except Exception as e:
     from flask import Flask, jsonify
     app = Flask(__name__)
     
-    @app.route('/<path:path>')
+    @app.route('/<path:path>', methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'])
     def error_handler(path):
         return jsonify({
             "error": f"Import error: {str(e)}",
             "path": path,
+            "method": request.method if 'request' in globals() else 'unknown',
             "sys_path": sys.path[:3]  # Show first 3 paths for debugging
         }), 500
+
+# Add debugging route to understand what's happening
+@app.route('/api/debug', methods=['GET', 'POST', 'PUT', 'DELETE', 'PATCH'])
+def debug_endpoint():
+    """Debug endpoint to understand request handling"""
+    from flask import request, jsonify
+    return jsonify({
+        "method": request.method,
+        "path": request.path,
+        "args": dict(request.args),
+        "headers": dict(request.headers),
+        "content_type": request.content_type,
+        "data": request.get_data(as_text=True)[:200] if request.get_data() else None,
+        "available_routes": [str(rule) for rule in app.url_map.iter_rules()][:10],
+        "environment": "vercel" if os.environ.get('VERCEL') else "local"
+    })
+
+# Add explicit error handling for common routes
+@app.errorhandler(405)
+def method_not_allowed(error):
+    """Handle 405 Method Not Allowed errors"""
+    from flask import request, jsonify
+    return jsonify({
+        "error": "Method Not Allowed",
+        "method": request.method,
+        "path": request.path,
+        "allowed_methods": [method for method in ['GET', 'POST', 'PUT', 'DELETE'] if hasattr(error, 'allowed_methods')],
+        "message": "This endpoint might not support the requested HTTP method",
+        "suggestion": "Try using POST for registration/authentication endpoints"
+    }), 405
+
+@app.errorhandler(404)
+def not_found(error):
+    """Handle 404 Not Found errors"""
+    from flask import request, jsonify
+    return jsonify({
+        "error": "Not Found",
+        "method": request.method,
+        "path": request.path,
+        "message": "The requested endpoint was not found",
+        "available_endpoints": [rule.rule for rule in app.url_map.iter_rules() if '/api/' in rule.rule][:10]
+    }), 404
 
 # The Flask app is automatically served by Vercel's Python runtime
 

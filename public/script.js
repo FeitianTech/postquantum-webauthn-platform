@@ -1799,11 +1799,29 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                 hideStatus('simple');
                 showProgress('simple', 'Starting registration...');
 
-                // Call server to begin registration
-                const response = await fetch(`/api/register/begin?email=${encodeURIComponent(email)}`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'}
-                });
+                // Call server to begin registration - try POST first, then GET if 405 error
+                let response;
+                try {
+                    response = await fetch(`/api/register/begin?email=${encodeURIComponent(email)}`, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'}
+                    });
+                } catch (error) {
+                    throw new Error(`Network error: ${error.message}`);
+                }
+
+                // If POST fails with 405, try GET method
+                if (response.status === 405) {
+                    console.log('POST failed with 405, trying GET method...');
+                    try {
+                        response = await fetch(`/api/register/begin?email=${encodeURIComponent(email)}`, {
+                            method: 'GET',
+                            headers: {'Content-Type': 'application/json'}
+                        });
+                    } catch (error) {
+                        throw new Error(`Network error on GET fallback: ${error.message}`);
+                    }
+                }
 
                 if (!response.ok) {
                     const errorText = await response.text();
@@ -1882,11 +1900,29 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                 hideStatus('simple');
                 showProgress('simple', 'Starting authentication...');
 
-                // Call server to begin authentication
-                const response = await fetch(`/api/authenticate/begin?email=${encodeURIComponent(email)}`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'}
-                });
+                // Call server to begin authentication - try POST first, then GET if 405 error
+                let response;
+                try {
+                    response = await fetch(`/api/authenticate/begin?email=${encodeURIComponent(email)}`, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'}
+                    });
+                } catch (error) {
+                    throw new Error(`Network error: ${error.message}`);
+                }
+
+                // If POST fails with 405, try GET method
+                if (response.status === 405) {
+                    console.log('POST failed with 405, trying GET method...');
+                    try {
+                        response = await fetch(`/api/authenticate/begin?email=${encodeURIComponent(email)}`, {
+                            method: 'GET',
+                            headers: {'Content-Type': 'application/json'}
+                        });
+                    } catch (error) {
+                        throw new Error(`Network error on GET fallback: ${error.message}`);
+                    }
+                }
 
                 if (!response.ok) {
                     if (response.status === 404) {
