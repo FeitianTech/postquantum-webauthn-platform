@@ -1376,15 +1376,25 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             }
         }
 
+        function resetModalScroll(modal) {
+            if (!modal) {
+                return;
+            }
+
+            modal.scrollTop = 0;
+            modal.querySelectorAll('.modal-content, .modal-body').forEach(element => {
+                if (element) {
+                    element.scrollTop = 0;
+                }
+            });
+        }
+
         function openModal(modalId) {
             const modal = document.getElementById(modalId);
             if (modal) {
-                modal.querySelectorAll('.modal-content, .modal-body').forEach(element => {
-                    if (element) {
-                        element.scrollTop = 0;
-                    }
-                });
+                resetModalScroll(modal);
                 modal.classList.add('open');
+                requestAnimationFrame(() => resetModalScroll(modal));
                 updateGlobalScrollLock();
             }
         }
@@ -1393,6 +1403,7 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             const modal = document.getElementById(modalId);
             if (modal) {
                 modal.classList.remove('open');
+                requestAnimationFrame(() => resetModalScroll(modal));
                 updateGlobalScrollLock();
             }
         }
@@ -1568,15 +1579,6 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                 <div style="font-size: 0.9rem;">${cred.attestationFormat || 'none'}</div>
             </div>`;
             
-            // Show attestation statement if available and not empty
-            if (cred.attestationStatement && Object.keys(cred.attestationStatement).length > 0) {
-                detailsHtml += `
-                <div style="margin-bottom: 1.5rem;">
-                    <h4 style="color: #0072CE; margin-bottom: 0.5rem;">Attestation Statement</h4>
-                    <div style="font-size: 0.8rem; font-family: monospace; background: rgba(0, 114, 206, 0.08); padding: 0.65rem; border-radius: 16px; white-space: pre-wrap;">${JSON.stringify(cred.attestationStatement, null, 2)}</div>
-                </div>`;
-            }
-            
             // Authenticator Data (registration)
             if (cred.flags) {
                 detailsHtml += `
@@ -1610,7 +1612,7 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                 else if (algo === -49) algorithmName = 'ML-DSA-65 (PQC) (-49)';
                 else if (typeof algo === 'number') algorithmName = `Algorithm (${algo})`;
                 else algorithmName = algo;
-                
+
                 detailsHtml += `
                 <div style="margin-bottom: 1.5rem;">
                     <h4 style="color: #0072CE; margin-bottom: 0.5rem;">Public Key</h4>
@@ -1619,9 +1621,21 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                     </div>
                 </div>`;
             }
-            
+
+            const attestationCertificateSection = renderCertificateDetails(cred.attestationCertificate || cred.attestation_certificate);
+            if (attestationCertificateSection) {
+                detailsHtml += `
+                <div style="margin-bottom: 1.5rem;">
+                    <h4 style="color: #0072CE; margin-bottom: 0.5rem;">Attestation Certificate</h4>
+                    ${attestationCertificateSection}
+                </div>`;
+            }
+
             modalBody.innerHTML = detailsHtml;
             modalBody.scrollTop = 0;
+            if (typeof modalBody.scrollTo === 'function') {
+                modalBody.scrollTo(0, 0);
+            }
             openModal('credentialModal');
         }
 
@@ -1633,6 +1647,39 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             closeModal('registrationResultModal');
         }
 
+        function formatPemFromDerBase64(derBase64) {
+            if (typeof derBase64 !== 'string') {
+                return '';
+            }
+
+            const normalized = derBase64.replace(/\s+/g, '').trim();
+            if (!normalized) {
+                return '';
+            }
+
+            const lines = normalized.match(/.{1,64}/g) || [];
+            return ['-----BEGIN CERTIFICATE-----', ...lines, '-----END CERTIFICATE-----'].join('\n');
+        }
+
+        function extractCertificatePem(details) {
+            if (!details || typeof details !== 'object') {
+                return '';
+            }
+
+            if (typeof details.pem === 'string' && details.pem.trim() !== '') {
+                return details.pem;
+            }
+
+            if (typeof details.derBase64 === 'string') {
+                const pem = formatPemFromDerBase64(details.derBase64);
+                if (pem) {
+                    return pem;
+                }
+            }
+
+            return '';
+        }
+
         function renderCertificateDetails(details) {
             if (!details || typeof details !== 'object') {
                 return '';
@@ -1642,129 +1689,12 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                 return `<div style="color: #dc3545;">${escapeHtml(details.error)}</div>`;
             }
 
-            const sections = [];
-            if (details.version?.display) {
-                sections.push(`<div><strong>Version:</strong> ${escapeHtml(details.version.display)}</div>`);
-            }
-            if (details.serialNumber) {
-                const serialParts = [];
-                if (details.serialNumber.decimal) {
-                    serialParts.push(escapeHtml(details.serialNumber.decimal));
-                }
-                if (details.serialNumber.hex) {
-                    serialParts.push(`(${escapeHtml(details.serialNumber.hex)})`);
-                }
-                if (serialParts.length) {
-                    sections.push(`<div><strong>Certificate Serial Number:</strong> ${serialParts.join(' ')}</div>`);
-                }
-            }
-            if (details.signatureAlgorithm) {
-                sections.push(`<div><strong>Signature Algorithm:</strong> ${escapeHtml(details.signatureAlgorithm)}</div>`);
-            }
-            if (details.issuer) {
-                sections.push(`<div><strong>Issuer:</strong> ${escapeHtml(details.issuer)}</div>`);
-            }
-            if (details.validity) {
-                const validityLines = [];
-                if (details.validity.notBefore) {
-                    validityLines.push(`<div>Not Before: ${escapeHtml(details.validity.notBefore)}</div>`);
-                }
-                if (details.validity.notAfter) {
-                    validityLines.push(`<div>Not After: ${escapeHtml(details.validity.notAfter)}</div>`);
-                }
-                if (validityLines.length) {
-                    sections.push(`
-                        <div>
-                            <strong>Validity</strong>
-                            <div style="margin-left: 1rem;">
-                                ${validityLines.join('')}
-                            </div>
-                        </div>
-                    `);
-                }
-            }
-            if (details.subject) {
-                sections.push(`<div><strong>Subject:</strong> ${escapeHtml(details.subject)}</div>`);
-            }
-            if (details.publicKeyInfo) {
-                const pk = details.publicKeyInfo;
-                const pkLines = [];
-                if (pk.type) {
-                    pkLines.push(`<div>Type: ${escapeHtml(pk.type)}</div>`);
-                }
-                if (pk.keySize) {
-                    pkLines.push(`<div>Key Size: ${escapeHtml(pk.keySize)}</div>`);
-                }
-                if (pk.curve) {
-                    pkLines.push(`<div>Curve: ${escapeHtml(pk.curve)}</div>`);
-                }
-                if (pk.publicExponent) {
-                    pkLines.push(`<div>Public Exponent: ${escapeHtml(pk.publicExponent)}</div>`);
-                }
-                if (pk.uncompressedPoint) {
-                    pkLines.push(`<div>Public-Key (uncompressed):<br><span style="font-family: 'Courier New', monospace;">${escapeHtml(pk.uncompressedPoint)}</span></div>`);
-                }
-                if (pk.modulusHex) {
-                    pkLines.push(`<div>Modulus:<br><span style="font-family: 'Courier New', monospace;">${escapeHtml(pk.modulusHex)}</span></div>`);
-                }
-                if (pk.publicKeyHex) {
-                    pkLines.push(`<div>Public Key:<br><span style="font-family: 'Courier New', monospace;">${escapeHtml(pk.publicKeyHex)}</span></div>`);
-                }
-                if (pk.subjectPublicKeyInfoBase64) {
-                    pkLines.push(`<div>SubjectPublicKeyInfo (base64):<br><span style="font-family: 'Courier New', monospace;">${escapeHtml(pk.subjectPublicKeyInfoBase64)}</span></div>`);
-                }
-                if (pkLines.length) {
-                    sections.push(`
-                        <div>
-                            <strong>Subject Public Key Info</strong>
-                            <div style="margin-left: 1rem;">
-                                ${pkLines.join('')}
-                            </div>
-                        </div>
-                    `);
-                }
-            }
-            if (Array.isArray(details.extensions) && details.extensions.length > 0) {
-                const extensionItems = details.extensions.map(ext => {
-                    const extensionName = ext.name || ext.oid || 'Extension';
-                    let valueContent = '';
-                    if (ext.value && typeof ext.value === 'object') {
-                        valueContent = `<pre style="background: rgba(0, 114, 206, 0.08); padding: 0.65rem; border-radius: 16px; white-space: pre-wrap;">${escapeHtml(JSON.stringify(ext.value, null, 2))}</pre>`;
-                    } else if (ext.value !== undefined) {
-                        valueContent = `<div style="font-family: 'Courier New', monospace;">${escapeHtml(ext.value)}</div>`;
-                    }
-                    const criticalTag = ext.critical ? ' <span style="color: #dc3545;">[critical]</span>' : '';
-                    return `
-                        <div style="margin-bottom: 0.75rem;">
-                            <div><strong>${escapeHtml(extensionName)}</strong> (${escapeHtml(ext.oid || '')})${criticalTag}</div>
-                            ${valueContent}
-                        </div>
-                    `;
-                }).join('');
-                sections.push(`
-                    <div>
-                        <strong>Extensions:</strong>
-                        <div style="margin-left: 1rem;">
-                            ${extensionItems}
-                        </div>
-                    </div>
-                `);
-            }
-            if (details.fingerprints) {
-                const fingerprintEntries = Object.entries(details.fingerprints)
-                    .map(([algorithm, fingerprint]) => `<div>${escapeHtml(algorithm.toUpperCase())}: ${escapeHtml(fingerprint)}</div>`)
-                    .join('');
-                sections.push(`
-                    <div>
-                        <strong>Fingerprint:</strong>
-                        <div style="margin-left: 1rem;">
-                            ${fingerprintEntries}
-                        </div>
-                    </div>
-                `);
+            const pem = extractCertificatePem(details);
+            if (!pem) {
+                return '';
             }
 
-            return sections.join('');
+            return `<textarea class="certificate-textarea" readonly spellcheck="false">${escapeHtml(pem)}</textarea>`;
         }
 
         function showRegistrationResultModal(credentialJson, relyingPartyInfo) {
@@ -1839,6 +1769,9 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
 
             modalBody.innerHTML = html;
             modalBody.scrollTop = 0;
+            if (typeof modalBody.scrollTo === 'function') {
+                modalBody.scrollTo(0, 0);
+            }
             openModal('registrationResultModal');
         }
 
@@ -2095,8 +2028,8 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             }
             
             // Update attestation
-            if (publicKey.attestation) {
-                document.getElementById('attestation').value = publicKey.attestation;
+            if (Object.prototype.hasOwnProperty.call(publicKey, 'attestation')) {
+                document.getElementById('attestation').value = publicKey.attestation || 'none';
             }
             
             // Update pubKeyCredParams (algorithms)
@@ -2157,8 +2090,9 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                     }
                     residentKeyElement.value = residentKeySetting;
                 }
-                if (publicKey.authenticatorSelection.userVerification) {
-                    document.getElementById('user-verification-reg').value = publicKey.authenticatorSelection.userVerification;
+                if (Object.prototype.hasOwnProperty.call(publicKey.authenticatorSelection, 'userVerification')) {
+                    const userVerificationValue = publicKey.authenticatorSelection.userVerification || 'preferred';
+                    document.getElementById('user-verification-reg').value = userVerificationValue;
                 }
             }
 
@@ -2274,8 +2208,8 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             }
             
             // Update user verification
-            if (publicKey.userVerification) {
-                document.getElementById('user-verification-auth').value = publicKey.userVerification;
+            if (Object.prototype.hasOwnProperty.call(publicKey, 'userVerification')) {
+                document.getElementById('user-verification-auth').value = publicKey.userVerification || 'preferred';
             }
             
             // Update extensions
@@ -3553,13 +3487,19 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                     // Update create form fields
                     if (parsed.username) document.getElementById('user-name').value = parsed.username;
                     if (parsed.displayName) document.getElementById('user-display-name').value = parsed.displayName;
-                    if (parsed.attestation) document.getElementById('attestation').value = parsed.attestation;
-                    if (parsed.userVerification) document.getElementById('user-verification-reg').value = parsed.userVerification;
+                    if (Object.prototype.hasOwnProperty.call(parsed, 'attestation')) {
+                        document.getElementById('attestation').value = parsed.attestation || 'none';
+                    }
+                    if (Object.prototype.hasOwnProperty.call(parsed, 'userVerification')) {
+                        document.getElementById('user-verification-reg').value = parsed.userVerification || 'preferred';
+                    }
                     if (parsed.authenticatorAttachment !== undefined) document.getElementById('authenticator-attachment').value = parsed.authenticatorAttachment || '';
                     if (parsed.residentKey) document.getElementById('resident-key').value = parsed.residentKey;
                 } else if (currentJsonMode === 'assert') {
                     // Update assert form fields
-                    if (parsed.userVerification) document.getElementById('user-verification-auth').value = parsed.userVerification;
+                    if (Object.prototype.hasOwnProperty.call(parsed, 'userVerification')) {
+                        document.getElementById('user-verification-auth').value = parsed.userVerification || 'preferred';
+                    }
                 }
                 
                 showStatus('advanced', 'JSON changes applied successfully!', 'success');

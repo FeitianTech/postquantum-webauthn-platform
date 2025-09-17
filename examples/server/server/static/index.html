@@ -152,11 +152,11 @@
                                                     <div class="language-toggle" onclick="toggleLanguage(this)">ENG</div>
                                                     <div class="text-en active">
                                                         Select whether user verification (UV), for example a PIN or biometric, should be used.<br><br>
-                                                        If "discouraged", UV will not be used if possible. If "preferred", UV will be used if possible. If "required", UV will be used and the user is shown an error if this fails. If unspecified, the default is "preferred".
+                                                        If "discouraged", UV will not be used if possible. If "preferred", UV will be used if possible. If "required", UV will be used and the user is shown an error if this fails. If no preference is set, the default is "preferred".
                                                     </div>
                                                     <div class="text-zh hidden">
                                                         选择是否应使用用户验证（UV），例如 PIN 或生物识别。<br><br>
-                                                        如果设为"discouraged"，在可能的情况下不会使用 UV。如果设为"preferred"，在可能的情况下会使用 UV。如果设为"required"，会使用 UV，失败时向用户显示错误。如果未指定（选择unspecified），默认为"preferred"。
+                                                        如果设为"discouraged"，在可能的情况下不会使用 UV。如果设为"preferred"，在可能的情况下会使用 UV。如果设为"required"，会使用 UV，失败时向用户显示错误。如果未设置偏好，默认值为"preferred"。
                                                     </div>
                                                 </div>
                                             </div>
@@ -165,7 +165,6 @@
                                             <option value="preferred">Preferred (default)</option>
                                             <option value="discouraged">Discouraged</option>
                                             <option value="required">Required</option>
-                                            <option value="">Unspecified</option>
                                         </select>
                                     </div>
                                     <div class="form-group">
@@ -176,11 +175,11 @@
                                                     <div class="language-toggle" onclick="toggleLanguage(this)">ENG</div>
                                                     <div class="text-en active">
                                                         Select whether the Relying Party (RP) requires authenticator attestation. Attestation is a way to prove what kind of authenticator is used.<br><br>
-                                                        If "none", no authenticator attestation will be returned. If "indirect", some kind of attestation will be returned if possible, but it may be anonymized by an attestation proxy. If "direct", the authenticator's original attestation will be returned, if any. If "enterprise", the authenticator is requested to produce an individually identifying attestation. If unspecified, the default is "none".
+                                                        If "none", no authenticator attestation will be returned. If "indirect", some kind of attestation will be returned if possible, but it may be anonymized by an attestation proxy. If "direct", the authenticator's original attestation will be returned, if any. If "enterprise", the authenticator is requested to produce an individually identifying attestation. By default, "none" is used.
                                                     </div>
                                                     <div class="text-zh hidden">
                                                         选择依赖方（RP）是否需要认证器证明。证明是一种证明使用何种认证器的方式。<br><br>
-                                                        如果选择"none"，将不返回认证器证明。如果选择"indirect"，在可能的情况下会返回某种证明，但可能被证明代理匿名化。如果选择"direct"，将返回认证器的原始证明（如果有）。如果选择"enterprise"，请求认证器产生个别标识证明。如果未指定（选择unspecified），则默认为"none"。
+                                                        如果选择"none"，将不返回认证器证明。如果选择"indirect"，在可能的情况下会返回某种证明，但可能被证明代理匿名化。如果选择"direct"，将返回认证器的原始证明（如果有）。如果选择"enterprise"，请求认证器产生个别标识证明。默认情况下，使用"none"。
                                                     </div>
                                                 </div>
                                             </div>
@@ -190,7 +189,6 @@
                                             <option value="indirect">Indirect</option>
                                             <option value="direct">Direct</option>
                                             <option value="enterprise">Enterprise</option>
-                                            <option value="">Unspecified</option>
                                         </select>
                                     </div>
                                     <div class="form-group">
@@ -590,11 +588,11 @@
                                                     <div class="language-toggle" onclick="toggleLanguage(this)">ENG</div>
                                                     <div class="text-en active">
                                                         Select whether user verification (UV), for example a PIN or biometric, should be used.<br><br>
-                                                        If "discouraged", UV will not be used if possible. If "preferred", UV will be used if possible. If "required", UV will be used and the user is shown an error if this fails. If unspecified, the default is "preferred".
+                                                        If "discouraged", UV will not be used if possible. If "preferred", UV will be used if possible. If "required", UV will be used and the user is shown an error if this fails. If no preference is set, the default is "preferred".
                                                     </div>
                                                     <div class="text-zh hidden">
                                                         选择是否应使用用户验证（UV），例如 PIN 或生物识别。<br><br>
-                                                        如果设为"discouraged"，在可能的情况下不会使用 UV。如果设为"preferred"，在可能的情况下会使用 UV。如果设为"required"，将使用 UV，失败时向用户显示错误。如果未指定（选择unspecified），默认为"preferred"。
+                                                        如果设为"discouraged"，在可能的情况下不会使用 UV。如果设为"preferred"，在可能的情况下会使用 UV。如果设为"required"，将使用 UV，失败时向用户显示错误。如果未设置偏好，默认值为"preferred"。
                                                     </div>
                                                 </div>
                                             </div>
@@ -603,7 +601,6 @@
                                             <option value="preferred">Preferred (default)</option>
                                             <option value="discouraged">Discouraged</option>
                                             <option value="required">Required</option>
-                                            <option value="">Unspecified</option>
                                         </select>
                                     </div>
                                     <div class="form-group">

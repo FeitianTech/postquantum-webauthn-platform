@@ -47,6 +47,7 @@ import fido2.features
 import base64
 import pickle
 import time
+import textwrap
 from datetime import datetime, timezone
 
 from typing import Any, Dict, Mapping, Optional, Tuple
@@ -113,13 +114,23 @@ def _encode_base64url(data: bytes) -> str:
     return base64.urlsafe_b64encode(data).rstrip(b"=").decode("ascii")
 
 
-def _extract_attestation_details(response: Any) -> Tuple[str, Dict[str, Any], Optional[str], Optional[str], Dict[str, Any]]:
+def _extract_attestation_details(
+    response: Any,
+) -> Tuple[
+    str,
+    Dict[str, Any],
+    Optional[str],
+    Optional[str],
+    Dict[str, Any],
+    Optional[Dict[str, Any]],
+]:
     """Parse attestation information from a registration response structure."""
     attestation_format = "none"
     attestation_statement: Dict[str, Any] = {}
     attestation_object_b64: Optional[str] = None
     client_data_b64: Optional[str] = None
     client_extension_results: Dict[str, Any] = {}
+    attestation_certificate: Optional[Dict[str, Any]] = None
 
     if not isinstance(response, dict):
         return (
@@ -128,6 +139,7 @@ def _extract_attestation_details(response: Any) -> Tuple[str, Dict[str, Any], Op
             attestation_object_b64,
             client_data_b64,
             client_extension_results,
+            attestation_certificate,
         )
 
     try:
@@ -140,12 +152,26 @@ def _extract_attestation_details(response: Any) -> Tuple[str, Dict[str, Any], Op
             attestation_object_b64,
             client_data_b64,
             client_extension_results,
+            attestation_certificate,
         )
 
     attestation_object = registration.response.attestation_object
     attestation_format = getattr(attestation_object, "fmt", None) or "none"
     attestation_statement = attestation_object.att_stmt or {}
     attestation_object_b64 = _encode_base64url(bytes(attestation_object))
+
+    if isinstance(attestation_statement, Mapping):
+        cert_chain = attestation_statement.get("x5c") or []
+        if isinstance(cert_chain, (list, tuple)) and cert_chain:
+            try:
+                first_cert = cert_chain[0]
+                if isinstance(first_cert, str):
+                    cert_bytes = base64.b64decode(first_cert)
+                else:
+                    cert_bytes = bytes(first_cert)
+                attestation_certificate = serialize_attestation_certificate(cert_bytes)
+            except Exception as cert_error:
+                attestation_certificate = {"error": str(cert_error)}
 
     client_data = registration.response.client_data
     client_data_b64 = getattr(client_data, "b64", None)
@@ -167,6 +193,7 @@ def _extract_attestation_details(response: Any) -> Tuple[str, Dict[str, Any], Op
         attestation_object_b64,
         client_data_b64,
         client_extension_results,
+        attestation_certificate,
     )
 
 
@@ -328,6 +355,11 @@ def serialize_attestation_certificate(cert_bytes: bytes):
         "md5": certificate.fingerprint(hashes.MD5()).hex(),
     }
 
+    der_bytes = certificate.public_bytes(serialization.Encoding.DER)
+    der_base64 = base64.b64encode(der_bytes).decode("ascii")
+    pem_body = "\n".join(textwrap.wrap(der_base64, 64))
+    pem = f"-----BEGIN CERTIFICATE-----\n{pem_body}\n-----END CERTIFICATE-----"
+
     return {
         "version": {
             "display": f"{version_number} ({version_hex})",
@@ -350,9 +382,8 @@ def serialize_attestation_certificate(cert_bytes: bytes):
         "publicKeyInfo": _serialize_public_key_info(certificate.public_key()),
         "extensions": extensions,
         "fingerprints": fingerprints,
-        "derBase64": base64.b64encode(
-            certificate.public_bytes(serialization.Encoding.DER)
-        ).decode("ascii"),
+        "derBase64": der_base64,
+        "pem": pem,
     }
 
 @app.route("/")
@@ -391,6 +422,7 @@ def register_complete():
         parsed_attestation_object,
         parsed_client_data_json,
         parsed_extension_results,
+        attestation_certificate_details,
     ) = _extract_attestation_details(response)
 
     raw_attestation_object = credential_response.get('attestationObject')
@@ -423,6 +455,7 @@ def register_complete():
         'attestation_object': raw_attestation_object or '',
         'attestation_format': attestation_format,  # Store parsed attestation format
         'attestation_statement': attestation_statement,  # Store attestation statement for details
+        'attestation_certificate': attestation_certificate_details,
         'client_extension_outputs': client_extension_results,
         # Store request parameters for simple registration (defaults)
         'request_params': {
@@ -604,6 +637,10 @@ def list_credentials():
                                     # Properties section - detailed credential information
                                     'properties': cred.get('properties', {}),
                                 }
+
+                                certificate_details = cred.get('attestation_certificate')
+                                if certificate_details is not None:
+                                    credential_info['attestationCertificate'] = certificate_details
                             else:
                                 # New format with real FIDO2 objects
                                 cred_data = cred['credential_data']
@@ -659,6 +696,10 @@ def list_credentials():
                                     # Properties section - detailed credential information
                                     'properties': cred.get('properties', {}),
                                 }
+
+                                certificate_details = cred.get('attestation_certificate')
+                                if certificate_details is not None:
+                                    credential_info['attestationCertificate'] = certificate_details
                         else:
                             # Old format (just AttestedCredentialData)
                             credential_info = {
@@ -979,6 +1020,7 @@ def advanced_register_complete():
         parsed_attestation_object,
         parsed_client_data_json,
         parsed_extension_results,
+        attestation_certificate_details,
     ) = _extract_attestation_details(response)
 
     raw_attestation_object = credential_response.get('attestationObject')
@@ -1066,20 +1108,6 @@ def advanced_register_complete():
                 'residentKeyRequired': bool(resident_key_required)
             }
         }
-
-        attestation_certificate_details = None
-        try:
-            if isinstance(attestation_statement, dict):
-                cert_chain = attestation_statement.get('x5c') or []
-                if cert_chain:
-                    first_cert = cert_chain[0]
-                    if isinstance(first_cert, str):
-                        cert_bytes = base64.b64decode(first_cert)
-                    else:
-                        cert_bytes = bytes(first_cert)
-                    attestation_certificate_details = serialize_attestation_certificate(cert_bytes)
-        except Exception as cert_error:
-            attestation_certificate_details = {"error": str(cert_error)}
 
         if attestation_certificate_details is not None:
             credential_info['attestation_certificate'] = attestation_certificate_details
