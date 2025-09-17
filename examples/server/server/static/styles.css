@@ -262,21 +262,21 @@ body.modal-open {
 }
 
 .status.success {
-    background: #d4edda;
-    border: 1px solid #c3e6cb;
-    color: #155724;
+    background: rgba(0, 166, 81, 0.15);
+    border: 1px solid rgba(0, 166, 81, 0.3);
+    color: #0b5d2a;
 }
 
 .status.error {
-    background: #f8d7da;
-    border: 1px solid #f5c6cb;
-    color: #721c24;
+    background: rgba(220, 53, 69, 0.18);
+    border: 1px solid rgba(220, 53, 69, 0.3);
+    color: #8a1c2c;
 }
 
 .status.info {
-    background: #cce7ff;
-    border: 1px solid #b3d7ff;
-    color: #004085;
+    background: rgba(0, 114, 206, 0.14);
+    border: 1px solid rgba(0, 114, 206, 0.3);
+    color: var(--primary-dark);
 }
 
 .two-column {
@@ -831,18 +831,18 @@ select.form-control option {
     left: 100%;
     transform: translateY(-50%);
     margin-left: 8px;
-    background: white;
-    border: 1px solid #dee2e6;
+    background: var(--surface-color);
+    border: 1px solid rgba(0, 114, 206, 0.18);
     border-radius: 8px;
     padding: 16px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    box-shadow: 0 18px 40px rgba(0, 114, 206, 0.16);
     z-index: 9999;
     max-width: 500px;
     min-width: 350px;
     font-size: 13px;
     line-height: 1.5;
     box-sizing: border-box; /* Ensure consistent sizing calculations */
-    color: #333;
+    color: var(--text-color);
     display: none;
     word-wrap: break-word;
     pointer-events: auto; /* Allow interactions with language toggle */
@@ -862,7 +862,7 @@ select.form-control option {
     height: 0;
     border-top: 8px solid transparent;
     border-bottom: 8px solid transparent;
-    border-right: 8px solid white;
+    border-right: 8px solid var(--surface-color);
 }
 
 .info-popup::after {
@@ -875,7 +875,7 @@ select.form-control option {
     height: 0;
     border-top: 9px solid transparent;
     border-bottom: 9px solid transparent;
-    border-right: 9px solid #dee2e6;
+    border-right: 9px solid rgba(0, 114, 206, 0.18);
 }
 
 /* Language toggle for info popups */

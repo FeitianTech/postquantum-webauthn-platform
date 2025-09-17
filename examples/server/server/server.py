@@ -126,6 +126,32 @@ def _make_json_safe(value: Any) -> Any:
     return value
 
 
+CRED_PROTECT_LABELS: Dict[Any, str] = {
+    1: "userVerificationOptional",
+    2: "userVerificationOptionalWithCredentialIdList",
+    3: "userVerificationRequired",
+    "userVerificationOptional": "userVerificationOptional",
+    "userVerificationOptionalWithCredentialIDList": "userVerificationOptionalWithCredentialIdList",
+    "userVerificationOptionalWithCredentialIdList": "userVerificationOptionalWithCredentialIdList",
+    "userVerificationRequired": "userVerificationRequired",
+}
+
+
+def describe_cred_protect(value: Any) -> Any:
+    """Return a human readable credProtect description when possible."""
+    return CRED_PROTECT_LABELS.get(value, value)
+
+
+def summarize_authenticator_extensions(extensions: Mapping[str, Any]) -> Dict[str, Any]:
+    """Augment authenticator extension outputs with human friendly metadata."""
+    summary: Dict[str, Any] = {}
+    for name, ext_value in extensions.items():
+        summary[name] = ext_value
+        if name == "credProtect":
+            summary["credProtectLabel"] = describe_cred_protect(ext_value)
+    return summary
+
+
 def _extract_attestation_details(
     response: Any,
 ) -> Tuple[
@@ -1202,8 +1228,22 @@ def advanced_register_complete():
         else:
             print(f"[DEBUG] No largeBlob extension results in client response")
             
+        authenticator_extensions_summary: Dict[str, Any] = {}
         if hasattr(auth_data, 'extensions'):
-            print(f"[DEBUG] Server auth_data extensions: {auth_data.extensions}")
+            authenticator_extensions = getattr(auth_data, 'extensions')
+            print(f"[DEBUG] Server auth_data extensions: {authenticator_extensions}")
+            if isinstance(authenticator_extensions, Mapping):
+                cred_protect_value = authenticator_extensions.get('credProtect')
+                if cred_protect_value is not None:
+                    cred_protect_label = describe_cred_protect(cred_protect_value)
+                    if cred_protect_label != cred_protect_value:
+                        print(
+                            "[DEBUG] credProtect resolved to "
+                            f"{cred_protect_label} (raw: {cred_protect_value})"
+                        )
+                authenticator_extensions_summary = summarize_authenticator_extensions(
+                    authenticator_extensions
+                )
         else:
             print(f"[DEBUG] No extensions in auth_data")
         
@@ -1263,6 +1303,9 @@ def advanced_register_complete():
                 'residentKeyRequired': bool(resident_key_required)
             }
         }
+
+        if authenticator_extensions_summary:
+            credential_info['authenticator_extensions'] = authenticator_extensions_summary
 
         if attestation_certificate_details is not None:
             credential_info['attestation_certificate'] = attestation_certificate_details
@@ -1415,6 +1458,11 @@ def advanced_register_complete():
                 "hex": user_handle.hex(),
             },
         }
+
+        if authenticator_extensions_summary:
+            rp_info["registrationData"]["authenticatorExtensions"] = _make_json_safe(
+                authenticator_extensions_summary
+            )
 
         if attestation_certificate_details:
             rp_info["attestationCertificate"] = attestation_certificate_details
