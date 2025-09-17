@@ -230,6 +230,7 @@ cd /path/to/your/project
 mkcert localhost 127.0.0.1 ::1
 ```
 Note: Adding 127.0.0.1 is just for backup, WebAuthn cannot work on 127.0.0.1, but can work on localhost. 
+      The name for certificate also vary depending on the system you are using. You can change the name for the .pem files in examples/server/server/server.py (line 1061) if the            program is failing to find the .pem files. 
 
 # 🚀 Quickstart: create a virtual environment, run the demo server, and use the test app
 
