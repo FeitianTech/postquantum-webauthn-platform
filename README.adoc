@@ -49,7 +49,7 @@ cd python-fido2-webauthn-test
 
 ---
 
-## 3) Recommended setup — pip + venv (no PQC)
+## 3) Recommended setup — pip + venv
 
 Create a project‑local virtual environment and install only the runtime dependencies needed for WebAuthn demos.
 
