@@ -152,11 +152,11 @@
                                                     <div class="language-toggle" onclick="toggleLanguage(this)">ENG</div>
                                                     <div class="text-en active">
                                                         Select whether user verification (UV), for example a PIN or biometric, should be used.<br><br>
-                                                        If "discouraged", UV will not be used if possible. If "preferred", UV will be used if possible. If "required", UV will be used and the user is shown an error if this fails. If unspecified, the default is "preferred".
+                                                        If "discouraged", UV will not be used if possible. If "preferred", UV will be used if possible. If "required", UV will be used and the user is shown an error if this fails. If no preference is set, the default is "preferred".
                                                     </div>
                                                     <div class="text-zh hidden">
                                                         选择是否应使用用户验证（UV），例如 PIN 或生物识别。<br><br>
-                                                        如果设为"discouraged"，在可能的情况下不会使用 UV。如果设为"preferred"，在可能的情况下会使用 UV。如果设为"required"，会使用 UV，失败时向用户显示错误。如果未指定（选择unspecified），默认为"preferred"。
+                                                        如果设为"discouraged"，在可能的情况下不会使用 UV。如果设为"preferred"，在可能的情况下会使用 UV。如果设为"required"，会使用 UV，失败时向用户显示错误。如果未设置偏好，默认值为"preferred"。
                                                     </div>
                                                 </div>
                                             </div>
@@ -165,7 +165,6 @@
                                             <option value="preferred">Preferred (default)</option>
                                             <option value="discouraged">Discouraged</option>
                                             <option value="required">Required</option>
-                                            <option value="">Unspecified</option>
                                         </select>
                                     </div>
                                     <div class="form-group">
@@ -176,11 +175,11 @@
                                                     <div class="language-toggle" onclick="toggleLanguage(this)">ENG</div>
                                                     <div class="text-en active">
                                                         Select whether the Relying Party (RP) requires authenticator attestation. Attestation is a way to prove what kind of authenticator is used.<br><br>
-                                                        If "none", no authenticator attestation will be returned. If "indirect", some kind of attestation will be returned if possible, but it may be anonymized by an attestation proxy. If "direct", the authenticator's original attestation will be returned, if any. If "enterprise", the authenticator is requested to produce an individually identifying attestation. If unspecified, the default is "none".
+                                                        If "none", no authenticator attestation will be returned. If "indirect", some kind of attestation will be returned if possible, but it may be anonymized by an attestation proxy. If "direct", the authenticator's original attestation will be returned, if any. If "enterprise", the authenticator is requested to produce an individually identifying attestation. By default, "none" is used.
                                                     </div>
                                                     <div class="text-zh hidden">
                                                         选择依赖方（RP）是否需要认证器证明。证明是一种证明使用何种认证器的方式。<br><br>
-                                                        如果选择"none"，将不返回认证器证明。如果选择"indirect"，在可能的情况下会返回某种证明，但可能被证明代理匿名化。如果选择"direct"，将返回认证器的原始证明（如果有）。如果选择"enterprise"，请求认证器产生个别标识证明。如果未指定（选择unspecified），则默认为"none"。
+                                                        如果选择"none"，将不返回认证器证明。如果选择"indirect"，在可能的情况下会返回某种证明，但可能被证明代理匿名化。如果选择"direct"，将返回认证器的原始证明（如果有）。如果选择"enterprise"，请求认证器产生个别标识证明。默认情况下，使用"none"。
                                                     </div>
                                                 </div>
                                             </div>
@@ -190,13 +189,13 @@
                                             <option value="indirect">Indirect</option>
                                             <option value="direct">Direct</option>
                                             <option value="enterprise">Enterprise</option>
-                                            <option value="">Unspecified</option>
                                         </select>
                                     </div>
                                     <div class="form-group">
                                         <div class="label-with-info">
-                                            <label>
-                                                <input type="checkbox" id="exclude-credentials" checked> Exclude Credentials
+                                            <label class="checkbox-label" for="exclude-credentials">
+                                                <input type="checkbox" id="exclude-credentials" checked>
+                                                <span>Exclude Credentials</span>
                                             </label>
                                             <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
                                                 <div class="info-popup">
@@ -293,36 +292,52 @@
                                         </div>
                                         <div class="checkbox-group">
                                             <div class="checkbox-item">
-                                                <input type="checkbox" id="param-eddsa" checked>
-                                                <label for="param-eddsa">EdDSA</label>
+                                                <label class="checkbox-label" for="param-eddsa">
+                                                    <input type="checkbox" id="param-eddsa" checked>
+                                                    <span>EdDSA</span>
+                                                </label>
                                             </div>
                                             <div class="checkbox-item">
-                                                <input type="checkbox" id="param-es256" checked>
-                                                <label for="param-es256">ES256</label>
+                                                <label class="checkbox-label" for="param-es256">
+                                                    <input type="checkbox" id="param-es256" checked>
+                                                    <span>ES256</span>
+                                                </label>
                                             </div>
                                             <div class="checkbox-item">
-                                                <input type="checkbox" id="param-rs256" checked>
-                                                <label for="param-rs256">RS256</label>
+                                                <label class="checkbox-label" for="param-rs256">
+                                                    <input type="checkbox" id="param-rs256" checked>
+                                                    <span>RS256</span>
+                                                </label>
                                             </div>
                                             <div class="checkbox-item">
-                                                <input type="checkbox" id="param-es384">
-                                                <label for="param-es384">ES384</label>
+                                                <label class="checkbox-label" for="param-es384">
+                                                    <input type="checkbox" id="param-es384">
+                                                    <span>ES384</span>
+                                                </label>
                                             </div>
                                             <div class="checkbox-item">
-                                                <input type="checkbox" id="param-es512">
-                                                <label for="param-es512">ES512</label>
+                                                <label class="checkbox-label" for="param-es512">
+                                                    <input type="checkbox" id="param-es512">
+                                                    <span>ES512</span>
+                                                </label>
                                             </div>
                                             <div class="checkbox-item">
-                                                <input type="checkbox" id="param-rs384">
-                                                <label for="param-rs384">RS384</label>
+                                                <label class="checkbox-label" for="param-rs384">
+                                                    <input type="checkbox" id="param-rs384">
+                                                    <span>RS384</span>
+                                                </label>
                                             </div>
                                             <div class="checkbox-item">
-                                                <input type="checkbox" id="param-rs512">
-                                                <label for="param-rs512">RS512</label>
+                                                <label class="checkbox-label" for="param-rs512">
+                                                    <input type="checkbox" id="param-rs512">
+                                                    <span>RS512</span>
+                                                </label>
                                             </div>
                                             <div class="checkbox-item">
-                                                <input type="checkbox" id="param-rs1">
-                                                <label for="param-rs1">RS1</label>
+                                                <label class="checkbox-label" for="param-rs1">
+                                                    <input type="checkbox" id="param-rs1">
+                                                    <span>RS1</span>
+                                                </label>
                                             </div>
                                         </div>
                                     </div>
@@ -345,16 +360,22 @@
                                         </div>
                                         <div class="checkbox-group">
                                             <div class="checkbox-item">
-                                                <input type="checkbox" id="hint-client-device">
-                                                <label for="hint-client-device">Client-device</label>
+                                                <label class="checkbox-label" for="hint-client-device">
+                                                    <input type="checkbox" id="hint-client-device">
+                                                    <span>Client-device</span>
+                                                </label>
                                             </div>
                                             <div class="checkbox-item">
-                                                <input type="checkbox" id="hint-hybrid">
-                                                <label for="hint-hybrid">Hybrid</label>
+                                                <label class="checkbox-label" for="hint-hybrid">
+                                                    <input type="checkbox" id="hint-hybrid">
+                                                    <span>Hybrid</span>
+                                                </label>
                                             </div>
                                             <div class="checkbox-item">
-                                                <input type="checkbox" id="hint-security-key">
-                                                <label for="hint-security-key">Security-key</label>
+                                                <label class="checkbox-label" for="hint-security-key">
+                                                    <input type="checkbox" id="hint-security-key">
+                                                    <span>Security-key</span>
+                                                </label>
                                             </div>
                                         </div>
                                     </div>
@@ -370,8 +391,9 @@
                                 <div id="extensions-reg" class="section-content">
                                     <div class="form-group">
                                         <div class="label-with-info">
-                                            <label>
-                                                <input type="checkbox" id="cred-props" checked> credProps
+                                            <label class="checkbox-label" for="cred-props">
+                                                <input type="checkbox" id="cred-props" checked>
+                                                <span>credProps</span>
                                             </label>
                                             <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
                                                 <div class="info-popup">
@@ -388,8 +410,9 @@
                                     </div>
                                     <div class="form-group">
                                         <div class="label-with-info">
-                                            <label>
-                                                <input type="checkbox" id="min-pin-length"> minPinLength
+                                            <label class="checkbox-label" for="min-pin-length">
+                                                <input type="checkbox" id="min-pin-length">
+                                                <span>minPinLength</span>
                                             </label>
                                             <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
                                                 <div class="info-popup">
@@ -422,14 +445,15 @@
                                         <select id="cred-protect" class="form-control">
                                             <option value="">Unspecified (default)</option>
                                             <option value="userVerificationOptional">userVerificationOptional</option>
-                                            <option value="userVerificationOptionalWithCredentialIdList">userVerificationOptionalWithCredentialIdList</option>
+                                            <option value="userVerificationOptionalWithCredentialIDList">userVerificationOptionalWithCredentialIDList</option>
                                             <option value="userVerificationRequired">userVerificationRequired</option>
                                         </select>
                                     </div>
                                     <div class="form-group">
                                         <div class="label-with-info">
-                                            <label>
-                                                <input type="checkbox" id="enforce-cred-protect" checked disabled> Enforce credProtect
+                                            <label class="checkbox-label" for="enforce-cred-protect">
+                                                <input type="checkbox" id="enforce-cred-protect" checked disabled>
+                                                <span>Enforce credProtect</span>
                                             </label>
                                             <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
                                                 <div class="info-popup">
@@ -471,8 +495,9 @@
                                     </div>
                                     <div class="form-group">
                                         <div class="label-with-info">
-                                            <label>
-                                                <input type="checkbox" id="prf-reg" checked> prf
+                                            <label class="checkbox-label" for="prf-reg">
+                                                <input type="checkbox" id="prf-reg">
+                                                <span>prf</span>
                                             </label>
                                             <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
                                                 <div class="info-popup">
@@ -563,11 +588,11 @@
                                                     <div class="language-toggle" onclick="toggleLanguage(this)">ENG</div>
                                                     <div class="text-en active">
                                                         Select whether user verification (UV), for example a PIN or biometric, should be used.<br><br>
-                                                        If "discouraged", UV will not be used if possible. If "preferred", UV will be used if possible. If "required", UV will be used and the user is shown an error if this fails. If unspecified, the default is "preferred".
+                                                        If "discouraged", UV will not be used if possible. If "preferred", UV will be used if possible. If "required", UV will be used and the user is shown an error if this fails. If no preference is set, the default is "preferred".
                                                     </div>
                                                     <div class="text-zh hidden">
                                                         选择是否应使用用户验证（UV），例如 PIN 或生物识别。<br><br>
-                                                        如果设为"discouraged"，在可能的情况下不会使用 UV。如果设为"preferred"，在可能的情况下会使用 UV。如果设为"required"，将使用 UV，失败时向用户显示错误。如果未指定（选择unspecified），默认为"preferred"。
+                                                        如果设为"discouraged"，在可能的情况下不会使用 UV。如果设为"preferred"，在可能的情况下会使用 UV。如果设为"required"，将使用 UV，失败时向用户显示错误。如果未设置偏好，默认值为"preferred"。
                                                     </div>
                                                 </div>
                                             </div>
@@ -576,7 +601,6 @@
                                             <option value="preferred">Preferred (default)</option>
                                             <option value="discouraged">Discouraged</option>
                                             <option value="required">Required</option>
-                                            <option value="">Unspecified</option>
                                         </select>
                                     </div>
                                     <div class="form-group">
@@ -689,16 +713,22 @@
                                         </div>
                                         <div class="checkbox-group">
                                             <div class="checkbox-item">
-                                                <input type="checkbox" id="hint-client-device-auth">
-                                                <label for="hint-client-device-auth">Client-device</label>
+                                                <label class="checkbox-label" for="hint-client-device-auth">
+                                                    <input type="checkbox" id="hint-client-device-auth">
+                                                    <span>Client-device</span>
+                                                </label>
                                             </div>
                                             <div class="checkbox-item">
-                                                <input type="checkbox" id="hint-hybrid-auth">
-                                                <label for="hint-hybrid-auth">Hybrid</label>
+                                                <label class="checkbox-label" for="hint-hybrid-auth">
+                                                    <input type="checkbox" id="hint-hybrid-auth">
+                                                    <span>Hybrid</span>
+                                                </label>
                                             </div>
                                             <div class="checkbox-item">
-                                                <input type="checkbox" id="hint-security-key-auth">
-                                                <label for="hint-security-key-auth">Security-key</label>
+                                                <label class="checkbox-label" for="hint-security-key-auth">
+                                                    <input type="checkbox" id="hint-security-key-auth">
+                                                    <span>Security-key</span>
+                                                </label>
                                             </div>
                                         </div>
                                     </div>

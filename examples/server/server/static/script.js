@@ -17,6 +17,7 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
         let currentJsonMode = null;
         let currentJsonData = null;
         const utf8Decoder = typeof TextDecoder !== 'undefined' ? new TextDecoder('utf-8') : null;
+        const JSON_EDITOR_INDENT_UNIT = '  ';
 
         // Info popup functionality
         let hideTimeout;
@@ -520,6 +521,7 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             const mapping = {
                 userVerificationOptional: 1,
                 userVerificationOptionalWithCredentialIDList: 2,
+                userVerificationOptionalWithCredentialIdList: 2,
                 userVerificationRequired: 3
             };
 
@@ -681,6 +683,175 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             }
 
             return value;
+        }
+
+        function wrapSelectionWithPair(editor, opening, closing) {
+            const start = editor.selectionStart;
+            const end = editor.selectionEnd;
+            const value = editor.value;
+            const before = value.slice(0, start);
+            const selected = value.slice(start, end);
+            const after = value.slice(end);
+            editor.value = before + opening + selected + closing + after;
+
+            if (selected.length > 0) {
+                editor.selectionStart = start + opening.length;
+                editor.selectionEnd = end + opening.length;
+            } else {
+                const caret = start + opening.length;
+                editor.selectionStart = caret;
+                editor.selectionEnd = caret;
+            }
+        }
+
+        function applyJsonEditorAutoIndent(editor) {
+            const value = editor.value;
+            const selectionStart = editor.selectionStart;
+            const selectionEnd = editor.selectionEnd;
+            const before = value.slice(0, selectionStart);
+            const after = value.slice(selectionEnd);
+            const lineStart = before.lastIndexOf('\n') + 1;
+            const currentLine = before.slice(lineStart);
+            const trimmedLine = currentLine.trimEnd();
+            const baseIndentMatch = currentLine.match(/^\s*/);
+            const baseIndent = baseIndentMatch ? baseIndentMatch[0] : '';
+            const closesImmediately = /^\s*[\}\]]/.test(after);
+
+            let extraIndent = '';
+            if (trimmedLine.endsWith('{') || trimmedLine.endsWith('[')) {
+                extraIndent = JSON_EDITOR_INDENT_UNIT;
+            }
+
+            if (closesImmediately && extraIndent) {
+                const inserted = `\n${baseIndent}${extraIndent}\n${baseIndent}`;
+                editor.value = before + inserted + after;
+                const caretPosition = before.length + 1 + baseIndent.length + extraIndent.length;
+                editor.selectionStart = caretPosition;
+                editor.selectionEnd = caretPosition;
+                return;
+            }
+
+            if (closesImmediately && currentLine.trim() === '') {
+                const dedentLength = Math.max(0, baseIndent.length - JSON_EDITOR_INDENT_UNIT.length);
+                const dedentIndent = baseIndent.slice(0, dedentLength);
+                const inserted = `\n${dedentIndent}`;
+                editor.value = before + inserted + after;
+                const caretPosition = before.length + inserted.length;
+                editor.selectionStart = caretPosition;
+                editor.selectionEnd = caretPosition;
+                return;
+            }
+
+            const inserted = `\n${baseIndent}${extraIndent}`;
+            editor.value = before + inserted + after;
+            const caretPosition = before.length + inserted.length;
+            editor.selectionStart = caretPosition;
+            editor.selectionEnd = caretPosition;
+        }
+
+        function applyTabIndentation(editor, isShift) {
+            const value = editor.value;
+            const selectionStart = editor.selectionStart;
+            const selectionEnd = editor.selectionEnd;
+            const hasSelection = selectionStart !== selectionEnd;
+
+            if (hasSelection && value.slice(selectionStart, selectionEnd).includes('\n')) {
+                const selectedText = value.slice(selectionStart, selectionEnd);
+                const lines = selectedText.split('\n');
+
+                if (isShift) {
+                    const dedentedLines = lines.map(line => {
+                        if (line.startsWith(JSON_EDITOR_INDENT_UNIT)) {
+                            return line.slice(JSON_EDITOR_INDENT_UNIT.length);
+                        }
+                        if (line.startsWith('\t')) {
+                            return line.slice(1);
+                        }
+                        const match = line.match(/^ {1,2}/);
+                        if (match) {
+                            return line.slice(match[0].length);
+                        }
+                        return line;
+                    });
+
+                    const dedentedText = dedentedLines.join('\n');
+                    const diff = selectedText.length - dedentedText.length;
+                    editor.value = value.slice(0, selectionStart) + dedentedText + value.slice(selectionEnd);
+                    editor.selectionStart = selectionStart;
+                    editor.selectionEnd = selectionEnd - diff;
+                } else {
+                    const indentedText = lines.map(line => JSON_EDITOR_INDENT_UNIT + line).join('\n');
+                    const diff = indentedText.length - selectedText.length;
+                    editor.value = value.slice(0, selectionStart) + indentedText + value.slice(selectionEnd);
+                    editor.selectionStart = selectionStart;
+                    editor.selectionEnd = selectionEnd + diff;
+                }
+                return;
+            }
+
+            if (isShift) {
+                const lineStart = value.lastIndexOf('\n', selectionStart - 1) + 1;
+                if (value.slice(lineStart, lineStart + JSON_EDITOR_INDENT_UNIT.length) === JSON_EDITOR_INDENT_UNIT) {
+                    editor.value = value.slice(0, lineStart) + value.slice(lineStart + JSON_EDITOR_INDENT_UNIT.length);
+                    const newPos = Math.max(lineStart, selectionStart - JSON_EDITOR_INDENT_UNIT.length);
+                    editor.selectionStart = newPos;
+                    editor.selectionEnd = newPos;
+                } else if (value[lineStart] === '\t') {
+                    editor.value = value.slice(0, lineStart) + value.slice(lineStart + 1);
+                    const newPos = Math.max(lineStart, selectionStart - 1);
+                    editor.selectionStart = newPos;
+                    editor.selectionEnd = newPos;
+                } else {
+                    const leadingSpaces = value.slice(lineStart, selectionStart).match(/^ +/);
+                    if (leadingSpaces && leadingSpaces[0].length > 0) {
+                        const removeCount = Math.min(leadingSpaces[0].length, JSON_EDITOR_INDENT_UNIT.length);
+                        editor.value = value.slice(0, lineStart) + value.slice(lineStart + removeCount);
+                        const newPos = Math.max(lineStart, selectionStart - removeCount);
+                        editor.selectionStart = newPos;
+                        editor.selectionEnd = newPos;
+                    }
+                }
+            } else {
+                const insertion = JSON_EDITOR_INDENT_UNIT;
+                editor.value = value.slice(0, selectionStart) + insertion + value.slice(selectionEnd);
+                const newPos = selectionStart + insertion.length;
+                editor.selectionStart = newPos;
+                editor.selectionEnd = newPos;
+            }
+        }
+
+        function handleJsonEditorKeydown(event) {
+            const editor = event.target;
+            if (!(editor instanceof HTMLTextAreaElement)) {
+                return;
+            }
+
+            if (event.key === 'Tab') {
+                event.preventDefault();
+                applyTabIndentation(editor, event.shiftKey);
+                return;
+            }
+
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                applyJsonEditorAutoIndent(editor);
+                return;
+            }
+
+            if (event.ctrlKey || event.metaKey || event.altKey) {
+                return;
+            }
+
+            const pairMap = {
+                '{': '}',
+                '[': ']',
+            };
+
+            const closing = pairMap[event.key];
+            if (closing) {
+                event.preventDefault();
+                wrapSelectionWithPair(editor, event.key, closing);
+            }
         }
 
         function normalizeToHex(value) {
@@ -1167,8 +1338,16 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             console.log('minpinlength (requested or not):', minPinLengthRequested);
             
             // credProtect setting - from actual server processing
-            const credProtectSetting = serverData.credProtectUsed || 'none';
-            console.log('credprotect setting:', credProtectSetting);
+            const credProtectSetting = serverData.credProtectUsed ?? 'none';
+            const credProtectLabelMap = {
+                1: 'userVerificationOptional',
+                2: 'userVerificationOptionalWithCredentialIdList',
+                3: 'userVerificationRequired',
+                userVerificationOptionalWithCredentialIDList: 'userVerificationOptionalWithCredentialIdList',
+                userVerificationOptionalWithCredentialIdList: 'userVerificationOptionalWithCredentialIdList',
+            };
+            const credProtectDisplay = credProtectLabelMap[credProtectSetting] || credProtectSetting || 'none';
+            console.log('credprotect setting:', credProtectDisplay);
             
             // enforce credProtect - from actual server processing
             const enforceCredProtect = serverData.enforceCredProtectUsed || false;
@@ -1376,15 +1555,25 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             }
         }
 
+        function resetModalScroll(modal) {
+            if (!modal) {
+                return;
+            }
+
+            modal.scrollTop = 0;
+            modal.querySelectorAll('.modal-content, .modal-body').forEach(element => {
+                if (element) {
+                    element.scrollTop = 0;
+                }
+            });
+        }
+
         function openModal(modalId) {
             const modal = document.getElementById(modalId);
             if (modal) {
-                modal.querySelectorAll('.modal-content, .modal-body').forEach(element => {
-                    if (element) {
-                        element.scrollTop = 0;
-                    }
-                });
+                resetModalScroll(modal);
                 modal.classList.add('open');
+                requestAnimationFrame(() => resetModalScroll(modal));
                 updateGlobalScrollLock();
             }
         }
@@ -1393,6 +1582,7 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             const modal = document.getElementById(modalId);
             if (modal) {
                 modal.classList.remove('open');
+                requestAnimationFrame(() => resetModalScroll(modal));
                 updateGlobalScrollLock();
             }
         }
@@ -1568,15 +1758,6 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                 <div style="font-size: 0.9rem;">${cred.attestationFormat || 'none'}</div>
             </div>`;
             
-            // Show attestation statement if available and not empty
-            if (cred.attestationStatement && Object.keys(cred.attestationStatement).length > 0) {
-                detailsHtml += `
-                <div style="margin-bottom: 1.5rem;">
-                    <h4 style="color: #0072CE; margin-bottom: 0.5rem;">Attestation Statement</h4>
-                    <div style="font-size: 0.8rem; font-family: monospace; background: rgba(0, 114, 206, 0.08); padding: 0.65rem; border-radius: 16px; white-space: pre-wrap;">${JSON.stringify(cred.attestationStatement, null, 2)}</div>
-                </div>`;
-            }
-            
             // Authenticator Data (registration)
             if (cred.flags) {
                 detailsHtml += `
@@ -1610,7 +1791,7 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                 else if (algo === -49) algorithmName = 'ML-DSA-65 (PQC) (-49)';
                 else if (typeof algo === 'number') algorithmName = `Algorithm (${algo})`;
                 else algorithmName = algo;
-                
+
                 detailsHtml += `
                 <div style="margin-bottom: 1.5rem;">
                     <h4 style="color: #0072CE; margin-bottom: 0.5rem;">Public Key</h4>
@@ -1619,10 +1800,28 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                     </div>
                 </div>`;
             }
-            
+
+            const attestationCertificateSection = renderCertificateDetails(cred.attestationCertificate || cred.attestation_certificate);
+            if (attestationCertificateSection) {
+                detailsHtml += `
+                <div style="margin-bottom: 1.5rem;">
+                    <h4 style="color: #0072CE; margin-bottom: 0.5rem;">Attestation Certificate</h4>
+                    ${attestationCertificateSection}
+                </div>`;
+            }
+
             modalBody.innerHTML = detailsHtml;
             modalBody.scrollTop = 0;
+            if (typeof modalBody.scrollTo === 'function') {
+                modalBody.scrollTo(0, 0);
+            }
             openModal('credentialModal');
+            const scheduleResize = () => autoResizeCertificateTextareas(modalBody);
+            if (typeof requestAnimationFrame === 'function') {
+                requestAnimationFrame(scheduleResize);
+            } else {
+                setTimeout(scheduleResize, 0);
+            }
         }
 
         function closeCredentialModal() {
@@ -1631,6 +1830,215 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
 
         function closeRegistrationResultModal() {
             closeModal('registrationResultModal');
+        }
+
+        function appendKeyValueLines(output, value, indentLevel = 0) {
+            if (value === null || value === undefined) {
+                return;
+            }
+
+            const indent = '    '.repeat(indentLevel);
+
+            if (typeof value === 'string' || typeof value === 'number') {
+                if (String(value).trim() !== '') {
+                    output.push(`${indent}${value}`);
+                }
+                return;
+            }
+
+            if (typeof value === 'boolean') {
+                output.push(`${indent}${value}`);
+                return;
+            }
+
+            if (Array.isArray(value)) {
+                if (value.length === 0) {
+                    return;
+                }
+
+                value.forEach(item => {
+                    if (item === null || item === undefined) {
+                        return;
+                    }
+
+                    if (typeof item === 'object') {
+                        output.push(`${indent}-`);
+                        appendKeyValueLines(output, item, indentLevel + 1);
+                    } else {
+                        output.push(`${indent}- ${item}`);
+                    }
+                });
+                return;
+            }
+
+            if (typeof value === 'object') {
+                const entries = Object.entries(value).filter(([key, val]) => {
+                    if (val === null || val === undefined || val === '') {
+                        return false;
+                    }
+                    if (typeof key === 'string' && key.toLowerCase().includes('base64')) {
+                        return false;
+                    }
+                    return true;
+                });
+
+                if (entries.length === 0) {
+                    return;
+                }
+
+                entries.forEach(([key, val]) => {
+                    if (typeof val === 'object') {
+                        if (Array.isArray(val)) {
+                            if (val.length === 0) {
+                                return;
+                            }
+                            output.push(`${indent}${key}:`);
+                            appendKeyValueLines(output, val, indentLevel + 1);
+                        } else {
+                            const nestedEntries = Object.entries(val).filter(([, nestedVal]) => nestedVal !== null && nestedVal !== undefined && nestedVal !== '');
+                            if (nestedEntries.length === 0) {
+                                return;
+                            }
+                            output.push(`${indent}${key}:`);
+                            appendKeyValueLines(output, val, indentLevel + 1);
+                        }
+                    } else {
+                        output.push(`${indent}${key}: ${val}`);
+                    }
+                });
+                return;
+            }
+
+            output.push(`${indent}${String(value)}`);
+        }
+
+        function formatCertificateDetails(details) {
+            if (!details || typeof details !== 'object') {
+                return '';
+            }
+
+            if (typeof details.summary === 'string' && details.summary.trim() !== '') {
+                return details.summary.trim();
+            }
+
+            const lines = [];
+            const addLine = line => lines.push(line);
+            const addBlankLine = () => {
+                if (lines.length && lines[lines.length - 1] !== '') {
+                    lines.push('');
+                }
+            };
+
+            const { version } = details;
+            if (version) {
+                if (typeof version === 'object') {
+                    const parts = [];
+                    if (typeof version.display === 'string' && version.display.trim() !== '') {
+                        parts.push(version.display.trim());
+                    }
+                    if (typeof version.hex === 'string' && version.hex.trim() !== '') {
+                        if (!parts.length || parts[parts.length - 1] !== version.hex.trim()) {
+                            parts.push(version.hex.trim());
+                        }
+                    }
+                    if (parts.length > 0) {
+                        addLine(`Version: ${parts.join(' ')}`);
+                    }
+                } else if (String(version).trim() !== '') {
+                    addLine(`Version: ${version}`);
+                }
+            }
+
+            const serialNumber = details.serialNumber;
+            if (serialNumber) {
+                if (typeof serialNumber === 'object') {
+                    const parts = [];
+                    if (typeof serialNumber.decimal === 'string' && serialNumber.decimal.trim() !== '') {
+                        parts.push(serialNumber.decimal.trim());
+                    }
+                    if (typeof serialNumber.hex === 'string' && serialNumber.hex.trim() !== '') {
+                        parts.push(serialNumber.hex.trim());
+                    }
+                    if (parts.length > 0) {
+                        addLine(`Serial Number: ${parts.join(' / ')}`);
+                    }
+                } else if (String(serialNumber).trim() !== '') {
+                    addLine(`Serial Number: ${serialNumber}`);
+                }
+            }
+
+            if (typeof details.signatureAlgorithm === 'string' && details.signatureAlgorithm.trim() !== '') {
+                addLine(`Signature Algorithm: ${details.signatureAlgorithm.trim()}`);
+            }
+
+            if (typeof details.issuer === 'string' && details.issuer.trim() !== '') {
+                addLine(`Issuer: ${details.issuer.trim()}`);
+            }
+
+            const validity = details.validity;
+            if (validity && (validity.notBefore || validity.notAfter)) {
+                addBlankLine();
+                addLine('Validity:');
+                if (validity.notBefore) {
+                    addLine(`    Not Before: ${validity.notBefore}`);
+                }
+                if (validity.notAfter) {
+                    addLine(`    Not After: ${validity.notAfter}`);
+                }
+            }
+
+            if (typeof details.subject === 'string' && details.subject.trim() !== '') {
+                addBlankLine();
+                addLine(`Subject: ${details.subject.trim()}`);
+            }
+
+            if (details.publicKeyInfo && typeof details.publicKeyInfo === 'object') {
+                addBlankLine();
+                addLine('Public Key Info:');
+                appendKeyValueLines(lines, details.publicKeyInfo, 1);
+            }
+
+            if (Array.isArray(details.extensions) && details.extensions.length) {
+                addBlankLine();
+                addLine('Extensions:');
+                details.extensions.forEach(ext => {
+                    if (!ext || typeof ext !== 'object') {
+                        return;
+                    }
+
+                    const parts = [];
+                    if (typeof ext.name === 'string' && ext.name.trim() !== '' && ext.name !== ext.oid) {
+                        parts.push(ext.name.trim());
+                    }
+                    if (typeof ext.oid === 'string' && ext.oid.trim() !== '') {
+                        if (parts.length) {
+                            parts[parts.length - 1] = `${parts[parts.length - 1]} (${ext.oid.trim()})`;
+                        } else {
+                            parts.push(`OID ${ext.oid.trim()}`);
+                        }
+                    }
+                    let header = parts.join('');
+                    if (!header) {
+                        header = 'Extension';
+                    }
+                    if (ext.critical) {
+                        header = `${header} [critical]`;
+                    }
+                    addLine(`    - ${header}`);
+                    if ('value' in ext) {
+                        appendKeyValueLines(lines, ext.value, 2);
+                    }
+                });
+            }
+
+            if (details.fingerprints && typeof details.fingerprints === 'object') {
+                addBlankLine();
+                addLine('Fingerprints:');
+                appendKeyValueLines(lines, details.fingerprints, 1);
+            }
+
+            const formatted = lines.join('\n').trim();
+            return formatted;
         }
 
         function renderCertificateDetails(details) {
@@ -1642,129 +2050,44 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                 return `<div style="color: #dc3545;">${escapeHtml(details.error)}</div>`;
             }
 
-            const sections = [];
-            if (details.version?.display) {
-                sections.push(`<div><strong>Version:</strong> ${escapeHtml(details.version.display)}</div>`);
-            }
-            if (details.serialNumber) {
-                const serialParts = [];
-                if (details.serialNumber.decimal) {
-                    serialParts.push(escapeHtml(details.serialNumber.decimal));
-                }
-                if (details.serialNumber.hex) {
-                    serialParts.push(`(${escapeHtml(details.serialNumber.hex)})`);
-                }
-                if (serialParts.length) {
-                    sections.push(`<div><strong>Certificate Serial Number:</strong> ${serialParts.join(' ')}</div>`);
-                }
-            }
-            if (details.signatureAlgorithm) {
-                sections.push(`<div><strong>Signature Algorithm:</strong> ${escapeHtml(details.signatureAlgorithm)}</div>`);
-            }
-            if (details.issuer) {
-                sections.push(`<div><strong>Issuer:</strong> ${escapeHtml(details.issuer)}</div>`);
-            }
-            if (details.validity) {
-                const validityLines = [];
-                if (details.validity.notBefore) {
-                    validityLines.push(`<div>Not Before: ${escapeHtml(details.validity.notBefore)}</div>`);
-                }
-                if (details.validity.notAfter) {
-                    validityLines.push(`<div>Not After: ${escapeHtml(details.validity.notAfter)}</div>`);
-                }
-                if (validityLines.length) {
-                    sections.push(`
-                        <div>
-                            <strong>Validity</strong>
-                            <div style="margin-left: 1rem;">
-                                ${validityLines.join('')}
-                            </div>
-                        </div>
-                    `);
-                }
-            }
-            if (details.subject) {
-                sections.push(`<div><strong>Subject:</strong> ${escapeHtml(details.subject)}</div>`);
-            }
-            if (details.publicKeyInfo) {
-                const pk = details.publicKeyInfo;
-                const pkLines = [];
-                if (pk.type) {
-                    pkLines.push(`<div>Type: ${escapeHtml(pk.type)}</div>`);
-                }
-                if (pk.keySize) {
-                    pkLines.push(`<div>Key Size: ${escapeHtml(pk.keySize)}</div>`);
-                }
-                if (pk.curve) {
-                    pkLines.push(`<div>Curve: ${escapeHtml(pk.curve)}</div>`);
-                }
-                if (pk.publicExponent) {
-                    pkLines.push(`<div>Public Exponent: ${escapeHtml(pk.publicExponent)}</div>`);
-                }
-                if (pk.uncompressedPoint) {
-                    pkLines.push(`<div>Public-Key (uncompressed):<br><span style="font-family: 'Courier New', monospace;">${escapeHtml(pk.uncompressedPoint)}</span></div>`);
-                }
-                if (pk.modulusHex) {
-                    pkLines.push(`<div>Modulus:<br><span style="font-family: 'Courier New', monospace;">${escapeHtml(pk.modulusHex)}</span></div>`);
-                }
-                if (pk.publicKeyHex) {
-                    pkLines.push(`<div>Public Key:<br><span style="font-family: 'Courier New', monospace;">${escapeHtml(pk.publicKeyHex)}</span></div>`);
-                }
-                if (pk.subjectPublicKeyInfoBase64) {
-                    pkLines.push(`<div>SubjectPublicKeyInfo (base64):<br><span style="font-family: 'Courier New', monospace;">${escapeHtml(pk.subjectPublicKeyInfoBase64)}</span></div>`);
-                }
-                if (pkLines.length) {
-                    sections.push(`
-                        <div>
-                            <strong>Subject Public Key Info</strong>
-                            <div style="margin-left: 1rem;">
-                                ${pkLines.join('')}
-                            </div>
-                        </div>
-                    `);
-                }
-            }
-            if (Array.isArray(details.extensions) && details.extensions.length > 0) {
-                const extensionItems = details.extensions.map(ext => {
-                    const extensionName = ext.name || ext.oid || 'Extension';
-                    let valueContent = '';
-                    if (ext.value && typeof ext.value === 'object') {
-                        valueContent = `<pre style="background: rgba(0, 114, 206, 0.08); padding: 0.65rem; border-radius: 16px; white-space: pre-wrap;">${escapeHtml(JSON.stringify(ext.value, null, 2))}</pre>`;
-                    } else if (ext.value !== undefined) {
-                        valueContent = `<div style="font-family: 'Courier New', monospace;">${escapeHtml(ext.value)}</div>`;
-                    }
-                    const criticalTag = ext.critical ? ' <span style="color: #dc3545;">[critical]</span>' : '';
-                    return `
-                        <div style="margin-bottom: 0.75rem;">
-                            <div><strong>${escapeHtml(extensionName)}</strong> (${escapeHtml(ext.oid || '')})${criticalTag}</div>
-                            ${valueContent}
-                        </div>
-                    `;
-                }).join('');
-                sections.push(`
-                    <div>
-                        <strong>Extensions:</strong>
-                        <div style="margin-left: 1rem;">
-                            ${extensionItems}
-                        </div>
-                    </div>
-                `);
-            }
-            if (details.fingerprints) {
-                const fingerprintEntries = Object.entries(details.fingerprints)
-                    .map(([algorithm, fingerprint]) => `<div>${escapeHtml(algorithm.toUpperCase())}: ${escapeHtml(fingerprint)}</div>`)
-                    .join('');
-                sections.push(`
-                    <div>
-                        <strong>Fingerprint:</strong>
-                        <div style="margin-left: 1rem;">
-                            ${fingerprintEntries}
-                        </div>
-                    </div>
-                `);
-            }
+            const formatted = formatCertificateDetails(details);
+            const content = formatted && formatted.trim() !== ''
+                ? formatted
+                : 'No decoded certificate details available.';
 
-            return sections.join('');
+            return `<textarea class="certificate-textarea" readonly spellcheck="false" wrap="soft">${escapeHtml(content)}</textarea>`;
+        }
+
+        function autoResizeCertificateTextareas(context) {
+            const scope = context && typeof context.querySelectorAll === 'function'
+                ? context
+                : document;
+            const textareas = scope.querySelectorAll('.certificate-textarea');
+            textareas.forEach(textarea => {
+                if (!(textarea instanceof HTMLTextAreaElement)) {
+                    return;
+                }
+
+                const resizeOnce = () => {
+                    textarea.style.height = 'auto';
+                    textarea.style.overflowY = 'hidden';
+                    textarea.style.overflowX = 'hidden';
+                    const measuredHeight = textarea.scrollHeight;
+                    if (Number.isFinite(measuredHeight) && measuredHeight > 0) {
+                        textarea.style.height = `${measuredHeight}px`;
+                    } else {
+                        textarea.style.height = '';
+                    }
+                };
+
+                resizeOnce();
+
+                if (typeof requestAnimationFrame === 'function') {
+                    requestAnimationFrame(resizeOnce);
+                }
+
+                setTimeout(resizeOnce, 150);
+            });
         }
 
         function showRegistrationResultModal(credentialJson, relyingPartyInfo) {
@@ -1795,20 +2118,20 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             const relyingPartyDisplay = relyingPartyCopy ? JSON.stringify(relyingPartyCopy, null, 2) : '';
 
             const credentialSection = credentialDisplay
-                ? `<pre style="background: rgba(0, 114, 206, 0.08); padding: 0.85rem; border-radius: 16px; overflow-x: auto;">${escapeHtml(credentialDisplay)}</pre>`
+                ? `<pre class="modal-pre">${escapeHtml(credentialDisplay)}</pre>`
                 : '<div style="font-style: italic; color: #6c757d;">No credential response captured.</div>';
 
             const clientDataSection = clientDataDisplay
-                ? `<pre style="background: rgba(0, 114, 206, 0.08); padding: 0.85rem; border-radius: 16px; overflow-x: auto;">${escapeHtml(clientDataDisplay)}</pre>`
+                ? `<pre class="modal-pre">${escapeHtml(clientDataDisplay)}</pre>`
                 : '<div style="font-style: italic; color: #6c757d;">No clientDataJSON available.</div>';
 
             const relyingPartySection = relyingPartyDisplay
-                ? `<pre style="background: rgba(0, 114, 206, 0.08); padding: 0.85rem; border-radius: 16px; overflow-x: auto;">${escapeHtml(relyingPartyDisplay)}</pre>`
+                ? `<pre class="modal-pre">${escapeHtml(relyingPartyDisplay)}</pre>`
                 : '<div style="font-style: italic; color: #6c757d;">No relying party data returned.</div>';
 
             let html = `
                 <section style="margin-bottom: 1.5rem;">
-                    <h3 style="color: #0072CE; margin-bottom: 0.75rem;">Registration Details</h3>
+                    <h3 style="color: #0072CE; margin-bottom: 0.75rem;">Authenticator Response</h3>
                     <ol style="padding-left: 1.25rem; margin: 0;">
                         <li style="margin-bottom: 1rem;">
                             <div style="font-weight: 600; margin-bottom: 0.5rem;">Result of navigator.credentials.create()</div>
@@ -1839,7 +2162,16 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
 
             modalBody.innerHTML = html;
             modalBody.scrollTop = 0;
+            if (typeof modalBody.scrollTo === 'function') {
+                modalBody.scrollTo(0, 0);
+            }
             openModal('registrationResultModal');
+            const scheduleResize = () => autoResizeCertificateTextareas(modalBody);
+            if (typeof requestAnimationFrame === 'function') {
+                requestAnimationFrame(scheduleResize);
+            } else {
+                setTimeout(scheduleResize, 0);
+            }
         }
 
         async function deleteCredential(username, index) {
@@ -1912,7 +2244,7 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             document.getElementById('enforce-cred-protect').checked = true;
             document.getElementById('enforce-cred-protect').disabled = true;
             document.getElementById('large-blob-reg').value = '';
-            document.getElementById('prf-reg').checked = true;
+            document.getElementById('prf-reg').checked = false;
             document.getElementById('prf-eval-first-reg').value = '';
             document.getElementById('prf-eval-second-reg').value = '';
             document.getElementById('prf-eval-second-reg').disabled = true;
@@ -2095,8 +2427,8 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             }
             
             // Update attestation
-            if (publicKey.attestation) {
-                document.getElementById('attestation').value = publicKey.attestation;
+            if (Object.prototype.hasOwnProperty.call(publicKey, 'attestation')) {
+                document.getElementById('attestation').value = publicKey.attestation || 'none';
             }
             
             // Update pubKeyCredParams (algorithms)
@@ -2157,8 +2489,9 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                     }
                     residentKeyElement.value = residentKeySetting;
                 }
-                if (publicKey.authenticatorSelection.userVerification) {
-                    document.getElementById('user-verification-reg').value = publicKey.authenticatorSelection.userVerification;
+                if (Object.prototype.hasOwnProperty.call(publicKey.authenticatorSelection, 'userVerification')) {
+                    const userVerificationValue = publicKey.authenticatorSelection.userVerification || 'preferred';
+                    document.getElementById('user-verification-reg').value = userVerificationValue;
                 }
             }
 
@@ -2274,8 +2607,8 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             }
             
             // Update user verification
-            if (publicKey.userVerification) {
-                document.getElementById('user-verification-auth').value = publicKey.userVerification;
+            if (Object.prototype.hasOwnProperty.call(publicKey, 'userVerification')) {
+                document.getElementById('user-verification-auth').value = publicKey.userVerification || 'preferred';
             }
             
             // Update extensions
@@ -3068,6 +3401,11 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                     jsonEditorOverlay.addEventListener('click', () => toggleJsonEditorExpansion(true));
                 }
 
+                const jsonEditorElement = document.getElementById('json-editor');
+                if (jsonEditorElement) {
+                    jsonEditorElement.addEventListener('keydown', handleJsonEditorKeydown);
+                }
+
                 document.addEventListener('keydown', (event) => {
                     if (event.key === 'Escape') {
                         const container = document.getElementById('json-editor-container');
@@ -3211,15 +3549,22 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             
             const largeBlob = document.getElementById('large-blob-reg')?.value;
             if (largeBlob && largeBlob !== '') {
-                options.extensions.largeBlob = largeBlob;
+                options.extensions.largeBlob = { support: largeBlob };
             }
-            
+
             if (document.getElementById('prf-reg')?.checked) {
-                options.extensions.prf = true;
                 const prfFirst = document.getElementById('prf-eval-first-reg')?.value;
                 const prfSecond = document.getElementById('prf-eval-second-reg')?.value;
-                if (prfFirst) options.extensions.prfEvalFirst = convertFormat(prfFirst, currentFormat, 'hex');
-                if (prfSecond) options.extensions.prfEvalSecond = convertFormat(prfSecond, currentFormat, 'hex');
+                if (prfFirst) {
+                    options.extensions.prf = {
+                        eval: {
+                            first: currentFormatToJsonFormat(prfFirst)
+                        }
+                    };
+                    if (prfSecond) {
+                        options.extensions.prf.eval.second = currentFormatToJsonFormat(prfSecond);
+                    }
+                }
             }
             
             return options;
@@ -3246,23 +3591,31 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             
             // Collect extensions for authentication
             const largeBlob = document.getElementById('large-blob-auth')?.value;
-            if (largeBlob && largeBlob !== '') {
-                options.extensions.largeBlob = largeBlob;
-                if (largeBlob === 'write') {
-                    const largeBlobWrite = document.getElementById('large-blob-write')?.value;
-                    if (largeBlobWrite) {
-                        options.extensions.largeBlobWrite = convertFormat(largeBlobWrite, currentFormat, 'hex');
-                    }
+            if (largeBlob === 'read') {
+                options.extensions.largeBlob = { read: true };
+            } else if (largeBlob === 'write') {
+                const largeBlobWrite = document.getElementById('large-blob-write')?.value;
+                if (largeBlobWrite) {
+                    options.extensions.largeBlob = {
+                        write: currentFormatToJsonFormat(largeBlobWrite)
+                    };
                 }
             }
-            
+
             // Check if we have prf inputs for authentication
             const prfFirst = document.getElementById('prf-eval-first-auth')?.value;
             const prfSecond = document.getElementById('prf-eval-second-auth')?.value;
             if (prfFirst || prfSecond) {
-                options.extensions.prf = true;
-                if (prfFirst) options.extensions.prfEvalFirst = convertFormat(prfFirst, currentFormat, 'hex');
-                if (prfSecond) options.extensions.prfEvalSecond = convertFormat(prfSecond, currentFormat, 'hex');
+                const prfEval = {};
+                if (prfFirst) {
+                    prfEval.first = currentFormatToJsonFormat(prfFirst);
+                }
+                if (prfSecond) {
+                    prfEval.second = currentFormatToJsonFormat(prfSecond);
+                }
+                if (Object.keys(prfEval).length > 0) {
+                    options.extensions.prf = { eval: prfEval };
+                }
             }
             
             return options;
@@ -3553,13 +3906,19 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                     // Update create form fields
                     if (parsed.username) document.getElementById('user-name').value = parsed.username;
                     if (parsed.displayName) document.getElementById('user-display-name').value = parsed.displayName;
-                    if (parsed.attestation) document.getElementById('attestation').value = parsed.attestation;
-                    if (parsed.userVerification) document.getElementById('user-verification-reg').value = parsed.userVerification;
+                    if (Object.prototype.hasOwnProperty.call(parsed, 'attestation')) {
+                        document.getElementById('attestation').value = parsed.attestation || 'none';
+                    }
+                    if (Object.prototype.hasOwnProperty.call(parsed, 'userVerification')) {
+                        document.getElementById('user-verification-reg').value = parsed.userVerification || 'preferred';
+                    }
                     if (parsed.authenticatorAttachment !== undefined) document.getElementById('authenticator-attachment').value = parsed.authenticatorAttachment || '';
                     if (parsed.residentKey) document.getElementById('resident-key').value = parsed.residentKey;
                 } else if (currentJsonMode === 'assert') {
                     // Update assert form fields
-                    if (parsed.userVerification) document.getElementById('user-verification-auth').value = parsed.userVerification;
+                    if (Object.prototype.hasOwnProperty.call(parsed, 'userVerification')) {
+                        document.getElementById('user-verification-auth').value = parsed.userVerification || 'preferred';
+                    }
                 }
                 
                 showStatus('advanced', 'JSON changes applied successfully!', 'success');

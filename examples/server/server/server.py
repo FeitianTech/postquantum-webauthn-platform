@@ -33,8 +33,13 @@ See the file README.adoc in this directory for details.
 
 Navigate to http://localhost:5000 in a supported web browser.
 """
-from fido2.webauthn import PublicKeyCredentialRpEntity, PublicKeyCredentialUserEntity
+from fido2.webauthn import (
+    PublicKeyCredentialRpEntity,
+    PublicKeyCredentialUserEntity,
+    RegistrationResponse,
+)
 from fido2.server import Fido2Server
+from fido2.utils import ByteBuffer
 from flask import Flask, request, redirect, abort, jsonify, session, send_file
 
 import os
@@ -43,7 +48,10 @@ import fido2.features
 import base64
 import pickle
 import time
+import textwrap
 from datetime import datetime, timezone
+
+from typing import Any, Dict, Mapping, Optional, Tuple
 
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
@@ -100,6 +108,131 @@ def delkey(name):
 
 def _colon_hex(data: bytes) -> str:
     return ":".join(f"{byte:02x}" for byte in data)
+
+
+def _encode_base64url(data: bytes) -> str:
+    """Encode bytes as unpadded base64url."""
+    return base64.urlsafe_b64encode(data).rstrip(b"=").decode("ascii")
+
+
+def _make_json_safe(value: Any) -> Any:
+    """Recursively convert bytes-like WebAuthn option values into JSON-friendly data."""
+    if isinstance(value, (bytes, bytearray, memoryview, ByteBuffer)):
+        return _encode_base64url(bytes(value))
+    if isinstance(value, Mapping):
+        return {key: _make_json_safe(val) for key, val in value.items()}
+    if isinstance(value, (list, tuple, set)):
+        return [_make_json_safe(item) for item in value]
+    return value
+
+
+CRED_PROTECT_LABELS: Dict[Any, str] = {
+    1: "userVerificationOptional",
+    2: "userVerificationOptionalWithCredentialIdList",
+    3: "userVerificationRequired",
+    "userVerificationOptional": "userVerificationOptional",
+    "userVerificationOptionalWithCredentialIDList": "userVerificationOptionalWithCredentialIdList",
+    "userVerificationOptionalWithCredentialIdList": "userVerificationOptionalWithCredentialIdList",
+    "userVerificationRequired": "userVerificationRequired",
+}
+
+
+def describe_cred_protect(value: Any) -> Any:
+    """Return a human readable credProtect description when possible."""
+    return CRED_PROTECT_LABELS.get(value, value)
+
+
+def summarize_authenticator_extensions(extensions: Mapping[str, Any]) -> Dict[str, Any]:
+    """Augment authenticator extension outputs with human friendly metadata."""
+    summary: Dict[str, Any] = {}
+    for name, ext_value in extensions.items():
+        summary[name] = ext_value
+        if name == "credProtect":
+            summary["credProtectLabel"] = describe_cred_protect(ext_value)
+    return summary
+
+
+def _extract_attestation_details(
+    response: Any,
+) -> Tuple[
+    str,
+    Dict[str, Any],
+    Optional[str],
+    Optional[str],
+    Dict[str, Any],
+    Optional[Dict[str, Any]],
+]:
+    """Parse attestation information from a registration response structure."""
+    attestation_format = "none"
+    attestation_statement: Dict[str, Any] = {}
+    attestation_object_b64: Optional[str] = None
+    client_data_b64: Optional[str] = None
+    client_extension_results: Dict[str, Any] = {}
+    attestation_certificate: Optional[Dict[str, Any]] = None
+
+    if not isinstance(response, dict):
+        return (
+            attestation_format,
+            attestation_statement,
+            attestation_object_b64,
+            client_data_b64,
+            client_extension_results,
+            attestation_certificate,
+        )
+
+    try:
+        registration = RegistrationResponse.from_dict(response)
+    except Exception as exc:  # pragma: no cover - debugging aid
+        print(f"[DEBUG] Failed to parse registration response for attestation: {exc}")
+        return (
+            attestation_format,
+            attestation_statement,
+            attestation_object_b64,
+            client_data_b64,
+            client_extension_results,
+            attestation_certificate,
+        )
+
+    attestation_object = registration.response.attestation_object
+    attestation_format = getattr(attestation_object, "fmt", None) or "none"
+    attestation_statement = attestation_object.att_stmt or {}
+    attestation_object_b64 = _encode_base64url(bytes(attestation_object))
+
+    if isinstance(attestation_statement, Mapping):
+        cert_chain = attestation_statement.get("x5c") or []
+        if isinstance(cert_chain, (list, tuple)) and cert_chain:
+            try:
+                first_cert = cert_chain[0]
+                if isinstance(first_cert, str):
+                    cert_bytes = base64.b64decode(first_cert)
+                else:
+                    cert_bytes = bytes(first_cert)
+                attestation_certificate = serialize_attestation_certificate(cert_bytes)
+            except Exception as cert_error:
+                attestation_certificate = {"error": str(cert_error)}
+
+    client_data = registration.response.client_data
+    client_data_b64 = getattr(client_data, "b64", None)
+    if client_data_b64 is None:
+        client_data_b64 = _encode_base64url(bytes(client_data))
+
+    extension_outputs = registration.client_extension_results
+    if extension_outputs:
+        if isinstance(extension_outputs, dict):
+            client_extension_results = extension_outputs
+        elif isinstance(extension_outputs, Mapping):
+            client_extension_results = dict(extension_outputs)
+        else:
+            client_extension_results = extension_outputs  # type: ignore[assignment]
+
+    return (
+        attestation_format,
+        attestation_statement,
+        attestation_object_b64,
+        client_data_b64,
+        client_extension_results,
+        attestation_certificate,
+    )
 
 
 def _format_x509_name(name: x509.Name) -> str:
@@ -230,6 +363,55 @@ def _serialize_extension_value(ext):
         return repr(value)
 
 
+def _format_structured_value(value, indent: int = 0):
+    """Format nested certificate data into readable text lines."""
+    indent_str = " " * 4 * indent
+
+    if value is None:
+        return []
+
+    if isinstance(value, (str, int, float)):
+        return [f"{indent_str}{value}"]
+
+    if isinstance(value, bool):
+        return [f"{indent_str}{str(value).lower()}"]
+
+    if isinstance(value, (list, tuple)):
+        if not value:
+            return []
+        lines = []
+        for item in value:
+            if isinstance(item, (dict, list, tuple)):
+                lines.append(f"{indent_str}-")
+                lines.extend(_format_structured_value(item, indent + 1))
+            else:
+                lines.append(f"{indent_str}- {item}")
+        return lines
+
+    if isinstance(value, Mapping):
+        entries = []
+        for key, val in value.items():
+            if val in (None, ""):
+                continue
+            if isinstance(key, str) and "base64" in key.lower():
+                continue
+            entries.append((key, val))
+
+        if not entries:
+            return []
+
+        lines = []
+        for key, val in entries:
+            if isinstance(val, (dict, list, tuple)):
+                lines.append(f"{indent_str}{key}:")
+                lines.extend(_format_structured_value(val, indent + 1))
+            else:
+                lines.append(f"{indent_str}{key}: {val}")
+        return lines
+
+    return [f"{indent_str}{value}"]
+
+
 def serialize_attestation_certificate(cert_bytes: bytes):
     if not cert_bytes:
         return None
@@ -242,6 +424,16 @@ def serialize_attestation_certificate(cert_bytes: bytes):
         if value.tzinfo is None:
             return value.replace(tzinfo=timezone.utc).isoformat()
         return value.astimezone(timezone.utc).isoformat()
+
+    def _get_cert_datetime(attribute: str) -> datetime:
+        utc_attribute = f"{attribute}_utc"
+        try:
+            return getattr(certificate, utc_attribute)
+        except AttributeError:
+            return getattr(certificate, attribute)
+
+    not_valid_before = _get_cert_datetime("not_valid_before")
+    not_valid_after = _get_cert_datetime("not_valid_after")
 
     extensions = []
     for ext in certificate.extensions:
@@ -260,6 +452,77 @@ def serialize_attestation_certificate(cert_bytes: bytes):
         "md5": certificate.fingerprint(hashes.MD5()).hex(),
     }
 
+    der_bytes = certificate.public_bytes(serialization.Encoding.DER)
+    der_base64 = base64.b64encode(der_bytes).decode("ascii")
+    pem_body = "\n".join(textwrap.wrap(der_base64, 64))
+    pem = f"-----BEGIN CERTIFICATE-----\n{pem_body}\n-----END CERTIFICATE-----"
+
+    summary_lines = []
+
+    def _append_line(line: str):
+        summary_lines.append(line)
+
+    def _append_blank_line():
+        if summary_lines and summary_lines[-1] != "":
+            summary_lines.append("")
+
+    _append_line(f"Version: {version_number} ({version_hex})")
+    _append_line(
+        "Serial Number: "
+        f"{certificate.serial_number} (0x{certificate.serial_number:x})"
+    )
+    signature_algorithm = getattr(
+        certificate.signature_algorithm_oid,
+        "_name",
+        certificate.signature_algorithm_oid.dotted_string,
+    )
+    _append_line(f"Signature Algorithm: {signature_algorithm}")
+    _append_line(f"Issuer: {_format_x509_name(certificate.issuer)}")
+
+    _append_blank_line()
+    _append_line("Validity:")
+    _append_line(f"    Not Before: {_isoformat(not_valid_before)}")
+    _append_line(f"    Not After: {_isoformat(not_valid_after)}")
+
+    _append_blank_line()
+    _append_line(f"Subject: {_format_x509_name(certificate.subject)}")
+
+    public_key_info = _serialize_public_key_info(certificate.public_key())
+    filtered_public_key_info = {
+        key: value
+        for key, value in public_key_info.items()
+        if not (isinstance(key, str) and "base64" in key.lower())
+    }
+    if filtered_public_key_info:
+        _append_blank_line()
+        _append_line("Public Key Info:")
+        summary_lines.extend(_format_structured_value(filtered_public_key_info, 1))
+
+    if extensions:
+        _append_blank_line()
+        _append_line("Extensions:")
+        for ext_info in extensions:
+            oid = ext_info.get("oid")
+            name = ext_info.get("name")
+            label = name if name and name != oid else (oid or "Extension")
+            if label and oid and label != oid:
+                label = f"{label} ({oid})"
+            elif not label:
+                label = "Extension"
+            if ext_info.get("critical"):
+                label = f"{label} [critical]"
+            _append_line(f"    - {label}")
+            summary_lines.extend(
+                _format_structured_value(ext_info.get("value"), indent=2)
+            )
+
+    if fingerprints:
+        _append_blank_line()
+        _append_line("Fingerprints:")
+        summary_lines.extend(_format_structured_value(fingerprints, 1))
+
+    summary = "\n".join(line for line in summary_lines if line is not None).strip()
+
     return {
         "version": {
             "display": f"{version_number} ({version_hex})",
@@ -270,21 +533,19 @@ def serialize_attestation_certificate(cert_bytes: bytes):
             "decimal": str(certificate.serial_number),
             "hex": f"0x{certificate.serial_number:x}",
         },
-        "signatureAlgorithm": getattr(
-            certificate.signature_algorithm_oid, "_name", certificate.signature_algorithm_oid.dotted_string
-        ),
+        "signatureAlgorithm": signature_algorithm,
         "issuer": _format_x509_name(certificate.issuer),
         "validity": {
-            "notBefore": _isoformat(certificate.not_valid_before),
-            "notAfter": _isoformat(certificate.not_valid_after),
+            "notBefore": _isoformat(not_valid_before),
+            "notAfter": _isoformat(not_valid_after),
         },
         "subject": _format_x509_name(certificate.subject),
-        "publicKeyInfo": _serialize_public_key_info(certificate.public_key()),
+        "publicKeyInfo": public_key_info,
         "extensions": extensions,
         "fingerprints": fingerprints,
-        "derBase64": base64.b64encode(
-            certificate.public_bytes(serialization.Encoding.DER)
-        ).decode("ascii"),
+        "derBase64": der_base64,
+        "pem": pem,
+        "summary": summary,
     }
 
 @app.route("/")
@@ -308,40 +569,39 @@ def register_begin():
 
     session["state"] = state
 
-    return jsonify(dict(options))
+    return jsonify(_make_json_safe(dict(options)))
 
 @app.route("/api/register/complete", methods=["POST"])
 def register_complete():
     uname = request.args.get("email")
     credentials = readkey(uname)
-    response = request.json
-    auth_data = server.register_complete(session["state"], response)
+    response = request.json or {}
+    credential_response = response.get('response', {}) if isinstance(response, dict) else {}
 
-    # Extract attestation format from attestation object
-    attestation_format = "none"  # Default
-    attestation_statement = None
-    try:
-        # First try to get attestation from auth_data if available
-        if hasattr(auth_data, 'attestation_object') and auth_data.attestation_object:
-            attestation_format = auth_data.attestation_object.fmt
-            if hasattr(auth_data.attestation_object, 'att_stmt'):
-                attestation_statement = auth_data.attestation_object.att_stmt
-        elif response.get('attestationObject'):
-            # Fallback: Try to parse attestation object from response
-            import cbor2
-            import base64
-            attestation_object_bytes = base64.b64decode(response['attestationObject'])
-            attestation_object = cbor2.loads(attestation_object_bytes)
-            attestation_format = attestation_object.get('fmt', 'none')
-            attestation_statement = attestation_object.get('attStmt', {})
-            
-            # Debug print to check what we're getting
-            print(f"[DEBUG] Parsed attestation format: {attestation_format}")
-            print(f"[DEBUG] Attestation statement keys: {list(attestation_statement.keys()) if attestation_statement else 'None'}")
-    except Exception as e:
-        print(f"[DEBUG] Attestation parsing error: {e}")
-        import traceback
-        traceback.print_exc()
+    (
+        attestation_format,
+        attestation_statement,
+        parsed_attestation_object,
+        parsed_client_data_json,
+        parsed_extension_results,
+        attestation_certificate_details,
+    ) = _extract_attestation_details(response)
+
+    raw_attestation_object = credential_response.get('attestationObject')
+    client_data_json = credential_response.get('clientDataJSON')
+
+    if parsed_attestation_object:
+        raw_attestation_object = parsed_attestation_object
+    if parsed_client_data_json:
+        client_data_json = parsed_client_data_json
+
+    client_extension_results = (
+        parsed_extension_results
+        if parsed_extension_results
+        else (response.get('clientExtensionResults', {}) if isinstance(response, dict) else {})
+    )
+
+    auth_data = server.register_complete(session["state"], response)
 
     # Store comprehensive credential data (same format as advanced)
     credential_info = {
@@ -353,11 +613,12 @@ def register_complete():
             'user_handle': uname.encode('utf-8')  # Use username as user_handle for simple registration
         },
         'registration_time': time.time(),
-        'client_data_json': response.get('clientDataJSON', ''),
-        'attestation_object': response.get('attestationObject', ''),
+        'client_data_json': client_data_json or '',
+        'attestation_object': raw_attestation_object or '',
         'attestation_format': attestation_format,  # Store parsed attestation format
         'attestation_statement': attestation_statement,  # Store attestation statement for details
-        'client_extension_outputs': response.get('clientExtensionResults', {}),
+        'attestation_certificate': attestation_certificate_details,
+        'client_extension_outputs': client_extension_results,
         # Store request parameters for simple registration (defaults)
         'request_params': {
             'user_verification': 'discouraged',
@@ -376,7 +637,7 @@ def register_complete():
             'hintsSent': [],  # Simple auth doesn't use hints
             # Enhanced largeBlob debugging information (simple auth defaults)
             'largeBlobRequested': {},  # Simple auth doesn't use largeBlob
-            'largeBlobClientOutput': response.get('clientExtensionResults', {}).get('largeBlob', {}),
+            'largeBlobClientOutput': client_extension_results.get('largeBlob', {}),
             'residentKeyRequested': None,  # Simple auth defaults
             'residentKeyRequired': False  # Simple auth defaults
         }
@@ -432,7 +693,7 @@ def authenticate_begin():
     )
     session["state"] = state
 
-    return jsonify(dict(options))
+    return jsonify(_make_json_safe(dict(options)))
 
 @app.route("/api/authenticate/complete", methods=["POST"])
 def authenticate_complete():
@@ -475,9 +736,9 @@ def downloadcred():
     return send_file(os.path.join(basepath, name), as_attachment=True, download_name=name)
 
 def convert_bytes_for_json(obj):
-    """Recursively convert bytes objects to base64 strings for JSON serialization"""
-    if isinstance(obj, bytes):
-        return base64.b64encode(obj).decode('utf-8')
+    """Recursively convert bytes-like objects to base64 strings for JSON serialization."""
+    if isinstance(obj, (bytes, bytearray, memoryview)):
+        return base64.b64encode(bytes(obj)).decode('utf-8')
     elif isinstance(obj, dict):
         return {k: convert_bytes_for_json(v) for k, v in obj.items()}
     elif isinstance(obj, list):
@@ -538,6 +799,10 @@ def list_credentials():
                                     # Properties section - detailed credential information
                                     'properties': cred.get('properties', {}),
                                 }
+
+                                certificate_details = cred.get('attestation_certificate')
+                                if certificate_details is not None:
+                                    credential_info['attestationCertificate'] = certificate_details
                             else:
                                 # New format with real FIDO2 objects
                                 cred_data = cred['credential_data']
@@ -593,6 +858,10 @@ def list_credentials():
                                     # Properties section - detailed credential information
                                     'properties': cred.get('properties', {}),
                                 }
+
+                                certificate_details = cred.get('attestation_certificate')
+                                if certificate_details is not None:
+                                    credential_info['attestationCertificate'] = certificate_details
                         else:
                             # Old format (just AttestedCredentialData)
                             credential_info = {
@@ -824,6 +1093,7 @@ def advanced_register_begin():
                 protect_map = {
                     "userVerificationOptional": 1,
                     "userVerificationOptionalWithCredentialIDList": 2,
+                    "userVerificationOptionalWithCredentialIdList": 2,
                     "userVerificationRequired": 3
                 }
                 processed_extensions["credProtect"] = protect_map.get(ext_value, ext_value)
@@ -837,8 +1107,26 @@ def advanced_register_begin():
             else:
                 processed_extensions["largeBlob"] = ext_value
         elif ext_name == "prf":
-            # Process PRF extension while preserving custom format
-            processed_extensions["prf"] = ext_value
+            if isinstance(ext_value, dict) and "eval" in ext_value:
+                prf_eval = ext_value["eval"]
+                processed_eval = {}
+                if isinstance(prf_eval, dict):
+                    if "first" in prf_eval:
+                        first_value = extract_binary_value(prf_eval["first"])
+                        if isinstance(first_value, str):
+                            first_value = bytes.fromhex(first_value)
+                        processed_eval["first"] = first_value
+                    if "second" in prf_eval:
+                        second_value = extract_binary_value(prf_eval["second"])
+                        if isinstance(second_value, str):
+                            second_value = bytes.fromhex(second_value)
+                        processed_eval["second"] = second_value
+                if processed_eval:
+                    processed_extensions["prf"] = {"eval": processed_eval}
+                else:
+                    processed_extensions["prf"] = ext_value
+            else:
+                processed_extensions["prf"] = ext_value
         else:
             # Pass through any custom extensions as-is for full extensibility
             processed_extensions[ext_name] = ext_value
@@ -867,7 +1155,7 @@ def advanced_register_begin():
     session["advanced_state"] = state
     session["advanced_original_request"] = data
     
-    return jsonify(dict(options))
+    return jsonify(_make_json_safe(dict(options)))
 
 @app.route("/api/advanced/register/complete", methods=["POST"])
 def advanced_register_complete():
@@ -881,7 +1169,9 @@ def advanced_register_complete():
     response = data.get("__credential_response")
     if not response:
         return jsonify({"error": "Credential response is required"}), 400
-    
+
+    credential_response = response.get('response', {}) if isinstance(response, dict) else {}
+
     # The rest of the data IS the original JSON editor content (primary source of truth)
     original_request = {key: value for key, value in data.items() if not key.startswith("__")}
     
@@ -905,19 +1195,55 @@ def advanced_register_complete():
     if resident_key_required is None:
         resident_key_required = resident_key_requested == 'required'
 
+    (
+        attestation_format,
+        attestation_statement,
+        parsed_attestation_object,
+        parsed_client_data_json,
+        parsed_extension_results,
+        attestation_certificate_details,
+    ) = _extract_attestation_details(response)
+
+    raw_attestation_object = credential_response.get('attestationObject')
+    client_data_json = credential_response.get('clientDataJSON')
+
+    if parsed_attestation_object:
+        raw_attestation_object = parsed_attestation_object
+    if parsed_client_data_json:
+        client_data_json = parsed_client_data_json
+
+    client_extension_results = (
+        parsed_extension_results
+        if parsed_extension_results
+        else (response.get('clientExtensionResults', {}) if isinstance(response, dict) else {})
+    )
+
     try:
         # Complete registration using stored state
         auth_data = server.register_complete(session.pop("advanced_state"), response)
-        
+
         # Debug logging for largeBlob extension results
-        client_extension_results = response.get('clientExtensionResults', {})
         if 'largeBlob' in client_extension_results:
             print(f"[DEBUG] largeBlob client extension results: {client_extension_results['largeBlob']}")
         else:
             print(f"[DEBUG] No largeBlob extension results in client response")
             
+        authenticator_extensions_summary: Dict[str, Any] = {}
         if hasattr(auth_data, 'extensions'):
-            print(f"[DEBUG] Server auth_data extensions: {auth_data.extensions}")
+            authenticator_extensions = getattr(auth_data, 'extensions')
+            print(f"[DEBUG] Server auth_data extensions: {authenticator_extensions}")
+            if isinstance(authenticator_extensions, Mapping):
+                cred_protect_value = authenticator_extensions.get('credProtect')
+                if cred_protect_value is not None:
+                    cred_protect_label = describe_cred_protect(cred_protect_value)
+                    if cred_protect_label != cred_protect_value:
+                        print(
+                            "[DEBUG] credProtect resolved to "
+                            f"{cred_protect_label} (raw: {cred_protect_value})"
+                        )
+                authenticator_extensions_summary = summarize_authenticator_extensions(
+                    authenticator_extensions
+                )
         else:
             print(f"[DEBUG] No extensions in auth_data")
         
@@ -946,24 +1272,6 @@ def advanced_register_complete():
         else:
             user_handle = username.encode('utf-8')
         
-        # Extract attestation information
-        attestation_format = "none"
-        attestation_statement = None
-        
-        try:
-            if hasattr(auth_data, 'attestation_object') and auth_data.attestation_object:
-                attestation_format = auth_data.attestation_object.fmt
-                if hasattr(auth_data.attestation_object, 'att_stmt'):
-                    attestation_statement = auth_data.attestation_object.att_stmt
-            elif response.get('attestationObject'):
-                import cbor2
-                attestation_object_bytes = base64.b64decode(response['attestationObject'])
-                attestation_object = cbor2.loads(attestation_object_bytes)
-                attestation_format = attestation_object.get('fmt', 'none')
-                attestation_statement = attestation_object.get('attStmt', {})
-        except Exception as e:
-            print(f"[DEBUG] Advanced - Attestation parsing error: {e}")
-        
         # Store comprehensive credential data
         credential_info = {
             'credential_data': auth_data.credential_data,
@@ -974,11 +1282,11 @@ def advanced_register_complete():
                 'user_handle': user_handle
             },
             'registration_time': time.time(),
-            'client_data_json': response.get('clientDataJSON', ''),
-            'attestation_object': response.get('attestationObject', ''),
+            'client_data_json': client_data_json or '',
+            'attestation_object': raw_attestation_object or '',
             'attestation_format': attestation_format,
             'attestation_statement': attestation_statement,
-            'client_extension_outputs': response.get('clientExtensionResults', {}),
+            'client_extension_outputs': client_extension_results,
             # Store complete original WebAuthn request for full traceability
             'original_webauthn_request': original_request,
             # Properties section - detailed credential information
@@ -990,25 +1298,14 @@ def advanced_register_complete():
                 'hintsSent': public_key.get('hints', []),
                 # Enhanced largeBlob debugging information
                 'largeBlobRequested': public_key.get('extensions', {}).get('largeBlob', {}),
-                'largeBlobClientOutput': response.get('clientExtensionResults', {}).get('largeBlob', {}),
+                'largeBlobClientOutput': client_extension_results.get('largeBlob', {}),
                 'residentKeyRequested': resident_key_requested,
                 'residentKeyRequired': bool(resident_key_required)
             }
         }
 
-        attestation_certificate_details = None
-        try:
-            if isinstance(attestation_statement, dict):
-                cert_chain = attestation_statement.get('x5c') or []
-                if cert_chain:
-                    first_cert = cert_chain[0]
-                    if isinstance(first_cert, str):
-                        cert_bytes = base64.b64decode(first_cert)
-                    else:
-                        cert_bytes = bytes(first_cert)
-                    attestation_certificate_details = serialize_attestation_certificate(cert_bytes)
-        except Exception as cert_error:
-            attestation_certificate_details = {"error": str(cert_error)}
+        if authenticator_extensions_summary:
+            credential_info['authenticator_extensions'] = authenticator_extensions_summary
 
         if attestation_certificate_details is not None:
             credential_info['attestation_certificate'] = attestation_certificate_details
@@ -1041,6 +1338,34 @@ def advanced_register_complete():
             "hintsUsed": public_key.get("hints", []),
             "actualResidentKey": bool(auth_data.flags & 0x04) if hasattr(auth_data, 'flags') else False,
         }
+
+        extensions_requested = public_key.get("extensions", {})
+        if not isinstance(extensions_requested, dict):
+            extensions_requested = {}
+
+        cred_protect_requested = extensions_requested.get("credentialProtectionPolicy")
+        if cred_protect_requested is None:
+            cred_protect_requested = extensions_requested.get("credProtect")
+
+        cred_protect_mapping = {
+            1: "userVerificationOptional",
+            2: "userVerificationOptionalWithCredentialIdList",
+            3: "userVerificationRequired",
+        }
+
+        if isinstance(cred_protect_requested, int):
+            cred_protect_display = cred_protect_mapping.get(cred_protect_requested, cred_protect_requested)
+        elif cred_protect_requested:
+            cred_protect_display = cred_protect_requested
+        else:
+            cred_protect_display = "none"
+
+        debug_info["credProtectUsed"] = cred_protect_display
+
+        enforce_requested = extensions_requested.get("enforceCredentialProtectionPolicy")
+        if enforce_requested is None:
+            enforce_requested = extensions_requested.get("enforceCredProtect")
+        debug_info["enforceCredProtectUsed"] = bool(enforce_requested)
         
         credential_data = auth_data.credential_data
         credential_id_bytes = getattr(credential_data, 'credential_id', b'') or b''
@@ -1133,6 +1458,11 @@ def advanced_register_complete():
                 "hex": user_handle.hex(),
             },
         }
+
+        if authenticator_extensions_summary:
+            rp_info["registrationData"]["authenticatorExtensions"] = _make_json_safe(
+                authenticator_extensions_summary
+            )
 
         if attestation_certificate_details:
             rp_info["attestationCertificate"] = attestation_certificate_details
@@ -1306,7 +1636,7 @@ def advanced_authenticate_begin():
     session["advanced_auth_state"] = state
     session["advanced_original_auth_request"] = data
     
-    return jsonify(dict(options))
+    return jsonify(_make_json_safe(dict(options)))
 
 @app.route("/api/advanced/authenticate/complete", methods=["POST"])
 def advanced_authenticate_complete():
