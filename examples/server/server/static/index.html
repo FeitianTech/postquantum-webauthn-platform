@@ -821,6 +821,7 @@
                         <div class="json-editor-column">
                             <h3>JSON Editor</h3>
                             <div id="json-editor-container" class="json-editor">
+                                <button type="button" id="json-editor-expand" class="json-editor-expand-btn" title="Expand JSON editor">Expand</button>
                                 <textarea id="json-editor" placeholder="JSON representation will appear here automatically..."></textarea>
                             </div>
                             <div class="json-editor-buttons" style="margin-top: 0.5rem;">
@@ -888,7 +889,7 @@
     <div id="registrationResultModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2 class="modal-title">Authenticator Response</h2>
+                <h2 class="modal-title">Registration Details</h2>
                 <button class="modal-close" onclick="closeRegistrationResultModal()">&times;</button>
             </div>
             <div class="modal-body" id="registrationResultBody">
@@ -909,6 +910,8 @@
             </div>
         </div>
     </div>
+
+    <div id="json-editor-overlay" class="json-editor-overlay"></div>
     <script type="module" src="script.js"></script>
 </body>
 </html>

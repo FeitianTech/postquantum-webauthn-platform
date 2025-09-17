@@ -1307,14 +1307,14 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                 const featureText = features.length > 0 ? features.join(' • ') : '';
                 
                 return `
-                <div class="credential-item" style="display: flex; align-items: center; justify-content: space-between; padding: 0.75rem; background: white; border: 1px solid #dee2e6; border-radius: 8px; margin-bottom: 0.5rem;">
+                <div class="credential-item">
                     <div style="flex: 1; min-width: 0;">
-                        <div style="font-weight: 500; color: #495057; font-size: 0.9rem; margin-bottom: 0.25rem;">${cred.email || cred.username || 'Unknown User'}</div>
-                        ${featureText ? `<div style="font-size: 0.75rem; color: #6c757d;">${featureText}</div>` : ''}
+                        <div style="font-weight: 600; color: #0f2740; font-size: 0.95rem; margin-bottom: 0.25rem;">${cred.email || cred.username || 'Unknown User'}</div>
+                        ${featureText ? `<div style="font-size: 0.75rem; color: #5c6c7a;">${featureText}</div>` : ''}
                     </div>
                     <div style="display: flex; gap: 0.5rem; flex-shrink: 0;">
-                        <button class="btn-small" onclick="showCredentialDetails(${index})" style="background: #325F74; color: white; border: none; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; cursor: pointer;">Details</button>
-                        <button class="btn-small btn-danger" onclick="deleteCredential('${cred.email || cred.username}', ${index})" style="background: #dc3545; color: white; border: none; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; cursor: pointer;">Delete</button>
+                        <button class="btn btn-small" onclick="showCredentialDetails(${index})">Details</button>
+                        <button class="btn btn-small btn-danger" onclick="deleteCredential('${cred.email || cred.username}', ${index})">Delete</button>
                     </div>
                 </div>
                 `;
@@ -1367,10 +1367,23 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             updateJsonEditor();
         }
 
+        function updateGlobalScrollLock() {
+            const overlayActive = document.getElementById('json-editor-overlay')?.classList.contains('active');
+            const modalActive = document.querySelector('.modal.open');
+            if (overlayActive || modalActive) {
+                document.body.classList.add('modal-open');
+                document.documentElement.classList.add('modal-open');
+            } else {
+                document.body.classList.remove('modal-open');
+                document.documentElement.classList.remove('modal-open');
+            }
+        }
+
         function openModal(modalId) {
             const modal = document.getElementById(modalId);
             if (modal) {
                 modal.classList.add('open');
+                updateGlobalScrollLock();
             }
         }
 
@@ -1378,7 +1391,34 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             const modal = document.getElementById(modalId);
             if (modal) {
                 modal.classList.remove('open');
+                updateGlobalScrollLock();
             }
+        }
+
+        function toggleJsonEditorExpansion(forceCollapse = false) {
+            const container = document.getElementById('json-editor-container');
+            const overlay = document.getElementById('json-editor-overlay');
+            const toggleButton = document.getElementById('json-editor-expand');
+
+            if (!container || !overlay || !toggleButton) {
+                return;
+            }
+
+            const shouldExpand = forceCollapse ? false : !container.classList.contains('expanded');
+
+            if (shouldExpand) {
+                container.classList.add('expanded');
+                overlay.classList.add('active');
+                toggleButton.textContent = 'Close';
+                toggleButton.setAttribute('aria-expanded', 'true');
+            } else {
+                container.classList.remove('expanded');
+                overlay.classList.remove('active');
+                toggleButton.textContent = 'Expand';
+                toggleButton.setAttribute('aria-expanded', 'false');
+            }
+
+            updateGlobalScrollLock();
         }
 
         function showCredentialDetails(index) {
@@ -1398,7 +1438,7 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             // User info at creation
             detailsHtml += `
             <div style="margin-bottom: 1.5rem;">
-                <h4 style="color: #325F74; margin-bottom: 0.5rem;">User info at creation</h4>
+                <h4 style="color: #0072CE; margin-bottom: 0.5rem;">User info at creation</h4>
                 <div style="font-size: 0.9rem; line-height: 1.4;">
                     <div><strong>Name:</strong> ${cred.userName || cred.email || 'N/A'}</div>
                     <div style="margin-bottom: 0.5rem;"><strong>Display name:</strong> ${cred.displayName || cred.userName || cred.email || 'N/A'}</div>
@@ -1415,11 +1455,11 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                     <div><strong>User handle (User ID):</strong></div>
                     <div style="font-family: 'Courier New', monospace; font-size: 0.9rem; margin-left: 1rem;">
                         <div><strong>b64</strong></div>
-                        <div style="background: #f8f9fa; padding: 0.25rem; border-radius: 4px; margin-bottom: 0.25rem;">${userHandleB64}</div>
+                        <div style="background: rgba(0, 114, 206, 0.08); padding: 0.35rem 0.5rem; border-radius: 12px; margin-bottom: 0.35rem;">${userHandleB64}</div>
                         <div><strong>b64u</strong></div>
-                        <div style="background: #f8f9fa; padding: 0.25rem; border-radius: 4px; margin-bottom: 0.25rem;">${userHandleB64u}</div>
+                        <div style="background: rgba(0, 114, 206, 0.08); padding: 0.35rem 0.5rem; border-radius: 12px; margin-bottom: 0.35rem;">${userHandleB64u}</div>
                         <div><strong>hex</strong></div>
-                        <div style="background: #f8f9fa; padding: 0.25rem; border-radius: 4px;">${userHandleHex}</div>
+                        <div style="background: rgba(0, 114, 206, 0.08); padding: 0.35rem 0.5rem; border-radius: 12px;">${userHandleHex}</div>
                     </div>
                 </div>`;
             }
@@ -1434,11 +1474,11 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                     <div><strong>Credential ID:</strong></div>
                     <div style="font-family: 'Courier New', monospace; font-size: 0.9rem; margin-left: 1rem;">
                         <div><strong>b64</strong></div>
-                        <div style="background: #f8f9fa; padding: 0.25rem; border-radius: 4px; margin-bottom: 0.25rem;">${credentialIdB64}</div>
+                        <div style="background: rgba(0, 114, 206, 0.08); padding: 0.35rem 0.5rem; border-radius: 12px; margin-bottom: 0.35rem;">${credentialIdB64}</div>
                         <div><strong>b64u</strong></div>
-                        <div style="background: #f8f9fa; padding: 0.25rem; border-radius: 4px; margin-bottom: 0.25rem;">${credentialIdB64u}</div>
+                        <div style="background: rgba(0, 114, 206, 0.08); padding: 0.35rem 0.5rem; border-radius: 12px; margin-bottom: 0.35rem;">${credentialIdB64u}</div>
                         <div><strong>hex</strong></div>
-                        <div style="background: #f8f9fa; padding: 0.25rem; border-radius: 4px;">${credentialIdHex}</div>
+                        <div style="background: rgba(0, 114, 206, 0.08); padding: 0.35rem 0.5rem; border-radius: 12px;">${credentialIdHex}</div>
                     </div>
                 </div>`;
             }
@@ -1472,13 +1512,13 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                         <div><strong>AAGUID:</strong></div>
                         <div style="font-family: 'Courier New', monospace; font-size: 0.9rem; margin-left: 1rem;">
                             <div><strong>b64</strong></div>
-                            <div style="background: #f8f9fa; padding: 0.25rem; border-radius: 4px; margin-bottom: 0.25rem;">${aaguidB64}</div>
+                            <div style="background: rgba(0, 114, 206, 0.08); padding: 0.35rem 0.5rem; border-radius: 12px; margin-bottom: 0.35rem;">${aaguidB64}</div>
                             <div><strong>b64u</strong></div>
-                            <div style="background: #f8f9fa; padding: 0.25rem; border-radius: 4px; margin-bottom: 0.25rem;">${aaguidB64u}</div>
+                            <div style="background: rgba(0, 114, 206, 0.08); padding: 0.35rem 0.5rem; border-radius: 12px; margin-bottom: 0.35rem;">${aaguidB64u}</div>
                             <div><strong>hex</strong></div>
-                            <div style="background: #f8f9fa; padding: 0.25rem; border-radius: 4px; margin-bottom: 0.25rem;">${aaguidHex}</div>
+                            <div style="background: rgba(0, 114, 206, 0.08); padding: 0.35rem 0.5rem; border-radius: 12px; margin-bottom: 0.35rem;">${aaguidHex}</div>
                             ${aaguidGuid ? `<div><strong>guid</strong></div>
-                            <div style="background: #f8f9fa; padding: 0.25rem; border-radius: 4px;">${aaguidGuid}</div>` : ''}
+                            <div style="background: rgba(0, 114, 206, 0.08); padding: 0.35rem 0.5rem; border-radius: 12px;">${aaguidGuid}</div>` : ''}
                         </div>
                     </div>`;
                 }
@@ -1489,7 +1529,7 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             // Properties section
             detailsHtml += `
             <div style="margin-bottom: 1.5rem;">
-                <h4 style="color: #325F74; margin-bottom: 0.5rem;">Properties</h4>
+                <h4 style="color: #0072CE; margin-bottom: 0.5rem;">Properties</h4>
                 <div style="font-size: 0.9rem; line-height: 1.4;">
                     <div><strong>Discoverable (resident key):</strong> ${cred.residentKey || false}</div>
                     <div><strong>Supports largeBlob:</strong> ${cred.largeBlob || false}</div>`;
@@ -1497,7 +1537,7 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             // Add new properties if available
             if (cred.properties) {
                 detailsHtml += `
-                    <div style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid #dee2e6;">
+                    <div style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(0, 114, 206, 0.15);">
                         <div><strong>Exclude credentials sent count:</strong> ${cred.properties.excludeCredentialsSentCount !== undefined ? cred.properties.excludeCredentialsSentCount : 'N/A'}</div>
                         <div><strong>Exclude credentials used:</strong> ${cred.properties.excludeCredentialsUsed !== undefined ? cred.properties.excludeCredentialsUsed : 'N/A'}</div>
                         <div><strong>Credential ID length (actual):</strong> ${cred.properties.credentialIdLength !== undefined ? cred.properties.credentialIdLength : 'N/A'} bytes</div>
@@ -1505,46 +1545,6 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                         <div><strong>Hints sent:</strong> ${cred.properties.hintsSent && cred.properties.hintsSent.length > 0 ? JSON.stringify(cred.properties.hintsSent) : '[]'}</div>
                     </div>`;
                 
-                // Enhanced largeBlob debugging section
-                if (cred.properties.largeBlobRequested !== undefined || cred.properties.largeBlobClientOutput !== undefined) {
-                    detailsHtml += `
-                        <div style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid #dee2e6;">
-                            <div style="color: #325F74; font-weight: bold; margin-bottom: 0.3rem;">largeBlob Debug Information:</div>
-                            <div><strong>Requested:</strong> ${JSON.stringify(cred.properties.largeBlobRequested || {})}</div>
-                            <div><strong>Client output:</strong> ${JSON.stringify(cred.properties.largeBlobClientOutput || {})}</div>
-                            <div><strong>Resident key requested:</strong> ${cred.properties.residentKeyRequested || 'N/A'}</div>
-                            <div><strong>Resident key required:</strong> ${cred.properties.residentKeyRequired !== undefined ? cred.properties.residentKeyRequired : 'N/A'}</div>`;
-                    
-                    // Analysis of why largeBlob might not be working
-                    const largeBlobSupported = cred.properties.largeBlobClientOutput?.supported === true;
-                    const largeBlobRequested = cred.properties.largeBlobRequested?.support;
-                    const residentKeyRequired = cred.properties.residentKeyRequired;
-                    
-                    if (largeBlobRequested && !largeBlobSupported) {
-                        detailsHtml += `
-                            <div style="margin-top: 0.3rem; padding: 0.5rem; background-color: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px;">
-                                <div style="color: #856404; font-weight: bold;">largeBlob Analysis:</div>`;
-                        
-                        if (!residentKeyRequired) {
-                            detailsHtml += `<div style="color: #856404;">⚠️ Resident key must be "required" for largeBlob to work</div>`;
-                        }
-                        
-                        if (largeBlobRequested === 'required') {
-                            detailsHtml += `<div style="color: #856404;">❌ largeBlob "required" but authenticator doesn't support it</div>`;
-                        } else if (largeBlobRequested === 'preferred') {
-                            detailsHtml += `<div style="color: #856404;">ℹ️ largeBlob "preferred" but authenticator doesn't support it</div>`;
-                        }
-                        
-                        detailsHtml += `</div>`;
-                    } else if (largeBlobSupported) {
-                        detailsHtml += `
-                            <div style="margin-top: 0.3rem; padding: 0.5rem; background-color: #d4edda; border: 1px solid #c3e6cb; border-radius: 4px;">
-                                <div style="color: #155724;">✅ largeBlob is supported by this credential</div>
-                            </div>`;
-                    }
-                    
-                    detailsHtml += `</div>`;
-                }
             }
             
             detailsHtml += `
@@ -1554,7 +1554,7 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             // Attestation Format - always show
             detailsHtml += `
             <div style="margin-bottom: 1.5rem;">
-                <h4 style="color: #325F74; margin-bottom: 0.5rem;">Attestation Format</h4>
+                <h4 style="color: #0072CE; margin-bottom: 0.5rem;">Attestation Format</h4>
                 <div style="font-size: 0.9rem;">${cred.attestationFormat || 'none'}</div>
             </div>`;
             
@@ -1562,8 +1562,8 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             if (cred.attestationStatement && Object.keys(cred.attestationStatement).length > 0) {
                 detailsHtml += `
                 <div style="margin-bottom: 1.5rem;">
-                    <h4 style="color: #325F74; margin-bottom: 0.5rem;">Attestation Statement</h4>
-                    <div style="font-size: 0.8rem; font-family: monospace; background: #f8f9fa; padding: 0.5rem; border-radius: 4px; white-space: pre-wrap;">${JSON.stringify(cred.attestationStatement, null, 2)}</div>
+                    <h4 style="color: #0072CE; margin-bottom: 0.5rem;">Attestation Statement</h4>
+                    <div style="font-size: 0.8rem; font-family: monospace; background: rgba(0, 114, 206, 0.08); padding: 0.65rem; border-radius: 16px; white-space: pre-wrap;">${JSON.stringify(cred.attestationStatement, null, 2)}</div>
                 </div>`;
             }
             
@@ -1571,7 +1571,7 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             if (cred.flags) {
                 detailsHtml += `
                 <div style="margin-bottom: 1.5rem;">
-                    <h4 style="color: #325F74; margin-bottom: 0.5rem;">Authenticator Data (registration)</h4>
+                    <h4 style="color: #0072CE; margin-bottom: 0.5rem;">Authenticator Data (registration)</h4>
                     <div style="font-size: 0.9rem; line-height: 1.4;">
                         <div><strong>AT:</strong> ${cred.flags.at}, <strong>BE:</strong> ${cred.flags.be}, <strong>BS:</strong> ${cred.flags.bs}, <strong>ED:</strong> ${cred.flags.ed}, <strong>UP:</strong> ${cred.flags.up}, <strong>UV:</strong> ${cred.flags.uv}</div>
                         <div><strong>Signature Counter:</strong> ${cred.signCount || 0}</div>
@@ -1583,8 +1583,8 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             if (cred.clientExtensionOutputs && Object.keys(cred.clientExtensionOutputs).length > 0) {
                 detailsHtml += `
                 <div style="margin-bottom: 1.5rem;">
-                    <h4 style="color: #325F74; margin-bottom: 0.5rem;">Client extension outputs (registration)</h4>
-                    <div style="font-family: 'Courier New', monospace; font-size: 0.9rem; background: #f8f9fa; padding: 0.5rem; border-radius: 4px; white-space: pre-wrap;">${JSON.stringify(cred.clientExtensionOutputs, null, 2)}</div>
+                    <h4 style="color: #0072CE; margin-bottom: 0.5rem;">Client extension outputs (registration)</h4>
+                    <div style="font-family: 'Courier New', monospace; font-size: 0.9rem; background: rgba(0, 114, 206, 0.08); padding: 0.65rem; border-radius: 16px; white-space: pre-wrap;">${JSON.stringify(cred.clientExtensionOutputs, null, 2)}</div>
                 </div>`;
             }
             
@@ -1603,7 +1603,7 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                 
                 detailsHtml += `
                 <div style="margin-bottom: 1.5rem;">
-                    <h4 style="color: #325F74; margin-bottom: 0.5rem;">Public Key</h4>
+                    <h4 style="color: #0072CE; margin-bottom: 0.5rem;">Public Key</h4>
                     <div style="font-size: 0.9rem;">
                         <div><strong>Algorithm:</strong> ${algorithmName}</div>
                     </div>
@@ -1611,6 +1611,7 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             }
             
             modalBody.innerHTML = detailsHtml;
+            modalBody.scrollTop = 0;
             openModal('credentialModal');
         }
 
@@ -1718,7 +1719,7 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                     const extensionName = ext.name || ext.oid || 'Extension';
                     let valueContent = '';
                     if (ext.value && typeof ext.value === 'object') {
-                        valueContent = `<pre style="background: #f8f9fa; padding: 0.5rem; border-radius: 4px; white-space: pre-wrap;">${escapeHtml(JSON.stringify(ext.value, null, 2))}</pre>`;
+                        valueContent = `<pre style="background: rgba(0, 114, 206, 0.08); padding: 0.65rem; border-radius: 16px; white-space: pre-wrap;">${escapeHtml(JSON.stringify(ext.value, null, 2))}</pre>`;
                     } else if (ext.value !== undefined) {
                         valueContent = `<div style="font-family: 'Courier New', monospace;">${escapeHtml(ext.value)}</div>`;
                     }
@@ -1784,20 +1785,20 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             const relyingPartyDisplay = relyingPartyCopy ? JSON.stringify(relyingPartyCopy, null, 2) : '';
 
             const credentialSection = credentialDisplay
-                ? `<pre style="background: #f8f9fa; padding: 0.75rem; border-radius: 6px; overflow-x: auto;">${escapeHtml(credentialDisplay)}</pre>`
+                ? `<pre style="background: rgba(0, 114, 206, 0.08); padding: 0.85rem; border-radius: 16px; overflow-x: auto;">${escapeHtml(credentialDisplay)}</pre>`
                 : '<div style="font-style: italic; color: #6c757d;">No credential response captured.</div>';
 
             const clientDataSection = clientDataDisplay
-                ? `<pre style="background: #f8f9fa; padding: 0.75rem; border-radius: 6px; overflow-x: auto;">${escapeHtml(clientDataDisplay)}</pre>`
+                ? `<pre style="background: rgba(0, 114, 206, 0.08); padding: 0.85rem; border-radius: 16px; overflow-x: auto;">${escapeHtml(clientDataDisplay)}</pre>`
                 : '<div style="font-style: italic; color: #6c757d;">No clientDataJSON available.</div>';
 
             const relyingPartySection = relyingPartyDisplay
-                ? `<pre style="background: #f8f9fa; padding: 0.75rem; border-radius: 6px; overflow-x: auto;">${escapeHtml(relyingPartyDisplay)}</pre>`
+                ? `<pre style="background: rgba(0, 114, 206, 0.08); padding: 0.85rem; border-radius: 16px; overflow-x: auto;">${escapeHtml(relyingPartyDisplay)}</pre>`
                 : '<div style="font-style: italic; color: #6c757d;">No relying party data returned.</div>';
 
             let html = `
                 <section style="margin-bottom: 1.5rem;">
-                    <h3 style="color: #325F74; margin-bottom: 0.75rem;">Authenticator Response</h3>
+                    <h3 style="color: #0072CE; margin-bottom: 0.75rem;">Registration Details</h3>
                     <ol style="padding-left: 1.25rem; margin: 0;">
                         <li style="margin-bottom: 1rem;">
                             <div style="font-weight: 600; margin-bottom: 0.5rem;">Result of navigator.credentials.create()</div>
@@ -1810,7 +1811,7 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                     </ol>
                 </section>
                 <section style="margin-bottom: 1.5rem;">
-                    <h3 style="color: #325F74; margin-bottom: 0.75rem;">Relying Party extracted information</h3>
+                    <h3 style="color: #0072CE; margin-bottom: 0.75rem;">Relying Party extracted information</h3>
                     ${relyingPartySection}
                 </section>
             `;
@@ -1818,7 +1819,7 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             if (certificateSection) {
                 html += `
                     <section>
-                        <h3 style="color: #325F74; margin-bottom: 0.75rem;">Attestation Certificate</h3>
+                        <h3 style="color: #0072CE; margin-bottom: 0.75rem;">Attestation Certificate</h3>
                         <div style="font-size: 0.95rem; line-height: 1.6;">
                             ${certificateSection}
                         </div>
@@ -2954,6 +2955,21 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                     });
                 }
 
+                const credProtectSelect = document.getElementById('cred-protect');
+                const enforceCredProtectCheckbox = document.getElementById('enforce-cred-protect');
+                if (credProtectSelect && enforceCredProtectCheckbox) {
+                    const handleCredProtectToggle = () => {
+                        if (credProtectSelect.value) {
+                            enforceCredProtectCheckbox.disabled = false;
+                        } else {
+                            enforceCredProtectCheckbox.checked = true;
+                            enforceCredProtectCheckbox.disabled = true;
+                        }
+                    };
+                    credProtectSelect.addEventListener('change', handleCredProtectToggle);
+                    handleCredProtectToggle();
+                }
+
                 // Set up allow credentials dropdown listener
                 const allowCredentialsSelect = document.getElementById('allow-credentials');
                 if (allowCredentialsSelect) {
@@ -3031,8 +3047,27 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                         });
                     }
                 });
+
+                const jsonEditorExpandButton = document.getElementById('json-editor-expand');
+                if (jsonEditorExpandButton) {
+                    jsonEditorExpandButton.addEventListener('click', () => toggleJsonEditorExpansion());
+                }
+
+                const jsonEditorOverlay = document.getElementById('json-editor-overlay');
+                if (jsonEditorOverlay) {
+                    jsonEditorOverlay.addEventListener('click', () => toggleJsonEditorExpansion(true));
+                }
+
+                document.addEventListener('keydown', (event) => {
+                    if (event.key === 'Escape') {
+                        const container = document.getElementById('json-editor-container');
+                        if (container?.classList.contains('expanded')) {
+                            toggleJsonEditorExpansion(true);
+                        }
+                    }
+                });
             }, 100);
-            
+
             // Initialize JSON editor
             setTimeout(updateJsonEditor, 200);
             

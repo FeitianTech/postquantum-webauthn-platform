@@ -1,60 +1,89 @@
 /* WebAuthn FIDO2 Test Application Styles */
 
+:root {
+    --primary-color: #0072CE;
+    --primary-dark: #005a9c;
+    --accent-color: #00A651;
+    --surface-color: #ffffff;
+    --surface-alt: #f3f7fb;
+    --text-color: #0f2740;
+    --muted-text: #5c6c7a;
+    --shadow-soft: 0 18px 40px rgba(0, 114, 206, 0.08);
+    --shadow-hover: 0 24px 55px rgba(0, 114, 206, 0.18);
+}
+
 * {
     box-sizing: border-box;
     margin: 0;
     padding: 0;
+    scrollbar-width: none;
+}
+
+*::-webkit-scrollbar {
+    display: none;
 }
 
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
     line-height: 1.6;
-    color: #333;
-    background-color: #f5f5f5;
+    color: var(--text-color);
+    background-color: var(--surface-alt);
+}
+
+html.modal-open,
+body.modal-open {
+    overflow: hidden;
+    touch-action: none;
 }
 
 .header {
-    background: linear-gradient(135deg, #325F74 0%, #4a7b8e 100%);
-    color: white;
-    padding: 1rem 2rem;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    background: linear-gradient(120deg, var(--primary-color) 0%, #009fe3 55%, var(--accent-color) 100%);
+    color: #ffffff;
+    padding: 1.5rem 2.5rem;
+    box-shadow: 0 24px 45px rgba(0, 114, 206, 0.25);
+    border-bottom-left-radius: 24px;
+    border-bottom-right-radius: 24px;
 }
 
 .header h1 {
     margin: 0;
-    font-size: 2rem;
-    font-weight: 300;
+    font-size: 2.25rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
 }
 
 .header p {
-    margin: 0.5rem 0 0 0;
-    opacity: 0.9;
+    margin: 0.75rem 0 0 0;
+    opacity: 0.95;
+    font-size: 1.05rem;
 }
 
 .container {
     width: 100%;
     margin: 0 auto;
-    padding: 2rem;
+    padding: 2.5rem;
 }
 
 .nav-tabs {
     display: flex;
-    background: white;
-    border-radius: 12px 12px 0 0;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    background: var(--surface-color);
+    border-radius: 18px;
+    box-shadow: var(--shadow-soft);
     overflow: hidden;
+    margin-bottom: 1.5rem;
 }
 
 .nav-tab {
     flex: 1;
     padding: 1rem 2rem;
-    background: #e9ecef;
+    background: transparent;
     border: none;
     cursor: pointer;
     font-size: 1rem;
-    color: #6c757d;
+    color: var(--muted-text);
     transition: all 0.3s ease;
-    border-right: 1px solid #dee2e6;
+    border-right: 1px solid rgba(0, 114, 206, 0.12);
+    font-weight: 500;
 }
 
 .nav-tab:last-child {
@@ -62,21 +91,21 @@ body {
 }
 
 .nav-tab.active {
-    background: white;
-    color: #325F74;
-    font-weight: 500;
+    background: linear-gradient(135deg, rgba(0, 114, 206, 0.15), rgba(0, 166, 81, 0.2));
+    color: var(--primary-dark);
+    box-shadow: inset 0 0 0 1px rgba(0, 114, 206, 0.25);
 }
 
 .nav-tab:hover:not(.active) {
-    background: #f8f9fa;
-    color: #495057;
+    background: rgba(0, 114, 206, 0.08);
+    color: var(--primary-dark);
 }
 
 .content {
-    background: white;
-    border-radius: 0 0 12px 12px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    padding: 2rem;
+    background: var(--surface-color);
+    border-radius: 24px;
+    box-shadow: var(--shadow-soft);
+    padding: 2.5rem;
     min-height: 600px;
 }
 
@@ -93,10 +122,10 @@ body {
 }
 
 .section h2 {
-    color: #325F74;
+    color: var(--primary-dark);
     margin-bottom: 1rem;
-    font-size: 1.5rem;
-    font-weight: 500;
+    font-size: 1.6rem;
+    font-weight: 600;
 }
 
 .form-group {
@@ -106,53 +135,55 @@ body {
 .form-group label {
     display: block;
     margin-bottom: 0.5rem;
-    font-weight: 500;
-    color: #495057;
+    font-weight: 600;
+    color: var(--muted-text);
 }
 
 .form-control {
     width: 100%;
     padding: 0.75rem;
-    border: 1px solid #dee2e6;
-    border-radius: 12px;
+    border: 1px solid rgba(0, 114, 206, 0.18);
+    border-radius: 16px;
     font-size: 1rem;
     transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    background: rgba(255, 255, 255, 0.95);
 }
 
 .form-control:focus {
     outline: none;
-    border-color: #325F74;
-    box-shadow: 0 0 0 3px rgba(50, 95, 116, 0.1);
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(0, 114, 206, 0.18);
 }
 
 .btn {
     display: inline-block;
     padding: 0.75rem 1.5rem;
-    background: #325F74;
-    color: white;
+    background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+    color: #ffffff;
     border: none;
-    border-radius: 12px;
+    border-radius: 18px;
     cursor: pointer;
     font-size: 1rem;
-    font-weight: 500;
+    font-weight: 600;
     text-decoration: none;
     transition: all 0.3s ease;
     margin-right: 0.5rem;
     margin-bottom: 0.5rem;
+    box-shadow: var(--shadow-soft);
 }
 
 .btn:hover {
-    background: #2a4e5f;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-hover);
 }
 
 .btn-secondary {
-    background: #6c757d;
+    background: rgba(15, 39, 64, 0.1);
+    color: var(--primary-dark);
 }
 
 .btn-secondary:hover {
-    background: #545b62;
+    background: rgba(15, 39, 64, 0.18);
 }
 
 .btn-danger {
@@ -173,7 +204,7 @@ body {
 
 .status {
     padding: 1rem;
-    border-radius: 12px;
+    border-radius: 18px;
     margin-bottom: 1rem;
     display: none;
     position: fixed;
@@ -183,7 +214,7 @@ body {
     z-index: 1000;
     min-width: 300px;
     max-width: 90vw;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    box-shadow: var(--shadow-soft);
     animation: slideDown 0.3s ease-out;
 }
 
@@ -245,18 +276,18 @@ body {
 
 .form-column h3, .json-editor-column h3, .credentials-column h3 {
     margin-bottom: 1rem;
-    color: #325F74;
+    color: var(--primary-dark);
     font-size: 1.1rem;
     height: 1.5rem; /* Fixed height for alignment */
 }
 
 .sub-tabs {
     display: flex;
-    background: #f8f9fa;
-    border-radius: 12px;
-    margin-bottom: 1rem;
+    background: rgba(0, 114, 206, 0.06);
+    border-radius: 16px;
+    margin-bottom: 1.25rem;
     overflow: hidden;
-    border: 1px solid #dee2e6;
+    border: 1px solid rgba(0, 114, 206, 0.1);
 }
 
 .sub-tab {
@@ -266,20 +297,20 @@ body {
     border: none;
     cursor: pointer;
     font-size: 0.9rem;
-    color: #6c757d;
+    color: var(--muted-text);
     transition: all 0.3s ease;
+    font-weight: 500;
 }
 
 .sub-tab.active {
-    background: white;
-    color: #325F74;
-    font-weight: 500;
-    box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);
+    background: linear-gradient(135deg, rgba(0, 114, 206, 0.15), rgba(0, 166, 81, 0.2));
+    color: var(--primary-dark);
+    box-shadow: inset 0 0 0 1px rgba(0, 114, 206, 0.2);
 }
 
 .sub-tab:hover:not(.active) {
-    background: #e9ecef;
-    color: #495057;
+    background: rgba(0, 114, 206, 0.1);
+    color: var(--primary-dark);
 }
 
 .form-control.error {
@@ -295,38 +326,45 @@ body {
 }
 
 .credentials-panel {
-    background: #f8f9fa;
-    border: 1px solid #dee2e6;
-    border-radius: 12px;
-    padding: 1rem;
+    background: var(--surface-color);
+    border: 1px solid rgba(0, 114, 206, 0.15);
+    border-radius: 20px;
+    padding: 1.25rem;
     min-height: 600px;
     max-height: 600px;
     overflow-y: auto;
+    box-shadow: var(--shadow-soft);
 }
 
 .credentials-panel h3 {
     margin-bottom: 1rem;
-    color: #325F74;
+    color: var(--primary-dark);
     font-size: 1.1rem;
 }
 
 .credential-item {
-    background: white;
-    border: 1px solid #dee2e6;
-    border-radius: 12px;
-    padding: 0.75rem;
-    margin-bottom: 0.75rem;
+    background: rgba(0, 114, 206, 0.05);
+    border: 1px solid rgba(0, 114, 206, 0.12);
+    border-radius: 18px;
+    padding: 0.9rem 1rem;
+    margin-bottom: 0.9rem;
     cursor: pointer;
     transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
 }
 
 .credential-item:hover {
-    border-color: #325F74;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    border-color: var(--primary-color);
+    box-shadow: var(--shadow-soft);
+    transform: translateY(-2px);
 }
 
 .credential-item.expanded {
-    border-color: #325F74;
+    border-color: var(--primary-color);
+    background: rgba(0, 114, 206, 0.1);
 }
 
 .credential-summary {
@@ -422,15 +460,16 @@ body {
 }
 
 .btn-small {
-    padding: 0.5rem 0.75rem;
-    font-size: 0.85rem;
+    padding: 0.35rem 0.85rem;
+    font-size: 0.8rem;
+    border-radius: 14px;
 }
 
 .btn-randomize {
-    background: #6c757d;
-    color: white;
+    background: rgba(0, 114, 206, 0.12);
+    color: var(--primary-dark);
     border: none;
-    border-radius: 6px;
+    border-radius: 14px;
     padding: 0.75rem;
     font-size: 1rem;
     cursor: pointer;
@@ -442,7 +481,7 @@ body {
 }
 
 .btn-randomize:hover {
-    background: #545b62;
+    background: rgba(0, 114, 206, 0.2);
 }
 
 .error-message {
@@ -478,33 +517,96 @@ body {
 }
 
 .json-editor {
-    background: #f8f9fa;
-    border: 1px solid #dee2e6;
-    border-radius: 12px;
-    padding: 0.5rem;
+    background: var(--surface-color);
+    border: 1px solid rgba(0, 114, 206, 0.15);
+    border-radius: 20px;
+    padding: 1.75rem 1rem 1rem;
     font-family: 'Monaco', 'Consolas', monospace;
-    font-size: 0.9rem;
-    line-height: 1.4;
-    min-height: 600px;
-    height: auto; /* Allow height to expand with content */
-    max-height: none; /* Remove height limit to allow full expansion */
+    font-size: 0.92rem;
+    line-height: 1.5;
+    min-height: 520px;
     white-space: pre-wrap;
     display: flex;
     flex-direction: column;
+    box-shadow: var(--shadow-soft);
+    overflow: hidden;
 }
 
 .json-editor textarea {
     width: 100%;
-    height: auto;
-    min-height: 600px;
+    min-height: 520px;
     background: transparent;
     border: none;
     outline: none;
-    resize: vertical;
+    resize: none;
     font-family: inherit;
     font-size: inherit;
     line-height: inherit;
-    flex: 1; /* Allow textarea to expand to fill available space */
+    flex: 1;
+    color: var(--text-color);
+    overflow-y: auto;
+}
+
+#json-editor-container {
+    position: relative;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+#json-editor-container.expanded {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 72vw;
+    max-width: 1000px;
+    height: 78vh;
+    z-index: 1100;
+    padding: 1.75rem 1.5rem 1.5rem;
+    border-radius: 24px;
+}
+
+#json-editor-container.expanded textarea {
+    min-height: unset;
+    height: 100%;
+}
+
+.json-editor-expand-btn {
+    position: absolute;
+    top: 0.85rem;
+    right: 0.85rem;
+    background: rgba(0, 114, 206, 0.12);
+    color: var(--primary-dark);
+    border: none;
+    border-radius: 999px;
+    padding: 0.35rem 0.9rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: none;
+}
+
+.json-editor-expand-btn:hover {
+    background: rgba(0, 114, 206, 0.2);
+}
+
+#json-editor-container.expanded .json-editor-expand-btn {
+    background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+    color: #ffffff;
+    box-shadow: var(--shadow-soft);
+}
+
+.json-editor-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 39, 64, 0.45);
+    backdrop-filter: blur(2px);
+    z-index: 1000;
+}
+
+.json-editor-overlay.active {
+    display: block;
 }
 
 .checkbox-group {
@@ -522,9 +624,9 @@ body {
 .progress {
     display: none;
     padding: 1rem;
-    background: #f8f9fa;
-    border: 1px solid #dee2e6;
-    border-radius: 4px;
+    background: rgba(0, 114, 206, 0.08);
+    border: 1px solid rgba(0, 114, 206, 0.18);
+    border-radius: 16px;
     text-align: center;
     margin-top: 1rem;
 }
@@ -537,9 +639,9 @@ body {
     display: inline-block;
     width: 20px;
     height: 20px;
-    border: 3px solid rgba(50, 95, 116, 0.3);
+    border: 3px solid rgba(0, 114, 206, 0.25);
     border-radius: 50%;
-    border-top-color: #325F74;
+    border-top-color: var(--primary-color);
     animation: spin 1s ease-in-out infinite;
     margin-right: 0.5rem;
 }
@@ -576,7 +678,7 @@ select.form-control {
     display: inline-block;
     width: 16px;
     height: 16px;
-    border: 2px solid #325F74;
+    border: 2px solid var(--primary-color);
     border-top: 2px solid transparent;
     border-radius: 50%;
     background: none;
@@ -593,7 +695,7 @@ select.form-control {
     min-width: auto;
     width: 32px;
     height: 32px;
-    border: 2px solid #325F74;
+    border: 2px solid var(--primary-color);
     border-top: 2px solid transparent;
     border-radius: 50%;
     background: none;
@@ -795,12 +897,13 @@ select.form-control {
 .modal {
     display: none;
     position: fixed;
-    z-index: 1000;
+    z-index: 1200;
     left: 0;
     top: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
+    background-color: rgba(15, 39, 64, 0.55);
+    backdrop-filter: blur(2px);
     justify-content: center;
     align-items: center;
     padding: 2vh 2vw;
@@ -811,17 +914,17 @@ select.form-control {
 }
 
 .modal-content {
-    background-color: white;
-    border-radius: 12px;
+    background-color: var(--surface-color);
+    border-radius: 24px;
     width: 80vw;
     max-width: 80vw;
     height: 80vh;
     max-height: 80vh;
     padding: 2rem;
     position: relative;
-    overflow: hidden;
     display: flex;
     flex-direction: column;
+    box-shadow: var(--shadow-hover);
 }
 
 .modal-header {
@@ -830,32 +933,34 @@ select.form-control {
     align-items: center;
     margin-bottom: 1.5rem;
     padding-bottom: 1rem;
-    border-bottom: 1px solid #dee2e6;
+    border-bottom: 1px solid rgba(0, 114, 206, 0.15);
 }
 
 .modal-title {
     font-size: 1.5rem;
-    font-weight: 500;
-    color: #325F74;
+    font-weight: 600;
+    color: var(--primary-dark);
     margin: 0;
 }
 
 .modal-close {
-    background: none;
+    background: rgba(0, 114, 206, 0.1);
     border: none;
     font-size: 1.5rem;
     cursor: pointer;
-    color: #6c757d;
+    color: var(--primary-dark);
     padding: 0;
     width: 24px;
     height: 24px;
     display: flex;
     align-items: center;
     justify-content: center;
+    border-radius: 12px;
+    transition: background-color 0.3s ease;
 }
 
 .modal-close:hover {
-    color: #495057;
+    background: rgba(0, 114, 206, 0.18);
 }
 
 .modal-body {
@@ -884,9 +989,9 @@ select.form-control {
 }
 
 .modal-body code {
-    background: #f8f9fa;
-    padding: 0.25rem 0.5rem;
-    border-radius: 4px;
+    background: rgba(0, 114, 206, 0.08);
+    padding: 0.35rem 0.6rem;
+    border-radius: 12px;
     font-family: 'Monaco', 'Consolas', monospace;
     font-size: 0.85rem;
     word-break: break-all;
