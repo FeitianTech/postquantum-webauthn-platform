@@ -600,8 +600,8 @@ def advanced_register_begin():
     
     # Process excludeCredentials
     exclude_list = []
-    exclude_credentials = public_key.get("excludeCredentials", [])
-    if exclude_credentials:
+    exclude_credentials = public_key.get("excludeCredentials") if "excludeCredentials" in public_key else None
+    if isinstance(exclude_credentials, list):
         for exclude_cred in exclude_credentials:
             if isinstance(exclude_cred, dict) and exclude_cred.get("type") == "public-key":
                 cred_id = extract_binary_value(exclude_cred.get("id", ""))
@@ -612,9 +612,6 @@ def advanced_register_begin():
                         type=PublicKeyCredentialType.PUBLIC_KEY,
                         id=cred_id
                     ))
-    elif credentials:
-        # Default exclusion of existing credentials
-        exclude_list = [extract_credential_data(cred) for cred in credentials]
     
     # Process extensions - pass through ALL extensions for full extensibility
     extensions = public_key.get("extensions", {})
@@ -639,7 +636,10 @@ def advanced_register_begin():
         elif ext_name in ("enforceCredProtect", "enforceCredentialProtectionPolicy"):
             processed_extensions["enforceCredProtect"] = bool(ext_value)
         elif ext_name == "largeBlob":
-            processed_extensions["largeBlob"] = ext_value
+            if isinstance(ext_value, str):
+                processed_extensions["largeBlob"] = {"support": ext_value}
+            else:
+                processed_extensions["largeBlob"] = ext_value
         elif ext_name == "prf":
             # Process PRF extension while preserving custom format
             processed_extensions["prf"] = ext_value

@@ -317,7 +317,7 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                     hexValue = jsToHex(value);
                     break;
             }
-            
+
             // Then convert from hex to target format
             switch (toFormat) {
                 case 'hex':
@@ -331,6 +331,252 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                 default:
                     return hexValue;
             }
+        }
+
+        function hexToUint8Array(hex) {
+            if (!hex) return null;
+            const normalized = hex.replace(/\s+/g, '').toLowerCase();
+            if (normalized.length % 2 !== 0) {
+                return null;
+            }
+
+            const bytes = new Uint8Array(normalized.length / 2);
+            for (let i = 0; i < normalized.length; i += 2) {
+                const byte = parseInt(normalized.substr(i, 2), 16);
+                if (Number.isNaN(byte)) {
+                    return null;
+                }
+                bytes[i / 2] = byte;
+            }
+            return bytes;
+        }
+
+        function base64ToUint8Array(base64) {
+            if (!base64) return null;
+            const normalized = base64.replace(/\s+/g, '');
+            const binaryString = atob(normalized);
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            return bytes;
+        }
+
+        function base64UrlToUint8Array(base64url) {
+            if (!base64url) return null;
+            let base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
+            while (base64.length % 4) {
+                base64 += '=';
+            }
+            return base64ToUint8Array(base64);
+        }
+
+        function jsonValueToUint8Array(jsonValue) {
+            if (!jsonValue) return null;
+
+            if (jsonValue instanceof ArrayBuffer) {
+                return new Uint8Array(jsonValue);
+            }
+
+            if (ArrayBuffer.isView(jsonValue)) {
+                return new Uint8Array(jsonValue.buffer.slice(jsonValue.byteOffset, jsonValue.byteOffset + jsonValue.byteLength));
+            }
+
+            if (typeof jsonValue === 'string') {
+                const trimmed = jsonValue.trim();
+                if (!trimmed) {
+                    return null;
+                }
+
+                if (isValidHex(trimmed) && trimmed.length % 2 === 0) {
+                    return hexToUint8Array(trimmed);
+                }
+
+                // Interpret strings as base64url by default
+                return base64UrlToUint8Array(trimmed);
+            }
+
+            if (typeof jsonValue === 'object') {
+                if (jsonValue.$hex) {
+                    return hexToUint8Array(jsonValue.$hex);
+                }
+                if (jsonValue.$base64url) {
+                    return base64UrlToUint8Array(jsonValue.$base64url);
+                }
+                if (jsonValue.$base64) {
+                    return base64ToUint8Array(jsonValue.$base64);
+                }
+                if (jsonValue.$js) {
+                    try {
+                        const parsed = JSON.parse(jsonValue.$js);
+                        if (Array.isArray(parsed)) {
+                            return new Uint8Array(parsed);
+                        }
+                    } catch (e) {
+                        console.warn('Unable to parse $js value into Uint8Array', e);
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        function jsonValueToArrayBuffer(jsonValue) {
+            const bytes = jsonValueToUint8Array(jsonValue);
+            return bytes ? bytes.buffer : null;
+        }
+
+        function convertCredProtectValue(value) {
+            if (typeof value === 'number') {
+                return value;
+            }
+
+            const mapping = {
+                userVerificationOptional: 1,
+                userVerificationOptionalWithCredentialIDList: 2,
+                userVerificationRequired: 3
+            };
+
+            return mapping[value] ?? value;
+        }
+
+        function convertLargeBlobExtension(extValue) {
+            if (extValue == null) {
+                return extValue;
+            }
+
+            if (typeof extValue === 'string') {
+                return { support: extValue };
+            }
+
+            if (typeof extValue !== 'object') {
+                return extValue;
+            }
+
+            const converted = { ...extValue };
+
+            if (extValue.write !== undefined) {
+                const buffer = jsonValueToArrayBuffer(extValue.write);
+                if (buffer) {
+                    converted.write = buffer;
+                }
+            }
+
+            if (extValue.support && typeof extValue.support === 'object') {
+                // Support might be expressed using JSON helper format
+                const supportValue = jsonValueToUint8Array(extValue.support);
+                if (!supportValue) {
+                    // If conversion failed treat as string via best effort
+                    if (typeof extValue.support.$js === 'string') {
+                        converted.support = extValue.support.$js;
+                    }
+                }
+            }
+
+            return converted;
+        }
+
+        function convertPrfExtension(extValue) {
+            if (extValue == null || typeof extValue !== 'object') {
+                return extValue;
+            }
+
+            const converted = {};
+
+            if (extValue.eval) {
+                const evalResult = {};
+                if (extValue.eval.first) {
+                    const firstBuffer = jsonValueToArrayBuffer(extValue.eval.first);
+                    if (firstBuffer) {
+                        evalResult.first = firstBuffer;
+                    }
+                }
+                if (extValue.eval.second) {
+                    const secondBuffer = jsonValueToArrayBuffer(extValue.eval.second);
+                    if (secondBuffer) {
+                        evalResult.second = secondBuffer;
+                    }
+                }
+                if (Object.keys(evalResult).length > 0) {
+                    converted.eval = evalResult;
+                }
+            }
+
+            if (extValue.evalByCredential) {
+                const evalByCredential = {};
+                Object.entries(extValue.evalByCredential).forEach(([credentialId, evaluation]) => {
+                    if (evaluation && typeof evaluation === 'object') {
+                        const evalEntry = {};
+                        if (evaluation.first) {
+                            const firstBuffer = jsonValueToArrayBuffer(evaluation.first);
+                            if (firstBuffer) {
+                                evalEntry.first = firstBuffer;
+                            }
+                        }
+                        if (evaluation.second) {
+                            const secondBuffer = jsonValueToArrayBuffer(evaluation.second);
+                            if (secondBuffer) {
+                                evalEntry.second = secondBuffer;
+                            }
+                        }
+                        if (Object.keys(evalEntry).length > 0) {
+                            evalByCredential[credentialId] = evalEntry;
+                        }
+                    }
+                });
+                if (Object.keys(evalByCredential).length > 0) {
+                    converted.evalByCredential = evalByCredential;
+                }
+            }
+
+            // Preserve any additional properties that aren't explicitly handled
+            Object.entries(extValue).forEach(([key, value]) => {
+                if (!(key in converted)) {
+                    converted[key] = value;
+                }
+            });
+
+            return converted;
+        }
+
+        function convertExtensionsForClient(extensionsJson) {
+            if (!extensionsJson || typeof extensionsJson !== 'object') {
+                return undefined;
+            }
+
+            const converted = {};
+
+            Object.entries(extensionsJson).forEach(([name, value]) => {
+                switch (name) {
+                    case 'credProtect':
+                        converted.credProtect = convertCredProtectValue(value);
+                        break;
+                    case 'credentialProtectionPolicy':
+                        converted.credProtect = convertCredProtectValue(value);
+                        break;
+                    case 'enforceCredProtect':
+                        converted.enforceCredProtect = !!value;
+                        break;
+                    case 'enforceCredentialProtectionPolicy':
+                        converted.enforceCredProtect = !!value;
+                        break;
+                    case 'largeBlob':
+                        converted.largeBlob = convertLargeBlobExtension(value);
+                        break;
+                    case 'prf':
+                        converted.prf = convertPrfExtension(value);
+                        break;
+                    case 'credProps':
+                    case 'minPinLength':
+                        converted[name] = !!value;
+                        break;
+                    default:
+                        converted[name] = value;
+                        break;
+                }
+            });
+
+            return Object.keys(converted).length > 0 ? converted : undefined;
         }
 
         function sortObjectKeys(value) {
@@ -1511,7 +1757,10 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
 
             const excludeCredentialsCheckbox = document.getElementById('exclude-credentials');
             if (excludeCredentialsCheckbox) {
-                excludeCredentialsCheckbox.checked = Array.isArray(publicKey.excludeCredentials);
+                const excludeArray = Array.isArray(publicKey.excludeCredentials)
+                    ? publicKey.excludeCredentials
+                    : [];
+                excludeCredentialsCheckbox.checked = excludeArray.length > 0;
             }
 
             // Update extensions
@@ -1798,9 +2047,9 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             const userVerification = document.getElementById('user-verification-reg')?.value;
             if (userVerification) publicKey.authenticatorSelection.userVerification = userVerification;
 
-            // Exclude credentials
+            // Exclude credentials always present for consistency with JSON editor expectations
+            const excludeList = [];
             if (document.getElementById('exclude-credentials')?.checked) {
-                const excludeList = [];
                 const currentBinaryFormat = getCurrentBinaryFormat();
                 const userIdHex = (convertFormat(userId, currentBinaryFormat, 'hex') || '').toLowerCase();
 
@@ -1819,9 +2068,9 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                         }
                     });
                 }
-
-                publicKey.excludeCredentials = excludeList;
             }
+
+            publicKey.excludeCredentials = excludeList;
 
             // Extensions
             if (document.getElementById('cred-props')?.checked) publicKey.extensions.credProps = true;
@@ -2002,7 +2251,17 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                 }
 
                 const json = await response.json();
+                const originalExtensions = json?.publicKey?.extensions;
                 const createOptions = parseCreationOptionsFromJSON(json);
+
+                const convertedExtensions = convertExtensionsForClient(originalExtensions);
+                if (convertedExtensions) {
+                    createOptions.publicKey = createOptions.publicKey || {};
+                    createOptions.publicKey.extensions = {
+                        ...(createOptions.publicKey.extensions || {}),
+                        ...convertedExtensions
+                    };
+                }
 
                 // Track fake credential length
                 window.lastFakeCredLength = 0; // Simple auth doesn't use fake credentials
@@ -2588,7 +2847,17 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                 }
 
                 const json = await response.json();
+                const originalExtensions = json?.publicKey?.extensions;
                 const createOptions = parseCreationOptionsFromJSON(json);
+
+                const convertedExtensions = convertExtensionsForClient(originalExtensions);
+                if (convertedExtensions) {
+                    createOptions.publicKey = createOptions.publicKey || {};
+                    createOptions.publicKey.extensions = {
+                        ...(createOptions.publicKey.extensions || {}),
+                        ...convertedExtensions
+                    };
+                }
 
                 // Track fake credential length from form (for debugging info only)
                 window.lastFakeCredLength = parseInt(document.getElementById('fake-cred-length-reg').value) || 0;
@@ -2679,7 +2948,17 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                 }
 
                 const json = await response.json();
+                const originalExtensions = json?.publicKey?.extensions;
                 const assertOptions = parseRequestOptionsFromJSON(json);
+
+                const convertedExtensions = convertExtensionsForClient(originalExtensions);
+                if (convertedExtensions) {
+                    assertOptions.publicKey = assertOptions.publicKey || {};
+                    assertOptions.publicKey.extensions = {
+                        ...(assertOptions.publicKey.extensions || {}),
+                        ...convertedExtensions
+                    };
+                }
                 
                 // Track fake credential length from form (for debugging info only)
                 window.lastFakeCredLength = parseInt(document.getElementById('fake-cred-length-auth').value) || 0;
