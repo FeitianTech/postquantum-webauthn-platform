@@ -371,11 +371,62 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             return base64ToUint8Array(base64);
         }
 
+        function bufferSourceToUint8Array(value) {
+            if (value instanceof ArrayBuffer) {
+                return new Uint8Array(value);
+            }
+
+            if (ArrayBuffer.isView(value)) {
+                return new Uint8Array(value.buffer, value.byteOffset, value.byteLength);
+            }
+
+            return null;
+        }
+
+        function arrayBufferToHex(buffer) {
+            if (!buffer) {
+                return '';
+            }
+
+            const view = bufferSourceToUint8Array(buffer);
+            if (!view) {
+                return '';
+            }
+
+            return Array.from(view).map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        function normalizeClientExtensionResults(results) {
+            if (results == null) {
+                return results;
+            }
+
+            const bufferView = bufferSourceToUint8Array(results);
+            if (bufferView) {
+                return { $hex: arrayBufferToHex(bufferView) };
+            }
+
+            if (Array.isArray(results)) {
+                return results.map(item => normalizeClientExtensionResults(item));
+            }
+
+            if (typeof results === 'object') {
+                const normalized = {};
+                Object.entries(results).forEach(([key, value]) => {
+                    normalized[key] = normalizeClientExtensionResults(value);
+                });
+                return normalized;
+            }
+
+            return results;
+        }
+
         function jsonValueToUint8Array(jsonValue) {
             if (!jsonValue) return null;
 
-            if (jsonValue instanceof ArrayBuffer) {
-                return new Uint8Array(jsonValue);
+            const directBuffer = bufferSourceToUint8Array(jsonValue);
+            if (directBuffer) {
+                return directBuffer;
             }
 
             if (ArrayBuffer.isView(jsonValue)) {
@@ -1030,7 +1081,9 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
         // Console debug output functions for credential information from actual credential data
         function printRegistrationDebug(credential, createOptions, serverResponse) {
             // Extract actual values from credential response and server data (not request options)
-            const clientExtensions = credential.clientExtensionResults || {};
+            const clientExtensions = credential.getClientExtensionResults
+                ? credential.getClientExtensionResults()
+                : (credential.clientExtensionResults || {});
             const serverData = serverResponse || {};
             
             // Resident key - from actual client extension results or server-detected RK flag
@@ -1087,7 +1140,7 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             console.log('enforce credprotect:', enforceCredProtect);
             
             // largeBlob - from actual client extension results
-            const largeBlob = clientExtensions.largeBlob?.supported || 'none';
+            const largeBlob = clientExtensions.largeBlob?.supported ?? 'none';
             console.log('largeblob:', largeBlob);
             
             // prf - from actual client extension results
@@ -1095,18 +1148,22 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             console.log('prf:', prfEnabled);
             
             // prf eval first hex code - from actual client extension results
-            const prfFirstHex = clientExtensions.prf?.results?.first ? 
-                               extractHexFromJsonFormat(clientExtensions.prf.results.first) : '';
+            const prfFirstHex = clientExtensions.prf?.results?.first !== undefined
+                               ? extractHexFromJsonFormat(clientExtensions.prf.results.first)
+                               : '';
             console.log('prf eval first hex code:', prfFirstHex);
             
             // prf eval second hex code - from actual client extension results
-            const prfSecondHex = clientExtensions.prf?.results?.second ? 
-                                extractHexFromJsonFormat(clientExtensions.prf.results.second) : '';
+            const prfSecondHex = clientExtensions.prf?.results?.second !== undefined
+                                ? extractHexFromJsonFormat(clientExtensions.prf.results.second)
+                                : '';
             console.log('prf eval second hex code:', prfSecondHex);
         }
         
         function printAuthenticationDebug(assertion, requestOptions, serverResponse) {
-            const clientExtensions = assertion.clientExtensionResults || {};
+            const clientExtensions = assertion.getClientExtensionResults
+                ? assertion.getClientExtensionResults()
+                : (assertion.clientExtensionResults || {});
             const serverData = serverResponse || {};
             
             // Fake credential ID length - from our actual setting
@@ -1136,24 +1193,29 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             console.log('largeblob:', largeBlobType);
             
             // largeBlob write hex code - from actual extension results
-            const largeBlobWriteHex = clientExtensions.largeBlob?.blob ? 
-                                     extractHexFromJsonFormat(clientExtensions.largeBlob.blob) : '';
+            const largeBlobWriteHex = clientExtensions.largeBlob?.blob !== undefined
+                                     ? extractHexFromJsonFormat(clientExtensions.largeBlob.blob)
+                                     : '';
             console.log('largeblob write hex code:', largeBlobWriteHex);
             
             // prf eval first hex code - from actual client extension results
-            const prfFirstHex = clientExtensions.prf?.results?.first ? 
-                               extractHexFromJsonFormat(clientExtensions.prf.results.first) : '';
+            const prfFirstHex = clientExtensions.prf?.results?.first !== undefined
+                               ? extractHexFromJsonFormat(clientExtensions.prf.results.first)
+                               : '';
             console.log('prf eval first hex code:', prfFirstHex);
             
             // prf eval second hex code - from actual client extension results
-            const prfSecondHex = clientExtensions.prf?.results?.second ? 
-                                extractHexFromJsonFormat(clientExtensions.prf.results.second) : '';
+            const prfSecondHex = clientExtensions.prf?.results?.second !== undefined
+                                ? extractHexFromJsonFormat(clientExtensions.prf.results.second)
+                                : '';
             console.log('prf eval second hex code:', prfSecondHex);
         }
         
         // Helper function to extract hex from JSON format objects
         function extractHexFromJsonFormat(jsonValue) {
             if (!jsonValue) return '';
+            const directBuffer = bufferSourceToUint8Array(jsonValue);
+            if (directBuffer) return arrayBufferToHex(directBuffer);
             if (jsonValue.$hex) return jsonValue.$hex;
             if (jsonValue.$base64url) return base64UrlToHex(jsonValue.$base64url);
             if (jsonValue.$base64) return base64ToHex(jsonValue.$base64);
@@ -2865,7 +2927,23 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                 showProgress('advanced', 'Connecting your authenticator device...');
 
                 const credential = await create(createOptions);
-                
+
+                const credentialJson = credential.toJSON ? credential.toJSON() : JSON.parse(JSON.stringify(credential));
+                const extensionResults = credential.getClientExtensionResults
+                    ? credential.getClientExtensionResults()
+                    : (credential.clientExtensionResults || {});
+                const normalizedExtensionResults = normalizeClientExtensionResults(extensionResults);
+                const existingExtensionResults = credentialJson.clientExtensionResults || {};
+                if (normalizedExtensionResults && typeof normalizedExtensionResults === 'object' &&
+                    Object.keys(normalizedExtensionResults).length > 0) {
+                    credentialJson.clientExtensionResults = {
+                        ...existingExtensionResults,
+                        ...normalizedExtensionResults,
+                    };
+                } else if (credentialJson.clientExtensionResults === undefined) {
+                    credentialJson.clientExtensionResults = existingExtensionResults;
+                }
+
                 showProgress('advanced', 'Completing registration...');
 
                 // Send the complete JSON editor content as primary source of truth
@@ -2876,7 +2954,7 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({
                         ...parsed,  // Spread the complete JSON editor content as primary data
-                        __credential_response: credential  // Add credential response with special key
+                        __credential_response: credentialJson  // Add credential response with special key
                     }),
                 });
 
@@ -2966,7 +3044,23 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                 showProgress('advanced', 'Connecting your authenticator device...');
 
                 const assertion = await get(assertOptions);
-                
+
+                const assertionJson = assertion.toJSON ? assertion.toJSON() : JSON.parse(JSON.stringify(assertion));
+                const assertionExtensionResults = assertion.getClientExtensionResults
+                    ? assertion.getClientExtensionResults()
+                    : (assertion.clientExtensionResults || {});
+                const normalizedAssertionExtensions = normalizeClientExtensionResults(assertionExtensionResults);
+                const existingAssertionExtensions = assertionJson.clientExtensionResults || {};
+                if (normalizedAssertionExtensions && typeof normalizedAssertionExtensions === 'object' &&
+                    Object.keys(normalizedAssertionExtensions).length > 0) {
+                    assertionJson.clientExtensionResults = {
+                        ...existingAssertionExtensions,
+                        ...normalizedAssertionExtensions,
+                    };
+                } else if (assertionJson.clientExtensionResults === undefined) {
+                    assertionJson.clientExtensionResults = existingAssertionExtensions;
+                }
+
                 showProgress('advanced', 'Completing authentication...');
 
                 // Send the complete JSON editor content as primary source of truth
@@ -2977,7 +3071,7 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({
                         ...parsed,  // Spread the complete JSON editor content as primary data
-                        __assertion_response: assertion  // Add assertion response with special key
+                        __assertion_response: assertionJson  // Add assertion response with special key
                     }),
                 });
 
