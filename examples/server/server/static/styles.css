@@ -166,15 +166,17 @@ body.modal-open {
     font-size: 1rem;
     font-weight: 600;
     text-decoration: none;
-    transition: all 0.3s ease;
+    transition: background 0.3s ease, box-shadow 0.3s ease, color 0.3s ease;
     margin-right: 0.5rem;
     margin-bottom: 0.5rem;
     box-shadow: var(--shadow-soft);
 }
 
-.btn:hover {
-    transform: translateY(-1px);
+.btn:hover,
+.btn:focus-visible {
+    background: linear-gradient(135deg, var(--primary-dark), #008f5c);
     box-shadow: var(--shadow-hover);
+    outline: none;
 }
 
 .btn-secondary {
@@ -184,25 +186,28 @@ body.modal-open {
     box-shadow: none;
 }
 
-.btn-secondary:hover {
-    background: rgba(0, 114, 206, 0.16);
-    border-color: rgba(0, 114, 206, 0.24);
+.btn-secondary:hover,
+.btn-secondary:focus-visible {
+    background: rgba(0, 114, 206, 0.22);
+    border-color: rgba(0, 114, 206, 0.28);
 }
 
 .btn-danger {
     background: #dc3545;
 }
 
-.btn-danger:hover {
-    background: #c82333;
+.btn-danger:hover,
+.btn-danger:focus-visible {
+    background: #c71f30;
 }
 
 .btn-success {
     background: #28a745;
 }
 
-.btn-success:hover {
-    background: #218838;
+.btn-success:hover,
+.btn-success:focus-visible {
+    background: #1f7f33;
 }
 
 .status {
@@ -290,6 +295,10 @@ body.modal-open {
     font-weight: 600;
     color: var(--primary-dark);
     font-size: 1.05rem;
+}
+
+.form-group label.form-section-title {
+    color: var(--primary-dark);
 }
 
 .sub-tabs {
@@ -445,7 +454,7 @@ body.modal-open {
     padding: 1.1rem 1rem;
     border: 1px solid rgba(0, 114, 206, 0.18);
     border-top: none;
-    border-radius: 0 0 18px 18px;
+    border-radius: 0 0 24px 24px;
     background: rgba(255, 255, 255, 0.98);
 }
 
@@ -680,13 +689,27 @@ select.form-control {
     -webkit-appearance: none;
     -moz-appearance: none;
     background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
-    background-position: right 0.5rem center;
+    background-position: right 0.75rem center;
     background-repeat: no-repeat;
-    background-size: 1.5em 1.5em;
-    padding-right: 2.5rem;
-    border-radius: 16px;
-    background-color: rgba(255, 255, 255, 0.95);
+    background-size: 1.4em 1.4em;
+    padding-right: 2.75rem;
+    padding-left: 1rem;
+    border-radius: 22px;
+    background-color: rgba(255, 255, 255, 0.98);
     border: 1px solid rgba(0, 114, 206, 0.18);
+    box-shadow: inset 0 0 0 1px rgba(0, 114, 206, 0.08);
+}
+
+select.form-control:focus,
+select.form-control:focus-visible {
+    border-color: rgba(0, 114, 206, 0.4);
+    box-shadow: 0 10px 30px rgba(0, 114, 206, 0.18);
+    outline: none;
+}
+
+select.form-control option {
+    padding: 0.6rem 1rem;
+    border-radius: 14px;
 }
 
 .alert {
@@ -702,43 +725,49 @@ select.form-control {
     border-color: #b6effb;
 }
 
-.refresh-icon {
-    display: inline-block;
-    width: 16px;
-    height: 16px;
-    border: 2px solid var(--primary-color);
-    border-top: 2px solid transparent;
-    border-radius: 50%;
-    background: none;
+.btn.refresh-icon {
+    min-width: 40px;
+    width: 40px;
+    height: 40px;
+    border-radius: 16px;
+    background: rgba(0, 114, 206, 0.12);
+    color: var(--primary-dark);
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     padding: 0;
-    cursor: pointer;
+    box-shadow: none;
+    position: relative;
+}
+
+.btn.refresh-icon::before {
+    content: '';
+    width: 18px;
+    height: 18px;
+    background-color: currentColor;
+    mask: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpath d='M21 12a9 9 0 1 0-2.64 6.36'/%3e%3cpolyline points='21 12 21 18 15 18'/%3e%3c/svg%3e");
+    -webkit-mask: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpath d='M21 12a9 9 0 1 0-2.64 6.36'/%3e%3cpolyline points='21 12 21 18 15 18'/%3e%3c/svg%3e") no-repeat center / contain;
+    mask-repeat: no-repeat;
+    mask-position: center;
+    mask-size: contain;
+    -webkit-mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    -webkit-mask-size: contain;
     transition: transform 0.3s ease;
 }
 
-.refresh-icon:hover {
-    transform: rotate(180deg);
+.btn.refresh-icon:hover,
+.btn.refresh-icon:focus-visible {
+    background: rgba(0, 114, 206, 0.22);
+    color: var(--primary-dark);
+    outline: none;
+    box-shadow: none;
 }
 
-.btn.refresh-icon {
-    min-width: auto;
-    width: 32px;
-    height: 32px;
-    border: 2px solid var(--primary-color);
-    border-top: 2px solid transparent;
-    border-radius: 50%;
-    background: none;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.btn.refresh-icon:hover {
-    background: #f8f9fa;
-    transform: rotate(180deg);
-}
-
-.btn.refresh-icon:before {
-    content: '';
+.btn.refresh-icon:hover::before,
+.btn.refresh-icon:focus-visible::before {
+    transform: rotate(90deg);
 }
 
 /* Info icon styles */

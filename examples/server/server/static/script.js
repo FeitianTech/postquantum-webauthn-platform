@@ -1303,19 +1303,16 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                 if (cred.largeBlob === true || cred.largeBlobSupported === true) {
                     features.push('largeBlob');
                 }
-                
+
                 const featureText = features.length > 0 ? features.join(' • ') : '';
-                
+
                 return `
-                <div class="credential-item">
+                <div class="credential-item" role="button" tabindex="0" onclick="showCredentialDetails(${index})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showCredentialDetails(${index});}">
                     <div style="flex: 1; min-width: 0;">
                         <div style="font-weight: 600; color: #0f2740; font-size: 0.95rem; margin-bottom: 0.25rem;">${cred.email || cred.username || 'Unknown User'}</div>
                         ${featureText ? `<div style="font-size: 0.75rem; color: #5c6c7a;">${featureText}</div>` : ''}
                     </div>
-                    <div style="display: flex; gap: 0.5rem; flex-shrink: 0;">
-                        <button class="btn btn-small" onclick="showCredentialDetails(${index})">Details</button>
-                        <button class="btn btn-small btn-danger" onclick="deleteCredential('${cred.email || cred.username}', ${index})">Delete</button>
-                    </div>
+                    <button class="btn btn-small btn-danger" onclick="event.stopPropagation();deleteCredential('${cred.email || cred.username}', ${index})">Delete</button>
                 </div>
                 `;
             }).join('');
@@ -1382,6 +1379,11 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
         function openModal(modalId) {
             const modal = document.getElementById(modalId);
             if (modal) {
+                modal.querySelectorAll('.modal-content, .modal-body').forEach(element => {
+                    if (element) {
+                        element.scrollTop = 0;
+                    }
+                });
                 modal.classList.add('open');
                 updateGlobalScrollLock();
             }
@@ -1413,6 +1415,10 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                 toggleButton.setAttribute('aria-label', 'Close expanded JSON editor');
                 toggleButton.setAttribute('title', 'Close expanded JSON editor');
                 toggleButton.setAttribute('aria-expanded', 'true');
+                const editor = document.getElementById('json-editor');
+                if (editor) {
+                    editor.scrollTop = 0;
+                }
             } else {
                 container.classList.remove('expanded');
                 overlay.classList.remove('active');
