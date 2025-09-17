@@ -33,7 +33,11 @@ See the file README.adoc in this directory for details.
 
 Navigate to http://localhost:5000 in a supported web browser.
 """
-from fido2.webauthn import PublicKeyCredentialRpEntity, PublicKeyCredentialUserEntity
+from fido2.webauthn import (
+    PublicKeyCredentialRpEntity,
+    PublicKeyCredentialUserEntity,
+    RegistrationResponse,
+)
 from fido2.server import Fido2Server
 from flask import Flask, request, redirect, abort, jsonify, session, send_file
 
@@ -44,6 +48,8 @@ import base64
 import pickle
 import time
 from datetime import datetime, timezone
+
+from typing import Any, Dict, Mapping, Optional, Tuple
 
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
@@ -102,10 +108,66 @@ def _colon_hex(data: bytes) -> str:
     return ":".join(f"{byte:02x}" for byte in data)
 
 
-def _decode_base64url(data: str) -> bytes:
-    """Decode base64url data that may be missing padding."""
-    padding = "=" * (-len(data) % 4)
-    return base64.urlsafe_b64decode(data + padding)
+def _encode_base64url(data: bytes) -> str:
+    """Encode bytes as unpadded base64url."""
+    return base64.urlsafe_b64encode(data).rstrip(b"=").decode("ascii")
+
+
+def _extract_attestation_details(response: Any) -> Tuple[str, Dict[str, Any], Optional[str], Optional[str], Dict[str, Any]]:
+    """Parse attestation information from a registration response structure."""
+    attestation_format = "none"
+    attestation_statement: Dict[str, Any] = {}
+    attestation_object_b64: Optional[str] = None
+    client_data_b64: Optional[str] = None
+    client_extension_results: Dict[str, Any] = {}
+
+    if not isinstance(response, dict):
+        return (
+            attestation_format,
+            attestation_statement,
+            attestation_object_b64,
+            client_data_b64,
+            client_extension_results,
+        )
+
+    try:
+        registration = RegistrationResponse.from_dict(response)
+    except Exception as exc:  # pragma: no cover - debugging aid
+        print(f"[DEBUG] Failed to parse registration response for attestation: {exc}")
+        return (
+            attestation_format,
+            attestation_statement,
+            attestation_object_b64,
+            client_data_b64,
+            client_extension_results,
+        )
+
+    attestation_object = registration.response.attestation_object
+    attestation_format = getattr(attestation_object, "fmt", None) or "none"
+    attestation_statement = attestation_object.att_stmt or {}
+    attestation_object_b64 = _encode_base64url(bytes(attestation_object))
+
+    client_data = registration.response.client_data
+    client_data_b64 = getattr(client_data, "b64", None)
+    if client_data_b64 is None:
+        client_data_b64 = _encode_base64url(bytes(client_data))
+
+    extension_outputs = registration.client_extension_results
+    if extension_outputs:
+        if isinstance(extension_outputs, dict):
+            client_extension_results = extension_outputs
+        elif isinstance(extension_outputs, Mapping):
+            client_extension_results = dict(extension_outputs)
+        else:
+            client_extension_results = extension_outputs  # type: ignore[assignment]
+
+    return (
+        attestation_format,
+        attestation_statement,
+        attestation_object_b64,
+        client_data_b64,
+        client_extension_results,
+    )
 
 
 def _format_x509_name(name: x509.Name) -> str:
@@ -322,35 +384,30 @@ def register_complete():
     credentials = readkey(uname)
     response = request.json or {}
     credential_response = response.get('response', {}) if isinstance(response, dict) else {}
-    client_extension_results = response.get('clientExtensionResults', {}) if isinstance(response, dict) else {}
-    auth_data = server.register_complete(session["state"], response)
 
-    # Extract attestation format from attestation object
-    attestation_format = "none"  # Default
-    attestation_statement = {}
+    (
+        attestation_format,
+        attestation_statement,
+        parsed_attestation_object,
+        parsed_client_data_json,
+        parsed_extension_results,
+    ) = _extract_attestation_details(response)
+
     raw_attestation_object = credential_response.get('attestationObject')
-    try:
-        # First try to get attestation from auth_data if available
-        if hasattr(auth_data, 'attestation_object') and getattr(auth_data, 'attestation_object', None):
-            attestation_format = auth_data.attestation_object.fmt
-            if hasattr(auth_data.attestation_object, 'att_stmt'):
-                attestation_statement = auth_data.attestation_object.att_stmt or {}
-        elif raw_attestation_object:
-            # Fallback: Try to parse attestation object from response
-            import cbor2
+    client_data_json = credential_response.get('clientDataJSON')
 
-            attestation_object_bytes = _decode_base64url(raw_attestation_object)
-            attestation_object = cbor2.loads(attestation_object_bytes)
-            attestation_format = attestation_object.get('fmt', 'none')
-            attestation_statement = attestation_object.get('attStmt', {}) or {}
+    if parsed_attestation_object:
+        raw_attestation_object = parsed_attestation_object
+    if parsed_client_data_json:
+        client_data_json = parsed_client_data_json
 
-            # Debug print to check what we're getting
-            print(f"[DEBUG] Parsed attestation format: {attestation_format}")
-            print(f"[DEBUG] Attestation statement keys: {list(attestation_statement.keys()) if attestation_statement else 'None'}")
-    except Exception as e:
-        print(f"[DEBUG] Attestation parsing error: {e}")
-        import traceback
-        traceback.print_exc()
+    client_extension_results = (
+        parsed_extension_results
+        if parsed_extension_results
+        else (response.get('clientExtensionResults', {}) if isinstance(response, dict) else {})
+    )
+
+    auth_data = server.register_complete(session["state"], response)
 
     # Store comprehensive credential data (same format as advanced)
     credential_info = {
@@ -362,7 +419,7 @@ def register_complete():
             'user_handle': uname.encode('utf-8')  # Use username as user_handle for simple registration
         },
         'registration_time': time.time(),
-        'client_data_json': credential_response.get('clientDataJSON', ''),
+        'client_data_json': client_data_json or '',
         'attestation_object': raw_attestation_object or '',
         'attestation_format': attestation_format,  # Store parsed attestation format
         'attestation_statement': attestation_statement,  # Store attestation statement for details
@@ -484,9 +541,9 @@ def downloadcred():
     return send_file(os.path.join(basepath, name), as_attachment=True, download_name=name)
 
 def convert_bytes_for_json(obj):
-    """Recursively convert bytes objects to base64 strings for JSON serialization"""
-    if isinstance(obj, bytes):
-        return base64.b64encode(obj).decode('utf-8')
+    """Recursively convert bytes-like objects to base64 strings for JSON serialization."""
+    if isinstance(obj, (bytes, bytearray, memoryview)):
+        return base64.b64encode(bytes(obj)).decode('utf-8')
     elif isinstance(obj, dict):
         return {k: convert_bytes_for_json(v) for k, v in obj.items()}
     elif isinstance(obj, list):
@@ -916,12 +973,33 @@ def advanced_register_complete():
     if resident_key_required is None:
         resident_key_required = resident_key_requested == 'required'
 
+    (
+        attestation_format,
+        attestation_statement,
+        parsed_attestation_object,
+        parsed_client_data_json,
+        parsed_extension_results,
+    ) = _extract_attestation_details(response)
+
+    raw_attestation_object = credential_response.get('attestationObject')
+    client_data_json = credential_response.get('clientDataJSON')
+
+    if parsed_attestation_object:
+        raw_attestation_object = parsed_attestation_object
+    if parsed_client_data_json:
+        client_data_json = parsed_client_data_json
+
+    client_extension_results = (
+        parsed_extension_results
+        if parsed_extension_results
+        else (response.get('clientExtensionResults', {}) if isinstance(response, dict) else {})
+    )
+
     try:
         # Complete registration using stored state
         auth_data = server.register_complete(session.pop("advanced_state"), response)
-        
+
         # Debug logging for largeBlob extension results
-        client_extension_results = response.get('clientExtensionResults', {}) if isinstance(response, dict) else {}
         if 'largeBlob' in client_extension_results:
             print(f"[DEBUG] largeBlob client extension results: {client_extension_results['largeBlob']}")
         else:
@@ -957,26 +1035,6 @@ def advanced_register_complete():
         else:
             user_handle = username.encode('utf-8')
         
-        # Extract attestation information
-        attestation_format = "none"
-        attestation_statement = {}
-        raw_attestation_object = credential_response.get('attestationObject')
-
-        try:
-            if hasattr(auth_data, 'attestation_object') and getattr(auth_data, 'attestation_object', None):
-                attestation_format = auth_data.attestation_object.fmt
-                if hasattr(auth_data.attestation_object, 'att_stmt'):
-                    attestation_statement = auth_data.attestation_object.att_stmt or {}
-            elif raw_attestation_object:
-                import cbor2
-
-                attestation_object_bytes = _decode_base64url(raw_attestation_object)
-                attestation_object = cbor2.loads(attestation_object_bytes)
-                attestation_format = attestation_object.get('fmt', 'none')
-                attestation_statement = attestation_object.get('attStmt', {}) or {}
-        except Exception as e:
-            print(f"[DEBUG] Advanced - Attestation parsing error: {e}")
-
         # Store comprehensive credential data
         credential_info = {
             'credential_data': auth_data.credential_data,
@@ -987,7 +1045,7 @@ def advanced_register_complete():
                 'user_handle': user_handle
             },
             'registration_time': time.time(),
-            'client_data_json': credential_response.get('clientDataJSON', ''),
+            'client_data_json': client_data_json or '',
             'attestation_object': raw_attestation_object or '',
             'attestation_format': attestation_format,
             'attestation_statement': attestation_statement,
