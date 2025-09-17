@@ -1409,12 +1409,16 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             if (shouldExpand) {
                 container.classList.add('expanded');
                 overlay.classList.add('active');
-                toggleButton.textContent = 'Close';
+                toggleButton.innerHTML = '<span aria-hidden="true">✕</span>';
+                toggleButton.setAttribute('aria-label', 'Close expanded JSON editor');
+                toggleButton.setAttribute('title', 'Close expanded JSON editor');
                 toggleButton.setAttribute('aria-expanded', 'true');
             } else {
                 container.classList.remove('expanded');
                 overlay.classList.remove('active');
-                toggleButton.textContent = 'Expand';
+                toggleButton.innerHTML = '<span aria-hidden="true">⛶</span>';
+                toggleButton.setAttribute('aria-label', 'Expand JSON editor');
+                toggleButton.setAttribute('title', 'Expand JSON editor');
                 toggleButton.setAttribute('aria-expanded', 'false');
             }
 
