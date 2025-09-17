@@ -1017,8 +1017,8 @@ def advanced_register_begin():
             if isinstance(param, dict) and param.get("type") == "public-key" and "alg" in param:
                 allowed_algorithms.append(
                     PublicKeyCredentialParameters(
-                        PublicKeyCredentialType.PUBLIC_KEY,
-                        param["alg"]
+                        type=PublicKeyCredentialType.PUBLIC_KEY,
+                        alg=param["alg"]
                     )
                 )
         if allowed_algorithms:
@@ -1026,8 +1026,8 @@ def advanced_register_begin():
     else:
         # Default algorithms
         temp_server.allowed_algorithms = [
-            PublicKeyCredentialParameters(PublicKeyCredentialType.PUBLIC_KEY, -7),  # ES256
-            PublicKeyCredentialParameters(PublicKeyCredentialType.PUBLIC_KEY, -257),  # RS256
+            PublicKeyCredentialParameters(type=PublicKeyCredentialType.PUBLIC_KEY, alg=-7),  # ES256
+            PublicKeyCredentialParameters(type=PublicKeyCredentialType.PUBLIC_KEY, alg=-257),  # RS256
         ]
     
     # Process authenticatorSelection
