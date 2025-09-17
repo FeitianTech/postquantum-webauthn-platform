@@ -62,7 +62,7 @@ py -3.12 -m venv .venv
 
 # Upgrade pip and install runtime dependencies
 python -m pip install --upgrade pip
-pip install fido2 flask
+pip install fido2 flask cryptography cbor2
 
 # Optional: if you need PC/SC smart card extras (pyscard)
 pip install "fido2[pcsc]"
@@ -77,7 +77,7 @@ source .venv/bin/activate
 
 # Upgrade pip and install runtime dependencies
 python -m pip install --upgrade pip
-pip install fido2 flask
+pip install fido2 flask cryptography cbor2
 
 # Optional: if you need PC/SC smart card extras (pyscard)
 pip install "fido2[pcsc]"
