@@ -102,6 +102,12 @@ def _colon_hex(data: bytes) -> str:
     return ":".join(f"{byte:02x}" for byte in data)
 
 
+def _decode_base64url(data: str) -> bytes:
+    """Decode base64url data that may be missing padding."""
+    padding = "=" * (-len(data) % 4)
+    return base64.urlsafe_b64decode(data + padding)
+
+
 def _format_x509_name(name: x509.Name) -> str:
     try:
         return name.rfc4514_string()
@@ -314,27 +320,30 @@ def register_begin():
 def register_complete():
     uname = request.args.get("email")
     credentials = readkey(uname)
-    response = request.json
+    response = request.json or {}
+    credential_response = response.get('response', {}) if isinstance(response, dict) else {}
+    client_extension_results = response.get('clientExtensionResults', {}) if isinstance(response, dict) else {}
     auth_data = server.register_complete(session["state"], response)
 
     # Extract attestation format from attestation object
     attestation_format = "none"  # Default
-    attestation_statement = None
+    attestation_statement = {}
+    raw_attestation_object = credential_response.get('attestationObject')
     try:
         # First try to get attestation from auth_data if available
-        if hasattr(auth_data, 'attestation_object') and auth_data.attestation_object:
+        if hasattr(auth_data, 'attestation_object') and getattr(auth_data, 'attestation_object', None):
             attestation_format = auth_data.attestation_object.fmt
             if hasattr(auth_data.attestation_object, 'att_stmt'):
-                attestation_statement = auth_data.attestation_object.att_stmt
-        elif response.get('attestationObject'):
+                attestation_statement = auth_data.attestation_object.att_stmt or {}
+        elif raw_attestation_object:
             # Fallback: Try to parse attestation object from response
             import cbor2
-            import base64
-            attestation_object_bytes = base64.b64decode(response['attestationObject'])
+
+            attestation_object_bytes = _decode_base64url(raw_attestation_object)
             attestation_object = cbor2.loads(attestation_object_bytes)
             attestation_format = attestation_object.get('fmt', 'none')
-            attestation_statement = attestation_object.get('attStmt', {})
-            
+            attestation_statement = attestation_object.get('attStmt', {}) or {}
+
             # Debug print to check what we're getting
             print(f"[DEBUG] Parsed attestation format: {attestation_format}")
             print(f"[DEBUG] Attestation statement keys: {list(attestation_statement.keys()) if attestation_statement else 'None'}")
@@ -353,11 +362,11 @@ def register_complete():
             'user_handle': uname.encode('utf-8')  # Use username as user_handle for simple registration
         },
         'registration_time': time.time(),
-        'client_data_json': response.get('clientDataJSON', ''),
-        'attestation_object': response.get('attestationObject', ''),
+        'client_data_json': credential_response.get('clientDataJSON', ''),
+        'attestation_object': raw_attestation_object or '',
         'attestation_format': attestation_format,  # Store parsed attestation format
         'attestation_statement': attestation_statement,  # Store attestation statement for details
-        'client_extension_outputs': response.get('clientExtensionResults', {}),
+        'client_extension_outputs': client_extension_results,
         # Store request parameters for simple registration (defaults)
         'request_params': {
             'user_verification': 'discouraged',
@@ -376,7 +385,7 @@ def register_complete():
             'hintsSent': [],  # Simple auth doesn't use hints
             # Enhanced largeBlob debugging information (simple auth defaults)
             'largeBlobRequested': {},  # Simple auth doesn't use largeBlob
-            'largeBlobClientOutput': response.get('clientExtensionResults', {}).get('largeBlob', {}),
+            'largeBlobClientOutput': client_extension_results.get('largeBlob', {}),
             'residentKeyRequested': None,  # Simple auth defaults
             'residentKeyRequired': False  # Simple auth defaults
         }
@@ -881,7 +890,9 @@ def advanced_register_complete():
     response = data.get("__credential_response")
     if not response:
         return jsonify({"error": "Credential response is required"}), 400
-    
+
+    credential_response = response.get('response', {}) if isinstance(response, dict) else {}
+
     # The rest of the data IS the original JSON editor content (primary source of truth)
     original_request = {key: value for key, value in data.items() if not key.startswith("__")}
     
@@ -910,7 +921,7 @@ def advanced_register_complete():
         auth_data = server.register_complete(session.pop("advanced_state"), response)
         
         # Debug logging for largeBlob extension results
-        client_extension_results = response.get('clientExtensionResults', {})
+        client_extension_results = response.get('clientExtensionResults', {}) if isinstance(response, dict) else {}
         if 'largeBlob' in client_extension_results:
             print(f"[DEBUG] largeBlob client extension results: {client_extension_results['largeBlob']}")
         else:
@@ -948,22 +959,24 @@ def advanced_register_complete():
         
         # Extract attestation information
         attestation_format = "none"
-        attestation_statement = None
-        
+        attestation_statement = {}
+        raw_attestation_object = credential_response.get('attestationObject')
+
         try:
-            if hasattr(auth_data, 'attestation_object') and auth_data.attestation_object:
+            if hasattr(auth_data, 'attestation_object') and getattr(auth_data, 'attestation_object', None):
                 attestation_format = auth_data.attestation_object.fmt
                 if hasattr(auth_data.attestation_object, 'att_stmt'):
-                    attestation_statement = auth_data.attestation_object.att_stmt
-            elif response.get('attestationObject'):
+                    attestation_statement = auth_data.attestation_object.att_stmt or {}
+            elif raw_attestation_object:
                 import cbor2
-                attestation_object_bytes = base64.b64decode(response['attestationObject'])
+
+                attestation_object_bytes = _decode_base64url(raw_attestation_object)
                 attestation_object = cbor2.loads(attestation_object_bytes)
                 attestation_format = attestation_object.get('fmt', 'none')
-                attestation_statement = attestation_object.get('attStmt', {})
+                attestation_statement = attestation_object.get('attStmt', {}) or {}
         except Exception as e:
             print(f"[DEBUG] Advanced - Attestation parsing error: {e}")
-        
+
         # Store comprehensive credential data
         credential_info = {
             'credential_data': auth_data.credential_data,
@@ -974,11 +987,11 @@ def advanced_register_complete():
                 'user_handle': user_handle
             },
             'registration_time': time.time(),
-            'client_data_json': response.get('clientDataJSON', ''),
-            'attestation_object': response.get('attestationObject', ''),
+            'client_data_json': credential_response.get('clientDataJSON', ''),
+            'attestation_object': raw_attestation_object or '',
             'attestation_format': attestation_format,
             'attestation_statement': attestation_statement,
-            'client_extension_outputs': response.get('clientExtensionResults', {}),
+            'client_extension_outputs': client_extension_results,
             # Store complete original WebAuthn request for full traceability
             'original_webauthn_request': original_request,
             # Properties section - detailed credential information
@@ -990,7 +1003,7 @@ def advanced_register_complete():
                 'hintsSent': public_key.get('hints', []),
                 # Enhanced largeBlob debugging information
                 'largeBlobRequested': public_key.get('extensions', {}).get('largeBlob', {}),
-                'largeBlobClientOutput': response.get('clientExtensionResults', {}).get('largeBlob', {}),
+                'largeBlobClientOutput': client_extension_results.get('largeBlob', {}),
                 'residentKeyRequested': resident_key_requested,
                 'residentKeyRequired': bool(resident_key_required)
             }
