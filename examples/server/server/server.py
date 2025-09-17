@@ -128,11 +128,11 @@ def _make_json_safe(value: Any) -> Any:
 
 CRED_PROTECT_LABELS: Dict[Any, str] = {
     1: "userVerificationOptional",
-    2: "userVerificationOptionalWithCredentialIdList",
+    2: "userVerificationOptionalWithCredentialIDList",
     3: "userVerificationRequired",
     "userVerificationOptional": "userVerificationOptional",
-    "userVerificationOptionalWithCredentialIDList": "userVerificationOptionalWithCredentialIdList",
-    "userVerificationOptionalWithCredentialIdList": "userVerificationOptionalWithCredentialIdList",
+    "userVerificationOptionalWithCredentialIDList": "userVerificationOptionalWithCredentialIDList",
+    "userVerificationOptionalWithCredentialIdList": "userVerificationOptionalWithCredentialIDList",
     "userVerificationRequired": "userVerificationRequired",
 }
 
@@ -1089,18 +1089,25 @@ def advanced_register_begin():
         elif ext_name == "minPinLength":
             processed_extensions["minPinLength"] = bool(ext_value)
         elif ext_name in ("credProtect", "credentialProtectionPolicy"):
-            if isinstance(ext_value, str):
+            if isinstance(ext_value, int):
                 protect_map = {
-                    "userVerificationOptional": 1,
-                    "userVerificationOptionalWithCredentialIDList": 2,
-                    "userVerificationOptionalWithCredentialIdList": 2,
-                    "userVerificationRequired": 3
+                    1: "userVerificationOptional",
+                    2: "userVerificationOptionalWithCredentialIDList",
+                    3: "userVerificationRequired",
                 }
-                processed_extensions["credProtect"] = protect_map.get(ext_value, ext_value)
+                processed_extensions["credentialProtectionPolicy"] = protect_map.get(ext_value, ext_value)
+            elif isinstance(ext_value, str):
+                alias_map = {
+                    "userVerificationOptional": "userVerificationOptional",
+                    "userVerificationOptionalWithCredentialIDList": "userVerificationOptionalWithCredentialIDList",
+                    "userVerificationOptionalWithCredentialIdList": "userVerificationOptionalWithCredentialIDList",
+                    "userVerificationRequired": "userVerificationRequired",
+                }
+                processed_extensions["credentialProtectionPolicy"] = alias_map.get(ext_value, ext_value)
             else:
-                processed_extensions["credProtect"] = ext_value
+                processed_extensions["credentialProtectionPolicy"] = ext_value
         elif ext_name in ("enforceCredProtect", "enforceCredentialProtectionPolicy"):
-            processed_extensions["enforceCredProtect"] = bool(ext_value)
+            processed_extensions["enforceCredentialProtectionPolicy"] = bool(ext_value)
         elif ext_name == "largeBlob":
             if isinstance(ext_value, str):
                 processed_extensions["largeBlob"] = {"support": ext_value}
@@ -1349,7 +1356,7 @@ def advanced_register_complete():
 
         cred_protect_mapping = {
             1: "userVerificationOptional",
-            2: "userVerificationOptionalWithCredentialIdList",
+            2: "userVerificationOptionalWithCredentialIDList",
             3: "userVerificationRequired",
         }
 

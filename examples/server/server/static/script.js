@@ -514,18 +514,28 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
         }
 
         function convertCredProtectValue(value) {
-            if (typeof value === 'number') {
-                return value;
-            }
-
-            const mapping = {
-                userVerificationOptional: 1,
-                userVerificationOptionalWithCredentialIDList: 2,
-                userVerificationOptionalWithCredentialIdList: 2,
-                userVerificationRequired: 3
+            const numberToPolicy = {
+                1: 'userVerificationOptional',
+                2: 'userVerificationOptionalWithCredentialIDList',
+                3: 'userVerificationRequired'
             };
 
-            return mapping[value] ?? value;
+            const stringNormalization = {
+                userVerificationOptional: 'userVerificationOptional',
+                userVerificationOptionalWithCredentialIDList: 'userVerificationOptionalWithCredentialIDList',
+                userVerificationOptionalWithCredentialIdList: 'userVerificationOptionalWithCredentialIDList',
+                userVerificationRequired: 'userVerificationRequired'
+            };
+
+            if (typeof value === 'number') {
+                return numberToPolicy[value] ?? value;
+            }
+
+            if (typeof value === 'string') {
+                return stringNormalization[value] ?? value;
+            }
+
+            return value;
         }
 
         function convertLargeBlobExtension(extValue) {
@@ -637,16 +647,12 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             Object.entries(extensionsJson).forEach(([name, value]) => {
                 switch (name) {
                     case 'credProtect':
-                        converted.credProtect = convertCredProtectValue(value);
-                        break;
                     case 'credentialProtectionPolicy':
-                        converted.credProtect = convertCredProtectValue(value);
+                        converted.credentialProtectionPolicy = convertCredProtectValue(value);
                         break;
                     case 'enforceCredProtect':
-                        converted.enforceCredProtect = !!value;
-                        break;
                     case 'enforceCredentialProtectionPolicy':
-                        converted.enforceCredProtect = !!value;
+                        converted.enforceCredentialProtectionPolicy = !!value;
                         break;
                     case 'largeBlob':
                         converted.largeBlob = convertLargeBlobExtension(value);
@@ -1341,10 +1347,10 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             const credProtectSetting = serverData.credProtectUsed ?? 'none';
             const credProtectLabelMap = {
                 1: 'userVerificationOptional',
-                2: 'userVerificationOptionalWithCredentialIdList',
+                2: 'userVerificationOptionalWithCredentialIDList',
                 3: 'userVerificationRequired',
-                userVerificationOptionalWithCredentialIDList: 'userVerificationOptionalWithCredentialIdList',
-                userVerificationOptionalWithCredentialIdList: 'userVerificationOptionalWithCredentialIdList',
+                userVerificationOptionalWithCredentialIDList: 'userVerificationOptionalWithCredentialIDList',
+                userVerificationOptionalWithCredentialIdList: 'userVerificationOptionalWithCredentialIDList',
             };
             const credProtectDisplay = credProtectLabelMap[credProtectSetting] || credProtectSetting || 'none';
             console.log('credprotect setting:', credProtectDisplay);
