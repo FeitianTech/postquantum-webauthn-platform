@@ -1233,7 +1233,14 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
 
                 if (response.ok) {
                     const credentials = await response.json();
-                    storedCredentials = credentials;
+                    const normalizedCredentials = Array.isArray(credentials)
+                        ? credentials.map(cred => ({
+                            ...cred,
+                            credentialIdHex: getCredentialIdHex(cred),
+                            userHandleHex: getCredentialUserHandleHex(cred),
+                        }))
+                        : [];
+                    storedCredentials = normalizedCredentials;
                     updateCredentialsDisplay();
                     updateJsonEditor(); // Update JSON editor in case allowCredentials needs updating
                 }
@@ -1297,13 +1304,18 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                 <option value="all">All credentials</option>
                 <option value="empty">Empty (resident key only)</option>
             `;
-            
+
             // Add individual credential options
             if (storedCredentials && storedCredentials.length > 0) {
                 storedCredentials.forEach((cred, index) => {
+                    const credentialIdHex = cred.credentialIdHex || getCredentialIdHex(cred);
+                    if (!credentialIdHex) {
+                        return;
+                    }
+
                     const credName = cred.userName || cred.email || `Credential ${index + 1}`;
                     const option = document.createElement('option');
-                    option.value = cred.credentialId;
+                    option.value = credentialIdHex;
                     option.textContent = `${credName} (${cred.algorithm || 'Unknown'})`;
                     allowCredentialsSelect.appendChild(option);
                 });
@@ -2196,30 +2208,63 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                 delete publicKey.allowCredentials;
             } else if (allowCreds === 'all') {
                 // Include all stored credentials
-                publicKey.allowCredentials = storedCredentials.map(cred => ({
-                    type: "public-key",
-                    id: {
-                        "$base64url": hexToBase64Url(cred.credentialId)
-                    }
-                }));
+                const allCredentials = (storedCredentials || [])
+                    .map(cred => {
+                        const credentialIdHex = cred.credentialIdHex || getCredentialIdHex(cred);
+                        if (!credentialIdHex) {
+                            return null;
+                        }
+
+                        const formatValue = convertFormat(credentialIdHex, 'hex', getCurrentBinaryFormat());
+                        const formattedId = currentFormatToJsonFormat(formatValue);
+                        if (!formattedId || typeof formattedId !== 'object') {
+                            return null;
+                        }
+
+                        return {
+                            type: "public-key",
+                            id: formattedId,
+                        };
+                    })
+                    .filter(Boolean);
+                publicKey.allowCredentials = allCredentials;
             } else {
                 // Specific credential selected - find it by credential ID
-                const selectedCred = storedCredentials.find(cred => cred.credentialId === allowCreds);
+                const selectedCred = (storedCredentials || []).find(
+                    cred => (cred.credentialIdHex || getCredentialIdHex(cred)) === allowCreds
+                );
                 if (selectedCred) {
-                    publicKey.allowCredentials = [{
-                        type: "public-key",
-                        id: {
-                            "$base64url": hexToBase64Url(selectedCred.credentialId)
-                        }
-                    }];
+                    const credentialIdHex = selectedCred.credentialIdHex || getCredentialIdHex(selectedCred);
+                    const formatValue = convertFormat(credentialIdHex, 'hex', getCurrentBinaryFormat());
+                    const formattedId = currentFormatToJsonFormat(formatValue);
+                    if (formattedId && typeof formattedId === 'object') {
+                        publicKey.allowCredentials = [{
+                            type: "public-key",
+                            id: formattedId,
+                        }];
+                    }
                 } else {
                     // Fallback to all credentials if specific one not found
-                    publicKey.allowCredentials = storedCredentials.map(cred => ({
-                        type: "public-key",
-                        id: {
-                            "$base64url": hexToBase64Url(cred.credentialId)
-                        }
-                    }));
+                    const fallbackCredentials = (storedCredentials || [])
+                        .map(cred => {
+                            const credentialIdHex = cred.credentialIdHex || getCredentialIdHex(cred);
+                            if (!credentialIdHex) {
+                                return null;
+                            }
+
+                            const formatValue = convertFormat(credentialIdHex, 'hex', getCurrentBinaryFormat());
+                            const formattedId = currentFormatToJsonFormat(formatValue);
+                            if (!formattedId || typeof formattedId !== 'object') {
+                                return null;
+                            }
+
+                            return {
+                                type: "public-key",
+                                id: formattedId,
+                            };
+                        })
+                        .filter(Boolean);
+                    publicKey.allowCredentials = fallbackCredentials;
                 }
             }
 
@@ -2450,7 +2495,12 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
 
         // Credentials management
         function addCredentialToList(credential) {
-            storedCredentials.push(credential);
+            const normalizedCredential = {
+                ...credential,
+                credentialIdHex: getCredentialIdHex(credential),
+                userHandleHex: getCredentialUserHandleHex(credential),
+            };
+            storedCredentials.push(normalizedCredential);
             updateCredentialsList();
         }
 
