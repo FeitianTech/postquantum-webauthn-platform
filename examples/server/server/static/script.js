@@ -1637,6 +1637,12 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                 modalBody.scrollTo(0, 0);
             }
             openModal('credentialModal');
+            const scheduleResize = () => autoResizeCertificateTextareas(modalBody);
+            if (typeof requestAnimationFrame === 'function') {
+                requestAnimationFrame(scheduleResize);
+            } else {
+                setTimeout(scheduleResize, 0);
+            }
         }
 
         function closeCredentialModal() {
@@ -1873,6 +1879,23 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             return `<textarea class="certificate-textarea" readonly spellcheck="false">${escapeHtml(content)}</textarea>`;
         }
 
+        function autoResizeCertificateTextareas(context) {
+            const scope = context && typeof context.querySelectorAll === 'function'
+                ? context
+                : document;
+            const textareas = scope.querySelectorAll('.certificate-textarea');
+            textareas.forEach(textarea => {
+                textarea.style.height = 'auto';
+                textarea.style.overflow = 'hidden';
+                const measuredHeight = textarea.scrollHeight;
+                if (measuredHeight > 0) {
+                    textarea.style.height = `${measuredHeight}px`;
+                } else {
+                    textarea.style.height = '';
+                }
+            });
+        }
+
         function showRegistrationResultModal(credentialJson, relyingPartyInfo) {
             const modalBody = document.getElementById('registrationResultBody');
             if (!modalBody) {
@@ -1949,6 +1972,12 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                 modalBody.scrollTo(0, 0);
             }
             openModal('registrationResultModal');
+            const scheduleResize = () => autoResizeCertificateTextareas(modalBody);
+            if (typeof requestAnimationFrame === 'function') {
+                requestAnimationFrame(scheduleResize);
+            } else {
+                setTimeout(scheduleResize, 0);
+            }
         }
 
         async function deleteCredential(username, index) {

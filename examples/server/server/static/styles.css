@@ -191,7 +191,7 @@ body.modal-open {
     font-size: 1rem;
     font-weight: 600;
     text-decoration: none;
-    transition: background 0.3s ease, box-shadow 0.3s ease, color 0.3s ease;
+    transition: background 0.3s ease, color 0.3s ease;
     margin-right: 0.5rem;
     margin-bottom: 0.5rem;
     box-shadow: 0 6px 18px rgba(0, 114, 206, 0.18);
@@ -200,7 +200,6 @@ body.modal-open {
 .btn:hover,
 .btn:focus-visible {
     background: linear-gradient(135deg, var(--primary-dark), #008f5c);
-    box-shadow: 0 8px 22px rgba(0, 114, 206, 0.24);
     outline: none;
 }
 
@@ -811,7 +810,7 @@ select.form-control option {
     font-size: 10px;
     font-weight: bold;
     cursor: pointer;
-    margin-left: 8px;
+    margin-left: 0;
     position: relative;
     transition: background-color 0.3s ease;
     flex-shrink: 0; /* Prevent shrinking */
@@ -934,7 +933,7 @@ select.form-control option {
 .label-with-info {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.35rem;
     position: relative;
 }
 
@@ -1091,7 +1090,8 @@ select.form-control option {
 
 .certificate-textarea {
     width: 100%;
-    min-height: 200px;
+    min-height: 0;
+    height: auto;
     padding: 0.75rem 1rem;
     border-radius: 16px;
     border: 1px solid rgba(0, 114, 206, 0.25);
@@ -1099,9 +1099,10 @@ select.form-control option {
     font-family: 'Courier New', monospace;
     font-size: 0.85rem;
     color: #0f2740;
-    resize: vertical;
+    resize: none;
     line-height: 1.5;
     white-space: pre;
+    overflow: hidden;
 }
 
 .certificate-textarea:focus {
