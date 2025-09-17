@@ -584,7 +584,9 @@ def advanced_register_begin():
     
     rk_req = ResidentKeyRequirement.PREFERRED
     resident_key = auth_selection.get("residentKey", "preferred")
-    if resident_key == "required":
+    if auth_selection.get("requireResidentKey") is True:
+        rk_req = ResidentKeyRequirement.REQUIRED
+    elif resident_key == "required":
         rk_req = ResidentKeyRequirement.REQUIRED
     elif resident_key == "discouraged":
         rk_req = ResidentKeyRequirement.DISCOURAGED
@@ -624,17 +626,17 @@ def advanced_register_begin():
             processed_extensions["credProps"] = bool(ext_value)
         elif ext_name == "minPinLength":
             processed_extensions["minPinLength"] = bool(ext_value)
-        elif ext_name == "credProtect":
+        elif ext_name in ("credProtect", "credentialProtectionPolicy"):
             if isinstance(ext_value, str):
                 protect_map = {
                     "userVerificationOptional": 1,
-                    "userVerificationOptionalWithCredentialIDList": 2, 
+                    "userVerificationOptionalWithCredentialIDList": 2,
                     "userVerificationRequired": 3
                 }
                 processed_extensions["credProtect"] = protect_map.get(ext_value, ext_value)
             else:
                 processed_extensions["credProtect"] = ext_value
-        elif ext_name == "enforceCredProtect":
+        elif ext_name in ("enforceCredProtect", "enforceCredentialProtectionPolicy"):
             processed_extensions["enforceCredProtect"] = bool(ext_value)
         elif ext_name == "largeBlob":
             processed_extensions["largeBlob"] = ext_value
@@ -701,6 +703,12 @@ def advanced_register_complete():
     
     credentials = readkey(username)
     
+    auth_selection = public_key.get('authenticatorSelection', {})
+    resident_key_requested = auth_selection.get('residentKey')
+    resident_key_required = auth_selection.get('requireResidentKey')
+    if resident_key_required is None:
+        resident_key_required = resident_key_requested == 'required'
+
     try:
         # Complete registration using stored state
         auth_data = server.register_complete(session.pop("advanced_state"), response)
@@ -787,8 +795,8 @@ def advanced_register_complete():
                 # Enhanced largeBlob debugging information
                 'largeBlobRequested': public_key.get('extensions', {}).get('largeBlob', {}),
                 'largeBlobClientOutput': response.get('clientExtensionResults', {}).get('largeBlob', {}),
-                'residentKeyRequested': public_key.get('authenticatorSelection', {}).get('residentKey'),
-                'residentKeyRequired': public_key.get('authenticatorSelection', {}).get('residentKey') == 'required'
+                'residentKeyRequested': resident_key_requested,
+                'residentKeyRequired': bool(resident_key_required)
             }
         }
         
