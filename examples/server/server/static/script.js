@@ -16,6 +16,7 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
         let storedCredentials = [];
         let currentJsonMode = null;
         let currentJsonData = null;
+        const utf8Decoder = typeof TextDecoder !== 'undefined' ? new TextDecoder('utf-8') : null;
 
         // Info popup functionality
         let hideTimeout;
@@ -369,6 +370,40 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                 base64 += '=';
             }
             return base64ToUint8Array(base64);
+        }
+
+        function base64UrlToUtf8String(base64url) {
+            if (!base64url) return null;
+            if (!utf8Decoder) return null;
+            const bytes = base64UrlToUint8Array(base64url);
+            if (!bytes) return null;
+            try {
+                return utf8Decoder.decode(bytes);
+            } catch (error) {
+                return null;
+            }
+        }
+
+        function base64UrlToJson(base64url) {
+            try {
+                const decoded = base64UrlToUtf8String(base64url);
+                if (!decoded) return null;
+                return JSON.parse(decoded);
+            } catch (error) {
+                return null;
+            }
+        }
+
+        function escapeHtml(value) {
+            if (value === undefined || value === null) {
+                return '';
+            }
+            return String(value)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
         }
 
         function bufferSourceToUint8Array(value) {
@@ -1332,12 +1367,26 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             updateJsonEditor();
         }
 
+        function openModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                modal.classList.add('open');
+            }
+        }
+
+        function closeModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                modal.classList.remove('open');
+            }
+        }
+
         function showCredentialDetails(index) {
             const cred = storedCredentials[index];
             if (!cred) return;
 
             const modalBody = document.getElementById('modalBody');
-            
+
             // Helper functions for format conversion
             
             
@@ -1360,7 +1409,7 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                 const userHandleB64 = cred.userHandle;
                 const userHandleB64u = base64ToBase64Url(userHandleB64);
                 const userHandleHex = base64UrlToHex(userHandleB64u);
-                
+
                 detailsHtml += `
                 <div style="margin-top: 0.5rem;">
                     <div><strong>User handle (User ID):</strong></div>
@@ -1374,7 +1423,67 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                     </div>
                 </div>`;
             }
-            
+
+            if (cred.credentialId) {
+                const credentialIdB64 = cred.credentialId;
+                const credentialIdB64u = base64ToBase64Url(credentialIdB64);
+                const credentialIdHex = base64UrlToHex(credentialIdB64u);
+
+                detailsHtml += `
+                <div style="margin-top: 0.5rem;">
+                    <div><strong>Credential ID:</strong></div>
+                    <div style="font-family: 'Courier New', monospace; font-size: 0.9rem; margin-left: 1rem;">
+                        <div><strong>b64</strong></div>
+                        <div style="background: #f8f9fa; padding: 0.25rem; border-radius: 4px; margin-bottom: 0.25rem;">${credentialIdB64}</div>
+                        <div><strong>b64u</strong></div>
+                        <div style="background: #f8f9fa; padding: 0.25rem; border-radius: 4px; margin-bottom: 0.25rem;">${credentialIdB64u}</div>
+                        <div><strong>hex</strong></div>
+                        <div style="background: #f8f9fa; padding: 0.25rem; border-radius: 4px;">${credentialIdHex}</div>
+                    </div>
+                </div>`;
+            }
+
+            if (cred.aaguid) {
+                let aaguidHex = '';
+                if (typeof cred.aaguid === 'string') {
+                    aaguidHex = cred.aaguid.replace(/-/g, '').toLowerCase();
+                } else if (Array.isArray(cred.aaguid)) {
+                    aaguidHex = Array.from(cred.aaguid).map(byte => byte.toString(16).padStart(2, '0')).join('');
+                } else if (ArrayBuffer.isView(cred.aaguid)) {
+                    aaguidHex = Array.from(new Uint8Array(cred.aaguid.buffer, cred.aaguid.byteOffset, cred.aaguid.byteLength))
+                        .map(byte => byte.toString(16).padStart(2, '0'))
+                        .join('');
+                } else if (cred.aaguid instanceof ArrayBuffer) {
+                    aaguidHex = Array.from(new Uint8Array(cred.aaguid))
+                        .map(byte => byte.toString(16).padStart(2, '0'))
+                        .join('');
+                } else if (typeof cred.aaguid.hex === 'function') {
+                    aaguidHex = cred.aaguid.hex();
+                }
+
+                if (aaguidHex) {
+                    aaguidHex = aaguidHex.toLowerCase();
+                    const aaguidB64 = hexToBase64(aaguidHex);
+                    const aaguidB64u = hexToBase64Url(aaguidHex);
+                    const aaguidGuid = aaguidHex.length === 32 ? hexToGuid(aaguidHex) : '';
+
+                    detailsHtml += `
+                    <div style="margin-top: 0.5rem;">
+                        <div><strong>AAGUID:</strong></div>
+                        <div style="font-family: 'Courier New', monospace; font-size: 0.9rem; margin-left: 1rem;">
+                            <div><strong>b64</strong></div>
+                            <div style="background: #f8f9fa; padding: 0.25rem; border-radius: 4px; margin-bottom: 0.25rem;">${aaguidB64}</div>
+                            <div><strong>b64u</strong></div>
+                            <div style="background: #f8f9fa; padding: 0.25rem; border-radius: 4px; margin-bottom: 0.25rem;">${aaguidB64u}</div>
+                            <div><strong>hex</strong></div>
+                            <div style="background: #f8f9fa; padding: 0.25rem; border-radius: 4px; margin-bottom: 0.25rem;">${aaguidHex}</div>
+                            ${aaguidGuid ? `<div><strong>guid</strong></div>
+                            <div style="background: #f8f9fa; padding: 0.25rem; border-radius: 4px;">${aaguidGuid}</div>` : ''}
+                        </div>
+                    </div>`;
+                }
+            }
+
             detailsHtml += `</div>`;
             
             // Properties section
@@ -1502,11 +1611,224 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             }
             
             modalBody.innerHTML = detailsHtml;
-            document.getElementById('credentialModal').style.display = 'block';
+            openModal('credentialModal');
         }
 
         function closeCredentialModal() {
-            document.getElementById('credentialModal').style.display = 'none';
+            closeModal('credentialModal');
+        }
+
+        function closeRegistrationResultModal() {
+            closeModal('registrationResultModal');
+        }
+
+        function renderCertificateDetails(details) {
+            if (!details || typeof details !== 'object') {
+                return '';
+            }
+
+            if (details.error) {
+                return `<div style="color: #dc3545;">${escapeHtml(details.error)}</div>`;
+            }
+
+            const sections = [];
+            if (details.version?.display) {
+                sections.push(`<div><strong>Version:</strong> ${escapeHtml(details.version.display)}</div>`);
+            }
+            if (details.serialNumber) {
+                const serialParts = [];
+                if (details.serialNumber.decimal) {
+                    serialParts.push(escapeHtml(details.serialNumber.decimal));
+                }
+                if (details.serialNumber.hex) {
+                    serialParts.push(`(${escapeHtml(details.serialNumber.hex)})`);
+                }
+                if (serialParts.length) {
+                    sections.push(`<div><strong>Certificate Serial Number:</strong> ${serialParts.join(' ')}</div>`);
+                }
+            }
+            if (details.signatureAlgorithm) {
+                sections.push(`<div><strong>Signature Algorithm:</strong> ${escapeHtml(details.signatureAlgorithm)}</div>`);
+            }
+            if (details.issuer) {
+                sections.push(`<div><strong>Issuer:</strong> ${escapeHtml(details.issuer)}</div>`);
+            }
+            if (details.validity) {
+                const validityLines = [];
+                if (details.validity.notBefore) {
+                    validityLines.push(`<div>Not Before: ${escapeHtml(details.validity.notBefore)}</div>`);
+                }
+                if (details.validity.notAfter) {
+                    validityLines.push(`<div>Not After: ${escapeHtml(details.validity.notAfter)}</div>`);
+                }
+                if (validityLines.length) {
+                    sections.push(`
+                        <div>
+                            <strong>Validity</strong>
+                            <div style="margin-left: 1rem;">
+                                ${validityLines.join('')}
+                            </div>
+                        </div>
+                    `);
+                }
+            }
+            if (details.subject) {
+                sections.push(`<div><strong>Subject:</strong> ${escapeHtml(details.subject)}</div>`);
+            }
+            if (details.publicKeyInfo) {
+                const pk = details.publicKeyInfo;
+                const pkLines = [];
+                if (pk.type) {
+                    pkLines.push(`<div>Type: ${escapeHtml(pk.type)}</div>`);
+                }
+                if (pk.keySize) {
+                    pkLines.push(`<div>Key Size: ${escapeHtml(pk.keySize)}</div>`);
+                }
+                if (pk.curve) {
+                    pkLines.push(`<div>Curve: ${escapeHtml(pk.curve)}</div>`);
+                }
+                if (pk.publicExponent) {
+                    pkLines.push(`<div>Public Exponent: ${escapeHtml(pk.publicExponent)}</div>`);
+                }
+                if (pk.uncompressedPoint) {
+                    pkLines.push(`<div>Public-Key (uncompressed):<br><span style="font-family: 'Courier New', monospace;">${escapeHtml(pk.uncompressedPoint)}</span></div>`);
+                }
+                if (pk.modulusHex) {
+                    pkLines.push(`<div>Modulus:<br><span style="font-family: 'Courier New', monospace;">${escapeHtml(pk.modulusHex)}</span></div>`);
+                }
+                if (pk.publicKeyHex) {
+                    pkLines.push(`<div>Public Key:<br><span style="font-family: 'Courier New', monospace;">${escapeHtml(pk.publicKeyHex)}</span></div>`);
+                }
+                if (pk.subjectPublicKeyInfoBase64) {
+                    pkLines.push(`<div>SubjectPublicKeyInfo (base64):<br><span style="font-family: 'Courier New', monospace;">${escapeHtml(pk.subjectPublicKeyInfoBase64)}</span></div>`);
+                }
+                if (pkLines.length) {
+                    sections.push(`
+                        <div>
+                            <strong>Subject Public Key Info</strong>
+                            <div style="margin-left: 1rem;">
+                                ${pkLines.join('')}
+                            </div>
+                        </div>
+                    `);
+                }
+            }
+            if (Array.isArray(details.extensions) && details.extensions.length > 0) {
+                const extensionItems = details.extensions.map(ext => {
+                    const extensionName = ext.name || ext.oid || 'Extension';
+                    let valueContent = '';
+                    if (ext.value && typeof ext.value === 'object') {
+                        valueContent = `<pre style="background: #f8f9fa; padding: 0.5rem; border-radius: 4px; white-space: pre-wrap;">${escapeHtml(JSON.stringify(ext.value, null, 2))}</pre>`;
+                    } else if (ext.value !== undefined) {
+                        valueContent = `<div style="font-family: 'Courier New', monospace;">${escapeHtml(ext.value)}</div>`;
+                    }
+                    const criticalTag = ext.critical ? ' <span style="color: #dc3545;">[critical]</span>' : '';
+                    return `
+                        <div style="margin-bottom: 0.75rem;">
+                            <div><strong>${escapeHtml(extensionName)}</strong> (${escapeHtml(ext.oid || '')})${criticalTag}</div>
+                            ${valueContent}
+                        </div>
+                    `;
+                }).join('');
+                sections.push(`
+                    <div>
+                        <strong>Extensions:</strong>
+                        <div style="margin-left: 1rem;">
+                            ${extensionItems}
+                        </div>
+                    </div>
+                `);
+            }
+            if (details.fingerprints) {
+                const fingerprintEntries = Object.entries(details.fingerprints)
+                    .map(([algorithm, fingerprint]) => `<div>${escapeHtml(algorithm.toUpperCase())}: ${escapeHtml(fingerprint)}</div>`)
+                    .join('');
+                sections.push(`
+                    <div>
+                        <strong>Fingerprint:</strong>
+                        <div style="margin-left: 1rem;">
+                            ${fingerprintEntries}
+                        </div>
+                    </div>
+                `);
+            }
+
+            return sections.join('');
+        }
+
+        function showRegistrationResultModal(credentialJson, relyingPartyInfo) {
+            const modalBody = document.getElementById('registrationResultBody');
+            if (!modalBody) {
+                return;
+            }
+
+            const credentialDisplay = credentialJson ? JSON.stringify(credentialJson, null, 2) : '';
+            const clientDataBase64 = credentialJson?.response?.clientDataJSON;
+            const parsedClientData = clientDataBase64 ? base64UrlToJson(clientDataBase64) : null;
+            const clientDataDisplay = parsedClientData
+                ? JSON.stringify(parsedClientData, null, 2)
+                : clientDataBase64
+                    ? base64UrlToUtf8String(clientDataBase64) || clientDataBase64
+                    : '';
+
+            let relyingPartyCopy = null;
+            let certificateSection = '';
+            if (relyingPartyInfo && typeof relyingPartyInfo === 'object') {
+                relyingPartyCopy = JSON.parse(JSON.stringify(relyingPartyInfo));
+                if (relyingPartyCopy.attestationCertificate) {
+                    certificateSection = renderCertificateDetails(relyingPartyCopy.attestationCertificate);
+                    delete relyingPartyCopy.attestationCertificate;
+                }
+            }
+
+            const relyingPartyDisplay = relyingPartyCopy ? JSON.stringify(relyingPartyCopy, null, 2) : '';
+
+            const credentialSection = credentialDisplay
+                ? `<pre style="background: #f8f9fa; padding: 0.75rem; border-radius: 6px; overflow-x: auto;">${escapeHtml(credentialDisplay)}</pre>`
+                : '<div style="font-style: italic; color: #6c757d;">No credential response captured.</div>';
+
+            const clientDataSection = clientDataDisplay
+                ? `<pre style="background: #f8f9fa; padding: 0.75rem; border-radius: 6px; overflow-x: auto;">${escapeHtml(clientDataDisplay)}</pre>`
+                : '<div style="font-style: italic; color: #6c757d;">No clientDataJSON available.</div>';
+
+            const relyingPartySection = relyingPartyDisplay
+                ? `<pre style="background: #f8f9fa; padding: 0.75rem; border-radius: 6px; overflow-x: auto;">${escapeHtml(relyingPartyDisplay)}</pre>`
+                : '<div style="font-style: italic; color: #6c757d;">No relying party data returned.</div>';
+
+            let html = `
+                <section style="margin-bottom: 1.5rem;">
+                    <h3 style="color: #325F74; margin-bottom: 0.75rem;">Authenticator Response</h3>
+                    <ol style="padding-left: 1.25rem; margin: 0;">
+                        <li style="margin-bottom: 1rem;">
+                            <div style="font-weight: 600; margin-bottom: 0.5rem;">Result of navigator.credentials.create()</div>
+                            ${credentialSection}
+                        </li>
+                        <li>
+                            <div style="font-weight: 600; margin-bottom: 0.5rem;">Parsed clientDataJSON response</div>
+                            ${clientDataSection}
+                        </li>
+                    </ol>
+                </section>
+                <section style="margin-bottom: 1.5rem;">
+                    <h3 style="color: #325F74; margin-bottom: 0.75rem;">Relying Party extracted information</h3>
+                    ${relyingPartySection}
+                </section>
+            `;
+
+            if (certificateSection) {
+                html += `
+                    <section>
+                        <h3 style="color: #325F74; margin-bottom: 0.75rem;">Attestation Certificate</h3>
+                        <div style="font-size: 0.95rem; line-height: 1.6;">
+                            ${certificateSection}
+                        </div>
+                    </section>
+                `;
+            }
+
+            modalBody.innerHTML = html;
+            modalBody.scrollTop = 0;
+            openModal('registrationResultModal');
         }
 
         async function deleteCredential(username, index) {
@@ -2658,14 +2980,14 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                 }
 
                 // Set up modal close on outside click
-                const modal = document.getElementById('credentialModal');
-                if (modal) {
+                const modals = document.querySelectorAll('.modal');
+                modals.forEach(modal => {
                     modal.addEventListener('click', (e) => {
                         if (e.target === modal) {
-                            closeCredentialModal();
+                            closeModal(modal.id);
                         }
                     });
-                }
+                });
                 
                 // Set up specific PRF validation listeners
                 const prfFirstInputs = ['prf-eval-first-reg', 'prf-eval-first-auth'];
@@ -2751,6 +3073,7 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
         window.resetJsonEditor = resetJsonEditor;
         window.showCredentialDetails = showCredentialDetails;
         window.closeCredentialModal = closeCredentialModal;
+        window.closeRegistrationResultModal = closeRegistrationResultModal;
         window.deleteCredential = deleteCredential;
 
 
@@ -3013,9 +3336,11 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                     
                     // Print debug information from actual credential data
                     printRegistrationDebug(credential, createOptions, data);
-                    
+
                     showStatus('advanced', `Advanced registration successful! Algorithm: ${data.algo || 'Unknown'}`, 'success');
-                    
+
+                    showRegistrationResultModal(credentialJson, data.relyingParty || null);
+
                     // Reload credentials from server to get the latest
                     setTimeout(loadSavedCredentials, 1000);
                 } else {
