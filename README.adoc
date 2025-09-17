@@ -229,6 +229,7 @@ cd /path/to/your/project
 # Generate certificate and private key for localhost
 mkcert localhost 127.0.0.1 ::1
 ```
+Note: Adding 127.0.0.1 is just for backup, WebAuthn cannot work on 127.0.0.1, but can work on localhost. 
 
 # 🚀 Quickstart: create a virtual environment, run the demo server, and use the test app
 
