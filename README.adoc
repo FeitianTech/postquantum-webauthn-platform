@@ -177,8 +177,59 @@ pip install oqs pqcrypto
 
 ---
 
+## mkcert Setup for Local HTTPS (Windows & macOS)
 
-  
+This guide explains how to install **mkcert** and generate SSL/TLS certificates for local development in a Python project.  
+The certificates created by mkcert are trusted by your system, so you can run your project locally over HTTPS without browser warnings.
+
+---
+
+### 1. Install mkcert
+
+#### Windows
+1. Download the latest `mkcert.exe` from the official releases page:  
+   👉 https://github.com/FiloSottile/mkcert/releases  
+
+2. Place `mkcert.exe` in a folder included in your **PATH** (for example: `C:\Windows\System32`).
+
+3. Open **PowerShell** and run:
+   ```powershell
+   mkcert -install
+
+
+#### macOS
+```
+# Install mkcert with Homebrew
+brew install mkcert
+
+# Install nss if you use Firefox
+brew install nss
+
+# Create and trust the local Certificate Authority (CA)
+mkcert -install
+```
+This creates and trusts a local CA on your Mac.
+
+
+### 2. Generate Certificates
+Windows
+In PowerShell, move to your Python project directory:
+```
+cd C:\path\to\your\project
+
+# Generate certificate and private key for localhost
+mkcert localhost 127.0.0.1 ::1
+```
+
+macOS
+In Terminal, move to your Python project directory:
+```
+cd /path/to/your/project
+
+# Generate certificate and private key for localhost
+mkcert localhost 127.0.0.1 ::1
+```
+
 # 🚀 Quickstart: create a virtual environment, run the demo server, and use the test app
 
 Note: Your server entry point is a Python file. Use:
