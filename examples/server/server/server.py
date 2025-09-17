@@ -1045,6 +1045,7 @@ def advanced_register_begin():
                 protect_map = {
                     "userVerificationOptional": 1,
                     "userVerificationOptionalWithCredentialIDList": 2,
+                    "userVerificationOptionalWithCredentialIdList": 2,
                     "userVerificationRequired": 3
                 }
                 processed_extensions["credProtect"] = protect_map.get(ext_value, ext_value)
@@ -1058,8 +1059,26 @@ def advanced_register_begin():
             else:
                 processed_extensions["largeBlob"] = ext_value
         elif ext_name == "prf":
-            # Process PRF extension while preserving custom format
-            processed_extensions["prf"] = ext_value
+            if isinstance(ext_value, dict) and "eval" in ext_value:
+                prf_eval = ext_value["eval"]
+                processed_eval = {}
+                if isinstance(prf_eval, dict):
+                    if "first" in prf_eval:
+                        first_value = extract_binary_value(prf_eval["first"])
+                        if isinstance(first_value, str):
+                            first_value = bytes.fromhex(first_value)
+                        processed_eval["first"] = first_value
+                    if "second" in prf_eval:
+                        second_value = extract_binary_value(prf_eval["second"])
+                        if isinstance(second_value, str):
+                            second_value = bytes.fromhex(second_value)
+                        processed_eval["second"] = second_value
+                if processed_eval:
+                    processed_extensions["prf"] = {"eval": processed_eval}
+                else:
+                    processed_extensions["prf"] = ext_value
+            else:
+                processed_extensions["prf"] = ext_value
         else:
             # Pass through any custom extensions as-is for full extensibility
             processed_extensions[ext_name] = ext_value
@@ -1254,6 +1273,34 @@ def advanced_register_complete():
             "hintsUsed": public_key.get("hints", []),
             "actualResidentKey": bool(auth_data.flags & 0x04) if hasattr(auth_data, 'flags') else False,
         }
+
+        extensions_requested = public_key.get("extensions", {})
+        if not isinstance(extensions_requested, dict):
+            extensions_requested = {}
+
+        cred_protect_requested = extensions_requested.get("credentialProtectionPolicy")
+        if cred_protect_requested is None:
+            cred_protect_requested = extensions_requested.get("credProtect")
+
+        cred_protect_mapping = {
+            1: "userVerificationOptional",
+            2: "userVerificationOptionalWithCredentialIdList",
+            3: "userVerificationRequired",
+        }
+
+        if isinstance(cred_protect_requested, int):
+            cred_protect_display = cred_protect_mapping.get(cred_protect_requested, cred_protect_requested)
+        elif cred_protect_requested:
+            cred_protect_display = cred_protect_requested
+        else:
+            cred_protect_display = "none"
+
+        debug_info["credProtectUsed"] = cred_protect_display
+
+        enforce_requested = extensions_requested.get("enforceCredentialProtectionPolicy")
+        if enforce_requested is None:
+            enforce_requested = extensions_requested.get("enforceCredProtect")
+        debug_info["enforceCredProtectUsed"] = bool(enforce_requested)
         
         credential_data = auth_data.credential_data
         credential_id_bytes = getattr(credential_data, 'credential_id', b'') or b''

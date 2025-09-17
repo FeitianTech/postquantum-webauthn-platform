@@ -520,6 +520,7 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             const mapping = {
                 userVerificationOptional: 1,
                 userVerificationOptionalWithCredentialIDList: 2,
+                userVerificationOptionalWithCredentialIdList: 2,
                 userVerificationRequired: 3
             };
 
@@ -1167,8 +1168,16 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             console.log('minpinlength (requested or not):', minPinLengthRequested);
             
             // credProtect setting - from actual server processing
-            const credProtectSetting = serverData.credProtectUsed || 'none';
-            console.log('credprotect setting:', credProtectSetting);
+            const credProtectSetting = serverData.credProtectUsed ?? 'none';
+            const credProtectLabelMap = {
+                1: 'userVerificationOptional',
+                2: 'userVerificationOptionalWithCredentialIdList',
+                3: 'userVerificationRequired',
+                userVerificationOptionalWithCredentialIDList: 'userVerificationOptionalWithCredentialIdList',
+                userVerificationOptionalWithCredentialIdList: 'userVerificationOptionalWithCredentialIdList',
+            };
+            const credProtectDisplay = credProtectLabelMap[credProtectSetting] || credProtectSetting || 'none';
+            console.log('credprotect setting:', credProtectDisplay);
             
             // enforce credProtect - from actual server processing
             const enforceCredProtect = serverData.enforceCredProtectUsed || false;
@@ -1876,7 +1885,7 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                 ? formatted
                 : 'No decoded certificate details available.';
 
-            return `<textarea class="certificate-textarea" readonly spellcheck="false">${escapeHtml(content)}</textarea>`;
+            return `<textarea class="certificate-textarea" readonly spellcheck="false" wrap="soft">${escapeHtml(content)}</textarea>`;
         }
 
         function autoResizeCertificateTextareas(context) {
@@ -1885,14 +1894,29 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                 : document;
             const textareas = scope.querySelectorAll('.certificate-textarea');
             textareas.forEach(textarea => {
-                textarea.style.height = 'auto';
-                textarea.style.overflow = 'hidden';
-                const measuredHeight = textarea.scrollHeight;
-                if (measuredHeight > 0) {
-                    textarea.style.height = `${measuredHeight}px`;
-                } else {
-                    textarea.style.height = '';
+                if (!(textarea instanceof HTMLTextAreaElement)) {
+                    return;
                 }
+
+                const resizeOnce = () => {
+                    textarea.style.height = 'auto';
+                    textarea.style.overflowY = 'hidden';
+                    textarea.style.overflowX = 'hidden';
+                    const measuredHeight = textarea.scrollHeight;
+                    if (Number.isFinite(measuredHeight) && measuredHeight > 0) {
+                        textarea.style.height = `${measuredHeight}px`;
+                    } else {
+                        textarea.style.height = '';
+                    }
+                };
+
+                resizeOnce();
+
+                if (typeof requestAnimationFrame === 'function') {
+                    requestAnimationFrame(resizeOnce);
+                }
+
+                setTimeout(resizeOnce, 150);
             });
         }
 
@@ -1924,15 +1948,15 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             const relyingPartyDisplay = relyingPartyCopy ? JSON.stringify(relyingPartyCopy, null, 2) : '';
 
             const credentialSection = credentialDisplay
-                ? `<pre style="background: rgba(0, 114, 206, 0.08); padding: 0.85rem; border-radius: 16px; overflow-x: auto;">${escapeHtml(credentialDisplay)}</pre>`
+                ? `<pre class="modal-pre">${escapeHtml(credentialDisplay)}</pre>`
                 : '<div style="font-style: italic; color: #6c757d;">No credential response captured.</div>';
 
             const clientDataSection = clientDataDisplay
-                ? `<pre style="background: rgba(0, 114, 206, 0.08); padding: 0.85rem; border-radius: 16px; overflow-x: auto;">${escapeHtml(clientDataDisplay)}</pre>`
+                ? `<pre class="modal-pre">${escapeHtml(clientDataDisplay)}</pre>`
                 : '<div style="font-style: italic; color: #6c757d;">No clientDataJSON available.</div>';
 
             const relyingPartySection = relyingPartyDisplay
-                ? `<pre style="background: rgba(0, 114, 206, 0.08); padding: 0.85rem; border-radius: 16px; overflow-x: auto;">${escapeHtml(relyingPartyDisplay)}</pre>`
+                ? `<pre class="modal-pre">${escapeHtml(relyingPartyDisplay)}</pre>`
                 : '<div style="font-style: italic; color: #6c757d;">No relying party data returned.</div>';
 
             let html = `
@@ -3350,15 +3374,22 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             
             const largeBlob = document.getElementById('large-blob-reg')?.value;
             if (largeBlob && largeBlob !== '') {
-                options.extensions.largeBlob = largeBlob;
+                options.extensions.largeBlob = { support: largeBlob };
             }
-            
+
             if (document.getElementById('prf-reg')?.checked) {
-                options.extensions.prf = true;
                 const prfFirst = document.getElementById('prf-eval-first-reg')?.value;
                 const prfSecond = document.getElementById('prf-eval-second-reg')?.value;
-                if (prfFirst) options.extensions.prfEvalFirst = convertFormat(prfFirst, currentFormat, 'hex');
-                if (prfSecond) options.extensions.prfEvalSecond = convertFormat(prfSecond, currentFormat, 'hex');
+                if (prfFirst) {
+                    options.extensions.prf = {
+                        eval: {
+                            first: currentFormatToJsonFormat(prfFirst)
+                        }
+                    };
+                    if (prfSecond) {
+                        options.extensions.prf.eval.second = currentFormatToJsonFormat(prfSecond);
+                    }
+                }
             }
             
             return options;
@@ -3385,23 +3416,31 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             
             // Collect extensions for authentication
             const largeBlob = document.getElementById('large-blob-auth')?.value;
-            if (largeBlob && largeBlob !== '') {
-                options.extensions.largeBlob = largeBlob;
-                if (largeBlob === 'write') {
-                    const largeBlobWrite = document.getElementById('large-blob-write')?.value;
-                    if (largeBlobWrite) {
-                        options.extensions.largeBlobWrite = convertFormat(largeBlobWrite, currentFormat, 'hex');
-                    }
+            if (largeBlob === 'read') {
+                options.extensions.largeBlob = { read: true };
+            } else if (largeBlob === 'write') {
+                const largeBlobWrite = document.getElementById('large-blob-write')?.value;
+                if (largeBlobWrite) {
+                    options.extensions.largeBlob = {
+                        write: currentFormatToJsonFormat(largeBlobWrite)
+                    };
                 }
             }
-            
+
             // Check if we have prf inputs for authentication
             const prfFirst = document.getElementById('prf-eval-first-auth')?.value;
             const prfSecond = document.getElementById('prf-eval-second-auth')?.value;
             if (prfFirst || prfSecond) {
-                options.extensions.prf = true;
-                if (prfFirst) options.extensions.prfEvalFirst = convertFormat(prfFirst, currentFormat, 'hex');
-                if (prfSecond) options.extensions.prfEvalSecond = convertFormat(prfSecond, currentFormat, 'hex');
+                const prfEval = {};
+                if (prfFirst) {
+                    prfEval.first = currentFormatToJsonFormat(prfFirst);
+                }
+                if (prfSecond) {
+                    prfEval.second = currentFormatToJsonFormat(prfSecond);
+                }
+                if (Object.keys(prfEval).length > 0) {
+                    options.extensions.prf = { eval: prfEval };
+                }
             }
             
             return options;

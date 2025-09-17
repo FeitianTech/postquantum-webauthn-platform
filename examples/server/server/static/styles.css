@@ -1101,7 +1101,9 @@ select.form-control option {
     color: #0f2740;
     resize: none;
     line-height: 1.5;
-    white-space: pre;
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow-wrap: anywhere;
     overflow: hidden;
 }
 
@@ -1109,4 +1111,18 @@ select.form-control option {
     outline: none;
     border-color: rgba(0, 114, 206, 0.25);
     box-shadow: none;
+}
+
+.modal-pre {
+    background: rgba(0, 114, 206, 0.08);
+    padding: 0.85rem;
+    border-radius: 16px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    overflow-x: hidden;
+    margin: 0;
 }
