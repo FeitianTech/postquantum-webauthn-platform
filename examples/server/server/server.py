@@ -38,10 +38,16 @@ from fido2.server import Fido2Server
 from flask import Flask, request, redirect, abort, jsonify, session, send_file
 
 import os
+import uuid
 import fido2.features
 import base64
 import pickle
 import time
+from datetime import datetime, timezone
+
+from cryptography import x509
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import ed25519, ed448, ec, rsa
 
 # Enable webauthn-json mapping if available (compatible across fido2 versions)
 try:
@@ -90,6 +96,196 @@ def delkey(name):
         os.remove(os.path.join(basepath, name))
     except Exception:
         pass
+
+
+def _colon_hex(data: bytes) -> str:
+    return ":".join(f"{byte:02x}" for byte in data)
+
+
+def _format_x509_name(name: x509.Name) -> str:
+    try:
+        return name.rfc4514_string()
+    except Exception:
+        return str(name)
+
+
+def _parse_fido_transport_bitfield(raw_value: bytes):
+    if not raw_value:
+        return []
+
+    data = raw_value
+    if raw_value[0] == 0x03 and len(raw_value) >= 3:
+        # BIT STRING tag followed by length and unused bits indicator
+        unused_bits = raw_value[2]
+        data = raw_value[3: 3 + raw_value[1] - 1]
+    else:
+        unused_bits = 0
+
+    aggregate = 0
+    for byte in data:
+        aggregate = (aggregate << 8) | byte
+
+    if unused_bits:
+        aggregate >>= unused_bits
+
+    transport_map = [
+        (0x01, "USB"),
+        (0x02, "NFC"),
+        (0x04, "BLE"),
+        (0x08, "TEST"),
+        (0x10, "INTERNAL"),
+        (0x20, "USB-C"),
+        (0x40, "LIGHTNING"),
+        (0x80, "BT CLASSIC"),
+    ]
+
+    transports = [label for mask, label in transport_map if aggregate & mask]
+    return transports
+
+
+def _serialize_public_key_info(public_key):
+    info = {
+        "type": public_key.__class__.__name__,
+        "keySize": getattr(public_key, "key_size", None),
+        "subjectPublicKeyInfoBase64": base64.b64encode(
+            public_key.public_bytes(
+                encoding=serialization.Encoding.DER,
+                format=serialization.PublicFormat.SubjectPublicKeyInfo,
+            )
+        ).decode("ascii"),
+    }
+
+    if isinstance(public_key, ec.EllipticCurvePublicKey):
+        info.update(
+            {
+                "type": "ECC",
+                "curve": getattr(public_key.curve, "name", "unknown"),
+                "uncompressedPoint": _colon_hex(
+                    public_key.public_bytes(
+                        encoding=serialization.Encoding.X962,
+                        format=serialization.PublicFormat.UncompressedPoint,
+                    )
+                ),
+            }
+        )
+    elif isinstance(public_key, rsa.RSAPublicKey):
+        numbers = public_key.public_numbers()
+        modulus_hex = f"0x{numbers.n:x}"
+        info.update(
+            {
+                "type": "RSA",
+                "publicExponent": numbers.e,
+                "modulusHex": modulus_hex,
+            }
+        )
+    elif isinstance(public_key, (ed25519.Ed25519PublicKey, ed448.Ed448PublicKey)):
+        info.update(
+            {
+                "type": public_key.__class__.__name__,
+                "publicKeyHex": _colon_hex(
+                    public_key.public_bytes(
+                        encoding=serialization.Encoding.Raw,
+                        format=serialization.PublicFormat.Raw,
+                    )
+                ),
+            }
+        )
+
+    return info
+
+
+def _serialize_extension_value(ext):
+    value = ext.value
+    if isinstance(value, x509.SubjectKeyIdentifier):
+        return {"subjectKeyIdentifier": value.digest.hex()}
+    if isinstance(value, x509.AuthorityKeyIdentifier):
+        serialized = {}
+        if value.key_identifier:
+            serialized["keyIdentifier"] = value.key_identifier.hex()
+        if value.authority_cert_serial_number is not None:
+            serialized["authorityCertSerialNumber"] = str(value.authority_cert_serial_number)
+        if value.authority_cert_issuer:
+            serialized["authorityCertIssuer"] = [
+                _format_x509_name(name) for name in value.authority_cert_issuer
+            ]
+        return serialized
+    if isinstance(value, x509.BasicConstraints):
+        return {"ca": value.ca, "pathLength": value.path_length}
+    if isinstance(value, x509.UnrecognizedExtension):
+        raw_hex = value.value.hex()
+        serialized = {"hex": raw_hex}
+        if ext.oid.dotted_string == "1.3.6.1.4.1.45724.1.1.4" and len(value.value) == 16:
+            serialized["aaguidHex"] = raw_hex
+            try:
+                serialized["aaguidGuid"] = str(uuid.UUID(hex=raw_hex))
+            except ValueError:
+                pass
+        elif ext.oid.dotted_string == "1.3.6.1.4.1.45724.2.1.1":
+            serialized["transports"] = _parse_fido_transport_bitfield(value.value)
+        return serialized
+
+    try:
+        return str(value)
+    except Exception:
+        return repr(value)
+
+
+def serialize_attestation_certificate(cert_bytes: bytes):
+    if not cert_bytes:
+        return None
+
+    certificate = x509.load_der_x509_certificate(cert_bytes)
+    version_number = certificate.version.value + 1
+    version_hex = f"0x{certificate.version.value:x}"
+
+    def _isoformat(value: datetime) -> str:
+        if value.tzinfo is None:
+            return value.replace(tzinfo=timezone.utc).isoformat()
+        return value.astimezone(timezone.utc).isoformat()
+
+    extensions = []
+    for ext in certificate.extensions:
+        extensions.append(
+            {
+                "oid": ext.oid.dotted_string,
+                "name": getattr(ext.oid, "_name", ext.oid.dotted_string),
+                "critical": ext.critical,
+                "value": _serialize_extension_value(ext),
+            }
+        )
+
+    fingerprints = {
+        "sha256": certificate.fingerprint(hashes.SHA256()).hex(),
+        "sha1": certificate.fingerprint(hashes.SHA1()).hex(),
+        "md5": certificate.fingerprint(hashes.MD5()).hex(),
+    }
+
+    return {
+        "version": {
+            "display": f"{version_number} ({version_hex})",
+            "numeric": version_number,
+            "hex": version_hex,
+        },
+        "serialNumber": {
+            "decimal": str(certificate.serial_number),
+            "hex": f"0x{certificate.serial_number:x}",
+        },
+        "signatureAlgorithm": getattr(
+            certificate.signature_algorithm_oid, "_name", certificate.signature_algorithm_oid.dotted_string
+        ),
+        "issuer": _format_x509_name(certificate.issuer),
+        "validity": {
+            "notBefore": _isoformat(certificate.not_valid_before),
+            "notAfter": _isoformat(certificate.not_valid_after),
+        },
+        "subject": _format_x509_name(certificate.subject),
+        "publicKeyInfo": _serialize_public_key_info(certificate.public_key()),
+        "extensions": extensions,
+        "fingerprints": fingerprints,
+        "derBase64": base64.b64encode(
+            certificate.public_bytes(serialization.Encoding.DER)
+        ).decode("ascii"),
+    }
 
 @app.route("/")
 def index():
@@ -584,7 +780,9 @@ def advanced_register_begin():
     
     rk_req = ResidentKeyRequirement.PREFERRED
     resident_key = auth_selection.get("residentKey", "preferred")
-    if resident_key == "required":
+    if auth_selection.get("requireResidentKey") is True:
+        rk_req = ResidentKeyRequirement.REQUIRED
+    elif resident_key == "required":
         rk_req = ResidentKeyRequirement.REQUIRED
     elif resident_key == "discouraged":
         rk_req = ResidentKeyRequirement.DISCOURAGED
@@ -598,8 +796,8 @@ def advanced_register_begin():
     
     # Process excludeCredentials
     exclude_list = []
-    exclude_credentials = public_key.get("excludeCredentials", [])
-    if exclude_credentials:
+    exclude_credentials = public_key.get("excludeCredentials") if "excludeCredentials" in public_key else None
+    if isinstance(exclude_credentials, list):
         for exclude_cred in exclude_credentials:
             if isinstance(exclude_cred, dict) and exclude_cred.get("type") == "public-key":
                 cred_id = extract_binary_value(exclude_cred.get("id", ""))
@@ -610,9 +808,6 @@ def advanced_register_begin():
                         type=PublicKeyCredentialType.PUBLIC_KEY,
                         id=cred_id
                     ))
-    elif credentials:
-        # Default exclusion of existing credentials
-        exclude_list = [extract_credential_data(cred) for cred in credentials]
     
     # Process extensions - pass through ALL extensions for full extensibility
     extensions = public_key.get("extensions", {})
@@ -624,20 +819,23 @@ def advanced_register_begin():
             processed_extensions["credProps"] = bool(ext_value)
         elif ext_name == "minPinLength":
             processed_extensions["minPinLength"] = bool(ext_value)
-        elif ext_name == "credProtect":
+        elif ext_name in ("credProtect", "credentialProtectionPolicy"):
             if isinstance(ext_value, str):
                 protect_map = {
                     "userVerificationOptional": 1,
-                    "userVerificationOptionalWithCredentialIDList": 2, 
+                    "userVerificationOptionalWithCredentialIDList": 2,
                     "userVerificationRequired": 3
                 }
                 processed_extensions["credProtect"] = protect_map.get(ext_value, ext_value)
             else:
                 processed_extensions["credProtect"] = ext_value
-        elif ext_name == "enforceCredProtect":
+        elif ext_name in ("enforceCredProtect", "enforceCredentialProtectionPolicy"):
             processed_extensions["enforceCredProtect"] = bool(ext_value)
         elif ext_name == "largeBlob":
-            processed_extensions["largeBlob"] = ext_value
+            if isinstance(ext_value, str):
+                processed_extensions["largeBlob"] = {"support": ext_value}
+            else:
+                processed_extensions["largeBlob"] = ext_value
         elif ext_name == "prf":
             # Process PRF extension while preserving custom format
             processed_extensions["prf"] = ext_value
@@ -701,6 +899,12 @@ def advanced_register_complete():
     
     credentials = readkey(username)
     
+    auth_selection = public_key.get('authenticatorSelection', {})
+    resident_key_requested = auth_selection.get('residentKey')
+    resident_key_required = auth_selection.get('requireResidentKey')
+    if resident_key_required is None:
+        resident_key_required = resident_key_requested == 'required'
+
     try:
         # Complete registration using stored state
         auth_data = server.register_complete(session.pop("advanced_state"), response)
@@ -787,11 +991,28 @@ def advanced_register_complete():
                 # Enhanced largeBlob debugging information
                 'largeBlobRequested': public_key.get('extensions', {}).get('largeBlob', {}),
                 'largeBlobClientOutput': response.get('clientExtensionResults', {}).get('largeBlob', {}),
-                'residentKeyRequested': public_key.get('authenticatorSelection', {}).get('residentKey'),
-                'residentKeyRequired': public_key.get('authenticatorSelection', {}).get('residentKey') == 'required'
+                'residentKeyRequested': resident_key_requested,
+                'residentKeyRequired': bool(resident_key_required)
             }
         }
-        
+
+        attestation_certificate_details = None
+        try:
+            if isinstance(attestation_statement, dict):
+                cert_chain = attestation_statement.get('x5c') or []
+                if cert_chain:
+                    first_cert = cert_chain[0]
+                    if isinstance(first_cert, str):
+                        cert_bytes = base64.b64decode(first_cert)
+                    else:
+                        cert_bytes = bytes(first_cert)
+                    attestation_certificate_details = serialize_attestation_certificate(cert_bytes)
+        except Exception as cert_error:
+            attestation_certificate_details = {"error": str(cert_error)}
+
+        if attestation_certificate_details is not None:
+            credential_info['attestation_certificate'] = attestation_certificate_details
+
         credentials.append(credential_info)
         savekey(username, credentials)
         
@@ -821,10 +1042,106 @@ def advanced_register_complete():
             "actualResidentKey": bool(auth_data.flags & 0x04) if hasattr(auth_data, 'flags') else False,
         }
         
+        credential_data = auth_data.credential_data
+        credential_id_bytes = getattr(credential_data, 'credential_id', b'') or b''
+        credential_id_hex = credential_id_bytes.hex() if credential_id_bytes else None
+        credential_id_b64 = (
+            base64.b64encode(credential_id_bytes).decode('ascii') if credential_id_bytes else None
+        )
+        credential_id_b64url = (
+            base64.urlsafe_b64encode(credential_id_bytes).rstrip(b'=').decode('ascii')
+            if credential_id_bytes else None
+        )
+
+        aaguid_hex = None
+        aaguid_guid = None
+        if getattr(credential_data, 'aaguid', None):
+            aaguid_bytes = bytes(credential_data.aaguid)
+            aaguid_hex = aaguid_bytes.hex()
+            try:
+                aaguid_guid = str(uuid.UUID(bytes=aaguid_bytes))
+            except ValueError:
+                aaguid_guid = None
+
+        flags_dict = {
+            "AT": bool(auth_data.flags & auth_data.FLAG.AT),
+            "BE": bool(auth_data.flags & auth_data.FLAG.BE),
+            "BS": bool(auth_data.flags & auth_data.FLAG.BS),
+            "ED": bool(auth_data.flags & auth_data.FLAG.ED),
+            "UP": bool(auth_data.flags & auth_data.FLAG.UP),
+            "UV": bool(auth_data.flags & auth_data.FLAG.UV),
+        }
+
+        authenticator_data_hex = bytes(auth_data).hex()
+        registration_timestamp = datetime.fromtimestamp(
+            credential_info['registration_time'], timezone.utc
+        ).isoformat()
+
+        resident_key_result = None
+        cred_props = (
+            client_extension_results.get('credProps')
+            if isinstance(client_extension_results, dict)
+            else None
+        )
+        if isinstance(cred_props, dict) and 'rk' in cred_props:
+            resident_key_result = bool(cred_props.get('rk'))
+        elif isinstance(cred_props, bool):
+            resident_key_result = bool(cred_props)
+        else:
+            resident_key_result = bool(auth_data.flags & auth_data.FLAG.BE) or bool(resident_key_required)
+
+        large_blob_result = False
+        if isinstance(client_extension_results, dict) and 'largeBlob' in client_extension_results:
+            large_blob_value = client_extension_results.get('largeBlob')
+            if isinstance(large_blob_value, dict):
+                large_blob_result = bool(
+                    large_blob_value.get('supported')
+                    or large_blob_value.get('written')
+                    or large_blob_value.get('blob')
+                    or large_blob_value.get('result')
+                )
+            else:
+                large_blob_result = bool(large_blob_value)
+
+        rp_info = {
+            "aaguid": {
+                "raw": aaguid_hex,
+                "guid": aaguid_guid,
+            },
+            "attestationFmt": attestation_format,
+            "attestationObject": credential_info.get('attestation_object'),
+            "createdAt": registration_timestamp,
+            "credentialId": credential_id_hex,
+            "credentialIdBase64": credential_id_b64,
+            "credentialIdBase64Url": credential_id_b64url,
+            "device": {
+                "name": "Unknown device",
+                "type": "unknown",
+            },
+            "largeBlob": large_blob_result,
+            "publicKeyAlgorithm": algo,
+            "registrationData": {
+                "authenticatorData": authenticator_data_hex,
+                "clientExtensionResults": client_extension_results,
+                "flags": flags_dict,
+                "signatureCounter": auth_data.counter,
+            },
+            "residentKey": resident_key_result,
+            "userHandle": {
+                "base64": base64.b64encode(user_handle).decode('ascii'),
+                "base64url": base64.urlsafe_b64encode(user_handle).rstrip(b'=').decode('ascii'),
+                "hex": user_handle.hex(),
+            },
+        }
+
+        if attestation_certificate_details:
+            rp_info["attestationCertificate"] = attestation_certificate_details
+
         return jsonify({
-            "status": "OK", 
+            "status": "OK",
             "algo": algoname,
-            **debug_info
+            **debug_info,
+            "relyingParty": rp_info,
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 400
