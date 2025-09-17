@@ -39,6 +39,7 @@ from fido2.webauthn import (
     RegistrationResponse,
 )
 from fido2.server import Fido2Server
+from fido2.utils import ByteBuffer
 from flask import Flask, request, redirect, abort, jsonify, session, send_file
 
 import os
@@ -112,6 +113,17 @@ def _colon_hex(data: bytes) -> str:
 def _encode_base64url(data: bytes) -> str:
     """Encode bytes as unpadded base64url."""
     return base64.urlsafe_b64encode(data).rstrip(b"=").decode("ascii")
+
+
+def _make_json_safe(value: Any) -> Any:
+    """Recursively convert bytes-like WebAuthn option values into JSON-friendly data."""
+    if isinstance(value, (bytes, bytearray, memoryview, ByteBuffer)):
+        return _encode_base64url(bytes(value))
+    if isinstance(value, Mapping):
+        return {key: _make_json_safe(val) for key, val in value.items()}
+    if isinstance(value, (list, tuple, set)):
+        return [_make_json_safe(item) for item in value]
+    return value
 
 
 def _extract_attestation_details(
@@ -387,6 +399,16 @@ def serialize_attestation_certificate(cert_bytes: bytes):
             return value.replace(tzinfo=timezone.utc).isoformat()
         return value.astimezone(timezone.utc).isoformat()
 
+    def _get_cert_datetime(attribute: str) -> datetime:
+        utc_attribute = f"{attribute}_utc"
+        try:
+            return getattr(certificate, utc_attribute)
+        except AttributeError:
+            return getattr(certificate, attribute)
+
+    not_valid_before = _get_cert_datetime("not_valid_before")
+    not_valid_after = _get_cert_datetime("not_valid_after")
+
     extensions = []
     for ext in certificate.extensions:
         extensions.append(
@@ -433,8 +455,8 @@ def serialize_attestation_certificate(cert_bytes: bytes):
 
     _append_blank_line()
     _append_line("Validity:")
-    _append_line(f"    Not Before: {_isoformat(certificate.not_valid_before)}")
-    _append_line(f"    Not After: {_isoformat(certificate.not_valid_after)}")
+    _append_line(f"    Not Before: {_isoformat(not_valid_before)}")
+    _append_line(f"    Not After: {_isoformat(not_valid_after)}")
 
     _append_blank_line()
     _append_line(f"Subject: {_format_x509_name(certificate.subject)}")
@@ -488,8 +510,8 @@ def serialize_attestation_certificate(cert_bytes: bytes):
         "signatureAlgorithm": signature_algorithm,
         "issuer": _format_x509_name(certificate.issuer),
         "validity": {
-            "notBefore": _isoformat(certificate.not_valid_before),
-            "notAfter": _isoformat(certificate.not_valid_after),
+            "notBefore": _isoformat(not_valid_before),
+            "notAfter": _isoformat(not_valid_after),
         },
         "subject": _format_x509_name(certificate.subject),
         "publicKeyInfo": public_key_info,
@@ -521,7 +543,7 @@ def register_begin():
 
     session["state"] = state
 
-    return jsonify(dict(options))
+    return jsonify(_make_json_safe(dict(options)))
 
 @app.route("/api/register/complete", methods=["POST"])
 def register_complete():
@@ -645,7 +667,7 @@ def authenticate_begin():
     )
     session["state"] = state
 
-    return jsonify(dict(options))
+    return jsonify(_make_json_safe(dict(options)))
 
 @app.route("/api/authenticate/complete", methods=["POST"])
 def authenticate_complete():
@@ -1107,7 +1129,7 @@ def advanced_register_begin():
     session["advanced_state"] = state
     session["advanced_original_request"] = data
     
-    return jsonify(dict(options))
+    return jsonify(_make_json_safe(dict(options)))
 
 @app.route("/api/advanced/register/complete", methods=["POST"])
 def advanced_register_complete():
@@ -1566,7 +1588,7 @@ def advanced_authenticate_begin():
     session["advanced_auth_state"] = state
     session["advanced_original_auth_request"] = data
     
-    return jsonify(dict(options))
+    return jsonify(_make_json_safe(dict(options)))
 
 @app.route("/api/advanced/authenticate/complete", methods=["POST"])
 def advanced_authenticate_complete():
