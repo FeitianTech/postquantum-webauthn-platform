@@ -1647,37 +1647,213 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             closeModal('registrationResultModal');
         }
 
-        function formatPemFromDerBase64(derBase64) {
-            if (typeof derBase64 !== 'string') {
-                return '';
+        function appendKeyValueLines(output, value, indentLevel = 0) {
+            if (value === null || value === undefined) {
+                return;
             }
 
-            const normalized = derBase64.replace(/\s+/g, '').trim();
-            if (!normalized) {
-                return '';
+            const indent = '    '.repeat(indentLevel);
+
+            if (typeof value === 'string' || typeof value === 'number') {
+                if (String(value).trim() !== '') {
+                    output.push(`${indent}${value}`);
+                }
+                return;
             }
 
-            const lines = normalized.match(/.{1,64}/g) || [];
-            return ['-----BEGIN CERTIFICATE-----', ...lines, '-----END CERTIFICATE-----'].join('\n');
+            if (typeof value === 'boolean') {
+                output.push(`${indent}${value}`);
+                return;
+            }
+
+            if (Array.isArray(value)) {
+                if (value.length === 0) {
+                    return;
+                }
+
+                value.forEach(item => {
+                    if (item === null || item === undefined) {
+                        return;
+                    }
+
+                    if (typeof item === 'object') {
+                        output.push(`${indent}-`);
+                        appendKeyValueLines(output, item, indentLevel + 1);
+                    } else {
+                        output.push(`${indent}- ${item}`);
+                    }
+                });
+                return;
+            }
+
+            if (typeof value === 'object') {
+                const entries = Object.entries(value).filter(([key, val]) => {
+                    if (val === null || val === undefined || val === '') {
+                        return false;
+                    }
+                    if (typeof key === 'string' && key.toLowerCase().includes('base64')) {
+                        return false;
+                    }
+                    return true;
+                });
+
+                if (entries.length === 0) {
+                    return;
+                }
+
+                entries.forEach(([key, val]) => {
+                    if (typeof val === 'object') {
+                        if (Array.isArray(val)) {
+                            if (val.length === 0) {
+                                return;
+                            }
+                            output.push(`${indent}${key}:`);
+                            appendKeyValueLines(output, val, indentLevel + 1);
+                        } else {
+                            const nestedEntries = Object.entries(val).filter(([, nestedVal]) => nestedVal !== null && nestedVal !== undefined && nestedVal !== '');
+                            if (nestedEntries.length === 0) {
+                                return;
+                            }
+                            output.push(`${indent}${key}:`);
+                            appendKeyValueLines(output, val, indentLevel + 1);
+                        }
+                    } else {
+                        output.push(`${indent}${key}: ${val}`);
+                    }
+                });
+                return;
+            }
+
+            output.push(`${indent}${String(value)}`);
         }
 
-        function extractCertificatePem(details) {
+        function formatCertificateDetails(details) {
             if (!details || typeof details !== 'object') {
                 return '';
             }
 
-            if (typeof details.pem === 'string' && details.pem.trim() !== '') {
-                return details.pem;
+            if (typeof details.summary === 'string' && details.summary.trim() !== '') {
+                return details.summary.trim();
             }
 
-            if (typeof details.derBase64 === 'string') {
-                const pem = formatPemFromDerBase64(details.derBase64);
-                if (pem) {
-                    return pem;
+            const lines = [];
+            const addLine = line => lines.push(line);
+            const addBlankLine = () => {
+                if (lines.length && lines[lines.length - 1] !== '') {
+                    lines.push('');
+                }
+            };
+
+            const { version } = details;
+            if (version) {
+                if (typeof version === 'object') {
+                    const parts = [];
+                    if (typeof version.display === 'string' && version.display.trim() !== '') {
+                        parts.push(version.display.trim());
+                    }
+                    if (typeof version.hex === 'string' && version.hex.trim() !== '') {
+                        if (!parts.length || parts[parts.length - 1] !== version.hex.trim()) {
+                            parts.push(version.hex.trim());
+                        }
+                    }
+                    if (parts.length > 0) {
+                        addLine(`Version: ${parts.join(' ')}`);
+                    }
+                } else if (String(version).trim() !== '') {
+                    addLine(`Version: ${version}`);
                 }
             }
 
-            return '';
+            const serialNumber = details.serialNumber;
+            if (serialNumber) {
+                if (typeof serialNumber === 'object') {
+                    const parts = [];
+                    if (typeof serialNumber.decimal === 'string' && serialNumber.decimal.trim() !== '') {
+                        parts.push(serialNumber.decimal.trim());
+                    }
+                    if (typeof serialNumber.hex === 'string' && serialNumber.hex.trim() !== '') {
+                        parts.push(serialNumber.hex.trim());
+                    }
+                    if (parts.length > 0) {
+                        addLine(`Serial Number: ${parts.join(' / ')}`);
+                    }
+                } else if (String(serialNumber).trim() !== '') {
+                    addLine(`Serial Number: ${serialNumber}`);
+                }
+            }
+
+            if (typeof details.signatureAlgorithm === 'string' && details.signatureAlgorithm.trim() !== '') {
+                addLine(`Signature Algorithm: ${details.signatureAlgorithm.trim()}`);
+            }
+
+            if (typeof details.issuer === 'string' && details.issuer.trim() !== '') {
+                addLine(`Issuer: ${details.issuer.trim()}`);
+            }
+
+            const validity = details.validity;
+            if (validity && (validity.notBefore || validity.notAfter)) {
+                addBlankLine();
+                addLine('Validity:');
+                if (validity.notBefore) {
+                    addLine(`    Not Before: ${validity.notBefore}`);
+                }
+                if (validity.notAfter) {
+                    addLine(`    Not After: ${validity.notAfter}`);
+                }
+            }
+
+            if (typeof details.subject === 'string' && details.subject.trim() !== '') {
+                addBlankLine();
+                addLine(`Subject: ${details.subject.trim()}`);
+            }
+
+            if (details.publicKeyInfo && typeof details.publicKeyInfo === 'object') {
+                addBlankLine();
+                addLine('Public Key Info:');
+                appendKeyValueLines(lines, details.publicKeyInfo, 1);
+            }
+
+            if (Array.isArray(details.extensions) && details.extensions.length) {
+                addBlankLine();
+                addLine('Extensions:');
+                details.extensions.forEach(ext => {
+                    if (!ext || typeof ext !== 'object') {
+                        return;
+                    }
+
+                    const parts = [];
+                    if (typeof ext.name === 'string' && ext.name.trim() !== '' && ext.name !== ext.oid) {
+                        parts.push(ext.name.trim());
+                    }
+                    if (typeof ext.oid === 'string' && ext.oid.trim() !== '') {
+                        if (parts.length) {
+                            parts[parts.length - 1] = `${parts[parts.length - 1]} (${ext.oid.trim()})`;
+                        } else {
+                            parts.push(`OID ${ext.oid.trim()}`);
+                        }
+                    }
+                    let header = parts.join('');
+                    if (!header) {
+                        header = 'Extension';
+                    }
+                    if (ext.critical) {
+                        header = `${header} [critical]`;
+                    }
+                    addLine(`    - ${header}`);
+                    if ('value' in ext) {
+                        appendKeyValueLines(lines, ext.value, 2);
+                    }
+                });
+            }
+
+            if (details.fingerprints && typeof details.fingerprints === 'object') {
+                addBlankLine();
+                addLine('Fingerprints:');
+                appendKeyValueLines(lines, details.fingerprints, 1);
+            }
+
+            const formatted = lines.join('\n').trim();
+            return formatted;
         }
 
         function renderCertificateDetails(details) {
@@ -1689,12 +1865,12 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                 return `<div style="color: #dc3545;">${escapeHtml(details.error)}</div>`;
             }
 
-            const pem = extractCertificatePem(details);
-            if (!pem) {
-                return '';
-            }
+            const formatted = formatCertificateDetails(details);
+            const content = formatted && formatted.trim() !== ''
+                ? formatted
+                : 'No decoded certificate details available.';
 
-            return `<textarea class="certificate-textarea" readonly spellcheck="false">${escapeHtml(pem)}</textarea>`;
+            return `<textarea class="certificate-textarea" readonly spellcheck="false">${escapeHtml(content)}</textarea>`;
         }
 
         function showRegistrationResultModal(credentialJson, relyingPartyInfo) {

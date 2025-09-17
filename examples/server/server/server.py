@@ -325,6 +325,55 @@ def _serialize_extension_value(ext):
         return repr(value)
 
 
+def _format_structured_value(value, indent: int = 0):
+    """Format nested certificate data into readable text lines."""
+    indent_str = " " * 4 * indent
+
+    if value is None:
+        return []
+
+    if isinstance(value, (str, int, float)):
+        return [f"{indent_str}{value}"]
+
+    if isinstance(value, bool):
+        return [f"{indent_str}{str(value).lower()}"]
+
+    if isinstance(value, (list, tuple)):
+        if not value:
+            return []
+        lines = []
+        for item in value:
+            if isinstance(item, (dict, list, tuple)):
+                lines.append(f"{indent_str}-")
+                lines.extend(_format_structured_value(item, indent + 1))
+            else:
+                lines.append(f"{indent_str}- {item}")
+        return lines
+
+    if isinstance(value, Mapping):
+        entries = []
+        for key, val in value.items():
+            if val in (None, ""):
+                continue
+            if isinstance(key, str) and "base64" in key.lower():
+                continue
+            entries.append((key, val))
+
+        if not entries:
+            return []
+
+        lines = []
+        for key, val in entries:
+            if isinstance(val, (dict, list, tuple)):
+                lines.append(f"{indent_str}{key}:")
+                lines.extend(_format_structured_value(val, indent + 1))
+            else:
+                lines.append(f"{indent_str}{key}: {val}")
+        return lines
+
+    return [f"{indent_str}{value}"]
+
+
 def serialize_attestation_certificate(cert_bytes: bytes):
     if not cert_bytes:
         return None
@@ -360,6 +409,72 @@ def serialize_attestation_certificate(cert_bytes: bytes):
     pem_body = "\n".join(textwrap.wrap(der_base64, 64))
     pem = f"-----BEGIN CERTIFICATE-----\n{pem_body}\n-----END CERTIFICATE-----"
 
+    summary_lines = []
+
+    def _append_line(line: str):
+        summary_lines.append(line)
+
+    def _append_blank_line():
+        if summary_lines and summary_lines[-1] != "":
+            summary_lines.append("")
+
+    _append_line(f"Version: {version_number} ({version_hex})")
+    _append_line(
+        "Serial Number: "
+        f"{certificate.serial_number} (0x{certificate.serial_number:x})"
+    )
+    signature_algorithm = getattr(
+        certificate.signature_algorithm_oid,
+        "_name",
+        certificate.signature_algorithm_oid.dotted_string,
+    )
+    _append_line(f"Signature Algorithm: {signature_algorithm}")
+    _append_line(f"Issuer: {_format_x509_name(certificate.issuer)}")
+
+    _append_blank_line()
+    _append_line("Validity:")
+    _append_line(f"    Not Before: {_isoformat(certificate.not_valid_before)}")
+    _append_line(f"    Not After: {_isoformat(certificate.not_valid_after)}")
+
+    _append_blank_line()
+    _append_line(f"Subject: {_format_x509_name(certificate.subject)}")
+
+    public_key_info = _serialize_public_key_info(certificate.public_key())
+    filtered_public_key_info = {
+        key: value
+        for key, value in public_key_info.items()
+        if not (isinstance(key, str) and "base64" in key.lower())
+    }
+    if filtered_public_key_info:
+        _append_blank_line()
+        _append_line("Public Key Info:")
+        summary_lines.extend(_format_structured_value(filtered_public_key_info, 1))
+
+    if extensions:
+        _append_blank_line()
+        _append_line("Extensions:")
+        for ext_info in extensions:
+            oid = ext_info.get("oid")
+            name = ext_info.get("name")
+            label = name if name and name != oid else (oid or "Extension")
+            if label and oid and label != oid:
+                label = f"{label} ({oid})"
+            elif not label:
+                label = "Extension"
+            if ext_info.get("critical"):
+                label = f"{label} [critical]"
+            _append_line(f"    - {label}")
+            summary_lines.extend(
+                _format_structured_value(ext_info.get("value"), indent=2)
+            )
+
+    if fingerprints:
+        _append_blank_line()
+        _append_line("Fingerprints:")
+        summary_lines.extend(_format_structured_value(fingerprints, 1))
+
+    summary = "\n".join(line for line in summary_lines if line is not None).strip()
+
     return {
         "version": {
             "display": f"{version_number} ({version_hex})",
@@ -370,20 +485,19 @@ def serialize_attestation_certificate(cert_bytes: bytes):
             "decimal": str(certificate.serial_number),
             "hex": f"0x{certificate.serial_number:x}",
         },
-        "signatureAlgorithm": getattr(
-            certificate.signature_algorithm_oid, "_name", certificate.signature_algorithm_oid.dotted_string
-        ),
+        "signatureAlgorithm": signature_algorithm,
         "issuer": _format_x509_name(certificate.issuer),
         "validity": {
             "notBefore": _isoformat(certificate.not_valid_before),
             "notAfter": _isoformat(certificate.not_valid_after),
         },
         "subject": _format_x509_name(certificate.subject),
-        "publicKeyInfo": _serialize_public_key_info(certificate.public_key()),
+        "publicKeyInfo": public_key_info,
         "extensions": extensions,
         "fingerprints": fingerprints,
         "derBase64": der_base64,
         "pem": pem,
+        "summary": summary,
     }
 
 @app.route("/")

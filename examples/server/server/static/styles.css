@@ -152,8 +152,8 @@ body.modal-open {
 
 .form-group .checkbox-label input[type="checkbox"],
 .checkbox-item .checkbox-label input[type="checkbox"] {
-    width: 1.2rem;
-    height: 1.2rem;
+    width: 1.35rem;
+    height: 1.35rem;
     accent-color: var(--primary-color);
     margin: 0;
     flex-shrink: 0;
@@ -194,13 +194,13 @@ body.modal-open {
     transition: background 0.3s ease, box-shadow 0.3s ease, color 0.3s ease;
     margin-right: 0.5rem;
     margin-bottom: 0.5rem;
-    box-shadow: var(--shadow-soft);
+    box-shadow: 0 6px 18px rgba(0, 114, 206, 0.18);
 }
 
 .btn:hover,
 .btn:focus-visible {
     background: linear-gradient(135deg, var(--primary-dark), #008f5c);
-    box-shadow: var(--shadow-hover);
+    box-shadow: 0 8px 22px rgba(0, 114, 206, 0.24);
     outline: none;
 }
 
@@ -934,7 +934,14 @@ select.form-control option {
 .label-with-info {
     display: flex;
     align-items: center;
+    gap: 0.5rem;
     position: relative;
+}
+
+.label-with-info label {
+    margin: 0;
+    display: inline-flex;
+    align-items: center;
 }
 
 /* For screens above 600px - three columns */
@@ -1099,6 +1106,6 @@ select.form-control option {
 
 .certificate-textarea:focus {
     outline: none;
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 0.2rem rgba(0, 114, 206, 0.15);
+    border-color: rgba(0, 114, 206, 0.25);
+    box-shadow: none;
 }
