@@ -1123,31 +1123,20 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
         function switchTab(tab) {
             // Hide all tabs
             document.querySelectorAll('.tab-content').forEach(content => {
-                content.classList.remove('active');
-            });
-            document.querySelectorAll('.nav-tab').forEach(navTab => {
-                navTab.classList.remove('active');
+                content.classList.toggle('active', content.id === `${tab}-tab`);
             });
 
-            // Show selected tab
-            const targetTab = document.getElementById(tab + '-tab');
-            if (targetTab) {
-                targetTab.classList.add('active');
-            }
-            
-            // Activate the corresponding nav button - use a more direct approach
-            const navButtons = document.querySelectorAll('.nav-tab');
-            const tabNames = ['simple', 'advanced', 'decoder'];
-            const tabIndex = tabNames.indexOf(tab);
-            
-            if (tabIndex !== -1 && navButtons[tabIndex]) {
-                navButtons[tabIndex].classList.add('active');
-            }
-            
+            // Activate the corresponding nav button
+            document.querySelectorAll('.nav-tab').forEach(navTab => {
+                navTab.classList.toggle('active', navTab.dataset.tab === tab);
+            });
+
             // Update JSON editor if in advanced tab
             if (tab === 'advanced') {
                 updateJsonEditor();
             }
+
+            document.dispatchEvent(new CustomEvent('tab:changed', { detail: { tab } }));
         }
 
         // Sub-tab switching for Registration/Authentication

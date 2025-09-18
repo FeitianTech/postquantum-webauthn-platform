@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WebAuthn FIDO2 Test Application</title>
     <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="mds.css">
 </head>
 <body>
     <div class="header">
@@ -14,9 +15,10 @@
 
     <div class="container">
         <nav class="nav-tabs">
-            <button class="nav-tab active" onclick="switchTab('simple')">Simple Authentication</button>
-            <button class="nav-tab" onclick="switchTab('advanced')">Advanced Authentication</button>
-            <button class="nav-tab" onclick="switchTab('decoder')">Decoder</button>
+            <button class="nav-tab active" data-tab="simple" onclick="switchTab('simple')">Simple Authentication</button>
+            <button class="nav-tab" data-tab="advanced" onclick="switchTab('advanced')">Advanced Authentication</button>
+            <button class="nav-tab" data-tab="decoder" onclick="switchTab('decoder')">Decoder</button>
+            <button class="nav-tab" data-tab="mds" onclick="switchTab('mds')">FIDO MDS Authenticators</button>
         </nav>
 
         <div class="content">
@@ -925,6 +927,11 @@
                     </div>
                 </div>
             </div>
+
+            <!-- FIDO MDS Authenticators Tab -->
+            <div id="mds-tab" class="tab-content">
+                <!-- Content dynamically loaded from mds.html -->
+            </div>
         </div>
     </div>
 
@@ -957,6 +964,7 @@
     </div>
 
     <div id="json-editor-overlay" class="json-editor-overlay"></div>
+    <script type="module" src="mds.js"></script>
     <script type="module" src="script.js"></script>
 </body>
 </html>
