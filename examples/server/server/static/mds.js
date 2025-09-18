@@ -2,6 +2,11 @@ const MDS_HTML_PATH = 'mds.html';
 const MDS_JWS_PATH = 'fido-mds3.jws';
 const COLUMN_COUNT = 11;
 
+const UPDATE_BUTTON_STATES = {
+    update: { label: 'Update Metadata', busyLabel: 'Updating…' },
+    download: { label: 'Download Metadata', busyLabel: 'Downloading…' },
+};
+
 const CERTIFICATION_OPTIONS = [
     'FIDO_CERTIFIED',
     'FIDO_CERTIFIED_L1',
@@ -249,6 +254,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const markup = await response.text();
         tabElement.innerHTML = markup;
         mdsState = initializeState(tabElement);
+        setUpdateButtonMode('update');
     } catch (error) {
         console.error('Failed to initialise the FIDO MDS tab:', error);
         tabElement.innerHTML = `
@@ -367,6 +373,7 @@ function initializeState(root) {
         columnWidths: null,
         columnWidthAttempts: 0,
         updateButton,
+        updateButtonMode: 'update',
     };
 }
 
@@ -383,12 +390,29 @@ async function loadMdsData(statusNote) {
         const response = await fetch(MDS_JWS_PATH, { cache: 'no-store' });
         if (!response.ok) {
             if (response.status === 404) {
-                setStatus(
-                    `Metadata file not found. Download the latest BLOB from ` +
-                        `<a href="https://mds3.fidoalliance.org/" target="_blank" rel="noopener">mds3.fidoalliance.org</a> ` +
-                        `and save it as <code>${MDS_JWS_PATH}</code> in this directory.`,
-                    'error',
-                );
+                const message =
+                    'Metadata has not been downloaded yet. Use the ' +
+                    '<strong>Download Metadata</strong> button above to retrieve the latest BLOB, or download it manually from ' +
+                    '<a href="https://mds3.fidoalliance.org/" target="_blank" rel="noopener">mds3.fidoalliance.org</a>.';
+                setUpdateButtonMode('download');
+                setStatus(message, 'info');
+                if (mdsState) {
+                    mdsState.defaultStatus = { html: message, variant: 'info', title: '' };
+                }
+                mdsData = [];
+                filteredData = [];
+                updateCount(0, 0);
+                if (mdsState?.tableBody) {
+                    const tbody = mdsState.tableBody;
+                    tbody.innerHTML = '';
+                    const emptyRow = document.createElement('tr');
+                    emptyRow.className = 'mds-empty-row';
+                    const cell = document.createElement('td');
+                    cell.colSpan = COLUMN_COUNT;
+                    cell.textContent = 'Metadata has not been downloaded yet.';
+                    emptyRow.appendChild(cell);
+                    tbody.appendChild(emptyRow);
+                }
                 return;
             }
             throw new Error(`Unexpected response status: ${response.status}`);
@@ -407,6 +431,7 @@ async function loadMdsData(statusNote) {
             ? metadata.entries.map(transformEntry).filter(Boolean)
             : [];
         hasLoaded = true;
+        setUpdateButtonMode('update');
 
         const optionSets = collectOptionSets(mdsData);
         updateOptionLists(optionSets);
@@ -732,25 +757,42 @@ function setUpdateButtonBusy(isBusy) {
     }
 
     if (isBusy) {
-        if (!button.dataset.originalLabel) {
-            button.dataset.originalLabel = button.textContent || '';
-        }
         button.disabled = true;
         button.classList.add('is-busy');
         button.setAttribute('aria-busy', 'true');
-        button.textContent = 'Updating…';
+        const mode = mdsState?.updateButtonMode || 'update';
+        const config = UPDATE_BUTTON_STATES[mode] || UPDATE_BUTTON_STATES.update;
+        button.textContent = config.busyLabel;
         return;
     }
 
-    const originalLabel = button.dataset.originalLabel;
     button.disabled = false;
     button.classList.remove('is-busy');
     button.removeAttribute('aria-busy');
-    if (typeof originalLabel === 'string') {
-        button.textContent = originalLabel;
-        delete button.dataset.originalLabel;
-    }
+    const mode = mdsState?.updateButtonMode || 'update';
+    const config = UPDATE_BUTTON_STATES[mode] || UPDATE_BUTTON_STATES.update;
+    button.textContent = config.label;
     button.blur();
+}
+
+function setUpdateButtonMode(mode) {
+    const button = mdsState?.updateButton;
+    if (!button) {
+        return;
+    }
+
+    const action = mode === 'download' ? 'download' : 'update';
+    const config = UPDATE_BUTTON_STATES[action] || UPDATE_BUTTON_STATES.update;
+
+    mdsState.updateButtonMode = action;
+
+    button.dataset.action = action;
+    button.dataset.idleLabel = config.label;
+    button.dataset.busyLabel = config.busyLabel;
+
+    if (!button.classList.contains('is-busy')) {
+        button.textContent = config.label;
+    }
 }
 
 async function refreshMetadata() {
@@ -770,7 +812,10 @@ async function refreshMetadata() {
     setUpdateButtonBusy(true);
 
     try {
-        setStatus('Updating metadata BLOB…', 'info');
+        const action = mdsState?.updateButtonMode === 'download' ? 'download' : 'update';
+        const inProgressMessage =
+            action === 'download' ? 'Downloading metadata BLOB…' : 'Updating metadata BLOB…';
+        setStatus(inProgressMessage, 'info');
 
         const response = await fetch('/api/mds/update', {
             method: 'POST',
@@ -792,9 +837,13 @@ async function refreshMetadata() {
             throw new Error(message);
         }
 
-        const note =
+        const payloadMessage =
             (payload && typeof payload.message === 'string' && payload.message.trim()) || '';
         const shouldReload = (payload && payload.updated) || !hasLoaded;
+        const note =
+            action === 'download' && shouldReload
+                ? ['Download complete.', payloadMessage].filter(Boolean).join(' ')
+                : payloadMessage;
 
         if (shouldReload) {
             hasLoaded = false;

@@ -65,10 +65,16 @@ import textwrap
 import urllib.error
 import urllib.request
 import hashlib
+import ssl
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 
 from typing import Any, Dict, List, Mapping, Optional, Tuple, Union
+
+try:
+    import certifi
+except ImportError:  # pragma: no cover - certifi is optional
+    certifi = None  # type: ignore[assignment]
 
 from cryptography import x509
 from cryptography.x509.oid import ExtensionOID
@@ -119,6 +125,7 @@ FIDO_METADATA_TRUST_ROOT_B64 = (
     "WD9f"
 )
 FIDO_METADATA_TRUST_ROOT_CERT = base64.b64decode(FIDO_METADATA_TRUST_ROOT_B64)
+FIDO_METADATA_TRUST_ROOT_PEM = ssl.DER_cert_to_PEM_cert(FIDO_METADATA_TRUST_ROOT_CERT)
 
 _mds_verifier_cache: Optional[MdsAttestationVerifier] = None
 _mds_verifier_mtime: Optional[float] = None
@@ -178,29 +185,79 @@ def _format_last_modified(header: Optional[str]) -> Optional[str]:
     return parsed.isoformat()
 
 
+def _metadata_ssl_contexts():
+    """Yield SSL contexts with different trust stores for the metadata download."""
+
+    contexts = []
+
+    try:
+        contexts.append(ssl.create_default_context())
+    except Exception:
+        pass
+
+    if certifi is not None:
+        try:
+            contexts.append(ssl.create_default_context(cafile=certifi.where()))
+        except Exception:
+            pass
+
+    try:
+        fallback = ssl.create_default_context()
+        fallback.load_verify_locations(cadata=FIDO_METADATA_TRUST_ROOT_PEM)
+        contexts.append(fallback)
+    except Exception:
+        pass
+
+    seen = set()
+    for context in contexts:
+        identifier = id(context)
+        if identifier in seen:
+            continue
+        seen.add(identifier)
+        yield context
+
+
 def download_metadata_blob(
     source_url: str = MDS_METADATA_URL,
     destination: str = MDS_METADATA_PATH,
 ) -> Tuple[bool, int, Optional[str]]:
     """Fetch the FIDO MDS metadata BLOB and store it locally."""
 
-    try:
-        with urllib.request.urlopen(source_url, timeout=60) as response:
-            status = getattr(response, "status", None) or response.getcode()
-            if status != 200:
-                raise MetadataDownloadError(
-                    f"Unexpected response status {status} while downloading metadata."
-                )
-            payload = response.read()
-            last_modified = response.headers.get("Last-Modified")
-    except urllib.error.HTTPError as exc:
-        raise MetadataDownloadError(
-            f"Failed to download metadata (HTTP {exc.code})."
-        ) from exc
-    except urllib.error.URLError as exc:
-        raise MetadataDownloadError(
-            f"Failed to reach FIDO Metadata Service: {exc.reason}"
-        ) from exc
+    payload = None
+    last_modified = None
+    last_cert_error: Optional[BaseException] = None
+
+    for context in _metadata_ssl_contexts():
+        try:
+            with urllib.request.urlopen(source_url, timeout=60, context=context) as response:
+                status = getattr(response, "status", None) or response.getcode()
+                if status != 200:
+                    raise MetadataDownloadError(
+                        f"Unexpected response status {status} while downloading metadata."
+                    )
+                payload = response.read()
+                last_modified = response.headers.get("Last-Modified")
+                break
+        except urllib.error.HTTPError as exc:
+            raise MetadataDownloadError(
+                f"Failed to download metadata (HTTP {exc.code})."
+            ) from exc
+        except urllib.error.URLError as exc:
+            reason = getattr(exc, "reason", exc)
+            if isinstance(reason, ssl.SSLCertVerificationError):
+                last_cert_error = reason
+                continue
+            raise MetadataDownloadError(
+                f"Failed to reach FIDO Metadata Service: {reason}"
+            ) from exc
+
+    if payload is None:
+        if last_cert_error is not None:
+            message = "Failed to verify the TLS certificate for the FIDO Metadata Service."
+            if str(last_cert_error):
+                message = f"{message} ({last_cert_error})."
+            raise MetadataDownloadError(message) from last_cert_error
+        raise MetadataDownloadError("Failed to reach FIDO Metadata Service.")
 
     os.makedirs(os.path.dirname(destination), exist_ok=True)
 
