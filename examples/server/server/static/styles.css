@@ -188,6 +188,35 @@ body.modal-open {
     box-shadow: 0 0 0 3px rgba(0, 114, 206, 0.18);
 }
 
+.form-column select.form-control {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    border-radius: 12px;
+    border: 1px solid rgba(0, 114, 206, 0.25);
+    background-color: rgba(255, 255, 255, 0.92);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%230072CE' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: calc(100% - 1rem) 50%;
+    background-size: 0.75rem;
+    padding-right: 2.75rem;
+    color: var(--text-color);
+    box-shadow: none;
+    transition: none;
+    cursor: pointer;
+}
+
+.form-column select.form-control:focus,
+.form-column select.form-control:active {
+    border-color: rgba(0, 114, 206, 0.25);
+    box-shadow: none;
+    outline: none;
+}
+
+.form-column select.form-control:hover {
+    border-color: rgba(0, 114, 206, 0.25);
+}
+
 .btn {
     display: inline-block;
     padding: 0.75rem 1.5rem;
@@ -634,6 +663,11 @@ body.modal-open {
     flex: 1;
     color: var(--text-color);
     overflow-y: auto;
+    scrollbar-width: none;
+}
+
+.json-editor textarea::-webkit-scrollbar {
+    display: none;
 }
 
 #json-editor-container {

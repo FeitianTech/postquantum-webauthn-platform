@@ -270,6 +270,22 @@ document.addEventListener('tab:changed', event => {
 });
 
 function initializeState(root) {
+    const statusEl = root.querySelector('#mds-status');
+    let defaultStatus = null;
+    if (statusEl) {
+        let variant = 'info';
+        if (statusEl.classList.contains('mds-status-success')) {
+            variant = 'success';
+        } else if (statusEl.classList.contains('mds-status-error')) {
+            variant = 'error';
+        }
+        defaultStatus = {
+            html: statusEl.innerHTML,
+            variant,
+            title: statusEl.getAttribute('title') || '',
+        };
+    }
+
     const filters = {};
     const filterInputs = {};
 
@@ -345,7 +361,9 @@ function initializeState(root) {
         tableBody: root.querySelector('#mds-table-body'),
         countEl: root.querySelector('#mds-entry-count'),
         totalEl: root.querySelector('#mds-total-count'),
-        statusEl: root.querySelector('#mds-status'),
+        statusEl,
+        defaultStatus,
+        statusResetTimer: null,
         columnWidths: null,
         columnWidthAttempts: 0,
         updateButton,
@@ -406,6 +424,9 @@ async function loadMdsData(statusNote) {
 
         if (metadata.legalHeader && mdsState.statusEl) {
             mdsState.statusEl.setAttribute('title', metadata.legalHeader);
+            if (mdsState.defaultStatus) {
+                mdsState.defaultStatus.title = metadata.legalHeader;
+            }
         }
     } catch (error) {
         console.error('Failed to load FIDO MDS metadata:', error);
@@ -437,6 +458,27 @@ function matchesFilters(entry, filters) {
         }
         const query = value.toLowerCase();
         if (key === 'certification') {
+            const canonicalQuery = normaliseEnumKey(value);
+            const dropdown = mdsState?.dropdowns?.certification;
+            const options = dropdown?.options || [];
+            const isKnownOption = Boolean(canonicalQuery) && options.some(option => normaliseEnumKey(option) === canonicalQuery);
+
+            if (isKnownOption && canonicalQuery) {
+                const statusKey = normaliseEnumKey(entry.certificationStatus);
+                if (canonicalQuery === 'FIDO_CERTIFIED') {
+                    if (statusKey) {
+                        return statusKey.startsWith('FIDO_CERTIFIED');
+                    }
+                    const displayKey = normaliseEnumKey((entry.certification || '').split('•')[0]);
+                    return displayKey.startsWith('FIDO_CERTIFIED');
+                }
+                if (statusKey) {
+                    return statusKey === canonicalQuery;
+                }
+                const displayKey = normaliseEnumKey((entry.certification || '').split('•')[0]);
+                return displayKey === canonicalQuery;
+            }
+
             const haystacks = [entry.certification, entry.certificationStatus]
                 .map(text => (text || '').toLowerCase())
                 .filter(Boolean);
@@ -632,15 +674,42 @@ function updateCount(filtered, total) {
     }
 }
 
-function setStatus(message, variant) {
+function setStatus(message, variant, options = {}) {
     if (!mdsState?.statusEl) {
         return;
     }
 
     const statusEl = mdsState.statusEl;
+    const { restoreDefault = false, delay = 5000 } = options;
+
+    if (mdsState.statusResetTimer) {
+        window.clearTimeout(mdsState.statusResetTimer);
+        mdsState.statusResetTimer = null;
+    }
+
     statusEl.classList.remove('mds-status-info', 'mds-status-success', 'mds-status-error');
     statusEl.classList.add(`mds-status-${variant}`);
     statusEl.innerHTML = message;
+
+    if (restoreDefault && mdsState.defaultStatus) {
+        const timeout = Number.isFinite(delay) ? Math.max(0, delay) : 5000;
+        mdsState.statusResetTimer = window.setTimeout(() => {
+            if (!mdsState?.statusEl || !mdsState?.defaultStatus) {
+                return;
+            }
+            const target = mdsState.statusEl;
+            const defaults = mdsState.defaultStatus;
+            target.classList.remove('mds-status-info', 'mds-status-success', 'mds-status-error');
+            target.classList.add(`mds-status-${defaults.variant}`);
+            target.innerHTML = defaults.html;
+            if (defaults.title) {
+                target.setAttribute('title', defaults.title);
+            } else {
+                target.removeAttribute('title');
+            }
+            mdsState.statusResetTimer = null;
+        }, timeout);
+    }
 }
 
 function setUpdateButtonBusy(isBusy) {
@@ -719,7 +788,7 @@ async function refreshMetadata() {
             await loadMdsData(note);
         } else {
             const message = note || 'Metadata already up to date.';
-            setStatus(message, 'info');
+            setStatus(message, 'info', { restoreDefault: true, delay: 5000 });
         }
     } catch (error) {
         console.error('Failed to update metadata BLOB:', error);
@@ -931,6 +1000,17 @@ function formatProtocol(protocol) {
         return compact.toUpperCase();
     }
     return normalised;
+}
+
+function normaliseEnumKey(value) {
+    if (value === undefined || value === null) {
+        return '';
+    }
+    return String(value)
+        .trim()
+        .toUpperCase()
+        .replace(/[^A-Z0-9]+/g, '_')
+        .replace(/^_+|_+$/g, '');
 }
 
 function formatEnum(value) {
