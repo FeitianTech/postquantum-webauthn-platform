@@ -1,0 +1,69 @@
+<div class="section mds-section">
+    <div class="mds-section-header">
+        <div class="mds-section-title">
+            <h2>FIDO MDS Authenticators</h2>
+            <p class="mds-section-description">
+                Explore the authenticators published by the FIDO Metadata Service (MDS) and prepare for attestation validation.
+            </p>
+        </div>
+        <div class="mds-entry-count" aria-live="polite">
+            <span class="mds-count-label">Number of entries</span>
+            <div class="mds-count-values">
+                <span id="mds-entry-count" class="mds-count-primary">0</span>
+                <span id="mds-total-count" class="mds-count-secondary"></span>
+            </div>
+        </div>
+    </div>
+
+    <div id="mds-status" class="mds-status mds-status-info">
+        Download the latest metadata BLOB from
+        <a href="https://mds3.fidoalliance.org/" target="_blank" rel="noopener">mds3.fidoalliance.org</a>
+        and save it in this directory as <code>fido-mds3.jws</code> to populate the table.
+    </div>
+
+    <div class="mds-table-container">
+        <table class="mds-table">
+            <thead>
+                <tr>
+                    <th scope="col">Name</th>
+                    <th scope="col">Protocol</th>
+                    <th scope="col">Icon</th>
+                    <th scope="col">Certification</th>
+                    <th scope="col">ID</th>
+                    <th scope="col">User Verification</th>
+                    <th scope="col">Attachment</th>
+                    <th scope="col">Transports</th>
+                    <th scope="col">Key Protection</th>
+                    <th scope="col">Algorithms</th>
+                    <th scope="col">Date Updated</th>
+                </tr>
+                <tr class="mds-filter-row">
+                    <th><input type="search" id="mds-filter-name" class="mds-filter-input" placeholder="Search name"></th>
+                    <th><input type="search" id="mds-filter-protocol" class="mds-filter-input" placeholder="Protocol" list="mds-options-protocol"></th>
+                    <th></th>
+                    <th><input type="search" id="mds-filter-certification" class="mds-filter-input" placeholder="Certification" list="mds-options-certification"></th>
+                    <th><input type="search" id="mds-filter-id" class="mds-filter-input" placeholder="AAGUID or AAID"></th>
+                    <th><input type="search" id="mds-filter-user-verification" class="mds-filter-input" placeholder="User verification" list="mds-options-user-verification"></th>
+                    <th><input type="search" id="mds-filter-attachment" class="mds-filter-input" placeholder="Attachment" list="mds-options-attachment"></th>
+                    <th><input type="search" id="mds-filter-transports" class="mds-filter-input" placeholder="Transports" list="mds-options-transports"></th>
+                    <th><input type="search" id="mds-filter-key-protection" class="mds-filter-input" placeholder="Key protection" list="mds-options-key-protection"></th>
+                    <th><input type="search" id="mds-filter-algorithms" class="mds-filter-input" placeholder="Algorithms" list="mds-options-algorithms"></th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody id="mds-table-body">
+                <tr class="mds-empty-row">
+                    <td colspan="11">Metadata has not been loaded yet.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <datalist id="mds-options-protocol"></datalist>
+    <datalist id="mds-options-certification"></datalist>
+    <datalist id="mds-options-user-verification"></datalist>
+    <datalist id="mds-options-attachment"></datalist>
+    <datalist id="mds-options-transports"></datalist>
+    <datalist id="mds-options-key-protection"></datalist>
+    <datalist id="mds-options-algorithms"></datalist>
+</div>
