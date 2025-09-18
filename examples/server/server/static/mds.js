@@ -420,12 +420,25 @@ async function loadMdsData(statusNote) {
         if (note) {
             statusParts.push(note);
         }
-        setStatus(statusParts.join(' '), 'success');
+        const statusMessage = statusParts.join(' ');
+        setStatus(statusMessage, 'success');
+
+        if (!mdsState.defaultStatus) {
+            mdsState.defaultStatus = { html: statusMessage, variant: 'success', title: '' };
+        } else {
+            mdsState.defaultStatus.html = statusMessage;
+            mdsState.defaultStatus.variant = 'success';
+        }
 
         if (metadata.legalHeader && mdsState.statusEl) {
             mdsState.statusEl.setAttribute('title', metadata.legalHeader);
             if (mdsState.defaultStatus) {
                 mdsState.defaultStatus.title = metadata.legalHeader;
+            }
+        } else if (mdsState?.statusEl) {
+            mdsState.statusEl.removeAttribute('title');
+            if (mdsState.defaultStatus) {
+                mdsState.defaultStatus.title = '';
             }
         }
     } catch (error) {
