@@ -34,18 +34,61 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             '-65535': 'RS1 (-65535)'
         };
 
-        const COSE_KEY_TYPE_LABELS = {
-            '1': 'OKP (1)',
-            '2': 'EC2 (2)',
-            '3': 'RSA (3)',
-            '4': 'Symmetric (4)',
-            '7': 'ML-DSA (7)'
-        };
+const COSE_KEY_TYPE_LABELS = {
+    '1': 'OKP (1)',
+    '2': 'EC2 (2)',
+    '3': 'RSA (3)',
+    '4': 'Symmetric (4)',
+    '7': 'ML-DSA (7)'
+};
 
-        function describeCoseAlgorithm(alg) {
-            if (alg === null || alg === undefined || (typeof alg === 'number' && Number.isNaN(alg))) {
-                return 'Unknown';
-            }
+function formatBoolean(value) {
+    if (value === true) {
+        return '<span style="color: #0a8754; font-weight: 600;">true</span>';
+    }
+    if (value === false) {
+        return '<span style="color: #c62828; font-weight: 600;">false</span>';
+    }
+    if (typeof value === 'string') {
+        const normalized = value.trim().toLowerCase();
+        if (normalized === 'true') {
+            return '<span style="color: #0a8754; font-weight: 600;">true</span>';
+        }
+        if (normalized === 'false') {
+            return '<span style="color: #c62828; font-weight: 600;">false</span>';
+        }
+    }
+    if (value === null || value === undefined) {
+        return '<span style="color: #6c757d;">N/A</span>';
+    }
+    const safeValue = String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    return `<span style="color: #6c757d;">${safeValue}</span>`;
+}
+
+function renderAttestationResultRow(label, value) {
+    const safeLabel = String(label)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    return `
+        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.35rem;">
+            <span style="min-width: 180px;"><strong>${safeLabel}:</strong></span>
+            <span>${formatBoolean(value)}</span>
+        </div>
+    `.trim();
+}
+
+function describeCoseAlgorithm(alg) {
+    if (alg === null || alg === undefined || (typeof alg === 'number' && Number.isNaN(alg))) {
+        return 'Unknown';
+    }
             const key = String(alg);
             return COSE_ALGORITHM_LABELS[key] || `Algorithm (${alg})`;
         }
@@ -1784,28 +1827,53 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
 
             detailsHtml += `</div>`;
             
+            const discoverableValue = cred.residentKey ?? cred.discoverable ?? false;
+            const largeBlobSupported = cred.largeBlob ?? cred.largeBlobSupported ?? false;
+            const propertiesData = (cred.properties && typeof cred.properties === 'object' && cred.properties !== null)
+                ? cred.properties
+                : {};
+            const attestationSummaryData = (() => {
+                if (cred && typeof cred.attestationSummary === 'object' && cred.attestationSummary !== null) {
+                    return cred.attestationSummary;
+                }
+                if (typeof propertiesData.attestationSummary === 'object' && propertiesData.attestationSummary !== null) {
+                    return propertiesData.attestationSummary;
+                }
+                return null;
+            })();
+            const resolveAttestationValue = (summaryKey, propertyKey) => {
+                if (attestationSummaryData && Object.prototype.hasOwnProperty.call(attestationSummaryData, summaryKey)) {
+                    return attestationSummaryData[summaryKey];
+                }
+                if (Object.prototype.hasOwnProperty.call(propertiesData, propertyKey)) {
+                    return propertiesData[propertyKey];
+                }
+                if (Object.prototype.hasOwnProperty.call(cred, propertyKey)) {
+                    return cred[propertyKey];
+                }
+                return null;
+            };
+            const attestationSignatureValue = resolveAttestationValue('signatureValid', 'attestationSignatureValid');
+            const attestationRootValue = resolveAttestationValue('rootValid', 'attestationRootValid');
+            const attestationRpIdHashValue = resolveAttestationValue('rpIdHashValid', 'attestationRpIdHashValid');
+            const attestationAaguidMatchValue = resolveAttestationValue('aaguidMatch', 'attestationAaguidMatch');
+            const attestationRowsHtml = [
+                renderAttestationResultRow('Signature Valid', attestationSignatureValue),
+                renderAttestationResultRow('Root Valid', attestationRootValue),
+                renderAttestationResultRow('RPID Hash Valid', attestationRpIdHashValue),
+                renderAttestationResultRow('AAGUID Match', attestationAaguidMatchValue),
+            ].join('');
+
             // Properties section
             detailsHtml += `
             <div style="margin-bottom: 1.5rem;">
                 <h4 style="color: #0072CE; margin-bottom: 0.5rem;">Properties</h4>
                 <div style="font-size: 0.9rem; line-height: 1.4;">
-                    <div><strong>Discoverable (resident key):</strong> ${cred.residentKey || false}</div>
-                    <div><strong>Supports largeBlob:</strong> ${cred.largeBlob || false}</div>`;
-            
-            // Add new properties if available
-            if (cred.properties) {
-                detailsHtml += `
+                    <div><strong>Discoverable (resident key):</strong> ${formatBoolean(discoverableValue)}</div>
+                    <div><strong>Supports largeBlob:</strong> ${formatBoolean(largeBlobSupported)}</div>
                     <div style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(0, 114, 206, 0.15);">
-                        <div><strong>Exclude credentials sent count:</strong> ${cred.properties.excludeCredentialsSentCount !== undefined ? cred.properties.excludeCredentialsSentCount : 'N/A'}</div>
-                        <div><strong>Exclude credentials used:</strong> ${cred.properties.excludeCredentialsUsed !== undefined ? cred.properties.excludeCredentialsUsed : 'N/A'}</div>
-                        <div><strong>Credential ID length (actual):</strong> ${cred.properties.credentialIdLength !== undefined ? cred.properties.credentialIdLength : 'N/A'} bytes</div>
-                        <div><strong>Fake credential ID length (requested):</strong> ${cred.properties.fakeCredentialIdLengthRequested !== undefined && cred.properties.fakeCredentialIdLengthRequested !== null ? cred.properties.fakeCredentialIdLengthRequested : 'N/A'}</div>
-                        <div><strong>Hints sent:</strong> ${cred.properties.hintsSent && cred.properties.hintsSent.length > 0 ? JSON.stringify(cred.properties.hintsSent) : '[]'}</div>
-                    </div>`;
-                
-            }
-            
-            detailsHtml += `
+                        ${attestationRowsHtml}
+                    </div>
                 </div>
             </div>`;
             
