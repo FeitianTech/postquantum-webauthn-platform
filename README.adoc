@@ -11,9 +11,7 @@ Built on python-fido2-PQC, which is built on Yubico’s python-fido2. Classical 
 This guide shows how to clone the repository and set up a working local environment for WebAuthn with Python FIDO2 on Windows, macOS, and Linux.
 
 Scope
-- Includes: Python, virtual environment, Flask, python-fido2, optional PC/SC extras.
-- Excludes: Post‑Quantum Crypto (PQC). PQC set up will be added later. 
-
+- Includes: Python, virtual environment, Flask, python-fido2, Post‑Quantum Crypto algorithm options (PQC).
 ---
 
 ## Supported platforms
