@@ -20,11 +20,21 @@ const FILTER_CONFIG = [
         staticOptions: CERTIFICATION_OPTIONS,
     },
     { key: 'id', inputId: 'mds-filter-id' },
-    { key: 'userVerification', inputId: 'mds-filter-user-verification', optionsKey: 'userVerification' },
+    {
+        key: 'userVerification',
+        inputId: 'mds-filter-user-verification',
+        optionsKey: 'userVerification',
+        expandDropdown: true,
+    },
     { key: 'attachment', inputId: 'mds-filter-attachment', optionsKey: 'attachment' },
     { key: 'transports', inputId: 'mds-filter-transports', optionsKey: 'transports' },
     { key: 'keyProtection', inputId: 'mds-filter-key-protection', optionsKey: 'keyProtection' },
-    { key: 'algorithms', inputId: 'mds-filter-algorithms', optionsKey: 'algorithms' },
+    {
+        key: 'algorithms',
+        inputId: 'mds-filter-algorithms',
+        optionsKey: 'algorithms',
+        expandDropdown: true,
+    },
 ];
 
 const FILTER_LOOKUP = FILTER_CONFIG.reduce((map, config) => {
@@ -35,7 +45,7 @@ const FILTER_LOOKUP = FILTER_CONFIG.reduce((map, config) => {
 let activeDropdown = null;
 
 class FilterDropdown {
-    constructor(input, onSelect) {
+    constructor(input, onSelect, config = {}) {
         this.input = input;
         this.onSelect = onSelect;
         this.options = [];
@@ -43,6 +53,7 @@ class FilterDropdown {
         this.activeIndex = -1;
         this.list = null;
         this.container = null;
+        this.expandToContent = Boolean(config.expandDropdown);
 
         const parent = input.parentElement;
         if (parent) {
@@ -52,6 +63,9 @@ class FilterDropdown {
         this.container = document.createElement('div');
         this.container.className = 'mds-filter-dropdown';
         this.container.hidden = true;
+        if (this.expandToContent) {
+            this.container.classList.add('mds-filter-dropdown--expanded');
+        }
 
         this.list = document.createElement('ul');
         this.list.className = 'mds-filter-dropdown__list';
@@ -210,8 +224,8 @@ class FilterDropdown {
     }
 }
 
-function createFilterDropdown(input, onSelect) {
-    return new FilterDropdown(input, onSelect);
+function createFilterDropdown(input, onSelect, config = {}) {
+    return new FilterDropdown(input, onSelect, config);
 }
 
 let mdsState = null;
@@ -303,10 +317,13 @@ function initializeState(root) {
 
         const config = FILTER_LOOKUP[key];
         if (config?.optionsKey) {
-            const dropdown = createFilterDropdown(input, value => updateFilter(key, value));
+            const dropdown = createFilterDropdown(input, value => updateFilter(key, value), config);
             dropdowns[key] = dropdown;
             if (Array.isArray(config.staticOptions)) {
-                dropdown.setOptions(config.staticOptions);
+                const initialOptions = config.staticOptions
+                    .map(option => formatEnum(option))
+                    .filter(Boolean);
+                dropdown.setOptions(initialOptions);
             }
         }
     });
@@ -316,10 +333,13 @@ function initializeState(root) {
         filters,
         filterInputs,
         dropdowns,
+        table: root.querySelector('.mds-table'),
         tableBody: root.querySelector('#mds-table-body'),
         countEl: root.querySelector('#mds-entry-count'),
         totalEl: root.querySelector('#mds-total-count'),
         statusEl: root.querySelector('#mds-status'),
+        columnWidths: null,
+        columnWidthAttempts: 0,
     };
 }
 
@@ -430,6 +450,7 @@ function renderTable(entries) {
         cell.textContent = 'No authenticators match the selected filters.';
         emptyRow.appendChild(cell);
         tbody.appendChild(emptyRow);
+        stabiliseColumnWidths();
         return;
     }
 
@@ -454,6 +475,80 @@ function renderTable(entries) {
     });
 
     tbody.appendChild(fragment);
+    stabiliseColumnWidths();
+}
+
+function stabiliseColumnWidths() {
+    if (!mdsState?.table) {
+        return;
+    }
+    if (mdsState.root instanceof HTMLElement && mdsState.root.offsetParent === null) {
+        return;
+    }
+    if (!Array.isArray(mdsState.columnWidths) || !mdsState.columnWidths.length) {
+        requestAnimationFrame(() => {
+            if (!mdsState?.table) {
+                return;
+            }
+            const headerCells = mdsState.table.querySelectorAll('thead tr:first-child th');
+            if (!headerCells.length) {
+                return;
+            }
+            const widths = Array.from(headerCells).map(cell => Math.round(cell.getBoundingClientRect().width));
+            if (!widths.length || widths.some(width => width === 0)) {
+                if (mdsState) {
+                    mdsState.columnWidthAttempts = (mdsState.columnWidthAttempts || 0) + 1;
+                    if (mdsState.columnWidthAttempts < 5) {
+                        requestAnimationFrame(stabiliseColumnWidths);
+                    }
+                }
+                return;
+            }
+            mdsState.columnWidths = widths;
+            mdsState.columnWidthAttempts = 0;
+            applyColumnWidths(widths);
+        });
+        return;
+    }
+    applyColumnWidths(mdsState.columnWidths);
+}
+
+function applyColumnWidths(widths) {
+    if (!mdsState?.table || !Array.isArray(widths) || !widths.length) {
+        return;
+    }
+
+    mdsState.table.style.tableLayout = 'fixed';
+
+    const tableHead = mdsState.table.tHead;
+    if (tableHead) {
+        Array.from(tableHead.rows).forEach(row => applyWidthsToCells(row.cells, widths));
+    }
+
+    if (mdsState.tableBody) {
+        Array.from(mdsState.tableBody.rows).forEach(row => applyWidthsToCells(row.cells, widths));
+    }
+}
+
+function applyWidthsToCells(cells, widths) {
+    if (!cells || !widths) {
+        return;
+    }
+
+    let columnIndex = 0;
+    Array.from(cells).forEach(cell => {
+        const span = cell.colSpan || 1;
+        if (span === 1) {
+            const width = widths[columnIndex];
+            if (width && Number.isFinite(width)) {
+                const widthPx = `${width}px`;
+                cell.style.width = widthPx;
+                cell.style.minWidth = widthPx;
+                cell.style.maxWidth = widthPx;
+            }
+        }
+        columnIndex += span;
+    });
 }
 
 function createTextCell(text, title) {
@@ -538,7 +633,7 @@ function setStatus(message, variant) {
 function collectOptionSets(data) {
     const sets = {
         protocol: new Set(),
-        certification: new Set(CERTIFICATION_OPTIONS),
+        certification: new Set(CERTIFICATION_OPTIONS.map(option => formatEnum(option))),
         userVerification: new Set(),
         attachment: new Set(),
         transports: new Set(),
@@ -551,7 +646,7 @@ function collectOptionSets(data) {
             sets.protocol.add(entry.protocol);
         }
         if (entry.certificationStatus) {
-            sets.certification.add(entry.certificationStatus);
+            sets.certification.add(formatEnum(entry.certificationStatus));
         }
         entry.userVerificationList.forEach(value => sets.userVerification.add(value));
         entry.attachmentList.forEach(value => sets.attachment.add(value));
@@ -574,11 +669,15 @@ function updateOptionLists(optionSets) {
             return;
         }
         const config = FILTER_LOOKUP[key];
-        let options = Array.from(values).filter(Boolean);
+        const optionList = Array.from(values).filter(Boolean);
         if (config?.staticOptions) {
-            options = config.staticOptions.slice();
+            const staticValues = config.staticOptions
+                .map(option => formatEnum(option))
+                .filter(Boolean);
+            optionList.push(...staticValues);
         }
-        dropdown.setOptions(options);
+        const unique = Array.from(new Set(optionList));
+        dropdown.setOptions(unique);
     });
 }
 
@@ -723,8 +822,9 @@ function formatProtocol(protocol) {
         return '';
     }
     const normalised = formatEnum(protocol);
-    if (/^fido\s*\d$/i.test(normalised.replace(/\s+/g, ''))) {
-        return normalised.replace(/\s+/g, '');
+    const compact = normalised.replace(/\s+/g, '');
+    if (/^fido\d$/i.test(compact)) {
+        return compact.toUpperCase();
     }
     return normalised;
 }
@@ -735,18 +835,21 @@ function formatEnum(value) {
     }
     return String(value)
         .split(/[_-]/)
+        .map(part => part.trim())
         .filter(Boolean)
         .map(part => {
             if (/^[A-Z0-9]+$/.test(part)) {
-                return part;
+                if (part.length <= 4) {
+                    return part;
+                }
+                const lower = part.toLowerCase();
+                return lower.charAt(0).toUpperCase() + lower.slice(1);
             }
             if (/^.*\d.*$/.test(part)) {
                 return part.toUpperCase();
             }
-            if (part.length <= 3) {
-                return part.toUpperCase();
-            }
-            return part.charAt(0).toUpperCase() + part.slice(1).toLowerCase();
+            const lower = part.toLowerCase();
+            return lower.charAt(0).toUpperCase() + lower.slice(1);
         })
         .join(' ');
 }
@@ -767,13 +870,15 @@ function formatCertification(statusReports) {
         return { display: '', status: '' };
     }
 
-    const statusRaw = typeof latest.status === 'string' ? latest.status.toUpperCase() : '';
+    const statusRaw = typeof latest.status === 'string' ? latest.status.trim() : '';
+    const statusValue = statusRaw ? statusRaw.toUpperCase() : '';
     const descriptor = typeof latest.certificationDescriptor === 'string' ? latest.certificationDescriptor.trim() : '';
     const certificateNumber = typeof latest.certificateNumber === 'string' ? latest.certificateNumber.trim() : '';
 
     const parts = [];
-    if (statusRaw) {
-        parts.push(statusRaw);
+    const statusDisplay = statusValue ? formatEnum(statusValue) : '';
+    if (statusDisplay) {
+        parts.push(statusDisplay);
     }
     if (descriptor) {
         parts.push(descriptor);
@@ -784,7 +889,7 @@ function formatCertification(statusReports) {
 
     return {
         display: parts.filter(Boolean).join(' • '),
-        status: statusRaw,
+        status: statusValue,
     };
 }
 
