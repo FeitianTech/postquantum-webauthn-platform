@@ -1794,15 +1794,21 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             
             // Add new properties if available
             if (cred.properties) {
+                const formatBoolean = (value) => {
+                    if (value === undefined || value === null) {
+                        return 'N/A';
+                    }
+                    return value ? 'true' : 'false';
+                };
+
                 detailsHtml += `
                     <div style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(0, 114, 206, 0.15);">
-                        <div><strong>Exclude credentials sent count:</strong> ${cred.properties.excludeCredentialsSentCount !== undefined ? cred.properties.excludeCredentialsSentCount : 'N/A'}</div>
-                        <div><strong>Exclude credentials used:</strong> ${cred.properties.excludeCredentialsUsed !== undefined ? cred.properties.excludeCredentialsUsed : 'N/A'}</div>
-                        <div><strong>Credential ID length (actual):</strong> ${cred.properties.credentialIdLength !== undefined ? cred.properties.credentialIdLength : 'N/A'} bytes</div>
-                        <div><strong>Fake credential ID length (requested):</strong> ${cred.properties.fakeCredentialIdLengthRequested !== undefined && cred.properties.fakeCredentialIdLengthRequested !== null ? cred.properties.fakeCredentialIdLengthRequested : 'N/A'}</div>
-                        <div><strong>Hints sent:</strong> ${cred.properties.hintsSent && cred.properties.hintsSent.length > 0 ? JSON.stringify(cred.properties.hintsSent) : '[]'}</div>
+                        <div><strong>Signature valid:</strong> ${formatBoolean(cred.properties.attestationSignatureValid)}</div>
+                        <div><strong>Root valid:</strong> ${formatBoolean(cred.properties.attestationRootValid)}</div>
+                        <div><strong>RPID hash valid:</strong> ${formatBoolean(cred.properties.attestationRpIdHashValid)}</div>
+                        <div><strong>AAGUID match:</strong> ${formatBoolean(cred.properties.attestationAaguidMatch)}</div>
                     </div>`;
-                
+
             }
             
             detailsHtml += `
