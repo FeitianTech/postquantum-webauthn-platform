@@ -51,9 +51,10 @@ import time
 import textwrap
 from datetime import datetime, timezone
 
-from typing import Any, Dict, Mapping, Optional, Tuple
+from typing import Any, Dict, List, Mapping, Optional, Tuple
 
 from cryptography import x509
+from cryptography.x509.oid import ExtensionOID
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ed25519, ed448, ec, rsa
 
@@ -108,6 +109,50 @@ def delkey(name):
 
 def _colon_hex(data: bytes) -> str:
     return ":".join(f"{byte:02x}" for byte in data)
+
+
+def _format_hex_bytes_lines(data: bytes, bytes_per_line: int = 16) -> List[str]:
+    """Return colon separated hex grouped across multiple lines."""
+    if not data:
+        return []
+
+    hex_pairs = [f"{byte:02x}" for byte in data]
+    lines = []
+    for start in range(0, len(hex_pairs), bytes_per_line):
+        chunk = hex_pairs[start : start + bytes_per_line]
+        if not chunk:
+            continue
+        lines.append(":".join(chunk))
+    return lines
+
+
+def _colon_hex_string(hex_string: str) -> str:
+    """Format a hexadecimal string with colon separators."""
+    cleaned = "".join(hex_string.split()).replace(":", "")
+    if len(cleaned) % 2:
+        cleaned = "0" + cleaned
+    try:
+        data = bytes.fromhex(cleaned)
+    except ValueError:
+        return hex_string
+    return _colon_hex(data)
+
+
+def _format_hex_string_lines(hex_string: str, bytes_per_line: int = 16) -> List[str]:
+    cleaned = "".join(hex_string.split()).replace(":", "")
+    if len(cleaned) % 2:
+        cleaned = "0" + cleaned
+    try:
+        data = bytes.fromhex(cleaned)
+    except ValueError:
+        return [hex_string]
+    return _format_hex_bytes_lines(data, bytes_per_line)
+
+
+EXTENSION_FRIENDLY_NAMES: Dict[str, str] = {
+    "1.3.6.1.4.1.45724.1.1.4": "FIDO: Device AAGUID",
+    "1.3.6.1.4.1.45724.2.1.1": "FIDO: Transports",
+}
 
 
 def _encode_base64url(data: bytes) -> str:
@@ -330,87 +375,45 @@ def _serialize_public_key_info(public_key):
 def _serialize_extension_value(ext):
     value = ext.value
     if isinstance(value, x509.SubjectKeyIdentifier):
-        return {"subjectKeyIdentifier": value.digest.hex()}
+        return {"Subject Key Identifier": _colon_hex(value.digest)}
     if isinstance(value, x509.AuthorityKeyIdentifier):
         serialized = {}
         if value.key_identifier:
-            serialized["keyIdentifier"] = value.key_identifier.hex()
+            serialized["Key Identifier"] = _colon_hex(value.key_identifier)
         if value.authority_cert_serial_number is not None:
-            serialized["authorityCertSerialNumber"] = str(value.authority_cert_serial_number)
+            serialized["Authority Cert Serial Number"] = (
+                f"{value.authority_cert_serial_number} "
+                f"(0x{value.authority_cert_serial_number:x})"
+            )
         if value.authority_cert_issuer:
-            serialized["authorityCertIssuer"] = [
+            serialized["Authority Cert Issuer"] = [
                 _format_x509_name(name) for name in value.authority_cert_issuer
             ]
         return serialized
     if isinstance(value, x509.BasicConstraints):
-        return {"ca": value.ca, "pathLength": value.path_length}
+        serialized = {"CA": value.ca}
+        if value.path_length is not None:
+            serialized["Path Length"] = value.path_length
+        return serialized
     if isinstance(value, x509.UnrecognizedExtension):
         raw_hex = value.value.hex()
-        serialized = {"hex": raw_hex}
+        serialized = {"Hex value": raw_hex}
         if ext.oid.dotted_string == "1.3.6.1.4.1.45724.1.1.4" and len(value.value) == 16:
-            serialized["aaguidHex"] = raw_hex
+            serialized["AAGUID"] = _colon_hex_string(raw_hex)
             try:
-                serialized["aaguidGuid"] = str(uuid.UUID(hex=raw_hex))
+                serialized["AAGUID (GUID)"] = str(uuid.UUID(hex=raw_hex))
             except ValueError:
                 pass
         elif ext.oid.dotted_string == "1.3.6.1.4.1.45724.2.1.1":
-            serialized["transports"] = _parse_fido_transport_bitfield(value.value)
+            transports = _parse_fido_transport_bitfield(value.value)
+            if transports:
+                serialized["Transports"] = " ".join(transports)
         return serialized
 
     try:
         return str(value)
     except Exception:
         return repr(value)
-
-
-def _format_structured_value(value, indent: int = 0):
-    """Format nested certificate data into readable text lines."""
-    indent_str = " " * 4 * indent
-
-    if value is None:
-        return []
-
-    if isinstance(value, (str, int, float)):
-        return [f"{indent_str}{value}"]
-
-    if isinstance(value, bool):
-        return [f"{indent_str}{str(value).lower()}"]
-
-    if isinstance(value, (list, tuple)):
-        if not value:
-            return []
-        lines = []
-        for item in value:
-            if isinstance(item, (dict, list, tuple)):
-                lines.append(f"{indent_str}-")
-                lines.extend(_format_structured_value(item, indent + 1))
-            else:
-                lines.append(f"{indent_str}- {item}")
-        return lines
-
-    if isinstance(value, Mapping):
-        entries = []
-        for key, val in value.items():
-            if val in (None, ""):
-                continue
-            if isinstance(key, str) and "base64" in key.lower():
-                continue
-            entries.append((key, val))
-
-        if not entries:
-            return []
-
-        lines = []
-        for key, val in entries:
-            if isinstance(val, (dict, list, tuple)):
-                lines.append(f"{indent_str}{key}:")
-                lines.extend(_format_structured_value(val, indent + 1))
-            else:
-                lines.append(f"{indent_str}{key}: {val}")
-        return lines
-
-    return [f"{indent_str}{value}"]
-
 
 def serialize_attestation_certificate(cert_bytes: bytes):
     if not cert_bytes:
@@ -437,10 +440,14 @@ def serialize_attestation_certificate(cert_bytes: bytes):
 
     extensions = []
     for ext in certificate.extensions:
+        oid = ext.oid.dotted_string
+        friendly_name = EXTENSION_FRIENDLY_NAMES.get(oid)
+        default_name = getattr(ext.oid, "_name", None)
         extensions.append(
             {
-                "oid": ext.oid.dotted_string,
-                "name": getattr(ext.oid, "_name", ext.oid.dotted_string),
+                "oid": oid,
+                "name": friendly_name or default_name or oid,
+                "friendlyName": friendly_name,
                 "critical": ext.critical,
                 "value": _serialize_extension_value(ext),
             }
@@ -466,18 +473,29 @@ def serialize_attestation_certificate(cert_bytes: bytes):
         if summary_lines and summary_lines[-1] != "":
             summary_lines.append("")
 
-    _append_line(f"Version: {version_number} ({version_hex})")
-    _append_line(
-        "Serial Number: "
-        f"{certificate.serial_number} (0x{certificate.serial_number:x})"
-    )
     signature_algorithm = getattr(
         certificate.signature_algorithm_oid,
         "_name",
         certificate.signature_algorithm_oid.dotted_string,
     )
+    issuer_str = _format_x509_name(certificate.issuer)
+    subject_str = _format_x509_name(certificate.subject)
+    public_key = certificate.public_key()
+    public_key_info = _serialize_public_key_info(public_key)
+    signature_bytes = certificate.signature
+    signature_lines = _format_hex_bytes_lines(signature_bytes)
+    signature_hex = signature_bytes.hex()
+    signature_colon = _colon_hex(signature_bytes)
+
+    serial_decimal = str(certificate.serial_number)
+    serial_hex = f"0x{certificate.serial_number:x}"
+
+    _append_line(f"Version: {version_number} ({version_hex})")
+    _append_line(
+        f"Certificate Serial Number: {serial_decimal} ({serial_hex})"
+    )
     _append_line(f"Signature Algorithm: {signature_algorithm}")
-    _append_line(f"Issuer: {_format_x509_name(certificate.issuer)}")
+    _append_line(f"Issuer: {issuer_str}")
 
     _append_blank_line()
     _append_line("Validity:")
@@ -485,41 +503,138 @@ def serialize_attestation_certificate(cert_bytes: bytes):
     _append_line(f"    Not After: {_isoformat(not_valid_after)}")
 
     _append_blank_line()
-    _append_line(f"Subject: {_format_x509_name(certificate.subject)}")
+    _append_line(f"Subject: {subject_str}")
 
-    public_key_info = _serialize_public_key_info(certificate.public_key())
-    filtered_public_key_info = {
-        key: value
-        for key, value in public_key_info.items()
-        if not (isinstance(key, str) and "base64" in key.lower())
-    }
-    if filtered_public_key_info:
+    pk_summary_entries: List[Tuple[str, Any]] = []
+    if isinstance(public_key, ec.EllipticCurvePublicKey):
+        pk_summary_entries.append(("Type", "ECC"))
+        if public_key.key_size:
+            pk_summary_entries.append(("Public-Key", f"({public_key.key_size} bit)"))
+        ecc_point_lines = _format_hex_bytes_lines(
+            public_key.public_bytes(
+                encoding=serialization.Encoding.X962,
+                format=serialization.PublicFormat.UncompressedPoint,
+            )
+        )
+        if ecc_point_lines:
+            pk_summary_entries.append(("pub", ecc_point_lines))
+        curve_name = getattr(public_key.curve, "name", None)
+        if curve_name:
+            pk_summary_entries.append(("Curve", curve_name))
+    elif isinstance(public_key, rsa.RSAPublicKey):
+        pk_summary_entries.append(("Type", "RSA"))
+        if public_key.key_size:
+            pk_summary_entries.append(("Public-Key", f"({public_key.key_size} bit)"))
+        numbers = public_key.public_numbers()
+        modulus_bytes = numbers.n.to_bytes((numbers.n.bit_length() + 7) // 8, "big")
+        modulus_lines = _format_hex_bytes_lines(modulus_bytes)
+        if modulus_lines:
+            pk_summary_entries.append(("Modulus", modulus_lines))
+        pk_summary_entries.append(("Exponent", str(numbers.e)))
+    elif isinstance(public_key, (ed25519.Ed25519PublicKey, ed448.Ed448PublicKey)):
+        key_type = "Ed25519" if isinstance(public_key, ed25519.Ed25519PublicKey) else "Ed448"
+        pk_summary_entries.append(("Type", key_type))
+        raw_bytes = public_key.public_bytes(
+            encoding=serialization.Encoding.Raw,
+            format=serialization.PublicFormat.Raw,
+        )
+        raw_lines = _format_hex_bytes_lines(raw_bytes)
+        if raw_lines:
+            pk_summary_entries.append(("Public Key", raw_lines))
+    else:
+        pk_summary_entries.append(("Type", public_key.__class__.__name__))
+
+    if pk_summary_entries:
         _append_blank_line()
-        _append_line("Public Key Info:")
-        summary_lines.extend(_format_structured_value(filtered_public_key_info, 1))
+        _append_line("Subject Public Key Info:")
+        for label, value in pk_summary_entries:
+            if value is None or (isinstance(value, list) and not value):
+                continue
+            if isinstance(value, list):
+                _append_line(f"    {label}:")
+                for line in value:
+                    _append_line(f"        {line}")
+            else:
+                _append_line(f"    {label}: {value}")
 
     if extensions:
         _append_blank_line()
-        _append_line("Extensions:")
+        _append_line("X509v3 extensions:")
+
+        def _append_structured(value: Any, indent: int) -> None:
+            indent_str = " " * 4 * indent
+            if value is None:
+                return
+            if isinstance(value, Mapping):
+                for key, val in value.items():
+                    if val in (None, ""):
+                        continue
+                    if isinstance(val, (Mapping, list, tuple)):
+                        _append_line(f"{indent_str}{key}:")
+                        _append_structured(val, indent + 1)
+                    else:
+                        _append_line(f"{indent_str}{key}: {val}")
+                return
+            if isinstance(value, (list, tuple)):
+                if all(isinstance(item, str) for item in value):
+                    for item in value:
+                        if item:
+                            _append_line(f"{indent_str}{item}")
+                else:
+                    for item in value:
+                        _append_structured(item, indent)
+                return
+            _append_line(f"{indent_str}{value}")
+
         for ext_info in extensions:
             oid = ext_info.get("oid")
+            friendly = ext_info.get("friendlyName")
             name = ext_info.get("name")
-            label = name if name and name != oid else (oid or "Extension")
-            if label and oid and label != oid:
-                label = f"{label} ({oid})"
-            elif not label:
-                label = "Extension"
+            header_parts: List[str] = []
+            if oid:
+                header_parts.append(oid)
+            display_name = friendly or (name if name != oid else None)
+            if display_name:
+                header_parts.append(f"({display_name})")
+            header = " ".join(header_parts) if header_parts else "Extension"
             if ext_info.get("critical"):
-                label = f"{label} [critical]"
-            _append_line(f"    - {label}")
-            summary_lines.extend(
-                _format_structured_value(ext_info.get("value"), indent=2)
-            )
+                header = f"{header} [critical]"
+            _append_line(f"    {header}:")
+            _append_structured(ext_info.get("value"), 2)
 
-    if fingerprints:
+    if signature_lines:
         _append_blank_line()
-        _append_line("Fingerprints:")
-        summary_lines.extend(_format_structured_value(fingerprints, 1))
+        _append_line(f"Signature Algorithm: {signature_algorithm}")
+        for line in signature_lines:
+            _append_line(f"    {line}")
+
+    fingerprint_order = ["md5", "sha1", "sha256"]
+    if any(fingerprints.get(label) for label in fingerprint_order):
+        _append_blank_line()
+        _append_line("Fingerprint:")
+        for label in fingerprint_order:
+            hex_value = fingerprints.get(label)
+            if not hex_value:
+                continue
+            colon_lines = _format_hex_string_lines(hex_value)
+            _append_line(f"    {label.upper()}:")
+            for line in colon_lines:
+                _append_line(f"        {line}")
+
+    try:
+        ski_extension = certificate.extensions.get_extension_for_oid(
+            ExtensionOID.SUBJECT_KEY_IDENTIFIER
+        )
+    except x509.ExtensionNotFound:
+        ski_lines: List[str] = []
+    else:
+        ski_lines = _format_hex_bytes_lines(ski_extension.value.digest)
+
+    if ski_lines:
+        _append_blank_line()
+        _append_line("Subject Key Identifier:")
+        for line in ski_lines:
+            _append_line(f"    {line}")
 
     summary = "\n".join(line for line in summary_lines if line is not None).strip()
 
@@ -543,6 +658,12 @@ def serialize_attestation_certificate(cert_bytes: bytes):
         "publicKeyInfo": public_key_info,
         "extensions": extensions,
         "fingerprints": fingerprints,
+        "signature": {
+            "algorithm": signature_algorithm,
+            "hex": signature_hex,
+            "colon": signature_colon,
+            "lines": signature_lines,
+        },
         "derBase64": der_base64,
         "pem": pem,
         "summary": summary,

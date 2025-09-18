@@ -2020,6 +2020,28 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                 }
             };
 
+            const hexToColonLines = (hexString, bytesPerLine = 16) => {
+                if (typeof hexString !== 'string') {
+                    return [];
+                }
+                let clean = hexString.replace(/[^0-9a-fA-F]/g, '').toLowerCase();
+                if (!clean) {
+                    return [];
+                }
+                if (clean.length % 2 !== 0) {
+                    clean = `0${clean}`;
+                }
+                const pairs = [];
+                for (let i = 0; i < clean.length; i += 2) {
+                    pairs.push(clean.slice(i, i + 2));
+                }
+                const output = [];
+                for (let i = 0; i < pairs.length; i += bytesPerLine) {
+                    output.push(pairs.slice(i, i + bytesPerLine).join(':'));
+                }
+                return output;
+            };
+
             const { version } = details;
             if (version) {
                 if (typeof version === 'object') {
@@ -2051,10 +2073,10 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                         parts.push(serialNumber.hex.trim());
                     }
                     if (parts.length > 0) {
-                        addLine(`Serial Number: ${parts.join(' / ')}`);
+                        addLine(`Certificate Serial Number: ${parts.join(' / ')}`);
                     }
                 } else if (String(serialNumber).trim() !== '') {
-                    addLine(`Serial Number: ${serialNumber}`);
+                    addLine(`Certificate Serial Number: ${serialNumber}`);
                 }
             }
 
@@ -2085,13 +2107,13 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
 
             if (details.publicKeyInfo && typeof details.publicKeyInfo === 'object') {
                 addBlankLine();
-                addLine('Public Key Info:');
+                addLine('Subject Public Key Info:');
                 appendKeyValueLines(lines, details.publicKeyInfo, 1);
             }
 
             if (Array.isArray(details.extensions) && details.extensions.length) {
                 addBlankLine();
-                addLine('Extensions:');
+                addLine('X509v3 extensions:');
                 details.extensions.forEach(ext => {
                     if (!ext || typeof ext !== 'object') {
                         return;
@@ -2115,17 +2137,56 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                     if (ext.critical) {
                         header = `${header} [critical]`;
                     }
-                    addLine(`    - ${header}`);
+                    addLine(`    ${header}:`);
                     if ('value' in ext) {
                         appendKeyValueLines(lines, ext.value, 2);
                     }
                 });
             }
 
+            if (details.signature && typeof details.signature === 'object') {
+                const algorithm = typeof details.signature.algorithm === 'string'
+                    ? details.signature.algorithm.trim()
+                    : '';
+                const signatureLines = Array.isArray(details.signature.lines)
+                    ? details.signature.lines.filter(line => typeof line === 'string' && line.trim() !== '')
+                    : [];
+                const signatureColon = typeof details.signature.colon === 'string'
+                    ? details.signature.colon.trim()
+                    : '';
+
+                if (algorithm || signatureLines.length || signatureColon) {
+                    addBlankLine();
+                    const algorithmLabel = algorithm || (typeof details.signatureAlgorithm === 'string' ? details.signatureAlgorithm.trim() : 'Signature');
+                    addLine(`Signature Algorithm: ${algorithmLabel}`);
+                    if (signatureLines.length) {
+                        signatureLines.forEach(line => addLine(`    ${line}`));
+                    } else if (signatureColon) {
+                        addLine(`    ${signatureColon}`);
+                    }
+                }
+            }
+
             if (details.fingerprints && typeof details.fingerprints === 'object') {
-                addBlankLine();
-                addLine('Fingerprints:');
-                appendKeyValueLines(lines, details.fingerprints, 1);
+                const fingerprintEntries = Object.entries(details.fingerprints)
+                    .filter(([, value]) => typeof value === 'string' && value.trim() !== '');
+
+                if (fingerprintEntries.length) {
+                    addBlankLine();
+                    addLine('Fingerprint:');
+                    fingerprintEntries.forEach(([algorithm, value]) => {
+                        const label = typeof algorithm === 'string' && algorithm.trim() !== ''
+                            ? algorithm.trim().toUpperCase()
+                            : 'VALUE';
+                        const colonLines = hexToColonLines(value);
+                        addLine(`    ${label}:`);
+                        if (colonLines.length) {
+                            colonLines.forEach(line => addLine(`        ${line}`));
+                        } else {
+                            addLine(`        ${value}`);
+                        }
+                    });
+                }
             }
 
             const formatted = lines.join('\n').trim();
