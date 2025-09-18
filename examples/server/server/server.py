@@ -137,6 +137,40 @@ def _format_hex_string_lines(hex_string: str, bytes_per_line: int = 16) -> List[
     return _format_hex_bytes_lines(data, bytes_per_line)
 
 
+def _decode_asn1_octet_string(data: bytes) -> bytes:
+    """Best-effort decode of a DER-encoded OCTET STRING payload."""
+
+    current = data
+    for _ in range(4):
+        if not current or current[0] != 0x04 or len(current) < 2:
+            break
+
+        length_byte = current[1]
+        offset = 2
+
+        if length_byte == 0x80:
+            break
+
+        if length_byte & 0x80:
+            length_octets = length_byte & 0x7F
+            if length_octets == 0 or len(current) < offset + length_octets:
+                break
+            length = int.from_bytes(current[offset : offset + length_octets], "big")
+            offset += length_octets
+        else:
+            length = length_byte
+
+        if len(current) < offset + length:
+            break
+
+        next_value = current[offset : offset + length]
+        if next_value == current:
+            break
+        current = next_value
+
+    return current
+
+
 EXTENSION_DISPLAY_METADATA: Dict[str, Dict[str, Any]] = {
     "1.3.6.1.4.1.45724.1.1.4": {
         "friendly_name": "FIDO: Device AAGUID",
@@ -403,12 +437,15 @@ def _serialize_extension_value(ext):
             serialized["Path Length"] = value.path_length
         return serialized
     if isinstance(value, x509.UnrecognizedExtension):
-        raw_hex = value.value.hex()
+        raw_bytes = value.value
+        raw_hex = raw_bytes.hex()
         serialized = {"Hex value": raw_hex}
-        if ext.oid.dotted_string == "1.3.6.1.4.1.45724.1.1.4" and len(value.value) == 16:
-            serialized["AAGUID"] = raw_hex
+        if ext.oid.dotted_string == "1.3.6.1.4.1.45724.1.1.4":
+            aaguid_bytes = _decode_asn1_octet_string(raw_bytes)
+            if len(aaguid_bytes) == 16:
+                serialized["AAGUID"] = aaguid_bytes.hex()
         elif ext.oid.dotted_string == "1.3.6.1.4.1.45724.2.1.1":
-            transports = _parse_fido_transport_bitfield(value.value)
+            transports = _parse_fido_transport_bitfield(raw_bytes)
             if transports:
                 serialized["Transports"] = " ".join(transports)
         return serialized
