@@ -542,6 +542,16 @@ body.modal-open {
     margin-top: 0.5rem;
 }
 
+.checkbox-subheading {
+    flex-basis: 100%;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--primary-dark);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-top: 0.25rem;
+}
+
 .checkbox-item {
     display: flex;
     align-items: center;
