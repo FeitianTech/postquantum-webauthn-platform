@@ -34,11 +34,11 @@ See the file README.adoc in this directory for details.
 Navigate to http://localhost:5000 in a supported web browser.
 """
 from fido2.webauthn import (
+    AuthenticatorData,
     CollectedClientData,
     PublicKeyCredentialRpEntity,
     PublicKeyCredentialUserEntity,
     RegistrationResponse,
-    AuthenticatorData,
 )
 from fido2.server import Fido2Server
 from fido2.utils import ByteBuffer, websafe_decode
@@ -97,7 +97,6 @@ MDS_METADATA_URL = "https://mds3.fidoalliance.org/"
 MDS_METADATA_FILENAME = "fido-mds3.jws"
 MDS_METADATA_PATH = os.path.join(basepath, "static", MDS_METADATA_FILENAME)
 
-
 FIDO_METADATA_TRUST_ROOT_B64 = (
     "MIIDXzCCAkegAwIBAgILBAAAAAABIVhTCKIwDQYJKoZIhvcNAQELBQAwTDEgMB4G"
     "A1UECxMXR2xvYmFsU2lnbiBSb290IENBIC0gUjMxEzARBgNVBAoTCkdsb2JhbFNp"
@@ -120,7 +119,6 @@ FIDO_METADATA_TRUST_ROOT_B64 = (
     "WD9f"
 )
 FIDO_METADATA_TRUST_ROOT_CERT = base64.b64decode(FIDO_METADATA_TRUST_ROOT_B64)
-
 
 _mds_verifier_cache: Optional[MdsAttestationVerifier] = None
 _mds_verifier_mtime: Optional[float] = None
@@ -481,294 +479,6 @@ def _get_mds_verifier() -> Optional[MdsAttestationVerifier]:
     _mds_verifier_cache = verifier
     _mds_verifier_mtime = mtime
     return verifier
-
-
-def perform_attestation_checks(
-    response: Mapping[str, Any],
-    state: Optional[Mapping[str, Any]],
-    public_key_options: Optional[Mapping[str, Any]],
-    auth_data: Optional[AuthenticatorData],
-    expected_origin: str,
-    rp_id: str,
-) -> Dict[str, Any]:
-    """Execute a comprehensive set of attestation validation checks."""
-
-    results: Dict[str, Any] = {
-        "attestation_format": None,
-        "signature_valid": False,
-        "root_valid": False,
-        "rp_id_hash_valid": False,
-        "aaguid_match": False,
-        "client_data": {},
-        "authenticator_data": {},
-        "metadata": {},
-        "hash_binding": {},
-        "errors": [],
-    }
-
-    try:
-        registration = RegistrationResponse.from_dict(response)
-    except Exception as exc:
-        results["errors"].append(f"registration_parse_error: {exc}")
-        return results
-
-    client_data = registration.response.client_data
-    attestation_object = registration.response.attestation_object
-    results["attestation_format"] = attestation_object.fmt
-
-    auth_data_obj: AuthenticatorData
-    if isinstance(auth_data, AuthenticatorData):
-        auth_data_obj = auth_data
-    else:
-        auth_data_obj = attestation_object.auth_data
-
-    challenge_source: Optional[Union[str, bytes]] = None
-    if isinstance(state, Mapping):
-        challenge_source = state.get("challenge")  # type: ignore[assignment]
-
-    expected_challenge_bytes = b""
-    if isinstance(challenge_source, str):
-        try:
-            expected_challenge_bytes = websafe_decode(challenge_source)
-        except Exception as exc:
-            results["errors"].append(f"challenge_decode_error: {exc}")
-    elif isinstance(challenge_source, (bytes, bytearray)):
-        expected_challenge_bytes = bytes(challenge_source)
-
-    challenge_matches = bool(expected_challenge_bytes) and (
-        client_data.challenge == expected_challenge_bytes
-    )
-
-    expected_origin_normalised = (expected_origin or "").rstrip("/")
-    origin_matches = bool(expected_origin_normalised) and (
-        client_data.origin == expected_origin_normalised
-    )
-
-    results["client_data"] = {
-        "type": client_data.type,
-        "expected_type": CollectedClientData.TYPE.CREATE.value,
-        "type_valid": client_data.type == CollectedClientData.TYPE.CREATE.value,
-        "challenge": _encode_base64url(client_data.challenge),
-        "expected_challenge": (
-            _encode_base64url(expected_challenge_bytes)
-            if expected_challenge_bytes
-            else None
-        ),
-        "challenge_matches": challenge_matches,
-        "origin": client_data.origin,
-        "expected_origin": expected_origin_normalised,
-        "origin_valid": origin_matches,
-        "cross_origin": bool(client_data.cross_origin),
-        "cross_origin_ok": not bool(client_data.cross_origin),
-    }
-
-    rp_id_value = rp_id or ""
-    rp_id_hash_expected = hashlib.sha256(rp_id_value.encode("utf-8")).digest()
-    rp_id_hash_valid = auth_data_obj.rp_id_hash == rp_id_hash_expected
-    results["rp_id_hash_valid"] = rp_id_hash_valid
-
-    flags = auth_data_obj.flags
-    user_present = bool(flags & AuthenticatorData.FLAG.UP)
-    user_verified = bool(flags & AuthenticatorData.FLAG.UV)
-    attested_credential_included = bool(flags & AuthenticatorData.FLAG.AT)
-
-    uv_required = False
-    if isinstance(state, Mapping):
-        state_uv = state.get("user_verification")
-        if getattr(state_uv, "value", None) == "required" or state_uv == "required":
-            uv_required = True
-
-    if not uv_required and isinstance(public_key_options, Mapping):
-        uv_setting: Optional[str] = None
-        if isinstance(public_key_options.get("authenticatorSelection"), Mapping):
-            uv_setting = public_key_options["authenticatorSelection"].get(
-                "userVerification"
-            )
-        if not uv_setting:
-            uv_setting = public_key_options.get("userVerification")
-        if isinstance(uv_setting, str) and uv_setting.lower() == "required":
-            uv_required = True
-
-    uv_satisfied = user_verified or not uv_required
-
-    allowed_algorithms: List[int] = []
-    if isinstance(public_key_options, Mapping):
-        params = public_key_options.get("pubKeyCredParams")
-        if isinstance(params, list):
-            for param in params:
-                if isinstance(param, Mapping) and isinstance(param.get("alg"), int):
-                    allowed_algorithms.append(param["alg"])
-
-    credential_data = getattr(auth_data_obj, "credential_data", None)
-    credential_id_length: Optional[int] = None
-    credential_aaguid: Optional[str] = None
-    algorithm: Optional[int] = None
-    cose_key_valid = False
-    if credential_data is not None:
-        try:
-            credential_id_length = len(credential_data.credential_id)
-        except Exception:
-            credential_id_length = None
-
-        try:
-            algorithm = credential_data.public_key.get(3)
-            CoseKey.parse(dict(credential_data.public_key))
-            cose_key_valid = True
-        except Exception as exc:
-            results["errors"].append(f"cose_key_error: {exc}")
-
-        try:
-            credential_aaguid = credential_data.aaguid.hex()
-        except Exception:
-            credential_aaguid = None
-
-    algorithm_allowed = True
-    if allowed_algorithms and isinstance(algorithm, int):
-        algorithm_allowed = algorithm in allowed_algorithms
-
-    results["authenticator_data"] = {
-        "user_present": user_present,
-        "user_verified": user_verified,
-        "user_verification_required": uv_required,
-        "user_verification_satisfied": uv_satisfied,
-        "attested_credential_data": attested_credential_included,
-        "counter": auth_data_obj.counter,
-        "credential_id_length": credential_id_length,
-        "credential_aaguid": credential_aaguid,
-        "algorithm": algorithm,
-        "algorithm_allowed": algorithm_allowed,
-        "cose_key_valid": cose_key_valid,
-    }
-
-    client_data_hash = client_data.hash
-    verification_data = bytes(auth_data_obj) + client_data_hash
-    results["hash_binding"] = {
-        "client_data_hash": _encode_base64url(client_data_hash),
-        "verification_data": _encode_base64url(verification_data),
-    }
-
-    signature_valid = False
-    attestation_result = None
-    try:
-        attestation_cls = Attestation.for_type(attestation_object.fmt)
-        attestation_instance = attestation_cls()
-        attestation_result = attestation_instance.verify(
-            attestation_object.att_stmt,
-            attestation_object.auth_data,
-            client_data_hash,
-        )
-        signature_valid = True
-    except UnsupportedType as exc:
-        results["errors"].append(f"unsupported_attestation: {exc}")
-    except (InvalidSignature, InvalidData) as exc:
-        results["errors"].append(f"attestation_invalid: {exc}")
-    except Exception as exc:
-        results["errors"].append(f"attestation_error: {exc}")
-
-    results["signature_valid"] = signature_valid
-
-    metadata_entry = None
-    now = datetime.now(timezone.utc)
-    if signature_valid and attestation_result is not None:
-        trust_path = attestation_result.trust_path or []
-        if trust_path:
-            certs_valid = True
-            for cert_der in trust_path:
-                try:
-                    cert = x509.load_der_x509_certificate(cert_der)
-                    not_before = cert.not_valid_before
-                    if not_before.tzinfo is None:
-                        not_before = not_before.replace(tzinfo=timezone.utc)
-                    else:
-                        not_before = not_before.astimezone(timezone.utc)
-                    not_after = cert.not_valid_after
-                    if not_after.tzinfo is None:
-                        not_after = not_after.replace(tzinfo=timezone.utc)
-                    else:
-                        not_after = not_after.astimezone(timezone.utc)
-                    if now < not_before or now > not_after:
-                        certs_valid = False
-                        results["errors"].append(
-                            f"certificate_out_of_validity: {cert.subject.rfc4514_string()}"
-                        )
-                except Exception as exc:
-                    certs_valid = False
-                    results["errors"].append(f"certificate_parse_error: {exc}")
-            if certs_valid:
-                verifier = _get_mds_verifier()
-                if verifier is not None:
-                    try:
-                        metadata_entry = verifier.find_entry(
-                            attestation_object,
-                            client_data_hash,
-                        )
-                        results["root_valid"] = metadata_entry is not None
-                        if metadata_entry is None:
-                            results["errors"].append("metadata_entry_not_found")
-                    except UntrustedAttestation as exc:
-                        results["errors"].append(f"untrusted_attestation: {exc}")
-                else:
-                    results["errors"].append("metadata_not_available")
-            else:
-                results["errors"].append("certificate_chain_invalid")
-        else:
-            results["errors"].append("trust_path_missing")
-    elif signature_valid is False:
-        results["errors"].append("attestation_signature_invalid")
-
-    metadata_description: Optional[str] = None
-    metadata_aaguid: Optional[str] = None
-    metadata_algorithm_supported: Optional[bool] = None
-    credential_aaguid_bytes = b""
-    if credential_data is not None:
-        try:
-            credential_aaguid_bytes = bytes(credential_data.aaguid)
-        except Exception:
-            credential_aaguid_bytes = b""
-
-    if metadata_entry is not None:
-        if getattr(metadata_entry, "metadata_statement", None):
-            metadata_statement = metadata_entry.metadata_statement
-            metadata_description = getattr(
-                metadata_statement,
-                "description",
-                None,
-            )
-            authenticator_info = getattr(
-                metadata_statement,
-                "authenticator_get_info",
-                None,
-            )
-            if (
-                isinstance(authenticator_info, Mapping)
-                and isinstance(algorithm, int)
-            ):
-                alg_list = authenticator_info.get("algorithms")
-                if isinstance(alg_list, (list, tuple)):
-                    numeric_algs = [alg for alg in alg_list if isinstance(alg, int)]
-                    if numeric_algs:
-                        metadata_algorithm_supported = algorithm in numeric_algs
-        entry_aaguid = getattr(metadata_entry, "aaguid", None)
-        if entry_aaguid is not None:
-            try:
-                metadata_aaguid = str(entry_aaguid)
-                metadata_aaguid_bytes = bytes(entry_aaguid)
-                results["aaguid_match"] = metadata_aaguid_bytes == credential_aaguid_bytes
-            except Exception:
-                metadata_aaguid = None
-                results["aaguid_match"] = False
-
-    results["metadata"] = {
-        "available": metadata_entry is not None,
-        "description": metadata_description,
-        "aaguid": metadata_aaguid,
-        "algorithm_supported": metadata_algorithm_supported,
-    }
-
-    if metadata_entry is None and credential_aaguid_bytes:
-        results["aaguid_match"] = False
-
-    return results
 
 
 def _parse_fido_transport_bitfield(raw_value: bytes):
@@ -1177,6 +887,374 @@ def serialize_attestation_certificate(cert_bytes: bytes):
         "summary": summary,
     }
 
+
+def perform_attestation_checks(
+    response: Mapping[str, Any],
+    state: Optional[Mapping[str, Any]],
+    public_key_options: Optional[Mapping[str, Any]],
+    auth_data: Optional[AuthenticatorData],
+    expected_origin: str,
+    rp_id: str,
+) -> Dict[str, Any]:
+    """Execute a comprehensive set of attestation validation checks."""
+
+    results: Dict[str, Any] = {
+        "attestation_format": None,
+        "signature_valid": False,
+        "root_valid": False,
+        "rp_id_hash_valid": False,
+        "aaguid_match": False,
+        "client_data": {},
+        "authenticator_data": {},
+        "metadata": {},
+        "hash_binding": {},
+        "errors": [],
+    }
+
+    if not isinstance(response, Mapping):
+        results["errors"].append("registration_response_invalid")
+        return results
+
+    try:
+        registration = RegistrationResponse.from_dict(response)
+    except Exception as exc:
+        results["errors"].append(f"registration_parse_error: {exc}")
+        return results
+
+    client_data = registration.response.client_data
+    attestation_object = registration.response.attestation_object
+    results["attestation_format"] = attestation_object.fmt
+
+    if isinstance(auth_data, AuthenticatorData):
+        auth_data_obj = auth_data
+    else:
+        auth_data_obj = attestation_object.auth_data
+
+    def _coerce_expected_bytes(value: Any) -> bytes:
+        if value is None:
+            return b""
+        if isinstance(value, ByteBuffer):
+            return bytes(value)
+        if isinstance(value, (bytes, bytearray, memoryview)):
+            return bytes(value)
+        if isinstance(value, str):
+            try:
+                return websafe_decode(value)
+            except Exception:
+                pass
+            try:
+                padded = value + "=" * ((4 - len(value) % 4) % 4)
+                return base64.b64decode(padded)
+            except Exception:
+                pass
+            try:
+                return bytes.fromhex(value)
+            except Exception:
+                pass
+            return value.encode("utf-8")
+        if isinstance(value, Mapping):
+            if "$base64url" in value:
+                return _coerce_expected_bytes(value["$base64url"])
+            if "$base64" in value:
+                encoded = value["$base64"]
+                try:
+                    padded = encoded + "=" * ((4 - len(encoded) % 4) % 4)
+                    return base64.b64decode(padded)
+                except Exception:
+                    return b""
+            if "$hex" in value:
+                try:
+                    return bytes.fromhex(value["$hex"])
+                except Exception:
+                    return b""
+        return b""
+
+    expected_challenge_bytes = b""
+    if isinstance(state, Mapping):
+        expected_challenge_bytes = _coerce_expected_bytes(state.get("challenge"))
+    if not expected_challenge_bytes and isinstance(public_key_options, Mapping):
+        expected_challenge_bytes = _coerce_expected_bytes(
+            public_key_options.get("challenge")
+        )
+
+    challenge_matches = (
+        bool(expected_challenge_bytes)
+        and client_data.challenge == expected_challenge_bytes
+    )
+
+    expected_origin_normalized = (expected_origin or "").rstrip("/")
+    origin_matches = bool(expected_origin_normalized) and (
+        client_data.origin == expected_origin_normalized
+    )
+
+    results["client_data"] = {
+        "type": client_data.type,
+        "expected_type": CollectedClientData.TYPE.CREATE.value,
+        "type_valid": client_data.type
+        == CollectedClientData.TYPE.CREATE.value,
+        "challenge": _encode_base64url(client_data.challenge),
+        "expected_challenge": (
+            _encode_base64url(expected_challenge_bytes)
+            if expected_challenge_bytes
+            else None
+        ),
+        "challenge_matches": challenge_matches,
+        "origin": client_data.origin,
+        "expected_origin": expected_origin_normalized,
+        "origin_valid": origin_matches,
+        "cross_origin": bool(client_data.cross_origin),
+        "cross_origin_ok": not bool(client_data.cross_origin),
+    }
+
+    if not results["client_data"]["type_valid"]:
+        results["errors"].append("client_data_type_invalid")
+    if expected_challenge_bytes and not challenge_matches:
+        results["errors"].append("challenge_mismatch")
+    if expected_origin_normalized and not origin_matches:
+        results["errors"].append("origin_mismatch")
+    if bool(client_data.cross_origin):
+        results["errors"].append("cross_origin_not_allowed")
+
+    rp_id_value = rp_id or ""
+    rp_id_hash_expected = hashlib.sha256(rp_id_value.encode("utf-8")).digest()
+    rp_id_hash_valid = auth_data_obj.rp_id_hash == rp_id_hash_expected
+    results["rp_id_hash_valid"] = rp_id_hash_valid
+
+    if not rp_id_hash_valid:
+        results["errors"].append("rp_id_hash_mismatch")
+
+    flags = auth_data_obj.flags
+    user_present = bool(flags & AuthenticatorData.FLAG.UP)
+    user_verified = bool(flags & AuthenticatorData.FLAG.UV)
+    attested_credential_included = bool(flags & AuthenticatorData.FLAG.AT)
+
+    uv_required = False
+    if isinstance(state, Mapping):
+        state_uv = state.get("user_verification")
+        if getattr(state_uv, "value", None) == "required" or state_uv == "required":
+            uv_required = True
+
+    if not uv_required and isinstance(public_key_options, Mapping):
+        uv_setting: Optional[str] = None
+        authenticator_selection = public_key_options.get("authenticatorSelection")
+        if isinstance(authenticator_selection, Mapping):
+            uv_setting = authenticator_selection.get("userVerification")
+        if not uv_setting:
+            uv_setting = public_key_options.get("userVerification")
+        if isinstance(uv_setting, str) and uv_setting.lower() == "required":
+            uv_required = True
+
+    uv_satisfied = user_verified or not uv_required
+
+    if not user_present:
+        results["errors"].append("user_presence_missing")
+    if uv_required and not uv_satisfied:
+        results["errors"].append("user_verification_required_not_satisfied")
+    if not attested_credential_included:
+        results["errors"].append("attested_credential_data_missing")
+
+    allowed_algorithms: List[int] = []
+    if isinstance(public_key_options, Mapping):
+        params = public_key_options.get("pubKeyCredParams")
+        if isinstance(params, list):
+            for param in params:
+                if isinstance(param, Mapping) and isinstance(param.get("alg"), int):
+                    allowed_algorithms.append(param["alg"])
+
+    credential_data = getattr(auth_data_obj, "credential_data", None)
+    credential_id_length: Optional[int] = None
+    credential_aaguid: Optional[str] = None
+    credential_aaguid_bytes = b""
+    algorithm: Optional[int] = None
+    cose_key_valid = False
+
+    if credential_data is not None:
+        try:
+            credential_id_length = len(credential_data.credential_id)
+        except Exception:
+            credential_id_length = None
+
+        try:
+            cose_map = dict(credential_data.public_key)
+        except Exception:
+            cose_map = {}
+
+        try:
+            if cose_map:
+                algorithm = cose_map.get(3)
+                CoseKey.parse(cose_map)
+            else:
+                algorithm = credential_data.public_key.get(3)
+                CoseKey.parse(dict(credential_data.public_key))
+            cose_key_valid = True
+        except Exception as exc:
+            if algorithm is None:
+                try:
+                    algorithm = credential_data.public_key.get(3)
+                except Exception:
+                    algorithm = None
+            results["errors"].append(f"cose_key_error: {exc}")
+
+        try:
+            credential_aaguid_bytes = bytes(credential_data.aaguid)
+            credential_aaguid = credential_aaguid_bytes.hex()
+        except Exception:
+            credential_aaguid_bytes = b""
+            credential_aaguid = None
+
+    algorithm_allowed = True
+    if allowed_algorithms:
+        if isinstance(algorithm, int):
+            algorithm_allowed = algorithm in allowed_algorithms
+        else:
+            algorithm_allowed = False
+
+    if allowed_algorithms and not algorithm_allowed:
+        results["errors"].append("algorithm_not_allowed")
+
+    results["authenticator_data"] = {
+        "user_present": user_present,
+        "user_verified": user_verified,
+        "user_verification_required": uv_required,
+        "user_verification_satisfied": uv_satisfied,
+        "attested_credential_data": attested_credential_included,
+        "counter": auth_data_obj.counter,
+        "credential_id_length": credential_id_length,
+        "credential_aaguid": credential_aaguid,
+        "algorithm": algorithm,
+        "algorithm_allowed": algorithm_allowed,
+        "cose_key_valid": cose_key_valid,
+    }
+
+    client_data_hash = client_data.hash
+    verification_data = bytes(auth_data_obj) + client_data_hash
+    results["hash_binding"] = {
+        "client_data_hash": _encode_base64url(client_data_hash),
+        "verification_data": _encode_base64url(verification_data),
+    }
+
+    signature_valid = False
+    attestation_result = None
+    try:
+        attestation_cls = Attestation.for_type(attestation_object.fmt)
+        attestation_instance = attestation_cls()
+        attestation_result = attestation_instance.verify(
+            attestation_object.att_stmt,
+            attestation_object.auth_data,
+            client_data_hash,
+        )
+        signature_valid = True
+    except UnsupportedType as exc:
+        results["errors"].append(f"unsupported_attestation: {exc}")
+    except (InvalidSignature, InvalidData) as exc:
+        results["errors"].append(f"attestation_invalid: {exc}")
+    except Exception as exc:
+        results["errors"].append(f"attestation_error: {exc}")
+
+    results["signature_valid"] = signature_valid
+
+    metadata_entry = None
+    now = datetime.now(timezone.utc)
+    if signature_valid and attestation_result is not None:
+        trust_path = attestation_result.trust_path or []
+        if trust_path:
+            certs_valid = True
+            for cert_der in trust_path:
+                try:
+                    cert = x509.load_der_x509_certificate(cert_der)
+                    not_before = cert.not_valid_before
+                    not_after = cert.not_valid_after
+                    if not_before.tzinfo is None:
+                        not_before = not_before.replace(tzinfo=timezone.utc)
+                    else:
+                        not_before = not_before.astimezone(timezone.utc)
+                    if not_after.tzinfo is None:
+                        not_after = not_after.replace(tzinfo=timezone.utc)
+                    else:
+                        not_after = not_after.astimezone(timezone.utc)
+                    if now < not_before or now > not_after:
+                        certs_valid = False
+                        results["errors"].append(
+                            f"certificate_out_of_validity: {cert.subject.rfc4514_string()}"
+                        )
+                except Exception as exc:
+                    certs_valid = False
+                    results["errors"].append(f"certificate_parse_error: {exc}")
+            if certs_valid:
+                verifier = _get_mds_verifier()
+                if verifier is not None:
+                    try:
+                        metadata_entry = verifier.find_entry(
+                            attestation_object,
+                            client_data_hash,
+                        )
+                        results["root_valid"] = metadata_entry is not None
+                        if metadata_entry is None:
+                            results["errors"].append("metadata_entry_not_found")
+                    except UntrustedAttestation as exc:
+                        results["errors"].append(f"untrusted_attestation: {exc}")
+                else:
+                    results["errors"].append("metadata_not_available")
+            else:
+                results["errors"].append("certificate_chain_invalid")
+        else:
+            results["errors"].append("trust_path_missing")
+    elif signature_valid is False:
+        results["errors"].append("attestation_signature_invalid")
+
+    metadata_description: Optional[str] = None
+    metadata_aaguid: Optional[str] = None
+    metadata_algorithm_supported: Optional[bool] = None
+    metadata_aaguid_bytes = b""
+
+    if metadata_entry is not None:
+        metadata_statement = getattr(metadata_entry, "metadata_statement", None)
+        if getattr(metadata_statement, "description", None):
+            metadata_description = metadata_statement.description
+        authenticator_info = getattr(
+            metadata_statement,
+            "authenticator_get_info",
+            None,
+        )
+        if (
+            isinstance(authenticator_info, Mapping)
+            and isinstance(algorithm, int)
+        ):
+            alg_list = authenticator_info.get("algorithms")
+            if isinstance(alg_list, (list, tuple)):
+                numeric_algs = [alg for alg in alg_list if isinstance(alg, int)]
+                if numeric_algs:
+                    metadata_algorithm_supported = algorithm in numeric_algs
+        entry_aaguid = getattr(metadata_entry, "aaguid", None)
+        if entry_aaguid is not None:
+            try:
+                metadata_aaguid = str(entry_aaguid)
+                metadata_aaguid_bytes = bytes(entry_aaguid)
+                results["aaguid_match"] = (
+                    metadata_aaguid_bytes == credential_aaguid_bytes
+                )
+            except Exception:
+                metadata_aaguid = None
+                results["aaguid_match"] = False
+
+    if metadata_entry is None and credential_aaguid_bytes:
+        results["aaguid_match"] = False
+
+    results["metadata"] = {
+        "available": metadata_entry is not None,
+        "description": metadata_description,
+        "aaguid": metadata_aaguid,
+        "algorithm_supported": metadata_algorithm_supported,
+    }
+
+    if metadata_entry is not None and not results["aaguid_match"]:
+        results["errors"].append("aaguid_mismatch")
+    if metadata_algorithm_supported is False:
+        results["errors"].append("algorithm_not_in_metadata")
+
+    return results
+
+
 @app.route("/")
 def index():
     return redirect("/index.html")
@@ -1264,28 +1342,6 @@ def register_complete():
         if parsed_extension_results
         else (response.get('clientExtensionResults', {}) if isinstance(response, dict) else {})
     )
-
-        stored_public_key = None
-        if isinstance(stored_original_request, Mapping):
-            stored_public_key = stored_original_request.get("publicKey")
-            if not isinstance(stored_public_key, Mapping):
-                stored_public_key = None
-
-        public_key_for_checks: Optional[Mapping[str, Any]] = None
-        if isinstance(stored_public_key, Mapping):
-            public_key_for_checks = stored_public_key
-        elif isinstance(public_key, Mapping):
-            public_key_for_checks = public_key
-
-        expected_origin = request.headers.get("Origin") or request.host_url.rstrip("/")
-        attestation_checks = perform_attestation_checks(
-            response if isinstance(response, Mapping) else {},
-            state if isinstance(state, Mapping) else None,
-            public_key_for_checks,
-            auth_data,
-            expected_origin,
-            rp.id,
-        )
 
     auth_data = server.register_complete(session["state"], response)
 
@@ -1950,7 +2006,6 @@ def advanced_register_complete():
     )
 
     try:
-        # Complete registration using stored state
         state = session.pop("advanced_state", None)
         stored_original_request = session.pop("advanced_original_request", None)
         if state is None:
@@ -1958,7 +2013,7 @@ def advanced_register_complete():
                 jsonify(
                     {
                         "error": "Registration state not found or has expired. "
-                        "Please restart the registration process."
+                        "Please restart the registration process.",
                     }
                 ),
                 400,
@@ -2126,13 +2181,18 @@ def advanced_register_complete():
             "excludeCredentialsUsed": bool(public_key.get("excludeCredentials")),
             "hintsUsed": public_key.get("hints", []),
             "actualResidentKey": bool(auth_data.flags & 0x04) if hasattr(auth_data, 'flags') else False,
-            "attestationSignatureValid": attestation_signature_valid,
-            "attestationRootValid": attestation_root_valid,
-            "attestationRpIdHashValid": attestation_rp_id_hash_valid,
-            "attestationAaguidMatch": attestation_aaguid_match,
-            "attestationChecks": attestation_checks_safe,
-            "attestationSummary": attestation_summary,
         }
+
+        debug_info.update(
+            {
+                "attestationSignatureValid": attestation_signature_valid,
+                "attestationRootValid": attestation_root_valid,
+                "attestationRpIdHashValid": attestation_rp_id_hash_valid,
+                "attestationAaguidMatch": attestation_aaguid_match,
+                "attestationChecks": attestation_checks_safe,
+                "attestationSummary": attestation_summary,
+            }
+        )
 
         extensions_requested = public_key.get("extensions", {})
         if not isinstance(extensions_requested, dict):
@@ -2256,7 +2316,6 @@ def advanced_register_complete():
             },
         }
 
-        rp_info["attestationChecks"] = attestation_checks_safe
         rp_info["attestationSummary"] = attestation_summary
 
         if authenticator_extensions_summary:
