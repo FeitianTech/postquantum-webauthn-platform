@@ -2,17 +2,217 @@ const MDS_HTML_PATH = 'mds.html';
 const MDS_JWS_PATH = 'fido-mds3.jws';
 const COLUMN_COUNT = 11;
 
+const CERTIFICATION_OPTIONS = [
+    'FIDO_CERTIFIED',
+    'FIDO_CERTIFIED_L1',
+    'FIDO_CERTIFIED_L2',
+    'NOT_FIDO_CERTIFIED',
+    'REVOKED',
+];
+
 const FILTER_CONFIG = [
     { key: 'name', inputId: 'mds-filter-name' },
-    { key: 'protocol', inputId: 'mds-filter-protocol', datalistId: 'mds-options-protocol' },
-    { key: 'certification', inputId: 'mds-filter-certification', datalistId: 'mds-options-certification' },
+    { key: 'protocol', inputId: 'mds-filter-protocol', optionsKey: 'protocol' },
+    {
+        key: 'certification',
+        inputId: 'mds-filter-certification',
+        optionsKey: 'certification',
+        staticOptions: CERTIFICATION_OPTIONS,
+    },
     { key: 'id', inputId: 'mds-filter-id' },
-    { key: 'userVerification', inputId: 'mds-filter-user-verification', datalistId: 'mds-options-user-verification' },
-    { key: 'attachment', inputId: 'mds-filter-attachment', datalistId: 'mds-options-attachment' },
-    { key: 'transports', inputId: 'mds-filter-transports', datalistId: 'mds-options-transports' },
-    { key: 'keyProtection', inputId: 'mds-filter-key-protection', datalistId: 'mds-options-key-protection' },
-    { key: 'algorithms', inputId: 'mds-filter-algorithms', datalistId: 'mds-options-algorithms' },
+    { key: 'userVerification', inputId: 'mds-filter-user-verification', optionsKey: 'userVerification' },
+    { key: 'attachment', inputId: 'mds-filter-attachment', optionsKey: 'attachment' },
+    { key: 'transports', inputId: 'mds-filter-transports', optionsKey: 'transports' },
+    { key: 'keyProtection', inputId: 'mds-filter-key-protection', optionsKey: 'keyProtection' },
+    { key: 'algorithms', inputId: 'mds-filter-algorithms', optionsKey: 'algorithms' },
 ];
+
+const FILTER_LOOKUP = FILTER_CONFIG.reduce((map, config) => {
+    map[config.key] = config;
+    return map;
+}, {});
+
+let activeDropdown = null;
+
+class FilterDropdown {
+    constructor(input, onSelect) {
+        this.input = input;
+        this.onSelect = onSelect;
+        this.options = [];
+        this.filtered = [];
+        this.activeIndex = -1;
+        this.list = null;
+        this.container = null;
+
+        const parent = input.parentElement;
+        if (parent) {
+            parent.classList.add('mds-filter-cell');
+        }
+
+        this.container = document.createElement('div');
+        this.container.className = 'mds-filter-dropdown';
+        this.container.hidden = true;
+
+        this.list = document.createElement('ul');
+        this.list.className = 'mds-filter-dropdown__list';
+        this.container.appendChild(this.list);
+
+        if (parent) {
+            parent.appendChild(this.container);
+        } else {
+            input.insertAdjacentElement('afterend', this.container);
+        }
+
+        this.handleDocumentClick = this.handleDocumentClick.bind(this);
+
+        input.addEventListener('focus', () => this.open());
+        input.addEventListener('click', () => this.open());
+        input.addEventListener('keydown', event => this.handleKeyDown(event));
+        input.addEventListener('input', () => this.filter(this.input.value));
+
+        this.container.addEventListener('mousedown', event => {
+            event.preventDefault();
+        });
+
+        this.container.addEventListener('click', event => {
+            const optionEl = event.target.closest('.mds-filter-dropdown__option');
+            if (optionEl) {
+                const value = optionEl.getAttribute('data-value') || optionEl.textContent || '';
+                this.select(value);
+            }
+        });
+
+        document.addEventListener('mousedown', this.handleDocumentClick);
+    }
+
+    setOptions(options) {
+        const unique = Array.from(new Set(options.filter(Boolean)));
+        unique.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+        this.options = unique;
+        this.filter(this.input.value);
+    }
+
+    open() {
+        if (!this.options.length) {
+            return;
+        }
+        if (activeDropdown && activeDropdown !== this) {
+            activeDropdown.close();
+        }
+        activeDropdown = this;
+        this.container.hidden = false;
+        this.container.classList.add('is-open');
+        this.activeIndex = -1;
+        this.filter(this.input.value);
+    }
+
+    close() {
+        if (activeDropdown === this) {
+            activeDropdown = null;
+        }
+        this.container.hidden = true;
+        this.container.classList.remove('is-open');
+        this.activeIndex = -1;
+    }
+
+    filter(query) {
+        const value = (query || '').trim().toLowerCase();
+        if (!value) {
+            this.filtered = [...this.options];
+        } else {
+            this.filtered = this.options.filter(option => option.toLowerCase().includes(value));
+        }
+        this.render();
+    }
+
+    render() {
+        if (!this.list) {
+            return;
+        }
+        this.list.innerHTML = '';
+
+        const items = this.filtered.length ? this.filtered : [];
+        if (!items.length) {
+            if (!this.options.length) {
+                return;
+            }
+            const empty = document.createElement('li');
+            empty.className = 'mds-filter-dropdown__empty';
+            empty.textContent = 'No matches';
+            this.list.appendChild(empty);
+            return;
+        }
+
+        items.forEach((option, index) => {
+            const item = document.createElement('li');
+            item.className = 'mds-filter-dropdown__option';
+            if (index === this.activeIndex) {
+                item.classList.add('is-active');
+            }
+            item.textContent = option;
+            item.setAttribute('data-value', option);
+            this.list.appendChild(item);
+        });
+    }
+
+    handleKeyDown(event) {
+        if (!this.options.length) {
+            return;
+        }
+        if (event.key === 'Escape') {
+            this.close();
+            return;
+        }
+        if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+            if (!this.container.classList.contains('is-open')) {
+                this.open();
+            }
+            const delta = event.key === 'ArrowDown' ? 1 : -1;
+            this.move(delta);
+            event.preventDefault();
+            return;
+        }
+        if (event.key === 'Enter' && this.container.classList.contains('is-open') && this.activeIndex >= 0) {
+            const items = this.filtered.length ? this.filtered : this.options;
+            const value = items[this.activeIndex];
+            if (value) {
+                this.select(value);
+                event.preventDefault();
+            }
+        }
+    }
+
+    move(delta) {
+        const items = this.filtered.length ? this.filtered : this.options;
+        if (!items.length) {
+            this.activeIndex = -1;
+            this.render();
+            return;
+        }
+        this.activeIndex = (this.activeIndex + delta + items.length) % items.length;
+        this.render();
+        const activeEl = this.list?.querySelector('.mds-filter-dropdown__option.is-active');
+        if (activeEl) {
+            activeEl.scrollIntoView({ block: 'nearest' });
+        }
+    }
+
+    select(value) {
+        this.input.value = value;
+        this.onSelect(value);
+        this.close();
+    }
+
+    handleDocumentClick(event) {
+        if (!this.container.contains(event.target) && event.target !== this.input) {
+            this.close();
+        }
+    }
+}
+
+function createFilterDropdown(input, onSelect) {
+    return new FilterDropdown(input, onSelect);
+}
 
 let mdsState = null;
 let mdsData = [];
@@ -57,19 +257,12 @@ document.addEventListener('tab:changed', event => {
 function initializeState(root) {
     const filters = {};
     const filterInputs = {};
-    const datalists = {};
 
     FILTER_CONFIG.forEach(config => {
         const input = root.querySelector(`#${config.inputId}`);
         if (input) {
             filters[config.key] = '';
             filterInputs[config.key] = input;
-        }
-        if (config.datalistId) {
-            const datalist = root.querySelector(`#${config.datalistId}`);
-            if (datalist) {
-                datalists[config.key] = datalist;
-            }
         }
     });
 
@@ -84,6 +277,8 @@ function initializeState(root) {
         filters[key] = value;
         applyFilters();
     };
+
+    const dropdowns = {};
 
     Object.entries(filterInputs).forEach(([key, input]) => {
         input.addEventListener('keydown', event => {
@@ -105,13 +300,22 @@ function initializeState(root) {
                 updateFilter(key, '');
             }
         });
+
+        const config = FILTER_LOOKUP[key];
+        if (config?.optionsKey) {
+            const dropdown = createFilterDropdown(input, value => updateFilter(key, value));
+            dropdowns[key] = dropdown;
+            if (Array.isArray(config.staticOptions)) {
+                dropdown.setOptions(config.staticOptions);
+            }
+        }
     });
 
     return {
         root,
         filters,
         filterInputs,
-        datalists,
+        dropdowns,
         tableBody: root.querySelector('#mds-table-body'),
         countEl: root.querySelector('#mds-entry-count'),
         totalEl: root.querySelector('#mds-total-count'),
@@ -198,8 +402,15 @@ function matchesFilters(entry, filters) {
         if (!value) {
             return true;
         }
+        const query = value.toLowerCase();
+        if (key === 'certification') {
+            const haystacks = [entry.certification, entry.certificationStatus]
+                .map(text => (text || '').toLowerCase())
+                .filter(Boolean);
+            return haystacks.some(text => text.includes(query));
+        }
         const haystack = (entry[key] || '').toLowerCase();
-        return haystack.includes(value.toLowerCase());
+        return haystack.includes(query);
     });
 }
 
@@ -236,7 +447,7 @@ function renderTable(entries) {
         row.appendChild(createTagCell(entry.attachmentList));
         row.appendChild(createTagCell(entry.transportsList));
         row.appendChild(createTagCell(entry.keyProtectionList));
-        row.appendChild(createTagCell(entry.algorithmsList, true));
+        row.appendChild(createTagCell(entry.algorithmsList));
         row.appendChild(createTextCell(entry.dateUpdated || '—', entry.dateTooltip));
 
         fragment.appendChild(row);
@@ -309,7 +520,7 @@ function updateCount(filtered, total) {
         mdsState.countEl.textContent = filtered.toLocaleString();
     }
     if (mdsState?.totalEl) {
-        mdsState.totalEl.textContent = total ? `of ${total.toLocaleString()} authenticators` : '';
+        mdsState.totalEl.textContent = total ? `of ${total.toLocaleString()} total` : '';
     }
 }
 
@@ -327,7 +538,7 @@ function setStatus(message, variant) {
 function collectOptionSets(data) {
     const sets = {
         protocol: new Set(),
-        certification: new Set(),
+        certification: new Set(CERTIFICATION_OPTIONS),
         userVerification: new Set(),
         attachment: new Set(),
         transports: new Set(),
@@ -339,8 +550,8 @@ function collectOptionSets(data) {
         if (entry.protocol) {
             sets.protocol.add(entry.protocol);
         }
-        if (entry.certification) {
-            sets.certification.add(entry.certification);
+        if (entry.certificationStatus) {
+            sets.certification.add(entry.certificationStatus);
         }
         entry.userVerificationList.forEach(value => sets.userVerification.add(value));
         entry.attachmentList.forEach(value => sets.attachment.add(value));
@@ -358,19 +569,16 @@ function updateOptionLists(optionSets) {
     }
 
     Object.entries(optionSets).forEach(([key, values]) => {
-        const datalist = mdsState.datalists[key];
-        if (!datalist) {
+        const dropdown = mdsState.dropdowns[key];
+        if (!dropdown) {
             return;
         }
-        datalist.innerHTML = '';
-        Array.from(values)
-            .filter(Boolean)
-            .sort((a, b) => a.localeCompare(b))
-            .forEach(value => {
-                const option = document.createElement('option');
-                option.value = value;
-                datalist.appendChild(option);
-            });
+        const config = FILTER_LOOKUP[key];
+        let options = Array.from(values).filter(Boolean);
+        if (config?.staticOptions) {
+            options = config.staticOptions.slice();
+        }
+        dropdown.setOptions(options);
     });
 }
 
@@ -378,14 +586,14 @@ function transformEntry(entry) {
     const metadata = entry?.metadataStatement ?? {};
     const name = resolveName(metadata, entry);
     const protocol = formatProtocol(metadata.protocolFamily || metadata.protocolType);
-    const certification = formatCertification(entry?.statusReports || []);
+    const { display: certification, status: certificationStatus } = formatCertification(entry?.statusReports || []);
     const identifier = resolveIdentifier(entry, metadata);
     const userVerificationList = extractUserVerification(metadata.userVerificationDetails);
     const attachmentList = extractList(metadata.attachmentHint).map(formatEnum);
     const transportsList = extractTransports(metadata);
     const keyProtectionList = extractList(metadata.keyProtection).map(formatEnum);
     const algorithmsList = extractList(metadata.authenticationAlgorithms).map(formatEnum);
-    const icon = metadata.icon ? `data:image/png;base64,${metadata.icon}` : '';
+    const icon = normaliseIcon(metadata.icon, metadata.iconType);
 
     const latestStatusDate = latestEffectiveDate(entry?.statusReports || []);
     const rawDate = entry?.timeOfLastStatusChange || latestStatusDate;
@@ -395,6 +603,7 @@ function transformEntry(entry) {
         name,
         protocol,
         certification,
+        certificationStatus,
         id: identifier,
         icon,
         userVerification: userVerificationList.join(', '),
@@ -410,6 +619,24 @@ function transformEntry(entry) {
         dateUpdated,
         dateTooltip: rawDate || undefined,
     };
+}
+
+function normaliseIcon(icon, iconType) {
+    if (!icon) {
+        return '';
+    }
+    const value = String(icon).trim();
+    if (!value) {
+        return '';
+    }
+    if (/^data:/i.test(value)) {
+        return value;
+    }
+    if (/^https?:\/\//i.test(value)) {
+        return value;
+    }
+    const type = typeof iconType === 'string' && iconType.trim() ? iconType.trim() : 'image/png';
+    return `data:${type};base64,${value}`;
 }
 
 function resolveName(metadata, entry) {
@@ -526,7 +753,7 @@ function formatEnum(value) {
 
 function formatCertification(statusReports) {
     if (!Array.isArray(statusReports) || !statusReports.length) {
-        return '';
+        return { display: '', status: '' };
     }
 
     const sorted = [...statusReports].sort((a, b) => {
@@ -537,17 +764,28 @@ function formatCertification(statusReports) {
 
     const latest = sorted[0];
     if (!latest) {
-        return '';
+        return { display: '', status: '' };
     }
 
-    const parts = [formatEnum(latest.status)];
-    if (latest.certificationDescriptor) {
-        parts.push(latest.certificationDescriptor);
+    const statusRaw = typeof latest.status === 'string' ? latest.status.toUpperCase() : '';
+    const descriptor = typeof latest.certificationDescriptor === 'string' ? latest.certificationDescriptor.trim() : '';
+    const certificateNumber = typeof latest.certificateNumber === 'string' ? latest.certificateNumber.trim() : '';
+
+    const parts = [];
+    if (statusRaw) {
+        parts.push(statusRaw);
     }
-    if (latest.certificateNumber) {
-        parts.push(`(${latest.certificateNumber})`);
+    if (descriptor) {
+        parts.push(descriptor);
     }
-    return parts.filter(Boolean).join(' ');
+    if (certificateNumber) {
+        parts.push(`(${certificateNumber})`);
+    }
+
+    return {
+        display: parts.filter(Boolean).join(' • '),
+        status: statusRaw,
+    };
 }
 
 function latestEffectiveDate(statusReports) {
