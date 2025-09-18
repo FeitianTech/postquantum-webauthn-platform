@@ -1,4 +1,4 @@
-# WebAuthn FIDO2 Test Application (With PQC Support)
+# WebAuthn FIDO2 Test Application With PQC Support
 
 A test server and web UI for WebAuthn/FIDO2 registration and authentication. It displays the selected algorithm, authenticator flags (UP/UV/AT/ED/BE/BS), sign counter, and extension results (credProps, PRF, largeBlob) for validation.
 
@@ -148,49 +148,37 @@ poetry run pytest
 
 ### 1. Activate Your Python Virtual Environment
 
-If not already activated:
+**Windows (PowerShell):**
 ```powershell
 .\.venv\Scripts\Activate
+```
+
+**macOS/Linux (bash/zsh):**
+```bash
+source .venv/bin/activate
 ```
 
 ---
 
 ### 2. Install PQC Cryptography Libraries
 
-To enable the ML-DSA (post-quantum) algorithms end-to-end you only need to
-install the optional ``pqc`` dependency set. The extra pulls in the Open Quantum
-Safe Python bindings (``oqs``) that the FIDO2 server uses to verify ML-DSA
-signatures as well as the auxiliary ``pqcrypto`` wheel.
-
-*Pip / virtualenv*
+**Using pip / virtualenv**
 
 ```bash
 pip install ".[pqc]"
 python -c "import oqs"
 ```
 
-*Poetry*
+**Using Poetry**
 
 ```bash
 poetry install --with pqc
 poetry run python -c "import oqs"
 ```
 
-Once installed, the browser UI exposes dedicated ``ML-DSA-44`` and ``ML-DSA-65``
-checkboxes that seed ``pubKeyCredParams`` in the JSON editor. The advanced
-registration workflow forwards those algorithms untouched to the Flask backend,
-which in turn advertises them to temporary ``Fido2Server`` instances and uses
-``python-fido2``’s ML-DSA verification paths (powered by ``oqs``) when the
-authenticator selects them.
-
 ---
 
 ## mkcert Setup for Local HTTPS (Windows & macOS)
-
-This guide explains how to install **mkcert** and generate SSL/TLS certificates for local development in a Python project.  
-The certificates created by mkcert are trusted by your system, so you can run your project locally over HTTPS without browser warnings.
-
----
 
 ### 1. Install mkcert
 
