@@ -19,6 +19,69 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
         const utf8Decoder = typeof TextDecoder !== 'undefined' ? new TextDecoder('utf-8') : null;
         const JSON_EDITOR_INDENT_UNIT = '  ';
 
+        const COSE_ALGORITHM_LABELS = {
+            '-49': 'ML-DSA-65 (PQC) (-49)',
+            '-48': 'ML-DSA-44 (PQC) (-48)',
+            '-8': 'EdDSA (-8)',
+            '-7': 'ES256 (-7)',
+            '-37': 'PS256 (-37)',
+            '-35': 'ES384 (-35)',
+            '-36': 'ES512 (-36)',
+            '-47': 'ES256K (-47)',
+            '-257': 'RS256 (-257)',
+            '-258': 'RS384 (-258)',
+            '-259': 'RS512 (-259)',
+            '-65535': 'RS1 (-65535)'
+        };
+
+        const COSE_KEY_TYPE_LABELS = {
+            '1': 'OKP (1)',
+            '2': 'EC2 (2)',
+            '3': 'RSA (3)',
+            '4': 'Symmetric (4)',
+            '7': 'ML-DSA (7)'
+        };
+
+        function describeCoseAlgorithm(alg) {
+            if (alg === null || alg === undefined || (typeof alg === 'number' && Number.isNaN(alg))) {
+                return 'Unknown';
+            }
+            const key = String(alg);
+            return COSE_ALGORITHM_LABELS[key] || `Algorithm (${alg})`;
+        }
+
+        function describeCoseKeyType(keyType) {
+            if (keyType === null || keyType === undefined || (typeof keyType === 'number' && Number.isNaN(keyType))) {
+                return 'Unknown';
+            }
+            const key = String(keyType);
+            return COSE_KEY_TYPE_LABELS[key] || `${keyType}`;
+        }
+
+        function describeMldsaParameterSet(alg) {
+            if (alg === -48 || alg === '-48') {
+                return 'ML-DSA-44';
+            }
+            if (alg === -49 || alg === '-49') {
+                return 'ML-DSA-65';
+            }
+            return '';
+        }
+
+        function getCoseMapValue(coseMap, key) {
+            if (!coseMap || typeof coseMap !== 'object') {
+                return undefined;
+            }
+            if (Object.prototype.hasOwnProperty.call(coseMap, key)) {
+                return coseMap[key];
+            }
+            const stringKey = String(key);
+            if (Object.prototype.hasOwnProperty.call(coseMap, stringKey)) {
+                return coseMap[stringKey];
+            }
+            return undefined;
+        }
+
         // Info popup functionality
         let hideTimeout;
         
@@ -1533,7 +1596,7 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                     const credName = cred.userName || cred.email || `Credential ${index + 1}`;
                     const option = document.createElement('option');
                     option.value = credentialIdHex;
-                    option.textContent = `${credName} (${cred.algorithm || 'Unknown'})`;
+                    option.textContent = `${credName} (${describeCoseAlgorithm(cred.algorithm)})`;
                     allowCredentialsSelect.appendChild(option);
                 });
             }
@@ -1786,24 +1849,46 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             }
             
             // Public Key section
-            if (cred.publicKeyAlgorithm || cred.algorithm) {
-                const algo = cred.publicKeyAlgorithm || cred.algorithm;
-                let algorithmName = 'Unknown';
-                if (algo === -7) algorithmName = 'ES256 (-7)';
-                else if (algo === -257) algorithmName = 'RS256 (-257)';
-                else if (algo === -37) algorithmName = 'PS256 (-37)';
-                else if (algo === -8) algorithmName = 'EdDSA (-8)';
-                else if (algo === -48) algorithmName = 'ML-DSA-44 (PQC) (-48)';
-                else if (algo === -49) algorithmName = 'ML-DSA-65 (PQC) (-49)';
-                else if (typeof algo === 'number') algorithmName = `Algorithm (${algo})`;
-                else algorithmName = algo;
+            if (cred.publicKeyAlgorithm !== undefined || cred.algorithm !== undefined) {
+                const algo = cred.publicKeyAlgorithm ?? cred.algorithm;
+                const algorithmName = describeCoseAlgorithm(algo);
+                const coseMap = cred.publicKeyCose || {};
+                const coseKeyTypeValue = cred.publicKeyType ?? getCoseMapValue(coseMap, 1);
+                const coseKeyTypeLine = coseKeyTypeValue !== undefined && coseKeyTypeValue !== null
+                    ? `<div><strong>COSE key type:</strong> ${describeCoseKeyType(coseKeyTypeValue)}</div>`
+                    : '';
+                const parameterSet = describeMldsaParameterSet(algo);
+                const rawPublicKeyEncoded = cred.publicKeyBytes ?? getCoseMapValue(coseMap, -1);
+
+                let pqcKeyBlock = '';
+                if (parameterSet && typeof rawPublicKeyEncoded === 'string' && rawPublicKeyEncoded.trim() !== '') {
+                    const rawKeyB64 = rawPublicKeyEncoded;
+                    const rawKeyB64u = base64ToBase64Url(rawKeyB64);
+                    const rawKeyHex = base64ToHex(rawKeyB64);
+                    pqcKeyBlock = `
+                        <div style="margin-top: 0.75rem; font-size: 0.9rem;">
+                            <div><strong>Raw public key (base64):</strong></div>
+                            <div style="font-family: 'Courier New', monospace; background: rgba(0, 114, 206, 0.08); padding: 0.35rem 0.5rem; border-radius: 12px; margin-bottom: 0.35rem;">${rawKeyB64}</div>
+                            <div><strong>Raw public key (base64url):</strong></div>
+                            <div style="font-family: 'Courier New', monospace; background: rgba(0, 114, 206, 0.08); padding: 0.35rem 0.5rem; border-radius: 12px; margin-bottom: 0.35rem;">${rawKeyB64u}</div>
+                            <div><strong>Raw public key (hex):</strong></div>
+                            <div style="font-family: 'Courier New', monospace; background: rgba(0, 114, 206, 0.08); padding: 0.35rem 0.5rem; border-radius: 12px;">${rawKeyHex}</div>
+                        </div>`;
+                }
+
+                const parameterSetLine = parameterSet
+                    ? `<div><strong>ML-DSA parameter set:</strong> ${parameterSet}</div>`
+                    : '';
 
                 detailsHtml += `
                 <div style="margin-bottom: 1.5rem;">
                     <h4 style="color: #0072CE; margin-bottom: 0.5rem;">Public Key</h4>
                     <div style="font-size: 0.9rem;">
                         <div><strong>Algorithm:</strong> ${algorithmName}</div>
+                        ${coseKeyTypeLine}
+                        ${parameterSetLine}
                     </div>
+                    ${pqcKeyBlock}
                 </div>`;
             }
 
@@ -2440,6 +2525,8 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             // Update pubKeyCredParams (algorithms)
             if (publicKey.pubKeyCredParams && Array.isArray(publicKey.pubKeyCredParams)) {
                 // First clear all algorithm checkboxes
+                if (document.getElementById('param-mldsa44')) document.getElementById('param-mldsa44').checked = false;
+                if (document.getElementById('param-mldsa65')) document.getElementById('param-mldsa65').checked = false;
                 document.getElementById('param-eddsa').checked = false;
                 document.getElementById('param-es256').checked = false;
                 document.getElementById('param-rs256').checked = false;
@@ -2448,11 +2535,22 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                 document.getElementById('param-rs384').checked = false;
                 document.getElementById('param-rs512').checked = false;
                 document.getElementById('param-rs1').checked = false;
-                
+
                 // Then set the ones specified in the JSON
                 publicKey.pubKeyCredParams.forEach(param => {
-                    if (param.alg) {
-                        switch(param.alg) {
+                    if (param && Object.prototype.hasOwnProperty.call(param, 'alg')) {
+                        const rawAlg = param.alg;
+                        const algValue = typeof rawAlg === 'string' ? parseInt(rawAlg, 10) : rawAlg;
+                        if (Number.isNaN(algValue)) {
+                            return;
+                        }
+                        switch(algValue) {
+                            case -48:
+                                if (document.getElementById('param-mldsa44')) document.getElementById('param-mldsa44').checked = true;
+                                break;
+                            case -49:
+                                if (document.getElementById('param-mldsa65')) document.getElementById('param-mldsa65').checked = true;
+                                break;
                             case -8:
                                 document.getElementById('param-eddsa').checked = true;
                                 break;
@@ -2757,6 +2855,12 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             };
 
             // Add selected algorithms
+            if (document.getElementById('param-mldsa44')?.checked) {
+                publicKey.pubKeyCredParams.push({type: "public-key", alg: -48}); // ML-DSA-44
+            }
+            if (document.getElementById('param-mldsa65')?.checked) {
+                publicKey.pubKeyCredParams.push({type: "public-key", alg: -49}); // ML-DSA-65
+            }
             if (document.getElementById('param-eddsa')?.checked) {
                 publicKey.pubKeyCredParams.push({type: "public-key", alg: -8}); // EdDSA
             }
@@ -3211,12 +3315,13 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
         }
 
         function generateCredentialDetails(cred) {
+            const algorithmDisplay = describeCoseAlgorithm(cred.algorithm);
             if (cred.type === 'simple') {
                 return `
                     <strong>Type:</strong> Simple Authentication<br>
                     <strong>User:</strong> ${cred.email || cred.username}<br>
                     <strong>Credential ID:</strong> ${cred.credentialId}<br>
-                    <strong>Algorithm:</strong> ${cred.algorithm}
+                    <strong>Algorithm:</strong> ${algorithmDisplay}
                 `;
             } else {
                 return `
@@ -3225,7 +3330,7 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                     <strong>User Name:</strong> ${cred.userName}<br>
                     <strong>Display Name:</strong> ${cred.displayName || 'N/A'}<br>
                     <strong>Credential ID:</strong> ${cred.credentialId}<br>
-                    <strong>Algorithm:</strong> ${cred.algorithm}
+                    <strong>Algorithm:</strong> ${algorithmDisplay}
                 `;
             }
         }
@@ -3522,6 +3627,8 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
             };
             
             // Collect selected algorithms
+            if (document.getElementById('param-mldsa44')?.checked) options.pubKeyCredParams.push('ML-DSA-44');
+            if (document.getElementById('param-mldsa65')?.checked) options.pubKeyCredParams.push('ML-DSA-65');
             if (document.getElementById('param-eddsa')?.checked) options.pubKeyCredParams.push('EdDSA');
             if (document.getElementById('param-es256')?.checked) options.pubKeyCredParams.push('ES256');
             if (document.getElementById('param-rs256')?.checked) options.pubKeyCredParams.push('RS256');

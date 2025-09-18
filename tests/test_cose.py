@@ -29,10 +29,18 @@
 from __future__ import absolute_import, unicode_literals
 
 from fido2 import cbor
-from fido2.cose import CoseKey, ES256, RS256, EdDSA, UnsupportedKey
+from fido2.cose import CoseKey, ES256, RS256, EdDSA, MLDSA44, MLDSA65, UnsupportedKey
 from binascii import a2b_hex
 
 import unittest
+
+
+try:  # pragma: no cover - optional dependency for PQC tests
+    import oqs  # type: ignore
+except ImportError:  # pragma: no cover - skip PQC tests when unavailable
+    oqs = None  # type: ignore
+
+OQS_AVAILABLE = oqs is not None
 
 
 _ES256_KEY = a2b_hex(
@@ -120,6 +128,32 @@ class TestCoseKey(unittest.TestCase):
                 b"e8c927ef1a57c738ff4ba8d6f90e06d837a5219eee47991f96b126b0685d512520c9c2eedebe4b88ff2de2b19cb5f8686efc7c4261e9ed1cb3ac5de50869be0a"  # noqa E501
             ),
         )
+
+    @unittest.skipUnless(OQS_AVAILABLE, "oqs is required for ML-DSA-44 test")
+    def test_MLDSA44_parse_verify(self):
+        with oqs.Signature("ML-DSA-44") as signer:
+            public_key = signer.generate_keypair()
+            message = b"python-fido2 ML-DSA-44"
+            signature = signer.sign(message)
+
+        cose_map = {1: 7, 3: -48, -1: public_key}
+        key = CoseKey.parse(cose_map)
+        self.assertIsInstance(key, MLDSA44)
+        self.assertEqual(key[-1], public_key)
+        key.verify(message, signature)
+
+    @unittest.skipUnless(OQS_AVAILABLE, "oqs is required for ML-DSA-65 test")
+    def test_MLDSA65_parse_verify(self):
+        with oqs.Signature("ML-DSA-65") as signer:
+            public_key = signer.generate_keypair()
+            message = b"python-fido2 ML-DSA-65"
+            signature = signer.sign(message)
+
+        cose_map = {1: 7, 3: -49, -1: public_key}
+        key = CoseKey.parse(cose_map)
+        self.assertIsInstance(key, MLDSA65)
+        self.assertEqual(key[-1], public_key)
+        key.verify(message, signature)
 
     def test_unsupported_key(self):
         key = CoseKey.parse({1: 4711, 3: 4712, -1: b"123", -2: b"456"})

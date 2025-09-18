@@ -292,6 +292,18 @@
                                         </div>
                                         <div class="checkbox-group">
                                             <div class="checkbox-item">
+                                                <label class="checkbox-label" for="param-mldsa44">
+                                                    <input type="checkbox" id="param-mldsa44" checked>
+                                                    <span>ML-DSA-44 (PQC)</span>
+                                                </label>
+                                            </div>
+                                            <div class="checkbox-item">
+                                                <label class="checkbox-label" for="param-mldsa65">
+                                                    <input type="checkbox" id="param-mldsa65" checked>
+                                                    <span>ML-DSA-65 (PQC)</span>
+                                                </label>
+                                            </div>
+                                            <div class="checkbox-item">
                                                 <label class="checkbox-label" for="param-eddsa">
                                                     <input type="checkbox" id="param-eddsa" checked>
                                                     <span>EdDSA</span>
@@ -859,6 +871,14 @@
                             <div class="json-editor-buttons" style="margin-top: 0.5rem;">
                                 <button class="btn" onclick="saveJsonEditor()" title="Save JSON changes to settings">Save</button>
                                 <button class="btn btn-secondary" onclick="resetJsonEditor()" title="Reset JSON to match current settings">Reset</button>
+                            </div>
+                            <div class="json-editor-help" aria-live="polite">
+                                <p><strong>Tip:</strong> Include ML-DSA alongside classical algorithms by listing them first in <code>pubKeyCredParams</code>:</p>
+<pre><code>"pubKeyCredParams": [
+  {"type": "public-key", "alg": -48},
+  {"type": "public-key", "alg": -49},
+  {"type": "public-key", "alg": -7}
+]</code></pre>
                             </div>
                         </div>
 

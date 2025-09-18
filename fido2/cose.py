@@ -31,8 +31,25 @@ from .utils import bytes2int, int2bytes
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec, rsa, padding, ed25519, types
-from typing import Sequence, Type, Mapping, Any, TypeVar
-# import oqs
+from typing import Sequence, Type, Mapping, Any, TypeVar, Optional
+
+try:  # pragma: no cover - exercised indirectly in tests
+    import oqs  # type: ignore
+except ImportError as _oqs_error:  # pragma: no cover - handled in verification
+    oqs = None  # type: ignore
+    _oqs_import_error: Optional[ImportError] = _oqs_error
+else:  # pragma: no cover - module imported successfully
+    _oqs_import_error = None
+
+
+def _require_oqs():  # pragma: no cover - exercised in tests when oqs is missing
+    if oqs is not None:  # type: ignore[name-defined]
+        return oqs  # type: ignore[return-value]
+    message = (
+        "ML-DSA verification requires the 'oqs' package. Install the "
+        "python-fido2-webauthn-test[pqc] extra to enable post-quantum algorithms."
+    )
+    raise RuntimeError(message) from _oqs_import_error
 
 class CoseKey(dict):
     """A COSE formatted public key.
@@ -124,8 +141,30 @@ class MLDSA65(CoseKey):
     def verify(self, message, signature):
         if self[1] != 7:
             raise ValueError("Unsupported ML-DSA-65 Param")
-        verifier=oqs.Signature('ML-DSA-65')
-        assert verifier.verify(message, signature, self[-1])
+        oqs_module = _require_oqs()
+        public_key = self.get(-1)
+        if public_key is None:
+            raise ValueError("Missing ML-DSA-65 public key")
+        message_bytes = (
+            message
+            if isinstance(message, (bytes, bytearray, memoryview))
+            else bytes(message)
+        )
+        signature_bytes = (
+            signature
+            if isinstance(signature, (bytes, bytearray, memoryview))
+            else bytes(signature)
+        )
+        public_key_bytes = (
+            public_key
+            if isinstance(public_key, (bytes, bytearray, memoryview))
+            else bytes(public_key)
+        )
+        with oqs_module.Signature("ML-DSA-65") as verifier:
+            if not verifier.verify(
+                bytes(message_bytes), bytes(signature_bytes), bytes(public_key_bytes)
+            ):
+                raise ValueError("Invalid ML-DSA-65 signature")
 
     @classmethod
     def from_cryptography_key(cls, public_key):        
@@ -144,8 +183,30 @@ class MLDSA44(CoseKey):
     def verify(self, message, signature):
         if self[1] != 7:
             raise ValueError("Unsupported ML-DSA-44 Param")
-        verifier=oqs.Signature('ML-DSA-44')
-        assert verifier.verify(message, signature, self[-1])
+        oqs_module = _require_oqs()
+        public_key = self.get(-1)
+        if public_key is None:
+            raise ValueError("Missing ML-DSA-44 public key")
+        message_bytes = (
+            message
+            if isinstance(message, (bytes, bytearray, memoryview))
+            else bytes(message)
+        )
+        signature_bytes = (
+            signature
+            if isinstance(signature, (bytes, bytearray, memoryview))
+            else bytes(signature)
+        )
+        public_key_bytes = (
+            public_key
+            if isinstance(public_key, (bytes, bytearray, memoryview))
+            else bytes(public_key)
+        )
+        with oqs_module.Signature("ML-DSA-44") as verifier:
+            if not verifier.verify(
+                bytes(message_bytes), bytes(signature_bytes), bytes(public_key_bytes)
+            ):
+                raise ValueError("Invalid ML-DSA-44 signature")
 
     @classmethod
     def from_cryptography_key(cls, public_key):        

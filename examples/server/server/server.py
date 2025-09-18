@@ -642,7 +642,12 @@ def register_complete():
             'residentKeyRequired': False  # Simple auth defaults
         }
     }
-    
+
+    add_public_key_material(
+        credential_info,
+        getattr(auth_data.credential_data, 'public_key', {})
+    )
+
     credentials.append(credential_info)
     # Persist the updated credentials list so authenticate can find it.
     savekey(uname, credentials)
@@ -746,6 +751,25 @@ def convert_bytes_for_json(obj):
     else:
         return obj
 
+
+def add_public_key_material(target: Dict[str, Any], public_key: Any) -> None:
+    """Populate JSON-friendly COSE public key details if available."""
+    if not isinstance(public_key, dict):
+        return
+
+    cose_map = dict(public_key)
+    target['publicKeyCose'] = convert_bytes_for_json(cose_map)
+
+    raw_key = cose_map.get(-1)
+    if isinstance(raw_key, (bytes, bytearray, memoryview)):
+        target['publicKeyBytes'] = convert_bytes_for_json(raw_key)
+
+    if 'publicKeyType' not in target:
+        target['publicKeyType'] = cose_map.get(1)
+
+    if 'publicKeyAlgorithm' not in target:
+        target['publicKeyAlgorithm'] = cose_map.get(3)
+
 @app.route("/api/credentials", methods=["GET"])
 def list_credentials():
     """List all saved credentials from PKL files with comprehensive details"""
@@ -803,6 +827,10 @@ def list_credentials():
                                 certificate_details = cred.get('attestation_certificate')
                                 if certificate_details is not None:
                                     credential_info['attestationCertificate'] = certificate_details
+
+                                add_public_key_material(credential_info, cred_data.get('public_key', {}))
+                                if credential_info.get('publicKeyAlgorithm') is not None:
+                                    credential_info['algorithm'] = credential_info['publicKeyAlgorithm']
                             else:
                                 # New format with real FIDO2 objects
                                 cred_data = cred['credential_data']
@@ -862,6 +890,10 @@ def list_credentials():
                                 certificate_details = cred.get('attestation_certificate')
                                 if certificate_details is not None:
                                     credential_info['attestationCertificate'] = certificate_details
+
+                                add_public_key_material(credential_info, getattr(cred_data, 'public_key', {}))
+                                if credential_info.get('publicKeyAlgorithm') is not None:
+                                    credential_info['algorithm'] = credential_info['publicKeyAlgorithm']
                         else:
                             # Old format (just AttestedCredentialData)
                             credential_info = {
@@ -895,7 +927,11 @@ def list_credentials():
                                 # Properties section - empty for old format
                                 'properties': {},
                             }
-                            
+
+                            add_public_key_material(credential_info, getattr(cred, 'public_key', {}))
+                            if credential_info.get('publicKeyAlgorithm') is not None:
+                                credential_info['algorithm'] = credential_info['publicKeyAlgorithm']
+
                         credentials.append(credential_info)
                     except Exception as e:
                         continue
@@ -1026,6 +1062,8 @@ def advanced_register_begin():
     else:
         # Default algorithms
         temp_server.allowed_algorithms = [
+            PublicKeyCredentialParameters(type=PublicKeyCredentialType.PUBLIC_KEY, alg=-48),  # ML-DSA-44
+            PublicKeyCredentialParameters(type=PublicKeyCredentialType.PUBLIC_KEY, alg=-49),  # ML-DSA-65
             PublicKeyCredentialParameters(type=PublicKeyCredentialType.PUBLIC_KEY, alg=-7),  # ES256
             PublicKeyCredentialParameters(type=PublicKeyCredentialType.PUBLIC_KEY, alg=-257),  # RS256
         ]
@@ -1310,6 +1348,11 @@ def advanced_register_complete():
                 'residentKeyRequired': bool(resident_key_required)
             }
         }
+
+        add_public_key_material(
+            credential_info,
+            getattr(auth_data.credential_data, 'public_key', {})
+        )
 
         if authenticator_extensions_summary:
             credential_info['authenticator_extensions'] = authenticator_extensions_summary

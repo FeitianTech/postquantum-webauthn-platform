@@ -37,6 +37,7 @@ pyscard = {version = "^1.9 || ^2", optional = true}
 
 [tool.poetry.extras]
 pcsc = ["pyscard"]
+pqc = ["oqs", "pqcrypto"]
 
 [tool.poetry.dev-dependencies]
 pytest = "^7.0"
