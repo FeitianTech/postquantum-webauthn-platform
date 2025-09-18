@@ -439,12 +439,16 @@ def _serialize_extension_value(ext):
     if isinstance(value, x509.UnrecognizedExtension):
         raw_bytes = value.value
         raw_hex = raw_bytes.hex()
-        serialized = {"Hex value": raw_hex}
-        if ext.oid.dotted_string == "1.3.6.1.4.1.45724.1.1.4":
+        oid = ext.oid.dotted_string
+
+        if oid == "1.3.6.1.4.1.45724.1.1.4":
             aaguid_bytes = _decode_asn1_octet_string(raw_bytes)
             if len(aaguid_bytes) == 16:
-                serialized["AAGUID"] = aaguid_bytes.hex()
-        elif ext.oid.dotted_string == "1.3.6.1.4.1.45724.2.1.1":
+                return {"AAGUID": aaguid_bytes.hex()}
+            return {"Hex value": raw_hex}
+
+        serialized: Dict[str, Any] = {"Hex value": raw_hex}
+        if oid == "1.3.6.1.4.1.45724.2.1.1":
             transports = _parse_fido_transport_bitfield(raw_bytes)
             if transports:
                 serialized["Transports"] = " ".join(transports)
