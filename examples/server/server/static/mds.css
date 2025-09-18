@@ -58,6 +58,14 @@
     cursor: progress;
 }
 
+.mds-update-button--attention {
+    box-shadow: 0 0 0 4px rgba(229, 83, 83, 0.28), var(--shadow-soft);
+}
+
+.mds-update-button--attention:hover:not(:disabled) {
+    box-shadow: 0 0 0 4px rgba(229, 83, 83, 0.35), var(--shadow-hover);
+}
+
 .mds-section-title h2 {
     margin-bottom: 0.35rem;
     font-size: 1.75rem;
