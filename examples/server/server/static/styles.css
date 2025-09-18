@@ -262,21 +262,21 @@ body.modal-open {
 }
 
 .status.success {
-    background: rgba(0, 166, 81, 0.15);
-    border: 1px solid rgba(0, 166, 81, 0.3);
-    color: #0b5d2a;
+    background: #d4edda;
+    border: 1px solid #c3e6cb;
+    color: #0f5132;
 }
 
 .status.error {
-    background: rgba(220, 53, 69, 0.18);
-    border: 1px solid rgba(220, 53, 69, 0.3);
-    color: #8a1c2c;
+    background: #f8d7da;
+    border: 1px solid #f5c2c7;
+    color: #842029;
 }
 
 .status.info {
-    background: rgba(0, 114, 206, 0.14);
-    border: 1px solid rgba(0, 114, 206, 0.3);
-    color: var(--primary-dark);
+    background: #cff4fc;
+    border: 1px solid #b6effb;
+    color: #055160;
 }
 
 .two-column {
@@ -542,6 +542,16 @@ body.modal-open {
     margin-top: 0.5rem;
 }
 
+.checkbox-subheading {
+    flex-basis: 100%;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--primary-dark);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-top: 0.25rem;
+}
+
 .checkbox-item {
     display: flex;
     align-items: center;
@@ -577,6 +587,30 @@ body.modal-open {
     flex-direction: column;
     box-shadow: var(--shadow-soft);
     overflow: hidden;
+}
+
+.json-editor-help {
+    margin-top: 1rem;
+    font-size: 0.85rem;
+    color: var(--muted-text);
+    background: rgba(0, 114, 206, 0.08);
+    border-radius: 16px;
+    padding: 0.75rem 1rem;
+    line-height: 1.5;
+}
+
+.json-editor-help pre {
+    background: rgba(15, 39, 64, 0.08);
+    border-radius: 12px;
+    padding: 0.5rem 0.75rem;
+    margin: 0.5rem 0 0;
+    font-family: 'Courier New', monospace;
+    font-size: 0.8rem;
+    overflow-x: auto;
+}
+
+.json-editor-help code {
+    font-family: 'Courier New', monospace;
 }
 
 .json-editor textarea {
