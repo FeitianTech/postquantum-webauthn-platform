@@ -233,6 +233,7 @@ let mdsData = [];
 let filteredData = [];
 let isLoading = false;
 let hasLoaded = false;
+let isUpdatingMetadata = false;
 
 document.addEventListener('DOMContentLoaded', async () => {
     const tabElement = document.getElementById('mds-tab');
@@ -328,6 +329,13 @@ function initializeState(root) {
         }
     });
 
+    const updateButton = root.querySelector('#mds-update-button');
+    if (updateButton) {
+        updateButton.addEventListener('click', () => {
+            void refreshMetadata();
+        });
+    }
+
     return {
         root,
         filters,
@@ -340,14 +348,16 @@ function initializeState(root) {
         statusEl: root.querySelector('#mds-status'),
         columnWidths: null,
         columnWidthAttempts: 0,
+        updateButton,
     };
 }
 
-async function loadMdsData() {
+async function loadMdsData(statusNote) {
     if (isLoading || hasLoaded || !mdsState) {
         return;
     }
 
+    const note = typeof statusNote === 'string' ? statusNote.trim() : '';
     isLoading = true;
     setStatus('Loading metadata BLOB…', 'info');
 
@@ -385,11 +395,14 @@ async function loadMdsData() {
         applyFilters();
 
         const nextUpdate = metadata.nextUpdate ? `Next update: ${formatDate(metadata.nextUpdate)}` : '';
-        const statusMessage = [`Loaded ${mdsData.length.toLocaleString()} authenticators.`];
+        const statusParts = [`Loaded ${mdsData.length.toLocaleString()} authenticators.`];
         if (nextUpdate) {
-            statusMessage.push(nextUpdate);
+            statusParts.push(nextUpdate);
         }
-        setStatus(statusMessage.join(' '), 'success');
+        if (note) {
+            statusParts.push(note);
+        }
+        setStatus(statusParts.join(' '), 'success');
 
         if (metadata.legalHeader && mdsState.statusEl) {
             mdsState.statusEl.setAttribute('title', metadata.legalHeader);
@@ -628,6 +641,97 @@ function setStatus(message, variant) {
     statusEl.classList.remove('mds-status-info', 'mds-status-success', 'mds-status-error');
     statusEl.classList.add(`mds-status-${variant}`);
     statusEl.innerHTML = message;
+}
+
+function setUpdateButtonBusy(isBusy) {
+    const button = mdsState?.updateButton;
+    if (!button) {
+        return;
+    }
+
+    if (isBusy) {
+        if (!button.dataset.originalLabel) {
+            button.dataset.originalLabel = button.textContent || '';
+        }
+        button.disabled = true;
+        button.classList.add('is-busy');
+        button.setAttribute('aria-busy', 'true');
+        button.textContent = 'Updating…';
+        return;
+    }
+
+    const originalLabel = button.dataset.originalLabel;
+    button.disabled = false;
+    button.classList.remove('is-busy');
+    button.removeAttribute('aria-busy');
+    if (typeof originalLabel === 'string') {
+        button.textContent = originalLabel;
+        delete button.dataset.originalLabel;
+    }
+    button.blur();
+}
+
+async function refreshMetadata() {
+    if (isUpdatingMetadata || !mdsState?.updateButton) {
+        return;
+    }
+
+    if (isLoading) {
+        setStatus(
+            'Metadata is currently loading. Please wait for the current operation to finish before requesting another update.',
+            'info',
+        );
+        return;
+    }
+
+    isUpdatingMetadata = true;
+    setUpdateButtonBusy(true);
+
+    try {
+        setStatus('Updating metadata BLOB…', 'info');
+
+        const response = await fetch('/api/mds/update', {
+            method: 'POST',
+            headers: { Accept: 'application/json' },
+            cache: 'no-store',
+        });
+
+        let payload = null;
+        try {
+            payload = await response.json();
+        } catch (error) {
+            payload = null;
+        }
+
+        if (!response.ok) {
+            const message =
+                (payload && typeof payload.message === 'string' && payload.message.trim()) ||
+                `Update request failed with status ${response.status}.`;
+            throw new Error(message);
+        }
+
+        const note =
+            (payload && typeof payload.message === 'string' && payload.message.trim()) || '';
+        const shouldReload = (payload && payload.updated) || !hasLoaded;
+
+        if (shouldReload) {
+            hasLoaded = false;
+            await loadMdsData(note);
+        } else {
+            const message = note || 'Metadata already up to date.';
+            setStatus(message, 'info');
+        }
+    } catch (error) {
+        console.error('Failed to update metadata BLOB:', error);
+        const message =
+            error instanceof Error && error.message
+                ? error.message
+                : 'Unable to update the metadata BLOB. Check the server logs for more details.';
+        setStatus(message, 'error');
+    } finally {
+        setUpdateButtonBusy(false);
+        isUpdatingMetadata = false;
+    }
 }
 
 function collectOptionSets(data) {

@@ -47,9 +47,14 @@ import uuid
 import fido2.features
 import base64
 import pickle
+import shutil
+import tempfile
 import time
 import textwrap
+import urllib.error
+import urllib.request
 from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
 
 from typing import Any, Dict, List, Mapping, Optional, Tuple
 
@@ -75,6 +80,15 @@ server = Fido2Server(rp)
 
 # Save credentials next to this server.py file, regardless of CWD.
 basepath = os.path.abspath(os.path.dirname(__file__))
+
+MDS_METADATA_URL = "https://mds3.fidoalliance.org/"
+MDS_METADATA_FILENAME = "fido-mds3.jws"
+MDS_METADATA_PATH = os.path.join(basepath, "static", MDS_METADATA_FILENAME)
+
+
+class MetadataDownloadError(Exception):
+    """Raised when the FIDO MDS metadata cannot be downloaded."""
+
 
 def extract_credential_data(cred):
     """Extract AttestedCredentialData from either old or new format"""
@@ -105,6 +119,72 @@ def delkey(name):
         os.remove(os.path.join(basepath, name))
     except Exception:
         pass
+
+
+def _format_last_modified(header: Optional[str]) -> Optional[str]:
+    """Convert an HTTP Last-Modified header to an ISO formatted string."""
+
+    if not header:
+        return None
+
+    try:
+        parsed = parsedate_to_datetime(header)
+    except (TypeError, ValueError, IndexError):
+        return header
+
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    else:
+        parsed = parsed.astimezone(timezone.utc)
+
+    return parsed.isoformat()
+
+
+def download_metadata_blob(
+    source_url: str = MDS_METADATA_URL,
+    destination: str = MDS_METADATA_PATH,
+) -> Tuple[bool, int, Optional[str]]:
+    """Fetch the FIDO MDS metadata BLOB and store it locally."""
+
+    try:
+        with urllib.request.urlopen(source_url, timeout=60) as response:
+            status = getattr(response, "status", None) or response.getcode()
+            if status != 200:
+                raise MetadataDownloadError(
+                    f"Unexpected response status {status} while downloading metadata."
+                )
+            payload = response.read()
+            last_modified = response.headers.get("Last-Modified")
+    except urllib.error.HTTPError as exc:
+        raise MetadataDownloadError(
+            f"Failed to download metadata (HTTP {exc.code})."
+        ) from exc
+    except urllib.error.URLError as exc:
+        raise MetadataDownloadError(
+            f"Failed to reach FIDO Metadata Service: {exc.reason}"
+        ) from exc
+
+    os.makedirs(os.path.dirname(destination), exist_ok=True)
+
+    if os.path.exists(destination):
+        with open(destination, "rb") as existing_file:
+            if existing_file.read() == payload:
+                return False, len(payload), _format_last_modified(last_modified)
+
+    with tempfile.NamedTemporaryFile("wb", delete=False, dir=os.path.dirname(destination)) as temp_file:
+        temp_file.write(payload)
+        temp_path = temp_file.name
+
+    try:
+        shutil.move(temp_path, destination)
+    except Exception:
+        try:
+            os.remove(temp_path)
+        except OSError:
+            pass
+        raise
+
+    return True, len(payload), _format_last_modified(last_modified)
 
 
 def _colon_hex(data: bytes) -> str:
@@ -733,6 +813,41 @@ def serialize_attestation_certificate(cert_bytes: bytes):
 @app.route("/")
 def index():
     return redirect("/index.html")
+
+
+@app.route("/api/mds/update", methods=["POST"])
+def api_update_mds_metadata():
+    try:
+        updated, bytes_written, last_modified = download_metadata_blob()
+    except MetadataDownloadError as exc:
+        return jsonify({"updated": False, "message": str(exc)}), 502
+    except OSError as exc:
+        app.logger.exception("Failed to store metadata BLOB: %s", exc)
+        return (
+            jsonify(
+                {
+                    "updated": False,
+                    "message": "Failed to store the metadata BLOB on the server.",
+                }
+            ),
+            500,
+        )
+
+    if updated:
+        message = f"Downloaded {bytes_written:,} bytes from the FIDO Metadata Service."
+    else:
+        message = "Metadata already up to date."
+
+    payload: Dict[str, Any] = {
+        "updated": updated,
+        "bytes_written": bytes_written,
+        "message": message,
+    }
+    if last_modified:
+        payload["last_modified"] = last_modified
+
+    return jsonify(payload)
+
 
 @app.route("/api/register/begin", methods=["POST"])
 def register_begin():
