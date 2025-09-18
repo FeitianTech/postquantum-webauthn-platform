@@ -227,9 +227,7 @@
     background: rgba(243, 247, 251, 0.6);
 }
 
-.mds-table tbody tr:hover td {
-    background: rgba(0, 114, 206, 0.08);
-}
+/* Hover styling intentionally omitted so non-interactive rows stay static. */
 
 .mds-cell-id {
     font-family: 'SFMono-Regular', 'JetBrains Mono', 'Fira Code', monospace;
@@ -264,8 +262,8 @@
 }
 
 .mds-icon-wrapper {
-    width: 64px;
-    height: 64px;
+    width: 80px;
+    height: 80px;
     border-radius: 14px;
     background: rgba(243, 247, 251, 0.95);
     display: flex;
@@ -276,8 +274,8 @@
 }
 
 .mds-icon-wrapper img {
-    max-width: 52px;
-    max-height: 52px;
+    max-width: 68px;
+    max-height: 68px;
     object-fit: contain;
     border-radius: 10px;
 }
@@ -299,10 +297,10 @@
     text-align: center;
 }
 
-.mds-table thead th:nth-child(3),
-.mds-table tbody td:nth-child(3) {
-    width: 180px;
-    min-width: 180px;
+.mds-table thead th:nth-child(1),
+.mds-table tbody td:nth-child(1) {
+    width: 200px;
+    min-width: 200px;
 }
 
 .mds-table thead th:nth-child(5),

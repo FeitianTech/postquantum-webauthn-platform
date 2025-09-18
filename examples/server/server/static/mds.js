@@ -459,9 +459,9 @@ function renderTable(entries) {
     entries.forEach(entry => {
         const row = document.createElement('tr');
 
+        row.appendChild(createIconCell(entry));
         row.appendChild(createTextCell(entry.name || '—'));
         row.appendChild(createTextCell(entry.protocol || '—'));
-        row.appendChild(createIconCell(entry));
         row.appendChild(createTextCell(entry.certification || '—'));
         row.appendChild(createIdCell(entry.id));
         row.appendChild(createTagCell(entry.userVerificationList));
