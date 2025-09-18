@@ -20,11 +20,21 @@ const FILTER_CONFIG = [
         staticOptions: CERTIFICATION_OPTIONS,
     },
     { key: 'id', inputId: 'mds-filter-id' },
-    { key: 'userVerification', inputId: 'mds-filter-user-verification', optionsKey: 'userVerification' },
+    {
+        key: 'userVerification',
+        inputId: 'mds-filter-user-verification',
+        optionsKey: 'userVerification',
+        expandDropdown: true,
+    },
     { key: 'attachment', inputId: 'mds-filter-attachment', optionsKey: 'attachment' },
     { key: 'transports', inputId: 'mds-filter-transports', optionsKey: 'transports' },
     { key: 'keyProtection', inputId: 'mds-filter-key-protection', optionsKey: 'keyProtection' },
-    { key: 'algorithms', inputId: 'mds-filter-algorithms', optionsKey: 'algorithms' },
+    {
+        key: 'algorithms',
+        inputId: 'mds-filter-algorithms',
+        optionsKey: 'algorithms',
+        expandDropdown: true,
+    },
 ];
 
 const FILTER_LOOKUP = FILTER_CONFIG.reduce((map, config) => {
@@ -35,7 +45,7 @@ const FILTER_LOOKUP = FILTER_CONFIG.reduce((map, config) => {
 let activeDropdown = null;
 
 class FilterDropdown {
-    constructor(input, onSelect) {
+    constructor(input, onSelect, config = {}) {
         this.input = input;
         this.onSelect = onSelect;
         this.options = [];
@@ -43,6 +53,7 @@ class FilterDropdown {
         this.activeIndex = -1;
         this.list = null;
         this.container = null;
+        this.expandToContent = Boolean(config.expandDropdown);
 
         const parent = input.parentElement;
         if (parent) {
@@ -52,6 +63,9 @@ class FilterDropdown {
         this.container = document.createElement('div');
         this.container.className = 'mds-filter-dropdown';
         this.container.hidden = true;
+        if (this.expandToContent) {
+            this.container.classList.add('mds-filter-dropdown--expanded');
+        }
 
         this.list = document.createElement('ul');
         this.list.className = 'mds-filter-dropdown__list';
@@ -210,8 +224,8 @@ class FilterDropdown {
     }
 }
 
-function createFilterDropdown(input, onSelect) {
-    return new FilterDropdown(input, onSelect);
+function createFilterDropdown(input, onSelect, config = {}) {
+    return new FilterDropdown(input, onSelect, config);
 }
 
 let mdsState = null;
@@ -219,6 +233,7 @@ let mdsData = [];
 let filteredData = [];
 let isLoading = false;
 let hasLoaded = false;
+let isUpdatingMetadata = false;
 
 document.addEventListener('DOMContentLoaded', async () => {
     const tabElement = document.getElementById('mds-tab');
@@ -255,6 +270,22 @@ document.addEventListener('tab:changed', event => {
 });
 
 function initializeState(root) {
+    const statusEl = root.querySelector('#mds-status');
+    let defaultStatus = null;
+    if (statusEl) {
+        let variant = 'info';
+        if (statusEl.classList.contains('mds-status-success')) {
+            variant = 'success';
+        } else if (statusEl.classList.contains('mds-status-error')) {
+            variant = 'error';
+        }
+        defaultStatus = {
+            html: statusEl.innerHTML,
+            variant,
+            title: statusEl.getAttribute('title') || '',
+        };
+    }
+
     const filters = {};
     const filterInputs = {};
 
@@ -303,31 +334,48 @@ function initializeState(root) {
 
         const config = FILTER_LOOKUP[key];
         if (config?.optionsKey) {
-            const dropdown = createFilterDropdown(input, value => updateFilter(key, value));
+            const dropdown = createFilterDropdown(input, value => updateFilter(key, value), config);
             dropdowns[key] = dropdown;
             if (Array.isArray(config.staticOptions)) {
-                dropdown.setOptions(config.staticOptions);
+                const initialOptions = config.staticOptions
+                    .map(option => formatEnum(option))
+                    .filter(Boolean);
+                dropdown.setOptions(initialOptions);
             }
         }
     });
+
+    const updateButton = root.querySelector('#mds-update-button');
+    if (updateButton) {
+        updateButton.addEventListener('click', () => {
+            void refreshMetadata();
+        });
+    }
 
     return {
         root,
         filters,
         filterInputs,
         dropdowns,
+        table: root.querySelector('.mds-table'),
         tableBody: root.querySelector('#mds-table-body'),
         countEl: root.querySelector('#mds-entry-count'),
         totalEl: root.querySelector('#mds-total-count'),
-        statusEl: root.querySelector('#mds-status'),
+        statusEl,
+        defaultStatus,
+        statusResetTimer: null,
+        columnWidths: null,
+        columnWidthAttempts: 0,
+        updateButton,
     };
 }
 
-async function loadMdsData() {
+async function loadMdsData(statusNote) {
     if (isLoading || hasLoaded || !mdsState) {
         return;
     }
 
+    const note = typeof statusNote === 'string' ? statusNote.trim() : '';
     isLoading = true;
     setStatus('Loading metadata BLOB…', 'info');
 
@@ -365,14 +413,33 @@ async function loadMdsData() {
         applyFilters();
 
         const nextUpdate = metadata.nextUpdate ? `Next update: ${formatDate(metadata.nextUpdate)}` : '';
-        const statusMessage = [`Loaded ${mdsData.length.toLocaleString()} authenticators.`];
+        const statusParts = [`Loaded ${mdsData.length.toLocaleString()} authenticators.`];
         if (nextUpdate) {
-            statusMessage.push(nextUpdate);
+            statusParts.push(nextUpdate);
         }
-        setStatus(statusMessage.join(' '), 'success');
+        if (note) {
+            statusParts.push(note);
+        }
+        const statusMessage = statusParts.join(' ');
+        setStatus(statusMessage, 'success');
+
+        if (!mdsState.defaultStatus) {
+            mdsState.defaultStatus = { html: statusMessage, variant: 'success', title: '' };
+        } else {
+            mdsState.defaultStatus.html = statusMessage;
+            mdsState.defaultStatus.variant = 'success';
+        }
 
         if (metadata.legalHeader && mdsState.statusEl) {
             mdsState.statusEl.setAttribute('title', metadata.legalHeader);
+            if (mdsState.defaultStatus) {
+                mdsState.defaultStatus.title = metadata.legalHeader;
+            }
+        } else if (mdsState?.statusEl) {
+            mdsState.statusEl.removeAttribute('title');
+            if (mdsState.defaultStatus) {
+                mdsState.defaultStatus.title = '';
+            }
         }
     } catch (error) {
         console.error('Failed to load FIDO MDS metadata:', error);
@@ -404,6 +471,27 @@ function matchesFilters(entry, filters) {
         }
         const query = value.toLowerCase();
         if (key === 'certification') {
+            const canonicalQuery = normaliseEnumKey(value);
+            const dropdown = mdsState?.dropdowns?.certification;
+            const options = dropdown?.options || [];
+            const isKnownOption = Boolean(canonicalQuery) && options.some(option => normaliseEnumKey(option) === canonicalQuery);
+
+            if (isKnownOption && canonicalQuery) {
+                const statusKey = normaliseEnumKey(entry.certificationStatus);
+                if (canonicalQuery === 'FIDO_CERTIFIED') {
+                    if (statusKey) {
+                        return statusKey.startsWith('FIDO_CERTIFIED');
+                    }
+                    const displayKey = normaliseEnumKey((entry.certification || '').split('•')[0]);
+                    return displayKey.startsWith('FIDO_CERTIFIED');
+                }
+                if (statusKey) {
+                    return statusKey === canonicalQuery;
+                }
+                const displayKey = normaliseEnumKey((entry.certification || '').split('•')[0]);
+                return displayKey === canonicalQuery;
+            }
+
             const haystacks = [entry.certification, entry.certificationStatus]
                 .map(text => (text || '').toLowerCase())
                 .filter(Boolean);
@@ -430,6 +518,7 @@ function renderTable(entries) {
         cell.textContent = 'No authenticators match the selected filters.';
         emptyRow.appendChild(cell);
         tbody.appendChild(emptyRow);
+        stabiliseColumnWidths();
         return;
     }
 
@@ -438,9 +527,9 @@ function renderTable(entries) {
     entries.forEach(entry => {
         const row = document.createElement('tr');
 
+        row.appendChild(createIconCell(entry));
         row.appendChild(createTextCell(entry.name || '—'));
         row.appendChild(createTextCell(entry.protocol || '—'));
-        row.appendChild(createIconCell(entry));
         row.appendChild(createTextCell(entry.certification || '—'));
         row.appendChild(createIdCell(entry.id));
         row.appendChild(createTagCell(entry.userVerificationList));
@@ -454,6 +543,80 @@ function renderTable(entries) {
     });
 
     tbody.appendChild(fragment);
+    stabiliseColumnWidths();
+}
+
+function stabiliseColumnWidths() {
+    if (!mdsState?.table) {
+        return;
+    }
+    if (mdsState.root instanceof HTMLElement && mdsState.root.offsetParent === null) {
+        return;
+    }
+    if (!Array.isArray(mdsState.columnWidths) || !mdsState.columnWidths.length) {
+        requestAnimationFrame(() => {
+            if (!mdsState?.table) {
+                return;
+            }
+            const headerCells = mdsState.table.querySelectorAll('thead tr:first-child th');
+            if (!headerCells.length) {
+                return;
+            }
+            const widths = Array.from(headerCells).map(cell => Math.round(cell.getBoundingClientRect().width));
+            if (!widths.length || widths.some(width => width === 0)) {
+                if (mdsState) {
+                    mdsState.columnWidthAttempts = (mdsState.columnWidthAttempts || 0) + 1;
+                    if (mdsState.columnWidthAttempts < 5) {
+                        requestAnimationFrame(stabiliseColumnWidths);
+                    }
+                }
+                return;
+            }
+            mdsState.columnWidths = widths;
+            mdsState.columnWidthAttempts = 0;
+            applyColumnWidths(widths);
+        });
+        return;
+    }
+    applyColumnWidths(mdsState.columnWidths);
+}
+
+function applyColumnWidths(widths) {
+    if (!mdsState?.table || !Array.isArray(widths) || !widths.length) {
+        return;
+    }
+
+    mdsState.table.style.tableLayout = 'fixed';
+
+    const tableHead = mdsState.table.tHead;
+    if (tableHead) {
+        Array.from(tableHead.rows).forEach(row => applyWidthsToCells(row.cells, widths));
+    }
+
+    if (mdsState.tableBody) {
+        Array.from(mdsState.tableBody.rows).forEach(row => applyWidthsToCells(row.cells, widths));
+    }
+}
+
+function applyWidthsToCells(cells, widths) {
+    if (!cells || !widths) {
+        return;
+    }
+
+    let columnIndex = 0;
+    Array.from(cells).forEach(cell => {
+        const span = cell.colSpan || 1;
+        if (span === 1) {
+            const width = widths[columnIndex];
+            if (width && Number.isFinite(width)) {
+                const widthPx = `${width}px`;
+                cell.style.width = widthPx;
+                cell.style.minWidth = widthPx;
+                cell.style.maxWidth = widthPx;
+            }
+        }
+        columnIndex += span;
+    });
 }
 
 function createTextCell(text, title) {
@@ -524,21 +687,139 @@ function updateCount(filtered, total) {
     }
 }
 
-function setStatus(message, variant) {
+function setStatus(message, variant, options = {}) {
     if (!mdsState?.statusEl) {
         return;
     }
 
     const statusEl = mdsState.statusEl;
+    const { restoreDefault = false, delay = 5000 } = options;
+
+    if (mdsState.statusResetTimer) {
+        window.clearTimeout(mdsState.statusResetTimer);
+        mdsState.statusResetTimer = null;
+    }
+
     statusEl.classList.remove('mds-status-info', 'mds-status-success', 'mds-status-error');
     statusEl.classList.add(`mds-status-${variant}`);
     statusEl.innerHTML = message;
+
+    if (restoreDefault && mdsState.defaultStatus) {
+        const timeout = Number.isFinite(delay) ? Math.max(0, delay) : 5000;
+        mdsState.statusResetTimer = window.setTimeout(() => {
+            if (!mdsState?.statusEl || !mdsState?.defaultStatus) {
+                return;
+            }
+            const target = mdsState.statusEl;
+            const defaults = mdsState.defaultStatus;
+            target.classList.remove('mds-status-info', 'mds-status-success', 'mds-status-error');
+            target.classList.add(`mds-status-${defaults.variant}`);
+            target.innerHTML = defaults.html;
+            if (defaults.title) {
+                target.setAttribute('title', defaults.title);
+            } else {
+                target.removeAttribute('title');
+            }
+            mdsState.statusResetTimer = null;
+        }, timeout);
+    }
+}
+
+function setUpdateButtonBusy(isBusy) {
+    const button = mdsState?.updateButton;
+    if (!button) {
+        return;
+    }
+
+    if (isBusy) {
+        if (!button.dataset.originalLabel) {
+            button.dataset.originalLabel = button.textContent || '';
+        }
+        button.disabled = true;
+        button.classList.add('is-busy');
+        button.setAttribute('aria-busy', 'true');
+        button.textContent = 'Updating…';
+        return;
+    }
+
+    const originalLabel = button.dataset.originalLabel;
+    button.disabled = false;
+    button.classList.remove('is-busy');
+    button.removeAttribute('aria-busy');
+    if (typeof originalLabel === 'string') {
+        button.textContent = originalLabel;
+        delete button.dataset.originalLabel;
+    }
+    button.blur();
+}
+
+async function refreshMetadata() {
+    if (isUpdatingMetadata || !mdsState?.updateButton) {
+        return;
+    }
+
+    if (isLoading) {
+        setStatus(
+            'Metadata is currently loading. Please wait for the current operation to finish before requesting another update.',
+            'info',
+        );
+        return;
+    }
+
+    isUpdatingMetadata = true;
+    setUpdateButtonBusy(true);
+
+    try {
+        setStatus('Updating metadata BLOB…', 'info');
+
+        const response = await fetch('/api/mds/update', {
+            method: 'POST',
+            headers: { Accept: 'application/json' },
+            cache: 'no-store',
+        });
+
+        let payload = null;
+        try {
+            payload = await response.json();
+        } catch (error) {
+            payload = null;
+        }
+
+        if (!response.ok) {
+            const message =
+                (payload && typeof payload.message === 'string' && payload.message.trim()) ||
+                `Update request failed with status ${response.status}.`;
+            throw new Error(message);
+        }
+
+        const note =
+            (payload && typeof payload.message === 'string' && payload.message.trim()) || '';
+        const shouldReload = (payload && payload.updated) || !hasLoaded;
+
+        if (shouldReload) {
+            hasLoaded = false;
+            await loadMdsData(note);
+        } else {
+            const message = note || 'Metadata already up to date.';
+            setStatus(message, 'info', { restoreDefault: true, delay: 5000 });
+        }
+    } catch (error) {
+        console.error('Failed to update metadata BLOB:', error);
+        const message =
+            error instanceof Error && error.message
+                ? error.message
+                : 'Unable to update the metadata BLOB. Check the server logs for more details.';
+        setStatus(message, 'error');
+    } finally {
+        setUpdateButtonBusy(false);
+        isUpdatingMetadata = false;
+    }
 }
 
 function collectOptionSets(data) {
     const sets = {
         protocol: new Set(),
-        certification: new Set(CERTIFICATION_OPTIONS),
+        certification: new Set(CERTIFICATION_OPTIONS.map(option => formatEnum(option))),
         userVerification: new Set(),
         attachment: new Set(),
         transports: new Set(),
@@ -551,7 +832,7 @@ function collectOptionSets(data) {
             sets.protocol.add(entry.protocol);
         }
         if (entry.certificationStatus) {
-            sets.certification.add(entry.certificationStatus);
+            sets.certification.add(formatEnum(entry.certificationStatus));
         }
         entry.userVerificationList.forEach(value => sets.userVerification.add(value));
         entry.attachmentList.forEach(value => sets.attachment.add(value));
@@ -574,11 +855,15 @@ function updateOptionLists(optionSets) {
             return;
         }
         const config = FILTER_LOOKUP[key];
-        let options = Array.from(values).filter(Boolean);
+        const optionList = Array.from(values).filter(Boolean);
         if (config?.staticOptions) {
-            options = config.staticOptions.slice();
+            const staticValues = config.staticOptions
+                .map(option => formatEnum(option))
+                .filter(Boolean);
+            optionList.push(...staticValues);
         }
-        dropdown.setOptions(options);
+        const unique = Array.from(new Set(optionList));
+        dropdown.setOptions(unique);
     });
 }
 
@@ -723,10 +1008,22 @@ function formatProtocol(protocol) {
         return '';
     }
     const normalised = formatEnum(protocol);
-    if (/^fido\s*\d$/i.test(normalised.replace(/\s+/g, ''))) {
-        return normalised.replace(/\s+/g, '');
+    const compact = normalised.replace(/\s+/g, '');
+    if (/^fido\d$/i.test(compact)) {
+        return compact.toUpperCase();
     }
     return normalised;
+}
+
+function normaliseEnumKey(value) {
+    if (value === undefined || value === null) {
+        return '';
+    }
+    return String(value)
+        .trim()
+        .toUpperCase()
+        .replace(/[^A-Z0-9]+/g, '_')
+        .replace(/^_+|_+$/g, '');
 }
 
 function formatEnum(value) {
@@ -735,18 +1032,21 @@ function formatEnum(value) {
     }
     return String(value)
         .split(/[_-]/)
+        .map(part => part.trim())
         .filter(Boolean)
         .map(part => {
             if (/^[A-Z0-9]+$/.test(part)) {
-                return part;
+                if (part.length <= 4) {
+                    return part;
+                }
+                const lower = part.toLowerCase();
+                return lower.charAt(0).toUpperCase() + lower.slice(1);
             }
             if (/^.*\d.*$/.test(part)) {
                 return part.toUpperCase();
             }
-            if (part.length <= 3) {
-                return part.toUpperCase();
-            }
-            return part.charAt(0).toUpperCase() + part.slice(1).toLowerCase();
+            const lower = part.toLowerCase();
+            return lower.charAt(0).toUpperCase() + lower.slice(1);
         })
         .join(' ');
 }
@@ -767,13 +1067,15 @@ function formatCertification(statusReports) {
         return { display: '', status: '' };
     }
 
-    const statusRaw = typeof latest.status === 'string' ? latest.status.toUpperCase() : '';
+    const statusRaw = typeof latest.status === 'string' ? latest.status.trim() : '';
+    const statusValue = statusRaw ? statusRaw.toUpperCase() : '';
     const descriptor = typeof latest.certificationDescriptor === 'string' ? latest.certificationDescriptor.trim() : '';
     const certificateNumber = typeof latest.certificateNumber === 'string' ? latest.certificateNumber.trim() : '';
 
     const parts = [];
-    if (statusRaw) {
-        parts.push(statusRaw);
+    const statusDisplay = statusValue ? formatEnum(statusValue) : '';
+    if (statusDisplay) {
+        parts.push(statusDisplay);
     }
     if (descriptor) {
         parts.push(descriptor);
@@ -784,7 +1086,7 @@ function formatCertification(statusReports) {
 
     return {
         display: parts.filter(Boolean).join(' • '),
-        status: statusRaw,
+        status: statusValue,
     };
 }
 

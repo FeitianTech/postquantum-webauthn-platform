@@ -10,21 +10,27 @@
                 <span id="mds-total-count" class="mds-entry-count-total"></span>
             </p>
         </div>
+        <div class="mds-section-actions">
+            <button type="button" id="mds-update-button" class="mds-update-button">
+                Update Metadata
+            </button>
+        </div>
     </div>
 
     <div id="mds-status" class="mds-status mds-status-info">
         Download the latest metadata BLOB from
-        <a href="https://mds3.fidoalliance.org/" target="_blank" rel="noopener">mds3.fidoalliance.org</a>
-        and save it in this directory as <code>fido-mds3.jws</code> to populate the table.
+        <a href="https://mds3.fidoalliance.org/" target="_blank" rel="noopener">mds3.fidoalliance.org</a>,
+        save it in this directory as <code>fido-mds3.jws</code>,
+        or use the <strong>Update Metadata</strong> button to refresh it automatically.
     </div>
 
     <div class="mds-table-container">
         <table class="mds-table">
             <thead>
                 <tr>
+                    <th scope="col">Company</th>
                     <th scope="col">Name</th>
                     <th scope="col">Protocol</th>
-                    <th scope="col">Icon</th>
                     <th scope="col">Certification</th>
                     <th scope="col">ID</th>
                     <th scope="col">User Verification</th>
@@ -35,9 +41,9 @@
                     <th scope="col">Date Updated</th>
                 </tr>
                 <tr class="mds-filter-row">
+                    <th></th>
                     <th class="mds-filter-cell"><input type="search" id="mds-filter-name" class="mds-filter-input" placeholder="Search name"></th>
                     <th class="mds-filter-cell"><input type="search" id="mds-filter-protocol" class="mds-filter-input" placeholder="Protocol"></th>
-                    <th></th>
                     <th class="mds-filter-cell"><input type="search" id="mds-filter-certification" class="mds-filter-input" placeholder="Certification"></th>
                     <th class="mds-filter-cell"><input type="search" id="mds-filter-id" class="mds-filter-input" placeholder="AAGUID or AAID"></th>
                     <th class="mds-filter-cell"><input type="search" id="mds-filter-user-verification" class="mds-filter-input" placeholder="User verification"></th>
