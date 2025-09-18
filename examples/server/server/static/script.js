@@ -1947,18 +1947,37 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                     return;
                 }
 
-                value.forEach(item => {
-                    if (item === null || item === undefined) {
-                        return;
-                    }
+                const filtered = value.filter(item => item !== null && item !== undefined);
+                if (filtered.length === 0) {
+                    return;
+                }
 
-                    if (typeof item === 'object') {
-                        output.push(`${indent}-`);
-                        appendKeyValueLines(output, item, indentLevel + 1);
-                    } else {
-                        output.push(`${indent}- ${item}`);
-                    }
+                const allScalars = filtered.every(item => {
+                    return (
+                        typeof item === 'string' ||
+                        typeof item === 'number' ||
+                        typeof item === 'boolean'
+                    );
                 });
+
+                if (allScalars) {
+                    filtered.forEach(item => {
+                        output.push(`${indent}${item}`);
+                    });
+                } else {
+                    filtered.forEach(item => {
+                        if (item === null || item === undefined) {
+                            return;
+                        }
+
+                        if (typeof item === 'object') {
+                            output.push(`${indent}-`);
+                            appendKeyValueLines(output, item, indentLevel + 1);
+                        } else {
+                            output.push(`${indent}- ${item}`);
+                        }
+                    });
+                }
                 return;
             }
 
@@ -2119,24 +2138,55 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
                         return;
                     }
 
-                    const parts = [];
-                    if (typeof ext.name === 'string' && ext.name.trim() !== '' && ext.name !== ext.oid) {
-                        parts.push(ext.name.trim());
-                    }
-                    if (typeof ext.oid === 'string' && ext.oid.trim() !== '') {
-                        if (parts.length) {
-                            parts[parts.length - 1] = `${parts[parts.length - 1]} (${ext.oid.trim()})`;
-                        } else {
-                            parts.push(`OID ${ext.oid.trim()}`);
-                        }
-                    }
-                    let header = parts.join('');
+                    const includeOid = ext.includeOidInHeader === undefined
+                        ? true
+                        : Boolean(ext.includeOidInHeader);
+                    const headerOverride = typeof ext.displayHeader === 'string'
+                        ? ext.displayHeader.trim()
+                        : '';
+                    const oid = typeof ext.oid === 'string' ? ext.oid.trim() : '';
+                    const friendlyName = typeof ext.friendlyName === 'string'
+                        ? ext.friendlyName.trim()
+                        : '';
+                    const extName = typeof ext.name === 'string' ? ext.name.trim() : '';
+
+                    let header = headerOverride;
                     if (!header) {
-                        header = 'Extension';
+                        const headerParts = [];
+                        if (includeOid && oid) {
+                            headerParts.push(oid);
+                        }
+
+                        let displayName = friendlyName;
+                        if (!displayName && extName && extName !== oid) {
+                            displayName = extName;
+                        }
+
+                        if (displayName) {
+                            if (includeOid && headerParts.length) {
+                                headerParts.push(`(${displayName})`);
+                            } else {
+                                headerParts.push(displayName);
+                            }
+                        }
+
+                        if (!headerParts.length) {
+                            if (extName) {
+                                headerParts.push(extName);
+                            } else if (oid) {
+                                headerParts.push(oid);
+                            } else {
+                                headerParts.push('Extension');
+                            }
+                        }
+
+                        header = headerParts.join(' ');
                     }
+
                     if (ext.critical) {
                         header = `${header} [critical]`;
                     }
+
                     addLine(`    ${header}:`);
                     if ('value' in ext) {
                         appendKeyValueLines(lines, ext.value, 2);

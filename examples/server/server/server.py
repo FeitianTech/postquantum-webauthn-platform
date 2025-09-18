@@ -126,18 +126,6 @@ def _format_hex_bytes_lines(data: bytes, bytes_per_line: int = 16) -> List[str]:
     return lines
 
 
-def _colon_hex_string(hex_string: str) -> str:
-    """Format a hexadecimal string with colon separators."""
-    cleaned = "".join(hex_string.split()).replace(":", "")
-    if len(cleaned) % 2:
-        cleaned = "0" + cleaned
-    try:
-        data = bytes.fromhex(cleaned)
-    except ValueError:
-        return hex_string
-    return _colon_hex(data)
-
-
 def _format_hex_string_lines(hex_string: str, bytes_per_line: int = 16) -> List[str]:
     cleaned = "".join(hex_string.split()).replace(":", "")
     if len(cleaned) % 2:
@@ -149,9 +137,24 @@ def _format_hex_string_lines(hex_string: str, bytes_per_line: int = 16) -> List[
     return _format_hex_bytes_lines(data, bytes_per_line)
 
 
-EXTENSION_FRIENDLY_NAMES: Dict[str, str] = {
-    "1.3.6.1.4.1.45724.1.1.4": "FIDO: Device AAGUID",
-    "1.3.6.1.4.1.45724.2.1.1": "FIDO: Transports",
+EXTENSION_DISPLAY_METADATA: Dict[str, Dict[str, Any]] = {
+    "1.3.6.1.4.1.45724.1.1.4": {
+        "friendly_name": "FIDO: Device AAGUID",
+    },
+    "1.3.6.1.4.1.45724.2.1.1": {
+        "friendly_name": "FIDO: Transports",
+    },
+    "2.5.29.14": {
+        "friendly_name": "Subject key id",
+    },
+    "2.5.29.35": {
+        "friendly_name": "Authority key identifier",
+    },
+    "2.5.29.19": {
+        "friendly_name": "X509v3 Basic Constraints",
+        "header": "X509v3 Basic Constraints",
+        "include_oid_in_header": False,
+    },
 }
 
 
@@ -375,11 +378,15 @@ def _serialize_public_key_info(public_key):
 def _serialize_extension_value(ext):
     value = ext.value
     if isinstance(value, x509.SubjectKeyIdentifier):
-        return {"Subject Key Identifier": _colon_hex(value.digest)}
+        hex_lines = _format_hex_bytes_lines(value.digest)
+        return {
+            "Hex value": hex_lines if hex_lines else _colon_hex(value.digest),
+        }
     if isinstance(value, x509.AuthorityKeyIdentifier):
         serialized = {}
         if value.key_identifier:
-            serialized["Key Identifier"] = _colon_hex(value.key_identifier)
+            hex_lines = _format_hex_bytes_lines(value.key_identifier)
+            serialized["Hex value"] = hex_lines if hex_lines else _colon_hex(value.key_identifier)
         if value.authority_cert_serial_number is not None:
             serialized["Authority Cert Serial Number"] = (
                 f"{value.authority_cert_serial_number} "
@@ -391,7 +398,7 @@ def _serialize_extension_value(ext):
             ]
         return serialized
     if isinstance(value, x509.BasicConstraints):
-        serialized = {"CA": value.ca}
+        serialized = {"CA": "TRUE" if value.ca else "FALSE"}
         if value.path_length is not None:
             serialized["Path Length"] = value.path_length
         return serialized
@@ -399,11 +406,7 @@ def _serialize_extension_value(ext):
         raw_hex = value.value.hex()
         serialized = {"Hex value": raw_hex}
         if ext.oid.dotted_string == "1.3.6.1.4.1.45724.1.1.4" and len(value.value) == 16:
-            serialized["AAGUID"] = _colon_hex_string(raw_hex)
-            try:
-                serialized["AAGUID (GUID)"] = str(uuid.UUID(hex=raw_hex))
-            except ValueError:
-                pass
+            serialized["AAGUID"] = raw_hex
         elif ext.oid.dotted_string == "1.3.6.1.4.1.45724.2.1.1":
             transports = _parse_fido_transport_bitfield(value.value)
             if transports:
@@ -441,15 +444,19 @@ def serialize_attestation_certificate(cert_bytes: bytes):
     extensions = []
     for ext in certificate.extensions:
         oid = ext.oid.dotted_string
-        friendly_name = EXTENSION_FRIENDLY_NAMES.get(oid)
+        metadata = EXTENSION_DISPLAY_METADATA.get(oid, {})
+        metadata_friendly = metadata.get("friendly_name")
         default_name = getattr(ext.oid, "_name", None)
+        include_oid = metadata.get("include_oid_in_header")
         extensions.append(
             {
                 "oid": oid,
-                "name": friendly_name or default_name or oid,
-                "friendlyName": friendly_name,
+                "name": metadata_friendly or default_name or oid,
+                "friendlyName": metadata_friendly,
                 "critical": ext.critical,
                 "value": _serialize_extension_value(ext),
+                "displayHeader": metadata.get("header"),
+                "includeOidInHeader": True if include_oid is None else bool(include_oid),
             }
         )
 
@@ -590,13 +597,26 @@ def serialize_attestation_certificate(cert_bytes: bytes):
             oid = ext_info.get("oid")
             friendly = ext_info.get("friendlyName")
             name = ext_info.get("name")
-            header_parts: List[str] = []
-            if oid:
-                header_parts.append(oid)
-            display_name = friendly or (name if name != oid else None)
-            if display_name:
-                header_parts.append(f"({display_name})")
-            header = " ".join(header_parts) if header_parts else "Extension"
+            include_oid = ext_info.get("includeOidInHeader", True)
+            header_override = ext_info.get("displayHeader")
+
+            if isinstance(header_override, str) and header_override.strip():
+                header = header_override.strip()
+            else:
+                header_parts: List[str] = []
+                if include_oid and oid:
+                    header_parts.append(oid)
+                display_name = friendly or (name if name and name != oid else None)
+                if display_name:
+                    if include_oid and header_parts:
+                        header_parts.append(f"({display_name})")
+                    else:
+                        header_parts.append(display_name)
+                if not header_parts:
+                    fallback = name or friendly or oid or "Extension"
+                    header_parts.append(fallback)
+                header = " ".join(header_parts)
+
             if ext_info.get("critical"):
                 header = f"{header} [critical]"
             _append_line(f"    {header}:")
