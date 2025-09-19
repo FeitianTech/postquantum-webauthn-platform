@@ -1662,9 +1662,12 @@ function describeCoseAlgorithm(alg) {
             }
 
             modal.scrollTop = 0;
-            modal.querySelectorAll('.modal-content, .modal-body').forEach(element => {
+            modal.querySelectorAll('.modal-content, .modal-body, textarea, pre, code, .credential-code-block').forEach(element => {
                 if (element) {
                     element.scrollTop = 0;
+                    if (element.scrollLeft !== undefined) {
+                        element.scrollLeft = 0;
+                    }
                 }
             });
         }
@@ -1754,13 +1757,13 @@ function describeCoseAlgorithm(alg) {
                 detailsHtml += `
                 <div style="margin-top: 0.5rem;">
                     <div><strong>User handle (User ID):</strong></div>
-                    <div style="font-family: 'Courier New', monospace; font-size: 0.9rem; margin-left: 1rem;">
+                    <div style="font-family: 'Courier New', monospace; font-size: 0.9rem; margin-left: 1rem; word-break: break-word; overflow-wrap: anywhere;">
                         <div><strong>b64</strong></div>
-                        <div style="background: rgba(0, 114, 206, 0.08); padding: 0.35rem 0.5rem; border-radius: 12px; margin-bottom: 0.35rem;">${userHandleB64}</div>
+                        <div class="credential-code-block">${userHandleB64}</div>
                         <div><strong>b64u</strong></div>
-                        <div style="background: rgba(0, 114, 206, 0.08); padding: 0.35rem 0.5rem; border-radius: 12px; margin-bottom: 0.35rem;">${userHandleB64u}</div>
+                        <div class="credential-code-block">${userHandleB64u}</div>
                         <div><strong>hex</strong></div>
-                        <div style="background: rgba(0, 114, 206, 0.08); padding: 0.35rem 0.5rem; border-radius: 12px;">${userHandleHex}</div>
+                        <div class="credential-code-block">${userHandleHex}</div>
                     </div>
                 </div>`;
             }
@@ -1773,13 +1776,13 @@ function describeCoseAlgorithm(alg) {
                 detailsHtml += `
                 <div style="margin-top: 0.5rem;">
                     <div><strong>Credential ID:</strong></div>
-                    <div style="font-family: 'Courier New', monospace; font-size: 0.9rem; margin-left: 1rem;">
+                    <div style="font-family: 'Courier New', monospace; font-size: 0.9rem; margin-left: 1rem; word-break: break-word; overflow-wrap: anywhere;">
                         <div><strong>b64</strong></div>
-                        <div style="background: rgba(0, 114, 206, 0.08); padding: 0.35rem 0.5rem; border-radius: 12px; margin-bottom: 0.35rem;">${credentialIdB64}</div>
+                        <div class="credential-code-block">${credentialIdB64}</div>
                         <div><strong>b64u</strong></div>
-                        <div style="background: rgba(0, 114, 206, 0.08); padding: 0.35rem 0.5rem; border-radius: 12px; margin-bottom: 0.35rem;">${credentialIdB64u}</div>
+                        <div class="credential-code-block">${credentialIdB64u}</div>
                         <div><strong>hex</strong></div>
-                        <div style="background: rgba(0, 114, 206, 0.08); padding: 0.35rem 0.5rem; border-radius: 12px;">${credentialIdHex}</div>
+                        <div class="credential-code-block">${credentialIdHex}</div>
                     </div>
                 </div>`;
             }
@@ -1853,23 +1856,28 @@ function describeCoseAlgorithm(alg) {
             if (aaguidHex) {
                 const rootVerified = attestationRootValue === true ||
                     (typeof attestationRootValue === 'string' && attestationRootValue.trim().toLowerCase() === 'true');
-                const aaguidNavigateValue = rootVerified && aaguidGuid ? aaguidGuid : '';
-                const aaguidLabel = aaguidNavigateValue
-                    ? `<button type="button" class="link-button credential-aaguid-button" data-aaguid="${escapeHtml(aaguidNavigateValue)}">AAGUID</button>`
-                    : '<strong>AAGUID:</strong>';
+                const aaguidDisplayValue = aaguidGuid || aaguidHex || aaguidB64u || aaguidB64;
+                const aaguidNavigateValue = aaguidGuid ? aaguidGuid.toLowerCase() : '';
+                const infoButton = rootVerified && aaguidNavigateValue
+                    ? `<button type="button" class="link-button credential-aaguid-button" data-aaguid="${escapeHtml(aaguidNavigateValue)}">Info</button>`
+                    : '';
 
                 detailsHtml += `
                     <div style="margin-top: 0.5rem;">
-                        <div>${aaguidLabel}</div>
-                        <div style="font-family: 'Courier New', monospace; font-size: 0.9rem; margin-left: 1rem;">
+                        <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                            <strong>AAGUID:</strong>
+                            <span style="font-family: 'Courier New', monospace;">${escapeHtml(aaguidDisplayValue || '')}</span>
+                            ${infoButton}
+                        </div>
+                        <div style="font-family: 'Courier New', monospace; font-size: 0.9rem; margin-left: 1rem; word-break: break-word; overflow-wrap: anywhere;">
                             <div><strong>b64</strong></div>
-                            <div style="background: rgba(0, 114, 206, 0.08); padding: 0.35rem 0.5rem; border-radius: 12px; margin-bottom: 0.35rem;">${aaguidB64}</div>
+                            <div class="credential-code-block">${aaguidB64}</div>
                             <div><strong>b64u</strong></div>
-                            <div style="background: rgba(0, 114, 206, 0.08); padding: 0.35rem 0.5rem; border-radius: 12px; margin-bottom: 0.35rem;">${aaguidB64u}</div>
+                            <div class="credential-code-block">${aaguidB64u}</div>
                             <div><strong>hex</strong></div>
-                            <div style="background: rgba(0, 114, 206, 0.08); padding: 0.35rem 0.5rem; border-radius: 12px; margin-bottom: 0.35rem;">${aaguidHex}</div>
+                            <div class="credential-code-block">${aaguidHex}</div>
                             ${aaguidGuid ? `<div><strong>guid</strong></div>
-                            <div style="background: rgba(0, 114, 206, 0.08); padding: 0.35rem 0.5rem; border-radius: 12px;">${aaguidGuid}</div>` : ''}
+                            <div class="credential-code-block">${aaguidGuid}</div>` : ''}
                         </div>
                     </div>`;
             }
@@ -1913,7 +1921,7 @@ function describeCoseAlgorithm(alg) {
                 detailsHtml += `
                 <div style="margin-bottom: 1.5rem;">
                     <h4 style="color: #0072CE; margin-bottom: 0.5rem;">Client extension outputs (registration)</h4>
-                    <div style="font-family: 'Courier New', monospace; font-size: 0.9rem; background: rgba(0, 114, 206, 0.08); padding: 0.65rem; border-radius: 16px; white-space: pre-wrap;">${JSON.stringify(cred.clientExtensionOutputs, null, 2)}</div>
+                    <div class="credential-code-block" style="font-size: 0.9rem; border-radius: 16px;">${JSON.stringify(cred.clientExtensionOutputs, null, 2)}</div>
                 </div>`;
             }
             
@@ -1935,13 +1943,13 @@ function describeCoseAlgorithm(alg) {
                     const rawKeyB64u = base64ToBase64Url(rawKeyB64);
                     const rawKeyHex = base64ToHex(rawKeyB64);
                     pqcKeyBlock = `
-                        <div style="margin-top: 0.75rem; font-size: 0.9rem;">
+                        <div style="margin-top: 0.75rem; font-size: 0.9rem; word-break: break-word; overflow-wrap: anywhere;">
                             <div><strong>Raw public key (base64):</strong></div>
-                            <div style="font-family: 'Courier New', monospace; background: rgba(0, 114, 206, 0.08); padding: 0.35rem 0.5rem; border-radius: 12px; margin-bottom: 0.35rem;">${rawKeyB64}</div>
+                            <div class="credential-code-block">${rawKeyB64}</div>
                             <div><strong>Raw public key (base64url):</strong></div>
-                            <div style="font-family: 'Courier New', monospace; background: rgba(0, 114, 206, 0.08); padding: 0.35rem 0.5rem; border-radius: 12px; margin-bottom: 0.35rem;">${rawKeyB64u}</div>
+                            <div class="credential-code-block">${rawKeyB64u}</div>
                             <div><strong>Raw public key (hex):</strong></div>
-                            <div style="font-family: 'Courier New', monospace; background: rgba(0, 114, 206, 0.08); padding: 0.35rem 0.5rem; border-radius: 12px;">${rawKeyHex}</div>
+                            <div class="credential-code-block">${rawKeyHex}</div>
                         </div>`;
                 }
 
@@ -1998,18 +2006,37 @@ function describeCoseAlgorithm(alg) {
                 return;
             }
 
-            switchTab('mds');
-            if (typeof window.focusMdsAuthenticator === 'function') {
-                try {
-                    const result = window.focusMdsAuthenticator(aaguid);
-                    if (result && typeof result.then === 'function') {
-                        result.catch(() => {
-                            // Ignore focus errors.
-                        });
-                    }
-                } catch (error) {
-                    // Ignore navigation errors.
+            const openModal = typeof window.openMdsAuthenticatorModal === 'function'
+                ? window.openMdsAuthenticatorModal
+                : null;
+
+            if (!openModal) {
+                console.warn('Unable to open authenticator details modal: integration unavailable.');
+                return;
+            }
+
+            let modalResult;
+            try {
+                modalResult = openModal(aaguid);
+            } catch (error) {
+                console.error('Failed to open authenticator details modal.', error);
+                return;
+            }
+
+            const handleEntry = entry => {
+                if (entry) {
+                    closeCredentialModal();
                 }
+            };
+
+            if (modalResult && typeof modalResult.then === 'function') {
+                modalResult
+                    .then(handleEntry)
+                    .catch(error => {
+                        console.error('Failed to open authenticator details modal.', error);
+                    });
+            } else {
+                handleEntry(modalResult);
             }
         }
 

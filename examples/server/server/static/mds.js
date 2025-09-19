@@ -369,6 +369,8 @@ function initializeState(root) {
 
     const certificateModal = root.querySelector('#mds-certificate-modal');
     const certificateClose = root.querySelector('#mds-certificate-modal-close');
+    const certificateBody = root.querySelector('#mds-certificate-modal-body');
+    const certificateSummary = root.querySelector('#mds-certificate-summary');
     if (certificateClose) {
         certificateClose.addEventListener('click', () => closeCertificateModal());
     }
@@ -376,6 +378,19 @@ function initializeState(root) {
         certificateModal.addEventListener('click', event => {
             if (event.target === certificateModal) {
                 closeCertificateModal();
+            }
+        });
+    }
+
+    const authenticatorModal = root.querySelector('#mds-authenticator-modal');
+    const authenticatorClose = root.querySelector('#mds-authenticator-modal-close');
+    if (authenticatorClose) {
+        authenticatorClose.addEventListener('click', () => closeAuthenticatorModal());
+    }
+    if (authenticatorModal) {
+        authenticatorModal.addEventListener('click', event => {
+            if (event.target === authenticatorModal) {
+                closeAuthenticatorModal();
             }
         });
     }
@@ -404,11 +419,18 @@ function initializeState(root) {
         detailTitle: root.querySelector('#mds-detail-title'),
         detailSubtitle: root.querySelector('#mds-detail-subtitle'),
         certificateModal,
+        certificateModalBody: certificateBody,
         certificateInput: root.querySelector('#mds-certificate-input'),
         certificateOutput: root.querySelector('#mds-certificate-output'),
         certificateTitle: root.querySelector('#mds-certificate-modal-title'),
+        certificateSummary,
+        authenticatorModal,
+        authenticatorModalContent: root.querySelector('#mds-authenticator-modal-content'),
+        authenticatorModalTitle: root.querySelector('#mds-authenticator-modal-title'),
+        authenticatorModalSubtitle: root.querySelector('#mds-authenticator-modal-subtitle'),
+        authenticatorModalBody: root.querySelector('#mds-authenticator-modal-body'),
+        authenticatorModalClose: authenticatorClose,
         activeDetailEntry: null,
-        activeHighlightRow: null,
         byAaguid: new Map(),
     };
 }
@@ -702,47 +724,90 @@ function renderTable(entries) {
     stabiliseColumnWidths();
 }
 
-function clearRowHighlight() {
-    if (mdsState?.activeHighlightRow) {
-        mdsState.activeHighlightRow.classList.remove('mds-row-highlight');
-        mdsState.activeHighlightRow = null;
+function formatDetailSubtitle(entry) {
+    if (!entry) {
+        return '';
+    }
+
+    const parts = [];
+    if (entry.aaguid) {
+        parts.push(`AAGUID: ${entry.aaguid}`);
+    }
+    if (entry.id && entry.id !== entry.aaguid) {
+        parts.push(`ID: ${entry.id}`);
+    }
+    if (entry.protocol) {
+        parts.push(entry.protocol);
+    }
+    return parts.join(' • ');
+}
+
+function applyDetailHeader(entry, titleEl, subtitleEl) {
+    if (titleEl) {
+        titleEl.textContent = entry?.name?.trim() ? entry.name : 'Authenticator';
+    }
+    if (subtitleEl) {
+        subtitleEl.textContent = formatDetailSubtitle(entry);
     }
 }
 
-function highlightRowByAaguid(aaguid, options = {}) {
-    if (!mdsState?.tableBody) {
-        return null;
+function populateDetailContent(target, entry) {
+    if (!target) {
+        return;
     }
-
-    clearRowHighlight();
-
-    const rows = Array.from(mdsState.tableBody.rows);
-    const targetKey = normaliseAaguid(aaguid);
-    const { entryIndex, id, scroll = false } = options;
-
-    let targetRow = null;
-    if (targetKey) {
-        targetRow = rows.find(row => row.dataset.aaguid === targetKey);
+    target.innerHTML = '';
+    const content = buildDetailContent(entry);
+    if (content) {
+        target.appendChild(content);
     }
-    if (!targetRow && typeof entryIndex === 'number') {
-        const indexValue = String(entryIndex);
-        targetRow = rows.find(row => row.dataset.entryIndex === indexValue);
-    }
-    if (!targetRow && typeof id === 'string') {
-        targetRow = rows.find(row => row.dataset.entryId === id);
-    }
+}
 
-    if (targetRow) {
-        targetRow.classList.add('mds-row-highlight');
-        mdsState.activeHighlightRow = targetRow;
-        if (scroll) {
-            targetRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+function resetScrollPositions(...elements) {
+    const apply = element => {
+        if (!element) {
+            return;
+        }
+        if (typeof element.scrollTo === 'function') {
+            element.scrollTo({ top: 0, left: 0 });
+            return;
+        }
+        if (typeof element.scrollTop === 'number') {
+            element.scrollTop = 0;
+        }
+        if (typeof element.scrollLeft === 'number') {
+            element.scrollLeft = 0;
+        }
+    };
+
+    elements.forEach(apply);
+    if (typeof requestAnimationFrame === 'function') {
+        requestAnimationFrame(() => {
+            elements.forEach(apply);
+        });
+    }
+}
+
+function scrollDocumentToTop() {
+    if (typeof window !== 'undefined' && typeof window.scrollTo === 'function') {
+        try {
+            window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+        } catch (error) {
+            window.scrollTo(0, 0);
         }
     }
-    return targetRow;
+    if (typeof document !== 'undefined') {
+        if (document.documentElement) {
+            document.documentElement.scrollTop = 0;
+            document.documentElement.scrollLeft = 0;
+        }
+        if (document.body) {
+            document.body.scrollTop = 0;
+            document.body.scrollLeft = 0;
+        }
+    }
 }
 
-function showAuthenticatorDetail(entry) {
+function showAuthenticatorDetail(entry, options = {}) {
     if (!mdsState || !entry) {
         return;
     }
@@ -760,35 +825,17 @@ function showAuthenticatorDetail(entry) {
         mdsState.detailView.hidden = false;
     }
 
-    if (mdsState.detailTitle) {
-        mdsState.detailTitle.textContent = sourceEntry.name || 'Authenticator';
-    }
-    if (mdsState.detailSubtitle) {
-        const parts = [];
-        if (sourceEntry.aaguid) {
-            parts.push(`AAGUID: ${sourceEntry.aaguid}`);
-        }
-        if (sourceEntry.id && sourceEntry.id !== sourceEntry.aaguid) {
-            parts.push(`ID: ${sourceEntry.id}`);
-        }
-        if (sourceEntry.protocol) {
-            parts.push(sourceEntry.protocol);
-        }
-        mdsState.detailSubtitle.textContent = parts.join(' • ');
-    }
+    applyDetailHeader(sourceEntry, mdsState.detailTitle, mdsState.detailSubtitle);
+    populateDetailContent(mdsState.detailContent, sourceEntry);
+    resetScrollPositions(mdsState.detailView, mdsState.detailContent);
+    scrollDocumentToTop();
 
-    if (mdsState.detailContent) {
-        mdsState.detailContent.innerHTML = '';
-        const content = buildDetailContent(sourceEntry);
-        if (content) {
-            mdsState.detailContent.appendChild(content);
-        }
+    const { scrollIntoView = true } = options;
+    if (scrollIntoView && mdsState.detailView && typeof mdsState.detailView.scrollIntoView === 'function') {
+        requestAnimationFrame(() => {
+            mdsState.detailView.scrollIntoView({ block: 'start' });
+        });
     }
-
-    highlightRowByAaguid(sourceEntry.aaguid, {
-        entryIndex: sourceEntry.index,
-        id: sourceEntry.id,
-    });
 }
 
 function hideAuthenticatorDetail() {
@@ -801,6 +848,18 @@ function hideAuthenticatorDetail() {
     }
     if (mdsState.tableContainer) {
         mdsState.tableContainer.hidden = false;
+        resetScrollPositions(mdsState.tableContainer);
+        scrollDocumentToTop();
+        if (typeof mdsState.tableContainer.scrollIntoView === 'function') {
+            requestAnimationFrame(() => {
+                mdsState.tableContainer.scrollIntoView({ block: 'start' });
+            });
+        }
+    }
+    if (mdsState.updateButton instanceof HTMLElement) {
+        requestAnimationFrame(() => {
+            mdsState.updateButton.focus();
+        });
     }
     mdsState.activeDetailEntry = null;
 }
@@ -1315,6 +1374,282 @@ function formatCertificateOutput(details) {
     return JSON.stringify(details, null, 2);
 }
 
+function formatCertificateDateDisplay(value) {
+    if (!value) {
+        return '';
+    }
+    const date = new Date(value);
+    if (!Number.isNaN(date.getTime())) {
+        return date.toUTCString();
+    }
+    return typeof value === 'string' ? value : '';
+}
+
+function createSummaryItem(label, value, options = {}) {
+    if (!label) {
+        return null;
+    }
+
+    const resolved = Array.isArray(value) ? value.filter(Boolean) : value;
+    const isArray = Array.isArray(resolved);
+    const scalar = !isArray ? resolved : null;
+    const text = typeof scalar === 'string' ? scalar.trim() : scalar;
+
+    if ((!isArray && (text === undefined || text === null || text === '')) || (isArray && !resolved.length)) {
+        return null;
+    }
+
+    const item = document.createElement('div');
+    item.className = 'mds-certificate-summary__item';
+
+    const labelEl = document.createElement('div');
+    labelEl.className = 'mds-certificate-summary__label';
+    labelEl.textContent = label;
+    item.appendChild(labelEl);
+
+    const valueEl = document.createElement('div');
+    valueEl.className = 'mds-certificate-summary__value';
+
+    if (options.code) {
+        const codeEl = document.createElement('code');
+        codeEl.className = 'mds-certificate-summary__code';
+        codeEl.textContent = String(value);
+        valueEl.appendChild(codeEl);
+    } else if (isArray) {
+        resolved.forEach(entry => {
+            const line = document.createElement('div');
+            line.textContent = String(entry);
+            valueEl.appendChild(line);
+        });
+    } else {
+        valueEl.textContent = String(text);
+    }
+
+    item.appendChild(valueEl);
+    return item;
+}
+
+function determinePublicKeyAlgorithm(info) {
+    if (!info || typeof info !== 'object') {
+        return '';
+    }
+    const algorithm = info.algorithm;
+    if (algorithm) {
+        if (typeof algorithm === 'string') {
+            const algorithmName = algorithm.trim();
+            if (algorithmName) {
+                return algorithmName;
+            }
+        }
+        if (typeof algorithm === 'object') {
+            const name = typeof algorithm.name === 'string' ? algorithm.name.trim() : '';
+            if (name) {
+                return name;
+            }
+        }
+    }
+    const type = typeof info.type === 'string' ? info.type.trim() : '';
+    return type;
+}
+
+function formatSignatureHashName(hash) {
+    if (typeof hash !== 'string') {
+        return '';
+    }
+    const trimmed = hash.trim();
+    if (!trimmed) {
+        return '';
+    }
+    const simpleShaMatch = /^sha(\d{3})$/i.exec(trimmed);
+    if (simpleShaMatch) {
+        return `SHA-${simpleShaMatch[1]}`;
+    }
+    return trimmed.toUpperCase();
+}
+
+function renderCertificatePublicKey(info) {
+    if (!info || typeof info !== 'object') {
+        return null;
+    }
+
+    const section = document.createElement('div');
+    section.className = 'mds-certificate-summary__section';
+
+    const title = document.createElement('div');
+    title.className = 'mds-certificate-summary__label';
+    title.textContent = 'Public Key';
+    section.appendChild(title);
+
+    const grid = document.createElement('div');
+    grid.className = 'mds-certificate-summary__grid';
+
+    const algorithmItem = createSummaryItem('Algorithm', determinePublicKeyAlgorithm(info));
+    if (algorithmItem) {
+        grid.appendChild(algorithmItem);
+    }
+
+    const algorithmDetails = info.algorithm && typeof info.algorithm === 'object' ? info.algorithm : null;
+    const curveValue = info.curve || (algorithmDetails && algorithmDetails.namedCurve);
+    if (curveValue) {
+        const curveItem = createSummaryItem('Named Curve', curveValue);
+        if (curveItem) {
+            grid.appendChild(curveItem);
+        }
+    }
+
+    const modulusLength = algorithmDetails && algorithmDetails.modulusLength;
+    const keySize = modulusLength || info.keySize;
+    if (keySize) {
+        const sizeItem = createSummaryItem('Key Size', `${keySize} bit`);
+        if (sizeItem) {
+            grid.appendChild(sizeItem);
+        }
+    }
+
+    if (info.publicExponent !== undefined && info.publicExponent !== null) {
+        const exponentItem = createSummaryItem('Public Exponent', String(info.publicExponent));
+        if (exponentItem) {
+            grid.appendChild(exponentItem);
+        }
+    }
+
+    if (info.modulusHex) {
+        const modulusItem = createSummaryItem('Modulus', info.modulusHex, { code: true });
+        if (modulusItem) {
+            grid.appendChild(modulusItem);
+        }
+    }
+
+    if (info.uncompressedPoint) {
+        const pointItem = createSummaryItem('Uncompressed Point', info.uncompressedPoint, { code: true });
+        if (pointItem) {
+            grid.appendChild(pointItem);
+        }
+    }
+
+    if (info.subjectPublicKeyInfoBase64) {
+        const valueItem = createSummaryItem('Value', info.subjectPublicKeyInfoBase64, { code: true });
+        if (valueItem) {
+            grid.appendChild(valueItem);
+        }
+    }
+
+    if (!grid.childElementCount) {
+        return null;
+    }
+
+    section.appendChild(grid);
+    return section;
+}
+
+function renderCertificateSignature(signature) {
+    if (!signature || typeof signature !== 'object') {
+        return null;
+    }
+
+    const section = document.createElement('div');
+    section.className = 'mds-certificate-summary__section';
+
+    const title = document.createElement('div');
+    title.className = 'mds-certificate-summary__label';
+    title.textContent = 'Signature';
+    section.appendChild(title);
+
+    const grid = document.createElement('div');
+    grid.className = 'mds-certificate-summary__grid';
+
+    if (signature.algorithm) {
+        const algorithmItem = createSummaryItem('Algorithm', signature.algorithm);
+        if (algorithmItem) {
+            grid.appendChild(algorithmItem);
+        }
+    }
+
+    if (signature.hash) {
+        const hashName = typeof signature.hash === 'object' && signature.hash !== null
+            ? signature.hash.name
+            : signature.hash;
+        const hashValue = typeof hashName === 'string' ? formatSignatureHashName(hashName) : hashName;
+        const hashItem = createSummaryItem('Hash', hashValue);
+        if (hashItem) {
+            grid.appendChild(hashItem);
+        }
+    }
+
+    if (signature.hex) {
+        const valueItem = createSummaryItem('Value', signature.hex, { code: true });
+        if (valueItem) {
+            grid.appendChild(valueItem);
+        }
+    }
+
+    if (!grid.childElementCount) {
+        return null;
+    }
+
+    section.appendChild(grid);
+    return section;
+}
+
+function renderCertificateSummary(details) {
+    if (!details || typeof details !== 'object') {
+        return null;
+    }
+
+    const fragment = document.createDocumentFragment();
+
+    const infoGrid = document.createElement('div');
+    infoGrid.className = 'mds-certificate-summary__grid';
+
+    const validity = details.validity || {};
+    const serialNumber = details.serialNumber || {};
+
+    [
+        createSummaryItem('Subject', details.subject),
+        createSummaryItem('Issuer', details.issuer),
+        createSummaryItem('Not Before', formatCertificateDateDisplay(validity.notBefore)),
+        createSummaryItem('Not After', formatCertificateDateDisplay(validity.notAfter)),
+        createSummaryItem('Serial Number', serialNumber.decimal || serialNumber.hex),
+        serialNumber.hex ? createSummaryItem('Serial Number (Hex)', serialNumber.hex) : null,
+    ].forEach(item => {
+        if (item) {
+            infoGrid.appendChild(item);
+        }
+    });
+
+    if (infoGrid.childElementCount) {
+        fragment.appendChild(infoGrid);
+    }
+
+    const publicKeySection = renderCertificatePublicKey(details.publicKeyInfo);
+    if (publicKeySection) {
+        fragment.appendChild(publicKeySection);
+    }
+
+    const signatureSection = renderCertificateSignature(details.signature);
+    if (signatureSection) {
+        fragment.appendChild(signatureSection);
+    }
+
+    return fragment.childElementCount ? fragment : null;
+}
+
+function setCertificateSummaryContent(content) {
+    if (!mdsState?.certificateSummary) {
+        return;
+    }
+    const container = mdsState.certificateSummary;
+    container.innerHTML = '';
+    if (content instanceof Node) {
+        container.appendChild(content);
+    } else if (typeof content === 'string' && content.trim()) {
+        const message = document.createElement('div');
+        message.className = 'mds-certificate-summary__value';
+        message.textContent = content;
+        container.appendChild(message);
+    }
+}
+
 async function updateCertificateButtonLabel(button, certificate) {
     if (!(button instanceof HTMLElement)) {
         return;
@@ -1324,6 +1659,7 @@ async function updateCertificateButtonLabel(button, certificate) {
         const subject = details && typeof details.subject === 'string' ? details.subject.trim() : '';
         if (subject) {
             button.textContent = subject;
+            button.title = subject;
         }
     } catch (error) {
         // Leave default label on failure.
@@ -1342,21 +1678,43 @@ async function openCertificateModal(certificate) {
 
     if (mdsState.certificateInput) {
         mdsState.certificateInput.value = formatCertificateInput(cleaned);
+        mdsState.certificateInput.scrollTop = 0;
+        mdsState.certificateInput.scrollLeft = 0;
     }
     if (mdsState.certificateOutput) {
         mdsState.certificateOutput.value = 'Decoding certificate…';
+        mdsState.certificateOutput.scrollTop = 0;
+        mdsState.certificateOutput.scrollLeft = 0;
     }
     if (mdsState.certificateTitle) {
         mdsState.certificateTitle.textContent = 'Attestation Certificate';
     }
 
+    setCertificateSummaryContent('Decoding certificate…');
+
     mdsState.certificateModal.hidden = false;
     mdsState.certificateModal.setAttribute('aria-hidden', 'false');
+    resetScrollPositions(
+        mdsState.certificateModalBody,
+        mdsState.certificateModal,
+        mdsState.certificateSummary,
+        mdsState.certificateInput,
+        mdsState.certificateOutput,
+    );
+    scrollDocumentToTop();
 
     try {
         const details = await decodeCertificate(cleaned);
         if (mdsState.certificateOutput) {
             mdsState.certificateOutput.value = formatCertificateOutput(details);
+            mdsState.certificateOutput.scrollTop = 0;
+            mdsState.certificateOutput.scrollLeft = 0;
+        }
+        const summaryContent = renderCertificateSummary(details);
+        if (summaryContent) {
+            setCertificateSummaryContent(summaryContent);
+        } else {
+            setCertificateSummaryContent('No decoded certificate details available.');
         }
         const subject = details && typeof details.subject === 'string' ? details.subject.trim() : '';
         if (subject && mdsState.certificateTitle) {
@@ -1366,7 +1724,10 @@ async function openCertificateModal(certificate) {
         const message = error instanceof Error ? error.message : 'Unable to decode certificate.';
         if (mdsState.certificateOutput) {
             mdsState.certificateOutput.value = message;
+            mdsState.certificateOutput.scrollTop = 0;
+            mdsState.certificateOutput.scrollLeft = 0;
         }
+        setCertificateSummaryContent(message);
     }
 }
 
@@ -1376,9 +1737,52 @@ function closeCertificateModal() {
     }
     mdsState.certificateModal.hidden = true;
     mdsState.certificateModal.setAttribute('aria-hidden', 'true');
+    resetScrollPositions(
+        mdsState.certificateModalBody,
+        mdsState.certificateSummary,
+        mdsState.certificateInput,
+        mdsState.certificateOutput,
+    );
 }
 
-async function focusAuthenticatorByAaguid(aaguid) {
+function openAuthenticatorModal(entry) {
+    if (!mdsState?.authenticatorModal) {
+        return;
+    }
+
+    applyDetailHeader(entry, mdsState.authenticatorModalTitle, mdsState.authenticatorModalSubtitle);
+    populateDetailContent(mdsState.authenticatorModalContent, entry);
+
+    mdsState.authenticatorModal.hidden = false;
+    mdsState.authenticatorModal.setAttribute('aria-hidden', 'false');
+    resetScrollPositions(
+        mdsState.authenticatorModalBody,
+        mdsState.authenticatorModal,
+        mdsState.authenticatorModalContent,
+    );
+    scrollDocumentToTop();
+
+    if (mdsState.authenticatorModalClose instanceof HTMLElement) {
+        requestAnimationFrame(() => {
+            mdsState.authenticatorModalClose.focus();
+        });
+    }
+}
+
+function closeAuthenticatorModal() {
+    if (!mdsState?.authenticatorModal) {
+        return;
+    }
+    mdsState.authenticatorModal.hidden = true;
+    mdsState.authenticatorModal.setAttribute('aria-hidden', 'true');
+    resetScrollPositions(
+        mdsState.authenticatorModalBody,
+        mdsState.authenticatorModal,
+        mdsState.authenticatorModalContent,
+    );
+}
+
+async function resolveEntryByAaguid(aaguid) {
     if (!mdsState) {
         return null;
     }
@@ -1398,22 +1802,46 @@ async function focusAuthenticatorByAaguid(aaguid) {
         return null;
     }
 
-    hideAuthenticatorDetail();
+    const cached = mdsState.byAaguid?.get(targetKey) || null;
+    if (cached) {
+        return cached;
+    }
 
-    if (mdsState.tableContainer) {
-        mdsState.tableContainer.hidden = false;
+    const fallback = mdsData.find(item => {
+        const key = normaliseAaguid(item?.aaguid || item?.id);
+        return key === targetKey;
+    }) || null;
+
+    if (fallback && mdsState.byAaguid) {
+        mdsState.byAaguid.set(targetKey, fallback);
+    }
+
+    return fallback;
+}
+
+async function openAuthenticatorModalByAaguid(aaguid) {
+    const entry = await resolveEntryByAaguid(aaguid);
+    if (!entry) {
+        return null;
+    }
+    openAuthenticatorModal(entry);
+    return entry;
+}
+
+async function focusAuthenticatorByAaguid(aaguid) {
+    const entry = await resolveEntryByAaguid(aaguid);
+    if (!entry) {
+        return null;
     }
 
     resetFilters();
+    showAuthenticatorDetail(entry, { scrollIntoView: true });
+    return entry;
+}
 
-    const entry = mdsState.byAaguid?.get(targetKey) || null;
-    const row = highlightRowByAaguid(targetKey, {
-        entryIndex: entry?.index,
-        id: entry?.id,
-        scroll: true,
-    });
-
-    return row;
+if (typeof window !== 'undefined') {
+    window.openMdsAuthenticatorModal = openAuthenticatorModalByAaguid;
+    window.focusMdsAuthenticator = focusAuthenticatorByAaguid;
 }
 
 function stabiliseColumnWidths() {
@@ -1500,6 +1928,7 @@ function createTextCell(text, title) {
 
 function createNameCell(entry) {
     const cell = document.createElement('td');
+    cell.classList.add('mds-cell-name');
     const label = entry?.name || '—';
     const trimmed = label.trim();
 

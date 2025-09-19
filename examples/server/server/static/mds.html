@@ -75,22 +75,40 @@
 </div>
 
 <div id="mds-certificate-modal" class="mds-modal" hidden aria-hidden="true">
-    <div class="mds-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="mds-certificate-modal-title">
+    <div class="mds-modal__dialog mds-modal__dialog--certificate" role="dialog" aria-modal="true" aria-labelledby="mds-certificate-modal-title">
         <div class="mds-modal__header">
             <h3 id="mds-certificate-modal-title" class="mds-modal__title">Attestation Certificate</h3>
             <button type="button" id="mds-certificate-modal-close" class="mds-modal__close" aria-label="Close">
                 ×
             </button>
         </div>
-        <div class="mds-modal__body">
-            <div class="mds-modal__section">
-                <h4 class="mds-modal__section-title">Input</h4>
-                <textarea id="mds-certificate-input" class="mds-modal__textarea" readonly spellcheck="false"></textarea>
+        <div id="mds-certificate-modal-body" class="mds-modal__body mds-modal__body--certificate">
+            <div id="mds-certificate-summary" class="mds-certificate-summary" aria-live="polite"></div>
+            <div class="mds-modal__grid">
+                <div class="mds-modal__section">
+                    <h4 class="mds-modal__section-title">Input</h4>
+                    <textarea id="mds-certificate-input" class="mds-modal__textarea" readonly spellcheck="false"></textarea>
+                </div>
+                <div class="mds-modal__section">
+                    <h4 class="mds-modal__section-title">Decoded Output</h4>
+                    <textarea id="mds-certificate-output" class="mds-modal__textarea" readonly spellcheck="false"></textarea>
+                </div>
             </div>
-            <div class="mds-modal__section">
-                <h4 class="mds-modal__section-title">Decoded Output</h4>
-                <textarea id="mds-certificate-output" class="mds-modal__textarea" readonly spellcheck="false"></textarea>
+        </div>
+    </div>
+</div>
+
+<div id="mds-authenticator-modal" class="mds-modal" hidden aria-hidden="true">
+    <div class="mds-modal__dialog mds-modal__dialog--authenticator" role="dialog" aria-modal="true" aria-labelledby="mds-authenticator-modal-title">
+        <div class="mds-modal__header mds-modal__header--authenticator">
+            <div class="mds-modal__heading">
+                <h3 id="mds-authenticator-modal-title" class="mds-modal__title">Authenticator</h3>
+                <p id="mds-authenticator-modal-subtitle" class="mds-modal__subtitle"></p>
             </div>
+            <button type="button" id="mds-authenticator-modal-close" class="mds-modal__close" aria-label="Close">×</button>
+        </div>
+        <div id="mds-authenticator-modal-body" class="mds-modal__body mds-modal__body--authenticator">
+            <div id="mds-authenticator-modal-content" class="mds-detail mds-detail--modal"></div>
         </div>
     </div>
 </div>
