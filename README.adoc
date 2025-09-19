@@ -8,7 +8,7 @@ Built on python-fido2-PQC, which is built on Yubico’s python-fido2. Classical 
 
 # 💻 Local setup
 
-This guide shows how to clone the repository and set up a working local environment for WebAuthn with Python FIDO2 on Windows, macOS, and Linux.
+This guide shows how to clone the repository and set up a working local environment for WebAuthn with Python FIDO2 on Windows and macOS. 
 
 Scope
 - Includes: Python, virtual environment, Flask, python-fido2, Post‑Quantum Crypto algorithm options (PQC).
@@ -18,7 +18,6 @@ Scope
 
 - Windows 10/11 (64‑bit)
 - macOS (Intel or Apple Silicon)
-- Linux (Ubuntu/Debian/Fedora/Arch, etc.)
 
 A modern browser (eg. Edge, Chrome, Safari, Firefox) with WebAuthn support is required. 
 
@@ -30,7 +29,6 @@ A modern browser (eg. Edge, Chrome, Safari, Firefox) with WebAuthn support is re
 - Python 3.12+ (64‑bit) with pip
   - Windows: Install from [python.org](https://www.python.org/downloads/windows/) and check “Add Python to PATH.”
   - macOS: Install via [python.org](https://www.python.org/downloads/macos/) or Homebrew.
-  - Linux: Install via your distro or [python.org](https://www.python.org/downloads/source/).
 
 ---
 
@@ -60,7 +58,7 @@ pip install fido2 flask cryptography cbor2
 pip install "fido2[pcsc]"
 ```
 
-### macOS and Linux (bash/zsh)
+### macOS
 
 ```bash
 # Create and activate a virtual environment
@@ -99,7 +97,7 @@ pipx install poetry
 
 ```
 
-- macOS/Linux (bash/zsh):
+- macOS:
 
 ```bash
 python3 -m pip install --user pipx
@@ -118,7 +116,7 @@ poetry config virtualenvs.in-project true
 # Point Poetry to your Python (choose one):
 poetry env use 3.12
 # OR give an absolute path if needed:
-# poetry env use "/usr/bin/python3"                # macOS/Linux example
+# poetry env use "/usr/bin/python3"                # macOS example
 # poetry env use "C:\Path\To\Python312\python.exe" # Windows example
 
 poetry install
@@ -153,7 +151,7 @@ poetry run pytest
 .\.venv\Scripts\Activate
 ```
 
-**macOS/Linux (bash/zsh):**
+**macOS:**
 ```bash
 source .venv/bin/activate
 ```
@@ -248,7 +246,7 @@ py -3 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 ```
 
-### macOS / Linux
+### macOS
 ```bash
 # Create venv in the project root (only the first time is required)
 python3 -m venv .venv
