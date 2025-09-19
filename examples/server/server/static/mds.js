@@ -242,6 +242,133 @@ let hasLoaded = false;
 let isUpdatingMetadata = false;
 let loadPromise = null;
 const certificateCache = new Map();
+let scrollTopButtonUpdateScheduled = false;
+
+function scheduleScrollTopButtonUpdate() {
+    if (scrollTopButtonUpdateScheduled) {
+        return;
+    }
+    scrollTopButtonUpdateScheduled = true;
+    const apply = () => {
+        scrollTopButtonUpdateScheduled = false;
+        updateScrollTopButtonVisibility();
+    };
+    if (typeof requestAnimationFrame === 'function') {
+        requestAnimationFrame(apply);
+    } else {
+        setTimeout(apply, 0);
+    }
+}
+
+function updateScrollTopButtonVisibility(options = {}) {
+    if (!mdsState?.scrollTopButton) {
+        return;
+    }
+
+    const { forceHidden = false } = options;
+    if (forceHidden) {
+        hideScrollTopButton();
+        return;
+    }
+
+    if (!mdsState.root || mdsState.root.offsetParent === null) {
+        hideScrollTopButton();
+        return;
+    }
+
+    if (mdsState.tableContainer?.hidden) {
+        hideScrollTopButton();
+        return;
+    }
+
+    const rows = Array.from(mdsState.tableBody?.rows ?? []).filter(row => !row.classList.contains('mds-empty-row'));
+    if (rows.length <= 10) {
+        hideScrollTopButton();
+        return;
+    }
+
+    const markerRow = rows[10];
+    if (!markerRow || typeof markerRow.getBoundingClientRect !== 'function') {
+        hideScrollTopButton();
+        return;
+    }
+
+    const rowRect = markerRow.getBoundingClientRect();
+    if (!rowRect || !Number.isFinite(rowRect.top)) {
+        hideScrollTopButton();
+        return;
+    }
+
+    const containerRect = mdsState.tableContainer?.getBoundingClientRect?.();
+    const headerRect = mdsState.table?.tHead?.getBoundingClientRect?.();
+    const thresholds = [];
+    if (containerRect && Number.isFinite(containerRect.top)) {
+        thresholds.push(containerRect.top);
+    }
+    if (headerRect && Number.isFinite(headerRect.bottom)) {
+        thresholds.push(headerRect.bottom);
+    }
+    const boundary = thresholds.length ? Math.max(...thresholds) : 0;
+    const shouldShow = rowRect.top < boundary;
+
+    if (shouldShow) {
+        showScrollTopButton();
+    } else {
+        hideScrollTopButton();
+    }
+}
+
+function showScrollTopButton() {
+    if (!mdsState?.scrollTopButton) {
+        return;
+    }
+    if (mdsState.scrollTopButtonVisible) {
+        return;
+    }
+    mdsState.scrollTopButton.hidden = false;
+    mdsState.scrollTopButton.setAttribute('aria-hidden', 'false');
+    mdsState.scrollTopButtonVisible = true;
+}
+
+function hideScrollTopButton() {
+    if (!mdsState?.scrollTopButton) {
+        return;
+    }
+    if (mdsState.scrollTopButton.hidden) {
+        mdsState.scrollTopButtonVisible = false;
+        mdsState.scrollTopButton.setAttribute('aria-hidden', 'true');
+        return;
+    }
+    mdsState.scrollTopButton.hidden = true;
+    mdsState.scrollTopButton.setAttribute('aria-hidden', 'true');
+    mdsState.scrollTopButtonVisible = false;
+}
+
+function scrollMdsSectionToTop() {
+    if (!mdsState) {
+        return;
+    }
+
+    const section = mdsState.root?.querySelector('.mds-section');
+    if (section && typeof section.scrollIntoView === 'function') {
+        section.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    } else if (mdsState.root && typeof mdsState.root.scrollIntoView === 'function') {
+        mdsState.root.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    } else if (typeof window !== 'undefined' && typeof window.scrollTo === 'function') {
+        window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+    }
+
+    scheduleScrollTopButtonUpdate();
+}
+
+function handleWindowScroll() {
+    scheduleScrollTopButtonUpdate();
+}
+
+if (typeof window !== 'undefined') {
+    window.addEventListener('scroll', handleWindowScroll, { passive: true });
+    window.addEventListener('resize', handleWindowScroll);
+}
 
 document.addEventListener('DOMContentLoaded', async () => {
     const tabElement = document.getElementById('mds-tab');
@@ -336,9 +463,7 @@ function initializeState(root) {
         });
 
         input.addEventListener('input', event => {
-            if (!event.target.value.trim() && filters[key]) {
-                updateFilter(key, '');
-            }
+            updateFilter(key, event.target.value);
         });
 
         const config = FILTER_LOOKUP[key];
@@ -353,6 +478,23 @@ function initializeState(root) {
             }
         }
     });
+
+    const tableContainer = root.querySelector('#mds-table-container');
+    if (tableContainer) {
+        tableContainer.addEventListener('scroll', () => scheduleScrollTopButtonUpdate());
+    }
+    const table = root.querySelector('.mds-table');
+    const tableBody = root.querySelector('#mds-table-body');
+
+    const scrollTopButton = root.querySelector('#mds-scroll-top-button');
+    if (scrollTopButton) {
+        scrollTopButton.addEventListener('click', event => {
+            event.preventDefault();
+            scrollMdsSectionToTop();
+        });
+        scrollTopButton.hidden = true;
+        scrollTopButton.setAttribute('aria-hidden', 'true');
+    }
 
     const updateButton = root.querySelector('#mds-update-button');
     if (updateButton) {
@@ -398,6 +540,9 @@ function initializeState(root) {
     const handleTabChanged = event => {
         if (event?.detail?.tab !== 'mds') {
             clearRowHighlight();
+            hideScrollTopButton();
+        } else {
+            scheduleScrollTopButtonUpdate();
         }
     };
     if (typeof document !== 'undefined') {
@@ -409,9 +554,9 @@ function initializeState(root) {
         filters,
         filterInputs,
         dropdowns,
-        tableContainer: root.querySelector('#mds-table-container'),
-        table: root.querySelector('.mds-table'),
-        tableBody: root.querySelector('#mds-table-body'),
+        tableContainer,
+        table,
+        tableBody,
         countEl: root.querySelector('#mds-entry-count'),
         totalEl: root.querySelector('#mds-total-count'),
         statusEl,
@@ -446,6 +591,8 @@ function initializeState(root) {
         highlightedRowKey: '',
         tabChangeHandler: handleTabChanged,
         byAaguid: new Map(),
+        scrollTopButton,
+        scrollTopButtonVisible: false,
     };
 }
 
@@ -498,6 +645,7 @@ async function loadMdsData(statusNote) {
                         emptyRow.appendChild(cell);
                         tbody.appendChild(emptyRow);
                     }
+                    hideScrollTopButton();
                     return;
                 }
                 throw new Error(`Unexpected response status: ${response.status}`);
@@ -695,6 +843,7 @@ function renderTable(entries) {
         cell.textContent = 'No authenticators match the selected filters.';
         emptyRow.appendChild(cell);
         tbody.appendChild(emptyRow);
+        hideScrollTopButton();
         stabiliseColumnWidths();
         return;
     }
@@ -742,6 +891,7 @@ function renderTable(entries) {
         }
     }
     stabiliseColumnWidths();
+    scheduleScrollTopButtonUpdate();
 }
 
 function formatDetailSubtitle(entry) {
@@ -919,6 +1069,7 @@ function applyRowHighlightByKey(key, options = {}) {
         row.scrollIntoView({ block: 'center', behavior });
     }
 
+    scheduleScrollTopButtonUpdate();
     return true;
 }
 
@@ -955,6 +1106,7 @@ function showAuthenticatorDetail(entry, options = {}) {
     }
 
     clearRowHighlight();
+    hideScrollTopButton();
 
     const sourceEntry = typeof entry.index === 'number' && mdsData[entry.index]
         ? mdsData[entry.index]
@@ -1054,6 +1206,7 @@ function hideAuthenticatorDetail() {
         });
     }
     mdsState.activeDetailEntry = null;
+    scheduleScrollTopButtonUpdate();
 }
 
 function buildDetailContent(entry) {
@@ -1553,7 +1706,7 @@ async function decodeCertificate(certificateBase64) {
 }
 
 function formatCertificateInput(value) {
-    return value.replace(/(.{64})/g, '$1\n');
+    return typeof value === 'string' ? value : '';
 }
 
 function formatCertificateOutput(details) {

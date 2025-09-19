@@ -172,6 +172,52 @@
     background: rgba(0, 114, 206, 0.55);
 }
 
+.mds-scroll-top {
+    position: fixed;
+    bottom: 2.5rem;
+    right: 2.5rem;
+    z-index: 1200;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border-radius: 999px;
+    border: none;
+    background: var(--primary-color);
+    color: #fff;
+    font-weight: 700;
+    font-size: 1.05rem;
+    cursor: pointer;
+    box-shadow: 0 18px 40px rgba(15, 39, 64, 0.28);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.mds-scroll-top:hover,
+.mds-scroll-top:focus-visible {
+    background: var(--primary-dark);
+    transform: translateY(-2px);
+    box-shadow: 0 24px 52px rgba(15, 39, 64, 0.32);
+}
+
+.mds-scroll-top:focus-visible {
+    outline: 3px solid rgba(255, 255, 255, 0.55);
+    outline-offset: 3px;
+}
+
+.mds-scroll-top[hidden] {
+    display: none;
+}
+
+@media (max-width: 900px) {
+    .mds-scroll-top {
+        bottom: 1.35rem;
+        right: 1.35rem;
+        width: 44px;
+        height: 44px;
+    }
+}
+
 .mds-table {
     width: 100%;
     min-width: 1500px;
