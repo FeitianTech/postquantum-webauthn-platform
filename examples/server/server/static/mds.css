@@ -544,6 +544,25 @@
     letter-spacing: 0.01em;
 }
 
+.mds-detail-code-values {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    font-family: var(--mds-font-mono, 'SFMono-Regular', 'Roboto Mono', 'Fira Mono', monospace);
+    font-size: 0.85rem;
+    line-height: 1.45;
+    word-break: break-all;
+}
+
+.mds-detail-code {
+    display: inline-block;
+    padding: 0.35rem 0.5rem;
+    border-radius: 10px;
+    background: rgba(0, 114, 206, 0.08);
+    color: var(--primary-dark);
+    letter-spacing: 0.03em;
+}
+
 .mds-detail-groups {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -624,6 +643,17 @@
     padding: 0.35rem 0;
     border-top: 1px solid rgba(0, 114, 206, 0.12);
     vertical-align: top;
+}
+
+.mds-status-descriptor {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.mds-status-meta {
+    font-size: 0.78rem;
+    color: var(--muted-text);
 }
 
 .mds-status-table tbody tr:first-child td {

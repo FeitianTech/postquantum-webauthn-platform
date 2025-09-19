@@ -844,6 +844,10 @@ function buildDetailContent(entry) {
     if (metadata.cryptoStrength !== undefined && metadata.cryptoStrength !== null) {
         metadataItems.push({ label: 'Crypto Strength', value: String(metadata.cryptoStrength) });
     }
+    const keyIdentifierNode = createCodeValueList(entry.attestationKeyIdentifiers);
+    if (keyIdentifierNode) {
+        metadataItems.push({ label: 'Attestation Certificate Key IDs', node: keyIdentifierNode });
+    }
     const upvValues = formatUpv(metadata.upv);
     if (upvValues.length) {
         metadataItems.push({ label: 'UPV', value: upvValues.join(', ') });
@@ -992,6 +996,25 @@ function createChipList(label, values) {
     wrapper.appendChild(labelEl);
     wrapper.appendChild(list);
     return wrapper;
+}
+
+function createCodeValueList(values) {
+    const items = extractList(values)
+        .map(value => (value === undefined || value === null ? '' : String(value).trim()))
+        .filter(Boolean);
+    if (!items.length) {
+        return null;
+    }
+
+    const container = document.createElement('div');
+    container.className = 'mds-detail-code-values';
+    items.forEach(value => {
+        const code = document.createElement('code');
+        code.className = 'mds-detail-code';
+        code.textContent = value;
+        container.appendChild(code);
+    });
+    return container;
 }
 
 function renderUserVerificationDetails(details) {
@@ -1197,6 +1220,9 @@ function renderStatusReports(reports) {
         row.appendChild(certificateCell);
 
         const descriptorCell = document.createElement('td');
+        const descriptorContainer = document.createElement('div');
+        descriptorContainer.className = 'mds-status-descriptor';
+
         const descriptorParts = [];
         if (report.certificationDescriptor) {
             descriptorParts.push(String(report.certificationDescriptor));
@@ -1204,10 +1230,34 @@ function renderStatusReports(reports) {
         if (report.url) {
             descriptorParts.push(String(report.url));
         }
-        if (report.timeOfLastStatusChange) {
-            descriptorParts.push(`Changed: ${formatDate(report.timeOfLastStatusChange)}`);
+        if (descriptorParts.length) {
+            const descriptorLine = document.createElement('div');
+            descriptorLine.textContent = descriptorParts.join(' • ');
+            descriptorContainer.appendChild(descriptorLine);
         }
-        descriptorCell.textContent = descriptorParts.length ? descriptorParts.join(' • ') : '—';
+
+        const metadataLines = [];
+        if (report.certificationPolicyVersion) {
+            metadataLines.push(`Policy: ${report.certificationPolicyVersion}`);
+        }
+        if (report.certificationRequirementsVersion) {
+            metadataLines.push(`Requirements: ${report.certificationRequirementsVersion}`);
+        }
+        if (report.timeOfLastStatusChange) {
+            metadataLines.push(`Changed: ${formatDate(report.timeOfLastStatusChange)}`);
+        }
+        if (metadataLines.length) {
+            const metaLine = document.createElement('div');
+            metaLine.className = 'mds-status-meta';
+            metaLine.textContent = metadataLines.join(' • ');
+            descriptorContainer.appendChild(metaLine);
+        }
+
+        if (!descriptorContainer.childElementCount) {
+            descriptorContainer.textContent = '—';
+        }
+
+        descriptorCell.appendChild(descriptorContainer);
         row.appendChild(descriptorCell);
 
         tbody.appendChild(row);
@@ -1780,6 +1830,7 @@ function transformEntry(entry, index = 0) {
     const algorithmsList = extractList(metadata.authenticationAlgorithms).map(formatEnum);
     const icon = normaliseIcon(metadata.icon, metadata.iconType);
     const attestationCertificates = extractList(metadata.attestationRootCertificates);
+    const attestationKeyIdentifiers = extractAttestationKeyIdentifiers(metadata, entry);
 
     const latestStatusDate = latestEffectiveDate(entry?.statusReports || []);
     const rawDate = entry?.timeOfLastStatusChange || latestStatusDate;
@@ -1810,7 +1861,30 @@ function transformEntry(entry, index = 0) {
         rawEntry: entry || null,
         statusReports: Array.isArray(entry?.statusReports) ? entry.statusReports : [],
         attestationCertificates,
+        attestationKeyIdentifiers,
     };
+}
+
+function extractAttestationKeyIdentifiers(metadata, entry) {
+    const map = new Map();
+    const addValue = value => {
+        if (value === undefined || value === null) {
+            return;
+        }
+        const text = String(value).trim();
+        if (!text) {
+            return;
+        }
+        const key = text.toLowerCase();
+        if (!map.has(key)) {
+            map.set(key, text);
+        }
+    };
+
+    extractList(metadata?.attestationCertificateKeyIdentifiers).forEach(addValue);
+    extractList(entry?.attestationCertificateKeyIdentifiers).forEach(addValue);
+
+    return Array.from(map.values());
 }
 
 function normaliseIcon(icon, iconType) {
