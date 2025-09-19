@@ -2612,6 +2612,7 @@ def advanced_register_begin():
     auth_selection = public_key.get("authenticatorSelection", {})
     if not isinstance(auth_selection, dict):
         auth_selection = {}
+        public_key["authenticatorSelection"] = auth_selection
 
     raw_hints = public_key.get("hints")
     hints_list: List[str] = []
@@ -2666,9 +2667,20 @@ def advanced_register_begin():
                     ),
                     400,
                 )
+            if len(allowed_attachment_values) != 1:
+                if isinstance(auth_selection, dict) and "authenticatorAttachment" in auth_selection:
+                    auth_selection.pop("authenticatorAttachment", None)
+                normalized_attachment = None
         elif len(allowed_attachment_values) == 1:
             normalized_attachment = allowed_attachment_values[0]
             auth_selection["authenticatorAttachment"] = normalized_attachment
+        elif isinstance(auth_selection, dict) and "authenticatorAttachment" in auth_selection:
+            auth_selection.pop("authenticatorAttachment", None)
+            normalized_attachment = None
+    else:
+        if isinstance(auth_selection, dict) and "authenticatorAttachment" in auth_selection:
+            auth_selection.pop("authenticatorAttachment", None)
+        normalized_attachment = None
 
     if normalized_attachment == "platform":
         auth_attachment = AuthenticatorAttachment.PLATFORM
@@ -2893,6 +2905,8 @@ def advanced_register_complete():
         if parsed_extension_results
         else (response.get('clientExtensionResults', {}) if isinstance(response, dict) else {})
     )
+
+    min_pin_length_value = _extract_min_pin_length(client_extension_results)
 
     authenticator_attachment_response = _normalize_attachment(
         response.get('authenticatorAttachment') if isinstance(response, Mapping) else None

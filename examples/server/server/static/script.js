@@ -227,31 +227,31 @@ function describeCoseAlgorithm(alg) {
             if (!publicKey || typeof publicKey !== 'object') {
                 return;
             }
+
             const allowedAttachments = ensureAuthenticationHintsAllowed(publicKey);
-            if (Array.isArray(allowedAttachments) && allowedAttachments.length > 0) {
-                publicKey.allowedAuthenticatorAttachments = allowedAttachments.slice();
+            const allowedList = Array.isArray(allowedAttachments) ? allowedAttachments : [];
+
+            if (allowedList.length > 0) {
+                publicKey.allowedAuthenticatorAttachments = allowedList.slice();
             } else if (Object.prototype.hasOwnProperty.call(publicKey, 'allowedAuthenticatorAttachments')) {
                 delete publicKey.allowedAuthenticatorAttachments;
             }
-            if (!Array.isArray(allowedAttachments) || allowedAttachments.length === 0) {
-                return;
-            }
+
             if (!publicKey.authenticatorSelection || typeof publicKey.authenticatorSelection !== 'object') {
                 publicKey.authenticatorSelection = {};
             }
+
             const selection = publicKey.authenticatorSelection;
-            let attachment = selection.authenticatorAttachment;
-            if (typeof attachment === 'string') {
-                attachment = attachment.trim();
-            } else {
-                attachment = undefined;
+            const normalizedAttachment = normalizeAttachmentValue(selection.authenticatorAttachment);
+
+            if (normalizedAttachment && allowedList.length > 0 && !allowedList.includes(normalizedAttachment)) {
+                throw new Error('Selected authenticator attachment is not permitted by the provided hints');
             }
-            if (attachment) {
-                if (!allowedAttachments.includes(attachment)) {
-                    throw new Error('Selected authenticator attachment is not permitted by the provided hints');
-                }
-            } else if (allowedAttachments.length === 1) {
-                selection.authenticatorAttachment = allowedAttachments[0];
+
+            if (allowedList.length === 1) {
+                selection.authenticatorAttachment = allowedList[0];
+            } else if (Object.prototype.hasOwnProperty.call(selection, 'authenticatorAttachment')) {
+                delete selection.authenticatorAttachment;
             }
         }
 
