@@ -20,6 +20,7 @@ window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
         const JSON_EDITOR_INDENT_UNIT = '  ';
 
         const COSE_ALGORITHM_LABELS = {
+            '-50': 'ML-DSA-87 (PQC) (-50)',
             '-49': 'ML-DSA-65 (PQC) (-49)',
             '-48': 'ML-DSA-44 (PQC) (-48)',
             '-8': 'EdDSA (-8)',
@@ -102,6 +103,9 @@ function describeCoseAlgorithm(alg) {
         }
 
         function describeMldsaParameterSet(alg) {
+            if (alg === -50 || alg === '-50') {
+                return 'ML-DSA-87';
+            }
             if (alg === -48 || alg === '-48') {
                 return 'ML-DSA-44';
             }
@@ -110,6 +114,273 @@ function describeCoseAlgorithm(alg) {
             }
             return '';
         }
+
+        const HINT_ATTACHMENT_MAP = {
+            'security-key': 'cross-platform',
+            'hybrid': 'cross-platform',
+            'client-device': 'platform',
+        };
+
+        const ATTACHMENT_LABELS = {
+            'cross-platform': 'Cross-platform (Security key / Hybrid)',
+            'platform': 'Platform (Client device)',
+        };
+
+        function normalizeHintValue(value) {
+            if (typeof value !== 'string') {
+                return '';
+            }
+            return value.trim().toLowerCase();
+        }
+
+        function collectSelectedHints(scope) {
+            const mappings = scope === 'authentication'
+                ? [
+                    {id: 'hint-client-device-auth', value: 'client-device'},
+                    {id: 'hint-hybrid-auth', value: 'hybrid'},
+                    {id: 'hint-security-key-auth', value: 'security-key'},
+                ]
+                : [
+                    {id: 'hint-client-device', value: 'client-device'},
+                    {id: 'hint-hybrid', value: 'hybrid'},
+                    {id: 'hint-security-key', value: 'security-key'},
+                ];
+            const hints = [];
+            mappings.forEach(({id, value}) => {
+                const checkbox = document.getElementById(id);
+                if (checkbox?.checked) {
+                    hints.push(value);
+                }
+            });
+            return hints;
+        }
+
+        function deriveAllowedAttachmentsFromHints(hints) {
+            const normalizedHints = Array.isArray(hints)
+                ? hints.map(normalizeHintValue).filter(Boolean)
+                : [];
+            const attachments = [];
+            const seen = new Set();
+            normalizedHints.forEach(hint => {
+                const mapped = HINT_ATTACHMENT_MAP[hint];
+                if (mapped && !seen.has(mapped)) {
+                    attachments.push(mapped);
+                    seen.add(mapped);
+                }
+            });
+            return attachments;
+        }
+
+        function normalizeAttachmentValue(value) {
+            if (typeof value !== 'string') {
+                return '';
+            }
+            return value.trim().toLowerCase();
+        }
+
+        function getStoredCredentialAttachment(cred) {
+            if (!cred || typeof cred !== 'object') {
+                return '';
+            }
+            const directValue = normalizeAttachmentValue(cred.authenticatorAttachment || cred.authenticator_attachment);
+            if (directValue) {
+                return directValue;
+            }
+            const properties = cred.properties && typeof cred.properties === 'object'
+                ? cred.properties
+                : {};
+            const propertyValue = normalizeAttachmentValue(
+                properties.authenticatorAttachment || properties.authenticator_attachment
+            );
+            return propertyValue;
+        }
+
+        function applyHintsToCheckboxes(hints, scope) {
+            const normalized = new Set(
+                Array.isArray(hints)
+                    ? hints.map(normalizeHintValue).filter(Boolean)
+                    : []
+            );
+            const mappings = scope === 'authentication'
+                ? [
+                    {id: 'hint-client-device-auth', value: 'client-device'},
+                    {id: 'hint-hybrid-auth', value: 'hybrid'},
+                    {id: 'hint-security-key-auth', value: 'security-key'},
+                ]
+                : [
+                    {id: 'hint-client-device', value: 'client-device'},
+                    {id: 'hint-hybrid', value: 'hybrid'},
+                    {id: 'hint-security-key', value: 'security-key'},
+                ];
+            mappings.forEach(({id, value}) => {
+                const checkbox = document.getElementById(id);
+                if (checkbox) {
+                    checkbox.checked = normalized.has(value);
+                }
+            });
+            if (scope !== 'authentication') {
+                updateJsonEditor();
+            }
+        }
+
+        function enforceAuthenticatorAttachmentWithHints(publicKey) {
+            if (!publicKey || typeof publicKey !== 'object') {
+                return;
+            }
+            const allowedAttachments = ensureAuthenticationHintsAllowed(publicKey);
+            if (Array.isArray(allowedAttachments) && allowedAttachments.length > 0) {
+                publicKey.allowedAuthenticatorAttachments = allowedAttachments.slice();
+            } else if (Object.prototype.hasOwnProperty.call(publicKey, 'allowedAuthenticatorAttachments')) {
+                delete publicKey.allowedAuthenticatorAttachments;
+            }
+            if (!Array.isArray(allowedAttachments) || allowedAttachments.length === 0) {
+                return;
+            }
+            if (!publicKey.authenticatorSelection || typeof publicKey.authenticatorSelection !== 'object') {
+                publicKey.authenticatorSelection = {};
+            }
+            const selection = publicKey.authenticatorSelection;
+            let attachment = selection.authenticatorAttachment;
+            if (typeof attachment === 'string') {
+                attachment = attachment.trim();
+            } else {
+                attachment = undefined;
+            }
+            if (attachment) {
+                if (!allowedAttachments.includes(attachment)) {
+                    throw new Error('Selected authenticator attachment is not permitted by the provided hints');
+                }
+            } else if (allowedAttachments.length === 1) {
+                selection.authenticatorAttachment = allowedAttachments[0];
+            }
+        }
+
+                
+        function ensureAuthenticationHintsAllowed(publicKey) {
+            if (!publicKey || typeof publicKey !== 'object') {
+                return [];
+            }
+            const hints = Array.isArray(publicKey.hints) ? publicKey.hints : [];
+            let allowedAttachments = deriveAllowedAttachmentsFromHints(hints);
+            const requestedAllowed = Array.isArray(publicKey.allowedAuthenticatorAttachments)
+                ? Array.from(new Set(publicKey.allowedAuthenticatorAttachments
+                    .map(normalizeAttachmentValue)
+                    .filter(Boolean)))
+                : [];
+            if (requestedAllowed.length > 0) {
+                if (allowedAttachments.length > 0) {
+                    allowedAttachments = allowedAttachments.filter(value => requestedAllowed.includes(value));
+                } else {
+                    allowedAttachments = requestedAllowed.slice();
+                }
+            }
+            allowedAttachments = Array.from(new Set(allowedAttachments));
+            const resolvedAllowed = allowedAttachments.length > 0
+                ? allowedAttachments
+                : requestedAllowed;
+
+            if (Array.isArray(publicKey.allowCredentials) && resolvedAllowed.length > 0) {
+                const invalidDescriptor = publicKey.allowCredentials.find(descriptor => {
+                    if (!descriptor || typeof descriptor !== 'object') {
+                        return false;
+                    }
+                    const descriptorId = descriptor.id;
+                    const hexId = extractHexFromJsonFormat(descriptorId);
+                    if (!hexId) {
+                        return false;
+                    }
+                    const matchingCredential = (storedCredentials || []).find(cred => {
+                        const credentialIdHex = cred.credentialIdHex || getCredentialIdHex(cred);
+                        if (!credentialIdHex) {
+                            return false;
+                        }
+                        return credentialIdHex.toLowerCase() === hexId.toLowerCase();
+                    });
+                    if (!matchingCredential) {
+                        return false;
+                    }
+                    const attachment = getStoredCredentialAttachment(matchingCredential);
+                    return attachment && !resolvedAllowed.includes(attachment);
+                });
+                if (invalidDescriptor) {
+                    publicKey.allowCredentials = publicKey.allowCredentials.filter(descriptor => {
+                        if (!descriptor || typeof descriptor !== 'object') {
+                            return false;
+                        }
+                        const descriptorId = descriptor.id;
+                        const hexId = extractHexFromJsonFormat(descriptorId);
+                        if (!hexId) {
+                            return false;
+                        }
+                        const matchingCredential = (storedCredentials || []).find(cred => {
+                            const credentialIdHex = cred.credentialIdHex || getCredentialIdHex(cred);
+                            if (!credentialIdHex) {
+                                return false;
+                            }
+                            return credentialIdHex.toLowerCase() === hexId.toLowerCase();
+                        });
+                        if (!matchingCredential) {
+                            return false;
+                        }
+                        const attachment = getStoredCredentialAttachment(matchingCredential);
+                        return attachment && resolvedAllowed.includes(attachment);
+                    });
+                    if (!publicKey.allowCredentials.length) {
+                        delete publicKey.allowCredentials;
+                    }
+                } else if (publicKey.allowCredentials.length === 0 && Array.isArray(storedCredentials) && storedCredentials.length > 0) {
+                    if (resolvedAllowed.length === 1) {
+                        const allowedValue = resolvedAllowed[0];
+                        const fallbackCredential = (storedCredentials || []).find(cred => {
+                            const attachment = getStoredCredentialAttachment(cred);
+                            return attachment && attachment === allowedValue;
+                        });
+                        if (fallbackCredential) {
+                            const credentialIdHex = fallbackCredential.credentialIdHex || getCredentialIdHex(fallbackCredential);
+                            const formatValue = convertFormat(credentialIdHex, 'hex', getCurrentBinaryFormat());
+                            const formattedId = currentFormatToJsonFormat(formatValue);
+                            if (formattedId && typeof formattedId === 'object') {
+                                publicKey.allowCredentials = [{
+                                    type: "public-key",
+                                    id: formattedId,
+                                }];
+                            }
+                        }
+                    } else {
+                        const fallbackSource = (storedCredentials || []).filter(cred => {
+                            const attachment = getStoredCredentialAttachment(cred);
+                            return !resolvedAllowed.length || (attachment && resolvedAllowed.includes(attachment));
+                        });
+                        const fallbackCredentials = fallbackSource
+                            .map(cred => {
+                                const credentialIdHex = cred.credentialIdHex || getCredentialIdHex(cred);
+                                if (!credentialIdHex) {
+                                    return null;
+                                }
+                                const formatValue = convertFormat(credentialIdHex, 'hex', getCurrentBinaryFormat());
+                                const formattedId = currentFormatToJsonFormat(formatValue);
+                                if (!formattedId || typeof formattedId !== 'object') {
+                                    return null;
+                                }
+                                return {
+                                    type: "public-key",
+                                    id: formattedId,
+                                };
+                            })
+                            .filter(Boolean);
+                        if (fallbackCredentials.length > 0) {
+                            publicKey.allowCredentials = fallbackCredentials;
+                        } else {
+                            delete publicKey.allowCredentials;
+                        }
+                    }
+                }
+            }
+
+            return resolvedAllowed;
+        }
+
+        
 
         function getCoseMapValue(coseMap, key) {
             if (!coseMap || typeof coseMap !== 'object') {
@@ -387,6 +658,233 @@ function describeCoseAlgorithm(alg) {
             }
             return '';
         }
+
+        function normalizeMinPinLengthValue(value) {
+            if (value === null || value === undefined) {
+                return null;
+            }
+            if (typeof value === 'number' && Number.isFinite(value)) {
+                const normalized = Math.floor(value);
+                return normalized >= 0 ? normalized : null;
+            }
+            if (typeof value === 'string') {
+                const trimmed = value.trim();
+                if (!trimmed) {
+                    return null;
+                }
+                const parsed = Number.parseInt(trimmed, 10);
+                if (!Number.isNaN(parsed) && Number.isFinite(parsed) && parsed >= 0) {
+                    return parsed;
+                }
+            }
+            return null;
+        }
+
+        function extractMinPinLengthValue(source) {
+            if (!source || typeof source !== 'object') {
+                return null;
+            }
+
+            const properties = (source.properties && typeof source.properties === 'object')
+                ? source.properties
+                : null;
+            if (properties) {
+                const propertyCandidates = [
+                    properties.minPinLength,
+                    properties.min_pin_length,
+                ];
+                for (const candidate of propertyCandidates) {
+                    const normalized = normalizeMinPinLengthValue(candidate);
+                    if (normalized !== null) {
+                        return normalized;
+                    }
+                }
+            }
+
+            const clientOutputs = (source.clientExtensionOutputs && typeof source.clientExtensionOutputs === 'object')
+                ? source.clientExtensionOutputs
+                : null;
+            if (clientOutputs && Object.prototype.hasOwnProperty.call(clientOutputs, 'minPinLength')) {
+                const extensionValue = clientOutputs.minPinLength;
+                const directValue = normalizeMinPinLengthValue(extensionValue);
+                if (directValue !== null) {
+                    return directValue;
+                }
+                if (extensionValue && typeof extensionValue === 'object') {
+                    const nestedCandidates = [
+                        extensionValue.minPinLength,
+                        extensionValue.minimumPinLength,
+                        extensionValue.value,
+                    ];
+                    for (const nested of nestedCandidates) {
+                        const normalized = normalizeMinPinLengthValue(nested);
+                        if (normalized !== null) {
+                            return normalized;
+                        }
+                    }
+                }
+            }
+
+            const registrationData = (source.registrationData && typeof source.registrationData === 'object')
+                ? source.registrationData
+                : null;
+            if (registrationData) {
+                const authenticatorExtensions = registrationData.authenticatorExtensions;
+                if (authenticatorExtensions && typeof authenticatorExtensions === 'object') {
+                    if (Object.prototype.hasOwnProperty.call(authenticatorExtensions, 'minPinLength')) {
+                        const normalized = normalizeMinPinLengthValue(authenticatorExtensions.minPinLength);
+                        if (normalized !== null) {
+                            return normalized;
+                        }
+                    }
+                }
+            }
+
+            return null;
+        }
+
+
+        function bytesToHex(bytes) {
+            if (!bytes) {
+                return '';
+            }
+            return Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('');
+        }
+
+
+        function extractAuthenticatorDataHex(source) {
+            if (!source) {
+                return '';
+            }
+
+            if (typeof source === 'string') {
+                const trimmed = source.trim();
+                if (!trimmed) {
+                    return '';
+                }
+                const hexCandidate = trimmed.replace(/[^0-9a-fA-F]/g, '');
+                if (hexCandidate.length === trimmed.length && hexCandidate.length % 2 === 0) {
+                    return hexCandidate.toLowerCase();
+                }
+                try {
+                    const fromBase64 = base64ToHex(trimmed);
+                    if (fromBase64) {
+                        return fromBase64;
+                    }
+                } catch (error) {
+                    // Ignore decode errors and continue checking other encodings
+                }
+                try {
+                    const fromBase64Url = base64UrlToHex(trimmed);
+                    if (fromBase64Url) {
+                        return fromBase64Url;
+                    }
+                } catch (error) {
+                    // Ignore decode errors
+                }
+                return '';
+            }
+
+            if (Array.isArray(source)) {
+                try {
+                    return bytesToHex(Uint8Array.from(source));
+                } catch (error) {
+                    return '';
+                }
+            }
+
+            if (ArrayBuffer.isView(source)) {
+                return bytesToHex(new Uint8Array(source.buffer, source.byteOffset, source.byteLength));
+            }
+
+            if (source instanceof ArrayBuffer) {
+                return bytesToHex(new Uint8Array(source));
+            }
+
+            if (typeof source === 'object') {
+                const candidates = [
+                    source.$hex,
+                    source.$base64,
+                    source.$base64url,
+                    source.hex,
+                    source.base64,
+                    source.base64url,
+                    source.raw,
+                    source.value,
+                ];
+                for (const candidate of candidates) {
+                    const extracted = extractAuthenticatorDataHex(candidate);
+                    if (extracted) {
+                        return extracted;
+                    }
+                }
+            }
+
+            return '';
+        }
+
+
+        function extractAaguidFromAuthDataHex(authDataHex) {
+            if (!authDataHex) {
+                return '';
+            }
+
+            const sanitized = authDataHex.replace(/[^0-9a-f]/gi, '').toLowerCase();
+            const minimumLength = (32 + 1 + 4 + 16) * 2; // rpIdHash + flags + counter + AAGUID
+            if (sanitized.length < minimumLength) {
+                return '';
+            }
+
+            const flagsHex = sanitized.substr(64, 2);
+            const flagsValue = Number.parseInt(flagsHex, 16);
+            if (!Number.isFinite(flagsValue)) {
+                return '';
+            }
+            const hasAttestedCredentialData = (flagsValue & 0x40) !== 0;
+            if (!hasAttestedCredentialData) {
+                return '';
+            }
+
+            const aaguidStart = (32 + 1 + 4) * 2;
+            const aaguidHex = sanitized.substr(aaguidStart, 32);
+            if (aaguidHex.length !== 32) {
+                return '';
+            }
+            return aaguidHex;
+        }
+
+
+        function deriveAaguidFromCredentialData(cred) {
+            if (!cred || typeof cred !== 'object') {
+                return '';
+            }
+
+            const sources = [
+                cred.registrationData && cred.registrationData.authenticatorData,
+                cred.registrationData && cred.registrationData.authenticator_data,
+                cred.properties && cred.properties.registrationData && cred.properties.registrationData.authenticatorData,
+                cred.properties && cred.properties.registrationData && cred.properties.registrationData.authenticator_data,
+                cred.properties && cred.properties.registration_data && cred.properties.registration_data.authenticatorData,
+                cred.properties && cred.properties.registration_data && cred.properties.registration_data.authenticator_data,
+                cred.properties && cred.properties.authenticatorData,
+                cred.properties && cred.properties.authenticator_data,
+                cred.relyingParty && cred.relyingParty.registrationData && cred.relyingParty.registrationData.authenticatorData,
+                cred.relyingParty && cred.relyingParty.registrationData && cred.relyingParty.registrationData.authenticator_data,
+                cred.authenticatorData,
+                cred.authenticator_data,
+            ];
+
+            for (const source of sources) {
+                const authDataHex = extractAuthenticatorDataHex(source);
+                const aaguid = extractAaguidFromAuthDataHex(authDataHex);
+                if (aaguid) {
+                    return aaguid;
+                }
+            }
+
+            return '';
+        }
+
 
         // Convert hex to JavaScript Uint8Array format
         function hexToJs(hexString) {
@@ -1621,6 +2119,10 @@ function describeCoseAlgorithm(alg) {
                 if (cred.largeBlob === true || cred.largeBlobSupported === true) {
                     features.push('largeBlob');
                 }
+                const algorithmValue = cred.publicKeyAlgorithm ?? cred.algorithm;
+                if (describeMldsaParameterSet(algorithmValue)) {
+                    features.push('PQC');
+                }
 
                 const featureText = features.length > 0 ? features.join(' • ') : '';
 
@@ -1829,6 +2331,7 @@ function describeCoseAlgorithm(alg) {
 
             const discoverableValue = cred.residentKey ?? cred.discoverable ?? false;
             const largeBlobSupported = cred.largeBlob ?? cred.largeBlobSupported ?? false;
+            const minPinLengthValue = extractMinPinLengthValue(cred);
             const propertiesData = (cred.properties && typeof cred.properties === 'object' && cred.properties !== null)
                 ? cred.properties
                 : {};
@@ -1864,15 +2367,30 @@ function describeCoseAlgorithm(alg) {
                 renderAttestationResultRow('AAGUID Match', attestationAaguidMatchValue),
             ].join('');
 
+            const fallbackAaguidCandidates = [
+                cred.aaguidHex,
+                cred.aaguidGuid,
+                cred.aaguidRaw,
+                propertiesData?.aaguid,
+                propertiesData?.aaguidHex,
+                propertiesData?.aaguidGuid,
+                propertiesData?.aaguidRaw,
+                attestationSummaryData?.aaguid,
+                attestationSummaryData?.aaguidHex,
+                attestationSummaryData?.aaguidGuid,
+            ];
+            const relyingPartyAaguid = cred?.relyingParty?.aaguid;
+            if (relyingPartyAaguid && typeof relyingPartyAaguid === 'object') {
+                fallbackAaguidCandidates.push(
+                    relyingPartyAaguid.raw,
+                    relyingPartyAaguid.hex,
+                    relyingPartyAaguid.guid,
+                );
+            } else if (relyingPartyAaguid) {
+                fallbackAaguidCandidates.push(relyingPartyAaguid);
+            }
+
             if (!aaguidHex) {
-                const fallbackAaguidCandidates = [
-                    propertiesData?.aaguid,
-                    propertiesData?.aaguidHex,
-                    propertiesData?.aaguidGuid,
-                    attestationSummaryData?.aaguid,
-                    attestationSummaryData?.aaguidHex,
-                    attestationSummaryData?.aaguidGuid,
-                ];
                 for (const candidate of fallbackAaguidCandidates) {
                     const normalised = normaliseAaguidValue(candidate);
                     if (normalised) {
@@ -1882,55 +2400,63 @@ function describeCoseAlgorithm(alg) {
                 }
             }
 
-            if (aaguidHex) {
-                aaguidHex = aaguidHex.toLowerCase();
-                const aaguidB64 = hexToBase64(aaguidHex);
-                const aaguidB64u = hexToBase64Url(aaguidHex);
-                const aaguidGuid = aaguidHex.length === 32 ? hexToGuid(aaguidHex) : '';
-                const rootVerified = attestationRootValue === true ||
-                    (typeof attestationRootValue === 'string' && attestationRootValue.trim().toLowerCase() === 'true');
-                const aaguidNavigateValue = aaguidGuid ? aaguidGuid.toLowerCase() : '';
-                const infoButton = rootVerified && aaguidNavigateValue
-                    ? `<button type="button" class="credential-info-button credential-aaguid-button" data-aaguid="${escapeHtml(aaguidNavigateValue)}" aria-label="View authenticator metadata">Info</button>`
-                    : '';
-
-                const sections = [];
-                if (aaguidB64) {
-                    sections.push(`
-                        <div class="credential-aaguid-value">
-                            <span class="credential-aaguid-value-label">b64</span>
-                            <div class="credential-code-block">${aaguidB64}</div>
-                        </div>`);
-                }
-                if (aaguidB64u) {
-                    sections.push(`
-                        <div class="credential-aaguid-value">
-                            <span class="credential-aaguid-value-label">b64u</span>
-                            <div class="credential-code-block">${aaguidB64u}</div>
-                        </div>`);
-                }
-                sections.push(`
-                    <div class="credential-aaguid-value">
-                        <span class="credential-aaguid-value-label">hex</span>
-                        <div class="credential-code-block">${aaguidHex}</div>
-                    </div>`);
-                if (aaguidGuid) {
-                    sections.push(`
-                        <div class="credential-aaguid-value">
-                            <span class="credential-aaguid-value-label">guid</span>
-                            <div class="credential-code-block">${aaguidGuid}</div>
-                        </div>`);
-                }
-
-                detailsHtml += `
-                    <div class="credential-aaguid-row">
-                        <span class="credential-aaguid-label">AAGUID</span>
-                        ${infoButton}
-                    </div>
-                    <div class="credential-aaguid-values">
-                        ${sections.join('')}
-                    </div>`;
+            if (!aaguidHex) {
+                aaguidHex = deriveAaguidFromCredentialData(cred);
             }
+
+            const rootVerified = attestationRootValue === true ||
+                (typeof attestationRootValue === 'string' && attestationRootValue.trim().toLowerCase() === 'true');
+
+            const normalizedAaguidHex = aaguidHex ? aaguidHex.toLowerCase() : '';
+            let aaguidB64 = '';
+            let aaguidB64u = '';
+            let aaguidGuid = '';
+            if (normalizedAaguidHex && normalizedAaguidHex.length % 2 === 0) {
+                try {
+                    aaguidB64 = hexToBase64(normalizedAaguidHex);
+                } catch (error) {
+                    aaguidB64 = '';
+                }
+                try {
+                    aaguidB64u = hexToBase64Url(normalizedAaguidHex);
+                } catch (error) {
+                    aaguidB64u = '';
+                }
+                if (normalizedAaguidHex.length === 32) {
+                    try {
+                        aaguidGuid = hexToGuid(normalizedAaguidHex);
+                    } catch (error) {
+                        aaguidGuid = '';
+                    }
+                }
+            }
+
+            const hasAaguid = Boolean(normalizedAaguidHex);
+            const infoButton = rootVerified && aaguidGuid
+                ? `<button type="button" class="credential-info-button credential-aaguid-button" data-aaguid="${escapeHtml(aaguidGuid.toLowerCase())}" aria-label="View authenticator metadata">Info</button>`
+                : '';
+
+            const renderAaguidValue = (label, value) => `
+                    <div class="credential-aaguid-value">
+                        <span class="credential-aaguid-value-label">${label}</span>
+                        <div class="credential-code-block">${escapeHtml(value || 'N/A')}</div>
+                    </div>`;
+
+            const sections = [
+                renderAaguidValue('b64', hasAaguid && aaguidB64 ? aaguidB64 : 'N/A'),
+                renderAaguidValue('b64u', hasAaguid && aaguidB64u ? aaguidB64u : 'N/A'),
+                renderAaguidValue('hex', hasAaguid ? normalizedAaguidHex : 'N/A'),
+                renderAaguidValue('guid', aaguidGuid || 'N/A'),
+            ];
+
+            detailsHtml += `
+                <div class="credential-aaguid-row">
+                    <span class="credential-aaguid-label">AAGUID</span>
+                    ${infoButton}
+                </div>
+                <div class="credential-aaguid-values">
+                    ${sections.join('')}
+                </div>`;
 
             detailsHtml += `</div>`;
 
@@ -1941,6 +2467,7 @@ function describeCoseAlgorithm(alg) {
                 <div style="font-size: 0.9rem; line-height: 1.4;">
                     <div><strong>Discoverable (resident key):</strong> ${formatBoolean(discoverableValue)}</div>
                     <div><strong>Supports largeBlob:</strong> ${formatBoolean(largeBlobSupported)}</div>
+                    ${minPinLengthValue !== null ? `<div><strong>Authenticator minPinLength:</strong> ${escapeHtml(String(minPinLengthValue))}</div>` : ''}
                     <div style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(0, 114, 206, 0.15);">
                         ${attestationRowsHtml}
                     </div>
@@ -2599,7 +3126,6 @@ function describeCoseAlgorithm(alg) {
             document.getElementById('user-display-name').value = randomUsername;
             
             // Reset Authenticator Selection
-            document.getElementById('authenticator-attachment').value = '';
             document.getElementById('resident-key').value = 'discouraged';
             document.getElementById('user-verification-reg').value = 'preferred';
             document.getElementById('attestation').value = 'none';
@@ -2617,10 +3143,13 @@ function describeCoseAlgorithm(alg) {
             document.getElementById('param-rs384').checked = false;
             document.getElementById('param-rs512').checked = false;
             document.getElementById('param-rs1').checked = false;
+            if (document.getElementById('param-mldsa44')) document.getElementById('param-mldsa44').checked = false;
+            if (document.getElementById('param-mldsa65')) document.getElementById('param-mldsa65').checked = false;
+            if (document.getElementById('param-mldsa87')) document.getElementById('param-mldsa87').checked = false;
             document.getElementById('hint-client-device').checked = false;
             document.getElementById('hint-hybrid').checked = false;
-            document.getElementById('hint-security-key').checked = false;
-            
+            document.getElementById('hint-security-key').checked = true;
+
             // Reset Extensions
             document.getElementById('cred-props').checked = true;
             document.getElementById('min-pin-length').checked = false;
@@ -2647,7 +3176,7 @@ function describeCoseAlgorithm(alg) {
             document.getElementById('timeout-auth').value = '90000';
             document.getElementById('hint-client-device-auth').checked = false;
             document.getElementById('hint-hybrid-auth').checked = false;
-            document.getElementById('hint-security-key-auth').checked = false;
+            document.getElementById('hint-security-key-auth').checked = true;
             
             // Reset Extensions
             document.getElementById('large-blob-auth').value = '';
@@ -2820,6 +3349,7 @@ function describeCoseAlgorithm(alg) {
                 // First clear all algorithm checkboxes
                 if (document.getElementById('param-mldsa44')) document.getElementById('param-mldsa44').checked = false;
                 if (document.getElementById('param-mldsa65')) document.getElementById('param-mldsa65').checked = false;
+                if (document.getElementById('param-mldsa87')) document.getElementById('param-mldsa87').checked = false;
                 document.getElementById('param-eddsa').checked = false;
                 document.getElementById('param-es256').checked = false;
                 document.getElementById('param-rs256').checked = false;
@@ -2843,6 +3373,9 @@ function describeCoseAlgorithm(alg) {
                                 break;
                             case -49:
                                 if (document.getElementById('param-mldsa65')) document.getElementById('param-mldsa65').checked = true;
+                                break;
+                            case -50:
+                                if (document.getElementById('param-mldsa87')) document.getElementById('param-mldsa87').checked = true;
                                 break;
                             case -8:
                                 document.getElementById('param-eddsa').checked = true;
@@ -2875,9 +3408,6 @@ function describeCoseAlgorithm(alg) {
             
             // Update authenticator selection
             if (publicKey.authenticatorSelection) {
-                if (publicKey.authenticatorSelection.authenticatorAttachment) {
-                    document.getElementById('authenticator-attachment').value = publicKey.authenticatorSelection.authenticatorAttachment;
-                }
                 const residentKeyElement = document.getElementById('resident-key');
                 if (residentKeyElement) {
                     let residentKeySetting = publicKey.authenticatorSelection.residentKey || 'discouraged';
@@ -2976,6 +3506,12 @@ function describeCoseAlgorithm(alg) {
                     enforceCredProtectCheckbox.checked = true;
                     enforceCredProtectCheckbox.disabled = true;
                 }
+            }
+
+            if (Array.isArray(publicKey.hints)) {
+                applyHintsToCheckboxes(publicKey.hints, 'registration');
+            } else {
+                applyHintsToCheckboxes([], 'registration');
             }
         }
 
@@ -3082,6 +3618,10 @@ function describeCoseAlgorithm(alg) {
                     enforceCredProtectCheckbox.disabled = true;
                 }
             }
+
+            if (Array.isArray(publicKey.hints)) {
+                applyHintsToCheckboxes(publicKey.hints, 'authentication');
+            }
         }
 
         // Convert current format value to the appropriate JSON format
@@ -3154,6 +3694,9 @@ function describeCoseAlgorithm(alg) {
             if (document.getElementById('param-mldsa65')?.checked) {
                 publicKey.pubKeyCredParams.push({type: "public-key", alg: -49}); // ML-DSA-65
             }
+            if (document.getElementById('param-mldsa87')?.checked) {
+                publicKey.pubKeyCredParams.push({type: "public-key", alg: -50}); // ML-DSA-87
+            }
             if (document.getElementById('param-eddsa')?.checked) {
                 publicKey.pubKeyCredParams.push({type: "public-key", alg: -8}); // EdDSA
             }
@@ -3180,9 +3723,6 @@ function describeCoseAlgorithm(alg) {
             }
 
             // Authenticator selection
-            const authAttachment = document.getElementById('authenticator-attachment')?.value;
-            if (authAttachment) publicKey.authenticatorSelection.authenticatorAttachment = authAttachment;
-
             const residentKeyValue = document.getElementById('resident-key')?.value || 'discouraged';
             publicKey.authenticatorSelection.residentKey = residentKeyValue;
             publicKey.authenticatorSelection.requireResidentKey = residentKeyValue === 'required';
@@ -3246,11 +3786,10 @@ function describeCoseAlgorithm(alg) {
             }
 
             // Add hints if any are selected
-            const hints = [];
-            if (document.getElementById('hint-client-device')?.checked) hints.push('client-device');
-            if (document.getElementById('hint-hybrid')?.checked) hints.push('hybrid');
-            if (document.getElementById('hint-security-key')?.checked) hints.push('security-key');
+            const hints = collectSelectedHints('registration');
             if (hints.length > 0) publicKey.hints = hints;
+
+            enforceAuthenticatorAttachmentWithHints(publicKey);
 
             return { publicKey };
         }
@@ -3258,8 +3797,10 @@ function describeCoseAlgorithm(alg) {
         // Get CredentialRequestOptions from form (WebAuthn standard format)
         function getCredentialRequestOptions() {
             const challenge = document.getElementById('challenge-auth')?.value || '';
-            
-            // Build publicKey object  
+            const hints = collectSelectedHints('authentication');
+            const allowedAttachments = deriveAllowedAttachmentsFromHints(hints);
+
+            // Build publicKey object
             const publicKey = {
                 challenge: currentFormatToJsonFormat(challenge),
                 timeout: parseInt(document.getElementById('timeout-auth')?.value) || 90000,
@@ -3269,6 +3810,10 @@ function describeCoseAlgorithm(alg) {
                 extensions: {}
             };
 
+            if (allowedAttachments.length > 0) {
+                publicKey.allowedAuthenticatorAttachments = allowedAttachments.slice();
+            }
+
             // Allow credentials handling
             const allowCreds = document.getElementById('allow-credentials')?.value;
             if (allowCreds === 'empty') {
@@ -3277,7 +3822,15 @@ function describeCoseAlgorithm(alg) {
                 delete publicKey.allowCredentials;
             } else if (allowCreds === 'all') {
                 // Include all stored credentials
-                const allCredentials = (storedCredentials || [])
+                const credentialSource = (storedCredentials || []).filter(cred => {
+                    if (allowedAttachments.length === 0) {
+                        return true;
+                    }
+                    const attachment = getStoredCredentialAttachment(cred);
+                    return attachment && allowedAttachments.includes(attachment);
+                });
+
+                const allCredentials = credentialSource
                     .map(cred => {
                         const credentialIdHex = cred.credentialIdHex || getCredentialIdHex(cred);
                         if (!credentialIdHex) {
@@ -3303,18 +3856,30 @@ function describeCoseAlgorithm(alg) {
                     cred => (cred.credentialIdHex || getCredentialIdHex(cred)) === allowCreds
                 );
                 if (selectedCred) {
-                    const credentialIdHex = selectedCred.credentialIdHex || getCredentialIdHex(selectedCred);
-                    const formatValue = convertFormat(credentialIdHex, 'hex', getCurrentBinaryFormat());
-                    const formattedId = currentFormatToJsonFormat(formatValue);
-                    if (formattedId && typeof formattedId === 'object') {
-                        publicKey.allowCredentials = [{
-                            type: "public-key",
-                            id: formattedId,
-                        }];
+                    const attachment = getStoredCredentialAttachment(selectedCred);
+                    if (allowedAttachments.length > 0 && (!attachment || !allowedAttachments.includes(attachment))) {
+                        publicKey.allowCredentials = [];
+                    } else {
+                        const credentialIdHex = selectedCred.credentialIdHex || getCredentialIdHex(selectedCred);
+                        const formatValue = convertFormat(credentialIdHex, 'hex', getCurrentBinaryFormat());
+                        const formattedId = currentFormatToJsonFormat(formatValue);
+                        if (formattedId && typeof formattedId === 'object') {
+                            publicKey.allowCredentials = [{
+                                type: "public-key",
+                                id: formattedId,
+                            }];
+                        }
                     }
                 } else {
                     // Fallback to all credentials if specific one not found
-                    const fallbackCredentials = (storedCredentials || [])
+                    const fallbackSource = (storedCredentials || []).filter(cred => {
+                        if (allowedAttachments.length === 0) {
+                            return true;
+                        }
+                        const attachment = getStoredCredentialAttachment(cred);
+                        return attachment && allowedAttachments.includes(attachment);
+                    });
+                    const fallbackCredentials = fallbackSource
                         .map(cred => {
                             const credentialIdHex = cred.credentialIdHex || getCredentialIdHex(cred);
                             if (!credentialIdHex) {
@@ -3366,10 +3931,6 @@ function describeCoseAlgorithm(alg) {
             }
 
             // Add hints if any are selected
-            const hints = [];
-            if (document.getElementById('hint-client-device-auth')?.checked) hints.push('client-device');
-            if (document.getElementById('hint-hybrid-auth')?.checked) hints.push('hybrid');  
-            if (document.getElementById('hint-security-key-auth')?.checked) hints.push('security-key');
             if (hints.length > 0) publicKey.hints = hints;
 
             return { publicKey };
@@ -3651,7 +4212,18 @@ function describeCoseAlgorithm(alg) {
             // Initialize binary format system
             window.currentBinaryFormat = 'hex';
             updateFieldLabels('hex');
-            
+
+            const jsonEditorElement = document.getElementById('json-editor');
+            if (jsonEditorElement) {
+                jsonEditorElement.setAttribute('spellcheck', 'false');
+                jsonEditorElement.setAttribute('autocorrect', 'off');
+                jsonEditorElement.setAttribute('autocapitalize', 'off');
+                jsonEditorElement.setAttribute('autocomplete', 'off');
+                jsonEditorElement.setAttribute('data-gramm', 'false');
+                jsonEditorElement.setAttribute('data-gramm_editor', 'false');
+                jsonEditorElement.setAttribute('data-enable-grammarly', 'false');
+            }
+
             // Initialize with default hex values as requested
             setTimeout(() => {
                 // Generate default hex values for userid, challenge, and largeblob write
@@ -3667,10 +4239,10 @@ function describeCoseAlgorithm(alg) {
                 document.getElementById('prf-eval-second-reg').value = '';
                 document.getElementById('prf-eval-first-auth').value = '';
                 document.getElementById('prf-eval-second-auth').value = '';
-                
+
                 // Load saved credentials
                 loadSavedCredentials();
-                
+
                 // Update JSON editor with initial values
                 updateJsonEditor();
             }, 100);
@@ -3900,7 +4472,6 @@ function describeCoseAlgorithm(alg) {
                 // Authenticator selection
                 attestation: document.getElementById('attestation').value,
                 userVerification: document.getElementById('user-verification-reg').value,
-                authenticatorAttachment: document.getElementById('authenticator-attachment').value || undefined,
                 residentKey: document.getElementById('resident-key').value,
                 
                 // Credential management
@@ -3924,6 +4495,7 @@ function describeCoseAlgorithm(alg) {
             // Collect selected algorithms
             if (document.getElementById('param-mldsa44')?.checked) options.pubKeyCredParams.push('ML-DSA-44');
             if (document.getElementById('param-mldsa65')?.checked) options.pubKeyCredParams.push('ML-DSA-65');
+            if (document.getElementById('param-mldsa87')?.checked) options.pubKeyCredParams.push('ML-DSA-87');
             if (document.getElementById('param-eddsa')?.checked) options.pubKeyCredParams.push('EdDSA');
             if (document.getElementById('param-es256')?.checked) options.pubKeyCredParams.push('ES256');
             if (document.getElementById('param-rs256')?.checked) options.pubKeyCredParams.push('RS256');
@@ -3932,12 +4504,16 @@ function describeCoseAlgorithm(alg) {
             if (document.getElementById('param-rs384')?.checked) options.pubKeyCredParams.push('RS384');
             if (document.getElementById('param-rs512')?.checked) options.pubKeyCredParams.push('RS512');
             if (document.getElementById('param-rs1')?.checked) options.pubKeyCredParams.push('RS1');
-            
+
             // Collect hints
-            if (document.getElementById('hint-client-device')?.checked) options.hints.push('client-device');
-            if (document.getElementById('hint-hybrid')?.checked) options.hints.push('hybrid');
-            if (document.getElementById('hint-security-key')?.checked) options.hints.push('security-key');
-            
+            options.hints = collectSelectedHints('registration');
+            const allowedAttachments = deriveAllowedAttachmentsFromHints(options.hints);
+            if (allowedAttachments.length > 0) {
+                options.allowedAuthenticatorAttachments = allowedAttachments;
+            } else {
+                delete options.allowedAuthenticatorAttachments;
+            }
+
             // Collect extensions
             if (document.getElementById('cred-props')?.checked) {
                 options.extensions.credProps = true;
@@ -4025,7 +4601,15 @@ function describeCoseAlgorithm(alg) {
                     options.extensions.prf = { eval: prfEval };
                 }
             }
-            
+
+            options.hints = collectSelectedHints('authentication');
+            const allowedAttachments = deriveAllowedAttachmentsFromHints(options.hints);
+            if (allowedAttachments.length > 0) {
+                options.allowedAuthenticatorAttachments = allowedAttachments;
+            } else {
+                delete options.allowedAuthenticatorAttachments;
+            }
+
             return options;
         }
 
@@ -4070,7 +4654,16 @@ function describeCoseAlgorithm(alg) {
                 if (!publicKey.challenge) {
                     throw new Error('Invalid CredentialCreationOptions: Missing required "challenge" property');
                 }
-                
+
+                if (document.getElementById('min-pin-length')?.checked) {
+                    if (!publicKey.extensions || typeof publicKey.extensions !== 'object') {
+                        publicKey.extensions = {};
+                    }
+                    publicKey.extensions.minPinLength = true;
+                }
+
+                enforceAuthenticatorAttachmentWithHints(publicKey);
+
                 // Send the complete parsed JSON directly to backend - NO TRANSFORMATION
                 // This preserves all custom extensions and enables full extensibility
                 hideStatus('advanced');
@@ -4107,7 +4700,13 @@ function describeCoseAlgorithm(alg) {
 
                 const credential = await create(createOptions);
 
+                const authenticatorAttachment = credential && typeof credential === 'object'
+                    ? credential.authenticatorAttachment ?? null
+                    : null;
                 const credentialJson = credential.toJSON ? credential.toJSON() : JSON.parse(JSON.stringify(credential));
+                if (authenticatorAttachment !== undefined) {
+                    credentialJson.authenticatorAttachment = authenticatorAttachment;
+                }
                 const extensionResults = credential.getClientExtensionResults
                     ? credential.getClientExtensionResults()
                     : (credential.clientExtensionResults || {});
@@ -4186,7 +4785,14 @@ function describeCoseAlgorithm(alg) {
                 if (!publicKey.challenge) {
                     throw new Error('Invalid CredentialRequestOptions: Missing required "challenge" property');
                 }
-                
+
+                const allowedAttachments = ensureAuthenticationHintsAllowed(publicKey);
+                if (Array.isArray(allowedAttachments) && allowedAttachments.length > 0) {
+                    publicKey.allowedAuthenticatorAttachments = allowedAttachments.slice();
+                } else if (Object.prototype.hasOwnProperty.call(publicKey, 'allowedAuthenticatorAttachments')) {
+                    delete publicKey.allowedAuthenticatorAttachments;
+                }
+
                 // Send the complete parsed JSON directly to backend - NO TRANSFORMATION
                 // This preserves all custom extensions and enables full extensibility
                 hideStatus('advanced');
@@ -4226,7 +4832,13 @@ function describeCoseAlgorithm(alg) {
 
                 const assertion = await get(assertOptions);
 
+                const authenticatorAttachment = assertion && typeof assertion === 'object'
+                    ? assertion.authenticatorAttachment ?? null
+                    : null;
                 const assertionJson = assertion.toJSON ? assertion.toJSON() : JSON.parse(JSON.stringify(assertion));
+                if (authenticatorAttachment !== undefined) {
+                    assertionJson.authenticatorAttachment = authenticatorAttachment;
+                }
                 const assertionExtensionResults = assertion.getClientExtensionResults
                     ? assertion.getClientExtensionResults()
                     : (assertion.clientExtensionResults || {});
@@ -4320,7 +4932,6 @@ function describeCoseAlgorithm(alg) {
                     if (Object.prototype.hasOwnProperty.call(parsed, 'userVerification')) {
                         document.getElementById('user-verification-reg').value = parsed.userVerification || 'preferred';
                     }
-                    if (parsed.authenticatorAttachment !== undefined) document.getElementById('authenticator-attachment').value = parsed.authenticatorAttachment || '';
                     if (parsed.residentKey) document.getElementById('resident-key').value = parsed.residentKey;
                 } else if (currentJsonMode === 'assert') {
                     // Update assert form fields
@@ -4432,7 +5043,7 @@ function describeCoseAlgorithm(alg) {
         document.addEventListener('DOMContentLoaded', function() {
             const formFields = [
                 'user-name', 'user-display-name', 'attestation',
-                'user-verification-reg', 'authenticator-attachment', 'resident-key',
+                'user-verification-reg', 'resident-key',
                 'user-verification-auth'
             ];
 

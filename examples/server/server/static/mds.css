@@ -172,22 +172,24 @@
     background: rgba(0, 114, 206, 0.55);
 }
 
+
 .mds-scroll-top {
     position: fixed;
-    bottom: 2.5rem;
-    right: 2.5rem;
+    top: 0.75rem;
+    left: 50%;
+    transform: translateX(-50%);
     z-index: 1200;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 48px;
-    height: 48px;
+    width: 72px;
+    height: 72px;
     border-radius: 999px;
     border: none;
     background: var(--primary-color);
     color: #fff;
     font-weight: 700;
-    font-size: 1.05rem;
+    font-size: 1.35rem;
     cursor: pointer;
     box-shadow: 0 18px 40px rgba(15, 39, 64, 0.28);
     transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
@@ -196,7 +198,7 @@
 .mds-scroll-top:hover,
 .mds-scroll-top:focus-visible {
     background: var(--primary-dark);
-    transform: translateY(-2px);
+    transform: translate(-50%, -4px);
     box-shadow: 0 24px 52px rgba(15, 39, 64, 0.32);
 }
 
@@ -211,10 +213,11 @@
 
 @media (max-width: 900px) {
     .mds-scroll-top {
-        bottom: 1.35rem;
-        right: 1.35rem;
-        width: 44px;
-        height: 44px;
+        top: 0.5rem;
+        left: 50%;
+        width: 60px;
+        height: 60px;
+        font-size: 1.2rem;
     }
 }
 
