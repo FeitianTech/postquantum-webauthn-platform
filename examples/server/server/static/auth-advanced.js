@@ -10,7 +10,8 @@ import {
 } from './binary-utils.js';
 import {
     ensureAuthenticationHintsAllowed,
-    applyAuthenticatorAttachmentPreference
+    applyAuthenticatorAttachmentPreference,
+    enforceAuthenticatorAttachmentWithHints,
 } from './hints.js';
 import {
     showStatus,

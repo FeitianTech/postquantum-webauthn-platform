@@ -39,23 +39,64 @@ export function switchSubTab(subTab) {
     updateJsonEditor();
 }
 
-export function toggleSection(sectionId, event) {
-    const header = event?.currentTarget || event;
+export function toggleSection(sectionId, eventOrElement) {
     const content = document.getElementById(sectionId);
-    if (!header || !content) {
+    if (!content) {
         return;
     }
-    const icon = header.querySelector('.expand-icon');
+
+    let header = null;
+
+    if (eventOrElement) {
+        if (eventOrElement.currentTarget instanceof HTMLElement) {
+            header = eventOrElement.currentTarget;
+        } else if (eventOrElement.target instanceof Element) {
+            header = eventOrElement.target.closest('.section-header');
+        } else if (eventOrElement instanceof HTMLElement) {
+            header = eventOrElement;
+        }
+    }
+
+    if (!header) {
+        const previous = content.previousElementSibling;
+        if (previous instanceof HTMLElement && previous.classList.contains('section-header')) {
+            header = previous;
+        }
+    }
+
+    if (!header && content.parentElement) {
+        const candidate = content.parentElement.querySelector('.section-header');
+        if (candidate instanceof HTMLElement) {
+            header = candidate;
+        }
+    }
+
+    if (!header) {
+        const headers = document.querySelectorAll('.section-header');
+        for (const element of headers) {
+            const handler = element.getAttribute('onclick') || '';
+            if (handler.includes(`toggleSection('${sectionId}'`) || handler.includes(`toggleSection("${sectionId}"`)) {
+                header = element;
+                break;
+            }
+        }
+    }
+
+    const icon = header ? header.querySelector('.expand-icon') : null;
 
     if (content.classList.contains('expanded')) {
         content.classList.remove('expanded');
-        header.classList.remove('expanded');
+        if (header) {
+            header.classList.remove('expanded');
+        }
         if (icon) {
             icon.classList.remove('rotated');
         }
     } else {
         content.classList.add('expanded');
-        header.classList.add('expanded');
+        if (header) {
+            header.classList.add('expanded');
+        }
         if (icon) {
             icon.classList.add('rotated');
         }
