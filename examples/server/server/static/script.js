@@ -339,7 +339,7 @@ function describeCoseAlgorithm(alg) {
         // Convert hex to GUID format (for AAGUID display)
         function hexToGuid(hexString) {
             if (!hexString || hexString.length !== 32) return '';
-            
+
             // Format as GUID: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
             return [
                 hexString.substring(0, 8),
@@ -350,10 +350,48 @@ function describeCoseAlgorithm(alg) {
             ].join('-');
         }
 
+        function normaliseAaguidValue(value) {
+            if (value === null || value === undefined) {
+                return '';
+            }
+            if (typeof value === 'string') {
+                const cleaned = value.replace(/[^0-9a-fA-F]/g, '');
+                return cleaned ? cleaned.toLowerCase() : '';
+            }
+            if (Array.isArray(value)) {
+                try {
+                    const bytes = Uint8Array.from(value);
+                    return Array.from(bytes).map(byte => byte.toString(16).padStart(2, '0')).join('');
+                } catch (error) {
+                    return '';
+                }
+            }
+            if (ArrayBuffer.isView(value)) {
+                const view = new Uint8Array(value.buffer, value.byteOffset, value.byteLength);
+                return Array.from(view).map(byte => byte.toString(16).padStart(2, '0')).join('');
+            }
+            if (value instanceof ArrayBuffer) {
+                return Array.from(new Uint8Array(value)).map(byte => byte.toString(16).padStart(2, '0')).join('');
+            }
+            if (typeof value === 'object') {
+                if (typeof value.hex === 'function') {
+                    try {
+                        return normaliseAaguidValue(value.hex());
+                    } catch (error) {
+                        return '';
+                    }
+                }
+                if (typeof value.hex === 'string') {
+                    return normaliseAaguidValue(value.hex);
+                }
+            }
+            return '';
+        }
+
         // Convert hex to JavaScript Uint8Array format
         function hexToJs(hexString) {
             if (!hexString) return '';
-            
+
             // Convert hex to bytes
             const bytes = [];
             for (let i = 0; i < hexString.length; i += 2) {
@@ -1647,13 +1685,13 @@ function describeCoseAlgorithm(alg) {
         function updateGlobalScrollLock() {
             const overlayActive = document.getElementById('json-editor-overlay')?.classList.contains('active');
             const modalActive = document.querySelector('.modal.open');
-            if (overlayActive || modalActive) {
-                document.body.classList.add('modal-open');
-                document.documentElement.classList.add('modal-open');
-            } else {
-                document.body.classList.remove('modal-open');
-                document.documentElement.classList.remove('modal-open');
-            }
+            const mdsModalActive = document.querySelector('.mds-modal:not([hidden])');
+            const shouldLock = Boolean(overlayActive || modalActive || mdsModalActive);
+
+            const targets = [document.body, document.documentElement].filter(Boolean);
+            targets.forEach(target => {
+                target.classList.toggle('modal-open', shouldLock);
+            });
         }
 
         function resetModalScroll(modal) {
@@ -1662,9 +1700,12 @@ function describeCoseAlgorithm(alg) {
             }
 
             modal.scrollTop = 0;
-            modal.querySelectorAll('.modal-content, .modal-body').forEach(element => {
+            modal.querySelectorAll('.modal-content, .modal-body, textarea, pre, code, .credential-code-block').forEach(element => {
                 if (element) {
                     element.scrollTop = 0;
+                    if (element.scrollLeft !== undefined) {
+                        element.scrollLeft = 0;
+                    }
                 }
             });
         }
@@ -1754,13 +1795,13 @@ function describeCoseAlgorithm(alg) {
                 detailsHtml += `
                 <div style="margin-top: 0.5rem;">
                     <div><strong>User handle (User ID):</strong></div>
-                    <div style="font-family: 'Courier New', monospace; font-size: 0.9rem; margin-left: 1rem;">
+                    <div style="font-family: 'Courier New', monospace; font-size: 0.9rem; margin-left: 1rem; word-break: break-word; overflow-wrap: anywhere;">
                         <div><strong>b64</strong></div>
-                        <div style="background: rgba(0, 114, 206, 0.08); padding: 0.35rem 0.5rem; border-radius: 12px; margin-bottom: 0.35rem;">${userHandleB64}</div>
+                        <div class="credential-code-block">${userHandleB64}</div>
                         <div><strong>b64u</strong></div>
-                        <div style="background: rgba(0, 114, 206, 0.08); padding: 0.35rem 0.5rem; border-radius: 12px; margin-bottom: 0.35rem;">${userHandleB64u}</div>
+                        <div class="credential-code-block">${userHandleB64u}</div>
                         <div><strong>hex</strong></div>
-                        <div style="background: rgba(0, 114, 206, 0.08); padding: 0.35rem 0.5rem; border-radius: 12px;">${userHandleHex}</div>
+                        <div class="credential-code-block">${userHandleHex}</div>
                     </div>
                 </div>`;
             }
@@ -1773,60 +1814,19 @@ function describeCoseAlgorithm(alg) {
                 detailsHtml += `
                 <div style="margin-top: 0.5rem;">
                     <div><strong>Credential ID:</strong></div>
-                    <div style="font-family: 'Courier New', monospace; font-size: 0.9rem; margin-left: 1rem;">
+                    <div style="font-family: 'Courier New', monospace; font-size: 0.9rem; margin-left: 1rem; word-break: break-word; overflow-wrap: anywhere;">
                         <div><strong>b64</strong></div>
-                        <div style="background: rgba(0, 114, 206, 0.08); padding: 0.35rem 0.5rem; border-radius: 12px; margin-bottom: 0.35rem;">${credentialIdB64}</div>
+                        <div class="credential-code-block">${credentialIdB64}</div>
                         <div><strong>b64u</strong></div>
-                        <div style="background: rgba(0, 114, 206, 0.08); padding: 0.35rem 0.5rem; border-radius: 12px; margin-bottom: 0.35rem;">${credentialIdB64u}</div>
+                        <div class="credential-code-block">${credentialIdB64u}</div>
                         <div><strong>hex</strong></div>
-                        <div style="background: rgba(0, 114, 206, 0.08); padding: 0.35rem 0.5rem; border-radius: 12px;">${credentialIdHex}</div>
+                        <div class="credential-code-block">${credentialIdHex}</div>
                     </div>
                 </div>`;
             }
 
-            if (cred.aaguid) {
-                let aaguidHex = '';
-                if (typeof cred.aaguid === 'string') {
-                    aaguidHex = cred.aaguid.replace(/-/g, '').toLowerCase();
-                } else if (Array.isArray(cred.aaguid)) {
-                    aaguidHex = Array.from(cred.aaguid).map(byte => byte.toString(16).padStart(2, '0')).join('');
-                } else if (ArrayBuffer.isView(cred.aaguid)) {
-                    aaguidHex = Array.from(new Uint8Array(cred.aaguid.buffer, cred.aaguid.byteOffset, cred.aaguid.byteLength))
-                        .map(byte => byte.toString(16).padStart(2, '0'))
-                        .join('');
-                } else if (cred.aaguid instanceof ArrayBuffer) {
-                    aaguidHex = Array.from(new Uint8Array(cred.aaguid))
-                        .map(byte => byte.toString(16).padStart(2, '0'))
-                        .join('');
-                } else if (typeof cred.aaguid.hex === 'function') {
-                    aaguidHex = cred.aaguid.hex();
-                }
+            let aaguidHex = normaliseAaguidValue(cred.aaguid);
 
-                if (aaguidHex) {
-                    aaguidHex = aaguidHex.toLowerCase();
-                    const aaguidB64 = hexToBase64(aaguidHex);
-                    const aaguidB64u = hexToBase64Url(aaguidHex);
-                    const aaguidGuid = aaguidHex.length === 32 ? hexToGuid(aaguidHex) : '';
-
-                    detailsHtml += `
-                    <div style="margin-top: 0.5rem;">
-                        <div><strong>AAGUID:</strong></div>
-                        <div style="font-family: 'Courier New', monospace; font-size: 0.9rem; margin-left: 1rem;">
-                            <div><strong>b64</strong></div>
-                            <div style="background: rgba(0, 114, 206, 0.08); padding: 0.35rem 0.5rem; border-radius: 12px; margin-bottom: 0.35rem;">${aaguidB64}</div>
-                            <div><strong>b64u</strong></div>
-                            <div style="background: rgba(0, 114, 206, 0.08); padding: 0.35rem 0.5rem; border-radius: 12px; margin-bottom: 0.35rem;">${aaguidB64u}</div>
-                            <div><strong>hex</strong></div>
-                            <div style="background: rgba(0, 114, 206, 0.08); padding: 0.35rem 0.5rem; border-radius: 12px; margin-bottom: 0.35rem;">${aaguidHex}</div>
-                            ${aaguidGuid ? `<div><strong>guid</strong></div>
-                            <div style="background: rgba(0, 114, 206, 0.08); padding: 0.35rem 0.5rem; border-radius: 12px;">${aaguidGuid}</div>` : ''}
-                        </div>
-                    </div>`;
-                }
-            }
-
-            detailsHtml += `</div>`;
-            
             const discoverableValue = cred.residentKey ?? cred.discoverable ?? false;
             const largeBlobSupported = cred.largeBlob ?? cred.largeBlobSupported ?? false;
             const propertiesData = (cred.properties && typeof cred.properties === 'object' && cred.properties !== null)
@@ -1863,6 +1863,76 @@ function describeCoseAlgorithm(alg) {
                 renderAttestationResultRow('RPID Hash Valid', attestationRpIdHashValue),
                 renderAttestationResultRow('AAGUID Match', attestationAaguidMatchValue),
             ].join('');
+
+            if (!aaguidHex) {
+                const fallbackAaguidCandidates = [
+                    propertiesData?.aaguid,
+                    propertiesData?.aaguidHex,
+                    propertiesData?.aaguidGuid,
+                    attestationSummaryData?.aaguid,
+                    attestationSummaryData?.aaguidHex,
+                    attestationSummaryData?.aaguidGuid,
+                ];
+                for (const candidate of fallbackAaguidCandidates) {
+                    const normalised = normaliseAaguidValue(candidate);
+                    if (normalised) {
+                        aaguidHex = normalised;
+                        break;
+                    }
+                }
+            }
+
+            if (aaguidHex) {
+                aaguidHex = aaguidHex.toLowerCase();
+                const aaguidB64 = hexToBase64(aaguidHex);
+                const aaguidB64u = hexToBase64Url(aaguidHex);
+                const aaguidGuid = aaguidHex.length === 32 ? hexToGuid(aaguidHex) : '';
+                const rootVerified = attestationRootValue === true ||
+                    (typeof attestationRootValue === 'string' && attestationRootValue.trim().toLowerCase() === 'true');
+                const aaguidNavigateValue = aaguidGuid ? aaguidGuid.toLowerCase() : '';
+                const infoButton = rootVerified && aaguidNavigateValue
+                    ? `<button type="button" class="credential-info-button credential-aaguid-button" data-aaguid="${escapeHtml(aaguidNavigateValue)}" aria-label="View authenticator metadata">Info</button>`
+                    : '';
+
+                const sections = [];
+                if (aaguidB64) {
+                    sections.push(`
+                        <div class="credential-aaguid-value">
+                            <span class="credential-aaguid-value-label">b64</span>
+                            <div class="credential-code-block">${aaguidB64}</div>
+                        </div>`);
+                }
+                if (aaguidB64u) {
+                    sections.push(`
+                        <div class="credential-aaguid-value">
+                            <span class="credential-aaguid-value-label">b64u</span>
+                            <div class="credential-code-block">${aaguidB64u}</div>
+                        </div>`);
+                }
+                sections.push(`
+                    <div class="credential-aaguid-value">
+                        <span class="credential-aaguid-value-label">hex</span>
+                        <div class="credential-code-block">${aaguidHex}</div>
+                    </div>`);
+                if (aaguidGuid) {
+                    sections.push(`
+                        <div class="credential-aaguid-value">
+                            <span class="credential-aaguid-value-label">guid</span>
+                            <div class="credential-code-block">${aaguidGuid}</div>
+                        </div>`);
+                }
+
+                detailsHtml += `
+                    <div class="credential-aaguid-row">
+                        <span class="credential-aaguid-label">AAGUID</span>
+                        ${infoButton}
+                    </div>
+                    <div class="credential-aaguid-values">
+                        ${sections.join('')}
+                    </div>`;
+            }
+
+            detailsHtml += `</div>`;
 
             // Properties section
             detailsHtml += `
@@ -1901,7 +1971,7 @@ function describeCoseAlgorithm(alg) {
                 detailsHtml += `
                 <div style="margin-bottom: 1.5rem;">
                     <h4 style="color: #0072CE; margin-bottom: 0.5rem;">Client extension outputs (registration)</h4>
-                    <div style="font-family: 'Courier New', monospace; font-size: 0.9rem; background: rgba(0, 114, 206, 0.08); padding: 0.65rem; border-radius: 16px; white-space: pre-wrap;">${JSON.stringify(cred.clientExtensionOutputs, null, 2)}</div>
+                    <div class="credential-code-block" style="font-size: 0.9rem; border-radius: 16px;">${JSON.stringify(cred.clientExtensionOutputs, null, 2)}</div>
                 </div>`;
             }
             
@@ -1923,13 +1993,13 @@ function describeCoseAlgorithm(alg) {
                     const rawKeyB64u = base64ToBase64Url(rawKeyB64);
                     const rawKeyHex = base64ToHex(rawKeyB64);
                     pqcKeyBlock = `
-                        <div style="margin-top: 0.75rem; font-size: 0.9rem;">
+                        <div style="margin-top: 0.75rem; font-size: 0.9rem; word-break: break-word; overflow-wrap: anywhere;">
                             <div><strong>Raw public key (base64):</strong></div>
-                            <div style="font-family: 'Courier New', monospace; background: rgba(0, 114, 206, 0.08); padding: 0.35rem 0.5rem; border-radius: 12px; margin-bottom: 0.35rem;">${rawKeyB64}</div>
+                            <div class="credential-code-block">${rawKeyB64}</div>
                             <div><strong>Raw public key (base64url):</strong></div>
-                            <div style="font-family: 'Courier New', monospace; background: rgba(0, 114, 206, 0.08); padding: 0.35rem 0.5rem; border-radius: 12px; margin-bottom: 0.35rem;">${rawKeyB64u}</div>
+                            <div class="credential-code-block">${rawKeyB64u}</div>
                             <div><strong>Raw public key (hex):</strong></div>
-                            <div style="font-family: 'Courier New', monospace; background: rgba(0, 114, 206, 0.08); padding: 0.35rem 0.5rem; border-radius: 12px;">${rawKeyHex}</div>
+                            <div class="credential-code-block">${rawKeyHex}</div>
                         </div>`;
                 }
 
@@ -1959,6 +2029,15 @@ function describeCoseAlgorithm(alg) {
             }
 
             modalBody.innerHTML = detailsHtml;
+            const aaguidButton = modalBody.querySelector('.credential-aaguid-button');
+            if (aaguidButton) {
+                aaguidButton.addEventListener('click', () => {
+                    const target = aaguidButton.getAttribute('data-aaguid');
+                    if (target) {
+                        navigateToMdsAuthenticator(target);
+                    }
+                });
+            }
             modalBody.scrollTop = 0;
             if (typeof modalBody.scrollTo === 'function') {
                 modalBody.scrollTo(0, 0);
@@ -1969,6 +2048,52 @@ function describeCoseAlgorithm(alg) {
                 requestAnimationFrame(scheduleResize);
             } else {
                 setTimeout(scheduleResize, 0);
+            }
+        }
+
+        function navigateToMdsAuthenticator(aaguid) {
+            if (!aaguid) {
+                return;
+            }
+
+            const switchToMdsTab = typeof window.switchTab === 'function'
+                ? window.switchTab
+                : null;
+            if (switchToMdsTab) {
+                switchToMdsTab('mds');
+            }
+
+            const highlightRow = typeof window.highlightMdsAuthenticatorRow === 'function'
+                ? window.highlightMdsAuthenticatorRow
+                : null;
+
+            if (!highlightRow) {
+                console.warn('Unable to highlight authenticator row: integration unavailable.');
+                return;
+            }
+
+            let modalResult;
+            try {
+                modalResult = highlightRow(aaguid);
+            } catch (error) {
+                console.error('Failed to highlight authenticator row.', error);
+                return;
+            }
+
+            const handleEntry = entry => {
+                if (entry) {
+                    closeCredentialModal();
+                }
+            };
+
+            if (modalResult && typeof modalResult.then === 'function') {
+                modalResult
+                    .then(handleEntry)
+                    .catch(error => {
+                        console.error('Failed to highlight authenticator row.', error);
+                    });
+            } else {
+                handleEntry(modalResult);
             }
         }
 
@@ -3712,6 +3837,7 @@ function describeCoseAlgorithm(alg) {
 
         // Make functions globally available
         window.switchTab = switchTab;
+        window.updateGlobalScrollLock = updateGlobalScrollLock;
         window.switchSubTab = switchSubTab;
         window.toggleSection = toggleSection;
         window.showInfoPopup = showInfoPopup;
@@ -3734,6 +3860,7 @@ function describeCoseAlgorithm(alg) {
         window.saveJsonEditor = saveJsonEditor;
         window.resetJsonEditor = resetJsonEditor;
         window.showCredentialDetails = showCredentialDetails;
+        window.navigateToMdsAuthenticator = navigateToMdsAuthenticator;
         window.closeCredentialModal = closeCredentialModal;
         window.closeRegistrationResultModal = closeRegistrationResultModal;
         window.deleteCredential = deleteCredential;

@@ -240,6 +240,135 @@ let filteredData = [];
 let isLoading = false;
 let hasLoaded = false;
 let isUpdatingMetadata = false;
+let loadPromise = null;
+const certificateCache = new Map();
+let scrollTopButtonUpdateScheduled = false;
+
+function scheduleScrollTopButtonUpdate() {
+    if (scrollTopButtonUpdateScheduled) {
+        return;
+    }
+    scrollTopButtonUpdateScheduled = true;
+    const apply = () => {
+        scrollTopButtonUpdateScheduled = false;
+        updateScrollTopButtonVisibility();
+    };
+    if (typeof requestAnimationFrame === 'function') {
+        requestAnimationFrame(apply);
+    } else {
+        setTimeout(apply, 0);
+    }
+}
+
+function updateScrollTopButtonVisibility(options = {}) {
+    if (!mdsState?.scrollTopButton) {
+        return;
+    }
+
+    const { forceHidden = false } = options;
+    if (forceHidden) {
+        hideScrollTopButton();
+        return;
+    }
+
+    if (!mdsState.root || mdsState.root.offsetParent === null) {
+        hideScrollTopButton();
+        return;
+    }
+
+    if (mdsState.tableContainer?.hidden) {
+        hideScrollTopButton();
+        return;
+    }
+
+    const rows = Array.from(mdsState.tableBody?.rows ?? []).filter(row => !row.classList.contains('mds-empty-row'));
+    if (rows.length <= 10) {
+        hideScrollTopButton();
+        return;
+    }
+
+    const markerRow = rows[10];
+    if (!markerRow || typeof markerRow.getBoundingClientRect !== 'function') {
+        hideScrollTopButton();
+        return;
+    }
+
+    const rowRect = markerRow.getBoundingClientRect();
+    if (!rowRect || !Number.isFinite(rowRect.top)) {
+        hideScrollTopButton();
+        return;
+    }
+
+    const containerRect = mdsState.tableContainer?.getBoundingClientRect?.();
+    const headerRect = mdsState.table?.tHead?.getBoundingClientRect?.();
+    const boundaryCandidates = [0];
+    if (containerRect && Number.isFinite(containerRect.top)) {
+        boundaryCandidates.push(containerRect.top);
+    }
+    if (headerRect && Number.isFinite(headerRect.bottom)) {
+        boundaryCandidates.push(headerRect.bottom);
+    }
+    const boundary = Math.max(...boundaryCandidates);
+    const shouldShow = rowRect.top < boundary;
+
+    if (shouldShow) {
+        showScrollTopButton();
+    } else {
+        hideScrollTopButton();
+    }
+}
+
+function showScrollTopButton() {
+    if (!mdsState?.scrollTopButton) {
+        return;
+    }
+    if (mdsState.scrollTopButtonVisible) {
+        return;
+    }
+    mdsState.scrollTopButton.hidden = false;
+    mdsState.scrollTopButton.setAttribute('aria-hidden', 'false');
+    mdsState.scrollTopButtonVisible = true;
+}
+
+function hideScrollTopButton() {
+    if (!mdsState?.scrollTopButton) {
+        return;
+    }
+    if (mdsState.scrollTopButton.hidden) {
+        mdsState.scrollTopButtonVisible = false;
+        mdsState.scrollTopButton.setAttribute('aria-hidden', 'true');
+        return;
+    }
+    mdsState.scrollTopButton.hidden = true;
+    mdsState.scrollTopButton.setAttribute('aria-hidden', 'true');
+    mdsState.scrollTopButtonVisible = false;
+}
+
+function scrollMdsSectionToTop() {
+    if (!mdsState) {
+        return;
+    }
+
+    const section = mdsState.root?.querySelector('.mds-section');
+    if (section && typeof section.scrollIntoView === 'function') {
+        section.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    } else if (mdsState.root && typeof mdsState.root.scrollIntoView === 'function') {
+        mdsState.root.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    } else if (typeof window !== 'undefined' && typeof window.scrollTo === 'function') {
+        window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+    }
+
+    scheduleScrollTopButtonUpdate();
+}
+
+function handleWindowScroll() {
+    scheduleScrollTopButtonUpdate();
+}
+
+if (typeof window !== 'undefined') {
+    window.addEventListener('scroll', handleWindowScroll, { passive: true });
+    window.addEventListener('resize', handleWindowScroll);
+}
 
 document.addEventListener('DOMContentLoaded', async () => {
     const tabElement = document.getElementById('mds-tab');
@@ -334,9 +463,7 @@ function initializeState(root) {
         });
 
         input.addEventListener('input', event => {
-            if (!event.target.value.trim() && filters[key]) {
-                updateFilter(key, '');
-            }
+            updateFilter(key, event.target.value);
         });
 
         const config = FILTER_LOOKUP[key];
@@ -352,6 +479,23 @@ function initializeState(root) {
         }
     });
 
+    const tableContainer = root.querySelector('#mds-table-container');
+    if (tableContainer) {
+        tableContainer.addEventListener('scroll', () => scheduleScrollTopButtonUpdate());
+    }
+    const table = root.querySelector('.mds-table');
+    const tableBody = root.querySelector('#mds-table-body');
+
+    const scrollTopButton = root.querySelector('#mds-scroll-top-button');
+    if (scrollTopButton) {
+        scrollTopButton.addEventListener('click', event => {
+            event.preventDefault();
+            scrollMdsSectionToTop();
+        });
+        scrollTopButton.hidden = true;
+        scrollTopButton.setAttribute('aria-hidden', 'true');
+    }
+
     const updateButton = root.querySelector('#mds-update-button');
     if (updateButton) {
         updateButton.addEventListener('click', () => {
@@ -359,13 +503,60 @@ function initializeState(root) {
         });
     }
 
+    const detailView = root.querySelector('#mds-detail-view');
+    const detailBack = root.querySelector('#mds-detail-back');
+    if (detailBack) {
+        detailBack.addEventListener('click', () => hideAuthenticatorDetail());
+    }
+
+    const certificateModal = root.querySelector('#mds-certificate-modal');
+    const certificateClose = root.querySelector('#mds-certificate-modal-close');
+    const certificateBody = root.querySelector('#mds-certificate-modal-body');
+    const certificateSummary = root.querySelector('#mds-certificate-summary');
+    if (certificateClose) {
+        certificateClose.addEventListener('click', () => closeCertificateModal());
+    }
+    if (certificateModal) {
+        certificateModal.addEventListener('click', event => {
+            if (event.target === certificateModal) {
+                closeCertificateModal();
+            }
+        });
+    }
+
+    const authenticatorModal = root.querySelector('#mds-authenticator-modal');
+    const authenticatorClose = root.querySelector('#mds-authenticator-modal-close');
+    if (authenticatorClose) {
+        authenticatorClose.addEventListener('click', () => closeAuthenticatorModal());
+    }
+    if (authenticatorModal) {
+        authenticatorModal.addEventListener('click', event => {
+            if (event.target === authenticatorModal) {
+                closeAuthenticatorModal();
+            }
+        });
+    }
+
+    const handleTabChanged = event => {
+        if (event?.detail?.tab !== 'mds') {
+            clearRowHighlight();
+            hideScrollTopButton();
+        } else {
+            scheduleScrollTopButtonUpdate();
+        }
+    };
+    if (typeof document !== 'undefined') {
+        document.addEventListener('tab:changed', handleTabChanged);
+    }
+
     return {
         root,
         filters,
         filterInputs,
         dropdowns,
-        table: root.querySelector('.mds-table'),
-        tableBody: root.querySelector('#mds-table-body'),
+        tableContainer,
+        table,
+        tableBody,
         countEl: root.querySelector('#mds-entry-count'),
         totalEl: root.querySelector('#mds-total-count'),
         statusEl,
@@ -377,133 +568,191 @@ function initializeState(root) {
         updateButtonMode: 'update',
         metadataOverdue: false,
         metadataNextUpdate: null,
+        detailView,
+        detailContent: root.querySelector('#mds-detail-content'),
+        detailTitle: root.querySelector('#mds-detail-title'),
+        detailSubtitle: root.querySelector('#mds-detail-subtitle'),
+        certificateModal,
+        certificateModalBody: certificateBody,
+        certificateInput: root.querySelector('#mds-certificate-input'),
+        certificateOutput: root.querySelector('#mds-certificate-output'),
+        certificateTitle: root.querySelector('#mds-certificate-modal-title'),
+        certificateSummary,
+        authenticatorModal,
+        authenticatorModalContent: root.querySelector('#mds-authenticator-modal-content'),
+        authenticatorModalTitle: root.querySelector('#mds-authenticator-modal-title'),
+        authenticatorModalSubtitle: root.querySelector('#mds-authenticator-modal-subtitle'),
+        authenticatorModalBody: root.querySelector('#mds-authenticator-modal-body'),
+        authenticatorModalClose: authenticatorClose,
+        activeDetailEntry: null,
+        previousDocumentScrollTop: null,
+        previousTableScrollTop: null,
+        highlightedRow: null,
+        highlightedRowKey: '',
+        tabChangeHandler: handleTabChanged,
+        byAaguid: new Map(),
+        scrollTopButton,
+        scrollTopButtonVisible: false,
     };
 }
 
 async function loadMdsData(statusNote) {
-    if (isLoading || hasLoaded || !mdsState) {
+    if (!mdsState) {
+        return;
+    }
+
+    if (hasLoaded) {
+        return;
+    }
+
+    if (isLoading && loadPromise) {
+        await loadPromise;
         return;
     }
 
     const note = typeof statusNote === 'string' ? statusNote.trim() : '';
-    isLoading = true;
     setStatus('Loading metadata BLOB…', 'info');
+    isLoading = true;
 
-    try {
-        const response = await fetch(MDS_JWS_PATH, { cache: 'no-store' });
-        if (!response.ok) {
-            if (response.status === 404) {
-                const message = MISSING_METADATA_MESSAGE;
-                setUpdateButtonMode('download');
-                setUpdateButtonAttention(false);
-                if (mdsState) {
-                    mdsState.metadataOverdue = false;
-                    mdsState.metadataNextUpdate = null;
+    const task = (async () => {
+        try {
+            const response = await fetch(MDS_JWS_PATH, { cache: 'no-store' });
+            if (!response.ok) {
+                if (response.status === 404) {
+                    const message = MISSING_METADATA_MESSAGE;
+                    setUpdateButtonMode('download');
+                    setUpdateButtonAttention(false);
+                    if (mdsState) {
+                        mdsState.metadataOverdue = false;
+                        mdsState.metadataNextUpdate = null;
+                        mdsState.byAaguid = new Map();
+                    }
+                    setStatus(message, 'info');
+                    if (mdsState) {
+                        mdsState.defaultStatus = { html: message, variant: 'info', title: '' };
+                    }
+                    mdsData = [];
+                    filteredData = [];
+                    updateCount(0, 0);
+                    if (mdsState?.tableBody) {
+                        const tbody = mdsState.tableBody;
+                        tbody.innerHTML = '';
+                        const emptyRow = document.createElement('tr');
+                        emptyRow.className = 'mds-empty-row';
+                        const cell = document.createElement('td');
+                        cell.colSpan = COLUMN_COUNT;
+                        cell.textContent = MISSING_METADATA_MESSAGE;
+                        emptyRow.appendChild(cell);
+                        tbody.appendChild(emptyRow);
+                    }
+                    hideScrollTopButton();
+                    return;
                 }
-                setStatus(message, 'info');
-                if (mdsState) {
-                    mdsState.defaultStatus = { html: message, variant: 'info', title: '' };
-                }
-                mdsData = [];
-                filteredData = [];
-                updateCount(0, 0);
-                if (mdsState?.tableBody) {
-                    const tbody = mdsState.tableBody;
-                    tbody.innerHTML = '';
-                    const emptyRow = document.createElement('tr');
-                    emptyRow.className = 'mds-empty-row';
-                    const cell = document.createElement('td');
-                    cell.colSpan = COLUMN_COUNT;
-                    cell.textContent = MISSING_METADATA_MESSAGE;
-                    emptyRow.appendChild(cell);
-                    tbody.appendChild(emptyRow);
-                }
-                return;
+                throw new Error(`Unexpected response status: ${response.status}`);
             }
-            throw new Error(`Unexpected response status: ${response.status}`);
-        }
 
-        const jws = await response.text();
-        const payloadSegment = jws.split('.')[1];
-        if (!payloadSegment) {
-            throw new Error('Invalid metadata BLOB format.');
-        }
+            const jws = await response.text();
+            const payloadSegment = jws.split('.')[1];
+            if (!payloadSegment) {
+                throw new Error('Invalid metadata BLOB format.');
+            }
 
-        const payload = decodeBase64Url(payloadSegment);
-        const metadata = JSON.parse(payload);
+            const payload = decodeBase64Url(payloadSegment);
+            const metadata = JSON.parse(payload);
 
-        mdsData = Array.isArray(metadata.entries)
-            ? metadata.entries.map(transformEntry).filter(Boolean)
-            : [];
-        hasLoaded = true;
-        setUpdateButtonMode('update');
+            mdsData = Array.isArray(metadata.entries)
+                ? metadata.entries.map((entry, index) => transformEntry(entry, index)).filter(Boolean)
+                : [];
+            hasLoaded = true;
+            setUpdateButtonMode('update');
 
-        const nextUpdateRaw = typeof metadata.nextUpdate === 'string' ? metadata.nextUpdate : '';
-        const nextUpdateDate = parseIsoDate(nextUpdateRaw);
-        const nextUpdateFormatted = nextUpdateRaw ? formatDate(nextUpdateRaw) : '';
-        const now = Date.now();
-        const isOverdue = Boolean(nextUpdateDate && nextUpdateDate.getTime() <= now);
+            if (mdsState) {
+                const map = new Map();
+                mdsData.forEach(item => {
+                    const key = normaliseAaguid(item.aaguid || item.id);
+                    if (key) {
+                        map.set(key, item);
+                    }
+                });
+                mdsState.byAaguid = map;
+            }
 
-        if (mdsState) {
-            mdsState.metadataOverdue = isOverdue;
-            mdsState.metadataNextUpdate = nextUpdateRaw || null;
-        }
-        setUpdateButtonAttention(isOverdue);
+            const nextUpdateRaw = typeof metadata.nextUpdate === 'string' ? metadata.nextUpdate : '';
+            const nextUpdateDate = parseIsoDate(nextUpdateRaw);
+            const nextUpdateFormatted = nextUpdateRaw ? formatDate(nextUpdateRaw) : '';
+            const now = Date.now();
+            const isOverdue = Boolean(nextUpdateDate && nextUpdateDate.getTime() <= now);
 
-        const optionSets = collectOptionSets(mdsData);
-        updateOptionLists(optionSets);
-        applyFilters();
+            if (mdsState) {
+                mdsState.metadataOverdue = isOverdue;
+                mdsState.metadataNextUpdate = nextUpdateRaw || null;
+            }
+            setUpdateButtonAttention(isOverdue);
 
-        const statusParts = [`Loaded ${mdsData.length.toLocaleString()} authenticators.`];
-        let statusVariant = 'success';
+            const optionSets = collectOptionSets(mdsData);
+            updateOptionLists(optionSets);
+            applyFilters();
 
-        if (isOverdue) {
-            const deadline = nextUpdateFormatted ? ` (${nextUpdateFormatted})` : '';
-            statusParts.push(
-                `The recommended metadata update date has passed${deadline}. Use the <strong>Update Metadata</strong> button to refresh the local file.`,
+            const statusParts = [`Loaded ${mdsData.length.toLocaleString()} authenticators.`];
+            let statusVariant = 'success';
+
+            if (isOverdue) {
+                const deadline = nextUpdateFormatted ? ` (${nextUpdateFormatted})` : '';
+                statusParts.push(
+                    `The recommended metadata update date has passed${deadline}. Use the <strong>Update Metadata</strong> button to refresh the local file.`,
+                );
+                statusVariant = 'error';
+            } else if (nextUpdateFormatted) {
+                statusParts.push(`Next update recommended by ${nextUpdateFormatted}.`);
+            }
+            if (note) {
+                statusParts.push(note);
+            }
+            const statusMessage = statusParts.join(' ');
+            setStatus(statusMessage, statusVariant);
+
+            if (!mdsState.defaultStatus) {
+                mdsState.defaultStatus = { html: statusMessage, variant: statusVariant, title: '' };
+            } else {
+                mdsState.defaultStatus.html = statusMessage;
+                mdsState.defaultStatus.variant = statusVariant;
+            }
+
+            if (metadata.legalHeader && mdsState.statusEl) {
+                mdsState.statusEl.setAttribute('title', metadata.legalHeader);
+                if (mdsState.defaultStatus) {
+                    mdsState.defaultStatus.title = metadata.legalHeader;
+                }
+            } else if (mdsState?.statusEl) {
+                mdsState.statusEl.removeAttribute('title');
+                if (mdsState.defaultStatus) {
+                    mdsState.defaultStatus.title = '';
+                }
+            }
+        } catch (error) {
+            console.error('Failed to load FIDO MDS metadata:', error);
+            setStatus(
+                `Unable to parse the metadata BLOB. Confirm that <code>${MDS_JWS_PATH}</code> is a valid download from ` +
+                    `<a href="https://mds3.fidoalliance.org/" target="_blank" rel="noopener">mds3.fidoalliance.org</a>.`,
+                'error',
             );
-            statusVariant = 'error';
-        } else if (nextUpdateFormatted) {
-            statusParts.push(`Next update recommended by ${nextUpdateFormatted}.`);
-        }
-        if (note) {
-            statusParts.push(note);
-        }
-        const statusMessage = statusParts.join(' ');
-        setStatus(statusMessage, statusVariant);
-
-        if (!mdsState.defaultStatus) {
-            mdsState.defaultStatus = { html: statusMessage, variant: statusVariant, title: '' };
-        } else {
-            mdsState.defaultStatus.html = statusMessage;
-            mdsState.defaultStatus.variant = statusVariant;
-        }
-
-        if (metadata.legalHeader && mdsState.statusEl) {
-            mdsState.statusEl.setAttribute('title', metadata.legalHeader);
-            if (mdsState.defaultStatus) {
-                mdsState.defaultStatus.title = metadata.legalHeader;
+            setUpdateButtonAttention(false);
+            if (mdsState) {
+                mdsState.metadataOverdue = false;
+                mdsState.metadataNextUpdate = null;
             }
-        } else if (mdsState?.statusEl) {
-            mdsState.statusEl.removeAttribute('title');
-            if (mdsState.defaultStatus) {
-                mdsState.defaultStatus.title = '';
-            }
+        } finally {
+            isLoading = false;
         }
-    } catch (error) {
-        console.error('Failed to load FIDO MDS metadata:', error);
-        setStatus(
-            `Unable to parse the metadata BLOB. Confirm that <code>${MDS_JWS_PATH}</code> is a valid download from ` +
-                `<a href="https://mds3.fidoalliance.org/" target="_blank" rel="noopener">mds3.fidoalliance.org</a>.`,
-            'error',
-        );
-        setUpdateButtonAttention(false);
-        if (mdsState) {
-            mdsState.metadataOverdue = false;
-            mdsState.metadataNextUpdate = null;
-        }
+    })();
+
+    loadPromise = task;
+    try {
+        await task;
     } finally {
-        isLoading = false;
+        if (loadPromise === task) {
+            loadPromise = null;
+        }
     }
 }
 
@@ -556,6 +805,28 @@ function matchesFilters(entry, filters) {
     });
 }
 
+function resetFilters() {
+    if (!mdsState) {
+        return;
+    }
+
+    let changed = false;
+    Object.entries(mdsState.filters || {}).forEach(([key, value]) => {
+        if (value) {
+            mdsState.filters[key] = '';
+            const input = mdsState.filterInputs[key];
+            if (input) {
+                input.value = '';
+            }
+            changed = true;
+        }
+    });
+
+    if (changed || (!filteredData.length && mdsData.length)) {
+        applyFilters();
+    }
+}
+
 function renderTable(entries) {
     if (!mdsState?.tableBody) {
         return;
@@ -572,6 +843,7 @@ function renderTable(entries) {
         cell.textContent = 'No authenticators match the selected filters.';
         emptyRow.appendChild(cell);
         tbody.appendChild(emptyRow);
+        hideScrollTopButton();
         stabiliseColumnWidths();
         return;
     }
@@ -581,8 +853,23 @@ function renderTable(entries) {
     entries.forEach(entry => {
         const row = document.createElement('tr');
 
+        if (typeof entry.index === 'number' && Number.isFinite(entry.index)) {
+            row.dataset.entryIndex = String(entry.index);
+        }
+        const aaguidKey = normaliseAaguid(entry.aaguid);
+        if (aaguidKey) {
+            row.dataset.aaguid = aaguidKey;
+        } else if (entry.id) {
+            const idKey = normaliseAaguid(entry.id);
+            if (idKey) {
+                row.dataset.aaguid = idKey;
+            } else {
+                row.dataset.entryId = entry.id;
+            }
+        }
+
         row.appendChild(createIconCell(entry));
-        row.appendChild(createTextCell(entry.name || '—'));
+        row.appendChild(createNameCell(entry));
         row.appendChild(createTextCell(entry.protocol || '—'));
         row.appendChild(createTextCell(entry.certification || '—'));
         row.appendChild(createIdCell(entry.id));
@@ -597,7 +884,1341 @@ function renderTable(entries) {
     });
 
     tbody.appendChild(fragment);
+    if (mdsState.highlightedRowKey) {
+        const restored = applyRowHighlightByKey(mdsState.highlightedRowKey, { scroll: false });
+        if (!restored) {
+            mdsState.highlightedRow = null;
+        }
+    }
     stabiliseColumnWidths();
+    scheduleScrollTopButtonUpdate();
+}
+
+function formatDetailSubtitle(entry) {
+    if (!entry) {
+        return '';
+    }
+
+    const parts = [];
+    if (entry.aaguid) {
+        parts.push(`AAGUID: ${entry.aaguid}`);
+    }
+    if (entry.id && entry.id !== entry.aaguid) {
+        parts.push(`ID: ${entry.id}`);
+    }
+    if (entry.protocol) {
+        parts.push(entry.protocol);
+    }
+    return parts.join(' • ');
+}
+
+function applyDetailHeader(entry, titleEl, subtitleEl) {
+    if (titleEl) {
+        titleEl.textContent = entry?.name?.trim() ? entry.name : 'Authenticator';
+    }
+    if (subtitleEl) {
+        subtitleEl.textContent = formatDetailSubtitle(entry);
+    }
+}
+
+function populateDetailContent(target, entry) {
+    if (!target) {
+        return;
+    }
+    target.innerHTML = '';
+    const content = buildDetailContent(entry);
+    if (content) {
+        target.appendChild(content);
+    }
+}
+
+function resetScrollPositions(...elements) {
+    const apply = element => {
+        if (!element) {
+            return;
+        }
+        if (typeof element.scrollTo === 'function') {
+            element.scrollTo({ top: 0, left: 0 });
+            return;
+        }
+        if (typeof element.scrollTop === 'number') {
+            element.scrollTop = 0;
+        }
+        if (typeof element.scrollLeft === 'number') {
+            element.scrollLeft = 0;
+        }
+    };
+
+    elements.forEach(apply);
+    if (typeof requestAnimationFrame === 'function') {
+        requestAnimationFrame(() => {
+            elements.forEach(apply);
+        });
+    }
+}
+
+function notifyGlobalScrollLock() {
+    if (typeof window !== 'undefined' && typeof window.updateGlobalScrollLock === 'function') {
+        window.updateGlobalScrollLock();
+        return;
+    }
+
+    if (typeof document === 'undefined') {
+        return;
+    }
+
+    const overlayActive = document.getElementById('json-editor-overlay')?.classList.contains('active');
+    const modalActive = document.querySelector('.modal.open');
+    const mdsModalActive = document.querySelector('.mds-modal:not([hidden])');
+    const shouldLock = Boolean(overlayActive || modalActive || mdsModalActive);
+
+    const targets = [document.body, document.documentElement].filter(Boolean);
+    targets.forEach(target => target.classList.toggle('modal-open', shouldLock));
+}
+
+function resizeCertificateTextareas() {
+    if (!mdsState) {
+        return;
+    }
+
+    const fields = [mdsState.certificateInput, mdsState.certificateOutput];
+    fields.forEach(field => {
+        if (!(field instanceof HTMLTextAreaElement)) {
+            return;
+        }
+        field.style.height = 'auto';
+        field.style.overflowY = 'hidden';
+        field.style.overflowX = 'hidden';
+        const { scrollHeight } = field;
+        if (Number.isFinite(scrollHeight)) {
+            field.style.height = `${scrollHeight}px`;
+        }
+    });
+}
+
+function scheduleCertificateTextareaResize() {
+    const adjust = () => resizeCertificateTextareas();
+    if (typeof requestAnimationFrame === 'function') {
+        requestAnimationFrame(() => requestAnimationFrame(adjust));
+    } else {
+        setTimeout(adjust, 0);
+    }
+}
+
+function resetCertificateTextareaHeights() {
+    if (!mdsState) {
+        return;
+    }
+    [mdsState.certificateInput, mdsState.certificateOutput].forEach(field => {
+        if (field instanceof HTMLTextAreaElement) {
+            field.style.height = '';
+        }
+    });
+}
+
+function clearRowHighlight() {
+    if (!mdsState) {
+        return;
+    }
+    if (mdsState.tableBody) {
+        mdsState.tableBody.querySelectorAll('tr.mds-row--highlight').forEach(row => {
+            row.classList.remove('mds-row--highlight');
+        });
+    }
+    mdsState.highlightedRow = null;
+    mdsState.highlightedRowKey = '';
+}
+
+function findRowByKey(key) {
+    if (!mdsState?.tableBody || !key) {
+        return null;
+    }
+    const normalised = key.toLowerCase();
+    const rows = mdsState.tableBody.querySelectorAll('tr[data-aaguid]');
+    for (const row of rows) {
+        if ((row.dataset.aaguid || '').toLowerCase() === normalised) {
+            return row;
+        }
+    }
+    return null;
+}
+
+function applyRowHighlightByKey(key, options = {}) {
+    if (!mdsState || !key) {
+        return false;
+    }
+
+    const row = findRowByKey(key);
+    if (!row) {
+        return false;
+    }
+
+    if (mdsState.highlightedRow && mdsState.highlightedRow !== row) {
+        mdsState.highlightedRow.classList.remove('mds-row--highlight');
+    }
+
+    if (!row.classList.contains('mds-row--highlight')) {
+        row.classList.add('mds-row--highlight');
+    }
+
+    mdsState.highlightedRow = row;
+    mdsState.highlightedRowKey = key;
+
+    if (options.scroll && typeof row.scrollIntoView === 'function') {
+        const behavior = options.behavior || 'smooth';
+        row.scrollIntoView({ block: 'center', behavior });
+    }
+
+    scheduleScrollTopButtonUpdate();
+    return true;
+}
+
+function scheduleRowHighlight(key, attempt = 0) {
+    if (!mdsState || !key) {
+        return;
+    }
+
+    if (mdsState.highlightedRowKey !== key) {
+        return;
+    }
+
+    const behavior = attempt === 0 ? 'smooth' : 'auto';
+    const applied = applyRowHighlightByKey(key, { scroll: true, behavior });
+    if (applied) {
+        return;
+    }
+
+    if (attempt >= 8) {
+        return;
+    }
+
+    const schedule = () => scheduleRowHighlight(key, attempt + 1);
+    if (typeof requestAnimationFrame === 'function') {
+        requestAnimationFrame(schedule);
+    } else {
+        setTimeout(schedule, attempt < 4 ? 16 : 64);
+    }
+}
+
+function showAuthenticatorDetail(entry, options = {}) {
+    if (!mdsState || !entry) {
+        return;
+    }
+
+    clearRowHighlight();
+    hideScrollTopButton();
+
+    const sourceEntry = typeof entry.index === 'number' && mdsData[entry.index]
+        ? mdsData[entry.index]
+        : entry;
+
+    mdsState.activeDetailEntry = sourceEntry;
+
+    if (typeof window !== 'undefined') {
+        const doc = document.documentElement;
+        const body = document.body;
+        const scrollTop = typeof window.pageYOffset === 'number'
+            ? window.pageYOffset
+            : (doc?.scrollTop ?? body?.scrollTop ?? 0);
+        mdsState.previousDocumentScrollTop = scrollTop;
+    }
+
+    if (mdsState.tableContainer) {
+        if (typeof mdsState.tableContainer.scrollTop === 'number') {
+            mdsState.previousTableScrollTop = mdsState.tableContainer.scrollTop;
+        }
+        mdsState.tableContainer.hidden = true;
+    }
+    if (mdsState.detailView) {
+        mdsState.detailView.hidden = false;
+    }
+
+    if (mdsState.root) {
+        mdsState.root.classList.add('mds-section--detail-active');
+    }
+
+    applyDetailHeader(sourceEntry, mdsState.detailTitle, mdsState.detailSubtitle);
+    populateDetailContent(mdsState.detailContent, sourceEntry);
+    resetScrollPositions(mdsState.detailView, mdsState.detailContent);
+
+    const { scrollIntoView = true } = options;
+    if (scrollIntoView && mdsState.detailView && typeof mdsState.detailView.scrollIntoView === 'function') {
+        requestAnimationFrame(() => {
+            mdsState.detailView.scrollIntoView({ block: 'start' });
+        });
+    }
+}
+
+function hideAuthenticatorDetail() {
+    if (!mdsState) {
+        return;
+    }
+
+    if (mdsState.root) {
+        mdsState.root.classList.remove('mds-section--detail-active');
+    }
+
+    if (mdsState.detailView) {
+        mdsState.detailView.hidden = true;
+    }
+    if (mdsState.tableContainer) {
+        mdsState.tableContainer.hidden = false;
+        if (typeof mdsState.previousTableScrollTop === 'number') {
+            const target = mdsState.previousTableScrollTop;
+            mdsState.tableContainer.scrollTop = target;
+            if (typeof requestAnimationFrame === 'function') {
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        mdsState.tableContainer.scrollTop = target;
+                    });
+                });
+            } else {
+                setTimeout(() => {
+                    mdsState.tableContainer.scrollTop = target;
+                }, 0);
+            }
+        }
+    }
+
+    const previousScrollTop = typeof mdsState.previousDocumentScrollTop === 'number'
+        ? mdsState.previousDocumentScrollTop
+        : null;
+    mdsState.previousDocumentScrollTop = null;
+    mdsState.previousTableScrollTop = null;
+
+    if (previousScrollTop !== null && typeof window !== 'undefined') {
+        const restore = () => {
+            if (typeof window.scrollTo === 'function') {
+                window.scrollTo({ top: previousScrollTop, left: 0, behavior: 'auto' });
+            } else {
+                window.scrollTo(0, previousScrollTop);
+            }
+        };
+        if (typeof requestAnimationFrame === 'function') {
+            requestAnimationFrame(() => requestAnimationFrame(restore));
+        } else {
+            setTimeout(restore, 0);
+        }
+    }
+    if (mdsState.updateButton instanceof HTMLElement) {
+        requestAnimationFrame(() => {
+            mdsState.updateButton.focus();
+        });
+    }
+    mdsState.activeDetailEntry = null;
+    scheduleScrollTopButtonUpdate();
+}
+
+function buildDetailContent(entry) {
+    const fragment = document.createDocumentFragment();
+    const metadata = entry?.metadataStatement ?? {};
+
+    const overviewSection = createDetailSection('Overview');
+    const overviewItems = [];
+    overviewItems.push({ label: 'Identifier', value: entry.id || '—' });
+    if (entry.aaguid) {
+        overviewItems.push({ label: 'AAGUID', value: entry.aaguid });
+    }
+    if (entry.protocol) {
+        overviewItems.push({ label: 'Protocol', value: entry.protocol });
+    }
+    if (entry.certification) {
+        overviewItems.push({ label: 'Certification', value: entry.certification });
+    }
+    if (metadata.authenticatorVersion !== undefined && metadata.authenticatorVersion !== null) {
+        overviewItems.push({ label: 'Authenticator Version', value: String(metadata.authenticatorVersion) });
+    }
+    if (entry.dateUpdated) {
+        overviewItems.push({ label: 'Date Updated', value: entry.dateUpdated });
+    }
+    appendDetailGrid(overviewSection, overviewItems);
+    fragment.appendChild(overviewSection);
+
+    const metadataSection = createDetailSection('Metadata Statement');
+    const metadataItems = [];
+    if (metadata.description) {
+        metadataItems.push({ label: 'Description', value: String(metadata.description) });
+    }
+    if (metadata.legalHeader) {
+        metadataItems.push({ label: 'Legal Header', value: String(metadata.legalHeader) });
+    }
+    if (metadata.schema !== undefined && metadata.schema !== null) {
+        metadataItems.push({ label: 'Schema', value: String(metadata.schema) });
+    }
+    if (metadata.cryptoStrength !== undefined && metadata.cryptoStrength !== null) {
+        metadataItems.push({ label: 'Crypto Strength', value: String(metadata.cryptoStrength) });
+    }
+    const keyIdentifierNode = createCodeValueList(entry.attestationKeyIdentifiers);
+    if (keyIdentifierNode) {
+        metadataItems.push({ label: 'Attestation Certificate Key IDs', node: keyIdentifierNode });
+    }
+    const upvValues = formatUpv(metadata.upv);
+    if (upvValues.length) {
+        metadataItems.push({ label: 'UPV', value: upvValues.join(', ') });
+    }
+    appendDetailGrid(metadataSection, metadataItems);
+
+    const algorithmChips = createChipList('Authentication Algorithms', formatListValues(metadata.authenticationAlgorithms));
+    if (algorithmChips) {
+        metadataSection.appendChild(algorithmChips);
+    }
+    const encodingChips = createChipList('Public Key Algorithms', formatListValues(metadata.publicKeyAlgAndEncodings));
+    if (encodingChips) {
+        metadataSection.appendChild(encodingChips);
+    }
+    const attestationChips = createChipList('Attestation Types', formatListValues(metadata.attestationTypes));
+    if (attestationChips) {
+        metadataSection.appendChild(attestationChips);
+    }
+    const keyProtectionChips = createChipList('Key Protection', formatListValues(metadata.keyProtection));
+    if (keyProtectionChips) {
+        metadataSection.appendChild(keyProtectionChips);
+    }
+    const matcherChips = createChipList('Matcher Protection', formatListValues(metadata.matcherProtection));
+    if (matcherChips) {
+        metadataSection.appendChild(matcherChips);
+    }
+    const attachmentChips = createChipList('Attachment Hints', formatListValues(metadata.attachmentHint));
+    if (attachmentChips) {
+        metadataSection.appendChild(attachmentChips);
+    }
+    const displayChips = createChipList('TC Display', formatListValues(metadata.tcDisplay));
+    if (displayChips) {
+        metadataSection.appendChild(displayChips);
+    }
+    fragment.appendChild(metadataSection);
+
+    const userVerificationContent = renderUserVerificationDetails(metadata.userVerificationDetails);
+    if (userVerificationContent) {
+        const userSection = createDetailSection('User Verification Details');
+        userSection.appendChild(userVerificationContent);
+        fragment.appendChild(userSection);
+    }
+
+    const certificatesContent = renderAttestationCertificates(entry.attestationCertificates);
+    if (certificatesContent) {
+        const certificateSection = createDetailSection('Attestation Root Certificates');
+        certificateSection.appendChild(certificatesContent);
+        fragment.appendChild(certificateSection);
+    }
+
+    const authenticatorInfoSection = renderAuthenticatorInfo(metadata.authenticatorGetInfo);
+    if (authenticatorInfoSection) {
+        fragment.appendChild(authenticatorInfoSection);
+    }
+
+    const statusContent = renderStatusReports(entry.statusReports);
+    if (statusContent) {
+        const statusSection = createDetailSection('Status Reports');
+        statusSection.appendChild(statusContent);
+        fragment.appendChild(statusSection);
+    }
+
+    return fragment;
+}
+
+function createDetailSection(title) {
+    const section = document.createElement('section');
+    section.className = 'mds-detail-section';
+    if (title) {
+        const heading = document.createElement('h4');
+        heading.className = 'mds-detail-section__title';
+        heading.textContent = title;
+        section.appendChild(heading);
+    }
+    return section;
+}
+
+function appendDetailGrid(section, items) {
+    if (!section || !Array.isArray(items) || !items.length) {
+        return;
+    }
+
+    const valid = items.filter(item => {
+        if (!item || typeof item.label !== 'string') {
+            return false;
+        }
+        if (item.node instanceof Node) {
+            return true;
+        }
+        const value = item.value;
+        if (Array.isArray(value)) {
+            return value.length > 0;
+        }
+        return value !== undefined && value !== null && String(value).trim() !== '';
+    });
+
+    if (!valid.length) {
+        return;
+    }
+
+    const grid = document.createElement('div');
+    grid.className = 'mds-detail-grid';
+
+    valid.forEach(item => {
+        const cell = document.createElement('div');
+        cell.className = 'mds-detail-item';
+        const labelEl = document.createElement('div');
+        labelEl.className = 'mds-detail-item__label';
+        labelEl.textContent = item.label;
+        const valueEl = document.createElement('div');
+        valueEl.className = 'mds-detail-item__value';
+        if (item.node instanceof Node) {
+            valueEl.appendChild(item.node);
+        } else if (Array.isArray(item.value)) {
+            valueEl.textContent = item.value.join(', ');
+        } else {
+            valueEl.textContent = String(item.value);
+        }
+        cell.appendChild(labelEl);
+        cell.appendChild(valueEl);
+        grid.appendChild(cell);
+    });
+
+    section.appendChild(grid);
+}
+
+function createChipList(label, values) {
+    const items = Array.isArray(values) ? values.filter(Boolean) : [];
+    if (!items.length) {
+        return null;
+    }
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'mds-detail-item';
+    const labelEl = document.createElement('div');
+    labelEl.className = 'mds-detail-item__label';
+    labelEl.textContent = label;
+    const list = document.createElement('div');
+    list.className = 'mds-detail-list';
+    items.forEach(value => {
+        const chip = document.createElement('span');
+        chip.className = 'mds-detail-chip';
+        chip.textContent = value;
+        list.appendChild(chip);
+    });
+    wrapper.appendChild(labelEl);
+    wrapper.appendChild(list);
+    return wrapper;
+}
+
+function createCodeValueList(values) {
+    const items = extractList(values)
+        .map(value => (value === undefined || value === null ? '' : String(value).trim()))
+        .filter(Boolean);
+    if (!items.length) {
+        return null;
+    }
+
+    const container = document.createElement('div');
+    container.className = 'mds-detail-code-values';
+    items.forEach(value => {
+        const code = document.createElement('code');
+        code.className = 'mds-detail-code';
+        code.textContent = value;
+        container.appendChild(code);
+    });
+    return container;
+}
+
+function renderUserVerificationDetails(details) {
+    const groups = Array.isArray(details) ? details : [];
+    if (!groups.length) {
+        return null;
+    }
+
+    const container = document.createElement('div');
+    container.className = 'mds-detail-groups';
+
+    groups.forEach((group, index) => {
+        const entries = Array.isArray(group) ? group : [group];
+        const validEntries = entries.filter(item => item && typeof item === 'object');
+        if (!validEntries.length) {
+            return;
+        }
+
+        const card = document.createElement('div');
+        card.className = 'mds-detail-card';
+        const title = document.createElement('div');
+        title.className = 'mds-detail-card__title';
+        title.textContent = `Combination ${index + 1}`;
+        card.appendChild(title);
+
+        const content = document.createElement('div');
+        content.className = 'mds-detail-card__content';
+
+        validEntries.forEach(item => {
+            const method = item.userVerificationMethod ? formatEnum(item.userVerificationMethod) : '';
+            if (method) {
+                const methodEl = document.createElement('div');
+                methodEl.textContent = method;
+                content.appendChild(methodEl);
+            }
+
+            const caDesc = item.caDesc && typeof item.caDesc === 'object' ? item.caDesc : null;
+            if (caDesc) {
+                const parts = [];
+                if (caDesc.base !== undefined) {
+                    parts.push(`Base: ${caDesc.base}`);
+                }
+                if (caDesc.minLength !== undefined) {
+                    parts.push(`Min length: ${caDesc.minLength}`);
+                }
+                if (caDesc.maxRetries !== undefined) {
+                    parts.push(`Max retries: ${caDesc.maxRetries}`);
+                }
+                if (caDesc.blockSlowdown !== undefined) {
+                    parts.push(`Block slowdown: ${caDesc.blockSlowdown}`);
+                }
+                if (parts.length) {
+                    const info = document.createElement('small');
+                    info.textContent = parts.join(' • ');
+                    content.appendChild(info);
+                }
+            }
+        });
+
+        if (content.childElementCount) {
+            card.appendChild(content);
+            container.appendChild(card);
+        }
+    });
+
+    return container.childElementCount ? container : null;
+}
+
+function renderAttestationCertificates(certificates) {
+    const values = Array.isArray(certificates) ? certificates.filter(Boolean) : [];
+    if (!values.length) {
+        return null;
+    }
+
+    const container = document.createElement('div');
+    container.className = 'mds-certificates';
+
+    values.forEach((certificate, index) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'mds-certificate-button';
+        button.textContent = `Certificate ${index + 1}`;
+        button.addEventListener('click', () => openCertificateModal(certificate));
+        container.appendChild(button);
+        void updateCertificateButtonLabel(button, certificate);
+    });
+
+    return container;
+}
+
+function renderAuthenticatorInfo(info) {
+    if (!info || typeof info !== 'object') {
+        return null;
+    }
+
+    const section = createDetailSection('Authenticator Get Info');
+    const gridItems = [];
+
+    if (info.aaguid) {
+        gridItems.push({ label: 'AAGUID', value: formatGuidCandidate(info.aaguid) || String(info.aaguid) });
+    }
+    const numericKeys = [
+        ['maxMsgSize', 'Max Message Size'],
+        ['maxCredentialCountInList', 'Max Credential Count'],
+        ['maxCredentialIdLength', 'Max Credential ID Length'],
+        ['maxSerializedLargeBlobArray', 'Max Serialized Large Blob Array'],
+        ['minPINLength', 'Min PIN Length'],
+        ['firmwareVersion', 'Firmware Version'],
+        ['maxCredBlobLength', 'Max Cred Blob Length'],
+        ['maxRPIDsForSetMinPINLength', 'Max RP IDs for Set Min PIN Length'],
+        ['remainingDiscoverableCredentials', 'Remaining Discoverable Credentials'],
+    ];
+    numericKeys.forEach(([key, label]) => {
+        if (info[key] !== undefined && info[key] !== null) {
+            gridItems.push({ label, value: String(info[key]) });
+        }
+    });
+    appendDetailGrid(section, gridItems);
+
+    const versionChips = createChipList('Versions', formatListValues(info.versions));
+    if (versionChips) {
+        section.appendChild(versionChips);
+    }
+    const extensionChips = createChipList('Extensions', formatListValues(info.extensions));
+    if (extensionChips) {
+        section.appendChild(extensionChips);
+    }
+    const transportChips = createChipList('Transports', formatListValues(info.transports));
+    if (transportChips) {
+        section.appendChild(transportChips);
+    }
+    const algorithmChips = createChipList('Algorithms', formatAuthenticatorAlgorithms(info.algorithms));
+    if (algorithmChips) {
+        section.appendChild(algorithmChips);
+    }
+    const pinProtocols = Array.isArray(info.pinUvAuthProtocols)
+        ? info.pinUvAuthProtocols.map(protocol => String(protocol)).filter(Boolean)
+        : [];
+    if (pinProtocols.length) {
+        const chip = createChipList('pinUvAuth Protocols', pinProtocols);
+        if (chip) {
+            section.appendChild(chip);
+        }
+    }
+
+    const optionEntries = info.options && typeof info.options === 'object'
+        ? Object.entries(info.options).filter(([, value]) => value !== undefined && value !== null)
+        : [];
+    if (optionEntries.length) {
+        const optionChips = createChipList(
+            'Options',
+            optionEntries.map(([key, value]) => `${key}: ${formatDetailValue(value)}`),
+        );
+        if (optionChips) {
+            section.appendChild(optionChips);
+        }
+    }
+
+    return section;
+}
+
+function renderStatusReports(reports) {
+    const list = Array.isArray(reports) ? reports : [];
+    if (!list.length) {
+        return null;
+    }
+
+    const table = document.createElement('table');
+    table.className = 'mds-status-table';
+    const thead = document.createElement('thead');
+    const headRow = document.createElement('tr');
+    ['Status', 'Effective Date', 'Authenticator Version', 'Certificate Number', 'Descriptor'].forEach(label => {
+        const th = document.createElement('th');
+        th.textContent = label;
+        headRow.appendChild(th);
+    });
+    thead.appendChild(headRow);
+    table.appendChild(thead);
+
+    const tbody = document.createElement('tbody');
+    list.forEach(report => {
+        if (!report || typeof report !== 'object') {
+            return;
+        }
+        const row = document.createElement('tr');
+
+        const statusCell = document.createElement('td');
+        statusCell.textContent = report.status ? formatEnum(report.status) : '—';
+        row.appendChild(statusCell);
+
+        const dateCell = document.createElement('td');
+        dateCell.textContent = report.effectiveDate ? formatDate(report.effectiveDate) : '—';
+        row.appendChild(dateCell);
+
+        const versionCell = document.createElement('td');
+        versionCell.textContent = report.authenticatorVersion !== undefined && report.authenticatorVersion !== null
+            ? String(report.authenticatorVersion)
+            : '—';
+        row.appendChild(versionCell);
+
+        const certificateCell = document.createElement('td');
+        certificateCell.textContent = report.certificateNumber ? String(report.certificateNumber) : '—';
+        row.appendChild(certificateCell);
+
+        const descriptorCell = document.createElement('td');
+        const descriptorContainer = document.createElement('div');
+        descriptorContainer.className = 'mds-status-descriptor';
+
+        const descriptorParts = [];
+        if (report.certificationDescriptor) {
+            descriptorParts.push(String(report.certificationDescriptor));
+        }
+        if (report.url) {
+            descriptorParts.push(String(report.url));
+        }
+        if (descriptorParts.length) {
+            const descriptorLine = document.createElement('div');
+            descriptorLine.textContent = descriptorParts.join(' • ');
+            descriptorContainer.appendChild(descriptorLine);
+        }
+
+        const metadataLines = [];
+        if (report.certificationPolicyVersion) {
+            metadataLines.push(`Policy: ${report.certificationPolicyVersion}`);
+        }
+        if (report.certificationRequirementsVersion) {
+            metadataLines.push(`Requirements: ${report.certificationRequirementsVersion}`);
+        }
+        if (report.timeOfLastStatusChange) {
+            metadataLines.push(`Changed: ${formatDate(report.timeOfLastStatusChange)}`);
+        }
+        if (metadataLines.length) {
+            const metaLine = document.createElement('div');
+            metaLine.className = 'mds-status-meta';
+            metaLine.textContent = metadataLines.join(' • ');
+            descriptorContainer.appendChild(metaLine);
+        }
+
+        if (!descriptorContainer.childElementCount) {
+            descriptorContainer.textContent = '—';
+        }
+
+        descriptorCell.appendChild(descriptorContainer);
+        row.appendChild(descriptorCell);
+
+        tbody.appendChild(row);
+    });
+
+    table.appendChild(tbody);
+    return table;
+}
+
+function normaliseCertificateBase64(value) {
+    if (typeof value !== 'string') {
+        return '';
+    }
+    return value.replace(/\s+/g, '').trim();
+}
+
+async function decodeCertificate(certificateBase64) {
+    const cleaned = normaliseCertificateBase64(certificateBase64);
+    if (!cleaned) {
+        throw new Error('No certificate data available.');
+    }
+    if (certificateCache.has(cleaned)) {
+        return certificateCache.get(cleaned);
+    }
+
+    const response = await fetch('/api/mds/decode-certificate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ certificate: cleaned }),
+        cache: 'no-store',
+    });
+
+    if (!response.ok) {
+        const message = `Certificate decode failed with status ${response.status}`;
+        throw new Error(message);
+    }
+
+    const payload = await response.json();
+    const details = payload?.details ?? null;
+    certificateCache.set(cleaned, details);
+    return details;
+}
+
+function formatCertificateInput(value) {
+    return typeof value === 'string' ? value : '';
+}
+
+function formatCertificateOutput(details) {
+    if (!details || typeof details !== 'object') {
+        return 'No decoded certificate details available.';
+    }
+    if (typeof details.summary === 'string' && details.summary.trim()) {
+        return details.summary.trim();
+    }
+    return JSON.stringify(details, null, 2);
+}
+
+function formatCertificateDateDisplay(value) {
+    if (!value) {
+        return '';
+    }
+    const date = new Date(value);
+    if (!Number.isNaN(date.getTime())) {
+        return date.toUTCString();
+    }
+    return typeof value === 'string' ? value : '';
+}
+
+function createSummaryItem(label, value, options = {}) {
+    if (!label) {
+        return null;
+    }
+
+    const resolved = Array.isArray(value) ? value.filter(Boolean) : value;
+    const isArray = Array.isArray(resolved);
+    const scalar = !isArray ? resolved : null;
+    const text = typeof scalar === 'string' ? scalar.trim() : scalar;
+
+    if ((!isArray && (text === undefined || text === null || text === '')) || (isArray && !resolved.length)) {
+        return null;
+    }
+
+    const item = document.createElement('li');
+    item.className = 'mds-certificate-summary__item';
+
+    const labelEl = document.createElement('div');
+    labelEl.className = 'mds-certificate-summary__label';
+    labelEl.textContent = label;
+    item.appendChild(labelEl);
+
+    const valueEl = document.createElement('div');
+    valueEl.className = 'mds-certificate-summary__value';
+
+    if (options.code) {
+        const codeEl = document.createElement('code');
+        codeEl.className = 'mds-certificate-summary__code';
+        codeEl.textContent = String(value);
+        valueEl.appendChild(codeEl);
+    } else if (isArray) {
+        resolved.forEach(entry => {
+            const line = document.createElement('div');
+            line.textContent = String(entry);
+            valueEl.appendChild(line);
+        });
+    } else {
+        valueEl.textContent = String(text);
+    }
+
+    item.appendChild(valueEl);
+    return item;
+}
+
+function determinePublicKeyAlgorithm(info) {
+    if (!info || typeof info !== 'object') {
+        return '';
+    }
+    const algorithm = info.algorithm;
+    if (algorithm) {
+        if (typeof algorithm === 'string') {
+            const algorithmName = algorithm.trim();
+            if (algorithmName) {
+                return algorithmName;
+            }
+        }
+        if (typeof algorithm === 'object') {
+            const name = typeof algorithm.name === 'string' ? algorithm.name.trim() : '';
+            if (name) {
+                return name;
+            }
+        }
+    }
+    const type = typeof info.type === 'string' ? info.type.trim() : '';
+    return type;
+}
+
+function formatSignatureHashName(hash) {
+    if (typeof hash !== 'string') {
+        return '';
+    }
+    const trimmed = hash.trim();
+    if (!trimmed) {
+        return '';
+    }
+    const simpleShaMatch = /^sha(\d{3})$/i.exec(trimmed);
+    if (simpleShaMatch) {
+        return `SHA-${simpleShaMatch[1]}`;
+    }
+    return trimmed.toUpperCase();
+}
+
+function renderCertificatePublicKey(info) {
+    if (!info || typeof info !== 'object') {
+        return null;
+    }
+
+    const section = document.createElement('div');
+    section.className = 'mds-certificate-summary__section';
+
+    const title = document.createElement('div');
+    title.className = 'mds-certificate-summary__label';
+    title.textContent = 'Public Key';
+    section.appendChild(title);
+
+    const list = document.createElement('ul');
+    list.className = 'mds-certificate-summary__list';
+
+    const algorithmItem = createSummaryItem('Algorithm', determinePublicKeyAlgorithm(info));
+    if (algorithmItem) {
+        list.appendChild(algorithmItem);
+    }
+
+    const algorithmDetails = info.algorithm && typeof info.algorithm === 'object' ? info.algorithm : null;
+    const curveValue = info.curve || (algorithmDetails && algorithmDetails.namedCurve);
+    if (curveValue) {
+        const curveItem = createSummaryItem('Named Curve', curveValue);
+        if (curveItem) {
+            list.appendChild(curveItem);
+        }
+    }
+
+    const modulusLength = algorithmDetails && algorithmDetails.modulusLength;
+    const keySize = modulusLength || info.keySize;
+    if (keySize) {
+        const sizeItem = createSummaryItem('Key Size', `${keySize} bit`);
+        if (sizeItem) {
+            list.appendChild(sizeItem);
+        }
+    }
+
+    if (info.publicExponent !== undefined && info.publicExponent !== null) {
+        const exponentItem = createSummaryItem('Public Exponent', String(info.publicExponent));
+        if (exponentItem) {
+            list.appendChild(exponentItem);
+        }
+    }
+
+    if (info.modulusHex) {
+        const modulusItem = createSummaryItem('Modulus', info.modulusHex, { code: true });
+        if (modulusItem) {
+            list.appendChild(modulusItem);
+        }
+    }
+
+    if (info.uncompressedPoint) {
+        const pointItem = createSummaryItem('Uncompressed Point', info.uncompressedPoint, { code: true });
+        if (pointItem) {
+            list.appendChild(pointItem);
+        }
+    }
+
+    if (info.subjectPublicKeyInfoBase64) {
+        const valueItem = createSummaryItem('Value', info.subjectPublicKeyInfoBase64, { code: true });
+        if (valueItem) {
+            list.appendChild(valueItem);
+        }
+    }
+
+    if (!list.childElementCount) {
+        return null;
+    }
+
+    section.appendChild(list);
+    return section;
+}
+
+function renderCertificateSignature(signature) {
+    if (!signature || typeof signature !== 'object') {
+        return null;
+    }
+
+    const section = document.createElement('div');
+    section.className = 'mds-certificate-summary__section';
+
+    const title = document.createElement('div');
+    title.className = 'mds-certificate-summary__label';
+    title.textContent = 'Signature';
+    section.appendChild(title);
+
+    const list = document.createElement('ul');
+    list.className = 'mds-certificate-summary__list';
+
+    if (signature.algorithm) {
+        const algorithmItem = createSummaryItem('Algorithm', signature.algorithm);
+        if (algorithmItem) {
+            list.appendChild(algorithmItem);
+        }
+    }
+
+    if (signature.hash) {
+        const hashName = typeof signature.hash === 'object' && signature.hash !== null
+            ? signature.hash.name
+            : signature.hash;
+        const hashValue = typeof hashName === 'string' ? formatSignatureHashName(hashName) : hashName;
+        const hashItem = createSummaryItem('Hash', hashValue);
+        if (hashItem) {
+            list.appendChild(hashItem);
+        }
+    }
+
+    if (signature.hex) {
+        const valueItem = createSummaryItem('Value', signature.hex, { code: true });
+        if (valueItem) {
+            list.appendChild(valueItem);
+        }
+    }
+
+    if (!list.childElementCount) {
+        return null;
+    }
+
+    section.appendChild(list);
+    return section;
+}
+
+function renderCertificateSummary(details) {
+    if (!details || typeof details !== 'object') {
+        return null;
+    }
+
+    const fragment = document.createDocumentFragment();
+
+    const infoList = document.createElement('ul');
+    infoList.className = 'mds-certificate-summary__list';
+
+    const validity = details.validity || {};
+    const serialNumber = details.serialNumber || {};
+
+    [
+        createSummaryItem('Subject', details.subject),
+        createSummaryItem('Issuer', details.issuer),
+        createSummaryItem('Not Before', formatCertificateDateDisplay(validity.notBefore)),
+        createSummaryItem('Not After', formatCertificateDateDisplay(validity.notAfter)),
+        createSummaryItem('Serial Number', serialNumber.decimal || serialNumber.hex),
+        serialNumber.hex ? createSummaryItem('Serial Number (Hex)', serialNumber.hex) : null,
+    ].forEach(item => {
+        if (item) {
+            infoList.appendChild(item);
+        }
+    });
+
+    if (infoList.childElementCount) {
+        fragment.appendChild(infoList);
+    }
+
+    const publicKeySection = renderCertificatePublicKey(details.publicKeyInfo);
+    if (publicKeySection) {
+        fragment.appendChild(publicKeySection);
+    }
+
+    const signatureSection = renderCertificateSignature(details.signature);
+    if (signatureSection) {
+        fragment.appendChild(signatureSection);
+    }
+
+    return fragment.childElementCount ? fragment : null;
+}
+
+function setCertificateSummaryContent(content) {
+    if (!mdsState?.certificateSummary) {
+        return;
+    }
+    const container = mdsState.certificateSummary;
+    container.innerHTML = '';
+    if (content instanceof Node) {
+        container.appendChild(content);
+    } else if (typeof content === 'string' && content.trim()) {
+        const message = document.createElement('div');
+        message.className = 'mds-certificate-summary__value';
+        message.textContent = content;
+        container.appendChild(message);
+    }
+}
+
+async function updateCertificateButtonLabel(button, certificate) {
+    if (!(button instanceof HTMLElement)) {
+        return;
+    }
+    try {
+        const details = await decodeCertificate(certificate);
+        const subject = details && typeof details.subject === 'string' ? details.subject.trim() : '';
+        if (subject) {
+            button.textContent = subject;
+            button.title = subject;
+        }
+    } catch (error) {
+        // Leave default label on failure.
+    }
+}
+
+async function openCertificateModal(certificate) {
+    if (!mdsState?.certificateModal) {
+        return;
+    }
+
+    const cleaned = normaliseCertificateBase64(certificate);
+    if (!cleaned) {
+        return;
+    }
+
+    if (mdsState.certificateInput) {
+        mdsState.certificateInput.value = formatCertificateInput(cleaned);
+        mdsState.certificateInput.scrollTop = 0;
+        mdsState.certificateInput.scrollLeft = 0;
+    }
+    if (mdsState.certificateOutput) {
+        mdsState.certificateOutput.value = 'Decoding certificate…';
+        mdsState.certificateOutput.scrollTop = 0;
+        mdsState.certificateOutput.scrollLeft = 0;
+    }
+    if (mdsState.certificateTitle) {
+        mdsState.certificateTitle.textContent = 'Attestation Certificate';
+    }
+
+    setCertificateSummaryContent('Decoding certificate…');
+
+    mdsState.certificateModal.hidden = false;
+    mdsState.certificateModal.setAttribute('aria-hidden', 'false');
+    resetScrollPositions(
+        mdsState.certificateModalBody,
+        mdsState.certificateModal,
+        mdsState.certificateSummary,
+        mdsState.certificateInput,
+        mdsState.certificateOutput,
+    );
+    scheduleCertificateTextareaResize();
+    notifyGlobalScrollLock();
+
+    try {
+        const details = await decodeCertificate(cleaned);
+        if (mdsState.certificateOutput) {
+            mdsState.certificateOutput.value = formatCertificateOutput(details);
+            mdsState.certificateOutput.scrollTop = 0;
+            mdsState.certificateOutput.scrollLeft = 0;
+        }
+        const summaryContent = renderCertificateSummary(details);
+        if (summaryContent) {
+            setCertificateSummaryContent(summaryContent);
+        } else {
+            setCertificateSummaryContent('No decoded certificate details available.');
+        }
+        const subject = details && typeof details.subject === 'string' ? details.subject.trim() : '';
+        if (subject && mdsState.certificateTitle) {
+            mdsState.certificateTitle.textContent = subject;
+        }
+        scheduleCertificateTextareaResize();
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Unable to decode certificate.';
+        if (mdsState.certificateOutput) {
+            mdsState.certificateOutput.value = message;
+            mdsState.certificateOutput.scrollTop = 0;
+            mdsState.certificateOutput.scrollLeft = 0;
+        }
+        setCertificateSummaryContent(message);
+        scheduleCertificateTextareaResize();
+    }
+}
+
+function closeCertificateModal() {
+    if (!mdsState?.certificateModal) {
+        return;
+    }
+    mdsState.certificateModal.hidden = true;
+    mdsState.certificateModal.setAttribute('aria-hidden', 'true');
+    resetScrollPositions(
+        mdsState.certificateModalBody,
+        mdsState.certificateSummary,
+        mdsState.certificateInput,
+        mdsState.certificateOutput,
+    );
+    resetCertificateTextareaHeights();
+    notifyGlobalScrollLock();
+}
+
+function openAuthenticatorModal(entry) {
+    if (!mdsState?.authenticatorModal) {
+        return;
+    }
+
+    applyDetailHeader(entry, mdsState.authenticatorModalTitle, mdsState.authenticatorModalSubtitle);
+    populateDetailContent(mdsState.authenticatorModalContent, entry);
+
+    mdsState.authenticatorModal.hidden = false;
+    mdsState.authenticatorModal.setAttribute('aria-hidden', 'false');
+    resetScrollPositions(
+        mdsState.authenticatorModalBody,
+        mdsState.authenticatorModal,
+        mdsState.authenticatorModalContent,
+    );
+    notifyGlobalScrollLock();
+
+    if (mdsState.authenticatorModalClose instanceof HTMLElement) {
+        requestAnimationFrame(() => {
+            mdsState.authenticatorModalClose.focus();
+        });
+    }
+}
+
+function closeAuthenticatorModal() {
+    if (!mdsState?.authenticatorModal) {
+        return;
+    }
+    mdsState.authenticatorModal.hidden = true;
+    mdsState.authenticatorModal.setAttribute('aria-hidden', 'true');
+    resetScrollPositions(
+        mdsState.authenticatorModalBody,
+        mdsState.authenticatorModal,
+        mdsState.authenticatorModalContent,
+    );
+    notifyGlobalScrollLock();
+}
+
+async function resolveEntryByAaguid(aaguid) {
+    if (!mdsState) {
+        return null;
+    }
+
+    const targetKey = normaliseAaguid(aaguid);
+    if (!targetKey) {
+        return null;
+    }
+
+    if (!hasLoaded) {
+        await loadMdsData();
+    } else if (isLoading && loadPromise) {
+        await loadPromise;
+    }
+
+    if (!mdsState) {
+        return null;
+    }
+
+    const cached = mdsState.byAaguid?.get(targetKey) || null;
+    if (cached) {
+        return cached;
+    }
+
+    const fallback = mdsData.find(item => {
+        const key = normaliseAaguid(item?.aaguid || item?.id);
+        return key === targetKey;
+    }) || null;
+
+    if (fallback && mdsState.byAaguid) {
+        mdsState.byAaguid.set(targetKey, fallback);
+    }
+
+    return fallback;
+}
+
+async function openAuthenticatorModalByAaguid(aaguid) {
+    const entry = await resolveEntryByAaguid(aaguid);
+    if (!entry) {
+        return null;
+    }
+    openAuthenticatorModal(entry);
+    return entry;
+}
+
+async function focusAuthenticatorByAaguid(aaguid) {
+    const entry = await resolveEntryByAaguid(aaguid);
+    if (!entry) {
+        return null;
+    }
+
+    resetFilters();
+    showAuthenticatorDetail(entry, { scrollIntoView: true });
+    return entry;
+}
+
+async function highlightAuthenticatorRowByAaguid(aaguid) {
+    const entry = await resolveEntryByAaguid(aaguid);
+    if (!entry || !mdsState) {
+        return entry || null;
+    }
+
+    const key = normaliseAaguid(entry.aaguid || entry.id);
+    if (!key) {
+        return entry;
+    }
+
+    mdsState.highlightedRowKey = key;
+
+    if (mdsState.detailView && !mdsState.detailView.hidden) {
+        hideAuthenticatorDetail();
+    }
+
+    resetFilters();
+    applyFilters();
+
+    scheduleRowHighlight(key);
+
+    return entry;
+}
+
+if (typeof window !== 'undefined') {
+    window.openMdsAuthenticatorModal = openAuthenticatorModalByAaguid;
+    window.focusMdsAuthenticator = focusAuthenticatorByAaguid;
+    window.highlightMdsAuthenticatorRow = highlightAuthenticatorRowByAaguid;
 }
 
 function stabiliseColumnWidths() {
@@ -679,6 +2300,26 @@ function createTextCell(text, title) {
     if (title) {
         cell.title = title;
     }
+    return cell;
+}
+
+function createNameCell(entry) {
+    const cell = document.createElement('td');
+    cell.classList.add('mds-cell-name');
+    const label = entry?.name || '—';
+    const trimmed = label.trim();
+
+    if (!entry || !trimmed || trimmed === '—') {
+        cell.textContent = label || '—';
+        return cell;
+    }
+
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'mds-name-button';
+    button.textContent = label;
+    button.addEventListener('click', () => showAuthenticatorDetail(entry));
+    cell.appendChild(button);
     return cell;
 }
 
@@ -981,29 +2622,34 @@ function updateOptionLists(optionSets) {
     });
 }
 
-function transformEntry(entry) {
+function transformEntry(entry, index = 0) {
     const metadata = entry?.metadataStatement ?? {};
     const name = resolveName(metadata, entry);
     const protocol = formatProtocol(metadata.protocolFamily || metadata.protocolType);
     const { display: certification, status: certificationStatus } = formatCertification(entry?.statusReports || []);
     const identifier = resolveIdentifier(entry, metadata);
+    const aaguid = resolveAaguid(entry, metadata) || '';
     const userVerificationList = extractUserVerification(metadata.userVerificationDetails);
     const attachmentList = extractList(metadata.attachmentHint).map(formatEnum);
     const transportsList = extractTransports(metadata);
     const keyProtectionList = extractList(metadata.keyProtection).map(formatEnum);
     const algorithmsList = extractList(metadata.authenticationAlgorithms).map(formatEnum);
     const icon = normaliseIcon(metadata.icon, metadata.iconType);
+    const attestationCertificates = extractList(metadata.attestationRootCertificates);
+    const attestationKeyIdentifiers = extractAttestationKeyIdentifiers(metadata, entry);
 
     const latestStatusDate = latestEffectiveDate(entry?.statusReports || []);
     const rawDate = entry?.timeOfLastStatusChange || latestStatusDate;
     const dateUpdated = rawDate ? formatDate(rawDate) : '';
 
     return {
+        index,
         name,
         protocol,
         certification,
         certificationStatus,
         id: identifier,
+        aaguid,
         icon,
         userVerification: userVerificationList.join(', '),
         userVerificationList,
@@ -1017,7 +2663,34 @@ function transformEntry(entry) {
         algorithmsList,
         dateUpdated,
         dateTooltip: rawDate || undefined,
+        metadataStatement: metadata,
+        rawEntry: entry || null,
+        statusReports: Array.isArray(entry?.statusReports) ? entry.statusReports : [],
+        attestationCertificates,
+        attestationKeyIdentifiers,
     };
+}
+
+function extractAttestationKeyIdentifiers(metadata, entry) {
+    const map = new Map();
+    const addValue = value => {
+        if (value === undefined || value === null) {
+            return;
+        }
+        const text = String(value).trim();
+        if (!text) {
+            return;
+        }
+        const key = text.toLowerCase();
+        if (!map.has(key)) {
+            map.set(key, text);
+        }
+    };
+
+    extractList(metadata?.attestationCertificateKeyIdentifiers).forEach(addValue);
+    extractList(entry?.attestationCertificateKeyIdentifiers).forEach(addValue);
+
+    return Array.from(map.values());
 }
 
 function normaliseIcon(icon, iconType) {
@@ -1081,6 +2754,72 @@ function resolveIdentifier(entry, metadata) {
     return '—';
 }
 
+function resolveAaguid(entry, metadata) {
+    const candidates = [entry?.aaguid, metadata?.aaguid];
+    for (const candidate of candidates) {
+        const formatted = formatGuidCandidate(candidate);
+        if (formatted) {
+            return formatted;
+        }
+    }
+    return '';
+}
+
+function formatGuidCandidate(value) {
+    if (value === undefined || value === null) {
+        return '';
+    }
+
+    if (typeof value === 'string') {
+        const trimmed = value.trim();
+        if (!trimmed) {
+            return '';
+        }
+        if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(trimmed)) {
+            return trimmed.toLowerCase();
+        }
+        const clean = trimmed.replace(/[^0-9a-fA-F]/g, '').toLowerCase();
+        if (clean.length === 32) {
+            return `${clean.slice(0, 8)}-${clean.slice(8, 12)}-${clean.slice(12, 16)}-${clean.slice(16, 20)}-${clean.slice(20)}`;
+        }
+        return '';
+    }
+
+    const bytes = extractByteArray(value);
+    if (bytes && bytes.length === 16) {
+        const hex = bytes.map(byte => byte.toString(16).padStart(2, '0')).join('');
+        return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+    }
+
+    try {
+        if (typeof value.toString === 'function') {
+            return formatGuidCandidate(value.toString());
+        }
+    } catch (error) {
+        // Ignore conversion errors.
+    }
+    return '';
+}
+
+function extractByteArray(value) {
+    if (!value) {
+        return null;
+    }
+    if (Array.isArray(value)) {
+        return value.every(item => Number.isInteger(item)) ? value : null;
+    }
+    if (value instanceof Uint8Array) {
+        return Array.from(value);
+    }
+    if (ArrayBuffer.isView(value)) {
+        return Array.from(new Uint8Array(value.buffer, value.byteOffset, value.byteLength));
+    }
+    if (value instanceof ArrayBuffer) {
+        return Array.from(new Uint8Array(value));
+    }
+    return null;
+}
+
 function extractUserVerification(details) {
     const values = new Set();
     if (Array.isArray(details)) {
@@ -1115,6 +2854,65 @@ function extractList(value) {
         return value.filter(Boolean);
     }
     return [value];
+}
+
+function normaliseAaguid(value) {
+    const formatted = formatGuidCandidate(value);
+    return formatted ? formatted.toLowerCase() : '';
+}
+
+function formatListValues(value) {
+    return extractList(value)
+        .map(item => formatEnum(item))
+        .filter(text => typeof text === 'string' && text.trim() !== '');
+}
+
+function formatUpv(upv) {
+    const list = Array.isArray(upv) ? upv : upv ? [upv] : [];
+    const formatted = [];
+    list.forEach(item => {
+        if (item && typeof item === 'object') {
+            const major = item.major ?? item.Major;
+            const minor = item.minor ?? item.Minor;
+            if (major !== undefined && minor !== undefined) {
+                formatted.push(`${major}.${minor}`);
+            }
+        }
+    });
+    return formatted;
+}
+
+function formatAuthenticatorAlgorithms(value) {
+    return extractList(value)
+        .map(item => {
+            if (item && typeof item === 'object') {
+                const type = item.type ? String(item.type) : '';
+                const algValue = item.alg !== undefined && item.alg !== null ? item.alg : item.algorithm;
+                const alg = algValue !== undefined && algValue !== null ? String(algValue) : '';
+                if (type && alg) {
+                    return `${type} (${alg})`;
+                }
+                return type || alg;
+            }
+            if (item !== undefined && item !== null) {
+                return String(item);
+            }
+            return '';
+        })
+        .filter(text => typeof text === 'string' && text.trim() !== '');
+}
+
+function formatDetailValue(value) {
+    if (typeof value === 'boolean') {
+        return value ? 'true' : 'false';
+    }
+    if (value === undefined || value === null) {
+        return '—';
+    }
+    if (Array.isArray(value)) {
+        return value.map(item => formatDetailValue(item)).join(', ');
+    }
+    return String(value);
 }
 
 function formatProtocol(protocol) {
@@ -1240,6 +3038,10 @@ function formatDate(value) {
         month: 'short',
         day: 'numeric',
     }).format(date);
+}
+
+if (typeof window !== 'undefined') {
+    window.focusMdsAuthenticator = focusAuthenticatorByAaguid;
 }
 
 function decodeBase64Url(value) {

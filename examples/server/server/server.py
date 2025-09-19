@@ -57,6 +57,7 @@ import os
 import uuid
 import fido2.features
 import base64
+import binascii
 import pickle
 import shutil
 import tempfile
@@ -911,13 +912,17 @@ def _serialize_public_key_info(public_key):
                 format=serialization.PublicFormat.SubjectPublicKeyInfo,
             )
         ).decode("ascii"),
+        "algorithm": {
+            "name": None,
+        },
     }
 
     if isinstance(public_key, ec.EllipticCurvePublicKey):
+        curve_name = getattr(public_key.curve, "name", "unknown")
         info.update(
             {
                 "type": "ECC",
-                "curve": getattr(public_key.curve, "name", "unknown"),
+                "curve": curve_name,
                 "uncompressedPoint": _colon_hex(
                     public_key.public_bytes(
                         encoding=serialization.Encoding.X962,
@@ -926,14 +931,27 @@ def _serialize_public_key_info(public_key):
                 ),
             }
         )
+        info["algorithm"].update(
+            {
+                "name": "ECDSA",
+                "namedCurve": curve_name,
+            }
+        )
     elif isinstance(public_key, rsa.RSAPublicKey):
         numbers = public_key.public_numbers()
         modulus_hex = f"0x{numbers.n:x}"
+        key_size = getattr(public_key, "key_size", None)
         info.update(
             {
                 "type": "RSA",
                 "publicExponent": numbers.e,
                 "modulusHex": modulus_hex,
+            }
+        )
+        info["algorithm"].update(
+            {
+                "name": "RSASSA-PKCS1-v1_5",
+                "modulusLength": key_size,
             }
         )
     elif isinstance(public_key, (ed25519.Ed25519PublicKey, ed448.Ed448PublicKey)):
@@ -948,6 +966,14 @@ def _serialize_public_key_info(public_key):
                 ),
             }
         )
+        info["algorithm"].update(
+            {
+                "name": "EdDSA",
+            }
+        )
+
+    if not info["algorithm"].get("name"):
+        info["algorithm"]["name"] = info.get("type") or public_key.__class__.__name__
 
     return info
 
@@ -1077,6 +1103,18 @@ def serialize_attestation_certificate(cert_bytes: bytes):
     signature_lines = _format_hex_bytes_lines(signature_bytes)
     signature_hex = signature_bytes.hex()
     signature_colon = _colon_hex(signature_bytes)
+
+    try:
+        signature_hash_algorithm = certificate.signature_hash_algorithm
+    except Exception:  # pragma: no cover - cryptography may raise if unavailable
+        signature_hash_algorithm = None
+    if signature_hash_algorithm is not None:
+        hash_name = getattr(signature_hash_algorithm, "name", None)
+        if not hash_name:
+            hash_name = signature_hash_algorithm.__class__.__name__
+        signature_hash = {"name": hash_name}
+    else:
+        signature_hash = None
 
     serial_decimal = str(certificate.serial_number)
     serial_hex = f"0x{certificate.serial_number:x}"
@@ -1264,6 +1302,7 @@ def serialize_attestation_certificate(cert_bytes: bytes):
         "fingerprints": fingerprints,
         "signature": {
             "algorithm": signature_algorithm,
+            "hash": signature_hash,
             "hex": signature_hex,
             "colon": signature_colon,
             "lines": signature_lines,
@@ -1704,6 +1743,34 @@ def api_update_mds_metadata():
         payload["last_modified"] = last_modified
 
     return jsonify(payload)
+
+
+@app.route("/api/mds/decode-certificate", methods=["POST"])
+def api_decode_mds_certificate():
+    if not request.is_json:
+        return jsonify({"error": "Expected JSON payload."}), 400
+
+    payload = request.get_json(silent=True) or {}
+    certificate_value = payload.get("certificate")
+    if not certificate_value or not isinstance(certificate_value, str):
+        return jsonify({"error": "Certificate is required."}), 400
+
+    cleaned = "".join(certificate_value.split())
+    padding = len(cleaned) % 4
+    if padding:
+        cleaned += "=" * (4 - padding)
+
+    try:
+        certificate_bytes = base64.b64decode(cleaned)
+    except (ValueError, binascii.Error):
+        return jsonify({"error": "Invalid certificate encoding."}), 400
+
+    try:
+        details = serialize_attestation_certificate(certificate_bytes)
+    except Exception as exc:  # pylint: disable=broad-except
+        return jsonify({"error": f"Unable to decode certificate: {exc}"}), 422
+
+    return jsonify({"details": details})
 
 
 @app.route("/api/register/begin", methods=["POST"])
