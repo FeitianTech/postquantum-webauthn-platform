@@ -4,6 +4,15 @@
     gap: 1.75rem;
 }
 
+.mds-section--detail-active .mds-section-header,
+.mds-section--detail-active .mds-status {
+    display: none;
+}
+
+.mds-section--detail-active .mds-detail {
+    margin-top: 0;
+}
+
 .mds-section-header {
     display: flex;
     flex-wrap: wrap;
@@ -384,10 +393,8 @@
     text-align: center;
     vertical-align: middle;
     white-space: normal;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 0.5rem;
+    padding: 0.9rem 1.1rem;
+    background-color: inherit;
 }
 
 .mds-name-button {
@@ -405,7 +412,7 @@
     max-width: 100%;
     text-align: center;
     padding: 0.15rem 0.45rem;
-    margin: 0;
+    margin: 0 auto;
     transition: color 0.2s ease, text-decoration-color 0.2s ease;
     text-decoration: underline transparent;
     white-space: normal;
@@ -734,6 +741,7 @@
     flex: 1;
     overflow-y: auto;
     overflow-x: hidden;
+    overscroll-behavior: contain;
 }
 
 .mds-modal__body--certificate .mds-modal__grid {
@@ -773,7 +781,9 @@
     font-size: 0.85rem;
     line-height: 1.5;
     color: var(--text-color);
-    resize: vertical;
+    resize: none;
+    overflow-y: hidden;
+    overflow-x: hidden;
     overflow-wrap: anywhere;
     word-break: break-word;
     white-space: pre-wrap;
@@ -853,10 +863,13 @@
     gap: 0.9rem;
 }
 
-.mds-certificate-summary__grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 0.9rem;
+.mds-certificate-summary__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
 }
 
 .mds-certificate-summary__item {
@@ -877,6 +890,7 @@
     color: var(--primary-dark);
     word-break: break-word;
     overflow-wrap: anywhere;
+    white-space: normal;
 }
 
 .mds-certificate-summary__code {

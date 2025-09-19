@@ -1647,13 +1647,13 @@ function describeCoseAlgorithm(alg) {
         function updateGlobalScrollLock() {
             const overlayActive = document.getElementById('json-editor-overlay')?.classList.contains('active');
             const modalActive = document.querySelector('.modal.open');
-            if (overlayActive || modalActive) {
-                document.body.classList.add('modal-open');
-                document.documentElement.classList.add('modal-open');
-            } else {
-                document.body.classList.remove('modal-open');
-                document.documentElement.classList.remove('modal-open');
-            }
+            const mdsModalActive = document.querySelector('.mds-modal:not([hidden])');
+            const shouldLock = Boolean(overlayActive || modalActive || mdsModalActive);
+
+            const targets = [document.body, document.documentElement].filter(Boolean);
+            targets.forEach(target => {
+                target.classList.toggle('modal-open', shouldLock);
+            });
         }
 
         function resetModalScroll(modal) {
@@ -1788,8 +1788,6 @@ function describeCoseAlgorithm(alg) {
             }
 
             let aaguidHex = '';
-            let aaguidB64 = '';
-            let aaguidB64u = '';
             let aaguidGuid = '';
             if (cred.aaguid) {
                 if (typeof cred.aaguid === 'string') {
@@ -1810,8 +1808,6 @@ function describeCoseAlgorithm(alg) {
 
                 if (aaguidHex) {
                     aaguidHex = aaguidHex.toLowerCase();
-                    aaguidB64 = hexToBase64(aaguidHex);
-                    aaguidB64u = hexToBase64Url(aaguidHex);
                     aaguidGuid = aaguidHex.length === 32 ? hexToGuid(aaguidHex) : '';
                 }
             }
@@ -1856,29 +1852,15 @@ function describeCoseAlgorithm(alg) {
             if (aaguidHex) {
                 const rootVerified = attestationRootValue === true ||
                     (typeof attestationRootValue === 'string' && attestationRootValue.trim().toLowerCase() === 'true');
-                const aaguidDisplayValue = aaguidGuid || aaguidHex || aaguidB64u || aaguidB64;
                 const aaguidNavigateValue = aaguidGuid ? aaguidGuid.toLowerCase() : '';
                 const infoButton = rootVerified && aaguidNavigateValue
-                    ? `<button type="button" class="link-button credential-aaguid-button" data-aaguid="${escapeHtml(aaguidNavigateValue)}">Info</button>`
+                    ? `<button type="button" class="credential-info-button credential-aaguid-button" data-aaguid="${escapeHtml(aaguidNavigateValue)}" aria-label="View authenticator metadata">Info</button>`
                     : '';
 
                 detailsHtml += `
-                    <div style="margin-top: 0.5rem;">
-                        <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-                            <strong>AAGUID:</strong>
-                            <span style="font-family: 'Courier New', monospace;">${escapeHtml(aaguidDisplayValue || '')}</span>
-                            ${infoButton}
-                        </div>
-                        <div style="font-family: 'Courier New', monospace; font-size: 0.9rem; margin-left: 1rem; word-break: break-word; overflow-wrap: anywhere;">
-                            <div><strong>b64</strong></div>
-                            <div class="credential-code-block">${aaguidB64}</div>
-                            <div><strong>b64u</strong></div>
-                            <div class="credential-code-block">${aaguidB64u}</div>
-                            <div><strong>hex</strong></div>
-                            <div class="credential-code-block">${aaguidHex}</div>
-                            ${aaguidGuid ? `<div><strong>guid</strong></div>
-                            <div class="credential-code-block">${aaguidGuid}</div>` : ''}
-                        </div>
+                    <div class="credential-aaguid-row">
+                        <span class="credential-aaguid-label">AAGUID</span>
+                        ${infoButton}
                     </div>`;
             }
 
@@ -2004,6 +1986,13 @@ function describeCoseAlgorithm(alg) {
         function navigateToMdsAuthenticator(aaguid) {
             if (!aaguid) {
                 return;
+            }
+
+            const switchToMdsTab = typeof window.switchTab === 'function'
+                ? window.switchTab
+                : null;
+            if (switchToMdsTab) {
+                switchToMdsTab('mds');
             }
 
             const openModal = typeof window.openMdsAuthenticatorModal === 'function'
@@ -3780,6 +3769,7 @@ function describeCoseAlgorithm(alg) {
 
         // Make functions globally available
         window.switchTab = switchTab;
+        window.updateGlobalScrollLock = updateGlobalScrollLock;
         window.switchSubTab = switchSubTab;
         window.toggleSection = toggleSection;
         window.showInfoPopup = showInfoPopup;

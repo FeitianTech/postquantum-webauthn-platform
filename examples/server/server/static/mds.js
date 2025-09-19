@@ -431,6 +431,8 @@ function initializeState(root) {
         authenticatorModalBody: root.querySelector('#mds-authenticator-modal-body'),
         authenticatorModalClose: authenticatorClose,
         activeDetailEntry: null,
+        previousDocumentScrollTop: null,
+        previousTableScrollTop: null,
         byAaguid: new Map(),
     };
 }
@@ -787,24 +789,63 @@ function resetScrollPositions(...elements) {
     }
 }
 
-function scrollDocumentToTop() {
-    if (typeof window !== 'undefined' && typeof window.scrollTo === 'function') {
-        try {
-            window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
-        } catch (error) {
-            window.scrollTo(0, 0);
-        }
+function notifyGlobalScrollLock() {
+    if (typeof window !== 'undefined' && typeof window.updateGlobalScrollLock === 'function') {
+        window.updateGlobalScrollLock();
+        return;
     }
-    if (typeof document !== 'undefined') {
-        if (document.documentElement) {
-            document.documentElement.scrollTop = 0;
-            document.documentElement.scrollLeft = 0;
-        }
-        if (document.body) {
-            document.body.scrollTop = 0;
-            document.body.scrollLeft = 0;
-        }
+
+    if (typeof document === 'undefined') {
+        return;
     }
+
+    const overlayActive = document.getElementById('json-editor-overlay')?.classList.contains('active');
+    const modalActive = document.querySelector('.modal.open');
+    const mdsModalActive = document.querySelector('.mds-modal:not([hidden])');
+    const shouldLock = Boolean(overlayActive || modalActive || mdsModalActive);
+
+    const targets = [document.body, document.documentElement].filter(Boolean);
+    targets.forEach(target => target.classList.toggle('modal-open', shouldLock));
+}
+
+function resizeCertificateTextareas() {
+    if (!mdsState) {
+        return;
+    }
+
+    const fields = [mdsState.certificateInput, mdsState.certificateOutput];
+    fields.forEach(field => {
+        if (!(field instanceof HTMLTextAreaElement)) {
+            return;
+        }
+        field.style.height = 'auto';
+        field.style.overflowY = 'hidden';
+        field.style.overflowX = 'hidden';
+        const { scrollHeight } = field;
+        if (Number.isFinite(scrollHeight)) {
+            field.style.height = `${scrollHeight}px`;
+        }
+    });
+}
+
+function scheduleCertificateTextareaResize() {
+    const adjust = () => resizeCertificateTextareas();
+    if (typeof requestAnimationFrame === 'function') {
+        requestAnimationFrame(() => requestAnimationFrame(adjust));
+    } else {
+        setTimeout(adjust, 0);
+    }
+}
+
+function resetCertificateTextareaHeights() {
+    if (!mdsState) {
+        return;
+    }
+    [mdsState.certificateInput, mdsState.certificateOutput].forEach(field => {
+        if (field instanceof HTMLTextAreaElement) {
+            field.style.height = '';
+        }
+    });
 }
 
 function showAuthenticatorDetail(entry, options = {}) {
@@ -819,16 +860,31 @@ function showAuthenticatorDetail(entry, options = {}) {
     mdsState.activeDetailEntry = sourceEntry;
 
     if (mdsState.tableContainer) {
+        if (typeof mdsState.tableContainer.scrollTop === 'number') {
+            mdsState.previousTableScrollTop = mdsState.tableContainer.scrollTop;
+        }
         mdsState.tableContainer.hidden = true;
     }
     if (mdsState.detailView) {
         mdsState.detailView.hidden = false;
     }
 
+    if (typeof window !== 'undefined') {
+        const doc = document.documentElement;
+        const body = document.body;
+        const scrollTop = typeof window.pageYOffset === 'number'
+            ? window.pageYOffset
+            : (doc?.scrollTop ?? body?.scrollTop ?? 0);
+        mdsState.previousDocumentScrollTop = scrollTop;
+    }
+
+    if (mdsState.root) {
+        mdsState.root.classList.add('mds-section--detail-active');
+    }
+
     applyDetailHeader(sourceEntry, mdsState.detailTitle, mdsState.detailSubtitle);
     populateDetailContent(mdsState.detailContent, sourceEntry);
     resetScrollPositions(mdsState.detailView, mdsState.detailContent);
-    scrollDocumentToTop();
 
     const { scrollIntoView = true } = options;
     if (scrollIntoView && mdsState.detailView && typeof mdsState.detailView.scrollIntoView === 'function') {
@@ -843,17 +899,38 @@ function hideAuthenticatorDetail() {
         return;
     }
 
+    if (mdsState.root) {
+        mdsState.root.classList.remove('mds-section--detail-active');
+    }
+
     if (mdsState.detailView) {
         mdsState.detailView.hidden = true;
     }
     if (mdsState.tableContainer) {
         mdsState.tableContainer.hidden = false;
-        resetScrollPositions(mdsState.tableContainer);
-        scrollDocumentToTop();
-        if (typeof mdsState.tableContainer.scrollIntoView === 'function') {
-            requestAnimationFrame(() => {
-                mdsState.tableContainer.scrollIntoView({ block: 'start' });
-            });
+        if (typeof mdsState.previousTableScrollTop === 'number') {
+            mdsState.tableContainer.scrollTop = mdsState.previousTableScrollTop;
+        }
+    }
+
+    const previousScrollTop = typeof mdsState.previousDocumentScrollTop === 'number'
+        ? mdsState.previousDocumentScrollTop
+        : null;
+    mdsState.previousDocumentScrollTop = null;
+    mdsState.previousTableScrollTop = null;
+
+    if (previousScrollTop !== null && typeof window !== 'undefined') {
+        const restore = () => {
+            if (typeof window.scrollTo === 'function') {
+                window.scrollTo({ top: previousScrollTop, left: 0, behavior: 'auto' });
+            } else {
+                window.scrollTo(0, previousScrollTop);
+            }
+        };
+        if (typeof requestAnimationFrame === 'function') {
+            requestAnimationFrame(() => requestAnimationFrame(restore));
+        } else {
+            setTimeout(restore, 0);
         }
     }
     if (mdsState.updateButton instanceof HTMLElement) {
@@ -1399,7 +1476,7 @@ function createSummaryItem(label, value, options = {}) {
         return null;
     }
 
-    const item = document.createElement('div');
+    const item = document.createElement('li');
     item.className = 'mds-certificate-summary__item';
 
     const labelEl = document.createElement('div');
@@ -1480,12 +1557,12 @@ function renderCertificatePublicKey(info) {
     title.textContent = 'Public Key';
     section.appendChild(title);
 
-    const grid = document.createElement('div');
-    grid.className = 'mds-certificate-summary__grid';
+    const list = document.createElement('ul');
+    list.className = 'mds-certificate-summary__list';
 
     const algorithmItem = createSummaryItem('Algorithm', determinePublicKeyAlgorithm(info));
     if (algorithmItem) {
-        grid.appendChild(algorithmItem);
+        list.appendChild(algorithmItem);
     }
 
     const algorithmDetails = info.algorithm && typeof info.algorithm === 'object' ? info.algorithm : null;
@@ -1493,7 +1570,7 @@ function renderCertificatePublicKey(info) {
     if (curveValue) {
         const curveItem = createSummaryItem('Named Curve', curveValue);
         if (curveItem) {
-            grid.appendChild(curveItem);
+            list.appendChild(curveItem);
         }
     }
 
@@ -1502,43 +1579,43 @@ function renderCertificatePublicKey(info) {
     if (keySize) {
         const sizeItem = createSummaryItem('Key Size', `${keySize} bit`);
         if (sizeItem) {
-            grid.appendChild(sizeItem);
+            list.appendChild(sizeItem);
         }
     }
 
     if (info.publicExponent !== undefined && info.publicExponent !== null) {
         const exponentItem = createSummaryItem('Public Exponent', String(info.publicExponent));
         if (exponentItem) {
-            grid.appendChild(exponentItem);
+            list.appendChild(exponentItem);
         }
     }
 
     if (info.modulusHex) {
         const modulusItem = createSummaryItem('Modulus', info.modulusHex, { code: true });
         if (modulusItem) {
-            grid.appendChild(modulusItem);
+            list.appendChild(modulusItem);
         }
     }
 
     if (info.uncompressedPoint) {
         const pointItem = createSummaryItem('Uncompressed Point', info.uncompressedPoint, { code: true });
         if (pointItem) {
-            grid.appendChild(pointItem);
+            list.appendChild(pointItem);
         }
     }
 
     if (info.subjectPublicKeyInfoBase64) {
         const valueItem = createSummaryItem('Value', info.subjectPublicKeyInfoBase64, { code: true });
         if (valueItem) {
-            grid.appendChild(valueItem);
+            list.appendChild(valueItem);
         }
     }
 
-    if (!grid.childElementCount) {
+    if (!list.childElementCount) {
         return null;
     }
 
-    section.appendChild(grid);
+    section.appendChild(list);
     return section;
 }
 
@@ -1555,13 +1632,13 @@ function renderCertificateSignature(signature) {
     title.textContent = 'Signature';
     section.appendChild(title);
 
-    const grid = document.createElement('div');
-    grid.className = 'mds-certificate-summary__grid';
+    const list = document.createElement('ul');
+    list.className = 'mds-certificate-summary__list';
 
     if (signature.algorithm) {
         const algorithmItem = createSummaryItem('Algorithm', signature.algorithm);
         if (algorithmItem) {
-            grid.appendChild(algorithmItem);
+            list.appendChild(algorithmItem);
         }
     }
 
@@ -1572,22 +1649,22 @@ function renderCertificateSignature(signature) {
         const hashValue = typeof hashName === 'string' ? formatSignatureHashName(hashName) : hashName;
         const hashItem = createSummaryItem('Hash', hashValue);
         if (hashItem) {
-            grid.appendChild(hashItem);
+            list.appendChild(hashItem);
         }
     }
 
     if (signature.hex) {
         const valueItem = createSummaryItem('Value', signature.hex, { code: true });
         if (valueItem) {
-            grid.appendChild(valueItem);
+            list.appendChild(valueItem);
         }
     }
 
-    if (!grid.childElementCount) {
+    if (!list.childElementCount) {
         return null;
     }
 
-    section.appendChild(grid);
+    section.appendChild(list);
     return section;
 }
 
@@ -1598,8 +1675,8 @@ function renderCertificateSummary(details) {
 
     const fragment = document.createDocumentFragment();
 
-    const infoGrid = document.createElement('div');
-    infoGrid.className = 'mds-certificate-summary__grid';
+    const infoList = document.createElement('ul');
+    infoList.className = 'mds-certificate-summary__list';
 
     const validity = details.validity || {};
     const serialNumber = details.serialNumber || {};
@@ -1613,12 +1690,12 @@ function renderCertificateSummary(details) {
         serialNumber.hex ? createSummaryItem('Serial Number (Hex)', serialNumber.hex) : null,
     ].forEach(item => {
         if (item) {
-            infoGrid.appendChild(item);
+            infoList.appendChild(item);
         }
     });
 
-    if (infoGrid.childElementCount) {
-        fragment.appendChild(infoGrid);
+    if (infoList.childElementCount) {
+        fragment.appendChild(infoList);
     }
 
     const publicKeySection = renderCertificatePublicKey(details.publicKeyInfo);
@@ -1701,7 +1778,8 @@ async function openCertificateModal(certificate) {
         mdsState.certificateInput,
         mdsState.certificateOutput,
     );
-    scrollDocumentToTop();
+    scheduleCertificateTextareaResize();
+    notifyGlobalScrollLock();
 
     try {
         const details = await decodeCertificate(cleaned);
@@ -1720,6 +1798,7 @@ async function openCertificateModal(certificate) {
         if (subject && mdsState.certificateTitle) {
             mdsState.certificateTitle.textContent = subject;
         }
+        scheduleCertificateTextareaResize();
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Unable to decode certificate.';
         if (mdsState.certificateOutput) {
@@ -1728,6 +1807,7 @@ async function openCertificateModal(certificate) {
             mdsState.certificateOutput.scrollLeft = 0;
         }
         setCertificateSummaryContent(message);
+        scheduleCertificateTextareaResize();
     }
 }
 
@@ -1743,6 +1823,8 @@ function closeCertificateModal() {
         mdsState.certificateInput,
         mdsState.certificateOutput,
     );
+    resetCertificateTextareaHeights();
+    notifyGlobalScrollLock();
 }
 
 function openAuthenticatorModal(entry) {
@@ -1760,7 +1842,7 @@ function openAuthenticatorModal(entry) {
         mdsState.authenticatorModal,
         mdsState.authenticatorModalContent,
     );
-    scrollDocumentToTop();
+    notifyGlobalScrollLock();
 
     if (mdsState.authenticatorModalClose instanceof HTMLElement) {
         requestAnimationFrame(() => {
@@ -1780,6 +1862,7 @@ function closeAuthenticatorModal() {
         mdsState.authenticatorModal,
         mdsState.authenticatorModalContent,
     );
+    notifyGlobalScrollLock();
 }
 
 async function resolveEntryByAaguid(aaguid) {
