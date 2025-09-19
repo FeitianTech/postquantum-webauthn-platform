@@ -11,15 +11,6 @@ _PROJECT_ROOT = _PACKAGE_ROOT.parent
 
 
 def _import_module(name: str) -> ModuleType:
-    """Import *name* and raise a helpful error if it cannot be found.
-
-    When the demo is executed as a script (``python app.py``) we need to make
-    sure the parent directory that contains the ``server`` package lives on
-    ``sys.path``.  The previous absolute imports raised a ``ModuleNotFoundError``
-    on systems where that path had not yet been added, which meant the demo
-    failed to start.  Loading modules via :mod:`importlib` lets us control the
-    import path and provide a clearer error message for troubleshooting.
-    """
 
     try:
         return importlib.import_module(name)
