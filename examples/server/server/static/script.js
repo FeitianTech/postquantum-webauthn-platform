@@ -223,12 +223,16 @@ function describeCoseAlgorithm(alg) {
             }
         }
 
-        function enforceAuthenticatorAttachmentWithHints(publicKey) {
+        function enforceAuthenticatorAttachmentWithHints(publicKey, options = {}) {
+            const { requireSelection = false } = options || {};
             if (!publicKey || typeof publicKey !== 'object') {
-                return;
+                if (requireSelection) {
+                    throw new Error('Please select at least one authenticator hint before continuing.');
+                }
+                return [];
             }
 
-            const allowedAttachments = ensureAuthenticationHintsAllowed(publicKey);
+            const allowedAttachments = ensureAuthenticationHintsAllowed(publicKey, { requireSelection });
             const allowedList = Array.isArray(allowedAttachments) ? allowedAttachments : [];
 
             if (allowedList.length > 0) {
@@ -242,31 +246,43 @@ function describeCoseAlgorithm(alg) {
             }
 
             const selection = publicKey.authenticatorSelection;
-            const normalizedAttachment = normalizeAttachmentValue(selection.authenticatorAttachment);
-
-            if (normalizedAttachment && allowedList.length > 0 && !allowedList.includes(normalizedAttachment)) {
-                throw new Error('Selected authenticator attachment is not permitted by the provided hints');
-            }
-
-            if (allowedList.length === 1) {
-                selection.authenticatorAttachment = allowedList[0];
-            } else if (Object.prototype.hasOwnProperty.call(selection, 'authenticatorAttachment')) {
+            if (selection && typeof selection === 'object' &&
+                Object.prototype.hasOwnProperty.call(selection, 'authenticatorAttachment')) {
                 delete selection.authenticatorAttachment;
             }
+
+            return allowedList;
         }
 
-                
-        function ensureAuthenticationHintsAllowed(publicKey) {
+
+        function ensureAuthenticationHintsAllowed(publicKey, options = {}) {
+            const { requireSelection = false } = options || {};
             if (!publicKey || typeof publicKey !== 'object') {
+                if (requireSelection) {
+                    throw new Error('Please select at least one authenticator hint before continuing.');
+                }
                 return [];
             }
+
             const hints = Array.isArray(publicKey.hints) ? publicKey.hints : [];
-            let allowedAttachments = deriveAllowedAttachmentsFromHints(hints);
+            const normalizedHints = hints.map(normalizeHintValue).filter(Boolean);
+
+            if (requireSelection && normalizedHints.length === 0) {
+                throw new Error('Please select at least one authenticator hint before continuing.');
+            }
+
+            let allowedAttachments = deriveAllowedAttachmentsFromHints(normalizedHints);
+
+            if (requireSelection && normalizedHints.length > 0 && allowedAttachments.length === 0) {
+                throw new Error('Selected hints do not map to any authenticator attachments.');
+            }
+
             const requestedAllowed = Array.isArray(publicKey.allowedAuthenticatorAttachments)
                 ? Array.from(new Set(publicKey.allowedAuthenticatorAttachments
                     .map(normalizeAttachmentValue)
                     .filter(Boolean)))
                 : [];
+
             if (requestedAllowed.length > 0) {
                 if (allowedAttachments.length > 0) {
                     allowedAttachments = allowedAttachments.filter(value => requestedAllowed.includes(value));
@@ -274,10 +290,16 @@ function describeCoseAlgorithm(alg) {
                     allowedAttachments = requestedAllowed.slice();
                 }
             }
+
             allowedAttachments = Array.from(new Set(allowedAttachments));
+
             const resolvedAllowed = allowedAttachments.length > 0
                 ? allowedAttachments
                 : requestedAllowed;
+
+            if (requireSelection && resolvedAllowed.length === 0) {
+                throw new Error('Selected hints do not map to any authenticator attachments.');
+            }
 
             if (Array.isArray(publicKey.allowCredentials) && resolvedAllowed.length > 0) {
                 const invalidDescriptor = publicKey.allowCredentials.find(descriptor => {
@@ -4690,7 +4712,7 @@ function describeCoseAlgorithm(alg) {
                     publicKey.extensions.minPinLength = true;
                 }
 
-                enforceAuthenticatorAttachmentWithHints(publicKey);
+                enforceAuthenticatorAttachmentWithHints(publicKey, { requireSelection: true });
 
                 // Send the complete parsed JSON directly to backend - NO TRANSFORMATION
                 // This preserves all custom extensions and enables full extensibility
@@ -4814,7 +4836,15 @@ function describeCoseAlgorithm(alg) {
                     throw new Error('Invalid CredentialRequestOptions: Missing required "challenge" property');
                 }
 
-                const allowedAttachments = ensureAuthenticationHintsAllowed(publicKey);
+                let allowedAttachments;
+                try {
+                    allowedAttachments = ensureAuthenticationHintsAllowed(publicKey, { requireSelection: true });
+                } catch (hintError) {
+                    const message = hintError?.message || 'Please select at least one authenticator hint before continuing.';
+                    showStatus('advanced', message, 'error');
+                    return;
+                }
+
                 if (Array.isArray(allowedAttachments) && allowedAttachments.length > 0) {
                     publicKey.allowedAuthenticatorAttachments = allowedAttachments.slice();
                 } else if (Object.prototype.hasOwnProperty.call(publicKey, 'allowedAuthenticatorAttachments')) {
