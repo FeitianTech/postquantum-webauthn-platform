@@ -1435,6 +1435,7 @@ def index():
 
 @app.route("/api/mds/update", methods=["POST"])
 def api_update_mds_metadata():
+    metadata_existed = os.path.exists(MDS_METADATA_PATH)
     try:
         updated, bytes_written, last_modified = download_metadata_blob()
     except MetadataDownloadError as exc:
@@ -1452,7 +1453,10 @@ def api_update_mds_metadata():
         )
 
     if updated:
-        message = f"Downloaded {bytes_written:,} bytes from the FIDO Metadata Service."
+        if metadata_existed:
+            message = "Metadata updated successfully."
+        else:
+            message = "Metadata downloaded successfully."
     else:
         message = "Metadata already up to date."
 

@@ -1,6 +1,7 @@
 const MDS_HTML_PATH = 'mds.html';
 const MDS_JWS_PATH = 'fido-mds3.jws';
 const COLUMN_COUNT = 11;
+const MISSING_METADATA_MESSAGE = 'Metadata has not been downloaded yet. Use the Download Metadata button.';
 
 const UPDATE_BUTTON_STATES = {
     update: { label: 'Update Metadata', busyLabel: 'Updating…' },
@@ -392,11 +393,7 @@ async function loadMdsData(statusNote) {
         const response = await fetch(MDS_JWS_PATH, { cache: 'no-store' });
         if (!response.ok) {
             if (response.status === 404) {
-                const message =
-                    'Metadata has not been downloaded yet. Use the ' +
-                    '<strong>Download Metadata</strong> button above to retrieve the latest BLOB and save it as ' +
-                    '<code>examples/server/server/static/fido-mds3.jws</code>, or download it manually from ' +
-                    '<a href="https://mds3.fidoalliance.org/" target="_blank" rel="noopener">mds3.fidoalliance.org</a>.';
+                const message = MISSING_METADATA_MESSAGE;
                 setUpdateButtonMode('download');
                 setUpdateButtonAttention(false);
                 if (mdsState) {
@@ -417,7 +414,7 @@ async function loadMdsData(statusNote) {
                     emptyRow.className = 'mds-empty-row';
                     const cell = document.createElement('td');
                     cell.colSpan = COLUMN_COUNT;
-                    cell.textContent = 'Metadata has not been downloaded yet. Save a copy to examples/server/server/static/fido-mds3.jws.';
+                    cell.textContent = MISSING_METADATA_MESSAGE;
                     emptyRow.appendChild(cell);
                     tbody.appendChild(emptyRow);
                 }
