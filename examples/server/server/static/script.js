@@ -2344,6 +2344,22 @@ function describeCoseAlgorithm(alg) {
                 }
                 return null;
             })();
+            const attestationChecksData = (() => {
+                if (cred && typeof cred.attestationChecks === 'object' && cred.attestationChecks !== null) {
+                    return cred.attestationChecks;
+                }
+                if (typeof propertiesData.attestationChecks === 'object' && propertiesData.attestationChecks !== null) {
+                    return propertiesData.attestationChecks;
+                }
+                if (
+                    attestationSummaryData
+                    && typeof attestationSummaryData.metadata === 'object'
+                    && attestationSummaryData.metadata !== null
+                ) {
+                    return { metadata: attestationSummaryData.metadata };
+                }
+                return null;
+            })();
             const resolveAttestationValue = (summaryKey, propertyKey) => {
                 if (attestationSummaryData && Object.prototype.hasOwnProperty.call(attestationSummaryData, summaryKey)) {
                     return attestationSummaryData[summaryKey];
@@ -2378,6 +2394,18 @@ function describeCoseAlgorithm(alg) {
                 attestationSummaryData?.aaguid,
                 attestationSummaryData?.aaguidHex,
                 attestationSummaryData?.aaguidGuid,
+                attestationChecksData?.metadata?.aaguid,
+                attestationChecksData?.metadata?.hex,
+                attestationChecksData?.metadata?.raw,
+                attestationChecksData?.metadata?.guid,
+                propertiesData?.metadata?.aaguid,
+                propertiesData?.metadata?.hex,
+                propertiesData?.metadata?.raw,
+                propertiesData?.metadata?.guid,
+                cred?.metadata?.aaguid,
+                cred?.metadata?.hex,
+                cred?.metadata?.raw,
+                cred?.metadata?.guid,
             ];
             const relyingPartyAaguid = cred?.relyingParty?.aaguid;
             if (relyingPartyAaguid && typeof relyingPartyAaguid === 'object') {
