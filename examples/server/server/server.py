@@ -66,8 +66,9 @@ import urllib.error
 import urllib.request
 import hashlib
 import ssl
+import json
 from datetime import datetime, timezone
-from email.utils import parsedate_to_datetime
+from email.utils import parsedate_to_datetime, formatdate
 
 from typing import Any, Dict, List, Mapping, Optional, Tuple, Union
 
@@ -102,6 +103,7 @@ basepath = os.path.abspath(os.path.dirname(__file__))
 MDS_METADATA_URL = "https://mds3.fidoalliance.org/"
 MDS_METADATA_FILENAME = "fido-mds3.jws"
 MDS_METADATA_PATH = os.path.join(basepath, "static", MDS_METADATA_FILENAME)
+MDS_METADATA_CACHE_PATH = MDS_METADATA_PATH + ".meta.json"
 
 FIDO_METADATA_TRUST_ROOT_B64 = (
     "MIIDXzCCAkegAwIBAgILBAAAAAABIVhTCKIwDQYJKoZIhvcNAQELBQAwTDEgMB4G"
@@ -213,6 +215,17 @@ _mds_verifier_mtime: Optional[float] = None
 class MetadataDownloadError(Exception):
     """Raised when the FIDO MDS metadata cannot be downloaded."""
 
+    def __init__(
+        self,
+        message: str,
+        *,
+        status_code: Optional[int] = None,
+        retry_after: Optional[str] = None,
+    ) -> None:
+        super().__init__(message)
+        self.status_code = status_code
+        self.retry_after = retry_after
+
 
 def extract_credential_data(cred):
     """Extract AttestedCredentialData from either old or new format"""
@@ -245,23 +258,154 @@ def delkey(name):
         pass
 
 
-def _format_last_modified(header: Optional[str]) -> Optional[str]:
-    """Convert an HTTP Last-Modified header to an ISO formatted string."""
+def _parse_http_datetime(value: Optional[str]) -> Optional[datetime]:
+    """Best-effort parsing of an HTTP date header into an aware datetime."""
 
-    if not header:
+    if not value:
         return None
 
     try:
-        parsed = parsedate_to_datetime(header)
+        parsed = parsedate_to_datetime(value)
     except (TypeError, ValueError, IndexError):
-        return header
+        return None
 
     if parsed.tzinfo is None:
         parsed = parsed.replace(tzinfo=timezone.utc)
     else:
         parsed = parsed.astimezone(timezone.utc)
 
+    return parsed
+
+
+def _parse_iso_datetime(value: Optional[str]) -> Optional[datetime]:
+    """Parse an ISO 8601 timestamp into an aware datetime if possible."""
+
+    if not value:
+        return None
+
+    text = value.strip()
+    if not text:
+        return None
+
+    if text.endswith("Z"):
+        text = text[:-1] + "+00:00"
+
+    try:
+        parsed = datetime.fromisoformat(text)
+    except ValueError:
+        return None
+
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    else:
+        parsed = parsed.astimezone(timezone.utc)
+
+    return parsed
+
+
+def _format_last_modified(header: Optional[str]) -> Optional[str]:
+    """Convert an HTTP Last-Modified header to an ISO formatted string."""
+
+    if not header:
+        return None
+
+    parsed = _parse_http_datetime(header)
+    if parsed is None:
+        return header
+
     return parsed.isoformat()
+
+
+def _clean_metadata_cache_value(value: Any) -> Optional[str]:
+    """Return a trimmed string value from cached metadata state if present."""
+
+    if isinstance(value, str):
+        stripped = value.strip()
+        if stripped:
+            return stripped
+    return None
+
+
+def _load_metadata_cache_entry() -> Dict[str, Optional[str]]:
+    """Load cached metadata headers used for conditional download requests."""
+
+    try:
+        with open(MDS_METADATA_CACHE_PATH, "r", encoding="utf-8") as cache_file:
+            cached = json.load(cache_file)
+    except (OSError, ValueError, TypeError):
+        return {}
+
+    if not isinstance(cached, Mapping):
+        return {}
+
+    last_modified_header = _clean_metadata_cache_value(cached.get("last_modified"))
+    last_modified_iso = _clean_metadata_cache_value(cached.get("last_modified_iso"))
+    if not last_modified_iso and last_modified_header:
+        last_modified_iso = _format_last_modified(last_modified_header)
+    etag = _clean_metadata_cache_value(cached.get("etag"))
+    fetched_at = _clean_metadata_cache_value(cached.get("fetched_at"))
+
+    return {
+        "last_modified": last_modified_header,
+        "last_modified_iso": last_modified_iso,
+        "etag": etag,
+        "fetched_at": fetched_at,
+    }
+
+
+def _store_metadata_cache_entry(
+    *,
+    last_modified_header: Optional[str],
+    last_modified_iso: Optional[str],
+    etag: Optional[str],
+) -> None:
+    """Persist cached metadata download headers for future requests."""
+
+    payload = {
+        "last_modified": last_modified_header,
+        "last_modified_iso": last_modified_iso,
+        "etag": etag,
+        "fetched_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+    try:
+        os.makedirs(os.path.dirname(MDS_METADATA_CACHE_PATH), exist_ok=True)
+        with open(MDS_METADATA_CACHE_PATH, "w", encoding="utf-8") as cache_file:
+            json.dump(payload, cache_file, indent=2, sort_keys=True)
+            cache_file.write("\n")
+    except OSError:
+        pass
+
+
+def _guess_last_modified_from_path(path: str) -> Tuple[Optional[str], Optional[str]]:
+    """Derive Last-Modified headers from the local file mtime when possible."""
+
+    try:
+        mtime = os.path.getmtime(path)
+    except OSError:
+        return None, None
+
+    header = formatdate(mtime, usegmt=True)
+    iso = datetime.fromtimestamp(mtime, timezone.utc).isoformat()
+    return header, iso
+
+
+def _apply_last_modified_timestamp(
+    path: str,
+    header: Optional[str],
+    iso: Optional[str],
+) -> None:
+    """Update the local file mtime to match the metadata Last-Modified value."""
+
+    timestamp_source = _parse_iso_datetime(iso) or _parse_http_datetime(header)
+    if timestamp_source is None:
+        return
+
+    timestamp = timestamp_source.timestamp()
+    try:
+        os.utime(path, (timestamp, timestamp))
+    except OSError:
+        pass
 
 
 def _is_certificate_verification_error(error: BaseException) -> bool:
@@ -333,24 +477,80 @@ def download_metadata_blob(
 ) -> Tuple[bool, int, Optional[str]]:
     """Fetch the FIDO MDS metadata BLOB and store it locally."""
 
-    payload = None
-    last_modified = None
+    metadata_exists = os.path.exists(destination)
+    cached_state = _load_metadata_cache_entry()
+    cached_last_modified = cached_state.get("last_modified")
+    cached_last_modified_iso = cached_state.get("last_modified_iso")
+    cached_etag = cached_state.get("etag")
+
+    if metadata_exists and not cached_last_modified:
+        fallback_header, fallback_iso = _guess_last_modified_from_path(destination)
+        if fallback_header:
+            cached_last_modified = fallback_header
+            if not cached_last_modified_iso:
+                cached_last_modified_iso = fallback_iso
+
+    payload: Optional[bytes] = None
+    last_modified_header: Optional[str] = None
+    last_modified_iso: Optional[str] = None
+    etag: Optional[str] = None
     last_cert_error: Optional[BaseException] = None
 
     for context in _metadata_ssl_contexts():
+        headers: Dict[str, str] = {}
+        if metadata_exists and cached_last_modified:
+            headers["If-Modified-Since"] = cached_last_modified
+        if metadata_exists and cached_etag:
+            headers["If-None-Match"] = cached_etag
+
+        request = urllib.request.Request(source_url, headers=headers)
         try:
-            with urllib.request.urlopen(source_url, timeout=60, context=context) as response:
+            with urllib.request.urlopen(request, timeout=60, context=context) as response:
                 status = getattr(response, "status", None) or response.getcode()
                 if status != 200:
                     raise MetadataDownloadError(
-                        f"Unexpected response status {status} while downloading metadata."
+                        f"Unexpected response status {status} while downloading metadata.",
+                        status_code=status,
                     )
                 payload = response.read()
-                last_modified = response.headers.get("Last-Modified")
+                response_headers = getattr(response, "headers", None)
+                if response_headers is not None:
+                    last_modified_header = _clean_metadata_cache_value(
+                        response_headers.get("Last-Modified")
+                    )
+                    etag = _clean_metadata_cache_value(response_headers.get("ETag"))
+                else:
+                    last_modified_header = None
+                    etag = None
+                last_modified_iso = _format_last_modified(last_modified_header)
+                if last_modified_iso is None and cached_last_modified_iso:
+                    last_modified_iso = cached_last_modified_iso
                 break
         except urllib.error.HTTPError as exc:
+            if exc.code == 304 and metadata_exists:
+                header = cached_last_modified
+                if exc.headers is not None:
+                    header = header or _clean_metadata_cache_value(exc.headers.get("Last-Modified"))
+                iso = cached_last_modified_iso or _format_last_modified(header)
+                etag_header = None
+                if exc.headers is not None:
+                    etag_header = _clean_metadata_cache_value(exc.headers.get("ETag"))
+                etag_to_store = etag_header or cached_etag
+                _apply_last_modified_timestamp(destination, header, iso)
+                _store_metadata_cache_entry(
+                    last_modified_header=header,
+                    last_modified_iso=iso,
+                    etag=etag_to_store,
+                )
+                return False, 0, iso
+
+            retry_after = None
+            if exc.headers is not None:
+                retry_after = _clean_metadata_cache_value(exc.headers.get("Retry-After"))
             raise MetadataDownloadError(
-                f"Failed to download metadata (HTTP {exc.code})."
+                f"Failed to download metadata (HTTP {exc.code}).",
+                status_code=exc.code,
+                retry_after=retry_after,
             ) from exc
         except urllib.error.URLError as exc:
             reason = getattr(exc, "reason", exc)
@@ -377,10 +577,16 @@ def download_metadata_blob(
 
     os.makedirs(os.path.dirname(destination), exist_ok=True)
 
-    if os.path.exists(destination):
+    if metadata_exists and os.path.exists(destination):
         with open(destination, "rb") as existing_file:
             if existing_file.read() == payload:
-                return False, len(payload), _format_last_modified(last_modified)
+                _apply_last_modified_timestamp(destination, last_modified_header, last_modified_iso)
+                _store_metadata_cache_entry(
+                    last_modified_header=last_modified_header,
+                    last_modified_iso=last_modified_iso,
+                    etag=etag or cached_etag,
+                )
+                return False, len(payload), last_modified_iso
 
     with tempfile.NamedTemporaryFile("wb", delete=False, dir=os.path.dirname(destination)) as temp_file:
         temp_file.write(payload)
@@ -395,7 +601,14 @@ def download_metadata_blob(
             pass
         raise
 
-    return True, len(payload), _format_last_modified(last_modified)
+    _apply_last_modified_timestamp(destination, last_modified_header, last_modified_iso)
+    _store_metadata_cache_entry(
+        last_modified_header=last_modified_header,
+        last_modified_iso=last_modified_iso,
+        etag=etag,
+    )
+
+    return True, len(payload), last_modified_iso
 
 
 def _colon_hex(data: bytes) -> str:
@@ -1439,6 +1652,28 @@ def api_update_mds_metadata():
     try:
         updated, bytes_written, last_modified = download_metadata_blob()
     except MetadataDownloadError as exc:
+        if metadata_existed and getattr(exc, "status_code", None) == 429:
+            app.logger.warning("Metadata update rate limited by FIDO MDS: %s", exc)
+            cached_state = _load_metadata_cache_entry()
+            cached_last_modified_iso = cached_state.get("last_modified_iso") if cached_state else None
+            retry_after = getattr(exc, "retry_after", None)
+            if retry_after:
+                note = (
+                    "Metadata already up to date. The FIDO Metadata Service asked us to wait before "
+                    f"downloading again (retry after {retry_after})."
+                )
+            else:
+                note = (
+                    "Metadata already up to date. The FIDO Metadata Service asked us to wait before downloading again."
+                )
+            payload: Dict[str, Any] = {
+                "updated": False,
+                "bytes_written": 0,
+                "message": note,
+            }
+            if cached_last_modified_iso:
+                payload["last_modified"] = cached_last_modified_iso
+            return jsonify(payload)
         return jsonify({"updated": False, "message": str(exc)}), 502
     except OSError as exc:
         app.logger.exception("Failed to store metadata BLOB: %s", exc)
