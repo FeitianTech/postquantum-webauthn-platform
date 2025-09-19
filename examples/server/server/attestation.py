@@ -42,6 +42,24 @@ __all__ = [
 ]
 
 
+def _ensure_utc_datetime(value: datetime) -> datetime:
+    """Return ``value`` normalised to a timezone-aware UTC datetime."""
+
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc)
+
+
+def _certificate_datetime(cert: x509.Certificate, attribute: str) -> datetime:
+    """Retrieve *attribute* from *cert* preferring the UTC variant if present."""
+
+    utc_attribute = f"{attribute}_utc"
+    value = getattr(cert, utc_attribute, None)
+    if value is None:
+        value = getattr(cert, attribute)
+    return _ensure_utc_datetime(value)
+
+
 def colon_hex(data: bytes) -> str:
     return ":".join(f"{byte:02x}" for byte in data)
 
@@ -381,19 +399,10 @@ def serialize_attestation_certificate(cert_bytes: bytes):
     version_hex = f"0x{certificate.version.value:x}"
 
     def _isoformat(value: datetime) -> str:
-        if value.tzinfo is None:
-            return value.replace(tzinfo=timezone.utc).isoformat()
-        return value.astimezone(timezone.utc).isoformat()
+        return _ensure_utc_datetime(value).isoformat()
 
-    def _get_cert_datetime(attribute: str) -> datetime:
-        utc_attribute = f"{attribute}_utc"
-        try:
-            return getattr(certificate, utc_attribute)
-        except AttributeError:
-            return getattr(certificate, attribute)
-
-    not_valid_before = _get_cert_datetime("not_valid_before")
-    not_valid_after = _get_cert_datetime("not_valid_after")
+    not_valid_before = _certificate_datetime(certificate, "not_valid_before")
+    not_valid_after = _certificate_datetime(certificate, "not_valid_after")
 
     extensions = []
     for ext in certificate.extensions:
@@ -1099,16 +1108,8 @@ def perform_attestation_checks(
             for cert_der in trust_path:
                 try:
                     cert = x509.load_der_x509_certificate(cert_der)
-                    not_before = cert.not_valid_before
-                    not_after = cert.not_valid_after
-                    if not_before.tzinfo is None:
-                        not_before = not_before.replace(tzinfo=timezone.utc)
-                    else:
-                        not_before = not_before.astimezone(timezone.utc)
-                    if not_after.tzinfo is None:
-                        not_after = not_after.replace(tzinfo=timezone.utc)
-                    else:
-                        not_after = not_after.astimezone(timezone.utc)
+                    not_before = _certificate_datetime(cert, "not_valid_before")
+                    not_after = _certificate_datetime(cert, "not_valid_after")
                     if now < not_before or now > not_after:
                         certs_valid = False
                         results["errors"].append(

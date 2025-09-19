@@ -1,24 +1,51 @@
 """Application entry point for the WebAuthn demo server."""
 from __future__ import annotations
 
+import importlib
 import pathlib
 import sys
+from types import ModuleType
+
+_PACKAGE_ROOT = pathlib.Path(__file__).resolve().parent
+_PROJECT_ROOT = _PACKAGE_ROOT.parent
+
+
+def _import_module(name: str) -> ModuleType:
+    """Import *name* and raise a helpful error if it cannot be found.
+
+    When the demo is executed as a script (``python app.py``) we need to make
+    sure the parent directory that contains the ``server`` package lives on
+    ``sys.path``.  The previous absolute imports raised a ``ModuleNotFoundError``
+    on systems where that path had not yet been added, which meant the demo
+    failed to start.  Loading modules via :mod:`importlib` lets us control the
+    import path and provide a clearer error message for troubleshooting.
+    """
+
+    try:
+        return importlib.import_module(name)
+    except ModuleNotFoundError as exc:  # pragma: no cover - environment specific.
+        missing = exc.name or name
+        raise ModuleNotFoundError(
+            f"Unable to import '{missing}'. Ensure the demo server package "
+            "and its dependencies are available on PYTHONPATH."
+        ) from exc
+
 
 if __package__:
-    from .config import app
-    from .routes import advanced  # noqa: F401
-    from .routes import general  # noqa: F401
-    from .routes import simple  # noqa: F401
+    _import_base = __package__
 else:  # pragma: no cover - executed when run as a script.
-    _PACKAGE_ROOT = pathlib.Path(__file__).resolve().parent
-    _PROJECT_ROOT = _PACKAGE_ROOT.parent
     if str(_PROJECT_ROOT) not in sys.path:
         sys.path.insert(0, str(_PROJECT_ROOT))
+    _import_base = _PACKAGE_ROOT.name
+    __package__ = _import_base
 
-    from server.config import app
-    from server.routes import advanced  # noqa: F401
-    from server.routes import general  # noqa: F401
-    from server.routes import simple  # noqa: F401
+config_module = _import_module(f"{_import_base}.config")
+app = config_module.app
+
+# Import the route modules so their decorators register endpoints with Flask.
+advanced = _import_module(f"{_import_base}.routes.advanced")  # noqa: F401
+general = _import_module(f"{_import_base}.routes.general")  # noqa: F401
+simple = _import_module(f"{_import_base}.routes.simple")  # noqa: F401
 
 
 def main() -> None:
