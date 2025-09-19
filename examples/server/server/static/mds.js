@@ -282,12 +282,13 @@ function updateScrollTopButtonVisibility(options = {}) {
     }
 
     const rows = Array.from(mdsState.tableBody?.rows ?? []).filter(row => !row.classList.contains('mds-empty-row'));
-    if (rows.length <= 10) {
+    if (rows.length <= 5) {
         hideScrollTopButton();
         return;
     }
 
-    const markerRow = rows[10];
+    const markerIndex = Math.min(4, rows.length - 1);
+    const markerRow = rows[markerIndex];
     if (!markerRow || typeof markerRow.getBoundingClientRect !== 'function') {
         hideScrollTopButton();
         return;
