@@ -240,6 +240,8 @@ let filteredData = [];
 let isLoading = false;
 let hasLoaded = false;
 let isUpdatingMetadata = false;
+let loadPromise = null;
+const certificateCache = new Map();
 
 document.addEventListener('DOMContentLoaded', async () => {
     const tabElement = document.getElementById('mds-tab');
@@ -359,11 +361,31 @@ function initializeState(root) {
         });
     }
 
+    const detailView = root.querySelector('#mds-detail-view');
+    const detailBack = root.querySelector('#mds-detail-back');
+    if (detailBack) {
+        detailBack.addEventListener('click', () => hideAuthenticatorDetail());
+    }
+
+    const certificateModal = root.querySelector('#mds-certificate-modal');
+    const certificateClose = root.querySelector('#mds-certificate-modal-close');
+    if (certificateClose) {
+        certificateClose.addEventListener('click', () => closeCertificateModal());
+    }
+    if (certificateModal) {
+        certificateModal.addEventListener('click', event => {
+            if (event.target === certificateModal) {
+                closeCertificateModal();
+            }
+        });
+    }
+
     return {
         root,
         filters,
         filterInputs,
         dropdowns,
+        tableContainer: root.querySelector('#mds-table-container'),
         table: root.querySelector('.mds-table'),
         tableBody: root.querySelector('#mds-table-body'),
         countEl: root.querySelector('#mds-entry-count'),
@@ -377,133 +399,176 @@ function initializeState(root) {
         updateButtonMode: 'update',
         metadataOverdue: false,
         metadataNextUpdate: null,
+        detailView,
+        detailContent: root.querySelector('#mds-detail-content'),
+        detailTitle: root.querySelector('#mds-detail-title'),
+        detailSubtitle: root.querySelector('#mds-detail-subtitle'),
+        certificateModal,
+        certificateInput: root.querySelector('#mds-certificate-input'),
+        certificateOutput: root.querySelector('#mds-certificate-output'),
+        certificateTitle: root.querySelector('#mds-certificate-modal-title'),
+        activeDetailEntry: null,
+        activeHighlightRow: null,
+        byAaguid: new Map(),
     };
 }
 
 async function loadMdsData(statusNote) {
-    if (isLoading || hasLoaded || !mdsState) {
+    if (!mdsState) {
+        return;
+    }
+
+    if (hasLoaded) {
+        return;
+    }
+
+    if (isLoading && loadPromise) {
+        await loadPromise;
         return;
     }
 
     const note = typeof statusNote === 'string' ? statusNote.trim() : '';
-    isLoading = true;
     setStatus('Loading metadata BLOB…', 'info');
+    isLoading = true;
 
-    try {
-        const response = await fetch(MDS_JWS_PATH, { cache: 'no-store' });
-        if (!response.ok) {
-            if (response.status === 404) {
-                const message = MISSING_METADATA_MESSAGE;
-                setUpdateButtonMode('download');
-                setUpdateButtonAttention(false);
-                if (mdsState) {
-                    mdsState.metadataOverdue = false;
-                    mdsState.metadataNextUpdate = null;
+    const task = (async () => {
+        try {
+            const response = await fetch(MDS_JWS_PATH, { cache: 'no-store' });
+            if (!response.ok) {
+                if (response.status === 404) {
+                    const message = MISSING_METADATA_MESSAGE;
+                    setUpdateButtonMode('download');
+                    setUpdateButtonAttention(false);
+                    if (mdsState) {
+                        mdsState.metadataOverdue = false;
+                        mdsState.metadataNextUpdate = null;
+                        mdsState.byAaguid = new Map();
+                    }
+                    setStatus(message, 'info');
+                    if (mdsState) {
+                        mdsState.defaultStatus = { html: message, variant: 'info', title: '' };
+                    }
+                    mdsData = [];
+                    filteredData = [];
+                    updateCount(0, 0);
+                    if (mdsState?.tableBody) {
+                        const tbody = mdsState.tableBody;
+                        tbody.innerHTML = '';
+                        const emptyRow = document.createElement('tr');
+                        emptyRow.className = 'mds-empty-row';
+                        const cell = document.createElement('td');
+                        cell.colSpan = COLUMN_COUNT;
+                        cell.textContent = MISSING_METADATA_MESSAGE;
+                        emptyRow.appendChild(cell);
+                        tbody.appendChild(emptyRow);
+                    }
+                    return;
                 }
-                setStatus(message, 'info');
-                if (mdsState) {
-                    mdsState.defaultStatus = { html: message, variant: 'info', title: '' };
-                }
-                mdsData = [];
-                filteredData = [];
-                updateCount(0, 0);
-                if (mdsState?.tableBody) {
-                    const tbody = mdsState.tableBody;
-                    tbody.innerHTML = '';
-                    const emptyRow = document.createElement('tr');
-                    emptyRow.className = 'mds-empty-row';
-                    const cell = document.createElement('td');
-                    cell.colSpan = COLUMN_COUNT;
-                    cell.textContent = MISSING_METADATA_MESSAGE;
-                    emptyRow.appendChild(cell);
-                    tbody.appendChild(emptyRow);
-                }
-                return;
+                throw new Error(`Unexpected response status: ${response.status}`);
             }
-            throw new Error(`Unexpected response status: ${response.status}`);
-        }
 
-        const jws = await response.text();
-        const payloadSegment = jws.split('.')[1];
-        if (!payloadSegment) {
-            throw new Error('Invalid metadata BLOB format.');
-        }
+            const jws = await response.text();
+            const payloadSegment = jws.split('.')[1];
+            if (!payloadSegment) {
+                throw new Error('Invalid metadata BLOB format.');
+            }
 
-        const payload = decodeBase64Url(payloadSegment);
-        const metadata = JSON.parse(payload);
+            const payload = decodeBase64Url(payloadSegment);
+            const metadata = JSON.parse(payload);
 
-        mdsData = Array.isArray(metadata.entries)
-            ? metadata.entries.map(transformEntry).filter(Boolean)
-            : [];
-        hasLoaded = true;
-        setUpdateButtonMode('update');
+            mdsData = Array.isArray(metadata.entries)
+                ? metadata.entries.map((entry, index) => transformEntry(entry, index)).filter(Boolean)
+                : [];
+            hasLoaded = true;
+            setUpdateButtonMode('update');
 
-        const nextUpdateRaw = typeof metadata.nextUpdate === 'string' ? metadata.nextUpdate : '';
-        const nextUpdateDate = parseIsoDate(nextUpdateRaw);
-        const nextUpdateFormatted = nextUpdateRaw ? formatDate(nextUpdateRaw) : '';
-        const now = Date.now();
-        const isOverdue = Boolean(nextUpdateDate && nextUpdateDate.getTime() <= now);
+            if (mdsState) {
+                const map = new Map();
+                mdsData.forEach(item => {
+                    const key = normaliseAaguid(item.aaguid || item.id);
+                    if (key) {
+                        map.set(key, item);
+                    }
+                });
+                mdsState.byAaguid = map;
+            }
 
-        if (mdsState) {
-            mdsState.metadataOverdue = isOverdue;
-            mdsState.metadataNextUpdate = nextUpdateRaw || null;
-        }
-        setUpdateButtonAttention(isOverdue);
+            const nextUpdateRaw = typeof metadata.nextUpdate === 'string' ? metadata.nextUpdate : '';
+            const nextUpdateDate = parseIsoDate(nextUpdateRaw);
+            const nextUpdateFormatted = nextUpdateRaw ? formatDate(nextUpdateRaw) : '';
+            const now = Date.now();
+            const isOverdue = Boolean(nextUpdateDate && nextUpdateDate.getTime() <= now);
 
-        const optionSets = collectOptionSets(mdsData);
-        updateOptionLists(optionSets);
-        applyFilters();
+            if (mdsState) {
+                mdsState.metadataOverdue = isOverdue;
+                mdsState.metadataNextUpdate = nextUpdateRaw || null;
+            }
+            setUpdateButtonAttention(isOverdue);
 
-        const statusParts = [`Loaded ${mdsData.length.toLocaleString()} authenticators.`];
-        let statusVariant = 'success';
+            const optionSets = collectOptionSets(mdsData);
+            updateOptionLists(optionSets);
+            applyFilters();
 
-        if (isOverdue) {
-            const deadline = nextUpdateFormatted ? ` (${nextUpdateFormatted})` : '';
-            statusParts.push(
-                `The recommended metadata update date has passed${deadline}. Use the <strong>Update Metadata</strong> button to refresh the local file.`,
+            const statusParts = [`Loaded ${mdsData.length.toLocaleString()} authenticators.`];
+            let statusVariant = 'success';
+
+            if (isOverdue) {
+                const deadline = nextUpdateFormatted ? ` (${nextUpdateFormatted})` : '';
+                statusParts.push(
+                    `The recommended metadata update date has passed${deadline}. Use the <strong>Update Metadata</strong> button to refresh the local file.`,
+                );
+                statusVariant = 'error';
+            } else if (nextUpdateFormatted) {
+                statusParts.push(`Next update recommended by ${nextUpdateFormatted}.`);
+            }
+            if (note) {
+                statusParts.push(note);
+            }
+            const statusMessage = statusParts.join(' ');
+            setStatus(statusMessage, statusVariant);
+
+            if (!mdsState.defaultStatus) {
+                mdsState.defaultStatus = { html: statusMessage, variant: statusVariant, title: '' };
+            } else {
+                mdsState.defaultStatus.html = statusMessage;
+                mdsState.defaultStatus.variant = statusVariant;
+            }
+
+            if (metadata.legalHeader && mdsState.statusEl) {
+                mdsState.statusEl.setAttribute('title', metadata.legalHeader);
+                if (mdsState.defaultStatus) {
+                    mdsState.defaultStatus.title = metadata.legalHeader;
+                }
+            } else if (mdsState?.statusEl) {
+                mdsState.statusEl.removeAttribute('title');
+                if (mdsState.defaultStatus) {
+                    mdsState.defaultStatus.title = '';
+                }
+            }
+        } catch (error) {
+            console.error('Failed to load FIDO MDS metadata:', error);
+            setStatus(
+                `Unable to parse the metadata BLOB. Confirm that <code>${MDS_JWS_PATH}</code> is a valid download from ` +
+                    `<a href="https://mds3.fidoalliance.org/" target="_blank" rel="noopener">mds3.fidoalliance.org</a>.`,
+                'error',
             );
-            statusVariant = 'error';
-        } else if (nextUpdateFormatted) {
-            statusParts.push(`Next update recommended by ${nextUpdateFormatted}.`);
-        }
-        if (note) {
-            statusParts.push(note);
-        }
-        const statusMessage = statusParts.join(' ');
-        setStatus(statusMessage, statusVariant);
-
-        if (!mdsState.defaultStatus) {
-            mdsState.defaultStatus = { html: statusMessage, variant: statusVariant, title: '' };
-        } else {
-            mdsState.defaultStatus.html = statusMessage;
-            mdsState.defaultStatus.variant = statusVariant;
-        }
-
-        if (metadata.legalHeader && mdsState.statusEl) {
-            mdsState.statusEl.setAttribute('title', metadata.legalHeader);
-            if (mdsState.defaultStatus) {
-                mdsState.defaultStatus.title = metadata.legalHeader;
+            setUpdateButtonAttention(false);
+            if (mdsState) {
+                mdsState.metadataOverdue = false;
+                mdsState.metadataNextUpdate = null;
             }
-        } else if (mdsState?.statusEl) {
-            mdsState.statusEl.removeAttribute('title');
-            if (mdsState.defaultStatus) {
-                mdsState.defaultStatus.title = '';
-            }
+        } finally {
+            isLoading = false;
         }
-    } catch (error) {
-        console.error('Failed to load FIDO MDS metadata:', error);
-        setStatus(
-            `Unable to parse the metadata BLOB. Confirm that <code>${MDS_JWS_PATH}</code> is a valid download from ` +
-                `<a href="https://mds3.fidoalliance.org/" target="_blank" rel="noopener">mds3.fidoalliance.org</a>.`,
-            'error',
-        );
-        setUpdateButtonAttention(false);
-        if (mdsState) {
-            mdsState.metadataOverdue = false;
-            mdsState.metadataNextUpdate = null;
-        }
+    })();
+
+    loadPromise = task;
+    try {
+        await task;
     } finally {
-        isLoading = false;
+        if (loadPromise === task) {
+            loadPromise = null;
+        }
     }
 }
 
@@ -556,6 +621,28 @@ function matchesFilters(entry, filters) {
     });
 }
 
+function resetFilters() {
+    if (!mdsState) {
+        return;
+    }
+
+    let changed = false;
+    Object.entries(mdsState.filters || {}).forEach(([key, value]) => {
+        if (value) {
+            mdsState.filters[key] = '';
+            const input = mdsState.filterInputs[key];
+            if (input) {
+                input.value = '';
+            }
+            changed = true;
+        }
+    });
+
+    if (changed || (!filteredData.length && mdsData.length)) {
+        applyFilters();
+    }
+}
+
 function renderTable(entries) {
     if (!mdsState?.tableBody) {
         return;
@@ -581,8 +668,23 @@ function renderTable(entries) {
     entries.forEach(entry => {
         const row = document.createElement('tr');
 
+        if (typeof entry.index === 'number' && Number.isFinite(entry.index)) {
+            row.dataset.entryIndex = String(entry.index);
+        }
+        const aaguidKey = normaliseAaguid(entry.aaguid);
+        if (aaguidKey) {
+            row.dataset.aaguid = aaguidKey;
+        } else if (entry.id) {
+            const idKey = normaliseAaguid(entry.id);
+            if (idKey) {
+                row.dataset.aaguid = idKey;
+            } else {
+                row.dataset.entryId = entry.id;
+            }
+        }
+
         row.appendChild(createIconCell(entry));
-        row.appendChild(createTextCell(entry.name || '—'));
+        row.appendChild(createNameCell(entry));
         row.appendChild(createTextCell(entry.protocol || '—'));
         row.appendChild(createTextCell(entry.certification || '—'));
         row.appendChild(createIdCell(entry.id));
@@ -598,6 +700,670 @@ function renderTable(entries) {
 
     tbody.appendChild(fragment);
     stabiliseColumnWidths();
+}
+
+function clearRowHighlight() {
+    if (mdsState?.activeHighlightRow) {
+        mdsState.activeHighlightRow.classList.remove('mds-row-highlight');
+        mdsState.activeHighlightRow = null;
+    }
+}
+
+function highlightRowByAaguid(aaguid, options = {}) {
+    if (!mdsState?.tableBody) {
+        return null;
+    }
+
+    clearRowHighlight();
+
+    const rows = Array.from(mdsState.tableBody.rows);
+    const targetKey = normaliseAaguid(aaguid);
+    const { entryIndex, id, scroll = false } = options;
+
+    let targetRow = null;
+    if (targetKey) {
+        targetRow = rows.find(row => row.dataset.aaguid === targetKey);
+    }
+    if (!targetRow && typeof entryIndex === 'number') {
+        const indexValue = String(entryIndex);
+        targetRow = rows.find(row => row.dataset.entryIndex === indexValue);
+    }
+    if (!targetRow && typeof id === 'string') {
+        targetRow = rows.find(row => row.dataset.entryId === id);
+    }
+
+    if (targetRow) {
+        targetRow.classList.add('mds-row-highlight');
+        mdsState.activeHighlightRow = targetRow;
+        if (scroll) {
+            targetRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    }
+    return targetRow;
+}
+
+function showAuthenticatorDetail(entry) {
+    if (!mdsState || !entry) {
+        return;
+    }
+
+    const sourceEntry = typeof entry.index === 'number' && mdsData[entry.index]
+        ? mdsData[entry.index]
+        : entry;
+
+    mdsState.activeDetailEntry = sourceEntry;
+
+    if (mdsState.tableContainer) {
+        mdsState.tableContainer.hidden = true;
+    }
+    if (mdsState.detailView) {
+        mdsState.detailView.hidden = false;
+    }
+
+    if (mdsState.detailTitle) {
+        mdsState.detailTitle.textContent = sourceEntry.name || 'Authenticator';
+    }
+    if (mdsState.detailSubtitle) {
+        const parts = [];
+        if (sourceEntry.aaguid) {
+            parts.push(`AAGUID: ${sourceEntry.aaguid}`);
+        }
+        if (sourceEntry.id && sourceEntry.id !== sourceEntry.aaguid) {
+            parts.push(`ID: ${sourceEntry.id}`);
+        }
+        if (sourceEntry.protocol) {
+            parts.push(sourceEntry.protocol);
+        }
+        mdsState.detailSubtitle.textContent = parts.join(' • ');
+    }
+
+    if (mdsState.detailContent) {
+        mdsState.detailContent.innerHTML = '';
+        const content = buildDetailContent(sourceEntry);
+        if (content) {
+            mdsState.detailContent.appendChild(content);
+        }
+    }
+
+    highlightRowByAaguid(sourceEntry.aaguid, {
+        entryIndex: sourceEntry.index,
+        id: sourceEntry.id,
+    });
+}
+
+function hideAuthenticatorDetail() {
+    if (!mdsState) {
+        return;
+    }
+
+    if (mdsState.detailView) {
+        mdsState.detailView.hidden = true;
+    }
+    if (mdsState.tableContainer) {
+        mdsState.tableContainer.hidden = false;
+    }
+    mdsState.activeDetailEntry = null;
+}
+
+function buildDetailContent(entry) {
+    const fragment = document.createDocumentFragment();
+    const metadata = entry?.metadataStatement ?? {};
+
+    const overviewSection = createDetailSection('Overview');
+    const overviewItems = [];
+    overviewItems.push({ label: 'Identifier', value: entry.id || '—' });
+    if (entry.aaguid) {
+        overviewItems.push({ label: 'AAGUID', value: entry.aaguid });
+    }
+    if (entry.protocol) {
+        overviewItems.push({ label: 'Protocol', value: entry.protocol });
+    }
+    if (entry.certification) {
+        overviewItems.push({ label: 'Certification', value: entry.certification });
+    }
+    if (metadata.authenticatorVersion !== undefined && metadata.authenticatorVersion !== null) {
+        overviewItems.push({ label: 'Authenticator Version', value: String(metadata.authenticatorVersion) });
+    }
+    if (entry.dateUpdated) {
+        overviewItems.push({ label: 'Date Updated', value: entry.dateUpdated });
+    }
+    appendDetailGrid(overviewSection, overviewItems);
+    fragment.appendChild(overviewSection);
+
+    const metadataSection = createDetailSection('Metadata Statement');
+    const metadataItems = [];
+    if (metadata.description) {
+        metadataItems.push({ label: 'Description', value: String(metadata.description) });
+    }
+    if (metadata.legalHeader) {
+        metadataItems.push({ label: 'Legal Header', value: String(metadata.legalHeader) });
+    }
+    if (metadata.schema !== undefined && metadata.schema !== null) {
+        metadataItems.push({ label: 'Schema', value: String(metadata.schema) });
+    }
+    if (metadata.cryptoStrength !== undefined && metadata.cryptoStrength !== null) {
+        metadataItems.push({ label: 'Crypto Strength', value: String(metadata.cryptoStrength) });
+    }
+    const upvValues = formatUpv(metadata.upv);
+    if (upvValues.length) {
+        metadataItems.push({ label: 'UPV', value: upvValues.join(', ') });
+    }
+    appendDetailGrid(metadataSection, metadataItems);
+
+    const algorithmChips = createChipList('Authentication Algorithms', formatListValues(metadata.authenticationAlgorithms));
+    if (algorithmChips) {
+        metadataSection.appendChild(algorithmChips);
+    }
+    const encodingChips = createChipList('Public Key Algorithms', formatListValues(metadata.publicKeyAlgAndEncodings));
+    if (encodingChips) {
+        metadataSection.appendChild(encodingChips);
+    }
+    const attestationChips = createChipList('Attestation Types', formatListValues(metadata.attestationTypes));
+    if (attestationChips) {
+        metadataSection.appendChild(attestationChips);
+    }
+    const keyProtectionChips = createChipList('Key Protection', formatListValues(metadata.keyProtection));
+    if (keyProtectionChips) {
+        metadataSection.appendChild(keyProtectionChips);
+    }
+    const matcherChips = createChipList('Matcher Protection', formatListValues(metadata.matcherProtection));
+    if (matcherChips) {
+        metadataSection.appendChild(matcherChips);
+    }
+    const attachmentChips = createChipList('Attachment Hints', formatListValues(metadata.attachmentHint));
+    if (attachmentChips) {
+        metadataSection.appendChild(attachmentChips);
+    }
+    const displayChips = createChipList('TC Display', formatListValues(metadata.tcDisplay));
+    if (displayChips) {
+        metadataSection.appendChild(displayChips);
+    }
+    fragment.appendChild(metadataSection);
+
+    const userVerificationContent = renderUserVerificationDetails(metadata.userVerificationDetails);
+    if (userVerificationContent) {
+        const userSection = createDetailSection('User Verification Details');
+        userSection.appendChild(userVerificationContent);
+        fragment.appendChild(userSection);
+    }
+
+    const certificatesContent = renderAttestationCertificates(entry.attestationCertificates);
+    if (certificatesContent) {
+        const certificateSection = createDetailSection('Attestation Root Certificates');
+        certificateSection.appendChild(certificatesContent);
+        fragment.appendChild(certificateSection);
+    }
+
+    const authenticatorInfoSection = renderAuthenticatorInfo(metadata.authenticatorGetInfo);
+    if (authenticatorInfoSection) {
+        fragment.appendChild(authenticatorInfoSection);
+    }
+
+    const statusContent = renderStatusReports(entry.statusReports);
+    if (statusContent) {
+        const statusSection = createDetailSection('Status Reports');
+        statusSection.appendChild(statusContent);
+        fragment.appendChild(statusSection);
+    }
+
+    return fragment;
+}
+
+function createDetailSection(title) {
+    const section = document.createElement('section');
+    section.className = 'mds-detail-section';
+    if (title) {
+        const heading = document.createElement('h4');
+        heading.className = 'mds-detail-section__title';
+        heading.textContent = title;
+        section.appendChild(heading);
+    }
+    return section;
+}
+
+function appendDetailGrid(section, items) {
+    if (!section || !Array.isArray(items) || !items.length) {
+        return;
+    }
+
+    const valid = items.filter(item => {
+        if (!item || typeof item.label !== 'string') {
+            return false;
+        }
+        if (item.node instanceof Node) {
+            return true;
+        }
+        const value = item.value;
+        if (Array.isArray(value)) {
+            return value.length > 0;
+        }
+        return value !== undefined && value !== null && String(value).trim() !== '';
+    });
+
+    if (!valid.length) {
+        return;
+    }
+
+    const grid = document.createElement('div');
+    grid.className = 'mds-detail-grid';
+
+    valid.forEach(item => {
+        const cell = document.createElement('div');
+        cell.className = 'mds-detail-item';
+        const labelEl = document.createElement('div');
+        labelEl.className = 'mds-detail-item__label';
+        labelEl.textContent = item.label;
+        const valueEl = document.createElement('div');
+        valueEl.className = 'mds-detail-item__value';
+        if (item.node instanceof Node) {
+            valueEl.appendChild(item.node);
+        } else if (Array.isArray(item.value)) {
+            valueEl.textContent = item.value.join(', ');
+        } else {
+            valueEl.textContent = String(item.value);
+        }
+        cell.appendChild(labelEl);
+        cell.appendChild(valueEl);
+        grid.appendChild(cell);
+    });
+
+    section.appendChild(grid);
+}
+
+function createChipList(label, values) {
+    const items = Array.isArray(values) ? values.filter(Boolean) : [];
+    if (!items.length) {
+        return null;
+    }
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'mds-detail-item';
+    const labelEl = document.createElement('div');
+    labelEl.className = 'mds-detail-item__label';
+    labelEl.textContent = label;
+    const list = document.createElement('div');
+    list.className = 'mds-detail-list';
+    items.forEach(value => {
+        const chip = document.createElement('span');
+        chip.className = 'mds-detail-chip';
+        chip.textContent = value;
+        list.appendChild(chip);
+    });
+    wrapper.appendChild(labelEl);
+    wrapper.appendChild(list);
+    return wrapper;
+}
+
+function renderUserVerificationDetails(details) {
+    const groups = Array.isArray(details) ? details : [];
+    if (!groups.length) {
+        return null;
+    }
+
+    const container = document.createElement('div');
+    container.className = 'mds-detail-groups';
+
+    groups.forEach((group, index) => {
+        const entries = Array.isArray(group) ? group : [group];
+        const validEntries = entries.filter(item => item && typeof item === 'object');
+        if (!validEntries.length) {
+            return;
+        }
+
+        const card = document.createElement('div');
+        card.className = 'mds-detail-card';
+        const title = document.createElement('div');
+        title.className = 'mds-detail-card__title';
+        title.textContent = `Combination ${index + 1}`;
+        card.appendChild(title);
+
+        const content = document.createElement('div');
+        content.className = 'mds-detail-card__content';
+
+        validEntries.forEach(item => {
+            const method = item.userVerificationMethod ? formatEnum(item.userVerificationMethod) : '';
+            if (method) {
+                const methodEl = document.createElement('div');
+                methodEl.textContent = method;
+                content.appendChild(methodEl);
+            }
+
+            const caDesc = item.caDesc && typeof item.caDesc === 'object' ? item.caDesc : null;
+            if (caDesc) {
+                const parts = [];
+                if (caDesc.base !== undefined) {
+                    parts.push(`Base: ${caDesc.base}`);
+                }
+                if (caDesc.minLength !== undefined) {
+                    parts.push(`Min length: ${caDesc.minLength}`);
+                }
+                if (caDesc.maxRetries !== undefined) {
+                    parts.push(`Max retries: ${caDesc.maxRetries}`);
+                }
+                if (caDesc.blockSlowdown !== undefined) {
+                    parts.push(`Block slowdown: ${caDesc.blockSlowdown}`);
+                }
+                if (parts.length) {
+                    const info = document.createElement('small');
+                    info.textContent = parts.join(' • ');
+                    content.appendChild(info);
+                }
+            }
+        });
+
+        if (content.childElementCount) {
+            card.appendChild(content);
+            container.appendChild(card);
+        }
+    });
+
+    return container.childElementCount ? container : null;
+}
+
+function renderAttestationCertificates(certificates) {
+    const values = Array.isArray(certificates) ? certificates.filter(Boolean) : [];
+    if (!values.length) {
+        return null;
+    }
+
+    const container = document.createElement('div');
+    container.className = 'mds-certificates';
+
+    values.forEach((certificate, index) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'mds-certificate-button';
+        button.textContent = `Certificate ${index + 1}`;
+        button.addEventListener('click', () => openCertificateModal(certificate));
+        container.appendChild(button);
+        void updateCertificateButtonLabel(button, certificate);
+    });
+
+    return container;
+}
+
+function renderAuthenticatorInfo(info) {
+    if (!info || typeof info !== 'object') {
+        return null;
+    }
+
+    const section = createDetailSection('Authenticator Get Info');
+    const gridItems = [];
+
+    if (info.aaguid) {
+        gridItems.push({ label: 'AAGUID', value: formatGuidCandidate(info.aaguid) || String(info.aaguid) });
+    }
+    const numericKeys = [
+        ['maxMsgSize', 'Max Message Size'],
+        ['maxCredentialCountInList', 'Max Credential Count'],
+        ['maxCredentialIdLength', 'Max Credential ID Length'],
+        ['maxSerializedLargeBlobArray', 'Max Serialized Large Blob Array'],
+        ['minPINLength', 'Min PIN Length'],
+        ['firmwareVersion', 'Firmware Version'],
+        ['maxCredBlobLength', 'Max Cred Blob Length'],
+        ['maxRPIDsForSetMinPINLength', 'Max RP IDs for Set Min PIN Length'],
+        ['remainingDiscoverableCredentials', 'Remaining Discoverable Credentials'],
+    ];
+    numericKeys.forEach(([key, label]) => {
+        if (info[key] !== undefined && info[key] !== null) {
+            gridItems.push({ label, value: String(info[key]) });
+        }
+    });
+    appendDetailGrid(section, gridItems);
+
+    const versionChips = createChipList('Versions', formatListValues(info.versions));
+    if (versionChips) {
+        section.appendChild(versionChips);
+    }
+    const extensionChips = createChipList('Extensions', formatListValues(info.extensions));
+    if (extensionChips) {
+        section.appendChild(extensionChips);
+    }
+    const transportChips = createChipList('Transports', formatListValues(info.transports));
+    if (transportChips) {
+        section.appendChild(transportChips);
+    }
+    const algorithmChips = createChipList('Algorithms', formatAuthenticatorAlgorithms(info.algorithms));
+    if (algorithmChips) {
+        section.appendChild(algorithmChips);
+    }
+    const pinProtocols = Array.isArray(info.pinUvAuthProtocols)
+        ? info.pinUvAuthProtocols.map(protocol => String(protocol)).filter(Boolean)
+        : [];
+    if (pinProtocols.length) {
+        const chip = createChipList('pinUvAuth Protocols', pinProtocols);
+        if (chip) {
+            section.appendChild(chip);
+        }
+    }
+
+    const optionEntries = info.options && typeof info.options === 'object'
+        ? Object.entries(info.options).filter(([, value]) => value !== undefined && value !== null)
+        : [];
+    if (optionEntries.length) {
+        const optionChips = createChipList(
+            'Options',
+            optionEntries.map(([key, value]) => `${key}: ${formatDetailValue(value)}`),
+        );
+        if (optionChips) {
+            section.appendChild(optionChips);
+        }
+    }
+
+    return section;
+}
+
+function renderStatusReports(reports) {
+    const list = Array.isArray(reports) ? reports : [];
+    if (!list.length) {
+        return null;
+    }
+
+    const table = document.createElement('table');
+    table.className = 'mds-status-table';
+    const thead = document.createElement('thead');
+    const headRow = document.createElement('tr');
+    ['Status', 'Effective Date', 'Authenticator Version', 'Certificate Number', 'Descriptor'].forEach(label => {
+        const th = document.createElement('th');
+        th.textContent = label;
+        headRow.appendChild(th);
+    });
+    thead.appendChild(headRow);
+    table.appendChild(thead);
+
+    const tbody = document.createElement('tbody');
+    list.forEach(report => {
+        if (!report || typeof report !== 'object') {
+            return;
+        }
+        const row = document.createElement('tr');
+
+        const statusCell = document.createElement('td');
+        statusCell.textContent = report.status ? formatEnum(report.status) : '—';
+        row.appendChild(statusCell);
+
+        const dateCell = document.createElement('td');
+        dateCell.textContent = report.effectiveDate ? formatDate(report.effectiveDate) : '—';
+        row.appendChild(dateCell);
+
+        const versionCell = document.createElement('td');
+        versionCell.textContent = report.authenticatorVersion !== undefined && report.authenticatorVersion !== null
+            ? String(report.authenticatorVersion)
+            : '—';
+        row.appendChild(versionCell);
+
+        const certificateCell = document.createElement('td');
+        certificateCell.textContent = report.certificateNumber ? String(report.certificateNumber) : '—';
+        row.appendChild(certificateCell);
+
+        const descriptorCell = document.createElement('td');
+        const descriptorParts = [];
+        if (report.certificationDescriptor) {
+            descriptorParts.push(String(report.certificationDescriptor));
+        }
+        if (report.url) {
+            descriptorParts.push(String(report.url));
+        }
+        if (report.timeOfLastStatusChange) {
+            descriptorParts.push(`Changed: ${formatDate(report.timeOfLastStatusChange)}`);
+        }
+        descriptorCell.textContent = descriptorParts.length ? descriptorParts.join(' • ') : '—';
+        row.appendChild(descriptorCell);
+
+        tbody.appendChild(row);
+    });
+
+    table.appendChild(tbody);
+    return table;
+}
+
+function normaliseCertificateBase64(value) {
+    if (typeof value !== 'string') {
+        return '';
+    }
+    return value.replace(/\s+/g, '').trim();
+}
+
+async function decodeCertificate(certificateBase64) {
+    const cleaned = normaliseCertificateBase64(certificateBase64);
+    if (!cleaned) {
+        throw new Error('No certificate data available.');
+    }
+    if (certificateCache.has(cleaned)) {
+        return certificateCache.get(cleaned);
+    }
+
+    const response = await fetch('/api/mds/decode-certificate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ certificate: cleaned }),
+        cache: 'no-store',
+    });
+
+    if (!response.ok) {
+        const message = `Certificate decode failed with status ${response.status}`;
+        throw new Error(message);
+    }
+
+    const payload = await response.json();
+    const details = payload?.details ?? null;
+    certificateCache.set(cleaned, details);
+    return details;
+}
+
+function formatCertificateInput(value) {
+    return value.replace(/(.{64})/g, '$1\n');
+}
+
+function formatCertificateOutput(details) {
+    if (!details || typeof details !== 'object') {
+        return 'No decoded certificate details available.';
+    }
+    if (typeof details.summary === 'string' && details.summary.trim()) {
+        return details.summary.trim();
+    }
+    return JSON.stringify(details, null, 2);
+}
+
+async function updateCertificateButtonLabel(button, certificate) {
+    if (!(button instanceof HTMLElement)) {
+        return;
+    }
+    try {
+        const details = await decodeCertificate(certificate);
+        const subject = details && typeof details.subject === 'string' ? details.subject.trim() : '';
+        if (subject) {
+            button.textContent = subject;
+        }
+    } catch (error) {
+        // Leave default label on failure.
+    }
+}
+
+async function openCertificateModal(certificate) {
+    if (!mdsState?.certificateModal) {
+        return;
+    }
+
+    const cleaned = normaliseCertificateBase64(certificate);
+    if (!cleaned) {
+        return;
+    }
+
+    if (mdsState.certificateInput) {
+        mdsState.certificateInput.value = formatCertificateInput(cleaned);
+    }
+    if (mdsState.certificateOutput) {
+        mdsState.certificateOutput.value = 'Decoding certificate…';
+    }
+    if (mdsState.certificateTitle) {
+        mdsState.certificateTitle.textContent = 'Attestation Certificate';
+    }
+
+    mdsState.certificateModal.hidden = false;
+    mdsState.certificateModal.setAttribute('aria-hidden', 'false');
+
+    try {
+        const details = await decodeCertificate(cleaned);
+        if (mdsState.certificateOutput) {
+            mdsState.certificateOutput.value = formatCertificateOutput(details);
+        }
+        const subject = details && typeof details.subject === 'string' ? details.subject.trim() : '';
+        if (subject && mdsState.certificateTitle) {
+            mdsState.certificateTitle.textContent = subject;
+        }
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Unable to decode certificate.';
+        if (mdsState.certificateOutput) {
+            mdsState.certificateOutput.value = message;
+        }
+    }
+}
+
+function closeCertificateModal() {
+    if (!mdsState?.certificateModal) {
+        return;
+    }
+    mdsState.certificateModal.hidden = true;
+    mdsState.certificateModal.setAttribute('aria-hidden', 'true');
+}
+
+async function focusAuthenticatorByAaguid(aaguid) {
+    if (!mdsState) {
+        return null;
+    }
+
+    const targetKey = normaliseAaguid(aaguid);
+    if (!targetKey) {
+        return null;
+    }
+
+    if (!hasLoaded) {
+        await loadMdsData();
+    } else if (isLoading && loadPromise) {
+        await loadPromise;
+    }
+
+    if (!mdsState) {
+        return null;
+    }
+
+    hideAuthenticatorDetail();
+
+    if (mdsState.tableContainer) {
+        mdsState.tableContainer.hidden = false;
+    }
+
+    resetFilters();
+
+    const entry = mdsState.byAaguid?.get(targetKey) || null;
+    const row = highlightRowByAaguid(targetKey, {
+        entryIndex: entry?.index,
+        id: entry?.id,
+        scroll: true,
+    });
+
+    return row;
 }
 
 function stabiliseColumnWidths() {
@@ -679,6 +1445,25 @@ function createTextCell(text, title) {
     if (title) {
         cell.title = title;
     }
+    return cell;
+}
+
+function createNameCell(entry) {
+    const cell = document.createElement('td');
+    const label = entry?.name || '—';
+    const trimmed = label.trim();
+
+    if (!entry || !trimmed || trimmed === '—') {
+        cell.textContent = label || '—';
+        return cell;
+    }
+
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'mds-name-button';
+    button.textContent = label;
+    button.addEventListener('click', () => showAuthenticatorDetail(entry));
+    cell.appendChild(button);
     return cell;
 }
 
@@ -981,29 +1766,33 @@ function updateOptionLists(optionSets) {
     });
 }
 
-function transformEntry(entry) {
+function transformEntry(entry, index = 0) {
     const metadata = entry?.metadataStatement ?? {};
     const name = resolveName(metadata, entry);
     const protocol = formatProtocol(metadata.protocolFamily || metadata.protocolType);
     const { display: certification, status: certificationStatus } = formatCertification(entry?.statusReports || []);
     const identifier = resolveIdentifier(entry, metadata);
+    const aaguid = resolveAaguid(entry, metadata) || '';
     const userVerificationList = extractUserVerification(metadata.userVerificationDetails);
     const attachmentList = extractList(metadata.attachmentHint).map(formatEnum);
     const transportsList = extractTransports(metadata);
     const keyProtectionList = extractList(metadata.keyProtection).map(formatEnum);
     const algorithmsList = extractList(metadata.authenticationAlgorithms).map(formatEnum);
     const icon = normaliseIcon(metadata.icon, metadata.iconType);
+    const attestationCertificates = extractList(metadata.attestationRootCertificates);
 
     const latestStatusDate = latestEffectiveDate(entry?.statusReports || []);
     const rawDate = entry?.timeOfLastStatusChange || latestStatusDate;
     const dateUpdated = rawDate ? formatDate(rawDate) : '';
 
     return {
+        index,
         name,
         protocol,
         certification,
         certificationStatus,
         id: identifier,
+        aaguid,
         icon,
         userVerification: userVerificationList.join(', '),
         userVerificationList,
@@ -1017,6 +1806,10 @@ function transformEntry(entry) {
         algorithmsList,
         dateUpdated,
         dateTooltip: rawDate || undefined,
+        metadataStatement: metadata,
+        rawEntry: entry || null,
+        statusReports: Array.isArray(entry?.statusReports) ? entry.statusReports : [],
+        attestationCertificates,
     };
 }
 
@@ -1081,6 +1874,72 @@ function resolveIdentifier(entry, metadata) {
     return '—';
 }
 
+function resolveAaguid(entry, metadata) {
+    const candidates = [entry?.aaguid, metadata?.aaguid];
+    for (const candidate of candidates) {
+        const formatted = formatGuidCandidate(candidate);
+        if (formatted) {
+            return formatted;
+        }
+    }
+    return '';
+}
+
+function formatGuidCandidate(value) {
+    if (value === undefined || value === null) {
+        return '';
+    }
+
+    if (typeof value === 'string') {
+        const trimmed = value.trim();
+        if (!trimmed) {
+            return '';
+        }
+        if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(trimmed)) {
+            return trimmed.toLowerCase();
+        }
+        const clean = trimmed.replace(/[^0-9a-fA-F]/g, '').toLowerCase();
+        if (clean.length === 32) {
+            return `${clean.slice(0, 8)}-${clean.slice(8, 12)}-${clean.slice(12, 16)}-${clean.slice(16, 20)}-${clean.slice(20)}`;
+        }
+        return '';
+    }
+
+    const bytes = extractByteArray(value);
+    if (bytes && bytes.length === 16) {
+        const hex = bytes.map(byte => byte.toString(16).padStart(2, '0')).join('');
+        return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+    }
+
+    try {
+        if (typeof value.toString === 'function') {
+            return formatGuidCandidate(value.toString());
+        }
+    } catch (error) {
+        // Ignore conversion errors.
+    }
+    return '';
+}
+
+function extractByteArray(value) {
+    if (!value) {
+        return null;
+    }
+    if (Array.isArray(value)) {
+        return value.every(item => Number.isInteger(item)) ? value : null;
+    }
+    if (value instanceof Uint8Array) {
+        return Array.from(value);
+    }
+    if (ArrayBuffer.isView(value)) {
+        return Array.from(new Uint8Array(value.buffer, value.byteOffset, value.byteLength));
+    }
+    if (value instanceof ArrayBuffer) {
+        return Array.from(new Uint8Array(value));
+    }
+    return null;
+}
+
 function extractUserVerification(details) {
     const values = new Set();
     if (Array.isArray(details)) {
@@ -1115,6 +1974,65 @@ function extractList(value) {
         return value.filter(Boolean);
     }
     return [value];
+}
+
+function normaliseAaguid(value) {
+    const formatted = formatGuidCandidate(value);
+    return formatted ? formatted.toLowerCase() : '';
+}
+
+function formatListValues(value) {
+    return extractList(value)
+        .map(item => formatEnum(item))
+        .filter(text => typeof text === 'string' && text.trim() !== '');
+}
+
+function formatUpv(upv) {
+    const list = Array.isArray(upv) ? upv : upv ? [upv] : [];
+    const formatted = [];
+    list.forEach(item => {
+        if (item && typeof item === 'object') {
+            const major = item.major ?? item.Major;
+            const minor = item.minor ?? item.Minor;
+            if (major !== undefined && minor !== undefined) {
+                formatted.push(`${major}.${minor}`);
+            }
+        }
+    });
+    return formatted;
+}
+
+function formatAuthenticatorAlgorithms(value) {
+    return extractList(value)
+        .map(item => {
+            if (item && typeof item === 'object') {
+                const type = item.type ? String(item.type) : '';
+                const algValue = item.alg !== undefined && item.alg !== null ? item.alg : item.algorithm;
+                const alg = algValue !== undefined && algValue !== null ? String(algValue) : '';
+                if (type && alg) {
+                    return `${type} (${alg})`;
+                }
+                return type || alg;
+            }
+            if (item !== undefined && item !== null) {
+                return String(item);
+            }
+            return '';
+        })
+        .filter(text => typeof text === 'string' && text.trim() !== '');
+}
+
+function formatDetailValue(value) {
+    if (typeof value === 'boolean') {
+        return value ? 'true' : 'false';
+    }
+    if (value === undefined || value === null) {
+        return '—';
+    }
+    if (Array.isArray(value)) {
+        return value.map(item => formatDetailValue(item)).join(', ');
+    }
+    return String(value);
 }
 
 function formatProtocol(protocol) {
@@ -1240,6 +2158,10 @@ function formatDate(value) {
         month: 'short',
         day: 'numeric',
     }).format(date);
+}
+
+if (typeof window !== 'undefined') {
+    window.focusMdsAuthenticator = focusAuthenticatorByAaguid;
 }
 
 function decodeBase64Url(value) {

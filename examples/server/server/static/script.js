@@ -1784,8 +1784,11 @@ function describeCoseAlgorithm(alg) {
                 </div>`;
             }
 
+            let aaguidHex = '';
+            let aaguidB64 = '';
+            let aaguidB64u = '';
+            let aaguidGuid = '';
             if (cred.aaguid) {
-                let aaguidHex = '';
                 if (typeof cred.aaguid === 'string') {
                     aaguidHex = cred.aaguid.replace(/-/g, '').toLowerCase();
                 } else if (Array.isArray(cred.aaguid)) {
@@ -1804,29 +1807,12 @@ function describeCoseAlgorithm(alg) {
 
                 if (aaguidHex) {
                     aaguidHex = aaguidHex.toLowerCase();
-                    const aaguidB64 = hexToBase64(aaguidHex);
-                    const aaguidB64u = hexToBase64Url(aaguidHex);
-                    const aaguidGuid = aaguidHex.length === 32 ? hexToGuid(aaguidHex) : '';
-
-                    detailsHtml += `
-                    <div style="margin-top: 0.5rem;">
-                        <div><strong>AAGUID:</strong></div>
-                        <div style="font-family: 'Courier New', monospace; font-size: 0.9rem; margin-left: 1rem;">
-                            <div><strong>b64</strong></div>
-                            <div style="background: rgba(0, 114, 206, 0.08); padding: 0.35rem 0.5rem; border-radius: 12px; margin-bottom: 0.35rem;">${aaguidB64}</div>
-                            <div><strong>b64u</strong></div>
-                            <div style="background: rgba(0, 114, 206, 0.08); padding: 0.35rem 0.5rem; border-radius: 12px; margin-bottom: 0.35rem;">${aaguidB64u}</div>
-                            <div><strong>hex</strong></div>
-                            <div style="background: rgba(0, 114, 206, 0.08); padding: 0.35rem 0.5rem; border-radius: 12px; margin-bottom: 0.35rem;">${aaguidHex}</div>
-                            ${aaguidGuid ? `<div><strong>guid</strong></div>
-                            <div style="background: rgba(0, 114, 206, 0.08); padding: 0.35rem 0.5rem; border-radius: 12px;">${aaguidGuid}</div>` : ''}
-                        </div>
-                    </div>`;
+                    aaguidB64 = hexToBase64(aaguidHex);
+                    aaguidB64u = hexToBase64Url(aaguidHex);
+                    aaguidGuid = aaguidHex.length === 32 ? hexToGuid(aaguidHex) : '';
                 }
             }
 
-            detailsHtml += `</div>`;
-            
             const discoverableValue = cred.residentKey ?? cred.discoverable ?? false;
             const largeBlobSupported = cred.largeBlob ?? cred.largeBlobSupported ?? false;
             const propertiesData = (cred.properties && typeof cred.properties === 'object' && cred.properties !== null)
@@ -1863,6 +1849,32 @@ function describeCoseAlgorithm(alg) {
                 renderAttestationResultRow('RPID Hash Valid', attestationRpIdHashValue),
                 renderAttestationResultRow('AAGUID Match', attestationAaguidMatchValue),
             ].join('');
+
+            if (aaguidHex) {
+                const rootVerified = attestationRootValue === true ||
+                    (typeof attestationRootValue === 'string' && attestationRootValue.trim().toLowerCase() === 'true');
+                const aaguidNavigateValue = rootVerified && aaguidGuid ? aaguidGuid : '';
+                const aaguidLabel = aaguidNavigateValue
+                    ? `<button type="button" class="link-button credential-aaguid-button" data-aaguid="${escapeHtml(aaguidNavigateValue)}">AAGUID</button>`
+                    : '<strong>AAGUID:</strong>';
+
+                detailsHtml += `
+                    <div style="margin-top: 0.5rem;">
+                        <div>${aaguidLabel}</div>
+                        <div style="font-family: 'Courier New', monospace; font-size: 0.9rem; margin-left: 1rem;">
+                            <div><strong>b64</strong></div>
+                            <div style="background: rgba(0, 114, 206, 0.08); padding: 0.35rem 0.5rem; border-radius: 12px; margin-bottom: 0.35rem;">${aaguidB64}</div>
+                            <div><strong>b64u</strong></div>
+                            <div style="background: rgba(0, 114, 206, 0.08); padding: 0.35rem 0.5rem; border-radius: 12px; margin-bottom: 0.35rem;">${aaguidB64u}</div>
+                            <div><strong>hex</strong></div>
+                            <div style="background: rgba(0, 114, 206, 0.08); padding: 0.35rem 0.5rem; border-radius: 12px; margin-bottom: 0.35rem;">${aaguidHex}</div>
+                            ${aaguidGuid ? `<div><strong>guid</strong></div>
+                            <div style="background: rgba(0, 114, 206, 0.08); padding: 0.35rem 0.5rem; border-radius: 12px;">${aaguidGuid}</div>` : ''}
+                        </div>
+                    </div>`;
+            }
+
+            detailsHtml += `</div>`;
 
             // Properties section
             detailsHtml += `
@@ -1959,6 +1971,15 @@ function describeCoseAlgorithm(alg) {
             }
 
             modalBody.innerHTML = detailsHtml;
+            const aaguidButton = modalBody.querySelector('.credential-aaguid-button');
+            if (aaguidButton) {
+                aaguidButton.addEventListener('click', () => {
+                    const target = aaguidButton.getAttribute('data-aaguid');
+                    if (target) {
+                        navigateToMdsAuthenticator(target);
+                    }
+                });
+            }
             modalBody.scrollTop = 0;
             if (typeof modalBody.scrollTo === 'function') {
                 modalBody.scrollTo(0, 0);
@@ -1969,6 +1990,26 @@ function describeCoseAlgorithm(alg) {
                 requestAnimationFrame(scheduleResize);
             } else {
                 setTimeout(scheduleResize, 0);
+            }
+        }
+
+        function navigateToMdsAuthenticator(aaguid) {
+            if (!aaguid) {
+                return;
+            }
+
+            switchTab('mds');
+            if (typeof window.focusMdsAuthenticator === 'function') {
+                try {
+                    const result = window.focusMdsAuthenticator(aaguid);
+                    if (result && typeof result.then === 'function') {
+                        result.catch(() => {
+                            // Ignore focus errors.
+                        });
+                    }
+                } catch (error) {
+                    // Ignore navigation errors.
+                }
             }
         }
 
@@ -3734,6 +3775,7 @@ function describeCoseAlgorithm(alg) {
         window.saveJsonEditor = saveJsonEditor;
         window.resetJsonEditor = resetJsonEditor;
         window.showCredentialDetails = showCredentialDetails;
+        window.navigateToMdsAuthenticator = navigateToMdsAuthenticator;
         window.closeCredentialModal = closeCredentialModal;
         window.closeRegistrationResultModal = closeRegistrationResultModal;
         window.deleteCredential = deleteCredential;

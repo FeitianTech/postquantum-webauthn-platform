@@ -240,6 +240,28 @@ body.modal-open {
     outline: none;
 }
 
+.link-button {
+    appearance: none;
+    border: none;
+    background: none;
+    color: var(--primary-color);
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0;
+    font-size: inherit;
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    text-decoration-color: transparent;
+    transition: color 0.2s ease, text-decoration-color 0.2s ease;
+}
+
+.link-button:hover,
+.link-button:focus-visible {
+    color: var(--primary-dark);
+    text-decoration-color: currentColor;
+    outline: none;
+}
+
 .btn-secondary {
     background: rgba(0, 114, 206, 0.08);
     border: 1px solid rgba(0, 114, 206, 0.18);

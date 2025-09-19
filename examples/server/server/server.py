@@ -57,6 +57,7 @@ import os
 import uuid
 import fido2.features
 import base64
+import binascii
 import pickle
 import shutil
 import tempfile
@@ -1704,6 +1705,34 @@ def api_update_mds_metadata():
         payload["last_modified"] = last_modified
 
     return jsonify(payload)
+
+
+@app.route("/api/mds/decode-certificate", methods=["POST"])
+def api_decode_mds_certificate():
+    if not request.is_json:
+        return jsonify({"error": "Expected JSON payload."}), 400
+
+    payload = request.get_json(silent=True) or {}
+    certificate_value = payload.get("certificate")
+    if not certificate_value or not isinstance(certificate_value, str):
+        return jsonify({"error": "Certificate is required."}), 400
+
+    cleaned = "".join(certificate_value.split())
+    padding = len(cleaned) % 4
+    if padding:
+        cleaned += "=" * (4 - padding)
+
+    try:
+        certificate_bytes = base64.b64decode(cleaned)
+    except (ValueError, binascii.Error):
+        return jsonify({"error": "Invalid certificate encoding."}), 400
+
+    try:
+        details = serialize_attestation_certificate(certificate_bytes)
+    except Exception as exc:  # pylint: disable=broad-except
+        return jsonify({"error": f"Unable to decode certificate: {exc}"}), 422
+
+    return jsonify({"details": details})
 
 
 @app.route("/api/register/begin", methods=["POST"])
