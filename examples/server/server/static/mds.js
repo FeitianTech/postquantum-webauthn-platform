@@ -395,6 +395,15 @@ function initializeState(root) {
         });
     }
 
+    const handleTabChanged = event => {
+        if (event?.detail?.tab !== 'mds') {
+            clearRowHighlight();
+        }
+    };
+    if (typeof document !== 'undefined') {
+        document.addEventListener('tab:changed', handleTabChanged);
+    }
+
     return {
         root,
         filters,
@@ -433,6 +442,9 @@ function initializeState(root) {
         activeDetailEntry: null,
         previousDocumentScrollTop: null,
         previousTableScrollTop: null,
+        highlightedRow: null,
+        highlightedRowKey: '',
+        tabChangeHandler: handleTabChanged,
         byAaguid: new Map(),
     };
 }
@@ -723,6 +735,12 @@ function renderTable(entries) {
     });
 
     tbody.appendChild(fragment);
+    if (mdsState.highlightedRowKey) {
+        const restored = applyRowHighlightByKey(mdsState.highlightedRowKey, { scroll: false });
+        if (!restored) {
+            mdsState.highlightedRow = null;
+        }
+    }
     stabiliseColumnWidths();
 }
 
@@ -848,16 +866,110 @@ function resetCertificateTextareaHeights() {
     });
 }
 
+function clearRowHighlight() {
+    if (!mdsState) {
+        return;
+    }
+    if (mdsState.tableBody) {
+        mdsState.tableBody.querySelectorAll('tr.mds-row--highlight').forEach(row => {
+            row.classList.remove('mds-row--highlight');
+        });
+    }
+    mdsState.highlightedRow = null;
+    mdsState.highlightedRowKey = '';
+}
+
+function findRowByKey(key) {
+    if (!mdsState?.tableBody || !key) {
+        return null;
+    }
+    const normalised = key.toLowerCase();
+    const rows = mdsState.tableBody.querySelectorAll('tr[data-aaguid]');
+    for (const row of rows) {
+        if ((row.dataset.aaguid || '').toLowerCase() === normalised) {
+            return row;
+        }
+    }
+    return null;
+}
+
+function applyRowHighlightByKey(key, options = {}) {
+    if (!mdsState || !key) {
+        return false;
+    }
+
+    const row = findRowByKey(key);
+    if (!row) {
+        return false;
+    }
+
+    if (mdsState.highlightedRow && mdsState.highlightedRow !== row) {
+        mdsState.highlightedRow.classList.remove('mds-row--highlight');
+    }
+
+    if (!row.classList.contains('mds-row--highlight')) {
+        row.classList.add('mds-row--highlight');
+    }
+
+    mdsState.highlightedRow = row;
+    mdsState.highlightedRowKey = key;
+
+    if (options.scroll && typeof row.scrollIntoView === 'function') {
+        const behavior = options.behavior || 'smooth';
+        row.scrollIntoView({ block: 'center', behavior });
+    }
+
+    return true;
+}
+
+function scheduleRowHighlight(key, attempt = 0) {
+    if (!mdsState || !key) {
+        return;
+    }
+
+    if (mdsState.highlightedRowKey !== key) {
+        return;
+    }
+
+    const behavior = attempt === 0 ? 'smooth' : 'auto';
+    const applied = applyRowHighlightByKey(key, { scroll: true, behavior });
+    if (applied) {
+        return;
+    }
+
+    if (attempt >= 8) {
+        return;
+    }
+
+    const schedule = () => scheduleRowHighlight(key, attempt + 1);
+    if (typeof requestAnimationFrame === 'function') {
+        requestAnimationFrame(schedule);
+    } else {
+        setTimeout(schedule, attempt < 4 ? 16 : 64);
+    }
+}
+
 function showAuthenticatorDetail(entry, options = {}) {
     if (!mdsState || !entry) {
         return;
     }
+
+    clearRowHighlight();
 
     const sourceEntry = typeof entry.index === 'number' && mdsData[entry.index]
         ? mdsData[entry.index]
         : entry;
 
     mdsState.activeDetailEntry = sourceEntry;
+
+    if (typeof window !== 'undefined') {
+        const doc = document.documentElement;
+        const body = document.body;
+        const scrollTop = typeof window.pageYOffset === 'number'
+            ? window.pageYOffset
+            : (doc?.scrollTop ?? body?.scrollTop ?? 0);
+        mdsState.previousDocumentScrollTop = scrollTop;
+    }
 
     if (mdsState.tableContainer) {
         if (typeof mdsState.tableContainer.scrollTop === 'number') {
@@ -867,15 +979,6 @@ function showAuthenticatorDetail(entry, options = {}) {
     }
     if (mdsState.detailView) {
         mdsState.detailView.hidden = false;
-    }
-
-    if (typeof window !== 'undefined') {
-        const doc = document.documentElement;
-        const body = document.body;
-        const scrollTop = typeof window.pageYOffset === 'number'
-            ? window.pageYOffset
-            : (doc?.scrollTop ?? body?.scrollTop ?? 0);
-        mdsState.previousDocumentScrollTop = scrollTop;
     }
 
     if (mdsState.root) {
@@ -909,7 +1012,19 @@ function hideAuthenticatorDetail() {
     if (mdsState.tableContainer) {
         mdsState.tableContainer.hidden = false;
         if (typeof mdsState.previousTableScrollTop === 'number') {
-            mdsState.tableContainer.scrollTop = mdsState.previousTableScrollTop;
+            const target = mdsState.previousTableScrollTop;
+            mdsState.tableContainer.scrollTop = target;
+            if (typeof requestAnimationFrame === 'function') {
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        mdsState.tableContainer.scrollTop = target;
+                    });
+                });
+            } else {
+                setTimeout(() => {
+                    mdsState.tableContainer.scrollTop = target;
+                }, 0);
+            }
         }
     }
 
@@ -1922,9 +2037,35 @@ async function focusAuthenticatorByAaguid(aaguid) {
     return entry;
 }
 
+async function highlightAuthenticatorRowByAaguid(aaguid) {
+    const entry = await resolveEntryByAaguid(aaguid);
+    if (!entry || !mdsState) {
+        return entry || null;
+    }
+
+    const key = normaliseAaguid(entry.aaguid || entry.id);
+    if (!key) {
+        return entry;
+    }
+
+    mdsState.highlightedRowKey = key;
+
+    if (mdsState.detailView && !mdsState.detailView.hidden) {
+        hideAuthenticatorDetail();
+    }
+
+    resetFilters();
+    applyFilters();
+
+    scheduleRowHighlight(key);
+
+    return entry;
+}
+
 if (typeof window !== 'undefined') {
     window.openMdsAuthenticatorModal = openAuthenticatorModalByAaguid;
     window.focusMdsAuthenticator = focusAuthenticatorByAaguid;
+    window.highlightMdsAuthenticatorRow = highlightAuthenticatorRowByAaguid;
 }
 
 function stabiliseColumnWidths() {

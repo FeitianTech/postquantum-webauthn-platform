@@ -1227,6 +1227,28 @@ select.form-control option {
     color: var(--text-color);
 }
 
+.credential-aaguid-values {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.45rem;
+    margin: 0 0 1.25rem 1rem;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9rem;
+}
+
+.credential-aaguid-value {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.credential-aaguid-value-label {
+    font-weight: 700;
+    color: var(--primary-dark);
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+}
+
 .credential-info-button {
     appearance: none;
     border: 1px solid rgba(0, 114, 206, 0.3);

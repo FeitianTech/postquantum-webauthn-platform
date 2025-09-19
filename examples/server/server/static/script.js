@@ -1850,6 +1850,8 @@ function describeCoseAlgorithm(alg) {
             ].join('');
 
             if (aaguidHex) {
+                const aaguidB64 = hexToBase64(aaguidHex);
+                const aaguidB64u = hexToBase64Url(aaguidHex);
                 const rootVerified = attestationRootValue === true ||
                     (typeof attestationRootValue === 'string' && attestationRootValue.trim().toLowerCase() === 'true');
                 const aaguidNavigateValue = aaguidGuid ? aaguidGuid.toLowerCase() : '';
@@ -1857,10 +1859,41 @@ function describeCoseAlgorithm(alg) {
                     ? `<button type="button" class="credential-info-button credential-aaguid-button" data-aaguid="${escapeHtml(aaguidNavigateValue)}" aria-label="View authenticator metadata">Info</button>`
                     : '';
 
+                const sections = [];
+                if (aaguidB64) {
+                    sections.push(`
+                        <div class="credential-aaguid-value">
+                            <span class="credential-aaguid-value-label">b64</span>
+                            <div class="credential-code-block">${aaguidB64}</div>
+                        </div>`);
+                }
+                if (aaguidB64u) {
+                    sections.push(`
+                        <div class="credential-aaguid-value">
+                            <span class="credential-aaguid-value-label">b64u</span>
+                            <div class="credential-code-block">${aaguidB64u}</div>
+                        </div>`);
+                }
+                sections.push(`
+                    <div class="credential-aaguid-value">
+                        <span class="credential-aaguid-value-label">hex</span>
+                        <div class="credential-code-block">${aaguidHex}</div>
+                    </div>`);
+                if (aaguidGuid) {
+                    sections.push(`
+                        <div class="credential-aaguid-value">
+                            <span class="credential-aaguid-value-label">guid</span>
+                            <div class="credential-code-block">${aaguidGuid}</div>
+                        </div>`);
+                }
+
                 detailsHtml += `
                     <div class="credential-aaguid-row">
                         <span class="credential-aaguid-label">AAGUID</span>
                         ${infoButton}
+                    </div>
+                    <div class="credential-aaguid-values">
+                        ${sections.join('')}
                     </div>`;
             }
 
@@ -1995,20 +2028,20 @@ function describeCoseAlgorithm(alg) {
                 switchToMdsTab('mds');
             }
 
-            const openModal = typeof window.openMdsAuthenticatorModal === 'function'
-                ? window.openMdsAuthenticatorModal
+            const highlightRow = typeof window.highlightMdsAuthenticatorRow === 'function'
+                ? window.highlightMdsAuthenticatorRow
                 : null;
 
-            if (!openModal) {
-                console.warn('Unable to open authenticator details modal: integration unavailable.');
+            if (!highlightRow) {
+                console.warn('Unable to highlight authenticator row: integration unavailable.');
                 return;
             }
 
             let modalResult;
             try {
-                modalResult = openModal(aaguid);
+                modalResult = highlightRow(aaguid);
             } catch (error) {
-                console.error('Failed to open authenticator details modal.', error);
+                console.error('Failed to highlight authenticator row.', error);
                 return;
             }
 
@@ -2022,7 +2055,7 @@ function describeCoseAlgorithm(alg) {
                 modalResult
                     .then(handleEntry)
                     .catch(error => {
-                        console.error('Failed to open authenticator details modal.', error);
+                        console.error('Failed to highlight authenticator row.', error);
                     });
             } else {
                 handleEntry(modalResult);
