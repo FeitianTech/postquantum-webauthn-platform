@@ -889,6 +889,38 @@ def _normalize_aaguid_string(value: Any) -> Optional[str]:
     return None
 
 
+def _coerce_aaguid_hex(value: Any) -> Optional[str]:
+    if value is None:
+        return None
+
+    if isinstance(value, (bytes, bytearray, memoryview)):
+        hex_value = bytes(value).hex()
+        return hex_value if len(hex_value) == 32 else None
+
+    if isinstance(value, str):
+        normalized = _normalize_aaguid_string(value)
+        if normalized and len(normalized) == 32:
+            return normalized
+        return None
+
+    if isinstance(value, Mapping):
+        for key in ("aaguid", "hex", "raw", "value", "guid"):
+            candidate = _coerce_aaguid_hex(value.get(key))
+            if candidate:
+                return candidate
+        return None
+
+    try:
+        raw_bytes = bytes(value)
+    except Exception:
+        return None
+
+    hex_value = raw_bytes.hex()
+    if len(hex_value) != 32:
+        return None
+    return hex_value
+
+
 def _augment_aaguid_fields(container: MutableMapping[str, Any]) -> None:
     if not isinstance(container, MutableMapping):
         return
@@ -2127,15 +2159,20 @@ def register_complete():
     )
 
     credential_data = auth_data.credential_data
-    if getattr(credential_data, 'aaguid', None):
-        aaguid_bytes = bytes(credential_data.aaguid)
-        aaguid_hex = aaguid_bytes.hex()
-        credential_info['properties']['aaguid'] = aaguid_hex
-        credential_info['properties']['aaguidHex'] = aaguid_hex
+    aaguid_value = getattr(credential_data, 'aaguid', None)
+    if aaguid_value is not None:
         try:
-            credential_info['properties']['aaguidGuid'] = str(uuid.UUID(bytes=aaguid_bytes))
-        except ValueError:
-            pass
+            aaguid_bytes = bytes(aaguid_value)
+        except Exception:
+            aaguid_bytes = None
+        if aaguid_bytes is not None and len(aaguid_bytes) == 16:
+            aaguid_hex = aaguid_bytes.hex()
+            credential_info['properties']['aaguid'] = aaguid_hex
+            credential_info['properties']['aaguidHex'] = aaguid_hex
+            try:
+                credential_info['properties']['aaguidGuid'] = str(uuid.UUID(bytes=aaguid_bytes))
+            except ValueError:
+                pass
 
     credentials.append(credential_info)
     # Persist the updated credentials list so authenticate can find it.
@@ -2297,6 +2334,8 @@ def list_credentials():
                                     or properties_copy.get('authenticator_attachment')
                                 )
 
+                                aaguid_hex = _coerce_aaguid_hex(cred_data.get('aaguid'))
+
                                 credential_info = {
                                     'email': email,
                                     'credentialId': base64.b64encode(cred_data['credential_id']).decode('utf-8'),
@@ -2307,9 +2346,9 @@ def list_credentials():
                                     'type': 'WebAuthn',
                                     'createdAt': cred.get('registration_time'),
                                     'signCount': auth_data.get('counter', 0),
-                                    
+
                                     # Detailed WebAuthn data
-                                    'aaguid': cred_data.get('aaguid').hex() if cred_data.get('aaguid') and isinstance(cred_data.get('aaguid'), bytes) else cred_data.get('aaguid'),
+                                    'aaguid': aaguid_hex,
                                     'flags': auth_data.get('flags', {}),
                                     'clientExtensionOutputs': cred.get('client_extension_outputs', {}),
                                     'attestationFormat': cred.get('attestation_format', 'none'),  # Fixed: use attestation_format not attestation_object
@@ -2372,6 +2411,8 @@ def list_credentials():
                                 
                                 # Debug resident key detection
                                 
+                                aaguid_hex = _coerce_aaguid_hex(getattr(cred_data, 'aaguid', None))
+
                                 credential_info = {
                                     'email': email,
                                     'credentialId': base64.b64encode(cred_data.credential_id).decode('utf-8'),
@@ -2384,7 +2425,7 @@ def list_credentials():
                                     'signCount': auth_data.counter if hasattr(auth_data, 'counter') else 0,
                                     
                                     # Detailed WebAuthn data
-                                    'aaguid': cred_data.aaguid.hex() if hasattr(cred_data, 'aaguid') and cred_data.aaguid else None,
+                                    'aaguid': aaguid_hex,
                                     'flags': {
                                         'up': bool(auth_data.flags & auth_data.FLAG.UP) if hasattr(auth_data, 'flags') else True,
                                         'uv': bool(auth_data.flags & auth_data.FLAG.UV) if hasattr(auth_data, 'flags') else True,
@@ -2431,6 +2472,8 @@ def list_credentials():
                                         properties_copy.setdefault('aaguidGuid', credential_info['aaguidGuid'])
                         else:
                             # Old format (just AttestedCredentialData)
+                            aaguid_hex = _coerce_aaguid_hex(getattr(cred, 'aaguid', None))
+
                             credential_info = {
                                 'email': email,
                                 'credentialId': base64.b64encode(cred.credential_id).decode('utf-8'),
@@ -2445,7 +2488,7 @@ def list_credentials():
                                 'authenticatorAttachment': None,
 
                                 # Limited data available for old format
-                                'aaguid': cred.aaguid.hex() if hasattr(cred, 'aaguid') and cred.aaguid else None,
+                                'aaguid': aaguid_hex,
                                 'flags': {
                                     'up': True,  # Default assumptions for old data
                                     'uv': True,
@@ -3150,13 +3193,18 @@ def advanced_register_complete():
 
         aaguid_hex = None
         aaguid_guid = None
-        if getattr(credential_data, 'aaguid', None):
-            aaguid_bytes = bytes(credential_data.aaguid)
-            aaguid_hex = aaguid_bytes.hex()
+        aaguid_value = getattr(credential_data, 'aaguid', None)
+        if aaguid_value is not None:
             try:
-                aaguid_guid = str(uuid.UUID(bytes=aaguid_bytes))
-            except ValueError:
-                aaguid_guid = None
+                aaguid_bytes = bytes(aaguid_value)
+            except Exception:
+                aaguid_bytes = None
+            if aaguid_bytes is not None and len(aaguid_bytes) == 16:
+                aaguid_hex = aaguid_bytes.hex()
+                try:
+                    aaguid_guid = str(uuid.UUID(bytes=aaguid_bytes))
+                except ValueError:
+                    aaguid_guid = None
 
         if aaguid_hex:
             credential_info['properties']['aaguid'] = aaguid_hex

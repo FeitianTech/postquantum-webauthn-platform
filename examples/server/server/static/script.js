@@ -254,6 +254,69 @@ function describeCoseAlgorithm(alg) {
             return allowedList;
         }
 
+        function applyAuthenticatorAttachmentPreference(targetOptions, allowedAttachments, ...fallbackSources) {
+            if (!targetOptions || typeof targetOptions !== 'object') {
+                return;
+            }
+
+            const publicKey = targetOptions.publicKey && typeof targetOptions.publicKey === 'object'
+                ? targetOptions.publicKey
+                : targetOptions;
+
+            if (!publicKey || typeof publicKey !== 'object') {
+                return;
+            }
+
+            let resolved = Array.isArray(allowedAttachments)
+                ? allowedAttachments.map(normalizeAttachmentValue).filter(Boolean)
+                : [];
+
+            if (!resolved.length && Array.isArray(publicKey.allowedAuthenticatorAttachments)) {
+                resolved = publicKey.allowedAuthenticatorAttachments
+                    .map(normalizeAttachmentValue)
+                    .filter(Boolean);
+            }
+
+            if (!resolved.length) {
+                fallbackSources.forEach(source => {
+                    if (resolved.length || !source || typeof source !== 'object') {
+                        return;
+                    }
+                    if (Array.isArray(source.allowedAuthenticatorAttachments)) {
+                        const normalized = source.allowedAuthenticatorAttachments
+                            .map(normalizeAttachmentValue)
+                            .filter(Boolean);
+                        if (normalized.length) {
+                            resolved = normalized;
+                            return;
+                        }
+                    }
+                    if (Array.isArray(source.hints)) {
+                        const derived = deriveAllowedAttachmentsFromHints(source.hints);
+                        if (derived.length) {
+                            resolved = derived;
+                        }
+                    }
+                });
+            }
+
+            if (resolved.length > 0) {
+                publicKey.allowedAuthenticatorAttachments = resolved.slice();
+            } else if (Object.prototype.hasOwnProperty.call(publicKey, 'allowedAuthenticatorAttachments')) {
+                delete publicKey.allowedAuthenticatorAttachments;
+            }
+
+            if (resolved.length === 1) {
+                if (!publicKey.authenticatorSelection || typeof publicKey.authenticatorSelection !== 'object') {
+                    publicKey.authenticatorSelection = {};
+                }
+                publicKey.authenticatorSelection.authenticatorAttachment = resolved[0];
+            } else if (publicKey.authenticatorSelection && typeof publicKey.authenticatorSelection === 'object'
+                && Object.prototype.hasOwnProperty.call(publicKey.authenticatorSelection, 'authenticatorAttachment')) {
+                delete publicKey.authenticatorSelection.authenticatorAttachment;
+            }
+        }
+
 
         function ensureAuthenticationHintsAllowed(publicKey, options = {}) {
             const { requireSelection = false } = options || {};
@@ -4712,7 +4775,7 @@ function describeCoseAlgorithm(alg) {
                     publicKey.extensions.minPinLength = true;
                 }
 
-                enforceAuthenticatorAttachmentWithHints(publicKey, { requireSelection: true });
+                const allowedAttachments = enforceAuthenticatorAttachmentWithHints(publicKey, { requireSelection: true }) || [];
 
                 // Send the complete parsed JSON directly to backend - NO TRANSFORMATION
                 // This preserves all custom extensions and enables full extensibility
@@ -4733,6 +4796,13 @@ function describeCoseAlgorithm(alg) {
                 const json = await response.json();
                 const originalExtensions = json?.publicKey?.extensions;
                 const createOptions = parseCreationOptionsFromJSON(json);
+
+                applyAuthenticatorAttachmentPreference(
+                    createOptions,
+                    allowedAttachments,
+                    json?.publicKey,
+                    publicKey,
+                );
 
                 const convertedExtensions = convertExtensionsForClient(originalExtensions);
                 if (convertedExtensions) {
