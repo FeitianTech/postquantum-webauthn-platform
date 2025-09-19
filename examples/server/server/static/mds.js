@@ -1,6 +1,12 @@
 const MDS_HTML_PATH = 'mds.html';
 const MDS_JWS_PATH = 'fido-mds3.jws';
 const COLUMN_COUNT = 11;
+const MISSING_METADATA_MESSAGE = 'Metadata has not been downloaded yet. Use the Download Metadata button.';
+
+const UPDATE_BUTTON_STATES = {
+    update: { label: 'Update Metadata', busyLabel: 'Updating…' },
+    download: { label: 'Download Metadata', busyLabel: 'Downloading…' },
+};
 
 const CERTIFICATION_OPTIONS = [
     'FIDO_CERTIFIED',
@@ -249,6 +255,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const markup = await response.text();
         tabElement.innerHTML = markup;
         mdsState = initializeState(tabElement);
+        setUpdateButtonMode('update');
     } catch (error) {
         console.error('Failed to initialise the FIDO MDS tab:', error);
         tabElement.innerHTML = `
@@ -367,6 +374,9 @@ function initializeState(root) {
         columnWidths: null,
         columnWidthAttempts: 0,
         updateButton,
+        updateButtonMode: 'update',
+        metadataOverdue: false,
+        metadataNextUpdate: null,
     };
 }
 
@@ -383,12 +393,31 @@ async function loadMdsData(statusNote) {
         const response = await fetch(MDS_JWS_PATH, { cache: 'no-store' });
         if (!response.ok) {
             if (response.status === 404) {
-                setStatus(
-                    `Metadata file not found. Download the latest BLOB from ` +
-                        `<a href="https://mds3.fidoalliance.org/" target="_blank" rel="noopener">mds3.fidoalliance.org</a> ` +
-                        `and save it as <code>${MDS_JWS_PATH}</code> in this directory.`,
-                    'error',
-                );
+                const message = MISSING_METADATA_MESSAGE;
+                setUpdateButtonMode('download');
+                setUpdateButtonAttention(false);
+                if (mdsState) {
+                    mdsState.metadataOverdue = false;
+                    mdsState.metadataNextUpdate = null;
+                }
+                setStatus(message, 'info');
+                if (mdsState) {
+                    mdsState.defaultStatus = { html: message, variant: 'info', title: '' };
+                }
+                mdsData = [];
+                filteredData = [];
+                updateCount(0, 0);
+                if (mdsState?.tableBody) {
+                    const tbody = mdsState.tableBody;
+                    tbody.innerHTML = '';
+                    const emptyRow = document.createElement('tr');
+                    emptyRow.className = 'mds-empty-row';
+                    const cell = document.createElement('td');
+                    cell.colSpan = COLUMN_COUNT;
+                    cell.textContent = MISSING_METADATA_MESSAGE;
+                    emptyRow.appendChild(cell);
+                    tbody.appendChild(emptyRow);
+                }
                 return;
             }
             throw new Error(`Unexpected response status: ${response.status}`);
@@ -407,27 +436,47 @@ async function loadMdsData(statusNote) {
             ? metadata.entries.map(transformEntry).filter(Boolean)
             : [];
         hasLoaded = true;
+        setUpdateButtonMode('update');
+
+        const nextUpdateRaw = typeof metadata.nextUpdate === 'string' ? metadata.nextUpdate : '';
+        const nextUpdateDate = parseIsoDate(nextUpdateRaw);
+        const nextUpdateFormatted = nextUpdateRaw ? formatDate(nextUpdateRaw) : '';
+        const now = Date.now();
+        const isOverdue = Boolean(nextUpdateDate && nextUpdateDate.getTime() <= now);
+
+        if (mdsState) {
+            mdsState.metadataOverdue = isOverdue;
+            mdsState.metadataNextUpdate = nextUpdateRaw || null;
+        }
+        setUpdateButtonAttention(isOverdue);
 
         const optionSets = collectOptionSets(mdsData);
         updateOptionLists(optionSets);
         applyFilters();
 
-        const nextUpdate = metadata.nextUpdate ? `Next update: ${formatDate(metadata.nextUpdate)}` : '';
         const statusParts = [`Loaded ${mdsData.length.toLocaleString()} authenticators.`];
-        if (nextUpdate) {
-            statusParts.push(nextUpdate);
+        let statusVariant = 'success';
+
+        if (isOverdue) {
+            const deadline = nextUpdateFormatted ? ` (${nextUpdateFormatted})` : '';
+            statusParts.push(
+                `The recommended metadata update date has passed${deadline}. Use the <strong>Update Metadata</strong> button to refresh the local file.`,
+            );
+            statusVariant = 'error';
+        } else if (nextUpdateFormatted) {
+            statusParts.push(`Next update recommended by ${nextUpdateFormatted}.`);
         }
         if (note) {
             statusParts.push(note);
         }
         const statusMessage = statusParts.join(' ');
-        setStatus(statusMessage, 'success');
+        setStatus(statusMessage, statusVariant);
 
         if (!mdsState.defaultStatus) {
-            mdsState.defaultStatus = { html: statusMessage, variant: 'success', title: '' };
+            mdsState.defaultStatus = { html: statusMessage, variant: statusVariant, title: '' };
         } else {
             mdsState.defaultStatus.html = statusMessage;
-            mdsState.defaultStatus.variant = 'success';
+            mdsState.defaultStatus.variant = statusVariant;
         }
 
         if (metadata.legalHeader && mdsState.statusEl) {
@@ -448,6 +497,11 @@ async function loadMdsData(statusNote) {
                 `<a href="https://mds3.fidoalliance.org/" target="_blank" rel="noopener">mds3.fidoalliance.org</a>.`,
             'error',
         );
+        setUpdateButtonAttention(false);
+        if (mdsState) {
+            mdsState.metadataOverdue = false;
+            mdsState.metadataNextUpdate = null;
+        }
     } finally {
         isLoading = false;
     }
@@ -732,25 +786,64 @@ function setUpdateButtonBusy(isBusy) {
     }
 
     if (isBusy) {
-        if (!button.dataset.originalLabel) {
-            button.dataset.originalLabel = button.textContent || '';
-        }
         button.disabled = true;
         button.classList.add('is-busy');
         button.setAttribute('aria-busy', 'true');
-        button.textContent = 'Updating…';
+        const mode = mdsState?.updateButtonMode || 'update';
+        const config = UPDATE_BUTTON_STATES[mode] || UPDATE_BUTTON_STATES.update;
+        button.textContent = config.busyLabel;
         return;
     }
 
-    const originalLabel = button.dataset.originalLabel;
     button.disabled = false;
     button.classList.remove('is-busy');
     button.removeAttribute('aria-busy');
-    if (typeof originalLabel === 'string') {
-        button.textContent = originalLabel;
-        delete button.dataset.originalLabel;
-    }
+    const mode = mdsState?.updateButtonMode || 'update';
+    const config = UPDATE_BUTTON_STATES[mode] || UPDATE_BUTTON_STATES.update;
+    button.textContent = config.label;
     button.blur();
+}
+
+function setUpdateButtonMode(mode) {
+    const button = mdsState?.updateButton;
+    if (!button) {
+        return;
+    }
+
+    const action = mode === 'download' ? 'download' : 'update';
+    const config = UPDATE_BUTTON_STATES[action] || UPDATE_BUTTON_STATES.update;
+
+    mdsState.updateButtonMode = action;
+    if (action === 'download') {
+        setUpdateButtonAttention(false);
+        if (mdsState) {
+            mdsState.metadataOverdue = false;
+            mdsState.metadataNextUpdate = null;
+        }
+    }
+
+    button.dataset.action = action;
+    button.dataset.idleLabel = config.label;
+    button.dataset.busyLabel = config.busyLabel;
+
+    if (!button.classList.contains('is-busy')) {
+        button.textContent = config.label;
+    }
+}
+
+function setUpdateButtonAttention(active) {
+    const button = mdsState?.updateButton;
+    if (!button) {
+        return;
+    }
+
+    const shouldHighlight = Boolean(active);
+    button.classList.toggle('mds-update-button--attention', shouldHighlight);
+    if (shouldHighlight) {
+        button.setAttribute('title', 'Metadata update recommended');
+    } else if (button.title === 'Metadata update recommended') {
+        button.removeAttribute('title');
+    }
 }
 
 async function refreshMetadata() {
@@ -770,7 +863,10 @@ async function refreshMetadata() {
     setUpdateButtonBusy(true);
 
     try {
-        setStatus('Updating metadata BLOB…', 'info');
+        const action = mdsState?.updateButtonMode === 'download' ? 'download' : 'update';
+        const inProgressMessage =
+            action === 'download' ? 'Downloading metadata BLOB…' : 'Updating metadata BLOB…';
+        setStatus(inProgressMessage, 'info');
 
         const response = await fetch('/api/mds/update', {
             method: 'POST',
@@ -792,16 +888,34 @@ async function refreshMetadata() {
             throw new Error(message);
         }
 
-        const note =
+        const payloadMessage =
             (payload && typeof payload.message === 'string' && payload.message.trim()) || '';
         const shouldReload = (payload && payload.updated) || !hasLoaded;
+        const note =
+            action === 'download' && shouldReload
+                ? ['Download complete.', payloadMessage].filter(Boolean).join(' ')
+                : payloadMessage;
 
         if (shouldReload) {
             hasLoaded = false;
             await loadMdsData(note);
         } else {
-            const message = note || 'Metadata already up to date.';
-            setStatus(message, 'info', { restoreDefault: true, delay: 5000 });
+            const overdue = Boolean(mdsState?.metadataOverdue);
+            let message = note || 'Metadata already up to date.';
+            let variant = 'info';
+
+            if (overdue) {
+                const formattedDeadline = mdsState?.metadataNextUpdate
+                    ? formatDate(mdsState.metadataNextUpdate)
+                    : '';
+                const deadlineSuffix = formattedDeadline ? ` (${formattedDeadline})` : '';
+                const overdueMessage = `Metadata is still older than the recommended refresh date${deadlineSuffix}. The published file may not have been updated yet.`;
+                message = note ? `${note} ${overdueMessage}` : overdueMessage;
+                variant = 'error';
+                setUpdateButtonAttention(true);
+            }
+
+            setStatus(message, variant, { restoreDefault: true, delay: 5000 });
         }
     } catch (error) {
         console.error('Failed to update metadata BLOB:', error);
@@ -1100,6 +1214,17 @@ function latestEffectiveDate(statusReports) {
         return dateB - dateA;
     });
     return sorted[0]?.effectiveDate || '';
+}
+
+function parseIsoDate(value) {
+    if (typeof value !== 'string' || !value.trim()) {
+        return null;
+    }
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+        return null;
+    }
+    return parsed;
 }
 
 function formatDate(value) {
