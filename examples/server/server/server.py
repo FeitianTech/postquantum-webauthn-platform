@@ -71,7 +71,8 @@ import json
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime, formatdate
 
-from typing import Any, Dict, List, Mapping, Optional, Tuple, Union
+from collections.abc import Iterable
+from typing import Any, Dict, List, Mapping, Optional, Set, Tuple, Union
 
 try:
     import certifi
@@ -236,6 +237,134 @@ def extract_credential_data(cred):
     else:
         # Old format - return as is (it's already AttestedCredentialData)
         return cred
+
+HINT_TO_ATTACHMENT_MAP: Dict[str, str] = {
+    "security-key": "cross-platform",
+    "hybrid": "cross-platform",
+    "client-device": "platform",
+}
+
+
+def _normalize_attachment(value: Any) -> Optional[str]:
+    if not isinstance(value, str):
+        return None
+    normalized = value.strip().lower()
+    return normalized or None
+
+
+def _derive_allowed_attachments_from_hints(hints: Optional[Iterable[str]]) -> List[str]:
+    allowed: List[str] = []
+    if not hints:
+        return allowed
+    seen: Set[str] = set()
+    for hint in hints:
+        if not isinstance(hint, str):
+            continue
+        mapped = HINT_TO_ATTACHMENT_MAP.get(hint.strip().lower())
+        if mapped and mapped not in seen:
+            allowed.append(mapped)
+            seen.add(mapped)
+    return allowed
+
+
+def _normalize_attachment_list(raw_values: Any) -> List[str]:
+    if isinstance(raw_values, Mapping):
+        candidates: Iterable[Any] = raw_values.values()
+    elif isinstance(raw_values, (str, bytes, bytearray)) or raw_values is None:
+        return []
+    elif isinstance(raw_values, Iterable):
+        candidates = raw_values
+    else:
+        return []
+
+    normalized: List[str] = []
+    seen: Set[str] = set()
+    for candidate in candidates:
+        normalized_value = _normalize_attachment(candidate)
+        if normalized_value and normalized_value not in seen:
+            normalized.append(normalized_value)
+            seen.add(normalized_value)
+    return normalized
+
+
+def _combine_allowed_attachment_values(
+    hints: Iterable[str],
+    requested: Any,
+) -> Tuple[List[str], List[str], Optional[str]]:
+    derived_allowed = _derive_allowed_attachments_from_hints(hints)
+    allowed: List[str] = list(derived_allowed)
+    normalized_requested = _normalize_attachment_list(requested)
+
+    requested_is_list = isinstance(requested, list)
+    requested_has_entries = requested_is_list and len(requested) > 0
+
+    if normalized_requested:
+        if allowed:
+            allowed = [value for value in allowed if value in normalized_requested]
+        else:
+            allowed = list(normalized_requested)
+        if not allowed:
+            return (
+                [],
+                normalized_requested,
+                "No authenticator attachments remain after combining hints with allowedAuthenticatorAttachments.",
+            )
+    elif requested_has_entries:
+        return (
+            [],
+            normalized_requested,
+            "No authenticator attachments remain after combining hints with allowedAuthenticatorAttachments.",
+        )
+
+    return allowed, normalized_requested, None
+
+
+def _build_credential_attachment_map() -> Dict[bytes, Optional[str]]:
+    attachment_map: Dict[bytes, Optional[str]] = {}
+    try:
+        pkl_files = [f for f in os.listdir(basepath) if f.endswith('_credential_data.pkl')]
+    except Exception:
+        return attachment_map
+
+    for pkl_file in pkl_files:
+        email = pkl_file.replace('_credential_data.pkl', '')
+        try:
+            user_creds = readkey(email)
+        except Exception:
+            continue
+
+        for cred in user_creds:
+            credential_data = extract_credential_data(cred)
+            credential_id: Optional[bytes] = None
+            if isinstance(credential_data, Mapping):
+                raw_id = credential_data.get('credential_id')
+                if isinstance(raw_id, (bytes, bytearray, memoryview)):
+                    credential_id = bytes(raw_id)
+            else:
+                raw_id = getattr(credential_data, 'credential_id', None)
+                if isinstance(raw_id, (bytes, bytearray, memoryview)):
+                    credential_id = bytes(raw_id)
+
+            if credential_id is None:
+                continue
+
+            attachment_value: Optional[str] = None
+            if isinstance(cred, Mapping):
+                attachment_value = _normalize_attachment(
+                    cred.get('authenticator_attachment')
+                    or cred.get('authenticatorAttachment')
+                )
+                if attachment_value is None:
+                    properties = cred.get('properties')
+                    if isinstance(properties, Mapping):
+                        attachment_value = _normalize_attachment(
+                            properties.get('authenticatorAttachment')
+                            or properties.get('authenticator_attachment')
+                        )
+
+            attachment_map[credential_id] = attachment_value
+
+    return attachment_map
 
 def savekey(name, key):
     name = name + "_credential_data.pkl"
@@ -1325,10 +1454,10 @@ def perform_attestation_checks(
 
     results: Dict[str, Any] = {
         "attestation_format": None,
-        "signature_valid": False,
-        "root_valid": False,
-        "rp_id_hash_valid": False,
-        "aaguid_match": False,
+        "signature_valid": None,
+        "root_valid": None,
+        "rp_id_hash_valid": None,
+        "aaguid_match": None,
         "client_data": {},
         "authenticator_data": {},
         "metadata": {},
@@ -1558,28 +1687,36 @@ def perform_attestation_checks(
         "verification_data": _encode_base64url(verification_data),
     }
 
-    signature_valid = False
+    attestation_format_value = (attestation_object.fmt or "").lower()
+    signature_valid: Optional[bool] = None
     attestation_result = None
-    try:
-        attestation_cls = Attestation.for_type(attestation_object.fmt)
-        attestation_instance = attestation_cls()
-        attestation_result = attestation_instance.verify(
-            attestation_object.att_stmt,
-            attestation_object.auth_data,
-            client_data_hash,
-        )
-        signature_valid = True
-    except UnsupportedType as exc:
-        results["errors"].append(f"unsupported_attestation: {exc}")
-    except (InvalidSignature, InvalidData) as exc:
-        results["errors"].append(f"attestation_invalid: {exc}")
-    except Exception as exc:
-        results["errors"].append(f"attestation_error: {exc}")
+    if attestation_format_value == "none":
+        signature_valid = False
+    else:
+        try:
+            attestation_cls = Attestation.for_type(attestation_object.fmt)
+            attestation_instance = attestation_cls()
+            attestation_result = attestation_instance.verify(
+                attestation_object.att_stmt,
+                attestation_object.auth_data,
+                client_data_hash,
+            )
+            signature_valid = True
+        except UnsupportedType as exc:
+            results["errors"].append(f"unsupported_attestation: {exc}")
+            signature_valid = False
+        except (InvalidSignature, InvalidData) as exc:
+            results["errors"].append(f"attestation_invalid: {exc}")
+            signature_valid = False
+        except Exception as exc:
+            results["errors"].append(f"attestation_error: {exc}")
+            signature_valid = False
 
     results["signature_valid"] = signature_valid
 
     metadata_entry = None
     now = datetime.now(timezone.utc)
+    root_valid: Optional[bool] = None
     if signature_valid and attestation_result is not None:
         trust_path = attestation_result.trust_path or []
         if trust_path:
@@ -1613,19 +1750,26 @@ def perform_attestation_checks(
                             attestation_object,
                             client_data_hash,
                         )
-                        results["root_valid"] = metadata_entry is not None
-                        if metadata_entry is None:
+                        if metadata_entry is not None:
+                            root_valid = True
+                        else:
+                            root_valid = None
                             results["errors"].append("metadata_entry_not_found")
                     except UntrustedAttestation as exc:
                         results["errors"].append(f"untrusted_attestation: {exc}")
+                        root_valid = False
                 else:
                     results["errors"].append("metadata_not_available")
+                    root_valid = None
             else:
                 results["errors"].append("certificate_chain_invalid")
+                root_valid = False
         else:
             results["errors"].append("trust_path_missing")
-    elif signature_valid is False:
+            root_valid = None
+    elif signature_valid is False and attestation_format_value != "none":
         results["errors"].append("attestation_signature_invalid")
+        root_valid = False
 
     metadata_description: Optional[str] = None
     metadata_aaguid: Optional[str] = None
@@ -1660,10 +1804,22 @@ def perform_attestation_checks(
                 )
             except Exception:
                 metadata_aaguid = None
-                results["aaguid_match"] = False
+                results["aaguid_match"] = None
 
     if metadata_entry is None and credential_aaguid_bytes:
-        results["aaguid_match"] = False
+        if metadata_aaguid_bytes:
+            results["aaguid_match"] = metadata_aaguid_bytes == credential_aaguid_bytes
+        else:
+            results["aaguid_match"] = False
+
+    if results["aaguid_match"] is False and not credential_aaguid_bytes:
+        results["aaguid_match"] = None
+
+    if metadata_entry is None and not credential_aaguid_bytes:
+        results["aaguid_match"] = None
+
+    if results["aaguid_match"] is None and credential_aaguid_bytes and metadata_entry is not None:
+        results["aaguid_match"] = metadata_aaguid_bytes == credential_aaguid_bytes
 
     results["metadata"] = {
         "available": metadata_entry is not None,
@@ -1672,10 +1828,16 @@ def perform_attestation_checks(
         "algorithm_supported": metadata_algorithm_supported,
     }
 
-    if metadata_entry is not None and not results["aaguid_match"]:
+    if metadata_entry is not None and results["aaguid_match"] is False:
         results["errors"].append("aaguid_mismatch")
     if metadata_algorithm_supported is False:
         results["errors"].append("algorithm_not_in_metadata")
+
+    if results["aaguid_match"] is False and metadata_entry is None:
+        results["aaguid_match"] = None
+
+    if root_valid is not None:
+        results["root_valid"] = root_valid
 
     return results
 
@@ -1824,6 +1986,10 @@ def register_complete():
 
     auth_data = server.register_complete(session["state"], response)
 
+    authenticator_attachment_response = _normalize_attachment(
+        response.get('authenticatorAttachment') if isinstance(response, Mapping) else None
+    )
+
     # Store comprehensive credential data (same format as advanced)
     credential_info = {
         'credential_data': auth_data.credential_data,  # AttestedCredentialData
@@ -1840,6 +2006,7 @@ def register_complete():
         'attestation_statement': attestation_statement,  # Store attestation statement for details
         'attestation_certificate': attestation_certificate_details,
         'client_extension_outputs': client_extension_results,
+        'authenticator_attachment': authenticator_attachment_response,
         # Store request parameters for simple registration (defaults)
         'request_params': {
             'user_verification': 'discouraged',
@@ -1856,6 +2023,8 @@ def register_complete():
             'credentialIdLength': len(auth_data.credential_data.credential_id),
             'fakeCredentialIdLengthRequested': None,  # Simple auth doesn't use fake credentials
             'hintsSent': [],  # Simple auth doesn't use hints
+            'allowedAuthenticatorAttachments': [],
+            'authenticatorAttachment': authenticator_attachment_response,
             # Enhanced largeBlob debugging information (simple auth defaults)
             'largeBlobRequested': {},  # Simple auth doesn't use largeBlob
             'largeBlobClientOutput': client_extension_results.get('largeBlob', {}),
@@ -1875,7 +2044,9 @@ def register_complete():
 
     algo = auth_data.credential_data.public_key[3]
     algoname = ""
-    if algo == -49:
+    if algo == -50:
+        algoname = "ML-DSA-87 (PQC)"
+    elif algo == -49:
         algoname = "ML-DSA-65 (PQC)"
     elif algo == -48:
         algoname = "ML-DSA-44 (PQC)"
@@ -2017,7 +2188,16 @@ def list_credentials():
                                 cred_data = cred['credential_data']
                                 auth_data = cred['auth_data']
                                 user_info = cred['user_info']
-                                
+
+                                properties_source = cred.get('properties')
+                                properties_copy = properties_source.copy() if isinstance(properties_source, dict) else {}
+                                attachment_value = _normalize_attachment(
+                                    cred.get('authenticator_attachment')
+                                    or cred.get('authenticatorAttachment')
+                                    or properties_copy.get('authenticatorAttachment')
+                                    or properties_copy.get('authenticator_attachment')
+                                )
+
                                 credential_info = {
                                     'email': email,
                                     'credentialId': base64.b64encode(cred_data['credential_id']).decode('utf-8'),
@@ -2036,14 +2216,18 @@ def list_credentials():
                                     'attestationFormat': cred.get('attestation_format', 'none'),  # Fixed: use attestation_format not attestation_object
                                     'attestationStatement': convert_bytes_for_json(cred.get('attestation_statement', {})),  # Convert bytes for JSON
                                     'publicKeyAlgorithm': cred_data.get('public_key', {}).get(3),
-                                    
+                                    'authenticatorAttachment': attachment_value,
+
                                     # Properties
                                     'residentKey': auth_data.get('flags', {}).get('be', False),
                                     'largeBlob': cred.get('client_extension_outputs', {}).get('largeBlob', {}).get('supported', False),
-                                    
+
                                     # Properties section - detailed credential information
-                                    'properties': cred.get('properties', {}),
+                                    'properties': properties_copy,
                                 }
+
+                                if attachment_value is not None:
+                                    properties_copy['authenticatorAttachment'] = attachment_value
 
                                 certificate_details = cred.get('attestation_certificate')
                                 if certificate_details is not None:
@@ -2057,6 +2241,15 @@ def list_credentials():
                                 cred_data = cred['credential_data']
                                 auth_data = cred['auth_data']
                                 user_info = cred['user_info']
+
+                                properties_source = cred.get('properties')
+                                properties_copy = properties_source.copy() if isinstance(properties_source, dict) else {}
+                                attachment_value = _normalize_attachment(
+                                    cred.get('authenticator_attachment')
+                                    or cred.get('authenticatorAttachment')
+                                    or properties_copy.get('authenticatorAttachment')
+                                    or properties_copy.get('authenticator_attachment')
+                                )
                                 
                                 # Extract detailed information
                                 # Properties determined from multiple sources for best accuracy
@@ -2096,21 +2289,25 @@ def list_credentials():
                                     'attestationFormat': cred.get('attestation_format', 'none'),  # Use stored attestation format
                                     'attestationStatement': convert_bytes_for_json(cred.get('attestation_statement', {})),  # Include attestation statement with bytes converted
                                     'publicKeyAlgorithm': cred_data.public_key[3] if hasattr(cred_data, 'public_key') and len(cred_data.public_key) > 3 else None,
-                                    
+                                    'authenticatorAttachment': attachment_value,
+
                                     # Properties determined from multiple sources for best accuracy
                                     'residentKey': resident_key_status,
                                     'largeBlob': cred.get('client_extension_outputs', {}).get('largeBlob', {}).get('supported', False),
-                                    
+
                                     # Add original request parameters for debugging/verification
                                     'requestParams': cred.get('request_params', {}),
-                                    
+
                                     # Properties section - detailed credential information
-                                    'properties': cred.get('properties', {}),
+                                    'properties': properties_copy,
                                 }
 
                                 certificate_details = cred.get('attestation_certificate')
                                 if certificate_details is not None:
                                     credential_info['attestationCertificate'] = certificate_details
+
+                                if attachment_value is not None:
+                                    properties_copy['authenticatorAttachment'] = attachment_value
 
                                 add_public_key_material(credential_info, getattr(cred_data, 'public_key', {}))
                                 if credential_info.get('publicKeyAlgorithm') is not None:
@@ -2127,7 +2324,9 @@ def list_credentials():
                                 'type': 'WebAuthn',
                                 'createdAt': None,
                                 'signCount': 0,
-                                
+
+                                'authenticatorAttachment': None,
+
                                 # Limited data available for old format
                                 'aaguid': cred.aaguid.hex() if hasattr(cred, 'aaguid') and cred.aaguid else None,
                                 'flags': {
@@ -2283,6 +2482,7 @@ def advanced_register_begin():
     else:
         # Default algorithms
         temp_server.allowed_algorithms = [
+            PublicKeyCredentialParameters(type=PublicKeyCredentialType.PUBLIC_KEY, alg=-50),  # ML-DSA-87
             PublicKeyCredentialParameters(type=PublicKeyCredentialType.PUBLIC_KEY, alg=-48),  # ML-DSA-44
             PublicKeyCredentialParameters(type=PublicKeyCredentialType.PUBLIC_KEY, alg=-49),  # ML-DSA-65
             PublicKeyCredentialParameters(type=PublicKeyCredentialType.PUBLIC_KEY, alg=-7),  # ES256
@@ -2291,7 +2491,34 @@ def advanced_register_begin():
     
     # Process authenticatorSelection
     auth_selection = public_key.get("authenticatorSelection", {})
-    
+    if not isinstance(auth_selection, dict):
+        auth_selection = {}
+
+    raw_hints = public_key.get("hints")
+    hints_list: List[str] = []
+    if isinstance(raw_hints, list):
+        hints_list = [item for item in raw_hints if isinstance(item, str)]
+
+    requested_allowed = (
+        public_key.get('allowedAuthenticatorAttachments')
+        if 'allowedAuthenticatorAttachments' in public_key
+        else None
+    )
+    (
+        allowed_attachment_values,
+        _normalized_requested,
+        combine_error,
+    ) = _combine_allowed_attachment_values(hints_list, requested_allowed)
+    if combine_error:
+        return jsonify({"error": combine_error}), 400
+
+    if allowed_attachment_values:
+        public_key['allowedAuthenticatorAttachments'] = allowed_attachment_values
+    elif 'allowedAuthenticatorAttachments' in public_key:
+        public_key.pop('allowedAuthenticatorAttachments', None)
+
+    session["advanced_register_allowed_attachments"] = list(allowed_attachment_values)
+
     uv_req = UserVerificationRequirement.PREFERRED
     user_verification = auth_selection.get("userVerification", "preferred")
     if user_verification == "required":
@@ -2301,9 +2528,32 @@ def advanced_register_begin():
     
     auth_attachment = None
     authenticator_attachment = auth_selection.get("authenticatorAttachment")
-    if authenticator_attachment == "platform":
+    normalized_attachment = (
+        authenticator_attachment.strip()
+        if isinstance(authenticator_attachment, str)
+        else None
+    )
+    if allowed_attachment_values:
+        if normalized_attachment:
+            if normalized_attachment not in allowed_attachment_values:
+                return (
+                    jsonify(
+                        {
+                            "error": (
+                                "Selected authenticator attachment is not permitted "
+                                "by the provided hints."
+                            )
+                        }
+                    ),
+                    400,
+                )
+        elif len(allowed_attachment_values) == 1:
+            normalized_attachment = allowed_attachment_values[0]
+            auth_selection["authenticatorAttachment"] = normalized_attachment
+
+    if normalized_attachment == "platform":
         auth_attachment = AuthenticatorAttachment.PLATFORM
-    elif authenticator_attachment == "cross-platform":
+    elif normalized_attachment == "cross-platform":
         auth_attachment = AuthenticatorAttachment.CROSS_PLATFORM
     
     rk_req = ResidentKeyRequirement.PREFERRED
@@ -2440,26 +2690,67 @@ def advanced_register_complete():
 
     # The rest of the data IS the original JSON editor content (primary source of truth)
     original_request = {key: value for key, value in data.items() if not key.startswith("__")}
-    
+
+    original_public_key = original_request.get("publicKey") if isinstance(original_request, Mapping) else None
+    original_hints: List[str] = []
+    if isinstance(original_public_key, Mapping):
+        raw_hints = original_public_key.get("hints")
+        if isinstance(raw_hints, list):
+            original_hints = [item for item in raw_hints if isinstance(item, str)]
+    requested_allowed = (
+        original_public_key.get('allowedAuthenticatorAttachments')
+        if isinstance(original_public_key, Mapping)
+        and 'allowedAuthenticatorAttachments' in original_public_key
+        else None
+    )
+    (
+        request_allowed_attachments,
+        _normalized_requested,
+        combine_error,
+    ) = _combine_allowed_attachment_values(original_hints, requested_allowed)
+    if combine_error:
+        return jsonify({"error": combine_error}), 400
+
+    session_allowed_marker = session.pop("advanced_register_allowed_attachments", None)
+    if session_allowed_marker is None:
+        allowed_attachments = request_allowed_attachments
+    else:
+        allowed_attachments = _normalize_attachment_list(session_allowed_marker)
+
+    response_attachment = _normalize_attachment(
+        response.get('authenticatorAttachment') if isinstance(response, Mapping) else None
+    )
+    if allowed_attachments:
+        if response_attachment is None:
+            return jsonify({
+                "error": "Authenticator attachment could not be determined to enforce selected hints."
+            }), 400
+        if response_attachment not in allowed_attachments:
+            return jsonify({
+                "error": "Authenticator attachment is not permitted by the selected hints."
+            }), 400
+
     if not original_request.get("publicKey"):
         return jsonify({"error": "Invalid request: Missing publicKey in JSON editor content"}), 400
-    
+
     # Extract user information from the JSON editor content
     public_key = original_request["publicKey"]
     user_info = public_key.get("user", {})
     username = user_info.get("name", "")
     display_name = user_info.get("displayName", username)
-    
+
     if not username:
         return jsonify({"error": "Username is required in user.name"}), 400
-    
+
     credentials = readkey(username)
-    
+
     auth_selection = public_key.get('authenticatorSelection', {})
     resident_key_requested = auth_selection.get('residentKey')
     resident_key_required = auth_selection.get('requireResidentKey')
     if resident_key_required is None:
         resident_key_required = resident_key_requested == 'required'
+
+    allowed_attachment_values = list(request_allowed_attachments)
 
     (
         attestation_format,
@@ -2482,6 +2773,10 @@ def advanced_register_complete():
         parsed_extension_results
         if parsed_extension_results
         else (response.get('clientExtensionResults', {}) if isinstance(response, dict) else {})
+    )
+
+    authenticator_attachment_response = _normalize_attachment(
+        response.get('authenticatorAttachment') if isinstance(response, Mapping) else None
     )
 
     try:
@@ -2522,10 +2817,10 @@ def advanced_register_complete():
             rp.id,
         )
 
-        attestation_signature_valid = bool(attestation_checks.get("signature_valid"))
-        attestation_root_valid = bool(attestation_checks.get("root_valid"))
-        attestation_rp_id_hash_valid = bool(attestation_checks.get("rp_id_hash_valid"))
-        attestation_aaguid_match = bool(attestation_checks.get("aaguid_match"))
+        attestation_signature_valid = attestation_checks.get("signature_valid")
+        attestation_root_valid = attestation_checks.get("root_valid")
+        attestation_rp_id_hash_valid = attestation_checks.get("rp_id_hash_valid")
+        attestation_aaguid_match = attestation_checks.get("aaguid_match")
         attestation_checks_safe = _make_json_safe(attestation_checks)
         attestation_summary = {
             "signatureValid": attestation_signature_valid,
@@ -2599,6 +2894,7 @@ def advanced_register_complete():
             'attestation_format': attestation_format,
             'attestation_statement': attestation_statement,
             'client_extension_outputs': client_extension_results,
+            'authenticator_attachment': authenticator_attachment_response,
             # Store complete original WebAuthn request for full traceability
             'original_webauthn_request': original_request,
             # Properties section - detailed credential information
@@ -2608,6 +2904,8 @@ def advanced_register_complete():
                 'credentialIdLength': len(auth_data.credential_data.credential_id),
                 'fakeCredentialIdLengthRequested': None,  # Extract from original request if present
                 'hintsSent': public_key.get('hints', []),
+                'allowedAuthenticatorAttachments': allowed_attachment_values,
+                'authenticatorAttachment': authenticator_attachment_response,
                 # Enhanced largeBlob debugging information
                 'largeBlobRequested': public_key.get('extensions', {}).get('largeBlob', {}),
                 'largeBlobClientOutput': client_extension_results.get('largeBlob', {}),
@@ -2639,7 +2937,9 @@ def advanced_register_complete():
         # Get algorithm info
         algo = auth_data.credential_data.public_key[3]
         algoname = ""
-        if algo == -49:
+        if algo == -50:
+            algoname = "ML-DSA-87 (PQC)"
+        elif algo == -49:
             algoname = "ML-DSA-65 (PQC)"
         elif algo == -48:
             algoname = "ML-DSA-44 (PQC)"
@@ -2827,11 +3127,30 @@ def advanced_authenticate_begin():
         return jsonify({"error": "Invalid request: Missing publicKey in CredentialRequestOptions"}), 400
     
     public_key = data["publicKey"]
-    
+
     # Extract required fields with validation
     if not public_key.get("challenge"):
         return jsonify({"error": "Missing required field: challenge"}), 400
-    
+
+    raw_hints = public_key.get("hints")
+    hints_list: List[str] = []
+    if isinstance(raw_hints, list):
+        hints_list = [item for item in raw_hints if isinstance(item, str)]
+    requested_allowed = (
+        public_key.get("allowedAuthenticatorAttachments")
+        if "allowedAuthenticatorAttachments" in public_key
+        else None
+    )
+    (
+        allowed_attachment_values,
+        _normalized_requested,
+        combine_error,
+    ) = _combine_allowed_attachment_values(hints_list, requested_allowed)
+    if combine_error:
+        return jsonify({"error": combine_error}), 400
+
+    session["advanced_authenticate_allowed_attachments"] = list(allowed_attachment_values)
+
     # Helper function to extract binary values
     def extract_binary_value(value):
         if isinstance(value, str):
@@ -2864,10 +3183,14 @@ def advanced_authenticate_begin():
     )
     from fido2.server import Fido2Server
     import secrets
-    
+
     # Create temporary server instance
     temp_server = Fido2Server(rp)
-    
+
+    credential_attachment_map: Dict[bytes, Optional[str]] = {}
+    if allowed_attachment_values:
+        credential_attachment_map = _build_credential_attachment_map()
+
     # Process timeout
     timeout = public_key.get("timeout", 90000)
     temp_server.timeout = timeout / 1000.0 if timeout else None
@@ -2910,15 +3233,48 @@ def advanced_authenticate_begin():
                     email = pkl_file.replace('_credential_data.pkl', '')
                     try:
                         user_creds = readkey(email)
-                        credential_data_list = [extract_credential_data(cred) for cred in user_creds]
-                        selected_credentials.extend(credential_data_list)
+                        for cred in user_creds:
+                            credential_data = extract_credential_data(cred)
+                            cred_id_bytes: Optional[bytes] = None
+                            if isinstance(credential_data, Mapping):
+                                raw_id = credential_data.get('credential_id')
+                                if isinstance(raw_id, (bytes, bytearray, memoryview)):
+                                    cred_id_bytes = bytes(raw_id)
+                            else:
+                                raw_id = getattr(credential_data, 'credential_id', None)
+                                if isinstance(raw_id, (bytes, bytearray, memoryview)):
+                                    cred_id_bytes = bytes(raw_id)
+                            if cred_id_bytes:
+                                selected_credentials.append(PublicKeyCredentialDescriptor(
+                                    type=PublicKeyCredentialType.PUBLIC_KEY,
+                                    id=cred_id_bytes
+                                ))
                     except Exception:
                         continue
             except Exception:
                 selected_credentials = []
-    
+
+        if allowed_attachment_values and isinstance(selected_credentials, list):
+            filtered_descriptors: List[PublicKeyCredentialDescriptor] = []
+            for descriptor in selected_credentials:
+                descriptor_id_bytes: Optional[bytes] = None
+                try:
+                    descriptor_id_bytes = bytes(descriptor.id)
+                except Exception:
+                    descriptor_id_bytes = None
+                if descriptor_id_bytes is None:
+                    continue
+                attachment_value = credential_attachment_map.get(descriptor_id_bytes)
+                if attachment_value and attachment_value in allowed_attachment_values:
+                    filtered_descriptors.append(descriptor)
+            selected_credentials = filtered_descriptors
+
     # For non-empty allowCredentials, ensure we have credentials
     if allow_credentials and selected_credentials is not None and len(selected_credentials) == 0:
+        if allowed_attachment_values:
+            return jsonify({
+                "error": "No credentials matched the selected hints. Please adjust your hints or select different credentials."
+            }), 404
         return jsonify({"error": "No matching credentials found. Please register first."}), 404
     
     # Process extensions - pass through ALL extensions for full extensibility
@@ -2991,9 +3347,49 @@ def advanced_authenticate_complete():
     
     # The rest of the data IS the original JSON editor content (primary source of truth)
     original_request = {key: value for key, value in data.items() if not key.startswith("__")}
-    
-    if not original_request.get("publicKey"):
+
+    public_key_raw = original_request.get("publicKey")
+    if not isinstance(public_key_raw, Mapping):
         return jsonify({"error": "Invalid request: Missing publicKey in JSON editor content"}), 400
+
+    public_key = public_key_raw
+
+    raw_hints = public_key.get("hints")
+    hints_list: List[str] = []
+    if isinstance(raw_hints, list):
+        hints_list = [item for item in raw_hints if isinstance(item, str)]
+
+    requested_allowed = (
+        public_key.get("allowedAuthenticatorAttachments")
+        if "allowedAuthenticatorAttachments" in public_key
+        else None
+    )
+    (
+        request_allowed_attachments,
+        _normalized_requested,
+        combine_error,
+    ) = _combine_allowed_attachment_values(hints_list, requested_allowed)
+    if combine_error:
+        return jsonify({"error": combine_error}), 400
+
+    session_allowed_marker = session.pop("advanced_authenticate_allowed_attachments", None)
+    if session_allowed_marker is None:
+        allowed_attachments = request_allowed_attachments
+    else:
+        allowed_attachments = _normalize_attachment_list(session_allowed_marker)
+
+    if allowed_attachments:
+        response_attachment = _normalize_attachment(
+            response.get('authenticatorAttachment') if isinstance(response, Mapping) else None
+        )
+        if response_attachment is None:
+            return jsonify({
+                "error": "Authenticator attachment could not be determined to enforce selected hints."
+            }), 400
+        if response_attachment not in allowed_attachments:
+            return jsonify({
+                "error": "Authenticator attachment is not permitted by the selected hints."
+            }), 400
     
     # Get all credentials from all users to find the matching one
     all_credentials = []
@@ -3022,7 +3418,6 @@ def advanced_authenticate_complete():
         )
         
         # Extract debug information from original request for traceability
-        public_key = original_request.get("publicKey", {})
         hints_used = public_key.get("hints", [])
         
         debug_info = {

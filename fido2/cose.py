@@ -117,6 +117,7 @@ class CoseKey(dict):
         algs: Sequence[Type[CoseKey]] = [
             MLDSA44,
             MLDSA65,
+            MLDSA87,
             ES256,
             EdDSA,
             ES384,
@@ -133,6 +134,50 @@ T_CoseKey = TypeVar("T_CoseKey", bound=CoseKey)
 
 class UnsupportedKey(CoseKey):
     """A COSE key with an unsupported algorithm."""
+
+
+class MLDSA87(CoseKey):
+    ALGORITHM = -50
+    _HASH_ALG = hashes.SHA256()
+
+    def verify(self, message, signature):
+        if self[1] != 7:
+            raise ValueError("Unsupported ML-DSA-87 Param")
+        oqs_module = _require_oqs()
+        public_key = self.get(-1)
+        if public_key is None:
+            raise ValueError("Missing ML-DSA-87 public key")
+        message_bytes = (
+            message
+            if isinstance(message, (bytes, bytearray, memoryview))
+            else bytes(message)
+        )
+        signature_bytes = (
+            signature
+            if isinstance(signature, (bytes, bytearray, memoryview))
+            else bytes(signature)
+        )
+        public_key_bytes = (
+            public_key
+            if isinstance(public_key, (bytes, bytearray, memoryview))
+            else bytes(public_key)
+        )
+        with oqs_module.Signature("ML-DSA-87") as verifier:
+            if not verifier.verify(
+                bytes(message_bytes), bytes(signature_bytes), bytes(public_key_bytes)
+            ):
+                raise ValueError("Invalid ML-DSA-87 signature")
+
+    @classmethod
+    def from_cryptography_key(cls, public_key):
+        return cls(
+            {
+                1: 7,
+                3: cls.ALGORITHM,
+                -1: public_key,
+            }
+        )
+
 
 class MLDSA65(CoseKey):
     ALGORITHM = -49

@@ -29,7 +29,16 @@
 from __future__ import absolute_import, unicode_literals
 
 from fido2 import cbor
-from fido2.cose import CoseKey, ES256, RS256, EdDSA, MLDSA44, MLDSA65, UnsupportedKey
+from fido2.cose import (
+    CoseKey,
+    ES256,
+    RS256,
+    EdDSA,
+    MLDSA44,
+    MLDSA65,
+    MLDSA87,
+    UnsupportedKey,
+)
 from binascii import a2b_hex
 
 import unittest
@@ -152,6 +161,19 @@ class TestCoseKey(unittest.TestCase):
         cose_map = {1: 7, 3: -49, -1: public_key}
         key = CoseKey.parse(cose_map)
         self.assertIsInstance(key, MLDSA65)
+        self.assertEqual(key[-1], public_key)
+        key.verify(message, signature)
+
+    @unittest.skipUnless(OQS_AVAILABLE, "oqs is required for ML-DSA-87 test")
+    def test_MLDSA87_parse_verify(self):
+        with oqs.Signature("ML-DSA-87") as signer:
+            public_key = signer.generate_keypair()
+            message = b"python-fido2 ML-DSA-87"
+            signature = signer.sign(message)
+
+        cose_map = {1: 7, 3: -50, -1: public_key}
+        key = CoseKey.parse(cose_map)
+        self.assertIsInstance(key, MLDSA87)
         self.assertEqual(key[-1], public_key)
         key.verify(message, signature)
 
