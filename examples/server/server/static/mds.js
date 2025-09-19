@@ -301,14 +301,14 @@ function updateScrollTopButtonVisibility(options = {}) {
 
     const containerRect = mdsState.tableContainer?.getBoundingClientRect?.();
     const headerRect = mdsState.table?.tHead?.getBoundingClientRect?.();
-    const thresholds = [];
+    const boundaryCandidates = [0];
     if (containerRect && Number.isFinite(containerRect.top)) {
-        thresholds.push(containerRect.top);
+        boundaryCandidates.push(containerRect.top);
     }
     if (headerRect && Number.isFinite(headerRect.bottom)) {
-        thresholds.push(headerRect.bottom);
+        boundaryCandidates.push(headerRect.bottom);
     }
-    const boundary = thresholds.length ? Math.max(...thresholds) : 0;
+    const boundary = Math.max(...boundaryCandidates);
     const shouldShow = rowRect.top < boundary;
 
     if (shouldShow) {

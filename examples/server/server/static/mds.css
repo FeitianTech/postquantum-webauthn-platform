@@ -829,7 +829,6 @@
 
 .mds-modal__textarea {
     width: 100%;
-    min-height: 260px;
     padding: 0.85rem 1rem;
     border-radius: 16px;
     border: 1px solid rgba(0, 114, 206, 0.18);

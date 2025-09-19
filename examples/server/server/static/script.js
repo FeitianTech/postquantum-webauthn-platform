@@ -339,7 +339,7 @@ function describeCoseAlgorithm(alg) {
         // Convert hex to GUID format (for AAGUID display)
         function hexToGuid(hexString) {
             if (!hexString || hexString.length !== 32) return '';
-            
+
             // Format as GUID: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
             return [
                 hexString.substring(0, 8),
@@ -350,10 +350,48 @@ function describeCoseAlgorithm(alg) {
             ].join('-');
         }
 
+        function normaliseAaguidValue(value) {
+            if (value === null || value === undefined) {
+                return '';
+            }
+            if (typeof value === 'string') {
+                const cleaned = value.replace(/[^0-9a-fA-F]/g, '');
+                return cleaned ? cleaned.toLowerCase() : '';
+            }
+            if (Array.isArray(value)) {
+                try {
+                    const bytes = Uint8Array.from(value);
+                    return Array.from(bytes).map(byte => byte.toString(16).padStart(2, '0')).join('');
+                } catch (error) {
+                    return '';
+                }
+            }
+            if (ArrayBuffer.isView(value)) {
+                const view = new Uint8Array(value.buffer, value.byteOffset, value.byteLength);
+                return Array.from(view).map(byte => byte.toString(16).padStart(2, '0')).join('');
+            }
+            if (value instanceof ArrayBuffer) {
+                return Array.from(new Uint8Array(value)).map(byte => byte.toString(16).padStart(2, '0')).join('');
+            }
+            if (typeof value === 'object') {
+                if (typeof value.hex === 'function') {
+                    try {
+                        return normaliseAaguidValue(value.hex());
+                    } catch (error) {
+                        return '';
+                    }
+                }
+                if (typeof value.hex === 'string') {
+                    return normaliseAaguidValue(value.hex);
+                }
+            }
+            return '';
+        }
+
         // Convert hex to JavaScript Uint8Array format
         function hexToJs(hexString) {
             if (!hexString) return '';
-            
+
             // Convert hex to bytes
             const bytes = [];
             for (let i = 0; i < hexString.length; i += 2) {
@@ -1787,30 +1825,7 @@ function describeCoseAlgorithm(alg) {
                 </div>`;
             }
 
-            let aaguidHex = '';
-            let aaguidGuid = '';
-            if (cred.aaguid) {
-                if (typeof cred.aaguid === 'string') {
-                    aaguidHex = cred.aaguid.replace(/-/g, '').toLowerCase();
-                } else if (Array.isArray(cred.aaguid)) {
-                    aaguidHex = Array.from(cred.aaguid).map(byte => byte.toString(16).padStart(2, '0')).join('');
-                } else if (ArrayBuffer.isView(cred.aaguid)) {
-                    aaguidHex = Array.from(new Uint8Array(cred.aaguid.buffer, cred.aaguid.byteOffset, cred.aaguid.byteLength))
-                        .map(byte => byte.toString(16).padStart(2, '0'))
-                        .join('');
-                } else if (cred.aaguid instanceof ArrayBuffer) {
-                    aaguidHex = Array.from(new Uint8Array(cred.aaguid))
-                        .map(byte => byte.toString(16).padStart(2, '0'))
-                        .join('');
-                } else if (typeof cred.aaguid.hex === 'function') {
-                    aaguidHex = cred.aaguid.hex();
-                }
-
-                if (aaguidHex) {
-                    aaguidHex = aaguidHex.toLowerCase();
-                    aaguidGuid = aaguidHex.length === 32 ? hexToGuid(aaguidHex) : '';
-                }
-            }
+            let aaguidHex = normaliseAaguidValue(cred.aaguid);
 
             const discoverableValue = cred.residentKey ?? cred.discoverable ?? false;
             const largeBlobSupported = cred.largeBlob ?? cred.largeBlobSupported ?? false;
@@ -1849,9 +1864,29 @@ function describeCoseAlgorithm(alg) {
                 renderAttestationResultRow('AAGUID Match', attestationAaguidMatchValue),
             ].join('');
 
+            if (!aaguidHex) {
+                const fallbackAaguidCandidates = [
+                    propertiesData?.aaguid,
+                    propertiesData?.aaguidHex,
+                    propertiesData?.aaguidGuid,
+                    attestationSummaryData?.aaguid,
+                    attestationSummaryData?.aaguidHex,
+                    attestationSummaryData?.aaguidGuid,
+                ];
+                for (const candidate of fallbackAaguidCandidates) {
+                    const normalised = normaliseAaguidValue(candidate);
+                    if (normalised) {
+                        aaguidHex = normalised;
+                        break;
+                    }
+                }
+            }
+
             if (aaguidHex) {
+                aaguidHex = aaguidHex.toLowerCase();
                 const aaguidB64 = hexToBase64(aaguidHex);
                 const aaguidB64u = hexToBase64Url(aaguidHex);
+                const aaguidGuid = aaguidHex.length === 32 ? hexToGuid(aaguidHex) : '';
                 const rootVerified = attestationRootValue === true ||
                     (typeof attestationRootValue === 'string' && attestationRootValue.trim().toLowerCase() === 'true');
                 const aaguidNavigateValue = aaguidGuid ? aaguidGuid.toLowerCase() : '';
