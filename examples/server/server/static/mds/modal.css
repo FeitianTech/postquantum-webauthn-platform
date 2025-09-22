@@ -9,6 +9,14 @@
     padding: 1.5rem;
 }
 
+#mds-authenticator-modal {
+    z-index: 1250;
+}
+
+#mds-certificate-modal {
+    z-index: 1300;
+}
+
 .mds-modal[hidden] {
     display: none;
 }
@@ -17,10 +25,10 @@
     background: var(--surface-color);
     border-radius: 20px;
     box-shadow: 0 30px 65px rgba(15, 39, 64, 0.35);
-    width: 85vw;
-    max-width: 85vw;
-    height: 85vh;
-    max-height: 85vh;
+    width: 95vw;
+    max-width: 95vw;
+    height: 95vh;
+    max-height: 95vh;
     display: flex;
     flex-direction: column;
 }

@@ -2169,20 +2169,15 @@ function applyWidthsToCells(cells, widths) {
     });
 }
 
-function normaliseColumnWidths(widths, state = mdsState) {
+function normaliseColumnWidths(widths) {
     if (!Array.isArray(widths)) {
         return [];
     }
-    const minWidths = Array.isArray(state?.columnMinWidths) ? state.columnMinWidths : [];
-    return widths.map((value, index) => {
-        const minWidth = Math.max(
-            DEFAULT_MIN_COLUMN_WIDTH,
-            Math.round(minWidths[index] || 0),
-        );
+    return widths.map(value => {
         if (!Number.isFinite(value) || value <= 0) {
-            return minWidth;
+            return DEFAULT_MIN_COLUMN_WIDTH;
         }
-        return Math.max(Math.round(value), minWidth);
+        return Math.max(Math.round(value), DEFAULT_MIN_COLUMN_WIDTH);
     });
 }
 
@@ -2191,8 +2186,7 @@ function computeColumnMinWidths(state = mdsState) {
         return [];
     }
 
-    const table = state.table;
-    const headerRow = table.tHead.rows[0];
+    const headerRow = state.table.tHead.rows[0];
     if (!headerRow) {
         return [];
     }
@@ -2202,126 +2196,7 @@ function computeColumnMinWidths(state = mdsState) {
         return [];
     }
 
-    const previousMinWidths = Array.isArray(state.columnMinWidths) ? state.columnMinWidths : [];
-    const hasClientRects = typeof table.getClientRects === 'function';
-    const isHidden = (table.offsetParent === null) && (!hasClientRects || table.getClientRects().length === 0);
-    if (isHidden) {
-        return previousMinWidths.slice(0, columnCount);
-    }
-
-    const rows = [];
-    if (table.tHead) {
-        rows.push(...table.tHead.rows);
-    }
-    if (state.tableBody) {
-        rows.push(...state.tableBody.rows);
-    }
-
-    const savedCellStyles = [];
-    rows.forEach(row => {
-        Array.from(row.cells).forEach(cell => {
-            if (!cell) {
-                return;
-            }
-            savedCellStyles.push({
-                cell,
-                width: cell.style.width,
-                minWidth: cell.style.minWidth,
-                maxWidth: cell.style.maxWidth,
-            });
-            cell.style.width = '';
-            cell.style.minWidth = '';
-            cell.style.maxWidth = '';
-        });
-    });
-
-    const previousLayout = table.style.tableLayout || '';
-    const previousWidth = table.style.width || '';
-
-    table.style.tableLayout = 'auto';
-    table.style.width = 'auto';
-
-    if (typeof table.getBoundingClientRect === 'function') {
-        table.getBoundingClientRect();
-    } else if (typeof table.offsetWidth === 'number') {
-        // Force layout in browsers without getBoundingClientRect.
-        void table.offsetWidth; // eslint-disable-line no-unused-expressions
-    }
-
-    const measuredWidths = new Array(columnCount).fill(DEFAULT_MIN_COLUMN_WIDTH);
-    const canComputeStyle = typeof window !== 'undefined'
-        && typeof window.getComputedStyle === 'function'
-        && typeof HTMLElement !== 'undefined';
-
-    const updateForCell = (cell, index) => {
-        if (!cell || cell.colSpan !== 1) {
-            return;
-        }
-
-        let candidate = 0;
-        if (typeof cell.getBoundingClientRect === 'function') {
-            const rect = cell.getBoundingClientRect();
-            if (rect && Number.isFinite(rect.width)) {
-                candidate = rect.width;
-            }
-        }
-
-        let intrinsic = Number.isFinite(cell.scrollWidth) ? cell.scrollWidth : 0;
-        if (canComputeStyle && cell instanceof HTMLElement) {
-            const style = window.getComputedStyle(cell);
-            const cssMin = parseFloat(style.minWidth) || 0;
-            const borderLeft = parseFloat(style.borderLeftWidth) || 0;
-            const borderRight = parseFloat(style.borderRightWidth) || 0;
-
-            if (cssMin > 0) {
-                intrinsic = Math.max(intrinsic, cssMin);
-            }
-            if (Number.isFinite(borderLeft) && Number.isFinite(borderRight)) {
-                intrinsic += borderLeft + borderRight;
-            }
-        }
-
-        const width = Math.max(candidate, intrinsic, DEFAULT_MIN_COLUMN_WIDTH);
-        measuredWidths[index] = Math.max(measuredWidths[index], Math.ceil(width));
-    };
-
-    rows.forEach(row => {
-        let columnIndex = 0;
-        Array.from(row.cells).forEach(cell => {
-            const span = cell.colSpan || 1;
-            if (span !== 1) {
-                columnIndex += span;
-                return;
-            }
-            updateForCell(cell, columnIndex);
-            columnIndex += 1;
-        });
-    });
-
-    savedCellStyles.forEach(({ cell, width, minWidth, maxWidth }) => {
-        cell.style.width = width;
-        cell.style.minWidth = minWidth;
-        cell.style.maxWidth = maxWidth;
-    });
-
-    if (previousLayout) {
-        table.style.tableLayout = previousLayout;
-    } else {
-        table.style.removeProperty('table-layout');
-    }
-
-    if (previousWidth) {
-        table.style.width = previousWidth;
-    } else {
-        table.style.removeProperty('width');
-    }
-
-    return measuredWidths.map((value, index) => {
-        const fallback = Number.isFinite(previousMinWidths[index]) ? previousMinWidths[index] : DEFAULT_MIN_COLUMN_WIDTH;
-        const measured = Number.isFinite(value) && value > 0 ? value : DEFAULT_MIN_COLUMN_WIDTH;
-        const finalWidth = Math.max(measured, fallback, DEFAULT_MIN_COLUMN_WIDTH);
-        return Math.max(Math.ceil(finalWidth), DEFAULT_MIN_COLUMN_WIDTH);
-    });
+    return new Array(columnCount).fill(DEFAULT_MIN_COLUMN_WIDTH);
 }
 
 function ensureColumnMetrics(state = mdsState) {
@@ -2367,7 +2242,7 @@ function ensureColumnMetrics(state = mdsState) {
         widths = state.columnWidths.slice();
     }
 
-    state.columnWidths = normaliseColumnWidths(widths, state);
+    state.columnWidths = normaliseColumnWidths(widths);
     return true;
 }
 
@@ -2434,11 +2309,10 @@ function handleColumnResizeStart(event) {
         return;
     }
 
-    const minWidths = Array.isArray(mdsState.columnMinWidths) ? mdsState.columnMinWidths : [];
     const startLeft = widths[columnIndex];
     const startRight = widths[nextIndex];
-    const minLeft = Math.max(minWidths[columnIndex] || DEFAULT_MIN_COLUMN_WIDTH, DEFAULT_MIN_COLUMN_WIDTH);
-    const minRight = Math.max(minWidths[nextIndex] || DEFAULT_MIN_COLUMN_WIDTH, DEFAULT_MIN_COLUMN_WIDTH);
+    const minLeft = DEFAULT_MIN_COLUMN_WIDTH;
+    const minRight = DEFAULT_MIN_COLUMN_WIDTH;
 
     if (!Number.isFinite(startLeft) || !Number.isFinite(startRight)) {
         return;

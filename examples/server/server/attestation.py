@@ -1173,7 +1173,7 @@ def perform_attestation_checks(
     signature_valid: Optional[bool] = None
     attestation_result = None
     if attestation_format_value == "none":
-        signature_valid = False
+        signature_valid = None
     else:
         try:
             attestation_cls = Attestation.for_type(attestation_object.fmt)

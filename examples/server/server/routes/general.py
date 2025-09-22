@@ -56,10 +56,13 @@ def _auto_refresh_metadata() -> None:
             app.logger.info("FIDO MDS metadata already up to date.")
 
 
-# Flask 2.3 removed the ``before_first_request`` hook, so register the
-# automatic refresh with ``before_request`` instead and guard the logic above
-# to only run once per process.
-app.before_request(_auto_refresh_metadata)
+def ensure_metadata_bootstrapped(skip_if_reloader_parent: bool = True) -> None:
+    """Ensure the MDS metadata cache is refreshed once per server process."""
+
+    if skip_if_reloader_parent and app.debug and os.environ.get("WERKZEUG_RUN_MAIN") != "true":
+        return
+
+    _auto_refresh_metadata()
 
 
 @app.route("/")
