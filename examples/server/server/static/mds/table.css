@@ -38,11 +38,20 @@
     z-index: 3;
 }
 
+.mds-column-resizer.is-disabled {
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
 .mds-column-resizer::before {
     content: '';
     width: 1px;
     background: rgba(0, 114, 206, 0.22);
     height: 100%;
+}
+
+.mds-column-resizer.is-disabled::before {
+    background: rgba(0, 114, 206, 0.12);
 }
 
 .mds-column-resizer:hover::before,

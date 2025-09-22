@@ -37,6 +37,9 @@ const certificateCache = new Map();
 let scrollTopButtonUpdateScheduled = false;
 let columnResizerMetricsScheduled = false;
 let rowHeightLockScheduled = false;
+const MDS_METADATA_STORAGE_KEY = 'fido.mds.metadataPayload';
+const MDS_METADATA_INFO_KEY = 'fido.mds.metadataInfo';
+let sessionStorageWarningShown = false;
 
 const SORT_NONE = 'none';
 const SORT_ASCENDING = 'asc';
@@ -147,6 +150,96 @@ function scheduleRowHeightLock() {
         });
     } else {
         setTimeout(apply, 0);
+    }
+}
+
+function getSessionStorage() {
+    if (typeof window === 'undefined') {
+        return null;
+    }
+    try {
+        return window.sessionStorage || null;
+    } catch (error) {
+        if (!sessionStorageWarningShown) {
+            console.warn('Session storage unavailable:', error);
+            sessionStorageWarningShown = true;
+        }
+        return null;
+    }
+}
+
+function readMetadataCache() {
+    const storage = getSessionStorage();
+    if (!storage) {
+        return null;
+    }
+
+    let payload = null;
+    try {
+        payload = storage.getItem(MDS_METADATA_STORAGE_KEY);
+    } catch (error) {
+        console.warn('Failed to read cached metadata payload:', error);
+        return null;
+    }
+
+    if (!payload) {
+        return null;
+    }
+
+    let metadata = null;
+    try {
+        metadata = JSON.parse(payload);
+    } catch (error) {
+        console.warn('Failed to parse cached metadata payload:', error);
+        clearMetadataCache();
+        return null;
+    }
+
+    let info = null;
+    try {
+        const infoRaw = storage.getItem(MDS_METADATA_INFO_KEY);
+        if (infoRaw) {
+            info = JSON.parse(infoRaw);
+        }
+    } catch (error) {
+        info = null;
+    }
+
+    return { metadata, info };
+}
+
+function storeMetadataCache(payload, info) {
+    const storage = getSessionStorage();
+    if (!storage) {
+        return;
+    }
+
+    try {
+        if (typeof payload !== 'string' || !payload) {
+            storage.removeItem(MDS_METADATA_STORAGE_KEY);
+        } else {
+            storage.setItem(MDS_METADATA_STORAGE_KEY, payload);
+        }
+        if (info && typeof info === 'object') {
+            storage.setItem(MDS_METADATA_INFO_KEY, JSON.stringify(info));
+        } else {
+            storage.removeItem(MDS_METADATA_INFO_KEY);
+        }
+    } catch (error) {
+        console.warn('Failed to cache metadata payload:', error);
+    }
+}
+
+function clearMetadataCache() {
+    const storage = getSessionStorage();
+    if (!storage) {
+        return;
+    }
+    try {
+        storage.removeItem(MDS_METADATA_STORAGE_KEY);
+        storage.removeItem(MDS_METADATA_INFO_KEY);
+    } catch (error) {
+        console.warn('Failed to clear cached metadata payload:', error);
     }
 }
 
@@ -481,12 +574,8 @@ function initializeState(root) {
 
     const authenticatorModal = root.querySelector('#mds-authenticator-modal');
     const authenticatorClose = root.querySelector('#mds-authenticator-modal-close');
-    const authenticatorBack = root.querySelector('#mds-authenticator-modal-back');
     if (authenticatorClose) {
         authenticatorClose.addEventListener('click', () => closeAuthenticatorModal());
-    }
-    if (authenticatorBack) {
-        authenticatorBack.addEventListener('click', () => closeAuthenticatorModal());
     }
     if (authenticatorModal) {
         authenticatorModal.addEventListener('click', event => {
@@ -528,6 +617,7 @@ function initializeState(root) {
         columnWidthAttempts: 0,
         columnResizers: [],
         columnResizeState: null,
+        columnResizersEnabled: false,
         updateButton,
         updateButtonMode: 'update',
         metadataOverdue: false,
@@ -544,7 +634,6 @@ function initializeState(root) {
         authenticatorModalSubtitle: root.querySelector('#mds-authenticator-modal-subtitle'),
         authenticatorModalBody: root.querySelector('#mds-authenticator-modal-body'),
         authenticatorModalClose: authenticatorClose,
-        authenticatorModalBack: authenticatorBack,
         activeDetailEntry: null,
         highlightedRow: null,
         highlightedRowKey: '',
@@ -555,15 +644,110 @@ function initializeState(root) {
     };
 
     setupColumnResizers(state);
+    setColumnResizersEnabled(false, state);
     return state;
 }
 
-async function loadMdsData(statusNote) {
+async function applyMetadataEntries(metadata, { note = '' } = {}) {
     if (!mdsState) {
         return;
     }
 
-    if (hasLoaded) {
+    const entries = Array.isArray(metadata?.entries)
+        ? metadata.entries.map((entry, index) => transformEntry(entry, index)).filter(Boolean)
+        : [];
+
+    mdsData = entries;
+    setUpdateButtonMode('update');
+    resetSortState();
+
+    if (mdsState) {
+        const map = new Map();
+        mdsData.forEach(item => {
+            const key = normaliseAaguid(item.aaguid || item.id);
+            if (key) {
+                map.set(key, item);
+            }
+        });
+        mdsState.byAaguid = map;
+    }
+
+    const nextUpdateRaw = typeof metadata?.nextUpdate === 'string' ? metadata.nextUpdate : '';
+    const nextUpdateDate = parseIsoDate(nextUpdateRaw);
+    const nextUpdateFormatted = nextUpdateRaw ? formatDate(nextUpdateRaw) : '';
+    const now = Date.now();
+    const isOverdue = Boolean(nextUpdateDate && nextUpdateDate.getTime() <= now);
+
+    if (mdsState) {
+        mdsState.metadataOverdue = isOverdue;
+        mdsState.metadataNextUpdate = nextUpdateRaw || null;
+    }
+    setUpdateButtonAttention(isOverdue);
+
+    const optionSets = collectOptionSets(mdsData);
+    updateOptionLists(optionSets);
+
+    try {
+        await populateCertificateDerivedInfo(mdsData);
+    } catch (error) {
+        console.error('Failed to derive attestation certificate details:', error);
+    }
+
+    applyFilters();
+
+    hasLoaded = true;
+
+    const statusParts = [`Loaded ${mdsData.length.toLocaleString()} authenticators.`];
+    let statusVariant = 'success';
+
+    if (isOverdue) {
+        const deadline = nextUpdateFormatted ? ` (${nextUpdateFormatted})` : '';
+        statusParts.push(
+            `The recommended metadata update date has passed${deadline}. Use the <strong>Update Metadata</strong> button to refresh the local file.`,
+        );
+        statusVariant = 'error';
+    } else if (nextUpdateFormatted) {
+        statusParts.push(`Next update recommended by ${nextUpdateFormatted}.`);
+    }
+
+    if (note) {
+        statusParts.push(note);
+    }
+
+    const statusMessage = statusParts.join(' ');
+    setStatus(statusMessage, statusVariant);
+
+    if (!mdsState.defaultStatus) {
+        mdsState.defaultStatus = { html: statusMessage, variant: statusVariant, title: '' };
+    } else {
+        mdsState.defaultStatus.html = statusMessage;
+        mdsState.defaultStatus.variant = statusVariant;
+    }
+
+    if (metadata?.legalHeader && mdsState.statusEl) {
+        mdsState.statusEl.setAttribute('title', metadata.legalHeader);
+        if (mdsState.defaultStatus) {
+            mdsState.defaultStatus.title = metadata.legalHeader;
+        }
+    } else if (mdsState?.statusEl) {
+        mdsState.statusEl.removeAttribute('title');
+        if (mdsState.defaultStatus) {
+            mdsState.defaultStatus.title = '';
+        }
+    }
+
+    setColumnResizersEnabled(true);
+}
+
+async function loadMdsData(statusNote, options = {}) {
+    if (!mdsState) {
+        return;
+    }
+
+    const opts = options && typeof options === 'object' ? options : {};
+    const forceReload = Boolean(opts.forceReload);
+
+    if (hasLoaded && !forceReload) {
         return;
     }
 
@@ -573,12 +757,31 @@ async function loadMdsData(statusNote) {
     }
 
     const note = typeof statusNote === 'string' ? statusNote.trim() : '';
+    const previousHasLoaded = hasLoaded;
+
+    if (!forceReload) {
+        const cached = readMetadataCache();
+        if (cached?.metadata) {
+            try {
+                await applyMetadataEntries(cached.metadata, { note });
+                setColumnResizersEnabled(hasLoaded);
+                return;
+            } catch (error) {
+                console.warn('Failed to apply cached metadata payload:', error);
+                clearMetadataCache();
+            }
+        }
+    }
+
     setStatus('Loading metadata BLOB…', 'info');
+    setColumnResizersEnabled(false);
     isLoading = true;
+    let stateUpdated = false;
 
     const task = (async () => {
         try {
-            const response = await fetch(MDS_JWS_PATH, { cache: 'no-store' });
+            const fetchOptions = forceReload ? { cache: 'reload' } : { cache: 'no-cache' };
+            const response = await fetch(MDS_JWS_PATH, fetchOptions);
             if (!response.ok) {
                 if (response.status === 404) {
                     const message = MISSING_METADATA_MESSAGE;
@@ -603,12 +806,15 @@ async function loadMdsData(statusNote) {
                         emptyRow.className = 'mds-empty-row';
                         const cell = document.createElement('td');
                         cell.colSpan = COLUMN_COUNT;
-                        cell.textContent = MISSING_METADATA_MESSAGE;
+                        cell.textContent = message;
                         emptyRow.appendChild(cell);
                         tbody.appendChild(emptyRow);
                     }
                     hideScrollTopButton();
                     resetSortState();
+                    clearMetadataCache();
+                    stateUpdated = true;
+                    hasLoaded = false;
                     return;
                 }
                 throw new Error(`Unexpected response status: ${response.status}`);
@@ -623,84 +829,16 @@ async function loadMdsData(statusNote) {
             const payload = decodeBase64Url(payloadSegment);
             const metadata = JSON.parse(payload);
 
-            mdsData = Array.isArray(metadata.entries)
-                ? metadata.entries.map((entry, index) => transformEntry(entry, index)).filter(Boolean)
-                : [];
-            setUpdateButtonMode('update');
+            await applyMetadataEntries(metadata, { note });
+            stateUpdated = true;
 
-            resetSortState();
-
-            if (mdsState) {
-                const map = new Map();
-                mdsData.forEach(item => {
-                    const key = normaliseAaguid(item.aaguid || item.id);
-                    if (key) {
-                        map.set(key, item);
-                    }
-                });
-                mdsState.byAaguid = map;
-            }
-
-            const nextUpdateRaw = typeof metadata.nextUpdate === 'string' ? metadata.nextUpdate : '';
-            const nextUpdateDate = parseIsoDate(nextUpdateRaw);
-            const nextUpdateFormatted = nextUpdateRaw ? formatDate(nextUpdateRaw) : '';
-            const now = Date.now();
-            const isOverdue = Boolean(nextUpdateDate && nextUpdateDate.getTime() <= now);
-
-            if (mdsState) {
-                mdsState.metadataOverdue = isOverdue;
-                mdsState.metadataNextUpdate = nextUpdateRaw || null;
-            }
-            setUpdateButtonAttention(isOverdue);
-
-            const optionSets = collectOptionSets(mdsData);
-            updateOptionLists(optionSets);
-
-            try {
-                await populateCertificateDerivedInfo(mdsData);
-            } catch (error) {
-                console.error('Failed to derive attestation certificate details:', error);
-            }
-
-            applyFilters();
-            hasLoaded = true;
-
-            const statusParts = [`Loaded ${mdsData.length.toLocaleString()} authenticators.`];
-            let statusVariant = 'success';
-
-            if (isOverdue) {
-                const deadline = nextUpdateFormatted ? ` (${nextUpdateFormatted})` : '';
-                statusParts.push(
-                    `The recommended metadata update date has passed${deadline}. Use the <strong>Update Metadata</strong> button to refresh the local file.`,
-                );
-                statusVariant = 'error';
-            } else if (nextUpdateFormatted) {
-                statusParts.push(`Next update recommended by ${nextUpdateFormatted}.`);
-            }
-            if (note) {
-                statusParts.push(note);
-            }
-            const statusMessage = statusParts.join(' ');
-            setStatus(statusMessage, statusVariant);
-
-            if (!mdsState.defaultStatus) {
-                mdsState.defaultStatus = { html: statusMessage, variant: statusVariant, title: '' };
-            } else {
-                mdsState.defaultStatus.html = statusMessage;
-                mdsState.defaultStatus.variant = statusVariant;
-            }
-
-            if (metadata.legalHeader && mdsState.statusEl) {
-                mdsState.statusEl.setAttribute('title', metadata.legalHeader);
-                if (mdsState.defaultStatus) {
-                    mdsState.defaultStatus.title = metadata.legalHeader;
-                }
-            } else if (mdsState?.statusEl) {
-                mdsState.statusEl.removeAttribute('title');
-                if (mdsState.defaultStatus) {
-                    mdsState.defaultStatus.title = '';
-                }
-            }
+            const lastModified = response.headers?.get('Last-Modified') || null;
+            const etag = response.headers?.get('ETag') || null;
+            storeMetadataCache(payload, {
+                lastModified,
+                etag,
+                cachedAt: new Date().toISOString(),
+            });
         } catch (error) {
             console.error('Failed to load FIDO MDS metadata:', error);
             setStatus(
@@ -712,6 +850,9 @@ async function loadMdsData(statusNote) {
             if (mdsState) {
                 mdsState.metadataOverdue = false;
                 mdsState.metadataNextUpdate = null;
+            }
+            if (!previousHasLoaded) {
+                clearMetadataCache();
             }
         } finally {
             isLoading = false;
@@ -725,6 +866,10 @@ async function loadMdsData(statusNote) {
         if (loadPromise === task) {
             loadPromise = null;
         }
+        if (!stateUpdated && previousHasLoaded) {
+            hasLoaded = true;
+        }
+        setColumnResizersEnabled(hasLoaded);
     }
 }
 
@@ -2010,10 +2155,10 @@ function openAuthenticatorModal(entry) {
     );
     notifyGlobalScrollLock();
 
-    const focusTarget = mdsState.authenticatorModalBack instanceof HTMLElement
-        ? mdsState.authenticatorModalBack
-        : mdsState.authenticatorModalClose;
-    if (focusTarget instanceof HTMLElement) {
+    const focusTarget = mdsState.authenticatorModalClose instanceof HTMLElement
+        ? mdsState.authenticatorModalClose
+        : null;
+    if (focusTarget) {
         requestAnimationFrame(() => {
             focusTarget.focus();
         });
@@ -2326,6 +2471,36 @@ function ensureColumnMetrics(state = mdsState) {
     return true;
 }
 
+function setColumnResizersEnabled(enabled, state = mdsState) {
+    if (!state) {
+        return;
+    }
+
+    const allow = Boolean(enabled);
+    state.columnResizersEnabled = allow;
+
+    if (!allow && state.columnResizeState) {
+        handleColumnResizeEnd();
+    }
+
+    const resizers = Array.isArray(state.columnResizers) ? state.columnResizers : [];
+    resizers.forEach(resizer => {
+        if (!(resizer instanceof HTMLElement)) {
+            return;
+        }
+        resizer.classList.toggle('is-disabled', !allow);
+        if (allow) {
+            resizer.removeAttribute('aria-disabled');
+        } else {
+            resizer.setAttribute('aria-disabled', 'true');
+        }
+    });
+
+    if (allow) {
+        scheduleColumnResizerMetricsUpdate();
+    }
+}
+
 function setupColumnResizers(state = mdsState) {
     if (!state?.table?.tHead) {
         return;
@@ -2372,6 +2547,11 @@ function handleColumnResizeStart(event) {
     }
     const target = event.currentTarget;
     if (!(target instanceof HTMLElement)) {
+        return;
+    }
+    if (isLoading || !hasLoaded || !mdsState.columnResizersEnabled) {
+        event.preventDefault();
+        event.stopPropagation();
         return;
     }
     const columnIndex = Number.parseInt(target.dataset.columnIndex || '', 10);
@@ -2787,8 +2967,8 @@ async function refreshMetadata() {
                 : payloadMessage;
 
         if (shouldReload) {
-            hasLoaded = false;
-            await loadMdsData(note);
+            clearMetadataCache();
+            await loadMdsData(note, { forceReload: true });
         } else {
             const overdue = Boolean(mdsState?.metadataOverdue);
             let message = note || 'Metadata already up to date.';
