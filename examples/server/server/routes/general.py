@@ -65,11 +65,18 @@ def ensure_metadata_bootstrapped(skip_if_reloader_parent: bool = True) -> None:
     _auto_refresh_metadata()
 
 
-@app.before_serving
-def _bootstrap_metadata_before_serving() -> None:
-    """Refresh metadata as the server starts handling requests."""
+# Refresh eagerly for environments lacking ``before_serving`` (older Flask versions)
+# while still registering the hook when available so each process performs the
+# bootstrap exactly once as it starts handling requests.
+ensure_metadata_bootstrapped()
 
-    ensure_metadata_bootstrapped(skip_if_reloader_parent=False)
+if hasattr(app, "before_serving"):
+
+    @app.before_serving
+    def _bootstrap_metadata_before_serving() -> None:
+        """Refresh metadata as the server starts handling requests."""
+
+        ensure_metadata_bootstrapped(skip_if_reloader_parent=False)
 
 
 @app.route("/")
