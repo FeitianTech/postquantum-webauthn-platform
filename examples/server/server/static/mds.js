@@ -2265,40 +2265,99 @@ function computeColumnMinWidths(state = mdsState) {
     if (!state?.table?.tHead) {
         return [];
     }
-    const headerRow = state.table.tHead.rows[0];
+
+    const table = state.table;
+    const headerRow = table.tHead.rows[0];
     if (!headerRow) {
         return [];
     }
+
     const columnCount = headerRow.cells.length;
     if (!columnCount) {
         return [];
     }
 
-    const minWidths = new Array(columnCount).fill(DEFAULT_MIN_COLUMN_WIDTH);
+    const previousMinWidths = Array.isArray(state.columnMinWidths) ? state.columnMinWidths : [];
+    const hasClientRects = typeof table.getClientRects === 'function';
+    const isHidden = (table.offsetParent === null) && (!hasClientRects || table.getClientRects().length === 0);
+    if (isHidden) {
+        return previousMinWidths.slice(0, columnCount);
+    }
+
     const rows = [];
-    if (state.table.tHead) {
-        rows.push(...state.table.tHead.rows);
+    if (table.tHead) {
+        rows.push(...table.tHead.rows);
     }
     if (state.tableBody) {
         rows.push(...state.tableBody.rows);
     }
 
+    const savedCellStyles = [];
+    rows.forEach(row => {
+        Array.from(row.cells).forEach(cell => {
+            if (!cell) {
+                return;
+            }
+            savedCellStyles.push({
+                cell,
+                width: cell.style.width,
+                minWidth: cell.style.minWidth,
+                maxWidth: cell.style.maxWidth,
+            });
+            cell.style.width = '';
+            cell.style.minWidth = '';
+            cell.style.maxWidth = '';
+        });
+    });
+
+    const previousLayout = table.style.tableLayout || '';
+    const previousWidth = table.style.width || '';
+
+    table.style.tableLayout = 'auto';
+    table.style.width = 'auto';
+
+    if (typeof table.getBoundingClientRect === 'function') {
+        table.getBoundingClientRect();
+    } else if (typeof table.offsetWidth === 'number') {
+        // Force layout in browsers without getBoundingClientRect.
+        void table.offsetWidth; // eslint-disable-line no-unused-expressions
+    }
+
+    const measuredWidths = new Array(columnCount).fill(DEFAULT_MIN_COLUMN_WIDTH);
+    const canComputeStyle = typeof window !== 'undefined'
+        && typeof window.getComputedStyle === 'function'
+        && typeof HTMLElement !== 'undefined';
+
     const updateForCell = (cell, index) => {
-        if (!cell) {
+        if (!cell || cell.colSpan !== 1) {
             return;
         }
-        const rect = cell.getBoundingClientRect();
-        const rectWidth = Number.isFinite(rect?.width) ? Math.ceil(rect.width) : 0;
-        const scrollWidth = Number.isFinite(cell.scrollWidth) ? Math.ceil(cell.scrollWidth) : 0;
-        let minWidth = Math.max(rectWidth, scrollWidth, DEFAULT_MIN_COLUMN_WIDTH);
-        if (typeof window !== 'undefined' && cell instanceof HTMLElement) {
-            const style = window.getComputedStyle(cell);
-            const cssMin = parseFloat(style.minWidth) || 0;
-            if (Number.isFinite(cssMin) && cssMin > 0) {
-                minWidth = Math.max(minWidth, Math.ceil(cssMin));
+
+        let candidate = 0;
+        if (typeof cell.getBoundingClientRect === 'function') {
+            const rect = cell.getBoundingClientRect();
+            if (rect && Number.isFinite(rect.width)) {
+                candidate = rect.width;
             }
         }
-        minWidths[index] = Math.max(minWidths[index], minWidth);
+
+        let intrinsic = Number.isFinite(cell.scrollWidth) ? cell.scrollWidth : 0;
+        if (canComputeStyle && cell instanceof HTMLElement) {
+            const style = window.getComputedStyle(cell);
+            const cssMin = parseFloat(style.minWidth) || 0;
+            const borderLeft = parseFloat(style.borderLeftWidth) || 0;
+            const borderRight = parseFloat(style.borderRightWidth) || 0;
+
+            if (cssMin > 0) {
+                intrinsic = Math.max(intrinsic, cssMin);
+            }
+            if (Number.isFinite(borderLeft) && Number.isFinite(borderRight)) {
+                intrinsic += borderLeft + borderRight;
+            }
+        }
+
+        const width = Math.max(candidate, intrinsic, DEFAULT_MIN_COLUMN_WIDTH);
+        measuredWidths[index] = Math.max(measuredWidths[index], Math.ceil(width));
     };
 
     rows.forEach(row => {
@@ -2314,7 +2373,30 @@ function computeColumnMinWidths(state = mdsState) {
         });
     });
 
-    return minWidths.map(value => Math.max(Math.round(value || 0), DEFAULT_MIN_COLUMN_WIDTH));
+    savedCellStyles.forEach(({ cell, width, minWidth, maxWidth }) => {
+        cell.style.width = width;
+        cell.style.minWidth = minWidth;
+        cell.style.maxWidth = maxWidth;
+    });
+
+    if (previousLayout) {
+        table.style.tableLayout = previousLayout;
+    } else {
+        table.style.removeProperty('table-layout');
+    }
+
+    if (previousWidth) {
+        table.style.width = previousWidth;
+    } else {
+        table.style.removeProperty('width');
+    }
+
+    return measuredWidths.map((value, index) => {
+        const fallback = Number.isFinite(previousMinWidths[index]) ? previousMinWidths[index] : DEFAULT_MIN_COLUMN_WIDTH;
+        const measured = Number.isFinite(value) && value > 0 ? value : DEFAULT_MIN_COLUMN_WIDTH;
+        const finalWidth = Math.max(measured, fallback, DEFAULT_MIN_COLUMN_WIDTH);
+        return Math.max(Math.ceil(finalWidth), DEFAULT_MIN_COLUMN_WIDTH);
+    });
 }
 
 function ensureColumnMetrics(state = mdsState) {
@@ -2512,16 +2594,26 @@ function handleColumnResizeMove(event) {
         delta = 0;
     }
     const maxNegativeDelta = state.startLeft - minLeft;
-    const maxPositiveDelta = state.startRight - minRight;
-    if (Number.isFinite(maxNegativeDelta)) {
+    if (Number.isFinite(maxNegativeDelta) && maxNegativeDelta >= 0) {
         delta = Math.max(delta, -maxNegativeDelta);
     }
-    if (Number.isFinite(maxPositiveDelta)) {
-        delta = Math.min(delta, maxPositiveDelta);
-    }
 
-    const newLeft = state.startLeft + delta;
-    const newRight = state.startRight - delta;
+    let newLeft = state.startLeft + delta;
+    let newRight = state.startRight - delta;
+
+    if (delta >= 0) {
+        let maxPositiveDelta = state.startRight - minRight;
+        if (!Number.isFinite(maxPositiveDelta) || maxPositiveDelta < 0) {
+            maxPositiveDelta = 0;
+        }
+        if (delta > maxPositiveDelta) {
+            const overflow = delta - maxPositiveDelta;
+            newLeft = state.startLeft + maxPositiveDelta + overflow;
+            newRight = minRight;
+        }
+    } else if (newRight < minRight) {
+        newRight = minRight;
+    }
 
     widths[leftIndex] = Math.max(minLeft, Math.round(newLeft));
     widths[rightIndex] = Math.max(minRight, Math.round(newRight));
