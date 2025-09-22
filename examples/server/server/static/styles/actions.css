@@ -1,0 +1,120 @@
+.btn {
+    display: inline-block;
+    padding: 0.75rem 1.5rem;
+    background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+    color: #ffffff;
+    border: none;
+    border-radius: 18px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background 0.3s ease, color 0.3s ease;
+    margin-right: 0.5rem;
+    margin-bottom: 0.5rem;
+    box-shadow: 0 6px 18px rgba(0, 114, 206, 0.18);
+}
+
+.btn:hover,
+.btn:focus-visible {
+    background: linear-gradient(135deg, var(--primary-dark), #008f5c);
+    outline: none;
+}
+
+.link-button {
+    appearance: none;
+    border: none;
+    background: none;
+    color: var(--primary-color);
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0;
+    font-size: inherit;
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    text-decoration-color: transparent;
+    transition: color 0.2s ease, text-decoration-color 0.2s ease;
+}
+
+.link-button:hover,
+.link-button:focus-visible {
+    color: var(--primary-dark);
+    text-decoration-color: currentColor;
+    outline: none;
+}
+
+.btn-secondary {
+    background: rgba(0, 114, 206, 0.08);
+    border: 1px solid rgba(0, 114, 206, 0.18);
+    color: var(--primary-dark);
+    box-shadow: none;
+}
+
+.btn-secondary:hover,
+.btn-secondary:focus-visible {
+    background: rgba(0, 114, 206, 0.22);
+    border-color: rgba(0, 114, 206, 0.28);
+}
+
+.btn-danger {
+    background: #dc3545;
+}
+
+.btn-danger:hover,
+.btn-danger:focus-visible {
+    background: #c71f30;
+}
+
+.btn-success {
+    background: #28a745;
+}
+
+.btn-success:hover,
+.btn-success:focus-visible {
+    background: #1f7f33;
+}
+
+.status {
+    padding: 1rem;
+    border-radius: 18px;
+    margin-bottom: 1rem;
+    display: none;
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    min-width: 300px;
+    max-width: 90vw;
+    box-shadow: var(--shadow-soft);
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+}
+
+.status.success {
+    background: #d4edda;
+    border: 1px solid #c3e6cb;
+    color: #0f5132;
+}
+
+.status.error {
+    background: #f8d7da;
+    border: 1px solid #f5c2c7;
+    color: #842029;
+}
+
+.status.info {
+    background: #cff4fc;
+    border: 1px solid #b6effb;
+    color: #055160;
+}
