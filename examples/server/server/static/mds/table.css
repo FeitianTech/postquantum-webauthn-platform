@@ -3,6 +3,7 @@
     min-width: 1700px;
     border-collapse: separate;
     border-spacing: 0;
+    --mds-resizer-extend: 0px;
 }
 
 .mds-table thead th {
@@ -19,6 +20,7 @@
     letter-spacing: 0.06em;
     color: var(--muted-text);
     border-bottom: 1px solid rgba(0, 114, 206, 0.15);
+    overflow: visible;
 }
 
 .mds-column-resizer {
@@ -26,7 +28,7 @@
     top: 0;
     right: -4px;
     width: 8px;
-    height: 100%;
+    bottom: calc(-1 * var(--mds-resizer-extend, 0px));
     cursor: col-resize;
     user-select: none;
     touch-action: none;

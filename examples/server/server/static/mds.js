@@ -34,8 +34,8 @@ let hasLoaded = false;
 let isUpdatingMetadata = false;
 let loadPromise = null;
 const certificateCache = new Map();
-let certificateInfoPromise = null;
 let scrollTopButtonUpdateScheduled = false;
+let columnResizerMetricsScheduled = false;
 
 const SORT_NONE = 'none';
 const SORT_ASCENDING = 'asc';
@@ -77,6 +77,24 @@ const SORT_ACCESSORS = {
 
 const DEFAULT_MIN_COLUMN_WIDTH = 64;
 
+function showElement(element) {
+    if (!(element instanceof HTMLElement)) {
+        return;
+    }
+    element.hidden = false;
+    element.removeAttribute('hidden');
+    element.setAttribute('aria-hidden', 'false');
+}
+
+function hideElement(element) {
+    if (!(element instanceof HTMLElement)) {
+        return;
+    }
+    element.hidden = true;
+    element.setAttribute('hidden', '');
+    element.setAttribute('aria-hidden', 'true');
+}
+
 function scheduleScrollTopButtonUpdate() {
     if (scrollTopButtonUpdateScheduled) {
         return;
@@ -85,6 +103,22 @@ function scheduleScrollTopButtonUpdate() {
     const apply = () => {
         scrollTopButtonUpdateScheduled = false;
         updateScrollTopButtonVisibility();
+    };
+    if (typeof requestAnimationFrame === 'function') {
+        requestAnimationFrame(apply);
+    } else {
+        setTimeout(apply, 0);
+    }
+}
+
+function scheduleColumnResizerMetricsUpdate() {
+    if (columnResizerMetricsScheduled) {
+        return;
+    }
+    columnResizerMetricsScheduled = true;
+    const apply = () => {
+        columnResizerMetricsScheduled = false;
+        updateColumnResizerMetrics();
     };
     if (typeof requestAnimationFrame === 'function') {
         requestAnimationFrame(apply);
@@ -197,6 +231,7 @@ function scrollMdsSectionToTop() {
 
 function handleWindowScroll() {
     scheduleScrollTopButtonUpdate();
+    scheduleColumnResizerMetricsUpdate();
 }
 
 if (typeof window !== 'undefined') {
@@ -520,7 +555,6 @@ async function loadMdsData(statusNote) {
             mdsData = Array.isArray(metadata.entries)
                 ? metadata.entries.map((entry, index) => transformEntry(entry, index)).filter(Boolean)
                 : [];
-            hasLoaded = true;
             setUpdateButtonMode('update');
 
             resetSortState();
@@ -550,23 +584,15 @@ async function loadMdsData(statusNote) {
 
             const optionSets = collectOptionSets(mdsData);
             updateOptionLists(optionSets);
-            applyFilters();
 
-            if (certificateInfoPromise) {
-                certificateInfoPromise = null;
+            try {
+                await populateCertificateDerivedInfo(mdsData);
+            } catch (error) {
+                console.error('Failed to derive attestation certificate details:', error);
             }
-            certificateInfoPromise = populateCertificateDerivedInfo(mdsData)
-                .then(() => {
-                    if (mdsState) {
-                        applyFilters();
-                    }
-                })
-                .catch(error => {
-                    console.error('Failed to derive attestation certificate details:', error);
-                })
-                .finally(() => {
-                    certificateInfoPromise = null;
-                });
+
+            applyFilters();
+            hasLoaded = true;
 
             const statusParts = [`Loaded ${mdsData.length.toLocaleString()} authenticators.`];
             let statusVariant = 'success';
@@ -870,15 +896,19 @@ async function populateCertificateDerivedInfo(entries) {
 
     const detailMap = new Map();
 
-    for (const certificate of certificates) {
-        try {
-            const details = await decodeCertificate(certificate);
-            detailMap.set(certificate, details);
-        } catch (error) {
-            console.error('Failed to decode attestation root certificate:', error);
-            detailMap.set(certificate, null);
+    const decodeTasks = certificates.map(certificate =>
+        decodeCertificate(certificate)
+            .then(details => ({ certificate, details, error: null }))
+            .catch(error => ({ certificate, details: null, error })),
+    );
+
+    const decodedResults = await Promise.all(decodeTasks);
+    decodedResults.forEach(result => {
+        if (result.error) {
+            console.error('Failed to decode attestation root certificate:', result.error);
         }
-    }
+        detailMap.set(result.certificate, result.details);
+    });
 
     entries.forEach(entry => {
         const algorithmSet = new Set();
@@ -965,6 +995,7 @@ function renderTable(entries) {
         tbody.appendChild(emptyRow);
         hideScrollTopButton();
         stabiliseColumnWidths();
+        scheduleColumnResizerMetricsUpdate();
         return;
     }
 
@@ -1014,6 +1045,7 @@ function renderTable(entries) {
     }
     stabiliseColumnWidths();
     scheduleScrollTopButtonUpdate();
+    scheduleColumnResizerMetricsUpdate();
 }
 
 function formatDetailSubtitle(entry) {
@@ -1245,14 +1277,15 @@ function showAuthenticatorDetail(entry, options = {}) {
         mdsState.previousDocumentScrollTop = scrollTop;
     }
 
-    if (mdsState.tableContainer) {
-        if (typeof mdsState.tableContainer.scrollTop === 'number') {
-            mdsState.previousTableScrollTop = mdsState.tableContainer.scrollTop;
+    const tableContainer = mdsState.tableContainer;
+    if (tableContainer) {
+        if (typeof tableContainer.scrollTop === 'number') {
+            mdsState.previousTableScrollTop = tableContainer.scrollTop;
         }
-        mdsState.tableContainer.hidden = true;
+        hideElement(tableContainer);
     }
     if (mdsState.detailView) {
-        mdsState.detailView.hidden = false;
+        showElement(mdsState.detailView);
     }
 
     if (mdsState.root) {
@@ -1281,26 +1314,29 @@ function hideAuthenticatorDetail() {
     }
 
     if (mdsState.detailView) {
-        mdsState.detailView.hidden = true;
+        hideElement(mdsState.detailView);
     }
-    if (mdsState.tableContainer) {
-        mdsState.tableContainer.hidden = false;
+    const tableContainer = mdsState.tableContainer;
+    if (tableContainer) {
+        showElement(tableContainer);
         if (typeof mdsState.previousTableScrollTop === 'number') {
             const target = mdsState.previousTableScrollTop;
-            mdsState.tableContainer.scrollTop = target;
+            tableContainer.scrollTop = target;
             if (typeof requestAnimationFrame === 'function') {
                 requestAnimationFrame(() => {
                     requestAnimationFrame(() => {
-                        mdsState.tableContainer.scrollTop = target;
+                        tableContainer.scrollTop = target;
                     });
                 });
             } else {
                 setTimeout(() => {
-                    mdsState.tableContainer.scrollTop = target;
+                    tableContainer.scrollTop = target;
                 }, 0);
             }
         }
     }
+
+    scheduleColumnResizerMetricsUpdate();
 
     const previousScrollTop = typeof mdsState.previousDocumentScrollTop === 'number'
         ? mdsState.previousDocumentScrollTop
@@ -2150,6 +2186,41 @@ function applyColumnWidths(widths) {
     if (mdsState.tableBody) {
         Array.from(mdsState.tableBody.rows).forEach(row => applyWidthsToCells(row.cells, widths));
     }
+
+    scheduleColumnResizerMetricsUpdate();
+}
+
+function updateColumnResizerMetrics() {
+    if (!mdsState?.table || !(mdsState.table instanceof HTMLElement)) {
+        return;
+    }
+
+    const table = mdsState.table;
+    if (table.offsetParent === null) {
+        table.style.setProperty('--mds-resizer-extend', '0px');
+        return;
+    }
+
+    const headerRow = table.tHead?.rows?.[0];
+    if (!headerRow) {
+        table.style.setProperty('--mds-resizer-extend', '0px');
+        return;
+    }
+
+    let headerHeight = 0;
+    if (typeof headerRow.getBoundingClientRect === 'function') {
+        const rect = headerRow.getBoundingClientRect();
+        if (rect && Number.isFinite(rect.height)) {
+            headerHeight = rect.height;
+        }
+    }
+    if (!headerHeight && headerRow instanceof HTMLElement) {
+        headerHeight = headerRow.offsetHeight || 0;
+    }
+
+    const tableHeight = table.offsetHeight || 0;
+    const extend = Math.max(Math.round(tableHeight - headerHeight), 0);
+    table.style.setProperty('--mds-resizer-extend', `${extend}px`);
 }
 
 function applyWidthsToCells(cells, widths) {
@@ -2326,6 +2397,8 @@ function setupColumnResizers(state = mdsState) {
         cell.appendChild(resizer);
         state.columnResizers.push(resizer);
     });
+
+    scheduleColumnResizerMetricsUpdate();
 }
 
 function handleColumnResizeStart(event) {
