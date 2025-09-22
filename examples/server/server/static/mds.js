@@ -2383,20 +2383,22 @@ function handleColumnResizeStart(event) {
         return;
     }
 
-    const nextIndex = columnIndex + 1;
     const widths = Array.isArray(mdsState.columnWidths) ? mdsState.columnWidths.slice() : [];
-    if (nextIndex >= widths.length) {
+    if (columnIndex >= widths.length - 1) {
         return;
     }
 
     const startLeft = widths[columnIndex];
-    const startRight = widths[nextIndex];
-    const minLeft = DEFAULT_MIN_COLUMN_WIDTH;
-    const minRight = DEFAULT_MIN_COLUMN_WIDTH;
-
-    if (!Number.isFinite(startLeft) || !Number.isFinite(startRight)) {
+    if (!Number.isFinite(startLeft)) {
         return;
     }
+
+    const minWidths = Array.isArray(mdsState.columnMinWidths) ? mdsState.columnMinWidths : [];
+    let minLeft = Number.isFinite(minWidths[columnIndex]) ? Math.round(minWidths[columnIndex]) : DEFAULT_MIN_COLUMN_WIDTH;
+    if (!Number.isFinite(minLeft) || minLeft <= 0) {
+        minLeft = DEFAULT_MIN_COLUMN_WIDTH;
+    }
+    minLeft = Math.max(minLeft, DEFAULT_MIN_COLUMN_WIDTH);
 
     event.preventDefault();
     event.stopPropagation();
@@ -2404,13 +2406,10 @@ function handleColumnResizeStart(event) {
     const resizeState = {
         activeResizer: target,
         columnIndex,
-        nextColumnIndex: nextIndex,
         pointerId: event.pointerId,
         startX: event.clientX,
         startLeft,
-        startRight,
         minLeft,
-        minRight,
         listenerTarget: target,
     };
 
@@ -2460,13 +2459,11 @@ function handleColumnResizeMove(event) {
     }
 
     const leftIndex = state.columnIndex;
-    const rightIndex = state.nextColumnIndex;
-    if (rightIndex >= widths.length) {
+    if (!Number.isFinite(leftIndex) || leftIndex < 0 || leftIndex >= widths.length) {
         return;
     }
 
     const minLeft = state.minLeft || DEFAULT_MIN_COLUMN_WIDTH;
-    const minRight = state.minRight || DEFAULT_MIN_COLUMN_WIDTH;
 
     let delta = event.clientX - state.startX;
     if (!Number.isFinite(delta)) {
@@ -2478,24 +2475,11 @@ function handleColumnResizeMove(event) {
     }
 
     let newLeft = state.startLeft + delta;
-    let newRight = state.startRight - delta;
-
-    if (delta >= 0) {
-        let maxPositiveDelta = state.startRight - minRight;
-        if (!Number.isFinite(maxPositiveDelta) || maxPositiveDelta < 0) {
-            maxPositiveDelta = 0;
-        }
-        if (delta > maxPositiveDelta) {
-            const overflow = delta - maxPositiveDelta;
-            newLeft = state.startLeft + maxPositiveDelta + overflow;
-            newRight = minRight;
-        }
-    } else if (newRight < minRight) {
-        newRight = minRight;
+    if (!Number.isFinite(newLeft)) {
+        newLeft = state.startLeft;
     }
 
     widths[leftIndex] = Math.max(minLeft, Math.round(newLeft));
-    widths[rightIndex] = Math.max(minRight, Math.round(newRight));
 
     mdsState.columnWidths = widths;
     const normalised = normaliseColumnWidths(widths);
