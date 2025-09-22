@@ -173,19 +173,12 @@ export async function advancedAuthenticate() {
             throw new Error('Invalid CredentialRequestOptions: Missing required "challenge" property');
         }
 
-        let allowedAttachments;
         try {
-            allowedAttachments = ensureAuthenticationHintsAllowed(publicKey, { requireSelection: true });
+            ensureAuthenticationHintsAllowed(publicKey);
         } catch (hintError) {
-            const message = hintError?.message || 'Please select at least one authenticator hint before continuing.';
+            const message = hintError?.message || 'Invalid hint configuration.';
             showStatus('advanced', message, 'error');
             return;
-        }
-
-        if (Array.isArray(allowedAttachments) && allowedAttachments.length > 0) {
-            publicKey.allowedAuthenticatorAttachments = allowedAttachments.slice();
-        } else if (Object.prototype.hasOwnProperty.call(publicKey, 'allowedAuthenticatorAttachments')) {
-            delete publicKey.allowedAuthenticatorAttachments;
         }
 
         hideStatus('advanced');
@@ -286,9 +279,10 @@ export async function advancedAuthenticate() {
 
 function enforceHintsForAdvanced(publicKey) {
     try {
-        return enforceAuthenticatorAttachmentWithHints(publicKey, { requireSelection: true });
+        const resolved = enforceAuthenticatorAttachmentWithHints(publicKey);
+        return Array.isArray(resolved) ? resolved : [];
     } catch (error) {
-        showStatus('advanced', error?.message || 'Please select at least one authenticator hint before continuing.', 'error');
+        showStatus('advanced', error?.message || 'Invalid hint configuration.', 'error');
         throw error;
     }
 }

@@ -42,7 +42,7 @@ simple = _import_module(f"{_import_base}.routes.simple")  # noqa: F401
 def main() -> None:
     ensure_metadata = getattr(general, "ensure_metadata_bootstrapped", None)
     if callable(ensure_metadata):
-        ensure_metadata()
+        ensure_metadata(skip_if_reloader_parent=False)
 
     # Note: using localhost without TLS, as some browsers do
     # not allow Webauthn in case of TLS certificate errors.

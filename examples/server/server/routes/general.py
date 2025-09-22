@@ -16,12 +16,16 @@ from ..storage import delkey
 
 
 _metadata_bootstrap_lock = Lock()
-_metadata_bootstrap_state = {"started": False}
+_metadata_bootstrap_state = {"started": False, "completed": False}
+_METADATA_BOOTSTRAP_ENV_FLAG = "FIDO_SERVER_MDS_BOOTSTRAPPED"
+
+if os.environ.get(_METADATA_BOOTSTRAP_ENV_FLAG) == "1":
+    _metadata_bootstrap_state["completed"] = True
 
 
 def _auto_refresh_metadata() -> None:
     with _metadata_bootstrap_lock:
-        if _metadata_bootstrap_state["started"]:
+        if _metadata_bootstrap_state["completed"] or _metadata_bootstrap_state["started"]:
             return
         _metadata_bootstrap_state["started"] = True
 
@@ -29,9 +33,13 @@ def _auto_refresh_metadata() -> None:
         updated, bytes_written, last_modified = download_metadata_blob()
     except MetadataDownloadError as exc:
         app.logger.warning("Automatic metadata update failed: %s", exc)
+        with _metadata_bootstrap_lock:
+            _metadata_bootstrap_state["started"] = False
         return
     except Exception as exc:  # pylint: disable=broad-except
         app.logger.exception("Unexpected error while refreshing metadata automatically: %s", exc)
+        with _metadata_bootstrap_lock:
+            _metadata_bootstrap_state["started"] = False
         return
 
     if updated:
@@ -55,6 +63,12 @@ def _auto_refresh_metadata() -> None:
         else:
             app.logger.info("FIDO MDS metadata already up to date.")
 
+    with _metadata_bootstrap_lock:
+        _metadata_bootstrap_state["completed"] = True
+        _metadata_bootstrap_state["started"] = False
+
+    os.environ[_METADATA_BOOTSTRAP_ENV_FLAG] = "1"
+
 
 def ensure_metadata_bootstrapped(skip_if_reloader_parent: bool = True) -> None:
     """Ensure the MDS metadata cache is refreshed once per server process."""
@@ -62,7 +76,28 @@ def ensure_metadata_bootstrapped(skip_if_reloader_parent: bool = True) -> None:
     if skip_if_reloader_parent and app.debug and os.environ.get("WERKZEUG_RUN_MAIN") != "true":
         return
 
+    if os.environ.get(_METADATA_BOOTSTRAP_ENV_FLAG) == "1":
+        return
+
+    with _metadata_bootstrap_lock:
+        if _metadata_bootstrap_state["completed"]:
+            return
+
     _auto_refresh_metadata()
+
+
+# Refresh eagerly for environments lacking ``before_serving`` (older Flask versions)
+# while still registering the hook when available so each process performs the
+# bootstrap exactly once as it starts handling requests.
+ensure_metadata_bootstrapped()
+
+if hasattr(app, "before_serving"):
+
+    @app.before_serving
+    def _bootstrap_metadata_before_serving() -> None:
+        """Refresh metadata as the server starts handling requests."""
+
+        ensure_metadata_bootstrapped(skip_if_reloader_parent=False)
 
 
 @app.route("/")
@@ -72,7 +107,22 @@ def index():
 
 @app.route("/index.html")
 def index_html():
-    return render_template("index.html")
+    ensure_metadata_bootstrapped(skip_if_reloader_parent=False)
+
+    initial_mds_blob = None
+    try:
+        with open(MDS_METADATA_PATH, "r", encoding="utf-8") as blob_file:
+            initial_mds_blob = blob_file.read()
+    except OSError:
+        initial_mds_blob = None
+
+    initial_mds_info = load_metadata_cache_entry()
+
+    return render_template(
+        "index.html",
+        initial_mds_blob=initial_mds_blob,
+        initial_mds_info=initial_mds_info,
+    )
 
 
 @app.route("/api/mds/update", methods=["POST"])

@@ -23,10 +23,9 @@ from fido2.webauthn import (
 
 from ..attachments import (
     build_credential_attachment_map,
-    combine_allowed_attachment_values,
-    derive_allowed_attachments_from_hints,
     normalize_attachment,
     normalize_attachment_list,
+    resolve_effective_attachments,
 )
 from ..attestation import (
     augment_aaguid_fields,
@@ -146,35 +145,10 @@ def advanced_register_begin():
     if isinstance(raw_hints, list):
         hints_list = [item for item in raw_hints if isinstance(item, str)]
 
-    if not hints_list:
-        return jsonify({"error": "Please select at least one authenticator hint."}), 400
+    requested_attachment = normalize_attachment(auth_selection.get("authenticatorAttachment"))
 
-    derived_allowed = derive_allowed_attachments_from_hints(hints_list)
-    if not derived_allowed:
-        return jsonify({"error": "Selected hints do not map to any authenticator attachments."}), 400
-
-    requested_allowed = (
-        public_key.get('allowedAuthenticatorAttachments')
-        if 'allowedAuthenticatorAttachments' in public_key
-        else None
-    )
-    (
-        allowed_attachment_values,
-        _normalized_requested,
-        combine_error,
-    ) = combine_allowed_attachment_values(hints_list, requested_allowed)
-    if combine_error:
-        return jsonify({"error": combine_error}), 400
-
-    if not allowed_attachment_values:
-        return jsonify({"error": "Selected hints do not map to any authenticator attachments."}), 400
-
-    if isinstance(public_key, MutableMapping):
-        public_key['allowedAuthenticatorAttachments'] = allowed_attachment_values
+    allowed_attachment_values = resolve_effective_attachments(hints_list, requested_attachment)
     session["advanced_register_allowed_attachments"] = list(allowed_attachment_values)
-
-    if isinstance(auth_selection, dict) and "authenticatorAttachment" in auth_selection:
-        auth_selection.pop("authenticatorAttachment", None)
 
     uv_req = UserVerificationRequirement.PREFERRED
     user_verification = auth_selection.get("userVerification", "preferred")
@@ -184,12 +158,13 @@ def advanced_register_begin():
         uv_req = UserVerificationRequirement.DISCOURAGED
 
     auth_attachment = None
-    if len(allowed_attachment_values) == 1:
-        only_attachment = allowed_attachment_values[0]
-        if only_attachment == "platform":
-            auth_attachment = AuthenticatorAttachment.PLATFORM
-        elif only_attachment == "cross-platform":
-            auth_attachment = AuthenticatorAttachment.CROSS_PLATFORM
+    attachment_source = requested_attachment
+    if not attachment_source and len(allowed_attachment_values) == 1:
+        attachment_source = allowed_attachment_values[0]
+    if attachment_source == "platform":
+        auth_attachment = AuthenticatorAttachment.PLATFORM
+    elif attachment_source == "cross-platform":
+        auth_attachment = AuthenticatorAttachment.CROSS_PLATFORM
 
     rk_req = ResidentKeyRequirement.PREFERRED
     resident_key = auth_selection.get("residentKey", "preferred")
@@ -323,25 +298,13 @@ def advanced_register_complete():
         if isinstance(raw_hints, list):
             original_hints = [item for item in raw_hints if isinstance(item, str)]
 
-    if not original_hints:
-        return jsonify({"error": "Please select at least one authenticator hint."}), 400
+    requested_attachment = None
+    if isinstance(original_public_key, Mapping):
+        selection = original_public_key.get("authenticatorSelection")
+        if isinstance(selection, Mapping):
+            requested_attachment = normalize_attachment(selection.get("authenticatorAttachment"))
 
-    derived_original_allowed = derive_allowed_attachments_from_hints(original_hints)
-    if not derived_original_allowed:
-        return jsonify({"error": "Selected hints do not map to any authenticator attachments."}), 400
-    requested_allowed = (
-        original_public_key.get('allowedAuthenticatorAttachments')
-        if isinstance(original_public_key, Mapping)
-        and 'allowedAuthenticatorAttachments' in original_public_key
-        else None
-    )
-    (
-        request_allowed_attachments,
-        _normalized_requested,
-        combine_error,
-    ) = combine_allowed_attachment_values(original_hints, requested_allowed)
-    if combine_error:
-        return jsonify({"error": combine_error}), 400
+    request_allowed_attachments = resolve_effective_attachments(original_hints, requested_attachment)
 
     session_allowed_marker = session.pop("advanced_register_allowed_attachments", None)
     if session_allowed_marker is None:
@@ -352,20 +315,17 @@ def advanced_register_complete():
     if not allowed_attachments:
         allowed_attachments = request_allowed_attachments
 
-    if not allowed_attachments:
-        return jsonify({"error": "Selected hints do not map to any authenticator attachments."}), 400
-
     response_attachment = normalize_attachment(
         response.get('authenticatorAttachment') if isinstance(response, Mapping) else None
     )
     if allowed_attachments:
         if response_attachment is None:
             return jsonify({
-                "error": "Authenticator attachment could not be determined to enforce selected hints."
+                "error": "Authenticator attachment could not be determined to enforce selected hints.",
             }), 400
         if response_attachment not in allowed_attachments:
             return jsonify({
-                "error": "Authenticator attachment is not permitted by the selected hints."
+                "error": "Authenticator attachment is not permitted by the selected hints.",
             }), 400
 
     if not original_request.get("publicKey"):
@@ -384,7 +344,6 @@ def advanced_register_complete():
     auth_selection = public_key.get('authenticatorSelection', {})
     if isinstance(auth_selection, Mapping):
         auth_selection = dict(auth_selection)
-        auth_selection.pop('authenticatorAttachment', None)
         if isinstance(public_key, MutableMapping):
             public_key['authenticatorSelection'] = auth_selection
     elif isinstance(public_key, MutableMapping):
@@ -394,10 +353,6 @@ def advanced_register_complete():
     resident_key_required = auth_selection.get('requireResidentKey')
     if resident_key_required is None:
         resident_key_required = resident_key_requested == 'required'
-
-    allowed_attachment_values = list(allowed_attachments)
-    if isinstance(public_key, MutableMapping):
-        public_key['allowedAuthenticatorAttachments'] = allowed_attachment_values
 
     (
         attestation_format,
@@ -522,7 +477,7 @@ def advanced_register_complete():
                 'credentialIdLength': len(auth_data.credential_data.credential_id),
                 'fakeCredentialIdLengthRequested': None,
                 'hintsSent': public_key.get('hints', []),
-                'allowedAuthenticatorAttachments': allowed_attachment_values,
+                'resolvedAuthenticatorAttachments': allowed_attachments,
                 'authenticatorAttachment': authenticator_attachment_response,
                 'largeBlobRequested': public_key.get('extensions', {}).get('largeBlob', {}),
                 'largeBlobClientOutput': client_extension_results.get('largeBlob', {}),
@@ -757,27 +712,7 @@ def advanced_authenticate_begin():
     if isinstance(raw_hints, list):
         hints_list = [item for item in raw_hints if isinstance(item, str)]
 
-    if not hints_list:
-        return jsonify({"error": "Please select at least one authenticator hint."}), 400
-
-    derived_allowed = derive_allowed_attachments_from_hints(hints_list)
-    if not derived_allowed:
-        return jsonify({"error": "Selected hints do not map to any authenticator attachments."}), 400
-    requested_allowed = (
-        public_key.get("allowedAuthenticatorAttachments")
-        if "allowedAuthenticatorAttachments" in public_key
-        else None
-    )
-    (
-        allowed_attachment_values,
-        _normalized_requested,
-        combine_error,
-    ) = combine_allowed_attachment_values(hints_list, requested_allowed)
-    if combine_error:
-        return jsonify({"error": combine_error}), 400
-
-    if not allowed_attachment_values:
-        return jsonify({"error": "Selected hints do not map to any authenticator attachments."}), 400
+    allowed_attachment_values = resolve_effective_attachments(hints_list, None)
 
     session["advanced_authenticate_allowed_attachments"] = list(allowed_attachment_values)
 
@@ -947,28 +882,7 @@ def advanced_authenticate_complete():
     if isinstance(raw_hints, list):
         hints_list = [item for item in raw_hints if isinstance(item, str)]
 
-    if not hints_list:
-        return jsonify({"error": "Please select at least one authenticator hint."}), 400
-
-    derived_allowed = derive_allowed_attachments_from_hints(hints_list)
-    if not derived_allowed:
-        return jsonify({"error": "Selected hints do not map to any authenticator attachments."}), 400
-
-    requested_allowed = (
-        public_key.get("allowedAuthenticatorAttachments")
-        if "allowedAuthenticatorAttachments" in public_key
-        else None
-    )
-    (
-        request_allowed_attachments,
-        _normalized_requested,
-        combine_error,
-    ) = combine_allowed_attachment_values(hints_list, requested_allowed)
-    if combine_error:
-        return jsonify({"error": combine_error}), 400
-
-    if not request_allowed_attachments:
-        return jsonify({"error": "Selected hints do not map to any authenticator attachments."}), 400
+    request_allowed_attachments = resolve_effective_attachments(hints_list, None)
 
     session_allowed_marker = session.pop("advanced_authenticate_allowed_attachments", None)
     if session_allowed_marker is None:
@@ -977,10 +891,7 @@ def advanced_authenticate_complete():
         allowed_attachments = normalize_attachment_list(session_allowed_marker)
 
     if not allowed_attachments:
-        return jsonify({"error": "Selected hints do not map to any authenticator attachments."}), 400
-
-    if isinstance(public_key, MutableMapping):
-        public_key['allowedAuthenticatorAttachments'] = list(allowed_attachments)
+        allowed_attachments = request_allowed_attachments
 
     if allowed_attachments:
         response_attachment = normalize_attachment(

@@ -110,7 +110,7 @@ def register_complete():
             'credentialIdLength': len(auth_data.credential_data.credential_id),
             'fakeCredentialIdLengthRequested': None,
             'hintsSent': [],
-            'allowedAuthenticatorAttachments': [],
+            'resolvedAuthenticatorAttachments': [],
             'authenticatorAttachment': authenticator_attachment_response,
             'largeBlobRequested': {},
             'largeBlobClientOutput': client_extension_results.get('largeBlob', {}),

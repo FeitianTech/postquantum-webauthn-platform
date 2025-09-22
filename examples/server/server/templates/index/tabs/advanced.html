@@ -54,6 +54,27 @@
                                 <div id="authenticator-selection" class="section-content">
                                     <div class="form-group">
                                         <div class="label-with-info">
+                                            <label for="authenticator-attachment">Authenticator Attachment</label>
+                                            <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
+                                                <div class="info-popup">
+                                                    <div class="language-toggle" onclick="toggleLanguage(this)">ENG</div>
+                                                    <div class="text-en active">
+                                                        Select whether an authenticator integrated into the client platform ("platform") or an external device ("cross-platform") should be used. If unspecified (default), either kind of authenticator is allowed.
+                                                    </div>
+                                                    <div class="text-zh hidden">
+                                                        选择是否使用集成在客户端平台中的认证器（“platform”）或外部设备（“cross-platform”）。如果未指定（默认），允许使用任一类型的认证器。
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <select id="authenticator-attachment" class="form-control">
+                                            <option value="unspecified">Unspecified (default)</option>
+                                            <option value="platform">Platform</option>
+                                            <option value="cross-platform">Cross-Platform</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <div class="label-with-info">
                                             <label for="resident-key">Resident Key</label>
                                             <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
                                                 <div class="info-popup">
@@ -299,11 +320,13 @@
                                                     <div class="language-toggle" onclick="toggleLanguage(this)">ENG</div>
                                                     <div class="text-en active">
                                                         Registration hints to guide the user-agent in interacting with the user.<br><br>
-                                                        Hints are suggestions that help guide the user experience. They're not required, and the system prioritizes them in order of preference. If hints conflict, the first one takes priority. Hints can also overlap, allowing for both specific and general suggestions to be sent. If hints contradict other information, the hints take precedence.
+                                                        These hints are not requirements, and do not bind the user-agent, but may guide it in providing the best experience by using contextual information that the Relying Party has about the request. Hints are provided in order of decreasing preference so, if two hints are contradictory, the first one controls. Hints may also overlap: if a more-specific hint is defined a Relying Party may still wish to send less specific ones for user-agents that may not recognise the more specific one. In this case the most specific hint should be sent before the less-specific ones.<br><br>
+                                                        Hints MAY contradict information contained in credential transports and authenticatorAttachment. When this occurs, the hints take precedence.
                                                     </div>
                                                     <div class="text-zh hidden">
-                                                        注册提示，用于指导用户代理与用户的交互。<br><br>
-                                                        提示是帮助指导用户体验的建议。它们不是必需的，系统按优先级顺序对它们进行优先排序。如果提示冲突，第一个优先。提示也可以重叠，允许发送特定和一般建议。如果提示与其他信息矛盾，提示优先。
+                                                        注册提示用于指导用户代理与用户交互。<br><br>
+                                                        这些提示不是强制要求，也不约束用户代理，但可利用依赖方掌握的上下文信息，引导其提供最佳体验。提示按优先级从高到低排列，因此若两个提示相互矛盾，则以前面的提示为准。提示也可以有重叠：如果定义了更具体的提示，依赖方仍可同时发送不那么具体的提示，以便那些可能无法识别更具体提示的用户代理使用。在这种情况下，应先发送最具体的提示，再发送较不具体的提示。<br><br>
+                                                        提示可以与凭据传输方式和 authenticatorAttachment 中的信息相矛盾。如发生矛盾，应以提示为准。
                                                     </div>
                                                 </div>
                                             </div>
@@ -651,12 +674,14 @@
                                                 <div class="info-popup">
                                                     <div class="language-toggle" onclick="toggleLanguage(this)">ENG</div>
                                                     <div class="text-en active">
-                                                        Authentication hints to guide the user-agent in interacting with the user.<br><br>
-                                                        Hints are suggestions that help guide the user experience. They're not required, and the system prioritizes them in order of preference. If hints conflict, the first one takes priority. Hints can also overlap, allowing for both specific and general suggestions to be sent. If hints contradict other information, the hints take precedence.
+                                                        Registration hints to guide the user-agent in interacting with the user.<br><br>
+                                                        These hints are not requirements, and do not bind the user-agent, but may guide it in providing the best experience by using contextual information that the Relying Party has about the request. Hints are provided in order of decreasing preference so, if two hints are contradictory, the first one controls. Hints may also overlap: if a more-specific hint is defined a Relying Party may still wish to send less specific ones for user-agents that may not recognise the more specific one. In this case the most specific hint should be sent before the less-specific ones.<br><br>
+                                                        Hints MAY contradict information contained in credential transports and authenticatorAttachment. When this occurs, the hints take precedence.
                                                     </div>
                                                     <div class="text-zh hidden">
-                                                        身份验证提示，用于指导用户代理与用户的交互。<br><br>
-                                                        提示是帮助指导用户体验的建议。它们不是必需的，系统按优先级顺序对它们进行优先排序。如果提示冲突，第一个优先。提示也可以重叠，允许发送特定和一般建议。如果提示与其他信息矛盾，提示优先。
+                                                        注册提示用于指导用户代理与用户交互。<br><br>
+                                                        这些提示不是强制要求，也不约束用户代理，但可利用依赖方掌握的上下文信息，引导其提供最佳体验。提示按优先级从高到低排列，因此若两个提示相互矛盾，则以前面的提示为准。提示也可以有重叠：如果定义了更具体的提示，依赖方仍可同时发送不那么具体的提示，以便那些可能无法识别更具体提示的用户代理使用。在这种情况下，应先发送最具体的提示，再发送较不具体的提示。<br><br>
+                                                        提示可以与凭据传输方式和 authenticatorAttachment 中的信息相矛盾。如发生矛盾，应以提示为准。
                                                     </div>
                                                 </div>
                                             </div>

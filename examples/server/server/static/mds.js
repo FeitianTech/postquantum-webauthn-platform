@@ -37,6 +37,8 @@ const certificateCache = new Map();
 let scrollTopButtonUpdateScheduled = false;
 let columnResizerMetricsScheduled = false;
 let rowHeightLockScheduled = false;
+let initialMdsJws = null;
+let initialMdsInfo = null;
 const MDS_METADATA_STORAGE_KEY = 'fido.mds.metadataPayload';
 const MDS_METADATA_INFO_KEY = 'fido.mds.metadataInfo';
 let sessionStorageWarningShown = false;
@@ -80,6 +82,22 @@ const SORT_ACCESSORS = {
 };
 
 const DEFAULT_MIN_COLUMN_WIDTH = 64;
+
+if (typeof window !== 'undefined') {
+    if (typeof window.__INITIAL_MDS_JWS__ === 'string' && window.__INITIAL_MDS_JWS__) {
+        initialMdsJws = window.__INITIAL_MDS_JWS__;
+    }
+    if (window.__INITIAL_MDS_INFO__ && typeof window.__INITIAL_MDS_INFO__ === 'object') {
+        initialMdsInfo = window.__INITIAL_MDS_INFO__;
+    }
+    try {
+        delete window.__INITIAL_MDS_JWS__;
+        delete window.__INITIAL_MDS_INFO__;
+    } catch (error) {
+        window.__INITIAL_MDS_JWS__ = undefined;
+        window.__INITIAL_MDS_INFO__ = undefined;
+    }
+}
 
 function showElement(element) {
     if (!(element instanceof HTMLElement)) {
@@ -151,6 +169,158 @@ function scheduleRowHeightLock() {
     } else {
         setTimeout(apply, 0);
     }
+}
+
+function nextAnimationFrame() {
+    return new Promise(resolve => {
+        if (typeof requestAnimationFrame === 'function') {
+            requestAnimationFrame(() => resolve());
+        } else {
+            setTimeout(() => resolve(), 16);
+        }
+    });
+}
+
+async function waitForLayoutSettled() {
+    await nextAnimationFrame();
+    await nextAnimationFrame();
+}
+
+function waitForStateReady({ timeout = 5000 } = {}) {
+    if (mdsState) {
+        return Promise.resolve(true);
+    }
+
+    return new Promise(resolve => {
+        const start = Date.now();
+        const check = () => {
+            if (mdsState) {
+                resolve(true);
+                return;
+            }
+            if (Date.now() - start >= timeout) {
+                resolve(false);
+                return;
+            }
+            if (typeof requestAnimationFrame === 'function') {
+                requestAnimationFrame(check);
+            } else {
+                setTimeout(check, 32);
+            }
+        };
+        check();
+    });
+}
+
+function waitForRowByKey(key, { attempts = 60 } = {}) {
+    if (!key) {
+        return Promise.resolve(null);
+    }
+
+    return new Promise(resolve => {
+        const attemptLookup = attempt => {
+            if (!mdsState || mdsState.highlightedRowKey !== key) {
+                resolve(null);
+                return;
+            }
+            const row = findRowByKey(key);
+            if (row) {
+                resolve(row);
+                return;
+            }
+            if (attempt >= attempts) {
+                resolve(null);
+                return;
+            }
+            const schedule = () => attemptLookup(attempt + 1);
+            if (typeof requestAnimationFrame === 'function') {
+                requestAnimationFrame(schedule);
+            } else {
+                setTimeout(schedule, attempt < 20 ? 16 : 64);
+            }
+        };
+        attemptLookup(0);
+    });
+}
+
+function scrollRowIntoView(row, { behavior = 'smooth' } = {}) {
+    if (!(row instanceof HTMLElement)) {
+        return;
+    }
+
+    if (typeof window === 'undefined' || typeof window.scrollTo !== 'function') {
+        if (typeof row.scrollIntoView === 'function') {
+            row.scrollIntoView({ behavior, block: 'center' });
+        }
+        return;
+    }
+
+    const rect = row.getBoundingClientRect();
+    const viewportHeight = window.innerHeight || document.documentElement?.clientHeight || 0;
+    const rowHeight = rect.height || row.offsetHeight || 0;
+    const centerOffset = Math.max((viewportHeight - rowHeight) / 2, 0);
+    const targetTop = rect.top + window.pageYOffset - centerOffset;
+    const top = Math.max(Math.round(targetTop), 0);
+
+    try {
+        window.scrollTo({ top, behavior });
+    } catch (error) {
+        window.scrollTo(0, top);
+    }
+}
+
+function focusRowButton(row) {
+    if (!(row instanceof HTMLElement)) {
+        return;
+    }
+    const button = row.querySelector('.mds-name-button');
+    if (!(button instanceof HTMLElement) || typeof button.focus !== 'function') {
+        return;
+    }
+
+    const focusButton = () => {
+        try {
+            button.focus({ preventScroll: true });
+        } catch (error) {
+            button.focus();
+        }
+    };
+
+    if (typeof requestAnimationFrame === 'function') {
+        requestAnimationFrame(focusButton);
+    } else {
+        setTimeout(focusButton, 0);
+    }
+}
+
+function setHighlightedRow(row, key, { scroll = false, behavior = 'smooth', focus = false } = {}) {
+    if (!mdsState || !(row instanceof HTMLElement)) {
+        return false;
+    }
+
+    if (mdsState.highlightedRow && mdsState.highlightedRow !== row) {
+        mdsState.highlightedRow.classList.remove('mds-row--highlight');
+    }
+
+    if (!row.classList.contains('mds-row--highlight')) {
+        row.classList.add('mds-row--highlight');
+    }
+
+    mdsState.highlightedRow = row;
+    if (key) {
+        mdsState.highlightedRowKey = key;
+    }
+
+    if (scroll) {
+        scrollRowIntoView(row, { behavior });
+    }
+
+    if (focus) {
+        focusRowButton(row);
+    }
+
+    scheduleScrollTopButtonUpdate();
+    return true;
 }
 
 function getSessionStorage() {
@@ -435,9 +605,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
-    if (tabElement.classList.contains('active')) {
-        void loadMdsData();
-    }
+    void loadMdsData();
 });
 
 document.addEventListener('tab:changed', event => {
@@ -739,6 +907,35 @@ async function applyMetadataEntries(metadata, { note = '' } = {}) {
     setColumnResizersEnabled(true);
 }
 
+async function applyInitialMetadataPayload(note) {
+    if (initialMdsJws === null || typeof initialMdsJws !== 'string') {
+        initialMdsJws = null;
+        initialMdsInfo = initialMdsInfo && typeof initialMdsInfo === 'object' ? initialMdsInfo : null;
+        return false;
+    }
+
+    const snapshotJws = initialMdsJws;
+    const snapshotInfo = initialMdsInfo && typeof initialMdsInfo === 'object' ? initialMdsInfo : null;
+    initialMdsJws = null;
+    initialMdsInfo = null;
+
+    try {
+        const payloadSegment = snapshotJws.split('.')[1];
+        if (!payloadSegment) {
+            throw new Error('Invalid metadata BLOB format.');
+        }
+        const payload = decodeBase64Url(payloadSegment);
+        const metadata = JSON.parse(payload);
+
+        await applyMetadataEntries(metadata, { note });
+        storeMetadataCache(payload, snapshotInfo);
+        return true;
+    } catch (error) {
+        console.error('Failed to apply initial metadata payload:', error);
+        return false;
+    }
+}
+
 async function loadMdsData(statusNote, options = {}) {
     if (!mdsState) {
         return;
@@ -759,7 +956,24 @@ async function loadMdsData(statusNote, options = {}) {
     const note = typeof statusNote === 'string' ? statusNote.trim() : '';
     const previousHasLoaded = hasLoaded;
 
+    if (forceReload) {
+        initialMdsJws = null;
+        initialMdsInfo = null;
+    }
+
     if (!forceReload) {
+        if (!hasLoaded) {
+            try {
+                const applied = await applyInitialMetadataPayload(note);
+                if (applied) {
+                    setColumnResizersEnabled(hasLoaded);
+                    return;
+                }
+            } catch (error) {
+                console.warn('Failed to apply server-provided metadata payload:', error);
+            }
+        }
+
         const cached = readMetadataCache();
         if (cached?.metadata) {
             try {
@@ -871,6 +1085,29 @@ async function loadMdsData(statusNote, options = {}) {
         }
         setColumnResizersEnabled(hasLoaded);
     }
+}
+
+async function waitForMetadataLoad() {
+    const ready = await waitForStateReady();
+    if (!ready || !mdsState) {
+        return false;
+    }
+    if (hasLoaded && !isLoading) {
+        return true;
+    }
+    if (isLoading && loadPromise) {
+        await loadPromise;
+        return hasLoaded;
+    }
+    await loadMdsData();
+    return hasLoaded;
+}
+
+function getMdsLoadStateSnapshot() {
+    return {
+        hasLoaded,
+        isLoading,
+    };
 }
 
 function applyFilters() {
@@ -1235,6 +1472,19 @@ function renderTable(entries) {
             }
         }
 
+        row.addEventListener('click', event => {
+            if (event.defaultPrevented) {
+                return;
+            }
+            const interactiveTarget = event.target instanceof HTMLElement
+                ? event.target.closest('button, a, input, select, textarea')
+                : null;
+            if (interactiveTarget) {
+                return;
+            }
+            showAuthenticatorDetail(entry);
+        });
+
         row.appendChild(createIconCell(entry));
         row.appendChild(createNameCell(entry));
         row.appendChild(createTextCell(entry.protocol || '—'));
@@ -1424,51 +1674,48 @@ function applyRowHighlightByKey(key, options = {}) {
         return false;
     }
 
-    if (mdsState.highlightedRow && mdsState.highlightedRow !== row) {
-        mdsState.highlightedRow.classList.remove('mds-row--highlight');
-    }
-
-    if (!row.classList.contains('mds-row--highlight')) {
-        row.classList.add('mds-row--highlight');
-    }
-
-    mdsState.highlightedRow = row;
-    mdsState.highlightedRowKey = key;
-
-    if (options.scroll && typeof row.scrollIntoView === 'function') {
-        const behavior = options.behavior || 'smooth';
-        row.scrollIntoView({ block: 'center', behavior });
-    }
-
-    scheduleScrollTopButtonUpdate();
-    return true;
+    const applied = setHighlightedRow(row, key, options);
+    return applied ? row : false;
 }
 
-function scheduleRowHighlight(key, attempt = 0) {
-    if (!mdsState || !key) {
-        return;
+function isElementVisible(element) {
+    if (!(element instanceof HTMLElement)) {
+        return false;
+    }
+    if (element.offsetParent !== null) {
+        return true;
+    }
+    const style = window.getComputedStyle ? window.getComputedStyle(element) : null;
+    if (!style) {
+        return false;
+    }
+    return style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0';
+}
+
+function waitForElementVisible(element, { timeout = 2000, interval = 32 } = {}) {
+    if (isElementVisible(element)) {
+        return Promise.resolve(true);
     }
 
-    if (mdsState.highlightedRowKey !== key) {
-        return;
-    }
-
-    const behavior = attempt === 0 ? 'smooth' : 'auto';
-    const applied = applyRowHighlightByKey(key, { scroll: true, behavior });
-    if (applied) {
-        return;
-    }
-
-    if (attempt >= 8) {
-        return;
-    }
-
-    const schedule = () => scheduleRowHighlight(key, attempt + 1);
-    if (typeof requestAnimationFrame === 'function') {
-        requestAnimationFrame(schedule);
-    } else {
-        setTimeout(schedule, attempt < 4 ? 16 : 64);
-    }
+    return new Promise(resolve => {
+        const start = Date.now();
+        const check = () => {
+            if (isElementVisible(element)) {
+                resolve(true);
+                return;
+            }
+            if (Date.now() - start >= timeout) {
+                resolve(false);
+                return;
+            }
+            if (typeof requestAnimationFrame === 'function') {
+                requestAnimationFrame(check);
+            } else {
+                setTimeout(check, interval);
+            }
+        };
+        check();
+    });
 }
 
 function showAuthenticatorDetail(entry, options = {}) {
@@ -1478,20 +1725,26 @@ function showAuthenticatorDetail(entry, options = {}) {
 
     clearRowHighlight();
 
-    const sourceEntry = typeof entry.index === 'number' && mdsData[entry.index]
-        ? mdsData[entry.index]
-        : entry;
+    const key = normaliseAaguid(entry.aaguid || entry.id);
+    let sourceEntry = entry;
+    if (key && mdsState.byAaguid?.has(key)) {
+        sourceEntry = mdsState.byAaguid.get(key);
+    } else if (typeof entry.index === 'number' && mdsData[entry.index]) {
+        sourceEntry = mdsData[entry.index];
+    }
 
     mdsState.activeDetailEntry = sourceEntry;
 
     const { scrollIntoView = true } = options;
-    if (scrollIntoView) {
-        const key = normaliseAaguid(sourceEntry.aaguid || sourceEntry.id);
-        const row = key ? findRowByKey(key) : null;
-        if (row && typeof row.scrollIntoView === 'function') {
-            requestAnimationFrame(() => {
-                row.scrollIntoView({ block: 'center', behavior: 'smooth' });
-            });
+    if (scrollIntoView && key) {
+        const row = findRowByKey(key);
+        if (row) {
+            const scroll = () => scrollRowIntoView(row, { behavior: 'smooth' });
+            if (typeof requestAnimationFrame === 'function') {
+                requestAnimationFrame(scroll);
+            } else {
+                scroll();
+            }
         }
     }
 
@@ -2182,7 +2435,8 @@ function closeAuthenticatorModal() {
 }
 
 async function resolveEntryByAaguid(aaguid) {
-    if (!mdsState) {
+    const ready = await waitForStateReady();
+    if (!ready || !mdsState) {
         return null;
     }
 
@@ -2240,13 +2494,17 @@ async function focusAuthenticatorByAaguid(aaguid) {
 
 async function highlightAuthenticatorRowByAaguid(aaguid) {
     const entry = await resolveEntryByAaguid(aaguid);
-    if (!entry || !mdsState) {
-        return entry || null;
+    if (!mdsState) {
+        return { entry: entry || null, highlighted: false };
+    }
+
+    if (!entry) {
+        return { entry: null, highlighted: false };
     }
 
     const key = normaliseAaguid(entry.aaguid || entry.id);
     if (!key) {
-        return entry;
+        return { entry, highlighted: false };
     }
 
     mdsState.highlightedRowKey = key;
@@ -2255,18 +2513,38 @@ async function highlightAuthenticatorRowByAaguid(aaguid) {
         hideAuthenticatorDetail();
     }
 
+    if (mdsState.root) {
+        await waitForElementVisible(mdsState.root);
+    }
+
     resetFilters();
     applyFilters();
+    await waitForLayoutSettled();
 
-    scheduleRowHighlight(key);
+    const row = await waitForRowByKey(key, { attempts: 80 });
+    if (!row || mdsState.highlightedRowKey !== key) {
+        if (mdsState.highlightedRowKey === key) {
+            mdsState.highlightedRowKey = '';
+        }
+        return { entry, highlighted: false };
+    }
 
-    return entry;
+    await waitForLayoutSettled();
+
+    const applied = setHighlightedRow(row, key, { scroll: true, behavior: 'smooth', focus: true });
+    if (!applied && mdsState.highlightedRowKey === key) {
+        mdsState.highlightedRowKey = '';
+    }
+
+    return { entry, highlighted: Boolean(applied), row: applied ? row : null };
 }
 
 if (typeof window !== 'undefined') {
     window.openMdsAuthenticatorModal = openAuthenticatorModalByAaguid;
     window.focusMdsAuthenticator = focusAuthenticatorByAaguid;
     window.highlightMdsAuthenticatorRow = highlightAuthenticatorRowByAaguid;
+    window.waitForMdsLoad = waitForMetadataLoad;
+    window.getMdsLoadState = getMdsLoadStateSnapshot;
 }
 
 function stabiliseColumnWidths() {
@@ -2747,7 +3025,11 @@ function createNameCell(entry) {
     button.type = 'button';
     button.className = 'mds-name-button';
     button.textContent = label;
-    button.addEventListener('click', () => showAuthenticatorDetail(entry));
+    button.addEventListener('click', event => {
+        event.preventDefault();
+        event.stopPropagation();
+        showAuthenticatorDetail(entry);
+    });
     cell.appendChild(button);
     return cell;
 }
@@ -3021,8 +3303,4 @@ function updateOptionLists(optionSets) {
         const unique = Array.from(new Set(optionList));
         dropdown.setOptions(unique);
     });
-}
-
-if (typeof window !== 'undefined') {
-    window.focusMdsAuthenticator = focusAuthenticatorByAaguid;
 }

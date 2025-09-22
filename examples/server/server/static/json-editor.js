@@ -53,6 +53,11 @@ export function getCredentialCreationOptions() {
         extensions: {}
     };
 
+    const authenticatorAttachment = document.getElementById('authenticator-attachment')?.value || 'unspecified';
+    if (authenticatorAttachment && authenticatorAttachment !== 'unspecified') {
+        publicKey.authenticatorSelection.authenticatorAttachment = authenticatorAttachment;
+    }
+
     if (document.getElementById('param-mldsa44')?.checked) {
         publicKey.pubKeyCredParams.push({type: 'public-key', alg: -48});
     }
@@ -168,10 +173,6 @@ export function getCredentialRequestOptions() {
         userVerification: document.getElementById('user-verification-auth')?.value || 'preferred',
         extensions: {},
     };
-
-    if (allowedAttachments.length > 0) {
-        publicKey.allowedAuthenticatorAttachments = allowedAttachments.slice();
-    }
 
     const allowCreds = document.getElementById('allow-credentials')?.value;
     if (allowCreds === 'empty') {
@@ -485,6 +486,14 @@ export function updateRegistrationFormFromJson(publicKey) {
     }
 
     if (publicKey.authenticatorSelection) {
+        const attachmentElement = document.getElementById('authenticator-attachment');
+        if (attachmentElement) {
+            const attachmentValue = publicKey.authenticatorSelection.authenticatorAttachment;
+            const normalizedAttachment = attachmentValue === 'platform' || attachmentValue === 'cross-platform'
+                ? attachmentValue
+                : 'unspecified';
+            attachmentElement.value = normalizedAttachment;
+        }
         const residentKeyElement = document.getElementById('resident-key');
         if (residentKeyElement) {
             let residentKeySetting = publicKey.authenticatorSelection.residentKey || 'discouraged';
@@ -496,6 +505,11 @@ export function updateRegistrationFormFromJson(publicKey) {
         if (Object.prototype.hasOwnProperty.call(publicKey.authenticatorSelection, 'userVerification')) {
             const userVerificationValue = publicKey.authenticatorSelection.userVerification || 'preferred';
             document.getElementById('user-verification-reg').value = userVerificationValue;
+        }
+    } else {
+        const attachmentElement = document.getElementById('authenticator-attachment');
+        if (attachmentElement) {
+            attachmentElement.value = 'unspecified';
         }
     }
 
@@ -706,6 +720,7 @@ export function getAdvancedCreateOptions() {
         attestation: document.getElementById('attestation').value,
         userVerification: document.getElementById('user-verification-reg').value,
         residentKey: document.getElementById('resident-key').value,
+        authenticatorAttachment: document.getElementById('authenticator-attachment').value || 'unspecified',
 
         excludeCredentials: document.getElementById('exclude-credentials').checked,
         fakeCredLength: parseInt(document.getElementById('fake-cred-length-reg').value) || 0,
@@ -731,13 +746,6 @@ export function getAdvancedCreateOptions() {
     if (document.getElementById('param-rs1')?.checked) options.pubKeyCredParams.push('RS1');
 
     options.hints = collectSelectedHints('registration');
-    const allowedAttachments = deriveAllowedAttachmentsFromHints(options.hints);
-    if (allowedAttachments.length > 0) {
-        options.allowedAuthenticatorAttachments = allowedAttachments;
-    } else {
-        delete options.allowedAuthenticatorAttachments;
-    }
-
     if (document.getElementById('cred-props')?.checked) {
         options.extensions.credProps = true;
     }
@@ -822,13 +830,6 @@ export function getAdvancedAssertOptions() {
     }
 
     options.hints = collectSelectedHints('authentication');
-    const allowedAttachments = deriveAllowedAttachmentsFromHints(options.hints);
-    if (allowedAttachments.length > 0) {
-        options.allowedAuthenticatorAttachments = allowedAttachments;
-    } else {
-        delete options.allowedAuthenticatorAttachments;
-    }
-
     return options;
 }
 
@@ -886,6 +887,16 @@ export function applyJsonChanges() {
                 document.getElementById('user-verification-reg').value = parsed.userVerification || 'preferred';
             }
             if (parsed.residentKey) document.getElementById('resident-key').value = parsed.residentKey;
+            if (Object.prototype.hasOwnProperty.call(parsed, 'authenticatorAttachment')) {
+                const attachmentSelect = document.getElementById('authenticator-attachment');
+                if (attachmentSelect) {
+                    const rawValue = parsed.authenticatorAttachment;
+                    const normalized = rawValue === 'platform' || rawValue === 'cross-platform'
+                        ? rawValue
+                        : 'unspecified';
+                    attachmentSelect.value = normalized;
+                }
+            }
         } else if (state.currentJsonMode === 'assert') {
             if (Object.prototype.hasOwnProperty.call(parsed, 'userVerification')) {
                 document.getElementById('user-verification-auth').value = parsed.userVerification || 'preferred';
