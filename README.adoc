@@ -230,7 +230,7 @@ Important: You need to change your .pem files name to "localhost+1.pem" and "loc
 # 🚀 Quickstart: create a virtual environment, run the demo server, and use the test app
 
 Note: Your server entry point is a Python file. Use:
-- python examples/server/server/server.py
+- python examples/server/server/app.py
 
 ---
 
@@ -271,7 +271,7 @@ pip install flask fido2
 
 From the repository root:
 ```bash
-python examples/server/server/server.py
+python examples/server/server/app.py
 ```
 
 You should see Flask start and a line similar to:
