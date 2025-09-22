@@ -435,9 +435,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
-    if (tabElement.classList.contains('active')) {
-        void loadMdsData();
-    }
+    void loadMdsData();
 });
 
 document.addEventListener('tab:changed', event => {

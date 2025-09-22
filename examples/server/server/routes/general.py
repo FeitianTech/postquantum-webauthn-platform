@@ -65,6 +65,13 @@ def ensure_metadata_bootstrapped(skip_if_reloader_parent: bool = True) -> None:
     _auto_refresh_metadata()
 
 
+@app.before_serving
+def _bootstrap_metadata_before_serving() -> None:
+    """Refresh metadata as the server starts handling requests."""
+
+    ensure_metadata_bootstrapped(skip_if_reloader_parent=False)
+
+
 @app.route("/")
 def index():
     return redirect("/index.html")
