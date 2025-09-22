@@ -1,38 +1,43 @@
 # WebAuthn FIDO2 Test Application With PQC Support
 
-A test server and web UI for WebAuthn/FIDO2 registration and authentication. It displays the selected algorithm, authenticator flags (UP/UV/AT/ED/BE/BS), sign counter, and extension results (credProps, PRF, largeBlob) for validation. This test app also support functionalities such as decoder, FIDO MDS explorer, etc. 
+A test server and web UI for WebAuthn/FIDO2 registration and authentication.  
+It displays the selected algorithm, authenticator flags (UP/UV/AT/ED/BE/BS), sign counter, and extension results (credProps, PRF, largeBlob) for validation.  
+This test app also supports functionalities such as **decoder**, **FIDO MDS explorer**, etc.  
 
-Built on python-fido2-PQC, which is built on Yubico’s python-fido2. Classical algorithms work by default;
-
----
-
-# 💻 Local setup
-
-This guide shows how to clone the repository and set up a working local environment for WebAuthn with Python FIDO2 on Windows and macOS. 
-
-Scope
-- Includes: Python, virtual environment, Flask, python-fido2, Post‑Quantum Crypto algorithm options (PQC).
----
-
-## Supported platforms
-
-- Windows 10/11 (64‑bit)
-- macOS (Intel or Apple Silicon)
-
-A modern browser (eg. Edge, Chrome, Safari, Firefox) with WebAuthn support is required. 
+Built on **python-fido2-PQC**, which extends Yubico’s **python-fido2**.  
+Classical algorithms work by default.
 
 ---
 
-## 1) Prerequisites
+## 💻 Local Setup
 
-- Git: install from [git-scm.com](https://git-scm.com/)
-- Python 3.12+ (64‑bit) with pip
-  - Windows: Install from [python.org](https://www.python.org/downloads/windows/) and check “Add Python to PATH.”
-  - macOS: Install via [python.org](https://www.python.org/downloads/macos/) or Homebrew.
+This guide shows how to clone the repository and set up a working local environment for WebAuthn with Python FIDO2 on **Windows** and **macOS**.
+
+**Scope**
+- Includes: Python, virtual environment, Flask, python-fido2, and Post-Quantum Crypto (PQC) algorithm options.
 
 ---
 
-## 2) Clone the repository
+## ✅ Supported Platforms
+
+- Windows 10/11 (64-bit)  
+- macOS (Intel or Apple Silicon)  
+
+A modern browser with WebAuthn support is required:
+- Edge, Chrome, Safari, Firefox
+
+---
+
+## 1. Prerequisites
+
+- **Git**: [git-scm.com](https://git-scm.com/)  
+- **Python 3.12+ (64-bit)** with pip  
+  - **Windows**: Install from [python.org](https://www.python.org/downloads/windows/) and check *“Add Python to PATH.”*  
+  - **macOS**: Install via [python.org](https://www.python.org/downloads/macos/) or Homebrew.
+
+---
+
+## 2. Clone the Repository
 
 ```bash
 git clone https://github.com/rainzhang05/python-fido2-webauthn-test.git
@@ -41,12 +46,12 @@ cd python-fido2-webauthn-test
 
 ---
 
-## 3) Recommended setup — pip + venv
+## 3. Recommended Setup — pip + venv
 
 ### Windows (PowerShell)
 
 ```powershell
-# Create and activate a virtual environment using Python 3.12
+# Create and activate a virtual environment
 py -3.12 -m venv .venv
 .\.venv\scripts\activate
 
@@ -54,7 +59,7 @@ py -3.12 -m venv .venv
 python -m pip install --upgrade pip
 pip install fido2 flask cryptography cbor2
 
-# Optional: if you need PC/SC smart card extras (pyscard)
+# Optional: PC/SC smart card extras
 pip install "fido2[pcsc]"
 ```
 
@@ -69,35 +74,31 @@ source .venv/bin/activate
 python -m pip install --upgrade pip
 pip install fido2 flask cryptography cbor2
 
-# Optional: if you need PC/SC smart card extras (pyscard)
+# Optional: PC/SC smart card extras
 pip install "fido2[pcsc]"
-```
-
 ```
 
 ---
 
-## 4) Optional setup — Poetry (instead of pip/venv)
+## 4. Optional Setup — Poetry (instead of pip/venv)
 
-Use Poetry if you prefer its workflow. It will create `.venv` inside the project.
+Use **Poetry** if you prefer its workflow. It will create `.venv` inside the project.
 
 ### Install Poetry
 
-- Windows (PowerShell):
+#### Windows (PowerShell)
 
 ```powershell
-# Install pipx for isolated CLI apps (user-level)
+# Install pipx for isolated CLI apps
 py -3.12 -m pip install --user pipx
 py -3.12 -m pipx ensurepath
 # Open a NEW PowerShell window so PATH changes apply
 
 # Install Poetry via pipx
 pipx install poetry
-
-
 ```
 
-- macOS:
+#### macOS
 
 ```bash
 python3 -m pip install --user pipx
@@ -107,34 +108,35 @@ pipx install poetry
 poetry --version
 ```
 
-### Use Poetry in this project
+### Use Poetry in this Project
 
 ```bash
 # From the repo root
 poetry config virtualenvs.in-project true
 
-# Point Poetry to your Python (choose one):
+# Point Poetry to your Python
 poetry env use 3.12
-# OR give an absolute path if needed:
+# OR specify absolute path if needed:
 # poetry env use "/usr/bin/python3"                # macOS example
 # poetry env use "C:\Path\To\Python312\python.exe" # Windows example
 
 poetry install
-
 ```
 
-## 5) Install and use pytest
+---
 
-Pytest is used to run unit tests. If your local clone includes a `tests/` folder (or you add your own tests), these commands will discover and run them.
+## 5. Install and Use Pytest
 
-- pip + venv
+Pytest is used for running unit tests.
+
+### pip + venv
 ```bash
 pip install --upgrade pip
 pip install pytest
 pytest
 ```
 
-- Poetry (installs as a dev dependency)
+### Poetry
 ```bash
 poetry add --group dev pytest
 poetry run pytest
@@ -142,7 +144,7 @@ poetry run pytest
 
 ---
 
-## PQC Setup
+## 🔐 PQC Setup
 
 ### 1. Activate Your Python Virtual Environment
 
@@ -156,19 +158,15 @@ poetry run pytest
 source .venv/bin/activate
 ```
 
----
-
 ### 2. Install PQC Cryptography Libraries
 
 **Using pip / virtualenv**
-
 ```bash
 pip install ".[pqc]"
 python -c "import oqs"
 ```
 
 **Using Poetry**
-
 ```bash
 poetry install --with pqc
 poetry run python -c "import oqs"
@@ -176,89 +174,70 @@ poetry run python -c "import oqs"
 
 ---
 
-## mkcert Setup for Local HTTPS (Windows & macOS)
+## 🔒 mkcert Setup for Local HTTPS
 
 ### 1. Install mkcert
 
 #### Windows
-1. Download the latest `mkcert.exe` from the official releases page:  
-   👉 https://github.com/FiloSottile/mkcert/releases  
-
-2. Place `mkcert.exe` in a folder included in your **PATH** (for example: `C:\Windows\System32`).
-
-3. Open **PowerShell** and run:
+1. Download the latest `mkcert.exe`:  
+   👉 [GitHub Releases](https://github.com/FiloSottile/mkcert/releases)  
+2. Place `mkcert.exe` in a folder included in **PATH** (e.g., `C:\Windows\System32`).  
+3. Run in PowerShell:
    ```powershell
    mkcert -install
-
+   ```
 
 #### macOS
-```
-# Install mkcert with Homebrew
+```bash
 brew install mkcert
-
-# Install nss if you use Firefox
-brew install nss
-
-# Create and trust the local Certificate Authority (CA)
+brew install nss   # required for Firefox users
 mkcert -install
 ```
-This creates and trusts a local CA on your Mac.
-
-
-### 2. Generate Certificates
-Windows
-In PowerShell, move to your Python project directory:
-```
-cd C:\path\to\your\project
-
-# Generate certificate and private key for localhost
-mkcert localhost 127.0.0.1 ::1
-```
-
-macOS
-In Terminal, move to your Python project directory:
-```
-cd /path/to/your/project
-
-# Generate certificate and private key for localhost
-mkcert localhost 127.0.0.1 ::1
-```
-Note: Adding 127.0.0.1 is just for backup, WebAuthn cannot work on 127.0.0.1, but can work on localhost. 
-
-Important: You need to change your .pem files name to "localhost+1.pem" and "localhost+1-key.pem". If the file name is different, the program will fail to run. 
-
-# 🚀 Quickstart: create a virtual environment, run the demo server, and use the test app
-
-Note: Your server entry point is a Python file. Use:
-- python examples/server/server/app.py
 
 ---
 
-## 1) Create and activate a virtual environment
+### 2. Generate Certificates
 
-Run these from the repository's root directory.
-
-### Windows PowerShell
+**Windows (PowerShell)**
 ```powershell
-# Create venv in the project root (only the first time is required)
-py -3 -m venv .venv
+cd C:\path\to\your\project
+mkcert localhost 127.0.0.1 ::1
+```
 
-# Activate it (required everytime you use the authenticator)
+**macOS (Terminal)**
+```bash
+cd /path/to/your/project
+mkcert localhost 127.0.0.1 ::1
+```
+
+⚠️ Important:
+- WebAuthn works on `localhost`, **not** `127.0.0.1`.  
+- Rename files to:
+  - `localhost+1.pem`  
+  - `localhost+1-key.pem`  
+  Otherwise, the program will fail to run.
+
+---
+
+## 🚀 Quickstart
+
+### 1. Create and Activate Virtual Environment
+
+**Windows (PowerShell)**
+```powershell
+py -3 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 ```
 
-### macOS
+**macOS**
 ```bash
-# Create venv in the project root (only the first time is required)
 python3 -m venv .venv
-
-# Activate it (required everytime you use the authenticator)
 source .venv/bin/activate
 ```
 
 ---
 
-## 2) Install dependencies
+### 2. Install Dependencies
 
 ```bash
 python -m pip install --upgrade pip
@@ -267,19 +246,25 @@ pip install flask fido2
 
 ---
 
-## 3) Run the demo server
+### 3. Run the Demo Server
 
-From the repository root:
 ```bash
 python examples/server/server/app.py
 ```
 
-You should see Flask start and a line similar to:
+Expected output:
 ```
-Running on http://localhost:5000/
+Running on https://localhost:5000/
 ```
 
-By clicking on the localhost link, the test app will be launched in a browser tab. 
+Click the link to open the test app in your browser.
 
+---
 
-#### Note: Credentials are saved in your local repository's examples/server/server as pkl files, deleting credentials in the test app will also delete the corresponding pkl file in your local path. 
+## 📝 Notes
+
+- Credentials are saved as `.pkl` files in:  
+  `examples/server/server`  
+- Deleting credentials in the test app will also delete the corresponding `.pkl` file locally.
+
+---
