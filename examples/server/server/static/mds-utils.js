@@ -71,6 +71,8 @@ export function transformEntry(entry, index = 0) {
         certificateAlgorithmInfoList: [],
         certificateCommonNames: '—',
         certificateCommonNameList: [],
+        algorithmInfo: '—',
+        commonName: '—',
         dateUpdated,
         dateTooltip: rawDate || undefined,
         metadataStatement: metadata,

@@ -42,6 +42,8 @@ export const FILTER_CONFIG = [
         optionsKey: 'algorithms',
         expandDropdown: true,
     },
+    { key: 'algorithmInfo', inputId: 'mds-filter-algorithm-info' },
+    { key: 'commonName', inputId: 'mds-filter-common-name' },
 ];
 
 export const FILTER_LOOKUP = FILTER_CONFIG.reduce((map, config) => {

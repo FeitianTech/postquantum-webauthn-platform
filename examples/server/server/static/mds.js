@@ -61,8 +61,8 @@ const SORT_ACCESSORS = {
     transports: entry => entry?.transports || '',
     keyProtection: entry => entry?.keyProtection || '',
     algorithms: entry => entry?.algorithms || '',
-    algorithmInfo: entry => entry?.certificateAlgorithmInfo || '',
-    commonName: entry => entry?.certificateCommonNames || '',
+    algorithmInfo: entry => entry?.algorithmInfo || entry?.certificateAlgorithmInfo || '',
+    commonName: entry => entry?.commonName || entry?.certificateCommonNames || '',
     dateUpdated: entry => {
         if (entry?.dateTooltip) {
             const timestamp = Date.parse(entry.dateTooltip);
@@ -74,6 +74,8 @@ const SORT_ACCESSORS = {
         return entry?.dateUpdated || '';
     },
 };
+
+const DEFAULT_MIN_COLUMN_WIDTH = 64;
 
 function scheduleScrollTopButtonUpdate() {
     if (scrollTopButtonUpdateScheduled) {
@@ -395,7 +397,7 @@ function initializeState(root) {
         document.addEventListener('tab:changed', handleTabChanged);
     }
 
-    return {
+    const state = {
         root,
         filters,
         filterInputs,
@@ -411,7 +413,10 @@ function initializeState(root) {
         defaultStatus,
         statusResetTimer: null,
         columnWidths: null,
+        columnMinWidths: null,
         columnWidthAttempts: 0,
+        columnResizers: [],
+        columnResizeState: null,
         updateButton,
         updateButtonMode: 'update',
         metadataOverdue: false,
@@ -442,6 +447,9 @@ function initializeState(root) {
         scrollTopButton,
         scrollTopButtonVisible: false,
     };
+
+    setupColumnResizers(state);
+    return state;
 }
 
 async function loadMdsData(statusNote) {
@@ -873,7 +881,9 @@ async function populateCertificateDerivedInfo(entries) {
     }
 
     entries.forEach(entry => {
+        const algorithmSet = new Set();
         const algorithms = [];
+        const commonNameSet = new Set();
         const commonNames = [];
         const list = Array.isArray(entry?.attestationCertificates) ? entry.attestationCertificates : [];
 
@@ -888,7 +898,8 @@ async function populateCertificateDerivedInfo(entries) {
             }
 
             const algorithmInfo = typeof details.algorithmInfo === 'string' ? details.algorithmInfo.trim() : '';
-            if (algorithmInfo && !algorithms.includes(algorithmInfo)) {
+            if (algorithmInfo && !algorithmSet.has(algorithmInfo)) {
+                algorithmSet.add(algorithmInfo);
                 algorithms.push(algorithmInfo);
             }
 
@@ -898,7 +909,8 @@ async function populateCertificateDerivedInfo(entries) {
                     return;
                 }
                 const trimmed = name.trim();
-                if (trimmed && !commonNames.includes(trimmed)) {
+                if (trimmed && !commonNameSet.has(trimmed)) {
+                    commonNameSet.add(trimmed);
                     commonNames.push(trimmed);
                 }
             });
@@ -906,8 +918,10 @@ async function populateCertificateDerivedInfo(entries) {
 
         entry.certificateAlgorithmInfoList = algorithms;
         entry.certificateAlgorithmInfo = algorithms.length ? algorithms.join(', ') : '—';
+        entry.algorithmInfo = entry.certificateAlgorithmInfo;
         entry.certificateCommonNameList = commonNames;
         entry.certificateCommonNames = commonNames.length ? commonNames.join(', ') : '—';
+        entry.commonName = entry.certificateCommonNames;
     });
 }
 
@@ -985,7 +999,7 @@ function renderTable(entries) {
         row.appendChild(createTagCell(entry.keyProtectionList));
         row.appendChild(createTagCell(entry.algorithmsList));
         row.appendChild(createTagCell(entry.certificateAlgorithmInfoList));
-        row.appendChild(createTagCell(entry.certificateCommonNameList, true));
+        row.appendChild(createTagCell(entry.certificateCommonNameList));
         row.appendChild(createTextCell(entry.dateUpdated || '—', entry.dateTooltip));
 
         fragment.appendChild(row);
@@ -2077,11 +2091,23 @@ function stabiliseColumnWidths() {
     if (mdsState.root instanceof HTMLElement && mdsState.root.offsetParent === null) {
         return;
     }
+    const updateMinWidths = () => {
+        const measured = computeColumnMinWidths();
+        if (measured.length) {
+            mdsState.columnMinWidths = measured;
+        }
+    };
+
+    updateMinWidths();
+
     if (!Array.isArray(mdsState.columnWidths) || !mdsState.columnWidths.length) {
         requestAnimationFrame(() => {
             if (!mdsState?.table) {
                 return;
             }
+
+            updateMinWidths();
+
             const headerCells = mdsState.table.querySelectorAll('thead tr:first-child th');
             if (!headerCells.length) {
                 return;
@@ -2096,13 +2122,17 @@ function stabiliseColumnWidths() {
                 }
                 return;
             }
-            mdsState.columnWidths = widths;
+            const normalised = normaliseColumnWidths(widths);
+            mdsState.columnWidths = normalised;
             mdsState.columnWidthAttempts = 0;
-            applyColumnWidths(widths);
+            applyColumnWidths(normalised);
         });
         return;
     }
-    applyColumnWidths(mdsState.columnWidths);
+
+    const adjusted = normaliseColumnWidths(mdsState.columnWidths);
+    mdsState.columnWidths = adjusted;
+    applyColumnWidths(adjusted);
 }
 
 function applyColumnWidths(widths) {
@@ -2141,6 +2171,348 @@ function applyWidthsToCells(cells, widths) {
         }
         columnIndex += span;
     });
+}
+
+function normaliseColumnWidths(widths, state = mdsState) {
+    if (!Array.isArray(widths)) {
+        return [];
+    }
+    const minWidths = Array.isArray(state?.columnMinWidths) ? state.columnMinWidths : [];
+    return widths.map((value, index) => {
+        const minWidth = Math.max(
+            DEFAULT_MIN_COLUMN_WIDTH,
+            Math.round(minWidths[index] || 0),
+        );
+        if (!Number.isFinite(value) || value <= 0) {
+            return minWidth;
+        }
+        return Math.max(Math.round(value), minWidth);
+    });
+}
+
+function computeColumnMinWidths(state = mdsState) {
+    if (!state?.table?.tHead) {
+        return [];
+    }
+    const headerRow = state.table.tHead.rows[0];
+    if (!headerRow) {
+        return [];
+    }
+    const columnCount = headerRow.cells.length;
+    if (!columnCount) {
+        return [];
+    }
+
+    const minWidths = new Array(columnCount).fill(DEFAULT_MIN_COLUMN_WIDTH);
+    const rows = [];
+    if (state.table.tHead) {
+        rows.push(...state.table.tHead.rows);
+    }
+    if (state.tableBody) {
+        rows.push(...state.tableBody.rows);
+    }
+
+    const updateForCell = (cell, index) => {
+        if (!cell) {
+            return;
+        }
+        const rect = cell.getBoundingClientRect();
+        const rectWidth = Number.isFinite(rect?.width) ? Math.ceil(rect.width) : 0;
+        const scrollWidth = Number.isFinite(cell.scrollWidth) ? Math.ceil(cell.scrollWidth) : 0;
+        let minWidth = Math.max(rectWidth, scrollWidth, DEFAULT_MIN_COLUMN_WIDTH);
+        if (typeof window !== 'undefined' && cell instanceof HTMLElement) {
+            const style = window.getComputedStyle(cell);
+            const cssMin = parseFloat(style.minWidth) || 0;
+            if (Number.isFinite(cssMin) && cssMin > 0) {
+                minWidth = Math.max(minWidth, Math.ceil(cssMin));
+            }
+        }
+        minWidths[index] = Math.max(minWidths[index], minWidth);
+    };
+
+    rows.forEach(row => {
+        let columnIndex = 0;
+        Array.from(row.cells).forEach(cell => {
+            const span = cell.colSpan || 1;
+            if (span !== 1) {
+                columnIndex += span;
+                return;
+            }
+            updateForCell(cell, columnIndex);
+            columnIndex += 1;
+        });
+    });
+
+    return minWidths.map(value => Math.max(Math.round(value || 0), DEFAULT_MIN_COLUMN_WIDTH));
+}
+
+function ensureColumnMetrics(state = mdsState) {
+    if (!state?.table?.tHead) {
+        return false;
+    }
+    const headerRow = state.table.tHead.rows[0];
+    if (!headerRow) {
+        return false;
+    }
+
+    const columnCount = headerRow.cells.length;
+    if (!columnCount) {
+        return false;
+    }
+
+    const minWidths = computeColumnMinWidths(state);
+    if (minWidths.length) {
+        state.columnMinWidths = minWidths;
+    }
+    if (!Array.isArray(state.columnMinWidths) || state.columnMinWidths.length < columnCount) {
+        const fallback = new Array(columnCount).fill(DEFAULT_MIN_COLUMN_WIDTH);
+        if (Array.isArray(state.columnMinWidths)) {
+            state.columnMinWidths.forEach((value, index) => {
+                fallback[index] = Math.max(DEFAULT_MIN_COLUMN_WIDTH, Math.round(value || 0));
+            });
+        }
+        state.columnMinWidths = fallback;
+    } else {
+        state.columnMinWidths = state.columnMinWidths.map(value =>
+            Math.max(DEFAULT_MIN_COLUMN_WIDTH, Math.round(value || 0)),
+        );
+    }
+
+    let widths;
+    if (!Array.isArray(state.columnWidths) || state.columnWidths.length < columnCount) {
+        widths = Array.from(headerRow.cells).map(cell => {
+            const rect = cell.getBoundingClientRect();
+            const rectWidth = Number.isFinite(rect?.width) ? Math.round(rect.width) : DEFAULT_MIN_COLUMN_WIDTH;
+            return Math.max(rectWidth, DEFAULT_MIN_COLUMN_WIDTH);
+        });
+    } else {
+        widths = state.columnWidths.slice();
+    }
+
+    state.columnWidths = normaliseColumnWidths(widths, state);
+    return true;
+}
+
+function setupColumnResizers(state = mdsState) {
+    if (!state?.table?.tHead) {
+        return;
+    }
+    const headerRow = state.table.tHead.rows[0];
+    if (!headerRow) {
+        return;
+    }
+
+    state.columnResizers = Array.isArray(state.columnResizers) ? state.columnResizers : [];
+
+    Array.from(headerRow.cells).forEach((cell, index) => {
+        if (!cell || index === headerRow.cells.length - 1) {
+            return;
+        }
+        if (cell.querySelector('.mds-column-resizer')) {
+            return;
+        }
+        const resizer = document.createElement('div');
+        resizer.className = 'mds-column-resizer';
+        resizer.dataset.columnIndex = String(index);
+        resizer.setAttribute('aria-hidden', 'true');
+        resizer.setAttribute('role', 'presentation');
+        resizer.tabIndex = -1;
+        resizer.title = 'Drag to resize column';
+        resizer.addEventListener('pointerdown', handleColumnResizeStart);
+        resizer.addEventListener('click', event => {
+            event.preventDefault();
+            event.stopPropagation();
+        });
+        cell.appendChild(resizer);
+        state.columnResizers.push(resizer);
+    });
+}
+
+function handleColumnResizeStart(event) {
+    if (!mdsState) {
+        return;
+    }
+    if (event.button !== undefined && event.button !== 0) {
+        return;
+    }
+    const target = event.currentTarget;
+    if (!(target instanceof HTMLElement)) {
+        return;
+    }
+    const columnIndex = Number.parseInt(target.dataset.columnIndex || '', 10);
+    if (!Number.isFinite(columnIndex)) {
+        return;
+    }
+
+    if (!ensureColumnMetrics()) {
+        return;
+    }
+
+    const nextIndex = columnIndex + 1;
+    const widths = Array.isArray(mdsState.columnWidths) ? mdsState.columnWidths.slice() : [];
+    if (nextIndex >= widths.length) {
+        return;
+    }
+
+    const minWidths = Array.isArray(mdsState.columnMinWidths) ? mdsState.columnMinWidths : [];
+    const startLeft = widths[columnIndex];
+    const startRight = widths[nextIndex];
+    const minLeft = Math.max(minWidths[columnIndex] || DEFAULT_MIN_COLUMN_WIDTH, DEFAULT_MIN_COLUMN_WIDTH);
+    const minRight = Math.max(minWidths[nextIndex] || DEFAULT_MIN_COLUMN_WIDTH, DEFAULT_MIN_COLUMN_WIDTH);
+
+    if (!Number.isFinite(startLeft) || !Number.isFinite(startRight)) {
+        return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    const resizeState = {
+        activeResizer: target,
+        columnIndex,
+        nextColumnIndex: nextIndex,
+        pointerId: event.pointerId,
+        startX: event.clientX,
+        startLeft,
+        startRight,
+        minLeft,
+        minRight,
+        listenerTarget: target,
+    };
+
+    mdsState.columnResizeState = resizeState;
+
+    if (mdsState.tableContainer) {
+        mdsState.tableContainer.classList.add('mds-table-container--resizing');
+    }
+
+    target.classList.add('is-active');
+
+    let useDocumentListeners = false;
+    if (typeof target.setPointerCapture === 'function') {
+        try {
+            target.setPointerCapture(event.pointerId);
+        } catch (error) {
+            useDocumentListeners = true;
+        }
+    } else {
+        useDocumentListeners = true;
+    }
+
+    if (useDocumentListeners && typeof document !== 'undefined') {
+        resizeState.listenerTarget = document;
+    }
+
+    const listenerTarget = resizeState.listenerTarget;
+    if (listenerTarget) {
+        listenerTarget.addEventListener('pointermove', handleColumnResizeMove);
+        listenerTarget.addEventListener('pointerup', handleColumnResizeEnd);
+        listenerTarget.addEventListener('pointercancel', handleColumnResizeEnd);
+    }
+}
+
+function handleColumnResizeMove(event) {
+    if (!mdsState?.columnResizeState) {
+        return;
+    }
+    const state = mdsState.columnResizeState;
+    if (state.pointerId !== undefined && event.pointerId !== undefined && state.pointerId !== event.pointerId) {
+        return;
+    }
+
+    const widths = Array.isArray(mdsState.columnWidths) ? mdsState.columnWidths.slice() : [];
+    if (!widths.length) {
+        return;
+    }
+
+    const leftIndex = state.columnIndex;
+    const rightIndex = state.nextColumnIndex;
+    if (rightIndex >= widths.length) {
+        return;
+    }
+
+    const minLeft = state.minLeft || DEFAULT_MIN_COLUMN_WIDTH;
+    const minRight = state.minRight || DEFAULT_MIN_COLUMN_WIDTH;
+
+    let delta = event.clientX - state.startX;
+    if (!Number.isFinite(delta)) {
+        delta = 0;
+    }
+    const maxNegativeDelta = state.startLeft - minLeft;
+    const maxPositiveDelta = state.startRight - minRight;
+    if (Number.isFinite(maxNegativeDelta)) {
+        delta = Math.max(delta, -maxNegativeDelta);
+    }
+    if (Number.isFinite(maxPositiveDelta)) {
+        delta = Math.min(delta, maxPositiveDelta);
+    }
+
+    const newLeft = state.startLeft + delta;
+    const newRight = state.startRight - delta;
+
+    widths[leftIndex] = Math.max(minLeft, Math.round(newLeft));
+    widths[rightIndex] = Math.max(minRight, Math.round(newRight));
+
+    mdsState.columnWidths = widths;
+    const normalised = normaliseColumnWidths(widths);
+    mdsState.columnWidths = normalised;
+    applyColumnWidths(normalised);
+
+    if (typeof window !== 'undefined' && window.getSelection) {
+        const selection = window.getSelection();
+        if (selection && typeof selection.removeAllRanges === 'function') {
+            selection.removeAllRanges();
+        }
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+}
+
+function handleColumnResizeEnd(event) {
+    const state = mdsState?.columnResizeState;
+    if (!state) {
+        return;
+    }
+
+    const target = state.activeResizer;
+    if (target instanceof HTMLElement) {
+        target.classList.remove('is-active');
+        if (typeof target.releasePointerCapture === 'function' && state.pointerId !== undefined) {
+            try {
+                target.releasePointerCapture(state.pointerId);
+            } catch (error) {
+                // Ignore errors when releasing capture.
+            }
+        }
+    }
+
+    const listenerTarget = state.listenerTarget || target;
+    if (listenerTarget) {
+        listenerTarget.removeEventListener('pointermove', handleColumnResizeMove);
+        listenerTarget.removeEventListener('pointerup', handleColumnResizeEnd);
+        listenerTarget.removeEventListener('pointercancel', handleColumnResizeEnd);
+    }
+
+    if (mdsState.tableContainer) {
+        mdsState.tableContainer.classList.remove('mds-table-container--resizing');
+    }
+
+    mdsState.columnResizeState = null;
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+
+    const minWidths = computeColumnMinWidths();
+    if (minWidths.length) {
+        mdsState.columnMinWidths = minWidths;
+    }
+    if (Array.isArray(mdsState.columnWidths)) {
+        const normalised = normaliseColumnWidths(mdsState.columnWidths);
+        mdsState.columnWidths = normalised;
+        applyColumnWidths(normalised);
+    }
 }
 
 function createTextCell(text, title) {
