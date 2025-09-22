@@ -35,6 +35,11 @@ python = "^3.8"
 cryptography = ">=2.6, !=35, <45"
 pyscard = {version = "^1.9 || ^2", optional = true}
 
+cbor2 = "^5.6.4"           # CBOR parsing
+pycose = "^1.0.0"          # COSE key handling
+pyjwt = "^2.9.0"           # JWT validation (for MDS)
+requests = "^2.32.3"       # Fetching metadata/trust anchors
+
 [tool.poetry.extras]
 pcsc = ["pyscard"]
 pqc = ["oqs", "pqcrypto"]
