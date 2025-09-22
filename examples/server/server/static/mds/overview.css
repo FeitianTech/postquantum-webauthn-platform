@@ -4,15 +4,6 @@
     gap: 1.75rem;
 }
 
-.mds-section--detail-active .mds-section-header,
-.mds-section--detail-active .mds-status {
-    display: none;
-}
-
-.mds-section--detail-active .mds-detail {
-    margin-top: 0;
-}
-
 .mds-section-header {
     display: flex;
     flex-wrap: wrap;

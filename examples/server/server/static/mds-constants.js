@@ -1,6 +1,6 @@
 export const MDS_HTML_PATH = 'mds.html';
 export const MDS_JWS_PATH = 'fido-mds3.jws';
-export const COLUMN_COUNT = 11;
+export const COLUMN_COUNT = 13;
 export const MISSING_METADATA_MESSAGE =
     'Metadata has not been downloaded yet. Use the Download Metadata button.';
 
@@ -42,6 +42,8 @@ export const FILTER_CONFIG = [
         optionsKey: 'algorithms',
         expandDropdown: true,
     },
+    { key: 'algorithmInfo', inputId: 'mds-filter-algorithm-info' },
+    { key: 'commonName', inputId: 'mds-filter-common-name' },
 ];
 
 export const FILTER_LOOKUP = FILTER_CONFIG.reduce((map, config) => {

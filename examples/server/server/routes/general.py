@@ -4,6 +4,7 @@ from __future__ import annotations
 import base64
 import binascii
 import os
+from threading import Lock
 from typing import Any, Dict
 
 from flask import abort, jsonify, redirect, render_template, request, send_file
@@ -12,6 +13,56 @@ from ..attestation import serialize_attestation_certificate
 from ..config import MDS_METADATA_PATH, app, basepath
 from ..metadata import MetadataDownloadError, download_metadata_blob, load_metadata_cache_entry
 from ..storage import delkey
+
+
+_metadata_bootstrap_lock = Lock()
+_metadata_bootstrap_state = {"started": False}
+
+
+def _auto_refresh_metadata() -> None:
+    with _metadata_bootstrap_lock:
+        if _metadata_bootstrap_state["started"]:
+            return
+        _metadata_bootstrap_state["started"] = True
+
+    try:
+        updated, bytes_written, last_modified = download_metadata_blob()
+    except MetadataDownloadError as exc:
+        app.logger.warning("Automatic metadata update failed: %s", exc)
+        return
+    except Exception as exc:  # pylint: disable=broad-except
+        app.logger.exception("Unexpected error while refreshing metadata automatically: %s", exc)
+        return
+
+    if updated:
+        if last_modified:
+            app.logger.info(
+                "Automatically refreshed FIDO MDS metadata (%d bytes written, Last-Modified: %s).",
+                bytes_written,
+                last_modified,
+            )
+        else:
+            app.logger.info(
+                "Automatically refreshed FIDO MDS metadata (%d bytes written).",
+                bytes_written,
+            )
+    else:
+        if last_modified:
+            app.logger.info(
+                "FIDO MDS metadata already up to date (Last-Modified: %s).",
+                last_modified,
+            )
+        else:
+            app.logger.info("FIDO MDS metadata already up to date.")
+
+
+def ensure_metadata_bootstrapped(skip_if_reloader_parent: bool = True) -> None:
+    """Ensure the MDS metadata cache is refreshed once per server process."""
+
+    if skip_if_reloader_parent and app.debug and os.environ.get("WERKZEUG_RUN_MAIN") != "true":
+        return
+
+    _auto_refresh_metadata()
 
 
 @app.route("/")

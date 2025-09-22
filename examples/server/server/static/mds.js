@@ -35,6 +35,66 @@ let isUpdatingMetadata = false;
 let loadPromise = null;
 const certificateCache = new Map();
 let scrollTopButtonUpdateScheduled = false;
+let columnResizerMetricsScheduled = false;
+let rowHeightLockScheduled = false;
+
+const SORT_NONE = 'none';
+const SORT_ASCENDING = 'asc';
+const SORT_DESCENDING = 'desc';
+
+const SORT_SEQUENCE = {
+    [SORT_NONE]: SORT_ASCENDING,
+    [SORT_ASCENDING]: SORT_DESCENDING,
+    [SORT_DESCENDING]: SORT_NONE,
+};
+
+const SORT_ACCESSORS = {
+    icon: entry => {
+        const name = typeof entry?.name === 'string' ? entry.name : '';
+        return `${entry?.icon ? '1' : '0'}_${name}`;
+    },
+    name: entry => entry?.name || '',
+    protocol: entry => entry?.protocol || '',
+    certification: entry => entry?.certification || '',
+    id: entry => entry?.id || '',
+    userVerification: entry => entry?.userVerification || '',
+    attachment: entry => entry?.attachment || '',
+    transports: entry => entry?.transports || '',
+    keyProtection: entry => entry?.keyProtection || '',
+    algorithms: entry => entry?.algorithms || '',
+    algorithmInfo: entry => entry?.algorithmInfo || entry?.certificateAlgorithmInfo || '',
+    commonName: entry => entry?.commonName || entry?.certificateCommonNames || '',
+    dateUpdated: entry => {
+        if (entry?.dateTooltip) {
+            const timestamp = Date.parse(entry.dateTooltip);
+            if (!Number.isNaN(timestamp)) {
+                return timestamp;
+            }
+            return entry.dateTooltip;
+        }
+        return entry?.dateUpdated || '';
+    },
+};
+
+const DEFAULT_MIN_COLUMN_WIDTH = 64;
+
+function showElement(element) {
+    if (!(element instanceof HTMLElement)) {
+        return;
+    }
+    element.hidden = false;
+    element.removeAttribute('hidden');
+    element.setAttribute('aria-hidden', 'false');
+}
+
+function hideElement(element) {
+    if (!(element instanceof HTMLElement)) {
+        return;
+    }
+    element.hidden = true;
+    element.setAttribute('hidden', '');
+    element.setAttribute('aria-hidden', 'true');
+}
 
 function scheduleScrollTopButtonUpdate() {
     if (scrollTopButtonUpdateScheduled) {
@@ -50,6 +110,99 @@ function scheduleScrollTopButtonUpdate() {
     } else {
         setTimeout(apply, 0);
     }
+}
+
+function scheduleColumnResizerMetricsUpdate() {
+    if (columnResizerMetricsScheduled) {
+        return;
+    }
+    columnResizerMetricsScheduled = true;
+    const apply = () => {
+        columnResizerMetricsScheduled = false;
+        updateColumnResizerMetrics();
+    };
+    if (typeof requestAnimationFrame === 'function') {
+        requestAnimationFrame(apply);
+    } else {
+        setTimeout(apply, 0);
+    }
+}
+
+function scheduleRowHeightLock() {
+    if (rowHeightLockScheduled) {
+        return;
+    }
+    rowHeightLockScheduled = true;
+    const apply = () => {
+        rowHeightLockScheduled = false;
+        lockRowHeights();
+    };
+    if (typeof requestAnimationFrame === 'function') {
+        requestAnimationFrame(() => {
+            if (typeof requestAnimationFrame === 'function') {
+                requestAnimationFrame(apply);
+            } else {
+                setTimeout(apply, 0);
+            }
+        });
+    } else {
+        setTimeout(apply, 0);
+    }
+}
+
+function lockRowHeights() {
+    if (!mdsState?.tableBody) {
+        return;
+    }
+
+    const rows = Array.from(mdsState.tableBody.rows ?? []).filter(row =>
+        row instanceof HTMLTableRowElement && !row.classList.contains('mds-empty-row'),
+    );
+
+    rows.forEach(row => {
+        if (!(row instanceof HTMLTableRowElement)) {
+            return;
+        }
+        if (row.offsetParent === null) {
+            return;
+        }
+
+        const stored = Number.parseInt(row.dataset.baseHeight || '', 10);
+        let baseHeight = Number.isFinite(stored) && stored > 0 ? stored : null;
+
+        if (!baseHeight) {
+            const rect = typeof row.getBoundingClientRect === 'function' ? row.getBoundingClientRect() : null;
+            const measured = rect && Number.isFinite(rect.height) ? Math.ceil(rect.height) : 0;
+            if (!measured) {
+                return;
+            }
+            baseHeight = measured;
+            row.dataset.baseHeight = String(baseHeight);
+        }
+
+        applyRowHeightLock(row, baseHeight);
+    });
+}
+
+function applyRowHeightLock(row, height) {
+    if (!(row instanceof HTMLTableRowElement) || !Number.isFinite(height) || height <= 0) {
+        return;
+    }
+
+    const heightPx = `${height}px`;
+    row.style.height = heightPx;
+    row.style.maxHeight = heightPx;
+    row.style.minHeight = heightPx;
+
+    Array.from(row.cells ?? []).forEach(cell => {
+        if (!(cell instanceof HTMLTableCellElement)) {
+            return;
+        }
+        cell.style.height = heightPx;
+        cell.style.maxHeight = heightPx;
+        cell.style.minHeight = heightPx;
+        cell.style.overflow = 'hidden';
+    });
 }
 
 function updateScrollTopButtonVisibility(options = {}) {
@@ -156,6 +309,7 @@ function scrollMdsSectionToTop() {
 
 function handleWindowScroll() {
     scheduleScrollTopButtonUpdate();
+    scheduleColumnResizerMetricsUpdate();
 }
 
 if (typeof window !== 'undefined') {
@@ -177,6 +331,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const markup = await response.text();
         tabElement.innerHTML = markup;
         mdsState = initializeState(tabElement);
+        updateSortButtonState();
         setUpdateButtonMode('update');
     } catch (error) {
         console.error('Failed to initialise the FIDO MDS tab:', error);
@@ -279,6 +434,19 @@ function initializeState(root) {
     const table = root.querySelector('.mds-table');
     const tableBody = root.querySelector('#mds-table-body');
 
+    const sortButtons = new Map();
+    root.querySelectorAll('.mds-sort-button[data-sort-key]').forEach(button => {
+        const sortKey = button.dataset.sortKey;
+        if (!sortKey) {
+            return;
+        }
+        sortButtons.set(sortKey, button);
+        button.addEventListener('click', () => handleSortButtonClick(sortKey));
+        if (!button.hasAttribute('data-sort-direction')) {
+            button.setAttribute('data-sort-direction', SORT_NONE);
+        }
+    });
+
     const scrollTopButton = root.querySelector('#mds-scroll-top-button');
     if (scrollTopButton) {
         scrollTopButton.addEventListener('click', event => {
@@ -294,12 +462,6 @@ function initializeState(root) {
         updateButton.addEventListener('click', () => {
             void refreshMetadata();
         });
-    }
-
-    const detailView = root.querySelector('#mds-detail-view');
-    const detailBack = root.querySelector('#mds-detail-back');
-    if (detailBack) {
-        detailBack.addEventListener('click', () => hideAuthenticatorDetail());
     }
 
     const certificateModal = root.querySelector('#mds-certificate-modal');
@@ -319,8 +481,12 @@ function initializeState(root) {
 
     const authenticatorModal = root.querySelector('#mds-authenticator-modal');
     const authenticatorClose = root.querySelector('#mds-authenticator-modal-close');
+    const authenticatorBack = root.querySelector('#mds-authenticator-modal-back');
     if (authenticatorClose) {
         authenticatorClose.addEventListener('click', () => closeAuthenticatorModal());
+    }
+    if (authenticatorBack) {
+        authenticatorBack.addEventListener('click', () => closeAuthenticatorModal());
     }
     if (authenticatorModal) {
         authenticatorModal.addEventListener('click', event => {
@@ -342,7 +508,7 @@ function initializeState(root) {
         document.addEventListener('tab:changed', handleTabChanged);
     }
 
-    return {
+    const state = {
         root,
         filters,
         filterInputs,
@@ -350,21 +516,22 @@ function initializeState(root) {
         tableContainer,
         table,
         tableBody,
+        sortButtons,
+        sort: { key: '', direction: SORT_NONE },
         countEl: root.querySelector('#mds-entry-count'),
         totalEl: root.querySelector('#mds-total-count'),
         statusEl,
         defaultStatus,
         statusResetTimer: null,
         columnWidths: null,
+        columnMinWidths: null,
         columnWidthAttempts: 0,
+        columnResizers: [],
+        columnResizeState: null,
         updateButton,
         updateButtonMode: 'update',
         metadataOverdue: false,
         metadataNextUpdate: null,
-        detailView,
-        detailContent: root.querySelector('#mds-detail-content'),
-        detailTitle: root.querySelector('#mds-detail-title'),
-        detailSubtitle: root.querySelector('#mds-detail-subtitle'),
         certificateModal,
         certificateModalBody: certificateBody,
         certificateInput: root.querySelector('#mds-certificate-input'),
@@ -377,9 +544,8 @@ function initializeState(root) {
         authenticatorModalSubtitle: root.querySelector('#mds-authenticator-modal-subtitle'),
         authenticatorModalBody: root.querySelector('#mds-authenticator-modal-body'),
         authenticatorModalClose: authenticatorClose,
+        authenticatorModalBack: authenticatorBack,
         activeDetailEntry: null,
-        previousDocumentScrollTop: null,
-        previousTableScrollTop: null,
         highlightedRow: null,
         highlightedRowKey: '',
         tabChangeHandler: handleTabChanged,
@@ -387,6 +553,9 @@ function initializeState(root) {
         scrollTopButton,
         scrollTopButtonVisible: false,
     };
+
+    setupColumnResizers(state);
+    return state;
 }
 
 async function loadMdsData(statusNote) {
@@ -439,6 +608,7 @@ async function loadMdsData(statusNote) {
                         tbody.appendChild(emptyRow);
                     }
                     hideScrollTopButton();
+                    resetSortState();
                     return;
                 }
                 throw new Error(`Unexpected response status: ${response.status}`);
@@ -456,8 +626,9 @@ async function loadMdsData(statusNote) {
             mdsData = Array.isArray(metadata.entries)
                 ? metadata.entries.map((entry, index) => transformEntry(entry, index)).filter(Boolean)
                 : [];
-            hasLoaded = true;
             setUpdateButtonMode('update');
+
+            resetSortState();
 
             if (mdsState) {
                 const map = new Map();
@@ -484,7 +655,15 @@ async function loadMdsData(statusNote) {
 
             const optionSets = collectOptionSets(mdsData);
             updateOptionLists(optionSets);
+
+            try {
+                await populateCertificateDerivedInfo(mdsData);
+            } catch (error) {
+                console.error('Failed to derive attestation certificate details:', error);
+            }
+
             applyFilters();
+            hasLoaded = true;
 
             const statusParts = [`Loaded ${mdsData.length.toLocaleString()} authenticators.`];
             let statusVariant = 'success';
@@ -555,9 +734,12 @@ function applyFilters() {
     }
 
     const activeFilters = mdsState.filters;
-    filteredData = mdsData.filter(entry => matchesFilters(entry, activeFilters));
-    renderTable(filteredData);
-    updateCount(filteredData.length, mdsData.length);
+    const matched = mdsData.filter(entry => matchesFilters(entry, activeFilters));
+    const sorted = applySorting(matched);
+    filteredData = sorted;
+    renderTable(sorted);
+    updateCount(sorted.length, mdsData.length);
+    updateSortButtonState();
 }
 
 function matchesFilters(entry, filters) {
@@ -595,6 +777,252 @@ function matchesFilters(entry, filters) {
         }
         const haystack = (entry[key] || '').toLowerCase();
         return haystack.includes(query);
+    });
+}
+
+function applySorting(entries) {
+    if (!Array.isArray(entries)) {
+        return [];
+    }
+    if (!mdsState?.sort) {
+        return entries.slice();
+    }
+
+    const { key, direction } = mdsState.sort;
+    if (!key || direction === SORT_NONE) {
+        return entries.slice();
+    }
+
+    const accessor = SORT_ACCESSORS[key];
+    if (typeof accessor !== 'function') {
+        return entries.slice();
+    }
+
+    const sorted = entries.slice().sort((a, b) => compareSortValues(a, b, accessor));
+    if (direction === SORT_DESCENDING) {
+        sorted.reverse();
+    }
+    return sorted;
+}
+
+function compareSortValues(entryA, entryB, accessor) {
+    const valueA = accessor(entryA);
+    const valueB = accessor(entryB);
+
+    const normalisedA = normaliseSortValue(valueA);
+    const normalisedB = normaliseSortValue(valueB);
+
+    if (normalisedA < normalisedB) {
+        return -1;
+    }
+    if (normalisedA > normalisedB) {
+        return 1;
+    }
+
+    const fallbackA = String(valueA ?? '').toLowerCase();
+    const fallbackB = String(valueB ?? '').toLowerCase();
+    if (fallbackA < fallbackB) {
+        return -1;
+    }
+    if (fallbackA > fallbackB) {
+        return 1;
+    }
+
+    const originalA = String(valueA ?? '');
+    const originalB = String(valueB ?? '');
+    if (originalA < originalB) {
+        return -1;
+    }
+    if (originalA > originalB) {
+        return 1;
+    }
+
+    const indexA = typeof entryA?.index === 'number' ? entryA.index : 0;
+    const indexB = typeof entryB?.index === 'number' ? entryB.index : 0;
+    return indexA - indexB;
+}
+
+function normaliseSortValue(value) {
+    if (value === undefined || value === null) {
+        return '';
+    }
+    if (typeof value === 'number') {
+        return value;
+    }
+    if (value instanceof Date) {
+        return value.getTime();
+    }
+
+    const text = String(value).trim();
+    if (!text || text === '—') {
+        return '';
+    }
+
+    const numeric = Number(text);
+    if (!Number.isNaN(numeric) && text !== '') {
+        return numeric;
+    }
+    return text.toLowerCase();
+}
+
+function updateSortButtonState() {
+    if (!mdsState?.sortButtons) {
+        return;
+    }
+
+    const activeKey = mdsState.sort?.key || '';
+    const direction = mdsState.sort?.direction || SORT_NONE;
+
+    mdsState.sortButtons.forEach((button, key) => {
+        const isActive = key === activeKey && direction !== SORT_NONE;
+        const appliedDirection = isActive ? direction : SORT_NONE;
+        button.setAttribute('data-sort-direction', appliedDirection);
+        button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+
+        const label = button.getAttribute('data-sort-label') || '';
+        if (label) {
+            let suffix = ' (no sorting)';
+            if (appliedDirection === SORT_ASCENDING) {
+                suffix = ' (ascending)';
+            } else if (appliedDirection === SORT_DESCENDING) {
+                suffix = ' (descending)';
+            }
+            button.setAttribute('aria-label', `Sort ${label}${suffix}`);
+        }
+
+        const headerCell = button.closest('th');
+        if (headerCell) {
+            headerCell.classList.toggle('mds-sort-active', isActive);
+        }
+    });
+}
+
+function resetSortState() {
+    if (!mdsState) {
+        return;
+    }
+    if (!mdsState.sort) {
+        mdsState.sort = { key: '', direction: SORT_NONE };
+    } else {
+        mdsState.sort.key = '';
+        mdsState.sort.direction = SORT_NONE;
+    }
+    updateSortButtonState();
+}
+
+function handleSortButtonClick(sortKey) {
+    if (!mdsState) {
+        return;
+    }
+    const key = typeof sortKey === 'string' ? sortKey : '';
+    if (!key || !Object.prototype.hasOwnProperty.call(SORT_ACCESSORS, key)) {
+        return;
+    }
+
+    if (!mdsState.sort) {
+        mdsState.sort = { key: '', direction: SORT_NONE };
+    }
+
+    const currentKey = mdsState.sort.key;
+    const currentDirection = mdsState.sort.direction || SORT_NONE;
+    let nextDirection = SORT_ASCENDING;
+    if (currentKey === key) {
+        nextDirection = SORT_SEQUENCE[currentDirection] || SORT_ASCENDING;
+    }
+
+    if (nextDirection === SORT_NONE) {
+        mdsState.sort.key = '';
+        mdsState.sort.direction = SORT_NONE;
+    } else {
+        mdsState.sort.key = key;
+        mdsState.sort.direction = nextDirection;
+    }
+
+    updateSortButtonState();
+    applyFilters();
+}
+
+async function populateCertificateDerivedInfo(entries) {
+    if (!Array.isArray(entries) || !entries.length) {
+        return;
+    }
+
+    const seen = new Set();
+    const certificates = [];
+
+    entries.forEach(entry => {
+        const list = Array.isArray(entry?.attestationCertificates) ? entry.attestationCertificates : [];
+        list.forEach(certificate => {
+            const cleaned = normaliseCertificateBase64(certificate);
+            if (cleaned && !seen.has(cleaned)) {
+                seen.add(cleaned);
+                certificates.push(cleaned);
+            }
+        });
+    });
+
+    if (!certificates.length) {
+        return;
+    }
+
+    const detailMap = new Map();
+
+    const decodeTasks = certificates.map(certificate =>
+        decodeCertificate(certificate)
+            .then(details => ({ certificate, details, error: null }))
+            .catch(error => ({ certificate, details: null, error })),
+    );
+
+    const decodedResults = await Promise.all(decodeTasks);
+    decodedResults.forEach(result => {
+        if (result.error) {
+            console.error('Failed to decode attestation root certificate:', result.error);
+        }
+        detailMap.set(result.certificate, result.details);
+    });
+
+    entries.forEach(entry => {
+        const algorithmSet = new Set();
+        const algorithms = [];
+        const commonNameSet = new Set();
+        const commonNames = [];
+        const list = Array.isArray(entry?.attestationCertificates) ? entry.attestationCertificates : [];
+
+        list.forEach(certificate => {
+            const cleaned = normaliseCertificateBase64(certificate);
+            if (!cleaned) {
+                return;
+            }
+            const details = detailMap.get(cleaned);
+            if (!details || typeof details !== 'object') {
+                return;
+            }
+
+            const algorithmInfo = typeof details.algorithmInfo === 'string' ? details.algorithmInfo.trim() : '';
+            if (algorithmInfo && !algorithmSet.has(algorithmInfo)) {
+                algorithmSet.add(algorithmInfo);
+                algorithms.push(algorithmInfo);
+            }
+
+            const cnValues = Array.isArray(details.subjectCommonNames) ? details.subjectCommonNames : [];
+            cnValues.forEach(name => {
+                if (typeof name !== 'string') {
+                    return;
+                }
+                const trimmed = name.trim();
+                if (trimmed && !commonNameSet.has(trimmed)) {
+                    commonNameSet.add(trimmed);
+                    commonNames.push(trimmed);
+                }
+            });
+        });
+
+        entry.certificateAlgorithmInfoList = algorithms;
+        entry.certificateAlgorithmInfo = algorithms.length ? algorithms.join(', ') : '—';
+        entry.algorithmInfo = entry.certificateAlgorithmInfo;
+        entry.certificateCommonNameList = commonNames;
+        entry.certificateCommonNames = commonNames.length ? commonNames.join(', ') : '—';
+        entry.commonName = entry.certificateCommonNames;
     });
 }
 
@@ -638,6 +1066,7 @@ function renderTable(entries) {
         tbody.appendChild(emptyRow);
         hideScrollTopButton();
         stabiliseColumnWidths();
+        scheduleColumnResizerMetricsUpdate();
         return;
     }
 
@@ -671,6 +1100,8 @@ function renderTable(entries) {
         row.appendChild(createTagCell(entry.transportsList));
         row.appendChild(createTagCell(entry.keyProtectionList));
         row.appendChild(createTagCell(entry.algorithmsList));
+        row.appendChild(createTagCell(entry.certificateAlgorithmInfoList));
+        row.appendChild(createTagCell(entry.certificateCommonNameList));
         row.appendChild(createTextCell(entry.dateUpdated || '—', entry.dateTooltip));
 
         fragment.appendChild(row);
@@ -685,6 +1116,8 @@ function renderTable(entries) {
     }
     stabiliseColumnWidths();
     scheduleScrollTopButtonUpdate();
+    scheduleColumnResizerMetricsUpdate();
+    scheduleRowHeightLock();
 }
 
 function formatDetailSubtitle(entry) {
@@ -899,7 +1332,6 @@ function showAuthenticatorDetail(entry, options = {}) {
     }
 
     clearRowHighlight();
-    hideScrollTopButton();
 
     const sourceEntry = typeof entry.index === 'number' && mdsData[entry.index]
         ? mdsData[entry.index]
@@ -907,39 +1339,18 @@ function showAuthenticatorDetail(entry, options = {}) {
 
     mdsState.activeDetailEntry = sourceEntry;
 
-    if (typeof window !== 'undefined') {
-        const doc = document.documentElement;
-        const body = document.body;
-        const scrollTop = typeof window.pageYOffset === 'number'
-            ? window.pageYOffset
-            : (doc?.scrollTop ?? body?.scrollTop ?? 0);
-        mdsState.previousDocumentScrollTop = scrollTop;
-    }
-
-    if (mdsState.tableContainer) {
-        if (typeof mdsState.tableContainer.scrollTop === 'number') {
-            mdsState.previousTableScrollTop = mdsState.tableContainer.scrollTop;
-        }
-        mdsState.tableContainer.hidden = true;
-    }
-    if (mdsState.detailView) {
-        mdsState.detailView.hidden = false;
-    }
-
-    if (mdsState.root) {
-        mdsState.root.classList.add('mds-section--detail-active');
-    }
-
-    applyDetailHeader(sourceEntry, mdsState.detailTitle, mdsState.detailSubtitle);
-    populateDetailContent(mdsState.detailContent, sourceEntry);
-    resetScrollPositions(mdsState.detailView, mdsState.detailContent);
-
     const { scrollIntoView = true } = options;
-    if (scrollIntoView && mdsState.detailView && typeof mdsState.detailView.scrollIntoView === 'function') {
-        requestAnimationFrame(() => {
-            mdsState.detailView.scrollIntoView({ block: 'start' });
-        });
+    if (scrollIntoView) {
+        const key = normaliseAaguid(sourceEntry.aaguid || sourceEntry.id);
+        const row = key ? findRowByKey(key) : null;
+        if (row && typeof row.scrollIntoView === 'function') {
+            requestAnimationFrame(() => {
+                row.scrollIntoView({ block: 'center', behavior: 'smooth' });
+            });
+        }
     }
+
+    openAuthenticatorModal(sourceEntry);
 }
 
 function hideAuthenticatorDetail() {
@@ -947,59 +1358,7 @@ function hideAuthenticatorDetail() {
         return;
     }
 
-    if (mdsState.root) {
-        mdsState.root.classList.remove('mds-section--detail-active');
-    }
-
-    if (mdsState.detailView) {
-        mdsState.detailView.hidden = true;
-    }
-    if (mdsState.tableContainer) {
-        mdsState.tableContainer.hidden = false;
-        if (typeof mdsState.previousTableScrollTop === 'number') {
-            const target = mdsState.previousTableScrollTop;
-            mdsState.tableContainer.scrollTop = target;
-            if (typeof requestAnimationFrame === 'function') {
-                requestAnimationFrame(() => {
-                    requestAnimationFrame(() => {
-                        mdsState.tableContainer.scrollTop = target;
-                    });
-                });
-            } else {
-                setTimeout(() => {
-                    mdsState.tableContainer.scrollTop = target;
-                }, 0);
-            }
-        }
-    }
-
-    const previousScrollTop = typeof mdsState.previousDocumentScrollTop === 'number'
-        ? mdsState.previousDocumentScrollTop
-        : null;
-    mdsState.previousDocumentScrollTop = null;
-    mdsState.previousTableScrollTop = null;
-
-    if (previousScrollTop !== null && typeof window !== 'undefined') {
-        const restore = () => {
-            if (typeof window.scrollTo === 'function') {
-                window.scrollTo({ top: previousScrollTop, left: 0, behavior: 'auto' });
-            } else {
-                window.scrollTo(0, previousScrollTop);
-            }
-        };
-        if (typeof requestAnimationFrame === 'function') {
-            requestAnimationFrame(() => requestAnimationFrame(restore));
-        } else {
-            setTimeout(restore, 0);
-        }
-    }
-    if (mdsState.updateButton instanceof HTMLElement) {
-        requestAnimationFrame(() => {
-            mdsState.updateButton.focus();
-        });
-    }
-    mdsState.activeDetailEntry = null;
-    scheduleScrollTopButtonUpdate();
+    closeAuthenticatorModal();
 }
 
 function buildDetailContent(entry) {
@@ -1634,6 +1993,11 @@ function openAuthenticatorModal(entry) {
         return;
     }
 
+    if (entry) {
+        mdsState.activeDetailEntry = entry;
+    }
+    hideScrollTopButton();
+
     applyDetailHeader(entry, mdsState.authenticatorModalTitle, mdsState.authenticatorModalSubtitle);
     populateDetailContent(mdsState.authenticatorModalContent, entry);
 
@@ -1646,9 +2010,12 @@ function openAuthenticatorModal(entry) {
     );
     notifyGlobalScrollLock();
 
-    if (mdsState.authenticatorModalClose instanceof HTMLElement) {
+    const focusTarget = mdsState.authenticatorModalBack instanceof HTMLElement
+        ? mdsState.authenticatorModalBack
+        : mdsState.authenticatorModalClose;
+    if (focusTarget instanceof HTMLElement) {
         requestAnimationFrame(() => {
-            mdsState.authenticatorModalClose.focus();
+            focusTarget.focus();
         });
     }
 }
@@ -1665,6 +2032,8 @@ function closeAuthenticatorModal() {
         mdsState.authenticatorModalContent,
     );
     notifyGlobalScrollLock();
+    mdsState.activeDetailEntry = null;
+    scheduleScrollTopButtonUpdate();
 }
 
 async function resolveEntryByAaguid(aaguid) {
@@ -1737,7 +2106,7 @@ async function highlightAuthenticatorRowByAaguid(aaguid) {
 
     mdsState.highlightedRowKey = key;
 
-    if (mdsState.detailView && !mdsState.detailView.hidden) {
+    if (mdsState.authenticatorModal && !mdsState.authenticatorModal.hidden) {
         hideAuthenticatorDetail();
     }
 
@@ -1762,11 +2131,23 @@ function stabiliseColumnWidths() {
     if (mdsState.root instanceof HTMLElement && mdsState.root.offsetParent === null) {
         return;
     }
+    const updateMinWidths = () => {
+        const measured = computeColumnMinWidths();
+        if (measured.length) {
+            mdsState.columnMinWidths = measured;
+        }
+    };
+
+    updateMinWidths();
+
     if (!Array.isArray(mdsState.columnWidths) || !mdsState.columnWidths.length) {
         requestAnimationFrame(() => {
             if (!mdsState?.table) {
                 return;
             }
+
+            updateMinWidths();
+
             const headerCells = mdsState.table.querySelectorAll('thead tr:first-child th');
             if (!headerCells.length) {
                 return;
@@ -1781,13 +2162,17 @@ function stabiliseColumnWidths() {
                 }
                 return;
             }
-            mdsState.columnWidths = widths;
+            const normalised = normaliseColumnWidths(widths);
+            mdsState.columnWidths = normalised;
             mdsState.columnWidthAttempts = 0;
-            applyColumnWidths(widths);
+            applyColumnWidths(normalised);
         });
         return;
     }
-    applyColumnWidths(mdsState.columnWidths);
+
+    const adjusted = normaliseColumnWidths(mdsState.columnWidths);
+    mdsState.columnWidths = adjusted;
+    applyColumnWidths(adjusted);
 }
 
 function applyColumnWidths(widths) {
@@ -1805,6 +2190,42 @@ function applyColumnWidths(widths) {
     if (mdsState.tableBody) {
         Array.from(mdsState.tableBody.rows).forEach(row => applyWidthsToCells(row.cells, widths));
     }
+
+    scheduleColumnResizerMetricsUpdate();
+    scheduleRowHeightLock();
+}
+
+function updateColumnResizerMetrics() {
+    if (!mdsState?.table || !(mdsState.table instanceof HTMLElement)) {
+        return;
+    }
+
+    const table = mdsState.table;
+    if (table.offsetParent === null) {
+        table.style.setProperty('--mds-resizer-extend', '0px');
+        return;
+    }
+
+    const headerRow = table.tHead?.rows?.[0];
+    if (!headerRow) {
+        table.style.setProperty('--mds-resizer-extend', '0px');
+        return;
+    }
+
+    let headerHeight = 0;
+    if (typeof headerRow.getBoundingClientRect === 'function') {
+        const rect = headerRow.getBoundingClientRect();
+        if (rect && Number.isFinite(rect.height)) {
+            headerHeight = rect.height;
+        }
+    }
+    if (!headerHeight && headerRow instanceof HTMLElement) {
+        headerHeight = headerRow.offsetHeight || 0;
+    }
+
+    const tableHeight = table.offsetHeight || 0;
+    const extend = Math.max(Math.round(tableHeight - headerHeight), 0);
+    table.style.setProperty('--mds-resizer-extend', `${extend}px`);
 }
 
 function applyWidthsToCells(cells, widths) {
@@ -1826,6 +2247,300 @@ function applyWidthsToCells(cells, widths) {
         }
         columnIndex += span;
     });
+}
+
+function normaliseColumnWidths(widths) {
+    if (!Array.isArray(widths)) {
+        return [];
+    }
+    return widths.map(value => {
+        if (!Number.isFinite(value) || value <= 0) {
+            return DEFAULT_MIN_COLUMN_WIDTH;
+        }
+        return Math.max(Math.round(value), DEFAULT_MIN_COLUMN_WIDTH);
+    });
+}
+
+function computeColumnMinWidths(state = mdsState) {
+    if (!state?.table?.tHead) {
+        return [];
+    }
+
+    const headerRow = state.table.tHead.rows[0];
+    if (!headerRow) {
+        return [];
+    }
+
+    const columnCount = headerRow.cells.length;
+    if (!columnCount) {
+        return [];
+    }
+
+    return new Array(columnCount).fill(DEFAULT_MIN_COLUMN_WIDTH);
+}
+
+function ensureColumnMetrics(state = mdsState) {
+    if (!state?.table?.tHead) {
+        return false;
+    }
+    const headerRow = state.table.tHead.rows[0];
+    if (!headerRow) {
+        return false;
+    }
+
+    const columnCount = headerRow.cells.length;
+    if (!columnCount) {
+        return false;
+    }
+
+    const minWidths = computeColumnMinWidths(state);
+    if (minWidths.length) {
+        state.columnMinWidths = minWidths;
+    }
+    if (!Array.isArray(state.columnMinWidths) || state.columnMinWidths.length < columnCount) {
+        const fallback = new Array(columnCount).fill(DEFAULT_MIN_COLUMN_WIDTH);
+        if (Array.isArray(state.columnMinWidths)) {
+            state.columnMinWidths.forEach((value, index) => {
+                fallback[index] = Math.max(DEFAULT_MIN_COLUMN_WIDTH, Math.round(value || 0));
+            });
+        }
+        state.columnMinWidths = fallback;
+    } else {
+        state.columnMinWidths = state.columnMinWidths.map(value =>
+            Math.max(DEFAULT_MIN_COLUMN_WIDTH, Math.round(value || 0)),
+        );
+    }
+
+    let widths;
+    if (!Array.isArray(state.columnWidths) || state.columnWidths.length < columnCount) {
+        widths = Array.from(headerRow.cells).map(cell => {
+            const rect = cell.getBoundingClientRect();
+            const rectWidth = Number.isFinite(rect?.width) ? Math.round(rect.width) : DEFAULT_MIN_COLUMN_WIDTH;
+            return Math.max(rectWidth, DEFAULT_MIN_COLUMN_WIDTH);
+        });
+    } else {
+        widths = state.columnWidths.slice();
+    }
+
+    state.columnWidths = normaliseColumnWidths(widths);
+    return true;
+}
+
+function setupColumnResizers(state = mdsState) {
+    if (!state?.table?.tHead) {
+        return;
+    }
+    const headerRow = state.table.tHead.rows[0];
+    if (!headerRow) {
+        return;
+    }
+
+    state.columnResizers = Array.isArray(state.columnResizers) ? state.columnResizers : [];
+
+    Array.from(headerRow.cells).forEach((cell, index) => {
+        if (!cell || index === headerRow.cells.length - 1) {
+            return;
+        }
+        if (cell.querySelector('.mds-column-resizer')) {
+            return;
+        }
+        const resizer = document.createElement('div');
+        resizer.className = 'mds-column-resizer';
+        resizer.dataset.columnIndex = String(index);
+        resizer.setAttribute('aria-hidden', 'true');
+        resizer.setAttribute('role', 'presentation');
+        resizer.tabIndex = -1;
+        resizer.title = 'Drag to resize column';
+        resizer.addEventListener('pointerdown', handleColumnResizeStart);
+        resizer.addEventListener('click', event => {
+            event.preventDefault();
+            event.stopPropagation();
+        });
+        cell.appendChild(resizer);
+        state.columnResizers.push(resizer);
+    });
+
+    scheduleColumnResizerMetricsUpdate();
+}
+
+function handleColumnResizeStart(event) {
+    if (!mdsState) {
+        return;
+    }
+    if (event.button !== undefined && event.button !== 0) {
+        return;
+    }
+    const target = event.currentTarget;
+    if (!(target instanceof HTMLElement)) {
+        return;
+    }
+    const columnIndex = Number.parseInt(target.dataset.columnIndex || '', 10);
+    if (!Number.isFinite(columnIndex)) {
+        return;
+    }
+
+    if (!ensureColumnMetrics()) {
+        return;
+    }
+
+    const widths = Array.isArray(mdsState.columnWidths) ? mdsState.columnWidths.slice() : [];
+    if (columnIndex >= widths.length - 1) {
+        return;
+    }
+
+    const startLeft = widths[columnIndex];
+    if (!Number.isFinite(startLeft)) {
+        return;
+    }
+
+    const minWidths = Array.isArray(mdsState.columnMinWidths) ? mdsState.columnMinWidths : [];
+    let minLeft = Number.isFinite(minWidths[columnIndex]) ? Math.round(minWidths[columnIndex]) : DEFAULT_MIN_COLUMN_WIDTH;
+    if (!Number.isFinite(minLeft) || minLeft <= 0) {
+        minLeft = DEFAULT_MIN_COLUMN_WIDTH;
+    }
+    minLeft = Math.max(minLeft, DEFAULT_MIN_COLUMN_WIDTH);
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    const resizeState = {
+        activeResizer: target,
+        columnIndex,
+        pointerId: event.pointerId,
+        startX: event.clientX,
+        startLeft,
+        minLeft,
+        listenerTarget: target,
+    };
+
+    mdsState.columnResizeState = resizeState;
+
+    if (mdsState.tableContainer) {
+        mdsState.tableContainer.classList.add('mds-table-container--resizing');
+    }
+
+    target.classList.add('is-active');
+
+    let useDocumentListeners = false;
+    if (typeof target.setPointerCapture === 'function') {
+        try {
+            target.setPointerCapture(event.pointerId);
+        } catch (error) {
+            useDocumentListeners = true;
+        }
+    } else {
+        useDocumentListeners = true;
+    }
+
+    if (useDocumentListeners && typeof document !== 'undefined') {
+        resizeState.listenerTarget = document;
+    }
+
+    const listenerTarget = resizeState.listenerTarget;
+    if (listenerTarget) {
+        listenerTarget.addEventListener('pointermove', handleColumnResizeMove);
+        listenerTarget.addEventListener('pointerup', handleColumnResizeEnd);
+        listenerTarget.addEventListener('pointercancel', handleColumnResizeEnd);
+    }
+}
+
+function handleColumnResizeMove(event) {
+    if (!mdsState?.columnResizeState) {
+        return;
+    }
+    const state = mdsState.columnResizeState;
+    if (state.pointerId !== undefined && event.pointerId !== undefined && state.pointerId !== event.pointerId) {
+        return;
+    }
+
+    const widths = Array.isArray(mdsState.columnWidths) ? mdsState.columnWidths.slice() : [];
+    if (!widths.length) {
+        return;
+    }
+
+    const leftIndex = state.columnIndex;
+    if (!Number.isFinite(leftIndex) || leftIndex < 0 || leftIndex >= widths.length) {
+        return;
+    }
+
+    const minLeft = state.minLeft || DEFAULT_MIN_COLUMN_WIDTH;
+
+    let delta = event.clientX - state.startX;
+    if (!Number.isFinite(delta)) {
+        delta = 0;
+    }
+    const maxNegativeDelta = state.startLeft - minLeft;
+    if (Number.isFinite(maxNegativeDelta) && maxNegativeDelta >= 0) {
+        delta = Math.max(delta, -maxNegativeDelta);
+    }
+
+    let newLeft = state.startLeft + delta;
+    if (!Number.isFinite(newLeft)) {
+        newLeft = state.startLeft;
+    }
+
+    widths[leftIndex] = Math.max(minLeft, Math.round(newLeft));
+
+    mdsState.columnWidths = widths;
+    const normalised = normaliseColumnWidths(widths);
+    mdsState.columnWidths = normalised;
+    applyColumnWidths(normalised);
+
+    if (typeof window !== 'undefined' && window.getSelection) {
+        const selection = window.getSelection();
+        if (selection && typeof selection.removeAllRanges === 'function') {
+            selection.removeAllRanges();
+        }
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+}
+
+function handleColumnResizeEnd(event) {
+    const state = mdsState?.columnResizeState;
+    if (!state) {
+        return;
+    }
+
+    const target = state.activeResizer;
+    if (target instanceof HTMLElement) {
+        target.classList.remove('is-active');
+        if (typeof target.releasePointerCapture === 'function' && state.pointerId !== undefined) {
+            try {
+                target.releasePointerCapture(state.pointerId);
+            } catch (error) {
+                // Ignore errors when releasing capture.
+            }
+        }
+    }
+
+    const listenerTarget = state.listenerTarget || target;
+    if (listenerTarget) {
+        listenerTarget.removeEventListener('pointermove', handleColumnResizeMove);
+        listenerTarget.removeEventListener('pointerup', handleColumnResizeEnd);
+        listenerTarget.removeEventListener('pointercancel', handleColumnResizeEnd);
+    }
+
+    if (mdsState.tableContainer) {
+        mdsState.tableContainer.classList.remove('mds-table-container--resizing');
+    }
+
+    mdsState.columnResizeState = null;
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+
+    const minWidths = computeColumnMinWidths();
+    if (minWidths.length) {
+        mdsState.columnMinWidths = minWidths;
+    }
+    if (Array.isArray(mdsState.columnWidths)) {
+        const normalised = normaliseColumnWidths(mdsState.columnWidths);
+        mdsState.columnWidths = normalised;
+        applyColumnWidths(normalised);
+    }
 }
 
 function createTextCell(text, title) {
