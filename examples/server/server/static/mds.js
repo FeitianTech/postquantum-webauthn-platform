@@ -1316,6 +1316,19 @@ function renderTable(entries) {
             }
         }
 
+        row.addEventListener('click', event => {
+            if (event.defaultPrevented) {
+                return;
+            }
+            const interactiveTarget = event.target instanceof HTMLElement
+                ? event.target.closest('button, a, input, select, textarea')
+                : null;
+            if (interactiveTarget) {
+                return;
+            }
+            showAuthenticatorDetail(entry);
+        });
+
         row.appendChild(createIconCell(entry));
         row.appendChild(createNameCell(entry));
         row.appendChild(createTextCell(entry.protocol || '—'));
@@ -1540,7 +1553,7 @@ function scheduleRowHighlight(key, attempt = 0, resolveFn = null) {
         return false;
     }
 
-    const behavior = attempt === 0 ? 'auto' : 'smooth';
+    const behavior = 'smooth';
     const applied = applyRowHighlightByKey(key, { scroll: true, behavior });
     if (applied) {
         if (typeof resolveFn === 'function') {
@@ -2374,13 +2387,17 @@ async function focusAuthenticatorByAaguid(aaguid) {
 
 async function highlightAuthenticatorRowByAaguid(aaguid) {
     const entry = await resolveEntryByAaguid(aaguid);
-    if (!entry || !mdsState) {
-        return entry || null;
+    if (!mdsState) {
+        return { entry: entry || null, highlighted: false };
+    }
+
+    if (!entry) {
+        return { entry: null, highlighted: false };
     }
 
     const key = normaliseAaguid(entry.aaguid || entry.id);
     if (!key) {
-        return entry;
+        return { entry, highlighted: false };
     }
 
     mdsState.highlightedRowKey = key;
@@ -2396,11 +2413,15 @@ async function highlightAuthenticatorRowByAaguid(aaguid) {
     resetFilters();
     applyFilters();
 
-    await new Promise(resolve => {
-        scheduleRowHighlight(key, 0, resolved => resolve(resolved));
+    const highlighted = await new Promise(resolve => {
+        scheduleRowHighlight(key, 0, resolved => resolve(Boolean(resolved)));
     });
 
-    return entry;
+    if (!highlighted && mdsState.highlightedRowKey === key) {
+        mdsState.highlightedRowKey = '';
+    }
+
+    return { entry, highlighted };
 }
 
 if (typeof window !== 'undefined') {
@@ -2889,7 +2910,11 @@ function createNameCell(entry) {
     button.type = 'button';
     button.className = 'mds-name-button';
     button.textContent = label;
-    button.addEventListener('click', () => showAuthenticatorDetail(entry));
+    button.addEventListener('click', event => {
+        event.preventDefault();
+        event.stopPropagation();
+        showAuthenticatorDetail(entry);
+    });
     cell.appendChild(button);
     return cell;
 }

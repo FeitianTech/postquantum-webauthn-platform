@@ -594,11 +594,24 @@ export function navigateToMdsAuthenticator(aaguid) {
         }
     };
 
+    const showSpinnerStatus = message => {
+        if (!statusEl) {
+            return;
+        }
+        if (typeof window !== 'undefined' && clearTimer) {
+            window.clearTimeout(clearTimer);
+            clearTimer = null;
+        }
+        setAaguidStatus(statusEl, message, { showSpinner: true });
+    };
+
     const run = async () => {
-        let highlightResult = null;
         try {
-            if (statusEl && requiresLoad) {
-                setAaguidStatus(statusEl, 'Loading authenticator metadata…', { showSpinner: true });
+            if (statusEl) {
+                const message = requiresLoad
+                    ? 'Loading authenticator metadata…'
+                    : 'Locating authenticator entry…';
+                showSpinnerStatus(message);
             }
 
             if (waitForLoad && requiresLoad) {
@@ -607,18 +620,32 @@ export function navigateToMdsAuthenticator(aaguid) {
                 } catch (error) {
                     console.warn('Failed to wait for authenticator metadata to load:', error);
                 }
+                showSpinnerStatus('Locating authenticator entry…');
             }
 
-            highlightResult = await Promise.resolve(highlightRow(aaguid));
+            const highlightResult = await Promise.resolve(highlightRow(aaguid));
 
-            if (highlightResult) {
+            let highlighted = false;
+            let resolvedEntry = null;
+
+            if (highlightResult && typeof highlightResult === 'object' && 'highlighted' in highlightResult) {
+                highlighted = Boolean(highlightResult.highlighted);
+                resolvedEntry = highlightResult.entry || null;
+            } else {
+                highlighted = Boolean(highlightResult);
+            }
+
+            if (highlighted) {
                 clearAaguidStatus(statusEl);
                 closeCredentialModal();
                 return;
             }
 
             if (statusEl) {
-                setAaguidStatus(statusEl, 'Authenticator metadata not found.', { showSpinner: false });
+                const message = resolvedEntry
+                    ? 'Unable to locate authenticator entry.'
+                    : 'Authenticator metadata not found.';
+                setAaguidStatus(statusEl, message, { showSpinner: false });
                 scheduleClear();
             }
         } catch (error) {

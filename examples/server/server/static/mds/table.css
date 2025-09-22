@@ -390,6 +390,5 @@
 .mds-name-button:focus-visible {
     box-shadow: 0 0 0 3px rgba(0, 114, 206, 0.25);
     border-radius: 6px;
-    padding: 0.1rem 0.35rem;
-    margin: -0.1rem -0.35rem;
+    padding: 0.15rem 0.45rem;
 }
