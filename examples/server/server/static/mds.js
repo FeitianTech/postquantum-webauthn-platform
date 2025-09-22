@@ -38,6 +38,8 @@ let scrollTopButtonUpdateScheduled = false;
 let columnResizerMetricsScheduled = false;
 let rowHeightLockScheduled = false;
 
+const METADATA_CACHE_STORAGE_KEY = 'fido2.mds.metadata';
+
 const SORT_NONE = 'none';
 const SORT_ASCENDING = 'asc';
 const SORT_DESCENDING = 'desc';
@@ -77,6 +79,75 @@ const SORT_ACCESSORS = {
 };
 
 const DEFAULT_MIN_COLUMN_WIDTH = 64;
+
+function getMetadataStorage() {
+    if (typeof window === 'undefined' || !window.localStorage) {
+        return null;
+    }
+    try {
+        return window.localStorage;
+    } catch (error) {
+        console.warn('Unable to access localStorage for metadata caching:', error);
+        return null;
+    }
+}
+
+function clearMetadataCacheEntry() {
+    const storage = getMetadataStorage();
+    if (!storage) {
+        return;
+    }
+    try {
+        storage.removeItem(METADATA_CACHE_STORAGE_KEY);
+    } catch (error) {
+        console.warn('Unable to clear cached metadata BLOB:', error);
+    }
+}
+
+function loadMetadataCacheEntry() {
+    const storage = getMetadataStorage();
+    if (!storage) {
+        return null;
+    }
+    try {
+        const raw = storage.getItem(METADATA_CACHE_STORAGE_KEY);
+        if (!raw) {
+            return null;
+        }
+        const parsed = JSON.parse(raw);
+        if (!parsed || typeof parsed.jws !== 'string' || !parsed.jws.trim()) {
+            return null;
+        }
+        const fetchedAt = typeof parsed.fetchedAt === 'string' ? parsed.fetchedAt : null;
+        return {
+            jws: parsed.jws,
+            fetchedAt,
+            nextUpdate: typeof parsed.nextUpdate === 'string' ? parsed.nextUpdate : null,
+        };
+    } catch (error) {
+        console.warn('Unable to read cached metadata BLOB:', error);
+        return null;
+    }
+}
+
+function storeMetadataCacheEntry(entry) {
+    const storage = getMetadataStorage();
+    if (!storage || !entry || typeof entry.jws !== 'string') {
+        return;
+    }
+    try {
+        const payload = {
+            jws: entry.jws,
+            fetchedAt: new Date().toISOString(),
+        };
+        if (entry.nextUpdate) {
+            payload.nextUpdate = entry.nextUpdate;
+        }
+        storage.setItem(METADATA_CACHE_STORAGE_KEY, JSON.stringify(payload));
+    } catch (error) {
+        console.warn('Unable to persist cached metadata BLOB:', error);
+    }
+}
 
 function showElement(element) {
     if (!(element instanceof HTMLElement)) {
@@ -481,12 +552,8 @@ function initializeState(root) {
 
     const authenticatorModal = root.querySelector('#mds-authenticator-modal');
     const authenticatorClose = root.querySelector('#mds-authenticator-modal-close');
-    const authenticatorBack = root.querySelector('#mds-authenticator-modal-back');
     if (authenticatorClose) {
         authenticatorClose.addEventListener('click', () => closeAuthenticatorModal());
-    }
-    if (authenticatorBack) {
-        authenticatorBack.addEventListener('click', () => closeAuthenticatorModal());
     }
     if (authenticatorModal) {
         authenticatorModal.addEventListener('click', event => {
@@ -544,7 +611,6 @@ function initializeState(root) {
         authenticatorModalSubtitle: root.querySelector('#mds-authenticator-modal-subtitle'),
         authenticatorModalBody: root.querySelector('#mds-authenticator-modal-body'),
         authenticatorModalClose: authenticatorClose,
-        authenticatorModalBack: authenticatorBack,
         activeDetailEntry: null,
         highlightedRow: null,
         highlightedRowKey: '',
@@ -558,7 +624,7 @@ function initializeState(root) {
     return state;
 }
 
-async function loadMdsData(statusNote) {
+async function loadMdsData(statusNote, options = {}) {
     if (!mdsState) {
         return;
     }
@@ -572,7 +638,27 @@ async function loadMdsData(statusNote) {
         return;
     }
 
+    const { bypassCache = false } = typeof options === 'object' && options !== null ? options : {};
     const note = typeof statusNote === 'string' ? statusNote.trim() : '';
+
+    if (!bypassCache) {
+        const cachedEntry = loadMetadataCacheEntry();
+        if (cachedEntry) {
+            try {
+                await applyMetadataJws(cachedEntry.jws, {
+                    statusNote: note,
+                    source: 'cache',
+                    fetchedAt: cachedEntry.fetchedAt,
+                });
+                hasLoaded = true;
+                return;
+            } catch (error) {
+                console.error('Failed to parse cached metadata BLOB:', error);
+                clearMetadataCacheEntry();
+            }
+        }
+    }
+
     setStatus('Loading metadata BLOB…', 'info');
     isLoading = true;
 
@@ -609,98 +695,16 @@ async function loadMdsData(statusNote) {
                     }
                     hideScrollTopButton();
                     resetSortState();
+                    clearMetadataCacheEntry();
                     return;
                 }
                 throw new Error(`Unexpected response status: ${response.status}`);
             }
 
             const jws = await response.text();
-            const payloadSegment = jws.split('.')[1];
-            if (!payloadSegment) {
-                throw new Error('Invalid metadata BLOB format.');
-            }
-
-            const payload = decodeBase64Url(payloadSegment);
-            const metadata = JSON.parse(payload);
-
-            mdsData = Array.isArray(metadata.entries)
-                ? metadata.entries.map((entry, index) => transformEntry(entry, index)).filter(Boolean)
-                : [];
-            setUpdateButtonMode('update');
-
-            resetSortState();
-
-            if (mdsState) {
-                const map = new Map();
-                mdsData.forEach(item => {
-                    const key = normaliseAaguid(item.aaguid || item.id);
-                    if (key) {
-                        map.set(key, item);
-                    }
-                });
-                mdsState.byAaguid = map;
-            }
-
-            const nextUpdateRaw = typeof metadata.nextUpdate === 'string' ? metadata.nextUpdate : '';
-            const nextUpdateDate = parseIsoDate(nextUpdateRaw);
-            const nextUpdateFormatted = nextUpdateRaw ? formatDate(nextUpdateRaw) : '';
-            const now = Date.now();
-            const isOverdue = Boolean(nextUpdateDate && nextUpdateDate.getTime() <= now);
-
-            if (mdsState) {
-                mdsState.metadataOverdue = isOverdue;
-                mdsState.metadataNextUpdate = nextUpdateRaw || null;
-            }
-            setUpdateButtonAttention(isOverdue);
-
-            const optionSets = collectOptionSets(mdsData);
-            updateOptionLists(optionSets);
-
-            try {
-                await populateCertificateDerivedInfo(mdsData);
-            } catch (error) {
-                console.error('Failed to derive attestation certificate details:', error);
-            }
-
-            applyFilters();
+            const result = await applyMetadataJws(jws, { statusNote: note });
             hasLoaded = true;
-
-            const statusParts = [`Loaded ${mdsData.length.toLocaleString()} authenticators.`];
-            let statusVariant = 'success';
-
-            if (isOverdue) {
-                const deadline = nextUpdateFormatted ? ` (${nextUpdateFormatted})` : '';
-                statusParts.push(
-                    `The recommended metadata update date has passed${deadline}. Use the <strong>Update Metadata</strong> button to refresh the local file.`,
-                );
-                statusVariant = 'error';
-            } else if (nextUpdateFormatted) {
-                statusParts.push(`Next update recommended by ${nextUpdateFormatted}.`);
-            }
-            if (note) {
-                statusParts.push(note);
-            }
-            const statusMessage = statusParts.join(' ');
-            setStatus(statusMessage, statusVariant);
-
-            if (!mdsState.defaultStatus) {
-                mdsState.defaultStatus = { html: statusMessage, variant: statusVariant, title: '' };
-            } else {
-                mdsState.defaultStatus.html = statusMessage;
-                mdsState.defaultStatus.variant = statusVariant;
-            }
-
-            if (metadata.legalHeader && mdsState.statusEl) {
-                mdsState.statusEl.setAttribute('title', metadata.legalHeader);
-                if (mdsState.defaultStatus) {
-                    mdsState.defaultStatus.title = metadata.legalHeader;
-                }
-            } else if (mdsState?.statusEl) {
-                mdsState.statusEl.removeAttribute('title');
-                if (mdsState.defaultStatus) {
-                    mdsState.defaultStatus.title = '';
-                }
-            }
+            storeMetadataCacheEntry({ jws, nextUpdate: result?.nextUpdate || null });
         } catch (error) {
             console.error('Failed to load FIDO MDS metadata:', error);
             setStatus(
@@ -713,6 +717,7 @@ async function loadMdsData(statusNote) {
                 mdsState.metadataOverdue = false;
                 mdsState.metadataNextUpdate = null;
             }
+            clearMetadataCacheEntry();
         } finally {
             isLoading = false;
         }
@@ -726,6 +731,110 @@ async function loadMdsData(statusNote) {
             loadPromise = null;
         }
     }
+}
+
+async function applyMetadataJws(jws, options = {}) {
+    if (!mdsState) {
+        return { nextUpdate: null };
+    }
+
+    const { statusNote = '', source = 'network', fetchedAt = null } = typeof options === 'object' && options !== null ? options : {};
+
+    const payloadSegment = jws.split('.')[1];
+    if (!payloadSegment) {
+        throw new Error('Invalid metadata BLOB format.');
+    }
+
+    const payload = decodeBase64Url(payloadSegment);
+    const metadata = JSON.parse(payload);
+
+    mdsData = Array.isArray(metadata.entries)
+        ? metadata.entries.map((entry, index) => transformEntry(entry, index)).filter(Boolean)
+        : [];
+    setUpdateButtonMode('update');
+
+    resetSortState();
+
+    const map = new Map();
+    mdsData.forEach(item => {
+        const key = normaliseAaguid(item.aaguid || item.id);
+        if (key) {
+            map.set(key, item);
+        }
+    });
+    mdsState.byAaguid = map;
+
+    const nextUpdateRaw = typeof metadata.nextUpdate === 'string' ? metadata.nextUpdate : '';
+    const nextUpdateDate = parseIsoDate(nextUpdateRaw);
+    const nextUpdateFormatted = nextUpdateRaw ? formatDate(nextUpdateRaw) : '';
+    const now = Date.now();
+    const isOverdue = Boolean(nextUpdateDate && nextUpdateDate.getTime() <= now);
+
+    mdsState.metadataOverdue = isOverdue;
+    mdsState.metadataNextUpdate = nextUpdateRaw || null;
+    setUpdateButtonAttention(isOverdue);
+
+    const optionSets = collectOptionSets(mdsData);
+    updateOptionLists(optionSets);
+
+    certificateCache.clear();
+    try {
+        await populateCertificateDerivedInfo(mdsData);
+    } catch (error) {
+        console.error('Failed to derive attestation certificate details:', error);
+    }
+
+    applyFilters();
+
+    const statusParts = [`Loaded ${mdsData.length.toLocaleString()} authenticators.`];
+    let statusVariant = 'success';
+
+    if (isOverdue) {
+        const deadline = nextUpdateFormatted ? ` (${nextUpdateFormatted})` : '';
+        statusParts.push(
+            `The recommended metadata update date has passed${deadline}. Use the <strong>Update Metadata</strong> button to refresh the local file.`,
+        );
+        statusVariant = 'error';
+    } else if (nextUpdateFormatted) {
+        statusParts.push(`Next update recommended by ${nextUpdateFormatted}.`);
+    }
+
+    if (source === 'cache') {
+        const fetchedDate = fetchedAt ? parseIsoDate(fetchedAt) : null;
+        if (fetchedDate) {
+            statusParts.push(`Using cached metadata from ${formatDate(fetchedAt)}.`);
+        } else {
+            statusParts.push('Using cached metadata.');
+        }
+    }
+
+    if (statusNote) {
+        statusParts.push(statusNote);
+    }
+
+    const statusMessage = statusParts.join(' ');
+    setStatus(statusMessage, statusVariant);
+
+    if (!mdsState.defaultStatus) {
+        mdsState.defaultStatus = { html: statusMessage, variant: statusVariant, title: '' };
+    } else {
+        mdsState.defaultStatus.html = statusMessage;
+        mdsState.defaultStatus.variant = statusVariant;
+    }
+
+    if (metadata.legalHeader && mdsState.statusEl) {
+        mdsState.statusEl.setAttribute('title', metadata.legalHeader);
+        if (mdsState.defaultStatus) {
+            mdsState.defaultStatus.title = metadata.legalHeader;
+        }
+    } else if (mdsState?.statusEl) {
+        mdsState.statusEl.removeAttribute('title');
+        if (mdsState.defaultStatus) {
+            mdsState.defaultStatus.title = '';
+        }
+    }
+
+    return { nextUpdate: nextUpdateRaw || null };
 }
 
 function applyFilters() {
@@ -2010,9 +2119,9 @@ function openAuthenticatorModal(entry) {
     );
     notifyGlobalScrollLock();
 
-    const focusTarget = mdsState.authenticatorModalBack instanceof HTMLElement
-        ? mdsState.authenticatorModalBack
-        : mdsState.authenticatorModalClose;
+    const focusTarget = mdsState.authenticatorModalClose instanceof HTMLElement
+        ? mdsState.authenticatorModalClose
+        : mdsState.authenticatorModal;
     if (focusTarget instanceof HTMLElement) {
         requestAnimationFrame(() => {
             focusTarget.focus();
@@ -2788,7 +2897,7 @@ async function refreshMetadata() {
 
         if (shouldReload) {
             hasLoaded = false;
-            await loadMdsData(note);
+            await loadMdsData(note, { bypassCache: true });
         } else {
             const overdue = Boolean(mdsState?.metadataOverdue);
             let message = note || 'Metadata already up to date.';

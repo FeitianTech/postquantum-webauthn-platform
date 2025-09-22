@@ -8,6 +8,7 @@ import re
 import string
 import textwrap
 import uuid
+import warnings
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Mapping, MutableMapping, Optional, Tuple
 
@@ -22,7 +23,15 @@ from fido2.webauthn import (
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec, ed25519, ed448, rsa
+from cryptography.utils import CryptographyDeprecationWarning
 from cryptography.x509.oid import ExtensionOID, NameOID
+
+try:  # Optional dependency used to sanitise non-compliant certificates
+    from asn1crypto import core as asn1_core
+    from asn1crypto import x509 as asn1_x509
+except ImportError:  # pragma: no cover - handled gracefully at runtime
+    asn1_core = None  # type: ignore[assignment]
+    asn1_x509 = None  # type: ignore[assignment]
 
 from .metadata import get_mds_verifier
 
@@ -482,11 +491,220 @@ def _extract_common_names(name: x509.Name) -> List[str]:
     return values
 
 
+_NULL_SIGNATURE_ALGORITHM_NAMES = {
+    "1.2.840.10045.4.1": "ecdsa-with-SHA1",
+    "1.2.840.10045.4.3.1": "ecdsa-with-SHA224",
+    "1.2.840.10045.4.3.2": "ecdsa-with-SHA256",
+    "1.2.840.10045.4.3.3": "ecdsa-with-SHA384",
+    "1.2.840.10045.4.3.4": "ecdsa-with-SHA512",
+    "1.3.101.112": "Ed25519",
+    "1.3.101.113": "Ed448",
+}
+
+_NULL_SIGNATURE_ALGORITHM_PREFIXES = ("1.2.840.10045.4.3",)
+
+
+def _algorithm_disallows_null_parameters(oid: Optional[str]) -> bool:
+    if not oid:
+        return False
+    if oid in _NULL_SIGNATURE_ALGORITHM_NAMES:
+        return True
+    return any(oid.startswith(prefix) for prefix in _NULL_SIGNATURE_ALGORITHM_PREFIXES)
+
+
+def _signature_oid_display_name(oid: str) -> str:
+    friendly = _NULL_SIGNATURE_ALGORITHM_NAMES.get(oid)
+    if friendly:
+        return f"{friendly} ({oid})"
+    return oid
+
+
+def _format_signed_hex(value: int) -> str:
+    prefix = "-" if value < 0 else ""
+    return f"{prefix}0x{abs(value):x}"
+
+
+def _format_unsigned_hex(value: int) -> str:
+    return f"0x{value:x}"
+
+
+def _serial_info_from_value(value: int) -> Dict[str, Any]:
+    unsigned_value = value if value >= 0 else abs(value)
+    normalized_value = value if value > 0 else max(unsigned_value, 1)
+    return {
+        "fix_applied": False,
+        "was_non_positive": value <= 0,
+        "zero_replaced": False,
+        "original": {
+            "value": value,
+            "decimal": str(value),
+            "hex": _format_signed_hex(value),
+            "unsignedValue": unsigned_value,
+            "unsignedHex": _format_unsigned_hex(unsigned_value),
+        },
+        "normalized": {
+            "value": normalized_value,
+            "decimal": str(normalized_value),
+            "hex": _format_unsigned_hex(normalized_value),
+        },
+        "encodedHex": None,
+    }
+
+
+def _asn1_value_is_null(value: Any) -> bool:
+    if asn1_core is None:
+        return False
+    if isinstance(value, asn1_core.Null):
+        return True
+    if isinstance(value, asn1_core.Any):
+        try:
+            parsed = value.parsed
+        except Exception:
+            return False
+        return isinstance(parsed, asn1_core.Null)
+    return False
+
+
+def _normalise_asn1_serial(tbs_certificate) -> Dict[str, Any]:
+    serial_field = tbs_certificate["serial_number"]
+    raw_bytes = bytes(serial_field.contents)
+    unsigned_value = int.from_bytes(raw_bytes, "big", signed=False) if raw_bytes else 0
+
+    try:
+        signed_value = serial_field.native
+    except ValueError:
+        signed_value = None
+
+    original_hex = _format_unsigned_hex(unsigned_value)
+    original_info = {
+        "value": signed_value,
+        "decimal": str(signed_value) if signed_value is not None else str(unsigned_value),
+        "hex": _format_signed_hex(signed_value) if isinstance(signed_value, int) else original_hex,
+        "unsignedValue": unsigned_value,
+        "unsignedHex": original_hex,
+    }
+
+    normalized_value = unsigned_value
+    zero_replaced = False
+
+    if normalized_value <= 0:
+        normalized_value = 1
+        zero_replaced = True
+
+    needs_fix = signed_value is None or signed_value <= 0
+
+    if needs_fix:
+        tbs_certificate["serial_number"] = asn1_core.Integer(normalized_value)
+
+    if signed_value is not None and signed_value > 0:
+        normalized_value = signed_value
+        zero_replaced = False
+
+    return {
+        "fix_applied": bool(needs_fix),
+        "was_non_positive": bool(needs_fix),
+        "zero_replaced": zero_replaced,
+        "original": original_info,
+        "normalized": {
+            "value": normalized_value,
+            "decimal": str(normalized_value),
+            "hex": _format_unsigned_hex(normalized_value),
+        },
+        "encodedHex": f"0x{raw_bytes.hex()}" if raw_bytes else "0x0",
+    }
+
+
+def _strip_null_signature_parameters(algorithm) -> Optional[str]:
+    if asn1_core is None or algorithm is None:
+        return None
+    try:
+        oid = algorithm["algorithm"].dotted
+    except Exception:
+        return None
+    if not _algorithm_disallows_null_parameters(oid):
+        return None
+    try:
+        parameters = algorithm["parameters"]
+    except KeyError:
+        return None
+    if isinstance(parameters, asn1_core.Void):
+        return None
+    if not _asn1_value_is_null(parameters):
+        return None
+    algorithm["parameters"] = asn1_core.Void()
+    return oid
+
+
+def _sanitize_certificate_bytes(cert_bytes: bytes) -> Tuple[bytes, Dict[str, Any]]:
+    if asn1_core is None or asn1_x509 is None:
+        raise RuntimeError(
+            "Unable to decode attestation certificate with non-compliant fields without the 'asn1crypto' package."
+        )
+
+    certificate = asn1_x509.Certificate.load(cert_bytes)
+    tbs_certificate = certificate["tbs_certificate"]
+    serial_info = _normalise_asn1_serial(tbs_certificate)
+
+    try:
+        signature_algorithm = certificate["signature_algorithm"]
+    except KeyError:
+        signature_algorithm = None
+
+    try:
+        tbs_signature_algorithm = tbs_certificate["signature"]
+    except KeyError:
+        tbs_signature_algorithm = None
+
+    removed_oids = []
+    for algorithm in (signature_algorithm, tbs_signature_algorithm):
+        oid = _strip_null_signature_parameters(algorithm)
+        if oid:
+            removed_oids.append(oid)
+
+    sanitized_bytes = certificate.dump()
+
+    return sanitized_bytes, {
+        "sanitized": True,
+        "serial": serial_info,
+        "removed_signature_parameter_oids": sorted(set(removed_oids)),
+    }
+
+
+def _load_certificate_without_warnings(cert_bytes: bytes) -> Tuple[x509.Certificate, Dict[str, Any]]:
+    try:
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", CryptographyDeprecationWarning)
+            certificate = x509.load_der_x509_certificate(cert_bytes)
+    except (CryptographyDeprecationWarning, ValueError):
+        sanitized_bytes, adjustments = _sanitize_certificate_bytes(cert_bytes)
+        try:
+            with warnings.catch_warnings():
+                warnings.simplefilter("error", CryptographyDeprecationWarning)
+                certificate = x509.load_der_x509_certificate(sanitized_bytes)
+        except (CryptographyDeprecationWarning, ValueError) as exc:
+            raise ValueError("Unable to decode attestation certificate due to non-compliant encoding.") from exc
+        adjustments.setdefault("removed_signature_parameter_oids", [])
+        adjustments.setdefault("serial", _serial_info_from_value(certificate.serial_number))
+        return certificate, adjustments
+
+    return certificate, {
+        "sanitized": False,
+        "serial": _serial_info_from_value(certificate.serial_number),
+        "removed_signature_parameter_oids": [],
+    }
+
+
+def _compute_hash_hex(data: bytes, algorithm: hashes.HashAlgorithm) -> str:
+    hasher = hashes.Hash(algorithm)
+    hasher.update(data)
+    return hasher.finalize().hex()
+
+
 def serialize_attestation_certificate(cert_bytes: bytes):
     if not cert_bytes:
         return None
 
-    certificate = x509.load_der_x509_certificate(cert_bytes)
+    certificate, parse_notes = _load_certificate_without_warnings(cert_bytes)
     version_number = certificate.version.value + 1
     version_hex = f"0x{certificate.version.value:x}"
 
@@ -495,6 +713,17 @@ def serialize_attestation_certificate(cert_bytes: bytes):
 
     not_valid_before = _certificate_datetime(certificate, "not_valid_before")
     not_valid_after = _certificate_datetime(certificate, "not_valid_after")
+
+    serial_info = parse_notes.get("serial") or _serial_info_from_value(certificate.serial_number)
+    normalized_serial = serial_info.get("normalized", {})
+    original_serial = serial_info.get("original", {})
+    serial_decimal = normalized_serial.get("decimal") or str(certificate.serial_number)
+    serial_hex = normalized_serial.get("hex") or f"0x{certificate.serial_number:x}"
+    original_serial_decimal = original_serial.get("decimal")
+    original_serial_hex = original_serial.get("hex")
+    original_serial_value = original_serial.get("value")
+
+    removed_null_oids = sorted(set(parse_notes.get("removed_signature_parameter_oids") or []))
 
     extensions = []
     for ext in certificate.extensions:
@@ -516,17 +745,18 @@ def serialize_attestation_certificate(cert_bytes: bytes):
         )
 
     fingerprints = {
-        "sha256": certificate.fingerprint(hashes.SHA256()).hex(),
-        "sha1": certificate.fingerprint(hashes.SHA1()).hex(),
-        "md5": certificate.fingerprint(hashes.MD5()).hex(),
+        "sha256": _compute_hash_hex(cert_bytes, hashes.SHA256()),
+        "sha1": _compute_hash_hex(cert_bytes, hashes.SHA1()),
+        "md5": _compute_hash_hex(cert_bytes, hashes.MD5()),
     }
 
-    der_bytes = certificate.public_bytes(serialization.Encoding.DER)
+    der_bytes = cert_bytes
     der_base64 = base64.b64encode(der_bytes).decode("ascii")
     pem_body = "\n".join(textwrap.wrap(der_base64, 64))
     pem = f"-----BEGIN CERTIFICATE-----\n{pem_body}\n-----END CERTIFICATE-----"
 
     summary_lines: List[str] = []
+    parsing_warnings: List[str] = []
 
     def _append_line(line: str) -> None:
         summary_lines.append(line)
@@ -561,13 +791,20 @@ def serialize_attestation_certificate(cert_bytes: bytes):
     else:
         signature_hash = None
 
-    serial_decimal = str(certificate.serial_number)
-    serial_hex = f"0x{certificate.serial_number:x}"
-
     _append_line(f"Version: {version_number} ({version_hex})")
     _append_line(
         f"Certificate Serial Number: {serial_decimal} ({serial_hex})"
     )
+    if serial_info.get("fix_applied") and original_serial_decimal and original_serial_hex:
+        if serial_info.get("zero_replaced"):
+            descriptor = "zero (non-compliant)"
+        elif isinstance(original_serial_value, int) and original_serial_value < 0:
+            descriptor = "negative (non-compliant)"
+        else:
+            descriptor = "non-compliant"
+        _append_line(
+            f"    Encoded serial {descriptor}: {original_serial_decimal} ({original_serial_hex})"
+        )
     _append_line(f"Signature Algorithm: {signature_algorithm}")
     _append_line(f"Issuer: {issuer_str}")
 
@@ -723,6 +960,32 @@ def serialize_attestation_certificate(cert_bytes: bytes):
         for line in ski_lines:
             _append_line(f"    {line}")
 
+    if serial_info.get("fix_applied"):
+        if serial_info.get("zero_replaced"):
+            descriptor = "zero value"
+        elif isinstance(original_serial_value, int) and original_serial_value < 0:
+            descriptor = "negative value"
+        else:
+            descriptor = "non-positive value"
+        if original_serial_decimal and original_serial_hex:
+            message = (
+                "Certificate serial number was encoded as a "
+                f"{descriptor} ({original_serial_decimal} / {original_serial_hex}) and "
+                f"has been normalised to {serial_decimal} ({serial_hex})."
+            )
+        else:
+            message = (
+                "Certificate serial number was normalised to "
+                f"{serial_decimal} ({serial_hex}) due to a non-compliant encoding."
+            )
+        parsing_warnings.append(message)
+
+    for oid in removed_null_oids:
+        display_name = _signature_oid_display_name(oid)
+        parsing_warnings.append(
+            f"Removed NULL signature algorithm parameters for {display_name}."
+        )
+
     summary = "\n".join(line for line in summary_lines if line is not None).strip()
 
     signature_details = {
@@ -732,8 +995,38 @@ def serialize_attestation_certificate(cert_bytes: bytes):
         "colon": signature_colon,
         "lines": signature_lines,
     }
+    if removed_null_oids:
+        signature_details["removedNullParameterOids"] = removed_null_oids
     algorithm_info = _derive_certificate_algorithm_info(public_key_info, signature_details)
     subject_common_names = _extract_common_names(certificate.subject)
+
+    serial_number_info: Dict[str, Any] = {
+        "decimal": serial_decimal,
+        "hex": serial_hex,
+        "fixApplied": bool(serial_info.get("fix_applied")),
+    }
+    normalized_value = normalized_serial.get("value")
+    if normalized_value is not None:
+        serial_number_info["normalized"] = {
+            "value": normalized_value,
+            "decimal": serial_decimal,
+            "hex": serial_hex,
+        }
+    if serial_info.get("encodedHex"):
+        serial_number_info["encodedHex"] = serial_info["encodedHex"]
+    if original_serial:
+        original_block: Dict[str, Any] = {
+            "decimal": original_serial_decimal,
+            "hex": original_serial_hex,
+            "unsignedValue": original_serial.get("unsignedValue"),
+            "unsignedHex": original_serial.get("unsignedHex"),
+        }
+        if original_serial_value is not None:
+            original_block["value"] = original_serial_value
+        serial_number_info["original"] = original_block
+    if serial_info.get("fix_applied"):
+        serial_number_info["wasNonPositive"] = bool(serial_info.get("was_non_positive"))
+        serial_number_info["zeroReplaced"] = bool(serial_info.get("zero_replaced"))
 
     return {
         "version": {
@@ -741,10 +1034,7 @@ def serialize_attestation_certificate(cert_bytes: bytes):
             "numeric": version_number,
             "hex": version_hex,
         },
-        "serialNumber": {
-            "decimal": str(certificate.serial_number),
-            "hex": f"0x{certificate.serial_number:x}",
-        },
+        "serialNumber": serial_number_info,
         "signatureAlgorithm": signature_algorithm,
         "issuer": format_x509_name(certificate.issuer),
         "validity": {
@@ -761,6 +1051,7 @@ def serialize_attestation_certificate(cert_bytes: bytes):
         "derBase64": der_base64,
         "pem": pem,
         "summary": summary,
+        "parsingWarnings": parsing_warnings,
     }
 
 
@@ -1205,17 +1496,24 @@ def perform_attestation_checks(
             certs_valid = True
             for cert_der in trust_path:
                 try:
-                    cert = x509.load_der_x509_certificate(cert_der)
-                    not_before = _certificate_datetime(cert, "not_valid_before")
-                    not_after = _certificate_datetime(cert, "not_valid_after")
-                    if now < not_before or now > not_after:
+                    cert, _notes = _load_certificate_without_warnings(cert_der)
+                except Exception:
+                    try:
+                        with warnings.catch_warnings():
+                            warnings.simplefilter("ignore", CryptographyDeprecationWarning)
+                            cert = x509.load_der_x509_certificate(cert_der)
+                    except Exception as exc:  # pragma: no cover - defensive fallback
                         certs_valid = False
-                        results["errors"].append(
-                            f"certificate_out_of_validity: {cert.subject.rfc4514_string()}"
-                        )
-                except Exception as exc:
+                        results["errors"].append(f"certificate_parse_error: {exc}")
+                        continue
+
+                not_before = _certificate_datetime(cert, "not_valid_before")
+                not_after = _certificate_datetime(cert, "not_valid_after")
+                if now < not_before or now > not_after:
                     certs_valid = False
-                    results["errors"].append(f"certificate_parse_error: {exc}")
+                    results["errors"].append(
+                        f"certificate_out_of_validity: {cert.subject.rfc4514_string()}"
+                    )
             if certs_valid:
                 verifier = get_mds_verifier()
                 if verifier is not None:

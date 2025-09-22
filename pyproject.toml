@@ -33,6 +33,7 @@ include = [
 [tool.poetry.dependencies]
 python = "^3.8"
 cryptography = ">=2.6, !=35, <45"
+asn1crypto = "^1.5.1"
 pyscard = {version = "^1.9 || ^2", optional = true}
 
 cbor2 = "^5.6.4"           # CBOR parsing

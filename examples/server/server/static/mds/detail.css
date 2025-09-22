@@ -19,23 +19,7 @@
 }
 
 .mds-detail-back {
-    appearance: none;
-    border: none;
-    background: rgba(0, 114, 206, 0.12);
-    color: var(--primary-dark);
-    font-weight: 600;
-    padding: 0.45rem 0.9rem;
-    border-radius: 999px;
-    cursor: pointer;
-    transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
-}
-
-.mds-detail-back:hover,
-.mds-detail-back:focus-visible {
-    background: rgba(0, 114, 206, 0.18);
-    color: var(--primary-color);
-    outline: none;
-    transform: translateY(-1px);
+    display: none !important;
 }
 
 .mds-detail-heading {
