@@ -36,6 +36,7 @@ let loadPromise = null;
 const certificateCache = new Map();
 let scrollTopButtonUpdateScheduled = false;
 let columnResizerMetricsScheduled = false;
+let rowHeightLockScheduled = false;
 
 const SORT_NONE = 'none';
 const SORT_ASCENDING = 'asc';
@@ -125,6 +126,83 @@ function scheduleColumnResizerMetricsUpdate() {
     } else {
         setTimeout(apply, 0);
     }
+}
+
+function scheduleRowHeightLock() {
+    if (rowHeightLockScheduled) {
+        return;
+    }
+    rowHeightLockScheduled = true;
+    const apply = () => {
+        rowHeightLockScheduled = false;
+        lockRowHeights();
+    };
+    if (typeof requestAnimationFrame === 'function') {
+        requestAnimationFrame(() => {
+            if (typeof requestAnimationFrame === 'function') {
+                requestAnimationFrame(apply);
+            } else {
+                setTimeout(apply, 0);
+            }
+        });
+    } else {
+        setTimeout(apply, 0);
+    }
+}
+
+function lockRowHeights() {
+    if (!mdsState?.tableBody) {
+        return;
+    }
+
+    const rows = Array.from(mdsState.tableBody.rows ?? []).filter(row =>
+        row instanceof HTMLTableRowElement && !row.classList.contains('mds-empty-row'),
+    );
+
+    rows.forEach(row => {
+        if (!(row instanceof HTMLTableRowElement)) {
+            return;
+        }
+        if (row.offsetParent === null) {
+            return;
+        }
+
+        const stored = Number.parseInt(row.dataset.baseHeight || '', 10);
+        let baseHeight = Number.isFinite(stored) && stored > 0 ? stored : null;
+
+        if (!baseHeight) {
+            const rect = typeof row.getBoundingClientRect === 'function' ? row.getBoundingClientRect() : null;
+            const measured = rect && Number.isFinite(rect.height) ? Math.ceil(rect.height) : 0;
+            if (!measured) {
+                return;
+            }
+            baseHeight = measured;
+            row.dataset.baseHeight = String(baseHeight);
+        }
+
+        applyRowHeightLock(row, baseHeight);
+    });
+}
+
+function applyRowHeightLock(row, height) {
+    if (!(row instanceof HTMLTableRowElement) || !Number.isFinite(height) || height <= 0) {
+        return;
+    }
+
+    const heightPx = `${height}px`;
+    row.style.height = heightPx;
+    row.style.maxHeight = heightPx;
+    row.style.minHeight = heightPx;
+
+    Array.from(row.cells ?? []).forEach(cell => {
+        if (!(cell instanceof HTMLTableCellElement)) {
+            return;
+        }
+        cell.style.height = heightPx;
+        cell.style.maxHeight = heightPx;
+        cell.style.minHeight = heightPx;
+        cell.style.overflow = 'hidden';
+    });
 }
 
 function updateScrollTopButtonVisibility(options = {}) {
@@ -1039,6 +1117,7 @@ function renderTable(entries) {
     stabiliseColumnWidths();
     scheduleScrollTopButtonUpdate();
     scheduleColumnResizerMetricsUpdate();
+    scheduleRowHeightLock();
 }
 
 function formatDetailSubtitle(entry) {
@@ -2113,6 +2192,7 @@ function applyColumnWidths(widths) {
     }
 
     scheduleColumnResizerMetricsUpdate();
+    scheduleRowHeightLock();
 }
 
 function updateColumnResizerMetrics() {

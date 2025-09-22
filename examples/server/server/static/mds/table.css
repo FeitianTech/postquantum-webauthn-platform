@@ -1,6 +1,6 @@
 .mds-table {
     width: 100%;
-    min-width: 1700px;
+    min-width: 1500px;
     border-collapse: separate;
     border-spacing: 0;
     --mds-resizer-extend: 0px;
@@ -200,9 +200,7 @@
     color: var(--text-color);
     background: rgba(255, 255, 255, 0.98);
     text-align: center;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: normal;
 }
 
 .mds-table thead th,
@@ -240,11 +238,9 @@
 
 .mds-tag-group {
     display: flex;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     gap: 0.4rem;
     justify-content: center;
-    max-width: 100%;
-    overflow: hidden;
 }
 
 .mds-tag {
@@ -258,10 +254,6 @@
     font-weight: 600;
     letter-spacing: 0.01em;
     white-space: nowrap;
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    flex-shrink: 0;
 }
 
 .mds-tag--neutral {
@@ -353,11 +345,9 @@
 .mds-cell-name {
     text-align: center;
     vertical-align: middle;
-    white-space: nowrap;
+    white-space: normal;
     padding: 0.9rem 1.1rem;
     background-color: inherit;
-    overflow: hidden;
-    text-overflow: ellipsis;
 }
 
 .mds-name-button {
@@ -378,9 +368,7 @@
     margin: 0 auto;
     transition: color 0.2s ease, text-decoration-color 0.2s ease;
     text-decoration: underline transparent;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: normal;
 }
 
 .mds-name-button:hover,
