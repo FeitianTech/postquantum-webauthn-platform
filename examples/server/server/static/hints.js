@@ -93,33 +93,7 @@ export function applyHintsToCheckboxes(hints, scope) {
 
 export function enforceAuthenticatorAttachmentWithHints(publicKey, options = {}) {
     const { requireSelection = false } = options || {};
-    if (!publicKey || typeof publicKey !== 'object') {
-        if (requireSelection) {
-            throw new Error('Please select at least one authenticator hint before continuing.');
-        }
-        return [];
-    }
-
-    const allowedAttachments = ensureAuthenticationHintsAllowed(publicKey, { requireSelection });
-    const allowedList = Array.isArray(allowedAttachments) ? allowedAttachments : [];
-
-    if (allowedList.length > 0) {
-        publicKey.allowedAuthenticatorAttachments = allowedList.slice();
-    } else if (Object.prototype.hasOwnProperty.call(publicKey, 'allowedAuthenticatorAttachments')) {
-        delete publicKey.allowedAuthenticatorAttachments;
-    }
-
-    if (!publicKey.authenticatorSelection || typeof publicKey.authenticatorSelection !== 'object') {
-        publicKey.authenticatorSelection = {};
-    }
-
-    const selection = publicKey.authenticatorSelection;
-    if (selection && typeof selection === 'object' &&
-        Object.prototype.hasOwnProperty.call(selection, 'authenticatorAttachment')) {
-        delete selection.authenticatorAttachment;
-    }
-
-    return allowedList;
+    return ensureAuthenticationHintsAllowed(publicKey, { requireSelection });
 }
 
 export function applyAuthenticatorAttachmentPreference(targetOptions, allowedAttachments, ...fallbackSources) {
@@ -135,52 +109,58 @@ export function applyAuthenticatorAttachmentPreference(targetOptions, allowedAtt
         return;
     }
 
-    let resolved = Array.isArray(allowedAttachments)
+    const normalizedResolved = Array.isArray(allowedAttachments)
         ? allowedAttachments.map(normalizeAttachmentValue).filter(Boolean)
         : [];
 
-    if (!resolved.length && Array.isArray(publicKey.allowedAuthenticatorAttachments)) {
-        resolved = publicKey.allowedAuthenticatorAttachments
-            .map(normalizeAttachmentValue)
-            .filter(Boolean);
+    const selectionSources = [publicKey, ...fallbackSources];
+
+    let preferredAttachment = null;
+
+    if (normalizedResolved.length === 1) {
+        preferredAttachment = normalizedResolved[0];
     }
 
-    if (!resolved.length) {
-        fallbackSources.forEach(source => {
-            if (resolved.length || !source || typeof source !== 'object') {
-                return;
+    if (!preferredAttachment) {
+        for (const source of selectionSources) {
+            if (!source || typeof source !== 'object') {
+                continue;
             }
-            if (Array.isArray(source.allowedAuthenticatorAttachments)) {
-                const normalized = source.allowedAuthenticatorAttachments
-                    .map(normalizeAttachmentValue)
-                    .filter(Boolean);
-                if (normalized.length) {
-                    resolved = normalized;
-                    return;
+            const selection = source.authenticatorSelection;
+            if (selection && typeof selection === 'object' && Object.prototype.hasOwnProperty.call(selection, 'authenticatorAttachment')) {
+                const normalized = normalizeAttachmentValue(selection.authenticatorAttachment);
+                if (normalized) {
+                    preferredAttachment = normalized;
+                    break;
                 }
+            }
+        }
+    }
+
+    if (!preferredAttachment) {
+        for (const source of selectionSources) {
+            if (!source || typeof source !== 'object') {
+                continue;
             }
             if (Array.isArray(source.hints)) {
                 const derived = deriveAllowedAttachmentsFromHints(source.hints);
-                if (derived.length) {
-                    resolved = derived;
+                if (derived.length === 1) {
+                    preferredAttachment = normalizeAttachmentValue(derived[0]);
+                    if (preferredAttachment) {
+                        break;
+                    }
                 }
             }
-        });
-    }
-
-    if (resolved.length > 0) {
-        publicKey.allowedAuthenticatorAttachments = resolved.slice();
-    } else if (Object.prototype.hasOwnProperty.call(publicKey, 'allowedAuthenticatorAttachments')) {
-        delete publicKey.allowedAuthenticatorAttachments;
-    }
-
-    if (resolved.length === 1) {
-        if (!publicKey.authenticatorSelection || typeof publicKey.authenticatorSelection !== 'object') {
-            publicKey.authenticatorSelection = {};
         }
-        publicKey.authenticatorSelection.authenticatorAttachment = resolved[0];
-    } else if (publicKey.authenticatorSelection && typeof publicKey.authenticatorSelection === 'object'
-        && Object.prototype.hasOwnProperty.call(publicKey.authenticatorSelection, 'authenticatorAttachment')) {
+    }
+
+    if (!publicKey.authenticatorSelection || typeof publicKey.authenticatorSelection !== 'object') {
+        publicKey.authenticatorSelection = {};
+    }
+
+    if (preferredAttachment) {
+        publicKey.authenticatorSelection.authenticatorAttachment = preferredAttachment;
+    } else if (Object.prototype.hasOwnProperty.call(publicKey.authenticatorSelection, 'authenticatorAttachment')) {
         delete publicKey.authenticatorSelection.authenticatorAttachment;
     }
 }
@@ -201,37 +181,33 @@ export function ensureAuthenticationHintsAllowed(publicKey, options = {}) {
         throw new Error('Please select at least one authenticator hint before continuing.');
     }
 
-    let allowedAttachments = deriveAllowedAttachmentsFromHints(normalizedHints);
+    const resolvedAttachments = [];
+    const seen = new Set();
 
-    if (requireSelection && normalizedHints.length > 0 && allowedAttachments.length === 0) {
-        throw new Error('Selected hints do not map to any authenticator attachments.');
-    }
-
-    const requestedAllowed = Array.isArray(publicKey.allowedAuthenticatorAttachments)
-        ? Array.from(new Set(publicKey.allowedAuthenticatorAttachments
-            .map(normalizeAttachmentValue)
-            .filter(Boolean)))
-        : [];
-
-    if (requestedAllowed.length > 0) {
-        if (allowedAttachments.length > 0) {
-            allowedAttachments = allowedAttachments.filter(value => requestedAllowed.includes(value));
-        } else {
-            allowedAttachments = requestedAllowed.slice();
+    const addAttachment = value => {
+        const normalized = normalizeAttachmentValue(value);
+        if (normalized && !seen.has(normalized)) {
+            resolvedAttachments.push(normalized);
+            seen.add(normalized);
         }
+    };
+
+    const derivedFromHints = deriveAllowedAttachmentsFromHints(normalizedHints);
+    derivedFromHints.forEach(addAttachment);
+
+    const selection = publicKey.authenticatorSelection && typeof publicKey.authenticatorSelection === 'object'
+        ? publicKey.authenticatorSelection
+        : null;
+
+    if (!resolvedAttachments.length && selection && Object.prototype.hasOwnProperty.call(selection, 'authenticatorAttachment')) {
+        addAttachment(selection.authenticatorAttachment);
     }
 
-    allowedAttachments = Array.from(new Set(allowedAttachments));
-
-    const resolvedAllowed = allowedAttachments.length > 0
-        ? allowedAttachments
-        : requestedAllowed;
-
-    if (requireSelection && resolvedAllowed.length === 0) {
+    if (requireSelection && normalizedHints.length > 0 && resolvedAttachments.length === 0) {
         throw new Error('Selected hints do not map to any authenticator attachments.');
     }
 
-    if (Array.isArray(publicKey.allowCredentials) && resolvedAllowed.length > 0) {
+    if (Array.isArray(publicKey.allowCredentials) && resolvedAttachments.length > 0) {
         const invalidDescriptor = publicKey.allowCredentials.find(descriptor => {
             if (!descriptor || typeof descriptor !== 'object') {
                 return false;
@@ -252,7 +228,7 @@ export function ensureAuthenticationHintsAllowed(publicKey, options = {}) {
                 return false;
             }
             const attachment = getStoredCredentialAttachment(matchingCredential);
-            return attachment && !resolvedAllowed.includes(attachment);
+            return attachment && !resolvedAttachments.includes(attachment);
         });
         if (invalidDescriptor) {
             publicKey.allowCredentials = publicKey.allowCredentials.filter(descriptor => {
@@ -275,14 +251,14 @@ export function ensureAuthenticationHintsAllowed(publicKey, options = {}) {
                     return false;
                 }
                 const attachment = getStoredCredentialAttachment(matchingCredential);
-                return attachment && resolvedAllowed.includes(attachment);
+                return attachment && resolvedAttachments.includes(attachment);
             });
             if (!publicKey.allowCredentials.length) {
                 delete publicKey.allowCredentials;
             }
         } else if (publicKey.allowCredentials.length === 0 && Array.isArray(state.storedCredentials) && state.storedCredentials.length > 0) {
-            if (resolvedAllowed.length === 1) {
-                const allowedValue = resolvedAllowed[0];
+            if (resolvedAttachments.length === 1) {
+                const allowedValue = resolvedAttachments[0];
                 const fallbackCredential = (state.storedCredentials || []).find(cred => {
                     const attachment = getStoredCredentialAttachment(cred);
                     return attachment && attachment === allowedValue;
@@ -301,7 +277,7 @@ export function ensureAuthenticationHintsAllowed(publicKey, options = {}) {
             } else {
                 const fallbackSource = (state.storedCredentials || []).filter(cred => {
                     const attachment = getStoredCredentialAttachment(cred);
-                    return !resolvedAllowed.length || (attachment && resolvedAllowed.includes(attachment));
+                    return !resolvedAttachments.length || (attachment && resolvedAttachments.includes(attachment));
                 });
                 const fallbackCredentials = fallbackSource
                     .map(cred => {
@@ -329,5 +305,5 @@ export function ensureAuthenticationHintsAllowed(publicKey, options = {}) {
         }
     }
 
-    return resolvedAllowed;
+    return resolvedAttachments;
 }

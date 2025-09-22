@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import os
 from collections.abc import Iterable, Mapping
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set
 
 from .config import basepath
 from .storage import extract_credential_data, readkey
@@ -11,10 +11,10 @@ from .storage import extract_credential_data, readkey
 __all__ = [
     "HINT_TO_ATTACHMENT_MAP",
     "build_credential_attachment_map",
-    "combine_allowed_attachment_values",
     "derive_allowed_attachments_from_hints",
     "normalize_attachment",
     "normalize_attachment_list",
+    "resolve_effective_attachments",
 ]
 
 
@@ -67,36 +67,19 @@ def normalize_attachment_list(raw_values: Any) -> List[str]:
     return normalized
 
 
-def combine_allowed_attachment_values(
+def resolve_effective_attachments(
     hints: Iterable[str],
-    requested: Any,
-) -> Tuple[List[str], List[str], Optional[str]]:
-    derived_allowed = derive_allowed_attachments_from_hints(hints)
-    allowed: List[str] = list(derived_allowed)
-    normalized_requested = normalize_attachment_list(requested)
+    requested_attachment: Optional[str] = None,
+) -> List[str]:
+    resolved = derive_allowed_attachments_from_hints(hints)
+    if resolved:
+        return resolved
 
-    requested_is_list = isinstance(requested, list)
-    requested_has_entries = requested_is_list and len(requested) > 0
-
+    normalized_requested = normalize_attachment(requested_attachment)
     if normalized_requested:
-        if allowed:
-            allowed = [value for value in allowed if value in normalized_requested]
-        else:
-            allowed = list(normalized_requested)
-        if not allowed:
-            return (
-                [],
-                normalized_requested,
-                "No authenticator attachments remain after combining hints with allowedAuthenticatorAttachments.",
-            )
-    elif requested_has_entries:
-        return (
-            [],
-            normalized_requested,
-            "No authenticator attachments remain after combining hints with allowedAuthenticatorAttachments.",
-        )
+        return [normalized_requested]
 
-    return allowed, normalized_requested, None
+    return []
 
 
 def build_credential_attachment_map() -> Dict[bytes, Optional[str]]:
