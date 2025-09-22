@@ -33,6 +33,13 @@
     flex-direction: column;
 }
 
+.mds-modal__dialog--certificate {
+    width: min(80vw, 1100px);
+    max-width: 80vw;
+    height: min(80vh, 900px);
+    max-height: 80vh;
+}
+
 .mds-modal__header {
     display: flex;
     align-items: center;
@@ -178,10 +185,6 @@
     gap: 0.85rem;
     flex: 1 1 auto;
     min-width: 0;
-}
-
-.mds-modal__back {
-    align-self: flex-start;
 }
 
 .mds-detail--modal {
