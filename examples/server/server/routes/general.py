@@ -19,7 +19,6 @@ _metadata_bootstrap_lock = Lock()
 _metadata_bootstrap_state = {"started": False}
 
 
-@app.before_first_request
 def _auto_refresh_metadata() -> None:
     with _metadata_bootstrap_lock:
         if _metadata_bootstrap_state["started"]:
@@ -55,6 +54,12 @@ def _auto_refresh_metadata() -> None:
             )
         else:
             app.logger.info("FIDO MDS metadata already up to date.")
+
+
+# Flask 2.3 removed the ``before_first_request`` hook, so register the
+# automatic refresh with ``before_request`` instead and guard the logic above
+# to only run once per process.
+app.before_request(_auto_refresh_metadata)
 
 
 @app.route("/")
