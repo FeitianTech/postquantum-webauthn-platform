@@ -34,7 +34,46 @@ let hasLoaded = false;
 let isUpdatingMetadata = false;
 let loadPromise = null;
 const certificateCache = new Map();
+let certificateInfoPromise = null;
 let scrollTopButtonUpdateScheduled = false;
+
+const SORT_NONE = 'none';
+const SORT_ASCENDING = 'asc';
+const SORT_DESCENDING = 'desc';
+
+const SORT_SEQUENCE = {
+    [SORT_NONE]: SORT_ASCENDING,
+    [SORT_ASCENDING]: SORT_DESCENDING,
+    [SORT_DESCENDING]: SORT_NONE,
+};
+
+const SORT_ACCESSORS = {
+    icon: entry => {
+        const name = typeof entry?.name === 'string' ? entry.name : '';
+        return `${entry?.icon ? '1' : '0'}_${name}`;
+    },
+    name: entry => entry?.name || '',
+    protocol: entry => entry?.protocol || '',
+    certification: entry => entry?.certification || '',
+    id: entry => entry?.id || '',
+    userVerification: entry => entry?.userVerification || '',
+    attachment: entry => entry?.attachment || '',
+    transports: entry => entry?.transports || '',
+    keyProtection: entry => entry?.keyProtection || '',
+    algorithms: entry => entry?.algorithms || '',
+    algorithmInfo: entry => entry?.certificateAlgorithmInfo || '',
+    commonName: entry => entry?.certificateCommonNames || '',
+    dateUpdated: entry => {
+        if (entry?.dateTooltip) {
+            const timestamp = Date.parse(entry.dateTooltip);
+            if (!Number.isNaN(timestamp)) {
+                return timestamp;
+            }
+            return entry.dateTooltip;
+        }
+        return entry?.dateUpdated || '';
+    },
+};
 
 function scheduleScrollTopButtonUpdate() {
     if (scrollTopButtonUpdateScheduled) {
@@ -177,6 +216,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const markup = await response.text();
         tabElement.innerHTML = markup;
         mdsState = initializeState(tabElement);
+        updateSortButtonState();
         setUpdateButtonMode('update');
     } catch (error) {
         console.error('Failed to initialise the FIDO MDS tab:', error);
@@ -279,6 +319,19 @@ function initializeState(root) {
     const table = root.querySelector('.mds-table');
     const tableBody = root.querySelector('#mds-table-body');
 
+    const sortButtons = new Map();
+    root.querySelectorAll('.mds-sort-button[data-sort-key]').forEach(button => {
+        const sortKey = button.dataset.sortKey;
+        if (!sortKey) {
+            return;
+        }
+        sortButtons.set(sortKey, button);
+        button.addEventListener('click', () => handleSortButtonClick(sortKey));
+        if (!button.hasAttribute('data-sort-direction')) {
+            button.setAttribute('data-sort-direction', SORT_NONE);
+        }
+    });
+
     const scrollTopButton = root.querySelector('#mds-scroll-top-button');
     if (scrollTopButton) {
         scrollTopButton.addEventListener('click', event => {
@@ -350,6 +403,8 @@ function initializeState(root) {
         tableContainer,
         table,
         tableBody,
+        sortButtons,
+        sort: { key: '', direction: SORT_NONE },
         countEl: root.querySelector('#mds-entry-count'),
         totalEl: root.querySelector('#mds-total-count'),
         statusEl,
@@ -439,6 +494,7 @@ async function loadMdsData(statusNote) {
                         tbody.appendChild(emptyRow);
                     }
                     hideScrollTopButton();
+                    resetSortState();
                     return;
                 }
                 throw new Error(`Unexpected response status: ${response.status}`);
@@ -458,6 +514,8 @@ async function loadMdsData(statusNote) {
                 : [];
             hasLoaded = true;
             setUpdateButtonMode('update');
+
+            resetSortState();
 
             if (mdsState) {
                 const map = new Map();
@@ -485,6 +543,22 @@ async function loadMdsData(statusNote) {
             const optionSets = collectOptionSets(mdsData);
             updateOptionLists(optionSets);
             applyFilters();
+
+            if (certificateInfoPromise) {
+                certificateInfoPromise = null;
+            }
+            certificateInfoPromise = populateCertificateDerivedInfo(mdsData)
+                .then(() => {
+                    if (mdsState) {
+                        applyFilters();
+                    }
+                })
+                .catch(error => {
+                    console.error('Failed to derive attestation certificate details:', error);
+                })
+                .finally(() => {
+                    certificateInfoPromise = null;
+                });
 
             const statusParts = [`Loaded ${mdsData.length.toLocaleString()} authenticators.`];
             let statusVariant = 'success';
@@ -555,9 +629,12 @@ function applyFilters() {
     }
 
     const activeFilters = mdsState.filters;
-    filteredData = mdsData.filter(entry => matchesFilters(entry, activeFilters));
-    renderTable(filteredData);
-    updateCount(filteredData.length, mdsData.length);
+    const matched = mdsData.filter(entry => matchesFilters(entry, activeFilters));
+    const sorted = applySorting(matched);
+    filteredData = sorted;
+    renderTable(sorted);
+    updateCount(sorted.length, mdsData.length);
+    updateSortButtonState();
 }
 
 function matchesFilters(entry, filters) {
@@ -595,6 +672,242 @@ function matchesFilters(entry, filters) {
         }
         const haystack = (entry[key] || '').toLowerCase();
         return haystack.includes(query);
+    });
+}
+
+function applySorting(entries) {
+    if (!Array.isArray(entries)) {
+        return [];
+    }
+    if (!mdsState?.sort) {
+        return entries.slice();
+    }
+
+    const { key, direction } = mdsState.sort;
+    if (!key || direction === SORT_NONE) {
+        return entries.slice();
+    }
+
+    const accessor = SORT_ACCESSORS[key];
+    if (typeof accessor !== 'function') {
+        return entries.slice();
+    }
+
+    const sorted = entries.slice().sort((a, b) => compareSortValues(a, b, accessor));
+    if (direction === SORT_DESCENDING) {
+        sorted.reverse();
+    }
+    return sorted;
+}
+
+function compareSortValues(entryA, entryB, accessor) {
+    const valueA = accessor(entryA);
+    const valueB = accessor(entryB);
+
+    const normalisedA = normaliseSortValue(valueA);
+    const normalisedB = normaliseSortValue(valueB);
+
+    if (normalisedA < normalisedB) {
+        return -1;
+    }
+    if (normalisedA > normalisedB) {
+        return 1;
+    }
+
+    const fallbackA = String(valueA ?? '').toLowerCase();
+    const fallbackB = String(valueB ?? '').toLowerCase();
+    if (fallbackA < fallbackB) {
+        return -1;
+    }
+    if (fallbackA > fallbackB) {
+        return 1;
+    }
+
+    const originalA = String(valueA ?? '');
+    const originalB = String(valueB ?? '');
+    if (originalA < originalB) {
+        return -1;
+    }
+    if (originalA > originalB) {
+        return 1;
+    }
+
+    const indexA = typeof entryA?.index === 'number' ? entryA.index : 0;
+    const indexB = typeof entryB?.index === 'number' ? entryB.index : 0;
+    return indexA - indexB;
+}
+
+function normaliseSortValue(value) {
+    if (value === undefined || value === null) {
+        return '';
+    }
+    if (typeof value === 'number') {
+        return value;
+    }
+    if (value instanceof Date) {
+        return value.getTime();
+    }
+
+    const text = String(value).trim();
+    if (!text || text === '—') {
+        return '';
+    }
+
+    const numeric = Number(text);
+    if (!Number.isNaN(numeric) && text !== '') {
+        return numeric;
+    }
+    return text.toLowerCase();
+}
+
+function updateSortButtonState() {
+    if (!mdsState?.sortButtons) {
+        return;
+    }
+
+    const activeKey = mdsState.sort?.key || '';
+    const direction = mdsState.sort?.direction || SORT_NONE;
+
+    mdsState.sortButtons.forEach((button, key) => {
+        const isActive = key === activeKey && direction !== SORT_NONE;
+        const appliedDirection = isActive ? direction : SORT_NONE;
+        button.setAttribute('data-sort-direction', appliedDirection);
+        button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+
+        const label = button.getAttribute('data-sort-label') || '';
+        if (label) {
+            let suffix = ' (no sorting)';
+            if (appliedDirection === SORT_ASCENDING) {
+                suffix = ' (ascending)';
+            } else if (appliedDirection === SORT_DESCENDING) {
+                suffix = ' (descending)';
+            }
+            button.setAttribute('aria-label', `Sort ${label}${suffix}`);
+        }
+
+        const headerCell = button.closest('th');
+        if (headerCell) {
+            headerCell.classList.toggle('mds-sort-active', isActive);
+        }
+    });
+}
+
+function resetSortState() {
+    if (!mdsState) {
+        return;
+    }
+    if (!mdsState.sort) {
+        mdsState.sort = { key: '', direction: SORT_NONE };
+    } else {
+        mdsState.sort.key = '';
+        mdsState.sort.direction = SORT_NONE;
+    }
+    updateSortButtonState();
+}
+
+function handleSortButtonClick(sortKey) {
+    if (!mdsState) {
+        return;
+    }
+    const key = typeof sortKey === 'string' ? sortKey : '';
+    if (!key || !Object.prototype.hasOwnProperty.call(SORT_ACCESSORS, key)) {
+        return;
+    }
+
+    if (!mdsState.sort) {
+        mdsState.sort = { key: '', direction: SORT_NONE };
+    }
+
+    const currentKey = mdsState.sort.key;
+    const currentDirection = mdsState.sort.direction || SORT_NONE;
+    let nextDirection = SORT_ASCENDING;
+    if (currentKey === key) {
+        nextDirection = SORT_SEQUENCE[currentDirection] || SORT_ASCENDING;
+    }
+
+    if (nextDirection === SORT_NONE) {
+        mdsState.sort.key = '';
+        mdsState.sort.direction = SORT_NONE;
+    } else {
+        mdsState.sort.key = key;
+        mdsState.sort.direction = nextDirection;
+    }
+
+    updateSortButtonState();
+    applyFilters();
+}
+
+async function populateCertificateDerivedInfo(entries) {
+    if (!Array.isArray(entries) || !entries.length) {
+        return;
+    }
+
+    const seen = new Set();
+    const certificates = [];
+
+    entries.forEach(entry => {
+        const list = Array.isArray(entry?.attestationCertificates) ? entry.attestationCertificates : [];
+        list.forEach(certificate => {
+            const cleaned = normaliseCertificateBase64(certificate);
+            if (cleaned && !seen.has(cleaned)) {
+                seen.add(cleaned);
+                certificates.push(cleaned);
+            }
+        });
+    });
+
+    if (!certificates.length) {
+        return;
+    }
+
+    const detailMap = new Map();
+
+    for (const certificate of certificates) {
+        try {
+            const details = await decodeCertificate(certificate);
+            detailMap.set(certificate, details);
+        } catch (error) {
+            console.error('Failed to decode attestation root certificate:', error);
+            detailMap.set(certificate, null);
+        }
+    }
+
+    entries.forEach(entry => {
+        const algorithms = [];
+        const commonNames = [];
+        const list = Array.isArray(entry?.attestationCertificates) ? entry.attestationCertificates : [];
+
+        list.forEach(certificate => {
+            const cleaned = normaliseCertificateBase64(certificate);
+            if (!cleaned) {
+                return;
+            }
+            const details = detailMap.get(cleaned);
+            if (!details || typeof details !== 'object') {
+                return;
+            }
+
+            const algorithmInfo = typeof details.algorithmInfo === 'string' ? details.algorithmInfo.trim() : '';
+            if (algorithmInfo && !algorithms.includes(algorithmInfo)) {
+                algorithms.push(algorithmInfo);
+            }
+
+            const cnValues = Array.isArray(details.subjectCommonNames) ? details.subjectCommonNames : [];
+            cnValues.forEach(name => {
+                if (typeof name !== 'string') {
+                    return;
+                }
+                const trimmed = name.trim();
+                if (trimmed && !commonNames.includes(trimmed)) {
+                    commonNames.push(trimmed);
+                }
+            });
+        });
+
+        entry.certificateAlgorithmInfoList = algorithms;
+        entry.certificateAlgorithmInfo = algorithms.length ? algorithms.join(', ') : '—';
+        entry.certificateCommonNameList = commonNames;
+        entry.certificateCommonNames = commonNames.length ? commonNames.join(', ') : '—';
     });
 }
 
@@ -671,6 +984,8 @@ function renderTable(entries) {
         row.appendChild(createTagCell(entry.transportsList));
         row.appendChild(createTagCell(entry.keyProtectionList));
         row.appendChild(createTagCell(entry.algorithmsList));
+        row.appendChild(createTagCell(entry.certificateAlgorithmInfoList));
+        row.appendChild(createTagCell(entry.certificateCommonNameList, true));
         row.appendChild(createTextCell(entry.dateUpdated || '—', entry.dateTooltip));
 
         fragment.appendChild(row);

@@ -4,6 +4,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import math
+import re
 import string
 import textwrap
 import uuid
@@ -21,7 +22,7 @@ from fido2.webauthn import (
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec, ed25519, ed448, rsa
-from cryptography.x509.oid import ExtensionOID
+from cryptography.x509.oid import ExtensionOID, NameOID
 
 from .metadata import get_mds_verifier
 
@@ -390,6 +391,97 @@ def format_x509_name(name: x509.Name) -> str:
         return str(name)
 
 
+_HASH_NORMALISE_PATTERN = re.compile(r"sha-?(\d{3})$", re.IGNORECASE)
+
+
+def _format_algorithm_component(value: Any) -> str:
+    if value in (None, ""):
+        return ""
+    text = str(value).strip()
+    if not text or text == "—":
+        return ""
+    return text.replace(" ", "")
+
+
+def _format_hash_value(value: Any) -> str:
+    if value in (None, ""):
+        return ""
+    text = str(value).strip()
+    if not text:
+        return ""
+    match = _HASH_NORMALISE_PATTERN.match(text)
+    if match:
+        return f"SHA{match.group(1)}"
+    return text.replace("-", "").replace(" ", "").upper()
+
+
+def _derive_certificate_algorithm_info(public_key_info: Mapping[str, Any], signature_info: Mapping[str, Any]) -> str:
+    if not isinstance(public_key_info, Mapping):
+        return ""
+
+    algorithm = public_key_info.get("algorithm", {})
+    if not isinstance(algorithm, Mapping):
+        algorithm = {}
+
+    named_curve = algorithm.get("namedCurve") or public_key_info.get("curve")
+    key_type = public_key_info.get("type")
+    modulus_length = algorithm.get("modulusLength") or public_key_info.get("keySize")
+
+    key_component = ""
+    if named_curve:
+        key_component = named_curve
+    elif key_type:
+        key_text = str(key_type)
+        if key_text.upper().startswith("RSA") and modulus_length:
+            key_component = f"RSA{modulus_length}"
+        else:
+            key_component = key_text
+    elif algorithm.get("name"):
+        key_component = algorithm["name"]
+
+    algorithm_name = algorithm.get("name") or key_type or ""
+    if not algorithm_name and isinstance(signature_info, Mapping):
+        algorithm_name = signature_info.get("algorithm") or ""
+
+    hash_component = ""
+    if isinstance(signature_info, Mapping):
+        hash_info = signature_info.get("hash")
+        if isinstance(hash_info, Mapping):
+            hash_component = hash_info.get("name") or ""
+        elif hash_info not in (None, ""):
+            hash_component = hash_info
+        if not hash_component:
+            sig_name = signature_info.get("algorithm")
+            if isinstance(sig_name, str):
+                lowered = sig_name.lower()
+                if "ed25519" in lowered:
+                    hash_component = "SHA512"
+                elif "ed448" in lowered:
+                    hash_component = "SHAKE256"
+
+    components = []
+    for part in (
+        _format_algorithm_component(key_component),
+        _format_algorithm_component(algorithm_name),
+        _format_hash_value(hash_component),
+    ):
+        if part and (not components or part.lower() != components[-1].lower()):
+            components.append(part)
+
+    return "_".join(components)
+
+
+def _extract_common_names(name: x509.Name) -> List[str]:
+    values: List[str] = []
+    for attribute in name.get_attributes_for_oid(NameOID.COMMON_NAME):
+        value = attribute.value
+        if isinstance(value, str):
+            text = value.strip()
+            if text:
+                values.append(text)
+    return values
+
+
 def serialize_attestation_certificate(cert_bytes: bytes):
     if not cert_bytes:
         return None
@@ -633,6 +725,16 @@ def serialize_attestation_certificate(cert_bytes: bytes):
 
     summary = "\n".join(line for line in summary_lines if line is not None).strip()
 
+    signature_details = {
+        "algorithm": signature_algorithm,
+        "hash": signature_hash,
+        "hex": signature_hex,
+        "colon": signature_colon,
+        "lines": signature_lines,
+    }
+    algorithm_info = _derive_certificate_algorithm_info(public_key_info, signature_details)
+    subject_common_names = _extract_common_names(certificate.subject)
+
     return {
         "version": {
             "display": f"{version_number} ({version_hex})",
@@ -650,16 +752,12 @@ def serialize_attestation_certificate(cert_bytes: bytes):
             "notAfter": _isoformat(not_valid_after),
         },
         "subject": format_x509_name(certificate.subject),
+        "subjectCommonNames": subject_common_names,
         "publicKeyInfo": public_key_info,
+        "algorithmInfo": algorithm_info,
         "extensions": extensions,
         "fingerprints": fingerprints,
-        "signature": {
-            "algorithm": signature_algorithm,
-            "hash": signature_hash,
-            "hex": signature_hex,
-            "colon": signature_colon,
-            "lines": signature_lines,
-        },
+        "signature": signature_details,
         "derBase64": der_base64,
         "pem": pem,
         "summary": summary,

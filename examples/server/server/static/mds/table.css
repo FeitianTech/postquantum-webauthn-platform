@@ -1,6 +1,6 @@
 .mds-table {
     width: 100%;
-    min-width: 1500px;
+    min-width: 1700px;
     border-collapse: separate;
     border-spacing: 0;
 }
@@ -19,6 +19,67 @@
     letter-spacing: 0.06em;
     color: var(--muted-text);
     border-bottom: 1px solid rgba(0, 114, 206, 0.15);
+}
+
+.mds-header-cell {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    white-space: nowrap;
+}
+
+.mds-header-text {
+    display: inline-block;
+}
+
+.mds-sort-button {
+    appearance: none;
+    border: none;
+    background: none;
+    color: rgba(15, 39, 64, 0.45);
+    width: 1.6rem;
+    height: 1.6rem;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.mds-sort-button::after {
+    content: '↕';
+    font-size: 0.9rem;
+    line-height: 1;
+}
+
+.mds-sort-button[data-sort-direction='asc']::after {
+    content: '↑';
+}
+
+.mds-sort-button[data-sort-direction='desc']::after {
+    content: '↓';
+}
+
+.mds-sort-button:hover,
+.mds-sort-button:focus-visible {
+    background: rgba(0, 114, 206, 0.12);
+    color: var(--primary-dark);
+    outline: none;
+}
+
+.mds-sort-button:focus-visible {
+    box-shadow: 0 0 0 2px rgba(0, 114, 206, 0.35);
+}
+
+.mds-sort-button[data-sort-direction='asc'],
+.mds-sort-button[data-sort-direction='desc'] {
+    color: var(--primary-dark);
+}
+
+.mds-table thead th.mds-sort-active {
+    color: var(--primary-dark);
 }
 
 .mds-filter-row th {
@@ -210,6 +271,16 @@
 
 .mds-table thead th:nth-child(11),
 .mds-table tbody td:nth-child(11) {
+    min-width: 220px;
+}
+
+.mds-table thead th:nth-child(12),
+.mds-table tbody td:nth-child(12) {
+    min-width: 240px;
+}
+
+.mds-table thead th:nth-child(13),
+.mds-table tbody td:nth-child(13) {
     min-width: 200px;
 }
 
