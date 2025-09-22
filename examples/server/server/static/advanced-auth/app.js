@@ -42,7 +42,7 @@ import {
 import {
     simpleRegister,
     simpleAuthenticate
-} from './auth-simple.js';
+} from '../simple-auth/auth-simple.js';
 import {
     advancedRegister,
     advancedAuthenticate
@@ -50,7 +50,7 @@ import {
 import {
     decodeResponse,
     clearDecoder
-} from './decoder.js';
+} from '../decoder/decoder.js';
 import {
     saveJsonEditor,
     resetJsonEditor,

@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WebAuthn FIDO2 Test Application</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='mds.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='advanced-auth/styles.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='mds/mds.css') }}">
 </head>
 <body>
 {% include 'index/header.html' %}
@@ -29,7 +29,7 @@
 {% include 'index/modals/credential-details.html' %}
 
     <div id="json-editor-overlay" class="json-editor-overlay"></div>
-    <script type="module" src="{{ url_for('static', filename='mds.js') }}"></script>
-    <script type="module" src="{{ url_for('static', filename='script.js') }}"></script>
+    <script type="module" src="{{ url_for('static', filename='mds/mds.js') }}"></script>
+    <script type="module" src="{{ url_for('static', filename='advanced-auth/app.js') }}"></script>
 </body>
 </html>

@@ -1,4 +1,4 @@
-import { showStatus, hideStatus } from './status.js';
+import { showStatus, hideStatus } from '../advanced-auth/status.js';
 
 export function decodeResponse() {
     const input = document.getElementById('decoder-input');

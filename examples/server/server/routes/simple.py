@@ -10,16 +10,22 @@ from typing import Any, Dict, List, Mapping, MutableMapping
 from flask import abort, jsonify, request, session
 from fido2.webauthn import PublicKeyCredentialUserEntity
 
-from ..attachments import normalize_attachment
-from ..attestation import (
+from ..backend.attachments import normalize_attachment
+from ..backend.attestation import (
     augment_aaguid_fields,
     coerce_aaguid_hex,
     extract_attestation_details,
     extract_min_pin_length,
     make_json_safe,
 )
-from ..config import app, basepath, server
-from ..storage import add_public_key_material, convert_bytes_for_json, extract_credential_data, readkey, savekey
+from ..backend.config import app, basepath, server
+from ..backend.storage import (
+    add_public_key_material,
+    convert_bytes_for_json,
+    extract_credential_data,
+    readkey,
+    savekey,
+)
 
 
 @app.route("/api/register/begin", methods=["POST"])

@@ -30,7 +30,7 @@ else:  # pragma: no cover - executed when run as a script.
     _import_base = _PACKAGE_ROOT.name
     __package__ = _import_base
 
-config_module = _import_module(f"{_import_base}.config")
+config_module = _import_module(f"{_import_base}.backend.config")
 app = config_module.app
 
 # Import the route modules so their decorators register endpoints with Flask.

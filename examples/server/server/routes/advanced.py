@@ -21,14 +21,14 @@ from fido2.webauthn import (
     UserVerificationRequirement,
 )
 
-from ..attachments import (
+from ..backend.attachments import (
     build_credential_attachment_map,
     combine_allowed_attachment_values,
     derive_allowed_attachments_from_hints,
     normalize_attachment,
     normalize_attachment_list,
 )
-from ..attestation import (
+from ..backend.attestation import (
     augment_aaguid_fields,
     extract_attestation_details,
     extract_min_pin_length,
@@ -36,8 +36,8 @@ from ..attestation import (
     perform_attestation_checks,
     summarize_authenticator_extensions,
 )
-from ..config import app, basepath, rp, server
-from ..storage import add_public_key_material, extract_credential_data, readkey, savekey
+from ..backend.config import app, basepath, rp, server
+from ..backend.storage import add_public_key_material, extract_credential_data, readkey, savekey
 
 
 def _extract_binary_value(value: Any) -> Any:

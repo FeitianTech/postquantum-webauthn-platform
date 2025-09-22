@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import base64
 import os
+import pathlib
 import ssl
 import textwrap
 
@@ -26,13 +27,17 @@ app.secret_key = os.urandom(32)  # Used for session.
 rp = PublicKeyCredentialRpEntity(name="Demo server", id="localhost")
 server = Fido2Server(rp)
 
-# Save credentials next to this module, regardless of CWD.
-basepath = os.path.abspath(os.path.dirname(__file__))
+_BACKEND_DIR = pathlib.Path(__file__).resolve().parent
+_PACKAGE_ROOT = _BACKEND_DIR.parent
+
+# Save credentials alongside the package root, regardless of the CWD.
+basepath = str(_PACKAGE_ROOT)
 
 MDS_METADATA_URL = "https://mds3.fidoalliance.org/"
 MDS_METADATA_FILENAME = "fido-mds3.jws"
-MDS_METADATA_PATH = os.path.join(basepath, "static", MDS_METADATA_FILENAME)
-MDS_METADATA_CACHE_PATH = MDS_METADATA_PATH + ".meta.json"
+_STATIC_DIR = _PACKAGE_ROOT / "static"
+MDS_METADATA_PATH = str(_STATIC_DIR / MDS_METADATA_FILENAME)
+MDS_METADATA_CACHE_PATH = str(_STATIC_DIR / f"{MDS_METADATA_FILENAME}.meta.json")
 
 FIDO_METADATA_TRUST_ROOT_B64 = (
     "MIIDXzCCAkegAwIBAgILBAAAAAABIVhTCKIwDQYJKoZIhvcNAQELBQAwTDEgMB4G"

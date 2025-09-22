@@ -8,10 +8,14 @@ from typing import Any, Dict
 
 from flask import abort, jsonify, redirect, render_template, request, send_file
 
-from ..attestation import serialize_attestation_certificate
-from ..config import MDS_METADATA_PATH, app, basepath
-from ..metadata import MetadataDownloadError, download_metadata_blob, load_metadata_cache_entry
-from ..storage import delkey
+from ..backend.attestation import serialize_attestation_certificate
+from ..backend.config import MDS_METADATA_PATH, app, basepath
+from ..backend.metadata import (
+    MetadataDownloadError,
+    download_metadata_blob,
+    load_metadata_cache_entry,
+)
+from ..backend.storage import delkey
 
 
 @app.route("/")

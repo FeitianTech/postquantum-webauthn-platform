@@ -3,12 +3,12 @@ import {
     get,
     parseCreationOptionsFromJSON,
     parseRequestOptionsFromJSON
-} from './webauthn-json.browser-ponyfill.js';
-import { convertExtensionsForClient } from './binary-utils.js';
-import { showStatus, hideStatus, showProgress, hideProgress } from './status.js';
-import { loadSavedCredentials } from './credential-display.js';
-import { printRegistrationDebug, printAuthenticationDebug } from './auth-debug.js';
-import { state } from './state.js';
+} from '../advanced-auth/webauthn-json.browser-ponyfill.js';
+import { convertExtensionsForClient } from '../advanced-auth/binary-utils.js';
+import { showStatus, hideStatus, showProgress, hideProgress } from '../advanced-auth/status.js';
+import { loadSavedCredentials } from '../advanced-auth/credential-display.js';
+import { printRegistrationDebug, printAuthenticationDebug } from '../advanced-auth/auth-debug.js';
+import { state } from '../advanced-auth/state.js';
 
 export async function simpleRegister() {
     const email = document.getElementById('simple-email').value;

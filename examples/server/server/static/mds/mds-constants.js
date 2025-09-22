@@ -1,4 +1,4 @@
-export const MDS_HTML_PATH = 'mds.html';
+export const MDS_HTML_PATH = 'mds/mds.html';
 export const MDS_JWS_PATH = 'fido-mds3.jws';
 export const COLUMN_COUNT = 11;
 export const MISSING_METADATA_MESSAGE =
