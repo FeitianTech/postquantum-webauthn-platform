@@ -232,19 +232,6 @@
 
 </div>
 
-<div id="mds-detail-view" class="mds-detail" hidden>
-    <div class="mds-detail-header">
-        <button type="button" id="mds-detail-back" class="mds-detail-back">
-            ← Back to authenticator list
-        </button>
-        <div class="mds-detail-heading">
-            <h3 id="mds-detail-title" class="mds-detail-title"></h3>
-            <p id="mds-detail-subtitle" class="mds-detail-subtitle"></p>
-        </div>
-    </div>
-    <div id="mds-detail-content" class="mds-detail-content"></div>
-</div>
-
 <div id="mds-certificate-modal" class="mds-modal" hidden aria-hidden="true">
     <div class="mds-modal__dialog mds-modal__dialog--certificate" role="dialog" aria-modal="true" aria-labelledby="mds-certificate-modal-title">
         <div class="mds-modal__header">
@@ -272,9 +259,14 @@
 <div id="mds-authenticator-modal" class="mds-modal" hidden aria-hidden="true">
     <div class="mds-modal__dialog mds-modal__dialog--authenticator" role="dialog" aria-modal="true" aria-labelledby="mds-authenticator-modal-title">
         <div class="mds-modal__header mds-modal__header--authenticator">
-            <div class="mds-modal__heading">
-                <h3 id="mds-authenticator-modal-title" class="mds-modal__title">Authenticator</h3>
-                <p id="mds-authenticator-modal-subtitle" class="mds-modal__subtitle"></p>
+            <div class="mds-modal__header-main">
+                <button type="button" id="mds-authenticator-modal-back" class="mds-detail-back mds-modal__back">
+                    ← Back to authenticator list
+                </button>
+                <div class="mds-modal__heading">
+                    <h3 id="mds-authenticator-modal-title" class="mds-modal__title">Authenticator</h3>
+                    <p id="mds-authenticator-modal-subtitle" class="mds-modal__subtitle"></p>
+                </div>
             </div>
             <button type="button" id="mds-authenticator-modal-close" class="mds-modal__close" aria-label="Close">×</button>
         </div>

@@ -160,6 +160,20 @@
 
 .mds-modal__header--authenticator {
     align-items: flex-start;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.mds-modal__header-main {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.mds-modal__back {
+    align-self: flex-start;
 }
 
 .mds-detail--modal {

@@ -386,12 +386,6 @@ function initializeState(root) {
         });
     }
 
-    const detailView = root.querySelector('#mds-detail-view');
-    const detailBack = root.querySelector('#mds-detail-back');
-    if (detailBack) {
-        detailBack.addEventListener('click', () => hideAuthenticatorDetail());
-    }
-
     const certificateModal = root.querySelector('#mds-certificate-modal');
     const certificateClose = root.querySelector('#mds-certificate-modal-close');
     const certificateBody = root.querySelector('#mds-certificate-modal-body');
@@ -409,8 +403,12 @@ function initializeState(root) {
 
     const authenticatorModal = root.querySelector('#mds-authenticator-modal');
     const authenticatorClose = root.querySelector('#mds-authenticator-modal-close');
+    const authenticatorBack = root.querySelector('#mds-authenticator-modal-back');
     if (authenticatorClose) {
         authenticatorClose.addEventListener('click', () => closeAuthenticatorModal());
+    }
+    if (authenticatorBack) {
+        authenticatorBack.addEventListener('click', () => closeAuthenticatorModal());
     }
     if (authenticatorModal) {
         authenticatorModal.addEventListener('click', event => {
@@ -456,10 +454,6 @@ function initializeState(root) {
         updateButtonMode: 'update',
         metadataOverdue: false,
         metadataNextUpdate: null,
-        detailView,
-        detailContent: root.querySelector('#mds-detail-content'),
-        detailTitle: root.querySelector('#mds-detail-title'),
-        detailSubtitle: root.querySelector('#mds-detail-subtitle'),
         certificateModal,
         certificateModalBody: certificateBody,
         certificateInput: root.querySelector('#mds-certificate-input'),
@@ -472,9 +466,8 @@ function initializeState(root) {
         authenticatorModalSubtitle: root.querySelector('#mds-authenticator-modal-subtitle'),
         authenticatorModalBody: root.querySelector('#mds-authenticator-modal-body'),
         authenticatorModalClose: authenticatorClose,
+        authenticatorModalBack: authenticatorBack,
         activeDetailEntry: null,
-        previousDocumentScrollTop: null,
-        previousTableScrollTop: null,
         highlightedRow: null,
         highlightedRowKey: '',
         tabChangeHandler: handleTabChanged,
@@ -1260,7 +1253,6 @@ function showAuthenticatorDetail(entry, options = {}) {
     }
 
     clearRowHighlight();
-    hideScrollTopButton();
 
     const sourceEntry = typeof entry.index === 'number' && mdsData[entry.index]
         ? mdsData[entry.index]
@@ -1268,40 +1260,18 @@ function showAuthenticatorDetail(entry, options = {}) {
 
     mdsState.activeDetailEntry = sourceEntry;
 
-    if (typeof window !== 'undefined') {
-        const doc = document.documentElement;
-        const body = document.body;
-        const scrollTop = typeof window.pageYOffset === 'number'
-            ? window.pageYOffset
-            : (doc?.scrollTop ?? body?.scrollTop ?? 0);
-        mdsState.previousDocumentScrollTop = scrollTop;
-    }
-
-    const tableContainer = mdsState.tableContainer;
-    if (tableContainer) {
-        if (typeof tableContainer.scrollTop === 'number') {
-            mdsState.previousTableScrollTop = tableContainer.scrollTop;
-        }
-        hideElement(tableContainer);
-    }
-    if (mdsState.detailView) {
-        showElement(mdsState.detailView);
-    }
-
-    if (mdsState.root) {
-        mdsState.root.classList.add('mds-section--detail-active');
-    }
-
-    applyDetailHeader(sourceEntry, mdsState.detailTitle, mdsState.detailSubtitle);
-    populateDetailContent(mdsState.detailContent, sourceEntry);
-    resetScrollPositions(mdsState.detailView, mdsState.detailContent);
-
     const { scrollIntoView = true } = options;
-    if (scrollIntoView && mdsState.detailView && typeof mdsState.detailView.scrollIntoView === 'function') {
-        requestAnimationFrame(() => {
-            mdsState.detailView.scrollIntoView({ block: 'start' });
-        });
+    if (scrollIntoView) {
+        const key = normaliseAaguid(sourceEntry.aaguid || sourceEntry.id);
+        const row = key ? findRowByKey(key) : null;
+        if (row && typeof row.scrollIntoView === 'function') {
+            requestAnimationFrame(() => {
+                row.scrollIntoView({ block: 'center', behavior: 'smooth' });
+            });
+        }
     }
+
+    openAuthenticatorModal(sourceEntry);
 }
 
 function hideAuthenticatorDetail() {
@@ -1309,62 +1279,7 @@ function hideAuthenticatorDetail() {
         return;
     }
 
-    if (mdsState.root) {
-        mdsState.root.classList.remove('mds-section--detail-active');
-    }
-
-    if (mdsState.detailView) {
-        hideElement(mdsState.detailView);
-    }
-    const tableContainer = mdsState.tableContainer;
-    if (tableContainer) {
-        showElement(tableContainer);
-        if (typeof mdsState.previousTableScrollTop === 'number') {
-            const target = mdsState.previousTableScrollTop;
-            tableContainer.scrollTop = target;
-            if (typeof requestAnimationFrame === 'function') {
-                requestAnimationFrame(() => {
-                    requestAnimationFrame(() => {
-                        tableContainer.scrollTop = target;
-                    });
-                });
-            } else {
-                setTimeout(() => {
-                    tableContainer.scrollTop = target;
-                }, 0);
-            }
-        }
-    }
-
-    scheduleColumnResizerMetricsUpdate();
-
-    const previousScrollTop = typeof mdsState.previousDocumentScrollTop === 'number'
-        ? mdsState.previousDocumentScrollTop
-        : null;
-    mdsState.previousDocumentScrollTop = null;
-    mdsState.previousTableScrollTop = null;
-
-    if (previousScrollTop !== null && typeof window !== 'undefined') {
-        const restore = () => {
-            if (typeof window.scrollTo === 'function') {
-                window.scrollTo({ top: previousScrollTop, left: 0, behavior: 'auto' });
-            } else {
-                window.scrollTo(0, previousScrollTop);
-            }
-        };
-        if (typeof requestAnimationFrame === 'function') {
-            requestAnimationFrame(() => requestAnimationFrame(restore));
-        } else {
-            setTimeout(restore, 0);
-        }
-    }
-    if (mdsState.updateButton instanceof HTMLElement) {
-        requestAnimationFrame(() => {
-            mdsState.updateButton.focus();
-        });
-    }
-    mdsState.activeDetailEntry = null;
-    scheduleScrollTopButtonUpdate();
+    closeAuthenticatorModal();
 }
 
 function buildDetailContent(entry) {
@@ -1999,6 +1914,11 @@ function openAuthenticatorModal(entry) {
         return;
     }
 
+    if (entry) {
+        mdsState.activeDetailEntry = entry;
+    }
+    hideScrollTopButton();
+
     applyDetailHeader(entry, mdsState.authenticatorModalTitle, mdsState.authenticatorModalSubtitle);
     populateDetailContent(mdsState.authenticatorModalContent, entry);
 
@@ -2011,9 +1931,12 @@ function openAuthenticatorModal(entry) {
     );
     notifyGlobalScrollLock();
 
-    if (mdsState.authenticatorModalClose instanceof HTMLElement) {
+    const focusTarget = mdsState.authenticatorModalBack instanceof HTMLElement
+        ? mdsState.authenticatorModalBack
+        : mdsState.authenticatorModalClose;
+    if (focusTarget instanceof HTMLElement) {
         requestAnimationFrame(() => {
-            mdsState.authenticatorModalClose.focus();
+            focusTarget.focus();
         });
     }
 }
@@ -2030,6 +1953,8 @@ function closeAuthenticatorModal() {
         mdsState.authenticatorModalContent,
     );
     notifyGlobalScrollLock();
+    mdsState.activeDetailEntry = null;
+    scheduleScrollTopButtonUpdate();
 }
 
 async function resolveEntryByAaguid(aaguid) {
@@ -2102,7 +2027,7 @@ async function highlightAuthenticatorRowByAaguid(aaguid) {
 
     mdsState.highlightedRowKey = key;
 
-    if (mdsState.detailView && !mdsState.detailView.hidden) {
+    if (mdsState.authenticatorModal && !mdsState.authenticatorModal.hidden) {
         hideAuthenticatorDetail();
     }
 
