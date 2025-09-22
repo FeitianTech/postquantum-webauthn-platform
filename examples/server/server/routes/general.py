@@ -6,7 +6,7 @@ import binascii
 import os
 from typing import Any, Dict
 
-from flask import abort, jsonify, redirect, request, send_file
+from flask import abort, jsonify, redirect, render_template, request, send_file
 
 from ..attestation import serialize_attestation_certificate
 from ..config import MDS_METADATA_PATH, app, basepath
@@ -17,6 +17,11 @@ from ..storage import delkey
 @app.route("/")
 def index():
     return redirect("/index.html")
+
+
+@app.route("/index.html")
+def index_html():
+    return render_template("index.html")
 
 
 @app.route("/api/mds/update", methods=["POST"])

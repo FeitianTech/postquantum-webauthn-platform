@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebAuthn FIDO2 Test Application</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='mds.css') }}">
+</head>
+<body>
+{% include 'index/header.html' %}
+
+    <div class="container">
+{% include 'index/navigation.html' %}
+
+        <div class="content">
+{% include 'index/tabs/simple.html' %}
+
+{% include 'index/tabs/advanced.html' %}
+
+{% include 'index/tabs/decoder.html' %}
+
+{% include 'index/tabs/mds.html' %}
+        </div>
+    </div>
+
+{% include 'index/modals/registration-result.html' %}
+
+{% include 'index/modals/credential-details.html' %}
+
+    <div id="json-editor-overlay" class="json-editor-overlay"></div>
+    <script type="module" src="{{ url_for('static', filename='mds.js') }}"></script>
+    <script type="module" src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
