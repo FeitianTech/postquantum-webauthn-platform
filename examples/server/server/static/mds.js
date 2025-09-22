@@ -37,6 +37,8 @@ const certificateCache = new Map();
 let scrollTopButtonUpdateScheduled = false;
 let columnResizerMetricsScheduled = false;
 let rowHeightLockScheduled = false;
+let initialMdsJws = null;
+let initialMdsInfo = null;
 const MDS_METADATA_STORAGE_KEY = 'fido.mds.metadataPayload';
 const MDS_METADATA_INFO_KEY = 'fido.mds.metadataInfo';
 let sessionStorageWarningShown = false;
@@ -80,6 +82,22 @@ const SORT_ACCESSORS = {
 };
 
 const DEFAULT_MIN_COLUMN_WIDTH = 64;
+
+if (typeof window !== 'undefined') {
+    if (typeof window.__INITIAL_MDS_JWS__ === 'string' && window.__INITIAL_MDS_JWS__) {
+        initialMdsJws = window.__INITIAL_MDS_JWS__;
+    }
+    if (window.__INITIAL_MDS_INFO__ && typeof window.__INITIAL_MDS_INFO__ === 'object') {
+        initialMdsInfo = window.__INITIAL_MDS_INFO__;
+    }
+    try {
+        delete window.__INITIAL_MDS_JWS__;
+        delete window.__INITIAL_MDS_INFO__;
+    } catch (error) {
+        window.__INITIAL_MDS_JWS__ = undefined;
+        window.__INITIAL_MDS_INFO__ = undefined;
+    }
+}
 
 function showElement(element) {
     if (!(element instanceof HTMLElement)) {
@@ -737,6 +755,35 @@ async function applyMetadataEntries(metadata, { note = '' } = {}) {
     setColumnResizersEnabled(true);
 }
 
+async function applyInitialMetadataPayload(note) {
+    if (initialMdsJws === null || typeof initialMdsJws !== 'string') {
+        initialMdsJws = null;
+        initialMdsInfo = initialMdsInfo && typeof initialMdsInfo === 'object' ? initialMdsInfo : null;
+        return false;
+    }
+
+    const snapshotJws = initialMdsJws;
+    const snapshotInfo = initialMdsInfo && typeof initialMdsInfo === 'object' ? initialMdsInfo : null;
+    initialMdsJws = null;
+    initialMdsInfo = null;
+
+    try {
+        const payloadSegment = snapshotJws.split('.')[1];
+        if (!payloadSegment) {
+            throw new Error('Invalid metadata BLOB format.');
+        }
+        const payload = decodeBase64Url(payloadSegment);
+        const metadata = JSON.parse(payload);
+
+        await applyMetadataEntries(metadata, { note });
+        storeMetadataCache(payload, snapshotInfo);
+        return true;
+    } catch (error) {
+        console.error('Failed to apply initial metadata payload:', error);
+        return false;
+    }
+}
+
 async function loadMdsData(statusNote, options = {}) {
     if (!mdsState) {
         return;
@@ -757,7 +804,24 @@ async function loadMdsData(statusNote, options = {}) {
     const note = typeof statusNote === 'string' ? statusNote.trim() : '';
     const previousHasLoaded = hasLoaded;
 
+    if (forceReload) {
+        initialMdsJws = null;
+        initialMdsInfo = null;
+    }
+
     if (!forceReload) {
+        if (!hasLoaded) {
+            try {
+                const applied = await applyInitialMetadataPayload(note);
+                if (applied) {
+                    setColumnResizersEnabled(hasLoaded);
+                    return;
+                }
+            } catch (error) {
+                console.warn('Failed to apply server-provided metadata payload:', error);
+            }
+        }
+
         const cached = readMetadataCache();
         if (cached?.metadata) {
             try {
@@ -869,6 +933,25 @@ async function loadMdsData(statusNote, options = {}) {
         }
         setColumnResizersEnabled(hasLoaded);
     }
+}
+
+async function waitForMetadataLoad() {
+    if (hasLoaded && !isLoading) {
+        return true;
+    }
+    if (isLoading && loadPromise) {
+        await loadPromise;
+        return hasLoaded;
+    }
+    await loadMdsData();
+    return hasLoaded;
+}
+
+function getMdsLoadStateSnapshot() {
+    return {
+        hasLoaded,
+        isLoading,
+    };
 }
 
 function applyFilters() {
@@ -1442,31 +1525,84 @@ function applyRowHighlightByKey(key, options = {}) {
     return true;
 }
 
-function scheduleRowHighlight(key, attempt = 0) {
+function scheduleRowHighlight(key, attempt = 0, resolveFn = null) {
     if (!mdsState || !key) {
-        return;
+        if (typeof resolveFn === 'function') {
+            resolveFn(false);
+        }
+        return false;
     }
 
     if (mdsState.highlightedRowKey !== key) {
-        return;
+        if (typeof resolveFn === 'function') {
+            resolveFn(false);
+        }
+        return false;
     }
 
-    const behavior = attempt === 0 ? 'smooth' : 'auto';
+    const behavior = attempt === 0 ? 'auto' : 'smooth';
     const applied = applyRowHighlightByKey(key, { scroll: true, behavior });
     if (applied) {
-        return;
+        if (typeof resolveFn === 'function') {
+            resolveFn(true);
+        }
+        return true;
     }
 
     if (attempt >= 8) {
-        return;
+        if (typeof resolveFn === 'function') {
+            resolveFn(false);
+        }
+        return false;
     }
 
-    const schedule = () => scheduleRowHighlight(key, attempt + 1);
+    const schedule = () => scheduleRowHighlight(key, attempt + 1, resolveFn);
     if (typeof requestAnimationFrame === 'function') {
         requestAnimationFrame(schedule);
     } else {
         setTimeout(schedule, attempt < 4 ? 16 : 64);
     }
+    return false;
+}
+
+function isElementVisible(element) {
+    if (!(element instanceof HTMLElement)) {
+        return false;
+    }
+    if (element.offsetParent !== null) {
+        return true;
+    }
+    const style = window.getComputedStyle ? window.getComputedStyle(element) : null;
+    if (!style) {
+        return false;
+    }
+    return style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0';
+}
+
+function waitForElementVisible(element, { timeout = 2000, interval = 32 } = {}) {
+    if (isElementVisible(element)) {
+        return Promise.resolve(true);
+    }
+
+    return new Promise(resolve => {
+        const start = Date.now();
+        const check = () => {
+            if (isElementVisible(element)) {
+                resolve(true);
+                return;
+            }
+            if (Date.now() - start >= timeout) {
+                resolve(false);
+                return;
+            }
+            if (typeof requestAnimationFrame === 'function') {
+                requestAnimationFrame(check);
+            } else {
+                setTimeout(check, interval);
+            }
+        };
+        check();
+    });
 }
 
 function showAuthenticatorDetail(entry, options = {}) {
@@ -2253,10 +2389,16 @@ async function highlightAuthenticatorRowByAaguid(aaguid) {
         hideAuthenticatorDetail();
     }
 
+    if (mdsState.root) {
+        await waitForElementVisible(mdsState.root);
+    }
+
     resetFilters();
     applyFilters();
 
-    scheduleRowHighlight(key);
+    await new Promise(resolve => {
+        scheduleRowHighlight(key, 0, resolved => resolve(resolved));
+    });
 
     return entry;
 }
@@ -2265,6 +2407,8 @@ if (typeof window !== 'undefined') {
     window.openMdsAuthenticatorModal = openAuthenticatorModalByAaguid;
     window.focusMdsAuthenticator = focusAuthenticatorByAaguid;
     window.highlightMdsAuthenticatorRow = highlightAuthenticatorRowByAaguid;
+    window.waitForMdsLoad = waitForMetadataLoad;
+    window.getMdsLoadState = getMdsLoadStateSnapshot;
 }
 
 function stabiliseColumnWidths() {
@@ -3019,8 +3163,4 @@ function updateOptionLists(optionSets) {
         const unique = Array.from(new Set(optionList));
         dropdown.setOptions(unique);
     });
-}
-
-if (typeof window !== 'undefined') {
-    window.focusMdsAuthenticator = focusAuthenticatorByAaguid;
 }

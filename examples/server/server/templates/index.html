@@ -29,6 +29,10 @@
 {% include 'index/modals/credential-details.html' %}
 
     <div id="json-editor-overlay" class="json-editor-overlay"></div>
+    <script>
+        window.__INITIAL_MDS_JWS__ = {{ initial_mds_blob | tojson }};
+        window.__INITIAL_MDS_INFO__ = {{ initial_mds_info | tojson }};
+    </script>
     <script type="module" src="{{ url_for('static', filename='mds.js') }}"></script>
     <script type="module" src="{{ url_for('static', filename='script.js') }}"></script>
 </body>

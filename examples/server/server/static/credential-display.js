@@ -509,6 +509,46 @@ export function updateCredentialsDisplay() {
     updateAllowCredentialsDropdown();
 }
 
+function setAaguidStatus(statusEl, message, { showSpinner = false } = {}) {
+    if (!(statusEl instanceof HTMLElement)) {
+        return;
+    }
+
+    statusEl.dataset.active = 'true';
+    const spinner = statusEl.querySelector('.credential-aaguid-spinner');
+    const textEl = statusEl.querySelector('.credential-aaguid-status-text');
+
+    if (spinner instanceof HTMLElement) {
+        if (showSpinner) {
+            spinner.hidden = false;
+            spinner.setAttribute('aria-hidden', 'true');
+        } else {
+            spinner.hidden = true;
+            spinner.setAttribute('aria-hidden', 'true');
+        }
+    }
+
+    if (textEl instanceof HTMLElement) {
+        textEl.textContent = typeof message === 'string' ? message : '';
+    }
+}
+
+function clearAaguidStatus(statusEl) {
+    if (!(statusEl instanceof HTMLElement)) {
+        return;
+    }
+    delete statusEl.dataset.active;
+    const spinner = statusEl.querySelector('.credential-aaguid-spinner');
+    const textEl = statusEl.querySelector('.credential-aaguid-status-text');
+    if (spinner instanceof HTMLElement) {
+        spinner.hidden = true;
+        spinner.setAttribute('aria-hidden', 'true');
+    }
+    if (textEl instanceof HTMLElement) {
+        textEl.textContent = '';
+    }
+}
+
 export function navigateToMdsAuthenticator(aaguid) {
     if (!aaguid) {
         return;
@@ -530,29 +570,67 @@ export function navigateToMdsAuthenticator(aaguid) {
         return;
     }
 
-    let modalResult;
-    try {
-        modalResult = highlightRow(aaguid);
-    } catch (error) {
-        console.error('Failed to highlight authenticator row.', error);
-        return;
-    }
+    const modalBody = document.getElementById('modalBody');
+    const statusEl = modalBody ? modalBody.querySelector('.credential-aaguid-status') : null;
+    const getLoadState = typeof window.getMdsLoadState === 'function'
+        ? window.getMdsLoadState
+        : null;
+    const waitForLoad = typeof window.waitForMdsLoad === 'function'
+        ? window.waitForMdsLoad
+        : null;
+    const initialState = getLoadState ? getLoadState() : null;
+    const requiresLoad = !initialState || initialState.isLoading || !initialState.hasLoaded;
 
-    const handleEntry = entry => {
-        if (entry) {
-            closeCredentialModal();
+    let clearTimer = null;
+    const scheduleClear = () => {
+        if (typeof window !== 'undefined' && clearTimer) {
+            window.clearTimeout(clearTimer);
+        }
+        if (typeof window !== 'undefined') {
+            clearTimer = window.setTimeout(() => {
+                clearAaguidStatus(statusEl);
+                clearTimer = null;
+            }, 4000);
         }
     };
 
-    if (modalResult && typeof modalResult.then === 'function') {
-        modalResult
-            .then(handleEntry)
-            .catch(error => {
-                console.error('Failed to highlight authenticator row.', error);
-            });
-    } else {
-        handleEntry(modalResult);
-    }
+    const run = async () => {
+        let highlightResult = null;
+        try {
+            if (statusEl && requiresLoad) {
+                setAaguidStatus(statusEl, 'Loading authenticator metadata…', { showSpinner: true });
+            }
+
+            if (waitForLoad && requiresLoad) {
+                try {
+                    await waitForLoad();
+                } catch (error) {
+                    console.warn('Failed to wait for authenticator metadata to load:', error);
+                }
+            }
+
+            highlightResult = await Promise.resolve(highlightRow(aaguid));
+
+            if (highlightResult) {
+                clearAaguidStatus(statusEl);
+                closeCredentialModal();
+                return;
+            }
+
+            if (statusEl) {
+                setAaguidStatus(statusEl, 'Authenticator metadata not found.', { showSpinner: false });
+                scheduleClear();
+            }
+        } catch (error) {
+            console.error('Failed to highlight authenticator row.', error);
+            if (statusEl) {
+                setAaguidStatus(statusEl, 'Unable to open authenticator metadata.', { showSpinner: false });
+                scheduleClear();
+            }
+        }
+    };
+
+    run();
 }
 
 export function closeCredentialModal() {
@@ -761,6 +839,10 @@ export function showCredentialDetails(index) {
             <span class="credential-aaguid-label">AAGUID</span>
             ${infoButton}
         </div>
+        <div class="credential-aaguid-status" role="status" aria-live="polite">
+            <span class="credential-aaguid-spinner" aria-hidden="true" hidden></span>
+            <span class="credential-aaguid-status-text"></span>
+        </div>
         <div class="credential-aaguid-values">
             ${sections.join('')}
         </div>`;
@@ -858,6 +940,10 @@ export function showCredentialDetails(index) {
     }
 
     modalBody.innerHTML = detailsHtml;
+    const statusEl = modalBody.querySelector('.credential-aaguid-status');
+    if (statusEl) {
+        clearAaguidStatus(statusEl);
+    }
     const aaguidButton = modalBody.querySelector('.credential-aaguid-button');
     if (aaguidButton) {
         aaguidButton.addEventListener('click', () => {

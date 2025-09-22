@@ -107,7 +107,22 @@ def index():
 
 @app.route("/index.html")
 def index_html():
-    return render_template("index.html")
+    ensure_metadata_bootstrapped(skip_if_reloader_parent=False)
+
+    initial_mds_blob = None
+    try:
+        with open(MDS_METADATA_PATH, "r", encoding="utf-8") as blob_file:
+            initial_mds_blob = blob_file.read()
+    except OSError:
+        initial_mds_blob = None
+
+    initial_mds_info = load_metadata_cache_entry()
+
+    return render_template(
+        "index.html",
+        initial_mds_blob=initial_mds_blob,
+        initial_mds_info=initial_mds_info,
+    )
 
 
 @app.route("/api/mds/update", methods=["POST"])
