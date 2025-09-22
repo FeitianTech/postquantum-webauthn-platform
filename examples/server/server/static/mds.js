@@ -171,6 +171,158 @@ function scheduleRowHeightLock() {
     }
 }
 
+function nextAnimationFrame() {
+    return new Promise(resolve => {
+        if (typeof requestAnimationFrame === 'function') {
+            requestAnimationFrame(() => resolve());
+        } else {
+            setTimeout(() => resolve(), 16);
+        }
+    });
+}
+
+async function waitForLayoutSettled() {
+    await nextAnimationFrame();
+    await nextAnimationFrame();
+}
+
+function waitForStateReady({ timeout = 5000 } = {}) {
+    if (mdsState) {
+        return Promise.resolve(true);
+    }
+
+    return new Promise(resolve => {
+        const start = Date.now();
+        const check = () => {
+            if (mdsState) {
+                resolve(true);
+                return;
+            }
+            if (Date.now() - start >= timeout) {
+                resolve(false);
+                return;
+            }
+            if (typeof requestAnimationFrame === 'function') {
+                requestAnimationFrame(check);
+            } else {
+                setTimeout(check, 32);
+            }
+        };
+        check();
+    });
+}
+
+function waitForRowByKey(key, { attempts = 60 } = {}) {
+    if (!key) {
+        return Promise.resolve(null);
+    }
+
+    return new Promise(resolve => {
+        const attemptLookup = attempt => {
+            if (!mdsState || mdsState.highlightedRowKey !== key) {
+                resolve(null);
+                return;
+            }
+            const row = findRowByKey(key);
+            if (row) {
+                resolve(row);
+                return;
+            }
+            if (attempt >= attempts) {
+                resolve(null);
+                return;
+            }
+            const schedule = () => attemptLookup(attempt + 1);
+            if (typeof requestAnimationFrame === 'function') {
+                requestAnimationFrame(schedule);
+            } else {
+                setTimeout(schedule, attempt < 20 ? 16 : 64);
+            }
+        };
+        attemptLookup(0);
+    });
+}
+
+function scrollRowIntoView(row, { behavior = 'smooth' } = {}) {
+    if (!(row instanceof HTMLElement)) {
+        return;
+    }
+
+    if (typeof window === 'undefined' || typeof window.scrollTo !== 'function') {
+        if (typeof row.scrollIntoView === 'function') {
+            row.scrollIntoView({ behavior, block: 'center' });
+        }
+        return;
+    }
+
+    const rect = row.getBoundingClientRect();
+    const viewportHeight = window.innerHeight || document.documentElement?.clientHeight || 0;
+    const rowHeight = rect.height || row.offsetHeight || 0;
+    const centerOffset = Math.max((viewportHeight - rowHeight) / 2, 0);
+    const targetTop = rect.top + window.pageYOffset - centerOffset;
+    const top = Math.max(Math.round(targetTop), 0);
+
+    try {
+        window.scrollTo({ top, behavior });
+    } catch (error) {
+        window.scrollTo(0, top);
+    }
+}
+
+function focusRowButton(row) {
+    if (!(row instanceof HTMLElement)) {
+        return;
+    }
+    const button = row.querySelector('.mds-name-button');
+    if (!(button instanceof HTMLElement) || typeof button.focus !== 'function') {
+        return;
+    }
+
+    const focusButton = () => {
+        try {
+            button.focus({ preventScroll: true });
+        } catch (error) {
+            button.focus();
+        }
+    };
+
+    if (typeof requestAnimationFrame === 'function') {
+        requestAnimationFrame(focusButton);
+    } else {
+        setTimeout(focusButton, 0);
+    }
+}
+
+function setHighlightedRow(row, key, { scroll = false, behavior = 'smooth', focus = false } = {}) {
+    if (!mdsState || !(row instanceof HTMLElement)) {
+        return false;
+    }
+
+    if (mdsState.highlightedRow && mdsState.highlightedRow !== row) {
+        mdsState.highlightedRow.classList.remove('mds-row--highlight');
+    }
+
+    if (!row.classList.contains('mds-row--highlight')) {
+        row.classList.add('mds-row--highlight');
+    }
+
+    mdsState.highlightedRow = row;
+    if (key) {
+        mdsState.highlightedRowKey = key;
+    }
+
+    if (scroll) {
+        scrollRowIntoView(row, { behavior });
+    }
+
+    if (focus) {
+        focusRowButton(row);
+    }
+
+    scheduleScrollTopButtonUpdate();
+    return true;
+}
+
 function getSessionStorage() {
     if (typeof window === 'undefined') {
         return null;
@@ -936,6 +1088,10 @@ async function loadMdsData(statusNote, options = {}) {
 }
 
 async function waitForMetadataLoad() {
+    const ready = await waitForStateReady();
+    if (!ready || !mdsState) {
+        return false;
+    }
     if (hasLoaded && !isLoading) {
         return true;
     }
@@ -1518,64 +1674,8 @@ function applyRowHighlightByKey(key, options = {}) {
         return false;
     }
 
-    if (mdsState.highlightedRow && mdsState.highlightedRow !== row) {
-        mdsState.highlightedRow.classList.remove('mds-row--highlight');
-    }
-
-    if (!row.classList.contains('mds-row--highlight')) {
-        row.classList.add('mds-row--highlight');
-    }
-
-    mdsState.highlightedRow = row;
-    mdsState.highlightedRowKey = key;
-
-    if (options.scroll && typeof row.scrollIntoView === 'function') {
-        const behavior = options.behavior || 'smooth';
-        row.scrollIntoView({ block: 'center', behavior });
-    }
-
-    scheduleScrollTopButtonUpdate();
-    return true;
-}
-
-function scheduleRowHighlight(key, attempt = 0, resolveFn = null) {
-    if (!mdsState || !key) {
-        if (typeof resolveFn === 'function') {
-            resolveFn(false);
-        }
-        return false;
-    }
-
-    if (mdsState.highlightedRowKey !== key) {
-        if (typeof resolveFn === 'function') {
-            resolveFn(false);
-        }
-        return false;
-    }
-
-    const behavior = 'smooth';
-    const applied = applyRowHighlightByKey(key, { scroll: true, behavior });
-    if (applied) {
-        if (typeof resolveFn === 'function') {
-            resolveFn(true);
-        }
-        return true;
-    }
-
-    if (attempt >= 8) {
-        if (typeof resolveFn === 'function') {
-            resolveFn(false);
-        }
-        return false;
-    }
-
-    const schedule = () => scheduleRowHighlight(key, attempt + 1, resolveFn);
-    if (typeof requestAnimationFrame === 'function') {
-        requestAnimationFrame(schedule);
-    } else {
-        setTimeout(schedule, attempt < 4 ? 16 : 64);
-    }
-    return false;
+    const applied = setHighlightedRow(row, key, options);
+    return applied ? row : false;
 }
 
 function isElementVisible(element) {
@@ -1625,20 +1725,26 @@ function showAuthenticatorDetail(entry, options = {}) {
 
     clearRowHighlight();
 
-    const sourceEntry = typeof entry.index === 'number' && mdsData[entry.index]
-        ? mdsData[entry.index]
-        : entry;
+    const key = normaliseAaguid(entry.aaguid || entry.id);
+    let sourceEntry = entry;
+    if (key && mdsState.byAaguid?.has(key)) {
+        sourceEntry = mdsState.byAaguid.get(key);
+    } else if (typeof entry.index === 'number' && mdsData[entry.index]) {
+        sourceEntry = mdsData[entry.index];
+    }
 
     mdsState.activeDetailEntry = sourceEntry;
 
     const { scrollIntoView = true } = options;
-    if (scrollIntoView) {
-        const key = normaliseAaguid(sourceEntry.aaguid || sourceEntry.id);
-        const row = key ? findRowByKey(key) : null;
-        if (row && typeof row.scrollIntoView === 'function') {
-            requestAnimationFrame(() => {
-                row.scrollIntoView({ block: 'center', behavior: 'smooth' });
-            });
+    if (scrollIntoView && key) {
+        const row = findRowByKey(key);
+        if (row) {
+            const scroll = () => scrollRowIntoView(row, { behavior: 'smooth' });
+            if (typeof requestAnimationFrame === 'function') {
+                requestAnimationFrame(scroll);
+            } else {
+                scroll();
+            }
         }
     }
 
@@ -2329,7 +2435,8 @@ function closeAuthenticatorModal() {
 }
 
 async function resolveEntryByAaguid(aaguid) {
-    if (!mdsState) {
+    const ready = await waitForStateReady();
+    if (!ready || !mdsState) {
         return null;
     }
 
@@ -2412,16 +2519,24 @@ async function highlightAuthenticatorRowByAaguid(aaguid) {
 
     resetFilters();
     applyFilters();
+    await waitForLayoutSettled();
 
-    const highlighted = await new Promise(resolve => {
-        scheduleRowHighlight(key, 0, resolved => resolve(Boolean(resolved)));
-    });
+    const row = await waitForRowByKey(key, { attempts: 80 });
+    if (!row || mdsState.highlightedRowKey !== key) {
+        if (mdsState.highlightedRowKey === key) {
+            mdsState.highlightedRowKey = '';
+        }
+        return { entry, highlighted: false };
+    }
 
-    if (!highlighted && mdsState.highlightedRowKey === key) {
+    await waitForLayoutSettled();
+
+    const applied = setHighlightedRow(row, key, { scroll: true, behavior: 'smooth', focus: true });
+    if (!applied && mdsState.highlightedRowKey === key) {
         mdsState.highlightedRowKey = '';
     }
 
-    return { entry, highlighted };
+    return { entry, highlighted: Boolean(applied), row: applied ? row : null };
 }
 
 if (typeof window !== 'undefined') {
