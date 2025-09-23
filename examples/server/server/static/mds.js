@@ -1473,19 +1473,6 @@ function renderTable(entries) {
             }
         }
 
-        row.addEventListener('click', event => {
-            if (event.defaultPrevented) {
-                return;
-            }
-            const interactiveTarget = event.target instanceof HTMLElement
-                ? event.target.closest('button, a, input, select, textarea')
-                : null;
-            if (interactiveTarget) {
-                return;
-            }
-            showAuthenticatorDetail(entry);
-        });
-
         row.appendChild(createIconCell(entry));
         row.appendChild(createNameCell(entry));
         row.appendChild(createTextCell(entry.protocol || '—'));
