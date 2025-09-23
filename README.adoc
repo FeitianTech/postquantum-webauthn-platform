@@ -73,18 +73,6 @@ pip install fido2 flask cryptography cbor2
 # Optional: PC/SC smart card extras
 pip install "fido2[pcsc]"
 ```
----
-
-## 4. Install and Use Pytest
-
-Pytest is used for running unit tests.
-
-### pip + venv
-```bash
-pip install --upgrade pip
-pip install pytest
-pytest
-```
 
 ---
 
