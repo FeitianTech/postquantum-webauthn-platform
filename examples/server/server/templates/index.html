@@ -29,9 +29,38 @@
 {% include 'index/modals/credential-details.html' %}
 
     <div id="json-editor-overlay" class="json-editor-overlay"></div>
+    <script id="initial-mds-bootstrap" type="application/json">
+        {{ {"jws": initial_mds_blob, "info": initial_mds_info} | tojson | safe }}
+    </script>
     <script>
-        window.__INITIAL_MDS_JWS__ = {{ initial_mds_blob | tojson }};
-        window.__INITIAL_MDS_INFO__ = {{ initial_mds_info | tojson }};
+        (function () {
+            const bootstrapEl = document.getElementById('initial-mds-bootstrap');
+
+            if (!bootstrapEl) {
+                return;
+            }
+
+            const rawPayload = bootstrapEl.textContent ? bootstrapEl.textContent.trim() : '';
+            let payload = null;
+
+            if (rawPayload) {
+                try {
+                    payload = JSON.parse(rawPayload);
+                } catch (error) {
+                    console.error('Failed to parse initial MDS bootstrap payload.', error);
+                }
+            }
+
+            if (payload && typeof payload === 'object') {
+                if (typeof payload.jws === 'string') {
+                    window.__INITIAL_MDS_JWS__ = payload.jws;
+                }
+
+                if (payload.info && typeof payload.info === 'object') {
+                    window.__INITIAL_MDS_INFO__ = payload.info;
+                }
+            }
+        })();
     </script>
     <script type="module" src="{{ url_for('static', filename='mds.js') }}"></script>
     <script type="module" src="{{ url_for('static', filename='script.js') }}"></script>
