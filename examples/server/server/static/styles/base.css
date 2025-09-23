@@ -45,6 +45,10 @@ body.modal-open {
 }
 
 .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
     background: var(--surface-color);
     color: var(--primary-color);
     padding: 1.25rem 2.5rem;
@@ -59,6 +63,32 @@ body.modal-open {
     font-weight: 600;
     letter-spacing: 0.02em;
     color: var(--primary-color);
+}
+
+.header__github-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 50%;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.header__github-link:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 4px;
+}
+
+.header__github-link:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-hover);
+}
+
+.header__github-icon {
+    display: block;
+    width: 2rem;
+    height: 2rem;
 }
 
 .container {
