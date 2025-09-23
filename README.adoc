@@ -29,9 +29,7 @@ A modern browser with WebAuthn support is required:
 ## 1. Prerequisites
 
 - **Git**: (https://git-scm.com/)  
-- **Python 3.12+ (64-bit)** with pip  
-  - **Windows**: Install from [python.org](https://www.python.org/downloads/windows/)*  
-  - **macOS**: Install via [python.org](https://www.python.org/downloads/macos/) or Homebrew.
+- **Python 3.12+ (64-bit)** with pip (https://www.python.org/downloads/)
 
 ---
 
