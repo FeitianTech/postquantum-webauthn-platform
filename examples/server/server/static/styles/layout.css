@@ -57,9 +57,24 @@
     padding-top: 1rem;
 }
 
+.json-editor-buttons {
+    margin-top: auto;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    padding-top: 1rem;
+}
+
 .json-editor-card,
 .credentials-card {
     min-height: 0;
+}
+
+@media (min-width: 601px) {
+    .json-editor-card,
+    .credentials-card {
+        min-height: 520px;
+    }
 }
 
 .json-editor-card .json-editor {
