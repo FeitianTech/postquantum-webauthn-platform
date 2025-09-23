@@ -239,7 +239,7 @@ select.form-control option {
     height: 18px;
     background-color: currentColor;
     mask: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpath d='M21 12a9 9 0 1 0-2.64 6.36'/%3e%3cpolyline points='21 12 21 18 15 18'/%3e%3c/svg%3e");
-    -webkit-mask: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpath d='M21 12a9 9 0 1 0-2.64 6.36'/%3e%3cpolyline points='21 12 21 18 15 18'/%3e%3c/svg%3e") no-repeat center / contain;
+    -webkit-mask-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpath d='M21 12a9 9 0 1 0-2.64 6.36'/%3e%3cpolyline points='21 12 21 18 15 18'/%3e%3c/svg%3e");
     mask-repeat: no-repeat;
     mask-position: center;
     mask-size: contain;
@@ -271,7 +271,7 @@ select.form-control option {
     height: 18px;
     background-color: currentColor;
     mask: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cline x1='12' y1='5' x2='12' y2='19'/%3e%3cline x1='5' y1='12' x2='19' y2='12'/%3e%3c/svg%3e") no-repeat center / contain;
-    -webkit-mask: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cline x1='12' y1='5' x2='12' y2='19'/%3e%3cline x1='5' y1='12' x2='19' y2='12'/%3e%3c/svg%3e") no-repeat center / contain;
+    -webkit-mask-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cline x1='12' y1='5' x2='12' y2='19'/%3e%3cline x1='5' y1='12' x2='19' y2='12'/%3e%3c/svg%3e");
     mask-repeat: no-repeat;
     mask-position: center;
     mask-size: contain;
