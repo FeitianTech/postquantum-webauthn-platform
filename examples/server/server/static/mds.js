@@ -1593,16 +1593,21 @@ function resizeCertificateTextareas() {
 
     const fields = [mdsState.certificateInput, mdsState.certificateOutput];
     fields.forEach(field => {
-        if (!(field instanceof HTMLTextAreaElement)) {
+        if (!(field instanceof HTMLElement)) {
             return;
         }
-        field.style.height = 'auto';
-        field.style.overflowY = 'hidden';
-        field.style.overflowX = 'hidden';
-        const { scrollHeight } = field;
-        if (Number.isFinite(scrollHeight)) {
-            field.style.height = `${scrollHeight}px`;
+        if (field instanceof HTMLTextAreaElement) {
+            field.style.height = 'auto';
+            field.style.overflowY = 'hidden';
+            field.style.overflowX = 'hidden';
+            const { scrollHeight } = field;
+            if (Number.isFinite(scrollHeight)) {
+                field.style.height = `${scrollHeight}px`;
+            }
+            return;
         }
+
+        field.style.removeProperty('height');
     });
 }
 
@@ -1620,7 +1625,7 @@ function resetCertificateTextareaHeights() {
         return;
     }
     [mdsState.certificateInput, mdsState.certificateOutput].forEach(field => {
-        if (field instanceof HTMLTextAreaElement) {
+        if (field instanceof HTMLElement) {
             field.style.height = '';
         }
     });
@@ -2275,6 +2280,19 @@ function setCertificateSummaryContent(content) {
     }
 }
 
+function setCertificateFieldContent(field, value) {
+    if (!(field instanceof HTMLElement)) {
+        return;
+    }
+
+    const content = typeof value === 'string' ? value : '';
+    if ('value' in field) {
+        field.value = content;
+    } else {
+        field.textContent = content;
+    }
+}
+
 async function updateCertificateButtonLabel(button, certificate) {
     if (!(button instanceof HTMLElement)) {
         return;
@@ -2302,12 +2320,12 @@ async function openCertificateModal(certificate) {
     }
 
     if (mdsState.certificateInput) {
-        mdsState.certificateInput.value = formatCertificateInput(cleaned);
+        setCertificateFieldContent(mdsState.certificateInput, formatCertificateInput(cleaned));
         mdsState.certificateInput.scrollTop = 0;
         mdsState.certificateInput.scrollLeft = 0;
     }
     if (mdsState.certificateOutput) {
-        mdsState.certificateOutput.value = 'Decoding certificate…';
+        setCertificateFieldContent(mdsState.certificateOutput, 'Decoding certificate…');
         mdsState.certificateOutput.scrollTop = 0;
         mdsState.certificateOutput.scrollLeft = 0;
     }
@@ -2332,7 +2350,7 @@ async function openCertificateModal(certificate) {
     try {
         const details = await decodeCertificate(cleaned);
         if (mdsState.certificateOutput) {
-            mdsState.certificateOutput.value = formatCertificateOutput(details);
+            setCertificateFieldContent(mdsState.certificateOutput, formatCertificateOutput(details));
             mdsState.certificateOutput.scrollTop = 0;
             mdsState.certificateOutput.scrollLeft = 0;
         }
@@ -2350,7 +2368,7 @@ async function openCertificateModal(certificate) {
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Unable to decode certificate.';
         if (mdsState.certificateOutput) {
-            mdsState.certificateOutput.value = message;
+            setCertificateFieldContent(mdsState.certificateOutput, message);
             mdsState.certificateOutput.scrollTop = 0;
             mdsState.certificateOutput.scrollLeft = 0;
         }
