@@ -69,9 +69,11 @@ body.modal-open {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 2.75rem;
-    height: 2.75rem;
+    width: 3.5rem;
+    height: 3.5rem;
     border-radius: 50%;
+    margin-right: 2cm;
+    flex-shrink: 0;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -87,8 +89,8 @@ body.modal-open {
 
 .header__github-icon {
     display: block;
-    width: 2rem;
-    height: 2rem;
+    width: 2.5rem;
+    height: 2.5rem;
 }
 
 .container {

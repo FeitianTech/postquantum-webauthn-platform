@@ -1110,16 +1110,18 @@ function getMdsLoadStateSnapshot() {
     };
 }
 
-function applyFilters() {
+function applyFilters(options = {}) {
     if (!mdsState) {
         return;
     }
+
+    const { preserveTableScroll = false } = options;
 
     const activeFilters = mdsState.filters;
     const matched = mdsData.filter(entry => matchesFilters(entry, activeFilters));
     const sorted = applySorting(matched);
     filteredData = sorted;
-    renderTable(sorted);
+    renderTable(sorted, { preserveTableScroll });
     updateCount(sorted.length, mdsData.length);
     updateSortButtonState();
 }
@@ -1321,7 +1323,7 @@ function handleSortButtonClick(sortKey) {
     }
 
     updateSortButtonState();
-    applyFilters();
+    applyFilters({ preserveTableScroll: true });
 }
 
 async function populateCertificateDerivedInfo(entries) {
@@ -1430,10 +1432,45 @@ function resetFilters() {
     }
 }
 
-function renderTable(entries) {
+function renderTable(entries, options = {}) {
     if (!mdsState?.tableBody) {
         return;
     }
+
+    const { preserveTableScroll = false } = options;
+    const container =
+        mdsState.tableContainer instanceof HTMLElement ? mdsState.tableContainer : null;
+
+    let preservedScroll = null;
+    if (preserveTableScroll && container) {
+        const left = Number.isFinite(container.scrollLeft) ? container.scrollLeft : null;
+        const top = Number.isFinite(container.scrollTop) ? container.scrollTop : null;
+        if (left !== null || top !== null) {
+            preservedScroll = { left, top };
+        }
+    }
+
+    const adjustScrollPosition = () => {
+        if (!container) {
+            return;
+        }
+        if (preservedScroll) {
+            const restore = () => {
+                if (typeof preservedScroll.left === 'number') {
+                    container.scrollLeft = preservedScroll.left;
+                }
+                if (typeof preservedScroll.top === 'number') {
+                    container.scrollTop = preservedScroll.top;
+                }
+            };
+            restore();
+            if (typeof requestAnimationFrame === 'function') {
+                requestAnimationFrame(restore);
+            }
+            return;
+        }
+        resetScrollPositions(container);
+    };
 
     const tbody = mdsState.tableBody;
     tbody.innerHTML = '';
@@ -1449,7 +1486,7 @@ function renderTable(entries) {
         hideScrollTopButton();
         stabiliseColumnWidths();
         scheduleColumnResizerMetricsUpdate();
-        resetScrollPositions(mdsState?.tableContainer);
+        adjustScrollPosition();
         return;
     }
 
@@ -1491,7 +1528,7 @@ function renderTable(entries) {
     });
 
     tbody.appendChild(fragment);
-    resetScrollPositions(mdsState?.tableContainer);
+    adjustScrollPosition();
     if (mdsState.highlightedRowKey) {
         const restored = applyRowHighlightByKey(mdsState.highlightedRowKey, { scroll: false });
         if (!restored) {
