@@ -11,6 +11,7 @@ from flask import abort, jsonify, redirect, render_template, request, send_file
 
 from ..attestation import serialize_attestation_certificate
 from ..config import MDS_METADATA_PATH, app, basepath
+from ..decoder import decode_payload_text
 from ..metadata import MetadataDownloadError, download_metadata_blob, load_metadata_cache_entry
 from ..storage import delkey
 
@@ -180,6 +181,27 @@ def api_update_mds_metadata():
         payload["last_modified"] = last_modified
 
     return jsonify(payload)
+
+
+@app.route("/api/decode", methods=["POST"])
+def api_decode_payload():
+    if not request.is_json:
+        return jsonify({"error": "Expected JSON payload."}), 400
+
+    payload = request.get_json(silent=True) or {}
+    decoder_input = payload.get("payload")
+    if not isinstance(decoder_input, str) or not decoder_input.strip():
+        return jsonify({"error": "Decoder payload must be a non-empty string."}), 400
+
+    try:
+        decoded = decode_payload_text(decoder_input)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 422
+    except Exception as exc:  # pylint: disable=broad-except
+        app.logger.exception("Failed to decode payload: %s", exc)
+        return jsonify({"error": "Unable to decode payload."}), 500
+
+    return jsonify(decoded)
 
 
 @app.route("/api/mds/decode-certificate", methods=["POST"])

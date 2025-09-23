@@ -1,6 +1,6 @@
 import { showStatus, hideStatus } from './status.js';
 
-export function decodeResponse() {
+export async function decodeResponse() {
     const input = document.getElementById('decoder-input');
     if (!input) {
         return;
@@ -8,76 +8,76 @@ export function decodeResponse() {
 
     const inputValue = input.value;
     if (!inputValue.trim()) {
-        showStatus('decoder', 'Decoder is empty. Please paste something to decode. ', 'error');
+        showStatus('decoder', 'Decoder is empty. Please paste something to decode.', 'error');
         return;
     }
 
+    const decoderOutput = document.getElementById('decoder-output');
+    const decodedContent = document.getElementById('decoded-content');
+
+    if (decodedContent) {
+        decodedContent.value = '';
+    }
+    if (decoderOutput) {
+        decoderOutput.style.display = 'none';
+    }
+    hideStatus('decoder');
+
     try {
-        const parsed = JSON.parse(inputValue);
-        const decoded = analyzeWebAuthnResponse(parsed);
+        const response = await fetch('/api/decode', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ payload: inputValue }),
+        });
 
-        const decodedContent = document.getElementById('decoded-content');
-        const decoderOutput = document.getElementById('decoder-output');
-
-        if (decodedContent && decoderOutput) {
-            decodedContent.innerHTML = `<pre>${JSON.stringify(decoded, null, 2)}</pre>`;
-            decoderOutput.style.display = 'block';
-            showStatus('decoder', 'Response decoded successfully!', 'success');
+        let payload = null;
+        try {
+            payload = await response.json();
+        } catch (parseError) {
+            if (!response.ok) {
+                throw new Error(`Server responded with status ${response.status}`);
+            }
+            throw new Error('Failed to parse decoder response.');
         }
+
+        if (!response.ok) {
+            const message = payload && payload.error
+                ? payload.error
+                : `Server responded with status ${response.status}`;
+            throw new Error(message);
+        }
+
+        if (decodedContent) {
+            decodedContent.value = JSON.stringify(payload, null, 2);
+        }
+        if (decoderOutput) {
+            decoderOutput.style.display = 'block';
+        }
+        showStatus('decoder', 'Response decoded successfully!', 'success');
     } catch (error) {
-        showStatus('decoder', `Decoding failed: ${error.message}`, 'error');
+        if (decoderOutput) {
+            decoderOutput.style.display = 'none';
+        }
+        const message = error instanceof Error ? error.message : String(error);
+        showStatus('decoder', `Decoding failed: ${message}`, 'error');
     }
 }
 
 export function clearDecoder() {
     const input = document.getElementById('decoder-input');
     const output = document.getElementById('decoder-output');
+    const decodedContent = document.getElementById('decoded-content');
 
     if (input) {
         input.value = '';
+    }
+    if (decodedContent) {
+        decodedContent.value = '';
     }
     if (output) {
         output.style.display = 'none';
     }
     hideStatus('decoder');
-}
-
-export function analyzeWebAuthnResponse(response) {
-    const analysis = {
-        type: 'Unknown',
-        rawResponse: response,
-        decodedFields: {}
-    };
-
-    if (response.response && response.response.attestationObject) {
-        analysis.type = 'Registration Response';
-        analysis.decodedFields = {
-            credentialId: response.id,
-            credentialType: response.type,
-            authenticatorAttachment: response.authenticatorAttachment,
-            clientDataJSON: tryDecodeBase64Url(response.response.clientDataJSON),
-            attestationObject: 'Base64URL encoded - contains authenticator data and attestation statement'
-        };
-    } else if (response.response && response.response.authenticatorData) {
-        analysis.type = 'Authentication Response';
-        analysis.decodedFields = {
-            credentialId: response.id,
-            credentialType: response.type,
-            authenticatorAttachment: response.authenticatorAttachment,
-            clientDataJSON: tryDecodeBase64Url(response.response.clientDataJSON),
-            authenticatorData: 'Base64URL encoded - contains RP ID hash, flags, counter, etc.',
-            signature: 'Base64URL encoded signature'
-        };
-    }
-
-    return analysis;
-}
-
-function tryDecodeBase64Url(encoded) {
-    try {
-        const decoded = atob(encoded.replace(/-/g, '+').replace(/_/g, '/'));
-        return JSON.parse(decoded);
-    } catch (error) {
-        return 'Could not decode as JSON: ' + encoded;
-    }
 }
