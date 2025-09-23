@@ -29,9 +29,57 @@
 {% include 'index/modals/credential-details.html' %}
 
     <div id="json-editor-overlay" class="json-editor-overlay"></div>
+    <div
+        id="initial-mds-bootstrap"
+        data-jws='{{ initial_mds_blob | tojson }}'
+        data-info='{{ initial_mds_info | tojson }}'
+        hidden
+    ></div>
     <script>
-        window.__INITIAL_MDS_JWS__ = {{ initial_mds_blob | tojson }};
-        window.__INITIAL_MDS_INFO__ = {{ initial_mds_info | tojson }};
+        (function () {
+            const bootstrapEl = document.getElementById('initial-mds-bootstrap');
+
+            if (!bootstrapEl) {
+                return;
+            }
+
+            let initialJws = null;
+            let initialInfo = null;
+
+            const { jws: rawJws, info: rawInfo } = bootstrapEl.dataset;
+
+            if (typeof rawJws === 'string' && rawJws) {
+                try {
+                    const parsedJws = JSON.parse(rawJws);
+
+                    if (typeof parsedJws === 'string' && parsedJws) {
+                        initialJws = parsedJws;
+                    }
+                } catch (error) {
+                    console.error('Failed to parse initial MDS bootstrap JWS.', error);
+                }
+            }
+
+            if (typeof rawInfo === 'string' && rawInfo) {
+                try {
+                    const parsedInfo = JSON.parse(rawInfo);
+
+                    if (parsedInfo && typeof parsedInfo === 'object') {
+                        initialInfo = parsedInfo;
+                    }
+                } catch (error) {
+                    console.error('Failed to parse initial MDS bootstrap info.', error);
+                }
+            }
+
+            if (typeof initialJws === 'string') {
+                window.__INITIAL_MDS_JWS__ = initialJws;
+            }
+
+            if (initialInfo && typeof initialInfo === 'object') {
+                window.__INITIAL_MDS_INFO__ = initialInfo;
+            }
+        })();
     </script>
     <script type="module" src="{{ url_for('static', filename='mds.js') }}"></script>
     <script type="module" src="{{ url_for('static', filename='script.js') }}"></script>
