@@ -20,14 +20,29 @@ import {
 import {
     getCredentialIdHex,
     getCredentialUserHandleHex,
-    getStoredCredentialAttachment
+    getStoredCredentialAttachment,
+    extractHexFromJsonFormat
 } from './credential-utils.js';
 import {
     showStatus,
     hideStatus
 } from './status.js';
+import {
+    getFakeExcludeCredentials,
+    setFakeExcludeCredentials
+} from './exclude-credentials.js';
 
 registerHintsChangeCallback(() => updateJsonEditor());
+
+function setJsonEditorContent(content) {
+    const jsonEditor = document.getElementById('json-editor');
+    if (!jsonEditor) {
+        return;
+    }
+    jsonEditor.value = content;
+    jsonEditor.scrollTop = 0;
+    jsonEditor.scrollLeft = 0;
+}
 
 export function getCredentialCreationOptions() {
     const userId = document.getElementById('user-id')?.value || '';
@@ -100,7 +115,8 @@ export function getCredentialCreationOptions() {
     if (userVerification) publicKey.authenticatorSelection.userVerification = userVerification;
 
     const excludeList = [];
-    if (document.getElementById('exclude-credentials')?.checked) {
+    const includeExcludes = document.getElementById('exclude-credentials')?.checked;
+    if (includeExcludes) {
         const currentBinaryFormat = getCurrentBinaryFormat();
         const userIdHex = (convertFormat(userId, currentBinaryFormat, 'hex') || '').toLowerCase();
 
@@ -119,6 +135,28 @@ export function getCredentialCreationOptions() {
                 }
             });
         }
+
+        getFakeExcludeCredentials().forEach(hexValue => {
+            if (!hexValue) {
+                return;
+            }
+
+            let idValue = { '$hex': hexValue };
+            try {
+                const formattedValue = convertFormat(hexValue, 'hex', currentBinaryFormat);
+                const jsonValue = currentFormatToJsonFormat(formattedValue);
+                if (jsonValue && typeof jsonValue === 'object') {
+                    idValue = jsonValue;
+                }
+            } catch (error) {
+                // Fall back to hex representation on conversion errors
+            }
+
+            excludeList.push({
+                type: 'public-key',
+                id: idValue,
+            });
+        });
     }
 
     publicKey.excludeCredentials = excludeList;
@@ -300,11 +338,8 @@ export function updateJsonEditor() {
         title = 'JSON Editor (CredentialRequestOptions)';
     }
 
-    const jsonEditor = document.getElementById('json-editor');
-    if (jsonEditor) {
-        const sortedOptions = sortObjectKeys(options);
-        jsonEditor.value = JSON.stringify(sortedOptions, null, 2);
-    }
+    const sortedOptions = sortObjectKeys(options);
+    setJsonEditorContent(JSON.stringify(sortedOptions, null, 2));
 
     const titleElement = document.querySelector('.json-editor-column h3');
     if (titleElement) {
@@ -519,6 +554,29 @@ export function updateRegistrationFormFromJson(publicKey) {
             ? publicKey.excludeCredentials
             : [];
         excludeCredentialsCheckbox.checked = excludeArray.length > 0;
+
+        const storedIds = new Set(
+            (state.storedCredentials || [])
+                .map(cred => (cred.credentialIdHex || getCredentialIdHex(cred) || '').toLowerCase())
+                .filter(Boolean)
+        );
+
+        const fakeHexList = [];
+        excludeArray.forEach(entry => {
+            if (!entry || typeof entry !== 'object') {
+                return;
+            }
+            const hexValue = extractHexFromJsonFormat(entry.id);
+            if (!hexValue) {
+                return;
+            }
+            const normalised = hexValue.toLowerCase();
+            if (!storedIds.has(normalised)) {
+                fakeHexList.push(hexValue);
+            }
+        });
+
+        setFakeExcludeCredentials(fakeHexList);
     }
 
     if (publicKey.extensions) {
@@ -856,7 +914,7 @@ export function editCreateOptions() {
     state.currentJsonData = options;
 
     const sortedOptions = sortObjectKeys(options);
-    document.getElementById('json-editor').value = JSON.stringify(sortedOptions, null, 2);
+    setJsonEditorContent(JSON.stringify(sortedOptions, null, 2));
     document.getElementById('apply-json').style.display = 'inline-block';
     document.getElementById('cancel-json').style.display = 'inline-block';
 }
@@ -867,7 +925,7 @@ export function editAssertOptions() {
     state.currentJsonData = options;
 
     const sortedOptions = sortObjectKeys(options);
-    document.getElementById('json-editor').value = JSON.stringify(sortedOptions, null, 2);
+    setJsonEditorContent(JSON.stringify(sortedOptions, null, 2));
     document.getElementById('apply-json').style.display = 'inline-block';
     document.getElementById('cancel-json').style.display = 'inline-block';
 }
@@ -911,7 +969,7 @@ export function applyJsonChanges() {
 }
 
 export function cancelJsonEdit() {
-    document.getElementById('json-editor').value = '';
+    setJsonEditorContent('');
     document.getElementById('apply-json').style.display = 'none';
     document.getElementById('cancel-json').style.display = 'none';
     state.currentJsonMode = null;
@@ -923,11 +981,11 @@ export function updateJsonFromForm() {
         if (state.currentJsonMode === 'create') {
             const options = getAdvancedCreateOptions();
             const sortedOptions = sortObjectKeys(options);
-            document.getElementById('json-editor').value = JSON.stringify(sortedOptions, null, 2);
+            setJsonEditorContent(JSON.stringify(sortedOptions, null, 2));
         } else if (state.currentJsonMode === 'assert') {
             const options = getAdvancedAssertOptions();
             const sortedOptions = sortObjectKeys(options);
-            document.getElementById('json-editor').value = JSON.stringify(sortedOptions, null, 2);
+            setJsonEditorContent(JSON.stringify(sortedOptions, null, 2));
         }
     }
 }

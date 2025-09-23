@@ -1,5 +1,14 @@
 import { showStatus, hideStatus, showProgress, hideProgress } from './status.js';
 
+function resetScrollPosition(element) {
+    if (element && typeof element.scrollTop === 'number') {
+        element.scrollTop = 0;
+    }
+    if (element && typeof element.scrollLeft === 'number') {
+        element.scrollLeft = 0;
+    }
+}
+
 const SPECIAL_LABELS = {
     aaguid: 'AAGUID',
     alg: 'Algorithm',
@@ -133,6 +142,7 @@ export async function decodeResponse() {
         if (rawContent) {
             rawContent.value = JSON.stringify(payload, null, 2);
             autoSizeRawTextarea(rawContent);
+            resetScrollPosition(rawContent);
         }
         if (decoderOutput) {
             decoderOutput.style.display = 'block';
@@ -174,6 +184,7 @@ export function clearDecoder() {
 
     if (input) {
         input.value = '';
+        resetScrollPosition(input);
     }
     if (decodedContent) {
         decodedContent.innerHTML = '';
@@ -181,6 +192,7 @@ export function clearDecoder() {
     if (rawContent) {
         rawContent.value = '';
         rawContent.style.height = '';
+        resetScrollPosition(rawContent);
     }
     if (rawContainer) {
         rawContainer.style.display = 'none';

@@ -13,9 +13,10 @@
                     <div class="three-column">
                         <!-- Left Column: Registration/Authentication Form -->
                         <div class="form-column">
-                            <h3>Settings</h3>
-                            <!-- Registration Form -->
-                            <div id="registration-form" class="sub-tab-content active">
+                            <div class="column-card form-card">
+                                <h3>Settings</h3>
+                                <!-- Registration Form -->
+                                <div id="registration-form" class="sub-tab-content active form-pane">
                                 <!-- User Identity Section -->
                             <div class="expandable-section">
                                 <div class="section-header" onclick="toggleSection('user-identity')">
@@ -177,7 +178,11 @@
                                                 </div>
                                             </div>
                                         </div>
-                                        <input type="number" id="fake-cred-length-reg" class="form-control" value="128" min="1">
+                                        <div class="input-with-button">
+                                            <input type="number" id="fake-cred-length-reg" class="form-control" value="128" min="1">
+                                            <button type="button" id="fake-cred-generate" class="btn btn-small add-icon" title="Generate fake credential ID" aria-label="Generate fake credential ID"></button>
+                                        </div>
+                                        <div id="fake-cred-generated-list" class="fake-credential-list" aria-live="polite"></div>
                                     </div>
                                 </div>
                             </div>
@@ -538,14 +543,14 @@
                                 </div>
                             </div>
 
-                            <div class="form-group" style="margin-top: 2rem;">
-                                <button class="btn" onclick="advancedRegister()">Create Credential</button>
-                                <button class="btn btn-secondary" onclick="resetRegistrationForm()">Reset</button>
-                            </div>
-                        </div>
+                                <div class="form-actions form-group">
+                                    <button class="btn" onclick="advancedRegister()">Create Credential</button>
+                                    <button class="btn btn-secondary" onclick="resetRegistrationForm()">Reset</button>
+                                </div>
+                                </div>
 
-                            <!-- Authentication Form -->
-                            <div id="authentication-form" class="sub-tab-content">
+                                <!-- Authentication Form -->
+                                <div id="authentication-form" class="sub-tab-content form-pane">
                             <!-- Credential Selection Section -->
                             <div class="expandable-section">
                                 <div class="section-header expanded" onclick="toggleSection('credential-selection')">
@@ -788,6 +793,7 @@
                                             <button class="btn btn-small refresh-icon" onclick="randomizePrfEval('first', 'auth')" title="Generate random PRF evaluation data"></button>
                                         </div>
                                         <div id="prf-eval-first-auth-error" class="error-message">Invalid hex value (exactly 32 bytes required)</div>
+                                        <div id="prf-capability-message" class="error-message info-hint" style="display: none;">Selected credential does not support the prf extension.</div>
                                     </div>
                                     <div class="form-group">
                                         <div class="label-with-info">
@@ -815,43 +821,48 @@
                                 </div>
                             </div>
 
-                            <div class="form-group" style="margin-top: 2rem;">
-                                <button class="btn" onclick="advancedAuthenticate()">Assert Credential</button>
-                                <button class="btn btn-secondary" onclick="resetAuthenticationForm()">Reset</button>
+                                <div class="form-actions form-group">
+                                    <button class="btn" onclick="advancedAuthenticate()">Assert Credential</button>
+                                    <button class="btn btn-secondary" onclick="resetAuthenticationForm()">Reset</button>
+                                </div>
+                                </div>
                             </div>
-                        </div>
                         </div>
 
                         <!-- Middle Column: JSON Editor -->
                         <div class="json-editor-column">
-                            <h3>JSON Editor</h3>
-                            <div id="json-editor-container" class="json-editor">
-                                <button type="button" id="json-editor-expand" class="json-editor-expand-btn" title="Expand JSON editor" aria-label="Expand JSON editor" aria-expanded="false">
-                                    <span aria-hidden="true">⛶</span>
-                                </button>
-                                <textarea id="json-editor" placeholder="JSON representation will appear here automatically..." spellcheck="false" autocorrect="off" autocapitalize="off" autocomplete="off" data-gramm="false" data-gramm_editor="false" data-enable-grammarly="false"></textarea>
-                            </div>
-                            <div class="json-editor-buttons" style="margin-top: 0.5rem;">
-                                <button class="btn" onclick="saveJsonEditor()" title="Save JSON changes to settings">Save</button>
-                                <button class="btn btn-secondary" onclick="resetJsonEditor()" title="Reset JSON to match current settings">Reset</button>
+                            <div class="column-card json-editor-card">
+                                <h3>JSON Editor</h3>
+                                <div id="json-editor-container" class="json-editor">
+                                    <button type="button" id="json-editor-expand" class="json-editor-expand-btn" title="Expand JSON editor" aria-label="Expand JSON editor" aria-expanded="false">
+                                        <span aria-hidden="true">⛶</span>
+                                    </button>
+                                    <textarea id="json-editor" placeholder="JSON representation will appear here automatically..." spellcheck="false" autocorrect="off" autocapitalize="off" autocomplete="off" data-gramm="false" data-gramm_editor="false" data-enable-grammarly="false"></textarea>
+                                </div>
+                                <div class="json-editor-buttons" style="margin-top: 0.5rem;">
+                                    <button class="btn" onclick="saveJsonEditor()" title="Save JSON changes to settings">Save</button>
+                                    <button class="btn btn-secondary" onclick="resetJsonEditor()" title="Reset JSON to match current settings">Reset</button>
+                                </div>
                             </div>
                         </div>
 
                         <!-- Right Column: Credentials Panel -->
                         <div class="credentials-column">
-                            <div class="form-group" style="margin-bottom: 1rem;">
-                                <label for="binary-format" class="form-section-title">Binary Format</label>
-                                <select id="binary-format" class="form-control" onchange="changeBinaryFormat()">
-                                    <option value="hex">hex</option>
-                                    <option value="b64">b64</option>
-                                    <option value="b64u">b64u</option>
-                                    <option value="js">js</option>
-                                </select>
-                            </div>
-                            <h3>Saved Credentials</h3>
-                            <div class="credentials-panel">
-                                <div id="credentials-list">
-                                    <p style="color: #6c757d;">No credentials registered yet.</p>
+                            <div class="column-card credentials-card">
+                                <div class="form-group" style="margin-bottom: 1rem;">
+                                    <label for="binary-format" class="form-section-title">Binary Format</label>
+                                    <select id="binary-format" class="form-control" onchange="changeBinaryFormat()">
+                                        <option value="hex">hex</option>
+                                        <option value="b64">b64</option>
+                                        <option value="b64u">b64u</option>
+                                        <option value="js">js</option>
+                                    </select>
+                                </div>
+                                <h3>Saved Credentials</h3>
+                                <div class="credentials-panel">
+                                    <div id="credentials-list">
+                                        <p style="color: #6c757d;">No credentials registered yet.</p>
+                                    </div>
                                 </div>
                             </div>
                         </div>

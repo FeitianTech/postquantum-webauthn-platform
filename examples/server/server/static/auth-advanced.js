@@ -24,7 +24,78 @@ import { showRegistrationResultModal, loadSavedCredentials } from './credential-
 import { printRegistrationDebug, printAuthenticationDebug } from './auth-debug.js';
 import { state } from './state.js';
 
+const COMMON_SUPPORTED_ALGORITHMS = new Set([-7, -257, -8]);
+
+function collectPotentialUnsupportedFeatures(publicKeyOptions, convertedExtensions, createOptions) {
+    const issues = [];
+
+    if (!publicKeyOptions || typeof publicKeyOptions !== 'object') {
+        return issues;
+    }
+
+    const selection = publicKeyOptions.authenticatorSelection && typeof publicKeyOptions.authenticatorSelection === 'object'
+        ? publicKeyOptions.authenticatorSelection
+        : {};
+
+    if (selection.requireResidentKey === true || selection.residentKey === 'required') {
+        issues.push('resident key requirement');
+    }
+    if (selection.userVerification === 'required') {
+        issues.push('user verification requirement');
+    }
+
+    const extensionSources = [];
+    if (publicKeyOptions.extensions && typeof publicKeyOptions.extensions === 'object') {
+        extensionSources.push(publicKeyOptions.extensions);
+    }
+    if (convertedExtensions && typeof convertedExtensions === 'object') {
+        extensionSources.push(convertedExtensions);
+    }
+
+    const extensionLabels = [
+        ['largeBlob', 'largeBlob extension'],
+        ['prf', 'prf extension'],
+        ['minPinLength', 'minPinLength extension'],
+        ['credentialProtectionPolicy', 'credProtect extension'],
+        ['credProps', 'credProps extension'],
+    ];
+
+    extensionSources.forEach(source => {
+        extensionLabels.forEach(([key, label]) => {
+            if (source && Object.prototype.hasOwnProperty.call(source, key) && !issues.includes(label)) {
+                issues.push(label);
+            }
+        });
+    });
+
+    const pubKeyOptions = createOptions && typeof createOptions === 'object' && createOptions.publicKey && typeof createOptions.publicKey === 'object'
+        ? createOptions.publicKey
+        : null;
+    const params = pubKeyOptions && Array.isArray(pubKeyOptions.pubKeyCredParams)
+        ? pubKeyOptions.pubKeyCredParams
+        : [];
+
+    if (params.length) {
+        const algValues = params
+            .map(param => (param && typeof param === 'object' ? param.alg : undefined))
+            .filter(value => typeof value === 'number');
+        if (algValues.length) {
+            const hasCommon = algValues.some(value => COMMON_SUPPORTED_ALGORITHMS.has(value));
+            if (!hasCommon) {
+                issues.push('selected signature algorithms');
+            }
+        }
+    }
+
+    return issues;
+}
+
 export async function advancedRegister() {
+    let publicKey = null;
+    let allowedAttachments = [];
+    let convertedExtensions = null;
+    let createOptions = null;
+
     try {
         const jsonText = document.getElementById('json-editor').value;
         const parsed = JSON.parse(jsonText);
@@ -33,7 +104,7 @@ export async function advancedRegister() {
             throw new Error('Invalid JSON structure: Missing "publicKey" property');
         }
 
-        const publicKey = parsed.publicKey;
+        publicKey = parsed.publicKey;
 
         if (!publicKey.rp) {
             throw new Error('Invalid CredentialCreationOptions: Missing required "rp" property');
@@ -52,7 +123,7 @@ export async function advancedRegister() {
             publicKey.extensions.minPinLength = true;
         }
 
-        const allowedAttachments = enforceHintsForAdvanced(publicKey);
+        allowedAttachments = enforceHintsForAdvanced(publicKey);
 
         hideStatus('advanced');
         showProgress('advanced', 'Starting advanced registration...');
@@ -70,7 +141,7 @@ export async function advancedRegister() {
 
         const json = await response.json();
         const originalExtensions = json?.publicKey?.extensions;
-        const createOptions = parseCreationOptionsFromJSON(json);
+        createOptions = parseCreationOptionsFromJSON(json);
 
         applyAuthenticatorAttachmentPreference(
             createOptions,
@@ -79,7 +150,7 @@ export async function advancedRegister() {
             publicKey,
         );
 
-        const convertedExtensions = convertExtensionsForClient(originalExtensions);
+        convertedExtensions = convertExtensionsForClient(originalExtensions);
         if (convertedExtensions) {
             createOptions.publicKey = createOptions.publicKey || {};
             createOptions.publicKey.extensions = {
@@ -143,16 +214,24 @@ export async function advancedRegister() {
             throw new Error(`Registration failed: ${errorText}`);
         }
     } catch (error) {
-        let errorMessage = error.message;
-        if (error.name === 'NotAllowedError') {
+        const errorName = error && typeof error === 'object' ? error.name : undefined;
+        let errorMessage = error && typeof error === 'object' && typeof error.message === 'string'
+            ? error.message
+            : String(error);
+        if (errorName === 'NotAllowedError') {
             errorMessage = 'User cancelled or authenticator not available';
-        } else if (error.name === 'InvalidStateError') {
+        } else if (errorName === 'InvalidStateError') {
             errorMessage = 'Authenticator is already registered for this account';
-        } else if (error.name === 'SecurityError') {
+        } else if (errorName === 'SecurityError') {
             errorMessage = 'Security error - check your connection and try again';
         }
 
-        showStatus('advanced', `Credential registration failed: ${errorMessage}`, 'error');
+        const potentialIssues = collectPotentialUnsupportedFeatures(publicKey, convertedExtensions, createOptions);
+        const detailMessage = potentialIssues.length
+            ? ` The authenticator may not support: ${potentialIssues.join(', ')}.`
+            : '';
+
+        showStatus('advanced', `Credential registration failed: ${errorMessage}${detailMessage}`, 'error');
     } finally {
         hideProgress('advanced');
     }

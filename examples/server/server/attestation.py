@@ -424,54 +424,57 @@ def _format_hash_value(value: Any) -> str:
     return text.replace("-", "").replace(" ", "").upper()
 
 
-def _derive_certificate_algorithm_info(public_key_info: Mapping[str, Any], signature_info: Mapping[str, Any]) -> str:
-    if not isinstance(public_key_info, Mapping):
+def _normalise_signature_algorithm_name(name: str) -> str:
+    text = (name or "").strip()
+    if not text:
         return ""
 
-    algorithm = public_key_info.get("algorithm", {})
-    if not isinstance(algorithm, Mapping):
-        algorithm = {}
+    lowered = text.lower()
+    if "ecdsa" in lowered:
+        return "ECDSA"
+    if "rsassa-pss" in lowered:
+        return "RSASSA-PSS"
+    if "rsa" in lowered:
+        return "RSASSA-PKCS1-v1_5"
+    if "ed25519" in lowered:
+        return "ED25519"
+    if "ed448" in lowered:
+        return "ED448"
+    if "dsa" in lowered:
+        return "DSA"
 
-    named_curve = algorithm.get("namedCurve") or public_key_info.get("curve")
-    key_type = public_key_info.get("type")
-    modulus_length = algorithm.get("modulusLength") or public_key_info.get("keySize")
+    return text.replace("-", "").replace(" ", "").upper()
 
-    key_component = ""
-    if named_curve:
-        key_component = named_curve
-    elif key_type:
-        key_text = str(key_type)
-        if key_text.upper().startswith("RSA") and modulus_length:
-            key_component = f"RSA{modulus_length}"
-        else:
-            key_component = key_text
-    elif algorithm.get("name"):
-        key_component = algorithm["name"]
 
-    algorithm_name = algorithm.get("name") or key_type or ""
-    if not algorithm_name and isinstance(signature_info, Mapping):
-        algorithm_name = signature_info.get("algorithm") or ""
+def _derive_certificate_algorithm_info(public_key_info: Mapping[str, Any], signature_info: Mapping[str, Any]) -> str:
+    if not isinstance(signature_info, Mapping):
+        return ""
+
+    algorithm_component = ""
+    raw_algorithm_name: Any = signature_info.get("algorithm")
+    if isinstance(raw_algorithm_name, Mapping):
+        raw_algorithm_name = raw_algorithm_name.get("name")
+    if isinstance(raw_algorithm_name, str):
+        algorithm_component = _normalise_signature_algorithm_name(raw_algorithm_name)
 
     hash_component = ""
-    if isinstance(signature_info, Mapping):
-        hash_info = signature_info.get("hash")
-        if isinstance(hash_info, Mapping):
-            hash_component = hash_info.get("name") or ""
-        elif hash_info not in (None, ""):
-            hash_component = hash_info
-        if not hash_component:
-            sig_name = signature_info.get("algorithm")
-            if isinstance(sig_name, str):
-                lowered = sig_name.lower()
-                if "ed25519" in lowered:
-                    hash_component = "SHA512"
-                elif "ed448" in lowered:
-                    hash_component = "SHAKE256"
+    hash_info = signature_info.get("hash")
+    if isinstance(hash_info, Mapping):
+        hash_component = hash_info.get("name") or ""
+    elif hash_info not in (None, ""):
+        hash_component = hash_info
+    if not hash_component:
+        sig_name = signature_info.get("algorithm")
+        if isinstance(sig_name, str):
+            lowered = sig_name.lower()
+            if "ed25519" in lowered:
+                hash_component = "SHA512"
+            elif "ed448" in lowered:
+                hash_component = "SHAKE256"
 
     components = []
     for part in (
-        _format_algorithm_component(key_component),
-        _format_algorithm_component(algorithm_name),
+        _format_algorithm_component(algorithm_component),
         _format_hash_value(hash_component),
     ):
         if part and (not components or part.lower() != components[-1].lower()):
