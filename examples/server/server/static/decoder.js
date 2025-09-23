@@ -68,6 +68,7 @@ export async function decodeResponse() {
     const inputValue = input.value;
     if (!inputValue.trim()) {
         showStatus('decoder', 'Decoder is empty. Please paste something to decode.', 'error');
+        updateDecoderEmptyState();
         return;
     }
 
@@ -95,6 +96,8 @@ export async function decodeResponse() {
         decoderOutput.style.display = 'none';
     }
     hideStatus('decoder');
+
+    updateDecoderEmptyState();
 
     showProgress('decoder', 'Decoding…');
 
@@ -157,6 +160,7 @@ export async function decodeResponse() {
         showStatus('decoder', `Decoding failed: ${message}`, 'error');
     } finally {
         hideProgress('decoder');
+        updateDecoderEmptyState();
     }
 }
 
@@ -190,6 +194,7 @@ export function clearDecoder() {
     }
     hideStatus('decoder');
     hideProgress('decoder');
+    updateDecoderEmptyState();
 }
 
 export function toggleRawDecoder() {
@@ -454,4 +459,44 @@ function formatKey(key) {
     });
 
     return words.join(' ');
+}
+
+function updateDecoderEmptyState() {
+    const input = document.getElementById('decoder-input');
+    const output = document.getElementById('decoder-output');
+    const description = document.getElementById('decoder-description');
+
+    if (!description) {
+        return;
+    }
+
+    const hasInput = Boolean(input && input.value.trim().length > 0);
+    const summary = output ? output.querySelector('#decoded-content') : null;
+    const hasVisibleOutput = Boolean(
+        output &&
+            output.style.display !== 'none' &&
+            output.offsetParent !== null &&
+            summary &&
+            summary.childElementCount > 0
+    );
+
+    if (!hasInput && !hasVisibleOutput) {
+        description.style.display = 'block';
+    } else {
+        description.style.display = 'none';
+    }
+}
+
+function initDecoderEmptyState() {
+    const input = document.getElementById('decoder-input');
+    if (input) {
+        input.addEventListener('input', updateDecoderEmptyState);
+    }
+    updateDecoderEmptyState();
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initDecoderEmptyState);
+} else {
+    initDecoderEmptyState();
 }

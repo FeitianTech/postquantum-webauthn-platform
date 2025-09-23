@@ -218,6 +218,77 @@ body.modal-open {
 }
 
 /* Decoder layout */
+.decoder-description {
+    margin: 1.5rem 0 1rem;
+    padding: 1.25rem 1.5rem;
+    border: 1px solid rgba(0, 114, 206, 0.12);
+    border-radius: 16px;
+    background: rgba(0, 114, 206, 0.06);
+    color: var(--muted-text);
+    display: block;
+    line-height: 1.5;
+}
+
+.decoder-description-title {
+    margin: 0 0 0.75rem 0;
+    font-weight: 600;
+    color: var(--primary-dark);
+}
+
+.decoder-description-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+}
+
+.decoder-description-list li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.decoder-format-name {
+    font-weight: 600;
+    color: var(--text-color);
+}
+
+.decoder-format-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border-radius: 0;
+    background: transparent;
+    color: var(--primary-dark);
+    font-weight: 600;
+    font-size: 0.9rem;
+    letter-spacing: 0.01em;
+    text-decoration: underline;
+    text-decoration-thickness: 0.08em;
+}
+
+.decoder-format-note {
+    color: var(--muted-text);
+    font-size: 0.85rem;
+}
+
+.decoder-description-note {
+    margin: 0.9rem 0 0 0;
+    color: var(--muted-text);
+    font-size: 0.9rem;
+}
+
+.decoder-description-note code {
+    font-size: 0.85rem;
+    background: rgba(15, 39, 64, 0.1);
+    padding: 0.1rem 0.35rem;
+    border-radius: 4px;
+}
+
 .decoder-summary {
     margin-top: 1rem;
     padding: 1.25rem 1.5rem;
