@@ -45,10 +45,10 @@ body.modal-open {
 }
 
 .header {
-    background: linear-gradient(120deg, var(--primary-color) 0%, #009fe3 55%, var(--accent-color) 100%);
-    color: #ffffff;
-    padding: 1.5rem 2.5rem;
-    box-shadow: 0 24px 45px rgba(0, 114, 206, 0.25);
+    background: var(--surface-color);
+    color: var(--primary-color);
+    padding: 1.25rem 2.5rem;
+    box-shadow: var(--shadow-soft);
     border-bottom-left-radius: 24px;
     border-bottom-right-radius: 24px;
 }
@@ -58,12 +58,7 @@ body.modal-open {
     font-size: 2.25rem;
     font-weight: 600;
     letter-spacing: 0.02em;
-}
-
-.header p {
-    margin: 0.75rem 0 0 0;
-    opacity: 0.95;
-    font-size: 1.05rem;
+    color: var(--primary-color);
 }
 
 .container {
