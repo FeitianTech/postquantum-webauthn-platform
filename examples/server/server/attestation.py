@@ -126,6 +126,15 @@ def decode_asn1_octet_string(data: bytes) -> bytes:
 
 
 EXTENSION_DISPLAY_METADATA: Dict[str, Dict[str, Any]] = {
+    "1.3.6.1.4.1.41482.13.1": {
+        "friendly_name": "Yubico: Firmware version",
+    },
+    "1.3.6.1.4.1.41482.2": {
+        "friendly_name": "Yubico: Device identifier",
+    },
+    "1.3.6.1.4.1.41482.1.1": {
+        "friendly_name": "Security Key by Yubico Series",
+    },
     "1.3.6.1.4.1.45724.1.1.4": {
         "friendly_name": "FIDO: Device AAGUID",
     },
@@ -871,6 +880,40 @@ def _serialize_extension_value(ext):
         raw_bytes = value.value
         raw_hex = raw_bytes.hex()
         oid = ext.oid.dotted_string
+
+        if oid == "1.3.6.1.4.1.41482.13.1":
+            version_bytes = decode_asn1_octet_string(raw_bytes)
+            if version_bytes:
+                version_components = "".join(
+                    f"{byte}." for byte in version_bytes
+                ).strip(".")
+                if version_components:
+                    return {"Firmware version": version_components}
+            return {"Hex value": raw_hex}
+
+        if oid == "1.3.6.1.4.1.41482.2":
+            identifier_bytes = decode_asn1_octet_string(raw_bytes)
+            text_value: Optional[str]
+            try:
+                text_value = identifier_bytes.decode("ascii").strip()
+            except Exception:  # pragma: no cover - defensive
+                text_value = None
+
+            payload: Dict[str, Any] = {"Hex value": raw_hex}
+            if text_value:
+                payload["Device identifier"] = text_value
+            return payload
+
+        if oid == "1.3.6.1.4.1.41482.1.1":
+            identifier_bytes = decode_asn1_octet_string(raw_bytes)
+            try:
+                identifier_text = identifier_bytes.decode("ascii").strip()
+            except Exception:  # pragma: no cover - defensive
+                identifier_text = None
+
+            if identifier_text:
+                return {"Value": identifier_text}
+            return {"Hex value": raw_hex}
 
         if oid == "1.3.6.1.4.1.45724.1.1.4":
             aaguid_bytes = decode_asn1_octet_string(raw_bytes)

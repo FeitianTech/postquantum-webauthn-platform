@@ -23,6 +23,27 @@
                             spellcheck="false"
                             wrap="off"
                         ></textarea>
+                        <div class="form-group" style="margin-top: 0.75rem;">
+                            <button
+                                class="btn btn-secondary"
+                                type="button"
+                                id="decoder-toggle-raw"
+                                data-expanded="false"
+                                onclick="toggleRawDecoder()"
+                            >
+                                Show raw
+                            </button>
+                        </div>
+                        <div id="decoder-raw-container" style="display: none;">
+                            <textarea
+                                id="decoder-raw-content"
+                                class="form-control decoder-output"
+                                rows="14"
+                                readonly
+                                spellcheck="false"
+                                wrap="off"
+                            ></textarea>
+                        </div>
                     </div>
                 </div>
             </div>
