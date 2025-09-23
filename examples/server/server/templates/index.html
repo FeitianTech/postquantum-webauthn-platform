@@ -29,32 +29,9 @@
 {% include 'index/modals/credential-details.html' %}
 
     <div id="json-editor-overlay" class="json-editor-overlay"></div>
-    <script id="initial-mds-state" type="application/json">
-        {{ {"jws": initial_mds_blob, "info": initial_mds_info} | tojson | safe }}
-    </script>
     <script>
-        (() => {
-            const stateElement = document.getElementById('initial-mds-state');
-            let payload = null;
-
-            if (stateElement) {
-                const text = stateElement.textContent;
-                if (typeof text === 'string' && text.trim()) {
-                    try {
-                        payload = JSON.parse(text);
-                    } catch (error) {
-                        console.error('Failed to parse initial MDS payload:', error);
-                    }
-                }
-            }
-
-            window.__INITIAL_MDS_JWS__ =
-                typeof payload?.jws === 'string' && payload.jws ? payload.jws : null;
-            window.__INITIAL_MDS_INFO__ =
-                payload && typeof payload.info === 'object' && payload.info !== null
-                    ? payload.info
-                    : null;
-        })();
+        window.__INITIAL_MDS_JWS__ = {{ initial_mds_blob | tojson }};
+        window.__INITIAL_MDS_INFO__ = {{ initial_mds_info | tojson }};
     </script>
     <script type="module" src="{{ url_for('static', filename='mds.js') }}"></script>
     <script type="module" src="{{ url_for('static', filename='script.js') }}"></script>
