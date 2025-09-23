@@ -462,7 +462,6 @@ function formatKey(key) {
 }
 
 function updateDecoderEmptyState() {
-    const input = document.getElementById('decoder-input');
     const output = document.getElementById('decoder-output');
     const description = document.getElementById('decoder-description');
 
@@ -470,7 +469,6 @@ function updateDecoderEmptyState() {
         return;
     }
 
-    const hasInput = Boolean(input && input.value.trim().length > 0);
     const summary = output ? output.querySelector('#decoded-content') : null;
     const hasVisibleOutput = Boolean(
         output &&
@@ -480,18 +478,10 @@ function updateDecoderEmptyState() {
             summary.childElementCount > 0
     );
 
-    if (!hasInput && !hasVisibleOutput) {
-        description.style.display = 'block';
-    } else {
-        description.style.display = 'none';
-    }
+    description.style.display = hasVisibleOutput ? 'none' : 'block';
 }
 
 function initDecoderEmptyState() {
-    const input = document.getElementById('decoder-input');
-    if (input) {
-        input.addEventListener('input', updateDecoderEmptyState);
-    }
     updateDecoderEmptyState();
 }
 

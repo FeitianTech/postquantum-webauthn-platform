@@ -267,8 +267,8 @@ body.modal-open {
     font-weight: 600;
     font-size: 0.9rem;
     letter-spacing: 0.01em;
-    text-decoration: underline;
-    text-decoration-thickness: 0.08em;
+    text-decoration: none;
+    cursor: default;
 }
 
 .decoder-format-note {
