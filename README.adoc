@@ -95,6 +95,7 @@ source .venv/bin/activate
 **Using pip / virtualenv**
 ```bash
 pip install ".[pqc]"
+pip install oqs
 python -c "import oqs"
 ```
 
