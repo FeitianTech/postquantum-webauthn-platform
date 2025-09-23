@@ -49,7 +49,8 @@ import {
 } from './auth-advanced.js';
 import {
     decodeResponse,
-    clearDecoder
+    clearDecoder,
+    toggleRawDecoder
 } from './decoder.js';
 import {
     saveJsonEditor,
@@ -96,6 +97,7 @@ window.advancedRegister = advancedRegister;
 window.advancedAuthenticate = advancedAuthenticate;
 window.decodeResponse = decodeResponse;
 window.clearDecoder = clearDecoder;
+window.toggleRawDecoder = toggleRawDecoder;
 window.changeBinaryFormat = changeBinaryFormat;
 window.saveJsonEditor = saveJsonEditor;
 window.resetJsonEditor = resetJsonEditor;

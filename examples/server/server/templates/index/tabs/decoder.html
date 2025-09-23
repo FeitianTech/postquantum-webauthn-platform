@@ -1,8 +1,58 @@
             <!-- Decoder Tab -->
             <div id="decoder-tab" class="tab-content">
                 <div class="section">
-                    <h2>WebAuthn Response Decoder</h2>
+                    <h2>Decoder</h2>
                     <div class="status" id="decoder-status"></div>
+
+                    <div id="decoder-description" class="decoder-description">
+                        <p class="decoder-description-title">Recognized formats:</p>
+                        <ul class="decoder-description-list">
+                            <li>
+                                <span class="decoder-format-name">PublicKeyCredential:</span>
+                                <span class="decoder-format-chip">JSON</span>
+                            </li>
+                            <li>
+                                <span class="decoder-format-name">attestationObject:</span>
+                                <span class="decoder-format-chip">binary</span>
+                                <span class="decoder-format-note">(CBOR)</span>
+                            </li>
+                            <li>
+                                <span class="decoder-format-name">authenticatorData:</span>
+                                <span class="decoder-format-chip">binary</span>
+                            </li>
+                            <li>
+                                <span class="decoder-format-name">WebAuthn client data:</span>
+                                <span class="decoder-format-chip">JSON</span>
+                                <span class="decoder-format-chip">binary</span>
+                            </li>
+                            <li>
+                                <span class="decoder-format-name">X.509 certificate:</span>
+                                <span class="decoder-format-chip">PEM</span>
+                                <span class="decoder-format-chip">binary-wrapped PEM</span>
+                                <span class="decoder-format-chip">binary (DER)</span>
+                            </li>
+                            <li>
+                                <span class="decoder-format-name">JSON:</span>
+                                <span class="decoder-format-chip">plain</span>
+                                <span class="decoder-format-chip">binary</span>
+                            </li>
+                            <li>
+                                <span class="decoder-format-name">CBOR:</span>
+                                <span class="decoder-format-chip">binary</span>
+                            </li>
+                        </ul>
+                        <p class="decoder-description-note">
+                            All binary values may be
+                            <span class="decoder-format-chip">base64</span>,
+                            <span class="decoder-format-chip">base64url</span>,
+                            or
+                            <span class="decoder-format-chip">hex</span>,
+                            ignoring all whitespace.
+                        </p>
+                        <p class="decoder-description-note">
+                            Hex also ignores <code>:</code> characters.
+                        </p>
+                    </div>
 
                     <div class="form-group">
                         <textarea id="decoder-input" class="form-control" rows="10" placeholder="Paste something here to decode..."></textarea>
@@ -13,10 +63,34 @@
                         <button class="btn btn-secondary" onclick="clearDecoder()">Clear</button>
                     </div>
 
+                    <div class="progress" id="decoder-progress">
+                        <div class="spinner" aria-hidden="true"></div>
+                        <span id="decoder-progress-text">Decoding...</span>
+                    </div>
+
                     <div id="decoder-output" style="display: none;">
                         <h3>Decoded Information</h3>
-                        <div id="decoded-content" class="json-editor">
-                            <!-- Decoded output will be displayed here -->
+                        <div id="decoded-content" class="decoder-summary"></div>
+                        <div class="form-group" style="margin-top: 0.75rem;">
+                            <button
+                                class="btn btn-secondary"
+                                type="button"
+                                id="decoder-toggle-raw"
+                                data-expanded="false"
+                                onclick="toggleRawDecoder()"
+                            >
+                                Show raw
+                            </button>
+                        </div>
+                        <div id="decoder-raw-container" style="display: none;">
+                            <textarea
+                                id="decoder-raw-content"
+                                class="form-control decoder-output"
+                                rows="14"
+                                readonly
+                                spellcheck="false"
+                                wrap="off"
+                            ></textarea>
                         </div>
                     </div>
                 </div>
