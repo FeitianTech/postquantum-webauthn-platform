@@ -330,10 +330,11 @@ function renderValue(value) {
     }
 
     if (typeof value === 'string') {
-        const code = document.createElement('code');
-        code.className = 'decoder-code';
-        code.textContent = value;
-        return code;
+        const isMultiline = value.includes('\n') || value.length > 80;
+        const element = document.createElement(isMultiline ? 'pre' : 'span');
+        element.className = isMultiline ? 'decoder-pre' : 'decoder-inline';
+        element.textContent = value;
+        return element;
     }
 
     if (typeof value === 'number' || typeof value === 'boolean') {
@@ -370,27 +371,23 @@ function renderValue(value) {
             return span;
         }
 
-        const wrapper = document.createElement('div');
-        wrapper.className = 'decoder-object';
+        const definition = document.createElement('dl');
+        definition.className = 'decoder-definition';
 
         entries.forEach(([childKey, childValue]) => {
-            const row = document.createElement('div');
-            row.className = 'decoder-row';
+            const term = document.createElement('dt');
+            term.className = 'decoder-term';
+            term.textContent = formatKey(childKey);
 
-            const keyEl = document.createElement('div');
-            keyEl.className = 'decoder-key';
-            keyEl.textContent = formatKey(childKey);
+            const detail = document.createElement('dd');
+            detail.className = 'decoder-details';
+            detail.appendChild(renderValue(childValue));
 
-            const valueEl = document.createElement('div');
-            valueEl.className = 'decoder-value';
-            valueEl.appendChild(renderValue(childValue));
-
-            row.appendChild(keyEl);
-            row.appendChild(valueEl);
-            wrapper.appendChild(row);
+            definition.appendChild(term);
+            definition.appendChild(detail);
         });
 
-        return wrapper;
+        return definition;
     }
 
     const span = document.createElement('span');
