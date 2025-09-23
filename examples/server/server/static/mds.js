@@ -1449,6 +1449,7 @@ function renderTable(entries) {
         hideScrollTopButton();
         stabiliseColumnWidths();
         scheduleColumnResizerMetricsUpdate();
+        resetScrollPositions(mdsState?.tableContainer);
         return;
     }
 
@@ -1503,6 +1504,7 @@ function renderTable(entries) {
     });
 
     tbody.appendChild(fragment);
+    resetScrollPositions(mdsState?.tableContainer);
     if (mdsState.highlightedRowKey) {
         const restored = applyRowHighlightByKey(mdsState.highlightedRowKey, { scroll: false });
         if (!restored) {

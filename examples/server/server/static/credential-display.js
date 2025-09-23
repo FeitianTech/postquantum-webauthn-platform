@@ -34,7 +34,7 @@ import { convertExtensionsForClient, normalizeClientExtensionResults } from './b
 import { openModal, closeModal, updateGlobalScrollLock, resetModalScroll } from './ui.js';
 import { showStatus, hideStatus, showProgress, hideProgress } from './status.js';
 import { updateJsonEditor } from './json-editor.js';
-import { checkLargeBlobCapability } from './forms.js';
+import { checkLargeBlobCapability, updateAuthenticationExtensionAvailability } from './forms.js';
 
 function appendKeyValueLines(output, value, indentLevel = 0) {
     if (value === null || value === undefined) {
@@ -476,6 +476,7 @@ export function updateCredentialsDisplay() {
         credentialsList.innerHTML = '<p style="color: #6c757d; font-style: normal;">No credentials registered yet.</p>';
         checkLargeBlobCapability();
         updateAllowCredentialsDropdown();
+        updateAuthenticationExtensionAvailability();
         return;
     }
 
@@ -507,6 +508,7 @@ export function updateCredentialsDisplay() {
 
     checkLargeBlobCapability();
     updateAllowCredentialsDropdown();
+    updateAuthenticationExtensionAvailability();
 }
 
 function setAaguidStatus(statusEl, message, { showSpinner = false } = {}) {

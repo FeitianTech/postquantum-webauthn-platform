@@ -177,7 +177,11 @@
                                                 </div>
                                             </div>
                                         </div>
-                                        <input type="number" id="fake-cred-length-reg" class="form-control" value="128" min="1">
+                                        <div class="input-with-button">
+                                            <input type="number" id="fake-cred-length-reg" class="form-control" value="128" min="1">
+                                            <button type="button" id="fake-cred-generate" class="btn btn-small add-icon" title="Generate fake credential ID" aria-label="Generate fake credential ID"></button>
+                                        </div>
+                                        <div id="fake-cred-generated-list" class="fake-credential-list" aria-live="polite"></div>
                                     </div>
                                 </div>
                             </div>
@@ -788,6 +792,7 @@
                                             <button class="btn btn-small refresh-icon" onclick="randomizePrfEval('first', 'auth')" title="Generate random PRF evaluation data"></button>
                                         </div>
                                         <div id="prf-eval-first-auth-error" class="error-message">Invalid hex value (exactly 32 bytes required)</div>
+                                        <div id="prf-capability-message" class="error-message info-hint" style="display: none;">Selected credential does not support the prf extension.</div>
                                     </div>
                                     <div class="form-group">
                                         <div class="label-with-info">

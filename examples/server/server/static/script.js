@@ -29,7 +29,8 @@ import {
     validateChallengeInputs,
     validatePrfEvalInputs,
     validateLargeBlobWriteInput,
-    checkLargeBlobCapability
+    checkLargeBlobCapability,
+    updateAuthenticationExtensionAvailability
 } from './forms.js';
 import {
     resetRegistrationForm,
@@ -71,6 +72,11 @@ import {
     deleteCredential
 } from './credential-display.js';
 import { handleJsonEditorKeydown } from './json-editor-utils.js';
+import {
+    createFakeExcludeCredential,
+    removeFakeExcludeCredential,
+    renderFakeExcludeCredentialList
+} from './exclude-credentials.js';
 
 window.create = create;
 window.get = get;
@@ -153,6 +159,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         loadSavedCredentials();
         updateJsonEditor();
+        renderFakeExcludeCredentialList();
+        updateAuthenticationExtensionAvailability();
     }, 100);
 
     setTimeout(() => {
@@ -174,7 +182,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const largeBlobSelect = document.getElementById('large-blob-auth');
         if (largeBlobSelect) {
             largeBlobSelect.addEventListener('change', () => {
-                checkLargeBlobCapability();
+                updateAuthenticationExtensionAvailability();
                 updateJsonEditor();
             });
         }
@@ -197,6 +205,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const allowCredentialsSelect = document.getElementById('allow-credentials');
         if (allowCredentialsSelect) {
             allowCredentialsSelect.addEventListener('change', () => {
+                updateAuthenticationExtensionAvailability();
                 updateJsonEditor();
             });
         }
@@ -213,6 +222,35 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
                 updateJsonEditor();
+            });
+        }
+
+        const fakeCredentialButton = document.getElementById('fake-cred-generate');
+        if (fakeCredentialButton) {
+            fakeCredentialButton.addEventListener('click', () => {
+                const lengthInput = document.getElementById('fake-cred-length-reg');
+                const lengthValue = lengthInput ? lengthInput.value : '';
+                const created = createFakeExcludeCredential(lengthValue);
+                if (created) {
+                    updateJsonEditor();
+                }
+            });
+        }
+
+        const fakeCredentialList = document.getElementById('fake-cred-generated-list');
+        if (fakeCredentialList) {
+            fakeCredentialList.addEventListener('click', event => {
+                const button = event.target instanceof HTMLElement
+                    ? event.target.closest('button[data-fake-credential-index]')
+                    : null;
+                if (!button) {
+                    return;
+                }
+                event.preventDefault();
+                const removed = removeFakeExcludeCredential(button.dataset.fakeCredentialIndex);
+                if (removed) {
+                    updateJsonEditor();
+                }
             });
         }
 

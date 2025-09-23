@@ -1,10 +1,12 @@
 import {
     randomizeUserId,
     randomizeChallenge,
-    validatePrfInputs
+    validatePrfInputs,
+    updateAuthenticationExtensionAvailability
 } from './forms.js';
 import { generateRandom10DigitUsername } from './username.js';
 import { updateJsonEditor } from './json-editor.js';
+import { clearFakeExcludeCredentials } from './exclude-credentials.js';
 
 export function resetRegistrationForm() {
     randomizeUserId();
@@ -46,6 +48,8 @@ export function resetRegistrationForm() {
     document.getElementById('prf-eval-second-reg').value = '';
     document.getElementById('prf-eval-second-reg').disabled = true;
 
+    clearFakeExcludeCredentials();
+
     updateJsonEditor();
 }
 
@@ -69,5 +73,6 @@ export function resetAuthenticationForm() {
 
     validatePrfInputs('reg');
     validatePrfInputs('auth');
+    updateAuthenticationExtensionAvailability();
     updateJsonEditor();
 }

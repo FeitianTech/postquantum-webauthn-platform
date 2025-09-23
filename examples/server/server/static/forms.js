@@ -7,9 +7,10 @@ import {
     base64UrlToHexFixed,
     jsToHex
 } from './binary-utils.js';
-import { getStoredCredentialAttachment } from './credential-utils.js';
+import { getCredentialIdHex, getStoredCredentialAttachment } from './credential-utils.js';
 import { showStatus } from './status.js';
 import { updateJsonEditor } from './json-editor.js';
+import { renderFakeExcludeCredentialList } from './exclude-credentials.js';
 
 export function changeBinaryFormat() {
     const newFormat = getCurrentBinaryFormat();
@@ -33,6 +34,76 @@ export function changeBinaryFormat() {
     updateFieldLabels(newFormat);
     updateJsonEditor();
     window.currentBinaryFormat = newFormat;
+    renderFakeExcludeCredentialList();
+}
+
+function credentialSupportsLargeBlob(cred) {
+    if (!cred || typeof cred !== 'object') {
+        return false;
+    }
+    if (cred.largeBlob === true || cred.largeBlobSupported === true) {
+        return true;
+    }
+    const clientOutputs = cred.clientExtensionOutputs;
+    if (clientOutputs && typeof clientOutputs === 'object') {
+        const value = clientOutputs.largeBlob;
+        if (value) {
+            if (typeof value === 'object') {
+                if (value.supported || value.written || value.blob || value.result) {
+                    return true;
+                }
+            } else {
+                return true;
+            }
+        }
+    }
+    const properties = cred.properties;
+    if (properties && typeof properties === 'object') {
+        if (properties.largeBlob === true || properties.largeBlobSupported === true) {
+            return true;
+        }
+    }
+    return false;
+}
+
+function credentialSupportsPrf(cred) {
+    if (!cred || typeof cred !== 'object') {
+        return false;
+    }
+    const clientOutputs = cred.clientExtensionOutputs;
+    if (clientOutputs && typeof clientOutputs === 'object') {
+        const value = clientOutputs.prf;
+        if (value) {
+            if (typeof value === 'object') {
+                if (value.results || value.eval || value.first || value.second) {
+                    return true;
+                }
+                if (Object.keys(value).length > 0) {
+                    return true;
+                }
+            } else {
+                return true;
+            }
+        }
+    }
+    const properties = cred.properties;
+    if (properties && typeof properties === 'object') {
+        if (properties.prf) {
+            return true;
+        }
+    }
+    return false;
+}
+
+function findStoredCredentialByHex(hexValue) {
+    if (typeof hexValue !== 'string' || !hexValue) {
+        return null;
+    }
+    const normalised = hexValue.toLowerCase();
+    return (state.storedCredentials || []).find(cred => {
+        const storedHex = (cred.credentialIdHex || getCredentialIdHex(cred) || '').toLowerCase();
+        return storedHex === normalised;
+    }) || null;
 }
 
 export function updateFieldLabels(format) {
@@ -246,13 +317,8 @@ export function validateLargeBlobDependency() {
     return true;
 }
 
-export function checkLargeBlobCapability() {
-    let hasLargeBlobCapability = false;
-
-    if (state.storedCredentials && state.storedCredentials.length > 0) {
-        hasLargeBlobCapability = state.storedCredentials.some(cred => cred.largeBlob === true);
-    }
-
+export function checkLargeBlobCapability(options = {}) {
+    const { selectedCredential = null } = options || {};
     const largeBlobSelect = document.getElementById('large-blob-auth');
     const largeBlobWriteInput = document.getElementById('large-blob-write');
     const largeBlobWriteButton = largeBlobWriteInput?.nextElementSibling;
@@ -260,28 +326,139 @@ export function checkLargeBlobCapability() {
     const readOption = largeBlobSelect?.querySelector('option[value="read"]');
     const writeOption = largeBlobSelect?.querySelector('option[value="write"]');
 
-    if (hasLargeBlobCapability) {
+    let hasCapability = false;
+    let message = '';
+
+    if (selectedCredential) {
+        hasCapability = credentialSupportsLargeBlob(selectedCredential);
+        if (!hasCapability) {
+            message = 'Selected credential does not support largeBlob.';
+        }
+    } else if (state.storedCredentials && state.storedCredentials.length > 0) {
+        hasCapability = state.storedCredentials.some(credentialSupportsLargeBlob);
+        if (!hasCapability) {
+            message = 'No largeBlob capable credentials available';
+        }
+    } else {
+        hasCapability = false;
+        message = 'No largeBlob capable credentials available';
+    }
+
+    if (messageElement) {
+        if (message) {
+            messageElement.textContent = message;
+            messageElement.style.display = 'block';
+        } else {
+            messageElement.style.display = 'none';
+        }
+    }
+
+    if (hasCapability) {
+        if (largeBlobSelect) {
+            largeBlobSelect.disabled = false;
+        }
         if (readOption) readOption.disabled = false;
         if (writeOption) writeOption.disabled = false;
-        if (messageElement) messageElement.style.display = 'none';
-
-        const currentValue = largeBlobSelect?.value;
-        if (largeBlobWriteInput && largeBlobWriteButton) {
-            if (currentValue === 'write') {
-                largeBlobWriteInput.disabled = false;
-                largeBlobWriteButton.disabled = false;
-            } else {
+        if (largeBlobWriteInput && largeBlobSelect?.value === 'write') {
+            largeBlobWriteInput.disabled = false;
+            if (largeBlobWriteButton) largeBlobWriteButton.disabled = false;
+        } else {
+            if (largeBlobWriteInput) {
                 largeBlobWriteInput.disabled = true;
+            }
+            if (largeBlobWriteButton) {
                 largeBlobWriteButton.disabled = true;
             }
         }
     } else {
+        if (largeBlobSelect) {
+            largeBlobSelect.value = '';
+            largeBlobSelect.disabled = true;
+        }
         if (readOption) readOption.disabled = true;
         if (writeOption) writeOption.disabled = true;
-        if (largeBlobWriteInput) largeBlobWriteInput.disabled = true;
-        if (largeBlobWriteButton) largeBlobWriteButton.disabled = true;
-        if (messageElement) messageElement.style.display = 'block';
-
-        if (largeBlobSelect) largeBlobSelect.value = '';
+        if (largeBlobWriteInput) {
+            largeBlobWriteInput.value = '';
+            largeBlobWriteInput.disabled = true;
+        }
+        if (largeBlobWriteButton) {
+            largeBlobWriteButton.disabled = true;
+        }
     }
+}
+
+function updatePrfAvailability(selectedCredential) {
+    const prfFirstInput = document.getElementById('prf-eval-first-auth');
+    const prfSecondInput = document.getElementById('prf-eval-second-auth');
+    const prfFirstButton = prfFirstInput?.nextElementSibling;
+    const prfSecondButton = prfSecondInput?.nextElementSibling;
+    const messageElement = document.getElementById('prf-capability-message');
+
+    if (!prfFirstInput || !prfSecondInput || !prfFirstButton || !prfSecondButton) {
+        if (messageElement) {
+            messageElement.style.display = 'none';
+        }
+        return;
+    }
+
+    let shouldDisable = false;
+    let message = '';
+
+    if (selectedCredential) {
+        shouldDisable = !credentialSupportsPrf(selectedCredential);
+        if (shouldDisable) {
+            message = 'Selected credential does not support the prf extension.';
+        }
+    } else if (state.storedCredentials && state.storedCredentials.length > 0) {
+        const anySupport = state.storedCredentials.some(credentialSupportsPrf);
+        if (!anySupport) {
+            shouldDisable = true;
+            message = 'No credentials with prf support available.';
+        }
+    } else {
+        shouldDisable = true;
+        message = 'No credentials with prf support available.';
+    }
+
+    if (messageElement) {
+        if (message) {
+            messageElement.textContent = message;
+            messageElement.style.display = 'block';
+        } else {
+            messageElement.style.display = 'none';
+        }
+    }
+
+    if (!shouldDisable) {
+        prfFirstInput.disabled = false;
+        prfFirstButton.disabled = false;
+        const enableSecond = Boolean(prfFirstInput.value.trim());
+        prfSecondInput.disabled = !enableSecond;
+        prfSecondButton.disabled = !enableSecond;
+    } else {
+        prfFirstInput.value = '';
+        prfSecondInput.value = '';
+        prfFirstInput.disabled = true;
+        prfSecondInput.disabled = true;
+        prfFirstButton.disabled = true;
+        prfSecondButton.disabled = true;
+    }
+
+    validatePrfInputs('auth');
+    validatePrfEvalInputs();
+}
+
+export function updateAuthenticationExtensionAvailability() {
+    const allowSelect = document.getElementById('allow-credentials');
+    let selectedCredential = null;
+
+    if (allowSelect) {
+        const selectedValue = allowSelect.value;
+        if (selectedValue && selectedValue !== 'all' && selectedValue !== 'empty') {
+            selectedCredential = findStoredCredentialByHex(selectedValue);
+        }
+    }
+
+    checkLargeBlobCapability({ selectedCredential });
+    updatePrfAvailability(selectedCredential);
 }
