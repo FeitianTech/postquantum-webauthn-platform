@@ -29,9 +29,12 @@
 {% include 'index/modals/credential-details.html' %}
 
     <div id="json-editor-overlay" class="json-editor-overlay"></div>
-    <script id="initial-mds-bootstrap" type="application/json">
-        {{ {"jws": initial_mds_blob, "info": initial_mds_info} | tojson | safe }}
-    </script>
+    <div
+        id="initial-mds-bootstrap"
+        data-jws='{{ initial_mds_blob | tojson }}'
+        data-info='{{ initial_mds_info | tojson }}'
+        hidden
+    ></div>
     <script>
         (function () {
             const bootstrapEl = document.getElementById('initial-mds-bootstrap');
@@ -40,25 +43,41 @@
                 return;
             }
 
-            const rawPayload = bootstrapEl.textContent ? bootstrapEl.textContent.trim() : '';
-            let payload = null;
+            let initialJws = null;
+            let initialInfo = null;
 
-            if (rawPayload) {
+            const { jws: rawJws, info: rawInfo } = bootstrapEl.dataset;
+
+            if (typeof rawJws === 'string' && rawJws) {
                 try {
-                    payload = JSON.parse(rawPayload);
+                    const parsedJws = JSON.parse(rawJws);
+
+                    if (typeof parsedJws === 'string' && parsedJws) {
+                        initialJws = parsedJws;
+                    }
                 } catch (error) {
-                    console.error('Failed to parse initial MDS bootstrap payload.', error);
+                    console.error('Failed to parse initial MDS bootstrap JWS.', error);
                 }
             }
 
-            if (payload && typeof payload === 'object') {
-                if (typeof payload.jws === 'string') {
-                    window.__INITIAL_MDS_JWS__ = payload.jws;
-                }
+            if (typeof rawInfo === 'string' && rawInfo) {
+                try {
+                    const parsedInfo = JSON.parse(rawInfo);
 
-                if (payload.info && typeof payload.info === 'object') {
-                    window.__INITIAL_MDS_INFO__ = payload.info;
+                    if (parsedInfo && typeof parsedInfo === 'object') {
+                        initialInfo = parsedInfo;
+                    }
+                } catch (error) {
+                    console.error('Failed to parse initial MDS bootstrap info.', error);
                 }
+            }
+
+            if (typeof initialJws === 'string') {
+                window.__INITIAL_MDS_JWS__ = initialJws;
+            }
+
+            if (initialInfo && typeof initialInfo === 'object') {
+                window.__INITIAL_MDS_INFO__ = initialInfo;
             }
         })();
     </script>
