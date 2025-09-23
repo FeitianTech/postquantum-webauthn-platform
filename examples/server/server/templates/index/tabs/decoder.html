@@ -13,6 +13,11 @@
                         <button class="btn btn-secondary" onclick="clearDecoder()">Clear</button>
                     </div>
 
+                    <div class="progress" id="decoder-progress">
+                        <div class="spinner" aria-hidden="true"></div>
+                        <span id="decoder-progress-text">Decoding...</span>
+                    </div>
+
                     <div id="decoder-output" style="display: none;">
                         <h3>Decoded Information</h3>
                         <div id="decoded-content" class="decoder-summary"></div>

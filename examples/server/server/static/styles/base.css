@@ -230,6 +230,13 @@ body.modal-open {
     gap: 1rem;
 }
 
+#decoder-raw-content {
+    overflow-y: hidden;
+    resize: vertical;
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    line-height: 1.4;
+}
+
 .decoder-summary-header {
     display: flex;
     align-items: center;

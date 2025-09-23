@@ -1,4 +1,4 @@
-import { showStatus, hideStatus } from './status.js';
+import { showStatus, hideStatus, showProgress, hideProgress } from './status.js';
 
 const SPECIAL_LABELS = {
     aaguid: 'AAGUID',
@@ -82,6 +82,7 @@ export async function decodeResponse() {
     }
     if (rawContent) {
         rawContent.value = '';
+        rawContent.style.height = '';
     }
     if (rawContainer) {
         rawContainer.style.display = 'none';
@@ -94,6 +95,8 @@ export async function decodeResponse() {
         decoderOutput.style.display = 'none';
     }
     hideStatus('decoder');
+
+    showProgress('decoder', 'Decoding…');
 
     try {
         const response = await fetch('/api/decode', {
@@ -126,6 +129,7 @@ export async function decodeResponse() {
         }
         if (rawContent) {
             rawContent.value = JSON.stringify(payload, null, 2);
+            autoSizeRawTextarea(rawContent);
         }
         if (decoderOutput) {
             decoderOutput.style.display = 'block';
@@ -151,6 +155,8 @@ export async function decodeResponse() {
         }
         const message = error instanceof Error ? error.message : String(error);
         showStatus('decoder', `Decoding failed: ${message}`, 'error');
+    } finally {
+        hideProgress('decoder');
     }
 }
 
@@ -170,6 +176,7 @@ export function clearDecoder() {
     }
     if (rawContent) {
         rawContent.value = '';
+        rawContent.style.height = '';
     }
     if (rawContainer) {
         rawContainer.style.display = 'none';
@@ -182,11 +189,13 @@ export function clearDecoder() {
         output.style.display = 'none';
     }
     hideStatus('decoder');
+    hideProgress('decoder');
 }
 
 export function toggleRawDecoder() {
     const rawContainer = document.getElementById('decoder-raw-container');
     const toggleButton = document.getElementById('decoder-toggle-raw');
+    const rawContent = document.getElementById('decoder-raw-content');
     if (!rawContainer || !toggleButton) {
         return;
     }
@@ -200,7 +209,20 @@ export function toggleRawDecoder() {
         rawContainer.style.display = 'block';
         toggleButton.textContent = 'Hide raw';
         toggleButton.dataset.expanded = 'true';
+        if (rawContent) {
+            autoSizeRawTextarea(rawContent);
+        }
     }
+}
+
+function autoSizeRawTextarea(textarea) {
+    if (!textarea) {
+        return;
+    }
+    textarea.style.overflowY = 'hidden';
+    textarea.style.height = 'auto';
+    const scrollHeight = textarea.scrollHeight;
+    textarea.style.height = scrollHeight ? `${scrollHeight}px` : '';
 }
 
 function renderDecodedResult(container, payload) {
