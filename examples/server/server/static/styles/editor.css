@@ -10,6 +10,7 @@
     white-space: pre-wrap;
     display: flex;
     flex-direction: column;
+    flex: 1 1 auto;
     box-shadow: var(--shadow-soft);
     overflow: hidden;
 }

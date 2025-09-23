@@ -10,12 +10,12 @@
     grid-template-columns: 0.7fr 3fr 0.6fr;
     gap: 2rem;
     margin-top: 1rem;
-    align-items: start;
+    align-items: stretch;
     width: 100%;
 }
 
 .three-column > div {
-    align-self: start;
+    align-self: stretch;
     min-width: 0; /* Prevent grid overflow */
 }
 
@@ -23,6 +23,7 @@
     display: flex;
     flex-direction: column;
     width: 100%;
+    height: 100%;
 }
 
 .form-column h3, .json-editor-column h3, .credentials-column h3 {
@@ -93,8 +94,9 @@
     border: 1px solid rgba(0, 114, 206, 0.15);
     border-radius: 20px;
     padding: 1.25rem;
-    min-height: 600px;
-    max-height: 600px;
+    min-height: 520px;
+    flex: 1 1 auto;
+    max-height: none;
     overflow-y: auto;
     box-shadow: var(--shadow-soft);
 }
