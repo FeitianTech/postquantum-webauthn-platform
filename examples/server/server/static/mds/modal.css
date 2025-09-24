@@ -45,9 +45,9 @@
 }
 
 .mds-modal__dialog--raw {
-    width: min(80vw, 960px);
+    width: 80vw;
     max-width: 80vw;
-    height: min(80vh, 780px);
+    height: 80vh;
     max-height: 80vh;
 }
 
