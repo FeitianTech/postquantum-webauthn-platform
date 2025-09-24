@@ -1315,7 +1315,7 @@ export async function showRegistrationResultModal(credentialJson, relyingPartyIn
         || attestationHasCertificates;
 
     const hasAuthenticatorData = Boolean(registrationDetailState.authenticatorData);
-    const authenticatorButton = hasAuthenticatorData
+    const authenticatorButtonMarkup = hasAuthenticatorData
         ? '<button type="button" class="btn btn-small btn-secondary registration-authenticator-data-button">Authenticator Data</button>'
         : '';
     const shouldShowAuthenticatorError = !hasAuthenticatorData && authenticatorDataValue && authenticatorDecodeError;
@@ -1344,8 +1344,8 @@ export async function showRegistrationResultModal(credentialJson, relyingPartyIn
             certificateMessageHtml = '<div style="font-style: italic; color: #6c757d; margin-top: 0.75rem;">No attestation certificates available.</div>';
         }
 
-        if (authenticatorButton) {
-            buttonRowSegments.push(authenticatorButton);
+        if (authenticatorButtonMarkup) {
+            buttonRowSegments.push(authenticatorButtonMarkup);
         }
 
         const buttonRowHtml = buttonRowSegments.length
@@ -1365,12 +1365,12 @@ export async function showRegistrationResultModal(credentialJson, relyingPartyIn
                 ${authenticatorMessageHtml}
             </section>
         `;
-    } else if (authenticatorButton || shouldShowAuthenticatorError) {
-        const buttonRowHtml = authenticatorButton
-            ? `<div class="registration-detail-button-row registration-detail-button-row--solo">${authenticatorButton}</div>`
+    } else if (authenticatorButtonMarkup || shouldShowAuthenticatorError) {
+        const buttonRowHtml = authenticatorButtonMarkup
+            ? `<div class="registration-detail-button-row registration-detail-button-row--solo">${authenticatorButtonMarkup}</div>`
             : '';
         const authenticatorMessageHtml = shouldShowAuthenticatorError
-            ? `<div style="color: #dc3545; font-size: 0.9rem; ${authenticatorButton ? 'margin-top: 0.75rem;' : ''}">${escapeHtml(authenticatorDecodeError)}</div>`
+            ? `<div style="color: #dc3545; font-size: 0.9rem; ${authenticatorButtonMarkup ? 'margin-top: 0.75rem;' : ''}">${escapeHtml(authenticatorDecodeError)}</div>`
             : '';
 
         attestationSectionHtml = `
@@ -1398,9 +1398,9 @@ export async function showRegistrationResultModal(credentialJson, relyingPartyIn
         });
     });
 
-    const authenticatorButton = modalBody.querySelector('.registration-authenticator-data-button');
-    if (authenticatorButton) {
-        authenticatorButton.addEventListener('click', event => {
+    const authenticatorButtonEl = modalBody.querySelector('.registration-authenticator-data-button');
+    if (authenticatorButtonEl) {
+        authenticatorButtonEl.addEventListener('click', event => {
             event.preventDefault();
             openAuthenticatorDataDetail();
         });
