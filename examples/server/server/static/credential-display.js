@@ -223,6 +223,31 @@ function stripCertificateCollections(target) {
     });
 }
 
+function removeKeysFromObject(target, keys) {
+    if (!target || typeof target !== 'object' || !Array.isArray(keys) || !keys.length) {
+        return;
+    }
+
+    const process = value => {
+        if (value && typeof value === 'object') {
+            removeKeysFromObject(value, keys);
+        }
+    };
+
+    if (Array.isArray(target)) {
+        target.forEach(process);
+        return;
+    }
+
+    keys.forEach(key => {
+        if (Object.prototype.hasOwnProperty.call(target, key)) {
+            delete target[key];
+        }
+    });
+
+    Object.values(target).forEach(process);
+}
+
 function sanitizeParsedCertificateDetails(parsed) {
     if (!parsed || typeof parsed !== 'object') {
         return null;
@@ -348,6 +373,7 @@ function sanitiseAttestationObjectForDisplay(attestationObject) {
     }
 
     stripCertificateCollections(cloned);
+    removeKeysFromObject(cloned, ['summary', 'raw']);
     return cloned;
 }
 
