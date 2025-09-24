@@ -277,3 +277,30 @@
         </div>
     </div>
 </div>
+
+<div id="mds-authenticator-raw-modal" class="mds-modal" hidden aria-hidden="true">
+    <div
+        class="mds-modal__dialog mds-modal__dialog--raw"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="mds-authenticator-raw-title"
+    >
+        <div class="mds-modal__header">
+            <div class="mds-modal__heading">
+                <h3 id="mds-authenticator-raw-title" class="mds-modal__title">Raw Authenticator Data</h3>
+                <p id="mds-authenticator-raw-subtitle" class="mds-modal__subtitle"></p>
+            </div>
+            <button type="button" id="mds-authenticator-raw-close" class="mds-modal__close" aria-label="Close">×</button>
+        </div>
+        <div id="mds-authenticator-raw-body" class="mds-modal__body mds-modal__body--raw">
+            <textarea
+                id="mds-authenticator-raw-text"
+                class="mds-modal__textarea mds-modal__textarea--raw"
+                readonly
+                spellcheck="false"
+                wrap="off"
+                aria-label="Raw authenticator metadata"
+            ></textarea>
+        </div>
+    </div>
+</div>

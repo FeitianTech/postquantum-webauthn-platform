@@ -17,7 +17,6 @@ import {
     formatEnum,
     normaliseEnumKey,
     normaliseAaguid,
-    formatListValues,
     formatDetailValue,
     formatGuidCandidate,
     formatUpv,
@@ -755,12 +754,25 @@ function initializeState(root) {
     if (authenticatorRawButton instanceof HTMLButtonElement) {
         authenticatorRawButton.addEventListener('click', event => {
             event.preventDefault();
-            openAuthenticatorInfoRawWindow();
+            openAuthenticatorRawModal();
         });
         authenticatorRawButton.disabled = true;
         authenticatorRawButton.setAttribute('aria-disabled', 'true');
         authenticatorRawButton.setAttribute('tabindex', '-1');
-        authenticatorRawButton.setAttribute('title', 'Raw authenticator info unavailable');
+        authenticatorRawButton.setAttribute('title', 'Raw authenticator data unavailable');
+    }
+
+    const authenticatorRawModal = root.querySelector('#mds-authenticator-raw-modal');
+    const authenticatorRawClose = root.querySelector('#mds-authenticator-raw-close');
+    if (authenticatorRawClose) {
+        authenticatorRawClose.addEventListener('click', () => closeAuthenticatorRawModal());
+    }
+    if (authenticatorRawModal) {
+        authenticatorRawModal.addEventListener('click', event => {
+            if (event.target === authenticatorRawModal) {
+                closeAuthenticatorRawModal();
+            }
+        });
     }
 
     const handleTabChanged = event => {
@@ -813,7 +825,13 @@ function initializeState(root) {
         authenticatorModalBody: root.querySelector('#mds-authenticator-modal-body'),
         authenticatorModalClose: authenticatorClose,
         authenticatorModalRawButton: authenticatorRawButton,
-        authenticatorRawWindow: null,
+        authenticatorRawModal,
+        authenticatorRawTitle: root.querySelector('#mds-authenticator-raw-title'),
+        authenticatorRawSubtitle: root.querySelector('#mds-authenticator-raw-subtitle'),
+        authenticatorRawBody: root.querySelector('#mds-authenticator-raw-body'),
+        authenticatorRawTextarea: root.querySelector('#mds-authenticator-raw-text'),
+        authenticatorRawClose,
+        authenticatorRawReturnFocus: null,
         activeDetailEntry: null,
         highlightedRow: null,
         highlightedRowKey: '',
@@ -1851,31 +1869,31 @@ function buildDetailContent(entry) {
     }
     appendDetailGrid(metadataSection, metadataItems);
 
-    const algorithmChips = createChipList('Authentication Algorithms', formatListValues(metadata.authenticationAlgorithms));
+    const algorithmChips = createChipList('Authentication Algorithms', formatRawListValues(metadata.authenticationAlgorithms));
     if (algorithmChips) {
         metadataSection.appendChild(algorithmChips);
     }
-    const encodingChips = createChipList('Public Key Algorithms', formatListValues(metadata.publicKeyAlgAndEncodings));
+    const encodingChips = createChipList('Public Key Algorithms', formatRawListValues(metadata.publicKeyAlgAndEncodings));
     if (encodingChips) {
         metadataSection.appendChild(encodingChips);
     }
-    const attestationChips = createChipList('Attestation Types', formatListValues(metadata.attestationTypes));
+    const attestationChips = createChipList('Attestation Types', formatRawListValues(metadata.attestationTypes));
     if (attestationChips) {
         metadataSection.appendChild(attestationChips);
     }
-    const keyProtectionChips = createChipList('Key Protection', formatListValues(metadata.keyProtection));
+    const keyProtectionChips = createChipList('Key Protection', formatRawListValues(metadata.keyProtection));
     if (keyProtectionChips) {
         metadataSection.appendChild(keyProtectionChips);
     }
-    const matcherChips = createChipList('Matcher Protection', formatListValues(metadata.matcherProtection));
+    const matcherChips = createChipList('Matcher Protection', formatRawListValues(metadata.matcherProtection));
     if (matcherChips) {
         metadataSection.appendChild(matcherChips);
     }
-    const attachmentChips = createChipList('Attachment Hints', formatListValues(metadata.attachmentHint));
+    const attachmentChips = createChipList('Attachment Hints', formatRawListValues(metadata.attachmentHint));
     if (attachmentChips) {
         metadataSection.appendChild(attachmentChips);
     }
-    const displayChips = createChipList('TC Display', formatListValues(metadata.tcDisplay));
+    const displayChips = createChipList('TC Display', formatRawListValues(metadata.tcDisplay));
     if (displayChips) {
         metadataSection.appendChild(displayChips);
     }
@@ -2041,7 +2059,9 @@ function renderUserVerificationDetails(details) {
         content.className = 'mds-detail-card__content';
 
         validEntries.forEach(item => {
-            const method = item.userVerificationMethod ? formatEnum(item.userVerificationMethod) : '';
+            const method = item.userVerificationMethod !== undefined && item.userVerificationMethod !== null
+                ? String(item.userVerificationMethod)
+                : '';
             if (method) {
                 const methodEl = document.createElement('div');
                 methodEl.textContent = method;
@@ -2102,32 +2122,38 @@ function renderAttestationCertificates(certificates) {
     return container;
 }
 
-function formatAuthenticatorInfoValues(value) {
+function toRawDisplayString(value) {
+    if (value === undefined || value === null) {
+        return '';
+    }
+    if (typeof value === 'string') {
+        return value;
+    }
+    if (typeof value === 'number' || typeof value === 'bigint') {
+        return String(value);
+    }
+    if (typeof value === 'boolean') {
+        return value ? 'true' : 'false';
+    }
+    try {
+        return JSON.stringify(value);
+    } catch (error) {
+        try {
+            return String(value);
+        } catch (stringError) {
+            return '';
+        }
+    }
+}
+
+function formatRawListValues(value) {
     return extractList(value)
-        .map(item => {
-            if (item === undefined || item === null) {
-                return '';
-            }
-            if (typeof item === 'string') {
-                return item;
-            }
-            if (typeof item === 'number' || typeof item === 'bigint') {
-                return String(item);
-            }
-            if (typeof item === 'boolean') {
-                return item ? 'true' : 'false';
-            }
-            try {
-                return JSON.stringify(item);
-            } catch (error) {
-                try {
-                    return String(item);
-                } catch (stringError) {
-                    return '';
-                }
-            }
-        })
+        .map(item => toRawDisplayString(item))
         .filter(text => text !== '');
+}
+
+function formatAuthenticatorInfoValues(value) {
+    return formatRawListValues(value);
 }
 
 function renderAuthenticatorInfo(info) {
@@ -2217,6 +2243,55 @@ function getAuthenticatorInfoFromEntry(entry) {
     return null;
 }
 
+function getAuthenticatorRawData(entry) {
+    if (!entry || typeof entry !== 'object') {
+        return null;
+    }
+
+    const rawEntry = entry.rawEntry;
+    const base = rawEntry && typeof rawEntry === 'object' && !Array.isArray(rawEntry)
+        ? { ...rawEntry }
+        : {};
+
+    const metadata = entry.metadataStatement && typeof entry.metadataStatement === 'object'
+        ? entry.metadataStatement
+        : null;
+    if (metadata && base.metadataStatement === undefined) {
+        base.metadataStatement = metadata;
+    }
+
+    if (base.attestationCertificateKeyIdentifiers === undefined) {
+        const identifiers = Array.isArray(entry.attestationKeyIdentifiers)
+            ? entry.attestationKeyIdentifiers
+            : [];
+        if (identifiers.length) {
+            base.attestationCertificateKeyIdentifiers = identifiers;
+        }
+    }
+
+    if (base.statusReports === undefined && Array.isArray(entry.statusReports) && entry.statusReports.length) {
+        base.statusReports = entry.statusReports;
+    }
+
+    if (base.aaguid === undefined && entry.aaguid) {
+        base.aaguid = entry.aaguid;
+    }
+
+    if (base.id === undefined && entry.id) {
+        base.id = entry.id;
+    }
+
+    if (base.timeOfLastStatusChange === undefined) {
+        if (rawEntry && typeof rawEntry === 'object' && rawEntry.timeOfLastStatusChange) {
+            base.timeOfLastStatusChange = rawEntry.timeOfLastStatusChange;
+        } else if (entry.timeOfLastStatusChange) {
+            base.timeOfLastStatusChange = entry.timeOfLastStatusChange;
+        }
+    }
+
+    return Object.keys(base).length ? base : null;
+}
+
 function renderStatusReports(reports) {
     const list = Array.isArray(reports) ? reports : [];
     if (!list.length) {
@@ -2243,11 +2318,15 @@ function renderStatusReports(reports) {
         const row = document.createElement('tr');
 
         const statusCell = document.createElement('td');
-        statusCell.textContent = report.status ? formatEnum(report.status) : '—';
+        statusCell.textContent = report.status !== undefined && report.status !== null
+            ? String(report.status)
+            : '—';
         row.appendChild(statusCell);
 
         const dateCell = document.createElement('td');
-        dateCell.textContent = report.effectiveDate ? formatDate(report.effectiveDate) : '—';
+        dateCell.textContent = report.effectiveDate !== undefined && report.effectiveDate !== null
+            ? String(report.effectiveDate)
+            : '—';
         row.appendChild(dateCell);
 
         const versionCell = document.createElement('td');
@@ -2486,123 +2565,235 @@ function closeCertificateModal() {
     notifyGlobalScrollLock();
 }
 
-function openAuthenticatorInfoRawWindow() {
-    if (!mdsState || typeof window === 'undefined') {
+function openAuthenticatorRawModal() {
+    if (!mdsState?.authenticatorRawModal) {
         return;
     }
 
     const entry = mdsState.activeDetailEntry;
-    const info = getAuthenticatorInfoFromEntry(entry);
-    if (!info) {
+    const rawData = getAuthenticatorRawData(entry);
+    if (!rawData) {
         return;
     }
 
-    let jsonString = '';
-    try {
-        jsonString = JSON.stringify(info, (_, value) => (typeof value === 'bigint' ? value.toString() : value), 2);
-    } catch (error) {
-        try {
-            jsonString = String(info);
-        } catch (stringError) {
-            jsonString = '';
-        }
-    }
-
-    if (!jsonString) {
+    const rawText = stringifyAuthenticatorRawData(rawData);
+    if (!rawText) {
         return;
     }
-
-    if (mdsState.authenticatorRawWindow && mdsState.authenticatorRawWindow.closed) {
-        mdsState.authenticatorRawWindow = null;
-    }
-
-    const popupFeatures = [
-        'width=900',
-        'height=700',
-        'resizable=yes',
-        'scrollbars=yes',
-        'menubar=no',
-        'toolbar=no',
-        'location=no',
-        'status=no',
-    ].join(',');
-
-    const rawWindow = mdsState.authenticatorRawWindow || window.open('', 'mdsAuthenticatorRaw', popupFeatures);
-    if (!rawWindow || !rawWindow.document) {
-        console.warn('Unable to open window for authenticator info raw data.');
-        return;
-    }
-    rawWindow.opener = null;
-    mdsState.authenticatorRawWindow = rawWindow;
 
     const titleParts = [];
     if (entry?.name && typeof entry.name === 'string' && entry.name.trim()) {
         titleParts.push(entry.name.trim());
     }
-    titleParts.push('Authenticator Get Info');
-    const headingText = titleParts.join(' – ');
+    titleParts.push('Authenticator Raw Data');
+    const titleText = titleParts.join(' – ');
 
-    const doc = rawWindow.document;
-    doc.open();
-    doc.write('<!DOCTYPE html><html><head><meta charset="utf-8"></head><body></body></html>');
-    doc.close();
-    doc.title = headingText;
-    doc.body.style.margin = '0';
-    doc.body.style.background = '#f5f8fb';
-    doc.body.style.height = '100vh';
-    doc.body.style.display = 'flex';
-
-    const wrapper = doc.createElement('div');
-    wrapper.style.padding = '1.75rem';
-    wrapper.style.fontFamily = '"Segoe UI", "Helvetica Neue", Arial, sans-serif';
-    wrapper.style.display = 'flex';
-    wrapper.style.flexDirection = 'column';
-    wrapper.style.gap = '1.25rem';
-    wrapper.style.flex = '1';
-    wrapper.style.height = '100%';
-    wrapper.style.minHeight = '0';
-
-    const heading = doc.createElement('h1');
-    heading.textContent = headingText;
-    heading.style.margin = '0';
-    heading.style.fontSize = '1.2rem';
-    heading.style.fontWeight = '600';
-    heading.style.color = '#0f2740';
-    wrapper.appendChild(heading);
-
-    const textarea = doc.createElement('textarea');
-    textarea.value = jsonString;
-    textarea.readOnly = true;
-    textarea.setAttribute('readonly', 'readonly');
-    textarea.setAttribute('aria-label', 'Authenticator getInfo raw data');
-    textarea.spellcheck = false;
-    textarea.wrap = 'off';
-    textarea.style.flex = '1';
-    textarea.style.minHeight = '0';
-    textarea.style.width = '100%';
-    textarea.style.resize = 'vertical';
-    textarea.style.fontFamily = "'SFMono-Regular','JetBrains Mono','Fira Code','Consolas',monospace";
-    textarea.style.fontSize = '0.9rem';
-    textarea.style.lineHeight = '1.55';
-    textarea.style.padding = '1.25rem';
-    textarea.style.margin = '0';
-    textarea.style.boxSizing = 'border-box';
-    textarea.style.background = '#ffffff';
-    textarea.style.borderRadius = '18px';
-    textarea.style.border = '1px solid rgba(0, 114, 206, 0.14)';
-    textarea.style.boxShadow = '0 20px 45px rgba(15, 39, 64, 0.18)';
-    textarea.style.color = '#0f2740';
-    textarea.style.overflow = 'auto';
-    wrapper.appendChild(textarea);
-
-    doc.body.appendChild(wrapper);
-
-    rawWindow.focus();
-    textarea.scrollTop = 0;
-    textarea.scrollLeft = 0;
-    if (typeof textarea.setSelectionRange === 'function') {
-        textarea.setSelectionRange(0, 0);
+    if (mdsState.authenticatorRawTitle) {
+        mdsState.authenticatorRawTitle.textContent = titleText;
     }
+    if (mdsState.authenticatorRawSubtitle) {
+        mdsState.authenticatorRawSubtitle.textContent = formatDetailSubtitle(entry);
+    }
+
+    mdsState.authenticatorRawReturnFocus = document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : mdsState.authenticatorModalRawButton || null;
+
+    setAuthenticatorRawTextareaContent(rawText);
+
+    mdsState.authenticatorRawModal.hidden = false;
+    mdsState.authenticatorRawModal.setAttribute('aria-hidden', 'false');
+
+    resetScrollPositions(mdsState.authenticatorRawBody, mdsState.authenticatorRawTextarea);
+    notifyGlobalScrollLock();
+
+    const focusTarget = mdsState.authenticatorRawClose instanceof HTMLElement
+        ? mdsState.authenticatorRawClose
+        : mdsState.authenticatorRawTextarea instanceof HTMLElement
+            ? mdsState.authenticatorRawTextarea
+            : null;
+
+    if (focusTarget) {
+        requestAnimationFrame(() => {
+            focusTarget.focus();
+        });
+    }
+}
+
+function closeAuthenticatorRawModal() {
+    if (!mdsState?.authenticatorRawModal) {
+        return;
+    }
+
+    if (mdsState.authenticatorRawModal.hidden) {
+        return;
+    }
+
+    mdsState.authenticatorRawModal.hidden = true;
+    mdsState.authenticatorRawModal.setAttribute('aria-hidden', 'true');
+
+    if (mdsState.authenticatorRawTextarea instanceof HTMLTextAreaElement) {
+        mdsState.authenticatorRawTextarea.value = '';
+    } else if (mdsState.authenticatorRawTextarea) {
+        mdsState.authenticatorRawTextarea.textContent = '';
+    }
+
+    resetScrollPositions(mdsState.authenticatorRawBody, mdsState.authenticatorRawTextarea);
+    notifyGlobalScrollLock();
+
+    const focusTarget = mdsState.authenticatorRawReturnFocus;
+    mdsState.authenticatorRawReturnFocus = null;
+    if (focusTarget instanceof HTMLElement) {
+        requestAnimationFrame(() => {
+            focusTarget.focus();
+        });
+        return;
+    }
+    if (mdsState.authenticatorModalRawButton instanceof HTMLElement) {
+        requestAnimationFrame(() => {
+            mdsState.authenticatorModalRawButton.focus();
+        });
+    }
+}
+
+function setAuthenticatorRawTextareaContent(text) {
+    if (!mdsState?.authenticatorRawTextarea) {
+        return;
+    }
+
+    const target = mdsState.authenticatorRawTextarea;
+    if (target instanceof HTMLTextAreaElement) {
+        target.value = text;
+        target.scrollTop = 0;
+        target.scrollLeft = 0;
+        if (typeof target.setSelectionRange === 'function') {
+            target.setSelectionRange(0, 0);
+        }
+        return;
+    }
+
+    target.textContent = text;
+}
+
+const RAW_TEXT_INDENT = '    ';
+
+function stringifyAuthenticatorRawData(value) {
+    const lines = buildAuthenticatorRawLines(value);
+    return lines.join('\n');
+}
+
+function buildAuthenticatorRawLines(value, depth = 0, label) {
+    const indent = RAW_TEXT_INDENT.repeat(depth);
+    const lines = [];
+
+    const addLine = text => {
+        if (text !== undefined && text !== null) {
+            lines.push(text);
+        }
+    };
+
+    if (label !== undefined) {
+        if (Array.isArray(value)) {
+            addLine(`${indent}${label}:`);
+            if (!value.length) {
+                addLine(`${indent}${RAW_TEXT_INDENT}[]`);
+                return lines;
+            }
+            value.forEach(item => {
+                if (Array.isArray(item) || isPlainObject(item)) {
+                    const childLines = buildAuthenticatorRawLines(item, depth + 1);
+                    lines.push(...childLines);
+                } else {
+                    addLine(`${indent}${RAW_TEXT_INDENT}${formatRawPrimitive(item)}`);
+                }
+            });
+            return lines;
+        }
+
+        if (isPlainObject(value)) {
+            addLine(`${indent}${label}:`);
+            const keys = Object.keys(value);
+            if (!keys.length) {
+                addLine(`${indent}${RAW_TEXT_INDENT}{}`);
+                return lines;
+            }
+            keys.forEach(key => {
+                const childLines = buildAuthenticatorRawLines(value[key], depth + 1, key);
+                lines.push(...childLines);
+            });
+            return lines;
+        }
+
+        addLine(`${indent}${label}: ${formatRawPrimitive(value)}`);
+        return lines;
+    }
+
+    if (Array.isArray(value)) {
+        if (!value.length) {
+            addLine(`${indent}[]`);
+            return lines;
+        }
+        value.forEach(item => {
+            if (Array.isArray(item) || isPlainObject(item)) {
+                const childLines = buildAuthenticatorRawLines(item, depth + 1);
+                lines.push(...childLines);
+            } else {
+                addLine(`${indent}${RAW_TEXT_INDENT}${formatRawPrimitive(item)}`);
+            }
+        });
+        return lines;
+    }
+
+    if (isPlainObject(value)) {
+        const keys = Object.keys(value);
+        if (!keys.length) {
+            addLine(`${indent}{}`);
+            return lines;
+        }
+        keys.forEach(key => {
+            const childLines = buildAuthenticatorRawLines(value[key], depth, key);
+            lines.push(...childLines);
+        });
+        return lines;
+    }
+
+    addLine(`${indent}${formatRawPrimitive(value)}`);
+    return lines;
+}
+
+function formatRawPrimitive(value) {
+    if (value === undefined) {
+        return 'undefined';
+    }
+    if (value === null) {
+        return 'null';
+    }
+    if (typeof value === 'string') {
+        try {
+            return JSON.stringify(value);
+        } catch (error) {
+            return `"${value.replace(/"/g, '\\"')}"`;
+        }
+    }
+    if (typeof value === 'number' || typeof value === 'bigint') {
+        return String(value);
+    }
+    if (typeof value === 'boolean') {
+        return value ? 'true' : 'false';
+    }
+    try {
+        return JSON.stringify(value);
+    } catch (error) {
+        try {
+            return String(value);
+        } catch (stringError) {
+            return '';
+        }
+    }
+}
+
+function isPlainObject(value) {
+    return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
 
 function updateAuthenticatorRawButton(entry) {
@@ -2611,13 +2802,13 @@ function updateAuthenticatorRawButton(entry) {
         return;
     }
 
-    const info = getAuthenticatorInfoFromEntry(entry);
-    const hasInfo = info && typeof info === 'object' && Object.keys(info).length > 0;
+    const rawData = getAuthenticatorRawData(entry);
+    const hasRawData = rawData && typeof rawData === 'object' && Object.keys(rawData).length > 0;
 
-    button.disabled = !hasInfo;
-    button.setAttribute('aria-disabled', hasInfo ? 'false' : 'true');
-    button.setAttribute('title', hasInfo ? 'View raw authenticator info' : 'Raw authenticator info unavailable');
-    if (hasInfo) {
+    button.disabled = !hasRawData;
+    button.setAttribute('aria-disabled', hasRawData ? 'false' : 'true');
+    button.setAttribute('title', hasRawData ? 'View raw authenticator data' : 'Raw authenticator data unavailable');
+    if (hasRawData) {
         button.removeAttribute('tabindex');
     } else {
         button.setAttribute('tabindex', '-1');
@@ -2628,6 +2819,8 @@ function openAuthenticatorModal(entry) {
     if (!mdsState?.authenticatorModal) {
         return;
     }
+
+    closeAuthenticatorRawModal();
 
     if (entry) {
         mdsState.activeDetailEntry = entry;
@@ -2663,6 +2856,7 @@ function closeAuthenticatorModal() {
     if (!mdsState?.authenticatorModal) {
         return;
     }
+    closeAuthenticatorRawModal();
     mdsState.authenticatorModal.hidden = true;
     mdsState.authenticatorModal.setAttribute('aria-hidden', 'true');
     resetScrollPositions(
