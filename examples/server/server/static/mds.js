@@ -17,9 +17,7 @@ import {
     formatEnum,
     normaliseEnumKey,
     normaliseAaguid,
-    formatListValues,
     formatDetailValue,
-    formatAuthenticatorAlgorithms,
     formatGuidCandidate,
     formatUpv,
     extractList,
@@ -752,6 +750,17 @@ function initializeState(root) {
             }
         });
     }
+    const authenticatorRawButton = root.querySelector('#mds-authenticator-modal-raw');
+    if (authenticatorRawButton instanceof HTMLButtonElement) {
+        authenticatorRawButton.addEventListener('click', event => {
+            event.preventDefault();
+            openAuthenticatorRawWindow();
+        });
+        authenticatorRawButton.disabled = true;
+        authenticatorRawButton.setAttribute('aria-disabled', 'true');
+        authenticatorRawButton.setAttribute('tabindex', '-1');
+        authenticatorRawButton.setAttribute('title', 'Raw authenticator data unavailable');
+    }
 
     const handleTabChanged = event => {
         if (event?.detail?.tab !== 'mds') {
@@ -802,6 +811,8 @@ function initializeState(root) {
         authenticatorModalSubtitle: root.querySelector('#mds-authenticator-modal-subtitle'),
         authenticatorModalBody: root.querySelector('#mds-authenticator-modal-body'),
         authenticatorModalClose: authenticatorClose,
+        authenticatorModalRawButton: authenticatorRawButton,
+        authenticatorRawWindow: null,
         activeDetailEntry: null,
         highlightedRow: null,
         highlightedRowKey: '',
@@ -1839,31 +1850,31 @@ function buildDetailContent(entry) {
     }
     appendDetailGrid(metadataSection, metadataItems);
 
-    const algorithmChips = createChipList('Authentication Algorithms', formatListValues(metadata.authenticationAlgorithms));
+    const algorithmChips = createChipList('Authentication Algorithms', formatRawListValues(metadata.authenticationAlgorithms));
     if (algorithmChips) {
         metadataSection.appendChild(algorithmChips);
     }
-    const encodingChips = createChipList('Public Key Algorithms', formatListValues(metadata.publicKeyAlgAndEncodings));
+    const encodingChips = createChipList('Public Key Algorithms', formatRawListValues(metadata.publicKeyAlgAndEncodings));
     if (encodingChips) {
         metadataSection.appendChild(encodingChips);
     }
-    const attestationChips = createChipList('Attestation Types', formatListValues(metadata.attestationTypes));
+    const attestationChips = createChipList('Attestation Types', formatRawListValues(metadata.attestationTypes));
     if (attestationChips) {
         metadataSection.appendChild(attestationChips);
     }
-    const keyProtectionChips = createChipList('Key Protection', formatListValues(metadata.keyProtection));
+    const keyProtectionChips = createChipList('Key Protection', formatRawListValues(metadata.keyProtection));
     if (keyProtectionChips) {
         metadataSection.appendChild(keyProtectionChips);
     }
-    const matcherChips = createChipList('Matcher Protection', formatListValues(metadata.matcherProtection));
+    const matcherChips = createChipList('Matcher Protection', formatRawListValues(metadata.matcherProtection));
     if (matcherChips) {
         metadataSection.appendChild(matcherChips);
     }
-    const attachmentChips = createChipList('Attachment Hints', formatListValues(metadata.attachmentHint));
+    const attachmentChips = createChipList('Attachment Hints', formatRawListValues(metadata.attachmentHint));
     if (attachmentChips) {
         metadataSection.appendChild(attachmentChips);
     }
-    const displayChips = createChipList('TC Display', formatListValues(metadata.tcDisplay));
+    const displayChips = createChipList('TC Display', formatRawListValues(metadata.tcDisplay));
     if (displayChips) {
         metadataSection.appendChild(displayChips);
     }
@@ -2029,7 +2040,9 @@ function renderUserVerificationDetails(details) {
         content.className = 'mds-detail-card__content';
 
         validEntries.forEach(item => {
-            const method = item.userVerificationMethod ? formatEnum(item.userVerificationMethod) : '';
+            const method = item.userVerificationMethod !== undefined && item.userVerificationMethod !== null
+                ? String(item.userVerificationMethod)
+                : '';
             if (method) {
                 const methodEl = document.createElement('div');
                 methodEl.textContent = method;
@@ -2090,6 +2103,40 @@ function renderAttestationCertificates(certificates) {
     return container;
 }
 
+function toRawDisplayString(value) {
+    if (value === undefined || value === null) {
+        return '';
+    }
+    if (typeof value === 'string') {
+        return value;
+    }
+    if (typeof value === 'number' || typeof value === 'bigint') {
+        return String(value);
+    }
+    if (typeof value === 'boolean') {
+        return value ? 'true' : 'false';
+    }
+    try {
+        return JSON.stringify(value);
+    } catch (error) {
+        try {
+            return String(value);
+        } catch (stringError) {
+            return '';
+        }
+    }
+}
+
+function formatRawListValues(value) {
+    return extractList(value)
+        .map(item => toRawDisplayString(item))
+        .filter(text => text !== '');
+}
+
+function formatAuthenticatorInfoValues(value) {
+    return formatRawListValues(value);
+}
+
 function renderAuthenticatorInfo(info) {
     if (!info || typeof info !== 'object') {
         return null;
@@ -2119,25 +2166,23 @@ function renderAuthenticatorInfo(info) {
     });
     appendDetailGrid(section, gridItems);
 
-    const versionChips = createChipList('Versions', formatListValues(info.versions));
+    const versionChips = createChipList('Versions', formatAuthenticatorInfoValues(info.versions));
     if (versionChips) {
         section.appendChild(versionChips);
     }
-    const extensionChips = createChipList('Extensions', formatListValues(info.extensions));
+    const extensionChips = createChipList('Extensions', formatAuthenticatorInfoValues(info.extensions));
     if (extensionChips) {
         section.appendChild(extensionChips);
     }
-    const transportChips = createChipList('Transports', formatListValues(info.transports));
+    const transportChips = createChipList('Transports', formatAuthenticatorInfoValues(info.transports));
     if (transportChips) {
         section.appendChild(transportChips);
     }
-    const algorithmChips = createChipList('Algorithms', formatAuthenticatorAlgorithms(info.algorithms));
+    const algorithmChips = createChipList('Algorithms', formatAuthenticatorInfoValues(info.algorithms));
     if (algorithmChips) {
         section.appendChild(algorithmChips);
     }
-    const pinProtocols = Array.isArray(info.pinUvAuthProtocols)
-        ? info.pinUvAuthProtocols.map(protocol => String(protocol)).filter(Boolean)
-        : [];
+    const pinProtocols = formatAuthenticatorInfoValues(info.pinUvAuthProtocols);
     if (pinProtocols.length) {
         const chip = createChipList('pinUvAuth Protocols', pinProtocols);
         if (chip) {
@@ -2159,6 +2204,73 @@ function renderAuthenticatorInfo(info) {
     }
 
     return section;
+}
+
+function getAuthenticatorInfoFromEntry(entry) {
+    if (!entry || typeof entry !== 'object') {
+        return null;
+    }
+
+    const directInfo = entry.metadataStatement?.authenticatorGetInfo;
+    if (directInfo && typeof directInfo === 'object') {
+        return directInfo;
+    }
+
+    const rawInfo = entry.rawEntry?.metadataStatement?.authenticatorGetInfo;
+    if (rawInfo && typeof rawInfo === 'object') {
+        return rawInfo;
+    }
+
+    return null;
+}
+
+function getAuthenticatorRawData(entry) {
+    if (!entry || typeof entry !== 'object') {
+        return null;
+    }
+
+    const rawEntry = entry.rawEntry;
+    const base = rawEntry && typeof rawEntry === 'object' && !Array.isArray(rawEntry)
+        ? { ...rawEntry }
+        : {};
+
+    const metadata = entry.metadataStatement && typeof entry.metadataStatement === 'object'
+        ? entry.metadataStatement
+        : null;
+    if (metadata && base.metadataStatement === undefined) {
+        base.metadataStatement = metadata;
+    }
+
+    if (base.attestationCertificateKeyIdentifiers === undefined) {
+        const identifiers = Array.isArray(entry.attestationKeyIdentifiers)
+            ? entry.attestationKeyIdentifiers
+            : [];
+        if (identifiers.length) {
+            base.attestationCertificateKeyIdentifiers = identifiers;
+        }
+    }
+
+    if (base.statusReports === undefined && Array.isArray(entry.statusReports) && entry.statusReports.length) {
+        base.statusReports = entry.statusReports;
+    }
+
+    if (base.aaguid === undefined && entry.aaguid) {
+        base.aaguid = entry.aaguid;
+    }
+
+    if (base.id === undefined && entry.id) {
+        base.id = entry.id;
+    }
+
+    if (base.timeOfLastStatusChange === undefined) {
+        if (rawEntry && typeof rawEntry === 'object' && rawEntry.timeOfLastStatusChange) {
+            base.timeOfLastStatusChange = rawEntry.timeOfLastStatusChange;
+        } else if (entry.timeOfLastStatusChange) {
+            base.timeOfLastStatusChange = entry.timeOfLastStatusChange;
+        }
+    }
+
+    return Object.keys(base).length ? base : null;
 }
 
 function renderStatusReports(reports) {
@@ -2187,11 +2299,15 @@ function renderStatusReports(reports) {
         const row = document.createElement('tr');
 
         const statusCell = document.createElement('td');
-        statusCell.textContent = report.status ? formatEnum(report.status) : '—';
+        statusCell.textContent = report.status !== undefined && report.status !== null
+            ? String(report.status)
+            : '—';
         row.appendChild(statusCell);
 
         const dateCell = document.createElement('td');
-        dateCell.textContent = report.effectiveDate ? formatDate(report.effectiveDate) : '—';
+        dateCell.textContent = report.effectiveDate !== undefined && report.effectiveDate !== null
+            ? String(report.effectiveDate)
+            : '—';
         row.appendChild(dateCell);
 
         const versionCell = document.createElement('td');
@@ -2430,6 +2546,331 @@ function closeCertificateModal() {
     notifyGlobalScrollLock();
 }
 
+function openAuthenticatorRawWindow() {
+    if (!mdsState) {
+        return;
+    }
+
+    const entry = mdsState.activeDetailEntry;
+    const rawData = getAuthenticatorRawData(entry);
+    if (!rawData) {
+        return;
+    }
+
+    const rawText = stringifyAuthenticatorRawData(rawData);
+    if (!rawText || typeof window === 'undefined') {
+        return;
+    }
+
+    const viewportWidth = Number.isFinite(window.innerWidth) && window.innerWidth > 0
+        ? window.innerWidth
+        : (window.screen && Number.isFinite(window.screen.availWidth) ? window.screen.availWidth : 1280);
+    const viewportHeight = Number.isFinite(window.innerHeight) && window.innerHeight > 0
+        ? window.innerHeight
+        : (window.screen && Number.isFinite(window.screen.availHeight) ? window.screen.availHeight : 720);
+
+    const width = Math.max(Math.round(viewportWidth * 0.8), 640);
+    const height = Math.max(Math.round(viewportHeight * 0.8), 480);
+    const features = `popup=yes,width=${width},height=${height},resizable=yes,scrollbars=yes`;
+    const viewerName = 'mdsAuthenticatorRawViewer';
+
+    let viewer = mdsState.authenticatorRawWindow;
+    if (!viewer || viewer.closed) {
+        viewer = window.open('', viewerName, features);
+    } else {
+        viewer.focus();
+        try {
+            viewer.resizeTo(width, height);
+        } catch (error) {
+            // Ignore resize errors caused by browser restrictions.
+        }
+    }
+
+    if (!viewer) {
+        return;
+    }
+
+    mdsState.authenticatorRawWindow = viewer;
+
+    let doc;
+    try {
+        doc = viewer.document;
+    } catch (error) {
+        return;
+    }
+
+    if (!doc) {
+        return;
+    }
+
+    const titleParts = [];
+    if (entry?.name && typeof entry.name === 'string' && entry.name.trim()) {
+        titleParts.push(entry.name.trim());
+    }
+    titleParts.push('Authenticator Raw Data');
+    const titleText = titleParts.join(' – ');
+    const subtitleText = formatDetailSubtitle(entry);
+
+    const template = `<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Authenticator Raw Data</title>
+    <style>
+        :root { color-scheme: light; }
+        body {
+            margin: 0;
+            font-family: 'SFMono-Regular', 'JetBrains Mono', 'Fira Code', monospace;
+            background: #f4f7fb;
+            color: #0f2740;
+        }
+        .raw-window {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        header {
+            padding: 1rem 1.5rem;
+            background: #ffffff;
+            border-bottom: 1px solid rgba(15, 39, 64, 0.12);
+            box-shadow: 0 6px 18px rgba(15, 39, 64, 0.05);
+        }
+        h1 {
+            margin: 0;
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+        p {
+            margin: 0.35rem 0 0;
+            font-size: 0.85rem;
+            color: #48607a;
+        }
+        textarea {
+            flex: 1;
+            width: 100%;
+            border: none;
+            resize: none;
+            padding: 1.25rem;
+            background: #ffffff;
+            font-family: 'SFMono-Regular', 'JetBrains Mono', 'Fira Code', monospace;
+            font-size: 0.85rem;
+            line-height: 1.5;
+            color: inherit;
+            box-sizing: border-box;
+            outline: none;
+        }
+        textarea:focus {
+            outline: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="raw-window">
+        <header>
+            <h1 id="mds-raw-title">Authenticator Raw Data</h1>
+            <p id="mds-raw-subtitle" style="display: none;"></p>
+        </header>
+        <textarea id="mds-raw-textarea" readonly spellcheck="false" wrap="off" aria-label="Raw authenticator metadata"></textarea>
+    </div>
+</body>
+</html>`;
+
+    doc.open();
+    doc.write(template);
+    doc.close();
+
+    doc.title = titleText;
+
+    const titleEl = doc.getElementById('mds-raw-title');
+    if (titleEl) {
+        titleEl.textContent = titleText;
+    }
+
+    const subtitleEl = doc.getElementById('mds-raw-subtitle');
+    if (subtitleEl) {
+        if (subtitleText) {
+            subtitleEl.textContent = subtitleText;
+            subtitleEl.style.display = '';
+        } else {
+            subtitleEl.textContent = '';
+            subtitleEl.style.display = 'none';
+        }
+    }
+
+    const textarea = doc.getElementById('mds-raw-textarea');
+    if (textarea) {
+        textarea.value = rawText;
+        textarea.scrollTop = 0;
+        textarea.scrollLeft = 0;
+        if (typeof textarea.setSelectionRange === 'function') {
+            try {
+                textarea.setSelectionRange(0, 0);
+            } catch (error) {
+                // Ignore selection errors in unsupported browsers.
+            }
+        }
+        if (typeof textarea.focus === 'function') {
+            textarea.focus();
+        }
+    }
+
+    try {
+        viewer.focus();
+    } catch (error) {
+        // Some browsers may block programmatic focus; ignore.
+    }
+
+    try {
+        viewer.onbeforeunload = () => {
+            if (mdsState && mdsState.authenticatorRawWindow === viewer) {
+                mdsState.authenticatorRawWindow = null;
+            }
+        };
+    } catch (error) {
+        // Ignore if the viewer does not permit assigning event handlers.
+    }
+}
+
+const RAW_TEXT_INDENT = '    ';
+
+function stringifyAuthenticatorRawData(value) {
+    const lines = buildAuthenticatorRawLines(value);
+    return lines.join('\n');
+}
+
+function buildAuthenticatorRawLines(value, depth = 0, label) {
+    const indent = RAW_TEXT_INDENT.repeat(depth);
+    const lines = [];
+
+    const addLine = text => {
+        if (text !== undefined && text !== null) {
+            lines.push(text);
+        }
+    };
+
+    if (label !== undefined) {
+        if (Array.isArray(value)) {
+            addLine(`${indent}${label}:`);
+            if (!value.length) {
+                addLine(`${indent}${RAW_TEXT_INDENT}[]`);
+                return lines;
+            }
+            value.forEach(item => {
+                if (Array.isArray(item) || isPlainObject(item)) {
+                    const childLines = buildAuthenticatorRawLines(item, depth + 1);
+                    lines.push(...childLines);
+                } else {
+                    addLine(`${indent}${RAW_TEXT_INDENT}${formatRawPrimitive(item)}`);
+                }
+            });
+            return lines;
+        }
+
+        if (isPlainObject(value)) {
+            addLine(`${indent}${label}:`);
+            const keys = Object.keys(value);
+            if (!keys.length) {
+                addLine(`${indent}${RAW_TEXT_INDENT}{}`);
+                return lines;
+            }
+            keys.forEach(key => {
+                const childLines = buildAuthenticatorRawLines(value[key], depth + 1, key);
+                lines.push(...childLines);
+            });
+            return lines;
+        }
+
+        addLine(`${indent}${label}: ${formatRawPrimitive(value)}`);
+        return lines;
+    }
+
+    if (Array.isArray(value)) {
+        if (!value.length) {
+            addLine(`${indent}[]`);
+            return lines;
+        }
+        value.forEach(item => {
+            if (Array.isArray(item) || isPlainObject(item)) {
+                const childLines = buildAuthenticatorRawLines(item, depth + 1);
+                lines.push(...childLines);
+            } else {
+                addLine(`${indent}${RAW_TEXT_INDENT}${formatRawPrimitive(item)}`);
+            }
+        });
+        return lines;
+    }
+
+    if (isPlainObject(value)) {
+        const keys = Object.keys(value);
+        if (!keys.length) {
+            addLine(`${indent}{}`);
+            return lines;
+        }
+        keys.forEach(key => {
+            const childLines = buildAuthenticatorRawLines(value[key], depth, key);
+            lines.push(...childLines);
+        });
+        return lines;
+    }
+
+    addLine(`${indent}${formatRawPrimitive(value)}`);
+    return lines;
+}
+
+function formatRawPrimitive(value) {
+    if (value === undefined) {
+        return 'undefined';
+    }
+    if (value === null) {
+        return 'null';
+    }
+    if (typeof value === 'string') {
+        try {
+            return JSON.stringify(value);
+        } catch (error) {
+            return `"${value.replace(/"/g, '\\"')}"`;
+        }
+    }
+    if (typeof value === 'number' || typeof value === 'bigint') {
+        return String(value);
+    }
+    if (typeof value === 'boolean') {
+        return value ? 'true' : 'false';
+    }
+    try {
+        return JSON.stringify(value);
+    } catch (error) {
+        try {
+            return String(value);
+        } catch (stringError) {
+            return '';
+        }
+    }
+}
+
+function isPlainObject(value) {
+    return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function updateAuthenticatorRawButton(entry) {
+    const button = mdsState?.authenticatorModalRawButton;
+    if (!(button instanceof HTMLButtonElement)) {
+        return;
+    }
+
+    const rawData = getAuthenticatorRawData(entry);
+    const hasRawData = rawData && typeof rawData === 'object' && Object.keys(rawData).length > 0;
+
+    button.disabled = !hasRawData;
+    button.setAttribute('aria-disabled', hasRawData ? 'false' : 'true');
+    button.setAttribute('title', hasRawData ? 'View raw authenticator data' : 'Raw authenticator data unavailable');
+    if (hasRawData) {
+        button.removeAttribute('tabindex');
+    } else {
+        button.setAttribute('tabindex', '-1');
+    }
+}
+
 function openAuthenticatorModal(entry) {
     if (!mdsState?.authenticatorModal) {
         return;
@@ -2438,10 +2879,13 @@ function openAuthenticatorModal(entry) {
     if (entry) {
         mdsState.activeDetailEntry = entry;
     }
+    const detailEntry = mdsState.activeDetailEntry || entry || null;
     hideScrollTopButton();
 
-    applyDetailHeader(entry, mdsState.authenticatorModalTitle, mdsState.authenticatorModalSubtitle);
-    populateDetailContent(mdsState.authenticatorModalContent, entry);
+    updateAuthenticatorRawButton(detailEntry);
+
+    applyDetailHeader(detailEntry, mdsState.authenticatorModalTitle, mdsState.authenticatorModalSubtitle);
+    populateDetailContent(mdsState.authenticatorModalContent, detailEntry);
 
     mdsState.authenticatorModal.hidden = false;
     mdsState.authenticatorModal.setAttribute('aria-hidden', 'false');
@@ -2475,6 +2919,7 @@ function closeAuthenticatorModal() {
     );
     notifyGlobalScrollLock();
     mdsState.activeDetailEntry = null;
+    updateAuthenticatorRawButton(null);
     scheduleScrollTopButtonUpdate();
 }
 

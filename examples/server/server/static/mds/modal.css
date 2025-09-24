@@ -48,6 +48,13 @@
     border-bottom: 1px solid rgba(0, 114, 206, 0.12);
 }
 
+.mds-modal__header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-left: auto;
+}
+
 .mds-modal__title {
     font-size: 1.15rem;
     font-weight: 700;
@@ -72,6 +79,34 @@
     color: var(--primary-dark);
     background: rgba(0, 114, 206, 0.12);
     outline: none;
+}
+
+.mds-modal__action-button {
+    appearance: none;
+    border: none;
+    background: linear-gradient(135deg, rgba(0, 114, 206, 0.16), rgba(0, 114, 206, 0.28));
+    color: var(--primary-dark);
+    font-weight: 600;
+    font-size: 0.85rem;
+    padding: 0.45rem 1rem;
+    border-radius: 14px;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.2s ease, background 0.2s ease;
+    box-shadow: 0 8px 18px rgba(0, 114, 206, 0.18);
+}
+
+.mds-modal__action-button:hover,
+.mds-modal__action-button:focus-visible {
+    transform: translateY(-1px);
+    box-shadow: 0 12px 28px rgba(0, 114, 206, 0.25);
+    outline: none;
+}
+
+.mds-modal__action-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+    transform: none;
+    box-shadow: none;
 }
 
 
