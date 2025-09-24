@@ -185,6 +185,172 @@ function normalizeClientDataString(value) {
     return trimmed;
 }
 
+function cloneJson(value) {
+    if (!value || typeof value !== 'object') {
+        return null;
+    }
+
+    try {
+        return JSON.parse(JSON.stringify(value));
+    } catch (error) {
+        return null;
+    }
+}
+
+const CERTIFICATE_COLLECTION_KEYS = [
+    'attestationCertificate',
+    'attestationCertificates',
+    'attestation_certificate',
+    'attestation_certificates',
+];
+
+function stripCertificateCollections(target) {
+    if (!target || typeof target !== 'object') {
+        return;
+    }
+
+    CERTIFICATE_COLLECTION_KEYS.forEach(key => {
+        if (Object.prototype.hasOwnProperty.call(target, key)) {
+            delete target[key];
+        }
+    });
+
+    Object.keys(target).forEach(key => {
+        const value = target[key];
+        if (value && typeof value === 'object') {
+            stripCertificateCollections(value);
+        }
+    });
+}
+
+function sanitizeParsedCertificateDetails(parsed) {
+    if (!parsed || typeof parsed !== 'object') {
+        return null;
+    }
+
+    const parsedCopy = cloneJson(parsed);
+    if (!parsedCopy || typeof parsedCopy !== 'object') {
+        return null;
+    }
+
+    ['pem', 'der', 'derBase64', 'der_base64', 'raw', 'summary', 'error'].forEach(key => {
+        if (Object.prototype.hasOwnProperty.call(parsedCopy, key)) {
+            delete parsedCopy[key];
+        }
+    });
+
+    if (Array.isArray(parsedCopy.extensions)) {
+        parsedCopy.extensions = parsedCopy.extensions
+            .map(ext => {
+                if (!ext || typeof ext !== 'object') {
+                    return null;
+                }
+
+                const extCopy = cloneJson(ext);
+                if (!extCopy || typeof extCopy !== 'object') {
+                    return null;
+                }
+
+                ['raw', 'hex', 'rawHex', 'der', 'derBase64', 'der_base64', 'valueHex'].forEach(key => {
+                    if (Object.prototype.hasOwnProperty.call(extCopy, key)) {
+                        delete extCopy[key];
+                    }
+                });
+
+                return extCopy;
+            })
+            .filter(Boolean);
+    }
+
+    return parsedCopy;
+}
+
+function sanitiseAttestationObjectForDisplay(attestationObject) {
+    const cloned = cloneJson(attestationObject);
+    if (!cloned || typeof cloned !== 'object') {
+        return null;
+    }
+
+    const certificates = Array.isArray(registrationDetailState.attestationCertificates)
+        ? registrationDetailState.attestationCertificates
+        : [];
+
+    if (cloned.attStmt && typeof cloned.attStmt === 'object') {
+        const attStmtClone = { ...cloned.attStmt };
+        const sourceArray = Array.isArray(attStmtClone.x5c) ? attStmtClone.x5c : [];
+        const maxLength = Math.max(sourceArray.length, certificates.length);
+
+        if (maxLength > 0) {
+            const sanitizedChain = [];
+
+            for (let index = 0; index < maxLength; index += 1) {
+                const certificateEntry = certificates[index];
+                const sourceEntry = sourceArray[index];
+
+                let parsedDetails = certificateEntry && typeof certificateEntry === 'object'
+                    ? certificateEntry.parsedX5c
+                    : null;
+
+                if ((!parsedDetails || typeof parsedDetails !== 'object') && sourceEntry) {
+                    const normalised = normaliseCertificateEntryForModal(sourceEntry);
+                    if (normalised && typeof normalised.parsedX5c === 'object') {
+                        parsedDetails = normalised.parsedX5c;
+                    }
+                }
+
+                if (!parsedDetails || typeof parsedDetails !== 'object') {
+                    continue;
+                }
+
+                const sanitizedDetails = sanitizeParsedCertificateDetails(parsedDetails);
+                const summaryText = typeof parsedDetails.summary === 'string'
+                    ? parsedDetails.summary.trim()
+                    : '';
+                const errorText = typeof parsedDetails.error === 'string'
+                    ? parsedDetails.error.trim()
+                    : '';
+
+                const hasDetails = sanitizedDetails && Object.keys(sanitizedDetails).length > 0;
+                if (!hasDetails && !summaryText && !errorText) {
+                    continue;
+                }
+
+                const entry = {
+                    certificateIndex: index + 1,
+                };
+
+                if (hasDetails) {
+                    entry.details = sanitizedDetails;
+                }
+
+                if (summaryText) {
+                    entry.summary = summaryText;
+                }
+
+                if (errorText) {
+                    entry.error = errorText;
+                }
+
+                sanitizedChain.push(entry);
+            }
+
+            if (sanitizedChain.length) {
+                attStmtClone.x5c = sanitizedChain;
+            } else {
+                delete attStmtClone.x5c;
+            }
+        } else {
+            delete attStmtClone.x5c;
+        }
+
+        stripCertificateCollections(attStmtClone);
+        cloned.attStmt = attStmtClone;
+    }
+
+    stripCertificateCollections(cloned);
+    return cloned;
+}
+
 const registrationDetailState = {
     attestationObject: null,
     attestationCertificates: [],
@@ -409,10 +575,30 @@ function buildAttestationSection({
         let attestationContent = '';
         const attestationHeading = '<h4 style="font-weight: 600; color: #0f2740; margin-bottom: 0.5rem;">Attestation Object</h4>';
         if (attestationObject) {
+            let attestationJson = '';
+            const attestationDisplay = sanitiseAttestationObjectForDisplay(attestationObject) || attestationObject;
+            try {
+                attestationJson = JSON.stringify(attestationDisplay, null, 2);
+            } catch (error) {
+                attestationJson = '';
+            }
+
+            if (!attestationJson && attestationObject) {
+                try {
+                    attestationJson = JSON.stringify(attestationObject, null, 2);
+                } catch (jsonError) {
+                    attestationJson = '';
+                }
+            }
+
+            const attestationBody = attestationJson
+                ? `<textarea class="certificate-textarea" readonly spellcheck="false" wrap="soft">${escapeHtml(attestationJson)}</textarea>`
+                : '<div style="font-style: italic; color: #6c757d;">Unable to prepare decoded attestationObject.</div>';
+
             attestationContent = `
                 <div style="margin-bottom: 0.75rem;">
                     ${attestationHeading}
-                    <textarea class="certificate-textarea" readonly spellcheck="false" wrap="soft">${escapeHtml(JSON.stringify(attestationObject, null, 2))}</textarea>
+                    ${attestationBody}
                 </div>
             `;
         } else if (attestationObjectValue) {
@@ -535,13 +721,9 @@ async function composeRegistrationDetailHtml({
 
     let relyingPartyCopy = null;
     if (relyingPartyInfo && typeof relyingPartyInfo === 'object') {
-        try {
-            relyingPartyCopy = JSON.parse(JSON.stringify(relyingPartyInfo));
-            if (relyingPartyCopy && typeof relyingPartyCopy === 'object' && 'attestationCertificate' in relyingPartyCopy) {
-                delete relyingPartyCopy.attestationCertificate;
-            }
-        } catch (error) {
-            relyingPartyCopy = null;
+        relyingPartyCopy = cloneJson(relyingPartyInfo);
+        if (relyingPartyCopy && typeof relyingPartyCopy === 'object') {
+            stripCertificateCollections(relyingPartyCopy);
         }
     }
 
@@ -1399,17 +1581,6 @@ export async function showCredentialDetails(index) {
         cred.registration_result,
     );
 
-    const cloneJson = value => {
-        if (!value || typeof value !== 'object') {
-            return null;
-        }
-        try {
-            return JSON.parse(JSON.stringify(value));
-        } catch (error) {
-            return null;
-        }
-    };
-
     let registrationCredential = cloneJson(registrationResponseStored);
     if (!registrationCredential || typeof registrationCredential !== 'object') {
         registrationCredential = {};
@@ -1934,11 +2105,42 @@ export async function showRegistrationResultModal(credentialJson, relyingPartyIn
     const attestationObjectValue = credentialJson?.response?.attestationObject || '';
     const authenticatorDataValue = credentialJson?.response?.authenticatorData || '';
 
+    const collectCertificates = (...sources) => {
+        const result = [];
+        sources.forEach(source => {
+            if (!source) {
+                return;
+            }
+            if (Array.isArray(source)) {
+                source.forEach(item => {
+                    if (item) {
+                        result.push(item);
+                    }
+                });
+            } else {
+                result.push(source);
+            }
+        });
+        return result;
+    };
+
+    const fallbackCertificates = collectCertificates(
+        relyingPartyInfo?.attestationCertificate,
+        relyingPartyInfo?.attestationCertificates,
+        relyingPartyInfo?.attestation_certificate,
+        relyingPartyInfo?.attestation_certificates,
+        relyingPartyInfo?.registrationData?.attestationCertificate,
+        relyingPartyInfo?.registrationData?.attestationCertificates,
+        relyingPartyInfo?.registrationData?.attestation_certificate,
+        relyingPartyInfo?.registrationData?.attestation_certificates,
+    );
+
     const registrationDetail = await composeRegistrationDetailHtml({
         credentialJson,
         relyingPartyInfo,
         attestationObjectValue,
         authenticatorDataValue,
+        fallbackCertificates,
     });
 
     modalBody.innerHTML = registrationDetail.html;
