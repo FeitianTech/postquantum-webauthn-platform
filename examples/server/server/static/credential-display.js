@@ -1310,23 +1310,35 @@ export async function showRegistrationResultModal(credentialJson, relyingPartyIn
             attestationContent = '<div style="font-style: italic; color: #6c757d; margin-bottom: 0.75rem;">No attestationObject was provided.</div>';
         }
 
-        const certificateButtonsHtml = registrationDetailState.attestationCertificates.length
-            ? `<div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.75rem;">${registrationDetailState.attestationCertificates.map((_, index) => `<button type="button" class="btn btn-small registration-attestation-cert-button" data-cert-index="${index}">Certificate ${index + 1}</button>`).join('')}</div>`
-            : '<div style="font-style: italic; color: #6c757d; margin-top: 0.75rem;">No attestation certificates available.</div>';
+        const buttonRowSegments = [];
+        let certificateMessageHtml = '';
+        let authenticatorMessageHtml = '';
 
-        let authenticatorButtonHtml = '';
-        if (registrationDetailState.authenticatorData) {
-            authenticatorButtonHtml = '<div style="margin-top: 1rem;"><button type="button" class="btn btn-small btn-secondary registration-authenticator-data-button">authenticatorData</button></div>';
-        } else if (authenticatorDataValue && authenticatorDecodeError) {
-            authenticatorButtonHtml = `<div style="color: #dc3545; font-size: 0.9rem; margin-top: 0.75rem;">${escapeHtml(authenticatorDecodeError)}</div>`;
+        if (registrationDetailState.attestationCertificates.length) {
+            registrationDetailState.attestationCertificates.forEach((_, index) => {
+                buttonRowSegments.push(`<button type="button" class="btn btn-small registration-attestation-cert-button" data-cert-index="${index}">Attestation Certificate ${index + 1}</button>`);
+            });
+        } else {
+            certificateMessageHtml = '<div style="font-style: italic; color: #6c757d; margin-top: 0.75rem;">No attestation certificates available.</div>';
         }
+
+        if (registrationDetailState.authenticatorData) {
+            buttonRowSegments.push('<button type="button" class="btn btn-small btn-secondary registration-authenticator-data-button">Authenticator Data</button>');
+        } else if (authenticatorDataValue && authenticatorDecodeError) {
+            authenticatorMessageHtml = `<div style="color: #dc3545; font-size: 0.9rem; margin-top: 0.75rem;">${escapeHtml(authenticatorDecodeError)}</div>`;
+        }
+
+        const buttonRowHtml = buttonRowSegments.length
+            ? `<div class="registration-detail-button-row">${buttonRowSegments.join('')}</div>`
+            : '';
 
         attestationSectionHtml = `
             <section style="margin-bottom: 1.5rem;">
-                <h3 style="color: #0072CE; margin-bottom: 0.75rem;">Attestation Object &amp; Authenticator Data</h3>
+                <h3 style="color: #0072CE; margin-bottom: 0.75rem;">Attestation and Authenticator Data</h3>
                 ${attestationContent}
-                ${certificateButtonsHtml}
-                ${authenticatorButtonHtml}
+                ${buttonRowHtml}
+                ${certificateMessageHtml}
+                ${authenticatorMessageHtml}
             </section>
         `;
     }

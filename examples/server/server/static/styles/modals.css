@@ -32,6 +32,13 @@
     box-shadow: var(--shadow-hover);
 }
 
+.modal-content.modal-content-large {
+    width: 95vw;
+    max-width: 95vw;
+    height: 95vh;
+    max-height: 95vh;
+}
+
 .modal-header {
     display: flex;
     justify-content: space-between;
@@ -98,6 +105,13 @@
         height: 85vh;
         max-height: 85vh;
         padding: 1.5rem;
+    }
+
+    .modal-content.modal-content-large {
+        width: 95vw;
+        max-width: 95vw;
+        height: 95vh;
+        max-height: 95vh;
     }
 }
 
@@ -262,6 +276,14 @@
     outline: none;
     border-color: rgba(0, 114, 206, 0.25);
     box-shadow: none;
+}
+
+.registration-detail-button-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+    align-items: center;
 }
 
 .modal-pre {
