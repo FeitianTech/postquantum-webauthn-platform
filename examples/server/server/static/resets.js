@@ -10,9 +10,10 @@ import { clearFakeExcludeCredentials } from './exclude-credentials.js';
 export function resetRegistrationForm() {
     randomizeUserIdentity();
 
+    document.getElementById('authenticator-attachment').value = 'cross-platform';
     document.getElementById('resident-key').value = 'discouraged';
     document.getElementById('user-verification-reg').value = 'preferred';
-    document.getElementById('attestation').value = 'none';
+    document.getElementById('attestation').value = 'direct';
     document.getElementById('exclude-credentials').checked = true;
     document.getElementById('fake-cred-length-reg').value = '128';
 

@@ -1294,15 +1294,38 @@ export async function showRegistrationResultModal(credentialJson, relyingPartyIn
         registrationDetailState.authenticatorData = fallback;
     }
 
-    let attestationSectionHtml = '';
-    const hasAttestationContent = Boolean(attestationObjectValue)
-        || registrationDetailState.attestationCertificates.length > 0
-        || Boolean(registrationDetailState.authenticatorData);
+    const attestationObject = registrationDetailState.attestationObject;
+    const attestationFormatFromRp = typeof relyingPartyInfo?.attestationFmt === 'string'
+        ? relyingPartyInfo.attestationFmt
+        : '';
+    const attestationFormatFromObject = attestationObject && typeof attestationObject.fmt === 'string'
+        ? attestationObject.fmt
+        : '';
+    const attestationFormatRaw = attestationFormatFromRp || attestationFormatFromObject || '';
+    const attestationFormatNormalized = typeof attestationFormatRaw === 'string'
+        ? attestationFormatRaw.trim().toLowerCase()
+        : '';
+    const attestationStatement = attestationObject && typeof attestationObject.attStmt === 'object'
+        ? attestationObject.attStmt
+        : null;
+    const attestationStatementHasContent = attestationStatement && Object.keys(attestationStatement).length > 0;
+    const attestationHasCertificates = registrationDetailState.attestationCertificates.length > 0;
+    const shouldShowAttestationSection = (attestationFormatNormalized && attestationFormatNormalized !== 'none')
+        || attestationStatementHasContent
+        || attestationHasCertificates;
 
-    if (hasAttestationContent) {
+    const hasAuthenticatorData = Boolean(registrationDetailState.authenticatorData);
+    const authenticatorButton = hasAuthenticatorData
+        ? '<button type="button" class="btn btn-small btn-secondary registration-authenticator-data-button">Authenticator Data</button>'
+        : '';
+    const shouldShowAuthenticatorError = !hasAuthenticatorData && authenticatorDataValue && authenticatorDecodeError;
+
+    let attestationSectionHtml = '';
+
+    if (shouldShowAttestationSection) {
         let attestationContent = '';
-        if (registrationDetailState.attestationObject) {
-            attestationContent = `<textarea class="certificate-textarea" readonly spellcheck="false" wrap="soft">${escapeHtml(JSON.stringify(registrationDetailState.attestationObject, null, 2))}</textarea>`;
+        if (attestationObject) {
+            attestationContent = `<textarea class="certificate-textarea" readonly spellcheck="false" wrap="soft">${escapeHtml(JSON.stringify(attestationObject, null, 2))}</textarea>`;
         } else if (attestationObjectValue) {
             const message = attestationDecodeError || 'Unable to decode attestationObject.';
             attestationContent = `<div style="color: #dc3545; font-size: 0.9rem; margin-bottom: 0.75rem;">${escapeHtml(message)}</div>`;
@@ -1312,24 +1335,25 @@ export async function showRegistrationResultModal(credentialJson, relyingPartyIn
 
         const buttonRowSegments = [];
         let certificateMessageHtml = '';
-        let authenticatorMessageHtml = '';
 
         if (registrationDetailState.attestationCertificates.length) {
             registrationDetailState.attestationCertificates.forEach((_, index) => {
                 buttonRowSegments.push(`<button type="button" class="btn btn-small registration-attestation-cert-button" data-cert-index="${index}">Attestation Certificate ${index + 1}</button>`);
             });
-        } else {
+        } else if ((attestationFormatNormalized && attestationFormatNormalized !== 'none') || attestationStatementHasContent) {
             certificateMessageHtml = '<div style="font-style: italic; color: #6c757d; margin-top: 0.75rem;">No attestation certificates available.</div>';
         }
 
-        if (registrationDetailState.authenticatorData) {
-            buttonRowSegments.push('<button type="button" class="btn btn-small btn-secondary registration-authenticator-data-button">Authenticator Data</button>');
-        } else if (authenticatorDataValue && authenticatorDecodeError) {
-            authenticatorMessageHtml = `<div style="color: #dc3545; font-size: 0.9rem; margin-top: 0.75rem;">${escapeHtml(authenticatorDecodeError)}</div>`;
+        if (authenticatorButton) {
+            buttonRowSegments.push(authenticatorButton);
         }
 
         const buttonRowHtml = buttonRowSegments.length
             ? `<div class="registration-detail-button-row">${buttonRowSegments.join('')}</div>`
+            : '';
+
+        const authenticatorMessageHtml = shouldShowAuthenticatorError
+            ? `<div style="color: #dc3545; font-size: 0.9rem; margin-top: 0.75rem;">${escapeHtml(authenticatorDecodeError)}</div>`
             : '';
 
         attestationSectionHtml = `
@@ -1338,6 +1362,20 @@ export async function showRegistrationResultModal(credentialJson, relyingPartyIn
                 ${attestationContent}
                 ${buttonRowHtml}
                 ${certificateMessageHtml}
+                ${authenticatorMessageHtml}
+            </section>
+        `;
+    } else if (authenticatorButton || shouldShowAuthenticatorError) {
+        const buttonRowHtml = authenticatorButton
+            ? `<div class="registration-detail-button-row registration-detail-button-row--solo">${authenticatorButton}</div>`
+            : '';
+        const authenticatorMessageHtml = shouldShowAuthenticatorError
+            ? `<div style="color: #dc3545; font-size: 0.9rem; ${authenticatorButton ? 'margin-top: 0.75rem;' : ''}">${escapeHtml(authenticatorDecodeError)}</div>`
+            : '';
+
+        attestationSectionHtml = `
+            <section style="margin-bottom: 1.5rem;">
+                ${buttonRowHtml}
                 ${authenticatorMessageHtml}
             </section>
         `;

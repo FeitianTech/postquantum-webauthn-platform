@@ -10,7 +10,7 @@ export function printRegistrationDebug(credential, createOptions, serverResponse
     const residentKey = clientExtensions.credProps?.rk || serverData.actualResidentKey || false;
     console.log('Resident key:', residentKey);
 
-    const attestationFormat = serverData.attestationFormat || 'none';
+    const attestationFormat = serverData.attestationFormat || 'direct';
     const attestationRetrieved = attestationFormat !== 'none';
     console.log('Attestation (retrieve or not, plus the format):', `${attestationRetrieved}, ${attestationFormat}`);
 

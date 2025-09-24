@@ -57,18 +57,18 @@
                                                 <div class="info-popup">
                                                     <div class="language-toggle" onclick="toggleLanguage(this)">ENG</div>
                                                     <div class="text-en active">
-                                                        Select whether an authenticator integrated into the client platform ("platform") or an external device ("cross-platform") should be used. If unspecified (default), either kind of authenticator is allowed.
+                                                        Select whether an authenticator integrated into the client platform ("platform") or an external device ("cross-platform") should be used. If unspecified, either kind of authenticator is allowed. By default, a cross-platform authenticator is requested.
                                                     </div>
                                                     <div class="text-zh hidden">
-                                                        选择是否使用集成在客户端平台中的认证器（“platform”）或外部设备（“cross-platform”）。如果未指定（默认），允许使用任一类型的认证器。
+                                                        选择是否使用集成在客户端平台中的认证器（“platform”）或外部设备（“cross-platform”）。如果未指定，允许使用任一类型的认证器。默认情况下，将请求 cross-platform 认证器。
                                                     </div>
                                                 </div>
                                             </div>
                                         </div>
                                         <select id="authenticator-attachment" class="form-control">
-                                            <option value="unspecified">Unspecified (default)</option>
+                                            <option value="cross-platform">Cross-Platform (default)</option>
                                             <option value="platform">Platform</option>
-                                            <option value="cross-platform">Cross-Platform</option>
+                                            <option value="unspecified">Unspecified</option>
                                         </select>
                                     </div>
                                     <div class="form-group">
@@ -125,19 +125,19 @@
                                                     <div class="language-toggle" onclick="toggleLanguage(this)">ENG</div>
                                                     <div class="text-en active">
                                                         Select whether the Relying Party (RP) requires authenticator attestation. Attestation is a way to prove what kind of authenticator is used.<br><br>
-                                                        If "none", no authenticator attestation will be returned. If "indirect", some kind of attestation will be returned if possible, but it may be anonymized by an attestation proxy. If "direct", the authenticator's original attestation will be returned, if any. If "enterprise", the authenticator is requested to produce an individually identifying attestation. By default, "none" is used.
+                                                        If "none", no authenticator attestation will be returned. If "indirect", some kind of attestation will be returned if possible, but it may be anonymized by an attestation proxy. If "direct", the authenticator's original attestation will be returned, if any. If "enterprise", the authenticator is requested to produce an individually identifying attestation. By default, "direct" is used.
                                                     </div>
                                                     <div class="text-zh hidden">
                                                         选择依赖方（RP）是否需要认证器证明。证明是一种证明使用何种认证器的方式。<br><br>
-                                                        如果选择"none"，将不返回认证器证明。如果选择"indirect"，在可能的情况下会返回某种证明，但可能被证明代理匿名化。如果选择"direct"，将返回认证器的原始证明（如果有）。如果选择"enterprise"，请求认证器产生个别标识证明。默认情况下，使用"none"。
+                                                        如果选择"none"，将不返回认证器证明。如果选择"indirect"，在可能的情况下会返回某种证明，但可能被证明代理匿名化。如果选择"direct"，将返回认证器的原始证明（如果有）。如果选择"enterprise"，请求认证器产生个别标识证明。默认情况下，使用"direct"。
                                                     </div>
                                                 </div>
                                             </div>
                                         </div>
                                         <select id="attestation" class="form-control">
-                                            <option value="none">None (default)</option>
+                                            <option value="direct">Direct (default)</option>
+                                            <option value="none">None</option>
                                             <option value="indirect">Indirect</option>
-                                            <option value="direct">Direct</option>
                                             <option value="enterprise">Enterprise</option>
                                         </select>
                                     </div>
@@ -855,11 +855,11 @@
                                         <option value="js">js</option>
                                     </select>
                                 </div>
-                                <div class="section-title-with-action">
-                                    <h3>Saved Credentials</h3>
-                                    <button id="clear-credentials" class="btn btn-small btn-danger" onclick="clearAllCredentials()">Clear All</button>
-                                </div>
+                                <h3 class="credentials-panel-title">Saved Credentials</h3>
                                 <div class="credentials-panel">
+                                    <div class="credentials-toolbar">
+                                        <button id="clear-credentials" class="btn btn-small btn-danger" onclick="clearAllCredentials()">Clear All</button>
+                                    </div>
                                     <div id="credentials-list">
                                         <p style="color: #6c757d;">No credentials registered yet.</p>
                                     </div>

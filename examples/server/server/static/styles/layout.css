@@ -92,6 +92,24 @@
     height: 1.5rem; /* Fixed height for alignment */
 }
 
+.credentials-column .credentials-panel-title {
+    margin-bottom: 0.75rem;
+    color: var(--primary-dark);
+    font-size: 1.1rem;
+    height: auto;
+}
+
+.credentials-toolbar {
+    display: flex;
+    justify-content: flex-end;
+    padding: 0 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.credentials-toolbar .btn {
+    flex-shrink: 0;
+}
+
 .section-title-with-action {
     display: flex;
     justify-content: space-between;

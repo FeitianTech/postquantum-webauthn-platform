@@ -64,11 +64,11 @@ export function getCredentialCreationOptions() {
         pubKeyCredParams: [],
         timeout: parseInt(document.getElementById('timeout-reg')?.value) || 90000,
         authenticatorSelection: {},
-        attestation: document.getElementById('attestation')?.value || 'none',
+        attestation: document.getElementById('attestation')?.value || 'direct',
         extensions: {}
     };
 
-    const authenticatorAttachment = document.getElementById('authenticator-attachment')?.value || 'unspecified';
+    const authenticatorAttachment = document.getElementById('authenticator-attachment')?.value || 'cross-platform';
     if (authenticatorAttachment && authenticatorAttachment !== 'unspecified') {
         publicKey.authenticatorSelection.authenticatorAttachment = authenticatorAttachment;
     }
@@ -458,7 +458,7 @@ export function updateRegistrationFormFromJson(publicKey) {
     }
 
     if (Object.prototype.hasOwnProperty.call(publicKey, 'attestation')) {
-        document.getElementById('attestation').value = publicKey.attestation || 'none';
+        document.getElementById('attestation').value = publicKey.attestation || 'direct';
     }
 
     if (publicKey.pubKeyCredParams && Array.isArray(publicKey.pubKeyCredParams)) {
@@ -524,9 +524,12 @@ export function updateRegistrationFormFromJson(publicKey) {
         const attachmentElement = document.getElementById('authenticator-attachment');
         if (attachmentElement) {
             const attachmentValue = publicKey.authenticatorSelection.authenticatorAttachment;
-            const normalizedAttachment = attachmentValue === 'platform' || attachmentValue === 'cross-platform'
-                ? attachmentValue
-                : 'unspecified';
+            let normalizedAttachment = 'cross-platform';
+            if (attachmentValue === 'platform' || attachmentValue === 'cross-platform') {
+                normalizedAttachment = attachmentValue;
+            } else if (attachmentValue === 'unspecified') {
+                normalizedAttachment = 'unspecified';
+            }
             attachmentElement.value = normalizedAttachment;
         }
         const residentKeyElement = document.getElementById('resident-key');
@@ -544,7 +547,7 @@ export function updateRegistrationFormFromJson(publicKey) {
     } else {
         const attachmentElement = document.getElementById('authenticator-attachment');
         if (attachmentElement) {
-            attachmentElement.value = 'unspecified';
+            attachmentElement.value = 'cross-platform';
         }
     }
 
@@ -778,7 +781,7 @@ export function getAdvancedCreateOptions() {
         attestation: document.getElementById('attestation').value,
         userVerification: document.getElementById('user-verification-reg').value,
         residentKey: document.getElementById('resident-key').value,
-        authenticatorAttachment: document.getElementById('authenticator-attachment').value || 'unspecified',
+        authenticatorAttachment: document.getElementById('authenticator-attachment').value || 'cross-platform',
 
         excludeCredentials: document.getElementById('exclude-credentials').checked,
         fakeCredLength: parseInt(document.getElementById('fake-cred-length-reg').value) || 0,
@@ -939,7 +942,7 @@ export function applyJsonChanges() {
             if (parsed.username) document.getElementById('user-name').value = parsed.username;
             if (parsed.displayName) document.getElementById('user-display-name').value = parsed.displayName;
             if (Object.prototype.hasOwnProperty.call(parsed, 'attestation')) {
-                document.getElementById('attestation').value = parsed.attestation || 'none';
+                document.getElementById('attestation').value = parsed.attestation || 'direct';
             }
             if (Object.prototype.hasOwnProperty.call(parsed, 'userVerification')) {
                 document.getElementById('user-verification-reg').value = parsed.userVerification || 'preferred';
@@ -949,9 +952,9 @@ export function applyJsonChanges() {
                 const attachmentSelect = document.getElementById('authenticator-attachment');
                 if (attachmentSelect) {
                     const rawValue = parsed.authenticatorAttachment;
-                    const normalized = rawValue === 'platform' || rawValue === 'cross-platform'
+                    const normalized = rawValue === 'platform' || rawValue === 'cross-platform' || rawValue === 'unspecified'
                         ? rawValue
-                        : 'unspecified';
+                        : 'cross-platform';
                     attachmentSelect.value = normalized;
                 }
             }

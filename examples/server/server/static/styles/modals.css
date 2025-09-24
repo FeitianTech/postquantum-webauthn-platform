@@ -286,6 +286,10 @@
     align-items: center;
 }
 
+.registration-detail-button-row--solo {
+    margin-top: 0;
+}
+
 .modal-pre {
     background: rgba(0, 114, 206, 0.08);
     padding: 0.85rem;
