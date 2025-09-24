@@ -1326,7 +1326,7 @@ export async function showCredentialDetails(index) {
         return result;
     };
 
-    const attestationObjectValue = pickFirstString(
+    let attestationObjectValue = pickFirstString(
         cred.attestationObjectRaw,
         cred.attestationObject,
         cred.attestation_object_raw,
@@ -1335,14 +1335,14 @@ export async function showCredentialDetails(index) {
         cred.attestation_object_base64,
     );
 
-    const attestationObjectDecoded = pickFirstObject(
+    let attestationObjectDecoded = pickFirstObject(
         cred.attestationObjectDecoded,
         cred.attestation_object_decoded,
         typeof cred.attestationObject === 'object' ? cred.attestationObject : null,
         typeof cred.attestation_object === 'object' ? cred.attestation_object : null,
     );
 
-    const authenticatorDataBase64 = pickFirstString(
+    let authenticatorDataBase64 = pickFirstString(
         cred.authenticatorDataRaw,
         cred.authenticatorData,
         cred.authenticator_data_raw,
@@ -1351,7 +1351,7 @@ export async function showCredentialDetails(index) {
         cred.authenticatorDataBase64Url,
     );
 
-    const authenticatorDataHex = pickFirstString(
+    let authenticatorDataHex = pickFirstString(
         cred.authenticatorDataHex,
         cred.authenticator_data_hex,
     );
@@ -1442,8 +1442,77 @@ export async function showCredentialDetails(index) {
         registrationCredential.type = 'public-key';
     }
 
+    const storedRegistrationResponse = (() => {
+        if (registrationResponseStored && typeof registrationResponseStored === 'object') {
+            const nestedResponse = registrationResponseStored.response;
+            if (nestedResponse && typeof nestedResponse === 'object') {
+                return nestedResponse;
+            }
+            return registrationResponseStored;
+        }
+        return null;
+    })();
+
+    if (!attestationObjectValue) {
+        attestationObjectValue = pickFirstString(
+            storedRegistrationResponse?.attestationObject,
+            storedRegistrationResponse?.attestation_object,
+            storedRegistrationResponse?.attestationObjectRaw,
+            storedRegistrationResponse?.attestation_object_raw,
+            registrationCredential?.attestationObject,
+            registrationCredential?.attestation_object,
+            registrationCredential?.attestationObjectRaw,
+            registrationCredential?.attestation_object_raw,
+        );
+    }
+
+    if (!attestationObjectDecoded) {
+        attestationObjectDecoded = pickFirstObject(
+            storedRegistrationResponse?.attestationObjectDecoded,
+            storedRegistrationResponse?.attestation_object_decoded,
+            typeof storedRegistrationResponse?.attestationObject === 'object'
+                ? storedRegistrationResponse.attestationObject
+                : null,
+            typeof storedRegistrationResponse?.attestation_object === 'object'
+                ? storedRegistrationResponse.attestation_object
+                : null,
+            typeof registrationCredential?.attestationObject === 'object'
+                ? registrationCredential.attestationObject
+                : null,
+            typeof registrationCredential?.attestation_object === 'object'
+                ? registrationCredential.attestation_object
+                : null,
+        );
+    }
+
+    if (!authenticatorDataBase64) {
+        authenticatorDataBase64 = pickFirstString(
+            storedRegistrationResponse?.authenticatorData,
+            storedRegistrationResponse?.authenticator_data,
+            storedRegistrationResponse?.authenticatorDataRaw,
+            storedRegistrationResponse?.authenticator_data_raw,
+            registrationCredential?.authenticatorData,
+            registrationCredential?.authenticator_data,
+            registrationCredential?.authenticatorDataRaw,
+            registrationCredential?.authenticator_data_raw,
+        );
+    }
+
+    if (!authenticatorDataHex) {
+        authenticatorDataHex = pickFirstString(
+            storedRegistrationResponse?.authenticatorDataHex,
+            storedRegistrationResponse?.authenticator_data_hex,
+            registrationCredential?.authenticatorDataHex,
+            registrationCredential?.authenticator_data_hex,
+        );
+    }
+
     if (attestationObjectValue && !registrationResponse.attestationObject) {
         registrationResponse.attestationObject = attestationObjectValue;
+    }
+
+    if (attestationObjectDecoded && !registrationResponse.attestationObjectDecoded) {
+        registrationResponse.attestationObjectDecoded = attestationObjectDecoded;
     }
 
     const normalizedClientDataForResponse = normalizeClientDataString(

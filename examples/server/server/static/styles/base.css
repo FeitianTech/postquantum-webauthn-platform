@@ -221,6 +221,7 @@ body.modal-open {
     background: rgba(255, 255, 255, 0.95);
 }
 
+
 .simple-username-input {
     align-items: center;
     flex-wrap: wrap;
@@ -228,8 +229,9 @@ body.modal-open {
 }
 
 .simple-username-field {
-    flex: 1 1 30ch;
-    max-width: 30ch;
+    flex: 1 1 38ch;
+    max-width: 38ch;
+    min-width: 0;
 }
 
 @media (max-width: 600px) {
