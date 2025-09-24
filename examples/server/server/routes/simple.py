@@ -133,6 +133,9 @@ def register_complete():
     if parsed_attestation_object:
         credential_info['attestation_object_decoded'] = make_json_safe(parsed_attestation_object)
 
+    if isinstance(response, Mapping):
+        credential_info['registration_response'] = make_json_safe(response)
+
     credential_data = auth_data.credential_data
     aaguid_value = getattr(credential_data, 'aaguid', None)
     if aaguid_value is not None:
@@ -253,6 +256,33 @@ def list_credentials():
 
     credentials: List[Dict[str, Any]] = []
 
+    def add_registration_metadata(target: Dict[str, Any], source: Mapping[str, Any]) -> None:
+        registration_response = source.get('registration_response')
+        if registration_response is None:
+            registration_response = source.get('registrationResponse')
+        if registration_response is not None:
+            if isinstance(registration_response, Mapping):
+                target['registrationResponse'] = make_json_safe(registration_response)
+            else:
+                target['registrationResponse'] = registration_response
+
+        registration_rp = source.get('relying_party')
+        if registration_rp is None:
+            registration_rp = source.get('relyingParty')
+        if registration_rp is not None:
+            if isinstance(registration_rp, Mapping):
+                target['relyingParty'] = make_json_safe(registration_rp)
+            else:
+                target['relyingParty'] = registration_rp
+
+        client_data_value = source.get('client_data_json')
+        if client_data_value is None:
+            client_data_value = source.get('clientDataJSON')
+        if isinstance(client_data_value, Mapping):
+            target['clientDataJSON'] = make_json_safe(client_data_value)
+        elif isinstance(client_data_value, str) and client_data_value:
+            target['clientDataJSON'] = client_data_value
+
     try:
         pkl_files = [f for f in os.listdir(basepath) if f.endswith('_credential_data.pkl')]
 
@@ -308,6 +338,8 @@ def list_credentials():
                                 certificate_details = cred.get('attestation_certificate')
                                 if certificate_details is not None:
                                     credential_info['attestationCertificate'] = certificate_details
+
+                                add_registration_metadata(credential_info, cred)
 
                                 add_public_key_material(credential_info, cred_data.get('public_key', {}))
                                 if credential_info.get('publicKeyAlgorithm') is not None:
@@ -425,6 +457,8 @@ def list_credentials():
 
                                 if attachment_value is not None:
                                     properties_copy['authenticatorAttachment'] = attachment_value
+
+                                add_registration_metadata(credential_info, cred)
 
                                 add_public_key_material(credential_info, getattr(cred_data, 'public_key', {}))
                                 if credential_info.get('publicKeyAlgorithm') is not None:

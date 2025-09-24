@@ -53,7 +53,7 @@ export function resetRegistrationForm() {
 export function resetAuthenticationForm() {
     document.getElementById('user-verification-auth').value = 'preferred';
     document.getElementById('allow-credentials').value = 'all';
-    document.getElementById('fake-cred-length-auth').value = '128';
+    document.getElementById('fake-cred-length-auth').value = '256';
 
     randomizeChallenge('auth');
     document.getElementById('timeout-auth').value = '90000';

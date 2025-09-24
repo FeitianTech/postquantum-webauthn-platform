@@ -157,6 +157,32 @@ function hexToColonLines(hexString, bytesPerLine = 16) {
     return output;
 }
 
+function normalizeClientDataString(value) {
+    if (typeof value !== 'string') {
+        return '';
+    }
+
+    const trimmed = value.trim();
+    if (!trimmed) {
+        return '';
+    }
+
+    if (trimmed.includes('-') || trimmed.includes('_')) {
+        return trimmed;
+    }
+
+    const base64Pattern = /^[A-Za-z0-9+/=]+$/;
+    if (base64Pattern.test(trimmed)) {
+        try {
+            return base64ToBase64Url(trimmed);
+        } catch (error) {
+            return trimmed;
+        }
+    }
+
+    return trimmed;
+}
+
 const registrationDetailState = {
     attestationObject: null,
     attestationCertificates: [],
@@ -430,6 +456,161 @@ function buildAttestationSection({
     }
 
     return attestationSectionHtml;
+}
+
+async function composeRegistrationDetailHtml({
+    credentialJson = null,
+    relyingPartyInfo = null,
+    attestationObjectValue = '',
+    attestationObjectDecoded = null,
+    authenticatorDataValue = '',
+    authenticatorDataHex = '',
+    fallbackCertificates = [],
+    fallbackClientData = null,
+    fallbackParsedClientData = null,
+} = {}) {
+    resetRegistrationDetailState();
+
+    const credentialDisplay = credentialJson && typeof credentialJson === 'object'
+        ? JSON.stringify(credentialJson, null, 2)
+        : '';
+
+    const fallbackClientDataString = typeof fallbackClientData === 'string'
+        ? fallbackClientData.trim()
+        : '';
+    const normalizedFallbackClientData = fallbackClientDataString
+        ? normalizeClientDataString(fallbackClientDataString)
+        : '';
+
+    let clientDataBase64 = credentialJson?.response?.clientDataJSON;
+    if (!clientDataBase64 && normalizedFallbackClientData) {
+        clientDataBase64 = normalizedFallbackClientData;
+    }
+
+    let parsedClientData = null;
+    if (clientDataBase64) {
+        parsedClientData = base64UrlToJson(clientDataBase64);
+    }
+
+    if (!parsedClientData && fallbackParsedClientData && typeof fallbackParsedClientData === 'object') {
+        parsedClientData = fallbackParsedClientData;
+    }
+
+    let clientDataDisplay = '';
+    if (parsedClientData) {
+        clientDataDisplay = JSON.stringify(parsedClientData, null, 2);
+    } else if (clientDataBase64) {
+        clientDataDisplay = base64UrlToUtf8String(clientDataBase64) || clientDataBase64;
+    } else if (fallbackClientDataString) {
+        clientDataDisplay = fallbackClientDataString;
+    } else if (fallbackParsedClientData && typeof fallbackParsedClientData === 'object') {
+        clientDataDisplay = JSON.stringify(fallbackParsedClientData, null, 2);
+    }
+
+    let relyingPartyCopy = null;
+    if (relyingPartyInfo && typeof relyingPartyInfo === 'object') {
+        try {
+            relyingPartyCopy = JSON.parse(JSON.stringify(relyingPartyInfo));
+            if (relyingPartyCopy && typeof relyingPartyCopy === 'object' && 'attestationCertificate' in relyingPartyCopy) {
+                delete relyingPartyCopy.attestationCertificate;
+            }
+        } catch (error) {
+            relyingPartyCopy = null;
+        }
+    }
+
+    const relyingPartyDisplay = relyingPartyCopy
+        ? JSON.stringify(relyingPartyCopy, null, 2)
+        : '';
+
+    const credentialSection = credentialDisplay
+        ? `<pre class="modal-pre">${escapeHtml(credentialDisplay)}</pre>`
+        : '<div style="font-style: italic; color: #6c757d;">No credential response captured.</div>';
+
+    const clientDataSection = clientDataDisplay
+        ? `<pre class="modal-pre">${escapeHtml(clientDataDisplay)}</pre>`
+        : '<div style="font-style: italic; color: #6c757d;">No clientDataJSON available.</div>';
+
+    const relyingPartySection = relyingPartyDisplay
+        ? `<pre class="modal-pre">${escapeHtml(relyingPartyDisplay)}</pre>`
+        : '<div style="font-style: italic; color: #6c757d;">No relying party data returned.</div>';
+
+    let html = `
+        <section style="margin-bottom: 1.5rem;">
+            <h3 style="color: #0072CE; margin-bottom: 0.75rem;">Authenticator Response</h3>
+            <ol style="padding-left: 1.25rem; margin: 0;">
+                <li style="margin-bottom: 1rem;">
+                    <div style="font-weight: 600; margin-bottom: 0.5rem;">Result of navigator.credentials.create()</div>
+                    ${credentialSection}
+                </li>
+                <li>
+                    <div style="font-weight: 600; margin-bottom: 0.5rem;">Parsed clientDataJSON response</div>
+                    ${clientDataSection}
+                </li>
+            </ol>
+        </section>
+        <section style="margin-bottom: 1.5rem;">
+            <h3 style="color: #0072CE; margin-bottom: 0.75rem;">Relying Party extracted information</h3>
+            ${relyingPartySection}
+        </section>
+    `;
+
+    const detailPreparation = await prepareRegistrationDetailState({
+        attestationObjectValue,
+        attestationObjectDecoded,
+        authenticatorDataValue,
+        fallbackCertificates,
+        relyingPartyInfo,
+    });
+
+    const authDataState = registrationDetailState.authenticatorData;
+    if (authDataState) {
+        if (detailPreparation.authenticatorDataValue && typeof authDataState.base64url !== 'string') {
+            authDataState.base64url = detailPreparation.authenticatorDataValue;
+        }
+        if (authenticatorDataHex && typeof authDataState.raw !== 'string') {
+            authDataState.raw = authenticatorDataHex;
+        }
+    } else if (detailPreparation.authenticatorDataValue || authenticatorDataHex) {
+        registrationDetailState.authenticatorData = {};
+        if (detailPreparation.authenticatorDataValue) {
+            registrationDetailState.authenticatorData.base64url = detailPreparation.authenticatorDataValue;
+        }
+        if (authenticatorDataHex) {
+            registrationDetailState.authenticatorData.raw = authenticatorDataHex;
+        }
+    }
+
+    const attestationObject = registrationDetailState.attestationObject;
+    const attestationFormatFromRp = typeof relyingPartyInfo?.attestationFmt === 'string'
+        ? relyingPartyInfo.attestationFmt
+        : '';
+    const attestationFormatFromObject = attestationObject && typeof attestationObject.fmt === 'string'
+        ? attestationObject.fmt
+        : attestationObjectDecoded && typeof attestationObjectDecoded === 'object' && typeof attestationObjectDecoded.fmt === 'string'
+            ? attestationObjectDecoded.fmt
+            : '';
+    const attestationFormatRaw = attestationFormatFromRp || attestationFormatFromObject || '';
+    const attestationStatement = attestationObject && typeof attestationObject.attStmt === 'object'
+        ? attestationObject.attStmt
+        : attestationObjectDecoded && typeof attestationObjectDecoded === 'object' && typeof attestationObjectDecoded.attStmt === 'object'
+            ? attestationObjectDecoded.attStmt
+            : null;
+
+    const attestationSectionHtml = buildAttestationSection({
+        attestationObjectValue: detailPreparation.attestationObjectValue,
+        attestationDecodeError: detailPreparation.attestationDecodeError,
+        attestationFormatRaw,
+        attestationStatement,
+        authenticatorDataValue: detailPreparation.authenticatorDataValue,
+        authenticatorDecodeError: detailPreparation.authenticatorDecodeError,
+    });
+
+    if (attestationSectionHtml) {
+        html += attestationSectionHtml;
+    }
+
+    return html;
 }
 
 function bindRegistrationDetailButtons(scope) {
@@ -1136,59 +1317,129 @@ export async function showCredentialDetails(index) {
 
     const relyingPartyInfo = pickFirstObject(
         cred.relyingParty,
+        cred.registrationRelyingParty,
+        cred.registration_relying_party,
         cred.properties?.relyingParty,
     );
 
-    const detailPreparation = await prepareRegistrationDetailState({
+    const fallbackClientDataString = pickFirstString(
+        cred.clientDataJSON,
+        cred.clientDataJson,
+        cred.clientData,
+        typeof cred.client_data_json === 'string' ? cred.client_data_json : '',
+    );
+
+    const fallbackClientDataObject = pickFirstObject(
+        typeof cred.client_data_json === 'object' ? cred.client_data_json : null,
+        cred.clientDataParsed,
+        cred.clientDataObject,
+    );
+
+    const registrationResponseStored = pickFirstObject(
+        cred.registrationResponse,
+        cred.registration_response,
+        cred.registrationResult,
+        cred.registration_result,
+    );
+
+    const cloneJson = value => {
+        if (!value || typeof value !== 'object') {
+            return null;
+        }
+        try {
+            return JSON.parse(JSON.stringify(value));
+        } catch (error) {
+            return null;
+        }
+    };
+
+    let registrationCredential = cloneJson(registrationResponseStored);
+    if (!registrationCredential || typeof registrationCredential !== 'object') {
+        registrationCredential = {};
+    }
+
+    if (!registrationCredential.response || typeof registrationCredential.response !== 'object') {
+        registrationCredential.response = {};
+    }
+    const registrationResponse = registrationCredential.response;
+
+    const credentialIdBase64 = pickFirstString(
+        cred.credentialId,
+        cred.credential_id,
+        cred.credentialIdBase64,
+    );
+    let credentialIdBase64Url = '';
+    if (credentialIdBase64) {
+        try {
+            credentialIdBase64Url = base64ToBase64Url(credentialIdBase64);
+        } catch (error) {
+            credentialIdBase64Url = credentialIdBase64;
+        }
+    }
+
+    if (credentialIdBase64Url) {
+        if (!registrationCredential.id) {
+            registrationCredential.id = credentialIdBase64Url;
+        }
+        if (!registrationCredential.rawId) {
+            registrationCredential.rawId = credentialIdBase64Url;
+        }
+    }
+
+    if (!registrationCredential.type) {
+        registrationCredential.type = 'public-key';
+    }
+
+    if (attestationObjectValue && !registrationResponse.attestationObject) {
+        registrationResponse.attestationObject = attestationObjectValue;
+    }
+
+    const normalizedClientDataForResponse = normalizeClientDataString(
+        registrationResponse.clientDataJSON || fallbackClientDataString,
+    );
+    if (normalizedClientDataForResponse && !registrationResponse.clientDataJSON) {
+        registrationResponse.clientDataJSON = normalizedClientDataForResponse;
+    }
+
+    if (authenticatorDataBase64 && !registrationResponse.authenticatorData) {
+        registrationResponse.authenticatorData = authenticatorDataBase64;
+    }
+
+    const extensionResults = pickFirstObject(
+        registrationCredential.clientExtensionResults,
+        cred.clientExtensionOutputs,
+        cred.client_extension_outputs,
+    );
+    if (extensionResults && typeof extensionResults === 'object') {
+        registrationCredential.clientExtensionResults = cloneJson(extensionResults) || extensionResults;
+    }
+
+    if (cred.authenticatorAttachment && !registrationCredential.authenticatorAttachment) {
+        registrationCredential.authenticatorAttachment = cred.authenticatorAttachment;
+    }
+
+    const authenticatorDataForDetail = authenticatorDataBase64 || authenticatorDataHex || '';
+
+    const registrationDetailHtml = await composeRegistrationDetailHtml({
+        credentialJson: Object.keys(registrationCredential).length ? registrationCredential : null,
+        relyingPartyInfo,
         attestationObjectValue,
         attestationObjectDecoded,
-        authenticatorDataValue: authenticatorDataBase64 || authenticatorDataHex || '',
+        authenticatorDataValue: authenticatorDataForDetail,
+        authenticatorDataHex,
         fallbackCertificates,
-        relyingPartyInfo,
+        fallbackClientData: fallbackClientDataString,
+        fallbackParsedClientData: fallbackClientDataObject,
     });
 
-    const attestationObject = registrationDetailState.attestationObject;
     const attestationFormatCandidates = [
         cred.attestationFormat,
         cred.attestation_format,
         cred.attestationFmt,
         relyingPartyInfo?.attestationFmt,
-        attestationObject && typeof attestationObject.fmt === 'string' ? attestationObject.fmt : '',
+        attestationObjectDecoded && typeof attestationObjectDecoded.fmt === 'string' ? attestationObjectDecoded.fmt : '',
     ];
     const attestationFormatRaw = pickFirstString(...attestationFormatCandidates);
-
-    const attestationStatement = pickFirstObject(
-        cred.attestationStatement,
-        cred.attestation_statement,
-        relyingPartyInfo?.attestationStatement,
-    );
-
-    const attestationSectionHtml = buildAttestationSection({
-        attestationObjectValue: detailPreparation.attestationObjectValue,
-        attestationDecodeError: detailPreparation.attestationDecodeError,
-        attestationFormatRaw,
-        attestationStatement,
-        authenticatorDataValue: detailPreparation.authenticatorDataValue,
-        authenticatorDecodeError: detailPreparation.authenticatorDecodeError,
-    });
-
-    const authDataState = registrationDetailState.authenticatorData;
-    if (authDataState) {
-        if (detailPreparation.authenticatorDataValue && typeof authDataState.base64url !== 'string') {
-            authDataState.base64url = detailPreparation.authenticatorDataValue;
-        }
-        if (authenticatorDataHex && typeof authDataState.raw !== 'string') {
-            authDataState.raw = authenticatorDataHex;
-        }
-    } else if (authenticatorDataHex || detailPreparation.authenticatorDataValue) {
-        registrationDetailState.authenticatorData = {};
-        if (detailPreparation.authenticatorDataValue) {
-            registrationDetailState.authenticatorData.base64url = detailPreparation.authenticatorDataValue;
-        }
-        if (authenticatorDataHex) {
-            registrationDetailState.authenticatorData.raw = authenticatorDataHex;
-        }
-    }
 
     let detailsHtml = '';
 
@@ -1473,8 +1724,18 @@ export async function showCredentialDetails(index) {
         </div>`;
     }
 
-    if (attestationSectionHtml) {
-        detailsHtml += attestationSectionHtml;
+    if (registrationDetailHtml) {
+        detailsHtml += `
+        <div class="credential-registration-copy">
+            <h4 style="color: #0072CE; margin-bottom: 0.75rem;">Registration Details at Creation</h4>
+            ${registrationDetailHtml}
+        </div>`;
+    } else {
+        detailsHtml += `
+        <div class="credential-registration-copy">
+            <h4 style="color: #0072CE; margin-bottom: 0.75rem;">Registration Details at Creation</h4>
+            <div style="font-style: italic; color: #6c757d;">Registration detail data is not available for this credential.</div>
+        </div>`;
     }
 
     modalBody.innerHTML = detailsHtml;
@@ -1542,92 +1803,15 @@ export async function showRegistrationResultModal(credentialJson, relyingPartyIn
         return;
     }
 
-    const credentialDisplay = credentialJson ? JSON.stringify(credentialJson, null, 2) : '';
-    const clientDataBase64 = credentialJson?.response?.clientDataJSON;
-    const parsedClientData = clientDataBase64 ? base64UrlToJson(clientDataBase64) : null;
-    const clientDataDisplay = parsedClientData
-        ? JSON.stringify(parsedClientData, null, 2)
-        : clientDataBase64
-            ? base64UrlToUtf8String(clientDataBase64) || clientDataBase64
-            : '';
-
-    let relyingPartyCopy = null;
-    if (relyingPartyInfo && typeof relyingPartyInfo === 'object') {
-        relyingPartyCopy = JSON.parse(JSON.stringify(relyingPartyInfo));
-        if (relyingPartyCopy.attestationCertificate) {
-            delete relyingPartyCopy.attestationCertificate;
-        }
-    }
-
-    const relyingPartyDisplay = relyingPartyCopy ? JSON.stringify(relyingPartyCopy, null, 2) : '';
-
-    const credentialSection = credentialDisplay
-        ? `<pre class="modal-pre">${escapeHtml(credentialDisplay)}</pre>`
-        : '<div style="font-style: italic; color: #6c757d;">No credential response captured.</div>';
-
-    const clientDataSection = clientDataDisplay
-        ? `<pre class="modal-pre">${escapeHtml(clientDataDisplay)}</pre>`
-        : '<div style="font-style: italic; color: #6c757d;">No clientDataJSON available.</div>';
-
-    const relyingPartySection = relyingPartyDisplay
-        ? `<pre class="modal-pre">${escapeHtml(relyingPartyDisplay)}</pre>`
-        : '<div style="font-style: italic; color: #6c757d;">No relying party data returned.</div>';
-
-    let html = `
-        <section style="margin-bottom: 1.5rem;">
-            <h3 style="color: #0072CE; margin-bottom: 0.75rem;">Authenticator Response</h3>
-            <ol style="padding-left: 1.25rem; margin: 0;">
-                <li style="margin-bottom: 1rem;">
-                    <div style="font-weight: 600; margin-bottom: 0.5rem;">Result of navigator.credentials.create()</div>
-                    ${credentialSection}
-                </li>
-                <li>
-                    <div style="font-weight: 600; margin-bottom: 0.5rem;">Parsed clientDataJSON response</div>
-                    ${clientDataSection}
-                </li>
-            </ol>
-        </section>
-        <section style="margin-bottom: 1.5rem;">
-            <h3 style="color: #0072CE; margin-bottom: 0.75rem;">Relying Party extracted information</h3>
-            ${relyingPartySection}
-        </section>
-    `;
-
-    resetRegistrationDetailState();
-
     const attestationObjectValue = credentialJson?.response?.attestationObject || '';
     const authenticatorDataValue = credentialJson?.response?.authenticatorData || '';
 
-    const detailPreparation = await prepareRegistrationDetailState({
+    const html = await composeRegistrationDetailHtml({
+        credentialJson,
+        relyingPartyInfo,
         attestationObjectValue,
         authenticatorDataValue,
-        relyingPartyInfo,
     });
-
-    const attestationObject = registrationDetailState.attestationObject;
-    const attestationFormatFromRp = typeof relyingPartyInfo?.attestationFmt === 'string'
-        ? relyingPartyInfo.attestationFmt
-        : '';
-    const attestationFormatFromObject = attestationObject && typeof attestationObject.fmt === 'string'
-        ? attestationObject.fmt
-        : '';
-    const attestationFormatRaw = attestationFormatFromRp || attestationFormatFromObject || '';
-    const attestationStatement = attestationObject && typeof attestationObject.attStmt === 'object'
-        ? attestationObject.attStmt
-        : null;
-
-    const attestationSectionHtml = buildAttestationSection({
-        attestationObjectValue: detailPreparation.attestationObjectValue,
-        attestationDecodeError: detailPreparation.attestationDecodeError,
-        attestationFormatRaw,
-        attestationStatement,
-        authenticatorDataValue: detailPreparation.authenticatorDataValue,
-        authenticatorDecodeError: detailPreparation.authenticatorDecodeError,
-    });
-
-    if (attestationSectionHtml) {
-        html += attestationSectionHtml;
-    }
 
     modalBody.innerHTML = html;
     bindRegistrationDetailButtons(modalBody);

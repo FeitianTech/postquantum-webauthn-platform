@@ -39,6 +39,10 @@
     max-height: 95vh;
 }
 
+#registrationDetailModal {
+    z-index: 1300;
+}
+
 .modal-header {
     display: flex;
     justify-content: space-between;
@@ -142,6 +146,17 @@
     word-break: break-word;
     overflow-wrap: anywhere;
     white-space: pre-wrap;
+}
+
+.credential-registration-copy {
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid rgba(0, 114, 206, 0.15);
+}
+
+.credential-registration-copy > h4 {
+    color: #0072CE;
+    margin-bottom: 0.75rem;
 }
 
 .credential-aaguid-row {

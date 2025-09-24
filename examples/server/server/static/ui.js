@@ -2,6 +2,89 @@ import { state } from './state.js';
 
 let hideTimeout;
 
+const BASE_MODAL_Z_INDEX = 1200;
+const MODAL_STACK_INCREMENT = 50;
+
+function parseModalZIndex(value) {
+    if (typeof value === 'number' && !Number.isNaN(value)) {
+        return value;
+    }
+
+    if (typeof value === 'string' && value.trim() !== '') {
+        const parsed = Number.parseInt(value, 10);
+        if (!Number.isNaN(parsed)) {
+            return parsed;
+        }
+    }
+
+    return null;
+}
+
+function getElementZIndex(element) {
+    if (!element) {
+        return null;
+    }
+
+    const datasetCandidates = [
+        element.dataset.modalStackZIndex,
+        element.dataset.modalBaseZIndex,
+    ];
+
+    for (const candidate of datasetCandidates) {
+        const parsed = parseModalZIndex(candidate);
+        if (parsed !== null) {
+            return parsed;
+        }
+    }
+
+    if (typeof window !== 'undefined' && typeof window.getComputedStyle === 'function') {
+        const computed = window.getComputedStyle(element);
+        const parsed = parseModalZIndex(computed?.zIndex);
+        if (parsed !== null) {
+            return parsed;
+        }
+    }
+
+    return null;
+}
+
+function ensureModalBaseZIndex(modal) {
+    if (!modal) {
+        return BASE_MODAL_Z_INDEX;
+    }
+
+    const stored = parseModalZIndex(modal.dataset.modalBaseZIndex);
+    if (stored !== null) {
+        return stored;
+    }
+
+    const computed = (typeof window !== 'undefined' && typeof window.getComputedStyle === 'function')
+        ? window.getComputedStyle(modal)
+        : null;
+    const parsed = parseModalZIndex(computed?.zIndex);
+    const base = parsed !== null ? parsed : BASE_MODAL_Z_INDEX;
+    modal.dataset.modalBaseZIndex = String(base);
+    return base;
+}
+
+function getHighestOpenModalZIndex(excludeModal = null) {
+    const openModals = Array.from(document.querySelectorAll('.modal.open'));
+    let highest = BASE_MODAL_Z_INDEX;
+
+    openModals.forEach(openModalEl => {
+        if (openModalEl === excludeModal) {
+            return;
+        }
+
+        const zIndex = getElementZIndex(openModalEl);
+        if (typeof zIndex === 'number' && zIndex > highest) {
+            highest = zIndex;
+        }
+    });
+
+    return highest;
+}
+
 export function showInfoPopup(iconElement) {
     const popup = iconElement.querySelector('.info-popup');
     if (!popup) {
@@ -155,7 +238,16 @@ export function openModal(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) {
         resetModalScroll(modal);
+
+        const baseZIndex = ensureModalBaseZIndex(modal);
+        const highestOtherModal = getHighestOpenModalZIndex(modal);
+        const targetZIndex = Math.max(baseZIndex, highestOtherModal + MODAL_STACK_INCREMENT);
+
+        modal.dataset.modalStackZIndex = String(targetZIndex);
+        modal.style.zIndex = String(targetZIndex);
+
         modal.classList.add('open');
+
         requestAnimationFrame(() => resetModalScroll(modal));
         updateGlobalScrollLock();
     }
@@ -165,6 +257,17 @@ export function closeModal(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) {
         modal.classList.remove('open');
+        if (modal.dataset.modalStackZIndex) {
+            const baseZIndex = ensureModalBaseZIndex(modal);
+            if (modal.dataset.modalBaseZIndex) {
+                modal.style.zIndex = modal.dataset.modalBaseZIndex;
+            } else if (typeof baseZIndex === 'number') {
+                modal.style.zIndex = String(baseZIndex);
+            } else {
+                modal.style.removeProperty('z-index');
+            }
+            delete modal.dataset.modalStackZIndex;
+        }
         requestAnimationFrame(() => resetModalScroll(modal));
         updateGlobalScrollLock();
     }
