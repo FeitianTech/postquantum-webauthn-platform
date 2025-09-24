@@ -6,6 +6,7 @@ import {
 import { randomizeUserIdentity } from './username.js';
 import { updateJsonEditor } from './json-editor.js';
 import { clearFakeExcludeCredentials, clearFakeAllowCredentials } from './exclude-credentials.js';
+import { updateAllowCredentialsDropdown } from './credential-display.js';
 
 export function resetRegistrationForm() {
     randomizeUserIdentity();
@@ -47,6 +48,7 @@ export function resetRegistrationForm() {
 
     clearFakeExcludeCredentials();
 
+    updateAllowCredentialsDropdown();
     updateJsonEditor();
 }
 

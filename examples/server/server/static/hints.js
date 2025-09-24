@@ -12,10 +12,12 @@ import {
     normalizeAttachmentValue
 } from './credential-utils.js';
 
-let onRegistrationHintsChange = null;
+const registrationHintCallbacks = new Set();
 
 export function registerHintsChangeCallback(callback) {
-    onRegistrationHintsChange = typeof callback === 'function' ? callback : null;
+    if (typeof callback === 'function') {
+        registrationHintCallbacks.add(callback);
+    }
 }
 
 export function normalizeHintValue(value) {
@@ -86,8 +88,14 @@ export function applyHintsToCheckboxes(hints, scope) {
             checkbox.checked = normalized.has(value);
         }
     });
-    if (scope !== 'authentication' && onRegistrationHintsChange) {
-        onRegistrationHintsChange();
+    if (scope !== 'authentication' && registrationHintCallbacks.size > 0) {
+        registrationHintCallbacks.forEach(callback => {
+            try {
+                callback();
+            } catch (error) {
+                console.error('Failed to run registration hints change callback.', error);
+            }
+        });
     }
 }
 

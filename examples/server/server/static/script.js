@@ -67,8 +67,10 @@ import {
     closeRegistrationResultModal,
     closeRegistrationDetailModal,
     deleteCredential,
-    clearAllCredentials
+    clearAllCredentials,
+    updateAllowCredentialsDropdown
 } from './credential-display.js';
+import { registerHintsChangeCallback } from './hints.js';
 import { handleJsonEditorKeydown } from './json-editor-utils.js';
 import {
     createFakeExcludeCredential,
@@ -78,6 +80,8 @@ import {
     removeFakeAllowCredential,
     renderFakeAllowCredentialList
 } from './exclude-credentials.js';
+
+registerHintsChangeCallback(() => updateAllowCredentialsDropdown());
 
 window.create = create;
 window.get = get;
@@ -168,6 +172,23 @@ document.addEventListener('DOMContentLoaded', () => {
         allInputs.forEach(input => {
             input.addEventListener('input', updateJsonEditor);
             input.addEventListener('change', updateJsonEditor);
+        });
+
+        const attachmentSelect = document.getElementById('authenticator-attachment');
+        if (attachmentSelect) {
+            attachmentSelect.addEventListener('change', () => {
+                updateAllowCredentialsDropdown();
+            });
+        }
+
+        const registrationHintCheckboxes = ['hint-client-device', 'hint-hybrid', 'hint-security-key'];
+        registrationHintCheckboxes.forEach(id => {
+            const checkbox = document.getElementById(id);
+            if (checkbox) {
+                checkbox.addEventListener('change', () => {
+                    updateAllowCredentialsDropdown();
+                });
+            }
         });
 
         const usernameInput = document.getElementById('user-name');

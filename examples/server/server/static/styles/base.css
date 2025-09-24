@@ -221,6 +221,24 @@ body.modal-open {
     background: rgba(255, 255, 255, 0.95);
 }
 
+.simple-username-input {
+    align-items: center;
+    flex-wrap: wrap;
+    max-width: 100%;
+}
+
+.simple-username-field {
+    flex: 1 1 30ch;
+    max-width: 30ch;
+}
+
+@media (max-width: 600px) {
+    .simple-username-field {
+        flex-basis: 100%;
+        max-width: 100%;
+    }
+}
+
 .form-control:focus {
     outline: none;
     border-color: var(--primary-color);

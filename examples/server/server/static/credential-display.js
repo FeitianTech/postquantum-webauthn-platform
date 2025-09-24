@@ -35,6 +35,8 @@ import { openModal, closeModal, updateGlobalScrollLock, resetModalScroll } from 
 import { showStatus, hideStatus, showProgress, hideProgress } from './status.js';
 import { updateJsonEditor } from './json-editor.js';
 import { checkLargeBlobCapability, updateAuthenticationExtensionAvailability } from './forms.js';
+import { collectSelectedHints, deriveAllowedAttachmentsFromHints } from './hints.js';
+import { ATTACHMENT_LABELS } from './constants.js';
 
 function appendKeyValueLines(output, value, indentLevel = 0) {
     if (value === null || value === undefined) {
@@ -405,13 +407,29 @@ function buildAttestationSection({
 
     if (shouldShowAttestationSection) {
         let attestationContent = '';
+        const attestationHeading = '<h4 style="font-weight: 600; color: #0f2740; margin-bottom: 0.5rem;">Attestation Object</h4>';
         if (attestationObject) {
-            attestationContent = `<textarea class="certificate-textarea" readonly spellcheck="false" wrap="soft">${escapeHtml(JSON.stringify(attestationObject, null, 2))}</textarea>`;
+            attestationContent = `
+                <div style="margin-bottom: 0.75rem;">
+                    ${attestationHeading}
+                    <textarea class="certificate-textarea" readonly spellcheck="false" wrap="soft">${escapeHtml(JSON.stringify(attestationObject, null, 2))}</textarea>
+                </div>
+            `;
         } else if (attestationObjectValue) {
             const message = attestationDecodeError || 'Unable to decode attestationObject.';
-            attestationContent = `<div style="color: #dc3545; font-size: 0.9rem; margin-bottom: 0.75rem;">${escapeHtml(message)}</div>`;
+            attestationContent = `
+                <div style="margin-bottom: 0.75rem;">
+                    ${attestationHeading}
+                    <div style="color: #dc3545; font-size: 0.9rem;">${escapeHtml(message)}</div>
+                </div>
+            `;
         } else {
-            attestationContent = '<div style="font-style: italic; color: #6c757d; margin-bottom: 0.75rem;">No attestationObject was provided.</div>';
+            attestationContent = `
+                <div style="margin-bottom: 0.75rem;">
+                    ${attestationHeading}
+                    <div style="font-style: italic; color: #6c757d;">No attestationObject was provided.</div>
+                </div>
+            `;
         }
 
         const buttonRowSegments = [];
@@ -475,6 +493,7 @@ async function composeRegistrationDetailHtml({
     fallbackCertificates = [],
     fallbackClientData = null,
     fallbackParsedClientData = null,
+    includeAttestationSection = true,
 } = {}) {
     resetRegistrationDetailState();
 
@@ -613,11 +632,14 @@ async function composeRegistrationDetailHtml({
         authenticatorDecodeError: detailPreparation.authenticatorDecodeError,
     });
 
-    if (attestationSectionHtml) {
+    if (includeAttestationSection && attestationSectionHtml) {
         html += attestationSectionHtml;
     }
 
-    return html;
+    return {
+        html,
+        attestationSectionHtml,
+    };
 }
 
 function bindRegistrationDetailButtons(scope) {
@@ -953,6 +975,26 @@ export function updateAllowCredentialsDropdown() {
         <option value="empty">Empty (resident key only)</option>
     `;
 
+    const selectedHints = collectSelectedHints ? collectSelectedHints('registration') : [];
+    let attachmentFilters = deriveAllowedAttachmentsFromHints(selectedHints);
+    if (!attachmentFilters.length) {
+        const attachmentSelect = document.getElementById('authenticator-attachment');
+        const attachmentPreference = attachmentSelect ? attachmentSelect.value : '';
+        if (attachmentPreference === 'platform' || attachmentPreference === 'cross-platform') {
+            attachmentFilters = [attachmentPreference];
+        }
+    }
+
+    const matchesAttachmentPreference = attachmentValue => {
+        if (!attachmentFilters.length) {
+            return true;
+        }
+        if (typeof attachmentValue !== 'string' || !attachmentValue.trim()) {
+            return false;
+        }
+        return attachmentFilters.includes(attachmentValue.trim().toLowerCase());
+    };
+
     if (state.storedCredentials && state.storedCredentials.length > 0) {
         state.storedCredentials.forEach((cred, index) => {
             const credentialIdHex = cred.credentialIdHex || getCredentialIdHex(cred);
@@ -960,21 +1002,39 @@ export function updateAllowCredentialsDropdown() {
                 return;
             }
 
+            const attachmentValue = getStoredCredentialAttachment(cred);
+            if (!matchesAttachmentPreference(attachmentValue)) {
+                return;
+            }
+
             const credName = cred.userName || cred.email || `Credential ${index + 1}`;
+            const algorithmValue = cred.publicKeyAlgorithm ?? cred.algorithm;
+            const algorithmLabel = describeCoseAlgorithm(algorithmValue) || 'Unknown';
+            const attachmentLabel = attachmentValue
+                ? (ATTACHMENT_LABELS[attachmentValue] || attachmentValue)
+                : '';
+            const labelSuffix = attachmentLabel ? ` • ${attachmentLabel}` : '';
+
             const option = document.createElement('option');
             option.value = credentialIdHex;
-            option.textContent = `${credName} (${describeCoseAlgorithm(cred.algorithm)})`;
+            option.textContent = `${credName} (${algorithmLabel})${labelSuffix}`;
+            option.dataset.attachment = attachmentValue || '';
             allowCredentialsSelect.appendChild(option);
         });
     }
 
-    if (currentValue && Array.from(allowCredentialsSelect.options).some(opt => opt.value === currentValue)) {
-        allowCredentialsSelect.value = currentValue;
-    } else {
-        allowCredentialsSelect.value = 'all';
+    const availableValues = new Set(Array.from(allowCredentialsSelect.options).map(opt => opt.value));
+    const desiredValue = availableValues.has(currentValue) ? currentValue : 'all';
+    if (allowCredentialsSelect.value !== desiredValue) {
+        allowCredentialsSelect.value = desiredValue;
+        try {
+            allowCredentialsSelect.dispatchEvent(new Event('change', { bubbles: true }));
+        } catch (error) {
+            const changeEvent = document.createEvent('Event');
+            changeEvent.initEvent('change', true, true);
+            allowCredentialsSelect.dispatchEvent(changeEvent);
+        }
     }
-
-    updateJsonEditor();
 }
 
 export async function loadSavedCredentials() {
@@ -1412,7 +1472,7 @@ export async function showCredentialDetails(index) {
 
     const authenticatorDataForDetail = authenticatorDataBase64 || authenticatorDataHex || '';
 
-    const registrationDetailHtml = await composeRegistrationDetailHtml({
+    const registrationDetailResult = await composeRegistrationDetailHtml({
         credentialJson: Object.keys(registrationCredential).length ? registrationCredential : null,
         relyingPartyInfo,
         attestationObjectValue,
@@ -1422,7 +1482,10 @@ export async function showCredentialDetails(index) {
         fallbackCertificates,
         fallbackClientData: fallbackClientDataString,
         fallbackParsedClientData: fallbackClientDataObject,
+        includeAttestationSection: false,
     });
+    const registrationDetailHtml = registrationDetailResult.html;
+    const attestationSectionHtml = registrationDetailResult.attestationSectionHtml;
 
     const attestationFormatCandidates = [
         cred.attestationFormat,
@@ -1716,16 +1779,15 @@ export async function showCredentialDetails(index) {
         </div>`;
     }
 
-    if (registrationDetailHtml) {
+    const combinedRegistrationHtml = [registrationDetailHtml, attestationSectionHtml].filter(Boolean).join('');
+    if (combinedRegistrationHtml) {
         detailsHtml += `
         <div class="credential-registration-copy">
-            <h4 style="color: #0072CE; margin-bottom: 0.75rem;">Registration Details at Creation</h4>
-            ${registrationDetailHtml}
+            ${combinedRegistrationHtml}
         </div>`;
     } else {
         detailsHtml += `
         <div class="credential-registration-copy">
-            <h4 style="color: #0072CE; margin-bottom: 0.75rem;">Registration Details at Creation</h4>
             <div style="font-style: italic; color: #6c757d;">Registration detail data is not available for this credential.</div>
         </div>`;
     }
@@ -1798,14 +1860,14 @@ export async function showRegistrationResultModal(credentialJson, relyingPartyIn
     const attestationObjectValue = credentialJson?.response?.attestationObject || '';
     const authenticatorDataValue = credentialJson?.response?.authenticatorData || '';
 
-    const html = await composeRegistrationDetailHtml({
+    const registrationDetail = await composeRegistrationDetailHtml({
         credentialJson,
         relyingPartyInfo,
         attestationObjectValue,
         authenticatorDataValue,
     });
 
-    modalBody.innerHTML = html;
+    modalBody.innerHTML = registrationDetail.html;
     bindRegistrationDetailButtons(modalBody);
 
     modalBody.scrollTop = 0;
