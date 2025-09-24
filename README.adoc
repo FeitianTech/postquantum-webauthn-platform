@@ -106,13 +106,15 @@ python -c "import oqs"
 ### 1. Install mkcert
 
 #### Windows
-1. Download the latest `mkcert.exe`:  
-    [GitHub Releases](https://github.com/FiloSottile/mkcert/releases)  
-2. Place `mkcert.exe` in a folder included in **PATH** (e.g., `C:\Windows\System32`).  
-3. Run in PowerShell:
-   ```powershell
-   mkcert -install
-   ```
+```bash
+# Install Chocolatey
+Set-ExecutionPolicy Bypass -Scope Process -Force; `
+  [System.Net.ServicePointManager]::SecurityProtocol = `
+  [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; `
+  iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+# Install mkcert via Chocolatey
+choco install mkcert -y
+```
 
 #### macOS
 ```bash
