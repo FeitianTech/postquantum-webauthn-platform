@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import base64
+import math
 import os
 import time
 import uuid
@@ -37,6 +38,28 @@ from ..attestation import (
 )
 from ..config import app, basepath, rp, server
 from ..storage import add_public_key_material, extract_credential_data, readkey, savekey
+
+
+def _coerce_cose_algorithm(value: Any) -> Optional[int]:
+    """Attempt to coerce a COSE algorithm identifier into an ``int``."""
+
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        if math.isfinite(value) and value.is_integer():
+            return int(value)
+        return None
+    if isinstance(value, str):
+        stripped = value.strip()
+        if not stripped:
+            return None
+        try:
+            return int(stripped, 10)
+        except ValueError:
+            return None
+    return None
 
 
 def _extract_binary_value(value: Any) -> Any:
@@ -115,15 +138,27 @@ def advanced_register_begin():
 
     pub_key_cred_params = public_key.get("pubKeyCredParams", [])
     if pub_key_cred_params:
-        allowed_algorithms = []
+        allowed_algorithms: List[PublicKeyCredentialParameters] = []
+        normalized_params: List[Dict[str, Any]] = []
         for param in pub_key_cred_params:
-            if isinstance(param, dict) and param.get("type") == "public-key" and "alg" in param:
-                allowed_algorithms.append(
-                    PublicKeyCredentialParameters(
-                        type=PublicKeyCredentialType.PUBLIC_KEY,
-                        alg=param["alg"]
-                    )
+            if not isinstance(param, Mapping):
+                continue
+            if param.get("type") != "public-key":
+                continue
+            alg_value = _coerce_cose_algorithm(param.get("alg"))
+            if alg_value is None:
+                continue
+            normalized_param = dict(param)
+            normalized_param["alg"] = alg_value
+            normalized_params.append(normalized_param)
+            allowed_algorithms.append(
+                PublicKeyCredentialParameters(
+                    type=PublicKeyCredentialType.PUBLIC_KEY,
+                    alg=alg_value
                 )
+            )
+        if normalized_params:
+            public_key["pubKeyCredParams"] = normalized_params
         if allowed_algorithms:
             temp_server.allowed_algorithms = allowed_algorithms
     else:

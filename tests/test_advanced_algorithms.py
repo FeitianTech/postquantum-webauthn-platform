@@ -1,0 +1,90 @@
+"""Tests for algorithm handling in the advanced registration routes."""
+
+from __future__ import annotations
+
+import importlib.util
+from pathlib import Path
+from typing import List
+
+import pytest
+
+
+def _load_app():
+    app_path = (
+        Path(__file__).resolve().parents[1]
+        / "examples"
+        / "server"
+        / "server"
+        / "app.py"
+    )
+    spec = importlib.util.spec_from_file_location("advanced_server_app", app_path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError("Unable to load advanced server application module")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.app
+
+
+
+@pytest.fixture()
+def client():
+    app = _load_app()
+    app.config["TESTING"] = True
+    with app.test_client() as test_client:
+        yield test_client
+
+
+def _post_begin(client, pubkey_params: List[dict]):
+    payload = {
+        "publicKey": {
+            "rp": {"name": "Test RP", "id": "localhost"},
+            "user": {
+                "id": {"$hex": "0102030405060708090a0b0c0d0e0f10"},
+                "name": "user",
+                "displayName": "User",
+            },
+            "challenge": {"$hex": "11223344556677889900aabbccddeeff"},
+            "pubKeyCredParams": pubkey_params,
+            "timeout": 60000,
+            "authenticatorSelection": {},
+            "attestation": "none",
+        }
+    }
+
+    response = client.post("/api/advanced/register/begin", json=payload)
+    assert response.status_code == 200, response.get_data(as_text=True)
+    return response.get_json()
+
+
+def test_coerces_string_algorithm_identifiers(client):
+    data = _post_begin(
+        client,
+        [
+            {"type": "public-key", "alg": " -50 "},
+            {"type": "public-key", "alg": -49},
+            {"type": "public-key", "alg": "-48"},
+        ],
+    )
+
+    params = data["publicKey"]["pubKeyCredParams"]
+    algorithms = [entry["alg"] for entry in params]
+
+    assert algorithms == [-50, -49, -48]
+    assert all(isinstance(entry["alg"], int) for entry in params)
+
+
+def test_ignores_invalid_algorithm_entries(client):
+    data = _post_begin(
+        client,
+        [
+            {"type": "public-key", "alg": "-50"},
+            {"type": "public-key", "alg": "not-a-number"},
+            {"type": "public-key", "alg": None},
+        ],
+    )
+
+    params = data["publicKey"]["pubKeyCredParams"]
+    algorithms = [entry["alg"] for entry in params]
+
+    assert algorithms == [-50]
+    assert all(isinstance(entry["alg"], int) for entry in params)
