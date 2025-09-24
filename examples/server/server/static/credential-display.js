@@ -35,6 +35,8 @@ import { openModal, closeModal, updateGlobalScrollLock, resetModalScroll } from 
 import { showStatus, hideStatus, showProgress, hideProgress } from './status.js';
 import { updateJsonEditor } from './json-editor.js';
 import { checkLargeBlobCapability, updateAuthenticationExtensionAvailability } from './forms.js';
+import { collectSelectedHints, deriveAllowedAttachmentsFromHints } from './hints.js';
+import { ATTACHMENT_LABELS } from './constants.js';
 
 function appendKeyValueLines(output, value, indentLevel = 0) {
     if (value === null || value === undefined) {
@@ -181,6 +183,172 @@ function normalizeClientDataString(value) {
     }
 
     return trimmed;
+}
+
+function cloneJson(value) {
+    if (!value || typeof value !== 'object') {
+        return null;
+    }
+
+    try {
+        return JSON.parse(JSON.stringify(value));
+    } catch (error) {
+        return null;
+    }
+}
+
+const CERTIFICATE_COLLECTION_KEYS = [
+    'attestationCertificate',
+    'attestationCertificates',
+    'attestation_certificate',
+    'attestation_certificates',
+];
+
+function stripCertificateCollections(target) {
+    if (!target || typeof target !== 'object') {
+        return;
+    }
+
+    CERTIFICATE_COLLECTION_KEYS.forEach(key => {
+        if (Object.prototype.hasOwnProperty.call(target, key)) {
+            delete target[key];
+        }
+    });
+
+    Object.keys(target).forEach(key => {
+        const value = target[key];
+        if (value && typeof value === 'object') {
+            stripCertificateCollections(value);
+        }
+    });
+}
+
+function sanitizeParsedCertificateDetails(parsed) {
+    if (!parsed || typeof parsed !== 'object') {
+        return null;
+    }
+
+    const parsedCopy = cloneJson(parsed);
+    if (!parsedCopy || typeof parsedCopy !== 'object') {
+        return null;
+    }
+
+    ['pem', 'der', 'derBase64', 'der_base64', 'raw', 'summary', 'error'].forEach(key => {
+        if (Object.prototype.hasOwnProperty.call(parsedCopy, key)) {
+            delete parsedCopy[key];
+        }
+    });
+
+    if (Array.isArray(parsedCopy.extensions)) {
+        parsedCopy.extensions = parsedCopy.extensions
+            .map(ext => {
+                if (!ext || typeof ext !== 'object') {
+                    return null;
+                }
+
+                const extCopy = cloneJson(ext);
+                if (!extCopy || typeof extCopy !== 'object') {
+                    return null;
+                }
+
+                ['raw', 'hex', 'rawHex', 'der', 'derBase64', 'der_base64', 'valueHex'].forEach(key => {
+                    if (Object.prototype.hasOwnProperty.call(extCopy, key)) {
+                        delete extCopy[key];
+                    }
+                });
+
+                return extCopy;
+            })
+            .filter(Boolean);
+    }
+
+    return parsedCopy;
+}
+
+function sanitiseAttestationObjectForDisplay(attestationObject) {
+    const cloned = cloneJson(attestationObject);
+    if (!cloned || typeof cloned !== 'object') {
+        return null;
+    }
+
+    const certificates = Array.isArray(registrationDetailState.attestationCertificates)
+        ? registrationDetailState.attestationCertificates
+        : [];
+
+    if (cloned.attStmt && typeof cloned.attStmt === 'object') {
+        const attStmtClone = { ...cloned.attStmt };
+        const sourceArray = Array.isArray(attStmtClone.x5c) ? attStmtClone.x5c : [];
+        const maxLength = Math.max(sourceArray.length, certificates.length);
+
+        if (maxLength > 0) {
+            const sanitizedChain = [];
+
+            for (let index = 0; index < maxLength; index += 1) {
+                const certificateEntry = certificates[index];
+                const sourceEntry = sourceArray[index];
+
+                let parsedDetails = certificateEntry && typeof certificateEntry === 'object'
+                    ? certificateEntry.parsedX5c
+                    : null;
+
+                if ((!parsedDetails || typeof parsedDetails !== 'object') && sourceEntry) {
+                    const normalised = normaliseCertificateEntryForModal(sourceEntry);
+                    if (normalised && typeof normalised.parsedX5c === 'object') {
+                        parsedDetails = normalised.parsedX5c;
+                    }
+                }
+
+                if (!parsedDetails || typeof parsedDetails !== 'object') {
+                    continue;
+                }
+
+                const sanitizedDetails = sanitizeParsedCertificateDetails(parsedDetails);
+                const summaryText = typeof parsedDetails.summary === 'string'
+                    ? parsedDetails.summary.trim()
+                    : '';
+                const errorText = typeof parsedDetails.error === 'string'
+                    ? parsedDetails.error.trim()
+                    : '';
+
+                const hasDetails = sanitizedDetails && Object.keys(sanitizedDetails).length > 0;
+                if (!hasDetails && !summaryText && !errorText) {
+                    continue;
+                }
+
+                const entry = {
+                    certificateIndex: index + 1,
+                };
+
+                if (hasDetails) {
+                    entry.details = sanitizedDetails;
+                }
+
+                if (summaryText) {
+                    entry.summary = summaryText;
+                }
+
+                if (errorText) {
+                    entry.error = errorText;
+                }
+
+                sanitizedChain.push(entry);
+            }
+
+            if (sanitizedChain.length) {
+                attStmtClone.x5c = sanitizedChain;
+            } else {
+                delete attStmtClone.x5c;
+            }
+        } else {
+            delete attStmtClone.x5c;
+        }
+
+        stripCertificateCollections(attStmtClone);
+        cloned.attStmt = attStmtClone;
+    }
+
+    stripCertificateCollections(cloned);
+    return cloned;
 }
 
 const registrationDetailState = {
@@ -384,7 +552,14 @@ function buildAttestationSection({
     const attestationStatementHasContent = attestationStatementObject && Object.keys(attestationStatementObject).length > 0;
     const attestationHasCertificates = registrationDetailState.attestationCertificates.length > 0;
 
-    const shouldShowAttestationSection = (attestationFormatNormalized && attestationFormatNormalized !== 'none')
+    const hasAttestationObject = Boolean(attestationObject);
+    const hasAttestationValue = typeof attestationObjectValue === 'string'
+        ? attestationObjectValue.trim() !== ''
+        : false;
+
+    const shouldShowAttestationSection = hasAttestationObject
+        || hasAttestationValue
+        || (attestationFormatNormalized && attestationFormatNormalized !== 'none')
         || attestationStatementHasContent
         || attestationHasCertificates;
 
@@ -398,13 +573,49 @@ function buildAttestationSection({
 
     if (shouldShowAttestationSection) {
         let attestationContent = '';
+        const attestationHeading = '<h4 style="font-weight: 600; color: #0f2740; margin-bottom: 0.5rem;">Attestation Object</h4>';
         if (attestationObject) {
-            attestationContent = `<textarea class="certificate-textarea" readonly spellcheck="false" wrap="soft">${escapeHtml(JSON.stringify(attestationObject, null, 2))}</textarea>`;
+            let attestationJson = '';
+            const attestationDisplay = sanitiseAttestationObjectForDisplay(attestationObject) || attestationObject;
+            try {
+                attestationJson = JSON.stringify(attestationDisplay, null, 2);
+            } catch (error) {
+                attestationJson = '';
+            }
+
+            if (!attestationJson && attestationObject) {
+                try {
+                    attestationJson = JSON.stringify(attestationObject, null, 2);
+                } catch (jsonError) {
+                    attestationJson = '';
+                }
+            }
+
+            const attestationBody = attestationJson
+                ? `<textarea class="certificate-textarea" readonly spellcheck="false" wrap="soft">${escapeHtml(attestationJson)}</textarea>`
+                : '<div style="font-style: italic; color: #6c757d;">Unable to prepare decoded attestationObject.</div>';
+
+            attestationContent = `
+                <div style="margin-bottom: 0.75rem;">
+                    ${attestationHeading}
+                    ${attestationBody}
+                </div>
+            `;
         } else if (attestationObjectValue) {
             const message = attestationDecodeError || 'Unable to decode attestationObject.';
-            attestationContent = `<div style="color: #dc3545; font-size: 0.9rem; margin-bottom: 0.75rem;">${escapeHtml(message)}</div>`;
+            attestationContent = `
+                <div style="margin-bottom: 0.75rem;">
+                    ${attestationHeading}
+                    <div style="color: #dc3545; font-size: 0.9rem;">${escapeHtml(message)}</div>
+                </div>
+            `;
         } else {
-            attestationContent = '<div style="font-style: italic; color: #6c757d; margin-bottom: 0.75rem;">No attestationObject was provided.</div>';
+            attestationContent = `
+                <div style="margin-bottom: 0.75rem;">
+                    ${attestationHeading}
+                    <div style="font-style: italic; color: #6c757d;">No attestationObject was provided.</div>
+                </div>
+            `;
         }
 
         const buttonRowSegments = [];
@@ -468,6 +679,7 @@ async function composeRegistrationDetailHtml({
     fallbackCertificates = [],
     fallbackClientData = null,
     fallbackParsedClientData = null,
+    includeAttestationSection = true,
 } = {}) {
     resetRegistrationDetailState();
 
@@ -509,13 +721,9 @@ async function composeRegistrationDetailHtml({
 
     let relyingPartyCopy = null;
     if (relyingPartyInfo && typeof relyingPartyInfo === 'object') {
-        try {
-            relyingPartyCopy = JSON.parse(JSON.stringify(relyingPartyInfo));
-            if (relyingPartyCopy && typeof relyingPartyCopy === 'object' && 'attestationCertificate' in relyingPartyCopy) {
-                delete relyingPartyCopy.attestationCertificate;
-            }
-        } catch (error) {
-            relyingPartyCopy = null;
+        relyingPartyCopy = cloneJson(relyingPartyInfo);
+        if (relyingPartyCopy && typeof relyingPartyCopy === 'object') {
+            stripCertificateCollections(relyingPartyCopy);
         }
     }
 
@@ -606,11 +814,14 @@ async function composeRegistrationDetailHtml({
         authenticatorDecodeError: detailPreparation.authenticatorDecodeError,
     });
 
-    if (attestationSectionHtml) {
+    if (includeAttestationSection && attestationSectionHtml) {
         html += attestationSectionHtml;
     }
 
-    return html;
+    return {
+        html,
+        attestationSectionHtml,
+    };
 }
 
 function bindRegistrationDetailButtons(scope) {
@@ -899,28 +1110,18 @@ function openAttestationCertificateDetail(index) {
     const parsed = normalised.parsedX5c && typeof normalised.parsedX5c === 'object'
         ? normalised.parsedX5c
         : {};
-    const summary = formatCertificateDetails(parsed);
     const sections = [];
+    const errorMessage = typeof parsed.error === 'string' && parsed.error.trim() !== ''
+        ? parsed.error.trim()
+        : '';
+    const summary = formatCertificateDetails(parsed);
 
     if (summary && summary.trim() !== '') {
         sections.push(`<textarea class="certificate-textarea" readonly spellcheck="false" wrap="soft">${escapeHtml(summary)}</textarea>`);
+    } else if (errorMessage) {
+        sections.push(`<div style="color: #dc3545; font-size: 0.9rem;">${escapeHtml(errorMessage)}</div>`);
     } else {
         sections.push('<div style="font-style: italic; color: #6c757d;">No decoded certificate details available.</div>');
-    }
-
-    if (normalised.pem) {
-        sections.push('<h4 style="margin-top: 1rem;">PEM</h4>');
-        sections.push(`<pre class="modal-pre">${escapeHtml(normalised.pem)}</pre>`);
-    }
-
-    if (normalised.raw) {
-        sections.push('<h4 style="margin-top: 1rem;">Raw certificate (hex)</h4>');
-        sections.push(`<pre class="modal-pre">${escapeHtml(normalised.raw)}</pre>`);
-    }
-
-    if (parsed && Object.keys(parsed).length > 0) {
-        sections.push('<h4 style="margin-top: 1rem;">Parsed certificate JSON</h4>');
-        sections.push(`<pre class="modal-pre">${escapeHtml(JSON.stringify(parsed, null, 2))}</pre>`);
     }
 
     openRegistrationDetailModal(`Attestation Certificate ${index + 1}`, sections.join(''));
@@ -961,6 +1162,26 @@ export function updateAllowCredentialsDropdown() {
         <option value="empty">Empty (resident key only)</option>
     `;
 
+    const selectedHints = collectSelectedHints ? collectSelectedHints('registration') : [];
+    let attachmentFilters = deriveAllowedAttachmentsFromHints(selectedHints);
+    if (!attachmentFilters.length) {
+        const attachmentSelect = document.getElementById('authenticator-attachment');
+        const attachmentPreference = attachmentSelect ? attachmentSelect.value : '';
+        if (attachmentPreference === 'platform' || attachmentPreference === 'cross-platform') {
+            attachmentFilters = [attachmentPreference];
+        }
+    }
+
+    const matchesAttachmentPreference = attachmentValue => {
+        if (!attachmentFilters.length) {
+            return true;
+        }
+        if (typeof attachmentValue !== 'string' || !attachmentValue.trim()) {
+            return false;
+        }
+        return attachmentFilters.includes(attachmentValue.trim().toLowerCase());
+    };
+
     if (state.storedCredentials && state.storedCredentials.length > 0) {
         state.storedCredentials.forEach((cred, index) => {
             const credentialIdHex = cred.credentialIdHex || getCredentialIdHex(cred);
@@ -968,21 +1189,39 @@ export function updateAllowCredentialsDropdown() {
                 return;
             }
 
+            const attachmentValue = getStoredCredentialAttachment(cred);
+            if (!matchesAttachmentPreference(attachmentValue)) {
+                return;
+            }
+
             const credName = cred.userName || cred.email || `Credential ${index + 1}`;
+            const algorithmValue = cred.publicKeyAlgorithm ?? cred.algorithm;
+            const algorithmLabel = describeCoseAlgorithm(algorithmValue) || 'Unknown';
+            const attachmentLabel = attachmentValue
+                ? (ATTACHMENT_LABELS[attachmentValue] || attachmentValue)
+                : '';
+            const labelSuffix = attachmentLabel ? ` • ${attachmentLabel}` : '';
+
             const option = document.createElement('option');
             option.value = credentialIdHex;
-            option.textContent = `${credName} (${describeCoseAlgorithm(cred.algorithm)})`;
+            option.textContent = `${credName} (${algorithmLabel})${labelSuffix}`;
+            option.dataset.attachment = attachmentValue || '';
             allowCredentialsSelect.appendChild(option);
         });
     }
 
-    if (currentValue && Array.from(allowCredentialsSelect.options).some(opt => opt.value === currentValue)) {
-        allowCredentialsSelect.value = currentValue;
-    } else {
-        allowCredentialsSelect.value = 'all';
+    const availableValues = new Set(Array.from(allowCredentialsSelect.options).map(opt => opt.value));
+    const desiredValue = availableValues.has(currentValue) ? currentValue : 'all';
+    if (allowCredentialsSelect.value !== desiredValue) {
+        allowCredentialsSelect.value = desiredValue;
+        try {
+            allowCredentialsSelect.dispatchEvent(new Event('change', { bubbles: true }));
+        } catch (error) {
+            const changeEvent = document.createEvent('Event');
+            changeEvent.initEvent('change', true, true);
+            allowCredentialsSelect.dispatchEvent(changeEvent);
+        }
     }
-
-    updateJsonEditor();
 }
 
 export async function loadSavedCredentials() {
@@ -1274,7 +1513,7 @@ export async function showCredentialDetails(index) {
         return result;
     };
 
-    const attestationObjectValue = pickFirstString(
+    let attestationObjectValue = pickFirstString(
         cred.attestationObjectRaw,
         cred.attestationObject,
         cred.attestation_object_raw,
@@ -1283,14 +1522,14 @@ export async function showCredentialDetails(index) {
         cred.attestation_object_base64,
     );
 
-    const attestationObjectDecoded = pickFirstObject(
+    let attestationObjectDecoded = pickFirstObject(
         cred.attestationObjectDecoded,
         cred.attestation_object_decoded,
         typeof cred.attestationObject === 'object' ? cred.attestationObject : null,
         typeof cred.attestation_object === 'object' ? cred.attestation_object : null,
     );
 
-    const authenticatorDataBase64 = pickFirstString(
+    let authenticatorDataBase64 = pickFirstString(
         cred.authenticatorDataRaw,
         cred.authenticatorData,
         cred.authenticator_data_raw,
@@ -1299,7 +1538,7 @@ export async function showCredentialDetails(index) {
         cred.authenticatorDataBase64Url,
     );
 
-    const authenticatorDataHex = pickFirstString(
+    let authenticatorDataHex = pickFirstString(
         cred.authenticatorDataHex,
         cred.authenticator_data_hex,
     );
@@ -1342,17 +1581,6 @@ export async function showCredentialDetails(index) {
         cred.registration_result,
     );
 
-    const cloneJson = value => {
-        if (!value || typeof value !== 'object') {
-            return null;
-        }
-        try {
-            return JSON.parse(JSON.stringify(value));
-        } catch (error) {
-            return null;
-        }
-    };
-
     let registrationCredential = cloneJson(registrationResponseStored);
     if (!registrationCredential || typeof registrationCredential !== 'object') {
         registrationCredential = {};
@@ -1390,8 +1618,77 @@ export async function showCredentialDetails(index) {
         registrationCredential.type = 'public-key';
     }
 
+    const storedRegistrationResponse = (() => {
+        if (registrationResponseStored && typeof registrationResponseStored === 'object') {
+            const nestedResponse = registrationResponseStored.response;
+            if (nestedResponse && typeof nestedResponse === 'object') {
+                return nestedResponse;
+            }
+            return registrationResponseStored;
+        }
+        return null;
+    })();
+
+    if (!attestationObjectValue) {
+        attestationObjectValue = pickFirstString(
+            storedRegistrationResponse?.attestationObject,
+            storedRegistrationResponse?.attestation_object,
+            storedRegistrationResponse?.attestationObjectRaw,
+            storedRegistrationResponse?.attestation_object_raw,
+            registrationCredential?.attestationObject,
+            registrationCredential?.attestation_object,
+            registrationCredential?.attestationObjectRaw,
+            registrationCredential?.attestation_object_raw,
+        );
+    }
+
+    if (!attestationObjectDecoded) {
+        attestationObjectDecoded = pickFirstObject(
+            storedRegistrationResponse?.attestationObjectDecoded,
+            storedRegistrationResponse?.attestation_object_decoded,
+            typeof storedRegistrationResponse?.attestationObject === 'object'
+                ? storedRegistrationResponse.attestationObject
+                : null,
+            typeof storedRegistrationResponse?.attestation_object === 'object'
+                ? storedRegistrationResponse.attestation_object
+                : null,
+            typeof registrationCredential?.attestationObject === 'object'
+                ? registrationCredential.attestationObject
+                : null,
+            typeof registrationCredential?.attestation_object === 'object'
+                ? registrationCredential.attestation_object
+                : null,
+        );
+    }
+
+    if (!authenticatorDataBase64) {
+        authenticatorDataBase64 = pickFirstString(
+            storedRegistrationResponse?.authenticatorData,
+            storedRegistrationResponse?.authenticator_data,
+            storedRegistrationResponse?.authenticatorDataRaw,
+            storedRegistrationResponse?.authenticator_data_raw,
+            registrationCredential?.authenticatorData,
+            registrationCredential?.authenticator_data,
+            registrationCredential?.authenticatorDataRaw,
+            registrationCredential?.authenticator_data_raw,
+        );
+    }
+
+    if (!authenticatorDataHex) {
+        authenticatorDataHex = pickFirstString(
+            storedRegistrationResponse?.authenticatorDataHex,
+            storedRegistrationResponse?.authenticator_data_hex,
+            registrationCredential?.authenticatorDataHex,
+            registrationCredential?.authenticator_data_hex,
+        );
+    }
+
     if (attestationObjectValue && !registrationResponse.attestationObject) {
         registrationResponse.attestationObject = attestationObjectValue;
+    }
+
+    if (attestationObjectDecoded && !registrationResponse.attestationObjectDecoded) {
+        registrationResponse.attestationObjectDecoded = attestationObjectDecoded;
     }
 
     const normalizedClientDataForResponse = normalizeClientDataString(
@@ -1420,7 +1717,7 @@ export async function showCredentialDetails(index) {
 
     const authenticatorDataForDetail = authenticatorDataBase64 || authenticatorDataHex || '';
 
-    const registrationDetailHtml = await composeRegistrationDetailHtml({
+    const registrationDetailResult = await composeRegistrationDetailHtml({
         credentialJson: Object.keys(registrationCredential).length ? registrationCredential : null,
         relyingPartyInfo,
         attestationObjectValue,
@@ -1430,7 +1727,10 @@ export async function showCredentialDetails(index) {
         fallbackCertificates,
         fallbackClientData: fallbackClientDataString,
         fallbackParsedClientData: fallbackClientDataObject,
+        includeAttestationSection: false,
     });
+    const registrationDetailHtml = registrationDetailResult.html;
+    const attestationSectionHtml = registrationDetailResult.attestationSectionHtml;
 
     const attestationFormatCandidates = [
         cred.attestationFormat,
@@ -1724,16 +2024,15 @@ export async function showCredentialDetails(index) {
         </div>`;
     }
 
-    if (registrationDetailHtml) {
+    const combinedRegistrationHtml = [registrationDetailHtml, attestationSectionHtml].filter(Boolean).join('');
+    if (combinedRegistrationHtml) {
         detailsHtml += `
         <div class="credential-registration-copy">
-            <h4 style="color: #0072CE; margin-bottom: 0.75rem;">Registration Details at Creation</h4>
-            ${registrationDetailHtml}
+            ${combinedRegistrationHtml}
         </div>`;
     } else {
         detailsHtml += `
         <div class="credential-registration-copy">
-            <h4 style="color: #0072CE; margin-bottom: 0.75rem;">Registration Details at Creation</h4>
             <div style="font-style: italic; color: #6c757d;">Registration detail data is not available for this credential.</div>
         </div>`;
     }
@@ -1806,14 +2105,45 @@ export async function showRegistrationResultModal(credentialJson, relyingPartyIn
     const attestationObjectValue = credentialJson?.response?.attestationObject || '';
     const authenticatorDataValue = credentialJson?.response?.authenticatorData || '';
 
-    const html = await composeRegistrationDetailHtml({
+    const collectCertificates = (...sources) => {
+        const result = [];
+        sources.forEach(source => {
+            if (!source) {
+                return;
+            }
+            if (Array.isArray(source)) {
+                source.forEach(item => {
+                    if (item) {
+                        result.push(item);
+                    }
+                });
+            } else {
+                result.push(source);
+            }
+        });
+        return result;
+    };
+
+    const fallbackCertificates = collectCertificates(
+        relyingPartyInfo?.attestationCertificate,
+        relyingPartyInfo?.attestationCertificates,
+        relyingPartyInfo?.attestation_certificate,
+        relyingPartyInfo?.attestation_certificates,
+        relyingPartyInfo?.registrationData?.attestationCertificate,
+        relyingPartyInfo?.registrationData?.attestationCertificates,
+        relyingPartyInfo?.registrationData?.attestation_certificate,
+        relyingPartyInfo?.registrationData?.attestation_certificates,
+    );
+
+    const registrationDetail = await composeRegistrationDetailHtml({
         credentialJson,
         relyingPartyInfo,
         attestationObjectValue,
         authenticatorDataValue,
+        fallbackCertificates,
     });
 
-    modalBody.innerHTML = html;
+    modalBody.innerHTML = registrationDetail.html;
     bindRegistrationDetailButtons(modalBody);
 
     modalBody.scrollTop = 0;

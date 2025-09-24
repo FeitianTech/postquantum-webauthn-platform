@@ -6,6 +6,7 @@ import {
 import { randomizeUserIdentity } from './username.js';
 import { updateJsonEditor } from './json-editor.js';
 import { clearFakeExcludeCredentials, clearFakeAllowCredentials } from './exclude-credentials.js';
+import { updateAllowCredentialsDropdown } from './credential-display.js';
 
 export function resetRegistrationForm() {
     randomizeUserIdentity();
@@ -32,7 +33,7 @@ export function resetRegistrationForm() {
     if (document.getElementById('param-mldsa87')) document.getElementById('param-mldsa87').checked = false;
     document.getElementById('hint-client-device').checked = false;
     document.getElementById('hint-hybrid').checked = false;
-    document.getElementById('hint-security-key').checked = true;
+    document.getElementById('hint-security-key').checked = false;
 
     document.getElementById('cred-props').checked = true;
     document.getElementById('min-pin-length').checked = false;
@@ -47,6 +48,7 @@ export function resetRegistrationForm() {
 
     clearFakeExcludeCredentials();
 
+    updateAllowCredentialsDropdown();
     updateJsonEditor();
 }
 
@@ -59,7 +61,7 @@ export function resetAuthenticationForm() {
     document.getElementById('timeout-auth').value = '90000';
     document.getElementById('hint-client-device-auth').checked = false;
     document.getElementById('hint-hybrid-auth').checked = false;
-    document.getElementById('hint-security-key-auth').checked = true;
+    document.getElementById('hint-security-key-auth').checked = false;
 
     document.getElementById('large-blob-auth').value = '';
     document.getElementById('large-blob-write').value = '';

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import base64
+import binascii
 import hashlib
 import math
 import re
@@ -310,6 +311,71 @@ def summarize_authenticator_extensions(extensions: Mapping[str, Any]) -> Dict[st
     return summary
 
 
+def _coerce_attestation_certificate_bytes(value: Any) -> Optional[bytes]:
+    """Return raw certificate bytes for attestation payload *value*."""
+
+    if value in (None, ""):
+        return None
+
+    if isinstance(value, (bytes, bytearray, memoryview)):
+        return bytes(value)
+
+    if isinstance(value, ByteBuffer):
+        return bytes(value)
+
+    if isinstance(value, str):
+        cleaned = "".join(value.split())
+        if not cleaned:
+            return None
+        padding = (-len(cleaned)) % 4
+        padded = cleaned + ("=" * padding)
+        try:
+            return base64.b64decode(padded)
+        except (binascii.Error, ValueError):
+            try:
+                return websafe_decode(cleaned)
+            except Exception:
+                return None
+
+    if isinstance(value, Mapping):
+        raw_value = value.get("raw")
+        if isinstance(raw_value, str):
+            cleaned = "".join(raw_value.split())
+            try:
+                return bytes.fromhex(cleaned)
+            except ValueError:
+                pass
+
+        der_base64 = value.get("derBase64") or value.get("der_base64")
+        if isinstance(der_base64, str):
+            cleaned = "".join(der_base64.split())
+            padding = (-len(cleaned)) % 4
+            try:
+                return base64.b64decode(cleaned + ("=" * padding))
+            except (binascii.Error, ValueError):
+                pass
+
+        pem_value = value.get("pem")
+        if isinstance(pem_value, str):
+            lines = [
+                line.strip()
+                for line in pem_value.splitlines()
+                if "-----" not in line
+            ]
+            body = "".join(lines)
+            if body:
+                padding = (-len(body)) % 4
+                try:
+                    return base64.b64decode(body + ("=" * padding))
+                except (binascii.Error, ValueError):
+                    pass
+
+    try:
+        return bytes(value)
+    except (TypeError, ValueError):
+        return None
+
+
 def extract_attestation_details(
     response: Any,
 ) -> Tuple[
@@ -319,6 +385,7 @@ def extract_attestation_details(
     Optional[str],
     Dict[str, Any],
     Optional[Dict[str, Any]],
+    List[Dict[str, Any]],
 ]:
     """Parse attestation information from a registration response structure."""
     attestation_format = "none"
@@ -327,6 +394,7 @@ def extract_attestation_details(
     client_data_b64: Optional[str] = None
     client_extension_results: Dict[str, Any] = {}
     attestation_certificate: Optional[Dict[str, Any]] = None
+    attestation_certificates: List[Dict[str, Any]] = []
 
     if not isinstance(response, dict):
         return (
@@ -336,6 +404,7 @@ def extract_attestation_details(
             client_data_b64,
             client_extension_results,
             attestation_certificate,
+            attestation_certificates,
         )
 
     try:
@@ -349,6 +418,7 @@ def extract_attestation_details(
             client_data_b64,
             client_extension_results,
             attestation_certificate,
+            attestation_certificates,
         )
 
     attestation_object = registration.response.attestation_object
@@ -359,15 +429,28 @@ def extract_attestation_details(
     if isinstance(attestation_statement, Mapping):
         cert_chain = attestation_statement.get("x5c") or []
         if isinstance(cert_chain, (list, tuple)) and cert_chain:
-            try:
-                first_cert = cert_chain[0]
-                if isinstance(first_cert, str):
-                    cert_bytes = base64.b64decode(first_cert)
+            for entry in cert_chain:
+                certificate_bytes = _coerce_attestation_certificate_bytes(entry)
+                if certificate_bytes is None:
+                    attestation_certificates.append({
+                        "error": "Unable to decode attestation certificate bytes.",
+                    })
+                    continue
+
+                try:
+                    certificate_details = serialize_attestation_certificate(certificate_bytes)
+                except Exception as cert_error:  # pragma: no cover - defensive
+                    certificate_details = {"error": str(cert_error)}
                 else:
-                    cert_bytes = bytes(first_cert)
-                attestation_certificate = serialize_attestation_certificate(cert_bytes)
-            except Exception as cert_error:
-                attestation_certificate = {"error": str(cert_error)}
+                    if certificate_details is None:
+                        certificate_details = {
+                            "error": "Unable to parse attestation certificate.",
+                        }
+
+                attestation_certificates.append(certificate_details)
+
+            if attestation_certificates:
+                attestation_certificate = attestation_certificates[0]
 
     client_data = registration.response.client_data
     client_data_b64 = getattr(client_data, "b64", None)
@@ -390,6 +473,7 @@ def extract_attestation_details(
         client_data_b64,
         client_extension_results,
         attestation_certificate,
+        attestation_certificates,
     )
 
 

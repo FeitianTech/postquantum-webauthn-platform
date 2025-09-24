@@ -570,6 +570,13 @@ export function updateRegistrationFormFromJson(publicKey) {
                 normalizedAttachment = 'unspecified';
             }
             attachmentElement.value = normalizedAttachment;
+            try {
+                attachmentElement.dispatchEvent(new Event('change', { bubbles: true }));
+            } catch (error) {
+                const changeEvent = document.createEvent('Event');
+                changeEvent.initEvent('change', true, true);
+                attachmentElement.dispatchEvent(changeEvent);
+            }
         }
         const residentKeyElement = document.getElementById('resident-key');
         if (residentKeyElement) {
@@ -587,6 +594,13 @@ export function updateRegistrationFormFromJson(publicKey) {
         const attachmentElement = document.getElementById('authenticator-attachment');
         if (attachmentElement) {
             attachmentElement.value = 'cross-platform';
+            try {
+                attachmentElement.dispatchEvent(new Event('change', { bubbles: true }));
+            } catch (error) {
+                const changeEvent = document.createEvent('Event');
+                changeEvent.initEvent('change', true, true);
+                attachmentElement.dispatchEvent(changeEvent);
+            }
         }
     }
 
@@ -995,6 +1009,13 @@ export function applyJsonChanges() {
                         ? rawValue
                         : 'cross-platform';
                     attachmentSelect.value = normalized;
+                    try {
+                        attachmentSelect.dispatchEvent(new Event('change', { bubbles: true }));
+                    } catch (error) {
+                        const changeEvent = document.createEvent('Event');
+                        changeEvent.initEvent('change', true, true);
+                        attachmentSelect.dispatchEvent(changeEvent);
+                    }
                 }
             }
         } else if (state.currentJsonMode === 'assert') {
