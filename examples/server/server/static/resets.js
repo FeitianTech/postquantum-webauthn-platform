@@ -1,18 +1,14 @@
 import {
-    randomizeUserId,
     randomizeChallenge,
     validatePrfInputs,
     updateAuthenticationExtensionAvailability
 } from './forms.js';
-import { generateRandom10DigitUsername } from './username.js';
+import { randomizeUserIdentity } from './username.js';
 import { updateJsonEditor } from './json-editor.js';
 import { clearFakeExcludeCredentials } from './exclude-credentials.js';
 
 export function resetRegistrationForm() {
-    randomizeUserId();
-    const randomUsername = generateRandom10DigitUsername();
-    document.getElementById('user-name').value = randomUsername;
-    document.getElementById('user-display-name').value = randomUsername;
+    randomizeUserIdentity();
 
     document.getElementById('resident-key').value = 'discouraged';
     document.getElementById('user-verification-reg').value = 'preferred';

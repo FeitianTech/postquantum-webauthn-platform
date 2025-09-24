@@ -20,7 +20,6 @@ import {
 import {
     changeBinaryFormat,
     updateFieldLabels,
-    randomizeUserId,
     randomizeChallenge,
     randomizePrfEval,
     randomizeLargeBlobWrite,
@@ -36,10 +35,7 @@ import {
     resetRegistrationForm,
     resetAuthenticationForm
 } from './resets.js';
-import {
-    randomizeUsername,
-    generateRandom10DigitUsername
-} from './username.js';
+import { randomizeUserIdentity } from './username.js';
 import {
     simpleRegister,
     simpleAuthenticate
@@ -69,7 +65,9 @@ import {
     navigateToMdsAuthenticator,
     closeCredentialModal,
     closeRegistrationResultModal,
-    deleteCredential
+    closeRegistrationDetailModal,
+    deleteCredential,
+    clearAllCredentials
 } from './credential-display.js';
 import { handleJsonEditorKeydown } from './json-editor-utils.js';
 import {
@@ -90,13 +88,12 @@ window.toggleSection = toggleSection;
 window.showInfoPopup = showInfoPopup;
 window.hideInfoPopup = hideInfoPopup;
 window.toggleLanguage = toggleLanguage;
-window.randomizeUserId = randomizeUserId;
 window.randomizeChallenge = randomizeChallenge;
 window.randomizePrfEval = randomizePrfEval;
 window.randomizeLargeBlobWrite = randomizeLargeBlobWrite;
 window.resetRegistrationForm = resetRegistrationForm;
 window.resetAuthenticationForm = resetAuthenticationForm;
-window.randomizeUsername = randomizeUsername;
+window.randomizeUserIdentity = randomizeUserIdentity;
 window.simpleRegister = simpleRegister;
 window.simpleAuthenticate = simpleAuthenticate;
 window.advancedRegister = advancedRegister;
@@ -111,7 +108,9 @@ window.showCredentialDetails = showCredentialDetails;
 window.navigateToMdsAuthenticator = navigateToMdsAuthenticator;
 window.closeCredentialModal = closeCredentialModal;
 window.closeRegistrationResultModal = closeRegistrationResultModal;
+window.closeRegistrationDetailModal = closeRegistrationDetailModal;
 window.deleteCredential = deleteCredential;
+window.clearAllCredentials = clearAllCredentials;
 window.editCreateOptions = editCreateOptions;
 window.editAssertOptions = editAssertOptions;
 window.applyJsonChanges = applyJsonChanges;
@@ -133,12 +132,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     setTimeout(() => {
-        randomizeUserId();
-        const randomUsername = generateRandom10DigitUsername();
-        const userName = document.getElementById('user-name');
-        const displayName = document.getElementById('user-display-name');
-        if (userName) userName.value = randomUsername;
-        if (displayName) displayName.value = randomUsername;
+        randomizeUserIdentity();
         randomizeChallenge('reg');
         randomizeChallenge('auth');
         randomizeLargeBlobWrite();

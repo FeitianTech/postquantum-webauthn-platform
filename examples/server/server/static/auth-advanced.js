@@ -206,7 +206,7 @@ export async function advancedRegister() {
 
             showStatus('advanced', `Advanced registration successful! Algorithm: ${data.algo || 'Unknown'}`, 'success');
 
-            showRegistrationResultModal(credentialJson, data.relyingParty || null);
+            await showRegistrationResultModal(credentialJson, data.relyingParty || null);
 
             setTimeout(loadSavedCredentials, 1000);
         } else {

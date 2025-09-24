@@ -157,6 +157,61 @@ function hexToColonLines(hexString, bytesPerLine = 16) {
     return output;
 }
 
+const registrationDetailState = {
+    attestationObject: null,
+    attestationCertificates: [],
+    authenticatorData: null,
+};
+
+function resetRegistrationDetailState() {
+    registrationDetailState.attestationObject = null;
+    registrationDetailState.attestationCertificates = [];
+    registrationDetailState.authenticatorData = null;
+}
+
+function normaliseCertificateEntryForModal(entry) {
+    if (!entry || typeof entry !== 'object') {
+        return null;
+    }
+
+    const normalised = {
+        parsedX5c: {},
+    };
+
+    if (entry.parsedX5c && typeof entry.parsedX5c === 'object') {
+        normalised.parsedX5c = entry.parsedX5c;
+    } else if (entry.parsed && typeof entry.parsed === 'object') {
+        normalised.parsedX5c = entry.parsed;
+    } else if (typeof entry === 'object') {
+        normalised.parsedX5c = entry;
+    }
+
+    const pemValue = entry.pem || entry.parsedX5c?.pem || entry.parsed?.pem;
+    if (typeof pemValue === 'string' && pemValue.trim() !== '') {
+        normalised.pem = pemValue.trim();
+    }
+
+    let rawHex = typeof entry.raw === 'string' && entry.raw.trim() !== '' ? entry.raw.trim() : null;
+    if (!rawHex) {
+        const derBase64 = entry.derBase64
+            || entry.der_base64
+            || entry.parsedX5c?.derBase64
+            || entry.parsed?.derBase64;
+        if (typeof derBase64 === 'string' && derBase64.trim() !== '') {
+            try {
+                rawHex = base64ToHex(derBase64.trim());
+            } catch (error) {
+                rawHex = null;
+            }
+        }
+    }
+    if (rawHex) {
+        normalised.raw = rawHex;
+    }
+
+    return normalised;
+}
+
 export function formatCertificateDetails(details) {
     if (!details || typeof details !== 'object') {
         return '';
@@ -405,6 +460,87 @@ export function autoResizeCertificateTextareas(context) {
     });
 }
 
+function openRegistrationDetailModal(title, bodyHtml) {
+    const modal = document.getElementById('registrationDetailModal');
+    const titleEl = document.getElementById('registrationDetailModalTitle');
+    const bodyEl = document.getElementById('registrationDetailModalBody');
+    if (!modal || !titleEl || !bodyEl) {
+        return;
+    }
+
+    titleEl.textContent = title;
+    bodyEl.innerHTML = bodyHtml;
+    openModal('registrationDetailModal');
+
+    const resize = () => autoResizeCertificateTextareas(bodyEl);
+    if (typeof requestAnimationFrame === 'function') {
+        requestAnimationFrame(resize);
+    } else {
+        setTimeout(resize, 0);
+    }
+}
+
+function openAttestationCertificateDetail(index) {
+    const certificate = registrationDetailState.attestationCertificates[index];
+    const normalised = normaliseCertificateEntryForModal(certificate);
+    if (!normalised) {
+        return;
+    }
+
+    const parsed = normalised.parsedX5c && typeof normalised.parsedX5c === 'object'
+        ? normalised.parsedX5c
+        : {};
+    const summary = formatCertificateDetails(parsed);
+    const sections = [];
+
+    if (summary && summary.trim() !== '') {
+        sections.push(`<textarea class="certificate-textarea" readonly spellcheck="false" wrap="soft">${escapeHtml(summary)}</textarea>`);
+    } else {
+        sections.push('<div style="font-style: italic; color: #6c757d;">No decoded certificate details available.</div>');
+    }
+
+    if (normalised.pem) {
+        sections.push('<h4 style="margin-top: 1rem;">PEM</h4>');
+        sections.push(`<pre class="modal-pre">${escapeHtml(normalised.pem)}</pre>`);
+    }
+
+    if (normalised.raw) {
+        sections.push('<h4 style="margin-top: 1rem;">Raw certificate (hex)</h4>');
+        sections.push(`<pre class="modal-pre">${escapeHtml(normalised.raw)}</pre>`);
+    }
+
+    if (parsed && Object.keys(parsed).length > 0) {
+        sections.push('<h4 style="margin-top: 1rem;">Parsed certificate JSON</h4>');
+        sections.push(`<pre class="modal-pre">${escapeHtml(JSON.stringify(parsed, null, 2))}</pre>`);
+    }
+
+    openRegistrationDetailModal(`Attestation Certificate ${index + 1}`, sections.join(''));
+}
+
+function openAuthenticatorDataDetail() {
+    const data = registrationDetailState.authenticatorData;
+    if (!data) {
+        return;
+    }
+
+    const sections = [];
+    const rawHex = typeof data.raw === 'string' && data.raw.trim() !== '' ? data.raw.trim() : null;
+    if (rawHex) {
+        sections.push('<h4 style="margin-bottom: 0.5rem;">Raw authenticatorData (hex)</h4>');
+        sections.push(`<pre class="modal-pre">${escapeHtml(rawHex)}</pre>`);
+    }
+
+    sections.push('<h4 style="margin-top: 1rem; margin-bottom: 0.5rem;">Decoded authenticatorData</h4>');
+    const jsonString = escapeHtml(JSON.stringify(data, null, 2));
+    sections.push(`<textarea class="certificate-textarea" readonly spellcheck="false" wrap="soft">${jsonString}</textarea>`);
+
+    openRegistrationDetailModal('Authenticator Data', sections.join(''));
+}
+
+export function closeRegistrationDetailModal() {
+    closeModal('registrationDetailModal');
+}
+
 export function updateAllowCredentialsDropdown() {
     const allowCredentialsSelect = document.getElementById('allow-credentials');
     if (!allowCredentialsSelect) return;
@@ -466,6 +602,11 @@ export async function loadSavedCredentials() {
 }
 
 export function updateCredentialsDisplay() {
+    const clearButton = document.getElementById('clear-credentials');
+    if (clearButton) {
+        clearButton.disabled = state.storedCredentials.length === 0;
+    }
+
     const credentialsList = document.getElementById('credentials-list');
 
     if (!credentialsList) {
@@ -995,7 +1136,37 @@ export function showCredentialDetails(index) {
     }
 }
 
-export function showRegistrationResultModal(credentialJson, relyingPartyInfo) {
+async function decodePayloadThroughApi(payload) {
+    const trimmed = typeof payload === 'string' ? payload.trim() : '';
+    if (!trimmed) {
+        throw new Error('Decoder payload must be a non-empty string.');
+    }
+
+    const response = await fetch('/api/decode', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ payload: trimmed })
+    });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || 'Unable to decode payload.');
+    }
+
+    const json = await response.json();
+    if (json && typeof json === 'object') {
+        if (json.error) {
+            throw new Error(json.error);
+        }
+        if (json.data !== undefined) {
+            return json;
+        }
+    }
+
+    throw new Error('Decoder response did not include data.');
+}
+
+export async function showRegistrationResultModal(credentialJson, relyingPartyInfo) {
     const modalBody = document.getElementById('registrationResultBody');
     if (!modalBody) {
         return;
@@ -1011,11 +1182,9 @@ export function showRegistrationResultModal(credentialJson, relyingPartyInfo) {
             : '';
 
     let relyingPartyCopy = null;
-    let certificateSection = '';
     if (relyingPartyInfo && typeof relyingPartyInfo === 'object') {
         relyingPartyCopy = JSON.parse(JSON.stringify(relyingPartyInfo));
         if (relyingPartyCopy.attestationCertificate) {
-            certificateSection = renderCertificateDetails(relyingPartyCopy.attestationCertificate);
             delete relyingPartyCopy.attestationCertificate;
         }
     }
@@ -1054,18 +1223,139 @@ export function showRegistrationResultModal(credentialJson, relyingPartyInfo) {
         </section>
     `;
 
-    if (certificateSection) {
-        html += `
-            <section>
-                <h3 style="color: #0072CE; margin-bottom: 0.75rem;">Attestation Certificate</h3>
-                <div style="font-size: 0.95rem; line-height: 1.6;">
-                    ${certificateSection}
-                </div>
+    resetRegistrationDetailState();
+
+    const attestationObjectValue = credentialJson?.response?.attestationObject || '';
+    const authenticatorDataValue = credentialJson?.response?.authenticatorData || '';
+
+    let decodedAttestationData = null;
+    let decodedAuthenticatorData = null;
+    let attestationDecodeError = '';
+    let authenticatorDecodeError = '';
+
+    if (attestationObjectValue) {
+        try {
+            const decoded = await decodePayloadThroughApi(attestationObjectValue);
+            const attestationData = decoded?.data?.attestationObject || decoded?.data || null;
+            if (attestationData && typeof attestationData === 'object') {
+                decodedAttestationData = attestationData;
+            }
+            if (decoded?.data?.authenticatorData) {
+                decodedAuthenticatorData = decoded.data.authenticatorData;
+            }
+        } catch (error) {
+            attestationDecodeError = error?.message || 'Failed to decode attestationObject.';
+        }
+    }
+
+    if (!decodedAuthenticatorData && authenticatorDataValue) {
+        try {
+            const decodedAuth = await decodePayloadThroughApi(authenticatorDataValue);
+            if (decodedAuth?.data) {
+                decodedAuthenticatorData = decodedAuth.data;
+            }
+        } catch (error) {
+            authenticatorDecodeError = error?.message || 'Failed to decode authenticatorData.';
+        }
+    }
+
+    if (decodedAttestationData && typeof decodedAttestationData === 'object') {
+        registrationDetailState.attestationObject = decodedAttestationData;
+        const certificateEntries = decodedAttestationData?.attStmt?.x5c;
+        if (Array.isArray(certificateEntries)) {
+            registrationDetailState.attestationCertificates = certificateEntries
+                .map(normaliseCertificateEntryForModal)
+                .filter(entry => entry !== null);
+        }
+    }
+
+    if (!registrationDetailState.attestationCertificates.length && relyingPartyInfo?.attestationCertificate) {
+        const fallbackCert = normaliseCertificateEntryForModal(relyingPartyInfo.attestationCertificate);
+        if (fallbackCert) {
+            registrationDetailState.attestationCertificates = [fallbackCert];
+        }
+    }
+
+    if (decodedAuthenticatorData) {
+        if (typeof decodedAuthenticatorData === 'object') {
+            registrationDetailState.authenticatorData = decodedAuthenticatorData;
+        } else if (typeof decodedAuthenticatorData === 'string') {
+            registrationDetailState.authenticatorData = { raw: decodedAuthenticatorData };
+        }
+    }
+
+    if (!registrationDetailState.authenticatorData && authenticatorDataValue) {
+        const fallback = { base64url: authenticatorDataValue };
+        try {
+            fallback.raw = base64UrlToHex(authenticatorDataValue);
+        } catch (error) {
+            fallback.raw = authenticatorDataValue;
+        }
+        registrationDetailState.authenticatorData = fallback;
+    }
+
+    let attestationSectionHtml = '';
+    const hasAttestationContent = Boolean(attestationObjectValue)
+        || registrationDetailState.attestationCertificates.length > 0
+        || Boolean(registrationDetailState.authenticatorData);
+
+    if (hasAttestationContent) {
+        let attestationContent = '';
+        if (registrationDetailState.attestationObject) {
+            attestationContent = `<textarea class="certificate-textarea" readonly spellcheck="false" wrap="soft">${escapeHtml(JSON.stringify(registrationDetailState.attestationObject, null, 2))}</textarea>`;
+        } else if (attestationObjectValue) {
+            const message = attestationDecodeError || 'Unable to decode attestationObject.';
+            attestationContent = `<div style="color: #dc3545; font-size: 0.9rem; margin-bottom: 0.75rem;">${escapeHtml(message)}</div>`;
+        } else {
+            attestationContent = '<div style="font-style: italic; color: #6c757d; margin-bottom: 0.75rem;">No attestationObject was provided.</div>';
+        }
+
+        const certificateButtonsHtml = registrationDetailState.attestationCertificates.length
+            ? `<div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.75rem;">${registrationDetailState.attestationCertificates.map((_, index) => `<button type="button" class="btn btn-small registration-attestation-cert-button" data-cert-index="${index}">Certificate ${index + 1}</button>`).join('')}</div>`
+            : '<div style="font-style: italic; color: #6c757d; margin-top: 0.75rem;">No attestation certificates available.</div>';
+
+        let authenticatorButtonHtml = '';
+        if (registrationDetailState.authenticatorData) {
+            authenticatorButtonHtml = '<div style="margin-top: 1rem;"><button type="button" class="btn btn-small btn-secondary registration-authenticator-data-button">authenticatorData</button></div>';
+        } else if (authenticatorDataValue && authenticatorDecodeError) {
+            authenticatorButtonHtml = `<div style="color: #dc3545; font-size: 0.9rem; margin-top: 0.75rem;">${escapeHtml(authenticatorDecodeError)}</div>`;
+        }
+
+        attestationSectionHtml = `
+            <section style="margin-bottom: 1.5rem;">
+                <h3 style="color: #0072CE; margin-bottom: 0.75rem;">Attestation Object &amp; Authenticator Data</h3>
+                ${attestationContent}
+                ${certificateButtonsHtml}
+                ${authenticatorButtonHtml}
             </section>
         `;
     }
 
+    if (attestationSectionHtml) {
+        html += attestationSectionHtml;
+    }
+
     modalBody.innerHTML = html;
+
+    const certificateButtons = modalBody.querySelectorAll('.registration-attestation-cert-button');
+    certificateButtons.forEach(button => {
+        button.addEventListener('click', event => {
+            event.preventDefault();
+            const indexValue = Number(button.getAttribute('data-cert-index'));
+            if (!Number.isNaN(indexValue)) {
+                openAttestationCertificateDetail(indexValue);
+            }
+        });
+    });
+
+    const authenticatorButton = modalBody.querySelector('.registration-authenticator-data-button');
+    if (authenticatorButton) {
+        authenticatorButton.addEventListener('click', event => {
+            event.preventDefault();
+            openAuthenticatorDataDetail();
+        });
+    }
+
     modalBody.scrollTop = 0;
     if (typeof modalBody.scrollTo === 'function') {
         modalBody.scrollTo(0, 0);
@@ -1103,6 +1393,38 @@ export async function deleteCredential(username, index) {
         }
     } catch (error) {
         showStatus('advanced', `Failed to delete credential: ${error.message}`, 'error');
+    }
+}
+
+export async function clearAllCredentials() {
+    if (!state.storedCredentials.length) {
+        showStatus('advanced', 'No saved credentials to clear.', 'info');
+        return;
+    }
+
+    if (!confirm('Are you sure you want to delete all saved credentials? This action cannot be undone.')) {
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/credentials', {
+            method: 'DELETE',
+            headers: {'Content-Type': 'application/json'}
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(errorText || 'Failed to clear credentials.');
+        }
+
+        state.storedCredentials = [];
+        updateCredentialsDisplay();
+        showStatus('advanced', 'All saved credentials removed successfully!', 'success');
+    } catch (error) {
+        const message = error && typeof error === 'object' && typeof error.message === 'string'
+            ? error.message
+            : 'Unknown error';
+        showStatus('advanced', `Failed to clear credentials: ${message}`, 'error');
     }
 }
 

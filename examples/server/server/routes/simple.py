@@ -19,7 +19,7 @@ from ..attestation import (
     make_json_safe,
 )
 from ..config import app, basepath, server
-from ..storage import add_public_key_material, convert_bytes_for_json, extract_credential_data, readkey, savekey
+from ..storage import add_public_key_material, convert_bytes_for_json, delkey, extract_credential_data, readkey, savekey
 
 
 @app.route("/api/register/begin", methods=["POST"])
@@ -222,8 +222,22 @@ def authenticate_complete():
     })
 
 
-@app.route("/api/credentials", methods=["GET"])
+@app.route("/api/credentials", methods=["GET", "DELETE"])
 def list_credentials():
+    if request.method == "DELETE":
+        removed = 0
+        try:
+            for filename in os.listdir(basepath):
+                if not filename.endswith('_credential_data.pkl'):
+                    continue
+                username = filename.replace('_credential_data.pkl', '')
+                delkey(username)
+                removed += 1
+        except Exception:
+            pass
+
+        return jsonify({"status": "OK", "removed": removed})
+
     credentials: List[Dict[str, Any]] = []
 
     try:
