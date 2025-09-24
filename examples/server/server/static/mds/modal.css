@@ -17,10 +17,6 @@
     z-index: 1300;
 }
 
-#mds-authenticator-raw-modal {
-    z-index: 1350;
-}
-
 .mds-modal[hidden] {
     display: none;
 }
@@ -41,13 +37,6 @@
     width: min(80vw, 1100px);
     max-width: 80vw;
     height: min(80vh, 900px);
-    max-height: 80vh;
-}
-
-.mds-modal__dialog--raw {
-    width: 80vw;
-    max-width: 80vw;
-    height: 80vh;
     max-height: 80vh;
 }
 
@@ -132,11 +121,6 @@
     overscroll-behavior: contain;
 }
 
-.mds-modal__body--raw {
-    gap: 0.75rem;
-    padding-bottom: 1.2rem;
-}
-
 .mds-modal__body--certificate .mds-modal__grid {
     display: flex;
     flex-direction: column;
@@ -179,17 +163,6 @@
     overflow-wrap: anywhere;
     word-break: break-word;
     white-space: pre-wrap;
-}
-
-.mds-modal__textarea--raw {
-    flex: 1;
-    min-height: 0;
-    resize: vertical;
-    overflow: auto;
-    white-space: pre;
-    overflow-wrap: normal;
-    word-break: normal;
-    line-height: 1.45;
 }
 
 .mds-modal__textarea:focus-visible {

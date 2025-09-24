@@ -754,25 +754,12 @@ function initializeState(root) {
     if (authenticatorRawButton instanceof HTMLButtonElement) {
         authenticatorRawButton.addEventListener('click', event => {
             event.preventDefault();
-            openAuthenticatorRawModal();
+            openAuthenticatorRawWindow();
         });
         authenticatorRawButton.disabled = true;
         authenticatorRawButton.setAttribute('aria-disabled', 'true');
         authenticatorRawButton.setAttribute('tabindex', '-1');
         authenticatorRawButton.setAttribute('title', 'Raw authenticator data unavailable');
-    }
-
-    const authenticatorRawModal = root.querySelector('#mds-authenticator-raw-modal');
-    const authenticatorRawClose = root.querySelector('#mds-authenticator-raw-close');
-    if (authenticatorRawClose) {
-        authenticatorRawClose.addEventListener('click', () => closeAuthenticatorRawModal());
-    }
-    if (authenticatorRawModal) {
-        authenticatorRawModal.addEventListener('click', event => {
-            if (event.target === authenticatorRawModal) {
-                closeAuthenticatorRawModal();
-            }
-        });
     }
 
     const handleTabChanged = event => {
@@ -825,13 +812,7 @@ function initializeState(root) {
         authenticatorModalBody: root.querySelector('#mds-authenticator-modal-body'),
         authenticatorModalClose: authenticatorClose,
         authenticatorModalRawButton: authenticatorRawButton,
-        authenticatorRawModal,
-        authenticatorRawTitle: root.querySelector('#mds-authenticator-raw-title'),
-        authenticatorRawSubtitle: root.querySelector('#mds-authenticator-raw-subtitle'),
-        authenticatorRawBody: root.querySelector('#mds-authenticator-raw-body'),
-        authenticatorRawTextarea: root.querySelector('#mds-authenticator-raw-text'),
-        authenticatorRawClose,
-        authenticatorRawReturnFocus: null,
+        authenticatorRawWindow: null,
         activeDetailEntry: null,
         highlightedRow: null,
         highlightedRowKey: '',
@@ -2565,8 +2546,8 @@ function closeCertificateModal() {
     notifyGlobalScrollLock();
 }
 
-function openAuthenticatorRawModal() {
-    if (!mdsState?.authenticatorRawModal) {
+function openAuthenticatorRawWindow() {
+    if (!mdsState) {
         return;
     }
 
@@ -2577,7 +2558,48 @@ function openAuthenticatorRawModal() {
     }
 
     const rawText = stringifyAuthenticatorRawData(rawData);
-    if (!rawText) {
+    if (!rawText || typeof window === 'undefined') {
+        return;
+    }
+
+    const viewportWidth = Number.isFinite(window.innerWidth) && window.innerWidth > 0
+        ? window.innerWidth
+        : (window.screen && Number.isFinite(window.screen.availWidth) ? window.screen.availWidth : 1280);
+    const viewportHeight = Number.isFinite(window.innerHeight) && window.innerHeight > 0
+        ? window.innerHeight
+        : (window.screen && Number.isFinite(window.screen.availHeight) ? window.screen.availHeight : 720);
+
+    const width = Math.max(Math.round(viewportWidth * 0.8), 640);
+    const height = Math.max(Math.round(viewportHeight * 0.8), 480);
+    const features = `popup=yes,width=${width},height=${height},resizable=yes,scrollbars=yes`;
+    const viewerName = 'mdsAuthenticatorRawViewer';
+
+    let viewer = mdsState.authenticatorRawWindow;
+    if (!viewer || viewer.closed) {
+        viewer = window.open('', viewerName, features);
+    } else {
+        viewer.focus();
+        try {
+            viewer.resizeTo(width, height);
+        } catch (error) {
+            // Ignore resize errors caused by browser restrictions.
+        }
+    }
+
+    if (!viewer) {
+        return;
+    }
+
+    mdsState.authenticatorRawWindow = viewer;
+
+    let doc;
+    try {
+        doc = viewer.document;
+    } catch (error) {
+        return;
+    }
+
+    if (!doc) {
         return;
     }
 
@@ -2587,92 +2609,126 @@ function openAuthenticatorRawModal() {
     }
     titleParts.push('Authenticator Raw Data');
     const titleText = titleParts.join(' – ');
+    const subtitleText = formatDetailSubtitle(entry);
 
-    if (mdsState.authenticatorRawTitle) {
-        mdsState.authenticatorRawTitle.textContent = titleText;
-    }
-    if (mdsState.authenticatorRawSubtitle) {
-        mdsState.authenticatorRawSubtitle.textContent = formatDetailSubtitle(entry);
-    }
-
-    mdsState.authenticatorRawReturnFocus = document.activeElement instanceof HTMLElement
-        ? document.activeElement
-        : mdsState.authenticatorModalRawButton || null;
-
-    setAuthenticatorRawTextareaContent(rawText);
-
-    mdsState.authenticatorRawModal.hidden = false;
-    mdsState.authenticatorRawModal.setAttribute('aria-hidden', 'false');
-
-    resetScrollPositions(mdsState.authenticatorRawBody, mdsState.authenticatorRawTextarea);
-    notifyGlobalScrollLock();
-
-    const focusTarget = mdsState.authenticatorRawClose instanceof HTMLElement
-        ? mdsState.authenticatorRawClose
-        : mdsState.authenticatorRawTextarea instanceof HTMLElement
-            ? mdsState.authenticatorRawTextarea
-            : null;
-
-    if (focusTarget) {
-        requestAnimationFrame(() => {
-            focusTarget.focus();
-        });
-    }
-}
-
-function closeAuthenticatorRawModal() {
-    if (!mdsState?.authenticatorRawModal) {
-        return;
-    }
-
-    if (mdsState.authenticatorRawModal.hidden) {
-        return;
-    }
-
-    mdsState.authenticatorRawModal.hidden = true;
-    mdsState.authenticatorRawModal.setAttribute('aria-hidden', 'true');
-
-    if (mdsState.authenticatorRawTextarea instanceof HTMLTextAreaElement) {
-        mdsState.authenticatorRawTextarea.value = '';
-    } else if (mdsState.authenticatorRawTextarea) {
-        mdsState.authenticatorRawTextarea.textContent = '';
-    }
-
-    resetScrollPositions(mdsState.authenticatorRawBody, mdsState.authenticatorRawTextarea);
-    notifyGlobalScrollLock();
-
-    const focusTarget = mdsState.authenticatorRawReturnFocus;
-    mdsState.authenticatorRawReturnFocus = null;
-    if (focusTarget instanceof HTMLElement) {
-        requestAnimationFrame(() => {
-            focusTarget.focus();
-        });
-        return;
-    }
-    if (mdsState.authenticatorModalRawButton instanceof HTMLElement) {
-        requestAnimationFrame(() => {
-            mdsState.authenticatorModalRawButton.focus();
-        });
-    }
-}
-
-function setAuthenticatorRawTextareaContent(text) {
-    if (!mdsState?.authenticatorRawTextarea) {
-        return;
-    }
-
-    const target = mdsState.authenticatorRawTextarea;
-    if (target instanceof HTMLTextAreaElement) {
-        target.value = text;
-        target.scrollTop = 0;
-        target.scrollLeft = 0;
-        if (typeof target.setSelectionRange === 'function') {
-            target.setSelectionRange(0, 0);
+    const template = `<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Authenticator Raw Data</title>
+    <style>
+        :root { color-scheme: light; }
+        body {
+            margin: 0;
+            font-family: 'SFMono-Regular', 'JetBrains Mono', 'Fira Code', monospace;
+            background: #f4f7fb;
+            color: #0f2740;
         }
-        return;
+        .raw-window {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        header {
+            padding: 1rem 1.5rem;
+            background: #ffffff;
+            border-bottom: 1px solid rgba(15, 39, 64, 0.12);
+            box-shadow: 0 6px 18px rgba(15, 39, 64, 0.05);
+        }
+        h1 {
+            margin: 0;
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+        p {
+            margin: 0.35rem 0 0;
+            font-size: 0.85rem;
+            color: #48607a;
+        }
+        textarea {
+            flex: 1;
+            width: 100%;
+            border: none;
+            resize: none;
+            padding: 1.25rem;
+            background: #ffffff;
+            font-family: 'SFMono-Regular', 'JetBrains Mono', 'Fira Code', monospace;
+            font-size: 0.85rem;
+            line-height: 1.5;
+            color: inherit;
+            box-sizing: border-box;
+            outline: none;
+        }
+        textarea:focus {
+            outline: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="raw-window">
+        <header>
+            <h1 id="mds-raw-title">Authenticator Raw Data</h1>
+            <p id="mds-raw-subtitle" style="display: none;"></p>
+        </header>
+        <textarea id="mds-raw-textarea" readonly spellcheck="false" wrap="off" aria-label="Raw authenticator metadata"></textarea>
+    </div>
+</body>
+</html>`;
+
+    doc.open();
+    doc.write(template);
+    doc.close();
+
+    doc.title = titleText;
+
+    const titleEl = doc.getElementById('mds-raw-title');
+    if (titleEl) {
+        titleEl.textContent = titleText;
     }
 
-    target.textContent = text;
+    const subtitleEl = doc.getElementById('mds-raw-subtitle');
+    if (subtitleEl) {
+        if (subtitleText) {
+            subtitleEl.textContent = subtitleText;
+            subtitleEl.style.display = '';
+        } else {
+            subtitleEl.textContent = '';
+            subtitleEl.style.display = 'none';
+        }
+    }
+
+    const textarea = doc.getElementById('mds-raw-textarea');
+    if (textarea) {
+        textarea.value = rawText;
+        textarea.scrollTop = 0;
+        textarea.scrollLeft = 0;
+        if (typeof textarea.setSelectionRange === 'function') {
+            try {
+                textarea.setSelectionRange(0, 0);
+            } catch (error) {
+                // Ignore selection errors in unsupported browsers.
+            }
+        }
+        if (typeof textarea.focus === 'function') {
+            textarea.focus();
+        }
+    }
+
+    try {
+        viewer.focus();
+    } catch (error) {
+        // Some browsers may block programmatic focus; ignore.
+    }
+
+    try {
+        viewer.onbeforeunload = () => {
+            if (mdsState && mdsState.authenticatorRawWindow === viewer) {
+                mdsState.authenticatorRawWindow = null;
+            }
+        };
+    } catch (error) {
+        // Ignore if the viewer does not permit assigning event handlers.
+    }
 }
 
 const RAW_TEXT_INDENT = '    ';
@@ -2820,8 +2876,6 @@ function openAuthenticatorModal(entry) {
         return;
     }
 
-    closeAuthenticatorRawModal();
-
     if (entry) {
         mdsState.activeDetailEntry = entry;
     }
@@ -2856,7 +2910,6 @@ function closeAuthenticatorModal() {
     if (!mdsState?.authenticatorModal) {
         return;
     }
-    closeAuthenticatorRawModal();
     mdsState.authenticatorModal.hidden = true;
     mdsState.authenticatorModal.setAttribute('aria-hidden', 'true');
     resetScrollPositions(
