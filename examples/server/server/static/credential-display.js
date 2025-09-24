@@ -928,11 +928,16 @@ function openAttestationCertificateDetail(index) {
     const parsed = normalised.parsedX5c && typeof normalised.parsedX5c === 'object'
         ? normalised.parsedX5c
         : {};
-    const summary = formatCertificateDetails(parsed);
     const sections = [];
+    const errorMessage = typeof parsed.error === 'string' && parsed.error.trim() !== ''
+        ? parsed.error.trim()
+        : '';
+    const summary = formatCertificateDetails(parsed);
 
     if (summary && summary.trim() !== '') {
         sections.push(`<textarea class="certificate-textarea" readonly spellcheck="false" wrap="soft">${escapeHtml(summary)}</textarea>`);
+    } else if (errorMessage) {
+        sections.push(`<div style="color: #dc3545; font-size: 0.9rem;">${escapeHtml(errorMessage)}</div>`);
     } else {
         sections.push('<div style="font-style: italic; color: #6c757d;">No decoded certificate details available.</div>');
     }

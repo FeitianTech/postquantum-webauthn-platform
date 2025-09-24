@@ -56,6 +56,7 @@ def register_complete():
         parsed_client_data_json,
         parsed_extension_results,
         attestation_certificate_details,
+        attestation_certificates_details,
     ) = extract_attestation_details(response)
 
     raw_attestation_object = credential_response.get('attestationObject')
@@ -97,6 +98,7 @@ def register_complete():
         'attestation_format': attestation_format,
         'attestation_statement': attestation_statement,
         'attestation_certificate': attestation_certificate_details,
+        'attestation_certificates': attestation_certificates_details,
         'client_extension_outputs': client_extension_results,
         'authenticator_attachment': authenticator_attachment_response,
         'request_params': {
@@ -132,6 +134,10 @@ def register_complete():
 
     if parsed_attestation_object:
         credential_info['attestation_object_decoded'] = make_json_safe(parsed_attestation_object)
+
+    if attestation_certificates_details:
+        credential_info['attestationCertificates'] = attestation_certificates_details
+        credential_info['properties']['attestationCertificates'] = attestation_certificates_details
 
     if isinstance(response, Mapping):
         credential_info['registration_response'] = make_json_safe(response)
@@ -338,6 +344,11 @@ def list_credentials():
                                 certificate_details = cred.get('attestation_certificate')
                                 if certificate_details is not None:
                                     credential_info['attestationCertificate'] = certificate_details
+
+                                certificates_list = cred.get('attestation_certificates') or cred.get('attestationCertificates')
+                                if certificates_list:
+                                    credential_info['attestationCertificates'] = certificates_list
+                                    credential_info['attestation_certificates'] = certificates_list
 
                                 add_registration_metadata(credential_info, cred)
 

@@ -361,6 +361,7 @@ def advanced_register_complete():
         parsed_client_data_json,
         parsed_extension_results,
         attestation_certificate_details,
+        attestation_certificates_details,
     ) = extract_attestation_details(response)
 
     raw_attestation_object = credential_response.get('attestationObject')
@@ -468,6 +469,7 @@ def advanced_register_complete():
             'attestation_object': raw_attestation_object or '',
             'attestation_format': attestation_format,
             'attestation_statement': attestation_statement,
+            'attestation_certificates': attestation_certificates_details,
             'client_extension_outputs': client_extension_results,
             'authenticator_attachment': authenticator_attachment_response,
             'original_webauthn_request': original_request,
@@ -494,6 +496,10 @@ def advanced_register_complete():
 
         if min_pin_length_value is not None:
             credential_info['properties']['minPinLength'] = min_pin_length_value
+
+        if attestation_certificates_details:
+            credential_info['attestationCertificates'] = attestation_certificates_details
+            credential_info['properties']['attestationCertificates'] = attestation_certificates_details
 
         add_public_key_material(
             credential_info,
@@ -680,6 +686,9 @@ def advanced_register_complete():
 
         if attestation_certificate_details:
             rp_info["attestationCertificate"] = attestation_certificate_details
+
+        if attestation_certificates_details:
+            rp_info["attestationCertificates"] = attestation_certificates_details
 
         credential_info['relying_party'] = make_json_safe(rp_info)
 
