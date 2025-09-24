@@ -813,6 +813,7 @@ function initializeState(root) {
         authenticatorModalBody: root.querySelector('#mds-authenticator-modal-body'),
         authenticatorModalClose: authenticatorClose,
         authenticatorModalRawButton: authenticatorRawButton,
+        authenticatorRawWindow: null,
         activeDetailEntry: null,
         highlightedRow: null,
         highlightedRowKey: '',
@@ -2511,11 +2512,28 @@ function openAuthenticatorInfoRawWindow() {
         return;
     }
 
-    const rawWindow = window.open('', '_blank', 'noopener=yes');
+    if (mdsState.authenticatorRawWindow && mdsState.authenticatorRawWindow.closed) {
+        mdsState.authenticatorRawWindow = null;
+    }
+
+    const popupFeatures = [
+        'width=900',
+        'height=700',
+        'resizable=yes',
+        'scrollbars=yes',
+        'menubar=no',
+        'toolbar=no',
+        'location=no',
+        'status=no',
+    ].join(',');
+
+    const rawWindow = mdsState.authenticatorRawWindow || window.open('', 'mdsAuthenticatorRaw', popupFeatures);
     if (!rawWindow || !rawWindow.document) {
         console.warn('Unable to open window for authenticator info raw data.');
         return;
     }
+    rawWindow.opener = null;
+    mdsState.authenticatorRawWindow = rawWindow;
 
     const titleParts = [];
     if (entry?.name && typeof entry.name === 'string' && entry.name.trim()) {
@@ -2531,35 +2549,60 @@ function openAuthenticatorInfoRawWindow() {
     doc.title = headingText;
     doc.body.style.margin = '0';
     doc.body.style.background = '#f5f8fb';
+    doc.body.style.height = '100vh';
+    doc.body.style.display = 'flex';
 
     const wrapper = doc.createElement('div');
     wrapper.style.padding = '1.75rem';
     wrapper.style.fontFamily = '"Segoe UI", "Helvetica Neue", Arial, sans-serif';
+    wrapper.style.display = 'flex';
+    wrapper.style.flexDirection = 'column';
+    wrapper.style.gap = '1.25rem';
+    wrapper.style.flex = '1';
+    wrapper.style.height = '100%';
+    wrapper.style.minHeight = '0';
 
     const heading = doc.createElement('h1');
     heading.textContent = headingText;
-    heading.style.margin = '0 0 1.25rem';
+    heading.style.margin = '0';
     heading.style.fontSize = '1.2rem';
     heading.style.fontWeight = '600';
     heading.style.color = '#0f2740';
     wrapper.appendChild(heading);
 
-    const pre = doc.createElement('pre');
-    pre.textContent = jsonString;
-    pre.style.whiteSpace = 'pre-wrap';
-    pre.style.wordBreak = 'break-word';
-    pre.style.fontFamily = "'SFMono-Regular','JetBrains Mono','Fira Code','Consolas',monospace";
-    pre.style.fontSize = '0.9rem';
-    pre.style.lineHeight = '1.55';
-    pre.style.margin = '0';
-    pre.style.padding = '1.25rem';
-    pre.style.background = '#ffffff';
-    pre.style.borderRadius = '18px';
-    pre.style.boxShadow = '0 20px 45px rgba(15, 39, 64, 0.18)';
-    pre.style.border = '1px solid rgba(0, 114, 206, 0.14)';
-    wrapper.appendChild(pre);
+    const textarea = doc.createElement('textarea');
+    textarea.value = jsonString;
+    textarea.readOnly = true;
+    textarea.setAttribute('readonly', 'readonly');
+    textarea.setAttribute('aria-label', 'Authenticator getInfo raw data');
+    textarea.spellcheck = false;
+    textarea.wrap = 'off';
+    textarea.style.flex = '1';
+    textarea.style.minHeight = '0';
+    textarea.style.width = '100%';
+    textarea.style.resize = 'vertical';
+    textarea.style.fontFamily = "'SFMono-Regular','JetBrains Mono','Fira Code','Consolas',monospace";
+    textarea.style.fontSize = '0.9rem';
+    textarea.style.lineHeight = '1.55';
+    textarea.style.padding = '1.25rem';
+    textarea.style.margin = '0';
+    textarea.style.boxSizing = 'border-box';
+    textarea.style.background = '#ffffff';
+    textarea.style.borderRadius = '18px';
+    textarea.style.border = '1px solid rgba(0, 114, 206, 0.14)';
+    textarea.style.boxShadow = '0 20px 45px rgba(15, 39, 64, 0.18)';
+    textarea.style.color = '#0f2740';
+    textarea.style.overflow = 'auto';
+    wrapper.appendChild(textarea);
 
     doc.body.appendChild(wrapper);
+
+    rawWindow.focus();
+    textarea.scrollTop = 0;
+    textarea.scrollLeft = 0;
+    if (typeof textarea.setSelectionRange === 'function') {
+        textarea.setSelectionRange(0, 0);
+    }
 }
 
 function updateAuthenticatorRawButton(entry) {
