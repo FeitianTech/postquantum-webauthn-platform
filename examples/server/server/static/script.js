@@ -140,6 +140,7 @@ document.addEventListener('DOMContentLoaded', () => {
         randomizeChallenge('reg');
         randomizeChallenge('auth');
         randomizeLargeBlobWrite();
+        randomizeSimpleUsername();
         const prfRegFirst = document.getElementById('prf-eval-first-reg');
         const prfRegSecond = document.getElementById('prf-eval-second-reg');
         const prfAuthFirst = document.getElementById('prf-eval-first-auth');

@@ -384,7 +384,14 @@ function buildAttestationSection({
     const attestationStatementHasContent = attestationStatementObject && Object.keys(attestationStatementObject).length > 0;
     const attestationHasCertificates = registrationDetailState.attestationCertificates.length > 0;
 
-    const shouldShowAttestationSection = (attestationFormatNormalized && attestationFormatNormalized !== 'none')
+    const hasAttestationObject = Boolean(attestationObject);
+    const hasAttestationValue = typeof attestationObjectValue === 'string'
+        ? attestationObjectValue.trim() !== ''
+        : false;
+
+    const shouldShowAttestationSection = hasAttestationObject
+        || hasAttestationValue
+        || (attestationFormatNormalized && attestationFormatNormalized !== 'none')
         || attestationStatementHasContent
         || attestationHasCertificates;
 
@@ -906,21 +913,6 @@ function openAttestationCertificateDetail(index) {
         sections.push(`<textarea class="certificate-textarea" readonly spellcheck="false" wrap="soft">${escapeHtml(summary)}</textarea>`);
     } else {
         sections.push('<div style="font-style: italic; color: #6c757d;">No decoded certificate details available.</div>');
-    }
-
-    if (normalised.pem) {
-        sections.push('<h4 style="margin-top: 1rem;">PEM</h4>');
-        sections.push(`<pre class="modal-pre">${escapeHtml(normalised.pem)}</pre>`);
-    }
-
-    if (normalised.raw) {
-        sections.push('<h4 style="margin-top: 1rem;">Raw certificate (hex)</h4>');
-        sections.push(`<pre class="modal-pre">${escapeHtml(normalised.raw)}</pre>`);
-    }
-
-    if (parsed && Object.keys(parsed).length > 0) {
-        sections.push('<h4 style="margin-top: 1rem;">Parsed certificate JSON</h4>');
-        sections.push(`<pre class="modal-pre">${escapeHtml(JSON.stringify(parsed, null, 2))}</pre>`);
     }
 
     openRegistrationDetailModal(`Attestation Certificate ${index + 1}`, sections.join(''));
