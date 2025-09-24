@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import base64
 import math
+import re
 import os
 import time
 import uuid
@@ -40,6 +41,66 @@ from ..config import app, basepath, rp, server
 from ..storage import add_public_key_material, extract_credential_data, readkey, savekey
 
 
+_COSE_ALGORITHM_NAME_MAP: Dict[str, int] = {
+    "ML-DSA-87": -50,
+    "ML-DSA-65": -49,
+    "ML-DSA-44": -48,
+    "EDDSA": -8,
+    "ED25519": -8,
+    "ES256": -7,
+    "ECDSA256": -7,
+    "ECDSA-256": -7,
+    "ES256K": -47,
+    "ES384": -35,
+    "ES512": -36,
+    "RS256": -257,
+    "RSA256": -257,
+    "RS384": -258,
+    "RSA384": -258,
+    "RS512": -259,
+    "RSA512": -259,
+    "RS1": -65535,
+    "RSASSA-PKCS1-V1_5-SHA1": -65535,
+    "PS256": -37,
+}
+
+
+def _normalize_algorithm_name_key(name: str) -> str:
+    base = name.strip().split("(")[0]
+    if not base:
+        return ""
+    sanitized = re.sub(r"[^A-Z0-9]", "", base.upper())
+    if sanitized.startswith("FIDOALG"):
+        sanitized = sanitized[len("FIDOALG"):]
+    if sanitized.startswith("COSEALG"):
+        sanitized = sanitized[len("COSEALG"):]
+    return sanitized
+
+
+_COSE_ALGORITHM_NAME_LOOKUP: Dict[str, int] = {}
+for raw_name, alg_id in _COSE_ALGORITHM_NAME_MAP.items():
+    normalized_key = _normalize_algorithm_name_key(raw_name)
+    if normalized_key:
+        _COSE_ALGORITHM_NAME_LOOKUP[normalized_key] = alg_id
+
+
+_SUPPORTED_COSE_ALGORITHMS = frozenset(_COSE_ALGORITHM_NAME_LOOKUP.values())
+_COSE_ALGORITHM_NUMERIC_PATTERN = re.compile(r"-?\d+")
+
+
+def _lookup_named_cose_algorithm(name: str) -> Optional[int]:
+    normalized_name = _normalize_algorithm_name_key(name)
+    if not normalized_name:
+        return None
+    direct_match = _COSE_ALGORITHM_NAME_LOOKUP.get(normalized_name)
+    if direct_match is not None:
+        return direct_match
+    for alias_key, alg_value in _COSE_ALGORITHM_NAME_LOOKUP.items():
+        if normalized_name.endswith(alias_key):
+            return alg_value
+    return None
+
+
 def _coerce_cose_algorithm(value: Any) -> Optional[int]:
     """Attempt to coerce a COSE algorithm identifier into an ``int``."""
 
@@ -58,6 +119,17 @@ def _coerce_cose_algorithm(value: Any) -> Optional[int]:
         try:
             return int(stripped, 10)
         except ValueError:
+            normalized_alg = _lookup_named_cose_algorithm(stripped)
+            if normalized_alg is not None:
+                return normalized_alg
+            matches = list(_COSE_ALGORITHM_NUMERIC_PATTERN.finditer(stripped))
+            if matches:
+                try:
+                    candidate = int(matches[-1].group(0), 10)
+                except ValueError:
+                    return None
+                if candidate in _SUPPORTED_COSE_ALGORITHMS:
+                    return candidate
             return None
     return None
 

@@ -88,3 +88,43 @@ def test_ignores_invalid_algorithm_entries(client):
 
     assert algorithms == [-50]
     assert all(isinstance(entry["alg"], int) for entry in params)
+
+
+def test_translates_algorithm_names_to_cose_ids(client):
+    data = _post_begin(
+        client,
+        [
+            {"type": "public-key", "alg": "ML-DSA-44"},
+            {"type": "public-key", "alg": "ml-dsa-65"},
+            {"type": "public-key", "alg": "MLDSA87"},
+            {"type": "public-key", "alg": "EdDSA"},
+            {"type": "public-key", "alg": "es256"},
+            {"type": "public-key", "alg": "RSA256"},
+            {"type": "public-key", "alg": "PS256"},
+            {"type": "public-key", "alg": "RS1"},
+        ],
+    )
+
+    params = data["publicKey"]["pubKeyCredParams"]
+    algorithms = [entry["alg"] for entry in params]
+
+    assert algorithms == [-48, -49, -50, -8, -7, -257, -37, -65535]
+    assert all(isinstance(entry["alg"], int) for entry in params)
+
+
+def test_handles_prefixed_algorithm_name_aliases(client):
+    data = _post_begin(
+        client,
+        [
+            {"type": "public-key", "alg": "ML-DSA-44 (PQC) (-48)"},
+            {"type": "public-key", "alg": "FIDOALG-MLDSA65"},
+            {"type": "public-key", "alg": "COSE_ALG_MLDSA87"},
+            {"type": "public-key", "alg": "COSE_ALG_RS256"},
+        ],
+    )
+
+    params = data["publicKey"]["pubKeyCredParams"]
+    algorithms = [entry["alg"] for entry in params]
+
+    assert algorithms == [-48, -49, -50, -257]
+    assert all(isinstance(entry["alg"], int) for entry in params)
