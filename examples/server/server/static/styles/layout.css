@@ -92,21 +92,27 @@
     height: 1.5rem; /* Fixed height for alignment */
 }
 
+
 .credentials-column .credentials-panel-title {
-    margin-bottom: 0.75rem;
+    margin-bottom: 0;
     color: var(--primary-dark);
     font-size: 1.1rem;
     height: auto;
 }
 
-.credentials-toolbar {
+.credentials-panel-header {
     display: flex;
-    justify-content: flex-end;
-    padding: 0 1rem;
-    margin-bottom: 0.5rem;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
 }
 
-.credentials-toolbar .btn {
+.credentials-panel-header .credentials-panel-title {
+    margin-bottom: 0;
+}
+
+.credentials-panel-header .btn {
     flex-shrink: 0;
 }
 

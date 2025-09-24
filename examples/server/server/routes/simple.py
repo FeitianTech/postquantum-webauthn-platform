@@ -80,6 +80,8 @@ def register_complete():
         response.get('authenticatorAttachment') if isinstance(response, Mapping) else None
     )
 
+    raw_attestation_object = credential_response.get('attestationObject')
+
     credential_info: Dict[str, Any] = {
         'credential_data': auth_data.credential_data,
         'auth_data': auth_data,
@@ -91,6 +93,7 @@ def register_complete():
         'registration_time': time.time(),
         'client_data_json': client_data_json or '',
         'attestation_object': raw_attestation_object or '',
+        'attestation_object_raw': raw_attestation_object or '',
         'attestation_format': attestation_format,
         'attestation_statement': attestation_statement,
         'attestation_certificate': attestation_certificate_details,
@@ -127,6 +130,9 @@ def register_complete():
         getattr(auth_data.credential_data, 'public_key', {})
     )
 
+    if parsed_attestation_object:
+        credential_info['attestation_object_decoded'] = make_json_safe(parsed_attestation_object)
+
     credential_data = auth_data.credential_data
     aaguid_value = getattr(credential_data, 'aaguid', None)
     if aaguid_value is not None:
@@ -142,6 +148,13 @@ def register_complete():
                 credential_info['properties']['aaguidGuid'] = str(uuid.UUID(bytes=aaguid_bytes))
             except ValueError:
                 pass
+
+    try:
+        auth_data_bytes = bytes(auth_data)
+        credential_info['authenticator_data_raw'] = base64.urlsafe_b64encode(auth_data_bytes).decode('utf-8').rstrip('=')
+        credential_info['authenticator_data_hex'] = auth_data_bytes.hex()
+    except Exception:
+        pass
 
     credentials.append(credential_info)
     savekey(uname, credentials)
@@ -308,6 +321,54 @@ def list_credentials():
                                         properties_copy.setdefault('aaguidRaw', credential_info['aaguidHex'])
                                     if credential_info.get('aaguidGuid'):
                                         properties_copy.setdefault('aaguidGuid', credential_info['aaguidGuid'])
+
+                                raw_attestation_value = (
+                                    cred.get('attestation_object_raw')
+                                    or cred.get('attestationObjectRaw')
+                                )
+                                if not raw_attestation_value:
+                                    stored_att_obj = cred.get('attestation_object')
+                                    if isinstance(stored_att_obj, str):
+                                        raw_attestation_value = stored_att_obj
+
+                                decoded_attestation_value = (
+                                    cred.get('attestation_object_decoded')
+                                    or cred.get('attestationObjectDecoded')
+                                )
+                                if decoded_attestation_value is None:
+                                    stored_att_obj = cred.get('attestation_object')
+                                    if isinstance(stored_att_obj, Mapping):
+                                        decoded_attestation_value = stored_att_obj
+
+                                if raw_attestation_value:
+                                    credential_info['attestationObjectRaw'] = raw_attestation_value
+                                if decoded_attestation_value is not None:
+                                    credential_info['attestationObjectDecoded'] = make_json_safe(decoded_attestation_value)
+
+                                raw_authenticator_value = (
+                                    cred.get('authenticator_data_raw')
+                                    or cred.get('authenticatorDataRaw')
+                                )
+                                authenticator_hex_value = (
+                                    cred.get('authenticator_data_hex')
+                                    or cred.get('authenticatorDataHex')
+                                )
+
+                                try:
+                                    auth_data_bytes = bytes(auth_data)
+                                except Exception:
+                                    auth_data_bytes = b''
+
+                                if auth_data_bytes:
+                                    if not raw_authenticator_value:
+                                        raw_authenticator_value = base64.urlsafe_b64encode(auth_data_bytes).decode('utf-8').rstrip('=')
+                                    if not authenticator_hex_value:
+                                        authenticator_hex_value = auth_data_bytes.hex()
+
+                                if raw_authenticator_value:
+                                    credential_info['authenticatorDataRaw'] = raw_authenticator_value
+                                if authenticator_hex_value:
+                                    credential_info['authenticatorDataHex'] = authenticator_hex_value
                             else:
                                 cred_data = cred['credential_data']
                                 auth_data = cred['auth_data']

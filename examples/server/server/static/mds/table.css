@@ -64,7 +64,7 @@
     align-items: center;
     justify-content: center;
     gap: 0.35rem;
-    white-space: nowrap;
+    white-space: normal;
 }
 
 .mds-header-text {
@@ -248,14 +248,16 @@
 
 .mds-tag-group {
     display: flex;
-    flex-wrap: wrap;
-    gap: 0.25rem;
-    justify-content: center;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.35rem;
+    width: 100%;
 }
 
 .mds-tag {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     padding: 0.16rem 0.5rem;
     border-radius: 999px;
     background: rgba(0, 114, 206, 0.12);
@@ -263,7 +265,10 @@
     font-size: 0.75rem;
     font-weight: 600;
     letter-spacing: 0.01em;
-    white-space: nowrap;
+    white-space: normal;
+    text-align: center;
+    width: 100%;
+    overflow-wrap: anywhere;
 }
 
 .mds-tag--neutral {

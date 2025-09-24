@@ -619,7 +619,11 @@
                                                 </div>
                                             </div>
                                         </div>
-                                        <input type="number" id="fake-cred-length-auth" class="form-control" value="256" min="1">
+                                        <div class="input-with-button">
+                                            <input type="number" id="fake-cred-length-auth" class="form-control" value="128" min="1">
+                                            <button type="button" id="fake-cred-generate-auth" class="btn btn-small add-icon" title="Generate fake credential ID" aria-label="Generate fake credential ID"></button>
+                                        </div>
+                                        <div id="fake-cred-auth-generated-list" class="fake-credential-list" aria-live="polite"></div>
                                     </div>
                                 </div>
                             </div>
@@ -855,11 +859,11 @@
                                         <option value="js">js</option>
                                     </select>
                                 </div>
-                                <h3 class="credentials-panel-title">Saved Credentials</h3>
+                                <div class="credentials-panel-header">
+                                    <h3 class="credentials-panel-title">Saved Credentials</h3>
+                                    <button id="clear-credentials" class="btn btn-small btn-danger" onclick="clearAllCredentials()">Clear All</button>
+                                </div>
                                 <div class="credentials-panel">
-                                    <div class="credentials-toolbar">
-                                        <button id="clear-credentials" class="btn btn-small btn-danger" onclick="clearAllCredentials()">Clear All</button>
-                                    </div>
                                     <div id="credentials-list">
                                         <p style="color: #6c757d;">No credentials registered yet.</p>
                                     </div>

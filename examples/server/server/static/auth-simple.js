@@ -9,6 +9,14 @@ import { showStatus, hideStatus, showProgress, hideProgress } from './status.js'
 import { loadSavedCredentials } from './credential-display.js';
 import { printRegistrationDebug, printAuthenticationDebug } from './auth-debug.js';
 import { state } from './state.js';
+import { randomizeSimpleUsername } from './username.js';
+
+function maybeRandomizeSimpleUsername() {
+    const input = document.getElementById('simple-email');
+    if (input && input.value.trim()) {
+        randomizeSimpleUsername();
+    }
+}
 
 export async function simpleRegister() {
     const email = document.getElementById('simple-email').value;
@@ -65,6 +73,8 @@ export async function simpleRegister() {
             printRegistrationDebug(credential, createOptions, data);
 
             showStatus('simple', `Registration successful! Algorithm: ${data.algo || 'Unknown'}`, 'success');
+
+            maybeRandomizeSimpleUsername();
 
             setTimeout(loadSavedCredentials, 1000);
         } else {
@@ -138,6 +148,8 @@ export async function simpleAuthenticate() {
             printAuthenticationDebug(assertion, getOptions, data);
 
             showStatus('simple', 'Authentication successful! You have been verified.', 'success');
+
+            maybeRandomizeSimpleUsername();
         } else {
             const errorText = await result.text();
             throw new Error(`Authentication failed: ${errorText}`);

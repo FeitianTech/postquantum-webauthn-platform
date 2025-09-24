@@ -29,6 +29,7 @@ import {
 } from './status.js';
 import {
     getFakeExcludeCredentials,
+    getFakeAllowCredentials,
     setFakeExcludeCredentials
 } from './exclude-credentials.js';
 
@@ -213,8 +214,11 @@ export function getCredentialRequestOptions() {
     };
 
     const allowCreds = document.getElementById('allow-credentials')?.value;
+    let shouldRemoveAllowCredentials = false;
+
     if (allowCreds === 'empty') {
-        delete publicKey.allowCredentials;
+        publicKey.allowCredentials = [];
+        shouldRemoveAllowCredentials = true;
     } else if (allowCreds === 'all') {
         const credentialSource = (state.storedCredentials || []).filter(cred => {
             if (allowedAttachments.length === 0) {
@@ -292,6 +296,41 @@ export function getCredentialRequestOptions() {
                 .filter(Boolean);
             publicKey.allowCredentials = fallbackCredentials;
         }
+    }
+
+    const fakeAllowCredentials = getFakeAllowCredentials();
+    if (Array.isArray(fakeAllowCredentials) && fakeAllowCredentials.length) {
+        if (!Array.isArray(publicKey.allowCredentials)) {
+            publicKey.allowCredentials = [];
+        }
+
+        fakeAllowCredentials.forEach(hexValue => {
+            if (!hexValue) {
+                return;
+            }
+
+            let idValue = { '$hex': hexValue };
+            try {
+                const formattedValue = convertFormat(hexValue, 'hex', getCurrentBinaryFormat());
+                const jsonValue = currentFormatToJsonFormat(formattedValue);
+                if (jsonValue && typeof jsonValue === 'object') {
+                    idValue = jsonValue;
+                }
+            } catch (error) {
+                // Fallback to hex representation if conversion fails.
+            }
+
+            publicKey.allowCredentials.push({
+                type: 'public-key',
+                id: idValue,
+            });
+        });
+
+        shouldRemoveAllowCredentials = false;
+    }
+
+    if (shouldRemoveAllowCredentials && (!publicKey.allowCredentials || !publicKey.allowCredentials.length)) {
+        delete publicKey.allowCredentials;
     }
 
     const largeBlobAuth = document.getElementById('large-blob-auth')?.value;

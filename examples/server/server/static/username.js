@@ -27,3 +27,10 @@ export function randomizeUserIdentity() {
     randomizeUserId();
     randomizeUsername();
 }
+
+export function randomizeSimpleUsername() {
+    const simpleInput = document.getElementById('simple-email');
+    if (simpleInput) {
+        simpleInput.value = generateRandom10DigitUsername();
+    }
+}

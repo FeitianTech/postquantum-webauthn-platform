@@ -20,9 +20,56 @@ import {
     hideProgress
 } from './status.js';
 import { updateJsonEditor, getAdvancedCreateOptions, getAdvancedAssertOptions } from './json-editor.js';
+import { randomizeChallenge, randomizePrfEval, randomizeLargeBlobWrite } from './forms.js';
+import { randomizeUserIdentity } from './username.js';
 import { showRegistrationResultModal, loadSavedCredentials } from './credential-display.js';
 import { printRegistrationDebug, printAuthenticationDebug } from './auth-debug.js';
 import { state } from './state.js';
+
+function maybeRandomizeAdvancedRegistrationFields() {
+    const userIdInput = document.getElementById('user-id');
+    const userNameInput = document.getElementById('user-name');
+    if ((userIdInput && userIdInput.value.trim()) || (userNameInput && userNameInput.value.trim())) {
+        randomizeUserIdentity();
+    }
+
+    const challengeRegInput = document.getElementById('challenge-reg');
+    if (challengeRegInput && challengeRegInput.value.trim()) {
+        randomizeChallenge('reg');
+    }
+
+    const prfFirstReg = document.getElementById('prf-eval-first-reg');
+    if (prfFirstReg && prfFirstReg.value.trim()) {
+        randomizePrfEval('first', 'reg');
+    }
+
+    const prfSecondReg = document.getElementById('prf-eval-second-reg');
+    if (prfSecondReg && prfSecondReg.value.trim()) {
+        randomizePrfEval('second', 'reg');
+    }
+}
+
+function maybeRandomizeAdvancedAuthenticationFields() {
+    const challengeAuthInput = document.getElementById('challenge-auth');
+    if (challengeAuthInput && challengeAuthInput.value.trim()) {
+        randomizeChallenge('auth');
+    }
+
+    const prfFirstAuth = document.getElementById('prf-eval-first-auth');
+    if (prfFirstAuth && prfFirstAuth.value.trim()) {
+        randomizePrfEval('first', 'auth');
+    }
+
+    const prfSecondAuth = document.getElementById('prf-eval-second-auth');
+    if (prfSecondAuth && prfSecondAuth.value.trim()) {
+        randomizePrfEval('second', 'auth');
+    }
+
+    const largeBlobWriteInput = document.getElementById('large-blob-write');
+    if (largeBlobWriteInput && largeBlobWriteInput.value.trim()) {
+        randomizeLargeBlobWrite();
+    }
+}
 
 const COMMON_SUPPORTED_ALGORITHMS = new Set([-7, -257, -8]);
 
@@ -206,6 +253,8 @@ export async function advancedRegister() {
 
             showStatus('advanced', `Advanced registration successful! Algorithm: ${data.algo || 'Unknown'}`, 'success');
 
+            maybeRandomizeAdvancedRegistrationFields();
+
             await showRegistrationResultModal(credentialJson, data.relyingParty || null);
 
             setTimeout(loadSavedCredentials, 1000);
@@ -336,6 +385,8 @@ export async function advancedAuthenticate() {
             printAuthenticationDebug(assertion, assertOptions, data);
 
             showStatus('advanced', 'Advanced authentication successful!', 'success');
+
+            maybeRandomizeAdvancedAuthenticationFields();
         } else {
             const errorText = await result.text();
             throw new Error(`Authentication failed: ${errorText}`);

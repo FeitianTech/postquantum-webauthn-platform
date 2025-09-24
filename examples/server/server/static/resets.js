@@ -5,7 +5,7 @@ import {
 } from './forms.js';
 import { randomizeUserIdentity } from './username.js';
 import { updateJsonEditor } from './json-editor.js';
-import { clearFakeExcludeCredentials } from './exclude-credentials.js';
+import { clearFakeExcludeCredentials, clearFakeAllowCredentials } from './exclude-credentials.js';
 
 export function resetRegistrationForm() {
     randomizeUserIdentity();
@@ -53,7 +53,7 @@ export function resetRegistrationForm() {
 export function resetAuthenticationForm() {
     document.getElementById('user-verification-auth').value = 'preferred';
     document.getElementById('allow-credentials').value = 'all';
-    document.getElementById('fake-cred-length-auth').value = '256';
+    document.getElementById('fake-cred-length-auth').value = '128';
 
     randomizeChallenge('auth');
     document.getElementById('timeout-auth').value = '90000';
@@ -67,6 +67,8 @@ export function resetAuthenticationForm() {
     document.getElementById('prf-eval-first-auth').value = '';
     document.getElementById('prf-eval-second-auth').value = '';
     document.getElementById('prf-eval-second-auth').disabled = true;
+
+    clearFakeAllowCredentials();
 
     validatePrfInputs('reg');
     validatePrfInputs('auth');
