@@ -5,5 +5,6 @@ export const state = {
     currentJsonData: null,
     lastFakeCredLength: 0,
     generatedExcludeCredentials: [],
+    generatedAllowCredentials: [],
     utf8Decoder: typeof TextDecoder !== 'undefined' ? new TextDecoder('utf-8') : null,
 };

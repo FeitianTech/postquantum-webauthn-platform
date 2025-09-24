@@ -32,6 +32,17 @@
     box-shadow: var(--shadow-hover);
 }
 
+.modal-content.modal-content-large {
+    width: 95vw;
+    max-width: 95vw;
+    height: 95vh;
+    max-height: 95vh;
+}
+
+#registrationDetailModal {
+    z-index: 1300;
+}
+
 .modal-header {
     display: flex;
     justify-content: space-between;
@@ -99,6 +110,13 @@
         max-height: 85vh;
         padding: 1.5rem;
     }
+
+    .modal-content.modal-content-large {
+        width: 95vw;
+        max-width: 95vw;
+        height: 95vh;
+        max-height: 95vh;
+    }
 }
 
 .modal-body p {
@@ -128,6 +146,17 @@
     word-break: break-word;
     overflow-wrap: anywhere;
     white-space: pre-wrap;
+}
+
+.credential-registration-copy {
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid rgba(0, 114, 206, 0.15);
+}
+
+.credential-registration-copy > h4 {
+    color: #0072CE;
+    margin-bottom: 0.75rem;
 }
 
 .credential-aaguid-row {
@@ -262,6 +291,18 @@
     outline: none;
     border-color: rgba(0, 114, 206, 0.25);
     box-shadow: none;
+}
+
+.registration-detail-button-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+    align-items: center;
+}
+
+.registration-detail-button-row--solo {
+    margin-top: 0;
 }
 
 .modal-pre {

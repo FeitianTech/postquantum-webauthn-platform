@@ -20,7 +20,6 @@ import {
 import {
     changeBinaryFormat,
     updateFieldLabels,
-    randomizeUserId,
     randomizeChallenge,
     randomizePrfEval,
     randomizeLargeBlobWrite,
@@ -36,10 +35,7 @@ import {
     resetRegistrationForm,
     resetAuthenticationForm
 } from './resets.js';
-import {
-    randomizeUsername,
-    generateRandom10DigitUsername
-} from './username.js';
+import { randomizeUserIdentity, randomizeSimpleUsername } from './username.js';
 import {
     simpleRegister,
     simpleAuthenticate
@@ -69,13 +65,18 @@ import {
     navigateToMdsAuthenticator,
     closeCredentialModal,
     closeRegistrationResultModal,
-    deleteCredential
+    closeRegistrationDetailModal,
+    deleteCredential,
+    clearAllCredentials
 } from './credential-display.js';
 import { handleJsonEditorKeydown } from './json-editor-utils.js';
 import {
     createFakeExcludeCredential,
     removeFakeExcludeCredential,
-    renderFakeExcludeCredentialList
+    renderFakeExcludeCredentialList,
+    createFakeAllowCredential,
+    removeFakeAllowCredential,
+    renderFakeAllowCredentialList
 } from './exclude-credentials.js';
 
 window.create = create;
@@ -90,13 +91,13 @@ window.toggleSection = toggleSection;
 window.showInfoPopup = showInfoPopup;
 window.hideInfoPopup = hideInfoPopup;
 window.toggleLanguage = toggleLanguage;
-window.randomizeUserId = randomizeUserId;
 window.randomizeChallenge = randomizeChallenge;
 window.randomizePrfEval = randomizePrfEval;
 window.randomizeLargeBlobWrite = randomizeLargeBlobWrite;
 window.resetRegistrationForm = resetRegistrationForm;
 window.resetAuthenticationForm = resetAuthenticationForm;
-window.randomizeUsername = randomizeUsername;
+window.randomizeUserIdentity = randomizeUserIdentity;
+window.randomizeSimpleUsername = randomizeSimpleUsername;
 window.simpleRegister = simpleRegister;
 window.simpleAuthenticate = simpleAuthenticate;
 window.advancedRegister = advancedRegister;
@@ -111,7 +112,9 @@ window.showCredentialDetails = showCredentialDetails;
 window.navigateToMdsAuthenticator = navigateToMdsAuthenticator;
 window.closeCredentialModal = closeCredentialModal;
 window.closeRegistrationResultModal = closeRegistrationResultModal;
+window.closeRegistrationDetailModal = closeRegistrationDetailModal;
 window.deleteCredential = deleteCredential;
+window.clearAllCredentials = clearAllCredentials;
 window.editCreateOptions = editCreateOptions;
 window.editAssertOptions = editAssertOptions;
 window.applyJsonChanges = applyJsonChanges;
@@ -133,12 +136,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     setTimeout(() => {
-        randomizeUserId();
-        const randomUsername = generateRandom10DigitUsername();
-        const userName = document.getElementById('user-name');
-        const displayName = document.getElementById('user-display-name');
-        if (userName) userName.value = randomUsername;
-        if (displayName) displayName.value = randomUsername;
+        randomizeUserIdentity();
         randomizeChallenge('reg');
         randomizeChallenge('auth');
         randomizeLargeBlobWrite();
@@ -160,6 +158,7 @@ document.addEventListener('DOMContentLoaded', () => {
         loadSavedCredentials();
         updateJsonEditor();
         renderFakeExcludeCredentialList();
+        renderFakeAllowCredentialList();
         updateAuthenticationExtensionAvailability();
     }, 100);
 
@@ -248,6 +247,35 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 event.preventDefault();
                 const removed = removeFakeExcludeCredential(button.dataset.fakeCredentialIndex);
+                if (removed) {
+                    updateJsonEditor();
+                }
+            });
+        }
+
+        const fakeAllowButton = document.getElementById('fake-cred-generate-auth');
+        if (fakeAllowButton) {
+            fakeAllowButton.addEventListener('click', () => {
+                const lengthInput = document.getElementById('fake-cred-length-auth');
+                const lengthValue = lengthInput ? lengthInput.value : '';
+                const created = createFakeAllowCredential(lengthValue);
+                if (created) {
+                    updateJsonEditor();
+                }
+            });
+        }
+
+        const fakeAllowList = document.getElementById('fake-cred-auth-generated-list');
+        if (fakeAllowList) {
+            fakeAllowList.addEventListener('click', event => {
+                const button = event.target instanceof HTMLElement
+                    ? event.target.closest('button[data-fake-credential-index]')
+                    : null;
+                if (!button) {
+                    return;
+                }
+                event.preventDefault();
+                const removed = removeFakeAllowCredential(button.dataset.fakeCredentialIndex);
                 if (removed) {
                     updateJsonEditor();
                 }

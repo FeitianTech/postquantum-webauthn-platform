@@ -19,7 +19,7 @@ from ..attestation import (
     make_json_safe,
 )
 from ..config import app, basepath, server
-from ..storage import add_public_key_material, convert_bytes_for_json, extract_credential_data, readkey, savekey
+from ..storage import add_public_key_material, convert_bytes_for_json, delkey, extract_credential_data, readkey, savekey
 
 
 @app.route("/api/register/begin", methods=["POST"])
@@ -80,6 +80,8 @@ def register_complete():
         response.get('authenticatorAttachment') if isinstance(response, Mapping) else None
     )
 
+    raw_attestation_object = credential_response.get('attestationObject')
+
     credential_info: Dict[str, Any] = {
         'credential_data': auth_data.credential_data,
         'auth_data': auth_data,
@@ -91,6 +93,7 @@ def register_complete():
         'registration_time': time.time(),
         'client_data_json': client_data_json or '',
         'attestation_object': raw_attestation_object or '',
+        'attestation_object_raw': raw_attestation_object or '',
         'attestation_format': attestation_format,
         'attestation_statement': attestation_statement,
         'attestation_certificate': attestation_certificate_details,
@@ -127,6 +130,12 @@ def register_complete():
         getattr(auth_data.credential_data, 'public_key', {})
     )
 
+    if parsed_attestation_object:
+        credential_info['attestation_object_decoded'] = make_json_safe(parsed_attestation_object)
+
+    if isinstance(response, Mapping):
+        credential_info['registration_response'] = make_json_safe(response)
+
     credential_data = auth_data.credential_data
     aaguid_value = getattr(credential_data, 'aaguid', None)
     if aaguid_value is not None:
@@ -142,6 +151,13 @@ def register_complete():
                 credential_info['properties']['aaguidGuid'] = str(uuid.UUID(bytes=aaguid_bytes))
             except ValueError:
                 pass
+
+    try:
+        auth_data_bytes = bytes(auth_data)
+        credential_info['authenticator_data_raw'] = base64.urlsafe_b64encode(auth_data_bytes).decode('utf-8').rstrip('=')
+        credential_info['authenticator_data_hex'] = auth_data_bytes.hex()
+    except Exception:
+        pass
 
     credentials.append(credential_info)
     savekey(uname, credentials)
@@ -222,9 +238,50 @@ def authenticate_complete():
     })
 
 
-@app.route("/api/credentials", methods=["GET"])
+@app.route("/api/credentials", methods=["GET", "DELETE"])
 def list_credentials():
+    if request.method == "DELETE":
+        removed = 0
+        try:
+            for filename in os.listdir(basepath):
+                if not filename.endswith('_credential_data.pkl'):
+                    continue
+                username = filename.replace('_credential_data.pkl', '')
+                delkey(username)
+                removed += 1
+        except Exception:
+            pass
+
+        return jsonify({"status": "OK", "removed": removed})
+
     credentials: List[Dict[str, Any]] = []
+
+    def add_registration_metadata(target: Dict[str, Any], source: Mapping[str, Any]) -> None:
+        registration_response = source.get('registration_response')
+        if registration_response is None:
+            registration_response = source.get('registrationResponse')
+        if registration_response is not None:
+            if isinstance(registration_response, Mapping):
+                target['registrationResponse'] = make_json_safe(registration_response)
+            else:
+                target['registrationResponse'] = registration_response
+
+        registration_rp = source.get('relying_party')
+        if registration_rp is None:
+            registration_rp = source.get('relyingParty')
+        if registration_rp is not None:
+            if isinstance(registration_rp, Mapping):
+                target['relyingParty'] = make_json_safe(registration_rp)
+            else:
+                target['relyingParty'] = registration_rp
+
+        client_data_value = source.get('client_data_json')
+        if client_data_value is None:
+            client_data_value = source.get('clientDataJSON')
+        if isinstance(client_data_value, Mapping):
+            target['clientDataJSON'] = make_json_safe(client_data_value)
+        elif isinstance(client_data_value, str) and client_data_value:
+            target['clientDataJSON'] = client_data_value
 
     try:
         pkl_files = [f for f in os.listdir(basepath) if f.endswith('_credential_data.pkl')]
@@ -282,6 +339,8 @@ def list_credentials():
                                 if certificate_details is not None:
                                     credential_info['attestationCertificate'] = certificate_details
 
+                                add_registration_metadata(credential_info, cred)
+
                                 add_public_key_material(credential_info, cred_data.get('public_key', {}))
                                 if credential_info.get('publicKeyAlgorithm') is not None:
                                     credential_info['algorithm'] = credential_info['publicKeyAlgorithm']
@@ -294,6 +353,54 @@ def list_credentials():
                                         properties_copy.setdefault('aaguidRaw', credential_info['aaguidHex'])
                                     if credential_info.get('aaguidGuid'):
                                         properties_copy.setdefault('aaguidGuid', credential_info['aaguidGuid'])
+
+                                raw_attestation_value = (
+                                    cred.get('attestation_object_raw')
+                                    or cred.get('attestationObjectRaw')
+                                )
+                                if not raw_attestation_value:
+                                    stored_att_obj = cred.get('attestation_object')
+                                    if isinstance(stored_att_obj, str):
+                                        raw_attestation_value = stored_att_obj
+
+                                decoded_attestation_value = (
+                                    cred.get('attestation_object_decoded')
+                                    or cred.get('attestationObjectDecoded')
+                                )
+                                if decoded_attestation_value is None:
+                                    stored_att_obj = cred.get('attestation_object')
+                                    if isinstance(stored_att_obj, Mapping):
+                                        decoded_attestation_value = stored_att_obj
+
+                                if raw_attestation_value:
+                                    credential_info['attestationObjectRaw'] = raw_attestation_value
+                                if decoded_attestation_value is not None:
+                                    credential_info['attestationObjectDecoded'] = make_json_safe(decoded_attestation_value)
+
+                                raw_authenticator_value = (
+                                    cred.get('authenticator_data_raw')
+                                    or cred.get('authenticatorDataRaw')
+                                )
+                                authenticator_hex_value = (
+                                    cred.get('authenticator_data_hex')
+                                    or cred.get('authenticatorDataHex')
+                                )
+
+                                try:
+                                    auth_data_bytes = bytes(auth_data)
+                                except Exception:
+                                    auth_data_bytes = b''
+
+                                if auth_data_bytes:
+                                    if not raw_authenticator_value:
+                                        raw_authenticator_value = base64.urlsafe_b64encode(auth_data_bytes).decode('utf-8').rstrip('=')
+                                    if not authenticator_hex_value:
+                                        authenticator_hex_value = auth_data_bytes.hex()
+
+                                if raw_authenticator_value:
+                                    credential_info['authenticatorDataRaw'] = raw_authenticator_value
+                                if authenticator_hex_value:
+                                    credential_info['authenticatorDataHex'] = authenticator_hex_value
                             else:
                                 cred_data = cred['credential_data']
                                 auth_data = cred['auth_data']
@@ -350,6 +457,8 @@ def list_credentials():
 
                                 if attachment_value is not None:
                                     properties_copy['authenticatorAttachment'] = attachment_value
+
+                                add_registration_metadata(credential_info, cred)
 
                                 add_public_key_material(credential_info, getattr(cred_data, 'public_key', {}))
                                 if credential_info.get('publicKeyAlgorithm') is not None:

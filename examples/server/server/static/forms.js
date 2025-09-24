@@ -10,7 +10,7 @@ import {
 import { getCredentialIdHex, getStoredCredentialAttachment } from './credential-utils.js';
 import { showStatus } from './status.js';
 import { updateJsonEditor } from './json-editor.js';
-import { renderFakeExcludeCredentialList } from './exclude-credentials.js';
+import { renderFakeExcludeCredentialList, renderFakeAllowCredentialList } from './exclude-credentials.js';
 
 export function changeBinaryFormat() {
     const newFormat = getCurrentBinaryFormat();
@@ -35,6 +35,7 @@ export function changeBinaryFormat() {
     updateJsonEditor();
     window.currentBinaryFormat = newFormat;
     renderFakeExcludeCredentialList();
+    renderFakeAllowCredentialList();
 }
 
 function credentialSupportsLargeBlob(cred) {

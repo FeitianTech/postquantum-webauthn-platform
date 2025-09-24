@@ -1,22 +1,19 @@
 import {
-    randomizeUserId,
     randomizeChallenge,
     validatePrfInputs,
     updateAuthenticationExtensionAvailability
 } from './forms.js';
-import { generateRandom10DigitUsername } from './username.js';
+import { randomizeUserIdentity } from './username.js';
 import { updateJsonEditor } from './json-editor.js';
-import { clearFakeExcludeCredentials } from './exclude-credentials.js';
+import { clearFakeExcludeCredentials, clearFakeAllowCredentials } from './exclude-credentials.js';
 
 export function resetRegistrationForm() {
-    randomizeUserId();
-    const randomUsername = generateRandom10DigitUsername();
-    document.getElementById('user-name').value = randomUsername;
-    document.getElementById('user-display-name').value = randomUsername;
+    randomizeUserIdentity();
 
+    document.getElementById('authenticator-attachment').value = 'cross-platform';
     document.getElementById('resident-key').value = 'discouraged';
     document.getElementById('user-verification-reg').value = 'preferred';
-    document.getElementById('attestation').value = 'none';
+    document.getElementById('attestation').value = 'direct';
     document.getElementById('exclude-credentials').checked = true;
     document.getElementById('fake-cred-length-reg').value = '128';
 
@@ -70,6 +67,8 @@ export function resetAuthenticationForm() {
     document.getElementById('prf-eval-first-auth').value = '';
     document.getElementById('prf-eval-second-auth').value = '';
     document.getElementById('prf-eval-second-auth').disabled = true;
+
+    clearFakeAllowCredentials();
 
     validatePrfInputs('reg');
     validatePrfInputs('auth');

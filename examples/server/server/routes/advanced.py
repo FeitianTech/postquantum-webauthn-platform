@@ -507,8 +507,8 @@ def advanced_register_complete():
         if attestation_certificate_details is not None:
             credential_info['attestation_certificate'] = attestation_certificate_details
 
-        credentials.append(credential_info)
-        savekey(username, credentials)
+        if isinstance(response, Mapping):
+            credential_info['registration_response'] = make_json_safe(response)
 
         algo = auth_data.credential_data.public_key[3]
         algoname = ""
@@ -680,6 +680,11 @@ def advanced_register_complete():
 
         if attestation_certificate_details:
             rp_info["attestationCertificate"] = attestation_certificate_details
+
+        credential_info['relying_party'] = make_json_safe(rp_info)
+
+        credentials.append(credential_info)
+        savekey(username, credentials)
 
         return jsonify({
             "status": "OK",

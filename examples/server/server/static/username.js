@@ -1,4 +1,5 @@
 import { updateJsonEditor } from './json-editor.js';
+import { randomizeUserId } from './forms.js';
 
 export function generateRandom10DigitUsername() {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -20,4 +21,16 @@ export function randomizeUsername() {
         displayName.value = randomUsername;
     }
     updateJsonEditor();
+}
+
+export function randomizeUserIdentity() {
+    randomizeUserId();
+    randomizeUsername();
+}
+
+export function randomizeSimpleUsername() {
+    const simpleInput = document.getElementById('simple-email');
+    if (simpleInput) {
+        simpleInput.value = generateRandom10DigitUsername();
+    }
 }

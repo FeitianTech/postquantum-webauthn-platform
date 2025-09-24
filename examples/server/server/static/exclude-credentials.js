@@ -2,11 +2,30 @@ import { state } from './state.js';
 import { generateRandomHex, convertFormat, getCurrentBinaryFormat } from './binary-utils.js';
 import { showStatus } from './status.js';
 
-function ensureList() {
-    if (!Array.isArray(state.generatedExcludeCredentials)) {
-        state.generatedExcludeCredentials = [];
+const LIST_CONFIG = {
+    exclude: {
+        stateKey: 'generatedExcludeCredentials',
+        containerId: 'fake-cred-generated-list',
+        emptyMessage: 'No fake credential IDs added.',
+    },
+    allow: {
+        stateKey: 'generatedAllowCredentials',
+        containerId: 'fake-cred-auth-generated-list',
+        emptyMessage: 'No fake allow credential IDs added.',
+    },
+};
+
+function getConfig(type = 'exclude') {
+    return LIST_CONFIG[type] || LIST_CONFIG.exclude;
+}
+
+function ensureList(type = 'exclude') {
+    const config = getConfig(type);
+    const current = state[config.stateKey];
+    if (!Array.isArray(current)) {
+        state[config.stateKey] = [];
     }
-    return state.generatedExcludeCredentials;
+    return state[config.stateKey];
 }
 
 function normaliseHex(value) {
@@ -17,12 +36,12 @@ function normaliseHex(value) {
     if (!trimmed) {
         return '';
     }
-    const hex = trimmed.replace(/[^0-9a-fA-F]/g, '').toLowerCase();
-    return hex;
+    return trimmed.replace(/[^0-9a-fA-F]/g, '').toLowerCase();
 }
 
-function getListContainer() {
-    return document.getElementById('fake-cred-generated-list');
+function getListContainer(type = 'exclude') {
+    const { containerId } = getConfig(type);
+    return document.getElementById(containerId);
 }
 
 function formatDisplayValue(hexValue) {
@@ -37,19 +56,19 @@ function formatDisplayValue(hexValue) {
     }
 }
 
-export function renderFakeExcludeCredentialList() {
-    const container = getListContainer();
+function renderFakeCredentialList(type = 'exclude') {
+    const container = getListContainer(type);
     if (!container) {
         return;
     }
 
-    const list = ensureList();
+    const list = ensureList(type);
     container.innerHTML = '';
 
     if (!list.length) {
         const empty = document.createElement('div');
         empty.className = 'fake-credential-empty';
-        empty.textContent = 'No fake credential IDs added.';
+        empty.textContent = getConfig(type).emptyMessage;
         container.appendChild(empty);
         container.scrollTop = 0;
         container.scrollLeft = 0;
@@ -95,12 +114,12 @@ export function renderFakeExcludeCredentialList() {
     container.scrollLeft = 0;
 }
 
-export function getFakeExcludeCredentials() {
-    return ensureList().slice();
+function getFakeCredentials(type = 'exclude') {
+    return ensureList(type).slice();
 }
 
-export function setFakeExcludeCredentials(hexList) {
-    const list = ensureList();
+function setFakeCredentials(type = 'exclude', hexList = []) {
+    const list = ensureList(type);
     list.splice(0, list.length);
     if (Array.isArray(hexList)) {
         hexList.forEach(value => {
@@ -110,14 +129,14 @@ export function setFakeExcludeCredentials(hexList) {
             }
         });
     }
-    renderFakeExcludeCredentialList();
+    renderFakeCredentialList(type);
 }
 
-export function clearFakeExcludeCredentials() {
-    setFakeExcludeCredentials([]);
+function clearFakeCredentials(type = 'exclude') {
+    setFakeCredentials(type, []);
 }
 
-export function createFakeExcludeCredential(length) {
+function createFakeCredential(type = 'exclude', length) {
     const parsed = Number.parseInt(length, 10);
     if (!Number.isFinite(parsed) || parsed <= 0) {
         showStatus('advanced', 'Please enter a valid fake credential ID length (at least 1 byte).', 'error');
@@ -130,19 +149,67 @@ export function createFakeExcludeCredential(length) {
     }
 
     const hexValue = generateRandomHex(safeLength);
-    const list = ensureList();
+    const list = ensureList(type);
     list.push(hexValue);
-    renderFakeExcludeCredentialList();
+    renderFakeCredentialList(type);
     return hexValue;
 }
 
-export function removeFakeExcludeCredential(index) {
-    const list = ensureList();
+function removeFakeCredential(type = 'exclude', index) {
+    const list = ensureList(type);
     const parsed = Number.parseInt(index, 10);
     if (!Number.isInteger(parsed) || parsed < 0 || parsed >= list.length) {
         return false;
     }
     list.splice(parsed, 1);
-    renderFakeExcludeCredentialList();
+    renderFakeCredentialList(type);
     return true;
+}
+
+export function renderFakeExcludeCredentialList() {
+    renderFakeCredentialList('exclude');
+}
+
+export function renderFakeAllowCredentialList() {
+    renderFakeCredentialList('allow');
+}
+
+export function getFakeExcludeCredentials() {
+    return getFakeCredentials('exclude');
+}
+
+export function getFakeAllowCredentials() {
+    return getFakeCredentials('allow');
+}
+
+export function setFakeExcludeCredentials(hexList) {
+    setFakeCredentials('exclude', hexList);
+}
+
+export function setFakeAllowCredentials(hexList) {
+    setFakeCredentials('allow', hexList);
+}
+
+export function clearFakeExcludeCredentials() {
+    clearFakeCredentials('exclude');
+}
+
+export function clearFakeAllowCredentials() {
+    clearFakeCredentials('allow');
+}
+
+export function createFakeExcludeCredential(length) {
+    return createFakeCredential('exclude', length);
+}
+
+export function createFakeAllowCredential(length) {
+    return createFakeCredential('allow', length);
+}
+
+export function removeFakeExcludeCredential(index) {
+    return removeFakeCredential('exclude', index);
+}
+
+export function removeFakeAllowCredential(index) {
+    return removeFakeCredential('allow', index);
 }
