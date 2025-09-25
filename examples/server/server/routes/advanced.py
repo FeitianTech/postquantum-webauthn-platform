@@ -708,6 +708,9 @@ def advanced_register_complete():
         pub_key_params = public_key.get("pubKeyCredParams", [])
         algorithms_used = [param.get("alg") for param in pub_key_params if isinstance(param, dict) and "alg" in param]
 
+        rp_id_hash_bytes = getattr(auth_data, 'rp_id_hash', b'') or b''
+        rp_id_hash_hex = rp_id_hash_bytes.hex() if rp_id_hash_bytes else None
+
         debug_info = {
             "attestationFormat": attestation_format,
             "algorithmsUsed": algorithms_used or [algo],
@@ -720,6 +723,18 @@ def advanced_register_complete():
             "attestationAaguidMatch": attestation_aaguid_match,
             "attestationChecks": attestation_checks_safe,
             "attestationSummary": attestation_summary,
+            "attestationObject": make_json_safe(raw_attestation_object),
+            "attestationObjectDecoded": make_json_safe(parsed_attestation_object)
+            if parsed_attestation_object
+            else None,
+            "attestationStatement": make_json_safe(attestation_statement)
+            if attestation_statement
+            else None,
+            "clientDataJSON": make_json_safe(client_data_json) if client_data_json else None,
+            "clientDataJSONDecoded": make_json_safe(parsed_client_data_json)
+            if parsed_client_data_json
+            else None,
+            "clientExtensionResults": make_json_safe(client_extension_results),
         }
 
         extensions_requested = public_key.get("extensions", {})
@@ -782,6 +797,8 @@ def advanced_register_complete():
         if aaguid_guid:
             credential_info['properties']['aaguidGuid'] = aaguid_guid
 
+        authenticator_data_hex = bytes(auth_data).hex()
+
         flags_dict = {
             "AT": bool(auth_data.flags & auth_data.FLAG.AT),
             "BE": bool(auth_data.flags & auth_data.FLAG.BE),
@@ -789,9 +806,83 @@ def advanced_register_complete():
             "ED": bool(auth_data.flags & auth_data.FLAG.ED),
             "UP": bool(auth_data.flags & auth_data.FLAG.UP),
             "UV": bool(auth_data.flags & auth_data.FLAG.UV),
+            "value": getattr(auth_data, 'flags', None),
         }
 
-        authenticator_data_hex = bytes(auth_data).hex()
+        credential_public_key_cose = None
+        credential_public_key_bytes = None
+        credential_public_key_alg = None
+        credential_public_key_type = None
+
+        credential_data_summary: Dict[str, Any] = {
+            "credentialIdHex": credential_id_hex,
+            "credentialIdBase64": credential_id_b64,
+            "credentialIdBase64Url": credential_id_b64url,
+            "credentialIdLength": len(credential_id_bytes) if credential_id_bytes else 0,
+        }
+
+        credential_data = getattr(auth_data, 'credential_data', None)
+        if credential_data is not None:
+            aaguid_bytes = getattr(credential_data, 'aaguid', None)
+            if isinstance(aaguid_bytes, (bytes, bytearray, memoryview)) and len(aaguid_bytes) == 16:
+                credential_data_summary["aaguidHex"] = aaguid_bytes.hex()
+                try:
+                    credential_data_summary["aaguidGuid"] = str(uuid.UUID(bytes=bytes(aaguid_bytes)))
+                except ValueError:
+                    pass
+                credential_data_summary["aaguidBase64Url"] = make_json_safe(aaguid_bytes)
+            elif isinstance(aaguid_hex, str):
+                credential_data_summary["aaguidHex"] = aaguid_hex
+                if aaguid_guid:
+                    credential_data_summary["aaguidGuid"] = aaguid_guid
+
+            public_key_value = getattr(credential_data, 'public_key', None)
+            public_key_map: Optional[Mapping[Any, Any]] = None
+            if isinstance(public_key_value, Mapping):
+                public_key_map = dict(public_key_value)
+            elif hasattr(public_key_value, 'items'):
+                try:
+                    public_key_map = dict(public_key_value.items())
+                except Exception:  # pragma: no cover - defensive fallback
+                    public_key_map = None
+
+            if public_key_map:
+                credential_public_key_alg = public_key_map.get(3)
+                credential_public_key_type = public_key_map.get(1)
+                raw_public_bytes = public_key_map.get(-1)
+                if isinstance(raw_public_bytes, (bytes, bytearray, memoryview)):
+                    credential_public_key_bytes = make_json_safe(raw_public_bytes)
+                credential_public_key_cose = make_json_safe(public_key_map)
+                credential_data_summary["credentialPublicKeyCose"] = credential_public_key_cose
+                credential_data_summary["credentialPublicKeyBytes"] = credential_public_key_bytes
+                credential_data_summary["credentialPublicKeyAlgorithm"] = credential_public_key_alg
+                credential_data_summary["credentialPublicKeyType"] = credential_public_key_type
+                credential_data_summary["credentialPublicKeyAlgorithmLabel"] = describe_algorithm(
+                    credential_public_key_alg
+                )
+
+        authenticator_data_breakdown = {
+            "rawHex": authenticator_data_hex,
+            "rpIdHashHex": rp_id_hash_hex,
+            "rpIdHashBase64Url": make_json_safe(rp_id_hash_bytes) if rp_id_hash_bytes else None,
+            "flags": flags_dict,
+            "signCount": getattr(auth_data, 'counter', None),
+            "attestedCredentialData": credential_data_summary,
+        }
+
+        debug_info["credentialIdHex"] = credential_id_hex
+        debug_info["credentialIdBase64Url"] = credential_id_b64url
+        debug_info["credentialPublicKeyCose"] = credential_public_key_cose
+        debug_info["credentialPublicKeyBytes"] = credential_public_key_bytes
+        debug_info["credentialPublicKeyAlgorithm"] = credential_public_key_alg
+        debug_info["credentialPublicKeyType"] = credential_public_key_type
+        debug_info["credentialPublicKeyAlgorithmLabel"] = (
+            describe_algorithm(credential_public_key_alg)
+            if credential_public_key_alg is not None
+            else None
+        )
+        debug_info["authenticatorDataBreakdown"] = authenticator_data_breakdown
+
         registration_timestamp = datetime_from_timestamp(credential_info['registration_time'])
 
         resident_key_result = None
