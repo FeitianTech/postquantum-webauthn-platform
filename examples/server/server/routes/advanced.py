@@ -264,7 +264,13 @@ def _log_authenticator_attestation_response(
 
 @app.route("/api/advanced/register/begin", methods=["POST"])
 def advanced_register_begin():
+    raw_request_payload = request.get_data(cache=True, as_text=True)
     data = request.get_json(silent=True)
+    print("[DEBUG] Raw advanced registration begin payload:", raw_request_payload or "<empty>")
+    if data is not None:
+        print("[DEBUG] Parsed advanced registration begin request:", data)
+    if request.args:
+        print("[DEBUG] Advanced registration begin query parameters:", request.args.to_dict(flat=False))
 
     if not data or not data.get("publicKey"):
         return jsonify({"error": "Invalid request: Missing publicKey in CredentialCreationOptions"}), 400
@@ -616,7 +622,10 @@ def advanced_register_begin():
     if warnings:
         response_payload["warnings"] = warnings
 
-    return jsonify(make_json_safe(response_payload))
+    safe_payload = make_json_safe(response_payload)
+    print("[DEBUG] Advanced registration options generated:", safe_payload)
+
+    return jsonify(safe_payload)
 
 
 @app.route("/api/advanced/register/complete", methods=["POST"])

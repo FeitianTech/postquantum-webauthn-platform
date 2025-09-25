@@ -24,6 +24,14 @@ from ..storage import add_public_key_material, convert_bytes_for_json, delkey, e
 
 @app.route("/api/register/begin", methods=["POST"])
 def register_begin():
+    raw_request_payload = request.get_data(cache=True, as_text=True)
+    parsed_payload = request.get_json(silent=True)
+    print("[DEBUG] Raw registration begin request payload:", raw_request_payload or "<empty>")
+    if parsed_payload is not None:
+        print("[DEBUG] Parsed registration begin request:", parsed_payload)
+    if request.args:
+        print("[DEBUG] Registration begin query parameters:", request.args.to_dict(flat=False))
+
     uname = request.args.get("email")
     credentials = readkey(uname)
     rp_id = determine_rp_id()
@@ -43,7 +51,10 @@ def register_begin():
     session["state"] = state
     session["register_rp_id"] = rp_id
 
-    return jsonify(make_json_safe(dict(options)))
+    options_payload = make_json_safe(dict(options))
+    print("[DEBUG] Registration options generated:", options_payload)
+
+    return jsonify(options_payload)
 
 
 @app.route("/api/register/complete", methods=["POST"])
