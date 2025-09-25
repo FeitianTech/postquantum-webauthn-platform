@@ -469,7 +469,7 @@ export async function advancedRegister() {
             if (createOptions) {
                 console.log('Create options (sanitized):', convertForLogging(createOptions));
             }
-        }, { collapsed: false });
+        }, { collapsed: false, force: true });
 
         if (debugFlow) {
             debugFlow.stage = 'error';

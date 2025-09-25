@@ -279,7 +279,7 @@ export async function simpleRegister() {
                 console.log('Create options (sanitized):', convertForLogging(createOptions));
             }
             console.log('Last request debug details:', requestDebugDetails);
-        }, { collapsed: false });
+        }, { collapsed: false, force: true });
 
         if (debugFlow) {
             debugFlow.stage = 'error';

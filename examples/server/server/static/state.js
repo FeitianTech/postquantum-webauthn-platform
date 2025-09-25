@@ -7,4 +7,5 @@ export const state = {
     generatedExcludeCredentials: [],
     generatedAllowCredentials: [],
     utf8Decoder: typeof TextDecoder !== 'undefined' ? new TextDecoder('utf-8') : null,
+    verboseConsoleLogging: false,
 };

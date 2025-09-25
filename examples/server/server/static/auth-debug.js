@@ -28,7 +28,24 @@ function endConsoleGroup(started) {
     }
 }
 
+function shouldLogVerbose(options = {}) {
+    if (options && typeof options === 'object' && options.force) {
+        return true;
+    }
+    if (state?.verboseConsoleLogging) {
+        return true;
+    }
+    if (typeof window !== 'undefined' && window.__webauthnVerboseLogging === true) {
+        return true;
+    }
+    return false;
+}
+
 export function logDebugGroup(label, callback, options = {}) {
+    if (!shouldLogVerbose(options)) {
+        return;
+    }
+
     const started = startConsoleGroup(label, options?.collapsed);
     try {
         callback();
@@ -129,7 +146,9 @@ function collectRegistrationRequestDetails(createOptions) {
     try {
         createOptionsForLogging = convertForLogging(createOptions);
     } catch (error) {
-        console.warn('Unable to normalise create() options for logging:', error);
+        if (shouldLogVerbose()) {
+            console.warn('Unable to normalise create() options for logging:', error);
+        }
     }
 
     return {
@@ -152,11 +171,14 @@ function collectRegistrationRequestDetails(createOptions) {
         excludeCredentials,
         rawCreateOptions: createOptions,
         rawCreateOptionsForLogging: createOptionsForLogging,
-        _logged: false,
     };
 }
 
 function logRegistrationRequestDetails(details) {
+    if (!shouldLogVerbose()) {
+        return;
+    }
+
     const started = startConsoleGroup('WebAuthn registration request (browser → authenticator)');
     if (details?.rp) {
         console.log('RP ID:', details.rp.id || null);
@@ -195,7 +217,6 @@ function logRegistrationRequestDetails(details) {
 export function printRegistrationRequestDebug(createOptions) {
     const details = collectRegistrationRequestDetails(createOptions);
     logRegistrationRequestDetails(details);
-    details._logged = true;
     if (typeof window !== 'undefined') {
         window.__webauthnDebug = window.__webauthnDebug || {};
         const summary = { ...details };
@@ -253,310 +274,296 @@ function decodeClientData(credential) {
     };
 }
 
-export function printRegistrationDebug(credential, createOptions, serverResponse, requestDetails) {
-    const clientExtensions = credential.getClientExtensionResults
-        ? credential.getClientExtensionResults()
-        : (credential.clientExtensionResults || {});
-    const serverData = serverResponse || {};
-    const requestInfo = requestDetails && typeof requestDetails === 'object'
-        ? requestDetails
-        : collectRegistrationRequestDetails(createOptions);
 
-    const started = startConsoleGroup('WebAuthn registration debug');
-    console.log('Server response (full payload):', serverData);
-    if (!requestInfo._logged) {
-        logRegistrationRequestDetails(requestInfo);
-        requestInfo._logged = true;
+function hasContent(value) {
+    if (value === null || value === undefined) {
+        return false;
+    }
+    if (typeof value === 'string') {
+        return value.length > 0;
+    }
+    if (Array.isArray(value)) {
+        return value.length > 0;
+    }
+    if (typeof value === 'object') {
+        return Object.keys(value).length > 0;
+    }
+    return true;
+}
+
+function normaliseAttestationObjectRaw(credential, serverData) {
+    const fromServer = serverData?.attestationObject;
+    if (typeof fromServer === 'string' && fromServer.length) {
+        const normalized = { base64url: fromServer };
+        try {
+            normalized.hex = base64UrlToHex(fromServer);
+        } catch (error) {
+            // ignore decode errors for malformed inputs
+        }
+        return normalized;
     }
 
-    const clientGroup = startConsoleGroup('Authenticator response (client observations)');
+    const attestationBuffer = credential?.response?.attestationObject;
+    if (attestationBuffer) {
+        const hex = arrayBufferToHex(attestationBuffer);
+        return {
+            base64url: hexToBase64Url(hex),
+            hex,
+        };
+    }
 
-    let credentialJson = null;
-    if (credential) {
-        console.log('Credential type:', credential.type || null);
+    return null;
+}
+
+function buildAuthenticatorDataSummary(serverData) {
+    const breakdown = serverData?.authenticatorDataBreakdown;
+    if (!breakdown || typeof breakdown !== 'object') {
+        return null;
+    }
+
+    const summary = {};
+    if (typeof breakdown.rawHex === 'string' && breakdown.rawHex.length) {
+        summary.rawHex = breakdown.rawHex;
+    }
+
+    if (breakdown.rpIdHashHex || breakdown.rpIdHashBase64Url) {
+        summary.rpIdHash = {};
+        if (typeof breakdown.rpIdHashHex === 'string' && breakdown.rpIdHashHex.length) {
+            summary.rpIdHash.hex = breakdown.rpIdHashHex;
+        }
+        if (typeof breakdown.rpIdHashBase64Url === 'string' && breakdown.rpIdHashBase64Url.length) {
+            summary.rpIdHash.base64url = breakdown.rpIdHashBase64Url;
+        }
+    }
+
+    if (breakdown.flags !== undefined && breakdown.flags !== null) {
+        summary.flags = breakdown.flags;
+    }
+
+    if (breakdown.signCount !== undefined && breakdown.signCount !== null) {
+        summary.signCount = breakdown.signCount;
+    }
+
+    if (breakdown.attestedCredentialData && typeof breakdown.attestedCredentialData === 'object') {
+        const attestedSource = breakdown.attestedCredentialData;
+        const attested = {};
+
+        if (attestedSource.aaguidHex) {
+            attested.aaguidHex = attestedSource.aaguidHex;
+        }
+        if (attestedSource.aaguidGuid) {
+            attested.aaguidGuid = attestedSource.aaguidGuid;
+        }
+        if (attestedSource.aaguidBase64Url) {
+            attested.aaguidBase64Url = attestedSource.aaguidBase64Url;
+        }
+        if (attestedSource.credentialIdHex) {
+            attested.credentialIdHex = attestedSource.credentialIdHex;
+        }
+        if (attestedSource.credentialIdBase64Url) {
+            attested.credentialIdBase64Url = attestedSource.credentialIdBase64Url;
+        }
+        if (attestedSource.credentialIdLength !== undefined && attestedSource.credentialIdLength !== null) {
+            attested.credentialIdLength = attestedSource.credentialIdLength;
+        }
+        if (attestedSource.credentialPublicKeyCose) {
+            attested.credentialPublicKeyCose = attestedSource.credentialPublicKeyCose;
+        }
+        if (attestedSource.credentialPublicKeyBytes) {
+            attested.credentialPublicKeyBytes = attestedSource.credentialPublicKeyBytes;
+        }
+        if (attestedSource.credentialPublicKeyAlgorithm !== undefined && attestedSource.credentialPublicKeyAlgorithm !== null) {
+            attested.credentialPublicKeyAlgorithm = attestedSource.credentialPublicKeyAlgorithm;
+        }
+        if (attestedSource.credentialPublicKeyAlgorithmLabel) {
+            attested.credentialPublicKeyAlgorithmLabel = attestedSource.credentialPublicKeyAlgorithmLabel;
+        }
+        if (attestedSource.credentialPublicKeyType !== undefined && attestedSource.credentialPublicKeyType !== null) {
+            attested.credentialPublicKeyType = attestedSource.credentialPublicKeyType;
+        }
+        if (attestedSource.extensions) {
+            attested.extensions = attestedSource.extensions;
+        }
+
+        if (hasContent(attested)) {
+            summary.attestedCredentialData = attested;
+        }
+    }
+
+    if (breakdown.extensions) {
+        summary.extensions = breakdown.extensions;
+    }
+
+    return hasContent(summary) ? summary : null;
+}
+
+function buildAttestationObjectSummary(credential, serverData, authenticatorDataSummary) {
+    const summary = {};
+    const fmt = serverData?.attestationFormat;
+    if (fmt !== undefined && fmt !== null && fmt !== '') {
+        summary.fmt = fmt;
+    }
+
+    const authDataHex = authenticatorDataSummary?.rawHex
+        || (typeof serverData?.authenticatorDataBreakdown?.rawHex === 'string' ? serverData.authenticatorDataBreakdown.rawHex : null);
+    if (typeof authDataHex === 'string' && authDataHex.length) {
+        summary.authData = {
+            hex: authDataHex,
+            base64url: hexToBase64Url(authDataHex),
+        };
+    }
+
+    const raw = normaliseAttestationObjectRaw(credential, serverData);
+    if (raw) {
+        summary.raw = raw;
+    }
+
+    return hasContent(summary) ? summary : null;
+}
+
+function buildAttestationStatementSummary(serverData) {
+    const attStmt = serverData?.attestationStatement;
+    if (attStmt && typeof attStmt === 'object') {
+        return Object.keys(attStmt).length ? attStmt : null;
+    }
+    if (attStmt !== undefined && attStmt !== null) {
+        return attStmt;
+    }
+
+    const attestationObjectDecoded = serverData?.attestationObjectDecoded;
+    if (attestationObjectDecoded && typeof attestationObjectDecoded === 'object' && attestationObjectDecoded.attStmt) {
+        return attestationObjectDecoded.attStmt;
+    }
+
+    return null;
+}
+
+function buildCredentialPublicKeySummary(serverData, authenticatorDataSummary) {
+    const attested = authenticatorDataSummary?.attestedCredentialData;
+    const summary = {};
+
+    const cose = serverData?.credentialPublicKeyCose || attested?.credentialPublicKeyCose;
+    if (cose) {
+        summary.cose = cose;
+    }
+
+    const bytes = serverData?.credentialPublicKeyBytes || attested?.credentialPublicKeyBytes;
+    if (bytes) {
+        summary.bytes = bytes;
+    }
+
+    const algorithm = serverData?.credentialPublicKeyAlgorithm ?? attested?.credentialPublicKeyAlgorithm;
+    if (algorithm !== undefined && algorithm !== null) {
+        summary.algorithm = algorithm;
+    }
+
+    const algorithmLabel = serverData?.credentialPublicKeyAlgorithmLabel
+        ?? attested?.credentialPublicKeyAlgorithmLabel
+        ?? serverData?.postQuantum?.credentialAlgorithmLabel;
+    if (algorithmLabel) {
+        summary.algorithmLabel = algorithmLabel;
+    }
+
+    const keyType = serverData?.credentialPublicKeyType ?? attested?.credentialPublicKeyType;
+    if (keyType !== undefined && keyType !== null) {
+        summary.keyType = keyType;
+    }
+
+    return hasContent(summary) ? summary : null;
+}
+
+export function printRegistrationDebug(credential, createOptions, serverResponse, requestDetails) {
+    const serverData = serverResponse || {};
+    const authenticatorDataSummary = buildAuthenticatorDataSummary(serverData);
+    const attestationObjectSummary = buildAttestationObjectSummary(credential, serverData, authenticatorDataSummary);
+    const attestationStatementSummary = buildAttestationStatementSummary(serverData);
+    const credentialPublicKeySummary = buildCredentialPublicKeySummary(serverData, authenticatorDataSummary);
+
+    if (hasContent(attestationObjectSummary)) {
+        console.log('Attestation object:', attestationObjectSummary);
+    }
+    if (hasContent(authenticatorDataSummary)) {
+        console.log('Authenticator data:', authenticatorDataSummary);
+    }
+    if (hasContent(attestationStatementSummary)) {
+        console.log('Attestation statement:', attestationStatementSummary);
+    }
+    if (hasContent(credentialPublicKeySummary)) {
+        console.log('Credential public key:', credentialPublicKeySummary);
+    }
+
+    const requestInfo = requestDetails && typeof requestDetails === 'object'
+        ? requestDetails
+        : (createOptions ? collectRegistrationRequestDetails(createOptions) : null);
+
+    let credentialSummary = null;
+    let clientExtensionsSummary = null;
+    if (credential && typeof credential === 'object') {
+        let credentialJson = null;
         if (typeof credential.toJSON === 'function') {
             try {
                 credentialJson = credential.toJSON();
-                console.log('Credential (toJSON):', credentialJson);
             } catch (jsonError) {
-                console.warn('Unable to serialize credential with toJSON():', jsonError);
+                // ignore serialization errors
             }
         }
-    }
 
-    const rawIdBytes = bufferSourceToUint8Array(credential?.rawId);
-    const rawIdHex = rawIdBytes ? bytesToHex(rawIdBytes) : '';
-    if (rawIdHex) {
-        console.log('credential.rawId (hex):', rawIdHex);
-        console.log('credential.rawId (base64url):', hexToBase64Url(rawIdHex));
-        console.log('credential.rawId length (bytes):', rawIdBytes.length);
-    }
-
-    const clientDataDecoded = decodeClientData(credential);
-
-    const residentKey = clientExtensions.credProps?.rk || serverData.actualResidentKey || false;
-    console.log('Resident key:', residentKey);
-
-    const attestationFormat = serverData.attestationFormat || 'direct';
-    const attestationRetrieved = attestationFormat !== 'none';
-    console.log('Attestation (retrieve or not, plus the format):', `${attestationRetrieved}, ${attestationFormat}`);
-
-    const excludeCredentials = serverData.excludeCredentialsUsed || false;
-    console.log('exclude credentials:', excludeCredentials);
-
-    const fakeCredLength = window.lastFakeCredLength || 0;
-    console.log('fake credential id length:', fakeCredLength);
-
-    let challengeHex = '';
-    if (clientDataDecoded.parsed?.challenge) {
-        challengeHex = base64UrlToHex(clientDataDecoded.parsed.challenge);
-    }
-    console.log('challenge hex code:', challengeHex);
-
-    const pubKeyCredParams = serverData.algorithmsUsed || [];
-    console.log('pubkeycredparam used:', pubKeyCredParams);
-
-    const hints = serverData.hintsUsed || [];
-    console.log('hints:', hints);
-
-    const credPropsRequested = clientExtensions.credProps !== undefined;
-    console.log('credprops (requested or not):', credPropsRequested);
-
-    const minPinLengthRequested = clientExtensions.minPinLength !== undefined;
-    console.log('minpinlength (requested or not):', minPinLengthRequested);
-
-    const credProtectSetting = serverData.credProtectUsed ?? 'none';
-    const credProtectLabelMap = {
-        1: 'userVerificationOptional',
-        2: 'userVerificationOptionalWithCredentialIDList',
-        3: 'userVerificationRequired',
-        userVerificationOptionalWithCredentialIDList: 'userVerificationOptionalWithCredentialIDList',
-        userVerificationOptionalWithCredentialIdList: 'userVerificationOptionalWithCredentialIDList',
-    };
-    const credProtectDisplay = credProtectLabelMap[credProtectSetting] || credProtectSetting || 'none';
-    console.log('credprotect setting:', credProtectDisplay);
-
-    const enforceCredProtect = serverData.enforceCredProtectUsed || false;
-    console.log('enforce credprotect:', enforceCredProtect);
-
-    const largeBlob = clientExtensions.largeBlob?.supported ?? 'none';
-    console.log('largeblob:', largeBlob);
-
-    const prfEnabled = clientExtensions.prf !== undefined;
-    console.log('prf:', prfEnabled);
-
-    const prfFirstHex = clientExtensions.prf?.results?.first !== undefined
-        ? extractHexFromJsonFormat(clientExtensions.prf.results.first)
-        : '';
-    console.log('prf eval first hex code:', prfFirstHex);
-
-    const prfSecondHex = clientExtensions.prf?.results?.second !== undefined
-        ? extractHexFromJsonFormat(clientExtensions.prf.results.second)
-        : '';
-    console.log('prf eval second hex code:', prfSecondHex);
-
-    const attestationObjectBuffer = credential?.response?.attestationObject;
-    if (attestationObjectBuffer) {
-        const attestationObjectHex = arrayBufferToHex(attestationObjectBuffer);
-        if (attestationObjectHex) {
-            console.log('attestation object (hex):', attestationObjectHex);
-            console.log('attestation object (base64url):', hexToBase64Url(attestationObjectHex));
+        credentialSummary = credentialJson ? { ...credentialJson } : {};
+        if (credential.authenticatorAttachment !== undefined) {
+            credentialSummary.authenticatorAttachment = credential.authenticatorAttachment;
         }
-    }
 
-    if (clientDataDecoded.hex) {
-        console.log('clientDataJSON (hex):', clientDataDecoded.hex);
-        console.log('clientDataJSON (base64url):', clientDataDecoded.base64url);
-    }
-    if (clientDataDecoded.text) {
-        console.log('clientDataJSON (text):', clientDataDecoded.text);
-    }
-    if (clientDataDecoded.parsed) {
-        console.log('clientDataJSON (parsed):', clientDataDecoded.parsed);
-    }
-
-    if (credentialJson?.clientExtensionResults) {
-        console.log('client extension results (submitted payload):', credentialJson.clientExtensionResults);
-    }
-    console.log('client extension results (client raw):', clientExtensions);
-    if (credential?.authenticatorAttachment !== undefined) {
-        console.log('authenticator attachment (client):', credential.authenticatorAttachment);
-    }
-    if (credential?.response) {
-        console.log('credential.response (raw object):', credential.response);
-        const responseSnapshot = convertForLogging({
-            attestationObject: credential.response.attestationObject,
-            clientDataJSON: credential.response.clientDataJSON,
-            transports: typeof credential.response.getTransports === 'function'
-                ? (() => {
-                    try {
-                        return credential.response.getTransports();
-                    } catch (err) {
-                        console.warn('Unable to read transports from credential response:', err);
-                        return undefined;
-                    }
-                })()
-                : undefined,
-        });
-        console.log('credential.response (sanitized):', responseSnapshot);
-    }
-    endConsoleGroup(clientGroup);
-
-    const serverGroup = startConsoleGroup('Server registration analysis');
-
-    if (serverData.clientDataJSON) {
-        console.log('clientDataJSON (from server):', serverData.clientDataJSON);
-    }
-    if (serverData.clientDataJSONDecoded) {
-        console.log('clientDataJSON (decoded from server):', serverData.clientDataJSONDecoded);
-    }
-
-    if (serverData.attestationFormat) {
-        console.log('attestation format:', serverData.attestationFormat);
-    }
-    if (serverData.attestationObject) {
-        console.log('attestation object (from server):', serverData.attestationObject);
-    }
-    if (serverData.attestationObjectDecoded) {
-        console.log('attestation object (decoded from server):', serverData.attestationObjectDecoded);
-    }
-    if (serverData.attestationStatement) {
-        console.log('attestation statement:', serverData.attestationStatement);
-    }
-    if (serverData.attestationSummary) {
-        console.log('attestation summary (server):', serverData.attestationSummary);
-    }
-    if (serverData.attestationChecks) {
-        console.log('attestation checks (server):', serverData.attestationChecks);
-    }
-
-    if (serverData.clientExtensionResults) {
-        console.log('client extension results (server normalized):', serverData.clientExtensionResults);
-    }
-
-    if (Array.isArray(serverData.algorithmsUsed)) {
-        console.log('algorithms advertised to authenticator:', serverData.algorithmsUsed);
-    }
-
-    if (serverData.actualResidentKey !== undefined) {
-        console.log('resident key (flags from server):', serverData.actualResidentKey);
-    }
-
-    if (serverData.attestationSignatureValid !== undefined) {
-        console.log('attestation signature valid (server):', serverData.attestationSignatureValid);
-    }
-    if (serverData.attestationRootValid !== undefined) {
-        console.log('attestation root valid (server):', serverData.attestationRootValid);
-    }
-    if (serverData.attestationRpIdHashValid !== undefined) {
-        console.log('attestation RP ID hash valid (server):', serverData.attestationRpIdHashValid);
-    }
-    if (serverData.attestationAaguidMatch !== undefined) {
-        console.log('attestation AAGUID match (server):', serverData.attestationAaguidMatch);
-    }
-
-    if (serverData.credentialIdHex) {
-        console.log('credential ID (hex):', serverData.credentialIdHex);
-    }
-    if (serverData.credentialIdBase64Url) {
-        console.log('credential ID (base64url):', serverData.credentialIdBase64Url);
-    }
-
-    if (serverData.credentialPublicKeyCose) {
-        console.log('credential public key (COSE):', serverData.credentialPublicKeyCose);
-    }
-    if (serverData.credentialPublicKeyBytes) {
-        console.log('credential public key (raw base64url):', serverData.credentialPublicKeyBytes);
-    }
-    if (serverData.credentialPublicKeyAlgorithm !== undefined) {
-        console.log('credential public key algorithm (COSE):', serverData.credentialPublicKeyAlgorithm);
-    }
-    if (serverData.credentialPublicKeyAlgorithmLabel) {
-        console.log('credential public key algorithm (label):', serverData.credentialPublicKeyAlgorithmLabel);
-    }
-    if (serverData.credentialPublicKeyType !== undefined) {
-        console.log('credential public key type (COSE kty):', serverData.credentialPublicKeyType);
-        const keyTypeLabel = describeKeyTypeLabel(serverData.credentialPublicKeyType);
-        if (keyTypeLabel) {
-            console.log('credential public key type (label):', keyTypeLabel);
+        const rawIdBytes = bufferSourceToUint8Array(credential.rawId);
+        if (rawIdBytes && rawIdBytes.length) {
+            const rawIdHex = bytesToHex(rawIdBytes);
+            credentialSummary.rawIdHex = rawIdHex;
+            credentialSummary.rawIdBase64Url = hexToBase64Url(rawIdHex);
+            credentialSummary.rawIdLength = rawIdBytes.length;
         }
-    }
 
-    if (serverData.authenticatorDataBreakdown) {
-        const breakdown = serverData.authenticatorDataBreakdown;
-        if (breakdown.rawHex) {
-            console.log('authenticator data (hex):', breakdown.rawHex);
-        }
-        console.log('authenticator data breakdown:', breakdown);
-        if (breakdown.attestedCredentialData?.credentialPublicKeyCose && !serverData.credentialPublicKeyCose) {
-            console.log('credential public key (COSE from breakdown):', breakdown.attestedCredentialData.credentialPublicKeyCose);
-        }
-    } else if (serverData?.relyingParty?.registrationData?.authenticatorData) {
-        console.log('authenticator data (hex from relying party):', serverData.relyingParty.registrationData.authenticatorData);
-    }
-
-    if (serverData.relyingParty) {
-        console.log('relying party summary:', serverData.relyingParty);
-    }
-
-    if (serverData.status) {
-        console.log('server status:', serverData.status);
-    }
-
-    if (serverData.registration_response) {
-        console.log('registration response (server echo):', serverData.registration_response);
-    }
-
-    if (serverData.originalEditorPayload) {
-        console.log('original JSON editor payload (server view):', serverData.originalEditorPayload);
-    }
-    if (serverData.originalPublicKeyOptions) {
-        console.log('original publicKey options (server view):', serverData.originalPublicKeyOptions);
-    }
-    if (serverData.credentialResponseEcho) {
-        console.log('credential response echo (server view):', serverData.credentialResponseEcho);
-    }
-    if (serverData.beginDebugContext) {
-        console.log('server begin() debug context:', serverData.beginDebugContext);
-    }
-    if (serverData.authenticatorAttachmentValidation) {
-        console.log('authenticator attachment validation:', serverData.authenticatorAttachmentValidation);
-    }
-    if (serverData.postQuantum) {
-        console.log('post-quantum diagnostics:', serverData.postQuantum);
-    }
-
-    endConsoleGroup(serverGroup);
-    endConsoleGroup(started);
-
-    if (typeof window !== 'undefined') {
-        window.__webauthnDebug = window.__webauthnDebug || {};
-        const credentialSummary = credentialJson ? { ...credentialJson } : {};
-        if (credential) {
-            credentialSummary.rawIdHex = rawIdHex || null;
-            credentialSummary.rawIdBase64Url = rawIdHex ? hexToBase64Url(rawIdHex) : null;
-            credentialSummary.response = credential?.response
-                ? convertForLogging({
+        if (credential.response) {
+            try {
+                credentialSummary.response = convertForLogging({
                     attestationObject: credential.response.attestationObject,
                     clientDataJSON: credential.response.clientDataJSON,
                     transports: typeof credential.response.getTransports === 'function'
                         ? (() => {
                             try {
                                 return credential.response.getTransports();
-                            } catch (err) {
+                            } catch (error) {
                                 return undefined;
                             }
                         })()
                         : undefined,
-                })
-                : null;
+                });
+            } catch (conversionError) {
+                credentialSummary.response = null;
+            }
         }
+
+        const clientExtensions = typeof credential.getClientExtensionResults === 'function'
+            ? credential.getClientExtensionResults()
+            : (credential.clientExtensionResults || {});
+
+        try {
+            clientExtensionsSummary = convertForLogging(clientExtensions);
+        } catch (conversionError) {
+            clientExtensionsSummary = clientExtensions;
+        }
+    }
+
+    if (typeof window !== 'undefined') {
+        window.__webauthnDebug = window.__webauthnDebug || {};
         window.__webauthnDebug.lastRegistrationDebug = {
             timestamp: new Date().toISOString(),
-            request: requestInfo,
-            credential: credentialSummary,
-            clientExtensions: convertForLogging(clientExtensions),
+            request: requestInfo || null,
+            credential: hasContent(credentialSummary) ? credentialSummary : null,
+            clientExtensions: hasContent(clientExtensionsSummary) ? clientExtensionsSummary : null,
             server: serverData,
+            attestationObject: attestationObjectSummary,
+            authenticatorData: authenticatorDataSummary,
+            attestationStatement: attestationStatementSummary,
+            credentialPublicKey: credentialPublicKeySummary,
         };
     }
 }
