@@ -118,3 +118,9 @@
     border: 1px solid #b6effb;
     color: #055160;
 }
+
+.status.warning {
+    background: #fff3cd;
+    border: 1px solid #ffe69c;
+    color: #664d03;
+}

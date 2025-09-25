@@ -188,20 +188,28 @@ def test_defaults_missing_type_to_public_key(client, monkeypatch):
     assert all(isinstance(entry["alg"], int) for entry in params)
 
 
-def test_rejects_pqc_algorithms_when_oqs_missing(client):
+def test_warns_about_pqc_algorithms_when_oqs_missing(client):
     data = _post_begin(
         client,
         [
             {"type": "public-key", "alg": -48},
             {"type": "public-key", "alg": -49},
         ],
-        expected_status=400,
     )
 
-    assert "oqs" in data.get("error", "")
+    pqc_warning = data.get("warnings", {}).get("pqc")
+
+    assert pqc_warning is not None
+    assert "Post-quantum" in pqc_warning.get("message", "")
+    assert pqc_warning.get("explicitSelection") == [-49, -48]
+    assert pqc_warning.get("missingAlgorithmLabels") == ["ML-DSA-65", "ML-DSA-44"]
+
+    params = data["publicKey"]["pubKeyCredParams"]
+    algorithms = [entry["alg"] for entry in params]
+    assert algorithms == [-7, -257, -8]
 
 
-def test_reports_missing_specific_pqc_algorithms(client, monkeypatch):
+def test_warns_about_specific_missing_pqc_algorithms(client, monkeypatch):
     _install_fake_oqs(monkeypatch, ("ML-DSA-44", "ML-DSA-65"))
 
     data = _post_begin(
@@ -211,10 +219,18 @@ def test_reports_missing_specific_pqc_algorithms(client, monkeypatch):
             {"type": "public-key", "alg": -49},
             {"type": "public-key", "alg": -50},
         ],
-        expected_status=400,
     )
 
-    assert "ML-DSA-87" in data.get("error", "")
+    pqc_warning = data.get("warnings", {}).get("pqc")
+
+    assert pqc_warning is not None
+    assert "Post-quantum" in pqc_warning.get("message", "")
+    assert "ML-DSA-87" in pqc_warning.get("details", "")
+    assert pqc_warning.get("explicitSelection") == [-50]
+
+    params = data["publicKey"]["pubKeyCredParams"]
+    algorithms = [entry["alg"] for entry in params]
+    assert algorithms == [-48, -49]
 
 
 def test_filters_pqc_from_default_list_when_unsupported(client):

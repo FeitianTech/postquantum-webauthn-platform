@@ -216,7 +216,9 @@ function logRegistrationRequestDetails(details) {
 
 export function printRegistrationRequestDebug(createOptions) {
     const details = collectRegistrationRequestDetails(createOptions);
-    logRegistrationRequestDetails(details);
+    if (shouldLogVerbose()) {
+        logRegistrationRequestDetails(details);
+    }
     if (typeof window !== 'undefined') {
         window.__webauthnDebug = window.__webauthnDebug || {};
         const summary = { ...details };
@@ -472,6 +474,139 @@ function buildCredentialPublicKeySummary(serverData, authenticatorDataSummary) {
     return hasContent(summary) ? summary : null;
 }
 
+function logRegistrationValue(label, value) {
+    if (value === undefined || value === null) {
+        return;
+    }
+    if (typeof value === 'object' && Object.keys(value).length === 0) {
+        return;
+    }
+    console.log(label, value);
+}
+
+function extractCredentialDetails(credential) {
+    if (!credential || typeof credential !== 'object') {
+        return { summary: null, extensions: null };
+    }
+
+    let summary = null;
+    if (typeof credential.toJSON === 'function') {
+        try {
+            summary = credential.toJSON();
+        } catch (error) {
+            summary = null;
+        }
+    }
+
+    const clientExtensions = typeof credential.getClientExtensionResults === 'function'
+        ? credential.getClientExtensionResults()
+        : (credential.clientExtensionResults || {});
+
+    let extensionsSummary = null;
+    try {
+        extensionsSummary = convertForLogging(clientExtensions);
+    } catch (error) {
+        extensionsSummary = clientExtensions;
+    }
+
+    const rawIdBytes = bufferSourceToUint8Array(credential.rawId);
+    if (rawIdBytes && rawIdBytes.length) {
+        const rawIdHex = bytesToHex(rawIdBytes);
+        const baseSummary = summary && typeof summary === 'object' ? { ...summary } : {};
+        baseSummary.rawIdHex = rawIdHex;
+        baseSummary.rawIdBase64Url = hexToBase64Url(rawIdHex);
+        baseSummary.rawIdLength = rawIdBytes.length;
+        summary = baseSummary;
+    }
+
+    return {
+        summary: summary && Object.keys(summary).length ? summary : null,
+        extensions: extensionsSummary && hasContent(extensionsSummary) ? extensionsSummary : null,
+    };
+}
+
+function logAuthenticatorDataDetails(authenticatorDataSummary) {
+    if (!authenticatorDataSummary || typeof authenticatorDataSummary !== 'object') {
+        return;
+    }
+
+    logRegistrationValue('Authenticator data (hex)', authenticatorDataSummary.rawHex);
+
+    if (authenticatorDataSummary.rpIdHash) {
+        const rpHash = authenticatorDataSummary.rpIdHash;
+        const displayValue = rpHash.base64url || rpHash.hex || rpHash;
+        logRegistrationValue('Authenticator data rpIdHash', displayValue);
+    }
+
+    if (authenticatorDataSummary.flags && typeof authenticatorDataSummary.flags === 'object') {
+        const { value, ...rest } = authenticatorDataSummary.flags;
+        logRegistrationValue('Authenticator data flags', rest);
+        if (value !== undefined) {
+            logRegistrationValue('Authenticator data flags (value)', value);
+        }
+    }
+
+    if (authenticatorDataSummary.signCount !== undefined) {
+        logRegistrationValue('Authenticator data signCount', authenticatorDataSummary.signCount);
+    }
+
+    const attested = authenticatorDataSummary.attestedCredentialData;
+    if (attested && typeof attested === 'object') {
+        logRegistrationValue('Credential AAGUID (hex)', attested.aaguidHex || attested.aaguidGuid || attested.aaguidBase64Url);
+        logRegistrationValue('Credential ID (hex)', attested.credentialIdHex);
+        logRegistrationValue('Credential ID (base64url)', attested.credentialIdBase64Url);
+        if (attested.credentialIdLength !== undefined) {
+            logRegistrationValue('Credential ID length', attested.credentialIdLength);
+        }
+    }
+}
+
+function logAttestationObjectDetails(attestationObjectSummary) {
+    if (!attestationObjectSummary || typeof attestationObjectSummary !== 'object') {
+        return;
+    }
+    logRegistrationValue('Attestation format', attestationObjectSummary.fmt);
+    if (attestationObjectSummary.raw && typeof attestationObjectSummary.raw === 'object') {
+        logRegistrationValue('Attestation object (base64url)', attestationObjectSummary.raw.base64url);
+        logRegistrationValue('Attestation object (hex)', attestationObjectSummary.raw.hex);
+    }
+    if (attestationObjectSummary.authData && typeof attestationObjectSummary.authData === 'object') {
+        logRegistrationValue('Authenticator data (base64url)', attestationObjectSummary.authData.base64url);
+        logRegistrationValue('Authenticator data (hex copy)', attestationObjectSummary.authData.hex);
+    }
+}
+
+function logAttestationStatementDetails(attestationStatementSummary) {
+    if (!attestationStatementSummary) {
+        return;
+    }
+    logRegistrationValue('Attestation statement', attestationStatementSummary);
+}
+
+function logCredentialPublicKeyDetails(credentialPublicKeySummary) {
+    if (!credentialPublicKeySummary || typeof credentialPublicKeySummary !== 'object') {
+        return;
+    }
+
+    if (credentialPublicKeySummary.cose) {
+        logRegistrationValue('Credential public key (COSE)', credentialPublicKeySummary.cose);
+    }
+    if (credentialPublicKeySummary.bytes) {
+        logRegistrationValue('Credential public key (bytes)', credentialPublicKeySummary.bytes);
+    }
+    if (credentialPublicKeySummary.algorithm !== undefined) {
+        const label = credentialPublicKeySummary.algorithmLabel
+            ? `${credentialPublicKeySummary.algorithm} (${credentialPublicKeySummary.algorithmLabel})`
+            : credentialPublicKeySummary.algorithm;
+        logRegistrationValue('Credential public key algorithm', label);
+    } else if (credentialPublicKeySummary.algorithmLabel) {
+        logRegistrationValue('Credential public key algorithm', credentialPublicKeySummary.algorithmLabel);
+    }
+    if (credentialPublicKeySummary.keyType !== undefined) {
+        logRegistrationValue('Credential public key type', credentialPublicKeySummary.keyType);
+    }
+}
+
 export function printRegistrationDebug(credential, createOptions, serverResponse, requestDetails) {
     const serverData = serverResponse || {};
     const authenticatorDataSummary = buildAuthenticatorDataSummary(serverData);
@@ -479,86 +614,24 @@ export function printRegistrationDebug(credential, createOptions, serverResponse
     const attestationStatementSummary = buildAttestationStatementSummary(serverData);
     const credentialPublicKeySummary = buildCredentialPublicKeySummary(serverData, authenticatorDataSummary);
 
-    if (hasContent(attestationObjectSummary)) {
-        console.log('Attestation object:', attestationObjectSummary);
-    }
-    if (hasContent(authenticatorDataSummary)) {
-        console.log('Authenticator data:', authenticatorDataSummary);
-    }
-    if (hasContent(attestationStatementSummary)) {
-        console.log('Attestation statement:', attestationStatementSummary);
-    }
-    if (hasContent(credentialPublicKeySummary)) {
-        console.log('Credential public key:', credentialPublicKeySummary);
-    }
+    logAttestationObjectDetails(attestationObjectSummary);
+    logAuthenticatorDataDetails(authenticatorDataSummary);
+    logAttestationStatementDetails(attestationStatementSummary);
+    logCredentialPublicKeyDetails(credentialPublicKeySummary);
 
     const requestInfo = requestDetails && typeof requestDetails === 'object'
         ? requestDetails
         : (createOptions ? collectRegistrationRequestDetails(createOptions) : null);
 
-    let credentialSummary = null;
-    let clientExtensionsSummary = null;
-    if (credential && typeof credential === 'object') {
-        let credentialJson = null;
-        if (typeof credential.toJSON === 'function') {
-            try {
-                credentialJson = credential.toJSON();
-            } catch (jsonError) {
-                // ignore serialization errors
-            }
-        }
-
-        credentialSummary = credentialJson ? { ...credentialJson } : {};
-        if (credential.authenticatorAttachment !== undefined) {
-            credentialSummary.authenticatorAttachment = credential.authenticatorAttachment;
-        }
-
-        const rawIdBytes = bufferSourceToUint8Array(credential.rawId);
-        if (rawIdBytes && rawIdBytes.length) {
-            const rawIdHex = bytesToHex(rawIdBytes);
-            credentialSummary.rawIdHex = rawIdHex;
-            credentialSummary.rawIdBase64Url = hexToBase64Url(rawIdHex);
-            credentialSummary.rawIdLength = rawIdBytes.length;
-        }
-
-        if (credential.response) {
-            try {
-                credentialSummary.response = convertForLogging({
-                    attestationObject: credential.response.attestationObject,
-                    clientDataJSON: credential.response.clientDataJSON,
-                    transports: typeof credential.response.getTransports === 'function'
-                        ? (() => {
-                            try {
-                                return credential.response.getTransports();
-                            } catch (error) {
-                                return undefined;
-                            }
-                        })()
-                        : undefined,
-                });
-            } catch (conversionError) {
-                credentialSummary.response = null;
-            }
-        }
-
-        const clientExtensions = typeof credential.getClientExtensionResults === 'function'
-            ? credential.getClientExtensionResults()
-            : (credential.clientExtensionResults || {});
-
-        try {
-            clientExtensionsSummary = convertForLogging(clientExtensions);
-        } catch (conversionError) {
-            clientExtensionsSummary = clientExtensions;
-        }
-    }
+    const { summary: credentialSummary, extensions: clientExtensionsSummary } = extractCredentialDetails(credential);
 
     if (typeof window !== 'undefined') {
         window.__webauthnDebug = window.__webauthnDebug || {};
         window.__webauthnDebug.lastRegistrationDebug = {
             timestamp: new Date().toISOString(),
             request: requestInfo || null,
-            credential: hasContent(credentialSummary) ? credentialSummary : null,
-            clientExtensions: hasContent(clientExtensionsSummary) ? clientExtensionsSummary : null,
+            credential: credentialSummary,
+            clientExtensions: clientExtensionsSummary,
             server: serverData,
             attestationObject: attestationObjectSummary,
             authenticatorData: authenticatorDataSummary,

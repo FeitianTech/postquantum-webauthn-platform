@@ -291,13 +291,22 @@ export async function advancedRegister() {
             throw new Error(`Server error: ${message}`);
         }
 
+        const { warnings: beginWarnings, ...creationPayload } = json || {};
+
         if (debugFlow) {
             debugFlow.stage = 'begin-response';
             debugFlow.beginResponse = convertForLogging(json);
+            if (beginWarnings) {
+                debugFlow.beginWarnings = convertForLogging(beginWarnings);
+            }
         }
 
-        const originalExtensions = json?.publicKey?.extensions;
-        createOptions = parseCreationOptionsFromJSON(json);
+        if (beginWarnings?.pqc?.message) {
+            showStatus('advanced', beginWarnings.pqc.message, 'warning');
+        }
+
+        const originalExtensions = creationPayload?.publicKey?.extensions;
+        createOptions = parseCreationOptionsFromJSON(creationPayload);
 
         applyAuthenticatorAttachmentPreference(
             createOptions,

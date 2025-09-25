@@ -297,6 +297,7 @@ def advanced_register_begin():
     pqc_error_message: Optional[str] = None
     missing_pqc: Set[int] = set()
     explicit_pqc: Set[int] = set()
+    pqc_warning: Optional[Dict[str, Any]] = None
     if pqc_in_allowed:
         pqc_available_ids, pqc_error_message = detect_available_pqc_algorithms()
         missing_pqc = pqc_in_allowed - pqc_available_ids
@@ -306,24 +307,49 @@ def advanced_register_begin():
                 missing_names = ", ".join(
                     PQC_ALGORITHM_ID_TO_NAME[alg] for alg in sorted(missing_pqc)
                 )
-                message = pqc_error_message or (
-                    "The server environment does not provide liboqs support for the selected post-quantum algorithms."
+                short_message = (
+                    "Post-quantum algorithms are not available on this server yet."
                 )
-                return jsonify({
-                    "error": f"{message} ({missing_names}).",
-                }), 400
+                if pqc_error_message:
+                    detailed_message = f"{pqc_error_message} ({missing_names})."
+                else:
+                    detailed_message = f"Missing support for: {missing_names}."
+                pqc_warning = {
+                    "message": short_message,
+                    "details": detailed_message,
+                    "missingAlgorithms": sorted(missing_pqc),
+                    "missingAlgorithmLabels": [
+                        PQC_ALGORITHM_ID_TO_NAME[alg] for alg in sorted(missing_pqc)
+                    ],
+                    "explicitSelection": sorted(explicit_pqc),
+                }
             filtered_allowed = [
                 param
                 for param in temp_server.allowed_algorithms
                 if getattr(param, "alg", None) not in missing_pqc
             ]
             if not filtered_allowed:
-                return jsonify({"error": "No compatible signature algorithms available."}), 400
-            temp_server.allowed_algorithms = filtered_allowed
-            allowed_algorithm_ids = [
-                getattr(param, "alg", None) for param in temp_server.allowed_algorithms
-            ]
-            allowed_algorithm_ids = [alg for alg in allowed_algorithm_ids if isinstance(alg, int)]
+                fallback_algorithms = [
+                    PublicKeyCredentialParameters(
+                        type=PublicKeyCredentialType.PUBLIC_KEY, alg=-7
+                    ),
+                    PublicKeyCredentialParameters(
+                        type=PublicKeyCredentialType.PUBLIC_KEY, alg=-257
+                    ),
+                    PublicKeyCredentialParameters(
+                        type=PublicKeyCredentialType.PUBLIC_KEY, alg=-8
+                    ),
+                ]
+                temp_server.allowed_algorithms = fallback_algorithms
+                allowed_algorithm_ids = [-7, -257, -8]
+                if pqc_warning is not None:
+                    pqc_warning["fallbackAlgorithms"] = allowed_algorithm_ids
+            else:
+                temp_server.allowed_algorithms = filtered_allowed
+                allowed_algorithm_ids = [
+                    getattr(param, "alg", None) for param in temp_server.allowed_algorithms
+                ]
+                allowed_algorithm_ids = [alg for alg in allowed_algorithm_ids if isinstance(alg, int)]
 
     public_key["pubKeyCredParams"] = [
         {
@@ -407,6 +433,9 @@ def advanced_register_begin():
         "residentKeyRequirement": getattr(rk_req, "value", str(rk_req)),
         "hints": hints_list,
     }
+    if pqc_warning is not None:
+        debug_context_payload["pqcWarning"] = pqc_warning
+
     session["advanced_register_debug_context"] = debug_context_payload
 
     user_entity = PublicKeyCredentialUserEntity(
@@ -529,7 +558,11 @@ def advanced_register_begin():
     session["advanced_state"] = state
     session["advanced_original_request"] = data
 
-    return jsonify(make_json_safe(dict(options)))
+    response_payload: Dict[str, Any] = dict(options)
+    if pqc_warning is not None:
+        response_payload["warnings"] = {"pqc": pqc_warning}
+
+    return jsonify(make_json_safe(response_payload))
 
 
 @app.route("/api/advanced/register/complete", methods=["POST"])
