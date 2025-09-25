@@ -39,7 +39,14 @@ def client():
 
 def _install_fake_oqs(monkeypatch, algorithms: Sequence[str]) -> None:
     signature = types.SimpleNamespace(algorithms=tuple(algorithms))
-    module = types.SimpleNamespace(Signature=signature)
+
+    def _get_enabled() -> Sequence[str]:
+        return tuple(algorithms)
+
+    module = types.SimpleNamespace(
+        Signature=signature,
+        get_enabled_sig_mechanisms=_get_enabled,
+    )
     monkeypatch.setitem(sys.modules, "oqs", module)
 
 

@@ -8,7 +8,7 @@ import os
 import time
 import uuid
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Mapping, MutableMapping, Optional, Set, Tuple
+from typing import Any, Dict, List, Mapping, MutableMapping, Optional
 
 from flask import jsonify, request, session
 from fido2.server import Fido2Server
@@ -38,6 +38,13 @@ from ..attestation import (
     summarize_authenticator_extensions,
 )
 from ..config import app, basepath, rp, server
+from ..pqc import (
+    PQC_ALGORITHM_ID_TO_NAME,
+    describe_algorithm,
+    detect_available_pqc_algorithms,
+    is_pqc_algorithm,
+    log_algorithm_selection,
+)
 from ..storage import add_public_key_material, extract_credential_data, readkey, savekey
 
 
@@ -86,50 +93,6 @@ for raw_name, alg_id in _COSE_ALGORITHM_NAME_MAP.items():
 
 _SUPPORTED_COSE_ALGORITHMS = frozenset(_COSE_ALGORITHM_NAME_LOOKUP.values())
 _COSE_ALGORITHM_NUMERIC_PATTERN = re.compile(r"-?\d+")
-
-_PQC_ALGORITHM_IDS: Dict[int, str] = {
-    -50: "ML-DSA-87",
-    -49: "ML-DSA-65",
-    -48: "ML-DSA-44",
-}
-
-
-def _detect_available_pqc_algorithms() -> Tuple[Set[int], Optional[str]]:
-    """Return the set of ML-DSA algorithms provided by the local oqs bindings."""
-
-    try:  # pragma: no cover - exercised in environments with oqs available
-        import oqs  # type: ignore
-    except ImportError:  # pragma: no cover - handled by callers when pqc is requested
-        return set(), (
-            "Post-quantum algorithms require the 'oqs' Python bindings (liboqs). "
-            "Install the python-fido2-webauthn-test[pqc] extra and ensure liboqs is present."
-        )
-
-    algorithms_attr = getattr(oqs.Signature, "algorithms", None)  # type: ignore[attr-defined]
-    if algorithms_attr is None:
-        return set(), (
-            "The installed 'oqs' bindings do not expose supported signature metadata. "
-            "Update the oqs package to a recent version with ML-DSA support."
-        )
-
-    supported_names = {str(name) for name in algorithms_attr}
-    available_ids = {
-        alg_id for alg_id, oqs_name in _PQC_ALGORITHM_IDS.items() if oqs_name in supported_names
-    }
-    if len(available_ids) == len(_PQC_ALGORITHM_IDS):
-        return available_ids, None
-
-    missing = [
-        _PQC_ALGORITHM_IDS[alg_id]
-        for alg_id in sorted(_PQC_ALGORITHM_IDS)
-        if alg_id not in available_ids
-    ]
-    return available_ids, (
-        "The installed 'oqs' bindings do not include support for: "
-        + ", ".join(missing)
-        + ". Rebuild liboqs with ML-DSA enabled or install an updated wheel."
-    )
-
 
 def _lookup_named_cose_algorithm(name: str) -> Optional[int]:
     normalized_name = _normalize_algorithm_name_key(name)
@@ -292,14 +255,16 @@ def advanced_register_begin():
     ]
     allowed_algorithm_ids = [alg for alg in allowed_algorithm_ids if isinstance(alg, int)]
 
-    pqc_in_allowed = {alg for alg in allowed_algorithm_ids if alg in _PQC_ALGORITHM_IDS}
+    pqc_in_allowed = {alg for alg in allowed_algorithm_ids if is_pqc_algorithm(alg)}
     if pqc_in_allowed:
-        pqc_available_ids, pqc_error_message = _detect_available_pqc_algorithms()
+        pqc_available_ids, pqc_error_message = detect_available_pqc_algorithms()
         missing_pqc = pqc_in_allowed - pqc_available_ids
         if missing_pqc:
             explicit_pqc = {alg for alg in requested_algorithm_ids if alg in missing_pqc}
             if explicit_pqc:
-                missing_names = ", ".join(_PQC_ALGORITHM_IDS[alg] for alg in sorted(missing_pqc))
+                missing_names = ", ".join(
+                    PQC_ALGORITHM_ID_TO_NAME[alg] for alg in sorted(missing_pqc)
+                )
                 message = pqc_error_message or (
                     "The server environment does not provide liboqs support for the selected post-quantum algorithms."
                 )
@@ -327,6 +292,11 @@ def advanced_register_begin():
         for param in temp_server.allowed_algorithms
         if getattr(param, "alg", None) is not None
     ]
+
+    app.logger.info(
+        "Advanced registration request will advertise algorithms: %s",
+        [entry.get("alg") for entry in public_key["pubKeyCredParams"]],
+    )
 
     auth_selection = public_key.get("authenticatorSelection", {})
     if not isinstance(auth_selection, dict):
@@ -710,19 +680,8 @@ def advanced_register_complete():
             credential_info['registration_response'] = make_json_safe(response)
 
         algo = auth_data.credential_data.public_key[3]
-        algoname = ""
-        if algo == -50:
-            algoname = "ML-DSA-87 (PQC)"
-        elif algo == -49:
-            algoname = "ML-DSA-65 (PQC)"
-        elif algo == -48:
-            algoname = "ML-DSA-44 (PQC)"
-        elif algo == -7:
-            algoname = "ES256 (ECDSA)"
-        elif algo == -257:
-            algoname = "RS256 (RSA)"
-        else:
-            algoname = "Other (Classical)"
+        algoname = describe_algorithm(algo)
+        log_algorithm_selection("registration", algo)
 
         pub_key_params = public_key.get("pubKeyCredParams", [])
         algorithms_used = [param.get("alg") for param in pub_key_params if isinstance(param, dict) and "alg" in param]
@@ -1136,6 +1095,17 @@ def advanced_authenticate_complete():
             all_credentials,
             response,
         )
+
+        auth_alg = None
+        try:
+            result_public_key = getattr(auth_result, "public_key", None)
+            if isinstance(result_public_key, Mapping):
+                auth_alg = result_public_key.get(3)
+            else:
+                auth_alg = getattr(result_public_key, "get", lambda *_: None)(3)
+        except Exception:  # pragma: no cover - defensive path for unexpected objects
+            auth_alg = None
+        log_algorithm_selection("authentication", auth_alg)
 
         hints_used = public_key.get("hints", [])
 
