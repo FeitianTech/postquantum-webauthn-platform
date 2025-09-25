@@ -103,7 +103,7 @@ export async function simpleRegister() {
 export async function simpleAuthenticate() {
     const email = document.getElementById('simple-email').value;
     if (!email) {
-        showStatus('simple', 'Please enter a username. ', 'error');
+        showStatus('simple', 'Please enter a username.', 'error');
         return;
     }
 
@@ -118,7 +118,7 @@ export async function simpleAuthenticate() {
 
         if (!response.ok) {
             if (response.status === 404) {
-                throw new Error('No credentials found for this email. Please register first.');
+                throw new Error('No credentials found for this username. Please register first.');
             }
             const errorText = await response.text();
             throw new Error(`Server error: ${errorText}`);

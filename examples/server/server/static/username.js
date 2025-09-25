@@ -28,9 +28,16 @@ export function randomizeUserIdentity() {
     randomizeUsername();
 }
 
+let hasRandomizedSimpleUsername = false;
+
 export function randomizeSimpleUsername() {
+    if (hasRandomizedSimpleUsername) {
+        return;
+    }
+
     const simpleInput = document.getElementById('simple-email');
     if (simpleInput) {
         simpleInput.value = generateRandom10DigitUsername();
+        hasRandomizedSimpleUsername = true;
     }
 }
