@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import importlib.util
 from pathlib import Path
-from typing import List, Sequence
+from typing import Any, List, Sequence
 
 import sys
 import types
@@ -50,7 +50,7 @@ def _install_fake_oqs(monkeypatch, algorithms: Sequence[str]) -> None:
     monkeypatch.setitem(sys.modules, "oqs", module)
 
 
-def _post_begin(client, pubkey_params: List[dict], expected_status: int = 200):
+def _post_begin(client, pubkey_params: List[Any], expected_status: int = 200):
     payload = {
         "publicKey": {
             "rp": {"name": "Test RP", "id": "localhost"},
@@ -151,6 +151,40 @@ def test_handles_prefixed_algorithm_name_aliases(client, monkeypatch):
     algorithms = [entry["alg"] for entry in params]
 
     assert algorithms == [-48, -49, -50, -257]
+    assert all(isinstance(entry["alg"], int) for entry in params)
+
+
+def test_accepts_string_algorithm_entries(client, monkeypatch):
+    _install_fake_oqs(monkeypatch, ("ML-DSA-44", "ML-DSA-65", "ML-DSA-87"))
+
+    data = _post_begin(
+        client,
+        ["ML-DSA-44", "-49", -50],
+    )
+
+    params = data["publicKey"]["pubKeyCredParams"]
+    algorithms = [entry["alg"] for entry in params]
+
+    assert algorithms == [-48, -49, -50]
+    assert all(isinstance(entry["alg"], int) for entry in params)
+
+
+def test_defaults_missing_type_to_public_key(client, monkeypatch):
+    _install_fake_oqs(monkeypatch, ("ML-DSA-44", "ML-DSA-65", "ML-DSA-87"))
+
+    data = _post_begin(
+        client,
+        [
+            {"alg": "ML-DSA-65"},
+            {"id": -7},
+            {"value": "RS256"},
+        ],
+    )
+
+    params = data["publicKey"]["pubKeyCredParams"]
+    algorithms = [entry["alg"] for entry in params]
+
+    assert algorithms == [-49, -7, -257]
     assert all(isinstance(entry["alg"], int) for entry in params)
 
 

@@ -220,17 +220,39 @@ def advanced_register_begin():
         allowed_algorithms: List[PublicKeyCredentialParameters] = []
         normalized_params: List[Dict[str, Any]] = []
         for param in pub_key_cred_params:
-            if not isinstance(param, Mapping):
-                continue
-            if param.get("type") != "public-key":
-                continue
-            alg_value = _coerce_cose_algorithm(param.get("alg"))
-            if alg_value is None:
-                continue
-            requested_algorithm_ids.append(alg_value)
-            normalized_param = dict(param)
-            normalized_param["alg"] = alg_value
-            normalized_params.append(normalized_param)
+            raw_alg_value: Any
+            normalized_param: Dict[str, Any]
+
+            if isinstance(param, Mapping):
+                raw_alg_value = param.get("alg")
+                if raw_alg_value is None:
+                    raw_alg_value = param.get("id")
+                if raw_alg_value is None:
+                    raw_alg_value = param.get("value")
+
+                type_value = param.get("type")
+                if isinstance(type_value, str):
+                    if type_value.strip().lower() != "public-key":
+                        continue
+                elif type_value is not None:
+                    continue
+
+                alg_value = _coerce_cose_algorithm(raw_alg_value)
+                if alg_value is None:
+                    continue
+
+                requested_algorithm_ids.append(alg_value)
+                normalized_param = {"type": "public-key", "alg": alg_value}
+                normalized_params.append(normalized_param)
+            else:
+                alg_value = _coerce_cose_algorithm(param)
+                if alg_value is None:
+                    continue
+
+                requested_algorithm_ids.append(alg_value)
+                normalized_param = {"type": "public-key", "alg": alg_value}
+                normalized_params.append(normalized_param)
+
             allowed_algorithms.append(
                 PublicKeyCredentialParameters(
                     type=PublicKeyCredentialType.PUBLIC_KEY,
