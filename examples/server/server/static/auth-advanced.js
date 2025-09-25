@@ -23,7 +23,11 @@ import { updateJsonEditor, getAdvancedCreateOptions, getAdvancedAssertOptions } 
 import { randomizeChallenge, randomizePrfEval, randomizeLargeBlobWrite } from './forms.js';
 import { randomizeUserIdentity } from './username.js';
 import { showRegistrationResultModal, loadSavedCredentials } from './credential-display.js';
-import { printRegistrationDebug, printAuthenticationDebug } from './auth-debug.js';
+import {
+    printRegistrationDebug,
+    printRegistrationRequestDebug,
+    printAuthenticationDebug,
+} from './auth-debug.js';
 import { state } from './state.js';
 
 function maybeRandomizeAdvancedRegistrationFields() {
@@ -211,6 +215,8 @@ export async function advancedRegister() {
 
         showProgress('advanced', 'Connecting your authenticator device...');
 
+        const requestDebugDetails = printRegistrationRequestDebug(createOptions);
+
         const credential = await create(createOptions);
 
         const authenticatorAttachment = credential && typeof credential === 'object'
@@ -249,7 +255,7 @@ export async function advancedRegister() {
         if (result.ok) {
             const data = await result.json();
 
-            printRegistrationDebug(credential, createOptions, data);
+            printRegistrationDebug(credential, createOptions, data, requestDebugDetails);
 
             showStatus('advanced', `Advanced registration successful! Algorithm: ${data.algo || 'Unknown'}`, 'success');
 

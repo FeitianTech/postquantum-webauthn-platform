@@ -5,14 +5,236 @@ import {
     bytesToHex,
     hexToBase64Url,
 } from './binary-utils.js';
+import { COSE_ALGORITHM_LABELS, COSE_KEY_TYPE_LABELS } from './constants.js';
 import { extractHexFromJsonFormat } from './credential-utils.js';
 import { state } from './state.js';
 
-export function printRegistrationDebug(credential, createOptions, serverResponse) {
+function describeAlgorithmLabel(alg) {
+    if (alg === undefined || alg === null) {
+        return null;
+    }
+    const key = String(alg);
+    return COSE_ALGORITHM_LABELS[key] || `COSE ${alg}`;
+}
+
+function describeKeyTypeLabel(kty) {
+    if (kty === undefined || kty === null) {
+        return null;
+    }
+    const key = String(kty);
+    return COSE_KEY_TYPE_LABELS[key] || `kty ${kty}`;
+}
+
+function convertForLogging(value) {
+    if (value == null) {
+        return value;
+    }
+    if (value instanceof ArrayBuffer || ArrayBuffer.isView(value)) {
+        const hex = arrayBufferToHex(value);
+        return {
+            $hex: hex,
+            $base64url: hexToBase64Url(hex),
+            $byteLength: bufferSourceToUint8Array(value)?.length || 0,
+        };
+    }
+    if (Array.isArray(value)) {
+        return value.map((item) => convertForLogging(item));
+    }
+    if (typeof value === 'object' && value.constructor === Object) {
+        const normalized = {};
+        for (const [key, val] of Object.entries(value)) {
+            normalized[key] = convertForLogging(val);
+        }
+        return normalized;
+    }
+    return value;
+}
+
+function collectRegistrationRequestDetails(createOptions) {
+    const publicKey = (createOptions && createOptions.publicKey) || {};
+
+    const challengeBytes = bufferSourceToUint8Array(publicKey.challenge);
+    const challengeHex = challengeBytes ? bytesToHex(challengeBytes) : '';
+
+    const userEntity = publicKey.user || {};
+    const userIdBytes = bufferSourceToUint8Array(userEntity.id);
+    const userIdHex = userIdBytes ? bytesToHex(userIdBytes) : '';
+
+    const excludeCredentialsRaw = Array.isArray(publicKey.excludeCredentials)
+        ? publicKey.excludeCredentials
+        : [];
+    const excludeCredentials = excludeCredentialsRaw.map((descriptor) => {
+        const idBytes = bufferSourceToUint8Array(descriptor && descriptor.id);
+        const idHex = idBytes ? bytesToHex(idBytes) : '';
+        return {
+            type: descriptor?.type || 'public-key',
+            transports: descriptor?.transports || null,
+            idHex: idHex || null,
+            idBase64Url: idHex ? hexToBase64Url(idHex) : null,
+            idLength: idBytes ? idBytes.length : 0,
+        };
+    });
+
+    const pubKeyCredParamsRaw = Array.isArray(publicKey.pubKeyCredParams)
+        ? publicKey.pubKeyCredParams
+        : [];
+    const pubKeyCredParams = pubKeyCredParamsRaw.map((param) => {
+        const alg = param?.alg ?? param;
+        const type = param?.type ?? 'public-key';
+        return {
+            type,
+            alg,
+            label: describeAlgorithmLabel(alg),
+        };
+    });
+
+    const authenticatorSelection = publicKey.authenticatorSelection || {};
+    const extensions = publicKey.extensions ? convertForLogging(publicKey.extensions) : null;
+    const hints = Array.isArray(publicKey.hints) ? publicKey.hints : [];
+
+    const timeout = publicKey.timeout ?? createOptions?.timeout ?? null;
+    const attestation = publicKey.attestation ?? createOptions?.attestation ?? 'none';
+
+    return {
+        rp: publicKey.rp || null,
+        user: {
+            name: userEntity?.name || null,
+            displayName: userEntity?.displayName || null,
+            idHex: userIdHex || null,
+            idBase64Url: userIdHex ? hexToBase64Url(userIdHex) : null,
+            idLength: userIdBytes ? userIdBytes.length : 0,
+        },
+        challengeHex: challengeHex || null,
+        challengeBase64Url: challengeHex ? hexToBase64Url(challengeHex) : null,
+        timeout,
+        attestation,
+        pubKeyCredParams,
+        authenticatorSelection,
+        hints,
+        extensions,
+        excludeCredentials,
+        rawCreateOptions: createOptions,
+        _logged: false,
+    };
+}
+
+function logRegistrationRequestDetails(details) {
+    console.group('WebAuthn registration request (browser → authenticator)');
+    if (details?.rp) {
+        console.log('RP ID:', details.rp.id || null);
+        console.log('RP name:', details.rp.name || null);
+    }
+    if (details?.user) {
+        console.log('User name:', details.user.name || null);
+        console.log('User displayName:', details.user.displayName || null);
+        console.log('User ID length (bytes):', details.user.idLength || 0);
+        console.log('User ID (hex):', details.user.idHex || '');
+        console.log('User ID (base64url):', details.user.idBase64Url || '');
+    }
+    console.log('Requested challenge (hex):', details?.challengeHex || '');
+    console.log('Requested challenge (base64url):', details?.challengeBase64Url || '');
+    console.log('Requested timeout (ms):', details?.timeout ?? null);
+    console.log('Requested attestation:', details?.attestation || 'none');
+    if (details?.authenticatorSelection) {
+        console.log('Requested authenticatorSelection:', details.authenticatorSelection);
+    }
+    console.log('Requested hints:', details?.hints || []);
+    console.log('Requested pubKeyCredParams:', details?.pubKeyCredParams || []);
+    console.log('Requested excludeCredentials:', details?.excludeCredentials || []);
+    if (details?.extensions) {
+        console.log('Requested extensions:', details.extensions);
+    }
+    console.log('fake credential id length:', window.lastFakeCredLength || 0);
+    console.groupEnd();
+}
+
+export function printRegistrationRequestDebug(createOptions) {
+    const details = collectRegistrationRequestDetails(createOptions);
+    logRegistrationRequestDetails(details);
+    details._logged = true;
+    return details;
+}
+
+function decodeClientData(credential) {
+    const buffer = credential?.response?.clientDataJSON
+        ? bufferSourceToUint8Array(credential.response.clientDataJSON)
+        : null;
+    if (!buffer || !buffer.length) {
+        return { buffer: null, hex: '', base64url: '', text: '', parsed: null };
+    }
+    const hex = bytesToHex(buffer);
+    let text = '';
+    if (state.utf8Decoder) {
+        try {
+            text = state.utf8Decoder.decode(buffer);
+        } catch (err) {
+            console.warn('Unable to decode clientDataJSON bytes with shared decoder:', err);
+        }
+    }
+    if (!text && typeof TextDecoder !== 'undefined') {
+        try {
+            const decoder = new TextDecoder('utf-8', { fatal: false });
+            text = decoder.decode(buffer);
+        } catch (err) {
+            console.warn('Unable to decode clientDataJSON bytes with TextDecoder:', err);
+        }
+    }
+    let parsed = null;
+    if (text) {
+        try {
+            parsed = JSON.parse(text);
+        } catch (parseError) {
+            console.warn('Unable to parse clientDataJSON text:', parseError);
+        }
+    }
+    return {
+        buffer,
+        hex,
+        base64url: hexToBase64Url(hex),
+        text,
+        parsed,
+    };
+}
+
+export function printRegistrationDebug(credential, createOptions, serverResponse, requestDetails) {
     const clientExtensions = credential.getClientExtensionResults
         ? credential.getClientExtensionResults()
         : (credential.clientExtensionResults || {});
     const serverData = serverResponse || {};
+    const requestInfo = requestDetails && typeof requestDetails === 'object'
+        ? requestDetails
+        : collectRegistrationRequestDetails(createOptions);
+
+    console.group('WebAuthn registration debug');
+    if (!requestInfo._logged) {
+        logRegistrationRequestDetails(requestInfo);
+        requestInfo._logged = true;
+    }
+
+    console.group('Authenticator response (client observations)');
+
+    let credentialJson = null;
+    if (credential) {
+        console.log('Credential type:', credential.type || null);
+        if (typeof credential.toJSON === 'function') {
+            try {
+                credentialJson = credential.toJSON();
+                console.log('Credential (toJSON):', credentialJson);
+            } catch (jsonError) {
+                console.warn('Unable to serialize credential with toJSON():', jsonError);
+            }
+        }
+    }
+
+    const rawIdBytes = bufferSourceToUint8Array(credential?.rawId);
+    const rawIdHex = rawIdBytes ? bytesToHex(rawIdBytes) : '';
+    if (rawIdHex) {
+        console.log('credential.rawId (hex):', rawIdHex);
+        console.log('credential.rawId (base64url):', hexToBase64Url(rawIdHex));
+        console.log('credential.rawId length (bytes):', rawIdBytes.length);
+    }
+
+    const clientDataDecoded = decodeClientData(credential);
 
     const residentKey = clientExtensions.credProps?.rk || serverData.actualResidentKey || false;
     console.log('Resident key:', residentKey);
@@ -28,13 +250,8 @@ export function printRegistrationDebug(credential, createOptions, serverResponse
     console.log('fake credential id length:', fakeCredLength);
 
     let challengeHex = '';
-    if (credential.response && credential.response.clientDataJSON) {
-        try {
-            const clientData = JSON.parse(atob(credential.response.clientDataJSON));
-            challengeHex = base64UrlToHex(clientData.challenge);
-        } catch (e) {
-            // ignore
-        }
+    if (clientDataDecoded.parsed?.challenge) {
+        challengeHex = base64UrlToHex(clientDataDecoded.parsed.challenge);
     }
     console.log('challenge hex code:', challengeHex);
 
@@ -89,29 +306,27 @@ export function printRegistrationDebug(credential, createOptions, serverResponse
         }
     }
 
-    const clientDataBuffer = credential?.response?.clientDataJSON
-        ? bufferSourceToUint8Array(credential.response.clientDataJSON)
-        : null;
-    if (clientDataBuffer && clientDataBuffer.length) {
-        const clientDataHex = bytesToHex(clientDataBuffer);
-        console.log('clientDataJSON (hex):', clientDataHex);
-        console.log('clientDataJSON (base64url):', hexToBase64Url(clientDataHex));
-        if (state.utf8Decoder) {
-            try {
-                const clientDataText = state.utf8Decoder.decode(clientDataBuffer);
-                if (clientDataText) {
-                    console.log('clientDataJSON (text):', clientDataText);
-                    try {
-                        console.log('clientDataJSON (parsed):', JSON.parse(clientDataText));
-                    } catch (parseError) {
-                        console.warn('Unable to parse clientDataJSON text:', parseError);
-                    }
-                }
-            } catch (decodeError) {
-                console.warn('Unable to decode clientDataJSON bytes:', decodeError);
-            }
-        }
+    if (clientDataDecoded.hex) {
+        console.log('clientDataJSON (hex):', clientDataDecoded.hex);
+        console.log('clientDataJSON (base64url):', clientDataDecoded.base64url);
     }
+    if (clientDataDecoded.text) {
+        console.log('clientDataJSON (text):', clientDataDecoded.text);
+    }
+    if (clientDataDecoded.parsed) {
+        console.log('clientDataJSON (parsed):', clientDataDecoded.parsed);
+    }
+
+    if (credentialJson?.clientExtensionResults) {
+        console.log('client extension results (submitted payload):', credentialJson.clientExtensionResults);
+    }
+    console.log('client extension results (client raw):', clientExtensions);
+    if (credential?.authenticatorAttachment !== undefined) {
+        console.log('authenticator attachment (client):', credential.authenticatorAttachment);
+    }
+    console.groupEnd();
+
+    console.group('Server registration analysis');
 
     if (serverData.clientDataJSON) {
         console.log('clientDataJSON (from server):', serverData.clientDataJSON);
@@ -139,13 +354,29 @@ export function printRegistrationDebug(credential, createOptions, serverResponse
         console.log('attestation checks (server):', serverData.attestationChecks);
     }
 
-    console.log('client extension results (client raw):', clientExtensions);
     if (serverData.clientExtensionResults) {
         console.log('client extension results (server normalized):', serverData.clientExtensionResults);
     }
 
     if (Array.isArray(serverData.algorithmsUsed)) {
         console.log('algorithms advertised to authenticator:', serverData.algorithmsUsed);
+    }
+
+    if (serverData.actualResidentKey !== undefined) {
+        console.log('resident key (flags from server):', serverData.actualResidentKey);
+    }
+
+    if (serverData.attestationSignatureValid !== undefined) {
+        console.log('attestation signature valid (server):', serverData.attestationSignatureValid);
+    }
+    if (serverData.attestationRootValid !== undefined) {
+        console.log('attestation root valid (server):', serverData.attestationRootValid);
+    }
+    if (serverData.attestationRpIdHashValid !== undefined) {
+        console.log('attestation RP ID hash valid (server):', serverData.attestationRpIdHashValid);
+    }
+    if (serverData.attestationAaguidMatch !== undefined) {
+        console.log('attestation AAGUID match (server):', serverData.attestationAaguidMatch);
     }
 
     if (serverData.credentialIdHex) {
@@ -169,6 +400,10 @@ export function printRegistrationDebug(credential, createOptions, serverResponse
     }
     if (serverData.credentialPublicKeyType !== undefined) {
         console.log('credential public key type (COSE kty):', serverData.credentialPublicKeyType);
+        const keyTypeLabel = describeKeyTypeLabel(serverData.credentialPublicKeyType);
+        if (keyTypeLabel) {
+            console.log('credential public key type (label):', keyTypeLabel);
+        }
     }
 
     if (serverData.authenticatorDataBreakdown) {
@@ -187,6 +422,17 @@ export function printRegistrationDebug(credential, createOptions, serverResponse
     if (serverData.relyingParty) {
         console.log('relying party summary:', serverData.relyingParty);
     }
+
+    if (serverData.status) {
+        console.log('server status:', serverData.status);
+    }
+
+    if (serverData.registration_response) {
+        console.log('registration response (server echo):', serverData.registration_response);
+    }
+
+    console.groupEnd();
+    console.groupEnd();
 }
 
 export function printAuthenticationDebug(assertion, requestOptions, serverResponse) {

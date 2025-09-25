@@ -7,7 +7,11 @@ import {
 import { convertExtensionsForClient } from './binary-utils.js';
 import { showStatus, hideStatus, showProgress, hideProgress } from './status.js';
 import { loadSavedCredentials } from './credential-display.js';
-import { printRegistrationDebug, printAuthenticationDebug } from './auth-debug.js';
+import {
+    printRegistrationDebug,
+    printRegistrationRequestDebug,
+    printAuthenticationDebug,
+} from './auth-debug.js';
 import { state } from './state.js';
 import { randomizeSimpleUsername } from './username.js';
 
@@ -57,6 +61,8 @@ export async function simpleRegister() {
 
         showProgress('simple', 'Connecting your authenticator device...');
 
+        const requestDebugDetails = printRegistrationRequestDebug(createOptions);
+
         const credential = await create(createOptions);
 
         showProgress('simple', 'Completing registration...');
@@ -70,7 +76,7 @@ export async function simpleRegister() {
         if (result.ok) {
             const data = await result.json();
 
-            printRegistrationDebug(credential, createOptions, data);
+            printRegistrationDebug(credential, createOptions, data, requestDebugDetails);
 
             showStatus('simple', `Registration successful! Algorithm: ${data.algo || 'Unknown'}`, 'success');
 
