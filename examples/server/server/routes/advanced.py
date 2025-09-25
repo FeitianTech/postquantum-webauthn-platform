@@ -8,7 +8,7 @@ import os
 import time
 import uuid
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Mapping, MutableMapping, Optional
+from typing import Any, Dict, List, Mapping, MutableMapping, Optional, Set, Tuple
 
 from flask import jsonify, request, session
 from fido2.server import Fido2Server
@@ -86,6 +86,49 @@ for raw_name, alg_id in _COSE_ALGORITHM_NAME_MAP.items():
 
 _SUPPORTED_COSE_ALGORITHMS = frozenset(_COSE_ALGORITHM_NAME_LOOKUP.values())
 _COSE_ALGORITHM_NUMERIC_PATTERN = re.compile(r"-?\d+")
+
+_PQC_ALGORITHM_IDS: Dict[int, str] = {
+    -50: "ML-DSA-87",
+    -49: "ML-DSA-65",
+    -48: "ML-DSA-44",
+}
+
+
+def _detect_available_pqc_algorithms() -> Tuple[Set[int], Optional[str]]:
+    """Return the set of ML-DSA algorithms provided by the local oqs bindings."""
+
+    try:  # pragma: no cover - exercised in environments with oqs available
+        import oqs  # type: ignore
+    except ImportError:  # pragma: no cover - handled by callers when pqc is requested
+        return set(), (
+            "Post-quantum algorithms require the 'oqs' Python bindings (liboqs). "
+            "Install the python-fido2-webauthn-test[pqc] extra and ensure liboqs is present."
+        )
+
+    algorithms_attr = getattr(oqs.Signature, "algorithms", None)  # type: ignore[attr-defined]
+    if algorithms_attr is None:
+        return set(), (
+            "The installed 'oqs' bindings do not expose supported signature metadata. "
+            "Update the oqs package to a recent version with ML-DSA support."
+        )
+
+    supported_names = {str(name) for name in algorithms_attr}
+    available_ids = {
+        alg_id for alg_id, oqs_name in _PQC_ALGORITHM_IDS.items() if oqs_name in supported_names
+    }
+    if len(available_ids) == len(_PQC_ALGORITHM_IDS):
+        return available_ids, None
+
+    missing = [
+        _PQC_ALGORITHM_IDS[alg_id]
+        for alg_id in sorted(_PQC_ALGORITHM_IDS)
+        if alg_id not in available_ids
+    ]
+    return available_ids, (
+        "The installed 'oqs' bindings do not include support for: "
+        + ", ".join(missing)
+        + ". Rebuild liboqs with ML-DSA enabled or install an updated wheel."
+    )
 
 
 def _lookup_named_cose_algorithm(name: str) -> Optional[int]:
@@ -209,6 +252,7 @@ def advanced_register_begin():
         temp_server.attestation = AttestationConveyancePreference.NONE
 
     pub_key_cred_params = public_key.get("pubKeyCredParams", [])
+    requested_algorithm_ids: List[int] = []
     if pub_key_cred_params:
         allowed_algorithms: List[PublicKeyCredentialParameters] = []
         normalized_params: List[Dict[str, Any]] = []
@@ -220,6 +264,7 @@ def advanced_register_begin():
             alg_value = _coerce_cose_algorithm(param.get("alg"))
             if alg_value is None:
                 continue
+            requested_algorithm_ids.append(alg_value)
             normalized_param = dict(param)
             normalized_param["alg"] = alg_value
             normalized_params.append(normalized_param)
@@ -241,6 +286,47 @@ def advanced_register_begin():
             PublicKeyCredentialParameters(type=PublicKeyCredentialType.PUBLIC_KEY, alg=-7),
             PublicKeyCredentialParameters(type=PublicKeyCredentialType.PUBLIC_KEY, alg=-257),
         ]
+
+    allowed_algorithm_ids = [
+        getattr(param, "alg", None) for param in getattr(temp_server, "allowed_algorithms", [])
+    ]
+    allowed_algorithm_ids = [alg for alg in allowed_algorithm_ids if isinstance(alg, int)]
+
+    pqc_in_allowed = {alg for alg in allowed_algorithm_ids if alg in _PQC_ALGORITHM_IDS}
+    if pqc_in_allowed:
+        pqc_available_ids, pqc_error_message = _detect_available_pqc_algorithms()
+        missing_pqc = pqc_in_allowed - pqc_available_ids
+        if missing_pqc:
+            explicit_pqc = {alg for alg in requested_algorithm_ids if alg in missing_pqc}
+            if explicit_pqc:
+                missing_names = ", ".join(_PQC_ALGORITHM_IDS[alg] for alg in sorted(missing_pqc))
+                message = pqc_error_message or (
+                    "The server environment does not provide liboqs support for the selected post-quantum algorithms."
+                )
+                return jsonify({
+                    "error": f"{message} ({missing_names}).",
+                }), 400
+            filtered_allowed = [
+                param
+                for param in temp_server.allowed_algorithms
+                if getattr(param, "alg", None) not in missing_pqc
+            ]
+            if not filtered_allowed:
+                return jsonify({"error": "No compatible signature algorithms available."}), 400
+            temp_server.allowed_algorithms = filtered_allowed
+            allowed_algorithm_ids = [
+                getattr(param, "alg", None) for param in temp_server.allowed_algorithms
+            ]
+            allowed_algorithm_ids = [alg for alg in allowed_algorithm_ids if isinstance(alg, int)]
+
+    public_key["pubKeyCredParams"] = [
+        {
+            "type": getattr(param.type, "value", param.type) if hasattr(param, "type") else "public-key",
+            "alg": getattr(param, "alg", None),
+        }
+        for param in temp_server.allowed_algorithms
+        if getattr(param, "alg", None) is not None
+    ]
 
     auth_selection = public_key.get("authenticatorSelection", {})
     if not isinstance(auth_selection, dict):
