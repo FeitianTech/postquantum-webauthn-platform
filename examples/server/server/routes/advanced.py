@@ -217,7 +217,20 @@ def _log_authenticator_attestation_response(
 
         public_key_value = getattr(credential_data, "public_key", None)
         if isinstance(public_key_value, Mapping):
-            credential_payload["credentialPublicKey"] = make_json_safe(dict(public_key_value))
+            public_key_dict = dict(public_key_value)
+            credential_payload["credentialPublicKey"] = make_json_safe(public_key_dict)
+
+            algorithm_value: Optional[int] = None
+            if 3 in public_key_dict:
+                algorithm_value = _coerce_cose_algorithm(public_key_dict[3])
+            elif "alg" in public_key_dict:
+                algorithm_value = _coerce_cose_algorithm(public_key_dict["alg"])
+
+            if algorithm_value is not None:
+                credential_payload["credentialPublicKeyAlgorithm"] = {
+                    "id": algorithm_value,
+                    "label": describe_algorithm(algorithm_value),
+                }
 
         if credential_payload:
             auth_data_payload["attestedCredentialData"] = credential_payload
@@ -252,6 +265,8 @@ def advanced_register_begin():
         return jsonify({"error": "Invalid request: Missing publicKey in CredentialCreationOptions"}), 400
 
     public_key = data["publicKey"]
+
+    warnings: List[str] = []
 
     if not public_key.get("rp"):
         return jsonify({"error": "Missing required field: rp"}), 400
@@ -373,25 +388,54 @@ def advanced_register_begin():
         pqc_available_ids, pqc_error_message = detect_available_pqc_algorithms()
         missing_pqc = pqc_in_allowed - pqc_available_ids
         if missing_pqc:
-            explicit_pqc = {alg for alg in requested_algorithm_ids if alg in missing_pqc}
-            if explicit_pqc:
-                missing_names = ", ".join(
-                    PQC_ALGORITHM_ID_TO_NAME[alg] for alg in sorted(missing_pqc)
+            missing_names = ", ".join(
+                PQC_ALGORITHM_ID_TO_NAME[alg] for alg in sorted(missing_pqc)
+            )
+            if pqc_error_message:
+                app.logger.warning("Post-quantum support unavailable: %s", pqc_error_message)
+            else:
+                app.logger.warning(
+                    "Post-quantum algorithms requested (%s) but not available in this environment.",
+                    missing_names,
                 )
-                message = pqc_error_message or (
-                    "The server environment does not provide liboqs support for the selected post-quantum algorithms."
-                )
-                return jsonify({
-                    "error": f"{message} ({missing_names}).",
-                }), 400
+
             filtered_allowed = [
                 param
                 for param in temp_server.allowed_algorithms
                 if getattr(param, "alg", None) not in missing_pqc
             ]
+
+            fallback_applied = False
             if not filtered_allowed:
-                return jsonify({"error": "No compatible signature algorithms available."}), 400
-            temp_server.allowed_algorithms = filtered_allowed
+                fallback_algorithms = [
+                    PublicKeyCredentialParameters(
+                        type=PublicKeyCredentialType.PUBLIC_KEY,
+                        alg=alg_value,
+                    )
+                    for alg_value in (-7, -8, -257)
+                ]
+                temp_server.allowed_algorithms = fallback_algorithms
+                fallback_applied = True
+            else:
+                temp_server.allowed_algorithms = filtered_allowed
+
+            if pqc_available_ids:
+                if fallback_applied:
+                    warning_message = (
+                        f"Unsupported PQC algorithms were skipped ({missing_names}); "
+                        "falling back to classical algorithms."
+                    )
+                else:
+                    warning_message = (
+                        f"Unsupported PQC algorithms were skipped ({missing_names})."
+                    )
+            else:
+                warning_message = (
+                    "PQC algorithms are not supported by this server right now. "
+                    "Falling back to classical algorithms."
+                )
+            warnings.append(warning_message)
+
             allowed_algorithm_ids = [
                 getattr(param, "alg", None) for param in temp_server.allowed_algorithms
             ]
@@ -552,7 +596,11 @@ def advanced_register_begin():
     session["advanced_state"] = state
     session["advanced_original_request"] = data
 
-    return jsonify(make_json_safe(dict(options)))
+    response_payload = dict(options)
+    if warnings:
+        response_payload["warnings"] = warnings
+
+    return jsonify(make_json_safe(response_payload))
 
 
 @app.route("/api/advanced/register/complete", methods=["POST"])
@@ -799,7 +847,20 @@ def advanced_register_complete():
         if isinstance(response, Mapping):
             credential_info['registration_response'] = make_json_safe(response)
 
-        algo = auth_data.credential_data.public_key[3]
+        credential_public_key_value = getattr(auth_data.credential_data, "public_key", None)
+        raw_alg_value: Any = None
+        if isinstance(credential_public_key_value, Mapping):
+            if 3 in credential_public_key_value:
+                raw_alg_value = credential_public_key_value[3]
+            elif "alg" in credential_public_key_value:
+                raw_alg_value = credential_public_key_value["alg"]
+        else:
+            try:
+                raw_alg_value = credential_public_key_value[3]  # type: ignore[index]
+            except Exception:
+                raw_alg_value = None
+
+        algo = _coerce_cose_algorithm(raw_alg_value)
         algoname = describe_algorithm(algo)
         log_algorithm_selection("registration", algo)
 
@@ -808,7 +869,7 @@ def advanced_register_complete():
 
         debug_info = {
             "attestationFormat": attestation_format,
-            "algorithmsUsed": algorithms_used or [algo],
+            "algorithmsUsed": algorithms_used or ([algo] if algo is not None else []),
             "excludeCredentialsUsed": bool(public_key.get("excludeCredentials")),
             "hintsUsed": public_key.get("hints", []),
             "actualResidentKey": bool(auth_data.flags & 0x04) if hasattr(auth_data, 'flags') else False,

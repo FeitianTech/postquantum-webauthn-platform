@@ -188,17 +188,22 @@ def test_defaults_missing_type_to_public_key(client, monkeypatch):
     assert all(isinstance(entry["alg"], int) for entry in params)
 
 
-def test_rejects_pqc_algorithms_when_oqs_missing(client):
+def test_warns_when_pqc_algorithms_are_unavailable(client):
     data = _post_begin(
         client,
         [
             {"type": "public-key", "alg": -48},
             {"type": "public-key", "alg": -49},
         ],
-        expected_status=400,
     )
 
-    assert "oqs" in data.get("error", "")
+    warnings = data.get("warnings", [])
+    assert any("PQC algorithms are not supported" in warning for warning in warnings)
+
+    params = data["publicKey"]["pubKeyCredParams"]
+    algorithms = [entry["alg"] for entry in params]
+
+    assert algorithms == [-7, -8, -257]
 
 
 def test_reports_missing_specific_pqc_algorithms(client, monkeypatch):
@@ -211,10 +216,15 @@ def test_reports_missing_specific_pqc_algorithms(client, monkeypatch):
             {"type": "public-key", "alg": -49},
             {"type": "public-key", "alg": -50},
         ],
-        expected_status=400,
     )
 
-    assert "ML-DSA-87" in data.get("error", "")
+    warnings = data.get("warnings", [])
+    assert any("ML-DSA-87" in warning for warning in warnings)
+
+    params = data["publicKey"]["pubKeyCredParams"]
+    algorithms = [entry["alg"] for entry in params]
+
+    assert algorithms == [-48, -49]
 
 
 def test_filters_pqc_from_default_list_when_unsupported(client):

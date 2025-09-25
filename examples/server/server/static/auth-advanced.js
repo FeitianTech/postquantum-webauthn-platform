@@ -187,8 +187,19 @@ export async function advancedRegister() {
         }
 
         const json = await response.json();
-        const originalExtensions = json?.publicKey?.extensions;
-        createOptions = parseCreationOptionsFromJSON(json);
+
+        const warnings = Array.isArray(json?.warnings)
+            ? json.warnings.filter((msg) => typeof msg === 'string' && msg.trim().length > 0)
+            : [];
+        if (warnings.length > 0) {
+            showStatus('advanced', warnings.join(' '), 'warning');
+        }
+
+        const optionsJson = { ...(json || {}) };
+        delete optionsJson.warnings;
+
+        const originalExtensions = optionsJson?.publicKey?.extensions;
+        createOptions = parseCreationOptionsFromJSON(optionsJson);
 
         applyAuthenticatorAttachmentPreference(
             createOptions,
