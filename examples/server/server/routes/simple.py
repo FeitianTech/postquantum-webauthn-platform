@@ -18,7 +18,7 @@ from ..attestation import (
     extract_min_pin_length,
     make_json_safe,
 )
-from ..config import app, basepath, server
+from ..config import app, basepath, create_fido_server, determine_rp_id
 from ..storage import add_public_key_material, convert_bytes_for_json, delkey, extract_credential_data, readkey, savekey
 
 
@@ -26,6 +26,9 @@ from ..storage import add_public_key_material, convert_bytes_for_json, delkey, e
 def register_begin():
     uname = request.args.get("email")
     credentials = readkey(uname)
+    rp_id = determine_rp_id()
+    server = create_fido_server(rp_id=rp_id)
+
     options, state = server.register_begin(
         PublicKeyCredentialUserEntity(
             id=b"user_id",
@@ -38,6 +41,7 @@ def register_begin():
     )
 
     session["state"] = state
+    session["register_rp_id"] = rp_id
 
     return jsonify(make_json_safe(dict(options)))
 
@@ -74,6 +78,9 @@ def register_complete():
     )
 
     min_pin_length_value = extract_min_pin_length(client_extension_results)
+
+    rp_id = session.get("register_rp_id")
+    server = create_fido_server(rp_id=rp_id)
 
     auth_data = server.register_complete(session["state"], response)
 
@@ -193,6 +200,8 @@ def register_complete():
         "actualResidentKey": bool(auth_data.flags & 0x04) if hasattr(auth_data, 'flags') else False,
     }
 
+    session.pop("register_rp_id", None)
+
     return jsonify({
         "status": "OK",
         "algo": algoname,
@@ -209,11 +218,15 @@ def authenticate_begin():
 
     credential_data_list = [extract_credential_data(cred) for cred in credentials]
 
+    rp_id = determine_rp_id()
+    server = create_fido_server(rp_id=rp_id)
+
     options, state = server.authenticate_begin(
         credential_data_list,
         user_verification="discouraged"
     )
     session["state"] = state
+    session["authenticate_rp_id"] = rp_id
 
     return jsonify(make_json_safe(dict(options)))
 
@@ -228,6 +241,9 @@ def authenticate_complete():
     credential_data_list = [extract_credential_data(cred) for cred in credentials]
 
     response = request.get_json(silent=True)
+    rp_id = session.pop("authenticate_rp_id", None)
+    server = create_fido_server(rp_id=rp_id)
+
     server.authenticate_complete(
         session.pop("state"),
         credential_data_list,

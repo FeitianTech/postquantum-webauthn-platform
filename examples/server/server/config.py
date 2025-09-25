@@ -5,9 +5,10 @@ import base64
 import os
 import ssl
 import textwrap
+from typing import Mapping, Optional
 
 import fido2.features
-from flask import Flask
+from flask import Flask, has_request_context, request
 from fido2.server import Fido2Server
 from fido2.webauthn import PublicKeyCredentialRpEntity
 
@@ -23,7 +24,66 @@ except Exception:  # pragma: no cover - compatibility shim
 app = Flask(__name__, static_url_path="")
 app.secret_key = os.urandom(32)  # Used for session.
 
-rp = PublicKeyCredentialRpEntity(name="Demo server", id="localhost")
+_DEFAULT_RP_NAME = os.environ.get("FIDO_SERVER_RP_NAME", "Demo server")
+_DEFAULT_RP_ID = os.environ.get("FIDO_SERVER_RP_ID")
+app.config.setdefault("FIDO_SERVER_RP_NAME", _DEFAULT_RP_NAME)
+app.config.setdefault("FIDO_SERVER_RP_ID", _DEFAULT_RP_ID)
+
+
+def determine_rp_id(explicit_id: Optional[str] = None) -> str:
+    """Resolve the relying party identifier for the current request."""
+
+    if explicit_id:
+        return explicit_id
+
+    configured_id = app.config.get("FIDO_SERVER_RP_ID")
+    if isinstance(configured_id, str) and configured_id.strip():
+        return configured_id.strip()
+
+    if has_request_context():
+        host = request.host.split(":", 1)[0].strip().lower()
+        if host in {"", None}:
+            return "localhost"
+        if host in {"127.0.0.1", "::1"}:
+            return "localhost"
+        return host
+
+    return "localhost"
+
+
+def build_rp_entity(
+    rp_data: Optional[Mapping[str, str]] = None,
+    *,
+    rp_id: Optional[str] = None,
+    rp_name: Optional[str] = None,
+) -> PublicKeyCredentialRpEntity:
+    """Create a ``PublicKeyCredentialRpEntity`` for the active request."""
+
+    rp_id_value = determine_rp_id(rp_id or (rp_data or {}).get("id"))
+
+    rp_name_value = (
+        rp_name
+        or (rp_data or {}).get("name")
+        or app.config.get("FIDO_SERVER_RP_NAME")
+        or "Demo server"
+    )
+
+    return PublicKeyCredentialRpEntity(name=rp_name_value, id=rp_id_value)
+
+
+def create_fido_server(
+    rp_data: Optional[Mapping[str, str]] = None,
+    *,
+    rp_id: Optional[str] = None,
+    rp_name: Optional[str] = None,
+) -> Fido2Server:
+    """Instantiate a :class:`Fido2Server` bound to the resolved RP ID."""
+
+    entity = build_rp_entity(rp_data, rp_id=rp_id, rp_name=rp_name)
+    return Fido2Server(entity)
+
+
+rp = build_rp_entity()
 server = Fido2Server(rp)
 
 # Save credentials next to this module, regardless of CWD.
@@ -140,6 +200,9 @@ MDS_TLS_ADDITIONAL_TRUST_ANCHORS_PEM = textwrap.dedent(
 __all__ = [
     "app",
     "basepath",
+    "build_rp_entity",
+    "create_fido_server",
+    "determine_rp_id",
     "rp",
     "server",
     "MDS_METADATA_CACHE_PATH",
