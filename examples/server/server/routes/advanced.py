@@ -12,7 +12,6 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Mapping, MutableMapping, Optional
 
 from flask import jsonify, request, session
-from fido2.server import Fido2Server
 from fido2.webauthn import (
     AttestationConveyancePreference,
     AuthenticatorAttachment,
@@ -38,7 +37,13 @@ from ..attestation import (
     perform_attestation_checks,
     summarize_authenticator_extensions,
 )
-from ..config import app, basepath, rp, server
+from ..config import (
+    app,
+    basepath,
+    build_rp_entity,
+    create_fido_server,
+    determine_rp_id,
+)
 from ..pqc import (
     PQC_ALGORITHM_ID_TO_NAME,
     describe_algorithm,
@@ -305,7 +310,17 @@ def advanced_register_begin():
         except (ValueError, TypeError) as exc:
             return jsonify({"error": f"Invalid challenge format: {exc}"}), 400
 
-    temp_server = Fido2Server(rp)
+    rp_input = public_key.get("rp") if isinstance(public_key, Mapping) else None
+    rp_entity = build_rp_entity(rp_input)
+    sanitized_rp = {"id": rp_entity.id, "name": rp_entity.name}
+    if isinstance(rp_input, Mapping):
+        sanitized_rp.update(
+            {k: v for k, v in rp_input.items() if k not in {"id", "name"}}
+        )
+    if isinstance(public_key, MutableMapping):
+        public_key["rp"] = sanitized_rp
+
+    temp_server = create_fido_server(rp_data=sanitized_rp)
 
     timeout = public_key.get("timeout", 90000)
     temp_server.timeout = timeout / 1000.0 if timeout else None
@@ -594,6 +609,7 @@ def advanced_register_begin():
             print(f"[DEBUG] No extensions in server response")
 
     session["advanced_state"] = state
+    session["advanced_rp"] = {"id": rp_entity.id, "name": rp_entity.name}
     session["advanced_original_request"] = data
 
     response_payload = dict(options)
@@ -722,7 +738,20 @@ def advanced_register_complete():
                 400,
             )
 
-        auth_data = server.register_complete(state, response)
+        stored_rp = session.get("advanced_rp")
+        stored_rp_id = None
+        stored_rp_name = None
+        if isinstance(stored_rp, Mapping):
+            stored_rp_id = stored_rp.get("id")
+            stored_rp_name = stored_rp.get("name")
+
+        resolved_rp_id = determine_rp_id(stored_rp_id)
+        register_server = create_fido_server(
+            rp_id=resolved_rp_id,
+            rp_name=stored_rp_name,
+        )
+
+        auth_data = register_server.register_complete(state, response)
 
         _log_authenticator_attestation_response(
             attestation_format,
@@ -750,7 +779,7 @@ def advanced_register_complete():
             public_key_for_checks,
             auth_data,
             expected_origin,
-            rp.id,
+            resolved_rp_id,
         )
 
         attestation_signature_valid = attestation_checks.get("signature_valid")
@@ -1073,7 +1102,15 @@ def advanced_authenticate_begin():
         except (ValueError, TypeError) as exc:
             return jsonify({"error": f"Invalid challenge format: {exc}"}), 400
 
-    temp_server = Fido2Server(rp)
+    stored_rp = session.get("advanced_rp")
+    stored_rp_id = None
+    stored_rp_name = None
+    if isinstance(stored_rp, Mapping):
+        stored_rp_id = stored_rp.get("id")
+        stored_rp_name = stored_rp.get("name")
+
+    resolved_rp_id = determine_rp_id(stored_rp_id)
+    temp_server = create_fido_server(rp_id=resolved_rp_id, rp_name=stored_rp_name)
 
     credential_attachment_map: Dict[bytes, Optional[str]] = {}
     if allowed_attachment_values:
@@ -1203,6 +1240,7 @@ def advanced_authenticate_begin():
     )
 
     session["advanced_auth_state"] = state
+    session["advanced_auth_rp"] = {"id": resolved_rp_id, "name": stored_rp_name}
     session["advanced_original_auth_request"] = data
 
     return jsonify(make_json_safe(dict(options)))
@@ -1271,7 +1309,21 @@ def advanced_authenticate_complete():
         return jsonify({"error": "No credentials found"}), 404
 
     try:
-        auth_result = server.authenticate_complete(
+        stored_rp = session.pop("advanced_auth_rp", None)
+        stored_rp_id = None
+        stored_rp_name = None
+        if isinstance(stored_rp, Mapping):
+            stored_rp_id = stored_rp.get("id")
+            stored_rp_name = stored_rp.get("name")
+        elif isinstance(session.get("advanced_rp"), Mapping):
+            fallback_rp = session.get("advanced_rp")
+            stored_rp_id = fallback_rp.get("id")
+            stored_rp_name = fallback_rp.get("name")
+
+        resolved_rp_id = determine_rp_id(stored_rp_id)
+        auth_server = create_fido_server(rp_id=resolved_rp_id, rp_name=stored_rp_name)
+
+        auth_result = auth_server.authenticate_complete(
             session.pop("advanced_auth_state"),
             all_credentials,
             response,
