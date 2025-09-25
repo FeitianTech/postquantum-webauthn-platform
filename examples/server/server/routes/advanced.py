@@ -1073,12 +1073,15 @@ def advanced_register_complete():
         credentials.append(credential_info)
         savekey(username, credentials)
 
-        return jsonify({
+        response_payload = {
             "status": "OK",
             "algo": algoname,
             **debug_info,
             "relyingParty": rp_info,
-        })
+        }
+        print("[DEBUG] Advanced registration completion response:", make_json_safe(response_payload))
+
+        return jsonify(response_payload)
     except Exception as exc:
         return jsonify({"error": str(exc)}), 400
 

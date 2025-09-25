@@ -218,11 +218,14 @@ def register_complete():
 
     session.pop("register_rp_id", None)
 
-    return jsonify({
+    response_payload = {
         "status": "OK",
         "algo": algoname,
         **debug_info
-    })
+    }
+    print("[DEBUG] Registration completion response:", response_payload)
+
+    return jsonify(response_payload)
 
 
 @app.route("/api/authenticate/begin", methods=["POST"])
