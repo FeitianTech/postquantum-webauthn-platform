@@ -8,7 +8,7 @@ import textwrap
 
 import fido2.features
 from flask import Flask
-from fido2.server import Fido2Server
+from fido2.server import Fido2Server, _verify_origin_for_rp
 from fido2.webauthn import PublicKeyCredentialRpEntity
 
 # Enable webauthn-json mapping if available (compatible across fido2 versions)
@@ -23,7 +23,10 @@ except Exception:  # pragma: no cover - compatibility shim
 app = Flask(__name__, static_url_path="")
 app.secret_key = os.urandom(32)  # Used for session.
 
-rp = PublicKeyCredentialRpEntity(name="Demo server", id="localhost")
+_DEFAULT_RP_NAME = "Demo server"
+_DEFAULT_RP_ID = "localhost"
+
+rp = PublicKeyCredentialRpEntity(name=_DEFAULT_RP_NAME, id=_DEFAULT_RP_ID)
 server = Fido2Server(rp)
 
 # Save credentials next to this module, regardless of CWD.
@@ -140,6 +143,7 @@ MDS_TLS_ADDITIONAL_TRUST_ANCHORS_PEM = textwrap.dedent(
 __all__ = [
     "app",
     "basepath",
+    "configure_relying_party",
     "rp",
     "server",
     "MDS_METADATA_CACHE_PATH",
@@ -150,3 +154,20 @@ __all__ = [
     "FIDO_METADATA_TRUST_ROOT_PEM",
     "MDS_TLS_ADDITIONAL_TRUST_ANCHORS_PEM",
 ]
+
+
+def configure_relying_party(hostname: str) -> None:
+    """Update the relying party metadata for the configured host."""
+
+    normalized = (hostname or "").strip()
+    if not normalized:
+        normalized = _DEFAULT_RP_ID
+
+    if rp.id != normalized:
+        rp.id = normalized
+
+    if getattr(server.rp, "id", None) != normalized:
+        server.rp.id = normalized
+        # ``id_hash`` is a computed property so no manual update required.
+
+    server._verify = _verify_origin_for_rp(server.rp.id)
