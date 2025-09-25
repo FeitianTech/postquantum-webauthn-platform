@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import base64
+import json
 import math
 import re
 import os
@@ -153,6 +154,109 @@ def _extract_binary_value(value: Any) -> Any:
     return value
 
 
+def _encode_base64url(data: bytes) -> str:
+    return base64.urlsafe_b64encode(data).rstrip(b"=").decode("ascii")
+
+
+def _log_authenticator_attestation_response(
+    attestation_format: Optional[str],
+    auth_data: Any,
+    attestation_statement: Any,
+    raw_attestation_object: Any,
+) -> None:
+    """Emit a structured log describing the authenticator's attestation payload."""
+
+    if auth_data is None:
+        return
+
+    payload: Dict[str, Any] = {}
+    if attestation_format:
+        payload["fmt"] = attestation_format
+
+    auth_data_payload: Dict[str, Any] = {}
+
+    rp_id_hash = getattr(auth_data, "rp_id_hash", None)
+    if isinstance(rp_id_hash, (bytes, bytearray, memoryview)):
+        auth_data_payload["rpIdHash"] = bytes(rp_id_hash).hex()
+
+    flags_value = getattr(auth_data, "flags", None)
+    if isinstance(flags_value, int):
+        auth_data_payload["flags"] = {"value": flags_value, "hex": f"0x{flags_value:02x}"}
+        flag_breakdown: Dict[str, bool] = {}
+        flag_names = ("UP", "UV", "BE", "BS", "AT", "ED")
+        flag_enum = getattr(auth_data, "FLAG", None)
+        for name in flag_names:
+            bit_value = getattr(flag_enum, name, None) if flag_enum is not None else None
+            if isinstance(bit_value, int):
+                flag_breakdown[name] = bool(flags_value & bit_value)
+        if flag_breakdown:
+            auth_data_payload["flagsDecoded"] = flag_breakdown
+
+    counter_value = getattr(auth_data, "counter", None)
+    if isinstance(counter_value, int):
+        auth_data_payload["counter"] = counter_value
+
+    try:
+        auth_data_payload["rawHex"] = bytes(auth_data).hex()
+    except Exception:  # pragma: no cover - defensive guard
+        pass
+
+    credential_data = getattr(auth_data, "credential_data", None)
+    if credential_data is not None:
+        credential_payload: Dict[str, Any] = {}
+
+        aaguid_value = getattr(credential_data, "aaguid", None)
+        if isinstance(aaguid_value, (bytes, bytearray, memoryview)):
+            credential_payload["aaguid"] = bytes(aaguid_value).hex()
+
+        credential_id_value = getattr(credential_data, "credential_id", None)
+        if isinstance(credential_id_value, (bytes, bytearray, memoryview)):
+            credential_id_bytes = bytes(credential_id_value)
+            credential_payload["credentialId"] = _encode_base64url(credential_id_bytes)
+            credential_payload["credentialIdLength"] = len(credential_id_bytes)
+
+        public_key_value = getattr(credential_data, "public_key", None)
+        if isinstance(public_key_value, Mapping):
+            public_key_dict = dict(public_key_value)
+            credential_payload["credentialPublicKey"] = make_json_safe(public_key_dict)
+
+            algorithm_value: Optional[int] = None
+            if 3 in public_key_dict:
+                algorithm_value = _coerce_cose_algorithm(public_key_dict[3])
+            elif "alg" in public_key_dict:
+                algorithm_value = _coerce_cose_algorithm(public_key_dict["alg"])
+
+            if algorithm_value is not None:
+                credential_payload["credentialPublicKeyAlgorithm"] = {
+                    "id": algorithm_value,
+                    "label": describe_algorithm(algorithm_value),
+                }
+
+        if credential_payload:
+            auth_data_payload["attestedCredentialData"] = credential_payload
+
+    extensions_value = getattr(auth_data, "extensions", None)
+    if isinstance(extensions_value, Mapping):
+        auth_data_payload["extensions"] = make_json_safe(dict(extensions_value))
+
+    payload["authData"] = auth_data_payload
+
+    if attestation_statement:
+        payload["attStmt"] = make_json_safe(attestation_statement)
+
+    if isinstance(raw_attestation_object, (bytes, bytearray, memoryview)):
+        payload["rawAttestationObject"] = _encode_base64url(bytes(raw_attestation_object))
+    elif isinstance(raw_attestation_object, str):
+        payload["rawAttestationObject"] = raw_attestation_object
+
+    try:
+        message = json.dumps(payload, indent=2, sort_keys=True)
+    except TypeError:
+        message = str(payload)
+
+    app.logger.info("Authenticator attestation response:\n%s", message)
+
+
 @app.route("/api/advanced/register/begin", methods=["POST"])
 def advanced_register_begin():
     data = request.get_json(silent=True)
@@ -161,6 +265,8 @@ def advanced_register_begin():
         return jsonify({"error": "Invalid request: Missing publicKey in CredentialCreationOptions"}), 400
 
     public_key = data["publicKey"]
+
+    warnings: List[str] = []
 
     if not public_key.get("rp"):
         return jsonify({"error": "Missing required field: rp"}), 400
@@ -282,25 +388,54 @@ def advanced_register_begin():
         pqc_available_ids, pqc_error_message = detect_available_pqc_algorithms()
         missing_pqc = pqc_in_allowed - pqc_available_ids
         if missing_pqc:
-            explicit_pqc = {alg for alg in requested_algorithm_ids if alg in missing_pqc}
-            if explicit_pqc:
-                missing_names = ", ".join(
-                    PQC_ALGORITHM_ID_TO_NAME[alg] for alg in sorted(missing_pqc)
+            missing_names = ", ".join(
+                PQC_ALGORITHM_ID_TO_NAME[alg] for alg in sorted(missing_pqc)
+            )
+            if pqc_error_message:
+                app.logger.warning("Post-quantum support unavailable: %s", pqc_error_message)
+            else:
+                app.logger.warning(
+                    "Post-quantum algorithms requested (%s) but not available in this environment.",
+                    missing_names,
                 )
-                message = pqc_error_message or (
-                    "The server environment does not provide liboqs support for the selected post-quantum algorithms."
-                )
-                return jsonify({
-                    "error": f"{message} ({missing_names}).",
-                }), 400
+
             filtered_allowed = [
                 param
                 for param in temp_server.allowed_algorithms
                 if getattr(param, "alg", None) not in missing_pqc
             ]
+
+            fallback_applied = False
             if not filtered_allowed:
-                return jsonify({"error": "No compatible signature algorithms available."}), 400
-            temp_server.allowed_algorithms = filtered_allowed
+                fallback_algorithms = [
+                    PublicKeyCredentialParameters(
+                        type=PublicKeyCredentialType.PUBLIC_KEY,
+                        alg=alg_value,
+                    )
+                    for alg_value in (-7, -8, -257)
+                ]
+                temp_server.allowed_algorithms = fallback_algorithms
+                fallback_applied = True
+            else:
+                temp_server.allowed_algorithms = filtered_allowed
+
+            if pqc_available_ids:
+                if fallback_applied:
+                    warning_message = (
+                        f"Unsupported PQC algorithms were skipped ({missing_names}); "
+                        "falling back to classical algorithms."
+                    )
+                else:
+                    warning_message = (
+                        f"Unsupported PQC algorithms were skipped ({missing_names})."
+                    )
+            else:
+                warning_message = (
+                    "PQC algorithms are not supported by this server right now. "
+                    "Falling back to classical algorithms."
+                )
+            warnings.append(warning_message)
+
             allowed_algorithm_ids = [
                 getattr(param, "alg", None) for param in temp_server.allowed_algorithms
             ]
@@ -461,7 +596,11 @@ def advanced_register_begin():
     session["advanced_state"] = state
     session["advanced_original_request"] = data
 
-    return jsonify(make_json_safe(dict(options)))
+    response_payload = dict(options)
+    if warnings:
+        response_payload["warnings"] = warnings
+
+    return jsonify(make_json_safe(response_payload))
 
 
 @app.route("/api/advanced/register/complete", methods=["POST"])
@@ -585,6 +724,13 @@ def advanced_register_complete():
 
         auth_data = server.register_complete(state, response)
 
+        _log_authenticator_attestation_response(
+            attestation_format,
+            auth_data,
+            attestation_statement,
+            raw_attestation_object,
+        )
+
         stored_public_key: Optional[Mapping[str, Any]] = None
         if isinstance(stored_original_request, Mapping):
             stored_public_key = stored_original_request.get("publicKey")
@@ -701,7 +847,20 @@ def advanced_register_complete():
         if isinstance(response, Mapping):
             credential_info['registration_response'] = make_json_safe(response)
 
-        algo = auth_data.credential_data.public_key[3]
+        credential_public_key_value = getattr(auth_data.credential_data, "public_key", None)
+        raw_alg_value: Any = None
+        if isinstance(credential_public_key_value, Mapping):
+            if 3 in credential_public_key_value:
+                raw_alg_value = credential_public_key_value[3]
+            elif "alg" in credential_public_key_value:
+                raw_alg_value = credential_public_key_value["alg"]
+        else:
+            try:
+                raw_alg_value = credential_public_key_value[3]  # type: ignore[index]
+            except Exception:
+                raw_alg_value = None
+
+        algo = _coerce_cose_algorithm(raw_alg_value)
         algoname = describe_algorithm(algo)
         log_algorithm_selection("registration", algo)
 
@@ -710,7 +869,7 @@ def advanced_register_complete():
 
         debug_info = {
             "attestationFormat": attestation_format,
-            "algorithmsUsed": algorithms_used or [algo],
+            "algorithmsUsed": algorithms_used or ([algo] if algo is not None else []),
             "excludeCredentialsUsed": bool(public_key.get("excludeCredentials")),
             "hintsUsed": public_key.get("hints", []),
             "actualResidentKey": bool(auth_data.flags & 0x04) if hasattr(auth_data, 'flags') else False,
