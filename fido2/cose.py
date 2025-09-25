@@ -31,7 +31,7 @@ from .utils import bytes2int, int2bytes
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec, rsa, padding, ed25519, types
-from typing import Sequence, Type, Mapping, Any, TypeVar, Optional
+from typing import Sequence, Type, Mapping, Any, TypeVar, Optional, Iterable
 
 try:  # pragma: no cover - exercised indirectly in tests
     import oqs  # type: ignore
@@ -50,6 +50,95 @@ def _require_oqs():  # pragma: no cover - exercised in tests when oqs is missing
         "python-fido2-webauthn-test[pqc] extra to enable post-quantum algorithms."
     )
     raise RuntimeError(message) from _oqs_import_error
+
+
+def _parse_der_length(data: memoryview, idx: int) -> tuple[int, int]:
+    """Parse a DER length field and return (length, new_index)."""
+
+    if idx >= len(data):
+        raise ValueError("Invalid DER length: truncated data")
+    first = data[idx]
+    idx += 1
+    if first & 0x80 == 0:
+        return first, idx
+    num_bytes = first & 0x7F
+    if num_bytes == 0:
+        raise ValueError("Indefinite length DER encodings are not supported")
+    if idx + num_bytes > len(data):
+        raise ValueError("Invalid DER length: truncated data")
+    length = int.from_bytes(data[idx : idx + num_bytes], "big")
+    idx += num_bytes
+    return length, idx
+
+
+def _extract_subject_public_key_from_spki(spki_der: bytes) -> bytes:
+    """Extract the BIT STRING payload from a SubjectPublicKeyInfo structure."""
+
+    view = memoryview(spki_der)
+    idx = 0
+    if not view:
+        raise ValueError("Empty SubjectPublicKeyInfo structure")
+    if view[idx] != 0x30:
+        raise ValueError("SubjectPublicKeyInfo must be a SEQUENCE")
+    idx += 1
+    seq_len, idx = _parse_der_length(view, idx)
+    end_of_spki = idx + seq_len
+    if end_of_spki > len(view):
+        raise ValueError("SubjectPublicKeyInfo length exceeds buffer size")
+
+    if idx >= end_of_spki or view[idx] != 0x30:
+        raise ValueError("AlgorithmIdentifier must be present in SubjectPublicKeyInfo")
+    idx += 1
+    algo_len, idx = _parse_der_length(view, idx)
+    idx += algo_len
+    if idx > end_of_spki:
+        raise ValueError("AlgorithmIdentifier overruns SubjectPublicKeyInfo")
+
+    if idx >= end_of_spki or view[idx] != 0x03:
+        raise ValueError("SubjectPublicKeyInfo must contain a BIT STRING public key")
+    idx += 1
+    bitstring_len, idx = _parse_der_length(view, idx)
+    if idx + bitstring_len > end_of_spki:
+        raise ValueError("SubjectPublicKey BIT STRING overruns SubjectPublicKeyInfo")
+    if bitstring_len == 0:
+        raise ValueError("SubjectPublicKey BIT STRING is empty")
+
+    unused_bits = view[idx]
+    idx += 1
+    payload = bytes(view[idx : idx + bitstring_len - 1])
+    if unused_bits != 0:
+        raise ValueError("Unsupported SubjectPublicKey BIT STRING padding")
+    return payload
+
+
+def _coerce_mldsa_public_key_bytes(value: Any) -> bytes:
+    """Convert assorted public key representations into raw ML-DSA bytes."""
+
+    if isinstance(value, (bytes, bytearray, memoryview)):
+        return bytes(value)
+
+    public_bytes = getattr(value, "public_bytes", None)
+    if callable(public_bytes):  # pragma: no branch - exercised in tests
+        attempts: Iterable[tuple[serialization.Encoding, serialization.PublicFormat]] = (
+            (serialization.Encoding.Raw, serialization.PublicFormat.Raw),
+            (serialization.Encoding.DER, serialization.PublicFormat.SubjectPublicKeyInfo),
+            (serialization.Encoding.PEM, serialization.PublicFormat.SubjectPublicKeyInfo),
+        )
+        for encoding, fmt in attempts:
+            try:
+                data = public_bytes(encoding, fmt)
+            except Exception:
+                continue
+            if not data:
+                continue
+            if fmt is serialization.PublicFormat.SubjectPublicKeyInfo:
+                try:
+                    data = _extract_subject_public_key_from_spki(data)
+                except Exception:
+                    continue
+            return bytes(data)
+
+    raise TypeError("Unable to coerce ML-DSA public key into raw bytes")
 
 class CoseKey(dict):
     """A COSE formatted public key.
@@ -157,11 +246,7 @@ class MLDSA87(CoseKey):
             if isinstance(signature, (bytes, bytearray, memoryview))
             else bytes(signature)
         )
-        public_key_bytes = (
-            public_key
-            if isinstance(public_key, (bytes, bytearray, memoryview))
-            else bytes(public_key)
-        )
+        public_key_bytes = _coerce_mldsa_public_key_bytes(public_key)
         with oqs_module.Signature("ML-DSA-87") as verifier:
             if not verifier.verify(
                 bytes(message_bytes), bytes(signature_bytes), bytes(public_key_bytes)
@@ -174,7 +259,7 @@ class MLDSA87(CoseKey):
             {
                 1: 7,
                 3: cls.ALGORITHM,
-                -1: public_key,
+                -1: _coerce_mldsa_public_key_bytes(public_key),
             }
         )
 
@@ -200,11 +285,7 @@ class MLDSA65(CoseKey):
             if isinstance(signature, (bytes, bytearray, memoryview))
             else bytes(signature)
         )
-        public_key_bytes = (
-            public_key
-            if isinstance(public_key, (bytes, bytearray, memoryview))
-            else bytes(public_key)
-        )
+        public_key_bytes = _coerce_mldsa_public_key_bytes(public_key)
         with oqs_module.Signature("ML-DSA-65") as verifier:
             if not verifier.verify(
                 bytes(message_bytes), bytes(signature_bytes), bytes(public_key_bytes)
@@ -212,12 +293,12 @@ class MLDSA65(CoseKey):
                 raise ValueError("Invalid ML-DSA-65 signature")
 
     @classmethod
-    def from_cryptography_key(cls, public_key):        
+    def from_cryptography_key(cls, public_key):
         return cls(
             {
                 1: 7,
                 3: cls.ALGORITHM,
-                -1: public_key,
+                -1: _coerce_mldsa_public_key_bytes(public_key),
             }
         )
 
@@ -242,11 +323,7 @@ class MLDSA44(CoseKey):
             if isinstance(signature, (bytes, bytearray, memoryview))
             else bytes(signature)
         )
-        public_key_bytes = (
-            public_key
-            if isinstance(public_key, (bytes, bytearray, memoryview))
-            else bytes(public_key)
-        )
+        public_key_bytes = _coerce_mldsa_public_key_bytes(public_key)
         with oqs_module.Signature("ML-DSA-44") as verifier:
             if not verifier.verify(
                 bytes(message_bytes), bytes(signature_bytes), bytes(public_key_bytes)
@@ -254,12 +331,12 @@ class MLDSA44(CoseKey):
                 raise ValueError("Invalid ML-DSA-44 signature")
 
     @classmethod
-    def from_cryptography_key(cls, public_key):        
+    def from_cryptography_key(cls, public_key):
         return cls(
             {
                 1: 7,
                 3: cls.ALGORITHM,
-                -1: public_key,
+                -1: _coerce_mldsa_public_key_bytes(public_key),
             }
         )
 
