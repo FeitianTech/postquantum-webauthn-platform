@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import base64
+import json
 import math
 import re
 import os
@@ -94,6 +95,18 @@ for raw_name, alg_id in _COSE_ALGORITHM_NAME_MAP.items():
 _SUPPORTED_COSE_ALGORITHMS = frozenset(_COSE_ALGORITHM_NAME_LOOKUP.values())
 _COSE_ALGORITHM_NUMERIC_PATTERN = re.compile(r"-?\d+")
 
+
+def _log_server_debug(event: str, payload: Any) -> None:
+    """Write JSON-formatted debug output to the Flask application logger."""
+
+    try:
+        safe_payload = make_json_safe(payload)
+        serialized = json.dumps(safe_payload, indent=2, sort_keys=True)
+    except Exception as exc:  # pragma: no cover - defensive logging guard
+        app.logger.warning("Unable to serialise %s payload for logging: %s", event, exc)
+        serialized = repr(payload)
+    app.logger.info("[advanced.register.%s] %s", event, serialized)
+
 def _lookup_named_cose_algorithm(name: str) -> Optional[int]:
     normalized_name = _normalize_algorithm_name_key(name)
     if not normalized_name:
@@ -159,6 +172,8 @@ def advanced_register_begin():
 
     if not data or not data.get("publicKey"):
         return jsonify({"error": "Invalid request: Missing publicKey in CredentialCreationOptions"}), 400
+
+    _log_server_debug("begin.request", {"request": data})
 
     public_key = data["publicKey"]
 
@@ -481,6 +496,25 @@ def advanced_register_begin():
         extensions=processed_extensions if processed_extensions else None,
     )
 
+    state_summary = None
+    if state is not None:
+        try:
+            state_summary = {
+                "type": type(state).__name__,
+                "repr": repr(state),
+            }
+        except Exception:  # pragma: no cover - defensive fallback
+            state_summary = {"type": type(state).__name__}
+
+    _log_server_debug(
+        "begin.response",
+        {
+            "options": dict(options),
+            "state": state_summary,
+            "debugContext": debug_context_payload,
+        },
+    )
+
     if "largeBlob" in processed_extensions:
         print(f"[DEBUG] largeBlob extension sent to Fido2Server: {processed_extensions['largeBlob']}")
         options_dict = dict(options)
@@ -501,6 +535,8 @@ def advanced_register_begin():
 @app.route("/api/advanced/register/complete", methods=["POST"])
 def advanced_register_complete():
     data = request.get_json(silent=True) or {}
+
+    _log_server_debug("complete.request", {"request": data})
 
     response = data.get("__credential_response")
     if not response:
@@ -1036,6 +1072,15 @@ def advanced_register_complete():
 
         credential_info['relying_party'] = make_json_safe(rp_info)
 
+        _log_server_debug(
+            "complete.response",
+            {
+                "credentialInfo": credential_info,
+                "debugInfo": debug_info,
+                "postQuantum": post_quantum_info,
+            },
+        )
+
         credentials.append(credential_info)
         savekey(username, credentials)
 
@@ -1046,6 +1091,7 @@ def advanced_register_complete():
             "relyingParty": rp_info,
         })
     except Exception as exc:
+        _log_server_debug("complete.error", {"error": str(exc)})
         return jsonify({"error": str(exc)}), 400
 
 
