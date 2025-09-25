@@ -50,8 +50,13 @@ def register_begin():
 def register_complete():
     uname = request.args.get("email")
     credentials = readkey(uname)
+    raw_request_payload = request.get_data(as_text=True)
     response = request.get_json(silent=True) or {}
+    print("[DEBUG] Raw registration request payload:", raw_request_payload or "<empty>")
+    print("[DEBUG] Parsed registration response:", response)
     credential_response = response.get('response', {}) if isinstance(response, dict) else {}
+    if credential_response:
+        print("[DEBUG] Parsed credential.response payload:", credential_response)
 
     (
         attestation_format,

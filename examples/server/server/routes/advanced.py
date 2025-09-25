@@ -621,13 +621,20 @@ def advanced_register_begin():
 
 @app.route("/api/advanced/register/complete", methods=["POST"])
 def advanced_register_complete():
+    raw_request_payload = request.get_data(as_text=True)
     data = request.get_json(silent=True) or {}
+    print("[DEBUG] Raw advanced registration request payload:", raw_request_payload or "<empty>")
+    print("[DEBUG] Parsed advanced registration payload:", data)
 
     response = data.get("__credential_response")
     if not response:
         return jsonify({"error": "Credential response is required"}), 400
 
+    print("[DEBUG] Parsed advanced credential response:", response)
+
     credential_response = response.get('response', {}) if isinstance(response, dict) else {}
+    if credential_response:
+        print("[DEBUG] Parsed advanced credential.response payload:", credential_response)
 
     original_request = {key: value for key, value in data.items() if not key.startswith("__")}
 
