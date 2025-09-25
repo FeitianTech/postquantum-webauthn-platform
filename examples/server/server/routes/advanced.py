@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import base64
+import math
+import re
 import os
 import time
 import uuid
@@ -36,7 +38,106 @@ from ..attestation import (
     summarize_authenticator_extensions,
 )
 from ..config import app, basepath, rp, server
+from ..pqc import (
+    PQC_ALGORITHM_ID_TO_NAME,
+    describe_algorithm,
+    detect_available_pqc_algorithms,
+    is_pqc_algorithm,
+    log_algorithm_selection,
+)
 from ..storage import add_public_key_material, extract_credential_data, readkey, savekey
+
+
+_COSE_ALGORITHM_NAME_MAP: Dict[str, int] = {
+    "ML-DSA-87": -50,
+    "ML-DSA-65": -49,
+    "ML-DSA-44": -48,
+    "EDDSA": -8,
+    "ED25519": -8,
+    "ES256": -7,
+    "ECDSA256": -7,
+    "ECDSA-256": -7,
+    "ES256K": -47,
+    "ES384": -35,
+    "ES512": -36,
+    "RS256": -257,
+    "RSA256": -257,
+    "RS384": -258,
+    "RSA384": -258,
+    "RS512": -259,
+    "RSA512": -259,
+    "RS1": -65535,
+    "RSASSA-PKCS1-V1_5-SHA1": -65535,
+    "PS256": -37,
+}
+
+
+def _normalize_algorithm_name_key(name: str) -> str:
+    base = name.strip().split("(")[0]
+    if not base:
+        return ""
+    sanitized = re.sub(r"[^A-Z0-9]", "", base.upper())
+    if sanitized.startswith("FIDOALG"):
+        sanitized = sanitized[len("FIDOALG"):]
+    if sanitized.startswith("COSEALG"):
+        sanitized = sanitized[len("COSEALG"):]
+    return sanitized
+
+
+_COSE_ALGORITHM_NAME_LOOKUP: Dict[str, int] = {}
+for raw_name, alg_id in _COSE_ALGORITHM_NAME_MAP.items():
+    normalized_key = _normalize_algorithm_name_key(raw_name)
+    if normalized_key:
+        _COSE_ALGORITHM_NAME_LOOKUP[normalized_key] = alg_id
+
+
+_SUPPORTED_COSE_ALGORITHMS = frozenset(_COSE_ALGORITHM_NAME_LOOKUP.values())
+_COSE_ALGORITHM_NUMERIC_PATTERN = re.compile(r"-?\d+")
+
+def _lookup_named_cose_algorithm(name: str) -> Optional[int]:
+    normalized_name = _normalize_algorithm_name_key(name)
+    if not normalized_name:
+        return None
+    direct_match = _COSE_ALGORITHM_NAME_LOOKUP.get(normalized_name)
+    if direct_match is not None:
+        return direct_match
+    for alias_key, alg_value in _COSE_ALGORITHM_NAME_LOOKUP.items():
+        if normalized_name.endswith(alias_key):
+            return alg_value
+    return None
+
+
+def _coerce_cose_algorithm(value: Any) -> Optional[int]:
+    """Attempt to coerce a COSE algorithm identifier into an ``int``."""
+
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        if math.isfinite(value) and value.is_integer():
+            return int(value)
+        return None
+    if isinstance(value, str):
+        stripped = value.strip()
+        if not stripped:
+            return None
+        try:
+            return int(stripped, 10)
+        except ValueError:
+            normalized_alg = _lookup_named_cose_algorithm(stripped)
+            if normalized_alg is not None:
+                return normalized_alg
+            matches = list(_COSE_ALGORITHM_NUMERIC_PATTERN.finditer(stripped))
+            if matches:
+                try:
+                    candidate = int(matches[-1].group(0), 10)
+                except ValueError:
+                    return None
+                if candidate in _SUPPORTED_COSE_ALGORITHMS:
+                    return candidate
+            return None
+    return None
 
 
 def _extract_binary_value(value: Any) -> Any:
@@ -114,16 +215,52 @@ def advanced_register_begin():
         temp_server.attestation = AttestationConveyancePreference.NONE
 
     pub_key_cred_params = public_key.get("pubKeyCredParams", [])
+    requested_algorithm_ids: List[int] = []
     if pub_key_cred_params:
-        allowed_algorithms = []
+        allowed_algorithms: List[PublicKeyCredentialParameters] = []
+        normalized_params: List[Dict[str, Any]] = []
         for param in pub_key_cred_params:
-            if isinstance(param, dict) and param.get("type") == "public-key" and "alg" in param:
-                allowed_algorithms.append(
-                    PublicKeyCredentialParameters(
-                        type=PublicKeyCredentialType.PUBLIC_KEY,
-                        alg=param["alg"]
-                    )
+            raw_alg_value: Any
+            normalized_param: Dict[str, Any]
+
+            if isinstance(param, Mapping):
+                raw_alg_value = param.get("alg")
+                if raw_alg_value is None:
+                    raw_alg_value = param.get("id")
+                if raw_alg_value is None:
+                    raw_alg_value = param.get("value")
+
+                type_value = param.get("type")
+                if isinstance(type_value, str):
+                    if type_value.strip().lower() != "public-key":
+                        continue
+                elif type_value is not None:
+                    continue
+
+                alg_value = _coerce_cose_algorithm(raw_alg_value)
+                if alg_value is None:
+                    continue
+
+                requested_algorithm_ids.append(alg_value)
+                normalized_param = {"type": "public-key", "alg": alg_value}
+                normalized_params.append(normalized_param)
+            else:
+                alg_value = _coerce_cose_algorithm(param)
+                if alg_value is None:
+                    continue
+
+                requested_algorithm_ids.append(alg_value)
+                normalized_param = {"type": "public-key", "alg": alg_value}
+                normalized_params.append(normalized_param)
+
+            allowed_algorithms.append(
+                PublicKeyCredentialParameters(
+                    type=PublicKeyCredentialType.PUBLIC_KEY,
+                    alg=alg_value
                 )
+            )
+        if normalized_params:
+            public_key["pubKeyCredParams"] = normalized_params
         if allowed_algorithms:
             temp_server.allowed_algorithms = allowed_algorithms
     else:
@@ -134,6 +271,54 @@ def advanced_register_begin():
             PublicKeyCredentialParameters(type=PublicKeyCredentialType.PUBLIC_KEY, alg=-7),
             PublicKeyCredentialParameters(type=PublicKeyCredentialType.PUBLIC_KEY, alg=-257),
         ]
+
+    allowed_algorithm_ids = [
+        getattr(param, "alg", None) for param in getattr(temp_server, "allowed_algorithms", [])
+    ]
+    allowed_algorithm_ids = [alg for alg in allowed_algorithm_ids if isinstance(alg, int)]
+
+    pqc_in_allowed = {alg for alg in allowed_algorithm_ids if is_pqc_algorithm(alg)}
+    if pqc_in_allowed:
+        pqc_available_ids, pqc_error_message = detect_available_pqc_algorithms()
+        missing_pqc = pqc_in_allowed - pqc_available_ids
+        if missing_pqc:
+            explicit_pqc = {alg for alg in requested_algorithm_ids if alg in missing_pqc}
+            if explicit_pqc:
+                missing_names = ", ".join(
+                    PQC_ALGORITHM_ID_TO_NAME[alg] for alg in sorted(missing_pqc)
+                )
+                message = pqc_error_message or (
+                    "The server environment does not provide liboqs support for the selected post-quantum algorithms."
+                )
+                return jsonify({
+                    "error": f"{message} ({missing_names}).",
+                }), 400
+            filtered_allowed = [
+                param
+                for param in temp_server.allowed_algorithms
+                if getattr(param, "alg", None) not in missing_pqc
+            ]
+            if not filtered_allowed:
+                return jsonify({"error": "No compatible signature algorithms available."}), 400
+            temp_server.allowed_algorithms = filtered_allowed
+            allowed_algorithm_ids = [
+                getattr(param, "alg", None) for param in temp_server.allowed_algorithms
+            ]
+            allowed_algorithm_ids = [alg for alg in allowed_algorithm_ids if isinstance(alg, int)]
+
+    public_key["pubKeyCredParams"] = [
+        {
+            "type": getattr(param.type, "value", param.type) if hasattr(param, "type") else "public-key",
+            "alg": getattr(param, "alg", None),
+        }
+        for param in temp_server.allowed_algorithms
+        if getattr(param, "alg", None) is not None
+    ]
+
+    app.logger.info(
+        "Advanced registration request will advertise algorithms: %s",
+        [entry.get("alg") for entry in public_key["pubKeyCredParams"]],
+    )
 
     auth_selection = public_key.get("authenticatorSelection", {})
     if not isinstance(auth_selection, dict):
@@ -517,19 +702,8 @@ def advanced_register_complete():
             credential_info['registration_response'] = make_json_safe(response)
 
         algo = auth_data.credential_data.public_key[3]
-        algoname = ""
-        if algo == -50:
-            algoname = "ML-DSA-87 (PQC)"
-        elif algo == -49:
-            algoname = "ML-DSA-65 (PQC)"
-        elif algo == -48:
-            algoname = "ML-DSA-44 (PQC)"
-        elif algo == -7:
-            algoname = "ES256 (ECDSA)"
-        elif algo == -257:
-            algoname = "RS256 (RSA)"
-        else:
-            algoname = "Other (Classical)"
+        algoname = describe_algorithm(algo)
+        log_algorithm_selection("registration", algo)
 
         pub_key_params = public_key.get("pubKeyCredParams", [])
         algorithms_used = [param.get("alg") for param in pub_key_params if isinstance(param, dict) and "alg" in param]
@@ -943,6 +1117,17 @@ def advanced_authenticate_complete():
             all_credentials,
             response,
         )
+
+        auth_alg = None
+        try:
+            result_public_key = getattr(auth_result, "public_key", None)
+            if isinstance(result_public_key, Mapping):
+                auth_alg = result_public_key.get(3)
+            else:
+                auth_alg = getattr(result_public_key, "get", lambda *_: None)(3)
+        except Exception:  # pragma: no cover - defensive path for unexpected objects
+            auth_alg = None
+        log_algorithm_selection("authentication", auth_alg)
 
         hints_used = public_key.get("hints", [])
 
