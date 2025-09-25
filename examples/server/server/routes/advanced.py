@@ -640,10 +640,50 @@ def advanced_register_complete():
         return jsonify({"error": "Credential response is required"}), 400
 
     print("[DEBUG] Parsed advanced credential response:", response)
+    if isinstance(response, Mapping):
+        raw_id = response.get('rawId')
+        if raw_id is not None:
+            print("[DEBUG] Advanced flow raw credential ID received:", raw_id)
+        credential_id = response.get('id')
+        if credential_id is not None:
+            print("[DEBUG] Advanced flow credential ID received:", credential_id)
+        credential_type = response.get('type')
+        if credential_type is not None:
+            print("[DEBUG] Advanced flow credential type received:", credential_type)
+        authenticator_attachment = response.get('authenticatorAttachment')
+        if authenticator_attachment is not None:
+            print(
+                "[DEBUG] Advanced flow authenticator attachment reported by authenticator:",
+                authenticator_attachment,
+            )
 
     credential_response = response.get('response', {}) if isinstance(response, dict) else {}
     if credential_response:
         print("[DEBUG] Parsed advanced credential.response payload:", credential_response)
+        attestation_object_payload = credential_response.get('attestationObject')
+        if attestation_object_payload is not None:
+            print(
+                "[DEBUG] Advanced flow raw attestationObject received from authenticator:",
+                attestation_object_payload,
+            )
+        client_data_json_payload = credential_response.get('clientDataJSON')
+        if client_data_json_payload is not None:
+            print(
+                "[DEBUG] Advanced flow raw clientDataJSON received from authenticator:",
+                client_data_json_payload,
+            )
+        authenticator_data_payload = credential_response.get('authenticatorData')
+        if authenticator_data_payload is not None:
+            print(
+                "[DEBUG] Advanced flow raw authenticatorData received from authenticator:",
+                authenticator_data_payload,
+            )
+        client_extensions_payload = credential_response.get('clientExtensionResults')
+        if client_extensions_payload is not None:
+            print(
+                "[DEBUG] Advanced flow raw clientExtensionResults received from authenticator:",
+                client_extensions_payload,
+            )
 
     original_request = {key: value for key, value in data.items() if not key.startswith("__")}
 
@@ -743,6 +783,8 @@ def advanced_register_complete():
     try:
         state = session.pop("advanced_state", None)
         stored_original_request = session.pop("advanced_original_request", None)
+        print("[DEBUG] Advanced flow stored registration state retrieved:", state)
+        print("[DEBUG] Advanced flow stored original request payload:", stored_original_request)
         if state is None:
             return (
                 jsonify(
@@ -760,6 +802,7 @@ def advanced_register_complete():
         if isinstance(stored_rp, Mapping):
             stored_rp_id = stored_rp.get("id")
             stored_rp_name = stored_rp.get("name")
+        print("[DEBUG] Advanced flow stored RP info:", stored_rp)
 
         resolved_rp_id = determine_rp_id(stored_rp_id)
         register_server = create_fido_server(
@@ -768,6 +811,23 @@ def advanced_register_complete():
         )
 
         auth_data = register_server.register_complete(state, response)
+        print("[DEBUG] Advanced flow register_complete authenticator data object:", auth_data)
+        if hasattr(auth_data, 'credential_data'):
+            print(
+                "[DEBUG] Advanced flow register_complete credential data object:",
+                auth_data.credential_data,
+            )
+            credential_id_value = getattr(auth_data.credential_data, 'credential_id', None)
+            if credential_id_value is not None:
+                print(
+                    "[DEBUG] Advanced flow credential ID returned from authenticator (raw):",
+                    credential_id_value,
+                )
+        try:
+            raw_auth_data_bytes = bytes(auth_data)
+            print("[DEBUG] Advanced flow raw authenticator data bytes:", raw_auth_data_bytes)
+        except Exception:
+            pass
 
         _log_authenticator_attestation_response(
             attestation_format,

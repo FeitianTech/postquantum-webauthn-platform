@@ -65,9 +65,50 @@ def register_complete():
     response = request.get_json(silent=True) or {}
     print("[DEBUG] Raw registration request payload:", raw_request_payload or "<empty>")
     print("[DEBUG] Parsed registration response:", response)
+    if isinstance(response, Mapping):
+        raw_id = response.get('rawId')
+        if raw_id is not None:
+            print("[DEBUG] Raw credential ID received:", raw_id)
+        credential_id = response.get('id')
+        if credential_id is not None:
+            print("[DEBUG] Credential ID received:", credential_id)
+        credential_type = response.get('type')
+        if credential_type is not None:
+            print("[DEBUG] Credential type received:", credential_type)
+        authenticator_attachment = response.get('authenticatorAttachment')
+        if authenticator_attachment is not None:
+            print(
+                "[DEBUG] Authenticator attachment reported by authenticator:",
+                authenticator_attachment,
+            )
+
     credential_response = response.get('response', {}) if isinstance(response, dict) else {}
     if credential_response:
         print("[DEBUG] Parsed credential.response payload:", credential_response)
+        attestation_object_payload = credential_response.get('attestationObject')
+        if attestation_object_payload is not None:
+            print(
+                "[DEBUG] Raw attestationObject received from authenticator:",
+                attestation_object_payload,
+            )
+        client_data_json_payload = credential_response.get('clientDataJSON')
+        if client_data_json_payload is not None:
+            print(
+                "[DEBUG] Raw clientDataJSON received from authenticator:",
+                client_data_json_payload,
+            )
+        authenticator_data_payload = credential_response.get('authenticatorData')
+        if authenticator_data_payload is not None:
+            print(
+                "[DEBUG] Raw authenticatorData received from authenticator:",
+                authenticator_data_payload,
+            )
+        client_extensions_payload = credential_response.get('clientExtensionResults')
+        if client_extensions_payload is not None:
+            print(
+                "[DEBUG] Raw clientExtensionResults received from authenticator:",
+                client_extensions_payload,
+            )
 
     (
         attestation_format,
@@ -98,7 +139,29 @@ def register_complete():
     rp_id = session.get("register_rp_id")
     server = create_fido_server(rp_id=rp_id)
 
-    auth_data = server.register_complete(session["state"], response)
+    state = session.get("state")
+    print("[DEBUG] Registration state retrieved for verification:", state)
+    if state is None:
+        return jsonify({"error": "Registration state not found. Please restart registration."}), 400
+
+    auth_data = server.register_complete(state, response)
+    print("[DEBUG] register_complete returned authenticator data object:", auth_data)
+    if hasattr(auth_data, 'credential_data'):
+        print(
+            "[DEBUG] register_complete credential data object:",
+            auth_data.credential_data,
+        )
+        credential_id_value = getattr(auth_data.credential_data, 'credential_id', None)
+        if credential_id_value is not None:
+            print(
+                "[DEBUG] Credential ID returned from authenticator (raw):",
+                credential_id_value,
+            )
+    try:
+        raw_auth_data_bytes = bytes(auth_data)
+        print("[DEBUG] Raw authenticator data bytes:", raw_auth_data_bytes)
+    except Exception:
+        pass
 
     authenticator_attachment_response = normalize_attachment(
         response.get('authenticatorAttachment') if isinstance(response, Mapping) else None
