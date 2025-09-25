@@ -9,6 +9,36 @@ import { COSE_ALGORITHM_LABELS, COSE_KEY_TYPE_LABELS } from './constants.js';
 import { extractHexFromJsonFormat } from './credential-utils.js';
 import { state } from './state.js';
 
+function startConsoleGroup(label, collapsed = false) {
+    if (collapsed && typeof console.groupCollapsed === 'function') {
+        console.groupCollapsed(label);
+        return true;
+    }
+    if (typeof console.group === 'function') {
+        console.group(label);
+        return true;
+    }
+    console.log(label);
+    return false;
+}
+
+function endConsoleGroup(started) {
+    if (started && typeof console.groupEnd === 'function') {
+        console.groupEnd();
+    }
+}
+
+export function logDebugGroup(label, callback, options = {}) {
+    const started = startConsoleGroup(label, options?.collapsed);
+    try {
+        callback();
+    } catch (error) {
+        console.error('Error while logging debug group:', error);
+    } finally {
+        endConsoleGroup(started);
+    }
+}
+
 function describeAlgorithmLabel(alg) {
     if (alg === undefined || alg === null) {
         return null;
@@ -95,6 +125,13 @@ function collectRegistrationRequestDetails(createOptions) {
     const timeout = publicKey.timeout ?? createOptions?.timeout ?? null;
     const attestation = publicKey.attestation ?? createOptions?.attestation ?? 'none';
 
+    let createOptionsForLogging = null;
+    try {
+        createOptionsForLogging = convertForLogging(createOptions);
+    } catch (error) {
+        console.warn('Unable to normalise create() options for logging:', error);
+    }
+
     return {
         rp: publicKey.rp || null,
         user: {
@@ -114,12 +151,13 @@ function collectRegistrationRequestDetails(createOptions) {
         extensions,
         excludeCredentials,
         rawCreateOptions: createOptions,
+        rawCreateOptionsForLogging: createOptionsForLogging,
         _logged: false,
     };
 }
 
 function logRegistrationRequestDetails(details) {
-    console.group('WebAuthn registration request (browser → authenticator)');
+    const started = startConsoleGroup('WebAuthn registration request (browser → authenticator)');
     if (details?.rp) {
         console.log('RP ID:', details.rp.id || null);
         console.log('RP name:', details.rp.name || null);
@@ -145,13 +183,32 @@ function logRegistrationRequestDetails(details) {
         console.log('Requested extensions:', details.extensions);
     }
     console.log('fake credential id length:', window.lastFakeCredLength || 0);
-    console.groupEnd();
+    if (details?.rawCreateOptionsForLogging) {
+        console.log('navigator.credentials.create options (sanitized):', details.rawCreateOptionsForLogging);
+    }
+    if (details?.rawCreateOptions) {
+        console.log('navigator.credentials.create options (raw reference):', details.rawCreateOptions);
+    }
+    endConsoleGroup(started);
 }
 
 export function printRegistrationRequestDebug(createOptions) {
     const details = collectRegistrationRequestDetails(createOptions);
     logRegistrationRequestDetails(details);
     details._logged = true;
+    if (typeof window !== 'undefined') {
+        window.__webauthnDebug = window.__webauthnDebug || {};
+        const summary = { ...details };
+        if (Object.prototype.hasOwnProperty.call(summary, 'rawCreateOptions')) {
+            delete summary.rawCreateOptions;
+        }
+        window.__webauthnDebug.lastRegistrationRequest = {
+            timestamp: new Date().toISOString(),
+            summary,
+            rawCreateOptions: details.rawCreateOptions,
+            rawCreateOptionsForLogging: details.rawCreateOptionsForLogging,
+        };
+    }
     return details;
 }
 
@@ -205,13 +262,14 @@ export function printRegistrationDebug(credential, createOptions, serverResponse
         ? requestDetails
         : collectRegistrationRequestDetails(createOptions);
 
-    console.group('WebAuthn registration debug');
+    const started = startConsoleGroup('WebAuthn registration debug');
+    console.log('Server response (full payload):', serverData);
     if (!requestInfo._logged) {
         logRegistrationRequestDetails(requestInfo);
         requestInfo._logged = true;
     }
 
-    console.group('Authenticator response (client observations)');
+    const clientGroup = startConsoleGroup('Authenticator response (client observations)');
 
     let credentialJson = null;
     if (credential) {
@@ -324,9 +382,27 @@ export function printRegistrationDebug(credential, createOptions, serverResponse
     if (credential?.authenticatorAttachment !== undefined) {
         console.log('authenticator attachment (client):', credential.authenticatorAttachment);
     }
-    console.groupEnd();
+    if (credential?.response) {
+        console.log('credential.response (raw object):', credential.response);
+        const responseSnapshot = convertForLogging({
+            attestationObject: credential.response.attestationObject,
+            clientDataJSON: credential.response.clientDataJSON,
+            transports: typeof credential.response.getTransports === 'function'
+                ? (() => {
+                    try {
+                        return credential.response.getTransports();
+                    } catch (err) {
+                        console.warn('Unable to read transports from credential response:', err);
+                        return undefined;
+                    }
+                })()
+                : undefined,
+        });
+        console.log('credential.response (sanitized):', responseSnapshot);
+    }
+    endConsoleGroup(clientGroup);
 
-    console.group('Server registration analysis');
+    const serverGroup = startConsoleGroup('Server registration analysis');
 
     if (serverData.clientDataJSON) {
         console.log('clientDataJSON (from server):', serverData.clientDataJSON);
@@ -431,8 +507,58 @@ export function printRegistrationDebug(credential, createOptions, serverResponse
         console.log('registration response (server echo):', serverData.registration_response);
     }
 
-    console.groupEnd();
-    console.groupEnd();
+    if (serverData.originalEditorPayload) {
+        console.log('original JSON editor payload (server view):', serverData.originalEditorPayload);
+    }
+    if (serverData.originalPublicKeyOptions) {
+        console.log('original publicKey options (server view):', serverData.originalPublicKeyOptions);
+    }
+    if (serverData.credentialResponseEcho) {
+        console.log('credential response echo (server view):', serverData.credentialResponseEcho);
+    }
+    if (serverData.beginDebugContext) {
+        console.log('server begin() debug context:', serverData.beginDebugContext);
+    }
+    if (serverData.authenticatorAttachmentValidation) {
+        console.log('authenticator attachment validation:', serverData.authenticatorAttachmentValidation);
+    }
+    if (serverData.postQuantum) {
+        console.log('post-quantum diagnostics:', serverData.postQuantum);
+    }
+
+    endConsoleGroup(serverGroup);
+    endConsoleGroup(started);
+
+    if (typeof window !== 'undefined') {
+        window.__webauthnDebug = window.__webauthnDebug || {};
+        const credentialSummary = credentialJson ? { ...credentialJson } : {};
+        if (credential) {
+            credentialSummary.rawIdHex = rawIdHex || null;
+            credentialSummary.rawIdBase64Url = rawIdHex ? hexToBase64Url(rawIdHex) : null;
+            credentialSummary.response = credential?.response
+                ? convertForLogging({
+                    attestationObject: credential.response.attestationObject,
+                    clientDataJSON: credential.response.clientDataJSON,
+                    transports: typeof credential.response.getTransports === 'function'
+                        ? (() => {
+                            try {
+                                return credential.response.getTransports();
+                            } catch (err) {
+                                return undefined;
+                            }
+                        })()
+                        : undefined,
+                })
+                : null;
+        }
+        window.__webauthnDebug.lastRegistrationDebug = {
+            timestamp: new Date().toISOString(),
+            request: requestInfo,
+            credential: credentialSummary,
+            clientExtensions: convertForLogging(clientExtensions),
+            server: serverData,
+        };
+    }
 }
 
 export function printAuthenticationDebug(assertion, requestOptions, serverResponse) {
@@ -478,3 +604,5 @@ export function printAuthenticationDebug(assertion, requestOptions, serverRespon
         : '';
     console.log('prf eval second hex code:', prfSecondHex);
 }
+
+export { convertForLogging };

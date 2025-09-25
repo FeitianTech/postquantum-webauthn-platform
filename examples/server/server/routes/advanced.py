@@ -8,7 +8,7 @@ import os
 import time
 import uuid
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Mapping, MutableMapping, Optional
+from typing import Any, Dict, List, Mapping, MutableMapping, Optional, Set
 
 from flask import jsonify, request, session
 from fido2.server import Fido2Server
@@ -278,6 +278,10 @@ def advanced_register_begin():
     allowed_algorithm_ids = [alg for alg in allowed_algorithm_ids if isinstance(alg, int)]
 
     pqc_in_allowed = {alg for alg in allowed_algorithm_ids if is_pqc_algorithm(alg)}
+    pqc_available_ids: Set[int] = set()
+    pqc_error_message: Optional[str] = None
+    missing_pqc: Set[int] = set()
+    explicit_pqc: Set[int] = set()
     if pqc_in_allowed:
         pqc_available_ids, pqc_error_message = detect_available_pqc_algorithms()
         missing_pqc = pqc_in_allowed - pqc_available_ids
@@ -359,6 +363,36 @@ def advanced_register_begin():
         rk_req = ResidentKeyRequirement.REQUIRED
     elif resident_key == "discouraged":
         rk_req = ResidentKeyRequirement.DISCOURAGED
+
+    resolved_auth_attachment = None
+    if isinstance(auth_attachment, AuthenticatorAttachment):
+        resolved_auth_attachment = auth_attachment.value
+    elif auth_attachment is not None:
+        resolved_auth_attachment = str(auth_attachment)
+
+    challenge_hex = None
+    if isinstance(challenge_bytes, (bytes, bytearray)):
+        challenge_hex = challenge_bytes.hex()
+
+    debug_context_payload = {
+        "requestedAlgorithms": requested_algorithm_ids,
+        "allowedAlgorithms": allowed_algorithm_ids,
+        "pqcAlgorithmsAllowed": sorted(pqc_in_allowed),
+        "pqcAlgorithmsAvailable": sorted(pqc_available_ids),
+        "pqcAlgorithmsMissing": sorted(missing_pqc),
+        "pqcAlgorithmsExplicit": sorted(explicit_pqc),
+        "pqcErrorMessage": pqc_error_message,
+        "timeout": timeout,
+        "attestation": attestation,
+        "challengeHex": challenge_hex,
+        "requestedAttachment": requested_attachment,
+        "allowedAttachments": list(allowed_attachment_values),
+        "resolvedAuthenticatorAttachment": resolved_auth_attachment,
+        "userVerificationRequirement": getattr(uv_req, "value", str(uv_req)),
+        "residentKeyRequirement": getattr(rk_req, "value", str(rk_req)),
+        "hints": hints_list,
+    }
+    session["advanced_register_debug_context"] = debug_context_payload
 
     user_entity = PublicKeyCredentialUserEntity(
         id=user_id_bytes,
@@ -503,6 +537,8 @@ def advanced_register_complete():
     response_attachment = normalize_attachment(
         response.get('authenticatorAttachment') if isinstance(response, Mapping) else None
     )
+
+    debug_context = session.pop("advanced_register_debug_context", None)
     if allowed_attachments:
         if response_attachment is None:
             return jsonify({
@@ -698,8 +734,10 @@ def advanced_register_complete():
         if attestation_certificate_details is not None:
             credential_info['attestation_certificate'] = attestation_certificate_details
 
+        registration_response_safe = None
         if isinstance(response, Mapping):
-            credential_info['registration_response'] = make_json_safe(response)
+            registration_response_safe = make_json_safe(response)
+            credential_info['registration_response'] = registration_response_safe
 
         algo = auth_data.credential_data.public_key[3]
         algoname = describe_algorithm(algo)
@@ -736,6 +774,47 @@ def advanced_register_complete():
             else None,
             "clientExtensionResults": make_json_safe(client_extension_results),
         }
+
+        debug_info["originalEditorPayload"] = make_json_safe(original_request)
+        debug_info["originalPublicKeyOptions"] = make_json_safe(public_key)
+        debug_info["beginDebugContext"] = (
+            make_json_safe(debug_context) if debug_context is not None else None
+        )
+
+        debug_info["authenticatorAttachmentValidation"] = make_json_safe(
+            {
+                "requestedHints": original_hints,
+                "requestedAttachment": requested_attachment,
+                "allowedAttachmentsFromRequest": list(request_allowed_attachments),
+                "allowedAttachmentsAfterSession": list(allowed_attachments)
+                if isinstance(allowed_attachments, (list, tuple, set))
+                else ([allowed_attachments] if allowed_attachments else []),
+                "sessionStoredAllowedAttachments": session_allowed_marker,
+                "responseAttachment": response_attachment,
+            }
+        )
+
+        if registration_response_safe is not None:
+            debug_info["credentialResponseEcho"] = registration_response_safe
+
+        post_quantum_info: Dict[str, Any] = {
+            "credentialAlgorithmId": algo,
+            "credentialAlgorithmLabel": algoname,
+            "credentialIsPostQuantum": is_pqc_algorithm(algo),
+        }
+        if isinstance(debug_context, Mapping):
+            post_quantum_info.update(
+                {
+                    "requestedAlgorithms": debug_context.get("requestedAlgorithms"),
+                    "allowedAlgorithms": debug_context.get("allowedAlgorithms"),
+                    "pqcAlgorithmsAllowed": debug_context.get("pqcAlgorithmsAllowed"),
+                    "pqcAlgorithmsAvailable": debug_context.get("pqcAlgorithmsAvailable"),
+                    "pqcAlgorithmsMissing": debug_context.get("pqcAlgorithmsMissing"),
+                    "pqcAlgorithmsExplicit": debug_context.get("pqcAlgorithmsExplicit"),
+                    "pqcErrorMessage": debug_context.get("pqcErrorMessage"),
+                }
+            )
+        debug_info["postQuantum"] = make_json_safe(post_quantum_info)
 
         extensions_requested = public_key.get("extensions", {})
         if not isinstance(extensions_requested, dict):

@@ -27,6 +27,8 @@ import {
     printRegistrationDebug,
     printRegistrationRequestDebug,
     printAuthenticationDebug,
+    logDebugGroup,
+    convertForLogging,
 } from './auth-debug.js';
 import { state } from './state.js';
 
@@ -76,6 +78,51 @@ function maybeRandomizeAdvancedAuthenticationFields() {
 }
 
 const COMMON_SUPPORTED_ALGORITHMS = new Set([-7, -257, -8]);
+
+function snapshotCredentialForLogging(credential) {
+    if (!credential || typeof credential !== 'object') {
+        return null;
+    }
+
+    const base = {
+        id: credential.id || null,
+        type: credential.type || null,
+        rawId: credential.rawId || null,
+        authenticatorAttachment: credential.authenticatorAttachment ?? null,
+    };
+
+    const response = credential.response;
+    if (response && typeof response === 'object') {
+        base.response = {
+            attestationObject: response.attestationObject,
+            clientDataJSON: response.clientDataJSON,
+            transports: typeof response.getTransports === 'function'
+                ? (() => {
+                    try {
+                        return response.getTransports();
+                    } catch (error) {
+                        console.warn('Unable to read transports from credential response:', error);
+                        return undefined;
+                    }
+                })()
+                : undefined,
+        };
+    }
+
+    const extensions = credential.getClientExtensionResults
+        ? credential.getClientExtensionResults()
+        : credential.clientExtensionResults;
+    if (extensions) {
+        base.clientExtensionResults = extensions;
+    }
+
+    try {
+        return convertForLogging(base);
+    } catch (error) {
+        console.warn('Unable to normalise credential snapshot for logging:', error);
+        return base;
+    }
+}
 
 function collectPotentialUnsupportedFeatures(publicKeyOptions, convertedExtensions, createOptions) {
     const issues = [];
@@ -146,10 +193,36 @@ export async function advancedRegister() {
     let allowedAttachments = [];
     let convertedExtensions = null;
     let createOptions = null;
+    let requestDebugDetails = null;
+    let debugFlow = null;
+    let lastStage = 'initial';
+    let createTimerLabel = '';
+    let createTimerActive = false;
+
+    const stopCreateTimer = () => {
+        if (createTimerActive && typeof console.timeEnd === 'function' && createTimerLabel) {
+            try {
+                console.timeEnd(createTimerLabel);
+            } catch (timerError) {
+                console.warn('Unable to stop navigator.credentials.create() timer:', timerError);
+            }
+            createTimerActive = false;
+        }
+    };
 
     try {
         const jsonText = document.getElementById('json-editor').value;
         const parsed = JSON.parse(jsonText);
+
+        if (typeof window !== 'undefined') {
+            window.__webauthnDebug = window.__webauthnDebug || {};
+            debugFlow = {
+                flow: 'advanced',
+                stage: 'parsed-json',
+                startedAt: new Date().toISOString(),
+            };
+            window.__webauthnDebug.registrationFlow = debugFlow;
+        }
 
         if (!parsed.publicKey) {
             throw new Error('Invalid JSON structure: Missing "publicKey" property');
@@ -179,18 +252,50 @@ export async function advancedRegister() {
         hideStatus('advanced');
         showProgress('advanced', 'Starting advanced registration...');
 
+        if (debugFlow) {
+            debugFlow.stage = 'begin-request';
+            debugFlow.beginRequest = convertForLogging(parsed);
+        }
+
+        logDebugGroup('Advanced registration: /api/advanced/register/begin request', () => {
+            console.log('Request body:', parsed);
+        }, { collapsed: true });
+
+        lastStage = 'begin-request';
         const response = await fetch('/api/advanced/register/begin', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify(parsed)
         });
 
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`Server error: ${errorText}`);
+        lastStage = 'begin-response';
+        const beginHeaders = Array.from(response.headers.entries());
+        const beginText = await response.text();
+        let json;
+        try {
+            json = beginText ? JSON.parse(beginText) : {};
+        } catch (parseError) {
+            console.error('Unable to parse /api/advanced/register/begin response JSON:', parseError, beginText);
+            throw new Error('Server returned invalid JSON during registration begin.');
         }
 
-        const json = await response.json();
+        logDebugGroup('Advanced registration: /api/advanced/register/begin response', () => {
+            console.log('Status:', response.status, response.statusText);
+            console.log('Headers:', beginHeaders);
+            console.log('Body (text):', beginText);
+            console.log('Body (parsed JSON):', json);
+        }, { collapsed: true });
+
+        if (!response.ok) {
+            const message = json?.error || beginText || response.statusText || 'Server error';
+            throw new Error(`Server error: ${message}`);
+        }
+
+        if (debugFlow) {
+            debugFlow.stage = 'begin-response';
+            debugFlow.beginResponse = convertForLogging(json);
+        }
+
         const originalExtensions = json?.publicKey?.extensions;
         createOptions = parseCreationOptionsFromJSON(json);
 
@@ -210,14 +315,41 @@ export async function advancedRegister() {
             };
         }
 
+        logDebugGroup('Advanced registration: processed create() options', () => {
+            console.log('Allowed attachments:', allowedAttachments);
+            console.log('Create options (raw object):', createOptions);
+            console.log('Create options (sanitized):', convertForLogging(createOptions));
+        }, { collapsed: true });
+
         state.lastFakeCredLength = parseInt(document.getElementById('fake-cred-length-reg').value) || 0;
         window.lastFakeCredLength = state.lastFakeCredLength;
 
         showProgress('advanced', 'Connecting your authenticator device...');
 
-        const requestDebugDetails = printRegistrationRequestDebug(createOptions);
+        requestDebugDetails = printRegistrationRequestDebug(createOptions);
 
+        const optionsSnapshot = requestDebugDetails?.rawCreateOptionsForLogging
+            || convertForLogging(createOptions);
+        if (debugFlow) {
+            debugFlow.stage = 'awaiting-authenticator';
+            debugFlow.requestDetails = requestDebugDetails;
+            debugFlow.createOptions = optionsSnapshot;
+        }
+
+        createTimerLabel = `navigator.credentials.create() ${new Date().toISOString()}`;
+        if (typeof console.time === 'function') {
+            console.time(createTimerLabel);
+            createTimerActive = true;
+        }
+
+        lastStage = 'awaiting-credential';
         const credential = await create(createOptions);
+        stopCreateTimer();
+
+        lastStage = 'credential-created';
+        logDebugGroup('Advanced registration: navigator.credentials.create resolved', () => {
+            console.log('Credential result:', credential);
+        }, { collapsed: true });
 
         const authenticatorAttachment = credential && typeof credential === 'object'
             ? credential.authenticatorAttachment ?? null
@@ -241,34 +373,76 @@ export async function advancedRegister() {
             credentialJson.clientExtensionResults = existingExtensionResults;
         }
 
+        const credentialSnapshot = snapshotCredentialForLogging(credential);
+        if (debugFlow) {
+            debugFlow.stage = 'credential-created';
+            debugFlow.credential = credentialSnapshot;
+            debugFlow.credentialJson = credentialJson;
+        }
+
         showProgress('advanced', 'Completing registration...');
 
+        const completionPayload = {
+            ...parsed,
+            __credential_response: credentialJson,
+        };
+
+        logDebugGroup('Advanced registration: /api/advanced/register/complete request', () => {
+            console.log('Request body:', completionPayload);
+        }, { collapsed: true });
+
+        if (debugFlow) {
+            debugFlow.stage = 'complete-request';
+            debugFlow.completionRequest = convertForLogging(completionPayload);
+        }
+
+        lastStage = 'complete-request';
         const result = await fetch('/api/advanced/register/complete', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-                ...parsed,
-                __credential_response: credentialJson
-            }),
+            body: JSON.stringify(completionPayload),
         });
 
-        if (result.ok) {
-            const data = await result.json();
-
-            printRegistrationDebug(credential, createOptions, data, requestDebugDetails);
-
-            showStatus('advanced', `Advanced registration successful! Algorithm: ${data.algo || 'Unknown'}`, 'success');
-
-            maybeRandomizeAdvancedRegistrationFields();
-
-            await showRegistrationResultModal(credentialJson, data.relyingParty || null);
-
-            setTimeout(loadSavedCredentials, 1000);
-        } else {
-            const errorText = await result.text();
-            throw new Error(`Registration failed: ${errorText}`);
+        lastStage = 'complete-response';
+        const completionHeaders = Array.from(result.headers.entries());
+        const completionText = await result.text();
+        let data;
+        try {
+            data = completionText ? JSON.parse(completionText) : {};
+        } catch (parseError) {
+            console.error('Unable to parse /api/advanced/register/complete response JSON:', parseError, completionText);
+            throw new Error('Server returned invalid JSON during registration completion.');
         }
+
+        logDebugGroup('Advanced registration: /api/advanced/register/complete response', () => {
+            console.log('Status:', result.status, result.statusText);
+            console.log('Headers:', completionHeaders);
+            console.log('Body (text):', completionText);
+            console.log('Body (parsed JSON):', data);
+        }, { collapsed: true });
+
+        if (!result.ok) {
+            const errorMessage = data?.error || completionText || result.statusText || 'Unknown error';
+            throw new Error(`Registration failed: ${errorMessage}`);
+        }
+
+        if (debugFlow) {
+            debugFlow.stage = 'complete';
+            debugFlow.serverResponse = data;
+        }
+
+        printRegistrationDebug(credential, createOptions, data, requestDebugDetails);
+
+        showStatus('advanced', `Advanced registration successful! Algorithm: ${data.algo || 'Unknown'}`, 'success');
+
+        maybeRandomizeAdvancedRegistrationFields();
+
+        await showRegistrationResultModal(credentialJson, data.relyingParty || null);
+
+        setTimeout(loadSavedCredentials, 1000);
     } catch (error) {
+        stopCreateTimer();
+
         const errorName = error && typeof error === 'object' ? error.name : undefined;
         let errorMessage = error && typeof error === 'object' && typeof error.message === 'string'
             ? error.message
@@ -287,7 +461,26 @@ export async function advancedRegister() {
             : '';
 
         showStatus('advanced', `Credential registration failed: ${errorMessage}${detailMessage}`, 'error');
+
+        logDebugGroup('Advanced registration: error context', () => {
+            console.error('Registration failed at stage:', lastStage);
+            console.error('Error object:', error);
+            console.log('Last request debug details:', requestDebugDetails);
+            if (createOptions) {
+                console.log('Create options (sanitized):', convertForLogging(createOptions));
+            }
+        }, { collapsed: false });
+
+        if (debugFlow) {
+            debugFlow.stage = 'error';
+            debugFlow.error = {
+                message: errorMessage,
+                name: errorName || null,
+                stage: lastStage,
+            };
+        }
     } finally {
+        stopCreateTimer();
         hideProgress('advanced');
     }
 }
