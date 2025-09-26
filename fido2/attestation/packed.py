@@ -36,19 +36,46 @@ from .base import (
     catch_builtins,
     _validate_cert_common,
 )
-from ..cose import CoseKey
+from typing import Optional
+
+from ..cose import CoseKey, extract_certificate_public_key_info
 
 from cryptography import x509
-from cryptography.exceptions import InvalidSignature as _InvalidSignature
+from cryptography.exceptions import (
+    InvalidSignature as _InvalidSignature,
+    UnsupportedAlgorithm,
+)
 from cryptography.hazmat.backends import default_backend
 
 
 OID_AAGUID = x509.ObjectIdentifier("1.3.6.1.4.1.45724.1.1.4")
 
 
-def _validate_packed_cert(cert, aaguid):
+def _certificate_uses_mldsa(cert_bytes: Optional[bytes]) -> bool:
+    if not cert_bytes:
+        return False
+
+    try:
+        info = extract_certificate_public_key_info(cert_bytes)
+    except Exception:
+        return False
+
+    return info.get("ml_dsa_parameter_set") is not None
+
+
+def _validate_packed_cert(cert, aaguid, *, cert_bytes: Optional[bytes] = None):
     # https://www.w3.org/TR/webauthn/#packed-attestation-cert-requirements
-    _validate_cert_common(cert)
+    try:
+        _validate_cert_common(cert)
+    except InvalidData as exc:
+        message = str(exc)
+        if (
+            "Basic Constraints" in message
+            and _certificate_uses_mldsa(cert_bytes)
+        ):
+            pass
+        else:
+            raise
 
     c = cert.subject.get_attributes_for_oid(x509.NameOID.COUNTRY_NAME)
     if not c:
@@ -91,10 +118,26 @@ class PackedAttestation(Attestation):
         alg = statement["alg"]
         x5c = statement.get("x5c")
         if x5c:
-            cert = x509.load_der_x509_certificate(x5c[0], default_backend())
-            _validate_packed_cert(cert, auth_data.credential_data.aaguid)
+            cert_bytes = x5c[0]
+            cert = x509.load_der_x509_certificate(cert_bytes, default_backend())
+            _validate_packed_cert(
+                cert,
+                auth_data.credential_data.aaguid,
+                cert_bytes=cert_bytes,
+            )
 
-            pub_key = CoseKey.for_alg(alg).from_cryptography_key(cert.public_key())
+            cose_cls = CoseKey.for_alg(alg)
+
+            try:
+                crypto_key = cert.public_key()
+            except (UnsupportedAlgorithm, ValueError) as exc:
+                info = extract_certificate_public_key_info(cert_bytes)
+                public_key_bytes = info.get("subject_public_key")
+                if public_key_bytes is None or getattr(cose_cls, "ALGORITHM", None) not in (-48, -49, -50):
+                    raise exc
+                pub_key = cose_cls({1: 7, 3: alg, -1: public_key_bytes})
+            else:
+                pub_key = cose_cls.from_cryptography_key(crypto_key)
             att_type = AttestationType.BASIC
         else:
             pub_key = CoseKey.parse(auth_data.credential_data.public_key)

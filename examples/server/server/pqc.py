@@ -24,8 +24,8 @@ def _load_enabled_mechanisms() -> Iterable[str]:
 
     try:  # pragma: no cover - exercised in environments with oqs available
         import oqs  # type: ignore
-    except ImportError:  # pragma: no cover - explicit messaging handled by caller
-        raise
+    except (ImportError, SystemExit):  # pragma: no cover - explicit messaging handled by caller
+        raise ImportError("oqs bindings are unavailable")
 
     enabled: Iterable[str]
     get_enabled: Optional[Callable[[], Sequence[str]]] = getattr(

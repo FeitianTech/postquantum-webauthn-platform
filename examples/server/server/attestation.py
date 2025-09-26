@@ -13,7 +13,12 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Mapping, MutableMapping, Optional, Tuple
 
 from fido2.attestation import Attestation, InvalidData, InvalidSignature, UnsupportedType
-from fido2.cose import CoseKey
+from fido2.cose import (
+    CoseKey,
+    describe_mldsa_oid,
+    describe_mldsa_oid_name,
+    extract_certificate_public_key_info,
+)
 from fido2.utils import ByteBuffer, websafe_decode
 from fido2.webauthn import (
     AuthenticatorData,
@@ -21,6 +26,7 @@ from fido2.webauthn import (
     RegistrationResponse,
 )
 from cryptography import x509
+from cryptography.exceptions import UnsupportedAlgorithm
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec, ed25519, ed448, rsa
 from cryptography.x509.oid import ExtensionOID, NameOID
@@ -631,15 +637,35 @@ def serialize_attestation_certificate(cert_bytes: bytes):
         if summary_lines and summary_lines[-1] != "":
             summary_lines.append("")
 
-    signature_algorithm = getattr(
+    signature_algorithm_oid = getattr(
+        certificate.signature_algorithm_oid,
+        "dotted_string",
+        None,
+    )
+    raw_signature_algorithm = getattr(
         certificate.signature_algorithm_oid,
         "_name",
-        certificate.signature_algorithm_oid.dotted_string,
+        signature_algorithm_oid,
     )
+    if isinstance(raw_signature_algorithm, str) and raw_signature_algorithm.lower() == "unknown oid":
+        signature_algorithm = signature_algorithm_oid or raw_signature_algorithm
+    else:
+        signature_algorithm = raw_signature_algorithm
+
+    signature_algorithm_details = describe_mldsa_oid(signature_algorithm_oid)
+    friendly_signature_name = describe_mldsa_oid_name(signature_algorithm_oid)
+    if friendly_signature_name:
+        signature_algorithm = friendly_signature_name
     issuer_str = format_x509_name(certificate.issuer)
     subject_str = format_x509_name(certificate.subject)
-    public_key = certificate.public_key()
-    public_key_info = _serialize_public_key_info(public_key)
+    fallback_public_key_summary: List[Tuple[str, Any]] = []
+    try:
+        public_key = certificate.public_key()
+    except (UnsupportedAlgorithm, ValueError) as exc:
+        public_key = None
+        public_key_info, fallback_public_key_summary = _build_unknown_public_key_info(cert_bytes, exc)
+    else:
+        public_key_info = _serialize_public_key_info(public_key)
     signature_bytes = certificate.signature
     signature_lines = format_hex_bytes_lines(signature_bytes)
     signature_hex = signature_bytes.hex()
@@ -676,7 +702,9 @@ def serialize_attestation_certificate(cert_bytes: bytes):
     _append_line(f"Subject: {subject_str}")
 
     pk_summary_entries: List[Tuple[str, Any]] = []
-    if isinstance(public_key, ec.EllipticCurvePublicKey):
+    if public_key is None:
+        pk_summary_entries.extend(fallback_public_key_summary)
+    elif isinstance(public_key, ec.EllipticCurvePublicKey):
         pk_summary_entries.append(("Type", "ECC"))
         if public_key.key_size:
             pk_summary_entries.append(("Public-Key", f"({public_key.key_size} bit)"))
@@ -827,6 +855,8 @@ def serialize_attestation_certificate(cert_bytes: bytes):
         "hex": signature_hex,
         "colon": signature_colon,
         "lines": signature_lines,
+        "oid": signature_algorithm_oid,
+        "details": signature_algorithm_details,
     }
     algorithm_info = _derive_certificate_algorithm_info(public_key_info, signature_details)
     subject_common_names = _extract_common_names(certificate.subject)
@@ -842,6 +872,8 @@ def serialize_attestation_certificate(cert_bytes: bytes):
             "hex": f"0x{certificate.serial_number:x}",
         },
         "signatureAlgorithm": signature_algorithm,
+        "signatureAlgorithmOid": signature_algorithm_oid,
+        "signatureAlgorithmDetails": signature_algorithm_details,
         "issuer": format_x509_name(certificate.issuer),
         "validity": {
             "notBefore": _isoformat(not_valid_before),
@@ -858,6 +890,137 @@ def serialize_attestation_certificate(cert_bytes: bytes):
         "pem": pem,
         "summary": summary,
     }
+
+
+def _load_oqs_signature_details(mechanism: str) -> Optional[Dict[str, Any]]:
+    """Retrieve signature metadata for *mechanism* from liboqs when available."""
+
+    try:  # pragma: no cover - exercised when oqs bindings are installed
+        import oqs  # type: ignore
+    except (ImportError, SystemExit):  # pragma: no cover - absence handled by caller
+        return None
+
+    try:  # pragma: no cover - defensive handling around oqs interaction
+        with oqs.Signature(mechanism) as signature:  # type: ignore[attr-defined]
+            details = getattr(signature, "details", None)
+    except BaseException:
+        return None
+
+    if not isinstance(details, Mapping):
+        return None
+
+    normalized: Dict[str, Any] = {str(key): value for key, value in details.items()}
+    normalized["mechanism"] = mechanism
+    return normalized
+
+
+def _build_unknown_public_key_info(cert_bytes: bytes, error: Exception):
+    try:
+        parsed = extract_certificate_public_key_info(cert_bytes)
+    except Exception:
+        parsed = {}
+
+    algorithm_details: Dict[str, Any] = {"name": "Unknown"}
+    public_key_bytes = parsed.get("subject_public_key")
+    wrapped_public_key_bytes = parsed.get("wrapped_subject_public_key")
+    spki_bytes = parsed.get("subject_public_key_info")
+
+    if isinstance(parsed.get("algorithm_name"), str):
+        algorithm_details["name"] = parsed["algorithm_name"]
+    if isinstance(parsed.get("algorithm_oid"), str):
+        algorithm_details["oid"] = parsed["algorithm_oid"]
+
+    oqs_details: Optional[Mapping[str, Any]] = None
+    parameter_set = parsed.get("ml_dsa_parameter_set")
+    if isinstance(parameter_set, str):
+        algorithm_details["mlDsaParameterSet"] = parameter_set
+        oqs_details = _load_oqs_signature_details(parameter_set)
+        if isinstance(oqs_details, Mapping):
+            claimed_level = oqs_details.get("claimed-nist-level")
+            if claimed_level is not None:
+                algorithm_details["claimedNistLevel"] = claimed_level
+            length_signature = oqs_details.get("length-signature")
+            if isinstance(length_signature, int):
+                algorithm_details["signatureLengthBytes"] = length_signature
+    parameters = parsed.get("algorithm_parameters")
+    if isinstance(parameters, (bytes, bytearray)) and parameters:
+        algorithm_details["parametersHex"] = bytes(parameters).hex()
+
+    info: Dict[str, Any] = {
+        "type": algorithm_details.get("name", "Unsupported"),
+        "algorithm": algorithm_details,
+    }
+
+    if isinstance(spki_bytes, (bytes, bytearray)) and spki_bytes:
+        info["subjectPublicKeyInfoBase64"] = base64.b64encode(bytes(spki_bytes)).decode("ascii")
+
+    key_size_bits: Optional[int] = None
+    raw_bytes: Optional[bytes] = None
+    if isinstance(public_key_bytes, (bytes, bytearray)):
+        candidate = bytes(public_key_bytes)
+        if candidate:
+            raw_bytes = candidate
+            info["publicKeyBase64"] = base64.b64encode(raw_bytes).decode("ascii")
+            info["publicKeyHex"] = colon_hex(raw_bytes)
+            info["publicKeyHexLines"] = format_hex_bytes_lines(raw_bytes)
+            key_size_bits = len(raw_bytes) * 8
+
+    if isinstance(wrapped_public_key_bytes, (bytes, bytearray)):
+        wrapped_bytes = bytes(wrapped_public_key_bytes)
+        if wrapped_bytes and (raw_bytes is None or wrapped_bytes != raw_bytes):
+            info["wrappedPublicKeyBase64"] = base64.b64encode(wrapped_bytes).decode("ascii")
+            info["wrappedPublicKeyHexLines"] = format_hex_bytes_lines(wrapped_bytes)
+
+    if isinstance(oqs_details, Mapping):
+        length_public_key = oqs_details.get("length-public-key")
+        if isinstance(length_public_key, int) and length_public_key > 0:
+            key_size_bits = length_public_key * 8
+        for field in ("description", "sig-name", "sig-family"):
+            value = oqs_details.get(field)
+            if value:
+                info_key = {
+                    "description": "mechanismDescription",
+                    "sig-name": "mechanismName",
+                    "sig-family": "mechanismFamily",
+                }.get(field)
+                if info_key:
+                    info[info_key] = value
+
+    if key_size_bits:
+        info["keySize"] = key_size_bits
+
+    summary_entries: List[Tuple[str, Any]] = []
+
+    def _append_summary(label: str, value: Any) -> None:
+        if value in (None, ""):
+            return
+        if isinstance(value, list) and not value:
+            return
+        summary_entries.append((label, value))
+
+    _append_summary("Type", info.get("type"))
+    algorithm_name = algorithm_details.get("name")
+    if algorithm_name and algorithm_name != info.get("type"):
+        _append_summary("Algorithm", algorithm_name)
+    _append_summary("Algorithm OID", algorithm_details.get("oid"))
+    _append_summary("ML-DSA parameter set", algorithm_details.get("mlDsaParameterSet"))
+    _append_summary("Claimed NIST level", algorithm_details.get("claimedNistLevel"))
+    _append_summary("Signature length (bytes)", algorithm_details.get("signatureLengthBytes"))
+    if key_size_bits:
+        _append_summary("Public key size (bits)", key_size_bits)
+    _append_summary("Public Key (base64)", info.get("publicKeyBase64"))
+    hex_lines = info.get("publicKeyHexLines")
+    if isinstance(hex_lines, list) and hex_lines:
+        _append_summary("Public Key (hex)", hex_lines)
+    wrapped_hex_lines = info.get("wrappedPublicKeyHexLines")
+    if isinstance(wrapped_hex_lines, list) and wrapped_hex_lines:
+        _append_summary("Wrapped Public Key (hex)", wrapped_hex_lines)
+
+    if not summary_entries and "error" not in info:
+        info["error"] = str(error)
+        summary_entries.append(("Error", str(error)))
+
+    return info, summary_entries
 
 
 def _serialize_public_key_info(public_key):

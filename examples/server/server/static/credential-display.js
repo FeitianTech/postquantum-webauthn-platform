@@ -2007,32 +2007,27 @@ export async function showCredentialDetails(index) {
         </div>`;
     }
 
-    if (cred.publicKeyAlgorithm !== undefined || cred.algorithm !== undefined) {
-        const algo = cred.publicKeyAlgorithm ?? cred.algorithm;
-        const algorithmName = describeCoseAlgorithm(algo);
+    if (cred.publicKeyAlgorithm !== undefined || cred.algorithm !== undefined || (cred.publicKeyCose && Object.keys(cred.publicKeyCose).length > 0)) {
         const coseMap = cred.publicKeyCose || {};
+        let algo = cred.publicKeyAlgorithm;
+        if (algo === undefined || algo === null) {
+            algo = cred.algorithm;
+        }
+        if (typeof algo === 'string' && algo.trim().toLowerCase() === 'unknown') {
+            const coseValue = getCoseMapValue(coseMap, 3);
+            if (coseValue !== undefined) {
+                algo = coseValue;
+            }
+        }
+        if (algo === undefined || algo === null) {
+            algo = getCoseMapValue(coseMap, 3);
+        }
+        const algorithmName = describeCoseAlgorithm(algo);
         const coseKeyTypeValue = cred.publicKeyType ?? getCoseMapValue(coseMap, 1);
         const coseKeyTypeLine = coseKeyTypeValue !== undefined && coseKeyTypeValue !== null
             ? `<div><strong>COSE key type:</strong> ${describeCoseKeyType(coseKeyTypeValue)}</div>`
             : '';
         const parameterSet = describeMldsaParameterSet(algo);
-        const rawPublicKeyEncoded = cred.publicKeyBytes ?? getCoseMapValue(coseMap, -1);
-
-        let pqcKeyBlock = '';
-        if (parameterSet && typeof rawPublicKeyEncoded === 'string' && rawPublicKeyEncoded.trim() !== '') {
-            const rawKeyB64 = rawPublicKeyEncoded;
-            const rawKeyB64u = base64ToBase64Url(rawKeyB64);
-            const rawKeyHex = base64ToHex(rawKeyB64);
-            pqcKeyBlock = `
-                <div style="margin-top: 0.75rem; font-size: 0.9rem; word-break: break-word; overflow-wrap: anywhere;">
-                    <div><strong>Raw public key (base64):</strong></div>
-                    <div class="credential-code-block">${rawKeyB64}</div>
-                    <div><strong>Raw public key (base64url):</strong></div>
-                    <div class="credential-code-block">${rawKeyB64u}</div>
-                    <div><strong>Raw public key (hex):</strong></div>
-                    <div class="credential-code-block">${rawKeyHex}</div>
-                </div>`;
-        }
 
         const parameterSetLine = parameterSet
             ? `<div><strong>ML-DSA parameter set:</strong> ${parameterSet}</div>`
@@ -2046,7 +2041,6 @@ export async function showCredentialDetails(index) {
                 ${coseKeyTypeLine}
                 ${parameterSetLine}
             </div>
-            ${pqcKeyBlock}
         </div>`;
     }
 
