@@ -640,7 +640,16 @@ def _serialize_attestation_certificate_fallback(
         "pem": pem,
         "fingerprints": fingerprints,
         "summary": summary_text,
+        "isFallback": True,
     }
+
+    # Expose a clear marker that this record was produced by the fallback logic
+    # so that downstream consumers (such as the credential modal) can prefer a
+    # fully parsed version when one becomes available later in the request
+    # lifecycle.  Retain a lower camelCase alias to ease consumption in the
+    # existing JavaScript normalisation helpers which look for multiple naming
+    # conventions when introspecting certificate payloads.
+    payload["fallback"] = True
 
     if public_key_info:
         payload["publicKeyInfo"] = public_key_info

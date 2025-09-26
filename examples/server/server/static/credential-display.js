@@ -666,9 +666,38 @@ function certificateHasParseError(entry) {
     return errorCandidates.some(value => typeof value === 'string' && value.trim() !== '');
 }
 
+function certificateIsFallback(entry) {
+    if (!entry || typeof entry !== 'object') {
+        return false;
+    }
+
+    const parsed = entry.parsedX5c && typeof entry.parsedX5c === 'object'
+        ? entry.parsedX5c
+        : entry;
+
+    const candidates = [
+        entry.isFallback,
+        entry.fallback,
+        parsed?.isFallback,
+        parsed?.fallback,
+    ];
+
+    return candidates.some(value => value === true || value === 'true');
+}
+
 function shouldReplaceCertificateEntry(existing, incoming) {
     const existingHasError = certificateHasParseError(existing);
     const incomingHasError = certificateHasParseError(incoming);
+
+    const existingIsFallback = certificateIsFallback(existing);
+    const incomingIsFallback = certificateIsFallback(incoming);
+
+    if (existingIsFallback && !incomingIsFallback) {
+        return true;
+    }
+    if (!existingIsFallback && incomingIsFallback) {
+        return false;
+    }
 
     if (existingHasError && !incomingHasError) {
         return true;
@@ -796,6 +825,16 @@ function choosePreferredCertificate(existing, incoming) {
         return incoming;
     }
     if (!incoming || typeof incoming !== 'object') {
+        return existing;
+    }
+
+    const existingIsFallback = certificateIsFallback(existing);
+    const incomingIsFallback = certificateIsFallback(incoming);
+
+    if (existingIsFallback && !incomingIsFallback) {
+        return incoming;
+    }
+    if (!existingIsFallback && incomingIsFallback) {
         return existing;
     }
 
