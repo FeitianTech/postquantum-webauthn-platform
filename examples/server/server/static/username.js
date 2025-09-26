@@ -28,16 +28,24 @@ export function randomizeUserIdentity() {
     randomizeUsername();
 }
 
-let hasRandomizedSimpleUsername = false;
+let hasInitializedSimpleUsername = false;
 
-export function randomizeSimpleUsername() {
-    if (hasRandomizedSimpleUsername) {
-        return;
-    }
-
+function setSimpleUsernameValue() {
     const simpleInput = document.getElementById('simple-email');
     if (simpleInput) {
         simpleInput.value = generateRandom10DigitUsername();
-        hasRandomizedSimpleUsername = true;
     }
+}
+
+export function initializeSimpleUsername() {
+    if (hasInitializedSimpleUsername) {
+        return;
+    }
+
+    hasInitializedSimpleUsername = true;
+    setSimpleUsernameValue();
+}
+
+export function randomizeSimpleUsername() {
+    setSimpleUsernameValue();
 }
