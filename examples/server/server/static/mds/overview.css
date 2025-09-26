@@ -175,10 +175,12 @@
     border: 1px solid rgba(0, 114, 206, 0.18);
     background: rgba(243, 247, 251, 0.94);
     box-shadow: 0 14px 34px rgba(15, 39, 64, 0.14);
-    min-height: 36px;
-    height: 36px;
+    --mds-floating-scrollbar-thickness: 32px;
+    --mds-floating-scrollbar-padding: 8px;
+    min-height: calc(var(--mds-floating-scrollbar-thickness) + var(--mds-floating-scrollbar-padding) * 2 + 2px);
+    height: calc(var(--mds-floating-scrollbar-thickness) + var(--mds-floating-scrollbar-padding) * 2 + 2px);
     box-sizing: border-box;
-    padding: 4px 6px;
+    padding: var(--mds-floating-scrollbar-padding) 8px;
     scrollbar-width: auto;
     scrollbar-color: rgba(0, 114, 206, 0.45) rgba(243, 247, 251, 0.7);
     opacity: 0;
@@ -204,7 +206,7 @@
 }
 
 .mds-horizontal-scroll::-webkit-scrollbar {
-    height: 28px;
+    height: var(--mds-floating-scrollbar-thickness);
 }
 
 .mds-horizontal-scroll::-webkit-scrollbar-track {
