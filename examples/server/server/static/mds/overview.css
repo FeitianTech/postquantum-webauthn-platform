@@ -163,6 +163,57 @@
     background: rgba(0, 114, 206, 0.55);
 }
 
+.mds-horizontal-scroll {
+    position: sticky;
+    bottom: 1.25rem;
+    z-index: 60;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    border-radius: 999px;
+    border: 1px solid rgba(0, 114, 206, 0.18);
+    background: rgba(243, 247, 251, 0.94);
+    box-shadow: 0 14px 34px rgba(15, 39, 64, 0.14);
+    min-height: 18px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 114, 206, 0.45) rgba(243, 247, 251, 0.7);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease, box-shadow 0.2s ease;
+}
+
+.mds-horizontal-scroll.is-ready {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.mds-horizontal-scroll.is-overflowing {
+    box-shadow: 0 16px 40px rgba(15, 39, 64, 0.18);
+}
+
+.mds-horizontal-scroll::-webkit-scrollbar {
+    height: 12px;
+}
+
+.mds-horizontal-scroll::-webkit-scrollbar-track {
+    background: rgba(243, 247, 251, 0.86);
+    border-radius: 999px;
+}
+
+.mds-horizontal-scroll::-webkit-scrollbar-thumb {
+    background: rgba(0, 114, 206, 0.45);
+    border-radius: 999px;
+}
+
+.mds-horizontal-scroll::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 114, 206, 0.6);
+}
+
+.mds-horizontal-scroll__content {
+    height: 2px;
+}
+
 
 .mds-scroll-top {
     position: fixed;
