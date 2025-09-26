@@ -146,7 +146,7 @@
 
 .mds-table-container::-webkit-scrollbar {
     display: block !important;
-    height: 12px;
+    height: 24px;
 }
 
 .mds-table-container::-webkit-scrollbar-track {
@@ -175,7 +175,7 @@
     border: 1px solid rgba(0, 114, 206, 0.18);
     background: rgba(243, 247, 251, 0.94);
     box-shadow: 0 14px 34px rgba(15, 39, 64, 0.14);
-    min-height: 18px;
+    min-height: 32px;
     scrollbar-width: thin;
     scrollbar-color: rgba(0, 114, 206, 0.45) rgba(243, 247, 251, 0.7);
     opacity: 0;
@@ -201,7 +201,7 @@
 }
 
 .mds-horizontal-scroll::-webkit-scrollbar {
-    height: 12px;
+    height: 24px;
 }
 
 .mds-horizontal-scroll::-webkit-scrollbar-track {
@@ -219,7 +219,7 @@
 }
 
 .mds-horizontal-scroll__content {
-    height: 2px;
+    height: 4px;
 }
 
 
