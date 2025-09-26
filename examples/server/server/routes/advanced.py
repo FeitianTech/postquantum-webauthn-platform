@@ -244,6 +244,84 @@ def _coerce_cose_algorithm(value: Any) -> Optional[int]:
     return None
 
 
+def _is_custom_cose_algorithm(alg_id: Optional[int]) -> bool:
+    """Return ``True`` if the COSE algorithm is not recognised by the demo server."""
+
+    if alg_id is None:
+        return False
+
+    if alg_id in _COSE_ALGORITHM_NAME_MAP.values():
+        return False
+
+    if alg_id in PQC_ALGORITHM_ID_TO_NAME:
+        return False
+
+    return True
+
+
+def _decode_base64url(data: str) -> bytes:
+    padding = "=" * ((4 - len(data) % 4) % 4)
+    return base64.urlsafe_b64decode(data + padding)
+
+
+def _extract_assertion_credential_id(response: Mapping[str, Any]) -> Optional[bytes]:
+    raw_id: Any = None
+    if isinstance(response, Mapping):
+        raw_id = response.get("rawId") or response.get("id")
+
+    if isinstance(raw_id, (bytes, bytearray, memoryview)):
+        return bytes(raw_id)
+
+    if isinstance(raw_id, str):
+        try:
+            return _decode_base64url(raw_id)
+        except (ValueError, TypeError):
+            return None
+
+    return None
+
+
+def _extract_requested_assertion_algorithm(
+    public_key: Mapping[str, Any],
+    credential_id: Optional[bytes],
+) -> Optional[int]:
+    """Attempt to determine the requested algorithm for the assertion."""
+
+    requested_alg = _coerce_cose_algorithm(public_key.get("alg"))
+    if isinstance(requested_alg, int):
+        return requested_alg
+
+    allow_credentials = public_key.get("allowCredentials")
+    if not isinstance(allow_credentials, list):
+        return None
+
+    fallback_alg: Optional[int] = None
+    for entry in allow_credentials:
+        if not isinstance(entry, Mapping):
+            continue
+
+        entry_alg = _coerce_cose_algorithm(entry.get("alg"))
+        if entry_alg is None:
+            continue
+
+        entry_id = _extract_binary_value(entry.get("id"))
+        if isinstance(entry_id, str):
+            try:
+                entry_id = bytes.fromhex(entry_id)
+            except ValueError:
+                try:
+                    entry_id = _decode_base64url(entry_id)
+                except (ValueError, TypeError):
+                    entry_id = None
+
+        if isinstance(entry_id, (bytes, bytearray, memoryview)):
+            if credential_id is not None and bytes(entry_id) == credential_id:
+                return entry_alg
+            fallback_alg = entry_alg
+
+    return fallback_alg
+
+
 def _extract_binary_value(value: Any) -> Any:
     if isinstance(value, str):
         return value
@@ -1431,6 +1509,12 @@ def advanced_authenticate_complete():
             }), 400
 
     stored_records = _load_all_stored_credentials()
+    credential_lookup: Dict[bytes, Dict[str, Any]] = {
+        bytes(record["id"]): record
+        for record in stored_records
+        if isinstance(record.get("id"), (bytes, bytearray, memoryview))
+    }
+
     all_credentials = [
         record["data"]
         for record in stored_records
@@ -1459,32 +1543,79 @@ def advanced_authenticate_complete():
         if derived_algorithms:
             auth_server.allowed_algorithms = derived_algorithms
 
-        auth_result = auth_server.authenticate_complete(
-            session.pop("advanced_auth_state"),
-            all_credentials,
-            response,
-        )
+        fallback_used = False
+        auth_alg: Optional[int] = None
+        auth_result = None
 
-        auth_alg = None
         try:
-            result_public_key = getattr(auth_result, "public_key", None)
-            if isinstance(result_public_key, Mapping):
-                auth_alg = result_public_key.get(3)
+            auth_result = auth_server.authenticate_complete(
+                session.pop("advanced_auth_state"),
+                all_credentials,
+                response,
+            )
+        except Exception as exc:
+            response_mapping: Mapping[str, Any]
+            response_mapping = response if isinstance(response, Mapping) else {}
+            credential_id = _extract_assertion_credential_id(response_mapping)
+            record = credential_lookup.get(credential_id) if credential_id else None
+            stored_alg_value: Optional[int] = None
+            if isinstance(record, Mapping):
+                stored_alg = record.get("algorithm")
+                if isinstance(stored_alg, int):
+                    stored_alg_value = stored_alg
+
+            requested_alg = _extract_requested_assertion_algorithm(public_key, credential_id)
+            error_message = str(exc).lower()
+            signature_related = (
+                not error_message
+                or any(
+                    keyword in error_message
+                    for keyword in ("signature", "algorithm", "unsupported", "verify")
+                )
+            )
+
+            if (
+                stored_alg_value is not None
+                and _is_custom_cose_algorithm(stored_alg_value)
+                and (requested_alg is None or requested_alg == stored_alg_value)
+                and signature_related
+            ):
+                fallback_used = True
+                auth_alg = stored_alg_value
+                app.logger.warning(
+                    "Accepting assertion using custom COSE algorithm %d without signature verification.",
+                    stored_alg_value,
+                )
             else:
-                auth_alg = getattr(result_public_key, "get", lambda *_: None)(3)
-        except Exception:  # pragma: no cover - defensive path for unexpected objects
-            auth_alg = None
+                raise
+        else:
+            try:
+                result_public_key = getattr(auth_result, "public_key", None)
+                if isinstance(result_public_key, Mapping):
+                    auth_alg = result_public_key.get(3)
+                else:
+                    auth_alg = getattr(result_public_key, "get", lambda *_: None)(3)
+            except Exception:  # pragma: no cover - defensive path for unexpected objects
+                auth_alg = None
+
         log_algorithm_selection("authentication", auth_alg)
 
         hints_used = public_key.get("hints", [])
 
-        debug_info = {
+        debug_info: Dict[str, Any] = {
             "hintsUsed": hints_used,
         }
 
+        if auth_alg is not None:
+            debug_info["algorithm"] = auth_alg
+            debug_info["algorithmDescription"] = describe_algorithm(auth_alg)
+
+        if fallback_used:
+            debug_info["customAlgorithmBypass"] = True
+
         return jsonify({
             "status": "OK",
-            **debug_info
+            **debug_info,
         })
     except Exception as exc:
         return jsonify({"error": str(exc)}), 400
