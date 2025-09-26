@@ -638,6 +638,209 @@ function shouldReplaceCertificateEntry(existing, incoming) {
     return false;
 }
 
+function getCertificateKeyCandidates(entry) {
+    if (!entry || typeof entry !== 'object') {
+        return [];
+    }
+
+    const keys = [];
+    const fingerprint = getCertificateFingerprint(entry);
+    if (fingerprint) {
+        keys.push(`fingerprint:${fingerprint}`);
+    }
+
+    const rawHex = extractCertificateRawHex(entry);
+    if (rawHex) {
+        keys.push(`raw:${rawHex}`);
+    }
+
+    const derBase64 = extractCertificateDerBase64(entry);
+    if (derBase64) {
+        keys.push(`der:${derBase64}`);
+    }
+
+    const pemValue = typeof entry.pem === 'string' ? entry.pem.trim() : '';
+    if (pemValue) {
+        keys.push(`pem:${pemValue}`);
+    }
+
+    const parsed = entry.parsedX5c && typeof entry.parsedX5c === 'object'
+        ? entry.parsedX5c
+        : null;
+    if (parsed) {
+        const parsedPem = typeof parsed.pem === 'string' ? parsed.pem.trim() : '';
+        if (parsedPem) {
+            keys.push(`pem:${parsedPem}`);
+        }
+        const parsedDer = typeof parsed.derBase64 === 'string' ? parsed.derBase64.trim() : '';
+        if (parsedDer) {
+            keys.push(`der:${parsedDer}`);
+        }
+        const parsedRaw = typeof parsed.raw === 'string' ? parsed.raw.trim() : '';
+        if (parsedRaw) {
+            keys.push(`raw:${parsedRaw.toLowerCase()}`);
+        }
+        const parsedFingerprint = extractFingerprintCandidate(parsed.fingerprint || parsed.fingerprints);
+        if (parsedFingerprint) {
+            keys.push(`fingerprint:${parsedFingerprint}`);
+        }
+    }
+
+    return Array.from(new Set(keys.filter(Boolean)));
+}
+
+function certificateDetailScore(entry) {
+    if (!entry || typeof entry !== 'object') {
+        return 0;
+    }
+
+    let score = 0;
+    if (!certificateHasParseError(entry)) {
+        score += 1000;
+    }
+
+    const parsed = entry.parsedX5c && typeof entry.parsedX5c === 'object'
+        ? entry.parsedX5c
+        : {};
+
+    const detailFields = [
+        'subject',
+        'issuer',
+        'serialNumber',
+        'version',
+        'notValidBefore',
+        'notValidAfter',
+        'signatureAlgorithm',
+        'publicKeyInfo',
+        'summary',
+    ];
+
+    detailFields.forEach(field => {
+        if (parsed && parsed[field]) {
+            score += 25;
+        }
+    });
+
+    if (Array.isArray(parsed.extensions) && parsed.extensions.length) {
+        score += 10;
+    }
+
+    if (entry.pem) {
+        score += 10;
+    }
+
+    if (extractCertificateRawHex(entry)) {
+        score += 10;
+    }
+
+    if (extractCertificateDerBase64(entry)) {
+        score += 5;
+    }
+
+    if (getCertificateFingerprint(entry)) {
+        score += 50;
+    }
+
+    return score;
+}
+
+function choosePreferredCertificate(existing, incoming) {
+    if (!existing || typeof existing !== 'object') {
+        return incoming;
+    }
+    if (!incoming || typeof incoming !== 'object') {
+        return existing;
+    }
+
+    const existingScore = certificateDetailScore(existing);
+    const incomingScore = certificateDetailScore(incoming);
+
+    if (incomingScore > existingScore) {
+        return incoming;
+    }
+    if (incomingScore < existingScore) {
+        return existing;
+    }
+
+    const existingHasError = certificateHasParseError(existing);
+    const incomingHasError = certificateHasParseError(incoming);
+
+    if (existingHasError && !incomingHasError) {
+        return incoming;
+    }
+    if (!existingHasError && incomingHasError) {
+        return existing;
+    }
+
+    return incoming;
+}
+
+function reconcileRegistrationCertificates() {
+    const certificates = registrationDetailState.attestationCertificates;
+    if (!Array.isArray(certificates) || certificates.length <= 1) {
+        return;
+    }
+
+    const buckets = [];
+    const noKeyWithoutErrors = [];
+    const noKeyWithErrors = [];
+
+    certificates.forEach(entry => {
+        if (!entry || typeof entry !== 'object') {
+            return;
+        }
+
+        const keys = getCertificateKeyCandidates(entry);
+        if (!keys.length) {
+            if (certificateHasParseError(entry)) {
+                noKeyWithErrors.push(entry);
+            } else {
+                noKeyWithoutErrors.push(entry);
+            }
+            return;
+        }
+
+        let bucket = null;
+        for (const existing of buckets) {
+            if (keys.some(key => existing.keys.has(key))) {
+                bucket = existing;
+                break;
+            }
+        }
+
+        if (!bucket) {
+            buckets.push({ entry, keys: new Set(keys) });
+            return;
+        }
+
+        bucket.entry = choosePreferredCertificate(bucket.entry, entry);
+        keys.forEach(key => bucket.keys.add(key));
+    });
+
+    const deduped = [];
+    const seenEntries = new Set();
+
+    buckets.forEach(bucket => {
+        if (!seenEntries.has(bucket.entry)) {
+            deduped.push(bucket.entry);
+            seenEntries.add(bucket.entry);
+        }
+    });
+
+    noKeyWithoutErrors.forEach(entry => {
+        if (!seenEntries.has(entry)) {
+            deduped.push(entry);
+            seenEntries.add(entry);
+        }
+    });
+
+    if (!deduped.length && noKeyWithErrors.length) {
+        deduped.push(noKeyWithErrors[0]);
+    }
+
+    registrationDetailState.attestationCertificates = deduped;
+}
+
 function addCertificateEntryToState(entry) {
     const normalised = normaliseCertificateEntryForModal(entry);
     if (!normalised) {
@@ -710,6 +913,8 @@ function addCertificatesToRegistrationState(entries) {
     } else {
         addCertificateEntryToState(entries);
     }
+
+    reconcileRegistrationCertificates();
 }
 
 function normaliseCertificateEntryForModal(entry) {
