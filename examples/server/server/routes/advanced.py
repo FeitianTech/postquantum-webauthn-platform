@@ -97,7 +97,6 @@ for raw_name, alg_id in _COSE_ALGORITHM_NAME_MAP.items():
         _COSE_ALGORITHM_NAME_LOOKUP[normalized_key] = alg_id
 
 
-_SUPPORTED_COSE_ALGORITHMS = frozenset(_COSE_ALGORITHM_NAME_LOOKUP.values())
 _COSE_ALGORITHM_NUMERIC_PATTERN = re.compile(r"-?\d+")
 
 def _lookup_named_cose_algorithm(name: str) -> Optional[int]:
@@ -137,11 +136,9 @@ def _coerce_cose_algorithm(value: Any) -> Optional[int]:
             matches = list(_COSE_ALGORITHM_NUMERIC_PATTERN.finditer(stripped))
             if matches:
                 try:
-                    candidate = int(matches[-1].group(0), 10)
+                    return int(matches[-1].group(0), 10)
                 except ValueError:
                     return None
-                if candidate in _SUPPORTED_COSE_ALGORITHMS:
-                    return candidate
             return None
     return None
 

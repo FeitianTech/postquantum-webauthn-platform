@@ -154,6 +154,26 @@ def test_handles_prefixed_algorithm_name_aliases(client, monkeypatch):
     assert all(isinstance(entry["alg"], int) for entry in params)
 
 
+def test_preserves_unknown_numeric_algorithms(client, monkeypatch):
+    """Ensure arbitrary COSE algorithm IDs survive round-tripping."""
+
+    _install_fake_oqs(monkeypatch, ("ML-DSA-44", "ML-DSA-65", "ML-DSA-87"))
+
+    data = _post_begin(
+        client,
+        [
+            {"type": "public-key", "alg": -65537},
+            {"type": "public-key", "alg": "COSE_ALG_FOO (-99999)"},
+        ],
+    )
+
+    params = data["publicKey"]["pubKeyCredParams"]
+    algorithms = [entry["alg"] for entry in params]
+
+    assert algorithms == [-65537, -99999]
+    assert all(isinstance(entry["alg"], int) for entry in params)
+
+
 def test_accepts_string_algorithm_entries(client, monkeypatch):
     _install_fake_oqs(monkeypatch, ("ML-DSA-44", "ML-DSA-65", "ML-DSA-87"))
 
