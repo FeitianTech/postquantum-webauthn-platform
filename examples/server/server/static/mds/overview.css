@@ -146,7 +146,7 @@
 
 .mds-table-container::-webkit-scrollbar {
     display: block !important;
-    height: 28px;
+    height: 36px;
 }
 
 .mds-table-container::-webkit-scrollbar-track {
@@ -175,11 +175,11 @@
     border: 1px solid rgba(0, 114, 206, 0.18);
     background: rgba(243, 247, 251, 0.94);
     box-shadow: 0 14px 34px rgba(15, 39, 64, 0.14);
-    --mds-floating-scrollbar-thickness: 32px;
-    min-height: calc(var(--mds-floating-scrollbar-thickness) + 2px);
-    height: calc(var(--mds-floating-scrollbar-thickness) + 2px);
+    --mds-floating-scrollbar-thickness: 36px;
+    min-height: var(--mds-floating-scrollbar-thickness);
+    height: var(--mds-floating-scrollbar-thickness);
     box-sizing: border-box;
-    padding: 0 8px;
+    padding: 0 6px;
     scrollbar-width: auto;
     scrollbar-color: rgba(0, 114, 206, 0.45) rgba(243, 247, 251, 0.7);
     opacity: 0;
