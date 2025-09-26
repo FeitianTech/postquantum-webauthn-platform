@@ -477,6 +477,134 @@ function getCertificateFingerprint(entry) {
     return '';
 }
 
+function getStoredCertificateKey(entry) {
+    if (!entry || typeof entry !== 'object') {
+        return '';
+    }
+
+    const stored = entry.__certificateKey;
+    return typeof stored === 'string' ? stored : '';
+}
+
+function storeCertificateKey(entry, key) {
+    if (!entry || typeof entry !== 'object' || typeof key !== 'string' || !key) {
+        return;
+    }
+
+    try {
+        Object.defineProperty(entry, '__certificateKey', {
+            value: key,
+            writable: true,
+            configurable: true,
+            enumerable: false,
+        });
+    } catch (error) {
+        entry.__certificateKey = key;
+    }
+}
+
+function extractCertificateDerBase64(entry) {
+    if (!entry || typeof entry !== 'object') {
+        return '';
+    }
+
+    const parsed = entry.parsedX5c && typeof entry.parsedX5c === 'object'
+        ? entry.parsedX5c
+        : null;
+
+    const candidates = [
+        entry.derBase64,
+        entry.der_base64,
+        parsed?.derBase64,
+        parsed?.der_base64,
+    ];
+
+    for (const candidate of candidates) {
+        if (typeof candidate === 'string') {
+            const trimmed = candidate.trim();
+            if (trimmed) {
+                return trimmed;
+            }
+        }
+    }
+
+    return '';
+}
+
+function extractCertificateRawHex(entry) {
+    if (!entry || typeof entry !== 'object') {
+        return '';
+    }
+
+    const parsed = entry.parsedX5c && typeof entry.parsedX5c === 'object'
+        ? entry.parsedX5c
+        : null;
+
+    const candidates = [
+        entry.raw,
+        parsed?.raw,
+    ];
+
+    for (const candidate of candidates) {
+        if (typeof candidate === 'string') {
+            const trimmed = candidate.trim();
+            if (trimmed) {
+                return trimmed.toLowerCase();
+            }
+        }
+    }
+
+    const derBase64 = extractCertificateDerBase64(entry);
+    if (derBase64) {
+        try {
+            return base64ToHex(derBase64).toLowerCase();
+        } catch (error) {
+            return '';
+        }
+    }
+
+    return '';
+}
+
+function getCertificateKey(entry) {
+    if (!entry || typeof entry !== 'object') {
+        return '';
+    }
+
+    const fingerprint = getCertificateFingerprint(entry);
+    if (fingerprint) {
+        return `fingerprint:${fingerprint}`;
+    }
+
+    const pemValue = typeof entry.pem === 'string' ? entry.pem.trim() : '';
+    if (pemValue) {
+        return `pem:${pemValue}`;
+    }
+
+    const rawHex = extractCertificateRawHex(entry);
+    if (rawHex) {
+        return `raw:${rawHex}`;
+    }
+
+    const derBase64 = extractCertificateDerBase64(entry);
+    if (derBase64) {
+        return `der:${derBase64}`;
+    }
+
+    const parsed = entry.parsedX5c && typeof entry.parsedX5c === 'object'
+        ? entry.parsedX5c
+        : null;
+
+    if (parsed && typeof parsed === 'object') {
+        const summary = typeof parsed.summary === 'string' ? parsed.summary.trim() : '';
+        if (summary) {
+            return `summary:${summary}`;
+        }
+    }
+
+    return '';
+}
+
 function certificateHasParseError(entry) {
     if (!entry || typeof entry !== 'object') {
         return false;
@@ -518,10 +646,24 @@ function addCertificateEntryToState(entry) {
 
     const existing = registrationDetailState.attestationCertificates;
     const fingerprint = getCertificateFingerprint(normalised);
+    const certificateKey = getCertificateKey(normalised);
+    if (fingerprint) {
+        normalised.fingerprint = fingerprint;
+    }
     let duplicateIndex = -1;
 
     existing.some((item, index) => {
         if (item === normalised) {
+            duplicateIndex = index;
+            return true;
+        }
+
+        const existingKeyStored = getStoredCertificateKey(item);
+        const existingKey = existingKeyStored || getCertificateKey(item);
+        if (existingKey) {
+            storeCertificateKey(item, existingKey);
+        }
+        if (certificateKey && existingKey && existingKey === certificateKey) {
             duplicateIndex = index;
             return true;
         }
@@ -545,13 +687,15 @@ function addCertificateEntryToState(entry) {
 
     if (duplicateIndex !== -1) {
         if (shouldReplaceCertificateEntry(existing[duplicateIndex], normalised)) {
+            if (certificateKey) {
+                storeCertificateKey(normalised, certificateKey);
+            }
             existing[duplicateIndex] = normalised;
         }
         return;
     }
-
-    if (fingerprint) {
-        normalised.fingerprint = fingerprint;
+    if (certificateKey) {
+        storeCertificateKey(normalised, certificateKey);
     }
 
     existing.push(normalised);
