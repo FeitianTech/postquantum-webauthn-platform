@@ -7,7 +7,8 @@ import sys
 from types import ModuleType
 
 _PACKAGE_ROOT = pathlib.Path(__file__).resolve().parent
-_PROJECT_ROOT = _PACKAGE_ROOT.parent
+_PACKAGE_PARENT = _PACKAGE_ROOT.parent
+_PROJECT_ROOT = _PACKAGE_ROOT.parents[2]
 
 
 def _import_module(name: str) -> ModuleType:
@@ -27,6 +28,8 @@ if __package__:
 else:  # pragma: no cover - executed when run as a script.
     if str(_PROJECT_ROOT) not in sys.path:
         sys.path.insert(0, str(_PROJECT_ROOT))
+    if str(_PACKAGE_PARENT) not in sys.path:
+        sys.path.insert(0, str(_PACKAGE_PARENT))
     _import_base = _PACKAGE_ROOT.name
     __package__ = _import_base
 
