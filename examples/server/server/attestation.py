@@ -584,11 +584,78 @@ def _extract_common_names(name: x509.Name) -> List[str]:
     return values
 
 
+def _serialize_attestation_certificate_fallback(
+    cert_bytes: bytes, error: Exception
+) -> Dict[str, Any]:
+    """Return a best-effort certificate summary when full parsing fails."""
+
+    der_base64 = base64.b64encode(cert_bytes).decode("ascii")
+    pem_body = "\n".join(textwrap.wrap(der_base64, 64))
+    pem = f"-----BEGIN CERTIFICATE-----\n{pem_body}\n-----END CERTIFICATE-----"
+
+    fingerprints = {
+        "sha256": hashlib.sha256(cert_bytes).hexdigest(),
+        "sha1": hashlib.sha1(cert_bytes).hexdigest(),
+        "md5": hashlib.md5(cert_bytes).hexdigest(),
+    }
+
+    public_key_info: Dict[str, Any] = {}
+    fallback_summary: List[Tuple[str, Any]] = []
+    try:
+        public_key_info, fallback_summary = _build_unknown_public_key_info(
+            cert_bytes, error
+        )
+    except Exception:
+        public_key_info = {}
+        fallback_summary = []
+
+    summary_lines: List[str] = [
+        "Unable to fully parse attestation certificate.",
+        f"Parser error: {error}",
+        "",
+        f"Certificate length: {len(cert_bytes)} bytes",
+        f"SHA256 Fingerprint: {fingerprints['sha256']}",
+        f"SHA1 Fingerprint: {fingerprints['sha1']}",
+        f"MD5 Fingerprint: {fingerprints['md5']}",
+    ]
+
+    if fallback_summary:
+        summary_lines.append("")
+        summary_lines.append("Subject Public Key Info (best effort):")
+        for label, value in fallback_summary:
+            if value is None or (isinstance(value, list) and not value):
+                continue
+            if isinstance(value, list):
+                summary_lines.append(f"    {label}:")
+                for line in value:
+                    summary_lines.append(f"        {line}")
+            else:
+                summary_lines.append(f"    {label}: {value}")
+
+    summary_text = "\n".join(summary_lines)
+
+    payload: Dict[str, Any] = {
+        "parseError": str(error),
+        "derBase64": der_base64,
+        "pem": pem,
+        "fingerprints": fingerprints,
+        "summary": summary_text,
+    }
+
+    if public_key_info:
+        payload["publicKeyInfo"] = public_key_info
+
+    return payload
+
+
 def serialize_attestation_certificate(cert_bytes: bytes):
     if not cert_bytes:
         return None
 
-    certificate = x509.load_der_x509_certificate(cert_bytes)
+    try:
+        certificate = x509.load_der_x509_certificate(cert_bytes)
+    except Exception as exc:  # pragma: no cover - defensive fallback
+        return _serialize_attestation_certificate_fallback(cert_bytes, exc)
     version_number = certificate.version.value + 1
     version_hex = f"0x{certificate.version.value:x}"
 
