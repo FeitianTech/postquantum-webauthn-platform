@@ -397,6 +397,12 @@ function normaliseFingerprintValue(value) {
     if (!trimmed) {
         return '';
     }
+
+    const hexish = trimmed.replace(/[^0-9a-f]/gi, '');
+    if (hexish) {
+        return hexish.toLowerCase();
+    }
+
     return trimmed.toLowerCase();
 }
 
@@ -447,6 +453,37 @@ function extractFingerprintCandidate(source) {
     return '';
 }
 
+function extractFingerprintFromSummary(entry) {
+    if (!entry || typeof entry !== 'object') {
+        return '';
+    }
+
+    const parsed = entry.parsedX5c && typeof entry.parsedX5c === 'object'
+        ? entry.parsedX5c
+        : entry;
+
+    const candidates = [
+        typeof parsed.summary === 'string' ? parsed.summary : '',
+        typeof entry.summary === 'string' ? entry.summary : '',
+    ];
+
+    for (const summary of candidates) {
+        if (!summary) {
+            continue;
+        }
+
+        const match = summary.match(/SHA(?:-?256)?\s*Fingerprint:\s*([0-9A-Fa-f:]+)/);
+        if (match && match[1]) {
+            const normalised = normaliseFingerprintValue(match[1]);
+            if (normalised) {
+                return normalised;
+            }
+        }
+    }
+
+    return '';
+}
+
 function getCertificateFingerprint(entry) {
     if (!entry || typeof entry !== 'object') {
         return '';
@@ -472,6 +509,11 @@ function getCertificateFingerprint(entry) {
         if (fingerprint) {
             return fingerprint;
         }
+    }
+
+    const fallback = extractFingerprintFromSummary(entry);
+    if (fallback) {
+        return fallback;
     }
 
     return '';
@@ -647,6 +689,11 @@ function getCertificateKeyCandidates(entry) {
     const fingerprint = getCertificateFingerprint(entry);
     if (fingerprint) {
         keys.push(`fingerprint:${fingerprint}`);
+    }
+
+    const summaryFingerprint = extractFingerprintFromSummary(entry);
+    if (summaryFingerprint) {
+        keys.push(`fingerprint:${summaryFingerprint}`);
     }
 
     const rawHex = extractCertificateRawHex(entry);
