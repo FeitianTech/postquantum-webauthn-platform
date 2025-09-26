@@ -102,7 +102,7 @@ class PackedAttestation(Attestation):
 
             try:
                 crypto_key = cert.public_key()
-            except UnsupportedAlgorithm as exc:
+            except (UnsupportedAlgorithm, ValueError) as exc:
                 info = extract_certificate_public_key_info(cert_bytes)
                 public_key_bytes = info.get("subject_public_key")
                 if public_key_bytes is None or getattr(cose_cls, "ALGORITHM", None) not in (-48, -49, -50):

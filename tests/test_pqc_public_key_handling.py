@@ -14,6 +14,8 @@ for _module_name in [name for name in list(sys.modules) if name == "fido2" or na
 import fido2.cose as cose_module  # noqa: E402
 import fido2.attestation.packed as packed_module  # noqa: E402
 import examples.server.server.attestation as attestation_module  # noqa: E402
+import pytest  # noqa: E402
+from cryptography import x509  # noqa: E402
 from cryptography.exceptions import UnsupportedAlgorithm  # noqa: E402
 from fido2.cose import MLDSA44, MLDSA65, MLDSA87  # noqa: E402
 from types import SimpleNamespace  # noqa: E402
@@ -193,7 +195,8 @@ def test_extract_certificate_public_key_info_unwraps_octet_string_public_key():
     assert info["wrapped_subject_public_key"] == wrapped
 
 
-def test_packed_attestation_falls_back_to_parsed_certificate_bytes(monkeypatch):
+@pytest.mark.parametrize("exception_cls", [UnsupportedAlgorithm, ValueError])
+def test_packed_attestation_falls_back_to_parsed_certificate_bytes(monkeypatch, exception_cls):
     raw_key = b"certificate-public-key"
     spki = _build_spki(raw_key, algorithm_oid="2.16.840.1.101.3.4.3.17")
     cert_der = _build_certificate(spki)
@@ -206,7 +209,7 @@ def test_packed_attestation_falls_back_to_parsed_certificate_bytes(monkeypatch):
             )
 
         def public_key(self):
-            raise packed_module.UnsupportedAlgorithm("unsupported")
+            raise exception_cls("Unknown key type: 2.16.840.1.101.3.4.3.17")
 
     monkeypatch.setattr(packed_module, "_validate_packed_cert", lambda cert, aaguid: None)
     monkeypatch.setattr(
@@ -282,3 +285,28 @@ def test_unknown_public_key_info_formats_mldsa_details(monkeypatch):
     summary_dict = dict(summary)
     assert summary_dict["ML-DSA parameter set"] == "ML-DSA-44"
     assert summary_dict["Claimed NIST level"] == 2
+
+
+def test_serialize_attestation_certificate_handles_value_error(monkeypatch):
+    raw_key = b"certificate-public-key"
+    cert_der = _build_certificate(
+        _build_spki(raw_key, algorithm_oid="2.16.840.1.101.3.4.3.17")
+    )
+
+    certificate = x509.load_der_x509_certificate(cert_der)
+    cert_type = type(certificate)
+
+    def fail_public_key(self):
+        raise ValueError("Unknown key type: 2.16.840.1.101.3.4.3.17")
+
+    monkeypatch.setattr(cert_type, "public_key", fail_public_key, raising=False)
+
+    details = attestation_module.serialize_attestation_certificate(cert_der)
+
+    public_key_info = details["publicKeyInfo"]
+    assert public_key_info["type"] == "ML-DSA"
+    assert public_key_info["algorithm"]["mlDsaParameterSet"] == "ML-DSA-44"
+    assert public_key_info["publicKeyHex"].replace(":", "").lower() == raw_key.hex()
+
+    summary_lines = details["summary"].splitlines()
+    assert any("ML-DSA parameter set" in line for line in summary_lines)

@@ -642,7 +642,7 @@ def serialize_attestation_certificate(cert_bytes: bytes):
     fallback_public_key_summary: List[Tuple[str, Any]] = []
     try:
         public_key = certificate.public_key()
-    except UnsupportedAlgorithm as exc:
+    except (UnsupportedAlgorithm, ValueError) as exc:
         public_key = None
         public_key_info, fallback_public_key_summary = _build_unknown_public_key_info(cert_bytes, exc)
     else:
