@@ -13,6 +13,8 @@ for _module_name in [name for name in list(sys.modules) if name == "fido2" or na
 
 import fido2.cose as cose_module  # noqa: E402
 import fido2.attestation.packed as packed_module  # noqa: E402
+import examples.server.server.attestation as attestation_module  # noqa: E402
+from cryptography.exceptions import UnsupportedAlgorithm  # noqa: E402
 from fido2.cose import MLDSA44, MLDSA65, MLDSA87  # noqa: E402
 from types import SimpleNamespace  # noqa: E402
 
@@ -68,6 +70,10 @@ def _encode_utf8_string(value: str) -> bytes:
 
 def _encode_utctime(value: str) -> bytes:
     return b"\x17" + _encode_length(len(value)) + value.encode("ascii")
+
+
+def _encode_octet_string(payload: bytes) -> bytes:
+    return b"\x04" + _encode_length(len(payload)) + payload
 
 
 def _build_name(common_name: str) -> bytes:
@@ -175,6 +181,18 @@ def test_extract_certificate_public_key_info_parses_mldsa_certificate():
     assert info["subject_public_key"] == raw_key
 
 
+def test_extract_certificate_public_key_info_unwraps_octet_string_public_key():
+    raw_key = b"wrapped-ml-dsa-key"
+    wrapped = _encode_octet_string(raw_key)
+    spki = _build_spki(wrapped, algorithm_oid="2.16.840.1.101.3.4.3.18")
+    cert = _build_certificate(spki)
+
+    info = cose_module.extract_certificate_public_key_info(cert)
+
+    assert info["subject_public_key"] == raw_key
+    assert info["wrapped_subject_public_key"] == wrapped
+
+
 def test_packed_attestation_falls_back_to_parsed_certificate_bytes(monkeypatch):
     raw_key = b"certificate-public-key"
     spki = _build_spki(raw_key, algorithm_oid="2.16.840.1.101.3.4.3.17")
@@ -233,3 +251,34 @@ def test_packed_attestation_falls_back_to_parsed_certificate_bytes(monkeypatch):
 
     assert verify_calls == [(raw_key, b"auth-data" + b"hash", b"sig")]
     assert result.attestation_type == packed_module.AttestationType.BASIC
+
+
+def test_unknown_public_key_info_formats_mldsa_details(monkeypatch):
+    raw_key = b"certificate-public-key"
+    wrapped = _encode_octet_string(raw_key)
+    cert_der = _build_certificate(
+        _build_spki(wrapped, algorithm_oid="2.16.840.1.101.3.4.3.17")
+    )
+
+    monkeypatch.setattr(
+        attestation_module,
+        "_load_oqs_signature_details",
+        lambda mechanism: {
+            "length-public-key": len(raw_key),
+            "length-signature": 10,
+            "claimed-nist-level": 2,
+        },
+    )
+
+    info, summary = attestation_module._build_unknown_public_key_info(
+        cert_der, UnsupportedAlgorithm("unsupported")
+    )
+
+    assert "error" not in info
+    assert info["type"] == "ML-DSA"
+    assert info["algorithm"]["mlDsaParameterSet"] == "ML-DSA-44"
+    assert info["keySize"] == len(raw_key) * 8
+
+    summary_dict = dict(summary)
+    assert summary_dict["ML-DSA parameter set"] == "ML-DSA-44"
+    assert summary_dict["Claimed NIST level"] == 2

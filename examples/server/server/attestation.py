@@ -869,6 +869,28 @@ def serialize_attestation_certificate(cert_bytes: bytes):
     }
 
 
+def _load_oqs_signature_details(mechanism: str) -> Optional[Dict[str, Any]]:
+    """Retrieve signature metadata for *mechanism* from liboqs when available."""
+
+    try:  # pragma: no cover - exercised when oqs bindings are installed
+        import oqs  # type: ignore
+    except ImportError:  # pragma: no cover - absence handled by caller
+        return None
+
+    try:  # pragma: no cover - defensive handling around oqs interaction
+        with oqs.Signature(mechanism) as signature:  # type: ignore[attr-defined]
+            details = getattr(signature, "details", None)
+    except Exception:
+        return None
+
+    if not isinstance(details, Mapping):
+        return None
+
+    normalized: Dict[str, Any] = {str(key): value for key, value in details.items()}
+    normalized["mechanism"] = mechanism
+    return normalized
+
+
 def _build_unknown_public_key_info(cert_bytes: bytes, error: Exception):
     try:
         parsed = extract_certificate_public_key_info(cert_bytes)
@@ -877,14 +899,26 @@ def _build_unknown_public_key_info(cert_bytes: bytes, error: Exception):
 
     algorithm_details: Dict[str, Any] = {"name": "Unknown"}
     public_key_bytes = parsed.get("subject_public_key")
+    wrapped_public_key_bytes = parsed.get("wrapped_subject_public_key")
     spki_bytes = parsed.get("subject_public_key_info")
 
     if isinstance(parsed.get("algorithm_name"), str):
         algorithm_details["name"] = parsed["algorithm_name"]
     if isinstance(parsed.get("algorithm_oid"), str):
         algorithm_details["oid"] = parsed["algorithm_oid"]
-    if isinstance(parsed.get("ml_dsa_parameter_set"), str):
-        algorithm_details["mlDsaParameterSet"] = parsed["ml_dsa_parameter_set"]
+
+    oqs_details: Optional[Mapping[str, Any]] = None
+    parameter_set = parsed.get("ml_dsa_parameter_set")
+    if isinstance(parameter_set, str):
+        algorithm_details["mlDsaParameterSet"] = parameter_set
+        oqs_details = _load_oqs_signature_details(parameter_set)
+        if isinstance(oqs_details, Mapping):
+            claimed_level = oqs_details.get("claimed-nist-level")
+            if claimed_level is not None:
+                algorithm_details["claimedNistLevel"] = claimed_level
+            length_signature = oqs_details.get("length-signature")
+            if isinstance(length_signature, int):
+                algorithm_details["signatureLengthBytes"] = length_signature
     parameters = parsed.get("algorithm_parameters")
     if isinstance(parameters, (bytes, bytearray)) and parameters:
         algorithm_details["parametersHex"] = bytes(parameters).hex()
@@ -892,18 +926,45 @@ def _build_unknown_public_key_info(cert_bytes: bytes, error: Exception):
     info: Dict[str, Any] = {
         "type": algorithm_details.get("name", "Unsupported"),
         "algorithm": algorithm_details,
-        "error": str(error),
     }
 
     if isinstance(spki_bytes, (bytes, bytearray)) and spki_bytes:
         info["subjectPublicKeyInfoBase64"] = base64.b64encode(bytes(spki_bytes)).decode("ascii")
 
+    key_size_bits: Optional[int] = None
+    raw_bytes: Optional[bytes] = None
     if isinstance(public_key_bytes, (bytes, bytearray)):
-        raw_bytes = bytes(public_key_bytes)
-        if raw_bytes:
+        candidate = bytes(public_key_bytes)
+        if candidate:
+            raw_bytes = candidate
             info["publicKeyBase64"] = base64.b64encode(raw_bytes).decode("ascii")
             info["publicKeyHex"] = colon_hex(raw_bytes)
             info["publicKeyHexLines"] = format_hex_bytes_lines(raw_bytes)
+            key_size_bits = len(raw_bytes) * 8
+
+    if isinstance(wrapped_public_key_bytes, (bytes, bytearray)):
+        wrapped_bytes = bytes(wrapped_public_key_bytes)
+        if wrapped_bytes and (raw_bytes is None or wrapped_bytes != raw_bytes):
+            info["wrappedPublicKeyBase64"] = base64.b64encode(wrapped_bytes).decode("ascii")
+            info["wrappedPublicKeyHexLines"] = format_hex_bytes_lines(wrapped_bytes)
+
+    if isinstance(oqs_details, Mapping):
+        length_public_key = oqs_details.get("length-public-key")
+        if isinstance(length_public_key, int) and length_public_key > 0:
+            key_size_bits = length_public_key * 8
+        for field in ("description", "sig-name", "sig-family"):
+            value = oqs_details.get(field)
+            if value:
+                info_key = {
+                    "description": "mechanismDescription",
+                    "sig-name": "mechanismName",
+                    "sig-family": "mechanismFamily",
+                }.get(field)
+                if info_key:
+                    info[info_key] = value
+
+    if key_size_bits:
+        info["keySize"] = key_size_bits
 
     summary_entries: List[Tuple[str, Any]] = []
 
@@ -920,10 +981,21 @@ def _build_unknown_public_key_info(cert_bytes: bytes, error: Exception):
         _append_summary("Algorithm", algorithm_name)
     _append_summary("Algorithm OID", algorithm_details.get("oid"))
     _append_summary("ML-DSA parameter set", algorithm_details.get("mlDsaParameterSet"))
+    _append_summary("Claimed NIST level", algorithm_details.get("claimedNistLevel"))
+    _append_summary("Signature length (bytes)", algorithm_details.get("signatureLengthBytes"))
+    if key_size_bits:
+        _append_summary("Public key size (bits)", key_size_bits)
     _append_summary("Public Key (base64)", info.get("publicKeyBase64"))
     hex_lines = info.get("publicKeyHexLines")
     if isinstance(hex_lines, list) and hex_lines:
         _append_summary("Public Key (hex)", hex_lines)
+    wrapped_hex_lines = info.get("wrappedPublicKeyHexLines")
+    if isinstance(wrapped_hex_lines, list) and wrapped_hex_lines:
+        _append_summary("Wrapped Public Key (hex)", wrapped_hex_lines)
+
+    if not summary_entries and "error" not in info:
+        info["error"] = str(error)
+        summary_entries.append(("Error", str(error)))
 
     return info, summary_entries
 

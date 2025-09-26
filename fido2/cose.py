@@ -111,6 +111,45 @@ def _extract_subject_public_key_from_spki(spki_der: bytes) -> bytes:
     return payload
 
 
+def _unwrap_mldsa_subject_public_key(payload: bytes) -> tuple[bytes, Optional[bytes]]:
+    """Return raw ML-DSA public key bytes, stripping DER wrappers when present."""
+
+    if not payload:
+        return payload, None
+
+    original = payload
+    view = memoryview(payload)
+
+    try:
+        if view[0] == 0x04:  # OCTET STRING
+            length, idx = _parse_der_length(view, 1)
+            end = idx + length
+            if end == len(view):
+                payload = bytes(view[idx:end])
+                return payload, original
+        elif view[0] == 0x30:  # SEQUENCE
+            idx = 1
+            seq_length, idx = _parse_der_length(view, idx)
+            seq_end = idx + seq_length
+            if seq_end == len(view):
+                while idx < seq_end:
+                    tag = view[idx]
+                    idx += 1
+                    element_length, idx = _parse_der_length(view, idx)
+                    element_end = idx + element_length
+                    if element_end > seq_end:
+                        break
+                    if tag == 0x04:  # OCTET STRING inside SEQUENCE
+                        candidate = bytes(view[idx:element_end])
+                        unwrapped, _ = _unwrap_mldsa_subject_public_key(candidate)
+                        return unwrapped, original
+                    idx = element_end
+    except Exception:
+        pass
+
+    return payload, None
+
+
 def _skip_der_value(view: memoryview, idx: int) -> int:
     """Advance *idx* past a single DER element."""
 
@@ -236,20 +275,27 @@ def extract_certificate_public_key_info(cert_der: bytes) -> Dict[str, Any]:
     spki_der = bytes(view[spki_start:spki_end])
     algorithm_oid, algorithm_params = _parse_spki_algorithm_info(spki_der)
     subject_public_key = _extract_subject_public_key_from_spki(spki_der)
+    wrapped_subject_public_key: Optional[bytes] = None
 
     info: Dict[str, Any] = {
         "algorithm_oid": algorithm_oid,
         "algorithm_parameters": algorithm_params,
-        "subject_public_key": subject_public_key,
         "subject_public_key_info": spki_der,
     }
 
     parameter_set = _ML_DSA_OID_TO_PARAMETER_SET.get(algorithm_oid)
     if parameter_set is not None:
+        subject_public_key, wrapped_subject_public_key = _unwrap_mldsa_subject_public_key(
+            subject_public_key
+        )
         info["ml_dsa_parameter_set"] = parameter_set
     algorithm_name = _ALGORITHM_OID_NAMES.get(algorithm_oid)
     if algorithm_name is not None:
         info["algorithm_name"] = algorithm_name
+
+    info["subject_public_key"] = subject_public_key
+    if wrapped_subject_public_key is not None:
+        info["wrapped_subject_public_key"] = wrapped_subject_public_key
 
     return info
 
