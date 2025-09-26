@@ -30,7 +30,14 @@ from __future__ import annotations
 from .utils import ByteBuffer, bytes2int, int2bytes
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.hazmat.primitives.asymmetric import ec, rsa, padding, ed25519, types
+from cryptography.hazmat.primitives.asymmetric import (
+    ec,
+    rsa,
+    padding,
+    ed25519,
+    types,
+)
+from cryptography.hazmat.primitives.asymmetric.utils import encode_dss_signature
 from typing import Sequence, Type, Mapping, Any, TypeVar, Optional, Iterable, Dict
 
 try:  # pragma: no cover - exercised indirectly in tests
@@ -799,6 +806,8 @@ class ES256(CoseKey):
     def verify(self, message, signature):
         if self[-1] != 1:
             raise ValueError("Unsupported elliptic curve")
+        coordinate_length = len(self[-2])
+        signature = _coerce_raw_ecdsa_signature(signature, coordinate_length)
         ec.EllipticCurvePublicNumbers(
             bytes2int(self[-2]), bytes2int(self[-3]), ec.SECP256R1()
         ).public_key(default_backend()).verify(
@@ -836,6 +845,8 @@ class ES384(CoseKey):
     def verify(self, message, signature):
         if self[-1] != 2:
             raise ValueError("Unsupported elliptic curve")
+        coordinate_length = len(self[-2])
+        signature = _coerce_raw_ecdsa_signature(signature, coordinate_length)
         ec.EllipticCurvePublicNumbers(
             bytes2int(self[-2]), bytes2int(self[-3]), ec.SECP384R1()
         ).public_key(default_backend()).verify(
@@ -864,6 +875,8 @@ class ES512(CoseKey):
     def verify(self, message, signature):
         if self[-1] != 3:
             raise ValueError("Unsupported elliptic curve")
+        coordinate_length = len(self[-2])
+        signature = _coerce_raw_ecdsa_signature(signature, coordinate_length)
         ec.EllipticCurvePublicNumbers(
             bytes2int(self[-2]), bytes2int(self[-3]), ec.SECP521R1()
         ).public_key(default_backend()).verify(
@@ -1048,6 +1061,8 @@ class ES256K(CoseKey):
     def verify(self, message, signature):
         if self[-1] != 8:
             raise ValueError("Unsupported elliptic curve")
+        coordinate_length = len(self[-2])
+        signature = _coerce_raw_ecdsa_signature(signature, coordinate_length)
         ec.EllipticCurvePublicNumbers(
             bytes2int(self[-2]), bytes2int(self[-3]), ec.SECP256K1()
         ).public_key(default_backend()).verify(
@@ -1067,3 +1082,14 @@ class ES256K(CoseKey):
                 -3: int2bytes(pn.y, 32),
             }
         )
+def _coerce_raw_ecdsa_signature(signature: bytes, coordinate_length: int) -> bytes:
+    """Return *signature* in DER format when provided as raw ECDSA bytes."""
+
+    expected_length = coordinate_length * 2
+    if len(signature) != expected_length:
+        return signature
+
+    r = int.from_bytes(signature[:coordinate_length], "big")
+    s = int.from_bytes(signature[coordinate_length:], "big")
+    return encode_dss_signature(r, s)
+
