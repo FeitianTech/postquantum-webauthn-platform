@@ -37,7 +37,11 @@ from cryptography.hazmat.primitives.asymmetric import (
     ed25519,
     types,
 )
-from cryptography.hazmat.primitives.asymmetric.utils import encode_dss_signature
+from cryptography.hazmat.primitives.asymmetric.utils import (
+    encode_dss_signature,
+    decode_dss_signature,
+)
+from cryptography.exceptions import InvalidSignature
 from typing import Sequence, Type, Mapping, Any, TypeVar, Optional, Iterable, Dict
 
 try:  # pragma: no cover - exercised indirectly in tests
@@ -807,11 +811,11 @@ class ES256(CoseKey):
         if self[-1] != 1:
             raise ValueError("Unsupported elliptic curve")
         coordinate_length = len(self[-2])
-        signature = _coerce_raw_ecdsa_signature(signature, coordinate_length)
-        ec.EllipticCurvePublicNumbers(
+        public_key = ec.EllipticCurvePublicNumbers(
             bytes2int(self[-2]), bytes2int(self[-3]), ec.SECP256R1()
-        ).public_key(default_backend()).verify(
-            signature, message, ec.ECDSA(self._HASH_ALG)
+        ).public_key(default_backend())
+        _verify_with_candidate_signatures(
+            public_key, message, signature, coordinate_length, self._HASH_ALG
         )
 
     @classmethod
@@ -846,11 +850,11 @@ class ES384(CoseKey):
         if self[-1] != 2:
             raise ValueError("Unsupported elliptic curve")
         coordinate_length = len(self[-2])
-        signature = _coerce_raw_ecdsa_signature(signature, coordinate_length)
-        ec.EllipticCurvePublicNumbers(
+        public_key = ec.EllipticCurvePublicNumbers(
             bytes2int(self[-2]), bytes2int(self[-3]), ec.SECP384R1()
-        ).public_key(default_backend()).verify(
-            signature, message, ec.ECDSA(self._HASH_ALG)
+        ).public_key(default_backend())
+        _verify_with_candidate_signatures(
+            public_key, message, signature, coordinate_length, self._HASH_ALG
         )
 
     @classmethod
@@ -876,11 +880,11 @@ class ES512(CoseKey):
         if self[-1] != 3:
             raise ValueError("Unsupported elliptic curve")
         coordinate_length = len(self[-2])
-        signature = _coerce_raw_ecdsa_signature(signature, coordinate_length)
-        ec.EllipticCurvePublicNumbers(
+        public_key = ec.EllipticCurvePublicNumbers(
             bytes2int(self[-2]), bytes2int(self[-3]), ec.SECP521R1()
-        ).public_key(default_backend()).verify(
-            signature, message, ec.ECDSA(self._HASH_ALG)
+        ).public_key(default_backend())
+        _verify_with_candidate_signatures(
+            public_key, message, signature, coordinate_length, self._HASH_ALG
         )
 
     @classmethod
@@ -1062,11 +1066,11 @@ class ES256K(CoseKey):
         if self[-1] != 8:
             raise ValueError("Unsupported elliptic curve")
         coordinate_length = len(self[-2])
-        signature = _coerce_raw_ecdsa_signature(signature, coordinate_length)
-        ec.EllipticCurvePublicNumbers(
+        public_key = ec.EllipticCurvePublicNumbers(
             bytes2int(self[-2]), bytes2int(self[-3]), ec.SECP256K1()
-        ).public_key(default_backend()).verify(
-            signature, message, ec.ECDSA(self._HASH_ALG)
+        ).public_key(default_backend())
+        _verify_with_candidate_signatures(
+            public_key, message, signature, coordinate_length, self._HASH_ALG
         )
 
     @classmethod
@@ -1082,14 +1086,98 @@ class ES256K(CoseKey):
                 -3: int2bytes(pn.y, 32),
             }
         )
-def _coerce_raw_ecdsa_signature(signature: bytes, coordinate_length: int) -> bytes:
-    """Return *signature* in DER format when provided as raw ECDSA bytes."""
+def _verify_with_candidate_signatures(
+    public_key: ec.EllipticCurvePublicKey,
+    message: bytes,
+    signature: bytes,
+    coordinate_length: int,
+    hash_algorithm: hashes.HashAlgorithm,
+) -> None:
+    last_error: Optional[InvalidSignature] = None
+    for candidate in _iter_der_encoded_ecdsa_signatures(signature, coordinate_length):
+        try:
+            public_key.verify(candidate, message, ec.ECDSA(hash_algorithm))
+        except InvalidSignature as error:
+            last_error = error
+        else:
+            return
+    if last_error is not None:
+        raise last_error
+
+
+def _iter_der_encoded_ecdsa_signatures(
+    signature: bytes, coordinate_length: int
+) -> list[bytes]:
+    """Return possible DER encodings for *signature* provided as raw bytes."""
+
+    signature_bytes = (
+        signature
+        if isinstance(signature, (bytes, bytearray, memoryview))
+        else bytes(signature)
+    )
+    signature_bytes = bytes(signature_bytes)
+
+    if not signature_bytes:
+        return [signature_bytes]
+
+    candidates: list[bytes] = []
+    seen: set[bytes] = set()
+
+    try:
+        decode_dss_signature(signature_bytes)
+    except ValueError:
+        pass
+    else:
+        candidates.append(signature_bytes)
+        return candidates
+
+    if coordinate_length <= 0:
+        return [signature_bytes]
 
     expected_length = coordinate_length * 2
-    if len(signature) != expected_length:
-        return signature
+    signature_length = len(signature_bytes)
 
-    r = int.from_bytes(signature[:coordinate_length], "big")
-    s = int.from_bytes(signature[coordinate_length:], "big")
-    return encode_dss_signature(r, s)
+    def add_candidate(r_bytes: bytes, s_bytes: bytes) -> None:
+        der = encode_dss_signature(
+            int.from_bytes(r_bytes, "big"), int.from_bytes(s_bytes, "big")
+        )
+        if der not in seen:
+            seen.add(der)
+            candidates.append(der)
+
+    if signature_length == expected_length:
+        add_candidate(
+            signature_bytes[:coordinate_length],
+            signature_bytes[coordinate_length:],
+        )
+        return candidates
+
+    if signature_length > expected_length:
+        trailing = signature_bytes[expected_length:]
+        if trailing and any(trailing):
+            if signature_length % 2 == 0:
+                half = signature_length // 2
+                add_candidate(signature_bytes[:half], signature_bytes[half:])
+            if not candidates:
+                candidates.append(signature_bytes)
+            return candidates
+        signature_bytes = signature_bytes[:expected_length]
+        signature_length = expected_length
+
+    min_r_len = max(1, signature_length - coordinate_length)
+    max_r_len = min(coordinate_length, signature_length - 1)
+    for r_len in range(max_r_len, min_r_len - 1, -1):
+        s_len = signature_length - r_len
+        if s_len <= 0 or s_len > coordinate_length:
+            continue
+        add_candidate(signature_bytes[:r_len], signature_bytes[r_len:])
+
+    if signature_length % 2 == 0:
+        half = signature_length // 2
+        add_candidate(signature_bytes[:half], signature_bytes[half:])
+
+    if not candidates:
+        candidates.append(signature_bytes)
+
+    return candidates
 
