@@ -95,9 +95,92 @@ source .venv/bin/activate
 **Using pip / virtualenv**
 ```bash
 pip install ".[pqc]"
-pip install oqs
 python -c "import oqs"
 ```
+### 3. Install Open Quantum Safe (OQS) Libraries: 
+
+#### Install `liboqs`
+
+##### Windows
+
+```powershell
+# Clone liboqs
+git clone --branch main https://github.com/open-quantum-safe/liboqs.git
+cd liboqs
+
+# Configure build
+cmake -S . -B build -DOQS_BUILD_SHARED_LIBS=ON -DOQS_USE_OPENSSL=OFF
+
+# Build in Release mode
+cmake --build build --config Release
+```
+Output: build\bin\Release\oqs.dll
+
+Copy the DLL into your Python venv so oqs can find it:
+
+```
+copy build\bin\Release\oqs.dll C:\path\to\your\venv\Lib\site-packages\oqs\
+```
+
+Or add the folder to your PATH.
+
+##### macOS
+```
+# Clone liboqs
+git clone --branch main https://github.com/open-quantum-safe/liboqs.git
+cd liboqs
+
+# Configure and build
+cmake -S . -B build -DOQS_BUILD_SHARED_LIBS=ON -DOQS_USE_OPENSSL=OFF
+cmake --build build --config Release
+```
+
+Output: build/lib/liboqs.dylib
+
+Copy to your venv:
+
+```
+cp build/lib/liboqs.dylib /path/to/venv/lib/python3.X/site-packages/oqs/
+```
+
+Or add to DYLD_LIBRARY_PATH:
+
+```
+export DYLD_LIBRARY_PATH=$PWD/build/lib:$DYLD_LIBRARY_PATH
+```
+
+#### 4. Install liboqs-python
+
+Make sure you already built and installed **liboqs** (the C library).  
+Now, clone and install the Python wrapper:
+
+```bash
+# Go to home directory
+cd ~
+
+# Clone liboqs-python
+git clone https://github.com/open-quantum-safe/liboqs-python.git
+cd liboqs-python
+
+# Install into your active virtual environment
+pip install .
+```
+
+#### Step 2. Verify Installation
+
+From your **project root** (where your `.venv` is located):
+
+```bash
+cd ~/IdeaProjects/python-fido2-webauthn-test
+python -c "import oqs; print(oqs.get_version()); print(oqs.get_enabled_sigs())"
+```
+
+If installed correctly, you should see something like: 
+```
+0.14.0-dev
+['ML-DSA-44', 'ML-DSA-65', 'ML-DSA-87', ...]
+```
+This indicates the version number and supported algorithms. Make sure all PQC algorithm that you would like to use appears in the list above. 
 
 ---
 
