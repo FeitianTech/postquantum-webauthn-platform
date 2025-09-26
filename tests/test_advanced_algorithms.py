@@ -123,6 +123,8 @@ def test_translates_algorithm_names_to_cose_ids(client, monkeypatch):
             {"type": "public-key", "alg": "es256"},
             {"type": "public-key", "alg": "RSA256"},
             {"type": "public-key", "alg": "PS256"},
+            {"type": "public-key", "alg": "PS384"},
+            {"type": "public-key", "alg": "PS512"},
             {"type": "public-key", "alg": "RS1"},
         ],
     )
@@ -130,7 +132,7 @@ def test_translates_algorithm_names_to_cose_ids(client, monkeypatch):
     params = data["publicKey"]["pubKeyCredParams"]
     algorithms = [entry["alg"] for entry in params]
 
-    assert algorithms == [-48, -49, -50, -8, -7, -257, -37, -65535]
+    assert algorithms == [-48, -49, -50, -8, -7, -257, -37, -38, -39, -65535]
     assert all(isinstance(entry["alg"], int) for entry in params)
 
 

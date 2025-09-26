@@ -211,9 +211,14 @@ class CoseKey(dict):
             EdDSA,
             ES384,
             ES512,
-            PS256,
-            RS256,
             ES256K,
+            PS256,
+            PS384,
+            PS512,
+            RS256,
+            RS384,
+            RS512,
+            RS1,
         ]
         return [cls.ALGORITHM for cls in algs]
 
@@ -449,9 +454,87 @@ class RS256(CoseKey):
         return cls({1: 3, 3: cls.ALGORITHM, -1: int2bytes(pn.n), -2: int2bytes(pn.e)})
 
 
+class RS384(CoseKey):
+    ALGORITHM = -258
+    _HASH_ALG = hashes.SHA384()
+
+    def verify(self, message, signature):
+        rsa.RSAPublicNumbers(bytes2int(self[-2]), bytes2int(self[-1])).public_key(
+            default_backend()
+        ).verify(signature, message, padding.PKCS1v15(), self._HASH_ALG)
+
+    @classmethod
+    def from_cryptography_key(cls, public_key):
+        assert isinstance(public_key, rsa.RSAPublicKey)  # nosec
+        pn = public_key.public_numbers()
+        return cls({1: 3, 3: cls.ALGORITHM, -1: int2bytes(pn.n), -2: int2bytes(pn.e)})
+
+
+class RS512(CoseKey):
+    ALGORITHM = -259
+    _HASH_ALG = hashes.SHA512()
+
+    def verify(self, message, signature):
+        rsa.RSAPublicNumbers(bytes2int(self[-2]), bytes2int(self[-1])).public_key(
+            default_backend()
+        ).verify(signature, message, padding.PKCS1v15(), self._HASH_ALG)
+
+    @classmethod
+    def from_cryptography_key(cls, public_key):
+        assert isinstance(public_key, rsa.RSAPublicKey)  # nosec
+        pn = public_key.public_numbers()
+        return cls({1: 3, 3: cls.ALGORITHM, -1: int2bytes(pn.n), -2: int2bytes(pn.e)})
+
+
 class PS256(CoseKey):
     ALGORITHM = -37
     _HASH_ALG = hashes.SHA256()
+
+    def verify(self, message, signature):
+        rsa.RSAPublicNumbers(bytes2int(self[-2]), bytes2int(self[-1])).public_key(
+            default_backend()
+        ).verify(
+            signature,
+            message,
+            padding.PSS(
+                mgf=padding.MGF1(self._HASH_ALG), salt_length=padding.PSS.MAX_LENGTH
+            ),
+            self._HASH_ALG,
+        )
+
+    @classmethod
+    def from_cryptography_key(cls, public_key):
+        assert isinstance(public_key, rsa.RSAPublicKey)  # nosec
+        pn = public_key.public_numbers()
+        return cls({1: 3, 3: cls.ALGORITHM, -1: int2bytes(pn.n), -2: int2bytes(pn.e)})
+
+
+class PS384(CoseKey):
+    ALGORITHM = -38
+    _HASH_ALG = hashes.SHA384()
+
+    def verify(self, message, signature):
+        rsa.RSAPublicNumbers(bytes2int(self[-2]), bytes2int(self[-1])).public_key(
+            default_backend()
+        ).verify(
+            signature,
+            message,
+            padding.PSS(
+                mgf=padding.MGF1(self._HASH_ALG), salt_length=padding.PSS.MAX_LENGTH
+            ),
+            self._HASH_ALG,
+        )
+
+    @classmethod
+    def from_cryptography_key(cls, public_key):
+        assert isinstance(public_key, rsa.RSAPublicKey)  # nosec
+        pn = public_key.public_numbers()
+        return cls({1: 3, 3: cls.ALGORITHM, -1: int2bytes(pn.n), -2: int2bytes(pn.e)})
+
+
+class PS512(CoseKey):
+    ALGORITHM = -39
+    _HASH_ALG = hashes.SHA512()
 
     def verify(self, message, signature):
         rsa.RSAPublicNumbers(bytes2int(self[-2]), bytes2int(self[-1])).public_key(

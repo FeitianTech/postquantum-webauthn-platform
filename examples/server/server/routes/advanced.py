@@ -75,6 +75,8 @@ _COSE_ALGORITHM_NAME_MAP: Dict[str, int] = {
     "RS1": -65535,
     "RSASSA-PKCS1-V1_5-SHA1": -65535,
     "PS256": -37,
+    "PS384": -38,
+    "PS512": -39,
 }
 
 

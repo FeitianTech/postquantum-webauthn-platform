@@ -103,6 +103,10 @@ def describe_algorithm(alg_id: Optional[int]) -> str:
         return "ES512 (ECDSA)"
     if alg_id == -37:
         return "PS256 (RSA-PSS)"
+    if alg_id == -38:
+        return "PS384 (RSA-PSS)"
+    if alg_id == -39:
+        return "PS512 (RSA-PSS)"
     if alg_id == -257:
         return "RS256 (RSA)"
     if alg_id == -258:
