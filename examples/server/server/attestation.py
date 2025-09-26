@@ -897,13 +897,13 @@ def _load_oqs_signature_details(mechanism: str) -> Optional[Dict[str, Any]]:
 
     try:  # pragma: no cover - exercised when oqs bindings are installed
         import oqs  # type: ignore
-    except ImportError:  # pragma: no cover - absence handled by caller
+    except (ImportError, SystemExit):  # pragma: no cover - absence handled by caller
         return None
 
     try:  # pragma: no cover - defensive handling around oqs interaction
         with oqs.Signature(mechanism) as signature:  # type: ignore[attr-defined]
             details = getattr(signature, "details", None)
-    except Exception:
+    except BaseException:
         return None
 
     if not isinstance(details, Mapping):

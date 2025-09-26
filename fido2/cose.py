@@ -27,7 +27,7 @@
 
 from __future__ import annotations
 
-from .utils import bytes2int, int2bytes
+from .utils import ByteBuffer, bytes2int, int2bytes
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec, rsa, padding, ed25519, types
@@ -35,9 +35,9 @@ from typing import Sequence, Type, Mapping, Any, TypeVar, Optional, Iterable, Di
 
 try:  # pragma: no cover - exercised indirectly in tests
     import oqs  # type: ignore
-except ImportError as _oqs_error:  # pragma: no cover - handled in verification
+except (ImportError, SystemExit) as _oqs_error:  # pragma: no cover - handled in verification
     oqs = None  # type: ignore
-    _oqs_import_error: Optional[ImportError] = _oqs_error
+    _oqs_import_error: Optional[BaseException] = _oqs_error
 else:  # pragma: no cover - module imported successfully
     _oqs_import_error = None
 
@@ -50,6 +50,12 @@ def _require_oqs():  # pragma: no cover - exercised in tests when oqs is missing
         "python-fido2-webauthn-test[pqc] extra to enable post-quantum algorithms."
     )
     raise RuntimeError(message) from _oqs_import_error
+
+
+def _get_optional_oqs():
+    """Return the oqs module when available without raising."""
+
+    return oqs  # type: ignore[name-defined,return-value]
 
 
 def _parse_der_length(data: memoryview, idx: int) -> tuple[int, int]:
@@ -111,7 +117,63 @@ def _extract_subject_public_key_from_spki(spki_der: bytes) -> bytes:
     return payload
 
 
-def _unwrap_mldsa_subject_public_key(payload: bytes) -> tuple[bytes, Optional[bytes]]:
+def _find_mldsa_der_candidate(
+    view: memoryview,
+    start: int,
+    end: int,
+    expected_length: int,
+    depth: int = 8,
+) -> Optional[bytes]:
+    """Recursively search DER structures for an OCTET STRING of the given length."""
+
+    if depth <= 0:
+        return None
+
+    idx = start
+    while idx < end:
+        if idx >= len(view):
+            return None
+        tag = view[idx]
+        idx += 1
+        try:
+            length, idx = _parse_der_length(view, idx)
+        except Exception:
+            return None
+
+        content_end = idx + length
+        if content_end > end:
+            return None
+
+        content_view = view[idx:content_end]
+        if len(content_view) == expected_length:
+            return bytes(content_view)
+
+        candidate: Optional[bytes] = None
+        if tag in (0x30, 0x31):  # SEQUENCE or SET
+            candidate = _find_mldsa_der_candidate(
+                view, idx, content_end, expected_length, depth - 1
+            )
+        elif tag == 0x04:  # OCTET STRING
+            candidate = _find_mldsa_der_candidate(
+                content_view, 0, len(content_view), expected_length, depth - 1
+            )
+        elif tag == 0x03 and length > 0:  # BIT STRING
+            if content_view[0] == 0x00:
+                candidate = _find_mldsa_der_candidate(
+                    content_view, 1, len(content_view), expected_length, depth - 1
+                )
+
+        if candidate is not None:
+            return candidate
+
+        idx = content_end
+
+    return None
+
+
+def _unwrap_mldsa_subject_public_key(
+    payload: bytes, parameter_set: Optional[str] = None
+) -> tuple[bytes, Optional[bytes]]:
     """Return raw ML-DSA public key bytes, stripping DER wrappers when present."""
 
     if not payload:
@@ -141,11 +203,23 @@ def _unwrap_mldsa_subject_public_key(payload: bytes) -> tuple[bytes, Optional[by
                         break
                     if tag == 0x04:  # OCTET STRING inside SEQUENCE
                         candidate = bytes(view[idx:element_end])
-                        unwrapped, _ = _unwrap_mldsa_subject_public_key(candidate)
+                        unwrapped, _ = _unwrap_mldsa_subject_public_key(
+                            candidate, parameter_set
+                        )
                         return unwrapped, original
                     idx = element_end
     except Exception:
         pass
+
+    expected_length: Optional[int] = None
+    if parameter_set:
+        parameter_details = _get_mldsa_parameter_details(parameter_set)
+        expected_length = parameter_details.get("public_key_length")
+
+    if expected_length and len(payload) != expected_length:
+        candidate = _find_mldsa_der_candidate(view, 0, len(view), expected_length)
+        if candidate is not None:
+            return candidate, original
 
     return payload, None
 
@@ -232,6 +306,44 @@ _ML_DSA_OID_TO_PARAMETER_SET: Dict[str, str] = {
 _ALGORITHM_OID_NAMES: Dict[str, str] = {
     oid: "ML-DSA" for oid in _ML_DSA_OID_TO_PARAMETER_SET
 }
+
+
+_ML_DSA_PARAMETER_SET_DEFAULTS: Dict[str, Dict[str, Optional[int]]] = {
+    "ML-DSA-44": {"public_key_length": 1312, "signature_length": 2420},
+    "ML-DSA-65": {"public_key_length": 1952, "signature_length": 3293},
+    "ML-DSA-87": {"public_key_length": 2592, "signature_length": 4595},
+}
+
+
+def _get_mldsa_parameter_details(parameter_set: Optional[str]) -> Dict[str, Optional[int]]:
+    """Return expected ML-DSA parameter lengths, consulting oqs when available."""
+
+    if not parameter_set:
+        return {}
+
+    details: Dict[str, Optional[int]] = dict(
+        _ML_DSA_PARAMETER_SET_DEFAULTS.get(parameter_set, {})
+    )
+
+    oqs_module = _get_optional_oqs()
+    if oqs_module is None:
+        return details
+
+    try:  # pragma: no cover - depends on optional oqs installation
+        with oqs_module.Signature(parameter_set) as signature:
+            signature_details = getattr(signature, "details", None)
+    except BaseException:
+        return details
+
+    if isinstance(signature_details, Mapping):
+        public_key_length = signature_details.get("length_public_key")
+        signature_length = signature_details.get("length_signature")
+        if public_key_length:
+            details.setdefault("public_key_length", int(public_key_length))
+        if signature_length:
+            details.setdefault("signature_length", int(signature_length))
+
+    return details
 
 
 def describe_mldsa_oid(oid: Optional[str]) -> Optional[Dict[str, str]]:
@@ -324,11 +436,15 @@ def extract_certificate_public_key_info(cert_der: bytes) -> Dict[str, Any]:
     }
 
     parameter_set = _ML_DSA_OID_TO_PARAMETER_SET.get(algorithm_oid)
+    parameter_details: Dict[str, Optional[int]] = {}
     if parameter_set is not None:
         subject_public_key, wrapped_subject_public_key = _unwrap_mldsa_subject_public_key(
-            subject_public_key
+            subject_public_key, parameter_set
         )
         info["ml_dsa_parameter_set"] = parameter_set
+        parameter_details = _get_mldsa_parameter_details(parameter_set)
+        if parameter_details:
+            info["ml_dsa_parameter_details"] = parameter_details
     algorithm_name = _ALGORITHM_OID_NAMES.get(algorithm_oid)
     if algorithm_name is not None:
         info["algorithm_name"] = algorithm_name
@@ -343,17 +459,23 @@ def extract_certificate_public_key_info(cert_der: bytes) -> Dict[str, Any]:
     return info
 
 
-def _coerce_mldsa_public_key_bytes(value: Any) -> bytes:
+def _coerce_mldsa_public_key_bytes(value: Any, parameter_set: Optional[str] = None) -> bytes:
     """Convert assorted public key representations into raw ML-DSA bytes."""
 
     if isinstance(value, (bytes, bytearray, memoryview)):
         data = bytes(value)
         if data.startswith(b"\x30"):
             try:
-                return _extract_subject_public_key_from_spki(data)
+                data = _extract_subject_public_key_from_spki(data)
             except Exception:
                 pass
-        return data
+        normalized, _ = _unwrap_mldsa_subject_public_key(data, parameter_set)
+        return normalized
+
+    if isinstance(value, ByteBuffer):
+        data = value.getvalue()
+        normalized, _ = _unwrap_mldsa_subject_public_key(data, parameter_set)
+        return normalized
 
     public_bytes = getattr(value, "public_bytes", None)
     if callable(public_bytes):  # pragma: no branch - exercised in tests
@@ -374,7 +496,8 @@ def _coerce_mldsa_public_key_bytes(value: Any) -> bytes:
                     data = _extract_subject_public_key_from_spki(data)
                 except Exception:
                     continue
-            return bytes(data)
+            normalized, _ = _unwrap_mldsa_subject_public_key(bytes(data), parameter_set)
+            return normalized
 
     raise TypeError("Unable to coerce ML-DSA public key into raw bytes")
 
@@ -489,7 +612,7 @@ class MLDSA87(CoseKey):
             if isinstance(signature, (bytes, bytearray, memoryview))
             else bytes(signature)
         )
-        public_key_bytes = _coerce_mldsa_public_key_bytes(public_key)
+        public_key_bytes = _coerce_mldsa_public_key_bytes(public_key, "ML-DSA-87")
         with oqs_module.Signature("ML-DSA-87") as verifier:
             if not verifier.verify(
                 bytes(message_bytes), bytes(signature_bytes), bytes(public_key_bytes)
@@ -502,7 +625,7 @@ class MLDSA87(CoseKey):
             {
                 1: 7,
                 3: cls.ALGORITHM,
-                -1: _coerce_mldsa_public_key_bytes(public_key),
+                -1: _coerce_mldsa_public_key_bytes(public_key, "ML-DSA-87"),
             }
         )
 
@@ -528,7 +651,7 @@ class MLDSA65(CoseKey):
             if isinstance(signature, (bytes, bytearray, memoryview))
             else bytes(signature)
         )
-        public_key_bytes = _coerce_mldsa_public_key_bytes(public_key)
+        public_key_bytes = _coerce_mldsa_public_key_bytes(public_key, "ML-DSA-65")
         with oqs_module.Signature("ML-DSA-65") as verifier:
             if not verifier.verify(
                 bytes(message_bytes), bytes(signature_bytes), bytes(public_key_bytes)
@@ -541,7 +664,7 @@ class MLDSA65(CoseKey):
             {
                 1: 7,
                 3: cls.ALGORITHM,
-                -1: _coerce_mldsa_public_key_bytes(public_key),
+                -1: _coerce_mldsa_public_key_bytes(public_key, "ML-DSA-65"),
             }
         )
 
@@ -566,7 +689,7 @@ class MLDSA44(CoseKey):
             if isinstance(signature, (bytes, bytearray, memoryview))
             else bytes(signature)
         )
-        public_key_bytes = _coerce_mldsa_public_key_bytes(public_key)
+        public_key_bytes = _coerce_mldsa_public_key_bytes(public_key, "ML-DSA-44")
         with oqs_module.Signature("ML-DSA-44") as verifier:
             if not verifier.verify(
                 bytes(message_bytes), bytes(signature_bytes), bytes(public_key_bytes)
@@ -579,7 +702,7 @@ class MLDSA44(CoseKey):
             {
                 1: 7,
                 3: cls.ALGORITHM,
-                -1: _coerce_mldsa_public_key_bytes(public_key),
+                -1: _coerce_mldsa_public_key_bytes(public_key, "ML-DSA-44"),
             }
         )
 

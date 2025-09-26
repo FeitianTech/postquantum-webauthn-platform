@@ -18,6 +18,7 @@ import pytest  # noqa: E402
 from cryptography import x509  # noqa: E402
 from cryptography.exceptions import UnsupportedAlgorithm  # noqa: E402
 from fido2.cose import MLDSA44, MLDSA65, MLDSA87  # noqa: E402
+from fido2.utils import ByteBuffer  # noqa: E402
 from types import SimpleNamespace  # noqa: E402
 
 
@@ -175,7 +176,16 @@ def test_coerce_mldsa_public_key_bytes_unwraps_der_subject_public_key():
     raw_key = b"wrapped-public-key"
     spki = _build_spki(raw_key, algorithm_oid="2.16.840.1.101.3.4.3.17")
 
-    result = cose_module._coerce_mldsa_public_key_bytes(spki)
+    result = cose_module._coerce_mldsa_public_key_bytes(spki, "ML-DSA-44")
+
+    assert result == raw_key
+
+
+def test_coerce_mldsa_public_key_bytes_handles_bytebuffer():
+    raw_key = b"bytebuffer-public-key"
+    buffer = ByteBuffer(raw_key)
+
+    result = cose_module._coerce_mldsa_public_key_bytes(buffer, "ML-DSA-65")
 
     assert result == raw_key
 
@@ -190,6 +200,12 @@ def test_extract_certificate_public_key_info_parses_mldsa_certificate():
     assert info["algorithm_oid"] == "2.16.840.1.101.3.4.3.17"
     assert info["ml_dsa_parameter_set"] == "ML-DSA-44"
     assert info["subject_public_key"] == raw_key
+    details = info.get("ml_dsa_parameter_details")
+    assert isinstance(details, dict)
+    length = details.get("public_key_length")
+    if length is not None:
+        assert isinstance(length, int)
+        assert length > 0
 
 
 def test_extract_certificate_public_key_info_unwraps_octet_string_public_key():
