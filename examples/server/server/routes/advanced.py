@@ -9,7 +9,7 @@ import os
 import time
 import uuid
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Mapping, MutableMapping, Optional
+from typing import Any, Dict, Iterable, List, Mapping, MutableMapping, Optional
 
 from flask import jsonify, request, session
 from fido2.webauthn import (
@@ -24,7 +24,6 @@ from fido2.webauthn import (
 )
 
 from ..attachments import (
-    build_credential_attachment_map,
     normalize_attachment,
     normalize_attachment_list,
     resolve_effective_attachments,
@@ -75,6 +74,8 @@ _COSE_ALGORITHM_NAME_MAP: Dict[str, int] = {
     "RS1": -65535,
     "RSASSA-PKCS1-V1_5-SHA1": -65535,
     "PS256": -37,
+    "PS384": -38,
+    "PS512": -39,
 }
 
 
@@ -97,8 +98,107 @@ for raw_name, alg_id in _COSE_ALGORITHM_NAME_MAP.items():
         _COSE_ALGORITHM_NAME_LOOKUP[normalized_key] = alg_id
 
 
-_SUPPORTED_COSE_ALGORITHMS = frozenset(_COSE_ALGORITHM_NAME_LOOKUP.values())
 _COSE_ALGORITHM_NUMERIC_PATTERN = re.compile(r"-?\d+")
+
+
+def _extract_credential_id(value: Any) -> Optional[bytes]:
+    credential_id = None
+    if isinstance(value, Mapping):
+        raw_id = value.get("credential_id")
+        if isinstance(raw_id, (bytes, bytearray, memoryview)):
+            credential_id = bytes(raw_id)
+    else:
+        raw_id = getattr(value, "credential_id", None)
+        if isinstance(raw_id, (bytes, bytearray, memoryview)):
+            credential_id = bytes(raw_id)
+    return credential_id
+
+
+def _extract_credential_algorithm(value: Any) -> Optional[int]:
+    public_key_value: Any = None
+    if isinstance(value, Mapping):
+        public_key_value = value.get("public_key") or value.get("publicKey")
+    else:
+        public_key_value = getattr(value, "public_key", None)
+
+    raw_alg: Any = None
+    if isinstance(public_key_value, Mapping):
+        if 3 in public_key_value:
+            raw_alg = public_key_value[3]
+        else:
+            raw_alg = public_key_value.get("alg")
+    else:
+        try:
+            raw_alg = public_key_value[3]  # type: ignore[index]
+        except Exception:
+            raw_alg = getattr(public_key_value, "alg", None)
+
+    return _coerce_cose_algorithm(raw_alg)
+
+
+def _load_all_stored_credentials() -> List[Dict[str, Any]]:
+    """Load all stored credentials with metadata needed for advanced flows."""
+
+    records: List[Dict[str, Any]] = []
+
+    try:
+        pkl_files = [f for f in os.listdir(basepath) if f.endswith("_credential_data.pkl")]
+    except Exception:
+        return records
+
+    for pkl_file in pkl_files:
+        email = pkl_file.replace("_credential_data.pkl", "")
+        try:
+            user_creds = readkey(email)
+        except Exception:
+            continue
+
+        for cred in user_creds:
+            record: Dict[str, Any] = {
+                "data": extract_credential_data(cred),
+                "id": None,
+                "attachment": None,
+                "algorithm": None,
+            }
+
+            credential_data = record["data"]
+            record["id"] = _extract_credential_id(credential_data)
+            record["algorithm"] = _extract_credential_algorithm(credential_data)
+
+            if isinstance(cred, Mapping):
+                attachment_value = normalize_attachment(
+                    cred.get("authenticator_attachment")
+                    or cred.get("authenticatorAttachment")
+                )
+                if attachment_value is None:
+                    properties = cred.get("properties")
+                    if isinstance(properties, Mapping):
+                        attachment_value = normalize_attachment(
+                            properties.get("authenticatorAttachment")
+                            or properties.get("authenticator_attachment")
+                        )
+                record["attachment"] = attachment_value
+
+            records.append(record)
+
+    return records
+
+
+def _derive_algorithms_from_credentials(credentials: Iterable[Any]) -> List[PublicKeyCredentialParameters]:
+    """Produce a list of allowed algorithms based on stored credential data."""
+
+    seen: Dict[int, PublicKeyCredentialParameters] = {}
+    for credential in credentials:
+        alg_value = _extract_credential_algorithm(credential)
+        if alg_value is None or alg_value in seen:
+            continue
+
+        seen[alg_value] = PublicKeyCredentialParameters(
+            type=PublicKeyCredentialType.PUBLIC_KEY,
+            alg=alg_value,
+        )
+
+    return list(seen.values())
 
 def _lookup_named_cose_algorithm(name: str) -> Optional[int]:
     normalized_name = _normalize_algorithm_name_key(name)
@@ -137,11 +237,9 @@ def _coerce_cose_algorithm(value: Any) -> Optional[int]:
             matches = list(_COSE_ALGORITHM_NUMERIC_PATTERN.finditer(stripped))
             if matches:
                 try:
-                    candidate = int(matches[-1].group(0), 10)
+                    return int(matches[-1].group(0), 10)
                 except ValueError:
                     return None
-                if candidate in _SUPPORTED_COSE_ALGORITHMS:
-                    return candidate
             return None
     return None
 
@@ -1112,10 +1210,6 @@ def advanced_authenticate_begin():
     resolved_rp_id = determine_rp_id(stored_rp_id)
     temp_server = create_fido_server(rp_id=resolved_rp_id, rp_name=stored_rp_name)
 
-    credential_attachment_map: Dict[bytes, Optional[str]] = {}
-    if allowed_attachment_values:
-        credential_attachment_map = build_credential_attachment_map()
-
     timeout = public_key.get("timeout", 90000)
     temp_server.timeout = timeout / 1000.0 if timeout else None
 
@@ -1126,73 +1220,118 @@ def advanced_authenticate_begin():
     elif user_verification == "discouraged":
         uv_req = UserVerificationRequirement.DISCOURAGED
 
-    allow_credentials = public_key.get("allowCredentials", [])
-    selected_credentials = None
+    stored_records = _load_all_stored_credentials()
+    credential_lookup: Dict[bytes, Dict[str, Any]] = {
+        bytes(record["id"]): record
+        for record in stored_records
+        if isinstance(record.get("id"), (bytes, bytearray, memoryview))
+    }
 
-    if not allow_credentials or len(allow_credentials) == 0:
-        selected_credentials = None
-    else:
+    allow_credentials = public_key.get("allowCredentials", [])
+    selected_credentials: Optional[List[PublicKeyCredentialDescriptor]] = None
+    credentials_for_begin: List[Any] = []
+
+    if allow_credentials and len(allow_credentials) > 0:
         selected_credentials = []
+        seen_ids: set[bytes] = set()
         for allow_cred in allow_credentials:
-            if isinstance(allow_cred, dict) and allow_cred.get("type") == "public-key":
-                cred_id = _extract_binary_value(allow_cred.get("id", ""))
-                if isinstance(cred_id, str):
+            if not isinstance(allow_cred, dict) or allow_cred.get("type") != "public-key":
+                continue
+
+            cred_id = _extract_binary_value(allow_cred.get("id", ""))
+            if isinstance(cred_id, str):
+                try:
                     cred_id = bytes.fromhex(cred_id)
-                if cred_id:
-                    selected_credentials.append(PublicKeyCredentialDescriptor(
-                        type=PublicKeyCredentialType.PUBLIC_KEY,
-                        id=cred_id
-                    ))
+                except ValueError:
+                    continue
+
+            if not isinstance(cred_id, (bytes, bytearray, memoryview)):
+                continue
+
+            cred_id_bytes = bytes(cred_id)
+            if cred_id_bytes in seen_ids:
+                continue
+
+            record = credential_lookup.get(cred_id_bytes)
+            if record is None:
+                continue
+
+            attachment_value = record.get("attachment")
+            if allowed_attachment_values and attachment_value not in allowed_attachment_values:
+                continue
+
+            descriptor = PublicKeyCredentialDescriptor(
+                type=PublicKeyCredentialType.PUBLIC_KEY,
+                id=cred_id_bytes,
+            )
+            selected_credentials.append(descriptor)
+            credentials_for_begin.append(record["data"])
+            seen_ids.add(cred_id_bytes)
 
         if not selected_credentials:
-            try:
-                pkl_files = [f for f in os.listdir(basepath) if f.endswith('_credential_data.pkl')]
-                for pkl_file in pkl_files:
-                    email = pkl_file.replace('_credential_data.pkl', '')
-                    try:
-                        user_creds = readkey(email)
-                        for cred in user_creds:
-                            credential_data = extract_credential_data(cred)
-                            cred_id_bytes: Optional[bytes] = None
-                            if isinstance(credential_data, Mapping):
-                                raw_id = credential_data.get('credential_id')
-                                if isinstance(raw_id, (bytes, bytearray, memoryview)):
-                                    cred_id_bytes = bytes(raw_id)
-                            else:
-                                raw_id = getattr(credential_data, 'credential_id', None)
-                                if isinstance(raw_id, (bytes, bytearray, memoryview)):
-                                    cred_id_bytes = bytes(raw_id)
-                            if cred_id_bytes:
-                                selected_credentials.append(PublicKeyCredentialDescriptor(
-                                    type=PublicKeyCredentialType.PUBLIC_KEY,
-                                    id=cred_id_bytes
-                                ))
-                    except Exception:
-                        continue
-            except Exception:
-                selected_credentials = []
-
-        if allowed_attachment_values and isinstance(selected_credentials, list):
-            filtered_descriptors: List[PublicKeyCredentialDescriptor] = []
-            for descriptor in selected_credentials:
-                descriptor_id_bytes: Optional[bytes] = None
-                try:
-                    descriptor_id_bytes = bytes(descriptor.id)
-                except Exception:
-                    descriptor_id_bytes = None
-                if descriptor_id_bytes is None:
+            selected_credentials = []
+            seen_ids.clear()
+            for record in stored_records:
+                cred_id = record.get("id")
+                if not isinstance(cred_id, (bytes, bytearray, memoryview)):
                     continue
-                attachment_value = credential_attachment_map.get(descriptor_id_bytes)
-                if attachment_value and attachment_value in allowed_attachment_values:
-                    filtered_descriptors.append(descriptor)
-            selected_credentials = filtered_descriptors
+                cred_id_bytes = bytes(cred_id)
+                if cred_id_bytes in seen_ids:
+                    continue
+                attachment_value = record.get("attachment")
+                if allowed_attachment_values and attachment_value not in allowed_attachment_values:
+                    continue
+                selected_credentials.append(
+                    PublicKeyCredentialDescriptor(
+                        type=PublicKeyCredentialType.PUBLIC_KEY,
+                        id=cred_id_bytes,
+                    )
+                )
+                credentials_for_begin.append(record["data"])
+                seen_ids.add(cred_id_bytes)
 
-    if allow_credentials and selected_credentials is not None and len(selected_credentials) == 0:
+        if not selected_credentials:
+            if allowed_attachment_values:
+                return jsonify({
+                    "error": "No credentials matched the selected hints. Please adjust your hints or select different credentials."
+                }), 404
+            return jsonify({"error": "No matching credentials found. Please register first."}), 404
+    else:
+        seen_ids: set[bytes] = set()
+        for record in stored_records:
+            cred_id = record.get("id")
+            if not isinstance(cred_id, (bytes, bytearray, memoryview)):
+                continue
+            cred_id_bytes = bytes(cred_id)
+            if cred_id_bytes in seen_ids:
+                continue
+            attachment_value = record.get("attachment")
+            if allowed_attachment_values and attachment_value not in allowed_attachment_values:
+                continue
+            credentials_for_begin.append(record["data"])
+            seen_ids.add(cred_id_bytes)
+
+    if not credentials_for_begin:
         if allowed_attachment_values:
             return jsonify({
                 "error": "No credentials matched the selected hints. Please adjust your hints or select different credentials."
             }), 404
-        return jsonify({"error": "No matching credentials found. Please register first."}), 404
+        if not stored_records:
+            return jsonify({"error": "No matching credentials found. Please register first."}), 404
+
+    algorithm_source: Iterable[Any]
+    if credentials_for_begin:
+        algorithm_source = credentials_for_begin
+    else:
+        algorithm_source = [
+            record["data"]
+            for record in stored_records
+            if record.get("data") is not None
+        ]
+
+    derived_algorithms = _derive_algorithms_from_credentials(algorithm_source)
+    if derived_algorithms:
+        temp_server.allowed_algorithms = derived_algorithms
 
     extensions = public_key.get("extensions", {})
     processed_extensions = {}
@@ -1233,7 +1372,7 @@ def advanced_authenticate_begin():
             processed_extensions[ext_name] = ext_value
 
     options, state = temp_server.authenticate_begin(
-        selected_credentials,
+        credentials_for_begin,
         user_verification=uv_req,
         challenge=challenge_bytes,
         extensions=processed_extensions if processed_extensions else None,
@@ -1291,19 +1430,12 @@ def advanced_authenticate_complete():
                 "error": "Authenticator attachment is not permitted by the selected hints."
             }), 400
 
-    all_credentials = []
-    try:
-        pkl_files = [f for f in os.listdir(basepath) if f.endswith('_credential_data.pkl')]
-        for pkl_file in pkl_files:
-            email = pkl_file.replace('_credential_data.pkl', '')
-            try:
-                user_creds = readkey(email)
-                credential_data_list = [extract_credential_data(cred) for cred in user_creds]
-                all_credentials.extend(credential_data_list)
-            except Exception:
-                continue
-    except Exception:
-        pass
+    stored_records = _load_all_stored_credentials()
+    all_credentials = [
+        record["data"]
+        for record in stored_records
+        if record.get("data") is not None
+    ]
 
     if not all_credentials:
         return jsonify({"error": "No credentials found"}), 404
@@ -1322,6 +1454,10 @@ def advanced_authenticate_complete():
 
         resolved_rp_id = determine_rp_id(stored_rp_id)
         auth_server = create_fido_server(rp_id=resolved_rp_id, rp_name=stored_rp_name)
+
+        derived_algorithms = _derive_algorithms_from_credentials(all_credentials)
+        if derived_algorithms:
+            auth_server.allowed_algorithms = derived_algorithms
 
         auth_result = auth_server.authenticate_complete(
             session.pop("advanced_auth_state"),

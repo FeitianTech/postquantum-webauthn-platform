@@ -35,11 +35,13 @@ const certificateCache = new Map();
 let scrollTopButtonUpdateScheduled = false;
 let columnResizerMetricsScheduled = false;
 let rowHeightLockScheduled = false;
+let horizontalScrollMetricsScheduled = false;
 let initialMdsJws = null;
 let initialMdsInfo = null;
 const MDS_METADATA_STORAGE_KEY = 'fido.mds.metadataPayload';
 const MDS_METADATA_INFO_KEY = 'fido.mds.metadataInfo';
 let sessionStorageWarningShown = false;
+let isSyncingHorizontalScroll = false;
 
 const SORT_NONE = 'none';
 const SORT_ASCENDING = 'asc';
@@ -49,6 +51,17 @@ const SORT_SEQUENCE = {
     [SORT_NONE]: SORT_ASCENDING,
     [SORT_ASCENDING]: SORT_DESCENDING,
     [SORT_DESCENDING]: SORT_NONE,
+};
+
+const DEFAULT_SORT_KEY = 'dateUpdated';
+const DEFAULT_SORT_DIRECTION = SORT_DESCENDING;
+
+const SORT_SEQUENCE_OVERRIDES = {
+    [DEFAULT_SORT_KEY]: {
+        [SORT_NONE]: DEFAULT_SORT_DIRECTION,
+        [SORT_ASCENDING]: SORT_DESCENDING,
+        [SORT_DESCENDING]: SORT_ASCENDING,
+    },
 };
 
 const SORT_ACCESSORS = {
@@ -80,6 +93,8 @@ const SORT_ACCESSORS = {
 };
 
 const DEFAULT_MIN_COLUMN_WIDTH = 64;
+const FLOATING_SCROLL_BOTTOM_MARGIN = 24;
+const FLOATING_SCROLL_SIDE_MARGIN = 16;
 
 if (typeof window !== 'undefined') {
     if (typeof window.__INITIAL_MDS_JWS__ === 'string' && window.__INITIAL_MDS_JWS__) {
@@ -166,6 +181,213 @@ function scheduleRowHeightLock() {
         });
     } else {
         setTimeout(apply, 0);
+    }
+}
+
+function scheduleHorizontalScrollMetricsUpdate() {
+    if (horizontalScrollMetricsScheduled) {
+        return;
+    }
+    horizontalScrollMetricsScheduled = true;
+    const apply = () => {
+        horizontalScrollMetricsScheduled = false;
+        updateHorizontalScrollMetrics();
+    };
+    if (typeof requestAnimationFrame === 'function') {
+        requestAnimationFrame(apply);
+    } else {
+        setTimeout(apply, 0);
+    }
+}
+
+function clearHorizontalFloatingStyles(horizontal) {
+    if (!horizontal) {
+        return;
+    }
+    horizontal.style.left = '';
+    horizontal.style.right = '';
+    horizontal.style.bottom = '';
+    horizontal.style.top = '';
+    horizontal.style.width = '';
+    horizontal.style.transform = '';
+}
+
+function hideHorizontalScroll(state = mdsState) {
+    if (!state) {
+        return;
+    }
+
+    const horizontal =
+        state.horizontalScrollContainer instanceof HTMLElement ? state.horizontalScrollContainer : null;
+
+    if (!horizontal) {
+        return;
+    }
+
+    clearHorizontalFloatingStyles(horizontal);
+    horizontal.hidden = true;
+    horizontal.setAttribute('hidden', '');
+    horizontal.setAttribute('aria-hidden', 'true');
+    horizontal.classList.remove('is-ready');
+    horizontal.classList.remove('is-overflowing');
+    horizontal.classList.remove('is-floating');
+}
+
+function updateFloatingHorizontalScrollPosition(state = mdsState, metrics = {}) {
+    if (!state) {
+        return;
+    }
+
+    const horizontal =
+        state.horizontalScrollContainer instanceof HTMLElement ? state.horizontalScrollContainer : null;
+    const container = state.tableContainer instanceof HTMLElement ? state.tableContainer : null;
+
+    if (!horizontal || !container) {
+        return;
+    }
+
+    const rect = metrics.containerRect || container.getBoundingClientRect();
+    if (!rect) {
+        clearHorizontalFloatingStyles(horizontal);
+        horizontal.classList.remove('is-floating');
+        return;
+    }
+
+    const viewportHeight =
+        typeof metrics.viewportHeight === 'number'
+            ? metrics.viewportHeight
+            : typeof window !== 'undefined'
+              ? window.innerHeight || document.documentElement?.clientHeight || 0
+              : 0;
+    const viewportWidth =
+        typeof metrics.viewportWidth === 'number'
+            ? metrics.viewportWidth
+            : typeof window !== 'undefined'
+              ? window.innerWidth || document.documentElement?.clientWidth || 0
+              : 0;
+
+    if (!viewportHeight || !viewportWidth) {
+        clearHorizontalFloatingStyles(horizontal);
+        horizontal.classList.remove('is-floating');
+        return;
+    }
+
+    const sideMargin = FLOATING_SCROLL_SIDE_MARGIN;
+    const bottomMargin = FLOATING_SCROLL_BOTTOM_MARGIN;
+
+    const rawWidth = Number.isFinite(rect.width) ? rect.width : viewportWidth;
+    const maxWidth = viewportWidth - sideMargin * 2;
+    let width = rawWidth;
+    if (maxWidth > 0) {
+        width = Math.min(width, maxWidth);
+    }
+    width = Math.max(0, width);
+    if (!width) {
+        clearHorizontalFloatingStyles(horizontal);
+        horizontal.classList.remove('is-floating');
+        return;
+    }
+    horizontal.style.width = `${Math.round(width)}px`;
+
+    const maxLeft = viewportWidth - sideMargin - width;
+    const preferredLeft = Number.isFinite(rect.left) ? rect.left : sideMargin;
+    let left = preferredLeft;
+    if (maxLeft >= sideMargin) {
+        left = Math.min(Math.max(preferredLeft, sideMargin), maxLeft);
+    } else {
+        left = Math.max(preferredLeft, sideMargin);
+    }
+    horizontal.style.left = `${Math.round(left)}px`;
+    horizontal.style.right = 'auto';
+
+    const offsetFromBottom = viewportHeight - rect.bottom;
+    const bottomOffset = Math.max(bottomMargin, offsetFromBottom);
+    horizontal.style.bottom = `${Math.round(bottomOffset)}px`;
+    horizontal.style.top = 'auto';
+    horizontal.classList.add('is-floating');
+}
+
+function updateHorizontalScrollMetrics(state = mdsState) {
+    if (!state) {
+        return;
+    }
+
+    const table = state.table instanceof HTMLElement ? state.table : null;
+    const container = state.tableContainer instanceof HTMLElement ? state.tableContainer : null;
+    const horizontal =
+        state.horizontalScrollContainer instanceof HTMLElement ? state.horizontalScrollContainer : null;
+    const content =
+        state.horizontalScrollContent instanceof HTMLElement ? state.horizontalScrollContent : null;
+
+    if (!horizontal) {
+        return;
+    }
+
+    const tableWidth = table ? table.scrollWidth : 0;
+    const containerWidth = container ? container.clientWidth : 0;
+    const targetWidth = Math.max(tableWidth, containerWidth);
+    const safeWidth = Number.isFinite(targetWidth) ? targetWidth : 0;
+
+    if (content) {
+        content.style.width = `${safeWidth}px`;
+    }
+
+    const overflowing = table && container ? tableWidth > containerWidth + 1 : false;
+    horizontal.classList.toggle('is-overflowing', Boolean(overflowing));
+
+    const viewportHeight =
+        typeof window !== 'undefined'
+            ? window.innerHeight || document.documentElement?.clientHeight || 0
+            : 0;
+    const viewportWidth =
+        typeof window !== 'undefined'
+            ? window.innerWidth || document.documentElement?.clientWidth || 0
+            : 0;
+    const containerRect = container ? container.getBoundingClientRect() : null;
+
+    const containerVisible =
+        containerRect &&
+        viewportHeight > 0 &&
+        containerRect.bottom > 0 &&
+        containerRect.top < viewportHeight;
+
+    if (!containerVisible) {
+        hideHorizontalScroll(state);
+        return;
+    }
+
+    if (horizontal.hidden) {
+        horizontal.hidden = false;
+        horizontal.removeAttribute('hidden');
+    }
+    horizontal.setAttribute('aria-hidden', 'false');
+    horizontal.classList.add('is-ready');
+
+    if (container && !isSyncingHorizontalScroll) {
+        isSyncingHorizontalScroll = true;
+        horizontal.scrollLeft = container.scrollLeft;
+        isSyncingHorizontalScroll = false;
+    }
+
+    updateFloatingHorizontalScrollPosition(state, {
+        containerRect,
+        viewportHeight,
+        viewportWidth,
+    });
+}
+
+function syncHorizontalScrollPositions(source, target) {
+    if (!source || !target) {
+        return;
+    }
+    if (isSyncingHorizontalScroll) {
+        return;
+    }
+    isSyncingHorizontalScroll = true;
+    try {
+        target.scrollLeft = source.scrollLeft;
+    } finally {
+        isSyncingHorizontalScroll = false;
     }
 }
 
@@ -571,6 +793,7 @@ function scrollMdsSectionToTop() {
 function handleWindowScroll() {
     scheduleScrollTopButtonUpdate();
     scheduleColumnResizerMetricsUpdate();
+    scheduleHorizontalScrollMetricsUpdate();
 }
 
 if (typeof window !== 'undefined') {
@@ -687,11 +910,39 @@ function initializeState(root) {
     });
 
     const tableContainer = root.querySelector('#mds-table-container');
-    if (tableContainer) {
-        tableContainer.addEventListener('scroll', () => scheduleScrollTopButtonUpdate());
-    }
     const table = root.querySelector('.mds-table');
     const tableBody = root.querySelector('#mds-table-body');
+    const horizontalScrollContainer = root.querySelector('#mds-horizontal-scroll');
+    const horizontalScrollContent = horizontalScrollContainer
+        ? horizontalScrollContainer.querySelector('.mds-horizontal-scroll__content')
+        : null;
+
+    if (horizontalScrollContainer) {
+        horizontalScrollContainer.hidden = true;
+        horizontalScrollContainer.setAttribute('hidden', '');
+    }
+
+    if (tableContainer) {
+        const handleScroll = () => {
+            scheduleScrollTopButtonUpdate();
+            if (horizontalScrollContainer) {
+                syncHorizontalScrollPositions(tableContainer, horizontalScrollContainer);
+            }
+        };
+        tableContainer.addEventListener('scroll', handleScroll, { passive: true });
+    }
+
+    if (horizontalScrollContainer) {
+        horizontalScrollContainer.addEventListener(
+            'scroll',
+            () => {
+                if (tableContainer) {
+                    syncHorizontalScrollPositions(horizontalScrollContainer, tableContainer);
+                }
+            },
+            { passive: true },
+        );
+    }
 
     const sortButtons = new Map();
     root.querySelectorAll('.mds-sort-button[data-sort-key]').forEach(button => {
@@ -766,8 +1017,10 @@ function initializeState(root) {
         if (event?.detail?.tab !== 'mds') {
             clearRowHighlight();
             hideScrollTopButton();
+            hideHorizontalScroll(state);
         } else {
             scheduleScrollTopButtonUpdate();
+            scheduleHorizontalScrollMetricsUpdate();
         }
     };
     if (typeof document !== 'undefined') {
@@ -782,8 +1035,10 @@ function initializeState(root) {
         tableContainer,
         table,
         tableBody,
+        horizontalScrollContainer,
+        horizontalScrollContent,
         sortButtons,
-        sort: { key: '', direction: SORT_NONE },
+        sort: { key: DEFAULT_SORT_KEY, direction: DEFAULT_SORT_DIRECTION },
         countEl: root.querySelector('#mds-entry-count'),
         totalEl: root.querySelector('#mds-total-count'),
         statusEl,
@@ -824,6 +1079,7 @@ function initializeState(root) {
 
     setupColumnResizers(state);
     setColumnResizersEnabled(false, state);
+    scheduleHorizontalScrollMetricsUpdate();
     return state;
 }
 
@@ -873,6 +1129,7 @@ async function applyMetadataEntries(metadata, { note = '' } = {}) {
     }
 
     applyFilters();
+    scheduleHorizontalScrollMetricsUpdate();
 
     hasLoaded = true;
 
@@ -1037,6 +1294,7 @@ async function loadMdsData(statusNote, options = {}) {
                     }
                     hideScrollTopButton();
                     resetSortState();
+                    scheduleHorizontalScrollMetricsUpdate();
                     clearMetadataCache();
                     stateUpdated = true;
                     hasLoaded = false;
@@ -1260,6 +1518,16 @@ function normaliseSortValue(value) {
     return text.toLowerCase();
 }
 
+function getNextSortDirection(sortKey, currentDirection) {
+    const key = typeof sortKey === 'string' ? sortKey : '';
+    const direction = currentDirection || SORT_NONE;
+    const override = key && SORT_SEQUENCE_OVERRIDES[key];
+    if (override && Object.prototype.hasOwnProperty.call(override, direction)) {
+        return override[direction];
+    }
+    return SORT_SEQUENCE[direction] || SORT_ASCENDING;
+}
+
 function updateSortButtonState() {
     if (!mdsState?.sortButtons) {
         return;
@@ -1297,10 +1565,10 @@ function resetSortState() {
         return;
     }
     if (!mdsState.sort) {
-        mdsState.sort = { key: '', direction: SORT_NONE };
+        mdsState.sort = { key: DEFAULT_SORT_KEY, direction: DEFAULT_SORT_DIRECTION };
     } else {
-        mdsState.sort.key = '';
-        mdsState.sort.direction = SORT_NONE;
+        mdsState.sort.key = DEFAULT_SORT_KEY;
+        mdsState.sort.direction = DEFAULT_SORT_DIRECTION;
     }
     updateSortButtonState();
 }
@@ -1315,25 +1583,24 @@ function handleSortButtonClick(sortKey) {
     }
 
     if (!mdsState.sort) {
-        mdsState.sort = { key: '', direction: SORT_NONE };
+        mdsState.sort = { key: DEFAULT_SORT_KEY, direction: DEFAULT_SORT_DIRECTION };
     }
 
     const currentKey = mdsState.sort.key;
     const currentDirection = mdsState.sort.direction || SORT_NONE;
-    let nextDirection = SORT_ASCENDING;
-    if (currentKey === key) {
-        nextDirection = SORT_SEQUENCE[currentDirection] || SORT_ASCENDING;
-    }
+    const baseDirection = currentKey === key ? currentDirection : SORT_NONE;
+    const nextDirection = getNextSortDirection(key, baseDirection);
 
     if (nextDirection === SORT_NONE) {
-        mdsState.sort.key = '';
-        mdsState.sort.direction = SORT_NONE;
+        resetSortState();
     } else {
         mdsState.sort.key = key;
         mdsState.sort.direction = nextDirection;
     }
 
-    updateSortButtonState();
+    if (nextDirection !== SORT_NONE) {
+        updateSortButtonState();
+    }
     applyFilters({ preserveTableScroll: true });
 }
 
@@ -1451,6 +1718,8 @@ function renderTable(entries, options = {}) {
     const { preserveTableScroll = false } = options;
     const container =
         mdsState.tableContainer instanceof HTMLElement ? mdsState.tableContainer : null;
+    const horizontal =
+        mdsState.horizontalScrollContainer instanceof HTMLElement ? mdsState.horizontalScrollContainer : null;
 
     let preservedScroll = null;
     if (preserveTableScroll && container) {
@@ -1469,6 +1738,9 @@ function renderTable(entries, options = {}) {
             const restore = () => {
                 if (typeof preservedScroll.left === 'number') {
                     container.scrollLeft = preservedScroll.left;
+                    if (horizontal) {
+                        horizontal.scrollLeft = preservedScroll.left;
+                    }
                 }
                 if (typeof preservedScroll.top === 'number') {
                     container.scrollTop = preservedScroll.top;
@@ -1480,7 +1752,7 @@ function renderTable(entries, options = {}) {
             }
             return;
         }
-        resetScrollPositions(container);
+        resetScrollPositions(container, horizontal);
     };
 
     const tbody = mdsState.tableBody;
@@ -1498,6 +1770,7 @@ function renderTable(entries, options = {}) {
         stabiliseColumnWidths();
         scheduleColumnResizerMetricsUpdate();
         adjustScrollPosition();
+        scheduleHorizontalScrollMetricsUpdate();
         return;
     }
 
@@ -1548,6 +1821,7 @@ function renderTable(entries, options = {}) {
     }
     stabiliseColumnWidths();
     scheduleScrollTopButtonUpdate();
+    scheduleHorizontalScrollMetricsUpdate();
     scheduleColumnResizerMetricsUpdate();
     scheduleRowHeightLock();
 }
@@ -3104,6 +3378,7 @@ function applyColumnWidths(widths) {
     }
 
     scheduleColumnResizerMetricsUpdate();
+    scheduleHorizontalScrollMetricsUpdate();
     scheduleRowHeightLock();
 }
 
