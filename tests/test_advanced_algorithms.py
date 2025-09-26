@@ -1,13 +1,18 @@
-"""Tests for algorithm handling in the advanced registration routes."""
+"""Tests for algorithm handling in the advanced registration and authentication routes."""
 
 from __future__ import annotations
 
 import importlib.util
+import importlib
 from pathlib import Path
 from typing import Any, List, Sequence
 
 import sys
 import types
+
+_REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
 
 import pytest
 
@@ -256,3 +261,140 @@ def test_filters_pqc_from_default_list_when_unsupported(client):
     algorithms = [entry["alg"] for entry in params]
 
     assert algorithms == [-7, -257]
+
+
+def test_authentication_begin_uses_stored_algorithms(client, monkeypatch):
+    view_func = client.application.view_functions["advanced_authenticate_begin"]
+    advanced = importlib.import_module(view_func.__module__)
+
+    credential_record = {
+        "data": {
+            "credential_id": b"\x01\x02",
+            "public_key": {1: 3, 3: -38},
+        },
+        "id": b"\x01\x02",
+        "attachment": "platform",
+        "algorithm": -38,
+    }
+
+    loader_calls: List[bool] = []
+
+    def _fake_loader():
+        loader_calls.append(True)
+        return [credential_record]
+
+    monkeypatch.setattr(advanced, "_load_all_stored_credentials", _fake_loader)
+    monkeypatch.setitem(
+        advanced.advanced_authenticate_begin.__globals__,
+        "_load_all_stored_credentials",
+        _fake_loader,
+    )
+
+    assert (
+        advanced.advanced_authenticate_begin.__globals__["_load_all_stored_credentials"]
+        is _fake_loader
+    )
+
+    class DummyServer:
+        def __init__(self) -> None:
+            self.allowed_algorithms = []
+            self.timeout = None
+            self.calls = []
+
+        def authenticate_begin(self, credentials, **kwargs):
+            self.calls.append({"credentials": credentials, **kwargs})
+            return {"publicKey": {"challenge": "dummy"}}, "dummy-state"
+
+    dummy_server = DummyServer()
+    monkeypatch.setattr(advanced, "create_fido_server", lambda *_, **__: dummy_server)
+
+    payload = {
+        "publicKey": {
+            "challenge": {"$hex": "0102030405060708090a0b0c0d0e0f10"},
+            "timeout": 60000,
+        }
+    }
+
+    response = client.post("/api/advanced/authenticate/begin", json=payload)
+
+    assert loader_calls, "stored credential loader was not invoked"
+    assert response.status_code == 200, response.get_data(as_text=True)
+    assert dummy_server.calls, "authenticate_begin was not invoked"
+    credentials_passed = dummy_server.calls[0]["credentials"]
+    assert credentials_passed == [credential_record["data"]]
+
+    derived_algs = [param.alg for param in dummy_server.allowed_algorithms]
+    assert derived_algs == [-38]
+
+
+def test_authentication_complete_uses_credential_algorithms(client, monkeypatch):
+    view_func = client.application.view_functions["advanced_authenticate_complete"]
+    advanced = importlib.import_module(view_func.__module__)
+
+    credential_record = {
+        "data": {
+            "credential_id": b"\x0a\x0b",
+            "public_key": {1: 3, 3: -39},
+        },
+        "id": b"\x0a\x0b",
+        "attachment": "cross-platform",
+        "algorithm": -39,
+    }
+
+    loader_calls: List[bool] = []
+
+    def _fake_loader():
+        loader_calls.append(True)
+        return [credential_record]
+
+    monkeypatch.setattr(advanced, "_load_all_stored_credentials", _fake_loader)
+    monkeypatch.setitem(
+        advanced.advanced_authenticate_complete.__globals__,
+        "_load_all_stored_credentials",
+        _fake_loader,
+    )
+
+    assert (
+        advanced.advanced_authenticate_complete.__globals__["_load_all_stored_credentials"]
+        is _fake_loader
+    )
+
+    class DummyAuthServer:
+        def __init__(self) -> None:
+            self.allowed_algorithms = []
+            self.calls = []
+
+        def authenticate_complete(self, state, credentials, response):
+            self.calls.append(
+                {
+                    "state": state,
+                    "credentials": credentials,
+                    "response": response,
+                }
+            )
+            return types.SimpleNamespace(public_key={3: -39})
+
+    dummy_server = DummyAuthServer()
+    monkeypatch.setattr(advanced, "create_fido_server", lambda *_, **__: dummy_server)
+
+    with client.session_transaction() as session_state:
+        session_state["advanced_auth_state"] = "dummy-state"
+        session_state["advanced_auth_rp"] = {"id": "localhost", "name": "Test"}
+
+    payload = {
+        "__assertion_response": {"signature": "unused"},
+        "publicKey": {
+            "challenge": {"$hex": "000102030405060708090a0b0c0d0e0f"},
+        },
+    }
+
+    response = client.post("/api/advanced/authenticate/complete", json=payload)
+
+    assert loader_calls, "stored credential loader was not invoked"
+    assert response.status_code == 200, response.get_data(as_text=True)
+    assert dummy_server.calls, "authenticate_complete was not invoked"
+    credentials_used = dummy_server.calls[0]["credentials"]
+    assert credentials_used == [credential_record["data"]]
+
+    derived_algs = [param.alg for param in dummy_server.allowed_algorithms]
+    assert derived_algs == [-39]
