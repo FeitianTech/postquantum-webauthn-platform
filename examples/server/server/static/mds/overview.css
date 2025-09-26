@@ -140,13 +140,13 @@
     border-radius: 18px;
     border: 1px solid rgba(0, 114, 206, 0.12);
     box-shadow: inset 0 1px 2px rgba(15, 39, 64, 0.05);
-    scrollbar-width: thin;
+    scrollbar-width: auto;
     scrollbar-color: rgba(0, 114, 206, 0.35) rgba(243, 247, 251, 0.9);
 }
 
 .mds-table-container::-webkit-scrollbar {
     display: block !important;
-    height: 24px;
+    height: 28px;
 }
 
 .mds-table-container::-webkit-scrollbar-track {
@@ -175,8 +175,11 @@
     border: 1px solid rgba(0, 114, 206, 0.18);
     background: rgba(243, 247, 251, 0.94);
     box-shadow: 0 14px 34px rgba(15, 39, 64, 0.14);
-    min-height: 32px;
-    scrollbar-width: thin;
+    min-height: 36px;
+    height: 36px;
+    box-sizing: border-box;
+    padding: 4px 6px;
+    scrollbar-width: auto;
     scrollbar-color: rgba(0, 114, 206, 0.45) rgba(243, 247, 251, 0.7);
     opacity: 0;
     pointer-events: none;
@@ -201,7 +204,7 @@
 }
 
 .mds-horizontal-scroll::-webkit-scrollbar {
-    height: 24px;
+    height: 28px;
 }
 
 .mds-horizontal-scroll::-webkit-scrollbar-track {
@@ -219,7 +222,8 @@
 }
 
 .mds-horizontal-scroll__content {
-    height: 4px;
+    height: 100%;
+    min-height: 100%;
 }
 
 
