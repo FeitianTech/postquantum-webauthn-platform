@@ -386,10 +386,11 @@ def describe_mldsa_oid_name(oid: Optional[str]) -> Optional[str]:
     return None
 
 
-def extract_certificate_public_key_info(cert_der: bytes) -> Dict[str, Any]:
-    """Extract public key metadata from an X.509 certificate."""
+def _locate_subject_public_key_info_from_tbs(
+    view: memoryview,
+) -> tuple[bytes, str, Optional[bytes], bytes]:
+    """Locate SubjectPublicKeyInfo by walking the TBSCertificate structure."""
 
-    view = memoryview(cert_der)
     idx = 0
     if not view or view[idx] != 0x30:
         raise ValueError("Certificate must be a SEQUENCE")
@@ -427,6 +428,91 @@ def extract_certificate_public_key_info(cert_der: bytes) -> Dict[str, Any]:
     spki_der = bytes(view[spki_start:spki_end])
     algorithm_oid, algorithm_params = _parse_spki_algorithm_info(spki_der)
     subject_public_key = _extract_subject_public_key_from_spki(spki_der)
+    return spki_der, algorithm_oid, algorithm_params, subject_public_key
+
+
+def _scan_certificate_for_subject_public_key_info(
+    view: memoryview,
+) -> tuple[bytes, str, Optional[bytes], bytes]:
+    """Search a DER-encoded certificate for a SubjectPublicKeyInfo structure."""
+
+    length = len(view)
+    for offset in range(length):
+        if view[offset] != 0x30:
+            continue
+        try:
+            seq_len, content_idx = _parse_der_length(view, offset + 1)
+        except Exception:
+            continue
+        seq_end = content_idx + seq_len
+        if seq_end > length or seq_len <= 0:
+            continue
+
+        inner_idx = content_idx
+        if inner_idx >= seq_end or view[inner_idx] != 0x30:
+            continue
+        try:
+            algo_len, algo_idx = _parse_der_length(view, inner_idx + 1)
+        except Exception:
+            continue
+        algo_end = algo_idx + algo_len
+        if algo_end > seq_end or algo_len <= 0:
+            continue
+
+        try:
+            algorithm_oid, value_idx = _decode_der_oid(view, algo_idx)
+        except Exception:
+            continue
+
+        parameters: Optional[bytes] = None
+        if value_idx < algo_end:
+            parameters = bytes(view[value_idx:algo_end])
+
+        bitstring_idx = algo_end
+        if bitstring_idx >= seq_end or view[bitstring_idx] != 0x03:
+            continue
+        try:
+            bit_len, bit_content_idx = _parse_der_length(view, bitstring_idx + 1)
+        except Exception:
+            continue
+        bit_end = bit_content_idx + bit_len
+        if bit_end > seq_end or bit_len <= 0:
+            continue
+
+        unused_bits = view[bit_content_idx]
+        if unused_bits != 0:
+            continue
+        payload = bytes(view[bit_content_idx + 1 : bit_end])
+        if not payload:
+            continue
+
+        spki_der = bytes(view[offset:seq_end])
+        return spki_der, algorithm_oid, parameters, payload
+
+    raise ValueError("Unable to locate SubjectPublicKeyInfo in certificate")
+
+
+def _extract_subject_public_key_info(
+    cert_der: bytes,
+) -> tuple[bytes, str, Optional[bytes], bytes]:
+    """Return SubjectPublicKeyInfo components from *cert_der*."""
+
+    view = memoryview(cert_der)
+    try:
+        return _locate_subject_public_key_info_from_tbs(view)
+    except Exception as primary_error:
+        try:
+            return _scan_certificate_for_subject_public_key_info(view)
+        except Exception:
+            raise primary_error
+
+
+def extract_certificate_public_key_info(cert_der: bytes) -> Dict[str, Any]:
+    """Extract public key metadata from an X.509 certificate."""
+
+    spki_der, algorithm_oid, algorithm_params, subject_public_key = (
+        _extract_subject_public_key_info(cert_der)
+    )
     wrapped_subject_public_key: Optional[bytes] = None
 
     info: Dict[str, Any] = {

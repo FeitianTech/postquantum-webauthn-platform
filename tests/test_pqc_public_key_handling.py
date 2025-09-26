@@ -220,6 +220,24 @@ def test_extract_certificate_public_key_info_unwraps_octet_string_public_key():
     assert info["wrapped_subject_public_key"] == wrapped
 
 
+def test_extract_certificate_public_key_info_scans_when_tbs_parse_fails(monkeypatch):
+    raw_key = b"fallback-ml-dsa-key"
+    spki = _build_spki(raw_key, algorithm_oid="2.16.840.1.101.3.4.3.19")
+    cert = _build_certificate(spki)
+
+    def fail_parse(view):
+        raise ValueError("unable to parse")
+
+    monkeypatch.setattr(
+        cose_module, "_locate_subject_public_key_info_from_tbs", fail_parse
+    )
+
+    info = cose_module.extract_certificate_public_key_info(cert)
+
+    assert info["algorithm_oid"] == "2.16.840.1.101.3.4.3.19"
+    assert info["subject_public_key"] == raw_key
+
+
 @pytest.mark.parametrize("exception_cls", [UnsupportedAlgorithm, ValueError])
 def test_packed_attestation_falls_back_to_parsed_certificate_bytes(monkeypatch, exception_cls):
     raw_key = b"certificate-public-key"
