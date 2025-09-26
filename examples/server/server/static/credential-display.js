@@ -389,6 +389,127 @@ function resetRegistrationDetailState() {
     registrationDetailState.authenticatorData = null;
 }
 
+function normaliseFingerprintValue(value) {
+    if (typeof value !== 'string') {
+        return '';
+    }
+    const trimmed = value.trim();
+    if (!trimmed) {
+        return '';
+    }
+    return trimmed.toLowerCase();
+}
+
+function extractFingerprintCandidate(source) {
+    if (!source) {
+        return '';
+    }
+    if (typeof source === 'string') {
+        return normaliseFingerprintValue(source);
+    }
+    if (Array.isArray(source)) {
+        for (const item of source) {
+            const extracted = extractFingerprintCandidate(item);
+            if (extracted) {
+                return extracted;
+            }
+        }
+        return '';
+    }
+    if (typeof source !== 'object') {
+        return '';
+    }
+
+    const preferredKeys = [
+        'sha256', 'SHA256',
+        'sha_256', 'SHA_256',
+        'sha1', 'SHA1',
+        'sha512', 'SHA512',
+    ];
+    for (const key of preferredKeys) {
+        if (typeof source[key] === 'string') {
+            const normalised = normaliseFingerprintValue(source[key]);
+            if (normalised) {
+                return normalised;
+            }
+        }
+    }
+
+    for (const value of Object.values(source)) {
+        if (typeof value === 'string') {
+            const normalised = normaliseFingerprintValue(value);
+            if (normalised) {
+                return normalised;
+            }
+        }
+    }
+
+    return '';
+}
+
+function getCertificateFingerprint(entry) {
+    if (!entry || typeof entry !== 'object') {
+        return '';
+    }
+
+    const parsed = entry.parsedX5c && typeof entry.parsedX5c === 'object'
+        ? entry.parsedX5c
+        : null;
+
+    const candidates = [
+        entry.fingerprint,
+        entry.fingerprints,
+        entry.fingerprintSha256,
+        entry.fingerprint_sha256,
+        parsed?.fingerprint,
+        parsed?.fingerprints,
+        parsed?.fingerprintSha256,
+        parsed?.fingerprint_sha256,
+    ];
+
+    for (const candidate of candidates) {
+        const fingerprint = extractFingerprintCandidate(candidate);
+        if (fingerprint) {
+            return fingerprint;
+        }
+    }
+
+    return '';
+}
+
+function certificateHasParseError(entry) {
+    if (!entry || typeof entry !== 'object') {
+        return false;
+    }
+
+    const parsed = entry.parsedX5c && typeof entry.parsedX5c === 'object'
+        ? entry.parsedX5c
+        : entry;
+
+    const errorCandidates = [
+        parsed.parseError,
+        parsed.error,
+        entry.parseError,
+        entry.error,
+    ];
+
+    return errorCandidates.some(value => typeof value === 'string' && value.trim() !== '');
+}
+
+function shouldReplaceCertificateEntry(existing, incoming) {
+    const existingHasError = certificateHasParseError(existing);
+    const incomingHasError = certificateHasParseError(incoming);
+
+    if (existingHasError && !incomingHasError) {
+        return true;
+    }
+    if (!existingHasError && incomingHasError) {
+        return false;
+    }
+
+    return false;
+}
+
 function addCertificateEntryToState(entry) {
     const normalised = normaliseCertificateEntryForModal(entry);
     if (!normalised) {
@@ -396,22 +517,44 @@ function addCertificateEntryToState(entry) {
     }
 
     const existing = registrationDetailState.attestationCertificates;
-    const hasDuplicate = existing.some(item => {
+    const fingerprint = getCertificateFingerprint(normalised);
+    let duplicateIndex = -1;
+
+    existing.some((item, index) => {
         if (item === normalised) {
+            duplicateIndex = index;
             return true;
         }
         if (item.pem && normalised.pem && item.pem === normalised.pem) {
+            duplicateIndex = index;
             return true;
         }
         if (item.raw && normalised.raw && item.raw === normalised.raw) {
+            duplicateIndex = index;
             return true;
+        }
+        if (fingerprint) {
+            const existingFingerprint = getCertificateFingerprint(item);
+            if (existingFingerprint && existingFingerprint === fingerprint) {
+                duplicateIndex = index;
+                return true;
+            }
         }
         return false;
     });
 
-    if (!hasDuplicate) {
-        existing.push(normalised);
+    if (duplicateIndex !== -1) {
+        if (shouldReplaceCertificateEntry(existing[duplicateIndex], normalised)) {
+            existing[duplicateIndex] = normalised;
+        }
+        return;
     }
+
+    if (fingerprint) {
+        normalised.fingerprint = fingerprint;
+    }
+
+    existing.push(normalised);
 }
 
 function addCertificatesToRegistrationState(entries) {
