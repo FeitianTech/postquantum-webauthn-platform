@@ -35,7 +35,7 @@ import {
     resetRegistrationForm,
     resetAuthenticationForm
 } from './resets.js';
-import { randomizeUserIdentity, randomizeSimpleUsername } from './username.js';
+import { initializeSimpleUsername, randomizeUserIdentity, randomizeSimpleUsername } from './username.js';
 import {
     simpleRegister,
     simpleAuthenticate
@@ -144,7 +144,7 @@ document.addEventListener('DOMContentLoaded', () => {
         randomizeChallenge('reg');
         randomizeChallenge('auth');
         randomizeLargeBlobWrite();
-        randomizeSimpleUsername();
+        initializeSimpleUsername();
         const prfRegFirst = document.getElementById('prf-eval-first-reg');
         const prfRegSecond = document.getElementById('prf-eval-second-reg');
         const prfAuthFirst = document.getElementById('prf-eval-first-auth');
