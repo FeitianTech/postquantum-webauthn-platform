@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Mapping, MutableMapping, Optional, Tuple
 
 from fido2.attestation import Attestation, InvalidData, InvalidSignature, UnsupportedType
-from fido2.cose import CoseKey
+from fido2.cose import CoseKey, extract_certificate_public_key_info
 from fido2.utils import ByteBuffer, websafe_decode
 from fido2.webauthn import (
     AuthenticatorData,
@@ -21,6 +21,7 @@ from fido2.webauthn import (
     RegistrationResponse,
 )
 from cryptography import x509
+from cryptography.exceptions import UnsupportedAlgorithm
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec, ed25519, ed448, rsa
 from cryptography.x509.oid import ExtensionOID, NameOID
@@ -638,8 +639,14 @@ def serialize_attestation_certificate(cert_bytes: bytes):
     )
     issuer_str = format_x509_name(certificate.issuer)
     subject_str = format_x509_name(certificate.subject)
-    public_key = certificate.public_key()
-    public_key_info = _serialize_public_key_info(public_key)
+    fallback_public_key_summary: List[Tuple[str, Any]] = []
+    try:
+        public_key = certificate.public_key()
+    except UnsupportedAlgorithm as exc:
+        public_key = None
+        public_key_info, fallback_public_key_summary = _build_unknown_public_key_info(cert_bytes, exc)
+    else:
+        public_key_info = _serialize_public_key_info(public_key)
     signature_bytes = certificate.signature
     signature_lines = format_hex_bytes_lines(signature_bytes)
     signature_hex = signature_bytes.hex()
@@ -676,7 +683,9 @@ def serialize_attestation_certificate(cert_bytes: bytes):
     _append_line(f"Subject: {subject_str}")
 
     pk_summary_entries: List[Tuple[str, Any]] = []
-    if isinstance(public_key, ec.EllipticCurvePublicKey):
+    if public_key is None:
+        pk_summary_entries.extend(fallback_public_key_summary)
+    elif isinstance(public_key, ec.EllipticCurvePublicKey):
         pk_summary_entries.append(("Type", "ECC"))
         if public_key.key_size:
             pk_summary_entries.append(("Public-Key", f"({public_key.key_size} bit)"))
@@ -858,6 +867,65 @@ def serialize_attestation_certificate(cert_bytes: bytes):
         "pem": pem,
         "summary": summary,
     }
+
+
+def _build_unknown_public_key_info(cert_bytes: bytes, error: Exception):
+    try:
+        parsed = extract_certificate_public_key_info(cert_bytes)
+    except Exception:
+        parsed = {}
+
+    algorithm_details: Dict[str, Any] = {"name": "Unknown"}
+    public_key_bytes = parsed.get("subject_public_key")
+    spki_bytes = parsed.get("subject_public_key_info")
+
+    if isinstance(parsed.get("algorithm_name"), str):
+        algorithm_details["name"] = parsed["algorithm_name"]
+    if isinstance(parsed.get("algorithm_oid"), str):
+        algorithm_details["oid"] = parsed["algorithm_oid"]
+    if isinstance(parsed.get("ml_dsa_parameter_set"), str):
+        algorithm_details["mlDsaParameterSet"] = parsed["ml_dsa_parameter_set"]
+    parameters = parsed.get("algorithm_parameters")
+    if isinstance(parameters, (bytes, bytearray)) and parameters:
+        algorithm_details["parametersHex"] = bytes(parameters).hex()
+
+    info: Dict[str, Any] = {
+        "type": algorithm_details.get("name", "Unsupported"),
+        "algorithm": algorithm_details,
+        "error": str(error),
+    }
+
+    if isinstance(spki_bytes, (bytes, bytearray)) and spki_bytes:
+        info["subjectPublicKeyInfoBase64"] = base64.b64encode(bytes(spki_bytes)).decode("ascii")
+
+    if isinstance(public_key_bytes, (bytes, bytearray)):
+        raw_bytes = bytes(public_key_bytes)
+        if raw_bytes:
+            info["publicKeyBase64"] = base64.b64encode(raw_bytes).decode("ascii")
+            info["publicKeyHex"] = colon_hex(raw_bytes)
+            info["publicKeyHexLines"] = format_hex_bytes_lines(raw_bytes)
+
+    summary_entries: List[Tuple[str, Any]] = []
+
+    def _append_summary(label: str, value: Any) -> None:
+        if value in (None, ""):
+            return
+        if isinstance(value, list) and not value:
+            return
+        summary_entries.append((label, value))
+
+    _append_summary("Type", info.get("type"))
+    algorithm_name = algorithm_details.get("name")
+    if algorithm_name and algorithm_name != info.get("type"):
+        _append_summary("Algorithm", algorithm_name)
+    _append_summary("Algorithm OID", algorithm_details.get("oid"))
+    _append_summary("ML-DSA parameter set", algorithm_details.get("mlDsaParameterSet"))
+    _append_summary("Public Key (base64)", info.get("publicKeyBase64"))
+    hex_lines = info.get("publicKeyHexLines")
+    if isinstance(hex_lines, list) and hex_lines:
+        _append_summary("Public Key (hex)", hex_lines)
+
+    return info, summary_entries
 
 
 def _serialize_public_key_info(public_key):

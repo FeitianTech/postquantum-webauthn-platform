@@ -36,10 +36,13 @@ from .base import (
     catch_builtins,
     _validate_cert_common,
 )
-from ..cose import CoseKey
+from ..cose import CoseKey, extract_certificate_public_key_info
 
 from cryptography import x509
-from cryptography.exceptions import InvalidSignature as _InvalidSignature
+from cryptography.exceptions import (
+    InvalidSignature as _InvalidSignature,
+    UnsupportedAlgorithm,
+)
 from cryptography.hazmat.backends import default_backend
 
 
@@ -91,10 +94,22 @@ class PackedAttestation(Attestation):
         alg = statement["alg"]
         x5c = statement.get("x5c")
         if x5c:
-            cert = x509.load_der_x509_certificate(x5c[0], default_backend())
+            cert_bytes = x5c[0]
+            cert = x509.load_der_x509_certificate(cert_bytes, default_backend())
             _validate_packed_cert(cert, auth_data.credential_data.aaguid)
 
-            pub_key = CoseKey.for_alg(alg).from_cryptography_key(cert.public_key())
+            cose_cls = CoseKey.for_alg(alg)
+
+            try:
+                crypto_key = cert.public_key()
+            except UnsupportedAlgorithm as exc:
+                info = extract_certificate_public_key_info(cert_bytes)
+                public_key_bytes = info.get("subject_public_key")
+                if public_key_bytes is None or getattr(cose_cls, "ALGORITHM", None) not in (-48, -49, -50):
+                    raise exc
+                pub_key = cose_cls({1: 7, 3: alg, -1: public_key_bytes})
+            else:
+                pub_key = cose_cls.from_cryptography_key(crypto_key)
             att_type = AttestationType.BASIC
         else:
             pub_key = CoseKey.parse(auth_data.credential_data.public_key)

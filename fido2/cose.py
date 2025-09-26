@@ -31,7 +31,7 @@ from .utils import bytes2int, int2bytes
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec, rsa, padding, ed25519, types
-from typing import Sequence, Type, Mapping, Any, TypeVar, Optional, Iterable
+from typing import Sequence, Type, Mapping, Any, TypeVar, Optional, Iterable, Dict
 
 try:  # pragma: no cover - exercised indirectly in tests
     import oqs  # type: ignore
@@ -109,6 +109,149 @@ def _extract_subject_public_key_from_spki(spki_der: bytes) -> bytes:
     if unused_bits != 0:
         raise ValueError("Unsupported SubjectPublicKey BIT STRING padding")
     return payload
+
+
+def _skip_der_value(view: memoryview, idx: int) -> int:
+    """Advance *idx* past a single DER element."""
+
+    if idx >= len(view):
+        raise ValueError("Truncated DER element")
+    idx += 1
+    length, idx = _parse_der_length(view, idx)
+    end = idx + length
+    if end > len(view):
+        raise ValueError("DER element overruns buffer")
+    return end
+
+
+def _decode_der_oid(view: memoryview, idx: int) -> tuple[str, int]:
+    """Decode an OBJECT IDENTIFIER at *idx* returning dotted string and new index."""
+
+    if idx >= len(view) or view[idx] != 0x06:
+        raise ValueError("Expected OBJECT IDENTIFIER")
+    idx += 1
+    length, idx = _parse_der_length(view, idx)
+    end = idx + length
+    if end > len(view) or length <= 0:
+        raise ValueError("Invalid OBJECT IDENTIFIER length")
+
+    body = view[idx:end]
+    idx = end
+
+    first = body[0]
+    oid_numbers = [str(first // 40), str(first % 40)]
+    value = 0
+    for byte in body[1:]:
+        value = (value << 7) | (byte & 0x7F)
+        if byte & 0x80:
+            continue
+        oid_numbers.append(str(value))
+        value = 0
+    if body[-1] & 0x80:
+        raise ValueError("Invalid OBJECT IDENTIFIER continuation byte")
+    if value:
+        oid_numbers.append(str(value))
+    return ".".join(oid_numbers), idx
+
+
+def _parse_spki_algorithm_info(spki_der: bytes) -> tuple[str, Optional[bytes]]:
+    """Return (OID, parameters) from a SubjectPublicKeyInfo structure."""
+
+    view = memoryview(spki_der)
+    idx = 0
+    if not view or view[idx] != 0x30:
+        raise ValueError("SubjectPublicKeyInfo must be a SEQUENCE")
+    idx += 1
+    total_len, idx = _parse_der_length(view, idx)
+    end = idx + total_len
+    if end > len(view):
+        raise ValueError("SubjectPublicKeyInfo length exceeds buffer size")
+
+    if idx >= end or view[idx] != 0x30:
+        raise ValueError("SubjectPublicKeyInfo missing AlgorithmIdentifier")
+    idx += 1
+    algo_len, idx = _parse_der_length(view, idx)
+    algo_end = idx + algo_len
+    if algo_end > end:
+        raise ValueError("AlgorithmIdentifier overruns SubjectPublicKeyInfo")
+
+    algorithm_oid, value_idx = _decode_der_oid(view, idx)
+    parameters: Optional[bytes] = None
+    if value_idx < algo_end:
+        parameters = bytes(view[value_idx:algo_end])
+
+    return algorithm_oid, parameters
+
+
+_ML_DSA_OID_TO_PARAMETER_SET: Dict[str, str] = {
+    "2.16.840.1.101.3.4.3.17": "ML-DSA-44",
+    "2.16.840.1.101.3.4.3.18": "ML-DSA-65",
+    "2.16.840.1.101.3.4.3.19": "ML-DSA-87",
+}
+
+
+_ALGORITHM_OID_NAMES: Dict[str, str] = {
+    oid: "ML-DSA" for oid in _ML_DSA_OID_TO_PARAMETER_SET
+}
+
+
+def extract_certificate_public_key_info(cert_der: bytes) -> Dict[str, Any]:
+    """Extract public key metadata from an X.509 certificate."""
+
+    view = memoryview(cert_der)
+    idx = 0
+    if not view or view[idx] != 0x30:
+        raise ValueError("Certificate must be a SEQUENCE")
+    idx += 1
+    cert_len, idx = _parse_der_length(view, idx)
+    cert_end = idx + cert_len
+    if cert_end > len(view):
+        raise ValueError("Certificate length exceeds buffer size")
+
+    if idx >= cert_end or view[idx] != 0x30:
+        raise ValueError("Certificate missing TBSCertificate")
+    idx += 1
+    tbs_len, idx = _parse_der_length(view, idx)
+    tbs_end = idx + tbs_len
+    if tbs_end > cert_end:
+        raise ValueError("TBSCertificate overruns Certificate")
+
+    if idx < tbs_end and view[idx] == 0xA0:
+        idx = _skip_der_value(view, idx)
+    idx = _skip_der_value(view, idx)  # serialNumber
+    idx = _skip_der_value(view, idx)  # signature
+    idx = _skip_der_value(view, idx)  # issuer
+    idx = _skip_der_value(view, idx)  # validity
+    idx = _skip_der_value(view, idx)  # subject
+
+    if idx >= tbs_end or view[idx] != 0x30:
+        raise ValueError("TBSCertificate missing subjectPublicKeyInfo")
+    spki_start = idx
+    idx += 1
+    spki_len, idx = _parse_der_length(view, idx)
+    spki_end = idx + spki_len
+    if spki_end > tbs_end:
+        raise ValueError("subjectPublicKeyInfo overruns TBSCertificate")
+
+    spki_der = bytes(view[spki_start:spki_end])
+    algorithm_oid, algorithm_params = _parse_spki_algorithm_info(spki_der)
+    subject_public_key = _extract_subject_public_key_from_spki(spki_der)
+
+    info: Dict[str, Any] = {
+        "algorithm_oid": algorithm_oid,
+        "algorithm_parameters": algorithm_params,
+        "subject_public_key": subject_public_key,
+        "subject_public_key_info": spki_der,
+    }
+
+    parameter_set = _ML_DSA_OID_TO_PARAMETER_SET.get(algorithm_oid)
+    if parameter_set is not None:
+        info["ml_dsa_parameter_set"] = parameter_set
+    algorithm_name = _ALGORITHM_OID_NAMES.get(algorithm_oid)
+    if algorithm_name is not None:
+        info["algorithm_name"] = algorithm_name
+
+    return info
 
 
 def _coerce_mldsa_public_key_bytes(value: Any) -> bytes:
