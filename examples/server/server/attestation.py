@@ -13,7 +13,12 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Mapping, MutableMapping, Optional, Tuple
 
 from fido2.attestation import Attestation, InvalidData, InvalidSignature, UnsupportedType
-from fido2.cose import CoseKey, extract_certificate_public_key_info
+from fido2.cose import (
+    CoseKey,
+    describe_mldsa_oid,
+    describe_mldsa_oid_name,
+    extract_certificate_public_key_info,
+)
 from fido2.utils import ByteBuffer, websafe_decode
 from fido2.webauthn import (
     AuthenticatorData,
@@ -632,11 +637,25 @@ def serialize_attestation_certificate(cert_bytes: bytes):
         if summary_lines and summary_lines[-1] != "":
             summary_lines.append("")
 
-    signature_algorithm = getattr(
+    signature_algorithm_oid = getattr(
+        certificate.signature_algorithm_oid,
+        "dotted_string",
+        None,
+    )
+    raw_signature_algorithm = getattr(
         certificate.signature_algorithm_oid,
         "_name",
-        certificate.signature_algorithm_oid.dotted_string,
+        signature_algorithm_oid,
     )
+    if isinstance(raw_signature_algorithm, str) and raw_signature_algorithm.lower() == "unknown oid":
+        signature_algorithm = signature_algorithm_oid or raw_signature_algorithm
+    else:
+        signature_algorithm = raw_signature_algorithm
+
+    signature_algorithm_details = describe_mldsa_oid(signature_algorithm_oid)
+    friendly_signature_name = describe_mldsa_oid_name(signature_algorithm_oid)
+    if friendly_signature_name:
+        signature_algorithm = friendly_signature_name
     issuer_str = format_x509_name(certificate.issuer)
     subject_str = format_x509_name(certificate.subject)
     fallback_public_key_summary: List[Tuple[str, Any]] = []
@@ -836,6 +855,8 @@ def serialize_attestation_certificate(cert_bytes: bytes):
         "hex": signature_hex,
         "colon": signature_colon,
         "lines": signature_lines,
+        "oid": signature_algorithm_oid,
+        "details": signature_algorithm_details,
     }
     algorithm_info = _derive_certificate_algorithm_info(public_key_info, signature_details)
     subject_common_names = _extract_common_names(certificate.subject)
@@ -851,6 +872,8 @@ def serialize_attestation_certificate(cert_bytes: bytes):
             "hex": f"0x{certificate.serial_number:x}",
         },
         "signatureAlgorithm": signature_algorithm,
+        "signatureAlgorithmOid": signature_algorithm_oid,
+        "signatureAlgorithmDetails": signature_algorithm_details,
         "issuer": format_x509_name(certificate.issuer),
         "validity": {
             "notBefore": _isoformat(not_valid_before),

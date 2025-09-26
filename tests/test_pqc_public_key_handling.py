@@ -93,10 +93,10 @@ def _build_spki(raw_key: bytes, algorithm_oid: str = "1.2.3") -> bytes:
     return _encode_sequence(algorithm, bit_string)
 
 
-def _build_certificate(spki: bytes) -> bytes:
+def _build_certificate(spki: bytes, signature_algorithm_oid: str = "1.2.840.10045.4.3.2") -> bytes:
     version = b"\xa0" + _encode_length(len(_encode_integer(2))) + _encode_integer(2)
     serial = _encode_integer(1)
-    signature_algo = _encode_sequence(_encode_oid("1.2.840.10045.4.3.2"), b"\x05\x00")
+    signature_algo = _encode_sequence(_encode_oid(signature_algorithm_oid), b"\x05\x00")
     name = _build_name("Test")
     validity = _encode_sequence(
         _encode_utctime("240101000000Z"),
@@ -171,6 +171,15 @@ def test_mldsa_verify_coerces_dynamic_public_key_bytes(monkeypatch):
     assert verify_calls == [(b"msg", b"sig", raw_key)]
 
 
+def test_coerce_mldsa_public_key_bytes_unwraps_der_subject_public_key():
+    raw_key = b"wrapped-public-key"
+    spki = _build_spki(raw_key, algorithm_oid="2.16.840.1.101.3.4.3.17")
+
+    result = cose_module._coerce_mldsa_public_key_bytes(spki)
+
+    assert result == raw_key
+
+
 def test_extract_certificate_public_key_info_parses_mldsa_certificate():
     raw_key = b"ml-dsa-public-key"
     spki = _build_spki(raw_key, algorithm_oid="2.16.840.1.101.3.4.3.17")
@@ -211,7 +220,11 @@ def test_packed_attestation_falls_back_to_parsed_certificate_bytes(monkeypatch, 
         def public_key(self):
             raise exception_cls("Unknown key type: 2.16.840.1.101.3.4.3.17")
 
-    monkeypatch.setattr(packed_module, "_validate_packed_cert", lambda cert, aaguid: None)
+    monkeypatch.setattr(
+        packed_module,
+        "_validate_packed_cert",
+        lambda cert, aaguid, **kwargs: None,
+    )
     monkeypatch.setattr(
         packed_module.x509,
         "load_der_x509_certificate",
@@ -256,6 +269,85 @@ def test_packed_attestation_falls_back_to_parsed_certificate_bytes(monkeypatch, 
     assert result.attestation_type == packed_module.AttestationType.BASIC
 
 
+def test_validate_packed_cert_allows_missing_basic_constraints_for_mldsa():
+    raw_key = b"certificate-public-key"
+    cert_der = _build_certificate(
+        _build_spki(raw_key, algorithm_oid="2.16.840.1.101.3.4.3.17")
+    )
+    cert = x509.load_der_x509_certificate(cert_der)
+
+    class DummyExtensions:
+        def get_extension_for_class(self, cls):
+            raise x509.ExtensionNotFound("missing", cls)
+
+        def get_extension_for_oid(self, oid):
+            raise x509.ExtensionNotFound("missing", oid)
+
+    class DummyName:
+        def get_attributes_for_oid(self, oid):
+            mapping = {
+                x509.NameOID.COUNTRY_NAME: [SimpleNamespace(value="US")],
+                x509.NameOID.ORGANIZATION_NAME: [SimpleNamespace(value="Example Corp")],
+                x509.NameOID.ORGANIZATIONAL_UNIT_NAME: [
+                    SimpleNamespace(value="Authenticator Attestation")
+                ],
+                x509.NameOID.COMMON_NAME: [SimpleNamespace(value="Test Device")],
+            }
+            return mapping.get(oid, [])
+
+    dummy_cert = SimpleNamespace(
+        version=x509.Version.v3,
+        extensions=DummyExtensions(),
+        subject=DummyName(),
+        issuer=DummyName(),
+    )
+
+    packed_module._validate_packed_cert(
+        dummy_cert,
+        b"\x00" * 16,
+        cert_bytes=cert_der,
+    )
+
+
+def test_validate_packed_cert_requires_basic_constraints_for_non_pqc():
+    raw_key = b"certificate-public-key"
+    cert_der = _build_certificate(_build_spki(raw_key, algorithm_oid="1.2.3"))
+    cert = x509.load_der_x509_certificate(cert_der)
+
+    class DummyExtensions:
+        def get_extension_for_class(self, cls):
+            raise x509.ExtensionNotFound("missing", cls)
+
+        def get_extension_for_oid(self, oid):
+            raise x509.ExtensionNotFound("missing", oid)
+
+    class DummyName:
+        def get_attributes_for_oid(self, oid):
+            mapping = {
+                x509.NameOID.COUNTRY_NAME: [SimpleNamespace(value="US")],
+                x509.NameOID.ORGANIZATION_NAME: [SimpleNamespace(value="Example Corp")],
+                x509.NameOID.ORGANIZATIONAL_UNIT_NAME: [
+                    SimpleNamespace(value="Authenticator Attestation")
+                ],
+                x509.NameOID.COMMON_NAME: [SimpleNamespace(value="Test Device")],
+            }
+            return mapping.get(oid, [])
+
+    dummy_cert = SimpleNamespace(
+        version=x509.Version.v3,
+        extensions=DummyExtensions(),
+        subject=DummyName(),
+        issuer=DummyName(),
+    )
+
+    with pytest.raises(packed_module.InvalidData):
+        packed_module._validate_packed_cert(
+            dummy_cert,
+            b"\x00" * 16,
+            cert_bytes=cert_der,
+        )
+
+
 def test_unknown_public_key_info_formats_mldsa_details(monkeypatch):
     raw_key = b"certificate-public-key"
     wrapped = _encode_octet_string(raw_key)
@@ -290,7 +382,8 @@ def test_unknown_public_key_info_formats_mldsa_details(monkeypatch):
 def test_serialize_attestation_certificate_handles_value_error(monkeypatch):
     raw_key = b"certificate-public-key"
     cert_der = _build_certificate(
-        _build_spki(raw_key, algorithm_oid="2.16.840.1.101.3.4.3.17")
+        _build_spki(raw_key, algorithm_oid="2.16.840.1.101.3.4.3.17"),
+        signature_algorithm_oid="2.16.840.1.101.3.4.3.17",
     )
 
     certificate = x509.load_der_x509_certificate(cert_der)
@@ -307,6 +400,12 @@ def test_serialize_attestation_certificate_handles_value_error(monkeypatch):
     assert public_key_info["type"] == "ML-DSA"
     assert public_key_info["algorithm"]["mlDsaParameterSet"] == "ML-DSA-44"
     assert public_key_info["publicKeyHex"].replace(":", "").lower() == raw_key.hex()
+    assert details["signatureAlgorithm"] == "ML-DSA-44"
+    assert details["signatureAlgorithmOid"] == "2.16.840.1.101.3.4.3.17"
+    assert details["signatureAlgorithmDetails"]["mlDsaParameterSet"] == "ML-DSA-44"
+    signature_info = details["signature"]
+    assert signature_info["algorithm"] == "ML-DSA-44"
+    assert signature_info["oid"] == "2.16.840.1.101.3.4.3.17"
 
     summary_lines = details["summary"].splitlines()
     assert any("ML-DSA parameter set" in line for line in summary_lines)

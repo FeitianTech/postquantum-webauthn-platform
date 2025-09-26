@@ -2028,23 +2028,6 @@ export async function showCredentialDetails(index) {
             ? `<div><strong>COSE key type:</strong> ${describeCoseKeyType(coseKeyTypeValue)}</div>`
             : '';
         const parameterSet = describeMldsaParameterSet(algo);
-        const rawPublicKeyEncoded = cred.publicKeyBytes ?? getCoseMapValue(coseMap, -1);
-
-        let pqcKeyBlock = '';
-        if (parameterSet && typeof rawPublicKeyEncoded === 'string' && rawPublicKeyEncoded.trim() !== '') {
-            const rawKeyB64 = rawPublicKeyEncoded;
-            const rawKeyB64u = base64ToBase64Url(rawKeyB64);
-            const rawKeyHex = base64ToHex(rawKeyB64);
-            pqcKeyBlock = `
-                <div style="margin-top: 0.75rem; font-size: 0.9rem; word-break: break-word; overflow-wrap: anywhere;">
-                    <div><strong>Raw public key (base64):</strong></div>
-                    <div class="credential-code-block">${rawKeyB64}</div>
-                    <div><strong>Raw public key (base64url):</strong></div>
-                    <div class="credential-code-block">${rawKeyB64u}</div>
-                    <div><strong>Raw public key (hex):</strong></div>
-                    <div class="credential-code-block">${rawKeyHex}</div>
-                </div>`;
-        }
 
         const parameterSetLine = parameterSet
             ? `<div><strong>ML-DSA parameter set:</strong> ${parameterSet}</div>`
@@ -2058,7 +2041,6 @@ export async function showCredentialDetails(index) {
                 ${coseKeyTypeLine}
                 ${parameterSetLine}
             </div>
-            ${pqcKeyBlock}
         </div>`;
     }
 

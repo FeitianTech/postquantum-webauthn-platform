@@ -234,6 +234,46 @@ _ALGORITHM_OID_NAMES: Dict[str, str] = {
 }
 
 
+def describe_mldsa_oid(oid: Optional[str]) -> Optional[Dict[str, str]]:
+    """Return descriptive ML-DSA metadata for a certificate algorithm OID."""
+
+    if not oid:
+        return None
+
+    parameter_set = _ML_DSA_OID_TO_PARAMETER_SET.get(oid)
+    if parameter_set is None:
+        return None
+
+    return {
+        "name": "ML-DSA",
+        "mlDsaParameterSet": parameter_set,
+        "display": parameter_set,
+        "oid": oid,
+    }
+
+
+def describe_mldsa_oid_name(oid: Optional[str]) -> Optional[str]:
+    """Return a user-friendly label for a recognised ML-DSA certificate OID."""
+
+    details = describe_mldsa_oid(oid)
+    if details is None:
+        return None
+
+    display = details.get("display")
+    if isinstance(display, str) and display.strip():
+        return display
+
+    parameter_set = details.get("mlDsaParameterSet")
+    if isinstance(parameter_set, str) and parameter_set.strip():
+        return parameter_set
+
+    name = details.get("name")
+    if isinstance(name, str) and name.strip():
+        return name
+
+    return None
+
+
 def extract_certificate_public_key_info(cert_der: bytes) -> Dict[str, Any]:
     """Extract public key metadata from an X.509 certificate."""
 
@@ -292,6 +332,9 @@ def extract_certificate_public_key_info(cert_der: bytes) -> Dict[str, Any]:
     algorithm_name = _ALGORITHM_OID_NAMES.get(algorithm_oid)
     if algorithm_name is not None:
         info["algorithm_name"] = algorithm_name
+    display_name = describe_mldsa_oid_name(algorithm_oid)
+    if display_name is not None:
+        info["algorithm_display_name"] = display_name
 
     info["subject_public_key"] = subject_public_key
     if wrapped_subject_public_key is not None:
@@ -304,7 +347,13 @@ def _coerce_mldsa_public_key_bytes(value: Any) -> bytes:
     """Convert assorted public key representations into raw ML-DSA bytes."""
 
     if isinstance(value, (bytes, bytearray, memoryview)):
-        return bytes(value)
+        data = bytes(value)
+        if data.startswith(b"\x30"):
+            try:
+                return _extract_subject_public_key_from_spki(data)
+            except Exception:
+                pass
+        return data
 
     public_bytes = getattr(value, "public_bytes", None)
     if callable(public_bytes):  # pragma: no branch - exercised in tests
