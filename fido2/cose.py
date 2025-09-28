@@ -31,7 +31,7 @@ from .utils import ByteBuffer, bytes2int, int2bytes
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec, rsa, padding, ed25519, types
-from typing import Sequence, Type, Mapping, Any, TypeVar, Optional, Iterable, Dict
+from typing import Sequence, Type, Mapping, Any, TypeVar, Optional, Iterable, Dict, Union
 
 try:  # pragma: no cover - exercised indirectly in tests
     import oqs  # type: ignore
@@ -587,6 +587,35 @@ def _coerce_mldsa_public_key_bytes(value: Any, parameter_set: Optional[str] = No
 
     raise TypeError("Unable to coerce ML-DSA public key into raw bytes")
 
+
+def _format_mldsa_message(
+    message: bytes, context: Optional[Union[bytes, bytearray, memoryview, str]] = None
+) -> bytes:
+    """Construct the ML-DSA message input including the context prefix.
+
+    FIPS 204 section 5.3 defines that signature verification must prepend a
+    domain separator byte, the context length, and the context string itself
+    before processing the message bits. WebAuthn currently does not define a
+    non-empty context for ML-DSA signatures, so the default behaviour is to use
+    an empty context. This helper nevertheless normalizes an optional context
+    argument to ease future extensions.
+    """
+
+    if context is None:
+        context_bytes = b""
+    elif isinstance(context, str):
+        context_bytes = context.encode("utf-8")
+    elif isinstance(context, (bytes, bytearray, memoryview)):
+        context_bytes = bytes(context)
+    else:  # pragma: no cover - defensive type guard
+        raise TypeError("Unsupported ML-DSA context type")
+
+    if len(context_bytes) > 255:
+        raise ValueError("ML-DSA context string must be 255 bytes or fewer")
+
+    prefix = b"\x00" + bytes((len(context_bytes),))
+    return prefix + context_bytes + message
+
 class CoseKey(dict):
     """A COSE formatted public key.
 
@@ -699,9 +728,10 @@ class MLDSA87(CoseKey):
             else bytes(signature)
         )
         public_key_bytes = _coerce_mldsa_public_key_bytes(public_key, "ML-DSA-87")
+        formatted_message = _format_mldsa_message(bytes(message_bytes))
         with oqs_module.Signature("ML-DSA-87") as verifier:
             if not verifier.verify(
-                bytes(message_bytes), bytes(signature_bytes), bytes(public_key_bytes)
+                formatted_message, bytes(signature_bytes), bytes(public_key_bytes)
             ):
                 raise ValueError("Invalid ML-DSA-87 signature")
 
@@ -738,9 +768,10 @@ class MLDSA65(CoseKey):
             else bytes(signature)
         )
         public_key_bytes = _coerce_mldsa_public_key_bytes(public_key, "ML-DSA-65")
+        formatted_message = _format_mldsa_message(bytes(message_bytes))
         with oqs_module.Signature("ML-DSA-65") as verifier:
             if not verifier.verify(
-                bytes(message_bytes), bytes(signature_bytes), bytes(public_key_bytes)
+                formatted_message, bytes(signature_bytes), bytes(public_key_bytes)
             ):
                 raise ValueError("Invalid ML-DSA-65 signature")
 
@@ -776,9 +807,10 @@ class MLDSA44(CoseKey):
             else bytes(signature)
         )
         public_key_bytes = _coerce_mldsa_public_key_bytes(public_key, "ML-DSA-44")
+        formatted_message = _format_mldsa_message(bytes(message_bytes))
         with oqs_module.Signature("ML-DSA-44") as verifier:
             if not verifier.verify(
-                bytes(message_bytes), bytes(signature_bytes), bytes(public_key_bytes)
+                formatted_message, bytes(signature_bytes), bytes(public_key_bytes)
             ):
                 raise ValueError("Invalid ML-DSA-44 signature")
 

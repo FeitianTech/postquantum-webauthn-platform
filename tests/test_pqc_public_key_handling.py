@@ -171,7 +171,8 @@ def test_mldsa_verify_coerces_dynamic_public_key_bytes(monkeypatch):
     cose_key = MLDSA44({1: 7, 3: -48, -1: DummyKey()})
     cose_key.verify(b"msg", b"sig")
 
-    assert verify_calls == [(b"msg", b"sig", raw_key)]
+    expected_message = b"\x00\x00" + b"msg"
+    assert verify_calls == [(expected_message, b"sig", raw_key)]
 
 
 def test_coerce_mldsa_public_key_bytes_unwraps_der_subject_public_key():
