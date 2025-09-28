@@ -171,7 +171,14 @@ def test_mldsa_verify_coerces_dynamic_public_key_bytes(monkeypatch):
     cose_key = MLDSA44({1: 7, 3: -48, -1: DummyKey()})
     cose_key.verify(b"msg", b"sig")
 
-    assert verify_calls == [(b"msg", b"sig", raw_key)]
+    # ML-DSA should now hash the message before verification (like other COSE algorithms)
+    from cryptography.hazmat.primitives import hashes
+    from cryptography.hazmat.backends import default_backend
+    digest = hashes.Hash(hashes.SHA256(), backend=default_backend())
+    digest.update(b"msg")
+    expected_hashed_message = digest.finalize()
+
+    assert verify_calls == [(expected_hashed_message, b"sig", raw_key)]
 
 
 def test_coerce_mldsa_public_key_bytes_unwraps_der_subject_public_key():

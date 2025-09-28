@@ -688,11 +688,18 @@ class MLDSA87(CoseKey):
         public_key = self.get(-1)
         if public_key is None:
             raise ValueError("Missing ML-DSA-87 public key")
+        
+        # Hash the message first, like other COSE algorithms
+        from cryptography.hazmat.backends import default_backend
+        digest = hashes.Hash(self._HASH_ALG, backend=default_backend())
         message_bytes = (
             message
             if isinstance(message, (bytes, bytearray, memoryview))
             else bytes(message)
         )
+        digest.update(message_bytes)
+        hashed_message = digest.finalize()
+        
         signature_bytes = (
             signature
             if isinstance(signature, (bytes, bytearray, memoryview))
@@ -701,7 +708,7 @@ class MLDSA87(CoseKey):
         public_key_bytes = _coerce_mldsa_public_key_bytes(public_key, "ML-DSA-87")
         with oqs_module.Signature("ML-DSA-87") as verifier:
             if not verifier.verify(
-                bytes(message_bytes), bytes(signature_bytes), bytes(public_key_bytes)
+                hashed_message, bytes(signature_bytes), bytes(public_key_bytes)
             ):
                 raise ValueError("Invalid ML-DSA-87 signature")
 
@@ -727,11 +734,18 @@ class MLDSA65(CoseKey):
         public_key = self.get(-1)
         if public_key is None:
             raise ValueError("Missing ML-DSA-65 public key")
+        
+        # Hash the message first, like other COSE algorithms
+        from cryptography.hazmat.backends import default_backend
+        digest = hashes.Hash(self._HASH_ALG, backend=default_backend())
         message_bytes = (
             message
             if isinstance(message, (bytes, bytearray, memoryview))
             else bytes(message)
         )
+        digest.update(message_bytes)
+        hashed_message = digest.finalize()
+        
         signature_bytes = (
             signature
             if isinstance(signature, (bytes, bytearray, memoryview))
@@ -740,7 +754,7 @@ class MLDSA65(CoseKey):
         public_key_bytes = _coerce_mldsa_public_key_bytes(public_key, "ML-DSA-65")
         with oqs_module.Signature("ML-DSA-65") as verifier:
             if not verifier.verify(
-                bytes(message_bytes), bytes(signature_bytes), bytes(public_key_bytes)
+                hashed_message, bytes(signature_bytes), bytes(public_key_bytes)
             ):
                 raise ValueError("Invalid ML-DSA-65 signature")
 
@@ -765,11 +779,18 @@ class MLDSA44(CoseKey):
         public_key = self.get(-1)
         if public_key is None:
             raise ValueError("Missing ML-DSA-44 public key")
+        
+        # Hash the message first, like other COSE algorithms
+        from cryptography.hazmat.backends import default_backend
+        digest = hashes.Hash(self._HASH_ALG, backend=default_backend())
         message_bytes = (
             message
             if isinstance(message, (bytes, bytearray, memoryview))
             else bytes(message)
         )
+        digest.update(message_bytes)
+        hashed_message = digest.finalize()
+        
         signature_bytes = (
             signature
             if isinstance(signature, (bytes, bytearray, memoryview))
@@ -778,7 +799,7 @@ class MLDSA44(CoseKey):
         public_key_bytes = _coerce_mldsa_public_key_bytes(public_key, "ML-DSA-44")
         with oqs_module.Signature("ML-DSA-44") as verifier:
             if not verifier.verify(
-                bytes(message_bytes), bytes(signature_bytes), bytes(public_key_bytes)
+                hashed_message, bytes(signature_bytes), bytes(public_key_bytes)
             ):
                 raise ValueError("Invalid ML-DSA-44 signature")
 
