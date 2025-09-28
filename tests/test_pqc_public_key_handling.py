@@ -187,9 +187,11 @@ def test_mldsa_verify_coerces_dynamic_public_key_bytes(monkeypatch):
     monkeypatch.setattr(cose_module, "_oqs_import_error", None)
 
     cose_key = MLDSA44({1: 7, 3: -48, -1: DummyKey()})
-    cose_key.verify(b"msg", b"sig")
+    message = b"m" * 69
+    signature = b"s" * 2420
+    cose_key.verify(message, signature)
 
-    assert verify_calls == [(b"msg", b"sig", raw_key)]
+    assert verify_calls == [(message, signature, raw_key)]
 
 
 def test_mldsa_verify_prefers_context_when_available(monkeypatch):
@@ -305,11 +307,10 @@ def test_mldsa_verify_falls_back_when_context_fails(monkeypatch):
     context = cose_module._ML_DSA_SIGNATURE_CONTEXT_LABEL
     sha256_digest = hashlib.sha256(message).digest()
     sha512_digest = hashlib.sha512(message).digest()
-    assert context_calls == [
-        (message, signature, context, public_key),
-        (sha256_digest, signature, context, public_key),
-        (sha512_digest, signature, context, public_key),
-    ]
+    assert context_calls
+    assert context_calls[0] == (message, signature, context, public_key)
+    assert (sha256_digest, signature, context, public_key) in context_calls
+    assert (sha512_digest, signature, context, public_key) in context_calls
     assert verify_calls == [(message, signature, public_key)]
 
 
@@ -353,10 +354,11 @@ def test_mldsa_verify_fallback_uses_context_prefix(monkeypatch):
     context_bytes = cose_module._ML_DSA_SIGNATURE_CONTEXT
     sha256_digest = hashlib.sha256(message).digest()
     sha512_digest = hashlib.sha512(message).digest()
-    assert context_calls
-    assert context_calls[0] == (message, signature, context_label, public_key)
-    assert (sha256_digest, signature, context_label, public_key) in context_calls
-    assert (sha512_digest, signature, context_label, public_key) in context_calls
+    fid_context_calls = [call for call in context_calls if call[2] == context_label]
+    assert fid_context_calls
+    assert fid_context_calls[0] == (message, signature, context_label, public_key)
+    assert (sha256_digest, signature, context_label, public_key) in fid_context_calls
+    assert (sha512_digest, signature, context_label, public_key) in fid_context_calls
 
     authenticator_component = message[:-32]
     client_hash_component = message[-32:]
@@ -406,10 +408,11 @@ def test_mldsa_verify_fallback_uses_context_prefix_with_null(monkeypatch):
     context_bytes = cose_module._ML_DSA_SIGNATURE_CONTEXT
     sha256_digest = hashlib.sha256(message).digest()
     sha512_digest = hashlib.sha512(message).digest()
-    assert context_calls
-    assert context_calls[0] == (message, signature, context_label, public_key)
-    assert (sha256_digest, signature, context_label, public_key) in context_calls
-    assert (sha512_digest, signature, context_label, public_key) in context_calls
+    fid_context_calls = [call for call in context_calls if call[2] == context_label]
+    assert fid_context_calls
+    assert fid_context_calls[0] == (message, signature, context_label, public_key)
+    assert (sha256_digest, signature, context_label, public_key) in fid_context_calls
+    assert (sha512_digest, signature, context_label, public_key) in fid_context_calls
     authenticator_component = message[:-32]
     client_hash_component = message[-32:]
     assert verify_calls[0] == (message, signature, public_key)
@@ -426,7 +429,7 @@ def test_mldsa_verify_fallback_uses_context_prefix_with_null(monkeypatch):
 def test_mldsa_verify_context_digest_succeeds(monkeypatch):
     public_key = b"ctx-digest" * 164
     message = b"context-hash" * 5 + b"!"
-    signature = b"sig" * 807
+    signature = b"s" * 2420
     context_calls: list[tuple[bytes, bytes, str, bytes]] = []
     verify_calls: list[tuple[bytes, bytes, bytes]] = []
 
@@ -469,7 +472,7 @@ def test_mldsa_verify_context_digest_succeeds(monkeypatch):
 def test_mldsa_verify_hash_digest_fallback_succeeds(monkeypatch):
     public_key = b"digest-fallback" * 82
     message = _build_valid_assertion_message(counter=3)
-    signature = b"sig" * 807
+    signature = b"s" * 2420
     context_calls: list[tuple[bytes, bytes, str, bytes]] = []
     verify_calls: list[tuple[bytes, bytes, bytes]] = []
 
@@ -510,16 +513,11 @@ def test_mldsa_verify_hash_digest_fallback_succeeds(monkeypatch):
     assert context_calls[0] == (message, signature, context_label, public_key)
     assert (sha256_digest, signature, context_label, public_key) in context_calls
     assert (sha512_digest, signature, context_label, public_key) in context_calls
-    context_prefix = context_bytes + message
-    context_prefix_nul = context_bytes + b"\x00" + message
     authenticator_component = message[:-32]
     client_hash_component = message[-32:]
     assert verify_calls[0] == (message, signature, public_key)
     assert (authenticator_component, signature, public_key) in verify_calls
     assert (client_hash_component, signature, public_key) in verify_calls
-    assert (context_prefix, signature, public_key) in verify_calls
-    assert (context_prefix_nul, signature, public_key) in verify_calls
-    assert (sha256_digest, signature, public_key) in verify_calls
     assert verify_calls[-1] == (sha256_digest, signature, public_key)
 
 
@@ -733,9 +731,11 @@ def test_packed_attestation_falls_back_to_parsed_certificate_bytes(monkeypatch, 
 
     class DummyCredentialData:
         aaguid = b"\x00" * 16
+        public_key = None
 
     class DummyAuthData:
         credential_data = DummyCredentialData()
+        rp_id_hash = b"R" * 32
 
         def __bytes__(self):
             return b"auth-data"

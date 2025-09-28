@@ -38,7 +38,7 @@ from .base import (
 )
 from typing import Optional
 
-from ..cose import CoseKey, extract_certificate_public_key_info
+from ..cose import CoseKey, MLDSA44, extract_certificate_public_key_info
 
 from cryptography import x509
 from cryptography.exceptions import (
@@ -138,6 +138,31 @@ class PackedAttestation(Attestation):
             if pub_key.ALGORITHM != alg:
                 raise InvalidData("Wrong algorithm of public key!")
             att_type = AttestationType.SELF
+        context_payload: Optional[dict] = None
+        if isinstance(pub_key, MLDSA44):
+            alternate_keys = []
+            if auth_data.credential_data and auth_data.credential_data.public_key:
+                try:
+                    credential_key = CoseKey.parse(auth_data.credential_data.public_key)
+                except Exception:
+                    credential_key = None
+                if isinstance(credential_key, MLDSA44):
+                    alternate_keys.append(
+                        (
+                            "authenticatorData.credentialPublicKey",
+                            credential_key.get(-1),
+                        )
+                    )
+            context_payload = {
+                "ceremony": "attestation",
+                "rp_id_hash": auth_data.rp_id_hash.hex(),
+                "alternate_public_keys": alternate_keys,
+                "primary_public_key_label": "attestation_certificate (x5c[0])"
+                if x5c
+                else "authenticatorData.credentialPublicKey",
+                "challenge_sha256": "unavailable",
+            }
+            pub_key._mldsa44_context = context_payload
         try:
             pub_key.verify(auth_data + client_data_hash, statement["sig"])
             return AttestationResult(att_type, x5c or [])

@@ -28,7 +28,7 @@
 from __future__ import annotations
 
 from .rpid import verify_rp_id
-from .cose import CoseKey
+from .cose import CoseKey, MLDSA44
 from .utils import websafe_encode, websafe_decode
 from .webauthn import (
     CollectedClientData,
@@ -59,6 +59,7 @@ from dataclasses import replace
 from urllib.parse import urlparse
 from typing import Sequence, Mapping, Optional, Callable, Union, Tuple, Any, overload
 
+import hashlib
 import os
 import logging
 
@@ -424,6 +425,16 @@ class Fido2Server:
 
         for cred in credentials:
             if cred.credential_id == credential_id:
+                if isinstance(cred.public_key, MLDSA44):
+                    context_payload = {
+                        "ceremony": "assertion",
+                        "challenge_sha256": hashlib.sha256(
+                            client_data.challenge
+                        ).hexdigest(),
+                        "rp_id_hash": auth_data.rp_id_hash.hex(),
+                        "client_data_json": bytes(client_data),
+                    }
+                    cred.public_key._mldsa44_context = context_payload
                 try:
                     cred.public_key.verify(auth_data + client_data.hash, signature)
                 except _InvalidSignature:

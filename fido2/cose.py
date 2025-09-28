@@ -27,7 +27,9 @@
 
 from __future__ import annotations
 
+import base64
 import hashlib
+import json
 
 from dataclasses import dataclass
 
@@ -46,6 +48,8 @@ from typing import (
     Dict,
     Callable,
     Set,
+    List,
+    Tuple,
 )
 
 try:  # pragma: no cover - exercised indirectly in tests
@@ -325,6 +329,11 @@ _ALGORITHM_OID_NAMES: Dict[str, str] = {
 
 _ML_DSA_SIGNATURE_CONTEXT = b"FIDOSIG"
 _ML_DSA_SIGNATURE_CONTEXT_LABEL = "FIDOSIG"
+_ML_DSA_SIGNATURE_CONTEXT_ALIASES: Tuple[Tuple[str, bytes], ...] = (
+    ("FIDOSIG", _ML_DSA_SIGNATURE_CONTEXT),
+    ("FIDOSIG-PQC", b"FIDOSIG-PQC"),
+    ("FIDOSIG-EXPERIMENTAL", b"FIDOSIG-EXPERIMENTAL"),
+)
 
 
 @dataclass(frozen=True)
@@ -334,6 +343,7 @@ class _MLDSAContextInvoker:
     method_name: str
     callable: Callable[[bytes, bytes, Any, bytes], Any]
     context_value: Any
+    context_label: Optional[str] = None
 
 
 @dataclass
@@ -405,52 +415,63 @@ def _verify_mldsa_signature(
     message: bytes,
     signature: bytes,
     public_key: bytes,
+    *,
+    explicit_message_variants: Optional[Sequence[Tuple[str, bytes]]] = None,
+    additional_messages: Sequence[Tuple[str, bytes]] = (),
+    context_labels: Sequence[str] = (),
 ) -> tuple[bool, _MLDSAContextResult]:
     """Verify *signature* returning success flag and context attempt metadata."""
 
     def _iter_context_invokers() -> list[_MLDSAContextInvoker]:
         invokers: list[_MLDSAContextInvoker] = []
 
-        label_str = _ML_DSA_SIGNATURE_CONTEXT_LABEL
-        label_bytes = _ML_DSA_SIGNATURE_CONTEXT
+        seen_labels: Dict[str, bytes] = {}
+        for label, value in _ML_DSA_SIGNATURE_CONTEXT_ALIASES:
+            if label in seen_labels:
+                continue
+            seen_labels[label] = value
+        for label in context_labels:
+            if not isinstance(label, str):
+                continue
+            if label in seen_labels:
+                continue
+            seen_labels[label] = label.encode("utf-8")
+
+        label_items = list(seen_labels.items())
 
         verify_with_ctx_str = getattr(verifier, "verify_with_ctx_str", None)
-        if callable(verify_with_ctx_str) and label_str is not None:
-            invokers.append(
-                _MLDSAContextInvoker(
-                    method_name="verify_with_ctx_str",
-                    callable=verify_with_ctx_str,
-                    context_value=label_str,
+        if callable(verify_with_ctx_str):
+            for label_str, value in label_items:
+                invokers.append(
+                    _MLDSAContextInvoker(
+                        method_name="verify_with_ctx_str",
+                        callable=verify_with_ctx_str,
+                        context_value=label_str,
+                        context_label=label_str,
+                    )
                 )
-            )
 
         verify_with_ctx = getattr(verifier, "verify_with_ctx", None)
         if callable(verify_with_ctx):
-            context_value: Optional[bytes] = None
-            if label_bytes is not None:
-                context_value = label_bytes
-            elif label_str is not None:
-                context_value = label_str.encode("utf-8")
-            if context_value is not None:
+            for label_str, context_value in label_items:
                 invokers.append(
                     _MLDSAContextInvoker(
                         method_name="verify_with_ctx",
                         callable=verify_with_ctx,
                         context_value=context_value,
+                        context_label=label_str,
                     )
                 )
 
         verify_with_ctx_bytes = getattr(verifier, "verify_with_ctx_bytes", None)
         if callable(verify_with_ctx_bytes):
-            context_value = label_bytes
-            if context_value is None and label_str is not None:
-                context_value = label_str.encode("utf-8")
-            if context_value is not None:
+            for label_str, context_value in label_items:
                 invokers.append(
                     _MLDSAContextInvoker(
                         method_name="verify_with_ctx_bytes",
                         callable=verify_with_ctx_bytes,
                         context_value=context_value,
+                        context_label=label_str,
                     )
                 )
 
@@ -463,6 +484,7 @@ def _verify_mldsa_signature(
     context_error_messages: list[str] = []
     context_error: Optional[str] = None
     selected_invoker: Optional[_MLDSAContextInvoker] = None
+    primary_invoker: Optional[_MLDSAContextInvoker] = None
 
     fallback_attempts: list[_MLDSAFallbackAttempt] = []
 
@@ -475,7 +497,22 @@ def _verify_mldsa_signature(
         message_variants.append((label, payload))
         seen_messages.add(payload)
 
-    _add_message_variant("original message", message)
+    if explicit_message_variants:
+        for label, payload in explicit_message_variants:
+            if not isinstance(label, str):
+                continue
+            if not isinstance(payload, (bytes, bytearray, memoryview)):
+                continue
+            _add_message_variant(label, bytes(payload))
+    else:
+        _add_message_variant("original message", message)
+
+    for label, payload in additional_messages:
+        if not isinstance(label, str):
+            continue
+        if not isinstance(payload, (bytes, bytearray, memoryview)):
+            continue
+        _add_message_variant(label, bytes(payload))
 
     rotation_block_lengths = (32, 48, 64)
     for block_length in rotation_block_lengths:
@@ -503,6 +540,11 @@ def _verify_mldsa_signature(
     if context_supported:
         for invoker in context_invokers:
             context_attempted = True
+            attempt_label = "context-aware verification"
+            if invoker.context_label:
+                attempt_label += f" using '{invoker.context_label}'"
+            else:
+                attempt_label += f" via {invoker.method_name}"
             try:
                 context_result = bool(
                     invoker.callable(
@@ -514,10 +556,26 @@ def _verify_mldsa_signature(
                 )
             except Exception as exc:  # pragma: no cover - defensive path
                 context_error_messages.append(f"{invoker.method_name}: {exc}")
+                fallback_attempts.append(
+                    _MLDSAFallbackAttempt(
+                        label=attempt_label,
+                        succeeded=None,
+                        error=str(exc),
+                    )
+                )
                 continue
 
+            if primary_invoker is None:
+                primary_invoker = invoker
             selected_invoker = invoker
             context_succeeded = context_result
+            fallback_attempts.append(
+                _MLDSAFallbackAttempt(
+                    label=attempt_label,
+                    succeeded=context_result,
+                    error=None,
+                )
+            )
             if context_result:
                 return True, _MLDSAContextResult(
                     supported=True,
@@ -526,9 +584,8 @@ def _verify_mldsa_signature(
                     error=None,
                     method_name=invoker.method_name,
                     errors=tuple(context_error_messages),
-                    fallback_attempts=(),
+                    fallback_attempts=tuple(fallback_attempts),
                 )
-            break
 
     def _record_attempt(
         label: str,
@@ -552,11 +609,13 @@ def _verify_mldsa_signature(
         ("SHA-512", hashlib.sha512),
     )
 
-    if selected_invoker is not None:
+    fallback_invoker = primary_invoker or selected_invoker
+
+    if fallback_invoker is not None:
         for variant_label, variant_payload in message_variants[1:]:
             result = _record_attempt(
                 f"context-aware verification using {variant_label}",
-                lambda payload=variant_payload, invoker=selected_invoker: invoker.callable(  # type: ignore[misc]
+                lambda payload=variant_payload, invoker=fallback_invoker: invoker.callable(  # type: ignore[misc]
                     payload,
                     signature,
                     invoker.context_value,
@@ -582,7 +641,7 @@ def _verify_mldsa_signature(
                 digest_label = f"{digest_name} digest of {base_label}"
                 result = _record_attempt(
                     f"context-aware verification using {digest_label}",
-                    lambda digest=digest, invoker=selected_invoker: invoker.callable(  # type: ignore[misc]
+                    lambda digest=digest, invoker=fallback_invoker: invoker.callable(  # type: ignore[misc]
                         digest,
                         signature,
                         invoker.context_value,
@@ -1194,6 +1253,7 @@ def _describe_mldsa_signature_verification_failure(
     public_key: Any,
     public_key_bytes: bytes,
     context_result: Optional[_MLDSAContextResult] = None,
+    diagnostic_json: Optional[str] = None,
 ) -> list[str]:
     """Return diagnostic strings for an ML-DSA verification failure."""
 
@@ -1374,6 +1434,9 @@ def _describe_mldsa_signature_verification_failure(
             context_result=context_result,
         )
     )
+
+    if diagnostic_json is not None:
+        parts.append(diagnostic_json)
 
     return parts
 
@@ -1594,41 +1657,456 @@ class MLDSA44(CoseKey):
         public_key = self.get(-1)
         if public_key is None:
             raise ValueError("Missing ML-DSA-44 public key")
-        message_bytes = (
-            message
-            if isinstance(message, (bytes, bytearray, memoryview))
-            else bytes(message)
-        )
-        signature_bytes = (
-            signature
-            if isinstance(signature, (bytes, bytearray, memoryview))
-            else bytes(signature)
-        )
-        message_bytes = bytes(message_bytes)
-        signature_bytes = bytes(signature_bytes)
         parameter_set = "ML-DSA-44"
-        public_key_bytes = _coerce_mldsa_public_key_bytes(public_key, parameter_set)
-        public_key_bytes = bytes(public_key_bytes)
-        with oqs_module.Signature(parameter_set) as verifier:
-            verified, context_result = _verify_mldsa_signature(
-                verifier,
-                message_bytes,
-                signature_bytes,
-                public_key_bytes,
+
+        context_info = getattr(self, "_mldsa44_context", None)
+        if hasattr(self, "_mldsa44_context"):
+            delattr(self, "_mldsa44_context")
+        if context_info is None:
+            context_info = {}
+        else:
+            context_info = dict(context_info)
+
+        def _as_bytes(value: Any) -> bytes:
+            if isinstance(value, (bytes, bytearray, memoryview)):
+                return bytes(value)
+            if isinstance(value, ByteBuffer):
+                return value.getvalue()
+            if isinstance(value, str):
+                return value.encode("utf-8")
+            return bytes(value)
+
+        message_bytes = _as_bytes(message)
+        signature_bytes = _as_bytes(signature)
+        public_key_bytes = bytes(
+            _coerce_mldsa_public_key_bytes(public_key, parameter_set)
+        )
+
+        parameter_details = _get_mldsa_parameter_details(parameter_set)
+        expected_signature_length = parameter_details.get("signature_length")
+        expected_public_key_length = parameter_details.get("public_key_length")
+
+        message_variants: List[Dict[str, Any]] = []
+        message_seen: Set[bytes] = set()
+
+        def _add_message_variant(label: str, payload: bytes) -> None:
+            if payload in message_seen:
+                return
+            message_seen.add(payload)
+            message_variants.append(
+                {
+                    "label": label,
+                    "bytes": payload,
+                    "length": len(payload),
+                    "sha256": hashlib.sha256(payload).hexdigest(),
+                }
             )
-        if not verified:
-            error_messages = _describe_mldsa_signature_verification_failure(
-                parameter_set=parameter_set,
-                cose_key=self,
-                message=message,
-                message_bytes=message_bytes,
-                signature=signature,
-                signature_bytes=signature_bytes,
-                public_key=public_key,
-                public_key_bytes=public_key_bytes,
-                context_result=context_result,
+
+        _add_message_variant("provided_message", message_bytes)
+
+        authenticator_bytes: Optional[bytes] = None
+        client_hash_bytes: Optional[bytes] = None
+        auth_data_summary: Optional[str] = None
+
+        split_components = _split_webauthn_assertion_components(message_bytes)
+        if split_components is not None:
+            authenticator_bytes, client_hash_bytes, auth_data = split_components
+            spec_default = authenticator_bytes + client_hash_bytes
+            _add_message_variant(
+                "authenticatorData||clientDataHash (spec_default)",
+                spec_default,
             )
-            raise ValueError("; ".join(error_messages))
+            _add_message_variant("authenticatorData_only", authenticator_bytes)
+            _add_message_variant("clientDataHash_only", client_hash_bytes)
+            _add_message_variant(
+                "SHA256(authenticatorData||clientDataHash)",
+                hashlib.sha256(spec_default).digest(),
+            )
+            auth_data_summary = _format_authenticator_data_summary(auth_data)
+
+        client_data_json = context_info.get("client_data_json")
+        if isinstance(client_data_json, ByteBuffer):
+            client_data_json = client_data_json.getvalue()
+        if isinstance(client_data_json, (bytes, bytearray, memoryview)):
+            client_json_bytes = bytes(client_data_json)
+            _add_message_variant("clientDataJSON_raw", client_json_bytes)
+            _add_message_variant(
+                "SHA256(clientDataJSON)",
+                hashlib.sha256(client_json_bytes).digest(),
+            )
+
+        signature_variants: List[Dict[str, Any]] = []
+        signature_seen: Set[bytes] = set()
+
+        def _add_signature_variant(
+            label: str, payload: bytes, *, error: Optional[str] = None
+        ) -> None:
+            normalized = bytes(payload)
+            valid_length = True
+            variant_error = error
+            if expected_signature_length is not None and len(normalized) != expected_signature_length:
+                valid_length = False
+                if variant_error is None:
+                    variant_error = (
+                        f"length {len(normalized)} != expected "
+                        f"{expected_signature_length}"
+                    )
+            signature_variants.append(
+                {
+                    "label": label,
+                    "bytes": normalized,
+                    "length": len(normalized),
+                    "sha256": hashlib.sha256(normalized).hexdigest(),
+                    "valid_length": valid_length and variant_error is None,
+                    "error": variant_error,
+                }
+            )
+            signature_seen.add(normalized)
+
+        _add_signature_variant("provided_signature", signature_bytes)
+
+        signature_text_candidates: List[str] = []
+        if isinstance(signature, str):
+            signature_text_candidates.append(signature)
+        else:
+            try:
+                signature_text = signature_bytes.decode("ascii")
+            except Exception:
+                signature_text = None
+            if signature_text:
+                signature_text_candidates.append(signature_text)
+
+        def _decode_with_padding(value: str, *, urlsafe: bool) -> bytes:
+            normalized = value.strip()
+            padding = "=" * ((4 - len(normalized) % 4) % 4)
+            data = normalized + padding
+            if urlsafe:
+                return base64.urlsafe_b64decode(data)
+            return base64.b64decode(data)
+
+        for idx, text in enumerate(signature_text_candidates):
+            prefix = f"candidate{idx}"
+            try:
+                decoded_url = _decode_with_padding(text, urlsafe=True)
+            except Exception as exc:
+                signature_variants.append(
+                    {
+                        "label": f"{prefix}_base64url-decoded",
+                        "bytes": b"",
+                        "length": 0,
+                        "sha256": hashlib.sha256(b"").hexdigest(),
+                        "valid_length": False,
+                        "error": f"decode error: {exc}",
+                    }
+                )
+            else:
+                if decoded_url not in signature_seen:
+                    _add_signature_variant(
+                        f"{prefix}_base64url-decoded",
+                        decoded_url,
+                    )
+            try:
+                decoded_std = _decode_with_padding(text, urlsafe=False)
+            except Exception as exc:
+                signature_variants.append(
+                    {
+                        "label": f"{prefix}_base64-decoded",
+                        "bytes": b"",
+                        "length": 0,
+                        "sha256": hashlib.sha256(b"").hexdigest(),
+                        "valid_length": False,
+                        "error": f"decode error: {exc}",
+                    }
+                )
+            else:
+                if decoded_std not in signature_seen:
+                    _add_signature_variant(
+                        f"{prefix}_base64-decoded",
+                        decoded_std,
+                    )
+
+        public_keys: List[Dict[str, Any]] = []
+        public_key_seen: Set[bytes] = set()
+
+        def _add_public_key(label: str, payload: bytes) -> None:
+            normalized = bytes(payload)
+            if normalized in public_key_seen:
+                return
+            public_key_seen.add(normalized)
+            expected_length = expected_public_key_length
+            matches_expected = (
+                expected_length is None or len(normalized) == expected_length
+            )
+            public_keys.append(
+                {
+                    "label": label,
+                    "bytes": normalized,
+                    "length": len(normalized),
+                    "sha256": hashlib.sha256(normalized).hexdigest(),
+                    "matches_expected_length": matches_expected,
+                    "expected_length": expected_length,
+                }
+            )
+
+        _add_public_key(context_info.get("primary_public_key_label", "COSE -1 field"), public_key_bytes)
+
+        alternate_public_keys = context_info.get("alternate_public_keys")
+        if isinstance(alternate_public_keys, (list, tuple)):
+            for entry in alternate_public_keys:
+                if not isinstance(entry, (list, tuple)) or len(entry) != 2:
+                    continue
+                label, value = entry
+                try:
+                    alternate_bytes = _coerce_mldsa_public_key_bytes(value, parameter_set)
+                except Exception:
+                    continue
+                _add_public_key(str(label), alternate_bytes)
+
+        message_variant_tuples = [
+            (variant["label"], variant["bytes"]) for variant in message_variants
+        ]
+
+        if not message_variant_tuples:
+            message_variant_tuples = [("provided_message", message_bytes)]
+
+        context_labels = []
+        context_label_values = context_info.get("context_labels")
+        if isinstance(context_label_values, (list, tuple)):
+            context_labels = [str(label) for label in context_label_values if isinstance(label, str)]
+
+        parameter_sets_to_try = context_info.get("parameter_sets")
+        if isinstance(parameter_sets_to_try, (list, tuple)) and parameter_sets_to_try:
+            parameter_order = [str(p) for p in parameter_sets_to_try]
+        else:
+            parameter_order = ["ML-DSA-44", "ML-DSA-65", "ML-DSA-87"]
+
+        attempts: List[Dict[str, Any]] = []
+        primary_context_result: Optional[_MLDSAContextResult] = None
+        verification_succeeded = False
+
+        def _fallbacks_to_dict(
+            result: _MLDSAContextResult,
+        ) -> List[Dict[str, Optional[str]]]:
+            items: List[Dict[str, Optional[str]]] = []
+            for attempt in result.fallback_attempts:
+                items.append(
+                    {
+                        "label": attempt.label,
+                        "succeeded": attempt.succeeded,
+                        "error": attempt.error,
+                    }
+                )
+            return items
+
+        for parameter_option in parameter_order:
+            try:
+                signature_impl = oqs_module.Signature(parameter_option)
+            except Exception as exc:
+                attempts.append(
+                    {
+                        "variant": f"param={parameter_option}|init",
+                        "parameter_set": parameter_option,
+                        "result": False,
+                        "error": f"verifier init failed: {exc}",
+                    }
+                )
+                continue
+
+            parameter_expected = _get_mldsa_parameter_details(parameter_option).get(
+                "public_key_length"
+            )
+
+            with signature_impl as verifier:
+                for key_index, key_entry in enumerate(public_keys):
+                    key_bytes_candidate = key_entry["bytes"]
+                    key_label = key_entry["label"]
+                    key_matches = (
+                        parameter_expected is None
+                        or len(key_bytes_candidate) == parameter_expected
+                    )
+                    for sig_index, signature_entry in enumerate(signature_variants):
+                        if signature_entry.get("error"):
+                            attempts.append(
+                                {
+                                    "variant": (
+                                        f"param={parameter_option}|key={key_label}|"
+                                        f"signature={signature_entry['label']}"
+                                    ),
+                                    "parameter_set": parameter_option,
+                                    "public_key": key_label,
+                                    "signature_variant": signature_entry["label"],
+                                    "result": False,
+                                    "error": signature_entry["error"],
+                                }
+                            )
+                            continue
+                        if not signature_entry.get("valid_length", True):
+                            attempts.append(
+                                {
+                                    "variant": (
+                                        f"param={parameter_option}|key={key_label}|"
+                                        f"signature={signature_entry['label']}"
+                                    ),
+                                    "parameter_set": parameter_option,
+                                    "public_key": key_label,
+                                    "signature_variant": signature_entry["label"],
+                                    "result": False,
+                                    "error": "signature length invalid",
+                                }
+                            )
+                            continue
+
+                        try:
+                            verified, context_result = _verify_mldsa_signature(
+                                verifier,
+                                message_variant_tuples[0][1],
+                                signature_entry["bytes"],
+                                key_bytes_candidate,
+                                explicit_message_variants=message_variant_tuples,
+                                context_labels=context_labels,
+                            )
+                        except Exception as exc:
+                            attempts.append(
+                                {
+                                    "variant": (
+                                        f"param={parameter_option}|key={key_label}|"
+                                        f"signature={signature_entry['label']}"
+                                    ),
+                                    "parameter_set": parameter_option,
+                                    "public_key": key_label,
+                                    "signature_variant": signature_entry["label"],
+                                    "result": False,
+                                    "error": str(exc),
+                                }
+                            )
+                            continue
+
+                        attempt_record = {
+                            "variant": (
+                                f"param={parameter_option}|key={key_label}|"
+                                f"signature={signature_entry['label']}"
+                            ),
+                            "parameter_set": parameter_option,
+                            "public_key": key_label,
+                            "public_key_length": len(key_bytes_candidate),
+                            "public_key_matches_expected": key_matches,
+                            "signature_variant": signature_entry["label"],
+                            "signature_length": len(signature_entry["bytes"]),
+                            "signature_sha256": signature_entry["sha256"],
+                            "message_variants": [
+                                variant["label"] for variant in message_variants
+                            ],
+                            "context_supported": context_result.supported,
+                            "context_attempted": context_result.attempted,
+                            "context_method": context_result.method_name,
+                            "context_errors": list(context_result.errors),
+                            "fallback_attempts": _fallbacks_to_dict(context_result),
+                            "result": bool(verified),
+                        }
+                        attempts.append(attempt_record)
+
+                        if (
+                            primary_context_result is None
+                            and parameter_option == parameter_set
+                            and key_index == 0
+                            and sig_index == 0
+                        ):
+                            primary_context_result = context_result
+
+                        if verified:
+                            verification_succeeded = True
+                            break
+                    if verification_succeeded:
+                        break
+                if verification_succeeded:
+                    break
+
+            if verification_succeeded:
+                break
+
+        if verification_succeeded:
+            return
+
+        def _first_hex(data: bytes) -> str:
+            return data[:32].hex()
+
+        def _last_hex(data: bytes) -> str:
+            return data[-32:].hex() if len(data) >= 32 else data.hex()
+
+        diagnostic_payload = {
+            "success": False,
+            "verified": False,
+            "ceremony": context_info.get("ceremony", "unknown"),
+            "challenge_sha256": context_info.get("challenge_sha256", "unavailable"),
+            "rpIdHash": (
+                context_info.get("rp_id_hash")
+                or (authenticator_bytes[:32].hex() if authenticator_bytes else None)
+            ),
+            "clientDataHash_hex": client_hash_bytes.hex()
+            if client_hash_bytes
+            else None,
+            "message_sha256": hashlib.sha256(message_bytes).hexdigest(),
+            "message_length": len(message_bytes),
+            "message_prefix32_hex": _first_hex(message_bytes),
+            "message_suffix32_hex": _last_hex(message_bytes),
+            "signature_sha256": hashlib.sha256(signature_bytes).hexdigest(),
+            "signature_length": len(signature_bytes),
+            "signature_prefix32_hex": _first_hex(signature_bytes),
+            "signature_suffix32_hex": _last_hex(signature_bytes),
+            "publicKey_sha256": hashlib.sha256(public_key_bytes).hexdigest(),
+            "publicKey_length": len(public_key_bytes),
+            "publicKey_matches_expected_length": (
+                expected_public_key_length is None
+                or len(public_key_bytes) == expected_public_key_length
+            ),
+            "message_variants": [
+                {
+                    "label": variant["label"],
+                    "length": variant["length"],
+                    "sha256": variant["sha256"],
+                }
+                for variant in message_variants
+            ],
+            "signature_variants": [
+                {
+                    "label": variant["label"],
+                    "length": variant["length"],
+                    "sha256": variant["sha256"],
+                    "valid_length": variant["valid_length"],
+                    "error": variant.get("error"),
+                }
+                for variant in signature_variants
+            ],
+            "public_keys": [
+                {
+                    "label": entry["label"],
+                    "length": entry["length"],
+                    "sha256": entry["sha256"],
+                    "matches_expected_length": entry["matches_expected_length"],
+                    "expected_length": entry["expected_length"],
+                }
+                for entry in public_keys
+            ],
+            "attempts": attempts,
+            "authenticator_data_summary": auth_data_summary,
+            "conclusion": "Likely authenticator-side issue if all failed.",
+        }
+
+        diagnostic_json = json.dumps(diagnostic_payload, sort_keys=True)
+
+        error_messages = _describe_mldsa_signature_verification_failure(
+            parameter_set=parameter_set,
+            cose_key=self,
+            message=message,
+            message_bytes=message_bytes,
+            signature=signature,
+            signature_bytes=signature_bytes,
+            public_key=public_key,
+            public_key_bytes=public_key_bytes,
+            context_result=primary_context_result,
+            diagnostic_json=diagnostic_json,
+        )
+        raise ValueError("; ".join(error_messages))
 
     @classmethod
     def from_cryptography_key(cls, public_key):
