@@ -29,6 +29,8 @@ from __future__ import annotations
 
 import hashlib
 
+from dataclasses import dataclass
+
 from .utils import ByteBuffer, bytes2int, int2bytes
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
@@ -310,6 +312,24 @@ _ALGORITHM_OID_NAMES: Dict[str, str] = {
 }
 
 
+_ML_DSA_SIGNATURE_CONTEXT = b"FIDOSIG"
+_ML_DSA_SIGNATURE_CONTEXT_LABEL = "FIDOSIG"
+
+
+@dataclass
+class _MLDSAContextResult:
+    """Metadata about context-aware ML-DSA verification attempts."""
+
+    supported: bool
+    attempted: bool
+    succeeded: Optional[bool]
+    error: Optional[str]
+
+    @property
+    def label(self) -> str:
+        return _ML_DSA_SIGNATURE_CONTEXT_LABEL
+
+
 _ML_DSA_PARAMETER_SET_DEFAULTS: Dict[str, Dict[str, Optional[int]]] = {
     "ML-DSA-44": {"public_key_length": 1312, "signature_length": 2420},
     "ML-DSA-65": {"public_key_length": 1952, "signature_length": 3293},
@@ -346,6 +366,52 @@ def _get_mldsa_parameter_details(parameter_set: Optional[str]) -> Dict[str, Opti
             details.setdefault("signature_length", int(signature_length))
 
     return details
+
+
+def _verify_mldsa_signature(
+    verifier: Any,
+    message: bytes,
+    signature: bytes,
+    public_key: bytes,
+) -> tuple[bool, _MLDSAContextResult]:
+    """Verify *signature* returning success flag and context attempt metadata."""
+
+    verify_with_ctx = getattr(verifier, "verify_with_ctx_str", None)
+    context_supported = callable(verify_with_ctx)
+    context_attempted = False
+    context_succeeded: Optional[bool] = None
+    context_error: Optional[str] = None
+
+    if context_supported and _ML_DSA_SIGNATURE_CONTEXT:
+        context_attempted = True
+        try:
+            context_result = bool(
+                verify_with_ctx(  # type: ignore[misc]
+                    message,
+                    signature,
+                    _ML_DSA_SIGNATURE_CONTEXT,
+                    public_key,
+                )
+            )
+        except Exception as exc:  # pragma: no cover - defensive path
+            context_error = str(exc)
+        else:
+            context_succeeded = context_result
+            if context_result:
+                return True, _MLDSAContextResult(
+                    supported=True,
+                    attempted=True,
+                    succeeded=True,
+                    error=None,
+                )
+
+    base_result = bool(verifier.verify(message, signature, public_key))
+    return base_result, _MLDSAContextResult(
+        supported=context_supported,
+        attempted=context_attempted,
+        succeeded=context_succeeded,
+        error=context_error,
+    )
 
 
 def describe_mldsa_oid(oid: Optional[str]) -> Optional[Dict[str, str]]:
@@ -600,6 +666,7 @@ def _describe_mldsa_signature_verification_failure(
     signature_bytes: bytes,
     public_key: Any,
     public_key_bytes: bytes,
+    context_result: Optional[_MLDSAContextResult] = None,
 ) -> list[str]:
     """Return diagnostic strings for an ML-DSA verification failure."""
 
@@ -688,6 +755,35 @@ def _describe_mldsa_signature_verification_failure(
         f"bytes_origin={_describe_bytes_origin(public_key, public_key_bytes)}, sha256={_maybe_sha256(public_key_bytes)}, "
         f"bytes_like={isinstance(public_key, (bytes, bytearray, memoryview))}."
     )
+
+    if context_result is not None:
+        if not context_result.supported:
+            parts.append(
+                "oqs bindings do not expose verify_with_ctx_str; context-aware "
+                "ML-DSA verification unavailable."
+            )
+        elif context_result.attempted:
+            if context_result.succeeded is True:
+                parts.append(
+                    "Context-aware ML-DSA verification using "
+                    f"'{context_result.label}' succeeded."
+                )
+            elif context_result.succeeded is False:
+                parts.append(
+                    "Context-aware ML-DSA verification using "
+                    f"'{context_result.label}' failed; falling back to "
+                    "context-free verification."
+                )
+            else:
+                parts.append(
+                    "Context-aware ML-DSA verification using "
+                    f"'{context_result.label}' raised "
+                    f"{context_result.error!r}; falling back to context-free verification."
+                )
+        else:
+            parts.append(
+                "verify_with_ctx_str was available but no context attempt was made."
+            )
 
     parameter_details = _get_mldsa_parameter_details(parameter_set)
     expected_signature_length = parameter_details.get("signature_length")
@@ -840,7 +936,12 @@ class MLDSA87(CoseKey):
         public_key_bytes = _coerce_mldsa_public_key_bytes(public_key, parameter_set)
         public_key_bytes = bytes(public_key_bytes)
         with oqs_module.Signature(parameter_set) as verifier:
-            verified = verifier.verify(message_bytes, signature_bytes, public_key_bytes)
+            verified, context_result = _verify_mldsa_signature(
+                verifier,
+                message_bytes,
+                signature_bytes,
+                public_key_bytes,
+            )
         if not verified:
             error_messages = _describe_mldsa_signature_verification_failure(
                 parameter_set=parameter_set,
@@ -851,6 +952,7 @@ class MLDSA87(CoseKey):
                 signature_bytes=signature_bytes,
                 public_key=public_key,
                 public_key_bytes=public_key_bytes,
+                context_result=context_result,
             )
             raise ValueError("; ".join(error_messages))
 
@@ -892,7 +994,12 @@ class MLDSA65(CoseKey):
         public_key_bytes = _coerce_mldsa_public_key_bytes(public_key, parameter_set)
         public_key_bytes = bytes(public_key_bytes)
         with oqs_module.Signature(parameter_set) as verifier:
-            verified = verifier.verify(message_bytes, signature_bytes, public_key_bytes)
+            verified, context_result = _verify_mldsa_signature(
+                verifier,
+                message_bytes,
+                signature_bytes,
+                public_key_bytes,
+            )
         if not verified:
             error_messages = _describe_mldsa_signature_verification_failure(
                 parameter_set=parameter_set,
@@ -903,6 +1010,7 @@ class MLDSA65(CoseKey):
                 signature_bytes=signature_bytes,
                 public_key=public_key,
                 public_key_bytes=public_key_bytes,
+                context_result=context_result,
             )
             raise ValueError("; ".join(error_messages))
 
@@ -943,7 +1051,12 @@ class MLDSA44(CoseKey):
         public_key_bytes = _coerce_mldsa_public_key_bytes(public_key, parameter_set)
         public_key_bytes = bytes(public_key_bytes)
         with oqs_module.Signature(parameter_set) as verifier:
-            verified = verifier.verify(message_bytes, signature_bytes, public_key_bytes)
+            verified, context_result = _verify_mldsa_signature(
+                verifier,
+                message_bytes,
+                signature_bytes,
+                public_key_bytes,
+            )
         if not verified:
             error_messages = _describe_mldsa_signature_verification_failure(
                 parameter_set=parameter_set,
@@ -954,6 +1067,7 @@ class MLDSA44(CoseKey):
                 signature_bytes=signature_bytes,
                 public_key=public_key,
                 public_key_bytes=public_key_bytes,
+                context_result=context_result,
             )
             raise ValueError("; ".join(error_messages))
 

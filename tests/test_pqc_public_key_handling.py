@@ -174,6 +174,83 @@ def test_mldsa_verify_coerces_dynamic_public_key_bytes(monkeypatch):
     assert verify_calls == [(b"msg", b"sig", raw_key)]
 
 
+def test_mldsa_verify_prefers_context_when_available(monkeypatch):
+    public_key = b"p" * 1312
+    message = b"m" * 69
+    signature = b"s" * 2420
+    context_calls: list[tuple[bytes, bytes, bytes, bytes]] = []
+
+    class FakeSignature:
+        def __init__(self, algorithm: str):
+            assert algorithm == "ML-DSA-44"
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+        def verify_with_ctx_str(self, msg, sig, ctx, pk):
+            context_calls.append((msg, sig, ctx, pk))
+            return True
+
+        def verify(self, msg, sig, pk):  # pragma: no cover - not expected to run
+            raise AssertionError("Context verification should succeed before fallback")
+
+    class FakeOQS:
+        Signature = FakeSignature
+
+    monkeypatch.setattr(cose_module, "oqs", FakeOQS)
+    monkeypatch.setattr(cose_module, "_oqs_import_error", None)
+
+    cose_key = MLDSA44({1: 7, 3: -48, -1: public_key})
+    cose_key.verify(message, signature)
+
+    assert context_calls == [
+        (message, signature, cose_module._ML_DSA_SIGNATURE_CONTEXT, public_key)
+    ]
+
+
+def test_mldsa_verify_falls_back_when_context_fails(monkeypatch):
+    public_key = b"q" * 1312
+    message = b"n" * 69
+    signature = b"t" * 2420
+    context_calls: list[tuple[bytes, bytes, bytes, bytes]] = []
+    verify_calls: list[tuple[bytes, bytes, bytes]] = []
+
+    class FakeSignature:
+        def __init__(self, algorithm: str):
+            assert algorithm == "ML-DSA-44"
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+        def verify_with_ctx_str(self, msg, sig, ctx, pk):
+            context_calls.append((msg, sig, ctx, pk))
+            return False
+
+        def verify(self, msg, sig, pk):
+            verify_calls.append((msg, sig, pk))
+            return True
+
+    class FakeOQS:
+        Signature = FakeSignature
+
+    monkeypatch.setattr(cose_module, "oqs", FakeOQS)
+    monkeypatch.setattr(cose_module, "_oqs_import_error", None)
+
+    cose_key = MLDSA44({1: 7, 3: -48, -1: public_key})
+    cose_key.verify(message, signature)
+
+    assert context_calls == [
+        (message, signature, cose_module._ML_DSA_SIGNATURE_CONTEXT, public_key)
+    ]
+    assert verify_calls == [(message, signature, public_key)]
+
+
 def test_coerce_mldsa_public_key_bytes_unwraps_der_subject_public_key():
     raw_key = b"wrapped-public-key"
     spki = _build_spki(raw_key, algorithm_oid="2.16.840.1.101.3.4.3.17")
