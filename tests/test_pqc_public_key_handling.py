@@ -23,6 +23,8 @@ from fido2.cose import MLDSA44, MLDSA65, MLDSA87  # noqa: E402
 from fido2.utils import ByteBuffer  # noqa: E402
 from types import SimpleNamespace  # noqa: E402
 
+from examples.server.server import storage  # noqa: E402
+
 
 def _encode_length(length: int) -> bytes:
     if length < 0x80:
@@ -535,3 +537,31 @@ def test_pqc_attestation_fallback_ignored_for_non_pqc_algorithm():
     assert outcome["attempted"] is False
     assert outcome["success"] is False
     assert outcome["attestation_result"] is None
+
+
+def test_add_public_key_material_serialises_credential_key_bytes():
+    credential_key = {1: 2, 3: -48, -1: b"credential-public-key"}
+    container: dict[str, object] = {}
+
+    storage.add_public_key_material(container, credential_key)
+
+    assert container["publicKeyCose"][3] == -48  # type: ignore[index]
+    assert container["publicKeyType"] == 2
+    expected = base64.b64encode(b"credential-public-key").decode("utf-8")
+    assert container["publicKeyBytes"] == expected
+
+
+def test_add_public_key_material_supports_prefixed_fields():
+    credential_key = {1: 2, 3: -48, -1: b"prefixed-key"}
+    container: dict[str, object] = {}
+
+    storage.add_public_key_material(
+        container,
+        credential_key,
+        field_prefix="credential",
+    )
+
+    assert container["credentialPublicKeyCose"][3] == -48  # type: ignore[index]
+    assert container["credentialPublicKeyType"] == 2
+    expected = base64.b64encode(b"prefixed-key").decode("utf-8")
+    assert container["credentialPublicKeyBytes"] == expected

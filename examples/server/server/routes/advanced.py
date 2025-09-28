@@ -50,7 +50,13 @@ from ..pqc import (
     is_pqc_algorithm,
     log_algorithm_selection,
 )
-from ..storage import add_public_key_material, extract_credential_data, readkey, savekey
+from ..storage import (
+    add_public_key_material,
+    coerce_cose_public_key_dict,
+    extract_credential_data,
+    readkey,
+    savekey,
+)
 
 
 _COSE_ALGORITHM_NAME_MAP: Dict[str, int] = {
@@ -928,6 +934,15 @@ def advanced_register_complete():
         )
 
         auth_data = register_server.register_complete(state, response)
+        credential_data_obj = getattr(auth_data, "credential_data", None)
+        credential_public_key_value = (
+            getattr(credential_data_obj, "public_key", None)
+            if credential_data_obj is not None
+            else None
+        )
+        credential_public_key_cose = coerce_cose_public_key_dict(
+            credential_public_key_value
+        )
 
         _log_authenticator_attestation_response(
             attestation_format,
@@ -1039,8 +1054,18 @@ def advanced_register_complete():
 
         add_public_key_material(
             credential_info,
-            getattr(auth_data.credential_data, 'public_key', {})
+            credential_public_key_value,
         )
+        if isinstance(credential_info.get('properties'), dict):
+            add_public_key_material(
+                credential_info['properties'],
+                credential_public_key_value,
+                field_prefix='credential',
+            )
+            if credential_public_key_cose is not None:
+                credential_info['properties']['credentialPublicKey'] = make_json_safe(
+                    credential_public_key_cose
+                )
         augment_aaguid_fields(credential_info)
 
         if authenticator_extensions_summary:
@@ -1052,18 +1077,9 @@ def advanced_register_complete():
         if isinstance(response, Mapping):
             credential_info['registration_response'] = make_json_safe(response)
 
-        credential_public_key_value = getattr(auth_data.credential_data, "public_key", None)
         raw_alg_value: Any = None
-        if isinstance(credential_public_key_value, Mapping):
-            if 3 in credential_public_key_value:
-                raw_alg_value = credential_public_key_value[3]
-            elif "alg" in credential_public_key_value:
-                raw_alg_value = credential_public_key_value["alg"]
-        else:
-            try:
-                raw_alg_value = credential_public_key_value[3]  # type: ignore[index]
-            except Exception:
-                raw_alg_value = None
+        if credential_public_key_cose is not None:
+            raw_alg_value = credential_public_key_cose.get(3)
 
         algo = _coerce_cose_algorithm(raw_alg_value)
         algoname = describe_algorithm(algo)
@@ -1222,11 +1238,22 @@ def advanced_register_complete():
                 authenticator_extensions_summary
             )
 
+        if credential_public_key_cose is not None:
+            rp_info["registrationData"]["credentialPublicKey"] = make_json_safe(
+                credential_public_key_cose
+            )
+
         if attestation_certificate_details:
             rp_info["attestationCertificate"] = attestation_certificate_details
 
         if attestation_certificates_details:
             rp_info["attestationCertificates"] = attestation_certificates_details
+
+        add_public_key_material(
+            rp_info,
+            credential_public_key_value,
+            field_prefix='credential',
+        )
 
         credential_info['relying_party'] = make_json_safe(rp_info)
 

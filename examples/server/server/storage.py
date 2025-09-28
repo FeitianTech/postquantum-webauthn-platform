@@ -4,12 +4,14 @@ from __future__ import annotations
 import base64
 import os
 import pickle
-from typing import Any, Dict, List
+from collections.abc import Mapping
+from typing import Any, Dict, List, Optional
 
 from .config import basepath
 
 __all__ = [
     "add_public_key_material",
+    "coerce_cose_public_key_dict",
     "convert_bytes_for_json",
     "delkey",
     "extract_credential_data",
@@ -53,23 +55,61 @@ def convert_bytes_for_json(obj: Any) -> Any:
     return obj
 
 
-def add_public_key_material(target: Dict[str, Any], public_key: Any) -> None:
-    """Populate JSON-friendly COSE public key details if available."""
-    if not isinstance(public_key, dict):
+def coerce_cose_public_key_dict(public_key: Any) -> Optional[Dict[Any, Any]]:
+    """Return ``public_key`` as a plain ``dict`` when it resembles a COSE map."""
+
+    if isinstance(public_key, Mapping):
+        return dict(public_key)
+
+    if hasattr(public_key, "items"):
+        try:
+            return dict(public_key.items())  # type: ignore[call-arg]
+        except Exception:
+            pass
+
+    try:
+        return dict(public_key)
+    except Exception:
+        return None
+
+
+def add_public_key_material(
+    target: Dict[str, Any],
+    public_key: Any,
+    *,
+    field_prefix: str = "",
+) -> None:
+    """Populate JSON-friendly COSE public key details if available.
+
+    When ``field_prefix`` is provided, generated keys (``publicKeyCose``,
+    ``publicKeyBytes`` and associated metadata) are prefixed with that value,
+    e.g. ``field_prefix="credential"`` produces ``credentialPublicKeyCose``.
+    """
+
+    cose_map = coerce_cose_public_key_dict(public_key)
+    if not cose_map:
         return
 
-    cose_map = dict(public_key)
-    target['publicKeyCose'] = convert_bytes_for_json(cose_map)
+    prefix = field_prefix or ""
+
+    def _field(name: str) -> str:
+        if not prefix:
+            return name
+        return f"{prefix}{name[0].upper()}{name[1:]}"
+
+    target[_field('publicKeyCose')] = convert_bytes_for_json(cose_map)
 
     raw_key = cose_map.get(-1)
     if isinstance(raw_key, (bytes, bytearray, memoryview)):
-        target['publicKeyBytes'] = convert_bytes_for_json(raw_key)
+        target[_field('publicKeyBytes')] = convert_bytes_for_json(raw_key)
 
-    if 'publicKeyType' not in target:
-        target['publicKeyType'] = cose_map.get(1)
+    type_field = _field('publicKeyType')
+    if type_field not in target:
+        target[type_field] = cose_map.get(1)
 
-    if 'publicKeyAlgorithm' not in target:
-        target['publicKeyAlgorithm'] = cose_map.get(3)
+    alg_field = _field('publicKeyAlgorithm')
+    if alg_field not in target:
+        target[alg_field] = cose_map.get(3)
 
 
 def extract_credential_data(cred: Any) -> Any:

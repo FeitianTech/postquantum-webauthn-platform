@@ -138,6 +138,11 @@ def register_complete():
         credential_info,
         getattr(auth_data.credential_data, 'public_key', {})
     )
+    add_public_key_material(
+        credential_info['properties'],
+        getattr(auth_data.credential_data, 'public_key', {}),
+        field_prefix='credential',
+    )
 
     if parsed_attestation_object:
         credential_info['attestation_object_decoded'] = make_json_safe(parsed_attestation_object)
