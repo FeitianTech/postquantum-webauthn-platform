@@ -11,6 +11,8 @@ if str(_REPO_ROOT) not in sys.path:
 for _module_name in [name for name in list(sys.modules) if name == "fido2" or name.startswith("fido2.")]:
     del sys.modules[_module_name]
 
+import base64  # noqa: E402
+import hashlib  # noqa: E402
 import fido2.cose as cose_module  # noqa: E402
 import fido2.attestation.packed as packed_module  # noqa: E402
 import examples.server.server.attestation as attestation_module  # noqa: E402
@@ -443,3 +445,22 @@ def test_serialize_attestation_certificate_handles_value_error(monkeypatch):
 
     summary_lines = details["summary"].splitlines()
     assert any("ML-DSA parameter set" in line for line in summary_lines)
+
+
+def test_serialize_attestation_certificate_fallback_on_parse_error(monkeypatch):
+    cert_der = b"invalid-der"
+
+    def fail_loader(*_args, **_kwargs):
+        raise ValueError("short data")
+
+    monkeypatch.setattr(
+        attestation_module.x509, "load_der_x509_certificate", fail_loader
+    )
+
+    details = attestation_module.serialize_attestation_certificate(cert_der)
+
+    assert details["error"].startswith("Unable to parse attestation certificate")
+    assert details["derBase64"] == base64.b64encode(cert_der).decode("ascii")
+    assert details["fingerprints"]["sha256"] == hashlib.sha256(cert_der).hexdigest()
+    assert "Fingerprints:" in details["summary"]
+    assert isinstance(details["publicKeyInfo"], dict)
