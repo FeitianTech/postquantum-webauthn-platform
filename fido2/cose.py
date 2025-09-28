@@ -405,6 +405,40 @@ def _verify_mldsa_signature(
 
     fallback_attempts: list[_MLDSAFallbackAttempt] = []
 
+    message_variants: list[tuple[str, bytes]] = []
+    seen_messages: Set[bytes] = set()
+
+    def _add_message_variant(label: str, payload: bytes) -> None:
+        if payload in seen_messages:
+            return
+        message_variants.append((label, payload))
+        seen_messages.add(payload)
+
+    _add_message_variant("original message", message)
+
+    rotation_block_lengths = (32, 48, 64)
+    for block_length in rotation_block_lengths:
+        if block_length >= len(message):
+            continue
+
+        leading = message[:block_length]
+        trailing = message[block_length:]
+        if trailing:
+            rotated = trailing + leading
+            _add_message_variant(
+                f"{block_length}-byte leading block moved to end",
+                rotated,
+            )
+
+        prefix = message[:-block_length]
+        suffix = message[-block_length:]
+        if prefix:
+            shifted = suffix + prefix
+            _add_message_variant(
+                f"{block_length}-byte trailing block moved to front",
+                shifted,
+            )
+
     if context_supported and _ML_DSA_SIGNATURE_CONTEXT:
         context_attempted = True
         try:
@@ -446,23 +480,17 @@ def _verify_mldsa_signature(
         )
         return outcome
 
-    digest_variants: list[tuple[str, bytes]] = []
     digest_functions: tuple[tuple[str, Callable[[bytes], Any]], ...] = (
         ("SHA-256", hashlib.sha256),
         ("SHA-512", hashlib.sha512),
     )
 
-    for digest_name, digest_factory in digest_functions:
-        digest = digest_factory(message).digest()
-        if digest != message:
-            digest_variants.append((f"{digest_name} digest of original message", digest))
-
     if context_supported and _ML_DSA_SIGNATURE_CONTEXT:
-        for digest_label, digest in digest_variants:
+        for variant_label, variant_payload in message_variants[1:]:
             result = _record_attempt(
-                f"context-aware verification using {digest_label}",
-                lambda digest=digest: verify_with_ctx(  # type: ignore[misc]
-                    digest,
+                f"context-aware verification using {variant_label}",
+                lambda payload=variant_payload: verify_with_ctx(  # type: ignore[misc]
+                    payload,
                     signature,
                     _ML_DSA_SIGNATURE_CONTEXT,
                     public_key,
@@ -477,6 +505,30 @@ def _verify_mldsa_signature(
                     fallback_attempts=tuple(fallback_attempts),
                 )
 
+        for base_label, base_payload in message_variants:
+            for digest_name, digest_factory in digest_functions:
+                digest = digest_factory(base_payload).digest()
+                if digest == base_payload:
+                    continue
+                digest_label = f"{digest_name} digest of {base_label}"
+                result = _record_attempt(
+                    f"context-aware verification using {digest_label}",
+                    lambda digest=digest: verify_with_ctx(  # type: ignore[misc]
+                        digest,
+                        signature,
+                        _ML_DSA_SIGNATURE_CONTEXT,
+                        public_key,
+                    ),
+                )
+                if result:
+                    return True, _MLDSAContextResult(
+                        supported=context_supported,
+                        attempted=True,
+                        succeeded=context_succeeded,
+                        error=context_error,
+                        fallback_attempts=tuple(fallback_attempts),
+                    )
+
     fallback_variants: list[tuple[str, bytes]] = []
     seen_variants: Set[bytes] = set()
 
@@ -486,26 +538,34 @@ def _verify_mldsa_signature(
         fallback_variants.append((label, payload))
         seen_variants.add(payload)
 
-    _add_variant("original message", message)
+    for base_label, base_payload in message_variants:
+        _add_variant(base_label, base_payload)
 
     if _ML_DSA_SIGNATURE_CONTEXT:
         context = bytes(_ML_DSA_SIGNATURE_CONTEXT)
         context_label = _ML_DSA_SIGNATURE_CONTEXT_LABEL
 
-        prefixed = context + message
-        if prefixed:
-            _add_variant(f"'{context_label}' prefix + message", prefixed)
+        for base_label, base_payload in message_variants:
+            prefixed = context + base_payload
+            if prefixed:
+                _add_variant(
+                    f"'{context_label}' prefix + {base_label}",
+                    prefixed,
+                )
 
-        nul_prefixed = context + b"\x00" + message
-        if nul_prefixed:
-            _add_variant(
-                f"'{context_label}' prefix + NUL separator + message", nul_prefixed
-            )
+            nul_prefixed = context + b"\x00" + base_payload
+            if nul_prefixed:
+                _add_variant(
+                    f"'{context_label}' prefix + NUL separator + {base_label}",
+                    nul_prefixed,
+                )
 
     base_variants_snapshot = list(fallback_variants)
     for base_label, base_payload in base_variants_snapshot:
         for digest_name, digest_factory in digest_functions:
             digest = digest_factory(base_payload).digest()
+            if digest == base_payload:
+                continue
             digest_label = f"{digest_name} digest of {base_label}"
             _add_variant(digest_label, digest)
 

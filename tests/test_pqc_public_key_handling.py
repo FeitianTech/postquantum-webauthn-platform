@@ -396,10 +396,9 @@ def test_mldsa_verify_context_digest_succeeds(monkeypatch):
     cose_key.verify(message, signature)
 
     context = cose_module._ML_DSA_SIGNATURE_CONTEXT
-    assert context_calls == [
-        (message, signature, context, public_key),
-        (target_digest, signature, context, public_key),
-    ]
+    assert context_calls
+    assert context_calls[0] == (message, signature, context, public_key)
+    assert (target_digest, signature, context, public_key) in context_calls
     assert verify_calls == []
 
 
@@ -442,19 +441,63 @@ def test_mldsa_verify_hash_digest_fallback_succeeds(monkeypatch):
     context = cose_module._ML_DSA_SIGNATURE_CONTEXT
     sha256_digest = hashlib.sha256(message).digest()
     sha512_digest = hashlib.sha512(message).digest()
-    assert context_calls == [
-        (message, signature, context, public_key),
-        (sha256_digest, signature, context, public_key),
-        (sha512_digest, signature, context, public_key),
-    ]
+    assert context_calls
+    assert context_calls[0] == (message, signature, context, public_key)
+    assert (sha256_digest, signature, context, public_key) in context_calls
+    assert (sha512_digest, signature, context, public_key) in context_calls
     context_prefix = context + message
     context_prefix_nul = context + b"\x00" + message
-    assert verify_calls == [
-        (message, signature, public_key),
-        (context_prefix, signature, public_key),
-        (context_prefix_nul, signature, public_key),
-        (sha256_digest, signature, public_key),
-    ]
+    assert verify_calls[0] == (message, signature, public_key)
+    assert (context_prefix, signature, public_key) in verify_calls
+    assert (context_prefix_nul, signature, public_key) in verify_calls
+    assert (sha256_digest, signature, public_key) in verify_calls
+    assert (sha512_digest, signature, public_key) not in verify_calls
+
+
+def test_mldsa_verify_attempts_rotated_message_variants(monkeypatch):
+    public_key = b"p" * 1312
+    message = b"A" * 37 + b"B" * 32
+    signature = b"s" * 2420
+    context_messages: list[bytes] = []
+    fallback_messages: list[bytes] = []
+
+    class FakeSignature:
+        def __init__(self, algorithm: str):
+            assert algorithm == "ML-DSA-44"
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+        def verify_with_ctx_str(self, msg, sig, ctx, pk):
+            context_messages.append(bytes(msg))
+            return False
+
+        def verify(self, msg, sig, pk):
+            fallback_messages.append(bytes(msg))
+            return False
+
+    class FakeOQS:
+        Signature = FakeSignature
+
+    monkeypatch.setattr(cose_module, "oqs", FakeOQS)
+    monkeypatch.setattr(cose_module, "_oqs_import_error", None)
+
+    cose_key = MLDSA44({1: 7, 3: -48, -1: public_key})
+
+    with pytest.raises(ValueError):
+        cose_key.verify(message, signature)
+
+    rotated_trailing = message[-32:] + message[:-32]
+    rotated_leading = message[32:] + message[:32]
+
+    attempted_payloads = context_messages + fallback_messages
+
+    assert rotated_trailing in attempted_payloads
+    assert rotated_leading in attempted_payloads
+
 
 def test_coerce_mldsa_public_key_bytes_unwraps_der_subject_public_key():
     raw_key = b"wrapped-public-key"
