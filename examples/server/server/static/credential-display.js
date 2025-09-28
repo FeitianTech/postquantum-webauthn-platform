@@ -373,22 +373,7 @@ function sanitiseAttestationObjectForDisplay(attestationObject) {
             delete attStmtClone.x5c;
         }
 
-        if (parseFailureInfos.length && certificateInfos.length) {
-            attStmtClone.x5cParseErrors = parseFailureInfos.map(info => {
-                const parsed = info.parsed || {};
-                return {
-                    certificateIndex: info.index + 1,
-                    error: typeof parsed.error === 'string' && parsed.error.trim() !== ''
-                        ? parsed.error.trim()
-                        : typeof parsed.parseError === 'string' && parsed.parseError.trim() !== ''
-                            ? parsed.parseError.trim()
-                            : 'Unable to parse attestation certificate.',
-                    summary: typeof parsed.summary === 'string' && parsed.summary.trim() !== ''
-                        ? parsed.summary.trim()
-                        : undefined,
-                };
-            });
-        }
+        delete attStmtClone.x5cParseErrors;
 
         stripCertificateCollections(attStmtClone);
         cloned.attStmt = attStmtClone;
