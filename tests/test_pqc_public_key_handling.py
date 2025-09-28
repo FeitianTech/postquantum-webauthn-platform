@@ -464,3 +464,74 @@ def test_serialize_attestation_certificate_fallback_on_parse_error(monkeypatch):
     assert details["fingerprints"]["sha256"] == hashlib.sha256(cert_der).hexdigest()
     assert "Fingerprints:" in details["summary"]
     assert isinstance(details["publicKeyInfo"], dict)
+
+def test_pqc_attestation_fallback_verifies_signature(monkeypatch):
+    class FakeCredentialData:
+        def __init__(self):
+            self.public_key = {"kty": 7}
+
+    class FakeAuthData:
+        def __init__(self):
+            self.credential_data = FakeCredentialData()
+
+        def __bytes__(self) -> bytes:  # pragma: no cover - simple helper
+            return b"auth-data"
+
+    attestation_object = SimpleNamespace(
+        fmt="packed",
+        att_stmt={"alg": -48, "sig": b"\x01\x02"},
+        auth_data=FakeAuthData(),
+    )
+
+    class FakeCoseKey(dict):
+        ALGORITHM = -48
+        verify_calls = []
+
+        def __init__(self, data=None):
+            super().__init__(data or {})
+
+        def verify(self, message: bytes, signature: bytes) -> None:
+            self.verify_calls.append((message, signature))
+
+    FakeCoseKey.verify_calls = []
+
+    def fake_for_alg(alg: int):
+        assert alg == -48
+        return FakeCoseKey
+
+    def fake_parse(_cose_data):
+        return FakeCoseKey({1: 7, 3: -48, -1: b"fake-public"})
+
+    monkeypatch.setattr(
+        attestation_module.CoseKey, "for_alg", staticmethod(fake_for_alg)
+    )
+    monkeypatch.setattr(
+        attestation_module.CoseKey, "parse", staticmethod(fake_parse)
+    )
+
+    outcome = attestation_module._attempt_pqc_attestation_signature_validation(
+        attestation_object, b"hash"
+    )
+
+    assert outcome["attempted"] is True
+    assert outcome["success"] is True
+    assert isinstance(outcome["attestation_result"], attestation_module.AttestationResult)
+    assert (
+        outcome["attestation_result"].attestation_type
+        == attestation_module.AttestationType.SELF
+    )
+    assert FakeCoseKey.verify_calls == [(b"auth-datahash", b"\x01\x02")]
+
+
+def test_pqc_attestation_fallback_ignored_for_non_pqc_algorithm():
+    attestation_object = SimpleNamespace(
+        fmt="packed", att_stmt={"alg": -7, "sig": b"\x00"}, auth_data=SimpleNamespace()
+    )
+
+    outcome = attestation_module._attempt_pqc_attestation_signature_validation(
+        attestation_object, b"hash"
+    )
+
+    assert outcome["attempted"] is False
+    assert outcome["success"] is False
+    assert outcome["attestation_result"] is None
