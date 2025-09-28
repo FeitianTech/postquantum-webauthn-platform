@@ -439,14 +439,16 @@ def _verify_mldsa_signature(
                 shifted,
             )
 
-    if context_supported and _ML_DSA_SIGNATURE_CONTEXT:
+    context_label = _ML_DSA_SIGNATURE_CONTEXT_LABEL
+
+    if context_supported and context_label:
         context_attempted = True
         try:
             context_result = bool(
                 verify_with_ctx(  # type: ignore[misc]
                     message,
                     signature,
-                    _ML_DSA_SIGNATURE_CONTEXT,
+                    context_label,
                     public_key,
                 )
             )
@@ -485,14 +487,14 @@ def _verify_mldsa_signature(
         ("SHA-512", hashlib.sha512),
     )
 
-    if context_supported and _ML_DSA_SIGNATURE_CONTEXT:
+    if context_supported and context_label:
         for variant_label, variant_payload in message_variants[1:]:
             result = _record_attempt(
                 f"context-aware verification using {variant_label}",
                 lambda payload=variant_payload: verify_with_ctx(  # type: ignore[misc]
                     payload,
                     signature,
-                    _ML_DSA_SIGNATURE_CONTEXT,
+                    context_label,
                     public_key,
                 ),
             )
@@ -516,7 +518,7 @@ def _verify_mldsa_signature(
                     lambda digest=digest: verify_with_ctx(  # type: ignore[misc]
                         digest,
                         signature,
-                        _ML_DSA_SIGNATURE_CONTEXT,
+                        context_label,
                         public_key,
                     ),
                 )

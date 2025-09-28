@@ -179,7 +179,7 @@ def test_mldsa_verify_prefers_context_when_available(monkeypatch):
     public_key = b"p" * 1312
     message = b"m" * 69
     signature = b"s" * 2420
-    context_calls: list[tuple[bytes, bytes, bytes, bytes]] = []
+    context_calls: list[tuple[bytes, bytes, str, bytes]] = []
 
     class FakeSignature:
         def __init__(self, algorithm: str):
@@ -207,7 +207,7 @@ def test_mldsa_verify_prefers_context_when_available(monkeypatch):
     cose_key = MLDSA44({1: 7, 3: -48, -1: public_key})
     cose_key.verify(message, signature)
 
-    context = cose_module._ML_DSA_SIGNATURE_CONTEXT
+    context = cose_module._ML_DSA_SIGNATURE_CONTEXT_LABEL
     assert context_calls == [
         (message, signature, context, public_key),
     ]
@@ -217,7 +217,7 @@ def test_mldsa_verify_falls_back_when_context_fails(monkeypatch):
     public_key = b"q" * 1312
     message = b"n" * 69
     signature = b"t" * 2420
-    context_calls: list[tuple[bytes, bytes, bytes, bytes]] = []
+    context_calls: list[tuple[bytes, bytes, str, bytes]] = []
     verify_calls: list[tuple[bytes, bytes, bytes]] = []
 
     class FakeSignature:
@@ -247,7 +247,7 @@ def test_mldsa_verify_falls_back_when_context_fails(monkeypatch):
     cose_key = MLDSA44({1: 7, 3: -48, -1: public_key})
     cose_key.verify(message, signature)
 
-    context = cose_module._ML_DSA_SIGNATURE_CONTEXT
+    context = cose_module._ML_DSA_SIGNATURE_CONTEXT_LABEL
     sha256_digest = hashlib.sha256(message).digest()
     sha512_digest = hashlib.sha512(message).digest()
     assert context_calls == [
@@ -262,7 +262,7 @@ def test_mldsa_verify_fallback_uses_context_prefix(monkeypatch):
     public_key = b"z" * 1312
     message = b"o" * 69
     signature = b"u" * 2420
-    context_calls: list[tuple[bytes, bytes, bytes, bytes]] = []
+    context_calls: list[tuple[bytes, bytes, str, bytes]] = []
     verify_calls: list[tuple[bytes, bytes, bytes]] = []
 
     class FakeSignature:
@@ -294,17 +294,18 @@ def test_mldsa_verify_fallback_uses_context_prefix(monkeypatch):
     cose_key = MLDSA44({1: 7, 3: -48, -1: public_key})
     cose_key.verify(message, signature)
 
-    context = cose_module._ML_DSA_SIGNATURE_CONTEXT
+    context_label = cose_module._ML_DSA_SIGNATURE_CONTEXT_LABEL
+    context_bytes = cose_module._ML_DSA_SIGNATURE_CONTEXT
     sha256_digest = hashlib.sha256(message).digest()
     sha512_digest = hashlib.sha512(message).digest()
     assert context_calls == [
-        (message, signature, context, public_key),
-        (sha256_digest, signature, context, public_key),
-        (sha512_digest, signature, context, public_key),
+        (message, signature, context_label, public_key),
+        (sha256_digest, signature, context_label, public_key),
+        (sha512_digest, signature, context_label, public_key),
     ]
     assert verify_calls == [
         (message, signature, public_key),
-        (context + message, signature, public_key),
+        (context_bytes + message, signature, public_key),
     ]
 
 
@@ -312,7 +313,7 @@ def test_mldsa_verify_fallback_uses_context_prefix_with_null(monkeypatch):
     public_key = b"y" * 1312
     message = b"p" * 69
     signature = b"v" * 2420
-    context_calls: list[tuple[bytes, bytes, bytes, bytes]] = []
+    context_calls: list[tuple[bytes, bytes, str, bytes]] = []
     verify_calls: list[tuple[bytes, bytes, bytes]] = []
 
     class FakeSignature:
@@ -344,18 +345,19 @@ def test_mldsa_verify_fallback_uses_context_prefix_with_null(monkeypatch):
     cose_key = MLDSA44({1: 7, 3: -48, -1: public_key})
     cose_key.verify(message, signature)
 
-    context = cose_module._ML_DSA_SIGNATURE_CONTEXT
+    context_label = cose_module._ML_DSA_SIGNATURE_CONTEXT_LABEL
+    context_bytes = cose_module._ML_DSA_SIGNATURE_CONTEXT
     sha256_digest = hashlib.sha256(message).digest()
     sha512_digest = hashlib.sha512(message).digest()
     assert context_calls == [
-        (message, signature, context, public_key),
-        (sha256_digest, signature, context, public_key),
-        (sha512_digest, signature, context, public_key),
+        (message, signature, context_label, public_key),
+        (sha256_digest, signature, context_label, public_key),
+        (sha512_digest, signature, context_label, public_key),
     ]
     assert verify_calls == [
         (message, signature, public_key),
-        (context + message, signature, public_key),
-        (context + b"\x00" + message, signature, public_key),
+        (context_bytes + message, signature, public_key),
+        (context_bytes + b"\x00" + message, signature, public_key),
     ]
 
 
@@ -363,7 +365,7 @@ def test_mldsa_verify_context_digest_succeeds(monkeypatch):
     public_key = b"ctx-digest" * 164
     message = b"context-hash" * 5 + b"!"
     signature = b"sig" * 807
-    context_calls: list[tuple[bytes, bytes, bytes, bytes]] = []
+    context_calls: list[tuple[bytes, bytes, str, bytes]] = []
     verify_calls: list[tuple[bytes, bytes, bytes]] = []
 
     target_digest = hashlib.sha256(message).digest()
@@ -395,7 +397,7 @@ def test_mldsa_verify_context_digest_succeeds(monkeypatch):
     cose_key = MLDSA44({1: 7, 3: -48, -1: public_key})
     cose_key.verify(message, signature)
 
-    context = cose_module._ML_DSA_SIGNATURE_CONTEXT
+    context = cose_module._ML_DSA_SIGNATURE_CONTEXT_LABEL
     assert context_calls
     assert context_calls[0] == (message, signature, context, public_key)
     assert (target_digest, signature, context, public_key) in context_calls
@@ -406,7 +408,7 @@ def test_mldsa_verify_hash_digest_fallback_succeeds(monkeypatch):
     public_key = b"digest-fallback" * 82
     message = b"fallback-hash" * 5 + b"?"
     signature = b"sig" * 807
-    context_calls: list[tuple[bytes, bytes, bytes, bytes]] = []
+    context_calls: list[tuple[bytes, bytes, str, bytes]] = []
     verify_calls: list[tuple[bytes, bytes, bytes]] = []
 
     digest_target = hashlib.sha256(message).digest()
@@ -438,15 +440,16 @@ def test_mldsa_verify_hash_digest_fallback_succeeds(monkeypatch):
     cose_key = MLDSA44({1: 7, 3: -48, -1: public_key})
     cose_key.verify(message, signature)
 
-    context = cose_module._ML_DSA_SIGNATURE_CONTEXT
+    context_label = cose_module._ML_DSA_SIGNATURE_CONTEXT_LABEL
+    context_bytes = cose_module._ML_DSA_SIGNATURE_CONTEXT
     sha256_digest = hashlib.sha256(message).digest()
     sha512_digest = hashlib.sha512(message).digest()
     assert context_calls
-    assert context_calls[0] == (message, signature, context, public_key)
-    assert (sha256_digest, signature, context, public_key) in context_calls
-    assert (sha512_digest, signature, context, public_key) in context_calls
-    context_prefix = context + message
-    context_prefix_nul = context + b"\x00" + message
+    assert context_calls[0] == (message, signature, context_label, public_key)
+    assert (sha256_digest, signature, context_label, public_key) in context_calls
+    assert (sha512_digest, signature, context_label, public_key) in context_calls
+    context_prefix = context_bytes + message
+    context_prefix_nul = context_bytes + b"\x00" + message
     assert verify_calls[0] == (message, signature, public_key)
     assert (context_prefix, signature, public_key) in verify_calls
     assert (context_prefix_nul, signature, public_key) in verify_calls
