@@ -27,6 +27,8 @@
 
 from __future__ import annotations
 
+import hashlib
+
 from .utils import ByteBuffer, bytes2int, int2bytes
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
@@ -601,25 +603,89 @@ def _describe_mldsa_signature_verification_failure(
 ) -> list[str]:
     """Return diagnostic strings for an ML-DSA verification failure."""
 
+    def _safe_len(value: Any) -> Optional[int]:
+        try:
+            return len(value)  # type: ignore[arg-type]
+        except Exception:
+            return None
+
+    def _describe_bytes_origin(original: Any, coerced: bytes) -> str:
+        if isinstance(original, (bytes, bytearray, memoryview)):
+            return "shared" if original is coerced else "copied"
+        if isinstance(original, ByteBuffer):
+            return "ByteBuffer"
+        return "coerced"
+
+    def _maybe_sha256(data: bytes) -> str:
+        digest = hashlib.sha256(data).hexdigest()
+        return digest
+
     parts: list[str] = []
     parts.append("oqs verifier reported an invalid ML-DSA signature")
     parts.append(f"parameter_set={parameter_set}")
 
+    parts.append(f"cose_key_class={type(cose_key).__name__}")
+    cose_fields = sorted(cose_key.keys())
+    parts.append(f"cose_key_fields={list(cose_fields)}")
     key_type = cose_key.get(1)
     parts.append(f"cose_key_type_field={key_type!r}")
     cose_alg = cose_key.get(3)
     parts.append(f"cose_alg_field={cose_alg!r}")
+    has_raw_public_key_field = -1 in cose_key
+    parts.append(f"cose_has_raw_public_key_field={has_raw_public_key_field}")
+    if has_raw_public_key_field:
+        raw_public_key = cose_key.get(-1)
+        parts.append(f"cose_raw_public_key_type={type(raw_public_key).__name__}")
+        raw_public_key_length = _safe_len(raw_public_key)
+        if raw_public_key_length is not None:
+            parts.append(f"cose_raw_public_key_length={raw_public_key_length}")
 
     parts.append(f"message_type={type(message).__name__}")
+    message_original_length = _safe_len(message)
+    if message_original_length is not None:
+        parts.append(f"message_original_length={message_original_length}")
     parts.append(f"message_length={len(message_bytes)}")
+    parts.append(
+        "message_bytes_origin="
+        f"{_describe_bytes_origin(message, message_bytes)}"
+    )
+    parts.append(f"message_sha256={_maybe_sha256(message_bytes)}")
+    parts.append(
+        "message_is_bytes_like="
+        f"{isinstance(message, (bytes, bytearray, memoryview))}"
+    )
 
     parts.append(f"signature_type={type(signature).__name__}")
+    signature_original_length = _safe_len(signature)
+    if signature_original_length is not None:
+        parts.append(f"signature_original_length={signature_original_length}")
     signature_length = len(signature_bytes)
     parts.append(f"signature_length={signature_length}")
+    parts.append(
+        "signature_bytes_origin="
+        f"{_describe_bytes_origin(signature, signature_bytes)}"
+    )
+    parts.append(f"signature_sha256={_maybe_sha256(signature_bytes)}")
+    parts.append(
+        "signature_is_bytes_like="
+        f"{isinstance(signature, (bytes, bytearray, memoryview))}"
+    )
 
     parts.append(f"public_key_type={type(public_key).__name__}")
+    public_key_original_length = _safe_len(public_key)
+    if public_key_original_length is not None:
+        parts.append(f"public_key_original_length={public_key_original_length}")
     public_key_length = len(public_key_bytes)
     parts.append(f"public_key_length={public_key_length}")
+    parts.append(
+        "public_key_bytes_origin="
+        f"{_describe_bytes_origin(public_key, public_key_bytes)}"
+    )
+    parts.append(f"public_key_sha256={_maybe_sha256(public_key_bytes)}")
+    parts.append(
+        "public_key_is_bytes_like="
+        f"{isinstance(public_key, (bytes, bytearray, memoryview))}"
+    )
 
     parameter_details = _get_mldsa_parameter_details(parameter_set)
     expected_signature_length = parameter_details.get("signature_length")
