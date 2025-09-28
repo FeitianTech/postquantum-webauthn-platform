@@ -621,70 +621,72 @@ def _describe_mldsa_signature_verification_failure(
         return digest
 
     parts: list[str] = []
-    parts.append("oqs verifier reported an invalid ML-DSA signature")
-    parts.append(f"parameter_set={parameter_set}")
+    parts.append(
+        "oqs verifier reported an invalid ML-DSA signature."
+        f" Parameter set in use: {parameter_set}."
+    )
 
-    parts.append(f"cose_key_class={type(cose_key).__name__}")
     cose_fields = sorted(cose_key.keys())
-    parts.append(f"cose_key_fields={list(cose_fields)}")
-    key_type = cose_key.get(1)
-    parts.append(f"cose_key_type_field={key_type!r}")
-    cose_alg = cose_key.get(3)
-    parts.append(f"cose_alg_field={cose_alg!r}")
-    has_raw_public_key_field = -1 in cose_key
-    parts.append(f"cose_has_raw_public_key_field={has_raw_public_key_field}")
-    if has_raw_public_key_field:
+    parts.append(
+        "COSE key summary: class="
+        f"{type(cose_key).__name__}, fields={list(cose_fields)}, type_field={cose_key.get(1)!r}, "
+        f"alg_field={cose_key.get(3)!r}."
+    )
+
+    if -1 in cose_key:
         raw_public_key = cose_key.get(-1)
-        parts.append(f"cose_raw_public_key_type={type(raw_public_key).__name__}")
         raw_public_key_length = _safe_len(raw_public_key)
-        if raw_public_key_length is not None:
-            parts.append(f"cose_raw_public_key_length={raw_public_key_length}")
+        raw_length_msg = (
+            f"length={raw_public_key_length}"
+            if raw_public_key_length is not None
+            else "length=unknown"
+        )
+        parts.append(
+            "COSE raw public key field present: type="
+            f"{type(raw_public_key).__name__}, {raw_length_msg}."
+        )
+    else:
+        parts.append("COSE raw public key field missing (-1 not present).")
 
-    parts.append(f"message_type={type(message).__name__}")
     message_original_length = _safe_len(message)
-    if message_original_length is not None:
-        parts.append(f"message_original_length={message_original_length}")
-    parts.append(f"message_length={len(message_bytes)}")
-    parts.append(
-        "message_bytes_origin="
-        f"{_describe_bytes_origin(message, message_bytes)}"
+    message_original_length_msg = (
+        f"original_length={message_original_length}"
+        if message_original_length is not None
+        else "original_length=unknown"
     )
-    parts.append(f"message_sha256={_maybe_sha256(message_bytes)}")
     parts.append(
-        "message_is_bytes_like="
-        f"{isinstance(message, (bytes, bytearray, memoryview))}"
+        "Message details: type="
+        f"{type(message).__name__}, {message_original_length_msg}, coerced_length={len(message_bytes)}, "
+        f"bytes_origin={_describe_bytes_origin(message, message_bytes)}, sha256={_maybe_sha256(message_bytes)}, "
+        f"bytes_like={isinstance(message, (bytes, bytearray, memoryview))}."
     )
 
-    parts.append(f"signature_type={type(signature).__name__}")
     signature_original_length = _safe_len(signature)
-    if signature_original_length is not None:
-        parts.append(f"signature_original_length={signature_original_length}")
-    signature_length = len(signature_bytes)
-    parts.append(f"signature_length={signature_length}")
-    parts.append(
-        "signature_bytes_origin="
-        f"{_describe_bytes_origin(signature, signature_bytes)}"
+    signature_original_length_msg = (
+        f"original_length={signature_original_length}"
+        if signature_original_length is not None
+        else "original_length=unknown"
     )
-    parts.append(f"signature_sha256={_maybe_sha256(signature_bytes)}")
+    signature_length = len(signature_bytes)
     parts.append(
-        "signature_is_bytes_like="
-        f"{isinstance(signature, (bytes, bytearray, memoryview))}"
+        "Signature details: type="
+        f"{type(signature).__name__}, {signature_original_length_msg}, coerced_length={signature_length}, "
+        f"bytes_origin={_describe_bytes_origin(signature, signature_bytes)}, sha256={_maybe_sha256(signature_bytes)}, "
+        f"bytes_like={isinstance(signature, (bytes, bytearray, memoryview))}."
     )
 
-    parts.append(f"public_key_type={type(public_key).__name__}")
     public_key_original_length = _safe_len(public_key)
-    if public_key_original_length is not None:
-        parts.append(f"public_key_original_length={public_key_original_length}")
-    public_key_length = len(public_key_bytes)
-    parts.append(f"public_key_length={public_key_length}")
-    parts.append(
-        "public_key_bytes_origin="
-        f"{_describe_bytes_origin(public_key, public_key_bytes)}"
+    public_key_original_length_msg = (
+        f"original_length={public_key_original_length}"
+        if public_key_original_length is not None
+        else "original_length=unknown"
     )
-    parts.append(f"public_key_sha256={_maybe_sha256(public_key_bytes)}")
+    public_key_length = len(public_key_bytes)
     parts.append(
-        "public_key_is_bytes_like="
-        f"{isinstance(public_key, (bytes, bytearray, memoryview))}"
+        "Verifier public key details: type="
+        f"{type(public_key).__name__}, {public_key_original_length_msg}, coerced_length={public_key_length}, "
+        f"bytes_origin={_describe_bytes_origin(public_key, public_key_bytes)}, sha256={_maybe_sha256(public_key_bytes)}, "
+        f"bytes_like={isinstance(public_key, (bytes, bytearray, memoryview))}."
     )
 
     parameter_details = _get_mldsa_parameter_details(parameter_set)
@@ -692,31 +694,31 @@ def _describe_mldsa_signature_verification_failure(
     if expected_signature_length is not None:
         if signature_length != expected_signature_length:
             parts.append(
-                "signature_length_mismatch="
-                f"expected {expected_signature_length}, got {signature_length}"
+                "Signature length mismatch: "
+                f"expected {expected_signature_length}, observed {signature_length}."
             )
         else:
             parts.append(
-                "signature_length_matches_expected="
-                f"{expected_signature_length}"
+                "Signature length matches expected "
+                f"{expected_signature_length}."
             )
     else:
-        parts.append("signature_expected_length=unknown")
+        parts.append("Signature expected length unknown for this parameter set.")
 
     expected_public_key_length = parameter_details.get("public_key_length")
     if expected_public_key_length is not None:
         if public_key_length != expected_public_key_length:
             parts.append(
-                "public_key_length_mismatch="
-                f"expected {expected_public_key_length}, got {public_key_length}"
+                "Public key length mismatch: "
+                f"expected {expected_public_key_length}, observed {public_key_length}."
             )
         else:
             parts.append(
-                "public_key_length_matches_expected="
-                f"{expected_public_key_length}"
+                "Public key length matches expected "
+                f"{expected_public_key_length}."
             )
     else:
-        parts.append("public_key_expected_length=unknown")
+        parts.append("Public key expected length unknown for this parameter set.")
 
     return parts
 
