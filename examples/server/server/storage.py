@@ -7,6 +7,8 @@ import pickle
 from collections.abc import Mapping
 from typing import Any, Dict, List, Optional
 
+from .attestation import colon_hex, format_hex_bytes_lines
+
 from .config import basepath
 
 __all__ = [
@@ -101,7 +103,12 @@ def add_public_key_material(
 
     raw_key = cose_map.get(-1)
     if isinstance(raw_key, (bytes, bytearray, memoryview)):
-        target[_field('publicKeyBytes')] = convert_bytes_for_json(raw_key)
+        raw_bytes = bytes(raw_key)
+        target[_field('publicKeyBytes')] = convert_bytes_for_json(raw_bytes)
+        target[_field('publicKeyHex')] = colon_hex(raw_bytes)
+        hex_lines = format_hex_bytes_lines(raw_bytes)
+        if hex_lines:
+            target[_field('publicKeyHexLines')] = hex_lines
 
     type_field = _field('publicKeyType')
     if type_field not in target:

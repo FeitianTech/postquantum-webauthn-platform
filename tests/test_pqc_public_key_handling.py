@@ -111,6 +111,16 @@ def _build_certificate(spki: bytes, signature_algorithm_oid: str = "1.2.840.1004
     signature_value = b"\x03\x02\x00\x00"
     return _encode_sequence(tbs, signature_algo, signature_value)
 
+
+def _format_hex_lines(data: bytes, bytes_per_line: int = 16) -> list[str]:
+    hex_pairs = [f"{byte:02x}" for byte in data]
+    lines: list[str] = []
+    for start in range(0, len(hex_pairs), bytes_per_line):
+        chunk = hex_pairs[start : start + bytes_per_line]
+        if chunk:
+            lines.append(":".join(chunk))
+    return lines
+
 def test_mldsa_from_cryptography_key_accepts_raw_public_bytes():
     raw_key = b"\x01\x02\x03"
 
@@ -549,6 +559,12 @@ def test_add_public_key_material_serialises_credential_key_bytes():
     assert container["publicKeyType"] == 2
     expected = base64.b64encode(b"credential-public-key").decode("utf-8")
     assert container["publicKeyBytes"] == expected
+    raw_bytes = b"credential-public-key"
+    expected_hex = ":".join(f"{byte:02x}" for byte in raw_bytes)
+    assert container["publicKeyHex"] == expected_hex
+    assert container["publicKeyHexLines"] == _format_hex_lines(raw_bytes)
+
+
 
 
 def test_add_public_key_material_supports_prefixed_fields():
@@ -565,3 +581,7 @@ def test_add_public_key_material_supports_prefixed_fields():
     assert container["credentialPublicKeyType"] == 2
     expected = base64.b64encode(b"prefixed-key").decode("utf-8")
     assert container["credentialPublicKeyBytes"] == expected
+    raw_bytes = b"prefixed-key"
+    expected_hex = ":".join(f"{byte:02x}" for byte in raw_bytes)
+    assert container["credentialPublicKeyHex"] == expected_hex
+    assert container["credentialPublicKeyHexLines"] == _format_hex_lines(raw_bytes)
