@@ -251,6 +251,95 @@ def test_mldsa_verify_falls_back_when_context_fails(monkeypatch):
     assert verify_calls == [(message, signature, public_key)]
 
 
+def test_mldsa_verify_fallback_uses_context_prefix(monkeypatch):
+    public_key = b"z" * 1312
+    message = b"o" * 69
+    signature = b"u" * 2420
+    context_calls: list[tuple[bytes, bytes, bytes, bytes]] = []
+    verify_calls: list[tuple[bytes, bytes, bytes]] = []
+
+    class FakeSignature:
+        def __init__(self, algorithm: str):
+            assert algorithm == "ML-DSA-44"
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+        def verify_with_ctx_str(self, msg, sig, ctx, pk):
+            context_calls.append((msg, sig, ctx, pk))
+            return False
+
+        def verify(self, msg, sig, pk):
+            verify_calls.append((msg, sig, pk))
+            if msg == cose_module._ML_DSA_SIGNATURE_CONTEXT + message:
+                return True
+            return False
+
+    class FakeOQS:
+        Signature = FakeSignature
+
+    monkeypatch.setattr(cose_module, "oqs", FakeOQS)
+    monkeypatch.setattr(cose_module, "_oqs_import_error", None)
+
+    cose_key = MLDSA44({1: 7, 3: -48, -1: public_key})
+    cose_key.verify(message, signature)
+
+    context = cose_module._ML_DSA_SIGNATURE_CONTEXT
+    assert context_calls == [(message, signature, context, public_key)]
+    assert verify_calls == [
+        (message, signature, public_key),
+        (context + message, signature, public_key),
+    ]
+
+
+def test_mldsa_verify_fallback_uses_context_prefix_with_null(monkeypatch):
+    public_key = b"y" * 1312
+    message = b"p" * 69
+    signature = b"v" * 2420
+    context_calls: list[tuple[bytes, bytes, bytes, bytes]] = []
+    verify_calls: list[tuple[bytes, bytes, bytes]] = []
+
+    class FakeSignature:
+        def __init__(self, algorithm: str):
+            assert algorithm == "ML-DSA-44"
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+        def verify_with_ctx_str(self, msg, sig, ctx, pk):
+            context_calls.append((msg, sig, ctx, pk))
+            return False
+
+        def verify(self, msg, sig, pk):
+            verify_calls.append((msg, sig, pk))
+            if msg == cose_module._ML_DSA_SIGNATURE_CONTEXT + b"\x00" + message:
+                return True
+            return False
+
+    class FakeOQS:
+        Signature = FakeSignature
+
+    monkeypatch.setattr(cose_module, "oqs", FakeOQS)
+    monkeypatch.setattr(cose_module, "_oqs_import_error", None)
+
+    cose_key = MLDSA44({1: 7, 3: -48, -1: public_key})
+    cose_key.verify(message, signature)
+
+    context = cose_module._ML_DSA_SIGNATURE_CONTEXT
+    assert context_calls == [(message, signature, context, public_key)]
+    assert verify_calls == [
+        (message, signature, public_key),
+        (context + message, signature, public_key),
+        (context + b"\x00" + message, signature, public_key),
+    ]
+
+
 def test_coerce_mldsa_public_key_bytes_unwraps_der_subject_public_key():
     raw_key = b"wrapped-public-key"
     spki = _build_spki(raw_key, algorithm_oid="2.16.840.1.101.3.4.3.17")

@@ -317,6 +317,15 @@ _ML_DSA_SIGNATURE_CONTEXT_LABEL = "FIDOSIG"
 
 
 @dataclass
+class _MLDSAFallbackAttempt:
+    """Outcome of a fallback ML-DSA verification attempt."""
+
+    label: str
+    succeeded: Optional[bool]
+    error: Optional[str]
+
+
+@dataclass
 class _MLDSAContextResult:
     """Metadata about context-aware ML-DSA verification attempts."""
 
@@ -324,6 +333,7 @@ class _MLDSAContextResult:
     attempted: bool
     succeeded: Optional[bool]
     error: Optional[str]
+    fallback_attempts: tuple[_MLDSAFallbackAttempt, ...] = ()
 
     @property
     def label(self) -> str:
@@ -382,6 +392,8 @@ def _verify_mldsa_signature(
     context_succeeded: Optional[bool] = None
     context_error: Optional[str] = None
 
+    fallback_attempts: list[_MLDSAFallbackAttempt] = []
+
     if context_supported and _ML_DSA_SIGNATURE_CONTEXT:
         context_attempted = True
         try:
@@ -403,14 +415,64 @@ def _verify_mldsa_signature(
                     attempted=True,
                     succeeded=True,
                     error=None,
+                    fallback_attempts=(),
                 )
 
-    base_result = bool(verifier.verify(message, signature, public_key))
+    fallback_candidates: list[tuple[str, bytes]] = [
+        ("context-free verification using original message", message)
+    ]
+
+    if _ML_DSA_SIGNATURE_CONTEXT:
+        context = bytes(_ML_DSA_SIGNATURE_CONTEXT)
+        context_label = _ML_DSA_SIGNATURE_CONTEXT_LABEL
+
+        prefixed = context + message
+        if prefixed != message:
+            fallback_candidates.append(
+                (
+                    f"context-free verification using '{context_label}' prefix",
+                    prefixed,
+                )
+            )
+
+        nul_prefixed = context + b"\x00" + message
+        if nul_prefixed not in (message, prefixed):
+            fallback_candidates.append(
+                (
+                    f"context-free verification using '{context_label}' prefix and NUL separator",
+                    nul_prefixed,
+                )
+            )
+
+    for label, candidate in fallback_candidates:
+        try:
+            base_result = bool(verifier.verify(candidate, signature, public_key))
+        except Exception as exc:  # pragma: no cover - defensive path
+            fallback_attempts.append(
+                _MLDSAFallbackAttempt(label=label, succeeded=None, error=str(exc))
+            )
+            continue
+
+        fallback_attempts.append(
+            _MLDSAFallbackAttempt(label=label, succeeded=base_result, error=None)
+        )
+
+        if base_result:
+            return base_result, _MLDSAContextResult(
+                supported=context_supported,
+                attempted=context_attempted,
+                succeeded=context_succeeded,
+                error=context_error,
+                fallback_attempts=tuple(fallback_attempts),
+            )
+
+    base_result = False
     return base_result, _MLDSAContextResult(
         supported=context_supported,
         attempted=context_attempted,
         succeeded=context_succeeded,
         error=context_error,
+        fallback_attempts=tuple(fallback_attempts),
     )
 
 
@@ -784,6 +846,16 @@ def _describe_mldsa_signature_verification_failure(
             parts.append(
                 "verify_with_ctx_str was available but no context attempt was made."
             )
+
+        for attempt in context_result.fallback_attempts:
+            if attempt.error is not None:
+                parts.append(
+                    f"Fallback {attempt.label} raised {attempt.error!r}."
+                )
+            elif attempt.succeeded:
+                parts.append(f"Fallback {attempt.label} succeeded.")
+            else:
+                parts.append(f"Fallback {attempt.label} failed.")
 
     parameter_details = _get_mldsa_parameter_details(parameter_set)
     expected_signature_length = parameter_details.get("signature_length")
