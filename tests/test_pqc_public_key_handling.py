@@ -175,6 +175,38 @@ def test_mldsa_verify_coerces_dynamic_public_key_bytes(monkeypatch):
     assert verify_calls == [(expected_message, b"sig", raw_key)]
 
 
+def test_mldsa_verify_reports_diagnostics_on_failure(monkeypatch):
+    class FakeSignature:
+        def __init__(self, algorithm: str):
+            assert algorithm == "ML-DSA-44"
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+        def verify(self, message: bytes, signature: bytes, public_key: bytes) -> bool:
+            return False
+
+    class FakeOQS:
+        Signature = FakeSignature
+
+    monkeypatch.setattr(cose_module, "_require_oqs", lambda: FakeOQS)
+
+    cose_key = MLDSA44({1: 7, 3: -48, -1: b"\xAA" * 1312})
+
+    with pytest.raises(ValueError) as excinfo:
+        cose_key.verify(b"A" * 69, b"B" * 10)
+
+    message = str(excinfo.value)
+    assert message.startswith("Invalid ML-DSA-44 signature.")
+    assert "[Algorithm]" in message
+    assert "[Public Key]" in message
+    assert "[Message]" in message
+    assert "[Signature]" in message
+
+
 def test_coerce_mldsa_public_key_bytes_unwraps_der_subject_public_key():
     raw_key = b"wrapped-public-key"
     spki = _build_spki(raw_key, algorithm_oid="2.16.840.1.101.3.4.3.17")

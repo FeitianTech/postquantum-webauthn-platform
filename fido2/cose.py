@@ -28,6 +28,7 @@
 from __future__ import annotations
 
 from .utils import ByteBuffer, bytes2int, int2bytes
+import hashlib
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec, rsa, padding, ed25519, types
@@ -616,6 +617,140 @@ def _format_mldsa_message(
     prefix = b"\x00" + bytes((len(context_bytes),))
     return prefix + context_bytes + message
 
+
+def _build_mldsa_verification_diagnostics(
+    cose_key: "CoseKey",
+    parameter_set: str,
+    message_bytes: bytes,
+    signature_bytes: bytes,
+    public_key_bytes: bytes,
+) -> list[str]:
+    """Return per-factor diagnostic strings for ML-DSA verification failures."""
+
+    diagnostics: list[str] = []
+
+    expected_algorithm = getattr(type(cose_key), "ALGORITHM", None)
+    actual_algorithm = cose_key.get(3)
+    if expected_algorithm is None:
+        diagnostics.append(
+            f"[Algorithm] alg={actual_algorithm!r} (no expected algorithm metadata)"
+        )
+    else:
+        if actual_algorithm == expected_algorithm:
+            diagnostics.append(
+                f"[Algorithm] expected {expected_algorithm}, got {actual_algorithm} (match)"
+            )
+        else:
+            observed = "missing" if actual_algorithm is None else str(actual_algorithm)
+            diagnostics.append(
+                f"[Algorithm] expected {expected_algorithm}, got {observed} (mismatch)"
+            )
+
+    parameter_details = _get_mldsa_parameter_details(parameter_set)
+    expected_public_key_length = parameter_details.get("public_key_length")
+    public_key_length = len(public_key_bytes)
+    public_key_digest = hashlib.sha256(public_key_bytes).hexdigest()
+    if expected_public_key_length is None:
+        diagnostics.append(
+            f"[Public Key] length={public_key_length} bytes; sha256={public_key_digest}"
+        )
+    else:
+        status = "match" if public_key_length == expected_public_key_length else "mismatch"
+        diagnostics.append(
+            "[Public Key] length={length} bytes (expected {expected}, {status}); sha256={digest}".format(
+                length=public_key_length,
+                expected=expected_public_key_length,
+                status=status,
+                digest=public_key_digest,
+            )
+        )
+
+    message_length = len(message_bytes)
+    if message_length < 32:
+        diagnostics.append(
+            f"[Message] length={message_length} bytes (shorter than 32-byte clientDataHash)"
+        )
+    else:
+        client_hash_length = 32
+        authenticator_data_length = message_length - client_hash_length
+        details = (
+            "total={total} bytes (authenticatorData={auth_len}, clientDataHash={hash_len})".format(
+                total=message_length,
+                auth_len=authenticator_data_length,
+                hash_len=client_hash_length,
+            )
+        )
+        if authenticator_data_length < 37:
+            details += " (authenticatorData shorter than 37-byte minimum)"
+        diagnostics.append(f"[Message] {details}")
+
+    expected_signature_length = parameter_details.get("signature_length")
+    signature_length = len(signature_bytes)
+    if expected_signature_length is None:
+        diagnostics.append(
+            f"[Signature] length={signature_length} bytes (expected length unavailable)"
+        )
+    else:
+        status = "match" if signature_length == expected_signature_length else "mismatch"
+        diagnostics.append(
+            "[Signature] length={length} bytes (expected {expected}, {status})".format(
+                length=signature_length,
+                expected=expected_signature_length,
+                status=status,
+            )
+        )
+
+    return diagnostics
+
+
+def _verify_mldsa_signature(
+    cose_key: "CoseKey",
+    message: Union[bytes, bytearray, memoryview, Sequence[int]],
+    signature: Union[bytes, bytearray, memoryview, Sequence[int]],
+    *,
+    parameter_set: str,
+    error_label: str,
+) -> None:
+    """Shared ML-DSA verification helper that surfaces diagnostics on failure."""
+
+    if cose_key.get(1) != 7:
+        raise ValueError(f"Unsupported {error_label} Param")
+
+    oqs_module = _require_oqs()
+    public_key = cose_key.get(-1)
+    if public_key is None:
+        raise ValueError(f"Missing {error_label} public key")
+
+    if isinstance(message, (bytes, bytearray, memoryview)):
+        message_bytes = bytes(message)
+    else:
+        message_bytes = bytes(message)
+
+    if isinstance(signature, (bytes, bytearray, memoryview)):
+        signature_bytes = bytes(signature)
+    else:
+        signature_bytes = bytes(signature)
+
+    public_key_bytes = _coerce_mldsa_public_key_bytes(public_key, parameter_set)
+    formatted_message = _format_mldsa_message(message_bytes)
+
+    with oqs_module.Signature(parameter_set) as verifier:
+        if not verifier.verify(
+            formatted_message, signature_bytes, bytes(public_key_bytes)
+        ):
+            diagnostics = _build_mldsa_verification_diagnostics(
+                cose_key,
+                parameter_set,
+                message_bytes,
+                signature_bytes,
+                bytes(public_key_bytes),
+            )
+            raise ValueError(
+                "Invalid {label} signature.\n{details}".format(
+                    label=error_label, details="\n".join(diagnostics)
+                )
+            )
+
 class CoseKey(dict):
     """A COSE formatted public key.
 
@@ -711,29 +846,13 @@ class MLDSA87(CoseKey):
     _HASH_ALG = hashes.SHA256()
 
     def verify(self, message, signature):
-        if self[1] != 7:
-            raise ValueError("Unsupported ML-DSA-87 Param")
-        oqs_module = _require_oqs()
-        public_key = self.get(-1)
-        if public_key is None:
-            raise ValueError("Missing ML-DSA-87 public key")
-        message_bytes = (
-            message
-            if isinstance(message, (bytes, bytearray, memoryview))
-            else bytes(message)
+        _verify_mldsa_signature(
+            self,
+            message,
+            signature,
+            parameter_set="ML-DSA-87",
+            error_label="ML-DSA-87",
         )
-        signature_bytes = (
-            signature
-            if isinstance(signature, (bytes, bytearray, memoryview))
-            else bytes(signature)
-        )
-        public_key_bytes = _coerce_mldsa_public_key_bytes(public_key, "ML-DSA-87")
-        formatted_message = _format_mldsa_message(bytes(message_bytes))
-        with oqs_module.Signature("ML-DSA-87") as verifier:
-            if not verifier.verify(
-                formatted_message, bytes(signature_bytes), bytes(public_key_bytes)
-            ):
-                raise ValueError("Invalid ML-DSA-87 signature")
 
     @classmethod
     def from_cryptography_key(cls, public_key):
@@ -751,29 +870,13 @@ class MLDSA65(CoseKey):
     _HASH_ALG = hashes.SHA256()
 
     def verify(self, message, signature):
-        if self[1] != 7:
-            raise ValueError("Unsupported ML-DSA-65 Param")
-        oqs_module = _require_oqs()
-        public_key = self.get(-1)
-        if public_key is None:
-            raise ValueError("Missing ML-DSA-65 public key")
-        message_bytes = (
-            message
-            if isinstance(message, (bytes, bytearray, memoryview))
-            else bytes(message)
+        _verify_mldsa_signature(
+            self,
+            message,
+            signature,
+            parameter_set="ML-DSA-65",
+            error_label="ML-DSA-65",
         )
-        signature_bytes = (
-            signature
-            if isinstance(signature, (bytes, bytearray, memoryview))
-            else bytes(signature)
-        )
-        public_key_bytes = _coerce_mldsa_public_key_bytes(public_key, "ML-DSA-65")
-        formatted_message = _format_mldsa_message(bytes(message_bytes))
-        with oqs_module.Signature("ML-DSA-65") as verifier:
-            if not verifier.verify(
-                formatted_message, bytes(signature_bytes), bytes(public_key_bytes)
-            ):
-                raise ValueError("Invalid ML-DSA-65 signature")
 
     @classmethod
     def from_cryptography_key(cls, public_key):
@@ -790,29 +893,13 @@ class MLDSA44(CoseKey):
     _HASH_ALG = hashes.SHA256()
 
     def verify(self, message, signature):
-        if self[1] != 7:
-            raise ValueError("Unsupported ML-DSA-44 Param")
-        oqs_module = _require_oqs()
-        public_key = self.get(-1)
-        if public_key is None:
-            raise ValueError("Missing ML-DSA-44 public key")
-        message_bytes = (
-            message
-            if isinstance(message, (bytes, bytearray, memoryview))
-            else bytes(message)
+        _verify_mldsa_signature(
+            self,
+            message,
+            signature,
+            parameter_set="ML-DSA-44",
+            error_label="ML-DSA-44",
         )
-        signature_bytes = (
-            signature
-            if isinstance(signature, (bytes, bytearray, memoryview))
-            else bytes(signature)
-        )
-        public_key_bytes = _coerce_mldsa_public_key_bytes(public_key, "ML-DSA-44")
-        formatted_message = _format_mldsa_message(bytes(message_bytes))
-        with oqs_module.Signature("ML-DSA-44") as verifier:
-            if not verifier.verify(
-                formatted_message, bytes(signature_bytes), bytes(public_key_bytes)
-            ):
-                raise ValueError("Invalid ML-DSA-44 signature")
 
     @classmethod
     def from_cryptography_key(cls, public_key):
