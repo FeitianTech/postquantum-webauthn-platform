@@ -10,9 +10,16 @@ import string
 import textwrap
 import uuid
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Mapping, MutableMapping, Optional, Tuple
+from typing import Any, Dict, List, Mapping, MutableMapping, Optional, Sequence, Tuple
 
-from fido2.attestation import Attestation, InvalidData, InvalidSignature, UnsupportedType
+from fido2.attestation import (
+    Attestation,
+    AttestationResult,
+    AttestationType,
+    InvalidData,
+    InvalidSignature,
+    UnsupportedType,
+)
 from fido2.cose import (
     CoseKey,
     describe_mldsa_oid,
@@ -32,6 +39,7 @@ from cryptography.hazmat.primitives.asymmetric import ec, ed25519, ed448, rsa
 from cryptography.x509.oid import ExtensionOID, NameOID
 
 from .metadata import get_mds_verifier
+from .pqc import PQC_ALGORITHM_ID_TO_NAME, is_pqc_algorithm
 
 __all__ = [
     "CRED_PROTECT_LABELS",
@@ -96,6 +104,166 @@ def format_hex_string_lines(hex_string: str, bytes_per_line: int = 16) -> List[s
     except ValueError:
         return [hex_string]
     return format_hex_bytes_lines(data, bytes_per_line)
+
+_PQC_ALGORITHM_NAME_TO_ID = {
+    name.lower(): alg_id for alg_id, name in PQC_ALGORITHM_ID_TO_NAME.items()
+}
+
+
+def _coerce_bytes(value: Any) -> Optional[bytes]:
+    """Return ``value`` as ``bytes`` when possible."""
+
+    if isinstance(value, ByteBuffer):
+        return value.getvalue()
+    if isinstance(value, (bytes, bytearray, memoryview)):
+        return bytes(value)
+    return None
+
+
+def _normalise_pqc_algorithm_identifier(value: Any) -> Optional[int]:
+    """Return the COSE identifier for a PQC algorithm when discernible."""
+
+    if isinstance(value, int) and is_pqc_algorithm(value):
+        return value
+
+    if isinstance(value, str):
+        stripped = value.strip()
+        if not stripped:
+            return None
+
+        try:
+            parsed = int(stripped, 10)
+        except ValueError:
+            parsed = None
+
+        if parsed is not None and is_pqc_algorithm(parsed):
+            return parsed
+
+        lowered = stripped.lower()
+        mapped = _PQC_ALGORITHM_NAME_TO_ID.get(lowered)
+        if mapped is not None:
+            return mapped
+
+        for name, alg_id in PQC_ALGORITHM_ID_TO_NAME.items():
+            if name.lower() in lowered:
+                return alg_id
+
+        match = re.search(r"-?\d+", stripped)
+        if match is not None:
+            try:
+                candidate = int(match.group(), 10)
+            except ValueError:
+                candidate = None
+            if candidate is not None and is_pqc_algorithm(candidate):
+                return candidate
+
+    return None
+
+
+def _collect_trust_path_entries(x5c: Any) -> List[bytes]:
+    """Coerce an ``x5c`` attestation entry into a list of DER certificates."""
+
+    if not isinstance(x5c, Sequence):
+        return []
+
+    trust_path: List[bytes] = []
+    for entry in x5c:
+        data = _coerce_bytes(entry)
+        if data:
+            trust_path.append(data)
+    return trust_path
+
+
+def _attempt_pqc_attestation_signature_validation(
+    attestation_object: Any, client_data_hash: bytes
+) -> Dict[str, Any]:
+    """Best-effort PQC attestation verification fallback using liboqs."""
+
+    outcome: Dict[str, Any] = {
+        "attempted": False,
+        "success": False,
+        "attestation_result": None,
+        "error": None,
+    }
+
+    statement = getattr(attestation_object, "att_stmt", None)
+    if not isinstance(statement, Mapping):
+        return outcome
+
+    algorithm = _normalise_pqc_algorithm_identifier(statement.get("alg"))
+    if algorithm is None or not is_pqc_algorithm(algorithm):
+        return outcome
+
+    signature = _coerce_bytes(statement.get("sig"))
+    if not signature:
+        outcome["attempted"] = True
+        outcome["error"] = "pqc_attestation_missing_signature"
+        return outcome
+
+    try:
+        cose_cls = CoseKey.for_alg(algorithm)
+    except Exception as exc:  # pragma: no cover - defensive guard
+        outcome["attempted"] = True
+        outcome["error"] = f"pqc_attestation_unsupported_algorithm: {exc}"
+        return outcome
+
+    trust_path = _collect_trust_path_entries(statement.get("x5c"))
+    attestation_type = AttestationType.SELF
+
+    if trust_path:
+        attestation_type = AttestationType.BASIC
+        cert_bytes = trust_path[0]
+        try:
+            info = extract_certificate_public_key_info(cert_bytes)
+        except Exception as exc:
+            outcome["attempted"] = True
+            outcome["error"] = f"pqc_attestation_public_key_error: {exc}"
+            return outcome
+
+        public_key_bytes = _coerce_bytes(info.get("subject_public_key"))
+        if public_key_bytes is None:
+            outcome["attempted"] = True
+            outcome["error"] = "pqc_attestation_public_key_missing"
+            return outcome
+
+        try:
+            public_key = cose_cls({1: 7, 3: algorithm, -1: public_key_bytes})
+        except Exception as exc:
+            outcome["attempted"] = True
+            outcome["error"] = f"pqc_attestation_public_key_invalid: {exc}"
+            return outcome
+    else:
+        credential_data = getattr(attestation_object.auth_data, "credential_data", None)
+        if credential_data is None:
+            outcome["attempted"] = True
+            outcome["error"] = "pqc_attestation_credential_data_missing"
+            return outcome
+
+        try:
+            public_key = CoseKey.parse(credential_data.public_key)
+        except Exception as exc:
+            outcome["attempted"] = True
+            outcome["error"] = f"pqc_attestation_public_key_parse_error: {exc}"
+            return outcome
+
+        if getattr(public_key, "ALGORITHM", None) != algorithm:
+            outcome["attempted"] = True
+            outcome["error"] = "pqc_attestation_algorithm_mismatch"
+            return outcome
+
+    message = bytes(attestation_object.auth_data) + client_data_hash
+
+    outcome["attempted"] = True
+    try:
+        public_key.verify(message, signature)
+    except Exception as exc:
+        outcome["error"] = f"pqc_attestation_verification_failed: {exc}"
+        return outcome
+
+    outcome["success"] = True
+    outcome["attestation_result"] = AttestationResult(attestation_type, trust_path)
+    return outcome
+
 
 
 def decode_asn1_octet_string(data: bytes) -> bytes:
@@ -1524,6 +1692,7 @@ def perform_attestation_checks(
     attestation_format_value = (attestation_object.fmt or "").lower()
     signature_valid: Optional[bool] = None
     attestation_result = None
+    attestation_errors: List[str] = []
     if attestation_format_value == "none":
         signature_valid = None
     else:
@@ -1537,14 +1706,30 @@ def perform_attestation_checks(
             )
             signature_valid = True
         except UnsupportedType as exc:
-            results["errors"].append(f"unsupported_attestation: {exc}")
+            attestation_errors.append(f"unsupported_attestation: {exc}")
             signature_valid = False
         except (InvalidSignature, InvalidData) as exc:
-            results["errors"].append(f"attestation_invalid: {exc}")
+            attestation_errors.append(f"attestation_invalid: {exc}")
             signature_valid = False
         except Exception as exc:
-            results["errors"].append(f"attestation_error: {exc}")
+            attestation_errors.append(f"attestation_error: {exc}")
             signature_valid = False
+
+    if signature_valid is False and attestation_format_value != "none":
+        pqc_outcome = _attempt_pqc_attestation_signature_validation(
+            attestation_object, client_data_hash
+        )
+        if pqc_outcome.get("attempted"):
+            pqc_error = pqc_outcome.get("error")
+            if pqc_outcome.get("success"):
+                signature_valid = True
+                attestation_result = pqc_outcome.get("attestation_result")
+                attestation_errors = []
+            elif pqc_error:
+                attestation_errors.append(str(pqc_error))
+
+    for error_message in attestation_errors:
+        results["errors"].append(error_message)
 
     results["signature_valid"] = signature_valid
 
