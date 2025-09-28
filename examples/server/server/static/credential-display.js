@@ -413,29 +413,143 @@ function resetRegistrationDetailState() {
     registrationDetailState.authenticatorData = null;
 }
 
+function normaliseHexFingerprint(value) {
+    if (typeof value !== 'string') {
+        return '';
+    }
+    const trimmed = value.replace(/[^0-9a-fA-F]/g, '');
+    return trimmed ? trimmed.toLowerCase() : '';
+}
+
+function normalisePemString(value) {
+    if (typeof value !== 'string') {
+        return '';
+    }
+    const stripped = value
+        .replace(/-----BEGIN CERTIFICATE-----/g, '')
+        .replace(/-----END CERTIFICATE-----/g, '')
+        .replace(/\s+/g, '');
+    return stripped.trim();
+}
+
+function deriveCertificateIdentity(entry) {
+    if (!entry || typeof entry !== 'object') {
+        return '';
+    }
+
+    const pickHexValue = candidate => {
+        if (typeof candidate !== 'string') {
+            return '';
+        }
+        const trimmed = candidate.replace(/\s+/g, '').toLowerCase();
+        return trimmed ? trimmed : '';
+    };
+
+    const pickBase64Value = candidate => {
+        if (typeof candidate !== 'string') {
+            return '';
+        }
+        const stripped = candidate.replace(/[^A-Za-z0-9+/=]/g, '');
+        return stripped.trim();
+    };
+
+    const directRaw = pickHexValue(entry.raw);
+    if (directRaw) {
+        return `raw:${directRaw}`;
+    }
+
+    const directPem = normalisePemString(entry.pem);
+    if (directPem) {
+        return `pem:${directPem}`;
+    }
+
+    const parsed = entry.parsedX5c && typeof entry.parsedX5c === 'object'
+        ? entry.parsedX5c
+        : entry.parsed && typeof entry.parsed === 'object'
+            ? entry.parsed
+            : null;
+
+    if (parsed) {
+        const parsedRaw = pickHexValue(parsed.raw);
+        if (parsedRaw) {
+            return `raw:${parsedRaw}`;
+        }
+
+        const parsedDer = pickBase64Value(parsed.derBase64 || parsed.der_base64);
+        if (parsedDer) {
+            return `der:${parsedDer}`;
+        }
+
+        const parsedPem = normalisePemString(parsed.pem);
+        if (parsedPem) {
+            return `pem:${parsedPem}`;
+        }
+
+        const fingerprints = parsed.fingerprints && typeof parsed.fingerprints === 'object'
+            ? parsed.fingerprints
+            : null;
+        if (fingerprints) {
+            const fingerprintOrder = ['sha256', 'sha1', 'md5'];
+            for (const key of fingerprintOrder) {
+                const value = normaliseHexFingerprint(fingerprints[key]);
+                if (value) {
+                    return `${key}:${value}`;
+                }
+            }
+        }
+    }
+
+    return '';
+}
+
 function addCertificateEntryToState(entry) {
     const normalised = normaliseCertificateEntryForModal(entry);
     if (!normalised) {
         return;
     }
 
+    const identity = deriveCertificateIdentity(normalised);
     const existing = registrationDetailState.attestationCertificates;
-    const hasDuplicate = existing.some(item => {
-        if (item === normalised) {
-            return true;
-        }
-        if (item.pem && normalised.pem && item.pem === normalised.pem) {
-            return true;
-        }
-        if (item.raw && normalised.raw && item.raw === normalised.raw) {
-            return true;
-        }
-        return false;
-    });
 
-    if (!hasDuplicate) {
-        existing.push(normalised);
+    if (identity) {
+        const existingIndex = existing.findIndex(item => deriveCertificateIdentity(item) === identity);
+        if (existingIndex !== -1) {
+            const currentEntry = existing[existingIndex];
+            const currentParsed = currentEntry && typeof currentEntry === 'object' && currentEntry.parsedX5c
+                && typeof currentEntry.parsedX5c === 'object'
+                ? currentEntry.parsedX5c
+                : null;
+            const newParsed = normalised.parsedX5c && typeof normalised.parsedX5c === 'object'
+                ? normalised.parsedX5c
+                : null;
+            const currentHasError = Boolean(currentParsed && currentParsed.parseError);
+            const newHasError = Boolean(newParsed && newParsed.parseError);
+
+            if (currentHasError && !newHasError) {
+                existing[existingIndex] = normalised;
+            }
+            return;
+        }
+    } else {
+        const duplicate = existing.some(item => {
+            if (item === normalised) {
+                return true;
+            }
+            if (item.pem && normalised.pem && item.pem === normalised.pem) {
+                return true;
+            }
+            if (item.raw && normalised.raw && item.raw === normalised.raw) {
+                return true;
+            }
+            return false;
+        });
+
+        if (duplicate) {
+            return;
+        }
     }
+
+    existing.push(normalised);
 }
 
 function addCertificatesToRegistrationState(entries) {
@@ -517,6 +631,24 @@ function partitionCertificateEntries(entries) {
             result.valid.push({ entry, index, parsed });
         }
     });
+
+    if (result.failures.length && result.valid.length) {
+        const validIdentities = new Set(
+            result.valid
+                .map(info => deriveCertificateIdentity(info.entry))
+                .filter(identity => identity)
+        );
+
+        if (validIdentities.size) {
+            result.failures = result.failures.filter(info => {
+                const identity = deriveCertificateIdentity(info.entry);
+                if (!identity) {
+                    return true;
+                }
+                return !validIdentities.has(identity);
+            });
+        }
+    }
 
     return result;
 }
