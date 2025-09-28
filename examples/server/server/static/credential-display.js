@@ -760,9 +760,8 @@ function buildAttestationSection({
     const certificatesAll = Array.isArray(registrationDetailState.attestationCertificates)
         ? registrationDetailState.attestationCertificates
         : [];
-    const { valid: certificateInfos, failures: parseFailureInfos } = partitionCertificateEntries(certificatesAll);
+    const { valid: certificateInfos } = partitionCertificateEntries(certificatesAll);
     const attestationHasCertificates = certificateInfos.length > 0;
-    const attestationHasParseFailures = parseFailureInfos.length > 0;
 
     registrationDetailState.visibleAttestationCertificateIndices = certificateInfos.map(info => info.index);
 
@@ -841,31 +840,6 @@ function buildAttestationSection({
             });
         } else if ((attestationFormatNormalized && attestationFormatNormalized !== 'none') || attestationStatementHasContent) {
             certificateMessageHtml = '<div style="font-style: italic; color: #6c757d; margin-top: 0.75rem;">No attestation certificates available.</div>';
-        }
-
-        if (attestationHasParseFailures) {
-            const parseFailureSections = parseFailureInfos.map(info => {
-                const certificateNumber = info.index + 1;
-                const parsed = info.parsed || {};
-                const errorTextRaw = typeof parsed.error === 'string' && parsed.error.trim() !== ''
-                    ? parsed.error.trim()
-                    : typeof parsed.parseError === 'string' && parsed.parseError.trim() !== ''
-                        ? parsed.parseError.trim()
-                        : 'Unable to parse attestation certificate.';
-                const summaryText = typeof parsed.summary === 'string' && parsed.summary.trim() !== ''
-                    ? parsed.summary.trim()
-                    : '';
-
-                let sectionHtml = '<div style="margin-top: 0.75rem;">';
-                sectionHtml += `<div style="color: #dc3545; font-size: 0.9rem;"><strong>Certificate ${certificateNumber} parse error:</strong> ${escapeHtml(errorTextRaw)}</div>`;
-                if (summaryText) {
-                    sectionHtml += `<textarea class="certificate-textarea" readonly spellcheck="false" wrap="soft">${escapeHtml(summaryText)}</textarea>`;
-                }
-                sectionHtml += '</div>';
-                return sectionHtml;
-            }).join('');
-
-            certificateMessageHtml += parseFailureSections;
         }
 
         if (authenticatorButtonMarkup) {
