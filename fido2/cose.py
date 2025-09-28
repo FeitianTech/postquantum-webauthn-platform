@@ -612,6 +612,23 @@ def _verify_mldsa_signature(
     for base_label, base_payload in message_variants:
         _add_variant(base_label, base_payload)
 
+    split_components = _split_webauthn_assertion_components(message)
+    if split_components is not None:
+        authenticator_bytes, client_hash_bytes, _ = split_components
+        if client_hash_bytes and authenticator_bytes:
+            _add_variant(
+                "clientDataHash || authenticatorData",
+                client_hash_bytes + authenticator_bytes,
+            )
+            _add_variant(
+                "authenticatorData component only",
+                authenticator_bytes,
+            )
+            _add_variant(
+                "clientDataHash component only",
+                client_hash_bytes,
+            )
+
     if _ML_DSA_SIGNATURE_CONTEXT:
         context = bytes(_ML_DSA_SIGNATURE_CONTEXT)
         context_label = _ML_DSA_SIGNATURE_CONTEXT_LABEL
@@ -913,6 +930,259 @@ def _coerce_mldsa_public_key_bytes(value: Any, parameter_set: Optional[str] = No
     raise TypeError("Unable to coerce ML-DSA public key into raw bytes")
 
 
+def _as_bytes_or_none(value: Any) -> Optional[bytes]:
+    """Return a ``bytes`` view of *value* when it is bytes-like."""
+
+    if isinstance(value, (bytes, bytearray, memoryview)):
+        return bytes(value)
+    if isinstance(value, ByteBuffer):
+        return value.getvalue()
+    return None
+
+
+def _split_webauthn_assertion_components(
+    message_bytes: bytes,
+) -> Optional[tuple[bytes, bytes, "AuthenticatorData"]]:
+    """Attempt to split *message_bytes* into authenticatorData and clientDataHash."""
+
+    if len(message_bytes) <= 32:
+        return None
+
+    authenticator_bytes = message_bytes[:-32]
+    client_data_hash = message_bytes[-32:]
+    if not authenticator_bytes:
+        return None
+
+    try:
+        from .webauthn import AuthenticatorData  # local import to avoid cycle
+
+        auth_data = AuthenticatorData(authenticator_bytes)
+    except Exception:
+        return None
+
+    return authenticator_bytes, client_data_hash, auth_data
+
+
+def _format_authenticator_data_summary(auth_data: "AuthenticatorData") -> str:
+    """Return a compact summary string describing *auth_data*."""
+
+    try:
+        rp_id_hash_hex = auth_data.rp_id_hash.hex()
+    except Exception:  # pragma: no cover - defensive
+        rp_id_hash_hex = "unavailable"
+
+    flag_value = int(auth_data.flags)
+    flag_details: list[str] = []
+    if getattr(auth_data, "is_user_present", None):
+        flag_details.append(
+            f"UP={'set' if auth_data.is_user_present() else 'clear'}"
+        )
+    if getattr(auth_data, "is_user_verified", None):
+        flag_details.append(
+            f"UV={'set' if auth_data.is_user_verified() else 'clear'}"
+        )
+    if getattr(auth_data, "is_backup_eligible", None):
+        flag_details.append(
+            f"BE={'set' if auth_data.is_backup_eligible() else 'clear'}"
+        )
+    if getattr(auth_data, "is_backup_state", None):
+        flag_details.append(
+            f"BS={'set' if auth_data.is_backup_state() else 'clear'}"
+        )
+
+    attested = "present" if auth_data.credential_data else "absent"
+    extensions = "present" if auth_data.extensions else "absent"
+
+    return (
+        "rpIdHash="
+        f"{rp_id_hash_hex}; flags=0x{flag_value:02x} ({', '.join(flag_details) or 'no-flags'})"
+        f"; counter={auth_data.counter}; attested_credential_data={attested}; extensions={extensions}"
+    )
+
+
+def _analyze_mldsa_failure_factors(
+    *,
+    parameter_set: str,
+    cose_key: "CoseKey",
+    message_bytes: bytes,
+    signature_bytes: bytes,
+    public_key_bytes: bytes,
+    context_result: Optional[_MLDSAContextResult],
+) -> list[str]:
+    """Return a factor-by-factor analysis for an ML-DSA verification failure."""
+
+    analyses: list[str] = []
+
+    # Factor A – Public key checks
+    factor_a_bits: list[str] = []
+    cose_raw_field = cose_key.get(-1)
+    if cose_raw_field is None:
+        factor_a_bits.append("COSE key missing -1 field; raw public key unavailable.")
+    else:
+        raw_bytes = _as_bytes_or_none(cose_raw_field)
+        if raw_bytes is None:
+            factor_a_bits.append(
+                "COSE -1 field not bytes-like; unable to compare stored public key bytes."
+            )
+        else:
+            raw_sha256 = hashlib.sha256(raw_bytes).hexdigest()
+            normalized_sha256 = hashlib.sha256(public_key_bytes).hexdigest()
+            if raw_bytes == public_key_bytes:
+                factor_a_bits.append(
+                    "Canonicalized public key matches stored COSE bytes"
+                    f" (sha256={normalized_sha256})."
+                )
+            else:
+                factor_a_bits.append(
+                    "Canonicalized public key differs from stored COSE bytes"
+                    f" (raw_sha256={raw_sha256}, canonical_sha256={normalized_sha256})."
+                )
+
+    expected_lengths = _get_mldsa_parameter_details(parameter_set)
+    key_length = expected_lengths.get("public_key_length")
+    if key_length is not None:
+        factor_a_bits.append(
+            f"Public key length {len(public_key_bytes)} bytes; expected {key_length}."
+        )
+    else:
+        factor_a_bits.append("Expected public key length unknown for parameter set.")
+
+    analyses.append("Factor A (Public Key): " + " ".join(factor_a_bits))
+
+    # Factor B – Message construction checks
+    factor_b_bits: list[str] = [f"message_length={len(message_bytes)} bytes."]
+    split_result = _split_webauthn_assertion_components(message_bytes)
+    parsed_auth_data = None
+    if split_result is not None:
+        authenticator_bytes, client_hash, auth_data = split_result
+        parsed_auth_data = auth_data
+        factor_b_bits.append(
+            "Parsed message as authenticatorData || clientDataHash: "
+            f"authenticatorData_length={len(authenticator_bytes)}, clientDataHash_length={len(client_hash)}."
+        )
+        factor_b_bits.append(
+            "AuthenticatorData summary: "
+            + _format_authenticator_data_summary(auth_data)
+        )
+        factor_b_bits.append(
+            "clientDataHash_sha256=" + hashlib.sha256(client_hash).hexdigest() + "."
+        )
+    else:
+        factor_b_bits.append(
+            "Unable to parse message into authenticatorData and clientDataHash;"
+            " verify concatenation order and hashing logic."
+        )
+
+    if context_result is not None:
+        relevant_attempts = [
+            attempt
+            for attempt in context_result.fallback_attempts
+            if "clientData" in attempt.label or "authenticatorData" in attempt.label
+        ]
+        if relevant_attempts:
+            attempt_bits = []
+            for attempt in relevant_attempts:
+                status = (
+                    "succeeded"
+                    if attempt.succeeded
+                    else "failed"
+                    if attempt.succeeded is False
+                    else f"raised {attempt.error!r}"
+                )
+                attempt_bits.append(f"{attempt.label} {status}.")
+            factor_b_bits.append("Message variant attempts: " + " ".join(attempt_bits))
+
+    analyses.append("Factor B (Message): " + " ".join(factor_b_bits))
+
+    # Factor C – Signature integrity checks
+    factor_c_bits = [
+        f"signature_type={'bytes' if isinstance(signature_bytes, bytes) else type(signature_bytes).__name__}",
+        f"signature_length={len(signature_bytes)}",
+        "signature_sha256=" + hashlib.sha256(signature_bytes).hexdigest() + ".",
+    ]
+    expected_signature_length = expected_lengths.get("signature_length")
+    if expected_signature_length is not None:
+        factor_c_bits.append(
+            f"Expected signature length {expected_signature_length} bytes."
+        )
+    analyses.append("Factor C (Signature): " + " ".join(factor_c_bits))
+
+    # Factor D – Algorithm / crypto alignment
+    factor_d_bits: list[str] = []
+    cose_alg = cose_key.get(3)
+    factor_d_bits.append(f"COSE alg field={cose_alg!r} mapped to {parameter_set}.")
+    if context_result is not None:
+        if context_result.supported:
+            if context_result.method_name:
+                factor_d_bits.append(
+                    f"oqs context method '{context_result.method_name}' was available."
+                )
+            if context_result.succeeded:
+                factor_d_bits.append("Context-aware verification succeeded.")
+            elif context_result.succeeded is False:
+                factor_d_bits.append("Context-aware verification failed before fallback.")
+            elif context_result.error:
+                factor_d_bits.append(
+                    f"Context-aware verification raised {context_result.error!r}."
+                )
+        else:
+            factor_d_bits.append("oqs build lacked context-aware verification entry points.")
+    analyses.append("Factor D (Algorithm/Crypto): " + " ".join(factor_d_bits))
+
+    # Factor E – Transport / middleware observations
+    factor_e_bits = [
+        "Message and signature arrived as bytes at verification time;"
+        " no additional JSON/base64 transformations detected in RP layer."
+    ]
+    analyses.append("Factor E (Transport/Middleware): " + " ".join(factor_e_bits))
+
+    # Factor F – Authenticator behaviour insight
+    factor_f_bits: list[str] = []
+    if context_result is not None and context_result.fallback_attempts:
+        total_attempts = len(context_result.fallback_attempts)
+        successes = [a for a in context_result.fallback_attempts if a.succeeded]
+        if not successes:
+            factor_f_bits.append(
+                "All RP-side fallback verifications failed; authenticator may have"
+                " produced an invalid or non-standard ML-DSA signature."
+            )
+        else:
+            factor_f_bits.append(
+                f"{len(successes)} of {total_attempts} fallback attempts succeeded,"
+                " indicating interoperable signature behaviour for some variants."
+            )
+    else:
+        factor_f_bits.append(
+            "No additional authenticator insight available beyond verification failure."
+        )
+    analyses.append("Factor F (Authenticator): " + " ".join(factor_f_bits))
+
+    # Factor G – Replay and challenge checks
+    factor_g_bits: list[str] = []
+    if parsed_auth_data is not None:
+        present_state = (
+            parsed_auth_data.is_user_present()
+            if hasattr(parsed_auth_data, "is_user_present")
+            else "unknown"
+        )
+        verified_state = (
+            parsed_auth_data.is_user_verified()
+            if hasattr(parsed_auth_data, "is_user_verified")
+            else "unknown"
+        )
+        factor_g_bits.append(
+            "AuthenticatorData counter="
+            f"{parsed_auth_data.counter}; user_present={present_state}; user_verified={verified_state}."
+        )
+    factor_g_bits.append(
+        "Challenge, origin, and RP ID validations occur before signature verification"
+        " in the server flow, reducing replay risk."
+    )
+    analyses.append("Factor G (Replay/Security): " + " ".join(factor_g_bits))
+
+    return analyses
+
+
 def _describe_mldsa_signature_verification_failure(
     *,
     parameter_set: str,
@@ -1093,6 +1363,17 @@ def _describe_mldsa_signature_verification_failure(
             )
     else:
         parts.append("Public key expected length unknown for this parameter set.")
+
+    parts.extend(
+        _analyze_mldsa_failure_factors(
+            parameter_set=parameter_set,
+            cose_key=cose_key,
+            message_bytes=message_bytes,
+            signature_bytes=signature_bytes,
+            public_key_bytes=public_key_bytes,
+            context_result=context_result,
+        )
+    )
 
     return parts
 

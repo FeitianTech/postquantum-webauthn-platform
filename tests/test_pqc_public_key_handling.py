@@ -22,6 +22,7 @@ from cryptography import x509  # noqa: E402
 from cryptography.exceptions import UnsupportedAlgorithm  # noqa: E402
 from fido2.cose import MLDSA44, MLDSA65, MLDSA87  # noqa: E402
 from fido2.utils import ByteBuffer  # noqa: E402
+from fido2.webauthn import AuthenticatorData  # noqa: E402
 from types import SimpleNamespace  # noqa: E402
 
 
@@ -109,6 +110,22 @@ def _build_certificate(spki: bytes, signature_algorithm_oid: str = "1.2.840.1004
     tbs = _encode_sequence(version, serial, signature_algo, name, validity, name, spki)
     signature_value = b"\x03\x02\x00\x00"
     return _encode_sequence(tbs, signature_algo, signature_value)
+
+
+def _build_valid_assertion_message(
+    *,
+    counter: int = 1,
+    rp_hash: bytes = b"R" * 32,
+    client_hash: bytes = b"C" * 32,
+) -> bytes:
+    auth_data = AuthenticatorData.create(
+        rp_hash,
+        AuthenticatorData.FLAG.UP,
+        counter,
+    )
+    if len(client_hash) != 32:
+        raise ValueError("client_hash must be 32 bytes long")
+    return bytes(auth_data) + client_hash
 
 def test_mldsa_from_cryptography_key_accepts_raw_public_bytes():
     raw_key = b"\x01\x02\x03"
@@ -298,7 +315,7 @@ def test_mldsa_verify_falls_back_when_context_fails(monkeypatch):
 
 def test_mldsa_verify_fallback_uses_context_prefix(monkeypatch):
     public_key = b"z" * 1312
-    message = b"o" * 69
+    message = _build_valid_assertion_message(counter=1)
     signature = b"u" * 2420
     context_calls: list[tuple[bytes, bytes, str, bytes]] = []
     verify_calls: list[tuple[bytes, bytes, bytes]] = []
@@ -336,20 +353,22 @@ def test_mldsa_verify_fallback_uses_context_prefix(monkeypatch):
     context_bytes = cose_module._ML_DSA_SIGNATURE_CONTEXT
     sha256_digest = hashlib.sha256(message).digest()
     sha512_digest = hashlib.sha512(message).digest()
-    assert context_calls == [
-        (message, signature, context_label, public_key),
-        (sha256_digest, signature, context_label, public_key),
-        (sha512_digest, signature, context_label, public_key),
-    ]
-    assert verify_calls == [
-        (message, signature, public_key),
-        (context_bytes + message, signature, public_key),
-    ]
+    assert context_calls
+    assert context_calls[0] == (message, signature, context_label, public_key)
+    assert (sha256_digest, signature, context_label, public_key) in context_calls
+    assert (sha512_digest, signature, context_label, public_key) in context_calls
+
+    authenticator_component = message[:-32]
+    client_hash_component = message[-32:]
+    assert verify_calls[0] == (message, signature, public_key)
+    assert (authenticator_component, signature, public_key) in verify_calls
+    assert (client_hash_component, signature, public_key) in verify_calls
+    assert verify_calls[-1] == (context_bytes + message, signature, public_key)
 
 
 def test_mldsa_verify_fallback_uses_context_prefix_with_null(monkeypatch):
     public_key = b"y" * 1312
-    message = b"p" * 69
+    message = _build_valid_assertion_message(counter=2)
     signature = b"v" * 2420
     context_calls: list[tuple[bytes, bytes, str, bytes]] = []
     verify_calls: list[tuple[bytes, bytes, bytes]] = []
@@ -387,16 +406,21 @@ def test_mldsa_verify_fallback_uses_context_prefix_with_null(monkeypatch):
     context_bytes = cose_module._ML_DSA_SIGNATURE_CONTEXT
     sha256_digest = hashlib.sha256(message).digest()
     sha512_digest = hashlib.sha512(message).digest()
-    assert context_calls == [
-        (message, signature, context_label, public_key),
-        (sha256_digest, signature, context_label, public_key),
-        (sha512_digest, signature, context_label, public_key),
-    ]
-    assert verify_calls == [
-        (message, signature, public_key),
-        (context_bytes + message, signature, public_key),
-        (context_bytes + b"\x00" + message, signature, public_key),
-    ]
+    assert context_calls
+    assert context_calls[0] == (message, signature, context_label, public_key)
+    assert (sha256_digest, signature, context_label, public_key) in context_calls
+    assert (sha512_digest, signature, context_label, public_key) in context_calls
+    authenticator_component = message[:-32]
+    client_hash_component = message[-32:]
+    assert verify_calls[0] == (message, signature, public_key)
+    assert (authenticator_component, signature, public_key) in verify_calls
+    assert (client_hash_component, signature, public_key) in verify_calls
+    assert (context_bytes + message, signature, public_key) in verify_calls
+    assert verify_calls[-1] == (
+        context_bytes + b"\x00" + message,
+        signature,
+        public_key,
+    )
 
 
 def test_mldsa_verify_context_digest_succeeds(monkeypatch):
@@ -444,7 +468,7 @@ def test_mldsa_verify_context_digest_succeeds(monkeypatch):
 
 def test_mldsa_verify_hash_digest_fallback_succeeds(monkeypatch):
     public_key = b"digest-fallback" * 82
-    message = b"fallback-hash" * 5 + b"?"
+    message = _build_valid_assertion_message(counter=3)
     signature = b"sig" * 807
     context_calls: list[tuple[bytes, bytes, str, bytes]] = []
     verify_calls: list[tuple[bytes, bytes, bytes]] = []
@@ -488,16 +512,20 @@ def test_mldsa_verify_hash_digest_fallback_succeeds(monkeypatch):
     assert (sha512_digest, signature, context_label, public_key) in context_calls
     context_prefix = context_bytes + message
     context_prefix_nul = context_bytes + b"\x00" + message
+    authenticator_component = message[:-32]
+    client_hash_component = message[-32:]
     assert verify_calls[0] == (message, signature, public_key)
+    assert (authenticator_component, signature, public_key) in verify_calls
+    assert (client_hash_component, signature, public_key) in verify_calls
     assert (context_prefix, signature, public_key) in verify_calls
     assert (context_prefix_nul, signature, public_key) in verify_calls
     assert (sha256_digest, signature, public_key) in verify_calls
-    assert (sha512_digest, signature, public_key) not in verify_calls
+    assert verify_calls[-1] == (sha256_digest, signature, public_key)
 
 
 def test_mldsa_verify_attempts_rotated_message_variants(monkeypatch):
     public_key = b"p" * 1312
-    message = b"A" * 37 + b"B" * 32
+    message = _build_valid_assertion_message(counter=4)
     signature = b"s" * 2420
     context_messages: list[bytes] = []
     fallback_messages: list[bytes] = []
@@ -538,6 +566,59 @@ def test_mldsa_verify_attempts_rotated_message_variants(monkeypatch):
 
     assert rotated_trailing in attempted_payloads
     assert rotated_leading in attempted_payloads
+    authenticator_component = message[:-32]
+    client_hash_component = message[-32:]
+    assert authenticator_component in attempted_payloads
+    assert client_hash_component in attempted_payloads
+
+
+def test_mldsa_failure_diagnostics_cover_all_factor_groups():
+    parameter_set = "ML-DSA-44"
+    public_key = b"\x01" * 1312
+    message = _build_valid_assertion_message(counter=5)
+    signature = b"S" * 2420
+    cose_key = MLDSA44({1: 7, 3: -48, -1: public_key})
+
+    context_result = cose_module._MLDSAContextResult(
+        supported=True,
+        attempted=True,
+        succeeded=False,
+        error=None,
+        method_name="verify_with_ctx_str",
+        errors=("verify_with_ctx_str: boom",),
+        fallback_attempts=(
+            cose_module._MLDSAFallbackAttempt(
+                label="context-free verification using clientDataHash || authenticatorData",
+                succeeded=False,
+                error=None,
+            ),
+        ),
+    )
+
+    parts = cose_module._describe_mldsa_signature_verification_failure(
+        parameter_set=parameter_set,
+        cose_key=cose_key,
+        message=message,
+        message_bytes=message,
+        signature=signature,
+        signature_bytes=signature,
+        public_key=public_key,
+        public_key_bytes=public_key,
+        context_result=context_result,
+    )
+
+    assert any(part.startswith("Factor A (Public Key):") for part in parts)
+    assert any(part.startswith("Factor B (Message):") for part in parts)
+    assert any(part.startswith("Factor C (Signature):") for part in parts)
+    assert any(part.startswith("Factor D (Algorithm/Crypto):") for part in parts)
+    assert any(part.startswith("Factor E (Transport/Middleware):") for part in parts)
+    assert any(part.startswith("Factor F (Authenticator):") for part in parts)
+    assert any(part.startswith("Factor G (Replay/Security):") for part in parts)
+    factor_b_details = next(
+        part for part in parts if part.startswith("Factor B (Message):")
+    )
+    assert "clientDataHash_length=32" in factor_b_details
+    assert "authenticatorData_length=37" in factor_b_details
 
 
 def test_coerce_mldsa_public_key_bytes_unwraps_der_subject_public_key():
