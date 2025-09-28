@@ -213,6 +213,44 @@ def test_mldsa_verify_prefers_context_when_available(monkeypatch):
     ]
 
 
+def test_mldsa_verify_uses_bytes_context_when_string_path_fails(monkeypatch):
+    public_key = b"b" * 1312
+    message = b"c" * 69
+    signature = b"d" * 2420
+    context_calls: list[tuple[bytes, bytes, bytes, bytes]] = []
+
+    class FakeSignature:
+        def __init__(self, algorithm: str):
+            assert algorithm == "ML-DSA-44"
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+        def verify_with_ctx_str(self, msg, sig, ctx, pk):
+            raise TypeError("string context unsupported")
+
+        def verify_with_ctx(self, msg, sig, ctx, pk):
+            context_calls.append((msg, sig, ctx, pk))
+            return True
+
+    class FakeOQS:
+        Signature = FakeSignature
+
+    monkeypatch.setattr(cose_module, "oqs", FakeOQS)
+    monkeypatch.setattr(cose_module, "_oqs_import_error", None)
+
+    cose_key = MLDSA44({1: 7, 3: -48, -1: public_key})
+    cose_key.verify(message, signature)
+
+    context_bytes = cose_module._ML_DSA_SIGNATURE_CONTEXT
+    assert context_calls == [
+        (message, signature, context_bytes, public_key),
+    ]
+
+
 def test_mldsa_verify_falls_back_when_context_fails(monkeypatch):
     public_key = b"q" * 1312
     message = b"n" * 69

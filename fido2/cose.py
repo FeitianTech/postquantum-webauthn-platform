@@ -327,6 +327,15 @@ _ML_DSA_SIGNATURE_CONTEXT = b"FIDOSIG"
 _ML_DSA_SIGNATURE_CONTEXT_LABEL = "FIDOSIG"
 
 
+@dataclass(frozen=True)
+class _MLDSAContextInvoker:
+    """Callable that performs context-aware ML-DSA verification."""
+
+    method_name: str
+    callable: Callable[[bytes, bytes, Any, bytes], Any]
+    context_value: Any
+
+
 @dataclass
 class _MLDSAFallbackAttempt:
     """Outcome of a fallback ML-DSA verification attempt."""
@@ -344,6 +353,8 @@ class _MLDSAContextResult:
     attempted: bool
     succeeded: Optional[bool]
     error: Optional[str]
+    method_name: Optional[str] = None
+    errors: tuple[str, ...] = ()
     fallback_attempts: tuple[_MLDSAFallbackAttempt, ...] = ()
 
     @property
@@ -397,11 +408,61 @@ def _verify_mldsa_signature(
 ) -> tuple[bool, _MLDSAContextResult]:
     """Verify *signature* returning success flag and context attempt metadata."""
 
-    verify_with_ctx = getattr(verifier, "verify_with_ctx_str", None)
-    context_supported = callable(verify_with_ctx)
+    def _iter_context_invokers() -> list[_MLDSAContextInvoker]:
+        invokers: list[_MLDSAContextInvoker] = []
+
+        label_str = _ML_DSA_SIGNATURE_CONTEXT_LABEL
+        label_bytes = _ML_DSA_SIGNATURE_CONTEXT
+
+        verify_with_ctx_str = getattr(verifier, "verify_with_ctx_str", None)
+        if callable(verify_with_ctx_str) and label_str is not None:
+            invokers.append(
+                _MLDSAContextInvoker(
+                    method_name="verify_with_ctx_str",
+                    callable=verify_with_ctx_str,
+                    context_value=label_str,
+                )
+            )
+
+        verify_with_ctx = getattr(verifier, "verify_with_ctx", None)
+        if callable(verify_with_ctx):
+            context_value: Optional[bytes] = None
+            if label_bytes is not None:
+                context_value = label_bytes
+            elif label_str is not None:
+                context_value = label_str.encode("utf-8")
+            if context_value is not None:
+                invokers.append(
+                    _MLDSAContextInvoker(
+                        method_name="verify_with_ctx",
+                        callable=verify_with_ctx,
+                        context_value=context_value,
+                    )
+                )
+
+        verify_with_ctx_bytes = getattr(verifier, "verify_with_ctx_bytes", None)
+        if callable(verify_with_ctx_bytes):
+            context_value = label_bytes
+            if context_value is None and label_str is not None:
+                context_value = label_str.encode("utf-8")
+            if context_value is not None:
+                invokers.append(
+                    _MLDSAContextInvoker(
+                        method_name="verify_with_ctx_bytes",
+                        callable=verify_with_ctx_bytes,
+                        context_value=context_value,
+                    )
+                )
+
+        return invokers
+
+    context_invokers = _iter_context_invokers()
+    context_supported = bool(context_invokers)
     context_attempted = False
     context_succeeded: Optional[bool] = None
+    context_error_messages: list[str] = []
     context_error: Optional[str] = None
+    selected_invoker: Optional[_MLDSAContextInvoker] = None
 
     fallback_attempts: list[_MLDSAFallbackAttempt] = []
 
@@ -439,22 +500,23 @@ def _verify_mldsa_signature(
                 shifted,
             )
 
-    context_label = _ML_DSA_SIGNATURE_CONTEXT_LABEL
-
-    if context_supported and context_label:
-        context_attempted = True
-        try:
-            context_result = bool(
-                verify_with_ctx(  # type: ignore[misc]
-                    message,
-                    signature,
-                    context_label,
-                    public_key,
+    if context_supported:
+        for invoker in context_invokers:
+            context_attempted = True
+            try:
+                context_result = bool(
+                    invoker.callable(
+                        message,
+                        signature,
+                        invoker.context_value,
+                        public_key,
+                    )
                 )
-            )
-        except Exception as exc:  # pragma: no cover - defensive path
-            context_error = str(exc)
-        else:
+            except Exception as exc:  # pragma: no cover - defensive path
+                context_error_messages.append(f"{invoker.method_name}: {exc}")
+                continue
+
+            selected_invoker = invoker
             context_succeeded = context_result
             if context_result:
                 return True, _MLDSAContextResult(
@@ -462,8 +524,11 @@ def _verify_mldsa_signature(
                     attempted=True,
                     succeeded=True,
                     error=None,
+                    method_name=invoker.method_name,
+                    errors=tuple(context_error_messages),
                     fallback_attempts=(),
                 )
+            break
 
     def _record_attempt(
         label: str,
@@ -487,14 +552,14 @@ def _verify_mldsa_signature(
         ("SHA-512", hashlib.sha512),
     )
 
-    if context_supported and context_label:
+    if selected_invoker is not None:
         for variant_label, variant_payload in message_variants[1:]:
             result = _record_attempt(
                 f"context-aware verification using {variant_label}",
-                lambda payload=variant_payload: verify_with_ctx(  # type: ignore[misc]
+                lambda payload=variant_payload, invoker=selected_invoker: invoker.callable(  # type: ignore[misc]
                     payload,
                     signature,
-                    context_label,
+                    invoker.context_value,
                     public_key,
                 ),
             )
@@ -504,6 +569,8 @@ def _verify_mldsa_signature(
                     attempted=True,
                     succeeded=context_succeeded,
                     error=context_error,
+                    method_name=selected_invoker.method_name,
+                    errors=tuple(context_error_messages),
                     fallback_attempts=tuple(fallback_attempts),
                 )
 
@@ -515,10 +582,10 @@ def _verify_mldsa_signature(
                 digest_label = f"{digest_name} digest of {base_label}"
                 result = _record_attempt(
                     f"context-aware verification using {digest_label}",
-                    lambda digest=digest: verify_with_ctx(  # type: ignore[misc]
+                    lambda digest=digest, invoker=selected_invoker: invoker.callable(  # type: ignore[misc]
                         digest,
                         signature,
-                        context_label,
+                        invoker.context_value,
                         public_key,
                     ),
                 )
@@ -528,6 +595,8 @@ def _verify_mldsa_signature(
                         attempted=True,
                         succeeded=context_succeeded,
                         error=context_error,
+                        method_name=selected_invoker.method_name,
+                        errors=tuple(context_error_messages),
                         fallback_attempts=tuple(fallback_attempts),
                     )
 
@@ -582,15 +651,22 @@ def _verify_mldsa_signature(
                 attempted=context_attempted,
                 succeeded=context_succeeded,
                 error=context_error,
+                method_name=selected_invoker.method_name if selected_invoker else None,
+                errors=tuple(context_error_messages),
                 fallback_attempts=tuple(fallback_attempts),
             )
 
     base_result = False
+    if context_error_messages and selected_invoker is None and not context_succeeded:
+        context_error = "; ".join(context_error_messages)
+
     return base_result, _MLDSAContextResult(
         supported=context_supported,
         attempted=context_attempted,
         succeeded=context_succeeded,
         error=context_error,
+        method_name=selected_invoker.method_name if selected_invoker else None,
+        errors=tuple(context_error_messages),
         fallback_attempts=tuple(fallback_attempts),
     )
 
@@ -940,31 +1016,42 @@ def _describe_mldsa_signature_verification_failure(
     if context_result is not None:
         if not context_result.supported:
             parts.append(
-                "oqs bindings do not expose verify_with_ctx_str; context-aware "
-                "ML-DSA verification unavailable."
+                "oqs bindings do not expose a context-aware verifier; ML-DSA "
+                "context support unavailable."
             )
         elif context_result.attempted:
+            method_suffix = (
+                f" via {context_result.method_name}" if context_result.method_name else ""
+            )
             if context_result.succeeded is True:
                 parts.append(
                     "Context-aware ML-DSA verification using "
-                    f"'{context_result.label}' succeeded."
+                    f"'{context_result.label}'{method_suffix} succeeded."
                 )
             elif context_result.succeeded is False:
                 parts.append(
                     "Context-aware ML-DSA verification using "
-                    f"'{context_result.label}' failed; falling back to "
+                    f"'{context_result.label}'{method_suffix} failed; falling back to "
                     "context-free verification."
                 )
             else:
+                error_detail = context_result.error
+                if error_detail is None and context_result.errors:
+                    error_detail = "; ".join(context_result.errors)
+                if error_detail is None:
+                    error_detail = "unknown error"
                 parts.append(
                     "Context-aware ML-DSA verification using "
-                    f"'{context_result.label}' raised "
-                    f"{context_result.error!r}; falling back to context-free verification."
+                    f"'{context_result.label}'{method_suffix} raised "
+                    f"{error_detail!r}; falling back to context-free verification."
                 )
         else:
             parts.append(
-                "verify_with_ctx_str was available but no context attempt was made."
+                "A context-aware ML-DSA verifier was exposed but no attempt was made."
             )
+
+        for error_msg in context_result.errors:
+            parts.append(f"Context-aware verifier {error_msg}.")
 
         for attempt in context_result.fallback_attempts:
             if attempt.error is not None:
