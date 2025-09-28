@@ -296,9 +296,13 @@ function sanitiseAttestationObjectForDisplay(attestationObject) {
         return null;
     }
 
-    const certificates = Array.isArray(registrationDetailState.attestationCertificates)
+    const certificatesAll = Array.isArray(registrationDetailState.attestationCertificates)
         ? registrationDetailState.attestationCertificates
         : [];
+    const { valid: certificateInfos, failures: parseFailureInfos } = partitionCertificateEntries(certificatesAll);
+    const certificates = certificateInfos.length
+        ? certificateInfos
+        : parseFailureInfos;
 
     if (cloned.attStmt && typeof cloned.attStmt === 'object') {
         const attStmtClone = { ...cloned.attStmt };
@@ -309,7 +313,8 @@ function sanitiseAttestationObjectForDisplay(attestationObject) {
             const sanitizedChain = [];
 
             for (let index = 0; index < maxLength; index += 1) {
-                const certificateEntry = certificates[index];
+                const info = certificates[index];
+                const certificateEntry = info && typeof info === 'object' && info.entry ? info.entry : info;
                 const sourceEntry = sourceArray[index];
 
                 let parsedDetails = certificateEntry && typeof certificateEntry === 'object'
@@ -368,6 +373,23 @@ function sanitiseAttestationObjectForDisplay(attestationObject) {
             delete attStmtClone.x5c;
         }
 
+        if (parseFailureInfos.length && certificateInfos.length) {
+            attStmtClone.x5cParseErrors = parseFailureInfos.map(info => {
+                const parsed = info.parsed || {};
+                return {
+                    certificateIndex: info.index + 1,
+                    error: typeof parsed.error === 'string' && parsed.error.trim() !== ''
+                        ? parsed.error.trim()
+                        : typeof parsed.parseError === 'string' && parsed.parseError.trim() !== ''
+                            ? parsed.parseError.trim()
+                            : 'Unable to parse attestation certificate.',
+                    summary: typeof parsed.summary === 'string' && parsed.summary.trim() !== ''
+                        ? parsed.summary.trim()
+                        : undefined,
+                };
+            });
+        }
+
         stripCertificateCollections(attStmtClone);
         cloned.attStmt = attStmtClone;
     }
@@ -380,12 +402,14 @@ function sanitiseAttestationObjectForDisplay(attestationObject) {
 const registrationDetailState = {
     attestationObject: null,
     attestationCertificates: [],
+    visibleAttestationCertificateIndices: [],
     authenticatorData: null,
 };
 
 function resetRegistrationDetailState() {
     registrationDetailState.attestationObject = null;
     registrationDetailState.attestationCertificates = [];
+    registrationDetailState.visibleAttestationCertificateIndices = [];
     registrationDetailState.authenticatorData = null;
 }
 
@@ -466,6 +490,45 @@ function normaliseCertificateEntryForModal(entry) {
     }
 
     return normalised;
+}
+
+function partitionCertificateEntries(entries) {
+    const result = {
+        valid: [],
+        failures: [],
+    };
+
+    if (!Array.isArray(entries) || !entries.length) {
+        return result;
+    }
+
+    entries.forEach((entry, index) => {
+        if (!entry || typeof entry !== 'object') {
+            return;
+        }
+
+        const parsed = entry.parsedX5c && typeof entry.parsedX5c === 'object'
+            ? entry.parsedX5c
+            : null;
+
+        if (parsed && parsed.parseError) {
+            result.failures.push({ entry, index, parsed });
+        } else {
+            result.valid.push({ entry, index, parsed });
+        }
+    });
+
+    return result;
+}
+
+function getVisibleAttestationCertificates() {
+    const indices = Array.isArray(registrationDetailState.visibleAttestationCertificateIndices)
+        ? registrationDetailState.visibleAttestationCertificateIndices
+        : [];
+
+    return indices
+        .map(idx => registrationDetailState.attestationCertificates[idx])
+        .filter(entry => entry && typeof entry === 'object');
 }
 
 async function prepareRegistrationDetailState(options = {}) {
@@ -576,7 +639,15 @@ function buildAttestationSection({
             ? attestationObject.attStmt
             : null;
     const attestationStatementHasContent = attestationStatementObject && Object.keys(attestationStatementObject).length > 0;
-    const attestationHasCertificates = registrationDetailState.attestationCertificates.length > 0;
+
+    const certificatesAll = Array.isArray(registrationDetailState.attestationCertificates)
+        ? registrationDetailState.attestationCertificates
+        : [];
+    const { valid: certificateInfos, failures: parseFailureInfos } = partitionCertificateEntries(certificatesAll);
+    const attestationHasCertificates = certificateInfos.length > 0;
+    const attestationHasParseFailures = parseFailureInfos.length > 0;
+
+    registrationDetailState.visibleAttestationCertificateIndices = certificateInfos.map(info => info.index);
 
     const hasAttestationObject = Boolean(attestationObject);
     const hasAttestationValue = typeof attestationObjectValue === 'string'
@@ -648,11 +719,36 @@ function buildAttestationSection({
         let certificateMessageHtml = '';
 
         if (attestationHasCertificates) {
-            registrationDetailState.attestationCertificates.forEach((_, index) => {
-                buttonRowSegments.push(`<button type="button" class="btn btn-small registration-attestation-cert-button" data-cert-index="${index}">Attestation Certificate ${index + 1}</button>`);
+            certificateInfos.forEach((info, displayIndex) => {
+                buttonRowSegments.push(`<button type="button" class="btn btn-small registration-attestation-cert-button" data-cert-index="${displayIndex}">Attestation Certificate ${displayIndex + 1}</button>`);
             });
         } else if ((attestationFormatNormalized && attestationFormatNormalized !== 'none') || attestationStatementHasContent) {
             certificateMessageHtml = '<div style="font-style: italic; color: #6c757d; margin-top: 0.75rem;">No attestation certificates available.</div>';
+        }
+
+        if (attestationHasParseFailures) {
+            const parseFailureSections = parseFailureInfos.map(info => {
+                const certificateNumber = info.index + 1;
+                const parsed = info.parsed || {};
+                const errorTextRaw = typeof parsed.error === 'string' && parsed.error.trim() !== ''
+                    ? parsed.error.trim()
+                    : typeof parsed.parseError === 'string' && parsed.parseError.trim() !== ''
+                        ? parsed.parseError.trim()
+                        : 'Unable to parse attestation certificate.';
+                const summaryText = typeof parsed.summary === 'string' && parsed.summary.trim() !== ''
+                    ? parsed.summary.trim()
+                    : '';
+
+                let sectionHtml = '<div style="margin-top: 0.75rem;">';
+                sectionHtml += `<div style="color: #dc3545; font-size: 0.9rem;"><strong>Certificate ${certificateNumber} parse error:</strong> ${escapeHtml(errorTextRaw)}</div>`;
+                if (summaryText) {
+                    sectionHtml += `<textarea class="certificate-textarea" readonly spellcheck="false" wrap="soft">${escapeHtml(summaryText)}</textarea>`;
+                }
+                sectionHtml += '</div>';
+                return sectionHtml;
+            }).join('');
+
+            certificateMessageHtml += parseFailureSections;
         }
 
         if (authenticatorButtonMarkup) {
@@ -1127,7 +1223,8 @@ function openRegistrationDetailModal(title, bodyHtml) {
 }
 
 function openAttestationCertificateDetail(index) {
-    const certificate = registrationDetailState.attestationCertificates[index];
+    const visibleCertificates = getVisibleAttestationCertificates();
+    const certificate = visibleCertificates[index];
     const normalised = normaliseCertificateEntryForModal(certificate);
     if (!normalised) {
         return;
