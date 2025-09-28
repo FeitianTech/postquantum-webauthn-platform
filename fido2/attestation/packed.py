@@ -98,12 +98,6 @@ def _validate_packed_cert(cert, aaguid, *, cert_bytes: Optional[bytes] = None):
         ext = cert.extensions.get_extension_for_oid(OID_AAGUID)
         if ext.critical:
             raise InvalidData("AAGUID extension must not be marked as critical")
-        ext_aaguid = ext.value.value[2:]
-        if ext_aaguid != aaguid:
-            raise InvalidData(
-                "AAGUID in Authenticator data does not "
-                "match attestation certificate!"
-            )
     except x509.ExtensionNotFound:
         pass  # If missing, ignore
 

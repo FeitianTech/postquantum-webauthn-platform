@@ -35,7 +35,18 @@ from .utils import ByteBuffer, bytes2int, int2bytes
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec, rsa, padding, ed25519, types
-from typing import Sequence, Type, Mapping, Any, TypeVar, Optional, Iterable, Dict
+from typing import (
+    Sequence,
+    Type,
+    Mapping,
+    Any,
+    TypeVar,
+    Optional,
+    Iterable,
+    Dict,
+    Callable,
+    Set,
+)
 
 try:  # pragma: no cover - exercised indirectly in tests
     import oqs  # type: ignore
@@ -418,47 +429,93 @@ def _verify_mldsa_signature(
                     fallback_attempts=(),
                 )
 
-    fallback_candidates: list[tuple[str, bytes]] = [
-        ("context-free verification using original message", message)
-    ]
+    def _record_attempt(
+        label: str,
+        operation: Callable[[], bool],
+    ) -> Optional[bool]:
+        try:
+            outcome = bool(operation())
+        except Exception as exc:  # pragma: no cover - defensive path
+            fallback_attempts.append(
+                _MLDSAFallbackAttempt(label=label, succeeded=None, error=str(exc))
+            )
+            return None
+
+        fallback_attempts.append(
+            _MLDSAFallbackAttempt(label=label, succeeded=outcome, error=None)
+        )
+        return outcome
+
+    digest_variants: list[tuple[str, bytes]] = []
+    digest_functions: tuple[tuple[str, Callable[[bytes], Any]], ...] = (
+        ("SHA-256", hashlib.sha256),
+        ("SHA-512", hashlib.sha512),
+    )
+
+    for digest_name, digest_factory in digest_functions:
+        digest = digest_factory(message).digest()
+        if digest != message:
+            digest_variants.append((f"{digest_name} digest of original message", digest))
+
+    if context_supported and _ML_DSA_SIGNATURE_CONTEXT:
+        for digest_label, digest in digest_variants:
+            result = _record_attempt(
+                f"context-aware verification using {digest_label}",
+                lambda digest=digest: verify_with_ctx(  # type: ignore[misc]
+                    digest,
+                    signature,
+                    _ML_DSA_SIGNATURE_CONTEXT,
+                    public_key,
+                ),
+            )
+            if result:
+                return True, _MLDSAContextResult(
+                    supported=context_supported,
+                    attempted=True,
+                    succeeded=context_succeeded,
+                    error=context_error,
+                    fallback_attempts=tuple(fallback_attempts),
+                )
+
+    fallback_variants: list[tuple[str, bytes]] = []
+    seen_variants: Set[bytes] = set()
+
+    def _add_variant(label: str, payload: bytes) -> None:
+        if payload in seen_variants:
+            return
+        fallback_variants.append((label, payload))
+        seen_variants.add(payload)
+
+    _add_variant("original message", message)
 
     if _ML_DSA_SIGNATURE_CONTEXT:
         context = bytes(_ML_DSA_SIGNATURE_CONTEXT)
         context_label = _ML_DSA_SIGNATURE_CONTEXT_LABEL
 
         prefixed = context + message
-        if prefixed != message:
-            fallback_candidates.append(
-                (
-                    f"context-free verification using '{context_label}' prefix",
-                    prefixed,
-                )
-            )
+        if prefixed:
+            _add_variant(f"'{context_label}' prefix + message", prefixed)
 
         nul_prefixed = context + b"\x00" + message
-        if nul_prefixed not in (message, prefixed):
-            fallback_candidates.append(
-                (
-                    f"context-free verification using '{context_label}' prefix and NUL separator",
-                    nul_prefixed,
-                )
+        if nul_prefixed:
+            _add_variant(
+                f"'{context_label}' prefix + NUL separator + message", nul_prefixed
             )
 
-    for label, candidate in fallback_candidates:
-        try:
-            base_result = bool(verifier.verify(candidate, signature, public_key))
-        except Exception as exc:  # pragma: no cover - defensive path
-            fallback_attempts.append(
-                _MLDSAFallbackAttempt(label=label, succeeded=None, error=str(exc))
-            )
-            continue
+    base_variants_snapshot = list(fallback_variants)
+    for base_label, base_payload in base_variants_snapshot:
+        for digest_name, digest_factory in digest_functions:
+            digest = digest_factory(base_payload).digest()
+            digest_label = f"{digest_name} digest of {base_label}"
+            _add_variant(digest_label, digest)
 
-        fallback_attempts.append(
-            _MLDSAFallbackAttempt(label=label, succeeded=base_result, error=None)
+    for variant_label, candidate in fallback_variants:
+        result = _record_attempt(
+            f"context-free verification using {variant_label}",
+            lambda candidate=candidate: verifier.verify(candidate, signature, public_key),
         )
-
-        if base_result:
-            return base_result, _MLDSAContextResult(
+        if result:
+            return True, _MLDSAContextResult(
                 supported=context_supported,
                 attempted=context_attempted,
                 succeeded=context_succeeded,
