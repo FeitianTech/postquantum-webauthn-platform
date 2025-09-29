@@ -31,7 +31,7 @@ from .utils import ByteBuffer, bytes2int, int2bytes
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec, rsa, padding, ed25519, types
-from typing import Sequence, Type, Mapping, Any, TypeVar, Optional, Iterable, Dict
+from typing import Sequence, Type, Mapping, Any, TypeVar, Optional, Iterable, Dict, cast
 
 try:  # pragma: no cover - exercised indirectly in tests
     import oqs  # type: ignore
@@ -604,6 +604,24 @@ class CoseKey(dict):
         """
         raise NotImplementedError("Signature verification not supported.")
 
+    def _credential_public_key_params(self) -> Mapping[int, Any]:
+        """Return the parameters of the credential public key for verification."""
+
+        credential_key = self.get("credentialPublicKey")
+        if isinstance(credential_key, CoseKey):
+            return credential_key
+        if isinstance(credential_key, Mapping):
+            normalized: Dict[Any, Any] = {}
+            for label, value in credential_key.items():
+                if isinstance(label, str):
+                    try:
+                        label = int(label)
+                    except ValueError:
+                        pass
+                normalized[label] = value
+            return cast(Mapping[int, Any], normalized)
+        return self
+
     @classmethod
     def from_cryptography_key(
         cls: Type[T_CoseKey], public_key: types.PublicKeyTypes
@@ -682,10 +700,11 @@ class MLDSA87(CoseKey):
     _HASH_ALG = hashes.SHA256()
 
     def verify(self, message, signature):
-        if self[1] != 7:
+        params = self._credential_public_key_params()
+        if params[1] != 7:
             raise ValueError("Unsupported ML-DSA-87 Param")
         oqs_module = _require_oqs()
-        public_key = self.get(-1)
+        public_key = params.get(-1)
         if public_key is None:
             raise ValueError("Missing ML-DSA-87 public key")
         message_bytes = (
@@ -721,10 +740,11 @@ class MLDSA65(CoseKey):
     _HASH_ALG = hashes.SHA256()
 
     def verify(self, message, signature):
-        if self[1] != 7:
+        params = self._credential_public_key_params()
+        if params[1] != 7:
             raise ValueError("Unsupported ML-DSA-65 Param")
         oqs_module = _require_oqs()
-        public_key = self.get(-1)
+        public_key = params.get(-1)
         if public_key is None:
             raise ValueError("Missing ML-DSA-65 public key")
         message_bytes = (
@@ -759,10 +779,11 @@ class MLDSA44(CoseKey):
     _HASH_ALG = hashes.SHA256()
 
     def verify(self, message, signature):
-        if self[1] != 7:
+        params = self._credential_public_key_params()
+        if params[1] != 7:
             raise ValueError("Unsupported ML-DSA-44 Param")
         oqs_module = _require_oqs()
-        public_key = self.get(-1)
+        public_key = params.get(-1)
         if public_key is None:
             raise ValueError("Missing ML-DSA-44 public key")
         message_bytes = (
@@ -797,10 +818,11 @@ class ES256(CoseKey):
     _HASH_ALG = hashes.SHA256()
 
     def verify(self, message, signature):
-        if self[-1] != 1:
+        params = self._credential_public_key_params()
+        if params[-1] != 1:
             raise ValueError("Unsupported elliptic curve")
         ec.EllipticCurvePublicNumbers(
-            bytes2int(self[-2]), bytes2int(self[-3]), ec.SECP256R1()
+            bytes2int(params[-2]), bytes2int(params[-3]), ec.SECP256R1()
         ).public_key(default_backend()).verify(
             signature, message, ec.ECDSA(self._HASH_ALG)
         )
@@ -834,10 +856,11 @@ class ES384(CoseKey):
     _HASH_ALG = hashes.SHA384()
 
     def verify(self, message, signature):
-        if self[-1] != 2:
+        params = self._credential_public_key_params()
+        if params[-1] != 2:
             raise ValueError("Unsupported elliptic curve")
         ec.EllipticCurvePublicNumbers(
-            bytes2int(self[-2]), bytes2int(self[-3]), ec.SECP384R1()
+            bytes2int(params[-2]), bytes2int(params[-3]), ec.SECP384R1()
         ).public_key(default_backend()).verify(
             signature, message, ec.ECDSA(self._HASH_ALG)
         )
@@ -862,10 +885,11 @@ class ES512(CoseKey):
     _HASH_ALG = hashes.SHA512()
 
     def verify(self, message, signature):
-        if self[-1] != 3:
+        params = self._credential_public_key_params()
+        if params[-1] != 3:
             raise ValueError("Unsupported elliptic curve")
         ec.EllipticCurvePublicNumbers(
-            bytes2int(self[-2]), bytes2int(self[-3]), ec.SECP521R1()
+            bytes2int(params[-2]), bytes2int(params[-3]), ec.SECP521R1()
         ).public_key(default_backend()).verify(
             signature, message, ec.ECDSA(self._HASH_ALG)
         )
@@ -890,7 +914,8 @@ class RS256(CoseKey):
     _HASH_ALG = hashes.SHA256()
 
     def verify(self, message, signature):
-        rsa.RSAPublicNumbers(bytes2int(self[-2]), bytes2int(self[-1])).public_key(
+        params = self._credential_public_key_params()
+        rsa.RSAPublicNumbers(bytes2int(params[-2]), bytes2int(params[-1])).public_key(
             default_backend()
         ).verify(signature, message, padding.PKCS1v15(), self._HASH_ALG)
 
@@ -906,7 +931,8 @@ class RS384(CoseKey):
     _HASH_ALG = hashes.SHA384()
 
     def verify(self, message, signature):
-        rsa.RSAPublicNumbers(bytes2int(self[-2]), bytes2int(self[-1])).public_key(
+        params = self._credential_public_key_params()
+        rsa.RSAPublicNumbers(bytes2int(params[-2]), bytes2int(params[-1])).public_key(
             default_backend()
         ).verify(signature, message, padding.PKCS1v15(), self._HASH_ALG)
 
@@ -922,7 +948,8 @@ class RS512(CoseKey):
     _HASH_ALG = hashes.SHA512()
 
     def verify(self, message, signature):
-        rsa.RSAPublicNumbers(bytes2int(self[-2]), bytes2int(self[-1])).public_key(
+        params = self._credential_public_key_params()
+        rsa.RSAPublicNumbers(bytes2int(params[-2]), bytes2int(params[-1])).public_key(
             default_backend()
         ).verify(signature, message, padding.PKCS1v15(), self._HASH_ALG)
 
@@ -938,7 +965,8 @@ class PS256(CoseKey):
     _HASH_ALG = hashes.SHA256()
 
     def verify(self, message, signature):
-        rsa.RSAPublicNumbers(bytes2int(self[-2]), bytes2int(self[-1])).public_key(
+        params = self._credential_public_key_params()
+        rsa.RSAPublicNumbers(bytes2int(params[-2]), bytes2int(params[-1])).public_key(
             default_backend()
         ).verify(
             signature,
@@ -961,7 +989,8 @@ class PS384(CoseKey):
     _HASH_ALG = hashes.SHA384()
 
     def verify(self, message, signature):
-        rsa.RSAPublicNumbers(bytes2int(self[-2]), bytes2int(self[-1])).public_key(
+        params = self._credential_public_key_params()
+        rsa.RSAPublicNumbers(bytes2int(params[-2]), bytes2int(params[-1])).public_key(
             default_backend()
         ).verify(
             signature,
@@ -984,7 +1013,8 @@ class PS512(CoseKey):
     _HASH_ALG = hashes.SHA512()
 
     def verify(self, message, signature):
-        rsa.RSAPublicNumbers(bytes2int(self[-2]), bytes2int(self[-1])).public_key(
+        params = self._credential_public_key_params()
+        rsa.RSAPublicNumbers(bytes2int(params[-2]), bytes2int(params[-1])).public_key(
             default_backend()
         ).verify(
             signature,
@@ -1006,9 +1036,10 @@ class EdDSA(CoseKey):
     ALGORITHM = -8
 
     def verify(self, message, signature):
-        if self[-1] != 6:
+        params = self._credential_public_key_params()
+        if params[-1] != 6:
             raise ValueError("Unsupported elliptic curve")
-        ed25519.Ed25519PublicKey.from_public_bytes(self[-2]).verify(signature, message)
+        ed25519.Ed25519PublicKey.from_public_bytes(params[-2]).verify(signature, message)
 
     @classmethod
     def from_cryptography_key(cls, public_key):
@@ -1030,7 +1061,8 @@ class RS1(CoseKey):
     _HASH_ALG = hashes.SHA1()  # nosec
 
     def verify(self, message, signature):
-        rsa.RSAPublicNumbers(bytes2int(self[-2]), bytes2int(self[-1])).public_key(
+        params = self._credential_public_key_params()
+        rsa.RSAPublicNumbers(bytes2int(params[-2]), bytes2int(params[-1])).public_key(
             default_backend()
         ).verify(signature, message, padding.PKCS1v15(), self._HASH_ALG)
 
@@ -1046,10 +1078,11 @@ class ES256K(CoseKey):
     _HASH_ALG = hashes.SHA256()
 
     def verify(self, message, signature):
-        if self[-1] != 8:
+        params = self._credential_public_key_params()
+        if params[-1] != 8:
             raise ValueError("Unsupported elliptic curve")
         ec.EllipticCurvePublicNumbers(
-            bytes2int(self[-2]), bytes2int(self[-3]), ec.SECP256K1()
+            bytes2int(params[-2]), bytes2int(params[-3]), ec.SECP256K1()
         ).public_key(default_backend()).verify(
             signature, message, ec.ECDSA(self._HASH_ALG)
         )
