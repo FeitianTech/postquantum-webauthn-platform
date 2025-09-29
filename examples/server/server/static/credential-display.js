@@ -200,6 +200,109 @@ function cloneJson(value) {
     }
 }
 
+function extractCredentialAttestationContext(cred) {
+    const propertiesData = cred && typeof cred.properties === 'object' && cred.properties !== null
+        ? cred.properties
+        : {};
+
+    const attestationSummaryData = (() => {
+        if (cred && typeof cred.attestationSummary === 'object' && cred.attestationSummary !== null) {
+            return cred.attestationSummary;
+        }
+        if (typeof propertiesData.attestationSummary === 'object' && propertiesData.attestationSummary !== null) {
+            return propertiesData.attestationSummary;
+        }
+        return null;
+    })();
+
+    const attestationChecksData = (() => {
+        if (cred && typeof cred.attestationChecks === 'object' && cred.attestationChecks !== null) {
+            return cred.attestationChecks;
+        }
+        if (typeof propertiesData.attestationChecks === 'object' && propertiesData.attestationChecks !== null) {
+            return propertiesData.attestationChecks;
+        }
+        if (
+            attestationSummaryData
+            && typeof attestationSummaryData.metadata === 'object'
+            && attestationSummaryData.metadata !== null
+        ) {
+            return { metadata: attestationSummaryData.metadata };
+        }
+        return null;
+    })();
+
+    return {
+        propertiesData,
+        attestationSummaryData,
+        attestationChecksData,
+    };
+}
+
+function resolveCredentialAttestationValue(cred, summaryKey, propertyKey, context) {
+    const sources = context || extractCredentialAttestationContext(cred);
+    const { propertiesData, attestationSummaryData } = sources;
+
+    if (
+        attestationSummaryData
+        && attestationSummaryData !== null
+        && Object.prototype.hasOwnProperty.call(attestationSummaryData, summaryKey)
+    ) {
+        return attestationSummaryData[summaryKey];
+    }
+
+    if (
+        propertiesData
+        && propertiesData !== null
+        && Object.prototype.hasOwnProperty.call(propertiesData, propertyKey)
+    ) {
+        return propertiesData[propertyKey];
+    }
+
+    if (cred && cred !== null && Object.prototype.hasOwnProperty.call(cred, propertyKey)) {
+        return cred[propertyKey];
+    }
+
+    return null;
+}
+
+function normaliseAttestationResultValue(value) {
+    if (typeof value === 'boolean' || value === null || value === undefined) {
+        return value;
+    }
+    if (typeof value === 'number') {
+        if (Number.isNaN(value)) {
+            return null;
+        }
+        if (value === 1) {
+            return true;
+        }
+        if (value === 0) {
+            return false;
+        }
+    }
+    if (typeof value === 'string') {
+        const trimmed = value.trim();
+        if (!trimmed) {
+            return null;
+        }
+        const normalised = trimmed.toLowerCase();
+        if (['true', 'yes', 'valid', 'pass', 'passed', 'success', 'ok'].includes(normalised)) {
+            return true;
+        }
+        if (['false', 'no', 'invalid', 'fail', 'failed', 'error', 'ko'].includes(normalised)) {
+            return false;
+        }
+        if (normalised === '1') {
+            return true;
+        }
+        if (normalised === '0') {
+            return false;
+        }
+    }
+    return value;
+}
+
 const CERTIFICATE_COLLECTION_KEYS = [
     'attestationCertificate',
     'attestationCertificates',
@@ -1108,6 +1211,36 @@ function buildAttestationSection({
                 }
             }
 
+            if (attestationJson) {
+                const hexValue = typeof registrationDetailState.authenticatorDataHex === 'string'
+                    ? registrationDetailState.authenticatorDataHex.trim()
+                    : '';
+                if (hexValue) {
+                    try {
+                        const parsedForHex = JSON.parse(attestationJson);
+                        if (parsedForHex && typeof parsedForHex === 'object' && !Array.isArray(parsedForHex)) {
+                            const hasExistingHex = Object.prototype.hasOwnProperty.call(parsedForHex, 'authenticatorDataHex');
+                            if (hasExistingHex) {
+                                const lastKey = Object.keys(parsedForHex).pop();
+                                if (
+                                    parsedForHex.authenticatorDataHex !== hexValue
+                                    || lastKey !== 'authenticatorDataHex'
+                                ) {
+                                    delete parsedForHex.authenticatorDataHex;
+                                    parsedForHex.authenticatorDataHex = hexValue;
+                                    attestationJson = JSON.stringify(parsedForHex, null, 2);
+                                }
+                            } else {
+                                parsedForHex.authenticatorDataHex = hexValue;
+                                attestationJson = JSON.stringify(parsedForHex, null, 2);
+                            }
+                        }
+                    } catch (error) {
+                        // Ignore parse errors when attempting to append authenticatorDataHex.
+                    }
+                }
+            }
+
             const attestationBody = attestationJson
                 ? `<textarea class="certificate-textarea" readonly spellcheck="false" wrap="soft">${escapeHtml(attestationJson)}</textarea>`
                 : '<div style="font-style: italic; color: #6c757d;">Unable to prepare decoded attestationObject.</div>';
@@ -1796,10 +1929,41 @@ export function updateCredentialsDisplay() {
 
         const featureText = features.length > 0 ? features.join(' • ') : '';
 
+        const attestationContext = extractCredentialAttestationContext(cred);
+        const signatureRaw = resolveCredentialAttestationValue(
+            cred,
+            'signatureValid',
+            'attestationSignatureValid',
+            attestationContext,
+        );
+        const rootRaw = resolveCredentialAttestationValue(
+            cred,
+            'rootValid',
+            'attestationRootValid',
+            attestationContext,
+        );
+        const signatureStatus = normaliseAttestationResultValue(signatureRaw);
+        const rootStatus = normaliseAttestationResultValue(rootRaw);
+        const pickStatusColor = value => {
+            if (value === true) {
+                return '#198754';
+            }
+            if (value === false) {
+                return '#dc3545';
+            }
+            return '#6c757d';
+        };
+        const signatureColor = pickStatusColor(signatureStatus);
+        const rootColor = pickStatusColor(rootStatus);
+
         return `
         <div class="credential-item" role="button" tabindex="0" onclick="showCredentialDetails(${index})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showCredentialDetails(${index});}">
             <div style="flex: 1; min-width: 0;">
                 <div style="font-weight: 600; color: #0f2740; font-size: 0.95rem; margin-bottom: 0.25rem;">${cred.email || cred.username || 'Unknown User'}</div>
+                <div style="font-size: 0.75rem; font-weight: 600; margin-bottom: 0.25rem;">
+                    <span style="color: ${signatureColor};">Signature</span>
+                    <span style="margin-left: 0.75rem; color: ${rootColor};">Root</span>
+                </div>
                 ${featureText ? `<div style="font-size: 0.75rem; color: #5c6c7a;">${featureText}</div>` : ''}
             </div>
             <button class="btn btn-small btn-danger" onclick="event.stopPropagation();deleteCredential('${cred.email || cred.username}', ${index})">Delete</button>
@@ -2306,87 +2470,41 @@ export async function showCredentialDetails(index) {
     const discoverableValue = cred.residentKey ?? cred.discoverable ?? false;
     const largeBlobSupported = cred.largeBlob ?? cred.largeBlobSupported ?? false;
     const minPinLengthValue = extractMinPinLengthValue(cred);
-    const propertiesData = (cred.properties && typeof cred.properties === 'object' && cred.properties !== null)
-        ? cred.properties
-        : {};
-    const attestationSummaryData = (() => {
-        if (cred && typeof cred.attestationSummary === 'object' && cred.attestationSummary !== null) {
-            return cred.attestationSummary;
-        }
-        if (typeof propertiesData.attestationSummary === 'object' && propertiesData.attestationSummary !== null) {
-            return propertiesData.attestationSummary;
-        }
-        return null;
-    })();
-    const attestationChecksData = (() => {
-        if (cred && typeof cred.attestationChecks === 'object' && cred.attestationChecks !== null) {
-            return cred.attestationChecks;
-        }
-        if (typeof propertiesData.attestationChecks === 'object' && propertiesData.attestationChecks !== null) {
-            return propertiesData.attestationChecks;
-        }
-        if (
-            attestationSummaryData
-            && typeof attestationSummaryData.metadata === 'object'
-            && attestationSummaryData.metadata !== null
-        ) {
-            return { metadata: attestationSummaryData.metadata };
-        }
-        return null;
-    })();
-    const resolveAttestationValue = (summaryKey, propertyKey) => {
-        if (attestationSummaryData && Object.prototype.hasOwnProperty.call(attestationSummaryData, summaryKey)) {
-            return attestationSummaryData[summaryKey];
-        }
-        if (Object.prototype.hasOwnProperty.call(propertiesData, propertyKey)) {
-            return propertiesData[propertyKey];
-        }
-        if (Object.prototype.hasOwnProperty.call(cred, propertyKey)) {
-            return cred[propertyKey];
-        }
-        return null;
-    };
-    const normaliseAttestationResultValue = (value) => {
-        if (typeof value === 'boolean' || value === null || value === undefined) {
-            return value;
-        }
-        if (typeof value === 'number') {
-            if (Number.isNaN(value)) {
-                return null;
-            }
-            if (value === 1) {
-                return true;
-            }
-            if (value === 0) {
-                return false;
-            }
-        }
-        if (typeof value === 'string') {
-            const trimmed = value.trim();
-            if (!trimmed) {
-                return null;
-            }
-            const normalised = trimmed.toLowerCase();
-            if (['true', 'yes', 'valid', 'pass', 'passed', 'success', 'ok'].includes(normalised)) {
-                return true;
-            }
-            if (['false', 'no', 'invalid', 'fail', 'failed', 'error', 'ko'].includes(normalised)) {
-                return false;
-            }
-            if (normalised === '1') {
-                return true;
-            }
-            if (normalised === '0') {
-                return false;
-            }
-        }
-        return value;
-    };
+    const attestationContext = extractCredentialAttestationContext(cred);
+    const { propertiesData, attestationSummaryData, attestationChecksData } = attestationContext;
 
-    const attestationSignatureValue = normaliseAttestationResultValue(resolveAttestationValue('signatureValid', 'attestationSignatureValid'));
-    const attestationRootValue = normaliseAttestationResultValue(resolveAttestationValue('rootValid', 'attestationRootValid'));
-    const attestationRpIdHashValue = normaliseAttestationResultValue(resolveAttestationValue('rpIdHashValid', 'attestationRpIdHashValid'));
-    const attestationAaguidMatchValue = normaliseAttestationResultValue(resolveAttestationValue('aaguidMatch', 'attestationAaguidMatch'));
+    const attestationSignatureValue = normaliseAttestationResultValue(
+        resolveCredentialAttestationValue(
+            cred,
+            'signatureValid',
+            'attestationSignatureValid',
+            attestationContext,
+        ),
+    );
+    const attestationRootValue = normaliseAttestationResultValue(
+        resolveCredentialAttestationValue(
+            cred,
+            'rootValid',
+            'attestationRootValid',
+            attestationContext,
+        ),
+    );
+    const attestationRpIdHashValue = normaliseAttestationResultValue(
+        resolveCredentialAttestationValue(
+            cred,
+            'rpIdHashValid',
+            'attestationRpIdHashValid',
+            attestationContext,
+        ),
+    );
+    const attestationAaguidMatchValue = normaliseAttestationResultValue(
+        resolveCredentialAttestationValue(
+            cred,
+            'aaguidMatch',
+            'attestationAaguidMatch',
+            attestationContext,
+        ),
+    );
     const attestationRowsHtml = [
         renderAttestationResultRow('Signature Valid', attestationSignatureValue),
         renderAttestationResultRow('Root Valid', attestationRootValue),
@@ -2489,7 +2607,7 @@ export async function showCredentialDetails(index) {
 
     detailsHtml += `</div>`;
 
-    detailsHtml += `
+    const propertiesSectionHtml = `
     <div style="margin-bottom: 1.5rem;">
         <h4 style="color: #0072CE; margin-bottom: 0.5rem;">Properties</h4>
         <div style="font-size: 0.9rem; line-height: 1.4;">
@@ -2580,7 +2698,9 @@ export async function showCredentialDetails(index) {
         </div>`;
     }
 
-    modalBody.innerHTML = detailsHtml;
+    const finalDetailsHtml = [propertiesSectionHtml, detailsHtml].filter(Boolean).join('');
+
+    modalBody.innerHTML = finalDetailsHtml;
     bindRegistrationDetailButtons(modalBody);
 
     const statusEl = modalBody.querySelector('.credential-aaguid-status');
