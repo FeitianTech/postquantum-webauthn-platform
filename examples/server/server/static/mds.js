@@ -1,6 +1,7 @@
 import {
     MDS_HTML_PATH,
     MDS_JWS_PATH,
+    FEITIAN_PQC_METADATA_PATH,
     COLUMN_COUNT,
     MISSING_METADATA_MESSAGE,
     UPDATE_BUTTON_STATES,
@@ -95,6 +96,152 @@ const SORT_ACCESSORS = {
 const DEFAULT_MIN_COLUMN_WIDTH = 64;
 const FLOATING_SCROLL_BOTTOM_MARGIN = 24;
 const FLOATING_SCROLL_SIDE_MARGIN = 16;
+
+let feitianEntryCache = null;
+let feitianEntryPromise = null;
+
+function cloneJsonValue(value) {
+    if (value === undefined) {
+        return undefined;
+    }
+    if (value === null || typeof value !== 'object') {
+        return value;
+    }
+    try {
+        return JSON.parse(JSON.stringify(value));
+    } catch (error) {
+        console.warn('Failed to clone metadata value.', error);
+        return value;
+    }
+}
+
+function cloneMetadataEntry(entry) {
+    if (!entry || typeof entry !== 'object') {
+        return null;
+    }
+    try {
+        return JSON.parse(JSON.stringify(entry));
+    } catch (error) {
+        console.warn('Failed to clone metadata entry.', error);
+        return entry;
+    }
+}
+
+function buildFeitianMetadataEntry(raw) {
+    if (!raw || typeof raw !== 'object') {
+        return null;
+    }
+
+    const metadataStatement = {};
+    Object.keys(raw).forEach(key => {
+        if (
+            key === 'statusReports' ||
+            key === 'timeOfLastStatusChange' ||
+            key === 'attestationCertificateKeyIdentifiers'
+        ) {
+            return;
+        }
+        const value = cloneJsonValue(raw[key]);
+        if (value !== undefined) {
+            metadataStatement[key] = value;
+        }
+    });
+
+    if (!metadataStatement.aaguid && typeof raw.aaguid === 'string') {
+        metadataStatement.aaguid = raw.aaguid;
+    }
+
+    const entry = {
+        statusReports: Array.isArray(raw.statusReports)
+            ? raw.statusReports.map(report => cloneJsonValue(report)).filter(Boolean)
+            : [],
+        timeOfLastStatusChange:
+            typeof raw.timeOfLastStatusChange === 'string' && raw.timeOfLastStatusChange.trim()
+                ? raw.timeOfLastStatusChange.trim()
+                : new Date().toISOString().slice(0, 10),
+        metadataStatement,
+    };
+
+    if (typeof raw.aaguid === 'string' && raw.aaguid) {
+        entry.aaguid = raw.aaguid;
+    }
+    if (typeof raw.aaid === 'string' && raw.aaid) {
+        entry.aaid = raw.aaid;
+    }
+    if (Array.isArray(raw.attestationCertificateKeyIdentifiers)) {
+        entry.attestationCertificateKeyIdentifiers = raw.attestationCertificateKeyIdentifiers
+            .map(identifier => (typeof identifier === 'string' ? identifier : null))
+            .filter(Boolean);
+    }
+
+    return entry;
+}
+
+async function getFeitianMetadataEntry() {
+    if (feitianEntryCache) {
+        return cloneMetadataEntry(feitianEntryCache);
+    }
+    if (feitianEntryPromise) {
+        const pending = await feitianEntryPromise;
+        return pending ? cloneMetadataEntry(pending) : null;
+    }
+
+    feitianEntryPromise = (async () => {
+        try {
+            const response = await fetch(FEITIAN_PQC_METADATA_PATH, { cache: 'no-store' });
+            if (!response.ok) {
+                if (response.status !== 404) {
+                    console.warn(
+                        `Failed to load ${FEITIAN_PQC_METADATA_PATH}: ${response.status}`,
+                    );
+                }
+                return null;
+            }
+            const raw = await response.json();
+            const entry = buildFeitianMetadataEntry(raw);
+            if (!entry) {
+                return null;
+            }
+            feitianEntryCache = entry;
+            return entry;
+        } catch (error) {
+            console.warn('Failed to load Feitian PQC metadata.', error);
+            return null;
+        } finally {
+            feitianEntryPromise = null;
+        }
+    })();
+
+    const loaded = await feitianEntryPromise;
+    return loaded ? cloneMetadataEntry(loaded) : null;
+}
+
+async function ensureFeitianMetadata(metadata) {
+    const entry = await getFeitianMetadataEntry();
+    const base = metadata && typeof metadata === 'object' ? metadata : {};
+    const result = { ...base };
+    const existingEntries = Array.isArray(base.entries) ? base.entries.slice() : [];
+
+    if (!entry) {
+        result.entries = existingEntries;
+        return result;
+    }
+
+    const targetAaguid = normaliseAaguid(entry.aaguid || entry.metadataStatement?.aaguid);
+    const filteredEntries = existingEntries.filter(existing => {
+        const existingAaguid = normaliseAaguid(existing?.aaguid || existing?.metadataStatement?.aaguid);
+        return !targetAaguid || existingAaguid !== targetAaguid;
+    });
+
+    filteredEntries.unshift(cloneMetadataEntry(entry));
+    result.entries = filteredEntries;
+
+    if (!result.legalHeader && entry?.metadataStatement?.legalHeader) {
+        result.legalHeader = entry.metadataStatement.legalHeader;
+    }
+
+    return result;
+}
 
 if (typeof window !== 'undefined') {
     if (typeof window.__INITIAL_MDS_JWS__ === 'string' && window.__INITIAL_MDS_JWS__) {
@@ -1195,8 +1342,9 @@ async function applyInitialMetadataPayload(note) {
         const payload = decodeBase64Url(payloadSegment);
         const metadata = JSON.parse(payload);
 
-        await applyMetadataEntries(metadata, { note });
-        storeMetadataCache(payload, snapshotInfo);
+        const enhancedMetadata = await ensureFeitianMetadata(metadata);
+        await applyMetadataEntries(enhancedMetadata, { note });
+        storeMetadataCache(JSON.stringify(enhancedMetadata), snapshotInfo);
         return true;
     } catch (error) {
         console.error('Failed to apply initial metadata payload:', error);
@@ -1245,7 +1393,9 @@ async function loadMdsData(statusNote, options = {}) {
         const cached = readMetadataCache();
         if (cached?.metadata) {
             try {
-                await applyMetadataEntries(cached.metadata, { note });
+                const enhanced = await ensureFeitianMetadata(cached.metadata);
+                await applyMetadataEntries(enhanced, { note });
+                storeMetadataCache(JSON.stringify(enhanced), cached.info || null);
                 setColumnResizersEnabled(hasLoaded);
                 return;
             } catch (error) {
@@ -1266,6 +1416,22 @@ async function loadMdsData(statusNote, options = {}) {
             const response = await fetch(MDS_JWS_PATH, fetchOptions);
             if (!response.ok) {
                 if (response.status === 404) {
+                    const fallbackMetadata = await ensureFeitianMetadata(null);
+                    if (Array.isArray(fallbackMetadata.entries) && fallbackMetadata.entries.length) {
+                        const fallbackNoteParts = [note, 'Using bundled Feitian PQC metadata.'].filter(Boolean);
+                        await applyMetadataEntries(fallbackMetadata, {
+                            note: fallbackNoteParts.join(' '),
+                        });
+                        setUpdateButtonMode('download');
+                        setUpdateButtonAttention(false);
+                        storeMetadataCache(JSON.stringify(fallbackMetadata), {
+                            cachedAt: new Date().toISOString(),
+                            source: 'bundled-feitian',
+                        });
+                        stateUpdated = true;
+                        return;
+                    }
+
                     const message = MISSING_METADATA_MESSAGE;
                     setUpdateButtonMode('download');
                     setUpdateButtonAttention(false);
@@ -1312,12 +1478,13 @@ async function loadMdsData(statusNote, options = {}) {
             const payload = decodeBase64Url(payloadSegment);
             const metadata = JSON.parse(payload);
 
-            await applyMetadataEntries(metadata, { note });
+            const enhanced = await ensureFeitianMetadata(metadata);
+            await applyMetadataEntries(enhanced, { note });
             stateUpdated = true;
 
             const lastModified = response.headers?.get('Last-Modified') || null;
             const etag = response.headers?.get('ETag') || null;
-            storeMetadataCache(payload, {
+            storeMetadataCache(JSON.stringify(enhanced), {
                 lastModified,
                 etag,
                 cachedAt: new Date().toISOString(),
