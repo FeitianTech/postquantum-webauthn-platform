@@ -408,9 +408,70 @@ function removeKeysCaseInsensitive(target, keys) {
     });
 }
 
-function sanitizeRelyingPartyInfo(info) {
+function sanitizeRelyingPartyInfo(info, authenticatorSummary = null) {
+    const summary = authenticatorSummary && typeof authenticatorSummary === 'object'
+        ? authenticatorSummary
+        : {};
+
+    const summaryHash = typeof summary.authenticatorDataHash === 'string'
+        ? summary.authenticatorDataHash.trim()
+        : '';
+    const summaryHex = typeof summary.authenticatorDataHex === 'string'
+        ? summary.authenticatorDataHex.trim()
+        : '';
+
+    const authenticatorCandidates = [];
+    const recordCandidate = value => {
+        if (typeof value !== 'string') {
+            return;
+        }
+        const trimmed = value.trim();
+        if (trimmed) {
+            authenticatorCandidates.push(trimmed);
+        }
+    };
+
+    if (info && typeof info === 'object') {
+        recordCandidate(info.authenticatorData);
+        recordCandidate(info.authenticator_data);
+
+        const registrationData = info.registrationData || info.registration_data;
+        if (registrationData && typeof registrationData === 'object') {
+            recordCandidate(registrationData.authenticatorData);
+            recordCandidate(registrationData.authenticator_data);
+        }
+    }
+
+    let authenticatorHex = summaryHex;
+    if (!authenticatorHex) {
+        const hexCandidate = authenticatorCandidates.find(candidate => {
+            const compact = candidate.replace(/\s+/g, '');
+            return compact && compact.length % 2 === 0 && /^[0-9a-fA-F]+$/.test(compact);
+        });
+        if (hexCandidate) {
+            authenticatorHex = hexCandidate.replace(/\s+/g, '').toLowerCase();
+        }
+    }
+
+    let fallbackAuthenticatorValue = '';
+    if (!authenticatorHex && authenticatorCandidates.length) {
+        fallbackAuthenticatorValue = authenticatorCandidates[0];
+    }
+
     const cloned = cloneJson(info);
     if (!cloned || typeof cloned !== 'object') {
+        if (authenticatorHex || summaryHash || fallbackAuthenticatorValue) {
+            const minimal = {};
+            if (authenticatorHex) {
+                minimal.authenticatorDataHex = authenticatorHex;
+            } else if (fallbackAuthenticatorValue) {
+                minimal.authenticatorData = fallbackAuthenticatorValue;
+            }
+            if (summaryHash) {
+                minimal.authenticatorDataHash = summaryHash;
+            }
+            return Object.keys(minimal).length ? minimal : null;
+        }
         return null;
     }
 
@@ -450,6 +511,16 @@ function sanitizeRelyingPartyInfo(info) {
         if (cloned.errors && typeof cloned.errors === 'object' && Object.keys(cloned.errors).length === 0) {
             delete cloned.errors;
         }
+    }
+
+    if (authenticatorHex) {
+        cloned.authenticatorDataHex = authenticatorHex;
+    } else if (fallbackAuthenticatorValue) {
+        cloned.authenticatorData = fallbackAuthenticatorValue;
+    }
+
+    if (summaryHash) {
+        cloned.authenticatorDataHash = summaryHash;
     }
 
     return cloned;
@@ -529,20 +600,15 @@ function stripSignatureFormatting(target) {
 
 function sanitiseAttestationObjectForDisplay(
     attestationObject,
-    attestationFormatRaw = '',
-    authenticatorDataHash = '',
-    authenticatorDataHex = ''
+    attestationFormatRaw = ''
 ) {
     const cloned = cloneJson(attestationObject);
     if (!cloned || typeof cloned !== 'object') {
-        const minimal = {};
         const formatValue = typeof attestationFormatRaw === 'string' ? attestationFormatRaw.trim() : '';
-        const hashValue = typeof authenticatorDataHash === 'string' ? authenticatorDataHash.trim() : '';
-        const hexValue = typeof authenticatorDataHex === 'string' ? authenticatorDataHex.trim() : '';
-        if (formatValue) minimal.fmt = formatValue;
-        if (hashValue) minimal.authenticatorDataHash = hashValue;
-        if (hexValue) minimal.authenticatorDataHex = hexValue;
-        return Object.keys(minimal).length ? minimal : null;
+        if (!formatValue) {
+            return null;
+        }
+        return { fmt: formatValue };
     }
 
     const certificatesAll = Array.isArray(registrationDetailState.attestationCertificates)
@@ -651,16 +717,6 @@ function sanitiseAttestationObjectForDisplay(
     Object.keys(cloned).forEach(key => {
         ordered[key] = cloned[key];
     });
-
-    const hashValue = typeof authenticatorDataHash === 'string' ? authenticatorDataHash.trim() : '';
-    if (hashValue) {
-        ordered.authenticatorDataHash = hashValue;
-    }
-
-    const hexValue = typeof authenticatorDataHex === 'string' ? authenticatorDataHex.trim() : '';
-    if (hexValue) {
-        ordered.authenticatorDataHex = hexValue;
-    }
 
     return ordered;
 }
@@ -1190,12 +1246,6 @@ function buildAttestationSection({
             const attestationDisplay = sanitiseAttestationObjectForDisplay(
                 attestationObject,
                 attestationFormatRaw,
-                typeof registrationDetailState.authenticatorDataHash === 'string'
-                    ? registrationDetailState.authenticatorDataHash
-                    : '',
-                typeof registrationDetailState.authenticatorDataHex === 'string'
-                    ? registrationDetailState.authenticatorDataHex
-                    : ''
             ) || attestationObject;
             try {
                 attestationJson = JSON.stringify(attestationDisplay, null, 2);
@@ -1208,36 +1258,6 @@ function buildAttestationSection({
                     attestationJson = JSON.stringify(attestationObject, null, 2);
                 } catch (jsonError) {
                     attestationJson = '';
-                }
-            }
-
-            if (attestationJson) {
-                const hexValue = typeof registrationDetailState.authenticatorDataHex === 'string'
-                    ? registrationDetailState.authenticatorDataHex.trim()
-                    : '';
-                if (hexValue) {
-                    try {
-                        const parsedForHex = JSON.parse(attestationJson);
-                        if (parsedForHex && typeof parsedForHex === 'object' && !Array.isArray(parsedForHex)) {
-                            const hasExistingHex = Object.prototype.hasOwnProperty.call(parsedForHex, 'authenticatorDataHex');
-                            if (hasExistingHex) {
-                                const lastKey = Object.keys(parsedForHex).pop();
-                                if (
-                                    parsedForHex.authenticatorDataHex !== hexValue
-                                    || lastKey !== 'authenticatorDataHex'
-                                ) {
-                                    delete parsedForHex.authenticatorDataHex;
-                                    parsedForHex.authenticatorDataHex = hexValue;
-                                    attestationJson = JSON.stringify(parsedForHex, null, 2);
-                                }
-                            } else {
-                                parsedForHex.authenticatorDataHex = hexValue;
-                                attestationJson = JSON.stringify(parsedForHex, null, 2);
-                            }
-                        }
-                    } catch (error) {
-                        // Ignore parse errors when attempting to append authenticatorDataHex.
-                    }
                 }
             }
 
@@ -1369,12 +1389,6 @@ async function composeRegistrationDetailHtml({
         clientDataDisplay = JSON.stringify(fallbackParsedClientData, null, 2);
     }
 
-    const relyingPartyCopy = sanitizeRelyingPartyInfo(relyingPartyInfo);
-
-    const relyingPartyDisplay = relyingPartyCopy
-        ? JSON.stringify(relyingPartyCopy, null, 2)
-        : '';
-
     const credentialSection = credentialDisplay
         ? `<pre class="modal-pre">${escapeHtml(credentialDisplay)}</pre>`
         : '<div style="font-style: italic; color: #6c757d;">No credential response captured.</div>';
@@ -1382,30 +1396,6 @@ async function composeRegistrationDetailHtml({
     const clientDataSection = clientDataDisplay
         ? `<pre class="modal-pre">${escapeHtml(clientDataDisplay)}</pre>`
         : '<div style="font-style: italic; color: #6c757d;">No clientDataJSON available.</div>';
-
-    const relyingPartySection = relyingPartyDisplay
-        ? `<pre class="modal-pre">${escapeHtml(relyingPartyDisplay)}</pre>`
-        : '<div style="font-style: italic; color: #6c757d;">No relying party data returned.</div>';
-
-    let html = `
-        <section style="margin-bottom: 1.5rem;">
-            <h3 style="color: #0072CE; margin-bottom: 0.75rem;">Authenticator Response</h3>
-            <ol style="padding-left: 1.25rem; margin: 0;">
-                <li style="margin-bottom: 1rem;">
-                    <div style="font-weight: 600; margin-bottom: 0.5rem;">Result of navigator.credentials.create()</div>
-                    ${credentialSection}
-                </li>
-                <li>
-                    <div style="font-weight: 600; margin-bottom: 0.5rem;">Parsed clientDataJSON response</div>
-                    ${clientDataSection}
-                </li>
-            </ol>
-        </section>
-        <section style="margin-bottom: 1.5rem;">
-            <h3 style="color: #0072CE; margin-bottom: 0.75rem;">Relying Party extracted information</h3>
-            ${relyingPartySection}
-        </section>
-    `;
 
     const detailPreparation = await prepareRegistrationDetailState({
         attestationObjectValue,
@@ -1432,6 +1422,45 @@ async function composeRegistrationDetailHtml({
             registrationDetailState.authenticatorData.raw = authenticatorDataHex;
         }
     }
+
+    const authenticatorSummary = {
+        authenticatorDataHex: typeof registrationDetailState.authenticatorDataHex === 'string'
+            ? registrationDetailState.authenticatorDataHex
+            : '',
+        authenticatorDataHash: typeof registrationDetailState.authenticatorDataHash === 'string'
+            ? registrationDetailState.authenticatorDataHash
+            : '',
+    };
+
+    const relyingPartyCopy = sanitizeRelyingPartyInfo(relyingPartyInfo, authenticatorSummary);
+
+    const relyingPartyDisplay = relyingPartyCopy
+        ? JSON.stringify(relyingPartyCopy, null, 2)
+        : '';
+
+    const relyingPartySection = relyingPartyDisplay
+        ? `<pre class="modal-pre">${escapeHtml(relyingPartyDisplay)}</pre>`
+        : '<div style="font-style: italic; color: #6c757d;">No relying party data returned.</div>';
+
+    let html = `
+        <section style=\"margin-bottom: 1.5rem;\">
+            <h3 style=\"color: #0072CE; margin-bottom: 0.75rem;\">Authenticator Response</h3>
+            <ol style=\"padding-left: 1.25rem; margin: 0;\">
+                <li style=\"margin-bottom: 1rem;\">
+                    <div style=\"font-weight: 600; margin-bottom: 0.5rem;\">Result of navigator.credentials.create()</div>
+                    ${credentialSection}
+                </li>
+                <li>
+                    <div style=\"font-weight: 600; margin-bottom: 0.5rem;\">Parsed clientDataJSON response</div>
+                    ${clientDataSection}
+                </li>
+            </ol>
+        </section>
+        <section style=\"margin-bottom: 1.5rem;\">
+            <h3 style=\"color: #0072CE; margin-bottom: 0.75rem;\">Relying Party extracted information</h3>
+            ${relyingPartySection}
+        </section>
+    `;
 
     const attestationObject = registrationDetailState.attestationObject;
     const attestationFormatFromRp = typeof relyingPartyInfo?.attestationFmt === 'string'
