@@ -262,7 +262,15 @@ export async function advancedRegister() {
 
             printRegistrationDebug(credential, createOptions, data);
 
-            showStatus('advanced', `Advanced registration successful! Algorithm: ${data.algo || 'Unknown'}`, 'success');
+            const completionWarnings = Array.isArray(data?.warnings)
+                ? data.warnings.filter(msg => typeof msg === 'string' && msg.trim().length > 0)
+                : [];
+            const successMessage = `Advanced registration successful! Algorithm: ${data.algo || 'Unknown'}`;
+            if (completionWarnings.length > 0) {
+                showStatus('advanced', `${successMessage} ${completionWarnings.join(' ')}`, 'warning');
+            } else {
+                showStatus('advanced', successMessage, 'success');
+            }
 
             maybeRandomizeAdvancedRegistrationFields();
 

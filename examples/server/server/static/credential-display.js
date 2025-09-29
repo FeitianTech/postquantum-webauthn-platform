@@ -2502,6 +2502,33 @@ export async function showCredentialDetails(index) {
     const attestationContext = extractCredentialAttestationContext(cred);
     const { propertiesData, attestationSummaryData, attestationChecksData } = attestationContext;
 
+    const metadataAvailableCandidates = [
+        cred?.metadata?.available,
+        propertiesData?.metadata?.available,
+        attestationSummaryData?.metadata?.available,
+        attestationChecksData?.metadata?.available,
+    ];
+    const metadataAvailable = metadataAvailableCandidates.some(value => {
+        if (typeof value === 'boolean') {
+            return value;
+        }
+        if (typeof value === 'string') {
+            const normalized = value.trim().toLowerCase();
+            return ['true', '1', 'yes', 'available'].includes(normalized);
+        }
+        return false;
+    });
+    const metadataWarningMessage = pickFirstString(
+        attestationChecksData?.metadata?.verification_warning,
+        attestationChecksData?.metadata?.verificationWarning,
+        attestationSummaryData?.metadata?.verification_warning,
+        attestationSummaryData?.metadata?.verificationWarning,
+        propertiesData?.metadata?.verification_warning,
+        propertiesData?.metadata?.verificationWarning,
+        cred?.metadata?.verification_warning,
+        cred?.metadata?.verificationWarning,
+    );
+
     const attestationSignatureValue = normaliseAttestationResultValue(
         resolveCredentialAttestationValue(
             cred,
@@ -2604,7 +2631,7 @@ export async function showCredentialDetails(index) {
     }
 
     const hasAaguid = Boolean(normalizedAaguidHex);
-    const infoButton = rootVerified && aaguidGuid
+    const infoButton = (rootVerified || metadataAvailable) && aaguidGuid
         ? `<button type="button" class="credential-info-button credential-aaguid-button" data-aaguid="${escapeHtml(aaguidGuid.toLowerCase())}" aria-label="View authenticator metadata">Info</button>`
         : '';
 
@@ -2636,6 +2663,10 @@ export async function showCredentialDetails(index) {
 
     detailsHtml += `</div>`;
 
+    const metadataWarningHtml = metadataWarningMessage
+        ? `<div style="margin-top: 0.4rem; color: #c47f16; font-size: 0.85rem;">${escapeHtml(metadataWarningMessage)}</div>`
+        : '';
+
     const propertiesSectionHtml = `
     <div style="margin-bottom: 1.5rem;">
         <h4 style="color: #0072CE; margin-bottom: 0.5rem;">Properties</h4>
@@ -2645,6 +2676,7 @@ export async function showCredentialDetails(index) {
             ${minPinLengthValue !== null ? `<div><strong>Authenticator minPinLength:</strong> ${escapeHtml(String(minPinLengthValue))}</div>` : ''}
             <div style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(0, 114, 206, 0.15);">
                 ${attestationRowsHtml}
+                ${metadataWarningHtml}
             </div>
         </div>
     </div>`;

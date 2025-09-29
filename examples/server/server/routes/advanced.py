@@ -967,6 +967,8 @@ def advanced_register_complete():
 
     credentials = readkey(username)
 
+    warnings: List[str] = []
+
     auth_selection = public_key.get('authenticatorSelection', {})
     if isinstance(auth_selection, Mapping):
         auth_selection = dict(auth_selection)
@@ -1073,12 +1075,25 @@ def advanced_register_complete():
         attestation_rp_id_hash_valid = attestation_checks.get("rp_id_hash_valid")
         attestation_aaguid_match = attestation_checks.get("aaguid_match")
         attestation_checks_safe = make_json_safe(attestation_checks)
+        attestation_warnings = attestation_checks.get("warnings")
+        if isinstance(attestation_warnings, list):
+            for message in attestation_warnings:
+                if isinstance(message, str):
+                    stripped = message.strip()
+                    if stripped:
+                        warnings.append(stripped)
         attestation_summary = {
             "signatureValid": attestation_signature_valid,
             "rootValid": attestation_root_valid,
             "rpIdHashValid": attestation_rp_id_hash_valid,
             "aaguidMatch": attestation_aaguid_match,
         }
+        metadata_summary = attestation_checks_safe.get("metadata")
+        if isinstance(metadata_summary, Mapping):
+            attestation_summary["metadata"] = metadata_summary
+        warnings_summary = attestation_checks_safe.get("warnings")
+        if isinstance(warnings_summary, list) and warnings_summary:
+            attestation_summary["warnings"] = warnings_summary
 
         authenticator_extensions_summary: Dict[str, Any] = {}
         if hasattr(auth_data, 'extensions'):
@@ -1346,12 +1361,16 @@ def advanced_register_complete():
         credentials.append(credential_info)
         savekey(username, credentials)
 
-        return jsonify({
+        response_payload: Dict[str, Any] = {
             "status": "OK",
             "algo": algoname,
             **debug_info,
             "relyingParty": rp_info,
-        })
+        }
+        if warnings:
+            response_payload["warnings"] = warnings
+
+        return jsonify(response_payload)
     except Exception as exc:
         return jsonify({"error": str(exc)}), 400
 
