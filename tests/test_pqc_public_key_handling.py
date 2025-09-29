@@ -25,7 +25,7 @@ from types import SimpleNamespace  # noqa: E402
 
 from examples.server.server import storage  # noqa: E402
 from fido2.cose import CoseKey  # noqa: E402
-from fido2.webauthn import AttestedCredentialData  # noqa: E402
+from fido2.webauthn import AttestedCredentialData, AuthenticatorData  # noqa: E402
 
 
 def _encode_length(length: int) -> bytes:
@@ -630,6 +630,11 @@ def test_extract_credential_data_updates_mapping_credentials():
                 credential_key_map[-1]
             ),
         },
+        "auth_data": {
+            "credential_data": {
+                "public_key": {1: 2, 3: -48, -1: b"legacy"},
+            }
+        },
     }
 
     recovered = storage.extract_credential_data(stored_mapping)
@@ -637,3 +642,43 @@ def test_extract_credential_data_updates_mapping_credentials():
     assert isinstance(recovered, dict)
     assert recovered is stored_mapping["credential_data"]
     assert dict(recovered["public_key"])[-1] == credential_key_map[-1]
+    auth_data_mapping = stored_mapping["auth_data"]
+    assert dict(auth_data_mapping["credential_data"]["public_key"])[-1] == credential_key_map[-1]
+
+
+def test_extract_credential_data_refreshes_auth_data_object():
+    credential_key_map = {1: 2, 3: -48, -1: b"credential-public"}
+    certificate_key_map = {1: 2, 3: -48, -1: b"certificate-public"}
+
+    credential_key = CoseKey.parse(dict(credential_key_map))
+    certificate_key = CoseKey.parse(dict(certificate_key_map))
+
+    attested_with_certificate = AttestedCredentialData.create(
+        b"\x01" * 16,
+        b"\xAB\xCD",
+        certificate_key,
+    )
+
+    auth_data = AuthenticatorData.create(
+        b"\x00" * 32,
+        AuthenticatorData.FLAG.UP | AuthenticatorData.FLAG.AT,
+        42,
+        bytes(attested_with_certificate),
+        None,
+    )
+
+    stored_record = {
+        "credential_data": attested_with_certificate,
+        "auth_data": auth_data,
+        "publicKeyCose": storage.convert_bytes_for_json(dict(credential_key_map)),
+        "publicKeyBytes": storage.convert_bytes_for_json(credential_key_map[-1]),
+    }
+
+    recovered = storage.extract_credential_data(stored_record)
+
+    assert isinstance(recovered, AttestedCredentialData)
+    assert dict(recovered.public_key)[-1] == credential_key_map[-1]
+    assert isinstance(stored_record["auth_data"], AuthenticatorData)
+    refreshed = stored_record["auth_data"].credential_data
+    assert isinstance(refreshed, AttestedCredentialData)
+    assert dict(refreshed.public_key)[-1] == credential_key_map[-1]

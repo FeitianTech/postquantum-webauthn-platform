@@ -5,10 +5,15 @@ import base64
 import os
 import time
 import uuid
-from typing import Any, Dict, List, Mapping, MutableMapping
+from typing import Any, Dict, List, Mapping, MutableMapping, Optional
 
 from flask import abort, jsonify, request, session
-from fido2.webauthn import PublicKeyCredentialUserEntity
+from fido2.cose import CoseKey
+from fido2.webauthn import (
+    AttestedCredentialData,
+    AuthenticatorData,
+    PublicKeyCredentialUserEntity,
+)
 
 from ..attachments import normalize_attachment
 from ..attestation import (
@@ -19,7 +24,15 @@ from ..attestation import (
     make_json_safe,
 )
 from ..config import app, basepath, create_fido_server, determine_rp_id
-from ..storage import add_public_key_material, convert_bytes_for_json, delkey, extract_credential_data, readkey, savekey
+from ..storage import (
+    add_public_key_material,
+    coerce_cose_public_key_dict,
+    convert_bytes_for_json,
+    delkey,
+    extract_credential_data,
+    readkey,
+    savekey,
+)
 
 
 @app.route("/api/register/begin", methods=["POST"])
@@ -83,6 +96,70 @@ def register_complete():
     server = create_fido_server(rp_id=rp_id)
 
     auth_data = server.register_complete(session["state"], response)
+    credential_data_obj = getattr(auth_data, "credential_data", None)
+    credential_public_key_value: Any = None
+    credential_public_key_cose: Optional[Dict[Any, Any]] = None
+
+    if credential_data_obj is not None:
+        credential_public_key_value = getattr(credential_data_obj, "public_key", None)
+        credential_public_key_cose = coerce_cose_public_key_dict(
+            credential_public_key_value
+        )
+
+    credential_public_key_cose_normalised: Optional[Dict[Any, Any]] = None
+    if credential_public_key_cose is not None:
+        credential_public_key_cose_normalised = dict(credential_public_key_cose)
+
+    if (
+        isinstance(credential_data_obj, AttestedCredentialData)
+        and credential_public_key_cose_normalised is not None
+    ):
+        try:
+            parsed_public_key = CoseKey.parse(credential_public_key_cose_normalised)
+        except Exception:
+            parsed_public_key = None
+        if parsed_public_key is not None:
+            current_key_map: Dict[Any, Any]
+            try:
+                current_key_map = dict(credential_data_obj.public_key)
+            except Exception:
+                current_key_map = {}
+            if current_key_map != dict(parsed_public_key):
+                try:
+                    credential_data_obj = AttestedCredentialData.create(
+                        bytes(credential_data_obj.aaguid),
+                        bytes(credential_data_obj.credential_id),
+                        parsed_public_key,
+                    )
+                except Exception:
+                    pass
+                else:
+                    try:
+                        auth_data = AuthenticatorData.create(
+                            bytes(auth_data.rp_id_hash),
+                            auth_data.flags,
+                            auth_data.counter,
+                            bytes(credential_data_obj),
+                            getattr(auth_data, "extensions", None),
+                        )
+                    except Exception:
+                        pass
+                    credential_public_key_value = parsed_public_key
+                    credential_public_key_cose_normalised = dict(parsed_public_key)
+
+    if credential_public_key_cose_normalised is None and isinstance(
+        credential_public_key_value, Mapping
+    ):
+        credential_public_key_cose_normalised = dict(credential_public_key_value)
+
+    if credential_public_key_cose is None:
+        credential_public_key_cose = (
+            credential_public_key_cose_normalised
+            if credential_public_key_cose_normalised is not None
+            else None
+        )
+    else:
+        credential_public_key_cose = credential_public_key_cose_normalised
 
     authenticator_attachment_response = normalize_attachment(
         response.get('authenticatorAttachment') if isinstance(response, Mapping) else None
@@ -136,13 +213,20 @@ def register_complete():
 
     add_public_key_material(
         credential_info,
-        getattr(auth_data.credential_data, 'public_key', {})
+        credential_public_key_value,
     )
     add_public_key_material(
         credential_info['properties'],
-        getattr(auth_data.credential_data, 'public_key', {}),
+        credential_public_key_value,
         field_prefix='credential',
     )
+    if (
+        credential_public_key_cose is not None
+        and isinstance(credential_info.get('properties'), MutableMapping)
+    ):
+        credential_info['properties']['credentialPublicKey'] = convert_bytes_for_json(
+            credential_public_key_cose
+        )
 
     if parsed_attestation_object:
         credential_info['attestation_object_decoded'] = make_json_safe(parsed_attestation_object)
@@ -176,6 +260,12 @@ def register_complete():
         credential_info['authenticator_data_hex'] = auth_data_bytes.hex()
     except Exception:
         pass
+
+    for stored in credentials:
+        try:
+            extract_credential_data(stored)
+        except Exception:
+            continue
 
     credentials.append(credential_info)
     savekey(uname, credentials)

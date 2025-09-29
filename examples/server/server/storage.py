@@ -6,11 +6,11 @@ import binascii
 import os
 import pickle
 from collections import deque
-from collections.abc import Mapping
+from collections.abc import Mapping, MutableMapping
 from typing import Any, Dict, Iterable, List, Mapping as MappingType, Optional
 
 from fido2.cose import CoseKey
-from fido2.webauthn import AttestedCredentialData
+from fido2.webauthn import AttestedCredentialData, AuthenticatorData
 
 from .attestation import colon_hex, format_hex_bytes_lines
 
@@ -124,6 +124,41 @@ def add_public_key_material(
         target[alg_field] = cose_map.get(3)
 
 
+def _refresh_authenticator_container(
+    container: MutableMapping[str, Any],
+    credential_data: AttestedCredentialData,
+) -> None:
+    """Ensure any stored authenticator data mirrors *credential_data*."""
+
+    auth_data_value = container.get("auth_data")
+
+    if isinstance(auth_data_value, AuthenticatorData):
+        try:
+            refreshed = AuthenticatorData.create(
+                bytes(auth_data_value.rp_id_hash),
+                auth_data_value.flags,
+                auth_data_value.counter,
+                bytes(credential_data),
+                getattr(auth_data_value, "extensions", None),
+            )
+        except Exception:
+            return
+        container["auth_data"] = refreshed
+        return
+
+    if isinstance(auth_data_value, MutableMapping):
+        nested = auth_data_value.get("credential_data")
+        if isinstance(nested, MutableMapping):
+            nested = dict(nested)
+            nested["public_key"] = dict(credential_data.public_key)
+            auth_data_value["credential_data"] = nested
+        nested_alt = auth_data_value.get("credentialData")
+        if isinstance(nested_alt, MutableMapping):
+            nested_alt = dict(nested_alt)
+            nested_alt["public_key"] = dict(credential_data.public_key)
+            auth_data_value["credentialData"] = nested_alt
+
+
 def extract_credential_data(cred: Any) -> Any:
     """Extract AttestedCredentialData from either old or new storage format."""
 
@@ -165,12 +200,38 @@ def extract_credential_data(cred: Any) -> Any:
         credential_data = cred.get("credential_data")
         if credential_data is not None:
             updated = _coerce_attested_with_key(credential_data, cred)
-            if updated is not credential_data:
-                cred["credential_data"] = updated
+            if isinstance(updated, AttestedCredentialData):
+                if updated is not credential_data:
+                    cred["credential_data"] = updated
+                if isinstance(cred, MutableMapping):
+                    _refresh_authenticator_container(cred, updated)
+            elif isinstance(updated, Mapping) and isinstance(cred, MutableMapping):
+                new_mapping = updated if isinstance(updated, dict) else dict(updated)
+                cred["credential_data"] = new_mapping
+                auth_container = cred.get("auth_data")
+                if isinstance(auth_container, MutableMapping):
+                    nested = auth_container.get("credential_data")
+                    if isinstance(nested, MutableMapping):
+                        nested = dict(nested)
+                        nested["public_key"] = dict(new_mapping.get("public_key", {}))
+                        auth_container["credential_data"] = nested
+                    alt_nested = auth_container.get("credentialData")
+                    if isinstance(alt_nested, MutableMapping):
+                        alt_nested = dict(alt_nested)
+                        alt_nested["public_key"] = dict(new_mapping.get("public_key", {}))
+                        auth_container["credentialData"] = alt_nested
             return updated
 
         if "public_key" in cred:
-            return _coerce_attested_with_key(cred, cred)
+            updated_mapping = _coerce_attested_with_key(cred, cred)
+            if isinstance(updated_mapping, Mapping):
+                if isinstance(cred, MutableMapping):
+                    nested = cred.get("auth_data")
+                    if isinstance(nested, MutableMapping):
+                        nested = dict(nested)
+                        nested["credential_data"] = dict(updated_mapping)
+                        cred["auth_data"] = nested
+            return updated_mapping
 
     return cred
 

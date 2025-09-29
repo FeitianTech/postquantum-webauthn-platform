@@ -14,6 +14,7 @@ from typing import Any, Dict, Iterable, List, Mapping, MutableMapping, Optional
 from flask import jsonify, request, session
 from fido2.webauthn import (
     AttestationConveyancePreference,
+    AuthenticatorData,
     AuthenticatorAttachment,
     PublicKeyCredentialDescriptor,
     PublicKeyCredentialParameters,
@@ -935,14 +936,71 @@ def advanced_register_complete():
 
         auth_data = register_server.register_complete(state, response)
         credential_data_obj = getattr(auth_data, "credential_data", None)
-        credential_public_key_value = (
-            getattr(credential_data_obj, "public_key", None)
-            if credential_data_obj is not None
-            else None
-        )
-        credential_public_key_cose = coerce_cose_public_key_dict(
-            credential_public_key_value
-        )
+        credential_public_key_value: Any = None
+        credential_public_key_cose: Optional[Dict[Any, Any]] = None
+
+        if credential_data_obj is not None:
+            credential_public_key_value = getattr(credential_data_obj, "public_key", None)
+            credential_public_key_cose = coerce_cose_public_key_dict(
+                credential_public_key_value
+            )
+
+        credential_public_key_cose_normalised: Optional[Dict[Any, Any]] = None
+        if credential_public_key_cose is not None:
+            credential_public_key_cose_normalised = dict(credential_public_key_cose)
+
+        if (
+            isinstance(credential_data_obj, AttestedCredentialData)
+            and credential_public_key_cose_normalised is not None
+        ):
+            try:
+                parsed_public_key = CoseKey.parse(
+                    credential_public_key_cose_normalised
+                )
+            except Exception:
+                parsed_public_key = None
+            if parsed_public_key is not None:
+                current_key_map: Dict[Any, Any]
+                try:
+                    current_key_map = dict(credential_data_obj.public_key)
+                except Exception:
+                    current_key_map = {}
+                if current_key_map != dict(parsed_public_key):
+                    try:
+                        credential_data_obj = AttestedCredentialData.create(
+                            bytes(credential_data_obj.aaguid),
+                            bytes(credential_data_obj.credential_id),
+                            parsed_public_key,
+                        )
+                    except Exception:
+                        pass
+                    else:
+                        try:
+                            auth_data = AuthenticatorData.create(
+                                bytes(auth_data.rp_id_hash),
+                                auth_data.flags,
+                                auth_data.counter,
+                                bytes(credential_data_obj),
+                                getattr(auth_data, "extensions", None),
+                            )
+                        except Exception:
+                            pass
+                        credential_public_key_value = parsed_public_key
+                        credential_public_key_cose_normalised = dict(parsed_public_key)
+
+        if credential_public_key_cose_normalised is None and isinstance(
+            credential_public_key_value, Mapping
+        ):
+            credential_public_key_cose_normalised = dict(credential_public_key_value)
+
+        if credential_public_key_cose is None:
+            credential_public_key_cose = (
+                credential_public_key_cose_normalised
+                if credential_public_key_cose_normalised is not None
+                else None
+            )
+        else:
+            credential_public_key_cose = credential_public_key_cose_normalised
 
         _log_authenticator_attestation_response(
             attestation_format,
@@ -1256,6 +1314,12 @@ def advanced_register_complete():
         )
 
         credential_info['relying_party'] = make_json_safe(rp_info)
+
+        for stored in credentials:
+            try:
+                extract_credential_data(stored)
+            except Exception:
+                continue
 
         credentials.append(credential_info)
         savekey(username, credentials)
