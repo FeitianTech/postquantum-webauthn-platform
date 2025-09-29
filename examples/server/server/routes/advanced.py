@@ -1305,12 +1305,17 @@ def advanced_authenticate_begin():
         if isinstance(record.get("id"), (bytes, bytearray, memoryview))
     }
 
-    allow_credentials = public_key.get("allowCredentials", [])
-    selected_credentials: Optional[List[PublicKeyCredentialDescriptor]] = None
+    allow_credentials_present = "allowCredentials" in public_key
+    raw_allow_credentials = public_key.get("allowCredentials") if allow_credentials_present else None
+    allow_credentials: List[Any] = (
+        list(raw_allow_credentials)
+        if isinstance(raw_allow_credentials, list)
+        else []
+    )
+    resident_key_only = not allow_credentials_present
     credentials_for_begin: List[Any] = []
 
-    if allow_credentials and len(allow_credentials) > 0:
-        selected_credentials = []
+    if allow_credentials:
         seen_ids: set[bytes] = set()
         for allow_cred in allow_credentials:
             if not isinstance(allow_cred, dict) or allow_cred.get("type") != "public-key":
@@ -1338,16 +1343,9 @@ def advanced_authenticate_begin():
             if allowed_attachment_values and attachment_value not in allowed_attachment_values:
                 continue
 
-            descriptor = PublicKeyCredentialDescriptor(
-                type=PublicKeyCredentialType.PUBLIC_KEY,
-                id=cred_id_bytes,
-            )
-            selected_credentials.append(descriptor)
             credentials_for_begin.append(record["data"])
             seen_ids.add(cred_id_bytes)
-
-        if not selected_credentials:
-            selected_credentials = []
+        if not credentials_for_begin:
             seen_ids.clear()
             for record in stored_records:
                 cred_id = record.get("id")
@@ -1359,21 +1357,31 @@ def advanced_authenticate_begin():
                 attachment_value = record.get("attachment")
                 if allowed_attachment_values and attachment_value not in allowed_attachment_values:
                     continue
-                selected_credentials.append(
-                    PublicKeyCredentialDescriptor(
-                        type=PublicKeyCredentialType.PUBLIC_KEY,
-                        id=cred_id_bytes,
-                    )
-                )
                 credentials_for_begin.append(record["data"])
                 seen_ids.add(cred_id_bytes)
 
-        if not selected_credentials:
+        if not credentials_for_begin:
             if allowed_attachment_values:
                 return jsonify({
                     "error": "No credentials matched the selected hints. Please adjust your hints or select different credentials."
                 }), 404
-            return jsonify({"error": "No matching credentials found. Please register first."}), 404
+            if not stored_records:
+                return jsonify({"error": "No matching credentials found. Please register first."}), 404
+    elif allow_credentials_present:
+        seen_ids: set[bytes] = set()
+        for record in stored_records:
+            cred_id = record.get("id")
+            if not isinstance(cred_id, (bytes, bytearray, memoryview)):
+                continue
+            cred_id_bytes = bytes(cred_id)
+            if cred_id_bytes in seen_ids:
+                continue
+            attachment_value = record.get("attachment")
+            if allowed_attachment_values and attachment_value not in allowed_attachment_values:
+                continue
+            credentials_for_begin.append(record["data"])
+            seen_ids.add(cred_id_bytes)
+
     else:
         seen_ids: set[bytes] = set()
         for record in stored_records:
@@ -1389,12 +1397,23 @@ def advanced_authenticate_begin():
             credentials_for_begin.append(record["data"])
             seen_ids.add(cred_id_bytes)
 
-    if not credentials_for_begin:
+    if not credentials_for_begin and not resident_key_only:
         if allowed_attachment_values:
             return jsonify({
                 "error": "No credentials matched the selected hints. Please adjust your hints or select different credentials."
             }), 404
         if not stored_records:
+            return jsonify({"error": "No matching credentials found. Please register first."}), 404
+
+    if resident_key_only:
+        if not credentials_for_begin:
+            if allowed_attachment_values:
+                return jsonify({
+                    "error": "No credentials matched the selected hints. Please adjust your hints or select different credentials."
+                }), 404
+            if not stored_records:
+                return jsonify({"error": "No matching credentials found. Please register first."}), 404
+        elif not stored_records:
             return jsonify({"error": "No matching credentials found. Please register first."}), 404
 
     algorithm_source: Iterable[Any]
@@ -1449,8 +1468,11 @@ def advanced_authenticate_begin():
         else:
             processed_extensions[ext_name] = ext_value
 
+    credentials_argument: Optional[List[Any]]
+    credentials_argument = credentials_for_begin if credentials_for_begin else None
+
     options, state = temp_server.authenticate_begin(
-        credentials_for_begin,
+        credentials_argument,
         user_verification=uv_req,
         challenge=challenge_bytes,
         extensions=processed_extensions if processed_extensions else None,
@@ -1460,7 +1482,14 @@ def advanced_authenticate_begin():
     session["advanced_auth_rp"] = {"id": resolved_rp_id, "name": stored_rp_name}
     session["advanced_original_auth_request"] = data
 
-    return jsonify(make_json_safe(dict(options)))
+    options_payload = dict(options)
+    public_key_dict = options_payload.get("publicKey")
+    if isinstance(public_key_dict, Mapping):
+        allow_list = public_key_dict.get("allowCredentials")
+        if resident_key_only or allow_list is None:
+            public_key_dict.pop("allowCredentials", None)
+
+    return jsonify(make_json_safe(options_payload))
 
 
 @app.route("/api/advanced/authenticate/complete", methods=["POST"])

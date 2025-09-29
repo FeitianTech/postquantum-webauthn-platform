@@ -740,6 +740,50 @@ export function updateAuthenticationFormFromJson(publicKey) {
         document.getElementById('timeout-auth').value = publicKey.timeout.toString();
     }
 
+    const allowCredentialsSelect = document.getElementById('allow-credentials');
+    if (allowCredentialsSelect) {
+        let desiredValue = 'all';
+
+        if (!Object.prototype.hasOwnProperty.call(publicKey, 'allowCredentials')) {
+            desiredValue = 'empty';
+        } else if (Array.isArray(publicKey.allowCredentials)) {
+            if (publicKey.allowCredentials.length === 0) {
+                desiredValue = 'empty';
+            } else if (publicKey.allowCredentials.length === 1) {
+                const descriptor = publicKey.allowCredentials[0];
+                if (descriptor && typeof descriptor === 'object') {
+                    const extractedHex = extractHexFromJsonFormat(descriptor.id);
+                    if (extractedHex) {
+                        const hasOption = Array.from(allowCredentialsSelect.options)
+                            .some(option => option.value === extractedHex);
+                        if (hasOption) {
+                            desiredValue = extractedHex;
+                        }
+                    }
+                }
+            }
+        }
+
+        if (desiredValue !== 'all' && desiredValue !== 'empty') {
+            const available = Array.from(allowCredentialsSelect.options)
+                .some(option => option.value === desiredValue);
+            if (!available) {
+                desiredValue = 'all';
+            }
+        }
+
+        if (allowCredentialsSelect.value !== desiredValue) {
+            allowCredentialsSelect.value = desiredValue;
+            try {
+                allowCredentialsSelect.dispatchEvent(new Event('change', { bubbles: true }));
+            } catch (error) {
+                const changeEvent = document.createEvent('Event');
+                changeEvent.initEvent('change', true, true);
+                allowCredentialsSelect.dispatchEvent(changeEvent);
+            }
+        }
+    }
+
     if (Object.prototype.hasOwnProperty.call(publicKey, 'userVerification')) {
         document.getElementById('user-verification-auth').value = publicKey.userVerification || 'preferred';
     }

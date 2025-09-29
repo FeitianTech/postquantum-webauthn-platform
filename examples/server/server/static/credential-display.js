@@ -2,14 +2,18 @@ import { state } from './state.js';
 import {
     base64ToBase64Url,
     base64ToHex,
+    base64ToUint8Array,
     base64UrlToHex,
     base64UrlToJson,
+    base64UrlToUint8Array,
     base64UrlToUtf8String,
+    bytesToHex,
     convertFormat,
     currentFormatToJsonFormat,
     hexToBase64,
     hexToBase64Url,
-    hexToGuid
+    hexToGuid,
+    hexToUint8Array
 } from './binary-utils.js';
 import {
     describeCoseAlgorithm,
@@ -30,7 +34,6 @@ import {
     getStoredCredentialAttachment,
     normaliseAaguidValue
 } from './credential-utils.js';
-import { convertExtensionsForClient, normalizeClientExtensionResults } from './binary-utils.js';
 import { openModal, closeModal, updateGlobalScrollLock, resetModalScroll } from './ui.js';
 import { showStatus, hideStatus, showProgress, hideProgress } from './status.js';
 import { updateJsonEditor } from './json-editor.js';
@@ -223,6 +226,32 @@ function stripCertificateCollections(target) {
     });
 }
 
+const RP_INFO_EXCLUDED_KEYS = [
+    'attestationFmt',
+    'attestationObject',
+    'credentialIdBase64',
+    'credentialIdBase64Url',
+    'device',
+    'registrationData',
+    'registration_data',
+    'root_valid',
+    'rp_id_hash_valid',
+    'signature_valid',
+    'attestationSummary',
+    'attestation_summary',
+    'authenticatorData',
+    'authenticator_data',
+    'clientExtensionResults',
+    'client_extension_results',
+    'flags',
+    'signatureCounter',
+    'signature_counter',
+    'residentKey',
+    'resident_key',
+    'userHandle',
+    'user_handle',
+];
+
 function removeKeysFromObject(target, keys) {
     if (!target || typeof target !== 'object' || !Array.isArray(keys) || !keys.length) {
         return;
@@ -246,6 +275,81 @@ function removeKeysFromObject(target, keys) {
     });
 
     Object.values(target).forEach(process);
+}
+
+function removeKeysCaseInsensitive(target, keys) {
+    if (!target || typeof target !== 'object' || !Array.isArray(keys) || !keys.length) {
+        return;
+    }
+
+    const lowerKeys = keys.map(key => String(key).toLowerCase());
+
+    const handleValue = value => {
+        if (value && typeof value === 'object') {
+            removeKeysCaseInsensitive(value, keys);
+        }
+    };
+
+    if (Array.isArray(target)) {
+        target.forEach(handleValue);
+        return;
+    }
+
+    Object.keys(target).forEach(key => {
+        const value = target[key];
+        if (lowerKeys.includes(String(key).toLowerCase())) {
+            delete target[key];
+            return;
+        }
+        handleValue(value);
+    });
+}
+
+function sanitizeRelyingPartyInfo(info) {
+    const cloned = cloneJson(info);
+    if (!cloned || typeof cloned !== 'object') {
+        return null;
+    }
+
+    stripCertificateCollections(cloned);
+    removeKeysCaseInsensitive(cloned, RP_INFO_EXCLUDED_KEYS);
+
+    if (Array.isArray(cloned.errors)) {
+        cloned.errors = cloned.errors.filter(item => {
+            if (typeof item === 'string') {
+                return !item.toLowerCase().includes('aaguid');
+            }
+            return true;
+        });
+        if (cloned.errors.length === 0) {
+            delete cloned.errors;
+        }
+    } else if (cloned.errors && typeof cloned.errors === 'object') {
+        Object.keys(cloned.errors).forEach(key => {
+            const value = cloned.errors[key];
+            if (typeof value === 'string') {
+                if (value.toLowerCase().includes('aaguid')) {
+                    delete cloned.errors[key];
+                }
+                return;
+            }
+            if (Array.isArray(value)) {
+                const filtered = value.filter(item => {
+                    return !(typeof item === 'string' && item.toLowerCase().includes('aaguid'));
+                });
+                if (filtered.length) {
+                    cloned.errors[key] = filtered;
+                } else {
+                    delete cloned.errors[key];
+                }
+            }
+        });
+        if (cloned.errors && typeof cloned.errors === 'object' && Object.keys(cloned.errors).length === 0) {
+            delete cloned.errors;
+        }
+    }
+
+    return cloned;
 }
 
 function sanitizeParsedCertificateDetails(parsed) {
@@ -290,10 +394,45 @@ function sanitizeParsedCertificateDetails(parsed) {
     return parsedCopy;
 }
 
-function sanitiseAttestationObjectForDisplay(attestationObject) {
+function stripSignatureFormatting(target) {
+    if (!target || typeof target !== 'object') {
+        return;
+    }
+
+    const process = value => {
+        if (value && typeof value === 'object') {
+            stripSignatureFormatting(value);
+        }
+    };
+
+    if (Array.isArray(target)) {
+        target.forEach(process);
+        return;
+    }
+
+    Object.keys(target).forEach(key => {
+        const value = target[key];
+        if ((key === 'signature' || key === 'sig') && value && typeof value === 'object') {
+            if (Object.prototype.hasOwnProperty.call(value, 'colon')) {
+                delete value.colon;
+            }
+            if (Object.prototype.hasOwnProperty.call(value, 'lines')) {
+                delete value.lines;
+            }
+        }
+        process(value);
+    });
+}
+
+function sanitiseAttestationObjectForDisplay(attestationObject, attestationFormatRaw = '', authenticatorDataHash = '') {
     const cloned = cloneJson(attestationObject);
     if (!cloned || typeof cloned !== 'object') {
-        return null;
+        const minimal = {};
+        const formatValue = typeof attestationFormatRaw === 'string' ? attestationFormatRaw.trim() : '';
+        const hashValue = typeof authenticatorDataHash === 'string' ? authenticatorDataHash.trim() : '';
+        if (formatValue) minimal.fmt = formatValue;
+        if (hashValue) minimal.authenticatorDataHash = hashValue;
+        return Object.keys(minimal).length ? minimal : null;
     }
 
     const certificatesAll = Array.isArray(registrationDetailState.attestationCertificates)
@@ -376,12 +515,38 @@ function sanitiseAttestationObjectForDisplay(attestationObject) {
         delete attStmtClone.x5cParseErrors;
 
         stripCertificateCollections(attStmtClone);
+        removeKeysCaseInsensitive(attStmtClone, ['publicKeyHex', 'publicKeyHexLines', 'publicKeyBase64']);
+        stripSignatureFormatting(attStmtClone);
         cloned.attStmt = attStmtClone;
     }
 
     stripCertificateCollections(cloned);
     removeKeysFromObject(cloned, ['summary', 'raw']);
-    return cloned;
+    removeKeysCaseInsensitive(cloned, ['publicKeyHex', 'publicKeyHexLines', 'publicKeyBase64']);
+    stripSignatureFormatting(cloned);
+
+    let formatValue = typeof attestationFormatRaw === 'string' ? attestationFormatRaw.trim() : '';
+    if (!formatValue && typeof cloned.fmt === 'string') {
+        formatValue = cloned.fmt;
+    }
+    if (Object.prototype.hasOwnProperty.call(cloned, 'fmt')) {
+        delete cloned.fmt;
+    }
+
+    const ordered = {};
+    if (formatValue) {
+        ordered.fmt = formatValue;
+    }
+
+    Object.keys(cloned).forEach(key => {
+        ordered[key] = cloned[key];
+    });
+
+    if (authenticatorDataHash && typeof authenticatorDataHash === 'string' && authenticatorDataHash.trim()) {
+        ordered.authenticatorDataHash = authenticatorDataHash.trim();
+    }
+
+    return ordered;
 }
 
 const registrationDetailState = {
@@ -389,6 +554,7 @@ const registrationDetailState = {
     attestationCertificates: [],
     visibleAttestationCertificateIndices: [],
     authenticatorData: null,
+    authenticatorDataHash: '',
 };
 
 function resetRegistrationDetailState() {
@@ -396,6 +562,7 @@ function resetRegistrationDetailState() {
     registrationDetailState.attestationCertificates = [];
     registrationDetailState.visibleAttestationCertificateIndices = [];
     registrationDetailState.authenticatorData = null;
+    registrationDetailState.authenticatorDataHash = '';
 }
 
 function normaliseHexFingerprint(value) {
@@ -648,6 +815,95 @@ function getVisibleAttestationCertificates() {
         .filter(entry => entry && typeof entry === 'object');
 }
 
+async function computeAuthenticatorDataHash() {
+    registrationDetailState.authenticatorDataHash = '';
+
+    const data = registrationDetailState.authenticatorData;
+    if (!data) {
+        return '';
+    }
+
+    const hexCandidates = new Set();
+    const base64UrlCandidates = new Set();
+    const base64Candidates = new Set();
+
+    const addCandidate = (collection, value) => {
+        if (typeof value !== 'string') {
+            return;
+        }
+        const trimmed = value.trim();
+        if (trimmed) {
+            collection.add(trimmed);
+        }
+    };
+
+    if (typeof data === 'string') {
+        addCandidate(hexCandidates, data);
+        addCandidate(base64UrlCandidates, data);
+        addCandidate(base64Candidates, data);
+    } else if (typeof data === 'object') {
+        ['raw', 'hex', 'rawHex', 'raw_hex', 'hexValue', 'value'].forEach(key => {
+            addCandidate(hexCandidates, data[key]);
+        });
+        ['base64url', 'base64Url'].forEach(key => {
+            addCandidate(base64UrlCandidates, data[key]);
+        });
+        addCandidate(base64Candidates, data.base64);
+    }
+
+    let bytes = null;
+
+    for (const candidate of hexCandidates) {
+        const normalized = candidate.replace(/[^0-9a-f]/gi, '').toLowerCase();
+        if (!normalized || normalized.length % 2 !== 0) {
+            continue;
+        }
+        const converted = hexToUint8Array(normalized);
+        if (converted && converted.length) {
+            bytes = converted;
+            break;
+        }
+    }
+
+    if (!bytes) {
+        for (const candidate of base64UrlCandidates) {
+            const converted = base64UrlToUint8Array(candidate);
+            if (converted && converted.length) {
+                bytes = converted;
+                break;
+            }
+        }
+    }
+
+    if (!bytes) {
+        for (const candidate of base64Candidates) {
+            const converted = base64ToUint8Array(candidate);
+            if (converted && converted.length) {
+                bytes = converted;
+                break;
+            }
+        }
+    }
+
+    if (!bytes || !bytes.length) {
+        return '';
+    }
+
+    if (!window.crypto || !window.crypto.subtle || typeof window.crypto.subtle.digest !== 'function') {
+        return '';
+    }
+
+    try {
+        const digestBuffer = await window.crypto.subtle.digest('SHA-256', bytes);
+        const hashHex = bytesToHex(new Uint8Array(digestBuffer));
+        registrationDetailState.authenticatorDataHash = hashHex;
+        return hashHex;
+    } catch (error) {
+        registrationDetailState.authenticatorDataHash = '';
+        return '';
+    }
+}
+
 async function prepareRegistrationDetailState(options = {}) {
     const {
         attestationObjectValue = '',
@@ -730,6 +986,8 @@ async function prepareRegistrationDetailState(options = {}) {
         registrationDetailState.authenticatorData = fallback;
     }
 
+    await computeAuthenticatorDataHash();
+
     return {
         attestationObjectValue: attestationValue,
         attestationDecodeError,
@@ -789,7 +1047,13 @@ function buildAttestationSection({
         const attestationHeading = '<h4 style="font-weight: 600; color: #0f2740; margin-bottom: 0.5rem;">Attestation Object</h4>';
         if (attestationObject) {
             let attestationJson = '';
-            const attestationDisplay = sanitiseAttestationObjectForDisplay(attestationObject) || attestationObject;
+            const attestationDisplay = sanitiseAttestationObjectForDisplay(
+                attestationObject,
+                attestationFormatRaw,
+                typeof registrationDetailState.authenticatorDataHash === 'string'
+                    ? registrationDetailState.authenticatorDataHash
+                    : ''
+            ) || attestationObject;
             try {
                 attestationJson = JSON.stringify(attestationDisplay, null, 2);
             } catch (error) {
@@ -932,13 +1196,7 @@ async function composeRegistrationDetailHtml({
         clientDataDisplay = JSON.stringify(fallbackParsedClientData, null, 2);
     }
 
-    let relyingPartyCopy = null;
-    if (relyingPartyInfo && typeof relyingPartyInfo === 'object') {
-        relyingPartyCopy = cloneJson(relyingPartyInfo);
-        if (relyingPartyCopy && typeof relyingPartyCopy === 'object') {
-            stripCertificateCollections(relyingPartyCopy);
-        }
-    }
+    const relyingPartyCopy = sanitizeRelyingPartyInfo(relyingPartyInfo);
 
     const relyingPartyDisplay = relyingPartyCopy
         ? JSON.stringify(relyingPartyCopy, null, 2)
