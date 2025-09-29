@@ -424,14 +424,21 @@ function stripSignatureFormatting(target) {
     });
 }
 
-function sanitiseAttestationObjectForDisplay(attestationObject, attestationFormatRaw = '', authenticatorDataHash = '') {
+function sanitiseAttestationObjectForDisplay(
+    attestationObject,
+    attestationFormatRaw = '',
+    authenticatorDataHash = '',
+    authenticatorDataHex = ''
+) {
     const cloned = cloneJson(attestationObject);
     if (!cloned || typeof cloned !== 'object') {
         const minimal = {};
         const formatValue = typeof attestationFormatRaw === 'string' ? attestationFormatRaw.trim() : '';
         const hashValue = typeof authenticatorDataHash === 'string' ? authenticatorDataHash.trim() : '';
+        const hexValue = typeof authenticatorDataHex === 'string' ? authenticatorDataHex.trim() : '';
         if (formatValue) minimal.fmt = formatValue;
         if (hashValue) minimal.authenticatorDataHash = hashValue;
+        if (hexValue) minimal.authenticatorDataHex = hexValue;
         return Object.keys(minimal).length ? minimal : null;
     }
 
@@ -542,8 +549,14 @@ function sanitiseAttestationObjectForDisplay(attestationObject, attestationForma
         ordered[key] = cloned[key];
     });
 
-    if (authenticatorDataHash && typeof authenticatorDataHash === 'string' && authenticatorDataHash.trim()) {
-        ordered.authenticatorDataHash = authenticatorDataHash.trim();
+    const hashValue = typeof authenticatorDataHash === 'string' ? authenticatorDataHash.trim() : '';
+    if (hashValue) {
+        ordered.authenticatorDataHash = hashValue;
+    }
+
+    const hexValue = typeof authenticatorDataHex === 'string' ? authenticatorDataHex.trim() : '';
+    if (hexValue) {
+        ordered.authenticatorDataHex = hexValue;
     }
 
     return ordered;
@@ -555,6 +568,7 @@ const registrationDetailState = {
     visibleAttestationCertificateIndices: [],
     authenticatorData: null,
     authenticatorDataHash: '',
+    authenticatorDataHex: '',
 };
 
 function resetRegistrationDetailState() {
@@ -563,6 +577,7 @@ function resetRegistrationDetailState() {
     registrationDetailState.visibleAttestationCertificateIndices = [];
     registrationDetailState.authenticatorData = null;
     registrationDetailState.authenticatorDataHash = '';
+    registrationDetailState.authenticatorDataHex = '';
 }
 
 function normaliseHexFingerprint(value) {
@@ -817,6 +832,7 @@ function getVisibleAttestationCertificates() {
 
 async function computeAuthenticatorDataHash() {
     registrationDetailState.authenticatorDataHash = '';
+    registrationDetailState.authenticatorDataHex = '';
 
     const data = registrationDetailState.authenticatorData;
     if (!data) {
@@ -853,6 +869,20 @@ async function computeAuthenticatorDataHash() {
 
     let bytes = null;
 
+    const recordHexCandidate = value => {
+        if (registrationDetailState.authenticatorDataHex) {
+            return;
+        }
+        if (typeof value !== 'string') {
+            return;
+        }
+        const trimmed = value.trim();
+        if (!trimmed) {
+            return;
+        }
+        registrationDetailState.authenticatorDataHex = trimmed.toLowerCase();
+    };
+
     for (const candidate of hexCandidates) {
         const normalized = candidate.replace(/[^0-9a-f]/gi, '').toLowerCase();
         if (!normalized || normalized.length % 2 !== 0) {
@@ -860,6 +890,7 @@ async function computeAuthenticatorDataHash() {
         }
         const converted = hexToUint8Array(normalized);
         if (converted && converted.length) {
+            recordHexCandidate(normalized);
             bytes = converted;
             break;
         }
@@ -869,6 +900,7 @@ async function computeAuthenticatorDataHash() {
         for (const candidate of base64UrlCandidates) {
             const converted = base64UrlToUint8Array(candidate);
             if (converted && converted.length) {
+                recordHexCandidate(bytesToHex(converted));
                 bytes = converted;
                 break;
             }
@@ -879,6 +911,7 @@ async function computeAuthenticatorDataHash() {
         for (const candidate of base64Candidates) {
             const converted = base64ToUint8Array(candidate);
             if (converted && converted.length) {
+                recordHexCandidate(bytesToHex(converted));
                 bytes = converted;
                 break;
             }
@@ -887,6 +920,10 @@ async function computeAuthenticatorDataHash() {
 
     if (!bytes || !bytes.length) {
         return '';
+    }
+
+    if (!registrationDetailState.authenticatorDataHex) {
+        registrationDetailState.authenticatorDataHex = bytesToHex(bytes);
     }
 
     if (!window.crypto || !window.crypto.subtle || typeof window.crypto.subtle.digest !== 'function') {
@@ -1052,6 +1089,9 @@ function buildAttestationSection({
                 attestationFormatRaw,
                 typeof registrationDetailState.authenticatorDataHash === 'string'
                     ? registrationDetailState.authenticatorDataHash
+                    : '',
+                typeof registrationDetailState.authenticatorDataHex === 'string'
+                    ? registrationDetailState.authenticatorDataHex
                     : ''
             ) || attestationObject;
             try {
