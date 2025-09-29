@@ -2,10 +2,15 @@
 from __future__ import annotations
 
 import base64
+import binascii
 import os
 import pickle
+from collections import deque
 from collections.abc import Mapping
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Iterable, List, Mapping as MappingType, Optional
+
+from fido2.cose import CoseKey
+from fido2.webauthn import AttestedCredentialData
 
 from .attestation import colon_hex, format_hex_bytes_lines
 
@@ -121,6 +126,171 @@ def add_public_key_material(
 
 def extract_credential_data(cred: Any) -> Any:
     """Extract AttestedCredentialData from either old or new storage format."""
+
+    def _coerce_attested_with_key(
+        credential_data: Any, metadata: MappingType[str, Any]
+    ) -> Any:
+        """Ensure ``credential_data`` exposes the credential public key."""
+
+        preferred_key = _recover_stored_credential_cose_key(metadata)
+        if preferred_key is None:
+            return credential_data
+
+        if isinstance(credential_data, AttestedCredentialData):
+            try:
+                current_key = CoseKey.parse(dict(credential_data.public_key))
+            except Exception:
+                current_key = None
+
+            if current_key is None or dict(current_key) != dict(preferred_key):
+                try:
+                    updated = AttestedCredentialData.create(
+                        bytes(credential_data.aaguid),
+                        bytes(credential_data.credential_id),
+                        preferred_key,
+                    )
+                except Exception:
+                    return credential_data
+                return updated
+            return credential_data
+
+        if isinstance(credential_data, Mapping):
+            new_data: Dict[Any, Any] = dict(credential_data)
+            new_data["public_key"] = dict(preferred_key)
+            return new_data
+
+        return credential_data
+
     if isinstance(cred, dict):
-        return cred['credential_data']
+        credential_data = cred.get("credential_data")
+        if credential_data is not None:
+            updated = _coerce_attested_with_key(credential_data, cred)
+            if updated is not credential_data:
+                cred["credential_data"] = updated
+            return updated
+
+        if "public_key" in cred:
+            return _coerce_attested_with_key(cred, cred)
+
     return cred
+
+
+_COSE_BYTE_LABELS = {-1, -2, -3, -4, -5, -6}
+
+
+def _decode_base64_string(value: str) -> Optional[bytes]:
+    stripped = value.strip()
+    if not stripped:
+        return b""
+
+    padding = "=" * ((4 - len(stripped) % 4) % 4)
+    padded = stripped + padding
+
+    for decoder in (base64.b64decode, base64.urlsafe_b64decode):
+        try:
+            return decoder(padded)
+        except (binascii.Error, ValueError):
+            continue
+
+    try:
+        return bytes.fromhex(stripped)
+    except ValueError:
+        return None
+
+
+def _coerce_cose_label(label: Any) -> Any:
+    if isinstance(label, int):
+        return label
+    if isinstance(label, str):
+        stripped = label.strip()
+        if stripped and stripped.lstrip("-").isdigit():
+            try:
+                return int(stripped, 10)
+            except ValueError:
+                return label
+    return label
+
+
+def _decode_cose_value(label: Any, value: Any) -> Any:
+    if isinstance(value, str) and isinstance(label, int) and label in _COSE_BYTE_LABELS:
+        decoded = _decode_base64_string(value)
+        if decoded is not None:
+            return decoded
+    if isinstance(value, list):
+        return [_decode_cose_value(label, item) for item in value]
+    if isinstance(value, Mapping):
+        return {
+            _coerce_cose_label(key): _decode_cose_value(_coerce_cose_label(key), item)
+            for key, item in value.items()
+        }
+    return value
+
+
+def _normalise_cose_map(
+    data: Mapping[Any, Any],
+    *,
+    raw_bytes: Optional[bytes] = None,
+) -> Dict[Any, Any]:
+    normalised: Dict[Any, Any] = {}
+    for key, value in data.items():
+        label = _coerce_cose_label(key)
+        normalised[label] = _decode_cose_value(label, value)
+
+    if raw_bytes is not None:
+        normalised[-1] = raw_bytes
+
+    return normalised
+
+
+def _iter_metadata_containers(source: MappingType[str, Any]) -> Iterable[Mapping[str, Any]]:
+    queue: deque[Mapping[str, Any]] = deque()
+    queue.append(source)
+    seen: set[int] = set()
+
+    while queue:
+        current = queue.popleft()
+        marker = id(current)
+        if marker in seen:
+            continue
+        seen.add(marker)
+        yield current
+
+        for key in ("properties", "relying_party", "relyingParty"):
+            nested = current.get(key)
+            if isinstance(nested, Mapping):
+                queue.append(nested)
+                if key in {"relying_party", "relyingParty"}:
+                    registration = nested.get("registrationData")
+                    if isinstance(registration, Mapping):
+                        queue.append(registration)
+
+
+def _recover_stored_credential_cose_key(
+    source: MappingType[str, Any]
+) -> Optional[CoseKey]:
+    for container in _iter_metadata_containers(source):
+        raw_bytes: Optional[bytes] = None
+        for byte_field in ("credentialPublicKeyBytes", "publicKeyBytes"):
+            byte_value = container.get(byte_field)
+            if isinstance(byte_value, str):
+                decoded = _decode_base64_string(byte_value)
+                if decoded is not None:
+                    raw_bytes = decoded
+                    break
+
+        for field in (
+            "credentialPublicKeyCose",
+            "credentialPublicKey",
+            "publicKeyCose",
+        ):
+            candidate = container.get(field)
+            if not isinstance(candidate, Mapping):
+                continue
+
+            normalised = _normalise_cose_map(candidate, raw_bytes=raw_bytes)
+            try:
+                return CoseKey.parse(normalised)
+            except Exception:
+                continue
+
+    return None

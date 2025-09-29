@@ -24,6 +24,8 @@ from fido2.utils import ByteBuffer  # noqa: E402
 from types import SimpleNamespace  # noqa: E402
 
 from examples.server.server import storage  # noqa: E402
+from fido2.cose import CoseKey  # noqa: E402
+from fido2.webauthn import AttestedCredentialData  # noqa: E402
 
 
 def _encode_length(length: int) -> bytes:
@@ -585,3 +587,53 @@ def test_add_public_key_material_supports_prefixed_fields():
     expected_hex = ":".join(f"{byte:02x}" for byte in raw_bytes)
     assert container["credentialPublicKeyHex"] == expected_hex
     assert container["credentialPublicKeyHexLines"] == _format_hex_lines(raw_bytes)
+
+
+def test_extract_credential_data_rebuilds_public_key_from_metadata():
+    credential_key_map = {1: 2, 3: -48, -1: b"credential-public"}
+    certificate_key_map = {1: 2, 3: -48, -1: b"certificate-public"}
+
+    certificate_key = CoseKey.parse(dict(certificate_key_map))
+
+    attested = AttestedCredentialData.create(
+        b"\x01" * 16,
+        b"\x02\x03",
+        certificate_key,
+    )
+
+    stored_record = {
+        "credential_data": attested,
+        "publicKeyCose": storage.convert_bytes_for_json(dict(credential_key_map)),
+        "publicKeyBytes": storage.convert_bytes_for_json(credential_key_map[-1]),
+    }
+
+    recovered = storage.extract_credential_data(stored_record)
+
+    assert isinstance(recovered, AttestedCredentialData)
+    assert recovered is stored_record["credential_data"]
+    assert dict(recovered.public_key)[-1] == credential_key_map[-1]
+
+
+def test_extract_credential_data_updates_mapping_credentials():
+    credential_key_map = {1: 2, 3: -48, -1: b"credential-public"}
+
+    stored_mapping = {
+        "credential_data": {
+            "credential_id": b"\xAA\xBB",
+            "public_key": {1: 2, 3: -48, -1: b"legacy"},
+        },
+        "properties": {
+            "credentialPublicKeyCose": storage.convert_bytes_for_json(
+                dict(credential_key_map)
+            ),
+            "credentialPublicKeyBytes": storage.convert_bytes_for_json(
+                credential_key_map[-1]
+            ),
+        },
+    }
+
+    recovered = storage.extract_credential_data(stored_mapping)
+
+    assert isinstance(recovered, dict)
+    assert recovered is stored_mapping["credential_data"]
+    assert dict(recovered["public_key"])[-1] == credential_key_map[-1]
