@@ -31,6 +31,7 @@ from fido2.webauthn import (
     AuthenticatorData,
     CollectedClientData,
     RegistrationResponse,
+    Aaguid,
 )
 from cryptography import x509
 from cryptography.exceptions import UnsupportedAlgorithm
@@ -1465,6 +1466,7 @@ def perform_attestation_checks(
         "metadata": {},
         "hash_binding": {},
         "errors": [],
+        "warnings": [],
     }
 
     if not isinstance(response, Mapping):
@@ -1734,8 +1736,10 @@ def perform_attestation_checks(
     results["signature_valid"] = signature_valid
 
     metadata_entry = None
+    metadata_lookup_source: Optional[str] = None
     now = datetime.now(timezone.utc)
     root_valid: Optional[bool] = None
+    verifier = None
     if signature_valid and attestation_result is not None:
         trust_path = attestation_result.trust_path or []
         if trust_path:
@@ -1762,6 +1766,7 @@ def perform_attestation_checks(
                             client_data_hash,
                         )
                         if metadata_entry is not None:
+                            metadata_lookup_source = "attestation"
                             root_valid = True
                         else:
                             root_valid = None
@@ -1786,6 +1791,26 @@ def perform_attestation_checks(
     metadata_aaguid: Optional[str] = None
     metadata_algorithm_supported: Optional[bool] = None
     metadata_aaguid_bytes = b""
+    metadata_root_certificates_present = False
+    metadata_verification_warning: Optional[str] = None
+
+    if metadata_entry is None and credential_aaguid_bytes:
+        try:
+            aaguid_obj = Aaguid.fromhex(credential_aaguid_bytes.hex())
+        except Exception:
+            aaguid_obj = None
+        if aaguid_obj is not None:
+            if verifier is None:
+                verifier = get_mds_verifier()
+            if verifier is not None:
+                try:
+                    fallback_entry = verifier.find_entry_by_aaguid(aaguid_obj)
+                except Exception:
+                    fallback_entry = None
+                else:
+                    if fallback_entry is not None:
+                        metadata_entry = fallback_entry
+                        metadata_lookup_source = "aaguid"
 
     if metadata_entry is not None:
         metadata_statement = getattr(metadata_entry, "metadata_statement", None)
@@ -1796,6 +1821,19 @@ def perform_attestation_checks(
             "authenticator_get_info",
             None,
         )
+        root_certs = getattr(
+            metadata_statement,
+            "attestation_root_certificates",
+            None,
+        )
+        if not root_certs and isinstance(metadata_statement, Mapping):
+            root_certs = metadata_statement.get("attestation_root_certificates") or metadata_statement.get(
+                "attestationRootCertificates"
+            )
+        if isinstance(root_certs, (list, tuple, set)):
+            metadata_root_certificates_present = any(bool(cert) for cert in root_certs)
+        elif root_certs:
+            metadata_root_certificates_present = True
         algorithm = results["authenticator_data"].get("algorithm")
         if (
             isinstance(authenticator_info, Mapping)
@@ -1832,12 +1870,32 @@ def perform_attestation_checks(
     if results["aaguid_match"] is None and credential_aaguid_bytes and metadata_entry is not None:
         results["aaguid_match"] = metadata_aaguid_bytes == credential_aaguid_bytes
 
+    if (
+        metadata_root_certificates_present
+        and metadata_entry is not None
+        and is_pqc_algorithm(algorithm)
+        and (root_valid is False or root_valid is None)
+    ):
+        metadata_verification_warning = (
+            "A trusted root certificate is bundled for this authenticator, "
+            "but the attestation chain could not be verified (post-quantum attestation)."
+        )
+        results["warnings"].append(metadata_verification_warning)
+        if root_valid is False:
+            root_valid = None
+
     results["metadata"] = {
         "available": metadata_entry is not None,
         "description": metadata_description,
         "aaguid": metadata_aaguid,
         "algorithm_supported": metadata_algorithm_supported,
+        "root_certificates_present": metadata_root_certificates_present,
     }
+
+    if metadata_lookup_source:
+        results["metadata"]["source"] = metadata_lookup_source
+    if metadata_verification_warning:
+        results["metadata"]["verification_warning"] = metadata_verification_warning
 
     # The AAGUID exposed during registration originates from the attestation
     # object. When metadata is present we still surface the comparison through

@@ -8,11 +8,17 @@ import ssl
 import tempfile
 import urllib.error
 import urllib.request
+from dataclasses import replace
 from datetime import datetime, timezone
 from email.utils import formatdate, parsedate_to_datetime
 from typing import Any, Dict, Iterator, Optional, Tuple
 
-from fido2.mds3 import MdsAttestationVerifier, parse_blob
+from fido2.mds3 import (
+    MetadataBlobPayload,
+    MetadataBlobPayloadEntry,
+    MdsAttestationVerifier,
+    parse_blob,
+)
 
 from .config import (
     MDS_METADATA_CACHE_PATH,
@@ -20,6 +26,7 @@ from .config import (
     MDS_METADATA_URL,
     MDS_TLS_ADDITIONAL_TRUST_ANCHORS_PEM,
     app,
+    FEITIAN_PQC_METADATA_PATH,
     FIDO_METADATA_TRUST_ROOT_CERT,
     FIDO_METADATA_TRUST_ROOT_PEM,
 )
@@ -415,34 +422,143 @@ def get_mds_verifier() -> Optional[MdsAttestationVerifier]:
     global _mds_verifier_cache, _mds_verifier_mtime
 
     try:
-        mtime = os.path.getmtime(MDS_METADATA_PATH)
+        mds_mtime = os.path.getmtime(MDS_METADATA_PATH)
     except OSError:
-        _mds_verifier_cache = None
-        _mds_verifier_mtime = None
-        return None
-
-    if _mds_verifier_cache is not None and _mds_verifier_mtime == mtime:
-        return _mds_verifier_cache
+        mds_mtime = None
 
     try:
-        with open(MDS_METADATA_PATH, "rb") as blob_file:
-            blob_data = blob_file.read()
-        metadata = parse_blob(blob_data, FIDO_METADATA_TRUST_ROOT_CERT)
-        verifier = MdsAttestationVerifier(metadata)
+        feitian_mtime = os.path.getmtime(FEITIAN_PQC_METADATA_PATH)
+    except OSError:
+        feitian_mtime = None
+
+    mtimes = [value for value in (mds_mtime, feitian_mtime) if value is not None]
+    combined_mtime = max(mtimes) if mtimes else None
+
+    if (
+        _mds_verifier_cache is not None
+        and _mds_verifier_mtime is not None
+        and _mds_verifier_mtime == combined_mtime
+    ):
+        return _mds_verifier_cache
+
+    metadata: Optional[MetadataBlobPayload] = None
+    try:
+        if mds_mtime is not None:
+            with open(MDS_METADATA_PATH, "rb") as blob_file:
+                blob_data = blob_file.read()
+            metadata = parse_blob(blob_data, FIDO_METADATA_TRUST_ROOT_CERT)
     except FileNotFoundError:
-        _mds_verifier_cache = None
-        _mds_verifier_mtime = None
-        return None
+        metadata = None
     except Exception as exc:
         app.logger.warning(
             "Failed to load MDS metadata from %s: %s",
             MDS_METADATA_PATH,
             exc,
         )
+        metadata = None
+
+    feitian_entry, feitian_legal_header = _load_feitian_metadata_entry()
+
+    if metadata is None and feitian_entry is None:
         _mds_verifier_cache = None
-        _mds_verifier_mtime = None
+        _mds_verifier_mtime = combined_mtime
         return None
 
+    if metadata is None and feitian_entry is not None:
+        payload = {
+            "legalHeader": feitian_legal_header or "",
+            "no": 0,
+            "nextUpdate": datetime.now(timezone.utc).date().isoformat(),
+            "entries": [dict(feitian_entry)],
+        }
+        try:
+            metadata = MetadataBlobPayload.from_dict(payload)
+        except Exception as exc:  # pragma: no cover - defensive
+            app.logger.warning(
+                "Failed to build metadata payload from %s: %s",
+                FEITIAN_PQC_METADATA_PATH,
+                exc,
+            )
+            metadata = None
+
+    if metadata is None:
+        _mds_verifier_cache = None
+        _mds_verifier_mtime = combined_mtime
+        return None
+
+    if feitian_entry is not None:
+        combined_entries = (feitian_entry,) + tuple(metadata.entries)
+        metadata = replace(metadata, entries=combined_entries)
+        if feitian_legal_header and not getattr(metadata, "legal_header", None):
+            metadata = replace(metadata, legal_header=feitian_legal_header)
+
+    verifier = MdsAttestationVerifier(metadata)
     _mds_verifier_cache = verifier
-    _mds_verifier_mtime = mtime
+    _mds_verifier_mtime = combined_mtime
     return verifier
+
+
+def _load_feitian_metadata_entry() -> Tuple[Optional[MetadataBlobPayloadEntry], Optional[str]]:
+    """Load the bundled Feitian PQC metadata entry if present."""
+
+    try:
+        with open(FEITIAN_PQC_METADATA_PATH, "r", encoding="utf-8") as metadata_file:
+            raw = json.load(metadata_file)
+    except FileNotFoundError:
+        return None, None
+    except (OSError, ValueError, TypeError) as exc:
+        app.logger.warning(
+            "Failed to load bundled metadata from %s: %s",
+            FEITIAN_PQC_METADATA_PATH,
+            exc,
+        )
+        return None, None
+
+    if not isinstance(raw, dict):
+        app.logger.warning(
+            "Bundled metadata %s is not a JSON object.",
+            FEITIAN_PQC_METADATA_PATH,
+        )
+        return None, None
+
+    entry_payload: Dict[str, Any] = {}
+    entry_payload["statusReports"] = list(raw.get("statusReports", []))
+    time_of_last_status_change = raw.get("timeOfLastStatusChange")
+    if isinstance(time_of_last_status_change, str) and time_of_last_status_change.strip():
+        entry_payload["timeOfLastStatusChange"] = time_of_last_status_change.strip()
+    else:
+        entry_payload["timeOfLastStatusChange"] = datetime.now(timezone.utc).date().isoformat()
+
+    for key in ("aaid", "aaguid", "attestationCertificateKeyIdentifiers"):
+        if key in raw:
+            entry_payload[key] = raw[key]
+
+    metadata_statement_fields = {
+        key: value
+        for key, value in raw.items()
+        if key
+        not in {
+            "statusReports",
+            "timeOfLastStatusChange",
+            "attestationCertificateKeyIdentifiers",
+        }
+    }
+    if "legalHeader" not in metadata_statement_fields and raw.get("legalHeader"):
+        metadata_statement_fields["legalHeader"] = raw["legalHeader"]
+    entry_payload["metadataStatement"] = metadata_statement_fields
+
+    try:
+        entry = MetadataBlobPayloadEntry.from_dict(entry_payload)
+    except Exception as exc:
+        app.logger.warning(
+            "Failed to parse bundled metadata entry from %s: %s",
+            FEITIAN_PQC_METADATA_PATH,
+            exc,
+        )
+        return None, None
+
+    legal_header = None
+    if isinstance(raw.get("legalHeader"), str):
+        legal_header = raw["legalHeader"].strip() or None
+
+    return entry, legal_header

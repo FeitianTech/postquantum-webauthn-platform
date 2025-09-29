@@ -27,6 +27,7 @@
 
 from __future__ import annotations
 
+from ..cose import describe_mldsa_oid, extract_certificate_public_key_info
 from ..webauthn import AuthenticatorData, AttestationObject
 from enum import IntEnum, unique
 from cryptography import x509
@@ -102,18 +103,74 @@ def catch_builtins(f):
 
 
 @catch_builtins
+def _verify_mldsa_certificate_signature(
+    child_cert: x509.Certificate, issuer_der: bytes
+) -> None:
+    """Verify an ML-DSA signed certificate using liboqs."""
+
+    signature_oid = child_cert.signature_algorithm_oid.dotted_string
+    mldsa_details = describe_mldsa_oid(signature_oid)
+    if not mldsa_details:
+        raise InvalidSignature(
+            f"Unsupported signature algorithm OID for ML-DSA verification: {signature_oid}"
+        )
+
+    parameter_set = mldsa_details.get("mlDsaParameterSet") or mldsa_details.get(
+        "ml_dsa_parameter_set"
+    )
+    if not parameter_set:
+        raise InvalidSignature(
+            "Unable to determine ML-DSA parameter set for certificate signature"
+        )
+
+    try:
+        info = extract_certificate_public_key_info(issuer_der)
+    except Exception as exc:  # pragma: no cover - defensive guard
+        raise InvalidSignature(f"Unable to parse issuer public key: {exc}") from exc
+
+    public_key = info.get("subject_public_key")
+    if not isinstance(public_key, (bytes, bytearray, memoryview)):
+        raise InvalidSignature("Issuer subject public key missing from certificate")
+
+    try:  # pragma: no cover - optional dependency
+        import oqs  # type: ignore
+    except (ImportError, SystemExit) as exc:  # pragma: no cover - handled by caller
+        raise InvalidSignature(
+            "ML-DSA certificate verification requires the 'oqs' package"
+        ) from exc
+
+    message = bytes(child_cert.tbs_certificate_bytes)
+    signature = bytes(child_cert.signature)
+    public_key_bytes = bytes(public_key)
+
+    try:  # pragma: no cover - depends on oqs runtime availability
+        with oqs.Signature(parameter_set) as verifier:  # type: ignore[attr-defined]
+            if not verifier.verify(message, signature, public_key_bytes):
+                raise InvalidSignature("ML-DSA certificate signature verification failed")
+    except InvalidSignature:
+        raise
+    except Exception as exc:  # pragma: no cover - defensive guard
+        raise InvalidSignature(f"ML-DSA certificate verification error: {exc}") from exc
+
+
 def verify_x509_chain(chain: List[bytes]) -> None:
     """Verifies a chain of certificates.
 
     Checks that the first item in the chain is signed by the next, and so on.
     The first item is the leaf, the last is the root.
     """
-    certs = [x509.load_der_x509_certificate(der, default_backend()) for der in chain]
-    cert = certs.pop(0)
+    certs = [
+        (x509.load_der_x509_certificate(der, default_backend()), der)
+        for der in chain
+    ]
+    cert, cert_der = certs.pop(0)
     while certs:
         child = cert
-        cert = certs.pop(0)
-        pub = cert.public_key()
+        cert, cert_der = certs.pop(0)
+        try:
+            pub = cert.public_key()
+        except ValueError:
+            pub = None
         try:
             if isinstance(pub, rsa.RSAPublicKey):
                 assert child.signature_hash_algorithm is not None  # nosec
@@ -130,6 +187,8 @@ def verify_x509_chain(chain: List[bytes]) -> None:
                     child.tbs_certificate_bytes,
                     ec.ECDSA(child.signature_hash_algorithm),
                 )
+            elif pub is None:
+                _verify_mldsa_certificate_signature(child, cert_der)
             else:
                 raise ValueError("Unsupported signature key type")
         except _InvalidSignature:
