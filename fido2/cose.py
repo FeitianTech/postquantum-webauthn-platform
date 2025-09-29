@@ -32,6 +32,8 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec, rsa, padding, ed25519, types
 from typing import Sequence, Type, Mapping, Any, TypeVar, Optional, Iterable, Dict
+from cryptography.hazmat.primitives import hashes
+import binascii
 
 try:  # pragma: no cover - exercised indirectly in tests
     import oqs  # type: ignore
@@ -705,6 +707,12 @@ class MLDSA87(CoseKey):
             ):
                 raise ValueError("Invalid ML-DSA-87 signature")
 
+        print("=== ML-DSA-44 Verification Debug ===")
+        print("Message (hex):", binascii.hexlify(message_bytes).decode())
+        print("Signature (hex):", binascii.hexlify(signature_bytes).decode())
+        print("Public Key (hex):", binascii.hexlify(public_key_bytes).decode())
+        print("===================================")
+
     @classmethod
     def from_cryptography_key(cls, public_key):
         return cls(
@@ -744,6 +752,12 @@ class MLDSA65(CoseKey):
             ):
                 raise ValueError("Invalid ML-DSA-65 signature")
 
+        print("=== ML-DSA-44 Verification Debug ===")
+        print("Message (hex):", binascii.hexlify(message_bytes).decode())
+        print("Signature (hex):", binascii.hexlify(signature_bytes).decode())
+        print("Public Key (hex):", binascii.hexlify(public_key_bytes).decode())
+        print("===================================")
+
     @classmethod
     def from_cryptography_key(cls, public_key):
         return cls(
@@ -776,6 +790,13 @@ class MLDSA44(CoseKey):
             else bytes(signature)
         )
         public_key_bytes = _coerce_mldsa_public_key_bytes(public_key, "ML-DSA-44")
+
+        print("=== ML-DSA-44 Verification Debug ===")
+        print("Message (hex):", binascii.hexlify(message_bytes).decode())
+        print("Signature (hex):", binascii.hexlify(signature_bytes).decode())
+        print("Public Key (hex):", binascii.hexlify(public_key_bytes).decode())
+        print("===================================")
+
         with oqs_module.Signature("ML-DSA-44") as verifier:
             if not verifier.verify(
                 bytes(message_bytes), bytes(signature_bytes), bytes(public_key_bytes)
@@ -791,6 +812,7 @@ class MLDSA44(CoseKey):
                 -1: _coerce_mldsa_public_key_bytes(public_key, "ML-DSA-44"),
             }
         )
+
 
 class ES256(CoseKey):
     ALGORITHM = -7
