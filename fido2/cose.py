@@ -612,13 +612,24 @@ class CoseKey(dict):
             return credential_key
         if isinstance(credential_key, Mapping):
             normalized: Dict[Any, Any] = {}
+            credential_public_key_bytes: Optional[Any] = None
             for label, value in credential_key.items():
                 if isinstance(label, str):
+                    lowered = label.lower()
+                    if lowered in (
+                        "subjectpublickey",
+                        "subject_public_key",
+                        "publickeybytes",
+                        "public_key_bytes",
+                    ):
+                        credential_public_key_bytes = value
                     try:
                         label = int(label)
                     except ValueError:
                         pass
                 normalized[label] = value
+            if -1 not in normalized and credential_public_key_bytes is not None:
+                normalized[-1] = credential_public_key_bytes
             return cast(Mapping[int, Any], normalized)
         return self
 
