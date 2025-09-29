@@ -403,6 +403,9 @@ class Fido2Server:
             auth_data = data[names[2]]
             signature = data[names[3]]
 
+        authenticator_data_hex = bytes(auth_data).hex()
+        client_data_json_hex = bytes(client_data).hex()
+
         if client_data.type != CollectedClientData.TYPE.GET:
             raise ValueError("Incorrect type in CollectedClientData.")
         if not self._verify(client_data.origin):
@@ -424,6 +427,11 @@ class Fido2Server:
 
         for cred in credentials:
             if cred.credential_id == credential_id:
+                logger.info(
+                    "Verifying assertion: authenticatorData=%s clientDataJSON=%s",
+                    authenticator_data_hex,
+                    client_data_json_hex,
+                )
                 try:
                     cred.public_key.verify(auth_data + client_data.hash, signature)
                 except _InvalidSignature:
