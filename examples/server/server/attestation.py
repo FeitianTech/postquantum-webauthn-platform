@@ -1839,8 +1839,12 @@ def perform_attestation_checks(
         "algorithm_supported": metadata_algorithm_supported,
     }
 
-    if metadata_entry is not None and results["aaguid_match"] is False:
-        results["errors"].append("aaguid_mismatch")
+    # The AAGUID exposed during registration originates from the attestation
+    # object. When metadata is present we still surface the comparison through
+    # ``results["aaguid_match"]`` for the UI, but avoid reporting the mismatch as
+    # a hard error. Showing it as an error in the relying-party registration
+    # details implied the authenticator supplied conflicting values even though
+    # registration has no separate "device" AAGUID source.
     if metadata_algorithm_supported is False:
         results["errors"].append("algorithm_not_in_metadata")
 
