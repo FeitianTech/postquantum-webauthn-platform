@@ -14,6 +14,7 @@ from typing import Any, Dict, Iterable, List, Mapping, MutableMapping, Optional
 from flask import jsonify, request, session
 from fido2.webauthn import (
     AttestationConveyancePreference,
+    AttestedCredentialData,
     AuthenticatorData,
     AuthenticatorAttachment,
     PublicKeyCredentialDescriptor,
