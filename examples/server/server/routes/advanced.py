@@ -141,6 +141,33 @@ def _load_all_stored_credentials() -> List[Dict[str, Any]]:
 
     records: List[Dict[str, Any]] = []
 
+    def _coerce_optional_bool(value: Any) -> Optional[bool]:
+        if isinstance(value, bool):
+            return value
+        if value is None:
+            return None
+        if isinstance(value, (int, float)):
+            if isinstance(value, bool):  # pragma: no cover - safety guard
+                return bool(value)
+            if value != value:  # NaN check
+                return None
+            return bool(value)
+        if isinstance(value, str):
+            lowered = value.strip().lower()
+            if lowered in {"true", "yes", "1"}:
+                return True
+            if lowered in {"false", "no", "0"}:
+                return False
+        return None
+
+    def _extract_flag_from_mapping(mapping: Mapping[str, Any], keys: Iterable[str]) -> Optional[bool]:
+        for key in keys:
+            if key in mapping:
+                coerced = _coerce_optional_bool(mapping.get(key))
+                if coerced is not None:
+                    return coerced
+        return None
+
     try:
         pkl_files = [f for f in os.listdir(basepath) if f.endswith("_credential_data.pkl")]
     except Exception:
@@ -178,6 +205,89 @@ def _load_all_stored_credentials() -> List[Dict[str, Any]]:
                             or properties.get("authenticator_attachment")
                         )
                 record["attachment"] = attachment_value
+
+                resident_flag = _extract_flag_from_mapping(
+                    cred,
+                    ["resident_key", "residentKey", "resident"],
+                )
+
+                properties = cred.get("properties") if isinstance(cred.get("properties"), Mapping) else None
+                if resident_flag is None and isinstance(properties, Mapping):
+                    resident_flag = _extract_flag_from_mapping(
+                        properties,
+                        [
+                            "residentKey",
+                            "resident_key",
+                            "actualResidentKey",
+                            "residentKeyRequired",
+                        ],
+                    )
+                    if resident_flag is None:
+                        summary = properties.get("attestationSummary") or properties.get("attestation_summary")
+                        if isinstance(summary, Mapping):
+                            resident_flag = _extract_flag_from_mapping(
+                                summary,
+                                ["residentKey", "resident_key"],
+                            )
+
+                client_outputs = cred.get("client_extension_outputs") or cred.get("clientExtensionOutputs")
+                if resident_flag is None and isinstance(client_outputs, Mapping):
+                    cred_props_value = client_outputs.get("credProps") or client_outputs.get("cred_props")
+                    if isinstance(cred_props_value, Mapping):
+                        resident_flag = _coerce_optional_bool(cred_props_value.get("rk"))
+                    else:
+                        resident_flag = _coerce_optional_bool(cred_props_value)
+
+                relying_party_info = cred.get("relying_party") or cred.get("relyingParty")
+                if resident_flag is None and isinstance(relying_party_info, Mapping):
+                    resident_flag = _extract_flag_from_mapping(
+                        relying_party_info,
+                        ["residentKey", "resident_key"],
+                    )
+                    if resident_flag is None:
+                        registration_data = relying_party_info.get("registrationData") or relying_party_info.get("registration_data")
+                        if isinstance(registration_data, Mapping):
+                            resident_flag = _extract_flag_from_mapping(
+                                registration_data,
+                                ["residentKey", "resident_key"],
+                            )
+                            if resident_flag is None:
+                                cred_props_value = registration_data.get("credProps") or registration_data.get("cred_props")
+                                if isinstance(cred_props_value, Mapping):
+                                    resident_flag = _coerce_optional_bool(cred_props_value.get("rk"))
+                                else:
+                                    resident_flag = _coerce_optional_bool(cred_props_value)
+
+                registration_response = cred.get("registration_response")
+                if resident_flag is None and isinstance(registration_response, Mapping):
+                    response_ext = registration_response.get("clientExtensionResults") or registration_response.get("client_extension_results")
+                    if isinstance(response_ext, Mapping):
+                        cred_props_value = response_ext.get("credProps") or response_ext.get("cred_props")
+                        if isinstance(cred_props_value, Mapping):
+                            resident_flag = _coerce_optional_bool(cred_props_value.get("rk"))
+                        else:
+                            resident_flag = _coerce_optional_bool(cred_props_value)
+            else:
+                resident_flag = None
+
+            if resident_flag is None:
+                auth_data_value = None
+                if isinstance(cred, Mapping):
+                    auth_data_value = cred.get("auth_data")
+                else:
+                    auth_data_value = getattr(cred, "auth_data", None)
+
+                if auth_data_value is not None:
+                    flags_value = getattr(auth_data_value, "flags", None)
+                    if isinstance(flags_value, int):
+                        flag_enum = getattr(auth_data_value, "FLAG", None)
+                        be_mask = getattr(flag_enum, "BE", None) if flag_enum is not None else None
+                        if isinstance(be_mask, int):
+                            resident_flag = bool(flags_value & be_mask)
+                        else:
+                            resident_flag = bool(flags_value & 0x20)
+
+            record["resident"] = bool(resident_flag)
 
             records.append(record)
 
@@ -1171,6 +1281,9 @@ def advanced_register_complete():
         else:
             resident_key_result = bool(auth_data.flags & auth_data.FLAG.BE) or bool(resident_key_required)
 
+        credential_info['properties']['residentKey'] = bool(resident_key_result)
+        credential_info['resident_key'] = bool(resident_key_result)
+
         large_blob_result = False
         if isinstance(client_extension_results, dict) and 'largeBlob' in client_extension_results:
             large_blob_value = client_extension_results.get('largeBlob')
@@ -1305,17 +1418,18 @@ def advanced_authenticate_begin():
         if isinstance(record.get("id"), (bytes, bytearray, memoryview))
     }
 
-    allow_credentials_present = "allowCredentials" in public_key
-    raw_allow_credentials = public_key.get("allowCredentials") if allow_credentials_present else None
+    raw_allow_credentials = public_key.get("allowCredentials")
     allow_credentials: List[Any] = (
         list(raw_allow_credentials)
         if isinstance(raw_allow_credentials, list)
         else []
     )
+    allow_credentials_present = bool(allow_credentials)
     resident_key_only = not allow_credentials_present
     credentials_for_begin: List[Any] = []
+    resident_records: List[Dict[str, Any]] = []
 
-    if allow_credentials:
+    if allow_credentials_present:
         seen_ids: set[bytes] = set()
         for allow_cred in allow_credentials:
             if not isinstance(allow_cred, dict) or allow_cred.get("type") != "public-key":
@@ -1360,31 +1474,13 @@ def advanced_authenticate_begin():
                 credentials_for_begin.append(record["data"])
                 seen_ids.add(cred_id_bytes)
 
-        if not credentials_for_begin:
-            if allowed_attachment_values:
-                return jsonify({
-                    "error": "No credentials matched the selected hints. Please adjust your hints or select different credentials."
-                }), 404
-            if not stored_records:
-                return jsonify({"error": "No matching credentials found. Please register first."}), 404
-    elif allow_credentials_present:
-        seen_ids: set[bytes] = set()
-        for record in stored_records:
-            cred_id = record.get("id")
-            if not isinstance(cred_id, (bytes, bytearray, memoryview)):
-                continue
-            cred_id_bytes = bytes(cred_id)
-            if cred_id_bytes in seen_ids:
-                continue
-            attachment_value = record.get("attachment")
-            if allowed_attachment_values and attachment_value not in allowed_attachment_values:
-                continue
-            credentials_for_begin.append(record["data"])
-            seen_ids.add(cred_id_bytes)
-
     else:
+        resident_records = [record for record in stored_records if record.get("resident")]
         seen_ids: set[bytes] = set()
-        for record in stored_records:
+        candidate_records = (
+            resident_records if resident_key_only and resident_records else stored_records
+        )
+        for record in candidate_records:
             cred_id = record.get("id")
             if not isinstance(cred_id, (bytes, bytearray, memoryview)):
                 continue
@@ -1405,16 +1501,14 @@ def advanced_authenticate_begin():
         if not stored_records:
             return jsonify({"error": "No matching credentials found. Please register first."}), 404
 
-    if resident_key_only:
-        if not credentials_for_begin:
-            if allowed_attachment_values:
-                return jsonify({
-                    "error": "No credentials matched the selected hints. Please adjust your hints or select different credentials."
-                }), 404
-            if not stored_records:
-                return jsonify({"error": "No matching credentials found. Please register first."}), 404
-        elif not stored_records:
-            return jsonify({"error": "No matching credentials found. Please register first."}), 404
+    if resident_key_only and resident_records and not credentials_for_begin:
+        if allowed_attachment_values:
+            return jsonify({
+                "error": "No resident key credentials matched the selected hints. Please adjust your hints or register a discoverable credential."
+            }), 404
+        return jsonify({
+            "error": "No resident key credentials are available. Please register a discoverable credential first."
+        }), 404
 
     algorithm_source: Iterable[Any]
     if credentials_for_begin:
@@ -1508,6 +1602,14 @@ def advanced_authenticate_complete():
 
     public_key = public_key_raw
 
+    raw_allow_credentials = public_key.get("allowCredentials")
+    allow_credentials_list = (
+        list(raw_allow_credentials)
+        if isinstance(raw_allow_credentials, list)
+        else []
+    )
+    resident_key_only = not allow_credentials_list
+
     raw_hints = public_key.get("hints")
     hints_list: List[str] = []
     if isinstance(raw_hints, list):
@@ -1552,6 +1654,16 @@ def advanced_authenticate_complete():
 
     if not all_credentials:
         return jsonify({"error": "No credentials found"}), 404
+
+    response_mapping: Mapping[str, Any]
+    response_mapping = response if isinstance(response, Mapping) else {}
+    credential_id_bytes = _extract_assertion_credential_id(response_mapping)
+    selected_record = credential_lookup.get(credential_id_bytes) if credential_id_bytes else None
+
+    if resident_key_only and selected_record is not None and not selected_record.get("resident"):
+        return jsonify({
+            "error": "The credential used is not discoverable. Please register a resident key credential to authenticate without allowCredentials."
+        }), 400
 
     try:
         stored_rp = session.pop("advanced_auth_rp", None)

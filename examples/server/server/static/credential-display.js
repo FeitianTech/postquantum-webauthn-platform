@@ -342,8 +342,8 @@ const RP_INFO_EXCLUDED_KEYS = [
     'signature_valid',
     'attestationSummary',
     'attestation_summary',
-    'authenticatorData',
-    'authenticator_data',
+    'authenticatorDataHex',
+    'authenticator_data_hex',
     'clientExtensionResults',
     'client_extension_results',
     'flags',
@@ -463,7 +463,7 @@ function sanitizeRelyingPartyInfo(info, authenticatorSummary = null) {
         if (authenticatorHex || summaryHash || fallbackAuthenticatorValue) {
             const minimal = {};
             if (authenticatorHex) {
-                minimal.authenticatorDataHex = authenticatorHex;
+                minimal.authenticatorData = authenticatorHex;
             } else if (fallbackAuthenticatorValue) {
                 minimal.authenticatorData = fallbackAuthenticatorValue;
             }
@@ -514,7 +514,7 @@ function sanitizeRelyingPartyInfo(info, authenticatorSummary = null) {
     }
 
     if (authenticatorHex) {
-        cloned.authenticatorDataHex = authenticatorHex;
+        cloned.authenticatorData = authenticatorHex;
     } else if (fallbackAuthenticatorValue) {
         cloned.authenticatorData = fallbackAuthenticatorValue;
     }
