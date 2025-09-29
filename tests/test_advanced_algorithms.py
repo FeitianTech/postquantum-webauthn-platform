@@ -275,6 +275,7 @@ def test_authentication_begin_uses_stored_algorithms(client, monkeypatch):
         "id": b"\x01\x02",
         "attachment": "platform",
         "algorithm": -38,
+        "resident_key": True,
     }
 
     loader_calls: List[bool] = []
@@ -325,6 +326,113 @@ def test_authentication_begin_uses_stored_algorithms(client, monkeypatch):
 
     derived_algs = [param.alg for param in dummy_server.allowed_algorithms]
     assert derived_algs == [-38]
+
+
+def test_authentication_begin_without_allow_credentials_requires_resident(client, monkeypatch):
+    view_func = client.application.view_functions["advanced_authenticate_begin"]
+    advanced = importlib.import_module(view_func.__module__)
+
+    credential_record = {
+        "data": {
+            "credential_id": b"\x09\x09",
+            "public_key": {1: 3, 3: -7},
+        },
+        "id": b"\x09\x09",
+        "attachment": "platform",
+        "algorithm": -7,
+        "resident_key": False,
+    }
+
+    def _fake_loader():
+        return [credential_record]
+
+    class DummyServer:
+        def authenticate_begin(self, *_args, **_kwargs):
+            raise AssertionError("authenticate_begin should not be called when no resident credential is available")
+
+    monkeypatch.setattr(advanced, "_load_all_stored_credentials", _fake_loader)
+    monkeypatch.setitem(
+        advanced.advanced_authenticate_begin.__globals__,
+        "_load_all_stored_credentials",
+        _fake_loader,
+    )
+    monkeypatch.setattr(advanced, "create_fido_server", lambda *_, **__: DummyServer())
+
+    payload = {
+        "publicKey": {
+            "challenge": {"$hex": "0102030405060708090a0b0c0d0e0f10"},
+            "timeout": 60000,
+        }
+    }
+
+    response = client.post("/api/advanced/authenticate/begin", json=payload)
+
+    assert response.status_code == 404
+    data = response.get_json()
+    assert isinstance(data, dict)
+    assert "Resident key" in data.get("error", "")
+
+
+def test_authentication_begin_without_allow_credentials_removes_allow_list(client, monkeypatch):
+    view_func = client.application.view_functions["advanced_authenticate_begin"]
+    advanced = importlib.import_module(view_func.__module__)
+
+    credential_record = {
+        "data": {
+            "credential_id": b"\x0c\x0d",
+            "public_key": {1: 3, 3: -7},
+        },
+        "id": b"\x0c\x0d",
+        "attachment": "platform",
+        "algorithm": -7,
+        "resident_key": True,
+    }
+
+    def _fake_loader():
+        return [credential_record]
+
+    class DummyServer:
+        def __init__(self) -> None:
+            self.calls = []
+            self.allowed_algorithms = []
+
+        def authenticate_begin(self, credentials, **kwargs):
+            self.calls.append({"credentials": credentials, **kwargs})
+            return {
+                "publicKey": {
+                    "challenge": "dummy",
+                    "allowCredentials": [{"type": "public-key", "id": "ignored"}],
+                }
+            }, "dummy-state"
+
+    dummy_server = DummyServer()
+
+    monkeypatch.setattr(advanced, "_load_all_stored_credentials", _fake_loader)
+    monkeypatch.setitem(
+        advanced.advanced_authenticate_begin.__globals__,
+        "_load_all_stored_credentials",
+        _fake_loader,
+    )
+    monkeypatch.setattr(advanced, "create_fido_server", lambda *_, **__: dummy_server)
+
+    payload = {
+        "publicKey": {
+            "challenge": {"$hex": "0f0e0d0c0b0a09080706050403020100"},
+            "timeout": 45000,
+        }
+    }
+
+    response = client.post("/api/advanced/authenticate/begin", json=payload)
+
+    assert response.status_code == 200, response.get_data(as_text=True)
+    assert dummy_server.calls, "authenticate_begin was not invoked"
+    credentials_passed = dummy_server.calls[0]["credentials"]
+    assert credentials_passed == [credential_record["data"]]
+
+    payload_json = response.get_json()
+    assert isinstance(payload_json, dict)
+    public_key_json = payload_json.get("publicKey", {})
+    assert "allowCredentials" not in public_key_json
 
 
 def test_authentication_complete_uses_credential_algorithms(client, monkeypatch):

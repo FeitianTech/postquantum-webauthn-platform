@@ -136,6 +136,53 @@ def _extract_credential_algorithm(value: Any) -> Optional[int]:
     return _coerce_cose_algorithm(raw_alg)
 
 
+def _coerce_optional_bool(value: Any) -> Optional[bool]:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        if isinstance(value, float) and not math.isfinite(value):
+            return None
+        return bool(value)
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if not normalized:
+            return None
+        if normalized in {"1", "true", "yes", "y"}:
+            return True
+        if normalized in {"0", "false", "no", "n"}:
+            return False
+    return None
+
+
+def _extract_nested_value(source: Mapping[str, Any], path: Iterable[str]) -> Any:
+    current: Any = source
+    for key in path:
+        if not isinstance(current, Mapping):
+            return None
+        current = current.get(key)
+    return current
+
+
+def _extract_resident_key_from_credential(cred: Mapping[str, Any]) -> Optional[bool]:
+    candidate_paths = [
+        ("residentKey",),
+        ("discoverable",),
+        ("relying_party", "residentKey"),
+        ("relyingParty", "residentKey"),
+        ("properties", "residentKey"),
+        ("properties", "discoverable"),
+        ("registration_response", "clientExtensionResults", "credProps", "rk"),
+        ("registration_response", "client_extension_results", "credProps", "rk"),
+    ]
+
+    for path in candidate_paths:
+        value = _extract_nested_value(cred, path)
+        coerced = _coerce_optional_bool(value)
+        if coerced is not None:
+            return coerced
+    return None
+
+
 def _load_all_stored_credentials() -> List[Dict[str, Any]]:
     """Load all stored credentials with metadata needed for advanced flows."""
 
@@ -159,6 +206,7 @@ def _load_all_stored_credentials() -> List[Dict[str, Any]]:
                 "id": None,
                 "attachment": None,
                 "algorithm": None,
+                "resident_key": None,
             }
 
             credential_data = record["data"]
@@ -178,6 +226,15 @@ def _load_all_stored_credentials() -> List[Dict[str, Any]]:
                             or properties.get("authenticator_attachment")
                         )
                 record["attachment"] = attachment_value
+
+                resident_key_value = _extract_resident_key_from_credential(cred)
+                if resident_key_value is None:
+                    relying_party_info = cred.get("relying_party")
+                    if isinstance(relying_party_info, Mapping):
+                        resident_key_value = _coerce_optional_bool(
+                            relying_party_info.get("residentKey")
+                        )
+                record["resident_key"] = resident_key_value
 
             records.append(record)
 
@@ -1305,11 +1362,16 @@ def advanced_authenticate_begin():
         if isinstance(record.get("id"), (bytes, bytearray, memoryview))
     }
 
-    allow_credentials = public_key.get("allowCredentials", [])
+    allow_credentials_provided = "allowCredentials" in public_key
+    raw_allow_credentials = public_key.get("allowCredentials")
+    allow_credentials: Optional[List[Any]] = None
+    if isinstance(raw_allow_credentials, list):
+        allow_credentials = raw_allow_credentials
+
     selected_credentials: Optional[List[PublicKeyCredentialDescriptor]] = None
     credentials_for_begin: List[Any] = []
 
-    if allow_credentials and len(allow_credentials) > 0:
+    if allow_credentials:
         selected_credentials = []
         seen_ids: set[bytes] = set()
         for allow_cred in allow_credentials:
@@ -1373,7 +1435,10 @@ def advanced_authenticate_begin():
                 return jsonify({
                     "error": "No credentials matched the selected hints. Please adjust your hints or select different credentials."
                 }), 404
-            return jsonify({"error": "No matching credentials found. Please register first."}), 404
+            if not stored_records:
+                return jsonify({"error": "No matching credentials found. Please register first."}), 404
+    elif allow_credentials_provided:
+        selected_credentials = []
     else:
         seen_ids: set[bytes] = set()
         for record in stored_records:
@@ -1386,6 +1451,8 @@ def advanced_authenticate_begin():
             attachment_value = record.get("attachment")
             if allowed_attachment_values and attachment_value not in allowed_attachment_values:
                 continue
+            if record.get("resident_key") is not True:
+                continue
             credentials_for_begin.append(record["data"])
             seen_ids.add(cred_id_bytes)
 
@@ -1396,6 +1463,14 @@ def advanced_authenticate_begin():
             }), 404
         if not stored_records:
             return jsonify({"error": "No matching credentials found. Please register first."}), 404
+        if not allow_credentials_provided:
+            return jsonify({
+                "error": "No discoverable credentials found. Resident key credentials are required when allowCredentials is omitted."
+            }), 404
+        if allow_credentials is not None:
+            return jsonify({
+                "error": "No credentials matched the provided allowCredentials descriptors."
+            }), 404
 
     algorithm_source: Iterable[Any]
     if credentials_for_begin:
@@ -1456,11 +1531,21 @@ def advanced_authenticate_begin():
         extensions=processed_extensions if processed_extensions else None,
     )
 
+    options_dict = dict(options)
+    if not allow_credentials_provided:
+        options_dict.pop("allowCredentials", None)
+        public_key_options = options_dict.get("publicKey")
+        if isinstance(public_key_options, Mapping):
+            public_key_options = dict(public_key_options)
+            public_key_options.pop("allowCredentials", None)
+            public_key_options.pop("allow_credentials", None)
+            options_dict["publicKey"] = public_key_options
+
     session["advanced_auth_state"] = state
     session["advanced_auth_rp"] = {"id": resolved_rp_id, "name": stored_rp_name}
     session["advanced_original_auth_request"] = data
 
-    return jsonify(make_json_safe(dict(options)))
+    return jsonify(make_json_safe(options_dict))
 
 
 @app.route("/api/advanced/authenticate/complete", methods=["POST"])

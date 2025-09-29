@@ -204,6 +204,25 @@ const CERTIFICATE_COLLECTION_KEYS = [
     'attestation_certificates',
 ];
 
+const RP_RESPONSE_DUPLICATE_KEYS = [
+    'credentialId',
+    'credential_id',
+    'credentialIdBase64',
+    'credential_id_base64',
+    'credentialIdBase64Url',
+    'credentialIdBase64URL',
+    'credential_id_base64url',
+];
+
+const RP_ATTESTATION_DUPLICATE_KEYS = [
+    'attestationObject',
+    'attestation_object',
+    'attestationFmt',
+    'attestation_fmt',
+    'registrationData',
+    'registration_data',
+];
+
 function stripCertificateCollections(target) {
     if (!target || typeof target !== 'object') {
         return;
@@ -221,6 +240,15 @@ function stripCertificateCollections(target) {
             stripCertificateCollections(value);
         }
     });
+}
+
+function pruneRelyingPartyInfoForDisplay(target) {
+    if (!target || typeof target !== 'object') {
+        return;
+    }
+
+    removeKeysFromObject(target, RP_RESPONSE_DUPLICATE_KEYS);
+    removeKeysFromObject(target, RP_ATTESTATION_DUPLICATE_KEYS);
 }
 
 function removeKeysFromObject(target, keys) {
@@ -296,85 +324,11 @@ function sanitiseAttestationObjectForDisplay(attestationObject) {
         return null;
     }
 
-    const certificatesAll = Array.isArray(registrationDetailState.attestationCertificates)
-        ? registrationDetailState.attestationCertificates
-        : [];
-    const { valid: certificateInfos, failures: parseFailureInfos } = partitionCertificateEntries(certificatesAll);
-    const certificates = certificateInfos.length
-        ? certificateInfos
-        : parseFailureInfos;
-
     if (cloned.attStmt && typeof cloned.attStmt === 'object') {
         const attStmtClone = { ...cloned.attStmt };
-        const sourceArray = Array.isArray(attStmtClone.x5c) ? attStmtClone.x5c : [];
-        const maxLength = Math.max(sourceArray.length, certificates.length);
-
-        if (maxLength > 0) {
-            const sanitizedChain = [];
-
-            for (let index = 0; index < maxLength; index += 1) {
-                const info = certificates[index];
-                const certificateEntry = info && typeof info === 'object' && info.entry ? info.entry : info;
-                const sourceEntry = sourceArray[index];
-
-                let parsedDetails = certificateEntry && typeof certificateEntry === 'object'
-                    ? certificateEntry.parsedX5c
-                    : null;
-
-                if ((!parsedDetails || typeof parsedDetails !== 'object') && sourceEntry) {
-                    const normalised = normaliseCertificateEntryForModal(sourceEntry);
-                    if (normalised && typeof normalised.parsedX5c === 'object') {
-                        parsedDetails = normalised.parsedX5c;
-                    }
-                }
-
-                if (!parsedDetails || typeof parsedDetails !== 'object') {
-                    continue;
-                }
-
-                const sanitizedDetails = sanitizeParsedCertificateDetails(parsedDetails);
-                const summaryText = typeof parsedDetails.summary === 'string'
-                    ? parsedDetails.summary.trim()
-                    : '';
-                const errorText = typeof parsedDetails.error === 'string'
-                    ? parsedDetails.error.trim()
-                    : '';
-
-                const hasDetails = sanitizedDetails && Object.keys(sanitizedDetails).length > 0;
-                if (!hasDetails && !summaryText && !errorText) {
-                    continue;
-                }
-
-                const entry = {
-                    certificateIndex: index + 1,
-                };
-
-                if (hasDetails) {
-                    entry.details = sanitizedDetails;
-                }
-
-                if (summaryText) {
-                    entry.summary = summaryText;
-                }
-
-                if (errorText) {
-                    entry.error = errorText;
-                }
-
-                sanitizedChain.push(entry);
-            }
-
-            if (sanitizedChain.length) {
-                attStmtClone.x5c = sanitizedChain;
-            } else {
-                delete attStmtClone.x5c;
-            }
-        } else {
-            delete attStmtClone.x5c;
-        }
-
+        delete attStmtClone.x5c;
+        delete attStmtClone.X5C;
         delete attStmtClone.x5cParseErrors;
-
         stripCertificateCollections(attStmtClone);
         cloned.attStmt = attStmtClone;
     }
@@ -937,6 +891,7 @@ async function composeRegistrationDetailHtml({
         relyingPartyCopy = cloneJson(relyingPartyInfo);
         if (relyingPartyCopy && typeof relyingPartyCopy === 'object') {
             stripCertificateCollections(relyingPartyCopy);
+            pruneRelyingPartyInfoForDisplay(relyingPartyCopy);
         }
     }
 
