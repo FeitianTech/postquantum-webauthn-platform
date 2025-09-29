@@ -598,6 +598,8 @@ class CoseKey(dict):
 
     ALGORITHM: int = None  # type: ignore
 
+    _assertion_debug_context: Optional[Dict[str, bytes]] = None
+
     def verify(self, message: bytes, signature: bytes) -> None:
         """Validates a digital signature over a given message.
 
@@ -605,6 +607,47 @@ class CoseKey(dict):
         :param signature: The signature to check.
         """
         raise NotImplementedError("Signature verification not supported.")
+
+    def set_assertion_debug_data(
+        self, authenticator_data: bytes, client_data_json: bytes
+    ) -> None:
+        """Store assertion context for later debug logging."""
+
+        self._assertion_debug_context = {
+            "authenticator_data": bytes(authenticator_data),
+            "client_data_json": bytes(client_data_json),
+        }
+
+    def _consume_assertion_debug_data(self) -> Optional[Dict[str, bytes]]:
+        context = self._assertion_debug_context
+        self._assertion_debug_context = None
+        return context
+
+    def _log_signature_debug(
+        self,
+        algorithm_label: str,
+        message_bytes: bytes,
+        signature_bytes: bytes,
+        public_key_bytes: bytes,
+    ) -> None:
+        context = self._consume_assertion_debug_data()
+        print(f"=== {algorithm_label} Verification Debug ===")
+        if context is not None:
+            print(
+                "Authenticator Data (hex):",
+                binascii.hexlify(context["authenticator_data"]).decode(),
+            )
+            print(
+                "Client Data JSON (hex):",
+                binascii.hexlify(context["client_data_json"]).decode(),
+            )
+        else:
+            print("Authenticator Data (hex): <not available>")
+            print("Client Data JSON (hex): <not available>")
+        print("Message (hex):", binascii.hexlify(bytes(message_bytes)).decode())
+        print("Signature (hex):", binascii.hexlify(bytes(signature_bytes)).decode())
+        print("Public Key (hex):", binascii.hexlify(bytes(public_key_bytes)).decode())
+        print("===================================")
 
     @classmethod
     def from_cryptography_key(
@@ -690,6 +733,7 @@ class MLDSA87(CoseKey):
         public_key = self.get(-1)
         if public_key is None:
             raise ValueError("Missing ML-DSA-87 public key")
+        parameter_set = "ML-DSA-87"
         message_bytes = (
             message
             if isinstance(message, (bytes, bytearray, memoryview))
@@ -700,18 +744,15 @@ class MLDSA87(CoseKey):
             if isinstance(signature, (bytes, bytearray, memoryview))
             else bytes(signature)
         )
-        public_key_bytes = _coerce_mldsa_public_key_bytes(public_key, "ML-DSA-87")
+        public_key_bytes = _coerce_mldsa_public_key_bytes(public_key, parameter_set)
+        self._log_signature_debug(
+            parameter_set, message_bytes, signature_bytes, public_key_bytes
+        )
         with oqs_module.Signature("ML-DSA-87") as verifier:
             if not verifier.verify(
                 bytes(message_bytes), bytes(signature_bytes), bytes(public_key_bytes)
             ):
                 raise ValueError("Invalid ML-DSA-87 signature")
-
-        print("=== ML-DSA-44 Verification Debug ===")
-        print("Message (hex):", binascii.hexlify(message_bytes).decode())
-        print("Signature (hex):", binascii.hexlify(signature_bytes).decode())
-        print("Public Key (hex):", binascii.hexlify(public_key_bytes).decode())
-        print("===================================")
 
     @classmethod
     def from_cryptography_key(cls, public_key):
@@ -735,6 +776,7 @@ class MLDSA65(CoseKey):
         public_key = self.get(-1)
         if public_key is None:
             raise ValueError("Missing ML-DSA-65 public key")
+        parameter_set = "ML-DSA-65"
         message_bytes = (
             message
             if isinstance(message, (bytes, bytearray, memoryview))
@@ -745,18 +787,15 @@ class MLDSA65(CoseKey):
             if isinstance(signature, (bytes, bytearray, memoryview))
             else bytes(signature)
         )
-        public_key_bytes = _coerce_mldsa_public_key_bytes(public_key, "ML-DSA-65")
+        public_key_bytes = _coerce_mldsa_public_key_bytes(public_key, parameter_set)
+        self._log_signature_debug(
+            parameter_set, message_bytes, signature_bytes, public_key_bytes
+        )
         with oqs_module.Signature("ML-DSA-65") as verifier:
             if not verifier.verify(
                 bytes(message_bytes), bytes(signature_bytes), bytes(public_key_bytes)
             ):
                 raise ValueError("Invalid ML-DSA-65 signature")
-
-        print("=== ML-DSA-44 Verification Debug ===")
-        print("Message (hex):", binascii.hexlify(message_bytes).decode())
-        print("Signature (hex):", binascii.hexlify(signature_bytes).decode())
-        print("Public Key (hex):", binascii.hexlify(public_key_bytes).decode())
-        print("===================================")
 
     @classmethod
     def from_cryptography_key(cls, public_key):
@@ -779,6 +818,7 @@ class MLDSA44(CoseKey):
         public_key = self.get(-1)
         if public_key is None:
             raise ValueError("Missing ML-DSA-44 public key")
+        parameter_set = "ML-DSA-44"
         message_bytes = (
             message
             if isinstance(message, (bytes, bytearray, memoryview))
@@ -789,13 +829,10 @@ class MLDSA44(CoseKey):
             if isinstance(signature, (bytes, bytearray, memoryview))
             else bytes(signature)
         )
-        public_key_bytes = _coerce_mldsa_public_key_bytes(public_key, "ML-DSA-44")
-
-        print("=== ML-DSA-44 Verification Debug ===")
-        print("Message (hex):", binascii.hexlify(message_bytes).decode())
-        print("Signature (hex):", binascii.hexlify(signature_bytes).decode())
-        print("Public Key (hex):", binascii.hexlify(public_key_bytes).decode())
-        print("===================================")
+        public_key_bytes = _coerce_mldsa_public_key_bytes(public_key, parameter_set)
+        self._log_signature_debug(
+            parameter_set, message_bytes, signature_bytes, public_key_bytes
+        )
 
         with oqs_module.Signature("ML-DSA-44") as verifier:
             if not verifier.verify(

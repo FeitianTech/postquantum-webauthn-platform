@@ -2048,10 +2048,47 @@ export async function showCredentialDetails(index) {
         }
         return null;
     };
-    const attestationSignatureValue = resolveAttestationValue('signatureValid', 'attestationSignatureValid');
-    const attestationRootValue = resolveAttestationValue('rootValid', 'attestationRootValid');
-    const attestationRpIdHashValue = resolveAttestationValue('rpIdHashValid', 'attestationRpIdHashValid');
-    const attestationAaguidMatchValue = resolveAttestationValue('aaguidMatch', 'attestationAaguidMatch');
+    const normaliseAttestationResultValue = (value) => {
+        if (typeof value === 'boolean' || value === null || value === undefined) {
+            return value;
+        }
+        if (typeof value === 'number') {
+            if (Number.isNaN(value)) {
+                return null;
+            }
+            if (value === 1) {
+                return true;
+            }
+            if (value === 0) {
+                return false;
+            }
+        }
+        if (typeof value === 'string') {
+            const trimmed = value.trim();
+            if (!trimmed) {
+                return null;
+            }
+            const normalised = trimmed.toLowerCase();
+            if (['true', 'yes', 'valid', 'pass', 'passed', 'success', 'ok'].includes(normalised)) {
+                return true;
+            }
+            if (['false', 'no', 'invalid', 'fail', 'failed', 'error', 'ko'].includes(normalised)) {
+                return false;
+            }
+            if (normalised === '1') {
+                return true;
+            }
+            if (normalised === '0') {
+                return false;
+            }
+        }
+        return value;
+    };
+
+    const attestationSignatureValue = normaliseAttestationResultValue(resolveAttestationValue('signatureValid', 'attestationSignatureValid'));
+    const attestationRootValue = normaliseAttestationResultValue(resolveAttestationValue('rootValid', 'attestationRootValid'));
+    const attestationRpIdHashValue = normaliseAttestationResultValue(resolveAttestationValue('rpIdHashValid', 'attestationRpIdHashValid'));
+    const attestationAaguidMatchValue = normaliseAttestationResultValue(resolveAttestationValue('aaguidMatch', 'attestationAaguidMatch'));
     const attestationRowsHtml = [
         renderAttestationResultRow('Signature Valid', attestationSignatureValue),
         renderAttestationResultRow('Root Valid', attestationRootValue),
