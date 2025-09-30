@@ -315,6 +315,7 @@ def _verify_mldsa_certificate_signature(
         raise InvalidSignature(
             "Unable to determine ML-DSA parameter set for certificate signature"
         )
+    print("_verify_mldsa_certificate_signature: ML-DSA parameter set", parameter_set)
 
     try:  # pragma: no cover - optional dependency
         import oqs  # type: ignore
@@ -354,11 +355,23 @@ def verify_x509_chain(chain: List[bytes]) -> None:
         issuer_der = remaining.pop(0)
         child_parsed = _parse_certificate(child_der)
         child_signature_oid = child_parsed.signature_algorithm_oid
+        print(
+            "verify_x509_chain: raw child signatureAlgorithm OID from DER",
+            child_signature_oid,
+        )
         signature_class = SIGNATURE_ALGORITHM_OIDS.get(child_signature_oid)
         if signature_class is None:
             raise ValueError(f"Unsupported signature algorithm OID: {child_signature_oid}")
+        print(
+            "verify_x509_chain: classified child signature algorithm",
+            signature_class,
+        )
 
         issuer_spki_oid, issuer_public_key = _extract_subject_public_key_info(issuer_der)
+        print(
+            "verify_x509_chain: raw issuer SubjectPublicKeyInfo algorithm OID",
+            issuer_spki_oid,
+        )
 
         try:
             if signature_class == "MLDSA":
@@ -370,6 +383,10 @@ def verify_x509_chain(chain: List[bytes]) -> None:
                     raise ValueError(
                         "Issuer public key OID does not match ML-DSA parameter set"
                     )
+                print(
+                    "verify_x509_chain: issuer SPKI recognized as ML-DSA OID",
+                    issuer_spki_oid,
+                )
                 _verify_mldsa_certificate_signature(
                     child_parsed.tbs_certificate,
                     child_parsed.signature_value,
@@ -382,6 +399,10 @@ def verify_x509_chain(chain: List[bytes]) -> None:
                         "Issuer public key OID does not match RSA algorithm"
                     )
                 print(
+                    "verify_x509_chain: issuer SPKI recognized as RSA OID",
+                    issuer_spki_oid,
+                )
+                print(
                     "verify_x509_chain: using RSA verifier for signature OID",
                     child_signature_oid,
                 )
@@ -391,9 +412,23 @@ def verify_x509_chain(chain: List[bytes]) -> None:
                 pub = issuer_cert.public_key()
                 if not isinstance(pub, rsa.RSAPublicKey):
                     raise ValueError("Issuer public key is not RSA")
+                print(
+                    "verify_x509_chain: cryptography issuer public key type",
+                    type(pub).__name__,
+                )
                 child_cert = x509.load_der_x509_certificate(
                     child_der, default_backend()
                 )
+                cryptography_sig_oid = getattr(
+                    getattr(child_cert, "signature_algorithm_oid", None),
+                    "dotted_string",
+                    None,
+                )
+                if cryptography_sig_oid:
+                    print(
+                        "verify_x509_chain: cryptography reported child signatureAlgorithm OID",
+                        cryptography_sig_oid,
+                    )
                 hash_algorithm = child_cert.signature_hash_algorithm
                 if hash_algorithm is None:
                     raise ValueError("Child certificate missing signature hash algorithm")
@@ -409,6 +444,10 @@ def verify_x509_chain(chain: List[bytes]) -> None:
                         "Issuer public key OID does not match EC algorithm"
                     )
                 print(
+                    "verify_x509_chain: issuer SPKI recognized as EC OID",
+                    issuer_spki_oid,
+                )
+                print(
                     "verify_x509_chain: using EC verifier for signature OID",
                     child_signature_oid,
                 )
@@ -418,9 +457,23 @@ def verify_x509_chain(chain: List[bytes]) -> None:
                 pub = issuer_cert.public_key()
                 if not isinstance(pub, ec.EllipticCurvePublicKey):
                     raise ValueError("Issuer public key is not EC")
+                print(
+                    "verify_x509_chain: cryptography issuer public key type",
+                    type(pub).__name__,
+                )
                 child_cert = x509.load_der_x509_certificate(
                     child_der, default_backend()
                 )
+                cryptography_sig_oid = getattr(
+                    getattr(child_cert, "signature_algorithm_oid", None),
+                    "dotted_string",
+                    None,
+                )
+                if cryptography_sig_oid:
+                    print(
+                        "verify_x509_chain: cryptography reported child signatureAlgorithm OID",
+                        cryptography_sig_oid,
+                    )
                 hash_algorithm = child_cert.signature_hash_algorithm
                 if hash_algorithm is None:
                     raise ValueError("Child certificate missing signature hash algorithm")
