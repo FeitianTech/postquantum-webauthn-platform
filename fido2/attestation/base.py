@@ -40,9 +40,21 @@ from typing import List, Type, Mapping, Sequence, Optional, Any
 
 import abc
 import logging
+from typing import Iterable
 
 
 logger = logging.getLogger(__name__)
+
+
+def _emit_signature_trace(message: str, *, extra: Iterable[object] = ()) -> None:
+    """Emit signature tracing output through both logging and stdout."""
+
+    if extra:
+        formatted = message % tuple(extra)
+    else:
+        formatted = message
+    print(formatted)
+    logger.info(formatted)
 
 
 class InvalidAttestation(Exception):
@@ -129,9 +141,9 @@ def _verify_mldsa_certificate_signature(
             "Unable to determine ML-DSA parameter set for certificate signature"
         )
 
-    logger.info(
+    _emit_signature_trace(
         "ML-DSA certificate verification uses parameter set %s at stage verify-mldsa",
-        parameter_set,
+        extra=(parameter_set,),
     )
 
     try:
@@ -192,7 +204,7 @@ def verify_x509_chain(chain: List[bytes]) -> None:
         signature_oid = child.signature_algorithm_oid.dotted_string
 
         if describe_mldsa_oid(signature_oid):
-            logger.info("%s detected ML-DSA signature", child_stage)
+            _emit_signature_trace("%s detected ML-DSA signature", extra=(child_stage,))
             _verify_mldsa_certificate_signature(child, cert_der)
             cert_index += 1
             continue
@@ -200,11 +212,17 @@ def verify_x509_chain(chain: List[bytes]) -> None:
         try:
             pub = cert.public_key()
         except ValueError:
-            logger.info("%s issuer public key could not be parsed; falling back to ML-DSA", issuer_stage)
+            _emit_signature_trace(
+                "%s issuer public key could not be parsed; falling back to ML-DSA",
+                extra=(issuer_stage,),
+            )
             pub = None
         try:
             if isinstance(pub, rsa.RSAPublicKey):
-                logger.info("%s verifying with RSA issuer key", child_stage)
+                _emit_signature_trace(
+                    "%s verifying with RSA issuer key",
+                    extra=(child_stage,),
+                )
                 assert child.signature_hash_algorithm is not None  # nosec
                 pub.verify(
                     child.signature,
@@ -213,7 +231,10 @@ def verify_x509_chain(chain: List[bytes]) -> None:
                     child.signature_hash_algorithm,
                 )
             elif isinstance(pub, ec.EllipticCurvePublicKey):
-                logger.info("%s verifying with EC issuer key", child_stage)
+                _emit_signature_trace(
+                    "%s verifying with EC issuer key",
+                    extra=(child_stage,),
+                )
                 assert child.signature_hash_algorithm is not None  # nosec
                 pub.verify(
                     child.signature,
@@ -221,7 +242,10 @@ def verify_x509_chain(chain: List[bytes]) -> None:
                     ec.ECDSA(child.signature_hash_algorithm),
                 )
             elif pub is None:
-                logger.info("%s issuer public key unavailable; invoking ML-DSA verifier", child_stage)
+                _emit_signature_trace(
+                    "%s issuer public key unavailable; invoking ML-DSA verifier",
+                    extra=(child_stage,),
+                )
                 _verify_mldsa_certificate_signature(child, cert_der)
             else:
                 raise ValueError("Unsupported signature key type")
@@ -392,7 +416,10 @@ def _log_certificate_signature(stage: str, certificate: x509.Certificate) -> Non
     try:
         signature_oid = certificate.signature_algorithm_oid.dotted_string
     except Exception as exc:  # pragma: no cover - defensive guard
-        logger.info("Certificate signature [%s]: unable to read signature algorithm (%s)", stage, exc)
+        _emit_signature_trace(
+            "Certificate signature [%s]: unable to read signature algorithm (%s)",
+            extra=(stage, exc),
+        )
         return
 
     algorithm_name = getattr(certificate.signature_algorithm_oid, "_name", "unknown")
@@ -404,11 +431,8 @@ def _log_certificate_signature(stage: str, certificate: x509.Certificate) -> Non
         )
 
     extra = f", parameter_set={parameter_set}" if parameter_set else ""
-    logger.info(
+    _emit_signature_trace(
         "Certificate signature [%s]: oid=%s, name=%s%s",
-        stage,
-        signature_oid,
-        algorithm_name,
-        extra,
+        extra=(stage, signature_oid, algorithm_name, extra),
     )
 
