@@ -213,6 +213,16 @@ _PARSED_CERTIFICATE_IDENTITIES: Dict[Tuple[bytes, bytes, bytes], _ParsedCertific
 _ASN1CRYPTO_MLDSA_PATCHED = False
 
 
+def _replace_cached_certificate(
+    previous: _ParsedCertificate, replacement: _ParsedCertificate
+) -> None:
+    """Ensure cached DER entries referencing *previous* now reference *replacement*."""
+
+    for der, cached in list(_PARSED_CERTIFICATE_CACHE.items()):
+        if cached is previous:
+            _PARSED_CERTIFICATE_CACHE[der] = replacement
+
+
 def _ensure_asn1crypto_supports_mldsa() -> None:
     global _ASN1CRYPTO_MLDSA_PATCHED
     if _ASN1CRYPTO_MLDSA_PATCHED:
@@ -448,28 +458,57 @@ def _parse_certificate(cert_der: bytes) -> _ParsedCertificate:
         _PARSED_CERTIFICATE_IDENTITIES[identity] = parsed
         return parsed
 
-    def _is_mldsa_certificate(cert: _ParsedCertificate) -> bool:
-        return (
-            cert.signature_algorithm_oid in MLDSA_OIDS
-            or cert.subject_public_key_algorithm_oid in MLDSA_OIDS
+    existing_signature_oid = existing.signature_algorithm_oid
+    existing_spki_oid = existing.subject_public_key_algorithm_oid
+    parsed_signature_oid = parsed.signature_algorithm_oid
+    parsed_spki_oid = parsed.subject_public_key_algorithm_oid
+
+    existing_signature_is_mldsa = existing_signature_oid in MLDSA_OIDS
+    parsed_signature_is_mldsa = parsed_signature_oid in MLDSA_OIDS
+    existing_spki_is_mldsa = existing_spki_oid in MLDSA_OIDS
+    parsed_spki_is_mldsa = parsed_spki_oid in MLDSA_OIDS
+
+    if parsed_signature_is_mldsa and not existing_signature_is_mldsa:
+        print(
+            "[DEBUG] Replacing cached certificate signature OID with ML-DSA value"
         )
-
-    existing_is_mldsa = _is_mldsa_certificate(existing)
-    parsed_is_mldsa = _is_mldsa_certificate(parsed)
-
-    if parsed_is_mldsa and not existing_is_mldsa:
-        print("[DEBUG] Replacing cached certificate metadata with ML-DSA identity match")
         _PARSED_CERTIFICATE_IDENTITIES[identity] = parsed
+        _replace_cached_certificate(existing, parsed)
         return parsed
 
-    if existing_is_mldsa and not parsed_is_mldsa:
-        print("[DEBUG] Preserving ML-DSA metadata for certificate identity")
+    if parsed_spki_is_mldsa and not existing_spki_is_mldsa:
+        print("[DEBUG] Replacing cached certificate SPKI OID with ML-DSA value")
+        _PARSED_CERTIFICATE_IDENTITIES[identity] = parsed
+        _replace_cached_certificate(existing, parsed)
+        return parsed
+
+    if existing_signature_is_mldsa and not parsed_signature_is_mldsa:
+        print("[DEBUG] Preserving ML-DSA signature metadata for certificate identity")
+        return existing
+
+    if existing_spki_is_mldsa and not parsed_spki_is_mldsa:
+        print("[DEBUG] Preserving ML-DSA SPKI metadata for certificate identity")
         return existing
 
     if (
-        existing.signature_algorithm_oid != parsed.signature_algorithm_oid
-        or existing.subject_public_key_algorithm_oid
-        != parsed.subject_public_key_algorithm_oid
+        (existing_signature_is_mldsa or existing_spki_is_mldsa)
+        and (parsed_signature_is_mldsa or parsed_spki_is_mldsa)
+        and (
+            existing_signature_oid != parsed_signature_oid
+            or existing_spki_oid != parsed_spki_oid
+        )
+    ):
+        print(
+            "[DEBUG] Certificate identity encountered with differing ML-DSA OIDs;"
+            " updating cached metadata",
+        )
+        _PARSED_CERTIFICATE_IDENTITIES[identity] = parsed
+        _replace_cached_certificate(existing, parsed)
+        return parsed
+
+    if (
+        existing_signature_oid != parsed_signature_oid
+        or existing_spki_oid != parsed_spki_oid
     ):
         print(
             "[DEBUG] Certificate identity encountered with differing OIDs;"
