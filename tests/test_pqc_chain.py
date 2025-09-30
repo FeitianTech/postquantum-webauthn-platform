@@ -19,6 +19,7 @@ from cryptography.hazmat.backends import default_backend
 from fido2.attestation import (
     AttestationResult,
     AttestationType,
+    AttestationVerifier,
     InvalidSignature,
     verify_x509_chain,
     verify_mldsa_x509_chain,
@@ -126,6 +127,74 @@ def test_verify_x509_chain_prefers_mldsa_oid(monkeypatch):
     verify_x509_chain([child_der, issuer_der])
 
     assert captured["call"] == (child_cert, issuer_der)
+
+
+def test_attestation_verifier_selects_mldsa_chain(monkeypatch):
+    class DummyVerifier(AttestationVerifier):
+        def ca_lookup(self, attestation_result, auth_data):  # pragma: no cover - unused
+            raise NotImplementedError
+
+    leaf_der = b"leaf"
+    issuer_der = b"issuer"
+
+    class DummyOid:
+        def __init__(self, dotted: str):
+            self.dotted_string = dotted
+
+    class DummyCert:
+        def __init__(self, oid: str):
+            self.signature_algorithm_oid = DummyOid(oid)
+
+    cert_map = {
+        leaf_der: DummyCert("2.16.840.1.101.3.4.3.17"),
+        issuer_der: DummyCert("1.2.840.113549.1.1.11"),
+    }
+
+    def fake_load_certificate(der_bytes, backend):
+        return cert_map[der_bytes]
+
+    monkeypatch.setattr(x509, "load_der_x509_certificate", fake_load_certificate)
+
+    attestation_result = AttestationResult(AttestationType.BASIC, [leaf_der, issuer_der])
+    auth_data = SimpleNamespace(credential_data=None)
+
+    verifier = DummyVerifier(attestation_types=[])
+
+    selected = verifier._select_chain_verifier(attestation_result, auth_data)
+
+    assert selected is verify_mldsa_x509_chain
+
+
+def test_attestation_verifier_defaults_without_mldsa(monkeypatch):
+    class DummyVerifier(AttestationVerifier):
+        def ca_lookup(self, attestation_result, auth_data):  # pragma: no cover - unused
+            raise NotImplementedError
+
+    leaf_der = b"leaf"
+
+    class DummyOid:
+        def __init__(self, dotted: str):
+            self.dotted_string = dotted
+
+    class DummyCert:
+        def __init__(self, oid: str):
+            self.signature_algorithm_oid = DummyOid(oid)
+
+    cert_map = {leaf_der: DummyCert("1.2.840.113549.1.1.11")}
+
+    def fake_load_certificate(der_bytes, backend):
+        return cert_map[der_bytes]
+
+    monkeypatch.setattr(x509, "load_der_x509_certificate", fake_load_certificate)
+
+    attestation_result = AttestationResult(AttestationType.BASIC, [leaf_der])
+    auth_data = SimpleNamespace(credential_data=None)
+
+    verifier = DummyVerifier(attestation_types=[])
+
+    selected = verifier._select_chain_verifier(attestation_result, auth_data)
+
+    assert selected is verify_x509_chain
 
 
 def test_verify_mldsa_chain_invokes_override(monkeypatch):

@@ -465,6 +465,26 @@ class AttestationVerifier(abc.ABC):
     ) -> Callable[[List[bytes]], None]:
         """Select the function that should verify the certificate chain."""
 
+        trust_path = getattr(attestation_result, "trust_path", None) or []
+        for index, cert_bytes in enumerate(trust_path):
+            stage = f"registration.trust_path[{index}]"
+            try:
+                cert = x509.load_der_x509_certificate(cert_bytes, default_backend())
+            except Exception as exc:  # pragma: no cover - defensive guard
+                _emit_signature_trace(
+                    "Unable to load %s while selecting chain verifier (%s)",
+                    extra=(stage, exc),
+                )
+                continue
+
+            signature_oid = getattr(cert.signature_algorithm_oid, "dotted_string", "")
+            if describe_mldsa_oid(signature_oid):
+                _emit_signature_trace(
+                    "Detected ML-DSA signature at %s; selecting ML-DSA chain verifier",
+                    extra=(stage,),
+                )
+                return verify_mldsa_x509_chain
+
         return verify_x509_chain
 
 
