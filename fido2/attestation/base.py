@@ -233,6 +233,29 @@ def _ensure_asn1crypto_supports_mldsa() -> None:
     _ASN1CRYPTO_MLDSA_PATCHED = True
 
 
+def _bit_string_value(bit_string: asn1_core.Asn1Value) -> bytes:
+    """Return the raw bytes for a BIT STRING-like ASN.1 value."""
+
+    native = getattr(bit_string, "native", None)
+    if isinstance(native, (bytes, bytearray, memoryview)):
+        return bytes(native)
+
+    contents = bit_string.contents
+    if not contents:
+        return b""
+
+    # BIT STRING values (including OctetBitString) encode the number of unused bits
+    # as the first content byte. Tag 0x03 identifies the BIT STRING universal tag.
+    tag = getattr(bit_string, "tag", None)
+    if tag == 3:
+        unused_bits = contents[0]
+        if unused_bits:
+            raise ValueError("Unexpected unused bits in BIT STRING value")
+        return bytes(contents[1:])
+
+    return bytes(contents)
+
+
 def _get_parsed_certificate(cert_der: bytes) -> _ParsedCertificate:
     cached = _PARSED_CERTIFICATE_CACHE.get(cert_der)
     if cached is None:
@@ -364,11 +387,12 @@ def _parse_certificate(cert_der: bytes) -> _ParsedCertificate:
 
     tbs_certificate = tbs.dump()
     signature_algorithm_oid = tbs['signature']['algorithm'].dotted
-    signature_value = cert['signature_value'].native
+
+    signature_value = _bit_string_value(cert['signature_value'])
 
     spki = tbs['subject_public_key_info']
     subject_public_key_algorithm_oid = spki['algorithm']['algorithm'].dotted
-    subject_public_key = spki['public_key'].native
+    subject_public_key = _bit_string_value(spki['public_key'])
 
     issuer_name = tbs['issuer'].dump()
     subject_name = tbs['subject'].dump()
