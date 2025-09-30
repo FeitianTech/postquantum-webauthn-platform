@@ -39,6 +39,7 @@ from asn1crypto import parser as asn1_parser
 from cryptography import x509
 from cryptography.exceptions import InvalidSignature as _InvalidSignature
 from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import ec, padding, rsa
 
 from ..cose import describe_mldsa_oid
@@ -102,18 +103,10 @@ class AttestationResult:
                 "AttestationResult: trust_path[%d] signatureAlgorithm OID %s"
                 % (index, parsed.signature_algorithm_oid)
             )
-            try:
-                spki_oid, _ = _extract_subject_public_key_info(der_bytes)
-            except Exception as exc:  # pragma: no cover - defensive logging
-                print(
-                    "AttestationResult: trust_path[%d] failed to parse SPKI OID: %s"
-                    % (index, exc)
-                )
-            else:
-                print(
-                    "AttestationResult: trust_path[%d] SubjectPublicKeyInfo algorithm OID %s"
-                    % (index, spki_oid)
-                )
+            print(
+                "AttestationResult: trust_path[%d] SubjectPublicKeyInfo algorithm OID %s"
+                % (index, parsed.subject_public_key_algorithm_oid)
+            )
             normalized.append(der_bytes)
 
         self.trust_path = normalized
@@ -137,6 +130,8 @@ class _ParsedCertificate:
     tbs_certificate: bytes
     signature_algorithm_oid: str
     signature_value: bytes
+    subject_public_key_algorithm_oid: str
+    subject_public_key: bytes
 
 
 X509ChainVerifier = Callable[[List[bytes]], None]
@@ -175,6 +170,29 @@ SIGNATURE_ALGORITHM_OIDS = {
 }
 
 
+RSA_SIGNATURE_HASHES = {
+    "1.2.840.113549.1.1.5": hashes.SHA1,
+    "1.2.840.113549.1.1.11": hashes.SHA256,
+    "1.2.840.113549.1.1.12": hashes.SHA384,
+    "1.2.840.113549.1.1.13": hashes.SHA512,
+}
+
+
+EC_SIGNATURE_HASHES = {
+    "1.2.840.10045.4.3.2": hashes.SHA256,
+    "1.2.840.10045.4.3.3": hashes.SHA384,
+    "1.2.840.10045.4.3.4": hashes.SHA512,
+}
+
+
+def _hash_for_signature_oid(signature_oid: str) -> hashes.HashAlgorithm:
+    if signature_oid in RSA_SIGNATURE_HASHES:
+        return RSA_SIGNATURE_HASHES[signature_oid]()
+    if signature_oid in EC_SIGNATURE_HASHES:
+        return EC_SIGNATURE_HASHES[signature_oid]()
+    raise ValueError(f"Unsupported hash mapping for signature OID: {signature_oid}")
+
+
 _custom_x509_chain_verifier: Optional[X509ChainVerifier] = None
 
 
@@ -207,59 +225,8 @@ def _parsed_length(info: tuple[Any, ...]) -> int:
     return len(header) + len(content) + len(trailer)
 
 
-def _parse_certificate(cert_der: bytes) -> _ParsedCertificate:
-    cert_info = asn1_parser.parse(cert_der)
-    if cert_info[0] != 0 or cert_info[1] != 1 or cert_info[2] != 16:
-        raise ValueError("Certificate must be a DER SEQUENCE")
-
-    remaining = cert_info[4]
-
-    tbs_info = asn1_parser.parse(remaining)
-    if tbs_info[0] != 0 or tbs_info[1] != 1 or tbs_info[2] != 16:
-        raise ValueError("Certificate missing TBSCertificate")
-    tbs_len = _parsed_length(tbs_info)
-    tbs_certificate = remaining[:tbs_len]
-    remaining = remaining[tbs_len:]
-
-    sig_alg_info = asn1_parser.parse(remaining)
-    if sig_alg_info[0] != 0 or sig_alg_info[1] != 1 or sig_alg_info[2] != 16:
-        raise ValueError("Certificate missing signature AlgorithmIdentifier")
-    sig_alg_len = _parsed_length(sig_alg_info)
-    sig_alg_content = sig_alg_info[4]
-
-    oid_info = asn1_parser.parse(sig_alg_content)
-    if oid_info[2] != 6:
-        raise ValueError("AlgorithmIdentifier missing OBJECT IDENTIFIER")
-    signature_algorithm_oid = asn1_core.ObjectIdentifier.load(
-        oid_info[3] + oid_info[4]
-    ).dotted
-
-    remaining = remaining[sig_alg_len:]
-
-    signature_info = asn1_parser.parse(remaining)
-    if signature_info[2] != 3:
-        raise ValueError("Certificate missing signature BIT STRING")
-    if not signature_info[4]:
-        raise ValueError("Invalid BIT STRING length")
-    unused_bits = signature_info[4][0]
-    if unused_bits != 0:
-        raise ValueError("Unsupported BIT STRING with unused bits")
-    signature_value = signature_info[4][1:]
-
-    remaining = remaining[_parsed_length(signature_info) :]
-    if remaining:
-        raise ValueError("Certificate parsing did not consume full structure")
-
-    return _ParsedCertificate(
-        tbs_certificate=bytes(tbs_certificate),
-        signature_algorithm_oid=signature_algorithm_oid,
-        signature_value=bytes(signature_value),
-    )
-
-
-def _extract_subject_public_key_info(cert_der: bytes) -> tuple[str, bytes]:
-    parsed = _get_parsed_certificate(cert_der)
-    tbs_info = asn1_parser.parse(parsed.tbs_certificate)
+def _parse_subject_public_key_info_from_tbs(tbs_certificate: bytes) -> tuple[str, bytes]:
+    tbs_info = asn1_parser.parse(tbs_certificate)
     if tbs_info[0] != 0 or tbs_info[1] != 1 or tbs_info[2] != 16:
         raise ValueError("TBSCertificate must be a DER SEQUENCE")
 
@@ -302,6 +269,67 @@ def _extract_subject_public_key_info(cert_der: bytes) -> tuple[str, bytes]:
     public_key_bytes = bitstring_info[4][1:]
 
     return algorithm_oid, bytes(public_key_bytes)
+
+
+def _parse_certificate(cert_der: bytes) -> _ParsedCertificate:
+    cert_info = asn1_parser.parse(cert_der)
+    if cert_info[0] != 0 or cert_info[1] != 1 or cert_info[2] != 16:
+        raise ValueError("Certificate must be a DER SEQUENCE")
+
+    remaining = cert_info[4]
+
+    tbs_info = asn1_parser.parse(remaining)
+    if tbs_info[0] != 0 or tbs_info[1] != 1 or tbs_info[2] != 16:
+        raise ValueError("Certificate missing TBSCertificate")
+    tbs_len = _parsed_length(tbs_info)
+    tbs_certificate = remaining[:tbs_len]
+    remaining = remaining[tbs_len:]
+
+    subject_public_key_algorithm_oid, subject_public_key = (
+        _parse_subject_public_key_info_from_tbs(tbs_certificate)
+    )
+
+    sig_alg_info = asn1_parser.parse(remaining)
+    if sig_alg_info[0] != 0 or sig_alg_info[1] != 1 or sig_alg_info[2] != 16:
+        raise ValueError("Certificate missing signature AlgorithmIdentifier")
+    sig_alg_len = _parsed_length(sig_alg_info)
+    sig_alg_content = sig_alg_info[4]
+
+    oid_info = asn1_parser.parse(sig_alg_content)
+    if oid_info[2] != 6:
+        raise ValueError("AlgorithmIdentifier missing OBJECT IDENTIFIER")
+    signature_algorithm_oid = asn1_core.ObjectIdentifier.load(
+        oid_info[3] + oid_info[4]
+    ).dotted
+
+    remaining = remaining[sig_alg_len:]
+
+    signature_info = asn1_parser.parse(remaining)
+    if signature_info[2] != 3:
+        raise ValueError("Certificate missing signature BIT STRING")
+    if not signature_info[4]:
+        raise ValueError("Invalid BIT STRING length")
+    unused_bits = signature_info[4][0]
+    if unused_bits != 0:
+        raise ValueError("Unsupported BIT STRING with unused bits")
+    signature_value = signature_info[4][1:]
+
+    remaining = remaining[_parsed_length(signature_info) :]
+    if remaining:
+        raise ValueError("Certificate parsing did not consume full structure")
+
+    return _ParsedCertificate(
+        tbs_certificate=bytes(tbs_certificate),
+        signature_algorithm_oid=signature_algorithm_oid,
+        signature_value=bytes(signature_value),
+        subject_public_key_algorithm_oid=subject_public_key_algorithm_oid,
+        subject_public_key=subject_public_key,
+    )
+
+
+def _extract_subject_public_key_info(cert_der: bytes) -> tuple[str, bytes]:
+    parsed = _get_parsed_certificate(cert_der)
+    return parsed.subject_public_key_algorithm_oid, parsed.subject_public_key
 
 
 @catch_builtins
@@ -379,7 +407,7 @@ def _default_verify_x509_chain(chain: List[bytes]) -> None:
         child_parsed = _get_parsed_certificate(child_der)
         child_signature_oid = child_parsed.signature_algorithm_oid
         print(
-            "verify_x509_chain: raw child signatureAlgorithm OID from DER",
+            "verify_x509_chain: cached child signatureAlgorithm OID from DER",
             child_signature_oid,
         )
         signature_class = SIGNATURE_ALGORITHM_OIDS.get(child_signature_oid)
@@ -390,9 +418,11 @@ def _default_verify_x509_chain(chain: List[bytes]) -> None:
             signature_class,
         )
 
-        issuer_spki_oid, issuer_public_key = _extract_subject_public_key_info(issuer_der)
+        issuer_parsed = _get_parsed_certificate(issuer_der)
+        issuer_spki_oid = issuer_parsed.subject_public_key_algorithm_oid
+        issuer_public_key = issuer_parsed.subject_public_key
         print(
-            "verify_x509_chain: raw issuer SubjectPublicKeyInfo algorithm OID",
+            "verify_x509_chain: cached issuer SubjectPublicKeyInfo algorithm OID",
             issuer_spki_oid,
         )
 
@@ -439,11 +469,12 @@ def _default_verify_x509_chain(chain: List[bytes]) -> None:
                     "verify_x509_chain: cryptography issuer public key type",
                     type(pub).__name__,
                 )
-                child_cert = x509.load_der_x509_certificate(
+                hash_algorithm = _hash_for_signature_oid(child_signature_oid)
+                child_cert_for_debug = x509.load_der_x509_certificate(
                     child_der, default_backend()
                 )
                 cryptography_sig_oid = getattr(
-                    getattr(child_cert, "signature_algorithm_oid", None),
+                    getattr(child_cert_for_debug, "signature_algorithm_oid", None),
                     "dotted_string",
                     None,
                 )
@@ -452,12 +483,9 @@ def _default_verify_x509_chain(chain: List[bytes]) -> None:
                         "verify_x509_chain: cryptography reported child signatureAlgorithm OID",
                         cryptography_sig_oid,
                     )
-                hash_algorithm = child_cert.signature_hash_algorithm
-                if hash_algorithm is None:
-                    raise ValueError("Child certificate missing signature hash algorithm")
                 pub.verify(
-                    child_cert.signature,
-                    child_cert.tbs_certificate_bytes,
+                    child_parsed.signature_value,
+                    child_parsed.tbs_certificate,
                     padding.PKCS1v15(),
                     hash_algorithm,
                 )
@@ -484,11 +512,12 @@ def _default_verify_x509_chain(chain: List[bytes]) -> None:
                     "verify_x509_chain: cryptography issuer public key type",
                     type(pub).__name__,
                 )
-                child_cert = x509.load_der_x509_certificate(
+                hash_algorithm = _hash_for_signature_oid(child_signature_oid)
+                child_cert_for_debug = x509.load_der_x509_certificate(
                     child_der, default_backend()
                 )
                 cryptography_sig_oid = getattr(
-                    getattr(child_cert, "signature_algorithm_oid", None),
+                    getattr(child_cert_for_debug, "signature_algorithm_oid", None),
                     "dotted_string",
                     None,
                 )
@@ -497,12 +526,9 @@ def _default_verify_x509_chain(chain: List[bytes]) -> None:
                         "verify_x509_chain: cryptography reported child signatureAlgorithm OID",
                         cryptography_sig_oid,
                     )
-                hash_algorithm = child_cert.signature_hash_algorithm
-                if hash_algorithm is None:
-                    raise ValueError("Child certificate missing signature hash algorithm")
                 pub.verify(
-                    child_cert.signature,
-                    child_cert.tbs_certificate_bytes,
+                    child_parsed.signature_value,
+                    child_parsed.tbs_certificate,
                     ec.ECDSA(hash_algorithm),
                 )
             else:  # pragma: no cover - exhaustive safeguard
