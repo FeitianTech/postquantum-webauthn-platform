@@ -14,8 +14,15 @@ from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 
 import examples.server.server.x509_chain  # noqa: F401  # ensure custom verifier registration
-from fido2.attestation.base import verify_x509_chain
-from fido2.cose import extract_certificate_public_key_info
+from fido2.attestation.base import (
+    AttestationResult,
+    AttestationType,
+    MLDSA_OIDS,
+    _get_parsed_certificate,
+    verify_x509_chain,
+)
+from fido2.cose import CoseKey, extract_certificate_public_key_info
+from examples.server.server.attestation import _attempt_pqc_attestation_signature_validation
 
 
 class DummySignature:
@@ -73,3 +80,71 @@ def test_verify_x509_chain_uses_ml_dsa(monkeypatch):
     assert signature_recorder["message"] == root_cert.tbs_certificate_bytes
     assert signature_recorder["signature"] == root_cert.signature
     assert signature_recorder["public_key"] == public_key_info["subject_public_key"]
+
+
+def test_pqc_attestation_path_preserves_ml_dsa_oid(monkeypatch):
+    metadata_path = "examples/server/server/static/feitian-pqc.json"
+    with open(metadata_path, "r", encoding="utf-8") as fh:
+        metadata = json.load(fh)
+
+    certificate_der = base64.b64decode(metadata["attestationRootCertificates"][0])
+    public_key_info = extract_certificate_public_key_info(certificate_der)
+
+    message_log: dict[str, bytes] = {}
+
+    class DummyKey(dict):
+        ALGORITHM = -48
+
+        def __init__(self, mapping):
+            super().__init__(mapping)
+            message_log.update({
+                "constructor_public_key": bytes(mapping.get(-1, b"")),
+            })
+
+        def verify(self, message, signature):
+            message_log.update(
+                {
+                    "message": bytes(message),
+                    "signature": bytes(signature),
+                }
+            )
+
+    def fake_for_alg(alg):
+        if alg != DummyKey.ALGORITHM:
+            raise AssertionError(f"Unexpected algorithm {alg}")
+        return DummyKey
+
+    monkeypatch.setattr(CoseKey, "for_alg", staticmethod(fake_for_alg))
+
+    class DummyAuthData:
+        credential_data = None
+
+        def __bytes__(self):
+            return b"auth"
+
+    attestation_object = SimpleNamespace(
+        att_stmt={
+            "alg": DummyKey.ALGORITHM,
+            "sig": b"\x01",  # dummy signature content
+            "x5c": [certificate_der],
+        },
+        auth_data=DummyAuthData(),
+    )
+
+    outcome = _attempt_pqc_attestation_signature_validation(
+        attestation_object, b"client_data"
+    )
+
+    assert outcome["success"] is True
+    attestation_result = outcome["attestation_result"]
+    assert isinstance(attestation_result, AttestationResult)
+    assert attestation_result.attestation_type is AttestationType.BASIC
+    assert attestation_result.trust_path
+
+    parsed = _get_parsed_certificate(attestation_result.trust_path[0])
+    assert parsed.signature_algorithm_oid in MLDSA_OIDS
+    assert parsed.subject_public_key_algorithm_oid in MLDSA_OIDS
+
+    assert message_log["constructor_public_key"] == public_key_info["subject_public_key"]
+    assert message_log["message"] == b"auth" + b"client_data"
+    assert message_log["signature"] == b"\x01"
