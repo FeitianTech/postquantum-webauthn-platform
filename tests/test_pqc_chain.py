@@ -14,6 +14,7 @@ from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 
 import examples.server.server.x509_chain  # noqa: F401  # ensure custom verifier registration
+from fido2.attestation import base as attestation_base
 from fido2.attestation.base import verify_x509_chain
 from fido2.cose import extract_certificate_public_key_info
 
@@ -73,3 +74,69 @@ def test_verify_x509_chain_uses_ml_dsa(monkeypatch):
     assert signature_recorder["message"] == root_cert.tbs_certificate_bytes
     assert signature_recorder["signature"] == root_cert.signature
     assert signature_recorder["public_key"] == public_key_info["subject_public_key"]
+
+
+def test_default_chain_verifier_preserves_mldsa_oid(monkeypatch):
+    ml_dsa_oid = "2.16.840.1.101.3.4.3.17"
+
+    # Ensure the default verifier is exercised rather than the server override.
+    monkeypatch.setattr(attestation_base, "_custom_x509_chain_verifier", None)
+
+    child_der = b"child-cert"
+    issuer_der = b"issuer-cert"
+    ordered_chain = [child_der, issuer_der]
+
+    monkeypatch.setattr(
+        attestation_base,
+        "_order_certificate_chain",
+        lambda chain: ordered_chain,
+    )
+
+    child_parsed = SimpleNamespace(
+        signature_algorithm_oid=ml_dsa_oid,
+        subject_public_key_algorithm_oid=ml_dsa_oid,
+        tbs_certificate=b"child-tbs",
+        signature_value=b"child-signature",
+    )
+    issuer_parsed = SimpleNamespace(
+        subject_public_key_algorithm_oid=ml_dsa_oid,
+        subject_public_key=b"issuer-public-key",
+    )
+
+    def fake_get_parsed_certificate(der: bytes) -> SimpleNamespace:
+        if der is child_der:
+            return child_parsed
+        if der is issuer_der:
+            return issuer_parsed
+        raise AssertionError("Unexpected certificate bytes encountered")
+
+    monkeypatch.setattr(
+        attestation_base,
+        "_get_parsed_certificate",
+        fake_get_parsed_certificate,
+    )
+
+    recorded_call: dict[str, bytes] = {}
+
+    def fake_verify_mldsa_certificate_signature(tbs, signature, public_key, oid) -> None:
+        recorded_call.update(
+            {
+                "tbs": tbs,
+                "signature": signature,
+                "public_key": public_key,
+                "oid": oid,
+            }
+        )
+
+    monkeypatch.setattr(
+        attestation_base,
+        "_verify_mldsa_certificate_signature",
+        fake_verify_mldsa_certificate_signature,
+    )
+
+    attestation_base.verify_x509_chain([child_der, issuer_der])
+
+    assert recorded_call["oid"] == ml_dsa_oid
+    assert recorded_call["tbs"] == child_parsed.tbs_certificate
+    assert recorded_call["signature"] == child_parsed.signature_value
+    assert recorded_call["public_key"] == issuer_parsed.subject_public_key
