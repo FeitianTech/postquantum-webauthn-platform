@@ -167,8 +167,18 @@ def verify_x509_chain(chain: List[bytes]) -> None:
     while certs:
         child = cert
         cert, cert_der = certs.pop(0)
-        print("Signature Algorithm OID:", child.signature_algorithm_oid.dotted_string)
-        print("Signature Algorithm Name:", getattr(child.signature_algorithm_oid, "_name", "unknown"))
+        signature_oid = child.signature_algorithm_oid.dotted_string
+        print("Signature Algorithm OID:", signature_oid)
+        print(
+            "Signature Algorithm Name:",
+            getattr(child.signature_algorithm_oid, "_name", "unknown"),
+        )
+
+        if describe_mldsa_oid(signature_oid):
+            print("ML-DSA is used")
+            _verify_mldsa_certificate_signature(child, cert_der)
+            continue
+
         try:
             pub = cert.public_key()
         except ValueError:

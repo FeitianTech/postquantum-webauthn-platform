@@ -72,3 +72,46 @@ def test_verify_x509_chain_uses_ml_dsa(monkeypatch):
     assert signature_recorder["message"] == root_cert.tbs_certificate_bytes
     assert signature_recorder["signature"] == root_cert.signature
     assert signature_recorder["public_key"] == public_key_info["subject_public_key"]
+
+
+def test_verify_x509_chain_prefers_mldsa_oid(monkeypatch):
+    child_der = b"child-der"
+    issuer_der = b"issuer-der"
+
+    class FakeSignatureAlgorithm:
+        dotted_string = "2.16.840.1.101.3.4.3.17"
+        _name = "ML-DSA"
+
+    child_cert = SimpleNamespace(
+        signature_algorithm_oid=FakeSignatureAlgorithm,
+        signature=b"sig",
+        tbs_certificate_bytes=b"tbs",
+        signature_hash_algorithm=None,
+    )
+
+    class FakeIssuerCert:
+        @staticmethod
+        def public_key():  # pragma: no cover - executed if ML-DSA detection regresses
+            raise AssertionError("public_key() should not be invoked for ML-DSA certificates")
+
+    certs = [child_cert, FakeIssuerCert()]
+
+    def fake_load_certificate(der, backend):
+        assert der in (child_der, issuer_der)
+        return certs.pop(0)
+
+    monkeypatch.setattr(x509, "load_der_x509_certificate", fake_load_certificate)
+
+    captured: dict[str, tuple[object, bytes]] = {}
+
+    def fake_verify(child, issuer_bytes):
+        captured["call"] = (child, issuer_bytes)
+
+    monkeypatch.setattr(
+        "fido2.attestation.base._verify_mldsa_certificate_signature",
+        fake_verify,
+    )
+
+    verify_x509_chain([child_der, issuer_der])
+
+    assert captured["call"] == (child_cert, issuer_der)
