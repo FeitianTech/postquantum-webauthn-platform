@@ -32,7 +32,7 @@ import abc
 from dataclasses import dataclass
 from enum import IntEnum, unique
 from functools import wraps
-from typing import Any, List, Mapping, Optional, Sequence, Type
+from typing import Any, Callable, List, Mapping, Optional, Sequence, Type
 
 from asn1crypto import core as asn1_core
 from asn1crypto import parser as asn1_parser
@@ -117,6 +117,9 @@ class _ParsedCertificate:
     signature_value: bytes
 
 
+X509ChainVerifier = Callable[[List[bytes]], None]
+
+
 MLDSA_OIDS = {
     "2.16.840.1.101.3.4.3.17": "ML-DSA-44",
     "2.16.840.1.101.3.4.3.18": "ML-DSA-65",
@@ -148,6 +151,9 @@ SIGNATURE_ALGORITHM_OIDS = {
     "1.2.840.10045.4.3.3": "EC",  # ecdsa-with-SHA384
     "1.2.840.10045.4.3.4": "EC",  # ecdsa-with-SHA512
 }
+
+
+_custom_x509_chain_verifier: Optional[X509ChainVerifier] = None
 
 
 def _coerce_der_bytes(value: Any) -> bytes:
@@ -307,6 +313,13 @@ def _verify_mldsa_certificate_signature(
         raise InvalidSignature(f"ML-DSA certificate verification error: {exc}") from exc
 
 
+def set_x509_chain_verifier(verifier: Optional[X509ChainVerifier]) -> None:
+    """Register a custom verifier invoked by :func:`verify_x509_chain`."""
+
+    global _custom_x509_chain_verifier
+    _custom_x509_chain_verifier = verifier
+
+
 def verify_x509_chain(chain: List[bytes]) -> None:
     """Verifies a chain of certificates.
 
@@ -314,6 +327,14 @@ def verify_x509_chain(chain: List[bytes]) -> None:
     The first item is the leaf, the last is the root.
     """
 
+    if _custom_x509_chain_verifier is not None:
+        _custom_x509_chain_verifier(chain)
+        return
+
+    _default_verify_x509_chain(chain)
+
+
+def _default_verify_x509_chain(chain: List[bytes]) -> None:
     if not chain:
         return
 

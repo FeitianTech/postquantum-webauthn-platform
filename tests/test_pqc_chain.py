@@ -13,6 +13,7 @@ if str(PROJECT_ROOT) not in sys.path:
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 
+import examples.server.server.x509_chain  # noqa: F401  # ensure custom verifier registration
 from fido2.attestation.base import verify_x509_chain
 from fido2.cose import extract_certificate_public_key_info
 

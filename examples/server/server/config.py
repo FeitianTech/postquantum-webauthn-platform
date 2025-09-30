@@ -12,6 +12,8 @@ from flask import Flask, has_request_context, request
 from fido2.server import Fido2Server
 from fido2.webauthn import PublicKeyCredentialRpEntity
 
+from . import x509_chain  # noqa: F401  # ensure custom X.509 verifier registration
+
 # Enable webauthn-json mapping if available (compatible across fido2 versions)
 try:  # pragma: no cover - compatibility shim
     fido2.features.webauthn_json_mapping.enabled = True
