@@ -36,7 +36,7 @@ from cryptography.hazmat.primitives.asymmetric import padding, ec, rsa
 from cryptography.exceptions import InvalidSignature as _InvalidSignature
 from dataclasses import dataclass
 from functools import wraps
-from typing import List, Type, Mapping, Sequence, Optional, Any
+from typing import Iterable, List, Type, Mapping, Sequence, Optional, Any
 
 import abc
 
@@ -167,6 +167,39 @@ def _certificate_uses_mldsa(cert_bytes: Optional[bytes]) -> bool:
     return bool(
         info.get("ml_dsa_parameter_set") or info.get("mlDsaParameterSet")
     )
+
+
+def _normalize_certificate_bytes(candidate: Any) -> Optional[bytes]:
+    """Return *candidate* as ``bytes`` when possible."""
+
+    if isinstance(candidate, (bytes, bytearray, memoryview)):
+        return bytes(candidate)
+    return None
+
+
+def _verify_mldsa_trust_path(child_der: bytes, issuer_candidates: Iterable[bytes]) -> None:
+    """Validate *child_der* against the first ML-DSA capable issuer in ``issuer_candidates``."""
+
+    try:
+        attestation_cert = x509.load_der_x509_certificate(child_der, default_backend())
+    except Exception as exc:  # pragma: no cover - defensive guard
+        raise InvalidSignature(
+            f"Unable to load ML-DSA certificate for verification: {exc}"
+        ) from exc
+
+    issuer_der: Optional[bytes] = None
+    for candidate in issuer_candidates:
+        candidate_bytes = _normalize_certificate_bytes(candidate)
+        if candidate_bytes is None:
+            continue
+        if _certificate_uses_mldsa(candidate_bytes):
+            issuer_der = candidate_bytes
+            break
+
+    if issuer_der is None:
+        raise InvalidSignature("No ML-DSA issuer certificate available for verification")
+
+    _verify_mldsa_certificate_signature(attestation_cert, issuer_der)
 
 
 def verify_x509_chain(chain: List[bytes]) -> None:
@@ -326,38 +359,20 @@ class AttestationVerifier(abc.ABC):
         )
 
         trust_path = result.trust_path or []
-        is_pqc_attestation = bool(trust_path) and _certificate_uses_mldsa(trust_path[0])
+        attestation_cert_der = trust_path[0] if trust_path else None
+        is_pqc_attestation = _certificate_uses_mldsa(attestation_cert_der)
 
         ca = self.ca_lookup(result, attestation_object.auth_data)
 
         if is_pqc_attestation:
             try:
-                attestation_cert = x509.load_der_x509_certificate(
-                    trust_path[0], default_backend()
-                )
-            except Exception as exc:
-                raise UntrustedAttestation(
-                    f"Unable to load attestation certificate for ML-DSA verification: {exc}"
-                ) from exc
+                issuer_candidates: List[bytes] = []
+                if len(trust_path) > 1:
+                    issuer_candidates.extend(trust_path[1:])
+                if ca:
+                    issuer_candidates.append(ca)
 
-            issuer_candidates = []
-            if ca:
-                issuer_candidates.append(ca)
-            if len(trust_path) > 1:
-                issuer_candidates.extend(reversed(trust_path[1:]))
-
-            issuer_der = next(
-                (candidate for candidate in issuer_candidates if _certificate_uses_mldsa(candidate)),
-                None,
-            )
-
-            if issuer_der is None:
-                raise UntrustedAttestation(
-                    "No ML-DSA issuer certificate found for PQC attestation"
-                )
-
-            try:
-                _verify_mldsa_certificate_signature(attestation_cert, issuer_der)
+                _verify_mldsa_trust_path(trust_path[0], issuer_candidates)
             except InvalidSignature as e:
                 raise UntrustedAttestation(e)
 

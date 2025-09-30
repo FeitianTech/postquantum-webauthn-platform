@@ -34,6 +34,7 @@ from .attestation import (
     verify_x509_chain,
     AttestationVerifier,
 )
+from .attestation.base import _certificate_uses_mldsa, _verify_mldsa_trust_path
 from .utils import websafe_decode, _JsonDataObject
 from .cose import CoseKey
 
@@ -487,8 +488,19 @@ def parse_blob(blob: bytes, trust_root: Optional[bytes]) -> MetadataBlobPayload:
     if trust_root is not None:
         # Verify trust chain
         chain = [b64decode(c) for c in header.get("x5c", [])]
-        chain += [trust_root]
-        verify_x509_chain(chain)
+        if not chain:
+            chain = [trust_root]
+            issuer_candidates = []
+        else:
+            issuer_candidates = list(chain[1:])
+
+        if trust_root:
+            issuer_candidates.append(trust_root)
+
+        if chain and _certificate_uses_mldsa(chain[0]):
+            _verify_mldsa_trust_path(chain[0], issuer_candidates)
+        else:
+            verify_x509_chain(chain + [trust_root])
 
         # Verify blob signature using leaf
         leaf = x509.load_der_x509_certificate(chain[0], default_backend())
