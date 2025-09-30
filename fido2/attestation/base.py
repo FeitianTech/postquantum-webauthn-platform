@@ -29,16 +29,17 @@ from __future__ import annotations
 
 import abc
 
-from cryptography import x509
-from cryptography.exceptions import InvalidSignature as _InvalidSignature
-from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives.asymmetric import ec, padding, rsa
 from dataclasses import dataclass
 from enum import IntEnum, unique
 from functools import wraps
 from typing import Any, List, Mapping, Optional, Sequence, Type
 
-from ..cose import describe_mldsa_oid, extract_certificate_public_key_info
+from cryptography import x509
+from cryptography.exceptions import InvalidSignature as _InvalidSignature
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives.asymmetric import ec, padding, rsa
+
+from ..cose import describe_mldsa_oid
 from ..webauthn import AttestationObject, AuthenticatorData
 
 
@@ -101,6 +102,13 @@ def catch_builtins(f):
             raise InvalidData(e)
 
     return inner
+
+
+@dataclass
+class _ParsedCertificate:
+    tbs_certificate: bytes
+    signature_algorithm_oid: str
+    signature_value: bytes
 
 
 MLDSA_OIDS = {
@@ -183,7 +191,46 @@ def _decode_oid_body(body: bytes) -> str:
     return ".".join(oid_numbers)
 
 
-def _extract_certificate_signature_oid(cert_der: bytes) -> str:
+def _parse_bit_string(data: memoryview, idx: int) -> tuple[bytes, int]:
+    if idx >= len(data) or data[idx] != 0x03:
+        raise ValueError("Expected BIT STRING tag")
+    idx += 1
+    length, idx = _parse_der_length(data, idx)
+    end = idx + length
+    if end > len(data) or length == 0:
+        raise ValueError("Invalid BIT STRING length")
+    unused_bits = data[idx]
+    if unused_bits != 0:
+        raise ValueError("Unsupported BIT STRING with unused bits")
+    value = bytes(data[idx + 1 : end])
+    return value, end
+
+
+def _parse_algorithm_identifier(
+    data: memoryview, idx: int
+) -> tuple[str, int]:
+    if idx >= len(data) or data[idx] != 0x30:
+        raise ValueError("AlgorithmIdentifier must be a SEQUENCE")
+    idx += 1
+    seq_len, idx = _parse_der_length(data, idx)
+    end = idx + seq_len
+    if end > len(data):
+        raise ValueError("AlgorithmIdentifier overruns buffer")
+    if idx >= end or data[idx] != 0x06:
+        raise ValueError("AlgorithmIdentifier missing OBJECT IDENTIFIER")
+    idx += 1
+    oid_len, idx = _parse_der_length(data, idx)
+    oid_end = idx + oid_len
+    if oid_end > end or oid_len <= 0:
+        raise ValueError("Invalid OBJECT IDENTIFIER length")
+    oid = _decode_oid_body(bytes(data[idx:oid_end]))
+    idx = oid_end
+    # Skip optional parameters if present.
+    idx = end
+    return oid, idx
+
+
+def _parse_certificate(cert_der: bytes) -> _ParsedCertificate:
     view = memoryview(cert_der)
     idx = 0
     if not view or view[idx] != 0x30:
@@ -194,30 +241,64 @@ def _extract_certificate_signature_oid(cert_der: bytes) -> str:
     if end > len(view):
         raise ValueError("Certificate length exceeds buffer size")
 
-    idx = _skip_der_value(view, idx)
     if idx >= end or view[idx] != 0x30:
-        raise ValueError("Certificate missing signatureAlgorithm")
-    idx += 1
-    sig_len, idx = _parse_der_length(view, idx)
-    sig_end = idx + sig_len
-    if sig_end > end or sig_len <= 0:
-        raise ValueError("Invalid signatureAlgorithm length")
+        raise ValueError("Certificate missing TBSCertificate")
+    tbs_start = idx
+    tbs_end = _skip_der_value(view, idx)
+    tbs_certificate = bytes(view[tbs_start:tbs_end])
+    idx = tbs_end
 
-    if idx >= sig_end or view[idx] != 0x06:
-        raise ValueError("signatureAlgorithm missing OBJECT IDENTIFIER")
-    idx += 1
-    oid_len, idx = _parse_der_length(view, idx)
-    oid_end = idx + oid_len
-    if oid_end > sig_end or oid_len <= 0:
-        raise ValueError("Invalid signatureAlgorithm OBJECT IDENTIFIER length")
+    signature_algorithm_oid, idx = _parse_algorithm_identifier(view, idx)
+    signature_value, idx = _parse_bit_string(view, idx)
 
-    oid_body = bytes(view[idx:oid_end])
-    return _decode_oid_body(oid_body)
+    if idx != end:
+        raise ValueError("Certificate parsing did not consume full structure")
+
+    return _ParsedCertificate(
+        tbs_certificate=tbs_certificate,
+        signature_algorithm_oid=signature_algorithm_oid,
+        signature_value=signature_value,
+    )
+
+
+def _extract_subject_public_key_info(cert_der: bytes) -> tuple[str, bytes]:
+    parsed = _parse_certificate(cert_der)
+    view = memoryview(parsed.tbs_certificate)
+    idx = 0
+    if not view or view[idx] != 0x30:
+        raise ValueError("TBSCertificate must be a DER SEQUENCE")
+    idx += 1
+    seq_len, idx = _parse_der_length(view, idx)
+    end = idx + seq_len
+    if end > len(view):
+        raise ValueError("TBSCertificate length exceeds buffer size")
+
+    if idx < end and view[idx] == 0xA0:
+        idx = _skip_der_value(view, idx)
+
+    for _ in range(5):
+        idx = _skip_der_value(view, idx)
+
+    if idx >= end or view[idx] != 0x30:
+        raise ValueError("TBSCertificate missing SubjectPublicKeyInfo")
+    idx += 1
+    spki_len, idx = _parse_der_length(view, idx)
+    spki_end = idx + spki_len
+    if spki_end > end:
+        raise ValueError("SubjectPublicKeyInfo overruns TBSCertificate")
+
+    algorithm_oid, idx = _parse_algorithm_identifier(view, idx)
+    public_key_bytes, idx = _parse_bit_string(view, idx)
+
+    if idx != spki_end:
+        raise ValueError("SubjectPublicKeyInfo parsing did not consume structure")
+
+    return algorithm_oid, public_key_bytes
 
 
 @catch_builtins
 def _verify_mldsa_certificate_signature(
-    child_cert: x509.Certificate, issuer_der: bytes, signature_oid: str
+    tbs_certificate: bytes, signature: bytes, issuer_public_key: bytes, signature_oid: str
 ) -> None:
     """Verify an ML-DSA signed certificate using liboqs."""
 
@@ -235,15 +316,6 @@ def _verify_mldsa_certificate_signature(
             "Unable to determine ML-DSA parameter set for certificate signature"
         )
 
-    try:
-        info = extract_certificate_public_key_info(issuer_der)
-    except Exception as exc:  # pragma: no cover - defensive guard
-        raise InvalidSignature(f"Unable to parse issuer public key: {exc}") from exc
-
-    public_key = info.get("subject_public_key")
-    if not isinstance(public_key, (bytes, bytearray, memoryview)):
-        raise InvalidSignature("Issuer subject public key missing from certificate")
-
     try:  # pragma: no cover - optional dependency
         import oqs  # type: ignore
     except (ImportError, SystemExit) as exc:  # pragma: no cover - handled by caller
@@ -251,13 +323,13 @@ def _verify_mldsa_certificate_signature(
             "ML-DSA certificate verification requires the 'oqs' package"
         ) from exc
 
-    message = bytes(child_cert.tbs_certificate_bytes)
-    signature = bytes(child_cert.signature)
-    public_key_bytes = bytes(public_key)
+    message = bytes(tbs_certificate)
+    signature_bytes = bytes(signature)
+    public_key_bytes = bytes(issuer_public_key)
 
     try:  # pragma: no cover - depends on oqs runtime availability
         with oqs.Signature(parameter_set) as verifier:  # type: ignore[attr-defined]
-            if not verifier.verify(message, signature, public_key_bytes):
+            if not verifier.verify(message, signature_bytes, public_key_bytes):
                 raise InvalidSignature("ML-DSA certificate signature verification failed")
     except InvalidSignature:
         raise
@@ -280,15 +352,13 @@ def verify_x509_chain(chain: List[bytes]) -> None:
 
     while remaining:
         issuer_der = remaining.pop(0)
-        child_signature_oid = _extract_certificate_signature_oid(child_der)
+        child_parsed = _parse_certificate(child_der)
+        child_signature_oid = child_parsed.signature_algorithm_oid
         signature_class = SIGNATURE_ALGORITHM_OIDS.get(child_signature_oid)
         if signature_class is None:
             raise ValueError(f"Unsupported signature algorithm OID: {child_signature_oid}")
 
-        issuer_info = extract_certificate_public_key_info(issuer_der)
-        issuer_spki_oid = issuer_info.get("algorithm_oid")
-        if not issuer_spki_oid:
-            raise ValueError("Unable to determine issuer public key algorithm OID")
+        issuer_spki_oid, issuer_public_key = _extract_subject_public_key_info(issuer_der)
 
         try:
             if signature_class == "MLDSA":
@@ -300,11 +370,11 @@ def verify_x509_chain(chain: List[bytes]) -> None:
                     raise ValueError(
                         "Issuer public key OID does not match ML-DSA parameter set"
                     )
-                child_cert = x509.load_der_x509_certificate(
-                    child_der, default_backend()
-                )
                 _verify_mldsa_certificate_signature(
-                    child_cert, issuer_der, child_signature_oid
+                    child_parsed.tbs_certificate,
+                    child_parsed.signature_value,
+                    issuer_public_key,
+                    child_signature_oid,
                 )
             elif signature_class == "RSA":
                 if issuer_spki_oid not in RSA_PUBLIC_KEY_OIDS:
