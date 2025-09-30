@@ -655,9 +655,45 @@ class AttestationVerifier(abc.ABC):
         if not ca:
             raise UntrustedAttestation("No root found for Authenticator")
 
-        # Validate the trust chain
+        chain: List[bytes] = result.trust_path + [ca]
+        remaining_chain: List[bytes] = list(chain)
+
+        while len(remaining_chain) >= 2:
+            child_der = remaining_chain[0]
+            child_parsed = _get_parsed_certificate(child_der)
+            saved_oid = child_parsed.signature_algorithm_oid
+            print(f"[DEBUG] Saved OID from DER: {saved_oid}")
+
+            if saved_oid not in MLDSA_OIDS:
+                break
+
+            issuer_der = remaining_chain[1]
+            issuer_parsed = _get_parsed_certificate(issuer_der)
+            issuer_oid = issuer_parsed.subject_public_key_algorithm_oid
+            if issuer_oid not in MLDSA_OIDS:
+                raise UntrustedAttestation(
+                    "Issuer public key OID does not match ML-DSA parameter set"
+                )
+
+            print("[DEBUG] Routing directly to ML-DSA verifier")
+            try:
+                _verify_mldsa_certificate_signature(
+                    child_parsed.tbs_certificate,
+                    child_parsed.signature_value,
+                    issuer_parsed.subject_public_key,
+                    saved_oid,
+                )
+            except (InvalidSignature, ValueError) as exc:
+                raise UntrustedAttestation(exc)
+
+            remaining_chain = remaining_chain[1:]
+
+        if len(remaining_chain) <= 1:
+            return
+
+        # Validate the remaining trust chain using the default logic
         try:
-            verify_x509_chain(result.trust_path + [ca])
+            verify_x509_chain(remaining_chain)
         except InvalidSignature as e:
             raise UntrustedAttestation(e)
 
