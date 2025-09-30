@@ -27,18 +27,22 @@
 
 from __future__ import annotations
 
-from ..cose import describe_mldsa_oid, extract_certificate_public_key_info
-from ..webauthn import AuthenticatorData, AttestationObject
-from enum import IntEnum, unique
-from cryptography import x509
-from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives.asymmetric import padding, ec, rsa
-from cryptography.exceptions import InvalidSignature as _InvalidSignature
-from dataclasses import dataclass
-from functools import wraps
-from typing import List, Type, Mapping, Sequence, Optional, Any
-
 import abc
+
+from asn1crypto import core as asn1_core
+from asn1crypto import keys as asn1_keys
+from asn1crypto import x509 as asn1_x509
+from cryptography import x509
+from cryptography.exceptions import InvalidSignature as _InvalidSignature
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives.asymmetric import ec, padding, rsa
+from dataclasses import dataclass
+from enum import IntEnum, unique
+from functools import wraps
+from typing import Any, List, Mapping, Optional, Sequence, Type
+
+from ..cose import describe_mldsa_oid, extract_certificate_public_key_info
+from ..webauthn import AttestationObject, AuthenticatorData
 
 
 class InvalidAttestation(Exception):
@@ -102,13 +106,54 @@ def catch_builtins(f):
     return inner
 
 
+MLDSA_OIDS = {
+    "2.16.840.1.101.3.4.3.17": "ML-DSA-44",
+    "2.16.840.1.101.3.4.3.18": "ML-DSA-65",
+    "2.16.840.1.101.3.4.3.19": "ML-DSA-87",
+}
+
+
+if not hasattr(asn1_keys.PublicKeyInfo, "_fido2_original_public_key_spec"):
+    asn1_keys.PublicKeyInfo._fido2_original_public_key_spec = (
+        asn1_keys.PublicKeyInfo._public_key_spec
+    )
+
+    def _public_key_spec_with_mldsa(self):  # type: ignore[override]
+        try:
+            return asn1_keys.PublicKeyInfo._fido2_original_public_key_spec(self)
+        except KeyError:
+            algorithm_oid = self["algorithm"]["algorithm"].dotted
+            if algorithm_oid in MLDSA_OIDS:
+                return asn1_core.BitString, None
+            raise
+
+    asn1_keys.PublicKeyInfo._public_key_spec = _public_key_spec_with_mldsa
+    asn1_keys.PublicKeyInfo._spec_callbacks["public_key"] = _public_key_spec_with_mldsa
+
+RSA_PUBLIC_KEY_OIDS = {
+    "1.2.840.113549.1.1.1",
+}
+
+EC_PUBLIC_KEY_OIDS = {
+    "1.2.840.10045.2.1",
+}
+
+
+def _extract_certificate_oids(cert_der: bytes) -> tuple[str, str]:
+    cert = asn1_x509.Certificate.load(cert_der)
+    signature_algorithm_oid = cert["signature_algorithm"]["algorithm"].dotted
+    subject_public_key_algorithm_oid = (
+        cert["tbs_certificate"]["subject_public_key_info"]["algorithm"]["algorithm"].dotted
+    )
+    return signature_algorithm_oid, subject_public_key_algorithm_oid
+
+
 @catch_builtins
 def _verify_mldsa_certificate_signature(
-    child_cert: x509.Certificate, issuer_der: bytes
+    child_cert: x509.Certificate, issuer_der: bytes, signature_oid: str
 ) -> None:
     """Verify an ML-DSA signed certificate using liboqs."""
 
-    signature_oid = child_cert.signature_algorithm_oid.dotted_string
     mldsa_details = describe_mldsa_oid(signature_oid)
     if not mldsa_details:
         raise InvalidSignature(
@@ -165,39 +210,55 @@ def verify_x509_chain(chain: List[bytes]) -> None:
     ]
     cert, cert_der = certs.pop(0)
     while certs:
-        child = cert
+        child_cert, child_der = cert, cert_der
         cert, cert_der = certs.pop(0)
-        print("Signature Algorithm OID:", child.signature_algorithm_oid.dotted_string)
-        print("Signature Algorithm Name:", getattr(child.signature_algorithm_oid, "_name", "unknown"))
+        issuer_cert, issuer_der = cert, cert_der
+
+        child_signature_oid, _ = _extract_certificate_oids(child_der)
+        _, issuer_spki_oid = _extract_certificate_oids(issuer_der)
+
         try:
-            pub = cert.public_key()
-        except ValueError:
-            pub = None
-        try:
-            if isinstance(pub, rsa.RSAPublicKey):
-                print("RSA is used")
-                assert child.signature_hash_algorithm is not None  # nosec
-                pub.verify(
-                    child.signature,
-                    child.tbs_certificate_bytes,
-                    padding.PKCS1v15(),
-                    child.signature_hash_algorithm,
-                )
-            elif isinstance(pub, ec.EllipticCurvePublicKey):
-                print("ec is used")
-                assert child.signature_hash_algorithm is not None  # nosec
-                pub.verify(
-                    child.signature,
-                    child.tbs_certificate_bytes,
-                    ec.ECDSA(child.signature_hash_algorithm),
-                )
-            elif pub is None:
+            if (
+                child_signature_oid in MLDSA_OIDS
+                and issuer_spki_oid in MLDSA_OIDS
+            ):
                 print("ML-DSA is used")
-                _verify_mldsa_certificate_signature(child, cert_der)
+                _verify_mldsa_certificate_signature(
+                    child_cert, issuer_der, child_signature_oid
+                )
             else:
-                raise ValueError("Unsupported signature key type")
+                try:
+                    pub = issuer_cert.public_key()
+                except ValueError:
+                    pub = None
+
+                if issuer_spki_oid in RSA_PUBLIC_KEY_OIDS and isinstance(
+                    pub, rsa.RSAPublicKey
+                ):
+                    print("RSA is used")
+                    assert child_cert.signature_hash_algorithm is not None  # nosec
+                    pub.verify(
+                        child_cert.signature,
+                        child_cert.tbs_certificate_bytes,
+                        padding.PKCS1v15(),
+                        child_cert.signature_hash_algorithm,
+                    )
+                elif issuer_spki_oid in EC_PUBLIC_KEY_OIDS and isinstance(
+                    pub, ec.EllipticCurvePublicKey
+                ):
+                    print("ec is used")
+                    assert child_cert.signature_hash_algorithm is not None  # nosec
+                    pub.verify(
+                        child_cert.signature,
+                        child_cert.tbs_certificate_bytes,
+                        ec.ECDSA(child_cert.signature_hash_algorithm),
+                    )
+                else:
+                    raise ValueError("Unsupported OID")
         except _InvalidSignature:
             raise InvalidSignature()
+
+        cert, cert_der = issuer_cert, issuer_der
 
 
 class Attestation(abc.ABC):
