@@ -167,12 +167,15 @@ def verify_x509_chain(chain: List[bytes]) -> None:
     while certs:
         child = cert
         cert, cert_der = certs.pop(0)
+        print("Signature Algorithm OID:", child.signature_algorithm_oid.dotted_string)
+        print("Signature Algorithm Name:", getattr(child.signature_algorithm_oid, "_name", "unknown"))
         try:
             pub = cert.public_key()
         except ValueError:
             pub = None
         try:
             if isinstance(pub, rsa.RSAPublicKey):
+                print("RSA is used")
                 assert child.signature_hash_algorithm is not None  # nosec
                 pub.verify(
                     child.signature,
@@ -181,6 +184,7 @@ def verify_x509_chain(chain: List[bytes]) -> None:
                     child.signature_hash_algorithm,
                 )
             elif isinstance(pub, ec.EllipticCurvePublicKey):
+                print("ec is used")
                 assert child.signature_hash_algorithm is not None  # nosec
                 pub.verify(
                     child.signature,
@@ -188,6 +192,7 @@ def verify_x509_chain(chain: List[bytes]) -> None:
                     ec.ECDSA(child.signature_hash_algorithm),
                 )
             elif pub is None:
+                print("ML-DSA is used")
                 _verify_mldsa_certificate_signature(child, cert_der)
             else:
                 raise ValueError("Unsupported signature key type")
