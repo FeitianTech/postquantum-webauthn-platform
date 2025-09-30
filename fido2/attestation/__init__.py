@@ -36,6 +36,7 @@ from .base import (  # noqa: F401
     UnsupportedAttestation,
     UntrustedAttestation,
     verify_x509_chain,
+    verify_mldsa_x509_chain,
     AttestationVerifier,
 )
 from .apple import AppleAttestation  # noqa: F401

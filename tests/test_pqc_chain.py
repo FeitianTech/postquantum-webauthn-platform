@@ -7,6 +7,8 @@ import sys
 from datetime import date
 from types import SimpleNamespace
 
+import pytest
+
 PROJECT_ROOT = pathlib.Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
@@ -14,9 +16,16 @@ if str(PROJECT_ROOT) not in sys.path:
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 
-from fido2.attestation.base import verify_x509_chain
+from fido2.attestation import (
+    AttestationResult,
+    AttestationType,
+    InvalidSignature,
+    verify_x509_chain,
+    verify_mldsa_x509_chain,
+)
 from fido2.cose import extract_certificate_public_key_info
 from fido2.mds3 import MetadataBlobPayload, MetadataBlobPayloadEntry, MdsAttestationVerifier
+from fido2.webauthn import Aaguid
 
 
 class DummySignature:
@@ -117,6 +126,151 @@ def test_verify_x509_chain_prefers_mldsa_oid(monkeypatch):
     verify_x509_chain([child_der, issuer_der])
 
     assert captured["call"] == (child_cert, issuer_der)
+
+
+def test_verify_mldsa_chain_invokes_override(monkeypatch):
+    child_der = b"child-der"
+    issuer_der = b"issuer-der"
+
+    class FakeSignatureAlgorithm:
+        dotted_string = "2.16.840.1.101.3.4.3.17"
+        _name = "ML-DSA"
+
+    child_cert = SimpleNamespace(
+        signature_algorithm_oid=FakeSignatureAlgorithm,
+        signature=b"sig",
+        tbs_certificate_bytes=b"tbs",
+    )
+
+    issuer_cert = SimpleNamespace(signature_algorithm_oid=FakeSignatureAlgorithm)
+
+    certs = [child_cert, issuer_cert]
+
+    def fake_load_certificate(der, backend):
+        assert der in (child_der, issuer_der)
+        return certs.pop(0)
+
+    monkeypatch.setattr(x509, "load_der_x509_certificate", fake_load_certificate)
+
+    captured: dict[str, tuple[object, bytes]] = {}
+
+    def fake_verify(child, issuer_bytes):
+        captured["call"] = (child, issuer_bytes)
+
+    monkeypatch.setattr(
+        "fido2.attestation.base._verify_mldsa_certificate_signature",
+        fake_verify,
+    )
+
+    verify_mldsa_x509_chain([child_der, issuer_der])
+
+    assert captured["call"] == (child_cert, issuer_der)
+
+
+def test_verify_mldsa_chain_requires_mldsa_signature(monkeypatch):
+    child_der = b"child-der"
+    issuer_der = b"issuer-der"
+
+    class FakeSignatureAlgorithm:
+        dotted_string = "1.2.840.113549.1.1.11"
+        _name = "sha256WithRSAEncryption"
+
+    child_cert = SimpleNamespace(
+        signature_algorithm_oid=FakeSignatureAlgorithm,
+        signature=b"sig",
+        tbs_certificate_bytes=b"tbs",
+    )
+
+    issuer_cert = SimpleNamespace(signature_algorithm_oid=FakeSignatureAlgorithm)
+
+    certs = [child_cert, issuer_cert]
+
+    def fake_load_certificate(der, backend):
+        assert der in (child_der, issuer_der)
+        return certs.pop(0)
+
+    monkeypatch.setattr(x509, "load_der_x509_certificate", fake_load_certificate)
+
+    with pytest.raises(InvalidSignature):
+        verify_mldsa_x509_chain([child_der, issuer_der])
+
+
+def test_mds_verifier_selects_testing_chain_for_feitian():
+    metadata_path = pathlib.Path(
+        "examples/server/server/static/feitian-pqc.json"
+    )
+    data = json.loads(metadata_path.read_text(encoding="utf-8"))
+    feitian_roots = [
+        base64.b64decode(cert) for cert in data["attestationRootCertificates"]
+    ]
+
+    entry = _build_metadata_entry(
+        data,
+        roots=feitian_roots,
+        description=data["description"],
+    )
+
+    payload = MetadataBlobPayload(
+        legal_header="",
+        no=0,
+        next_update=date(2024, 1, 1),
+        entries=(entry,),
+    )
+
+    verifier = MdsAttestationVerifier(payload)
+
+    attestation_result = AttestationResult(
+        AttestationType.BASIC,
+        [b"leaf"],
+    )
+    auth_data = SimpleNamespace(
+        credential_data=SimpleNamespace(
+            aaguid=Aaguid.parse("73b2b592-8829-4fb7-a199-cfb5e1e271b7")
+        )
+    )
+
+    selected = verifier._select_chain_verifier(attestation_result, auth_data)
+
+    assert selected is verify_mldsa_x509_chain
+
+
+def test_mds_verifier_uses_default_chain_for_other_aaguid():
+    metadata_path = pathlib.Path(
+        "examples/server/server/static/feitian-pqc.json"
+    )
+    data = json.loads(metadata_path.read_text(encoding="utf-8"))
+    feitian_roots = [
+        base64.b64decode(cert) for cert in data["attestationRootCertificates"]
+    ]
+
+    entry = _build_metadata_entry(
+        data,
+        roots=feitian_roots,
+        description=data["description"],
+    )
+
+    payload = MetadataBlobPayload(
+        legal_header="",
+        no=0,
+        next_update=date(2024, 1, 1),
+        entries=(entry,),
+    )
+
+    verifier = MdsAttestationVerifier(payload)
+
+    attestation_result = AttestationResult(
+        AttestationType.BASIC,
+        [b"leaf"],
+    )
+    auth_data = SimpleNamespace(
+        credential_data=SimpleNamespace(
+            aaguid=Aaguid.parse("00000000-0000-0000-0000-000000000000")
+        )
+    )
+
+    selected = verifier._select_chain_verifier(attestation_result, auth_data)
+
+    assert selected is verify_x509_chain
 
 
 def _build_metadata_entry(source: dict, *, roots: list[bytes], description: str) -> MetadataBlobPayloadEntry:

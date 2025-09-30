@@ -36,7 +36,7 @@ from cryptography.hazmat.primitives.asymmetric import padding, ec, rsa
 from cryptography.exceptions import InvalidSignature as _InvalidSignature
 from dataclasses import dataclass
 from functools import wraps
-from typing import List, Type, Mapping, Sequence, Optional, Any
+from typing import Callable, List, Type, Mapping, Sequence, Optional, Any
 
 import abc
 import logging
@@ -255,6 +255,52 @@ def verify_x509_chain(chain: List[bytes]) -> None:
         cert_index += 1
 
 
+def verify_mldsa_x509_chain(chain: List[bytes]) -> None:
+    """Verifies a chain of certificates using ML-DSA for each hop.
+
+    This variant is intended for attestation chains where every signature is
+    expected to use an ML-DSA algorithm and classical issuer verification would
+    incorrectly downgrade the signature metadata. The caller is responsible for
+    supplying the appropriate trust anchor as the final element in ``chain``.
+    """
+
+    _emit_signature_trace(
+        "Using ML-DSA-only certificate chain verifier for attestation",
+    )
+
+    certs = [
+        (x509.load_der_x509_certificate(der, default_backend()), der)
+        for der in chain
+    ]
+
+    for index, (loaded_cert, _) in enumerate(certs):
+        _log_certificate_signature(f"chain.load[{index}]", loaded_cert)
+
+    cert_index = 0
+    cert, cert_der = certs.pop(0)
+    while certs:
+        child = cert
+        child_stage = f"chain.child[{cert_index}]"
+        issuer_stage = f"chain.issuer[{cert_index + 1}]"
+        _log_certificate_signature(child_stage, child)
+
+        cert, cert_der = certs.pop(0)
+        _log_certificate_signature(f"{issuer_stage}.loaded", cert)
+
+        signature_oid = child.signature_algorithm_oid.dotted_string
+        if not describe_mldsa_oid(signature_oid):
+            raise InvalidSignature(
+                f"Expected ML-DSA signature for {child_stage}, got {signature_oid}"
+            )
+
+        _emit_signature_trace(
+            "%s verifying with ML-DSA issuer key (testing override)",
+            extra=(child_stage,),
+        )
+        _verify_mldsa_certificate_signature(child, cert_der)
+        cert_index += 1
+
+
 class Attestation(abc.ABC):
     """Implements verification of a specific attestation type."""
 
@@ -398,8 +444,11 @@ class AttestationVerifier(abc.ABC):
             _log_certificate_signature("registration.ca", ca_cert)
 
         # Validate the trust chain
+        chain_verifier = self._select_chain_verifier(
+            result, attestation_object.auth_data
+        )
         try:
-            verify_x509_chain(result.trust_path + [ca])
+            chain_verifier(result.trust_path + [ca])
         except InvalidSignature as e:
             raise UntrustedAttestation(e)
         else:
@@ -408,6 +457,15 @@ class AttestationVerifier(abc.ABC):
     def __call__(self, *args):
         """Allows passing an instance to Fido2Server as verify_attestation"""
         self.verify_attestation(*args)
+
+    def _select_chain_verifier(
+        self,
+        attestation_result: AttestationResult,
+        auth_data: AuthenticatorData,
+    ) -> Callable[[List[bytes]], None]:
+        """Select the function that should verify the certificate chain."""
+
+        return verify_x509_chain
 
 
 def _log_certificate_signature(stage: str, certificate: x509.Certificate) -> None:

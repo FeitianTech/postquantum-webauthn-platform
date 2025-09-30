@@ -32,8 +32,10 @@ from .attestation import (
     Attestation,
     UntrustedAttestation,
     verify_x509_chain,
+    verify_mldsa_x509_chain,
     AttestationVerifier,
 )
+from .attestation.base import _emit_signature_trace
 from .utils import websafe_decode, _JsonDataObject
 from .cose import CoseKey, describe_mldsa_oid
 
@@ -44,7 +46,7 @@ from enum import Enum, unique
 from datetime import date
 from base64 import b64decode, b64encode
 from contextvars import ContextVar
-from typing import Sequence, Mapping, Any, Optional, Callable
+from typing import Dict, List, Sequence, Mapping, Any, Optional, Callable
 
 import json
 import logging
@@ -332,6 +334,9 @@ def filter_attestation_key_compromised(
 _last_entry: ContextVar[Optional[MetadataBlobPayloadEntry]] = ContextVar("_last_entry")
 
 
+FEITIAN_PQC_TEST_AAGUID = Aaguid.parse("73b2b592-8829-4fb7-a199-cfb5e1e271b7")
+
+
 class MdsAttestationVerifier(AttestationVerifier):
     """MDS3 implementation of an AttestationVerifier.
 
@@ -371,6 +376,9 @@ class MdsAttestationVerifier(AttestationVerifier):
         self._attestation_filter = attestation_filter or (
             lambda a, b: True
         )  # No-op for None
+        self._testing_chain_verifiers: Dict[Aaguid, Callable[[List[bytes]], None]] = {
+            FEITIAN_PQC_TEST_AAGUID: verify_mldsa_x509_chain,
+        }
 
         entries = (
             [e for e in blob.entries if entry_filter(e)]
@@ -498,6 +506,24 @@ class MdsAttestationVerifier(AttestationVerifier):
 
             logger.info(f"No attestation root matching subject: {issuer}")
         return None
+
+    def _select_chain_verifier(
+        self,
+        attestation_result,
+        auth_data,
+    ):
+        credential_data = getattr(auth_data, "credential_data", None)
+        if credential_data is not None:
+            aaguid = getattr(credential_data, "aaguid", None)
+            override = self._testing_chain_verifiers.get(aaguid)
+            if override is not None:
+                _emit_signature_trace(
+                    "Using ML-DSA testing chain verifier for AAGUID %s",
+                    extra=(str(aaguid),),
+                )
+                return override
+
+        return super()._select_chain_verifier(attestation_result, auth_data)
 
     def find_entry(
         self, attestation_object: AttestationObject, client_data_hash: bytes
