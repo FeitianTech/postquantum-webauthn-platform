@@ -325,13 +325,12 @@ class AttestationVerifier(abc.ABC):
             client_data_hash,
         )
 
-        # Lookup CA to use for trust path verification
-        ca = self.ca_lookup(result, attestation_object.auth_data)
-        if not ca:
-            raise UntrustedAttestation("No root found for Authenticator")
-
         trust_path = result.trust_path or []
-        if trust_path and _certificate_uses_mldsa(ca):
+        is_pqc_attestation = bool(trust_path) and _certificate_uses_mldsa(trust_path[0])
+
+        ca = self.ca_lookup(result, attestation_object.auth_data)
+
+        if is_pqc_attestation:
             try:
                 attestation_cert = x509.load_der_x509_certificate(
                     trust_path[0], default_backend()
@@ -341,16 +340,35 @@ class AttestationVerifier(abc.ABC):
                     f"Unable to load attestation certificate for ML-DSA verification: {exc}"
                 ) from exc
 
+            issuer_candidates = []
+            if ca:
+                issuer_candidates.append(ca)
+            if len(trust_path) > 1:
+                issuer_candidates.extend(reversed(trust_path[1:]))
+
+            issuer_der = next(
+                (candidate for candidate in issuer_candidates if _certificate_uses_mldsa(candidate)),
+                None,
+            )
+
+            if issuer_der is None:
+                raise UntrustedAttestation(
+                    "No ML-DSA issuer certificate found for PQC attestation"
+                )
+
             try:
-                _verify_mldsa_certificate_signature(attestation_cert, ca)
+                _verify_mldsa_certificate_signature(attestation_cert, issuer_der)
             except InvalidSignature as e:
                 raise UntrustedAttestation(e)
 
             return
 
+        if not ca:
+            raise UntrustedAttestation("No root found for Authenticator")
+
         # Validate the trust chain
         try:
-            verify_x509_chain(result.trust_path + [ca])
+            verify_x509_chain(trust_path + [ca])
         except InvalidSignature as e:
             raise UntrustedAttestation(e)
 

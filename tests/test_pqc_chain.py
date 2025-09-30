@@ -86,7 +86,7 @@ class DummyAttestation(Attestation):
 
 
 class DummyVerifier(AttestationVerifier):
-    def __init__(self, ca_der: bytes, result: AttestationResult) -> None:
+    def __init__(self, result: AttestationResult, ca_der: bytes | None = None) -> None:
         super().__init__(attestation_types=[DummyAttestation(result)])
         self._ca_der = ca_der
 
@@ -105,7 +105,42 @@ def test_verify_attestation_skips_chain_for_pqc(monkeypatch):
         [root_der, root_der],
     )
 
-    verifier = DummyVerifier(root_der, attestation_result)
+    verifier = DummyVerifier(attestation_result, ca_der=root_der)
+
+    called: dict[str, object] = {}
+
+    def record_verify(child_cert, issuer_der):
+        called.update({"child": child_cert, "issuer": issuer_der})
+
+    def fail_verify_x509_chain(_chain):  # pragma: no cover - guard
+        raise AssertionError("verify_x509_chain should not run for PQC attestation")
+
+    monkeypatch.setattr(
+        "fido2.attestation.base._verify_mldsa_certificate_signature",
+        record_verify,
+    )
+    monkeypatch.setattr("fido2.attestation.base.verify_x509_chain", fail_verify_x509_chain)
+
+    attestation_object = SimpleNamespace(fmt="dummy", att_stmt={}, auth_data=object())
+
+    verifier.verify_attestation(attestation_object, b"hash")
+
+    assert called["issuer"] == root_der
+    assert called["child"].tbs_certificate_bytes
+
+
+def test_verify_attestation_skips_chain_for_pqc_without_ca(monkeypatch):
+    metadata_path = "examples/server/server/static/feitian-pqc.json"
+    with open(metadata_path, "r", encoding="utf-8") as fh:
+        metadata = json.load(fh)
+
+    root_der = base64.b64decode(metadata["attestationRootCertificates"][0])
+    attestation_result = AttestationResult(
+        AttestationType.BASIC,
+        [root_der, root_der],
+    )
+
+    verifier = DummyVerifier(attestation_result)
 
     called: dict[str, object] = {}
 
