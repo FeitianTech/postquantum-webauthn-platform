@@ -35,7 +35,7 @@ from .attestation import (
     AttestationVerifier,
 )
 from .utils import websafe_decode, _JsonDataObject
-from .cose import CoseKey
+from .cose import CoseKey, describe_mldsa_oid
 
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
@@ -377,12 +377,17 @@ class MdsAttestationVerifier(AttestationVerifier):
             if entry_filter
             else blob.entries
         )
-        self._aaguid_table = {e.aaguid: e for e in entries if e.aaguid}
-        self._ski_table = {
-            ski: e
-            for e in entries
-            for ski in e.attestation_certificate_key_identifiers or []
-        }
+        self._aaguid_table = {}
+        for entry in entries:
+            if entry.aaguid and entry.aaguid not in self._aaguid_table:
+                self._aaguid_table[entry.aaguid] = entry
+
+        self._ski_table = {}
+        for entry in entries:
+            if not entry.attestation_certificate_key_identifiers:
+                continue
+            for ski in entry.attestation_certificate_key_identifiers:
+                self._ski_table.setdefault(ski, entry)
 
     def find_entry_by_aaguid(
         self, aaguid: Aaguid
@@ -440,13 +445,57 @@ class MdsAttestationVerifier(AttestationVerifier):
                 attestation_result.trust_path[-1], default_backend()
             ).issuer
 
+            leaf_cert = None
+            if attestation_result.trust_path:
+                try:
+                    leaf_cert = x509.load_der_x509_certificate(
+                        attestation_result.trust_path[0], default_backend()
+                    )
+                except Exception as exc:  # pragma: no cover - defensive guard
+                    logging.debug(
+                        "Unable to load attestation leaf certificate while selecting root: %s",
+                        exc,
+                    )
+
+            candidate_roots = []
+            preferred_roots = []
+
             for root in entry.metadata_statement.attestation_root_certificates:
                 subject = x509.load_der_x509_certificate(
                     root, default_backend()
                 ).subject
-                if subject == issuer:
-                    _last_entry.set(entry)
-                    return root
+                if subject != issuer:
+                    continue
+
+                candidate_roots.append(root)
+
+                if not leaf_cert:
+                    continue
+
+                signature_oid = getattr(
+                    leaf_cert.signature_algorithm_oid, "dotted_string", ""
+                )
+                if describe_mldsa_oid(signature_oid):
+                    try:
+                        root_cert = x509.load_der_x509_certificate(
+                            root, default_backend()
+                        )
+                    except Exception:  # pragma: no cover - defensive guard
+                        continue
+                    root_signature_oid = getattr(
+                        root_cert.signature_algorithm_oid, "dotted_string", ""
+                    )
+                    if describe_mldsa_oid(root_signature_oid):
+                        preferred_roots.append(root)
+
+            if preferred_roots:
+                _last_entry.set(entry)
+                return preferred_roots[0]
+
+            if candidate_roots:
+                _last_entry.set(entry)
+                return candidate_roots[0]
+
             logger.info(f"No attestation root matching subject: {issuer}")
         return None
 

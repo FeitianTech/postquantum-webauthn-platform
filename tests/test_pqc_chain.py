@@ -4,6 +4,7 @@ import base64
 import json
 import pathlib
 import sys
+from datetime import date
 from types import SimpleNamespace
 
 PROJECT_ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -15,6 +16,7 @@ from cryptography.hazmat.backends import default_backend
 
 from fido2.attestation.base import verify_x509_chain
 from fido2.cose import extract_certificate_public_key_info
+from fido2.mds3 import MetadataBlobPayload, MetadataBlobPayloadEntry, MdsAttestationVerifier
 
 
 class DummySignature:
@@ -115,3 +117,152 @@ def test_verify_x509_chain_prefers_mldsa_oid(monkeypatch):
     verify_x509_chain([child_der, issuer_der])
 
     assert captured["call"] == (child_cert, issuer_der)
+
+
+def _build_metadata_entry(source: dict, *, roots: list[bytes], description: str) -> MetadataBlobPayloadEntry:
+    return MetadataBlobPayloadEntry.from_dict(
+        {
+            "statusReports": [
+                {
+                    "status": "FIDO_CERTIFIED",
+                }
+            ],
+            "timeOfLastStatusChange": "2024-01-01",
+            "aaguid": source["aaguid"],
+            "metadataStatement": {
+                "description": description,
+                "authenticatorVersion": source["authenticatorVersion"],
+                "schema": source["schema"],
+                "upv": source["upv"],
+                "attestationTypes": source["attestationTypes"],
+                "authenticationAlgorithms": source["authenticationAlgorithms"],
+                "publicKeyAlgAndEncodings": source["publicKeyAlgAndEncodings"],
+                "userVerificationDetails": source["userVerificationDetails"],
+                "keyProtection": source["keyProtection"],
+                "matcherProtection": source["matcherProtection"],
+                "cryptoStrength": source["cryptoStrength"],
+                "attachmentHint": source["attachmentHint"],
+                "tcDisplay": source["tcDisplay"],
+                "attestationRootCertificates": [
+                    base64.b64encode(root).decode("ascii") for root in roots
+                ],
+            },
+        }
+    )
+
+
+def test_mds_verifier_prefers_feitian_entry_for_aaguid():
+    metadata_path = pathlib.Path(
+        "examples/server/server/static/feitian-pqc.json"
+    )
+    data = json.loads(metadata_path.read_text(encoding="utf-8"))
+    feitian_roots = [
+        base64.b64decode(cert) for cert in data["attestationRootCertificates"]
+    ]
+    feitian_entry = _build_metadata_entry(
+        data,
+        roots=feitian_roots,
+        description=data["description"],
+    )
+
+    rsa_root = b"rsa-root-placeholder"
+    rsa_entry = _build_metadata_entry(
+        data,
+        roots=[rsa_root],
+        description="RSA override",
+    )
+
+    payload = MetadataBlobPayload(
+        legal_header="",
+        no=0,
+        next_update=date(2024, 1, 1),
+        entries=(feitian_entry, rsa_entry),
+    )
+
+    verifier = MdsAttestationVerifier(payload)
+
+    matched = verifier.find_entry_by_aaguid(feitian_entry.aaguid)
+    assert matched is feitian_entry
+
+
+def test_mds_ca_lookup_prefers_mldsa_root(monkeypatch):
+    metadata_path = pathlib.Path(
+        "examples/server/server/static/feitian-pqc.json"
+    )
+    data = json.loads(metadata_path.read_text(encoding="utf-8"))
+
+    feitian_roots = [
+        base64.b64decode(cert) for cert in data["attestationRootCertificates"]
+    ]
+    rsa_root = b"rsa-root-placeholder"
+
+    entry = _build_metadata_entry(
+        data,
+        roots=[rsa_root] + feitian_roots,
+        description=data["description"],
+    )
+
+    payload = MetadataBlobPayload(
+        legal_header="",
+        no=0,
+        next_update=date(2024, 1, 1),
+        entries=(entry,),
+    )
+
+    verifier = MdsAttestationVerifier(payload)
+
+    leaf_der = b"leaf-cert"
+    issuer_der = b"issuer-cert"
+
+    class DummyOid:
+        def __init__(self, dotted: str):
+            self.dotted_string = dotted
+
+    class DummyCert:
+        def __init__(self, *, subject: str, issuer: str, oid: str):
+            self.subject = subject
+            self.issuer = issuer
+            self.signature_algorithm_oid = DummyOid(oid)
+
+        def public_key(self):  # pragma: no cover - not exercised here
+            raise NotImplementedError
+
+    root_subject = "root-subject"
+    cert_map = {
+        leaf_der: DummyCert(
+            subject="leaf-subject",
+            issuer=root_subject,
+            oid="2.16.840.1.101.3.4.3.17",
+        ),
+        issuer_der: DummyCert(
+            subject=root_subject,
+            issuer=root_subject,
+            oid="2.16.840.1.101.3.4.3.17",
+        ),
+        rsa_root: DummyCert(
+            subject=root_subject,
+            issuer=root_subject,
+            oid="1.2.840.113549.1.1.11",
+        ),
+    }
+
+    for feitian_root in feitian_roots:
+        cert_map[feitian_root] = DummyCert(
+            subject=root_subject,
+            issuer=root_subject,
+            oid="2.16.840.1.101.3.4.3.17",
+        )
+
+    def fake_load_certificate(der_bytes, backend):
+        return cert_map[der_bytes]
+
+    monkeypatch.setattr(x509, "load_der_x509_certificate", fake_load_certificate)
+
+    attestation_result = SimpleNamespace(trust_path=[leaf_der, issuer_der])
+    auth_data = SimpleNamespace(
+        credential_data=SimpleNamespace(aaguid=entry.aaguid)
+    )
+
+    selected_root = verifier.ca_lookup(attestation_result, auth_data)
+
+    assert selected_root in feitian_roots
