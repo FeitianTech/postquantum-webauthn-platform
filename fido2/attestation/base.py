@@ -102,13 +102,100 @@ def catch_builtins(f):
     return inner
 
 
+def _decode_asn1_oid(oid_bytes: bytes) -> Optional[str]:
+    """Decode a DER encoded OBJECT IDENTIFIER into dotted string form."""
+
+    if not oid_bytes:
+        return None
+
+    first = oid_bytes[0]
+    arcs = [first // 40, first % 40]
+
+    value = 0
+    for byte in oid_bytes[1:]:
+        value = (value << 7) | (byte & 0x7F)
+        if byte & 0x80:
+            continue
+        arcs.append(value)
+        value = 0
+
+    if value:
+        return None
+
+    return ".".join(str(arc) for arc in arcs)
+
+
+def _parse_der_length(data: memoryview, idx: int) -> tuple[int, int]:
+    """Parse a DER length field."""
+
+    if idx >= len(data):
+        raise ValueError("Invalid DER length: truncated data")
+
+    first = data[idx]
+    idx += 1
+    if first & 0x80 == 0:
+        return first, idx
+
+    num_bytes = first & 0x7F
+    if num_bytes == 0 or idx + num_bytes > len(data):
+        raise ValueError("Invalid DER length encoding")
+
+    length = int.from_bytes(data[idx : idx + num_bytes], "big")
+    idx += num_bytes
+    return length, idx
+
+
+def _extract_certificate_signature_algorithm_oid(cert_der: bytes) -> Optional[str]:
+    """Return the signatureAlgorithm OID from a DER encoded certificate."""
+
+    try:
+        view = memoryview(cert_der)
+        idx = 0
+
+        if idx >= len(view) or view[idx] != 0x30:
+            return None
+        idx += 1
+        cert_length, idx = _parse_der_length(view, idx)
+        cert_end = idx + cert_length
+        if cert_end > len(view):
+            return None
+
+        if idx >= cert_end or view[idx] != 0x30:
+            return None
+        idx += 1
+        tbs_length, idx = _parse_der_length(view, idx)
+        idx += tbs_length
+        if idx > cert_end:
+            return None
+
+        if idx >= cert_end or view[idx] != 0x30:
+            return None
+        idx += 1
+        algo_length, idx = _parse_der_length(view, idx)
+        algo_end = idx + algo_length
+        if algo_end > cert_end:
+            return None
+
+        if idx >= algo_end or view[idx] != 0x06:
+            return None
+        idx += 1
+        oid_length, idx = _parse_der_length(view, idx)
+        if idx + oid_length > algo_end:
+            return None
+
+        return _decode_asn1_oid(bytes(view[idx : idx + oid_length]))
+    except Exception:
+        return None
+
+
 @catch_builtins
 def _verify_mldsa_certificate_signature(
-    child_cert: x509.Certificate, issuer_der: bytes
+    child_cert: x509.Certificate, issuer_der: bytes, signature_oid: Optional[str] = None
 ) -> None:
     """Verify an ML-DSA signed certificate using liboqs."""
 
-    signature_oid = child_cert.signature_algorithm_oid.dotted_string
+    if signature_oid is None:
+        signature_oid = child_cert.signature_algorithm_oid.dotted_string
     mldsa_details = describe_mldsa_oid(signature_oid)
     if not mldsa_details:
         raise InvalidSignature(
@@ -165,17 +252,24 @@ def verify_x509_chain(chain: List[bytes]) -> None:
     ]
     cert, cert_der = certs.pop(0)
     while certs:
-        child = cert
+        child, child_der = cert, cert_der
         cert, cert_der = certs.pop(0)
-        print("Signature Algorithm OID:", child.signature_algorithm_oid.dotted_string)
-        print("Signature Algorithm Name:", getattr(child.signature_algorithm_oid, "_name", "unknown"))
+
+        signature_oid = _extract_certificate_signature_algorithm_oid(child_der)
+        if signature_oid is None:
+            signature_oid = child.signature_algorithm_oid.dotted_string
+
+        signature_details = describe_mldsa_oid(signature_oid)
+        if signature_details is not None:
+            _verify_mldsa_certificate_signature(child, cert_der, signature_oid)
+            continue
+
         try:
             pub = cert.public_key()
         except ValueError:
             pub = None
         try:
             if isinstance(pub, rsa.RSAPublicKey):
-                print("RSA is used")
                 assert child.signature_hash_algorithm is not None  # nosec
                 pub.verify(
                     child.signature,
@@ -184,7 +278,6 @@ def verify_x509_chain(chain: List[bytes]) -> None:
                     child.signature_hash_algorithm,
                 )
             elif isinstance(pub, ec.EllipticCurvePublicKey):
-                print("ec is used")
                 assert child.signature_hash_algorithm is not None  # nosec
                 pub.verify(
                     child.signature,
@@ -192,8 +285,7 @@ def verify_x509_chain(chain: List[bytes]) -> None:
                     ec.ECDSA(child.signature_hash_algorithm),
                 )
             elif pub is None:
-                print("ML-DSA is used")
-                _verify_mldsa_certificate_signature(child, cert_der)
+                raise InvalidSignature("Unsupported signature key type")
             else:
                 raise ValueError("Unsupported signature key type")
         except _InvalidSignature:
