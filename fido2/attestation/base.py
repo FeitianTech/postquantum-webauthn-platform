@@ -39,6 +39,10 @@ from functools import wraps
 from typing import List, Type, Mapping, Sequence, Optional, Any
 
 import abc
+import logging
+
+
+logger = logging.getLogger(__name__)
 
 
 class InvalidAttestation(Exception):
@@ -108,6 +112,8 @@ def _verify_mldsa_certificate_signature(
 ) -> None:
     """Verify an ML-DSA signed certificate using liboqs."""
 
+    _log_certificate_signature("verify-mldsa.child", child_cert)
+
     signature_oid = child_cert.signature_algorithm_oid.dotted_string
     mldsa_details = describe_mldsa_oid(signature_oid)
     if not mldsa_details:
@@ -122,6 +128,11 @@ def _verify_mldsa_certificate_signature(
         raise InvalidSignature(
             "Unable to determine ML-DSA parameter set for certificate signature"
         )
+
+    logger.info(
+        "ML-DSA certificate verification uses parameter set %s at stage verify-mldsa",
+        parameter_set,
+    )
 
     try:
         info = extract_certificate_public_key_info(issuer_der)
@@ -163,29 +174,37 @@ def verify_x509_chain(chain: List[bytes]) -> None:
         (x509.load_der_x509_certificate(der, default_backend()), der)
         for der in chain
     ]
+
+    for index, (loaded_cert, _) in enumerate(certs):
+        _log_certificate_signature(f"chain.load[{index}]", loaded_cert)
+
+    cert_index = 0
     cert, cert_der = certs.pop(0)
     while certs:
         child = cert
+        child_stage = f"chain.child[{cert_index}]"
+        issuer_stage = f"chain.issuer[{cert_index + 1}]"
+        _log_certificate_signature(child_stage, child)
+
         cert, cert_der = certs.pop(0)
+        _log_certificate_signature(f"{issuer_stage}.loaded", cert)
+
         signature_oid = child.signature_algorithm_oid.dotted_string
-        print("Signature Algorithm OID:", signature_oid)
-        print(
-            "Signature Algorithm Name:",
-            getattr(child.signature_algorithm_oid, "_name", "unknown"),
-        )
 
         if describe_mldsa_oid(signature_oid):
-            print("ML-DSA is used")
+            logger.info("%s detected ML-DSA signature", child_stage)
             _verify_mldsa_certificate_signature(child, cert_der)
+            cert_index += 1
             continue
 
         try:
             pub = cert.public_key()
         except ValueError:
+            logger.info("%s issuer public key could not be parsed; falling back to ML-DSA", issuer_stage)
             pub = None
         try:
             if isinstance(pub, rsa.RSAPublicKey):
-                print("RSA is used")
+                logger.info("%s verifying with RSA issuer key", child_stage)
                 assert child.signature_hash_algorithm is not None  # nosec
                 pub.verify(
                     child.signature,
@@ -194,7 +213,7 @@ def verify_x509_chain(chain: List[bytes]) -> None:
                     child.signature_hash_algorithm,
                 )
             elif isinstance(pub, ec.EllipticCurvePublicKey):
-                print("ec is used")
+                logger.info("%s verifying with EC issuer key", child_stage)
                 assert child.signature_hash_algorithm is not None  # nosec
                 pub.verify(
                     child.signature,
@@ -202,12 +221,14 @@ def verify_x509_chain(chain: List[bytes]) -> None:
                     ec.ECDSA(child.signature_hash_algorithm),
                 )
             elif pub is None:
-                print("ML-DSA is used")
+                logger.info("%s issuer public key unavailable; invoking ML-DSA verifier", child_stage)
                 _verify_mldsa_certificate_signature(child, cert_der)
             else:
                 raise ValueError("Unsupported signature key type")
         except _InvalidSignature:
             raise InvalidSignature()
+
+        cert_index += 1
 
 
 class Attestation(abc.ABC):
@@ -305,6 +326,9 @@ class AttestationVerifier(abc.ABC):
         :param attestation_object: dict containing attestation data.
         :param client_data_hash: SHA256 hash of the ClientData bytes.
         """
+        logger.info(
+            "Registration start: attestation format=%s", attestation_object.fmt
+        )
         att_verifier: Attestation = UnsupportedAttestation(attestation_object.fmt)
         for at in self._attestation_types:
             if getattr(at, "FORMAT", None) == attestation_object.fmt:
@@ -319,17 +343,72 @@ class AttestationVerifier(abc.ABC):
             client_data_hash,
         )
 
+        logger.info(
+            "Attestation statement verified for format %s; trust_path length=%d",
+            attestation_object.fmt,
+            len(result.trust_path),
+        )
+
+        for index, cert_bytes in enumerate(result.trust_path):
+            try:
+                cert = x509.load_der_x509_certificate(cert_bytes, default_backend())
+            except Exception as exc:  # pragma: no cover - defensive guard
+                logger.info(
+                    "registration.trust_path[%d]: unable to load certificate (%s)",
+                    index,
+                    exc,
+                )
+                continue
+            _log_certificate_signature(f"registration.trust_path[{index}]", cert)
+
         # Lookup CA to use for trust path verification
         ca = self.ca_lookup(result, attestation_object.auth_data)
         if not ca:
             raise UntrustedAttestation("No root found for Authenticator")
+
+        try:
+            ca_cert = x509.load_der_x509_certificate(ca, default_backend())
+        except Exception as exc:  # pragma: no cover - defensive guard
+            logger.info("registration.ca: unable to load certificate (%s)", exc)
+        else:
+            _log_certificate_signature("registration.ca", ca_cert)
 
         # Validate the trust chain
         try:
             verify_x509_chain(result.trust_path + [ca])
         except InvalidSignature as e:
             raise UntrustedAttestation(e)
+        else:
+            logger.info("Registration complete for format %s", attestation_object.fmt)
 
     def __call__(self, *args):
         """Allows passing an instance to Fido2Server as verify_attestation"""
         self.verify_attestation(*args)
+
+
+def _log_certificate_signature(stage: str, certificate: x509.Certificate) -> None:
+    """Log signature metadata for a certificate at a specific pipeline stage."""
+
+    try:
+        signature_oid = certificate.signature_algorithm_oid.dotted_string
+    except Exception as exc:  # pragma: no cover - defensive guard
+        logger.info("Certificate signature [%s]: unable to read signature algorithm (%s)", stage, exc)
+        return
+
+    algorithm_name = getattr(certificate.signature_algorithm_oid, "_name", "unknown")
+    mldsa_details = describe_mldsa_oid(signature_oid)
+    parameter_set = None
+    if mldsa_details:
+        parameter_set = mldsa_details.get("mlDsaParameterSet") or mldsa_details.get(
+            "ml_dsa_parameter_set"
+        )
+
+    extra = f", parameter_set={parameter_set}" if parameter_set else ""
+    logger.info(
+        "Certificate signature [%s]: oid=%s, name=%s%s",
+        stage,
+        signature_oid,
+        algorithm_name,
+        extra,
+    )
+

@@ -33,6 +33,7 @@ from .base import (
     AttestationResult,
     InvalidData,
     catch_builtins,
+    _log_certificate_signature,
 )
 from ..cose import CoseKey
 from ..utils import sha256, websafe_decode
@@ -64,6 +65,7 @@ class AndroidSafetynetAttestation(Attestation):
         data = json.loads(header.decode("utf8"))
         x5c = [websafe_decode(x) for x in data["x5c"]]
         cert = x509.load_der_x509_certificate(x5c[0], default_backend())
+        _log_certificate_signature("attestation.android-safetynet.x5c[0]", cert)
 
         cn = cert.subject.get_attributes_for_oid(x509.NameOID.COMMON_NAME)
         if cn[0].value != "attest.android.com":

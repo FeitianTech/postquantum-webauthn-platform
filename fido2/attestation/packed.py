@@ -35,6 +35,7 @@ from .base import (
     InvalidSignature,
     catch_builtins,
     _validate_cert_common,
+    _log_certificate_signature,
 )
 from typing import Optional
 
@@ -120,6 +121,7 @@ class PackedAttestation(Attestation):
         if x5c:
             cert_bytes = x5c[0]
             cert = x509.load_der_x509_certificate(cert_bytes, default_backend())
+            _log_certificate_signature("attestation.packed.x5c[0]", cert)
             _validate_packed_cert(
                 cert,
                 auth_data.credential_data.aaguid,

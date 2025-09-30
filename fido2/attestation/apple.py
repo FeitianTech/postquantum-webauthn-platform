@@ -33,6 +33,7 @@ from .base import (
     AttestationResult,
     InvalidData,
     catch_builtins,
+    _log_certificate_signature,
 )
 from ..utils import sha256
 
@@ -52,6 +53,7 @@ class AppleAttestation(Attestation):
         x5c = statement["x5c"]
         expected_nonce = sha256(auth_data + client_data_hash)
         cert = x509.load_der_x509_certificate(x5c[0], default_backend())
+        _log_certificate_signature("attestation.apple.x5c[0]", cert)
         ext = cert.extensions.get_extension_for_oid(OID_APPLE)
         ext_nonce = ext.value.value[6:]  # Sequence of single element of octet string
         if not bytes_eq(expected_nonce, ext_nonce):

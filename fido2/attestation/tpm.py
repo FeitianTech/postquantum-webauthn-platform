@@ -37,6 +37,7 @@ from .base import (
     InvalidSignature,
     catch_builtins,
     _validate_cert_common,
+    _log_certificate_signature,
 )
 from ..cose import CoseKey
 from ..utils import bytes2int, ByteBuffer
@@ -518,6 +519,7 @@ class TpmAttestation(Attestation):
         x5c = statement["x5c"]
         cert_info = statement["certInfo"]
         cert = x509.load_der_x509_certificate(x5c[0], default_backend())
+        _log_certificate_signature("attestation.tpm.x5c[0]", cert)
         _validate_tpm_cert(cert)
 
         pub_key = CoseKey.for_alg(alg).from_cryptography_key(cert.public_key())

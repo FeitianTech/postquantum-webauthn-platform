@@ -33,6 +33,7 @@ from .base import (
     AttestationResult,
     InvalidSignature,
     catch_builtins,
+    _log_certificate_signature,
 )
 from ..cose import ES256
 
@@ -65,6 +66,7 @@ class FidoU2FAttestation(Attestation):
     ):
         m = b"\0" + app_param + client_param + key_handle + public_key
         cert = x509.load_der_x509_certificate(cert_bytes, default_backend())
+        _log_certificate_signature("attestation.fido-u2f.x5c[0]", cert)
         try:
             ES256.from_cryptography_key(cert.public_key()).verify(m, signature)
         except _InvalidSignature:
