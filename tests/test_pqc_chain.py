@@ -117,7 +117,9 @@ def test_attestation_verifier_skips_chain_for_pqc(monkeypatch, caplog):
             return self._ca_bytes
 
     attestation_object = SimpleNamespace(
-        fmt="dummy", att_stmt={}, auth_data=SimpleNamespace()
+        fmt="dummy",
+        att_stmt={"x5c": [root_der]},
+        auth_data=SimpleNamespace(credential_data=SimpleNamespace()),
     )
 
     caplog.set_level("INFO")
@@ -128,6 +130,66 @@ def test_attestation_verifier_skips_chain_for_pqc(monkeypatch, caplog):
     assert isinstance(recorded["child"], x509.Certificate)
     assert recorded["child"].tbs_certificate_bytes == root_cert.tbs_certificate_bytes
     assert (
-        "Using direct ML-DSA verification (skipping chain) for PQC testing mode"
+        "Using PQC direct verification, bypassing x5c chain to avoid RSA overwrite"
+        in caplog.text
+    )
+
+
+def test_attestation_verifier_detects_pqc_by_aaguid(monkeypatch, caplog):
+    metadata_path = "examples/server/server/static/feitian-pqc.json"
+    with open(metadata_path, "r", encoding="utf-8") as fh:
+        metadata = json.load(fh)
+
+    root_der = base64.b64decode(metadata["attestationRootCertificates"][0])
+    root_cert = x509.load_der_x509_certificate(root_der, default_backend())
+    aaguid_hex = metadata["aaguid"].replace("-", "")
+    aaguid_bytes = bytes.fromhex(aaguid_hex)
+
+    recorded: dict[str, object] = {}
+
+    def record_signature(child, issuer):
+        recorded.update({"child": child, "issuer": issuer})
+
+    def fail_chain(_chain):  # pragma: no cover - guard assertion for this test
+        raise AssertionError("verify_x509_chain should not be called for PQC attestation")
+
+    monkeypatch.setattr(
+        "fido2.attestation.base._verify_mldsa_certificate_signature",
+        record_signature,
+    )
+    monkeypatch.setattr("fido2.attestation.base.verify_x509_chain", fail_chain)
+    monkeypatch.setattr("fido2.attestation.base.describe_mldsa_oid", lambda _: {})
+
+    class DummyAttestation(Attestation):
+        FORMAT = "dummy"
+
+        def verify(self, statement, auth_data, client_data_hash):
+            return AttestationResult(AttestationType.BASIC, [root_der])
+
+    class DummyVerifier(AttestationVerifier):
+        def __init__(self, ca_bytes):
+            super().__init__([DummyAttestation()])
+            self._ca_bytes = ca_bytes
+
+        def ca_lookup(self, attestation_result, auth_data):
+            return self._ca_bytes
+
+    attestation_object = SimpleNamespace(
+        fmt="dummy",
+        att_stmt={"x5c": [root_der]},
+        auth_data=SimpleNamespace(
+            credential_data=SimpleNamespace(aaguid=aaguid_bytes)
+        ),
+    )
+
+    caplog.set_level("INFO")
+
+    DummyVerifier(root_der).verify_attestation(attestation_object, b"")
+
+    assert recorded["issuer"] == root_der
+    assert isinstance(recorded["child"], x509.Certificate)
+    assert recorded["child"].tbs_certificate_bytes == root_cert.tbs_certificate_bytes
+    assert (
+        "Using PQC direct verification, bypassing x5c chain to avoid RSA overwrite"
         in caplog.text
     )

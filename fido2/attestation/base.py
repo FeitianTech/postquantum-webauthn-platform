@@ -45,6 +45,12 @@ import abc
 
 logger = logging.getLogger(__name__)
 
+_PQC_TRACE_MESSAGE = "Using PQC direct verification, bypassing x5c chain to avoid RSA overwrite"
+
+KNOWN_PQC_AAGUIDS = {
+    bytes.fromhex("73b2b59288294fb7a199cfb5e1e271b7"),
+}
+
 
 class InvalidAttestation(Exception):
     """Base exception for attestation-related errors."""
@@ -156,6 +162,28 @@ def _verify_mldsa_certificate_signature(
         raise
     except Exception as exc:  # pragma: no cover - defensive guard
         raise InvalidSignature(f"ML-DSA certificate verification error: {exc}") from exc
+
+
+def _extract_att_stmt_leaf_certificate(att_stmt: Mapping[str, Any]) -> Optional[bytes]:
+    if not isinstance(att_stmt, Mapping):
+        return None
+    chain = att_stmt.get("x5c")
+    if not isinstance(chain, (list, tuple)) or not chain:
+        return None
+    first = chain[0]
+    if isinstance(first, (bytes, bytearray, memoryview)):
+        return bytes(first)
+    return None
+
+
+def _extract_aaguid_bytes(auth_data: AuthenticatorData) -> Optional[bytes]:
+    credential_data = getattr(auth_data, "credential_data", None)
+    if credential_data is None:
+        return None
+    aaguid_value = getattr(credential_data, "aaguid", None)
+    if isinstance(aaguid_value, (bytes, bytearray, memoryview)):
+        return bytes(aaguid_value)
+    return None
 
 
 def verify_x509_chain(chain: List[bytes]) -> None:
@@ -314,34 +342,49 @@ class AttestationVerifier(abc.ABC):
             client_data_hash,
         )
 
+        att_stmt_leaf = _extract_att_stmt_leaf_certificate(attestation_object.att_stmt)
+        pqc_child_cert: Optional[x509.Certificate] = None
+        pqc_oid_detected = False
+        if att_stmt_leaf:
+            try:
+                pqc_child_cert = x509.load_der_x509_certificate(
+                    att_stmt_leaf, default_backend()
+                )
+            except (ValueError, TypeError):
+                pqc_child_cert = None
+            else:
+                signature_oid = pqc_child_cert.signature_algorithm_oid.dotted_string
+                pqc_oid_detected = bool(describe_mldsa_oid(signature_oid))
+
+        pqc_aaguid_detected = False
+        try:
+            aaguid_bytes = _extract_aaguid_bytes(attestation_object.auth_data)
+        except AttributeError:
+            aaguid_bytes = None
+        if aaguid_bytes is not None:
+            pqc_aaguid_detected = aaguid_bytes in KNOWN_PQC_AAGUIDS
+
         # Lookup CA to use for trust path verification
         ca = self.ca_lookup(result, attestation_object.auth_data)
         if not ca:
             raise UntrustedAttestation("No root found for Authenticator")
 
-        # Validate the trust chain
-        if result.trust_path:
-            try:
-                child_cert = x509.load_der_x509_certificate(
-                    result.trust_path[0], default_backend()
+        if pqc_oid_detected or pqc_aaguid_detected:
+            if pqc_child_cert is None:
+                raise UntrustedAttestation(
+                    "PQC attestation certificate missing from attestation statement"
                 )
-            except (ValueError, TypeError):
-                child_cert = None
+            logger.info(_PQC_TRACE_MESSAGE)
+            try:
+                _verify_mldsa_certificate_signature(pqc_child_cert, ca)
+            except InvalidSignature as e:
+                raise UntrustedAttestation(e)
             else:
-                signature_oid = child_cert.signature_algorithm_oid.dotted_string
-                if describe_mldsa_oid(signature_oid):
-                    logger.info(
-                        "Using direct ML-DSA verification (skipping chain) for PQC testing mode"
-                    )
-                    try:
-                        _verify_mldsa_certificate_signature(child_cert, ca)
-                    except InvalidSignature as e:
-                        raise UntrustedAttestation(e)
-                    else:
-                        return
+                return
 
+        trust_path = list(result.trust_path or [])
         try:
-            verify_x509_chain(result.trust_path + [ca])
+            verify_x509_chain(trust_path + [ca])
         except InvalidSignature as e:
             raise UntrustedAttestation(e)
 
