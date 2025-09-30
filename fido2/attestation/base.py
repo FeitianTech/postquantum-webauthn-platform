@@ -167,35 +167,42 @@ def verify_x509_chain(chain: List[bytes]) -> None:
     while certs:
         child = cert
         cert, cert_der = certs.pop(0)
-        print("Signature Algorithm OID:", child.signature_algorithm_oid.dotted_string)
-        print("Signature Algorithm Name:", getattr(child.signature_algorithm_oid, "_name", "unknown"))
+        
+        # Determine verification method based on child certificate's signature algorithm
+        signature_oid = child.signature_algorithm_oid.dotted_string
+        
+        # Check if this is an ML-DSA signature algorithm
+        from ..cose import describe_mldsa_oid
+        mldsa_details = describe_mldsa_oid(signature_oid)
+        
         try:
-            pub = cert.public_key()
-        except ValueError:
-            pub = None
-        try:
-            if isinstance(pub, rsa.RSAPublicKey):
-                print("RSA is used")
-                assert child.signature_hash_algorithm is not None  # nosec
-                pub.verify(
-                    child.signature,
-                    child.tbs_certificate_bytes,
-                    padding.PKCS1v15(),
-                    child.signature_hash_algorithm,
-                )
-            elif isinstance(pub, ec.EllipticCurvePublicKey):
-                print("ec is used")
-                assert child.signature_hash_algorithm is not None  # nosec
-                pub.verify(
-                    child.signature,
-                    child.tbs_certificate_bytes,
-                    ec.ECDSA(child.signature_hash_algorithm),
-                )
-            elif pub is None:
-                print("ML-DSA is used")
+            if mldsa_details:
                 _verify_mldsa_certificate_signature(child, cert_der)
             else:
-                raise ValueError("Unsupported signature key type")
+                # For non-ML-DSA signatures, use the traditional approach
+                try:
+                    pub = cert.public_key()
+                except ValueError:
+                    # If we can't parse the parent's public key, we can't verify
+                    raise ValueError("Unable to parse parent certificate's public key")
+                
+                if isinstance(pub, rsa.RSAPublicKey):
+                    assert child.signature_hash_algorithm is not None  # nosec
+                    pub.verify(
+                        child.signature,
+                        child.tbs_certificate_bytes,
+                        padding.PKCS1v15(),
+                        child.signature_hash_algorithm,
+                    )
+                elif isinstance(pub, ec.EllipticCurvePublicKey):
+                    assert child.signature_hash_algorithm is not None  # nosec
+                    pub.verify(
+                        child.signature,
+                        child.tbs_certificate_bytes,
+                        ec.ECDSA(child.signature_hash_algorithm),
+                    )
+                else:
+                    raise ValueError("Unsupported signature key type")
         except _InvalidSignature:
             raise InvalidSignature()
 
