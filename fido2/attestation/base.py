@@ -27,7 +27,13 @@
 
 from __future__ import annotations
 
-from ..cose import describe_mldsa_oid, extract_certificate_public_key_info
+from ..cose import (
+    _decode_der_oid,
+    _parse_der_length,
+    _skip_der_value,
+    describe_mldsa_oid,
+    extract_certificate_public_key_info,
+)
 from ..webauthn import AuthenticatorData, AttestationObject
 from enum import IntEnum, unique
 from cryptography import x509
@@ -71,6 +77,38 @@ class InvalidSignature(InvalidAttestation):
 
 class UntrustedAttestation(InvalidAttestation):
     """The CA of the attestation is not trusted."""
+
+
+def _extract_certificate_signature_algorithm_oid(cert_der: bytes) -> Optional[str]:
+    """Return the signatureAlgorithm OID from *cert_der* without cryptography."""
+
+    view = memoryview(cert_der)
+    try:
+        if not view or view[0] != 0x30:
+            return None
+
+        idx = 1
+        cert_len, idx = _parse_der_length(view, idx)
+        cert_end = idx + cert_len
+        if cert_end > len(view):
+            return None
+
+        # Skip TBSCertificate
+        idx = _skip_der_value(view, idx)
+        if idx >= cert_end or view[idx] != 0x30:
+            return None
+
+        # Parse signatureAlgorithm SEQUENCE
+        algo_idx = idx + 1
+        algo_len, content_idx = _parse_der_length(view, algo_idx)
+        algo_end = content_idx + algo_len
+        if algo_end > cert_end:
+            return None
+
+        algorithm_oid, _ = _decode_der_oid(view, content_idx)
+        return algorithm_oid
+    except Exception:
+        return None
 
 
 class UnsupportedType(InvalidAttestation):
@@ -120,13 +158,18 @@ def catch_builtins(f):
 
 @catch_builtins
 def _verify_mldsa_certificate_signature(
-    child_cert: x509.Certificate, issuer_der: bytes
+    child_cert: x509.Certificate,
+    issuer_der: bytes,
+    *,
+    signature_oid_override: Optional[str] = None,
 ) -> None:
     """Verify an ML-DSA signed certificate using liboqs."""
 
     _log_certificate_signature("verify-mldsa.child", child_cert)
 
-    signature_oid = child_cert.signature_algorithm_oid.dotted_string
+    signature_oid = signature_oid_override
+    if not signature_oid:
+        signature_oid = child_cert.signature_algorithm_oid.dotted_string
     mldsa_details = describe_mldsa_oid(signature_oid)
     if not mldsa_details:
         raise InvalidSignature(
@@ -182,30 +225,48 @@ def verify_x509_chain(chain: List[bytes]) -> None:
     Checks that the first item in the chain is signed by the next, and so on.
     The first item is the leaf, the last is the root.
     """
-    certs = [
-        (x509.load_der_x509_certificate(der, default_backend()), der)
-        for der in chain
-    ]
+    certs: List[tuple[x509.Certificate, bytes, Optional[str]]] = []
+    for der in chain:
+        signature_oid = _extract_certificate_signature_algorithm_oid(der)
+        certs.append(
+            (x509.load_der_x509_certificate(der, default_backend()), der, signature_oid)
+        )
 
-    for index, (loaded_cert, _) in enumerate(certs):
-        _log_certificate_signature(f"chain.load[{index}]", loaded_cert)
+    for index, (loaded_cert, _, signature_oid) in enumerate(certs):
+        _log_certificate_signature(
+            f"chain.load[{index}]",
+            loaded_cert,
+            signature_oid_override=signature_oid,
+        )
 
     cert_index = 0
-    cert, cert_der = certs.pop(0)
+    cert, cert_der, cert_oid = certs.pop(0)
     while certs:
         child = cert
+        child_der = cert_der
+        child_oid = cert_oid
         child_stage = f"chain.child[{cert_index}]"
         issuer_stage = f"chain.issuer[{cert_index + 1}]"
-        _log_certificate_signature(child_stage, child)
+        _log_certificate_signature(
+            child_stage,
+            child,
+            signature_oid_override=child_oid,
+        )
 
-        cert, cert_der = certs.pop(0)
-        _log_certificate_signature(f"{issuer_stage}.loaded", cert)
+        cert, cert_der, cert_oid = certs.pop(0)
+        _log_certificate_signature(
+            f"{issuer_stage}.loaded", cert, signature_oid_override=cert_oid
+        )
 
-        signature_oid = child.signature_algorithm_oid.dotted_string
+        signature_oid = child_oid or getattr(
+            child.signature_algorithm_oid, "dotted_string", ""
+        )
 
         if describe_mldsa_oid(signature_oid):
             _emit_signature_trace("%s detected ML-DSA signature", extra=(child_stage,))
-            _verify_mldsa_certificate_signature(child, cert_der)
+            _verify_mldsa_certificate_signature(
+                child, cert_der, signature_oid_override=signature_oid
+            )
             cert_index += 1
             continue
 
@@ -246,7 +307,9 @@ def verify_x509_chain(chain: List[bytes]) -> None:
                     "%s issuer public key unavailable; invoking ML-DSA verifier",
                     extra=(child_stage,),
                 )
-                _verify_mldsa_certificate_signature(child, cert_der)
+                _verify_mldsa_certificate_signature(
+                    child, cert_der, signature_oid_override=child_oid
+                )
             else:
                 raise ValueError("Unsupported signature key type")
         except _InvalidSignature:
@@ -268,26 +331,41 @@ def verify_mldsa_x509_chain(chain: List[bytes]) -> None:
         "Using ML-DSA-only certificate chain verifier for attestation",
     )
 
-    certs = [
-        (x509.load_der_x509_certificate(der, default_backend()), der)
-        for der in chain
-    ]
+    certs: List[tuple[x509.Certificate, bytes, Optional[str]]] = []
+    for der in chain:
+        signature_oid = _extract_certificate_signature_algorithm_oid(der)
+        certs.append(
+            (x509.load_der_x509_certificate(der, default_backend()), der, signature_oid)
+        )
 
-    for index, (loaded_cert, _) in enumerate(certs):
-        _log_certificate_signature(f"chain.load[{index}]", loaded_cert)
+    for index, (loaded_cert, _, signature_oid) in enumerate(certs):
+        _log_certificate_signature(
+            f"chain.load[{index}]",
+            loaded_cert,
+            signature_oid_override=signature_oid,
+        )
 
     cert_index = 0
-    cert, cert_der = certs.pop(0)
+    cert, cert_der, cert_oid = certs.pop(0)
     while certs:
         child = cert
+        child_oid = cert_oid
         child_stage = f"chain.child[{cert_index}]"
         issuer_stage = f"chain.issuer[{cert_index + 1}]"
-        _log_certificate_signature(child_stage, child)
+        _log_certificate_signature(
+            child_stage,
+            child,
+            signature_oid_override=child_oid,
+        )
 
-        cert, cert_der = certs.pop(0)
-        _log_certificate_signature(f"{issuer_stage}.loaded", cert)
+        cert, cert_der, cert_oid = certs.pop(0)
+        _log_certificate_signature(
+            f"{issuer_stage}.loaded", cert, signature_oid_override=cert_oid
+        )
 
-        signature_oid = child.signature_algorithm_oid.dotted_string
+        signature_oid = child_oid or getattr(
+            child.signature_algorithm_oid, "dotted_string", ""
+        )
         if not describe_mldsa_oid(signature_oid):
             raise InvalidSignature(
                 f"Expected ML-DSA signature for {child_stage}, got {signature_oid}"
@@ -297,7 +375,9 @@ def verify_mldsa_x509_chain(chain: List[bytes]) -> None:
             "%s verifying with ML-DSA issuer key (testing override)",
             extra=(child_stage,),
         )
-        _verify_mldsa_certificate_signature(child, cert_der)
+        _verify_mldsa_certificate_signature(
+            child, cert_der, signature_oid_override=signature_oid
+        )
         cert_index += 1
 
 
@@ -429,7 +509,12 @@ class AttestationVerifier(abc.ABC):
                     exc,
                 )
                 continue
-            _log_certificate_signature(f"registration.trust_path[{index}]", cert)
+            signature_oid = _extract_certificate_signature_algorithm_oid(cert_bytes)
+            _log_certificate_signature(
+                f"registration.trust_path[{index}]",
+                cert,
+                signature_oid_override=signature_oid,
+            )
 
         # Lookup CA to use for trust path verification
         ca = self.ca_lookup(result, attestation_object.auth_data)
@@ -441,7 +526,12 @@ class AttestationVerifier(abc.ABC):
         except Exception as exc:  # pragma: no cover - defensive guard
             logger.info("registration.ca: unable to load certificate (%s)", exc)
         else:
-            _log_certificate_signature("registration.ca", ca_cert)
+            ca_signature_oid = _extract_certificate_signature_algorithm_oid(ca)
+            _log_certificate_signature(
+                "registration.ca",
+                ca_cert,
+                signature_oid_override=ca_signature_oid,
+            )
 
         # Validate the trust chain
         chain_verifier = self._select_chain_verifier(
@@ -468,6 +558,13 @@ class AttestationVerifier(abc.ABC):
         trust_path = getattr(attestation_result, "trust_path", None) or []
         for index, cert_bytes in enumerate(trust_path):
             stage = f"registration.trust_path[{index}]"
+            signature_oid = _extract_certificate_signature_algorithm_oid(cert_bytes)
+            if describe_mldsa_oid(signature_oid):
+                _emit_signature_trace(
+                    "Detected ML-DSA signature at %s via DER parsing; selecting ML-DSA chain verifier",
+                    extra=(stage,),
+                )
+                return verify_mldsa_x509_chain
             try:
                 cert = x509.load_der_x509_certificate(cert_bytes, default_backend())
             except Exception as exc:  # pragma: no cover - defensive guard
@@ -488,22 +585,54 @@ class AttestationVerifier(abc.ABC):
         return verify_x509_chain
 
 
-def _log_certificate_signature(stage: str, certificate: x509.Certificate) -> None:
+def _log_certificate_signature(
+    stage: str,
+    certificate: x509.Certificate,
+    *,
+    signature_oid_override: Optional[str] = None,
+) -> None:
     """Log signature metadata for a certificate at a specific pipeline stage."""
 
+    signature_oid: Optional[str] = None
+    certificate_oid: Optional[str] = None
+    algorithm_name = "unknown"
+
     try:
-        signature_oid = certificate.signature_algorithm_oid.dotted_string
+        certificate_oid = certificate.signature_algorithm_oid.dotted_string
+        algorithm_name = getattr(certificate.signature_algorithm_oid, "_name", "unknown")
     except Exception as exc:  # pragma: no cover - defensive guard
+        if signature_oid_override is None:
+            _emit_signature_trace(
+                "Certificate signature [%s]: unable to read signature algorithm (%s)",
+                extra=(stage, exc),
+            )
+
+    if signature_oid_override:
+        signature_oid = signature_oid_override
+    elif certificate_oid:
+        signature_oid = certificate_oid
+
+    if not signature_oid:
         _emit_signature_trace(
-            "Certificate signature [%s]: unable to read signature algorithm (%s)",
-            extra=(stage, exc),
+            "Certificate signature [%s]: signature algorithm OID unavailable",
+            extra=(stage,),
         )
         return
 
-    algorithm_name = getattr(certificate.signature_algorithm_oid, "_name", "unknown")
+    if (
+        signature_oid_override
+        and certificate_oid
+        and certificate_oid != signature_oid_override
+    ):
+        _emit_signature_trace(
+            "Certificate signature [%s]: overriding parser OID %s with DER OID %s",
+            extra=(stage, certificate_oid, signature_oid_override),
+        )
+
     mldsa_details = describe_mldsa_oid(signature_oid)
     parameter_set = None
     if mldsa_details:
+        algorithm_name = mldsa_details.get("name", algorithm_name)
         parameter_set = mldsa_details.get("mlDsaParameterSet") or mldsa_details.get(
             "ml_dsa_parameter_set"
         )

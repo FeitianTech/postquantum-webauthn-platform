@@ -35,7 +35,10 @@ from .attestation import (
     verify_mldsa_x509_chain,
     AttestationVerifier,
 )
-from .attestation.base import _emit_signature_trace
+from .attestation.base import (
+    _emit_signature_trace,
+    _extract_certificate_signature_algorithm_oid,
+)
 from .utils import websafe_decode, _JsonDataObject
 from .cose import CoseKey, describe_mldsa_oid
 
@@ -453,46 +456,48 @@ class MdsAttestationVerifier(AttestationVerifier):
                 attestation_result.trust_path[-1], default_backend()
             ).issuer
 
-            leaf_cert = None
+            leaf_signature_oid: Optional[str] = None
             if attestation_result.trust_path:
-                try:
-                    leaf_cert = x509.load_der_x509_certificate(
-                        attestation_result.trust_path[0], default_backend()
-                    )
-                except Exception as exc:  # pragma: no cover - defensive guard
-                    logging.debug(
-                        "Unable to load attestation leaf certificate while selecting root: %s",
-                        exc,
-                    )
+                leaf_signature_oid = _extract_certificate_signature_algorithm_oid(
+                    attestation_result.trust_path[0]
+                )
+                if leaf_signature_oid is None:
+                    try:
+                        fallback_leaf = x509.load_der_x509_certificate(
+                            attestation_result.trust_path[0], default_backend()
+                        )
+                    except Exception as exc:  # pragma: no cover - defensive guard
+                        logging.debug(
+                            "Unable to load attestation leaf certificate while selecting root: %s",
+                            exc,
+                        )
+                    else:
+                        leaf_signature_oid = getattr(
+                            fallback_leaf.signature_algorithm_oid, "dotted_string", None
+                        )
 
             candidate_roots = []
             preferred_roots = []
 
             for root in entry.metadata_statement.attestation_root_certificates:
-                subject = x509.load_der_x509_certificate(
-                    root, default_backend()
-                ).subject
+                root_cert = x509.load_der_x509_certificate(root, default_backend())
+                subject = root_cert.subject
                 if subject != issuer:
                     continue
 
                 candidate_roots.append(root)
 
-                if not leaf_cert:
+                if not leaf_signature_oid:
                     continue
 
-                signature_oid = getattr(
-                    leaf_cert.signature_algorithm_oid, "dotted_string", ""
-                )
-                if describe_mldsa_oid(signature_oid):
-                    try:
-                        root_cert = x509.load_der_x509_certificate(
-                            root, default_backend()
-                        )
-                    except Exception:  # pragma: no cover - defensive guard
-                        continue
-                    root_signature_oid = getattr(
-                        root_cert.signature_algorithm_oid, "dotted_string", ""
+                if describe_mldsa_oid(leaf_signature_oid):
+                    root_signature_oid = _extract_certificate_signature_algorithm_oid(
+                        root
                     )
+                    if root_signature_oid is None:
+                        root_signature_oid = getattr(
+                            root_cert.signature_algorithm_oid, "dotted_string", None
+                        )
                     if describe_mldsa_oid(root_signature_oid):
                         preferred_roots.append(root)
 

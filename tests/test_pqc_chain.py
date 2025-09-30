@@ -4,6 +4,7 @@ import base64
 import json
 import pathlib
 import sys
+from typing import Optional
 from datetime import date
 from types import SimpleNamespace
 
@@ -86,6 +87,51 @@ def test_verify_x509_chain_uses_ml_dsa(monkeypatch):
     assert signature_recorder["public_key"] == public_key_info["subject_public_key"]
 
 
+def test_verify_x509_chain_prefers_der_signature_oid(monkeypatch):
+    metadata_path = "examples/server/server/static/feitian-pqc.json"
+    with open(metadata_path, "r", encoding="utf-8") as fh:
+        metadata = json.load(fh)
+
+    root_der = base64.b64decode(metadata["attestationRootCertificates"][0])
+    real_cert = x509.load_der_x509_certificate(root_der, default_backend())
+
+    class FakeSignatureOid:
+        dotted_string = "1.2.840.113549.1.1.11"
+        _name = "sha256WithRSAEncryption"
+
+    class PretendRsaCert:
+        def __init__(self, delegate):
+            self.signature = delegate.signature
+            self.tbs_certificate_bytes = delegate.tbs_certificate_bytes
+            self.signature_algorithm_oid = FakeSignatureOid
+            self.signature_hash_algorithm = None
+
+        def public_key(self):  # pragma: no cover - ML-DSA branch should bypass
+            raise AssertionError("public_key() should not be called for ML-DSA certificates")
+
+    certs = [PretendRsaCert(real_cert), PretendRsaCert(real_cert)]
+
+    def fake_load_certificate(der, backend):
+        assert der == root_der
+        return certs.pop(0)
+
+    monkeypatch.setattr(x509, "load_der_x509_certificate", fake_load_certificate)
+
+    captured: dict[str, Optional[str]] = {}
+
+    def fake_verify(child, issuer_bytes, *, signature_oid_override=None):
+        captured["override"] = signature_oid_override
+
+    monkeypatch.setattr(
+        "fido2.attestation.base._verify_mldsa_certificate_signature",
+        fake_verify,
+    )
+
+    verify_x509_chain([root_der, root_der])
+
+    assert captured["override"] == "2.16.840.1.101.3.4.3.17"
+
+
 def test_verify_x509_chain_prefers_mldsa_oid(monkeypatch):
     child_der = b"child-der"
     issuer_der = b"issuer-der"
@@ -114,10 +160,10 @@ def test_verify_x509_chain_prefers_mldsa_oid(monkeypatch):
 
     monkeypatch.setattr(x509, "load_der_x509_certificate", fake_load_certificate)
 
-    captured: dict[str, tuple[object, bytes]] = {}
+    captured: dict[str, tuple[object, bytes, Optional[str]]] = {}
 
-    def fake_verify(child, issuer_bytes):
-        captured["call"] = (child, issuer_bytes)
+    def fake_verify(child, issuer_bytes, *, signature_oid_override=None):
+        captured["call"] = (child, issuer_bytes, signature_oid_override)
 
     monkeypatch.setattr(
         "fido2.attestation.base._verify_mldsa_certificate_signature",
@@ -126,7 +172,7 @@ def test_verify_x509_chain_prefers_mldsa_oid(monkeypatch):
 
     verify_x509_chain([child_der, issuer_der])
 
-    assert captured["call"] == (child_cert, issuer_der)
+    assert captured["call"][0:2] == (child_cert, issuer_der)
 
 
 def test_attestation_verifier_selects_mldsa_chain(monkeypatch):
@@ -221,10 +267,10 @@ def test_verify_mldsa_chain_invokes_override(monkeypatch):
 
     monkeypatch.setattr(x509, "load_der_x509_certificate", fake_load_certificate)
 
-    captured: dict[str, tuple[object, bytes]] = {}
+    captured: dict[str, tuple[object, bytes, Optional[str]]] = {}
 
-    def fake_verify(child, issuer_bytes):
-        captured["call"] = (child, issuer_bytes)
+    def fake_verify(child, issuer_bytes, *, signature_oid_override=None):
+        captured["call"] = (child, issuer_bytes, signature_oid_override)
 
     monkeypatch.setattr(
         "fido2.attestation.base._verify_mldsa_certificate_signature",
@@ -233,7 +279,11 @@ def test_verify_mldsa_chain_invokes_override(monkeypatch):
 
     verify_mldsa_x509_chain([child_der, issuer_der])
 
-    assert captured["call"] == (child_cert, issuer_der)
+    assert captured["call"] == (
+        child_cert,
+        issuer_der,
+        "2.16.840.1.101.3.4.3.17",
+    )
 
 
 def test_verify_mldsa_chain_requires_mldsa_signature(monkeypatch):
