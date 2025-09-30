@@ -35,7 +35,8 @@ from functools import wraps
 from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Type
 
 from asn1crypto import core as asn1_core
-from asn1crypto import parser as asn1_parser
+from asn1crypto import keys as asn1_keys
+from asn1crypto import x509 as asn1_x509
 from cryptography import x509
 from cryptography.exceptions import InvalidSignature as _InvalidSignature
 from cryptography.hazmat.backends import default_backend
@@ -149,6 +150,8 @@ MLDSA_OIDS = {
     "2.16.840.1.101.3.4.3.19": "ML-DSA-87",
 }
 
+_MLDSA_ASN1_NAMES = {oid: name.lower().replace("-", "_") for oid, name in MLDSA_OIDS.items()}
+
 
 RSA_PUBLIC_KEY_OIDS = {
     "1.2.840.113549.1.1.1",
@@ -203,6 +206,31 @@ _custom_x509_chain_verifier: Optional[X509ChainVerifier] = None
 
 
 _PARSED_CERTIFICATE_CACHE: Dict[bytes, _ParsedCertificate] = {}
+
+_ASN1CRYPTO_MLDSA_PATCHED = False
+
+
+def _ensure_asn1crypto_supports_mldsa() -> None:
+    global _ASN1CRYPTO_MLDSA_PATCHED
+    if _ASN1CRYPTO_MLDSA_PATCHED:
+        return
+
+    for oid, name in _MLDSA_ASN1_NAMES.items():
+        asn1_keys.PublicKeyAlgorithmId._map.setdefault(oid, name)
+        asn1_keys.PublicKeyAlgorithm._oid_specs.setdefault(name, None)
+
+    original_spec = asn1_keys.PublicKeyInfo._public_key_spec
+
+    def _public_key_spec_with_mldsa(self):  # type: ignore[override]
+        algorithm_name = self['algorithm']['algorithm'].native
+        if algorithm_name in _MLDSA_ASN1_NAMES.values():
+            return (asn1_core.OctetBitString, None)
+        return original_spec(self)
+
+    asn1_keys.PublicKeyInfo._public_key_spec = _public_key_spec_with_mldsa  # type: ignore[assignment]
+    asn1_keys.PublicKeyInfo._spec_callbacks['public_key'] = _public_key_spec_with_mldsa
+
+    _ASN1CRYPTO_MLDSA_PATCHED = True
 
 
 def _get_parsed_certificate(cert_der: bytes) -> _ParsedCertificate:
@@ -328,229 +356,56 @@ def _order_certificate_chain(chain: Sequence[bytes]) -> List[bytes]:
     return best_chain
 
 
-def _parsed_length(info: tuple[Any, ...]) -> int:
-    """Return the encoded length for a parsed ASN.1 element."""
-
-    header, content, trailer = info[3], info[4], info[5]
-    return len(header) + len(content) + len(trailer)
-
-
-def _encoded_value(info: tuple[Any, ...]) -> bytes:
-    """Return the full encoding (header+content+trailer) of an ASN.1 element."""
-
-    return bytes(info[3] + info[4] + info[5])
-
-
-def _parse_extension_value(
-    oid: str,
-    value_bytes: bytes,
-    *,
-    current_is_ca: Optional[bool],
-    current_has_aaguid: bool,
-    current_subject_key_identifier: Optional[bytes],
-    current_authority_key_identifier: Optional[bytes],
-) -> tuple[Optional[bool], bool, Optional[bytes], Optional[bytes]]:
-    is_ca = current_is_ca
-    has_aaguid = current_has_aaguid
-    subject_key_identifier = current_subject_key_identifier
-    authority_key_identifier = current_authority_key_identifier
-
-    if oid == "2.5.29.19":  # BasicConstraints
-        info = asn1_parser.parse(value_bytes)
-        if info[2] != 16:
-            raise ValueError("BasicConstraints extension must be a SEQUENCE")
-        content = info[4]
-        if not content:
-            is_ca = False
-        else:
-            offset = 0
-            field_info = asn1_parser.parse(content[offset:])
-            if field_info[2] == 1:
-                is_ca = field_info[4] != b"\x00"
-            else:
-                is_ca = False
-    elif oid == "2.5.29.14":  # SubjectKeyIdentifier
-        info = asn1_parser.parse(value_bytes)
-        if info[2] != 4:
-            raise ValueError("SubjectKeyIdentifier must be an OCTET STRING")
-        subject_key_identifier = bytes(info[4])
-    elif oid == "2.5.29.35":  # AuthorityKeyIdentifier
-        info = asn1_parser.parse(value_bytes)
-        if info[2] != 16:
-            raise ValueError("AuthorityKeyIdentifier must be a SEQUENCE")
-        content = info[4]
-        offset = 0
-        while offset < len(content):
-            field_info = asn1_parser.parse(content[offset:])
-            offset += _parsed_length(field_info)
-            if field_info[0] == 2 and field_info[2] == 0:
-                authority_key_identifier = bytes(field_info[4])
-                break
-    elif oid == "1.3.6.1.4.1.45724.1.1.4":  # AAGUID extension
-        info = asn1_parser.parse(value_bytes)
-        if info[2] != 4:
-            raise ValueError("AAGUID extension must be an OCTET STRING")
-        has_aaguid = True
-
-    return is_ca, has_aaguid, subject_key_identifier, authority_key_identifier
-
-
 def _parse_certificate(cert_der: bytes) -> _ParsedCertificate:
-    cert_info = asn1_parser.parse(cert_der)
-    if cert_info[0] != 0 or cert_info[1] != 1 or cert_info[2] != 16:
-        raise ValueError("Certificate must be a DER SEQUENCE")
+    _ensure_asn1crypto_supports_mldsa()
 
-    remaining = cert_info[4]
+    cert = asn1_x509.Certificate.load(cert_der)
+    tbs = cert['tbs_certificate']
 
-    tbs_info = asn1_parser.parse(remaining)
-    if tbs_info[0] != 0 or tbs_info[1] != 1 or tbs_info[2] != 16:
-        raise ValueError("Certificate missing TBSCertificate")
-    tbs_len = _parsed_length(tbs_info)
-    tbs_certificate = remaining[:tbs_len]
-    remaining = remaining[tbs_len:]
+    tbs_certificate = tbs.dump()
+    signature_algorithm_oid = tbs['signature']['algorithm'].dotted
+    signature_value = cert['signature_value'].native
 
-    tbs_content = tbs_info[4]
-    offset = 0
+    spki = tbs['subject_public_key_info']
+    subject_public_key_algorithm_oid = spki['algorithm']['algorithm'].dotted
+    subject_public_key = spki['public_key'].native
 
-    version_info = asn1_parser.parse(tbs_content[offset:])
-    if version_info[0] == 2 and version_info[2] == 0:
-        offset += _parsed_length(version_info)
-
-    # serialNumber
-    serial_info = asn1_parser.parse(tbs_content[offset:])
-    offset += _parsed_length(serial_info)
-
-    # signature
-    signature_field_info = asn1_parser.parse(tbs_content[offset:])
-    offset += _parsed_length(signature_field_info)
-
-    issuer_info = asn1_parser.parse(tbs_content[offset:])
-    issuer_name = _encoded_value(issuer_info)
-    offset += _parsed_length(issuer_info)
-
-    # validity
-    validity_info = asn1_parser.parse(tbs_content[offset:])
-    offset += _parsed_length(validity_info)
-
-    subject_info = asn1_parser.parse(tbs_content[offset:])
-    subject_name = _encoded_value(subject_info)
-    offset += _parsed_length(subject_info)
-
-    spki_info = asn1_parser.parse(tbs_content[offset:])
-    if spki_info[0] != 0 or spki_info[1] != 1 or spki_info[2] != 16:
-        raise ValueError("TBSCertificate missing SubjectPublicKeyInfo")
-    offset += _parsed_length(spki_info)
-
-    spki_content = spki_info[4]
-    algorithm_info = asn1_parser.parse(spki_content)
-    if algorithm_info[0] != 0 or algorithm_info[1] != 1 or algorithm_info[2] != 16:
-        raise ValueError("SubjectPublicKeyInfo missing AlgorithmIdentifier")
-    oid_info = asn1_parser.parse(algorithm_info[4])
-    if oid_info[2] != 6:
-        raise ValueError("AlgorithmIdentifier missing OBJECT IDENTIFIER")
-    subject_public_key_algorithm_oid = asn1_core.ObjectIdentifier.load(
-        oid_info[3] + oid_info[4]
-    ).dotted
-
-    algorithm_len = _parsed_length(algorithm_info)
-    bitstring_info = asn1_parser.parse(spki_content[algorithm_len:])
-    if bitstring_info[2] != 3:
-        raise ValueError("SubjectPublicKeyInfo missing public key BIT STRING")
-    if not bitstring_info[4]:
-        raise ValueError("Invalid BIT STRING length")
-    if bitstring_info[4][0] != 0:
-        raise ValueError("Unsupported BIT STRING with unused bits")
-    subject_public_key = bytes(bitstring_info[4][1:])
+    issuer_name = tbs['issuer'].dump()
+    subject_name = tbs['subject'].dump()
 
     authority_key_identifier: Optional[bytes] = None
     subject_key_identifier: Optional[bytes] = None
     is_ca: Optional[bool] = None
     has_aaguid = False
 
-    while offset < len(tbs_content):
-        field_info = asn1_parser.parse(tbs_content[offset:])
-        tag_class, tag_number = field_info[0], field_info[2]
-        if tag_class == 2 and tag_number in (1, 2):
-            offset += _parsed_length(field_info)
-            continue
-        if tag_class == 2 and tag_number == 3:
-            extensions_info = asn1_parser.parse(field_info[4])
-            if extensions_info[0] != 0 or extensions_info[1] != 1 or extensions_info[2] != 16:
-                raise ValueError("Extensions must be a DER SEQUENCE")
-            extensions_content = extensions_info[4]
-            ext_offset = 0
-            while ext_offset < len(extensions_content):
-                extension_info = asn1_parser.parse(extensions_content[ext_offset:])
-                ext_offset += _parsed_length(extension_info)
-                extension_sequence = extension_info[4]
-                entry_offset = 0
-                oid_info = asn1_parser.parse(extension_sequence[entry_offset:])
-                if oid_info[2] != 6:
-                    raise ValueError("Extension missing OBJECT IDENTIFIER")
-                extension_oid = asn1_core.ObjectIdentifier.load(
-                    oid_info[3] + oid_info[4]
-                ).dotted
-                entry_offset += _parsed_length(oid_info)
-                value_info = asn1_parser.parse(extension_sequence[entry_offset:])
-                if value_info[2] == 1:  # critical boolean
-                    entry_offset += _parsed_length(value_info)
-                    value_info = asn1_parser.parse(extension_sequence[entry_offset:])
-                if value_info[2] != 4:
-                    raise ValueError("Extension extnValue must be an OCTET STRING")
-                (
-                    is_ca,
-                    has_aaguid,
-                    subject_key_identifier,
-                    authority_key_identifier,
-                ) = _parse_extension_value(
-                    extension_oid,
-                    value_info[4],
-                    current_is_ca=is_ca,
-                    current_has_aaguid=has_aaguid,
-                    current_subject_key_identifier=subject_key_identifier,
-                    current_authority_key_identifier=authority_key_identifier,
-                )
-            offset += _parsed_length(field_info)
-            continue
-        raise ValueError("Unexpected field in TBSCertificate")
-
-    sig_alg_info = asn1_parser.parse(remaining)
-    if sig_alg_info[0] != 0 or sig_alg_info[1] != 1 or sig_alg_info[2] != 16:
-        raise ValueError("Certificate missing signature AlgorithmIdentifier")
-    sig_alg_len = _parsed_length(sig_alg_info)
-    sig_alg_content = sig_alg_info[4]
-
-    oid_info = asn1_parser.parse(sig_alg_content)
-    if oid_info[2] != 6:
-        raise ValueError("AlgorithmIdentifier missing OBJECT IDENTIFIER")
-    signature_algorithm_oid = asn1_core.ObjectIdentifier.load(
-        oid_info[3] + oid_info[4]
-    ).dotted
-
-    remaining = remaining[sig_alg_len:]
-
-    signature_info = asn1_parser.parse(remaining)
-    if signature_info[2] != 3:
-        raise ValueError("Certificate missing signature BIT STRING")
-    if not signature_info[4]:
-        raise ValueError("Invalid BIT STRING length")
-    unused_bits = signature_info[4][0]
-    if unused_bits != 0:
-        raise ValueError("Unsupported BIT STRING with unused bits")
-    signature_value = signature_info[4][1:]
-
-    remaining = remaining[_parsed_length(signature_info) :]
-    if remaining:
-        raise ValueError("Certificate parsing did not consume full structure")
+    extensions = tbs['extensions'] if 'extensions' in tbs else None
+    if extensions is not None:
+        for extension in extensions:
+            oid = extension['extn_id'].dotted
+            if oid == '2.5.29.14':
+                subject_key_identifier = bytes(extension['extn_value'].parsed.native)
+            elif oid == '2.5.29.35':
+                aki_data = extension['extn_value'].parsed.native
+                key_identifier = aki_data.get('key_identifier') if aki_data else None
+                if key_identifier is not None:
+                    authority_key_identifier = bytes(key_identifier)
+            elif oid == '2.5.29.19':
+                basic_constraints = extension['extn_value'].parsed.native
+                if not basic_constraints:
+                    is_ca = False
+                else:
+                    is_ca = bool(basic_constraints.get('ca', False))
+            elif oid == '1.3.6.1.4.1.45724.1.1.4':
+                has_aaguid = True
 
     return _ParsedCertificate(
         tbs_certificate=bytes(tbs_certificate),
         signature_algorithm_oid=signature_algorithm_oid,
         signature_value=bytes(signature_value),
         subject_public_key_algorithm_oid=subject_public_key_algorithm_oid,
-        subject_public_key=subject_public_key,
-        issuer_name=issuer_name,
-        subject_name=subject_name,
+        subject_public_key=bytes(subject_public_key),
+        issuer_name=bytes(issuer_name),
+        subject_name=bytes(subject_name),
         authority_key_identifier=authority_key_identifier,
         subject_key_identifier=subject_key_identifier,
         is_ca=is_ca,
