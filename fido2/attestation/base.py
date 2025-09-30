@@ -32,7 +32,7 @@ import abc
 from dataclasses import dataclass
 from enum import IntEnum, unique
 from functools import wraps
-from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Type
+from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple, Type
 
 from asn1crypto import core as asn1_core
 from asn1crypto import keys as asn1_keys
@@ -135,6 +135,7 @@ class _ParsedCertificate:
     subject_public_key: bytes
     issuer_name: bytes
     subject_name: bytes
+    serial_number: bytes
     authority_key_identifier: Optional[bytes]
     subject_key_identifier: Optional[bytes]
     is_ca: Optional[bool]
@@ -206,6 +207,8 @@ _custom_x509_chain_verifier: Optional[X509ChainVerifier] = None
 
 
 _PARSED_CERTIFICATE_CACHE: Dict[bytes, _ParsedCertificate] = {}
+
+_PARSED_CERTIFICATE_IDENTITIES: Dict[Tuple[bytes, bytes, bytes], _ParsedCertificate] = {}
 
 _ASN1CRYPTO_MLDSA_PATCHED = False
 
@@ -396,6 +399,9 @@ def _parse_certificate(cert_der: bytes) -> _ParsedCertificate:
 
     issuer_name = tbs['issuer'].dump()
     subject_name = tbs['subject'].dump()
+    serial_number = bytes(tbs['serial_number'].contents)
+
+    identity: Tuple[bytes, bytes, bytes] = (issuer_name, subject_name, serial_number)
 
     authority_key_identifier: Optional[bytes] = None
     subject_key_identifier: Optional[bytes] = None
@@ -422,7 +428,7 @@ def _parse_certificate(cert_der: bytes) -> _ParsedCertificate:
             elif oid == '1.3.6.1.4.1.45724.1.1.4':
                 has_aaguid = True
 
-    return _ParsedCertificate(
+    parsed = _ParsedCertificate(
         tbs_certificate=bytes(tbs_certificate),
         signature_algorithm_oid=signature_algorithm_oid,
         signature_value=bytes(signature_value),
@@ -430,11 +436,47 @@ def _parse_certificate(cert_der: bytes) -> _ParsedCertificate:
         subject_public_key=bytes(subject_public_key),
         issuer_name=bytes(issuer_name),
         subject_name=bytes(subject_name),
+        serial_number=serial_number,
         authority_key_identifier=authority_key_identifier,
         subject_key_identifier=subject_key_identifier,
         is_ca=is_ca,
         has_aaguid_extension=has_aaguid,
     )
+
+    existing = _PARSED_CERTIFICATE_IDENTITIES.get(identity)
+    if existing is None:
+        _PARSED_CERTIFICATE_IDENTITIES[identity] = parsed
+        return parsed
+
+    def _is_mldsa_certificate(cert: _ParsedCertificate) -> bool:
+        return (
+            cert.signature_algorithm_oid in MLDSA_OIDS
+            or cert.subject_public_key_algorithm_oid in MLDSA_OIDS
+        )
+
+    existing_is_mldsa = _is_mldsa_certificate(existing)
+    parsed_is_mldsa = _is_mldsa_certificate(parsed)
+
+    if parsed_is_mldsa and not existing_is_mldsa:
+        print("[DEBUG] Replacing cached certificate metadata with ML-DSA identity match")
+        _PARSED_CERTIFICATE_IDENTITIES[identity] = parsed
+        return parsed
+
+    if existing_is_mldsa and not parsed_is_mldsa:
+        print("[DEBUG] Preserving ML-DSA metadata for certificate identity")
+        return existing
+
+    if (
+        existing.signature_algorithm_oid != parsed.signature_algorithm_oid
+        or existing.subject_public_key_algorithm_oid
+        != parsed.subject_public_key_algorithm_oid
+    ):
+        print(
+            "[DEBUG] Certificate identity encountered with differing OIDs;"
+            " keeping existing metadata",
+        )
+
+    return existing
 
 
 def _verify_ordered_chain(ordered_chain: Sequence[bytes], *, log_prefix: str) -> None:
