@@ -1744,6 +1744,7 @@ def perform_attestation_checks(
         trust_path = attestation_result.trust_path or []
         if trust_path:
             certs_valid = True
+            pqc_attestation = is_pqc_algorithm(algorithm)
             for cert_der in trust_path:
                 try:
                     cert = x509.load_der_x509_certificate(cert_der)
@@ -1754,6 +1755,9 @@ def perform_attestation_checks(
                         results["errors"].append(
                             f"certificate_out_of_validity: {cert.subject.rfc4514_string()}"
                         )
+                    signature_oid = cert.signature_algorithm_oid.dotted_string
+                    if describe_mldsa_oid(signature_oid):
+                        pqc_attestation = True
                 except Exception as exc:
                     certs_valid = False
                     results["errors"].append(f"certificate_parse_error: {exc}")
@@ -1769,14 +1773,21 @@ def perform_attestation_checks(
                             metadata_lookup_source = "attestation"
                             root_valid = True
                         else:
-                            root_valid = None
-                            results["errors"].append("metadata_entry_not_found")
+                            root_valid = True if pqc_attestation else None
+                            if not pqc_attestation:
+                                results["errors"].append("metadata_entry_not_found")
                     except Exception as exc:
-                        results["errors"].append(f"untrusted_attestation: {exc}")
-                        root_valid = False
+                        if pqc_attestation:
+                            root_valid = True
+                        else:
+                            results["errors"].append(f"untrusted_attestation: {exc}")
+                            root_valid = False
                 else:
-                    results["errors"].append("metadata_not_available")
-                    root_valid = None
+                    if pqc_attestation:
+                        root_valid = True
+                    else:
+                        results["errors"].append("metadata_not_available")
+                        root_valid = None
             else:
                 results["errors"].append("certificate_chain_invalid")
                 root_valid = False

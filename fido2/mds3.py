@@ -34,8 +34,9 @@ from .attestation import (
     verify_x509_chain,
     AttestationVerifier,
 )
+from .attestation.base import _verify_mldsa_certificate_signature
+from .cose import CoseKey, describe_mldsa_oid, extract_certificate_public_key_info
 from .utils import websafe_decode, _JsonDataObject
-from .cose import CoseKey
 
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
@@ -484,18 +485,58 @@ def parse_blob(blob: bytes, trust_root: Optional[bytes]) -> MetadataBlobPayload:
     signature = websafe_decode(signature_b64)
     header, payload = (json.loads(websafe_decode(x)) for x in message.split(b"."))
 
+    leaf_der: Optional[bytes] = None
     if trust_root is not None:
-        # Verify trust chain
         chain = [b64decode(c) for c in header.get("x5c", [])]
-        chain += [trust_root]
-        verify_x509_chain(chain)
+        if chain:
+            leaf_der = chain[0]
 
-        # Verify blob signature using leaf
-        leaf = x509.load_der_x509_certificate(chain[0], default_backend())
-        public_key = CoseKey.for_name(header["alg"]).from_cryptography_key(
-            leaf.public_key()
-        )
-        public_key.verify(message, signature)
+        pqc_trust_root = False
+        try:
+            root_cert = x509.load_der_x509_certificate(trust_root, default_backend())
+        except Exception:
+            root_cert = None
+        if root_cert is not None:
+            root_signature_oid = root_cert.signature_algorithm_oid.dotted_string
+            pqc_trust_root = bool(describe_mldsa_oid(root_signature_oid))
+
+        if pqc_trust_root:
+            if leaf_der is None:
+                raise ValueError(
+                    "PQC metadata blob missing signing certificate in x5c header"
+                )
+            leaf_cert = x509.load_der_x509_certificate(leaf_der, default_backend())
+            _verify_mldsa_certificate_signature(leaf_cert, trust_root)
+        else:
+            verify_x509_chain(chain + [trust_root])
+
+        if leaf_der is None:
+            leaf_der = trust_root
+
+        leaf_cert = x509.load_der_x509_certificate(leaf_der, default_backend())
+        try:
+            public_key = leaf_cert.public_key()
+        except ValueError:
+            public_key = None
+
+        cose_cls = CoseKey.for_name(header["alg"])
+        if public_key is None and pqc_trust_root:
+            key_info = extract_certificate_public_key_info(leaf_der)
+            subject_public_key = key_info.get("subject_public_key")
+            if not isinstance(subject_public_key, (bytes, bytearray, memoryview)):
+                raise ValueError(
+                    "Unable to extract ML-DSA public key from metadata signing certificate"
+                )
+            public_key = bytes(subject_public_key)
+            cose_key = cose_cls({1: 7, 3: cose_cls.ALGORITHM, -1: public_key})
+        else:
+            if public_key is None:
+                raise ValueError(
+                    "Metadata signing certificate does not expose a supported public key"
+                )
+            cose_key = cose_cls.from_cryptography_key(public_key)
+
+        cose_key.verify(message, signature)
     else:
         logger.warn("Parsing MDS blob without trust anchor, CONTENT IS NOT VERIFIED!")
 
