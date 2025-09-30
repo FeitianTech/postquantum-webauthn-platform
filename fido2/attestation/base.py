@@ -29,9 +29,6 @@ from __future__ import annotations
 
 import abc
 
-from asn1crypto import core as asn1_core
-from asn1crypto import keys as asn1_keys
-from asn1crypto import x509 as asn1_x509
 from cryptography import x509
 from cryptography.exceptions import InvalidSignature as _InvalidSignature
 from cryptography.hazmat.backends import default_backend
@@ -113,23 +110,6 @@ MLDSA_OIDS = {
 }
 
 
-if not hasattr(asn1_keys.PublicKeyInfo, "_fido2_original_public_key_spec"):
-    asn1_keys.PublicKeyInfo._fido2_original_public_key_spec = (
-        asn1_keys.PublicKeyInfo._public_key_spec
-    )
-
-    def _public_key_spec_with_mldsa(self):  # type: ignore[override]
-        try:
-            return asn1_keys.PublicKeyInfo._fido2_original_public_key_spec(self)
-        except KeyError:
-            algorithm_oid = self["algorithm"]["algorithm"].dotted
-            if algorithm_oid in MLDSA_OIDS:
-                return asn1_core.BitString, None
-            raise
-
-    asn1_keys.PublicKeyInfo._public_key_spec = _public_key_spec_with_mldsa
-    asn1_keys.PublicKeyInfo._spec_callbacks["public_key"] = _public_key_spec_with_mldsa
-
 RSA_PUBLIC_KEY_OIDS = {
     "1.2.840.113549.1.1.1",
 }
@@ -139,13 +119,83 @@ EC_PUBLIC_KEY_OIDS = {
 }
 
 
-def _extract_certificate_oids(cert_der: bytes) -> tuple[str, str]:
-    cert = asn1_x509.Certificate.load(cert_der)
-    signature_algorithm_oid = cert["signature_algorithm"]["algorithm"].dotted
-    subject_public_key_algorithm_oid = (
-        cert["tbs_certificate"]["subject_public_key_info"]["algorithm"]["algorithm"].dotted
-    )
-    return signature_algorithm_oid, subject_public_key_algorithm_oid
+def _parse_der_length(data: memoryview, idx: int) -> tuple[int, int]:
+    if idx >= len(data):
+        raise ValueError("Invalid DER length: truncated data")
+    first = data[idx]
+    idx += 1
+    if first & 0x80 == 0:
+        return first, idx
+    num_bytes = first & 0x7F
+    if num_bytes == 0:
+        raise ValueError("Indefinite length DER encodings are not supported")
+    if idx + num_bytes > len(data):
+        raise ValueError("Invalid DER length: truncated data")
+    length = int.from_bytes(data[idx : idx + num_bytes], "big")
+    idx += num_bytes
+    return length, idx
+
+
+def _skip_der_value(data: memoryview, idx: int) -> int:
+    if idx >= len(data):
+        raise ValueError("Truncated DER element")
+    idx += 1
+    length, idx = _parse_der_length(data, idx)
+    end = idx + length
+    if end > len(data):
+        raise ValueError("DER element overruns buffer")
+    return end
+
+
+def _decode_oid_body(body: bytes) -> str:
+    if not body:
+        raise ValueError("OBJECT IDENTIFIER body is empty")
+    first = body[0]
+    oid_numbers = [str(first // 40), str(first % 40)]
+    value = 0
+    for byte in body[1:]:
+        value = (value << 7) | (byte & 0x7F)
+        if byte & 0x80:
+            continue
+        oid_numbers.append(str(value))
+        value = 0
+    if body[-1] & 0x80:
+        raise ValueError("Invalid OBJECT IDENTIFIER continuation byte")
+    if value:
+        oid_numbers.append(str(value))
+    return ".".join(oid_numbers)
+
+
+def _extract_certificate_signature_oid(cert_der: bytes) -> str:
+    view = memoryview(cert_der)
+    idx = 0
+    if not view or view[idx] != 0x30:
+        raise ValueError("Certificate must be a DER SEQUENCE")
+    idx += 1
+    cert_len, idx = _parse_der_length(view, idx)
+    end = idx + cert_len
+    if end > len(view):
+        raise ValueError("Certificate length exceeds buffer size")
+
+    idx = _skip_der_value(view, idx)
+    if idx >= end or view[idx] != 0x30:
+        raise ValueError("Certificate missing signatureAlgorithm")
+    idx += 1
+    sig_len, idx = _parse_der_length(view, idx)
+    sig_end = idx + sig_len
+    if sig_end > end or sig_len <= 0:
+        raise ValueError("Invalid signatureAlgorithm length")
+
+    if idx >= sig_end or view[idx] != 0x06:
+        raise ValueError("signatureAlgorithm missing OBJECT IDENTIFIER")
+    idx += 1
+    oid_len, idx = _parse_der_length(view, idx)
+    oid_end = idx + oid_len
+    if oid_end > sig_end or oid_len <= 0:
+        raise ValueError("Invalid signatureAlgorithm OBJECT IDENTIFIER length")
+
+    oid_body = bytes(view[idx:oid_end])
+    return _decode_oid_body(oid_body)
 
 
 @catch_builtins
@@ -214,15 +264,17 @@ def verify_x509_chain(chain: List[bytes]) -> None:
         cert, cert_der = certs.pop(0)
         issuer_cert, issuer_der = cert, cert_der
 
-        child_signature_oid, _ = _extract_certificate_oids(child_der)
-        _, issuer_spki_oid = _extract_certificate_oids(issuer_der)
+        child_signature_oid = _extract_certificate_signature_oid(child_der)
+        issuer_info = extract_certificate_public_key_info(issuer_der)
+        issuer_spki_oid = issuer_info.get("algorithm_oid")
+        if not issuer_spki_oid:
+            raise ValueError("Unable to determine issuer public key algorithm OID")
 
         try:
             if (
                 child_signature_oid in MLDSA_OIDS
                 and issuer_spki_oid in MLDSA_OIDS
             ):
-                print("ML-DSA is used")
                 _verify_mldsa_certificate_signature(
                     child_cert, issuer_der, child_signature_oid
                 )
@@ -235,7 +287,6 @@ def verify_x509_chain(chain: List[bytes]) -> None:
                 if issuer_spki_oid in RSA_PUBLIC_KEY_OIDS and isinstance(
                     pub, rsa.RSAPublicKey
                 ):
-                    print("RSA is used")
                     assert child_cert.signature_hash_algorithm is not None  # nosec
                     pub.verify(
                         child_cert.signature,
@@ -246,7 +297,6 @@ def verify_x509_chain(chain: List[bytes]) -> None:
                 elif issuer_spki_oid in EC_PUBLIC_KEY_OIDS and isinstance(
                     pub, ec.EllipticCurvePublicKey
                 ):
-                    print("ec is used")
                     assert child_cert.signature_hash_algorithm is not None  # nosec
                     pub.verify(
                         child_cert.signature,
