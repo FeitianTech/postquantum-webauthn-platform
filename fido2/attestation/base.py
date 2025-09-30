@@ -210,6 +210,8 @@ _PARSED_CERTIFICATE_CACHE: Dict[bytes, _ParsedCertificate] = {}
 
 _PARSED_CERTIFICATE_IDENTITIES: Dict[Tuple[bytes, bytes, bytes], _ParsedCertificate] = {}
 
+_PARSED_CERTIFICATE_DER_IDENTITIES: Dict[bytes, Tuple[bytes, bytes, bytes]] = {}
+
 _ASN1CRYPTO_MLDSA_PATCHED = False
 
 
@@ -276,6 +278,64 @@ def _coerce_der_bytes(value: Any) -> bytes:
         "Certificate chain entries must be DER-encoded bytes, "
         f"not {type(value).__name__}"
     )
+
+
+def _update_cached_identity(
+    identity: Tuple[bytes, bytes, bytes],
+    parsed: _ParsedCertificate,
+) -> None:
+    for der, der_identity in list(_PARSED_CERTIFICATE_DER_IDENTITIES.items()):
+        if der_identity == identity:
+            _PARSED_CERTIFICATE_CACHE[der] = parsed
+
+
+def _register_parsed_certificate(
+    cert_der: bytes,
+    identity: Tuple[bytes, bytes, bytes],
+    parsed: _ParsedCertificate,
+) -> _ParsedCertificate:
+    cert_der_key = bytes(cert_der)
+    _PARSED_CERTIFICATE_DER_IDENTITIES[cert_der_key] = identity
+
+    existing = _PARSED_CERTIFICATE_IDENTITIES.get(identity)
+    if existing is None:
+        _PARSED_CERTIFICATE_IDENTITIES[identity] = parsed
+        return parsed
+
+    def _is_mldsa_certificate(cert: _ParsedCertificate) -> bool:
+        return (
+            cert.signature_algorithm_oid in MLDSA_OIDS
+            or cert.subject_public_key_algorithm_oid in MLDSA_OIDS
+        )
+
+    existing_is_mldsa = _is_mldsa_certificate(existing)
+    parsed_is_mldsa = _is_mldsa_certificate(parsed)
+
+    if parsed_is_mldsa and not existing_is_mldsa:
+        print("[DEBUG] Replacing cached certificate metadata with ML-DSA identity match")
+        _PARSED_CERTIFICATE_IDENTITIES[identity] = parsed
+        _update_cached_identity(identity, parsed)
+        return parsed
+
+    if existing_is_mldsa and not parsed_is_mldsa:
+        print("[DEBUG] Preserving ML-DSA metadata for certificate identity")
+        _update_cached_identity(identity, existing)
+        return existing
+
+    if (
+        existing.signature_algorithm_oid != parsed.signature_algorithm_oid
+        or existing.subject_public_key_algorithm_oid
+        != parsed.subject_public_key_algorithm_oid
+    ):
+        print(
+            "[DEBUG] Certificate identity encountered with differing OIDs;",
+            " keeping existing metadata",
+        )
+        _update_cached_identity(identity, existing)
+        return existing
+
+    _update_cached_identity(identity, existing)
+    return existing
 
 
 def _select_parent_candidate(
@@ -443,40 +503,7 @@ def _parse_certificate(cert_der: bytes) -> _ParsedCertificate:
         has_aaguid_extension=has_aaguid,
     )
 
-    existing = _PARSED_CERTIFICATE_IDENTITIES.get(identity)
-    if existing is None:
-        _PARSED_CERTIFICATE_IDENTITIES[identity] = parsed
-        return parsed
-
-    def _is_mldsa_certificate(cert: _ParsedCertificate) -> bool:
-        return (
-            cert.signature_algorithm_oid in MLDSA_OIDS
-            or cert.subject_public_key_algorithm_oid in MLDSA_OIDS
-        )
-
-    existing_is_mldsa = _is_mldsa_certificate(existing)
-    parsed_is_mldsa = _is_mldsa_certificate(parsed)
-
-    if parsed_is_mldsa and not existing_is_mldsa:
-        print("[DEBUG] Replacing cached certificate metadata with ML-DSA identity match")
-        _PARSED_CERTIFICATE_IDENTITIES[identity] = parsed
-        return parsed
-
-    if existing_is_mldsa and not parsed_is_mldsa:
-        print("[DEBUG] Preserving ML-DSA metadata for certificate identity")
-        return existing
-
-    if (
-        existing.signature_algorithm_oid != parsed.signature_algorithm_oid
-        or existing.subject_public_key_algorithm_oid
-        != parsed.subject_public_key_algorithm_oid
-    ):
-        print(
-            "[DEBUG] Certificate identity encountered with differing OIDs;"
-            " keeping existing metadata",
-        )
-
-    return existing
+    return _register_parsed_certificate(cert_der, identity, parsed)
 
 
 def _verify_ordered_chain(ordered_chain: Sequence[bytes], *, log_prefix: str) -> None:
