@@ -32,7 +32,7 @@ import abc
 from dataclasses import dataclass
 from enum import IntEnum, unique
 from functools import wraps
-from typing import Any, Callable, List, Mapping, Optional, Sequence, Type
+from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Type
 
 from asn1crypto import core as asn1_core
 from asn1crypto import parser as asn1_parser
@@ -94,7 +94,29 @@ class AttestationResult:
     trust_path: List[bytes]
 
     def __post_init__(self) -> None:
-        self.trust_path = [_coerce_der_bytes(entry) for entry in self.trust_path]
+        normalized: List[bytes] = []
+        for index, entry in enumerate(self.trust_path):
+            der_bytes = _coerce_der_bytes(entry)
+            parsed = _get_parsed_certificate(der_bytes)
+            print(
+                "AttestationResult: trust_path[%d] signatureAlgorithm OID %s"
+                % (index, parsed.signature_algorithm_oid)
+            )
+            try:
+                spki_oid, _ = _extract_subject_public_key_info(der_bytes)
+            except Exception as exc:  # pragma: no cover - defensive logging
+                print(
+                    "AttestationResult: trust_path[%d] failed to parse SPKI OID: %s"
+                    % (index, exc)
+                )
+            else:
+                print(
+                    "AttestationResult: trust_path[%d] SubjectPublicKeyInfo algorithm OID %s"
+                    % (index, spki_oid)
+                )
+            normalized.append(der_bytes)
+
+        self.trust_path = normalized
 
 
 def catch_builtins(f):
@@ -154,6 +176,17 @@ SIGNATURE_ALGORITHM_OIDS = {
 
 
 _custom_x509_chain_verifier: Optional[X509ChainVerifier] = None
+
+
+_PARSED_CERTIFICATE_CACHE: Dict[bytes, _ParsedCertificate] = {}
+
+
+def _get_parsed_certificate(cert_der: bytes) -> _ParsedCertificate:
+    cached = _PARSED_CERTIFICATE_CACHE.get(cert_der)
+    if cached is None:
+        cached = _parse_certificate(cert_der)
+        _PARSED_CERTIFICATE_CACHE[cert_der] = cached
+    return cached
 
 
 def _coerce_der_bytes(value: Any) -> bytes:
@@ -225,7 +258,7 @@ def _parse_certificate(cert_der: bytes) -> _ParsedCertificate:
 
 
 def _extract_subject_public_key_info(cert_der: bytes) -> tuple[str, bytes]:
-    parsed = _parse_certificate(cert_der)
+    parsed = _get_parsed_certificate(cert_der)
     tbs_info = asn1_parser.parse(parsed.tbs_certificate)
     if tbs_info[0] != 0 or tbs_info[1] != 1 or tbs_info[2] != 16:
         raise ValueError("TBSCertificate must be a DER SEQUENCE")
@@ -343,7 +376,7 @@ def _default_verify_x509_chain(chain: List[bytes]) -> None:
 
     while remaining:
         issuer_der = remaining.pop(0)
-        child_parsed = _parse_certificate(child_der)
+        child_parsed = _get_parsed_certificate(child_der)
         child_signature_oid = child_parsed.signature_algorithm_oid
         print(
             "verify_x509_chain: raw child signatureAlgorithm OID from DER",
