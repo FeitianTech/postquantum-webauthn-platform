@@ -132,6 +132,12 @@ class _ParsedCertificate:
     signature_value: bytes
     subject_public_key_algorithm_oid: str
     subject_public_key: bytes
+    issuer_name: bytes
+    subject_name: bytes
+    authority_key_identifier: Optional[bytes]
+    subject_key_identifier: Optional[bytes]
+    is_ca: Optional[bool]
+    has_aaguid_extension: bool
 
 
 X509ChainVerifier = Callable[[List[bytes]], None]
@@ -218,6 +224,110 @@ def _coerce_der_bytes(value: Any) -> bytes:
     )
 
 
+def _select_parent_candidate(
+    child_parsed: _ParsedCertificate,
+    candidates: List[bytes],
+    parsed_map: Mapping[bytes, _ParsedCertificate],
+    normalized_order: Sequence[bytes],
+) -> Optional[bytes]:
+    if not candidates:
+        return None
+
+    authority_key_identifier = child_parsed.authority_key_identifier
+    if authority_key_identifier is not None:
+        aki_matches = [
+            candidate
+            for candidate in candidates
+            if parsed_map[candidate].subject_key_identifier == authority_key_identifier
+        ]
+        if aki_matches:
+            candidates = aki_matches
+
+    ca_candidates = [
+        candidate for candidate in candidates if parsed_map[candidate].is_ca is not False
+    ]
+    if ca_candidates:
+        candidates = ca_candidates
+
+    for der in normalized_order:
+        if der in candidates:
+            return der
+    return candidates[0]
+
+
+def _build_chain_from_leaf(
+    leaf: bytes,
+    normalized_order: Sequence[bytes],
+    parsed_map: Mapping[bytes, _ParsedCertificate],
+    subject_to_ders: Mapping[bytes, List[bytes]],
+) -> List[bytes]:
+    ordered = [leaf]
+    used = {leaf}
+    current = leaf
+
+    while True:
+        current_parsed = parsed_map[current]
+        issuer_name = current_parsed.issuer_name
+        if issuer_name == current_parsed.subject_name:
+            break
+
+        parent_candidates = [
+            candidate
+            for candidate in subject_to_ders.get(issuer_name, [])
+            if candidate not in used
+        ]
+        parent = _select_parent_candidate(
+            current_parsed, parent_candidates, parsed_map, normalized_order
+        )
+        if parent is None:
+            break
+
+        ordered.append(parent)
+        used.add(parent)
+        current = parent
+
+    return ordered
+
+
+def _order_certificate_chain(chain: Sequence[bytes]) -> List[bytes]:
+    normalized = [_coerce_der_bytes(cert) for cert in chain]
+    if not normalized:
+        return []
+
+    parsed_map = {der: _get_parsed_certificate(der) for der in normalized}
+    subject_to_ders: Dict[bytes, List[bytes]] = {}
+    for der, parsed in parsed_map.items():
+        subject_to_ders.setdefault(parsed.subject_name, []).append(der)
+
+    leaf_candidates = [
+        der
+        for der, parsed in parsed_map.items()
+        if parsed.is_ca is False or parsed.has_aaguid_extension
+    ]
+    if not leaf_candidates:
+        issuer_names = {parsed.issuer_name for parsed in parsed_map.values()}
+        leaf_candidates = [
+            der for der, parsed in parsed_map.items() if parsed.subject_name not in issuer_names
+        ]
+    if not leaf_candidates:
+        leaf_candidates = [normalized[0]]
+
+    best_chain: Optional[List[bytes]] = None
+    for leaf in leaf_candidates:
+        candidate_chain = _build_chain_from_leaf(
+            leaf, normalized, parsed_map, subject_to_ders
+        )
+        if best_chain is None or len(candidate_chain) > len(best_chain):
+            best_chain = candidate_chain
+        if len(candidate_chain) == len(parsed_map):
+            return candidate_chain
+
+    if best_chain is None or len(best_chain) != len(parsed_map):
+        raise ValueError("Unable to determine certificate chain order")
+
+    return best_chain
+
+
 def _parsed_length(info: tuple[Any, ...]) -> int:
     """Return the encoded length for a parsed ASN.1 element."""
 
@@ -225,50 +335,64 @@ def _parsed_length(info: tuple[Any, ...]) -> int:
     return len(header) + len(content) + len(trailer)
 
 
-def _parse_subject_public_key_info_from_tbs(tbs_certificate: bytes) -> tuple[str, bytes]:
-    tbs_info = asn1_parser.parse(tbs_certificate)
-    if tbs_info[0] != 0 or tbs_info[1] != 1 or tbs_info[2] != 16:
-        raise ValueError("TBSCertificate must be a DER SEQUENCE")
+def _encoded_value(info: tuple[Any, ...]) -> bytes:
+    """Return the full encoding (header+content+trailer) of an ASN.1 element."""
 
-    tbs_content = tbs_info[4]
-    offset = 0
+    return bytes(info[3] + info[4] + info[5])
 
-    # Optional version field is [0] EXPLICIT
-    version_info = asn1_parser.parse(tbs_content[offset:])
-    if version_info[0] == 2 and version_info[2] == 0:
-        offset += _parsed_length(version_info)
 
-    # serialNumber, signature, issuer, validity, subject
-    for _ in range(5):
-        field_info = asn1_parser.parse(tbs_content[offset:])
-        offset += _parsed_length(field_info)
+def _parse_extension_value(
+    oid: str,
+    value_bytes: bytes,
+    *,
+    current_is_ca: Optional[bool],
+    current_has_aaguid: bool,
+    current_subject_key_identifier: Optional[bytes],
+    current_authority_key_identifier: Optional[bytes],
+) -> tuple[Optional[bool], bool, Optional[bytes], Optional[bytes]]:
+    is_ca = current_is_ca
+    has_aaguid = current_has_aaguid
+    subject_key_identifier = current_subject_key_identifier
+    authority_key_identifier = current_authority_key_identifier
 
-    spki_info = asn1_parser.parse(tbs_content[offset:])
-    if spki_info[0] != 0 or spki_info[1] != 1 or spki_info[2] != 16:
-        raise ValueError("TBSCertificate missing SubjectPublicKeyInfo")
+    if oid == "2.5.29.19":  # BasicConstraints
+        info = asn1_parser.parse(value_bytes)
+        if info[2] != 16:
+            raise ValueError("BasicConstraints extension must be a SEQUENCE")
+        content = info[4]
+        if not content:
+            is_ca = False
+        else:
+            offset = 0
+            field_info = asn1_parser.parse(content[offset:])
+            if field_info[2] == 1:
+                is_ca = field_info[4] != b"\x00"
+            else:
+                is_ca = False
+    elif oid == "2.5.29.14":  # SubjectKeyIdentifier
+        info = asn1_parser.parse(value_bytes)
+        if info[2] != 4:
+            raise ValueError("SubjectKeyIdentifier must be an OCTET STRING")
+        subject_key_identifier = bytes(info[4])
+    elif oid == "2.5.29.35":  # AuthorityKeyIdentifier
+        info = asn1_parser.parse(value_bytes)
+        if info[2] != 16:
+            raise ValueError("AuthorityKeyIdentifier must be a SEQUENCE")
+        content = info[4]
+        offset = 0
+        while offset < len(content):
+            field_info = asn1_parser.parse(content[offset:])
+            offset += _parsed_length(field_info)
+            if field_info[0] == 2 and field_info[2] == 0:
+                authority_key_identifier = bytes(field_info[4])
+                break
+    elif oid == "1.3.6.1.4.1.45724.1.1.4":  # AAGUID extension
+        info = asn1_parser.parse(value_bytes)
+        if info[2] != 4:
+            raise ValueError("AAGUID extension must be an OCTET STRING")
+        has_aaguid = True
 
-    spki_content = spki_info[4]
-
-    algorithm_info = asn1_parser.parse(spki_content)
-    if algorithm_info[0] != 0 or algorithm_info[1] != 1 or algorithm_info[2] != 16:
-        raise ValueError("SubjectPublicKeyInfo missing AlgorithmIdentifier")
-    oid_info = asn1_parser.parse(algorithm_info[4])
-    if oid_info[2] != 6:
-        raise ValueError("AlgorithmIdentifier missing OBJECT IDENTIFIER")
-    algorithm_oid = asn1_core.ObjectIdentifier.load(oid_info[3] + oid_info[4]).dotted
-
-    algorithm_len = _parsed_length(algorithm_info)
-    bitstring_info = asn1_parser.parse(spki_content[algorithm_len:])
-    if bitstring_info[2] != 3:
-        raise ValueError("SubjectPublicKeyInfo missing public key BIT STRING")
-    if not bitstring_info[4]:
-        raise ValueError("Invalid BIT STRING length")
-    unused_bits = bitstring_info[4][0]
-    if unused_bits != 0:
-        raise ValueError("Unsupported BIT STRING with unused bits")
-    public_key_bytes = bitstring_info[4][1:]
-
-    return algorithm_oid, bytes(public_key_bytes)
+    return is_ca, has_aaguid, subject_key_identifier, authority_key_identifier
 
 
 def _parse_certificate(cert_der: bytes) -> _ParsedCertificate:
@@ -285,9 +409,110 @@ def _parse_certificate(cert_der: bytes) -> _ParsedCertificate:
     tbs_certificate = remaining[:tbs_len]
     remaining = remaining[tbs_len:]
 
-    subject_public_key_algorithm_oid, subject_public_key = (
-        _parse_subject_public_key_info_from_tbs(tbs_certificate)
-    )
+    tbs_content = tbs_info[4]
+    offset = 0
+
+    version_info = asn1_parser.parse(tbs_content[offset:])
+    if version_info[0] == 2 and version_info[2] == 0:
+        offset += _parsed_length(version_info)
+
+    # serialNumber
+    serial_info = asn1_parser.parse(tbs_content[offset:])
+    offset += _parsed_length(serial_info)
+
+    # signature
+    signature_field_info = asn1_parser.parse(tbs_content[offset:])
+    offset += _parsed_length(signature_field_info)
+
+    issuer_info = asn1_parser.parse(tbs_content[offset:])
+    issuer_name = _encoded_value(issuer_info)
+    offset += _parsed_length(issuer_info)
+
+    # validity
+    validity_info = asn1_parser.parse(tbs_content[offset:])
+    offset += _parsed_length(validity_info)
+
+    subject_info = asn1_parser.parse(tbs_content[offset:])
+    subject_name = _encoded_value(subject_info)
+    offset += _parsed_length(subject_info)
+
+    spki_info = asn1_parser.parse(tbs_content[offset:])
+    if spki_info[0] != 0 or spki_info[1] != 1 or spki_info[2] != 16:
+        raise ValueError("TBSCertificate missing SubjectPublicKeyInfo")
+    offset += _parsed_length(spki_info)
+
+    spki_content = spki_info[4]
+    algorithm_info = asn1_parser.parse(spki_content)
+    if algorithm_info[0] != 0 or algorithm_info[1] != 1 or algorithm_info[2] != 16:
+        raise ValueError("SubjectPublicKeyInfo missing AlgorithmIdentifier")
+    oid_info = asn1_parser.parse(algorithm_info[4])
+    if oid_info[2] != 6:
+        raise ValueError("AlgorithmIdentifier missing OBJECT IDENTIFIER")
+    subject_public_key_algorithm_oid = asn1_core.ObjectIdentifier.load(
+        oid_info[3] + oid_info[4]
+    ).dotted
+
+    algorithm_len = _parsed_length(algorithm_info)
+    bitstring_info = asn1_parser.parse(spki_content[algorithm_len:])
+    if bitstring_info[2] != 3:
+        raise ValueError("SubjectPublicKeyInfo missing public key BIT STRING")
+    if not bitstring_info[4]:
+        raise ValueError("Invalid BIT STRING length")
+    if bitstring_info[4][0] != 0:
+        raise ValueError("Unsupported BIT STRING with unused bits")
+    subject_public_key = bytes(bitstring_info[4][1:])
+
+    authority_key_identifier: Optional[bytes] = None
+    subject_key_identifier: Optional[bytes] = None
+    is_ca: Optional[bool] = None
+    has_aaguid = False
+
+    while offset < len(tbs_content):
+        field_info = asn1_parser.parse(tbs_content[offset:])
+        tag_class, tag_number = field_info[0], field_info[2]
+        if tag_class == 2 and tag_number in (1, 2):
+            offset += _parsed_length(field_info)
+            continue
+        if tag_class == 2 and tag_number == 3:
+            extensions_info = asn1_parser.parse(field_info[4])
+            if extensions_info[0] != 0 or extensions_info[1] != 1 or extensions_info[2] != 16:
+                raise ValueError("Extensions must be a DER SEQUENCE")
+            extensions_content = extensions_info[4]
+            ext_offset = 0
+            while ext_offset < len(extensions_content):
+                extension_info = asn1_parser.parse(extensions_content[ext_offset:])
+                ext_offset += _parsed_length(extension_info)
+                extension_sequence = extension_info[4]
+                entry_offset = 0
+                oid_info = asn1_parser.parse(extension_sequence[entry_offset:])
+                if oid_info[2] != 6:
+                    raise ValueError("Extension missing OBJECT IDENTIFIER")
+                extension_oid = asn1_core.ObjectIdentifier.load(
+                    oid_info[3] + oid_info[4]
+                ).dotted
+                entry_offset += _parsed_length(oid_info)
+                value_info = asn1_parser.parse(extension_sequence[entry_offset:])
+                if value_info[2] == 1:  # critical boolean
+                    entry_offset += _parsed_length(value_info)
+                    value_info = asn1_parser.parse(extension_sequence[entry_offset:])
+                if value_info[2] != 4:
+                    raise ValueError("Extension extnValue must be an OCTET STRING")
+                (
+                    is_ca,
+                    has_aaguid,
+                    subject_key_identifier,
+                    authority_key_identifier,
+                ) = _parse_extension_value(
+                    extension_oid,
+                    value_info[4],
+                    current_is_ca=is_ca,
+                    current_has_aaguid=has_aaguid,
+                    current_subject_key_identifier=subject_key_identifier,
+                    current_authority_key_identifier=authority_key_identifier,
+                )
+            offset += _parsed_length(field_info)
+            continue
+        raise ValueError("Unexpected field in TBSCertificate")
 
     sig_alg_info = asn1_parser.parse(remaining)
     if sig_alg_info[0] != 0 or sig_alg_info[1] != 1 or sig_alg_info[2] != 16:
@@ -324,7 +549,137 @@ def _parse_certificate(cert_der: bytes) -> _ParsedCertificate:
         signature_value=bytes(signature_value),
         subject_public_key_algorithm_oid=subject_public_key_algorithm_oid,
         subject_public_key=subject_public_key,
+        issuer_name=issuer_name,
+        subject_name=subject_name,
+        authority_key_identifier=authority_key_identifier,
+        subject_key_identifier=subject_key_identifier,
+        is_ca=is_ca,
+        has_aaguid_extension=has_aaguid,
     )
+
+
+def _verify_ordered_chain(ordered_chain: Sequence[bytes], *, log_prefix: str) -> None:
+    if len(ordered_chain) <= 1:
+        return
+
+    for child_der, issuer_der in zip(ordered_chain, ordered_chain[1:]):
+        child_parsed = _get_parsed_certificate(child_der)
+        child_signature_oid = child_parsed.signature_algorithm_oid
+        print(
+            f"{log_prefix}: cached child signatureAlgorithm OID from DER",
+            child_signature_oid,
+        )
+        signature_class = SIGNATURE_ALGORITHM_OIDS.get(child_signature_oid)
+        if signature_class is None:
+            raise ValueError(f"Unsupported signature algorithm OID: {child_signature_oid}")
+        print(
+            f"{log_prefix}: classified child signature algorithm",
+            signature_class,
+        )
+
+        issuer_parsed = _get_parsed_certificate(issuer_der)
+        issuer_spki_oid = issuer_parsed.subject_public_key_algorithm_oid
+        print(
+            f"{log_prefix}: cached issuer SubjectPublicKeyInfo algorithm OID",
+            issuer_spki_oid,
+        )
+
+        if signature_class == "MLDSA":
+            print(f"[DEBUG] Saved OID from DER: {child_signature_oid}")
+            if issuer_spki_oid not in MLDSA_OIDS:
+                raise ValueError("Issuer public key OID does not match ML-DSA parameter set")
+            print(
+                f"{log_prefix}: issuer SPKI recognized as ML-DSA OID",
+                issuer_spki_oid,
+            )
+            print(
+                f"{log_prefix}: using ML-DSA verifier for signature OID",
+                child_signature_oid,
+            )
+            print("[DEBUG] Routing directly to ML-DSA verifier")
+            _verify_mldsa_certificate_signature(
+                child_parsed.tbs_certificate,
+                child_parsed.signature_value,
+                issuer_parsed.subject_public_key,
+                child_signature_oid,
+            )
+        elif signature_class == "RSA":
+            if issuer_spki_oid not in RSA_PUBLIC_KEY_OIDS:
+                raise ValueError("Issuer public key OID does not match RSA algorithm")
+            print(
+                f"{log_prefix}: issuer SPKI recognized as RSA OID",
+                issuer_spki_oid,
+            )
+            print(
+                f"{log_prefix}: using RSA verifier for signature OID",
+                child_signature_oid,
+            )
+            issuer_cert = x509.load_der_x509_certificate(issuer_der, default_backend())
+            pub = issuer_cert.public_key()
+            if not isinstance(pub, rsa.RSAPublicKey):
+                raise ValueError("Issuer public key is not RSA")
+            print(
+                f"{log_prefix}: cryptography issuer public key type",
+                type(pub).__name__,
+            )
+            hash_algorithm = _hash_for_signature_oid(child_signature_oid)
+            child_cert_for_debug = x509.load_der_x509_certificate(child_der, default_backend())
+            cryptography_sig_oid = getattr(
+                getattr(child_cert_for_debug, "signature_algorithm_oid", None),
+                "dotted_string",
+                None,
+            )
+            if cryptography_sig_oid:
+                print(
+                    f"{log_prefix}: cryptography reported child signatureAlgorithm OID",
+                    cryptography_sig_oid,
+                )
+            pub.verify(
+                child_parsed.signature_value,
+                child_parsed.tbs_certificate,
+                padding.PKCS1v15(),
+                hash_algorithm,
+            )
+        elif signature_class == "EC":
+            if issuer_spki_oid not in EC_PUBLIC_KEY_OIDS:
+                raise ValueError("Issuer public key OID does not match EC algorithm")
+            print(
+                f"{log_prefix}: issuer SPKI recognized as EC OID",
+                issuer_spki_oid,
+            )
+            print(
+                f"{log_prefix}: using EC verifier for signature OID",
+                child_signature_oid,
+            )
+            issuer_cert = x509.load_der_x509_certificate(issuer_der, default_backend())
+            pub = issuer_cert.public_key()
+            if not isinstance(pub, ec.EllipticCurvePublicKey):
+                raise ValueError("Issuer public key is not EC")
+            print(
+                f"{log_prefix}: cryptography issuer public key type",
+                type(pub).__name__,
+            )
+            hash_algorithm = _hash_for_signature_oid(child_signature_oid)
+            child_cert_for_debug = x509.load_der_x509_certificate(child_der, default_backend())
+            cryptography_sig_oid = getattr(
+                getattr(child_cert_for_debug, "signature_algorithm_oid", None),
+                "dotted_string",
+                None,
+            )
+            if cryptography_sig_oid:
+                print(
+                    f"{log_prefix}: cryptography reported child signatureAlgorithm OID",
+                    cryptography_sig_oid,
+                )
+            pub.verify(
+                child_parsed.signature_value,
+                child_parsed.tbs_certificate,
+                ec.ECDSA(hash_algorithm),
+            )
+        else:  # pragma: no cover - exhaustive safeguard
+            raise ValueError(
+                f"Unhandled signature classification for OID: {child_signature_oid}"
+            )
 
 
 def _extract_subject_public_key_info(cert_der: bytes) -> tuple[str, bytes]:
@@ -396,149 +751,12 @@ def verify_x509_chain(chain: List[bytes]) -> None:
 
 
 def _default_verify_x509_chain(chain: List[bytes]) -> None:
-    if not chain:
-        return
+    ordered_chain = _order_certificate_chain(chain)
+    try:
+        _verify_ordered_chain(ordered_chain, log_prefix="verify_x509_chain")
+    except _InvalidSignature:
+        raise InvalidSignature()
 
-    remaining = [_coerce_der_bytes(cert) for cert in chain]
-    child_der = remaining.pop(0)
-
-    while remaining:
-        issuer_der = remaining.pop(0)
-        child_parsed = _get_parsed_certificate(child_der)
-        child_signature_oid = child_parsed.signature_algorithm_oid
-        print(
-            "verify_x509_chain: cached child signatureAlgorithm OID from DER",
-            child_signature_oid,
-        )
-        signature_class = SIGNATURE_ALGORITHM_OIDS.get(child_signature_oid)
-        if signature_class is None:
-            raise ValueError(f"Unsupported signature algorithm OID: {child_signature_oid}")
-        print(
-            "verify_x509_chain: classified child signature algorithm",
-            signature_class,
-        )
-
-        issuer_parsed = _get_parsed_certificate(issuer_der)
-        issuer_spki_oid = issuer_parsed.subject_public_key_algorithm_oid
-        issuer_public_key = issuer_parsed.subject_public_key
-        print(
-            "verify_x509_chain: cached issuer SubjectPublicKeyInfo algorithm OID",
-            issuer_spki_oid,
-        )
-
-        try:
-            if signature_class == "MLDSA":
-                print(
-                    "verify_x509_chain: using ML-DSA verifier for signature OID",
-                    child_signature_oid,
-                )
-                if issuer_spki_oid not in MLDSA_OIDS:
-                    raise ValueError(
-                        "Issuer public key OID does not match ML-DSA parameter set"
-                    )
-                print(
-                    "verify_x509_chain: issuer SPKI recognized as ML-DSA OID",
-                    issuer_spki_oid,
-                )
-                _verify_mldsa_certificate_signature(
-                    child_parsed.tbs_certificate,
-                    child_parsed.signature_value,
-                    issuer_public_key,
-                    child_signature_oid,
-                )
-            elif signature_class == "RSA":
-                if issuer_spki_oid not in RSA_PUBLIC_KEY_OIDS:
-                    raise ValueError(
-                        "Issuer public key OID does not match RSA algorithm"
-                    )
-                print(
-                    "verify_x509_chain: issuer SPKI recognized as RSA OID",
-                    issuer_spki_oid,
-                )
-                print(
-                    "verify_x509_chain: using RSA verifier for signature OID",
-                    child_signature_oid,
-                )
-                issuer_cert = x509.load_der_x509_certificate(
-                    issuer_der, default_backend()
-                )
-                pub = issuer_cert.public_key()
-                if not isinstance(pub, rsa.RSAPublicKey):
-                    raise ValueError("Issuer public key is not RSA")
-                print(
-                    "verify_x509_chain: cryptography issuer public key type",
-                    type(pub).__name__,
-                )
-                hash_algorithm = _hash_for_signature_oid(child_signature_oid)
-                child_cert_for_debug = x509.load_der_x509_certificate(
-                    child_der, default_backend()
-                )
-                cryptography_sig_oid = getattr(
-                    getattr(child_cert_for_debug, "signature_algorithm_oid", None),
-                    "dotted_string",
-                    None,
-                )
-                if cryptography_sig_oid:
-                    print(
-                        "verify_x509_chain: cryptography reported child signatureAlgorithm OID",
-                        cryptography_sig_oid,
-                    )
-                pub.verify(
-                    child_parsed.signature_value,
-                    child_parsed.tbs_certificate,
-                    padding.PKCS1v15(),
-                    hash_algorithm,
-                )
-            elif signature_class == "EC":
-                if issuer_spki_oid not in EC_PUBLIC_KEY_OIDS:
-                    raise ValueError(
-                        "Issuer public key OID does not match EC algorithm"
-                    )
-                print(
-                    "verify_x509_chain: issuer SPKI recognized as EC OID",
-                    issuer_spki_oid,
-                )
-                print(
-                    "verify_x509_chain: using EC verifier for signature OID",
-                    child_signature_oid,
-                )
-                issuer_cert = x509.load_der_x509_certificate(
-                    issuer_der, default_backend()
-                )
-                pub = issuer_cert.public_key()
-                if not isinstance(pub, ec.EllipticCurvePublicKey):
-                    raise ValueError("Issuer public key is not EC")
-                print(
-                    "verify_x509_chain: cryptography issuer public key type",
-                    type(pub).__name__,
-                )
-                hash_algorithm = _hash_for_signature_oid(child_signature_oid)
-                child_cert_for_debug = x509.load_der_x509_certificate(
-                    child_der, default_backend()
-                )
-                cryptography_sig_oid = getattr(
-                    getattr(child_cert_for_debug, "signature_algorithm_oid", None),
-                    "dotted_string",
-                    None,
-                )
-                if cryptography_sig_oid:
-                    print(
-                        "verify_x509_chain: cryptography reported child signatureAlgorithm OID",
-                        cryptography_sig_oid,
-                    )
-                pub.verify(
-                    child_parsed.signature_value,
-                    child_parsed.tbs_certificate,
-                    ec.ECDSA(hash_algorithm),
-                )
-            else:  # pragma: no cover - exhaustive safeguard
-                raise ValueError(
-                    f"Unhandled signature classification for OID: {child_signature_oid}"
-                )
-        except _InvalidSignature:
-            raise InvalidSignature()
-
-        child_der = issuer_der
 
 
 class Attestation(abc.ABC):
@@ -656,45 +874,10 @@ class AttestationVerifier(abc.ABC):
             raise UntrustedAttestation("No root found for Authenticator")
 
         chain: List[bytes] = result.trust_path + [ca]
-        remaining_chain: List[bytes] = list(chain)
 
-        while len(remaining_chain) >= 2:
-            child_der = remaining_chain[0]
-            child_parsed = _get_parsed_certificate(child_der)
-            saved_oid = child_parsed.signature_algorithm_oid
-            print(f"[DEBUG] Saved OID from DER: {saved_oid}")
-
-            if saved_oid not in MLDSA_OIDS:
-                break
-
-            issuer_der = remaining_chain[1]
-            issuer_parsed = _get_parsed_certificate(issuer_der)
-            issuer_oid = issuer_parsed.subject_public_key_algorithm_oid
-            if issuer_oid not in MLDSA_OIDS:
-                raise UntrustedAttestation(
-                    "Issuer public key OID does not match ML-DSA parameter set"
-                )
-
-            print("[DEBUG] Routing directly to ML-DSA verifier")
-            try:
-                _verify_mldsa_certificate_signature(
-                    child_parsed.tbs_certificate,
-                    child_parsed.signature_value,
-                    issuer_parsed.subject_public_key,
-                    saved_oid,
-                )
-            except (InvalidSignature, ValueError) as exc:
-                raise UntrustedAttestation(exc)
-
-            remaining_chain = remaining_chain[1:]
-
-        if len(remaining_chain) <= 1:
-            return
-
-        # Validate the remaining trust chain using the default logic
         try:
-            verify_x509_chain(remaining_chain)
-        except InvalidSignature as e:
+            verify_x509_chain(chain)
+        except (InvalidSignature, ValueError) as e:
             raise UntrustedAttestation(e)
 
     def __call__(self, *args):
