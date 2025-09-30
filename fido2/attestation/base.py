@@ -153,6 +153,22 @@ def _verify_mldsa_certificate_signature(
         raise InvalidSignature(f"ML-DSA certificate verification error: {exc}") from exc
 
 
+def _certificate_uses_mldsa(cert_bytes: Optional[bytes]) -> bool:
+    """Return ``True`` when the provided certificate exposes an ML-DSA key."""
+
+    if not cert_bytes:
+        return False
+
+    try:
+        info = extract_certificate_public_key_info(cert_bytes)
+    except Exception:
+        return False
+
+    return bool(
+        info.get("ml_dsa_parameter_set") or info.get("mlDsaParameterSet")
+    )
+
+
 def verify_x509_chain(chain: List[bytes]) -> None:
     """Verifies a chain of certificates.
 
@@ -313,6 +329,24 @@ class AttestationVerifier(abc.ABC):
         ca = self.ca_lookup(result, attestation_object.auth_data)
         if not ca:
             raise UntrustedAttestation("No root found for Authenticator")
+
+        trust_path = result.trust_path or []
+        if trust_path and _certificate_uses_mldsa(ca):
+            try:
+                attestation_cert = x509.load_der_x509_certificate(
+                    trust_path[0], default_backend()
+                )
+            except Exception as exc:
+                raise UntrustedAttestation(
+                    f"Unable to load attestation certificate for ML-DSA verification: {exc}"
+                ) from exc
+
+            try:
+                _verify_mldsa_certificate_signature(attestation_cert, ca)
+            except InvalidSignature as e:
+                raise UntrustedAttestation(e)
+
+            return
 
         # Validate the trust chain
         try:
