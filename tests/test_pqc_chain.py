@@ -20,6 +20,7 @@ from fido2.attestation.base import (
     AttestationVerifier,
     verify_x509_chain,
 )
+from fido2.mds3 import parse_blob
 from fido2.cose import extract_certificate_public_key_info
 
 
@@ -193,3 +194,70 @@ def test_attestation_verifier_detects_pqc_by_aaguid(monkeypatch, caplog):
         "Using PQC direct verification, bypassing x5c chain to avoid RSA overwrite"
         in caplog.text
     )
+
+
+def test_parse_blob_uses_direct_pqc_verification(monkeypatch):
+    metadata_path = "examples/server/server/static/feitian-pqc.json"
+    with open(metadata_path, "r", encoding="utf-8") as fh:
+        metadata = json.load(fh)
+
+    root_der = base64.b64decode(metadata["attestationRootCertificates"][0])
+
+    recorded: dict[str, object] = {}
+
+    def record_certificate(child, issuer):
+        recorded["child"] = child
+        recorded["issuer"] = issuer
+
+    def fail_chain(_chain):  # pragma: no cover - guard assertion for this test
+        raise AssertionError("verify_x509_chain should not be called for PQC metadata")
+
+    monkeypatch.setattr(
+        "fido2.mds3._verify_mldsa_certificate_signature",
+        record_certificate,
+    )
+    monkeypatch.setattr("fido2.mds3.verify_x509_chain", fail_chain)
+
+    class DummyKey:
+        ALGORITHM = -48
+
+        def __init__(self, params):
+            self.params = params
+
+        @classmethod
+        def from_cryptography_key(cls, _):  # pragma: no cover - should not be used
+            raise AssertionError("cryptography key path must not be used for PQC")
+
+        def verify(self, message: bytes, signature: bytes) -> None:
+            recorded["message"] = bytes(message)
+            recorded["signature"] = bytes(signature)
+            recorded["public_key"] = self.params.get(-1)
+
+    monkeypatch.setattr("fido2.mds3.CoseKey.for_name", lambda _: DummyKey)
+
+    header = {
+        "alg": "MLDSA44",
+        "x5c": [base64.b64encode(root_der).decode("ascii")],
+    }
+    payload = {
+        "legalHeader": "",
+        "no": 0,
+        "nextUpdate": "2024-01-01",
+        "entries": [],
+    }
+
+    def _urlsafe(data: bytes) -> bytes:
+        return base64.urlsafe_b64encode(data).rstrip(b"=")
+
+    header_segment = _urlsafe(json.dumps(header).encode("utf-8"))
+    payload_segment = _urlsafe(json.dumps(payload).encode("utf-8"))
+    signature_segment = _urlsafe(b"")
+    blob = b".".join([header_segment, payload_segment, signature_segment])
+
+    parse_blob(blob, root_der)
+
+    assert recorded["issuer"] == root_der
+    assert isinstance(recorded["child"], x509.Certificate)
+    assert recorded["public_key"]
+    assert recorded["message"] == blob.rsplit(b".", 1)[0]
+    assert recorded["signature"] == b""
