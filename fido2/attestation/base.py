@@ -29,7 +29,7 @@ from __future__ import annotations
 
 import abc
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import IntEnum, unique
 from functools import wraps
 from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple, Type
@@ -89,13 +89,25 @@ class AttestationType(IntEnum):
 
 
 @dataclass
+class _TrustPathEntry:
+    der: bytes
+    tbs_certificate: bytes
+    signature_algorithm_oid: str
+    signature_value: bytes
+    subject_public_key_algorithm_oid: str
+    subject_public_key: bytes
+
+
+@dataclass
 class AttestationResult:
     """The result of verifying an attestation."""
 
     attestation_type: AttestationType
     trust_path: List[bytes]
+    trust_path_details: List[_TrustPathEntry] = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
+        self.trust_path_details = []
         normalized: List[bytes] = []
         for index, entry in enumerate(self.trust_path):
             der_bytes = _coerce_der_bytes(entry)
@@ -109,6 +121,16 @@ class AttestationResult:
                 % (index, parsed.subject_public_key_algorithm_oid)
             )
             normalized.append(der_bytes)
+            self.trust_path_details.append(
+                _TrustPathEntry(
+                    der=der_bytes,
+                    tbs_certificate=parsed.tbs_certificate,
+                    signature_algorithm_oid=parsed.signature_algorithm_oid,
+                    signature_value=parsed.signature_value,
+                    subject_public_key_algorithm_oid=parsed.subject_public_key_algorithm_oid,
+                    subject_public_key=parsed.subject_public_key,
+                )
+            )
 
         self.trust_path = normalized
 
@@ -642,6 +664,57 @@ def _verify_ordered_chain(ordered_chain: Sequence[bytes], *, log_prefix: str) ->
             )
 
 
+def _verify_trust_path_with_attestation_details(
+    attestation_result: AttestationResult, ca_der: bytes
+) -> bool:
+    """Verify an ML-DSA trust path using cached attestation metadata.
+
+    Returns ``True`` when the verification was handled, allowing callers to
+    bypass :func:`verify_x509_chain`. A ``False`` return value indicates that
+    the generic verifier should be used instead.
+    """
+
+    details = getattr(attestation_result, "trust_path_details", None)
+    if not details:
+        return False
+
+    if not any(entry.signature_algorithm_oid in MLDSA_OIDS for entry in details):
+        return False
+
+    ca_bytes = _coerce_der_bytes(ca_der)
+    ca_parsed = _get_parsed_certificate(ca_bytes)
+
+    issuer_public_keys = [entry.subject_public_key for entry in details[1:]]
+    issuer_public_keys.append(ca_parsed.subject_public_key)
+
+    issuer_spki_oids = [
+        entry.subject_public_key_algorithm_oid for entry in details[1:]
+    ]
+    issuer_spki_oids.append(ca_parsed.subject_public_key_algorithm_oid)
+
+    for index, entry in enumerate(details):
+        signature_oid = entry.signature_algorithm_oid
+        if signature_oid not in MLDSA_OIDS:
+            return False
+
+        issuer_spki_oid = issuer_spki_oids[index]
+        issuer_public_key = issuer_public_keys[index]
+
+        if issuer_spki_oid not in MLDSA_OIDS:
+            raise InvalidSignature(
+                "Issuer public key OID does not match ML-DSA parameter set"
+            )
+
+        _verify_mldsa_certificate_signature(
+            entry.tbs_certificate,
+            entry.signature_value,
+            issuer_public_key,
+            signature_oid,
+        )
+
+    return True
+
+
 def _extract_subject_public_key_info(cert_der: bytes) -> tuple[str, bytes]:
     parsed = _get_parsed_certificate(cert_der)
     return parsed.subject_public_key_algorithm_oid, parsed.subject_public_key
@@ -833,9 +906,12 @@ class AttestationVerifier(abc.ABC):
         if not ca:
             raise UntrustedAttestation("No root found for Authenticator")
 
-        chain: List[bytes] = result.trust_path + [ca]
+        ca_bytes = _coerce_der_bytes(ca)
+        chain: List[bytes] = result.trust_path + [ca_bytes]
 
         try:
+            if _verify_trust_path_with_attestation_details(result, ca_bytes):
+                return
             verify_x509_chain(chain)
         except (InvalidSignature, ValueError) as e:
             raise UntrustedAttestation(e)
