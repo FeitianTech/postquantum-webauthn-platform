@@ -27,6 +27,8 @@
 
 from __future__ import annotations
 
+import logging
+
 from ..cose import describe_mldsa_oid, extract_certificate_public_key_info
 from ..webauthn import AuthenticatorData, AttestationObject
 from enum import IntEnum, unique
@@ -39,6 +41,9 @@ from functools import wraps
 from typing import List, Type, Mapping, Sequence, Optional, Any
 
 import abc
+
+
+logger = logging.getLogger(__name__)
 
 
 class InvalidAttestation(Exception):
@@ -315,6 +320,26 @@ class AttestationVerifier(abc.ABC):
             raise UntrustedAttestation("No root found for Authenticator")
 
         # Validate the trust chain
+        if result.trust_path:
+            try:
+                child_cert = x509.load_der_x509_certificate(
+                    result.trust_path[0], default_backend()
+                )
+            except (ValueError, TypeError):
+                child_cert = None
+            else:
+                signature_oid = child_cert.signature_algorithm_oid.dotted_string
+                if describe_mldsa_oid(signature_oid):
+                    logger.info(
+                        "Using direct ML-DSA verification (skipping chain) for PQC testing mode"
+                    )
+                    try:
+                        _verify_mldsa_certificate_signature(child_cert, ca)
+                    except InvalidSignature as e:
+                        raise UntrustedAttestation(e)
+                    else:
+                        return
+
         try:
             verify_x509_chain(result.trust_path + [ca])
         except InvalidSignature as e:
