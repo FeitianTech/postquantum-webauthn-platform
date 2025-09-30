@@ -37,6 +37,7 @@ cbor2 = "^5.6.4"           # CBOR parsing
 pycose = "^1.0.0"          # COSE key handling
 pyjwt = "^2.9.0"           # JWT validation (for MDS)
 requests = "^2.32.3"       # Fetching metadata/trust anchors
+asn1crypto = "^1.5.1"      # ASN.1 parsing for certificate inspection
 
 [tool.poetry.extras]
 pcsc = ["pyscard"]

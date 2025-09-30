@@ -34,12 +34,15 @@ from enum import IntEnum, unique
 from functools import wraps
 from typing import Any, List, Mapping, Optional, Sequence, Type
 
+from asn1crypto import core as asn1_core
+from asn1crypto import parser as asn1_parser
 from cryptography import x509
 from cryptography.exceptions import InvalidSignature as _InvalidSignature
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.asymmetric import ec, padding, rsa
 
 from ..cose import describe_mldsa_oid
+from ..utils import ByteBuffer
 from ..webauthn import AttestationObject, AuthenticatorData
 
 
@@ -89,6 +92,9 @@ class AttestationResult:
 
     attestation_type: AttestationType
     trust_path: List[bytes]
+
+    def __post_init__(self) -> None:
+        self.trust_path = [_coerce_der_bytes(entry) for entry in self.trust_path]
 
 
 def catch_builtins(f):
@@ -144,156 +150,119 @@ SIGNATURE_ALGORITHM_OIDS = {
 }
 
 
-def _parse_der_length(data: memoryview, idx: int) -> tuple[int, int]:
-    if idx >= len(data):
-        raise ValueError("Invalid DER length: truncated data")
-    first = data[idx]
-    idx += 1
-    if first & 0x80 == 0:
-        return first, idx
-    num_bytes = first & 0x7F
-    if num_bytes == 0:
-        raise ValueError("Indefinite length DER encodings are not supported")
-    if idx + num_bytes > len(data):
-        raise ValueError("Invalid DER length: truncated data")
-    length = int.from_bytes(data[idx : idx + num_bytes], "big")
-    idx += num_bytes
-    return length, idx
+def _coerce_der_bytes(value: Any) -> bytes:
+    if isinstance(value, ByteBuffer):
+        return value.getvalue()
+    if isinstance(value, (bytes, bytearray, memoryview)):
+        return bytes(value)
+    raise TypeError(
+        "Certificate chain entries must be DER-encoded bytes, "
+        f"not {type(value).__name__}"
+    )
 
 
-def _skip_der_value(data: memoryview, idx: int) -> int:
-    if idx >= len(data):
-        raise ValueError("Truncated DER element")
-    idx += 1
-    length, idx = _parse_der_length(data, idx)
-    end = idx + length
-    if end > len(data):
-        raise ValueError("DER element overruns buffer")
-    return end
+def _parsed_length(info: tuple[Any, ...]) -> int:
+    """Return the encoded length for a parsed ASN.1 element."""
 
-
-def _decode_oid_body(body: bytes) -> str:
-    if not body:
-        raise ValueError("OBJECT IDENTIFIER body is empty")
-    first = body[0]
-    oid_numbers = [str(first // 40), str(first % 40)]
-    value = 0
-    for byte in body[1:]:
-        value = (value << 7) | (byte & 0x7F)
-        if byte & 0x80:
-            continue
-        oid_numbers.append(str(value))
-        value = 0
-    if body[-1] & 0x80:
-        raise ValueError("Invalid OBJECT IDENTIFIER continuation byte")
-    if value:
-        oid_numbers.append(str(value))
-    return ".".join(oid_numbers)
-
-
-def _parse_bit_string(data: memoryview, idx: int) -> tuple[bytes, int]:
-    if idx >= len(data) or data[idx] != 0x03:
-        raise ValueError("Expected BIT STRING tag")
-    idx += 1
-    length, idx = _parse_der_length(data, idx)
-    end = idx + length
-    if end > len(data) or length == 0:
-        raise ValueError("Invalid BIT STRING length")
-    unused_bits = data[idx]
-    if unused_bits != 0:
-        raise ValueError("Unsupported BIT STRING with unused bits")
-    value = bytes(data[idx + 1 : end])
-    return value, end
-
-
-def _parse_algorithm_identifier(
-    data: memoryview, idx: int
-) -> tuple[str, int]:
-    if idx >= len(data) or data[idx] != 0x30:
-        raise ValueError("AlgorithmIdentifier must be a SEQUENCE")
-    idx += 1
-    seq_len, idx = _parse_der_length(data, idx)
-    end = idx + seq_len
-    if end > len(data):
-        raise ValueError("AlgorithmIdentifier overruns buffer")
-    if idx >= end or data[idx] != 0x06:
-        raise ValueError("AlgorithmIdentifier missing OBJECT IDENTIFIER")
-    idx += 1
-    oid_len, idx = _parse_der_length(data, idx)
-    oid_end = idx + oid_len
-    if oid_end > end or oid_len <= 0:
-        raise ValueError("Invalid OBJECT IDENTIFIER length")
-    oid = _decode_oid_body(bytes(data[idx:oid_end]))
-    idx = oid_end
-    # Skip optional parameters if present.
-    idx = end
-    return oid, idx
+    header, content, trailer = info[3], info[4], info[5]
+    return len(header) + len(content) + len(trailer)
 
 
 def _parse_certificate(cert_der: bytes) -> _ParsedCertificate:
-    view = memoryview(cert_der)
-    idx = 0
-    if not view or view[idx] != 0x30:
+    cert_info = asn1_parser.parse(cert_der)
+    if cert_info[0] != 0 or cert_info[1] != 1 or cert_info[2] != 16:
         raise ValueError("Certificate must be a DER SEQUENCE")
-    idx += 1
-    cert_len, idx = _parse_der_length(view, idx)
-    end = idx + cert_len
-    if end > len(view):
-        raise ValueError("Certificate length exceeds buffer size")
 
-    if idx >= end or view[idx] != 0x30:
+    remaining = cert_info[4]
+
+    tbs_info = asn1_parser.parse(remaining)
+    if tbs_info[0] != 0 or tbs_info[1] != 1 or tbs_info[2] != 16:
         raise ValueError("Certificate missing TBSCertificate")
-    tbs_start = idx
-    tbs_end = _skip_der_value(view, idx)
-    tbs_certificate = bytes(view[tbs_start:tbs_end])
-    idx = tbs_end
+    tbs_len = _parsed_length(tbs_info)
+    tbs_certificate = remaining[:tbs_len]
+    remaining = remaining[tbs_len:]
 
-    signature_algorithm_oid, idx = _parse_algorithm_identifier(view, idx)
-    signature_value, idx = _parse_bit_string(view, idx)
+    sig_alg_info = asn1_parser.parse(remaining)
+    if sig_alg_info[0] != 0 or sig_alg_info[1] != 1 or sig_alg_info[2] != 16:
+        raise ValueError("Certificate missing signature AlgorithmIdentifier")
+    sig_alg_len = _parsed_length(sig_alg_info)
+    sig_alg_content = sig_alg_info[4]
 
-    if idx != end:
+    oid_info = asn1_parser.parse(sig_alg_content)
+    if oid_info[2] != 6:
+        raise ValueError("AlgorithmIdentifier missing OBJECT IDENTIFIER")
+    signature_algorithm_oid = asn1_core.ObjectIdentifier.load(
+        oid_info[3] + oid_info[4]
+    ).dotted
+
+    remaining = remaining[sig_alg_len:]
+
+    signature_info = asn1_parser.parse(remaining)
+    if signature_info[2] != 3:
+        raise ValueError("Certificate missing signature BIT STRING")
+    if not signature_info[4]:
+        raise ValueError("Invalid BIT STRING length")
+    unused_bits = signature_info[4][0]
+    if unused_bits != 0:
+        raise ValueError("Unsupported BIT STRING with unused bits")
+    signature_value = signature_info[4][1:]
+
+    remaining = remaining[_parsed_length(signature_info) :]
+    if remaining:
         raise ValueError("Certificate parsing did not consume full structure")
 
     return _ParsedCertificate(
-        tbs_certificate=tbs_certificate,
+        tbs_certificate=bytes(tbs_certificate),
         signature_algorithm_oid=signature_algorithm_oid,
-        signature_value=signature_value,
+        signature_value=bytes(signature_value),
     )
 
 
 def _extract_subject_public_key_info(cert_der: bytes) -> tuple[str, bytes]:
     parsed = _parse_certificate(cert_der)
-    view = memoryview(parsed.tbs_certificate)
-    idx = 0
-    if not view or view[idx] != 0x30:
+    tbs_info = asn1_parser.parse(parsed.tbs_certificate)
+    if tbs_info[0] != 0 or tbs_info[1] != 1 or tbs_info[2] != 16:
         raise ValueError("TBSCertificate must be a DER SEQUENCE")
-    idx += 1
-    seq_len, idx = _parse_der_length(view, idx)
-    end = idx + seq_len
-    if end > len(view):
-        raise ValueError("TBSCertificate length exceeds buffer size")
 
-    if idx < end and view[idx] == 0xA0:
-        idx = _skip_der_value(view, idx)
+    tbs_content = tbs_info[4]
+    offset = 0
 
+    # Optional version field is [0] EXPLICIT
+    version_info = asn1_parser.parse(tbs_content[offset:])
+    if version_info[0] == 2 and version_info[2] == 0:
+        offset += _parsed_length(version_info)
+
+    # serialNumber, signature, issuer, validity, subject
     for _ in range(5):
-        idx = _skip_der_value(view, idx)
+        field_info = asn1_parser.parse(tbs_content[offset:])
+        offset += _parsed_length(field_info)
 
-    if idx >= end or view[idx] != 0x30:
+    spki_info = asn1_parser.parse(tbs_content[offset:])
+    if spki_info[0] != 0 or spki_info[1] != 1 or spki_info[2] != 16:
         raise ValueError("TBSCertificate missing SubjectPublicKeyInfo")
-    idx += 1
-    spki_len, idx = _parse_der_length(view, idx)
-    spki_end = idx + spki_len
-    if spki_end > end:
-        raise ValueError("SubjectPublicKeyInfo overruns TBSCertificate")
 
-    algorithm_oid, idx = _parse_algorithm_identifier(view, idx)
-    public_key_bytes, idx = _parse_bit_string(view, idx)
+    spki_content = spki_info[4]
 
-    if idx != spki_end:
-        raise ValueError("SubjectPublicKeyInfo parsing did not consume structure")
+    algorithm_info = asn1_parser.parse(spki_content)
+    if algorithm_info[0] != 0 or algorithm_info[1] != 1 or algorithm_info[2] != 16:
+        raise ValueError("SubjectPublicKeyInfo missing AlgorithmIdentifier")
+    oid_info = asn1_parser.parse(algorithm_info[4])
+    if oid_info[2] != 6:
+        raise ValueError("AlgorithmIdentifier missing OBJECT IDENTIFIER")
+    algorithm_oid = asn1_core.ObjectIdentifier.load(oid_info[3] + oid_info[4]).dotted
 
-    return algorithm_oid, public_key_bytes
+    algorithm_len = _parsed_length(algorithm_info)
+    bitstring_info = asn1_parser.parse(spki_content[algorithm_len:])
+    if bitstring_info[2] != 3:
+        raise ValueError("SubjectPublicKeyInfo missing public key BIT STRING")
+    if not bitstring_info[4]:
+        raise ValueError("Invalid BIT STRING length")
+    unused_bits = bitstring_info[4][0]
+    if unused_bits != 0:
+        raise ValueError("Unsupported BIT STRING with unused bits")
+    public_key_bytes = bitstring_info[4][1:]
+
+    return algorithm_oid, bytes(public_key_bytes)
 
 
 @catch_builtins
@@ -348,7 +317,7 @@ def verify_x509_chain(chain: List[bytes]) -> None:
     if not chain:
         return
 
-    remaining = list(chain)
+    remaining = [_coerce_der_bytes(cert) for cert in chain]
     child_der = remaining.pop(0)
 
     while remaining:
