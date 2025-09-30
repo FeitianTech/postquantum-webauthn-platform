@@ -119,6 +119,23 @@ EC_PUBLIC_KEY_OIDS = {
 }
 
 
+SIGNATURE_ALGORITHM_OIDS = {
+    # ML-DSA parameter set OIDs are reused for their signatures.
+    "2.16.840.1.101.3.4.3.17": "MLDSA",
+    "2.16.840.1.101.3.4.3.18": "MLDSA",
+    "2.16.840.1.101.3.4.3.19": "MLDSA",
+    # RSA signature algorithms
+    "1.2.840.113549.1.1.5": "RSA",  # sha1WithRSAEncryption
+    "1.2.840.113549.1.1.11": "RSA",  # sha256WithRSAEncryption
+    "1.2.840.113549.1.1.12": "RSA",  # sha384WithRSAEncryption
+    "1.2.840.113549.1.1.13": "RSA",  # sha512WithRSAEncryption
+    # ECDSA signature algorithms
+    "1.2.840.10045.4.3.2": "EC",  # ecdsa-with-SHA256
+    "1.2.840.10045.4.3.3": "EC",  # ecdsa-with-SHA384
+    "1.2.840.10045.4.3.4": "EC",  # ecdsa-with-SHA512
+}
+
+
 def _parse_der_length(data: memoryview, idx: int) -> tuple[int, int]:
     if idx >= len(data):
         raise ValueError("Invalid DER length: truncated data")
@@ -254,61 +271,102 @@ def verify_x509_chain(chain: List[bytes]) -> None:
     Checks that the first item in the chain is signed by the next, and so on.
     The first item is the leaf, the last is the root.
     """
-    certs = [
-        (x509.load_der_x509_certificate(der, default_backend()), der)
-        for der in chain
-    ]
-    cert, cert_der = certs.pop(0)
-    while certs:
-        child_cert, child_der = cert, cert_der
-        cert, cert_der = certs.pop(0)
-        issuer_cert, issuer_der = cert, cert_der
 
+    if not chain:
+        return
+
+    remaining = list(chain)
+    child_der = remaining.pop(0)
+
+    while remaining:
+        issuer_der = remaining.pop(0)
         child_signature_oid = _extract_certificate_signature_oid(child_der)
+        signature_class = SIGNATURE_ALGORITHM_OIDS.get(child_signature_oid)
+        if signature_class is None:
+            raise ValueError(f"Unsupported signature algorithm OID: {child_signature_oid}")
+
         issuer_info = extract_certificate_public_key_info(issuer_der)
         issuer_spki_oid = issuer_info.get("algorithm_oid")
         if not issuer_spki_oid:
             raise ValueError("Unable to determine issuer public key algorithm OID")
 
         try:
-            if (
-                child_signature_oid in MLDSA_OIDS
-                and issuer_spki_oid in MLDSA_OIDS
-            ):
+            if signature_class == "MLDSA":
+                print(
+                    "verify_x509_chain: using ML-DSA verifier for signature OID",
+                    child_signature_oid,
+                )
+                if issuer_spki_oid not in MLDSA_OIDS:
+                    raise ValueError(
+                        "Issuer public key OID does not match ML-DSA parameter set"
+                    )
+                child_cert = x509.load_der_x509_certificate(
+                    child_der, default_backend()
+                )
                 _verify_mldsa_certificate_signature(
                     child_cert, issuer_der, child_signature_oid
                 )
-            else:
-                try:
-                    pub = issuer_cert.public_key()
-                except ValueError:
-                    pub = None
-
-                if issuer_spki_oid in RSA_PUBLIC_KEY_OIDS and isinstance(
-                    pub, rsa.RSAPublicKey
-                ):
-                    assert child_cert.signature_hash_algorithm is not None  # nosec
-                    pub.verify(
-                        child_cert.signature,
-                        child_cert.tbs_certificate_bytes,
-                        padding.PKCS1v15(),
-                        child_cert.signature_hash_algorithm,
+            elif signature_class == "RSA":
+                if issuer_spki_oid not in RSA_PUBLIC_KEY_OIDS:
+                    raise ValueError(
+                        "Issuer public key OID does not match RSA algorithm"
                     )
-                elif issuer_spki_oid in EC_PUBLIC_KEY_OIDS and isinstance(
-                    pub, ec.EllipticCurvePublicKey
-                ):
-                    assert child_cert.signature_hash_algorithm is not None  # nosec
-                    pub.verify(
-                        child_cert.signature,
-                        child_cert.tbs_certificate_bytes,
-                        ec.ECDSA(child_cert.signature_hash_algorithm),
+                print(
+                    "verify_x509_chain: using RSA verifier for signature OID",
+                    child_signature_oid,
+                )
+                issuer_cert = x509.load_der_x509_certificate(
+                    issuer_der, default_backend()
+                )
+                pub = issuer_cert.public_key()
+                if not isinstance(pub, rsa.RSAPublicKey):
+                    raise ValueError("Issuer public key is not RSA")
+                child_cert = x509.load_der_x509_certificate(
+                    child_der, default_backend()
+                )
+                hash_algorithm = child_cert.signature_hash_algorithm
+                if hash_algorithm is None:
+                    raise ValueError("Child certificate missing signature hash algorithm")
+                pub.verify(
+                    child_cert.signature,
+                    child_cert.tbs_certificate_bytes,
+                    padding.PKCS1v15(),
+                    hash_algorithm,
+                )
+            elif signature_class == "EC":
+                if issuer_spki_oid not in EC_PUBLIC_KEY_OIDS:
+                    raise ValueError(
+                        "Issuer public key OID does not match EC algorithm"
                     )
-                else:
-                    raise ValueError("Unsupported OID")
+                print(
+                    "verify_x509_chain: using EC verifier for signature OID",
+                    child_signature_oid,
+                )
+                issuer_cert = x509.load_der_x509_certificate(
+                    issuer_der, default_backend()
+                )
+                pub = issuer_cert.public_key()
+                if not isinstance(pub, ec.EllipticCurvePublicKey):
+                    raise ValueError("Issuer public key is not EC")
+                child_cert = x509.load_der_x509_certificate(
+                    child_der, default_backend()
+                )
+                hash_algorithm = child_cert.signature_hash_algorithm
+                if hash_algorithm is None:
+                    raise ValueError("Child certificate missing signature hash algorithm")
+                pub.verify(
+                    child_cert.signature,
+                    child_cert.tbs_certificate_bytes,
+                    ec.ECDSA(hash_algorithm),
+                )
+            else:  # pragma: no cover - exhaustive safeguard
+                raise ValueError(
+                    f"Unhandled signature classification for OID: {child_signature_oid}"
+                )
         except _InvalidSignature:
             raise InvalidSignature()
 
-        cert, cert_der = issuer_cert, issuer_der
+        child_der = issuer_der
 
 
 class Attestation(abc.ABC):
