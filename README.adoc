@@ -1,4 +1,4 @@
-# WebAuthn/FIDO2 PQC Test Application
+# Post-Quantum WebAuthn Test Platform
 
 A test server and web UI for WebAuthn/FIDO2 registration and authentication.  
 It displays the selected algorithm, authenticator flags (UP/UV/AT/ED/BE/BS), sign counter, and extension results (credProps, PRF, largeBlob) for validation.  
