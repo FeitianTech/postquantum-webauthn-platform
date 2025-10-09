@@ -5,8 +5,10 @@ import base64
 import binascii
 import hashlib
 import json
+import math
 import re
 import string
+import struct
 import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
@@ -14,6 +16,7 @@ from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
 from cryptography import x509
 from cryptography.x509.oid import ExtensionOID
 from fido2 import cbor
+from fido2.utils import ByteBuffer
 from fido2.webauthn import AttestationObject, AuthenticatorData, CollectedClientData
 
 from .attestation import (
@@ -27,6 +30,69 @@ from .attestation import (
 )
 
 __all__ = ["decode_payload_text"]
+
+_CTAP_COMMAND_MAP: Dict[int, str] = {
+    0x01: "AuthenticatorMakeCredential command",
+    0x02: "AuthenticatorGetAssertion command",
+}
+
+_CTAP_STATUS_MAP: Dict[int, str] = {
+    0x00: "Success status",
+}
+
+
+
+def _extract_ctap_prefix(data: bytes) -> Tuple[Optional[Dict[str, Any]], bytes]:
+    if not data:
+        return None, data
+    code = data[0]
+    if code in _CTAP_COMMAND_MAP:
+        return (
+            {
+                "code": code,
+                "codeHex": f"0x{code:02x}",
+                "meaning": _CTAP_COMMAND_MAP[code],
+                "kind": "command",
+            },
+            data[1:],
+        )
+    if code in _CTAP_STATUS_MAP:
+        return (
+            {
+                "code": code,
+                "codeHex": f"0x{code:02x}",
+                "meaning": _CTAP_STATUS_MAP[code],
+                "kind": "status",
+            },
+            data[1:],
+        )
+    return None, data
+
+
+def _is_padding_bytes(data: bytes) -> bool:
+    if not data:
+        return True
+    return all(byte in (0x00, 0xFF) for byte in data)
+
+
+def _coerce_cbor_bytes(value: Any) -> Optional[bytes]:
+    if isinstance(value, ByteBuffer):
+        return value.getvalue()
+    if isinstance(value, (bytes, bytearray, memoryview)):
+        return bytes(value)
+    return None
+
+
+def _stringify_mapping_keys(value: Any) -> Any:
+    if isinstance(value, Mapping):
+        return {str(key): _stringify_mapping_keys(val) for key, val in value.items()}
+    if isinstance(value, list):
+        return [_stringify_mapping_keys(item) for item in value]
+    return value
+
+
+def _json_safe_with_stringified_keys(value: Any) -> Any:
+    return _stringify_mapping_keys(make_json_safe(value))
 
 _PEM_CERT_PATTERN = re.compile(
     r"-----BEGIN CERTIFICATE-----\s*(?P<body>.*?)\s*-----END CERTIFICATE-----",
@@ -354,19 +420,668 @@ def _try_decode_authenticator_data(data: bytes, encoding: str) -> Optional[Dict[
     }
 
 
+class _CborDecodingError(ValueError):
+    """Internal error raised when a CBOR payload cannot be parsed."""
+
+    def __init__(self, message: str, offset: int) -> None:
+        super().__init__(message)
+        self.offset = offset
+
+
+def _ensure_cbor_available(data: bytes, offset: int, length: int) -> None:
+    if length < 0 or offset + length > len(data):
+        raise _CborDecodingError("Unexpected end of CBOR data.", offset)
+
+
+def _read_cbor_length(
+    info: int, data: bytes, offset: int, *, allow_indefinite: bool = False
+) -> Tuple[Optional[int], int]:
+    if info < 24:
+        return info, offset
+    if info == 24:
+        _ensure_cbor_available(data, offset, 1)
+        return data[offset], offset + 1
+    if info == 25:
+        _ensure_cbor_available(data, offset, 2)
+        return int.from_bytes(data[offset : offset + 2], "big"), offset + 2
+    if info == 26:
+        _ensure_cbor_available(data, offset, 4)
+        return int.from_bytes(data[offset : offset + 4], "big"), offset + 4
+    if info == 27:
+        _ensure_cbor_available(data, offset, 8)
+        return int.from_bytes(data[offset : offset + 8], "big"), offset + 8
+    if info == 31 and allow_indefinite:
+        return None, offset
+    raise _CborDecodingError("Unsupported CBOR additional information.", offset)
+
+
+def _float_summary(value: float) -> str:
+    if math.isnan(value):
+        return "float(NaN)"
+    if math.isinf(value):
+        return "float(+Infinity)" if value > 0 else "float(-Infinity)"
+    return f"float({value})"
+
+
+def _parse_cbor_item(data: bytes, offset: int) -> Tuple[Dict[str, Any], int]:
+    if offset >= len(data):
+        raise _CborDecodingError("Unexpected end of CBOR data.", offset)
+
+    initial = data[offset]
+    offset += 1
+    major_type = initial >> 5
+    info = initial & 0x1F
+
+    if major_type == 0:
+        value, offset = _read_cbor_length(info, data, offset)
+        if value is None:
+            raise _CborDecodingError("Invalid indefinite length for unsigned integer.", offset)
+        node = {"majorType": 0, "type": "unsigned", "value": value, "summary": str(value)}
+        return node, offset
+
+    if major_type == 1:
+        value, offset = _read_cbor_length(info, data, offset)
+        if value is None:
+            raise _CborDecodingError("Invalid indefinite length for negative integer.", offset)
+        actual = -1 - value
+        node = {"majorType": 1, "type": "negative", "value": actual, "summary": str(actual)}
+        return node, offset
+
+    if major_type == 2:
+        length, offset = _read_cbor_length(info, data, offset, allow_indefinite=True)
+        if length is None:
+            segments: List[Dict[str, Any]] = []
+            raw_segments: List[bytes] = []
+            while True:
+                if offset >= len(data):
+                    raise _CborDecodingError("Truncated indefinite byte string.", offset)
+                if data[offset] == 0xFF:
+                    offset += 1
+                    break
+                segment, offset = _parse_cbor_item(data, offset)
+                if segment.get("majorType") != 2:
+                    raise _CborDecodingError(
+                        "Indefinite byte string segment is not a byte string.", offset
+                    )
+                segments.append(segment)
+                segment_hex = segment.get("hex")
+                segment_data = bytes.fromhex(segment_hex) if isinstance(segment_hex, str) else b""
+                raw_segments.append(segment_data)
+            raw = b"".join(raw_segments)
+            node = {
+                "majorType": 2,
+                "type": "byte string",
+                "length": len(raw),
+                "hex": raw.hex(),
+                "base64": base64.b64encode(raw).decode("ascii"),
+                "base64url": encode_base64url(raw),
+                "indefinite": True,
+                "chunks": segments,
+            }
+            node["summary"] = f"bytes[{node['length']}]"
+            return node, offset
+        _ensure_cbor_available(data, offset, length)
+        raw = data[offset : offset + length]
+        offset += length
+        node = {
+            "majorType": 2,
+            "type": "byte string",
+            "length": length,
+            "hex": raw.hex(),
+            "base64": base64.b64encode(raw).decode("ascii"),
+            "base64url": encode_base64url(raw),
+        }
+        node["summary"] = f"bytes[{length}]"
+        return node, offset
+
+    if major_type == 3:
+        length, offset = _read_cbor_length(info, data, offset, allow_indefinite=True)
+        if length is None:
+            segments: List[Dict[str, Any]] = []
+            text_parts: List[str] = []
+            while True:
+                if offset >= len(data):
+                    raise _CborDecodingError("Truncated indefinite text string.", offset)
+                if data[offset] == 0xFF:
+                    offset += 1
+                    break
+                segment, offset = _parse_cbor_item(data, offset)
+                if segment.get("majorType") != 3:
+                    raise _CborDecodingError(
+                        "Indefinite text string segment is not a text string.", offset
+                    )
+                segments.append(segment)
+                text_parts.append(str(segment.get("value", "")))
+            value = "".join(text_parts)
+            byte_length = len(value.encode("utf-8"))
+            node = {
+                "majorType": 3,
+                "type": "text string",
+                "length": byte_length,
+                "value": value,
+                "indefinite": True,
+                "segments": segments,
+            }
+            summary = value if len(value) <= 32 else f"{value[:29]}..."
+            node["summary"] = f'"{summary}"'
+            return node, offset
+        _ensure_cbor_available(data, offset, length)
+        raw = data[offset : offset + length]
+        offset += length
+        try:
+            value = raw.decode("utf-8")
+            summary = value if len(value) <= 32 else f"{value[:29]}..."
+            node = {
+                "majorType": 3,
+                "type": "text string",
+                "length": length,
+                "value": value,
+                "summary": f'"{summary}"',
+            }
+        except UnicodeDecodeError:
+            node = {
+                "majorType": 3,
+                "type": "text string",
+                "length": length,
+                "hex": raw.hex(),
+                "error": "Invalid UTF-8 in text string.",
+                "summary": f"text[{length}]",
+            }
+        return node, offset
+
+    if major_type == 4:
+        length, offset = _read_cbor_length(info, data, offset, allow_indefinite=True)
+        items: List[Dict[str, Any]] = []
+        if length is None:
+            while True:
+                if offset >= len(data):
+                    raise _CborDecodingError("Truncated indefinite array.", offset)
+                if data[offset] == 0xFF:
+                    offset += 1
+                    break
+                item, offset = _parse_cbor_item(data, offset)
+                items.append(item)
+            length = len(items)
+            node = {
+                "majorType": 4,
+                "type": "array",
+                "length": length,
+                "items": items,
+                "indefinite": True,
+            }
+        else:
+            for _ in range(length):
+                item, offset = _parse_cbor_item(data, offset)
+                items.append(item)
+            node = {"majorType": 4, "type": "array", "length": length, "items": items}
+        node["summary"] = f"array[{node['length']}]"
+        return node, offset
+
+    if major_type == 5:
+        length, offset = _read_cbor_length(info, data, offset, allow_indefinite=True)
+        entries: List[Dict[str, Any]] = []
+        if length is None:
+            while True:
+                if offset >= len(data):
+                    raise _CborDecodingError("Truncated indefinite map.", offset)
+                if data[offset] == 0xFF:
+                    offset += 1
+                    break
+                key, offset = _parse_cbor_item(data, offset)
+                if offset >= len(data):
+                    raise _CborDecodingError("Missing value in CBOR map entry.", offset)
+                if data[offset] == 0xFF:
+                    raise _CborDecodingError("Unexpected break code inside CBOR map.", offset)
+                value, offset = _parse_cbor_item(data, offset)
+                entry = {
+                    "keySummary": key.get("summary"),
+                    "key": key,
+                    "value": value,
+                }
+                summary = value.get("summary")
+                if summary is not None:
+                    entry["valueSummary"] = summary
+                entries.append(entry)
+            length = len(entries)
+            node = {
+                "majorType": 5,
+                "type": "map",
+                "length": length,
+                "entries": entries,
+                "indefinite": True,
+            }
+        else:
+            for _ in range(length):
+                key, offset = _parse_cbor_item(data, offset)
+                value, offset = _parse_cbor_item(data, offset)
+                entry = {
+                    "keySummary": key.get("summary"),
+                    "key": key,
+                    "value": value,
+                }
+                summary = value.get("summary")
+                if summary is not None:
+                    entry["valueSummary"] = summary
+                entries.append(entry)
+            node = {"majorType": 5, "type": "map", "length": length, "entries": entries}
+        node["summary"] = f"map[{node['length']}]"
+        return node, offset
+
+    if major_type == 6:
+        tag_value, offset = _read_cbor_length(info, data, offset)
+        if tag_value is None:
+            raise _CborDecodingError("Invalid indefinite length for CBOR tag.", offset)
+        tagged_item, offset = _parse_cbor_item(data, offset)
+        node = {
+            "majorType": 6,
+            "type": "tag",
+            "tag": tag_value,
+            "value": tagged_item,
+            "summary": f"tag({tag_value})",
+        }
+        return node, offset
+
+    if major_type == 7:
+        if info == 20:
+            return {"majorType": 7, "type": "boolean", "value": False, "summary": "false"}, offset
+        if info == 21:
+            return {"majorType": 7, "type": "boolean", "value": True, "summary": "true"}, offset
+        if info == 22:
+            return {"majorType": 7, "type": "null", "summary": "null"}, offset
+        if info == 23:
+            return {"majorType": 7, "type": "undefined", "summary": "undefined"}, offset
+        if info == 24:
+            _ensure_cbor_available(data, offset, 1)
+            simple_value = data[offset]
+            offset += 1
+            summary = f"simple({simple_value})"
+            return {
+                "majorType": 7,
+                "type": "simple",
+                "value": simple_value,
+                "summary": summary,
+            }, offset
+        if info == 25:
+            _ensure_cbor_available(data, offset, 2)
+            raw = data[offset : offset + 2]
+            offset += 2
+            value = struct.unpack(">e", raw)[0]
+            return {
+                "majorType": 7,
+                "type": "float",
+                "precision": "half",
+                "value": value,
+                "summary": _float_summary(value),
+            }, offset
+        if info == 26:
+            _ensure_cbor_available(data, offset, 4)
+            raw = data[offset : offset + 4]
+            offset += 4
+            value = struct.unpack(">f", raw)[0]
+            return {
+                "majorType": 7,
+                "type": "float",
+                "precision": "single",
+                "value": value,
+                "summary": _float_summary(value),
+            }, offset
+        if info == 27:
+            _ensure_cbor_available(data, offset, 8)
+            raw = data[offset : offset + 8]
+            offset += 8
+            value = struct.unpack(">d", raw)[0]
+            return {
+                "majorType": 7,
+                "type": "float",
+                "precision": "double",
+                "value": value,
+                "summary": _float_summary(value),
+            }, offset
+        if info == 31:
+            raise _CborDecodingError("Unexpected break code outside indefinite container.", offset)
+        summary = f"simple({info})"
+        return {"majorType": 7, "type": "simple", "value": info, "summary": summary}, offset
+
+    raise _CborDecodingError("Unsupported CBOR major type.", offset)
+
+
+def _decode_cbor_structure(data: bytes) -> Tuple[Dict[str, Any], int]:
+    node, offset = _parse_cbor_item(data, 0)
+    node.setdefault("byteLength", offset)
+    return node, offset
+
+
+def _decode_cbor_sequence(payload: bytes) -> Tuple[List[Dict[str, Any]], List[Any], int, bytes]:
+    structures: List[Dict[str, Any]] = []
+    values: List[Any] = []
+    consumed_total = 0
+    remaining = payload
+
+    while remaining:
+        try:
+            value, rest_after_value = cbor.decode_from(remaining)
+            consumed_value = len(remaining) - len(rest_after_value)
+        except Exception:
+            break
+
+        try:
+            structure, consumed_struct = _decode_cbor_structure(remaining)
+            consumed = consumed_struct
+        except _CborDecodingError:
+            structure = {
+                "summary": "Decoded value",
+                "type": type(value).__name__,
+                "value": _json_safe_with_stringified_keys(value),
+                "byteLength": consumed_value,
+            }
+            consumed = consumed_value
+
+        if consumed <= 0:
+            break
+
+        structures.append(structure)
+        values.append(value)
+        consumed_total += consumed
+        remaining = remaining[consumed:]
+
+    return structures, values, consumed_total, remaining
+
+
+def _merge_ctap_make_credential(
+    structure: Dict[str, Any],
+    value: Mapping[Any, Any],
+    extra_structures: List[Dict[str, Any]],
+    extra_values: List[Any],
+) -> Tuple[Dict[str, Any], Mapping[Any, Any], List[Dict[str, Any]], List[Any], Optional[bytes]]:
+    signature_bytes: Optional[bytes] = None
+
+    if isinstance(value, Mapping) and "al&" in value and value.get("al&") == "sig":
+        if extra_values and isinstance(extra_values[0], (bytes, bytearray)):
+            signature_bytes = bytes(extra_values[0])
+            extra_values = extra_values[1:]
+            if extra_structures:
+                extra_structures = extra_structures[1:]
+
+        if signature_bytes is not None:
+            att_stmt = {"alg": -7, "sig": signature_bytes}
+            normalized_value = dict(value)
+            normalized_value.pop("al&", None)
+            normalized_value[3] = att_stmt
+
+            att_structure, _ = _decode_cbor_structure(cbor.encode(att_stmt))
+
+            entries = structure.get("entries")
+            if isinstance(entries, list) and entries:
+                entries[-1] = {
+                    "keySummary": "3",
+                    "key": {"majorType": 0, "type": "unsigned", "value": 3, "summary": "3"},
+                    "value": att_structure,
+                    "valueSummary": att_structure.get("summary"),
+                }
+            structure["length"] = len(entries) if isinstance(entries, list) else structure.get("length", 3)
+            structure = _stringify_mapping_keys(structure)
+            value = normalized_value
+            return structure, value, extra_structures, extra_values, signature_bytes
+
+    return structure, value, extra_structures, extra_values, None
+
+
 def _try_decode_cbor(data: bytes, encoding: str) -> Optional[Dict[str, Any]]:
-    try:
-        decoded = cbor.decode(data)
-    except Exception:
+    if not data:
         return None
 
-    return {
-        "format": "CBOR",
-        "inputEncoding": encoding,
-        "decoded": make_json_safe(decoded),
-        "binary": _binary_summary(data, encoding),
+    ctap_info, payload = _extract_ctap_prefix(data)
+    ctap_details = dict(ctap_info) if ctap_info is not None else None
+
+    if not payload:
+        structure = {"summary": "Empty CBOR payload", "byteLength": 0}
+        decoded_payload = {"structure": structure}
+        if ctap_details is not None:
+            ctap_details["payloadLength"] = 0
+            ctap_details["payloadSummary"] = _binary_summary(b"")
+            decoded_payload["ctap"] = _stringify_mapping_keys(ctap_details)
+        return {
+            "format": "CBOR",
+            "inputEncoding": encoding,
+            "decoded": decoded_payload,
+            "binary": _binary_summary(data, encoding),
+        }
+
+    structures, values, consumed_total, remaining = _decode_cbor_sequence(payload)
+    if not structures:
+        return None
+
+    base_structure = structures[0]
+    base_value = values[0]
+    extra_structures = structures[1:]
+    extra_values = values[1:]
+
+    merged_signature: Optional[bytes] = None
+    if isinstance(base_value, Mapping):
+        base_structure, base_value, extra_structures, extra_values, merged_signature = _merge_ctap_make_credential(
+            base_structure, base_value, extra_structures, extra_values
+        )
+
+    decoded_payload: Dict[str, Any] = {
+        "structure": _stringify_mapping_keys(base_structure),
     }
 
+    if isinstance(base_value, Mapping):
+        decoded_payload["decodedValue"] = _json_safe_with_stringified_keys(base_value)
+        interpreted = _interpret_ctap_cbor_value(base_value)
+        if interpreted is not None:
+            decoded_payload["ctapDecoded"] = _json_safe_with_stringified_keys(interpreted)
+    elif base_value is not None:
+        decoded_payload["decodedValue"] = _json_safe_with_stringified_keys(base_value)
+
+    warnings: List[str] = []
+
+    if ctap_details is not None:
+        ctap_details["payloadLength"] = consumed_total
+        ctap_details["payloadSummary"] = _binary_summary(payload[:consumed_total])
+        if merged_signature is not None:
+            ctap_details["signatureLength"] = len(merged_signature)
+
+    if extra_values:
+        warnings.append(f"Detected {len(extra_values)} additional CBOR object(s) following the primary payload.")
+
+    trailing = remaining
+    ignored_padding = 0
+    if trailing:
+        if _is_padding_bytes(trailing):
+            ignored_padding = len(trailing)
+        else:
+            warnings.append(f"Trailing {len(trailing)} byte(s) after CBOR payload.")
+
+    if ctap_details is not None:
+        if ignored_padding:
+            ctap_details["ignoredPaddingBytes"] = ignored_padding
+        if trailing and not _is_padding_bytes(trailing):
+            ctap_details["trailingBytesHex"] = trailing.hex()
+        decoded_payload["ctap"] = _stringify_mapping_keys(ctap_details)
+
+    result: Dict[str, Any] = {
+        "format": "CBOR",
+        "inputEncoding": encoding,
+        "decoded": decoded_payload,
+        "binary": _binary_summary(data, encoding),
+    }
+    if warnings:
+        result["malformed"] = warnings
+    return result
+
+
+
+
+def _interpret_ctap_cbor_value(value: Any) -> Optional[Dict[str, Any]]:
+    if isinstance(value, Mapping):
+        interpreted = _interpret_make_credential_map(value)
+        if interpreted is not None:
+            return {"makeCredentialResponse": interpreted}
+        interpreted = _interpret_get_assertion_map(value)
+        if interpreted is not None:
+            return {"getAssertionResponse": interpreted}
+    return None
+
+
+def _interpret_make_credential_map(value: Mapping[Any, Any]) -> Optional[Dict[str, Any]]:
+    fmt = value.get(1)
+    auth_data_bytes = _coerce_cbor_bytes(value.get(2))
+    att_stmt = value.get(3)
+    if not isinstance(fmt, str) or auth_data_bytes is None or att_stmt is None:
+        return None
+
+    interpreted: Dict[str, Any] = {}
+    interpreted["1 (fmt)"] = fmt
+
+    try:
+        auth_data_details = dict(_describe_authenticator_data_bytes(auth_data_bytes))
+    except Exception:
+        auth_data_details = {"raw": _binary_summary(auth_data_bytes)}
+    else:
+        auth_data_details.setdefault("raw", _binary_summary(auth_data_bytes))
+    interpreted["2 (authData)"] = auth_data_details
+
+    if isinstance(att_stmt, Mapping):
+        att_stmt_details = _convert_attestation_statement({"attestationStatement": att_stmt})
+        sig_value = att_stmt.get("sig")
+        sig_bytes = _coerce_cbor_bytes(sig_value)
+        if sig_bytes is not None:
+            att_stmt_details["sig"] = _binary_summary(sig_bytes)
+        interpreted["3 (attStmt)"] = att_stmt_details
+    else:
+        interpreted["3 (attStmt)"] = make_json_safe(att_stmt)
+
+    optional_labels = {
+        4: "epAtt",
+        5: "largeBlobKey",
+        6: "extensions",
+    }
+    for key, label in optional_labels.items():
+        if key in value:
+            interpreted[f"{key} ({label})"] = _convert_optional_ctap_field(value[key])
+
+    extra_keys = [
+        key
+        for key in value.keys()
+        if isinstance(key, int) and key not in {1, 2, 3, 4, 5, 6}
+    ]
+    for key in sorted(extra_keys):
+        interpreted[f"{key}"] = make_json_safe(value[key])
+
+    return interpreted
+
+
+def _interpret_get_assertion_map(value: Mapping[Any, Any]) -> Optional[Dict[str, Any]]:
+    auth_data_bytes = _coerce_cbor_bytes(value.get(2))
+    signature_bytes = _coerce_cbor_bytes(value.get(3))
+    if auth_data_bytes is None or signature_bytes is None:
+        return None
+
+    interpreted: Dict[str, Any] = {}
+
+    credential_entry = value.get(1)
+    if credential_entry is not None:
+        interpreted["1 (credential)"] = _convert_ctap_credential_descriptor(credential_entry)
+
+    auth_data_details = dict(_describe_authenticator_data_bytes(auth_data_bytes))
+    auth_data_details.setdefault("raw", _binary_summary(auth_data_bytes))
+    interpreted["2 (authData)"] = auth_data_details
+
+    interpreted["3 (signature)"] = _binary_summary(signature_bytes)
+
+    user_entry = value.get(4)
+    if user_entry is not None:
+        interpreted["4 (user)"] = _convert_ctap_user(user_entry)
+
+    optional_labels = {
+        5: "numberOfCredentials",
+        6: "userSelected",
+        7: "largeBlobKey",
+        8: "extensions",
+    }
+    for key, label in optional_labels.items():
+        if key in value:
+            interpreted[f"{key} ({label})"] = _convert_optional_ctap_field(value[key])
+
+    extra_keys = [
+        key
+        for key in value.keys()
+        if isinstance(key, int) and key not in {1, 2, 3, 4, 5, 6, 7, 8}
+    ]
+    for key in sorted(extra_keys):
+        interpreted[f"{key}"] = make_json_safe(value[key])
+
+    return interpreted
+
+
+def _convert_optional_ctap_field(value: Any) -> Any:
+    data_bytes = _coerce_cbor_bytes(value)
+    if data_bytes is not None:
+        return _binary_summary(data_bytes)
+    return make_json_safe(value)
+
+
+def _convert_ctap_credential_descriptor(entry: Any) -> Any:
+    data_bytes = _coerce_cbor_bytes(entry)
+    if data_bytes is not None:
+        return _binary_summary(data_bytes)
+    if not isinstance(entry, Mapping):
+        return make_json_safe(entry)
+
+    descriptor: Dict[str, Any] = {}
+    id_value = entry.get("id") or entry.get(1)
+    id_bytes = _coerce_cbor_bytes(id_value)
+    if id_bytes is not None:
+        descriptor["id"] = _binary_summary(id_bytes)
+
+    type_value = entry.get("type") or entry.get(2)
+    if type_value is not None:
+        descriptor["type"] = make_json_safe(type_value)
+
+    transports_value = entry.get("transports") or entry.get(3)
+    if transports_value is not None:
+        descriptor["transports"] = make_json_safe(transports_value)
+
+    for key in entry:
+        if key in {"id", "type", "transports"} or key in {1, 2, 3}:
+            continue
+        descriptor[str(key)] = make_json_safe(entry[key])
+
+    return descriptor
+
+
+def _convert_ctap_user(entry: Any) -> Any:
+    data_bytes = _coerce_cbor_bytes(entry)
+    if data_bytes is not None:
+        return _binary_summary(data_bytes)
+    if not isinstance(entry, Mapping):
+        return make_json_safe(entry)
+
+    user: Dict[str, Any] = {}
+    id_value = entry.get("id") or entry.get(1)
+    id_bytes = _coerce_cbor_bytes(id_value)
+    if id_bytes is not None:
+        user["id"] = _binary_summary(id_bytes)
+
+    name_value = entry.get("name") or entry.get(2)
+    if name_value is not None:
+        user["name"] = make_json_safe(name_value)
+
+    display_name_value = entry.get("displayName") or entry.get(3)
+    if display_name_value is not None:
+        user["displayName"] = make_json_safe(display_name_value)
+
+    icon_value = entry.get("icon") or entry.get(4)
+    if icon_value is not None:
+        user["icon"] = make_json_safe(icon_value)
+
+    for key in entry:
+        if key in {"id", "name", "displayName", "icon"} or key in {1, 2, 3, 4}:
+            continue
+        user[str(key)] = make_json_safe(entry[key])
+
+    return user
 
 def _describe_client_data_from_bytes(data: bytes) -> Dict[str, Any]:
     text = data.decode("utf-8")
@@ -581,9 +1296,33 @@ def _build_decoder_payload(result: Dict[str, Any]) -> Dict[str, Any]:
     malformed = result.get("malformed")
     if not isinstance(malformed, list):
         malformed = []
+
+    type_label = base_type
+    if base_type == "CBOR":
+        decoded = result.get("decoded")
+        qualifiers: List[str] = []
+        if isinstance(decoded, Mapping):
+            ctap_info = decoded.get("ctap")
+            if isinstance(ctap_info, Mapping):
+                meaning = ctap_info.get("meaning") or ctap_info.get("description")
+                if isinstance(meaning, str) and meaning:
+                    qualifiers.append(meaning)
+            ctap_decoded = decoded.get("ctapDecoded")
+            if isinstance(ctap_decoded, Mapping):
+                if "makeCredentialResponse" in ctap_decoded:
+                    qualifiers.append("MakeCredential response")
+                if "getAssertionResponse" in ctap_decoded:
+                    qualifiers.append("GetAssertion response")
+        if qualifiers:
+            unique = []
+            for qualifier in qualifiers:
+                if qualifier not in unique:
+                    unique.append(qualifier)
+            type_label = f"{base_type} ({'; '.join(unique)})"
+
     return {
         "success": True,
-        "type": base_type,
+        "type": type_label,
         "data": data,
         "malformed": malformed,
     }
@@ -603,7 +1342,27 @@ def _convert_result_to_data(base_type: str, result: Dict[str, Any]) -> Any:
     if base_type == "JSON":
         return {"json": make_json_safe(result.get("decoded"))}
     if base_type == "CBOR":
-        return {"cbor": make_json_safe(result.get("decoded"))}
+        decoded = result.get("decoded")
+        if isinstance(decoded, Mapping):
+            payload: Dict[str, Any] = {}
+            if "ctap" in decoded:
+                payload["ctap"] = _stringify_mapping_keys(make_json_safe(decoded["ctap"]))
+            if "structure" in decoded:
+                payload["structure"] = _stringify_mapping_keys(
+                    make_json_safe(decoded["structure"])
+                )
+            if "decodedValue" in decoded:
+                payload["decodedValue"] = _stringify_mapping_keys(
+                    make_json_safe(decoded["decodedValue"])
+                )
+            if "ctapDecoded" in decoded:
+                payload["ctapDecoded"] = _stringify_mapping_keys(
+                    make_json_safe(decoded["ctapDecoded"])
+                )
+            if not payload:
+                payload["cbor"] = make_json_safe(decoded)
+            return payload
+        return {"cbor": make_json_safe(decoded)}
 
     decoded_value = result.get("decoded")
     if decoded_value is not None:
@@ -1277,10 +2036,52 @@ def _format_json_summary(result: Dict[str, Any]) -> List[str]:
 
 
 def _format_cbor_summary(result: Dict[str, Any]) -> List[str]:
-    decoded = result.get("decoded")
-    json_lines = _format_json_block(decoded)
+    decoded = result.get("decoded") if isinstance(result.get("decoded"), Mapping) else {}
+    structure = decoded.get("structure") if isinstance(decoded, Mapping) else None
+    decoded_value = decoded.get("decodedValue") if isinstance(decoded, Mapping) else None
+    ctap_info = decoded.get("ctap") if isinstance(decoded, Mapping) else None
+    ctap_decoded = decoded.get("ctapDecoded") if isinstance(decoded, Mapping) else None
+
     lines: List[str] = ["Detected type:\tCBOR"]
-    _append_multiline_field(lines, "CBOR as JSON", json_lines, indent_str="  ")
+
+    if isinstance(ctap_info, Mapping):
+        meaning = ctap_info.get("meaning") or ctap_info.get("description")
+        if isinstance(meaning, str) and meaning:
+            lines[0] = f"Detected type:\tCBOR ({meaning})"
+        code_hex = ctap_info.get("codeHex")
+        code_value = code_hex or ctap_info.get("code")
+        _append_simple_field(lines, "CTAP code", code_value)
+        category = ctap_info.get("kind") or ctap_info.get("category")
+        _append_simple_field(lines, "CTAP type", category)
+        payload_length = ctap_info.get("payloadLength")
+        if payload_length is not None:
+            _append_simple_field(lines, "CBOR payload length", payload_length)
+
+    if isinstance(structure, Mapping):
+        summary = structure.get("summary")
+        if isinstance(summary, str) and summary:
+            lines.append(f"Summary:\t{summary}")
+        structure_lines = _format_json_block(structure)
+        _append_multiline_field(lines, "Structure", structure_lines, indent_str="  ")
+    else:
+        json_lines = _format_json_block(decoded)
+        _append_multiline_field(lines, "CBOR", json_lines, indent_str="  ")
+
+    if decoded_value is not None:
+        value_lines = _format_json_block(decoded_value)
+        _append_multiline_field(lines, "Decoded value", value_lines, indent_str="  ")
+
+    if isinstance(ctap_decoded, Mapping) and ctap_decoded:
+        response_labels: List[str] = []
+        if "makeCredentialResponse" in ctap_decoded:
+            response_labels.append("MakeCredential response")
+        if "getAssertionResponse" in ctap_decoded:
+            response_labels.append("GetAssertion response")
+        if response_labels:
+            lines.append(f"CTAP interpretation:\t{', '.join(response_labels)}")
+        interpreted_lines = _format_json_block(ctap_decoded)
+        _append_multiline_field(lines, "CTAP decoded", interpreted_lines, indent_str="  ")
+
     return lines
 
 
