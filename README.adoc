@@ -1,11 +1,13 @@
 # Post-Quantum WebAuthn Test Platform
 
-A complete test suite for WebAuthn/FIDO2 registration and authentication with Post-Quantum Cryptography (PQC) support.  
-PQC: Currently supporting ML-DSA-44 (sig = -48), ML-DSA-65 (sig = -49), and ML-DSA-87 (sig = -50). 
+A complete test suite for WebAuthn/FIDO2 registration and authentication with Post-Quantum Cryptography (PQC) support.
 It displays the selected algorithm, authenticator flags (UP/UV/AT/ED/BE/BS), sign counter, and extension results (credProps, PRF, largeBlob) for validation.  
 This test app also supports functionalities such as **decoder**, **FIDO MDS explorer**, etc.  
 
 Built on **python-fido2-PQC**, which extends Yubico’s **python-fido2**.  
+
+PQC: Currently supporting **ML-DSA-44** (sig: -48), **ML-DSA-65** (sig: -49), and **ML-DSA-87** (sig: -50). 
+
 Classical algorithms work by default.
 
 ---
