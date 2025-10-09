@@ -25,7 +25,7 @@ include = [
   { path = "COPYING.MPLv2", format = "sdist"},
   { path = "COPYING.APLv2", format = "sdist"},
   { path = "README.adoc", format = "sdist"},
-  { path= "examples/", format = "sdist"},
+  { path= "server/", format = "sdist"},
 ]
 
 [tool.poetry.dependencies]

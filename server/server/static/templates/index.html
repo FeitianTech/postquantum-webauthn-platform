@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebAuthn FIDO2 Test Application</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/advanced/main.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/advanced/mds.css') }}">
+</head>
+<body>
+{% include 'shared/header.html' %}
+
+    <div class="container">
+{% include 'shared/navigation.html' %}
+
+        <div class="content">
+{% include 'simple/tab.html' %}
+
+{% include 'advanced/tab.html' %}
+
+{% include 'decoder/tab.html' %}
+
+{% include 'advanced/mds-tab.html' %}
+        </div>
+    </div>
+
+{% include 'shared/modals/registration-result.html' %}
+
+{% include 'shared/modals/credential-details.html' %}
+
+    <div id="json-editor-overlay" class="json-editor-overlay"></div>
+    <div
+        id="initial-mds-bootstrap"
+        data-jws='{{ initial_mds_blob | tojson }}'
+        data-info='{{ initial_mds_info | tojson }}'
+        hidden
+    ></div>
+    <script>
+        (function () {
+            const bootstrapEl = document.getElementById('initial-mds-bootstrap');
+
+            if (!bootstrapEl) {
+                return;
+            }
+
+            let initialJws = null;
+            let initialInfo = null;
+
+            const { jws: rawJws, info: rawInfo } = bootstrapEl.dataset;
+
+            if (typeof rawJws === 'string' && rawJws) {
+                try {
+                    const parsedJws = JSON.parse(rawJws);
+
+                    if (typeof parsedJws === 'string' && parsedJws) {
+                        initialJws = parsedJws;
+                    }
+                } catch (error) {
+                    console.error('Failed to parse initial MDS bootstrap JWS.', error);
+                }
+            }
+
+            if (typeof rawInfo === 'string' && rawInfo) {
+                try {
+                    const parsedInfo = JSON.parse(rawInfo);
+
+                    if (parsedInfo && typeof parsedInfo === 'object') {
+                        initialInfo = parsedInfo;
+                    }
+                } catch (error) {
+                    console.error('Failed to parse initial MDS bootstrap info.', error);
+                }
+            }
+
+            if (typeof initialJws === 'string') {
+                window.__INITIAL_MDS_JWS__ = initialJws;
+            }
+
+            if (initialInfo && typeof initialInfo === 'object') {
+                window.__INITIAL_MDS_INFO__ = initialInfo;
+            }
+        })();
+    </script>
+    <script type="module" src="{{ url_for('static', filename='scripts/advanced/mds.js') }}"></script>
+    <script type="module" src="{{ url_for('static', filename='scripts/main.js') }}"></script>
+</body>
+</html>
