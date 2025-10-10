@@ -76,6 +76,84 @@ def _is_padding_bytes(data: bytes) -> bool:
         return True
     return all(byte in (0x00, 0xFF) for byte in data)
 
+_MISSING = object()
+
+
+def _int_to_key_bytes(value: int) -> bytes:
+    if value == 0:
+        return b"\x00"
+    length = max(1, (value.bit_length() + 7) // 8)
+    return value.to_bytes(length, "big", signed=False)
+
+
+def _generate_key_variants(key: Any) -> Iterable[Any]:
+    yield key
+
+    if isinstance(key, int):
+        yield str(key)
+        if key >= 0:
+            yield _int_to_key_bytes(key)
+        return
+
+    if isinstance(key, str):
+        stripped = key.strip()
+        if not stripped:
+            return
+        if stripped.isdigit():
+            numeric = int(stripped, 10)
+            yield numeric
+            if numeric >= 0:
+                yield _int_to_key_bytes(numeric)
+        elif stripped.lower().startswith("0x"):
+            try:
+                numeric = int(stripped, 16)
+            except ValueError:
+                return
+            yield numeric
+            if numeric >= 0:
+                yield _int_to_key_bytes(numeric)
+        return
+
+    if isinstance(key, (bytes, bytearray)):
+        raw = bytes(key)
+        yield raw
+        if 1 <= len(raw) <= 8:
+            numeric = int.from_bytes(raw, "big", signed=False)
+            yield numeric
+            yield str(numeric)
+        return
+
+    if isinstance(key, ByteBuffer):
+        raw = key.getvalue()
+        yield raw
+        if 1 <= len(raw) <= 8:
+            numeric = int.from_bytes(raw, "big", signed=False)
+            yield numeric
+            yield str(numeric)
+
+
+def _key_variant_identity(key: Any) -> Tuple[str, Any]:
+    if isinstance(key, (bytes, bytearray)):
+        return ("bytes", bytes(key))
+    return ("other", key)
+
+
+def _get_mapping_entry(mapping: Mapping[Any, Any], *keys: Any) -> Any:
+    if not isinstance(mapping, Mapping):
+        return _MISSING
+
+    seen: set = set()
+    for original in keys:
+        for variant in _generate_key_variants(original):
+            identity = _key_variant_identity(variant)
+            if identity in seen:
+                continue
+            seen.add(identity)
+            candidate = mapping.get(variant, _MISSING)
+            if candidate is not _MISSING:
+                return candidate
+    return _MISSING
+
 
 def _coerce_cbor_bytes(value: Any) -> Optional[bytes]:
     if isinstance(value, ByteBuffer):
@@ -1439,17 +1517,19 @@ def _merge_trailing_signature(
     if not trailing or _is_padding_bytes(trailing):
         return None
 
-    fmt = value.get(1) or value.get("1") or value.get("fmt")
+    fmt_entry = _get_mapping_entry(value, 1, "1", "fmt")
+    fmt = fmt_entry if fmt_entry is not _MISSING else None
     if fmt != "packed":
         return None
 
-    if 3 in value or "3" in value:
+    if _get_mapping_entry(value, 3, "3", "signature") is not _MISSING:
         return None
 
     if not isinstance(structure, Mapping):
         return None
 
-    auth_data_bytes = _coerce_cbor_bytes(value.get(2) or value.get("2"))
+    auth_data_entry = _get_mapping_entry(value, 2, "2", "authData")
+    auth_data_bytes = _coerce_cbor_bytes(auth_data_entry)
     alg_value = _derive_alg_from_auth_data(auth_data_bytes)
     signature_bytes = bytes(trailing)
 
@@ -1483,28 +1563,36 @@ def _merge_trailing_signature(
 
 
 def _extract_mapping_string(value: Mapping[Any, Any], keys: Iterable[Any]) -> Optional[str]:
-    for key in keys:
-        candidate = value.get(key)
-        if isinstance(candidate, str):
-            stripped = candidate.strip()
-            if stripped:
-                return stripped
+    if not isinstance(value, Mapping):
+        return None
+    candidate = _get_mapping_entry(value, *keys)
+    if candidate is _MISSING:
+        return None
+    if isinstance(candidate, str):
+        stripped = candidate.strip()
+        if stripped:
+            return stripped
     return None
 
 
 def _extract_mapping_bytes(value: Mapping[Any, Any], keys: Iterable[Any]) -> Optional[bytes]:
-    for key in keys:
-        candidate = value.get(key)
-        candidate_bytes = _coerce_cbor_bytes(candidate)
-        if candidate_bytes is not None:
-            return candidate_bytes
+    if not isinstance(value, Mapping):
+        return None
+    candidate = _get_mapping_entry(value, *keys)
+    if candidate is _MISSING:
+        return None
+    candidate_bytes = _coerce_cbor_bytes(candidate)
+    if candidate_bytes is not None:
+        return candidate_bytes
     return None
 
 
 def _classify_ctap_map(value: Mapping[Any, Any]) -> str:
     fmt_value = _extract_mapping_string(value, (1, "1", "fmt"))
     auth_data_bytes = _extract_mapping_bytes(value, (2, "2", "authData"))
-    att_stmt_value = value.get(3) or value.get("3") or value.get("attStmt")
+    att_stmt_value = _get_mapping_entry(value, 3, "3", "attStmt")
+    if att_stmt_value is _MISSING:
+        att_stmt_value = None
     att_stmt_bytes = _coerce_cbor_bytes(att_stmt_value)
     att_stmt_map = att_stmt_value if isinstance(att_stmt_value, Mapping) else None
 
@@ -1715,8 +1803,8 @@ def _build_make_credential_expanded_json(value: Mapping[Any, Any], raw_bytes: Op
         auth_info, auth_trailing = _format_auth_data_for_expanded_json(auth_data_bytes)
         result["authData"] = auth_info
 
-    att_stmt_value = value.get(3) or value.get("3") or value.get("attStmt")
-    if att_stmt_value is not None:
+    att_stmt_value = _get_mapping_entry(value, 3, "3", "attStmt")
+    if att_stmt_value is not _MISSING and att_stmt_value is not None:
         result["attStmt"] = _format_att_stmt_for_expanded_json(att_stmt_value)
 
     optional_labels = {
@@ -1728,8 +1816,10 @@ def _build_make_credential_expanded_json(value: Mapping[Any, Any], raw_bytes: Op
         "extensions": "extensions",
     }
     for key, label in optional_labels.items():
-        if key in value:
-            result[label] = _convert_optional_ctap_field(value[key])
+        candidate = _get_mapping_entry(value, key)
+        if candidate is _MISSING or label in result:
+            continue
+        result[label] = _convert_optional_ctap_field(candidate)
 
     for key in value:
         if key in {1, 2, 3, 4, 5, 6, "1", "2", "3", "4", "5", "6", "fmt", "authData", "attStmt"}:
@@ -1745,8 +1835,8 @@ def _build_make_credential_expanded_json(value: Mapping[Any, Any], raw_bytes: Op
 def _build_get_assertion_expanded_json(value: Mapping[Any, Any], raw_bytes: Optional[bytes] = None) -> Dict[str, Any]:
     result: Dict[str, Any] = {}
 
-    credential_entry = value.get(1) or value.get("1") or value.get("credential")
-    if credential_entry is not None:
+    credential_entry = _get_mapping_entry(value, 1, "1", "credential")
+    if credential_entry is not _MISSING and credential_entry is not None:
         result["credential"] = _convert_ctap_credential_descriptor(credential_entry)
 
     auth_data_bytes = _extract_mapping_bytes(value, (2, "2", "authData"))
@@ -1761,8 +1851,8 @@ def _build_get_assertion_expanded_json(value: Mapping[Any, Any], raw_bytes: Opti
     else:
         result["signature"] = None
 
-    user_entry = value.get(4) or value.get("4") or value.get("user")
-    if user_entry is not None:
+    user_entry = _get_mapping_entry(value, 4, "4", "user")
+    if user_entry is not _MISSING and user_entry is not None:
         result["user"] = _convert_ctap_user(user_entry)
 
     optional_labels = {
@@ -1776,8 +1866,10 @@ def _build_get_assertion_expanded_json(value: Mapping[Any, Any], raw_bytes: Opti
         "extensions": "extensions",
     }
     for key, label in optional_labels.items():
-        if key in value:
-            result[label] = _convert_optional_ctap_field(value[key])
+        candidate = _get_mapping_entry(value, key)
+        if candidate is _MISSING or label in result:
+            continue
+        result[label] = _convert_optional_ctap_field(candidate)
 
     for key in value:
         if key in {1, 2, 3, 4, 5, 6, 7, 8, "1", "2", "3", "4", "5", "6", "7", "8", "credential", "authData", "signature", "user"}:
@@ -1869,7 +1961,7 @@ def _try_decode_cbor(data: bytes, encoding: str) -> Optional[Dict[str, Any]]:
             temp_structure, temp_value, repaired_sig = _repair_make_credential_entries(
                 temp_structure, temp_value
             )
-            att_stmt_candidate = temp_value.get(3) or temp_value.get("3")
+            att_stmt_candidate = _get_mapping_entry(temp_value, 3, "3", "attStmt")
             if isinstance(att_stmt_candidate, Mapping) and "sig" in att_stmt_candidate:
                 classification = "make_credential_output"
                 base_structure = temp_structure
@@ -1997,9 +2089,13 @@ def _interpret_ctap_cbor_value(value: Any) -> Optional[Dict[str, Any]]:
 
 
 def _interpret_make_credential_map(value: Mapping[Any, Any]) -> Optional[Dict[str, Any]]:
-    fmt = value.get(1)
-    auth_data_bytes = _coerce_cbor_bytes(value.get(2))
-    att_stmt = value.get(3)
+    fmt = _get_mapping_entry(value, 1, "1", "fmt")
+    fmt = fmt if fmt is not _MISSING else None
+    auth_data_entry = _get_mapping_entry(value, 2, "2", "authData")
+    auth_data_bytes = _coerce_cbor_bytes(auth_data_entry)
+    att_stmt = _get_mapping_entry(value, 3, "3", "attStmt")
+    if att_stmt is _MISSING:
+        att_stmt = None
     if not isinstance(fmt, str) or not fmt.strip() or auth_data_bytes is None or not isinstance(att_stmt, Mapping):
         return None
 
@@ -2029,8 +2125,10 @@ def _interpret_make_credential_map(value: Mapping[Any, Any]) -> Optional[Dict[st
         6: "extensions",
     }
     for key, label in optional_labels.items():
-        if key in value:
-            interpreted[f"{key} ({label})"] = _convert_optional_ctap_field(value[key])
+        candidate = _get_mapping_entry(value, key)
+        if candidate is _MISSING:
+            continue
+        interpreted[f"{key} ({label})"] = _convert_optional_ctap_field(candidate)
 
     extra_keys = [
         key
@@ -2044,15 +2142,17 @@ def _interpret_make_credential_map(value: Mapping[Any, Any]) -> Optional[Dict[st
 
 
 def _interpret_get_assertion_map(value: Mapping[Any, Any]) -> Optional[Dict[str, Any]]:
-    auth_data_bytes = _coerce_cbor_bytes(value.get(2))
-    signature_bytes = _coerce_cbor_bytes(value.get(3))
+    auth_data_entry = _get_mapping_entry(value, 2, "2", "authData")
+    signature_entry = _get_mapping_entry(value, 3, "3", "signature")
+    auth_data_bytes = _coerce_cbor_bytes(auth_data_entry)
+    signature_bytes = _coerce_cbor_bytes(signature_entry)
     if auth_data_bytes is None:
         return None
 
     interpreted: Dict[str, Any] = {}
 
-    credential_entry = value.get(1)
-    if credential_entry is not None:
+    credential_entry = _get_mapping_entry(value, 1, "1", "credential")
+    if credential_entry is not _MISSING and credential_entry is not None:
         interpreted["1 (credential)"] = _convert_ctap_credential_descriptor(credential_entry)
 
     auth_data_details, auth_trailing = _format_auth_data_for_expanded_json(auth_data_bytes)
@@ -2063,8 +2163,8 @@ def _interpret_get_assertion_map(value: Mapping[Any, Any]) -> Optional[Dict[str,
     else:
         interpreted["3 (signature)"] = None
 
-    user_entry = value.get(4)
-    if user_entry is not None:
+    user_entry = _get_mapping_entry(value, 4, "4", "user")
+    if user_entry is not _MISSING and user_entry is not None:
         interpreted["4 (user)"] = _convert_ctap_user(user_entry)
 
     optional_labels = {
@@ -2074,8 +2174,10 @@ def _interpret_get_assertion_map(value: Mapping[Any, Any]) -> Optional[Dict[str,
         8: "extensions",
     }
     for key, label in optional_labels.items():
-        if key in value:
-            interpreted[f"{key} ({label})"] = _convert_optional_ctap_field(value[key])
+        candidate = _get_mapping_entry(value, key)
+        if candidate is _MISSING:
+            continue
+        interpreted[f"{key} ({label})"] = _convert_optional_ctap_field(candidate)
 
     extra_keys = [
         key
@@ -2125,17 +2227,18 @@ def _convert_ctap_credential_descriptor(entry: Any) -> Any:
         return _hex_json_safe(entry)
 
     descriptor: Dict[str, Any] = {}
-    id_value = entry.get("id") or entry.get(1)
-    id_bytes = _coerce_cbor_bytes(id_value)
-    if id_bytes is not None:
-        descriptor["id"] = id_bytes.hex()
+    id_value = _get_mapping_entry(entry, "id", 1)
+    if id_value is not _MISSING:
+        id_bytes = _coerce_cbor_bytes(id_value)
+        if id_bytes is not None:
+            descriptor["id"] = id_bytes.hex()
 
-    type_value = entry.get("type") or entry.get(2)
-    if type_value is not None:
+    type_value = _get_mapping_entry(entry, "type", 2)
+    if type_value is not _MISSING:
         descriptor["type"] = _hex_json_safe(type_value)
 
-    transports_value = entry.get("transports") or entry.get(3)
-    if transports_value is not None:
+    transports_value = _get_mapping_entry(entry, "transports", 3)
+    if transports_value is not _MISSING:
         descriptor["transports"] = _hex_json_safe(transports_value)
 
     for key in entry:
@@ -2154,21 +2257,22 @@ def _convert_ctap_user(entry: Any) -> Any:
         return _hex_json_safe(entry)
 
     user: Dict[str, Any] = {}
-    id_value = entry.get("id") or entry.get(1)
-    id_bytes = _coerce_cbor_bytes(id_value)
-    if id_bytes is not None:
-        user["id"] = id_bytes.hex()
+    id_value = _get_mapping_entry(entry, "id", 1)
+    if id_value is not _MISSING:
+        id_bytes = _coerce_cbor_bytes(id_value)
+        if id_bytes is not None:
+            user["id"] = id_bytes.hex()
 
-    name_value = entry.get("name") or entry.get(2)
-    if name_value is not None:
+    name_value = _get_mapping_entry(entry, "name", 2)
+    if name_value is not _MISSING:
         user["name"] = _hex_json_safe(name_value)
 
-    display_name_value = entry.get("displayName") or entry.get(3)
-    if display_name_value is not None:
+    display_name_value = _get_mapping_entry(entry, "displayName", 3)
+    if display_name_value is not _MISSING:
         user["displayName"] = _hex_json_safe(display_name_value)
 
-    icon_value = entry.get("icon") or entry.get(4)
-    if icon_value is not None:
+    icon_value = _get_mapping_entry(entry, "icon", 4)
+    if icon_value is not _MISSING:
         user["icon"] = _hex_json_safe(icon_value)
 
     for key in entry:
