@@ -10,6 +10,7 @@ import re
 import string
 import struct
 import uuid
+from collections import OrderedDict
 from datetime import datetime, timezone
 from io import BytesIO
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
@@ -1492,6 +1493,207 @@ def _repair_get_assertion_entries(
     return structure, repaired_value, signature_bytes
 
 
+def _recover_get_assertion_map_from_bytes(
+    raw_bytes: bytes,
+    existing_value: Mapping[Any, Any],
+) -> Optional[Tuple[bytes, Dict[str, Any], Mapping[Any, Any], Optional[str]]]:
+    if not raw_bytes or not isinstance(existing_value, Mapping):
+        return None
+
+    signature_entry = _get_mapping_entry(existing_value, 3, "3", "signature")
+    if _coerce_cbor_bytes(signature_entry) is not None:
+        return None
+
+    try:
+        recovered_value = cbor2.loads(raw_bytes)
+    except Exception:
+        pass
+    else:
+        if isinstance(recovered_value, Mapping):
+            sig_candidate = _coerce_cbor_bytes(_get_mapping_entry(recovered_value, 3, "3", "signature"))
+            if sig_candidate is not None:
+                structure, _ = _decode_cbor_structure(raw_bytes)
+                return raw_bytes, structure, recovered_value, None
+
+    patched_bytes, recovered_value = _patch_get_assertion_signature_length(raw_bytes)
+    if patched_bytes is None or not isinstance(recovered_value, Mapping):
+        reconstructed = _reconstruct_get_assertion_map(raw_bytes)
+        if reconstructed is None:
+            return None
+        patched_bytes, recovered_value = reconstructed
+
+    structure, _ = _decode_cbor_structure(patched_bytes)
+    warning = (
+        "Corrected inconsistent signature length while decoding GetAssertion response."
+    )
+    return patched_bytes, structure, recovered_value, warning
+
+
+def _patch_get_assertion_signature_length(
+    raw_bytes: bytes,
+) -> Tuple[Optional[bytes], Optional[Mapping[Any, Any]]]:
+    if not raw_bytes:
+        return None, None
+
+    marker = b"\x03\x59"
+    idx = raw_bytes.find(marker)
+    if idx == -1 or idx + 4 > len(raw_bytes):
+        return None, None
+
+    sig_data_start = idx + 4
+    map_candidates: List[int] = []
+    for pos in range(len(raw_bytes) - 2, sig_data_start, -1):
+        if raw_bytes[pos] == 0x04 and pos + 1 < len(raw_bytes):
+            next_byte = raw_bytes[pos + 1]
+            if 0xA0 <= next_byte <= 0xBF or next_byte == 0xBF:
+                map_candidates.append(pos)
+    fallback_candidates: List[int] = []
+    for pos in range(len(raw_bytes) - 1, sig_data_start, -1):
+        if raw_bytes[pos] in {0x04, 0x05, 0x06, 0x07, 0x08}:
+            fallback_candidates.append(pos)
+
+    candidate_positions: List[int] = []
+    candidate_positions.extend(map_candidates)
+    for pos in fallback_candidates:
+        if pos not in candidate_positions:
+            candidate_positions.append(pos)
+
+    for pos in candidate_positions:
+        actual_length = pos - sig_data_start
+        if actual_length <= 0 or actual_length > 0xFFFF:
+            continue
+        patched = bytearray(raw_bytes)
+        patched[idx + 2 : idx + 4] = actual_length.to_bytes(2, "big")
+        try:
+            recovered_value = cbor2.loads(bytes(patched))
+        except Exception:
+            continue
+        if not isinstance(recovered_value, Mapping):
+            continue
+        sig_candidate = _coerce_cbor_bytes(
+            _get_mapping_entry(recovered_value, 3, "3", "signature")
+        )
+        if sig_candidate is None:
+            continue
+        return bytes(patched), recovered_value
+
+    return None, None
+
+
+def _find_get_assertion_key_index(
+    raw_bytes: bytes, key: int, *, start: int, end: int
+) -> Optional[int]:
+    if not (0 <= key <= 23):
+        return None
+    search_start = start
+    key_byte = bytes([key])
+    while search_start < end:
+        pos = raw_bytes.find(key_byte, search_start, end)
+        if pos == -1:
+            return None
+        decoded_key, new_offset = _lenient_decode_from(raw_bytes, pos)
+        if isinstance(decoded_key, int) and decoded_key == key and new_offset > pos:
+            return pos
+        search_start = pos + 1
+    return None
+
+
+def _reconstruct_get_assertion_map(
+    raw_bytes: bytes,
+) -> Optional[Tuple[bytes, Mapping[Any, Any]]]:
+    if not raw_bytes:
+        return None
+
+    initial = raw_bytes[0]
+    if initial >> 5 != 5:
+        return None
+
+    map_length = initial & 0x1F
+    offset = 1
+    recovered: "OrderedDict[Any, Any]" = OrderedDict()
+    signature_bytes: Optional[bytes] = None
+    sig_data_start: Optional[int] = None
+    sig_data_end: Optional[int] = None
+
+    for _ in range(map_length):
+        key_offset = offset
+        key, offset = _lenient_decode_from(raw_bytes, offset)
+        if key is None:
+            return None
+        if isinstance(key, int) and key == 3:
+            sig_data_start = offset
+            break
+        if not isinstance(key, int):
+            # The signature value was emitted without the expected key 3. Treat the
+            # decoded data as the signature payload and rewind to its start so we can
+            # rebuild the map consistently.
+            possible_sig = _coerce_cbor_bytes(key)
+            if possible_sig is None:
+                return None
+            signature_bytes = possible_sig
+            sig_data_start = key_offset
+            sig_data_end = offset
+            offset = sig_data_end
+            break
+        if key == 3:
+            break
+        value, offset = _lenient_decode_from(raw_bytes, offset)
+        recovered[key] = value
+    else:
+        return None
+
+    if sig_data_start is None:
+        sig_data_start = offset
+
+    candidate_indexes: List[int] = []
+    key5_index = _find_get_assertion_key_index(
+        raw_bytes, 5, start=sig_data_start, end=len(raw_bytes)
+    )
+    if key5_index is not None:
+        candidate_indexes.append(key5_index)
+    key4_index = _find_get_assertion_key_index(
+        raw_bytes,
+        4,
+        start=sig_data_start,
+        end=key5_index if key5_index is not None else len(raw_bytes),
+    )
+    if key4_index is not None:
+        candidate_indexes.append(key4_index)
+
+    if candidate_indexes:
+        candidate = min(candidate_indexes)
+        if sig_data_end is None or candidate < sig_data_end:
+            sig_data_end = candidate
+
+    if sig_data_end is None:
+        sig_data_end = len(raw_bytes)
+
+    if signature_bytes is None:
+        signature_bytes = raw_bytes[sig_data_start:sig_data_end]
+
+    if signature_bytes is None:
+        return None
+
+    recovered[3] = signature_bytes
+    offset = sig_data_end if sig_data_end is not None else len(raw_bytes)
+
+    allowed_keys = {1, 2, 3, 4, 5, 6, 7, 8}
+
+    while offset < len(raw_bytes) and len(recovered) < map_length:
+        key_offset = offset
+        key, offset = _lenient_decode_from(raw_bytes, offset)
+        if key is None:
+            break
+        if not isinstance(key, int) or key not in allowed_keys:
+            offset = key_offset
+            break
+        value, offset = _lenient_decode_from(raw_bytes, offset)
+        recovered[key] = value
+
+    patched_bytes = cbor.encode(recovered)
+    return patched_bytes, recovered
+
+
 def _derive_alg_from_auth_data(auth_data_bytes: Optional[bytes]) -> Optional[int]:
     if not auth_data_bytes:
         return None
@@ -1909,6 +2111,65 @@ def _build_get_assertion_expanded_json(value: Mapping[Any, Any], raw_bytes: Opti
     return result
 
 
+def _build_get_assertion_request_expanded_json(
+    value: Mapping[Any, Any], raw_bytes: Optional[bytes] = None
+) -> Dict[str, Any]:
+    result: Dict[str, Any] = {}
+
+    rp_id = _get_mapping_entry(value, 1, "1", "rpId")
+    if isinstance(rp_id, str):
+        result["rpId"] = rp_id
+
+    client_hash_entry = _get_mapping_entry(value, 2, "2", "clientDataHash")
+    client_hash = _coerce_cbor_bytes(client_hash_entry)
+    if client_hash is not None:
+        result["clientDataHash"] = _binary_summary(client_hash)
+
+    allow_list_entry = _get_mapping_entry(value, 3, "3", "allowList")
+    if allow_list_entry is not _MISSING and allow_list_entry is not None:
+        if isinstance(allow_list_entry, Sequence) and not isinstance(
+            allow_list_entry, (bytes, bytearray)
+        ):
+            result["allowList"] = [
+                _convert_ctap_credential_descriptor(item)
+                for item in allow_list_entry
+            ]
+        else:
+            result["allowList"] = _hex_json_safe(allow_list_entry)
+
+    optional_labels: Dict[Any, str] = {
+        4: "extensions",
+        "extensions": "extensions",
+        5: "options",
+        "options": "options",
+        6: "pinAuth",
+        "pinAuth": "pinAuth",
+        7: "pinProtocol",
+        "pinProtocol": "pinProtocol",
+    }
+    for key, label in optional_labels.items():
+        candidate = _get_mapping_entry(value, key)
+        if candidate is _MISSING or label in result:
+            continue
+        if label == "pinAuth":
+            bytes_value = _coerce_cbor_bytes(candidate)
+            result[label] = (
+                _binary_summary(bytes_value) if bytes_value is not None else _hex_json_safe(candidate)
+            )
+        else:
+            result[label] = _hex_json_safe(candidate)
+
+    for key in value:
+        if key in {1, 2, 3, 4, 5, 6, 7} or key in {"rpId", "clientDataHash", "allowList", "extensions", "options", "pinAuth", "pinProtocol"}:
+            continue
+        try:
+            result[str(key)] = _hex_json_safe(value[key])
+        except Exception:
+            continue
+
+    return result
+
+
 def _try_decode_cbor(data: bytes, encoding: str) -> Optional[Dict[str, Any]]:
     if not data:
         return None
@@ -1941,6 +2202,22 @@ def _try_decode_cbor(data: bytes, encoding: str) -> Optional[Dict[str, Any]]:
     extra_structures = structures[1:]
     extra_values = values[1:]
 
+    patched_get_assertion_warning: Optional[str] = None
+    if (
+        isinstance(base_structure, Mapping)
+        and isinstance(base_value, Mapping)
+        and primary_bytes
+    ):
+        patched = _recover_get_assertion_map_from_bytes(primary_bytes, base_value)
+        if patched is not None:
+            primary_bytes, patched_structure, patched_value, warning_msg = patched
+            base_structure = patched_structure
+            base_value = patched_value
+            structures[0] = patched_structure
+            values[0] = patched_value
+            if warning_msg:
+                patched_get_assertion_warning = warning_msg
+
     merged_signature: Optional[bytes] = None
     classification = "other"
     if isinstance(base_value, Mapping):
@@ -1952,7 +2229,9 @@ def _try_decode_cbor(data: bytes, encoding: str) -> Optional[Dict[str, Any]]:
         fmt_candidate = _extract_mapping_string(working_value, (1, "1", "fmt"))
         auth_candidate = _extract_mapping_bytes(working_value, (2, "2", "authData"))
 
-        if fmt_candidate is not None and auth_candidate is not None:
+        if _is_get_assertion_request_map(working_value):
+            classification = "get_assertion_request"
+        elif fmt_candidate is not None and auth_candidate is not None:
             temp_structure = dict(base_structure)
             entries = base_structure.get("entries")
             if isinstance(entries, list):
@@ -2005,7 +2284,9 @@ def _try_decode_cbor(data: bytes, encoding: str) -> Optional[Dict[str, Any]]:
                 merged_signature = merged_signature or assertion_sig
                 extra_structures = []
                 extra_values = []
-        if classification == "other" and fmt_candidate is None and auth_candidate is not None:
+        if classification == "other" and _is_get_assertion_request_map(working_value):
+            classification = "get_assertion_request"
+        elif classification == "other" and fmt_candidate is None and auth_candidate is not None:
             if ctap_details is not None and ctap_details.get("kind") == "status":
                 classification = "get_assertion_output"
 
@@ -2027,6 +2308,8 @@ def _try_decode_cbor(data: bytes, encoding: str) -> Optional[Dict[str, Any]]:
             expanded_json = _build_make_credential_expanded_json(base_value, primary_bytes)
         elif classification == "get_assertion_output":
             expanded_json = _build_get_assertion_expanded_json(base_value, primary_bytes)
+        elif classification == "get_assertion_request":
+            expanded_json = _build_get_assertion_request_expanded_json(base_value, primary_bytes)
     elif base_value is not None:
         hex_decoded_value = _hex_json_safe(base_value)
 
@@ -2040,6 +2323,9 @@ def _try_decode_cbor(data: bytes, encoding: str) -> Optional[Dict[str, Any]]:
         decoded_payload["decodedValue"] = _stringify_mapping_keys(_hex_json_safe(hex_decoded_value))
 
     warnings: List[str] = []
+
+    if patched_get_assertion_warning:
+        warnings.append(patched_get_assertion_warning)
 
     if ctap_details is not None:
         ctap_details["payloadLength"] = consumed_total
@@ -2079,6 +2365,9 @@ def _try_decode_cbor(data: bytes, encoding: str) -> Optional[Dict[str, Any]]:
 
 def _interpret_ctap_cbor_value(value: Any) -> Optional[Dict[str, Any]]:
     if isinstance(value, Mapping):
+        request = _interpret_get_assertion_request_map(value)
+        if request is not None:
+            return {"getAssertionRequest": request}
         interpreted = _interpret_make_credential_map(value)
         if interpreted is not None:
             return {"makeCredentialResponse": interpreted}
@@ -2212,6 +2501,64 @@ def _interpret_get_assertion_map(value: Mapping[Any, Any]) -> Optional[Dict[str,
     return interpreted
 
 
+def _interpret_get_assertion_request_map(value: Mapping[Any, Any]) -> Optional[Dict[str, Any]]:
+    if not _is_get_assertion_request_map(value):
+        return None
+
+    rp_id = _get_mapping_entry(value, 1, "1", "rpId")
+    client_hash_entry = _get_mapping_entry(value, 2, "2", "clientDataHash")
+    client_hash = _coerce_cbor_bytes(client_hash_entry)
+
+    interpreted: Dict[str, Any] = {
+        "1 (rpId)": rp_id,
+        "2 (clientDataHash)": client_hash.hex() if client_hash is not None else None,
+    }
+
+    allow_list_entry = _get_mapping_entry(value, 3, "3", "allowList")
+    if allow_list_entry is not _MISSING and allow_list_entry is not None:
+        if isinstance(allow_list_entry, Sequence) and not isinstance(
+            allow_list_entry, (bytes, bytearray)
+        ):
+            interpreted["3 (allowList)"] = [
+                _convert_ctap_credential_descriptor(item)
+                for item in allow_list_entry
+            ]
+        else:
+            interpreted["3 (allowList)"] = _hex_json_safe(allow_list_entry)
+
+    optional_labels: Dict[Any, str] = {
+        4: "extensions",
+        "extensions": "extensions",
+        5: "options",
+        "options": "options",
+        6: "pinAuth",
+        "pinAuth": "pinAuth",
+        7: "pinProtocol",
+        "pinProtocol": "pinProtocol",
+    }
+    for key, label in optional_labels.items():
+        candidate = _get_mapping_entry(value, key)
+        if candidate is _MISSING:
+            continue
+        if label == "pinAuth":
+            bytes_value = _coerce_cbor_bytes(candidate)
+            interpreted[f"{key} ({label})"] = (
+                bytes_value.hex() if bytes_value is not None else _hex_json_safe(candidate)
+            )
+        else:
+            interpreted[f"{key} ({label})"] = _hex_json_safe(candidate)
+
+    extra_keys = [
+        key
+        for key in value.keys()
+        if isinstance(key, int) and key not in {1, 2, 3, 4, 5, 6, 7}
+    ]
+    for key in sorted(extra_keys):
+        interpreted[f"{key}"] = _hex_json_safe(value[key])
+
+    return interpreted
+
+
 def _convert_optional_ctap_field(value: Any) -> Any:
     data_bytes = _coerce_cbor_bytes(value)
     if data_bytes is not None:
@@ -2281,6 +2628,16 @@ def _convert_ctap_user(entry: Any) -> Any:
         user[str(key)] = _hex_json_safe(entry[key])
 
     return user
+
+
+def _is_get_assertion_request_map(value: Mapping[Any, Any]) -> bool:
+    rp_id = _get_mapping_entry(value, 1, "1", "rpId")
+    if not isinstance(rp_id, str) or not rp_id.strip():
+        return False
+    client_hash_entry = _get_mapping_entry(value, 2, "2", "clientDataHash")
+    if _coerce_cbor_bytes(client_hash_entry) is None:
+        return False
+    return True
 
 def _describe_client_data_from_bytes(data: bytes) -> Dict[str, Any]:
     text = data.decode("utf-8")
@@ -2512,6 +2869,8 @@ def _build_decoder_payload(result: Dict[str, Any]) -> Dict[str, Any]:
                     qualifiers.append("MakeCredential response")
                 if "getAssertionResponse" in ctap_decoded:
                     qualifiers.append("GetAssertion response")
+                if "getAssertionRequest" in ctap_decoded:
+                    qualifiers.append("GetAssertion request")
             expanded_json = decoded.get("expandedJson")
             if isinstance(expanded_json, Mapping):
                 if "attStmt" in expanded_json and "MakeCredential response" not in qualifiers:
@@ -3262,14 +3621,16 @@ def _format_cbor_summary(result: Dict[str, Any]) -> List[str]:
         if payload_length is not None:
             _append_simple_field(lines, "CBOR payload length", payload_length)
 
-    if isinstance(ctap_decoded, Mapping) and ctap_decoded:
-        response_labels: List[str] = []
-        if "makeCredentialResponse" in ctap_decoded:
-            response_labels.append("MakeCredential response")
-        if "getAssertionResponse" in ctap_decoded:
-            response_labels.append("GetAssertion response")
-        if response_labels:
-            lines.append(f"CTAP interpretation:\t{', '.join(response_labels)}")
+        if isinstance(ctap_decoded, Mapping) and ctap_decoded:
+            response_labels: List[str] = []
+            if "makeCredentialResponse" in ctap_decoded:
+                response_labels.append("MakeCredential response")
+            if "getAssertionResponse" in ctap_decoded:
+                response_labels.append("GetAssertion response")
+            if "getAssertionRequest" in ctap_decoded:
+                response_labels.append("GetAssertion request")
+            if response_labels:
+                lines.append(f"CTAP interpretation:\t{', '.join(response_labels)}")
         interpreted_lines = _format_json_block(ctap_decoded)
         _append_multiline_field(lines, "CTAP decoded", interpreted_lines, indent_str="  ")
 
