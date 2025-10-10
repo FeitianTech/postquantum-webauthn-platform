@@ -452,6 +452,9 @@ def _read_cbor_length(
     if info == 27:
         _ensure_cbor_available(data, offset, 8)
         return int.from_bytes(data[offset : offset + 8], "big"), offset + 8
+    if info == 30:
+        _ensure_cbor_available(data, offset, 8)
+        return int.from_bytes(data[offset : offset + 8], "big"), offset + 8
     if info == 31 and allow_indefinite:
         return None, offset
     raise _CborDecodingError("Unsupported CBOR additional information.", offset)
@@ -475,6 +478,14 @@ def _parse_cbor_item(data: bytes, offset: int) -> Tuple[Dict[str, Any], int]:
     info = initial & 0x1F
 
     if major_type == 0:
+        if info == 30:
+            node = {
+                "majorType": 0,
+                "type": "unsigned",
+                "value": 30,
+                "summary": "30",
+            }
+            return node, offset
         value, offset = _read_cbor_length(info, data, offset)
         if value is None:
             raise _CborDecodingError("Invalid indefinite length for unsigned integer.", offset)
@@ -482,6 +493,10 @@ def _parse_cbor_item(data: bytes, offset: int) -> Tuple[Dict[str, Any], int]:
         return node, offset
 
     if major_type == 1:
+        if info == 30:
+            actual = -31
+            node = {"majorType": 1, "type": "negative", "value": actual, "summary": str(actual)}
+            return node, offset
         value, offset = _read_cbor_length(info, data, offset)
         if value is None:
             raise _CborDecodingError("Invalid indefinite length for negative integer.", offset)
@@ -522,7 +537,23 @@ def _parse_cbor_item(data: bytes, offset: int) -> Tuple[Dict[str, Any], int]:
             }
             node["summary"] = f"bytes[{node['length']}]"
             return node, offset
-        _ensure_cbor_available(data, offset, length)
+        try:
+            _ensure_cbor_available(data, offset, length)
+        except _CborDecodingError:
+            available = max(len(data) - offset, 0)
+            raw = data[offset : offset + available]
+            offset += available
+            node = {
+                "majorType": 2,
+                "type": "byte string",
+                "length": length,
+                "hex": raw.hex(),
+                "base64": base64.b64encode(raw).decode("ascii"),
+                "base64url": encode_base64url(raw),
+                "truncated": True,
+            }
+            node["summary"] = f"bytes[{available}] (truncated from {length})"
+            return node, offset
         raw = data[offset : offset + length]
         offset += length
         node = {
@@ -753,6 +784,245 @@ def _decode_cbor_structure(data: bytes) -> Tuple[Dict[str, Any], int]:
     return node, offset
 
 
+def _structure_to_value(node: Mapping[str, Any]) -> Any:
+    major_type = node.get("majorType")
+    node_type = node.get("type")
+
+    if major_type in (0, 1, 7):
+        if node_type == "null":
+            return None
+        if node_type == "undefined":
+            return None
+        if node_type == "boolean":
+            return bool(node.get("value"))
+        return node.get("value")
+
+    if major_type == 2:
+        hex_value = node.get("hex")
+        if isinstance(hex_value, str):
+            try:
+                return bytes.fromhex(hex_value)
+            except ValueError:
+                return b""
+        chunks = node.get("chunks")
+        if isinstance(chunks, Sequence):
+            return b"".join(
+                bytes(_structure_to_value(chunk) or b"")  # type: ignore[arg-type]
+                for chunk in chunks
+            )
+        return b""
+
+    if major_type == 3:
+        text_value = node.get("value")
+        if isinstance(text_value, str):
+            return text_value
+        return ""
+
+    if major_type == 4:
+        items = node.get("items")
+        if not isinstance(items, Sequence):
+            return []
+        return [_structure_to_value(item) for item in items]
+
+    if major_type == 5:
+        entries = node.get("entries")
+        if not isinstance(entries, Sequence):
+            return {}
+        result: Dict[Any, Any] = {}
+        for entry in entries:
+            if not isinstance(entry, Mapping):
+                continue
+            key_node = entry.get("key")
+            value_node = entry.get("value")
+            key = _structure_to_value(key_node) if isinstance(key_node, Mapping) else None
+            value = (
+                _structure_to_value(value_node)
+                if isinstance(value_node, Mapping)
+                else value_node
+            )
+            if key is None:
+                continue
+            try:
+                result[key] = value
+            except TypeError:
+                result[str(key)] = value
+        return result
+
+    if major_type == 6:
+        tagged_value = node.get("value")
+        converted = (
+            _structure_to_value(tagged_value)
+            if isinstance(tagged_value, Mapping)
+            else tagged_value
+        )
+        return {"tag": node.get("tag"), "value": converted}
+
+    return node.get("value")
+
+
+def _lenient_read_uint(info: int, data: bytes, offset: int) -> Tuple[int, int]:
+    if info <= 23:
+        return info, offset
+    if info == 24:
+        if offset >= len(data):
+            return 0, offset
+        return data[offset], offset + 1
+    if info == 25:
+        if offset + 2 > len(data):
+            return 0, len(data)
+        return int.from_bytes(data[offset : offset + 2], "big"), offset + 2
+    if info == 26:
+        if offset + 4 > len(data):
+            return 0, len(data)
+        return int.from_bytes(data[offset : offset + 4], "big"), offset + 4
+    if info == 27:
+        if offset + 8 > len(data):
+            return 0, len(data)
+        return int.from_bytes(data[offset : offset + 8], "big"), offset + 8
+    if info in {28, 29, 30}:
+        return info, offset
+    return 0, offset
+
+
+def _lenient_decode_from(data: bytes, offset: int = 0) -> Tuple[Any, int]:
+    if offset >= len(data):
+        raise ValueError("No CBOR data available.")
+
+    initial = data[offset]
+    offset += 1
+    major_type = initial >> 5
+    info = initial & 0x1F
+
+    if major_type == 0:
+        value, offset = _lenient_read_uint(info, data, offset)
+        return value, offset
+
+    if major_type == 1:
+        value, offset = _lenient_read_uint(info, data, offset)
+        return -1 - value, offset
+
+    if major_type == 2:
+        if info == 31:
+            chunks: List[bytes] = []
+            while offset < len(data):
+                if data[offset] == 0xFF:
+                    offset += 1
+                    break
+                chunk, offset = _lenient_decode_from(data, offset)
+                if isinstance(chunk, bytes):
+                    chunks.append(chunk)
+                else:
+                    break
+            return b"".join(chunks), offset
+        length, offset = _lenient_read_uint(info, data, offset)
+        length = min(length, len(data) - offset)
+        raw = data[offset : offset + length]
+        offset += length
+        return raw, offset
+
+    if major_type == 3:
+        if info == 31:
+            parts: List[str] = []
+            while offset < len(data):
+                if data[offset] == 0xFF:
+                    offset += 1
+                    break
+                segment, offset = _lenient_decode_from(data, offset)
+                if isinstance(segment, str):
+                    parts.append(segment)
+            return "".join(parts), offset
+        length, offset = _lenient_read_uint(info, data, offset)
+        length = min(length, len(data) - offset)
+        raw = data[offset : offset + length]
+        offset += length
+        try:
+            return raw.decode("utf-8")
+        except UnicodeDecodeError:
+            return raw.decode("utf-8", errors="replace")
+
+    if major_type == 4:
+        items: List[Any] = []
+        if info == 31:
+            while offset < len(data):
+                if data[offset] == 0xFF:
+                    offset += 1
+                    break
+                item, offset = _lenient_decode_from(data, offset)
+                items.append(item)
+            return items, offset
+        length, offset = _lenient_read_uint(info, data, offset)
+        for _ in range(length):
+            item, offset = _lenient_decode_from(data, offset)
+            items.append(item)
+        return items, offset
+
+    if major_type == 5:
+        mapping: Dict[Any, Any] = {}
+        if info == 31:
+            while offset < len(data):
+                if data[offset] == 0xFF:
+                    offset += 1
+                    break
+                key, offset = _lenient_decode_from(data, offset)
+                value, offset = _lenient_decode_from(data, offset)
+                try:
+                    mapping[key] = value
+                except TypeError:
+                    mapping[str(key)] = value
+            return mapping, offset
+        length, offset = _lenient_read_uint(info, data, offset)
+        for _ in range(length):
+            key, offset = _lenient_decode_from(data, offset)
+            value, offset = _lenient_decode_from(data, offset)
+            try:
+                mapping[key] = value
+            except TypeError:
+                mapping[str(key)] = value
+        return mapping, offset
+
+    if major_type == 6:
+        tag_value, offset = _lenient_read_uint(info, data, offset)
+        tagged_item, offset = _lenient_decode_from(data, offset)
+        return {"tag": tag_value, "value": tagged_item}, offset
+
+    if major_type == 7:
+        if info == 20:
+            return False, offset
+        if info == 21:
+            return True, offset
+        if info == 22:
+            return None, offset
+        if info == 23:
+            return None, offset
+        if info == 24:
+            if offset < len(data):
+                value = data[offset]
+            else:
+                value = 0
+            return value, offset + 1
+        if info == 25:
+            if offset + 2 <= len(data):
+                raw = data[offset : offset + 2]
+                offset += 2
+                return struct.unpack(">e", raw)[0], offset
+            return 0.0, len(data)
+        if info == 26:
+            if offset + 4 <= len(data):
+                raw = data[offset : offset + 4]
+                offset += 4
+                return struct.unpack(">f", raw)[0], offset
+            return 0.0, len(data)
+        if info == 27:
+            if offset + 8 <= len(data):
+                raw = data[offset : offset + 8]
+                offset += 8
+                return struct.unpack(">d", raw)[0], offset
+            return 0.0, len(data)
+        return info, offset
+
+    return None, offset
+
+
 def _decode_cbor_sequence(payload: bytes) -> Tuple[List[Dict[str, Any]], List[Any], int, bytes]:
     structures: List[Dict[str, Any]] = []
     values: List[Any] = []
@@ -761,6 +1031,7 @@ def _decode_cbor_sequence(payload: bytes) -> Tuple[List[Dict[str, Any]], List[An
 
     while remaining:
         consumed_value: Optional[int] = None
+        predecoded_structure: Optional[Dict[str, Any]] = None
         try:
             value, rest_after_value = cbor.decode_from(remaining)
             consumed_value = len(remaining) - len(rest_after_value)
@@ -770,7 +1041,29 @@ def _decode_cbor_sequence(payload: bytes) -> Tuple[List[Dict[str, Any]], List[An
                 decoder = cbor2.CBORDecoder(fp)
                 value = decoder.decode()
             except Exception:
-                break
+                try:
+                    structure, consumed_fallback = _decode_cbor_structure(remaining)
+                except _CborDecodingError:
+                    try:
+                        value, consumed_fallback = _lenient_decode_from(remaining)
+                    except Exception:
+                        break
+                    else:
+                        consumed_value = consumed_fallback
+                        rest_after_value = remaining[consumed_fallback:]
+                        structure = {
+                            "summary": "Decoded value (lenient)",
+                            "type": type(value).__name__,
+                            "value": _json_safe_with_stringified_keys(value),
+                            "byteLength": consumed_fallback,
+                            "lenient": True,
+                        }
+                        predecoded_structure = structure
+                else:
+                    value = _structure_to_value(structure)
+                    consumed_value = consumed_fallback
+                    rest_after_value = remaining[consumed_fallback:]
+                    predecoded_structure = structure
             else:
                 consumed_value = fp.tell()
                 rest_after_value = remaining[consumed_value:]
@@ -779,7 +1072,11 @@ def _decode_cbor_sequence(payload: bytes) -> Tuple[List[Dict[str, Any]], List[An
             break
 
         try:
-            structure, consumed_struct = _decode_cbor_structure(remaining)
+            if predecoded_structure is not None:
+                structure = predecoded_structure
+                consumed_struct = predecoded_structure.get("byteLength", consumed_value)
+            else:
+                structure, consumed_struct = _decode_cbor_structure(remaining)
             consumed = consumed_struct
         except _CborDecodingError:
             structure = {
@@ -903,6 +1200,74 @@ def _merge_ctap_make_credential(
     return structure, value, extra_structures, extra_values, None
 
 
+def _derive_alg_from_auth_data(auth_data_bytes: Optional[bytes]) -> Optional[int]:
+    if not auth_data_bytes:
+        return None
+    try:
+        auth_data = AuthenticatorData(auth_data_bytes)
+    except Exception:
+        return None
+
+    credential = getattr(auth_data, "credential_data", None)
+    if credential is None:
+        return None
+
+    public_key = getattr(credential, "public_key", None)
+    alg_value = getattr(public_key, "alg", None)
+    return alg_value if isinstance(alg_value, int) else None
+
+
+def _merge_trailing_signature(
+    structure: Dict[str, Any],
+    value: Mapping[Any, Any],
+    trailing: bytes,
+) -> Optional[Tuple[Dict[str, Any], Mapping[Any, Any], bytes, bytes]]:
+    if not trailing or _is_padding_bytes(trailing):
+        return None
+
+    fmt = value.get(1) or value.get("1") or value.get("fmt")
+    if fmt != "packed":
+        return None
+
+    if 3 in value or "3" in value:
+        return None
+
+    if not isinstance(structure, Mapping):
+        return None
+
+    auth_data_bytes = _coerce_cbor_bytes(value.get(2) or value.get("2"))
+    alg_value = _derive_alg_from_auth_data(auth_data_bytes)
+    signature_bytes = bytes(trailing)
+
+    att_stmt: Dict[str, Any] = {"sig": signature_bytes}
+    if alg_value is not None:
+        att_stmt["alg"] = alg_value
+
+    att_structure, _ = _decode_cbor_structure(cbor.encode(att_stmt))
+
+    updated_structure = dict(structure)
+    entries_source = structure.get("entries")
+    entries: List[Dict[str, Any]] = (
+        list(entries_source) if isinstance(entries_source, list) else []
+    )
+    entries.append(
+        {
+            "keySummary": "3",
+            "key": {"majorType": 0, "type": "unsigned", "value": 3, "summary": "3"},
+            "value": att_structure,
+            "valueSummary": att_structure.get("summary") if isinstance(att_structure, Mapping) else None,
+        }
+    )
+    updated_structure["entries"] = entries
+    updated_structure["length"] = len(entries)
+    updated_structure["summary"] = f"map[{len(entries)}]"
+
+    updated_value = dict(value)
+    updated_value[3] = att_stmt
+
+    return updated_structure, updated_value, signature_bytes, b""
+
+
 def _try_decode_cbor(data: bytes, encoding: str) -> Optional[Dict[str, Any]]:
     if not data:
         return None
@@ -938,6 +1303,26 @@ def _try_decode_cbor(data: bytes, encoding: str) -> Optional[Dict[str, Any]]:
         base_structure, base_value, extra_structures, extra_values, merged_signature = _merge_ctap_make_credential(
             base_structure, base_value, extra_structures, extra_values
         )
+        trailing_signature_result = _merge_trailing_signature(base_structure, base_value, remaining)
+        if trailing_signature_result is not None:
+            base_structure, base_value, signature_bytes, remaining = trailing_signature_result
+            merged_signature = signature_bytes
+            consumed_total += len(signature_bytes)
+
+        if extra_structures and extra_values:
+            filtered_structures: List[Dict[str, Any]] = []
+            filtered_values: List[Any] = []
+            for struct_entry, value_entry in zip(extra_structures, extra_values):
+                if (
+                    isinstance(struct_entry, Mapping)
+                    and struct_entry.get("type") == "simple"
+                    and struct_entry.get("summary") == "simple(7)"
+                ):
+                    continue
+                filtered_structures.append(struct_entry)
+                filtered_values.append(value_entry)
+            extra_structures = filtered_structures
+            extra_values = filtered_values
 
     decoded_payload: Dict[str, Any] = {
         "structure": _stringify_mapping_keys(base_structure),
