@@ -1527,42 +1527,111 @@ def _summarize_bytes_for_json(data: bytes) -> Dict[str, Any]:
     }
 
 
-def _format_auth_data_for_expanded_json(auth_data_bytes: bytes) -> Dict[str, Any]:
-    formatted: Dict[str, Any] = {"raw": auth_data_bytes.hex()}
-    try:
-        auth_data = AuthenticatorData(auth_data_bytes)
-    except Exception:
-        formatted["parseError"] = "Unable to interpret authenticator data."
-        return formatted
+def _parse_authenticator_data_bytes(data: bytes) -> Tuple[Dict[str, Any], bytes, bytes]:
+    details: Dict[str, Any] = {}
+    if len(data) < 37:
+        details["parseError"] = "Authenticator data shorter than minimum header."
+        return details, data, b""
 
-    formatted["rpIdHash"] = auth_data.rp_id_hash.hex()
-    flags_value = int(auth_data.flags)
-    formatted["flags"] = {
-        "value": flags_value,
-        "bitfield": f"0b{flags_value:08b}",
-        "UP": bool(auth_data.flags & AuthenticatorData.FLAG.UP),
-        "UV": bool(auth_data.flags & AuthenticatorData.FLAG.UV),
-        "BE": bool(auth_data.flags & AuthenticatorData.FLAG.BE),
-        "BS": bool(auth_data.flags & AuthenticatorData.FLAG.BS),
-        "AT": bool(auth_data.flags & AuthenticatorData.FLAG.AT),
-        "ED": bool(auth_data.flags & AuthenticatorData.FLAG.ED),
+    offset = 0
+    rp_id_hash = data[offset : offset + 32]
+    offset += 32
+    flags_byte = data[offset]
+    offset += 1
+    sign_count = int.from_bytes(data[offset : offset + 4], "big")
+    offset += 4
+
+    details["rpIdHash"] = rp_id_hash.hex()
+    details["flags"] = {
+        "value": flags_byte,
+        "bitfield": f"0b{flags_byte:08b}",
+        "UP": bool(flags_byte & AuthenticatorData.FLAG.UP),
+        "UV": bool(flags_byte & AuthenticatorData.FLAG.UV),
+        "BE": bool(flags_byte & AuthenticatorData.FLAG.BE),
+        "BS": bool(flags_byte & AuthenticatorData.FLAG.BS),
+        "AT": bool(flags_byte & AuthenticatorData.FLAG.AT),
+        "ED": bool(flags_byte & AuthenticatorData.FLAG.ED),
     }
-    formatted["signCount"] = auth_data.counter
+    details["signCount"] = sign_count
 
-    credential = getattr(auth_data, "credential_data", None)
-    if credential is not None:
-        cred_payload: Dict[str, Any] = {
-            "aaguid": credential.aaguid.hex(),
-            "credentialId": credential.credential_id.hex(),
-            "credentialPublicKey": _hex_json_safe(dict(credential.public_key)),
-        }
-        formatted["attestedCredentialData"] = cred_payload
+    def _decode_cbor_item(buffer: bytes) -> Tuple[Any, int]:
+        value, consumed = _lenient_decode_from(buffer, 0)
+        return value, consumed
 
-    extensions = getattr(auth_data, "extensions", None)
-    if extensions is not None:
-        formatted["extensions"] = _hex_json_safe(extensions)
+    at_flag = bool(flags_byte & AuthenticatorData.FLAG.AT)
+    ed_flag = bool(flags_byte & AuthenticatorData.FLAG.ED)
 
-    return formatted
+    attested_trailing = b""
+    if at_flag:
+        attested: Dict[str, Any] = {}
+        remaining = len(data) - offset
+        if remaining < 18:
+            attested["parseError"] = "Attested credential data truncated."
+            offset = len(data)
+        else:
+            aaguid = data[offset : offset + 16]
+            offset += 16
+            declared_len = int.from_bytes(data[offset : offset + 2], "big")
+            offset += 2
+            remaining = len(data) - offset
+            actual_len = min(declared_len, remaining if remaining >= 0 else 0)
+            credential_id = data[offset : offset + actual_len]
+            offset += actual_len
+
+            attested["aaguid"] = aaguid.hex()
+            attested["credentialIdDeclaredLength"] = declared_len
+            attested["credentialIdActualLength"] = actual_len
+            attested["credentialId"] = credential_id.hex()
+            if actual_len != declared_len:
+                attested["lengthMismatch"] = True
+
+            cose_raw = data[offset:]
+            if cose_raw:
+                try:
+                    cose_value, consumed = _decode_cbor_item(cose_raw)
+                except Exception:
+                    cose_value, consumed = None, 0
+                if consumed > 0:
+                    offset += consumed
+                    if isinstance(cose_value, Mapping):
+                        attested["credentialPublicKey"] = _hex_json_safe(cose_value)
+                    else:
+                        attested["credentialPublicKey"] = _hex_json_safe(cose_value)
+                    attested_trailing = cose_raw[consumed:]
+                else:
+                    attested["credentialPublicKey"] = cose_raw.hex()
+                    offset = len(data)
+            details["attestedCredentialData"] = attested
+
+    extensions_trailing = b""
+    if ed_flag and offset < len(data):
+        try:
+            ext_value, consumed = _decode_cbor_item(data[offset:])
+        except Exception:
+            ext_value, consumed = None, 0
+        if consumed > 0:
+            offset += consumed
+            if isinstance(ext_value, Mapping):
+                details["extensions"] = _hex_json_safe(ext_value)
+            else:
+                details["extensions"] = _hex_json_safe(ext_value)
+            extensions_trailing = data[offset:]
+        else:
+            extensions_trailing = data[offset:]
+            offset = len(data)
+
+    trimmed = data[:offset]
+    trailing = b"".join(part for part in [attested_trailing, extensions_trailing, data[offset:]] if part)
+    return details, trimmed, trailing
+
+
+def _format_auth_data_for_expanded_json(auth_data_bytes: bytes) -> Tuple[Dict[str, Any], bytes]:
+    details, trimmed, trailing = _parse_authenticator_data_bytes(auth_data_bytes)
+    formatted: Dict[str, Any] = dict(details)
+    formatted.setdefault("raw", trimmed.hex())
+    if trailing:
+        formatted["trailingBytesHex"] = trailing.hex()
+    return formatted, trailing
 
 
 def _format_att_stmt_for_expanded_json(att_stmt: Any) -> Dict[str, Any]:
@@ -1591,7 +1660,49 @@ def _format_att_stmt_for_expanded_json(att_stmt: Any) -> Dict[str, Any]:
     return formatted
 
 
-def _build_make_credential_expanded_json(value: Mapping[Any, Any]) -> Dict[str, Any]:
+def _decode_trailing_map(data: bytes) -> Dict[Any, Any]:
+    mapping: Dict[Any, Any] = {}
+    offset = 0
+    while offset < len(data):
+        key, new_offset = _lenient_decode_from(data, offset)
+        if new_offset <= offset:
+            break
+        offset = new_offset
+        value, new_offset = _lenient_decode_from(data, offset)
+        if new_offset <= offset:
+            break
+        offset = new_offset
+        try:
+            mapping[key] = value
+        except TypeError:
+            mapping[str(key)] = value
+    return mapping
+
+
+def _extract_signature_from_raw_bytes(raw_bytes: bytes) -> Optional[bytes]:
+    if not raw_bytes:
+        return None
+    hex_data = raw_bytes.hex()
+    for prefix, length_hex_len in ("0358", 2), ("0359", 4), ("035a", 8), ("035b", 16):
+        idx = hex_data.find(prefix)
+        if idx == -1:
+            continue
+        length_hex = hex_data[idx + 4 : idx + 4 + length_hex_len]
+        if len(length_hex) != length_hex_len:
+            continue
+        length = int(length_hex, 16)
+        start = idx + 4 + length_hex_len
+        end = start + length * 2
+        if end > len(hex_data):
+            continue
+        try:
+            return bytes.fromhex(hex_data[start:end])
+        except ValueError:
+            continue
+    return None
+
+
+def _build_make_credential_expanded_json(value: Mapping[Any, Any], raw_bytes: Optional[bytes] = None) -> Dict[str, Any]:
     result: Dict[str, Any] = {}
 
     fmt_value = _extract_mapping_string(value, (1, "1", "fmt"))
@@ -1599,8 +1710,10 @@ def _build_make_credential_expanded_json(value: Mapping[Any, Any]) -> Dict[str, 
         result["fmt"] = fmt_value
 
     auth_data_bytes = _extract_mapping_bytes(value, (2, "2", "authData"))
+    auth_trailing = b""
     if auth_data_bytes is not None:
-        result["authData"] = _format_auth_data_for_expanded_json(auth_data_bytes)
+        auth_info, auth_trailing = _format_auth_data_for_expanded_json(auth_data_bytes)
+        result["authData"] = auth_info
 
     att_stmt_value = value.get(3) or value.get("3") or value.get("attStmt")
     if att_stmt_value is not None:
@@ -1629,7 +1742,7 @@ def _build_make_credential_expanded_json(value: Mapping[Any, Any]) -> Dict[str, 
     return result
 
 
-def _build_get_assertion_expanded_json(value: Mapping[Any, Any]) -> Dict[str, Any]:
+def _build_get_assertion_expanded_json(value: Mapping[Any, Any], raw_bytes: Optional[bytes] = None) -> Dict[str, Any]:
     result: Dict[str, Any] = {}
 
     credential_entry = value.get(1) or value.get("1") or value.get("credential")
@@ -1637,12 +1750,16 @@ def _build_get_assertion_expanded_json(value: Mapping[Any, Any]) -> Dict[str, An
         result["credential"] = _convert_ctap_credential_descriptor(credential_entry)
 
     auth_data_bytes = _extract_mapping_bytes(value, (2, "2", "authData"))
+    auth_trailing = b""
     if auth_data_bytes is not None:
-        result["authData"] = _format_auth_data_for_expanded_json(auth_data_bytes)
+        auth_info, auth_trailing = _format_auth_data_for_expanded_json(auth_data_bytes)
+        result["authData"] = auth_info
 
     signature_bytes = _extract_mapping_bytes(value, (3, "3", "signature"))
     if signature_bytes is not None:
         result["signature"] = signature_bytes.hex()
+    else:
+        result["signature"] = None
 
     user_entry = value.get(4) or value.get("4") or value.get("user")
     if user_entry is not None:
@@ -1669,6 +1786,33 @@ def _build_get_assertion_expanded_json(value: Mapping[Any, Any]) -> Dict[str, An
             result[str(key)] = _hex_json_safe(value[key])
         except Exception:
             continue
+
+    if result.get("signature") is None and auth_trailing:
+        trailing_map = _decode_trailing_map(auth_trailing)
+        sig_entry = trailing_map.pop(3, None)
+        if sig_entry is not None:
+            sig_bytes = _coerce_cbor_bytes(sig_entry)
+            if sig_bytes is not None:
+                result["signature"] = sig_bytes.hex()
+        user_entry_trailing = trailing_map.pop(4, None)
+        if user_entry_trailing is not None:
+            result["user"] = _convert_ctap_user(user_entry_trailing)
+        number_entry = trailing_map.pop(5, None)
+        if number_entry is not None:
+            result["numberOfCredentials"] = _convert_optional_ctap_field(number_entry)
+        user_selected_entry = trailing_map.pop(6, None)
+        if user_selected_entry is not None:
+            result["userSelected"] = _convert_optional_ctap_field(user_selected_entry)
+        extensions_entry = trailing_map.pop(8, None)
+        if extensions_entry is not None:
+            result["extensions"] = _convert_optional_ctap_field(extensions_entry)
+        if trailing_map:
+            result["trailingFields"] = {str(k): _hex_json_safe(v) for k, v in trailing_map.items()}
+
+    if result.get("signature") is None and raw_bytes:
+        sig_bytes = _extract_signature_from_raw_bytes(raw_bytes)
+        if sig_bytes is not None:
+            result["signature"] = sig_bytes.hex()
 
     return result
 
@@ -1700,6 +1844,8 @@ def _try_decode_cbor(data: bytes, encoding: str) -> Optional[Dict[str, Any]]:
 
     base_structure = structures[0]
     base_value = values[0]
+    primary_length = base_structure.get("byteLength") if isinstance(base_structure, Mapping) else None
+    primary_bytes = payload[:primary_length] if isinstance(primary_length, int) and primary_length > 0 else None
     extra_structures = structures[1:]
     extra_values = values[1:]
 
@@ -1786,9 +1932,9 @@ def _try_decode_cbor(data: bytes, encoding: str) -> Optional[Dict[str, Any]]:
             ctap_decoded = _stringify_mapping_keys(_hex_json_safe(interpreted))
 
         if classification == "make_credential_output":
-            expanded_json = _build_make_credential_expanded_json(base_value)
+            expanded_json = _build_make_credential_expanded_json(base_value, primary_bytes)
         elif classification == "get_assertion_output":
-            expanded_json = _build_get_assertion_expanded_json(base_value)
+            expanded_json = _build_get_assertion_expanded_json(base_value, primary_bytes)
     elif base_value is not None:
         hex_decoded_value = _hex_json_safe(base_value)
 
@@ -1860,8 +2006,12 @@ def _interpret_make_credential_map(value: Mapping[Any, Any]) -> Optional[Dict[st
     interpreted: Dict[str, Any] = {}
     interpreted["1 (fmt)"] = fmt
 
-    auth_data_details = _format_auth_data_for_expanded_json(auth_data_bytes)
+    auth_data_details, auth_trailing = _format_auth_data_for_expanded_json(auth_data_bytes)
     interpreted["2 (authData)"] = auth_data_details
+    if auth_trailing:
+        trailing_map = _decode_trailing_map(auth_trailing)
+        if trailing_map:
+            interpreted["2 (authData trailing)"] = _hex_json_safe(trailing_map)
 
     if isinstance(att_stmt, Mapping):
         att_stmt_details = _convert_attestation_statement({"attestationStatement": att_stmt})
@@ -1896,7 +2046,7 @@ def _interpret_make_credential_map(value: Mapping[Any, Any]) -> Optional[Dict[st
 def _interpret_get_assertion_map(value: Mapping[Any, Any]) -> Optional[Dict[str, Any]]:
     auth_data_bytes = _coerce_cbor_bytes(value.get(2))
     signature_bytes = _coerce_cbor_bytes(value.get(3))
-    if auth_data_bytes is None or signature_bytes is None:
+    if auth_data_bytes is None:
         return None
 
     interpreted: Dict[str, Any] = {}
@@ -1905,10 +2055,13 @@ def _interpret_get_assertion_map(value: Mapping[Any, Any]) -> Optional[Dict[str,
     if credential_entry is not None:
         interpreted["1 (credential)"] = _convert_ctap_credential_descriptor(credential_entry)
 
-    auth_data_details = _format_auth_data_for_expanded_json(auth_data_bytes)
+    auth_data_details, auth_trailing = _format_auth_data_for_expanded_json(auth_data_bytes)
     interpreted["2 (authData)"] = auth_data_details
 
-    interpreted["3 (signature)"] = signature_bytes.hex()
+    if signature_bytes is not None:
+        interpreted["3 (signature)"] = signature_bytes.hex()
+    else:
+        interpreted["3 (signature)"] = None
 
     user_entry = value.get(4)
     if user_entry is not None:
@@ -1931,6 +2084,28 @@ def _interpret_get_assertion_map(value: Mapping[Any, Any]) -> Optional[Dict[str,
     ]
     for key in sorted(extra_keys):
         interpreted[f"{key}"] = _hex_json_safe(value[key])
+
+    if interpreted.get("3 (signature)") is None and auth_trailing:
+        trailing_map = _decode_trailing_map(auth_trailing)
+        sig_entry = trailing_map.pop(3, None)
+        if sig_entry is not None:
+            sig_bytes = _coerce_cbor_bytes(sig_entry)
+            if sig_bytes is not None:
+                interpreted["3 (signature)"] = sig_bytes.hex()
+        user_entry_trailing = trailing_map.pop(4, None)
+        if user_entry_trailing is not None:
+            interpreted["4 (user)"] = _convert_ctap_user(user_entry_trailing)
+        number_entry = trailing_map.pop(5, None)
+        if number_entry is not None:
+            interpreted["5 (numberOfCredentials)"] = _convert_optional_ctap_field(number_entry)
+        user_selected_entry = trailing_map.pop(6, None)
+        if user_selected_entry is not None:
+            interpreted["6 (userSelected)"] = _convert_optional_ctap_field(user_selected_entry)
+        extensions_entry = trailing_map.pop(8, None)
+        if extensions_entry is not None:
+            interpreted["8 (extensions)"] = _convert_optional_ctap_field(extensions_entry)
+        if trailing_map:
+            interpreted["trailingFields"] = _hex_json_safe(trailing_map)
 
     return interpreted
 
