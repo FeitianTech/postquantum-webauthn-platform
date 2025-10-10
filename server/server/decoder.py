@@ -511,11 +511,14 @@ def _parse_cbor_item(data: bytes, offset: int) -> Tuple[Dict[str, Any], int]:
             raw_segments: List[bytes] = []
             while True:
                 if offset >= len(data):
-                    raise _CborDecodingError("Truncated indefinite byte string.", offset)
+                    break
                 if data[offset] == 0xFF:
                     offset += 1
                     break
-                segment, offset = _parse_cbor_item(data, offset)
+                try:
+                    segment, offset = _parse_cbor_item(data, offset)
+                except _CborDecodingError:
+                    break
                 if segment.get("majorType") != 2:
                     raise _CborDecodingError(
                         "Indefinite byte string segment is not a byte string.", offset
@@ -574,11 +577,14 @@ def _parse_cbor_item(data: bytes, offset: int) -> Tuple[Dict[str, Any], int]:
             text_parts: List[str] = []
             while True:
                 if offset >= len(data):
-                    raise _CborDecodingError("Truncated indefinite text string.", offset)
+                    break
                 if data[offset] == 0xFF:
                     offset += 1
                     break
-                segment, offset = _parse_cbor_item(data, offset)
+                try:
+                    segment, offset = _parse_cbor_item(data, offset)
+                except _CborDecodingError:
+                    break
                 if segment.get("majorType") != 3:
                     raise _CborDecodingError(
                         "Indefinite text string segment is not a text string.", offset
@@ -628,11 +634,14 @@ def _parse_cbor_item(data: bytes, offset: int) -> Tuple[Dict[str, Any], int]:
         if length is None:
             while True:
                 if offset >= len(data):
-                    raise _CborDecodingError("Truncated indefinite array.", offset)
+                    break
                 if data[offset] == 0xFF:
                     offset += 1
                     break
-                item, offset = _parse_cbor_item(data, offset)
+                try:
+                    item, offset = _parse_cbor_item(data, offset)
+                except _CborDecodingError:
+                    break
                 items.append(item)
             length = len(items)
             node = {
@@ -644,7 +653,12 @@ def _parse_cbor_item(data: bytes, offset: int) -> Tuple[Dict[str, Any], int]:
             }
         else:
             for _ in range(length):
-                item, offset = _parse_cbor_item(data, offset)
+                if offset >= len(data):
+                    break
+                try:
+                    item, offset = _parse_cbor_item(data, offset)
+                except _CborDecodingError:
+                    break
                 items.append(item)
             node = {"majorType": 4, "type": "array", "length": length, "items": items}
         node["summary"] = f"array[{node['length']}]"
@@ -656,16 +670,19 @@ def _parse_cbor_item(data: bytes, offset: int) -> Tuple[Dict[str, Any], int]:
         if length is None:
             while True:
                 if offset >= len(data):
-                    raise _CborDecodingError("Truncated indefinite map.", offset)
+                    break
                 if data[offset] == 0xFF:
                     offset += 1
                     break
-                key, offset = _parse_cbor_item(data, offset)
-                if offset >= len(data):
-                    raise _CborDecodingError("Missing value in CBOR map entry.", offset)
-                if data[offset] == 0xFF:
-                    raise _CborDecodingError("Unexpected break code inside CBOR map.", offset)
-                value, offset = _parse_cbor_item(data, offset)
+                try:
+                    key, offset = _parse_cbor_item(data, offset)
+                    if offset >= len(data):
+                        break
+                    if data[offset] == 0xFF:
+                        break
+                    value, offset = _parse_cbor_item(data, offset)
+                except _CborDecodingError:
+                    break
                 entry = {
                     "keySummary": key.get("summary"),
                     "key": key,
@@ -685,8 +702,13 @@ def _parse_cbor_item(data: bytes, offset: int) -> Tuple[Dict[str, Any], int]:
             }
         else:
             for _ in range(length):
-                key, offset = _parse_cbor_item(data, offset)
-                value, offset = _parse_cbor_item(data, offset)
+                if offset >= len(data):
+                    break
+                try:
+                    key, offset = _parse_cbor_item(data, offset)
+                    value, offset = _parse_cbor_item(data, offset)
+                except _CborDecodingError:
+                    break
                 entry = {
                     "keySummary": key.get("summary"),
                     "key": key,
@@ -886,7 +908,7 @@ def _lenient_read_uint(info: int, data: bytes, offset: int) -> Tuple[int, int]:
 
 def _lenient_decode_from(data: bytes, offset: int = 0) -> Tuple[Any, int]:
     if offset >= len(data):
-        raise ValueError("No CBOR data available.")
+        return None, len(data)
 
     initial = data[offset]
     offset += 1
@@ -936,9 +958,10 @@ def _lenient_decode_from(data: bytes, offset: int = 0) -> Tuple[Any, int]:
         raw = data[offset : offset + length]
         offset += length
         try:
-            return raw.decode("utf-8")
+            value = raw.decode("utf-8")
         except UnicodeDecodeError:
-            return raw.decode("utf-8", errors="replace")
+            value = raw.decode("utf-8", errors="replace")
+        return value, offset
 
     if major_type == 4:
         items: List[Any] = []
@@ -948,11 +971,17 @@ def _lenient_decode_from(data: bytes, offset: int = 0) -> Tuple[Any, int]:
                     offset += 1
                     break
                 item, offset = _lenient_decode_from(data, offset)
+                if item is None and offset >= len(data):
+                    break
                 items.append(item)
             return items, offset
         length, offset = _lenient_read_uint(info, data, offset)
         for _ in range(length):
+            if offset >= len(data):
+                break
             item, offset = _lenient_decode_from(data, offset)
+            if item is None and offset >= len(data):
+                break
             items.append(item)
         return items, offset
 
@@ -965,6 +994,8 @@ def _lenient_decode_from(data: bytes, offset: int = 0) -> Tuple[Any, int]:
                     break
                 key, offset = _lenient_decode_from(data, offset)
                 value, offset = _lenient_decode_from(data, offset)
+                if key is None or value is None:
+                    break
                 try:
                     mapping[key] = value
                 except TypeError:
@@ -972,8 +1003,14 @@ def _lenient_decode_from(data: bytes, offset: int = 0) -> Tuple[Any, int]:
             return mapping, offset
         length, offset = _lenient_read_uint(info, data, offset)
         for _ in range(length):
+            if offset >= len(data):
+                break
             key, offset = _lenient_decode_from(data, offset)
+            if key is None and offset >= len(data):
+                break
             value, offset = _lenient_decode_from(data, offset)
+            if value is None and offset >= len(data):
+                break
             try:
                 mapping[key] = value
             except TypeError:
@@ -1193,11 +1230,159 @@ def _merge_ctap_make_credential(
                     "valueSummary": att_structure.get("summary") if isinstance(att_structure, Mapping) else None,
                 }
             structure["length"] = len(entries) if isinstance(entries, list) else structure.get("length", 3)
-            structure = _stringify_mapping_keys(structure)
             value = normalized_value
             return structure, value, extra_structures, extra_values, signature_bytes
 
     return structure, value, extra_structures, extra_values, None
+
+
+def _repair_make_credential_entries(
+    structure: Dict[str, Any],
+    value: Mapping[Any, Any],
+    *,
+    default_alg: int = -50,
+) -> Tuple[Dict[str, Any], Mapping[Any, Any], Optional[bytes]]:
+    if not isinstance(value, dict):
+        return structure, value, None
+
+    signature_key = None
+    signature_node: Optional[Dict[str, Any]] = None
+    entries = structure.get("entries")
+    if isinstance(entries, list):
+        for idx, entry in enumerate(entries):
+            key_info = entry.get("key") if isinstance(entry, Mapping) else None
+            if not isinstance(key_info, Mapping):
+                continue
+            major_type = key_info.get("majorType")
+            if major_type in {2, 7} or (major_type == 0 and key_info.get("value") == 13):
+                signature_key = key_info
+                signature_node = entry
+                entries.pop(idx)
+                break
+
+    signature_bytes: Optional[bytes] = None
+    if signature_key is not None:
+        hex_value = signature_key.get("hex")
+        if isinstance(hex_value, str):
+            try:
+                signature_bytes = bytes.fromhex(hex_value)
+            except ValueError:
+                signature_bytes = None
+
+    polished_value = dict(value)
+    pop_keys: List[Any] = []
+    for key in list(polished_value.keys()):
+        if isinstance(key, (bytes, bytearray)):
+            pop_keys.append(key)
+    for key in pop_keys:
+        polished_value.pop(key, None)
+
+    if 13 in polished_value and 3 not in polished_value:
+        raw_entry = polished_value.pop(13)
+        if isinstance(raw_entry, list):
+            segments: List[bytes] = []
+            alg_candidate: Optional[int] = None
+            for item in raw_entry:
+                if isinstance(item, (bytes, bytearray)):
+                    segments.append(bytes(item))
+                elif isinstance(item, Mapping) and alg_candidate is None:
+                    for possible in item.values():
+                        if isinstance(possible, int):
+                            alg_candidate = possible
+                            break
+            if segments:
+                signature_bytes = b"".join(segments)
+                if alg_candidate is not None:
+                    default_alg = alg_candidate
+
+    if signature_bytes is not None:
+        polished_value[3] = {"sig": signature_bytes, "alg": default_alg}
+        att_stmt_structure, _ = _decode_cbor_structure(
+            cbor.encode({"sig": signature_bytes, "alg": default_alg})
+        )
+        if isinstance(entries, list):
+            entries.append(
+                {
+                    "keySummary": "3",
+                    "key": {"majorType": 0, "type": "unsigned", "value": 3, "summary": "3"},
+                    "value": att_stmt_structure,
+                    "valueSummary": att_stmt_structure.get("summary"),
+                }
+            )
+            structure["length"] = len(entries)
+            structure["summary"] = f"map[{len(entries)}]"
+
+    return structure, polished_value, signature_bytes
+
+
+def _repair_get_assertion_entries(
+    structure: Dict[str, Any],
+    value: Mapping[Any, Any],
+) -> Tuple[Dict[str, Any], Mapping[Any, Any], Optional[bytes]]:
+    if not isinstance(value, dict):
+        return structure, value, None
+
+    signature_entry = None
+    entries = structure.get("entries")
+    if isinstance(entries, list):
+        for idx, entry in enumerate(entries):
+            key_info = entry.get("key") if isinstance(entry, Mapping) else None
+            if not isinstance(key_info, Mapping):
+                continue
+            if key_info.get("majorType") == 2 and isinstance(entry.get("value"), Mapping):
+                signature_entry = (idx, entry)
+                break
+
+    signature_bytes: Optional[bytes] = None
+    user_value: Optional[Any] = None
+
+    if signature_entry is not None:
+        idx, entry = signature_entry
+        key_info = entry.get("key")
+        if isinstance(key_info, Mapping):
+            hex_value = key_info.get("hex")
+            if isinstance(hex_value, str):
+                try:
+                    signature_bytes = bytes.fromhex(hex_value)
+                except ValueError:
+                    signature_bytes = None
+        value_node = entry.get("value")
+        if isinstance(value_node, Mapping):
+            user_value = _structure_to_value(value_node)
+        entries.pop(idx)
+
+    repaired_value = dict(value)
+    if signature_bytes is not None:
+        bytes_keys = [key for key in repaired_value if isinstance(key, (bytes, bytearray))]
+        for key in bytes_keys:
+            repaired_value.pop(key, None)
+        repaired_value[3] = signature_bytes
+        sig_structure, _ = _decode_cbor_structure(cbor.encode(signature_bytes))
+        if isinstance(entries, list):
+            entries.append(
+                {
+                    "keySummary": "3",
+                    "key": {"majorType": 0, "type": "unsigned", "value": 3, "summary": "3"},
+                    "value": sig_structure,
+                    "valueSummary": sig_structure.get("summary"),
+                }
+            )
+    if user_value is not None:
+        repaired_value[4] = user_value
+        user_structure, _ = _decode_cbor_structure(cbor.encode(user_value))
+        if isinstance(entries, list):
+            entries.append(
+                {
+                    "keySummary": "4",
+                    "key": {"majorType": 0, "type": "unsigned", "value": 4, "summary": "4"},
+                    "value": user_structure,
+                    "valueSummary": user_structure.get("summary"),
+                }
+            )
+        structure["length"] = len(entries)
+        structure["summary"] = f"map[{len(entries)}]"
+
+    return structure, repaired_value, signature_bytes
 
 
 def _derive_alg_from_auth_data(auth_data_bytes: Optional[bytes]) -> Optional[int]:
@@ -1323,6 +1508,28 @@ def _try_decode_cbor(data: bytes, encoding: str) -> Optional[Dict[str, Any]]:
                 filtered_values.append(value_entry)
             extra_structures = filtered_structures
             extra_values = filtered_values
+
+    if isinstance(base_value, Mapping):
+        working_value: Mapping[Any, Any] = base_value
+        if any(isinstance(key, (bytes, bytearray)) for key in working_value) or (3 not in working_value and 13 in working_value):
+            base_structure, working_dict, repaired_sig = _repair_make_credential_entries(
+                base_structure, dict(working_value)
+            )
+            if repaired_sig is not None:
+                merged_signature = merged_signature or repaired_sig
+                extra_structures = []
+                extra_values = []
+                working_value = working_dict
+        if any(isinstance(key, (bytes, bytearray)) for key in working_value) or (
+            3 not in working_value and 13 in working_value
+        ):
+            base_structure, working_dict, assertion_sig = _repair_get_assertion_entries(
+                base_structure, dict(working_value)
+            )
+            if assertion_sig is not None:
+                merged_signature = merged_signature or assertion_sig
+                working_value = working_dict
+        base_value = working_value
 
     decoded_payload: Dict[str, Any] = {
         "structure": _stringify_mapping_keys(base_structure),
