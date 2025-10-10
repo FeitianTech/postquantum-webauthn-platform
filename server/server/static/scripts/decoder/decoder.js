@@ -25,10 +25,10 @@ const SPECIAL_LABELS = {
     clientExtensionResults: 'Client extensions',
     cose: 'COSE key',
     counter: 'Counter',
+    expandedJson: 'Expanded JSON',
     decodedValue: 'Decoded value',
     ctap: 'CTAP metadata',
     ctapDecoded: 'CTAP decoded',
-    payloadSummary: 'Payload summary',
     ignoredPaddingBytes: 'Ignored padding bytes',
     trailingBytesHex: 'Trailing bytes (hex)',
     makeCredentialResponse: 'MakeCredential response',
@@ -334,8 +334,9 @@ function buildSections(type, data) {
         'Authenticator data': ['authenticatorData'],
         'WebAuthn client data': ['clientDataJSON'],
         'X.509 certificate': ['raw', 'pem', 'parsedX5c', 'certificates'],
-        'CBOR': ['ctapDecoded', 'decodedValue', 'structure', 'ctap'],
+        'CBOR': ['ctapDecoded', 'expandedJson', 'decodedValue', 'ctap'],
     };
+    const hiddenKeys = new Set();
 
     const usedKeys = new Set();
     const preferredOrder = orderMap[type] || [];
@@ -351,7 +352,7 @@ function buildSections(type, data) {
     });
 
     Object.keys(data).forEach((key) => {
-        if (usedKeys.has(key)) {
+        if (usedKeys.has(key) || hiddenKeys.has(key)) {
             return;
         }
         const section = createSection(key, data[key]);

@@ -93,6 +93,26 @@ def _stringify_mapping_keys(value: Any) -> Any:
     return value
 
 
+def _bytes_to_hex(value: bytes) -> str:
+    return value.hex()
+
+
+def _make_hex_only(value: Any) -> Any:
+    if isinstance(value, ByteBuffer):
+        return value.getvalue().hex()
+    if isinstance(value, (bytes, bytearray, memoryview)):
+        return bytes(value).hex()
+    if isinstance(value, Mapping):
+        return {str(key): _make_hex_only(val) for key, val in value.items()}
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+        return [_make_hex_only(item) for item in value]
+    return value
+
+
+def _hex_json_safe(value: Any) -> Any:
+    return _make_hex_only(value)
+
+
 def _json_safe_with_stringified_keys(value: Any) -> Any:
     return _stringify_mapping_keys(make_json_safe(value))
 
@@ -882,6 +902,21 @@ def _structure_to_value(node: Mapping[str, Any]) -> Any:
     return node.get("value")
 
 
+def _expand_cbor_value(value: Any) -> Any:
+    if isinstance(value, ByteBuffer):
+        return _binary_summary(value.getvalue())
+    if isinstance(value, (bytes, bytearray, memoryview)):
+        return _binary_summary(bytes(value))
+    if isinstance(value, Mapping):
+        expanded: Dict[str, Any] = {}
+        for key, entry in value.items():
+            expanded[str(key)] = _expand_cbor_value(entry)
+        return expanded
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+        return [_expand_cbor_value(item) for item in value]
+    return make_json_safe(value)
+
+
 def _lenient_read_uint(info: int, data: bytes, offset: int) -> Tuple[int, int]:
     if info <= 23:
         return info, offset
@@ -1453,6 +1488,197 @@ def _merge_trailing_signature(
     return updated_structure, updated_value, signature_bytes, b""
 
 
+def _extract_mapping_string(value: Mapping[Any, Any], keys: Iterable[Any]) -> Optional[str]:
+    for key in keys:
+        candidate = value.get(key)
+        if isinstance(candidate, str):
+            stripped = candidate.strip()
+            if stripped:
+                return stripped
+    return None
+
+
+def _extract_mapping_bytes(value: Mapping[Any, Any], keys: Iterable[Any]) -> Optional[bytes]:
+    for key in keys:
+        candidate = value.get(key)
+        candidate_bytes = _coerce_cbor_bytes(candidate)
+        if candidate_bytes is not None:
+            return candidate_bytes
+    return None
+
+
+def _classify_ctap_map(value: Mapping[Any, Any]) -> str:
+    fmt_value = _extract_mapping_string(value, (1, "1", "fmt"))
+    auth_data_bytes = _extract_mapping_bytes(value, (2, "2", "authData"))
+    att_stmt_value = value.get(3) or value.get("3") or value.get("attStmt")
+    att_stmt_bytes = _coerce_cbor_bytes(att_stmt_value)
+    att_stmt_map = att_stmt_value if isinstance(att_stmt_value, Mapping) else None
+
+    if fmt_value is not None and auth_data_bytes is not None and (att_stmt_map is not None or att_stmt_bytes is not None):
+        return "make_credential_output"
+
+    signature_bytes = _extract_mapping_bytes(value, (3, "3", "signature"))
+    if auth_data_bytes is not None and signature_bytes is not None:
+        return "get_assertion_output"
+
+    return "other"
+
+
+def _summarize_bytes_for_json(data: bytes) -> Dict[str, Any]:
+    return {
+        "length": len(data),
+        "hex": data.hex(),
+        "base64": base64.b64encode(data).decode("ascii"),
+        "base64url": encode_base64url(data),
+    }
+
+
+def _format_auth_data_for_expanded_json(auth_data_bytes: bytes) -> Dict[str, Any]:
+    formatted: Dict[str, Any] = {"raw": auth_data_bytes.hex()}
+    try:
+        auth_data = AuthenticatorData(auth_data_bytes)
+    except Exception:
+        formatted["parseError"] = "Unable to interpret authenticator data."
+        return formatted
+
+    formatted["rpIdHash"] = auth_data.rp_id_hash.hex()
+    flags_value = int(auth_data.flags)
+    formatted["flags"] = {
+        "value": flags_value,
+        "bitfield": f"0b{flags_value:08b}",
+        "UP": bool(auth_data.flags & AuthenticatorData.FLAG.UP),
+        "UV": bool(auth_data.flags & AuthenticatorData.FLAG.UV),
+        "BE": bool(auth_data.flags & AuthenticatorData.FLAG.BE),
+        "BS": bool(auth_data.flags & AuthenticatorData.FLAG.BS),
+        "AT": bool(auth_data.flags & AuthenticatorData.FLAG.AT),
+        "ED": bool(auth_data.flags & AuthenticatorData.FLAG.ED),
+    }
+    formatted["signCount"] = auth_data.counter
+
+    credential = getattr(auth_data, "credential_data", None)
+    if credential is not None:
+        cred_payload: Dict[str, Any] = {
+            "aaguid": credential.aaguid.hex(),
+            "credentialId": credential.credential_id.hex(),
+            "credentialPublicKey": _hex_json_safe(dict(credential.public_key)),
+        }
+        formatted["attestedCredentialData"] = cred_payload
+
+    extensions = getattr(auth_data, "extensions", None)
+    if extensions is not None:
+        formatted["extensions"] = _hex_json_safe(extensions)
+
+    return formatted
+
+
+def _format_att_stmt_for_expanded_json(att_stmt: Any) -> Dict[str, Any]:
+    formatted: Dict[str, Any] = {}
+
+    if isinstance(att_stmt, Mapping):
+        for key, value in att_stmt.items():
+            if key == "sig":
+                sig_bytes = _coerce_cbor_bytes(value)
+                if sig_bytes is not None:
+                    formatted["sig"] = sig_bytes.hex()
+                else:
+                    formatted["sig"] = _hex_json_safe(value)
+            elif key == "x5c":
+                formatted["x5c"] = _convert_certificate_chain(value)
+            else:
+                formatted[key] = _hex_json_safe(value)
+        return formatted
+
+    sig_bytes = _coerce_cbor_bytes(att_stmt)
+    if sig_bytes is not None:
+        formatted["sig"] = sig_bytes.hex()
+    elif att_stmt is not None:
+        formatted["value"] = _hex_json_safe(att_stmt)
+
+    return formatted
+
+
+def _build_make_credential_expanded_json(value: Mapping[Any, Any]) -> Dict[str, Any]:
+    result: Dict[str, Any] = {}
+
+    fmt_value = _extract_mapping_string(value, (1, "1", "fmt"))
+    if fmt_value is not None:
+        result["fmt"] = fmt_value
+
+    auth_data_bytes = _extract_mapping_bytes(value, (2, "2", "authData"))
+    if auth_data_bytes is not None:
+        result["authData"] = _format_auth_data_for_expanded_json(auth_data_bytes)
+
+    att_stmt_value = value.get(3) or value.get("3") or value.get("attStmt")
+    if att_stmt_value is not None:
+        result["attStmt"] = _format_att_stmt_for_expanded_json(att_stmt_value)
+
+    optional_labels = {
+        4: "epAtt",
+        "epAtt": "epAtt",
+        5: "largeBlobKey",
+        "largeBlobKey": "largeBlobKey",
+        6: "extensions",
+        "extensions": "extensions",
+    }
+    for key, label in optional_labels.items():
+        if key in value:
+            result[label] = _convert_optional_ctap_field(value[key])
+
+    for key in value:
+        if key in {1, 2, 3, 4, 5, 6, "1", "2", "3", "4", "5", "6", "fmt", "authData", "attStmt"}:
+            continue
+        try:
+            result[str(key)] = _hex_json_safe(value[key])
+        except Exception:
+            continue
+
+    return result
+
+
+def _build_get_assertion_expanded_json(value: Mapping[Any, Any]) -> Dict[str, Any]:
+    result: Dict[str, Any] = {}
+
+    credential_entry = value.get(1) or value.get("1") or value.get("credential")
+    if credential_entry is not None:
+        result["credential"] = _convert_ctap_credential_descriptor(credential_entry)
+
+    auth_data_bytes = _extract_mapping_bytes(value, (2, "2", "authData"))
+    if auth_data_bytes is not None:
+        result["authData"] = _format_auth_data_for_expanded_json(auth_data_bytes)
+
+    signature_bytes = _extract_mapping_bytes(value, (3, "3", "signature"))
+    if signature_bytes is not None:
+        result["signature"] = signature_bytes.hex()
+
+    user_entry = value.get(4) or value.get("4") or value.get("user")
+    if user_entry is not None:
+        result["user"] = _convert_ctap_user(user_entry)
+
+    optional_labels = {
+        5: "numberOfCredentials",
+        6: "userSelected",
+        7: "largeBlobKey",
+        8: "extensions",
+        "numberOfCredentials": "numberOfCredentials",
+        "userSelected": "userSelected",
+        "largeBlobKey": "largeBlobKey",
+        "extensions": "extensions",
+    }
+    for key, label in optional_labels.items():
+        if key in value:
+            result[label] = _convert_optional_ctap_field(value[key])
+
+    for key in value:
+        if key in {1, 2, 3, 4, 5, 6, 7, 8, "1", "2", "3", "4", "5", "6", "7", "8", "credential", "authData", "signature", "user"}:
+            continue
+        try:
+            result[str(key)] = _hex_json_safe(value[key])
+        except Exception:
+            continue
+
+    return result
+
+
 def _try_decode_cbor(data: bytes, encoding: str) -> Optional[Dict[str, Any]]:
     if not data:
         return None
@@ -1461,11 +1687,11 @@ def _try_decode_cbor(data: bytes, encoding: str) -> Optional[Dict[str, Any]]:
     ctap_details = dict(ctap_info) if ctap_info is not None else None
 
     if not payload:
-        structure = {"summary": "Empty CBOR payload", "byteLength": 0}
-        decoded_payload = {"structure": structure}
+        decoded_payload: Dict[str, Any] = {
+            "decodedValue": {"summary": "Empty CBOR payload", "byteLength": 0},
+        }
         if ctap_details is not None:
             ctap_details["payloadLength"] = 0
-            ctap_details["payloadSummary"] = _binary_summary(b"")
             decoded_payload["ctap"] = _stringify_mapping_keys(ctap_details)
         return {
             "format": "CBOR",
@@ -1484,70 +1710,107 @@ def _try_decode_cbor(data: bytes, encoding: str) -> Optional[Dict[str, Any]]:
     extra_values = values[1:]
 
     merged_signature: Optional[bytes] = None
+    classification = "other"
     if isinstance(base_value, Mapping):
         base_structure, base_value, extra_structures, extra_values, merged_signature = _merge_ctap_make_credential(
             base_structure, base_value, extra_structures, extra_values
         )
-        trailing_signature_result = _merge_trailing_signature(base_structure, base_value, remaining)
-        if trailing_signature_result is not None:
-            base_structure, base_value, signature_bytes, remaining = trailing_signature_result
-            merged_signature = signature_bytes
-            consumed_total += len(signature_bytes)
-
-        if extra_structures and extra_values:
-            filtered_structures: List[Dict[str, Any]] = []
-            filtered_values: List[Any] = []
-            for struct_entry, value_entry in zip(extra_structures, extra_values):
-                if (
-                    isinstance(struct_entry, Mapping)
-                    and struct_entry.get("type") == "simple"
-                    and struct_entry.get("summary") == "simple(7)"
-                ):
-                    continue
-                filtered_structures.append(struct_entry)
-                filtered_values.append(value_entry)
-            extra_structures = filtered_structures
-            extra_values = filtered_values
-
-    if isinstance(base_value, Mapping):
         working_value: Mapping[Any, Any] = base_value
-        if any(isinstance(key, (bytes, bytearray)) for key in working_value) or (3 not in working_value and 13 in working_value):
-            base_structure, working_dict, repaired_sig = _repair_make_credential_entries(
-                base_structure, dict(working_value)
+
+        fmt_candidate = _extract_mapping_string(working_value, (1, "1", "fmt"))
+        auth_candidate = _extract_mapping_bytes(working_value, (2, "2", "authData"))
+
+        if fmt_candidate is not None and auth_candidate is not None:
+            temp_structure = dict(base_structure)
+            entries = base_structure.get("entries")
+            if isinstance(entries, list):
+                temp_structure["entries"] = [dict(entry) for entry in entries]
+            temp_value = dict(working_value)
+            temp_structure, temp_value, repaired_sig = _repair_make_credential_entries(
+                temp_structure, temp_value
             )
-            if repaired_sig is not None:
-                merged_signature = merged_signature or repaired_sig
+            att_stmt_candidate = temp_value.get(3) or temp_value.get("3")
+            if isinstance(att_stmt_candidate, Mapping) and "sig" in att_stmt_candidate:
+                classification = "make_credential_output"
+                base_structure = temp_structure
+                working_value = temp_value
+                if repaired_sig is not None:
+                    merged_signature = merged_signature or repaired_sig
+
+                trailing_signature_result = _merge_trailing_signature(base_structure, working_value, remaining)
+                if trailing_signature_result is not None:
+                    base_structure, working_value, signature_bytes, remaining = trailing_signature_result
+                    merged_signature = signature_bytes
+                    consumed_total += len(signature_bytes)
                 extra_structures = []
                 extra_values = []
-                working_value = working_dict
-        if any(isinstance(key, (bytes, bytearray)) for key in working_value) or (
-            3 not in working_value and 13 in working_value
-        ):
-            base_structure, working_dict, assertion_sig = _repair_get_assertion_entries(
+            else:
+                classification = _classify_ctap_map(working_value)
+        else:
+            classification = _classify_ctap_map(working_value)
+
+        if classification == "get_assertion_output":
+            base_structure, working_value, assertion_sig = _repair_get_assertion_entries(
                 base_structure, dict(working_value)
             )
             if assertion_sig is not None:
                 merged_signature = merged_signature or assertion_sig
-                working_value = working_dict
+            extra_structures = []
+            extra_values = []
+        elif classification == "other" and fmt_candidate is None:
+            temp_structure = dict(base_structure)
+            entries = base_structure.get("entries")
+            if isinstance(entries, list):
+                temp_structure["entries"] = [dict(entry) for entry in entries]
+            temp_value = dict(working_value)
+            temp_structure, temp_value, assertion_sig = _repair_get_assertion_entries(
+                temp_structure, temp_value
+            )
+            if assertion_sig is not None:
+                classification = "get_assertion_output"
+                base_structure = temp_structure
+                working_value = temp_value
+                merged_signature = merged_signature or assertion_sig
+                extra_structures = []
+                extra_values = []
+        if classification == "other" and fmt_candidate is None and auth_candidate is not None:
+            if ctap_details is not None and ctap_details.get("kind") == "status":
+                classification = "get_assertion_output"
+
         base_value = working_value
 
-    decoded_payload: Dict[str, Any] = {
-        "structure": _stringify_mapping_keys(base_structure),
-    }
+    decoded_payload: Dict[str, Any] = {}
+
+    expanded_json: Optional[Dict[str, Any]] = None
+    ctap_decoded: Optional[Dict[str, Any]] = None
+    hex_decoded_value: Optional[Any] = None
 
     if isinstance(base_value, Mapping):
-        decoded_payload["decodedValue"] = _json_safe_with_stringified_keys(base_value)
+        hex_decoded_value = _hex_json_safe(base_value)
         interpreted = _interpret_ctap_cbor_value(base_value)
         if interpreted is not None:
-            decoded_payload["ctapDecoded"] = _json_safe_with_stringified_keys(interpreted)
+            ctap_decoded = _stringify_mapping_keys(_hex_json_safe(interpreted))
+
+        if classification == "make_credential_output":
+            expanded_json = _build_make_credential_expanded_json(base_value)
+        elif classification == "get_assertion_output":
+            expanded_json = _build_get_assertion_expanded_json(base_value)
     elif base_value is not None:
-        decoded_payload["decodedValue"] = _json_safe_with_stringified_keys(base_value)
+        hex_decoded_value = _hex_json_safe(base_value)
+
+    if ctap_decoded is not None:
+        decoded_payload["ctapDecoded"] = ctap_decoded
+
+    if expanded_json:
+        decoded_payload["expandedJson"] = _stringify_mapping_keys(_hex_json_safe(expanded_json))
+
+    if ctap_decoded is None and hex_decoded_value is not None:
+        decoded_payload["decodedValue"] = _stringify_mapping_keys(_hex_json_safe(hex_decoded_value))
 
     warnings: List[str] = []
 
     if ctap_details is not None:
         ctap_details["payloadLength"] = consumed_total
-        ctap_details["payloadSummary"] = _binary_summary(payload[:consumed_total])
         if merged_signature is not None:
             ctap_details["signatureLength"] = len(merged_signature)
 
@@ -1597,18 +1860,13 @@ def _interpret_make_credential_map(value: Mapping[Any, Any]) -> Optional[Dict[st
     fmt = value.get(1)
     auth_data_bytes = _coerce_cbor_bytes(value.get(2))
     att_stmt = value.get(3)
-    if not isinstance(fmt, str) or auth_data_bytes is None or att_stmt is None:
+    if not isinstance(fmt, str) or not fmt.strip() or auth_data_bytes is None or not isinstance(att_stmt, Mapping):
         return None
 
     interpreted: Dict[str, Any] = {}
     interpreted["1 (fmt)"] = fmt
 
-    try:
-        auth_data_details = dict(_describe_authenticator_data_bytes(auth_data_bytes))
-    except Exception:
-        auth_data_details = {"raw": _binary_summary(auth_data_bytes)}
-    else:
-        auth_data_details.setdefault("raw", _binary_summary(auth_data_bytes))
+    auth_data_details = _format_auth_data_for_expanded_json(auth_data_bytes)
     interpreted["2 (authData)"] = auth_data_details
 
     if isinstance(att_stmt, Mapping):
@@ -1616,10 +1874,10 @@ def _interpret_make_credential_map(value: Mapping[Any, Any]) -> Optional[Dict[st
         sig_value = att_stmt.get("sig")
         sig_bytes = _coerce_cbor_bytes(sig_value)
         if sig_bytes is not None:
-            att_stmt_details["sig"] = _binary_summary(sig_bytes)
+            att_stmt_details["sig"] = sig_bytes.hex()
         interpreted["3 (attStmt)"] = att_stmt_details
     else:
-        interpreted["3 (attStmt)"] = make_json_safe(att_stmt)
+        interpreted["3 (attStmt)"] = _hex_json_safe(att_stmt)
 
     optional_labels = {
         4: "epAtt",
@@ -1636,7 +1894,7 @@ def _interpret_make_credential_map(value: Mapping[Any, Any]) -> Optional[Dict[st
         if isinstance(key, int) and key not in {1, 2, 3, 4, 5, 6}
     ]
     for key in sorted(extra_keys):
-        interpreted[f"{key}"] = make_json_safe(value[key])
+        interpreted[f"{key}"] = _hex_json_safe(value[key])
 
     return interpreted
 
@@ -1653,11 +1911,10 @@ def _interpret_get_assertion_map(value: Mapping[Any, Any]) -> Optional[Dict[str,
     if credential_entry is not None:
         interpreted["1 (credential)"] = _convert_ctap_credential_descriptor(credential_entry)
 
-    auth_data_details = dict(_describe_authenticator_data_bytes(auth_data_bytes))
-    auth_data_details.setdefault("raw", _binary_summary(auth_data_bytes))
+    auth_data_details = _format_auth_data_for_expanded_json(auth_data_bytes)
     interpreted["2 (authData)"] = auth_data_details
 
-    interpreted["3 (signature)"] = _binary_summary(signature_bytes)
+    interpreted["3 (signature)"] = signature_bytes.hex()
 
     user_entry = value.get(4)
     if user_entry is not None:
@@ -1679,7 +1936,7 @@ def _interpret_get_assertion_map(value: Mapping[Any, Any]) -> Optional[Dict[str,
         if isinstance(key, int) and key not in {1, 2, 3, 4, 5, 6, 7, 8}
     ]
     for key in sorted(extra_keys):
-        interpreted[f"{key}"] = make_json_safe(value[key])
+        interpreted[f"{key}"] = _hex_json_safe(value[key])
 
     return interpreted
 
@@ -1687,8 +1944,8 @@ def _interpret_get_assertion_map(value: Mapping[Any, Any]) -> Optional[Dict[str,
 def _convert_optional_ctap_field(value: Any) -> Any:
     data_bytes = _coerce_cbor_bytes(value)
     if data_bytes is not None:
-        return _binary_summary(data_bytes)
-    return make_json_safe(value)
+        return data_bytes.hex()
+    return _hex_json_safe(value)
 
 
 def _convert_ctap_credential_descriptor(entry: Any) -> Any:
@@ -1702,20 +1959,20 @@ def _convert_ctap_credential_descriptor(entry: Any) -> Any:
     id_value = entry.get("id") or entry.get(1)
     id_bytes = _coerce_cbor_bytes(id_value)
     if id_bytes is not None:
-        descriptor["id"] = _binary_summary(id_bytes)
+        descriptor["id"] = id_bytes.hex()
 
     type_value = entry.get("type") or entry.get(2)
     if type_value is not None:
-        descriptor["type"] = make_json_safe(type_value)
+        descriptor["type"] = _hex_json_safe(type_value)
 
     transports_value = entry.get("transports") or entry.get(3)
     if transports_value is not None:
-        descriptor["transports"] = make_json_safe(transports_value)
+        descriptor["transports"] = _hex_json_safe(transports_value)
 
     for key in entry:
         if key in {"id", "type", "transports"} or key in {1, 2, 3}:
             continue
-        descriptor[str(key)] = make_json_safe(entry[key])
+        descriptor[str(key)] = _hex_json_safe(entry[key])
 
     return descriptor
 
@@ -1731,24 +1988,24 @@ def _convert_ctap_user(entry: Any) -> Any:
     id_value = entry.get("id") or entry.get(1)
     id_bytes = _coerce_cbor_bytes(id_value)
     if id_bytes is not None:
-        user["id"] = _binary_summary(id_bytes)
+        user["id"] = id_bytes.hex()
 
     name_value = entry.get("name") or entry.get(2)
     if name_value is not None:
-        user["name"] = make_json_safe(name_value)
+        user["name"] = _hex_json_safe(name_value)
 
     display_name_value = entry.get("displayName") or entry.get(3)
     if display_name_value is not None:
-        user["displayName"] = make_json_safe(display_name_value)
+        user["displayName"] = _hex_json_safe(display_name_value)
 
     icon_value = entry.get("icon") or entry.get(4)
     if icon_value is not None:
-        user["icon"] = make_json_safe(icon_value)
+        user["icon"] = _hex_json_safe(icon_value)
 
     for key in entry:
         if key in {"id", "name", "displayName", "icon"} or key in {1, 2, 3, 4}:
             continue
-        user[str(key)] = make_json_safe(entry[key])
+        user[str(key)] = _hex_json_safe(entry[key])
 
     return user
 
@@ -1982,6 +2239,12 @@ def _build_decoder_payload(result: Dict[str, Any]) -> Dict[str, Any]:
                     qualifiers.append("MakeCredential response")
                 if "getAssertionResponse" in ctap_decoded:
                     qualifiers.append("GetAssertion response")
+            expanded_json = decoded.get("expandedJson")
+            if isinstance(expanded_json, Mapping):
+                if "attStmt" in expanded_json and "MakeCredential response" not in qualifiers:
+                    qualifiers.append("MakeCredential response")
+                if "signature" in expanded_json and "GetAssertion response" not in qualifiers:
+                    qualifiers.append("GetAssertion response")
         if qualifiers:
             unique = []
             for qualifier in qualifiers:
@@ -2016,17 +2279,17 @@ def _convert_result_to_data(base_type: str, result: Dict[str, Any]) -> Any:
             payload: Dict[str, Any] = {}
             if "ctap" in decoded:
                 payload["ctap"] = _stringify_mapping_keys(make_json_safe(decoded["ctap"]))
-            if "structure" in decoded:
-                payload["structure"] = _stringify_mapping_keys(
-                    make_json_safe(decoded["structure"])
+            if "expandedJson" in decoded:
+                payload["expandedJson"] = _stringify_mapping_keys(
+                    _hex_json_safe(decoded["expandedJson"])
                 )
             if "decodedValue" in decoded:
                 payload["decodedValue"] = _stringify_mapping_keys(
-                    make_json_safe(decoded["decodedValue"])
+                    _hex_json_safe(decoded["decodedValue"])
                 )
             if "ctapDecoded" in decoded:
                 payload["ctapDecoded"] = _stringify_mapping_keys(
-                    make_json_safe(decoded["ctapDecoded"])
+                    _hex_json_safe(decoded["ctapDecoded"])
                 )
             if not payload:
                 payload["cbor"] = make_json_safe(decoded)
@@ -2239,7 +2502,7 @@ def _convert_attestation_statement(details: Any) -> Dict[str, Any]:
         if key == "x5c":
             payload["x5c"] = _convert_certificate_chain(value)
         else:
-            payload[key] = make_json_safe(value)
+            payload[key] = _hex_json_safe(value)
     return payload
 
 
@@ -2306,7 +2569,7 @@ def _convert_certificate_payload(
         payload["pem"] = pem_value
 
     parsed_entry = {key: value for key, value in entry.items() if key != "summary"}
-    payload["parsedX5c"] = make_json_safe(parsed_entry)
+    payload["parsedX5c"] = _hex_json_safe(parsed_entry)
 
     return payload
 
@@ -2706,8 +2969,8 @@ def _format_json_summary(result: Dict[str, Any]) -> List[str]:
 
 def _format_cbor_summary(result: Dict[str, Any]) -> List[str]:
     decoded = result.get("decoded") if isinstance(result.get("decoded"), Mapping) else {}
-    structure = decoded.get("structure") if isinstance(decoded, Mapping) else None
     decoded_value = decoded.get("decodedValue") if isinstance(decoded, Mapping) else None
+    expanded_json = decoded.get("expandedJson") if isinstance(decoded, Mapping) else None
     ctap_info = decoded.get("ctap") if isinstance(decoded, Mapping) else None
     ctap_decoded = decoded.get("ctapDecoded") if isinstance(decoded, Mapping) else None
 
@@ -2726,20 +2989,6 @@ def _format_cbor_summary(result: Dict[str, Any]) -> List[str]:
         if payload_length is not None:
             _append_simple_field(lines, "CBOR payload length", payload_length)
 
-    if isinstance(structure, Mapping):
-        summary = structure.get("summary")
-        if isinstance(summary, str) and summary:
-            lines.append(f"Summary:\t{summary}")
-        structure_lines = _format_json_block(structure)
-        _append_multiline_field(lines, "Structure", structure_lines, indent_str="  ")
-    else:
-        json_lines = _format_json_block(decoded)
-        _append_multiline_field(lines, "CBOR", json_lines, indent_str="  ")
-
-    if decoded_value is not None:
-        value_lines = _format_json_block(decoded_value)
-        _append_multiline_field(lines, "Decoded value", value_lines, indent_str="  ")
-
     if isinstance(ctap_decoded, Mapping) and ctap_decoded:
         response_labels: List[str] = []
         if "makeCredentialResponse" in ctap_decoded:
@@ -2750,6 +2999,17 @@ def _format_cbor_summary(result: Dict[str, Any]) -> List[str]:
             lines.append(f"CTAP interpretation:\t{', '.join(response_labels)}")
         interpreted_lines = _format_json_block(ctap_decoded)
         _append_multiline_field(lines, "CTAP decoded", interpreted_lines, indent_str="  ")
+
+    if isinstance(expanded_json, Mapping):
+        expanded_lines = _format_json_block(expanded_json)
+        _append_multiline_field(lines, "Expanded JSON", expanded_lines, indent_str="  ")
+
+    if decoded_value is not None:
+        value_lines = _format_json_block(decoded_value)
+        _append_multiline_field(lines, "Decoded value", value_lines, indent_str="  ")
+    elif decoded and not expanded_json and not ctap_decoded:
+        json_lines = _format_json_block(decoded)
+        _append_multiline_field(lines, "CBOR", json_lines, indent_str="  ")
 
     return lines
 
