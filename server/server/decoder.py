@@ -812,20 +812,80 @@ def _merge_ctap_make_credential(
 ) -> Tuple[Dict[str, Any], Mapping[Any, Any], List[Dict[str, Any]], List[Any], Optional[bytes]]:
     signature_bytes: Optional[bytes] = None
 
-    if isinstance(value, Mapping) and "al&" in value and value.get("al&") == "sig":
-        if extra_values and isinstance(extra_values[0], (bytes, bytearray)):
-            signature_bytes = bytes(extra_values[0])
-            extra_values = extra_values[1:]
-            if extra_structures:
-                extra_structures = extra_structures[1:]
+    if isinstance(value, Mapping) and value.get("al&") == "sig":
+        normalized_value = dict(value)
+        normalized_value.pop("al&", None)
+
+        def _extract_alg(mapping: Mapping[Any, Any]) -> Optional[int]:
+            for key in ("alg", "algorithm", 1, "1", 3, "3"):
+                raw = mapping.get(key)
+                if isinstance(raw, int):
+                    return raw
+            return None
+
+        def _extract_sig(mapping: Mapping[Any, Any]) -> Optional[bytes]:
+            for key in ("sig", "signature", 2, "2", 3, "3"):
+                if key in mapping:
+                    coerced = _coerce_cbor_bytes(mapping[key])
+                    if coerced is not None:
+                        return coerced
+            return None
+
+        alg_value = _extract_alg(normalized_value)
+        truncated_sig = _coerce_cbor_bytes(normalized_value.pop("sig", None))
+        if truncated_sig is None:
+            truncated_sig = _coerce_cbor_bytes(normalized_value.pop("signature", None))
+        normalized_value.pop("alg", None)
+        normalized_value.pop("algorithm", None)
+        normalized_value.pop("attStmt", None)
+        normalized_value.pop("attstmt", None)
+
+        att_structure_override: Optional[Dict[str, Any]] = None
+        att_stmt_base: Optional[Mapping[Any, Any]] = None
+
+        if extra_values:
+            candidate = extra_values[0]
+            if isinstance(candidate, Mapping):
+                candidate_alg = _extract_alg(candidate)
+                candidate_sig = _extract_sig(candidate)
+                if candidate_alg is not None or candidate_sig is not None:
+                    alg_value = candidate_alg if candidate_alg is not None else alg_value
+                    if candidate_sig is not None:
+                        signature_bytes = candidate_sig
+                    att_stmt_base = candidate
+                    extra_values = extra_values[1:]
+                    if extra_structures:
+                        att_structure_override = extra_structures[0]
+                        extra_structures = extra_structures[1:]
+            elif isinstance(candidate, (bytes, bytearray, memoryview, ByteBuffer)):
+                signature_bytes = _coerce_cbor_bytes(candidate)
+                extra_values = extra_values[1:]
+                if extra_structures:
+                    extra_structures = extra_structures[1:]
+
+        if signature_bytes is None:
+            signature_bytes = truncated_sig
 
         if signature_bytes is not None:
-            att_stmt = {"alg": -7, "sig": signature_bytes}
-            normalized_value = dict(value)
-            normalized_value.pop("al&", None)
+            if alg_value is None:
+                alg_value = -7
+
+            if att_stmt_base is not None:
+                att_stmt = dict(att_stmt_base)
+                att_stmt.pop("sig", None)
+                att_stmt.pop("signature", None)
+                att_stmt.pop("alg", None)
+                att_stmt.pop("algorithm", None)
+                att_stmt["alg"] = alg_value
+                att_stmt["sig"] = signature_bytes
+            else:
+                att_stmt = {"alg": alg_value, "sig": signature_bytes}
             normalized_value[3] = att_stmt
 
-            att_structure, _ = _decode_cbor_structure(cbor.encode(att_stmt))
+            if isinstance(att_structure_override, Mapping):
+                att_structure = att_structure_override
+            else:
+                att_structure, _ = _decode_cbor_structure(cbor.encode(att_stmt))
 
             entries = structure.get("entries")
             if isinstance(entries, list) and entries:
@@ -833,7 +893,7 @@ def _merge_ctap_make_credential(
                     "keySummary": "3",
                     "key": {"majorType": 0, "type": "unsigned", "value": 3, "summary": "3"},
                     "value": att_structure,
-                    "valueSummary": att_structure.get("summary"),
+                    "valueSummary": att_structure.get("summary") if isinstance(att_structure, Mapping) else None,
                 }
             structure["length"] = len(entries) if isinstance(entries, list) else structure.get("length", 3)
             structure = _stringify_mapping_keys(structure)
