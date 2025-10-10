@@ -91,12 +91,6 @@ def _stringify_mapping_keys(value: Any) -> Any:
     if isinstance(value, list):
         return [_stringify_mapping_keys(item) for item in value]
     return value
-
-
-def _bytes_to_hex(value: bytes) -> str:
-    return value.hex()
-
-
 def _make_hex_only(value: Any) -> Any:
     if isinstance(value, ByteBuffer):
         return value.getvalue().hex()
@@ -1951,9 +1945,9 @@ def _convert_optional_ctap_field(value: Any) -> Any:
 def _convert_ctap_credential_descriptor(entry: Any) -> Any:
     data_bytes = _coerce_cbor_bytes(entry)
     if data_bytes is not None:
-        return _binary_summary(data_bytes)
+        return data_bytes.hex()
     if not isinstance(entry, Mapping):
-        return make_json_safe(entry)
+        return _hex_json_safe(entry)
 
     descriptor: Dict[str, Any] = {}
     id_value = entry.get("id") or entry.get(1)
@@ -1980,9 +1974,9 @@ def _convert_ctap_credential_descriptor(entry: Any) -> Any:
 def _convert_ctap_user(entry: Any) -> Any:
     data_bytes = _coerce_cbor_bytes(entry)
     if data_bytes is not None:
-        return _binary_summary(data_bytes)
+        return data_bytes.hex()
     if not isinstance(entry, Mapping):
-        return make_json_safe(entry)
+        return _hex_json_safe(entry)
 
     user: Dict[str, Any] = {}
     id_value = entry.get("id") or entry.get(1)
@@ -2277,8 +2271,10 @@ def _convert_result_to_data(base_type: str, result: Dict[str, Any]) -> Any:
         decoded = result.get("decoded")
         if isinstance(decoded, Mapping):
             payload: Dict[str, Any] = {}
-            if "ctap" in decoded:
-                payload["ctap"] = _stringify_mapping_keys(make_json_safe(decoded["ctap"]))
+            if "ctapDecoded" in decoded:
+                payload["ctapDecoded"] = _stringify_mapping_keys(
+                    _hex_json_safe(decoded["ctapDecoded"])
+                )
             if "expandedJson" in decoded:
                 payload["expandedJson"] = _stringify_mapping_keys(
                     _hex_json_safe(decoded["expandedJson"])
@@ -2287,10 +2283,8 @@ def _convert_result_to_data(base_type: str, result: Dict[str, Any]) -> Any:
                 payload["decodedValue"] = _stringify_mapping_keys(
                     _hex_json_safe(decoded["decodedValue"])
                 )
-            if "ctapDecoded" in decoded:
-                payload["ctapDecoded"] = _stringify_mapping_keys(
-                    _hex_json_safe(decoded["ctapDecoded"])
-                )
+            if "ctap" in decoded:
+                payload["ctap"] = _stringify_mapping_keys(make_json_safe(decoded["ctap"]))
             if not payload:
                 payload["cbor"] = make_json_safe(decoded)
             return payload
