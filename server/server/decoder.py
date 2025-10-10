@@ -11,8 +11,10 @@ import string
 import struct
 import uuid
 from datetime import datetime, timezone
+from io import BytesIO
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
 
+import cbor2
 from cryptography import x509
 from cryptography.x509.oid import ExtensionOID
 from fido2 import cbor
@@ -758,10 +760,22 @@ def _decode_cbor_sequence(payload: bytes) -> Tuple[List[Dict[str, Any]], List[An
     remaining = payload
 
     while remaining:
+        consumed_value: Optional[int] = None
         try:
             value, rest_after_value = cbor.decode_from(remaining)
             consumed_value = len(remaining) - len(rest_after_value)
         except Exception:
+            try:
+                fp = BytesIO(remaining)
+                decoder = cbor2.CBORDecoder(fp)
+                value = decoder.decode()
+            except Exception:
+                break
+            else:
+                consumed_value = fp.tell()
+                rest_after_value = remaining[consumed_value:]
+
+        if consumed_value is None or consumed_value <= 0:
             break
 
         try:
@@ -775,6 +789,9 @@ def _decode_cbor_sequence(payload: bytes) -> Tuple[List[Dict[str, Any]], List[An
                 "byteLength": consumed_value,
             }
             consumed = consumed_value
+        else:
+            if consumed <= 0:
+                consumed = consumed_value
 
         if consumed <= 0:
             break
