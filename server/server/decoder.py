@@ -2347,18 +2347,18 @@ def _try_decode_cbor(data: bytes, encoding: str) -> Optional[Dict[str, Any]]:
 
 def _interpret_ctap_cbor_value(value: Any) -> Optional[Dict[str, Any]]:
     if isinstance(value, Mapping):
-        interpreted = _interpret_make_credential_request_map(value)
-        if interpreted is not None:
-            return {"makeCredentialRequest": interpreted}
-        interpreted = _interpret_get_assertion_request_map(value)
-        if interpreted is not None:
-            return {"getAssertionRequest": interpreted}
         interpreted = _interpret_make_credential_map(value)
         if interpreted is not None:
             return {"makeCredentialResponse": interpreted}
         interpreted = _interpret_get_assertion_map(value)
         if interpreted is not None:
             return {"getAssertionResponse": interpreted}
+        interpreted = _interpret_make_credential_request_map(value)
+        if interpreted is not None:
+            return {"makeCredentialRequest": interpreted}
+        interpreted = _interpret_get_assertion_request_map(value)
+        if interpreted is not None:
+            return {"getAssertionRequest": interpreted}
     return None
 
 
@@ -2367,10 +2367,14 @@ def _interpret_make_credential_map(value: Mapping[Any, Any]) -> Optional[Dict[st
     fmt = fmt if fmt is not _MISSING else None
     auth_data_entry = _get_mapping_entry(value, 2, "2", "authData")
     auth_data_bytes = _coerce_cbor_bytes(auth_data_entry)
-    att_stmt = _get_mapping_entry(value, 3, "3", "attStmt")
-    if att_stmt is _MISSING:
-        att_stmt = None
-    if not isinstance(fmt, str) or not fmt.strip() or auth_data_bytes is None or not isinstance(att_stmt, Mapping):
+    att_stmt_entry = _get_mapping_entry(value, 3, "3", "attStmt")
+    if att_stmt_entry is _MISSING:
+        att_stmt_entry = None
+    att_stmt_bytes = _coerce_cbor_bytes(att_stmt_entry)
+    att_stmt_map = att_stmt_entry if isinstance(att_stmt_entry, Mapping) else None
+    if not isinstance(fmt, str) or not fmt.strip() or auth_data_bytes is None:
+        return None
+    if att_stmt_map is None and att_stmt_bytes is None and att_stmt_entry is not None:
         return None
 
     interpreted: Dict[str, Any] = {}
@@ -2383,15 +2387,18 @@ def _interpret_make_credential_map(value: Mapping[Any, Any]) -> Optional[Dict[st
         if trailing_map:
             interpreted["2 (authData trailing)"] = _hex_json_safe(trailing_map)
 
-    if isinstance(att_stmt, Mapping):
-        att_stmt_details = _convert_attestation_statement({"attestationStatement": att_stmt})
-        sig_value = att_stmt.get("sig")
+    if isinstance(att_stmt_map, Mapping):
+        att_stmt_details = _convert_attestation_statement({"attestationStatement": att_stmt_map})
+        sig_value = att_stmt_map.get("sig")
         sig_bytes = _coerce_cbor_bytes(sig_value)
         if sig_bytes is not None:
             att_stmt_details["sig"] = sig_bytes.hex()
         interpreted["3 (attStmt)"] = att_stmt_details
     else:
-        interpreted["3 (attStmt)"] = _hex_json_safe(att_stmt)
+        if att_stmt_bytes is not None:
+            interpreted["3 (attStmt)"] = att_stmt_bytes.hex()
+        else:
+            interpreted["3 (attStmt)"] = _hex_json_safe(att_stmt_entry)
 
     optional_labels = {
         4: "epAtt",
@@ -3243,7 +3250,8 @@ def _build_authenticator_data_payload(
 
     flags_info = details.get("flags") if isinstance(details, Mapping) else None
     flags_byte = auth_bytes[32] if auth_bytes is not None and len(auth_bytes) > 32 else None
-    flags_payload = _build_flag_payload(flags_info, flags_byte)
+    auth_length = len(auth_bytes) if auth_bytes is not None else None
+    flags_payload = _build_flag_payload(flags_info, flags_byte, auth_length)
     if flags_payload:
         payload["flags"] = flags_payload
 
@@ -3270,8 +3278,15 @@ def _build_authenticator_data_payload(
     return payload
 
 
-def _build_flag_payload(flag_details: Any, flags_byte: Optional[int]) -> Dict[str, Any]:
+def _build_flag_payload(
+    flag_details: Any,
+    flags_byte: Optional[int],
+    auth_byte_length: Optional[int] = None,
+) -> Dict[str, Any]:
     if flag_details is None and flags_byte is None:
+        return {}
+
+    if flag_details is None and auth_byte_length is not None and auth_byte_length < 37:
         return {}
 
     payload: Dict[str, Any] = {}

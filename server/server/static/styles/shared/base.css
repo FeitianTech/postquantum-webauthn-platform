@@ -441,6 +441,21 @@ body.modal-open {
     margin-top: 0.6rem;
 }
 
+.decoder-expanded-json {
+    font-family: var(--font-monospace, 'SFMono-Regular', Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace);
+    font-size: 0.9rem;
+    line-height: 1.45;
+    min-height: 14rem;
+    width: 100%;
+    resize: vertical;
+    background: rgba(15, 39, 64, 0.04);
+    border-radius: 14px;
+    border: 1px solid rgba(0, 114, 206, 0.18);
+    color: var(--primary-dark);
+    padding: 0.75rem 0.85rem;
+    overflow-y: hidden;
+}
+
 .decoder-definition {
     margin: 0;
     display: grid;

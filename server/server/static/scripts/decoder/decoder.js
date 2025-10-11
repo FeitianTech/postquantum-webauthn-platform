@@ -374,7 +374,11 @@ function createSection(key, value) {
 
     const body = document.createElement('div');
     body.className = 'decoder-section-body';
-    body.appendChild(renderValue(value));
+    if (key === 'expandedJson') {
+        body.appendChild(renderExpandedJson(value));
+    } else {
+        body.appendChild(renderValue(value));
+    }
     section.appendChild(body);
 
     return section;
@@ -453,6 +457,26 @@ function renderValue(value) {
     span.className = 'decoder-primitive';
     span.textContent = String(value);
     return span;
+}
+
+function renderExpandedJson(value) {
+    const textarea = document.createElement('textarea');
+    textarea.className = 'form-control decoder-expanded-json';
+    textarea.setAttribute('readonly', '');
+    textarea.setAttribute('spellcheck', 'false');
+    textarea.wrap = 'off';
+
+    const payload = { 'decoded json': value === undefined ? null : value };
+    try {
+        textarea.value = JSON.stringify(payload, null, 2);
+    } catch (error) {
+        textarea.value = 'Unable to render expanded JSON';
+    }
+
+    autoSizeRawTextarea(textarea);
+    resetScrollPosition(textarea);
+
+    return textarea;
 }
 
 function formatKey(key) {
