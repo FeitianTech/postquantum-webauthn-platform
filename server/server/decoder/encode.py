@@ -4,14 +4,16 @@ from __future__ import annotations
 import base64
 import binascii
 import json
+import math
 import re
 import string
+import struct
 import textwrap
 from collections import deque
 from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
 
 import cbor2
-from cbor2 import CBORTag, undefined
+from cbor2 import CBORTag, CBORSimpleValue, undefined
 
 from ..attestation import make_json_safe, serialize_attestation_certificate
 from .decode import (
@@ -750,6 +752,8 @@ class _CanonicalCBOREncoder:
     def _encode(self, value: Any) -> bytes:
         if isinstance(value, Mapping):
             return self._encode_map(value)
+        if isinstance(value, CBORSimpleValue):
+            return self._encode_cbor_simple_value(value)
         if isinstance(value, (list, tuple)):
             return self._encode_array(value)
         if isinstance(value, CBORTag):
@@ -763,14 +767,30 @@ class _CanonicalCBOREncoder:
             return b"\xf6"
         if value is undefined:
             return b"\xf7"
-        if isinstance(value, (bytearray, memoryview)):
-            value = bytes(value)
+        if isinstance(value, int):
+            return self._encode_int(value)
+        if isinstance(value, float):
+            return _encode_canonical_float(value)
+        if isinstance(value, (bytes, bytearray, memoryview)):
+            return self._encode_bytes(value)
+        if isinstance(value, str):
+            return self._encode_text(value)
+        if isinstance(value, CBORSimpleValue):
+            return self._encode_cbor_simple_value(value)
+
+        # Fall back to cbor2 for less common types (e.g. decimal.Decimal, datetime).
+        # The canonical flag preserves determinism while allowing extended values.
         return cbor2.dumps(value, canonical=True)
 
     def _encode_array(self, values: Iterable[Any]) -> bytes:
         encoded_items = [self._encode(item) for item in values]
         prefix = _encode_major_type_with_length(4, len(encoded_items))
         return prefix + b"".join(encoded_items)
+
+    def _encode_bytes(self, value: Any) -> bytes:
+        data = bytes(value)
+        prefix = _encode_major_type_with_length(2, len(data))
+        return prefix + data
 
     def _encode_map(self, mapping: Mapping[Any, Any]) -> bytes:
         encoded_items: List[Tuple[bytes, bytes]] = []
@@ -796,6 +816,32 @@ class _CanonicalCBOREncoder:
         encoded_value = self._encode(tag.value)
         return encoded_tag + encoded_value
 
+    def _encode_int(self, value: int) -> bytes:
+        if value >= 0:
+            return _encode_unsigned_integer(0, value)
+
+        complement = -1 - value
+        return _encode_unsigned_integer(1, complement)
+
+    def _encode_text(self, value: str) -> bytes:
+        data = value.encode("utf-8")
+        prefix = _encode_major_type_with_length(3, len(data))
+        return prefix + data
+
+    def _encode_cbor_simple_value(self, value: CBORSimpleValue) -> bytes:
+        simple = value.value
+        if not isinstance(simple, int):
+            raise TypeError("CBOR simple value code must be an integer.")
+        if simple < 0 or simple > 255:
+            raise ValueError("CBOR simple value code must be between 0 and 255.")
+
+        if simple <= 23:
+            return bytes([0xE0 | simple])
+        if 32 <= simple <= 255:
+            return b"\xf8" + bytes([simple])
+
+        raise ValueError("CBOR simple values 24..31 are reserved in canonical encoding.")
+
 
 def _encode_major_type_with_length(major_type: int, length: int) -> bytes:
     if length < 0:
@@ -819,6 +865,28 @@ def _encode_unsigned_integer(major_type: int, value: int) -> bytes:
         return bytes([(major_type << 5) | 27]) + value.to_bytes(8, "big")
 
     raise ValueError("CBOR integers exceeding 64 bits are not supported in canonical mode.")
+
+
+def _encode_canonical_float(value: float) -> bytes:
+    if math.isnan(value):
+        # Canonical NaN representation (RFC 8949, Section 3.9): 0xf9 7e00
+        return b"\xf9\x7e\x00"
+
+    for fmt, prefix in (("e", b"\xf9"), ("f", b"\xfa"), ("d", b"\xfb")):
+        try:
+            packed = struct.pack(">" + fmt, value)
+        except (OverflowError, ValueError):
+            continue
+
+        unpacked = struct.unpack(">" + fmt, packed)[0]
+        if math.isnan(unpacked):
+            continue
+
+        if unpacked == value and math.copysign(1.0, unpacked) == math.copysign(1.0, value):
+            return prefix + packed
+
+    # Fall back to float64 encoding when no shorter representation is exact.
+    return b"\xfb" + struct.pack(">d", value)
 
 
 _ENCODING_HANDLERS: Dict[str, Callable[[Any], Dict[str, Any]]] = {

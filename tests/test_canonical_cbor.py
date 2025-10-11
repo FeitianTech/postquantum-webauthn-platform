@@ -1,10 +1,12 @@
 from collections.abc import Mapping
+from math import copysign, isnan
 from pathlib import Path
 import sys
 
 import pytest
 
 import cbor2
+from cbor2 import CBORSimpleValue
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "server"))
@@ -58,6 +60,34 @@ def test_canonical_cbor_encodes_floats_using_shortest_precision():
     assert decoded == [1.0, 1.5]
 
 
+def test_canonical_cbor_encodes_negative_zero_with_sign():
+    encoded = _canonical_cbor_dumps(-0.0)
+    assert encoded == bytes.fromhex("f98000")
+    decoded = cbor2.loads(encoded)
+    assert decoded == -0.0 and copysign(1.0, decoded) == copysign(1.0, -0.0)
+
+
+def test_canonical_cbor_normalises_nan_representation():
+    encoded = _canonical_cbor_dumps(float("nan"))
+    assert encoded == bytes.fromhex("f97e00")
+    decoded = cbor2.loads(encoded)
+    assert isnan(decoded)
+
+
+def test_canonical_cbor_encodes_simple_values_minimally():
+    encoded = _canonical_cbor_dumps(CBORSimpleValue(32))
+    assert encoded == bytes.fromhex("f820")
+
+
+def test_canonical_cbor_orders_nested_maps_by_encoded_bytes():
+    payload = {"outer": {b"b": 1, 1: 2, "a": 3}}
+    encoded = _canonical_cbor_dumps(payload)
+    expected = cbor2.dumps(payload, canonical=True)
+    assert encoded == expected
+    decoded = cbor2.loads(encoded)
+    assert decoded == {"outer": {1: 2, b"b": 1, "a": 3}}
+
+
 @pytest.mark.parametrize(
     "payload",
     [
@@ -75,6 +105,8 @@ def test_canonical_cbor_encodes_floats_using_shortest_precision():
         -25,
         1.0,
         1.5,
+        -0.0,
+        float("nan"),
         float("inf"),
         float("-inf"),
         "a",
