@@ -282,16 +282,22 @@ def _encode_cbor_value(parsed: Any, *, base_type: str = "CBOR (canonical)") -> D
         full_bytes = (
             bytes([prefix_code]) + payload_bytes if prefix_code is not None else payload_bytes
         )
+        canonical_structure = _canonicalize_cbor_structure(encoded_map)
         payload: Dict[str, Any] = {
             "binary": _binary_summary(full_bytes, "cbor"),
-            "encodedValue": _stringify_mapping_keys(_hex_json_safe(encoded_map)),
+            "encodedValue": _stringify_mapping_keys(
+                _hex_json_safe(canonical_structure)
+            ),
         }
         if ctap_source is not None and isinstance(ctap_source, Mapping):
+            canonical_ctap_source = _canonicalize_cbor_structure(ctap_source)
             payload.setdefault(
                 "ctapDecoded",
-                _stringify_mapping_keys(_hex_json_safe({ctap_kind: ctap_source}))
+                _stringify_mapping_keys(
+                    _hex_json_safe({ctap_kind: canonical_ctap_source})
+                )
                 if ctap_kind
-                else _stringify_mapping_keys(_hex_json_safe(ctap_source)),
+                else _stringify_mapping_keys(_hex_json_safe(canonical_ctap_source)),
             )
         if prefix_code is not None:
             payload["ctap"] = {
@@ -305,7 +311,9 @@ def _encode_cbor_value(parsed: Any, *, base_type: str = "CBOR (canonical)") -> D
     payload_bytes = _canonical_cbor_dumps(parsed)
     payload = {
         "binary": _binary_summary(payload_bytes, "cbor"),
-        "decodedValue": _stringify_mapping_keys(_hex_json_safe(parsed)),
+        "decodedValue": _stringify_mapping_keys(
+            _hex_json_safe(_canonicalize_cbor_structure(parsed))
+        ),
     }
     return _prepare_encoder_response(base_type, payload, qualifier="encoded")
 
@@ -359,12 +367,16 @@ def _encode_ctap_webauthn_value(parsed: Any) -> Dict[str, Any]:
     full_bytes = (
         bytes([prefix_code]) + payload_bytes if isinstance(prefix_code, int) else payload_bytes
     )
+    canonical_encoded_map = _canonicalize_cbor_structure(encoded_map)
+    canonical_decoded_structure = _canonicalize_cbor_structure(decoded_structure)
 
     payload: Dict[str, Any] = {
         "binary": _binary_summary(full_bytes, "cbor"),
-        "encodedValue": _stringify_mapping_keys(_hex_json_safe(encoded_map)),
+        "encodedValue": _stringify_mapping_keys(
+            _hex_json_safe(canonical_encoded_map)
+        ),
         "ctapDecoded": _stringify_mapping_keys(
-            _hex_json_safe({ctap_type: decoded_structure})
+            _hex_json_safe({ctap_type: canonical_decoded_structure})
         ),
     }
 
@@ -743,11 +755,21 @@ def _canonical_cbor_dumps(value: Any) -> bytes:
     return encoder.encode(value)
 
 
+def _canonicalize_cbor_structure(value: Any) -> Any:
+    """Return a structure whose maps follow canonical CBOR key ordering."""
+
+    encoder = _CanonicalCBOREncoder()
+    return encoder.canonicalize_structure(value)
+
+
 class _CanonicalCBOREncoder:
     """Minimal canonical CBOR encoder specialised for deterministic output."""
 
     def encode(self, value: Any) -> bytes:
         return self._encode(value)
+
+    def canonicalize_structure(self, value: Any) -> Any:
+        return self._canonicalize(value)
 
     def _encode(self, value: Any) -> bytes:
         if isinstance(value, Mapping):
@@ -759,6 +781,17 @@ class _CanonicalCBOREncoder:
         if isinstance(value, CBORTag):
             return self._encode_tag(value)
         return self._encode_simple(value)
+
+    def _canonicalize(self, value: Any) -> Any:
+        if isinstance(value, Mapping):
+            return self._canonicalize_map(value)
+        if isinstance(value, (list, tuple)):
+            return [self._canonicalize(item) for item in value]
+        if isinstance(value, CBORTag):
+            return CBORTag(value.tag, self._canonicalize(value.value))
+        if isinstance(value, (bytes, bytearray, memoryview)):
+            return bytes(value)
+        return value
 
     def _encode_simple(self, value: Any) -> bytes:
         if isinstance(value, bool):
@@ -793,7 +826,25 @@ class _CanonicalCBOREncoder:
         return prefix + data
 
     def _encode_map(self, mapping: Mapping[Any, Any]) -> bytes:
-        encoded_items: List[Tuple[bytes, bytes]] = []
+        sorted_items = self._sorted_map_items(mapping)
+        prefix = _encode_major_type_with_length(5, len(sorted_items))
+        chunks = []
+        for encoded_key, _original_key, value in sorted_items:
+            encoded_value = self._encode(value)
+            chunks.append(encoded_key + encoded_value)
+        return prefix + b"".join(chunks)
+
+    def _canonicalize_map(self, mapping: Mapping[Any, Any]) -> Dict[Any, Any]:
+        sorted_items = self._sorted_map_items(mapping)
+        result: Dict[Any, Any] = {}
+        for _encoded_key, key, value in sorted_items:
+            result[key] = self._canonicalize(value)
+        return result
+
+    def _sorted_map_items(
+        self, mapping: Mapping[Any, Any]
+    ) -> List[Tuple[bytes, Any, Any]]:
+        encoded_items: List[Tuple[bytes, Any, Any]] = []
         seen_keys: set[bytes] = set()
         for key, value in mapping.items():
             encoded_key = self._encode(key)
@@ -802,12 +853,10 @@ class _CanonicalCBOREncoder:
                     "Duplicate CBOR map key detected during canonical encoding."
                 )
             seen_keys.add(encoded_key)
-            encoded_value = self._encode(value)
-            encoded_items.append((encoded_key, encoded_value))
+            encoded_items.append((encoded_key, key, value))
 
-        encoded_items.sort(key=lambda kv: (len(kv[0]), kv[0]))
-        prefix = _encode_major_type_with_length(5, len(encoded_items))
-        return prefix + b"".join(key + value for key, value in encoded_items)
+        encoded_items.sort(key=lambda item: (len(item[0]), item[0]))
+        return encoded_items
 
     def _encode_tag(self, tag: CBORTag) -> bytes:
         if not isinstance(tag.tag, int) or tag.tag < 0:

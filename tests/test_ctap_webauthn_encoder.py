@@ -11,6 +11,15 @@ sys.path.insert(0, str(ROOT / "server"))
 from server.decoder.encode import encode_payload_text
 
 
+def _canonical_key_order(keys):
+    ordered = []
+    for key in keys:
+        encoded = cbor2.dumps(key, canonical=True)
+        ordered.append((len(encoded), encoded, key))
+    ordered.sort(key=lambda item: (item[0], item[1]))
+    return [item[2] for item in ordered]
+
+
 def test_ctap_webauthn_encoder_extracts_nested_numeric_payload():
     credential_id = "622518ecb4dd41109f3a62008c269c085f63"
     auth_data = "00" * 37
@@ -85,6 +94,60 @@ def test_ctap_webauthn_encoder_extracts_nested_numeric_payload():
 
     expected_bytes = bytes([0x00]) + cbor2.dumps(expected_map, canonical=True)
     assert encoded_hex == expected_bytes.hex()
+
+
+def test_ctap_webauthn_encoder_canonicalizes_display_order():
+    credential_id = "622518ecb4dd41109f3a62008c269c085f63"
+    auth_data = "00" * 37
+    signature = "11" * 64
+    user_id = "25919e6571314d93977a51fb50597c64"
+
+    nested_input = {
+        "outer": {
+            "decoded json": {
+                "1 (credential)": {
+                    "type": "public-key",
+                    "id": credential_id,
+                    "transports": ["usb", "internal"],
+                    "extra": {"b": 2, "a": 1},
+                },
+                "2 (authData)": {
+                    "raw": auth_data,
+                    "flags": {"UP": True, "UV": False, "value": 0},
+                },
+                "3 (signature)": {"hex": signature},
+                "4 (user)": {
+                    "id": {"hex": user_id},
+                    "name": "Example",
+                    "custom": "auxiliary",
+                    "extras": {"2": "06", "10": "07"},
+                },
+                "5 (numberOfCredentials)": 1,
+            }
+        }
+    }
+
+    response = encode_payload_text(
+        json.dumps(nested_input),
+        "CBOR (CTAP/WebAuthn Data)",
+    )
+
+    payload = response["data"]
+    encoded_value = payload["encodedValue"]
+    credential_map = encoded_value["1"]
+    assert list(credential_map.keys()) == _canonical_key_order(credential_map.keys())
+    assert list(credential_map["extra"].keys()) == _canonical_key_order(
+        credential_map["extra"].keys()
+    )
+
+    ctap_decoded = payload["ctapDecoded"]["getAssertionResponse"]
+    assert list(ctap_decoded.keys()) == _canonical_key_order(ctap_decoded.keys())
+    credential_decoded = ctap_decoded["credential"]
+    assert list(credential_decoded.keys()) == _canonical_key_order(
+        credential_decoded.keys()
+    )
+    user_extras = ctap_decoded["user"]["extras"]
+    assert list(user_extras.keys()) == _canonical_key_order(user_extras.keys())
 
 
 def test_ctap_webauthn_encoder_handles_wrapped_make_credential_request():
