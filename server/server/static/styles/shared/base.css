@@ -348,6 +348,45 @@ body.modal-open {
     border-radius: 4px;
 }
 
+.codec-mode-tabs {
+    display: inline-flex;
+    border-radius: 16px;
+    margin-bottom: 1rem;
+    background: rgba(0, 114, 206, 0.06);
+    border: 1px solid rgba(0, 114, 206, 0.1);
+    overflow: hidden;
+}
+
+.codec-mode-tab {
+    padding: 0.6rem 1.2rem;
+    border: none;
+    background: transparent;
+    color: var(--muted-text);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.codec-mode-tab.active {
+    background: linear-gradient(135deg, rgba(0, 114, 206, 0.18), rgba(0, 166, 81, 0.18));
+    color: var(--primary-dark);
+    box-shadow: inset 0 0 0 1px rgba(0, 114, 206, 0.2);
+}
+
+.codec-mode-tab:hover:not(.active) {
+    color: var(--primary-dark);
+    background: rgba(0, 114, 206, 0.12);
+}
+
+.codec-mode-tab:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(0, 114, 206, 0.25);
+}
+
+.decoder-format-group {
+    margin-top: 1rem;
+}
+
 .decoder-summary {
     margin-top: 1rem;
     padding: 1.25rem 1.5rem;
@@ -439,6 +478,66 @@ body.modal-open {
 
 .decoder-section-body {
     margin-top: 0.6rem;
+}
+
+.codec-encoded-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+}
+
+.codec-encoded-formats {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.codec-encoded-format {
+    padding: 0.75rem 0.9rem;
+    border-radius: 12px;
+    border: 1px solid rgba(0, 114, 206, 0.12);
+    background: rgba(0, 114, 206, 0.04);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+.codec-encoded-label {
+    font-weight: 600;
+    color: var(--primary-dark);
+    margin-bottom: 0.35rem;
+}
+
+.codec-encoded-value {
+    margin: 0;
+    white-space: pre;
+    overflow-x: auto;
+}
+
+.codec-encoded-meta {
+    font-size: 0.85rem;
+    color: var(--muted-text);
+}
+
+.decoder-expanded-json {
+    font-family: var(--font-monospace, 'SFMono-Regular', Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace);
+    font-size: 0.9rem;
+    line-height: 1.45;
+    width: 100%;
+    height: auto;
+    resize: vertical;
+    background: rgba(0, 114, 206, 0.08);
+    border-radius: 14px;
+    border: 1px solid rgba(0, 114, 206, 0.18);
+    color: #000000;
+    padding: 0.75rem 0.85rem;
+    overflow-y: hidden;
+    overflow-x: auto;
+}
+
+.decoder-expanded-json:focus,
+.decoder-expanded-json:focus-visible {
+    outline: none;
+    border-color: rgba(0, 114, 206, 0.18);
+    box-shadow: none;
 }
 
 .decoder-definition {

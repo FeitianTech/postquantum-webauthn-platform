@@ -27,7 +27,9 @@ const SPECIAL_LABELS = {
     counter: 'Counter',
     expandedJson: 'Expanded JSON',
     decodedValue: 'Decoded value',
+    encodedValue: 'Encoded value',
     ctap: 'CTAP metadata',
+    binary: 'Binary summary',
     ctapDecoded: 'CTAP decoded',
     ignoredPaddingBytes: 'Ignored padding bytes',
     trailingBytesHex: 'Trailing bytes (hex)',
@@ -86,7 +88,9 @@ const SPECIAL_LABELS = {
     x5c: 'X5C',
 };
 
-export async function decodeResponse() {
+let currentCodecMode = 'decode';
+
+export async function processCodec() {
     const input = document.getElementById('decoder-input');
     if (!input) {
         return;
@@ -94,9 +98,21 @@ export async function decodeResponse() {
 
     const inputValue = input.value;
     if (!inputValue.trim()) {
-        showStatus('decoder', 'Decoder is empty. Please paste something to decode.', 'error');
+        showStatus('decoder', 'Codec input is empty. Please paste something to process.', 'error');
         updateDecoderEmptyState();
         return;
+    }
+
+    const mode = getSelectedDecoderMode();
+    const formatSelect = document.getElementById('decoder-format');
+    let targetFormat = null;
+
+    if (mode === 'encode') {
+        targetFormat = formatSelect ? formatSelect.value : '';
+        if (!targetFormat || !targetFormat.trim()) {
+            showStatus('decoder', 'Select an encoding format before encoding.', 'error');
+            return;
+        }
     }
 
     const decoderOutput = document.getElementById('decoder-output');
@@ -104,6 +120,7 @@ export async function decodeResponse() {
     const rawContainer = document.getElementById('decoder-raw-container');
     const rawContent = document.getElementById('decoder-raw-content');
     const toggleButton = document.getElementById('decoder-toggle-raw');
+    const progressText = document.getElementById('decoder-progress-text');
 
     if (summaryContainer) {
         summaryContainer.innerHTML = '';
@@ -126,15 +143,24 @@ export async function decodeResponse() {
 
     updateDecoderEmptyState();
 
-    showProgress('decoder', 'Decoding…');
+    const actionText = mode === 'encode' ? 'Encoding…' : 'Decoding…';
+    showProgress('decoder', actionText);
+    if (progressText) {
+        progressText.textContent = actionText;
+    }
 
     try {
-        const response = await fetch('/api/decode', {
+        const body = { payload: inputValue, mode };
+        if (mode === 'encode') {
+            body.format = targetFormat;
+        }
+
+        const response = await fetch('/api/codec', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ payload: inputValue }),
+            body: JSON.stringify(body),
         });
 
         let payload = null;
@@ -155,7 +181,7 @@ export async function decodeResponse() {
         }
 
         if (summaryContainer) {
-            renderDecodedResult(summaryContainer, payload);
+            renderDecodedResult(summaryContainer, payload, mode);
         }
         if (rawContent) {
             rawContent.value = JSON.stringify(payload, null, 2);
@@ -172,7 +198,10 @@ export async function decodeResponse() {
         if (rawContainer) {
             rawContainer.style.display = 'none';
         }
-        showStatus('decoder', 'Response decoded successfully!', 'success');
+        const successMessage = mode === 'encode'
+            ? 'Payload encoded successfully!'
+            : 'Response decoded successfully!';
+        showStatus('decoder', successMessage, 'success');
     } catch (error) {
         if (decoderOutput) {
             decoderOutput.style.display = 'none';
@@ -185,11 +214,58 @@ export async function decodeResponse() {
             toggleButton.dataset.expanded = 'false';
         }
         const message = error instanceof Error ? error.message : String(error);
-        showStatus('decoder', `Decoding failed: ${message}`, 'error');
+        const failurePrefix = mode === 'encode' ? 'Encoding failed' : 'Decoding failed';
+        showStatus('decoder', `${failurePrefix}: ${message}`, 'error');
     } finally {
         hideProgress('decoder');
         updateDecoderEmptyState();
     }
+}
+
+function getSelectedDecoderMode() {
+    return currentCodecMode;
+}
+
+function updateDecoderModeUI() {
+    const mode = getSelectedDecoderMode();
+    const formatGroup = document.getElementById('decoder-format-group');
+    const submitButton = document.getElementById('decoder-submit');
+    const progressText = document.getElementById('decoder-progress-text');
+    const input = document.getElementById('decoder-input');
+    const decodeTab = document.getElementById('codec-mode-decode');
+    const encodeTab = document.getElementById('codec-mode-encode');
+
+    if (formatGroup) {
+        formatGroup.style.display = mode === 'encode' ? 'block' : 'none';
+    }
+    if (submitButton) {
+        submitButton.textContent = mode === 'encode' ? 'Encode' : 'Decode';
+    }
+    if (progressText) {
+        progressText.textContent = mode === 'encode' ? 'Encoding...' : 'Decoding...';
+    }
+    if (input) {
+        input.placeholder = mode === 'encode'
+            ? 'Paste JSON here to encode...'
+            : 'Paste something here to decode...';
+    }
+    if (decodeTab) {
+        decodeTab.classList.toggle('active', mode === 'decode');
+        decodeTab.setAttribute('aria-selected', mode === 'decode' ? 'true' : 'false');
+    }
+    if (encodeTab) {
+        encodeTab.classList.toggle('active', mode === 'encode');
+        encodeTab.setAttribute('aria-selected', mode === 'encode' ? 'true' : 'false');
+    }
+}
+
+export function switchCodecMode(mode) {
+    if (mode !== 'decode' && mode !== 'encode') {
+        return;
+    }
+    currentCodecMode = mode;
+    hideStatus('decoder');
+    updateDecoderModeUI();
 }
 
 export function clearDecoder() {
@@ -225,6 +301,7 @@ export function clearDecoder() {
     hideStatus('decoder');
     hideProgress('decoder');
     updateDecoderEmptyState();
+    updateDecoderModeUI();
 }
 
 export function toggleRawDecoder() {
@@ -260,7 +337,7 @@ function autoSizeRawTextarea(textarea) {
     textarea.style.height = scrollHeight ? `${scrollHeight}px` : '';
 }
 
-function renderDecodedResult(container, payload) {
+function renderDecodedResult(container, payload, mode = 'decode') {
     container.innerHTML = '';
 
     if (!payload || typeof payload !== 'object') {
@@ -296,7 +373,9 @@ function renderDecodedResult(container, payload) {
     const sectionsWrapper = document.createElement('div');
     sectionsWrapper.className = 'decoder-sections';
 
-    const sections = buildSections(payload.type, payload.data);
+    const sections = mode === 'encode'
+        ? buildEncodeSections(payload.type, payload.data)
+        : buildSections(payload.type, payload.data);
     if (sections.length === 0) {
         const emptySection = document.createElement('div');
         emptySection.className = 'decoder-empty';
@@ -307,6 +386,177 @@ function renderDecodedResult(container, payload) {
     }
 
     container.appendChild(sectionsWrapper);
+}
+
+function buildEncodeSections(type, data) {
+    const summaryInfo = findEncodedSummary(data);
+    if (!summaryInfo) {
+        return buildSections(type, data);
+    }
+
+    const { label, summary } = summaryInfo;
+    const formatBlocks = createEncodedFormatElements(summary);
+    if (formatBlocks.length === 0) {
+        return buildSections(type, data);
+    }
+
+    const section = document.createElement('div');
+    section.className = 'decoder-section codec-encoded-section';
+
+    const heading = document.createElement('h4');
+    heading.textContent = label || 'Encoded output';
+    section.appendChild(heading);
+
+    const body = document.createElement('div');
+    body.className = 'decoder-section-body codec-encoded-body';
+
+    const formatsContainer = document.createElement('div');
+    formatsContainer.className = 'codec-encoded-formats';
+    formatBlocks.forEach(block => formatsContainer.appendChild(block));
+    body.appendChild(formatsContainer);
+
+    const byteLength = getSummaryByteLength(summary);
+    if (typeof byteLength === 'number' && Number.isFinite(byteLength)) {
+        const meta = document.createElement('div');
+        meta.className = 'codec-encoded-meta';
+        meta.textContent = `Byte length: ${byteLength}`;
+        body.appendChild(meta);
+    }
+
+    section.appendChild(body);
+    return [section];
+}
+
+function findEncodedSummary(value, label = '') {
+    if (value === null || value === undefined) {
+        return null;
+    }
+
+    if (Array.isArray(value)) {
+        for (const item of value) {
+            const result = findEncodedSummary(item, label);
+            if (result) {
+                return result;
+            }
+        }
+        return null;
+    }
+
+    if (typeof value !== 'object') {
+        return null;
+    }
+
+    if (looksLikeBinarySummary(value)) {
+        const friendly = label ? formatKey(label) : 'Encoded output';
+        return {
+            summary: value,
+            label: friendly.toLowerCase() === 'binary' ? 'Encoded output' : friendly,
+        };
+    }
+
+    if (value.binary && looksLikeBinarySummary(value.binary)) {
+        const friendly = label ? formatKey(label) : 'Encoded output';
+        return {
+            summary: value.binary,
+            label: friendly.toLowerCase() === 'binary' ? 'Encoded output' : friendly,
+        };
+    }
+
+    for (const [key, nested] of Object.entries(value)) {
+        const result = findEncodedSummary(nested, key);
+        if (result) {
+            return result;
+        }
+    }
+
+    return null;
+}
+
+function looksLikeBinarySummary(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+        return false;
+    }
+    if (typeof value.hex === 'string' && value.hex.trim()) {
+        return true;
+    }
+    if (typeof value.base64 === 'string' && value.base64.trim()) {
+        return true;
+    }
+    if (typeof value.base64url === 'string' && value.base64url.trim()) {
+        return true;
+    }
+    return false;
+}
+
+function createEncodedFormatElements(summary) {
+    if (!summary || typeof summary !== 'object') {
+        return [];
+    }
+
+    const order = ['hex', 'base64', 'base64url', 'colonHex'];
+    const blocks = [];
+    const used = new Set();
+    const skipKeys = new Set(['encoding']);
+
+    order.forEach(key => {
+        const value = summary[key];
+        if (typeof value === 'string') {
+            const trimmed = value.trim();
+            if (trimmed) {
+                blocks.push(createEncodedFormatBlock(key, value));
+                used.add(key);
+            }
+        }
+    });
+
+    Object.entries(summary).forEach(([key, value]) => {
+        if (used.has(key)) {
+            return;
+        }
+        if (skipKeys.has(key)) {
+            return;
+        }
+        if (typeof value === 'string') {
+            const trimmed = value.trim();
+            if (!trimmed) {
+                return;
+            }
+            blocks.push(createEncodedFormatBlock(key, value));
+            used.add(key);
+        }
+    });
+
+    return blocks;
+}
+
+function createEncodedFormatBlock(key, value) {
+    const block = document.createElement('div');
+    block.className = 'codec-encoded-format';
+
+    const label = document.createElement('div');
+    label.className = 'codec-encoded-label';
+    label.textContent = formatKey(key);
+    block.appendChild(label);
+
+    const pre = document.createElement('pre');
+    pre.className = 'decoder-pre codec-encoded-value';
+    pre.textContent = value;
+    block.appendChild(pre);
+
+    return block;
+}
+
+function getSummaryByteLength(summary) {
+    if (!summary || typeof summary !== 'object') {
+        return null;
+    }
+    if (typeof summary.byteLength === 'number') {
+        return summary.byteLength;
+    }
+    if (typeof summary.length === 'number') {
+        return summary.length;
+    }
+    return null;
 }
 
 function buildSections(type, data) {
@@ -339,7 +589,8 @@ function buildSections(type, data) {
     const hiddenKeys = new Set();
 
     const usedKeys = new Set();
-    const preferredOrder = orderMap[type] || [];
+    const baseType = getSectionBaseType(type);
+    const preferredOrder = orderMap[baseType] || [];
 
     preferredOrder.forEach((key) => {
         if (Object.prototype.hasOwnProperty.call(data, key)) {
@@ -364,6 +615,17 @@ function buildSections(type, data) {
     return sections;
 }
 
+function getSectionBaseType(type) {
+    if (typeof type !== 'string') {
+        return '';
+    }
+    const separatorIndex = type.indexOf(' (');
+    if (separatorIndex === -1) {
+        return type;
+    }
+    return type.slice(0, separatorIndex);
+}
+
 function createSection(key, value) {
     const section = document.createElement('div');
     section.className = 'decoder-section';
@@ -374,7 +636,16 @@ function createSection(key, value) {
 
     const body = document.createElement('div');
     body.className = 'decoder-section-body';
-    body.appendChild(renderValue(value));
+    if (key === 'expandedJson') {
+        const textarea = renderExpandedJson(value);
+        body.appendChild(textarea);
+        requestAnimationFrame(() => {
+            autoSizeRawTextarea(textarea);
+            resetScrollPosition(textarea);
+        });
+    } else {
+        body.appendChild(renderValue(value));
+    }
     section.appendChild(body);
 
     return section;
@@ -455,6 +726,23 @@ function renderValue(value) {
     return span;
 }
 
+function renderExpandedJson(value) {
+    const textarea = document.createElement('textarea');
+    textarea.className = 'form-control decoder-expanded-json';
+    textarea.setAttribute('readonly', '');
+    textarea.setAttribute('spellcheck', 'false');
+    textarea.wrap = 'off';
+
+    const payload = { 'decoded json': value === undefined ? null : value };
+    try {
+        textarea.value = JSON.stringify(payload, null, 2);
+    } catch (error) {
+        textarea.value = 'Unable to render expanded JSON';
+    }
+
+    return textarea;
+}
+
 function formatKey(key) {
     if (typeof key !== 'string' || key.length === 0) {
         return 'Value';
@@ -515,6 +803,7 @@ function updateDecoderEmptyState() {
 
 function initDecoderEmptyState() {
     updateDecoderEmptyState();
+    updateDecoderModeUI();
 }
 
 if (document.readyState === 'loading') {
