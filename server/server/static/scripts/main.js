@@ -52,8 +52,8 @@ import {
 } from './advanced/auth-advanced.js';
 import {
     processCodec,
-    clearDecoder,
-    toggleRawDecoder,
+    clearCodec,
+    toggleRawCodec,
     switchCodecMode
 } from './decoder/decoder.js';
 import {
@@ -114,8 +114,10 @@ window.simpleAuthenticate = simpleAuthenticate;
 window.advancedRegister = advancedRegister;
 window.advancedAuthenticate = advancedAuthenticate;
 window.processCodec = processCodec;
-window.clearDecoder = clearDecoder;
-window.toggleRawDecoder = toggleRawDecoder;
+window.clearCodec = clearCodec;
+window.toggleRawCodec = toggleRawCodec;
+window.clearDecoder = clearCodec;
+window.toggleRawDecoder = toggleRawCodec;
 window.closeModal = closeModal;
 window.switchCodecMode = switchCodecMode;
 window.changeBinaryFormat = changeBinaryFormat;
