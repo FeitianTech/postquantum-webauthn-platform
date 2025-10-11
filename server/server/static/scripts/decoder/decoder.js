@@ -88,6 +88,8 @@ const SPECIAL_LABELS = {
     x5c: 'X5C',
 };
 
+let currentCodecMode = 'decode';
+
 export async function processCodec() {
     const input = document.getElementById('decoder-input');
     if (!input) {
@@ -96,7 +98,7 @@ export async function processCodec() {
 
     const inputValue = input.value;
     if (!inputValue.trim()) {
-        showStatus('decoder', 'Decoder is empty. Please paste something to process.', 'error');
+        showStatus('decoder', 'Codec input is empty. Please paste something to process.', 'error');
         updateDecoderEmptyState();
         return;
     }
@@ -179,7 +181,7 @@ export async function processCodec() {
         }
 
         if (summaryContainer) {
-            renderDecodedResult(summaryContainer, payload);
+            renderDecodedResult(summaryContainer, payload, mode);
         }
         if (rawContent) {
             rawContent.value = JSON.stringify(payload, null, 2);
@@ -221,11 +223,7 @@ export async function processCodec() {
 }
 
 function getSelectedDecoderMode() {
-    const checked = document.querySelector('input[name="decoder-mode"]:checked');
-    if (checked && typeof checked.value === 'string') {
-        return checked.value;
-    }
-    return 'decode';
+    return currentCodecMode;
 }
 
 function updateDecoderModeUI() {
@@ -234,6 +232,8 @@ function updateDecoderModeUI() {
     const submitButton = document.getElementById('decoder-submit');
     const progressText = document.getElementById('decoder-progress-text');
     const input = document.getElementById('decoder-input');
+    const decodeTab = document.getElementById('codec-mode-decode');
+    const encodeTab = document.getElementById('codec-mode-encode');
 
     if (formatGroup) {
         formatGroup.style.display = mode === 'encode' ? 'block' : 'none';
@@ -249,9 +249,21 @@ function updateDecoderModeUI() {
             ? 'Paste JSON here to encode...'
             : 'Paste something here to decode...';
     }
+    if (decodeTab) {
+        decodeTab.classList.toggle('active', mode === 'decode');
+        decodeTab.setAttribute('aria-selected', mode === 'decode' ? 'true' : 'false');
+    }
+    if (encodeTab) {
+        encodeTab.classList.toggle('active', mode === 'encode');
+        encodeTab.setAttribute('aria-selected', mode === 'encode' ? 'true' : 'false');
+    }
 }
 
-export function handleDecoderModeChange() {
+export function switchCodecMode(mode) {
+    if (mode !== 'decode' && mode !== 'encode') {
+        return;
+    }
+    currentCodecMode = mode;
     hideStatus('decoder');
     updateDecoderModeUI();
 }
@@ -325,7 +337,7 @@ function autoSizeRawTextarea(textarea) {
     textarea.style.height = scrollHeight ? `${scrollHeight}px` : '';
 }
 
-function renderDecodedResult(container, payload) {
+function renderDecodedResult(container, payload, mode = 'decode') {
     container.innerHTML = '';
 
     if (!payload || typeof payload !== 'object') {
@@ -361,7 +373,9 @@ function renderDecodedResult(container, payload) {
     const sectionsWrapper = document.createElement('div');
     sectionsWrapper.className = 'decoder-sections';
 
-    const sections = buildSections(payload.type, payload.data);
+    const sections = mode === 'encode'
+        ? buildEncodeSections(payload.type, payload.data)
+        : buildSections(payload.type, payload.data);
     if (sections.length === 0) {
         const emptySection = document.createElement('div');
         emptySection.className = 'decoder-empty';
@@ -372,6 +386,177 @@ function renderDecodedResult(container, payload) {
     }
 
     container.appendChild(sectionsWrapper);
+}
+
+function buildEncodeSections(type, data) {
+    const summaryInfo = findEncodedSummary(data);
+    if (!summaryInfo) {
+        return buildSections(type, data);
+    }
+
+    const { label, summary } = summaryInfo;
+    const formatBlocks = createEncodedFormatElements(summary);
+    if (formatBlocks.length === 0) {
+        return buildSections(type, data);
+    }
+
+    const section = document.createElement('div');
+    section.className = 'decoder-section codec-encoded-section';
+
+    const heading = document.createElement('h4');
+    heading.textContent = label || 'Encoded output';
+    section.appendChild(heading);
+
+    const body = document.createElement('div');
+    body.className = 'decoder-section-body codec-encoded-body';
+
+    const formatsContainer = document.createElement('div');
+    formatsContainer.className = 'codec-encoded-formats';
+    formatBlocks.forEach(block => formatsContainer.appendChild(block));
+    body.appendChild(formatsContainer);
+
+    const byteLength = getSummaryByteLength(summary);
+    if (typeof byteLength === 'number' && Number.isFinite(byteLength)) {
+        const meta = document.createElement('div');
+        meta.className = 'codec-encoded-meta';
+        meta.textContent = `Byte length: ${byteLength}`;
+        body.appendChild(meta);
+    }
+
+    section.appendChild(body);
+    return [section];
+}
+
+function findEncodedSummary(value, label = '') {
+    if (value === null || value === undefined) {
+        return null;
+    }
+
+    if (Array.isArray(value)) {
+        for (const item of value) {
+            const result = findEncodedSummary(item, label);
+            if (result) {
+                return result;
+            }
+        }
+        return null;
+    }
+
+    if (typeof value !== 'object') {
+        return null;
+    }
+
+    if (looksLikeBinarySummary(value)) {
+        const friendly = label ? formatKey(label) : 'Encoded output';
+        return {
+            summary: value,
+            label: friendly.toLowerCase() === 'binary' ? 'Encoded output' : friendly,
+        };
+    }
+
+    if (value.binary && looksLikeBinarySummary(value.binary)) {
+        const friendly = label ? formatKey(label) : 'Encoded output';
+        return {
+            summary: value.binary,
+            label: friendly.toLowerCase() === 'binary' ? 'Encoded output' : friendly,
+        };
+    }
+
+    for (const [key, nested] of Object.entries(value)) {
+        const result = findEncodedSummary(nested, key);
+        if (result) {
+            return result;
+        }
+    }
+
+    return null;
+}
+
+function looksLikeBinarySummary(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+        return false;
+    }
+    if (typeof value.hex === 'string' && value.hex.trim()) {
+        return true;
+    }
+    if (typeof value.base64 === 'string' && value.base64.trim()) {
+        return true;
+    }
+    if (typeof value.base64url === 'string' && value.base64url.trim()) {
+        return true;
+    }
+    return false;
+}
+
+function createEncodedFormatElements(summary) {
+    if (!summary || typeof summary !== 'object') {
+        return [];
+    }
+
+    const order = ['hex', 'base64', 'base64url', 'colonHex'];
+    const blocks = [];
+    const used = new Set();
+    const skipKeys = new Set(['encoding']);
+
+    order.forEach(key => {
+        const value = summary[key];
+        if (typeof value === 'string') {
+            const trimmed = value.trim();
+            if (trimmed) {
+                blocks.push(createEncodedFormatBlock(key, value));
+                used.add(key);
+            }
+        }
+    });
+
+    Object.entries(summary).forEach(([key, value]) => {
+        if (used.has(key)) {
+            return;
+        }
+        if (skipKeys.has(key)) {
+            return;
+        }
+        if (typeof value === 'string') {
+            const trimmed = value.trim();
+            if (!trimmed) {
+                return;
+            }
+            blocks.push(createEncodedFormatBlock(key, value));
+            used.add(key);
+        }
+    });
+
+    return blocks;
+}
+
+function createEncodedFormatBlock(key, value) {
+    const block = document.createElement('div');
+    block.className = 'codec-encoded-format';
+
+    const label = document.createElement('div');
+    label.className = 'codec-encoded-label';
+    label.textContent = formatKey(key);
+    block.appendChild(label);
+
+    const pre = document.createElement('pre');
+    pre.className = 'decoder-pre codec-encoded-value';
+    pre.textContent = value;
+    block.appendChild(pre);
+
+    return block;
+}
+
+function getSummaryByteLength(summary) {
+    if (!summary || typeof summary !== 'object') {
+        return null;
+    }
+    if (typeof summary.byteLength === 'number') {
+        return summary.byteLength;
+    }
+    if (typeof summary.length === 'number') {
+        return summary.length;
+    }
+    return null;
 }
 
 function buildSections(type, data) {

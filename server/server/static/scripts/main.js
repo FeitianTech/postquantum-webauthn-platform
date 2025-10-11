@@ -48,7 +48,7 @@ import {
     processCodec,
     clearDecoder,
     toggleRawDecoder,
-    handleDecoderModeChange
+    switchCodecMode
 } from './decoder/decoder.js';
 import {
     saveJsonEditor,
@@ -110,7 +110,7 @@ window.advancedAuthenticate = advancedAuthenticate;
 window.processCodec = processCodec;
 window.clearDecoder = clearDecoder;
 window.toggleRawDecoder = toggleRawDecoder;
-window.handleDecoderModeChange = handleDecoderModeChange;
+window.switchCodecMode = switchCodecMode;
 window.changeBinaryFormat = changeBinaryFormat;
 window.saveJsonEditor = saveJsonEditor;
 window.resetJsonEditor = resetJsonEditor;
