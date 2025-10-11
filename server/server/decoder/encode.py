@@ -845,14 +845,25 @@ def _maybe_decode_bytes(value: Any) -> Optional[bytes]:
             except ValueError:
                 pass
 
-        if any(char in candidate for char in "+/_-="):
-            cleaned = "".join(candidate.split())
+        cleaned = "".join(candidate.split())
+        if cleaned:
             padding = (-len(cleaned)) % 4
-            for decoder in (base64.b64decode, base64.urlsafe_b64decode):
+            for decoder, encoder in (
+                (base64.b64decode, base64.b64encode),
+                (base64.urlsafe_b64decode, base64.urlsafe_b64encode),
+            ):
                 try:
-                    return decoder(cleaned + "=" * padding)
+                    decoded = decoder(cleaned + "=" * padding)
                 except (ValueError, binascii.Error):
                     continue
+
+                # Confirm the round-trip to avoid misclassifying plain text as base64.
+                try:
+                    reencoded = encoder(decoded).decode("ascii").rstrip("=")
+                except Exception:  # pragma: no cover - defensive
+                    continue
+                if reencoded == cleaned.rstrip("="):
+                    return decoded
 
     if isinstance(value, Mapping):
         for key in ("raw", "hex", "hexValue", "hexString"):
