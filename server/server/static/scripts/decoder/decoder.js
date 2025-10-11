@@ -1,4 +1,5 @@
 import { showStatus, hideStatus, showProgress, hideProgress } from '../shared/status.js';
+import { openModal, closeModal } from '../shared/ui.js';
 
 function resetScrollPosition(element) {
     if (element && typeof element.scrollTop === 'number') {
@@ -117,27 +118,25 @@ export async function processCodec() {
 
     const decoderOutput = document.getElementById('decoder-output');
     const summaryContainer = document.getElementById('decoded-content');
-    const rawContainer = document.getElementById('decoder-raw-container');
     const rawContent = document.getElementById('decoder-raw-content');
     const toggleButton = document.getElementById('decoder-toggle-raw');
+    const rawModal = document.getElementById('decoder-raw-modal');
     const progressText = document.getElementById('decoder-progress-text');
 
     if (summaryContainer) {
         summaryContainer.innerHTML = '';
     }
     if (rawContent) {
-        rawContent.value = '';
-        rawContent.style.height = '';
-    }
-    if (rawContainer) {
-        rawContainer.style.display = 'none';
+        rawContent.textContent = '';
     }
     if (toggleButton) {
-        toggleButton.textContent = 'Show raw';
-        toggleButton.dataset.expanded = 'false';
+        toggleButton.disabled = true;
     }
     if (decoderOutput) {
-        decoderOutput.style.display = 'none';
+        decoderOutput.classList.remove('is-visible');
+    }
+    if (rawModal && rawModal.classList.contains('open')) {
+        closeModal('decoder-raw-modal');
     }
     hideStatus('decoder');
 
@@ -184,19 +183,14 @@ export async function processCodec() {
             renderDecodedResult(summaryContainer, payload, mode);
         }
         if (rawContent) {
-            rawContent.value = JSON.stringify(payload, null, 2);
-            autoSizeRawTextarea(rawContent);
+            rawContent.textContent = JSON.stringify(payload, null, 2);
             resetScrollPosition(rawContent);
         }
         if (decoderOutput) {
-            decoderOutput.style.display = 'block';
+            decoderOutput.classList.add('is-visible');
         }
         if (toggleButton) {
-            toggleButton.textContent = 'Show raw';
-            toggleButton.dataset.expanded = 'false';
-        }
-        if (rawContainer) {
-            rawContainer.style.display = 'none';
+            toggleButton.disabled = !rawContent || rawContent.textContent.trim().length === 0;
         }
         const successMessage = mode === 'encode'
             ? 'Payload encoded successfully!'
@@ -204,14 +198,13 @@ export async function processCodec() {
         showStatus('decoder', successMessage, 'success');
     } catch (error) {
         if (decoderOutput) {
-            decoderOutput.style.display = 'none';
-        }
-        if (rawContainer) {
-            rawContainer.style.display = 'none';
+            decoderOutput.classList.remove('is-visible');
         }
         if (toggleButton) {
-            toggleButton.textContent = 'Show raw';
-            toggleButton.dataset.expanded = 'false';
+            toggleButton.disabled = true;
+        }
+        if (rawModal && rawModal.classList.contains('open')) {
+            closeModal('decoder-raw-modal');
         }
         const message = error instanceof Error ? error.message : String(error);
         const failurePrefix = mode === 'encode' ? 'Encoding failed' : 'Decoding failed';
@@ -272,9 +265,9 @@ export function clearDecoder() {
     const input = document.getElementById('decoder-input');
     const output = document.getElementById('decoder-output');
     const decodedContent = document.getElementById('decoded-content');
-    const rawContainer = document.getElementById('decoder-raw-container');
     const rawContent = document.getElementById('decoder-raw-content');
     const toggleButton = document.getElementById('decoder-toggle-raw');
+    const rawModal = document.getElementById('decoder-raw-modal');
 
     if (input) {
         input.value = '';
@@ -284,19 +277,17 @@ export function clearDecoder() {
         decodedContent.innerHTML = '';
     }
     if (rawContent) {
-        rawContent.value = '';
-        rawContent.style.height = '';
+        rawContent.textContent = '';
         resetScrollPosition(rawContent);
     }
-    if (rawContainer) {
-        rawContainer.style.display = 'none';
-    }
     if (toggleButton) {
-        toggleButton.textContent = 'Show raw';
-        toggleButton.dataset.expanded = 'false';
+        toggleButton.disabled = true;
     }
     if (output) {
-        output.style.display = 'none';
+        output.classList.remove('is-visible');
+    }
+    if (rawModal && rawModal.classList.contains('open')) {
+        closeModal('decoder-raw-modal');
     }
     hideStatus('decoder');
     hideProgress('decoder');
@@ -305,32 +296,34 @@ export function clearDecoder() {
 }
 
 export function toggleRawDecoder() {
-    const rawContainer = document.getElementById('decoder-raw-container');
     const toggleButton = document.getElementById('decoder-toggle-raw');
     const rawContent = document.getElementById('decoder-raw-content');
-    if (!rawContainer || !toggleButton) {
+    const modal = document.getElementById('decoder-raw-modal');
+    if (!toggleButton || !rawContent || !modal) {
         return;
     }
 
-    const expanded = toggleButton.dataset.expanded === 'true';
-    if (expanded) {
-        rawContainer.style.display = 'none';
-        toggleButton.textContent = 'Show raw';
-        toggleButton.dataset.expanded = 'false';
+    if (toggleButton.disabled) {
+        return;
+    }
+
+    const hasContent = rawContent.textContent && rawContent.textContent.trim().length > 0;
+    if (!hasContent) {
+        return;
+    }
+
+    if (modal.classList.contains('open')) {
+        closeModal('decoder-raw-modal');
     } else {
-        rawContainer.style.display = 'block';
-        toggleButton.textContent = 'Hide raw';
-        toggleButton.dataset.expanded = 'true';
-        if (rawContent) {
-            autoSizeRawTextarea(rawContent);
-        }
+        openModal('decoder-raw-modal');
     }
 }
 
 function autoSizeRawTextarea(textarea) {
-    if (!textarea) {
+    if (!(textarea instanceof HTMLTextAreaElement)) {
         return;
     }
+
     textarea.style.overflowY = 'hidden';
     textarea.style.height = 'auto';
     const scrollHeight = textarea.scrollHeight;
@@ -792,8 +785,7 @@ function updateDecoderEmptyState() {
     const summary = output ? output.querySelector('#decoded-content') : null;
     const hasVisibleOutput = Boolean(
         output &&
-            output.style.display !== 'none' &&
-            output.offsetParent !== null &&
+            output.classList.contains('is-visible') &&
             summary &&
             summary.childElementCount > 0
     );

@@ -1,0 +1,24 @@
+<div
+    id="decoder-raw-modal"
+    class="modal"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="decoder-raw-modal-title"
+>
+    <div class="modal-content" role="document">
+        <div class="modal-header">
+            <h2 id="decoder-raw-modal-title" class="modal-title">Raw Codec Output</h2>
+            <button
+                type="button"
+                class="modal-close"
+                aria-label="Close raw codec output"
+                onclick="closeModal('decoder-raw-modal')"
+            >
+                &times;
+            </button>
+        </div>
+        <div class="modal-body">
+            <pre id="decoder-raw-content" class="decoder-raw-pre" tabindex="0"></pre>
+        </div>
+    </div>
+</div>

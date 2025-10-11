@@ -1,22 +1,41 @@
+const STATUS_TIMEOUT_MS = 10000;
+
 export function showStatus(tabId, message, type) {
-    const statusEl = document.getElementById(tabId + '-status');
+    const statusEl = document.getElementById(`${tabId}-status`);
     if (!statusEl) {
         return;
     }
-    statusEl.className = 'status ' + type;
-    statusEl.textContent = message;
-    statusEl.style.display = 'block';
 
-    setTimeout(() => {
+    if (statusEl.dataset.statusTimeoutId) {
+        clearTimeout(Number(statusEl.dataset.statusTimeoutId));
+        delete statusEl.dataset.statusTimeoutId;
+    }
+
+    statusEl.className = `status ${type}`;
+    statusEl.textContent = message;
+
+    requestAnimationFrame(() => {
+        statusEl.classList.add('status--visible');
+    });
+
+    const timeoutId = window.setTimeout(() => {
         hideStatus(tabId);
-    }, 10000);
+    }, STATUS_TIMEOUT_MS);
+    statusEl.dataset.statusTimeoutId = String(timeoutId);
 }
 
 export function hideStatus(tabId) {
-    const statusEl = document.getElementById(tabId + '-status');
-    if (statusEl) {
-        statusEl.style.display = 'none';
+    const statusEl = document.getElementById(`${tabId}-status`);
+    if (!statusEl) {
+        return;
     }
+
+    if (statusEl.dataset.statusTimeoutId) {
+        clearTimeout(Number(statusEl.dataset.statusTimeoutId));
+        delete statusEl.dataset.statusTimeoutId;
+    }
+
+    statusEl.classList.remove('status--visible');
 }
 
 export function showProgress(tabId, message) {

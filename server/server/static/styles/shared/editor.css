@@ -61,6 +61,7 @@
 
 #json-editor-container {
     position: relative;
+    transition: transform 280ms ease, box-shadow 280ms ease, width 280ms ease, height 280ms ease;
 }
 
 #json-editor-container.expanded {
@@ -99,7 +100,7 @@
     font-weight: 600;
     line-height: 1;
     cursor: pointer;
-    transition: background-color 0.2s ease, color 0.2s ease;
+    transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
     box-shadow: none;
 }
 
@@ -123,16 +124,22 @@
 }
 
 .json-editor-overlay {
-    display: none;
     position: fixed;
     inset: 0;
     background: rgba(15, 39, 64, 0.45);
     backdrop-filter: blur(2px);
     z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 260ms ease, visibility 0s linear 260ms;
 }
 
 .json-editor-overlay.active {
-    display: block;
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transition: opacity 260ms ease, visibility 0s linear 0s;
 }
 
 .checkbox-group {
@@ -159,6 +166,7 @@
 
 .progress.show {
     display: block;
+    animation: fadeInSoft 240ms ease;
 }
 
 .spinner {

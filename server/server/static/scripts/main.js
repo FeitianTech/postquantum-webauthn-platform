@@ -116,6 +116,7 @@ window.advancedAuthenticate = advancedAuthenticate;
 window.processCodec = processCodec;
 window.clearDecoder = clearDecoder;
 window.toggleRawDecoder = toggleRawDecoder;
+window.closeModal = closeModal;
 window.switchCodecMode = switchCodecMode;
 window.changeBinaryFormat = changeBinaryFormat;
 window.saveJsonEditor = saveJsonEditor;

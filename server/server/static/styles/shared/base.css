@@ -1,4 +1,4 @@
-/* WebAuthn FIDO2 Test Application Styles */
+/* Post-Quantum WebAuthn Test Platform Styles */
 
 :root {
     --primary-color: #0072CE;
@@ -10,6 +10,26 @@
     --muted-text: #5c6c7a;
     --shadow-soft: 0 18px 40px rgba(0, 114, 206, 0.08);
     --shadow-hover: 0 24px 55px rgba(0, 114, 206, 0.18);
+}
+
+@keyframes fadeInSoft {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeInPlace {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
 }
 
 * {
@@ -150,6 +170,7 @@ body.modal-open {
 
 .tab-content.active {
     display: block;
+    animation: fadeInSoft 320ms ease;
 }
 
 .section {
@@ -399,11 +420,21 @@ body.modal-open {
     gap: 1rem;
 }
 
-#decoder-raw-content {
-    overflow-y: hidden;
-    resize: vertical;
-    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
-    line-height: 1.4;
+.decoder-output-panel {
+    margin-top: 1.5rem;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translateY(8px);
+    transition: opacity 260ms ease, transform 260ms ease, visibility 0s linear 260ms;
+}
+
+.decoder-output-panel.is-visible {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateY(0);
+    transition: opacity 260ms ease, transform 260ms ease, visibility 0s linear 0s;
 }
 
 .decoder-summary-header {
@@ -414,6 +445,48 @@ body.modal-open {
     border-bottom: 1px solid rgba(15, 39, 64, 0.08);
     padding-bottom: 0.65rem;
     margin-bottom: 0;
+}
+
+.decoder-summary-header--with-actions {
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.decoder-summary-header--with-actions h3 {
+    margin: 0;
+}
+
+.decoder-summary-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.decoder-raw-button {
+    min-width: 88px;
+}
+
+.decoder-raw-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+    transform: none;
+    box-shadow: none;
+}
+
+#decoder-raw-content {
+    margin: 0;
+    padding: 1.25rem;
+    border-radius: 18px;
+    background: rgba(0, 114, 206, 0.08);
+    border: 1px solid rgba(0, 114, 206, 0.18);
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    font-size: 0.92rem;
+    line-height: 1.5;
+    color: var(--text-color);
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow: auto;
+    max-height: calc(80vh - 160px);
 }
 
 .decoder-pill {

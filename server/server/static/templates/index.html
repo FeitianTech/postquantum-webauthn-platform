@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WebAuthn FIDO2 Test Application</title>
+    <title>Post-Quantum WebAuthn Test Platform</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles/advanced/main.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='styles/advanced/mds.css') }}">
 </head>
 <body class="app-loading">
     <div id="app-loader" class="app-loader" role="status" aria-live="polite" aria-hidden="false">
         <div class="app-loader__dialog" role="alertdialog" aria-modal="true">
-            <h1 class="app-loader__title">WebAuthn FIDO2 Test Application</h1>
+            <h1 class="app-loader__title">Post-Quantum WebAuthn Test Platform</h1>
             <p id="app-loader-status" class="app-loader__status">Preparing application…</p>
             <div class="app-loader__progress">
                 <div
@@ -50,6 +50,8 @@
 {% include 'shared/modals/registration-result.html' %}
 
 {% include 'shared/modals/credential-details.html' %}
+
+{% include 'shared/modals/decoder-raw.html' %}
 
     <div id="json-editor-overlay" class="json-editor-overlay"></div>
     <div

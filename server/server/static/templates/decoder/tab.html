@@ -39,6 +39,7 @@
                             <li>
                                 <span class="decoder-format-name">CBOR:</span>
                                 <span class="decoder-format-chip">binary</span>
+                                <span class="decoder-format-chip">CTAP/WebAuthn Data</span>
                             </li>
                         </ul>
                         <p class="decoder-description-note">
@@ -104,30 +105,22 @@
                         <span id="decoder-progress-text">Decoding...</span>
                     </div>
 
-                    <div id="decoder-output" style="display: none;">
-                        <h3>Codec Output</h3>
+                    <div id="decoder-output" class="decoder-output-panel">
+                        <div class="decoder-summary-header decoder-summary-header--with-actions">
+                            <h3>Codec Output</h3>
+                            <div class="decoder-summary-actions">
+                                <button
+                                    class="btn btn-secondary decoder-raw-button"
+                                    type="button"
+                                    id="decoder-toggle-raw"
+                                    onclick="toggleRawDecoder()"
+                                    disabled
+                                >
+                                    Raw
+                                </button>
+                            </div>
+                        </div>
                         <div id="decoded-content" class="decoder-summary"></div>
-                        <div class="form-group" style="margin-top: 0.75rem;">
-                            <button
-                                class="btn btn-secondary"
-                                type="button"
-                                id="decoder-toggle-raw"
-                                data-expanded="false"
-                                onclick="toggleRawDecoder()"
-                            >
-                                Show raw
-                            </button>
-                        </div>
-                        <div id="decoder-raw-container" style="display: none;">
-                            <textarea
-                                id="decoder-raw-content"
-                                class="form-control decoder-output"
-                                rows="14"
-                                readonly
-                                spellcheck="false"
-                                wrap="off"
-                            ></textarea>
-                        </div>
                     </div>
                 </div>
             </div>
