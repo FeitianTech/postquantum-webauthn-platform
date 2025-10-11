@@ -80,13 +80,13 @@
                     <div class="form-group decoder-format-group" id="decoder-format-group" style="display: none;">
                         <label for="decoder-format">Encoding format</label>
                         <select id="decoder-format" class="form-control">
-                            <option value="JSON">JSON</option>
-                            <option value="CBOR">CBOR</option>
-                            <option value="WebAuthn client data">WebAuthn client data</option>
-                            <option value="Authenticator data">Authenticator data</option>
-                            <option value="Attestation object">Attestation object</option>
-                            <option value="X.509 certificate">X.509 certificate</option>
-                            <option value="PublicKeyCredential">PublicKeyCredential</option>
+                            <option value="CBOR" selected>CBOR (binary)</option>
+                            <option value="JSON">JSON (text)</option>
+                            <option value="WebAuthn client data">WebAuthn client data (binary JSON)</option>
+                            <option value="Authenticator data">Authenticator data (binary)</option>
+                            <option value="Attestation object">Attestation object (binary CBOR)</option>
+                            <option value="X.509 certificate">X.509 certificate (binary DER + PEM)</option>
+                            <option value="PublicKeyCredential">PublicKeyCredential (JSON text)</option>
                         </select>
                     </div>
 

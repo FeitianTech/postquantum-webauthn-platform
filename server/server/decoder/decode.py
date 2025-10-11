@@ -1422,6 +1422,152 @@ def _repair_make_credential_entries(
     return structure, polished_value, signature_bytes
 
 
+def _locate_get_assertion_trailing_offset(raw_bytes: bytes, signature_start: int) -> int:
+    if not raw_bytes or signature_start >= len(raw_bytes):
+        return len(raw_bytes)
+
+    search_start = max(signature_start, len(raw_bytes) - 2048)
+    for idx in range(search_start, len(raw_bytes)):
+        if raw_bytes[idx] != 0x04:
+            continue
+        key, after_key = _lenient_decode_from(raw_bytes, idx)
+        if key != 4 or after_key <= idx:
+            continue
+        value, after_value = _lenient_decode_from(raw_bytes, after_key)
+        if after_value <= after_key:
+            continue
+        if isinstance(value, Mapping):
+            string_keys = {str(k) for k in value.keys()}
+            if string_keys.intersection({"id", "name", "displayName"}):
+                return idx
+        if isinstance(value, list):
+            # Some authenticators wrap user structures; ensure strings exist within the payload.
+            flattened = []
+            for item in value:
+                if isinstance(item, Mapping):
+                    flattened.extend(str(k) for k in item.keys())
+            if any(key in {"id", "name", "displayName"} for key in flattened):
+                return idx
+    return len(raw_bytes)
+
+
+def _extract_get_assertion_trailing_from_raw(
+    raw_bytes: bytes,
+) -> Tuple[Optional[bytes], Dict[int, Any]]:
+    if not raw_bytes:
+        return None, {}
+
+    signature_offset: Optional[int] = None
+    length_size = 0
+    for prefix, size in ((0x58, 1), (0x59, 2), (0x5A, 4), (0x5B, 8)):
+        marker = bytes((3, prefix))
+        idx = raw_bytes.find(marker)
+        if idx != -1:
+            signature_offset = idx
+            length_size = size
+            break
+
+    if signature_offset is None or length_size == 0:
+        return None, {}
+
+    length_bytes = raw_bytes[signature_offset + 2 : signature_offset + 2 + length_size]
+    if len(length_bytes) != length_size:
+        return None, {}
+
+    declared_length = int.from_bytes(length_bytes, "big")
+    value_offset = signature_offset + 2 + length_size
+    declared_end = value_offset + declared_length
+
+    if declared_end > len(raw_bytes):
+        trailing_offset = _locate_get_assertion_trailing_offset(raw_bytes, value_offset)
+    else:
+        trailing_offset = declared_end
+
+    signature_bytes = raw_bytes[value_offset:trailing_offset]
+    trailing_fields: Dict[int, Any] = {}
+
+    cursor = trailing_offset
+    while cursor < len(raw_bytes):
+        key, after_key = _lenient_decode_from(raw_bytes, cursor)
+        if after_key <= cursor or not isinstance(key, int):
+            break
+        value, after_value = _lenient_decode_from(raw_bytes, after_key)
+        if after_value <= after_key:
+            break
+        try:
+            encoded_value = cbor.encode(value)
+        except Exception:  # pragma: no cover - defensive encoding guard
+            encoded_value = None
+        if encoded_value is not None:
+            expected_end = after_key + len(encoded_value)
+            if expected_end <= len(raw_bytes):
+                after_value = min(after_value, expected_end)
+        trailing_fields[int(key)] = value
+        cursor = after_value
+
+    if 5 not in trailing_fields and trailing_offset < len(raw_bytes):
+        idx = raw_bytes.rfind(b"\x05", trailing_offset)
+        if idx != -1:
+            key_candidate, after_key_candidate = _lenient_decode_from(raw_bytes, idx)
+            if key_candidate == 5 and after_key_candidate > idx:
+                value_candidate, after_value_candidate = _lenient_decode_from(
+                    raw_bytes, after_key_candidate
+                )
+                if after_value_candidate > after_key_candidate:
+                    trailing_fields[5] = value_candidate
+
+    return (signature_bytes if signature_bytes else None), trailing_fields
+
+
+def _split_get_assertion_trailing_fields(
+    signature_bytes: bytes,
+) -> Tuple[bytes, Dict[int, Any]]:
+    if not signature_bytes:
+        return signature_bytes, {}
+
+    start_search = max(0, len(signature_bytes) - 1024)
+    for offset in range(start_search, len(signature_bytes)):
+        if signature_bytes[offset] != 0x04:
+            continue
+
+        key, after_key = _lenient_decode_from(signature_bytes, offset)
+        if key != 4 or after_key <= offset:
+            continue
+
+        value, after_value = _lenient_decode_from(signature_bytes, after_key)
+        if after_value <= after_key:
+            continue
+
+        trailing_fields: Dict[int, Any] = {4: value}
+        cursor = after_value
+        success = True
+
+        while cursor < len(signature_bytes):
+            next_key, after_next_key = _lenient_decode_from(signature_bytes, cursor)
+            if (
+                after_next_key <= cursor
+                or next_key is None
+                or not isinstance(next_key, int)
+                or next_key < 4
+                or next_key > 8
+            ):
+                success = False
+                break
+
+            next_value, after_next_value = _lenient_decode_from(signature_bytes, after_next_key)
+            if after_next_value <= after_next_key:
+                success = False
+                break
+
+            trailing_fields[int(next_key)] = next_value
+            cursor = after_next_value
+
+        if success and cursor == len(signature_bytes):
+            return signature_bytes[:offset], trailing_fields
+
+    return signature_bytes, {}
+
+
 def _repair_get_assertion_entries(
     structure: Dict[str, Any],
     value: Mapping[Any, Any],
@@ -1430,16 +1576,21 @@ def _repair_get_assertion_entries(
     if not isinstance(value, dict):
         return structure, value, None
 
+    entries_source = structure.get("entries")
+    if isinstance(entries_source, list):
+        entries = entries_source
+    else:
+        entries = []
+        structure["entries"] = entries
+
     signature_entry = None
-    entries = structure.get("entries")
-    if isinstance(entries, list):
-        for idx, entry in enumerate(entries):
-            key_info = entry.get("key") if isinstance(entry, Mapping) else None
-            if not isinstance(key_info, Mapping):
-                continue
-            if key_info.get("majorType") == 2 and isinstance(entry.get("value"), Mapping):
-                signature_entry = (idx, entry)
-                break
+    for idx, entry in enumerate(entries):
+        key_info = entry.get("key") if isinstance(entry, Mapping) else None
+        if not isinstance(key_info, Mapping):
+            continue
+        if key_info.get("majorType") == 2 and isinstance(entry.get("value"), Mapping):
+            signature_entry = (idx, entry)
+            break
 
     signature_bytes: Optional[bytes] = None
     user_value: Optional[Any] = None
@@ -1459,7 +1610,17 @@ def _repair_get_assertion_entries(
             user_value = _structure_to_value(value_node)
         entries.pop(idx)
 
-    repaired_value = dict(value)
+    recovered_value = dict(value)
+    recovered_fields: Dict[int, Any] = {}
+
+    if raw_bytes:
+        raw_signature, raw_field_map = _extract_get_assertion_trailing_from_raw(raw_bytes)
+        if raw_signature is not None:
+            signature_bytes = raw_signature
+        recovered_fields.update(raw_field_map)
+        if user_value is None and 4 in raw_field_map:
+            user_value = raw_field_map.get(4)
+
     if signature_bytes is None and raw_bytes:
         for raw_key, raw_value in _extract_lenient_map_entries(raw_bytes):
             if isinstance(raw_key, int) and raw_key == 3:
@@ -1477,39 +1638,59 @@ def _repair_get_assertion_entries(
                     break
 
     if signature_bytes is not None:
-        bytes_keys = [key for key in repaired_value if isinstance(key, (bytes, bytearray))]
-        for key in bytes_keys:
-            repaired_value.pop(key, None)
-        repaired_value[3] = signature_bytes
-        sig_structure, _ = _decode_cbor_structure(cbor.encode(signature_bytes))
-        if isinstance(entries, list):
-            entries.append(
-                {
-                    "keySummary": "3",
-                    "key": {"majorType": 0, "type": "unsigned", "value": 3, "summary": "3"},
-                    "value": sig_structure,
-                    "valueSummary": sig_structure.get("summary"),
-                }
-            )
-        if isinstance(entries, list):
-            structure["length"] = len(entries)
-            structure["summary"] = f"map[{len(entries)}]"
-    if user_value is not None:
-        repaired_value[4] = user_value
-        user_structure, _ = _decode_cbor_structure(cbor.encode(user_value))
-        if isinstance(entries, list):
-            entries.append(
-                {
-                    "keySummary": "4",
-                    "key": {"majorType": 0, "type": "unsigned", "value": 4, "summary": "4"},
-                    "value": user_structure,
-                    "valueSummary": user_structure.get("summary"),
-                }
-            )
-        structure["length"] = len(entries)
-        structure["summary"] = f"map[{len(entries)}]"
+        signature_bytes, trailing_fields = _split_get_assertion_trailing_fields(signature_bytes)
+        if user_value is None and 4 in trailing_fields:
+            user_value = trailing_fields.pop(4)
+        for key, value in trailing_fields.items():
+            recovered_fields.setdefault(key, value)
 
-    return structure, repaired_value, signature_bytes
+        bytes_keys = [key for key in recovered_value if isinstance(key, (bytes, bytearray))]
+        for key in bytes_keys:
+            recovered_value.pop(key, None)
+        recovered_value[3] = signature_bytes
+        sig_structure, _ = _decode_cbor_structure(cbor.encode(signature_bytes))
+        entries.append(
+            {
+                "keySummary": "3",
+                "key": {"majorType": 0, "type": "unsigned", "value": 3, "summary": "3"},
+                "value": sig_structure,
+                "valueSummary": sig_structure.get("summary"),
+            }
+        )
+
+    if user_value is not None:
+        recovered_value[4] = user_value
+        user_structure, _ = _decode_cbor_structure(cbor.encode(user_value))
+        entries.append(
+            {
+                "keySummary": "4",
+                "key": {"majorType": 0, "type": "unsigned", "value": 4, "summary": "4"},
+                "value": user_structure,
+                "valueSummary": user_structure.get("summary"),
+            }
+        )
+
+    for key in sorted(recovered_fields):
+        if key in {3, 4}:
+            continue
+        if key in recovered_value:
+            continue
+        field_value = recovered_fields[key]
+        recovered_value[key] = field_value
+        field_structure, _ = _decode_cbor_structure(cbor.encode(field_value))
+        entries.append(
+            {
+                "keySummary": str(key),
+                "key": {"majorType": 0, "type": "unsigned", "value": key, "summary": str(key)},
+                "value": field_structure,
+                "valueSummary": field_structure.get("summary"),
+            }
+        )
+
+    structure["length"] = len(entries)
+    structure["summary"] = f"map[{len(entries)}]"
+
+    return structure, recovered_value, signature_bytes
 
 
 def _derive_alg_from_auth_data(auth_data_bytes: Optional[bytes]) -> Optional[int]:
