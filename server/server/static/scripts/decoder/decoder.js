@@ -256,9 +256,21 @@ export function switchCodecMode(mode) {
     if (mode !== 'decode' && mode !== 'encode') {
         return;
     }
+    if (mode === currentCodecMode) {
+        return;
+    }
     currentCodecMode = mode;
     hideStatus('decoder');
     updateDecoderModeUI();
+    const content = document.getElementById('codec-mode-content');
+    if (content) {
+        content.classList.remove('codec-mode-animating');
+        void content.offsetWidth;
+        content.classList.add('codec-mode-animating');
+        content.addEventListener('animationend', () => {
+            content.classList.remove('codec-mode-animating');
+        }, { once: true });
+    }
 }
 
 export function clearDecoder() {

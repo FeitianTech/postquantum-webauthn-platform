@@ -7,6 +7,17 @@
     justify-content: center;
     z-index: 1200;
     padding: 1.5rem;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 220ms ease, visibility 0s linear 220ms;
+}
+
+.mds-modal.is-open {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transition: opacity 220ms ease, visibility 0s linear 0s;
 }
 
 #mds-authenticator-modal {
@@ -31,6 +42,14 @@
     max-height: 95vh;
     display: flex;
     flex-direction: column;
+    transform: translateY(16px) scale(0.98);
+    opacity: 0;
+    transition: transform 260ms ease, opacity 260ms ease;
+}
+
+.mds-modal.is-open .mds-modal__dialog {
+    transform: translateY(0) scale(1);
+    opacity: 1;
 }
 
 .mds-modal__dialog--certificate {

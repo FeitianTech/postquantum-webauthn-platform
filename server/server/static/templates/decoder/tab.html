@@ -78,49 +78,51 @@
                         </button>
                     </div>
 
-                    <div class="form-group decoder-format-group" id="decoder-format-group" style="display: none;">
-                        <label for="decoder-format">Encoding format</label>
-                        <select id="decoder-format" class="form-control">
-                            <option value="CBOR" selected>CBOR (binary)</option>
-                            <option value="JSON">JSON (text)</option>
-                            <option value="WebAuthn client data">WebAuthn client data (binary JSON)</option>
-                            <option value="Authenticator data">Authenticator data (binary)</option>
-                            <option value="Attestation object">Attestation object (binary CBOR)</option>
-                            <option value="X.509 certificate">X.509 certificate (binary DER + PEM)</option>
-                            <option value="PublicKeyCredential">PublicKeyCredential (JSON text)</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <textarea id="decoder-input" class="form-control" rows="10" placeholder="Paste something here to decode..."></textarea>
-                    </div>
-
-                    <div class="form-group">
-                        <button class="btn" id="decoder-submit" onclick="processCodec()">Decode</button>
-                        <button class="btn btn-secondary" onclick="clearDecoder()">Clear</button>
-                    </div>
-
-                    <div class="progress" id="decoder-progress">
-                        <div class="spinner" aria-hidden="true"></div>
-                        <span id="decoder-progress-text">Decoding...</span>
-                    </div>
-
-                    <div id="decoder-output" class="decoder-output-panel">
-                        <div class="decoder-summary-header decoder-summary-header--with-actions">
-                            <h3>Codec Output</h3>
-                            <div class="decoder-summary-actions">
-                                <button
-                                    class="btn btn-secondary decoder-raw-button"
-                                    type="button"
-                                    id="decoder-toggle-raw"
-                                    onclick="toggleRawDecoder()"
-                                    disabled
-                                >
-                                    Raw
-                                </button>
-                            </div>
+                    <div id="codec-mode-content" class="codec-mode-content">
+                        <div class="form-group decoder-format-group" id="decoder-format-group" style="display: none;">
+                            <label for="decoder-format">Encoding format</label>
+                            <select id="decoder-format" class="form-control">
+                                <option value="CBOR" selected>CBOR (binary)</option>
+                                <option value="JSON">JSON (text)</option>
+                                <option value="WebAuthn client data">WebAuthn client data (binary JSON)</option>
+                                <option value="Authenticator data">Authenticator data (binary)</option>
+                                <option value="Attestation object">Attestation object (binary CBOR)</option>
+                                <option value="X.509 certificate">X.509 certificate (binary DER + PEM)</option>
+                                <option value="PublicKeyCredential">PublicKeyCredential (JSON text)</option>
+                            </select>
                         </div>
-                        <div id="decoded-content" class="decoder-summary"></div>
+
+                        <div class="form-group">
+                            <textarea id="decoder-input" class="form-control" rows="10" placeholder="Paste something here to decode..."></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <button class="btn" id="decoder-submit" onclick="processCodec()">Decode</button>
+                            <button class="btn btn-secondary" onclick="clearDecoder()">Clear</button>
+                        </div>
+
+                        <div class="progress" id="decoder-progress">
+                            <div class="spinner" aria-hidden="true"></div>
+                            <span id="decoder-progress-text">Decoding...</span>
+                        </div>
+
+                        <div id="decoder-output" class="decoder-output-panel">
+                            <div class="decoder-summary-header decoder-summary-header--with-actions">
+                                <h3>Codec Output</h3>
+                                <div class="decoder-summary-actions">
+                                    <button
+                                        class="btn btn-secondary decoder-raw-button"
+                                        type="button"
+                                        id="decoder-toggle-raw"
+                                        onclick="toggleRawDecoder()"
+                                        disabled
+                                    >
+                                        Raw
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="decoded-content" class="decoder-summary"></div>
+                        </div>
                     </div>
                 </div>
             </div>

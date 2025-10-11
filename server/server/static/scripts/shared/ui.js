@@ -286,7 +286,14 @@ export function toggleJsonEditorExpansion(forceCollapse = false) {
 
     if (shouldExpand) {
         container.classList.add('expanded');
+        if (container.dataset.jsonEditorCollapseTimeout) {
+            clearTimeout(Number(container.dataset.jsonEditorCollapseTimeout));
+            delete container.dataset.jsonEditorCollapseTimeout;
+        }
         overlay.classList.add('active');
+        requestAnimationFrame(() => {
+            container.classList.add('is-visible');
+        });
         toggleButton.innerHTML = '<span aria-hidden="true">✕</span>';
         toggleButton.setAttribute('aria-label', 'Close expanded JSON editor');
         toggleButton.setAttribute('title', 'Close expanded JSON editor');
@@ -296,8 +303,37 @@ export function toggleJsonEditorExpansion(forceCollapse = false) {
             editor.scrollTop = 0;
         }
     } else {
-        container.classList.remove('expanded');
         overlay.classList.remove('active');
+        container.classList.remove('is-visible');
+        if (container.classList.contains('expanded')) {
+            const handleTransitionEnd = event => {
+                if (event.target !== container || event.propertyName !== 'opacity') {
+                    return;
+                }
+                const timeoutId = container.dataset.jsonEditorCollapseTimeout;
+                if (timeoutId) {
+                    clearTimeout(Number(timeoutId));
+                    delete container.dataset.jsonEditorCollapseTimeout;
+                }
+                container.classList.remove('expanded');
+            };
+            container.addEventListener('transitionend', handleTransitionEnd, { once: true });
+            const previousTimeoutId = container.dataset.jsonEditorCollapseTimeout;
+            if (previousTimeoutId) {
+                clearTimeout(Number(previousTimeoutId));
+            }
+            const fallbackTimeout = setTimeout(() => {
+                if (container.classList.contains('expanded')) {
+                    container.classList.remove('expanded');
+                }
+                if (container.dataset.jsonEditorCollapseTimeout === String(fallbackTimeout)) {
+                    delete container.dataset.jsonEditorCollapseTimeout;
+                }
+            }, 260);
+            container.dataset.jsonEditorCollapseTimeout = String(fallbackTimeout);
+        } else {
+            container.classList.remove('expanded');
+        }
         toggleButton.innerHTML = '<span aria-hidden="true">⛶</span>';
         toggleButton.setAttribute('aria-label', 'Expand JSON editor');
         toggleButton.setAttribute('title', 'Expand JSON editor');

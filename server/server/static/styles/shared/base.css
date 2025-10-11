@@ -404,6 +404,25 @@ body.modal-open {
     box-shadow: 0 0 0 3px rgba(0, 114, 206, 0.25);
 }
 
+.codec-mode-content {
+    position: relative;
+}
+
+.codec-mode-content.codec-mode-animating {
+    animation: codecModeFade 240ms ease;
+}
+
+@keyframes codecModeFade {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 .decoder-format-group {
     margin-top: 1rem;
 }

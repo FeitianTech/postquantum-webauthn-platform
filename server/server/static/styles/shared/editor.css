@@ -61,7 +61,6 @@
 
 #json-editor-container {
     position: relative;
-    transition: transform 280ms ease, box-shadow 280ms ease, width 280ms ease, height 280ms ease;
 }
 
 #json-editor-container.expanded {
@@ -75,11 +74,17 @@
     z-index: 1100;
     padding: 1.75rem 1.5rem 1.5rem;
     border-radius: 24px;
+    opacity: 0;
+    transition: opacity 220ms ease;
 }
 
 #json-editor-container.expanded textarea {
     min-height: unset;
     height: 100%;
+}
+
+#json-editor-container.expanded.is-visible {
+    opacity: 1;
 }
 
 .json-editor-expand-btn {
@@ -132,14 +137,14 @@
     opacity: 0;
     visibility: hidden;
     pointer-events: none;
-    transition: opacity 260ms ease, visibility 0s linear 260ms;
+    transition: opacity 220ms ease, visibility 0s linear 220ms;
 }
 
 .json-editor-overlay.active {
     opacity: 1;
     visibility: visible;
     pointer-events: auto;
-    transition: opacity 260ms ease, visibility 0s linear 0s;
+    transition: opacity 220ms ease, visibility 0s linear 0s;
 }
 
 .checkbox-group {
