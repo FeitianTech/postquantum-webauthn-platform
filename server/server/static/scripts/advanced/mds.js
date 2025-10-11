@@ -24,6 +24,13 @@ import {
     extractList,
     renderCertificateSummary,
 } from './mds-utils.js';
+import {
+    loaderIsActive,
+    loaderSetPhase,
+    loaderSetProgress,
+    loaderSetMetadataCount,
+    loaderComplete,
+} from '../shared/loader.js';
 
 let mdsState = null;
 let mdsData = [];
@@ -1235,9 +1242,43 @@ async function applyMetadataEntries(metadata, { note = '' } = {}) {
         return;
     }
 
-    const entries = Array.isArray(metadata?.entries)
-        ? metadata.entries.map((entry, index) => transformEntry(entry, index)).filter(Boolean)
-        : [];
+    const rawEntries = Array.isArray(metadata?.entries) ? metadata.entries : [];
+    const totalEntries = rawEntries.length;
+    const shouldReportProgress = loaderIsActive() && !hasLoaded;
+    const entries = [];
+
+    if (shouldReportProgress) {
+        const initialProgress = totalEntries ? 58 : 72;
+        loaderSetPhase('Processing authenticator metadata…', { progress: initialProgress });
+        loaderSetMetadataCount(0);
+    }
+
+    if (totalEntries) {
+        const progressBase = 58;
+        const progressRange = 32;
+        let processedCount = 0;
+
+        rawEntries.forEach((entry, index) => {
+            processedCount += 1;
+            const transformed = transformEntry(entry, index);
+            if (transformed) {
+                entries.push(transformed);
+                if (shouldReportProgress) {
+                    loaderSetMetadataCount(entries.length);
+                }
+            }
+
+            if (shouldReportProgress) {
+                const ratio = processedCount / totalEntries;
+                const progress = progressBase + Math.min(progressRange, ratio * progressRange);
+                loaderSetProgress(progress);
+            }
+        });
+    } else {
+        if (shouldReportProgress) {
+            loaderSetProgress(88);
+        }
+    }
 
     mdsData = entries;
     setUpdateButtonMode('update');
@@ -1320,6 +1361,12 @@ async function applyMetadataEntries(metadata, { note = '' } = {}) {
     }
 
     setColumnResizersEnabled(true);
+
+    if (shouldReportProgress) {
+        loaderSetMetadataCount(entries.length);
+        loaderSetPhase('Finalising interface…', { progress: 94 });
+        loaderComplete({ message: 'Application ready!', delay: 720 });
+    }
 }
 
 async function applyInitialMetadataPayload(note) {
@@ -1371,6 +1418,12 @@ async function loadMdsData(statusNote, options = {}) {
 
     const note = typeof statusNote === 'string' ? statusNote.trim() : '';
     const previousHasLoaded = hasLoaded;
+    const trackProgress = loaderIsActive() && !hasLoaded;
+
+    if (trackProgress) {
+        loaderSetPhase('Loading authenticator metadata…', { progress: 46 });
+        loaderSetMetadataCount(0);
+    }
 
     if (forceReload) {
         initialMdsJws = null;
@@ -1380,6 +1433,9 @@ async function loadMdsData(statusNote, options = {}) {
     if (!forceReload) {
         if (!hasLoaded) {
             try {
+                if (trackProgress && typeof initialMdsJws === 'string' && initialMdsJws) {
+                    loaderSetPhase('Applying server metadata snapshot…', { progress: 52 });
+                }
                 const applied = await applyInitialMetadataPayload(note);
                 if (applied) {
                     setColumnResizersEnabled(hasLoaded);
@@ -1393,6 +1449,9 @@ async function loadMdsData(statusNote, options = {}) {
         const cached = readMetadataCache();
         if (cached?.metadata) {
             try {
+                if (trackProgress) {
+                    loaderSetPhase('Restoring cached authenticator metadata…', { progress: 52 });
+                }
                 const enhanced = await ensureFeitianMetadata(cached.metadata);
                 await applyMetadataEntries(enhanced, { note });
                 storeMetadataCache(JSON.stringify(enhanced), cached.info || null);
@@ -1413,11 +1472,20 @@ async function loadMdsData(statusNote, options = {}) {
     const task = (async () => {
         try {
             const fetchOptions = forceReload ? { cache: 'reload' } : { cache: 'no-cache' };
+            if (trackProgress) {
+                const phaseLabel = forceReload
+                    ? 'Refreshing authenticator metadata…'
+                    : 'Downloading authenticator metadata…';
+                loaderSetPhase(phaseLabel, { progress: 52 });
+            }
             const response = await fetch(MDS_JWS_PATH, fetchOptions);
             if (!response.ok) {
                 if (response.status === 404) {
                     const fallbackMetadata = await ensureFeitianMetadata(null);
                     if (Array.isArray(fallbackMetadata.entries) && fallbackMetadata.entries.length) {
+                        if (trackProgress) {
+                            loaderSetPhase('Loading bundled authenticator metadata…', { progress: 54 });
+                        }
                         const fallbackNoteParts = [note, 'Using bundled Feitian PQC metadata.'].filter(Boolean);
                         await applyMetadataEntries(fallbackMetadata, {
                             note: fallbackNoteParts.join(' '),
@@ -1464,11 +1532,18 @@ async function loadMdsData(statusNote, options = {}) {
                     clearMetadataCache();
                     stateUpdated = true;
                     hasLoaded = false;
+                    if (trackProgress) {
+                        loaderSetPhase('Metadata unavailable. Continuing without authenticator data.', { progress: 92 });
+                        loaderComplete({ message: 'Application ready!', delay: 720 });
+                    }
                     return;
                 }
                 throw new Error(`Unexpected response status: ${response.status}`);
             }
 
+            if (trackProgress) {
+                loaderSetPhase('Decoding metadata payload…', { progress: 56 });
+            }
             const jws = await response.text();
             const payloadSegment = jws.split('.')[1];
             if (!payloadSegment) {
@@ -1503,6 +1578,10 @@ async function loadMdsData(statusNote, options = {}) {
             }
             if (!previousHasLoaded) {
                 clearMetadataCache();
+            }
+            if (trackProgress) {
+                loaderSetPhase('Unable to load authenticator metadata. Continuing with limited data.', { progress: 92 });
+                loaderComplete({ message: 'Application ready!', delay: 720 });
             }
         } finally {
             isLoading = false;
