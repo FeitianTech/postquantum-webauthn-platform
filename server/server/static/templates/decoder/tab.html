@@ -94,6 +94,13 @@
                                     class="form-control"
                                     rows="10"
                                     placeholder="Paste something here to decode..."
+                                    spellcheck="false"
+                                    autocorrect="off"
+                                    autocapitalize="off"
+                                    autocomplete="off"
+                                    data-gramm="false"
+                                    data-gramm_editor="false"
+                                    data-enable-grammarly="false"
                                 ></textarea>
                             </div>
 
@@ -138,7 +145,8 @@
                             <div class="form-group decoder-format-group" id="encoder-format-group">
                                 <label for="encoder-format">Encoding format</label>
                                 <select id="encoder-format" class="form-control">
-                                    <option value="CBOR (binary)" selected>CBOR (binary)</option>
+                                    <option value="CBOR (canonical)" selected>CBOR (canonical)</option>
+                                    <option value="CBOR (CTAP/WebAuthn Data)">CBOR (CTAP/WebAuthn Data)</option>
                                     <option value="JSON (binary)">JSON (binary)</option>
                                     <option value="DER">DER</option>
                                     <option value="PEM">PEM</option>
@@ -152,6 +160,13 @@
                                     class="form-control"
                                     rows="10"
                                     placeholder="Paste JSON here to encode..."
+                                    spellcheck="false"
+                                    autocorrect="off"
+                                    autocapitalize="off"
+                                    autocomplete="off"
+                                    data-gramm="false"
+                                    data-gramm_editor="false"
+                                    data-enable-grammarly="false"
                                 ></textarea>
                             </div>
 

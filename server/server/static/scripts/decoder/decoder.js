@@ -121,7 +121,7 @@ const MODE_CONFIG = {
 
 const ENCODER_FORMAT_ALIASES = new Map([
     ['cbor', 'cbor'],
-    ['cbor (binary)', 'cbor'],
+    ['cbor (canonical)', 'cbor'],
     ['json', 'json'],
     ['json (binary)', 'json'],
     ['der', 'der'],
