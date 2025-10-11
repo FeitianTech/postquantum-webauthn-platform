@@ -24,6 +24,67 @@ from .decode import (
 __all__ = ["encode_payload_text"]
 
 
+_CTAP_LABELED_KEY_PATTERN = re.compile(r"^\s*(-?\d+)\s*\(([^)]+)\)\s*$")
+
+_CTAP_FIELD_LABELS: Dict[str, Dict[int, str]] = {
+    "makeCredentialRequest": {
+        1: "clientDataHash",
+        2: "rp",
+        3: "user",
+        4: "pubKeyCredParams",
+        5: "excludeList",
+        6: "extensions",
+        7: "options",
+        8: "pinUvAuthParam",
+        9: "pinUvAuthProtocol",
+        10: "enterpriseAttestation",
+        11: "largeBlobKey",
+    },
+    "getAssertionRequest": {
+        1: "rpId",
+        2: "clientDataHash",
+        3: "allowList",
+        4: "extensions",
+        5: "options",
+        6: "pinUvAuthParam",
+        7: "pinUvAuthProtocol",
+        8: "largeBlobKey",
+    },
+    "makeCredentialResponse": {
+        1: "fmt",
+        2: "authData",
+        3: "attStmt",
+        4: "epAtt",
+        5: "largeBlobKey",
+        6: "extensions",
+    },
+    "getAssertionResponse": {
+        1: "credential",
+        2: "authData",
+        3: "signature",
+        4: "userHandle",
+        5: "numberOfCredentials",
+        6: "userSelected",
+        7: "largeBlobKey",
+        8: "extensions",
+    },
+}
+
+_CTAP_REQUIRED_FIELDS: Dict[str, Sequence[int]] = {
+    "makeCredentialRequest": (1, 2, 3, 4),
+    "getAssertionRequest": (1, 2),
+    "makeCredentialResponse": (1, 2),
+    "getAssertionResponse": (2, 3),
+}
+
+_CTAP_PREFIX_DETAILS: Dict[str, Tuple[int, str]] = {
+    "makeCredentialRequest": (0x01, "command"),
+    "getAssertionRequest": (0x02, "command"),
+    "makeCredentialResponse": (0x00, "status"),
+    "getAssertionResponse": (0x00, "status"),
+}
+
+
 def encode_payload_text(value: str, target_format: str) -> Dict[str, Any]:
     """Encode ``value`` into the requested ``target_format``."""
 
@@ -78,6 +139,7 @@ def _normalize_encoding_format(value: str) -> str:
         "json": "json",
         "cbor": "cbor",
         "cbor (binary)": "cbor",
+        "cbor (ctap/webauthn data)": "ctap-webauthn",
         "json (binary)": "json",
         "webauthn client data": "client-data",
         "clientdata": "client-data",
@@ -245,6 +307,211 @@ def _encode_cbor_value(parsed: Any, *, base_type: str = "CBOR") -> Dict[str, Any
     return _prepare_encoder_response(base_type, payload, qualifier="encoded")
 
 
+def _encode_ctap_webauthn_value(parsed: Any) -> Dict[str, Any]:
+    if not isinstance(parsed, Mapping):
+        raise ValueError(
+            "CTAP/WebAuthn encoding expects a JSON object with numeric keys (e.g., \"01\")."
+        )
+
+    numeric_map = _sanitize_ctap_numeric_mapping(parsed)
+    ctap_type = _classify_ctap_numeric_mapping(numeric_map)
+
+    field_labels = _CTAP_FIELD_LABELS.get(ctap_type, {})
+    for index in _CTAP_REQUIRED_FIELDS.get(ctap_type, ()):  # pragma: no branch - small tuple
+        if index not in numeric_map:
+            label = field_labels.get(index, f"0x{index:02x}")
+            raise ValueError(f"Missing field 0x{index:02x} ({label})")
+
+    structure = {
+        label: numeric_map[index]
+        for index, label in field_labels.items()
+        if index in numeric_map
+    }
+
+    encoder_map = {
+        "makeCredentialRequest": _encode_make_credential_request,
+        "getAssertionRequest": _encode_get_assertion_request,
+        "makeCredentialResponse": _encode_make_credential_response,
+        "getAssertionResponse": _encode_get_assertion_response,
+    }
+    encoder = encoder_map.get(ctap_type)
+    if encoder is None:  # pragma: no cover - defensive guard
+        raise ValueError("Unsupported CTAP/WebAuthn data type.")
+
+    encoded_map = encoder(structure)
+    decoded_structure = {
+        label: encoded_map[index]
+        for index, label in field_labels.items()
+        if index in encoded_map
+    }
+
+    extras: Dict[int, Any] = {}
+    for index, value in numeric_map.items():
+        if index not in field_labels:
+            extras[index] = _normalize_ctap_extra_value(value)
+
+    if extras:
+        encoded_map = dict(encoded_map)
+        for index, value in extras.items():
+            encoded_map[index] = value
+        for index, value in extras.items():
+            decoded_structure[str(index)] = value
+
+    prefix_code, prefix_kind = _CTAP_PREFIX_DETAILS.get(ctap_type, (None, None))
+    payload_bytes = cbor2.dumps(encoded_map)
+    full_bytes = (
+        bytes([prefix_code]) + payload_bytes if isinstance(prefix_code, int) else payload_bytes
+    )
+
+    payload: Dict[str, Any] = {
+        "binary": _binary_summary(full_bytes, "cbor"),
+        "encodedValue": _stringify_mapping_keys(_hex_json_safe(encoded_map)),
+        "ctapDecoded": _stringify_mapping_keys(
+            _hex_json_safe({ctap_type: decoded_structure})
+        ),
+    }
+
+    if isinstance(prefix_code, int):
+        payload["ctap"] = {
+            "code": prefix_code,
+            "codeHex": f"0x{prefix_code:02x}",
+            "kind": prefix_kind,
+        }
+
+    qualifier = f"encoded {ctap_type}"
+    return _prepare_encoder_response(
+        "CBOR (CTAP/WebAuthn Data)", payload, qualifier=qualifier
+    )
+
+
+def _sanitize_ctap_numeric_mapping(parsed: Mapping[Any, Any]) -> Dict[int, Any]:
+    numeric_map: Dict[int, Any] = {}
+    for key, value in parsed.items():
+        index = _coerce_ctap_numeric_key(key)
+        if index is None:
+            raise ValueError(
+                "CTAP/WebAuthn encoding requires numeric keys such as \"01\" or \"02\"."
+            )
+        if index in numeric_map:
+            raise ValueError(f"Duplicate field 0x{index:02x} detected in CTAP/WebAuthn input.")
+        numeric_map[index] = value
+
+    if not numeric_map:
+        raise ValueError("CTAP/WebAuthn encoding expects at least one CTAP field.")
+
+    return numeric_map
+
+
+def _coerce_ctap_numeric_key(key: Any) -> Optional[int]:
+    if isinstance(key, int):
+        index = key
+    elif isinstance(key, str):
+        stripped = key.strip()
+        if not stripped:
+            return None
+        match = _CTAP_LABELED_KEY_PATTERN.match(stripped)
+        if match:
+            stripped = match.group(1).strip()
+        if stripped.lower().startswith("0x"):
+            try:
+                index = int(stripped, 16)
+            except ValueError:
+                return None
+        elif stripped.isdigit():
+            index = int(stripped, 10)
+        else:
+            return None
+    else:
+        return None
+
+    if index < 0:
+        raise ValueError(
+            f"CTAP/WebAuthn field numbers must be non-negative (received {index})."
+        )
+    return index
+
+
+def _classify_ctap_numeric_mapping(mapping: Mapping[int, Any]) -> str:
+    if not mapping:
+        raise ValueError("CTAP/WebAuthn encoding expects at least one CTAP field.")
+
+    field_two = mapping.get(2)
+    if field_two is None:
+        raise ValueError("Missing field 0x02 (authData/clientDataHash)")
+
+    field_two_bytes = _maybe_decode_bytes(field_two)
+    if field_two_bytes is None:
+        raise ValueError("Field 0x02 (authData/clientDataHash) must be binary data.")
+
+    signature_candidate = mapping.get(3)
+    signature_bytes = (
+        _maybe_decode_bytes(signature_candidate) if signature_candidate is not None else None
+    )
+    if signature_bytes is not None:
+        if len(field_two_bytes) < 37:
+            raise ValueError(
+                "Field 0x02 (authData) must contain authenticator data for GetAssertion response."
+            )
+        return "getAssertionResponse"
+
+    field_one = mapping.get(1)
+    if field_one is None:
+        raise ValueError("Missing field 0x01 (clientDataHash/rpId/fmt/credential)")
+
+    field_one_bytes = _maybe_decode_bytes(field_one)
+    if field_one_bytes is not None:
+        if len(field_one_bytes) != 32:
+            raise ValueError(
+                "Field 0x01 (clientDataHash) must be exactly 32 bytes for MakeCredential request."
+            )
+        return "makeCredentialRequest"
+
+    if isinstance(field_one, str) and field_one.strip():
+        if len(field_two_bytes) == 32:
+            return "getAssertionRequest"
+        if len(field_two_bytes) >= 37:
+            return "makeCredentialResponse"
+        raise ValueError(
+            "Field 0x02 (authData/clientDataHash) length is not valid for CTAP/WebAuthn data."
+        )
+
+    raise ValueError(
+        "Unable to classify CTAP/WebAuthn data. Provide MakeCredential/GetAssertion request or response fields."
+    )
+
+
+def _normalize_ctap_extra_value(value: Any) -> Any:
+    decoded = _maybe_decode_bytes(value)
+    if decoded is not None:
+        return decoded
+
+    if isinstance(value, Mapping):
+        cleaned: Dict[str, Any] = {}
+        for key, entry in value.items():
+            cleaned[_sanitize_nested_extra_key(key)] = _normalize_ctap_extra_value(entry)
+        return cleaned
+
+    if isinstance(value, list):
+        return [_normalize_ctap_extra_value(entry) for entry in value]
+
+    return value
+
+
+def _sanitize_nested_extra_key(key: Any) -> str:
+    if isinstance(key, str):
+        stripped = key.strip()
+        if not stripped:
+            return ""
+        match = _CTAP_LABELED_KEY_PATTERN.match(stripped)
+        if match:
+            label = match.group(2).strip()
+            if label:
+                return label
+            stripped = match.group(1).strip()
+        return stripped
+    return str(key)
+
+
 def _encode_hex_value(parsed: Any) -> Dict[str, Any]:
     data_bytes = _extract_generic_binary_payload(parsed)
     summary = _binary_summary(data_bytes, "hex")
@@ -391,6 +658,7 @@ _ENCODING_HANDLERS: Dict[str, Callable[[Any], Dict[str, Any]]] = {
     "attestation-object": _encode_attestation_object,
     "x509": _encode_x509_certificate,
     "cbor": _encode_cbor_value,
+    "ctap-webauthn": _encode_ctap_webauthn_value,
     "der": _encode_der_value,
     "pem": _encode_pem_value,
     "cose": _encode_cose_value,
@@ -427,9 +695,6 @@ def _extract_binary_input(value: Any, field_name: str) -> bytes:
             return bytes(value)
 
     raise ValueError(f"Unable to interpret {field_name} as binary data for encoding.")
-
-
-_CTAP_LABELED_KEY_PATTERN = re.compile(r"^\s*(-?\d+)\s*\(([^)]+)\)\s*$")
 
 
 def _encode_ctap_from_decoded(
