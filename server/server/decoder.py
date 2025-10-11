@@ -1523,10 +1523,7 @@ def _recover_get_assertion_map_from_bytes(
         patched_bytes, recovered_value = reconstructed
 
     structure, _ = _decode_cbor_structure(patched_bytes)
-    warning = (
-        "Corrected inconsistent signature length while decoding GetAssertion response."
-    )
-    return patched_bytes, structure, recovered_value, warning
+    return patched_bytes, structure, recovered_value, None
 
 
 def _patch_get_assertion_signature_length(
@@ -2442,19 +2439,19 @@ def _interpret_get_assertion_map(value: Mapping[Any, Any]) -> Optional[Dict[str,
 
     credential_entry = _get_mapping_entry(value, 1, "1", "credential")
     if credential_entry is not _MISSING and credential_entry is not None:
-        interpreted["1 (credential)"] = _convert_ctap_credential_descriptor(credential_entry)
+        interpreted["credential"] = _convert_ctap_credential_descriptor(credential_entry)
 
     auth_data_details, auth_trailing = _format_auth_data_for_expanded_json(auth_data_bytes)
-    interpreted["2 (authData)"] = auth_data_details
+    interpreted["authData"] = auth_data_details
 
     if signature_bytes is not None:
-        interpreted["3 (signature)"] = signature_bytes.hex()
+        interpreted["signature"] = signature_bytes.hex()
     else:
-        interpreted["3 (signature)"] = None
+        interpreted["signature"] = None
 
     user_entry = _get_mapping_entry(value, 4, "4", "user")
     if user_entry is not _MISSING and user_entry is not None:
-        interpreted["4 (user)"] = _convert_ctap_user(user_entry)
+        interpreted["user"] = _convert_ctap_user(user_entry)
 
     optional_labels = {
         5: "numberOfCredentials",
@@ -2466,7 +2463,7 @@ def _interpret_get_assertion_map(value: Mapping[Any, Any]) -> Optional[Dict[str,
         candidate = _get_mapping_entry(value, key)
         if candidate is _MISSING:
             continue
-        interpreted[f"{key} ({label})"] = _convert_optional_ctap_field(candidate)
+        interpreted[label] = _convert_optional_ctap_field(candidate)
 
     extra_keys = [
         key
@@ -2476,25 +2473,25 @@ def _interpret_get_assertion_map(value: Mapping[Any, Any]) -> Optional[Dict[str,
     for key in sorted(extra_keys):
         interpreted[f"{key}"] = _hex_json_safe(value[key])
 
-    if interpreted.get("3 (signature)") is None and auth_trailing:
+    if interpreted.get("signature") is None and auth_trailing:
         trailing_map = _decode_trailing_map(auth_trailing)
         sig_entry = trailing_map.pop(3, None)
         if sig_entry is not None:
             sig_bytes = _coerce_cbor_bytes(sig_entry)
             if sig_bytes is not None:
-                interpreted["3 (signature)"] = sig_bytes.hex()
+                interpreted["signature"] = sig_bytes.hex()
         user_entry_trailing = trailing_map.pop(4, None)
         if user_entry_trailing is not None:
-            interpreted["4 (user)"] = _convert_ctap_user(user_entry_trailing)
+            interpreted["user"] = _convert_ctap_user(user_entry_trailing)
         number_entry = trailing_map.pop(5, None)
         if number_entry is not None:
-            interpreted["5 (numberOfCredentials)"] = _convert_optional_ctap_field(number_entry)
+            interpreted["numberOfCredentials"] = _convert_optional_ctap_field(number_entry)
         user_selected_entry = trailing_map.pop(6, None)
         if user_selected_entry is not None:
-            interpreted["6 (userSelected)"] = _convert_optional_ctap_field(user_selected_entry)
+            interpreted["userSelected"] = _convert_optional_ctap_field(user_selected_entry)
         extensions_entry = trailing_map.pop(8, None)
         if extensions_entry is not None:
-            interpreted["8 (extensions)"] = _convert_optional_ctap_field(extensions_entry)
+            interpreted["extensions"] = _convert_optional_ctap_field(extensions_entry)
         if trailing_map:
             interpreted["trailingFields"] = _hex_json_safe(trailing_map)
 
@@ -2510,8 +2507,8 @@ def _interpret_get_assertion_request_map(value: Mapping[Any, Any]) -> Optional[D
     client_hash = _coerce_cbor_bytes(client_hash_entry)
 
     interpreted: Dict[str, Any] = {
-        "1 (rpId)": rp_id,
-        "2 (clientDataHash)": client_hash.hex() if client_hash is not None else None,
+        "rpId": rp_id,
+        "clientDataHash": client_hash.hex() if client_hash is not None else None,
     }
 
     allow_list_entry = _get_mapping_entry(value, 3, "3", "allowList")
@@ -2519,12 +2516,12 @@ def _interpret_get_assertion_request_map(value: Mapping[Any, Any]) -> Optional[D
         if isinstance(allow_list_entry, Sequence) and not isinstance(
             allow_list_entry, (bytes, bytearray)
         ):
-            interpreted["3 (allowList)"] = [
+            interpreted["allowList"] = [
                 _convert_ctap_credential_descriptor(item)
                 for item in allow_list_entry
             ]
         else:
-            interpreted["3 (allowList)"] = _hex_json_safe(allow_list_entry)
+            interpreted["allowList"] = _hex_json_safe(allow_list_entry)
 
     optional_labels: Dict[Any, str] = {
         4: "extensions",
@@ -2542,11 +2539,11 @@ def _interpret_get_assertion_request_map(value: Mapping[Any, Any]) -> Optional[D
             continue
         if label == "pinAuth":
             bytes_value = _coerce_cbor_bytes(candidate)
-            interpreted[f"{key} ({label})"] = (
+            interpreted[label] = (
                 bytes_value.hex() if bytes_value is not None else _hex_json_safe(candidate)
             )
         else:
-            interpreted[f"{key} ({label})"] = _hex_json_safe(candidate)
+            interpreted[label] = _hex_json_safe(candidate)
 
     extra_keys = [
         key
