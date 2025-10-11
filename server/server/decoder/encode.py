@@ -4,6 +4,7 @@ from __future__ import annotations
 import base64
 import binascii
 import json
+import math
 import re
 import string
 import textwrap
@@ -11,6 +12,7 @@ from collections import deque
 from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
 
 import cbor2
+from cbor2 import CBORTag, undefined
 
 from ..attestation import make_json_safe, serialize_attestation_certificate
 from .decode import (
@@ -275,7 +277,7 @@ def _encode_cbor_value(parsed: Any, *, base_type: str = "CBOR (canonical)") -> D
 
     if encoded_map is not None:
         prefix_code, prefix_kind = _determine_ctap_prefix(ctap_metadata, ctap_kind)
-        payload_bytes = cbor2.dumps(encoded_map, canonical=True)
+        payload_bytes = _canonical_cbor_dumps(encoded_map)
         full_bytes = (
             bytes([prefix_code]) + payload_bytes if prefix_code is not None else payload_bytes
         )
@@ -299,7 +301,7 @@ def _encode_cbor_value(parsed: Any, *, base_type: str = "CBOR (canonical)") -> D
         qualifier = f"encoded {ctap_kind}" if ctap_kind else "encoded"
         return _prepare_encoder_response(base_type, payload, qualifier=qualifier)
 
-    payload_bytes = cbor2.dumps(parsed, canonical=True)
+    payload_bytes = _canonical_cbor_dumps(parsed)
     payload = {
         "binary": _binary_summary(payload_bytes, "cbor"),
         "decodedValue": _stringify_mapping_keys(_hex_json_safe(parsed)),
@@ -352,7 +354,7 @@ def _encode_ctap_webauthn_value(parsed: Any) -> Dict[str, Any]:
             decoded_structure[str(index)] = value
 
     prefix_code, prefix_kind = _CTAP_PREFIX_DETAILS.get(ctap_type, (None, None))
-    payload_bytes = cbor2.dumps(encoded_map, canonical=True)
+    payload_bytes = _canonical_cbor_dumps(encoded_map)
     full_bytes = (
         bytes([prefix_code]) + payload_bytes if isinstance(prefix_code, int) else payload_bytes
     )
@@ -731,6 +733,96 @@ def _normalize_pem_label(label: str) -> str:
         return "DATA"
     compact = re.sub(r"\s+", " ", sanitized)
     return compact.replace(" ", "_").upper()
+
+
+def _canonical_cbor_dumps(value: Any) -> bytes:
+    """Serialize *value* using strict canonical CBOR rules."""
+
+    encoder = _CanonicalCBOREncoder()
+    return encoder.encode(value)
+
+
+class _CanonicalCBOREncoder:
+    """Minimal canonical CBOR encoder specialised for deterministic output."""
+
+    def encode(self, value: Any) -> bytes:
+        return self._encode(value)
+
+    def _encode(self, value: Any) -> bytes:
+        if isinstance(value, Mapping):
+            return self._encode_map(value)
+        if isinstance(value, (list, tuple)):
+            return self._encode_array(value)
+        if isinstance(value, CBORTag):
+            return self._encode_tag(value)
+        return self._encode_simple(value)
+
+    def _encode_simple(self, value: Any) -> bytes:
+        if isinstance(value, bool):
+            return b"\xf5" if value else b"\xf4"
+        if value is None:
+            return b"\xf6"
+        if value is undefined:
+            return b"\xf7"
+        if isinstance(value, (bytearray, memoryview)):
+            value = bytes(value)
+        if isinstance(value, float):
+            if math.isfinite(value) and value.is_integer():
+                return self._encode(int(value))
+        return cbor2.dumps(value, canonical=True)
+
+    def _encode_array(self, values: Iterable[Any]) -> bytes:
+        encoded_items = [self._encode(item) for item in values]
+        prefix = _encode_major_type_with_length(4, len(encoded_items))
+        return prefix + b"".join(encoded_items)
+
+    def _encode_map(self, mapping: Mapping[Any, Any]) -> bytes:
+        encoded_items: List[Tuple[bytes, bytes]] = []
+        seen_keys: set[bytes] = set()
+        for key, value in mapping.items():
+            encoded_key = self._encode(key)
+            if encoded_key in seen_keys:
+                raise ValueError(
+                    "Duplicate CBOR map key detected during canonical encoding."
+                )
+            seen_keys.add(encoded_key)
+            encoded_value = self._encode(value)
+            encoded_items.append((encoded_key, encoded_value))
+
+        encoded_items.sort(key=lambda kv: (len(kv[0]), kv[0]))
+        prefix = _encode_major_type_with_length(5, len(encoded_items))
+        return prefix + b"".join(key + value for key, value in encoded_items)
+
+    def _encode_tag(self, tag: CBORTag) -> bytes:
+        if not isinstance(tag.tag, int) or tag.tag < 0:
+            raise ValueError("CBOR tags must be non-negative integers.")
+        encoded_tag = _encode_unsigned_integer(6, tag.tag)
+        encoded_value = self._encode(tag.value)
+        return encoded_tag + encoded_value
+
+
+def _encode_major_type_with_length(major_type: int, length: int) -> bytes:
+    if length < 0:
+        raise ValueError("CBOR lengths must be non-negative.")
+    return _encode_unsigned_integer(major_type, length)
+
+
+def _encode_unsigned_integer(major_type: int, value: int) -> bytes:
+    if value < 0:
+        raise ValueError("Unsigned CBOR integers must be non-negative.")
+
+    if value < 24:
+        return bytes([(major_type << 5) | value])
+    if value < 256:
+        return bytes([(major_type << 5) | 24, value])
+    if value < 65536:
+        return bytes([(major_type << 5) | 25]) + value.to_bytes(2, "big")
+    if value < 4294967296:
+        return bytes([(major_type << 5) | 26]) + value.to_bytes(4, "big")
+    if value < 18446744073709551616:
+        return bytes([(major_type << 5) | 27]) + value.to_bytes(8, "big")
+
+    raise ValueError("CBOR integers exceeding 64 bits are not supported in canonical mode.")
 
 
 _ENCODING_HANDLERS: Dict[str, Callable[[Any], Dict[str, Any]]] = {
