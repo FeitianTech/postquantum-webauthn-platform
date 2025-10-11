@@ -138,7 +138,7 @@ def _normalize_encoding_format(value: str) -> str:
     aliases = {
         "json": "json",
         "cbor": "cbor",
-        "cbor (binary)": "cbor",
+        "cbor (canonical)": "cbor",
         "cbor (ctap/webauthn data)": "ctap-webauthn",
         "json (binary)": "json",
         "webauthn client data": "client-data",
@@ -246,7 +246,7 @@ def _encode_x509_certificate(parsed: Any) -> Dict[str, Any]:
     return _prepare_encoder_response("X.509 certificate", payload, qualifier="encoded")
 
 
-def _encode_cbor_value(parsed: Any, *, base_type: str = "CBOR") -> Dict[str, Any]:
+def _encode_cbor_value(parsed: Any, *, base_type: str = "CBOR (canonical)") -> Dict[str, Any]:
     ctap_source: Optional[Mapping[str, Any]] = None
     ctap_kind: Optional[str] = None
     ctap_metadata: Optional[Mapping[str, Any]] = None
@@ -275,7 +275,7 @@ def _encode_cbor_value(parsed: Any, *, base_type: str = "CBOR") -> Dict[str, Any
 
     if encoded_map is not None:
         prefix_code, prefix_kind = _determine_ctap_prefix(ctap_metadata, ctap_kind)
-        payload_bytes = cbor2.dumps(encoded_map)
+        payload_bytes = cbor2.dumps(encoded_map, canonical=True)
         full_bytes = (
             bytes([prefix_code]) + payload_bytes if prefix_code is not None else payload_bytes
         )
@@ -299,7 +299,7 @@ def _encode_cbor_value(parsed: Any, *, base_type: str = "CBOR") -> Dict[str, Any
         qualifier = f"encoded {ctap_kind}" if ctap_kind else "encoded"
         return _prepare_encoder_response(base_type, payload, qualifier=qualifier)
 
-    payload_bytes = cbor2.dumps(parsed)
+    payload_bytes = cbor2.dumps(parsed, canonical=True)
     payload = {
         "binary": _binary_summary(payload_bytes, "cbor"),
         "decodedValue": _stringify_mapping_keys(_hex_json_safe(parsed)),
@@ -352,7 +352,7 @@ def _encode_ctap_webauthn_value(parsed: Any) -> Dict[str, Any]:
             decoded_structure[str(index)] = value
 
     prefix_code, prefix_kind = _CTAP_PREFIX_DETAILS.get(ctap_type, (None, None))
-    payload_bytes = cbor2.dumps(encoded_map)
+    payload_bytes = cbor2.dumps(encoded_map, canonical=True)
     full_bytes = (
         bytes([prefix_code]) + payload_bytes if isinstance(prefix_code, int) else payload_bytes
     )

@@ -83,7 +83,7 @@ def test_ctap_webauthn_encoder_extracts_nested_numeric_payload():
         ]
     )
 
-    expected_bytes = bytes([0x00]) + cbor2.dumps(expected_map)
+    expected_bytes = bytes([0x00]) + cbor2.dumps(expected_map, canonical=True)
     assert encoded_hex == expected_bytes.hex()
 
 
