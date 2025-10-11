@@ -12,7 +12,7 @@ import struct
 import uuid
 from datetime import datetime, timezone
 from io import BytesIO
-from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
+from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
 
 import cbor2
 from cryptography import x509
@@ -1425,6 +1425,7 @@ def _repair_make_credential_entries(
 def _repair_get_assertion_entries(
     structure: Dict[str, Any],
     value: Mapping[Any, Any],
+    raw_bytes: Optional[bytes] = None,
 ) -> Tuple[Dict[str, Any], Mapping[Any, Any], Optional[bytes]]:
     if not isinstance(value, dict):
         return structure, value, None
@@ -1459,6 +1460,22 @@ def _repair_get_assertion_entries(
         entries.pop(idx)
 
     repaired_value = dict(value)
+    if signature_bytes is None and raw_bytes:
+        for raw_key, raw_value in _extract_lenient_map_entries(raw_bytes):
+            if isinstance(raw_key, int) and raw_key == 3:
+                candidate_bytes = _coerce_cbor_bytes(raw_value)
+                if candidate_bytes is not None:
+                    signature_bytes = candidate_bytes
+                    break
+                if isinstance(raw_value, (bytes, bytearray)):
+                    signature_bytes = bytes(raw_value)
+                    break
+            if isinstance(raw_key, (bytes, bytearray)):
+                candidate = bytes(raw_key)
+                if candidate:
+                    signature_bytes = candidate
+                    break
+
     if signature_bytes is not None:
         bytes_keys = [key for key in repaired_value if isinstance(key, (bytes, bytearray))]
         for key in bytes_keys:
@@ -1474,6 +1491,9 @@ def _repair_get_assertion_entries(
                     "valueSummary": sig_structure.get("summary"),
                 }
             )
+        if isinstance(entries, list):
+            structure["length"] = len(entries)
+            structure["summary"] = f"map[{len(entries)}]"
     if user_value is not None:
         repaired_value[4] = user_value
         user_structure, _ = _decode_cbor_structure(cbor.encode(user_value))
@@ -1587,7 +1607,244 @@ def _extract_mapping_bytes(value: Mapping[Any, Any], keys: Iterable[Any]) -> Opt
     return None
 
 
-def _classify_ctap_map(value: Mapping[Any, Any]) -> str:
+_MAKE_CREDENTIAL_REQUEST_LABELS: Dict[Any, str] = {
+    1: "clientDataHash",
+    "clientDataHash": "clientDataHash",
+    2: "rp",
+    "rp": "rp",
+    3: "user",
+    "user": "user",
+    4: "pubKeyCredParams",
+    "pubKeyCredParams": "pubKeyCredParams",
+    5: "excludeList",
+    "excludeList": "excludeList",
+    6: "extensions",
+    "extensions": "extensions",
+    7: "options",
+    "options": "options",
+    8: "pinUvAuthParam",
+    "pinUvAuthParam": "pinUvAuthParam",
+    9: "pinUvAuthProtocol",
+    "pinUvAuthProtocol": "pinUvAuthProtocol",
+    10: "enterpriseAttestation",
+    "enterpriseAttestation": "enterpriseAttestation",
+    11: "largeBlobKey",
+    "largeBlobKey": "largeBlobKey",
+}
+
+_GET_ASSERTION_REQUEST_LABELS: Dict[Any, str] = {
+    1: "rpId",
+    "rpId": "rpId",
+    2: "clientDataHash",
+    "clientDataHash": "clientDataHash",
+    3: "allowList",
+    "allowList": "allowList",
+    4: "extensions",
+    "extensions": "extensions",
+    5: "options",
+    "options": "options",
+    6: "pinUvAuthParam",
+    "pinUvAuthParam": "pinUvAuthParam",
+    7: "pinUvAuthProtocol",
+    "pinUvAuthProtocol": "pinUvAuthProtocol",
+    8: "largeBlobKey",
+    "largeBlobKey": "largeBlobKey",
+}
+
+_MAKE_CREDENTIAL_RESPONSE_LABELS: Dict[Any, str] = {
+    1: "fmt",
+    "fmt": "fmt",
+    2: "authData",
+    "authData": "authData",
+    3: "attStmt",
+    "attStmt": "attStmt",
+    4: "epAtt",
+    "epAtt": "epAtt",
+    5: "largeBlobKey",
+    "largeBlobKey": "largeBlobKey",
+    6: "extensions",
+    "extensions": "extensions",
+}
+
+_GET_ASSERTION_RESPONSE_LABELS: Dict[Any, str] = {
+    1: "credential",
+    "credential": "credential",
+    2: "authData",
+    "authData": "authData",
+    3: "signature",
+    "signature": "signature",
+    4: "user",
+    "user": "user",
+    5: "numberOfCredentials",
+    "numberOfCredentials": "numberOfCredentials",
+    6: "userSelected",
+    "userSelected": "userSelected",
+    7: "largeBlobKey",
+    "largeBlobKey": "largeBlobKey",
+    8: "extensions",
+    "extensions": "extensions",
+}
+
+
+def _resolve_ctap_label(label_map: Mapping[Any, str], key: Any) -> Optional[str]:
+    if key in label_map:
+        return label_map[key]
+    key_str = str(key)
+    if key_str in label_map:
+        return label_map[key_str]
+    return None
+
+
+def _format_ctap_entry_key(key: Any, label: Optional[str]) -> str:
+    if isinstance(key, (bytes, bytearray)):
+        key_display = bytes(key).hex()
+    else:
+        key_display = str(key)
+    if label:
+        return f"{key_display} ({label})"
+    return key_display
+
+
+def _convert_ctap_allow_list(entry: Any) -> Any:
+    if isinstance(entry, Sequence) and not isinstance(entry, (str, bytes, bytearray)):
+        return [_convert_ctap_credential_descriptor(item) for item in entry]
+    return _convert_optional_ctap_field(entry)
+
+
+def _convert_pub_key_cred_params(entry: Any) -> Any:
+    if isinstance(entry, Sequence) and not isinstance(entry, (str, bytes, bytearray)):
+        return [_hex_json_safe(item) for item in entry]
+    return _hex_json_safe(entry)
+
+
+def _convert_auth_data_field(value: Any) -> Any:
+    auth_bytes = _coerce_cbor_bytes(value)
+    if auth_bytes is not None:
+        auth_info, trailing = _format_auth_data_for_expanded_json(auth_bytes)
+        if trailing:
+            auth_info = dict(auth_info)
+        return auth_info
+    return _convert_optional_ctap_field(value)
+
+
+def _convert_signature_field(value: Any) -> Any:
+    signature_bytes = _coerce_cbor_bytes(value)
+    if signature_bytes is not None:
+        return signature_bytes.hex()
+    if value is None:
+        return None
+    return _convert_optional_ctap_field(value)
+
+
+def _convert_att_stmt_field(value: Any) -> Any:
+    if value is None:
+        return None
+    return _format_att_stmt_for_expanded_json(value)
+
+
+def _convert_ctap_user_field(value: Any) -> Any:
+    if value is None:
+        return None
+    return _convert_ctap_user(value)
+
+
+def _build_labeled_ctap_map(
+    mapping: Mapping[Any, Any],
+    labels: Mapping[Any, str],
+    handlers: Mapping[Any, Callable[[Any], Any]],
+    *,
+    missing_keys: Sequence[Any] = (),
+) -> Dict[str, Any]:
+    result: Dict[str, Any] = {}
+    seen_keys: set = set()
+    seen_labels: set = set()
+
+    if isinstance(mapping, Mapping):
+        for key in mapping:
+            label = _resolve_ctap_label(labels, key)
+            formatted_key = _format_ctap_entry_key(key, label)
+            handler: Optional[Callable[[Any], Any]] = None
+            if label is not None and label in handlers:
+                handler = handlers[label]
+            elif key in handlers:
+                handler = handlers[key]
+            elif str(key) in handlers:
+                handler = handlers[str(key)]
+            value = mapping[key]
+            if handler is not None:
+                result[formatted_key] = handler(value)
+            else:
+                result[formatted_key] = _hex_json_safe(value)
+            seen_keys.add(key)
+            seen_keys.add(str(key))
+            if label is not None:
+                seen_labels.add(label)
+
+    for missing in missing_keys:
+        label = _resolve_ctap_label(labels, missing)
+        if missing in seen_keys or str(missing) in seen_keys:
+            continue
+        if label is not None and label in seen_labels:
+            continue
+        formatted_key = _format_ctap_entry_key(missing, label)
+        handler: Optional[Callable[[Any], Any]] = None
+        if label is not None and label in handlers:
+            handler = handlers[label]
+        elif missing in handlers:
+            handler = handlers[missing]
+        elif str(missing) in handlers:
+            handler = handlers[str(missing)]
+        if handler is not None:
+            result.setdefault(formatted_key, handler(None))
+        else:
+            result.setdefault(formatted_key, None)
+
+    return result
+
+
+def _looks_like_make_credential_request(value: Mapping[Any, Any]) -> bool:
+    client_hash_entry = _get_mapping_entry(value, 1, "1", "clientDataHash")
+    client_hash_bytes = _coerce_cbor_bytes(client_hash_entry)
+    if client_hash_bytes is None:
+        return False
+    if _extract_mapping_string(value, (1, "1", "fmt")) is not None:
+        return False
+    if _extract_mapping_bytes(value, (2, "2", "authData")) is not None:
+        return False
+    rp_entry = _get_mapping_entry(value, 2, "2", "rp")
+    user_entry = _get_mapping_entry(value, 3, "3", "user")
+    if rp_entry is _MISSING or user_entry is _MISSING:
+        return False
+    return True
+
+
+def _looks_like_get_assertion_request(value: Mapping[Any, Any]) -> bool:
+    if not isinstance(value, Mapping):
+        return False
+    rp_candidate = value.get(1, _MISSING)
+    if isinstance(rp_candidate, str) and rp_candidate.strip():
+        pass
+    else:
+        rp_candidate = value.get("rpId", _MISSING)
+        if not isinstance(rp_candidate, str) or not rp_candidate.strip():
+            return False
+    client_entry = value.get(2, _MISSING)
+    if client_entry is _MISSING:
+        client_entry = value.get("clientDataHash", _MISSING)
+    if client_entry is _MISSING or _coerce_cbor_bytes(client_entry) is None:
+        return False
+    signature_candidate = value.get(3, _MISSING)
+    if signature_candidate is _MISSING:
+        signature_candidate = value.get("signature", _MISSING)
+    if signature_candidate is not _MISSING and _coerce_cbor_bytes(signature_candidate) is not None:
+        return False
+    auth_candidate = value.get("authData", _MISSING)
+    if auth_candidate is not _MISSING and _coerce_cbor_bytes(auth_candidate) is not None:
+        return False
+    return True
+
+
+def _looks_like_make_credential_output(value: Mapping[Any, Any]) -> bool:
     fmt_value = _extract_mapping_string(value, (1, "1", "fmt"))
     auth_data_bytes = _extract_mapping_bytes(value, (2, "2", "authData"))
     att_stmt_value = _get_mapping_entry(value, 3, "3", "attStmt")
@@ -1595,14 +1852,26 @@ def _classify_ctap_map(value: Mapping[Any, Any]) -> str:
         att_stmt_value = None
     att_stmt_bytes = _coerce_cbor_bytes(att_stmt_value)
     att_stmt_map = att_stmt_value if isinstance(att_stmt_value, Mapping) else None
+    return fmt_value is not None and auth_data_bytes is not None and (
+        att_stmt_map is not None or att_stmt_bytes is not None
+    )
 
-    if fmt_value is not None and auth_data_bytes is not None and (att_stmt_map is not None or att_stmt_bytes is not None):
-        return "make_credential_output"
 
+def _looks_like_get_assertion_output(value: Mapping[Any, Any]) -> bool:
+    auth_data_bytes = _extract_mapping_bytes(value, (2, "2", "authData"))
     signature_bytes = _extract_mapping_bytes(value, (3, "3", "signature"))
-    if auth_data_bytes is not None and signature_bytes is not None:
-        return "get_assertion_output"
+    return auth_data_bytes is not None and signature_bytes is not None
 
+
+def _classify_ctap_map(value: Mapping[Any, Any]) -> str:
+    if _looks_like_make_credential_output(value):
+        return "make_credential_output"
+    if _looks_like_get_assertion_output(value):
+        return "get_assertion_output"
+    if _looks_like_make_credential_request(value):
+        return "make_credential_input"
+    if _looks_like_get_assertion_request(value):
+        return "get_assertion_input"
     return "other"
 
 
@@ -1767,6 +2036,34 @@ def _decode_trailing_map(data: bytes) -> Dict[Any, Any]:
     return mapping
 
 
+def _extract_lenient_map_entries(raw_bytes: Optional[bytes]) -> List[Tuple[Any, Any]]:
+    entries: List[Tuple[Any, Any]] = []
+    if not raw_bytes:
+        return entries
+    offset = 0
+    initial = raw_bytes[offset]
+    major_type = initial >> 5
+    if major_type != 5:
+        return entries
+    info = initial & 0x1F
+    offset += 1
+    length, offset = _lenient_read_uint(info, raw_bytes, offset)
+    for _ in range(length):
+        key, new_offset = _lenient_decode_from(raw_bytes, offset)
+        if new_offset <= offset:
+            break
+        offset = new_offset
+        value, new_offset = _lenient_decode_from(raw_bytes, offset)
+        if new_offset <= offset:
+            entries.append((key, None))
+            break
+        offset = new_offset
+        entries.append((key, value))
+        if offset >= len(raw_bytes):
+            break
+    return entries
+
+
 def _extract_signature_from_raw_bytes(raw_bytes: bytes) -> Optional[bytes]:
     if not raw_bytes:
         return None
@@ -1790,121 +2087,84 @@ def _extract_signature_from_raw_bytes(raw_bytes: bytes) -> Optional[bytes]:
     return None
 
 
+def _build_make_credential_request_expanded_json(
+    value: Mapping[Any, Any], raw_bytes: Optional[bytes] = None
+) -> Dict[str, Any]:
+    return _build_labeled_ctap_map(
+        value,
+        _MAKE_CREDENTIAL_REQUEST_LABELS,
+        _MAKE_CREDENTIAL_REQUEST_HANDLERS,
+    )
+
+
+def _build_get_assertion_request_expanded_json(
+    value: Mapping[Any, Any], raw_bytes: Optional[bytes] = None
+) -> Dict[str, Any]:
+    return _build_labeled_ctap_map(
+        value,
+        _GET_ASSERTION_REQUEST_LABELS,
+        _GET_ASSERTION_REQUEST_HANDLERS,
+    )
+
+
 def _build_make_credential_expanded_json(value: Mapping[Any, Any], raw_bytes: Optional[bytes] = None) -> Dict[str, Any]:
-    result: Dict[str, Any] = {}
-
-    fmt_value = _extract_mapping_string(value, (1, "1", "fmt"))
-    if fmt_value is not None:
-        result["fmt"] = fmt_value
-
-    auth_data_bytes = _extract_mapping_bytes(value, (2, "2", "authData"))
-    auth_trailing = b""
-    if auth_data_bytes is not None:
-        auth_info, auth_trailing = _format_auth_data_for_expanded_json(auth_data_bytes)
-        result["authData"] = auth_info
-
-    att_stmt_value = _get_mapping_entry(value, 3, "3", "attStmt")
-    if att_stmt_value is not _MISSING and att_stmt_value is not None:
-        result["attStmt"] = _format_att_stmt_for_expanded_json(att_stmt_value)
-
-    optional_labels = {
-        4: "epAtt",
-        "epAtt": "epAtt",
-        5: "largeBlobKey",
-        "largeBlobKey": "largeBlobKey",
-        6: "extensions",
-        "extensions": "extensions",
-    }
-    for key, label in optional_labels.items():
-        candidate = _get_mapping_entry(value, key)
-        if candidate is _MISSING or label in result:
-            continue
-        result[label] = _convert_optional_ctap_field(candidate)
-
-    for key in value:
-        if key in {1, 2, 3, 4, 5, 6, "1", "2", "3", "4", "5", "6", "fmt", "authData", "attStmt"}:
-            continue
-        try:
-            result[str(key)] = _hex_json_safe(value[key])
-        except Exception:
-            continue
-
-    return result
+    return _build_labeled_ctap_map(
+        value,
+        _MAKE_CREDENTIAL_RESPONSE_LABELS,
+        _MAKE_CREDENTIAL_RESPONSE_HANDLERS,
+    )
 
 
 def _build_get_assertion_expanded_json(value: Mapping[Any, Any], raw_bytes: Optional[bytes] = None) -> Dict[str, Any]:
-    result: Dict[str, Any] = {}
+    result = _build_labeled_ctap_map(
+        value,
+        _GET_ASSERTION_RESPONSE_LABELS,
+        _GET_ASSERTION_RESPONSE_HANDLERS,
+        missing_keys=(3,),
+    )
 
-    credential_entry = _get_mapping_entry(value, 1, "1", "credential")
-    if credential_entry is not _MISSING and credential_entry is not None:
-        result["credential"] = _convert_ctap_credential_descriptor(credential_entry)
+    signature_key = _format_ctap_entry_key(3, _resolve_ctap_label(_GET_ASSERTION_RESPONSE_LABELS, 3))
+    auth_key = _format_ctap_entry_key(2, _resolve_ctap_label(_GET_ASSERTION_RESPONSE_LABELS, 2))
+    auth_details = result.get(auth_key)
+    auth_trailing_bytes: Optional[bytes] = None
+    if isinstance(auth_details, Mapping):
+        trailing_hex = auth_details.get("trailingBytesHex")
+        if isinstance(trailing_hex, str) and trailing_hex.strip():
+            try:
+                auth_trailing_bytes = bytes.fromhex(trailing_hex)
+            except ValueError:
+                auth_trailing_bytes = None
 
-    auth_data_bytes = _extract_mapping_bytes(value, (2, "2", "authData"))
-    auth_trailing = b""
-    if auth_data_bytes is not None:
-        auth_info, auth_trailing = _format_auth_data_for_expanded_json(auth_data_bytes)
-        result["authData"] = auth_info
-
-    signature_bytes = _extract_mapping_bytes(value, (3, "3", "signature"))
-    if signature_bytes is not None:
-        result["signature"] = signature_bytes.hex()
-    else:
-        result["signature"] = None
-
-    user_entry = _get_mapping_entry(value, 4, "4", "user")
-    if user_entry is not _MISSING and user_entry is not None:
-        result["user"] = _convert_ctap_user(user_entry)
-
-    optional_labels = {
-        5: "numberOfCredentials",
-        6: "userSelected",
-        7: "largeBlobKey",
-        8: "extensions",
-        "numberOfCredentials": "numberOfCredentials",
-        "userSelected": "userSelected",
-        "largeBlobKey": "largeBlobKey",
-        "extensions": "extensions",
-    }
-    for key, label in optional_labels.items():
-        candidate = _get_mapping_entry(value, key)
-        if candidate is _MISSING or label in result:
-            continue
-        result[label] = _convert_optional_ctap_field(candidate)
-
-    for key in value:
-        if key in {1, 2, 3, 4, 5, 6, 7, 8, "1", "2", "3", "4", "5", "6", "7", "8", "credential", "authData", "signature", "user"}:
-            continue
-        try:
-            result[str(key)] = _hex_json_safe(value[key])
-        except Exception:
-            continue
-
-    if result.get("signature") is None and auth_trailing:
-        trailing_map = _decode_trailing_map(auth_trailing)
+    if result.get(signature_key) is None and auth_trailing_bytes:
+        trailing_map = _decode_trailing_map(auth_trailing_bytes)
         sig_entry = trailing_map.pop(3, None)
         if sig_entry is not None:
             sig_bytes = _coerce_cbor_bytes(sig_entry)
             if sig_bytes is not None:
-                result["signature"] = sig_bytes.hex()
+                result[signature_key] = sig_bytes.hex()
         user_entry_trailing = trailing_map.pop(4, None)
         if user_entry_trailing is not None:
-            result["user"] = _convert_ctap_user(user_entry_trailing)
+            user_key = _format_ctap_entry_key(4, _resolve_ctap_label(_GET_ASSERTION_RESPONSE_LABELS, 4))
+            result[user_key] = _convert_ctap_user(user_entry_trailing)
         number_entry = trailing_map.pop(5, None)
         if number_entry is not None:
-            result["numberOfCredentials"] = _convert_optional_ctap_field(number_entry)
+            number_key = _format_ctap_entry_key(5, _resolve_ctap_label(_GET_ASSERTION_RESPONSE_LABELS, 5))
+            result[number_key] = _convert_optional_ctap_field(number_entry)
         user_selected_entry = trailing_map.pop(6, None)
         if user_selected_entry is not None:
-            result["userSelected"] = _convert_optional_ctap_field(user_selected_entry)
+            selected_key = _format_ctap_entry_key(6, _resolve_ctap_label(_GET_ASSERTION_RESPONSE_LABELS, 6))
+            result[selected_key] = _convert_optional_ctap_field(user_selected_entry)
         extensions_entry = trailing_map.pop(8, None)
         if extensions_entry is not None:
-            result["extensions"] = _convert_optional_ctap_field(extensions_entry)
+            extensions_key = _format_ctap_entry_key(8, _resolve_ctap_label(_GET_ASSERTION_RESPONSE_LABELS, 8))
+            result[extensions_key] = _convert_optional_ctap_field(extensions_entry)
         if trailing_map:
             result["trailingFields"] = {str(k): _hex_json_safe(v) for k, v in trailing_map.items()}
 
-    if result.get("signature") is None and raw_bytes:
+    if result.get(signature_key) is None and raw_bytes:
         sig_bytes = _extract_signature_from_raw_bytes(raw_bytes)
         if sig_bytes is not None:
-            result["signature"] = sig_bytes.hex()
+            result[signature_key] = sig_bytes.hex()
 
     return result
 
@@ -1983,7 +2243,9 @@ def _try_decode_cbor(data: bytes, encoding: str) -> Optional[Dict[str, Any]]:
 
         if classification == "get_assertion_output":
             base_structure, working_value, assertion_sig = _repair_get_assertion_entries(
-                base_structure, dict(working_value)
+                base_structure,
+                dict(working_value),
+                primary_bytes,
             )
             if assertion_sig is not None:
                 merged_signature = merged_signature or assertion_sig
@@ -1996,7 +2258,9 @@ def _try_decode_cbor(data: bytes, encoding: str) -> Optional[Dict[str, Any]]:
                 temp_structure["entries"] = [dict(entry) for entry in entries]
             temp_value = dict(working_value)
             temp_structure, temp_value, assertion_sig = _repair_get_assertion_entries(
-                temp_structure, temp_value
+                temp_structure,
+                temp_value,
+                primary_bytes,
             )
             if assertion_sig is not None:
                 classification = "get_assertion_output"
@@ -2027,6 +2291,10 @@ def _try_decode_cbor(data: bytes, encoding: str) -> Optional[Dict[str, Any]]:
             expanded_json = _build_make_credential_expanded_json(base_value, primary_bytes)
         elif classification == "get_assertion_output":
             expanded_json = _build_get_assertion_expanded_json(base_value, primary_bytes)
+        elif classification == "make_credential_input":
+            expanded_json = _build_make_credential_request_expanded_json(base_value, primary_bytes)
+        elif classification == "get_assertion_input":
+            expanded_json = _build_get_assertion_request_expanded_json(base_value, primary_bytes)
     elif base_value is not None:
         hex_decoded_value = _hex_json_safe(base_value)
 
@@ -2079,6 +2347,12 @@ def _try_decode_cbor(data: bytes, encoding: str) -> Optional[Dict[str, Any]]:
 
 def _interpret_ctap_cbor_value(value: Any) -> Optional[Dict[str, Any]]:
     if isinstance(value, Mapping):
+        interpreted = _interpret_make_credential_request_map(value)
+        if interpreted is not None:
+            return {"makeCredentialRequest": interpreted}
+        interpreted = _interpret_get_assertion_request_map(value)
+        if interpreted is not None:
+            return {"getAssertionRequest": interpreted}
         interpreted = _interpret_make_credential_map(value)
         if interpreted is not None:
             return {"makeCredentialResponse": interpreted}
@@ -2212,6 +2486,26 @@ def _interpret_get_assertion_map(value: Mapping[Any, Any]) -> Optional[Dict[str,
     return interpreted
 
 
+def _interpret_make_credential_request_map(value: Mapping[Any, Any]) -> Optional[Dict[str, Any]]:
+    if not _looks_like_make_credential_request(value):
+        return None
+    return _build_labeled_ctap_map(
+        value,
+        _MAKE_CREDENTIAL_REQUEST_LABELS,
+        _MAKE_CREDENTIAL_REQUEST_HANDLERS,
+    )
+
+
+def _interpret_get_assertion_request_map(value: Mapping[Any, Any]) -> Optional[Dict[str, Any]]:
+    if not _looks_like_get_assertion_request(value):
+        return None
+    return _build_labeled_ctap_map(
+        value,
+        _GET_ASSERTION_REQUEST_LABELS,
+        _GET_ASSERTION_REQUEST_HANDLERS,
+    )
+
+
 def _convert_optional_ctap_field(value: Any) -> Any:
     data_bytes = _coerce_cbor_bytes(value)
     if data_bytes is not None:
@@ -2281,6 +2575,53 @@ def _convert_ctap_user(entry: Any) -> Any:
         user[str(key)] = _hex_json_safe(entry[key])
 
     return user
+
+
+_MAKE_CREDENTIAL_REQUEST_HANDLERS: Dict[Any, Callable[[Any], Any]] = {
+    "clientDataHash": _convert_optional_ctap_field,
+    "rp": _hex_json_safe,
+    "user": _convert_ctap_user_field,
+    "pubKeyCredParams": _convert_pub_key_cred_params,
+    "excludeList": _convert_ctap_allow_list,
+    "extensions": _hex_json_safe,
+    "options": _hex_json_safe,
+    "pinUvAuthParam": _convert_optional_ctap_field,
+    "pinUvAuthProtocol": _hex_json_safe,
+    "enterpriseAttestation": _hex_json_safe,
+    "largeBlobKey": _convert_optional_ctap_field,
+}
+
+_GET_ASSERTION_REQUEST_HANDLERS: Dict[Any, Callable[[Any], Any]] = {
+    "rpId": _hex_json_safe,
+    "clientDataHash": _convert_optional_ctap_field,
+    "allowList": _convert_ctap_allow_list,
+    "extensions": _hex_json_safe,
+    "options": _hex_json_safe,
+    "pinUvAuthParam": _convert_optional_ctap_field,
+    "pinUvAuthProtocol": _hex_json_safe,
+    "largeBlobKey": _convert_optional_ctap_field,
+}
+
+_MAKE_CREDENTIAL_RESPONSE_HANDLERS: Dict[Any, Callable[[Any], Any]] = {
+    "fmt": _hex_json_safe,
+    "authData": _convert_auth_data_field,
+    "attStmt": _convert_att_stmt_field,
+    "epAtt": _convert_optional_ctap_field,
+    "largeBlobKey": _convert_optional_ctap_field,
+    "extensions": _convert_optional_ctap_field,
+}
+
+_GET_ASSERTION_RESPONSE_HANDLERS: Dict[Any, Callable[[Any], Any]] = {
+    "credential": _convert_ctap_credential_descriptor,
+    "authData": _convert_auth_data_field,
+    "signature": _convert_signature_field,
+    "user": _convert_ctap_user_field,
+    "numberOfCredentials": _convert_optional_ctap_field,
+    "userSelected": _convert_optional_ctap_field,
+    "largeBlobKey": _convert_optional_ctap_field,
+    "extensions": _convert_optional_ctap_field,
+}
+
 
 def _describe_client_data_from_bytes(data: bytes) -> Dict[str, Any]:
     text = data.decode("utf-8")
@@ -2512,6 +2853,10 @@ def _build_decoder_payload(result: Dict[str, Any]) -> Dict[str, Any]:
                     qualifiers.append("MakeCredential response")
                 if "getAssertionResponse" in ctap_decoded:
                     qualifiers.append("GetAssertion response")
+                if "makeCredentialRequest" in ctap_decoded:
+                    qualifiers.append("MakeCredential request")
+                if "getAssertionRequest" in ctap_decoded:
+                    qualifiers.append("GetAssertion request")
             expanded_json = decoded.get("expandedJson")
             if isinstance(expanded_json, Mapping):
                 if "attStmt" in expanded_json and "MakeCredential response" not in qualifiers:
