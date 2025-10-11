@@ -139,6 +139,26 @@ def _key_variant_identity(key: Any) -> Tuple[str, Any]:
     return ("other", key)
 
 
+def _mapping_has_numeric_key(mapping: Mapping[Any, Any], numeric_key: int) -> bool:
+    if not isinstance(mapping, Mapping):
+        return False
+    key_bytes = _int_to_key_bytes(numeric_key)
+    for candidate in (numeric_key, key_bytes):
+        if candidate in mapping:
+            return True
+    for existing in mapping.keys():
+        if isinstance(existing, ByteBuffer):
+            if existing.getvalue() == key_bytes:
+                return True
+    return False
+
+
+def _prefixed_label(mapping: Mapping[Any, Any], numeric_key: int, label: str) -> str:
+    if _mapping_has_numeric_key(mapping, numeric_key):
+        return f"{numeric_key} ({label})"
+    return label
+
+
 def _get_mapping_entry(mapping: Mapping[Any, Any], *keys: Any) -> Any:
     if not isinstance(mapping, Mapping):
         return _MISSING
@@ -1990,35 +2010,37 @@ def _extract_signature_from_raw_bytes(raw_bytes: bytes) -> Optional[bytes]:
 
 
 def _build_make_credential_expanded_json(value: Mapping[Any, Any], raw_bytes: Optional[bytes] = None) -> Dict[str, Any]:
-    result: Dict[str, Any] = {}
+    result: "OrderedDict[str, Any]" = OrderedDict()
 
     fmt_value = _extract_mapping_string(value, (1, "1", "fmt"))
     if fmt_value is not None:
-        result["fmt"] = fmt_value
+        result[_prefixed_label(value, 1, "fmt")] = fmt_value
 
     auth_data_bytes = _extract_mapping_bytes(value, (2, "2", "authData"))
     auth_trailing = b""
     if auth_data_bytes is not None:
         auth_info, auth_trailing = _format_auth_data_for_expanded_json(auth_data_bytes)
-        result["authData"] = auth_info
+        result[_prefixed_label(value, 2, "authData")] = auth_info
 
     att_stmt_value = _get_mapping_entry(value, 3, "3", "attStmt")
     if att_stmt_value is not _MISSING and att_stmt_value is not None:
-        result["attStmt"] = _format_att_stmt_for_expanded_json(att_stmt_value)
+        result[_prefixed_label(value, 3, "attStmt")] = _format_att_stmt_for_expanded_json(att_stmt_value)
 
-    optional_labels = {
-        4: "epAtt",
-        "epAtt": "epAtt",
-        5: "largeBlobKey",
-        "largeBlobKey": "largeBlobKey",
-        6: "extensions",
-        "extensions": "extensions",
-    }
-    for key, label in optional_labels.items():
-        candidate = _get_mapping_entry(value, key)
-        if candidate is _MISSING or label in result:
+    optional_order = [
+        (4, "epAtt"),
+        (5, "largeBlobKey"),
+        (6, "extensions"),
+    ]
+    for numeric_key, label in optional_order:
+        candidate = _get_mapping_entry(value, numeric_key, label)
+        if candidate is _MISSING:
             continue
-        result[label] = _convert_optional_ctap_field(candidate)
+        field_label = (
+            _prefixed_label(value, numeric_key, label)
+            if _mapping_has_numeric_key(value, numeric_key)
+            else label
+        )
+        result[field_label] = _convert_optional_ctap_field(candidate)
 
     for key in value:
         if key in {1, 2, 3, 4, 5, 6, "1", "2", "3", "4", "5", "6", "fmt", "authData", "attStmt"}:
@@ -2032,78 +2054,107 @@ def _build_make_credential_expanded_json(value: Mapping[Any, Any], raw_bytes: Op
 
 
 def _build_get_assertion_expanded_json(value: Mapping[Any, Any], raw_bytes: Optional[bytes] = None) -> Dict[str, Any]:
-    result: Dict[str, Any] = {}
-
-    credential_entry = _get_mapping_entry(value, 1, "1", "credential")
-    if credential_entry is not _MISSING and credential_entry is not None:
-        result["credential"] = _convert_ctap_credential_descriptor(credential_entry)
+    result: "OrderedDict[str, Any]" = OrderedDict()
 
     auth_data_bytes = _extract_mapping_bytes(value, (2, "2", "authData"))
     auth_trailing = b""
+    auth_info: Optional[Dict[str, Any]] = None
     if auth_data_bytes is not None:
         auth_info, auth_trailing = _format_auth_data_for_expanded_json(auth_data_bytes)
-        result["authData"] = auth_info
+
+    trailing_map = _decode_trailing_map(auth_trailing) if auth_trailing else {}
+
+    credential_entry = _get_mapping_entry(value, 1, "1", "credential")
+    if credential_entry is not _MISSING and credential_entry is not None:
+        result[_prefixed_label(value, 1, "credential")] = _convert_ctap_credential_descriptor(
+            credential_entry
+        )
+
+    if auth_info is not None:
+        result[_prefixed_label(value, 2, "authData")] = auth_info
 
     signature_bytes = _extract_mapping_bytes(value, (3, "3", "signature"))
-    if signature_bytes is not None:
-        result["signature"] = signature_bytes.hex()
-    else:
-        result["signature"] = None
+    signature_label_source: Mapping[Any, Any] = value
+    if signature_bytes is None and trailing_map:
+        trailing_sig_entry = trailing_map.get(3)
+        if trailing_sig_entry is not None:
+            sig_bytes = _coerce_cbor_bytes(trailing_sig_entry)
+            if sig_bytes is not None:
+                signature_bytes = sig_bytes
+                signature_label_source = {3: trailing_sig_entry}
+                trailing_map.pop(3, None)
+    if signature_bytes is None and raw_bytes:
+        recovered_sig = _extract_signature_from_raw_bytes(raw_bytes)
+        if recovered_sig is not None:
+            signature_bytes = recovered_sig
+            if not _mapping_has_numeric_key(value, 3):
+                signature_label_source = {3: recovered_sig}
+    signature_label = _prefixed_label(signature_label_source, 3, "signature")
+    result[signature_label] = signature_bytes.hex() if signature_bytes is not None else None
 
     user_entry = _get_mapping_entry(value, 4, "4", "user")
+    user_label_source: Mapping[Any, Any] = value
+    if (user_entry is _MISSING or user_entry is None) and trailing_map:
+        trailing_user = trailing_map.get(4)
+        if trailing_user is not None:
+            user_entry = trailing_user
+            user_label_source = {4: trailing_user}
+            trailing_map.pop(4, None)
     if user_entry is not _MISSING and user_entry is not None:
-        result["user"] = _convert_ctap_user(user_entry)
+        result[_prefixed_label(user_label_source, 4, "user")] = _convert_ctap_user(user_entry)
 
     optional_labels = {
         5: "numberOfCredentials",
         6: "userSelected",
         7: "largeBlobKey",
         8: "extensions",
-        "numberOfCredentials": "numberOfCredentials",
-        "userSelected": "userSelected",
-        "largeBlobKey": "largeBlobKey",
-        "extensions": "extensions",
     }
-    for key, label in optional_labels.items():
-        candidate = _get_mapping_entry(value, key)
-        if candidate is _MISSING or label in result:
+    for numeric_key, label in optional_labels.items():
+        candidate = _get_mapping_entry(value, numeric_key, label)
+        source_map: Mapping[Any, Any] = value
+        if candidate is _MISSING or candidate is None:
+            trailing_candidate = trailing_map.get(numeric_key)
+            if trailing_candidate is not None:
+                candidate = trailing_candidate
+                source_map = {numeric_key: trailing_candidate}
+                trailing_map.pop(numeric_key, None)
+        if candidate is _MISSING or candidate is None:
             continue
-        result[label] = _convert_optional_ctap_field(candidate)
+        result[_prefixed_label(source_map, numeric_key, label)] = _convert_optional_ctap_field(
+            candidate
+        )
 
     for key in value:
-        if key in {1, 2, 3, 4, 5, 6, 7, 8, "1", "2", "3", "4", "5", "6", "7", "8", "credential", "authData", "signature", "user"}:
+        if key in {
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "credential",
+            "authData",
+            "signature",
+            "user",
+        }:
             continue
         try:
             result[str(key)] = _hex_json_safe(value[key])
         except Exception:
             continue
 
-    if result.get("signature") is None and auth_trailing:
-        trailing_map = _decode_trailing_map(auth_trailing)
-        sig_entry = trailing_map.pop(3, None)
-        if sig_entry is not None:
-            sig_bytes = _coerce_cbor_bytes(sig_entry)
-            if sig_bytes is not None:
-                result["signature"] = sig_bytes.hex()
-        user_entry_trailing = trailing_map.pop(4, None)
-        if user_entry_trailing is not None:
-            result["user"] = _convert_ctap_user(user_entry_trailing)
-        number_entry = trailing_map.pop(5, None)
-        if number_entry is not None:
-            result["numberOfCredentials"] = _convert_optional_ctap_field(number_entry)
-        user_selected_entry = trailing_map.pop(6, None)
-        if user_selected_entry is not None:
-            result["userSelected"] = _convert_optional_ctap_field(user_selected_entry)
-        extensions_entry = trailing_map.pop(8, None)
-        if extensions_entry is not None:
-            result["extensions"] = _convert_optional_ctap_field(extensions_entry)
-        if trailing_map:
-            result["trailingFields"] = {str(k): _hex_json_safe(v) for k, v in trailing_map.items()}
-
-    if result.get("signature") is None and raw_bytes:
-        sig_bytes = _extract_signature_from_raw_bytes(raw_bytes)
-        if sig_bytes is not None:
-            result["signature"] = sig_bytes.hex()
+    if trailing_map:
+        result["trailingFields"] = {str(k): _hex_json_safe(v) for k, v in trailing_map.items()}
 
     return result
 
@@ -2111,53 +2162,60 @@ def _build_get_assertion_expanded_json(value: Mapping[Any, Any], raw_bytes: Opti
 def _build_get_assertion_request_expanded_json(
     value: Mapping[Any, Any], raw_bytes: Optional[bytes] = None
 ) -> Dict[str, Any]:
-    result: Dict[str, Any] = {}
+    result: "OrderedDict[str, Any]" = OrderedDict()
 
     rp_id = _get_mapping_entry(value, 1, "1", "rpId")
     if isinstance(rp_id, str):
-        result["rpId"] = rp_id
+        result[_prefixed_label(value, 1, "rpId")] = rp_id
 
     client_hash_entry = _get_mapping_entry(value, 2, "2", "clientDataHash")
-    client_hash = _coerce_cbor_bytes(client_hash_entry)
-    if client_hash is not None:
-        result["clientDataHash"] = _binary_summary(client_hash)
+    if client_hash_entry is not _MISSING:
+        client_hash = _coerce_cbor_bytes(client_hash_entry)
+        result[_prefixed_label(value, 2, "clientDataHash")] = (
+            client_hash.hex() if client_hash is not None else None
+        )
 
     allow_list_entry = _get_mapping_entry(value, 3, "3", "allowList")
     if allow_list_entry is not _MISSING and allow_list_entry is not None:
         if isinstance(allow_list_entry, Sequence) and not isinstance(
             allow_list_entry, (bytes, bytearray)
         ):
-            result["allowList"] = [
+            result[_prefixed_label(value, 3, "allowList")] = [
                 _convert_ctap_credential_descriptor(item)
                 for item in allow_list_entry
             ]
         else:
-            result["allowList"] = _hex_json_safe(allow_list_entry)
+            result[_prefixed_label(value, 3, "allowList")] = _hex_json_safe(allow_list_entry)
 
-    optional_labels: Dict[Any, str] = {
-        4: "extensions",
-        "extensions": "extensions",
-        5: "options",
-        "options": "options",
-        6: "pinAuth",
-        "pinAuth": "pinAuth",
-        7: "pinProtocol",
-        "pinProtocol": "pinProtocol",
-    }
-    for key, label in optional_labels.items():
-        candidate = _get_mapping_entry(value, key)
-        if candidate is _MISSING or label in result:
+    optional_order = [
+        (4, "extensions"),
+        (5, "options"),
+        (6, "pinAuth"),
+        (7, "pinProtocol"),
+    ]
+    for numeric_key, label in optional_order:
+        candidate = _get_mapping_entry(value, numeric_key, label)
+        if candidate is _MISSING:
             continue
+        field_label = _prefixed_label(value, numeric_key, label)
         if label == "pinAuth":
             bytes_value = _coerce_cbor_bytes(candidate)
-            result[label] = (
-                _binary_summary(bytes_value) if bytes_value is not None else _hex_json_safe(candidate)
+            result[field_label] = (
+                bytes_value.hex() if bytes_value is not None else _hex_json_safe(candidate)
             )
         else:
-            result[label] = _hex_json_safe(candidate)
+            result[field_label] = _hex_json_safe(candidate)
 
     for key in value:
-        if key in {1, 2, 3, 4, 5, 6, 7} or key in {"rpId", "clientDataHash", "allowList", "extensions", "options", "pinAuth", "pinProtocol"}:
+        if key in {1, 2, 3, 4, 5, 6, 7} or key in {
+            "rpId",
+            "clientDataHash",
+            "allowList",
+            "extensions",
+            "options",
+            "pinAuth",
+            "pinProtocol",
+        }:
             continue
         try:
             result[str(key)] = _hex_json_safe(value[key])
@@ -2385,11 +2443,13 @@ def _interpret_make_credential_map(value: Mapping[Any, Any]) -> Optional[Dict[st
     if not isinstance(fmt, str) or not fmt.strip() or auth_data_bytes is None or not isinstance(att_stmt, Mapping):
         return None
 
-    interpreted: Dict[str, Any] = {}
-    interpreted["1 (fmt)"] = fmt
+    interpreted: "OrderedDict[str, Any]" = OrderedDict()
+    fmt_label = _prefixed_label(value, 1, "fmt")
+    interpreted[fmt_label] = fmt
 
     auth_data_details, auth_trailing = _format_auth_data_for_expanded_json(auth_data_bytes)
-    interpreted["2 (authData)"] = auth_data_details
+    auth_label = _prefixed_label(value, 2, "authData")
+    interpreted[auth_label] = auth_data_details
     if auth_trailing:
         trailing_map = _decode_trailing_map(auth_trailing)
         if trailing_map:
@@ -2401,9 +2461,11 @@ def _interpret_make_credential_map(value: Mapping[Any, Any]) -> Optional[Dict[st
         sig_bytes = _coerce_cbor_bytes(sig_value)
         if sig_bytes is not None:
             att_stmt_details["sig"] = sig_bytes.hex()
-        interpreted["3 (attStmt)"] = att_stmt_details
+        att_stmt_label = _prefixed_label(value, 3, "attStmt")
+        interpreted[att_stmt_label] = att_stmt_details
     else:
-        interpreted["3 (attStmt)"] = _hex_json_safe(att_stmt)
+        att_stmt_label = _prefixed_label(value, 3, "attStmt")
+        interpreted[att_stmt_label] = _hex_json_safe(att_stmt)
 
     optional_labels = {
         4: "epAtt",
@@ -2414,7 +2476,8 @@ def _interpret_make_credential_map(value: Mapping[Any, Any]) -> Optional[Dict[st
         candidate = _get_mapping_entry(value, key)
         if candidate is _MISSING:
             continue
-        interpreted[f"{key} ({label})"] = _convert_optional_ctap_field(candidate)
+        field_label = _prefixed_label(value, key, label)
+        interpreted[field_label] = _convert_optional_ctap_field(candidate)
 
     extra_keys = [
         key
@@ -2435,23 +2498,40 @@ def _interpret_get_assertion_map(value: Mapping[Any, Any]) -> Optional[Dict[str,
     if auth_data_bytes is None:
         return None
 
-    interpreted: Dict[str, Any] = {}
+    auth_data_details, auth_trailing = _format_auth_data_for_expanded_json(auth_data_bytes)
+    trailing_map = _decode_trailing_map(auth_trailing) if auth_trailing else {}
+
+    interpreted: "OrderedDict[str, Any]" = OrderedDict()
+    entries: Dict[int, Tuple[str, Any, Mapping[Any, Any]]] = {}
 
     credential_entry = _get_mapping_entry(value, 1, "1", "credential")
     if credential_entry is not _MISSING and credential_entry is not None:
-        interpreted["credential"] = _convert_ctap_credential_descriptor(credential_entry)
+        entries[1] = ("credential", _convert_ctap_credential_descriptor(credential_entry), value)
 
-    auth_data_details, auth_trailing = _format_auth_data_for_expanded_json(auth_data_bytes)
-    interpreted["authData"] = auth_data_details
+    entries[2] = ("authData", auth_data_details, value)
 
-    if signature_bytes is not None:
-        interpreted["signature"] = signature_bytes.hex()
-    else:
-        interpreted["signature"] = None
+    signature_label_source: Mapping[Any, Any] = value
+    if signature_bytes is None and trailing_map:
+        trailing_sig_entry = trailing_map.get(3)
+        if trailing_sig_entry is not None:
+            sig_bytes = _coerce_cbor_bytes(trailing_sig_entry)
+            if sig_bytes is not None:
+                signature_bytes = sig_bytes
+                signature_label_source = {3: trailing_sig_entry}
+                trailing_map.pop(3, None)
+    signature_value = signature_bytes.hex() if signature_bytes is not None else None
+    entries[3] = ("signature", signature_value, signature_label_source)
 
     user_entry = _get_mapping_entry(value, 4, "4", "user")
+    user_label_source: Mapping[Any, Any] = value
+    if (user_entry is _MISSING or user_entry is None) and trailing_map:
+        trailing_user = trailing_map.get(4)
+        if trailing_user is not None:
+            user_entry = trailing_user
+            user_label_source = {4: trailing_user}
+            trailing_map.pop(4, None)
     if user_entry is not _MISSING and user_entry is not None:
-        interpreted["user"] = _convert_ctap_user(user_entry)
+        entries[4] = ("user", _convert_ctap_user(user_entry), user_label_source)
 
     optional_labels = {
         5: "numberOfCredentials",
@@ -2460,10 +2540,17 @@ def _interpret_get_assertion_map(value: Mapping[Any, Any]) -> Optional[Dict[str,
         8: "extensions",
     }
     for key, label in optional_labels.items():
-        candidate = _get_mapping_entry(value, key)
-        if candidate is _MISSING:
+        candidate = _get_mapping_entry(value, key, label)
+        source_map: Mapping[Any, Any] = value
+        if candidate is _MISSING or candidate is None:
+            trailing_candidate = trailing_map.get(key)
+            if trailing_candidate is not None:
+                candidate = trailing_candidate
+                source_map = {key: trailing_candidate}
+                trailing_map.pop(key, None)
+        if candidate is _MISSING or candidate is None:
             continue
-        interpreted[label] = _convert_optional_ctap_field(candidate)
+        entries[key] = (label, _convert_optional_ctap_field(candidate), source_map)
 
     extra_keys = [
         key
@@ -2471,29 +2558,14 @@ def _interpret_get_assertion_map(value: Mapping[Any, Any]) -> Optional[Dict[str,
         if isinstance(key, int) and key not in {1, 2, 3, 4, 5, 6, 7, 8}
     ]
     for key in sorted(extra_keys):
-        interpreted[f"{key}"] = _hex_json_safe(value[key])
+        entries[key] = (str(key), _hex_json_safe(value[key]), {key: value[key]})
 
-    if interpreted.get("signature") is None and auth_trailing:
-        trailing_map = _decode_trailing_map(auth_trailing)
-        sig_entry = trailing_map.pop(3, None)
-        if sig_entry is not None:
-            sig_bytes = _coerce_cbor_bytes(sig_entry)
-            if sig_bytes is not None:
-                interpreted["signature"] = sig_bytes.hex()
-        user_entry_trailing = trailing_map.pop(4, None)
-        if user_entry_trailing is not None:
-            interpreted["user"] = _convert_ctap_user(user_entry_trailing)
-        number_entry = trailing_map.pop(5, None)
-        if number_entry is not None:
-            interpreted["numberOfCredentials"] = _convert_optional_ctap_field(number_entry)
-        user_selected_entry = trailing_map.pop(6, None)
-        if user_selected_entry is not None:
-            interpreted["userSelected"] = _convert_optional_ctap_field(user_selected_entry)
-        extensions_entry = trailing_map.pop(8, None)
-        if extensions_entry is not None:
-            interpreted["extensions"] = _convert_optional_ctap_field(extensions_entry)
-        if trailing_map:
-            interpreted["trailingFields"] = _hex_json_safe(trailing_map)
+    for key in sorted(entries.keys()):
+        label, payload, source = entries[key]
+        interpreted[_prefixed_label(source, key, label)] = payload
+
+    if trailing_map:
+        interpreted["trailingFields"] = _hex_json_safe(trailing_map)
 
     return interpreted
 
@@ -2506,44 +2578,46 @@ def _interpret_get_assertion_request_map(value: Mapping[Any, Any]) -> Optional[D
     client_hash_entry = _get_mapping_entry(value, 2, "2", "clientDataHash")
     client_hash = _coerce_cbor_bytes(client_hash_entry)
 
-    interpreted: Dict[str, Any] = {
-        "rpId": rp_id,
-        "clientDataHash": client_hash.hex() if client_hash is not None else None,
-    }
+    interpreted: "OrderedDict[str, Any]" = OrderedDict()
+
+    if rp_id is not _MISSING and rp_id is not None:
+        interpreted[_prefixed_label(value, 1, "rpId")] = rp_id
+
+    if client_hash_entry is not _MISSING:
+        interpreted[_prefixed_label(value, 2, "clientDataHash")] = (
+            client_hash.hex() if client_hash is not None else None
+        )
 
     allow_list_entry = _get_mapping_entry(value, 3, "3", "allowList")
     if allow_list_entry is not _MISSING and allow_list_entry is not None:
         if isinstance(allow_list_entry, Sequence) and not isinstance(
             allow_list_entry, (bytes, bytearray)
         ):
-            interpreted["allowList"] = [
+            interpreted[_prefixed_label(value, 3, "allowList")] = [
                 _convert_ctap_credential_descriptor(item)
                 for item in allow_list_entry
             ]
         else:
-            interpreted["allowList"] = _hex_json_safe(allow_list_entry)
+            interpreted[_prefixed_label(value, 3, "allowList")] = _hex_json_safe(allow_list_entry)
 
-    optional_labels: Dict[Any, str] = {
-        4: "extensions",
-        "extensions": "extensions",
-        5: "options",
-        "options": "options",
-        6: "pinAuth",
-        "pinAuth": "pinAuth",
-        7: "pinProtocol",
-        "pinProtocol": "pinProtocol",
-    }
-    for key, label in optional_labels.items():
-        candidate = _get_mapping_entry(value, key)
+    optional_order = [
+        (4, "extensions"),
+        (5, "options"),
+        (6, "pinAuth"),
+        (7, "pinProtocol"),
+    ]
+    for numeric_key, label in optional_order:
+        candidate = _get_mapping_entry(value, numeric_key, label)
         if candidate is _MISSING:
             continue
+        field_label = _prefixed_label(value, numeric_key, label)
         if label == "pinAuth":
             bytes_value = _coerce_cbor_bytes(candidate)
-            interpreted[label] = (
+            interpreted[field_label] = (
                 bytes_value.hex() if bytes_value is not None else _hex_json_safe(candidate)
             )
         else:
-            interpreted[label] = _hex_json_safe(candidate)
+            interpreted[field_label] = _hex_json_safe(candidate)
 
     extra_keys = [
         key
