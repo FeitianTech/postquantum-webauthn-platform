@@ -4,7 +4,6 @@ from __future__ import annotations
 import base64
 import binascii
 import json
-import math
 import re
 import string
 import textwrap
@@ -766,9 +765,6 @@ class _CanonicalCBOREncoder:
             return b"\xf7"
         if isinstance(value, (bytearray, memoryview)):
             value = bytes(value)
-        if isinstance(value, float):
-            if math.isfinite(value) and value.is_integer():
-                return self._encode(int(value))
         return cbor2.dumps(value, canonical=True)
 
     def _encode_array(self, values: Iterable[Any]) -> bytes:

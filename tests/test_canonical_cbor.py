@@ -48,11 +48,45 @@ def test_canonical_cbor_rejects_duplicate_keys_after_canonicalisation():
         _canonical_cbor_dumps(DuplicateMapping())
 
 
-def test_canonical_cbor_prefers_integer_encoding_for_integral_floats():
+def test_canonical_cbor_encodes_floats_using_shortest_precision():
     encoded = _canonical_cbor_dumps([1.0, 1.5])
 
-    # Array header (0x82) followed by integer 1 (0x01) then canonical float16 1.5.
-    assert encoded[0] == 0x82
-    assert encoded[1] == 0x01
+    # Array header (0x82) followed by canonical float16 encodings for 1.0 and 1.5.
+    assert encoded[:4] == bytes.fromhex("82f93c00")
+    assert encoded[4:] == bytes.fromhex("f93e00")
     decoded = cbor2.loads(encoded)
-    assert decoded == [1, 1.5]
+    assert decoded == [1.0, 1.5]
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        None,
+        True,
+        False,
+        0,
+        1,
+        23,
+        24,
+        255,
+        256,
+        -1,
+        -24,
+        -25,
+        1.0,
+        1.5,
+        float("inf"),
+        float("-inf"),
+        "a",
+        "aa",
+        b"a",
+        [1, 2, 3],
+        {"a": 1, "b": 2},
+        {"b": 1, "a": 2},
+        {1: "one", 10: "ten"},
+    ],
+)
+def test_canonical_cbor_matches_cbor2_canonical_output(payload):
+    ours = _canonical_cbor_dumps(payload)
+    theirs = cbor2.dumps(payload, canonical=True)
+    assert ours == theirs
