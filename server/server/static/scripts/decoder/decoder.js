@@ -91,37 +91,107 @@ const SPECIAL_LABELS = {
 
 let currentCodecMode = 'decode';
 
-export async function processCodec() {
-    const input = document.getElementById('decoder-input');
+const MODE_CONFIG = {
+    decode: {
+        panelId: 'codec-decode-panel',
+        inputId: 'decoder-input',
+        outputId: 'decoder-output',
+        summaryId: 'decoded-content',
+        toggleRawId: 'decoder-toggle-raw',
+        rawContentId: 'decoder-raw-content',
+        rawModalId: 'decoder-raw-modal',
+        statusKey: 'decoder',
+        progressId: 'decoder-progress',
+        progressTextId: 'decoder-progress-text',
+    },
+    encode: {
+        panelId: 'codec-encode-panel',
+        inputId: 'encoder-input',
+        outputId: 'encoder-output',
+        summaryId: 'encoded-content',
+        toggleRawId: 'encoder-toggle-raw',
+        rawContentId: 'encoder-raw-content',
+        rawModalId: 'encoder-raw-modal',
+        statusKey: 'encoder',
+        progressId: 'encoder-progress',
+        progressTextId: 'encoder-progress-text',
+        formatSelectId: 'encoder-format',
+    },
+};
+
+const ENCODER_FORMAT_ALIASES = new Map([
+    ['cbor', 'cbor'],
+    ['cbor (binary)', 'cbor'],
+    ['json', 'json'],
+    ['json (binary)', 'json'],
+    ['hex', 'hex'],
+    ['base64', 'base64'],
+    ['base64url', 'base64url'],
+    ['binary', 'binary'],
+    ['binary (raw bytes)', 'binary'],
+    ['der', 'der'],
+    ['pem', 'pem'],
+    ['cose', 'cose'],
+]);
+
+export async function processCodec(mode = getSelectedDecoderMode()) {
+    const config = MODE_CONFIG[mode] || MODE_CONFIG[currentCodecMode];
+    if (!config) {
+        return;
+    }
+
+    const input = document.getElementById(config.inputId);
     if (!input) {
         return;
     }
 
     const inputValue = input.value;
     if (!inputValue.trim()) {
-        showStatus('decoder', 'Codec input is empty. Please paste something to process.', 'error');
-        updateDecoderEmptyState();
+        const message = mode === 'encode'
+            ? 'Encoder input is empty. Provide JSON to encode.'
+            : 'Codec input is empty. Please paste something to process.';
+        showStatus(config.statusKey, message, 'error');
+        if (mode === 'decode') {
+            updateDecoderEmptyState();
+        }
         return;
     }
 
-    const mode = getSelectedDecoderMode();
-    const formatSelect = document.getElementById('decoder-format');
     let targetFormat = null;
-
     if (mode === 'encode') {
+        const formatSelect = config.formatSelectId
+            ? document.getElementById(config.formatSelectId)
+            : null;
         targetFormat = formatSelect ? formatSelect.value : '';
         if (!targetFormat || !targetFormat.trim()) {
-            showStatus('decoder', 'Select an encoding format before encoding.', 'error');
+            showStatus(config.statusKey, 'Select an encoding format before encoding.', 'error');
+            return;
+        }
+
+        let parsedValue;
+        try {
+            parsedValue = JSON.parse(inputValue);
+        } catch (parseError) {
+            showStatus(config.statusKey, 'Encoder expects valid JSON input.', 'error');
+            return;
+        }
+
+        if (!canEncodeToFormat(parsedValue, targetFormat)) {
+            showStatus(
+                config.statusKey,
+                `Input cannot be converted into ${targetFormat}.`,
+                'error',
+            );
             return;
         }
     }
 
-    const decoderOutput = document.getElementById('decoder-output');
-    const summaryContainer = document.getElementById('decoded-content');
-    const rawContent = document.getElementById('decoder-raw-content');
-    const toggleButton = document.getElementById('decoder-toggle-raw');
-    const rawModal = document.getElementById('decoder-raw-modal');
-    const progressText = document.getElementById('decoder-progress-text');
+    const outputPanel = document.getElementById(config.outputId);
+    const summaryContainer = document.getElementById(config.summaryId);
+    const rawContent = document.getElementById(config.rawContentId);
+    const toggleButton = document.getElementById(config.toggleRawId);
+    const rawModal = config.rawModalId ? document.getElementById(config.rawModalId) : null;
+    const progressText = document.getElementById(config.progressTextId);
 
     if (summaryContainer) {
         summaryContainer.innerHTML = '';
@@ -132,18 +202,20 @@ export async function processCodec() {
     if (toggleButton) {
         toggleButton.disabled = true;
     }
-    if (decoderOutput) {
-        decoderOutput.classList.remove('is-visible');
+    if (outputPanel) {
+        outputPanel.classList.remove('is-visible');
     }
     if (rawModal && rawModal.classList.contains('open')) {
-        closeModal('decoder-raw-modal');
+        closeModal(config.rawModalId);
     }
-    hideStatus('decoder');
+    hideStatus(config.statusKey);
 
-    updateDecoderEmptyState();
+    if (mode === 'decode') {
+        updateDecoderEmptyState();
+    }
 
     const actionText = mode === 'encode' ? 'Encoding…' : 'Decoding…';
-    showProgress('decoder', actionText);
+    showProgress(config.statusKey, actionText);
     if (progressText) {
         progressText.textContent = actionText;
     }
@@ -186,8 +258,8 @@ export async function processCodec() {
             rawContent.textContent = JSON.stringify(payload, null, 2);
             resetScrollPosition(rawContent);
         }
-        if (decoderOutput) {
-            decoderOutput.classList.add('is-visible');
+        if (outputPanel) {
+            outputPanel.classList.add('is-visible');
         }
         if (toggleButton) {
             toggleButton.disabled = !rawContent || rawContent.textContent.trim().length === 0;
@@ -195,23 +267,33 @@ export async function processCodec() {
         const successMessage = mode === 'encode'
             ? 'Payload encoded successfully!'
             : 'Response decoded successfully!';
-        showStatus('decoder', successMessage, 'success');
+        showStatus(config.statusKey, successMessage, 'success');
+
+        if (mode === 'decode') {
+            updateDecoderEmptyState();
+        }
     } catch (error) {
-        if (decoderOutput) {
-            decoderOutput.classList.remove('is-visible');
+        if (outputPanel) {
+            outputPanel.classList.remove('is-visible');
         }
         if (toggleButton) {
             toggleButton.disabled = true;
         }
         if (rawModal && rawModal.classList.contains('open')) {
-            closeModal('decoder-raw-modal');
+            closeModal(config.rawModalId);
         }
         const message = error instanceof Error ? error.message : String(error);
         const failurePrefix = mode === 'encode' ? 'Encoding failed' : 'Decoding failed';
-        showStatus('decoder', `${failurePrefix}: ${message}`, 'error');
+        showStatus(config.statusKey, `${failurePrefix}: ${message}`, 'error');
+
+        if (mode === 'decode') {
+            updateDecoderEmptyState();
+        }
     } finally {
-        hideProgress('decoder');
-        updateDecoderEmptyState();
+        hideProgress(config.statusKey);
+        if (mode === 'decode') {
+            updateDecoderEmptyState();
+        }
     }
 }
 
@@ -221,27 +303,11 @@ function getSelectedDecoderMode() {
 
 function updateDecoderModeUI() {
     const mode = getSelectedDecoderMode();
-    const formatGroup = document.getElementById('decoder-format-group');
-    const submitButton = document.getElementById('decoder-submit');
-    const progressText = document.getElementById('decoder-progress-text');
-    const input = document.getElementById('decoder-input');
     const decodeTab = document.getElementById('codec-mode-decode');
     const encodeTab = document.getElementById('codec-mode-encode');
+    const decodePanel = document.getElementById(MODE_CONFIG.decode.panelId);
+    const encodePanel = document.getElementById(MODE_CONFIG.encode.panelId);
 
-    if (formatGroup) {
-        formatGroup.style.display = mode === 'encode' ? 'block' : 'none';
-    }
-    if (submitButton) {
-        submitButton.textContent = mode === 'encode' ? 'Encode' : 'Decode';
-    }
-    if (progressText) {
-        progressText.textContent = mode === 'encode' ? 'Encoding...' : 'Decoding...';
-    }
-    if (input) {
-        input.placeholder = mode === 'encode'
-            ? 'Paste JSON here to encode...'
-            : 'Paste something here to decode...';
-    }
     if (decodeTab) {
         decodeTab.classList.toggle('active', mode === 'decode');
         decodeTab.setAttribute('aria-selected', mode === 'decode' ? 'true' : 'false');
@@ -249,6 +315,14 @@ function updateDecoderModeUI() {
     if (encodeTab) {
         encodeTab.classList.toggle('active', mode === 'encode');
         encodeTab.setAttribute('aria-selected', mode === 'encode' ? 'true' : 'false');
+    }
+    if (decodePanel) {
+        decodePanel.classList.toggle('is-active', mode === 'decode');
+        decodePanel.hidden = mode !== 'decode';
+    }
+    if (encodePanel) {
+        encodePanel.classList.toggle('is-active', mode === 'encode');
+        encodePanel.hidden = mode !== 'encode';
     }
 }
 
@@ -261,6 +335,7 @@ export function switchCodecMode(mode) {
     }
     currentCodecMode = mode;
     hideStatus('decoder');
+    hideStatus('encoder');
     updateDecoderModeUI();
     const content = document.getElementById('codec-mode-content');
     if (content) {
@@ -273,20 +348,25 @@ export function switchCodecMode(mode) {
     }
 }
 
-export function clearDecoder() {
-    const input = document.getElementById('decoder-input');
-    const output = document.getElementById('decoder-output');
-    const decodedContent = document.getElementById('decoded-content');
-    const rawContent = document.getElementById('decoder-raw-content');
-    const toggleButton = document.getElementById('decoder-toggle-raw');
-    const rawModal = document.getElementById('decoder-raw-modal');
+export function clearCodec(mode = getSelectedDecoderMode()) {
+    const config = MODE_CONFIG[mode] || MODE_CONFIG[currentCodecMode];
+    if (!config) {
+        return;
+    }
+
+    const input = document.getElementById(config.inputId);
+    const output = document.getElementById(config.outputId);
+    const summary = document.getElementById(config.summaryId);
+    const rawContent = document.getElementById(config.rawContentId);
+    const toggleButton = document.getElementById(config.toggleRawId);
+    const rawModal = config.rawModalId ? document.getElementById(config.rawModalId) : null;
 
     if (input) {
         input.value = '';
         resetScrollPosition(input);
     }
-    if (decodedContent) {
-        decodedContent.innerHTML = '';
+    if (summary) {
+        summary.innerHTML = '';
     }
     if (rawContent) {
         rawContent.textContent = '';
@@ -299,18 +379,28 @@ export function clearDecoder() {
         output.classList.remove('is-visible');
     }
     if (rawModal && rawModal.classList.contains('open')) {
-        closeModal('decoder-raw-modal');
+        closeModal(config.rawModalId);
     }
-    hideStatus('decoder');
-    hideProgress('decoder');
-    updateDecoderEmptyState();
+
+    hideStatus(config.statusKey);
+    hideProgress(config.statusKey);
+
+    if (mode === 'decode') {
+        updateDecoderEmptyState();
+    }
     updateDecoderModeUI();
 }
 
-export function toggleRawDecoder() {
-    const toggleButton = document.getElementById('decoder-toggle-raw');
-    const rawContent = document.getElementById('decoder-raw-content');
-    const modal = document.getElementById('decoder-raw-modal');
+export function toggleRawCodec(mode = getSelectedDecoderMode()) {
+    const config = MODE_CONFIG[mode] || MODE_CONFIG[currentCodecMode];
+    if (!config || !config.rawModalId) {
+        return;
+    }
+
+    const toggleButton = document.getElementById(config.toggleRawId);
+    const rawContent = document.getElementById(config.rawContentId);
+    const modal = document.getElementById(config.rawModalId);
+
     if (!toggleButton || !rawContent || !modal) {
         return;
     }
@@ -325,9 +415,9 @@ export function toggleRawDecoder() {
     }
 
     if (modal.classList.contains('open')) {
-        closeModal('decoder-raw-modal');
+        closeModal(config.rawModalId);
     } else {
-        openModal('decoder-raw-modal');
+        openModal(config.rawModalId);
     }
 }
 
@@ -784,6 +874,123 @@ function formatKey(key) {
     });
 
     return words.join(' ');
+}
+
+function normalizeEncoderFormat(format) {
+    if (typeof format !== 'string') {
+        return '';
+    }
+    return format.trim().toLowerCase();
+}
+
+function getCanonicalEncoderFormat(format) {
+    const normalized = normalizeEncoderFormat(format);
+    if (!normalized) {
+        return '';
+    }
+    return ENCODER_FORMAT_ALIASES.get(normalized) || normalized;
+}
+
+function canEncodeToFormat(parsedValue, format) {
+    const canonical = getCanonicalEncoderFormat(format);
+    if (!canonical) {
+        return true;
+    }
+
+    if (canonical === 'cbor' || canonical === 'json' || canonical === 'cose') {
+        return parsedValue !== undefined;
+    }
+
+    if (['hex', 'base64', 'base64url', 'binary', 'der', 'pem'].includes(canonical)) {
+        return hasBinaryConvertibleValue(parsedValue);
+    }
+
+    return true;
+}
+
+function hasBinaryConvertibleValue(value) {
+    if (value === null || value === undefined) {
+        return false;
+    }
+
+    if (typeof value === 'string') {
+        const trimmed = value.trim();
+        if (!trimmed) {
+            return false;
+        }
+        if (isPemString(trimmed)) {
+            return true;
+        }
+        if (isLikelyHex(trimmed)) {
+            return true;
+        }
+        if (isLikelyBase64(trimmed) || isLikelyBase64Url(trimmed)) {
+            return true;
+        }
+        return false;
+    }
+
+    if (Array.isArray(value)) {
+        if (value.length === 0) {
+            return false;
+        }
+        if (value.every((item) => Number.isInteger(item) && item >= 0 && item <= 255)) {
+            return true;
+        }
+        return value.some((item) => hasBinaryConvertibleValue(item));
+    }
+
+    if (typeof value === 'object') {
+        const keysToInspect = [
+            'value',
+            'data',
+            'raw',
+            'binary',
+            'bytes',
+            'hex',
+            'base64',
+            'base64url',
+            'derBase64',
+            'pem',
+        ];
+
+        for (const key of keysToInspect) {
+            if (Object.prototype.hasOwnProperty.call(value, key)) {
+                if (hasBinaryConvertibleValue(value[key])) {
+                    return true;
+                }
+            }
+        }
+
+        return Object.values(value).some((entry) => hasBinaryConvertibleValue(entry));
+    }
+
+    return false;
+}
+
+function isLikelyHex(value) {
+    const candidate = value.trim().replace(/^0x/i, '').replace(/[\s:]/g, '');
+    return candidate.length > 0 && candidate.length % 2 === 0 && /^[0-9a-fA-F]+$/.test(candidate);
+}
+
+function isLikelyBase64(value) {
+    const candidate = value.replace(/\s+/g, '');
+    if (!candidate) {
+        return false;
+    }
+    return /^[A-Za-z0-9+/=]+$/.test(candidate);
+}
+
+function isLikelyBase64Url(value) {
+    const candidate = value.replace(/\s+/g, '');
+    if (!candidate) {
+        return false;
+    }
+    return /^[A-Za-z0-9_\-]+=*$/.test(candidate);
+}
+
+function isPemString(value) {
+    return /-----BEGIN [^-]+-----/.test(value) && /-----END [^-]+-----/.test(value);
 }
 
 function updateDecoderEmptyState() {

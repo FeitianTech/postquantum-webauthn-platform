@@ -6,6 +6,8 @@ import binascii
 import json
 import re
 import string
+import textwrap
+from collections import deque
 from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
 
 import cbor2
@@ -75,6 +77,8 @@ def _normalize_encoding_format(value: str) -> str:
     aliases = {
         "json": "json",
         "cbor": "cbor",
+        "cbor (binary)": "cbor",
+        "json (binary)": "json",
         "webauthn client data": "client-data",
         "clientdata": "client-data",
         "client data": "client-data",
@@ -86,6 +90,14 @@ def _normalize_encoding_format(value: str) -> str:
         "x509": "x509",
         "publickeycredential": "public-key-credential",
         "public key credential": "public-key-credential",
+        "hex": "hex",
+        "base64": "base64",
+        "base64url": "base64url",
+        "binary": "binary",
+        "binary (raw bytes)": "binary",
+        "der": "der",
+        "pem": "pem",
+        "cose": "cose",
     }
 
     if normalized in aliases:
@@ -177,7 +189,7 @@ def _encode_x509_certificate(parsed: Any) -> Dict[str, Any]:
     return _prepare_encoder_response("X.509 certificate", payload, qualifier="encoded")
 
 
-def _encode_cbor_value(parsed: Any) -> Dict[str, Any]:
+def _encode_cbor_value(parsed: Any, *, base_type: str = "CBOR") -> Dict[str, Any]:
     ctap_source: Optional[Mapping[str, Any]] = None
     ctap_kind: Optional[str] = None
     ctap_metadata: Optional[Mapping[str, Any]] = None
@@ -228,14 +240,152 @@ def _encode_cbor_value(parsed: Any) -> Dict[str, Any]:
                 "kind": prefix_kind,
             }
         qualifier = f"encoded {ctap_kind}" if ctap_kind else "encoded"
-        return _prepare_encoder_response("CBOR", payload, qualifier=qualifier)
+        return _prepare_encoder_response(base_type, payload, qualifier=qualifier)
 
     payload_bytes = cbor2.dumps(parsed)
     payload = {
         "binary": _binary_summary(payload_bytes, "cbor"),
         "decodedValue": _stringify_mapping_keys(_hex_json_safe(parsed)),
     }
-    return _prepare_encoder_response("CBOR", payload, qualifier="encoded")
+    return _prepare_encoder_response(base_type, payload, qualifier="encoded")
+
+
+def _encode_hex_value(parsed: Any) -> Dict[str, Any]:
+    data_bytes = _extract_generic_binary_payload(parsed)
+    summary = _binary_summary(data_bytes, "hex")
+    payload = {
+        "binary": summary,
+        "hex": summary["hex"],
+    }
+    return _prepare_encoder_response("Hex", payload, qualifier="encoded")
+
+
+def _encode_base64_value(parsed: Any) -> Dict[str, Any]:
+    data_bytes = _extract_generic_binary_payload(parsed)
+    summary = _binary_summary(data_bytes, "base64")
+    payload = {
+        "binary": summary,
+        "base64": summary["base64"],
+    }
+    return _prepare_encoder_response("Base64", payload, qualifier="encoded")
+
+
+def _encode_base64url_value(parsed: Any) -> Dict[str, Any]:
+    data_bytes = _extract_generic_binary_payload(parsed)
+    summary = _binary_summary(data_bytes, "base64url")
+    payload = {
+        "binary": summary,
+        "base64url": summary["base64url"],
+    }
+    return _prepare_encoder_response("Base64URL", payload, qualifier="encoded")
+
+
+def _encode_binary_value(parsed: Any) -> Dict[str, Any]:
+    data_bytes = _extract_generic_binary_payload(parsed)
+    summary = _binary_summary(data_bytes, "binary")
+    payload = {
+        "binary": summary,
+        "bytes": list(data_bytes),
+    }
+    return _prepare_encoder_response("Binary data", payload, qualifier="raw bytes")
+
+
+def _encode_der_value(parsed: Any) -> Dict[str, Any]:
+    data_bytes = _extract_generic_binary_payload(parsed)
+    summary = _binary_summary(data_bytes, "der")
+    payload = {
+        "binary": summary,
+        "derBase64": summary["base64"],
+    }
+    return _prepare_encoder_response("DER", payload, qualifier="encoded")
+
+
+def _encode_pem_value(parsed: Any) -> Dict[str, Any]:
+    data_bytes = _extract_generic_binary_payload(parsed)
+    summary = _binary_summary(data_bytes, "pem")
+    label = _determine_pem_label(parsed)
+    payload = {
+        "binary": summary,
+        "pem": _format_pem_block(summary["base64"], label),
+    }
+    return _prepare_encoder_response("PEM", payload, qualifier="encoded")
+
+
+def _encode_cose_value(parsed: Any) -> Dict[str, Any]:
+    return _encode_cbor_value(parsed, base_type="COSE")
+
+
+def _extract_generic_binary_payload(value: Any) -> bytes:
+    queue: deque[Any] = deque([value])
+    seen: set[int] = set()
+
+    while queue:
+        candidate = queue.popleft()
+        decoded = _maybe_decode_bytes(candidate)
+        if decoded is not None:
+            return decoded
+
+        if isinstance(candidate, Mapping):
+            marker = id(candidate)
+            if marker in seen:
+                continue
+            seen.add(marker)
+
+            preferred_keys = (
+                "value",
+                "data",
+                "raw",
+                "binary",
+                "bytes",
+                "payload",
+                "body",
+                "der",
+                "derBase64",
+                "pem",
+                "base64",
+                "base64url",
+            )
+            for key in preferred_keys:
+                if key in candidate:
+                    queue.append(candidate[key])
+
+            for entry in candidate.values():
+                if isinstance(entry, (Mapping, Sequence)) and not isinstance(entry, (str, bytes, bytearray)):
+                    queue.append(entry)
+        elif isinstance(candidate, Sequence) and not isinstance(candidate, (str, bytes, bytearray)):
+            queue.extend(candidate)
+
+    raise ValueError("Unable to extract binary payload for encoding.")
+
+
+def _determine_pem_label(value: Any) -> str:
+    if isinstance(value, Mapping):
+        for key in ("pemLabel", "label"):
+            entry = value.get(key)
+            if isinstance(entry, str) and entry.strip():
+                return entry
+
+        binary_section = value.get("binary")
+        if isinstance(binary_section, Mapping):
+            encoding_label = binary_section.get("encoding")
+            if isinstance(encoding_label, str) and encoding_label.strip():
+                return encoding_label
+
+    return "DATA"
+
+
+def _format_pem_block(base64_body: str, label: str) -> str:
+    normalized_label = _normalize_pem_label(label)
+    wrapped = "\n".join(textwrap.wrap(base64_body, 64)) if base64_body else ""
+    return f"-----BEGIN {normalized_label}-----\n{wrapped}\n-----END {normalized_label}-----"
+
+
+def _normalize_pem_label(label: str) -> str:
+    sanitized = re.sub(r"[^A-Za-z0-9]+", " ", label).strip()
+    if not sanitized:
+        return "DATA"
+    compact = re.sub(r"\s+", " ", sanitized)
+    return compact.replace(" ", "_").upper()
 
 
 _ENCODING_HANDLERS: Dict[str, Callable[[Any], Dict[str, Any]]] = {
@@ -246,6 +396,13 @@ _ENCODING_HANDLERS: Dict[str, Callable[[Any], Dict[str, Any]]] = {
     "attestation-object": _encode_attestation_object,
     "x509": _encode_x509_certificate,
     "cbor": _encode_cbor_value,
+    "hex": _encode_hex_value,
+    "base64": _encode_base64_value,
+    "base64url": _encode_base64url_value,
+    "binary": _encode_binary_value,
+    "der": _encode_der_value,
+    "pem": _encode_pem_value,
+    "cose": _encode_cose_value,
 }
 
 

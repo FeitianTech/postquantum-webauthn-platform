@@ -2,58 +2,6 @@
             <div id="codec-tab" class="tab-content">
                 <div class="section">
                     <h2>Codec</h2>
-                    <div class="status" id="decoder-status"></div>
-
-                    <div id="decoder-description" class="decoder-description">
-                        <p class="decoder-description-title">Recognized formats:</p>
-                        <ul class="decoder-description-list">
-                            <li>
-                                <span class="decoder-format-name">PublicKeyCredential:</span>
-                                <span class="decoder-format-chip">JSON</span>
-                            </li>
-                            <li>
-                                <span class="decoder-format-name">attestationObject:</span>
-                                <span class="decoder-format-chip">binary</span>
-                                <span class="decoder-format-note">(CBOR)</span>
-                            </li>
-                            <li>
-                                <span class="decoder-format-name">authenticatorData:</span>
-                                <span class="decoder-format-chip">binary</span>
-                            </li>
-                            <li>
-                                <span class="decoder-format-name">WebAuthn client data:</span>
-                                <span class="decoder-format-chip">JSON</span>
-                                <span class="decoder-format-chip">binary</span>
-                            </li>
-                            <li>
-                                <span class="decoder-format-name">X.509 certificate:</span>
-                                <span class="decoder-format-chip">PEM</span>
-                                <span class="decoder-format-chip">binary-wrapped PEM</span>
-                                <span class="decoder-format-chip">binary (DER)</span>
-                            </li>
-                            <li>
-                                <span class="decoder-format-name">JSON:</span>
-                                <span class="decoder-format-chip">plain</span>
-                                <span class="decoder-format-chip">binary</span>
-                            </li>
-                            <li>
-                                <span class="decoder-format-name">CBOR:</span>
-                                <span class="decoder-format-chip">binary</span>
-                                <span class="decoder-format-chip">CTAP/WebAuthn Data</span>
-                            </li>
-                        </ul>
-                        <p class="decoder-description-note">
-                            All binary values may be
-                            <span class="decoder-format-chip">base64</span>,
-                            <span class="decoder-format-chip">base64url</span>,
-                            or
-                            <span class="decoder-format-chip">hex</span>,
-                            ignoring all whitespace.
-                        </p>
-                        <p class="decoder-description-note">
-                            Hex also ignores <code>:</code> characters.
-                        </p>
-                    </div>
 
                     <div class="codec-mode-tabs" role="tablist">
                         <button
@@ -62,6 +10,7 @@
                             class="codec-mode-tab active"
                             role="tab"
                             aria-selected="true"
+                            aria-controls="codec-decode-panel"
                             onclick="switchCodecMode('decode')"
                         >
                             Decode
@@ -72,6 +21,7 @@
                             class="codec-mode-tab"
                             role="tab"
                             aria-selected="false"
+                            aria-controls="codec-encode-panel"
                             onclick="switchCodecMode('encode')"
                         >
                             Encode
@@ -79,49 +29,163 @@
                     </div>
 
                     <div id="codec-mode-content" class="codec-mode-content">
-                        <div class="form-group decoder-format-group" id="decoder-format-group" style="display: none;">
-                            <label for="decoder-format">Encoding format</label>
-                            <select id="decoder-format" class="form-control">
-                                <option value="CBOR" selected>CBOR (binary)</option>
-                                <option value="JSON">JSON (text)</option>
-                                <option value="WebAuthn client data">WebAuthn client data (binary JSON)</option>
-                                <option value="Authenticator data">Authenticator data (binary)</option>
-                                <option value="Attestation object">Attestation object (binary CBOR)</option>
-                                <option value="X.509 certificate">X.509 certificate (binary DER + PEM)</option>
-                                <option value="PublicKeyCredential">PublicKeyCredential (JSON text)</option>
-                            </select>
-                        </div>
+                        <div
+                            id="codec-decode-panel"
+                            class="codec-panel is-active"
+                            role="tabpanel"
+                            aria-labelledby="codec-mode-decode"
+                        >
+                            <div class="status" id="decoder-status"></div>
 
-                        <div class="form-group">
-                            <textarea id="decoder-input" class="form-control" rows="10" placeholder="Paste something here to decode..."></textarea>
-                        </div>
-
-                        <div class="form-group">
-                            <button class="btn" id="decoder-submit" onclick="processCodec()">Decode</button>
-                            <button class="btn btn-secondary" onclick="clearDecoder()">Clear</button>
-                        </div>
-
-                        <div class="progress" id="decoder-progress">
-                            <div class="spinner" aria-hidden="true"></div>
-                            <span id="decoder-progress-text">Decoding...</span>
-                        </div>
-
-                        <div id="decoder-output" class="decoder-output-panel">
-                            <div class="decoder-summary-header decoder-summary-header--with-actions">
-                                <h3>Codec Output</h3>
-                                <div class="decoder-summary-actions">
-                                    <button
-                                        class="btn btn-secondary decoder-raw-button"
-                                        type="button"
-                                        id="decoder-toggle-raw"
-                                        onclick="toggleRawDecoder()"
-                                        disabled
-                                    >
-                                        Raw
-                                    </button>
-                                </div>
+                            <div id="decoder-description" class="decoder-description">
+                                <p class="decoder-description-title">Recognized formats:</p>
+                                <ul class="decoder-description-list">
+                                    <li>
+                                        <span class="decoder-format-name">PublicKeyCredential:</span>
+                                        <span class="decoder-format-chip">JSON</span>
+                                    </li>
+                                    <li>
+                                        <span class="decoder-format-name">attestationObject:</span>
+                                        <span class="decoder-format-chip">binary</span>
+                                        <span class="decoder-format-note">(CBOR)</span>
+                                    </li>
+                                    <li>
+                                        <span class="decoder-format-name">authenticatorData:</span>
+                                        <span class="decoder-format-chip">binary</span>
+                                    </li>
+                                    <li>
+                                        <span class="decoder-format-name">WebAuthn client data:</span>
+                                        <span class="decoder-format-chip">JSON</span>
+                                        <span class="decoder-format-chip">binary</span>
+                                    </li>
+                                    <li>
+                                        <span class="decoder-format-name">X.509 certificate:</span>
+                                        <span class="decoder-format-chip">PEM</span>
+                                        <span class="decoder-format-chip">binary-wrapped PEM</span>
+                                        <span class="decoder-format-chip">binary (DER)</span>
+                                    </li>
+                                    <li>
+                                        <span class="decoder-format-name">JSON:</span>
+                                        <span class="decoder-format-chip">plain</span>
+                                        <span class="decoder-format-chip">binary</span>
+                                    </li>
+                                    <li>
+                                        <span class="decoder-format-name">CBOR:</span>
+                                        <span class="decoder-format-chip">binary</span>
+                                        <span class="decoder-format-chip">CTAP/WebAuthn Data</span>
+                                    </li>
+                                </ul>
+                                <p class="decoder-description-note">
+                                    All binary values may be
+                                    <span class="decoder-format-chip">base64</span>,
+                                    <span class="decoder-format-chip">base64url</span>,
+                                    or
+                                    <span class="decoder-format-chip">hex</span>,
+                                    ignoring all whitespace.
+                                </p>
+                                <p class="decoder-description-note">
+                                    Hex also ignores <code>:</code> characters.
+                                </p>
                             </div>
-                            <div id="decoded-content" class="decoder-summary"></div>
+
+                            <div class="form-group">
+                                <textarea
+                                    id="decoder-input"
+                                    class="form-control"
+                                    rows="10"
+                                    placeholder="Paste something here to decode..."
+                                ></textarea>
+                            </div>
+
+                            <div class="form-group">
+                                <button class="btn" id="decoder-submit" onclick="processCodec('decode')">Decode</button>
+                                <button class="btn btn-secondary" onclick="clearCodec('decode')">Clear</button>
+                            </div>
+
+                            <div class="progress" id="decoder-progress">
+                                <div class="spinner" aria-hidden="true"></div>
+                                <span id="decoder-progress-text">Decoding...</span>
+                            </div>
+
+                            <div id="decoder-output" class="decoder-output-panel">
+                                <div class="decoder-summary-header decoder-summary-header--with-actions">
+                                    <h3>Codec Output</h3>
+                                    <div class="decoder-summary-actions">
+                                        <button
+                                            class="btn btn-secondary decoder-raw-button"
+                                            type="button"
+                                            id="decoder-toggle-raw"
+                                            onclick="toggleRawCodec('decode')"
+                                            disabled
+                                        >
+                                            Raw
+                                        </button>
+                                    </div>
+                                </div>
+                                <div id="decoded-content" class="decoder-summary"></div>
+                            </div>
+                        </div>
+
+                        <div
+                            id="codec-encode-panel"
+                            class="codec-panel"
+                            role="tabpanel"
+                            aria-labelledby="codec-mode-encode"
+                            hidden
+                        >
+                            <div class="status" id="encoder-status"></div>
+
+                            <div class="form-group decoder-format-group" id="encoder-format-group">
+                                <label for="encoder-format">Encoding format</label>
+                                <select id="encoder-format" class="form-control">
+                                    <option value="CBOR (binary)" selected>CBOR (binary)</option>
+                                    <option value="JSON (binary)">JSON (binary)</option>
+                                    <option value="Hex">Hex</option>
+                                    <option value="Base64">Base64</option>
+                                    <option value="Base64URL">Base64URL</option>
+                                    <option value="Binary (raw bytes)">Binary (raw bytes)</option>
+                                    <option value="DER">DER</option>
+                                    <option value="PEM">PEM</option>
+                                    <option value="COSE">COSE</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <textarea
+                                    id="encoder-input"
+                                    class="form-control"
+                                    rows="10"
+                                    placeholder="Paste JSON here to encode..."
+                                ></textarea>
+                            </div>
+
+                            <div class="form-group">
+                                <button class="btn" id="encoder-submit" onclick="processCodec('encode')">Encode</button>
+                                <button class="btn btn-secondary" onclick="clearCodec('encode')">Clear</button>
+                            </div>
+
+                            <div class="progress" id="encoder-progress">
+                                <div class="spinner" aria-hidden="true"></div>
+                                <span id="encoder-progress-text">Encoding...</span>
+                            </div>
+
+                            <div id="encoder-output" class="decoder-output-panel">
+                                <div class="decoder-summary-header decoder-summary-header--with-actions">
+                                    <h3>Codec Output</h3>
+                                    <div class="decoder-summary-actions">
+                                        <button
+                                            class="btn btn-secondary decoder-raw-button"
+                                            type="button"
+                                            id="encoder-toggle-raw"
+                                            onclick="toggleRawCodec('encode')"
+                                            disabled
+                                        >
+                                            Raw
+                                        </button>
+                                    </div>
+                                </div>
+                                <div id="encoded-content" class="decoder-summary"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
