@@ -2762,6 +2762,24 @@ def _normalize_user_mapping(entry: Mapping[Any, Any]) -> Mapping[Any, Any]:
     return normalized
 
 
+def _convert_user_text_value(value: Any) -> Any:
+    if isinstance(value, str):
+        return value
+
+    data_bytes = _coerce_cbor_bytes(value)
+    if data_bytes is None:
+        return _hex_json_safe(value)
+
+    text_value = _try_decode_utf8(data_bytes)
+    binary_summary = _binary_summary(
+        data_bytes, "utf-8" if text_value is not None else "binary"
+    )
+    if text_value is None:
+        return binary_summary
+
+    return {"text": text_value, "binary": binary_summary}
+
+
 def _convert_ctap_user(entry: Any) -> Any:
     data_bytes = _coerce_cbor_bytes(entry)
     if data_bytes is not None:
@@ -2794,15 +2812,15 @@ def _convert_ctap_user(entry: Any) -> Any:
 
     name_value = _get_mapping_entry(normalized_entry, "name", 2)
     if name_value is not _MISSING:
-        user["name"] = _hex_json_safe(name_value)
+        user["name"] = _convert_user_text_value(name_value)
 
     display_name_value = _get_mapping_entry(normalized_entry, "displayName", 3)
     if display_name_value is not _MISSING:
-        user["displayName"] = _hex_json_safe(display_name_value)
+        user["displayName"] = _convert_user_text_value(display_name_value)
 
     icon_value = _get_mapping_entry(normalized_entry, "icon", 4)
     if icon_value is not _MISSING:
-        user["icon"] = _hex_json_safe(icon_value)
+        user["icon"] = _convert_user_text_value(icon_value)
 
     for key in normalized_entry:
         if key in {"id", "name", "displayName", "icon"} or key in {1, 2, 3, 4}:

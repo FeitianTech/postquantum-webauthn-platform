@@ -124,11 +124,6 @@ const ENCODER_FORMAT_ALIASES = new Map([
     ['cbor (binary)', 'cbor'],
     ['json', 'json'],
     ['json (binary)', 'json'],
-    ['hex', 'hex'],
-    ['base64', 'base64'],
-    ['base64url', 'base64url'],
-    ['binary', 'binary'],
-    ['binary (raw bytes)', 'binary'],
     ['der', 'der'],
     ['pem', 'pem'],
     ['cose', 'cose'],
@@ -901,7 +896,7 @@ function canEncodeToFormat(parsedValue, format) {
         return parsedValue !== undefined;
     }
 
-    if (['hex', 'base64', 'base64url', 'binary', 'der', 'pem'].includes(canonical)) {
+    if (['der', 'pem'].includes(canonical)) {
         return hasBinaryConvertibleValue(parsedValue);
     }
 
