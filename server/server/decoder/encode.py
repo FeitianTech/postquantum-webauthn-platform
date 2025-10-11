@@ -62,7 +62,7 @@ _CTAP_FIELD_LABELS: Dict[str, Dict[int, str]] = {
         1: "credential",
         2: "authData",
         3: "signature",
-        4: "userHandle",
+        4: "user",
         5: "numberOfCredentials",
         6: "userSelected",
         7: "largeBlobKey",
@@ -308,13 +308,7 @@ def _encode_cbor_value(parsed: Any, *, base_type: str = "CBOR") -> Dict[str, Any
 
 
 def _encode_ctap_webauthn_value(parsed: Any) -> Dict[str, Any]:
-    if not isinstance(parsed, Mapping):
-        raise ValueError(
-            "CTAP/WebAuthn encoding expects a JSON object with numeric keys (e.g., \"01\")."
-        )
-
-    numeric_map = _sanitize_ctap_numeric_mapping(parsed)
-    ctap_type = _classify_ctap_numeric_mapping(numeric_map)
+    numeric_map, ctap_type = _extract_ctap_numeric_payload(parsed)
 
     field_labels = _CTAP_FIELD_LABELS.get(ctap_type, {})
     for index in _CTAP_REQUIRED_FIELDS.get(ctap_type, ()):  # pragma: no branch - small tuple
@@ -381,6 +375,87 @@ def _encode_ctap_webauthn_value(parsed: Any) -> Dict[str, Any]:
     qualifier = f"encoded {ctap_type}"
     return _prepare_encoder_response(
         "CBOR (CTAP/WebAuthn Data)", payload, qualifier=qualifier
+    )
+
+
+def _extract_ctap_numeric_payload(parsed: Any) -> Tuple[Dict[int, Any], str]:
+    """Locate and sanitize a CTAP/WebAuthn numeric-keyed mapping within ``parsed``."""
+
+    def _enqueue_candidates(queue: deque[Any], value: Any, visited: set[int]) -> None:
+        if isinstance(value, Mapping):
+            marker = id(value)
+            if marker in visited:
+                return
+            visited.add(marker)
+            queue.append(value)
+            return
+
+        if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+            for entry in value:
+                _enqueue_candidates(queue, entry, visited)
+
+    visited: set[int] = set()
+    candidates: deque[Any] = deque()
+    _enqueue_candidates(candidates, parsed, visited)
+
+    classification_error: Optional[ValueError] = None
+
+    while candidates:
+        candidate = candidates.popleft()
+
+        try:
+            numeric_map = _sanitize_ctap_numeric_mapping(candidate)
+        except ValueError:
+            numeric_map = None
+            salvage_map: Dict[int, Any] = {}
+            salvage_error: Optional[ValueError] = None
+            if isinstance(candidate, Mapping):
+                for key, value in candidate.items():
+                    try:
+                        index = _coerce_ctap_numeric_key(key)
+                    except ValueError as exc:
+                        salvage_map = {}
+                        salvage_error = exc
+                        break
+                    if index is None:
+                        continue
+                    if index in salvage_map:
+                        salvage_map = {}
+                        salvage_error = ValueError(
+                            f"Duplicate field 0x{index:02x} detected in CTAP/WebAuthn input."
+                        )
+                        break
+                    salvage_map[index] = value
+
+            if salvage_map:
+                try:
+                    ctap_type = _classify_ctap_numeric_mapping(salvage_map)
+                except ValueError as exc:
+                    if classification_error is None:
+                        classification_error = exc
+                else:
+                    return salvage_map, ctap_type
+
+            if salvage_error is not None and classification_error is None:
+                classification_error = salvage_error
+        else:
+            try:
+                ctap_type = _classify_ctap_numeric_mapping(numeric_map)
+            except ValueError as exc:
+                if classification_error is None:
+                    classification_error = exc
+            else:
+                return numeric_map, ctap_type
+
+        if isinstance(candidate, Mapping):
+            for value in candidate.values():
+                _enqueue_candidates(candidates, value, visited)
+
+    if classification_error is not None:
+        raise classification_error
+
+    raise ValueError(
+        "Unable to locate CTAP/WebAuthn numeric-keyed fields in input JSON."
     )
 
 
