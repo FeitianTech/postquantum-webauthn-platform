@@ -7,7 +7,30 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='styles/advanced/main.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='styles/advanced/mds.css') }}">
 </head>
-<body>
+<body class="app-loading">
+    <div id="app-loader" class="app-loader" role="status" aria-live="polite" aria-hidden="false">
+        <div class="app-loader__dialog" role="alertdialog" aria-modal="true">
+            <h1 class="app-loader__title">WebAuthn FIDO2 Test Application</h1>
+            <p id="app-loader-status" class="app-loader__status">Preparing application…</p>
+            <div class="app-loader__progress">
+                <div
+                    id="app-loader-progress"
+                    class="app-loader__progress-bar"
+                    role="progressbar"
+                    aria-valuemin="0"
+                    aria-valuemax="100"
+                    aria-valuenow="0"
+                >
+                    <div class="app-loader__progress-fill"></div>
+                </div>
+                <div class="app-loader__progress-info">
+                    <span id="app-loader-percentage" class="app-loader__percentage">0%</span>
+                    <span id="app-loader-metadata" class="app-loader__metadata">Metadata loaded: 0</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
 {% include 'shared/header.html' %}
 
     <div class="container">
