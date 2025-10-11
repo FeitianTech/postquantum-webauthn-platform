@@ -448,12 +448,13 @@ body.modal-open {
     width: 100%;
     height: auto;
     resize: vertical;
-    background: #d9ecff;
+    background: rgba(0, 114, 206, 0.08);
     border-radius: 14px;
     border: 1px solid rgba(0, 114, 206, 0.18);
     color: #000000;
     padding: 0.75rem 0.85rem;
     overflow-y: hidden;
+    overflow-x: auto;
 }
 
 .decoder-expanded-json:focus,

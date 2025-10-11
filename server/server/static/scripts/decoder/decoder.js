@@ -375,7 +375,12 @@ function createSection(key, value) {
     const body = document.createElement('div');
     body.className = 'decoder-section-body';
     if (key === 'expandedJson') {
-        body.appendChild(renderExpandedJson(value));
+        const textarea = renderExpandedJson(value);
+        body.appendChild(textarea);
+        requestAnimationFrame(() => {
+            autoSizeRawTextarea(textarea);
+            resetScrollPosition(textarea);
+        });
     } else {
         body.appendChild(renderValue(value));
     }
@@ -472,9 +477,6 @@ function renderExpandedJson(value) {
     } catch (error) {
         textarea.value = 'Unable to render expanded JSON';
     }
-
-    autoSizeRawTextarea(textarea);
-    resetScrollPosition(textarea);
 
     return textarea;
 }
