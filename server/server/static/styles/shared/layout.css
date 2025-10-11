@@ -248,6 +248,7 @@
 
 .credential-item.expanded .credential-details {
     display: block;
+    animation: fadeInSoft 240ms ease;
 }
 
 .credential-delete {
@@ -305,6 +306,7 @@
 
 .section-content.expanded {
     display: block;
+    animation: fadeInSoft 260ms ease;
 }
 
 .expand-icon {
@@ -392,4 +394,5 @@
 
 .sub-tab-content.active {
     display: block;
+    animation: fadeInSoft 280ms ease;
 }

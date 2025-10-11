@@ -296,8 +296,8 @@ export function toggleJsonEditorExpansion(forceCollapse = false) {
             editor.scrollTop = 0;
         }
     } else {
-        container.classList.remove('expanded');
         overlay.classList.remove('active');
+        container.classList.remove('expanded');
         toggleButton.innerHTML = '<span aria-hidden="true">⛶</span>';
         toggleButton.setAttribute('aria-label', 'Expand JSON editor');
         toggleButton.setAttribute('title', 'Expand JSON editor');

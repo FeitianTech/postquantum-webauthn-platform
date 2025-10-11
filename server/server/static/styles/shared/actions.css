@@ -1,7 +1,8 @@
 .btn {
     display: inline-block;
     padding: 0.75rem 1.5rem;
-    background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+    background-color: var(--primary-color);
+    background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0));
     color: #ffffff;
     border: none;
     border-radius: 18px;
@@ -9,15 +10,17 @@
     font-size: 1rem;
     font-weight: 600;
     text-decoration: none;
-    transition: background 0.3s ease, color 0.3s ease;
+    transition: background-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
     margin-right: 0.5rem;
     margin-bottom: 0.5rem;
-    box-shadow: 0 6px 18px rgba(0, 114, 206, 0.18);
+    box-shadow: 0 10px 20px rgba(6, 75, 128, 0.16);
 }
 
 .btn:hover,
 .btn:focus-visible {
-    background: linear-gradient(135deg, var(--primary-dark), #008f5c);
+    background-color: var(--primary-dark);
+    box-shadow: 0 14px 26px rgba(6, 75, 128, 0.22);
+    transform: translateY(-1px);
     outline: none;
 }
 
@@ -78,27 +81,26 @@
     padding: 1rem;
     border-radius: 18px;
     margin-bottom: 1rem;
-    display: none;
     position: fixed;
     top: 20px;
     left: 50%;
-    transform: translateX(-50%);
+    transform: translateX(-50%) translateY(-12px);
     z-index: 1000;
     min-width: 300px;
     max-width: 90vw;
     box-shadow: var(--shadow-soft);
-    animation: slideDown 0.3s ease-out;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 260ms ease, transform 260ms ease, visibility 0s linear 260ms;
 }
 
-@keyframes slideDown {
-    from {
-        opacity: 0;
-        transform: translateX(-50%) translateY(-20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateX(-50%) translateY(0);
-    }
+.status.status--visible {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateX(-50%) translateY(0);
+    transition: opacity 260ms ease, transform 260ms ease, visibility 0s linear 0s;
 }
 
 .status.success {

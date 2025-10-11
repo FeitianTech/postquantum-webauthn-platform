@@ -44,13 +44,18 @@
     line-height: 1.5;
     box-sizing: border-box; /* Ensure consistent sizing calculations */
     color: var(--text-color);
-    display: none;
     word-wrap: break-word;
-    pointer-events: auto; /* Allow interactions with language toggle */
+    pointer-events: none; /* Enable interactions once visible */
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 200ms ease, visibility 0s linear 200ms;
 }
 
 .info-popup.show {
-    display: block;
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transition: opacity 200ms ease, visibility 0s linear 0s;
 }
 
 .info-popup::before {

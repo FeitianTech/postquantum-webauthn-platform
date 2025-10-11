@@ -161,14 +161,22 @@
     border: 1px solid rgba(0, 114, 206, 0.18);
     box-shadow: 0 18px 40px rgba(15, 39, 64, 0.18);
     padding: 0.35rem 0;
-    display: none;
     max-height: min(560px, 75vh);
     overflow-y: auto;
     z-index: 20;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translateY(8px);
+    transition: opacity 220ms ease, transform 220ms ease, visibility 0s linear 220ms;
 }
 
 .mds-filter-dropdown.is-open {
-    display: block;
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateY(0);
+    transition: opacity 220ms ease, transform 220ms ease, visibility 0s linear 0s;
 }
 
 .mds-filter-dropdown--expanded {

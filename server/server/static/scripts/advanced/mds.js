@@ -3008,8 +3008,19 @@ async function openCertificateModal(certificate) {
 
     setCertificateSummaryContent('Decoding certificate…');
 
+    mdsState.certificateModal.classList.remove('is-closing');
     mdsState.certificateModal.hidden = false;
     mdsState.certificateModal.setAttribute('aria-hidden', 'false');
+    if (typeof requestAnimationFrame === 'function') {
+        requestAnimationFrame(() => {
+            if (mdsState?.certificateModal?.hidden) {
+                return;
+            }
+            mdsState.certificateModal.classList.add('is-open');
+        });
+    } else {
+        mdsState.certificateModal.classList.add('is-open');
+    }
     resetScrollPositions(
         mdsState.certificateModalBody,
         mdsState.certificateModal,
@@ -3054,16 +3065,55 @@ function closeCertificateModal() {
     if (!mdsState?.certificateModal) {
         return;
     }
-    mdsState.certificateModal.hidden = true;
-    mdsState.certificateModal.setAttribute('aria-hidden', 'true');
-    resetScrollPositions(
-        mdsState.certificateModalBody,
-        mdsState.certificateSummary,
-        mdsState.certificateInput,
-        mdsState.certificateOutput,
-    );
-    resetCertificateTextareaHeights();
-    notifyGlobalScrollLock();
+
+    const modal = mdsState.certificateModal;
+
+    let completed = false;
+    let fallbackTimeout;
+    const finishClose = () => {
+        if (completed) {
+            return;
+        }
+        completed = true;
+        if (fallbackTimeout) {
+            clearTimeout(fallbackTimeout);
+            fallbackTimeout = undefined;
+        }
+        modal.classList.remove('is-open');
+        modal.classList.remove('is-closing');
+        modal.hidden = true;
+        modal.setAttribute('aria-hidden', 'true');
+        resetScrollPositions(
+            mdsState.certificateModalBody,
+            mdsState.certificateSummary,
+            mdsState.certificateInput,
+            mdsState.certificateOutput,
+        );
+        resetCertificateTextareaHeights();
+        notifyGlobalScrollLock();
+    };
+
+    if (!modal.classList.contains('is-open')) {
+        finishClose();
+        return;
+    }
+
+    modal.classList.remove('is-open');
+    modal.classList.add('is-closing');
+
+    const handleTransitionEnd = event => {
+        if (event.target !== modal || event.propertyName !== 'opacity') {
+            return;
+        }
+        modal.removeEventListener('transitionend', handleTransitionEnd);
+        finishClose();
+    };
+
+    modal.addEventListener('transitionend', handleTransitionEnd);
+    fallbackTimeout = setTimeout(() => {
+        modal.removeEventListener('transitionend', handleTransitionEnd);
+        finishClose();
+    }, 280);
 }
 
 function openAuthenticatorRawWindow() {
@@ -3407,8 +3457,19 @@ function openAuthenticatorModal(entry) {
     applyDetailHeader(detailEntry, mdsState.authenticatorModalTitle, mdsState.authenticatorModalSubtitle);
     populateDetailContent(mdsState.authenticatorModalContent, detailEntry);
 
+    mdsState.authenticatorModal.classList.remove('is-closing');
     mdsState.authenticatorModal.hidden = false;
     mdsState.authenticatorModal.setAttribute('aria-hidden', 'false');
+    if (typeof requestAnimationFrame === 'function') {
+        requestAnimationFrame(() => {
+            if (mdsState?.authenticatorModal?.hidden) {
+                return;
+            }
+            mdsState.authenticatorModal.classList.add('is-open');
+        });
+    } else {
+        mdsState.authenticatorModal.classList.add('is-open');
+    }
     resetScrollPositions(
         mdsState.authenticatorModalBody,
         mdsState.authenticatorModal,
@@ -3430,17 +3491,56 @@ function closeAuthenticatorModal() {
     if (!mdsState?.authenticatorModal) {
         return;
     }
-    mdsState.authenticatorModal.hidden = true;
-    mdsState.authenticatorModal.setAttribute('aria-hidden', 'true');
-    resetScrollPositions(
-        mdsState.authenticatorModalBody,
-        mdsState.authenticatorModal,
-        mdsState.authenticatorModalContent,
-    );
-    notifyGlobalScrollLock();
-    mdsState.activeDetailEntry = null;
-    updateAuthenticatorRawButton(null);
-    scheduleScrollTopButtonUpdate();
+
+    const modal = mdsState.authenticatorModal;
+
+    let completed = false;
+    let fallbackTimeout;
+    const finishClose = () => {
+        if (completed) {
+            return;
+        }
+        completed = true;
+        if (fallbackTimeout) {
+            clearTimeout(fallbackTimeout);
+            fallbackTimeout = undefined;
+        }
+        modal.classList.remove('is-open');
+        modal.classList.remove('is-closing');
+        modal.hidden = true;
+        modal.setAttribute('aria-hidden', 'true');
+        resetScrollPositions(
+            mdsState.authenticatorModalBody,
+            mdsState.authenticatorModal,
+            mdsState.authenticatorModalContent,
+        );
+        notifyGlobalScrollLock();
+        mdsState.activeDetailEntry = null;
+        updateAuthenticatorRawButton(null);
+        scheduleScrollTopButtonUpdate();
+    };
+
+    if (!modal.classList.contains('is-open')) {
+        finishClose();
+        return;
+    }
+
+    modal.classList.remove('is-open');
+    modal.classList.add('is-closing');
+
+    const handleTransitionEnd = event => {
+        if (event.target !== modal || event.propertyName !== 'opacity') {
+            return;
+        }
+        modal.removeEventListener('transitionend', handleTransitionEnd);
+        finishClose();
+    };
+
+    modal.addEventListener('transitionend', handleTransitionEnd);
+    fallbackTimeout = setTimeout(() => {
+        modal.removeEventListener('transitionend', handleTransitionEnd);
+        finishClose();
+    }, 280);
 }
 
 async function resolveEntryByAaguid(aaguid) {

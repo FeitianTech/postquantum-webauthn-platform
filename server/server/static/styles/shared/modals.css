@@ -1,6 +1,5 @@
 /* Modal Styles */
 .modal {
-    display: none;
     position: fixed;
     z-index: 1200;
     left: 0;
@@ -12,10 +11,18 @@
     justify-content: center;
     align-items: center;
     padding: 2vh 2vw;
+    display: flex;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 190ms ease, visibility 0s linear 160ms;
 }
 
 .modal.open {
-    display: flex;
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transition: opacity 280ms ease, visibility 0s linear 0s;
 }
 
 .modal-content {
@@ -30,6 +37,14 @@
     display: flex;
     flex-direction: column;
     box-shadow: var(--shadow-hover);
+    transform: translateY(16px) scale(0.98);
+    opacity: 0;
+    transition: transform 200ms ease, opacity 200ms ease;
+}
+
+.modal.open .modal-content {
+    transform: translateY(0) scale(1);
+    opacity: 1;
 }
 
 .modal-content.modal-content-large {

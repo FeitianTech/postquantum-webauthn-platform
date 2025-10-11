@@ -53,7 +53,7 @@ export function getCredentialCreationOptions() {
 
     const publicKey = {
         rp: {
-            name: 'WebAuthn FIDO2 Test Application',
+            name: 'Post-Quantum WebAuthn Test Platform',
             id: window.location.hostname
         },
         user: {
