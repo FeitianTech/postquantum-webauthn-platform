@@ -85,3 +85,67 @@ def test_ctap_webauthn_encoder_extracts_nested_numeric_payload():
 
     expected_bytes = bytes([0x00]) + cbor2.dumps(expected_map)
     assert encoded_hex == expected_bytes.hex()
+
+
+def test_ctap_webauthn_encoder_handles_wrapped_make_credential_request():
+    client_data_hash = "11" * 32
+    user_id = "aa" * 16
+
+    wrapped_input = {
+        "meta": {"source": "decoded json"},
+        "payload": {
+            "nested": {
+                "decoded json": {
+                    "1 (clientDataHash)": {"hex": client_data_hash},
+                    "2 (rp)": {"id": "example.com", "name": "Example"},
+                    "3 (user)": {
+                        "id": {"hex": user_id},
+                        "name": "User",  # preserved value
+                        "displayName": "User Display",
+                    },
+                    "4 (pubKeyCredParams)": [
+                        {"type": "public-key", "alg": -7},
+                        {"type": "public-key", "alg": -257},
+                    ],
+                    "5 (excludeList)": [
+                        {
+                            "type": "public-key",
+                            "id": {"hex": "22" * 16},
+                        }
+                    ],
+                }
+            }
+        },
+    }
+
+    response = encode_payload_text(
+        json.dumps(wrapped_input),
+        "CBOR (CTAP/WebAuthn Data)",
+    )
+
+    assert response["success"] is True
+    assert response["type"] == "CBOR (CTAP/WebAuthn Data) (encoded makeCredentialRequest)"
+
+    encoded_hex = response["data"]["binary"]["hex"]
+    encoded_bytes = bytes.fromhex(encoded_hex)
+
+    assert encoded_bytes[0] == 0x01
+
+    decoded_map = cbor2.loads(encoded_bytes[1:])
+    assert decoded_map[1] == bytes.fromhex(client_data_hash)
+    assert decoded_map[2] == {"id": "example.com", "name": "Example"}
+    assert decoded_map[3] == {
+        "id": bytes.fromhex(user_id),
+        "name": "User",
+        "displayName": "User Display",
+    }
+    assert decoded_map[4] == [
+        {"type": "public-key", "alg": -7},
+        {"type": "public-key", "alg": -257},
+    ]
+    assert decoded_map[5] == [
+        {
+            "type": "public-key",
+            "id": bytes.fromhex("22" * 16),
+        }
+    ]

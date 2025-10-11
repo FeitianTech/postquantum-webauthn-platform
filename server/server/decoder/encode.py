@@ -512,17 +512,18 @@ def _classify_ctap_numeric_mapping(mapping: Mapping[int, Any]) -> str:
 
     field_two = mapping.get(2)
     if field_two is None:
-        raise ValueError("Missing field 0x02 (authData/clientDataHash)")
-
-    field_two_bytes = _maybe_decode_bytes(field_two)
-    if field_two_bytes is None:
-        raise ValueError("Field 0x02 (authData/clientDataHash) must be binary data.")
+        raise ValueError("Missing field 0x02 (authData/clientDataHash/rp)")
 
     signature_candidate = mapping.get(3)
     signature_bytes = (
         _maybe_decode_bytes(signature_candidate) if signature_candidate is not None else None
     )
     if signature_bytes is not None:
+        field_two_bytes = _maybe_decode_bytes(field_two)
+        if field_two_bytes is None:
+            raise ValueError(
+                "Field 0x02 (authData) must be binary data for GetAssertion response."
+            )
         if len(field_two_bytes) < 37:
             raise ValueError(
                 "Field 0x02 (authData) must contain authenticator data for GetAssertion response."
@@ -539,9 +540,16 @@ def _classify_ctap_numeric_mapping(mapping: Mapping[int, Any]) -> str:
             raise ValueError(
                 "Field 0x01 (clientDataHash) must be exactly 32 bytes for MakeCredential request."
             )
+        if not isinstance(field_two, Mapping):
+            raise ValueError("Field 0x02 (rp) must be an object for MakeCredential request.")
         return "makeCredentialRequest"
 
     if isinstance(field_one, str) and field_one.strip():
+        field_two_bytes = _maybe_decode_bytes(field_two)
+        if field_two_bytes is None:
+            raise ValueError(
+                "Field 0x02 (authData/clientDataHash) must be binary data."
+            )
         if len(field_two_bytes) == 32:
             return "getAssertionRequest"
         if len(field_two_bytes) >= 37:
