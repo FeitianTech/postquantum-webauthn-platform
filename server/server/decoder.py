@@ -2423,6 +2423,8 @@ def _interpret_make_credential_map(value: Mapping[Any, Any]) -> Optional[Dict[st
 
 
 def _interpret_get_assertion_map(value: Mapping[Any, Any]) -> Optional[Dict[str, Any]]:
+    if _looks_like_get_assertion_request(value):
+        return None
     auth_data_entry = _get_mapping_entry(value, 2, "2", "authData")
     signature_entry = _get_mapping_entry(value, 3, "3", "signature")
     auth_data_bytes = _coerce_cbor_bytes(auth_data_entry)

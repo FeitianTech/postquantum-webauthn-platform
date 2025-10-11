@@ -445,15 +445,22 @@ body.modal-open {
     font-family: var(--font-monospace, 'SFMono-Regular', Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace);
     font-size: 0.9rem;
     line-height: 1.45;
-    min-height: 14rem;
     width: 100%;
+    height: auto;
     resize: vertical;
-    background: rgba(15, 39, 64, 0.04);
+    background: #d9ecff;
     border-radius: 14px;
     border: 1px solid rgba(0, 114, 206, 0.18);
-    color: var(--primary-dark);
+    color: #000000;
     padding: 0.75rem 0.85rem;
     overflow-y: hidden;
+}
+
+.decoder-expanded-json:focus,
+.decoder-expanded-json:focus-visible {
+    outline: none;
+    border-color: rgba(0, 114, 206, 0.18);
+    box-shadow: none;
 }
 
 .decoder-definition {
