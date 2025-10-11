@@ -11,7 +11,7 @@ from flask import abort, jsonify, redirect, render_template, request, send_file
 
 from ..attestation import serialize_attestation_certificate
 from ..config import MDS_METADATA_PATH, app, basepath
-from ..decoder import decode_payload_text
+from ..decoder import decode_payload_text, encode_payload_text
 from ..metadata import MetadataDownloadError, download_metadata_blob, load_metadata_cache_entry
 from ..storage import delkey
 
@@ -183,6 +183,50 @@ def api_update_mds_metadata():
     return jsonify(payload)
 
 
+def _perform_decode(decoder_input: str):
+    try:
+        return decode_payload_text(decoder_input), 200
+    except ValueError as exc:
+        return {"error": str(exc)}, 422
+    except Exception as exc:  # pylint: disable=broad-except
+        app.logger.exception("Failed to decode payload: %s", exc)
+        return {"error": "Unable to decode payload."}, 500
+
+
+def _perform_encode(encoder_input: str, target_format: str):
+    try:
+        return encode_payload_text(encoder_input, target_format), 200
+    except ValueError as exc:
+        return {"error": str(exc)}, 422
+    except Exception as exc:  # pylint: disable=broad-except
+        app.logger.exception("Failed to encode payload: %s", exc)
+        return {"error": "Unable to encode payload."}, 500
+
+
+@app.route("/api/codec", methods=["POST"])
+def api_codec_payload():
+    if not request.is_json:
+        return jsonify({"error": "Expected JSON payload."}), 400
+
+    payload = request.get_json(silent=True) or {}
+    codec_input = payload.get("payload")
+    if not isinstance(codec_input, str) or not codec_input.strip():
+        return jsonify({"error": "Codec payload must be a non-empty string."}), 400
+
+    mode = payload.get("mode", "decode")
+    mode_normalized = mode.lower() if isinstance(mode, str) else "decode"
+
+    if mode_normalized == "encode":
+        target_format = payload.get("format")
+        if not isinstance(target_format, str) or not target_format.strip():
+            return jsonify({"error": "Encoder format must be provided."}), 400
+        result, status = _perform_encode(codec_input, target_format)
+        return jsonify(result), status
+
+    result, status = _perform_decode(codec_input)
+    return jsonify(result), status
+
+
 @app.route("/api/decode", methods=["POST"])
 def api_decode_payload():
     if not request.is_json:
@@ -193,15 +237,8 @@ def api_decode_payload():
     if not isinstance(decoder_input, str) or not decoder_input.strip():
         return jsonify({"error": "Decoder payload must be a non-empty string."}), 400
 
-    try:
-        decoded = decode_payload_text(decoder_input)
-    except ValueError as exc:
-        return jsonify({"error": str(exc)}), 422
-    except Exception as exc:  # pylint: disable=broad-except
-        app.logger.exception("Failed to decode payload: %s", exc)
-        return jsonify({"error": "Unable to decode payload."}), 500
-
-    return jsonify(decoded)
+    result, status = _perform_decode(decoder_input)
+    return jsonify(result), status
 
 
 @app.route("/api/mds/decode-certificate", methods=["POST"])

@@ -54,12 +54,52 @@
                         </p>
                     </div>
 
+                    <div class="form-group decoder-mode-group">
+                        <label for="decoder-mode-decode">Mode</label>
+                        <div class="decoder-mode-options">
+                            <label class="decoder-mode-option">
+                                <input
+                                    type="radio"
+                                    name="decoder-mode"
+                                    id="decoder-mode-decode"
+                                    value="decode"
+                                    checked
+                                    onchange="handleDecoderModeChange(event)"
+                                />
+                                Decode
+                            </label>
+                            <label class="decoder-mode-option">
+                                <input
+                                    type="radio"
+                                    name="decoder-mode"
+                                    id="decoder-mode-encode"
+                                    value="encode"
+                                    onchange="handleDecoderModeChange(event)"
+                                />
+                                Encode
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-group decoder-format-group" id="decoder-format-group" style="display: none;">
+                        <label for="decoder-format">Encoding format</label>
+                        <select id="decoder-format" class="form-control">
+                            <option value="JSON">JSON</option>
+                            <option value="CBOR">CBOR</option>
+                            <option value="WebAuthn client data">WebAuthn client data</option>
+                            <option value="Authenticator data">Authenticator data</option>
+                            <option value="Attestation object">Attestation object</option>
+                            <option value="X.509 certificate">X.509 certificate</option>
+                            <option value="PublicKeyCredential">PublicKeyCredential</option>
+                        </select>
+                    </div>
+
                     <div class="form-group">
                         <textarea id="decoder-input" class="form-control" rows="10" placeholder="Paste something here to decode..."></textarea>
                     </div>
 
                     <div class="form-group">
-                        <button class="btn" onclick="decodeResponse()">Decode</button>
+                        <button class="btn" id="decoder-submit" onclick="processCodec()">Decode</button>
                         <button class="btn btn-secondary" onclick="clearDecoder()">Clear</button>
                     </div>
 

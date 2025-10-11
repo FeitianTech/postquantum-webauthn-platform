@@ -45,9 +45,10 @@ import {
     advancedAuthenticate
 } from './advanced/auth-advanced.js';
 import {
-    decodeResponse,
+    processCodec,
     clearDecoder,
-    toggleRawDecoder
+    toggleRawDecoder,
+    handleDecoderModeChange
 } from './decoder/decoder.js';
 import {
     saveJsonEditor,
@@ -106,9 +107,10 @@ window.simpleRegister = simpleRegister;
 window.simpleAuthenticate = simpleAuthenticate;
 window.advancedRegister = advancedRegister;
 window.advancedAuthenticate = advancedAuthenticate;
-window.decodeResponse = decodeResponse;
+window.processCodec = processCodec;
 window.clearDecoder = clearDecoder;
 window.toggleRawDecoder = toggleRawDecoder;
+window.handleDecoderModeChange = handleDecoderModeChange;
 window.changeBinaryFormat = changeBinaryFormat;
 window.saveJsonEditor = saveJsonEditor;
 window.resetJsonEditor = resetJsonEditor;

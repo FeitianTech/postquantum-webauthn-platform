@@ -27,7 +27,9 @@ const SPECIAL_LABELS = {
     counter: 'Counter',
     expandedJson: 'Expanded JSON',
     decodedValue: 'Decoded value',
+    encodedValue: 'Encoded value',
     ctap: 'CTAP metadata',
+    binary: 'Binary summary',
     ctapDecoded: 'CTAP decoded',
     ignoredPaddingBytes: 'Ignored padding bytes',
     trailingBytesHex: 'Trailing bytes (hex)',
@@ -86,7 +88,7 @@ const SPECIAL_LABELS = {
     x5c: 'X5C',
 };
 
-export async function decodeResponse() {
+export async function processCodec() {
     const input = document.getElementById('decoder-input');
     if (!input) {
         return;
@@ -94,9 +96,21 @@ export async function decodeResponse() {
 
     const inputValue = input.value;
     if (!inputValue.trim()) {
-        showStatus('decoder', 'Decoder is empty. Please paste something to decode.', 'error');
+        showStatus('decoder', 'Decoder is empty. Please paste something to process.', 'error');
         updateDecoderEmptyState();
         return;
+    }
+
+    const mode = getSelectedDecoderMode();
+    const formatSelect = document.getElementById('decoder-format');
+    let targetFormat = null;
+
+    if (mode === 'encode') {
+        targetFormat = formatSelect ? formatSelect.value : '';
+        if (!targetFormat || !targetFormat.trim()) {
+            showStatus('decoder', 'Select an encoding format before encoding.', 'error');
+            return;
+        }
     }
 
     const decoderOutput = document.getElementById('decoder-output');
@@ -104,6 +118,7 @@ export async function decodeResponse() {
     const rawContainer = document.getElementById('decoder-raw-container');
     const rawContent = document.getElementById('decoder-raw-content');
     const toggleButton = document.getElementById('decoder-toggle-raw');
+    const progressText = document.getElementById('decoder-progress-text');
 
     if (summaryContainer) {
         summaryContainer.innerHTML = '';
@@ -126,15 +141,24 @@ export async function decodeResponse() {
 
     updateDecoderEmptyState();
 
-    showProgress('decoder', 'Decoding…');
+    const actionText = mode === 'encode' ? 'Encoding…' : 'Decoding…';
+    showProgress('decoder', actionText);
+    if (progressText) {
+        progressText.textContent = actionText;
+    }
 
     try {
-        const response = await fetch('/api/decode', {
+        const body = { payload: inputValue, mode };
+        if (mode === 'encode') {
+            body.format = targetFormat;
+        }
+
+        const response = await fetch('/api/codec', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ payload: inputValue }),
+            body: JSON.stringify(body),
         });
 
         let payload = null;
@@ -172,7 +196,10 @@ export async function decodeResponse() {
         if (rawContainer) {
             rawContainer.style.display = 'none';
         }
-        showStatus('decoder', 'Response decoded successfully!', 'success');
+        const successMessage = mode === 'encode'
+            ? 'Payload encoded successfully!'
+            : 'Response decoded successfully!';
+        showStatus('decoder', successMessage, 'success');
     } catch (error) {
         if (decoderOutput) {
             decoderOutput.style.display = 'none';
@@ -185,11 +212,48 @@ export async function decodeResponse() {
             toggleButton.dataset.expanded = 'false';
         }
         const message = error instanceof Error ? error.message : String(error);
-        showStatus('decoder', `Decoding failed: ${message}`, 'error');
+        const failurePrefix = mode === 'encode' ? 'Encoding failed' : 'Decoding failed';
+        showStatus('decoder', `${failurePrefix}: ${message}`, 'error');
     } finally {
         hideProgress('decoder');
         updateDecoderEmptyState();
     }
+}
+
+function getSelectedDecoderMode() {
+    const checked = document.querySelector('input[name="decoder-mode"]:checked');
+    if (checked && typeof checked.value === 'string') {
+        return checked.value;
+    }
+    return 'decode';
+}
+
+function updateDecoderModeUI() {
+    const mode = getSelectedDecoderMode();
+    const formatGroup = document.getElementById('decoder-format-group');
+    const submitButton = document.getElementById('decoder-submit');
+    const progressText = document.getElementById('decoder-progress-text');
+    const input = document.getElementById('decoder-input');
+
+    if (formatGroup) {
+        formatGroup.style.display = mode === 'encode' ? 'block' : 'none';
+    }
+    if (submitButton) {
+        submitButton.textContent = mode === 'encode' ? 'Encode' : 'Decode';
+    }
+    if (progressText) {
+        progressText.textContent = mode === 'encode' ? 'Encoding...' : 'Decoding...';
+    }
+    if (input) {
+        input.placeholder = mode === 'encode'
+            ? 'Paste JSON here to encode...'
+            : 'Paste something here to decode...';
+    }
+}
+
+export function handleDecoderModeChange() {
+    hideStatus('decoder');
+    updateDecoderModeUI();
 }
 
 export function clearDecoder() {
@@ -225,6 +289,7 @@ export function clearDecoder() {
     hideStatus('decoder');
     hideProgress('decoder');
     updateDecoderEmptyState();
+    updateDecoderModeUI();
 }
 
 export function toggleRawDecoder() {
@@ -339,7 +404,8 @@ function buildSections(type, data) {
     const hiddenKeys = new Set();
 
     const usedKeys = new Set();
-    const preferredOrder = orderMap[type] || [];
+    const baseType = getSectionBaseType(type);
+    const preferredOrder = orderMap[baseType] || [];
 
     preferredOrder.forEach((key) => {
         if (Object.prototype.hasOwnProperty.call(data, key)) {
@@ -362,6 +428,17 @@ function buildSections(type, data) {
     });
 
     return sections;
+}
+
+function getSectionBaseType(type) {
+    if (typeof type !== 'string') {
+        return '';
+    }
+    const separatorIndex = type.indexOf(' (');
+    if (separatorIndex === -1) {
+        return type;
+    }
+    return type.slice(0, separatorIndex);
 }
 
 function createSection(key, value) {
@@ -541,6 +618,7 @@ function updateDecoderEmptyState() {
 
 function initDecoderEmptyState() {
     updateDecoderEmptyState();
+    updateDecoderModeUI();
 }
 
 if (document.readyState === 'loading') {

@@ -348,6 +348,35 @@ body.modal-open {
     border-radius: 4px;
 }
 
+.decoder-mode-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
+.decoder-mode-options {
+    display: inline-flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.decoder-mode-option {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-weight: 600;
+    color: var(--muted-text);
+}
+
+.decoder-mode-option input[type="radio"] {
+    accent-color: var(--primary-color);
+}
+
+.decoder-format-group {
+    margin-top: 1rem;
+}
+
 .decoder-summary {
     margin-top: 1rem;
     padding: 1.25rem 1.5rem;
