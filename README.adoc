@@ -12,8 +12,6 @@ Built on **python-fido2-PQC**, which extends Yubico’s **python-fido2**.
 
 PQC: Currently supporting **ML-DSA-44** (alg: -48), **ML-DSA-65** (alg: -49), and **ML-DSA-87** (alg: -50). 
 
-Classical algorithms work by default.
-
 ---
 
 ## 💻 Local Setup
