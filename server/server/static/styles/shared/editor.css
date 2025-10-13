@@ -241,11 +241,11 @@ select.form-control option {
 }
 
 .btn.refresh-icon svg {
-    width: 20px;
-    height: 20px;
+    width: 22px;
+    height: 22px;
     stroke: currentColor;
     fill: none;
-    stroke-width: 2.1;
+    stroke-width: 2.4;
     stroke-linecap: round;
     stroke-linejoin: round;
     transition: transform 0.3s ease;
