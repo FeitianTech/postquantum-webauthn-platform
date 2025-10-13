@@ -1,6 +1,6 @@
 # Post-Quantum WebAuthn Test Platform
 
-**Deployed Web Service:**  https://python-fido2-webauthn-test.onrender.com[window=_blank]
+**Deployed Web Service:**  https://python-fido2-webauthn-test.onrender.com[Post-Quantum WebAuthn Test Platform, window=_blank]
 
 **Note:** PQC support requires setting up locally and have the liboqs library installed and running. 
 
