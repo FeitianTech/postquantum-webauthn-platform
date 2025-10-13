@@ -7,7 +7,7 @@ import {
     base64UrlToHexFixed,
     jsToHex
 } from '../shared/binary-utils.js';
-import { getCredentialIdHex, getStoredCredentialAttachment } from './credential-utils.js';
+import { getCredentialIdHex } from './credential-utils.js';
 import { showStatus } from '../shared/status.js';
 import { updateJsonEditor } from './json-editor.js';
 
@@ -279,19 +279,6 @@ export function validateLargeBlobWriteInput() {
     return true;
 }
 
-export function validateLargeBlobDependency() {
-    const largeBlobReg = document.getElementById('large-blob-reg')?.value;
-    const residentKey = document.getElementById('resident-key')?.value;
-
-    if (largeBlobReg && (largeBlobReg === 'preferred' || largeBlobReg === 'required')) {
-        if (residentKey !== 'required') {
-            showStatus('advanced', 'Resident key must be set to "Required" for largeBlob to be enabled. Please change the Resident Key setting to "Required" before proceeding.', 'error');
-            return false;
-        }
-    }
-    return true;
-}
-
 export function checkLargeBlobCapability(options = {}) {
     const { selectedCredential = null } = options || {};
     const largeBlobSelect = document.getElementById('large-blob-auth');
@@ -301,7 +288,7 @@ export function checkLargeBlobCapability(options = {}) {
     const readOption = largeBlobSelect?.querySelector('option[value="read"]');
     const writeOption = largeBlobSelect?.querySelector('option[value="write"]');
 
-    let hasCapability = false;
+    let hasCapability;
     let message = '';
 
     if (selectedCredential) {

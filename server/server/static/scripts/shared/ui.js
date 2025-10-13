@@ -1,5 +1,3 @@
-import { state } from './state.js';
-
 let hideTimeout;
 
 const BASE_MODAL_Z_INDEX = 1200;

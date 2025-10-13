@@ -8,10 +8,6 @@ import {
     base64UrlToUint8Array,
     base64UrlToUtf8String,
     bytesToHex,
-    convertFormat,
-    currentFormatToJsonFormat,
-    hexToBase64,
-    hexToBase64Url,
     hexToGuid,
     hexToUint8Array
 } from '../shared/binary-utils.js';
@@ -26,7 +22,6 @@ import {
 import {
     deriveAaguidDisplayValues,
     deriveAaguidFromCredentialData,
-    extractHexFromJsonFormat,
     extractMinPinLengthValue,
     getCredentialIdHex,
     getCredentialUserHandleHex,
@@ -34,8 +29,8 @@ import {
     getStoredCredentialAttachment,
     normaliseAaguidValue
 } from './credential-utils.js';
-import { openModal, closeModal, updateGlobalScrollLock, resetModalScroll } from '../shared/ui.js';
-import { showStatus, hideStatus, showProgress, hideProgress } from '../shared/status.js';
+import { openModal, closeModal } from '../shared/ui.js';
+import { showStatus } from '../shared/status.js';
 import { updateJsonEditor } from './json-editor.js';
 import { checkLargeBlobCapability, updateAuthenticationExtensionAvailability } from './forms.js';
 import { collectSelectedHints, deriveAllowedAttachmentsFromHints } from './hints.js';
@@ -1313,10 +1308,10 @@ function buildAttestationSection({
     let attestationSectionHtml = '';
 
     if (shouldShowAttestationSection) {
-        let attestationContent = '';
+        let attestationContent;
         const attestationHeading = '<h4 style="font-weight: 600; color: #0f2740; margin-bottom: 0.5rem;">Attestation Object</h4>';
         if (attestationObject) {
-            let attestationJson = '';
+            let attestationJson;
             const attestationDisplay = sanitiseAttestationObjectForDisplay(
                 attestationObject,
                 attestationFormatRaw,
@@ -2194,7 +2189,7 @@ export function navigateToMdsAuthenticator(aaguid) {
 
             const highlightResult = await Promise.resolve(highlightRow(aaguid));
 
-            let highlighted = false;
+            let highlighted;
             let resolvedEntry = null;
 
             if (highlightResult && typeof highlightResult === 'object' && 'highlighted' in highlightResult) {
@@ -3004,16 +2999,6 @@ export async function clearAllCredentials() {
     }
 }
 
-export function addCredentialToList(credential) {
-    const normalizedCredential = {
-        ...credential,
-        credentialIdHex: getCredentialIdHex(credential),
-        userHandleHex: getCredentialUserHandleHex(credential),
-    };
-    state.storedCredentials.push(normalizedCredential);
-    updateCredentialsList();
-}
-
 export function updateCredentialsList() {
     const list = document.getElementById('credentials-list');
 
@@ -3032,7 +3017,7 @@ export function updateCredentialsList() {
         credItem.className = 'credential-item';
         credItem.onclick = () => toggleCredentialDetails(index);
 
-        let summary = '';
+        let summary;
         if (cred.type === 'simple') {
             summary = cred.email || cred.username;
         } else {

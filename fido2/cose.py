@@ -27,13 +27,15 @@
 
 from __future__ import annotations
 
-from .utils import ByteBuffer, bytes2int, int2bytes
-from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.hazmat.primitives.asymmetric import ec, rsa, padding, ed25519, types
-from typing import Sequence, Type, Mapping, Any, TypeVar, Optional, Iterable, Dict
-from cryptography.hazmat.primitives import hashes
 import binascii
+from typing import Sequence, Type, Mapping, Any, TypeVar, Optional, Iterable, Dict
+
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import ec, rsa, padding, ed25519, types
+
+from .utils import ByteBuffer, bytes2int, int2bytes
 
 try:  # pragma: no cover - exercised indirectly in tests
     import oqs  # type: ignore
@@ -524,7 +526,7 @@ def extract_certificate_public_key_info(cert_der: bytes) -> Dict[str, Any]:
     }
 
     parameter_set = _ML_DSA_OID_TO_PARAMETER_SET.get(algorithm_oid)
-    parameter_details: Dict[str, Optional[int]] = {}
+    {}
     if parameter_set is not None:
         subject_public_key, wrapped_subject_public_key = _unwrap_mldsa_subject_public_key(
             subject_public_key, parameter_set

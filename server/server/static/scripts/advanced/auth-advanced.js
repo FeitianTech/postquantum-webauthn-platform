@@ -19,7 +19,6 @@ import {
     showProgress,
     hideProgress
 } from '../shared/status.js';
-import { updateJsonEditor, getAdvancedCreateOptions, getAdvancedAssertOptions } from './json-editor.js';
 import { randomizeChallenge, randomizePrfEval, randomizeLargeBlobWrite } from './forms.js';
 import { randomizeUserIdentity } from '../shared/username.js';
 import { showRegistrationResultModal, loadSavedCredentials } from './credential-display.js';

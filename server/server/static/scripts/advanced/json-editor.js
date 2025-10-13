@@ -3,7 +3,6 @@ import {
     base64ToHex,
     base64UrlToHex,
     convertFormat,
-    currentFormatToBase64Url,
     currentFormatToJsonFormat,
     getCurrentBinaryFormat,
     sortObjectKeys
@@ -13,9 +12,7 @@ import {
     deriveAllowedAttachmentsFromHints,
     enforceAuthenticatorAttachmentWithHints,
     applyHintsToCheckboxes,
-    registerHintsChangeCallback,
-    ensureAuthenticationHintsAllowed,
-    applyAuthenticatorAttachmentPreference
+    registerHintsChangeCallback
 } from './hints.js';
 import {
     getCredentialIdHex,
@@ -152,7 +149,7 @@ function validateBinaryField(value, path, { allowEmpty = false } = {}) {
         throw new Error(`${path} is required.`);
     }
 
-    let hexValue = '';
+    let hexValue;
     try {
         hexValue = extractHexFromJsonFormat(value);
     } catch (error) {
@@ -1558,23 +1555,6 @@ export function getAdvancedAssertOptions() {
 
     options.hints = collectSelectedHints('authentication');
     return options;
-}
-
-export function extractBinaryValue(value) {
-    if (!value) return '';
-
-    if (typeof value === 'string') {
-        return value;
-    }
-
-    if (typeof value === 'object') {
-        if (value.$hex) return value.$hex;
-        if (value.$base64) return base64ToHex(value.$base64);
-        if (value.$base64url) return base64UrlToHex(value.$base64url);
-        if (value.$js) return value.$js;
-    }
-
-    return '';
 }
 
 export function editCreateOptions() {

@@ -1174,7 +1174,7 @@ def _decode_cbor_sequence(payload: bytes) -> Tuple[List[Dict[str, Any]], List[An
     remaining = payload
 
     while remaining:
-        consumed_value: Optional[int] = None
+        None
         predecoded_structure: Optional[Dict[str, Any]] = None
         try:
             value, rest_after_value = cbor.decode_from(remaining)
@@ -1194,7 +1194,7 @@ def _decode_cbor_sequence(payload: bytes) -> Tuple[List[Dict[str, Any]], List[An
                         break
                     else:
                         consumed_value = consumed_fallback
-                        rest_after_value = remaining[consumed_fallback:]
+                        remaining[consumed_fallback:]
                         structure = {
                             "summary": "Decoded value (lenient)",
                             "type": type(value).__name__,
@@ -1206,11 +1206,11 @@ def _decode_cbor_sequence(payload: bytes) -> Tuple[List[Dict[str, Any]], List[An
                 else:
                     value = _structure_to_value(structure)
                     consumed_value = consumed_fallback
-                    rest_after_value = remaining[consumed_fallback:]
+                    remaining[consumed_fallback:]
                     predecoded_structure = structure
             else:
                 consumed_value = fp.tell()
-                rest_after_value = remaining[consumed_value:]
+                remaining[consumed_value:]
 
         if consumed_value is None or consumed_value <= 0:
             break
@@ -1353,7 +1353,7 @@ def _repair_make_credential_entries(
         return structure, value, None
 
     signature_key = None
-    signature_node: Optional[Dict[str, Any]] = None
+    None
     entries = structure.get("entries")
     if isinstance(entries, list):
         for idx, entry in enumerate(entries):
@@ -1363,7 +1363,7 @@ def _repair_make_credential_entries(
             major_type = key_info.get("majorType")
             if major_type in {2, 7} or (major_type == 0 and key_info.get("value") == 13):
                 signature_key = key_info
-                signature_node = entry
+                entry
                 entries.pop(idx)
                 break
 
@@ -2269,7 +2269,7 @@ def _extract_signature_from_raw_bytes(raw_bytes: bytes) -> Optional[bytes]:
 
 
 def _build_make_credential_request_expanded_json(
-    value: Mapping[Any, Any], raw_bytes: Optional[bytes] = None
+    value: Mapping[Any, Any]
 ) -> Dict[str, Any]:
     return _build_labeled_ctap_map(
         value,
@@ -2279,7 +2279,7 @@ def _build_make_credential_request_expanded_json(
 
 
 def _build_get_assertion_request_expanded_json(
-    value: Mapping[Any, Any], raw_bytes: Optional[bytes] = None
+    value: Mapping[Any, Any]
 ) -> Dict[str, Any]:
     return _build_labeled_ctap_map(
         value,
@@ -2288,7 +2288,7 @@ def _build_get_assertion_request_expanded_json(
     )
 
 
-def _build_make_credential_expanded_json(value: Mapping[Any, Any], raw_bytes: Optional[bytes] = None) -> Dict[str, Any]:
+def _build_make_credential_expanded_json(value: Mapping[Any, Any]) -> Dict[str, Any]:
     return _build_labeled_ctap_map(
         value,
         _MAKE_CREDENTIAL_RESPONSE_LABELS,
@@ -2415,7 +2415,7 @@ def _try_decode_cbor(data: bytes, encoding: str) -> Optional[Dict[str, Any]]:
                     base_structure, working_value, signature_bytes, remaining = trailing_signature_result
                     merged_signature = signature_bytes
                     consumed_total += len(signature_bytes)
-                extra_structures = []
+                []
                 extra_values = []
             else:
                 classification = _classify_ctap_map(working_value)
@@ -2430,7 +2430,7 @@ def _try_decode_cbor(data: bytes, encoding: str) -> Optional[Dict[str, Any]]:
             )
             if assertion_sig is not None:
                 merged_signature = merged_signature or assertion_sig
-            extra_structures = []
+            []
             extra_values = []
         elif classification == "other" and fmt_candidate is None:
             temp_structure = dict(base_structure)
@@ -2445,10 +2445,10 @@ def _try_decode_cbor(data: bytes, encoding: str) -> Optional[Dict[str, Any]]:
             )
             if assertion_sig is not None:
                 classification = "get_assertion_output"
-                base_structure = temp_structure
+                temp_structure
                 working_value = temp_value
                 merged_signature = merged_signature or assertion_sig
-                extra_structures = []
+                []
                 extra_values = []
         if classification == "other" and fmt_candidate is None and auth_candidate is not None:
             if ctap_details is not None and ctap_details.get("kind") == "status":
@@ -2469,13 +2469,13 @@ def _try_decode_cbor(data: bytes, encoding: str) -> Optional[Dict[str, Any]]:
             ctap_decoded = _stringify_mapping_keys(_hex_json_safe(interpreted))
 
         if classification == "make_credential_output":
-            expanded_json = _build_make_credential_expanded_json(base_value, primary_bytes)
+            expanded_json = _build_make_credential_expanded_json(base_value)
         elif classification == "get_assertion_output":
             expanded_json = _build_get_assertion_expanded_json(base_value, primary_bytes)
         elif classification == "make_credential_input":
-            expanded_json = _build_make_credential_request_expanded_json(base_value, primary_bytes)
+            expanded_json = _build_make_credential_request_expanded_json(base_value)
         elif classification == "get_assertion_input":
-            expanded_json = _build_get_assertion_request_expanded_json(base_value, primary_bytes)
+            expanded_json = _build_get_assertion_request_expanded_json(base_value)
     elif base_value is not None:
         hex_decoded_value = _hex_json_safe(base_value)
 
@@ -3192,7 +3192,7 @@ def _convert_public_key_credential_data(result: Mapping[str, Any]) -> Dict[str, 
         payload["attestationObject"] = attestation_section
 
     authenticator_section = _build_authenticator_section(
-        response, attestation_entry, attestation_section
+        response, attestation_entry
     )
     if authenticator_section:
         payload["authenticatorData"] = authenticator_section
@@ -3246,7 +3246,7 @@ def _convert_attestation_object_data(result: Mapping[str, Any]) -> Dict[str, Any
 
 def _convert_authenticator_data_result(result: Mapping[str, Any]) -> Dict[str, Any]:
     decoded = result.get("decoded") if isinstance(result.get("decoded"), Mapping) else {}
-    binary_entry = result.get("binary")
+    result.get("binary")
     auth_bytes = _extract_bytes_from_binary(result.get("binary"))
     if auth_bytes is None:
         auth_bytes = _extract_bytes_from_binary(decoded)
@@ -3448,7 +3448,6 @@ def _convert_certificate_payload(
 def _build_authenticator_section(
     response: Any,
     attestation_entry: Any,
-    attestation_section: Optional[Mapping[str, Any]] = None,
 ) -> Dict[str, Any]:
     response_mapping = response if isinstance(response, Mapping) else {}
     attestation_mapping = attestation_entry if isinstance(attestation_entry, Mapping) else {}
@@ -4402,7 +4401,7 @@ def _collect_attested_info(
         if public_key_bytes:
             credential_lines.append(public_key_bytes.hex())
     else:
-        public_key_bytes = b""
+        b""
 
     public_key = attested.get("publicKey") if isinstance(attested, Mapping) else None
     algorithm_label = _resolve_cose_algorithm(public_key, fallback_alg)

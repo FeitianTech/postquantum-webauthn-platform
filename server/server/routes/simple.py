@@ -63,11 +63,11 @@ def register_complete():
         attestation_certificates_details,
     ) = extract_attestation_details(response)
 
-    raw_attestation_object = credential_response.get('attestationObject')
+    credential_response.get('attestationObject')
     client_data_json = credential_response.get('clientDataJSON')
 
     if parsed_attestation_object:
-        raw_attestation_object = parsed_attestation_object
+        parsed_attestation_object
     if parsed_client_data_json:
         client_data_json = parsed_client_data_json
 
@@ -176,7 +176,7 @@ def register_complete():
     savekey(uname, credentials)
 
     algo = auth_data.credential_data.public_key[3]
-    algoname = ""
+    ""
     if algo == -50:
         algoname = "ML-DSA-87 (PQC)"
     elif algo == -49:

@@ -115,13 +115,13 @@ def _extract_credential_id(value: Any) -> Optional[bytes]:
 
 
 def _extract_credential_algorithm(value: Any) -> Optional[int]:
-    public_key_value: Any = None
+    None
     if isinstance(value, Mapping):
         public_key_value = value.get("public_key") or value.get("publicKey")
     else:
         public_key_value = getattr(value, "public_key", None)
 
-    raw_alg: Any = None
+    None
     if isinstance(public_key_value, Mapping):
         if 3 in public_key_value:
             raw_alg = public_key_value[3]
@@ -271,7 +271,7 @@ def _load_all_stored_credentials() -> List[Dict[str, Any]]:
                 resident_flag = None
 
             if resident_flag is None:
-                auth_data_value = None
+                None
                 if isinstance(cred, Mapping):
                     auth_data_value = cred.get("auth_data")
                 else:
@@ -573,7 +573,7 @@ def advanced_register_begin():
     if not username:
         return jsonify({"error": "Username is required in user.name"}), 400
 
-    credentials = readkey(username)
+    readkey(username)
 
     user_id_value = user_info.get("id", "")
     if user_id_value:
@@ -736,7 +736,7 @@ def advanced_register_begin():
             allowed_algorithm_ids = [
                 getattr(param, "alg", None) for param in temp_server.allowed_algorithms
             ]
-            allowed_algorithm_ids = [alg for alg in allowed_algorithm_ids if isinstance(alg, int)]
+            [alg for alg in allowed_algorithm_ids if isinstance(alg, int)]
 
     public_key["pubKeyCredParams"] = [
         {
@@ -1279,7 +1279,7 @@ def advanced_register_complete():
         authenticator_data_hex = bytes(auth_data).hex()
         registration_timestamp = datetime_from_timestamp(credential_info['registration_time'])
 
-        resident_key_result = None
+        None
         cred_props = (
             client_extension_results.get('credProps')
             if isinstance(client_extension_results, dict)
@@ -1700,8 +1700,8 @@ def advanced_authenticate_complete():
             auth_server.allowed_algorithms = derived_algorithms
 
         fallback_used = False
-        auth_alg: Optional[int] = None
-        auth_result = None
+        None
+        None
 
         try:
             auth_result = auth_server.authenticate_complete(

@@ -266,24 +266,6 @@ if (typeof window !== 'undefined') {
     }
 }
 
-function showElement(element) {
-    if (!(element instanceof HTMLElement)) {
-        return;
-    }
-    element.hidden = false;
-    element.removeAttribute('hidden');
-    element.setAttribute('aria-hidden', 'false');
-}
-
-function hideElement(element) {
-    if (!(element instanceof HTMLElement)) {
-        return;
-    }
-    element.hidden = true;
-    element.setAttribute('hidden', '');
-    element.setAttribute('aria-hidden', 'true');
-}
-
 function scheduleScrollTopButtonUpdate() {
     if (scrollTopButtonUpdateScheduled) {
         return;
@@ -445,7 +427,7 @@ function updateFloatingHorizontalScrollPosition(state = mdsState, metrics = {}) 
 
     const maxLeft = viewportWidth - sideMargin - width;
     const preferredLeft = Number.isFinite(rect.left) ? rect.left : sideMargin;
-    let left = preferredLeft;
+    let left;
     if (maxLeft >= sideMargin) {
         left = Math.min(Math.max(preferredLeft, sideMargin), maxLeft);
     } else {
@@ -2722,24 +2704,6 @@ function renderAuthenticatorInfo(info) {
     return section;
 }
 
-function getAuthenticatorInfoFromEntry(entry) {
-    if (!entry || typeof entry !== 'object') {
-        return null;
-    }
-
-    const directInfo = entry.metadataStatement?.authenticatorGetInfo;
-    if (directInfo && typeof directInfo === 'object') {
-        return directInfo;
-    }
-
-    const rawInfo = entry.rawEntry?.metadataStatement?.authenticatorGetInfo;
-    if (rawInfo && typeof rawInfo === 'object') {
-        return rawInfo;
-    }
-
-    return null;
-}
-
 function getAuthenticatorRawData(entry) {
     if (!entry || typeof entry !== 'object') {
         return null;
@@ -4403,7 +4367,7 @@ async function refreshMetadata() {
             cache: 'no-store',
         });
 
-        let payload = null;
+        let payload;
         try {
             payload = await response.json();
         } catch (error) {

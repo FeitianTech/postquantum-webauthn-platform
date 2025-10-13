@@ -119,7 +119,6 @@ def _wrap_credentials(
 
 
 def _ignore_attestation(
-    attestation_object: AttestationObject, client_data_hash: bytes
 ) -> None:
     """Ignore attestation."""
 

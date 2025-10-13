@@ -273,12 +273,6 @@ export function normaliseAaguid(value) {
     return formatted ? formatted.toLowerCase() : '';
 }
 
-export function formatListValues(value) {
-    return extractList(value)
-        .map(item => formatEnum(item))
-        .filter(text => typeof text === 'string' && text.trim() !== '');
-}
-
 export function formatUpv(upv) {
     const list = Array.isArray(upv) ? upv : upv ? [upv] : [];
     const formatted = [];
@@ -292,26 +286,6 @@ export function formatUpv(upv) {
         }
     });
     return formatted;
-}
-
-export function formatAuthenticatorAlgorithms(value) {
-    return extractList(value)
-        .map(item => {
-            if (item && typeof item === 'object') {
-                const type = item.type ? String(item.type) : '';
-                const algValue = item.alg !== undefined && item.alg !== null ? item.alg : item.algorithm;
-                const alg = algValue !== undefined && algValue !== null ? String(algValue) : '';
-                if (type && alg) {
-                    return `${type} (${alg})`;
-                }
-                return type || alg;
-            }
-            if (item !== undefined && item !== null) {
-                return String(item);
-            }
-            return '';
-        })
-        .filter(text => typeof text === 'string' && text.trim() !== '');
 }
 
 export function formatDetailValue(value) {

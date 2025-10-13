@@ -54,6 +54,7 @@ See the specification for a description and details on their usage.
 
 class Aaguid(bytes):
     def __init__(self, data: bytes):
+        self.data = data
         if len(self) != 16:
             raise ValueError("AAGUID must be 16 bytes")
 
@@ -392,14 +393,14 @@ class CollectedClientData(bytes):
 
 
 class _StringEnumMeta(EnumMeta):
-    def _get_value(cls, value):
+    def _get_value(cls):
         return None
 
     def __call__(cls, value, *args, **kwargs):
         try:
             return super().__call__(value, *args, **kwargs)
         except ValueError:
-            return cls._get_value(value)
+            return cls._get_value()
 
 
 class _StringEnum(str, Enum, metaclass=_StringEnumMeta):

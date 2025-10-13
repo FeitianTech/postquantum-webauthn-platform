@@ -705,7 +705,7 @@ def _normalise_signature_algorithm_name(name: str) -> str:
     return text.replace("-", "").replace(" ", "").upper()
 
 
-def _derive_certificate_algorithm_info(public_key_info: Mapping[str, Any], signature_info: Mapping[str, Any]) -> str:
+def _derive_certificate_algorithm_info(signature_info: Mapping[str, Any]) -> str:
     if not isinstance(signature_info, Mapping):
         return ""
 
@@ -1086,7 +1086,7 @@ def serialize_attestation_certificate(cert_bytes: bytes):
         "oid": signature_algorithm_oid,
         "details": signature_algorithm_details,
     }
-    algorithm_info = _derive_certificate_algorithm_info(public_key_info, signature_details)
+    algorithm_info = _derive_certificate_algorithm_info(signature_details)
     subject_common_names = _extract_common_names(certificate.subject)
 
     return {
@@ -1692,7 +1692,7 @@ def perform_attestation_checks(
     }
 
     attestation_format_value = (attestation_object.fmt or "").lower()
-    signature_valid: Optional[bool] = None
+    None
     attestation_result = None
     attestation_errors: List[str] = []
     if attestation_format_value == "none":
@@ -1817,7 +1817,7 @@ def perform_attestation_checks(
                 try:
                     fallback_entry = verifier.find_entry_by_aaguid(aaguid_obj)
                 except Exception:
-                    fallback_entry = None
+                    None
                 else:
                     if fallback_entry is not None:
                         metadata_entry = fallback_entry

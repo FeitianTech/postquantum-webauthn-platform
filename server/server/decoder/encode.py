@@ -421,7 +421,7 @@ def _extract_ctap_numeric_payload(parsed: Any) -> Tuple[Dict[int, Any], str]:
         try:
             numeric_map = _sanitize_ctap_numeric_mapping(candidate)
         except ValueError:
-            numeric_map = None
+            None
             salvage_map: Dict[int, Any] = {}
             salvage_error: Optional[ValueError] = None
             if isinstance(candidate, Mapping):
