@@ -240,14 +240,14 @@ select.form-control option {
     position: relative;
 }
 
-.btn.refresh-icon::before {
-    content: '';
-    width: 18px;
-    height: 18px;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21 6V3h-3'/%3E%3Cpath d='M3 18v3h3'/%3E%3Cpath d='M21 6a9 9 0 0 0-15.36-5.657L3 3'/%3E%3Cpath d='M3 18a9 9 0 0 0 15.36 5.657L21 21'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: center;
-    background-size: contain;
+.btn.refresh-icon svg {
+    width: 20px;
+    height: 20px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 2.1;
+    stroke-linecap: round;
+    stroke-linejoin: round;
     transition: transform 0.3s ease;
 }
 
@@ -347,7 +347,7 @@ select.form-control option {
     box-shadow: none;
 }
 
-.btn.refresh-icon:hover::before,
-.btn.refresh-icon:focus-visible::before {
+.btn.refresh-icon:hover svg,
+.btn.refresh-icon:focus-visible svg {
     transform: rotate(90deg);
 }
