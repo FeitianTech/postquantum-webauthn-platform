@@ -20,7 +20,7 @@ RUN set -eux; \
     rm -rf /var/lib/apt/lists/*
 
 COPY prebuilt_liboqs/linux-x86_64 /opt/liboqs
-ENV LD_LIBRARY_PATH=/opt/liboqs/lib \
+ENV LD_LIBRARY_PATH=/opt/liboqs/lib:/usr/local/lib \
     LIBOQS_DIR=/opt/liboqs \
     OQS_DIST_BUILD=1
 
@@ -42,25 +42,24 @@ RUN pip install --prefix=/install --no-cache-dir gunicorn
 FROM python:3.11-slim AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
+    PYTHONUNBUFFERED=1 \
+    LIBOQS_DIR=/opt/liboqs \
+    OQS_DIST_BUILD=1 \
+    LD_LIBRARY_PATH=/opt/liboqs/lib:/usr/local/lib
 
 RUN set -eux; \
     apt-get update; \
-    apt-get install -y --no-install-recommends \
-        libssl3 \
-    ; \
+    apt-get install -y --no-install-recommends libssl3 git; \
     rm -rf /var/lib/apt/lists/*
 
 COPY prebuilt_liboqs/linux-x86_64 /opt/liboqs
-ENV LD_LIBRARY_PATH=/opt/liboqs/lib \
-    LIBOQS_DIR=/opt/liboqs \
-    OQS_DIST_BUILD=1
-
 COPY --from=python-builder /install /usr/local
+COPY server/server /app/server
 
 WORKDIR /app
-COPY server/server /app/server
+
+RUN ls -l /opt/liboqs/lib && ldd /opt/liboqs/lib/liboqs.so || true
 
 ENV PYTHONPATH=/app:${PYTHONPATH}
 
-CMD ["/bin/sh", "-c", "gunicorn --bind 0.0.0.0:${PORT:-8000} server.app:app"]
+CMD ["/bin/sh", "-c", "echo 'LD_LIBRARY_PATH='$LD_LIBRARY_PATH && gunicorn --bind 0.0.0.0:${PORT:-8000} server.app:app"]
