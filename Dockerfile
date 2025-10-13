@@ -33,7 +33,7 @@ COPY server ./server
 
 RUN pip install --upgrade pip setuptools wheel
 RUN pip install --prefix=/install --no-cache-dir \
-    "oqs @ git+https://github.com/open-quantum-safe/liboqs-python@main" \
+    "liboqs-python @ git+https://github.com/open-quantum-safe/liboqs-python@main" \
     pqcrypto
 RUN pip install --prefix=/install --no-cache-dir .
 RUN pip install --prefix=/install --no-cache-dir ./server
