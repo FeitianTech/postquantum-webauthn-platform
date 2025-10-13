@@ -49,7 +49,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 RUN set -eux; \
     apt-get update; \
-    apt-get install -y --no-install-recommends libssl3 git cmake; \
+    apt-get install -y --no-install-recommends \
+        libssl3 git cmake build-essential; \
     echo "/opt/liboqs/lib" > /etc/ld.so.conf.d/liboqs.conf; \
     ldconfig; \
     rm -rf /var/lib/apt/lists/*
@@ -60,7 +61,9 @@ COPY server/server /app/server
 
 WORKDIR /app
 
-RUN ls -l /opt/liboqs/lib && ldd /opt/liboqs/lib/liboqs.so && python3 -c "import ctypes; ctypes.CDLL('/opt/liboqs/lib/liboqs.so'); print('liboqs loaded successfully')" || true
+RUN ls -l /opt/liboqs/lib && \
+    ldd /opt/liboqs/lib/liboqs.so && \
+    python3 -c "import ctypes; ctypes.CDLL('/opt/liboqs/lib/liboqs.so'); print('✅ liboqs loaded successfully')" || true
 
 ENV PYTHONPATH=/app:${PYTHONPATH}
 
