@@ -6,7 +6,7 @@ This test app also supports functionalities such as **decoder**, **FIDO MDS expl
 
 Built on **python-fido2-PQC**, which extends Yubico’s **python-fido2**.  
 
-PQC: Currently supporting **ML-DSA-44** (sig: -48), **ML-DSA-65** (sig: -49), and **ML-DSA-87** (sig: -50). 
+PQC: Currently supporting **ML-DSA-44** (alg: -48), **ML-DSA-65** (alg: -49), and **ML-DSA-87** (alg: -50). 
 
 Classical algorithms work by default.
 
@@ -56,7 +56,7 @@ py -3.12 -m venv .venv
 
 # Upgrade pip and install runtime dependencies
 python -m pip install --upgrade pip
-pip install fido2 flask cryptography cbor2 asn1crypto
+pip install -r requirements.txt
 
 # Optional: PC/SC smart card extras
 pip install "fido2[pcsc]"
@@ -71,7 +71,7 @@ source .venv/bin/activate
 
 # Upgrade pip and install runtime dependencies
 python -m pip install --upgrade pip
-pip install fido2 flask cryptography cbor2 asn1crypto
+pip install -r requirements.txt
 
 # Optional: PC/SC smart card extras
 pip install "fido2[pcsc]"
@@ -85,7 +85,7 @@ pip install "fido2[pcsc]"
 
 **Windows (PowerShell):**
 ```powershell
-.\.venv\Scripts\Activate
+.\.venv\scripts\activate
 ```
 
 **macOS:**
@@ -241,7 +241,7 @@ mkcert localhost 127.0.0.1 ::1
 **Windows (PowerShell)**
 ```powershell
 py -3 -m venv .venv
-.\.venv\Scripts\Activate.ps1
+.\.venv\scripts\activate
 ```
 
 **macOS**
@@ -252,19 +252,10 @@ source .venv/bin/activate
 
 ---
 
-### 2. Install Dependencies
+### 2. Run the Server
 
 ```bash
-python -m pip install --upgrade pip
-pip install flask fido2
-```
-
----
-
-### 3. Run the Server
-
-```bash
-python examples/server/server/app.py
+python server/server/app.py
 ```
 
 Expected output:
@@ -279,7 +270,7 @@ Click the link to open the test app in your browser.
 ## 📝 Notes
 
 - Credentials are saved as `.pkl` files in:  
-  `examples/server/server`  
+  `server/server`  
 - Deleting credentials in the test app will also delete the corresponding `.pkl` file locally.
 
 ---
