@@ -372,11 +372,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        const jsonEditorOverlay = document.getElementById('json-editor-overlay');
-        if (jsonEditorOverlay) {
-            jsonEditorOverlay.addEventListener('click', () => toggleJsonEditorExpansion(true));
-        }
-
         if (jsonEditorElement) {
             jsonEditorElement.addEventListener('click', () => {
                 const container = document.getElementById('json-editor-container');
@@ -391,6 +386,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
             jsonEditorElement.addEventListener('keydown', handleJsonEditorKeydown);
+        }
+
+        const jsonEditorCloseButton = document.getElementById('json-editor-close');
+        if (jsonEditorCloseButton) {
+            jsonEditorCloseButton.addEventListener('click', () => toggleJsonEditorExpansion(true));
         }
 
         document.addEventListener('keydown', (event) => {

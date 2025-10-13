@@ -277,6 +277,7 @@ export function closeModal(modalId) {
 export function toggleJsonEditorExpansion(forceCollapse = false) {
     const container = document.getElementById('json-editor-container');
     const overlay = document.getElementById('json-editor-overlay');
+    const closeButton = document.getElementById('json-editor-close');
 
     if (!container || !overlay) {
         return;
@@ -299,6 +300,14 @@ export function toggleJsonEditorExpansion(forceCollapse = false) {
         overlay.classList.remove('active');
         container.classList.remove('expanded');
         container.setAttribute('aria-expanded', 'false');
+        if (closeButton) {
+            closeButton.blur();
+        }
+    }
+
+    if (closeButton) {
+        closeButton.setAttribute('aria-hidden', shouldExpand ? 'false' : 'true');
+        closeButton.tabIndex = shouldExpand ? 0 : -1;
     }
 
     updateGlobalScrollLock();

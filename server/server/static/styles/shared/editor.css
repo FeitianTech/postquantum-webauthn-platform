@@ -74,7 +74,7 @@
     z-index: 1100;
     padding: 1.75rem 1.5rem 1.5rem;
     border-radius: 24px;
-    box-shadow: var(--shadow-hover);
+    box-shadow: 0 42px 120px rgba(15, 39, 64, 0.48), 0 18px 44px rgba(15, 39, 64, 0.35);
 }
 
 #json-editor-container.expanded textarea {
@@ -97,7 +97,48 @@
     opacity: 1;
     visibility: visible;
     pointer-events: auto;
+    cursor: default;
+}
+
+.json-editor-close-btn {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 50%;
+    border: none;
+    background: rgba(15, 39, 64, 0.08);
+    color: var(--text-color);
+    font-size: 1.5rem;
+    line-height: 1;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+    box-shadow: 0 12px 32px rgba(15, 39, 64, 0.18);
     cursor: pointer;
+}
+
+.json-editor-close-btn span {
+    margin-top: -0.15rem;
+}
+
+#json-editor-container.expanded .json-editor-close-btn {
+    display: inline-flex;
+}
+
+.json-editor-close-btn:hover,
+.json-editor-close-btn:focus {
+    background: rgba(15, 39, 64, 0.16);
+    box-shadow: 0 18px 40px rgba(15, 39, 64, 0.28);
+    transform: translateY(-1px);
+    outline: none;
+}
+
+.json-editor-close-btn:focus-visible {
+    outline: 3px solid rgba(0, 114, 206, 0.35);
+    outline-offset: 2px;
 }
 
 .checkbox-group {
