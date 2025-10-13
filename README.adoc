@@ -49,9 +49,10 @@ If the service was originally provisioned as a Python app, update it before the 
    runtime to **Docker**. Render may require recreating the service under the Docker runtime; if so,
    create a new Web Service, select Docker as the environment, and point it at this repository.
 2. Confirm the generated configuration matches the supplied `render.yaml`, in particular the
-   `env: docker` stanza and the use of the root `Dockerfile` as the build source. Leave the Build
-   and Start command fields empty so Render knows to execute the Dockerfile directly; nothing should
-   invoke `docker build` inside the Python runtime.
+   `runtime: docker` stanza (or `env: docker` on older blueprints) and the use of the root
+   `Dockerfile` as the build source. Leave the Build and Start command fields empty so Render knows
+   to execute the Dockerfile directly; nothing should invoke `docker build` inside the Python
+   runtime.
 3. Trigger a fresh deploy. A successful migration prints `Using Dockerfile: ./Dockerfile` near the
    top of the logs and no longer shows the Python runtime banner (`Using Python version …`).
 
@@ -86,6 +87,28 @@ scripts are required beyond the existing Dockerfile:
    deployment. The logs should now show the Docker build output (multi-stage compilation, pip
    installs, etc.) rather than `Using Python version …`. Once the container starts, confirm that
    PQC registration/auth flows succeed, proving the bundled libraries load correctly.
+
+==== Deployment debugging checklist
+
+If a redeploy still prints `Using Python version …` or fails with `docker: command not found`, walk
+through this checklist:
+
+* **Service type:** Existing services created as Python apps stay on the native runtime even after
+  commits add a Dockerfile. Recreate the service and choose **Docker** as the environment to unlock
+  Docker builds.
+* **Blueprint runtime:** Ensure `render.yaml` lives at the repository root and declares
+  `runtime: docker` for the web service. Render ignores the Dockerfile if the runtime remains set to
+  `python`.
+* **Dashboard overrides:** In the Render UI verify that Build Command and Start Command are blank.
+  Any manual entry overrides Dockerfile execution and can reintroduce `docker build` invocations.
+* **Path configuration:** When creating the service confirm the Dockerfile path is `./Dockerfile`
+  and the context is the repository root. Misconfigured paths cause Render to fall back to native
+  builds.
+* **Clean rebuild:** Use **Clear build cache and deploy** or recreate the service to force Render to
+  read the updated configuration. Cached Python builds can linger even after switching runtimes.
+
+Once these checks pass, deploy logs should begin with `Using Dockerfile: ./Dockerfile`, proving the
+Docker runtime is active and the PQC-enabled image is building end-to-end.
 
 Following this workflow isolates the PQC toolchain inside the container image, eliminating
 environment drift between local development, CI, and Render. The Docker runtime becomes the single
