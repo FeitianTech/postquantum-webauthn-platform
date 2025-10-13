@@ -6,7 +6,6 @@ services:
     dockerfilePath: ./Dockerfile
     dockerContext: .
     autoDeploy: true
-    # Ensure the Render service itself is created with the Docker runtime; otherwise the
-    # platform will attempt to run `docker build` inside the Python environment and fail.
-    # If Docker is unavailable for your account, fall back to ./render-build.sh and
-    # ./render-start.sh via the Render dashboard.
+    # Provision this service using Render's Docker runtime so the platform builds the Dockerfile
+    # directly. When the migration succeeds, deploy logs begin with "Using Dockerfile: ./Dockerfile"
+    # and no longer show the Python runtime banner.

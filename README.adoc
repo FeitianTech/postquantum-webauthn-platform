@@ -49,12 +49,11 @@ If the service was originally provisioned as a Python app, update it before the 
    runtime to **Docker**. Render may require recreating the service under the Docker runtime; if so,
    create a new Web Service, select Docker as the environment, and point it at this repository.
 2. Confirm the generated configuration matches the supplied `render.yaml`, in particular the
-   `env: docker` stanza and the use of the root `Dockerfile` as the build source. Leaving the build
-   and start commands blank tells Render to execute the Dockerfile natively instead of trying to run
-   `docker build` inside the Python runtime.
-3. Trigger a fresh deploy. The build logs should now show Docker stages (base image pulls, liboqs
-   compilation, dependency installs) rather than the Python runtime banner (`Using Python version
-   …`).
+   `env: docker` stanza and the use of the root `Dockerfile` as the build source. Leave the Build
+   and Start command fields empty so Render knows to execute the Dockerfile directly; nothing should
+   invoke `docker build` inside the Python runtime.
+3. Trigger a fresh deploy. A successful migration prints `Using Dockerfile: ./Dockerfile` near the
+   top of the logs and no longer shows the Python runtime banner (`Using Python version …`).
 
 ==== Conceptual image composition
 
@@ -65,8 +64,8 @@ scripts are required beyond the existing Dockerfile:
    the build context at this repository, and allow Render to clone it directly. Seeing cloning logs
    that reference this public repository confirms the service has access; if Render reports a
    permissions issue, update the repository visibility or deploy key before proceeding.
-2. **Let Render execute the Dockerfile.** Leave the Build and Start command fields blank so the
-   platform runs the multi-stage Dockerfile. The build stages should:
+2. **Let Render execute the Dockerfile.** With the Build and Start command fields blank, Render runs
+   the multi-stage Dockerfile itself. The build stages should:
    * Base on a supported Python image (e.g., `python:3.12-slim`) to guarantee compatibility with the
      application runtime.
    * Install OS-level build tooling (build-essential, cmake, ninja, pkg-config) plus crypto
