@@ -6,6 +6,3 @@ services:
     dockerfilePath: ./Dockerfile
     dockerContext: .
     autoDeploy: true
-    # Provision this service using Render's Docker runtime so the platform builds the Dockerfile
-    # directly. When the migration succeeds, deploy logs begin with "Using Dockerfile: ./Dockerfile"
-    # and no longer show the Python runtime banner.
