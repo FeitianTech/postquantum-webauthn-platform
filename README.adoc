@@ -37,8 +37,12 @@ host configuration.  The Flask demo is served via Gunicorn using the command
 will automatically compile liboqs/liboqs-python and start Gunicorn bound to the platform-provided
 port. When creating or updating the service in Render:
 
-1. Choose the **Docker** environment and point it at this repository.
-2. Leave the Build Command and Start Command fields empty so Render runs the Dockerfile directly.
+1. Choose the **Docker** environment (Render labels this as “Runtime: Docker”) and point it at this
+   repository. If you already created the service with the Python runtime, delete and recreate it so
+   the Docker runtime is used—seeing logs such as “Using Python version …” means Render is still on
+   the non-container runtime and will fail with `docker: command not found`.
+2. Leave the **Build Command** and **Start Command** fields empty so Render executes the Dockerfile
+   directly; the container already starts Gunicorn for you.
 3. Confirm that the generated container image starts with `gunicorn --bind 0.0.0.0:${PORT:-8000}
    server.app:app`, which exposes PQC-capable WebAuthn endpoints using the bundled `oqs`
    dependency.
