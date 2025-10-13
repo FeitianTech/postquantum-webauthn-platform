@@ -1,5 +1,9 @@
 # Post-Quantum WebAuthn Test Platform
 
+**Deployed Web Service:**  
+
+**Note:** PQC support requires setting up locally and have the liboqs library installed and running. 
+
 A complete test suite for WebAuthn/FIDO2 registration and authentication with Post-Quantum Cryptography (PQC) support.
 It displays the selected algorithm, authenticator flags (UP/UV/AT/ED/BE/BS), sign counter, and extension results (credProps, PRF, largeBlob) for validation.  
 This test app also supports functionalities such as **decoder**, **FIDO MDS explorer**, etc.  
