@@ -47,6 +47,24 @@ port. When creating or updating the service in Render:
    server.app:app`, which exposes PQC-capable WebAuthn endpoints using the bundled `oqs`
    dependency.
 
+==== Fallback: Render's native Python runtime
+
+Some Render accounts cannot switch an existing service to the Docker runtime immediately. If the
+build logs still show “Using Python version …” and the deployment fails with
+`docker: command not found`, configure the service with the following commands instead:
+
+[,text]
+----
+Build Command: ./render-build.sh
+Start Command: ./render-start.sh
+----
+
+These scripts recreate the Docker build steps inside Render's native environment by compiling
+`liboqs` from source, installing the matching `liboqs-python` bindings, and launching Gunicorn with
+the required `LD_LIBRARY_PATH`/`LIBOQS_DIR` settings. The resulting deployment exposes the same PQC
+algorithms as the container image, so you can keep validating WebAuthn flows while you migrate to
+Render's Docker runtime.
+
 A complete test suite for WebAuthn/FIDO2 registration and authentication with Post-Quantum Cryptography (PQC) support.
 It displays the selected algorithm, authenticator flags (UP/UV/AT/ED/BE/BS), sign counter, and extension results (credProps, PRF, largeBlob) for validation.  
 This test app also supports functionalities such as **decoder**, **FIDO MDS explorer**, etc.  

@@ -6,3 +6,5 @@ services:
     dockerfilePath: ./Dockerfile
     dockerContext: .
     autoDeploy: true
+    # If your account cannot use the Docker runtime yet, set the build/start commands
+    # to ./render-build.sh and ./render-start.sh in the Render dashboard instead.
