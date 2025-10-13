@@ -751,8 +751,7 @@ def _normalize_pem_label(label: str) -> str:
 def _canonical_cbor_dumps(value: Any) -> bytes:
     """Serialize *value* using strict canonical CBOR rules."""
 
-    encoder = _CanonicalCBOREncoder()
-    return encoder.encode(value)
+    return cbor2.dumps(value, canonical=True)
 
 
 def _canonicalize_cbor_structure(value: Any) -> Any:
