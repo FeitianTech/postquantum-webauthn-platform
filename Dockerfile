@@ -1,40 +1,6 @@
 # syntax=docker/dockerfile:1.7
 
-# Stage 1: build liboqs from source so the runtime only needs shared libs.
-FROM python:3.11-slim AS liboqs-builder
-
-ARG LIBOQS_VERSION=0.9.2
-WORKDIR /tmp/liboqs
-
-# Constrain the build to a single thread to lower memory pressure on
-# resource-constrained builders (e.g., Render free tiers).
-ENV CMAKE_BUILD_PARALLEL_LEVEL=1
-
-RUN set -eux; \
-    apt-get update; \
-    apt-get install -y --no-install-recommends \
-        ca-certificates \
-        git \
-        build-essential \
-        cmake \
-        ninja-build \
-    ; \
-    rm -rf /var/lib/apt/lists/*
-
-RUN git clone --depth 1 --branch "${LIBOQS_VERSION}" https://github.com/open-quantum-safe/liboqs.git .
-
-# OQS_BUILD_ONLY_LIB disables tests, docs, and example targets so the build
-# stays lightweight in constrained environments.
-RUN set -eux; \
-    cmake -S . -B build -GNinja \
-        -DCMAKE_BUILD_TYPE=Release \
-        -DCMAKE_INSTALL_PREFIX=/opt/liboqs \
-        -DBUILD_SHARED_LIBS=ON \
-        -DOQS_BUILD_ONLY_LIB=ON; \
-    cmake --build build --target install --parallel 1
-
-
-# Stage 2: install Python dependencies (including PQC extras) with liboqs available.
+# Stage 1: install Python dependencies (including PQC extras) with prebuilt liboqs available.
 FROM python:3.11-slim AS python-builder
 
 ARG LIBOQS_PYTHON_VERSION=0.9.2
@@ -54,8 +20,8 @@ RUN set -eux; \
     ; \
     rm -rf /var/lib/apt/lists/*
 
-COPY --from=liboqs-builder /opt/liboqs /opt/liboqs
-
+# 🧠 Copy the prebuilt liboqs instead of compiling it
+COPY prebuilt_liboqs/linux-x86_64 /opt/liboqs
 ENV LD_LIBRARY_PATH=/opt/liboqs/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH} \
     LIBOQS_DIR=/opt/liboqs \
     OQS_DIST_BUILD=1
@@ -76,7 +42,7 @@ RUN pip install --prefix=/install --no-cache-dir ./server
 RUN pip install --prefix=/install --no-cache-dir gunicorn
 
 
-# Stage 3: create the final runtime image with only what is needed to run the app.
+# Stage 2: create the final runtime image with only what is needed to run the app.
 FROM python:3.11-slim AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -89,7 +55,8 @@ RUN set -eux; \
     ; \
     rm -rf /var/lib/apt/lists/*
 
-COPY --from=liboqs-builder /opt/liboqs /opt/liboqs
+# 🧠 Copy prebuilt liboqs for runtime use
+COPY prebuilt_liboqs/linux-x86_64 /opt/liboqs
 COPY --from=python-builder /install /usr/local
 
 # The Flask app expects to find its static assets within the package tree.
