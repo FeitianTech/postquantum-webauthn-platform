@@ -24,7 +24,6 @@ import {
     closeModal
 } from './shared/ui.js';
 import {
-    changeBinaryFormat,
     updateFieldLabels,
     randomizeChallenge,
     randomizePrfEval,
@@ -120,7 +119,6 @@ window.clearDecoder = clearCodec;
 window.toggleRawDecoder = toggleRawCodec;
 window.closeModal = closeModal;
 window.switchCodecMode = switchCodecMode;
-window.changeBinaryFormat = changeBinaryFormat;
 window.saveJsonEditor = saveJsonEditor;
 window.resetJsonEditor = resetJsonEditor;
 window.showCredentialDetails = showCredentialDetails;
@@ -139,8 +137,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeLoader();
     loaderSetPhase('Preparing application…', { progress: 8 });
 
-    window.currentBinaryFormat = 'hex';
-    updateFieldLabels('hex');
+    updateFieldLabels();
 
     const jsonEditorElement = document.getElementById('json-editor');
     if (jsonEditorElement) {

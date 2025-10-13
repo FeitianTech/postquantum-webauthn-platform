@@ -475,9 +475,10 @@ export function sortObjectKeys(value) {
     return value;
 }
 
+const ACTIVE_BINARY_FORMAT = 'hex';
+
 export function getCurrentBinaryFormat() {
-    const element = document.getElementById('binary-format');
-    return element ? element.value : 'hex';
+    return ACTIVE_BINARY_FORMAT;
 }
 
 export function currentFormatToJsonFormat(value) {
