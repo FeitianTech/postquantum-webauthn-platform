@@ -1,5 +1,4 @@
-# Prevent line-ending conversion for binary libs
-prebuilt_liboqs/**/* binary
-
-# Disable CRLF conversion for everything (optional global safety)
-* text eol=lf
+*.so binary
+*.so.* binary
+*.pc text eol=lf
+*.h text eol=lf
