@@ -20,7 +20,7 @@ RUN set -eux; \
     rm -rf /var/lib/apt/lists/*
 
 COPY prebuilt_liboqs/linux-x86_64 /opt/liboqs
-ENV LD_LIBRARY_PATH=/opt/liboqs/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH} \
+ENV LD_LIBRARY_PATH=/opt/liboqs/lib \
     LIBOQS_DIR=/opt/liboqs \
     OQS_DIST_BUILD=1
 
@@ -52,14 +52,15 @@ RUN set -eux; \
     rm -rf /var/lib/apt/lists/*
 
 COPY prebuilt_liboqs/linux-x86_64 /opt/liboqs
+ENV LD_LIBRARY_PATH=/opt/liboqs/lib \
+    LIBOQS_DIR=/opt/liboqs \
+    OQS_DIST_BUILD=1
+
 COPY --from=python-builder /install /usr/local
 
 WORKDIR /app
 COPY server/server /app/server
 
-ENV LD_LIBRARY_PATH=/opt/liboqs/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH} \
-    LIBOQS_DIR=/opt/liboqs \
-    OQS_DIST_BUILD=1 \
-    PYTHONPATH=/app:${PYTHONPATH}
+ENV PYTHONPATH=/app:${PYTHONPATH}
 
 CMD ["/bin/sh", "-c", "gunicorn --bind 0.0.0.0:${PORT:-8000} server.app:app"]
