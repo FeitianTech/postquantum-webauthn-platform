@@ -3,3 +3,4 @@ fido2>=1.1.1
 cryptography>=2.6,<45
 cbor2>=5.6.4
 certifi>=2024.2.0  # optional: improves TLS validation for metadata downloads
+gunicorn>=21.2,<22.0

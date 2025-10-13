@@ -83,6 +83,31 @@ pip install "fido2[pcsc]"
 
 ---
 
+## ☁️ Render Deployment (Classical Algorithms)
+
+The repository includes a `render.yaml` manifest that provisions a Python web service using
+only the classical FIDO2 dependencies. When creating the service on Render, point it at this
+repository and use the following settings:
+
+- **Build Command:**
+
+  ```bash
+  pip install --upgrade pip && pip install -r requirements.txt && pip install -e .
+  ```
+
+- **Start Command:**
+
+  ```bash
+  gunicorn server.server.app:app --bind 0.0.0.0:$PORT
+  ```
+
+The build command installs the classical WebAuthn runtime (Flask, python-fido2, cryptography,
+`cbor2`, etc.) without the optional PQC extras, while the start command serves the existing
+Flask application through `gunicorn` for production use. Render automatically injects the
+`$PORT` environment variable required by the platform.
+
+---
+
 ## 🔐 PQC Setup
 
 ### 1. Activate Your Python Virtual Environment
