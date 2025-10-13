@@ -18,10 +18,9 @@
                                 <!-- Registration Form -->
                                 <div id="registration-form" class="sub-tab-content active form-pane">
                                 <!-- User Identity Section -->
-                            <div class="expandable-section">
-                                <div class="section-header" onclick="toggleSection('user-identity')">
+                            <div class="static-section">
+                                <div class="section-header section-header--static expanded">
                                     <span>User Identity</span>
-                                    <span class="expand-icon">▼</span>
                                 </div>
                                 <div id="user-identity" class="section-content expanded">
                                     <div class="form-group">
@@ -549,10 +548,9 @@
                                 <!-- Authentication Form -->
                                 <div id="authentication-form" class="sub-tab-content form-pane">
                             <!-- Credential Selection Section -->
-                            <div class="expandable-section">
-                                <div class="section-header expanded" onclick="toggleSection('credential-selection')">
+                            <div class="static-section">
+                                <div class="section-header section-header--static expanded">
                                     <span>Credential Selection</span>
-                                    <span class="expand-icon rotated">▼</span>
                                 </div>
                                 <div id="credential-selection" class="section-content expanded">
                                     <div class="form-group">
@@ -834,10 +832,7 @@
                         <div class="json-editor-column">
                             <div class="column-card json-editor-card">
                                 <h3>JSON Editor</h3>
-                                <div id="json-editor-container" class="json-editor">
-                                    <button type="button" id="json-editor-expand" class="json-editor-expand-btn" title="Expand JSON editor" aria-label="Expand JSON editor" aria-expanded="false">
-                                        <span aria-hidden="true">⛶</span>
-                                    </button>
+                                <div id="json-editor-container" class="json-editor" aria-expanded="false">
                                     <textarea id="json-editor" placeholder="JSON representation will appear here automatically..." spellcheck="false" autocorrect="off" autocapitalize="off" autocomplete="off" data-gramm="false" data-gramm_editor="false" data-enable-grammarly="false"></textarea>
                                 </div>
                                 <div class="json-editor-buttons" style="margin-top: 0.5rem;">

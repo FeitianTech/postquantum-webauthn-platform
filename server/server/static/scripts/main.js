@@ -372,17 +372,24 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        const jsonEditorExpandButton = document.getElementById('json-editor-expand');
-        if (jsonEditorExpandButton) {
-            jsonEditorExpandButton.addEventListener('click', () => toggleJsonEditorExpansion());
-        }
-
         const jsonEditorOverlay = document.getElementById('json-editor-overlay');
         if (jsonEditorOverlay) {
             jsonEditorOverlay.addEventListener('click', () => toggleJsonEditorExpansion(true));
         }
 
         if (jsonEditorElement) {
+            jsonEditorElement.addEventListener('click', () => {
+                const container = document.getElementById('json-editor-container');
+                if (container && !container.classList.contains('expanded')) {
+                    toggleJsonEditorExpansion();
+                }
+            });
+            jsonEditorElement.addEventListener('focus', () => {
+                const container = document.getElementById('json-editor-container');
+                if (container && !container.classList.contains('expanded')) {
+                    toggleJsonEditorExpansion();
+                }
+            });
             jsonEditorElement.addEventListener('keydown', handleJsonEditorKeydown);
         }
 

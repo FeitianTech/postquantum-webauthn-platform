@@ -277,9 +277,8 @@ export function closeModal(modalId) {
 export function toggleJsonEditorExpansion(forceCollapse = false) {
     const container = document.getElementById('json-editor-container');
     const overlay = document.getElementById('json-editor-overlay');
-    const toggleButton = document.getElementById('json-editor-expand');
 
-    if (!container || !overlay || !toggleButton) {
+    if (!container || !overlay) {
         return;
     }
 
@@ -287,22 +286,19 @@ export function toggleJsonEditorExpansion(forceCollapse = false) {
 
     if (shouldExpand) {
         container.classList.add('expanded');
+        container.setAttribute('aria-expanded', 'true');
         overlay.classList.add('active');
-        toggleButton.innerHTML = '<span aria-hidden="true">✕</span>';
-        toggleButton.setAttribute('aria-label', 'Close expanded JSON editor');
-        toggleButton.setAttribute('title', 'Close expanded JSON editor');
-        toggleButton.setAttribute('aria-expanded', 'true');
         const editor = document.getElementById('json-editor');
         if (editor) {
             editor.scrollTop = 0;
+            if (typeof editor.focus === 'function') {
+                editor.focus();
+            }
         }
     } else {
         overlay.classList.remove('active');
         container.classList.remove('expanded');
-        toggleButton.innerHTML = '<span aria-hidden="true">⛶</span>';
-        toggleButton.setAttribute('aria-label', 'Expand JSON editor');
-        toggleButton.setAttribute('title', 'Expand JSON editor');
-        toggleButton.setAttribute('aria-expanded', 'false');
+        container.setAttribute('aria-expanded', 'false');
     }
 
     updateGlobalScrollLock();
