@@ -44,18 +44,19 @@ FROM python:3.11-slim AS runtime
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     LIBOQS_DIR=/opt/liboqs \
+    OQS_INSTALL_PATH=/opt/liboqs \
     OQS_DIST_BUILD=1 \
     LD_LIBRARY_PATH=/opt/liboqs/lib:/usr/local/lib
 
 RUN set -eux; \
     apt-get update; \
     apt-get install -y --no-install-recommends \
-        libssl3 git cmake build-essential; \
-    echo "/opt/liboqs/lib" > /etc/ld.so.conf.d/liboqs.conf; \
-    ldconfig; \
+        libssl3 git cmake build-essential libssl-dev; \
     rm -rf /var/lib/apt/lists/*
 
 COPY prebuilt_liboqs/linux-x86_64 /opt/liboqs
+RUN echo "/opt/liboqs/lib" > /etc/ld.so.conf.d/liboqs.conf && ldconfig
+
 COPY --from=python-builder /install /usr/local
 COPY server/server /app/server
 
@@ -63,7 +64,7 @@ WORKDIR /app
 
 RUN ls -l /opt/liboqs/lib && \
     ldd /opt/liboqs/lib/liboqs.so && \
-    python3 -c "import ctypes; ctypes.CDLL('/opt/liboqs/lib/liboqs.so'); print('✅ liboqs loaded successfully')" || true
+    python3 -c "import ctypes; ctypes.CDLL('/opt/liboqs/lib/liboqs.so'); print('liboqs loaded successfully')" || true
 
 ENV PYTHONPATH=/app:${PYTHONPATH}
 
