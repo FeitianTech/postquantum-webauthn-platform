@@ -35,7 +35,13 @@ host configuration.  The Flask demo is served via Gunicorn using the command
 
 `render.yaml` is already configured to build from the Dockerfile, so deploying this repo on Render
 will automatically compile liboqs/liboqs-python and start Gunicorn bound to the platform-provided
-port.
+port. When creating or updating the service in Render:
+
+1. Choose the **Docker** environment and point it at this repository.
+2. Leave the Build Command and Start Command fields empty so Render runs the Dockerfile directly.
+3. Confirm that the generated container image starts with `gunicorn --bind 0.0.0.0:${PORT:-8000}
+   server.app:app`, which exposes PQC-capable WebAuthn endpoints using the bundled `oqs`
+   dependency.
 
 A complete test suite for WebAuthn/FIDO2 registration and authentication with Post-Quantum Cryptography (PQC) support.
 It displays the selected algorithm, authenticator flags (UP/UV/AT/ED/BE/BS), sign counter, and extension results (credProps, PRF, largeBlob) for validation.  
