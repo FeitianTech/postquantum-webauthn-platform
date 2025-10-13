@@ -1,9 +1,8 @@
 # syntax=docker/dockerfile:1.7
 
-# Install Python dependencies with prebuilt liboqs available.
 FROM python:3.11-slim AS python-builder
 
-ARG LIBOQS_PYTHON_VERSION=0.9.2
+ARG LIBOQS_PYTHON_VERSION=main
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -20,7 +19,6 @@ RUN set -eux; \
     ; \
     rm -rf /var/lib/apt/lists/*
 
-# Copy the prebuilt liboqs
 COPY prebuilt_liboqs/linux-x86_64 /opt/liboqs
 ENV LD_LIBRARY_PATH=/opt/liboqs/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH} \
     LIBOQS_DIR=/opt/liboqs \
@@ -41,8 +39,6 @@ RUN pip install --prefix=/install --no-cache-dir .
 RUN pip install --prefix=/install --no-cache-dir ./server
 RUN pip install --prefix=/install --no-cache-dir gunicorn
 
-
-# Create the final runtime image with only what is needed to run the app.
 FROM python:3.11-slim AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -55,12 +51,11 @@ RUN set -eux; \
     ; \
     rm -rf /var/lib/apt/lists/*
 
-# Copy prebuilt liboqs for runtime use
 COPY prebuilt_liboqs/linux-x86_64 /opt/liboqs
 COPY --from=python-builder /install /usr/local
 
 WORKDIR /app
-COPY server/server/app/server
+COPY server/server /app/server
 
 ENV LD_LIBRARY_PATH=/opt/liboqs/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH} \
     LIBOQS_DIR=/opt/liboqs \
