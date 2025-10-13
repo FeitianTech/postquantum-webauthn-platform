@@ -74,16 +74,12 @@
     gap: 0.45rem;
     font-size: 0.95rem;
     color: #0d3555;
+    align-items: center;
 }
 
 .app-loader__percentage {
     font-weight: 700;
     letter-spacing: 0.02em;
-}
-
-.app-loader__metadata {
-    font-size: 0.92rem;
-    color: #10517d;
 }
 
 .app-loader--hidden {

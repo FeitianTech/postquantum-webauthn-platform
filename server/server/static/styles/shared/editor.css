@@ -245,8 +245,8 @@ select.form-control option {
     width: 18px;
     height: 18px;
     background-color: currentColor;
-    mask: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpath d='M21 12a9 9 0 1 0-2.64 6.36'/%3e%3cpolyline points='21 12 21 18 15 18'/%3e%3c/svg%3e");
-    -webkit-mask-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpath d='M21 12a9 9 0 1 0-2.64 6.36'/%3e%3cpolyline points='21 12 21 18 15 18'/%3e%3c/svg%3e");
+    mask: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20viewBox%3D%270%200%2024%2024%27%20fill%3D%27none%27%20stroke%3D%27%2523fff%27%20stroke-width%3D%272%27%20stroke-linecap%3D%27round%27%20stroke-linejoin%3D%27round%27%3E%3Cpolyline%20points%3D%2723%204%2023%2010%2017%2010%27/%3E%3Cpolyline%20points%3D%271%2020%201%2014%207%2014%27/%3E%3Cpath%20d%3D%27M20.49%2015a9%209%200%201%201-2.13-9.36L23%2010%27/%3E%3Cpath%20d%3D%27M3.51%209a9%209%200%200%201%202.13-9.36L1%204%27/%3E%3C/svg%3E");
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20viewBox%3D%270%200%2024%2024%27%20fill%3D%27none%27%20stroke%3D%27%2523fff%27%20stroke-width%3D%272%27%20stroke-linecap%3D%27round%27%20stroke-linejoin%3D%27round%27%3E%3Cpolyline%20points%3D%2723%204%2023%2010%2017%2010%27/%3E%3Cpolyline%20points%3D%271%2020%201%2014%207%2014%27/%3E%3Cpath%20d%3D%27M20.49%2015a9%209%200%201%201-2.13-9.36L23%2010%27/%3E%3Cpath%20d%3D%27M3.51%209a9%209%200%200%201%202.13-9.36L1%204%27/%3E%3C/svg%3E");
     mask-repeat: no-repeat;
     mask-position: center;
     mask-size: contain;
