@@ -730,11 +730,7 @@ def advanced_register_begin():
                     warning_message = (
                         f"Unsupported PQC algorithms were skipped ({missing_names})."
                     )
-            else:
-                warning_message = (
-                    "PQC algorithms are not supported by this server right now. "
-                    "Falling back to classical algorithms."
-                )
+
             warnings.append(warning_message)
 
             allowed_algorithm_ids = [
