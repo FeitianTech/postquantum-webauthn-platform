@@ -81,6 +81,48 @@ const KNOWN_HINT_VALUES = new Set(['client-device', 'hybrid', 'security-key']);
 
 const KNOWN_ALGORITHMS = new Set(Object.keys(COSE_ALGORITHM_LABELS).map(key => Number.parseInt(key, 10)));
 
+function normalizeKeyName(key) {
+    if (typeof key !== 'string') {
+        return '';
+    }
+    return key.trim().toLowerCase().replace(/[^a-z0-9]+/g, '');
+}
+
+function createNormalizedKeySet(keys) {
+    const normalized = new Set();
+    if (!keys) {
+        return normalized;
+    }
+    (keys instanceof Set ? Array.from(keys) : keys).forEach(key => {
+        const normalizedKey = normalizeKeyName(key);
+        if (normalizedKey) {
+            normalized.add(normalizedKey);
+        }
+    });
+    return normalized;
+}
+
+function shouldPreserveUnknownKey(key, normalizedKnownKeys) {
+    const normalizedKey = normalizeKeyName(key);
+    if (!normalizedKey) {
+        return false;
+    }
+    if (normalizedKnownKeys.has(normalizedKey)) {
+        return false;
+    }
+
+    for (const known of normalizedKnownKeys) {
+        if (normalizedKey.startsWith(known) && normalizedKey.length - known.length <= 8) {
+            return false;
+        }
+        if (normalizedKey.endsWith(known) && normalizedKey.length - known.length <= 8) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 function isPlainObject(value) {
     return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
@@ -400,8 +442,13 @@ function mergeKnownProperties(existingValue, latestValue, knownKeys) {
     }
     const result = { ...latest };
     const keySet = knownKeys instanceof Set ? knownKeys : new Set();
+    const normalizedKnown = createNormalizedKeySet(keySet);
     Object.keys(existingValue).forEach(key => {
-        if (!keySet.has(key) && !Object.prototype.hasOwnProperty.call(result, key)) {
+        if (
+            !keySet.has(key)
+            && !Object.prototype.hasOwnProperty.call(result, key)
+            && shouldPreserveUnknownKey(key, normalizedKnown)
+        ) {
             result[key] = existingValue[key];
         }
     });
@@ -419,9 +466,14 @@ function mergePublicKey(existingPublicKey, latestPublicKey, scope) {
     const managedTopLevelKeys = scope === 'authentication'
         ? KNOWN_AUTHENTICATION_PUBLIC_KEY_KEYS
         : KNOWN_REGISTRATION_PUBLIC_KEY_KEYS;
+    const normalizedManagedKeys = createNormalizedKeySet(managedTopLevelKeys);
 
     Object.keys(existing).forEach(key => {
-        if (!Object.prototype.hasOwnProperty.call(merged, key) && !managedTopLevelKeys.has(key)) {
+        if (
+            !Object.prototype.hasOwnProperty.call(merged, key)
+            && !managedTopLevelKeys.has(key)
+            && shouldPreserveUnknownKey(key, normalizedManagedKeys)
+        ) {
             merged[key] = existing[key];
         }
     });
@@ -479,6 +531,58 @@ function mergePublicKey(existingPublicKey, latestPublicKey, scope) {
     return merged;
 }
 
+function pruneUnsupportedProperties(mergedPublicKey, scope) {
+    if (!isPlainObject(mergedPublicKey)) {
+        return;
+    }
+
+    const validator = scope === 'authentication'
+        ? validateAuthenticationPublicKey
+        : validateRegistrationPublicKey;
+
+    const maxAttempts = 10;
+    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+        try {
+            validator({ ...mergedPublicKey });
+            return;
+        } catch (error) {
+            if (!(error instanceof Error)) {
+                throw error;
+            }
+            const unsupportedMatch = /(publicKey(?:\.[a-zA-Z0-9]+)*) contains unsupported properties: (.+)/.exec(error.message);
+            if (!unsupportedMatch) {
+                throw error;
+            }
+
+            const [, path, properties] = unsupportedMatch;
+            const propertyList = properties.split(',').map(prop => prop.trim()).filter(Boolean);
+            if (propertyList.length === 0) {
+                throw error;
+            }
+
+            const pathSegments = path.split('.').slice(1);
+            let container = mergedPublicKey;
+            for (const segment of pathSegments) {
+                if (!isPlainObject(container[segment])) {
+                    container = null;
+                    break;
+                }
+                container = container[segment];
+            }
+
+            if (!isPlainObject(container)) {
+                throw error;
+            }
+
+            propertyList.forEach(propertyName => {
+                if (Object.prototype.hasOwnProperty.call(container, propertyName)) {
+                    delete container[propertyName];
+                }
+            });
+        }
+    }
+}
+
 function buildOptionsForCurrentScope(scope) {
     if (scope === 'authentication') {
         return getCredentialRequestOptions();
@@ -499,6 +603,7 @@ function mergeParsedJsonWithForm(parsedRoot, scope) {
     Object.keys(latestOptions).forEach(key => {
         if (key === 'publicKey') {
             merged.publicKey = mergePublicKey(parsedRoot.publicKey, latestPublicKey, scope);
+            pruneUnsupportedProperties(merged.publicKey, scope);
         } else {
             merged[key] = latestOptions[key];
         }
