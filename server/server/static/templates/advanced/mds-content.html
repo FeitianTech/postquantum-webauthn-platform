@@ -1,4 +1,4 @@
-<div class="section mds-section">
+<div id="mds-list-section" class="section mds-section">
     <div class="mds-section-header">
         <div class="mds-section-title">
             <h2>FIDO MDS Authenticators</h2>
@@ -259,24 +259,26 @@
     </div>
 </div>
 
-<div id="mds-authenticator-modal" class="mds-modal" hidden aria-hidden="true">
-    <div class="mds-modal__dialog mds-modal__dialog--authenticator" role="dialog" aria-modal="true" aria-labelledby="mds-authenticator-modal-title">
-        <div class="mds-modal__header mds-modal__header--authenticator">
-            <div class="mds-modal__header-main">
-                <div class="mds-modal__heading">
-                    <h3 id="mds-authenticator-modal-title" class="mds-modal__title">Authenticator</h3>
-                    <p id="mds-authenticator-modal-subtitle" class="mds-modal__subtitle"></p>
-                </div>
-            </div>
-            <div class="mds-modal__header-actions">
-                <button type="button" id="mds-authenticator-modal-raw" class="mds-modal__action-button">
-                    Raw
-                </button>
-            </div>
-            <button type="button" id="mds-authenticator-modal-close" class="mds-modal__close" aria-label="Close">×</button>
+<div id="mds-authenticator-modal" class="mds-detail-page" hidden aria-hidden="true">
+    <div class="mds-detail-page__header">
+        <button
+            type="button"
+            id="mds-authenticator-modal-close"
+            class="mds-detail-page__back"
+            aria-label="Return to authenticator list"
+            title="Back"
+        >&larr;</button>
+        <div class="mds-detail-page__heading">
+            <h3 id="mds-authenticator-modal-title" class="mds-detail-page__title">Authenticator</h3>
+            <p id="mds-authenticator-modal-subtitle" class="mds-detail-page__subtitle"></p>
         </div>
-        <div id="mds-authenticator-modal-body" class="mds-modal__body mds-modal__body--authenticator">
-            <div id="mds-authenticator-modal-content" class="mds-detail mds-detail--modal"></div>
+        <div class="mds-detail-page__actions">
+            <button type="button" id="mds-authenticator-modal-raw" class="mds-detail-page__action">
+                Raw
+            </button>
         </div>
+    </div>
+    <div id="mds-authenticator-modal-body" class="mds-detail-page__body">
+        <div id="mds-authenticator-modal-content" class="mds-detail mds-detail--page"></div>
     </div>
 </div>

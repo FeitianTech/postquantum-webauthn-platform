@@ -210,7 +210,8 @@ export function updateGlobalScrollLock() {
     const overlayActive = document.getElementById('json-editor-overlay')?.classList.contains('active');
     const modalActive = document.querySelector('.modal.open');
     const mdsModalActive = document.querySelector('.mds-modal:not([hidden])');
-    const shouldLock = Boolean(overlayActive || modalActive || mdsModalActive);
+    const mdsDetailActive = document.querySelector('.mds-detail-page--open');
+    const shouldLock = Boolean(overlayActive || modalActive || mdsModalActive || mdsDetailActive);
 
     const targets = [document.body, document.documentElement].filter(Boolean);
     targets.forEach(target => {

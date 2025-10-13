@@ -53,10 +53,10 @@
 }
 
 .mds-modal__dialog--certificate {
-    width: min(80vw, 1100px);
-    max-width: 80vw;
-    height: min(80vh, 900px);
-    max-height: 80vh;
+    width: min(90vw, 1400px);
+    max-width: 90vw;
+    height: min(90vh, 960px);
+    max-height: 90vh;
 }
 
 .mds-modal__header {

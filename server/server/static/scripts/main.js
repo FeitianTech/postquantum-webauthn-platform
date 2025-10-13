@@ -55,7 +55,7 @@ import {
     clearCodec,
     toggleRawCodec,
     switchCodecMode
-} from './decoder/decoder.js';
+} from './decoder/codec.js';
 import {
     saveJsonEditor,
     resetJsonEditor,

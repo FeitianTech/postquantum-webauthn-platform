@@ -1128,6 +1128,7 @@ function initializeState(root) {
         });
     }
 
+    const listSection = root.querySelector('#mds-list-section');
     const certificateModal = root.querySelector('#mds-certificate-modal');
     const certificateClose = root.querySelector('#mds-certificate-modal-close');
     const certificateBody = root.querySelector('#mds-certificate-modal-body');
@@ -1147,13 +1148,6 @@ function initializeState(root) {
     const authenticatorClose = root.querySelector('#mds-authenticator-modal-close');
     if (authenticatorClose) {
         authenticatorClose.addEventListener('click', () => closeAuthenticatorModal());
-    }
-    if (authenticatorModal) {
-        authenticatorModal.addEventListener('click', event => {
-            if (event.target === authenticatorModal) {
-                closeAuthenticatorModal();
-            }
-        });
     }
     const authenticatorRawButton = root.querySelector('#mds-authenticator-modal-raw');
     if (authenticatorRawButton instanceof HTMLButtonElement) {
@@ -1183,6 +1177,8 @@ function initializeState(root) {
 
     const state = {
         root,
+        listSection,
+        listScrollTop: null,
         filters,
         filterInputs,
         dropdowns,
@@ -2297,7 +2293,7 @@ function showAuthenticatorDetail(entry, options = {}) {
 
     mdsState.activeDetailEntry = sourceEntry;
 
-    const { scrollIntoView = true } = options;
+    const { scrollIntoView = false } = options;
     if (scrollIntoView && key) {
         const row = findRowByKey(key);
         if (row) {
@@ -3304,8 +3300,45 @@ function openAuthenticatorRawWindow() {
 const RAW_TEXT_INDENT = '    ';
 
 function stringifyAuthenticatorRawData(value) {
-    const lines = buildAuthenticatorRawLines(value);
-    return lines.join('\n');
+    const seen = typeof WeakSet === 'function' ? new WeakSet() : null;
+    const replacer = (key, currentValue) => {
+        if (typeof currentValue === 'bigint') {
+            return currentValue.toString();
+        }
+        if (typeof Map !== 'undefined' && currentValue instanceof Map) {
+            return Object.fromEntries(currentValue);
+        }
+        if (typeof Set !== 'undefined' && currentValue instanceof Set) {
+            return Array.from(currentValue);
+        }
+        if (typeof ArrayBuffer !== 'undefined') {
+            if (currentValue instanceof ArrayBuffer) {
+                return Array.from(new Uint8Array(currentValue));
+            }
+            if (typeof ArrayBuffer.isView === 'function' && ArrayBuffer.isView(currentValue)) {
+                const view = new Uint8Array(
+                    currentValue.buffer,
+                    currentValue.byteOffset || 0,
+                    currentValue.byteLength || currentValue.length || 0,
+                );
+                return Array.from(view);
+            }
+        }
+        if (currentValue && typeof currentValue === 'object' && seen) {
+            if (seen.has(currentValue)) {
+                return '[Circular]';
+            }
+            seen.add(currentValue);
+        }
+        return currentValue;
+    };
+
+    try {
+        return JSON.stringify(value, replacer, 4);
+    } catch (error) {
+        const lines = buildAuthenticatorRawLines(value);
+        return lines.join('\n');
+    }
 }
 
 function buildAuthenticatorRawLines(value, depth = 0, label) {
@@ -3441,10 +3474,52 @@ function updateAuthenticatorRawButton(entry) {
     }
 }
 
+function suppressListSection(section) {
+    if (!section) {
+        return;
+    }
+    if (!('mdsDetailVisibility' in section.dataset)) {
+        section.dataset.mdsDetailVisibility = section.style.visibility || '';
+    }
+    if (!('mdsDetailPointerEvents' in section.dataset)) {
+        section.dataset.mdsDetailPointerEvents = section.style.pointerEvents || '';
+    }
+    if (!('mdsDetailUserSelect' in section.dataset)) {
+        section.dataset.mdsDetailUserSelect = section.style.userSelect || '';
+    }
+    section.setAttribute('aria-hidden', 'true');
+    section.style.visibility = 'hidden';
+    section.style.pointerEvents = 'none';
+    section.style.userSelect = 'none';
+}
+
+function restoreListSection(section) {
+    if (!section) {
+        return;
+    }
+    section.removeAttribute('aria-hidden');
+    const toCssProperty = name => name.replace(/[A-Z]/g, match => `-${match.toLowerCase()}`);
+    const apply = (property, key) => {
+        const value = section.dataset[key];
+        if (value !== undefined && value !== null && value !== '') {
+            section.style[property] = value;
+        } else {
+            section.style[property] = '';
+            section.style.removeProperty(toCssProperty(property));
+        }
+        delete section.dataset[key];
+    };
+    apply('visibility', 'mdsDetailVisibility');
+    apply('pointerEvents', 'mdsDetailPointerEvents');
+    apply('userSelect', 'mdsDetailUserSelect');
+}
+
 function openAuthenticatorModal(entry) {
     if (!mdsState?.authenticatorModal) {
         return;
     }
+
+    const modal = mdsState.authenticatorModal;
 
     if (entry) {
         mdsState.activeDetailEntry = entry;
@@ -3457,25 +3532,36 @@ function openAuthenticatorModal(entry) {
     applyDetailHeader(detailEntry, mdsState.authenticatorModalTitle, mdsState.authenticatorModalSubtitle);
     populateDetailContent(mdsState.authenticatorModalContent, detailEntry);
 
-    mdsState.authenticatorModal.classList.remove('is-closing');
-    mdsState.authenticatorModal.hidden = false;
-    mdsState.authenticatorModal.setAttribute('aria-hidden', 'false');
-    if (typeof requestAnimationFrame === 'function') {
-        requestAnimationFrame(() => {
-            if (mdsState?.authenticatorModal?.hidden) {
-                return;
-            }
-            mdsState.authenticatorModal.classList.add('is-open');
-        });
-    } else {
-        mdsState.authenticatorModal.classList.add('is-open');
+    let currentScroll = 0;
+    if (typeof window !== 'undefined') {
+        currentScroll =
+            window.pageYOffset ||
+            document.documentElement?.scrollTop ||
+            document.body?.scrollTop ||
+            0;
     }
-    resetScrollPositions(
-        mdsState.authenticatorModalBody,
-        mdsState.authenticatorModal,
-        mdsState.authenticatorModalContent,
-    );
-    notifyGlobalScrollLock();
+    mdsState.listScrollTop = currentScroll;
+
+    suppressListSection(mdsState.listSection);
+
+    modal.classList.remove('mds-detail-page--open');
+    modal.classList.remove('mds-detail-page--open');
+    modal.hidden = false;
+    modal.setAttribute('aria-hidden', 'false');
+    const activateModal = () => {
+        if (modal.hidden) {
+            return;
+        }
+        modal.classList.add('mds-detail-page--open');
+        notifyGlobalScrollLock();
+    };
+    if (typeof requestAnimationFrame === 'function') {
+        requestAnimationFrame(activateModal);
+    } else {
+        activateModal();
+    }
+
+    resetScrollPositions(mdsState.authenticatorModalBody, modal, mdsState.authenticatorModalContent);
 
     const focusTarget = mdsState.authenticatorModalClose instanceof HTMLElement
         ? mdsState.authenticatorModalClose
@@ -3494,53 +3580,34 @@ function closeAuthenticatorModal() {
 
     const modal = mdsState.authenticatorModal;
 
-    let completed = false;
-    let fallbackTimeout;
+    if (modal.hidden) {
+        return;
+    }
+
+    const previousScroll =
+        typeof mdsState.listScrollTop === 'number' ? mdsState.listScrollTop : null;
+
     const finishClose = () => {
-        if (completed) {
-            return;
-        }
-        completed = true;
-        if (fallbackTimeout) {
-            clearTimeout(fallbackTimeout);
-            fallbackTimeout = undefined;
-        }
-        modal.classList.remove('is-open');
-        modal.classList.remove('is-closing');
+        modal.classList.remove('mds-detail-page--open');
         modal.hidden = true;
         modal.setAttribute('aria-hidden', 'true');
-        resetScrollPositions(
-            mdsState.authenticatorModalBody,
-            mdsState.authenticatorModal,
-            mdsState.authenticatorModalContent,
-        );
+
+        restoreListSection(mdsState.listSection);
+
+        resetScrollPositions(mdsState.authenticatorModalBody, modal, mdsState.authenticatorModalContent);
         notifyGlobalScrollLock();
         mdsState.activeDetailEntry = null;
         updateAuthenticatorRawButton(null);
         scheduleScrollTopButtonUpdate();
-    };
-
-    if (!modal.classList.contains('is-open')) {
-        finishClose();
-        return;
-    }
-
-    modal.classList.remove('is-open');
-    modal.classList.add('is-closing');
-
-    const handleTransitionEnd = event => {
-        if (event.target !== modal || event.propertyName !== 'opacity') {
-            return;
+        if (previousScroll !== null && typeof window !== 'undefined') {
+            requestAnimationFrame(() => {
+                window.scrollTo(0, previousScroll);
+            });
         }
-        modal.removeEventListener('transitionend', handleTransitionEnd);
-        finishClose();
+        mdsState.listScrollTop = null;
     };
 
-    modal.addEventListener('transitionend', handleTransitionEnd);
-    fallbackTimeout = setTimeout(() => {
-        modal.removeEventListener('transitionend', handleTransitionEnd);
-        finishClose();
-    }, 280);
+    finishClose();
 }
 
 async function resolveEntryByAaguid(aaguid) {
