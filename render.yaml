@@ -6,5 +6,7 @@ services:
     dockerfilePath: ./Dockerfile
     dockerContext: .
     autoDeploy: true
-    # If your account cannot use the Docker runtime yet, set the build/start commands
-    # to ./render-build.sh and ./render-start.sh in the Render dashboard instead.
+    # Ensure the Render service itself is created with the Docker runtime; otherwise the
+    # platform will attempt to run `docker build` inside the Python environment and fail.
+    # If Docker is unavailable for your account, fall back to ./render-build.sh and
+    # ./render-start.sh via the Render dashboard.

@@ -41,8 +41,25 @@ system image. The sustainable approach is therefore to migrate the service to Re
 runtime, letting the platform build the provided Dockerfile rather than invoking `pip` inside the
 Python sandbox.
 
-The migration plan is purely procedural—no additional Render YAML or scripts are required beyond
-the existing Dockerfile:
+==== Migrate the existing service to the Docker runtime
+
+If the service was originally provisioned as a Python app, update it before the next deploy:
+
+1. In the Render dashboard open the service, choose **Settings → Environment**, and change the
+   runtime to **Docker**. Render may require recreating the service under the Docker runtime; if so,
+   create a new Web Service, select Docker as the environment, and point it at this repository.
+2. Confirm the generated configuration matches the supplied `render.yaml`, in particular the
+   `env: docker` stanza and the use of the root `Dockerfile` as the build source. Leaving the build
+   and start commands blank tells Render to execute the Dockerfile natively instead of trying to run
+   `docker build` inside the Python runtime.
+3. Trigger a fresh deploy. The build logs should now show Docker stages (base image pulls, liboqs
+   compilation, dependency installs) rather than the Python runtime banner (`Using Python version
+   …`).
+
+==== Conceptual image composition
+
+With the runtime switched, the migration plan is purely procedural—no additional Render YAML or
+scripts are required beyond the existing Dockerfile:
 
 1. **Create a Docker service in Render.** When creating the service choose the Docker runtime, point
    the build context at this repository, and allow Render to clone it directly. Seeing cloning logs
