@@ -9,7 +9,9 @@ demo is PQC-ready without any host-level setup.
 
 The repository now contains a multi-stage `Dockerfile` that builds liboqs from source, compiles the
 matching `liboqs-python` bindings, and runs the Flask demo with Gunicorn.  This container is
-self-contained and works on Render or any other Docker-capable platform.
+self-contained and works on Render or any other Docker-capable platform.  The liboqs stage disables
+tests/docs/examples and forces single-threaded builds so it fits comfortably within the memory
+budget of smaller Render instances.
 
 === Build the image
 

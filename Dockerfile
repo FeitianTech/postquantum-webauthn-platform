@@ -6,6 +6,10 @@ FROM python:3.11-slim AS liboqs-builder
 ARG LIBOQS_VERSION=0.9.2
 WORKDIR /tmp/liboqs
 
+# Constrain the build to a single thread to lower memory pressure on
+# resource-constrained builders (e.g., Render free tiers).
+ENV CMAKE_BUILD_PARALLEL_LEVEL=1
+
 RUN set -eux; \
     apt-get update; \
     apt-get install -y --no-install-recommends \
@@ -19,14 +23,15 @@ RUN set -eux; \
 
 RUN git clone --depth 1 --branch "${LIBOQS_VERSION}" https://github.com/open-quantum-safe/liboqs.git .
 
+# OQS_BUILD_ONLY_LIB disables tests, docs, and example targets so the build
+# stays lightweight in constrained environments.
 RUN set -eux; \
     cmake -S . -B build -GNinja \
         -DCMAKE_BUILD_TYPE=Release \
         -DCMAKE_INSTALL_PREFIX=/opt/liboqs \
         -DBUILD_SHARED_LIBS=ON \
         -DOQS_BUILD_ONLY_LIB=ON; \
-    cmake --build build --target install; \
-    cmake --build build --target clean
+    cmake --build build --target install --parallel 1
 
 
 # Stage 2: install Python dependencies (including PQC extras) with liboqs available.
@@ -35,7 +40,8 @@ FROM python:3.11-slim AS python-builder
 ARG LIBOQS_PYTHON_VERSION=0.9.2
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
+    PYTHONUNBUFFERED=1 \
+    CMAKE_BUILD_PARALLEL_LEVEL=1
 
 RUN set -eux; \
     apt-get update; \
