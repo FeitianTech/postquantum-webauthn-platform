@@ -32,6 +32,8 @@ RUN set -eux; \
 # Stage 2: install Python dependencies (including PQC extras) with liboqs available.
 FROM python:3.11-slim AS python-builder
 
+ARG LIBOQS_PYTHON_VERSION=0.9.2
+
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
@@ -39,7 +41,10 @@ RUN set -eux; \
     apt-get update; \
     apt-get install -y --no-install-recommends \
         build-essential \
+        cmake \
+        git \
         libssl-dev \
+        ninja-build \
     ; \
     rm -rf /var/lib/apt/lists/*
 
@@ -56,9 +61,11 @@ COPY COPYING COPYING.APLv2 COPYING.MPLv2 ./
 COPY fido2 ./fido2
 COPY server ./server
 
-RUN pip install --upgrade pip
+RUN pip install --upgrade pip setuptools wheel
 RUN pip install --prefix=/install --no-cache-dir \
-    '.[pqc]'
+    "oqs @ git+https://github.com/open-quantum-safe/liboqs-python@${LIBOQS_PYTHON_VERSION}" \
+    pqcrypto
+RUN pip install --prefix=/install --no-cache-dir .
 RUN pip install --prefix=/install --no-cache-dir ./server
 RUN pip install --prefix=/install --no-cache-dir gunicorn
 

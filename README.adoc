@@ -2,13 +2,14 @@
 
 **Deployed Web Service:**  https://python-fido2-webauthn-test.onrender.com
 
-**Note:** PQC support requires setting up locally and have the liboqs library installed and running.
+**Note:** The Docker image in this repo builds `liboqs` and its Python bindings from source so the
+demo is PQC-ready without any host-level setup.
 
 == 🚢 Containerised deployment
 
-The repository now contains a multi-stage `Dockerfile` that builds liboqs from source, installs the
-`oqs` Python bindings, and runs the Flask demo with Gunicorn.  This container is self-contained and
-works on Render or any other Docker-capable platform.
+The repository now contains a multi-stage `Dockerfile` that builds liboqs from source, compiles the
+matching `liboqs-python` bindings, and runs the Flask demo with Gunicorn.  This container is
+self-contained and works on Render or any other Docker-capable platform.
 
 === Build the image
 
@@ -27,7 +28,14 @@ docker run --rm -p 8000:8000 webauthn-pqc
 The container uses the `PORT` environment variable when supplied by a hosting service, defaulting to
 `8000` for local testing.  liboqs is installed under `/opt/liboqs` and made available to the
 `oqs` Python package automatically, so Post-Quantum algorithms can be exercised without any manual
-host configuration.
+host configuration.  The Flask demo is served via Gunicorn using the command
+`gunicorn --bind 0.0.0.0:${PORT:-8000} server.app:app`.
+
+=== Deploying on Render
+
+`render.yaml` is already configured to build from the Dockerfile, so deploying this repo on Render
+will automatically compile liboqs/liboqs-python and start Gunicorn bound to the platform-provided
+port.
 
 A complete test suite for WebAuthn/FIDO2 registration and authentication with Post-Quantum Cryptography (PQC) support.
 It displays the selected algorithm, authenticator flags (UP/UV/AT/ED/BE/BS), sign counter, and extension results (credProps, PRF, largeBlob) for validation.  
