@@ -10,33 +10,6 @@ import {
 import { getCredentialIdHex, getStoredCredentialAttachment } from './credential-utils.js';
 import { showStatus } from '../shared/status.js';
 import { updateJsonEditor } from './json-editor.js';
-import { renderFakeExcludeCredentialList, renderFakeAllowCredentialList } from './exclude-credentials.js';
-
-export function changeBinaryFormat() {
-    const newFormat = getCurrentBinaryFormat();
-    const oldFormat = window.currentBinaryFormat || 'hex';
-
-    const fieldIds = [
-        'user-id', 'challenge-reg', 'challenge-auth',
-        'prf-eval-first-reg', 'prf-eval-second-reg',
-        'prf-eval-first-auth', 'prf-eval-second-auth',
-        'large-blob-write'
-    ];
-
-    fieldIds.forEach(fieldId => {
-        const input = document.getElementById(fieldId);
-        if (input && input.value) {
-            const convertedValue = convertFormat(input.value, oldFormat, newFormat);
-            input.value = convertedValue;
-        }
-    });
-
-    updateFieldLabels(newFormat);
-    updateJsonEditor();
-    window.currentBinaryFormat = newFormat;
-    renderFakeExcludeCredentialList();
-    renderFakeAllowCredentialList();
-}
 
 function credentialSupportsLargeBlob(cred) {
     if (!cred || typeof cred !== 'object') {
@@ -107,7 +80,8 @@ function findStoredCredentialByHex(hexValue) {
     }) || null;
 }
 
-export function updateFieldLabels(format) {
+export function updateFieldLabels() {
+    const format = 'hex';
     const labelMappings = [
         { id: 'user-id', text: `User ID (${format})` },
         { id: 'challenge-reg', text: `Challenge (${format})` },

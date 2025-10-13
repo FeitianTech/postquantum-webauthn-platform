@@ -18,17 +18,20 @@
                                 <!-- Registration Form -->
                                 <div id="registration-form" class="sub-tab-content active form-pane">
                                 <!-- User Identity Section -->
-                            <div class="expandable-section">
-                                <div class="section-header" onclick="toggleSection('user-identity')">
+                            <div class="static-section">
+                                <div class="section-header section-header--static expanded">
                                     <span>User Identity</span>
-                                    <span class="expand-icon">▼</span>
                                 </div>
                                 <div id="user-identity" class="section-content expanded">
                                     <div class="form-group">
                                         <label for="user-id">User ID (hex)</label>
                                         <div class="input-with-button">
                                             <input type="text" id="user-id" class="form-control" placeholder="Auto-generated hex value">
-                                            <button class="btn btn-small refresh-icon" onclick="randomizeUserIdentity()" title="Generate a new random User ID and username" aria-label="Generate a new random User ID and username"></button>
+                                            <button class="btn btn-small refresh-icon" onclick="randomizeUserIdentity()" title="Generate a new random User ID and username" aria-label="Generate a new random User ID and username">
+                                                <svg class="icon-refresh" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                                    <circle cx="12" cy="12" r="8.25" />
+                                                </svg>
+                                            </button>
                                         </div>
                                         <div id="user-id-error" class="error-message">Invalid hex value (1-64 bytes required)</div>
                                     </div>
@@ -208,7 +211,11 @@
                                         </div>
                                         <div class="input-with-button">
                                             <input type="text" id="challenge-reg" class="form-control" placeholder="Auto-generated hex value">
-                                            <button class="btn btn-small refresh-icon" onclick="randomizeChallenge('reg')" title="Generate new random challenge"></button>
+                                            <button class="btn btn-small refresh-icon" onclick="randomizeChallenge('reg')" title="Generate new random challenge">
+                                                <svg class="icon-refresh" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                                    <circle cx="12" cy="12" r="8.25" />
+                                                </svg>
+                                            </button>
                                         </div>
                                         <div id="challenge-reg-error" class="error-message">Invalid hex value (minimum 16 bytes required)</div>
                                     </div>
@@ -510,7 +517,11 @@
                                         </div>
                                         <div class="input-with-button">
                                             <input type="text" id="prf-eval-first-reg" class="form-control" placeholder="Hex value">
-                                            <button class="btn btn-small refresh-icon" onclick="randomizePrfEval('first', 'reg')" title="Generate random PRF evaluation data"></button>
+                                            <button class="btn btn-small refresh-icon" onclick="randomizePrfEval('first', 'reg')" title="Generate random PRF evaluation data">
+                                                <svg class="icon-refresh" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                                    <circle cx="12" cy="12" r="8.25" />
+                                                </svg>
+                                            </button>
                                         </div>
                                         <div id="prf-eval-first-reg-error" class="error-message">Invalid hex value (exactly 32 bytes required)</div>
                                     </div>
@@ -533,7 +544,11 @@
                                         </div>
                                         <div class="input-with-button">
                                             <input type="text" id="prf-eval-second-reg" class="form-control" placeholder="Hex value" disabled>
-                                            <button class="btn btn-small refresh-icon" onclick="randomizePrfEval('second', 'reg')" disabled title="Generate random PRF evaluation data"></button>
+                                            <button class="btn btn-small refresh-icon" onclick="randomizePrfEval('second', 'reg')" disabled title="Generate random PRF evaluation data">
+                                                <svg class="icon-refresh" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                                    <circle cx="12" cy="12" r="8.25" />
+                                                </svg>
+                                            </button>
                                         </div>
                                         <div id="prf-eval-second-reg-error" class="error-message">Invalid hex value (exactly 32 bytes required)</div>
                                     </div>
@@ -549,10 +564,9 @@
                                 <!-- Authentication Form -->
                                 <div id="authentication-form" class="sub-tab-content form-pane">
                             <!-- Credential Selection Section -->
-                            <div class="expandable-section">
-                                <div class="section-header expanded" onclick="toggleSection('credential-selection')">
+                            <div class="static-section">
+                                <div class="section-header section-header--static expanded">
                                     <span>Credential Selection</span>
-                                    <span class="expand-icon rotated">▼</span>
                                 </div>
                                 <div id="credential-selection" class="section-content expanded">
                                     <div class="form-group">
@@ -652,7 +666,11 @@
                                         </div>
                                         <div class="input-with-button">
                                             <input type="text" id="challenge-auth" class="form-control" placeholder="Auto-generated hex value">
-                                            <button class="btn btn-small refresh-icon" onclick="randomizeChallenge('auth')" title="Generate new random challenge"></button>
+                                            <button class="btn btn-small refresh-icon" onclick="randomizeChallenge('auth')" title="Generate new random challenge">
+                                                <svg class="icon-refresh" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                                    <circle cx="12" cy="12" r="8.25" />
+                                                </svg>
+                                            </button>
                                         </div>
                                         <div id="challenge-auth-error" class="error-message">Invalid hex value (minimum 16 bytes required)</div>
                                     </div>
@@ -768,7 +786,11 @@
                                         </div>
                                         <div class="input-with-button">
                                             <input type="text" id="large-blob-write" class="form-control" placeholder="Hex value" disabled>
-                                            <button class="btn btn-small refresh-icon" onclick="randomizeLargeBlobWrite()" disabled title="Generate random large blob data"></button>
+                                            <button class="btn btn-small refresh-icon" onclick="randomizeLargeBlobWrite()" disabled title="Generate random large blob data">
+                                                <svg class="icon-refresh" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                                    <circle cx="12" cy="12" r="8.25" />
+                                                </svg>
+                                            </button>
                                         </div>
                                         <div id="large-blob-write-error" class="error-message">Invalid hex value</div>
                                     </div>
@@ -791,7 +813,11 @@
                                         </div>
                                         <div class="input-with-button">
                                             <input type="text" id="prf-eval-first-auth" class="form-control" placeholder="Hex value">
-                                            <button class="btn btn-small refresh-icon" onclick="randomizePrfEval('first', 'auth')" title="Generate random PRF evaluation data"></button>
+                                            <button class="btn btn-small refresh-icon" onclick="randomizePrfEval('first', 'auth')" title="Generate random PRF evaluation data">
+                                                <svg class="icon-refresh" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                                    <circle cx="12" cy="12" r="8.25" />
+                                                </svg>
+                                            </button>
                                         </div>
                                         <div id="prf-eval-first-auth-error" class="error-message">Invalid hex value (exactly 32 bytes required)</div>
                                         <div id="prf-capability-message" class="error-message info-hint" style="display: none;">Selected credential does not support the prf extension.</div>
@@ -815,7 +841,11 @@
                                         </div>
                                         <div class="input-with-button">
                                             <input type="text" id="prf-eval-second-auth" class="form-control" placeholder="Hex value" disabled>
-                                            <button class="btn btn-small refresh-icon" onclick="randomizePrfEval('second', 'auth')" disabled title="Generate random PRF evaluation data"></button>
+                                            <button class="btn btn-small refresh-icon" onclick="randomizePrfEval('second', 'auth')" disabled title="Generate random PRF evaluation data">
+                                                <svg class="icon-refresh" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                                    <circle cx="12" cy="12" r="8.25" />
+                                                </svg>
+                                            </button>
                                         </div>
                                         <div id="prf-eval-second-auth-error" class="error-message">Invalid hex value (exactly 32 bytes required)</div>
                                     </div>
@@ -834,9 +864,9 @@
                         <div class="json-editor-column">
                             <div class="column-card json-editor-card">
                                 <h3>JSON Editor</h3>
-                                <div id="json-editor-container" class="json-editor">
-                                    <button type="button" id="json-editor-expand" class="json-editor-expand-btn" title="Expand JSON editor" aria-label="Expand JSON editor" aria-expanded="false">
-                                        <span aria-hidden="true">⛶</span>
+                                <div id="json-editor-container" class="json-editor" aria-expanded="false">
+                                    <button type="button" id="json-editor-close" class="json-editor-close-btn" title="Close JSON editor" aria-label="Close JSON editor" aria-hidden="true">
+                                        <span aria-hidden="true">&times;</span>
                                     </button>
                                     <textarea id="json-editor" placeholder="JSON representation will appear here automatically..." spellcheck="false" autocorrect="off" autocapitalize="off" autocomplete="off" data-gramm="false" data-gramm_editor="false" data-enable-grammarly="false"></textarea>
                                 </div>
@@ -850,15 +880,6 @@
                         <!-- Right Column: Credentials Panel -->
                         <div class="credentials-column">
                             <div class="column-card credentials-card">
-                                <div class="form-group" style="margin-bottom: 1rem;">
-                                    <label for="binary-format" class="form-section-title">Binary Format</label>
-                                    <select id="binary-format" class="form-control" onchange="changeBinaryFormat()">
-                                        <option value="hex">hex</option>
-                                        <option value="b64">b64</option>
-                                        <option value="b64u">b64u</option>
-                                        <option value="js">js</option>
-                                    </select>
-                                </div>
                                 <div class="credentials-panel-header">
                                     <h3 class="credentials-panel-title">Saved Credentials</h3>
                                     <button id="clear-credentials" class="btn btn-small btn-danger" onclick="clearAllCredentials()">Clear All</button>

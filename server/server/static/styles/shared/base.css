@@ -173,6 +173,18 @@ body.modal-open {
     animation: fadeInSoft 320ms ease;
 }
 
+#advanced-tab,
+#codec-tab {
+    overflow: visible;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+#advanced-tab::-webkit-scrollbar,
+#codec-tab::-webkit-scrollbar {
+    display: none;
+}
+
 .section {
     margin-bottom: 2rem;
 }

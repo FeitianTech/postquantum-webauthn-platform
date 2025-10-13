@@ -41,6 +41,80 @@ import { checkLargeBlobCapability, updateAuthenticationExtensionAvailability } f
 import { collectSelectedHints, deriveAllowedAttachmentsFromHints } from './hints.js';
 import { ATTACHMENT_LABELS } from './constants.js';
 
+function normaliseAlgorithmIdentifier(value) {
+    if (value === null || value === undefined) {
+        return null;
+    }
+
+    if (typeof value === 'number' && Number.isFinite(value)) {
+        return value;
+    }
+
+    if (typeof value === 'string') {
+        const trimmed = value.trim();
+        if (!trimmed) {
+            return null;
+        }
+
+        const direct = Number.parseInt(trimmed, 10);
+        if (!Number.isNaN(direct) && Number.isFinite(direct)) {
+            return direct;
+        }
+
+        const matches = trimmed.match(/-?\d+/g);
+        if (matches && matches.length) {
+            for (let i = matches.length - 1; i >= 0; i -= 1) {
+                const candidate = Number.parseInt(matches[i], 10);
+                if (!Number.isNaN(candidate) && Number.isFinite(candidate)) {
+                    return candidate;
+                }
+            }
+        }
+    }
+
+    return null;
+}
+
+function resolveCredentialAlgorithmIdentifier(credential) {
+    if (!credential || typeof credential !== 'object') {
+        return null;
+    }
+
+    const candidates = [
+        credential.publicKeyAlgorithm,
+        credential.algorithm,
+        credential.coseAlgorithm,
+        credential.cose_alg,
+    ];
+
+    for (const candidate of candidates) {
+        const normalized = normaliseAlgorithmIdentifier(candidate);
+        if (normalized !== null) {
+            return normalized;
+        }
+    }
+
+    const coseMap = credential.publicKeyCose;
+    if (coseMap && typeof coseMap === 'object') {
+        const raw = coseMap[3] ?? coseMap['3'];
+        const normalized = normaliseAlgorithmIdentifier(raw);
+        if (normalized !== null) {
+            return normalized;
+        }
+    }
+
+    return null;
+}
+
+function describeCredentialAlgorithm(credential) {
+    const identifier = resolveCredentialAlgorithmIdentifier(credential);
+    if (identifier !== null) {
+        return describeCoseAlgorithm(identifier);
+    }
+    const fallback = credential?.publicKeyAlgorithm ?? credential?.algorithm;
+    return describeCoseAlgorithm(fallback);
+}
+
 function appendKeyValueLines(output, value, indentLevel = 0) {
     if (value === null || value === undefined) {
         return;
@@ -1869,8 +1943,7 @@ export function updateAllowCredentialsDropdown() {
             }
 
             const credName = cred.userName || cred.email || `Credential ${index + 1}`;
-            const algorithmValue = cred.publicKeyAlgorithm ?? cred.algorithm;
-            const algorithmLabel = describeCoseAlgorithm(algorithmValue) || 'Unknown';
+            const algorithmLabel = describeCredentialAlgorithm(cred);
             const attachmentLabel = attachmentValue
                 ? (ATTACHMENT_LABELS[attachmentValue] || attachmentValue)
                 : '';
@@ -1951,8 +2024,8 @@ export function updateCredentialsDisplay() {
         if (cred.largeBlob === true || cred.largeBlobSupported === true) {
             features.push('largeBlob');
         }
-        const algorithmValue = cred.publicKeyAlgorithm ?? cred.algorithm;
-        if (describeMldsaParameterSet(algorithmValue)) {
+        const algorithmIdentifier = resolveCredentialAlgorithmIdentifier(cred);
+        if (describeMldsaParameterSet(algorithmIdentifier)) {
             features.push('PQC');
         }
 
@@ -2711,25 +2784,14 @@ export async function showCredentialDetails(index) {
 
     if (cred.publicKeyAlgorithm !== undefined || cred.algorithm !== undefined || (cred.publicKeyCose && Object.keys(cred.publicKeyCose).length > 0)) {
         const coseMap = cred.publicKeyCose || {};
-        let algo = cred.publicKeyAlgorithm;
-        if (algo === undefined || algo === null) {
-            algo = cred.algorithm;
-        }
-        if (typeof algo === 'string' && algo.trim().toLowerCase() === 'unknown') {
-            const coseValue = getCoseMapValue(coseMap, 3);
-            if (coseValue !== undefined) {
-                algo = coseValue;
-            }
-        }
-        if (algo === undefined || algo === null) {
-            algo = getCoseMapValue(coseMap, 3);
-        }
-        const algorithmName = describeCoseAlgorithm(algo);
+        const resolvedAlgorithm = resolveCredentialAlgorithmIdentifier(cred);
+        const fallbackAlgorithm = resolvedAlgorithm !== null ? resolvedAlgorithm : getCoseMapValue(coseMap, 3);
+        const algorithmName = describeCoseAlgorithm(fallbackAlgorithm);
         const coseKeyTypeValue = cred.publicKeyType ?? getCoseMapValue(coseMap, 1);
         const coseKeyTypeLine = coseKeyTypeValue !== undefined && coseKeyTypeValue !== null
             ? `<div><strong>COSE key type:</strong> ${describeCoseKeyType(coseKeyTypeValue)}</div>`
             : '';
-        const parameterSet = describeMldsaParameterSet(algo);
+        const parameterSet = describeMldsaParameterSet(fallbackAlgorithm);
 
         const parameterSetLine = parameterSet
             ? `<div><strong>ML-DSA parameter set:</strong> ${parameterSet}</div>`
@@ -2991,7 +3053,7 @@ export function updateCredentialsList() {
 }
 
 export function generateCredentialDetails(cred) {
-    const algorithmDisplay = describeCoseAlgorithm(cred.algorithm);
+    const algorithmDisplay = describeCredentialAlgorithm(cred);
     if (cred.type === 'simple') {
         return `
             <strong>Type:</strong> Simple Authentication<br>

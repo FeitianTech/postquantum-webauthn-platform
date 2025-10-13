@@ -24,7 +24,6 @@ import {
     closeModal
 } from './shared/ui.js';
 import {
-    changeBinaryFormat,
     updateFieldLabels,
     randomizeChallenge,
     randomizePrfEval,
@@ -120,7 +119,6 @@ window.clearDecoder = clearCodec;
 window.toggleRawDecoder = toggleRawCodec;
 window.closeModal = closeModal;
 window.switchCodecMode = switchCodecMode;
-window.changeBinaryFormat = changeBinaryFormat;
 window.saveJsonEditor = saveJsonEditor;
 window.resetJsonEditor = resetJsonEditor;
 window.showCredentialDetails = showCredentialDetails;
@@ -139,8 +137,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeLoader();
     loaderSetPhase('Preparing application…', { progress: 8 });
 
-    window.currentBinaryFormat = 'hex';
-    updateFieldLabels('hex');
+    updateFieldLabels();
 
     const jsonEditorElement = document.getElementById('json-editor');
     if (jsonEditorElement) {
@@ -372,18 +369,25 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        const jsonEditorExpandButton = document.getElementById('json-editor-expand');
-        if (jsonEditorExpandButton) {
-            jsonEditorExpandButton.addEventListener('click', () => toggleJsonEditorExpansion());
-        }
-
-        const jsonEditorOverlay = document.getElementById('json-editor-overlay');
-        if (jsonEditorOverlay) {
-            jsonEditorOverlay.addEventListener('click', () => toggleJsonEditorExpansion(true));
-        }
-
         if (jsonEditorElement) {
+            jsonEditorElement.addEventListener('click', () => {
+                const container = document.getElementById('json-editor-container');
+                if (container && !container.classList.contains('expanded')) {
+                    toggleJsonEditorExpansion();
+                }
+            });
+            jsonEditorElement.addEventListener('focus', () => {
+                const container = document.getElementById('json-editor-container');
+                if (container && !container.classList.contains('expanded')) {
+                    toggleJsonEditorExpansion();
+                }
+            });
             jsonEditorElement.addEventListener('keydown', handleJsonEditorKeydown);
+        }
+
+        const jsonEditorCloseButton = document.getElementById('json-editor-close');
+        if (jsonEditorCloseButton) {
+            jsonEditorCloseButton.addEventListener('click', () => toggleJsonEditorExpansion(true));
         }
 
         document.addEventListener('keydown', (event) => {

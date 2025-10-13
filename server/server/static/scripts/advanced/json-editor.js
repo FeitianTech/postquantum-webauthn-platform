@@ -23,17 +23,594 @@ import {
     getStoredCredentialAttachment,
     extractHexFromJsonFormat
 } from './credential-utils.js';
-import {
-    showStatus,
-    hideStatus
-} from '../shared/status.js';
+import { showStatus } from '../shared/status.js';
 import {
     getFakeExcludeCredentials,
     getFakeAllowCredentials,
     setFakeExcludeCredentials
 } from './exclude-credentials.js';
+import { COSE_ALGORITHM_LABELS } from './constants.js';
 
 registerHintsChangeCallback(() => updateJsonEditor());
+
+const KNOWN_REGISTRATION_PUBLIC_KEY_KEYS = new Set([
+    'rp',
+    'user',
+    'challenge',
+    'pubKeyCredParams',
+    'timeout',
+    'authenticatorSelection',
+    'attestation',
+    'extensions',
+    'excludeCredentials',
+    'hints',
+]);
+
+const KNOWN_AUTHENTICATION_PUBLIC_KEY_KEYS = new Set([
+    'challenge',
+    'timeout',
+    'rpId',
+    'allowCredentials',
+    'userVerification',
+    'extensions',
+    'hints',
+]);
+
+const KNOWN_RP_KEYS = new Set(['name', 'id']);
+const KNOWN_USER_KEYS = new Set(['id', 'name', 'displayName']);
+const KNOWN_AUTH_SELECTION_KEYS = new Set([
+    'authenticatorAttachment',
+    'residentKey',
+    'requireResidentKey',
+    'userVerification',
+]);
+const KNOWN_REGISTRATION_EXTENSION_KEYS = new Set([
+    'credProps',
+    'minPinLength',
+    'credentialProtectionPolicy',
+    'enforceCredentialProtectionPolicy',
+    'largeBlob',
+    'prf',
+]);
+const KNOWN_AUTHENTICATION_EXTENSION_KEYS = new Set(['largeBlob', 'prf']);
+const KNOWN_LARGE_BLOB_REG_KEYS = new Set(['support']);
+const KNOWN_LARGE_BLOB_AUTH_KEYS = new Set(['read', 'write']);
+const KNOWN_PRF_KEYS = new Set(['eval']);
+const KNOWN_PRF_EVAL_KEYS = new Set(['first', 'second']);
+const KNOWN_HINT_VALUES = new Set(['client-device', 'hybrid', 'security-key']);
+
+const KNOWN_ALGORITHMS = new Set(Object.keys(COSE_ALGORITHM_LABELS).map(key => Number.parseInt(key, 10)));
+
+function normalizeKeyName(key) {
+    if (typeof key !== 'string') {
+        return '';
+    }
+    return key.trim().toLowerCase().replace(/[^a-z0-9]+/g, '');
+}
+
+function createNormalizedKeySet(keys) {
+    const normalized = new Set();
+    if (!keys) {
+        return normalized;
+    }
+    (keys instanceof Set ? Array.from(keys) : keys).forEach(key => {
+        const normalizedKey = normalizeKeyName(key);
+        if (normalizedKey) {
+            normalized.add(normalizedKey);
+        }
+    });
+    return normalized;
+}
+
+function shouldPreserveUnknownKey(key, normalizedKnownKeys) {
+    const normalizedKey = normalizeKeyName(key);
+    if (!normalizedKey) {
+        return false;
+    }
+    if (normalizedKnownKeys.has(normalizedKey)) {
+        return false;
+    }
+
+    for (const known of normalizedKnownKeys) {
+        if (normalizedKey.startsWith(known) && normalizedKey.length - known.length <= 8) {
+            return false;
+        }
+        if (normalizedKey.endsWith(known) && normalizedKey.length - known.length <= 8) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+function isPlainObject(value) {
+    return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function assertPlainObject(value, path) {
+    if (!isPlainObject(value)) {
+        throw new Error(`${path} must be an object.`);
+    }
+}
+
+function assertAllowedKeys(object, allowedKeys, path) {
+    if (!isPlainObject(object)) {
+        return;
+    }
+    const keys = Object.keys(object);
+    const invalid = keys.filter(key => !allowedKeys.has(key));
+    if (invalid.length > 0) {
+        throw new Error(`${path} contains unsupported properties: ${invalid.join(', ')}`);
+    }
+}
+
+function validateBinaryField(value, path, { allowEmpty = false } = {}) {
+    if (value === null || value === undefined) {
+        if (allowEmpty) {
+            return '';
+        }
+        throw new Error(`${path} is required.`);
+    }
+
+    let hexValue = '';
+    try {
+        hexValue = extractHexFromJsonFormat(value);
+    } catch (error) {
+        hexValue = '';
+    }
+
+    if (!hexValue) {
+        if (allowEmpty && typeof value === 'string' && value.trim() === '') {
+            return '';
+        }
+        throw new Error(`${path} must be a base64url, base64, or hexadecimal value.`);
+    }
+
+    return hexValue;
+}
+
+function normalizeInteger(value, path) {
+    if (value === null || value === undefined) {
+        return null;
+    }
+    if (typeof value === 'number' && Number.isFinite(value)) {
+        return Math.floor(value);
+    }
+    if (typeof value === 'string') {
+        const trimmed = value.trim();
+        if (!trimmed) {
+            return null;
+        }
+        const parsed = Number.parseInt(trimmed, 10);
+        if (!Number.isNaN(parsed) && Number.isFinite(parsed)) {
+            return parsed;
+        }
+    }
+    throw new Error(`${path} must be a whole number.`);
+}
+
+function validateHints(hints, path) {
+    if (hints === undefined) {
+        return;
+    }
+    if (!Array.isArray(hints)) {
+        throw new Error(`${path} must be an array of strings.`);
+    }
+    hints.forEach((hint, index) => {
+        if (typeof hint !== 'string') {
+            throw new Error(`${path}[${index}] must be a string.`);
+        }
+        const normalized = hint.trim().toLowerCase();
+        if (!KNOWN_HINT_VALUES.has(normalized)) {
+            throw new Error(`${path}[${index}] is not a supported hint value.`);
+        }
+    });
+}
+
+function validateRegistrationPublicKey(publicKey) {
+    assertPlainObject(publicKey, 'publicKey');
+    assertAllowedKeys(publicKey, KNOWN_REGISTRATION_PUBLIC_KEY_KEYS, 'publicKey');
+
+    assertPlainObject(publicKey.rp, 'publicKey.rp');
+    assertAllowedKeys(publicKey.rp, KNOWN_RP_KEYS, 'publicKey.rp');
+    if (typeof publicKey.rp.name !== 'string' || !publicKey.rp.name.trim()) {
+        throw new Error('publicKey.rp.name must be a non-empty string.');
+    }
+    if (publicKey.rp.id !== undefined && typeof publicKey.rp.id !== 'string') {
+        throw new Error('publicKey.rp.id must be a string when provided.');
+    }
+
+    assertPlainObject(publicKey.user, 'publicKey.user');
+    assertAllowedKeys(publicKey.user, KNOWN_USER_KEYS, 'publicKey.user');
+    validateBinaryField(publicKey.user.id, 'publicKey.user.id');
+    if (typeof publicKey.user.name !== 'string' || !publicKey.user.name.trim()) {
+        throw new Error('publicKey.user.name must be a non-empty string.');
+    }
+    if (typeof publicKey.user.displayName !== 'string' || !publicKey.user.displayName.trim()) {
+        throw new Error('publicKey.user.displayName must be a non-empty string.');
+    }
+
+    validateBinaryField(publicKey.challenge, 'publicKey.challenge');
+
+    if (publicKey.timeout !== undefined) {
+        const timeoutValue = normalizeInteger(publicKey.timeout, 'publicKey.timeout');
+        if (timeoutValue !== null && timeoutValue < 0) {
+            throw new Error('publicKey.timeout must be zero or greater.');
+        }
+    }
+
+    if (publicKey.pubKeyCredParams !== undefined) {
+        if (!Array.isArray(publicKey.pubKeyCredParams)) {
+            throw new Error('publicKey.pubKeyCredParams must be an array.');
+        }
+        publicKey.pubKeyCredParams.forEach((param, index) => {
+            assertPlainObject(param, `publicKey.pubKeyCredParams[${index}]`);
+            const { type, alg } = param;
+            if (type && type !== 'public-key') {
+                throw new Error(`publicKey.pubKeyCredParams[${index}].type must be "public-key".`);
+            }
+            if (alg === undefined || alg === null) {
+                throw new Error(`publicKey.pubKeyCredParams[${index}].alg is required.`);
+            }
+            const normalizedAlg = typeof alg === 'string' ? Number.parseInt(alg, 10) : alg;
+            if (Number.isNaN(normalizedAlg) || !Number.isFinite(normalizedAlg)) {
+                throw new Error(`publicKey.pubKeyCredParams[${index}].alg must be a valid COSE algorithm number.`);
+            }
+            if (!KNOWN_ALGORITHMS.has(Number(normalizedAlg))) {
+                throw new Error(`publicKey.pubKeyCredParams[${index}].alg is not a supported algorithm.`);
+            }
+        });
+    }
+
+    if (publicKey.authenticatorSelection !== undefined) {
+        assertPlainObject(publicKey.authenticatorSelection, 'publicKey.authenticatorSelection');
+        assertAllowedKeys(publicKey.authenticatorSelection, KNOWN_AUTH_SELECTION_KEYS, 'publicKey.authenticatorSelection');
+        const selection = publicKey.authenticatorSelection;
+        if (selection.authenticatorAttachment !== undefined) {
+            const attachment = selection.authenticatorAttachment;
+            if (typeof attachment !== 'string' || !['platform', 'cross-platform'].includes(attachment)) {
+                throw new Error('publicKey.authenticatorSelection.authenticatorAttachment must be "platform" or "cross-platform".');
+            }
+        }
+        if (selection.residentKey !== undefined) {
+            if (typeof selection.residentKey !== 'string' || !['discouraged', 'preferred', 'required'].includes(selection.residentKey)) {
+                throw new Error('publicKey.authenticatorSelection.residentKey must be discouraged, preferred, or required.');
+            }
+        }
+        if (selection.requireResidentKey !== undefined && typeof selection.requireResidentKey !== 'boolean') {
+            throw new Error('publicKey.authenticatorSelection.requireResidentKey must be a boolean.');
+        }
+        if (selection.userVerification !== undefined) {
+            if (typeof selection.userVerification !== 'string' || !['required', 'preferred', 'discouraged'].includes(selection.userVerification)) {
+                throw new Error('publicKey.authenticatorSelection.userVerification must be required, preferred, or discouraged.');
+            }
+        }
+    }
+
+    if (publicKey.attestation !== undefined) {
+        if (typeof publicKey.attestation !== 'string' || !['none', 'indirect', 'direct', 'enterprise'].includes(publicKey.attestation)) {
+            throw new Error('publicKey.attestation must be none, indirect, direct, or enterprise.');
+        }
+    }
+
+    if (publicKey.excludeCredentials !== undefined) {
+        if (!Array.isArray(publicKey.excludeCredentials)) {
+            throw new Error('publicKey.excludeCredentials must be an array.');
+        }
+        publicKey.excludeCredentials.forEach((descriptor, index) => {
+            assertPlainObject(descriptor, `publicKey.excludeCredentials[${index}]`);
+            if (descriptor.type && descriptor.type !== 'public-key') {
+                throw new Error(`publicKey.excludeCredentials[${index}].type must be "public-key".`);
+            }
+            validateBinaryField(descriptor.id, `publicKey.excludeCredentials[${index}].id`);
+            if (descriptor.transports !== undefined) {
+                if (!Array.isArray(descriptor.transports) || !descriptor.transports.every(item => typeof item === 'string')) {
+                    throw new Error(`publicKey.excludeCredentials[${index}].transports must be an array of strings.`);
+                }
+            }
+        });
+    }
+
+    if (publicKey.extensions !== undefined) {
+        assertPlainObject(publicKey.extensions, 'publicKey.extensions');
+        assertAllowedKeys(publicKey.extensions, KNOWN_REGISTRATION_EXTENSION_KEYS, 'publicKey.extensions');
+        const extensions = publicKey.extensions;
+        if (extensions.credProps !== undefined && typeof extensions.credProps !== 'boolean') {
+            throw new Error('publicKey.extensions.credProps must be a boolean.');
+        }
+        if (extensions.minPinLength !== undefined && typeof extensions.minPinLength !== 'boolean') {
+            throw new Error('publicKey.extensions.minPinLength must be a boolean.');
+        }
+        if (extensions.credentialProtectionPolicy !== undefined) {
+            if (typeof extensions.credentialProtectionPolicy !== 'string' || ![
+                'userVerificationOptional',
+                'userVerificationOptionalWithCredentialIDList',
+                'userVerificationRequired',
+            ].includes(extensions.credentialProtectionPolicy)) {
+                throw new Error('publicKey.extensions.credentialProtectionPolicy must be a recognised policy value.');
+            }
+        }
+        if (extensions.enforceCredentialProtectionPolicy !== undefined && typeof extensions.enforceCredentialProtectionPolicy !== 'boolean') {
+            throw new Error('publicKey.extensions.enforceCredentialProtectionPolicy must be a boolean.');
+        }
+        if (extensions.largeBlob !== undefined) {
+            assertPlainObject(extensions.largeBlob, 'publicKey.extensions.largeBlob');
+            assertAllowedKeys(extensions.largeBlob, KNOWN_LARGE_BLOB_REG_KEYS, 'publicKey.extensions.largeBlob');
+            if (extensions.largeBlob.support !== undefined) {
+                if (typeof extensions.largeBlob.support !== 'string' || !['preferred', 'required'].includes(extensions.largeBlob.support)) {
+                    throw new Error('publicKey.extensions.largeBlob.support must be preferred or required.');
+                }
+            }
+        }
+        if (extensions.prf !== undefined) {
+            assertPlainObject(extensions.prf, 'publicKey.extensions.prf');
+            assertAllowedKeys(extensions.prf, KNOWN_PRF_KEYS, 'publicKey.extensions.prf');
+            if (extensions.prf.eval !== undefined) {
+                assertPlainObject(extensions.prf.eval, 'publicKey.extensions.prf.eval');
+                assertAllowedKeys(extensions.prf.eval, KNOWN_PRF_EVAL_KEYS, 'publicKey.extensions.prf.eval');
+                if (extensions.prf.eval.first !== undefined) {
+                    validateBinaryField(extensions.prf.eval.first, 'publicKey.extensions.prf.eval.first');
+                }
+                if (extensions.prf.eval.second !== undefined) {
+                    validateBinaryField(extensions.prf.eval.second, 'publicKey.extensions.prf.eval.second');
+                }
+            }
+        }
+    }
+
+    validateHints(publicKey.hints, 'publicKey.hints');
+}
+
+function validateAuthenticationPublicKey(publicKey) {
+    assertPlainObject(publicKey, 'publicKey');
+    assertAllowedKeys(publicKey, KNOWN_AUTHENTICATION_PUBLIC_KEY_KEYS, 'publicKey');
+
+    validateBinaryField(publicKey.challenge, 'publicKey.challenge');
+
+    if (publicKey.timeout !== undefined) {
+        const timeoutValue = normalizeInteger(publicKey.timeout, 'publicKey.timeout');
+        if (timeoutValue !== null && timeoutValue < 0) {
+            throw new Error('publicKey.timeout must be zero or greater.');
+        }
+    }
+
+    if (publicKey.rpId !== undefined && (typeof publicKey.rpId !== 'string' || !publicKey.rpId.trim())) {
+        throw new Error('publicKey.rpId must be a non-empty string when provided.');
+    }
+
+    if (publicKey.allowCredentials !== undefined) {
+        if (!Array.isArray(publicKey.allowCredentials)) {
+            throw new Error('publicKey.allowCredentials must be an array.');
+        }
+        publicKey.allowCredentials.forEach((descriptor, index) => {
+            assertPlainObject(descriptor, `publicKey.allowCredentials[${index}]`);
+            if (descriptor.type && descriptor.type !== 'public-key') {
+                throw new Error(`publicKey.allowCredentials[${index}].type must be "public-key".`);
+            }
+            validateBinaryField(descriptor.id, `publicKey.allowCredentials[${index}].id`);
+            if (descriptor.transports !== undefined) {
+                if (!Array.isArray(descriptor.transports) || !descriptor.transports.every(item => typeof item === 'string')) {
+                    throw new Error(`publicKey.allowCredentials[${index}].transports must be an array of strings.`);
+                }
+            }
+        });
+    }
+
+    if (publicKey.userVerification !== undefined) {
+        if (typeof publicKey.userVerification !== 'string' || !['required', 'preferred', 'discouraged'].includes(publicKey.userVerification)) {
+            throw new Error('publicKey.userVerification must be required, preferred, or discouraged.');
+        }
+    }
+
+    if (publicKey.extensions !== undefined) {
+        assertPlainObject(publicKey.extensions, 'publicKey.extensions');
+        assertAllowedKeys(publicKey.extensions, KNOWN_AUTHENTICATION_EXTENSION_KEYS, 'publicKey.extensions');
+        const extensions = publicKey.extensions;
+        if (extensions.largeBlob !== undefined) {
+            assertPlainObject(extensions.largeBlob, 'publicKey.extensions.largeBlob');
+            assertAllowedKeys(extensions.largeBlob, KNOWN_LARGE_BLOB_AUTH_KEYS, 'publicKey.extensions.largeBlob');
+            if (extensions.largeBlob.read !== undefined && typeof extensions.largeBlob.read !== 'boolean') {
+                throw new Error('publicKey.extensions.largeBlob.read must be a boolean.');
+            }
+            if (extensions.largeBlob.write !== undefined) {
+                validateBinaryField(extensions.largeBlob.write, 'publicKey.extensions.largeBlob.write');
+            }
+        }
+        if (extensions.prf !== undefined) {
+            assertPlainObject(extensions.prf, 'publicKey.extensions.prf');
+            assertAllowedKeys(extensions.prf, KNOWN_PRF_KEYS, 'publicKey.extensions.prf');
+            if (extensions.prf.eval !== undefined) {
+                assertPlainObject(extensions.prf.eval, 'publicKey.extensions.prf.eval');
+                assertAllowedKeys(extensions.prf.eval, KNOWN_PRF_EVAL_KEYS, 'publicKey.extensions.prf.eval');
+                if (extensions.prf.eval.first !== undefined) {
+                    validateBinaryField(extensions.prf.eval.first, 'publicKey.extensions.prf.eval.first');
+                }
+                if (extensions.prf.eval.second !== undefined) {
+                    validateBinaryField(extensions.prf.eval.second, 'publicKey.extensions.prf.eval.second');
+                }
+            }
+        }
+    }
+
+    validateHints(publicKey.hints, 'publicKey.hints');
+}
+
+function mergeKnownProperties(existingValue, latestValue, knownKeys) {
+    const latest = isPlainObject(latestValue) ? { ...latestValue } : {};
+    if (!isPlainObject(existingValue)) {
+        return latest;
+    }
+    const result = { ...latest };
+    const keySet = knownKeys instanceof Set ? knownKeys : new Set();
+    const normalizedKnown = createNormalizedKeySet(keySet);
+    Object.keys(existingValue).forEach(key => {
+        if (
+            !keySet.has(key)
+            && !Object.prototype.hasOwnProperty.call(result, key)
+            && shouldPreserveUnknownKey(key, normalizedKnown)
+        ) {
+            result[key] = existingValue[key];
+        }
+    });
+    return result;
+}
+
+function mergePublicKey(existingPublicKey, latestPublicKey, scope) {
+    if (!isPlainObject(latestPublicKey)) {
+        return isPlainObject(existingPublicKey) ? { ...existingPublicKey } : {};
+    }
+
+    const merged = { ...latestPublicKey };
+    const existing = isPlainObject(existingPublicKey) ? existingPublicKey : {};
+
+    const managedTopLevelKeys = scope === 'authentication'
+        ? KNOWN_AUTHENTICATION_PUBLIC_KEY_KEYS
+        : KNOWN_REGISTRATION_PUBLIC_KEY_KEYS;
+    const normalizedManagedKeys = createNormalizedKeySet(managedTopLevelKeys);
+
+    Object.keys(existing).forEach(key => {
+        if (
+            !Object.prototype.hasOwnProperty.call(merged, key)
+            && !managedTopLevelKeys.has(key)
+            && shouldPreserveUnknownKey(key, normalizedManagedKeys)
+        ) {
+            merged[key] = existing[key];
+        }
+    });
+
+    if (scope !== 'authentication') {
+        if (merged.rp) {
+            merged.rp = mergeKnownProperties(existing.rp, merged.rp, KNOWN_RP_KEYS);
+        }
+        if (merged.user) {
+            merged.user = mergeKnownProperties(existing.user, merged.user, KNOWN_USER_KEYS);
+        }
+        if (merged.authenticatorSelection) {
+            merged.authenticatorSelection = mergeKnownProperties(
+                existing.authenticatorSelection,
+                merged.authenticatorSelection,
+                KNOWN_AUTH_SELECTION_KEYS,
+            );
+        }
+    }
+
+    if (merged.extensions) {
+        const existingExtensions = existing.extensions;
+        const knownExtensionKeys = scope === 'authentication'
+            ? KNOWN_AUTHENTICATION_EXTENSION_KEYS
+            : KNOWN_REGISTRATION_EXTENSION_KEYS;
+        merged.extensions = mergeKnownProperties(existingExtensions, merged.extensions, knownExtensionKeys);
+
+        if (merged.extensions.largeBlob) {
+            const largeBlobKeys = scope === 'authentication'
+                ? KNOWN_LARGE_BLOB_AUTH_KEYS
+                : KNOWN_LARGE_BLOB_REG_KEYS;
+            merged.extensions.largeBlob = mergeKnownProperties(
+                existingExtensions && existingExtensions.largeBlob,
+                merged.extensions.largeBlob,
+                largeBlobKeys,
+            );
+        }
+
+        if (merged.extensions.prf) {
+            merged.extensions.prf = mergeKnownProperties(
+                existingExtensions && existingExtensions.prf,
+                merged.extensions.prf,
+                KNOWN_PRF_KEYS,
+            );
+            if (merged.extensions.prf && merged.extensions.prf.eval) {
+                merged.extensions.prf.eval = mergeKnownProperties(
+                    existingExtensions && existingExtensions.prf && existingExtensions.prf.eval,
+                    merged.extensions.prf.eval,
+                    KNOWN_PRF_EVAL_KEYS,
+                );
+            }
+        }
+    }
+
+    return merged;
+}
+
+function pruneUnsupportedProperties(mergedPublicKey, scope) {
+    if (!isPlainObject(mergedPublicKey)) {
+        return;
+    }
+
+    const validator = scope === 'authentication'
+        ? validateAuthenticationPublicKey
+        : validateRegistrationPublicKey;
+
+    const maxAttempts = 10;
+    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+        try {
+            validator({ ...mergedPublicKey });
+            return;
+        } catch (error) {
+            if (!(error instanceof Error)) {
+                throw error;
+            }
+            const unsupportedMatch = /(publicKey(?:\.[a-zA-Z0-9]+)*) contains unsupported properties: (.+)/.exec(error.message);
+            if (!unsupportedMatch) {
+                throw error;
+            }
+
+            const [, path, properties] = unsupportedMatch;
+            const propertyList = properties.split(',').map(prop => prop.trim()).filter(Boolean);
+            if (propertyList.length === 0) {
+                throw error;
+            }
+
+            const pathSegments = path.split('.').slice(1);
+            let container = mergedPublicKey;
+            for (const segment of pathSegments) {
+                if (!isPlainObject(container[segment])) {
+                    container = null;
+                    break;
+                }
+                container = container[segment];
+            }
+
+            if (!isPlainObject(container)) {
+                throw error;
+            }
+
+            propertyList.forEach(propertyName => {
+                if (Object.prototype.hasOwnProperty.call(container, propertyName)) {
+                    delete container[propertyName];
+                }
+            });
+        }
+    }
+}
+
+function buildOptionsForCurrentScope(scope) {
+    if (scope === 'authentication') {
+        return getCredentialRequestOptions();
+    }
+    return getCredentialCreationOptions();
+}
+
+function mergeParsedJsonWithForm(parsedRoot, scope) {
+    const latestOptions = buildOptionsForCurrentScope(scope);
+    const latestPublicKey = latestOptions?.publicKey || {};
+
+    if (!isPlainObject(parsedRoot)) {
+        return latestOptions;
+    }
+
+    const merged = { ...parsedRoot };
+
+    Object.keys(latestOptions).forEach(key => {
+        if (key === 'publicKey') {
+            merged.publicKey = mergePublicKey(parsedRoot.publicKey, latestPublicKey, scope);
+            pruneUnsupportedProperties(merged.publicKey, scope);
+        } else {
+            merged[key] = latestOptions[key];
+        }
+    });
+
+    return merged;
+}
 
 function setJsonEditorContent(content) {
     const jsonEditor = document.getElementById('json-editor');
@@ -388,66 +965,58 @@ export function updateJsonEditor() {
 
 export function saveJsonEditor() {
     try {
-        const jsonText = document.getElementById('json-editor').value;
-        const parsed = JSON.parse(jsonText);
+        const editor = document.getElementById('json-editor');
+        const jsonText = editor ? editor.value : '';
+        const parsed = JSON.parse(jsonText || '{}');
 
-        if (!parsed.publicKey) {
-            throw new Error('Invalid JSON structure: Missing "publicKey" property');
+        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+            throw new Error('Invalid JSON structure.');
         }
 
-        const publicKey = parsed.publicKey;
-
-        if (state.currentSubTab === 'registration') {
-            if (!publicKey.rp || !publicKey.user || !publicKey.challenge) {
-                throw new Error('Invalid CredentialCreationOptions: Missing required properties (rp, user, challenge)');
-            }
-
-            updateRegistrationFormFromJson(publicKey);
-        } else if (state.currentSubTab === 'authentication') {
-            if (!publicKey.challenge) {
-                throw new Error('Invalid CredentialRequestOptions: Missing required challenge property');
-            }
-
-            updateAuthenticationFormFromJson(publicKey);
+        if (!parsed.publicKey || typeof parsed.publicKey !== 'object') {
+            throw new Error('Invalid JSON structure: Missing "publicKey" object.');
         }
 
-        const statusDiv = document.querySelector('#advanced-tab .status') ||
-                        document.querySelector('#advanced-status');
-        if (statusDiv) {
-            statusDiv.textContent = 'JSON changes saved successfully!';
-            statusDiv.className = 'status success';
-            statusDiv.style.display = 'block';
-            setTimeout(() => {
-                statusDiv.style.display = 'none';
-            }, 3000);
+        const scope = state.currentSubTab === 'authentication' ? 'authentication' : 'registration';
+
+        if (scope === 'registration') {
+            validateRegistrationPublicKey(parsed.publicKey);
+            updateRegistrationFormFromJson(parsed.publicKey);
+        } else {
+            validateAuthenticationPublicKey(parsed.publicKey);
+            updateAuthenticationFormFromJson(parsed.publicKey);
         }
 
+        const merged = mergeParsedJsonWithForm(parsed, scope);
+        const sorted = sortObjectKeys(merged);
+        setJsonEditorContent(JSON.stringify(sorted, null, 2));
+
+        showStatus('advanced', 'JSON changes saved successfully!', 'success');
     } catch (error) {
-        const statusDiv = document.querySelector('#advanced-tab .status') ||
-                        document.querySelector('#advanced-status');
-        if (statusDiv) {
-            statusDiv.textContent = `JSON validation failed: ${error.message}`;
-            statusDiv.className = 'status error';
-            statusDiv.style.display = 'block';
-            setTimeout(() => {
-                statusDiv.style.display = 'none';
-            }, 5000);
-        }
+        showStatus('advanced', `JSON validation failed: ${error.message}`, 'error');
     }
 }
 
 export function resetJsonEditor() {
-    updateJsonEditor();
+    const scope = state.currentSubTab === 'authentication' ? 'authentication' : 'registration';
+    const editor = document.getElementById('json-editor');
+    let parsed = null;
 
-    const statusDiv = document.querySelector('#advanced-tab .status') ||
-                    document.querySelector('#advanced-status');
-    if (statusDiv) {
-        statusDiv.textContent = 'JSON editor reset to current settings';
-        statusDiv.className = 'status info';
-        statusDiv.style.display = 'block';
-        setTimeout(() => {
-            statusDiv.style.display = 'none';
-        }, 2000);
+    if (editor && editor.value) {
+        try {
+            parsed = JSON.parse(editor.value);
+        } catch (error) {
+            parsed = null;
+        }
+    }
+
+    try {
+        const merged = mergeParsedJsonWithForm(parsed, scope);
+        const sorted = sortObjectKeys(merged);
+        setJsonEditorContent(JSON.stringify(sorted, null, 2));
+        showStatus('advanced', 'JSON editor reset to current settings.', 'info');
+    } catch (error) {
+        showStatus('advanced', `Unable to reset JSON editor: ${error.message}`, 'error');
     }
 }
 

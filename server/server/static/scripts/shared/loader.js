@@ -1,12 +1,23 @@
 const BODY_LOADING_CLASS = 'app-loading';
 const BODY_LOADED_CLASS = 'app-loaded';
 
+const PROGRESS_INTERVAL_MS = 24;
+const PROGRESS_STEP = 1;
+
 let elements = null;
 let initialized = false;
 let hasCompleted = false;
 let hideTimer = null;
-let currentProgress = 0;
-let currentMetadataCount = 0;
+let displayedProgress = 0;
+let targetProgress = 0;
+let progressTimer = null;
+
+function getScheduler() {
+    if (typeof window !== 'undefined' && window) {
+        return window;
+    }
+    return globalThis;
+}
 
 function getElements() {
     if (elements) {
@@ -22,7 +33,6 @@ function getElements() {
     const progressBar = document.getElementById('app-loader-progress');
     const progressFill = root.querySelector('.app-loader__progress-fill');
     const percentage = document.getElementById('app-loader-percentage');
-    const metadata = document.getElementById('app-loader-metadata');
 
     elements = {
         root,
@@ -30,10 +40,73 @@ function getElements() {
         progressBar,
         progressFill,
         percentage,
-        metadata,
     };
 
     return elements;
+}
+
+function renderProgress(value) {
+    const els = getElements();
+    if (!els) {
+        return;
+    }
+
+    const safeValue = Math.max(0, Math.min(100, Math.round(value)));
+
+    if (els.progressFill) {
+        els.progressFill.style.width = `${safeValue}%`;
+    }
+
+    if (els.progressBar) {
+        els.progressBar.setAttribute('aria-valuenow', String(safeValue));
+    }
+
+    if (els.percentage) {
+        els.percentage.textContent = `${safeValue}%`;
+    }
+}
+
+function stopProgressAnimation() {
+    if (progressTimer === null) {
+        return;
+    }
+
+    const scheduler = getScheduler();
+    if (typeof scheduler.clearInterval === 'function') {
+        scheduler.clearInterval(progressTimer);
+    } else {
+        clearInterval(progressTimer);
+    }
+    progressTimer = null;
+}
+
+function stepProgress() {
+    if (displayedProgress >= targetProgress) {
+        stopProgressAnimation();
+        return;
+    }
+
+    displayedProgress = Math.min(targetProgress, displayedProgress + PROGRESS_STEP);
+    renderProgress(displayedProgress);
+
+    if (displayedProgress >= targetProgress) {
+        stopProgressAnimation();
+    }
+}
+
+function startProgressAnimation() {
+    if (progressTimer !== null || displayedProgress >= targetProgress) {
+        return;
+    }
+
+    const scheduler = getScheduler();
+    if (typeof scheduler.setInterval === 'function') {
+        progressTimer = scheduler.setInterval(stepProgress, PROGRESS_INTERVAL_MS);
+    } else {
+        progressTimer = setInterval(stepProgress, PROGRESS_INTERVAL_MS);
+    }
+
+    stepProgress();
 }
 
 function ensureInitialized() {
@@ -47,6 +120,11 @@ function ensureInitialized() {
     }
 
     initialized = true;
+    hasCompleted = false;
+    displayedProgress = 0;
+    targetProgress = 0;
+    stopProgressAnimation();
+    renderProgress(displayedProgress);
 
     if (!els.root.classList.contains('app-loader--hidden')) {
         els.root.setAttribute('aria-hidden', 'false');
@@ -55,9 +133,6 @@ function ensureInitialized() {
     if (typeof document !== 'undefined' && document.body) {
         document.body.classList.add(BODY_LOADING_CLASS);
     }
-
-    updateMetadataCount(0);
-    updateProgress(0);
 
     return els;
 }
@@ -79,41 +154,25 @@ function updateProgress(value) {
         return;
     }
 
-    const progress = Math.max(0, Math.min(100, Math.round(value)));
-    if (progress === currentProgress) {
+    const sanitized = Math.max(0, Math.min(100, Math.round(value)));
+
+    if (sanitized < displayedProgress) {
+        renderProgress(displayedProgress);
         return;
     }
 
-    currentProgress = progress;
-
-    if (els.progressFill) {
-        els.progressFill.style.width = `${progress}%`;
+    if (sanitized > targetProgress) {
+        targetProgress = sanitized;
     }
 
-    if (els.progressBar) {
-        els.progressBar.setAttribute('aria-valuenow', String(progress));
+    if (targetProgress < displayedProgress) {
+        targetProgress = displayedProgress;
     }
 
-    if (els.percentage) {
-        els.percentage.textContent = `${progress}%`;
-    }
-}
+    renderProgress(displayedProgress);
 
-function updateMetadataCount(count) {
-    const els = getElements();
-    if (!els || hasCompleted) {
-        return;
-    }
-
-    const safeCount = Math.max(0, Math.floor(count));
-    if (safeCount === currentMetadataCount) {
-        return;
-    }
-
-    currentMetadataCount = safeCount;
-
-    if (els.metadata) {
-        els.metadata.textContent = `Metadata loaded: ${safeCount.toLocaleString()}`;
+    if (displayedProgress < targetProgress) {
+        startProgressAnimation();
     }
 }
 
@@ -154,11 +213,12 @@ export function loaderSetPhase(message, options = {}) {
 }
 
 export function loaderSetProgress(progress) {
+    ensureInitialized();
     updateProgress(progress);
 }
 
-export function loaderSetMetadataCount(count) {
-    updateMetadataCount(count);
+export function loaderSetMetadataCount() {
+    // Metadata counts are no longer displayed; this function is kept for compatibility.
 }
 
 export function loaderComplete(options = {}) {
@@ -190,12 +250,18 @@ export function loaderComplete(options = {}) {
     hasCompleted = true;
 
     if (hideTimer) {
-        clearTimeout(hideTimer);
+        const scheduler = getScheduler();
+        if (typeof scheduler.clearTimeout === 'function') {
+            scheduler.clearTimeout(hideTimer);
+        } else {
+            clearTimeout(hideTimer);
+        }
     }
 
     revealApplication();
 
-    hideTimer = setTimeout(() => {
+    const scheduler = getScheduler();
+    hideTimer = (typeof scheduler.setTimeout === 'function' ? scheduler.setTimeout : setTimeout)(() => {
         els.root.classList.add('app-loader--hidden');
         els.root.setAttribute('aria-hidden', 'true');
     }, delay);

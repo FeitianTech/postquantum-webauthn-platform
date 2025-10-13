@@ -74,6 +74,7 @@
     z-index: 1100;
     padding: 1.75rem 1.5rem 1.5rem;
     border-radius: 24px;
+    box-shadow: 0 42px 120px rgba(15, 39, 64, 0.48), 0 18px 44px rgba(15, 39, 64, 0.35);
 }
 
 #json-editor-container.expanded textarea {
@@ -81,52 +82,11 @@
     height: 100%;
 }
 
-.json-editor-expand-btn {
-    position: absolute;
-    top: 0.85rem;
-    right: 0.85rem;
-    background: rgba(0, 114, 206, 0.12);
-    color: var(--primary-dark);
-    border: none;
-    border-radius: 50%;
-    width: 40px;
-    height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0;
-    font-size: 1.15rem;
-    font-weight: 600;
-    line-height: 1;
-    cursor: pointer;
-    transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
-    box-shadow: none;
-}
-
-.json-editor-expand-btn:hover {
-    background: rgba(0, 114, 206, 0.2);
-}
-
-#json-editor-container.expanded .json-editor-expand-btn {
-    background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
-    color: #ffffff;
-    box-shadow: var(--shadow-soft);
-}
-
-.json-editor-expand-btn span {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-    height: 100%;
-    line-height: 1;
-}
-
 .json-editor-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(15, 39, 64, 0.45);
-    backdrop-filter: blur(2px);
+    background: transparent;
+    backdrop-filter: none;
     z-index: 1000;
     opacity: 0;
     visibility: hidden;
@@ -137,6 +97,48 @@
     opacity: 1;
     visibility: visible;
     pointer-events: auto;
+    cursor: default;
+}
+
+.json-editor-close-btn {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 50%;
+    border: none;
+    background: rgba(15, 39, 64, 0.08);
+    color: var(--text-color);
+    font-size: 1.5rem;
+    line-height: 1;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+    box-shadow: 0 12px 32px rgba(15, 39, 64, 0.18);
+    cursor: pointer;
+}
+
+.json-editor-close-btn span {
+    margin-top: -0.15rem;
+}
+
+#json-editor-container.expanded .json-editor-close-btn {
+    display: inline-flex;
+}
+
+.json-editor-close-btn:hover,
+.json-editor-close-btn:focus {
+    background: rgba(15, 39, 64, 0.16);
+    box-shadow: 0 18px 40px rgba(15, 39, 64, 0.28);
+    transform: translateY(-1px);
+    outline: none;
+}
+
+.json-editor-close-btn:focus-visible {
+    outline: 3px solid rgba(0, 114, 206, 0.35);
+    outline-offset: 2px;
 }
 
 .checkbox-group {
@@ -238,19 +240,14 @@ select.form-control option {
     position: relative;
 }
 
-.btn.refresh-icon::before {
-    content: '';
-    width: 18px;
-    height: 18px;
-    background-color: currentColor;
-    mask: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpath d='M21 12a9 9 0 1 0-2.64 6.36'/%3e%3cpolyline points='21 12 21 18 15 18'/%3e%3c/svg%3e");
-    -webkit-mask-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpath d='M21 12a9 9 0 1 0-2.64 6.36'/%3e%3cpolyline points='21 12 21 18 15 18'/%3e%3c/svg%3e");
-    mask-repeat: no-repeat;
-    mask-position: center;
-    mask-size: contain;
-    -webkit-mask-repeat: no-repeat;
-    -webkit-mask-position: center;
-    -webkit-mask-size: contain;
+.btn.refresh-icon svg {
+    width: 22px;
+    height: 22px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 2.4;
+    stroke-linecap: round;
+    stroke-linejoin: round;
     transition: transform 0.3s ease;
 }
 
@@ -350,7 +347,7 @@ select.form-control option {
     box-shadow: none;
 }
 
-.btn.refresh-icon:hover::before,
-.btn.refresh-icon:focus-visible::before {
+.btn.refresh-icon:hover svg,
+.btn.refresh-icon:focus-visible svg {
     transform: rotate(90deg);
 }

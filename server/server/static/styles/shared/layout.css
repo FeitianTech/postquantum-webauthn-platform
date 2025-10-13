@@ -271,6 +271,10 @@
     margin-bottom: 1rem;
 }
 
+.static-section {
+    margin-bottom: 1rem;
+}
+
 .section-header {
     cursor: pointer;
     padding: 0.85rem 1rem;
@@ -315,6 +319,14 @@
 
 .expand-icon.rotated {
     transform: rotate(180deg);
+}
+
+.section-header--static {
+    cursor: default;
+}
+
+.section-header--static:hover {
+    background: rgba(0, 114, 206, 0.14);
 }
 
 .input-with-button {
