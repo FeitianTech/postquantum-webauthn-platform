@@ -6,7 +6,11 @@ ARG LIBOQS_PYTHON_VERSION=main
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    CMAKE_BUILD_PARALLEL_LEVEL=1
+    CMAKE_BUILD_PARALLEL_LEVEL=1 \
+    LIBOQS_DIR=/opt/liboqs \
+    OQS_INSTALL_PATH=/opt/liboqs \
+    LD_LIBRARY_PATH=/opt/liboqs/lib:/usr/local/lib \
+    OQS_DIST_BUILD=1
 
 RUN set -eux; \
     apt-get update; \
@@ -15,23 +19,21 @@ RUN set -eux; \
         cmake \
         git \
         libssl-dev \
-        ninja-build \
-    ; \
+        ninja-build; \
     rm -rf /var/lib/apt/lists/*
 
+# Copy your prebuilt liboqs before installing liboqs-python
 COPY prebuilt_liboqs/linux-x86_64 /opt/liboqs
-ENV LD_LIBRARY_PATH=/opt/liboqs/lib:/usr/local/lib \
-    LIBOQS_DIR=/opt/liboqs \
-    OQS_DIST_BUILD=1
+RUN echo "/opt/liboqs/lib" > /etc/ld.so.conf.d/liboqs.conf && ldconfig
 
 WORKDIR /src
-
 COPY pyproject.toml README.adoc ./
 COPY COPYING COPYING.APLv2 COPYING.MPLv2 ./
 COPY fido2 ./fido2
 COPY server ./server
 
 RUN pip install --upgrade pip setuptools wheel
+# During this step, liboqs-python will now detect /opt/liboqs and skip building
 RUN pip install --prefix=/install --no-cache-dir \
     "liboqs-python @ git+https://github.com/open-quantum-safe/liboqs-python@main" \
     pqcrypto
@@ -52,19 +54,18 @@ RUN set -eux; \
     apt-get update; \
     apt-get install -y --no-install-recommends \
         libssl3 git cmake build-essential libssl-dev; \
+    echo "/opt/liboqs/lib" > /etc/ld.so.conf.d/liboqs.conf; \
+    ldconfig; \
     rm -rf /var/lib/apt/lists/*
 
 COPY prebuilt_liboqs/linux-x86_64 /opt/liboqs
-RUN echo "/opt/liboqs/lib" > /etc/ld.so.conf.d/liboqs.conf && ldconfig
-
 COPY --from=python-builder /install /usr/local
 COPY server/server /app/server
 
 WORKDIR /app
 
 RUN ls -l /opt/liboqs/lib && \
-    ldd /opt/liboqs/lib/liboqs.so && \
-    python3 -c "import ctypes; ctypes.CDLL('/opt/liboqs/lib/liboqs.so'); print('liboqs loaded successfully')" || true
+    python3 -c "import ctypes; ctypes.CDLL('/opt/liboqs/lib/liboqs.so'); print('liboqs prebuilt detected')" || true
 
 ENV PYTHONPATH=/app:${PYTHONPATH}
 
