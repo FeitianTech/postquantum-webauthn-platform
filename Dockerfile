@@ -56,7 +56,7 @@ ENV LD_LIBRARY_PATH=/opt/liboqs/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH} \
 
 WORKDIR /src
 
-COPY pyproject.toml poetry.lock README.adoc ./
+COPY pyproject.toml README.adoc ./
 COPY COPYING COPYING.APLv2 COPYING.MPLv2 ./
 COPY fido2 ./fido2
 COPY server ./server
