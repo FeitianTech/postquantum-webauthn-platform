@@ -26,3 +26,6 @@ htmlcov/
 # FIDO Metadata Service blobs (download separately)
 fido-mds3.jws
 fido-mds3.jws.meta.json
+
+# Session-scoped metadata uploads
+server/server/static/session-metadata/
