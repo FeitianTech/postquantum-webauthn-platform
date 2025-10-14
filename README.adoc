@@ -2,9 +2,6 @@
 
 **Deployed Web Service:**  https://python-fido2-webauthn-test.onrender.com
 
-**Note:** The Docker image in this repo builds `liboqs` and its Python bindings from source so the
-demo is PQC-ready without any host-level setup.
-
 
 ## 💻 Local Setup
 
