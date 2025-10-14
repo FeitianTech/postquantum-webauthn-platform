@@ -11,9 +11,33 @@
             </p>
         </div>
         <div class="mds-section-actions">
+            <button type="button" id="mds-add-metadata-button" class="mds-add-metadata-button">
+                Add Metadata
+            </button>
             <button type="button" id="mds-update-button" class="mds-update-button">
                 Update Metadata
             </button>
+        </div>
+    </div>
+
+    <div id="mds-custom-metadata-panel" class="mds-custom-panel" hidden>
+        <div class="mds-custom-panel__backdrop" data-action="close"></div>
+        <div class="mds-custom-panel__dialog" role="dialog" aria-modal="true" aria-labelledby="mds-custom-panel-title">
+            <button type="button" class="mds-custom-panel__close" id="mds-custom-panel-close" aria-label="Close">
+                ×
+            </button>
+            <h3 id="mds-custom-panel-title">Add Trusted Metadata</h3>
+            <p class="mds-custom-panel__description">
+                Drop JSON metadata files here or select them from your device. Uploaded files are trusted only for this browser session.
+            </p>
+            <div class="mds-custom-panel__dropzone" id="mds-custom-dropzone" role="button" tabindex="0" aria-describedby="mds-custom-dropzone-hint">
+                <span class="mds-custom-panel__dropzone-icon" aria-hidden="true">📁</span>
+                <span class="mds-custom-panel__dropzone-text">Drop JSON files here or click to browse</span>
+                <span id="mds-custom-dropzone-hint" class="mds-custom-panel__hint">Only <code>.json</code> files are accepted.</span>
+                <input type="file" id="mds-custom-file-input" accept=".json,application/json" multiple hidden />
+            </div>
+            <div id="mds-custom-messages" class="mds-custom-panel__messages" aria-live="polite"></div>
+            <ul id="mds-custom-list" class="mds-custom-panel__list" aria-live="polite"></ul>
         </div>
     </div>
 

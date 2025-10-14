@@ -20,6 +20,37 @@
     flex-shrink: 0;
 }
 
+.mds-add-metadata-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.6rem 1.2rem;
+    border-radius: 16px;
+    border: 1px solid rgba(0, 114, 206, 0.25);
+    background: rgba(255, 255, 255, 0.95);
+    color: var(--primary-dark);
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: var(--shadow-soft);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.mds-add-metadata-button:hover {
+    transform: translateY(-1px);
+    border-color: rgba(0, 114, 206, 0.45);
+    box-shadow: var(--shadow-hover);
+}
+
+.mds-add-metadata-button:focus-visible {
+    outline: 3px solid rgba(0, 114, 206, 0.26);
+    outline-offset: 3px;
+}
+
+.mds-add-metadata-button:active {
+    transform: translateY(0);
+}
+
 .mds-update-button {
     display: inline-flex;
     align-items: center;
@@ -134,6 +165,186 @@
     border-left-color: rgba(229, 83, 83, 0.75);
     background: rgba(229, 83, 83, 0.1);
     color: #a23535;
+}
+
+.mds-custom-panel[hidden] {
+    display: none !important;
+}
+
+.mds-custom-panel {
+    position: fixed;
+    inset: 0;
+    z-index: 120;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+}
+
+.mds-custom-panel__backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(11, 27, 43, 0.45);
+    backdrop-filter: blur(3px);
+}
+
+.mds-custom-panel__dialog {
+    position: relative;
+    z-index: 1;
+    width: min(640px, 100%);
+    max-height: min(80vh, 680px);
+    background: #ffffff;
+    border-radius: 20px;
+    box-shadow: 0 28px 80px rgba(11, 27, 43, 0.22);
+    padding: 2rem 2.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.mds-custom-panel__close {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 50%;
+    border: none;
+    background: rgba(0, 114, 206, 0.08);
+    color: var(--primary-dark);
+    font-size: 1.35rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s ease;
+}
+
+.mds-custom-panel__close:hover {
+    background: rgba(0, 114, 206, 0.16);
+}
+
+.mds-custom-panel__close:focus-visible {
+    outline: 3px solid rgba(0, 114, 206, 0.26);
+    outline-offset: 3px;
+}
+
+.mds-custom-panel__description {
+    margin: 0;
+    color: var(--muted-text);
+    font-size: 0.95rem;
+    line-height: 1.6;
+}
+
+.mds-custom-panel__dropzone {
+    position: relative;
+    border: 2px dashed rgba(0, 114, 206, 0.35);
+    border-radius: 16px;
+    padding: 1.8rem;
+    text-align: center;
+    color: var(--muted-text);
+    background: rgba(243, 247, 251, 0.7);
+    cursor: pointer;
+    transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.mds-custom-panel__dropzone:focus-visible {
+    outline: 3px solid rgba(0, 114, 206, 0.26);
+    outline-offset: 3px;
+}
+
+.mds-custom-panel__dropzone.is-active {
+    border-color: rgba(0, 114, 206, 0.7);
+    background: rgba(220, 235, 249, 0.8);
+}
+
+.mds-custom-panel__dropzone-icon {
+    display: block;
+    font-size: 2rem;
+    margin-bottom: 0.75rem;
+}
+
+.mds-custom-panel__dropzone-text {
+    display: block;
+    font-weight: 600;
+    color: var(--primary-dark);
+    margin-bottom: 0.35rem;
+}
+
+.mds-custom-panel__hint {
+    display: block;
+    font-size: 0.85rem;
+    color: var(--muted-text);
+}
+
+.mds-custom-panel__messages {
+    font-size: 0.9rem;
+    padding: 0.75rem 1rem;
+    border-radius: 12px;
+    background: rgba(243, 247, 251, 0.8);
+    color: var(--muted-text);
+}
+
+.mds-custom-panel__messages[hidden] {
+    display: none;
+}
+
+.mds-custom-panel__messages--success {
+    background: rgba(0, 166, 81, 0.1);
+    color: #157347;
+}
+
+.mds-custom-panel__messages--error {
+    background: rgba(229, 83, 83, 0.12);
+    color: #a23535;
+}
+
+.mds-custom-panel__messages--warning {
+    background: rgba(255, 193, 7, 0.14);
+    color: #8a6d1f;
+}
+
+.mds-custom-panel__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    overflow-y: auto;
+    max-height: 220px;
+    padding-right: 0.25rem;
+}
+
+.mds-custom-panel__list-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    padding: 0.85rem 1rem;
+    border-radius: 12px;
+    border: 1px solid rgba(0, 114, 206, 0.16);
+    background: rgba(255, 255, 255, 0.92);
+    box-shadow: var(--shadow-soft);
+}
+
+.mds-custom-panel__list-item--empty {
+    font-size: 0.9rem;
+    color: var(--muted-text);
+    text-align: center;
+    border-style: dashed;
+    background: rgba(243, 247, 251, 0.6);
+}
+
+.mds-custom-panel__item-name {
+    font-weight: 600;
+    color: var(--primary-dark);
+    word-break: break-word;
+}
+
+.mds-custom-panel__item-details {
+    font-size: 0.85rem;
+    color: var(--muted-text);
 }
 
 .mds-table-container {

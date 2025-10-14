@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import base64
 import binascii
+import json
 import os
 from threading import Lock
 from typing import Any, Dict
@@ -12,7 +13,15 @@ from flask import abort, jsonify, redirect, render_template, request, send_file
 from ..attestation import serialize_attestation_certificate
 from ..config import MDS_METADATA_PATH, app, basepath
 from ..decoder import decode_payload_text, encode_payload_text
-from ..metadata import MetadataDownloadError, download_metadata_blob, load_metadata_cache_entry
+from ..metadata import (
+    MetadataDownloadError,
+    download_metadata_blob,
+    ensure_metadata_session_id,
+    list_session_metadata_items,
+    load_metadata_cache_entry,
+    save_session_metadata_item,
+    serialize_session_metadata_item,
+)
 from ..storage import delkey
 
 
@@ -109,6 +118,7 @@ def index():
 @app.route("/index.html")
 def index_html():
     ensure_metadata_bootstrapped(skip_if_reloader_parent=False)
+    ensure_metadata_session_id()
 
     initial_mds_blob = None
     try:
@@ -181,6 +191,74 @@ def api_update_mds_metadata():
         payload["last_modified"] = last_modified
 
     return jsonify(payload)
+
+
+@app.route("/api/mds/metadata/custom", methods=["GET"])
+def api_list_custom_metadata():
+    ensure_metadata_session_id()
+    items = [serialize_session_metadata_item(item) for item in list_session_metadata_items()]
+    return jsonify({"items": items})
+
+
+@app.route("/api/mds/metadata/upload", methods=["POST"])
+def api_upload_custom_metadata():
+    ensure_metadata_session_id()
+
+    file_entries = request.files.getlist("files") if request.files else []
+    if not file_entries:
+        return jsonify({"items": [], "errors": ["No JSON files were provided."]}), 400
+
+    saved_items = []
+    errors = []
+
+    for storage in file_entries:
+        filename = storage.filename or ""
+        trimmed = filename.strip()
+        if not trimmed:
+            trimmed = "metadata.json"
+
+        if not trimmed.lower().endswith(".json"):
+            errors.append(f"{trimmed} is not a JSON file.")
+            continue
+
+        try:
+            raw_bytes = storage.read()
+        except Exception as exc:  # pylint: disable=broad-except
+            errors.append(f"Failed to read {trimmed}: {exc}")
+            continue
+
+        try:
+            text = raw_bytes.decode("utf-8-sig")
+        except UnicodeDecodeError:
+            errors.append(f"{trimmed} is not valid UTF-8 JSON.")
+            continue
+
+        try:
+            payload: Dict[str, Any] = json.loads(text)
+        except ValueError as exc:
+            errors.append(f"{trimmed}: {exc}")
+            continue
+
+        if not isinstance(payload, dict):
+            errors.append(f"{trimmed} must contain a JSON object.")
+            continue
+
+        try:
+            item = save_session_metadata_item(payload, original_filename=trimmed)
+        except ValueError as exc:
+            errors.append(f"{trimmed}: {exc}")
+            continue
+        except RuntimeError as exc:
+            return jsonify({"error": str(exc)}), 500
+
+        saved_items.append(serialize_session_metadata_item(item))
+
+    status_code = 200 if saved_items else 400
+    response: Dict[str, Any] = {"items": saved_items}
+    if errors:
+        response["errors"] = errors
+
+    return jsonify(response), status_code
 
 
 def _perform_decode(decoder_input: str):

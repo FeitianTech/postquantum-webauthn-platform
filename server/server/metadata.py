@@ -3,15 +3,19 @@ from __future__ import annotations
 
 import json
 import os
+import secrets
 import shutil
 import ssl
 import tempfile
 import urllib.error
 import urllib.request
-from dataclasses import replace
+import uuid
+from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from email.utils import formatdate, parsedate_to_datetime
-from typing import Any, Dict, Iterator, Optional, Tuple
+from typing import Any, Dict, Iterator, List, Mapping, Optional, Set, Tuple
+
+from flask import has_request_context, session
 
 from fido2.mds3 import (
     MetadataBlobPayload,
@@ -25,8 +29,8 @@ from .config import (
     MDS_METADATA_PATH,
     MDS_METADATA_URL,
     MDS_TLS_ADDITIONAL_TRUST_ANCHORS_PEM,
+    SESSION_METADATA_DIR,
     app,
-    FEITIAN_PQC_METADATA_PATH,
     FIDO_METADATA_TRUST_ROOT_CERT,
     FIDO_METADATA_TRUST_ROOT_PEM,
 )
@@ -41,11 +45,403 @@ __all__ = [
     "download_metadata_blob",
     "get_mds_verifier",
     "load_metadata_cache_entry",
+    "ensure_metadata_session_id",
+    "list_session_metadata_items",
+    "save_session_metadata_item",
+    "serialize_session_metadata_item",
 ]
 
 
-_mds_verifier_cache: Optional[MdsAttestationVerifier] = None
-_mds_verifier_mtime: Optional[float] = None
+_base_metadata_cache: Optional[MetadataBlobPayload] = None
+_base_metadata_mtime: Optional[float] = None
+_base_verifier_cache: Optional[MdsAttestationVerifier] = None
+_base_verifier_mtime: Optional[float] = None
+
+_SESSION_METADATA_SUFFIX = ".json"
+_SESSION_METADATA_INFO_SUFFIX = ".meta.json"
+_SESSION_METADATA_SESSION_KEY = "fido.mds.session"
+
+
+@dataclass(frozen=True)
+class SessionMetadataItem:
+    filename: str
+    payload: Dict[str, Any]
+    legal_header: Optional[str]
+    entry: MetadataBlobPayloadEntry
+    uploaded_at: Optional[str]
+    original_filename: Optional[str]
+    mtime: Optional[float]
+
+
+def _get_metadata_session_id(*, create: bool = False) -> Optional[str]:
+    if not has_request_context():
+        return None
+
+    existing = session.get(_SESSION_METADATA_SESSION_KEY)
+    if isinstance(existing, str) and existing.strip():
+        return existing.strip()
+
+    if not create:
+        return None
+
+    identifier = secrets.token_urlsafe(32)
+    session[_SESSION_METADATA_SESSION_KEY] = identifier
+    return identifier
+
+
+def ensure_metadata_session_id() -> str:
+    identifier = _get_metadata_session_id(create=True)
+    if not identifier:
+        raise RuntimeError("Unable to establish metadata session identifier.")
+    return identifier
+
+
+def _session_metadata_directory(session_id: str, *, create: bool = False) -> Optional[str]:
+    if not session_id:
+        return None
+
+    directory = os.path.join(SESSION_METADATA_DIR, session_id)
+    if create:
+        try:
+            os.makedirs(directory, exist_ok=True)
+        except OSError as exc:
+            app.logger.error("Failed to prepare session metadata directory %s: %s", directory, exc)
+            raise
+    return directory
+
+
+def _load_session_metadata_info(path: str) -> Dict[str, Any]:
+    try:
+        with open(path, "r", encoding="utf-8") as info_file:
+            payload = json.load(info_file)
+    except (OSError, ValueError, TypeError):
+        return {}
+
+    if not isinstance(payload, dict):
+        return {}
+
+    return payload
+
+
+def _clone_json_value(value: Any) -> Any:
+    if value is None:
+        return None
+    if isinstance(value, (str, int, float, bool)):
+        return value
+    try:
+        return json.loads(json.dumps(value))
+    except (TypeError, ValueError):
+        return None
+
+
+def _normalise_status_reports(raw: Mapping[str, Any]) -> List[Dict[str, Any]]:
+    reports: List[Dict[str, Any]] = []
+    value = raw.get("statusReports")
+    if not isinstance(value, list):
+        return reports
+
+    for entry in value:
+        cloned = _clone_json_value(entry)
+        if isinstance(cloned, dict):
+            reports.append(cloned)
+    return reports
+
+
+def _normalise_attestation_identifiers(raw: Mapping[str, Any]) -> Optional[List[str]]:
+    identifiers = raw.get("attestationCertificateKeyIdentifiers")
+    if not isinstance(identifiers, list):
+        return None
+
+    filtered: List[str] = []
+    for identifier in identifiers:
+        if isinstance(identifier, str):
+            trimmed = identifier.strip()
+            if trimmed:
+                filtered.append(trimmed)
+    return filtered or None
+
+
+def _normalise_metadata_statement(raw: Mapping[str, Any]) -> Tuple[Dict[str, Any], Optional[str]]:
+    metadata_statement: Dict[str, Any] = {}
+    legal_header: Optional[str] = None
+
+    raw_legal_header = raw.get("legalHeader")
+    if isinstance(raw_legal_header, str):
+        legal_header = raw_legal_header.strip() or None
+
+    excluded_keys = {
+        "statusReports",
+        "timeOfLastStatusChange",
+        "attestationCertificateKeyIdentifiers",
+        "aaid",
+        "aaguid",
+    }
+
+    for key, value in raw.items():
+        if key in excluded_keys:
+            continue
+        cloned = _clone_json_value(value)
+        if cloned is not None:
+            metadata_statement[key] = cloned
+
+    if legal_header and "legalHeader" not in metadata_statement:
+        metadata_statement["legalHeader"] = legal_header
+
+    return metadata_statement, legal_header
+
+
+def build_metadata_entry_components(raw: Mapping[str, Any]) -> Tuple[
+    MetadataBlobPayloadEntry,
+    Optional[str],
+    Dict[str, Any],
+]:
+    if not isinstance(raw, Mapping):
+        raise TypeError("Metadata JSON must be an object.")
+
+    payload: Dict[str, Any] = {}
+    payload["statusReports"] = _normalise_status_reports(raw)
+
+    time_of_last_status_change = raw.get("timeOfLastStatusChange")
+    if isinstance(time_of_last_status_change, str) and time_of_last_status_change.strip():
+        payload["timeOfLastStatusChange"] = time_of_last_status_change.strip()
+    else:
+        payload["timeOfLastStatusChange"] = datetime.now(timezone.utc).date().isoformat()
+
+    identifiers = _normalise_attestation_identifiers(raw)
+    if identifiers:
+        payload["attestationCertificateKeyIdentifiers"] = identifiers
+
+    if isinstance(raw.get("aaid"), str) and raw["aaid"].strip():
+        payload["aaid"] = raw["aaid"].strip()
+
+    if isinstance(raw.get("aaguid"), str) and raw["aaguid"].strip():
+        payload["aaguid"] = raw["aaguid"].strip()
+
+    metadata_statement, legal_header = _normalise_metadata_statement(raw)
+    payload["metadataStatement"] = metadata_statement
+
+    entry = MetadataBlobPayloadEntry.from_dict(payload)
+    payload_clone = json.loads(json.dumps(payload))
+    return entry, legal_header, payload_clone
+
+
+def _normalise_aaguid(value: Any) -> Optional[str]:
+    if not isinstance(value, str):
+        return None
+    cleaned = value.strip().replace("-", "").lower()
+    return cleaned or None
+
+
+def _extract_entry_aaguid(entry: MetadataBlobPayloadEntry) -> Optional[str]:
+    direct = _normalise_aaguid(getattr(entry, "aaguid", None))
+    if direct:
+        return direct
+
+    statement = getattr(entry, "metadata_statement", None)
+    if statement is None:
+        statement = getattr(entry, "metadataStatement", None)
+    if isinstance(statement, Mapping):
+        return _normalise_aaguid(statement.get("aaguid"))
+    return None
+
+
+def _merge_metadata(
+    base_metadata: Optional[MetadataBlobPayload],
+    session_items: List[SessionMetadataItem],
+) -> MetadataBlobPayload:
+    custom_entries: List[MetadataBlobPayloadEntry] = []
+    seen_aaguids: Set[str] = set()
+
+    for item in session_items:
+        entry = item.entry
+        aaguid = _extract_entry_aaguid(entry)
+        if aaguid and aaguid in seen_aaguids:
+            continue
+        if aaguid:
+            seen_aaguids.add(aaguid)
+        custom_entries.append(entry)
+
+    base_entries: List[MetadataBlobPayloadEntry] = []
+    if base_metadata is not None:
+        for entry in base_metadata.entries:
+            aaguid = _extract_entry_aaguid(entry)
+            if aaguid and aaguid in seen_aaguids:
+                continue
+            base_entries.append(entry)
+
+    combined_entries = tuple(custom_entries + base_entries)
+    if base_metadata is not None:
+        metadata = replace(base_metadata, entries=combined_entries)
+        if not getattr(metadata, "legal_header", None):
+            for item in session_items:
+                if item.legal_header:
+                    metadata = replace(metadata, legal_header=item.legal_header)
+                    break
+        return metadata
+
+    legal_header = ""
+    for item in session_items:
+        if item.legal_header:
+            legal_header = item.legal_header
+            break
+
+    next_update = datetime.now(timezone.utc).date()
+    return MetadataBlobPayload(
+        legal_header=legal_header,
+        no=0,
+        next_update=next_update,
+        entries=combined_entries,
+    )
+
+
+def save_session_metadata_item(
+    raw_payload: Mapping[str, Any],
+    *,
+    original_filename: Optional[str] = None,
+) -> SessionMetadataItem:
+    session_id = ensure_metadata_session_id()
+    directory = _session_metadata_directory(session_id, create=True)
+    if not directory:
+        raise RuntimeError("Unable to resolve session metadata storage path.")
+
+    entry, legal_header, payload = build_metadata_entry_components(raw_payload)
+
+    try:
+        serialisable_payload = json.loads(json.dumps(raw_payload))
+    except (TypeError, ValueError) as exc:
+        raise ValueError("Metadata JSON contains unsupported types.") from exc
+
+    os.makedirs(directory, exist_ok=True)
+    stored_filename = f"{uuid.uuid4().hex}{_SESSION_METADATA_SUFFIX}"
+    metadata_path = os.path.join(directory, stored_filename)
+
+    try:
+        with open(metadata_path, "w", encoding="utf-8") as metadata_file:
+            json.dump(serialisable_payload, metadata_file, indent=2, sort_keys=True)
+            metadata_file.write("\n")
+    except OSError as exc:
+        app.logger.error("Failed to store session metadata %s: %s", metadata_path, exc)
+        raise RuntimeError("Failed to store uploaded metadata on the server.") from exc
+
+    uploaded_at = datetime.now(timezone.utc).isoformat()
+    info_payload = {
+        "original_filename": original_filename or None,
+        "uploaded_at": uploaded_at,
+        "stored_filename": stored_filename,
+    }
+
+    info_path = metadata_path + _SESSION_METADATA_INFO_SUFFIX
+    try:
+        with open(info_path, "w", encoding="utf-8") as info_file:
+            json.dump(info_payload, info_file, indent=2, sort_keys=True)
+            info_file.write("\n")
+    except OSError as exc:
+        app.logger.warning("Failed to store session metadata info for %s: %s", metadata_path, exc)
+
+    try:
+        mtime = os.path.getmtime(metadata_path)
+    except OSError:
+        mtime = None
+
+    return SessionMetadataItem(
+        filename=stored_filename,
+        payload=payload,
+        legal_header=legal_header,
+        entry=entry,
+        uploaded_at=uploaded_at,
+        original_filename=original_filename or None,
+        mtime=mtime,
+    )
+
+
+def list_session_metadata_items(session_id: Optional[str] = None) -> List[SessionMetadataItem]:
+    active_session = session_id or _get_metadata_session_id(create=False)
+    if not active_session:
+        return []
+
+    directory = _session_metadata_directory(active_session, create=False)
+    if not directory or not os.path.isdir(directory):
+        return []
+
+    try:
+        filenames = [
+            name
+            for name in os.listdir(directory)
+            if name.endswith(_SESSION_METADATA_SUFFIX)
+        ]
+    except OSError:
+        return []
+
+    items: List[SessionMetadataItem] = []
+    for filename in sorted(filenames):
+        metadata_path = os.path.join(directory, filename)
+        try:
+            with open(metadata_path, "r", encoding="utf-8") as metadata_file:
+                raw = json.load(metadata_file)
+        except (OSError, ValueError, TypeError) as exc:
+            app.logger.warning("Failed to load session metadata from %s: %s", metadata_path, exc)
+            continue
+
+        try:
+            entry, legal_header, payload = build_metadata_entry_components(raw)
+        except Exception as exc:  # pylint: disable=broad-except
+            app.logger.warning(
+                "Failed to parse session metadata entry from %s: %s",
+                metadata_path,
+                exc,
+            )
+            continue
+
+        info_path = metadata_path + _SESSION_METADATA_INFO_SUFFIX
+        info = _load_session_metadata_info(info_path)
+
+        raw_uploaded_at = info.get("uploaded_at")
+        uploaded_at = raw_uploaded_at.strip() if isinstance(raw_uploaded_at, str) else None
+        raw_original_name = info.get("original_filename")
+        original_filename = (
+            raw_original_name.strip() if isinstance(raw_original_name, str) and raw_original_name.strip() else None
+        )
+
+        try:
+            mtime = os.path.getmtime(metadata_path)
+        except OSError:
+            mtime = None
+
+        items.append(
+            SessionMetadataItem(
+                filename=filename,
+                payload=payload,
+                legal_header=legal_header,
+                entry=entry,
+                uploaded_at=uploaded_at,
+                original_filename=original_filename,
+                mtime=mtime,
+            )
+        )
+
+    items.sort(key=lambda item: item.mtime or 0, reverse=True)
+    return items
+
+
+def serialize_session_metadata_item(item: SessionMetadataItem) -> Dict[str, Any]:
+    source: Dict[str, Any] = {
+        "storedFilename": item.filename,
+    }
+    if item.original_filename:
+        source["originalFilename"] = item.original_filename
+    if item.uploaded_at:
+        source["uploadedAt"] = item.uploaded_at
+    if item.mtime is not None:
+        source["modifiedAt"] = datetime.fromtimestamp(item.mtime, timezone.utc).isoformat()
+
+    payload: Dict[str, Any] = {
+        "entry": item.payload,
+        "source": source,
+    }
+    if item.legal_header:
+        payload["legalHeader"] = item.legal_header
+
+    return payload
 
 
 class MetadataDownloadError(Exception):
@@ -416,149 +812,68 @@ def download_metadata_blob(
     return True, len(payload), last_modified_iso
 
 
-def get_mds_verifier() -> Optional[MdsAttestationVerifier]:
-    """Return a cached MDS attestation verifier if metadata is available."""
-
-    global _mds_verifier_cache, _mds_verifier_mtime
+def _load_base_metadata() -> Tuple[Optional[MetadataBlobPayload], Optional[float]]:
+    global _base_metadata_cache, _base_metadata_mtime
 
     try:
-        mds_mtime = os.path.getmtime(MDS_METADATA_PATH)
+        mtime = os.path.getmtime(MDS_METADATA_PATH)
     except OSError:
-        mds_mtime = None
+        mtime = None
 
-    try:
-        feitian_mtime = os.path.getmtime(FEITIAN_PQC_METADATA_PATH)
-    except OSError:
-        feitian_mtime = None
-
-    mtimes = [value for value in (mds_mtime, feitian_mtime) if value is not None]
-    combined_mtime = max(mtimes) if mtimes else None
-
-    if (
-        _mds_verifier_cache is not None
-        and _mds_verifier_mtime is not None
-        and _mds_verifier_mtime == combined_mtime
-    ):
-        return _mds_verifier_cache
+    if _base_metadata_cache is not None and _base_metadata_mtime == mtime:
+        return _base_metadata_cache, mtime
 
     metadata: Optional[MetadataBlobPayload] = None
-    try:
-        if mds_mtime is not None:
+    if mtime is not None:
+        try:
             with open(MDS_METADATA_PATH, "rb") as blob_file:
                 blob_data = blob_file.read()
             metadata = parse_blob(blob_data, FIDO_METADATA_TRUST_ROOT_CERT)
-    except FileNotFoundError:
-        metadata = None
-    except Exception as exc:
-        app.logger.warning(
-            "Failed to load MDS metadata from %s: %s",
-            MDS_METADATA_PATH,
-            exc,
-        )
-        metadata = None
-
-    feitian_entry, feitian_legal_header = _load_feitian_metadata_entry()
-
-    if metadata is None and feitian_entry is None:
-        _mds_verifier_cache = None
-        _mds_verifier_mtime = combined_mtime
-        return None
-
-    if metadata is None and feitian_entry is not None:
-        payload = {
-            "legalHeader": feitian_legal_header or "",
-            "no": 0,
-            "nextUpdate": datetime.now(timezone.utc).date().isoformat(),
-            "entries": [dict(feitian_entry)],
-        }
-        try:
-            metadata = MetadataBlobPayload.from_dict(payload)
-        except Exception as exc:  # pragma: no cover - defensive
+        except FileNotFoundError:
+            metadata = None
+        except Exception as exc:  # pylint: disable=broad-except
             app.logger.warning(
-                "Failed to build metadata payload from %s: %s",
-                FEITIAN_PQC_METADATA_PATH,
+                "Failed to load MDS metadata from %s: %s",
+                MDS_METADATA_PATH,
                 exc,
             )
             metadata = None
 
-    if metadata is None:
-        _mds_verifier_cache = None
-        _mds_verifier_mtime = combined_mtime
+    _base_metadata_cache = metadata
+    _base_metadata_mtime = mtime
+    return metadata, mtime
+
+
+def get_mds_verifier() -> Optional[MdsAttestationVerifier]:
+    """Return an MDS attestation verifier using session metadata when available."""
+
+    global _base_verifier_cache, _base_verifier_mtime
+
+    base_metadata, base_mtime = _load_base_metadata()
+    session_items = list_session_metadata_items()
+
+    if not session_items:
+        if base_metadata is None:
+            _base_verifier_cache = None
+            _base_verifier_mtime = base_mtime
+            return None
+
+        if (
+            _base_verifier_cache is not None
+            and _base_verifier_mtime is not None
+            and _base_verifier_mtime == base_mtime
+        ):
+            return _base_verifier_cache
+
+        verifier = MdsAttestationVerifier(base_metadata)
+        _base_verifier_cache = verifier
+        _base_verifier_mtime = base_mtime
+        return verifier
+
+    if base_metadata is None and not session_items:
         return None
 
-    if feitian_entry is not None:
-        combined_entries = (feitian_entry,) + tuple(metadata.entries)
-        metadata = replace(metadata, entries=combined_entries)
-        if feitian_legal_header and not getattr(metadata, "legal_header", None):
-            metadata = replace(metadata, legal_header=feitian_legal_header)
-
-    verifier = MdsAttestationVerifier(metadata)
-    _mds_verifier_cache = verifier
-    _mds_verifier_mtime = combined_mtime
-    return verifier
+    metadata = _merge_metadata(base_metadata, session_items)
+    return MdsAttestationVerifier(metadata)
 
 
-def _load_feitian_metadata_entry() -> Tuple[Optional[MetadataBlobPayloadEntry], Optional[str]]:
-    """Load the bundled Feitian PQC metadata entry if present."""
-
-    try:
-        with open(FEITIAN_PQC_METADATA_PATH, "r", encoding="utf-8") as metadata_file:
-            raw = json.load(metadata_file)
-    except FileNotFoundError:
-        return None, None
-    except (OSError, ValueError, TypeError) as exc:
-        app.logger.warning(
-            "Failed to load bundled metadata from %s: %s",
-            FEITIAN_PQC_METADATA_PATH,
-            exc,
-        )
-        return None, None
-
-    if not isinstance(raw, dict):
-        app.logger.warning(
-            "Bundled metadata %s is not a JSON object.",
-            FEITIAN_PQC_METADATA_PATH,
-        )
-        return None, None
-
-    entry_payload: Dict[str, Any] = {}
-    entry_payload["statusReports"] = list(raw.get("statusReports", []))
-    time_of_last_status_change = raw.get("timeOfLastStatusChange")
-    if isinstance(time_of_last_status_change, str) and time_of_last_status_change.strip():
-        entry_payload["timeOfLastStatusChange"] = time_of_last_status_change.strip()
-    else:
-        entry_payload["timeOfLastStatusChange"] = datetime.now(timezone.utc).date().isoformat()
-
-    for key in ("aaid", "aaguid", "attestationCertificateKeyIdentifiers"):
-        if key in raw:
-            entry_payload[key] = raw[key]
-
-    metadata_statement_fields = {
-        key: value
-        for key, value in raw.items()
-        if key
-        not in {
-            "statusReports",
-            "timeOfLastStatusChange",
-            "attestationCertificateKeyIdentifiers",
-        }
-    }
-    if "legalHeader" not in metadata_statement_fields and raw.get("legalHeader"):
-        metadata_statement_fields["legalHeader"] = raw["legalHeader"]
-    entry_payload["metadataStatement"] = metadata_statement_fields
-
-    try:
-        entry = MetadataBlobPayloadEntry.from_dict(entry_payload)
-    except Exception as exc:
-        app.logger.warning(
-            "Failed to parse bundled metadata entry from %s: %s",
-            FEITIAN_PQC_METADATA_PATH,
-            exc,
-        )
-        return None, None
-
-    legal_header = None
-    if isinstance(raw.get("legalHeader"), str):
-        legal_header = raw["legalHeader"].strip() or None
-
-    return entry, legal_header

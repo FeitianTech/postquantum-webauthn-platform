@@ -1,7 +1,8 @@
 import {
     MDS_HTML_PATH,
     MDS_JWS_PATH,
-    FEITIAN_PQC_METADATA_PATH,
+    CUSTOM_METADATA_LIST_PATH,
+    CUSTOM_METADATA_UPLOAD_PATH,
     COLUMN_COUNT,
     MISSING_METADATA_MESSAGE,
     UPDATE_BUTTON_STATES,
@@ -104,8 +105,9 @@ const DEFAULT_MIN_COLUMN_WIDTH = 64;
 const FLOATING_SCROLL_BOTTOM_MARGIN = 24;
 const FLOATING_SCROLL_SIDE_MARGIN = 16;
 
-let feitianEntryCache = null;
-let feitianEntryPromise = null;
+let customMetadataCache = null;
+let customMetadataPromise = null;
+let customMetadataItems = [];
 
 function cloneJsonValue(value) {
     if (value === undefined) {
@@ -134,120 +136,407 @@ function cloneMetadataEntry(entry) {
     }
 }
 
-function buildFeitianMetadataEntry(raw) {
-    if (!raw || typeof raw !== 'object') {
+function cloneCustomMetadataItem(item) {
+    if (!item || typeof item !== 'object') {
         return null;
     }
 
-    const metadataStatement = {};
-    Object.keys(raw).forEach(key => {
-        if (
-            key === 'statusReports' ||
-            key === 'timeOfLastStatusChange' ||
-            key === 'attestationCertificateKeyIdentifiers'
-        ) {
-            return;
-        }
-        const value = cloneJsonValue(raw[key]);
-        if (value !== undefined) {
-            metadataStatement[key] = value;
-        }
-    });
-
-    if (!metadataStatement.aaguid && typeof raw.aaguid === 'string') {
-        metadataStatement.aaguid = raw.aaguid;
+    const cloned = { ...item };
+    cloned.entry = cloneMetadataEntry(item.entry);
+    if (!cloned.entry) {
+        return null;
     }
-
-    const entry = {
-        statusReports: Array.isArray(raw.statusReports)
-            ? raw.statusReports.map(report => cloneJsonValue(report)).filter(Boolean)
-            : [],
-        timeOfLastStatusChange:
-            typeof raw.timeOfLastStatusChange === 'string' && raw.timeOfLastStatusChange.trim()
-                ? raw.timeOfLastStatusChange.trim()
-                : new Date().toISOString().slice(0, 10),
-        metadataStatement,
-    };
-
-    if (typeof raw.aaguid === 'string' && raw.aaguid) {
-        entry.aaguid = raw.aaguid;
+    if (item.source && typeof item.source === 'object') {
+        cloned.source = { ...item.source };
     }
-    if (typeof raw.aaid === 'string' && raw.aaid) {
-        entry.aaid = raw.aaid;
+    if (typeof item.legalHeader === 'string' && item.legalHeader.trim()) {
+        cloned.legalHeader = item.legalHeader.trim();
+    } else {
+        delete cloned.legalHeader;
     }
-    if (Array.isArray(raw.attestationCertificateKeyIdentifiers)) {
-        entry.attestationCertificateKeyIdentifiers = raw.attestationCertificateKeyIdentifiers
-            .map(identifier => (typeof identifier === 'string' ? identifier : null))
-            .filter(Boolean);
-    }
-
-    return entry;
+    return cloned;
 }
 
-async function getFeitianMetadataEntry() {
-    if (feitianEntryCache) {
-        return cloneMetadataEntry(feitianEntryCache);
+function cloneCustomMetadataItems(items) {
+    if (!Array.isArray(items)) {
+        return [];
     }
-    if (feitianEntryPromise) {
-        const pending = await feitianEntryPromise;
-        return pending ? cloneMetadataEntry(pending) : null;
-    }
-
-    feitianEntryPromise = (async () => {
-        try {
-            const response = await fetch(FEITIAN_PQC_METADATA_PATH, { cache: 'no-store' });
-            if (!response.ok) {
-                if (response.status !== 404) {
-                    console.warn(
-                        `Failed to load ${FEITIAN_PQC_METADATA_PATH}: ${response.status}`,
-                    );
-                }
-                return null;
-            }
-            const raw = await response.json();
-            const entry = buildFeitianMetadataEntry(raw);
-            if (!entry) {
-                return null;
-            }
-            feitianEntryCache = entry;
-            return entry;
-        } catch (error) {
-            console.warn('Failed to load Feitian PQC metadata.', error);
-            return null;
-        } finally {
-            feitianEntryPromise = null;
-        }
-    })();
-
-    const loaded = await feitianEntryPromise;
-    return loaded ? cloneMetadataEntry(loaded) : null;
+    return items.map(item => cloneCustomMetadataItem(item)).filter(Boolean);
 }
 
-async function ensureFeitianMetadata(metadata) {
-    const entry = await getFeitianMetadataEntry();
+async function fetchCustomMetadataItems() {
+    try {
+        const response = await fetch(CUSTOM_METADATA_LIST_PATH, { cache: 'no-store' });
+        if (!response.ok) {
+            if (response.status !== 404) {
+                console.warn(
+                    `Failed to load ${CUSTOM_METADATA_LIST_PATH}: ${response.status}`,
+                );
+            }
+            return [];
+        }
+        const payload = await response.json();
+        const rawItems = Array.isArray(payload?.items) ? payload.items : [];
+        return cloneCustomMetadataItems(rawItems);
+    } catch (error) {
+        console.warn('Failed to load custom metadata entries.', error);
+        return [];
+    }
+}
+
+async function getCustomMetadataItems(options = {}) {
+    const opts = options && typeof options === 'object' ? options : {};
+    const forceReload = Boolean(opts.forceReload);
+
+    if (forceReload) {
+        customMetadataCache = null;
+    }
+
+    if (customMetadataCache) {
+        return cloneCustomMetadataItems(customMetadataCache);
+    }
+
+    if (!customMetadataPromise) {
+        customMetadataPromise = (async () => {
+            const items = await fetchCustomMetadataItems();
+            customMetadataCache = items;
+            return items;
+        })();
+    }
+
+    try {
+        const loaded = await customMetadataPromise;
+        return cloneCustomMetadataItems(loaded);
+    } finally {
+        customMetadataPromise = null;
+    }
+}
+
+function extractCustomEntries(items) {
+    return items
+        .map(item => cloneMetadataEntry(item.entry))
+        .filter(entry => entry && typeof entry === 'object');
+}
+
+function mergeCustomEntriesIntoMetadata(metadata, entries, items) {
     const base = metadata && typeof metadata === 'object' ? metadata : {};
     const result = { ...base };
     const existingEntries = Array.isArray(base.entries) ? base.entries.slice() : [];
 
-    if (!entry) {
+    if (!entries.length) {
         result.entries = existingEntries;
         return result;
     }
 
-    const targetAaguid = normaliseAaguid(entry.aaguid || entry.metadataStatement?.aaguid);
-    const filteredEntries = existingEntries.filter(existing => {
-        const existingAaguid = normaliseAaguid(existing?.aaguid || existing?.metadataStatement?.aaguid);
-        return !targetAaguid || existingAaguid !== targetAaguid;
+    const seen = new Set(
+        entries
+            .map(entry => normaliseAaguid(entry?.aaguid || entry?.metadataStatement?.aaguid))
+            .filter(Boolean),
+    );
+
+    const filteredExisting = existingEntries.filter(existing => {
+        const existingAaguid = normaliseAaguid(
+            existing?.aaguid || existing?.metadataStatement?.aaguid,
+        );
+        return !existingAaguid || !seen.has(existingAaguid);
     });
 
-    filteredEntries.unshift(cloneMetadataEntry(entry));
-    result.entries = filteredEntries;
+    const combined = entries.map(entry => cloneMetadataEntry(entry)).concat(filteredExisting);
+    result.entries = combined.filter(Boolean);
 
-    if (!result.legalHeader && entry?.metadataStatement?.legalHeader) {
-        result.legalHeader = entry.metadataStatement.legalHeader;
+    if (!result.legalHeader) {
+        const header = items
+            .map(item => (typeof item.legalHeader === 'string' ? item.legalHeader : ''))
+            .map(value => value.trim())
+            .find(value => value);
+        if (header) {
+            result.legalHeader = header;
+        }
     }
 
     return result;
+}
+
+async function ensureCustomMetadata(metadata, options = {}) {
+    const items = await getCustomMetadataItems(options);
+    customMetadataItems = cloneCustomMetadataItems(items);
+    updateCustomMetadataList(customMetadataItems);
+    const entries = extractCustomEntries(customMetadataItems);
+    return mergeCustomEntriesIntoMetadata(metadata, entries, customMetadataItems);
+}
+
+function setCustomMetadataMessage(message, variant = 'info', targetState = mdsState) {
+    const container = targetState?.customPanelMessages;
+    if (!container) {
+        return;
+    }
+
+    const variants = ['info', 'success', 'error', 'warning'];
+    container.classList.remove(
+        ...variants.map(name => `mds-custom-panel__messages--${name}`),
+    );
+
+    const safeVariant = variants.includes(variant) ? variant : 'info';
+    container.classList.add(`mds-custom-panel__messages--${safeVariant}`);
+
+    if (typeof message === 'string' && message.trim()) {
+        container.textContent = message.trim();
+        container.hidden = false;
+        container.removeAttribute('hidden');
+    } else {
+        container.textContent = '';
+        container.hidden = true;
+        container.setAttribute('hidden', '');
+    }
+}
+
+function updateCustomMetadataList(items, targetState = mdsState) {
+    const list = targetState?.customList;
+    if (!list) {
+        return;
+    }
+
+    list.innerHTML = '';
+
+    const entries = Array.isArray(items) ? items : [];
+    if (!entries.length) {
+        const emptyItem = document.createElement('li');
+        emptyItem.className = 'mds-custom-panel__list-item mds-custom-panel__list-item--empty';
+        emptyItem.textContent = 'No custom metadata has been added yet.';
+        list.appendChild(emptyItem);
+        return;
+    }
+
+    entries.forEach(item => {
+        const listItem = document.createElement('li');
+        listItem.className = 'mds-custom-panel__list-item';
+
+        const name =
+            (item?.source?.originalFilename && String(item.source.originalFilename).trim()) ||
+            (item?.source?.storedFilename && String(item.source.storedFilename).trim()) ||
+            'metadata.json';
+
+        const nameEl = document.createElement('span');
+        nameEl.className = 'mds-custom-panel__item-name';
+        nameEl.textContent = name;
+        listItem.appendChild(nameEl);
+
+        const details = [];
+        const uploadedAtRaw = item?.source?.uploadedAt;
+        if (typeof uploadedAtRaw === 'string' && uploadedAtRaw) {
+            const parsed = new Date(uploadedAtRaw);
+            if (!Number.isNaN(parsed.getTime())) {
+                details.push(`Uploaded ${parsed.toLocaleString()}`);
+            }
+        }
+        if (item?.legalHeader) {
+            details.push('Includes legal header');
+        }
+
+        if (details.length) {
+            const detailEl = document.createElement('span');
+            detailEl.className = 'mds-custom-panel__item-details';
+            detailEl.textContent = details.join(' · ');
+            listItem.appendChild(detailEl);
+        }
+
+        list.appendChild(listItem);
+    });
+}
+
+function handleCustomPanelKeydown(event) {
+    if (event.key === 'Escape') {
+        event.stopPropagation();
+        closeCustomMetadataPanel();
+    }
+}
+
+function openCustomMetadataPanel() {
+    if (!mdsState?.customPanel) {
+        return;
+    }
+
+    if (!mdsState.customPanelIsOpen) {
+        const panel = mdsState.customPanel;
+        panel.hidden = false;
+        panel.removeAttribute('hidden');
+        panel.classList.add('is-open');
+        mdsState.customPanelIsOpen = true;
+        mdsState.customPanelReturnFocus =
+            document.activeElement instanceof HTMLElement ? document.activeElement : null;
+        if (mdsState.addMetadataButton) {
+            mdsState.addMetadataButton.setAttribute('aria-expanded', 'true');
+        }
+        if (mdsState.customDropzone instanceof HTMLElement) {
+            mdsState.customDropzone.focus();
+        }
+    }
+}
+
+function closeCustomMetadataPanel() {
+    if (!mdsState?.customPanel) {
+        return;
+    }
+
+    const panel = mdsState.customPanel;
+    panel.classList.remove('is-open');
+    panel.hidden = true;
+    panel.setAttribute('hidden', '');
+    mdsState.customPanelIsOpen = false;
+
+    if (mdsState.addMetadataButton) {
+        mdsState.addMetadataButton.setAttribute('aria-expanded', 'false');
+    }
+
+    if (mdsState.customDropzone instanceof HTMLElement) {
+        mdsState.customDropzone.classList.remove('is-active');
+    }
+
+    if (mdsState.customPanelReturnFocus instanceof HTMLElement) {
+        try {
+            mdsState.customPanelReturnFocus.focus();
+        } catch (error) {
+            /* ignore focus errors */
+        }
+    }
+    mdsState.customPanelReturnFocus = null;
+}
+
+function handleCustomDropzoneDragEnter(event) {
+    if (!mdsState?.customDropzone) {
+        return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    if (event.dataTransfer) {
+        event.dataTransfer.dropEffect = 'copy';
+    }
+    mdsState.customDropzone.classList.add('is-active');
+}
+
+function handleCustomDropzoneDragLeave(event) {
+    if (!mdsState?.customDropzone) {
+        return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    if (event.target === mdsState.customDropzone || event.currentTarget === mdsState.customDropzone) {
+        mdsState.customDropzone.classList.remove('is-active');
+    }
+}
+
+function normaliseFileList(list) {
+    if (!list) {
+        return [];
+    }
+    return Array.from(list).filter(file => file instanceof File);
+}
+
+function splitAcceptedFiles(files) {
+    const accepted = [];
+    const rejected = [];
+    files.forEach(file => {
+        if (!file) {
+            return;
+        }
+        const name = typeof file.name === 'string' ? file.name : '';
+        if (name.toLowerCase().endsWith('.json')) {
+            accepted.push(file);
+        } else {
+            rejected.push(name || 'Unnamed file');
+        }
+    });
+    return { accepted, rejected };
+}
+
+async function handleCustomFileSelection(files) {
+    const { accepted, rejected } = splitAcceptedFiles(files);
+
+    if (rejected.length) {
+        setCustomMetadataMessage(
+            `Ignored non-JSON files: ${rejected.join(', ')}`,
+            'warning',
+        );
+    }
+
+    if (!accepted.length) {
+        if (!rejected.length) {
+            setCustomMetadataMessage('Please select one or more JSON files.', 'warning');
+        }
+        return;
+    }
+
+    await uploadCustomMetadataFiles(accepted);
+}
+
+function handleCustomDrop(event) {
+    if (!mdsState?.customDropzone) {
+        return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    mdsState.customDropzone.classList.remove('is-active');
+    const files = normaliseFileList(event.dataTransfer?.files);
+    void handleCustomFileSelection(files);
+}
+
+function handleCustomFileInputChange(event) {
+    const files = normaliseFileList(event.target?.files);
+    if (mdsState?.customFileInput) {
+        mdsState.customFileInput.value = '';
+    }
+    void handleCustomFileSelection(files);
+}
+
+async function uploadCustomMetadataFiles(files) {
+    if (!files.length) {
+        setCustomMetadataMessage('Please choose one or more JSON files.', 'warning');
+        return;
+    }
+
+    const formData = new FormData();
+    files.forEach(file => {
+        const name = typeof file.name === 'string' && file.name ? file.name : 'metadata.json';
+        formData.append('files', file, name);
+    });
+
+    setCustomMetadataMessage('Uploading metadata…', 'info');
+
+    try {
+        const response = await fetch(CUSTOM_METADATA_UPLOAD_PATH, {
+            method: 'POST',
+            body: formData,
+        });
+
+        let payload = null;
+        try {
+            payload = await response.json();
+        } catch (error) {
+            payload = null;
+        }
+
+        const errors = Array.isArray(payload?.errors) ? payload.errors : [];
+        if (!response.ok) {
+            const message =
+                (payload && typeof payload.error === 'string' && payload.error.trim()) ||
+                errors.join(' ') ||
+                'Failed to upload metadata files.';
+            setCustomMetadataMessage(message, 'error');
+            return;
+        }
+
+        customMetadataCache = null;
+        const successMessage =
+            errors.length > 0
+                ? `Metadata uploaded with warnings: ${errors.join(' ')}`
+                : 'Metadata uploaded successfully.';
+        setCustomMetadataMessage(successMessage, errors.length ? 'warning' : 'success');
+
+        await loadMdsData('Custom metadata updated.', { forceReload: true });
+    } catch (error) {
+        console.error('Failed to upload custom metadata files.', error);
+        setCustomMetadataMessage('Failed to upload metadata files.', 'error');
+    }
 }
 
 if (typeof window !== 'undefined') {
@@ -767,6 +1056,8 @@ function clearMetadataCache() {
     } catch (error) {
         console.warn('Failed to clear cached metadata payload:', error);
     }
+
+    customMetadataCache = null;
 }
 
 function lockRowHeights() {
@@ -1045,6 +1336,76 @@ function initializeState(root) {
         }
     });
 
+    const addMetadataButton = root.querySelector('#mds-add-metadata-button');
+    const customPanel = root.querySelector('#mds-custom-metadata-panel');
+    const customPanelClose = root.querySelector('#mds-custom-panel-close');
+    const customMessages = root.querySelector('#mds-custom-messages');
+    const customList = root.querySelector('#mds-custom-list');
+    const customDropzone = root.querySelector('#mds-custom-dropzone');
+    const customFileInput = root.querySelector('#mds-custom-file-input');
+    const customBackdrop = customPanel?.querySelector('[data-action="close"]');
+
+    if (customPanel) {
+        customPanel.addEventListener('keydown', handleCustomPanelKeydown);
+    }
+
+    if (customBackdrop instanceof HTMLElement) {
+        customBackdrop.addEventListener('click', event => {
+            event.preventDefault();
+            closeCustomMetadataPanel();
+        });
+    }
+
+    if (customPanelClose instanceof HTMLElement) {
+        customPanelClose.addEventListener('click', event => {
+            event.preventDefault();
+            closeCustomMetadataPanel();
+        });
+    }
+
+    if (addMetadataButton instanceof HTMLButtonElement) {
+        addMetadataButton.type = 'button';
+        addMetadataButton.setAttribute('aria-haspopup', 'dialog');
+        addMetadataButton.setAttribute('aria-expanded', 'false');
+        addMetadataButton.addEventListener('click', event => {
+            event.preventDefault();
+            openCustomMetadataPanel();
+        });
+        addMetadataButton.addEventListener('keydown', event => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                openCustomMetadataPanel();
+            }
+        });
+    }
+
+    if (customDropzone instanceof HTMLElement) {
+        const activateFileInput = () => {
+            if (customFileInput instanceof HTMLInputElement) {
+                customFileInput.click();
+            }
+        };
+
+        customDropzone.addEventListener('click', event => {
+            event.preventDefault();
+            activateFileInput();
+        });
+        customDropzone.addEventListener('keydown', event => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                activateFileInput();
+            }
+        });
+        customDropzone.addEventListener('dragenter', handleCustomDropzoneDragEnter);
+        customDropzone.addEventListener('dragover', handleCustomDropzoneDragEnter);
+        customDropzone.addEventListener('dragleave', handleCustomDropzoneDragLeave);
+        customDropzone.addEventListener('drop', handleCustomDrop);
+    }
+
+    if (customFileInput instanceof HTMLInputElement) {
+        customFileInput.addEventListener('change', handleCustomFileInputChange);
+    }
+
     const tableContainer = root.querySelector('#mds-table-container');
     const table = root.querySelector('.mds-table');
     const tableBody = root.querySelector('#mds-table-body');
@@ -1182,6 +1543,15 @@ function initializeState(root) {
         columnResizers: [],
         columnResizeState: null,
         columnResizersEnabled: false,
+        addMetadataButton,
+        customPanel,
+        customPanelClose,
+        customPanelMessages: customMessages,
+        customList,
+        customDropzone,
+        customFileInput,
+        customPanelIsOpen: false,
+        customPanelReturnFocus: null,
         updateButton,
         updateButtonMode: 'update',
         metadataOverdue: false,
@@ -1208,6 +1578,9 @@ function initializeState(root) {
         scrollTopButton,
         scrollTopButtonVisible: false,
     };
+
+    updateCustomMetadataList(customMetadataItems, state);
+    setCustomMetadataMessage('', 'info', state);
 
     setupColumnResizers(state);
     setColumnResizersEnabled(false, state);
@@ -1367,7 +1740,7 @@ async function applyInitialMetadataPayload(note) {
         const payload = decodeBase64Url(payloadSegment);
         const metadata = JSON.parse(payload);
 
-        const enhancedMetadata = await ensureFeitianMetadata(metadata);
+        const enhancedMetadata = await ensureCustomMetadata(metadata);
         await applyMetadataEntries(enhancedMetadata, { note });
         storeMetadataCache(JSON.stringify(enhancedMetadata), snapshotInfo);
         return true;
@@ -1430,7 +1803,7 @@ async function loadMdsData(statusNote, options = {}) {
                 if (trackProgress) {
                     loaderSetPhase('Restoring cached authenticator metadata…', { progress: 52 });
                 }
-                const enhanced = await ensureFeitianMetadata(cached.metadata);
+                const enhanced = await ensureCustomMetadata(cached.metadata);
                 await applyMetadataEntries(enhanced, { note });
                 storeMetadataCache(JSON.stringify(enhanced), cached.info || null);
                 setColumnResizersEnabled(hasLoaded);
@@ -1459,12 +1832,12 @@ async function loadMdsData(statusNote, options = {}) {
             const response = await fetch(MDS_JWS_PATH, fetchOptions);
             if (!response.ok) {
                 if (response.status === 404) {
-                    const fallbackMetadata = await ensureFeitianMetadata(null);
+                    const fallbackMetadata = await ensureCustomMetadata(null);
                     if (Array.isArray(fallbackMetadata.entries) && fallbackMetadata.entries.length) {
                         if (trackProgress) {
-                            loaderSetPhase('Loading bundled authenticator metadata…', { progress: 54 });
+                            loaderSetPhase('Loading custom authenticator metadata…', { progress: 54 });
                         }
-                        const fallbackNoteParts = [note, 'Using bundled Feitian PQC metadata.'].filter(Boolean);
+                        const fallbackNoteParts = [note, 'Using uploaded session metadata.'].filter(Boolean);
                         await applyMetadataEntries(fallbackMetadata, {
                             note: fallbackNoteParts.join(' '),
                         });
@@ -1472,7 +1845,7 @@ async function loadMdsData(statusNote, options = {}) {
                         setUpdateButtonAttention(false);
                         storeMetadataCache(JSON.stringify(fallbackMetadata), {
                             cachedAt: new Date().toISOString(),
-                            source: 'bundled-feitian',
+                            source: 'session-custom',
                         });
                         stateUpdated = true;
                         return;
@@ -1531,7 +1904,7 @@ async function loadMdsData(statusNote, options = {}) {
             const payload = decodeBase64Url(payloadSegment);
             const metadata = JSON.parse(payload);
 
-            const enhanced = await ensureFeitianMetadata(metadata);
+            const enhanced = await ensureCustomMetadata(metadata);
             await applyMetadataEntries(enhanced, { note });
             stateUpdated = true;
 
