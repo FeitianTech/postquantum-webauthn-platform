@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: python-fido2-webauthn-demo
+    name: Post-Quantum WebAuthn Test Platform
     runtime: docker
     plan: free
     dockerfilePath: ./Dockerfile
@@ -8,8 +8,8 @@ services:
     autoDeploy: true
 
 cronJobs:
-  - name: python-fido2-webauthn-demo-mds-refresh
-    schedule: "0 6 * * *"
+  - name: MDS Refresh
+    schedule: "0 18 * * *"
     runtime: docker
     plan: free
     dockerfilePath: ./Dockerfile

@@ -22,9 +22,11 @@ from fido2.mds3 import (
 from .config import (
     MDS_METADATA_CACHE_PATH,
     MDS_METADATA_PATH,
+    MDS_METADATA_CACHE_STATIC_PATH,
     MDS_METADATA_URL,
     MDS_TLS_ADDITIONAL_TRUST_ANCHORS_PEM,
     MDS_VERIFIED_PAYLOAD_PATH,
+    MDS_VERIFIED_PAYLOAD_STATIC_PATH,
     app,
     FEITIAN_PQC_METADATA_PATH,
     FIDO_METADATA_TRUST_ROOT_PEM,
@@ -134,14 +136,21 @@ def _clean_metadata_cache_value(value: Any) -> Optional[str]:
 def load_metadata_cache_entry() -> Dict[str, Optional[str]]:
     """Load cached metadata headers used for conditional download requests."""
 
-    try:
-        with open(MDS_METADATA_CACHE_PATH, "r", encoding="utf-8") as cache_file:
-            cached = json.load(cache_file)
-    except (OSError, ValueError, TypeError):
-        return {}
+    def _load(path: Optional[str]) -> Optional[Dict[str, Any]]:
+        if not path:
+            return None
+        try:
+            with open(path, "r", encoding="utf-8") as cache_file:
+                payload = json.load(cache_file)
+        except FileNotFoundError:
+            return None
+        except (OSError, ValueError, TypeError):
+            return None
+        if not isinstance(payload, dict):
+            return None
+        return payload
 
-    if not isinstance(cached, dict):
-        return {}
+    cached = _load(MDS_METADATA_CACHE_PATH) or _load(MDS_METADATA_CACHE_STATIC_PATH) or {}
 
     last_modified_header = _clean_metadata_cache_value(cached.get("last_modified"))
     last_modified_iso = _clean_metadata_cache_value(cached.get("last_modified_iso"))
@@ -459,24 +468,36 @@ def combine_with_local_metadata(
 def _load_verified_metadata_payload() -> Optional[MetadataBlobPayload]:
     """Load the cached, verified metadata payload if present."""
 
-    try:
-        with open(MDS_VERIFIED_PAYLOAD_PATH, "r", encoding="utf-8") as payload_file:
-            raw_payload = json.load(payload_file)
-    except FileNotFoundError:
-        return None
-    except (OSError, ValueError, TypeError) as exc:
-        app.logger.warning(
-            "Failed to load verified metadata payload from %s: %s",
-            MDS_VERIFIED_PAYLOAD_PATH,
-            exc,
-        )
-        return None
+    paths = []
+    if MDS_VERIFIED_PAYLOAD_PATH:
+        paths.append(MDS_VERIFIED_PAYLOAD_PATH)
+    if MDS_VERIFIED_PAYLOAD_STATIC_PATH and MDS_VERIFIED_PAYLOAD_STATIC_PATH not in paths:
+        paths.append(MDS_VERIFIED_PAYLOAD_STATIC_PATH)
 
-    if not isinstance(raw_payload, dict):
-        app.logger.warning(
-            "Verified metadata payload %s is not a JSON object.",
-            MDS_VERIFIED_PAYLOAD_PATH,
-        )
+    raw_payload: Optional[Dict[str, Any]] = None
+    for candidate in paths:
+        try:
+            with open(candidate, "r", encoding="utf-8") as payload_file:
+                loaded = json.load(payload_file)
+        except FileNotFoundError:
+            continue
+        except (OSError, ValueError, TypeError) as exc:
+            app.logger.warning(
+                "Failed to load verified metadata payload from %s: %s",
+                candidate,
+                exc,
+            )
+            continue
+        if not isinstance(loaded, dict):
+            app.logger.warning(
+                "Verified metadata payload %s is not a JSON object.",
+                candidate,
+            )
+            continue
+        raw_payload = loaded
+        break
+
+    if raw_payload is None:
         return None
 
     try:
@@ -501,11 +522,20 @@ def get_mds_verifier() -> Optional[MdsAttestationVerifier]:
         verified_mtime = None
 
     try:
+        verified_fallback_mtime = os.path.getmtime(MDS_VERIFIED_PAYLOAD_STATIC_PATH)
+    except OSError:
+        verified_fallback_mtime = None
+
+    try:
         feitian_mtime = os.path.getmtime(FEITIAN_PQC_METADATA_PATH)
     except OSError:
         feitian_mtime = None
 
-    mtimes = [value for value in (verified_mtime, feitian_mtime) if value is not None]
+    mtimes = [
+        value
+        for value in (verified_mtime, verified_fallback_mtime, feitian_mtime)
+        if value is not None
+    ]
     combined_mtime = max(mtimes) if mtimes else None
 
     if (

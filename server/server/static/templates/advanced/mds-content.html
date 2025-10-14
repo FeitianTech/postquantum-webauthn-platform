@@ -5,20 +5,18 @@
             <p class="mds-section-description">
                 Explore the authenticators published by the FIDO Metadata Service (MDS).
             </p>
+            <p id="mds-last-updated" class="mds-last-updated" aria-live="polite">
+                Last updated: Not yet downloaded.
+            </p>
             <p class="mds-entry-count-inline" aria-live="polite">
                 Entries: <span id="mds-entry-count">0</span>
                 <span id="mds-total-count" class="mds-entry-count-total"></span>
             </p>
         </div>
-        <div class="mds-section-actions">
-            <button type="button" id="mds-update-button" class="mds-update-button">
-                Update Metadata
-            </button>
-        </div>
     </div>
 
     <div id="mds-status" class="mds-status mds-status-info">
-        Metadata has not been downloaded yet. Use the Download Metadata button.
+        Metadata has not been downloaded yet. The scheduled background job will fetch it automatically.
     </div>
 
     <div class="mds-table-container" id="mds-table-container">

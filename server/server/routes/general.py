@@ -12,6 +12,7 @@ from ..attestation import serialize_attestation_certificate
 from ..config import (
     MDS_METADATA_FILENAME,
     MDS_METADATA_PATH,
+    MDS_METADATA_STATIC_PATH,
     app,
     basepath,
 )
@@ -27,10 +28,13 @@ def index():
 
 @app.route(f"/{MDS_METADATA_FILENAME}")
 def serve_mds_metadata_blob():
-    if not os.path.exists(MDS_METADATA_PATH):
-        abort(404)
+    path = MDS_METADATA_PATH
+    if not os.path.exists(path):
+        path = MDS_METADATA_STATIC_PATH
+        if not os.path.exists(path):
+            abort(404)
     return send_file(
-        MDS_METADATA_PATH,
+        path,
         mimetype="application/jose",
         conditional=True,
         download_name=MDS_METADATA_FILENAME,
@@ -40,10 +44,14 @@ def serve_mds_metadata_blob():
 @app.route("/index.html")
 def index_html():
     initial_mds_blob = None
-    try:
-        with open(MDS_METADATA_PATH, "r", encoding="utf-8") as blob_file:
-            initial_mds_blob = blob_file.read()
-    except OSError:
+    for candidate in (MDS_METADATA_PATH, MDS_METADATA_STATIC_PATH):
+        try:
+            with open(candidate, "r", encoding="utf-8") as blob_file:
+                initial_mds_blob = blob_file.read()
+                break
+        except OSError:
+            continue
+    else:
         initial_mds_blob = None
 
     initial_mds_info = load_metadata_cache_entry()
