@@ -6,3 +6,12 @@ services:
     dockerfilePath: ./Dockerfile
     dockerContext: .
     autoDeploy: true
+
+jobs:
+  - type: cron
+    name: refresh-fido-mds
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    schedule: "0 3 * * *"
+    command: python -m server.scripts.refresh_mds_cache

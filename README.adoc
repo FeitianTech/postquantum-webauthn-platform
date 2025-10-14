@@ -2,6 +2,13 @@
 
 **Deployed Web Service:**  https://python-fido2-webauthn-test.onrender.com
 
+## 🔁 Automated FIDO Metadata Service updates
+
+- The Flask demo no longer downloads or verifies the FIDO Metadata Service (MDS) during request handling or process start-up. It always consumes the most recent verified snapshot written by a background job.
+- A Render cron job (defined in `render.yaml`) runs `python -m server.scripts.refresh_mds_cache` daily. The script downloads the latest MDS JWT, verifies it against the FIDO trust root, serialises the parsed payload, and atomically updates the cached files.
+- Verified data and download headers are stored under the shared state directory (`STATE_DATA_ROOT`). By default this points to `/data/fido-metadata` on Render so both the web service and cron container see the same persistent volume. Local development falls back to `server/server/state/`.
+- The cron job preserves the previous snapshot if a refresh fails. The web UI simply reads the cached JSON/JWS; if no snapshot exists yet it shows an informational message rather than trying to fetch the metadata itself.
+- Runtime observability: the cron script logs start/end markers, download size, entry counts, and cache timestamps so Render’s job logs confirm successful updates.
 
 ## 💻 Local Setup
 

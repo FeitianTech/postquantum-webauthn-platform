@@ -3,11 +3,11 @@ export const MDS_JWS_PATH = 'fido-mds3.jws';
 export const FEITIAN_PQC_METADATA_PATH = 'feitian-pqc.json';
 export const COLUMN_COUNT = 13;
 export const MISSING_METADATA_MESSAGE =
-    'Metadata has not been downloaded yet. Use the Download Metadata button.';
+    'Metadata is not available yet. The scheduled background job will download and verify the latest snapshot automatically.';
 
 export const UPDATE_BUTTON_STATES = {
-    update: { label: 'Update Metadata', busyLabel: 'Updating…' },
-    download: { label: 'Download Metadata', busyLabel: 'Downloading…' },
+    update: { label: 'Load Metadata', busyLabel: 'Loading…' },
+    download: { label: 'Load Metadata', busyLabel: 'Loading…' },
 };
 
 export const CERTIFICATION_OPTIONS = [

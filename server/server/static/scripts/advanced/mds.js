@@ -1305,7 +1305,7 @@ async function applyMetadataEntries(metadata, { note = '' } = {}) {
     if (isOverdue) {
         const deadline = nextUpdateFormatted ? ` (${nextUpdateFormatted})` : '';
         statusParts.push(
-            `The recommended metadata update date has passed${deadline}. Use the <strong>Update Metadata</strong> button to refresh the local file.`,
+            `The recommended metadata update date has passed${deadline}. The scheduled metadata refresh will replace the cached file once a new snapshot is available.`,
         );
         statusVariant = 'error';
     } else if (nextUpdateFormatted) {

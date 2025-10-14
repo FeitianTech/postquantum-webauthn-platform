@@ -8,7 +8,7 @@ import ssl
 import tempfile
 import urllib.error
 import urllib.request
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from email.utils import formatdate, parsedate_to_datetime
 from typing import Any, Dict, Iterator, Optional, Tuple
@@ -25,6 +25,7 @@ from .config import (
     MDS_METADATA_PATH,
     MDS_METADATA_URL,
     MDS_TLS_ADDITIONAL_TRUST_ANCHORS_PEM,
+    MDS_VERIFIED_METADATA_PATH,
     app,
     FEITIAN_PQC_METADATA_PATH,
     FIDO_METADATA_TRUST_ROOT_CERT,
@@ -38,9 +39,12 @@ except ImportError:  # pragma: no cover - optional dependency
 
 __all__ = [
     "MetadataDownloadError",
+    "MetadataVerificationError",
     "download_metadata_blob",
     "get_mds_verifier",
     "load_metadata_cache_entry",
+    "load_verified_metadata_payload",
+    "refresh_metadata_cache",
 ]
 
 
@@ -61,6 +65,22 @@ class MetadataDownloadError(Exception):
         super().__init__(message)
         self.status_code = status_code
         self.retry_after = retry_after
+
+
+class MetadataVerificationError(Exception):
+    """Raised when a downloaded metadata blob cannot be verified."""
+
+
+@dataclass(frozen=True)
+class MetadataRefreshResult:
+    """Outcome of refreshing the local metadata cache."""
+
+    blob_updated: bool
+    blob_bytes_written: int
+    blob_last_modified: Optional[str]
+    verified_payload_updated: bool
+    verified_payload_bytes: int
+    entry_count: int
 
 
 def _parse_http_datetime(value: Optional[str]) -> Optional[datetime]:
@@ -156,6 +176,40 @@ def load_metadata_cache_entry() -> Dict[str, Optional[str]]:
         "etag": etag,
         "fetched_at": fetched_at,
     }
+
+
+def load_verified_metadata_payload() -> Optional[MetadataBlobPayload]:
+    """Load the verified metadata payload stored by the scheduled updater."""
+
+    try:
+        with open(MDS_VERIFIED_METADATA_PATH, "r", encoding="utf-8") as payload_file:
+            raw_payload = json.load(payload_file)
+    except FileNotFoundError:
+        return None
+    except (OSError, ValueError, TypeError) as exc:
+        app.logger.warning(
+            "Failed to load verified metadata payload from %s: %s",
+            MDS_VERIFIED_METADATA_PATH,
+            exc,
+        )
+        return None
+
+    if not isinstance(raw_payload, dict):
+        app.logger.warning(
+            "Verified metadata payload %s is not a JSON object.",
+            MDS_VERIFIED_METADATA_PATH,
+        )
+        return None
+
+    try:
+        return MetadataBlobPayload.from_dict(raw_payload)
+    except Exception as exc:  # pragma: no cover - defensive
+        app.logger.warning(
+            "Failed to parse verified metadata payload from %s: %s",
+            MDS_VERIFIED_METADATA_PATH,
+            exc,
+        )
+        return None
 
 
 def _store_metadata_cache_entry(
@@ -416,22 +470,101 @@ def download_metadata_blob(
     return True, len(payload), last_modified_iso
 
 
+def _store_verified_metadata_payload(
+    payload: MetadataBlobPayload,
+) -> Tuple[bool, int]:
+    """Persist the verified metadata payload as JSON."""
+
+    serialised = json.dumps(dict(payload), indent=2, sort_keys=True)
+    serialised = f"{serialised}\n"
+    encoded = serialised.encode("utf-8")
+
+    try:
+        with open(MDS_VERIFIED_METADATA_PATH, "r", encoding="utf-8") as existing_file:
+            if existing_file.read() == serialised:
+                return False, len(encoded)
+    except FileNotFoundError:
+        pass
+    except OSError as exc:
+        app.logger.warning(
+            "Failed to read existing verified metadata payload %s: %s",
+            MDS_VERIFIED_METADATA_PATH,
+            exc,
+        )
+
+    os.makedirs(os.path.dirname(MDS_VERIFIED_METADATA_PATH), exist_ok=True)
+
+    with tempfile.NamedTemporaryFile(
+        "w", encoding="utf-8", delete=False, dir=os.path.dirname(MDS_VERIFIED_METADATA_PATH)
+    ) as temp_file:
+        temp_file.write(serialised)
+        temp_path = temp_file.name
+
+    try:
+        shutil.move(temp_path, MDS_VERIFIED_METADATA_PATH)
+    except Exception:
+        try:
+            os.remove(temp_path)
+        except OSError:
+            pass
+        raise
+
+    return True, len(encoded)
+
+
+def refresh_metadata_cache(
+    *,
+    source_url: str = MDS_METADATA_URL,
+    destination: str = MDS_METADATA_PATH,
+) -> MetadataRefreshResult:
+    """Download, verify, and persist the latest FIDO MDS metadata payload."""
+
+    blob_updated, bytes_written, last_modified = download_metadata_blob(
+        source_url=source_url,
+        destination=destination,
+    )
+
+    try:
+        with open(destination, "rb") as blob_file:
+            blob_data = blob_file.read()
+    except OSError as exc:
+        raise MetadataVerificationError(
+            f"Failed to read downloaded metadata blob from {destination}"
+        ) from exc
+
+    try:
+        payload = parse_blob(blob_data, FIDO_METADATA_TRUST_ROOT_CERT)
+    except Exception as exc:  # pragma: no cover - depends on external data
+        raise MetadataVerificationError("Failed to verify the downloaded metadata blob") from exc
+
+    payload_updated, payload_size = _store_verified_metadata_payload(payload)
+
+    return MetadataRefreshResult(
+        blob_updated=blob_updated,
+        blob_bytes_written=bytes_written,
+        blob_last_modified=last_modified,
+        verified_payload_updated=payload_updated,
+        verified_payload_bytes=payload_size,
+        entry_count=len(payload.entries),
+    )
+
+
 def get_mds_verifier() -> Optional[MdsAttestationVerifier]:
     """Return a cached MDS attestation verifier if metadata is available."""
 
     global _mds_verifier_cache, _mds_verifier_mtime
 
     try:
-        mds_mtime = os.path.getmtime(MDS_METADATA_PATH)
+        payload_mtime = os.path.getmtime(MDS_VERIFIED_METADATA_PATH)
     except OSError:
-        mds_mtime = None
+        payload_mtime = None
 
     try:
         feitian_mtime = os.path.getmtime(FEITIAN_PQC_METADATA_PATH)
     except OSError:
         feitian_mtime = None
 
-    mtimes = [value for value in (mds_mtime, feitian_mtime) if value is not None]
+    mtimes = [value for value in (payload_mtime, feitian_mtime) if value is not None]
     combined_mtime = max(mtimes) if mtimes else None
 
     if (
@@ -441,21 +574,7 @@ def get_mds_verifier() -> Optional[MdsAttestationVerifier]:
     ):
         return _mds_verifier_cache
 
-    metadata: Optional[MetadataBlobPayload] = None
-    try:
-        if mds_mtime is not None:
-            with open(MDS_METADATA_PATH, "rb") as blob_file:
-                blob_data = blob_file.read()
-            metadata = parse_blob(blob_data, FIDO_METADATA_TRUST_ROOT_CERT)
-    except FileNotFoundError:
-        metadata = None
-    except Exception as exc:
-        app.logger.warning(
-            "Failed to load MDS metadata from %s: %s",
-            MDS_METADATA_PATH,
-            exc,
-        )
-        metadata = None
+    metadata = load_verified_metadata_payload()
 
     feitian_entry, feitian_legal_header = _load_feitian_metadata_entry()
 
