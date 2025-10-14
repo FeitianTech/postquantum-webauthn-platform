@@ -2,6 +2,7 @@ export const MDS_HTML_PATH = 'templates/advanced/mds-content.html';
 export const MDS_JWS_PATH = 'fido-mds3.jws';
 export const CUSTOM_METADATA_LIST_PATH = 'api/mds/metadata/custom';
 export const CUSTOM_METADATA_UPLOAD_PATH = 'api/mds/metadata/upload';
+export const CUSTOM_METADATA_DELETE_PATH = 'api/mds/metadata/custom';
 export const COLUMN_COUNT = 13;
 export const MISSING_METADATA_MESSAGE =
     'Metadata has not been downloaded yet. Use the Download Metadata button.';

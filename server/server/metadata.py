@@ -49,6 +49,7 @@ __all__ = [
     "list_session_metadata_items",
     "save_session_metadata_item",
     "serialize_session_metadata_item",
+    "delete_session_metadata_item",
 ]
 
 
@@ -108,6 +109,45 @@ def _session_metadata_directory(session_id: str, *, create: bool = False) -> Opt
             app.logger.error("Failed to prepare session metadata directory %s: %s", directory, exc)
             raise
     return directory
+
+
+def _validate_session_metadata_filename(filename: str) -> str:
+    if not isinstance(filename, str):
+        raise ValueError("Invalid metadata filename.")
+
+    trimmed = filename.strip()
+    if not trimmed:
+        raise ValueError("Invalid metadata filename.")
+
+    if trimmed.startswith("."):
+        raise ValueError("Invalid metadata filename.")
+
+    for separator in (os.sep, os.altsep):
+        if separator and separator in trimmed:
+            raise ValueError("Invalid metadata filename.")
+
+    if os.path.basename(trimmed) != trimmed:
+        raise ValueError("Invalid metadata filename.")
+
+    if not trimmed.endswith(_SESSION_METADATA_SUFFIX):
+        raise ValueError("Invalid metadata filename.")
+
+    return trimmed
+
+
+def _prune_session_metadata_directory(directory: str) -> None:
+    try:
+        entries = os.listdir(directory)
+    except OSError:
+        return
+
+    if entries:
+        return
+
+    try:
+        os.rmdir(directory)
+    except OSError:
+        pass
 
 
 def _load_session_metadata_info(path: str) -> Dict[str, Any]:
@@ -421,6 +461,40 @@ def list_session_metadata_items(session_id: Optional[str] = None) -> List[Sessio
 
     items.sort(key=lambda item: item.mtime or 0, reverse=True)
     return items
+
+
+def delete_session_metadata_item(
+    stored_filename: str, session_id: Optional[str] = None
+) -> bool:
+    active_session = session_id or _get_metadata_session_id(create=False)
+    if not active_session:
+        raise ValueError("No active metadata session.")
+
+    safe_name = _validate_session_metadata_filename(stored_filename)
+    directory = _session_metadata_directory(active_session, create=False)
+    if not directory or not os.path.isdir(directory):
+        return False
+
+    metadata_path = os.path.join(directory, safe_name)
+    if not os.path.exists(metadata_path):
+        return False
+
+    try:
+        os.remove(metadata_path)
+    except OSError as exc:
+        app.logger.error(
+            "Failed to delete session metadata %s: %s", metadata_path, exc
+        )
+        raise RuntimeError("Failed to delete the uploaded metadata file.") from exc
+
+    info_path = metadata_path + _SESSION_METADATA_INFO_SUFFIX
+    try:
+        os.remove(info_path)
+    except OSError:
+        pass
+
+    _prune_session_metadata_directory(directory)
+    return True
 
 
 def serialize_session_metadata_item(item: SessionMetadataItem) -> Dict[str, Any]:
