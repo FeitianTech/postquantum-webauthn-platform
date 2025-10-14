@@ -1,0 +1,4 @@
+*.so binary
+*.so.* binary
+*.pc text eol=lf
+*.h text eol=lf

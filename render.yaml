@@ -1,10 +1,8 @@
 services:
   - type: web
     name: python-fido2-webauthn-demo
-    env: python
+    runtime: docker
     plan: free
-    buildCommand: |
-      pip install --upgrade pip \
-        && pip install -r requirements.txt \
-        && pip install -e .
-    startCommand: gunicorn server.server.app:app --bind 0.0.0.0:$PORT
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    autoDeploy: true
