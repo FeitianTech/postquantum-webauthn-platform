@@ -7,7 +7,8 @@ import os
 import shutil
 import sys
 import tempfile
-from typing import Tuple
+from dataclasses import dataclass
+from typing import Optional, Tuple
 
 from fido2.mds3 import parse_blob
 
@@ -25,6 +26,14 @@ from server.server.metadata import (
     download_metadata_blob,
     load_metadata_cache_entry,
 )
+
+
+@dataclass(frozen=True)
+class UpdateOutcome:
+    success: bool
+    updated: bool = False
+    bytes_written: int = 0
+    last_modified_iso: Optional[str] = None
 
 
 def _configure_logging() -> logging.Logger:
@@ -82,8 +91,10 @@ def _write_verified_payload(payload) -> None:
     shutil.move(temp_path, MDS_VERIFIED_PAYLOAD_PATH)
 
 
-def main() -> int:
-    logger = _configure_logging()
+def perform_update(logger: Optional[logging.Logger] = None) -> UpdateOutcome:
+    """Refresh the cached MDS metadata, returning an outcome summary."""
+
+    logger = logger or logging.getLogger("mds-updater")
     logger.info("Starting scheduled FIDO MDS metadata refresh from %s", MDS_METADATA_URL)
 
     os.makedirs(MDS_CACHE_DIR, exist_ok=True)
@@ -92,35 +103,35 @@ def main() -> int:
         download_outcome: Tuple[bool, int, str | None] = download_metadata_blob()
     except MetadataDownloadError as exc:
         logger.error("Unable to download metadata from FIDO MDS: %s", exc)
-        return 1
+        return UpdateOutcome(success=False)
     except Exception:
         logger.exception("Unexpected error while downloading metadata from FIDO MDS")
-        return 1
+        return UpdateOutcome(success=False)
 
     updated, bytes_written, last_modified = download_outcome
     _log_download_result(logger, updated, bytes_written, last_modified)
 
     if not os.path.exists(MDS_METADATA_PATH):
         logger.error("Metadata blob %s is missing after download step", MDS_METADATA_PATH)
-        return 1
+        return UpdateOutcome(success=False)
 
     try:
         with open(MDS_METADATA_PATH, "rb") as blob_file:
             blob_data = blob_file.read()
     except OSError:
         logger.exception("Failed to read metadata blob from %s", MDS_METADATA_PATH)
-        return 1
+        return UpdateOutcome(success=False, updated=updated, bytes_written=bytes_written, last_modified_iso=last_modified)
 
     try:
         verified_payload = parse_blob(blob_data, FIDO_METADATA_TRUST_ROOT_CERT)
     except Exception:
         logger.exception("Failed to verify metadata blob signature")
-        return 1
+        return UpdateOutcome(success=False, updated=updated, bytes_written=bytes_written, last_modified_iso=last_modified)
 
     combined_payload = combine_with_local_metadata(verified_payload)
     if combined_payload is None:
         logger.error("No metadata payload available after verification; aborting update")
-        return 1
+        return UpdateOutcome(success=False, updated=updated, bytes_written=bytes_written, last_modified_iso=last_modified)
 
     try:
         _write_verified_payload(combined_payload)
@@ -129,7 +140,7 @@ def main() -> int:
             "Failed to write verified metadata payload to %s",
             MDS_VERIFIED_PAYLOAD_PATH,
         )
-        return 1
+        return UpdateOutcome(success=False, updated=updated, bytes_written=bytes_written, last_modified_iso=last_modified)
 
     logger.info("Stored verified metadata payload at %s", MDS_VERIFIED_PAYLOAD_PATH)
 
@@ -142,7 +153,19 @@ def main() -> int:
         logger.info("Metadata fetched at: %s", cache_state["fetched_at"])
 
     logger.info("FIDO MDS metadata refresh complete")
-    return 0
+
+    return UpdateOutcome(
+        success=True,
+        updated=updated,
+        bytes_written=bytes_written,
+        last_modified_iso=last_modified,
+    )
+
+
+def main() -> int:
+    logger = _configure_logging()
+    outcome = perform_update(logger=logger)
+    return 0 if outcome.success else 1
 
 
 if __name__ == "__main__":

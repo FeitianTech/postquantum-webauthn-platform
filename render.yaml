@@ -6,22 +6,3 @@ services:
     dockerfilePath: ./Dockerfile
     dockerContext: .
     autoDeploy: true
-    disk:
-      name: mds-cache
-      mountPath: /data
-      sizeGB: 1
-
-cronJobs:
-  - name: MDS Refresh
-    schedule: "0 18 * * *"
-    runtime: docker
-    plan: free
-    dockerfilePath: ./Dockerfile
-    dockerContext: .
-    dockerCommand:
-      - python
-      - -m
-      - server.scripts.update_mds_cache
-    disk:
-      name: mds-cache
-      mountPath: /data

@@ -3,7 +3,7 @@ export const MDS_JWS_PATH = 'fido-mds3.jws';
 export const FEITIAN_PQC_METADATA_PATH = 'feitian-pqc.json';
 export const COLUMN_COUNT = 13;
 export const MISSING_METADATA_MESSAGE =
-    'Metadata has not been downloaded yet. The scheduled background job will fetch it automatically.';
+    'Metadata has not been downloaded yet. The application refreshes the verified cache automatically once per day.';
 
 export const CERTIFICATION_OPTIONS = [
     'FIDO_CERTIFIED',

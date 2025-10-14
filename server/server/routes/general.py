@@ -68,7 +68,7 @@ def api_update_mds_metadata():
     cache_state = load_metadata_cache_entry()
     message = (
         "Runtime metadata updates are disabled. "
-        "The scheduled background job on Render refreshes the verified cache once per day."
+        "The internal background updater refreshes the verified cache once per day."
     )
     payload: Dict[str, Any] = {
         "updated": False,

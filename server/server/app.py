@@ -54,6 +54,12 @@ advanced = _import_module(f"{_import_base}.routes.advanced")  # noqa: F401
 general = _import_module(f"{_import_base}.routes.general")  # noqa: F401
 simple = _import_module(f"{_import_base}.routes.simple")  # noqa: F401
 
+mds_scheduler = _import_module(f"{_import_base}.mds_scheduler")
+try:
+    mds_scheduler.start_scheduler(app.logger)
+except Exception:  # pragma: no cover - defensive logging
+    app.logger.exception("Failed to start internal MDS update scheduler")
+
 
 def main() -> None:
     # Note: using localhost without TLS, as some browsers do
