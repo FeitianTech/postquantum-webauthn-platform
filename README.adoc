@@ -9,27 +9,6 @@
 
 ---
 
-## 🔄 Automated FIDO Metadata Updates
-
-The FIDO Metadata Service (MDS) snapshot is refreshed by an internal background scheduler rather than an external cron job.
-
-- Runtime downloads and signature verification are disabled; the web server only reads the previously verified JSON payload.
-- Once per day (18:00 UTC) a background thread downloads the latest JWS from the FIDO Alliance, verifies the signature against the trusted root, merges bundled PQC metadata, and stores a verified snapshot on the shared data volume (`/data/mds` by default).
-- The verified payload is written to `${FIDO_SERVER_MDS_CACHE_DIR:-/data/mds}/fido-mds3.verified.json` and reused across deploys. If the download fails, the previous verified file remains untouched so the server continues operating with the last known good data.
-- Because the refresh happens asynchronously, the web application continues serving requests without blocking or restarting.
-
-### Manual refresh for local development
-
-Run the updater locally (or for the first bootstrap) with:
-
-```bash
-python -m server.scripts.update_mds_cache
-```
-
-Set `FIDO_SERVER_DATA_DIR` or `FIDO_SERVER_MDS_CACHE_DIR` to change where the cache is written.
-
----
-
 ## ✅ Supported Platforms
 
 - Windows 10/11 (64-bit)  
@@ -50,8 +29,8 @@ A modern browser with WebAuthn support is required:
 ## 2. Clone the Repository
 
 ```bash
-git clone https://github.com/rainzhang05/python-fido2-webauthn-test.git
-cd python-fido2-webauthn-test
+git clone https://github.com/FeitianTech/postquantum-webauthn-platform.git
+cd postquantum-webauthn-platform
 ```
 
 ---
@@ -183,7 +162,7 @@ pip install .
 From your **project root** (where your `.venv` is located):
 
 ```bash
-cd ~/IdeaProjects/python-fido2-webauthn-test
+cd ~/postquantum-webauthn-platform
 python -c "import oqs; print(oqs.get_version()); print(oqs.get_enabled_sigs())"
 ```
 
@@ -234,11 +213,11 @@ cd /path/to/your/project
 mkcert localhost 127.0.0.1 ::1
 ```
 
-⚠️ Important:
+⚠️ **Important**:
 - WebAuthn works on `localhost`, **not** `127.0.0.1`.  
 - Rename files to:
-  - `localhost+1.pem`  
-  - `localhost+1-key.pem`  
+  - `demo.ftsafe.demo+3.pem`
+  - `demo.ftsafe.demo+3-key.pem`
   Otherwise, the program will fail to run.
 
 ---
@@ -269,7 +248,7 @@ python server/server/app.py
 
 Expected output:
 ```
-Running on https://localhost:5000/
+Running on https://demo.ftsafe.demo:5000/
 ```
 
 Click the link to open the test app in your browser.
@@ -279,7 +258,7 @@ Click the link to open the test app in your browser.
 ## 📝 Notes
 
 - Credentials are saved as `.pkl` files in:  
-  `server/server`  
+  `server/server`
 - Deleting credentials in the test app will also delete the corresponding `.pkl` file locally.
 
 ---
