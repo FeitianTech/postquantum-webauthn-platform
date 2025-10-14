@@ -6,3 +6,15 @@ services:
     dockerfilePath: ./Dockerfile
     dockerContext: .
     autoDeploy: true
+
+cronJobs:
+  - name: python-fido2-webauthn-demo-mds-refresh
+    schedule: "0 6 * * *"
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    dockerCommand:
+      - python
+      - -m
+      - server.scripts.update_mds_cache

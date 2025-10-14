@@ -89,10 +89,26 @@ server = Fido2Server(rp)
 # Save credentials next to this module, regardless of CWD.
 basepath = os.path.abspath(os.path.dirname(__file__))
 
+_default_data_root = os.environ.get("FIDO_SERVER_DATA_DIR")
+if not _default_data_root:
+    _candidate_data_root = "/data"
+    if os.path.isdir(_candidate_data_root) or os.access("/", os.W_OK):
+        _default_data_root = _candidate_data_root
+    else:
+        _default_data_root = os.path.join(basepath, "data")
+
+MDS_CACHE_DIR = os.environ.get(
+    "FIDO_SERVER_MDS_CACHE_DIR", os.path.join(_default_data_root, "mds")
+)
+
 MDS_METADATA_URL = "https://mds3.fidoalliance.org/"
 MDS_METADATA_FILENAME = "fido-mds3.jws"
-MDS_METADATA_PATH = os.path.join(basepath, "static", MDS_METADATA_FILENAME)
+MDS_METADATA_PATH = os.path.join(MDS_CACHE_DIR, MDS_METADATA_FILENAME)
 MDS_METADATA_CACHE_PATH = MDS_METADATA_PATH + ".meta.json"
+MDS_VERIFIED_PAYLOAD_FILENAME = "fido-mds3.verified.json"
+MDS_VERIFIED_PAYLOAD_PATH = os.path.join(
+    MDS_CACHE_DIR, MDS_VERIFIED_PAYLOAD_FILENAME
+)
 
 FEITIAN_PQC_METADATA_FILENAME = "feitian-pqc.json"
 FEITIAN_PQC_METADATA_PATH = os.path.join(basepath, "static", FEITIAN_PQC_METADATA_FILENAME)
@@ -211,6 +227,9 @@ __all__ = [
     "MDS_METADATA_CACHE_PATH",
     "MDS_METADATA_FILENAME",
     "MDS_METADATA_PATH",
+    "MDS_VERIFIED_PAYLOAD_FILENAME",
+    "MDS_VERIFIED_PAYLOAD_PATH",
+    "MDS_CACHE_DIR",
     "MDS_METADATA_URL",
     "FEITIAN_PQC_METADATA_FILENAME",
     "FEITIAN_PQC_METADATA_PATH",

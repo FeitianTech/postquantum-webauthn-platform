@@ -26,3 +26,5 @@ htmlcov/
 # FIDO Metadata Service blobs (download separately)
 fido-mds3.jws
 fido-mds3.jws.meta.json
+fido-mds3.verified.json
+server/server/data/

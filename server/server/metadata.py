@@ -17,7 +17,6 @@ from fido2.mds3 import (
     MetadataBlobPayload,
     MetadataBlobPayloadEntry,
     MdsAttestationVerifier,
-    parse_blob,
 )
 
 from .config import (
@@ -25,9 +24,9 @@ from .config import (
     MDS_METADATA_PATH,
     MDS_METADATA_URL,
     MDS_TLS_ADDITIONAL_TRUST_ANCHORS_PEM,
+    MDS_VERIFIED_PAYLOAD_PATH,
     app,
     FEITIAN_PQC_METADATA_PATH,
-    FIDO_METADATA_TRUST_ROOT_CERT,
     FIDO_METADATA_TRUST_ROOT_PEM,
 )
 
@@ -39,6 +38,7 @@ except ImportError:  # pragma: no cover - optional dependency
 __all__ = [
     "MetadataDownloadError",
     "download_metadata_blob",
+    "combine_with_local_metadata",
     "get_mds_verifier",
     "load_metadata_cache_entry",
 ]
@@ -283,6 +283,7 @@ def download_metadata_blob(
     """Fetch the FIDO MDS metadata BLOB and store it locally."""
 
     metadata_exists = os.path.exists(destination)
+    os.makedirs(os.path.dirname(destination), exist_ok=True)
     cached_state = load_metadata_cache_entry()
     cached_last_modified = cached_state.get("last_modified")
     cached_last_modified_iso = cached_state.get("last_modified_iso")
@@ -416,22 +417,95 @@ def download_metadata_blob(
     return True, len(payload), last_modified_iso
 
 
+def combine_with_local_metadata(
+    payload: Optional[MetadataBlobPayload],
+) -> Optional[MetadataBlobPayload]:
+    """Merge verified metadata with bundled local entries if present."""
+
+    feitian_entry, feitian_legal_header = _load_feitian_metadata_entry()
+
+    if payload is None and feitian_entry is None:
+        return None
+
+    if payload is None and feitian_entry is not None:
+        payload_dict = {
+            "legalHeader": feitian_legal_header or "",
+            "no": 0,
+            "nextUpdate": datetime.now(timezone.utc).date().isoformat(),
+            "entries": [dict(feitian_entry)],
+        }
+        try:
+            return MetadataBlobPayload.from_dict(payload_dict)
+        except Exception as exc:  # pragma: no cover - defensive
+            app.logger.warning(
+                "Failed to build metadata payload from %s: %s",
+                FEITIAN_PQC_METADATA_PATH,
+                exc,
+            )
+            return None
+
+    if payload is None:
+        return None
+
+    if feitian_entry is not None:
+        combined_entries = (feitian_entry,) + tuple(payload.entries)
+        payload = replace(payload, entries=combined_entries)
+        if feitian_legal_header and not getattr(payload, "legal_header", None):
+            payload = replace(payload, legal_header=feitian_legal_header)
+
+    return payload
+
+
+def _load_verified_metadata_payload() -> Optional[MetadataBlobPayload]:
+    """Load the cached, verified metadata payload if present."""
+
+    try:
+        with open(MDS_VERIFIED_PAYLOAD_PATH, "r", encoding="utf-8") as payload_file:
+            raw_payload = json.load(payload_file)
+    except FileNotFoundError:
+        return None
+    except (OSError, ValueError, TypeError) as exc:
+        app.logger.warning(
+            "Failed to load verified metadata payload from %s: %s",
+            MDS_VERIFIED_PAYLOAD_PATH,
+            exc,
+        )
+        return None
+
+    if not isinstance(raw_payload, dict):
+        app.logger.warning(
+            "Verified metadata payload %s is not a JSON object.",
+            MDS_VERIFIED_PAYLOAD_PATH,
+        )
+        return None
+
+    try:
+        return MetadataBlobPayload.from_dict(raw_payload)
+    except Exception as exc:  # pragma: no cover - defensive
+        app.logger.warning(
+            "Failed to parse verified metadata payload from %s: %s",
+            MDS_VERIFIED_PAYLOAD_PATH,
+            exc,
+        )
+        return None
+
+
 def get_mds_verifier() -> Optional[MdsAttestationVerifier]:
     """Return a cached MDS attestation verifier if metadata is available."""
 
     global _mds_verifier_cache, _mds_verifier_mtime
 
     try:
-        mds_mtime = os.path.getmtime(MDS_METADATA_PATH)
+        verified_mtime = os.path.getmtime(MDS_VERIFIED_PAYLOAD_PATH)
     except OSError:
-        mds_mtime = None
+        verified_mtime = None
 
     try:
         feitian_mtime = os.path.getmtime(FEITIAN_PQC_METADATA_PATH)
     except OSError:
         feitian_mtime = None
 
-    mtimes = [value for value in (mds_mtime, feitian_mtime) if value is not None]
+    mtimes = [value for value in (verified_mtime, feitian_mtime) if value is not None]
     combined_mtime = max(mtimes) if mtimes else None
 
     if (
@@ -441,56 +515,12 @@ def get_mds_verifier() -> Optional[MdsAttestationVerifier]:
     ):
         return _mds_verifier_cache
 
-    metadata: Optional[MetadataBlobPayload] = None
-    try:
-        if mds_mtime is not None:
-            with open(MDS_METADATA_PATH, "rb") as blob_file:
-                blob_data = blob_file.read()
-            metadata = parse_blob(blob_data, FIDO_METADATA_TRUST_ROOT_CERT)
-    except FileNotFoundError:
-        metadata = None
-    except Exception as exc:
-        app.logger.warning(
-            "Failed to load MDS metadata from %s: %s",
-            MDS_METADATA_PATH,
-            exc,
-        )
-        metadata = None
-
-    feitian_entry, feitian_legal_header = _load_feitian_metadata_entry()
-
-    if metadata is None and feitian_entry is None:
-        _mds_verifier_cache = None
-        _mds_verifier_mtime = combined_mtime
-        return None
-
-    if metadata is None and feitian_entry is not None:
-        payload = {
-            "legalHeader": feitian_legal_header or "",
-            "no": 0,
-            "nextUpdate": datetime.now(timezone.utc).date().isoformat(),
-            "entries": [dict(feitian_entry)],
-        }
-        try:
-            metadata = MetadataBlobPayload.from_dict(payload)
-        except Exception as exc:  # pragma: no cover - defensive
-            app.logger.warning(
-                "Failed to build metadata payload from %s: %s",
-                FEITIAN_PQC_METADATA_PATH,
-                exc,
-            )
-            metadata = None
+    metadata = combine_with_local_metadata(_load_verified_metadata_payload())
 
     if metadata is None:
         _mds_verifier_cache = None
         _mds_verifier_mtime = combined_mtime
         return None
-
-    if feitian_entry is not None:
-        combined_entries = (feitian_entry,) + tuple(metadata.entries)
-        metadata = replace(metadata, entries=combined_entries)
-        if feitian_legal_header and not getattr(metadata, "legal_header", None):
-            metadata = replace(metadata, legal_header=feitian_legal_header)
 
     verifier = MdsAttestationVerifier(metadata)
     _mds_verifier_cache = verifier

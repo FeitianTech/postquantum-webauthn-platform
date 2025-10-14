@@ -4,101 +4,20 @@ from __future__ import annotations
 import base64
 import binascii
 import os
-from threading import Lock
 from typing import Any, Dict
 
 from flask import abort, jsonify, redirect, render_template, request, send_file
 
 from ..attestation import serialize_attestation_certificate
-from ..config import MDS_METADATA_PATH, app, basepath
+from ..config import (
+    MDS_METADATA_FILENAME,
+    MDS_METADATA_PATH,
+    app,
+    basepath,
+)
 from ..decoder import decode_payload_text, encode_payload_text
-from ..metadata import MetadataDownloadError, download_metadata_blob, load_metadata_cache_entry
+from ..metadata import load_metadata_cache_entry
 from ..storage import delkey
-
-
-_metadata_bootstrap_lock = Lock()
-_metadata_bootstrap_state = {"started": False, "completed": False}
-_METADATA_BOOTSTRAP_ENV_FLAG = "FIDO_SERVER_MDS_BOOTSTRAPPED"
-
-if os.environ.get(_METADATA_BOOTSTRAP_ENV_FLAG) == "1":
-    _metadata_bootstrap_state["completed"] = True
-
-
-def _auto_refresh_metadata() -> None:
-    with _metadata_bootstrap_lock:
-        if _metadata_bootstrap_state["completed"] or _metadata_bootstrap_state["started"]:
-            return
-        _metadata_bootstrap_state["started"] = True
-
-    try:
-        updated, bytes_written, last_modified = download_metadata_blob()
-    except MetadataDownloadError as exc:
-        app.logger.warning("Automatic metadata update failed: %s", exc)
-        with _metadata_bootstrap_lock:
-            _metadata_bootstrap_state["started"] = False
-        return
-    except Exception as exc:  # pylint: disable=broad-except
-        app.logger.exception("Unexpected error while refreshing metadata automatically: %s", exc)
-        with _metadata_bootstrap_lock:
-            _metadata_bootstrap_state["started"] = False
-        return
-
-    if updated:
-        if last_modified:
-            app.logger.info(
-                "Automatically refreshed FIDO MDS metadata (%d bytes written, Last-Modified: %s).",
-                bytes_written,
-                last_modified,
-            )
-        else:
-            app.logger.info(
-                "Automatically refreshed FIDO MDS metadata (%d bytes written).",
-                bytes_written,
-            )
-    else:
-        if last_modified:
-            app.logger.info(
-                "FIDO MDS metadata already up to date (Last-Modified: %s).",
-                last_modified,
-            )
-        else:
-            app.logger.info("FIDO MDS metadata already up to date.")
-
-    with _metadata_bootstrap_lock:
-        _metadata_bootstrap_state["completed"] = True
-        _metadata_bootstrap_state["started"] = False
-
-    os.environ[_METADATA_BOOTSTRAP_ENV_FLAG] = "1"
-
-
-def ensure_metadata_bootstrapped(skip_if_reloader_parent: bool = True) -> None:
-    """Ensure the MDS metadata cache is refreshed once per server process."""
-
-    if skip_if_reloader_parent and app.debug and os.environ.get("WERKZEUG_RUN_MAIN") != "true":
-        return
-
-    if os.environ.get(_METADATA_BOOTSTRAP_ENV_FLAG) == "1":
-        return
-
-    with _metadata_bootstrap_lock:
-        if _metadata_bootstrap_state["completed"]:
-            return
-
-    _auto_refresh_metadata()
-
-
-# Refresh eagerly for environments lacking ``before_serving`` (older Flask versions)
-# while still registering the hook when available so each process performs the
-# bootstrap exactly once as it starts handling requests.
-ensure_metadata_bootstrapped()
-
-if hasattr(app, "before_serving"):
-
-    @app.before_serving
-    def _bootstrap_metadata_before_serving() -> None:
-        """Refresh metadata as the server starts handling requests."""
-
-        ensure_metadata_bootstrapped(skip_if_reloader_parent=False)
 
 
 @app.route("/")
@@ -106,10 +25,20 @@ def index():
     return redirect("/index.html")
 
 
+@app.route(f"/{MDS_METADATA_FILENAME}")
+def serve_mds_metadata_blob():
+    if not os.path.exists(MDS_METADATA_PATH):
+        abort(404)
+    return send_file(
+        MDS_METADATA_PATH,
+        mimetype="application/jose",
+        conditional=True,
+        download_name=MDS_METADATA_FILENAME,
+    )
+
+
 @app.route("/index.html")
 def index_html():
-    ensure_metadata_bootstrapped(skip_if_reloader_parent=False)
-
     initial_mds_blob = None
     try:
         with open(MDS_METADATA_PATH, "r", encoding="utf-8") as blob_file:
@@ -128,59 +57,25 @@ def index_html():
 
 @app.route("/api/mds/update", methods=["POST"])
 def api_update_mds_metadata():
-    metadata_existed = os.path.exists(MDS_METADATA_PATH)
-    try:
-        updated, bytes_written, last_modified = download_metadata_blob()
-    except MetadataDownloadError as exc:
-        if metadata_existed and getattr(exc, "status_code", None) == 429:
-            app.logger.warning("Metadata update rate limited by FIDO MDS: %s", exc)
-            cached_state = load_metadata_cache_entry()
-            cached_last_modified_iso = cached_state.get("last_modified_iso") if cached_state else None
-            retry_after = getattr(exc, "retry_after", None)
-            if retry_after:
-                note = (
-                    "Metadata already up to date. The FIDO Metadata Service asked us to wait before "
-                    f"downloading again (retry after {retry_after})."
-                )
-            else:
-                note = (
-                    "Metadata already up to date. The FIDO Metadata Service asked us to wait before downloading again."
-                )
-            payload: Dict[str, Any] = {
-                "updated": False,
-                "bytes_written": 0,
-                "message": note,
-            }
-            if cached_last_modified_iso:
-                payload["last_modified"] = cached_last_modified_iso
-            return jsonify(payload)
-        return jsonify({"updated": False, "message": str(exc)}), 502
-    except OSError as exc:
-        app.logger.exception("Failed to store metadata BLOB: %s", exc)
-        return (
-            jsonify(
-                {
-                    "updated": False,
-                    "message": "Failed to store the metadata BLOB on the server.",
-                }
-            ),
-            500,
-        )
-
-    if updated:
-        message = "Metadata updated successfully." if metadata_existed else "Metadata downloaded successfully."
-    else:
-        message = "Metadata already up to date."
-
-    payload = {
-        "updated": updated,
-        "bytes_written": bytes_written,
+    cache_state = load_metadata_cache_entry()
+    message = (
+        "Runtime metadata updates are disabled. "
+        "The scheduled background job on Render refreshes the verified cache once per day."
+    )
+    payload: Dict[str, Any] = {
+        "updated": False,
+        "bytes_written": 0,
         "message": message,
+        "metadata_available": os.path.exists(MDS_METADATA_PATH),
     }
-    if last_modified:
-        payload["last_modified"] = last_modified
 
-    return jsonify(payload)
+    if cache_state:
+        if cache_state.get("last_modified_iso"):
+            payload["last_modified"] = cache_state["last_modified_iso"]
+        if cache_state.get("fetched_at"):
+            payload["fetched_at"] = cache_state["fetched_at"]
+
+    return jsonify(payload), 503
 
 
 def _perform_decode(decoder_input: str):
