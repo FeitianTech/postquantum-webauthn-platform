@@ -17,6 +17,7 @@ from ..metadata import (
     MetadataDownloadError,
     download_metadata_blob,
     ensure_metadata_session_id,
+    delete_session_metadata_item,
     list_session_metadata_items,
     load_metadata_cache_entry,
     save_session_metadata_item,
@@ -259,6 +260,25 @@ def api_upload_custom_metadata():
         response["errors"] = errors
 
     return jsonify(response), status_code
+
+
+@app.route("/api/mds/metadata/custom/<string:stored_filename>", methods=["DELETE"])
+def api_delete_custom_metadata(stored_filename: str):
+    ensure_metadata_session_id()
+    try:
+        deleted = delete_session_metadata_item(stored_filename)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    except RuntimeError as exc:
+        return jsonify({"error": str(exc)}), 500
+
+    if not deleted:
+        return (
+            jsonify({"deleted": False, "message": "Metadata entry not found."}),
+            404,
+        )
+
+    return jsonify({"deleted": True})
 
 
 def _perform_decode(decoder_input: str):

@@ -247,6 +247,10 @@
     background: rgba(243, 247, 251, 0.7);
     cursor: pointer;
     transition: border-color 0.2s ease, background 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
 }
 
 .mds-custom-panel__dropzone:focus-visible {
@@ -276,6 +280,17 @@
     display: block;
     font-size: 0.85rem;
     color: var(--muted-text);
+}
+
+.mds-custom-panel__file-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
 }
 
 .mds-custom-panel__messages {
@@ -345,6 +360,57 @@
 .mds-custom-panel__item-details {
     font-size: 0.85rem;
     color: var(--muted-text);
+}
+
+.mds-custom-panel__item-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.mds-custom-panel__item-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    flex-shrink: 0;
+}
+
+.mds-custom-panel__delete-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.35rem 0.75rem;
+    border-radius: 999px;
+    border: 1px solid rgba(229, 83, 83, 0.3);
+    background: rgba(229, 83, 83, 0.08);
+    color: #a23535;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.mds-custom-panel__delete-button:hover {
+    background: rgba(229, 83, 83, 0.16);
+    border-color: rgba(229, 83, 83, 0.45);
+    color: #8f2f2f;
+    box-shadow: var(--shadow-soft);
+}
+
+.mds-custom-panel__delete-button:focus-visible {
+    outline: 3px solid rgba(229, 83, 83, 0.35);
+    outline-offset: 2px;
+}
+
+.mds-custom-panel__delete-button:disabled,
+.mds-custom-panel__delete-button[aria-disabled='true'],
+.mds-custom-panel__delete-button.is-busy {
+    cursor: not-allowed;
+    opacity: 0.65;
+    box-shadow: none;
+    background: rgba(229, 83, 83, 0.12);
+    border-color: rgba(229, 83, 83, 0.25);
 }
 
 .mds-table-container {

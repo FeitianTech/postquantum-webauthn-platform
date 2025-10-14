@@ -3,6 +3,7 @@ import {
     MDS_JWS_PATH,
     CUSTOM_METADATA_LIST_PATH,
     CUSTOM_METADATA_UPLOAD_PATH,
+    CUSTOM_METADATA_DELETE_PATH,
     COLUMN_COUNT,
     MISSING_METADATA_MESSAGE,
     UPDATE_BUTTON_STATES,
@@ -164,6 +165,21 @@ function cloneCustomMetadataItems(items) {
     return items.map(item => cloneCustomMetadataItem(item)).filter(Boolean);
 }
 
+function setButtonBusy(button, busy) {
+    if (!(button instanceof HTMLButtonElement)) {
+        return;
+    }
+    if (busy) {
+        button.disabled = true;
+        button.setAttribute('aria-disabled', 'true');
+        button.classList.add('is-busy');
+    } else {
+        button.disabled = false;
+        button.removeAttribute('aria-disabled');
+        button.classList.remove('is-busy');
+    }
+}
+
 async function fetchCustomMetadataItems() {
     try {
         const response = await fetch(CUSTOM_METADATA_LIST_PATH, { cache: 'no-store' });
@@ -316,10 +332,49 @@ function updateCustomMetadataList(items, targetState = mdsState) {
             (item?.source?.storedFilename && String(item.source.storedFilename).trim()) ||
             'metadata.json';
 
+        const storedFilename =
+            (item?.source?.storedFilename && String(item.source.storedFilename).trim()) || '';
+
+        if (storedFilename) {
+            listItem.dataset.filename = storedFilename;
+        }
+
+        const headerEl = document.createElement('div');
+        headerEl.className = 'mds-custom-panel__item-header';
+
         const nameEl = document.createElement('span');
         nameEl.className = 'mds-custom-panel__item-name';
         nameEl.textContent = name;
-        listItem.appendChild(nameEl);
+        headerEl.appendChild(nameEl);
+
+        if (storedFilename) {
+            const actionsEl = document.createElement('div');
+            actionsEl.className = 'mds-custom-panel__item-actions';
+
+            const deleteButton = document.createElement('button');
+            deleteButton.type = 'button';
+            deleteButton.className = 'mds-custom-panel__delete-button';
+            deleteButton.textContent = 'Delete';
+            deleteButton.setAttribute('aria-label', `Delete ${name}`);
+            deleteButton.title = `Delete ${name}`;
+            deleteButton.addEventListener('click', event => {
+                event.preventDefault();
+                event.stopPropagation();
+                if (deleteButton.disabled) {
+                    return;
+                }
+                setButtonBusy(deleteButton, true);
+                void deleteCustomMetadata(storedFilename, {
+                    trigger: deleteButton,
+                    itemName: name,
+                });
+            });
+
+            actionsEl.appendChild(deleteButton);
+            headerEl.appendChild(actionsEl);
+        }
+
+        listItem.appendChild(headerEl);
 
         const details = [];
         const uploadedAtRaw = item?.source?.uploadedAt;
@@ -536,6 +591,64 @@ async function uploadCustomMetadataFiles(files) {
     } catch (error) {
         console.error('Failed to upload custom metadata files.', error);
         setCustomMetadataMessage('Failed to upload metadata files.', 'error');
+    }
+}
+
+async function deleteCustomMetadata(storedFilename, options = {}) {
+    const opts = options && typeof options === 'object' ? options : {};
+    const triggerButton = opts.trigger instanceof HTMLButtonElement ? opts.trigger : null;
+    const itemName =
+        typeof opts.itemName === 'string' && opts.itemName.trim()
+            ? opts.itemName.trim()
+            : 'metadata file';
+
+    if (!storedFilename) {
+        setCustomMetadataMessage('Unable to delete the metadata file.', 'error');
+        if (triggerButton) {
+            setButtonBusy(triggerButton, false);
+        }
+        return;
+    }
+
+    setCustomMetadataMessage(`Removing ${itemName}…`, 'info');
+
+    try {
+        const response = await fetch(
+            `${CUSTOM_METADATA_DELETE_PATH}/${encodeURIComponent(storedFilename)}`,
+            { method: 'DELETE' },
+        );
+
+        let payload = null;
+        try {
+            payload = await response.json();
+        } catch (error) {
+            payload = null;
+        }
+
+        if (!response.ok) {
+            const errorMessage =
+                (payload && typeof payload.error === 'string' && payload.error.trim()) ||
+                (payload && typeof payload.message === 'string' && payload.message.trim()) ||
+                'Failed to delete metadata file.';
+            const variant = response.status === 404 ? 'warning' : 'error';
+            setCustomMetadataMessage(errorMessage, variant);
+            if (triggerButton) {
+                setButtonBusy(triggerButton, false);
+            }
+            return;
+        }
+
+        customMetadataCache = null;
+        customMetadataPromise = null;
+
+        await loadMdsData('Custom metadata updated.', { forceReload: true });
+        setCustomMetadataMessage(`${itemName} removed.`, 'success');
+    } catch (error) {
+        console.error('Failed to delete custom metadata file.', error);
+        setCustomMetadataMessage('Failed to delete metadata file.', 'error');
+        if (triggerButton) {
+            setButtonBusy(triggerButton, false);
+        }
     }
 }
 
