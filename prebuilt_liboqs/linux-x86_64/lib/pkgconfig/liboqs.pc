@@ -1,9 +1,10 @@
 prefix=/opt/liboqs
-exec_prefix=${prefix}
-libdir=${exec_prefix}/lib
+libdir=${prefix}/lib
 includedir=${prefix}/include
+
 Name: liboqs
-Description: Open Quantum Safe cryptography library
-Version: 0.14.1
-Libs: -L${libdir} -loqs
+Description: Library for quantum-safe cryptographic algorithms
+Version: 0.14.1-dev
+Requires.private: openssl
 Cflags: -I${includedir}
+Libs: -L${libdir} -loqs

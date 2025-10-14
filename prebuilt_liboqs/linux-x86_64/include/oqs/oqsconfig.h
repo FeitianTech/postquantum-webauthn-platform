@@ -32,7 +32,7 @@
 #define OQS_OPT_TARGET "generic"
 /* #undef USE_COVERAGE */
 /* #undef USE_SANITIZER */
-/* #undef CMAKE_BUILD_TYPE */
+#define CMAKE_BUILD_TYPE "Release"
 
 #define OQS_USE_OPENSSL 1
 /* #undef OQS_USE_AES_OPENSSL */

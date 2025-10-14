@@ -24,9 +24,13 @@ RUN set -eux; \
 # Copy prebuilt liboqs
 COPY prebuilt_liboqs/linux-x86_64 /opt/liboqs
 
+# Configure ldconfig and verify
 RUN set -eux; \
     echo "/opt/liboqs/lib" > /etc/ld.so.conf.d/liboqs.conf; \
     ldconfig; \
+    echo "=== Checking library ==="; \
+    ls -lah /opt/liboqs/lib/; \
+    ldd /opt/liboqs/lib/liboqs.so.0.14.1-dev; \
     ldconfig -p | grep liboqs
 
 WORKDIR /src
@@ -55,17 +59,18 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 RUN set -eux; \
     apt-get update; \
     apt-get install -y --no-install-recommends libssl3; \
-    echo "/opt/liboqs/lib" > /etc/ld.so.conf.d/liboqs.conf; \
-    ldconfig; \
     rm -rf /var/lib/apt/lists/*
 
 COPY prebuilt_liboqs/linux-x86_64 /opt/liboqs
 COPY --from=python-builder /install /usr/local
 COPY server/server /app/server
 
+RUN set -eux; \
+    echo "/opt/liboqs/lib" > /etc/ld.so.conf.d/liboqs.conf; \
+    ldconfig
+
 WORKDIR /app
 
 ENV PYTHONPATH=/app:${PYTHONPATH}
 
-# Set LD_PRELOAD at runtime, not build time
 CMD ["/bin/sh", "-c", "LD_PRELOAD=/opt/liboqs/lib/liboqs.so gunicorn --bind 0.0.0.0:${PORT:-8000} server.app:app"]
