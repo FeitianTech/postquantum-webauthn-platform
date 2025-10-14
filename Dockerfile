@@ -41,9 +41,6 @@ RUN pip install --upgrade pip setuptools wheel
 RUN pip install --prefix=/install --no-cache-dir \
     "liboqs-python @ git+https://github.com/open-quantum-safe/liboqs-python@main"
 
-# DON'T test import here - it triggers auto-build
-# We'll rely on LD_PRELOAD at runtime instead
-
 RUN pip install --prefix=/install --no-cache-dir pqcrypto
 RUN pip install --prefix=/install --no-cache-dir .
 RUN pip install --prefix=/install --no-cache-dir ./server
@@ -53,8 +50,7 @@ FROM python:3.11-slim AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    LD_LIBRARY_PATH=/opt/liboqs/lib:/usr/local/lib \
-    LD_PRELOAD=/opt/liboqs/lib/liboqs.so
+    LD_LIBRARY_PATH=/opt/liboqs/lib:/usr/local/lib
 
 RUN set -eux; \
     apt-get update; \
@@ -71,4 +67,5 @@ WORKDIR /app
 
 ENV PYTHONPATH=/app:${PYTHONPATH}
 
-CMD ["/bin/sh", "-c", "gunicorn --bind 0.0.0.0:${PORT:-8000} server.app:app"]
+# Set LD_PRELOAD at runtime, not build time
+CMD ["/bin/sh", "-c", "LD_PRELOAD=/opt/liboqs/lib/liboqs.so gunicorn --bind 0.0.0.0:${PORT:-8000} server.app:app"]
