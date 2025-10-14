@@ -6,6 +6,7 @@ import os
 import shutil
 import ssl
 import tempfile
+import time
 import urllib.error
 import urllib.request
 from dataclasses import dataclass, replace
@@ -41,7 +42,9 @@ __all__ = [
     "MetadataDownloadError",
     "MetadataVerificationError",
     "download_metadata_blob",
+    "ensure_verified_metadata_snapshot",
     "get_mds_verifier",
+    "invalidate_mds_verifier_cache",
     "load_metadata_cache_entry",
     "load_verified_metadata_payload",
     "refresh_metadata_cache",
@@ -50,6 +53,9 @@ __all__ = [
 
 _mds_verifier_cache: Optional[MdsAttestationVerifier] = None
 _mds_verifier_mtime: Optional[float] = None
+_initial_refresh_attempted = False
+_initial_refresh_next_attempt: float = 0.0
+_INITIAL_REFRESH_COOLDOWN_SECONDS = 300
 
 
 class MetadataDownloadError(Exception):
@@ -176,6 +182,15 @@ def load_metadata_cache_entry() -> Dict[str, Optional[str]]:
         "etag": etag,
         "fetched_at": fetched_at,
     }
+
+
+def invalidate_mds_verifier_cache() -> None:
+    """Drop any cached attestation verifier so new data is reloaded."""
+
+    global _mds_verifier_cache, _mds_verifier_mtime
+
+    _mds_verifier_cache = None
+    _mds_verifier_mtime = None
 
 
 def load_verified_metadata_payload() -> Optional[MetadataBlobPayload]:
@@ -479,6 +494,8 @@ def _store_verified_metadata_payload(
     serialised = f"{serialised}\n"
     encoded = serialised.encode("utf-8")
 
+    invalidate_mds_verifier_cache()
+
     try:
         with open(MDS_VERIFIED_METADATA_PATH, "r", encoding="utf-8") as existing_file:
             if existing_file.read() == serialised:
@@ -509,7 +526,49 @@ def _store_verified_metadata_payload(
             pass
         raise
 
+    invalidate_mds_verifier_cache()
+
     return True, len(encoded)
+
+
+def ensure_verified_metadata_snapshot(*, allow_download: bool = False) -> Optional[MetadataBlobPayload]:
+    """Ensure a verified metadata snapshot is available, optionally refreshing."""
+
+    global _initial_refresh_attempted, _initial_refresh_next_attempt
+
+    payload = load_verified_metadata_payload()
+    if payload is not None:
+        _initial_refresh_attempted = False
+        _initial_refresh_next_attempt = 0.0
+        return payload
+
+    if not allow_download:
+        return None
+
+    now = time.monotonic()
+    if _initial_refresh_attempted and now < _initial_refresh_next_attempt:
+        return None
+
+    _initial_refresh_attempted = True
+    _initial_refresh_next_attempt = now + _INITIAL_REFRESH_COOLDOWN_SECONDS
+    app.logger.info("Verified FIDO MDS snapshot missing; attempting on-demand refresh.")
+
+    try:
+        refresh_metadata_cache()
+    except MetadataDownloadError as exc:
+        app.logger.warning("On-demand metadata download failed: %s", exc)
+        return None
+    except MetadataVerificationError as exc:
+        app.logger.warning("On-demand metadata verification failed: %s", exc)
+        return None
+    except Exception as exc:  # pragma: no cover - defensive
+        app.logger.exception("Unexpected error during on-demand metadata refresh: %s", exc)
+        return load_verified_metadata_payload()
+
+    payload = load_verified_metadata_payload()
+    if payload is None:
+        app.logger.warning("On-demand metadata refresh completed without producing a snapshot.")
+    return payload
 
 
 def refresh_metadata_cache(

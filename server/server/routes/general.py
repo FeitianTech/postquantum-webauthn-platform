@@ -11,7 +11,7 @@ from flask import abort, jsonify, redirect, render_template, request, send_file
 from ..attestation import serialize_attestation_certificate
 from ..config import MDS_METADATA_FILENAME, MDS_METADATA_PATH, app, basepath
 from ..decoder import decode_payload_text, encode_payload_text
-from ..metadata import load_metadata_cache_entry
+from ..metadata import ensure_verified_metadata_snapshot, load_metadata_cache_entry
 from ..storage import delkey
 
 
@@ -22,6 +22,8 @@ def index():
 
 @app.route("/index.html")
 def index_html():
+    ensure_verified_metadata_snapshot(allow_download=True)
+
     initial_mds_blob = None
     try:
         with open(MDS_METADATA_PATH, "r", encoding="utf-8") as blob_file:
@@ -40,6 +42,8 @@ def index_html():
 
 @app.route(f"/{MDS_METADATA_FILENAME}")
 def serve_mds_metadata_blob():
+    ensure_verified_metadata_snapshot(allow_download=True)
+
     if not os.path.exists(MDS_METADATA_PATH):
         abort(404)
 
