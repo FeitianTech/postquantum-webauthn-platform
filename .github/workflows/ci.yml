@@ -6,7 +6,7 @@ on:
   pull_request:
 
 jobs:
-  build-and-check:
+  build-and-test:
     runs-on: ubuntu-latest
 
     steps:
@@ -22,12 +22,13 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+          pip install pytest
 
       - name: Build Docker image
         run: docker build -t pqc-webauthn .
 
       - name: Run syntax check
-        run: python -m compileall server/server fido2
+        run: python -m compileall .
 
       - name: Run import check
         run: |
@@ -46,3 +47,7 @@ jobs:
               importlib.import_module(module)
               print(f"Imported {module}")
           PY
+
+      - name: Run pytest
+        run: |
+          pytest -v --maxfail=1 --disable-warnings -q
