@@ -195,7 +195,7 @@ class AssertionSelection:
         assertion = self._assertions[index]
 
         return AuthenticationResponse(
-            raw_id=assertion.credential["id"],
+            id=assertion.credential["id"],
             response=AuthenticatorAssertionResponse(
                 client_data=self._client_data,
                 authenticator_data=assertion.auth_data,
@@ -466,7 +466,7 @@ class _Ctap1ClientBackend(_ClientBackend):
         assert credential is not None  # noqa: S101
 
         return RegistrationResponse(
-            raw_id=credential.credential_id,
+            id=credential.credential_id,
             response=AuthenticatorAttestationResponse(
                 client_data=client_data, attestation_object=att_obj
             ),
@@ -920,7 +920,7 @@ class _Ctap2ClientBackend(_ClientBackend):
         assert credential is not None  # noqa: S101
 
         return RegistrationResponse(
-            raw_id=credential.credential_id,
+            id=credential.credential_id,
             response=AuthenticatorAttestationResponse(
                 client_data=client_data, attestation_object=att_obj
             ),

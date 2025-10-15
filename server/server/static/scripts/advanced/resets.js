@@ -28,6 +28,7 @@ export function resetRegistrationForm() {
     document.getElementById('param-rs384').checked = false;
     document.getElementById('param-rs512').checked = false;
     document.getElementById('param-rs1').checked = false;
+    document.getElementById('param-ed25519').checked = false;
     document.getElementById('param-es256k').checked = false;
     document.getElementById('param-esp256').checked = false;
     document.getElementById('param-esp384').checked = false;

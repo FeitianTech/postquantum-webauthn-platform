@@ -681,6 +681,9 @@ export function getCredentialCreationOptions() {
     if (document.getElementById('param-rs1')?.checked) {
         publicKey.pubKeyCredParams.push({type: 'public-key', alg: -65535});
     }
+    if (document.getElementById('param-ed25519')?.checked) {
+        publicKey.pubKeyCredParams.push({type: 'public-key', alg: -19});
+    }
     if (document.getElementById('param-es256k')?.checked) {
         publicKey.pubKeyCredParams.push({type: 'public-key', alg: -47});
     }
@@ -1102,6 +1105,7 @@ export function updateRegistrationFormFromJson(publicKey) {
         document.getElementById('param-rs384').checked = false;
         document.getElementById('param-rs512').checked = false;
         document.getElementById('param-rs1').checked = false;
+        document.getElementById('param-ed25519').checked = false;
         document.getElementById('param-es256k').checked = false;
         document.getElementById('param-esp256').checked = false;
         document.getElementById('param-esp384').checked = false;
@@ -1166,6 +1170,9 @@ export function updateRegistrationFormFromJson(publicKey) {
                         break;
                     case -53:
                         document.getElementById('param-ed448').checked = true;
+                        break;
+                    case -19:
+                        document.getElementById('param-ed25519').checked = true;
                         break;
                     case -258:
                         document.getElementById('param-rs384').checked = true;
@@ -1524,6 +1531,7 @@ export function getAdvancedCreateOptions() {
     if (document.getElementById('param-rs384')?.checked) options.pubKeyCredParams.push('RS384');
     if (document.getElementById('param-rs512')?.checked) options.pubKeyCredParams.push('RS512');
     if (document.getElementById('param-rs1')?.checked) options.pubKeyCredParams.push('RS1');
+    if (document.getElementById('param-ed25519')?.checked) options.pubKeyCredParams.push('Ed25519');
     if (document.getElementById('param-es256k')?.checked) options.pubKeyCredParams.push('ES256K');
     if (document.getElementById('param-esp256')?.checked) options.pubKeyCredParams.push('ESP256');
     if (document.getElementById('param-esp384')?.checked) options.pubKeyCredParams.push('ESP384');

@@ -454,15 +454,14 @@ class PublicKeyCredentialType(_StringEnum):
 
 class _WebAuthnDataObject(_JsonDataObject):
     def __getitem__(self, key):
-        if webauthn_json_mapping.enabled:
-            return super().__getitem__(key)
-        return super(_JsonDataObject, self).__getitem__(key)
+        value = super().__getitem__(key)
+        if not webauthn_json_mapping.enabled and isinstance(value, Mapping):
+            return dict(value)
+        return value
 
     @classmethod
     def _parse_value(cls, t, value):
-        if webauthn_json_mapping.enabled:
-            return super()._parse_value(t, value)
-        return super(_JsonDataObject, cls)._parse_value(t, value)
+        return super()._parse_value(t, value)
 
     @classmethod
     def from_dict(cls, data):
@@ -624,7 +623,7 @@ class RegistrationResponse(_WebAuthnDataObject):
     type: Optional[PublicKeyCredentialType] = None
 
     def __post_init__(self):
-        webauthn_json_mapping.require()
+        webauthn_json_mapping.warn()
         super().__post_init__()
 
 
@@ -638,7 +637,7 @@ class AuthenticationResponse(_WebAuthnDataObject):
     type: Optional[PublicKeyCredentialType] = None
 
     def __post_init__(self):
-        webauthn_json_mapping.require()
+        webauthn_json_mapping.warn()
         super().__post_init__()
 
 
