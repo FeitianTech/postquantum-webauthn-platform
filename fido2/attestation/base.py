@@ -27,8 +27,6 @@
 
 from __future__ import annotations
 
-import logging
-
 from ..cose import (
     describe_mldsa_oid,
     extract_certificate_public_key_info,
@@ -45,15 +43,6 @@ from functools import wraps
 from typing import List, Type, Mapping, Sequence, Optional, Any
 
 import abc
-
-
-logger = logging.getLogger(__name__)
-
-_PQC_TRACE_MESSAGE = "Using PQC direct verification, bypassing x5c chain to avoid RSA overwrite"
-
-KNOWN_PQC_AAGUIDS = {
-    bytes.fromhex("73b2b59288294fb7a199cfb5e1e271b7"),
-}
 
 
 class InvalidAttestation(Exception):
@@ -175,28 +164,6 @@ def _verify_mldsa_certificate_signature(
         raise InvalidSignature(f"ML-DSA certificate verification error: {exc}") from exc
 
 
-def _extract_att_stmt_leaf_certificate(att_stmt: Mapping[str, Any]) -> Optional[bytes]:
-    if not isinstance(att_stmt, Mapping):
-        return None
-    chain = att_stmt.get("x5c")
-    if not isinstance(chain, (list, tuple)) or not chain:
-        return None
-    first = chain[0]
-    if isinstance(first, (bytes, bytearray, memoryview)):
-        return bytes(first)
-    return None
-
-
-def _extract_aaguid_bytes(auth_data: AuthenticatorData) -> Optional[bytes]:
-    credential_data = getattr(auth_data, "credential_data", None)
-    if credential_data is None:
-        return None
-    aaguid_value = getattr(credential_data, "aaguid", None)
-    if isinstance(aaguid_value, (bytes, bytearray, memoryview)):
-        return bytes(aaguid_value)
-    return None
-
-
 def verify_x509_chain(chain: List[bytes]) -> None:
     """Verifies a chain of certificates.
 
@@ -230,8 +197,6 @@ def verify_x509_chain(chain: List[bytes]) -> None:
                     child.tbs_certificate_bytes,
                     ec.ECDSA(child.signature_hash_algorithm),
                 )
-            elif pub is None:
-                _verify_mldsa_certificate_signature(child_der, cert_der)
             else:
                 raise ValueError("Unsupported signature key type")
         except _InvalidSignature:
@@ -349,53 +314,10 @@ class AttestationVerifier(abc.ABC):
             client_data_hash,
         )
 
-        att_stmt_leaf = _extract_att_stmt_leaf_certificate(attestation_object.att_stmt)
-        pqc_child_cert_der: Optional[bytes] = None
-        pqc_oid_detected = False
-        if att_stmt_leaf:
-            try:
-                parsed_leaf = extract_certificate_signature_info(att_stmt_leaf)
-            except Exception:
-                pqc_child_cert_der = None
-            else:
-                pqc_child_cert_der = att_stmt_leaf
-                signature_oid = parsed_leaf.get("signature_algorithm_oid")
-                pqc_oid_detected = bool(describe_mldsa_oid(signature_oid))
-
-        pqc_aaguid_detected = False
-        try:
-            aaguid_bytes = _extract_aaguid_bytes(attestation_object.auth_data)
-        except AttributeError:
-            aaguid_bytes = None
-        if aaguid_bytes is not None:
-            pqc_aaguid_detected = aaguid_bytes in KNOWN_PQC_AAGUIDS
-
         # Lookup CA to use for trust path verification
         ca = self.ca_lookup(result, attestation_object.auth_data)
         if not ca:
             raise UntrustedAttestation("No root found for Authenticator")
-
-        pqc_ca_detected = False
-        try:
-            ca_info = extract_certificate_signature_info(ca)
-        except Exception:
-            ca_info = None
-        if ca_info is not None:
-            ca_signature_oid = ca_info.get("signature_algorithm_oid")
-            pqc_ca_detected = bool(describe_mldsa_oid(ca_signature_oid))
-
-        if pqc_oid_detected or pqc_aaguid_detected or pqc_ca_detected:
-            if pqc_child_cert_der is None:
-                raise UntrustedAttestation(
-                    "PQC attestation certificate missing from attestation statement"
-                )
-            logger.info(_PQC_TRACE_MESSAGE)
-            try:
-                _verify_mldsa_certificate_signature(pqc_child_cert_der, ca)
-            except InvalidSignature as e:
-                raise UntrustedAttestation(e)
-            else:
-                return
 
         trust_path = list(result.trust_path or [])
         try:
