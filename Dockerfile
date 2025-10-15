@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
 
-FROM python:3.11-slim AS python-builder
+FROM python:3.14-slim AS python-builder
 
 ARG LIBOQS_PYTHON_VERSION=main
 
@@ -50,7 +50,7 @@ RUN pip install --prefix=/install --no-cache-dir .
 RUN pip install --prefix=/install --no-cache-dir ./server
 RUN pip install --prefix=/install --no-cache-dir gunicorn
 
-FROM python:3.11-slim AS runtime
+FROM python:3.14-slim AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
