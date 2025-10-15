@@ -27,8 +27,6 @@
 
 from __future__ import annotations
 
-import logging
-
 from ..cose import describe_mldsa_oid, extract_certificate_public_key_info
 from ..webauthn import AuthenticatorData, AttestationObject
 from enum import IntEnum, unique
@@ -41,15 +39,6 @@ from functools import wraps
 from typing import List, Type, Mapping, Sequence, Optional, Any
 
 import abc
-
-
-logger = logging.getLogger(__name__)
-
-_PQC_TRACE_MESSAGE = "Using PQC direct verification, bypassing x5c chain to avoid RSA overwrite"
-
-KNOWN_PQC_AAGUIDS = {
-    bytes.fromhex("73b2b59288294fb7a199cfb5e1e271b7"),
-}
 
 
 class InvalidAttestation(Exception):
@@ -115,9 +104,18 @@ def catch_builtins(f):
 
 @catch_builtins
 def _verify_mldsa_certificate_signature(
-    child_cert: x509.Certificate, issuer_der: bytes
+    child_cert: Any, issuer_der: bytes
 ) -> None:
     """Verify an ML-DSA signed certificate using liboqs."""
+
+    if isinstance(child_cert, (bytes, bytearray, memoryview)):
+        child_cert = x509.load_der_x509_certificate(
+            bytes(child_cert), default_backend()
+        )
+    elif not isinstance(child_cert, x509.Certificate):
+        raise InvalidSignature(
+            "ML-DSA verification requires a certificate or DER bytes"
+        )
 
     signature_oid = child_cert.signature_algorithm_oid.dotted_string
     mldsa_details = describe_mldsa_oid(signature_oid)
@@ -164,26 +162,17 @@ def _verify_mldsa_certificate_signature(
         raise InvalidSignature(f"ML-DSA certificate verification error: {exc}") from exc
 
 
-def _extract_att_stmt_leaf_certificate(att_stmt: Mapping[str, Any]) -> Optional[bytes]:
+def _extract_attestation_chain(att_stmt: Mapping[str, Any]) -> List[bytes]:
     if not isinstance(att_stmt, Mapping):
-        return None
+        return []
     chain = att_stmt.get("x5c")
-    if not isinstance(chain, (list, tuple)) or not chain:
-        return None
-    first = chain[0]
-    if isinstance(first, (bytes, bytearray, memoryview)):
-        return bytes(first)
-    return None
-
-
-def _extract_aaguid_bytes(auth_data: AuthenticatorData) -> Optional[bytes]:
-    credential_data = getattr(auth_data, "credential_data", None)
-    if credential_data is None:
-        return None
-    aaguid_value = getattr(credential_data, "aaguid", None)
-    if isinstance(aaguid_value, (bytes, bytearray, memoryview)):
-        return bytes(aaguid_value)
-    return None
+    if not isinstance(chain, (list, tuple)):
+        return []
+    der_chain: List[bytes] = []
+    for cert in chain:
+        if isinstance(cert, (bytes, bytearray, memoryview)):
+            der_chain.append(bytes(cert))
+    return der_chain
 
 
 def verify_x509_chain(chain: List[bytes]) -> None:
@@ -337,45 +326,35 @@ class AttestationVerifier(abc.ABC):
             client_data_hash,
         )
 
-        att_stmt_leaf = _extract_att_stmt_leaf_certificate(attestation_object.att_stmt)
-        pqc_child_cert: Optional[x509.Certificate] = None
-        pqc_oid_detected = False
-        if att_stmt_leaf:
+        raw_chain = _extract_attestation_chain(attestation_object.att_stmt)
+        mldsa_detected = False
+        for cert_der in raw_chain:
             try:
-                pqc_child_cert = x509.load_der_x509_certificate(
-                    att_stmt_leaf, default_backend()
-                )
+                cert = x509.load_der_x509_certificate(cert_der, default_backend())
             except (ValueError, TypeError):
-                pqc_child_cert = None
-            else:
-                signature_oid = pqc_child_cert.signature_algorithm_oid.dotted_string
-                pqc_oid_detected = bool(describe_mldsa_oid(signature_oid))
+                continue
+            signature_oid = cert.signature_algorithm_oid.dotted_string
+            if describe_mldsa_oid(signature_oid):
+                mldsa_detected = True
+                break
 
-        pqc_aaguid_detected = False
-        try:
-            aaguid_bytes = _extract_aaguid_bytes(attestation_object.auth_data)
-        except AttributeError:
-            aaguid_bytes = None
-        if aaguid_bytes is not None:
-            pqc_aaguid_detected = aaguid_bytes in KNOWN_PQC_AAGUIDS
+        if mldsa_detected:
+            if not raw_chain:
+                raise UntrustedAttestation(
+                    "ML-DSA attestation chain missing certificate data"
+                )
+            try:
+                for child_der, issuer_der in zip(raw_chain, raw_chain[1:]):
+                    _verify_mldsa_certificate_signature(child_der, issuer_der)
+                _verify_mldsa_certificate_signature(raw_chain[-1], raw_chain[-1])
+            except InvalidSignature as e:
+                raise UntrustedAttestation(e)
+            return
 
         # Lookup CA to use for trust path verification
         ca = self.ca_lookup(result, attestation_object.auth_data)
         if not ca:
             raise UntrustedAttestation("No root found for Authenticator")
-
-        if pqc_oid_detected or pqc_aaguid_detected:
-            if pqc_child_cert is None:
-                raise UntrustedAttestation(
-                    "PQC attestation certificate missing from attestation statement"
-                )
-            logger.info(_PQC_TRACE_MESSAGE)
-            try:
-                _verify_mldsa_certificate_signature(pqc_child_cert, ca)
-            except InvalidSignature as e:
-                raise UntrustedAttestation(e)
-            else:
-                return
 
         trust_path = list(result.trust_path or [])
         try:
