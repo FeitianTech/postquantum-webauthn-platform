@@ -50,7 +50,7 @@ let initialMdsJws = null;
 let initialMdsInfo = null;
 const MDS_METADATA_STORAGE_KEY = 'fido.mds.metadataPayload';
 const MDS_METADATA_INFO_KEY = 'fido.mds.metadataInfo';
-let sessionStorageWarningShown = false;
+let metadataStorageWarningShown = false;
 let isSyncingHorizontalScroll = false;
 
 const SORT_NONE = 'none';
@@ -279,6 +279,38 @@ async function ensureCustomMetadata(metadata, options = {}) {
     updateCustomMetadataList(customMetadataItems);
     const entries = extractCustomEntries(customMetadataItems);
     return mergeCustomEntriesIntoMetadata(metadata, entries, customMetadataItems);
+}
+
+async function refreshCustomMetadataAfterUpload(note) {
+    customMetadataCache = null;
+
+    const cached = readMetadataCache();
+    const baseMetadata = cached && typeof cached.metadata === 'object' ? cached.metadata : null;
+
+    if (!baseMetadata) {
+        return false;
+    }
+
+    try {
+        const enhanced = await ensureCustomMetadata(baseMetadata, { forceReload: true });
+        if (!enhanced || typeof enhanced !== 'object') {
+            throw new Error('No metadata available for refresh.');
+        }
+
+        await applyMetadataEntries(enhanced, { note });
+
+        const infoSource =
+            cached && cached.info && typeof cached.info === 'object' ? { ...cached.info } : {};
+        infoSource.cachedAt = new Date().toISOString();
+        if (!infoSource.source) {
+            infoSource.source = 'session-custom';
+        }
+        storeMetadataCache(JSON.stringify(enhanced), infoSource);
+        return true;
+    } catch (error) {
+        console.warn('Fast custom metadata refresh failed. Falling back to full reload.', error);
+        return false;
+    }
 }
 
 function setCustomMetadataMessage(message, variant = 'info', targetState = mdsState) {
@@ -587,7 +619,11 @@ async function uploadCustomMetadataFiles(files) {
                 : 'Metadata uploaded successfully.';
         setCustomMetadataMessage(successMessage, errors.length ? 'warning' : 'success');
 
-        await loadMdsData('Custom metadata updated.', { forceReload: true });
+        const refreshNote = 'Custom metadata updated.';
+        const refreshed = await refreshCustomMetadataAfterUpload(refreshNote);
+        if (!refreshed) {
+            await loadMdsData(refreshNote, { forceReload: true });
+        }
     } catch (error) {
         console.error('Failed to upload custom metadata files.', error);
         setCustomMetadataMessage('Failed to upload metadata files.', 'error');
@@ -1081,23 +1117,31 @@ function setHighlightedRow(row, key, { scroll = false, behavior = 'smooth', focu
     return true;
 }
 
-function getSessionStorage() {
+function getMetadataStorage() {
     if (typeof window === 'undefined') {
         return null;
     }
-    try {
-        return window.sessionStorage || null;
-    } catch (error) {
-        if (!sessionStorageWarningShown) {
-            console.warn('Session storage unavailable:', error);
-            sessionStorageWarningShown = true;
+
+    const storageCandidates = ['localStorage', 'sessionStorage'];
+    for (const candidate of storageCandidates) {
+        try {
+            const storage = window[candidate];
+            if (storage) {
+                return storage;
+            }
+        } catch (error) {
+            if (!metadataStorageWarningShown) {
+                console.warn('Metadata storage unavailable:', error);
+                metadataStorageWarningShown = true;
+            }
         }
-        return null;
     }
+
+    return null;
 }
 
 function readMetadataCache() {
-    const storage = getSessionStorage();
+    const storage = getMetadataStorage();
     if (!storage) {
         return null;
     }
@@ -1137,7 +1181,7 @@ function readMetadataCache() {
 }
 
 function storeMetadataCache(payload, info) {
-    const storage = getSessionStorage();
+    const storage = getMetadataStorage();
     if (!storage) {
         return;
     }
@@ -1159,7 +1203,7 @@ function storeMetadataCache(payload, info) {
 }
 
 function clearMetadataCache() {
-    const storage = getSessionStorage();
+    const storage = getMetadataStorage();
     if (!storage) {
         return;
     }
