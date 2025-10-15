@@ -24,10 +24,27 @@ except Exception:  # pragma: no cover - compatibility shim
 app = Flask(__name__, static_url_path="", template_folder="static/templates")
 app.secret_key = os.urandom(32)  # Used for session.
 
+
+def _env_flag(name: str) -> Optional[bool]:
+    """Return ``True`` or ``False`` when the named env var is explicitly set."""
+
+    raw_value = os.environ.get(name)
+    if raw_value is None:
+        return None
+
+    normalised = raw_value.strip().lower()
+    if normalised in {"", "0", "false", "off", "no"}:
+        return False
+    return True
+
 _DEFAULT_RP_NAME = os.environ.get("FIDO_SERVER_RP_NAME", "Demo server")
 _DEFAULT_RP_ID = os.environ.get("FIDO_SERVER_RP_ID")
 app.config.setdefault("FIDO_SERVER_RP_NAME", _DEFAULT_RP_NAME)
 app.config.setdefault("FIDO_SERVER_RP_ID", _DEFAULT_RP_ID)
+
+_session_metadata_recover_flag = _env_flag("FIDO_SERVER_SESSION_METADATA_RECOVER")
+if _session_metadata_recover_flag is not None:
+    app.config["SESSION_METADATA_RECOVER_ON_START"] = _session_metadata_recover_flag
 
 
 def determine_rp_id(explicit_id: Optional[str] = None) -> str:

@@ -61,6 +61,7 @@ _base_verifier_mtime: Optional[float] = None
 _SESSION_METADATA_SUFFIX = ".json"
 _SESSION_METADATA_INFO_SUFFIX = ".meta.json"
 _SESSION_METADATA_SESSION_KEY = "fido.mds.session"
+_SESSION_METADATA_RECOVERY_MARKER = ".last-session-id"
 
 
 @dataclass(frozen=True)
@@ -74,19 +75,140 @@ class SessionMetadataItem:
     mtime: Optional[float]
 
 
+def _session_metadata_recovery_enabled() -> bool:
+    flag = app.config.get("SESSION_METADATA_RECOVER_ON_START")
+    if flag is not None:
+        return bool(flag)
+    return bool(app.debug)
+
+
+def _normalise_session_identifier(value: Any) -> Optional[str]:
+    if not isinstance(value, str):
+        return None
+
+    trimmed = value.strip()
+    if not trimmed or trimmed.startswith("."):
+        return None
+
+    for separator in (os.sep, os.altsep):
+        if separator and separator in trimmed:
+            return None
+
+    return trimmed
+
+
+def _session_metadata_marker_path() -> str:
+    return os.path.join(SESSION_METADATA_DIR, _SESSION_METADATA_RECOVERY_MARKER)
+
+
+def _remember_session_identifier(identifier: str) -> None:
+    if not _session_metadata_recovery_enabled():
+        return
+
+    normalised = _normalise_session_identifier(identifier)
+    if not normalised:
+        return
+
+    marker_path = _session_metadata_marker_path()
+    try:
+        os.makedirs(SESSION_METADATA_DIR, exist_ok=True)
+        with open(marker_path, "w", encoding="utf-8") as marker_file:
+            marker_file.write(normalised)
+            marker_file.write("\n")
+    except OSError as exc:
+        app.logger.debug(
+            "Unable to persist session metadata identifier %s: %s", normalised, exc
+        )
+
+
+def _load_persisted_session_identifier() -> Optional[str]:
+    if not _session_metadata_recovery_enabled():
+        return None
+
+    marker_path = _session_metadata_marker_path()
+    try:
+        with open(marker_path, "r", encoding="utf-8") as marker_file:
+            candidate = _normalise_session_identifier(marker_file.read())
+    except OSError:
+        return None
+
+    if not candidate:
+        return None
+
+    directory = _session_metadata_directory(candidate, create=False)
+    if not directory or not os.path.isdir(directory):
+        return None
+
+    return candidate
+
+
+def _discover_single_session_directory() -> Optional[str]:
+    if not _session_metadata_recovery_enabled():
+        return None
+
+    try:
+        entries = os.listdir(SESSION_METADATA_DIR)
+    except OSError:
+        return None
+
+    candidates: List[str] = []
+    for entry in entries:
+        identifier = _normalise_session_identifier(entry)
+        if not identifier:
+            continue
+
+        path = os.path.join(SESSION_METADATA_DIR, identifier)
+        if not os.path.isdir(path):
+            continue
+
+        try:
+            directory_entries = os.listdir(path)
+        except OSError:
+            continue
+
+        has_metadata = False
+        for name in directory_entries:
+            if name.endswith(_SESSION_METADATA_INFO_SUFFIX):
+                continue
+            if name.endswith(_SESSION_METADATA_SUFFIX):
+                has_metadata = True
+                break
+
+        if has_metadata:
+            candidates.append(identifier)
+
+    if len(candidates) == 1:
+        return candidates[0]
+
+    return None
+
+
+def _recover_session_metadata_identifier() -> Optional[str]:
+    candidate = _load_persisted_session_identifier()
+    if candidate:
+        return candidate
+
+    return _discover_single_session_directory()
+
+
 def _get_metadata_session_id(*, create: bool = False) -> Optional[str]:
     if not has_request_context():
         return None
 
     existing = session.get(_SESSION_METADATA_SESSION_KEY)
     if isinstance(existing, str) and existing.strip():
-        return existing.strip()
+        identifier = existing.strip()
+        _remember_session_identifier(identifier)
+        return identifier
 
     if not create:
         return None
 
-    identifier = secrets.token_urlsafe(32)
+    identifier = _recover_session_metadata_identifier()
+    if not identifier:
+        identifier = secrets.token_urlsafe(32)
     session[_SESSION_METADATA_SESSION_KEY] = identifier
+    _remember_session_identifier(identifier)
     return identifier
 
 
