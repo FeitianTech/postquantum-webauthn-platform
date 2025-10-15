@@ -53,8 +53,13 @@ from fido2.cose import (
     EdDSA,
     UnsupportedKey,
 )
-from cryptography.hazmat.primitives.asymmetric import ec, ed448 as crypto_ed448, rsa
-from cryptography.hazmat.primitives.asymmetric import padding
+from cryptography.hazmat.primitives.asymmetric import (
+    ec,
+    ed448 as crypto_ed448,
+    ed25519 as crypto_ed25519,
+    rsa,
+)
+from cryptography.hazmat.primitives.asymmetric import padding, utils
 from cryptography.hazmat.primitives import hashes
 
 _ES256_KEY = a2b_hex(
@@ -68,6 +73,27 @@ _EdDSA_KEY = a2b_hex(
     b"a4010103272006215820ee9b21803405d3cf45601e58b6f4c06ea93862de87d3af903c5870a5016e86f5"  # noqa E501
 )
 _Ed25519_KEY = _EdDSA_KEY[0:4] + a2b_hex("32") + _EdDSA_KEY[5:]
+
+
+_SECP256R1_ORDER = int(
+    "FFFFFFFF00000000FFFFFFFFFFFFFFFFBCE6FAADA7179E84F3B9CAC2FC632551", 16
+)
+_SECP384R1_ORDER = int(
+    "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFC7634D81F4372DDF581A0DB248B0A77AECEC196ACCC52973",
+    16,
+)
+_SECP521R1_ORDER = int(
+    "1FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
+    16,
+)
+
+
+def _generate_ecdsa_signature(private_key, message, algorithm, order, *, high_s):
+    while True:
+        signature = private_key.sign(message, algorithm)
+        _, s = utils.decode_dss_signature(signature)
+        if (s > order // 2) is high_s:
+            return signature
 
 
 class TestCoseKey(unittest.TestCase):
@@ -128,7 +154,13 @@ class TestCoseKey(unittest.TestCase):
     def test_ESP384_from_cryptography_key_verify(self):
         private_key = ec.generate_private_key(ec.SECP384R1())
         message = b"postquantum-webauthn-esp384"
-        signature = private_key.sign(message, ec.ECDSA(hashes.SHA384()))
+        signature = _generate_ecdsa_signature(
+            private_key,
+            message,
+            ec.ECDSA(hashes.SHA384()),
+            _SECP384R1_ORDER,
+            high_s=False,
+        )
         key = ESP384.from_cryptography_key(private_key.public_key())
         self.assertIsInstance(key, ESP384)
         key.verify(message, signature)
@@ -136,10 +168,58 @@ class TestCoseKey(unittest.TestCase):
     def test_ESP512_from_cryptography_key_verify(self):
         private_key = ec.generate_private_key(ec.SECP521R1())
         message = b"postquantum-webauthn-esp512"
-        signature = private_key.sign(message, ec.ECDSA(hashes.SHA512()))
+        signature = _generate_ecdsa_signature(
+            private_key,
+            message,
+            ec.ECDSA(hashes.SHA512()),
+            _SECP521R1_ORDER,
+            high_s=False,
+        )
         key = ESP512.from_cryptography_key(private_key.public_key())
         self.assertIsInstance(key, ESP512)
         key.verify(message, signature)
+
+    def test_ESP256_rejects_high_s_signature(self):
+        private_key = ec.generate_private_key(ec.SECP256R1())
+        message = b"postquantum-webauthn-esp256-high-s"
+        bad_signature = _generate_ecdsa_signature(
+            private_key,
+            message,
+            ec.ECDSA(hashes.SHA256()),
+            _SECP256R1_ORDER,
+            high_s=True,
+        )
+        key = ESP256.from_cryptography_key(private_key.public_key())
+        with self.assertRaises(ValueError):
+            key.verify(message, bad_signature)
+
+    def test_ESP384_rejects_high_s_signature(self):
+        private_key = ec.generate_private_key(ec.SECP384R1())
+        message = b"postquantum-webauthn-esp384-high-s"
+        bad_signature = _generate_ecdsa_signature(
+            private_key,
+            message,
+            ec.ECDSA(hashes.SHA384()),
+            _SECP384R1_ORDER,
+            high_s=True,
+        )
+        key = ESP384.from_cryptography_key(private_key.public_key())
+        with self.assertRaises(ValueError):
+            key.verify(message, bad_signature)
+
+    def test_ESP512_rejects_high_s_signature(self):
+        private_key = ec.generate_private_key(ec.SECP521R1())
+        message = b"postquantum-webauthn-esp512-high-s"
+        bad_signature = _generate_ecdsa_signature(
+            private_key,
+            message,
+            ec.ECDSA(hashes.SHA512()),
+            _SECP521R1_ORDER,
+            high_s=True,
+        )
+        key = ESP512.from_cryptography_key(private_key.public_key())
+        with self.assertRaises(ValueError):
+            key.verify(message, bad_signature)
 
     def test_ES384_from_cryptography_key_verify(self):
         private_key = ec.generate_private_key(ec.SECP384R1())
@@ -258,6 +338,12 @@ class TestCoseKey(unittest.TestCase):
                 b"e8c927ef1a57c738ff4ba8d6f90e06d837a5219eee47991f96b126b0685d512520c9c2eedebe4b88ff2de2b19cb5f8686efc7c4261e9ed1cb3ac5de50869be0a"  # noqa E501
             ),
         )
+
+    def test_Ed25519_rejects_invalid_length_signature(self):
+        private_key = crypto_ed25519.Ed25519PrivateKey.generate()
+        key = Ed25519.from_cryptography_key(private_key.public_key())
+        with self.assertRaises(ValueError):
+            key.verify(b"message", b"short")
 
     def test_Ed448_from_cryptography_key_verify(self):
         private_key = crypto_ed448.Ed448PrivateKey.generate()
