@@ -66,7 +66,7 @@ def main() -> None:
     app.run(
         host="demo.ftsafe.demo",
         port=5000,
-        ssl_context=("demo.ftsafe.demo+3.pem", "demo.ftsafe.demo+3-key.pem"),
+        ssl_context=("demo.ftsafe.demo.pem", "demo.ftsafe.demo-key.pem"),
         debug=True,
     )
 
