@@ -337,7 +337,7 @@ class WindowsClient(WebAuthnClient):
         assert credential is not None  # noqa: S101
 
         return RegistrationResponse(
-            raw_id=credential.credential_id,
+            id=credential.credential_id,
             response=AuthenticatorAttestationResponse(
                 client_data=client_data, attestation_object=att_obj
             ),

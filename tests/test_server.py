@@ -73,7 +73,7 @@ class TestFido2Server(unittest.TestCase):
             "A379A6F6EEAFB9A55E378C118034E2751E682FAB9F2D30AB13D2125586CE1947010000001D"
         )
         response = AuthenticationResponse(
-            raw_id=_CRED_ID,
+            id=_CRED_ID,
             response=AuthenticatorAssertionResponse(
                 client_data=client_data,
                 authenticator_data=AuthenticatorData(_AUTH_DATA),
