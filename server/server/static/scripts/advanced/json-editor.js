@@ -681,6 +681,30 @@ export function getCredentialCreationOptions() {
     if (document.getElementById('param-rs1')?.checked) {
         publicKey.pubKeyCredParams.push({type: 'public-key', alg: -65535});
     }
+    if (document.getElementById('param-es256k')?.checked) {
+        publicKey.pubKeyCredParams.push({type: 'public-key', alg: -47});
+    }
+    if (document.getElementById('param-esp256')?.checked) {
+        publicKey.pubKeyCredParams.push({type: 'public-key', alg: -9});
+    }
+    if (document.getElementById('param-esp384')?.checked) {
+        publicKey.pubKeyCredParams.push({type: 'public-key', alg: -51});
+    }
+    if (document.getElementById('param-esp512')?.checked) {
+        publicKey.pubKeyCredParams.push({type: 'public-key', alg: -52});
+    }
+    if (document.getElementById('param-ps256')?.checked) {
+        publicKey.pubKeyCredParams.push({type: 'public-key', alg: -37});
+    }
+    if (document.getElementById('param-ps384')?.checked) {
+        publicKey.pubKeyCredParams.push({type: 'public-key', alg: -38});
+    }
+    if (document.getElementById('param-ps512')?.checked) {
+        publicKey.pubKeyCredParams.push({type: 'public-key', alg: -39});
+    }
+    if (document.getElementById('param-ed448')?.checked) {
+        publicKey.pubKeyCredParams.push({type: 'public-key', alg: -53});
+    }
 
     const residentKeyValue = document.getElementById('resident-key')?.value || 'discouraged';
     publicKey.authenticatorSelection.residentKey = residentKeyValue;
@@ -1078,6 +1102,14 @@ export function updateRegistrationFormFromJson(publicKey) {
         document.getElementById('param-rs384').checked = false;
         document.getElementById('param-rs512').checked = false;
         document.getElementById('param-rs1').checked = false;
+        document.getElementById('param-es256k').checked = false;
+        document.getElementById('param-esp256').checked = false;
+        document.getElementById('param-esp384').checked = false;
+        document.getElementById('param-esp512').checked = false;
+        document.getElementById('param-ps256').checked = false;
+        document.getElementById('param-ps384').checked = false;
+        document.getElementById('param-ps512').checked = false;
+        document.getElementById('param-ed448').checked = false;
 
         publicKey.pubKeyCredParams.forEach(param => {
             if (param && Object.prototype.hasOwnProperty.call(param, 'alg')) {
@@ -1110,6 +1142,30 @@ export function updateRegistrationFormFromJson(publicKey) {
                         break;
                     case -36:
                         document.getElementById('param-es512').checked = true;
+                        break;
+                    case -47:
+                        document.getElementById('param-es256k').checked = true;
+                        break;
+                    case -9:
+                        document.getElementById('param-esp256').checked = true;
+                        break;
+                    case -51:
+                        document.getElementById('param-esp384').checked = true;
+                        break;
+                    case -52:
+                        document.getElementById('param-esp512').checked = true;
+                        break;
+                    case -37:
+                        document.getElementById('param-ps256').checked = true;
+                        break;
+                    case -38:
+                        document.getElementById('param-ps384').checked = true;
+                        break;
+                    case -39:
+                        document.getElementById('param-ps512').checked = true;
+                        break;
+                    case -53:
+                        document.getElementById('param-ed448').checked = true;
                         break;
                     case -258:
                         document.getElementById('param-rs384').checked = true;
@@ -1468,6 +1524,14 @@ export function getAdvancedCreateOptions() {
     if (document.getElementById('param-rs384')?.checked) options.pubKeyCredParams.push('RS384');
     if (document.getElementById('param-rs512')?.checked) options.pubKeyCredParams.push('RS512');
     if (document.getElementById('param-rs1')?.checked) options.pubKeyCredParams.push('RS1');
+    if (document.getElementById('param-es256k')?.checked) options.pubKeyCredParams.push('ES256K');
+    if (document.getElementById('param-esp256')?.checked) options.pubKeyCredParams.push('ESP256');
+    if (document.getElementById('param-esp384')?.checked) options.pubKeyCredParams.push('ESP384');
+    if (document.getElementById('param-esp512')?.checked) options.pubKeyCredParams.push('ESP512');
+    if (document.getElementById('param-ps256')?.checked) options.pubKeyCredParams.push('PS256');
+    if (document.getElementById('param-ps384')?.checked) options.pubKeyCredParams.push('PS384');
+    if (document.getElementById('param-ps512')?.checked) options.pubKeyCredParams.push('PS512');
+    if (document.getElementById('param-ed448')?.checked) options.pubKeyCredParams.push('Ed448');
 
     options.hints = collectSelectedHints('registration');
     if (document.getElementById('cred-props')?.checked) {

@@ -28,6 +28,14 @@ export function resetRegistrationForm() {
     document.getElementById('param-rs384').checked = false;
     document.getElementById('param-rs512').checked = false;
     document.getElementById('param-rs1').checked = false;
+    document.getElementById('param-es256k').checked = false;
+    document.getElementById('param-esp256').checked = false;
+    document.getElementById('param-esp384').checked = false;
+    document.getElementById('param-esp512').checked = false;
+    document.getElementById('param-ps256').checked = false;
+    document.getElementById('param-ps384').checked = false;
+    document.getElementById('param-ps512').checked = false;
+    document.getElementById('param-ed448').checked = false;
     if (document.getElementById('param-mldsa44')) document.getElementById('param-mldsa44').checked = false;
     if (document.getElementById('param-mldsa65')) document.getElementById('param-mldsa65').checked = false;
     if (document.getElementById('param-mldsa87')) document.getElementById('param-mldsa87').checked = false;
