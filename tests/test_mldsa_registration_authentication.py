@@ -28,7 +28,7 @@ def test_mldsa_registration_and_authentication(label: str, cose_cls: Type[cose.C
     """End-to-end style test covering registration and authentication for ML-DSA."""
 
     rp = PublicKeyCredentialRpEntity(name="Example RP", id="example.com")
-    server = Fido2Server(rp, attestation=AttestationConveyancePreference.NONE)
+    server = Fido2Server(rp, attestation=AttestationConveyancePreference.DIRECT)
     user = {"id": hashlib.sha256(label.encode()).digest(), "name": f"{label} User"}
 
     creation_options, state = server.register_begin(user)
@@ -62,6 +62,14 @@ def test_mldsa_registration_and_authentication(label: str, cose_cls: Type[cose.C
         {"alg": alg_id, "sig": attestation_signature},
     )
 
+    def _verify_attestation(att_obj: AttestationObject, client_data_hash: bytes) -> None:
+        assert att_obj is attestation_object
+        assert client_data_hash == client_data_create.hash
+        assert att_obj.att_stmt["alg"] == alg_id
+        assert att_obj.att_stmt["sig"] == attestation_signature
+
+    monkeypatch.setattr(server, "_verify_attestation", _verify_attestation)
+
     assert attestation_object.att_stmt["alg"] == alg_id
     assert attestation_object.att_stmt["sig"] == attestation_signature
 
@@ -69,6 +77,8 @@ def test_mldsa_registration_and_authentication(label: str, cose_cls: Type[cose.C
 
     assert isinstance(stored_auth_data.credential_data.public_key, cose_cls)
     assert stored_auth_data.credential_data.credential_id == credential_id
+    assert stored_auth_data == auth_data_create
+    assert stored_auth_data.credential_data == attested_credential
 
     request_options, auth_state = server.authenticate_begin([stored_auth_data.credential_data])
 
