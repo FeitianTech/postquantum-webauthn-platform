@@ -2,6 +2,9 @@
 
 **Deployed Web Service:**  https://pqcwebauthn.onrender.com
 
+This project provides an end-to-end playground for exploring WebAuthn user flows secured by post-quantum cryptography. The hosted demo and local setup instructions help you register authenticators, run authentication ceremonies, and compare PQC signature suites in a realistic WebAuthn environment.
+
+
 ## 💻 Local Setup
 
 **Scope**
@@ -29,8 +32,8 @@ A modern browser with WebAuthn support is required:
 ## 2. Clone the Repository
 
 ```bash
-git clone https://github.com/rainzhang05/python-fido2-webauthn-test.git
-cd python-fido2-webauthn-test
+git clone https://github.com/FeitianTech/postquantum-webauthn-platform.git
+cd postquantum-webauthn-platform
 ```
 
 ---
@@ -88,7 +91,7 @@ source .venv/bin/activate
 pip install ".[pqc]"
 python -c "import oqs"
 ```
-### 3. Install Open Quantum Safe (OQS) Libraries: 
+### 3. Install Open Quantum Safe (OQS) Libraries
 
 #### Install `liboqs`
 
@@ -121,23 +124,14 @@ Or add the folder to your PATH.
 git clone --branch main https://github.com/open-quantum-safe/liboqs.git
 cd liboqs
 
-# Configure and build
+# Configure build
 cmake -S . -B build -DOQS_BUILD_SHARED_LIBS=ON -DOQS_USE_OPENSSL=OFF
+
+# Build in Release mode
 cmake --build build --config Release
-```
 
-Output: build/lib/liboqs.dylib
-
-Copy to your venv:
-
-```
-cp build/lib/liboqs.dylib /path/to/venv/lib/python3.X/site-packages/oqs/
-```
-
-Or add to DYLD_LIBRARY_PATH:
-
-```
-export DYLD_LIBRARY_PATH=$PWD/build/lib:$DYLD_LIBRARY_PATH
+# Install the library (requires sudo)
+sudo cmake --install build
 ```
 
 #### 4. Install liboqs-python
@@ -157,12 +151,12 @@ cd liboqs-python
 pip install .
 ```
 
-#### Step 2. Verify Installation
+#### 5. Verify Installation
 
 From your **project root** (where your `.venv` is located):
 
 ```bash
-cd ~/IdeaProjects/python-fido2-webauthn-test
+cd ~/postquantum-webauthn-platform
 python -c "import oqs; print(oqs.get_version()); print(oqs.get_enabled_sigs())"
 ```
 
@@ -171,7 +165,7 @@ If installed correctly, you should see something like:
 0.14.0-dev
 ['ML-DSA-44', 'ML-DSA-65', 'ML-DSA-87', ...]
 ```
-This indicates the version number and supported algorithms. Make sure all PQC algorithm that you would like to use appears in the list above. 
+This indicates the version number and supported algorithms. Make sure every PQC algorithm that you plan to use appears in the list above.
 
 ---
 
@@ -204,20 +198,20 @@ mkcert -install
 **Windows (PowerShell)**
 ```powershell
 cd C:\path\to\your\project
-mkcert localhost 127.0.0.1 ::1
+mkcert demo.ftsafe.demo
 ```
 
 **macOS (Terminal)**
 ```bash
 cd /path/to/your/project
-mkcert localhost 127.0.0.1 ::1
+mkcert demo.ftsafe.demo
 ```
 
 ⚠️ Important:
-- WebAuthn works on `localhost`, **not** `127.0.0.1`.  
+- WebAuthn only works on secure contexts (HTTPS or localhost).
 - Rename files to:
-  - `localhost+1.pem`  
-  - `localhost+1-key.pem`  
+  - `demo.ftsafe.demo.pem`
+  - `demo.ftsafe.demo-key.pem`
   Otherwise, the program will fail to run.
 
 ---
@@ -248,7 +242,7 @@ python server/server/app.py
 
 Expected output:
 ```
-Running on https://localhost:5000/
+Running on https://demo.ftsafe.demo:5000/
 ```
 
 Click the link to open the test app in your browser.
@@ -258,7 +252,10 @@ Click the link to open the test app in your browser.
 ## 📝 Notes
 
 - Credentials are saved as `.pkl` files in:  
-  `server/server`  
-- Deleting credentials in the test app will also delete the corresponding `.pkl` file locally.
+  `server/server`
+
+- Uploaded metadata are saved as `.json` files in:
+  `server/server/static/session/metadata`
+- Deleting credentials or metadata in the test app will also delete the corresponding .json and .pkl files locally.
 
 ---
