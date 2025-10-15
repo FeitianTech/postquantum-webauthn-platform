@@ -170,6 +170,50 @@ class TestAttestationObject(unittest.TestCase):
         verify_sig.assert_called_once_with(b"leaf", b"root")
         verify_chain.assert_not_called()
 
+    def test_mldsa_verifier_detects_via_subject_public_key_info(self):
+        class DummyAttestation(Attestation):
+            FORMAT = "dummy-mldsa"
+
+            def __init__(self):
+                self.last_result = None
+
+            def verify(self, statement, auth_data, client_data_hash):
+                self.last_result = AttestationResult(AttestationType.BASIC, [])
+                return self.last_result
+
+        class DummyVerifier(AttestationVerifier):
+            def __init__(self, attestation):
+                super().__init__([attestation])
+
+            def ca_lookup(self, attestation_result, auth_data):
+                return None
+
+        attestation = DummyAttestation()
+        verifier = DummyVerifier(attestation)
+
+        attestation_object = mock.Mock()
+        attestation_object.fmt = "dummy-mldsa"
+        attestation_object.att_stmt = {"x5c": [ByteBuffer(b"leaf"), ByteBuffer(b"root")]}
+        attestation_object.auth_data = mock.Mock()
+
+        with mock.patch(
+            "fido2.attestation.base.x509.load_der_x509_certificate",
+            side_effect=ValueError("cannot parse"),
+        ), mock.patch(
+            "fido2.attestation.base.extract_certificate_public_key_info",
+            return_value={"algorithm_oid": "2.16.840.1.101.3.4.3.18"},
+        ) as extract_info, mock.patch(
+            "fido2.attestation.base._verify_mldsa_certificate_signature"
+        ) as verify_sig, mock.patch(
+            "fido2.attestation.base.verify_x509_chain"
+        ) as verify_chain:
+            verifier.verify_attestation(attestation_object, b"client-hash")
+
+        self.assertEqual(attestation.last_result.trust_path, [b"leaf", b"root"])
+        verify_sig.assert_called_once_with(b"leaf", b"root")
+        verify_chain.assert_not_called()
+        self.assertGreaterEqual(extract_info.call_count, 1)
+
     def test_unsupported_attestation(self):
         attestation = Attestation.for_type("__unsupported__")()
         self.assertIsInstance(attestation, UnsupportedAttestation)

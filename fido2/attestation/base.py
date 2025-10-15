@@ -373,14 +373,34 @@ class AttestationVerifier(abc.ABC):
         mldsa_trust_path: Optional[List[bytes]] = None
         if not mldsa_detected:
             for cert_der in raw_chain:
+                cert_bytes = _coerce_der_bytes(cert_der)
+                if not cert_bytes:
+                    continue
+
+                signature_oid: Optional[str] = None
                 try:
                     cert = x509.load_der_x509_certificate(
-                        cert_der, default_backend()
+                        cert_bytes, default_backend()
                     )
                 except (ValueError, TypeError):
+                    cert = None
+                if cert is not None:
+                    signature_oid = getattr(
+                        getattr(cert, "signature_algorithm_oid", None),
+                        "dotted_string",
+                        None,
+                    )
+                    if signature_oid and describe_mldsa_oid(signature_oid):
+                        mldsa_detected = True
+                        break
+
+                try:
+                    key_info = extract_certificate_public_key_info(cert_bytes)
+                except Exception:
                     continue
-                signature_oid = cert.signature_algorithm_oid.dotted_string
-                if describe_mldsa_oid(signature_oid):
+
+                algorithm_oid = key_info.get("algorithm_oid")
+                if isinstance(algorithm_oid, str) and describe_mldsa_oid(algorithm_oid):
                     mldsa_detected = True
                     break
 
@@ -449,15 +469,23 @@ _MLDSA_COSE_ALGORITHMS = {
 
 
 def _coerce_int(value: Any) -> Optional[int]:
+    if isinstance(value, ByteBuffer):
+        return _coerce_int(value.getvalue())
     if isinstance(value, bool):
         return None
     if isinstance(value, int):
         return value
     if isinstance(value, (bytes, bytearray, memoryview)):
-        try:
-            return int(value.decode("ascii"))
-        except Exception:
+        data = bytes(value)
+        if not data:
             return None
+        try:
+            return int(data.decode("ascii"))
+        except Exception:
+            try:
+                return int.from_bytes(data, byteorder="big", signed=data[0] & 0x80 != 0)
+            except Exception:
+                return None
     if isinstance(value, str):
         stripped = value.strip()
         if not stripped:
