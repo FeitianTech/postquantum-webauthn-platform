@@ -27,7 +27,13 @@
 
 from __future__ import annotations
 
-from ..cose import describe_mldsa_oid, extract_certificate_public_key_info
+from ..cose import (
+    MLDSA44,
+    MLDSA65,
+    MLDSA87,
+    describe_mldsa_oid,
+    extract_certificate_public_key_info,
+)
 from ..utils import ByteBuffer
 from ..webauthn import AuthenticatorData, AttestationObject
 from enum import IntEnum, unique
@@ -356,18 +362,27 @@ class AttestationVerifier(abc.ABC):
             client_data_hash,
         )
 
-        raw_chain = _extract_attestation_chain(attestation_object.att_stmt)
-        mldsa_detected = False
+        att_statement = getattr(attestation_object, "att_stmt", {})
+        raw_chain = _extract_attestation_chain(att_statement)
+
+        declared_alg = None
+        if isinstance(att_statement, Mapping):
+            declared_alg = _coerce_int(att_statement.get("alg"))
+
+        mldsa_detected = declared_alg in _MLDSA_COSE_ALGORITHMS
         mldsa_trust_path: Optional[List[bytes]] = None
-        for cert_der in raw_chain:
-            try:
-                cert = x509.load_der_x509_certificate(cert_der, default_backend())
-            except (ValueError, TypeError):
-                continue
-            signature_oid = cert.signature_algorithm_oid.dotted_string
-            if describe_mldsa_oid(signature_oid):
-                mldsa_detected = True
-                break
+        if not mldsa_detected:
+            for cert_der in raw_chain:
+                try:
+                    cert = x509.load_der_x509_certificate(
+                        cert_der, default_backend()
+                    )
+                except (ValueError, TypeError):
+                    continue
+                signature_oid = cert.signature_algorithm_oid.dotted_string
+                if describe_mldsa_oid(signature_oid):
+                    mldsa_detected = True
+                    break
 
         mldsa_chain_verified = False
         if mldsa_detected:
@@ -395,7 +410,7 @@ class AttestationVerifier(abc.ABC):
 
         # Lookup CA to use for trust path verification
         ca = self.ca_lookup(result, attestation_object.auth_data)
-        if not ca:
+        if not ca and not mldsa_chain_verified:
             raise UntrustedAttestation("No root found for Authenticator")
 
         trust_path = list(result.trust_path or [])
@@ -405,18 +420,19 @@ class AttestationVerifier(abc.ABC):
             if mldsa_chain_verified:
                 if not trust_path:
                     raise InvalidSignature("ML-DSA attestation missing trust path")
-                try:
-                    root_der = _coerce_der_bytes(trust_path[-1])
-                    ca_der = _coerce_der_bytes(ca)
-                    if not root_der or not ca_der:
-                        raise InvalidSignature(
-                            "ML-DSA attestation trust anchor is not DER-encoded"
-                        )
-                    _verify_mldsa_certificate_signature(root_der, ca_der)
-                except InvalidSignature:
-                    raise
-                except Exception as exc:  # pragma: no cover - defensive guard
-                    raise InvalidSignature(exc)
+                if ca:
+                    try:
+                        root_der = _coerce_der_bytes(trust_path[-1])
+                        ca_der = _coerce_der_bytes(ca)
+                        if not root_der or not ca_der:
+                            raise InvalidSignature(
+                                "ML-DSA attestation trust anchor is not DER-encoded"
+                            )
+                        _verify_mldsa_certificate_signature(root_der, ca_der)
+                    except InvalidSignature:
+                        raise
+                    except Exception as exc:  # pragma: no cover - defensive guard
+                        raise InvalidSignature(exc)
             else:
                 verify_x509_chain(trust_path + [ca])
         except InvalidSignature as e:
@@ -425,3 +441,32 @@ class AttestationVerifier(abc.ABC):
     def __call__(self, *args):
         """Allows passing an instance to Fido2Server as verify_attestation"""
         self.verify_attestation(*args)
+_MLDSA_COSE_ALGORITHMS = {
+    MLDSA44.ALGORITHM,
+    MLDSA65.ALGORITHM,
+    MLDSA87.ALGORITHM,
+}
+
+
+def _coerce_int(value: Any) -> Optional[int]:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value
+    if isinstance(value, (bytes, bytearray, memoryview)):
+        try:
+            return int(value.decode("ascii"))
+        except Exception:
+            return None
+    if isinstance(value, str):
+        stripped = value.strip()
+        if not stripped:
+            return None
+        try:
+            return int(stripped, 10)
+        except ValueError:
+            return None
+    numeric = getattr(value, "value", None)
+    if isinstance(numeric, int):
+        return numeric
+    return None

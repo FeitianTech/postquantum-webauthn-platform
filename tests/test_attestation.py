@@ -47,6 +47,7 @@ from fido2.attestation import (
     verify_x509_chain,
 )
 from fido2.attestation.base import _extract_attestation_chain
+from fido2.cose import MLDSA65
 from fido2.webauthn import AuthenticatorData
 from fido2.utils import ByteBuffer
 
@@ -124,6 +125,49 @@ class TestAttestationObject(unittest.TestCase):
 
         self.assertEqual(attestation.last_result.trust_path, [b"leaf", b"root"])
         self.assertEqual(verify_sig.call_count, 2)
+        verify_chain.assert_not_called()
+
+    def test_mldsa_verifier_uses_declared_algorithm_and_allows_missing_root(self):
+        class DummyAttestation(Attestation):
+            FORMAT = "dummy-mldsa"
+
+            def __init__(self):
+                self.last_result = None
+
+            def verify(self, statement, auth_data, client_data_hash):
+                self.last_result = AttestationResult(AttestationType.BASIC, [])
+                return self.last_result
+
+        class DummyVerifier(AttestationVerifier):
+            def __init__(self, attestation):
+                super().__init__([attestation])
+
+            def ca_lookup(self, attestation_result, auth_data):
+                return None
+
+        attestation = DummyAttestation()
+        verifier = DummyVerifier(attestation)
+
+        attestation_object = mock.Mock()
+        attestation_object.fmt = "dummy-mldsa"
+        attestation_object.att_stmt = {
+            "alg": MLDSA65.ALGORITHM,
+            "x5c": [ByteBuffer(b"leaf"), ByteBuffer(b"root")],
+        }
+        attestation_object.auth_data = mock.Mock()
+
+        with mock.patch(
+            "fido2.attestation.base.x509.load_der_x509_certificate",
+            side_effect=AssertionError("should not decode ML-DSA certificates"),
+        ), mock.patch(
+            "fido2.attestation.base._verify_mldsa_certificate_signature"
+        ) as verify_sig, mock.patch(
+            "fido2.attestation.base.verify_x509_chain"
+        ) as verify_chain:
+            verifier.verify_attestation(attestation_object, b"client-hash")
+
+        self.assertEqual(attestation.last_result.trust_path, [b"leaf", b"root"])
+        verify_sig.assert_called_once_with(b"leaf", b"root")
         verify_chain.assert_not_called()
 
     def test_unsupported_attestation(self):
