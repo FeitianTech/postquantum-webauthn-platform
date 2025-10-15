@@ -464,6 +464,65 @@ def describe_mldsa_oid_name(oid: Optional[str]) -> Optional[str]:
     return None
 
 
+def extract_certificate_signature_info(cert_der: bytes) -> Dict[str, Any]:
+    """Return signature metadata for a DER-encoded certificate."""
+
+    view = memoryview(cert_der)
+    idx = 0
+    if not view:
+        raise ValueError("Certificate buffer is empty")
+    if view[idx] != 0x30:
+        raise ValueError("Certificate must be a SEQUENCE")
+    idx += 1
+    cert_len, idx = _parse_der_length(view, idx)
+    cert_end = idx + cert_len
+    if cert_end > len(view):
+        raise ValueError("Certificate length exceeds buffer size")
+
+    if idx >= cert_end or view[idx] != 0x30:
+        raise ValueError("Certificate missing TBSCertificate")
+    tbs_start = idx
+    idx += 1
+    tbs_len, idx = _parse_der_length(view, idx)
+    tbs_end = idx + tbs_len
+    if tbs_end > cert_end:
+        raise ValueError("TBSCertificate overruns Certificate")
+    tbs_certificate = bytes(view[tbs_start:tbs_end])
+
+    idx = tbs_end
+    if idx >= cert_end or view[idx] != 0x30:
+        raise ValueError("Certificate missing signatureAlgorithm")
+    idx += 1
+    sigalg_len, idx = _parse_der_length(view, idx)
+    sigalg_end = idx + sigalg_len
+    if sigalg_end > cert_end:
+        raise ValueError("signatureAlgorithm overruns Certificate")
+
+    signature_algorithm_oid, _ = _decode_der_oid(view, idx)
+
+    idx = sigalg_end
+    if idx >= cert_end or view[idx] != 0x03:
+        raise ValueError("Certificate missing signatureValue")
+    idx += 1
+    sig_len, idx = _parse_der_length(view, idx)
+    sig_end = idx + sig_len
+    if sig_end > cert_end:
+        raise ValueError("signatureValue overruns Certificate")
+    if sig_len == 0:
+        raise ValueError("signatureValue is empty")
+
+    unused_bits = view[idx]
+    if unused_bits != 0:
+        raise ValueError("Unsupported signatureValue with unused bits")
+    signature = bytes(view[idx + 1 : sig_end])
+
+    return {
+        "tbs_certificate": tbs_certificate,
+        "signature": signature,
+        "signature_algorithm_oid": signature_algorithm_oid,
+    }
+
+
 def _locate_subject_public_key_info_from_tbs(
     view: memoryview,
 ) -> tuple[bytes, str, Optional[bytes], bytes]:
