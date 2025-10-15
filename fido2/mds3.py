@@ -30,6 +30,7 @@ from __future__ import annotations
 from .webauthn import AttestationObject, Aaguid
 from .attestation import (
     Attestation,
+    InvalidSignature,
     UntrustedAttestation,
     verify_x509_chain,
     AttestationVerifier,
@@ -438,8 +439,65 @@ class MdsAttestationVerifier(AttestationVerifier):
                 )
                 return None
 
+            trust_path = list(attestation_result.trust_path or [])
+            if not trust_path:
+                return None
+
+            attestation_root = trust_path[-1]
+
+            def _coerce_der_bytes(value):
+                if isinstance(value, bytes):
+                    return value
+                if isinstance(value, bytearray):
+                    return bytes(value)
+                if isinstance(value, memoryview):
+                    return value.tobytes()
+                return None
+
+            def _is_mldsa_certificate(cert_bytes: bytes) -> bool:
+                try:
+                    info = extract_certificate_public_key_info(cert_bytes)
+                except Exception:
+                    return False
+
+                algorithm_oid = info.get("algorithm_oid")
+                return (
+                    isinstance(algorithm_oid, str)
+                    and bool(describe_mldsa_oid(algorithm_oid))
+                )
+
+            attestation_root_bytes = _coerce_der_bytes(attestation_root)
+            if attestation_root_bytes is None:
+                return None
+
+            if _is_mldsa_certificate(attestation_root_bytes):
+                roots = getattr(
+                    entry.metadata_statement, "attestation_root_certificates", []
+                )
+                for root in roots or []:
+                    root_bytes = _coerce_der_bytes(root)
+                    if not root_bytes:
+                        continue
+                    if root_bytes == attestation_root_bytes:
+                        _last_entry.set(entry)
+                        return root_bytes
+                    try:
+                        _verify_mldsa_certificate_signature(
+                            attestation_root_bytes, root_bytes
+                        )
+                    except InvalidSignature:
+                        continue
+                    except Exception:
+                        continue
+                    _last_entry.set(entry)
+                    return root_bytes
+                logger.info(
+                    "No ML-DSA attestation root matched trusted metadata anchor"
+                )
+                return None
+
             issuer = x509.load_der_x509_certificate(
-                attestation_result.trust_path[-1], default_backend()
+                attestation_root_bytes, default_backend()
             ).issuer
 
             for root in entry.metadata_statement.attestation_root_certificates:

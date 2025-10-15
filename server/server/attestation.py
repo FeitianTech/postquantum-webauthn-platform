@@ -1966,7 +1966,17 @@ def perform_attestation_checks(
     if results["aaguid_match"] is False and metadata_entry is None:
         results["aaguid_match"] = None
 
-    if root_valid is not None:
-        results["root_valid"] = root_valid
+    if is_pqc_algorithm(algorithm):
+        aaguid_match = results.get("aaguid_match")
+        if pqc_trust_failure:
+            root_valid = False
+        elif metadata_entry is None:
+            root_valid = None
+        elif aaguid_match is True:
+            root_valid = True
+        elif root_valid is False:
+            root_valid = None
+
+    results["root_valid"] = root_valid
 
     return results
