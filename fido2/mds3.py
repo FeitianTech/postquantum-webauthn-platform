@@ -50,7 +50,7 @@ from enum import Enum, unique
 from datetime import date
 from base64 import b64decode, b64encode
 from contextvars import ContextVar
-from typing import Sequence, Mapping, Any, Optional, Callable
+from typing import Sequence, Mapping, Any, Optional, Callable, List
 
 import json
 import logging
@@ -500,6 +500,17 @@ class MdsAttestationVerifier(AttestationVerifier):
             _last_entry.reset(token)
 
 
+def _is_mldsa_certificate(cert_der: Optional[bytes]) -> bool:
+    if not cert_der:
+        return False
+    try:
+        info = extract_certificate_signature_info(cert_der)
+    except Exception:
+        return False
+    signature_oid = info.get("signature_algorithm_oid")
+    return bool(describe_mldsa_oid(signature_oid))
+
+
 def parse_blob(blob: bytes, trust_root: Optional[bytes]) -> MetadataBlobPayload:
     """Parse a FIDO MDS3 blob and verifies its signature.
 
@@ -522,71 +533,117 @@ def parse_blob(blob: bytes, trust_root: Optional[bytes]) -> MetadataBlobPayload:
         if chain:
             leaf_der = chain[0]
 
-        pqc_trust_root = False
-        root_signature_oid: Optional[str] = None
-        try:
-            root_cert = x509.load_der_x509_certificate(trust_root, default_backend())
-        except Exception:
-            root_cert = None
-        if root_cert is not None:
-            root_signature_oid = root_cert.signature_algorithm_oid.dotted_string
-        else:
-            try:
-                root_info = extract_certificate_signature_info(trust_root)
-            except Exception:
-                root_info = None
-            if root_info:
-                root_signature_oid = root_info.get("signature_algorithm_oid")
-
-        if root_signature_oid:
-            pqc_trust_root = bool(describe_mldsa_oid(root_signature_oid))
-
-        pqc_leaf = False
+        leaf_signature_info: Optional[Mapping[str, Any]] = None
+        leaf_public_key_info: Optional[Mapping[str, Any]] = None
+        pqc_public_key: Optional[bytes] = None
+        pqc_parameter_set: Optional[str] = None
         if leaf_der is not None:
             try:
-                leaf_info = extract_certificate_signature_info(leaf_der)
+                leaf_signature_info = extract_certificate_signature_info(leaf_der)
             except Exception:
-                leaf_info = None
-            if leaf_info:
-                leaf_signature_oid = leaf_info.get("signature_algorithm_oid")
-                pqc_leaf = bool(describe_mldsa_oid(leaf_signature_oid))
+                leaf_signature_info = None
+            try:
+                leaf_public_key_info = extract_certificate_public_key_info(leaf_der)
+            except Exception:
+                leaf_public_key_info = None
 
-        if pqc_trust_root or pqc_leaf:
-            if leaf_der is None or trust_root is None:
+        pqc_leaf = False
+        if leaf_signature_info is not None:
+            leaf_signature_oid = leaf_signature_info.get("signature_algorithm_oid")
+            signature_details = describe_mldsa_oid(leaf_signature_oid)
+            if signature_details:
+                pqc_leaf = True
+                pqc_parameter_set = signature_details.get("mlDsaParameterSet") or signature_details.get(
+                    "ml_dsa_parameter_set"
+                )
+
+        if leaf_public_key_info is not None:
+            subject_public_key = leaf_public_key_info.get("subject_public_key")
+            if isinstance(subject_public_key, (bytes, bytearray, memoryview)):
+                pqc_public_key = bytes(subject_public_key)
+            parameter_set = leaf_public_key_info.get("ml_dsa_parameter_set") or leaf_public_key_info.get(
+                "mlDsaParameterSet"
+            )
+            if parameter_set:
+                pqc_leaf = True
+                pqc_parameter_set = pqc_parameter_set or parameter_set
+
+        pqc_trust_root = _is_mldsa_certificate(trust_root)
+        pqc_detected = pqc_leaf or pqc_trust_root
+
+        if pqc_detected:
+            chain_to_validate: List[bytes] = list(chain)
+            if not chain_to_validate and trust_root is not None:
+                chain_to_validate.append(trust_root)
+            elif trust_root is not None and chain_to_validate and chain_to_validate[-1] != trust_root:
+                if _is_mldsa_certificate(trust_root):
+                    chain_to_validate.append(trust_root)
+
+            if not chain_to_validate:
                 raise ValueError(
                     "PQC metadata blob missing signing certificate in x5c header"
                 )
-            _verify_mldsa_certificate_signature(leaf_der, trust_root)
-        else:
-            verify_x509_chain(chain + [trust_root])
 
-        if leaf_der is None:
-            leaf_der = trust_root
+            if len(chain_to_validate) == 1:
+                _verify_mldsa_certificate_signature(
+                    chain_to_validate[0], chain_to_validate[0]
+                )
+            else:
+                for child, issuer in zip(chain_to_validate, chain_to_validate[1:]):
+                    _verify_mldsa_certificate_signature(child, issuer)
+                _verify_mldsa_certificate_signature(
+                    chain_to_validate[-1], chain_to_validate[-1]
+                )
 
-        leaf_cert: Optional[x509.Certificate]
-        try:
-            leaf_cert = x509.load_der_x509_certificate(leaf_der, default_backend())
-        except Exception:
-            leaf_cert = None
+            if leaf_der is None:
+                leaf_der = chain_to_validate[0]
 
-        public_key = None
-        if leaf_cert is not None:
-            try:
-                public_key = leaf_cert.public_key()
-            except ValueError:
-                public_key = None
+            if pqc_public_key is None and leaf_der is not None:
+                key_info = extract_certificate_public_key_info(leaf_der)
+                subject_public_key = key_info.get("subject_public_key")
+                if not isinstance(subject_public_key, (bytes, bytearray, memoryview)):
+                    raise ValueError(
+                        "Unable to extract ML-DSA public key from metadata signing certificate"
+                    )
+                pqc_public_key = bytes(subject_public_key)
+                parameter_set = key_info.get("ml_dsa_parameter_set") or key_info.get(
+                    "mlDsaParameterSet"
+                )
+                if parameter_set and not pqc_parameter_set:
+                    pqc_parameter_set = parameter_set
 
-        cose_cls = CoseKey.for_name(header["alg"])
-        if public_key is None and (pqc_trust_root or pqc_leaf):
-            key_info = extract_certificate_public_key_info(leaf_der)
-            subject_public_key = key_info.get("subject_public_key")
-            if not isinstance(subject_public_key, (bytes, bytearray, memoryview)):
+            if pqc_parameter_set is None:
+                raise ValueError(
+                    "Unable to determine ML-DSA parameter set for metadata signature"
+                )
+
+            alg_name = pqc_parameter_set.replace("-", "")
+            cose_cls = CoseKey.for_name(alg_name)
+            if pqc_public_key is None:
                 raise ValueError(
                     "Unable to extract ML-DSA public key from metadata signing certificate"
                 )
-            public_key = bytes(subject_public_key)
-            cose_key = cose_cls({1: 7, 3: cose_cls.ALGORITHM, -1: public_key})
+            cose_key = cose_cls({1: 7, 3: cose_cls.ALGORITHM, -1: pqc_public_key})
         else:
+            verify_x509_chain(chain + [trust_root])
+
+            if leaf_der is None:
+                leaf_der = trust_root
+
+            leaf_cert: Optional[x509.Certificate]
+            try:
+                leaf_cert = x509.load_der_x509_certificate(leaf_der, default_backend())
+            except Exception:
+                leaf_cert = None
+
+            public_key = None
+            if leaf_cert is not None:
+                try:
+                    public_key = leaf_cert.public_key()
+                except ValueError:
+                    public_key = None
+
+            cose_cls = CoseKey.for_name(header["alg"])
             if public_key is None:
                 raise ValueError(
                     "Metadata signing certificate does not expose a supported public key"
