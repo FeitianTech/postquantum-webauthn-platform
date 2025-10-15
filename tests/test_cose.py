@@ -34,17 +34,27 @@ from binascii import a2b_hex
 from fido2 import cbor, cose
 from fido2.cose import (
     ES256,
+    ES256K,
+    ES384,
+    ES512,
     ESP256,
     ESP384,
     ESP512,
+    PS256,
+    PS384,
+    PS512,
+    RS1,
     RS256,
+    RS384,
+    RS512,
     CoseKey,
     Ed25519,
     Ed448,
     EdDSA,
     UnsupportedKey,
 )
-from cryptography.hazmat.primitives.asymmetric import ec, ed448 as crypto_ed448
+from cryptography.hazmat.primitives.asymmetric import ec, ed448 as crypto_ed448, rsa
+from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives import hashes
 
 _ES256_KEY = a2b_hex(
@@ -131,6 +141,30 @@ class TestCoseKey(unittest.TestCase):
         self.assertIsInstance(key, ESP512)
         key.verify(message, signature)
 
+    def test_ES384_from_cryptography_key_verify(self):
+        private_key = ec.generate_private_key(ec.SECP384R1())
+        message = b"postquantum-webauthn-es384"
+        signature = private_key.sign(message, ec.ECDSA(hashes.SHA384()))
+        key = ES384.from_cryptography_key(private_key.public_key())
+        self.assertIsInstance(key, ES384)
+        key.verify(message, signature)
+
+    def test_ES512_from_cryptography_key_verify(self):
+        private_key = ec.generate_private_key(ec.SECP521R1())
+        message = b"postquantum-webauthn-es512"
+        signature = private_key.sign(message, ec.ECDSA(hashes.SHA512()))
+        key = ES512.from_cryptography_key(private_key.public_key())
+        self.assertIsInstance(key, ES512)
+        key.verify(message, signature)
+
+    def test_ES256K_from_cryptography_key_verify(self):
+        private_key = ec.generate_private_key(ec.SECP256K1())
+        message = b"postquantum-webauthn-es256k"
+        signature = private_key.sign(message, ec.ECDSA(hashes.SHA256()))
+        key = ES256K.from_cryptography_key(private_key.public_key())
+        self.assertIsInstance(key, ES256K)
+        key.verify(message, signature)
+
     def test_RS256_parse_verify(self):
         key = CoseKey.parse(cbor.decode(_RS256_KEY))
         self.assertIsInstance(key, RS256)
@@ -154,6 +188,30 @@ class TestCoseKey(unittest.TestCase):
                 b"071B707D11F0E7F62861DFACA89C4E674321AD8A6E329FDD40C7D6971348FBB0514E7B2B0EFE215BAAC0365C4124A808F8180D6575B710E7C01DAE8F052D0C5A2CE82F487C656E7AD824F3D699BE389ADDDE2CBF39E87A8955E93202BAE8830AB4139A7688DFDAD849F1BB689F3852BA05BED70897553CC44704F6941FD1467AD6A46B4DAB503716D386FE7B398E78E0A5A8C4040539D2C9BFA37E4D94F96091FFD1D194DE2CA58E9124A39757F013801421E09BD261ADA31992A8B0386A80AF51A87BD0CEE8FDAB0D4651477670D4C7B245489BED30A57B83964DB79418D5A4F5F2E5ABCA274426C9F90B007A962AE15DFF7343AF9E110746E2DB9226D785C6"  # noqa E501
             ),
         )
+
+    def test_RS384_from_cryptography_key_verify(self):
+        private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+        message = b"postquantum-webauthn-rs384"
+        signature = private_key.sign(message, padding.PKCS1v15(), hashes.SHA384())
+        key = RS384.from_cryptography_key(private_key.public_key())
+        self.assertIsInstance(key, RS384)
+        key.verify(message, signature)
+
+    def test_RS512_from_cryptography_key_verify(self):
+        private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+        message = b"postquantum-webauthn-rs512"
+        signature = private_key.sign(message, padding.PKCS1v15(), hashes.SHA512())
+        key = RS512.from_cryptography_key(private_key.public_key())
+        self.assertIsInstance(key, RS512)
+        key.verify(message, signature)
+
+    def test_RS1_from_cryptography_key_verify(self):
+        private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+        message = b"postquantum-webauthn-rs1"
+        signature = private_key.sign(message, padding.PKCS1v15(), hashes.SHA1())
+        key = RS1.from_cryptography_key(private_key.public_key())
+        self.assertIsInstance(key, RS1)
+        key.verify(message, signature)
 
     def test_EdDSA_parse_verify(self):
         key = CoseKey.parse(cbor.decode(_EdDSA_KEY))
@@ -207,6 +265,42 @@ class TestCoseKey(unittest.TestCase):
         signature = private_key.sign(message)
         key = Ed448.from_cryptography_key(private_key.public_key())
         self.assertIsInstance(key, Ed448)
+        key.verify(message, signature)
+
+    def test_PS256_from_cryptography_key_verify(self):
+        private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+        message = b"postquantum-webauthn-ps256"
+        signature = private_key.sign(
+            message,
+            padding.PSS(mgf=padding.MGF1(hashes.SHA256()), salt_length=padding.PSS.MAX_LENGTH),
+            hashes.SHA256(),
+        )
+        key = PS256.from_cryptography_key(private_key.public_key())
+        self.assertIsInstance(key, PS256)
+        key.verify(message, signature)
+
+    def test_PS384_from_cryptography_key_verify(self):
+        private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+        message = b"postquantum-webauthn-ps384"
+        signature = private_key.sign(
+            message,
+            padding.PSS(mgf=padding.MGF1(hashes.SHA384()), salt_length=padding.PSS.MAX_LENGTH),
+            hashes.SHA384(),
+        )
+        key = PS384.from_cryptography_key(private_key.public_key())
+        self.assertIsInstance(key, PS384)
+        key.verify(message, signature)
+
+    def test_PS512_from_cryptography_key_verify(self):
+        private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+        message = b"postquantum-webauthn-ps512"
+        signature = private_key.sign(
+            message,
+            padding.PSS(mgf=padding.MGF1(hashes.SHA512()), salt_length=padding.PSS.MAX_LENGTH),
+            hashes.SHA512(),
+        )
+        key = PS512.from_cryptography_key(private_key.public_key())
+        self.assertIsInstance(key, PS512)
         key.verify(message, signature)
 
     def test_unsupported_key(self):
