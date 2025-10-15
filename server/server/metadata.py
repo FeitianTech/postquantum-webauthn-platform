@@ -50,6 +50,7 @@ __all__ = [
     "save_session_metadata_item",
     "serialize_session_metadata_item",
     "delete_session_metadata_item",
+    "expand_metadata_entry_payloads",
 ]
 
 
@@ -324,12 +325,15 @@ def _normalise_attestation_identifiers(raw: Mapping[str, Any]) -> Optional[List[
 
 
 def _normalise_metadata_statement(raw: Mapping[str, Any]) -> Tuple[Dict[str, Any], Optional[str]]:
-    metadata_statement: Dict[str, Any] = {}
     legal_header: Optional[str] = None
-
     raw_legal_header = raw.get("legalHeader")
     if isinstance(raw_legal_header, str):
         legal_header = raw_legal_header.strip() or None
+
+    metadata_source: Mapping[str, Any] = raw
+    nested_statement = raw.get("metadataStatement")
+    if isinstance(nested_statement, Mapping):
+        metadata_source = nested_statement
 
     excluded_keys = {
         "statusReports",
@@ -339,9 +343,11 @@ def _normalise_metadata_statement(raw: Mapping[str, Any]) -> Tuple[Dict[str, Any
         "aaguid",
     }
 
-    for key, value in raw.items():
-        if key in excluded_keys:
+    metadata_statement: Dict[str, Any] = {}
+    for key, value in metadata_source.items():
+        if metadata_source is raw and key in excluded_keys:
             continue
+
         cloned = _clone_json_value(value)
         if cloned is not None:
             metadata_statement[key] = cloned
@@ -385,6 +391,48 @@ def build_metadata_entry_components(raw: Mapping[str, Any]) -> Tuple[
     entry = MetadataBlobPayloadEntry.from_dict(payload)
     payload_clone = json.loads(json.dumps(payload))
     return entry, legal_header, payload_clone
+
+
+def expand_metadata_entry_payloads(raw: Mapping[str, Any]) -> List[Mapping[str, Any]]:
+    """Expand a JSON payload into individual metadata entries.
+
+    The FIDO Metadata BLOB contains an ``entries`` list with metadata
+    statements. Uploaded JSON snippets may either provide a single metadata
+    entry object or a structure mirroring the BLOB shape. This helper
+    normalises both cases into a list of per-entry payload mappings that can be
+    handed to :func:`build_metadata_entry_components`.
+    """
+
+    if not isinstance(raw, Mapping):
+        raise TypeError("Metadata JSON must be an object.")
+
+    entries_value = raw.get("entries")
+    if not isinstance(entries_value, list):
+        return [raw]
+
+    if not entries_value:
+        raise ValueError("Metadata JSON does not contain any entries.")
+
+    legal_header: Optional[str] = None
+    raw_legal_header = raw.get("legalHeader")
+    if isinstance(raw_legal_header, str) and raw_legal_header.strip():
+        legal_header = raw_legal_header.strip()
+
+    expanded: List[Mapping[str, Any]] = []
+    for index, entry in enumerate(entries_value):
+        if not isinstance(entry, Mapping):
+            raise ValueError(f"Entry {index + 1} is not a JSON object.")
+
+        cloned = _clone_json_value(entry)
+        if not isinstance(cloned, dict):
+            raise ValueError(f"Entry {index + 1} could not be cloned into a JSON object.")
+
+        if legal_header and "legalHeader" not in cloned:
+            cloned["legalHeader"] = legal_header
+
+        expanded.append(cloned)
+
+    return expanded
 
 
 def _normalise_aaguid(value: Any) -> Optional[str]:
