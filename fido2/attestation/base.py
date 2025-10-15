@@ -338,6 +338,7 @@ class AttestationVerifier(abc.ABC):
                 mldsa_detected = True
                 break
 
+        mldsa_chain_verified = False
         if mldsa_detected:
             if not raw_chain:
                 raise UntrustedAttestation(
@@ -346,10 +347,13 @@ class AttestationVerifier(abc.ABC):
             try:
                 for child_der, issuer_der in zip(raw_chain, raw_chain[1:]):
                     _verify_mldsa_certificate_signature(child_der, issuer_der)
-                _verify_mldsa_certificate_signature(raw_chain[-1], raw_chain[-1])
             except InvalidSignature as e:
                 raise UntrustedAttestation(e)
-            return
+
+            if isinstance(result, AttestationResult):
+                result.trust_path = list(raw_chain)
+
+            mldsa_chain_verified = True
 
         # Lookup CA to use for trust path verification
         ca = self.ca_lookup(result, attestation_object.auth_data)
@@ -358,7 +362,17 @@ class AttestationVerifier(abc.ABC):
 
         trust_path = list(result.trust_path or [])
         try:
-            verify_x509_chain(trust_path + [ca])
+            if mldsa_chain_verified:
+                if not trust_path:
+                    raise InvalidSignature("ML-DSA attestation missing trust path")
+                try:
+                    _verify_mldsa_certificate_signature(trust_path[-1], ca)
+                except InvalidSignature:
+                    raise
+                except Exception as exc:  # pragma: no cover - defensive guard
+                    raise InvalidSignature(exc)
+            else:
+                verify_x509_chain(trust_path + [ca])
         except InvalidSignature as e:
             raise UntrustedAttestation(e)
 

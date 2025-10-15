@@ -1773,8 +1773,13 @@ def perform_attestation_checks(
                             metadata_lookup_source = "attestation"
                             root_valid = True
                         else:
-                            root_valid = True if pqc_attestation else None
-                            if not pqc_attestation:
+                            if pqc_attestation:
+                                root_valid = False
+                                results["warnings"].append(
+                                    "pqc_metadata_entry_not_found"
+                                )
+                            else:
+                                root_valid = None
                                 results["errors"].append("metadata_entry_not_found")
                     except Exception as exc:
                         if pqc_attestation:
@@ -1784,7 +1789,8 @@ def perform_attestation_checks(
                             root_valid = False
                 else:
                     if pqc_attestation:
-                        root_valid = True
+                        root_valid = False
+                        results["warnings"].append("pqc_metadata_not_available")
                     else:
                         results["errors"].append("metadata_not_available")
                         root_valid = None
