@@ -18,6 +18,7 @@ from ..metadata import (
     download_metadata_blob,
     ensure_metadata_session_id,
     delete_session_metadata_item,
+    expand_metadata_entry_payloads,
     list_session_metadata_items,
     load_metadata_cache_entry,
     save_session_metadata_item,
@@ -245,14 +246,30 @@ def api_upload_custom_metadata():
             continue
 
         try:
-            item = save_session_metadata_item(payload, original_filename=trimmed)
-        except ValueError as exc:
+            entry_payloads = expand_metadata_entry_payloads(payload)
+        except (TypeError, ValueError) as exc:
             errors.append(f"{trimmed}: {exc}")
             continue
-        except RuntimeError as exc:
-            return jsonify({"error": str(exc)}), 500
 
-        saved_items.append(serialize_session_metadata_item(item))
+        for index, entry_payload in enumerate(entry_payloads, start=1):
+            display_name = (
+                trimmed
+                if len(entry_payloads) == 1
+                else f"{trimmed} (entry {index})"
+            )
+
+            try:
+                item = save_session_metadata_item(
+                    entry_payload,
+                    original_filename=display_name,
+                )
+            except ValueError as exc:
+                errors.append(f"{display_name}: {exc}")
+                continue
+            except RuntimeError as exc:
+                return jsonify({"error": str(exc)}), 500
+
+            saved_items.append(serialize_session_metadata_item(item))
 
     status_code = 200 if saved_items else 400
     response: Dict[str, Any] = {"items": saved_items}
