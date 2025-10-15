@@ -991,7 +991,12 @@ class ESP256(ES256):
         canonical_signature = _require_canonical_ecdsa_signature(
             signature, _SECP256R1_ORDER
         )
-        super().verify(message, canonical_signature)
+        message_bytes = (
+            message
+            if isinstance(message, (bytes, bytearray, memoryview))
+            else bytes(message)
+        )
+        super().verify(bytes(message_bytes), canonical_signature)
 
 class ES384(CoseKey):
     ALGORITHM = -35
@@ -1028,7 +1033,12 @@ class ESP384(ES384):
         canonical_signature = _require_canonical_ecdsa_signature(
             signature, _SECP384R1_ORDER
         )
-        super().verify(message, canonical_signature)
+        message_bytes = (
+            message
+            if isinstance(message, (bytes, bytearray, memoryview))
+            else bytes(message)
+        )
+        super().verify(bytes(message_bytes), canonical_signature)
 
 class ES512(CoseKey):
     ALGORITHM = -36
@@ -1065,7 +1075,12 @@ class ESP512(ES512):
         canonical_signature = _require_canonical_ecdsa_signature(
             signature, _SECP521R1_ORDER
         )
-        super().verify(message, canonical_signature)
+        message_bytes = (
+            message
+            if isinstance(message, (bytes, bytearray, memoryview))
+            else bytes(message)
+        )
+        super().verify(bytes(message_bytes), canonical_signature)
 
 class RS256(CoseKey):
     ALGORITHM = -257
@@ -1241,10 +1256,19 @@ class Ed25519(EdDSA):
         )
         if len(signature_bytes) != 64:
             raise ValueError("Ed25519 signatures must be 64 bytes")
+        if self[-1] != 6:
+            raise ValueError("Unsupported elliptic curve")
         public_key = self.get(-2)
         if public_key is None or len(public_key) != 32:
             raise ValueError("Ed25519 public key must be 32 bytes")
-        super().verify(message, bytes(signature_bytes))
+        message_bytes = (
+            message
+            if isinstance(message, (bytes, bytearray, memoryview))
+            else bytes(message)
+        )
+        ed25519.Ed25519PublicKey.from_public_bytes(bytes(public_key)).verify(
+            bytes(signature_bytes), bytes(message_bytes)
+        )
 
 class RS1(CoseKey):
     ALGORITHM = -65535
