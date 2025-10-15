@@ -28,10 +28,12 @@
 from __future__ import annotations
 
 from ..cose import describe_mldsa_oid, extract_certificate_public_key_info
+from ..utils import ByteBuffer
 from ..webauthn import AuthenticatorData, AttestationObject
 from enum import IntEnum, unique
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import padding, ec, rsa
 from cryptography.exceptions import InvalidSignature as _InvalidSignature
 from dataclasses import dataclass
@@ -162,6 +164,33 @@ def _verify_mldsa_certificate_signature(
         raise InvalidSignature(f"ML-DSA certificate verification error: {exc}") from exc
 
 
+def _coerce_der_bytes(value: Any) -> Optional[bytes]:
+    if isinstance(value, (bytes, bytearray, memoryview)):
+        return bytes(value)
+    if isinstance(value, ByteBuffer):
+        return bytes(value.getvalue())
+    if isinstance(value, x509.Certificate):
+        try:
+            return value.public_bytes(serialization.Encoding.DER)
+        except Exception:
+            return None
+    public_bytes = getattr(value, "public_bytes", None)
+    if callable(public_bytes):
+        try:
+            return public_bytes(serialization.Encoding.DER)
+        except Exception:
+            return None
+    tobytes = getattr(value, "tobytes", None)
+    if callable(tobytes):
+        try:
+            data = tobytes()
+        except Exception:
+            return None
+        if isinstance(data, (bytes, bytearray, memoryview)):
+            return bytes(data)
+    return None
+
+
 def _extract_attestation_chain(att_stmt: Mapping[str, Any]) -> List[bytes]:
     if not isinstance(att_stmt, Mapping):
         return []
@@ -170,8 +199,9 @@ def _extract_attestation_chain(att_stmt: Mapping[str, Any]) -> List[bytes]:
         return []
     der_chain: List[bytes] = []
     for cert in chain:
-        if isinstance(cert, (bytes, bytearray, memoryview)):
-            der_chain.append(bytes(cert))
+        der_bytes = _coerce_der_bytes(cert)
+        if der_bytes:
+            der_chain.append(der_bytes)
     return der_chain
 
 
@@ -346,7 +376,13 @@ class AttestationVerifier(abc.ABC):
                 )
             try:
                 for child_der, issuer_der in zip(raw_chain, raw_chain[1:]):
-                    _verify_mldsa_certificate_signature(child_der, issuer_der)
+                    child_bytes = _coerce_der_bytes(child_der)
+                    issuer_bytes = _coerce_der_bytes(issuer_der)
+                    if not child_bytes or not issuer_bytes:
+                        raise InvalidSignature(
+                            "ML-DSA attestation chain contains unsupported certificate data"
+                        )
+                    _verify_mldsa_certificate_signature(child_bytes, issuer_bytes)
             except InvalidSignature as e:
                 raise UntrustedAttestation(e)
 
@@ -366,7 +402,13 @@ class AttestationVerifier(abc.ABC):
                 if not trust_path:
                     raise InvalidSignature("ML-DSA attestation missing trust path")
                 try:
-                    _verify_mldsa_certificate_signature(trust_path[-1], ca)
+                    root_der = _coerce_der_bytes(trust_path[-1])
+                    ca_der = _coerce_der_bytes(ca)
+                    if not root_der or not ca_der:
+                        raise InvalidSignature(
+                            "ML-DSA attestation trust anchor is not DER-encoded"
+                        )
+                    _verify_mldsa_certificate_signature(root_der, ca_der)
                 except InvalidSignature:
                     raise
                 except Exception as exc:  # pragma: no cover - defensive guard

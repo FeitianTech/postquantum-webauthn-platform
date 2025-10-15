@@ -33,7 +33,9 @@ from fido2.attestation import (
     AndroidSafetynetAttestation,
     AppleAttestation,
     Attestation,
+    AttestationResult,
     AttestationType,
+    AttestationVerifier,
     FidoU2FAttestation,
     InvalidData,
     InvalidSignature,
@@ -44,7 +46,11 @@ from fido2.attestation import (
     UnsupportedType,
     verify_x509_chain,
 )
+from fido2.attestation.base import _extract_attestation_chain
 from fido2.webauthn import AuthenticatorData
+from fido2.utils import ByteBuffer
+
+from unittest import mock
 
 # GS Root R2 (https://pki.goog/)
 _GSR2_DER = bytes.fromhex(
@@ -53,6 +59,73 @@ _GSR2_DER = bytes.fromhex(
 
 
 class TestAttestationObject(unittest.TestCase):
+    def test_extract_attestation_chain_accepts_non_bytes_entries(self):
+        class StubCertificate:
+            def public_bytes(self, encoding):
+                return b"stub-der"
+
+        chain = _extract_attestation_chain(
+            {
+                "x5c": [
+                    ByteBuffer(b"buffer-cert"),
+                    memoryview(b"view-cert"),
+                    StubCertificate(),
+                ]
+            }
+        )
+
+        self.assertEqual(
+            chain,
+            [b"buffer-cert", b"view-cert", b"stub-der"],
+        )
+
+    def test_mldsa_verifier_skips_classic_chain_verification(self):
+        class DummyAttestation(Attestation):
+            FORMAT = "dummy-mldsa"
+
+            def __init__(self):
+                self.last_result = None
+
+            def verify(self, statement, auth_data, client_data_hash):
+                self.last_result = AttestationResult(AttestationType.BASIC, [])
+                return self.last_result
+
+        class DummyVerifier(AttestationVerifier):
+            def __init__(self, attestation, ca_value):
+                super().__init__([attestation])
+                self._ca_value = ca_value
+
+            def ca_lookup(self, attestation_result, auth_data):
+                return self._ca_value
+
+        ca_buffer = ByteBuffer(b"ca-der")
+        attestation = DummyAttestation()
+        verifier = DummyVerifier(attestation, ca_buffer)
+
+        attestation_object = mock.Mock()
+        attestation_object.fmt = "dummy-mldsa"
+        attestation_object.att_stmt = {"x5c": [ByteBuffer(b"leaf"), ByteBuffer(b"root")]}
+        attestation_object.auth_data = mock.Mock()
+
+        dummy_cert = mock.Mock()
+        dummy_cert.signature_algorithm_oid.dotted_string = "1.2.840.113556.1.8000.2554"
+        dummy_cert.tbs_certificate_bytes = b"tbs"
+        dummy_cert.signature = b"sig"
+
+        with mock.patch("fido2.attestation.base.x509.load_der_x509_certificate", return_value=dummy_cert), mock.patch(
+            "fido2.attestation.base.describe_mldsa_oid",
+            return_value={"ml_dsa_parameter_set": "ML-DSA-65"},
+        ), mock.patch(
+            "fido2.attestation.base._verify_mldsa_certificate_signature"
+        ) as verify_sig, mock.patch(
+            "fido2.attestation.base.verify_x509_chain"
+        ) as verify_chain:
+            verifier.verify_attestation(attestation_object, b"client-hash")
+
+        self.assertEqual(attestation.last_result.trust_path, [b"leaf", b"root"])
+        self.assertEqual(verify_sig.call_count, 2)
+        verify_chain.assert_not_called()
+
     def test_unsupported_attestation(self):
         attestation = Attestation.for_type("__unsupported__")()
         self.assertIsInstance(attestation, UnsupportedAttestation)

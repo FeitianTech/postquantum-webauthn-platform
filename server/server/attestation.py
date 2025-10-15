@@ -1783,7 +1783,10 @@ def perform_attestation_checks(
                                 results["errors"].append("metadata_entry_not_found")
                     except Exception as exc:
                         if pqc_attestation:
-                            root_valid = True
+                            root_valid = False
+                            results["warnings"].append(
+                                "pqc_metadata_verification_failed"
+                            )
                         else:
                             results["errors"].append(f"untrusted_attestation: {exc}")
                             root_valid = False
