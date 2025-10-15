@@ -64,6 +64,20 @@ _SESSION_METADATA_INFO_SUFFIX = ".meta.json"
 _SESSION_METADATA_SESSION_KEY = "fido.mds.session"
 _SESSION_METADATA_RECOVERY_MARKER = ".last-session-id"
 
+_METADATA_STATEMENT_REQUIRED_DEFAULTS: Mapping[str, Any] = {
+    "description": "",
+    "authenticatorVersion": 0,
+    "schema": 3,
+    "upv": [],
+    "attestationTypes": [],
+    "userVerificationDetails": [],
+    "keyProtection": [],
+    "matcherProtection": [],
+    "attachmentHint": [],
+    "tcDisplay": [],
+    "attestationRootCertificates": [],
+}
+
 
 @dataclass(frozen=True)
 class SessionMetadataItem:
@@ -217,6 +231,8 @@ def ensure_metadata_session_id() -> str:
     identifier = _get_metadata_session_id(create=True)
     if not identifier:
         raise RuntimeError("Unable to establish metadata session identifier.")
+    if has_request_context():
+        session.permanent = True
     return identifier
 
 
@@ -354,6 +370,33 @@ def _normalise_metadata_statement(raw: Mapping[str, Any]) -> Tuple[Dict[str, Any
 
     if legal_header and "legalHeader" not in metadata_statement:
         metadata_statement["legalHeader"] = legal_header
+
+    description = metadata_statement.get("description")
+    if not isinstance(description, str):
+        metadata_statement["description"] = _METADATA_STATEMENT_REQUIRED_DEFAULTS["description"]
+
+    authenticator_version = metadata_statement.get("authenticatorVersion")
+    if not isinstance(authenticator_version, int):
+        metadata_statement["authenticatorVersion"] = _METADATA_STATEMENT_REQUIRED_DEFAULTS["authenticatorVersion"]
+
+    schema = metadata_statement.get("schema")
+    if not isinstance(schema, int):
+        metadata_statement["schema"] = _METADATA_STATEMENT_REQUIRED_DEFAULTS["schema"]
+
+    for key in (
+        "upv",
+        "attestationTypes",
+        "userVerificationDetails",
+        "keyProtection",
+        "matcherProtection",
+        "attachmentHint",
+        "tcDisplay",
+        "attestationRootCertificates",
+    ):
+        value = metadata_statement.get(key)
+        if not isinstance(value, list):
+            default_value = _METADATA_STATEMENT_REQUIRED_DEFAULTS[key]
+            metadata_statement[key] = list(default_value) if isinstance(default_value, list) else default_value
 
     return metadata_statement, legal_header
 
@@ -578,6 +621,7 @@ def list_session_metadata_items(session_id: Optional[str] = None) -> List[Sessio
             name
             for name in os.listdir(directory)
             if name.endswith(_SESSION_METADATA_SUFFIX)
+            and not name.endswith(_SESSION_METADATA_INFO_SUFFIX)
         ]
     except OSError:
         return []
