@@ -375,7 +375,16 @@ class AttestationVerifier(abc.ABC):
         if not ca:
             raise UntrustedAttestation("No root found for Authenticator")
 
-        if pqc_oid_detected or pqc_aaguid_detected:
+        pqc_ca_detected = False
+        try:
+            ca_info = extract_certificate_signature_info(ca)
+        except Exception:
+            ca_info = None
+        if ca_info is not None:
+            ca_signature_oid = ca_info.get("signature_algorithm_oid")
+            pqc_ca_detected = bool(describe_mldsa_oid(ca_signature_oid))
+
+        if pqc_oid_detected or pqc_aaguid_detected or pqc_ca_detected:
             if pqc_child_cert_der is None:
                 raise UntrustedAttestation(
                     "PQC attestation certificate missing from attestation statement"
