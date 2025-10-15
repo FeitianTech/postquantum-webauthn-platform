@@ -33,7 +33,14 @@ from typing import Sequence, Type, Mapping, Any, TypeVar, Optional, Iterable, Di
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric import ec, rsa, padding, ed25519, types, ed448
+from cryptography.hazmat.primitives.asymmetric import (
+    ec,
+    rsa,
+    padding,
+    ed25519,
+    types,
+    ed448,
+)
 
 from .utils import ByteBuffer, bytes2int, int2bytes
 
@@ -226,6 +233,73 @@ def _unwrap_mldsa_subject_public_key(
             return candidate, original
 
     return payload, None
+
+
+def _parse_der_integer(view: memoryview, idx: int) -> tuple[int, int]:
+    """Parse a DER INTEGER and return its value and new index."""
+
+    if idx >= len(view) or view[idx] != 0x02:
+        raise ValueError("ECDSA signature must contain INTEGER elements")
+    idx += 1
+    length, idx = _parse_der_length(view, idx)
+    end = idx + length
+    if end > len(view):
+        raise ValueError("Truncated DER INTEGER in ECDSA signature")
+    if length == 0:
+        raise ValueError("Empty DER INTEGER in ECDSA signature")
+    integer_bytes = bytes(view[idx:end])
+    if integer_bytes[0] & 0x80:
+        raise ValueError("ECDSA signature INTEGER cannot be negative")
+    if len(integer_bytes) > 1 and integer_bytes[0] == 0x00:
+        if integer_bytes[1] & 0x80 == 0:
+            raise ValueError("Non-canonical ECDSA INTEGER encoding")
+    value = int.from_bytes(integer_bytes, "big")
+    if value == 0:
+        raise ValueError("ECDSA signature integers must be non-zero")
+    return value, end
+
+
+def _require_canonical_ecdsa_signature(
+    signature: bytes | bytearray | memoryview, order: int
+) -> bytes:
+    """Validate that *signature* is DER-encoded and uses low-S form."""
+
+    signature_bytes = (
+        signature
+        if isinstance(signature, (bytes, bytearray, memoryview))
+        else bytes(signature)
+    )
+    view = memoryview(signature_bytes)
+    if not view or view[0] != 0x30:
+        raise ValueError("ECDSA signature must be a DER SEQUENCE")
+    idx = 1
+    length, idx = _parse_der_length(view, idx)
+    if idx + length != len(view):
+        raise ValueError("ECDSA DER sequence has trailing data")
+    r, idx = _parse_der_integer(view, idx)
+    s, idx = _parse_der_integer(view, idx)
+    if idx != len(view):
+        raise ValueError("ECDSA DER sequence contains extra data")
+    if r >= order:
+        raise ValueError("ECDSA signature r value out of range")
+    if s >= order:
+        raise ValueError("ECDSA signature s value out of range")
+    if s > order // 2:
+        raise ValueError("ECDSA signature must use low-S form")
+    return bytes(view)
+
+
+_SECP256R1_ORDER = int(
+    "FFFFFFFF00000000FFFFFFFFFFFFFFFFBCE6FAADA7179E84F3B9CAC2FC632551", 16
+)
+_SECP384R1_ORDER = int(
+    "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFC7634D81F4372DDF581A0DB248B0A77AECEC196ACCC52973",
+    16,
+)
+_SECP521R1_ORDER = int(
+    "1FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
+    16,
+)
 
 
 def _skip_der_value(view: memoryview, idx: int) -> int:
@@ -913,6 +987,12 @@ class ESP256(ES256):
     # See: https://www.ietf.org/archive/id/draft-ietf-jose-fully-specified-algorithms-10.html#name-elliptic-curve-digital-sign  # noqa:E501
     ALGORITHM = -9
 
+    def verify(self, message, signature):
+        canonical_signature = _require_canonical_ecdsa_signature(
+            signature, _SECP256R1_ORDER
+        )
+        super().verify(message, canonical_signature)
+
 class ES384(CoseKey):
     ALGORITHM = -35
     _HASH_ALG = hashes.SHA384()
@@ -944,6 +1024,12 @@ class ESP384(ES384):
     # See: https://www.ietf.org/archive/id/draft-ietf-jose-fully-specified-algorithms-12.html#name-elliptic-curve-digital-sign  # noqa:E501
     ALGORITHM = -51
 
+    def verify(self, message, signature):
+        canonical_signature = _require_canonical_ecdsa_signature(
+            signature, _SECP384R1_ORDER
+        )
+        super().verify(message, canonical_signature)
+
 class ES512(CoseKey):
     ALGORITHM = -36
     _HASH_ALG = hashes.SHA512()
@@ -974,6 +1060,12 @@ class ES512(CoseKey):
 class ESP512(ES512):
     # See: https://www.ietf.org/archive/id/draft-ietf-jose-fully-specified-algorithms-12.html#name-elliptic-curve-digital-sign  # noqa:E501
     ALGORITHM = -52
+
+    def verify(self, message, signature):
+        canonical_signature = _require_canonical_ecdsa_signature(
+            signature, _SECP521R1_ORDER
+        )
+        super().verify(message, canonical_signature)
 
 class RS256(CoseKey):
     ALGORITHM = -257
@@ -1140,6 +1232,19 @@ class Ed448(CoseKey):
 class Ed25519(EdDSA):
     # See: https://www.ietf.org/archive/id/draft-ietf-jose-fully-specified-algorithms-12.html#name-edwards-curve-digital-signa  # noqa:E501
     ALGORITHM = -19
+
+    def verify(self, message, signature):
+        signature_bytes = (
+            signature
+            if isinstance(signature, (bytes, bytearray, memoryview))
+            else bytes(signature)
+        )
+        if len(signature_bytes) != 64:
+            raise ValueError("Ed25519 signatures must be 64 bytes")
+        public_key = self.get(-2)
+        if public_key is None or len(public_key) != 32:
+            raise ValueError("Ed25519 public key must be 32 bytes")
+        super().verify(message, bytes(signature_bytes))
 
 class RS1(CoseKey):
     ALGORITHM = -65535
