@@ -20,6 +20,7 @@ from fido2.attestation import (
     InvalidSignature,
     UnsupportedType,
 )
+from fido2.attestation.base import _verify_mldsa_certificate_signature
 from fido2.cose import (
     CoseKey,
     describe_mldsa_oid,
@@ -29,6 +30,7 @@ from fido2.cose import (
 from fido2.utils import ByteBuffer, websafe_decode
 from fido2.webauthn import (
     AuthenticatorData,
+    AttestationObject,
     CollectedClientData,
     RegistrationResponse,
     Aaguid,
@@ -173,6 +175,140 @@ def _collect_trust_path_entries(x5c: Any) -> List[bytes]:
         if data:
             trust_path.append(data)
     return trust_path
+
+
+def _coerce_certificate_bytes(value: Any) -> Optional[bytes]:
+    """Decode certificate data from common encodings into raw DER bytes."""
+
+    byte_value = _coerce_bytes(value)
+    if byte_value is not None:
+        return byte_value
+
+    if isinstance(value, str):
+        stripped = "".join(value.split())
+        if not stripped:
+            return None
+        try:
+            padded = stripped + "=" * ((4 - len(stripped) % 4) % 4)
+            return base64.b64decode(padded, validate=True)
+        except (binascii.Error, ValueError):
+            try:
+                return bytes.fromhex(stripped)
+            except ValueError:
+                return None
+    return None
+
+
+def _extract_attestation_leaf_certificate(
+    attestation_object: AttestationObject,
+) -> Optional[bytes]:
+    """Return the first certificate from an attestation statement."""
+
+    att_stmt = getattr(attestation_object, "att_stmt", None)
+    if not isinstance(att_stmt, Mapping):
+        return None
+    chain = att_stmt.get("x5c")
+    if not isinstance(chain, Sequence) or not chain:
+        return None
+    return _coerce_certificate_bytes(chain[0])
+
+
+def _collect_metadata_root_certificates(metadata_entry: Any) -> List[bytes]:
+    """Extract attestation root certificates from a metadata entry."""
+
+    roots: List[bytes] = []
+    metadata_statement = getattr(metadata_entry, "metadata_statement", None)
+    candidates: Any = None
+    if metadata_statement is not None:
+        candidates = getattr(
+            metadata_statement,
+            "attestation_root_certificates",
+            None,
+        )
+        if not candidates and isinstance(metadata_statement, Mapping):
+            candidates = metadata_statement.get(
+                "attestation_root_certificates",
+            ) or metadata_statement.get("attestationRootCertificates")
+
+    if candidates is None and isinstance(metadata_entry, Mapping):
+        candidates = metadata_entry.get(
+            "attestation_root_certificates",
+        ) or metadata_entry.get("attestationRootCertificates")
+
+    if isinstance(candidates, (list, tuple, set)):
+        iterable = candidates
+    elif candidates is None:
+        iterable = []
+    else:
+        iterable = [candidates]
+
+    for candidate in iterable:
+        data = _coerce_certificate_bytes(candidate)
+        if data:
+            roots.append(data)
+    return roots
+
+
+def _find_metadata_entry_for_aaguid(verifier: Any, aaguid_bytes: bytes) -> Optional[Any]:
+    """Lookup metadata by AAGUID without invoking attestation verification."""
+
+    if verifier is None or not aaguid_bytes:
+        return None
+    try:
+        aaguid_obj = Aaguid.fromhex(aaguid_bytes.hex())
+    except Exception:
+        return None
+    try:
+        return verifier.find_entry_by_aaguid(aaguid_obj)
+    except Exception:
+        return None
+
+
+def _evaluate_mldsa_attestation_root(
+    attestation_object: AttestationObject,
+    aaguid_bytes: bytes,
+    verifier: Optional[Any],
+) -> Tuple[Optional[bool], Optional[Any], Optional[str], List[str], List[str]]:
+    """Determine ML-DSA attestation root status using PQC-only verification."""
+
+    warnings: List[str] = []
+    errors: List[str] = []
+
+    if verifier is None:
+        errors.append("metadata_not_available")
+        return None, None, None, warnings, errors
+
+    metadata_entry = _find_metadata_entry_for_aaguid(verifier, aaguid_bytes)
+    if metadata_entry is None:
+        return None, None, None, warnings, errors
+
+    metadata_lookup_source = "aaguid"
+    roots = _collect_metadata_root_certificates(metadata_entry)
+    if not roots:
+        errors.append("pqc_metadata_root_missing")
+        return False, metadata_entry, metadata_lookup_source, warnings, errors
+
+    leaf_certificate = _extract_attestation_leaf_certificate(attestation_object)
+    if leaf_certificate is None:
+        errors.append("pqc_attestation_leaf_missing")
+        return False, metadata_entry, metadata_lookup_source, warnings, errors
+
+    last_error: Optional[str] = None
+    for root in roots:
+        try:
+            _verify_mldsa_certificate_signature(leaf_certificate, root)
+        except InvalidSignature as exc:
+            last_error = str(exc)
+        except Exception as exc:  # pragma: no cover - defensive
+            last_error = str(exc)
+        else:
+            return True, metadata_entry, metadata_lookup_source, warnings, errors
+
+    if last_error:
+        errors.append(f"pqc_root_verification_failed: {last_error}")
+    else:
+        errors.append("pqc_root_verification_failed")
+    return False, metadata_entry, metadata_lookup_source, warnings, errors
 
 
 def _attempt_pqc_attestation_signature_validation(
@@ -1740,11 +1876,28 @@ def perform_attestation_checks(
     now = datetime.now(timezone.utc)
     root_valid: Optional[bool] = None
     verifier = None
-    if signature_valid and attestation_result is not None:
+    pqc_registration = isinstance(algorithm, int) and is_pqc_algorithm(algorithm)
+    if pqc_registration:
+        verifier = get_mds_verifier()
+        (
+            root_valid,
+            metadata_entry,
+            metadata_lookup_source,
+            pqc_warnings,
+            pqc_errors,
+        ) = _evaluate_mldsa_attestation_root(
+            attestation_object,
+            credential_aaguid_bytes,
+            verifier,
+        )
+        if pqc_errors:
+            results["errors"].extend(pqc_errors)
+        if pqc_warnings:
+            results["warnings"].extend(pqc_warnings)
+    elif signature_valid and attestation_result is not None:
         trust_path = attestation_result.trust_path or []
         if trust_path:
             certs_valid = True
-            pqc_attestation = is_pqc_algorithm(algorithm)
             for cert_der in trust_path:
                 try:
                     cert = x509.load_der_x509_certificate(cert_der)
@@ -1755,9 +1908,6 @@ def perform_attestation_checks(
                         results["errors"].append(
                             f"certificate_out_of_validity: {cert.subject.rfc4514_string()}"
                         )
-                    signature_oid = cert.signature_algorithm_oid.dotted_string
-                    if describe_mldsa_oid(signature_oid):
-                        pqc_attestation = True
                 except Exception as exc:
                     certs_valid = False
                     results["errors"].append(f"certificate_parse_error: {exc}")
@@ -1769,25 +1919,19 @@ def perform_attestation_checks(
                             attestation_object,
                             client_data_hash,
                         )
+                    except Exception as exc:
+                        results["errors"].append(f"untrusted_attestation: {exc}")
+                        root_valid = False
+                    else:
                         if metadata_entry is not None:
                             metadata_lookup_source = "attestation"
                             root_valid = True
                         else:
+                            results["errors"].append("metadata_entry_not_found")
                             root_valid = None
-                            if not pqc_attestation:
-                                results["errors"].append("metadata_entry_not_found")
-                    except Exception as exc:
-                        if pqc_attestation:
-                            root_valid = None
-                        else:
-                            results["errors"].append(f"untrusted_attestation: {exc}")
-                            root_valid = False
                 else:
-                    if pqc_attestation:
-                        root_valid = None
-                    else:
-                        results["errors"].append("metadata_not_available")
-                        root_valid = None
+                    results["errors"].append("metadata_not_available")
+                    root_valid = None
             else:
                 results["errors"].append("certificate_chain_invalid")
                 root_valid = False
@@ -1880,20 +2024,6 @@ def perform_attestation_checks(
 
     if results["aaguid_match"] is None and credential_aaguid_bytes and metadata_entry is not None:
         results["aaguid_match"] = metadata_aaguid_bytes == credential_aaguid_bytes
-
-    if (
-        metadata_root_certificates_present
-        and metadata_entry is not None
-        and is_pqc_algorithm(algorithm)
-        and (root_valid is False or root_valid is None)
-    ):
-        metadata_verification_warning = (
-            "A trusted root certificate is bundled for this authenticator, "
-            "but the attestation chain could not be verified (post-quantum attestation)."
-        )
-        results["warnings"].append(metadata_verification_warning)
-        if root_valid is False:
-            root_valid = None
 
     results["metadata"] = {
         "available": metadata_entry is not None,
