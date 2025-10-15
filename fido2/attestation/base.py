@@ -29,7 +29,11 @@ from __future__ import annotations
 
 import logging
 
-from ..cose import describe_mldsa_oid, extract_certificate_public_key_info
+from ..cose import (
+    describe_mldsa_oid,
+    extract_certificate_public_key_info,
+    extract_certificate_signature_info,
+)
 from ..webauthn import AuthenticatorData, AttestationObject
 from enum import IntEnum, unique
 from cryptography import x509
@@ -115,11 +119,16 @@ def catch_builtins(f):
 
 @catch_builtins
 def _verify_mldsa_certificate_signature(
-    child_cert: x509.Certificate, issuer_der: bytes
+    child_der: bytes, issuer_der: bytes
 ) -> None:
     """Verify an ML-DSA signed certificate using liboqs."""
 
-    signature_oid = child_cert.signature_algorithm_oid.dotted_string
+    try:
+        child_info = extract_certificate_signature_info(child_der)
+    except Exception as exc:  # pragma: no cover - defensive guard
+        raise InvalidSignature(f"Unable to parse ML-DSA certificate: {exc}") from exc
+
+    signature_oid = child_info.get("signature_algorithm_oid")
     mldsa_details = describe_mldsa_oid(signature_oid)
     if not mldsa_details:
         raise InvalidSignature(
@@ -150,8 +159,10 @@ def _verify_mldsa_certificate_signature(
             "ML-DSA certificate verification requires the 'oqs' package"
         ) from exc
 
-    message = bytes(child_cert.tbs_certificate_bytes)
-    signature = bytes(child_cert.signature)
+    message = bytes(child_info.get("tbs_certificate") or b"")
+    signature = bytes(child_info.get("signature") or b"")
+    if not message or not signature:
+        raise InvalidSignature("Unable to extract ML-DSA certificate signature payload")
     public_key_bytes = bytes(public_key)
 
     try:  # pragma: no cover - depends on oqs runtime availability
@@ -196,9 +207,8 @@ def verify_x509_chain(chain: List[bytes]) -> None:
         (x509.load_der_x509_certificate(der, default_backend()), der)
         for der in chain
     ]
-    cert, cert_der = certs.pop(0)
+    child, child_der = certs.pop(0)
     while certs:
-        child = cert
         cert, cert_der = certs.pop(0)
         try:
             pub = cert.public_key()
@@ -221,11 +231,13 @@ def verify_x509_chain(chain: List[bytes]) -> None:
                     ec.ECDSA(child.signature_hash_algorithm),
                 )
             elif pub is None:
-                _verify_mldsa_certificate_signature(child, cert_der)
+                _verify_mldsa_certificate_signature(child_der, cert_der)
             else:
                 raise ValueError("Unsupported signature key type")
         except _InvalidSignature:
             raise InvalidSignature()
+
+        child, child_der = cert, cert_der
 
 
 class Attestation(abc.ABC):
@@ -338,17 +350,16 @@ class AttestationVerifier(abc.ABC):
         )
 
         att_stmt_leaf = _extract_att_stmt_leaf_certificate(attestation_object.att_stmt)
-        pqc_child_cert: Optional[x509.Certificate] = None
+        pqc_child_cert_der: Optional[bytes] = None
         pqc_oid_detected = False
         if att_stmt_leaf:
             try:
-                pqc_child_cert = x509.load_der_x509_certificate(
-                    att_stmt_leaf, default_backend()
-                )
-            except (ValueError, TypeError):
-                pqc_child_cert = None
+                parsed_leaf = extract_certificate_signature_info(att_stmt_leaf)
+            except Exception:
+                pqc_child_cert_der = None
             else:
-                signature_oid = pqc_child_cert.signature_algorithm_oid.dotted_string
+                pqc_child_cert_der = att_stmt_leaf
+                signature_oid = parsed_leaf.get("signature_algorithm_oid")
                 pqc_oid_detected = bool(describe_mldsa_oid(signature_oid))
 
         pqc_aaguid_detected = False
@@ -365,13 +376,13 @@ class AttestationVerifier(abc.ABC):
             raise UntrustedAttestation("No root found for Authenticator")
 
         if pqc_oid_detected or pqc_aaguid_detected:
-            if pqc_child_cert is None:
+            if pqc_child_cert_der is None:
                 raise UntrustedAttestation(
                     "PQC attestation certificate missing from attestation statement"
                 )
             logger.info(_PQC_TRACE_MESSAGE)
             try:
-                _verify_mldsa_certificate_signature(pqc_child_cert, ca)
+                _verify_mldsa_certificate_signature(pqc_child_cert_der, ca)
             except InvalidSignature as e:
                 raise UntrustedAttestation(e)
             else:

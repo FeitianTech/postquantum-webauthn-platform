@@ -35,7 +35,12 @@ from .attestation import (
     AttestationVerifier,
 )
 from .attestation.base import _verify_mldsa_certificate_signature
-from .cose import CoseKey, describe_mldsa_oid, extract_certificate_public_key_info
+from .cose import (
+    CoseKey,
+    describe_mldsa_oid,
+    extract_certificate_public_key_info,
+    extract_certificate_signature_info,
+)
 from .utils import websafe_decode, _JsonDataObject
 
 from cryptography import x509
@@ -437,18 +442,44 @@ class MdsAttestationVerifier(AttestationVerifier):
                 )
                 return None
 
-            issuer = x509.load_der_x509_certificate(
-                attestation_result.trust_path[-1], default_backend()
-            ).issuer
+            issuer = None
+            try:
+                issuer_cert = x509.load_der_x509_certificate(
+                    attestation_result.trust_path[-1], default_backend()
+                )
+            except Exception:
+                issuer_cert = None
+            if issuer_cert is not None:
+                issuer = issuer_cert.issuer
+
+            if issuer is not None:
+                for root in entry.metadata_statement.attestation_root_certificates:
+                    try:
+                        subject = x509.load_der_x509_certificate(
+                            root, default_backend()
+                        ).subject
+                    except Exception:
+                        continue
+                    if subject == issuer:
+                        _last_entry.set(entry)
+                        return root
+                logger.info(f"No attestation root matching subject: {issuer}")
+                return None
 
             for root in entry.metadata_statement.attestation_root_certificates:
-                subject = x509.load_der_x509_certificate(
-                    root, default_backend()
-                ).subject
-                if subject == issuer:
+                try:
+                    root_info = extract_certificate_signature_info(root)
+                except Exception:
+                    root_info = None
+                if root_info and describe_mldsa_oid(root_info.get("signature_algorithm_oid")):
                     _last_entry.set(entry)
                     return root
-            logger.info(f"No attestation root matching subject: {issuer}")
+
+            roots = entry.metadata_statement.attestation_root_certificates
+            if roots:
+                logger.info("Falling back to first metadata root without x509 parsing")
+                _last_entry.set(entry)
+                return roots[0]
         return None
 
     def find_entry(
@@ -492,35 +523,61 @@ def parse_blob(blob: bytes, trust_root: Optional[bytes]) -> MetadataBlobPayload:
             leaf_der = chain[0]
 
         pqc_trust_root = False
+        root_signature_oid: Optional[str] = None
         try:
             root_cert = x509.load_der_x509_certificate(trust_root, default_backend())
         except Exception:
             root_cert = None
         if root_cert is not None:
             root_signature_oid = root_cert.signature_algorithm_oid.dotted_string
+        else:
+            try:
+                root_info = extract_certificate_signature_info(trust_root)
+            except Exception:
+                root_info = None
+            if root_info:
+                root_signature_oid = root_info.get("signature_algorithm_oid")
+
+        if root_signature_oid:
             pqc_trust_root = bool(describe_mldsa_oid(root_signature_oid))
 
-        if pqc_trust_root:
-            if leaf_der is None:
+        pqc_leaf = False
+        if leaf_der is not None:
+            try:
+                leaf_info = extract_certificate_signature_info(leaf_der)
+            except Exception:
+                leaf_info = None
+            if leaf_info:
+                leaf_signature_oid = leaf_info.get("signature_algorithm_oid")
+                pqc_leaf = bool(describe_mldsa_oid(leaf_signature_oid))
+
+        if pqc_trust_root or pqc_leaf:
+            if leaf_der is None or trust_root is None:
                 raise ValueError(
                     "PQC metadata blob missing signing certificate in x5c header"
                 )
-            leaf_cert = x509.load_der_x509_certificate(leaf_der, default_backend())
-            _verify_mldsa_certificate_signature(leaf_cert, trust_root)
+            _verify_mldsa_certificate_signature(leaf_der, trust_root)
         else:
             verify_x509_chain(chain + [trust_root])
 
         if leaf_der is None:
             leaf_der = trust_root
 
-        leaf_cert = x509.load_der_x509_certificate(leaf_der, default_backend())
+        leaf_cert: Optional[x509.Certificate]
         try:
-            public_key = leaf_cert.public_key()
-        except ValueError:
-            public_key = None
+            leaf_cert = x509.load_der_x509_certificate(leaf_der, default_backend())
+        except Exception:
+            leaf_cert = None
+
+        public_key = None
+        if leaf_cert is not None:
+            try:
+                public_key = leaf_cert.public_key()
+            except ValueError:
+                public_key = None
 
         cose_cls = CoseKey.for_name(header["alg"])
-        if public_key is None and pqc_trust_root:
+        if public_key is None and (pqc_trust_root or pqc_leaf):
             key_info = extract_certificate_public_key_info(leaf_der)
             subject_public_key = key_info.get("subject_public_key")
             if not isinstance(subject_public_key, (bytes, bytearray, memoryview)):
