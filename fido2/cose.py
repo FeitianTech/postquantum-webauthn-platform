@@ -663,13 +663,28 @@ class CoseKey(dict):
         raise NotImplementedError("Creation from cryptography not supported.")
 
     @staticmethod
+    def _iter_subclasses() -> Iterable[Type["CoseKey"]]:
+        """Yield all subclasses of ``CoseKey`` recursively."""
+
+        seen: set[Type["CoseKey"]] = set()
+        stack: list[Type["CoseKey"]] = list(CoseKey.__subclasses__())
+
+        while stack:
+            cls = stack.pop()
+            if cls in seen:
+                continue
+            seen.add(cls)
+            yield cls
+            stack.extend(cls.__subclasses__())
+
+    @staticmethod
     def for_alg(alg: int) -> Type[CoseKey]:
         """Get a subclass of CoseKey corresponding to an algorithm identifier.
 
         :param alg: The COSE identifier of the algorithm.
         :return: A CoseKey.
         """
-        for cls in CoseKey.__subclasses__():
+        for cls in CoseKey._iter_subclasses():
             if cls.ALGORITHM == alg:
                 return cls
         return UnsupportedKey
@@ -681,7 +696,7 @@ class CoseKey(dict):
         :param alg: The COSE identifier of the algorithm.
         :return: A CoseKey.
         """
-        for cls in CoseKey.__subclasses__():
+        for cls in CoseKey._iter_subclasses():
             if cls.__name__ == name:
                 return cls
         return UnsupportedKey

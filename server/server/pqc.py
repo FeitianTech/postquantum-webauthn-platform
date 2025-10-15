@@ -93,14 +93,24 @@ def describe_algorithm(alg_id: Optional[int]) -> str:
         return f"{name} (PQC)"
     if alg_id == -8:
         return "EdDSA"
+    if alg_id == -19:
+        return "Ed25519"
+    if alg_id == -53:
+        return "Ed448"
     if alg_id == -7:
         return "ES256 (ECDSA)"
+    if alg_id == -9:
+        return "ESP256 (ECDSA)"
     if alg_id == -47:
         return "ES256K (ECDSA)"
     if alg_id == -35:
         return "ES384 (ECDSA)"
     if alg_id == -36:
         return "ES512 (ECDSA)"
+    if alg_id == -51:
+        return "ESP384 (ECDSA)"
+    if alg_id == -52:
+        return "ESP512 (ECDSA)"
     if alg_id == -37:
         return "PS256 (RSA-PSS)"
     if alg_id == -38:
