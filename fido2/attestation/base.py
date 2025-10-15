@@ -358,6 +358,7 @@ class AttestationVerifier(abc.ABC):
 
         raw_chain = _extract_attestation_chain(attestation_object.att_stmt)
         mldsa_detected = False
+        mldsa_trust_path: Optional[List[bytes]] = None
         for cert_der in raw_chain:
             try:
                 cert = x509.load_der_x509_certificate(cert_der, default_backend())
@@ -390,6 +391,7 @@ class AttestationVerifier(abc.ABC):
                 result.trust_path = list(raw_chain)
 
             mldsa_chain_verified = True
+            mldsa_trust_path = list(raw_chain)
 
         # Lookup CA to use for trust path verification
         ca = self.ca_lookup(result, attestation_object.auth_data)
@@ -397,6 +399,8 @@ class AttestationVerifier(abc.ABC):
             raise UntrustedAttestation("No root found for Authenticator")
 
         trust_path = list(result.trust_path or [])
+        if mldsa_trust_path is not None:
+            trust_path = mldsa_trust_path
         try:
             if mldsa_chain_verified:
                 if not trust_path:

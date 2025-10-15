@@ -1742,6 +1742,7 @@ def perform_attestation_checks(
     verifier = None
     if signature_valid and attestation_result is not None:
         trust_path = attestation_result.trust_path or []
+        pqc_trust_failure = False
         if trust_path:
             certs_valid = True
             pqc_attestation = is_pqc_algorithm(algorithm)
@@ -1764,42 +1765,77 @@ def perform_attestation_checks(
             if certs_valid:
                 verifier = get_mds_verifier()
                 if verifier is not None:
+                    metadata_error: Optional[BaseException] = None
                     try:
                         metadata_entry = verifier.find_entry(
                             attestation_object,
                             client_data_hash,
                         )
-                        if metadata_entry is not None:
-                            metadata_lookup_source = "attestation"
-                            root_valid = True
-                        else:
-                            if pqc_attestation:
-                                root_valid = False
-                                results["warnings"].append(
-                                    "pqc_metadata_entry_not_found"
-                                )
-                            else:
-                                root_valid = None
-                                results["errors"].append("metadata_entry_not_found")
                     except Exception as exc:
+                        metadata_error = exc
                         if pqc_attestation:
+                            pqc_trust_failure = True
                             root_valid = False
                             results["warnings"].append(
                                 "pqc_metadata_verification_failed"
                             )
+                            results["errors"].append(
+                                f"pqc_attestation_trust_verification_failed: {exc}"
+                            )
                         else:
-                            results["errors"].append(f"untrusted_attestation: {exc}")
                             root_valid = False
+                            results["errors"].append(
+                                f"untrusted_attestation: {exc}"
+                            )
+                    else:
+                        last_error = getattr(
+                            verifier, "last_verification_error", None
+                        )
+                        if callable(last_error):
+                            try:
+                                metadata_error = last_error()
+                            except Exception:
+                                metadata_error = None
+
+                        if metadata_entry is not None:
+                            metadata_lookup_source = "attestation"
+                            root_valid = True
+                            metadata_error = None
+                        else:
+                            if metadata_error is not None:
+                                if pqc_attestation:
+                                    results["errors"].append(
+                                        f"pqc_attestation_trust_verification_failed: {metadata_error}"
+                                    )
+                                    pqc_trust_failure = True
+                                else:
+                                    results["errors"].append(
+                                        f"untrusted_attestation: {metadata_error}"
+                                    )
+                                root_valid = False
+                            else:
+                                root_valid = None
+                                if pqc_attestation:
+                                    results["warnings"].append(
+                                        "pqc_metadata_entry_not_found"
+                                    )
+                                else:
+                                    results["errors"].append(
+                                        "metadata_entry_not_found"
+                                    )
                 else:
                     if pqc_attestation:
-                        root_valid = False
+                        root_valid = None
                         results["warnings"].append("pqc_metadata_not_available")
                     else:
                         results["errors"].append("metadata_not_available")
                         root_valid = None
             else:
                 results["errors"].append("certificate_chain_invalid")
-                root_valid = False
+                if pqc_attestation:
+                    root_valid = None
+                else:
+                    root_valid = False
         else:
             results["errors"].append("trust_path_missing")
             root_valid = None
@@ -1894,6 +1930,7 @@ def perform_attestation_checks(
         metadata_root_certificates_present
         and metadata_entry is not None
         and is_pqc_algorithm(algorithm)
+        and not pqc_trust_failure
         and (root_valid is False or root_valid is None)
     ):
         metadata_verification_warning = (

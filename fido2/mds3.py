@@ -331,6 +331,7 @@ def filter_attestation_key_compromised(
 
 
 _last_entry: ContextVar[Optional[MetadataBlobPayloadEntry]] = ContextVar("_last_entry")
+_last_error: ContextVar[Optional[BaseException]] = ContextVar("_last_error", default=None)
 
 
 class MdsAttestationVerifier(AttestationVerifier):
@@ -460,13 +461,21 @@ class MdsAttestationVerifier(AttestationVerifier):
         including checking it against the attestation_filter.
         """
         token = _last_entry.set(None)
+        _last_error.set(None)
         try:
             self.verify_attestation(attestation_object, client_data_hash)
+            _last_error.set(None)
             return _last_entry.get()
-        except UntrustedAttestation:
+        except UntrustedAttestation as exc:
+            _last_error.set(exc)
             return None
         finally:
             _last_entry.reset(token)
+
+    def last_verification_error(self) -> Optional[BaseException]:
+        """Return the most recent attestation verification failure cause."""
+
+        return _last_error.get()
 
 
 def parse_blob(blob: bytes, trust_root: Optional[bytes]) -> MetadataBlobPayload:
