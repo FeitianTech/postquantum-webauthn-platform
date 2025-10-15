@@ -33,7 +33,7 @@ from typing import Sequence, Type, Mapping, Any, TypeVar, Optional, Iterable, Di
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric import ec, rsa, padding, ed25519, types
+from cryptography.hazmat.primitives.asymmetric import ec, rsa, padding, ed25519, types, ed448
 
 from .utils import ByteBuffer, bytes2int, int2bytes
 
@@ -889,6 +889,9 @@ class ES256(CoseKey):
         """
         return cls({1: 2, 3: cls.ALGORITHM, -1: 1, -2: data[1:33], -3: data[33:65]})
 
+class ESP256(ES256):
+    # See: https://www.ietf.org/archive/id/draft-ietf-jose-fully-specified-algorithms-10.html#name-elliptic-curve-digital-sign  # noqa:E501
+    ALGORITHM = -9
 
 class ES384(CoseKey):
     ALGORITHM = -35
@@ -917,6 +920,9 @@ class ES384(CoseKey):
             }
         )
 
+class ESP384(ES384):
+    # See: https://www.ietf.org/archive/id/draft-ietf-jose-fully-specified-algorithms-12.html#name-elliptic-curve-digital-sign  # noqa:E501
+    ALGORITHM = -51
 
 class ES512(CoseKey):
     ALGORITHM = -36
@@ -945,6 +951,9 @@ class ES512(CoseKey):
             }
         )
 
+class ESP512(ES512):
+    # See: https://www.ietf.org/archive/id/draft-ietf-jose-fully-specified-algorithms-12.html#name-elliptic-curve-digital-sign  # noqa:E501
+    ALGORITHM = -52
 
 class RS256(CoseKey):
     ALGORITHM = -257
@@ -1085,6 +1094,32 @@ class EdDSA(CoseKey):
             }
         )
 
+class Ed448(CoseKey):
+    # See: https://www.ietf.org/archive/id/draft-ietf-jose-fully-specified-algorithms-12.html#name-edwards-curve-digital-signa  # noqa:E501
+    ALGORITHM = -53
+
+    def verify(self, message, signature):
+        if self[-1] != 7:
+            raise ValueError("Unsupported elliptic curve")
+        ed448.Ed448PublicKey.from_public_bytes(self[-2]).verify(signature, message)
+
+    @classmethod
+    def from_cryptography_key(cls, public_key):
+        assert isinstance(public_key, ed448.Ed448PublicKey)  # noqa: S101
+        return cls(
+            {
+                1: 1,
+                3: cls.ALGORITHM,
+                -1: 7,
+                -2: public_key.public_bytes(
+                    serialization.Encoding.Raw, serialization.PublicFormat.Raw
+                ),
+            }
+        )
+
+class Ed25519(EdDSA):
+    # See: https://www.ietf.org/archive/id/draft-ietf-jose-fully-specified-algorithms-12.html#name-edwards-curve-digital-signa  # noqa:E501
+    ALGORITHM = -19
 
 class RS1(CoseKey):
     ALGORITHM = -65535
