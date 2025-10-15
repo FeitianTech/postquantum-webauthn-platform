@@ -32,7 +32,20 @@ import unittest
 from binascii import a2b_hex
 
 from fido2 import cbor, cose
-from fido2.cose import ES256, ESP256, RS256, CoseKey, Ed25519, EdDSA, UnsupportedKey
+from fido2.cose import (
+    ES256,
+    ESP256,
+    ESP384,
+    ESP512,
+    RS256,
+    CoseKey,
+    Ed25519,
+    Ed448,
+    EdDSA,
+    UnsupportedKey,
+)
+from cryptography.hazmat.primitives.asymmetric import ec, ed448 as crypto_ed448
+from cryptography.hazmat.primitives import hashes
 
 _ES256_KEY = a2b_hex(
     b"A5010203262001215820A5FD5CE1B1C458C530A54FA61B31BF6B04BE8B97AFDE54DD8CBB69275A8A1BE1225820FA3A3231DD9DEED9D1897BE5A6228C59501E4BCD12975D3DFF730F01278EA61C"  # noqa E501
@@ -101,6 +114,22 @@ class TestCoseKey(unittest.TestCase):
                 b"304402202B3933FE954A2D29DE691901EB732535393D4859AAA80D58B08741598109516D0220236FBE6B52326C0A6B1CFDC6BF0A35BDA92A6C2E41E40C3A1643428D820941E0"  # noqa E501
             ),
         )
+
+    def test_ESP384_from_cryptography_key_verify(self):
+        private_key = ec.generate_private_key(ec.SECP384R1())
+        message = b"postquantum-webauthn-esp384"
+        signature = private_key.sign(message, ec.ECDSA(hashes.SHA384()))
+        key = ESP384.from_cryptography_key(private_key.public_key())
+        self.assertIsInstance(key, ESP384)
+        key.verify(message, signature)
+
+    def test_ESP512_from_cryptography_key_verify(self):
+        private_key = ec.generate_private_key(ec.SECP521R1())
+        message = b"postquantum-webauthn-esp512"
+        signature = private_key.sign(message, ec.ECDSA(hashes.SHA512()))
+        key = ESP512.from_cryptography_key(private_key.public_key())
+        self.assertIsInstance(key, ESP512)
+        key.verify(message, signature)
 
     def test_RS256_parse_verify(self):
         key = CoseKey.parse(cbor.decode(_RS256_KEY))
@@ -171,6 +200,14 @@ class TestCoseKey(unittest.TestCase):
                 b"e8c927ef1a57c738ff4ba8d6f90e06d837a5219eee47991f96b126b0685d512520c9c2eedebe4b88ff2de2b19cb5f8686efc7c4261e9ed1cb3ac5de50869be0a"  # noqa E501
             ),
         )
+
+    def test_Ed448_from_cryptography_key_verify(self):
+        private_key = crypto_ed448.Ed448PrivateKey.generate()
+        message = b"postquantum-webauthn-ed448"
+        signature = private_key.sign(message)
+        key = Ed448.from_cryptography_key(private_key.public_key())
+        self.assertIsInstance(key, Ed448)
+        key.verify(message, signature)
 
     def test_unsupported_key(self):
         key = CoseKey.parse({1: 4711, 3: 4712, -1: b"123", -2: b"456"})

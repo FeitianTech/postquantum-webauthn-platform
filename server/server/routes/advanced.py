@@ -58,7 +58,7 @@ _COSE_ALGORITHM_NAME_MAP: Dict[str, int] = {
     "ML-DSA-65": -49,
     "ML-DSA-44": -48,
     "EDDSA": -8,
-    "ED25519": -8,
+    "ED25519": -19,
     "ED448": -53,
     "ES256": -7,
     "ECDSA256": -7,
