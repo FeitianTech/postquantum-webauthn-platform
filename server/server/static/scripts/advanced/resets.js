@@ -37,9 +37,9 @@ export function resetRegistrationForm() {
     document.getElementById('param-ps384').checked = false;
     document.getElementById('param-ps512').checked = false;
     document.getElementById('param-ed448').checked = false;
-    if (document.getElementById('param-mldsa44')) document.getElementById('param-mldsa44').checked = false;
-    if (document.getElementById('param-mldsa65')) document.getElementById('param-mldsa65').checked = false;
-    if (document.getElementById('param-mldsa87')) document.getElementById('param-mldsa87').checked = false;
+    if (document.getElementById('param-mldsa44')) document.getElementById('param-mldsa44').checked = true;
+    if (document.getElementById('param-mldsa65')) document.getElementById('param-mldsa65').checked = true;
+    if (document.getElementById('param-mldsa87')) document.getElementById('param-mldsa87').checked = true;
     document.getElementById('hint-client-device').checked = false;
     document.getElementById('hint-hybrid').checked = false;
     document.getElementById('hint-security-key').checked = false;
