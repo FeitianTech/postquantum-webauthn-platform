@@ -51,6 +51,7 @@ __all__ = [
     "serialize_session_metadata_item",
     "delete_session_metadata_item",
     "expand_metadata_entry_payloads",
+    "metadata_entry_trust_anchor_status",
 ]
 
 
@@ -58,6 +59,9 @@ _base_metadata_cache: Optional[MetadataBlobPayload] = None
 _base_metadata_mtime: Optional[float] = None
 _base_verifier_cache: Optional[MdsAttestationVerifier] = None
 _base_verifier_mtime: Optional[float] = None
+_base_metadata_trust_verified: Optional[bool] = None
+_base_metadata_entry_ids: Set[int] = set()
+_session_metadata_entry_ids: Set[int] = set()
 
 _SESSION_METADATA_SUFFIX = ".json"
 _SESSION_METADATA_INFO_SUFFIX = ".meta.json"
@@ -608,12 +612,15 @@ def save_session_metadata_item(
 
 
 def list_session_metadata_items(session_id: Optional[str] = None) -> List[SessionMetadataItem]:
+    global _session_metadata_entry_ids
     active_session = session_id or _get_metadata_session_id(create=False)
     if not active_session:
+        _session_metadata_entry_ids = set()
         return []
 
     directory = _session_metadata_directory(active_session, create=False)
     if not directory or not os.path.isdir(directory):
+        _session_metadata_entry_ids = set()
         return []
 
     try:
@@ -674,6 +681,7 @@ def list_session_metadata_items(session_id: Optional[str] = None) -> List[Sessio
         )
 
     items.sort(key=lambda item: item.mtime or 0, reverse=True)
+    _session_metadata_entry_ids = {id(item.entry) for item in items}
     return items
 
 
@@ -1102,6 +1110,7 @@ def download_metadata_blob(
 
 def _load_base_metadata() -> Tuple[Optional[MetadataBlobPayload], Optional[float]]:
     global _base_metadata_cache, _base_metadata_mtime
+    global _base_metadata_trust_verified, _base_metadata_entry_ids
 
     try:
         mtime = os.path.getmtime(MDS_METADATA_PATH)
@@ -1112,13 +1121,16 @@ def _load_base_metadata() -> Tuple[Optional[MetadataBlobPayload], Optional[float
         return _base_metadata_cache, mtime
 
     metadata: Optional[MetadataBlobPayload] = None
+    metadata_verified: Optional[bool] = None
     if mtime is not None:
         try:
             with open(MDS_METADATA_PATH, "rb") as blob_file:
                 blob_data = blob_file.read()
             metadata = parse_blob(blob_data, FIDO_METADATA_TRUST_ROOT_CERT)
+            metadata_verified = True
         except FileNotFoundError:
             metadata = None
+            metadata_verified = None
         except Exception as exc:  # pylint: disable=broad-except
             app.logger.warning(
                 "Failed to load MDS metadata from %s: %s",
@@ -1126,10 +1138,33 @@ def _load_base_metadata() -> Tuple[Optional[MetadataBlobPayload], Optional[float
                 exc,
             )
             metadata = None
+            metadata_verified = False
+
+    if metadata is not None:
+        _base_metadata_entry_ids = {id(entry) for entry in metadata.entries}
+    else:
+        _base_metadata_entry_ids = set()
+
+    _base_metadata_trust_verified = metadata_verified
 
     _base_metadata_cache = metadata
     _base_metadata_mtime = mtime
     return metadata, mtime
+
+
+def metadata_entry_trust_anchor_status(entry: Any) -> Optional[bool]:
+    """Return whether *entry* originates from a trust-anchored metadata source."""
+
+    if entry is None or not isinstance(entry, MetadataBlobPayloadEntry):
+        return None
+
+    entry_id = id(entry)
+    if entry_id in _session_metadata_entry_ids:
+        return False
+    if entry_id in _base_metadata_entry_ids:
+        return _base_metadata_trust_verified
+
+    return _base_metadata_trust_verified
 
 
 def get_mds_verifier() -> Optional[MdsAttestationVerifier]:
