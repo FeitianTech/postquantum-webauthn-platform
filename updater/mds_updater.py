@@ -48,6 +48,7 @@ FIDO_METADATA_TRUST_ROOT_CERT = _config.FIDO_METADATA_TRUST_ROOT_CERT
 FIDO_METADATA_TRUST_ROOT_PEM = _config.FIDO_METADATA_TRUST_ROOT_PEM
 MDS_METADATA_CACHE_PATH = _config.MDS_METADATA_CACHE_PATH
 MDS_METADATA_PATH = _config.MDS_METADATA_PATH
+MDS_METADATA_JWS_PATH = _config.MDS_METADATA_JWS_PATH
 MDS_METADATA_URL = _config.MDS_METADATA_URL
 MDS_TLS_ADDITIONAL_TRUST_ANCHORS_PEM = _config.MDS_TLS_ADDITIONAL_TRUST_ANCHORS_PEM
 
@@ -360,6 +361,35 @@ def download_metadata_json() -> Tuple[bool, int, Optional[str]]:
         parse_blob(payload, FIDO_METADATA_TRUST_ROOT_CERT)
     except Exception as exc:  # pragma: no cover - defensive
         raise MetadataDownloadError("Failed to verify metadata BLOB signature.") from exc
+
+    existing_blob: Optional[bytes] = None
+    if os.path.exists(MDS_METADATA_JWS_PATH):
+        try:
+            with open(MDS_METADATA_JWS_PATH, "rb") as blob_file:
+                existing_blob = blob_file.read()
+        except OSError:
+            existing_blob = None
+
+    if existing_blob != payload:
+        os.makedirs(os.path.dirname(MDS_METADATA_JWS_PATH), exist_ok=True)
+        with tempfile.NamedTemporaryFile(
+            "wb", delete=False, dir=os.path.dirname(MDS_METADATA_JWS_PATH)
+        ) as temp_blob_file:
+            temp_blob_file.write(payload)
+            blob_temp_path = temp_blob_file.name
+
+        try:
+            shutil.move(blob_temp_path, MDS_METADATA_JWS_PATH)
+        except Exception:
+            try:
+                os.remove(blob_temp_path)
+            except OSError:
+                pass
+            raise
+
+        _apply_last_modified_timestamp(
+            MDS_METADATA_JWS_PATH, last_modified_header, last_modified_iso
+        )
 
     metadata_dict = _decode_jws_payload(payload)
     metadata_json = json.dumps(metadata_dict, indent=2, sort_keys=True)

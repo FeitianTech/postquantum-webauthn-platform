@@ -328,8 +328,6 @@ def _resolve_root_validity(checks: Mapping[str, Optional[bool]]) -> Optional[boo
         return None
 
     if trusted is False:
-        if any(value is True for value in attempted):
-            return True
         if attempted and all(value is False for value in attempted):
             return False
         return None

@@ -8,7 +8,7 @@ import uuid
 from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from email.utils import formatdate, parsedate_to_datetime
-from typing import Any, Dict, List, Mapping, Optional, Set, Tuple
+from typing import Any, Dict, List, Mapping, Optional, Sequence, Set, Tuple
 
 from flask import has_request_context, session
 
@@ -16,9 +16,16 @@ from fido2.mds3 import (
     MetadataBlobPayload,
     MetadataBlobPayloadEntry,
     MdsAttestationVerifier,
+    parse_blob,
 )
 
-from .config import MDS_METADATA_CACHE_PATH, MDS_METADATA_PATH, SESSION_METADATA_DIR, app
+from .config import (
+    FIDO_METADATA_TRUST_ROOT_CERT,
+    MDS_METADATA_CACHE_PATH,
+    MDS_METADATA_JWS_PATH,
+    MDS_METADATA_PATH,
+    app,
+)
 
 __all__ = [
     "get_mds_verifier",
@@ -42,9 +49,8 @@ _base_metadata_entry_ids: Set[int] = set()
 _session_metadata_entry_ids: Set[int] = set()
 
 _SESSION_METADATA_SUFFIX = ".json"
-_SESSION_METADATA_INFO_SUFFIX = ".meta.json"
 _SESSION_METADATA_SESSION_KEY = "fido.mds.session"
-_SESSION_METADATA_RECOVERY_MARKER = ".last-session-id"
+_SESSION_METADATA_ITEMS_KEY = "fido.mds.session-items"
 
 _METADATA_STATEMENT_REQUIRED_DEFAULTS: Mapping[str, Any] = {
     "description": "",
@@ -72,140 +78,19 @@ class SessionMetadataItem:
     mtime: Optional[float]
 
 
-def _session_metadata_recovery_enabled() -> bool:
-    flag = app.config.get("SESSION_METADATA_RECOVER_ON_START")
-    if flag is not None:
-        return bool(flag)
-    return bool(app.debug)
-
-
-def _normalise_session_identifier(value: Any) -> Optional[str]:
-    if not isinstance(value, str):
-        return None
-
-    trimmed = value.strip()
-    if not trimmed or trimmed.startswith("."):
-        return None
-
-    for separator in (os.sep, os.altsep):
-        if separator and separator in trimmed:
-            return None
-
-    return trimmed
-
-
-def _session_metadata_marker_path() -> str:
-    return os.path.join(SESSION_METADATA_DIR, _SESSION_METADATA_RECOVERY_MARKER)
-
-
-def _remember_session_identifier(identifier: str) -> None:
-    if not _session_metadata_recovery_enabled():
-        return
-
-    normalised = _normalise_session_identifier(identifier)
-    if not normalised:
-        return
-
-    marker_path = _session_metadata_marker_path()
-    try:
-        os.makedirs(SESSION_METADATA_DIR, exist_ok=True)
-        with open(marker_path, "w", encoding="utf-8") as marker_file:
-            marker_file.write(normalised)
-            marker_file.write("\n")
-    except OSError as exc:
-        app.logger.debug(
-            "Unable to persist session metadata identifier %s: %s", normalised, exc
-        )
-
-
-def _load_persisted_session_identifier() -> Optional[str]:
-    if not _session_metadata_recovery_enabled():
-        return None
-
-    marker_path = _session_metadata_marker_path()
-    try:
-        with open(marker_path, "r", encoding="utf-8") as marker_file:
-            candidate = _normalise_session_identifier(marker_file.read())
-    except OSError:
-        return None
-
-    if not candidate:
-        return None
-
-    directory = _session_metadata_directory(candidate, create=False)
-    if not directory or not os.path.isdir(directory):
-        return None
-
-    return candidate
-
-
-def _discover_single_session_directory() -> Optional[str]:
-    if not _session_metadata_recovery_enabled():
-        return None
-
-    try:
-        entries = os.listdir(SESSION_METADATA_DIR)
-    except OSError:
-        return None
-
-    candidates: List[str] = []
-    for entry in entries:
-        identifier = _normalise_session_identifier(entry)
-        if not identifier:
-            continue
-
-        path = os.path.join(SESSION_METADATA_DIR, identifier)
-        if not os.path.isdir(path):
-            continue
-
-        try:
-            directory_entries = os.listdir(path)
-        except OSError:
-            continue
-
-        has_metadata = False
-        for name in directory_entries:
-            if name.endswith(_SESSION_METADATA_INFO_SUFFIX):
-                continue
-            if name.endswith(_SESSION_METADATA_SUFFIX):
-                has_metadata = True
-                break
-
-        if has_metadata:
-            candidates.append(identifier)
-
-    if len(candidates) == 1:
-        return candidates[0]
-
-    return None
-
-
-def _recover_session_metadata_identifier() -> Optional[str]:
-    candidate = _load_persisted_session_identifier()
-    if candidate:
-        return candidate
-
-    return _discover_single_session_directory()
-
-
 def _get_metadata_session_id(*, create: bool = False) -> Optional[str]:
     if not has_request_context():
         return None
 
     existing = session.get(_SESSION_METADATA_SESSION_KEY)
     if isinstance(existing, str) and existing.strip():
-        identifier = existing.strip()
-        _remember_session_identifier(identifier)
-        return identifier
+        return existing.strip()
 
     if not create:
         return None
 
-    identifier = _recover_session_metadata_identifier()
-    if not identifier:
-        identifier = secrets.token_urlsafe(32)
+    identifier = secrets.token_urlsafe(32)
     session[_SESSION_METADATA_SESSION_KEY] = identifier
-    _remember_session_identifier(identifier)
     return identifier
 
 
@@ -218,18 +103,45 @@ def ensure_metadata_session_id() -> str:
     return identifier
 
 
-def _session_metadata_directory(session_id: str, *, create: bool = False) -> Optional[str]:
-    if not session_id:
-        return None
+def _get_session_metadata_records(*, create: bool = False) -> List[Dict[str, Any]]:
+    if not has_request_context():
+        return []
 
-    directory = os.path.join(SESSION_METADATA_DIR, session_id)
-    if create:
-        try:
-            os.makedirs(directory, exist_ok=True)
-        except OSError as exc:
-            app.logger.error("Failed to prepare session metadata directory %s: %s", directory, exc)
-            raise
-    return directory
+    raw = session.get(_SESSION_METADATA_ITEMS_KEY)
+    if not isinstance(raw, list):
+        if create:
+            session[_SESSION_METADATA_ITEMS_KEY] = []
+        return []
+
+    records: List[Dict[str, Any]] = []
+    for entry in raw:
+        if isinstance(entry, dict):
+            records.append(dict(entry))
+
+    if create and len(records) != len(raw):
+        session[_SESSION_METADATA_ITEMS_KEY] = records
+
+    return records
+
+
+def _set_session_metadata_records(records: Sequence[Mapping[str, Any]]) -> None:
+    if not has_request_context():
+        return
+
+    serialisable: List[Dict[str, Any]] = []
+    for record in records:
+        if isinstance(record, Mapping):
+            cleaned = {}
+            for key, value in record.items():
+                if isinstance(value, (str, int, float, bool)) or value is None:
+                    cleaned[key] = value
+                elif isinstance(value, Mapping):
+                    cleaned[key] = json.loads(json.dumps(value))
+                elif isinstance(value, list):
+                    cleaned[key] = json.loads(json.dumps(value))
+            serialisable.append(cleaned)
+
+    session[_SESSION_METADATA_ITEMS_KEY] = serialisable
 
 
 def _validate_session_metadata_filename(filename: str) -> str:
@@ -243,45 +155,13 @@ def _validate_session_metadata_filename(filename: str) -> str:
     if trimmed.startswith("."):
         raise ValueError("Invalid metadata filename.")
 
-    for separator in (os.sep, os.altsep):
-        if separator and separator in trimmed:
-            raise ValueError("Invalid metadata filename.")
-
-    if os.path.basename(trimmed) != trimmed:
+    if any(separator in trimmed for separator in ("/", "\\")):
         raise ValueError("Invalid metadata filename.")
 
     if not trimmed.endswith(_SESSION_METADATA_SUFFIX):
         raise ValueError("Invalid metadata filename.")
 
     return trimmed
-
-
-def _prune_session_metadata_directory(directory: str) -> None:
-    try:
-        entries = os.listdir(directory)
-    except OSError:
-        return
-
-    if entries:
-        return
-
-    try:
-        os.rmdir(directory)
-    except OSError:
-        pass
-
-
-def _load_session_metadata_info(path: str) -> Dict[str, Any]:
-    try:
-        with open(path, "r", encoding="utf-8") as info_file:
-            payload = json.load(info_file)
-    except (OSError, ValueError, TypeError):
-        return {}
-
-    if not isinstance(payload, dict):
-        return {}
-
-    return payload
 
 
 def _clone_json_value(value: Any) -> Any:
@@ -534,49 +414,36 @@ def save_session_metadata_item(
     *,
     original_filename: Optional[str] = None,
 ) -> SessionMetadataItem:
-    session_id = ensure_metadata_session_id()
-    directory = _session_metadata_directory(session_id, create=True)
-    if not directory:
-        raise RuntimeError("Unable to resolve session metadata storage path.")
+    global _session_metadata_entry_ids
+    ensure_metadata_session_id()
 
     entry, legal_header, payload = build_metadata_entry_components(raw_payload)
 
     try:
-        serialisable_payload = json.loads(json.dumps(raw_payload))
+        serialisable_payload = json.loads(json.dumps(payload))
     except (TypeError, ValueError) as exc:
         raise ValueError("Metadata JSON contains unsupported types.") from exc
 
-    os.makedirs(directory, exist_ok=True)
     stored_filename = f"{uuid.uuid4().hex}{_SESSION_METADATA_SUFFIX}"
-    metadata_path = os.path.join(directory, stored_filename)
-
-    try:
-        with open(metadata_path, "w", encoding="utf-8") as metadata_file:
-            json.dump(serialisable_payload, metadata_file, indent=2, sort_keys=True)
-            metadata_file.write("\n")
-    except OSError as exc:
-        app.logger.error("Failed to store session metadata %s: %s", metadata_path, exc)
-        raise RuntimeError("Failed to store uploaded metadata on the server.") from exc
-
     uploaded_at = datetime.now(timezone.utc).isoformat()
-    info_payload = {
-        "original_filename": original_filename or None,
-        "uploaded_at": uploaded_at,
+
+    records = _get_session_metadata_records(create=True)
+    record = {
         "stored_filename": stored_filename,
+        "payload": serialisable_payload,
+        "legal_header": legal_header,
+        "uploaded_at": uploaded_at,
+        "original_filename": (original_filename or None),
     }
-
-    info_path = metadata_path + _SESSION_METADATA_INFO_SUFFIX
-    try:
-        with open(info_path, "w", encoding="utf-8") as info_file:
-            json.dump(info_payload, info_file, indent=2, sort_keys=True)
-            info_file.write("\n")
-    except OSError as exc:
-        app.logger.warning("Failed to store session metadata info for %s: %s", metadata_path, exc)
+    records.append(record)
+    _set_session_metadata_records(records)
 
     try:
-        mtime = os.path.getmtime(metadata_path)
-    except OSError:
+        mtime = datetime.fromisoformat(uploaded_at).timestamp()
+    except ValueError:
         mtime = None
+
+    _session_metadata_entry_ids.add(id(entry))
 
     return SessionMetadataItem(
         filename=stored_filename,
@@ -591,65 +458,51 @@ def save_session_metadata_item(
 
 def list_session_metadata_items(session_id: Optional[str] = None) -> List[SessionMetadataItem]:
     global _session_metadata_entry_ids
-    active_session = session_id or _get_metadata_session_id(create=False)
-    if not active_session:
-        _session_metadata_entry_ids = set()
-        return []
+    ensure_metadata_session_id()
 
-    directory = _session_metadata_directory(active_session, create=False)
-    if not directory or not os.path.isdir(directory):
-        _session_metadata_entry_ids = set()
-        return []
-
-    try:
-        filenames = [
-            name
-            for name in os.listdir(directory)
-            if name.endswith(_SESSION_METADATA_SUFFIX)
-            and not name.endswith(_SESSION_METADATA_INFO_SUFFIX)
-        ]
-    except OSError:
-        return []
-
+    records = _get_session_metadata_records(create=False)
     items: List[SessionMetadataItem] = []
-    for filename in sorted(filenames):
-        metadata_path = os.path.join(directory, filename)
-        try:
-            with open(metadata_path, "r", encoding="utf-8") as metadata_file:
-                raw = json.load(metadata_file)
-        except (OSError, ValueError, TypeError) as exc:
-            app.logger.warning("Failed to load session metadata from %s: %s", metadata_path, exc)
+
+    for record in records:
+        stored_filename = record.get("stored_filename")
+        payload = record.get("payload")
+        if not isinstance(stored_filename, str) or not stored_filename.strip():
+            continue
+        if not isinstance(payload, Mapping):
             continue
 
         try:
-            entry, legal_header, payload = build_metadata_entry_components(raw)
+            entry = MetadataBlobPayloadEntry.from_dict(payload)
         except Exception as exc:  # pylint: disable=broad-except
             app.logger.warning(
-                "Failed to parse session metadata entry from %s: %s",
-                metadata_path,
+                "Failed to restore session metadata entry %s: %s",
+                stored_filename,
                 exc,
             )
             continue
 
-        info_path = metadata_path + _SESSION_METADATA_INFO_SUFFIX
-        info = _load_session_metadata_info(info_path)
+        legal_header = record.get("legal_header")
+        if not isinstance(legal_header, str):
+            legal_header = None
 
-        raw_uploaded_at = info.get("uploaded_at")
-        uploaded_at = raw_uploaded_at.strip() if isinstance(raw_uploaded_at, str) else None
-        raw_original_name = info.get("original_filename")
-        original_filename = (
-            raw_original_name.strip() if isinstance(raw_original_name, str) and raw_original_name.strip() else None
-        )
+        uploaded_at_raw = record.get("uploaded_at")
+        uploaded_at = uploaded_at_raw.strip() if isinstance(uploaded_at_raw, str) else None
 
-        try:
-            mtime = os.path.getmtime(metadata_path)
-        except OSError:
-            mtime = None
+        original_filename = record.get("original_filename")
+        if not isinstance(original_filename, str) or not original_filename.strip():
+            original_filename = None
+
+        mtime = None
+        if uploaded_at:
+            try:
+                mtime = datetime.fromisoformat(uploaded_at).timestamp()
+            except ValueError:
+                mtime = None
 
         items.append(
             SessionMetadataItem(
-                filename=filename,
-                payload=payload,
+                filename=stored_filename,
+                payload=json.loads(json.dumps(payload)),
                 legal_header=legal_header,
                 entry=entry,
                 uploaded_at=uploaded_at,
@@ -666,34 +519,21 @@ def list_session_metadata_items(session_id: Optional[str] = None) -> List[Sessio
 def delete_session_metadata_item(
     stored_filename: str, session_id: Optional[str] = None
 ) -> bool:
-    active_session = session_id or _get_metadata_session_id(create=False)
-    if not active_session:
-        raise ValueError("No active metadata session.")
+    global _session_metadata_entry_ids
+    ensure_metadata_session_id()
 
     safe_name = _validate_session_metadata_filename(stored_filename)
-    directory = _session_metadata_directory(active_session, create=False)
-    if not directory or not os.path.isdir(directory):
+    records = _get_session_metadata_records(create=False)
+    if not records:
         return False
 
-    metadata_path = os.path.join(directory, safe_name)
-    if not os.path.exists(metadata_path):
+    filtered = [record for record in records if record.get("stored_filename") != safe_name]
+    if len(filtered) == len(records):
         return False
 
-    try:
-        os.remove(metadata_path)
-    except OSError as exc:
-        app.logger.error(
-            "Failed to delete session metadata %s: %s", metadata_path, exc
-        )
-        raise RuntimeError("Failed to delete the uploaded metadata file.") from exc
-
-    info_path = metadata_path + _SESSION_METADATA_INFO_SUFFIX
-    try:
-        os.remove(info_path)
-    except OSError:
-        pass
-
-    _prune_session_metadata_directory(directory)
+    _set_session_metadata_records(filtered)
+    # Refresh cached identifiers to ensure trust decisions reflect the update.
+    list_session_metadata_items()
     return True
 
 
@@ -840,24 +680,52 @@ def _load_base_metadata() -> Tuple[Optional[MetadataBlobPayload], Optional[float
     global _base_metadata_trust_verified, _base_metadata_entry_ids
 
     try:
-        mtime = os.path.getmtime(MDS_METADATA_PATH)
+        json_mtime = os.path.getmtime(MDS_METADATA_PATH)
     except OSError:
-        mtime = None
+        json_mtime = None
+
+    try:
+        jws_mtime = os.path.getmtime(MDS_METADATA_JWS_PATH)
+    except OSError:
+        jws_mtime = None
+
+    mtime_candidates = [value for value in (jws_mtime, json_mtime) if value is not None]
+    mtime = max(mtime_candidates) if mtime_candidates else None
 
     if _base_metadata_cache is not None and _base_metadata_mtime == mtime:
         return _base_metadata_cache, mtime
 
     metadata: Optional[MetadataBlobPayload] = None
     metadata_verified: Optional[bool] = None
-    if mtime is not None:
+    if jws_mtime is not None:
         try:
-            with open(MDS_METADATA_PATH, "r", encoding="utf-8") as metadata_file:
-                payload = json.load(metadata_file)
-            metadata = MetadataBlobPayload.from_dict(payload)
+            with open(MDS_METADATA_JWS_PATH, "rb") as blob_file:
+                blob_payload = blob_file.read()
+            metadata = parse_blob(blob_payload, FIDO_METADATA_TRUST_ROOT_CERT)
             metadata_verified = True
         except FileNotFoundError:
             metadata = None
             metadata_verified = None
+        except Exception as exc:  # pylint: disable=broad-except
+            app.logger.warning(
+                "Failed to load verified MDS metadata blob from %s: %s",
+                MDS_METADATA_JWS_PATH,
+                exc,
+            )
+            metadata = None
+            metadata_verified = False
+
+    if metadata is None and json_mtime is not None:
+        try:
+            with open(MDS_METADATA_PATH, "r", encoding="utf-8") as metadata_file:
+                payload = json.load(metadata_file)
+            metadata = MetadataBlobPayload.from_dict(payload)
+            if metadata_verified is None:
+                metadata_verified = False
+        except FileNotFoundError:
+            metadata = None
+            if metadata_verified is None:
+                metadata_verified = None
         except Exception as exc:  # pylint: disable=broad-except
             app.logger.warning(
                 "Failed to load MDS metadata from %s: %s",
@@ -865,7 +733,8 @@ def _load_base_metadata() -> Tuple[Optional[MetadataBlobPayload], Optional[float
                 exc,
             )
             metadata = None
-            metadata_verified = False
+            if metadata_verified is None:
+                metadata_verified = False
 
     if metadata is not None:
         _base_metadata_entry_ids = {id(entry) for entry in metadata.entries}
@@ -889,9 +758,12 @@ def metadata_entry_trust_anchor_status(entry: Any) -> Optional[bool]:
     if entry_id in _session_metadata_entry_ids:
         return False
     if entry_id in _base_metadata_entry_ids:
-        return _base_metadata_trust_verified
+        return True if _base_metadata_trust_verified else False
 
-    return _base_metadata_trust_verified
+    if _base_metadata_trust_verified:
+        return False
+
+    return None
 
 
 def get_mds_verifier() -> Optional[MdsAttestationVerifier]:
