@@ -24,9 +24,11 @@ COPY prebuilt_liboqs/linux-x86_64 /opt/liboqs
 RUN set -eux; \
     echo "/opt/liboqs/lib" > /etc/ld.so.conf.d/liboqs.conf; \
     ldconfig; \
+    ln -sf /opt/liboqs/lib/liboqs.so /usr/local/lib/liboqs.so; \
+    ldconfig; \
     ls -lah /opt/liboqs/lib/; \
     ldd /opt/liboqs/lib/liboqs.so.0.14.1-dev; \
-    ldconfig -p | grep liboqs
+    ldconfig -p | grep liboqs || true
 
 WORKDIR /src
 COPY pyproject.toml README.adoc ./
@@ -35,12 +37,12 @@ COPY fido2 ./fido2
 COPY server ./server
 COPY updater ./updater
 
-RUN pip install --upgrade pip setuptools wheel
-RUN pip install --prefix=/install --no-cache-dir /opt/liboqs/liboqs_python*.whl
-RUN pip install --prefix=/install --no-cache-dir pqcrypto
-RUN pip install --prefix=/install --no-cache-dir .
-RUN pip install --prefix=/install --no-cache-dir ./server
-RUN pip install --prefix=/install --no-cache-dir gunicorn
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install --upgrade pip setuptools wheel && \
+    pip install --prefix=/install --no-cache-dir /opt/liboqs/liboqs_python*.whl pqcrypto gunicorn . ./server && \
+    apt-get purge -y build-essential cmake git ninja-build pkg-config libssl-dev && \
+    apt-get autoremove -y && \
+    rm -rf /opt/liboqs/include /opt/liboqs/lib/pkgconfig /var/lib/apt/lists/*
 
 FROM python:3.11-slim AS runtime
 
@@ -51,7 +53,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 RUN set -eux; \
     apt-get update; \
     apt-get install -y --no-install-recommends libssl3; \
-    rm -rf /var/lib/apt/lists/*
+    rm -rf /var/lib/apt/lists/* /root/.cache
 
 COPY prebuilt_liboqs/linux-x86_64 /opt/liboqs
 COPY --from=python-builder /install /usr/local
@@ -60,7 +62,9 @@ COPY updater /app/updater
 
 RUN set -eux; \
     echo "/opt/liboqs/lib" > /etc/ld.so.conf.d/liboqs.conf; \
-    ldconfig
+    ln -sf /opt/liboqs/lib/liboqs.so /usr/local/lib/liboqs.so; \
+    ldconfig; \
+    rm -rf /usr/local/lib/python3.11/ensurepip
 
 WORKDIR /app
 
