@@ -2633,11 +2633,13 @@ export async function showCredentialDetails(index) {
         ];
         const rootCheckParts = [];
         for (const descriptor of rootCheckDescriptors) {
-            const rawValue = rootChecksRaw[descriptor.key] ?? rootChecksRaw[descriptor.altKey];
+            let rawValue = rootChecksRaw[descriptor.key];
             if (rawValue === undefined) {
-                continue;
+                rawValue = rootChecksRaw[descriptor.altKey];
             }
-            const status = normaliseAttestationResultValue(rawValue);
+            const status = rawValue === undefined
+                ? null
+                : normaliseAttestationResultValue(rawValue);
             const color = status === true
                 ? '#198754'
                 : status === false

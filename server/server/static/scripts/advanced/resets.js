@@ -72,6 +72,13 @@ export function resetAuthenticationForm() {
     document.getElementById('hint-hybrid-auth').checked = false;
     document.getElementById('hint-security-key-auth').checked = false;
 
+    ['param-mldsa44', 'param-mldsa65', 'param-mldsa87'].forEach(id => {
+        const checkbox = document.getElementById(id);
+        if (checkbox) {
+            checkbox.checked = true;
+        }
+    });
+
     document.getElementById('large-blob-auth').value = '';
     document.getElementById('large-blob-write').value = '';
     document.getElementById('large-blob-write').disabled = true;
