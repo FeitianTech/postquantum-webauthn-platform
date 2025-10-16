@@ -2,8 +2,6 @@
 
 FROM python:3.11-slim AS python-builder
 
-ARG LIBOQS_PYTHON_VERSION=main
-
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     CMAKE_BUILD_PARALLEL_LEVEL=1 \
@@ -21,14 +19,11 @@ RUN set -eux; \
         pkg-config; \
     rm -rf /var/lib/apt/lists/*
 
-# Copy prebuilt liboqs
 COPY prebuilt_liboqs/linux-x86_64 /opt/liboqs
 
-# Configure ldconfig and verify
 RUN set -eux; \
     echo "/opt/liboqs/lib" > /etc/ld.so.conf.d/liboqs.conf; \
     ldconfig; \
-    echo "=== Checking library ==="; \
     ls -lah /opt/liboqs/lib/; \
     ldd /opt/liboqs/lib/liboqs.so.0.14.1-dev; \
     ldconfig -p | grep liboqs
@@ -41,11 +36,7 @@ COPY server ./server
 COPY updater ./updater
 
 RUN pip install --upgrade pip setuptools wheel
-
-# Install liboqs-python
-RUN pip install --prefix=/install --no-cache-dir \
-    "liboqs-python @ git+https://github.com/open-quantum-safe/liboqs-python@main"
-
+RUN pip install --prefix=/install --no-cache-dir /opt/liboqs/liboqs_python*.whl
 RUN pip install --prefix=/install --no-cache-dir pqcrypto
 RUN pip install --prefix=/install --no-cache-dir .
 RUN pip install --prefix=/install --no-cache-dir ./server
