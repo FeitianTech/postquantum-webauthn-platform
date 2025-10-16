@@ -314,16 +314,26 @@ def _find_metadata_entry_for_aaguid(verifier: Any, aaguid_bytes: bytes) -> Optio
 
 
 def _resolve_root_validity(checks: Mapping[str, Optional[bool]]) -> Optional[bool]:
-    if checks.get("trusted_ca") is False:
-        return False
-    if checks.get("trusted_ca") is not True:
+    """Normalise root validity so red is only shown after explicit failures."""
+
+    trusted = checks.get("trusted_ca")
+    outcomes = [checks.get("chain"), checks.get("fido_mds")]
+    attempted = [value for value in outcomes if value is not None]
+
+    if trusted is True:
+        if any(value is True for value in attempted):
+            return True
+        if len(attempted) == len(outcomes) and all(value is False for value in attempted):
+            return False
         return None
 
-    outcomes = [checks.get("chain"), checks.get("fido_mds")]
-    if any(value is True for value in outcomes):
-        return True
-    if any(value is False for value in outcomes):
-        return False
+    if trusted is False:
+        if any(value is True for value in attempted):
+            return True
+        if attempted and all(value is False for value in attempted):
+            return False
+        return None
+
     return None
 
 
@@ -490,7 +500,7 @@ def _evaluate_mldsa_attestation_root(
         checks["trusted_ca"] = False
         errors.append("pqc_metadata_entry_missing")
         return {
-            "root_valid": False,
+            "root_valid": _resolve_root_validity(checks),
             "metadata_entry": None,
             "metadata_lookup_source": None,
             "warnings": warnings,
@@ -505,7 +515,7 @@ def _evaluate_mldsa_attestation_root(
         errors.append("pqc_metadata_root_missing")
         checks["trusted_ca"] = False
         return {
-            "root_valid": False,
+            "root_valid": _resolve_root_validity(checks),
             "metadata_entry": metadata_entry,
             "metadata_lookup_source": metadata_lookup_source,
             "warnings": warnings,
@@ -522,7 +532,7 @@ def _evaluate_mldsa_attestation_root(
         errors.append("attestation_root_not_trusted")
         checks["trusted_ca"] = False
         return {
-            "root_valid": False,
+            "root_valid": _resolve_root_validity(checks),
             "metadata_entry": metadata_entry,
             "metadata_lookup_source": metadata_lookup_source,
             "warnings": warnings,
