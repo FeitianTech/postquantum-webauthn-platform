@@ -4,6 +4,13 @@ on:
   push:
     branches: ["main"]
   pull_request:
+  workflow_call:
+    inputs:
+      ref:
+        description: "Git reference to check out when the workflow is re-used"
+        required: false
+        default: ""
+        type: string
 
 jobs:
   build-and-test:
@@ -12,6 +19,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_call' && inputs.ref || github.ref }}
 
       - name: Set up Python
         uses: actions/setup-python@v5
