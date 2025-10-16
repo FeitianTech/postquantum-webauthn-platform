@@ -52,6 +52,104 @@ const MDS_METADATA_INFO_KEY = 'fido.mds.metadataInfo';
 let metadataStorageWarningShown = false;
 let isSyncingHorizontalScroll = false;
 
+function cleanMetadataInfoValue(value) {
+    if (typeof value !== 'string') {
+        return null;
+    }
+    const trimmed = value.trim();
+    return trimmed ? trimmed : null;
+}
+
+function normaliseMetadataInfo(raw) {
+    if (!raw || typeof raw !== 'object') {
+        return null;
+    }
+
+    const lastModifiedIso =
+        cleanMetadataInfoValue(raw.last_modified_iso) ||
+        cleanMetadataInfoValue(raw.lastModifiedIso) ||
+        cleanMetadataInfoValue(raw.lastModified);
+    const lastModifiedHeader =
+        cleanMetadataInfoValue(raw.last_modified) || cleanMetadataInfoValue(raw.lastModifiedHeader);
+    const fetchedAt = cleanMetadataInfoValue(raw.fetched_at) || cleanMetadataInfoValue(raw.fetchedAt);
+    const nextScheduledCheck =
+        cleanMetadataInfoValue(raw.next_scheduled_check) ||
+        cleanMetadataInfoValue(raw.nextScheduledCheck);
+    const lastResult = cleanMetadataInfoValue(raw.last_result) || cleanMetadataInfoValue(raw.lastResult);
+
+    if (!lastModifiedIso && !lastModifiedHeader && !fetchedAt && !nextScheduledCheck && !lastResult) {
+        return null;
+    }
+
+    return {
+        lastModifiedIso: lastModifiedIso || null,
+        lastModifiedHeader: lastModifiedHeader || null,
+        fetchedAt: fetchedAt || null,
+        nextScheduledCheck: nextScheduledCheck || null,
+        lastResult: lastResult || null,
+    };
+}
+
+function persistMetadataInfo(info) {
+    const storage = getMetadataStorage();
+    if (!storage) {
+        return;
+    }
+
+    try {
+        if (info && typeof info === 'object') {
+            const normalisedInfo = normaliseMetadataInfo(info);
+            if (normalisedInfo) {
+                storage.setItem(MDS_METADATA_INFO_KEY, JSON.stringify(normalisedInfo));
+            } else {
+                storage.removeItem(MDS_METADATA_INFO_KEY);
+            }
+        } else {
+            storage.removeItem(MDS_METADATA_INFO_KEY);
+        }
+    } catch (error) {
+        console.warn('Failed to persist metadata info state:', error);
+    }
+}
+
+function setMetadataInfo(rawInfo) {
+    const info = normaliseMetadataInfo(rawInfo);
+    if (mdsState) {
+        mdsState.metadataInfo = info;
+    }
+    persistMetadataInfo(info);
+    return info;
+}
+
+function getMetadataInfo() {
+    return mdsState?.metadataInfo || null;
+}
+
+function formatMetadataInfoLines(info) {
+    if (!info || typeof info !== 'object') {
+        return [];
+    }
+
+    const lines = [];
+    if (info.nextScheduledCheck) {
+        const formattedNext = formatDate(info.nextScheduledCheck) || info.nextScheduledCheck;
+        lines.push(`Next scheduled check: ${formattedNext}.`);
+    }
+
+    if (info.fetchedAt) {
+        const formattedLast = formatDate(info.fetchedAt) || info.fetchedAt;
+        let suffix = '';
+        if (info.lastResult === 'updated') {
+            suffix = ' (metadata refreshed)';
+        } else if (info.lastResult === 'unchanged') {
+            suffix = ' (already up to date)';
+        }
+        lines.push(`Last checked: ${formattedLast}${suffix}.`);
+    }
+
+    return lines;
+}
+
 const SORT_NONE = 'none';
 const SORT_ASCENDING = 'asc';
 const SORT_DESCENDING = 'desc';
@@ -1170,7 +1268,7 @@ function readMetadataCache() {
     try {
         const infoRaw = storage.getItem(MDS_METADATA_INFO_KEY);
         if (infoRaw) {
-            info = JSON.parse(infoRaw);
+            info = normaliseMetadataInfo(JSON.parse(infoRaw));
         }
     } catch (error) {
         info = null;
@@ -1192,7 +1290,12 @@ function storeMetadataCache(payload, info) {
             storage.setItem(MDS_METADATA_STORAGE_KEY, payload);
         }
         if (info && typeof info === 'object') {
-            storage.setItem(MDS_METADATA_INFO_KEY, JSON.stringify(info));
+            const normalisedInfo = normaliseMetadataInfo(info);
+            if (normalisedInfo) {
+                storage.setItem(MDS_METADATA_INFO_KEY, JSON.stringify(normalisedInfo));
+            } else {
+                storage.removeItem(MDS_METADATA_INFO_KEY);
+            }
         } else {
             storage.removeItem(MDS_METADATA_INFO_KEY);
         }
@@ -1214,6 +1317,7 @@ function clearMetadataCache() {
     }
 
     customMetadataCache = null;
+    setMetadataInfo(null);
 }
 
 function lockRowHeights() {
@@ -1712,6 +1816,7 @@ function initializeState(root) {
         updateButtonMode: 'update',
         metadataOverdue: false,
         metadataNextUpdate: null,
+        metadataInfo: normaliseMetadataInfo(initialMdsInfo),
         certificateModal,
         certificateModalBody: certificateBody,
         certificateInput: root.querySelector('#mds-certificate-input'),
@@ -1828,24 +1933,27 @@ async function applyMetadataEntries(metadata, { note = '' } = {}) {
 
     hasLoaded = true;
 
-    const statusParts = [`Loaded ${mdsData.length.toLocaleString()} authenticators.`];
+    const statusSections = [`Loaded ${mdsData.length.toLocaleString()} authenticators.`];
     let statusVariant = 'success';
 
     if (isOverdue) {
         const deadline = nextUpdateFormatted ? ` (${nextUpdateFormatted})` : '';
-        statusParts.push(
-            `The recommended metadata update date has passed${deadline}. Use the <strong>Update Metadata</strong> button to refresh the local file.`,
+        statusSections.push(
+            `The recommended metadata update date has passed${deadline}. Ensure the metadata updater service is running or retry after the next scheduled check.`,
         );
         statusVariant = 'error';
-    } else if (nextUpdateFormatted) {
-        statusParts.push(`Next update recommended by ${nextUpdateFormatted}.`);
+    }
+
+    const metadataInfoLines = formatMetadataInfoLines(getMetadataInfo());
+    if (metadataInfoLines.length) {
+        statusSections.push(metadataInfoLines.join('<br>'));
     }
 
     if (note) {
-        statusParts.push(note);
+        statusSections.push(note);
     }
 
-    const statusMessage = statusParts.join(' ');
+    const statusMessage = statusSections.join('<br>');
     setStatus(statusMessage, statusVariant);
 
     if (!mdsState.defaultStatus) {
@@ -1891,6 +1999,7 @@ async function applyInitialMetadataPayload(note) {
     try {
         const metadata = JSON.parse(snapshotPayload);
         const enhancedMetadata = await ensureCustomMetadata(metadata);
+        setMetadataInfo(snapshotInfo);
         await applyMetadataEntries(enhancedMetadata, { note });
         storeMetadataCache(JSON.stringify(enhancedMetadata), snapshotInfo);
         return true;
@@ -1954,6 +2063,7 @@ async function loadMdsData(statusNote, options = {}) {
                     loaderSetPhase('Restoring cached authenticator metadata…', { progress: 52 });
                 }
                 const enhanced = await ensureCustomMetadata(cached.metadata);
+                setMetadataInfo(cached.info || null);
                 await applyMetadataEntries(enhanced, { note });
                 storeMetadataCache(JSON.stringify(enhanced), cached.info || null);
                 setColumnResizersEnabled(hasLoaded);
@@ -1988,6 +2098,7 @@ async function loadMdsData(statusNote, options = {}) {
                             loaderSetPhase('Loading custom authenticator metadata…', { progress: 54 });
                         }
                         const fallbackNoteParts = [note, 'Using uploaded session metadata.'].filter(Boolean);
+                        setMetadataInfo(null);
                         await applyMetadataEntries(fallbackMetadata, {
                             note: fallbackNoteParts.join(' '),
                         });
@@ -2009,6 +2120,7 @@ async function loadMdsData(statusNote, options = {}) {
                         mdsState.metadataNextUpdate = null;
                         mdsState.byAaguid = new Map();
                     }
+                    setMetadataInfo(null);
                     setStatus(message, 'info');
                     if (mdsState) {
                         mdsState.defaultStatus = { html: message, variant: 'info', title: '' };
@@ -2053,11 +2165,25 @@ async function loadMdsData(statusNote, options = {}) {
 
             const lastModified = response.headers?.get('Last-Modified') || null;
             const etag = response.headers?.get('ETag') || null;
-            storeMetadataCache(JSON.stringify(enhanced), {
+            const metadataInfo = getMetadataInfo();
+            const infoSource = {
                 lastModified,
                 etag,
                 cachedAt: new Date().toISOString(),
-            });
+            };
+            if (metadataInfo?.lastModifiedIso) {
+                infoSource.last_modified_iso = metadataInfo.lastModifiedIso;
+            }
+            if (metadataInfo?.fetchedAt) {
+                infoSource.fetched_at = metadataInfo.fetchedAt;
+            }
+            if (metadataInfo?.nextScheduledCheck) {
+                infoSource.next_scheduled_check = metadataInfo.nextScheduledCheck;
+            }
+            if (metadataInfo?.lastResult) {
+                infoSource.last_result = metadataInfo.lastResult;
+            }
+            storeMetadataCache(JSON.stringify(enhanced), infoSource);
         } catch (error) {
             console.error('Failed to load FIDO MDS metadata:', error);
             setStatus(
@@ -4894,6 +5020,13 @@ async function refreshMetadata() {
                 (payload && typeof payload.message === 'string' && payload.message.trim()) ||
                 `Update request failed with status ${response.status}.`;
             throw new Error(message);
+        }
+
+        if (payload && typeof payload === 'object') {
+            const infoUpdate = normaliseMetadataInfo(payload);
+            if (infoUpdate) {
+                setMetadataInfo(infoUpdate);
+            }
         }
 
         const payloadMessage =

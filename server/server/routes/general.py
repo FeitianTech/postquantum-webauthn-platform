@@ -22,6 +22,7 @@ from ..metadata import (
     serialize_session_metadata_item,
 )
 from ..storage import delkey
+from updater.mds_updater import MetadataDownloadError, download_metadata_json
 
 
 @app.route("/")
@@ -51,24 +52,56 @@ def index_html():
 
 @app.route("/api/mds/update", methods=["POST"])
 def api_update_mds_metadata():
+    # Keep a synchronous fallback path so operators without the background
+    # updater process can still refresh the cached metadata on demand.
+    try:
+        updated, bytes_written, last_modified_iso = download_metadata_json()
+    except MetadataDownloadError as exc:
+        app.logger.warning("Manual metadata update failed: %s", exc)
+        return (
+            jsonify(
+                {
+                    "updated": False,
+                    "bytes_written": 0,
+                    "message": str(exc) or "Failed to fetch metadata.",
+                }
+            ),
+            exc.status_code or 503,
+        )
+    except Exception as exc:  # pylint: disable=broad-except
+        app.logger.exception("Unexpected error while updating FIDO metadata: %s", exc)
+        return (
+            jsonify(
+                {
+                    "updated": False,
+                    "bytes_written": 0,
+                    "message": "Unable to refresh the metadata snapshot.",
+                }
+            ),
+            500,
+        )
+
     cached_state = load_metadata_cache_entry()
     message = (
-        "Reloading the cached metadata snapshot. A daily background service keeps the file up to date."
+        "Downloaded the latest metadata snapshot from the FIDO Metadata Service."
+        if updated
+        else "Metadata already up to date; verified with the FIDO Metadata Service."
     )
 
     payload: Dict[str, Any] = {
-        "updated": True,
-        "bytes_written": 0,
+        "updated": updated,
+        "bytes_written": bytes_written,
         "message": message,
     }
 
+    if last_modified_iso:
+        payload["last_modified"] = last_modified_iso
+
     if cached_state:
-        last_modified_iso = cached_state.get("last_modified_iso")
-        fetched_at = cached_state.get("fetched_at")
-        if last_modified_iso:
-            payload["last_modified"] = last_modified_iso
-        if fetched_at:
-            payload["fetched_at"] = fetched_at
+        for key in ("last_modified_iso", "fetched_at", "next_scheduled_check", "last_result"):
+            value = cached_state.get(key)
+            if value:
+                payload[key] = value
 
     return jsonify(payload)
 

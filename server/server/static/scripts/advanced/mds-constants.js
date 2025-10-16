@@ -5,7 +5,7 @@ export const CUSTOM_METADATA_UPLOAD_PATH = 'api/mds/metadata/upload';
 export const CUSTOM_METADATA_DELETE_PATH = 'api/mds/metadata/custom';
 export const COLUMN_COUNT = 13;
 export const MISSING_METADATA_MESSAGE =
-    'Metadata has not been downloaded yet. Use the Download Metadata button.';
+    'Metadata has not been downloaded yet. Ensure the automatic metadata updater is running.';
 
 export const UPDATE_BUTTON_STATES = {
     update: { label: 'Update Metadata', busyLabel: 'Updating…' },

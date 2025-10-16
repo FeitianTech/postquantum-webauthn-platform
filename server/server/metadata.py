@@ -804,6 +804,8 @@ def load_metadata_cache_entry() -> Dict[str, Optional[str]]:
         last_modified_iso = _format_last_modified(last_modified_header)
     etag = _clean_metadata_cache_value(cached.get("etag"))
     fetched_at = _clean_metadata_cache_value(cached.get("fetched_at"))
+    next_scheduled_check = _clean_metadata_cache_value(cached.get("next_scheduled_check"))
+    last_result = _clean_metadata_cache_value(cached.get("last_result"))
 
     if not last_modified_header or not last_modified_iso:
         fallback_header, fallback_iso = _last_modified_from_metadata_file()
@@ -815,6 +817,8 @@ def load_metadata_cache_entry() -> Dict[str, Optional[str]]:
         "last_modified_iso": last_modified_iso,
         "etag": etag,
         "fetched_at": fetched_at,
+        "next_scheduled_check": next_scheduled_check,
+        "last_result": last_result,
     }
 
 
