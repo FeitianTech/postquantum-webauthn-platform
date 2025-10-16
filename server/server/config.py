@@ -155,7 +155,7 @@ server = Fido2Server(rp)
 basepath = os.path.abspath(os.path.dirname(__file__))
 
 MDS_METADATA_URL = "https://mds3.fidoalliance.org/"
-MDS_METADATA_FILENAME = "fido-mds3.jws"
+MDS_METADATA_FILENAME = "fido-mds3.verified.json"
 MDS_METADATA_PATH = os.path.join(basepath, "static", MDS_METADATA_FILENAME)
 MDS_METADATA_CACHE_PATH = MDS_METADATA_PATH + ".meta.json"
 SESSION_METADATA_DIR = os.path.join(basepath, "static", "session-metadata")
