@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import importlib
+import importlib.util
 import pathlib
 import sys
 from types import ModuleType
@@ -41,9 +42,13 @@ if __package__:
 else:  # pragma: no cover - executed when run as a script.
     if str(_PROJECT_ROOT) not in sys.path:
         sys.path.insert(0, str(_PROJECT_ROOT))
-    if str(_PACKAGE_PARENT) not in sys.path:
-        sys.path.insert(0, str(_PACKAGE_PARENT))
-    _import_base = _PACKAGE_ROOT.name
+
+    _import_base = f"{_PACKAGE_PARENT.name}.{_PACKAGE_ROOT.name}"
+
+    if importlib.util.find_spec(_import_base) is None:
+        if str(_PACKAGE_PARENT) not in sys.path:
+            sys.path.insert(0, str(_PACKAGE_PARENT))
+
     __package__ = _import_base
 
 config_module = _import_module(f"{_import_base}.config")
