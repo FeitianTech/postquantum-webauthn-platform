@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import importlib
-import importlib.util
 import pathlib
 import sys
 from types import ModuleType
@@ -42,13 +41,9 @@ if __package__:
 else:  # pragma: no cover - executed when run as a script.
     if str(_PROJECT_ROOT) not in sys.path:
         sys.path.insert(0, str(_PROJECT_ROOT))
-
-    _import_base = f"{_PACKAGE_PARENT.name}.{_PACKAGE_ROOT.name}"
-
-    if importlib.util.find_spec(_import_base) is None:
-        if str(_PACKAGE_PARENT) not in sys.path:
-            sys.path.insert(0, str(_PACKAGE_PARENT))
-
+    if str(_PACKAGE_PARENT) not in sys.path:
+        sys.path.insert(0, str(_PACKAGE_PARENT))
+    _import_base = _PACKAGE_ROOT.name
     __package__ = _import_base
 
 config_module = _import_module(f"{_import_base}.config")
@@ -59,7 +54,12 @@ advanced = _import_module(f"{_import_base}.routes.advanced")  # noqa: F401
 general = _import_module(f"{_import_base}.routes.general")  # noqa: F401
 simple = _import_module(f"{_import_base}.routes.simple")  # noqa: F401
 
+
 def main() -> None:
+    ensure_metadata = getattr(general, "ensure_metadata_bootstrapped", None)
+    if callable(ensure_metadata):
+        ensure_metadata(skip_if_reloader_parent=False)
+
     # Note: using localhost without TLS, as some browsers do
     # not allow Webauthn in case of TLS certificate errors.
     # See https://lists.w3.org/Archives/Public/public-webauthn/2022Nov/0135.html

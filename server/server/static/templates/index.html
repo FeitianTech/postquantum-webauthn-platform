@@ -57,6 +57,7 @@
     <div id="json-editor-overlay" class="json-editor-overlay"></div>
     <div
         id="initial-mds-bootstrap"
+        data-jws='{{ initial_mds_blob | tojson }}'
         data-info='{{ initial_mds_info | tojson }}'
         hidden
     ></div>
@@ -68,9 +69,22 @@
                 return;
             }
 
+            let initialJws = null;
             let initialInfo = null;
 
-            const { info: rawInfo } = bootstrapEl.dataset;
+            const { jws: rawJws, info: rawInfo } = bootstrapEl.dataset;
+
+            if (typeof rawJws === 'string' && rawJws) {
+                try {
+                    const parsedJws = JSON.parse(rawJws);
+
+                    if (typeof parsedJws === 'string' && parsedJws) {
+                        initialJws = parsedJws;
+                    }
+                } catch (error) {
+                    console.error('Failed to parse initial MDS bootstrap JWS.', error);
+                }
+            }
 
             if (typeof rawInfo === 'string' && rawInfo) {
                 try {
@@ -82,6 +96,10 @@
                 } catch (error) {
                     console.error('Failed to parse initial MDS bootstrap info.', error);
                 }
+            }
+
+            if (typeof initialJws === 'string') {
+                window.__INITIAL_MDS_JWS__ = initialJws;
             }
 
             if (initialInfo && typeof initialInfo === 'object') {

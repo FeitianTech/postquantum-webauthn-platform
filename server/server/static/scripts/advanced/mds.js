@@ -1,6 +1,6 @@
 import {
     MDS_HTML_PATH,
-    MDS_METADATA_PATH,
+    MDS_JWS_PATH,
     CUSTOM_METADATA_LIST_PATH,
     CUSTOM_METADATA_UPLOAD_PATH,
     CUSTOM_METADATA_DELETE_PATH,
@@ -16,6 +16,7 @@ import {
     transformEntry,
     parseIsoDate,
     formatDate,
+    decodeBase64Url,
     formatEnum,
     normaliseEnumKey,
     normaliseAaguid,
@@ -45,109 +46,12 @@ let scrollTopButtonUpdateScheduled = false;
 let columnResizerMetricsScheduled = false;
 let rowHeightLockScheduled = false;
 let horizontalScrollMetricsScheduled = false;
+let initialMdsJws = null;
 let initialMdsInfo = null;
 const MDS_METADATA_STORAGE_KEY = 'fido.mds.metadataPayload';
 const MDS_METADATA_INFO_KEY = 'fido.mds.metadataInfo';
 let metadataStorageWarningShown = false;
 let isSyncingHorizontalScroll = false;
-
-function cleanMetadataInfoValue(value) {
-    if (typeof value !== 'string') {
-        return null;
-    }
-    const trimmed = value.trim();
-    return trimmed ? trimmed : null;
-}
-
-function normaliseMetadataInfo(raw) {
-    if (!raw || typeof raw !== 'object') {
-        return null;
-    }
-
-    const lastModifiedIso =
-        cleanMetadataInfoValue(raw.last_modified_iso) ||
-        cleanMetadataInfoValue(raw.lastModifiedIso) ||
-        cleanMetadataInfoValue(raw.lastModified);
-    const lastModifiedHeader =
-        cleanMetadataInfoValue(raw.last_modified) || cleanMetadataInfoValue(raw.lastModifiedHeader);
-    const fetchedAt = cleanMetadataInfoValue(raw.fetched_at) || cleanMetadataInfoValue(raw.fetchedAt);
-    const nextScheduledCheck =
-        cleanMetadataInfoValue(raw.next_scheduled_check) ||
-        cleanMetadataInfoValue(raw.nextScheduledCheck);
-    const lastResult = cleanMetadataInfoValue(raw.last_result) || cleanMetadataInfoValue(raw.lastResult);
-
-    if (!lastModifiedIso && !lastModifiedHeader && !fetchedAt && !nextScheduledCheck && !lastResult) {
-        return null;
-    }
-
-    return {
-        lastModifiedIso: lastModifiedIso || null,
-        lastModifiedHeader: lastModifiedHeader || null,
-        fetchedAt: fetchedAt || null,
-        nextScheduledCheck: nextScheduledCheck || null,
-        lastResult: lastResult || null,
-    };
-}
-
-function persistMetadataInfo(info) {
-    const storage = getMetadataStorage();
-    if (!storage) {
-        return;
-    }
-
-    try {
-        if (info && typeof info === 'object') {
-            const normalisedInfo = normaliseMetadataInfo(info);
-            if (normalisedInfo) {
-                storage.setItem(MDS_METADATA_INFO_KEY, JSON.stringify(normalisedInfo));
-            } else {
-                storage.removeItem(MDS_METADATA_INFO_KEY);
-            }
-        } else {
-            storage.removeItem(MDS_METADATA_INFO_KEY);
-        }
-    } catch (error) {
-        console.warn('Failed to persist metadata info state:', error);
-    }
-}
-
-function setMetadataInfo(rawInfo) {
-    const info = normaliseMetadataInfo(rawInfo);
-    if (mdsState) {
-        mdsState.metadataInfo = info;
-    }
-    persistMetadataInfo(info);
-    return info;
-}
-
-function getMetadataInfo() {
-    return mdsState?.metadataInfo || null;
-}
-
-function formatMetadataInfoLines(info) {
-    if (!info || typeof info !== 'object') {
-        return [];
-    }
-
-    const lines = [];
-    if (info.nextScheduledCheck) {
-        const formattedNext = formatDate(info.nextScheduledCheck) || info.nextScheduledCheck;
-        lines.push(`Next scheduled check: ${formattedNext}.`);
-    }
-
-    if (info.fetchedAt) {
-        const formattedLast = formatDate(info.fetchedAt) || info.fetchedAt;
-        let suffix = '';
-        if (info.lastResult === 'updated') {
-            suffix = ' (metadata refreshed)';
-        } else if (info.lastResult === 'unchanged') {
-            suffix = ' (already up to date)';
-        }
-        lines.push(`Last checked: ${formattedLast}${suffix}.`);
-    }
-
-    return lines;
-}
 
 const SORT_NONE = 'none';
 const SORT_ASCENDING = 'asc';
@@ -785,12 +689,17 @@ async function deleteCustomMetadata(storedFilename, options = {}) {
 }
 
 if (typeof window !== 'undefined') {
+    if (typeof window.__INITIAL_MDS_JWS__ === 'string' && window.__INITIAL_MDS_JWS__) {
+        initialMdsJws = window.__INITIAL_MDS_JWS__;
+    }
     if (window.__INITIAL_MDS_INFO__ && typeof window.__INITIAL_MDS_INFO__ === 'object') {
         initialMdsInfo = window.__INITIAL_MDS_INFO__;
     }
     try {
+        delete window.__INITIAL_MDS_JWS__;
         delete window.__INITIAL_MDS_INFO__;
     } catch (error) {
+        window.__INITIAL_MDS_JWS__ = undefined;
         window.__INITIAL_MDS_INFO__ = undefined;
     }
 }
@@ -1262,7 +1171,7 @@ function readMetadataCache() {
     try {
         const infoRaw = storage.getItem(MDS_METADATA_INFO_KEY);
         if (infoRaw) {
-            info = normaliseMetadataInfo(JSON.parse(infoRaw));
+            info = JSON.parse(infoRaw);
         }
     } catch (error) {
         info = null;
@@ -1284,12 +1193,7 @@ function storeMetadataCache(payload, info) {
             storage.setItem(MDS_METADATA_STORAGE_KEY, payload);
         }
         if (info && typeof info === 'object') {
-            const normalisedInfo = normaliseMetadataInfo(info);
-            if (normalisedInfo) {
-                storage.setItem(MDS_METADATA_INFO_KEY, JSON.stringify(normalisedInfo));
-            } else {
-                storage.removeItem(MDS_METADATA_INFO_KEY);
-            }
+            storage.setItem(MDS_METADATA_INFO_KEY, JSON.stringify(info));
         } else {
             storage.removeItem(MDS_METADATA_INFO_KEY);
         }
@@ -1311,7 +1215,6 @@ function clearMetadataCache() {
     }
 
     customMetadataCache = null;
-    setMetadataInfo(null);
 }
 
 function lockRowHeights() {
@@ -1810,7 +1713,6 @@ function initializeState(root) {
         updateButtonMode: 'update',
         metadataOverdue: false,
         metadataNextUpdate: null,
-        metadataInfo: normaliseMetadataInfo(initialMdsInfo),
         certificateModal,
         certificateModalBody: certificateBody,
         certificateInput: root.querySelector('#mds-certificate-input'),
@@ -1927,27 +1829,24 @@ async function applyMetadataEntries(metadata, { note = '' } = {}) {
 
     hasLoaded = true;
 
-    const statusSections = [`Loaded ${mdsData.length.toLocaleString()} authenticators.`];
+    const statusParts = [`Loaded ${mdsData.length.toLocaleString()} authenticators.`];
     let statusVariant = 'success';
 
     if (isOverdue) {
         const deadline = nextUpdateFormatted ? ` (${nextUpdateFormatted})` : '';
-        statusSections.push(
-            `The recommended metadata update date has passed${deadline}. Ensure the metadata updater service is running or retry after the next scheduled check.`,
+        statusParts.push(
+            `The recommended metadata update date has passed${deadline}. Use the <strong>Update Metadata</strong> button to refresh the local file.`,
         );
         statusVariant = 'error';
-    }
-
-    const metadataInfoLines = formatMetadataInfoLines(getMetadataInfo());
-    if (metadataInfoLines.length) {
-        statusSections.push(metadataInfoLines.join('<br>'));
+    } else if (nextUpdateFormatted) {
+        statusParts.push(`Next update recommended by ${nextUpdateFormatted}.`);
     }
 
     if (note) {
-        statusSections.push(note);
+        statusParts.push(note);
     }
 
-    const statusMessage = statusSections.join('<br>');
+    const statusMessage = statusParts.join(' ');
     setStatus(statusMessage, statusVariant);
 
     if (!mdsState.defaultStatus) {
@@ -1978,6 +1877,36 @@ async function applyMetadataEntries(metadata, { note = '' } = {}) {
     }
 }
 
+async function applyInitialMetadataPayload(note) {
+    if (initialMdsJws === null || typeof initialMdsJws !== 'string') {
+        initialMdsJws = null;
+        initialMdsInfo = initialMdsInfo && typeof initialMdsInfo === 'object' ? initialMdsInfo : null;
+        return false;
+    }
+
+    const snapshotJws = initialMdsJws;
+    const snapshotInfo = initialMdsInfo && typeof initialMdsInfo === 'object' ? initialMdsInfo : null;
+    initialMdsJws = null;
+    initialMdsInfo = null;
+
+    try {
+        const payloadSegment = snapshotJws.split('.')[1];
+        if (!payloadSegment) {
+            throw new Error('Invalid metadata BLOB format.');
+        }
+        const payload = decodeBase64Url(payloadSegment);
+        const metadata = JSON.parse(payload);
+
+        const enhancedMetadata = await ensureCustomMetadata(metadata);
+        await applyMetadataEntries(enhancedMetadata, { note });
+        storeMetadataCache(JSON.stringify(enhancedMetadata), snapshotInfo);
+        return true;
+    } catch (error) {
+        console.error('Failed to apply initial metadata payload:', error);
+        return false;
+    }
+}
+
 async function loadMdsData(statusNote, options = {}) {
     if (!mdsState) {
         return;
@@ -2005,13 +1934,26 @@ async function loadMdsData(statusNote, options = {}) {
     }
 
     if (forceReload) {
-        initialMdsInfo = null;
-    } else if (!hasLoaded && initialMdsInfo && typeof initialMdsInfo === 'object') {
-        setMetadataInfo(initialMdsInfo);
+        initialMdsJws = null;
         initialMdsInfo = null;
     }
 
     if (!forceReload) {
+        if (!hasLoaded) {
+            try {
+                if (trackProgress && typeof initialMdsJws === 'string' && initialMdsJws) {
+                    loaderSetPhase('Applying server metadata snapshot…', { progress: 52 });
+                }
+                const applied = await applyInitialMetadataPayload(note);
+                if (applied) {
+                    setColumnResizersEnabled(hasLoaded);
+                    return;
+                }
+            } catch (error) {
+                console.warn('Failed to apply server-provided metadata payload:', error);
+            }
+        }
+
         const cached = readMetadataCache();
         if (cached?.metadata) {
             try {
@@ -2019,7 +1961,6 @@ async function loadMdsData(statusNote, options = {}) {
                     loaderSetPhase('Restoring cached authenticator metadata…', { progress: 52 });
                 }
                 const enhanced = await ensureCustomMetadata(cached.metadata);
-                setMetadataInfo(cached.info || null);
                 await applyMetadataEntries(enhanced, { note });
                 storeMetadataCache(JSON.stringify(enhanced), cached.info || null);
                 setColumnResizersEnabled(hasLoaded);
@@ -2031,7 +1972,7 @@ async function loadMdsData(statusNote, options = {}) {
         }
     }
 
-    setStatus('Loading metadata…', 'info');
+    setStatus('Loading metadata BLOB…', 'info');
     setColumnResizersEnabled(false);
     isLoading = true;
     let stateUpdated = false;
@@ -2045,7 +1986,7 @@ async function loadMdsData(statusNote, options = {}) {
                     : 'Downloading authenticator metadata…';
                 loaderSetPhase(phaseLabel, { progress: 52 });
             }
-            const response = await fetch(MDS_METADATA_PATH, fetchOptions);
+            const response = await fetch(MDS_JWS_PATH, fetchOptions);
             if (!response.ok) {
                 if (response.status === 404) {
                     const fallbackMetadata = await ensureCustomMetadata(null);
@@ -2054,7 +1995,6 @@ async function loadMdsData(statusNote, options = {}) {
                             loaderSetPhase('Loading custom authenticator metadata…', { progress: 54 });
                         }
                         const fallbackNoteParts = [note, 'Using uploaded session metadata.'].filter(Boolean);
-                        setMetadataInfo(null);
                         await applyMetadataEntries(fallbackMetadata, {
                             note: fallbackNoteParts.join(' '),
                         });
@@ -2076,7 +2016,6 @@ async function loadMdsData(statusNote, options = {}) {
                         mdsState.metadataNextUpdate = null;
                         mdsState.byAaguid = new Map();
                     }
-                    setMetadataInfo(null);
                     setStatus(message, 'info');
                     if (mdsState) {
                         mdsState.defaultStatus = { html: message, variant: 'info', title: '' };
@@ -2111,9 +2050,16 @@ async function loadMdsData(statusNote, options = {}) {
             }
 
             if (trackProgress) {
-                loaderSetPhase('Parsing metadata payload…', { progress: 56 });
+                loaderSetPhase('Decoding metadata payload…', { progress: 56 });
             }
-            const metadata = await response.json();
+            const jws = await response.text();
+            const payloadSegment = jws.split('.')[1];
+            if (!payloadSegment) {
+                throw new Error('Invalid metadata BLOB format.');
+            }
+
+            const payload = decodeBase64Url(payloadSegment);
+            const metadata = JSON.parse(payload);
 
             const enhanced = await ensureCustomMetadata(metadata);
             await applyMetadataEntries(enhanced, { note });
@@ -2121,29 +2067,16 @@ async function loadMdsData(statusNote, options = {}) {
 
             const lastModified = response.headers?.get('Last-Modified') || null;
             const etag = response.headers?.get('ETag') || null;
-            const metadataInfo = getMetadataInfo();
-            const infoSource = {
+            storeMetadataCache(JSON.stringify(enhanced), {
                 lastModified,
                 etag,
-            };
-            if (metadataInfo?.lastModifiedIso) {
-                infoSource.last_modified_iso = metadataInfo.lastModifiedIso;
-            }
-            if (metadataInfo?.fetchedAt) {
-                infoSource.fetched_at = metadataInfo.fetchedAt;
-            }
-            if (metadataInfo?.nextScheduledCheck) {
-                infoSource.next_scheduled_check = metadataInfo.nextScheduledCheck;
-            }
-            if (metadataInfo?.lastResult) {
-                infoSource.last_result = metadataInfo.lastResult;
-            }
-            const infoToPersist = setMetadataInfo(infoSource);
-            storeMetadataCache(JSON.stringify(enhanced), infoToPersist);
+                cachedAt: new Date().toISOString(),
+            });
         } catch (error) {
             console.error('Failed to load FIDO MDS metadata:', error);
             setStatus(
-                `Unable to load the metadata JSON. Ensure <code>${MDS_METADATA_PATH}</code> is a valid verified payload.`,
+                `Unable to parse the metadata BLOB. Confirm that <code>${MDS_JWS_PATH}</code> is a valid download from ` +
+                    `<a href="https://mds3.fidoalliance.org/" target="_blank" rel="noopener">mds3.fidoalliance.org</a>.`,
                 'error',
             );
             setUpdateButtonAttention(false);
@@ -4955,7 +4888,7 @@ async function refreshMetadata() {
     try {
         const action = mdsState?.updateButtonMode === 'download' ? 'download' : 'update';
         const inProgressMessage =
-            action === 'download' ? 'Loading metadata snapshot…' : 'Refreshing metadata snapshot…';
+            action === 'download' ? 'Downloading metadata BLOB…' : 'Updating metadata BLOB…';
         setStatus(inProgressMessage, 'info');
 
         const response = await fetch('/api/mds/update', {
@@ -4965,7 +4898,6 @@ async function refreshMetadata() {
         });
 
         let payload;
-        let infoUpdate = null;
         try {
             payload = await response.json();
         } catch (error) {
@@ -4979,13 +4911,6 @@ async function refreshMetadata() {
             throw new Error(message);
         }
 
-        if (payload && typeof payload === 'object') {
-            infoUpdate = normaliseMetadataInfo(payload);
-            if (infoUpdate) {
-                setMetadataInfo(infoUpdate);
-            }
-        }
-
         const payloadMessage =
             (payload && typeof payload.message === 'string' && payload.message.trim()) || '';
         const shouldReload = (payload && payload.updated) || !hasLoaded;
@@ -4996,9 +4921,6 @@ async function refreshMetadata() {
 
         if (shouldReload) {
             clearMetadataCache();
-            if (infoUpdate) {
-                setMetadataInfo(infoUpdate);
-            }
             await loadMdsData(note, { forceReload: true });
         } else {
             const overdue = Boolean(mdsState?.metadataOverdue);
@@ -5019,11 +4941,11 @@ async function refreshMetadata() {
             setStatus(message, variant, { restoreDefault: true, delay: 5000 });
         }
     } catch (error) {
-        console.error('Failed to refresh the metadata snapshot:', error);
+        console.error('Failed to update metadata BLOB:', error);
         const message =
             error instanceof Error && error.message
                 ? error.message
-                : 'Unable to refresh the metadata snapshot. Check the server logs for more details.';
+                : 'Unable to update the metadata BLOB. Check the server logs for more details.';
         setStatus(message, 'error');
     } finally {
         setUpdateButtonBusy(false);
