@@ -44,7 +44,7 @@ from cryptography.hazmat.primitives.asymmetric import ec, ed25519, ed448, rsa
 from cryptography.x509.oid import ExtensionOID, NameOID
 
 from .config import app
-from .metadata import get_mds_verifier
+from .metadata import get_mds_verifier, metadata_entry_trust_anchor_status
 from .pqc import PQC_ALGORITHM_ID_TO_NAME, is_pqc_algorithm
 
 __all__ = [
@@ -320,20 +320,147 @@ def _resolve_root_validity(checks: Mapping[str, Optional[bool]]) -> Optional[boo
         return None
 
     outcomes = [checks.get("chain"), checks.get("fido_mds")]
-    has_true = any(value is True for value in outcomes)
-    has_false = any(value is False for value in outcomes)
-
-    if has_true and not has_false:
+    if any(value is True for value in outcomes):
         return True
-    if has_false:
+    if any(value is False for value in outcomes):
         return False
     return None
+
+
+def _describe_certificate_subject(cert: x509.Certificate) -> str:
+    subject = cert.subject.rfc4514_string()
+    return subject or "(unknown)"
+
+
+def _check_pqc_certificate_constraints(
+    cert_der: bytes,
+    *,
+    now: datetime,
+    is_leaf: bool,
+    remaining_subordinates: int,
+) -> Optional[str]:
+    """Validate expiry, key usage and policy constraints for PQC certificates."""
+
+    try:
+        cert = x509.load_der_x509_certificate(cert_der)
+    except Exception as exc:
+        return f"pqc_certificate_parse_error: {exc}"
+
+    subject = _describe_certificate_subject(cert)
+    not_before = _certificate_datetime(cert, "not_valid_before")
+    not_after = _certificate_datetime(cert, "not_valid_after")
+    if now < not_before or now > not_after:
+        return f"pqc_certificate_out_of_validity: {subject}"
+
+    try:
+        basic_constraints = cert.extensions.get_extension_for_class(
+            x509.BasicConstraints
+        ).value
+    except x509.ExtensionNotFound:
+        basic_constraints = None
+
+    if basic_constraints is not None:
+        if is_leaf and basic_constraints.ca:
+            return f"pqc_basic_constraints_leaf_ca: {subject}"
+        if not is_leaf and not basic_constraints.ca:
+            return f"pqc_basic_constraints_not_ca: {subject}"
+        if (
+            not is_leaf
+            and basic_constraints.ca
+            and basic_constraints.path_length is not None
+            and basic_constraints.path_length < remaining_subordinates
+        ):
+            return f"pqc_basic_constraints_path_length: {subject}"
+    elif not is_leaf:
+        return f"pqc_basic_constraints_missing: {subject}"
+
+    try:
+        key_usage = cert.extensions.get_extension_for_class(x509.KeyUsage).value
+    except x509.ExtensionNotFound:
+        key_usage = None
+
+    if key_usage is not None:
+        if is_leaf and not (
+            key_usage.digital_signature or key_usage.content_commitment
+        ):
+            return f"pqc_key_usage_leaf_invalid: {subject}"
+        if not is_leaf and not key_usage.key_cert_sign:
+            return f"pqc_key_usage_ca_invalid: {subject}"
+
+    try:
+        policy_constraints = cert.extensions.get_extension_for_class(
+            x509.PolicyConstraints
+        ).value
+    except x509.ExtensionNotFound:
+        policy_constraints = None
+
+    if policy_constraints is not None:
+        if (
+            policy_constraints.require_explicit_policy is not None
+            and policy_constraints.require_explicit_policy < 0
+        ) or (
+            policy_constraints.inhibit_policy_mapping is not None
+            and policy_constraints.inhibit_policy_mapping < 0
+        ):
+            return f"pqc_policy_constraints_invalid: {subject}"
+
+    return None
+
+
+def _verify_pqc_attestation_chain(
+    trust_path: Sequence[bytes],
+    root: bytes,
+    *,
+    now: datetime,
+) -> Tuple[bool, List[str]]:
+    """Verify a PQC attestation chain against *root* including constraints."""
+
+    errors: List[str] = []
+    if not trust_path:
+        return False, ["pqc_attestation_chain_missing"]
+
+    candidate_chain = list(trust_path)
+    if not candidate_chain or candidate_chain[-1] != root:
+        candidate_chain.append(root)
+
+    for idx, cert_der in enumerate(candidate_chain):
+        is_leaf = idx == 0
+        remaining_subordinates = len(candidate_chain) - idx - 1
+        constraint_error = _check_pqc_certificate_constraints(
+            cert_der,
+            now=now,
+            is_leaf=is_leaf,
+            remaining_subordinates=remaining_subordinates,
+        )
+        if constraint_error is not None:
+            errors.append(constraint_error)
+            return False, errors
+
+        if remaining_subordinates <= 0:
+            continue
+
+        issuer_der = candidate_chain[idx + 1]
+        try:
+            _verify_mldsa_certificate_signature(cert_der, issuer_der)
+        except InvalidSignature as exc:
+            errors.append(f"pqc_certificate_signature_invalid: {exc}")
+            return False, errors
+        except Exception as exc:  # pragma: no cover - defensive
+            errors.append(f"pqc_certificate_signature_error: {exc}")
+            return False, errors
+
+    if not _is_trusted_ca_certificate(candidate_chain[-1], allow_subject_parsing=False):
+        errors.append("pqc_root_not_in_trusted_list")
+        return False, errors
+
+    return True, errors
 
 
 def _evaluate_mldsa_attestation_root(
     attestation_object: AttestationObject,
     aaguid_bytes: bytes,
     verifier: Optional[Any],
+    now: datetime,
 ) -> Dict[str, Any]:
     """Determine ML-DSA attestation root status using PQC-only verification."""
 
@@ -360,9 +487,10 @@ def _evaluate_mldsa_attestation_root(
 
     metadata_entry = _find_metadata_entry_for_aaguid(verifier, aaguid_bytes)
     if metadata_entry is None:
-        checks["fido_mds"] = False
+        checks["trusted_ca"] = False
+        errors.append("pqc_metadata_entry_missing")
         return {
-            "root_valid": None,
+            "root_valid": False,
             "metadata_entry": None,
             "metadata_lookup_source": None,
             "warnings": warnings,
@@ -371,13 +499,11 @@ def _evaluate_mldsa_attestation_root(
         }
 
     metadata_lookup_source = "aaguid"
-    checks["fido_mds"] = True
 
     roots = _collect_metadata_root_certificates(metadata_entry)
     if not roots:
         errors.append("pqc_metadata_root_missing")
         checks["trusted_ca"] = False
-        checks["chain"] = False
         return {
             "root_valid": False,
             "metadata_entry": metadata_entry,
@@ -387,12 +513,14 @@ def _evaluate_mldsa_attestation_root(
             "checks": checks,
         }
 
-    trusted_ca = any(
-        _is_trusted_ca_certificate(root, allow_subject_parsing=False) for root in roots
-    )
-    checks["trusted_ca"] = trusted_ca
-    if not trusted_ca:
+    trusted_roots = [
+        root
+        for root in roots
+        if _is_trusted_ca_certificate(root, allow_subject_parsing=False)
+    ]
+    if not trusted_roots:
         errors.append("attestation_root_not_trusted")
+        checks["trusted_ca"] = False
         return {
             "root_valid": False,
             "metadata_entry": metadata_entry,
@@ -402,39 +530,43 @@ def _evaluate_mldsa_attestation_root(
             "checks": checks,
         }
 
-    leaf_certificate = _extract_attestation_leaf_certificate(attestation_object)
-    if leaf_certificate is None:
-        errors.append("pqc_attestation_leaf_missing")
+    checks["trusted_ca"] = True
+
+    fido_status = metadata_entry_trust_anchor_status(metadata_entry)
+    if fido_status is True:
+        checks["fido_mds"] = True
+    elif fido_status is False:
+        checks["fido_mds"] = False
+        errors.append("pqc_metadata_not_fido_trusted")
+
+    att_stmt = getattr(attestation_object, "att_stmt", None)
+    trust_path: Sequence[bytes] = []
+    if isinstance(att_stmt, Mapping):
+        trust_path = _collect_trust_path_entries(att_stmt.get("x5c"))
+
+    if not trust_path:
         checks["chain"] = False
-        return {
-            "root_valid": _resolve_root_validity(checks),
-            "metadata_entry": metadata_entry,
-            "metadata_lookup_source": metadata_lookup_source,
-            "warnings": warnings,
-            "errors": errors,
-            "checks": checks,
-        }
+        errors.append("pqc_attestation_chain_missing")
+    else:
+        chain_valid = False
+        chain_errors: List[str] = []
+        for root in trusted_roots:
+            valid, attempt_errors = _verify_pqc_attestation_chain(
+                trust_path,
+                root,
+                now=now,
+            )
+            if valid:
+                chain_valid = True
+                chain_errors = []
+                break
+            chain_errors.extend(attempt_errors)
 
-    chain_valid = False
-    last_error: Optional[str] = None
-    for root in roots:
-        try:
-            _verify_mldsa_certificate_signature(leaf_certificate, root)
-        except InvalidSignature as exc:
-            last_error = str(exc)
-        except Exception as exc:  # pragma: no cover - defensive
-            last_error = str(exc)
-        else:
-            chain_valid = True
-            break
-
-    checks["chain"] = chain_valid
-
-    if not chain_valid:
-        if last_error:
-            errors.append(f"pqc_root_verification_failed: {last_error}")
-        else:
-            errors.append("pqc_root_verification_failed")
+        checks["chain"] = chain_valid
+        if not chain_valid:
+            for err in chain_errors or ["pqc_root_verification_failed"]:
+                if err not in errors:
+                    errors.append(err)
 
     return {
         "root_valid": _resolve_root_validity(checks),
@@ -515,18 +647,36 @@ def _evaluate_classical_attestation_root(
             if trust_details.errors:
                 errors.extend(trust_details.errors)
 
-    checks["fido_mds"] = metadata_entry is not None
-
-    trusted_ca: Optional[bool] = None
+    candidate_roots: List[bytes] = []
     if trust_details is not None and trust_details.ca_certificate:
-        trusted_ca = _is_trusted_ca_certificate(trust_details.ca_certificate)
-    elif metadata_entry is not None:
-        roots = _collect_metadata_root_certificates(metadata_entry)
-        if roots:
-            trusted_ca = any(_is_trusted_ca_certificate(root) for root in roots)
-    checks["trusted_ca"] = trusted_ca
-    if trusted_ca is False:
+        candidate_roots.append(trust_details.ca_certificate)
+    if metadata_entry is not None:
+        candidate_roots.extend(_collect_metadata_root_certificates(metadata_entry))
+    else:
+        errors.append("metadata_entry_missing")
+
+    trusted_roots = [
+        root for root in candidate_roots if _is_trusted_ca_certificate(root)
+    ]
+
+    trusted_ca: Optional[bool]
+    if trusted_roots:
+        trusted_ca = True
+    elif candidate_roots:
+        trusted_ca = False
         errors.append("attestation_root_not_trusted")
+    else:
+        trusted_ca = False
+
+    checks["trusted_ca"] = trusted_ca
+
+    if trusted_ca is True and metadata_entry is not None:
+        fido_status = metadata_entry_trust_anchor_status(metadata_entry)
+        if fido_status is True:
+            checks["fido_mds"] = True
+        elif fido_status is False:
+            checks["fido_mds"] = False
+            errors.append("metadata_not_fido_trusted")
 
     chain_valid: Optional[bool] = None
     if trust_details is not None:
@@ -537,7 +687,8 @@ def _evaluate_classical_attestation_root(
         chain_valid = False
     if chain_valid is None and chain_valid_dates is False:
         chain_valid = False
-    checks["chain"] = chain_valid
+    if trusted_ca is True:
+        checks["chain"] = chain_valid
 
     return {
         "root_valid": _resolve_root_validity(checks),
@@ -2122,6 +2273,7 @@ def perform_attestation_checks(
             attestation_object,
             credential_aaguid_bytes,
             verifier,
+            now,
         )
         root_valid = pqc_outcome.get("root_valid")
         metadata_entry = pqc_outcome.get("metadata_entry") or metadata_entry
