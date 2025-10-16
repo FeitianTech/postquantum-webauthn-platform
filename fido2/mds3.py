@@ -30,6 +30,7 @@ from __future__ import annotations
 from .webauthn import AttestationObject, Aaguid
 from .attestation import (
     Attestation,
+    TrustPathEvaluation,
     UntrustedAttestation,
     verify_x509_chain,
     AttestationVerifier,
@@ -330,6 +331,18 @@ def filter_attestation_key_compromised(
 
 
 _last_entry: ContextVar[Optional[MetadataBlobPayloadEntry]] = ContextVar("_last_entry")
+_last_lookup_source: ContextVar[Optional[str]] = ContextVar(
+    "_last_lookup_source", default=None
+)
+
+
+@dataclass
+class MdsAttestationEvaluation:
+    """Details about verifying attestation trust using FIDO metadata."""
+
+    trust_path: TrustPathEvaluation
+    metadata_entry: Optional[MetadataBlobPayloadEntry]
+    metadata_lookup_source: Optional[str]
 
 
 class MdsAttestationVerifier(AttestationVerifier):
@@ -413,13 +426,18 @@ class MdsAttestationVerifier(AttestationVerifier):
 
     def ca_lookup(self, attestation_result, auth_data):
         assert auth_data.credential_data is not None  # nosec
+        _last_lookup_source.set(None)
         aaguid = auth_data.credential_data.aaguid
         if aaguid:
             logging.debug(f"Using AAGUID: {aaguid} to look up metadata")
             entry = self.find_entry_by_aaguid(aaguid)
+            if entry is not None:
+                _last_lookup_source.set("aaguid")
         else:
             logging.debug("Using trust_path chain to look up metadata")
             entry = self.find_entry_by_chain(attestation_result.trust_path)
+            if entry is not None:
+                _last_lookup_source.set("chain")
 
         if entry:
             logging.debug(f"Found entry: {entry}")
@@ -475,6 +493,7 @@ class MdsAttestationVerifier(AttestationVerifier):
         including checking it against the attestation_filter.
         """
         token = _last_entry.set(None)
+        source_token = _last_lookup_source.set(None)
         try:
             self.verify_attestation(attestation_object, client_data_hash)
             return _last_entry.get()
@@ -482,6 +501,30 @@ class MdsAttestationVerifier(AttestationVerifier):
             return None
         finally:
             _last_entry.reset(token)
+            _last_lookup_source.reset(source_token)
+
+    def evaluate_attestation(
+        self, attestation_object: AttestationObject, client_data_hash: bytes
+    ) -> MdsAttestationEvaluation:
+        """Evaluate an attestation and return detailed trust information."""
+
+        entry_token = _last_entry.set(None)
+        source_token = _last_lookup_source.set(None)
+        try:
+            trust_details = self.collect_trust_path_details(
+                attestation_object, client_data_hash
+            )
+            entry = _last_entry.get()
+            lookup_source = _last_lookup_source.get()
+        finally:
+            _last_entry.reset(entry_token)
+            _last_lookup_source.reset(source_token)
+
+        return MdsAttestationEvaluation(
+            trust_path=trust_details,
+            metadata_entry=entry,
+            metadata_lookup_source=lookup_source,
+        )
 
 
 def parse_blob(blob: bytes, trust_root: Optional[bytes]) -> MetadataBlobPayload:

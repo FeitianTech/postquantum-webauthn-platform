@@ -93,6 +93,16 @@ class AttestationResult:
     trust_path: List[bytes]
 
 
+@dataclass
+class TrustPathEvaluation:
+    """Details about verifying the trust path of an attestation."""
+
+    attestation_result: Optional[AttestationResult]
+    ca_certificate: Optional[bytes]
+    chain_valid: Optional[bool]
+    errors: List[str]
+
+
 def catch_builtins(f):
     """Utility decoractor to wrap common exceptions related to InvalidData."""
 
@@ -292,6 +302,59 @@ class AttestationVerifier(abc.ABC):
         """
         raise NotImplementedError()
 
+    def collect_trust_path_details(
+        self, attestation_object: AttestationObject, client_data_hash: bytes
+    ) -> TrustPathEvaluation:
+        """Return detailed information about the attestation trust path."""
+
+        errors: List[str] = []
+
+        att_verifier: Attestation = UnsupportedAttestation(attestation_object.fmt)
+        for at in self._attestation_types:
+            if getattr(at, "FORMAT", None) == attestation_object.fmt:
+                att_verifier = at
+                break
+
+        try:
+            attestation_result = att_verifier.verify(
+                attestation_object.att_stmt,
+                attestation_object.auth_data,
+                client_data_hash,
+            )
+        except UnsupportedType:
+            raise
+        except (InvalidSignature, InvalidData) as exc:
+            errors.append(str(exc))
+            return TrustPathEvaluation(None, None, False, errors)
+        except Exception as exc:  # pragma: no cover - defensive guard
+            errors.append(str(exc))
+            return TrustPathEvaluation(None, None, False, errors)
+
+        try:
+            ca = self.ca_lookup(attestation_result, attestation_object.auth_data)
+        except Exception as exc:  # pragma: no cover - defensive guard
+            errors.append(str(exc))
+            return TrustPathEvaluation(attestation_result, None, False, errors)
+
+        if not ca:
+            errors.append("No root found for Authenticator")
+            return TrustPathEvaluation(attestation_result, None, False, errors)
+
+        trust_path = list(attestation_result.trust_path or [])
+        chain_valid: Optional[bool] = None
+        try:
+            verify_x509_chain(trust_path + [ca])
+        except InvalidSignature as exc:
+            errors.append(str(exc))
+            chain_valid = False
+        except Exception as exc:  # pragma: no cover - defensive guard
+            errors.append(str(exc))
+            chain_valid = False
+        else:
+            chain_valid = True
+
+        return TrustPathEvaluation(attestation_result, ca, chain_valid, errors)
+
     def verify_attestation(
         self, attestation_object: AttestationObject, client_data_hash: bytes
     ) -> None:
@@ -300,30 +363,20 @@ class AttestationVerifier(abc.ABC):
         :param attestation_object: dict containing attestation data.
         :param client_data_hash: SHA256 hash of the ClientData bytes.
         """
-        att_verifier: Attestation = UnsupportedAttestation(attestation_object.fmt)
-        for at in self._attestation_types:
-            if getattr(at, "FORMAT", None) == attestation_object.fmt:
-                att_verifier = at
-                break
-        # An unsupported format causes an exception to be thrown, which
-        # includes the auth_data. The caller may choose to handle this case
-        # and allow the registration.
-        result = att_verifier.verify(
-            attestation_object.att_stmt,
-            attestation_object.auth_data,
-            client_data_hash,
-        )
+        evaluation = self.collect_trust_path_details(attestation_object, client_data_hash)
 
-        # Lookup CA to use for trust path verification
-        ca = self.ca_lookup(result, attestation_object.auth_data)
-        if not ca:
+        if evaluation.attestation_result is None:
+            if evaluation.errors:
+                raise UntrustedAttestation(evaluation.errors[-1])
+            raise UntrustedAttestation("Untrusted attestation")
+
+        if not evaluation.ca_certificate:
             raise UntrustedAttestation("No root found for Authenticator")
 
-        trust_path = list(result.trust_path or [])
-        try:
-            verify_x509_chain(trust_path + [ca])
-        except InvalidSignature as e:
-            raise UntrustedAttestation(e)
+        if evaluation.chain_valid is False:
+            if evaluation.errors:
+                raise UntrustedAttestation(evaluation.errors[-1])
+            raise UntrustedAttestation("Invalid attestation trust path")
 
     def __call__(self, *args):
         """Allows passing an instance to Fido2Server as verify_attestation"""

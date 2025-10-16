@@ -3,9 +3,10 @@ from __future__ import annotations
 
 import base64
 import os
+import re
 import ssl
 import textwrap
-from typing import Mapping, Optional
+from typing import Mapping, Optional, Set
 
 import fido2.features
 from flask import Flask, has_request_context, request
@@ -45,6 +46,53 @@ app.config.setdefault("FIDO_SERVER_RP_ID", _DEFAULT_RP_ID)
 _session_metadata_recover_flag = _env_flag("FIDO_SERVER_SESSION_METADATA_RECOVER")
 if _session_metadata_recover_flag is not None:
     app.config["SESSION_METADATA_RECOVER_ON_START"] = _session_metadata_recover_flag
+
+
+def _parse_trusted_ca_subjects(raw_value: Optional[str]) -> Optional[Set[str]]:
+    """Normalise a comma or newline separated list of CA subject names."""
+
+    if raw_value is None:
+        return None
+
+    components = re.split(r"[,;\n]+", raw_value)
+    subjects = {component.strip() for component in components if component.strip()}
+    if not subjects:
+        return None
+    return subjects
+
+
+def _parse_trusted_ca_fingerprints(raw_value: Optional[str]) -> Optional[Set[str]]:
+    """Normalise a list of hexadecimal fingerprints for trusted CA certificates."""
+
+    if raw_value is None:
+        return None
+
+    components = re.split(r"[,;\n]+", raw_value)
+    fingerprints = set()
+    for component in components:
+        cleaned = re.sub(r"[^0-9a-fA-F]", "", component)
+        if cleaned:
+            normalised = cleaned.upper()
+            # Require at least 20 bytes / 40 hex characters to avoid trivial matches.
+            if len(normalised) >= 40:
+                fingerprints.add(normalised)
+    if not fingerprints:
+        return None
+    return fingerprints
+
+
+app.config.setdefault(
+    "TRUSTED_ATTESTATION_CA_SUBJECTS",
+    _parse_trusted_ca_subjects(
+        os.environ.get("FIDO_SERVER_TRUSTED_ATTESTATION_CA_SUBJECTS")
+    ),
+)
+app.config.setdefault(
+    "TRUSTED_ATTESTATION_CA_FINGERPRINTS",
+    _parse_trusted_ca_fingerprints(
+        os.environ.get("FIDO_SERVER_TRUSTED_ATTESTATION_CA_FINGERPRINTS")
+    ),
+)
 
 
 def determine_rp_id(explicit_id: Optional[str] = None) -> str:
