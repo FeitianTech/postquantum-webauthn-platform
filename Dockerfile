@@ -35,7 +35,6 @@ COPY pyproject.toml README.adoc ./
 COPY COPYING COPYING.APLv2 COPYING.MPLv2 ./
 COPY fido2 ./fido2
 COPY server ./server
-COPY updater ./updater
 
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip install --upgrade pip setuptools wheel && \
@@ -58,7 +57,6 @@ RUN set -eux; \
 COPY prebuilt_liboqs/linux-x86_64 /opt/liboqs
 COPY --from=python-builder /install /usr/local
 COPY server/server /app/server
-COPY updater /app/updater
 
 RUN set -eux; \
     echo "/opt/liboqs/lib" > /etc/ld.so.conf.d/liboqs.conf; \
@@ -70,4 +68,4 @@ WORKDIR /app
 
 ENV PYTHONPATH=/app:${PYTHONPATH}
 
-CMD ["/bin/sh", "-c", "export LD_PRELOAD=/opt/liboqs/lib/liboqs.so; python -m updater.run & exec gunicorn --bind 0.0.0.0:${PORT:-8000} server.app:app"]
+CMD ["/bin/sh", "-c", "export LD_PRELOAD=/opt/liboqs/lib/liboqs.so; exec gunicorn --bind 0.0.0.0:${PORT:-8000} server.app:app"]
