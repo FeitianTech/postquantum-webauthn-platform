@@ -1,8 +1,6 @@
 # syntax=docker/dockerfile:1.7
 
-FROM python:3.11-slim AS python-builder
-
-ARG LIBOQS_PYTHON_VERSION=main
+FROM python:3.12-slim AS python-builder
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -21,36 +19,32 @@ RUN set -eux; \
         pkg-config; \
     rm -rf /var/lib/apt/lists/*
 
-# Copy prebuilt liboqs
 COPY prebuilt_liboqs/linux-x86_64 /opt/liboqs
 
-# Configure ldconfig and verify
 RUN set -eux; \
     echo "/opt/liboqs/lib" > /etc/ld.so.conf.d/liboqs.conf; \
     ldconfig; \
-    echo "=== Checking library ==="; \
+    ln -sf /opt/liboqs/lib/liboqs.so /usr/local/lib/liboqs.so; \
+    ldconfig; \
     ls -lah /opt/liboqs/lib/; \
     ldd /opt/liboqs/lib/liboqs.so.0.14.1-dev; \
-    ldconfig -p | grep liboqs
+    ldconfig -p | grep liboqs || true
 
 WORKDIR /src
 COPY pyproject.toml README.adoc ./
 COPY COPYING COPYING.APLv2 COPYING.MPLv2 ./
 COPY fido2 ./fido2
 COPY server ./server
+COPY updater ./updater
 
-RUN pip install --upgrade pip setuptools wheel
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install --upgrade pip setuptools wheel && \
+    pip install --prefix=/install --no-cache-dir /opt/liboqs/liboqs_python*.whl pqcrypto gunicorn . ./server && \
+    apt-get purge -y build-essential cmake git ninja-build pkg-config libssl-dev && \
+    apt-get autoremove -y && \
+    rm -rf /opt/liboqs/include /opt/liboqs/lib/pkgconfig /var/lib/apt/lists/*
 
-# Install liboqs-python
-RUN pip install --prefix=/install --no-cache-dir \
-    "liboqs-python @ git+https://github.com/open-quantum-safe/liboqs-python@main"
-
-RUN pip install --prefix=/install --no-cache-dir pqcrypto
-RUN pip install --prefix=/install --no-cache-dir .
-RUN pip install --prefix=/install --no-cache-dir ./server
-RUN pip install --prefix=/install --no-cache-dir gunicorn
-
-FROM python:3.11-slim AS runtime
+FROM python:3.12-slim AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -59,18 +53,21 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 RUN set -eux; \
     apt-get update; \
     apt-get install -y --no-install-recommends libssl3; \
-    rm -rf /var/lib/apt/lists/*
+    rm -rf /var/lib/apt/lists/* /root/.cache
 
 COPY prebuilt_liboqs/linux-x86_64 /opt/liboqs
 COPY --from=python-builder /install /usr/local
 COPY server/server /app/server
+COPY updater /app/updater
 
 RUN set -eux; \
     echo "/opt/liboqs/lib" > /etc/ld.so.conf.d/liboqs.conf; \
-    ldconfig
+    ln -sf /opt/liboqs/lib/liboqs.so /usr/local/lib/liboqs.so; \
+    ldconfig; \
+    rm -rf /usr/local/lib/python3.12/ensurepip
 
 WORKDIR /app
 
 ENV PYTHONPATH=/app:${PYTHONPATH}
 
-CMD ["/bin/sh", "-c", "LD_PRELOAD=/opt/liboqs/lib/liboqs.so gunicorn --bind 0.0.0.0:${PORT:-8000} server.app:app"]
+CMD ["/bin/sh", "-c", "export LD_PRELOAD=/opt/liboqs/lib/liboqs.so; python -m updater.run & exec gunicorn --bind 0.0.0.0:${PORT:-8000} server.app:app"]
