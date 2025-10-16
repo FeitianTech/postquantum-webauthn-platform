@@ -320,9 +320,12 @@ def _resolve_root_validity(checks: Mapping[str, Optional[bool]]) -> Optional[boo
         return None
 
     outcomes = [checks.get("chain"), checks.get("fido_mds")]
-    if any(value is True for value in outcomes):
+    has_true = any(value is True for value in outcomes)
+    has_false = any(value is False for value in outcomes)
+
+    if has_true and not has_false:
         return True
-    if all(value is False for value in outcomes):
+    if has_false:
         return False
     return None
 
