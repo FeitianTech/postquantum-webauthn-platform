@@ -28,7 +28,7 @@
 from __future__ import annotations
 
 from .webauthn import AttestationObject, Aaguid
-from .attestation import (
+from .attestation.base import (
     Attestation,
     TrustPathEvaluation,
     UntrustedAttestation,
