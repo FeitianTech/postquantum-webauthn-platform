@@ -18,15 +18,40 @@ from typing import Dict, Iterable, Optional, Tuple
 
 from fido2.mds3 import parse_blob
 
-from server.server.config import (
-    FIDO_METADATA_TRUST_ROOT_CERT,
-    FIDO_METADATA_TRUST_ROOT_PEM,
-    MDS_METADATA_CACHE_PATH,
-    MDS_METADATA_PATH,
-    MDS_METADATA_URL,
-    MDS_TLS_ADDITIONAL_TRUST_ANCHORS_PEM,
-)
-from server.server.metadata import load_metadata_cache_entry
+from importlib import import_module
+from types import ModuleType
+
+def _import_server_module(module: str) -> ModuleType:
+    """Load a server submodule regardless of packaging layout."""
+
+    bases = ("server.server", "server")
+    last_error: ModuleNotFoundError | None = None
+
+    for base in bases:
+        try:
+            return import_module(f"{base}.{module}")
+        except ModuleNotFoundError as error:
+            missing = error.name or ""
+            if missing not in {base, f"{base}.{module}"}:
+                raise
+            last_error = error
+
+    raise ModuleNotFoundError(
+        "Unable to locate the demo server package. "
+        "Install it as either 'server' or 'server.server'."
+    ) from last_error
+
+_config = _import_server_module("config")
+_metadata = _import_server_module("metadata")
+
+FIDO_METADATA_TRUST_ROOT_CERT = _config.FIDO_METADATA_TRUST_ROOT_CERT
+FIDO_METADATA_TRUST_ROOT_PEM = _config.FIDO_METADATA_TRUST_ROOT_PEM
+MDS_METADATA_CACHE_PATH = _config.MDS_METADATA_CACHE_PATH
+MDS_METADATA_PATH = _config.MDS_METADATA_PATH
+MDS_METADATA_URL = _config.MDS_METADATA_URL
+MDS_TLS_ADDITIONAL_TRUST_ANCHORS_PEM = _config.MDS_TLS_ADDITIONAL_TRUST_ANCHORS_PEM
+
+load_metadata_cache_entry = _metadata.load_metadata_cache_entry
 
 try:  # pragma: no cover - optional dependency
     import certifi
