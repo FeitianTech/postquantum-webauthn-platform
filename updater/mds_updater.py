@@ -117,12 +117,16 @@ def _store_metadata_cache_entry(
     last_modified_header: Optional[str],
     last_modified_iso: Optional[str],
     etag: Optional[str],
+    updated: bool,
 ) -> None:
+    now = datetime.now(timezone.utc)
     payload = {
         "last_modified": last_modified_header,
         "last_modified_iso": last_modified_iso,
         "etag": etag,
-        "fetched_at": datetime.now(timezone.utc).isoformat(),
+        "fetched_at": now.isoformat(),
+        "next_scheduled_check": _compute_next_scheduled_check(now),
+        "last_result": "updated" if updated else "unchanged",
     }
 
     try:
@@ -260,6 +264,7 @@ def download_metadata_json() -> Tuple[bool, int, Optional[str]]:
                         last_modified_header=cached_last_modified,
                         last_modified_iso=iso,
                         etag=cached_etag,
+                        updated=False,
                     )
                     return False, 0, iso
                 if status != 200:
@@ -291,6 +296,7 @@ def download_metadata_json() -> Tuple[bool, int, Optional[str]]:
                     last_modified_header=cached_last_modified,
                     last_modified_iso=iso,
                     etag=etag_to_store,
+                    updated=False,
                 )
                 return False, 0, iso
 
@@ -348,6 +354,7 @@ def download_metadata_json() -> Tuple[bool, int, Optional[str]]:
             last_modified_header=last_modified_header,
             last_modified_iso=last_modified_iso,
             etag=etag or cached_etag,
+            updated=False,
         )
         return False, len(metadata_bytes), last_modified_iso
 
@@ -370,6 +377,7 @@ def download_metadata_json() -> Tuple[bool, int, Optional[str]]:
         last_modified_header=last_modified_header,
         last_modified_iso=last_modified_iso,
         etag=etag,
+        updated=True,
     )
 
     return True, len(metadata_bytes), last_modified_iso
@@ -391,6 +399,30 @@ class DailySchedule:
         if now < target:
             return target
         return target + timedelta(days=1)
+
+
+_DEFAULT_SCHEDULE: Optional[DailySchedule] = None
+
+
+def _default_schedule() -> DailySchedule:
+    global _DEFAULT_SCHEDULE
+    if _DEFAULT_SCHEDULE is None:
+        _DEFAULT_SCHEDULE = DailySchedule()
+    return _DEFAULT_SCHEDULE
+
+
+def _compute_next_scheduled_check(now: datetime) -> Optional[str]:
+    try:
+        schedule = _default_schedule()
+    except Exception:  # pragma: no cover - defensive
+        return None
+
+    try:
+        next_run = schedule.next_after(now)
+    except Exception:  # pragma: no cover - defensive
+        return None
+
+    return next_run.isoformat()
 
 
 class DailyMdsUpdater:
