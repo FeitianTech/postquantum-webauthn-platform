@@ -10,7 +10,7 @@ from typing import Any, Dict
 from flask import abort, jsonify, redirect, render_template, request, send_file
 
 from ..attestation import serialize_attestation_certificate
-from ..config import MDS_METADATA_PATH, app, basepath
+from ..config import app, basepath
 from ..decoder import decode_payload_text, encode_payload_text
 from ..metadata import (
     ensure_metadata_session_id,
@@ -34,18 +34,10 @@ def index():
 def index_html():
     ensure_metadata_session_id()
 
-    initial_mds_payload = None
-    try:
-        with open(MDS_METADATA_PATH, "r", encoding="utf-8") as metadata_file:
-            initial_mds_payload = metadata_file.read()
-    except OSError:
-        initial_mds_payload = None
-
     initial_mds_info = load_metadata_cache_entry()
 
     return render_template(
         "index.html",
-        initial_mds_payload=initial_mds_payload,
         initial_mds_info=initial_mds_info,
     )
 
