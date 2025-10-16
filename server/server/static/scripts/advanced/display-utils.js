@@ -28,17 +28,18 @@ export function formatBoolean(value) {
     return `<span style="color: #6c757d;">${safeValue}</span>`;
 }
 
-export function renderAttestationResultRow(label, value) {
+export function renderAttestationResultRow(label, value, extraHtml = '') {
     const safeLabel = String(label)
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#39;');
+    const extraContent = extraHtml || '';
     return `
         <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.35rem;">
             <span style="min-width: 180px;"><strong>${safeLabel}:</strong></span>
-            <span>${formatBoolean(value)}</span>
+            <span>${formatBoolean(value)}${extraContent}</span>
         </div>
     `.trim();
 }

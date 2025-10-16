@@ -2613,6 +2613,44 @@ export async function showCredentialDetails(index) {
             attestationContext,
         ),
     );
+    let rootChecksRaw = null;
+    if (
+        attestationContext.attestationChecksData
+        && typeof attestationContext.attestationChecksData === 'object'
+    ) {
+        const checksSource = attestationContext.attestationChecksData;
+        if (checksSource.root_checks && typeof checksSource.root_checks === 'object') {
+            rootChecksRaw = checksSource.root_checks;
+        } else if (checksSource.rootChecks && typeof checksSource.rootChecks === 'object') {
+            rootChecksRaw = checksSource.rootChecks;
+        }
+    }
+    let rootChecksHtml = '';
+    if (rootChecksRaw && typeof rootChecksRaw === 'object') {
+        const rootCheckDescriptors = [
+            { key: 'fido_mds', altKey: 'fidoMds', label: 'FIDO MDS' },
+            { key: 'chain', altKey: 'chain', label: 'Chain' },
+        ];
+        const rootCheckParts = [];
+        for (const descriptor of rootCheckDescriptors) {
+            const rawValue = rootChecksRaw[descriptor.key] ?? rootChecksRaw[descriptor.altKey];
+            if (rawValue === undefined) {
+                continue;
+            }
+            const status = normaliseAttestationResultValue(rawValue);
+            const color = status === true
+                ? '#198754'
+                : status === false
+                    ? '#dc3545'
+                    : '#6c757d';
+            rootCheckParts.push(
+                `<span style="color: ${color}; font-weight: 600;">${descriptor.label}</span>`,
+            );
+        }
+        if (rootCheckParts.length) {
+            rootChecksHtml = ` <span style="margin-left: 0.5rem; color: #6c757d;">(${rootCheckParts.join(', ')})</span>`;
+        }
+    }
     const attestationRpIdHashValue = normaliseAttestationResultValue(
         resolveCredentialAttestationValue(
             cred,
@@ -2631,7 +2669,7 @@ export async function showCredentialDetails(index) {
     );
     const attestationRowsHtml = [
         renderAttestationResultRow('Signature Valid', attestationSignatureValue),
-        renderAttestationResultRow('Root Valid', attestationRootValue),
+        renderAttestationResultRow('Root Valid', attestationRootValue, rootChecksHtml),
         renderAttestationResultRow('RPID Hash Valid', attestationRpIdHashValue),
         renderAttestationResultRow('AAGUID Match', attestationAaguidMatchValue),
     ].join('');

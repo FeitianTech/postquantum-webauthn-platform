@@ -10,7 +10,7 @@ import string
 import textwrap
 import uuid
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Mapping, MutableMapping, Optional, Sequence, Tuple
+from typing import Any, Dict, List, Mapping, MutableMapping, Optional, Sequence, Set, Tuple
 
 from fido2.attestation import (
     Attestation,
@@ -19,7 +19,9 @@ from fido2.attestation import (
     InvalidData,
     InvalidSignature,
     UnsupportedType,
+    verify_x509_chain,
 )
+from fido2.attestation.base import TrustPathEvaluation
 from fido2.attestation.base import _verify_mldsa_certificate_signature
 from fido2.cose import (
     CoseKey,
@@ -41,6 +43,7 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec, ed25519, ed448, rsa
 from cryptography.x509.oid import ExtensionOID, NameOID
 
+from .config import app
 from .metadata import get_mds_verifier
 from .pqc import PQC_ALGORITHM_ID_TO_NAME, is_pqc_algorithm
 
@@ -249,6 +252,52 @@ def _collect_metadata_root_certificates(metadata_entry: Any) -> List[bytes]:
     return roots
 
 
+def _trusted_ca_subjects() -> Optional[Set[str]]:
+    subjects = app.config.get("TRUSTED_ATTESTATION_CA_SUBJECTS")
+    if isinstance(subjects, set):
+        return subjects
+    if isinstance(subjects, (list, tuple)):
+        return {str(subject) for subject in subjects if subject}
+    return None
+
+
+def _trusted_ca_fingerprints() -> Optional[Set[str]]:
+    fingerprints = app.config.get("TRUSTED_ATTESTATION_CA_FINGERPRINTS")
+    if isinstance(fingerprints, set):
+        return {str(fp).upper() for fp in fingerprints if fp}
+    if isinstance(fingerprints, (list, tuple)):
+        return {str(fp).upper() for fp in fingerprints if fp}
+    return None
+
+
+def _certificate_fingerprint(cert_bytes: bytes) -> str:
+    return hashlib.sha256(cert_bytes).hexdigest().upper()
+
+
+def _is_trusted_ca_certificate(cert_bytes: bytes, *, allow_subject_parsing: bool = True) -> bool:
+    subjects = _trusted_ca_subjects()
+    fingerprints = _trusted_ca_fingerprints()
+
+    if not subjects and not fingerprints:
+        return True
+
+    if fingerprints:
+        fingerprint = _certificate_fingerprint(cert_bytes)
+        if fingerprint in fingerprints:
+            return True
+
+    if allow_subject_parsing and subjects:
+        try:
+            cert = x509.load_der_x509_certificate(cert_bytes)
+        except Exception:
+            return False
+        subject_value = cert.subject.rfc4514_string()
+        if subject_value in subjects:
+            return True
+
+    return False
+
+
 def _find_metadata_entry_for_aaguid(verifier: Any, aaguid_bytes: bytes) -> Optional[Any]:
     """Lookup metadata by AAGUID without invoking attestation verification."""
 
@@ -264,35 +313,106 @@ def _find_metadata_entry_for_aaguid(verifier: Any, aaguid_bytes: bytes) -> Optio
         return None
 
 
+def _resolve_root_validity(checks: Mapping[str, Optional[bool]]) -> Optional[bool]:
+    if checks.get("trusted_ca") is False:
+        return False
+    if checks.get("trusted_ca") is not True:
+        return None
+
+    outcomes = [checks.get("chain"), checks.get("fido_mds")]
+    if any(value is True for value in outcomes):
+        return True
+    if all(value is False for value in outcomes):
+        return False
+    return None
+
+
 def _evaluate_mldsa_attestation_root(
     attestation_object: AttestationObject,
     aaguid_bytes: bytes,
     verifier: Optional[Any],
-) -> Tuple[Optional[bool], Optional[Any], Optional[str], List[str], List[str]]:
+) -> Dict[str, Any]:
     """Determine ML-DSA attestation root status using PQC-only verification."""
 
     warnings: List[str] = []
     errors: List[str] = []
+    metadata_entry: Optional[Any] = None
+    metadata_lookup_source: Optional[str] = None
+    checks: Dict[str, Optional[bool]] = {
+        "trusted_ca": None,
+        "chain": None,
+        "fido_mds": None,
+    }
 
     if verifier is None:
         errors.append("metadata_not_available")
-        return None, None, None, warnings, errors
+        return {
+            "root_valid": None,
+            "metadata_entry": None,
+            "metadata_lookup_source": None,
+            "warnings": warnings,
+            "errors": errors,
+            "checks": checks,
+        }
 
     metadata_entry = _find_metadata_entry_for_aaguid(verifier, aaguid_bytes)
     if metadata_entry is None:
-        return None, None, None, warnings, errors
+        checks["fido_mds"] = False
+        return {
+            "root_valid": None,
+            "metadata_entry": None,
+            "metadata_lookup_source": None,
+            "warnings": warnings,
+            "errors": errors,
+            "checks": checks,
+        }
 
     metadata_lookup_source = "aaguid"
+    checks["fido_mds"] = True
+
     roots = _collect_metadata_root_certificates(metadata_entry)
     if not roots:
         errors.append("pqc_metadata_root_missing")
-        return False, metadata_entry, metadata_lookup_source, warnings, errors
+        checks["trusted_ca"] = False
+        checks["chain"] = False
+        return {
+            "root_valid": False,
+            "metadata_entry": metadata_entry,
+            "metadata_lookup_source": metadata_lookup_source,
+            "warnings": warnings,
+            "errors": errors,
+            "checks": checks,
+        }
+
+    trusted_ca = any(
+        _is_trusted_ca_certificate(root, allow_subject_parsing=False) for root in roots
+    )
+    checks["trusted_ca"] = trusted_ca
+    if not trusted_ca:
+        errors.append("attestation_root_not_trusted")
+        return {
+            "root_valid": False,
+            "metadata_entry": metadata_entry,
+            "metadata_lookup_source": metadata_lookup_source,
+            "warnings": warnings,
+            "errors": errors,
+            "checks": checks,
+        }
 
     leaf_certificate = _extract_attestation_leaf_certificate(attestation_object)
     if leaf_certificate is None:
         errors.append("pqc_attestation_leaf_missing")
-        return False, metadata_entry, metadata_lookup_source, warnings, errors
+        checks["chain"] = False
+        return {
+            "root_valid": _resolve_root_validity(checks),
+            "metadata_entry": metadata_entry,
+            "metadata_lookup_source": metadata_lookup_source,
+            "warnings": warnings,
+            "errors": errors,
+            "checks": checks,
+        }
 
+    chain_valid = False
     last_error: Optional[str] = None
     for root in roots:
         try:
@@ -302,13 +422,128 @@ def _evaluate_mldsa_attestation_root(
         except Exception as exc:  # pragma: no cover - defensive
             last_error = str(exc)
         else:
-            return True, metadata_entry, metadata_lookup_source, warnings, errors
+            chain_valid = True
+            break
 
-    if last_error:
-        errors.append(f"pqc_root_verification_failed: {last_error}")
+    checks["chain"] = chain_valid
+
+    if not chain_valid:
+        if last_error:
+            errors.append(f"pqc_root_verification_failed: {last_error}")
+        else:
+            errors.append("pqc_root_verification_failed")
+
+    return {
+        "root_valid": _resolve_root_validity(checks),
+        "metadata_entry": metadata_entry,
+        "metadata_lookup_source": metadata_lookup_source,
+        "warnings": warnings,
+        "errors": errors,
+        "checks": checks,
+    }
+
+
+def _evaluate_classical_attestation_root(
+    attestation_object: AttestationObject,
+    attestation_result: Any,
+    client_data_hash: bytes,
+    verifier: Optional[Any],
+    now: datetime,
+) -> Dict[str, Any]:
+    """Evaluate attestation trust using classical x509 verification."""
+
+    warnings: List[str] = []
+    errors: List[str] = []
+    metadata_entry: Optional[Any] = None
+    metadata_lookup_source: Optional[str] = None
+    checks: Dict[str, Optional[bool]] = {
+        "trusted_ca": None,
+        "chain": None,
+        "fido_mds": None,
+    }
+
+    trust_path = list(getattr(attestation_result, "trust_path", []) or [])
+
+    manual_chain_valid: Optional[bool] = None
+    if trust_path:
+        manual_chain_valid = True
+        try:
+            verify_x509_chain(list(trust_path))
+        except InvalidSignature:
+            manual_chain_valid = False
+        except Exception as exc:  # pragma: no cover - defensive
+            errors.append(f"certificate_chain_error: {exc}")
+            manual_chain_valid = False
     else:
-        errors.append("pqc_root_verification_failed")
-    return False, metadata_entry, metadata_lookup_source, warnings, errors
+        errors.append("trust_path_missing")
+
+    chain_valid_dates = True
+    for cert_der in trust_path:
+        try:
+            cert = x509.load_der_x509_certificate(cert_der)
+        except Exception as exc:
+            errors.append(f"certificate_parse_error: {exc}")
+            chain_valid_dates = False
+            continue
+
+        not_before = _certificate_datetime(cert, "not_valid_before")
+        not_after = _certificate_datetime(cert, "not_valid_after")
+        if now < not_before or now > not_after:
+            chain_valid_dates = False
+            errors.append(
+                f"certificate_out_of_validity: {cert.subject.rfc4514_string()}"
+            )
+
+    trust_details: Optional[TrustPathEvaluation] = None
+
+    if verifier is None:
+        errors.append("metadata_not_available")
+    else:
+        try:
+            evaluation = verifier.evaluate_attestation(
+                attestation_object, client_data_hash
+            )
+        except Exception as exc:  # pragma: no cover - defensive
+            errors.append(f"untrusted_attestation: {exc}")
+        else:
+            trust_details = evaluation.trust_path
+            metadata_entry = evaluation.metadata_entry
+            metadata_lookup_source = evaluation.metadata_lookup_source
+            if trust_details.errors:
+                errors.extend(trust_details.errors)
+
+    checks["fido_mds"] = metadata_entry is not None
+
+    trusted_ca: Optional[bool] = None
+    if trust_details is not None and trust_details.ca_certificate:
+        trusted_ca = _is_trusted_ca_certificate(trust_details.ca_certificate)
+    elif metadata_entry is not None:
+        roots = _collect_metadata_root_certificates(metadata_entry)
+        if roots:
+            trusted_ca = any(_is_trusted_ca_certificate(root) for root in roots)
+    checks["trusted_ca"] = trusted_ca
+    if trusted_ca is False:
+        errors.append("attestation_root_not_trusted")
+
+    chain_valid: Optional[bool] = None
+    if trust_details is not None:
+        chain_valid = trust_details.chain_valid
+    if chain_valid is None:
+        chain_valid = manual_chain_valid
+    if chain_valid is True and not chain_valid_dates:
+        chain_valid = False
+    if chain_valid is None and chain_valid_dates is False:
+        chain_valid = False
+    checks["chain"] = chain_valid
+
+    return {
+        "root_valid": _resolve_root_validity(checks),
+        "metadata_entry": metadata_entry,
+        "metadata_lookup_source": metadata_lookup_source,
+        "warnings": warnings,
+        "errors": errors,
+        "checks": checks,
+    }
 
 
 def _attempt_pqc_attestation_signature_validation(
@@ -1876,68 +2111,47 @@ def perform_attestation_checks(
     now = datetime.now(timezone.utc)
     root_valid: Optional[bool] = None
     verifier = None
+    root_check_details: Optional[Dict[str, Optional[bool]]] = None
     pqc_registration = isinstance(algorithm, int) and is_pqc_algorithm(algorithm)
     if pqc_registration:
         verifier = get_mds_verifier()
-        (
-            root_valid,
-            metadata_entry,
-            metadata_lookup_source,
-            pqc_warnings,
-            pqc_errors,
-        ) = _evaluate_mldsa_attestation_root(
+        pqc_outcome = _evaluate_mldsa_attestation_root(
             attestation_object,
             credential_aaguid_bytes,
             verifier,
         )
+        root_valid = pqc_outcome.get("root_valid")
+        metadata_entry = pqc_outcome.get("metadata_entry") or metadata_entry
+        metadata_lookup_source = pqc_outcome.get("metadata_lookup_source")
+        root_check_details = pqc_outcome.get("checks")
+        pqc_errors = pqc_outcome.get("errors") or []
+        pqc_warnings = pqc_outcome.get("warnings") or []
         if pqc_errors:
-            results["errors"].extend(pqc_errors)
+            results["errors"].extend(str(err) for err in pqc_errors)
         if pqc_warnings:
-            results["warnings"].extend(pqc_warnings)
+            results["warnings"].extend(str(warn) for warn in pqc_warnings)
     elif signature_valid and attestation_result is not None:
-        trust_path = attestation_result.trust_path or []
-        if trust_path:
-            certs_valid = True
-            for cert_der in trust_path:
-                try:
-                    cert = x509.load_der_x509_certificate(cert_der)
-                    not_before = _certificate_datetime(cert, "not_valid_before")
-                    not_after = _certificate_datetime(cert, "not_valid_after")
-                    if now < not_before or now > not_after:
-                        certs_valid = False
-                        results["errors"].append(
-                            f"certificate_out_of_validity: {cert.subject.rfc4514_string()}"
-                        )
-                except Exception as exc:
-                    certs_valid = False
-                    results["errors"].append(f"certificate_parse_error: {exc}")
-            if certs_valid:
-                verifier = get_mds_verifier()
-                if verifier is not None:
-                    try:
-                        metadata_entry = verifier.find_entry(
-                            attestation_object,
-                            client_data_hash,
-                        )
-                    except Exception as exc:
-                        results["errors"].append(f"untrusted_attestation: {exc}")
-                        root_valid = False
-                    else:
-                        if metadata_entry is not None:
-                            metadata_lookup_source = "attestation"
-                            root_valid = True
-                        else:
-                            results["errors"].append("metadata_entry_not_found")
-                            root_valid = None
-                else:
-                    results["errors"].append("metadata_not_available")
-                    root_valid = None
-            else:
-                results["errors"].append("certificate_chain_invalid")
-                root_valid = False
-        else:
-            results["errors"].append("trust_path_missing")
-            root_valid = None
+        verifier = get_mds_verifier()
+        classical_outcome = _evaluate_classical_attestation_root(
+            attestation_object,
+            attestation_result,
+            client_data_hash,
+            verifier,
+            now,
+        )
+        root_valid = classical_outcome.get("root_valid")
+        if classical_outcome.get("metadata_entry") is not None:
+            metadata_entry = classical_outcome.get("metadata_entry")
+            metadata_lookup_source = classical_outcome.get("metadata_lookup_source")
+        elif classical_outcome.get("metadata_lookup_source"):
+            metadata_lookup_source = classical_outcome.get("metadata_lookup_source")
+        root_check_details = classical_outcome.get("checks")
+        class_errors = classical_outcome.get("errors") or []
+        class_warnings = classical_outcome.get("warnings") or []
+        if class_errors:
+            results["errors"].extend(str(err) for err in class_errors)
+        if class_warnings:
+            results["warnings"].extend(str(warn) for warn in class_warnings)
     elif signature_valid is False and attestation_format_value != "none":
         results["errors"].append("attestation_signature_invalid")
         root_valid = False
@@ -2049,6 +2263,9 @@ def perform_attestation_checks(
 
     if results["aaguid_match"] is False and metadata_entry is None:
         results["aaguid_match"] = None
+
+    if root_check_details:
+        results["root_checks"] = root_check_details
 
     if root_valid is not None:
         results["root_valid"] = root_valid
