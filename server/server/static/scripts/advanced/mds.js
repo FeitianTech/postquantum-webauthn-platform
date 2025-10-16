@@ -45,7 +45,6 @@ let scrollTopButtonUpdateScheduled = false;
 let columnResizerMetricsScheduled = false;
 let rowHeightLockScheduled = false;
 let horizontalScrollMetricsScheduled = false;
-let initialMdsPayload = null;
 let initialMdsInfo = null;
 const MDS_METADATA_STORAGE_KEY = 'fido.mds.metadataPayload';
 const MDS_METADATA_INFO_KEY = 'fido.mds.metadataInfo';
@@ -786,17 +785,12 @@ async function deleteCustomMetadata(storedFilename, options = {}) {
 }
 
 if (typeof window !== 'undefined') {
-    if (typeof window.__INITIAL_MDS_PAYLOAD__ === 'string' && window.__INITIAL_MDS_PAYLOAD__) {
-        initialMdsPayload = window.__INITIAL_MDS_PAYLOAD__;
-    }
     if (window.__INITIAL_MDS_INFO__ && typeof window.__INITIAL_MDS_INFO__ === 'object') {
         initialMdsInfo = window.__INITIAL_MDS_INFO__;
     }
     try {
-        delete window.__INITIAL_MDS_PAYLOAD__;
         delete window.__INITIAL_MDS_INFO__;
     } catch (error) {
-        window.__INITIAL_MDS_PAYLOAD__ = undefined;
         window.__INITIAL_MDS_INFO__ = undefined;
     }
 }
@@ -1984,31 +1978,6 @@ async function applyMetadataEntries(metadata, { note = '' } = {}) {
     }
 }
 
-async function applyInitialMetadataPayload(note) {
-    if (initialMdsPayload === null || typeof initialMdsPayload !== 'string') {
-        initialMdsPayload = null;
-        initialMdsInfo = initialMdsInfo && typeof initialMdsInfo === 'object' ? initialMdsInfo : null;
-        return false;
-    }
-
-    const snapshotPayload = initialMdsPayload;
-    const snapshotInfo = initialMdsInfo && typeof initialMdsInfo === 'object' ? initialMdsInfo : null;
-    initialMdsPayload = null;
-    initialMdsInfo = null;
-
-    try {
-        const metadata = JSON.parse(snapshotPayload);
-        const enhancedMetadata = await ensureCustomMetadata(metadata);
-        setMetadataInfo(snapshotInfo);
-        await applyMetadataEntries(enhancedMetadata, { note });
-        storeMetadataCache(JSON.stringify(enhancedMetadata), snapshotInfo);
-        return true;
-    } catch (error) {
-        console.error('Failed to apply initial metadata payload:', error);
-        return false;
-    }
-}
-
 async function loadMdsData(statusNote, options = {}) {
     if (!mdsState) {
         return;
@@ -2036,26 +2005,13 @@ async function loadMdsData(statusNote, options = {}) {
     }
 
     if (forceReload) {
-        initialMdsPayload = null;
+        initialMdsInfo = null;
+    } else if (!hasLoaded && initialMdsInfo && typeof initialMdsInfo === 'object') {
+        setMetadataInfo(initialMdsInfo);
         initialMdsInfo = null;
     }
 
     if (!forceReload) {
-        if (!hasLoaded) {
-            try {
-                if (trackProgress && typeof initialMdsPayload === 'string' && initialMdsPayload) {
-                    loaderSetPhase('Applying server metadata snapshot…', { progress: 52 });
-                }
-                const applied = await applyInitialMetadataPayload(note);
-                if (applied) {
-                    setColumnResizersEnabled(hasLoaded);
-                    return;
-                }
-            } catch (error) {
-                console.warn('Failed to apply server-provided metadata payload:', error);
-            }
-        }
-
         const cached = readMetadataCache();
         if (cached?.metadata) {
             try {
@@ -2169,7 +2125,6 @@ async function loadMdsData(statusNote, options = {}) {
             const infoSource = {
                 lastModified,
                 etag,
-                cachedAt: new Date().toISOString(),
             };
             if (metadataInfo?.lastModifiedIso) {
                 infoSource.last_modified_iso = metadataInfo.lastModifiedIso;
@@ -2183,7 +2138,8 @@ async function loadMdsData(statusNote, options = {}) {
             if (metadataInfo?.lastResult) {
                 infoSource.last_result = metadataInfo.lastResult;
             }
-            storeMetadataCache(JSON.stringify(enhanced), infoSource);
+            const infoToPersist = setMetadataInfo(infoSource);
+            storeMetadataCache(JSON.stringify(enhanced), infoToPersist);
         } catch (error) {
             console.error('Failed to load FIDO MDS metadata:', error);
             setStatus(
@@ -5009,6 +4965,7 @@ async function refreshMetadata() {
         });
 
         let payload;
+        let infoUpdate = null;
         try {
             payload = await response.json();
         } catch (error) {
@@ -5023,7 +4980,7 @@ async function refreshMetadata() {
         }
 
         if (payload && typeof payload === 'object') {
-            const infoUpdate = normaliseMetadataInfo(payload);
+            infoUpdate = normaliseMetadataInfo(payload);
             if (infoUpdate) {
                 setMetadataInfo(infoUpdate);
             }
@@ -5039,6 +4996,9 @@ async function refreshMetadata() {
 
         if (shouldReload) {
             clearMetadataCache();
+            if (infoUpdate) {
+                setMetadataInfo(infoUpdate);
+            }
             await loadMdsData(note, { forceReload: true });
         } else {
             const overdue = Boolean(mdsState?.metadataOverdue);
