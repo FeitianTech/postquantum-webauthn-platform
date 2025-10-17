@@ -41,7 +41,7 @@ from cryptography import x509
 from cryptography.exceptions import UnsupportedAlgorithm
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec, ed25519, ed448, rsa
-from cryptography.x509.oid import ExtensionOID, NameOID
+from cryptography.x509.oid import ExtensionOID, NameOID, ObjectIdentifier
 
 from .config import app
 from .metadata import get_mds_verifier, metadata_entry_trust_anchor_status
@@ -62,6 +62,8 @@ __all__ = [
     "serialize_attestation_certificate",
     "summarize_authenticator_extensions",
 ]
+
+AAGUID_EXTENSION_OID = ObjectIdentifier("1.3.6.1.4.1.45724.1.1.4")
 
 
 def _ensure_utc_datetime(value: datetime) -> datetime:
@@ -178,6 +180,50 @@ def _collect_trust_path_entries(x5c: Any) -> List[bytes]:
         if data:
             trust_path.append(data)
     return trust_path
+
+
+def _extract_certificate_aaguid(cert_der: bytes) -> bytes:
+    """Return the AAGUID extension value from *cert_der* when present."""
+
+    if not cert_der:
+        return b""
+
+    try:
+        certificate = x509.load_der_x509_certificate(cert_der)
+    except Exception:
+        return b""
+
+    try:
+        extension = certificate.extensions.get_extension_for_oid(AAGUID_EXTENSION_OID)
+    except x509.ExtensionNotFound:
+        return b""
+
+    raw_value: Optional[bytes] = None
+    value = extension.value
+
+    if isinstance(value, x509.UnrecognizedExtension):
+        raw_value = bytes(value.value)
+    else:
+        candidate = getattr(value, "value", None)
+        if isinstance(candidate, (bytes, bytearray, memoryview)):
+            raw_value = bytes(candidate)
+        elif isinstance(value, (bytes, bytearray, memoryview)):
+            raw_value = bytes(value)
+        elif isinstance(candidate, str):
+            try:
+                raw_value = bytes.fromhex(candidate)
+            except ValueError:
+                raw_value = candidate.encode("utf-8")
+
+    if raw_value is None:
+        return b""
+
+    decoded = decode_asn1_octet_string(raw_value)
+    if len(decoded) == 16:
+        return decoded
+    if len(raw_value) == 16:
+        return raw_value
+    return b""
 
 
 def _coerce_certificate_bytes(value: Any) -> Optional[bytes]:
@@ -2270,6 +2316,20 @@ def perform_attestation_checks(
 
     results["signature_valid"] = signature_valid
 
+    attestation_trust_path: List[bytes] = []
+    if attestation_result is not None:
+        trust_path_candidate = getattr(attestation_result, "trust_path", None)
+        if trust_path_candidate:
+            attestation_trust_path = list(trust_path_candidate)
+    if not attestation_trust_path and isinstance(attestation_object.att_stmt, Mapping):
+        attestation_trust_path = _collect_trust_path_entries(
+            attestation_object.att_stmt.get("x5c")
+        )
+
+    certificate_aaguid_bytes = b""
+    if attestation_trust_path:
+        certificate_aaguid_bytes = _extract_certificate_aaguid(attestation_trust_path[0])
+
     metadata_entry = None
     metadata_lookup_source: Optional[str] = None
     now = datetime.now(timezone.utc)
@@ -2383,26 +2443,31 @@ def perform_attestation_checks(
             try:
                 metadata_aaguid = str(entry_aaguid)
                 metadata_aaguid_bytes = bytes(entry_aaguid)
-                results["aaguid_match"] = (
-                    metadata_aaguid_bytes == credential_aaguid_bytes
-                )
             except Exception:
                 pass
 
-    if metadata_entry is None and credential_aaguid_bytes:
-        if metadata_aaguid_bytes:
-            results["aaguid_match"] = metadata_aaguid_bytes == credential_aaguid_bytes
+    attestation_evidence_available = (
+        attestation_format_value != "none" and bool(attestation_trust_path)
+    )
+    credential_aaguid_value = credential_aaguid_bytes if credential_aaguid_bytes else None
+    certificate_aaguid_value = certificate_aaguid_bytes if certificate_aaguid_bytes else None
+    metadata_aaguid_value = metadata_aaguid_bytes if metadata_aaguid_bytes else None
+
+    if attestation_evidence_available:
+        if (
+            credential_aaguid_value
+            and certificate_aaguid_value
+            and metadata_aaguid_value
+        ):
+            results["aaguid_match"] = (
+                credential_aaguid_value
+                == certificate_aaguid_value
+                == metadata_aaguid_value
+            )
         else:
             results["aaguid_match"] = False
-
-    if results["aaguid_match"] is False and not credential_aaguid_bytes:
+    else:
         results["aaguid_match"] = None
-
-    if metadata_entry is None and not credential_aaguid_bytes:
-        results["aaguid_match"] = None
-
-    if results["aaguid_match"] is None and credential_aaguid_bytes and metadata_entry is not None:
-        results["aaguid_match"] = metadata_aaguid_bytes == credential_aaguid_bytes
 
     results["metadata"] = {
         "available": metadata_entry is not None,
@@ -2425,9 +2490,6 @@ def perform_attestation_checks(
     # registration has no separate "device" AAGUID source.
     if metadata_algorithm_supported is False:
         results["errors"].append("algorithm_not_in_metadata")
-
-    if results["aaguid_match"] is False and metadata_entry is None:
-        results["aaguid_match"] = None
 
     if root_check_details:
         results["root_checks"] = root_check_details
