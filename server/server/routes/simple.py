@@ -5,10 +5,12 @@ import base64
 import os
 import time
 import uuid
-from typing import Any, Dict, List, Mapping, MutableMapping
+from typing import Any, Dict, Iterable, List, Mapping, MutableMapping, Sequence, Tuple
 
 from flask import abort, jsonify, request, session
-from fido2.webauthn import PublicKeyCredentialUserEntity
+from fido2 import cbor
+from fido2.cose import CoseKey
+from fido2.webauthn import AttestedCredentialData, AuthenticatorData, PublicKeyCredentialUserEntity
 
 from ..attachments import normalize_attachment
 from ..attestation import (
@@ -19,13 +21,215 @@ from ..attestation import (
     make_json_safe,
 )
 from ..config import app, basepath, create_fido_server, determine_rp_id
-from ..storage import add_public_key_material, convert_bytes_for_json, delkey, extract_credential_data, readkey, savekey
+from ..storage import add_public_key_material, convert_bytes_for_json, delkey, extract_credential_data, readkey
+
+
+_SIMPLE_ALLOWED_ALGORITHMS: Tuple[int, ...] = tuple(
+    alg
+    for alg in (-50, -49, -48, -8, -7, -257, -35)
+    if alg in set(CoseKey.supported_algorithms())
+)
+
+
+def _add_base64_padding(value: str) -> str:
+    return value + "=" * (-len(value) % 4)
+
+
+def _decode_binary_value(value: Any) -> bytes:
+    if value is None:
+        raise ValueError("missing binary value")
+
+    if isinstance(value, (bytes, bytearray, memoryview)):
+        return bytes(value)
+
+    if isinstance(value, str):
+        candidate = value.strip()
+        if not candidate:
+            raise ValueError("empty string")
+
+        try:
+            return base64.urlsafe_b64decode(_add_base64_padding(candidate))
+        except Exception:
+            pass
+
+        try:
+            return base64.b64decode(_add_base64_padding(candidate))
+        except Exception:
+            pass
+
+        try:
+            return bytes.fromhex(candidate)
+        except Exception as exc:  # pragma: no cover - defensive
+            raise ValueError("invalid binary value") from exc
+
+    if isinstance(value, Iterable):
+        try:
+            return bytes(value)
+        except Exception as exc:  # pragma: no cover - defensive
+            raise ValueError("invalid iterable value") from exc
+
+    raise ValueError("unsupported binary value type")
+
+
+def _select_first(mapping: Mapping[str, Any], keys: Sequence[str]) -> Any:
+    for key in keys:
+        if key in mapping:
+            return mapping[key]
+    return None
+
+
+def _serialize_credential_for_session(entry: Mapping[str, Any]) -> Dict[str, Any]:
+    serialized: Dict[str, Any] = {}
+    for source_key, dest_key in (
+        ("email", "email"),
+        ("userName", "userName"),
+        ("displayName", "displayName"),
+        ("signCount", "signCount"),
+        ("algorithm", "algorithm"),
+        ("publicKeyAlgorithm", "publicKeyAlgorithm"),
+        ("type", "type"),
+    ):
+        if source_key in entry:
+            serialized[dest_key] = entry[source_key]
+
+    aaguid_value = _select_first(entry, ("aaguid", "aaguidBase64", "aaguidBase64Url"))
+    if aaguid_value is None and "aaguidHex" in entry:
+        aaguid_value = entry["aaguidHex"]
+
+    credential_id_value = _select_first(
+        entry,
+        (
+            "credentialIdBase64Url",
+            "credentialId",
+            "credentialID",
+            "id",
+            "rawId",
+        ),
+    )
+
+    public_key_value = _select_first(
+        entry,
+        (
+            "publicKey",
+            "publicKeyBase64",
+            "publicKeyBase64Url",
+            "publicKeyCbor",
+        ),
+    )
+
+    if aaguid_value is not None:
+        aaguid_bytes = _decode_binary_value(aaguid_value)
+        serialized["aaguid"] = base64.urlsafe_b64encode(aaguid_bytes).decode("ascii").rstrip("=")
+
+    if credential_id_value is not None:
+        credential_id_bytes = _decode_binary_value(credential_id_value)
+        serialized["credentialId"] = base64.urlsafe_b64encode(credential_id_bytes).decode("ascii").rstrip("=")
+
+    if public_key_value is not None:
+        public_key_bytes = _decode_binary_value(public_key_value)
+        serialized["publicKey"] = base64.urlsafe_b64encode(public_key_bytes).decode("ascii").rstrip("=")
+
+    return serialized
+
+
+def _parse_client_credentials(raw_credentials: Any) -> Tuple[List[AttestedCredentialData], List[Dict[str, Any]]]:
+    if not isinstance(raw_credentials, list):
+        return [], []
+
+    attested_credentials: List[AttestedCredentialData] = []
+    serialized_entries: List[Dict[str, Any]] = []
+
+    for entry in raw_credentials:
+        if not isinstance(entry, Mapping):
+            continue
+
+        try:
+            aaguid_raw = _select_first(
+                entry,
+                (
+                    "aaguid",
+                    "aaguidBase64",
+                    "aaguidBase64Url",
+                    "aaguidHex",
+                ),
+            )
+            credential_id_raw = _select_first(
+                entry,
+                (
+                    "credentialId",
+                    "credentialIdBase64Url",
+                    "credentialID",
+                    "id",
+                    "rawId",
+                ),
+            )
+            public_key_raw = _select_first(
+                entry,
+                (
+                    "publicKey",
+                    "publicKeyBase64",
+                    "publicKeyBase64Url",
+                    "publicKeyCbor",
+                ),
+            )
+
+            if aaguid_raw is None or credential_id_raw is None or public_key_raw is None:
+                continue
+
+            aaguid_bytes = _decode_binary_value(aaguid_raw)
+            credential_id_bytes = _decode_binary_value(credential_id_raw)
+            public_key_bytes = _decode_binary_value(public_key_raw)
+
+            cose_key = CoseKey.parse(cbor.decode(public_key_bytes))
+
+            attested = AttestedCredentialData.create(
+                aaguid_bytes,
+                credential_id_bytes,
+                cose_key,
+            )
+
+            attested_credentials.append(attested)
+
+            serialized_entry = _serialize_credential_for_session(entry)
+            serialized_entry.setdefault(
+                "credentialId", base64.urlsafe_b64encode(credential_id_bytes).decode("ascii").rstrip("=")
+            )
+            serialized_entry.setdefault(
+                "aaguid", base64.urlsafe_b64encode(aaguid_bytes).decode("ascii").rstrip("=")
+            )
+            serialized_entry.setdefault(
+                "publicKey", base64.urlsafe_b64encode(public_key_bytes).decode("ascii").rstrip("=")
+            )
+            if "signCount" not in serialized_entry and isinstance(entry.get("signCount"), int):
+                serialized_entry["signCount"] = entry["signCount"]
+            algorithm_value = entry.get("algorithm") or entry.get("publicKeyAlgorithm")
+            if isinstance(algorithm_value, int):
+                serialized_entry["algorithm"] = algorithm_value
+
+            serialized_entries.append(serialized_entry)
+        except Exception:
+            continue
+
+    return attested_credentials, serialized_entries
 
 
 @app.route("/api/register/begin", methods=["POST"])
 def register_begin():
     uname = request.args.get("email")
-    credentials = readkey(uname)
+    payload = request.get_json(silent=True) or {}
+
+    existing_credentials_raw: List[Any] = []
+    if isinstance(payload, Mapping):
+        raw_candidates = payload.get("credentials") or payload.get("existingCredentials")
+        if isinstance(raw_candidates, list):
+            existing_credentials_raw = raw_candidates
+
+    credentials, serialized = _parse_client_credentials(existing_credentials_raw)
+    if serialized:
+        session["simple_credentials"] = serialized
+    else:
+        session.pop("simple_credentials", None)
+
     rp_id = determine_rp_id()
     server = create_fido_server(rp_id=rp_id)
 
@@ -43,13 +247,34 @@ def register_begin():
     session["state"] = state
     session["register_rp_id"] = rp_id
 
-    return jsonify(make_json_safe(dict(options)))
+    options_dict = dict(options)
+    if _SIMPLE_ALLOWED_ALGORITHMS:
+        public_key_options = options_dict.get("publicKey")
+        if isinstance(public_key_options, MutableMapping):
+            params = public_key_options.get("pubKeyCredParams")
+            allowed_params: List[Dict[str, Any]] = []
+            existing_param_map: Dict[int, Dict[str, Any]] = {}
+            if isinstance(params, list):
+                for param in params:
+                    if isinstance(param, MutableMapping):
+                        alg_value = param.get("alg")
+                        if isinstance(alg_value, int) and alg_value in _SIMPLE_ALLOWED_ALGORITHMS:
+                            cloned = dict(param)
+                            cloned["type"] = "public-key"
+                            existing_param_map[alg_value] = cloned
+            for alg in _SIMPLE_ALLOWED_ALGORITHMS:
+                if alg in existing_param_map:
+                    allowed_params.append(existing_param_map[alg])
+                else:
+                    allowed_params.append({"type": "public-key", "alg": alg})
+            public_key_options["pubKeyCredParams"] = allowed_params
+
+    return jsonify(make_json_safe(options_dict))
 
 
 @app.route("/api/register/complete", methods=["POST"])
 def register_complete():
     uname = request.args.get("email")
-    credentials = readkey(uname)
     response = request.get_json(silent=True) or {}
     credential_response = response.get('response', {}) if isinstance(response, dict) else {}
 
@@ -172,9 +397,6 @@ def register_complete():
     except Exception:
         pass
 
-    credentials.append(credential_info)
-    savekey(uname, credentials)
-
     algo = auth_data.credential_data.public_key[3]
     ""
     if algo == -50:
@@ -202,21 +424,87 @@ def register_complete():
 
     session.pop("register_rp_id", None)
 
+    credential_id_bytes = auth_data.credential_data.credential_id
+    try:
+        aaguid_bytes = bytes(auth_data.credential_data.aaguid)
+    except Exception:
+        aaguid_bytes = b""
+
+    cose_public_key = dict(getattr(auth_data.credential_data, 'public_key', {}))
+    public_key_bytes = cbor.encode(cose_public_key)
+
+    stored_credential: Dict[str, Any] = {
+        "type": "simple",
+        "email": uname,
+        "userName": credential_info['user_info'].get('name', uname),
+        "displayName": credential_info['user_info'].get('display_name', uname),
+        "credentialId": base64.b64encode(credential_id_bytes).decode('ascii'),
+        "credentialIdBase64Url": base64.urlsafe_b64encode(credential_id_bytes).decode('ascii').rstrip('='),
+        "credentialIdHex": credential_id_bytes.hex(),
+        "aaguid": base64.urlsafe_b64encode(aaguid_bytes).decode('ascii').rstrip('=') if aaguid_bytes else None,
+        "aaguidHex": aaguid_bytes.hex() if aaguid_bytes else None,
+        "publicKey": base64.b64encode(public_key_bytes).decode('ascii'),
+        "publicKeyBase64Url": base64.urlsafe_b64encode(public_key_bytes).decode('ascii').rstrip('='),
+        "publicKeyAlgorithm": credential_info.get('publicKeyAlgorithm') or algo,
+        "signCount": getattr(auth_data, 'counter', 0),
+        "createdAt": credential_info['registration_time'],
+        "clientExtensionOutputs": convert_bytes_for_json(client_extension_results),
+        "attestationFormat": attestation_format,
+        "attestationStatement": convert_bytes_for_json(attestation_statement),
+        "properties": convert_bytes_for_json(credential_info.get('properties', {})),
+        "publicKeyCose": convert_bytes_for_json(cose_public_key),
+        "publicKeyBytes": base64.b64encode(public_key_bytes).decode('ascii'),
+        "authenticatorAttachment": authenticator_attachment_response,
+        "clientDataJSON": credential_info.get('client_data_json'),
+        "attestationObject": credential_info.get('attestation_object'),
+        "authenticatorData": credential_info.get('authenticator_data_raw'),
+    }
+
+    user_handle_value = credential_info['user_info'].get('user_handle')
+    if isinstance(user_handle_value, (bytes, bytearray, memoryview)):
+        stored_credential['userHandle'] = base64.urlsafe_b64encode(bytes(user_handle_value)).decode('ascii').rstrip('=')
+
+    session_simple_credentials = session.get('simple_credentials')
+    if isinstance(session_simple_credentials, list):
+        new_entry = {
+            "credentialId": stored_credential["credentialIdBase64Url"],
+            "aaguid": stored_credential.get("aaguid"),
+            "publicKey": stored_credential["publicKeyBase64Url"],
+            "algorithm": stored_credential.get("publicKeyAlgorithm"),
+            "signCount": stored_credential.get("signCount", 0),
+            "email": stored_credential.get("email"),
+            "type": "simple",
+        }
+        session_simple_credentials = [entry for entry in session_simple_credentials if isinstance(entry, Mapping)]
+        session_simple_credentials.append(new_entry)
+        session['simple_credentials'] = session_simple_credentials
+
     return jsonify({
         "status": "OK",
         "algo": algoname,
-        **debug_info
+        **debug_info,
+        "storedCredential": convert_bytes_for_json(stored_credential),
     })
 
 
 @app.route("/api/authenticate/begin", methods=["POST"])
 def authenticate_begin():
     uname = request.args.get("email")
-    credentials = readkey(uname)
-    if not credentials:
+    payload = request.get_json(silent=True) or {}
+
+    raw_credentials: List[Any] = []
+    if isinstance(payload, Mapping):
+        candidate_credentials = payload.get("credentials") or payload.get("storedCredentials")
+        if isinstance(candidate_credentials, list):
+            raw_credentials = candidate_credentials
+
+    credential_data_list, serialized = _parse_client_credentials(raw_credentials)
+
+    if not credential_data_list:
         abort(404)
 
-    credential_data_list = [extract_credential_data(cred) for cred in credentials]
+    session['simple_credentials'] = serialized
+    session['simple_credentials_email'] = uname
 
     rp_id = determine_rp_id()
     server = create_fido_server(rp_id=rp_id)
@@ -234,30 +522,55 @@ def authenticate_begin():
 @app.route("/api/authenticate/complete", methods=["POST"])
 def authenticate_complete():
     uname = request.args.get("email")
-    credentials = readkey(uname)
-    if not credentials:
-        abort(404)
-
-    credential_data_list = [extract_credential_data(cred) for cred in credentials]
-
     response = request.get_json(silent=True)
+    session_credentials = session.pop('simple_credentials', [])
+    credential_data_list, _ = _parse_client_credentials(session_credentials)
+    if not credential_data_list:
+        abort(400)
+
     rp_id = session.pop("authenticate_rp_id", None)
     server = create_fido_server(rp_id=rp_id)
 
-    server.authenticate_complete(
+    matched_credential = server.authenticate_complete(
         session.pop("state"),
         credential_data_list,
         response,
     )
 
+    credential_response = response.get('response', {}) if isinstance(response, Mapping) else {}
+    auth_data_b64 = credential_response.get('authenticatorData') if isinstance(credential_response, Mapping) else None
+    sign_count = None
+    if isinstance(auth_data_b64, str):
+        try:
+            auth_data_bytes = base64.b64decode(_add_base64_padding(auth_data_b64))
+            sign_count = AuthenticatorData(auth_data_bytes).counter
+        except Exception:
+            sign_count = None
+
+    authenticated_id = None
+    try:
+        credential_id_bytes = bytes(getattr(matched_credential, 'credential_id', b''))
+        if credential_id_bytes:
+            authenticated_id = base64.urlsafe_b64encode(credential_id_bytes).decode('ascii').rstrip('=')
+    except Exception:
+        authenticated_id = None
+
     debug_info = {
         "hintsUsed": [],
     }
 
-    return jsonify({
+    response_payload: Dict[str, Any] = {
         "status": "OK",
-        **debug_info
-    })
+        **debug_info,
+    }
+    if authenticated_id is not None:
+        response_payload["authenticatedCredentialId"] = authenticated_id
+    if sign_count is not None:
+        response_payload["signCount"] = sign_count
+
+    session.pop('simple_credentials_email', None)
+
+    return jsonify(response_payload)
 
 
 @app.route("/api/credentials", methods=["GET", "DELETE"])

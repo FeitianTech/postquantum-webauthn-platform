@@ -35,6 +35,11 @@ import { updateJsonEditor } from './json-editor.js';
 import { checkLargeBlobCapability, updateAuthenticationExtensionAvailability } from './forms.js';
 import { collectSelectedHints, deriveAllowedAttachmentsFromHints } from './hints.js';
 import { ATTACHMENT_LABELS } from './constants.js';
+import {
+    getAllSimpleCredentials,
+    removeSimpleCredential as removeSimpleCredentialFromLocal,
+    clearSimpleCredentials as clearLocalSimpleCredentials,
+} from '../shared/local-storage.js';
 
 function normaliseAlgorithmIdentifier(value) {
     if (value === null || value === undefined) {
@@ -1967,6 +1972,15 @@ export function updateAllowCredentialsDropdown() {
 }
 
 export async function loadSavedCredentials() {
+    const localCredentials = getAllSimpleCredentials().map(cred => ({
+        ...cred,
+        type: 'simple',
+        credentialIdHex: getCredentialIdHex(cred),
+        userHandleHex: getCredentialUserHandleHex(cred),
+    }));
+
+    let serverCredentials = [];
+
     try {
         const response = await fetch('/api/credentials', {
             method: 'GET',
@@ -1975,20 +1989,22 @@ export async function loadSavedCredentials() {
 
         if (response.ok) {
             const credentials = await response.json();
-            const normalizedCredentials = Array.isArray(credentials)
-                ? credentials.map(cred => ({
+            if (Array.isArray(credentials)) {
+                serverCredentials = credentials.map(cred => ({
                     ...cred,
+                    type: cred.type || 'server',
                     credentialIdHex: getCredentialIdHex(cred),
                     userHandleHex: getCredentialUserHandleHex(cred),
-                }))
-                : [];
-            state.storedCredentials = normalizedCredentials;
-            updateCredentialsDisplay();
-            updateJsonEditor();
+                }));
+            }
         }
     } catch (error) {
-        // Silently fail
+        // Ignore fetch failures and fall back to local credentials only.
     }
+
+    state.storedCredentials = [...localCredentials, ...serverCredentials];
+    updateCredentialsDisplay();
+    updateJsonEditor();
 }
 
 export function updateCredentialsDisplay() {
@@ -2063,7 +2079,7 @@ export function updateCredentialsDisplay() {
                 </div>
                 ${featureText ? `<div style="font-size: 0.75rem; color: #5c6c7a;">${featureText}</div>` : ''}
             </div>
-            <button class="btn btn-small btn-danger" onclick="event.stopPropagation();deleteCredential('${cred.email || cred.username}', ${index})">Delete</button>
+            <button class="btn btn-small btn-danger" onclick="event.stopPropagation();deleteCredential(${index})">Delete</button>
         </div>
         `;
     }).join('');
@@ -2980,8 +2996,34 @@ export async function showRegistrationResultModal(credentialJson, relyingPartyIn
     }
 }
 
-export async function deleteCredential(username, index) {
-    if (!confirm(`Are you sure you want to delete the credential for ${username}? This action cannot be undone.`)) {
+export async function deleteCredential(index) {
+    const credential = state.storedCredentials[index];
+    if (!credential) {
+        return;
+    }
+
+    const label = credential.email || credential.username || credential.userName || 'this credential';
+    if (!confirm(`Are you sure you want to delete the credential for ${label}? This action cannot be undone.`)) {
+        return;
+    }
+
+    const identifier = credential.credentialIdBase64Url || credential.credentialId || credential.id;
+
+    if (credential.type === 'simple') {
+        const removed = removeSimpleCredentialFromLocal(identifier, credential.email || credential.userName || credential.username);
+        if (removed) {
+            state.storedCredentials.splice(index, 1);
+            updateCredentialsDisplay();
+            showStatus('advanced', 'Credential removed from this browser.', 'success');
+        } else {
+            showStatus('advanced', 'Unable to remove credential from this browser.', 'error');
+        }
+        return;
+    }
+
+    const username = credential.email || credential.username || credential.userName;
+    if (!username) {
+        showStatus('advanced', 'Credential is missing an associated username and cannot be deleted from the server.', 'error');
         return;
     }
 
@@ -2989,16 +3031,13 @@ export async function deleteCredential(username, index) {
         const response = await fetch('/api/deletepub', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({"email": username})
+            body: JSON.stringify({ email: username })
         });
 
         if (response.ok) {
             state.storedCredentials.splice(index, 1);
             updateCredentialsDisplay();
-            showStatus('advanced',
-                'Credential deleted from server successfully! ',
-                'success'
-            );
+            showStatus('advanced', 'Credential deleted from server successfully!', 'success');
         } else {
             throw new Error('Failed to delete credential from server');
         }
@@ -3008,7 +3047,10 @@ export async function deleteCredential(username, index) {
 }
 
 export async function clearAllCredentials() {
-    if (!state.storedCredentials.length) {
+    const localCount = getAllSimpleCredentials().length;
+    const serverCount = state.storedCredentials.filter(cred => cred.type !== 'simple').length;
+
+    if (localCount === 0 && serverCount === 0) {
         showStatus('advanced', 'No saved credentials to clear.', 'info');
         return;
     }
@@ -3017,25 +3059,39 @@ export async function clearAllCredentials() {
         return;
     }
 
-    try {
-        const response = await fetch('/api/credentials', {
-            method: 'DELETE',
-            headers: {'Content-Type': 'application/json'}
-        });
+    let serverSuccess = true;
+    let serverErrorMessage = '';
 
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(errorText || 'Failed to clear credentials.');
+    if (serverCount > 0) {
+        try {
+            const response = await fetch('/api/credentials', {
+                method: 'DELETE',
+                headers: {'Content-Type': 'application/json'}
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                serverSuccess = false;
+                serverErrorMessage = errorText || 'Failed to clear credentials.';
+            }
+        } catch (error) {
+            serverSuccess = false;
+            serverErrorMessage = error && typeof error === 'object' && typeof error.message === 'string'
+                ? error.message
+                : 'Unknown error';
         }
+    }
 
-        state.storedCredentials = [];
-        updateCredentialsDisplay();
+    if (localCount > 0) {
+        clearLocalSimpleCredentials();
+    }
+
+    await loadSavedCredentials();
+
+    if (serverSuccess) {
         showStatus('advanced', 'All saved credentials removed successfully!', 'success');
-    } catch (error) {
-        const message = error && typeof error === 'object' && typeof error.message === 'string'
-            ? error.message
-            : 'Unknown error';
-        showStatus('advanced', `Failed to clear credentials: ${message}`, 'error');
+    } else {
+        showStatus('advanced', `Local credentials cleared, but server removal failed: ${serverErrorMessage}`, 'error');
     }
 }
 
