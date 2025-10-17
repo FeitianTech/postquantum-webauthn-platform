@@ -134,6 +134,26 @@
     color: var(--muted-text);
 }
 
+.mds-memory-usage {
+    margin-top: 0.35rem;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.35rem;
+    font-size: 0.9rem;
+    color: var(--muted-text);
+}
+
+.mds-memory-usage__value {
+    font-weight: 600;
+    color: var(--primary-dark);
+}
+
+.mds-memory-usage__timestamp {
+    font-size: 0.85rem;
+    color: var(--muted-text);
+}
+
 .mds-status {
     padding: 1.1rem 1.35rem;
     border-radius: 16px;

@@ -9,6 +9,7 @@ import {
     UPDATE_BUTTON_STATES,
     FILTER_CONFIG,
     FILTER_LOOKUP,
+    MDS_MEMORY_USAGE_PATH,
 } from './mds-constants.js';
 import { createFilterDropdown } from './mds-dropdown.js';
 import {
@@ -52,6 +53,10 @@ const MDS_METADATA_STORAGE_KEY = 'fido.mds.metadataPayload';
 const MDS_METADATA_INFO_KEY = 'fido.mds.metadataInfo';
 let metadataStorageWarningShown = false;
 let isSyncingHorizontalScroll = false;
+
+const MEMORY_USAGE_POLL_INTERVAL_MS = 5000;
+const MEMORY_USAGE_PENDING_TEXT = 'Updating…';
+const MEMORY_USAGE_UNAVAILABLE_TEXT = 'Unavailable';
 
 const SORT_NONE = 'none';
 const SORT_ASCENDING = 'asc';
@@ -163,6 +168,147 @@ function cloneCustomMetadataItems(items) {
         return [];
     }
     return items.map(item => cloneCustomMetadataItem(item)).filter(Boolean);
+}
+
+function formatBytesShort(bytes) {
+    if (!Number.isFinite(bytes) || bytes < 0) {
+        return null;
+    }
+
+    const units = ['B', 'KiB', 'MiB', 'GiB', 'TiB'];
+    let value = bytes;
+    let unitIndex = 0;
+
+    while (value >= 1024 && unitIndex < units.length - 1) {
+        value /= 1024;
+        unitIndex += 1;
+    }
+
+    if (unitIndex === 0) {
+        return `${Math.round(value)} ${units[unitIndex]}`;
+    }
+
+    const decimals = value >= 100 ? 0 : value >= 10 ? 1 : 2;
+    return `${value.toFixed(decimals)} ${units[unitIndex]}`;
+}
+
+function setMemoryUsageIndicator(bytes, isoTimestamp, state = mdsState, { pending = false } = {}) {
+    if (!state?.memoryUsageEl) {
+        return;
+    }
+
+    if (pending) {
+        state.memoryUsageEl.textContent = MEMORY_USAGE_PENDING_TEXT;
+    } else if (Number.isFinite(bytes) && bytes >= 0) {
+        const formatted = formatBytesShort(bytes);
+        if (formatted) {
+            state.memoryUsageEl.textContent = formatted;
+        } else {
+            state.memoryUsageEl.textContent = `${Math.max(0, bytes).toLocaleString()} B`;
+        }
+    } else {
+        state.memoryUsageEl.textContent = MEMORY_USAGE_UNAVAILABLE_TEXT;
+    }
+
+    if (!state.memoryUsageTimestampEl) {
+        return;
+    }
+
+    if (pending) {
+        state.memoryUsageTimestampEl.textContent = '';
+        return;
+    }
+
+    const timestamp = typeof isoTimestamp === 'string' ? new Date(isoTimestamp) : null;
+    if (timestamp && !Number.isNaN(timestamp.getTime())) {
+        const formattedTime = timestamp.toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+        });
+        state.memoryUsageTimestampEl.textContent = `· Updated ${formattedTime}`;
+    } else {
+        state.memoryUsageTimestampEl.textContent = '';
+    }
+}
+
+async function refreshMemoryUsage(state = mdsState) {
+    if (!state?.memoryUsageEl) {
+        return;
+    }
+
+    if (state.memoryUsageInFlight) {
+        try {
+            await state.memoryUsageInFlight;
+        } catch (error) {
+            // Ignore errors from an in-flight request; they are handled elsewhere.
+        }
+        if (state.memoryUsageInFlight) {
+            return;
+        }
+    }
+
+    const task = (async () => {
+        try {
+            const response = await fetch(MDS_MEMORY_USAGE_PATH, { cache: 'no-store' });
+            if (!response.ok) {
+                throw new Error(`Unexpected response status: ${response.status}`);
+            }
+
+            const payload = await response.json();
+            const rssBytesRaw = payload?.rss_bytes;
+            const timestamp = typeof payload?.timestamp === 'string' ? payload.timestamp : null;
+            const rssBytes = Number(rssBytesRaw);
+            if (Number.isFinite(rssBytes) && rssBytes >= 0) {
+                setMemoryUsageIndicator(rssBytes, timestamp, state);
+            } else {
+                setMemoryUsageIndicator(null, null, state);
+            }
+            state.memoryUsageErrorLogged = false;
+        } catch (error) {
+            if (!state.memoryUsageErrorLogged) {
+                console.warn('Failed to retrieve memory usage for the MDS section.', error);
+                state.memoryUsageErrorLogged = true;
+            }
+            setMemoryUsageIndicator(null, null, state);
+        }
+    })();
+
+    state.memoryUsageInFlight = task;
+    try {
+        await task;
+    } finally {
+        if (state.memoryUsageInFlight === task) {
+            state.memoryUsageInFlight = null;
+        }
+    }
+}
+
+function startMemoryUsageUpdates(state = mdsState) {
+    if (!state?.memoryUsageEl || typeof window === 'undefined') {
+        return;
+    }
+
+    stopMemoryUsageUpdates(state);
+    setMemoryUsageIndicator(null, null, state, { pending: true });
+
+    const runUpdate = () => {
+        void refreshMemoryUsage(state);
+    };
+
+    runUpdate();
+    state.memoryUsageTimer = window.setInterval(runUpdate, MEMORY_USAGE_POLL_INTERVAL_MS);
+}
+
+function stopMemoryUsageUpdates(state = mdsState) {
+    if (!state) {
+        return;
+    }
+
+    if (state.memoryUsageTimer) {
+        window.clearInterval(state.memoryUsageTimer);
+        state.memoryUsageTimer = null;
+    }
 }
 
 function setButtonBusy(button, busy) {
@@ -1401,6 +1547,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         mdsState = initializeState(tabElement);
         updateSortButtonState();
         setUpdateButtonMode('update');
+        startMemoryUsageUpdates();
     } catch (error) {
         console.error('Failed to initialise the FIDO MDS tab:', error);
         tabElement.innerHTML = `
@@ -1421,6 +1568,8 @@ document.addEventListener('tab:changed', event => {
 
 function initializeState(root) {
     const statusEl = root.querySelector('#mds-status');
+    const memoryUsageValueEl = root.querySelector('#mds-memory-usage-value');
+    const memoryUsageTimestampEl = root.querySelector('#mds-memory-usage-timestamp');
     let defaultStatus = null;
     if (statusEl) {
         let variant = 'info';
@@ -1666,9 +1815,11 @@ function initializeState(root) {
             clearRowHighlight();
             hideScrollTopButton();
             hideHorizontalScroll(state);
+            stopMemoryUsageUpdates(state);
         } else {
             scheduleScrollTopButtonUpdate();
             scheduleHorizontalScrollMetricsUpdate();
+            startMemoryUsageUpdates(state);
         }
     };
     if (typeof document !== 'undefined') {
@@ -1694,6 +1845,11 @@ function initializeState(root) {
         statusEl,
         defaultStatus,
         statusResetTimer: null,
+        memoryUsageEl: memoryUsageValueEl,
+        memoryUsageTimestampEl,
+        memoryUsageTimer: null,
+        memoryUsageInFlight: null,
+        memoryUsageErrorLogged: false,
         columnWidths: null,
         columnMinWidths: null,
         columnWidthAttempts: 0,

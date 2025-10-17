@@ -5,8 +5,12 @@ import base64
 import binascii
 import json
 import os
+import sys
+from datetime import datetime, timezone
+from importlib import import_module
+from importlib.util import find_spec
 from threading import Lock
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from flask import abort, jsonify, redirect, render_template, request, send_file
 
@@ -34,6 +38,35 @@ _METADATA_BOOTSTRAP_ENV_FLAG = "FIDO_SERVER_MDS_BOOTSTRAPPED"
 
 if os.environ.get(_METADATA_BOOTSTRAP_ENV_FLAG) == "1":
     _metadata_bootstrap_state["completed"] = True
+
+
+_RESOURCE_MODULE = import_module("resource") if find_spec("resource") else None
+
+
+def _current_process_rss_bytes() -> Optional[int]:
+    """Return the resident set size of the current process in bytes."""
+
+    # Prefer /proc/self/statm on Linux-like systems for current RSS readings.
+    try:
+        with open("/proc/self/statm", "r", encoding="utf-8") as statm_file:
+            contents = statm_file.readline().split()
+            if len(contents) >= 2:
+                rss_pages = int(contents[1])
+                page_size = os.sysconf("SC_PAGE_SIZE")
+                return rss_pages * page_size
+    except (OSError, ValueError):
+        pass
+
+    # Fallback to the resource module when /proc is unavailable.
+    if _RESOURCE_MODULE is not None:
+        usage = _RESOURCE_MODULE.getrusage(_RESOURCE_MODULE.RUSAGE_SELF)
+        rss_kb = getattr(usage, "ru_maxrss", 0)
+        if rss_kb:
+            if sys.platform == "darwin":
+                return int(rss_kb)
+            return int(rss_kb * 1024)
+
+    return None
 
 
 def _auto_refresh_metadata() -> None:
@@ -190,6 +223,16 @@ def api_update_mds_metadata():
     if last_modified:
         payload["last_modified"] = last_modified
 
+    return jsonify(payload)
+
+
+@app.route("/api/mds/runtime/memory", methods=["GET"])
+def api_mds_memory_usage():
+    """Return the current memory usage of the server process."""
+
+    rss_bytes = _current_process_rss_bytes()
+    timestamp = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    payload: Dict[str, Any] = {"timestamp": timestamp, "rss_bytes": rss_bytes}
     return jsonify(payload)
 
 
