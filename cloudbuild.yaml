@@ -1,0 +1,50 @@
+# Google Cloud Deployment Configuration File
+
+steps:
+  # Build Docker image with BuildKit
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'Build Docker Image'
+    env:
+      - 'DOCKER_BUILDKIT=1'          # Enable BuildKit
+      - 'BUILDKIT_PROGRESS=plain'    # Show detailed logs (optional)
+    args:
+      [
+        'build',
+        '-t', 'gcr.io/$PROJECT_ID/pqc-webauthn',
+        '.'
+      ]
+
+  # Push the image to Google Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'Push Image'
+    args:
+      [
+        'push',
+        'gcr.io/$PROJECT_ID/pqc-webauthn'
+      ]
+
+  # Deploy to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'Deploy to Cloud Run'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        gcloud run deploy pqc-webauthn \
+          --image gcr.io/$PROJECT_ID/pqc-webauthn \
+          --region us-central1 \
+          --platform managed \
+          --cpu=0.5 \
+          --memory=512Mi \
+          --port=8080 \
+          --allow-unauthenticated \
+          --min-instances=0 \
+          --max-instances=3 \
+          --execution-environment=gen2 \
+          --project $PROJECT_ID
+
+images:
+  - 'gcr.io/$PROJECT_ID/pqc-webauthn'
+
+# Optional timeout
+timeout: '1500s'

@@ -36,8 +36,7 @@ COPY COPYING COPYING.APLv2 COPYING.MPLv2 ./
 COPY fido2 ./fido2
 COPY server ./server
 
-RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install --upgrade pip setuptools wheel && \
+RUN pip install --upgrade pip setuptools wheel && \
     pip install --prefix=/install --no-cache-dir /opt/liboqs/liboqs_python*.whl pqcrypto gunicorn . ./server && \
     apt-get purge -y build-essential cmake git ninja-build pkg-config libssl-dev && \
     apt-get autoremove -y && \
