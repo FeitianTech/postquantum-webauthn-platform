@@ -53,7 +53,7 @@ from ..pqc import (
     is_pqc_algorithm,
     log_algorithm_selection,
 )
-from ..storage import add_public_key_material, convert_bytes_for_json
+from ..storage import add_public_key_material, convert_bytes_for_json, readkey
 
 
 _COSE_ALGORITHM_NAME_MAP: Dict[str, int] = {
