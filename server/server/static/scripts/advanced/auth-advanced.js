@@ -376,11 +376,24 @@ export async function advancedAuthenticate() {
         });
 
         if (!response.ok) {
-            if (response.status === 404) {
+            let errorText = await response.text();
+            let parsedError = null;
+            try {
+                parsedError = JSON.parse(errorText);
+            } catch (parseError) {
+                parsedError = null;
+            }
+
+            const messageFromJson = parsedError && typeof parsedError.error === 'string'
+                ? parsedError.error
+                : null;
+
+            if (response.status === 404 && !messageFromJson) {
                 throw new Error('No credentials detected. Please register a credential first.');
             }
-            const errorText = await response.text();
-            throw new Error(`Server error: ${errorText}`);
+
+            const fallback = messageFromJson || errorText || `Server error (${response.status})`;
+            throw new Error(fallback);
         }
 
         const json = await response.json();
@@ -432,7 +445,8 @@ export async function advancedAuthenticate() {
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({
                 ...parsed,
-                __assertion_response: assertionJson
+                __assertion_response: assertionJson,
+                __storedCredentials: storedCredentials,
             }),
         });
 
@@ -453,8 +467,18 @@ export async function advancedAuthenticate() {
 
             maybeRandomizeAdvancedAuthenticationFields();
         } else {
-            const errorText = await result.text();
-            throw new Error(`Authentication failed: ${errorText}`);
+            let errorText = await result.text();
+            let parsedError = null;
+            try {
+                parsedError = JSON.parse(errorText);
+            } catch (parseError) {
+                parsedError = null;
+            }
+            const messageFromJson = parsedError && typeof parsedError.error === 'string'
+                ? parsedError.error
+                : null;
+            const fallback = messageFromJson || errorText || `Authentication failed (${result.status})`;
+            throw new Error(fallback);
         }
     } catch (error) {
         let errorMessage = error.message;

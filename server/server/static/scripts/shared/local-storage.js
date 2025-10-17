@@ -557,17 +557,31 @@ function extractAlgorithm(record) {
 }
 
 function extractPublicKey(record) {
-    const candidates = [
-        record.publicKeyBytes,
-        record.publicKeyBase64Url,
-        record.publicKeyBase64,
+    if (!record || typeof record !== 'object') {
+        return '';
+    }
+
+    const preferredCandidates = [
         record.publicKey,
+        record.publicKeyBase64,
+        record.publicKeyBase64Url,
+        record.publicKeyCbor,
     ];
-    for (const candidate of candidates) {
+    for (const candidate of preferredCandidates) {
         if (typeof candidate === 'string' && candidate.trim()) {
             return ensureBase64Url(candidate);
         }
     }
+
+    const secondaryCandidates = [
+        record.publicKeyBytes,
+    ];
+    for (const candidate of secondaryCandidates) {
+        if (typeof candidate === 'string' && candidate.trim()) {
+            return ensureBase64Url(candidate);
+        }
+    }
+
     if (record.publicKeyCose && typeof record.publicKeyCose === 'object') {
         try {
             const json = JSON.stringify(record.publicKeyCose);
