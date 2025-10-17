@@ -12,10 +12,45 @@ export function normaliseAaguidValue(value) {
     if (value === null || value === undefined) {
         return '';
     }
+
+    const normaliseGuidString = (guidString) => {
+        if (!guidString || typeof guidString !== 'string') {
+            return '';
+        }
+        return guidString.replace(/[^0-9a-fA-F]/g, '').toLowerCase();
+    };
+
     if (typeof value === 'string') {
-        const cleaned = value.replace(/[^0-9a-fA-F]/g, '');
+        const trimmed = value.trim();
+        if (!trimmed) {
+            return '';
+        }
+
+        const hexPattern = /^[0-9a-fA-F]+$/;
+        if (hexPattern.test(trimmed) && trimmed.length % 2 === 0) {
+            return trimmed.toLowerCase();
+        }
+
+        const base64Pattern = /^[A-Za-z0-9+/=]+$/;
+        if (base64Pattern.test(trimmed)) {
+            const decodedHex = base64ToHex(trimmed);
+            if (decodedHex) {
+                return decodedHex.toLowerCase();
+            }
+        }
+
+        const base64UrlPattern = /^[A-Za-z0-9_-]+$/;
+        if (base64UrlPattern.test(trimmed)) {
+            const decodedHex = base64UrlToHex(trimmed);
+            if (decodedHex) {
+                return decodedHex.toLowerCase();
+            }
+        }
+
+        const cleaned = trimmed.replace(/[^0-9a-fA-F]/g, '');
         return cleaned ? cleaned.toLowerCase() : '';
     }
+
     if (Array.isArray(value)) {
         try {
             const bytes = Uint8Array.from(value);
@@ -24,13 +59,16 @@ export function normaliseAaguidValue(value) {
             return '';
         }
     }
+
     if (ArrayBuffer.isView(value)) {
         const view = new Uint8Array(value.buffer, value.byteOffset, value.byteLength);
         return Array.from(view).map(byte => byte.toString(16).padStart(2, '0')).join('');
     }
+
     if (value instanceof ArrayBuffer) {
         return Array.from(new Uint8Array(value)).map(byte => byte.toString(16).padStart(2, '0')).join('');
     }
+
     if (typeof value === 'object') {
         if (typeof value.hex === 'function') {
             try {
@@ -40,9 +78,55 @@ export function normaliseAaguidValue(value) {
             }
         }
         if (typeof value.hex === 'string') {
-            return normaliseAaguidValue(value.hex);
+            const normalized = normaliseAaguidValue(value.hex);
+            if (normalized) {
+                return normalized;
+            }
+        }
+
+        if (typeof value.raw === 'string' || Array.isArray(value.raw)) {
+            const normalizedRaw = normaliseAaguidValue(value.raw);
+            if (normalizedRaw) {
+                return normalizedRaw;
+            }
+        }
+
+        if (typeof value.guid === 'string') {
+            const normalizedGuid = normaliseGuidString(value.guid);
+            if (normalizedGuid) {
+                return normalizedGuid;
+            }
+        }
+
+        const base64Candidates = [
+            value.base64,
+            value.base64url,
+            value.base64Url,
+            value.b64,
+            value.b64u,
+        ];
+        for (const candidate of base64Candidates) {
+            if (typeof candidate === 'string' && candidate.trim()) {
+                const fromBase64 = normaliseAaguidValue(candidate);
+                if (fromBase64) {
+                    return fromBase64;
+                }
+            }
+        }
+
+        const nestedCandidates = [
+            value.aaguid,
+            value.metadata && value.metadata.aaguid,
+            value.metadata && value.metadata.hex,
+        ];
+        for (const candidate of nestedCandidates) {
+            const normalized = normaliseAaguidValue(candidate);
+            if (normalized) {
+                return normalized;
+            }
         }
     }
+
     return '';
 }
 

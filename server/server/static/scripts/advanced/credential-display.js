@@ -1945,7 +1945,7 @@ export function updateAllowCredentialsDropdown() {
                 return;
             }
 
-            const credName = cred.userName || cred.email || `Credential ${index + 1}`;
+            const credName = cred.userName || cred.username || cred.email || `Credential ${index + 1}`;
             const algorithmLabel = describeCredentialAlgorithm(cred);
             const attachmentLabel = attachmentValue
                 ? (ATTACHMENT_LABELS[attachmentValue] || attachmentValue)
@@ -1982,12 +1982,25 @@ export async function loadSavedCredentials() {
         userHandleHex: getCredentialUserHandleHex(cred),
     }));
 
-    const advancedCredentials = getAllAdvancedCredentials().map(cred => ({
-        ...cred,
-        type: cred.type || 'advanced',
-        credentialIdHex: getCredentialIdHex(cred),
-        userHandleHex: getCredentialUserHandleHex(cred),
-    }));
+    const advancedCredentials = getAllAdvancedCredentials().map(cred => {
+        const relyingPartyInfo = cred && typeof cred === 'object' ? cred.relyingParty : null;
+        const relyingPartyAaguid = relyingPartyInfo && typeof relyingPartyInfo === 'object'
+            ? relyingPartyInfo.aaguid
+            : null;
+        const normalizedAaguidHex = normaliseAaguidValue(
+            cred.aaguidHex || cred.aaguid || relyingPartyAaguid
+        );
+
+        return {
+            ...cred,
+            type: cred.type || 'advanced',
+            storageId: cred.storageId || cred.localStorageId || null,
+            localStorageId: cred.storageId || cred.localStorageId || null,
+            aaguidHex: normalizedAaguidHex || cred.aaguidHex || null,
+            credentialIdHex: getCredentialIdHex(cred),
+            userHandleHex: getCredentialUserHandleHex(cred),
+        };
+    });
 
     state.storedCredentials = [...advancedCredentials, ...simpleCredentials];
     updateCredentialsDisplay();
@@ -2059,7 +2072,7 @@ export function updateCredentialsDisplay() {
         return `
         <div class="credential-item" role="button" tabindex="0" onclick="showCredentialDetails(${index})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showCredentialDetails(${index});}">
             <div style="flex: 1; min-width: 0;">
-                <div style="font-weight: 600; color: #0f2740; font-size: 0.95rem; margin-bottom: 0.25rem;">${cred.email || cred.username || 'Unknown User'}</div>
+                <div style="font-weight: 600; color: #0f2740; font-size: 0.95rem; margin-bottom: 0.25rem;">${cred.userName || cred.username || cred.email || 'Unknown User'}</div>
                 <div style="font-size: 0.75rem; font-weight: 600; margin-bottom: 0.25rem;">
                     <span style="color: ${signatureColor};">Signature</span>
                     <span style="margin-left: 0.75rem; color: ${rootColor};">Root</span>
@@ -2989,12 +3002,13 @@ export async function deleteCredential(index) {
         return;
     }
 
-    const label = credential.email || credential.username || credential.userName || 'this credential';
+    const label = credential.userName || credential.username || credential.email || 'this credential';
     if (!confirm(`Are you sure you want to delete the credential for ${label}? This action cannot be undone.`)) {
         return;
     }
 
     const identifier = credential.credentialIdBase64Url || credential.credentialId || credential.id;
+    const storageId = credential.storageId || credential.localStorageId || null;
 
     if (credential.type === 'simple') {
         const removed = removeSimpleCredentialFromLocal(identifier, credential.email || credential.userName || credential.username);
@@ -3008,7 +3022,7 @@ export async function deleteCredential(index) {
         return;
     }
 
-    const removedAdvanced = removeAdvancedCredentialFromLocal(identifier);
+    const removedAdvanced = removeAdvancedCredentialFromLocal(identifier, storageId);
     if (removedAdvanced) {
         state.storedCredentials.splice(index, 1);
         updateCredentialsDisplay();

@@ -1,6 +1,10 @@
 const SIMPLE_STORAGE_KEY = 'postquantum-webauthn.simpleCredentials';
 const ADVANCED_STORAGE_KEY = 'postquantum-webauthn.advancedCredentials';
 
+function isNonEmptyString(value) {
+    return typeof value === 'string' && value.trim() !== '';
+}
+
 function safeParse(json) {
     if (typeof json !== 'string') {
         return [];
@@ -216,11 +220,79 @@ function normaliseAdvancedCredentialId(record) {
     return '';
 }
 
+function generateRandomIdSegment() {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+        return crypto.randomUUID();
+    }
+    const random = Math.random().toString(36).slice(2, 11);
+    const randomB = Math.random().toString(36).slice(2, 11);
+    return `${random}${randomB}`;
+}
+
+function ensureAdvancedCredentialStorageId(record, { forceNew = false } = {}) {
+    if (!record || typeof record !== 'object') {
+        return '';
+    }
+
+    if (!forceNew) {
+        const existing = isNonEmptyString(record.storageId) ? record.storageId.trim() : '';
+        if (existing) {
+            record.storageId = existing;
+            return existing;
+        }
+    }
+
+    const baseId = normaliseAdvancedCredentialId(record);
+    const timestampSource = record.createdAt || record.registrationTime || record.registration_time;
+    const timestampValue = isNonEmptyString(timestampSource) ? timestampSource.trim() : '';
+    const randomSegment = generateRandomIdSegment();
+    const parts = [];
+    if (baseId) {
+        parts.push(baseId);
+    }
+    if (timestampValue) {
+        parts.push(timestampValue);
+    } else {
+        parts.push(Date.now().toString(36));
+    }
+    parts.push(randomSegment);
+    const storageId = parts.join('::');
+    record.storageId = storageId;
+    return storageId;
+}
+
+function cloneAdvancedStoredRecord(record) {
+    if (!record || typeof record !== 'object') {
+        return null;
+    }
+    const clone = { ...record };
+    clone.type = clone.type || 'advanced';
+    ensureAdvancedCredentialStorageId(clone);
+    return clone;
+}
+
 function readAdvancedCredentials() {
-    return readStoredCredentials(ADVANCED_STORAGE_KEY)
-        .map(cloneCredential)
-        .filter(Boolean)
-        .map(cred => ({ ...cred, type: cred.type || 'advanced' }));
+    const stored = readStoredCredentials(ADVANCED_STORAGE_KEY);
+    let needsPersist = false;
+
+    const clonedRecords = stored
+        .map(record => {
+            const clone = cloneAdvancedStoredRecord(record);
+            if (!clone) {
+                return null;
+            }
+            if (clone.storageId && clone.storageId !== record.storageId) {
+                needsPersist = true;
+            }
+            return clone;
+        })
+        .filter(Boolean);
+
+    if (needsPersist) {
+        persistAdvancedCredentials(clonedRecords);
+    }
+
+    return clonedRecords;
 }
 
 function persistAdvancedCredentials(records) {
@@ -260,6 +332,7 @@ function cloneAdvancedCredential(record) {
     if (!credential.credentialIdBase64Url) {
         credential.credentialIdBase64Url = ensureBase64Url(normaliseAdvancedCredentialId(credential));
     }
+    ensureAdvancedCredentialStorageId(credential);
     return credential;
 }
 
@@ -285,21 +358,39 @@ export function saveAdvancedCredential(rawCredential) {
     }
 
     credential.credentialIdBase64Url = ensureBase64Url(credentialId);
+    const storageId = ensureAdvancedCredentialStorageId(credential, { forceNew: !isNonEmptyString(credential.storageId) });
 
     const stored = readAdvancedCredentials();
-    const filtered = stored.filter(item => normaliseAdvancedCredentialId(item) !== credentialId);
+    const filtered = stored.filter(item => {
+        if (!item || typeof item !== 'object') {
+            return false;
+        }
+        if (storageId && isNonEmptyString(item.storageId)) {
+            return item.storageId !== storageId;
+        }
+        return normaliseAdvancedCredentialId(item) !== credentialId;
+    });
     filtered.push(credential);
     persistAdvancedCredentials(filtered);
     return credential;
 }
 
-export function removeAdvancedCredential(credentialId) {
+export function removeAdvancedCredential(credentialId, storageId = null) {
     const id = credentialId ? String(credentialId) : '';
-    if (!id) {
-        return false;
-    }
+    const storageKey = isNonEmptyString(storageId) ? storageId.trim() : '';
     const stored = readAdvancedCredentials();
-    const filtered = stored.filter(record => normaliseAdvancedCredentialId(record) !== id);
+    const filtered = stored.filter(record => {
+        if (!record || typeof record !== 'object') {
+            return false;
+        }
+        if (storageKey) {
+            return record.storageId !== storageKey;
+        }
+        if (!id) {
+            return true;
+        }
+        return normaliseAdvancedCredentialId(record) !== id;
+    });
     const changed = filtered.length !== stored.length;
     if (changed) {
         persistAdvancedCredentials(filtered);
@@ -311,16 +402,24 @@ export function clearAdvancedCredentials() {
     persistAdvancedCredentials([]);
 }
 
-export function updateAdvancedCredentialSignCount(credentialId, signCount) {
+export function updateAdvancedCredentialSignCount(credentialId, signCount, storageId = null) {
     const id = credentialId ? String(credentialId) : '';
-    if (!id) {
+    const storageKey = isNonEmptyString(storageId) ? storageId.trim() : '';
+    if (!id && !storageKey) {
         return false;
     }
 
     const stored = readAdvancedCredentials();
     let updated = false;
     const updatedRecords = stored.map(record => {
-        if (normaliseAdvancedCredentialId(record) !== id) {
+        if (!record || typeof record !== 'object') {
+            return record;
+        }
+        if (storageKey) {
+            if (record.storageId !== storageKey) {
+                return record;
+            }
+        } else if (normaliseAdvancedCredentialId(record) !== id) {
             return record;
         }
         const clone = { ...record };
@@ -385,11 +484,20 @@ export function prepareAdvancedCredentialsForServer(credentials = null) {
     if (!source.length) {
         return [];
     }
-    return source
+
+    const uniqueById = new Map();
+
+    source
         .filter(item => item && typeof item === 'object')
-        .map(item => {
+        .forEach(item => {
             const credentialId = ensureBase64Url(normaliseAdvancedCredentialId(item));
+            if (!credentialId) {
+                return;
+            }
             const publicKey = extractPublicKey(item);
+            if (!publicKey) {
+                return;
+            }
             const aaguidCandidate = item.aaguidBase64Url || item.aaguid || item.aaguidHex;
             const aaguid = aaguidCandidate ? ensureBase64Url(String(aaguidCandidate)) : null;
             const signCount = Number.isFinite(item.signCount) ? Number(item.signCount) : 0;
@@ -401,7 +509,7 @@ export function prepareAdvancedCredentialsForServer(credentials = null) {
             );
             const resident = typeof residentSource === 'boolean' ? residentSource : Boolean(item.residentKey);
 
-            return {
+            const prepared = {
                 credentialId,
                 publicKey,
                 aaguid,
@@ -410,8 +518,18 @@ export function prepareAdvancedCredentialsForServer(credentials = null) {
                 authenticatorAttachment: attachment || null,
                 resident,
             };
-        })
-        .filter(item => item.credentialId && item.publicKey);
+
+            if (!uniqueById.has(credentialId)) {
+                uniqueById.set(credentialId, prepared);
+            } else {
+                const existing = uniqueById.get(credentialId);
+                if (prepared.signCount > existing.signCount) {
+                    uniqueById.set(credentialId, prepared);
+                }
+            }
+        });
+
+    return Array.from(uniqueById.values());
 }
 
 export default {
