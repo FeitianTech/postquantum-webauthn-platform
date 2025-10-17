@@ -1,5 +1,25 @@
 const SIMPLE_STORAGE_KEY = 'postquantum-webauthn.simpleCredentials';
 const ADVANCED_STORAGE_KEY = 'postquantum-webauthn.advancedCredentials';
+const CERTIFICATE_COLLECTION_KEYS = [
+    'attestationCertificate',
+    'attestationCertificates',
+    'attestation_certificate',
+    'attestation_certificates',
+];
+const HEAVY_DUPLICATE_KEYS = [
+    'attestationObject',
+    'attestation_object',
+    'authenticatorData',
+    'authenticator_data',
+];
+const AGGRESSIVE_DROP_KEYS = [
+    'attestationObject',
+    'attestation_object',
+    'attestationStatement',
+    'attestation_statement',
+    'registrationResponse',
+    'registration_response',
+];
 
 function isNonEmptyString(value) {
     return typeof value === 'string' && value.trim() !== '';
@@ -271,6 +291,67 @@ function cloneAdvancedStoredRecord(record) {
     return clone;
 }
 
+function stripKeysRecursively(target, keys, skipRoot = false) {
+    if (!target || typeof target !== 'object' || !Array.isArray(keys) || !keys.length) {
+        return;
+    }
+
+    if (Array.isArray(target)) {
+        target.forEach(item => {
+            if (item && typeof item === 'object') {
+                stripKeysRecursively(item, keys, false);
+            }
+        });
+        return;
+    }
+
+    if (!skipRoot) {
+        keys.forEach(key => {
+            if (Object.prototype.hasOwnProperty.call(target, key)) {
+                delete target[key];
+            }
+        });
+    }
+
+    Object.keys(target).forEach(key => {
+        const value = target[key];
+        if (value && typeof value === 'object') {
+            stripKeysRecursively(value, keys, false);
+        }
+    });
+}
+
+function pruneAdvancedCredentialPayload(record, { aggressive = false } = {}) {
+    if (!record || typeof record !== 'object') {
+        return;
+    }
+
+    stripKeysRecursively(record, CERTIFICATE_COLLECTION_KEYS, true);
+    stripKeysRecursively(record, HEAVY_DUPLICATE_KEYS, true);
+
+    if (aggressive) {
+        CERTIFICATE_COLLECTION_KEYS.forEach(key => {
+            if (Object.prototype.hasOwnProperty.call(record, key)) {
+                delete record[key];
+            }
+        });
+        AGGRESSIVE_DROP_KEYS.forEach(key => {
+            if (Object.prototype.hasOwnProperty.call(record, key)) {
+                delete record[key];
+            }
+        });
+    }
+}
+
+function prepareAdvancedCredentialForStorage(record, options = {}) {
+    const clone = cloneAdvancedCredential(record);
+    if (!clone) {
+        return null;
+    }
+    pruneAdvancedCredentialPayload(clone, options);
+    return clone;
+}
+
 function readAdvancedCredentials() {
     const stored = readStoredCredentials(ADVANCED_STORAGE_KEY);
     let needsPersist = false;
@@ -365,9 +446,33 @@ export function saveAdvancedCredential(rawCredential) {
         storageId = ensureAdvancedCredentialStorageId(credential, { forceNew: true });
     }
 
-    const updated = stored.concat(credential);
-    persistAdvancedCredentials(updated);
-    return credential;
+    const sanitisedStored = stored
+        .map(item => prepareAdvancedCredentialForStorage(item))
+        .filter(Boolean);
+    const sanitisedCredential = prepareAdvancedCredentialForStorage(credential);
+    if (!sanitisedCredential) {
+        return null;
+    }
+
+    const updated = sanitisedStored.concat(sanitisedCredential);
+    if (persistAdvancedCredentials(updated)) {
+        return sanitisedCredential;
+    }
+
+    const aggressivelyTrimmedStored = stored
+        .map(item => prepareAdvancedCredentialForStorage(item, { aggressive: true }))
+        .filter(Boolean);
+    const aggressivelyTrimmedCredential = prepareAdvancedCredentialForStorage(credential, { aggressive: true });
+    if (!aggressivelyTrimmedCredential) {
+        return null;
+    }
+
+    const aggressiveSet = aggressivelyTrimmedStored.concat(aggressivelyTrimmedCredential);
+    if (persistAdvancedCredentials(aggressiveSet)) {
+        return aggressivelyTrimmedCredential;
+    }
+
+    return null;
 }
 
 export function removeAdvancedCredential(credentialId, storageId = null) {
