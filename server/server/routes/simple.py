@@ -768,6 +768,33 @@ def list_credentials():
         return jsonify({"status": "OK", "removed": removed})
 
     credentials: List[Dict[str, Any]] = []
+    seen_credential_ids: Set[str] = set()
+
+    def _append_credential(entry: Dict[str, Any]) -> None:
+        credential_id_value = entry.get('credentialId')
+        normalized_id: str | None = None
+
+        if isinstance(credential_id_value, str):
+            try:
+                credential_id_bytes = _decode_binary_value(credential_id_value)
+            except ValueError:
+                normalized_id = credential_id_value
+            else:
+                normalized_id = (
+                    base64.urlsafe_b64encode(credential_id_bytes).decode('ascii').rstrip('=')
+                )
+        elif isinstance(credential_id_value, (bytes, bytearray, memoryview)):
+            credential_id_bytes = bytes(credential_id_value)
+            normalized_id = base64.urlsafe_b64encode(credential_id_bytes).decode('ascii').rstrip('=')
+
+        if normalized_id is None:
+            normalized_id = str(credential_id_value)
+
+        if normalized_id in seen_credential_ids:
+            return
+
+        seen_credential_ids.add(normalized_id)
+        credentials.append(entry)
 
     def add_registration_metadata(target: Dict[str, Any], source: Mapping[str, Any]) -> None:
         registration_response = source.get('registration_response')
@@ -919,6 +946,8 @@ def list_credentials():
                                     credential_info['authenticatorDataRaw'] = raw_authenticator_value
                                 if authenticator_hex_value:
                                     credential_info['authenticatorDataHex'] = authenticator_hex_value
+
+                                _append_credential(credential_info)
                             else:
                                 cred_data = cred['credential_data']
                                 auth_data = cred['auth_data']
@@ -1028,7 +1057,7 @@ def list_credentials():
 
                             augment_aaguid_fields(credential_info)
 
-                        credentials.append(credential_info)
+                        _append_credential(credential_info)
                     except Exception:
                         continue
             except Exception:
