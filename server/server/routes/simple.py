@@ -5,7 +5,7 @@ import base64
 import os
 import time
 import uuid
-from typing import Any, Dict, Iterable, List, Mapping, MutableMapping, Sequence, Tuple
+from typing import Any, Dict, Iterable, List, Mapping, MutableMapping, Sequence, Set, Tuple
 
 from flask import abort, jsonify, request, session
 from fido2 import cbor
@@ -561,25 +561,40 @@ def register_complete():
         filtered_entries: List[Any] = []
         replaced = False
         credential_id_bytes = bytes(auth_data.credential_data.credential_id)
+        seen_ids: Set[bytes] = set()
         if isinstance(existing_entries, list):
             for entry in existing_entries:
                 try:
                     existing_data = extract_credential_data(entry)
                 except Exception:
+                    # Unable to parse this entry; keep it as-is
+                    filtered_entries.append(entry)
                     continue
+
                 if not isinstance(existing_data, AttestedCredentialData):
                     filtered_entries.append(entry)
                     continue
+
                 try:
                     existing_id = bytes(existing_data.credential_id)
                 except Exception:
                     filtered_entries.append(entry)
                     continue
+
+                if existing_id in seen_ids:
+                    # Skip duplicate stored credentials that share the same ID
+                    continue
+                seen_ids.add(existing_id)
+
                 if existing_id == credential_id_bytes:
-                    filtered_entries.append(credential_info)
-                    replaced = True
-                else:
-                    filtered_entries.append(entry)
+                    if not replaced:
+                        filtered_entries.append(credential_info)
+                        replaced = True
+                    # Skip appending additional duplicates of the same credential
+                    continue
+
+                filtered_entries.append(entry)
+
         if not replaced:
             filtered_entries.append(credential_info)
         savekey(uname, filtered_entries)
