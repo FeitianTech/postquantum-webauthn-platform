@@ -41,6 +41,110 @@ import {
     clearSimpleCredentials as clearLocalSimpleCredentials,
 } from '../shared/local-storage.js';
 
+function deriveCredentialDedupKey(credential) {
+    if (!credential || typeof credential !== 'object') {
+        return '';
+    }
+
+    const credentialIdHex = getCredentialIdHex(credential);
+    if (credentialIdHex) {
+        return `id:${credentialIdHex}`;
+    }
+
+    const rawIdentifier = credential.credentialId || credential.credentialID || credential.id || credential.rawId;
+    if (typeof rawIdentifier === 'string' && rawIdentifier.trim() !== '') {
+        return `raw:${rawIdentifier.trim()}`;
+    }
+
+    if (rawIdentifier instanceof ArrayBuffer || ArrayBuffer.isView(rawIdentifier)) {
+        try {
+            if (rawIdentifier instanceof ArrayBuffer) {
+                const uint8 = new Uint8Array(rawIdentifier.slice(0));
+                return `raw-bytes:${bytesToHex(uint8)}`;
+            }
+
+            const view = rawIdentifier;
+            const offset = typeof view.byteOffset === 'number' ? view.byteOffset : 0;
+            const length = typeof view.byteLength === 'number' ? view.byteLength : view.length;
+            if (typeof length === 'number' && length > 0) {
+                const uint8 = new Uint8Array(view.buffer.slice(offset, offset + length));
+                return `raw-bytes:${bytesToHex(uint8)}`;
+            }
+        } catch (error) {
+            // Ignore errors when attempting to normalise raw identifiers.
+        }
+    }
+
+    const userHandleHex = getCredentialUserHandleHex(credential);
+    if (userHandleHex) {
+        return `user:${userHandleHex}`;
+    }
+
+    const email = typeof credential.email === 'string' ? credential.email.trim() : '';
+    const username = typeof credential.username === 'string' ? credential.username.trim() : '';
+    if (email || username) {
+        return `user-ref:${email || username}`;
+    }
+
+    return '';
+}
+
+function shouldReplaceStoredCredential(existingCredential, candidateCredential) {
+    if (!existingCredential) {
+        return true;
+    }
+
+    if (!candidateCredential) {
+        return false;
+    }
+
+    const existingType = typeof existingCredential.type === 'string' ? existingCredential.type : '';
+    const candidateType = typeof candidateCredential.type === 'string' ? candidateCredential.type : '';
+
+    if (existingType === candidateType) {
+        return false;
+    }
+
+    if (existingType === 'simple' && candidateType !== 'simple') {
+        return true;
+    }
+
+    if (candidateType === 'simple' && existingType !== 'simple') {
+        return false;
+    }
+
+    return false;
+}
+
+function deduplicateStoredCredentials(credentials) {
+    const deduplicated = [];
+    const seenKeys = new Map();
+
+    credentials.forEach(credential => {
+        const key = deriveCredentialDedupKey(credential);
+
+        if (!key) {
+            deduplicated.push(credential);
+            return;
+        }
+
+        const existingIndex = seenKeys.get(key);
+
+        if (existingIndex === undefined) {
+            seenKeys.set(key, deduplicated.length);
+            deduplicated.push(credential);
+            return;
+        }
+
+        const existingCredential = deduplicated[existingIndex];
+        if (shouldReplaceStoredCredential(existingCredential, credential)) {
+            deduplicated[existingIndex] = credential;
+        }
+    });
+
+    return deduplicated;
+}
+
 function normaliseAlgorithmIdentifier(value) {
     if (value === null || value === undefined) {
         return null;
@@ -2002,7 +2106,10 @@ export async function loadSavedCredentials() {
         // Ignore fetch failures and fall back to local credentials only.
     }
 
-    state.storedCredentials = [...localCredentials, ...serverCredentials];
+    state.storedCredentials = deduplicateStoredCredentials([
+        ...localCredentials,
+        ...serverCredentials,
+    ]);
     updateCredentialsDisplay();
     updateJsonEditor();
 }
