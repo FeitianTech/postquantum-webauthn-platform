@@ -6,11 +6,12 @@ import binascii
 import json
 import os
 import sys
+import tracemalloc
 from datetime import datetime, timezone
 from importlib import import_module
 from importlib.util import find_spec
 from threading import Lock
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Tuple
 
 from flask import abort, jsonify, redirect, render_template, request, send_file
 
@@ -40,13 +41,57 @@ if os.environ.get(_METADATA_BOOTSTRAP_ENV_FLAG) == "1":
     _metadata_bootstrap_state["completed"] = True
 
 
+_memory_usage_state: Dict[str, Optional[int]] = {"rss_baseline": None}
+
+
 _RESOURCE_MODULE = import_module("resource") if find_spec("resource") else None
 
 
-def _current_process_rss_bytes() -> Optional[int]:
-    """Return the resident set size of the current process in bytes."""
+def _parse_proc_status_value(line: str) -> Optional[int]:
+    parts = line.split()
+    if len(parts) < 2:
+        return None
 
-    # Prefer /proc/self/statm on Linux-like systems for current RSS readings.
+    try:
+        value = int(parts[1])
+    except ValueError:
+        return None
+
+    unit = parts[2].lower() if len(parts) >= 3 else "kb"
+    if unit in {"kb", "kib"}:
+        multiplier = 1024
+    elif unit in {"mb", "mib"}:
+        multiplier = 1024 * 1024
+    elif unit in {"b", "bytes"}:
+        multiplier = 1
+    else:
+        multiplier = 1024
+
+    return value * multiplier
+
+
+def _read_proc_status_memory() -> Tuple[Optional[int], Optional[int]]:
+    rss_bytes: Optional[int] = None
+    peak_bytes: Optional[int] = None
+
+    try:
+        with open("/proc/self/status", "r", encoding="utf-8") as status_file:
+            for raw_line in status_file:
+                line = raw_line.strip()
+                if line.startswith("VmRSS:"):
+                    rss_bytes = _parse_proc_status_value(line)
+                elif line.startswith("VmHWM:"):
+                    peak_bytes = _parse_proc_status_value(line)
+
+                if rss_bytes is not None and peak_bytes is not None:
+                    break
+    except (OSError, ValueError):
+        return None, None
+
+    return rss_bytes, peak_bytes
+
+
+def _read_proc_statm_rss_bytes() -> Optional[int]:
     try:
         with open("/proc/self/statm", "r", encoding="utf-8") as statm_file:
             contents = statm_file.readline().split()
@@ -55,18 +100,42 @@ def _current_process_rss_bytes() -> Optional[int]:
                 page_size = os.sysconf("SC_PAGE_SIZE")
                 return rss_pages * page_size
     except (OSError, ValueError):
-        pass
+        return None
 
-    # Fallback to the resource module when /proc is unavailable.
-    if _RESOURCE_MODULE is not None:
+    return None
+
+
+def _current_process_memory_stats() -> Tuple[Optional[int], Optional[int]]:
+    """Return the resident set size and peak working set in bytes."""
+
+    rss_bytes, peak_bytes = _read_proc_status_memory()
+
+    if rss_bytes is None:
+        rss_bytes = _read_proc_statm_rss_bytes()
+
+    if peak_bytes is None and _RESOURCE_MODULE is not None:
         usage = _RESOURCE_MODULE.getrusage(_RESOURCE_MODULE.RUSAGE_SELF)
         rss_kb = getattr(usage, "ru_maxrss", 0)
         if rss_kb:
             if sys.platform == "darwin":
-                return int(rss_kb)
-            return int(rss_kb * 1024)
+                peak_bytes = int(rss_kb)
+            else:
+                peak_bytes = int(rss_kb * 1024)
+            if rss_bytes is None:
+                rss_bytes = peak_bytes
 
-    return None
+    return rss_bytes, peak_bytes
+
+
+def _get_tracemalloc_memory() -> Tuple[Optional[int], Optional[int]]:
+    if not tracemalloc.is_tracing():
+        try:
+            tracemalloc.start(1)
+        except RuntimeError:
+            return None, None
+
+    current, peak = tracemalloc.get_traced_memory()
+    return int(current), int(peak)
 
 
 def _auto_refresh_metadata() -> None:
@@ -230,9 +299,39 @@ def api_update_mds_metadata():
 def api_mds_memory_usage():
     """Return the current memory usage of the server process."""
 
-    rss_bytes = _current_process_rss_bytes()
+    rss_bytes, peak_bytes = _current_process_memory_stats()
+    baseline = _memory_usage_state.get("rss_baseline")
+    if baseline is None and rss_bytes is not None:
+        baseline = rss_bytes
+        _memory_usage_state["rss_baseline"] = baseline
+
+    delta_bytes: Optional[int] = None
+    if rss_bytes is not None and baseline is not None:
+        delta_bytes = rss_bytes - baseline
+
+    python_current: Optional[int]
+    python_peak: Optional[int]
+    try:
+        python_current, python_peak = _get_tracemalloc_memory()
+    except RuntimeError:
+        python_current, python_peak = None, None
+
     timestamp = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
-    payload: Dict[str, Any] = {"timestamp": timestamp, "rss_bytes": rss_bytes}
+    payload: Dict[str, Any] = {"timestamp": timestamp}
+
+    if rss_bytes is not None:
+        payload["rss_bytes"] = int(rss_bytes)
+    if peak_bytes is not None:
+        payload["rss_peak_bytes"] = int(peak_bytes)
+    if baseline is not None:
+        payload["rss_baseline_bytes"] = int(baseline)
+    if delta_bytes is not None:
+        payload["rss_delta_bytes"] = int(delta_bytes)
+    if python_current is not None:
+        payload["python_traced_bytes"] = int(python_current)
+    if python_peak is not None:
+        payload["python_traced_peak_bytes"] = int(python_peak)
+
     return jsonify(payload)
 
 

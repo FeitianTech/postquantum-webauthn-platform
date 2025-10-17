@@ -12,7 +12,19 @@
             <p class="mds-memory-usage" aria-live="polite">
                 Memory usage:
                 <span id="mds-memory-usage-value" class="mds-memory-usage__value">--</span>
+                <span id="mds-memory-usage-delta" class="mds-memory-usage__delta"></span>
+                <span id="mds-memory-usage-peak" class="mds-memory-usage__peak"></span>
+                <span id="mds-memory-usage-tracked" class="mds-memory-usage__tracked"></span>
                 <span id="mds-memory-usage-timestamp" class="mds-memory-usage__timestamp"></span>
+                <span
+                    id="mds-memory-usage-info"
+                    class="mds-memory-usage__info"
+                    role="img"
+                    aria-label="Memory readings reflect the server process working set (RSS). Small increases over time are expected because Python keeps memory ready for reuse."
+                    title="Memory readings reflect the server process working set (RSS). Small increases over time are expected because Python keeps memory ready for reuse."
+                >
+                    ⓘ
+                </span>
             </p>
         </div>
         <div class="mds-section-actions">

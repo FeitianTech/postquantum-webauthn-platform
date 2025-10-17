@@ -149,6 +149,34 @@
     color: var(--primary-dark);
 }
 
+.mds-memory-usage__delta,
+.mds-memory-usage__peak,
+.mds-memory-usage__tracked {
+    font-size: 0.85rem;
+    color: var(--muted-text);
+}
+
+.mds-memory-usage__delta {
+    font-weight: 500;
+}
+
+.mds-memory-usage__delta.is-increase {
+    color: #b05a00;
+}
+
+.mds-memory-usage__delta.is-decrease {
+    color: #0a7a55;
+}
+
+.mds-memory-usage__info {
+    font-size: 0.85rem;
+    color: var(--muted-text);
+    cursor: help;
+    user-select: none;
+    display: inline-flex;
+    align-items: center;
+}
+
 .mds-memory-usage__timestamp {
     font-size: 0.85rem;
     color: var(--muted-text);

@@ -192,30 +192,144 @@ function formatBytesShort(bytes) {
     return `${value.toFixed(decimals)} ${units[unitIndex]}`;
 }
 
-function setMemoryUsageIndicator(bytes, isoTimestamp, state = mdsState, { pending = false } = {}) {
-    if (!state?.memoryUsageEl) {
+function setMemoryUsageIndicator(metrics, isoTimestamp, state = mdsState, { pending = false } = {}) {
+    if (!state) {
         return;
     }
 
-    if (pending) {
-        state.memoryUsageEl.textContent = MEMORY_USAGE_PENDING_TEXT;
-    } else if (Number.isFinite(bytes) && bytes >= 0) {
-        const formatted = formatBytesShort(bytes);
-        if (formatted) {
-            state.memoryUsageEl.textContent = formatted;
-        } else {
-            state.memoryUsageEl.textContent = `${Math.max(0, bytes).toLocaleString()} B`;
+    const valueEl = state.memoryUsageValueEl || state.memoryUsageEl;
+    const deltaEl = state.memoryUsageDeltaEl || null;
+    const peakEl = state.memoryUsagePeakEl || null;
+    const trackedEl = state.memoryUsageTrackedEl || null;
+    const infoEl = state.memoryUsageInfoEl || null;
+    const timestampEl = state.memoryUsageTimestampEl || null;
+
+    const resetDetails = () => {
+        if (deltaEl) {
+            deltaEl.textContent = '';
+            deltaEl.classList.remove('is-increase', 'is-decrease');
         }
-    } else {
-        state.memoryUsageEl.textContent = MEMORY_USAGE_UNAVAILABLE_TEXT;
-    }
+        if (peakEl) {
+            peakEl.textContent = '';
+        }
+        if (trackedEl) {
+            trackedEl.textContent = '';
+        }
+        if (infoEl) {
+            const defaultLabel = infoEl.getAttribute('data-default-label');
+            if (defaultLabel) {
+                infoEl.setAttribute('title', defaultLabel);
+                infoEl.setAttribute('aria-label', defaultLabel);
+            }
+        }
+    };
 
-    if (!state.memoryUsageTimestampEl) {
+    if (!valueEl) {
         return;
     }
 
     if (pending) {
-        state.memoryUsageTimestampEl.textContent = '';
+        valueEl.textContent = MEMORY_USAGE_PENDING_TEXT;
+        resetDetails();
+    } else {
+        const rssBytesRaw = metrics && typeof metrics === 'object' ? metrics.rssBytes : null;
+        const rssBytes = Number.isFinite(rssBytesRaw) && rssBytesRaw >= 0 ? rssBytesRaw : null;
+
+        if (rssBytes !== null) {
+            const formatted = formatBytesShort(rssBytes);
+            valueEl.textContent = formatted || `${Math.max(0, rssBytes).toLocaleString()} B`;
+
+            if (deltaEl) {
+                deltaEl.textContent = '';
+                deltaEl.classList.remove('is-increase', 'is-decrease');
+                const deltaRaw = metrics && typeof metrics === 'object' ? metrics.rssDeltaBytes : null;
+                const deltaBytes = Number.isFinite(deltaRaw) ? deltaRaw : null;
+                if (deltaBytes !== null) {
+                    if (deltaBytes === 0) {
+                        deltaEl.textContent = '(baseline)';
+                    } else {
+                        const formattedDelta = formatBytesShort(Math.abs(deltaBytes));
+                        const deltaMagnitude = formattedDelta || `${Math.abs(deltaBytes).toLocaleString()} B`;
+                        const sign = deltaBytes > 0 ? '+' : '−';
+                        deltaEl.textContent = `(${sign}${deltaMagnitude} vs baseline)`;
+                        deltaEl.classList.add(deltaBytes > 0 ? 'is-increase' : 'is-decrease');
+                    }
+                }
+            }
+
+            if (peakEl) {
+                const peakRaw = metrics && typeof metrics === 'object' ? metrics.rssPeakBytes : null;
+                const peakBytes = Number.isFinite(peakRaw) && peakRaw >= 0 ? peakRaw : null;
+                if (peakBytes !== null) {
+                    const formattedPeak = formatBytesShort(peakBytes) || `${Math.max(0, peakBytes).toLocaleString()} B`;
+                    peakEl.textContent = `· Peak ${formattedPeak}`;
+                } else {
+                    peakEl.textContent = '';
+                }
+            }
+
+            if (trackedEl) {
+                const tracedRaw = metrics && typeof metrics === 'object' ? metrics.pythonTracedBytes : null;
+                const tracedBytes = Number.isFinite(tracedRaw) && tracedRaw >= 0 ? tracedRaw : null;
+                const tracedPeakRaw = metrics && typeof metrics === 'object' ? metrics.pythonTracedPeakBytes : null;
+                const tracedPeakBytes = Number.isFinite(tracedPeakRaw) && tracedPeakRaw >= 0 ? tracedPeakRaw : null;
+                if (tracedBytes !== null) {
+                    const formattedTracked = formatBytesShort(tracedBytes) || `${Math.max(0, tracedBytes).toLocaleString()} B`;
+                    let trackedText = `· Python heap ${formattedTracked}`;
+                    if (tracedPeakBytes !== null && tracedPeakBytes >= tracedBytes) {
+                        const formattedTrackedPeak =
+                            formatBytesShort(tracedPeakBytes) || `${Math.max(0, tracedPeakBytes).toLocaleString()} B`;
+                        trackedText += ` (peak ${formattedTrackedPeak})`;
+                    }
+                    trackedEl.textContent = trackedText;
+                } else {
+                    trackedEl.textContent = '';
+                }
+            }
+
+            if (infoEl) {
+                const pieces = [
+                    'Values reflect the server process working set (RSS).',
+                    'Python keeps memory available for reuse, so gradual increases can be normal even when idle.',
+                ];
+
+                const baselineRaw = metrics && typeof metrics === 'object' ? metrics.rssBaselineBytes : null;
+                const baselineBytes = Number.isFinite(baselineRaw) && baselineRaw >= 0 ? baselineRaw : null;
+                if (baselineBytes !== null) {
+                    const formattedBaseline = formatBytesShort(baselineBytes) || `${Math.max(0, baselineBytes).toLocaleString()} B`;
+                    pieces.push(`Baseline: ${formattedBaseline}.`);
+                }
+
+                const peakRaw = metrics && typeof metrics === 'object' ? metrics.rssPeakBytes : null;
+                const peakBytes = Number.isFinite(peakRaw) && peakRaw >= 0 ? peakRaw : null;
+                if (peakBytes !== null) {
+                    const formattedPeak = formatBytesShort(peakBytes) || `${Math.max(0, peakBytes).toLocaleString()} B`;
+                    pieces.push(`Peak RSS: ${formattedPeak}.`);
+                }
+
+                const tracedRaw = metrics && typeof metrics === 'object' ? metrics.pythonTracedBytes : null;
+                const tracedBytes = Number.isFinite(tracedRaw) && tracedRaw >= 0 ? tracedRaw : null;
+                if (tracedBytes !== null) {
+                    const formattedTracked = formatBytesShort(tracedBytes) || `${Math.max(0, tracedBytes).toLocaleString()} B`;
+                    pieces.push(`Python heap (tracked): ${formattedTracked}.`);
+                }
+
+                const message = pieces.join(' ');
+                infoEl.setAttribute('title', message);
+                infoEl.setAttribute('aria-label', message);
+            }
+        } else {
+            valueEl.textContent = MEMORY_USAGE_UNAVAILABLE_TEXT;
+            resetDetails();
+        }
+    }
+
+    if (!timestampEl) {
+        return;
+    }
+
+    if (pending) {
+        timestampEl.textContent = '';
         return;
     }
 
@@ -226,9 +340,9 @@ function setMemoryUsageIndicator(bytes, isoTimestamp, state = mdsState, { pendin
             minute: '2-digit',
             second: '2-digit',
         });
-        state.memoryUsageTimestampEl.textContent = `· Updated ${formattedTime}`;
+        timestampEl.textContent = `· Updated ${formattedTime}`;
     } else {
-        state.memoryUsageTimestampEl.textContent = '';
+        timestampEl.textContent = '';
     }
 }
 
@@ -256,14 +370,35 @@ async function refreshMemoryUsage(state = mdsState) {
             }
 
             const payload = await response.json();
-            const rssBytesRaw = payload?.rss_bytes;
             const timestamp = typeof payload?.timestamp === 'string' ? payload.timestamp : null;
-            const rssBytes = Number(rssBytesRaw);
-            if (Number.isFinite(rssBytes) && rssBytes >= 0) {
-                setMemoryUsageIndicator(rssBytes, timestamp, state);
-            } else {
-                setMemoryUsageIndicator(null, null, state);
-            }
+            const metrics = {
+                rssBytes:
+                    typeof payload?.rss_bytes === 'number' && Number.isFinite(payload.rss_bytes)
+                        ? payload.rss_bytes
+                        : null,
+                rssDeltaBytes:
+                    typeof payload?.rss_delta_bytes === 'number' && Number.isFinite(payload.rss_delta_bytes)
+                        ? payload.rss_delta_bytes
+                        : null,
+                rssPeakBytes:
+                    typeof payload?.rss_peak_bytes === 'number' && Number.isFinite(payload.rss_peak_bytes)
+                        ? payload.rss_peak_bytes
+                        : null,
+                rssBaselineBytes:
+                    typeof payload?.rss_baseline_bytes === 'number' && Number.isFinite(payload.rss_baseline_bytes)
+                        ? payload.rss_baseline_bytes
+                        : null,
+                pythonTracedBytes:
+                    typeof payload?.python_traced_bytes === 'number' && Number.isFinite(payload.python_traced_bytes)
+                        ? payload.python_traced_bytes
+                        : null,
+                pythonTracedPeakBytes:
+                    typeof payload?.python_traced_peak_bytes === 'number' &&
+                    Number.isFinite(payload.python_traced_peak_bytes)
+                        ? payload.python_traced_peak_bytes
+                        : null,
+            };
+            setMemoryUsageIndicator(metrics, timestamp, state);
             state.memoryUsageErrorLogged = false;
         } catch (error) {
             if (!state.memoryUsageErrorLogged) {
@@ -1569,7 +1704,18 @@ document.addEventListener('tab:changed', event => {
 function initializeState(root) {
     const statusEl = root.querySelector('#mds-status');
     const memoryUsageValueEl = root.querySelector('#mds-memory-usage-value');
+    const memoryUsageDeltaEl = root.querySelector('#mds-memory-usage-delta');
+    const memoryUsagePeakEl = root.querySelector('#mds-memory-usage-peak');
+    const memoryUsageTrackedEl = root.querySelector('#mds-memory-usage-tracked');
     const memoryUsageTimestampEl = root.querySelector('#mds-memory-usage-timestamp');
+    const memoryUsageInfoEl = root.querySelector('#mds-memory-usage-info');
+    if (memoryUsageInfoEl && !memoryUsageInfoEl.getAttribute('data-default-label')) {
+        const fallbackLabel =
+            memoryUsageInfoEl.getAttribute('aria-label') || memoryUsageInfoEl.getAttribute('title') || '';
+        if (fallbackLabel) {
+            memoryUsageInfoEl.setAttribute('data-default-label', fallbackLabel);
+        }
+    }
     let defaultStatus = null;
     if (statusEl) {
         let variant = 'info';
@@ -1846,6 +1992,11 @@ function initializeState(root) {
         defaultStatus,
         statusResetTimer: null,
         memoryUsageEl: memoryUsageValueEl,
+        memoryUsageValueEl,
+        memoryUsageDeltaEl,
+        memoryUsagePeakEl,
+        memoryUsageTrackedEl,
+        memoryUsageInfoEl,
         memoryUsageTimestampEl,
         memoryUsageTimer: null,
         memoryUsageInFlight: null,
