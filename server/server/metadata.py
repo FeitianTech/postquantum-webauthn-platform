@@ -1,6 +1,7 @@
 """Metadata handling utilities for the WebAuthn demo server."""
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import secrets
@@ -13,7 +14,7 @@ import uuid
 from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from email.utils import formatdate, parsedate_to_datetime
-from typing import Any, Dict, Iterator, List, Mapping, Optional, Set, Tuple
+from typing import Any, Dict, Iterable, Iterator, List, Mapping, Optional, Set, Tuple
 
 from flask import has_request_context, session
 
@@ -27,6 +28,8 @@ from fido2.mds3 import (
 from .config import (
     MDS_METADATA_CACHE_PATH,
     MDS_METADATA_PATH,
+    MDS_METADATA_SNAPSHOT_META_PATH,
+    MDS_METADATA_SNAPSHOT_PAYLOAD_PATH,
     MDS_METADATA_URL,
     MDS_TLS_ADDITIONAL_TRUST_ANCHORS_PEM,
     SESSION_METADATA_DIR,
@@ -52,16 +55,14 @@ __all__ = [
     "delete_session_metadata_item",
     "expand_metadata_entry_payloads",
     "metadata_entry_trust_anchor_status",
+    "refresh_metadata_snapshot",
 ]
 
 
-_base_metadata_cache: Optional[MetadataBlobPayload] = None
-_base_metadata_mtime: Optional[float] = None
-_base_verifier_cache: Optional[MdsAttestationVerifier] = None
-_base_verifier_mtime: Optional[float] = None
 _base_metadata_trust_verified: Optional[bool] = None
-_base_metadata_entry_ids: Set[int] = set()
+_base_metadata_entry_digests: Set[str] = set()
 _session_metadata_entry_ids: Set[int] = set()
+_session_metadata_entry_digests: Set[str] = set()
 
 _SESSION_METADATA_SUFFIX = ".json"
 _SESSION_METADATA_INFO_SUFFIX = ".meta.json"
@@ -316,6 +317,189 @@ def _clone_json_value(value: Any) -> Any:
     except (TypeError, ValueError):
         return None
 
+
+def _stat_metadata_blob() -> Optional[os.stat_result]:
+    try:
+        return os.stat(MDS_METADATA_PATH)
+    except OSError:
+        return None
+
+
+def _coerce_mtime_ns(stat_result: os.stat_result) -> int:
+    raw_ns = getattr(stat_result, "st_mtime_ns", None)
+    if isinstance(raw_ns, int):
+        return raw_ns
+    return int(stat_result.st_mtime * 1_000_000_000)
+
+
+def _write_json_atomic(path: str, payload: Any) -> None:
+    directory = os.path.dirname(path)
+    if directory:
+        os.makedirs(directory, exist_ok=True)
+
+    with tempfile.NamedTemporaryFile(
+        "w", encoding="utf-8", delete=False, dir=directory or None
+    ) as temp_file:
+        json.dump(payload, temp_file, indent=2, sort_keys=True)
+        temp_file.write("\n")
+        temp_path = temp_file.name
+
+    try:
+        shutil.move(temp_path, path)
+    except Exception:
+        try:
+            os.remove(temp_path)
+        except OSError:
+            pass
+        raise
+
+
+def _load_metadata_snapshot_manifest() -> Optional[Dict[str, Any]]:
+    payload = _load_json_value(MDS_METADATA_SNAPSHOT_META_PATH)
+    if not isinstance(payload, dict):
+        return None
+    return payload
+
+
+def _load_metadata_snapshot_payload(path: str) -> Optional[Dict[str, Any]]:
+    payload = _load_json_value(path)
+    if not isinstance(payload, dict):
+        return None
+    return payload
+
+
+def _load_json_value(path: str) -> Optional[Any]:
+    try:
+        with open(path, "r", encoding="utf-8") as payload_file:
+            return json.load(payload_file)
+    except (OSError, ValueError, TypeError):
+        return None
+
+
+def _manifest_matches_source(manifest: Mapping[str, Any], stat_result: os.stat_result) -> bool:
+    if not manifest:
+        return False
+
+    raw_version = manifest.get("version")
+    if raw_version not in (None, 1):
+        return False
+
+    source_size = manifest.get("source_size")
+    if isinstance(source_size, (int, float)):
+        if int(source_size) != stat_result.st_size:
+            return False
+
+    manifest_ns = manifest.get("source_mtime_ns")
+    if isinstance(manifest_ns, str) and manifest_ns.isdigit():
+        manifest_ns = int(manifest_ns)
+    if isinstance(manifest_ns, (int, float)):
+        if int(manifest_ns) != _coerce_mtime_ns(stat_result):
+            return False
+    else:
+        manifest_mtime = manifest.get("source_mtime")
+        if isinstance(manifest_mtime, (int, float)):
+            if abs(float(manifest_mtime) - stat_result.st_mtime) > 1e-6:
+                return False
+
+    return True
+
+
+def _clear_metadata_snapshot() -> None:
+    for path in (MDS_METADATA_SNAPSHOT_META_PATH, MDS_METADATA_SNAPSHOT_PAYLOAD_PATH):
+        try:
+            os.remove(path)
+        except OSError:
+            pass
+
+
+def _metadata_entry_digest(entry: MetadataBlobPayloadEntry) -> Optional[str]:
+    try:
+        serialised = _clone_json_value(dict(entry))
+    except Exception:  # pragma: no cover - defensive guard
+        serialised = None
+
+    if not isinstance(serialised, dict):
+        return None
+
+    try:
+        canonical = json.dumps(serialised, sort_keys=True, separators=(",", ":"))
+    except (TypeError, ValueError):
+        return None
+
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def _compute_entry_digests(
+    entries: Iterable[MetadataBlobPayloadEntry],
+) -> List[str]:
+    digests: List[str] = []
+    for entry in entries:
+        digest = _metadata_entry_digest(entry)
+        if digest:
+            digests.append(digest)
+    return digests
+
+
+def _prepare_snapshot_payload(
+    metadata: MetadataBlobPayload,
+) -> Tuple[Dict[str, Any], List[str]]:
+    payload = _clone_json_value(dict(metadata))
+    if not isinstance(payload, dict):
+        raise ValueError("Metadata payload cannot be serialized to JSON.")
+    digests = _compute_entry_digests(iter(metadata.entries))
+    return payload, digests
+
+
+def _store_metadata_snapshot(
+    payload: Mapping[str, Any],
+    digests: List[str],
+    stat_result: os.stat_result,
+    verified: Optional[bool],
+) -> Dict[str, Any]:
+    manifest = {
+        "version": 1,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "source_mtime": stat_result.st_mtime,
+        "source_mtime_ns": _coerce_mtime_ns(stat_result),
+        "source_size": stat_result.st_size,
+        "verified": bool(verified),
+        "payload_path": MDS_METADATA_SNAPSHOT_PAYLOAD_PATH,
+        "entry_digests": digests,
+    }
+
+    _write_json_atomic(MDS_METADATA_SNAPSHOT_PAYLOAD_PATH, payload)
+    _write_json_atomic(MDS_METADATA_SNAPSHOT_META_PATH, manifest)
+    return manifest
+
+
+def refresh_metadata_snapshot(force: bool = False) -> Optional[bool]:
+    """Ensure the on-disk snapshot is synchronized with the downloaded JWS."""
+
+    stat_result = _stat_metadata_blob()
+    if stat_result is None:
+        _clear_metadata_snapshot()
+        return None
+
+    manifest = _load_metadata_snapshot_manifest()
+    if (
+        not force
+        and isinstance(manifest, Mapping)
+        and _manifest_matches_source(manifest, stat_result)
+    ):
+        return True
+
+    metadata, verified = _parse_metadata_from_blob()
+    if metadata is None:
+        return False
+
+    try:
+        payload, digests = _prepare_snapshot_payload(metadata)
+        _store_metadata_snapshot(payload, digests, stat_result, verified)
+    except Exception as exc:  # pragma: no cover - defensive guard
+        app.logger.warning("Failed to persist metadata snapshot: %s", exc)
+        return False
+
+    return True
 
 def _normalise_status_reports(raw: Mapping[str, Any]) -> List[Dict[str, Any]]:
     reports: List[Dict[str, Any]] = []
@@ -612,15 +796,17 @@ def save_session_metadata_item(
 
 
 def list_session_metadata_items(session_id: Optional[str] = None) -> List[SessionMetadataItem]:
-    global _session_metadata_entry_ids
+    global _session_metadata_entry_ids, _session_metadata_entry_digests
     active_session = session_id or _get_metadata_session_id(create=False)
     if not active_session:
         _session_metadata_entry_ids = set()
+        _session_metadata_entry_digests = set()
         return []
 
     directory = _session_metadata_directory(active_session, create=False)
     if not directory or not os.path.isdir(directory):
         _session_metadata_entry_ids = set()
+        _session_metadata_entry_digests = set()
         return []
 
     try:
@@ -634,6 +820,8 @@ def list_session_metadata_items(session_id: Optional[str] = None) -> List[Sessio
         return []
 
     items: List[SessionMetadataItem] = []
+    session_digests: Set[str] = set()
+    session_ids: Set[int] = set()
     for filename in sorted(filenames):
         metadata_path = os.path.join(directory, filename)
         try:
@@ -680,8 +868,15 @@ def list_session_metadata_items(session_id: Optional[str] = None) -> List[Sessio
             )
         )
 
+        digest = _metadata_entry_digest(entry)
+        if digest:
+            session_digests.add(digest)
+        else:
+            session_ids.add(id(entry))
+
     items.sort(key=lambda item: item.mtime or 0, reverse=True)
-    _session_metadata_entry_ids = {id(item.entry) for item in items}
+    _session_metadata_entry_digests = session_digests
+    _session_metadata_entry_ids = session_ids
     return items
 
 
@@ -1039,6 +1234,7 @@ def download_metadata_blob(
                     last_modified_iso=iso,
                     etag=etag_to_store,
                 )
+                refresh_metadata_snapshot()
                 return False, 0, iso
 
             retry_after = None
@@ -1083,6 +1279,7 @@ def download_metadata_blob(
                     last_modified_iso=last_modified_iso,
                     etag=etag or cached_etag,
                 )
+                refresh_metadata_snapshot()
                 return False, len(payload), last_modified_iso
 
     with tempfile.NamedTemporaryFile("wb", delete=False, dir=os.path.dirname(destination)) as temp_file:
@@ -1105,51 +1302,115 @@ def download_metadata_blob(
         etag=etag,
     )
 
+    refresh_metadata_snapshot(force=True)
+
     return True, len(payload), last_modified_iso
 
 
-def _load_base_metadata() -> Tuple[Optional[MetadataBlobPayload], Optional[float]]:
-    global _base_metadata_cache, _base_metadata_mtime
-    global _base_metadata_trust_verified, _base_metadata_entry_ids
+def _parse_metadata_from_blob() -> Tuple[Optional[MetadataBlobPayload], Optional[bool]]:
+    try:
+        with open(MDS_METADATA_PATH, "rb") as blob_file:
+            blob_data = blob_file.read()
+    except FileNotFoundError:
+        return None, None
+    except OSError as exc:
+        app.logger.warning(
+            "Failed to read MDS metadata from %s: %s", MDS_METADATA_PATH, exc
+        )
+        return None, None
 
     try:
-        mtime = os.path.getmtime(MDS_METADATA_PATH)
-    except OSError:
-        mtime = None
+        metadata = parse_blob(blob_data, FIDO_METADATA_TRUST_ROOT_CERT)
+    except Exception as exc:  # pylint: disable=broad-except
+        app.logger.warning(
+            "Failed to load MDS metadata from %s: %s",
+            MDS_METADATA_PATH,
+            exc,
+        )
+        return None, False
 
-    if _base_metadata_cache is not None and _base_metadata_mtime == mtime:
-        return _base_metadata_cache, mtime
+    return metadata, True
+
+
+def _load_base_metadata() -> Tuple[Optional[MetadataBlobPayload], Optional[float]]:
+    global _base_metadata_trust_verified, _base_metadata_entry_digests
+
+    stat_result = _stat_metadata_blob()
+    if stat_result is None:
+        _base_metadata_entry_digests = set()
+        _base_metadata_trust_verified = None
+        return None, None
+
+    manifest = _load_metadata_snapshot_manifest()
+    manifest_matches = isinstance(manifest, Mapping) and _manifest_matches_source(
+        manifest, stat_result
+    )
 
     metadata: Optional[MetadataBlobPayload] = None
-    metadata_verified: Optional[bool] = None
-    if mtime is not None:
-        try:
-            with open(MDS_METADATA_PATH, "rb") as blob_file:
-                blob_data = blob_file.read()
-            metadata = parse_blob(blob_data, FIDO_METADATA_TRUST_ROOT_CERT)
-            metadata_verified = True
-        except FileNotFoundError:
+    verified: Optional[bool] = None
+
+    if manifest_matches:
+        payload_path = manifest.get("payload_path")
+        if not isinstance(payload_path, str) or not payload_path:
+            payload_path = MDS_METADATA_SNAPSHOT_PAYLOAD_PATH
+
+        payload = _load_metadata_snapshot_payload(payload_path)
+        if isinstance(payload, dict):
+            try:
+                metadata = MetadataBlobPayload.from_dict(payload)
+            except Exception as exc:  # pylint: disable=broad-except
+                app.logger.warning(
+                    "Failed to hydrate metadata snapshot from %s: %s",
+                    payload_path,
+                    exc,
+                )
+                metadata = None
+        else:
             metadata = None
-            metadata_verified = None
-        except Exception as exc:  # pylint: disable=broad-except
-            app.logger.warning(
-                "Failed to load MDS metadata from %s: %s",
-                MDS_METADATA_PATH,
-                exc,
-            )
-            metadata = None
-            metadata_verified = False
 
-    if metadata is not None:
-        _base_metadata_entry_ids = {id(entry) for entry in metadata.entries}
-    else:
-        _base_metadata_entry_ids = set()
+        if metadata is not None:
+            raw_digests = manifest.get("entry_digests")
+            if isinstance(raw_digests, list):
+                digests = [
+                    str(value)
+                    for value in raw_digests
+                    if isinstance(value, str) and value
+                ]
+            else:
+                digests = _compute_entry_digests(iter(metadata.entries))
 
-    _base_metadata_trust_verified = metadata_verified
+            _base_metadata_entry_digests = set(digests)
+            verified_value = manifest.get("verified")
+            if isinstance(verified_value, bool):
+                verified = verified_value
+            elif isinstance(verified_value, str):
+                verified = verified_value.lower() in {"1", "true", "yes"}
+            else:
+                verified = None
 
-    _base_metadata_cache = metadata
-    _base_metadata_mtime = mtime
-    return metadata, mtime
+            _base_metadata_trust_verified = verified
+            return metadata, stat_result.st_mtime
+
+    metadata, verified = _parse_metadata_from_blob()
+    if metadata is None:
+        _base_metadata_entry_digests = set()
+        _base_metadata_trust_verified = verified
+        return None, stat_result.st_mtime
+
+    try:
+        payload, digests = _prepare_snapshot_payload(metadata)
+        manifest = _store_metadata_snapshot(payload, digests, stat_result, verified)
+        _base_metadata_entry_digests = set(digests)
+        verified_value = manifest.get("verified")
+        _base_metadata_trust_verified = bool(verified_value) if verified_value is not None else verified
+    except Exception as exc:  # pragma: no cover - defensive guard
+        app.logger.warning("Failed to store metadata snapshot: %s", exc)
+        _base_metadata_entry_digests = set(
+            digest for digest in _compute_entry_digests(iter(metadata.entries)) if digest
+        )
+        _base_metadata_trust_verified = verified
+
+    return metadata, stat_result.st_mtime
 
 
 def metadata_entry_trust_anchor_status(entry: Any) -> Optional[bool]:
@@ -1158,11 +1419,16 @@ def metadata_entry_trust_anchor_status(entry: Any) -> Optional[bool]:
     if entry is None or not isinstance(entry, MetadataBlobPayloadEntry):
         return None
 
-    entry_id = id(entry)
-    if entry_id in _session_metadata_entry_ids:
-        return False
-    if entry_id in _base_metadata_entry_ids:
+    digest = _metadata_entry_digest(entry)
+    if digest:
+        if digest in _session_metadata_entry_digests:
+            return False
+        if digest in _base_metadata_entry_digests:
+            return _base_metadata_trust_verified
         return _base_metadata_trust_verified
+
+    if id(entry) in _session_metadata_entry_ids:
+        return False
 
     return _base_metadata_trust_verified
 
@@ -1170,28 +1436,13 @@ def metadata_entry_trust_anchor_status(entry: Any) -> Optional[bool]:
 def get_mds_verifier() -> Optional[MdsAttestationVerifier]:
     """Return an MDS attestation verifier using session metadata when available."""
 
-    global _base_verifier_cache, _base_verifier_mtime
-
-    base_metadata, base_mtime = _load_base_metadata()
+    base_metadata, _ = _load_base_metadata()
     session_items = list_session_metadata_items()
 
     if not session_items:
         if base_metadata is None:
-            _base_verifier_cache = None
-            _base_verifier_mtime = base_mtime
             return None
-
-        if (
-            _base_verifier_cache is not None
-            and _base_verifier_mtime is not None
-            and _base_verifier_mtime == base_mtime
-        ):
-            return _base_verifier_cache
-
-        verifier = MdsAttestationVerifier(base_metadata)
-        _base_verifier_cache = verifier
-        _base_verifier_mtime = base_mtime
-        return verifier
+        return MdsAttestationVerifier(base_metadata)
 
     if base_metadata is None and not session_items:
         return None

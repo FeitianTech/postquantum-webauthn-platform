@@ -158,6 +158,8 @@ MDS_METADATA_URL = "https://mds3.fidoalliance.org/"
 MDS_METADATA_FILENAME = "fido-mds3.jws"
 MDS_METADATA_PATH = os.path.join(basepath, "static", MDS_METADATA_FILENAME)
 MDS_METADATA_CACHE_PATH = MDS_METADATA_PATH + ".meta.json"
+MDS_METADATA_SNAPSHOT_META_PATH = MDS_METADATA_PATH + ".snapshot.json"
+MDS_METADATA_SNAPSHOT_PAYLOAD_PATH = MDS_METADATA_PATH + ".snapshot.payload.json"
 SESSION_METADATA_DIR = os.path.join(basepath, "static", "session-metadata")
 
 FIDO_METADATA_TRUST_ROOT_B64 = (

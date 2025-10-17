@@ -21,6 +21,7 @@ from ..metadata import (
     expand_metadata_entry_payloads,
     list_session_metadata_items,
     load_metadata_cache_entry,
+    refresh_metadata_snapshot,
     save_session_metadata_item,
     serialize_session_metadata_item,
 )
@@ -89,6 +90,7 @@ def ensure_metadata_bootstrapped(skip_if_reloader_parent: bool = True) -> None:
         return
 
     if os.environ.get(_METADATA_BOOTSTRAP_ENV_FLAG) == "1":
+        refresh_metadata_snapshot()
         return
 
     with _metadata_bootstrap_lock:
@@ -96,6 +98,7 @@ def ensure_metadata_bootstrapped(skip_if_reloader_parent: bool = True) -> None:
             return
 
     _auto_refresh_metadata()
+    refresh_metadata_snapshot()
 
 
 # Refresh eagerly for environments lacking ``before_serving`` (older Flask versions)
@@ -123,11 +126,6 @@ def index_html():
     ensure_metadata_session_id()
 
     initial_mds_blob = None
-    try:
-        with open(MDS_METADATA_PATH, "r", encoding="utf-8") as blob_file:
-            initial_mds_blob = blob_file.read()
-    except OSError:
-        initial_mds_blob = None
 
     initial_mds_info = load_metadata_cache_entry()
 
