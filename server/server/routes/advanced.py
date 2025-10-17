@@ -1707,8 +1707,10 @@ def advanced_authenticate_begin():
 
     session["advanced_auth_state"] = state
     session["advanced_auth_rp"] = {"id": resolved_rp_id, "name": stored_rp_name}
-    session["advanced_original_auth_request"] = data
-    session["advanced_auth_credentials"] = serialized_credentials
+    session["advanced_auth_credentials_meta"] = {
+        "count": len(serialized_credentials),
+        "resident_count": sum(1 for entry in serialized_credentials if entry.get("resident")),
+    }
 
     options_payload = dict(options)
     public_key_dict = options_payload.get("publicKey")
@@ -1773,11 +1775,37 @@ def advanced_authenticate_complete():
                 "error": "Authenticator attachment is not permitted by the selected hints."
             }), 400
 
-    serialized_credentials = session.pop("advanced_auth_credentials", [])
-    stored_records, _ = _parse_client_supplied_credentials(serialized_credentials)
+    raw_credentials_input: Optional[List[Any]] = None
+    for field in ("__storedCredentials", "storedCredentials", "credentials"):
+        candidate = data.get(field)
+        if isinstance(candidate, list):
+            raw_credentials_input = candidate
+            break
+
+    stored_records: List[Dict[str, Any]] = []
+    serialized_credentials: List[Dict[str, Any]] = []
+    if isinstance(raw_credentials_input, list):
+        stored_records, serialized_credentials = _parse_client_supplied_credentials(raw_credentials_input)
 
     if not stored_records:
+        legacy_serialized = session.pop("advanced_auth_credentials", [])
+        if legacy_serialized:
+            stored_records, serialized_credentials = _parse_client_supplied_credentials(legacy_serialized)
+
+    if not stored_records:
+        if isinstance(raw_credentials_input, list) and raw_credentials_input:
+            session.pop("advanced_auth_credentials_meta", None)
+            return jsonify({
+                "error": (
+                    "Stored credentials could not be restored from the browser session. "
+                    "This often means the session cookie exceeded the browser size limit. "
+                    "Please clear some saved credentials or restart the authentication flow and try again."
+                )
+            }), 400
+        session.pop("advanced_auth_credentials_meta", None)
         return jsonify({"error": "No credentials found"}), 404
+
+    session.pop("advanced_auth_credentials_meta", None)
 
     credential_lookup: Dict[bytes, Dict[str, Any]] = {
         bytes(record["id"]): record
