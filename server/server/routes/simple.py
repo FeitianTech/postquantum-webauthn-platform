@@ -21,7 +21,14 @@ from ..attestation import (
     make_json_safe,
 )
 from ..config import app, basepath, create_fido_server, determine_rp_id
-from ..storage import add_public_key_material, convert_bytes_for_json, delkey, extract_credential_data, readkey
+from ..storage import (
+    add_public_key_material,
+    convert_bytes_for_json,
+    delkey,
+    extract_credential_data,
+    readkey,
+    savekey,
+)
 
 
 _SIMPLE_ALLOWED_ALGORITHMS: Tuple[int, ...] = tuple(
@@ -211,6 +218,91 @@ def _parse_client_credentials(raw_credentials: Any) -> Tuple[List[AttestedCreden
             continue
 
     return attested_credentials, serialized_entries
+
+
+def _load_credentials_for_user(email: str) -> List[Tuple[AttestedCredentialData, Dict[str, Any]]]:
+    if not email:
+        return []
+
+    stored_credentials = readkey(email)
+    if not isinstance(stored_credentials, list):
+        return []
+
+    results: List[Tuple[AttestedCredentialData, Dict[str, Any]]] = []
+
+    for stored_entry in stored_credentials:
+        try:
+            credential_data = extract_credential_data(stored_entry)
+        except Exception:
+            continue
+
+        if not isinstance(credential_data, AttestedCredentialData):
+            continue
+
+        try:
+            credential_id_bytes = bytes(credential_data.credential_id)
+            aaguid_bytes = bytes(credential_data.aaguid)
+            cose_public_key = dict(getattr(credential_data, "public_key", {}))
+            public_key_bytes = cbor.encode(cose_public_key)
+        except Exception:
+            continue
+
+        serialized_source: Dict[str, Any] = {
+            "credentialId": credential_id_bytes,
+            "aaguid": aaguid_bytes,
+            "publicKey": public_key_bytes,
+            "type": "simple",
+            "email": email,
+        }
+
+        if isinstance(stored_entry, Mapping):
+            user_info = stored_entry.get("user_info")
+            if isinstance(user_info, Mapping):
+                if "name" in user_info:
+                    serialized_source["userName"] = user_info["name"]
+                if "display_name" in user_info:
+                    serialized_source["displayName"] = user_info["display_name"]
+
+            if isinstance(stored_entry.get("signCount"), int):
+                serialized_source["signCount"] = stored_entry["signCount"]
+
+            algorithm_value = stored_entry.get("publicKeyAlgorithm") or stored_entry.get("algorithm")
+            if isinstance(algorithm_value, int):
+                serialized_source["algorithm"] = algorithm_value
+        else:
+            algorithm_value = None
+
+        auth_data_value = None
+        if isinstance(stored_entry, Mapping):
+            auth_data_value = stored_entry.get("auth_data")
+        elif hasattr(stored_entry, "auth_data"):
+            auth_data_value = getattr(stored_entry, "auth_data")
+
+        counter_value = None
+        if isinstance(auth_data_value, Mapping):
+            counter_candidate = auth_data_value.get("counter")
+        else:
+            counter_candidate = getattr(auth_data_value, "counter", None)
+        if isinstance(counter_candidate, int):
+            counter_value = counter_candidate
+
+        if counter_value is not None:
+            serialized_source["signCount"] = counter_value
+
+        if "algorithm" not in serialized_source and isinstance(cose_public_key.get(3), int):
+            serialized_source["algorithm"] = cose_public_key[3]
+
+        serialized = _serialize_credential_for_session(serialized_source)
+        if "credentialId" not in serialized:
+            serialized["credentialId"] = base64.urlsafe_b64encode(credential_id_bytes).decode("ascii").rstrip("=")
+        if "aaguid" not in serialized:
+            serialized["aaguid"] = base64.urlsafe_b64encode(aaguid_bytes).decode("ascii").rstrip("=")
+        if "publicKey" not in serialized:
+            serialized["publicKey"] = base64.urlsafe_b64encode(public_key_bytes).decode("ascii").rstrip("=")
+
+        results.append((credential_data, serialized))
+
+    return results
 
 
 @app.route("/api/register/begin", methods=["POST"])
@@ -464,6 +556,34 @@ def register_complete():
     if isinstance(user_handle_value, (bytes, bytearray, memoryview)):
         stored_credential['userHandle'] = base64.urlsafe_b64encode(bytes(user_handle_value)).decode('ascii').rstrip('=')
 
+    if uname:
+        existing_entries = readkey(uname)
+        filtered_entries: List[Any] = []
+        replaced = False
+        credential_id_bytes = bytes(auth_data.credential_data.credential_id)
+        if isinstance(existing_entries, list):
+            for entry in existing_entries:
+                try:
+                    existing_data = extract_credential_data(entry)
+                except Exception:
+                    continue
+                if not isinstance(existing_data, AttestedCredentialData):
+                    filtered_entries.append(entry)
+                    continue
+                try:
+                    existing_id = bytes(existing_data.credential_id)
+                except Exception:
+                    filtered_entries.append(entry)
+                    continue
+                if existing_id == credential_id_bytes:
+                    filtered_entries.append(credential_info)
+                    replaced = True
+                else:
+                    filtered_entries.append(entry)
+        if not replaced:
+            filtered_entries.append(credential_info)
+        savekey(uname, filtered_entries)
+
     session_simple_credentials = session.get('simple_credentials')
     if isinstance(session_simple_credentials, list):
         new_entry = {
@@ -492,13 +612,47 @@ def authenticate_begin():
     uname = request.args.get("email")
     payload = request.get_json(silent=True) or {}
 
-    raw_credentials: List[Any] = []
+    credential_candidates: List[Any] = []
     if isinstance(payload, Mapping):
         candidate_credentials = payload.get("credentials") or payload.get("storedCredentials")
         if isinstance(candidate_credentials, list):
-            raw_credentials = candidate_credentials
+            credential_candidates = candidate_credentials
 
-    credential_data_list, serialized = _parse_client_credentials(raw_credentials)
+    stored_credentials = _load_credentials_for_user(uname)
+
+    candidate_ids: List[bytes] = []
+    for entry in credential_candidates:
+        if not isinstance(entry, Mapping):
+            continue
+        raw_identifier = _select_first(
+            entry,
+            (
+                "credentialId",
+                "credentialIdBase64Url",
+                "credentialID",
+                "id",
+                "rawId",
+            ),
+        )
+        if raw_identifier is None:
+            continue
+        try:
+            candidate_ids.append(_decode_binary_value(raw_identifier))
+        except Exception:
+            continue
+
+    if candidate_ids:
+        candidate_id_set = {candidate for candidate in candidate_ids}
+        filtered_credentials = [
+            item
+            for item in stored_credentials
+            if bytes(item[0].credential_id) in candidate_id_set
+        ]
+    else:
+        filtered_credentials = stored_credentials
+
+    credential_data_list = [item[0] for item in filtered_credentials]
+    serialized = [item[1] for item in filtered_credentials]
 
     if not credential_data_list:
         abort(404)
