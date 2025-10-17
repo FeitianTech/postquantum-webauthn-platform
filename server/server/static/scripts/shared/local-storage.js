@@ -358,20 +358,15 @@ export function saveAdvancedCredential(rawCredential) {
     }
 
     credential.credentialIdBase64Url = ensureBase64Url(credentialId);
-    const storageId = ensureAdvancedCredentialStorageId(credential, { forceNew: !isNonEmptyString(credential.storageId) });
+    let storageId = ensureAdvancedCredentialStorageId(credential, { forceNew: !isNonEmptyString(credential.storageId) });
 
     const stored = readAdvancedCredentials();
-    const filtered = stored.filter(item => {
-        if (!item || typeof item !== 'object') {
-            return false;
-        }
-        if (storageId && isNonEmptyString(item.storageId)) {
-            return item.storageId !== storageId;
-        }
-        return true;
-    });
-    filtered.push(credential);
-    persistAdvancedCredentials(filtered);
+    if (storageId && stored.some(item => item && typeof item === 'object' && item.storageId === storageId)) {
+        storageId = ensureAdvancedCredentialStorageId(credential, { forceNew: true });
+    }
+
+    const updated = stored.concat(credential);
+    persistAdvancedCredentials(updated);
     return credential;
 }
 
