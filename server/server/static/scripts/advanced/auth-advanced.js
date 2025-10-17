@@ -24,6 +24,11 @@ import { randomizeUserIdentity } from '../shared/username.js';
 import { showRegistrationResultModal, loadSavedCredentials } from './credential-display.js';
 import { printRegistrationDebug, printAuthenticationDebug } from '../shared/auth-debug.js';
 import { state } from '../shared/state.js';
+import {
+    saveAdvancedCredential,
+    prepareAdvancedCredentialsForServer,
+    updateAdvancedCredentialSignCount,
+} from '../shared/local-storage.js';
 
 function maybeRandomizeAdvancedRegistrationFields() {
     const userIdInput = document.getElementById('user-id');
@@ -273,6 +278,16 @@ export async function advancedRegister() {
 
             maybeRandomizeAdvancedRegistrationFields();
 
+            if (data.storedCredential && typeof data.storedCredential === 'object') {
+                const saved = saveAdvancedCredential({
+                    ...data.storedCredential,
+                    userName: data.storedCredential.userName || publicKey?.user?.name || '',
+                });
+                if (saved) {
+                    loadSavedCredentials();
+                }
+            }
+
             await showRegistrationResultModal(credentialJson, data.relyingParty || null);
 
             setTimeout(loadSavedCredentials, 1000);
@@ -330,10 +345,16 @@ export async function advancedAuthenticate() {
         hideStatus('advanced');
         showProgress('advanced', 'Detecting credentials...');
 
+        const storedCredentials = prepareAdvancedCredentialsForServer();
+        const requestPayload = {
+            ...parsed,
+            __storedCredentials: storedCredentials,
+        };
+
         const response = await fetch('/api/advanced/authenticate/begin', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(parsed)
+            body: JSON.stringify(requestPayload)
         });
 
         if (!response.ok) {
@@ -403,6 +424,14 @@ export async function advancedAuthenticate() {
             printAuthenticationDebug(assertion, assertOptions, data);
 
             showStatus('advanced', 'Advanced authentication successful!', 'success');
+
+            if (data.authenticatedCredentialId) {
+                updateAdvancedCredentialSignCount(
+                    data.authenticatedCredentialId,
+                    typeof data.signCount === 'number' ? data.signCount : undefined,
+                );
+                loadSavedCredentials();
+            }
 
             maybeRandomizeAdvancedAuthenticationFields();
         } else {
