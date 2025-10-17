@@ -5,6 +5,7 @@ import base64
 import binascii
 import json
 import os
+from datetime import datetime, timezone
 from threading import Lock
 from typing import Any, Dict
 
@@ -28,11 +29,56 @@ from ..storage import delkey
 
 
 _metadata_bootstrap_lock = Lock()
-_metadata_bootstrap_state = {"started": False, "completed": False}
+_metadata_bootstrap_state = {"started": False, "completed": False, "marker": None}
 _METADATA_BOOTSTRAP_ENV_FLAG = "FIDO_SERVER_MDS_BOOTSTRAPPED"
 
-if os.environ.get(_METADATA_BOOTSTRAP_ENV_FLAG) == "1":
-    _metadata_bootstrap_state["completed"] = True
+
+def _bootstrap_marker_for_today() -> str:
+    """Return the marker string used to identify today's bootstrap."""
+
+    return datetime.now(timezone.utc).date().isoformat()
+
+
+def _mark_bootstrap_completed_for_today() -> None:
+    """Record that the metadata bootstrap completed for the current day."""
+
+    today_marker = _bootstrap_marker_for_today()
+    with _metadata_bootstrap_lock:
+        _metadata_bootstrap_state["completed"] = True
+        _metadata_bootstrap_state["started"] = False
+        _metadata_bootstrap_state["marker"] = today_marker
+    os.environ[_METADATA_BOOTSTRAP_ENV_FLAG] = today_marker
+
+
+def _metadata_refresh_needed_today() -> bool:
+    """Return True if the automatic metadata refresh should run today."""
+
+    if not os.path.exists(MDS_METADATA_PATH):
+        return True
+
+    cached_state = load_metadata_cache_entry()
+    fetched_at = cached_state.get("fetched_at")
+    if not fetched_at:
+        return True
+
+    normalized = fetched_at.strip()
+    if normalized.endswith("Z"):
+        normalized = normalized[:-1] + "+00:00"
+
+    try:
+        fetched_at_dt = datetime.fromisoformat(normalized)
+    except ValueError:
+        return True
+
+    today = datetime.now(timezone.utc).date()
+    return fetched_at_dt.date() < today
+
+
+_existing_marker = os.environ.get(_METADATA_BOOTSTRAP_ENV_FLAG)
+if _existing_marker:
+    _metadata_bootstrap_state["marker"] = _existing_marker
+    if _existing_marker == _bootstrap_marker_for_today():
+        _metadata_bootstrap_state["completed"] = True
 
 
 def _auto_refresh_metadata() -> None:
@@ -75,11 +121,7 @@ def _auto_refresh_metadata() -> None:
         else:
             app.logger.info("FIDO MDS metadata already up to date.")
 
-    with _metadata_bootstrap_lock:
-        _metadata_bootstrap_state["completed"] = True
-        _metadata_bootstrap_state["started"] = False
-
-    os.environ[_METADATA_BOOTSTRAP_ENV_FLAG] = "1"
+    _mark_bootstrap_completed_for_today()
 
 
 def ensure_metadata_bootstrapped(skip_if_reloader_parent: bool = True) -> None:
@@ -88,12 +130,22 @@ def ensure_metadata_bootstrapped(skip_if_reloader_parent: bool = True) -> None:
     if skip_if_reloader_parent and app.debug and os.environ.get("WERKZEUG_RUN_MAIN") != "true":
         return
 
-    if os.environ.get(_METADATA_BOOTSTRAP_ENV_FLAG) == "1":
+    today_marker = _bootstrap_marker_for_today()
+
+    if os.environ.get(_METADATA_BOOTSTRAP_ENV_FLAG) == today_marker:
         return
 
     with _metadata_bootstrap_lock:
-        if _metadata_bootstrap_state["completed"]:
+        if _metadata_bootstrap_state["marker"] != today_marker:
+            _metadata_bootstrap_state["completed"] = False
+            _metadata_bootstrap_state["marker"] = None
+        elif _metadata_bootstrap_state["completed"]:
             return
+
+    if not _metadata_refresh_needed_today():
+        app.logger.info("Skipping automatic FIDO MDS refresh; already checked today.")
+        _mark_bootstrap_completed_for_today()
+        return
 
     _auto_refresh_metadata()
 
