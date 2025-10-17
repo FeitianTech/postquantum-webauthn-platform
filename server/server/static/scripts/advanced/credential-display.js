@@ -1296,14 +1296,17 @@ function buildAttestationSection({
 
     registrationDetailState.visibleAttestationCertificateIndices = certificateInfos.map(info => info.index);
 
-    const hasAttestationObject = Boolean(attestationObject);
+    const hasAttestationObject = Boolean(
+        attestationObject
+        && typeof attestationObject === 'object'
+        && Object.keys(attestationObject).length > 0,
+    );
     const hasAttestationValue = typeof attestationObjectValue === 'string'
         ? attestationObjectValue.trim() !== ''
         : false;
 
     const hasAttestation = hasAttestationObject
         || hasAttestationValue
-        || (attestationFormatNormalized && attestationFormatNormalized !== 'none')
         || attestationStatementHasContent
         || attestationHasCertificates;
 
