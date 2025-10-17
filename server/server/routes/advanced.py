@@ -2,19 +2,23 @@
 from __future__ import annotations
 
 import base64
+import binascii
 import json
 import math
 import re
-import os
 import time
 import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, Iterable, List, Mapping, MutableMapping, Optional
 
 from flask import jsonify, request, session
+from fido2 import cbor
+from fido2.cose import CoseKey
 from fido2.webauthn import (
     AttestationConveyancePreference,
+    AttestedCredentialData,
     AuthenticatorAttachment,
+    AuthenticatorData,
     PublicKeyCredentialDescriptor,
     PublicKeyCredentialParameters,
     PublicKeyCredentialType,
@@ -38,7 +42,6 @@ from ..attestation import (
 )
 from ..config import (
     app,
-    basepath,
     build_rp_entity,
     create_fido_server,
     determine_rp_id,
@@ -50,7 +53,7 @@ from ..pqc import (
     is_pqc_algorithm,
     log_algorithm_selection,
 )
-from ..storage import add_public_key_material, extract_credential_data, readkey, savekey
+from ..storage import add_public_key_material, convert_bytes_for_json
 
 
 _COSE_ALGORITHM_NAME_MAP: Dict[str, int] = {
@@ -143,163 +146,206 @@ def _extract_credential_algorithm(value: Any) -> Optional[int]:
     return _coerce_cose_algorithm(raw_alg)
 
 
-def _load_all_stored_credentials() -> List[Dict[str, Any]]:
-    """Load all stored credentials with metadata needed for advanced flows."""
+
+
+def _coerce_optional_bool(value: Any) -> Optional[bool]:
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return None
+    if isinstance(value, (int, float)):
+        if isinstance(value, bool):  # pragma: no cover - defensive guard
+            return bool(value)
+        if value != value:  # NaN check
+            return None
+        return bool(value)
+    if isinstance(value, str):
+        lowered = value.strip().lower()
+        if lowered in {"true", "yes", "1"}:
+            return True
+        if lowered in {"false", "no", "0"}:
+            return False
+    return None
+
+
+def _extract_flag_from_mapping(mapping: Mapping[str, Any], keys: Iterable[str]) -> Optional[bool]:
+    for key in keys:
+        if key in mapping:
+            coerced = _coerce_optional_bool(mapping.get(key))
+            if coerced is not None:
+                return coerced
+    return None
+
+
+def _select_first(mapping: Mapping[str, Any], keys: Iterable[str]) -> Any:
+    for key in keys:
+        if key in mapping:
+            value = mapping[key]
+            if value is not None:
+                return value
+    return None
+
+
+def _decode_client_binary(value: Any) -> bytes:
+    if value is None:
+        raise ValueError("missing binary value")
+
+    if isinstance(value, (bytes, bytearray, memoryview)):
+        return bytes(value)
+
+    if isinstance(value, str):
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError("empty binary value")
+
+        for decoder in (
+            lambda candidate: base64.urlsafe_b64decode(candidate + "=" * ((4 - len(candidate) % 4) % 4)),
+            lambda candidate: base64.b64decode(candidate + "=" * ((4 - len(candidate) % 4) % 4)),
+        ):
+            try:
+                return decoder(stripped)
+            except (ValueError, TypeError, binascii.Error):
+                continue
+
+        try:
+            return bytes.fromhex(stripped)
+        except ValueError as exc:
+            raise ValueError("invalid binary value") from exc
+
+    if isinstance(value, Mapping):
+        for key in ("$base64url", "base64url", "$base64", "base64", "$hex", "hex"):
+            if key in value and value[key] is not None:
+                return _decode_client_binary(value[key])
+
+    raise ValueError("unsupported binary value type")
+
+
+def _parse_client_supplied_credentials(raw_credentials: Any) -> tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+    if not isinstance(raw_credentials, list):
+        return [], []
 
     records: List[Dict[str, Any]] = []
+    serialized: List[Dict[str, Any]] = []
 
-    def _coerce_optional_bool(value: Any) -> Optional[bool]:
-        if isinstance(value, bool):
-            return value
-        if value is None:
-            return None
-        if isinstance(value, (int, float)):
-            if isinstance(value, bool):  # pragma: no cover - safety guard
-                return bool(value)
-            if value != value:  # NaN check
-                return None
-            return bool(value)
-        if isinstance(value, str):
-            lowered = value.strip().lower()
-            if lowered in {"true", "yes", "1"}:
-                return True
-            if lowered in {"false", "no", "0"}:
-                return False
-        return None
-
-    def _extract_flag_from_mapping(mapping: Mapping[str, Any], keys: Iterable[str]) -> Optional[bool]:
-        for key in keys:
-            if key in mapping:
-                coerced = _coerce_optional_bool(mapping.get(key))
-                if coerced is not None:
-                    return coerced
-        return None
-
-    try:
-        pkl_files = [f for f in os.listdir(basepath) if f.endswith("_credential_data.pkl")]
-    except Exception:
-        return records
-
-    for pkl_file in pkl_files:
-        email = pkl_file.replace("_credential_data.pkl", "")
-        try:
-            user_creds = readkey(email)
-        except Exception:
+    for entry in raw_credentials:
+        if not isinstance(entry, Mapping):
             continue
 
-        for cred in user_creds:
-            record: Dict[str, Any] = {
-                "data": extract_credential_data(cred),
-                "id": None,
-                "attachment": None,
-                "algorithm": None,
-            }
+        try:
+            aaguid_raw = _select_first(
+                entry,
+                (
+                    "aaguid",
+                    "aaguidBase64Url",
+                    "aaguidBase64",
+                    "aaguidHex",
+                ),
+            )
+            credential_id_raw = _select_first(
+                entry,
+                (
+                    "credentialId",
+                    "credentialID",
+                    "credentialIdBase64Url",
+                    "id",
+                    "rawId",
+                ),
+            )
+            public_key_raw = _select_first(
+                entry,
+                (
+                    "publicKey",
+                    "publicKeyBase64",
+                    "publicKeyBase64Url",
+                    "publicKeyBytes",
+                    "publicKeyCbor",
+                ),
+            )
 
-            credential_data = record["data"]
-            record["id"] = _extract_credential_id(credential_data)
-            record["algorithm"] = _extract_credential_algorithm(credential_data)
+            if credential_id_raw is None or public_key_raw is None:
+                continue
 
-            if isinstance(cred, Mapping):
-                attachment_value = normalize_attachment(
-                    cred.get("authenticator_attachment")
-                    or cred.get("authenticatorAttachment")
-                )
-                if attachment_value is None:
-                    properties = cred.get("properties")
-                    if isinstance(properties, Mapping):
-                        attachment_value = normalize_attachment(
-                            properties.get("authenticatorAttachment")
-                            or properties.get("authenticator_attachment")
-                        )
-                record["attachment"] = attachment_value
-
-                resident_flag = _extract_flag_from_mapping(
-                    cred,
-                    ["resident_key", "residentKey", "resident"],
-                )
-
-                properties = cred.get("properties") if isinstance(cred.get("properties"), Mapping) else None
-                if resident_flag is None and isinstance(properties, Mapping):
-                    resident_flag = _extract_flag_from_mapping(
-                        properties,
-                        [
-                            "residentKey",
-                            "resident_key",
-                            "actualResidentKey",
-                            "residentKeyRequired",
-                        ],
-                    )
-                    if resident_flag is None:
-                        summary = properties.get("attestationSummary") or properties.get("attestation_summary")
-                        if isinstance(summary, Mapping):
-                            resident_flag = _extract_flag_from_mapping(
-                                summary,
-                                ["residentKey", "resident_key"],
-                            )
-
-                client_outputs = cred.get("client_extension_outputs") or cred.get("clientExtensionOutputs")
-                if resident_flag is None and isinstance(client_outputs, Mapping):
-                    cred_props_value = client_outputs.get("credProps") or client_outputs.get("cred_props")
-                    if isinstance(cred_props_value, Mapping):
-                        resident_flag = _coerce_optional_bool(cred_props_value.get("rk"))
-                    else:
-                        resident_flag = _coerce_optional_bool(cred_props_value)
-
-                relying_party_info = cred.get("relying_party") or cred.get("relyingParty")
-                if resident_flag is None and isinstance(relying_party_info, Mapping):
-                    resident_flag = _extract_flag_from_mapping(
-                        relying_party_info,
-                        ["residentKey", "resident_key"],
-                    )
-                    if resident_flag is None:
-                        registration_data = relying_party_info.get("registrationData") or relying_party_info.get("registration_data")
-                        if isinstance(registration_data, Mapping):
-                            resident_flag = _extract_flag_from_mapping(
-                                registration_data,
-                                ["residentKey", "resident_key"],
-                            )
-                            if resident_flag is None:
-                                cred_props_value = registration_data.get("credProps") or registration_data.get("cred_props")
-                                if isinstance(cred_props_value, Mapping):
-                                    resident_flag = _coerce_optional_bool(cred_props_value.get("rk"))
-                                else:
-                                    resident_flag = _coerce_optional_bool(cred_props_value)
-
-                registration_response = cred.get("registration_response")
-                if resident_flag is None and isinstance(registration_response, Mapping):
-                    response_ext = registration_response.get("clientExtensionResults") or registration_response.get("client_extension_results")
-                    if isinstance(response_ext, Mapping):
-                        cred_props_value = response_ext.get("credProps") or response_ext.get("cred_props")
-                        if isinstance(cred_props_value, Mapping):
-                            resident_flag = _coerce_optional_bool(cred_props_value.get("rk"))
-                        else:
-                            resident_flag = _coerce_optional_bool(cred_props_value)
+            if aaguid_raw is None:
+                aaguid_bytes = b"\x00" * 16
             else:
-                resident_flag = None
+                aaguid_bytes = _decode_client_binary(aaguid_raw)
+            credential_id_bytes = _decode_client_binary(credential_id_raw)
+            public_key_bytes = _decode_client_binary(public_key_raw)
+
+            cose_key = CoseKey.parse(cbor.decode(public_key_bytes))
+
+            attested = AttestedCredentialData.create(
+                aaguid_bytes,
+                credential_id_bytes,
+                cose_key,
+            )
+
+            attachment_value = normalize_attachment(
+                _select_first(
+                    entry,
+                    ("authenticatorAttachment", "attachment"),
+                )
+                or (entry.get("properties") or {}).get("authenticatorAttachment")
+                or (entry.get("properties") or {}).get("authenticator_attachment")
+            )
+
+            raw_alg_value = entry.get("algorithm") or entry.get("publicKeyAlgorithm")
+            algorithm_value = _coerce_cose_algorithm(raw_alg_value)
+
+            resident_flag = _extract_flag_from_mapping(
+                entry,
+                ("resident", "residentKey", "discoverable"),
+            )
 
             if resident_flag is None:
-                None
-                if isinstance(cred, Mapping):
-                    auth_data_value = cred.get("auth_data")
-                else:
-                    auth_data_value = getattr(cred, "auth_data", None)
+                properties = entry.get("properties")
+                if isinstance(properties, Mapping):
+                    resident_flag = _extract_flag_from_mapping(
+                        properties,
+                        ("resident", "residentKey", "discoverable", "actualResidentKey"),
+                    )
 
-                if auth_data_value is not None:
-                    flags_value = getattr(auth_data_value, "flags", None)
-                    if isinstance(flags_value, int):
-                        flag_enum = getattr(auth_data_value, "FLAG", None)
-                        be_mask = getattr(flag_enum, "BE", None) if flag_enum is not None else None
-                        if isinstance(be_mask, int):
-                            resident_flag = bool(flags_value & be_mask)
-                        else:
-                            resident_flag = bool(flags_value & 0x20)
+            if resident_flag is None:
+                client_outputs = entry.get("clientExtensionOutputs")
+                if isinstance(client_outputs, Mapping):
+                    cred_props_value = client_outputs.get("credProps")
+                    if isinstance(cred_props_value, Mapping):
+                        resident_flag = _coerce_optional_bool(cred_props_value.get("rk"))
+                    elif isinstance(cred_props_value, bool):
+                        resident_flag = cred_props_value
 
-            record["resident"] = bool(resident_flag)
+            if resident_flag is None:
+                resident_flag = False
+
+            record = {
+                "data": attested,
+                "id": credential_id_bytes,
+                "attachment": attachment_value,
+                "algorithm": algorithm_value,
+                "resident": bool(resident_flag),
+            }
 
             records.append(record)
 
-    return records
+            serialized_entry: Dict[str, Any] = {
+                "credentialId": base64.urlsafe_b64encode(credential_id_bytes).decode("ascii").rstrip("="),
+                "publicKey": base64.urlsafe_b64encode(public_key_bytes).decode("ascii").rstrip("="),
+                "signCount": int(entry.get("signCount")) if isinstance(entry.get("signCount"), int) else 0,
+            }
 
+            if aaguid_bytes:
+                serialized_entry["aaguid"] = base64.urlsafe_b64encode(aaguid_bytes).decode("ascii").rstrip("=")
+            if attachment_value:
+                serialized_entry["authenticatorAttachment"] = attachment_value
+            if algorithm_value is not None:
+                serialized_entry["algorithm"] = algorithm_value
+            serialized_entry["resident"] = bool(resident_flag)
+
+            serialized.append(serialized_entry)
+        except Exception:
+            continue
+
+    return records, serialized
 
 def _derive_algorithms_from_credentials(credentials: Iterable[Any]) -> List[PublicKeyCredentialParameters]:
     """Produce a list of allowed algorithms based on stored credential data."""
@@ -579,8 +625,6 @@ def advanced_register_begin():
 
     if not username:
         return jsonify({"error": "Username is required in user.name"}), 400
-
-    readkey(username)
 
     user_id_value = user_info.get("id", "")
     if user_id_value:
@@ -1255,6 +1299,7 @@ def advanced_register_complete():
 
         aaguid_hex = None
         aaguid_guid = None
+        aaguid_bytes: Optional[bytes] = None
         aaguid_value = getattr(credential_data, 'aaguid', None)
         if aaguid_value is not None:
             try:
@@ -1361,8 +1406,62 @@ def advanced_register_complete():
 
         credential_info['relying_party'] = make_json_safe(rp_info)
 
-        credentials.append(credential_info)
-        savekey(username, credentials)
+        user_handle_b64url = base64.urlsafe_b64encode(user_handle).rstrip(b'=').decode('ascii')
+        user_handle_b64 = base64.b64encode(user_handle).decode('ascii')
+
+        stored_properties = convert_bytes_for_json(credential_info.get('properties', {}))
+        stored_extensions = convert_bytes_for_json(client_extension_results)
+
+        public_key_b64 = None
+        public_key_b64url = None
+        credential_public_key = getattr(auth_data.credential_data, 'public_key', None)
+        if isinstance(credential_public_key, Mapping):
+            try:
+                public_key_cbor_bytes = cbor.encode(dict(credential_public_key))
+            except Exception:
+                public_key_cbor_bytes = None
+            if public_key_cbor_bytes:
+                public_key_b64 = base64.b64encode(public_key_cbor_bytes).decode('ascii')
+                public_key_b64url = base64.urlsafe_b64encode(public_key_cbor_bytes).rstrip(b'=').decode('ascii')
+
+        stored_credential: Dict[str, Any] = {
+            "type": "advanced",
+            "userName": username,
+            "displayName": display_name,
+            "residentKey": bool(resident_key_result),
+            "largeBlob": bool(large_blob_result),
+            "authenticatorAttachment": authenticator_attachment_response,
+            "credentialId": credential_id_b64,
+            "credentialIdBase64Url": credential_id_b64url,
+            "credentialIdHex": credential_id_hex,
+            "aaguid": base64.urlsafe_b64encode(aaguid_bytes).rstrip(b'=').decode('ascii') if aaguid_bytes else None,
+            "aaguidHex": aaguid_hex,
+            "aaguidGuid": aaguid_guid,
+            "publicKeyAlgorithm": algo,
+            "publicKey": public_key_b64,
+            "publicKeyBase64": public_key_b64,
+            "publicKeyBase64Url": public_key_b64url,
+            "publicKeyBytes": credential_info.get('publicKeyBytes'),
+            "publicKeyCose": credential_info.get('publicKeyCose'),
+            "publicKeyType": credential_info.get('publicKeyType'),
+            "signCount": getattr(auth_data, 'counter', 0),
+            "createdAt": credential_info['registration_time'],
+            "clientExtensionOutputs": stored_extensions,
+            "attestationFormat": attestation_format,
+            "attestationStatement": convert_bytes_for_json(attestation_statement),
+            "attestationObject": convert_bytes_for_json(credential_info.get('attestation_object')),
+            "authenticatorData": authenticator_data_hex,
+            "clientDataJSON": convert_bytes_for_json(credential_info.get('client_data_json')),
+            "relyingParty": make_json_safe(rp_info),
+            "properties": stored_properties,
+            "registrationResponse": credential_info.get('registration_response'),
+            "userHandle": user_handle_b64,
+            "userHandleBase64": user_handle_b64,
+            "userHandleBase64Url": user_handle_b64url,
+            "userHandleHex": user_handle.hex(),
+        }
+
+        stored_credential = convert_bytes_for_json({k: v for k, v in stored_credential.items() if v is not None})
 
         response_payload: Dict[str, Any] = {
             "status": "OK",
@@ -1372,6 +1471,8 @@ def advanced_register_complete():
         }
         if warnings:
             response_payload["warnings"] = warnings
+
+        response_payload["storedCredential"] = stored_credential
 
         return jsonify(response_payload)
     except Exception as exc:
@@ -1433,7 +1534,18 @@ def advanced_authenticate_begin():
     elif user_verification == "discouraged":
         uv_req = UserVerificationRequirement.DISCOURAGED
 
-    stored_records = _load_all_stored_credentials()
+    raw_credentials_input: List[Any] = []
+    for field in ("__storedCredentials", "storedCredentials", "credentials"):
+        candidate = data.get(field)
+        if isinstance(candidate, list):
+            raw_credentials_input = candidate
+            break
+
+    stored_records, serialized_credentials = _parse_client_supplied_credentials(raw_credentials_input)
+
+    if not stored_records:
+        return jsonify({"error": "No credentials detected. Please register a credential first."}), 404
+
     credential_lookup: Dict[bytes, Dict[str, Any]] = {
         bytes(record["id"]): record
         for record in stored_records
@@ -1520,8 +1632,7 @@ def advanced_authenticate_begin():
             return jsonify({
                 "error": "No credentials matched the selected hints. Please adjust your hints or select different credentials."
             }), 404
-        if not stored_records:
-            return jsonify({"error": "No matching credentials found. Please register first."}), 404
+        return jsonify({"error": "No matching credentials found. Please register first."}), 404
 
     if resident_key_only and resident_records and not credentials_for_begin:
         if allowed_attachment_values:
@@ -1597,6 +1708,7 @@ def advanced_authenticate_begin():
     session["advanced_auth_state"] = state
     session["advanced_auth_rp"] = {"id": resolved_rp_id, "name": stored_rp_name}
     session["advanced_original_auth_request"] = data
+    session["advanced_auth_credentials"] = serialized_credentials
 
     options_payload = dict(options)
     public_key_dict = options_payload.get("publicKey")
@@ -1661,7 +1773,12 @@ def advanced_authenticate_complete():
                 "error": "Authenticator attachment is not permitted by the selected hints."
             }), 400
 
-    stored_records = _load_all_stored_credentials()
+    serialized_credentials = session.pop("advanced_auth_credentials", [])
+    stored_records, _ = _parse_client_supplied_credentials(serialized_credentials)
+
+    if not stored_records:
+        return jsonify({"error": "No credentials found"}), 404
+
     credential_lookup: Dict[bytes, Dict[str, Any]] = {
         bytes(record["id"]): record
         for record in stored_records
@@ -1673,9 +1790,6 @@ def advanced_authenticate_complete():
         for record in stored_records
         if record.get("data") is not None
     ]
-
-    if not all_credentials:
-        return jsonify({"error": "No credentials found"}), 404
 
     response_mapping: Mapping[str, Any]
     response_mapping = response if isinstance(response, Mapping) else {}
@@ -1769,6 +1883,21 @@ def advanced_authenticate_complete():
             "hintsUsed": hints_used,
         }
 
+        authenticated_id = None
+        if credential_id_bytes:
+            authenticated_id = base64.urlsafe_b64encode(credential_id_bytes).decode('ascii').rstrip('=')
+
+        sign_count_value = None
+        credential_response = response.get('response', {}) if isinstance(response, Mapping) else {}
+        if isinstance(credential_response, Mapping):
+            auth_data_b64 = credential_response.get('authenticatorData')
+            if isinstance(auth_data_b64, str):
+                try:
+                    auth_data_bytes = _decode_base64url(auth_data_b64)
+                    sign_count_value = AuthenticatorData(auth_data_bytes).counter
+                except Exception:
+                    sign_count_value = None
+
         if auth_alg is not None:
             debug_info["algorithm"] = auth_alg
             debug_info["algorithmDescription"] = describe_algorithm(auth_alg)
@@ -1776,9 +1905,15 @@ def advanced_authenticate_complete():
         if fallback_used:
             debug_info["customAlgorithmBypass"] = True
 
-        return jsonify({
+        response_payload: Dict[str, Any] = {
             "status": "OK",
             **debug_info,
-        })
+        }
+        if authenticated_id is not None:
+            response_payload["authenticatedCredentialId"] = authenticated_id
+        if sign_count_value is not None:
+            response_payload["signCount"] = sign_count_value
+
+        return jsonify(response_payload)
     except Exception as exc:
         return jsonify({"error": str(exc)}), 400
