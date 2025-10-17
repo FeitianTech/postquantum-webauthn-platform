@@ -1310,6 +1310,10 @@ function buildAttestationSection({
         || attestationStatementHasContent
         || attestationHasCertificates;
 
+    if (attestationFormatNormalized === 'none') {
+        return '';
+    }
+
     if (!hasAttestation) {
         return '';
     }
