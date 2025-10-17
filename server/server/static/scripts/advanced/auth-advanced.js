@@ -6,7 +6,9 @@ import {
 } from '../shared/webauthn-json.browser-ponyfill.js';
 import {
     convertExtensionsForClient,
-    normalizeClientExtensionResults
+    normalizeClientExtensionResults,
+    bufferSourceToUint8Array,
+    bytesToHex,
 } from '../shared/binary-utils.js';
 import {
     ensureAuthenticationHintsAllowed,
@@ -279,8 +281,24 @@ export async function advancedRegister() {
             maybeRandomizeAdvancedRegistrationFields();
 
             if (data.storedCredential && typeof data.storedCredential === 'object') {
+                const rawIdBytes = bufferSourceToUint8Array(credential.rawId);
+                const credentialIdFromBrowser = typeof credential.id === 'string' && credential.id.trim()
+                    ? credential.id.trim()
+                    : '';
+                const credentialIdBase64Url = credentialIdFromBrowser
+                    || data.storedCredential.credentialIdBase64Url
+                    || data.storedCredential.credentialId
+                    || '';
+                const credentialIdHexFromBrowser = rawIdBytes && rawIdBytes.length
+                    ? bytesToHex(rawIdBytes)
+                    : '';
+
                 const saved = saveAdvancedCredential({
                     ...data.storedCredential,
+                    id: credentialIdBase64Url || data.storedCredential.id,
+                    credentialId: credentialIdBase64Url || data.storedCredential.credentialId,
+                    credentialIdBase64Url,
+                    credentialIdHex: credentialIdHexFromBrowser || data.storedCredential.credentialIdHex,
                     userName: data.storedCredential.userName || publicKey?.user?.name || '',
                 });
                 if (saved) {
