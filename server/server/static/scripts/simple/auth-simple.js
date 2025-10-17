@@ -9,6 +9,12 @@ import { showStatus, hideStatus, showProgress, hideProgress } from '../shared/st
 import { loadSavedCredentials } from '../advanced/credential-display.js';
 import { printRegistrationDebug, printAuthenticationDebug } from '../shared/auth-debug.js';
 import { state } from '../shared/state.js';
+import {
+    getSimpleCredentialsForEmail,
+    saveSimpleCredential,
+    prepareCredentialsForServer,
+    updateSimpleCredentialSignCount,
+} from '../shared/local-storage.js';
 
 export async function simpleRegister() {
     const email = document.getElementById('simple-email').value;
@@ -21,9 +27,15 @@ export async function simpleRegister() {
         hideStatus('simple');
         showProgress('simple', 'Starting registration...');
 
+        const existingCredentials = getSimpleCredentialsForEmail(email);
+        const registrationPayload = {
+            credentials: prepareCredentialsForServer(existingCredentials)
+        };
+
         const response = await fetch(`/api/register/begin?email=${encodeURIComponent(email)}`, {
             method: 'POST',
-            headers: {'Content-Type': 'application/json'}
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(registrationPayload)
         });
 
         if (!response.ok) {
@@ -66,6 +78,11 @@ export async function simpleRegister() {
 
             showStatus('simple', `Registration successful! Algorithm: ${data.algo || 'Unknown'}`, 'success');
 
+            if (data.storedCredential && typeof data.storedCredential === 'object') {
+                saveSimpleCredential({ ...data.storedCredential, email });
+                loadSavedCredentials();
+            }
+
             setTimeout(loadSavedCredentials, 1000);
         } else {
             const errorText = await result.text();
@@ -101,9 +118,19 @@ export async function simpleAuthenticate() {
         hideStatus('simple');
         showProgress('simple', 'Starting authentication...');
 
+        const storedCredentials = getSimpleCredentialsForEmail(email);
+        if (!storedCredentials.length) {
+            throw new Error('No credentials stored in this browser for the provided username. Please register first.');
+        }
+
+        const authenticatePayload = {
+            credentials: prepareCredentialsForServer(storedCredentials)
+        };
+
         const response = await fetch(`/api/authenticate/begin?email=${encodeURIComponent(email)}`, {
             method: 'POST',
-            headers: {'Content-Type': 'application/json'}
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(authenticatePayload)
         });
 
         if (!response.ok) {
@@ -138,6 +165,15 @@ export async function simpleAuthenticate() {
             printAuthenticationDebug(assertion, getOptions, data);
 
             showStatus('simple', 'Authentication successful! You have been verified.', 'success');
+
+            if (data.authenticatedCredentialId) {
+                updateSimpleCredentialSignCount(
+                    email,
+                    data.authenticatedCredentialId,
+                    typeof data.signCount === 'number' ? data.signCount : undefined
+                );
+                loadSavedCredentials();
+            }
         } else {
             const errorText = await result.text();
             throw new Error(`Authentication failed: ${errorText}`);
