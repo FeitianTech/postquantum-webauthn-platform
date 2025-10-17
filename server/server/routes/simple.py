@@ -595,9 +595,18 @@ def register_complete():
             "email": stored_credential.get("email"),
             "type": "simple",
         }
-        session_simple_credentials = [entry for entry in session_simple_credentials if isinstance(entry, Mapping)]
-        session_simple_credentials.append(new_entry)
-        session['simple_credentials'] = session_simple_credentials
+
+        filtered_session_credentials: List[Dict[str, Any]] = []
+        for entry in session_simple_credentials:
+            if not isinstance(entry, Mapping):
+                continue
+            existing_id = entry.get("credentialId")
+            if isinstance(existing_id, str) and existing_id == new_entry["credentialId"]:
+                continue
+            filtered_session_credentials.append(dict(entry))
+
+        filtered_session_credentials.append(new_entry)
+        session['simple_credentials'] = filtered_session_credentials
 
     return jsonify({
         "status": "OK",
