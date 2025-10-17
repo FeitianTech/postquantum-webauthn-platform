@@ -368,7 +368,7 @@ export function saveAdvancedCredential(rawCredential) {
         if (storageId && isNonEmptyString(item.storageId)) {
             return item.storageId !== storageId;
         }
-        return normaliseAdvancedCredentialId(item) !== credentialId;
+        return true;
     });
     filtered.push(credential);
     persistAdvancedCredentials(filtered);
