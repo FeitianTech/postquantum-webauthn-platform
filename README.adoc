@@ -2,8 +2,6 @@
 
 **Deployed Web Service (Render):**  https://pqcwebauthn.onrender.com
 
-**Back-up Deployment (Google Cloud):** https://pqcwebauthn-799025274939.asia-northeast1.run.app
-
 This project provides an end-to-end platform for exploring WebAuthn user flows secured by post-quantum cryptography. The hosted demo and local setup instructions help you register authenticators, run authentication process, and compare PQC signature suites in a realistic WebAuthn environment. Decoder is integrated for decoding attestation objects, WebAuthn type CBOR responses, authenticator metadata, etc. A FIDO MDS explorer is also built for direct retrieval of authenticator metadata information, and conducting root certificate verification. 
  
 ## 💻 Local Setup
