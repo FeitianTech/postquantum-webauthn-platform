@@ -164,8 +164,17 @@ body.app-loaded > :not(.app-loader) {
     padding: 0;
 }
 
+.advanced-settings-layout .form-card .form-pane {
+    background: var(--surface-color);
+    border: 1px solid rgba(0, 114, 206, 0.15);
+    border-radius: 24px;
+    box-shadow: var(--shadow-soft);
+    padding: 2.25rem 2rem 2.5rem;
+}
+
 .advanced-settings-layout .form-card .form-pane.active {
     display: block;
+    overflow-y: auto;
 }
 
 .advanced-settings-layout .json-editor-card {
@@ -199,10 +208,31 @@ body.app-loaded > :not(.app-loader) {
 
 .advanced-settings-layout .credentials-column .credentials-panel {
     overflow-y: auto;
-    padding: 0 0.25rem 0 0;
+    padding: 0;
     background: transparent;
     border: none;
+    border-radius: 0;
     box-shadow: none;
+    min-height: 0;
+}
+
+.advanced-settings-layout .credentials-column #credentials-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+    padding-right: 0.35rem;
+}
+
+.advanced-settings-layout .credentials-column #credentials-list p {
+    margin: 0;
+}
+
+.advanced-settings-layout .credentials-column #credentials-list > :last-child {
+    margin-bottom: 0;
+}
+
+.advanced-settings-layout .credentials-column .credential-item {
+    margin: 0;
 }
 
 .advanced-settings-layout .credentials-column .credentials-panel::-webkit-scrollbar {
@@ -230,7 +260,6 @@ body.app-loaded > :not(.app-loader) {
 
     .advanced-settings-layout .form-card .form-pane.active {
         max-height: calc(100vh - var(--advanced-layout-sticky-top) - 4rem);
-        overflow-y: auto;
         padding-right: 1.75rem;
         padding-bottom: 3rem;
     }
@@ -363,7 +392,7 @@ body.app-loaded > :not(.app-loader) {
     .advanced-settings-layout .form-card .form-pane.active {
         max-height: none;
         overflow: visible;
-        padding: 0;
+        padding: 1.75rem 1.5rem 2rem;
     }
 
     .advanced-settings-layout .credentials-column .column-card {
