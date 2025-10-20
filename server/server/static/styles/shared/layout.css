@@ -70,8 +70,8 @@
 .advanced-header {
     display: flex;
     flex-direction: column;
-    gap: 0.6rem;
-    margin-bottom: 1rem;
+    gap: 0.45rem;
+    margin-bottom: 0.55rem;
 }
 
 .advanced-header__title-row {
@@ -110,7 +110,7 @@
 .advanced-header__meta {
     display: flex;
     flex-direction: column;
-    gap: 0.6rem;
+    gap: 0.45rem;
     flex: 1 1 auto;
 }
 

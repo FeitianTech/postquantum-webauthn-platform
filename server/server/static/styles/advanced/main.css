@@ -136,8 +136,8 @@ body.app-loaded > :not(.app-loader) {
     top: calc(var(--advanced-layout-sticky-top) - 2.5rem);
     z-index: 20;
     background: var(--surface-color);
-    padding: 0.85rem 0 0.95rem;
-    margin-bottom: 0.85rem;
+    padding: 0.55rem 0 0.65rem;
+    margin-bottom: 0.55rem;
     border-bottom: none;
 }
 
@@ -148,7 +148,7 @@ body.app-loaded > :not(.app-loader) {
 .advanced-settings-layout {
     align-items: start;
     gap: 2.5rem;
-    padding-top: 1.1rem;
+    padding-top: 0.55rem;
 }
 
 .advanced-settings-layout .form-column {
