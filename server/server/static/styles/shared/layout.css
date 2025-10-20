@@ -18,7 +18,7 @@
     display: grid;
     grid-template-columns: minmax(0, 0.7fr) minmax(240px, 0.3fr);
     gap: 2rem;
-    margin-top: 0.6rem;
+    margin-top: 0;
     align-items: stretch;
     width: 100%;
 }
@@ -71,7 +71,7 @@
     display: flex;
     flex-direction: column;
     gap: 0.6rem;
-    margin-bottom: 1.25rem;
+    margin-bottom: 1rem;
 }
 
 .advanced-header__title-row {

@@ -43,7 +43,7 @@
 html {
     overflow-y: auto;
     overflow-x: hidden;
-    scrollbar-gutter: stable both-edges;
+    scrollbar-gutter: stable;
 }
 
 body {
@@ -79,10 +79,10 @@ body.modal-open {
     position: relative;
     top: auto;
     left: 0;
-    width: 100vw;
+    width: 100%;
     max-width: none;
-    margin-left: calc(50% - 50vw);
-    margin-right: calc(50% - 50vw);
+    margin-left: 0;
+    margin-right: 0;
     z-index: 70;
 }
 
@@ -91,10 +91,10 @@ body.modal-open {
     top: 0;
     left: 0;
     right: 0;
-    width: 100vw;
+    width: 100%;
     margin: 0;
     padding-top: 0.75rem;
-    padding-bottom: 0.75rem;
+    padding-bottom: 0.5rem;
     z-index: 90;
 }
 
@@ -111,9 +111,9 @@ body.modal-open {
 }
 
 .header-placeholder {
-    width: 100vw;
-    margin-left: calc(50% - 50vw);
-    margin-right: calc(50% - 50vw);
+    width: 100%;
+    margin-left: 0;
+    margin-right: 0;
     padding: 0;
 }
 
