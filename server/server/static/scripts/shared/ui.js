@@ -336,6 +336,7 @@ export function initializeStickyHeader() {
     }
 
     const navTabs = header.querySelector('.header__tabs');
+    const sentinel = header.querySelector('.header-sentinel');
 
     let isFixed = false;
     let navOffset = 0;
@@ -343,19 +344,29 @@ export function initializeStickyHeader() {
     const ACTIVATION_BUFFER = 6;
     const RELEASE_BUFFER = 10;
 
-    const computeTriggerPosition = () => {
-        if (!isFixed) {
-            if (navTabs instanceof HTMLElement) {
-                const navRect = navTabs.getBoundingClientRect();
-                const headerRect = header.getBoundingClientRect();
-                navOffset = Math.max(0, navRect.top - headerRect.top);
-            } else {
-                navOffset = 0;
-            }
+    const resolveNavOffset = () => {
+        if (sentinel instanceof HTMLElement) {
+            return sentinel.offsetTop;
         }
 
-        const headerTop = header.offsetTop || 0;
-        triggerPosition = headerTop + navOffset;
+        if (navTabs instanceof HTMLElement) {
+            return navTabs.offsetTop;
+        }
+
+        return 0;
+    };
+
+    const getAnchorTop = () => {
+        if (isFixed) {
+            return placeholder.offsetTop || 0;
+        }
+
+        return header.offsetTop || 0;
+    };
+
+    const computeTriggerPosition = () => {
+        navOffset = resolveNavOffset();
+        triggerPosition = getAnchorTop() + navOffset;
     };
 
     const updatePlaceholderHeight = () => {
@@ -382,6 +393,10 @@ export function initializeStickyHeader() {
     };
 
     const evaluateStickyState = () => {
+        if (!isFixed) {
+            computeTriggerPosition();
+        }
+
         const scrollPosition = window.scrollY ?? window.pageYOffset ?? 0;
 
         if (!isFixed && scrollPosition >= (triggerPosition + ACTIVATION_BUFFER)) {
@@ -390,6 +405,7 @@ export function initializeStickyHeader() {
         }
 
         if (isFixed) {
+            computeTriggerPosition();
             const releaseThreshold = Math.max(0, triggerPosition - RELEASE_BUFFER);
 
             if (scrollPosition <= releaseThreshold) {
