@@ -340,6 +340,8 @@ export function initializeStickyHeader() {
     let isFixed = false;
     let navOffset = 0;
     let triggerPosition = header.offsetTop || 0;
+    const ACTIVATION_BUFFER = 6;
+    const RELEASE_BUFFER = 10;
 
     const computeTriggerPosition = () => {
         if (!isFixed) {
@@ -381,7 +383,19 @@ export function initializeStickyHeader() {
 
     const evaluateStickyState = () => {
         const scrollPosition = window.scrollY ?? window.pageYOffset ?? 0;
-        applyFixedState(scrollPosition >= triggerPosition);
+
+        if (!isFixed && scrollPosition >= (triggerPosition + ACTIVATION_BUFFER)) {
+            applyFixedState(true);
+            return;
+        }
+
+        if (isFixed) {
+            const releaseThreshold = Math.max(0, triggerPosition - RELEASE_BUFFER);
+
+            if (scrollPosition <= releaseThreshold) {
+                applyFixedState(false);
+            }
+        }
     };
 
     let resizeObserver = null;
