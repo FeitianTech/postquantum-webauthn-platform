@@ -15,7 +15,12 @@
 }
 
 .advanced-settings-layout {
-    grid-template-columns: minmax(170px, 0.9fr) minmax(0, 3.9fr) minmax(240px, 1.2fr);
+    display: grid;
+    grid-template-columns: minmax(0, 0.7fr) minmax(240px, 0.3fr);
+    gap: 2rem;
+    margin-top: 0.6rem;
+    align-items: stretch;
+    width: 100%;
 }
 
 .three-column > div {

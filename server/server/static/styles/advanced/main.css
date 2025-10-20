@@ -186,20 +186,23 @@ body.app-loaded > :not(.app-loader) {
 .advanced-settings-layout .credentials-column .column-card {
     position: sticky;
     top: var(--advanced-layout-sticky-top);
-    padding: 1.75rem 1.5rem;
-    background: var(--surface-color);
-    border-radius: 24px;
-    box-shadow: var(--shadow-soft);
+    padding: 0;
+    background: transparent;
+    border-radius: 0;
+    box-shadow: none;
     display: flex;
     flex-direction: column;
     gap: 1.25rem;
     max-height: calc(100vh - var(--advanced-layout-sticky-top) - 3rem);
-    overflow: hidden;
+    overflow: visible;
 }
 
 .advanced-settings-layout .credentials-column .credentials-panel {
     overflow-y: auto;
-    padding-right: 0.25rem;
+    padding: 0 0.25rem 0 0;
+    background: transparent;
+    border: none;
+    box-shadow: none;
 }
 
 .advanced-settings-layout .credentials-column .credentials-panel::-webkit-scrollbar {
@@ -222,7 +225,7 @@ body.app-loaded > :not(.app-loader) {
 
 @media (min-width: 993px) {
     .advanced-settings-layout {
-        grid-template-columns: minmax(180px, 15%) minmax(0, 65%) minmax(220px, 20%);
+        grid-template-columns: minmax(0, 0.7fr) minmax(240px, 0.3fr);
     }
 
     .advanced-settings-layout .form-card .form-pane.active {
@@ -357,23 +360,6 @@ body.app-loaded > :not(.app-loader) {
         padding: 1.25rem 0 1.5rem;
     }
 
-    .settings-nav {
-        position: static;
-        padding: 0;
-        flex-direction: row;
-        flex-wrap: wrap;
-        gap: 0.5rem 1.25rem;
-        margin-bottom: 1.5rem;
-    }
-
-    .settings-nav__separator {
-        display: none;
-    }
-
-    .settings-nav-column {
-        order: -1;
-    }
-
     .advanced-settings-layout .form-card .form-pane.active {
         max-height: none;
         overflow: visible;
@@ -383,11 +369,11 @@ body.app-loaded > :not(.app-loader) {
     .advanced-settings-layout .credentials-column .column-card {
         position: static;
         max-height: none;
-        padding: 1.5rem;
+        padding: 0;
     }
 
     .advanced-settings-layout .credentials-column .credentials-panel {
         overflow: visible;
-        padding-right: 0;
+        padding: 0;
     }
 }
