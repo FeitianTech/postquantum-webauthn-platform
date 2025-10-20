@@ -76,7 +76,8 @@ body.modal-open {
     background: var(--surface-color);
     color: var(--primary-color);
     padding: 1rem 2.5rem;
-    box-shadow: var(--shadow-soft);
+    box-shadow: none;
+    border-bottom: 1px solid rgba(0, 114, 206, 0.2);
     border-radius: 0;
     position: relative;
     top: auto;
@@ -97,6 +98,8 @@ body.modal-open {
     margin: 0;
     padding-top: 0.75rem;
     padding-bottom: 0.5rem;
+    box-shadow: none;
+    border-bottom: 1px solid rgba(0, 114, 206, 0.2);
     z-index: 90;
 }
 

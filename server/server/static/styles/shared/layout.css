@@ -78,7 +78,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 1rem;
+    gap: 1.75rem;
     flex-wrap: wrap;
 }
 
@@ -178,8 +178,42 @@
     flex-wrap: wrap;
 }
 
-.simple-credentials-section {
-    margin-top: 2rem;
+
+.simple-layout {
+    display: flex;
+    align-items: flex-start;
+    gap: 2.5rem;
+}
+
+.simple-layout .simple-auth-section,
+.simple-layout .simple-credentials-section {
+    flex: 1 1 50%;
+    max-width: 50%;
+    min-width: 0;
+}
+
+.simple-layout .simple-credentials-section {
+    margin-top: 0;
+}
+
+.simple-layout .simple-credentials-section .credentials-card {
+    height: 100%;
+}
+
+.simple-layout .simple-credentials-section .credentials-panel-title {
+    color: var(--primary-color);
+}
+
+@media (max-width: 960px) {
+    .simple-layout {
+        flex-direction: column;
+    }
+
+    .simple-layout .simple-auth-section,
+    .simple-layout .simple-credentials-section {
+        max-width: 100%;
+        flex-basis: 100%;
+    }
 }
 
 .section-title-with-action h3 {
