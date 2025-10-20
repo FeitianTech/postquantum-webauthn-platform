@@ -103,9 +103,10 @@
     top: auto !important;
     left: auto !important;
     transform: none !important;
-    width: 100% !important;
-    max-width: none !important;
+    width: min(100%, 720px) !important;
     height: auto !important;
+    min-height: 260px;
+    aspect-ratio: 3 / 2;
     padding: 2.25rem 1.75rem 1.75rem !important;
     border-radius: 24px !important;
     box-shadow: var(--shadow-soft);
@@ -113,7 +114,8 @@
 
 .inline-json-editor textarea {
     min-height: 0;
-    height: clamp(320px, 60vh, 520px);
+    height: 100%;
+    max-height: none;
 }
 
 .inline-json-editor .json-editor-actions {

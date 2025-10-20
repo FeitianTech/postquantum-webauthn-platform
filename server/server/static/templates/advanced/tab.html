@@ -62,9 +62,8 @@
                                     <div id="registration-authenticator-selection" class="settings-section-sentinel" data-scroll-target="authenticator-selection"></div>
                             <!-- Authenticator Selection Section -->
                             <div class="expandable-section">
-                                <div class="section-header" onclick="toggleSection('authenticator-selection')">
+                                <div class="section-header">
                                     <span>Authenticator Selection</span>
-                                    <span class="expand-icon">▼</span>
                                 </div>
                                 <div id="authenticator-selection" class="section-content">
                                     <div class="form-group">
@@ -204,9 +203,8 @@
                                     <div id="registration-other-options" class="settings-section-sentinel" data-scroll-target="other-options-reg"></div>
                             <!-- Other Options Section -->
                             <div class="expandable-section">
-                                <div class="section-header" onclick="toggleSection('other-options-reg')">
+                                <div class="section-header">
                                     <span>Other Options</span>
-                                    <span class="expand-icon">▼</span>
                                 </div>
                                 <div id="other-options-reg" class="section-content">
                                     <div class="form-group">
@@ -438,9 +436,8 @@
                                     <div id="registration-extensions" class="settings-section-sentinel" data-scroll-target="extensions-reg"></div>
                             <!-- Extensions Section -->
                             <div class="expandable-section">
-                                <div class="section-header" onclick="toggleSection('extensions-reg')">
+                                <div class="section-header">
                                     <span>Extensions</span>
-                                    <span class="expand-icon">▼</span>
                                 </div>
                                 <div id="extensions-reg" class="section-content">
                                     <div class="form-group">
@@ -714,9 +711,8 @@
                                     <div id="authentication-other-options" class="settings-section-sentinel" data-scroll-target="other-options-auth"></div>
                             <!-- Other Options Section -->
                             <div class="expandable-section">
-                                <div class="section-header" onclick="toggleSection('other-options-auth')">
+                                <div class="section-header">
                                     <span>Other Options</span>
-                                    <span class="expand-icon">▼</span>
                                 </div>
                                 <div id="other-options-auth" class="section-content">
                                     <div class="form-group">
@@ -807,9 +803,8 @@
                                     <div id="authentication-extensions" class="settings-section-sentinel" data-scroll-target="extensions-auth"></div>
                             <!-- Extensions Section -->
                             <div class="expandable-section">
-                                <div class="section-header" onclick="toggleSection('extensions-auth')">
+                                <div class="section-header">
                                     <span>Extensions</span>
-                                    <span class="expand-icon">▼</span>
                                 </div>
                                 <div id="extensions-auth" class="section-content">
                                     <div class="form-group">
@@ -922,25 +917,26 @@
                                     </div>
                                 </div>
                             </div>
-                                </div>
-                            </div>
-                            <div id="json-editor-section" class="settings-section-sentinel" data-scroll-target="json-editor-container"></div>
-                            <div class="column-card json-editor-card">
-                                <h3>JSON Editor</h3>
-                                <div id="json-editor-container" class="json-editor inline-json-editor expanded" aria-expanded="true">
-                                    <div class="json-editor-actions">
-                                        <div class="json-editor-inline-buttons">
-                                            <button class="btn" onclick="saveJsonEditor()" title="Save JSON changes to settings">Save</button>
-                                            <button class="btn btn-secondary" onclick="resetJsonEditor()" title="Reset JSON to match current settings">Reset</button>
-                                        </div>
-                                        <button type="button" id="json-editor-close" class="json-editor-close-btn" title="Close JSON editor" aria-label="Close JSON editor">
-                                            <span aria-hidden="true">&times;</span>
-                                        </button>
-                                    </div>
-                                    <textarea id="json-editor" placeholder="JSON representation will appear here automatically..." spellcheck="false" autocorrect="off" autocapitalize="off" autocomplete="off" data-gramm="false" data-gramm_editor="false" data-enable-grammarly="false"></textarea>
-                                </div>
-                            </div>
                         </div>
+                    </div>
+
+                    <div id="json-editor-section" class="settings-section-sentinel" data-scroll-target="json-editor-container"></div>
+                    <div class="column-card json-editor-card">
+                        <h3>JSON Editor</h3>
+                        <div id="json-editor-container" class="json-editor inline-json-editor expanded" aria-expanded="true">
+                            <div class="json-editor-actions">
+                                <div class="json-editor-inline-buttons">
+                                    <button class="btn" onclick="saveJsonEditor()" title="Save JSON changes to settings">Save</button>
+                                    <button class="btn btn-secondary" onclick="resetJsonEditor()" title="Reset JSON to match current settings">Reset</button>
+                                </div>
+                                <button type="button" id="json-editor-close" class="json-editor-close-btn" title="Close JSON editor" aria-label="Close JSON editor">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </div>
+                            <textarea id="json-editor" placeholder="JSON representation will appear here automatically..." spellcheck="false" autocorrect="off" autocapitalize="off" autocomplete="off" data-gramm="false" data-gramm_editor="false" data-enable-grammarly="false"></textarea>
+                        </div>
+                    </div>
+                </div>
 
                         <!-- Right Column: Credentials Panel -->
                         <div class="credentials-column">
