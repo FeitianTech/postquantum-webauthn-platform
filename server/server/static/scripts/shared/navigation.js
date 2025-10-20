@@ -36,6 +36,10 @@ export function switchSubTab(subTab) {
         form.classList.add('active');
     }
 
+    document.querySelectorAll('.advanced-header__actions-group').forEach(group => {
+        group.classList.toggle('active', group.dataset.subtab === subTab);
+    });
+
     updateJsonEditor();
 }
 

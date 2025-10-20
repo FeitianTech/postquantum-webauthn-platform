@@ -79,10 +79,18 @@
 
 .advanced-header__actions {
     display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
     align-items: center;
     justify-content: flex-end;
+}
+
+.advanced-header__actions-group {
+    display: none;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.advanced-header__actions-group.active {
+    display: inline-flex;
 }
 
 .advanced-header__actions .btn,

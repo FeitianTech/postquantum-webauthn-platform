@@ -109,12 +109,12 @@ body.modal-open {
     justify-content: center;
     width: 3.5rem;
     height: 3.5rem;
-    border-radius: 50%;
+    border-radius: 0;
     margin-right: 0;
     flex-shrink: 0;
-    background: rgba(0, 114, 206, 0.08);
-    transition: background-color 0.2s ease, border-color 0.2s ease;
-    border: 1px solid transparent;
+    background: transparent;
+    transition: transform 0.2s ease;
+    border: none;
     align-self: center;
 }
 
@@ -124,14 +124,13 @@ body.modal-open {
 }
 
 .header__github-link:hover {
-    background: rgba(0, 114, 206, 0.16);
-    border-color: rgba(0, 114, 206, 0.24);
+    transform: translateY(-2px);
 }
 
 .header__github-icon {
     display: block;
-    width: 2.5rem;
-    height: 2.5rem;
+    width: 2.75rem;
+    height: 2.75rem;
 }
 
 .container {

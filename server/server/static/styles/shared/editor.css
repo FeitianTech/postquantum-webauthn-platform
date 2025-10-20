@@ -203,29 +203,44 @@
 }
 
 .progress {
-    display: none;
-    padding: 1rem;
-    background: rgba(0, 114, 206, 0.08);
-    border: 1px solid rgba(0, 114, 206, 0.18);
-    border-radius: 16px;
-    text-align: center;
-    margin-top: 1rem;
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-12px);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem 1.25rem;
+    background: var(--primary-color);
+    color: #ffffff;
+    border-radius: 18px;
+    box-shadow: var(--shadow-soft);
+    min-width: 320px;
+    max-width: 90vw;
+    justify-content: center;
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 220ms ease, transform 220ms ease, visibility 0s linear 220ms;
 }
 
 .progress.show {
-    display: block;
-    animation: fadeInSoft 240ms ease;
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateX(-50%) translateY(0);
+    transition: opacity 220ms ease, transform 220ms ease, visibility 0s linear 0s;
 }
 
-.spinner {
+.progress .spinner {
     display: inline-block;
     width: 20px;
     height: 20px;
-    border: 3px solid rgba(0, 114, 206, 0.25);
+    border: 3px solid rgba(255, 255, 255, 0.35);
     border-radius: 50%;
-    border-top-color: var(--primary-color);
+    border-top-color: #ffffff;
     animation: spin 1s ease-in-out infinite;
-    margin-right: 0.5rem;
 }
 
 @keyframes spin {
