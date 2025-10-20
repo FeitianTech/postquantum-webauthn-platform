@@ -75,11 +75,40 @@ body.modal-open {
     color: var(--primary-color);
     padding: 1rem 2.5rem;
     box-shadow: var(--shadow-soft);
-    border-bottom-left-radius: 24px;
-    border-bottom-right-radius: 24px;
+    border-radius: 0;
     position: sticky;
     top: 0;
-    z-index: 50;
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    z-index: 70;
+}
+
+.header--stuck {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    z-index: 90;
+}
+
+.header-placeholder {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+.header-placeholder[hidden] {
+    display: none !important;
+}
+
+.header-sentinel {
+    width: 100%;
+    height: 1px;
+    margin: 0;
+    padding: 0;
+    pointer-events: none;
 }
 
 .header h1 {

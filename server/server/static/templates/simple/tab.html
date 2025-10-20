@@ -27,4 +27,30 @@
                         <span id="simple-progress-text">Processing...</span>
                     </div>
                 </div>
+
+                <div class="section simple-credentials-section">
+                    <div class="column-card credentials-card">
+                        <div class="credentials-panel-header">
+                            <h3 class="credentials-panel-title">Saved Credentials</h3>
+                            <button
+                                type="button"
+                                class="btn btn-small btn-danger"
+                                id="simple-clear-credentials"
+                                data-credentials-clear
+                                onclick="clearAllCredentials()"
+                            >
+                                Clear All
+                            </button>
+                        </div>
+                        <div class="credentials-panel">
+                            <div
+                                id="simple-credentials-list"
+                                class="credentials-panel-list"
+                                data-credentials-list
+                            >
+                                <p style="color: #6c757d;">No credentials registered yet.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>

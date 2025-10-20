@@ -18,7 +18,7 @@
 }
 
 .app-loader__dialog {
-    width: min(440px, 100%);
+    width: min(520px, 100%);
     padding: 0;
     background: transparent;
     text-align: center;
@@ -35,6 +35,9 @@
     font-size: 1.5rem;
     font-weight: 700;
     color: var(--primary-color);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .app-loader__spinner {
@@ -133,9 +136,9 @@ body.app-loaded > :not(.app-loader) {
     top: calc(var(--advanced-layout-sticky-top) - 2.5rem);
     z-index: 20;
     background: var(--surface-color);
-    padding: 1.35rem 0 1.5rem;
-    margin-bottom: 0;
-    border-bottom: 1px solid rgba(0, 114, 206, 0.12);
+    padding: 1.5rem 0 1.5rem;
+    margin-bottom: 1.75rem;
+    border-bottom: none;
 }
 
 .advanced-header__title-row {
@@ -382,6 +385,7 @@ body.app-loaded > :not(.app-loader) {
         position: static;
         border-bottom: none;
         padding: 1.25rem 0 1.5rem;
+        margin-bottom: 1.5rem;
     }
 
     .advanced-settings-layout .form-card .form-pane.active {

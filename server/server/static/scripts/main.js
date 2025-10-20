@@ -21,7 +21,8 @@ import {
     toggleLanguage,
     toggleJsonEditorExpansion,
     updateGlobalScrollLock,
-    closeModal
+    closeModal,
+    initializeStickyHeader,
 } from './shared/ui.js';
 import {
     updateFieldLabels,
@@ -137,6 +138,8 @@ window.cancelJsonEdit = cancelJsonEdit;
 document.addEventListener('DOMContentLoaded', () => {
     initializeLoader();
     loaderSetPhase('Preparing application…', { progress: 8 });
+
+    initializeStickyHeader();
 
     updateFieldLabels();
     initializeAdvancedSettingsNavigation();

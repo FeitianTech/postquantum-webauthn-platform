@@ -178,6 +178,10 @@
     flex-wrap: wrap;
 }
 
+.simple-credentials-section {
+    margin-top: 2rem;
+}
+
 .section-title-with-action h3 {
     margin-bottom: 0;
 }

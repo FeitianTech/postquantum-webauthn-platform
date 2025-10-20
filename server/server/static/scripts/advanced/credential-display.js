@@ -45,6 +45,14 @@ import {
     updateAdvancedCredentialRegistrationSnapshot,
 } from '../shared/local-storage.js';
 
+const SHARED_CREDENTIAL_STATUS_TABS = ['advanced', 'simple'];
+
+function showSharedCredentialStatus(message, type) {
+    SHARED_CREDENTIAL_STATUS_TABS.forEach(tabId => {
+        showStatus(tabId, message, type);
+    });
+}
+
 function normaliseAlgorithmIdentifier(value) {
     if (value === null || value === undefined) {
         return null;
@@ -2249,26 +2257,36 @@ export async function loadSavedCredentials() {
 }
 
 export function updateCredentialsDisplay() {
-    const clearButton = document.getElementById('clear-credentials');
-    if (clearButton) {
-        clearButton.disabled = state.storedCredentials.length === 0;
-    }
-
-    const credentialsList = document.getElementById('credentials-list');
-
-    if (!credentialsList) {
-        return;
-    }
-
-    if (!state.storedCredentials.length) {
-        credentialsList.innerHTML = '<p style="color: #6c757d; font-style: normal;">No credentials registered yet.</p>';
+    const hasCredentials = state.storedCredentials.length > 0;
+    const runPostUpdate = () => {
         checkLargeBlobCapability();
         updateAllowCredentialsDropdown();
         updateAuthenticationExtensionAvailability();
+    };
+
+    const clearButtons = document.querySelectorAll('[data-credentials-clear]');
+    clearButtons.forEach(button => {
+        if (button instanceof HTMLButtonElement) {
+            button.disabled = !hasCredentials;
+        }
+    });
+
+    const lists = document.querySelectorAll('[data-credentials-list]');
+    if (!lists.length) {
         return;
     }
 
-    credentialsList.innerHTML = state.storedCredentials.map((cred, index) => {
+    const emptyStateHtml = '<p style="color: #6c757d;">No credentials registered yet.</p>';
+
+    if (!hasCredentials) {
+        lists.forEach(list => {
+            list.innerHTML = emptyStateHtml;
+        });
+        runPostUpdate();
+        return;
+    }
+
+    const itemsHtml = state.storedCredentials.map((cred, index) => {
         const features = [];
         if (cred.residentKey === true || cred.discoverable === true) {
             features.push('Discoverable');
@@ -2325,9 +2343,11 @@ export function updateCredentialsDisplay() {
         `;
     }).join('');
 
-    checkLargeBlobCapability();
-    updateAllowCredentialsDropdown();
-    updateAuthenticationExtensionAvailability();
+    lists.forEach(list => {
+        list.innerHTML = itemsHtml;
+    });
+
+    runPostUpdate();
 }
 
 function setAaguidStatus(statusEl, message, { showSpinner = false } = {}) {
@@ -3365,9 +3385,9 @@ export async function deleteCredential(index) {
         if (removed) {
             state.storedCredentials.splice(index, 1);
             updateCredentialsDisplay();
-            showStatus('advanced', 'Credential removed from this browser.', 'success');
+            showSharedCredentialStatus('Credential removed from this browser.', 'success');
         } else {
-            showStatus('advanced', 'Unable to remove credential from this browser.', 'error');
+            showSharedCredentialStatus('Unable to remove credential from this browser.', 'error');
         }
         return;
     }
@@ -3376,9 +3396,9 @@ export async function deleteCredential(index) {
     if (removedAdvanced) {
         state.storedCredentials.splice(index, 1);
         updateCredentialsDisplay();
-        showStatus('advanced', 'Credential removed from this browser.', 'success');
+        showSharedCredentialStatus('Credential removed from this browser.', 'success');
     } else {
-        showStatus('advanced', 'Unable to remove credential from this browser.', 'error');
+        showSharedCredentialStatus('Unable to remove credential from this browser.', 'error');
     }
 }
 
@@ -3387,7 +3407,7 @@ export async function clearAllCredentials() {
     const advancedCount = getAllAdvancedCredentials().length;
 
     if (simpleCount === 0 && advancedCount === 0) {
-        showStatus('advanced', 'No saved credentials to clear.', 'info');
+        showSharedCredentialStatus('No saved credentials to clear.', 'info');
         return;
     }
 
@@ -3405,45 +3425,11 @@ export async function clearAllCredentials() {
 
     await loadSavedCredentials();
 
-    showStatus('advanced', 'All saved credentials removed successfully!', 'success');
+    showSharedCredentialStatus('All saved credentials removed successfully!', 'success');
 }
 
 export function updateCredentialsList() {
-    const list = document.getElementById('credentials-list');
-
-    if (!list) {
-        return;
-    }
-
-    if (state.storedCredentials.length === 0) {
-        list.innerHTML = '<p style="color: #6c757d; font-style: normal">No credentials registered yet.</p>';
-        return;
-    }
-
-    list.innerHTML = '';
-    state.storedCredentials.forEach((cred, index) => {
-        const credItem = document.createElement('div');
-        credItem.className = 'credential-item';
-        credItem.onclick = () => toggleCredentialDetails(index);
-
-        let summary;
-        if (cred.type === 'simple') {
-            summary = cred.email || cred.username;
-        } else {
-            summary = `${cred.userName || cred.userId}`;
-            if (cred.displayName) summary += `\n${cred.displayName}`;
-        }
-
-        credItem.innerHTML = `
-            <div class="credential-summary">${summary}</div>
-            <div class="credential-details">
-                ${generateCredentialDetails(cred)}
-                <button class="credential-delete" onclick="deleteCredential(${index}); event.stopPropagation();">Delete</button>
-            </div>
-        `;
-
-        list.appendChild(credItem);
-    });
+    updateCredentialsDisplay();
 }
 
 export function generateCredentialDetails(cred) {
