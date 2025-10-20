@@ -196,6 +196,41 @@
     margin-top: 0;
 }
 
+.simple-layout .simple-auth-section .simple-username-input {
+    max-width: none;
+}
+
+.simple-layout .simple-auth-section .input-with-button {
+    width: 100%;
+}
+
+.simple-layout .simple-auth-section .btn.refresh-icon {
+    flex-shrink: 0;
+}
+
+.simple-layout .simple-credentials-section .column-card,
+.simple-layout .simple-credentials-section .credentials-panel {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    padding: 0;
+    min-height: 0;
+}
+
+.simple-layout .simple-credentials-section .credentials-panel {
+    overflow: visible;
+}
+
+.simple-layout .simple-credentials-section .credentials-panel-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+}
+
+.simple-layout .simple-credentials-section .credentials-panel-list > :last-child {
+    margin-bottom: 0;
+}
+
 .simple-layout .simple-credentials-section .credentials-card {
     height: 100%;
 }

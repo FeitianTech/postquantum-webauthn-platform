@@ -268,7 +268,7 @@ body.modal-open {
     background: var(--surface-color);
     border-radius: 0;
     box-shadow: none;
-    padding: 2.25rem 2.5rem 3.5rem;
+    padding: 2.25rem clamp(3rem, 6vw, 4.75rem) 3.5rem;
 }
 
 .tab-content {
@@ -366,11 +366,12 @@ body.modal-open {
     align-items: center;
     flex-wrap: wrap;
     max-width: 100%;
+    width: 100%;
 }
 
 .simple-username-field {
-    flex: 1 1 38ch;
-    max-width: 38ch;
+    flex: 1 1 auto;
+    max-width: none;
     min-width: 0;
 }
 
@@ -378,6 +379,12 @@ body.modal-open {
     .simple-username-field {
         flex-basis: 100%;
         max-width: 100%;
+    }
+}
+
+@media (max-width: 768px) {
+    .content {
+        padding: 2rem 1.5rem 3rem;
     }
 }
 
