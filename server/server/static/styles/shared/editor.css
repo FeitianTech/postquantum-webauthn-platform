@@ -52,11 +52,27 @@
     flex: 1;
     color: var(--text-color);
     overflow-y: auto;
-    scrollbar-width: none;
+    scrollbar-width: thin;
+    scrollbar-color: var(--primary-color) rgba(0, 114, 206, 0.12);
 }
 
 .json-editor textarea::-webkit-scrollbar {
-    display: none;
+    width: 0.6rem;
+}
+
+.json-editor textarea::-webkit-scrollbar-track {
+    background: rgba(0, 114, 206, 0.08);
+    border-radius: 999px;
+}
+
+.json-editor textarea::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 114, 206, 0.45);
+    border-radius: 999px;
+    border: 0.15rem solid rgba(0, 114, 206, 0.08);
+}
+
+.json-editor textarea::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(0, 114, 206, 0.6);
 }
 
 #json-editor-container {
