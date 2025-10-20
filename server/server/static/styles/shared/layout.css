@@ -35,6 +35,19 @@
     height: 100%;
 }
 
+.advanced-settings-layout .form-column {
+    grid-row: 1;
+}
+
+.advanced-settings-layout .credentials-column {
+    grid-row: 1 / span 2;
+}
+
+.advanced-settings-layout .json-editor-column {
+    grid-column: 1 / 2;
+    grid-row: 2 / span 1;
+}
+
 .column-card {
     display: flex;
     flex-direction: column;
@@ -90,7 +103,7 @@
     display: flex;
     align-items: center;
     justify-content: flex-end;
-    margin-top: 0.95rem;
+    margin-top: 1.85rem;
 }
 
 .advanced-header__actions-group {

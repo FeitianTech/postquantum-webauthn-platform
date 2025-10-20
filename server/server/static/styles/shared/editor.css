@@ -103,7 +103,8 @@
     top: auto !important;
     left: auto !important;
     transform: none !important;
-    width: min(100%, 720px) !important;
+    width: 100% !important;
+    max-width: 720px;
     height: auto !important;
     min-height: 260px;
     aspect-ratio: 3 / 2;
