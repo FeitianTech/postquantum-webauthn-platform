@@ -9,7 +9,7 @@
     display: grid;
     grid-template-columns: 0.7fr 3fr 0.6fr;
     gap: 2rem;
-    margin-top: 1rem;
+    margin-top: 0.6rem;
     align-items: stretch;
     width: 100%;
 }
@@ -57,12 +57,48 @@
     padding-top: 1rem;
 }
 
-.json-editor-buttons {
-    margin-top: auto;
+
+.advanced-header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    margin-bottom: 1.25rem;
+}
+
+.advanced-header__title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.advanced-header__title-row h2 {
+    margin: 0;
+}
+
+.advanced-header__actions {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.75rem;
-    padding-top: 1rem;
+    gap: 0.5rem;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.advanced-header__actions .btn,
+.advanced-header__actions .btn-secondary {
+    margin-bottom: 0;
+}
+
+.advanced-header__meta {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    flex: 1 1 auto;
+}
+
+.advanced-header__meta .status {
+    margin-bottom: 0;
 }
 
 .json-editor-card,
@@ -129,10 +165,6 @@
     margin-bottom: 0;
 }
 
-.section-title-with-action .btn {
-    flex-shrink: 0;
-}
-
 .form-section-title {
     display: block;
     margin-bottom: 0.5rem;
@@ -147,34 +179,36 @@
 
 .sub-tabs {
     display: flex;
-    background: rgba(0, 114, 206, 0.06);
-    border-radius: 16px;
-    margin-bottom: 1.25rem;
-    overflow: hidden;
-    border: 1px solid rgba(0, 114, 206, 0.1);
+    justify-content: flex-start;
+    gap: 0.55rem;
+    margin-bottom: 0.55rem;
+    flex-wrap: wrap;
 }
 
 .sub-tab {
-    flex: 1;
-    padding: 0.75rem 1rem;
-    background: transparent;
-    border: none;
+    padding: 0.55rem 1.1rem;
+    background: var(--surface-color);
+    border: 1px solid rgba(0, 114, 206, 0.25);
+    border-radius: 999px;
     cursor: pointer;
     font-size: 0.9rem;
     color: var(--muted-text);
-    transition: all 0.3s ease;
-    font-weight: 500;
+    font-family: inherit;
+    letter-spacing: 0.02em;
+    transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
+    font-weight: 600;
 }
 
 .sub-tab.active {
-    background: linear-gradient(135deg, rgba(0, 114, 206, 0.15), rgba(0, 166, 81, 0.2));
+    background: linear-gradient(135deg, rgba(0, 114, 206, 0.2), rgba(0, 166, 81, 0.2));
     color: var(--primary-dark);
-    box-shadow: inset 0 0 0 1px rgba(0, 114, 206, 0.2);
+    border-color: rgba(0, 114, 206, 0.5);
 }
 
 .sub-tab:hover:not(.active) {
-    background: rgba(0, 114, 206, 0.1);
     color: var(--primary-dark);
+    background: rgba(0, 114, 206, 0.12);
+    border-color: rgba(0, 114, 206, 0.3);
 }
 
 .form-control.error {

@@ -1,8 +1,7 @@
 .btn {
     display: inline-block;
-    padding: 0.75rem 1.5rem;
+    padding: 0.65rem 1.4rem;
     background-color: var(--primary-color);
-    background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0));
     color: #ffffff;
     border: none;
     border-radius: 18px;
@@ -10,17 +9,14 @@
     font-size: 1rem;
     font-weight: 600;
     text-decoration: none;
-    transition: background-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
+    transition: background-color 0.18s ease, color 0.18s ease;
     margin-right: 0.5rem;
     margin-bottom: 0.5rem;
-    box-shadow: 0 10px 20px rgba(6, 75, 128, 0.16);
 }
 
 .btn:hover,
 .btn:focus-visible {
-    background-color: var(--primary-dark);
-    box-shadow: 0 14px 26px rgba(6, 75, 128, 0.22);
-    transform: translateY(-1px);
+    background-color: var(--primary-soft);
     outline: none;
 }
 
@@ -48,14 +44,13 @@
 
 .btn-secondary {
     background: rgba(0, 114, 206, 0.08);
-    border: 1px solid rgba(0, 114, 206, 0.18);
+    border: 1px solid rgba(0, 114, 206, 0.2);
     color: var(--primary-dark);
-    box-shadow: none;
 }
 
 .btn-secondary:hover,
 .btn-secondary:focus-visible {
-    background: rgba(0, 114, 206, 0.22);
+    background: rgba(0, 114, 206, 0.16);
     border-color: rgba(0, 114, 206, 0.28);
 }
 
@@ -65,7 +60,7 @@
 
 .btn-danger:hover,
 .btn-danger:focus-visible {
-    background: #c71f30;
+    background: #c22433;
 }
 
 .btn-success {
@@ -74,7 +69,7 @@
 
 .btn-success:hover,
 .btn-success:focus-visible {
-    background: #1f7f33;
+    background: #21863a;
 }
 
 .status {

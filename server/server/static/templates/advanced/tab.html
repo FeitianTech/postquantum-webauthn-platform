@@ -1,13 +1,21 @@
             <!-- Advanced Authentication Tab -->
             <div id="advanced-tab" class="tab-content">
                 <div class="section">
-                    <h2>Advanced Authentication</h2>
-                    <div class="status" id="advanced-status"></div>
-
-                    <!-- Sub-tabs for Registration and Authentication -->
-                    <div class="sub-tabs">
-                        <button id="registration-tab-btn" class="sub-tab active" onclick="switchSubTab('registration')">Registration</button>
-                        <button id="authentication-tab-btn" class="sub-tab" onclick="switchSubTab('authentication')">Authentication</button>
+                    <div class="advanced-header">
+                        <div class="advanced-header__title-row">
+                            <h2>Advanced Authentication</h2>
+                            <div class="advanced-header__actions">
+                                <button class="btn" onclick="advancedRegister()">Create Credential</button>
+                                <button type="button" class="btn btn-secondary" onclick="resetRegistrationForm()">Reset</button>
+                            </div>
+                        </div>
+                        <div class="advanced-header__meta">
+                            <div class="status" id="advanced-status"></div>
+                            <div class="sub-tabs">
+                                <button id="registration-tab-btn" class="sub-tab active" onclick="switchSubTab('registration')">Registration</button>
+                                <button id="authentication-tab-btn" class="sub-tab" onclick="switchSubTab('authentication')">Authentication</button>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="three-column">
@@ -610,11 +618,6 @@
                                     </div>
                                 </div>
                             </div>
-
-                                <div class="form-actions form-group">
-                                    <button class="btn" onclick="advancedRegister()">Create Credential</button>
-                                    <button type="button" class="btn btn-secondary" onclick="resetRegistrationForm()">Reset</button>
-                                </div>
                                 </div>
 
                                 <!-- Authentication Form -->
@@ -907,7 +910,6 @@
                                     </div>
                                 </div>
                             </div>
-
                                 <div class="form-actions form-group">
                                     <button class="btn" onclick="advancedAuthenticate()">Assert Credential</button>
                                     <button type="button" class="btn btn-secondary" onclick="resetAuthenticationForm()">Reset</button>
@@ -921,14 +923,16 @@
                             <div class="column-card json-editor-card">
                                 <h3>JSON Editor</h3>
                                 <div id="json-editor-container" class="json-editor" aria-expanded="false">
-                                    <button type="button" id="json-editor-close" class="json-editor-close-btn" title="Close JSON editor" aria-label="Close JSON editor" aria-hidden="true">
-                                        <span aria-hidden="true">&times;</span>
-                                    </button>
+                                    <div class="json-editor-actions">
+                                        <div class="json-editor-inline-buttons">
+                                            <button class="btn" onclick="saveJsonEditor()" title="Save JSON changes to settings">Save</button>
+                                            <button class="btn btn-secondary" onclick="resetJsonEditor()" title="Reset JSON to match current settings">Reset</button>
+                                        </div>
+                                        <button type="button" id="json-editor-close" class="json-editor-close-btn" title="Close JSON editor" aria-label="Close JSON editor">
+                                            <span aria-hidden="true">&times;</span>
+                                        </button>
+                                    </div>
                                     <textarea id="json-editor" placeholder="JSON representation will appear here automatically..." spellcheck="false" autocorrect="off" autocapitalize="off" autocomplete="off" data-gramm="false" data-gramm_editor="false" data-enable-grammarly="false"></textarea>
-                                </div>
-                                <div class="json-editor-buttons" style="margin-top: 0.5rem;">
-                                    <button class="btn" onclick="saveJsonEditor()" title="Save JSON changes to settings">Save</button>
-                                    <button class="btn btn-secondary" onclick="resetJsonEditor()" title="Reset JSON to match current settings">Reset</button>
                                 </div>
                             </div>
                         </div>

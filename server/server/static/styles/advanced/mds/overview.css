@@ -32,14 +32,13 @@
     font-size: 0.9rem;
     font-weight: 600;
     cursor: pointer;
-    box-shadow: var(--shadow-soft);
-    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    box-shadow: none;
+    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
 
 .mds-add-metadata-button:hover {
-    transform: translateY(-1px);
+    background: rgba(0, 114, 206, 0.08);
     border-color: rgba(0, 114, 206, 0.45);
-    box-shadow: var(--shadow-hover);
 }
 
 .mds-add-metadata-button:focus-visible {
@@ -48,7 +47,7 @@
 }
 
 .mds-add-metadata-button:active {
-    transform: translateY(0);
+    background: rgba(0, 114, 206, 0.12);
 }
 
 .mds-update-button {
@@ -57,7 +56,7 @@
     justify-content: center;
     gap: 0.4rem;
     padding: 0.65rem 1.4rem;
-    border: none;
+    border: 1px solid transparent;
     border-radius: 16px;
     background-color: var(--primary-color);
     background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0));
@@ -65,14 +64,12 @@
     font-size: 0.95rem;
     font-weight: 600;
     cursor: pointer;
-    box-shadow: var(--shadow-soft);
-    transition: background-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease, opacity 0.25s ease;
+    box-shadow: none;
+    transition: background-color 0.2s ease, opacity 0.2s ease, border-color 0.2s ease;
 }
 
 .mds-update-button:hover:not(:disabled) {
-    transform: translateY(-1px);
-    background-color: var(--primary-dark);
-    box-shadow: var(--shadow-hover);
+    background-color: var(--primary-soft);
 }
 
 .mds-update-button:focus-visible {
@@ -83,7 +80,6 @@
 .mds-update-button:disabled {
     cursor: not-allowed;
     opacity: 0.7;
-    transform: none;
     box-shadow: none;
 }
 
@@ -92,11 +88,11 @@
 }
 
 .mds-update-button--attention {
-    box-shadow: 0 0 0 4px rgba(229, 83, 83, 0.28), var(--shadow-soft);
+    border-color: rgba(229, 83, 83, 0.45);
 }
 
 .mds-update-button--attention:hover:not(:disabled) {
-    box-shadow: 0 0 0 4px rgba(229, 83, 83, 0.35), var(--shadow-hover);
+    border-color: rgba(229, 83, 83, 0.55);
 }
 
 .mds-section-title h2 {
