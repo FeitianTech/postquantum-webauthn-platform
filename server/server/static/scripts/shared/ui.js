@@ -324,11 +324,6 @@ export function initializeStickyHeader() {
 
     header.dataset.stickyInitialized = 'true';
 
-    const sentinel = document.createElement('div');
-    sentinel.className = 'header-sentinel';
-    sentinel.setAttribute('aria-hidden', 'true');
-    parent.insertBefore(sentinel, header);
-
     const placeholder = document.createElement('div');
     placeholder.className = 'header-placeholder';
     placeholder.setAttribute('aria-hidden', 'true');
@@ -340,15 +335,56 @@ export function initializeStickyHeader() {
         parent.insertBefore(placeholder, header.nextSibling);
     }
 
+    const navTabs = header.querySelector('.header__tabs');
+
+    let isFixed = false;
+    let navOffset = 0;
+    let triggerPosition = header.offsetTop || 0;
+
+    const computeTriggerPosition = () => {
+        if (!isFixed) {
+            if (navTabs instanceof HTMLElement) {
+                const navRect = navTabs.getBoundingClientRect();
+                const headerRect = header.getBoundingClientRect();
+                navOffset = Math.max(0, navRect.top - headerRect.top);
+            } else {
+                navOffset = 0;
+            }
+        }
+
+        const headerTop = header.offsetTop || 0;
+        triggerPosition = headerTop + navOffset;
+    };
+
     const updatePlaceholderHeight = () => {
         placeholder.style.height = `${header.offsetHeight}px`;
+        computeTriggerPosition();
     };
 
     updatePlaceholderHeight();
 
+    const applyFixedState = shouldFix => {
+        if (isFixed === shouldFix) {
+            return;
+        }
+
+        isFixed = shouldFix;
+        header.classList.toggle('header--stuck', shouldFix);
+        placeholder.hidden = !shouldFix;
+
+        if (shouldFix) {
+            updatePlaceholderHeight();
+        } else {
+            computeTriggerPosition();
+        }
+    };
+
+    const evaluateStickyState = () => {
+        const scrollPosition = window.scrollY ?? window.pageYOffset ?? 0;
+        applyFixedState(scrollPosition >= triggerPosition);
+    };
+
     let resizeObserver = null;
-    let removeScrollListener = null;
-    let intersectionObserver = null;
     if (typeof ResizeObserver === 'function') {
         resizeObserver = new ResizeObserver(updatePlaceholderHeight);
         resizeObserver.observe(header);
@@ -356,38 +392,13 @@ export function initializeStickyHeader() {
         window.addEventListener('resize', updatePlaceholderHeight);
     }
 
-    let isFixed = false;
-    const applyFixedState = shouldFix => {
-        if (isFixed === shouldFix) {
-            return;
-        }
-        isFixed = shouldFix;
-        header.classList.toggle('header--stuck', shouldFix);
-        placeholder.hidden = !shouldFix;
-        if (shouldFix) {
-            updatePlaceholderHeight();
-        }
+    window.addEventListener('scroll', evaluateStickyState, { passive: true });
+    evaluateStickyState();
+
+    const handlePageshow = () => {
+        updatePlaceholderHeight();
+        evaluateStickyState();
     };
-
-    if (typeof IntersectionObserver === 'function') {
-        intersectionObserver = new IntersectionObserver(entries => {
-            entries.forEach(entry => {
-                const shouldFix = !entry.isIntersecting && entry.boundingClientRect.top < 0;
-                applyFixedState(shouldFix);
-            });
-        });
-        intersectionObserver.observe(sentinel);
-    } else {
-        const handleScroll = () => {
-            const rect = sentinel.getBoundingClientRect();
-            applyFixedState(rect.top < 0);
-        };
-        window.addEventListener('scroll', handleScroll);
-        removeScrollListener = () => window.removeEventListener('scroll', handleScroll);
-        handleScroll();
-    }
-
-    const handlePageshow = () => updatePlaceholderHeight();
     window.addEventListener('pageshow', handlePageshow);
 
     window.addEventListener('beforeunload', () => {
@@ -396,12 +407,7 @@ export function initializeStickyHeader() {
         } else {
             window.removeEventListener('resize', updatePlaceholderHeight);
         }
-        if (intersectionObserver) {
-            intersectionObserver.disconnect();
-        }
-        if (typeof removeScrollListener === 'function') {
-            removeScrollListener();
-        }
+        window.removeEventListener('scroll', evaluateStickyState);
         window.removeEventListener('pageshow', handlePageshow);
     }, { once: true });
 }

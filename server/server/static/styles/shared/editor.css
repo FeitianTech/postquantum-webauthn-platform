@@ -40,7 +40,8 @@
 }
 
 .json-editor textarea {
-    width: 100%;
+    width: calc(100% + 1.75rem);
+    margin-right: -1.75rem;
     min-height: 520px;
     background: transparent;
     border: none;
@@ -54,7 +55,7 @@
     overflow-y: auto;
     padding-right: 1.75rem;
     scrollbar-width: thin;
-    scrollbar-color: rgba(0, 114, 206, 0.25) transparent;
+    scrollbar-color: rgba(92, 108, 122, 0.5) transparent;
 }
 
 .json-editor textarea::-webkit-scrollbar {
@@ -66,12 +67,12 @@
 }
 
 .json-editor textarea::-webkit-scrollbar-thumb {
-    background-color: rgba(0, 114, 206, 0.25);
+    background-color: rgba(92, 108, 122, 0.5);
     border-radius: 999px;
 }
 
 .json-editor textarea::-webkit-scrollbar-thumb:hover {
-    background-color: rgba(0, 114, 206, 0.4);
+    background-color: rgba(92, 108, 122, 0.7);
 }
 
 #json-editor-container {
@@ -149,8 +150,8 @@ body.advanced-inline-json-editor .json-editor-overlay.active {
 .json-editor-actions {
     position: absolute;
     top: 1.1rem;
-    left: 1.5rem;
-    right: 1.5rem;
+    left: 1.75rem;
+    right: 1.75rem;
     display: none;
     align-items: center;
     justify-content: flex-end;
