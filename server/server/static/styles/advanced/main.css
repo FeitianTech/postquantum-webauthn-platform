@@ -160,19 +160,21 @@ body.app-loaded > :not(.app-loader) {
     box-shadow: none;
     background: transparent;
     padding: 0;
+    min-height: 0;
 }
 
 .advanced-settings-layout .form-card .form-pane {
-    background: var(--surface-color);
-    border: 1px solid rgba(0, 114, 206, 0.15);
-    border-radius: 24px;
-    box-shadow: var(--shadow-soft);
-    padding: 2.25rem 2rem 2.5rem;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 0;
 }
 
 .advanced-settings-layout .form-card .form-pane.active {
     display: block;
-    overflow-y: auto;
+    overflow: visible;
+    max-height: none;
 }
 
 .advanced-settings-layout .json-editor-card {
@@ -257,13 +259,8 @@ body.app-loaded > :not(.app-loader) {
     }
 
     .advanced-settings-layout .form-card .form-pane.active {
-        max-height: calc(100vh - var(--advanced-layout-sticky-top) - 4rem);
-        padding-right: 1.75rem;
-        padding-bottom: 3rem;
-    }
-
-    .advanced-settings-layout .form-card .form-pane.active {
-        scrollbar-width: thin;
+        padding-right: 0;
+        padding-bottom: 0;
     }
 }
 
