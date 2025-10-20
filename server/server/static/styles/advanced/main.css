@@ -336,8 +336,8 @@ body.app-loaded > :not(.app-loader) {
 }
 
 .settings-section-sentinel + .json-editor-card {
-    padding-top: 0.5rem;
-    margin-top: 0.5rem;
+    padding-top: 1.25rem;
+    margin-top: 1.25rem;
 }
 
 .settings-section-sentinel--first + .static-section,
