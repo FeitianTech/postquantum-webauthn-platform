@@ -1,54 +1,56 @@
             <!-- Simple Authentication Tab -->
             <div id="simple-tab" class="tab-content active">
-                <div class="section">
-                    <h2>Simple Authentication</h2>
-                    
-                    <div class="status" id="simple-status"></div>
+                <div class="simple-layout">
+                    <div class="section simple-auth-section">
+                        <h2>Simple Authentication</h2>
 
-                    <div class="form-group">
-                        <label for="simple-email">Username</label>
-                        <div class="input-with-button simple-username-input">
-                            <input type="text" id="simple-email" class="form-control simple-username-field" placeholder="Enter username">
-                            <button type="button" class="btn btn-small refresh-icon" onclick="randomizeSimpleUsername()" title="Generate random username" aria-label="Generate random username">
-                                <svg class="icon-refresh" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                                    <circle cx="12" cy="12" r="8.25" />
-                                </svg>
-                            </button>
+                        <div class="status" id="simple-status"></div>
+
+                        <div class="form-group">
+                            <label for="simple-email">Username</label>
+                            <div class="input-with-button simple-username-input">
+                                <input type="text" id="simple-email" class="form-control simple-username-field" placeholder="Enter username">
+                                <button type="button" class="btn btn-small refresh-icon" onclick="randomizeSimpleUsername()" title="Generate random username" aria-label="Generate random username">
+                                    <svg class="icon-refresh" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                        <circle cx="12" cy="12" r="8.25" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <button class="btn" onclick="simpleRegister()">Register Passkey</button>
+                            <button class="btn btn-secondary" onclick="simpleAuthenticate()">Authenticate</button>
+                        </div>
+
+                        <div class="progress" id="simple-progress">
+                            <div class="spinner"></div>
+                            <span id="simple-progress-text">Processing...</span>
                         </div>
                     </div>
 
-                    <div class="form-group">
-                        <button class="btn" onclick="simpleRegister()">Register Passkey</button>
-                        <button class="btn btn-secondary" onclick="simpleAuthenticate()">Authenticate</button>
-                    </div>
-
-                    <div class="progress" id="simple-progress">
-                        <div class="spinner"></div>
-                        <span id="simple-progress-text">Processing...</span>
-                    </div>
-                </div>
-
-                <div class="section simple-credentials-section">
-                    <div class="column-card credentials-card">
-                        <div class="credentials-panel-header">
-                            <h3 class="credentials-panel-title">Saved Credentials</h3>
-                            <button
-                                type="button"
-                                class="btn btn-small btn-danger"
-                                id="simple-clear-credentials"
-                                data-credentials-clear
-                                onclick="clearAllCredentials()"
-                            >
-                                Clear All
-                            </button>
-                        </div>
-                        <div class="credentials-panel">
-                            <div
-                                id="simple-credentials-list"
-                                class="credentials-panel-list"
-                                data-credentials-list
-                            >
-                                <p style="color: #6c757d;">No credentials registered yet.</p>
+                    <div class="section simple-credentials-section">
+                        <div class="column-card credentials-card">
+                            <div class="credentials-panel-header">
+                                <h3 class="credentials-panel-title">Saved Credentials</h3>
+                                <button
+                                    type="button"
+                                    class="btn btn-small btn-danger"
+                                    id="simple-clear-credentials"
+                                    data-credentials-clear
+                                    onclick="clearAllCredentials()"
+                                >
+                                    Clear All
+                                </button>
+                            </div>
+                            <div class="credentials-panel">
+                                <div
+                                    id="simple-credentials-list"
+                                    class="credentials-panel-list"
+                                    data-credentials-list
+                                >
+                                    <p style="color: #6c757d;">No credentials registered yet.</p>
+                                </div>
                             </div>
                         </div>
                     </div>

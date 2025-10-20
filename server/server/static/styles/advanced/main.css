@@ -136,8 +136,8 @@ body.app-loaded > :not(.app-loader) {
     top: calc(var(--advanced-layout-sticky-top) - 2.5rem);
     z-index: 20;
     background: var(--surface-color);
-    padding: 0.55rem 0 0.65rem;
-    margin-bottom: 0.55rem;
+    padding: 0.35rem 0 0.6rem;
+    margin: -0.4rem 0 0.45rem;
     border-bottom: none;
 }
 
