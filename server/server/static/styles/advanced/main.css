@@ -178,7 +178,7 @@ body.app-loaded > :not(.app-loader) {
 }
 
 .advanced-settings-layout .json-editor-column {
-    align-items: flex-start;
+    align-items: stretch;
     gap: 0;
 }
 
@@ -191,7 +191,8 @@ body.app-loaded > :not(.app-loader) {
     position: static;
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
+    align-items: stretch;
+    width: 100%;
 }
 
 .advanced-settings-layout .json-editor-card h3 {
@@ -335,8 +336,8 @@ body.app-loaded > :not(.app-loader) {
 }
 
 .settings-section-sentinel + .json-editor-card {
-    padding-top: 0.85rem;
-    margin-top: 0.85rem;
+    padding-top: 0.5rem;
+    margin-top: 0.5rem;
 }
 
 .settings-section-sentinel--first + .static-section,

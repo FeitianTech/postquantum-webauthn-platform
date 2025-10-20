@@ -105,8 +105,9 @@
     transform: none !important;
     width: 100% !important;
     max-width: none;
+    display: block;
     height: auto !important;
-    min-height: 260px;
+    min-height: 0;
     aspect-ratio: 3 / 2;
     padding: 2.25rem 1.75rem 1.75rem !important;
     border-radius: 24px !important;
