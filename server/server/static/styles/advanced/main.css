@@ -137,7 +137,7 @@ body.app-loaded > :not(.app-loader) {
     z-index: 20;
     background: var(--surface-color);
     padding: 0.35rem 0 0.6rem;
-    margin: -0.4rem 0 0.45rem;
+    margin: -1rem 0 0.45rem;
     border-bottom: none;
 }
 
@@ -332,6 +332,11 @@ body.app-loaded > :not(.app-loader) {
     padding-top: 1.75rem;
     margin-top: 1.75rem;
     border-top: 1px solid var(--advanced-section-divider);
+}
+
+.settings-section-sentinel + .json-editor-card {
+    padding-top: 0.85rem;
+    margin-top: 0.85rem;
 }
 
 .settings-section-sentinel--first + .static-section,
