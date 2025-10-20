@@ -918,25 +918,8 @@
                                 </div>
                             </div>
                         </div>
-                    </div>
-
-                    <div id="json-editor-section" class="settings-section-sentinel" data-scroll-target="json-editor-container"></div>
-                    <div class="column-card json-editor-card">
-                        <h3>JSON Editor</h3>
-                        <div id="json-editor-container" class="json-editor inline-json-editor expanded" aria-expanded="true">
-                            <div class="json-editor-actions">
-                                <div class="json-editor-inline-buttons">
-                                    <button class="btn" onclick="saveJsonEditor()" title="Save JSON changes to settings">Save</button>
-                                    <button class="btn btn-secondary" onclick="resetJsonEditor()" title="Reset JSON to match current settings">Reset</button>
-                                </div>
-                                <button type="button" id="json-editor-close" class="json-editor-close-btn" title="Close JSON editor" aria-label="Close JSON editor">
-                                    <span aria-hidden="true">&times;</span>
-                                </button>
                             </div>
-                            <textarea id="json-editor" placeholder="JSON representation will appear here automatically..." spellcheck="false" autocorrect="off" autocapitalize="off" autocomplete="off" data-gramm="false" data-gramm_editor="false" data-enable-grammarly="false"></textarea>
                         </div>
-                    </div>
-                </div>
 
                         <!-- Right Column: Credentials Panel -->
                         <div class="credentials-column">
@@ -960,6 +943,25 @@
                                     >
                                         <p style="color: #6c757d;">No credentials registered yet.</p>
                                     </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="json-editor-column">
+                            <div id="json-editor-section" class="settings-section-sentinel" data-scroll-target="json-editor-container"></div>
+                            <div class="column-card json-editor-card">
+                                <h3>JSON Editor</h3>
+                                <div id="json-editor-container" class="json-editor inline-json-editor expanded" aria-expanded="true">
+                                    <div class="json-editor-actions">
+                                        <div class="json-editor-inline-buttons">
+                                            <button class="btn" onclick="saveJsonEditor()" title="Save JSON changes to settings">Save</button>
+                                            <button class="btn btn-secondary" onclick="resetJsonEditor()" title="Reset JSON to match current settings">Reset</button>
+                                        </div>
+                                        <button type="button" id="json-editor-close" class="json-editor-close-btn" title="Close JSON editor" aria-label="Close JSON editor">
+                                            <span aria-hidden="true">&times;</span>
+                                        </button>
+                                    </div>
+                                    <textarea id="json-editor" placeholder="JSON representation will appear here automatically..." spellcheck="false" autocorrect="off" autocapitalize="off" autocomplete="off" data-gramm="false" data-gramm_editor="false" data-enable-grammarly="false"></textarea>
                                 </div>
                             </div>
                         </div>

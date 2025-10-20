@@ -177,12 +177,17 @@ body.app-loaded > :not(.app-loader) {
     max-height: none;
 }
 
+.advanced-settings-layout .json-editor-column {
+    align-items: flex-start;
+    gap: 0;
+}
+
 .advanced-settings-layout .json-editor-card {
     box-shadow: none;
     background: transparent;
-    padding: 1.75rem 0 0;
-    margin-top: 1.75rem;
-    border-top: 1px solid var(--advanced-section-divider);
+    padding: 0;
+    margin-top: 0;
+    border-top: none;
     position: static;
     display: flex;
     flex-direction: column;
