@@ -2,7 +2,7 @@
     background: var(--surface-color);
     border: 1px solid rgba(0, 114, 206, 0.15);
     border-radius: 20px;
-    padding: 1.75rem 1rem 1rem;
+    padding: 2.25rem 1.75rem 1.75rem;
     font-family: 'Monaco', 'Consolas', monospace;
     font-size: 0.92rem;
     line-height: 1.5;
@@ -52,27 +52,26 @@
     flex: 1;
     color: var(--text-color);
     overflow-y: auto;
+    padding-right: 1.75rem;
     scrollbar-width: thin;
-    scrollbar-color: var(--primary-color) rgba(0, 114, 206, 0.12);
+    scrollbar-color: rgba(0, 114, 206, 0.25) transparent;
 }
 
 .json-editor textarea::-webkit-scrollbar {
-    width: 0.6rem;
+    width: 8px;
 }
 
 .json-editor textarea::-webkit-scrollbar-track {
-    background: rgba(0, 114, 206, 0.08);
-    border-radius: 999px;
+    background: transparent;
 }
 
 .json-editor textarea::-webkit-scrollbar-thumb {
-    background-color: rgba(0, 114, 206, 0.45);
+    background-color: rgba(0, 114, 206, 0.25);
     border-radius: 999px;
-    border: 0.15rem solid rgba(0, 114, 206, 0.08);
 }
 
 .json-editor textarea::-webkit-scrollbar-thumb:hover {
-    background-color: rgba(0, 114, 206, 0.6);
+    background-color: rgba(0, 114, 206, 0.4);
 }
 
 #json-editor-container {
@@ -106,7 +105,7 @@
     width: 100% !important;
     max-width: none !important;
     height: auto !important;
-    padding: 2.25rem 1.5rem 1.5rem !important;
+    padding: 2.25rem 1.75rem 1.75rem !important;
     border-radius: 24px !important;
     box-shadow: var(--shadow-soft);
 }

@@ -310,3 +310,98 @@ export function toggleJsonEditorExpansion(forceCollapse = false) {
 
     updateGlobalScrollLock();
 }
+
+export function initializeStickyHeader() {
+    const header = document.querySelector('.header');
+    if (!(header instanceof HTMLElement) || header.dataset.stickyInitialized === 'true') {
+        return;
+    }
+
+    const parent = header.parentElement;
+    if (!(parent instanceof HTMLElement)) {
+        return;
+    }
+
+    header.dataset.stickyInitialized = 'true';
+
+    const sentinel = document.createElement('div');
+    sentinel.className = 'header-sentinel';
+    sentinel.setAttribute('aria-hidden', 'true');
+    parent.insertBefore(sentinel, header);
+
+    const placeholder = document.createElement('div');
+    placeholder.className = 'header-placeholder';
+    placeholder.setAttribute('aria-hidden', 'true');
+    placeholder.hidden = true;
+
+    if (typeof header.after === 'function') {
+        header.after(placeholder);
+    } else {
+        parent.insertBefore(placeholder, header.nextSibling);
+    }
+
+    const updatePlaceholderHeight = () => {
+        placeholder.style.height = `${header.offsetHeight}px`;
+    };
+
+    updatePlaceholderHeight();
+
+    let resizeObserver = null;
+    let removeScrollListener = null;
+    let intersectionObserver = null;
+    if (typeof ResizeObserver === 'function') {
+        resizeObserver = new ResizeObserver(updatePlaceholderHeight);
+        resizeObserver.observe(header);
+    } else {
+        window.addEventListener('resize', updatePlaceholderHeight);
+    }
+
+    let isFixed = false;
+    const applyFixedState = shouldFix => {
+        if (isFixed === shouldFix) {
+            return;
+        }
+        isFixed = shouldFix;
+        header.classList.toggle('header--stuck', shouldFix);
+        placeholder.hidden = !shouldFix;
+        if (shouldFix) {
+            updatePlaceholderHeight();
+        }
+    };
+
+    if (typeof IntersectionObserver === 'function') {
+        intersectionObserver = new IntersectionObserver(entries => {
+            entries.forEach(entry => {
+                const shouldFix = !entry.isIntersecting && entry.boundingClientRect.top < 0;
+                applyFixedState(shouldFix);
+            });
+        });
+        intersectionObserver.observe(sentinel);
+    } else {
+        const handleScroll = () => {
+            const rect = sentinel.getBoundingClientRect();
+            applyFixedState(rect.top < 0);
+        };
+        window.addEventListener('scroll', handleScroll);
+        removeScrollListener = () => window.removeEventListener('scroll', handleScroll);
+        handleScroll();
+    }
+
+    const handlePageshow = () => updatePlaceholderHeight();
+    window.addEventListener('pageshow', handlePageshow);
+
+    window.addEventListener('beforeunload', () => {
+        if (resizeObserver) {
+            resizeObserver.disconnect();
+        } else {
+            window.removeEventListener('resize', updatePlaceholderHeight);
+        }
+        if (intersectionObserver) {
+            intersectionObserver.disconnect();
+        }
+        if (typeof removeScrollListener === 'function') {
+            removeScrollListener();
+        }
+        window.removeEventListener('pageshow', handlePageshow);
+    }, { once: true });
+}
