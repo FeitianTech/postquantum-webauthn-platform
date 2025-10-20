@@ -77,7 +77,7 @@
     border-radius: 18px;
     margin-bottom: 1rem;
     position: fixed;
-    top: 20px;
+    top: var(--global-toast-offset, 6.75rem);
     left: 50%;
     transform: translateX(-50%) translateY(-12px);
     z-index: 4000;
