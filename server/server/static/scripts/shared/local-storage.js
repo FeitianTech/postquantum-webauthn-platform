@@ -326,20 +326,31 @@ function pruneAdvancedCredentialPayload(record, { aggressive = false } = {}) {
         return;
     }
 
+    let registrationSnapshot = null;
+    if (record.registrationDetailSnapshot && typeof record.registrationDetailSnapshot === 'object') {
+        try {
+            registrationSnapshot = JSON.parse(JSON.stringify(record.registrationDetailSnapshot));
+        } catch (error) {
+            registrationSnapshot = { ...record.registrationDetailSnapshot };
+        }
+        delete record.registrationDetailSnapshot;
+    }
+
     stripKeysRecursively(record, CERTIFICATE_COLLECTION_KEYS, true);
     stripKeysRecursively(record, HEAVY_DUPLICATE_KEYS, true);
 
     if (aggressive) {
-        CERTIFICATE_COLLECTION_KEYS.forEach(key => {
-            if (Object.prototype.hasOwnProperty.call(record, key)) {
-                delete record[key];
-            }
-        });
+        // Keep attestation certificate collections even in aggressively trimmed payloads so
+        // credential detail views can reuse the parsed attestation data without re-decoding.
         AGGRESSIVE_DROP_KEYS.forEach(key => {
             if (Object.prototype.hasOwnProperty.call(record, key)) {
                 delete record[key];
             }
         });
+    }
+
+    if (registrationSnapshot) {
+        record.registrationDetailSnapshot = registrationSnapshot;
     }
 }
 
@@ -541,6 +552,44 @@ export function updateAdvancedCredentialSignCount(credentialId, signCount, stora
     return updated;
 }
 
+export function updateAdvancedCredentialRegistrationSnapshot(storageId, snapshot) {
+    const storageKey = isNonEmptyString(storageId) ? storageId.trim() : '';
+    if (!storageKey || !snapshot || typeof snapshot !== 'object') {
+        return false;
+    }
+
+    const stored = readAdvancedCredentials();
+    let updated = false;
+    const updatedRecords = stored.map(record => {
+        if (!record || typeof record !== 'object') {
+            return record;
+        }
+        if (record.storageId !== storageKey) {
+            return record;
+        }
+        const clone = { ...record };
+        clone.registrationDetailSnapshot = {
+            ...snapshot,
+        };
+        updated = true;
+        return clone;
+    });
+
+    if (!updated) {
+        return false;
+    }
+
+    const sanitised = updatedRecords
+        .map(item => prepareAdvancedCredentialForStorage(item))
+        .filter(Boolean);
+
+    if (!sanitised.length) {
+        return false;
+    }
+
+    return persistAdvancedCredentials(sanitised);
+}
+
 function extractAlgorithm(record) {
     const candidates = [
         record.algorithm,
@@ -659,5 +708,6 @@ export default {
     removeAdvancedCredential,
     clearAdvancedCredentials,
     updateAdvancedCredentialSignCount,
+    updateAdvancedCredentialRegistrationSnapshot,
     prepareAdvancedCredentialsForServer,
 };

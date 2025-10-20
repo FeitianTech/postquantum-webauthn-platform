@@ -42,6 +42,7 @@ import {
     getAllAdvancedCredentials,
     removeAdvancedCredential as removeAdvancedCredentialFromLocal,
     clearAdvancedCredentials as clearLocalAdvancedCredentials,
+    updateAdvancedCredentialRegistrationSnapshot,
 } from '../shared/local-storage.js';
 
 function normaliseAlgorithmIdentifier(value) {
@@ -1184,6 +1185,7 @@ async function prepareRegistrationDetailState(options = {}) {
         authenticatorDataValue = '',
         fallbackCertificates = [],
         relyingPartyInfo = null,
+        preferFallbackCertificates = false,
     } = options || {};
 
     resetRegistrationDetailState();
@@ -1198,13 +1200,24 @@ async function prepareRegistrationDetailState(options = {}) {
     let attestationDecodeError = '';
     let authenticatorDecodeError = '';
 
+    if (fallbackCertificates) {
+        addCertificatesToRegistrationState(fallbackCertificates);
+    }
+
+    const fallbackCertificatesAvailable = preferFallbackCertificates
+        && registrationDetailState.attestationCertificates.length > 0;
+
     if (attestationValue) {
         try {
             const decoded = await decodePayloadThroughApi(attestationValue);
             const attestationData = decoded?.data?.attestationObject || decoded?.data || null;
             if (attestationData && typeof attestationData === 'object') {
                 registrationDetailState.attestationObject = attestationData;
-                if (attestationData.attStmt && typeof attestationData.attStmt === 'object') {
+                if (
+                    attestationData.attStmt
+                    && typeof attestationData.attStmt === 'object'
+                    && !fallbackCertificatesAvailable
+                ) {
                     addCertificatesToRegistrationState(attestationData.attStmt.x5c);
                 }
             }
@@ -1222,13 +1235,13 @@ async function prepareRegistrationDetailState(options = {}) {
     if (!registrationDetailState.attestationObject && decodedObject) {
         registrationDetailState.attestationObject = decodedObject;
         const attStmt = decodedObject.attStmt || decodedObject.att_statement || null;
-        if (attStmt && typeof attStmt === 'object') {
+        if (
+            attStmt
+            && typeof attStmt === 'object'
+            && !fallbackCertificatesAvailable
+        ) {
             addCertificatesToRegistrationState(attStmt.x5c || attStmt.X5C || []);
         }
-    }
-
-    if (fallbackCertificates) {
-        addCertificatesToRegistrationState(fallbackCertificates);
     }
 
     if (!registrationDetailState.attestationCertificates.length && relyingPartyInfo?.attestationCertificate) {
@@ -1267,6 +1280,97 @@ async function prepareRegistrationDetailState(options = {}) {
         authenticatorDataValue: authenticatorValue,
         authenticatorDecodeError,
     };
+}
+
+const EMPTY_DETAIL_PREPARATION = Object.freeze({
+    attestationObjectValue: '',
+    attestationDecodeError: '',
+    authenticatorDataValue: '',
+    authenticatorDecodeError: '',
+});
+
+function normaliseDetailPreparationSnapshot(value) {
+    if (!value || typeof value !== 'object') {
+        return { ...EMPTY_DETAIL_PREPARATION };
+    }
+    return {
+        attestationObjectValue: typeof value.attestationObjectValue === 'string' ? value.attestationObjectValue : '',
+        attestationDecodeError: typeof value.attestationDecodeError === 'string' ? value.attestationDecodeError : '',
+        authenticatorDataValue: typeof value.authenticatorDataValue === 'string' ? value.authenticatorDataValue : '',
+        authenticatorDecodeError: typeof value.authenticatorDecodeError === 'string' ? value.authenticatorDecodeError : '',
+    };
+}
+
+function captureRegistrationDetailState(detailPreparation = EMPTY_DETAIL_PREPARATION) {
+    const certificatesClone = cloneJson(registrationDetailState.attestationCertificates) || [];
+    const visibleIndices = Array.isArray(registrationDetailState.visibleAttestationCertificateIndices)
+        ? [...registrationDetailState.visibleAttestationCertificateIndices]
+        : [];
+
+    return {
+        detailPreparation: normaliseDetailPreparationSnapshot(detailPreparation),
+        attestationObject: cloneJson(registrationDetailState.attestationObject),
+        attestationCertificates: Array.isArray(certificatesClone) ? certificatesClone : [],
+        visibleAttestationCertificateIndices: visibleIndices,
+        authenticatorData: cloneJson(registrationDetailState.authenticatorData),
+        authenticatorDataHex: typeof registrationDetailState.authenticatorDataHex === 'string'
+            ? registrationDetailState.authenticatorDataHex
+            : '',
+        authenticatorDataHash: typeof registrationDetailState.authenticatorDataHash === 'string'
+            ? registrationDetailState.authenticatorDataHash
+            : '',
+    };
+}
+
+function applyRegistrationDetailSnapshot(snapshot) {
+    if (!snapshot || typeof snapshot !== 'object') {
+        return;
+    }
+
+    const stateSource = snapshot.state && typeof snapshot.state === 'object'
+        ? snapshot.state
+        : snapshot;
+
+    const attObj = cloneJson(stateSource.attestationObject);
+    registrationDetailState.attestationObject = attObj && typeof attObj === 'object' ? attObj : null;
+
+    const certificatesClone = cloneJson(stateSource.attestationCertificates);
+    registrationDetailState.attestationCertificates = Array.isArray(certificatesClone)
+        ? certificatesClone
+        : [];
+
+    const indices = Array.isArray(stateSource.visibleAttestationCertificateIndices)
+        ? [...stateSource.visibleAttestationCertificateIndices]
+        : [];
+    registrationDetailState.visibleAttestationCertificateIndices = indices;
+
+    const authDataClone = cloneJson(stateSource.authenticatorData);
+    registrationDetailState.authenticatorData = authDataClone && typeof authDataClone === 'object'
+        ? authDataClone
+        : null;
+
+    registrationDetailState.authenticatorDataHex = typeof stateSource.authenticatorDataHex === 'string'
+        ? stateSource.authenticatorDataHex
+        : '';
+    registrationDetailState.authenticatorDataHash = typeof stateSource.authenticatorDataHash === 'string'
+        ? stateSource.authenticatorDataHash
+        : '';
+
+    // When restoring from snapshot we no longer have to recompute certificate indices; if none were stored,
+    // fall back to sequential indices.
+    if (!registrationDetailState.visibleAttestationCertificateIndices.length && registrationDetailState.attestationCertificates.length) {
+        registrationDetailState.visibleAttestationCertificateIndices = registrationDetailState.attestationCertificates.map((_, index) => index);
+    }
+
+    if (registrationDetailState.authenticatorData && typeof registrationDetailState.authenticatorData === 'object') {
+        if (registrationDetailState.authenticatorDataHex && !registrationDetailState.authenticatorData.raw) {
+            registrationDetailState.authenticatorData.raw = registrationDetailState.authenticatorDataHex;
+        }
+    }
+
+    return stateSource.detailPreparation
+        ? normaliseDetailPreparationSnapshot(stateSource.detailPreparation)
+        : { ...EMPTY_DETAIL_PREPARATION };
 }
 
 function buildAttestationSection({
@@ -1309,10 +1413,6 @@ function buildAttestationSection({
         || hasAttestationValue
         || attestationStatementHasContent
         || attestationHasCertificates;
-
-    if (attestationFormatNormalized === 'none') {
-        return '';
-    }
 
     if (!hasAttestation) {
         return '';
@@ -1380,7 +1480,7 @@ function buildAttestationSection({
         certificateInfos.forEach((info, displayIndex) => {
             buttonRowSegments.push(`<button type="button" class="btn btn-small registration-attestation-cert-button" data-cert-index="${displayIndex}">Attestation Certificate ${displayIndex + 1}</button>`);
         });
-    } else if ((attestationFormatNormalized && attestationFormatNormalized !== 'none') || attestationStatementHasContent) {
+    } else if (hasAttestationObject || hasAttestationValue || attestationStatementHasContent) {
         certificateMessageHtml = '<div style="font-style: italic; color: #6c757d; margin-top: 0.75rem;">No attestation certificates available.</div>';
     }
 
@@ -1418,8 +1518,11 @@ async function composeRegistrationDetailHtml({
     fallbackClientData = null,
     fallbackParsedClientData = null,
     includeAttestationSection = true,
+    preferFallbackCertificates = false,
 } = {}) {
     resetRegistrationDetailState();
+
+    let detailPreparation = null;
 
     const credentialDisplay = credentialJson && typeof credentialJson === 'object'
         ? JSON.stringify(credentialJson, null, 2)
@@ -1465,13 +1568,16 @@ async function composeRegistrationDetailHtml({
         ? `<pre class="modal-pre">${escapeHtml(clientDataDisplay)}</pre>`
         : '<div style="font-style: italic; color: #6c757d;">No clientDataJSON available.</div>';
 
-    const detailPreparation = await prepareRegistrationDetailState({
-        attestationObjectValue,
-        attestationObjectDecoded,
-        authenticatorDataValue,
-        fallbackCertificates,
-        relyingPartyInfo,
-    });
+    if (!detailPreparation) {
+        detailPreparation = await prepareRegistrationDetailState({
+            attestationObjectValue,
+            attestationObjectDecoded,
+            authenticatorDataValue,
+            fallbackCertificates,
+            relyingPartyInfo,
+            preferFallbackCertificates,
+        });
+    }
 
     const authDataState = registrationDetailState.authenticatorData;
     if (authDataState) {
@@ -1559,9 +1665,15 @@ async function composeRegistrationDetailHtml({
         html += attestationSectionHtml;
     }
 
+    const stateSnapshot = captureRegistrationDetailState(detailPreparation);
+
     return {
         html,
         attestationSectionHtml,
+        combinedHtml: includeAttestationSection
+            ? html
+            : [html, attestationSectionHtml].filter(Boolean).join(''),
+        stateSnapshot,
     };
 }
 
@@ -2293,6 +2405,56 @@ export async function showCredentialDetails(index) {
         return result;
     };
 
+    let detailPreparation = null;
+    let registrationDetailHtml = '';
+    let attestationSectionHtml = '';
+    let combinedRegistrationHtml = '';
+    let preferFallbackCertificates = false;
+    let snapshotState = null;
+
+    const registrationDetailSnapshot = (() => {
+        const objectCandidates = [
+            cred.registrationDetailSnapshot,
+            cred.registration_detail_snapshot,
+            cred.registrationDetailCopy,
+            cred.registration_detail_copy,
+        ];
+        for (const candidate of objectCandidates) {
+            if (candidate && typeof candidate === 'object') {
+                return candidate;
+            }
+        }
+        const htmlCopy = pickFirstString(
+            cred.registrationDetailHtml,
+            cred.registration_detail_html,
+            cred.registrationDetailCombinedHtml,
+            cred.registration_detail_combined_html,
+        );
+        if (htmlCopy) {
+            return { combinedHtml: htmlCopy };
+        }
+        return null;
+    })();
+
+    if (registrationDetailSnapshot) {
+        snapshotState = registrationDetailSnapshot.state && typeof registrationDetailSnapshot.state === 'object'
+            ? registrationDetailSnapshot.state
+            : registrationDetailSnapshot;
+
+        detailPreparation = applyRegistrationDetailSnapshot(registrationDetailSnapshot) || { ...EMPTY_DETAIL_PREPARATION };
+        preferFallbackCertificates = true;
+
+        registrationDetailHtml = typeof registrationDetailSnapshot.html === 'string'
+            ? registrationDetailSnapshot.html
+            : '';
+        attestationSectionHtml = typeof registrationDetailSnapshot.attestationSectionHtml === 'string'
+            ? registrationDetailSnapshot.attestationSectionHtml
+            : '';
+        combinedRegistrationHtml = typeof registrationDetailSnapshot.combinedHtml === 'string'
+            ? registrationDetailSnapshot.combinedHtml
+            : [registrationDetailHtml, attestationSectionHtml].filter(Boolean).join('');
+    }
+
     let attestationObjectValue = pickFirstString(
         cred.attestationObjectRaw,
         cred.attestationObject,
@@ -2323,7 +2485,7 @@ export async function showCredentialDetails(index) {
         cred.authenticator_data_hex,
     );
 
-    const fallbackCertificates = collectCertificates(
+    let fallbackCertificates = collectCertificates(
         cred.attestationCertificate,
         cred.attestationCertificates,
         cred.attestation_certificate,
@@ -2333,6 +2495,27 @@ export async function showCredentialDetails(index) {
         cred.relyingParty?.attestationCertificate,
         cred.relyingParty?.attestationCertificates,
     );
+
+    if (snapshotState) {
+        const attObjSnapshot = cloneJson(snapshotState.attestationObject);
+        if (attObjSnapshot && typeof attObjSnapshot === 'object') {
+            attestationObjectDecoded = attObjSnapshot;
+        }
+
+        const certSnapshot = cloneJson(snapshotState.attestationCertificates);
+        if (Array.isArray(certSnapshot)) {
+            fallbackCertificates = certSnapshot;
+        }
+
+        if (typeof snapshotState.authenticatorDataHex === 'string') {
+            authenticatorDataHex = snapshotState.authenticatorDataHex;
+        }
+    }
+
+    if (detailPreparation) {
+        attestationObjectValue = detailPreparation.attestationObjectValue || attestationObjectValue;
+        authenticatorDataBase64 = detailPreparation.authenticatorDataValue || authenticatorDataBase64;
+    }
 
     const relyingPartyInfo = pickFirstObject(
         cred.relyingParty,
@@ -2497,20 +2680,36 @@ export async function showCredentialDetails(index) {
 
     const authenticatorDataForDetail = authenticatorDataBase64 || authenticatorDataHex || '';
 
-    const registrationDetailResult = await composeRegistrationDetailHtml({
-        credentialJson: Object.keys(registrationCredential).length ? registrationCredential : null,
-        relyingPartyInfo,
-        attestationObjectValue,
-        attestationObjectDecoded,
-        authenticatorDataValue: authenticatorDataForDetail,
-        authenticatorDataHex,
-        fallbackCertificates,
-        fallbackClientData: fallbackClientDataString,
-        fallbackParsedClientData: fallbackClientDataObject,
-        includeAttestationSection: false,
-    });
-    const registrationDetailHtml = registrationDetailResult.html;
-    const attestationSectionHtml = registrationDetailResult.attestationSectionHtml;
+    if (!combinedRegistrationHtml) {
+        const registrationDetailResult = await composeRegistrationDetailHtml({
+            credentialJson: Object.keys(registrationCredential).length ? registrationCredential : null,
+            relyingPartyInfo,
+            attestationObjectValue,
+            attestationObjectDecoded,
+            authenticatorDataValue: authenticatorDataForDetail,
+            authenticatorDataHex,
+            fallbackCertificates,
+            fallbackClientData: fallbackClientDataString,
+            fallbackParsedClientData: fallbackClientDataObject,
+            includeAttestationSection: false,
+            preferFallbackCertificates: Array.isArray(fallbackCertificates) && fallbackCertificates.length > 0,
+        });
+
+        registrationDetailHtml = registrationDetailResult.html;
+        attestationSectionHtml = registrationDetailResult.attestationSectionHtml;
+        combinedRegistrationHtml = registrationDetailResult.combinedHtml
+            || [registrationDetailHtml, attestationSectionHtml].filter(Boolean).join('');
+
+        if (!detailPreparation && registrationDetailResult.stateSnapshot) {
+            detailPreparation = normaliseDetailPreparationSnapshot(
+                registrationDetailResult.stateSnapshot.detailPreparation
+            );
+        }
+
+        if (!registrationDetailSnapshot && registrationDetailResult.stateSnapshot) {
+            snapshotState = registrationDetailResult.stateSnapshot;
+        }
+    }
 
     const attestationFormatCandidates = [
         cred.attestationFormat,
@@ -2850,7 +3049,9 @@ export async function showCredentialDetails(index) {
         </div>`;
     }
 
-    const combinedRegistrationHtml = [registrationDetailHtml, attestationSectionHtml].filter(Boolean).join('');
+    if (!combinedRegistrationHtml) {
+        combinedRegistrationHtml = [registrationDetailHtml, attestationSectionHtml].filter(Boolean).join('');
+    }
     if (combinedRegistrationHtml) {
         detailsHtml += `
         <div class="credential-registration-copy">
@@ -2924,11 +3125,13 @@ async function decodePayloadThroughApi(payload) {
     throw new Error('Decoder response did not include data.');
 }
 
-export async function showRegistrationResultModal(credentialJson, relyingPartyInfo) {
+export async function showRegistrationResultModal(credentialJson, relyingPartyInfo, options = {}) {
     const modalBody = document.getElementById('registrationResultBody');
     if (!modalBody) {
         return;
     }
+
+    const { storageId = null } = options || {};
 
     const attestationObjectValue = credentialJson?.response?.attestationObject || '';
     const authenticatorDataValue = credentialJson?.response?.authenticatorData || '';
@@ -2970,6 +3173,22 @@ export async function showRegistrationResultModal(credentialJson, relyingPartyIn
         authenticatorDataValue,
         fallbackCertificates,
     });
+
+    if (storageId && registrationDetail) {
+        const snapshotPayload = {
+            schemaVersion: 1,
+            capturedAt: new Date().toISOString(),
+            html: registrationDetail.html || '',
+            attestationSectionHtml: registrationDetail.attestationSectionHtml || '',
+            combinedHtml: registrationDetail.combinedHtml
+                || [registrationDetail.html, registrationDetail.attestationSectionHtml].filter(Boolean).join(''),
+            state: registrationDetail.stateSnapshot || {},
+        };
+
+        if (updateAdvancedCredentialRegistrationSnapshot(storageId, snapshotPayload)) {
+            await loadSavedCredentials();
+        }
+    }
 
     modalBody.innerHTML = registrationDetail.html;
     bindRegistrationDetailButtons(modalBody);

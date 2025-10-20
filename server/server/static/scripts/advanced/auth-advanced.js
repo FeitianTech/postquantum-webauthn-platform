@@ -280,6 +280,8 @@ export async function advancedRegister() {
 
             maybeRandomizeAdvancedRegistrationFields();
 
+            let savedCredentialRecord = null;
+
             if (data.storedCredential && typeof data.storedCredential === 'object') {
                 const rawIdBytes = bufferSourceToUint8Array(credential.rawId);
                 const credentialIdFromBrowser = typeof credential.id === 'string' && credential.id.trim()
@@ -302,11 +304,18 @@ export async function advancedRegister() {
                     userName: data.storedCredential.userName || publicKey?.user?.name || '',
                 });
                 if (saved) {
+                    savedCredentialRecord = saved;
                     loadSavedCredentials();
                 }
             }
 
-            await showRegistrationResultModal(credentialJson, data.relyingParty || null);
+            await showRegistrationResultModal(
+                credentialJson,
+                data.relyingParty || null,
+                {
+                    storageId: savedCredentialRecord?.storageId || null,
+                },
+            );
 
             setTimeout(loadSavedCredentials, 1000);
         } else {
