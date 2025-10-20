@@ -41,6 +41,8 @@ export function switchSubTab(subTab) {
     });
 
     updateJsonEditor();
+
+    document.dispatchEvent(new CustomEvent('advanced:subtab-changed', { detail: { subTab } }));
 }
 
 export function toggleSection(sectionId, eventOrElement) {

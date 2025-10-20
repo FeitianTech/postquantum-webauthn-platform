@@ -14,6 +14,10 @@
     width: 100%;
 }
 
+.advanced-settings-layout {
+    grid-template-columns: minmax(170px, 0.9fr) minmax(0, 3.9fr) minmax(240px, 1.2fr);
+}
+
 .three-column > div {
     align-self: stretch;
     min-width: 0; /* Prevent grid overflow */

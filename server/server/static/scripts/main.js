@@ -86,6 +86,7 @@ import {
     removeFakeAllowCredential,
     renderFakeAllowCredentialList
 } from './advanced/exclude-credentials.js';
+import { initializeAdvancedSettingsNavigation } from './advanced/settings-nav.js';
 
 registerHintsChangeCallback(() => updateAllowCredentialsDropdown());
 
@@ -138,6 +139,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loaderSetPhase('Preparing application…', { progress: 8 });
 
     updateFieldLabels();
+    initializeAdvancedSettingsNavigation();
 
     const jsonEditorElement = document.getElementById('json-editor');
     if (jsonEditorElement) {
