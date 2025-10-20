@@ -142,7 +142,7 @@ body.app-loaded > :not(.app-loader) {
 }
 
 .advanced-header__title-row {
-    align-items: flex-start;
+    align-items: center;
 }
 
 .advanced-settings-layout {
@@ -180,7 +180,12 @@ body.app-loaded > :not(.app-loader) {
 .advanced-settings-layout .json-editor-card {
     box-shadow: none;
     background: transparent;
-    padding: 0;
+    padding: 1.75rem 0 0;
+    margin-top: 1.75rem;
+    border-top: 1px solid var(--advanced-section-divider);
+    position: static;
+    display: flex;
+    flex-direction: column;
 }
 
 .advanced-settings-layout .json-editor-card h3 {
@@ -255,7 +260,7 @@ body.app-loaded > :not(.app-loader) {
 
 @media (min-width: 993px) {
     .advanced-settings-layout {
-        grid-template-columns: minmax(0, 0.7fr) minmax(240px, 0.3fr);
+        grid-template-columns: minmax(0, 7fr) minmax(280px, 3fr);
     }
 
     .advanced-settings-layout .form-card .form-pane.active {

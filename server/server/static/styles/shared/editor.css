@@ -112,8 +112,8 @@
 }
 
 .inline-json-editor textarea {
-    min-height: 520px;
-    height: auto;
+    min-height: 0;
+    height: clamp(320px, 60vh, 520px);
 }
 
 .inline-json-editor .json-editor-actions {
