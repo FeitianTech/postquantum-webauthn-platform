@@ -77,6 +77,9 @@ body.modal-open {
     box-shadow: var(--shadow-soft);
     border-bottom-left-radius: 24px;
     border-bottom-right-radius: 24px;
+    position: sticky;
+    top: 0;
+    z-index: 50;
 }
 
 .header h1 {
