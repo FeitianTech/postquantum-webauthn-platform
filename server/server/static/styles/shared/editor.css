@@ -82,6 +82,32 @@
     height: 100%;
 }
 
+.inline-json-editor {
+    position: relative !important;
+    top: auto !important;
+    left: auto !important;
+    transform: none !important;
+    width: 100% !important;
+    max-width: none !important;
+    height: auto !important;
+    padding: 2.25rem 1.5rem 1.5rem !important;
+    border-radius: 24px !important;
+    box-shadow: var(--shadow-soft);
+}
+
+.inline-json-editor textarea {
+    min-height: 520px;
+    height: auto;
+}
+
+.inline-json-editor .json-editor-actions {
+    display: flex;
+}
+
+.inline-json-editor .json-editor-close-btn {
+    display: none !important;
+}
+
 .json-editor-overlay {
     position: fixed;
     inset: 0;
@@ -98,6 +124,11 @@
     visibility: visible;
     pointer-events: auto;
     cursor: default;
+}
+
+body.advanced-inline-json-editor .json-editor-overlay,
+body.advanced-inline-json-editor .json-editor-overlay.active {
+    display: none;
 }
 
 .json-editor-actions {

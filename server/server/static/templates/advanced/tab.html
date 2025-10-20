@@ -24,13 +24,26 @@
                         </div>
                     </div>
 
-                    <div class="three-column">
-                        <!-- Left Column: Registration/Authentication Form -->
+                    <div class="three-column advanced-settings-layout">
+                        <aside class="settings-nav-column">
+                            <nav class="settings-nav" aria-label="Advanced authentication settings">
+                                <button type="button" class="settings-nav__item settings-nav__item--active" data-registration-target="registration-user-identity" data-authentication-target="authentication-user-identity">User Identity</button>
+                                <hr class="settings-nav__separator">
+                                <button type="button" class="settings-nav__item" data-registration-target="registration-authenticator-selection" data-authentication-target="authentication-authenticator-selection">Authenticator Selection</button>
+                                <hr class="settings-nav__separator">
+                                <button type="button" class="settings-nav__item" data-registration-target="registration-other-options" data-authentication-target="authentication-other-options">Other Options</button>
+                                <hr class="settings-nav__separator">
+                                <button type="button" class="settings-nav__item" data-registration-target="registration-extensions" data-authentication-target="authentication-extensions">Extensions</button>
+                                <hr class="settings-nav__separator">
+                                <button type="button" class="settings-nav__item" data-registration-target="json-editor-section" data-authentication-target="json-editor-section">JSON Editor</button>
+                            </nav>
+                        </aside>
+
                         <div class="form-column">
                             <div class="column-card form-card">
-                                <h3>Settings</h3>
                                 <!-- Registration Form -->
                                 <div id="registration-form" class="sub-tab-content active form-pane">
+                                    <div id="registration-user-identity" class="settings-section-sentinel" data-scroll-target="user-identity"></div>
                                 <!-- User Identity Section -->
                             <div class="static-section">
                                 <div class="section-header section-header--static expanded">
@@ -60,6 +73,7 @@
                                 </div>
                             </div>
 
+                                    <div id="registration-authenticator-selection" class="settings-section-sentinel" data-scroll-target="authenticator-selection"></div>
                             <!-- Authenticator Selection Section -->
                             <div class="expandable-section">
                                 <div class="section-header" onclick="toggleSection('authenticator-selection')">
@@ -201,6 +215,7 @@
                                 </div>
                             </div>
 
+                                    <div id="registration-other-options" class="settings-section-sentinel" data-scroll-target="other-options-reg"></div>
                             <!-- Other Options Section -->
                             <div class="expandable-section">
                                 <div class="section-header" onclick="toggleSection('other-options-reg')">
@@ -434,6 +449,7 @@
                                 </div>
                             </div>
 
+                                    <div id="registration-extensions" class="settings-section-sentinel" data-scroll-target="extensions-reg"></div>
                             <!-- Extensions Section -->
                             <div class="expandable-section">
                                 <div class="section-header" onclick="toggleSection('extensions-reg')">
@@ -628,6 +644,7 @@
 
                                 <!-- Authentication Form -->
                                 <div id="authentication-form" class="sub-tab-content form-pane">
+                                    <div id="authentication-user-identity" class="settings-section-sentinel" data-scroll-target="credential-selection"></div>
                             <!-- Credential Selection Section -->
                             <div class="static-section">
                                 <div class="section-header section-header--static expanded">
@@ -657,6 +674,7 @@
                                             <option value="required">Required</option>
                                         </select>
                                     </div>
+                                    <div id="authentication-authenticator-selection" class="settings-section-sentinel settings-section-sentinel--inline" data-scroll-target="allow-credentials"></div>
                                     <div class="form-group">
                                         <div class="label-with-info">
                                             <label for="allow-credentials">Allow Credentials</label>
@@ -707,6 +725,7 @@
                                 </div>
                             </div>
 
+                                    <div id="authentication-other-options" class="settings-section-sentinel" data-scroll-target="other-options-auth"></div>
                             <!-- Other Options Section -->
                             <div class="expandable-section">
                                 <div class="section-header" onclick="toggleSection('other-options-auth')">
@@ -799,6 +818,7 @@
                                 </div>
                             </div>
 
+                                    <div id="authentication-extensions" class="settings-section-sentinel" data-scroll-target="extensions-auth"></div>
                             <!-- Extensions Section -->
                             <div class="expandable-section">
                                 <div class="section-header" onclick="toggleSection('extensions-auth')">
@@ -918,13 +938,10 @@
                             </div>
                                 </div>
                             </div>
-                        </div>
-
-                        <!-- Middle Column: JSON Editor -->
-                        <div class="json-editor-column">
+                            <div id="json-editor-section" class="settings-section-sentinel" data-scroll-target="json-editor-container"></div>
                             <div class="column-card json-editor-card">
                                 <h3>JSON Editor</h3>
-                                <div id="json-editor-container" class="json-editor" aria-expanded="false">
+                                <div id="json-editor-container" class="json-editor inline-json-editor expanded" aria-expanded="true">
                                     <div class="json-editor-actions">
                                         <div class="json-editor-inline-buttons">
                                             <button class="btn" onclick="saveJsonEditor()" title="Save JSON changes to settings">Save</button>
