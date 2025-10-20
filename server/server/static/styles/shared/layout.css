@@ -103,7 +103,8 @@
     display: flex;
     align-items: center;
     justify-content: flex-end;
-    margin-top: 1.85rem;
+    margin-top: 0;
+    align-self: center;
 }
 
 .advanced-header__actions-group {
