@@ -390,9 +390,20 @@
 
 .credential-item-actions {
     margin-left: auto;
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.2rem;
+    justify-content: flex-end;
+}
+
+.credential-item-actions .btn-small {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.credential-item-actions .credential-mds-button {
+    margin-right: 0.35rem;
 }
 
 .credential-item:hover {

@@ -4257,6 +4257,7 @@ if (typeof window !== 'undefined') {
     window.highlightMdsAuthenticatorRow = highlightAuthenticatorRowByAaguid;
     window.waitForMdsLoad = waitForMetadataLoad;
     window.getMdsLoadState = getMdsLoadStateSnapshot;
+    window.resolveMdsEntryByAaguid = resolveEntryByAaguid;
 }
 
 function stabiliseColumnWidths() {

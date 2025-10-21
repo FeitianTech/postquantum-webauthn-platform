@@ -2615,7 +2615,7 @@ export function updateCredentialsDisplay() {
         const mdsButtonHtml = (aaguidGuid && (rootStatus === true || metadataAvailable))
             ? `<button type="button" class="btn btn-small btn-secondary credential-mds-button" data-aaguid="${escapeHtml(aaguidGuid.toLowerCase())}" title="Open authenticator metadata">FIDO MDS</button>`
             : '';
-        const deleteButtonHtml = `<button class="btn btn-small btn-danger" onclick="event.stopPropagation();deleteCredential(${index})">Delete</button>`;
+        const deleteButtonHtml = `<button class="btn btn-small btn-danger credential-delete-button" onclick="event.stopPropagation();deleteCredential(${index})">Delete</button>`;
         const actionsHtml = `<div class="credential-item-actions">${mdsButtonHtml}${deleteButtonHtml}</div>`;
 
         return `
@@ -2711,8 +2711,11 @@ export function navigateToMdsAuthenticator(aaguid) {
     const waitForLoad = typeof window.waitForMdsLoad === 'function'
         ? window.waitForMdsLoad
         : null;
+    const resolveEntryByAaguidGlobal = typeof window.resolveMdsEntryByAaguid === 'function'
+        ? window.resolveMdsEntryByAaguid
+        : null;
     const initialState = getLoadState ? getLoadState() : null;
-    const requiresLoad = !initialState || initialState.isLoading || !initialState.hasLoaded;
+    const shouldAwaitLoad = !initialState || initialState.isLoading || !initialState.hasLoaded;
 
     let clearTimer = null;
     const scheduleClear = () => {
@@ -2741,37 +2744,80 @@ export function navigateToMdsAuthenticator(aaguid) {
     const run = async () => {
         try {
             if (statusEl) {
-                const message = requiresLoad
+                const message = shouldAwaitLoad
                     ? 'Loading authenticator metadata...'
                     : 'Locating metadata entry...';
                 showSpinnerStatus(message);
             }
 
-            if (waitForLoad && requiresLoad) {
+            if (waitForLoad && shouldAwaitLoad) {
                 try {
                     await waitForLoad();
                 } catch (error) {
                     console.warn('Failed to wait for authenticator metadata to load:', error);
                 }
+            }
+
+            let resolvedEntry = null;
+            if (resolveEntryByAaguidGlobal) {
+                try {
+                    resolvedEntry = await resolveEntryByAaguidGlobal(aaguid);
+                } catch (error) {
+                    console.warn('Failed to pre-resolve authenticator metadata entry:', error);
+                }
+            }
+
+            if (statusEl) {
                 showSpinnerStatus('Locating metadata entry...');
             }
 
-            const highlightResult = await Promise.resolve(highlightRow(aaguid));
+            if (switchToMdsTab) {
+                switchToMdsTab('mds');
+                if (typeof requestAnimationFrame === 'function') {
+                    await new Promise(resolve => requestAnimationFrame(resolve));
+                }
+            }
 
-            let highlighted;
-            let resolvedEntry = null;
+            const normaliseHighlightResult = result => {
+                if (result && typeof result === 'object' && 'highlighted' in result) {
+                    return {
+                        highlighted: Boolean(result.highlighted),
+                        entry: result.entry || null,
+                    };
+                }
+                return {
+                    highlighted: Boolean(result),
+                    entry: null,
+                };
+            };
 
-            if (highlightResult && typeof highlightResult === 'object' && 'highlighted' in highlightResult) {
-                highlighted = Boolean(highlightResult.highlighted);
-                resolvedEntry = highlightResult.entry || null;
-            } else {
-                highlighted = Boolean(highlightResult);
+            const attemptHighlight = async () => {
+                try {
+                    const result = await Promise.resolve(highlightRow(aaguid));
+                    return normaliseHighlightResult(result);
+                } catch (error) {
+                    console.warn('Failed to highlight authenticator row:', error);
+                    return { highlighted: false, entry: null };
+                }
+            };
+
+            let { highlighted, entry } = await attemptHighlight();
+            if (!resolvedEntry && entry) {
+                resolvedEntry = entry;
+            }
+
+            if (!highlighted) {
+                if (typeof requestAnimationFrame === 'function') {
+                    await new Promise(resolve => requestAnimationFrame(resolve));
+                }
+                const retry = await attemptHighlight();
+                if (!resolvedEntry && retry.entry) {
+                    resolvedEntry = retry.entry;
+                }
+                highlighted = retry.highlighted;
             }
 
             if (highlighted) {
-                if (switchToMdsTab) {
-                    switchToMdsTab('mds');
-                }
                 clearAaguidStatus(statusEl);
                 closeCredentialModal();
                 return { highlighted: true, entry: resolvedEntry };
@@ -3753,4 +3799,7 @@ export function toggleCredentialDetails(index) {
     if (item.classList.contains('expanded')) {
         item.classList.remove('expanded');
     } else {
-        credItems.forEach(item => item.classList.remove('e
+        credItems.forEach(item => item.classList.remove('expanded'));
+        item.classList.add('expanded');
+    }
+}
