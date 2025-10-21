@@ -396,6 +396,13 @@ export function initializeStickyHeader() {
 
     header.dataset.stickyInitialized = 'true';
 
+    const sentinel = document.createElement('div');
+    sentinel.className = 'header-sentinel';
+    sentinel.setAttribute('aria-hidden', 'true');
+    if (typeof parent.insertBefore === 'function') {
+        parent.insertBefore(sentinel, header);
+    }
+
     const placeholder = document.createElement('div');
     placeholder.className = 'header-placeholder';
     placeholder.setAttribute('aria-hidden', 'true');
@@ -411,6 +418,8 @@ export function initializeStickyHeader() {
     const raf = typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function'
         ? window.requestAnimationFrame.bind(window)
         : (fn => setTimeout(fn, 16));
+
+    const cleanupHandlers = [];
 
     const getScrollPosition = () => {
         if (typeof window !== 'undefined') {
@@ -434,51 +443,66 @@ export function initializeStickyHeader() {
         return 0;
     };
 
-    const cleanupHandlers = [];
+    const measureHeaderHeight = () => {
+        const rect = header.getBoundingClientRect();
+        const height = rect && typeof rect.height === 'number' ? rect.height : header.offsetHeight;
+        if (Number.isFinite(height) && height > 0) {
+            placeholder.style.height = `${height}px`;
+        }
+    };
 
-    const updatePlaceholderHeight = () => {
-        placeholder.style.height = `${header.offsetHeight}px`;
+    const syncPlaceholderHeight = () => {
+        raf(() => {
+            measureHeaderHeight();
+        });
     };
 
     const applyFixedState = shouldFix => {
         if (isFixed === shouldFix) {
+            if (shouldFix) {
+                syncPlaceholderHeight();
+            }
             return;
+        }
+
+        if (shouldFix) {
+            measureHeaderHeight();
+            placeholder.hidden = false;
+            header.classList.add('header--stuck');
+            syncPlaceholderHeight();
+        } else {
+            header.classList.remove('header--stuck');
+            syncPlaceholderHeight();
+            raf(() => {
+                placeholder.hidden = true;
+            });
         }
 
         isFixed = shouldFix;
-        header.classList.toggle('header--stuck', shouldFix);
-        placeholder.hidden = !shouldFix;
-
-        raf(() => {
-            updatePlaceholderHeight();
-        });
     };
 
     const evaluateStickyState = () => {
-        if (!isFixed) {
-            const headerRect = header.getBoundingClientRect();
-            const scrollPosition = getScrollPosition();
-            if (headerRect.top <= 0 && scrollPosition > 0) {
-                applyFixedState(true);
-                return;
-            }
+        const sentinelRect = sentinel.getBoundingClientRect();
+        const sentinelTop = sentinelRect ? sentinelRect.top : 0;
 
-            updatePlaceholderHeight();
+        if (!isFixed && sentinelTop <= 0 && getScrollPosition() > 0) {
+            applyFixedState(true);
             return;
         }
 
-        const placeholderRect = placeholder.getBoundingClientRect();
-        if (placeholderRect.top >= 0) {
+        if (isFixed && sentinelTop > 0) {
             applyFixedState(false);
             return;
         }
 
-        updatePlaceholderHeight();
+        if (isFixed) {
+            syncPlaceholderHeight();
+        }
     };
 
     const handlePageshow = () => {
         raf(() => {
-            updatePlaceholderHeight();
+            measureHeaderHeight();
             evaluateStickyState();
         });
     };
@@ -489,7 +513,7 @@ export function initializeStickyHeader() {
 
     if (typeof ResizeObserver === 'function') {
         const resizeObserver = new ResizeObserver(() => {
-            updatePlaceholderHeight();
+            measureHeaderHeight();
             evaluateStickyState();
         });
         resizeObserver.observe(header);
@@ -498,7 +522,7 @@ export function initializeStickyHeader() {
         });
     } else {
         const handleResize = () => {
-            updatePlaceholderHeight();
+            measureHeaderHeight();
             evaluateStickyState();
         };
         window.addEventListener('resize', handleResize);
@@ -526,7 +550,7 @@ export function initializeStickyHeader() {
     });
 
     raf(() => {
-        updatePlaceholderHeight();
+        measureHeaderHeight();
         evaluateStickyState();
     });
 
