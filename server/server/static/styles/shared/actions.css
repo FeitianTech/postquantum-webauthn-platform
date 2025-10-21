@@ -77,10 +77,10 @@
     border-radius: 18px;
     margin-bottom: 1rem;
     position: fixed;
-    top: 20px;
+    top: var(--global-toast-offset);
     left: 50%;
     transform: translateX(-50%) translateY(-12px);
-    z-index: 1200;
+    z-index: 1400;
     min-width: 300px;
     max-width: 90vw;
     box-shadow: var(--shadow-soft);
