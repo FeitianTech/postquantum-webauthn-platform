@@ -7,7 +7,7 @@ import threading
 import time
 import uuid
 from dataclasses import dataclass
-from datetime import date, datetime, time as datetime_time, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from email.message import EmailMessage
 from pathlib import Path
 from typing import Iterable, Optional
@@ -29,6 +29,7 @@ LOG_SUFFIX = ".log"
 REPORT_HOUR = 9
 LOCK_FILENAME = "webauthn_device_logs.lock"
 STALE_LOCK_MAX_AGE_SECONDS = 6 * 60 * 60  # 6 hours
+STATUS_FILENAME = "webauthn_device_logs.status"
 
 
 def _env_flag(name: str, default: bool = True) -> bool:
@@ -97,12 +98,14 @@ class RegistrationLogManager:
     def __init__(self) -> None:
         self.log_dir = Path("/tmp")
         self._lock_path = self.log_dir / LOCK_FILENAME
+        self._status_path = self.log_dir / STATUS_FILENAME
         self._email_config = self._load_email_config()
         self.enabled = self._email_config is not None and _env_flag(
             "REGISTRATION_LOG_EMAIL_ENABLED", default=True
         )
         self._thread: Optional[threading.Thread] = None
         self._write_lock = threading.Lock()
+        self._last_processed_report_date = self._load_last_processed_report_date()
 
         if not self.enabled:
             return
@@ -242,13 +245,12 @@ class RegistrationLogManager:
         seconds = delta.total_seconds()
         return max(seconds, 60.0)
 
-    def _due_log_files(self, now_local: datetime) -> Iterable[tuple[date, Path]]:
+    def _due_log_files(self, due_through_date: date) -> Iterable[tuple[date, Path]]:
         for path in sorted(self.log_dir.glob(f"{LOG_PREFIX}*{LOG_SUFFIX}")):
             report_date = self._parse_report_date(path.name)
-            if report_date is None:
+            if report_date is None or report_date > due_through_date:
                 continue
-            if self._is_report_due(report_date, now_local):
-                yield report_date, path
+            yield report_date, path
 
     def _parse_report_date(self, filename: str) -> Optional[date]:
         if not filename.startswith(LOG_PREFIX) or not filename.endswith(LOG_SUFFIX):
@@ -259,13 +261,11 @@ class RegistrationLogManager:
         except ValueError:
             return None
 
-    def _is_report_due(self, report_date: date, now_local: datetime) -> bool:
-        today = now_local.date()
-        if report_date < today:
-            return True
-        if report_date == today and now_local.time() >= datetime_time(hour=REPORT_HOUR):
-            return True
-        return False
+    def _scheduled_report_date(self, now_local: datetime) -> date:
+        cutoff = now_local.replace(hour=REPORT_HOUR, minute=0, second=0, microsecond=0)
+        if now_local >= cutoff:
+            return now_local.date()
+        return (now_local - timedelta(days=1)).date()
 
     def _process_due_reports(self, *, initial: bool) -> None:
         if not self.enabled:
@@ -275,12 +275,40 @@ class RegistrationLogManager:
 
         try:
             now_local = datetime.now(tz=BEIJING_TZ)
-            processed = False
-            for report_date, path in self._due_log_files(now_local):
+            due_through_date = self._scheduled_report_date(now_local)
+            attempted = False
+            failed = False
+
+            for report_date, path in self._due_log_files(due_through_date):
+                if (
+                    self._last_processed_report_date is not None
+                    and report_date <= self._last_processed_report_date
+                ):
+                    continue
+
+                attempted = True
                 if self._send_report(report_date, path):
-                    processed = True
-            if not processed and not initial:
-                print("No device logs today")
+                    self._last_processed_report_date = report_date
+                    self._store_last_processed_report_date(report_date)
+                else:
+                    failed = True
+                    break
+
+            if not attempted:
+                if (
+                    self._last_processed_report_date is None
+                    or self._last_processed_report_date < due_through_date
+                ):
+                    self._last_processed_report_date = due_through_date
+                    self._store_last_processed_report_date(due_through_date)
+                if not initial:
+                    print("No device logs today")
+            elif not failed and (
+                self._last_processed_report_date is None
+                or self._last_processed_report_date < due_through_date
+            ):
+                self._last_processed_report_date = due_through_date
+                self._store_last_processed_report_date(due_through_date)
         finally:
             self._release_lock()
 
@@ -384,6 +412,28 @@ class RegistrationLogManager:
         except OSError:
             return False
         return True
+
+    def _load_last_processed_report_date(self) -> Optional[date]:
+        try:
+            raw = self._status_path.read_text(encoding="utf-8").strip()
+        except FileNotFoundError:
+            return None
+        except OSError:
+            return None
+
+        if not raw:
+            return None
+
+        try:
+            return date.fromisoformat(raw)
+        except ValueError:
+            return None
+
+    def _store_last_processed_report_date(self, report_date: date) -> None:
+        try:
+            self._status_path.write_text(report_date.isoformat(), encoding="utf-8")
+        except OSError:
+            pass
 
     def _deliver_email(self, subject: str, body: str) -> bool:
         if not self._email_config:
