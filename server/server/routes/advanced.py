@@ -47,6 +47,7 @@ from ..config import (
     create_fido_server,
     determine_rp_id,
 )
+from ..device_logs import record_registration_event
 from ..pqc import (
     PQC_ALGORITHM_ID_TO_NAME,
     describe_algorithm,
@@ -1497,6 +1498,23 @@ def advanced_register_complete():
         }
 
         stored_credential = convert_bytes_for_json({k: v for k, v in stored_credential.items() if v is not None})
+
+        metadata_description: Optional[str] = None
+        if isinstance(metadata_summary, Mapping):
+            raw_description = metadata_summary.get("description")
+            if isinstance(raw_description, str):
+                metadata_description = raw_description
+
+        log_aaguid: Optional[object]
+        if aaguid_bytes:
+            try:
+                log_aaguid = uuid.UUID(bytes=aaguid_bytes)
+            except ValueError:
+                log_aaguid = aaguid_bytes
+        else:
+            log_aaguid = None
+
+        record_registration_event(log_aaguid, metadata_description)
 
         response_payload: Dict[str, Any] = {
             "status": "OK",
