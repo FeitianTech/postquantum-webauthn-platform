@@ -265,9 +265,9 @@ body.advanced-inline-json-editor .json-editor-overlay.active {
 
 .progress {
     position: fixed;
-    top: var(--global-toast-offset);
+    bottom: var(--global-toast-offset);
     left: 50%;
-    transform: translateX(-50%) translateY(-12px);
+    transform: translateX(-50%) translateY(12px);
     display: flex;
     align-items: center;
     gap: 0.75rem;

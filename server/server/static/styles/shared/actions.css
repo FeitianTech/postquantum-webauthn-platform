@@ -77,9 +77,9 @@
     border-radius: 18px;
     margin-bottom: 1rem;
     position: fixed;
-    top: var(--global-toast-offset);
+    bottom: var(--global-toast-offset);
     left: 50%;
-    transform: translateX(-50%) translateY(-12px);
+    transform: translateX(-50%) translateY(12px);
     z-index: 12000;
     min-width: 300px;
     max-width: 90vw;
