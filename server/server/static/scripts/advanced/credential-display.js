@@ -47,6 +47,29 @@ import {
 
 const SHARED_CREDENTIAL_STATUS_TABS = ['advanced', 'simple'];
 
+const COSE_ALGORITHM_TAG_LABELS = {
+    '-53': 'ED448',
+    '-52': 'ESP512',
+    '-51': 'ESP384',
+    '-50': 'MLDSA87',
+    '-49': 'MLDSA65',
+    '-48': 'MLDSA44',
+    '-47': 'ES256K',
+    '-39': 'PS512',
+    '-38': 'PS384',
+    '-37': 'PS256',
+    '-19': 'ED25519',
+    '-9': 'ESP256',
+    '-8': 'EDDSA',
+    '-7': 'ES256',
+    '-36': 'ES512',
+    '-35': 'ES384',
+    '-259': 'RS512',
+    '-258': 'RS384',
+    '-257': 'RS256',
+    '-65535': 'RS1'
+};
+
 function showSharedCredentialStatus(message, type) {
     SHARED_CREDENTIAL_STATUS_TABS.forEach(tabId => {
         showStatus(tabId, message, type);
@@ -315,6 +338,39 @@ function describeCredentialAlgorithm(credential) {
     }
     const fallback = credential?.publicKeyAlgorithm ?? credential?.algorithm;
     return describeCoseAlgorithm(fallback);
+}
+
+function describeCredentialAlgorithmTag(credential) {
+    const identifier = resolveCredentialAlgorithmIdentifier(credential);
+    if (identifier !== null && identifier !== undefined) {
+        const key = String(identifier);
+        if (Object.prototype.hasOwnProperty.call(COSE_ALGORITHM_TAG_LABELS, key)) {
+            return COSE_ALGORITHM_TAG_LABELS[key];
+        }
+    }
+
+    const description = describeCredentialAlgorithm(credential);
+    if (typeof description === 'string' && description.trim()) {
+        const prefix = description.split('(')[0].trim();
+        if (prefix) {
+            const normalized = prefix.replace(/[^0-9a-z]+/gi, '');
+            if (normalized) {
+                if (normalized.toLowerCase() === 'unknown') {
+                    return 'Unknown';
+                }
+                return normalized.toUpperCase();
+            }
+        }
+    }
+
+    if (identifier !== null && identifier !== undefined) {
+        const identifierText = String(identifier).replace(/[^0-9a-z-]/gi, '');
+        if (identifierText) {
+            return `COSE${identifierText}`.toUpperCase();
+        }
+    }
+
+    return 'Unknown';
 }
 
 function appendKeyValueLines(output, value, indentLevel = 0) {
@@ -2575,19 +2631,21 @@ export function updateCredentialsDisplay() {
     }
 
     const itemsHtml = state.storedCredentials.map((cred, index) => {
-        const features = [];
+        const featureLabels = [];
+        const algorithmTag = describeCredentialAlgorithmTag(cred);
+        if (algorithmTag) {
+            featureLabels.push(algorithmTag);
+        }
         if (cred.residentKey === true || cred.discoverable === true) {
-            features.push('Discoverable');
+            featureLabels.push('Discoverable');
         }
         if (cred.largeBlob === true || cred.largeBlobSupported === true) {
-            features.push('largeBlob');
-        }
-        const algorithmIdentifier = resolveCredentialAlgorithmIdentifier(cred);
-        if (describeMldsaParameterSet(algorithmIdentifier)) {
-            features.push('PQC');
+            featureLabels.push('Large blob');
         }
 
-        const featureText = features.length > 0 ? features.join(' • ') : '';
+        const featureTagsHtml = featureLabels.length > 0
+            ? `<div class="credential-feature-tags">${featureLabels.map(label => `<span class="credential-feature-tag">${escapeHtml(label)}</span>`).join('')}</div>`
+            : '';
 
         const {
             signatureStatus,
@@ -2628,7 +2686,7 @@ export function updateCredentialsDisplay() {
                     <span style="margin-left: 0.75rem; color: ${rpidColor};">RPID</span>
                     <span style="margin-left: 0.75rem; color: ${aaguidColor};">AAGUID</span>
                 </div>
-                ${featureText ? `<div style="font-size: 0.75rem; color: #5c6c7a;">${featureText}</div>` : ''}
+                ${featureTagsHtml}
             </div>
             ${actionsHtml}
         </div>
