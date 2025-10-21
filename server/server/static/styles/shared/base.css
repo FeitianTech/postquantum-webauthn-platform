@@ -147,7 +147,7 @@ body.modal-open {
     left: 0;
     right: 0;
     z-index: 95;
-    height: var(--header-mini-height, 0px);
+    height: calc(var(--header-mini-height, 0px) * var(--header-mini-progress, 0));
     pointer-events: none;
     overflow: hidden;
     border-bottom: 1px solid rgba(0, 114, 206, 0.2);
@@ -159,7 +159,7 @@ body.modal-open {
     align-items: center;
     justify-content: flex-start;
     background: var(--surface-color);
-    padding: 0.5rem 2.5rem;
+    padding: 0.75rem 2.5rem;
     transform: translateY(calc((var(--header-mini-progress, 0) - 1) * 100%));
     will-change: transform;
 }
@@ -219,7 +219,7 @@ body.modal-open {
 }
 
 .header-mini .nav-tab::after {
-    bottom: 0.1rem;
+    bottom: -0.05rem;
 }
 
 .header__github-link {
