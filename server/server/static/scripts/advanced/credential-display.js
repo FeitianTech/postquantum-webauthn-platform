@@ -2794,17 +2794,6 @@ export function navigateToMdsAuthenticator(aaguid) {
                 return { highlighted: false, entry: null };
             }
 
-            if (statusEl) {
-                showSpinnerStatus('Locating metadata entry...');
-            }
-
-            await waitForNextFrame(2);
-
-            if (switchToMdsTab) {
-                switchToMdsTab('mds', { preserveMessages: true });
-                await waitForNextFrame(2);
-            }
-
             const normaliseHighlightResult = result => {
                 if (result && typeof result === 'object' && 'highlighted' in result) {
                     return {
@@ -2818,11 +2807,12 @@ export function navigateToMdsAuthenticator(aaguid) {
                 };
             };
 
-            const attemptHighlight = async () => {
+            const invokeHighlight = async (options = {}) => {
                 try {
                     const result = await Promise.resolve(highlightRow(aaguid, {
                         scrollBehavior: 'smooth',
                         preResolvedEntry: resolvedEntry,
+                        ...options,
                     }));
                     return normaliseHighlightResult(result);
                 } catch (error) {
@@ -2831,23 +2821,64 @@ export function navigateToMdsAuthenticator(aaguid) {
                 }
             };
 
-            let { highlighted, entry } = await attemptHighlight();
-            if (!resolvedEntry && entry) {
-                resolvedEntry = entry;
+            if (statusEl) {
+                showSpinnerStatus('Locating metadata entry...');
             }
 
-            if (!highlighted) {
-                if (typeof requestAnimationFrame === 'function') {
-                    await new Promise(resolve => requestAnimationFrame(resolve));
-                }
-                const retry = await attemptHighlight();
-                if (!resolvedEntry && retry.entry) {
-                    resolvedEntry = retry.entry;
-                }
-                highlighted = retry.highlighted;
+            const preparation = await invokeHighlight({
+                deferScroll: true,
+                waitForVisibility: false,
+                focusRow: false,
+            });
+
+            if (!resolvedEntry && preparation.entry) {
+                resolvedEntry = preparation.entry;
             }
 
-            if (highlighted) {
+            if (!preparation.highlighted) {
+                if (statusEl) {
+                    const message = resolvedEntry
+                        ? 'Unable to locate metadata entry.'
+                        : 'Authenticator metadata not found.';
+                    setAaguidStatus(statusEl, message, { showSpinner: false });
+                    scheduleClear();
+                }
+                return { highlighted: false, entry: resolvedEntry };
+            }
+
+            if (statusEl) {
+                showSpinnerStatus('Opening authenticator metadata...');
+            }
+
+            if (switchToMdsTab) {
+                switchToMdsTab('mds', { preserveMessages: true });
+            }
+
+            await waitForNextFrame(2);
+
+            let finalised = false;
+            const finaliseHighlight = typeof window.finaliseMdsAuthenticatorHighlight === 'function'
+                ? window.finaliseMdsAuthenticatorHighlight
+                : null;
+
+            if (finaliseHighlight) {
+                try {
+                    finalised = Boolean(finaliseHighlight({ behavior: 'smooth', focus: true }));
+                } catch (error) {
+                    console.warn('Failed to finalise authenticator highlight:', error);
+                    finalised = false;
+                }
+            }
+
+            if (!finalised) {
+                const completion = await invokeHighlight({ waitForVisibility: true });
+                if (!resolvedEntry && completion.entry) {
+                    resolvedEntry = completion.entry;
+                }
+                finalised = completion.highlighted;
+            }
+
+            if (finalised) {
                 clearAaguidStatus(statusEl);
                 closeCredentialModal();
                 return { highlighted: true, entry: resolvedEntry };
