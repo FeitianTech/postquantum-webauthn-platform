@@ -2239,7 +2239,6 @@ function openAuthenticatorDataDetail() {
         sections.push(`<pre class="modal-pre">${escapeHtml(rawHex)}</pre>`);
     }
 
-    sections.push('<h4 style="margin-top: 1rem; margin-bottom: 0.5rem;">Decoded authenticatorData</h4>');
     const jsonString = escapeHtml(JSON.stringify(data, null, 2));
     sections.push(`<textarea class="certificate-textarea" readonly spellcheck="false" wrap="soft">${jsonString}</textarea>`);
 
