@@ -406,28 +406,39 @@ export function initializeStickyHeader() {
         parent.insertBefore(placeholder, header.nextSibling);
     }
 
-    let sentinel = header.querySelector('.header-sentinel');
-    if (sentinel instanceof HTMLElement) {
-        if (typeof sentinel.remove === 'function') {
-            sentinel.remove();
-        } else if (sentinel.parentElement) {
-            sentinel.parentElement.removeChild(sentinel);
-        }
-    } else {
-        sentinel = document.createElement('div');
-        sentinel.className = 'header-sentinel';
-        sentinel.setAttribute('aria-hidden', 'true');
-    }
-
-    parent.insertBefore(sentinel, header);
-
     let isFixed = false;
+
+    const raf = typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function'
+        ? window.requestAnimationFrame.bind(window)
+        : (fn => setTimeout(fn, 16));
+
+    const getScrollPosition = () => {
+        if (typeof window !== 'undefined') {
+            if (typeof window.scrollY === 'number') {
+                return window.scrollY;
+            }
+            if (typeof window.pageYOffset === 'number') {
+                return window.pageYOffset;
+            }
+        }
+
+        if (typeof document !== 'undefined') {
+            if (document.documentElement && typeof document.documentElement.scrollTop === 'number') {
+                return document.documentElement.scrollTop;
+            }
+            if (document.body && typeof document.body.scrollTop === 'number') {
+                return document.body.scrollTop;
+            }
+        }
+
+        return 0;
+    };
+
+    const cleanupHandlers = [];
 
     const updatePlaceholderHeight = () => {
         placeholder.style.height = `${header.offsetHeight}px`;
     };
-
-    updatePlaceholderHeight();
 
     const applyFixedState = shouldFix => {
         if (isFixed === shouldFix) {
@@ -438,25 +449,49 @@ export function initializeStickyHeader() {
         header.classList.toggle('header--stuck', shouldFix);
         placeholder.hidden = !shouldFix;
 
-        if (shouldFix) {
+        raf(() => {
             updatePlaceholderHeight();
-        }
+        });
     };
 
     const evaluateStickyState = () => {
-        const sentinelRect = sentinel.getBoundingClientRect();
-        if (sentinelRect.top <= 0) {
-            applyFixedState(true);
-        } else {
-            applyFixedState(false);
+        if (!isFixed) {
+            const headerRect = header.getBoundingClientRect();
+            const scrollPosition = getScrollPosition();
+            if (headerRect.top <= 0 && scrollPosition > 0) {
+                applyFixedState(true);
+                return;
+            }
+
+            updatePlaceholderHeight();
+            return;
         }
+
+        const placeholderRect = placeholder.getBoundingClientRect();
+        if (placeholderRect.top >= 0) {
+            applyFixedState(false);
+            return;
+        }
+
+        updatePlaceholderHeight();
     };
 
-    const cleanupHandlers = [];
+    const handlePageshow = () => {
+        raf(() => {
+            updatePlaceholderHeight();
+            evaluateStickyState();
+        });
+    };
+    window.addEventListener('pageshow', handlePageshow);
+    cleanupHandlers.push(() => {
+        window.removeEventListener('pageshow', handlePageshow);
+    });
 
-    let resizeObserver = null;
     if (typeof ResizeObserver === 'function') {
-        resizeObserver = new ResizeObserver(updatePlaceholderHeight);
+        const resizeObserver = new ResizeObserver(() => {
+            updatePlaceholderHeight();
+            evaluateStickyState();
+        });
         resizeObserver.observe(header);
         cleanupHandlers.push(() => {
             resizeObserver.disconnect();
@@ -472,60 +507,28 @@ export function initializeStickyHeader() {
         });
     }
 
-    const handlePageshow = () => {
-        updatePlaceholderHeight();
-        evaluateStickyState();
+    let ticking = false;
+    const handleScroll = () => {
+        if (ticking) {
+            return;
+        }
+
+        ticking = true;
+        raf(() => {
+            ticking = false;
+            evaluateStickyState();
+        });
     };
-    window.addEventListener('pageshow', handlePageshow);
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
     cleanupHandlers.push(() => {
-        window.removeEventListener('pageshow', handlePageshow);
+        window.removeEventListener('scroll', handleScroll);
     });
 
-    const raf = typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function'
-        ? window.requestAnimationFrame.bind(window)
-        : (fn => setTimeout(fn, 16));
-
-    if (typeof IntersectionObserver === 'function') {
-        const observer = new IntersectionObserver(entries => {
-            for (const entry of entries) {
-                if (entry.target !== sentinel) {
-                    continue;
-                }
-
-                if (!entry.isIntersecting) {
-                    applyFixedState(true);
-                } else {
-                    applyFixedState(false);
-                }
-            }
-        }, {
-            threshold: [0, 1],
-        });
-
-        observer.observe(sentinel);
-        cleanupHandlers.push(() => {
-            observer.disconnect();
-        });
-    } else {
-        let ticking = false;
-        const handleScroll = () => {
-            if (ticking) {
-                return;
-            }
-            ticking = true;
-            raf(() => {
-                ticking = false;
-                evaluateStickyState();
-            });
-        };
-
-        window.addEventListener('scroll', handleScroll, { passive: true });
-        cleanupHandlers.push(() => {
-            window.removeEventListener('scroll', handleScroll);
-        });
-    }
-
-    evaluateStickyState();
+    raf(() => {
+        updatePlaceholderHeight();
+        evaluateStickyState();
+    });
 
     window.addEventListener('beforeunload', () => {
         for (const cleanup of cleanupHandlers) {
