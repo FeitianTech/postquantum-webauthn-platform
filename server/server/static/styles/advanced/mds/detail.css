@@ -230,13 +230,22 @@
     opacity: 0;
     visibility: hidden;
     pointer-events: none;
-    transition: opacity 200ms ease;
+    transform: translateY(32px);
+    transition: opacity 320ms ease, transform 420ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .mds-detail-page--open {
     opacity: 1;
     visibility: visible;
     pointer-events: auto;
+    transform: translateY(0);
+}
+
+.mds-detail-page--closing {
+    opacity: 0;
+    visibility: visible;
+    pointer-events: none;
+    transform: translateY(32px);
 }
 
 .mds-detail-page[hidden] {

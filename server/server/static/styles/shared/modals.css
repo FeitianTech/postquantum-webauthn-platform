@@ -25,6 +25,20 @@
     transition: opacity 280ms ease, visibility 0s linear 0s;
 }
 
+.modal.detail-screen {
+    background-color: var(--surface-alt);
+    backdrop-filter: none;
+    padding: 0;
+    align-items: stretch;
+    justify-content: flex-start;
+    flex-direction: column;
+    transition: opacity 360ms ease, visibility 0s linear 320ms;
+}
+
+.modal.detail-screen.open {
+    transition: opacity 360ms ease, visibility 0s linear 0s;
+}
+
 .modal-content {
     background-color: var(--surface-color);
     border-radius: 24px;
@@ -47,6 +61,29 @@
     opacity: 1;
 }
 
+.modal.detail-screen .modal-content {
+    width: 100%;
+    max-width: none;
+    height: 100%;
+    max-height: none;
+    border-radius: 0;
+    padding: 0;
+    box-shadow: none;
+    transform: translateY(32px);
+    opacity: 0;
+    transition: transform 420ms cubic-bezier(0.16, 1, 0.3, 1), opacity 320ms ease;
+}
+
+.detail-screen__content {
+    display: flex;
+    flex-direction: column;
+}
+
+.modal.detail-screen.open .modal-content {
+    transform: translateY(0);
+    opacity: 1;
+}
+
 .modal-content.modal-content-large {
     width: 95vw;
     max-width: 95vw;
@@ -65,6 +102,17 @@
     margin-bottom: 1.5rem;
     padding-bottom: 1rem;
     border-bottom: 1px solid rgba(0, 114, 206, 0.15);
+}
+
+.modal.detail-screen .modal-header {
+    margin-bottom: 0;
+    padding: clamp(1.75rem, 4vw, 2.5rem) clamp(2rem, 5vw, 3.5rem) clamp(1.25rem, 3vh, 1.75rem);
+    border-bottom: 1px solid rgba(0, 114, 206, 0.15);
+}
+
+.modal.detail-screen .modal-title {
+    font-size: clamp(1.6rem, 2.6vw, 2.1rem);
+    color: var(--primary-dark);
 }
 
 .modal-title {
@@ -103,6 +151,11 @@
     word-break: break-word;
     overflow-wrap: anywhere;
     overscroll-behavior: contain;
+}
+
+.modal.detail-screen .modal-body {
+    padding: 0 clamp(2rem, 5vw, 3.5rem) clamp(2.5rem, 6vh, 3.5rem);
+    line-height: 1.7;
 }
 
 .modal-body * {
