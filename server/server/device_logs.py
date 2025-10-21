@@ -28,6 +28,7 @@ LOG_PREFIX = "webauthn_device_logs_"
 LOG_SUFFIX = ".log"
 REPORT_HOUR = 9
 LOCK_FILENAME = "webauthn_device_logs.lock"
+STALE_LOCK_MAX_AGE_SECONDS = 6 * 60 * 60  # 6 hours
 
 
 def _env_flag(name: str, default: bool = True) -> bool:
@@ -112,6 +113,9 @@ class RegistrationLogManager:
             # Fail closed if the log directory cannot be created.
             self.enabled = False
             return
+
+        # Clean up any stale scheduler lock left over from crashes or deploys.
+        self._remove_stale_lock_if_present()
 
         # Process any due reports immediately (e.g., after restarts).
         self._process_due_reports(initial=True)
@@ -203,11 +207,15 @@ class RegistrationLogManager:
         try:
             fd = os.open(self._lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
         except FileExistsError:
+            if self._remove_stale_lock_if_present():
+                return self._acquire_lock()
             return False
         except OSError:
             return False
         else:
-            os.close(fd)
+            with os.fdopen(fd, "w", encoding="utf-8") as handle:
+                handle.write(f"pid={os.getpid()}\n")
+                handle.write(f"timestamp={int(time.time())}\n")
             return True
 
     def _release_lock(self) -> None:
@@ -310,6 +318,72 @@ class RegistrationLogManager:
 
         print("Email failed — retained log for retry")
         return False
+
+    def _remove_stale_lock_if_present(self) -> bool:
+        try:
+            metadata = self._lock_path.read_text(encoding="utf-8")
+        except FileNotFoundError:
+            return False
+        except OSError:
+            metadata = ""
+
+        if not self._is_lock_stale(metadata):
+            return False
+
+        try:
+            self._lock_path.unlink()
+            return True
+        except FileNotFoundError:
+            return False
+        except OSError:
+            return False
+
+    def _is_lock_stale(self, metadata: str) -> bool:
+        pid = None
+        timestamp = None
+
+        for line in metadata.splitlines():
+            if line.startswith("pid="):
+                try:
+                    pid = int(line.split("=", 1)[1])
+                except ValueError:
+                    pid = None
+            if line.startswith("timestamp="):
+                try:
+                    timestamp = int(line.split("=", 1)[1])
+                except ValueError:
+                    timestamp = None
+
+        if pid is not None:
+            if not self._process_alive(pid):
+                return True
+
+        if timestamp is not None:
+            age = time.time() - timestamp
+            if age >= STALE_LOCK_MAX_AGE_SECONDS:
+                return True
+
+        try:
+            stat_result = self._lock_path.stat()
+        except OSError:
+            return False
+
+        age = time.time() - stat_result.st_mtime
+        return age >= STALE_LOCK_MAX_AGE_SECONDS
+
+    @staticmethod
+    def _process_alive(pid: int) -> bool:
+        if pid <= 0:
+            return False
+        try:
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            return False
+        except PermissionError:
+            return True
+        except OSError:
+            return False
+        return True
 
     def _deliver_email(self, subject: str, body: str) -> bool:
         if not self._email_config:
