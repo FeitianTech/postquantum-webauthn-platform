@@ -406,43 +406,25 @@ export function initializeStickyHeader() {
         parent.insertBefore(placeholder, header.nextSibling);
     }
 
-    const navTabs = header.querySelector('.header__tabs');
-    const sentinel = header.querySelector('.header-sentinel');
+    let sentinel = header.querySelector('.header-sentinel');
+    if (sentinel instanceof HTMLElement) {
+        if (typeof sentinel.remove === 'function') {
+            sentinel.remove();
+        } else if (sentinel.parentElement) {
+            sentinel.parentElement.removeChild(sentinel);
+        }
+    } else {
+        sentinel = document.createElement('div');
+        sentinel.className = 'header-sentinel';
+        sentinel.setAttribute('aria-hidden', 'true');
+    }
+
+    parent.insertBefore(sentinel, header);
 
     let isFixed = false;
-    let navOffset = 0;
-    let triggerPosition = header.offsetTop || 0;
-    const ACTIVATION_BUFFER = 6;
-    const RELEASE_BUFFER = 10;
-
-    const resolveNavOffset = () => {
-        if (sentinel instanceof HTMLElement) {
-            return sentinel.offsetTop;
-        }
-
-        if (navTabs instanceof HTMLElement) {
-            return navTabs.offsetTop;
-        }
-
-        return 0;
-    };
-
-    const getAnchorTop = () => {
-        if (isFixed) {
-            return placeholder.offsetTop || 0;
-        }
-
-        return header.offsetTop || 0;
-    };
-
-    const computeTriggerPosition = () => {
-        navOffset = resolveNavOffset();
-        triggerPosition = getAnchorTop() + navOffset;
-    };
 
     const updatePlaceholderHeight = () => {
         placeholder.style.height = `${header.offsetHeight}px`;
-        computeTriggerPosition();
     };
 
     updatePlaceholderHeight();
@@ -458,57 +440,100 @@ export function initializeStickyHeader() {
 
         if (shouldFix) {
             updatePlaceholderHeight();
-        } else {
-            computeTriggerPosition();
         }
     };
 
     const evaluateStickyState = () => {
-        if (!isFixed) {
-            computeTriggerPosition();
-        }
-
-        const scrollPosition = window.scrollY ?? window.pageYOffset ?? 0;
-
-        if (!isFixed && scrollPosition >= (triggerPosition + ACTIVATION_BUFFER)) {
+        const sentinelRect = sentinel.getBoundingClientRect();
+        if (sentinelRect.top <= 0) {
             applyFixedState(true);
-            return;
-        }
-
-        if (isFixed) {
-            computeTriggerPosition();
-            const releaseThreshold = Math.max(0, triggerPosition - RELEASE_BUFFER);
-
-            if (scrollPosition <= releaseThreshold) {
-                applyFixedState(false);
-            }
+        } else {
+            applyFixedState(false);
         }
     };
+
+    const cleanupHandlers = [];
 
     let resizeObserver = null;
     if (typeof ResizeObserver === 'function') {
         resizeObserver = new ResizeObserver(updatePlaceholderHeight);
         resizeObserver.observe(header);
+        cleanupHandlers.push(() => {
+            resizeObserver.disconnect();
+        });
     } else {
-        window.addEventListener('resize', updatePlaceholderHeight);
+        const handleResize = () => {
+            updatePlaceholderHeight();
+            evaluateStickyState();
+        };
+        window.addEventListener('resize', handleResize);
+        cleanupHandlers.push(() => {
+            window.removeEventListener('resize', handleResize);
+        });
     }
-
-    window.addEventListener('scroll', evaluateStickyState, { passive: true });
-    evaluateStickyState();
 
     const handlePageshow = () => {
         updatePlaceholderHeight();
         evaluateStickyState();
     };
     window.addEventListener('pageshow', handlePageshow);
+    cleanupHandlers.push(() => {
+        window.removeEventListener('pageshow', handlePageshow);
+    });
+
+    const raf = typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function'
+        ? window.requestAnimationFrame.bind(window)
+        : (fn => setTimeout(fn, 16));
+
+    if (typeof IntersectionObserver === 'function') {
+        const observer = new IntersectionObserver(entries => {
+            for (const entry of entries) {
+                if (entry.target !== sentinel) {
+                    continue;
+                }
+
+                if (!entry.isIntersecting) {
+                    applyFixedState(true);
+                } else {
+                    applyFixedState(false);
+                }
+            }
+        }, {
+            threshold: [0, 1],
+        });
+
+        observer.observe(sentinel);
+        cleanupHandlers.push(() => {
+            observer.disconnect();
+        });
+    } else {
+        let ticking = false;
+        const handleScroll = () => {
+            if (ticking) {
+                return;
+            }
+            ticking = true;
+            raf(() => {
+                ticking = false;
+                evaluateStickyState();
+            });
+        };
+
+        window.addEventListener('scroll', handleScroll, { passive: true });
+        cleanupHandlers.push(() => {
+            window.removeEventListener('scroll', handleScroll);
+        });
+    }
+
+    evaluateStickyState();
 
     window.addEventListener('beforeunload', () => {
-        if (resizeObserver) {
-            resizeObserver.disconnect();
-        } else {
-            window.removeEventListener('resize', updatePlaceholderHeight);
+        for (const cleanup of cleanupHandlers) {
+            try {
+                cleanup();
+            } catch (error) {
+                // Ignore cleanup errors to avoid blocking unload.
+            }
         }
-        window.removeEventListener('scroll', evaluateStickyState);
-        window.removeEventListener('pageshow', handlePageshow);
     }, { once: true });
 }
