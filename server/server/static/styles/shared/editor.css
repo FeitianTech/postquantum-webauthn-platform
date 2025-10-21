@@ -171,6 +171,7 @@ body.advanced-inline-json-editor .json-editor-overlay.active {
     justify-content: flex-end;
     gap: 0.85rem;
     z-index: 5;
+    pointer-events: none;
 }
 
 .json-editor-inline-buttons {
@@ -197,6 +198,7 @@ body.advanced-inline-json-editor .json-editor-overlay.active {
     justify-content: center;
     margin: 0;
     transition: color 0.18s ease, background-color 0.18s ease, border-color 0.18s ease;
+    pointer-events: auto;
 }
 
 .json-editor-inline-buttons .btn:hover,
@@ -226,6 +228,7 @@ body.advanced-inline-json-editor .json-editor-overlay.active {
     justify-content: center;
     transition: background-color 0.2s ease;
     cursor: pointer;
+    pointer-events: auto;
 }
 
 .json-editor-close-btn span {
