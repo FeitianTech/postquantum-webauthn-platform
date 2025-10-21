@@ -2,9 +2,11 @@
 from __future__ import annotations
 
 import base64
+import hashlib
 import os
 import time
 import uuid
+from datetime import datetime, timezone
 from typing import Any, Dict, Iterable, List, Mapping, MutableMapping, Sequence, Tuple
 
 from flask import abort, jsonify, request, session
@@ -19,6 +21,7 @@ from ..attestation import (
     extract_attestation_details,
     extract_min_pin_length,
     make_json_safe,
+    perform_attestation_checks,
 )
 from ..config import app, basepath, create_fido_server, determine_rp_id
 from ..storage import add_public_key_material, convert_bytes_for_json, delkey, extract_credential_data, readkey
@@ -248,6 +251,11 @@ def register_begin():
     session["register_rp_id"] = rp_id
 
     options_dict = dict(options)
+    public_key_options = options_dict.get("publicKey")
+    if isinstance(public_key_options, MutableMapping):
+        session["simple_register_public_key"] = make_json_safe(public_key_options)
+    else:
+        session.pop("simple_register_public_key", None)
     if _SIMPLE_ALLOWED_ALGORITHMS:
         public_key_options = options_dict.get("publicKey")
         if isinstance(public_key_options, MutableMapping):
@@ -288,11 +296,7 @@ def register_complete():
         attestation_certificates_details,
     ) = extract_attestation_details(response)
 
-    credential_response.get('attestationObject')
     client_data_json = credential_response.get('clientDataJSON')
-
-    if parsed_attestation_object:
-        parsed_attestation_object
     if parsed_client_data_json:
         client_data_json = parsed_client_data_json
 
@@ -305,15 +309,62 @@ def register_complete():
     min_pin_length_value = extract_min_pin_length(client_extension_results)
 
     rp_id = session.get("register_rp_id")
-    server = create_fido_server(rp_id=rp_id)
+    state = session.get("state")
+    public_key_options_for_checks = session.pop("simple_register_public_key", None)
+    resolved_rp_id = rp_id or determine_rp_id()
+    server = create_fido_server(rp_id=resolved_rp_id)
 
-    auth_data = server.register_complete(session["state"], response)
+    auth_data = server.register_complete(state, response)
+    session.pop("state", None)
 
     authenticator_attachment_response = normalize_attachment(
         response.get('authenticatorAttachment') if isinstance(response, Mapping) else None
     )
 
     raw_attestation_object = credential_response.get('attestationObject')
+
+    expected_origin = request.headers.get("Origin") or request.host_url.rstrip("/")
+
+    attestation_checks = perform_attestation_checks(
+        response if isinstance(response, Mapping) else {},
+        state if isinstance(state, Mapping) else None,
+        public_key_options_for_checks if isinstance(public_key_options_for_checks, Mapping) else None,
+        auth_data,
+        expected_origin,
+        resolved_rp_id,
+    )
+
+    attestation_signature_valid = attestation_checks.get("signature_valid")
+    attestation_root_valid = attestation_checks.get("root_valid")
+    attestation_rp_id_hash_valid = attestation_checks.get("rp_id_hash_valid")
+    attestation_aaguid_match = attestation_checks.get("aaguid_match")
+    attestation_checks_safe = make_json_safe(attestation_checks)
+
+    attestation_summary = {
+        "signatureValid": attestation_signature_valid,
+        "rootValid": attestation_root_valid,
+        "rpIdHashValid": attestation_rp_id_hash_valid,
+        "aaguidMatch": attestation_aaguid_match,
+    }
+
+    metadata_summary = attestation_checks_safe.get("metadata")
+    if isinstance(metadata_summary, Mapping):
+        attestation_summary["metadata"] = metadata_summary
+
+    warnings_summary = attestation_checks_safe.get("warnings")
+    warnings: List[str] = []
+    if isinstance(warnings_summary, list):
+        filtered_warnings: List[Any] = []
+        for message in warnings_summary:
+            if isinstance(message, str):
+                stripped = message.strip()
+                if stripped:
+                    warnings.append(stripped)
+                    filtered_warnings.append(stripped)
+            elif message:
+                filtered_warnings.append(message)
+        if filtered_warnings:
+            attestation_summary["warnings"] = filtered_warnings
 
     credential_info: Dict[str, Any] = {
         'credential_data': auth_data.credential_data,
@@ -356,8 +407,18 @@ def register_complete():
         }
     }
 
+    credential_properties = credential_info['properties']
+    credential_properties['attestationSignatureValid'] = attestation_signature_valid
+    credential_properties['attestationRootValid'] = attestation_root_valid
+    credential_properties['attestationRpIdHashValid'] = attestation_rp_id_hash_valid
+    credential_properties['attestationAaguidMatch'] = attestation_aaguid_match
+    credential_properties['attestationChecks'] = attestation_checks_safe
+    credential_properties['attestationSummary'] = attestation_summary
+    if warnings:
+        credential_properties['attestationWarnings'] = warnings
+
     if min_pin_length_value is not None:
-        credential_info['properties']['minPinLength'] = min_pin_length_value
+        credential_properties['minPinLength'] = min_pin_length_value
 
     add_public_key_material(
         credential_info,
@@ -369,7 +430,7 @@ def register_complete():
 
     if attestation_certificates_details:
         credential_info['attestationCertificates'] = attestation_certificates_details
-        credential_info['properties']['attestationCertificates'] = attestation_certificates_details
+        credential_properties['attestationCertificates'] = attestation_certificates_details
 
     if isinstance(response, Mapping):
         credential_info['registration_response'] = make_json_safe(response)
@@ -383,22 +444,31 @@ def register_complete():
             aaguid_bytes = None
         if aaguid_bytes is not None and len(aaguid_bytes) == 16:
             aaguid_hex = aaguid_bytes.hex()
-            credential_info['properties']['aaguid'] = aaguid_hex
-            credential_info['properties']['aaguidHex'] = aaguid_hex
+            credential_properties['aaguid'] = aaguid_hex
+            credential_properties['aaguidHex'] = aaguid_hex
             try:
-                credential_info['properties']['aaguidGuid'] = str(uuid.UUID(bytes=aaguid_bytes))
+                credential_properties['aaguidGuid'] = str(uuid.UUID(bytes=aaguid_bytes))
             except ValueError:
                 pass
 
     try:
         auth_data_bytes = bytes(auth_data)
-        credential_info['authenticator_data_raw'] = base64.urlsafe_b64encode(auth_data_bytes).decode('utf-8').rstrip('=')
-        credential_info['authenticator_data_hex'] = auth_data_bytes.hex()
     except Exception:
-        pass
+        auth_data_bytes = b''
+
+    authenticator_data_raw = ''
+    authenticator_data_hex = ''
+    authenticator_data_hash = ''
+    if auth_data_bytes:
+        authenticator_data_raw = base64.urlsafe_b64encode(auth_data_bytes).decode('utf-8').rstrip('=')
+        authenticator_data_hex = auth_data_bytes.hex()
+        authenticator_data_hash = hashlib.sha256(auth_data_bytes).hexdigest()
+        credential_info['authenticator_data_raw'] = authenticator_data_raw
+        credential_info['authenticator_data_hex'] = authenticator_data_hex
+        credential_info['authenticator_data_hash'] = authenticator_data_hash
+        credential_properties['authenticatorDataHash'] = authenticator_data_hash
 
     algo = auth_data.credential_data.public_key[3]
-    ""
     if algo == -50:
         algoname = "ML-DSA-87 (PQC)"
     elif algo == -49:
@@ -412,19 +482,59 @@ def register_complete():
     else:
         algoname = "Other (Classical)"
 
-    debug_info = {
-        "attestationFormat": attestation_format,
-        "algorithmsUsed": [algo],
-        "excludeCredentialsUsed": False,
-        "hintsUsed": [],
-        "credProtectUsed": "none",
-        "enforceCredProtectUsed": False,
-        "actualResidentKey": bool(auth_data.flags & 0x04) if hasattr(auth_data, 'flags') else False,
+    flags_value = getattr(auth_data, 'flags', 0)
+    flags_dict = {
+        "UP": bool(flags_value & getattr(auth_data.FLAG, 'UP', 0)),
+        "UV": bool(flags_value & getattr(auth_data.FLAG, 'UV', 0)),
+        "BE": bool(flags_value & getattr(auth_data.FLAG, 'BE', 0)),
+        "BS": bool(flags_value & getattr(auth_data.FLAG, 'BS', 0)),
+        "AT": bool(flags_value & getattr(auth_data.FLAG, 'AT', 0)),
+        "ED": bool(flags_value & getattr(auth_data.FLAG, 'ED', 0)),
     }
 
-    session.pop("register_rp_id", None)
+    rp_id_hash_bytes = getattr(auth_data, 'rp_id_hash', b'')
+    if isinstance(rp_id_hash_bytes, (bytearray, memoryview)):
+        rp_id_hash_bytes = bytes(rp_id_hash_bytes)
+    elif not isinstance(rp_id_hash_bytes, bytes):
+        rp_id_hash_bytes = b''
+
+    rp_id_hash_hex = rp_id_hash_bytes.hex() if rp_id_hash_bytes else ''
+    rp_id_hash_b64 = base64.urlsafe_b64encode(rp_id_hash_bytes).decode('ascii').rstrip('=') if rp_id_hash_bytes else ''
+
+    expected_rp_hash_bytes = hashlib.sha256((resolved_rp_id or '').encode('utf-8')).digest()
+    expected_rp_hash_hex = expected_rp_hash_bytes.hex()
+    expected_rp_hash_b64 = base64.urlsafe_b64encode(expected_rp_hash_bytes).decode('ascii').rstrip('=')
+
+    if attestation_rp_id_hash_valid is None:
+        attestation_rp_id_hash_valid = rp_id_hash_bytes == expected_rp_hash_bytes
+
+    if rp_id_hash_hex:
+        credential_properties['rpIdHash'] = rp_id_hash_hex
+    if rp_id_hash_b64:
+        credential_properties['rpIdHashBase64'] = rp_id_hash_b64
+    credential_properties['rpIdHashExpected'] = expected_rp_hash_hex
+    credential_properties['rpIdHashExpectedBase64'] = expected_rp_hash_b64
+
+    registration_timestamp = datetime.fromtimestamp(credential_info['registration_time'], timezone.utc).isoformat()
+
+    large_blob_result = False
+    if isinstance(client_extension_results, Mapping) and 'largeBlob' in client_extension_results:
+        large_blob_value = client_extension_results.get('largeBlob')
+        if isinstance(large_blob_value, Mapping):
+            large_blob_result = bool(
+                large_blob_value.get('supported')
+                or large_blob_value.get('written')
+                or large_blob_value.get('blob')
+                or large_blob_value.get('result')
+            )
+        else:
+            large_blob_result = bool(large_blob_value)
 
     credential_id_bytes = auth_data.credential_data.credential_id
+    credential_id_hex = credential_id_bytes.hex()
+    credential_id_b64 = base64.b64encode(credential_id_bytes).decode('ascii')
+    credential_id_b64u = base64.urlsafe_b64encode(credential_id_bytes).decode('ascii').rstrip('=')
+
     try:
         aaguid_bytes = bytes(auth_data.credential_data.aaguid)
     except Exception:
@@ -433,14 +543,81 @@ def register_complete():
     cose_public_key = dict(getattr(auth_data.credential_data, 'public_key', {}))
     public_key_bytes = cbor.encode(cose_public_key)
 
+    user_handle_value = credential_info['user_info'].get('user_handle')
+    if isinstance(user_handle_value, (bytes, bytearray, memoryview)):
+        user_handle_bytes = bytes(user_handle_value)
+    else:
+        user_handle_bytes = str(user_handle_value or '').encode('utf-8')
+    user_handle_b64 = base64.b64encode(user_handle_bytes).decode('ascii')
+    user_handle_b64u = base64.urlsafe_b64encode(user_handle_bytes).decode('ascii').rstrip('=')
+    user_handle_hex = user_handle_bytes.hex()
+
+    rp_registration_data = {
+        "authenticatorData": authenticator_data_hex,
+        "authenticatorDataHash": authenticator_data_hash,
+        "clientExtensionResults": convert_bytes_for_json(client_extension_results),
+        "flags": flags_dict,
+        "signatureCounter": getattr(auth_data, 'counter', 0),
+        "attestationChecks": attestation_checks_safe,
+        "attestationSummary": attestation_summary,
+    }
+    if warnings:
+        rp_registration_data['warnings'] = warnings
+
+    rp_info = {
+        "attestationFmt": attestation_format,
+        "createdAt": registration_timestamp,
+        "credentialId": credential_id_hex,
+        "credentialIdBase64": credential_id_b64,
+        "credentialIdBase64Url": credential_id_b64u,
+        "rpIdHash": rp_id_hash_hex,
+        "rpIdHashBase64": rp_id_hash_b64,
+        "rpIdHashExpected": expected_rp_hash_hex,
+        "rpIdHashExpectedBase64": expected_rp_hash_b64,
+        "rpIdHashMatch": bool(attestation_rp_id_hash_valid),
+        "authenticatorDataHash": authenticator_data_hash,
+        "largeBlob": large_blob_result,
+        "publicKeyAlgorithm": algo,
+        "registrationData": rp_registration_data,
+        "userHandle": {
+            "base64": user_handle_b64,
+            "base64url": user_handle_b64u,
+            "hex": user_handle_hex,
+        },
+    }
+
+    if aaguid_bytes:
+        rp_info["aaguid"] = {
+            "raw": aaguid_bytes.hex(),
+            "guid": str(uuid.UUID(bytes=aaguid_bytes)) if len(aaguid_bytes) == 16 else None,
+        }
+
+    credential_info['relying_party'] = make_json_safe(rp_info)
+
+    debug_info = {
+        "attestationFormat": attestation_format,
+        "algorithmsUsed": [algo],
+        "excludeCredentialsUsed": False,
+        "hintsUsed": [],
+        "credProtectUsed": "none",
+        "enforceCredProtectUsed": False,
+        "actualResidentKey": bool(flags_value & getattr(auth_data.FLAG, 'BE', 0)),
+        "attestationSummary": attestation_summary,
+        "rpIdHashValid": attestation_rp_id_hash_valid,
+        "rpIdHash": rp_id_hash_hex,
+        "rpIdHashExpected": expected_rp_hash_hex,
+    }
+
+    session.pop("register_rp_id", None)
+
     stored_credential: Dict[str, Any] = {
         "type": "simple",
         "email": uname,
         "userName": credential_info['user_info'].get('name', uname),
         "displayName": credential_info['user_info'].get('display_name', uname),
-        "credentialId": base64.b64encode(credential_id_bytes).decode('ascii'),
-        "credentialIdBase64Url": base64.urlsafe_b64encode(credential_id_bytes).decode('ascii').rstrip('='),
-        "credentialIdHex": credential_id_bytes.hex(),
+        "credentialId": credential_id_b64,
+        "credentialIdBase64Url": credential_id_b64u,
+        "credentialIdHex": credential_id_hex,
         "aaguid": base64.urlsafe_b64encode(aaguid_bytes).decode('ascii').rstrip('=') if aaguid_bytes else None,
         "aaguidHex": aaguid_bytes.hex() if aaguid_bytes else None,
         "publicKey": base64.b64encode(public_key_bytes).decode('ascii'),
@@ -451,18 +628,20 @@ def register_complete():
         "clientExtensionOutputs": convert_bytes_for_json(client_extension_results),
         "attestationFormat": attestation_format,
         "attestationStatement": convert_bytes_for_json(attestation_statement),
-        "properties": convert_bytes_for_json(credential_info.get('properties', {})),
+        "properties": convert_bytes_for_json(credential_properties),
         "publicKeyCose": convert_bytes_for_json(cose_public_key),
         "publicKeyBytes": base64.b64encode(public_key_bytes).decode('ascii'),
         "authenticatorAttachment": authenticator_attachment_response,
         "clientDataJSON": credential_info.get('client_data_json'),
         "attestationObject": credential_info.get('attestation_object'),
-        "authenticatorData": credential_info.get('authenticator_data_raw'),
+        "authenticatorData": authenticator_data_raw,
+        "authenticatorDataHex": authenticator_data_hex,
+        "authenticatorDataHash": authenticator_data_hash or None,
+        "relyingParty": make_json_safe(rp_info),
+        "registrationResponse": credential_info.get('registration_response'),
     }
 
-    user_handle_value = credential_info['user_info'].get('user_handle')
-    if isinstance(user_handle_value, (bytes, bytearray, memoryview)):
-        stored_credential['userHandle'] = base64.urlsafe_b64encode(bytes(user_handle_value)).decode('ascii').rstrip('=')
+    stored_credential['userHandle'] = user_handle_b64u
 
     session_simple_credentials = session.get('simple_credentials')
     if isinstance(session_simple_credentials, list):
@@ -479,12 +658,17 @@ def register_complete():
         session_simple_credentials.append(new_entry)
         session['simple_credentials'] = session_simple_credentials
 
-    return jsonify({
+    response_payload: Dict[str, Any] = {
         "status": "OK",
         "algo": algoname,
         **debug_info,
         "storedCredential": convert_bytes_for_json(stored_credential),
-    })
+        "relyingParty": rp_info,
+    }
+    if warnings:
+        response_payload["warnings"] = warnings
+
+    return jsonify(response_payload)
 
 
 @app.route("/api/authenticate/begin", methods=["POST"])

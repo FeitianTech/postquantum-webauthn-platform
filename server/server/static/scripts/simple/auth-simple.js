@@ -27,10 +27,7 @@ export async function simpleRegister() {
         hideStatus('simple');
         showProgress('simple', 'Starting registration...');
 
-        const existingCredentials = getSimpleCredentialsForEmail(email);
-        const registrationPayload = {
-            credentials: prepareCredentialsForServer(existingCredentials)
-        };
+        const registrationPayload = {};
 
         const response = await fetch(`/api/register/begin?email=${encodeURIComponent(email)}`, {
             method: 'POST',

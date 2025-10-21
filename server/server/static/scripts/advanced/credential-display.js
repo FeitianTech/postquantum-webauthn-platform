@@ -421,15 +421,9 @@ const RP_INFO_EXCLUDED_KEYS = [
     'credentialIdBase64',
     'credentialIdBase64Url',
     'device',
-    'registrationData',
-    'registration_data',
     'root_valid',
     'rp_id_hash_valid',
     'signature_valid',
-    'attestationSummary',
-    'attestation_summary',
-    'authenticatorDataHex',
-    'authenticator_data_hex',
     'clientExtensionResults',
     'client_extension_results',
     'flags',
@@ -492,6 +486,51 @@ function removeKeysCaseInsensitive(target, keys) {
         }
         handleValue(value);
     });
+}
+
+function sanitiseRegistrationData(raw) {
+    if (!raw || typeof raw !== 'object') {
+        return null;
+    }
+
+    const cloned = cloneJson(raw);
+    if (!cloned || typeof cloned !== 'object') {
+        return null;
+    }
+
+    const keysToRemove = [
+        'attestationObject',
+        'attestation_object',
+        'attestationStatement',
+        'attestation_statement',
+        'attStmt',
+        'rawAuthenticatorData',
+        'raw_authenticator_data',
+        'rawClientDataJSON',
+        'raw_client_data_json',
+    ];
+
+    removeKeysCaseInsensitive(cloned, keysToRemove);
+    stripCertificateCollections(cloned);
+    stripSignatureFormatting(cloned);
+
+    if (Object.prototype.hasOwnProperty.call(cloned, 'attestation_summary') && !cloned.attestationSummary) {
+        const summary = cloned.attestation_summary;
+        delete cloned.attestation_summary;
+        if (summary && typeof summary === 'object') {
+            cloned.attestationSummary = summary;
+        }
+    }
+
+    if (Object.prototype.hasOwnProperty.call(cloned, 'attestation_checks') && !cloned.attestationChecks) {
+        const checks = cloned.attestation_checks;
+        delete cloned.attestation_checks;
+        if (checks && typeof checks === 'object') {
+            cloned.attestationChecks = checks;
+        }
+    }
+
+    return cloned;
 }
 
 function sanitizeRelyingPartyInfo(info, authenticatorSummary = null) {
@@ -564,6 +603,37 @@ function sanitizeRelyingPartyInfo(info, authenticatorSummary = null) {
     stripCertificateCollections(cloned);
     removeKeysCaseInsensitive(cloned, RP_INFO_EXCLUDED_KEYS);
 
+    let registrationData = null;
+    if (cloned.registrationData && typeof cloned.registrationData === 'object') {
+        registrationData = sanitiseRegistrationData(cloned.registrationData);
+    } else if (cloned.registration_data && typeof cloned.registration_data === 'object') {
+        registrationData = sanitiseRegistrationData(cloned.registration_data);
+        delete cloned.registration_data;
+    }
+
+    if (registrationData) {
+        cloned.registrationData = registrationData;
+    } else if (Object.prototype.hasOwnProperty.call(cloned, 'registrationData')) {
+        delete cloned.registrationData;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(cloned, 'attestation_summary') && !cloned.attestationSummary) {
+        const summaryValue = cloned.attestation_summary;
+        delete cloned.attestation_summary;
+        if (summaryValue && typeof summaryValue === 'object') {
+            cloned.attestationSummary = summaryValue;
+        }
+    }
+
+    if (
+        !cloned.attestationSummary
+        && registrationData
+        && registrationData.attestationSummary
+        && typeof registrationData.attestationSummary === 'object'
+    ) {
+        cloned.attestationSummary = cloneJson(registrationData.attestationSummary);
+    }
+
     if (Array.isArray(cloned.errors)) {
         cloned.errors = cloned.errors.filter(item => {
             if (typeof item === 'string') {
@@ -607,6 +677,35 @@ function sanitizeRelyingPartyInfo(info, authenticatorSummary = null) {
 
     if (summaryHash) {
         cloned.authenticatorDataHash = summaryHash;
+        if (
+            registrationData
+            && typeof registrationData === 'object'
+            && !registrationData.authenticatorDataHash
+        ) {
+            registrationData.authenticatorDataHash = summaryHash;
+        }
+    }
+
+    if (
+        registrationData
+        && typeof registrationData === 'object'
+        && authenticatorHex
+        && !registrationData.authenticatorData
+    ) {
+        registrationData.authenticatorData = authenticatorHex;
+    }
+
+    if (!cloned.rpIdHash && typeof cloned.rp_id_hash === 'string') {
+        cloned.rpIdHash = cloned.rp_id_hash;
+    }
+    if (!cloned.rpIdHashBase64 && typeof cloned.rp_id_hash_base64 === 'string') {
+        cloned.rpIdHashBase64 = cloned.rp_id_hash_base64;
+    }
+    if (!cloned.rpIdHashExpected && typeof cloned.rp_id_hash_expected === 'string') {
+        cloned.rpIdHashExpected = cloned.rp_id_hash_expected;
+    }
+    if (!cloned.rpIdHashExpectedBase64 && typeof cloned.rp_id_hash_expected_base64 === 'string') {
+        cloned.rpIdHashExpectedBase64 = cloned.rp_id_hash_expected_base64;
     }
 
     return cloned;
