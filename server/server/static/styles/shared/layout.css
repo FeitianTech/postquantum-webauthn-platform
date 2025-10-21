@@ -267,7 +267,7 @@
 .simple-layout .simple-credentials-section .credentials-panel-list {
     display: flex;
     flex-direction: column;
-    gap: 0.9rem;
+    gap: 0.55rem;
 }
 
 .simple-layout .simple-credentials-section .credentials-panel-list > :last-child {
