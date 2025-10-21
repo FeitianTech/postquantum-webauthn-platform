@@ -126,8 +126,8 @@
 }
 
 .modal.detail-screen .modal-header {
-    margin-bottom: clamp(1.1rem, 2.8vh, 1.75rem);
-    padding: clamp(1rem, 2.6vw, 1.5rem) clamp(1.3rem, 3.4vw, 2.2rem) clamp(0.75rem, 2.1vh, 1.15rem);
+    margin-bottom: clamp(1.35rem, 3.3vh, 2.2rem);
+    padding: clamp(0.75rem, 2.2vw, 1.25rem) clamp(1.3rem, 3.4vw, 2.2rem) clamp(0.45rem, 1.6vh, 0.75rem);
     border-bottom: 1px solid rgba(0, 114, 206, 0.15);
 }
 

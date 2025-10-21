@@ -260,7 +260,7 @@ body.modal-open {
 
 .nav-tab:hover:not(.active)::after {
     background: var(--primary-light);
-    transform: scaleX(0.3);
+    transform: scaleX(0.1);
 }
 
 .nav-tab.active::after {
