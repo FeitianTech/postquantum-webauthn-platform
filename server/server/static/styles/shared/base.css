@@ -284,7 +284,7 @@ body.modal-open {
 
 .tab-content.active {
     display: block;
-    animation: fadeInSoft 320ms ease;
+    animation: fadeInSoft 420ms ease;
 }
 
 #advanced-tab,
