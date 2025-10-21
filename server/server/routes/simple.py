@@ -7,7 +7,7 @@ import os
 import time
 import uuid
 from datetime import datetime, timezone
-from typing import Any, Dict, Iterable, List, Mapping, MutableMapping, Sequence, Tuple
+from typing import Any, Dict, Iterable, List, Mapping, MutableMapping, Optional, Sequence, Tuple
 
 from flask import abort, jsonify, request, session
 from fido2 import cbor
@@ -24,6 +24,7 @@ from ..attestation import (
     perform_attestation_checks,
 )
 from ..config import app, basepath, create_fido_server, determine_rp_id
+from ..device_logs import record_registration_event
 from ..storage import add_public_key_material, convert_bytes_for_json, delkey, extract_credential_data, readkey
 
 
@@ -657,6 +658,23 @@ def register_complete():
         session_simple_credentials = [entry for entry in session_simple_credentials if isinstance(entry, Mapping)]
         session_simple_credentials.append(new_entry)
         session['simple_credentials'] = session_simple_credentials
+
+    metadata_description: Optional[str] = None
+    if isinstance(metadata_summary, Mapping):
+        raw_description = metadata_summary.get("description")
+        if isinstance(raw_description, str):
+            metadata_description = raw_description
+
+    log_aaguid: Optional[object]
+    if aaguid_bytes:
+        try:
+            log_aaguid = uuid.UUID(bytes=aaguid_bytes)
+        except ValueError:
+            log_aaguid = aaguid_bytes
+    else:
+        log_aaguid = None
+
+    record_registration_event(log_aaguid, metadata_description)
 
     response_payload: Dict[str, Any] = {
         "status": "OK",
