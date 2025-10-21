@@ -508,7 +508,7 @@
 .btn-small {
     padding: 0.35rem 0.85rem;
     font-size: 0.8rem;
-    border-radius: 14px;
+    border-radius: 999px;
 }
 
 .btn-randomize {

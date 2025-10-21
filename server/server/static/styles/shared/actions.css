@@ -1,17 +1,22 @@
 .btn {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     padding: 0.65rem 1.4rem;
     background-color: var(--primary-color);
     color: #ffffff;
     border: none;
-    border-radius: 18px;
+    border-radius: 999px;
     cursor: pointer;
     font-size: 1rem;
     font-weight: 600;
+    line-height: 1;
     text-decoration: none;
     transition: background-color 0.18s ease, color 0.18s ease;
     margin-right: 0.5rem;
     margin-bottom: 0.5rem;
+    vertical-align: middle;
+    gap: 0.4rem;
 }
 
 .btn:hover,
