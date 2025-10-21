@@ -4205,7 +4205,13 @@ async function focusAuthenticatorByAaguid(aaguid) {
 }
 
 async function highlightAuthenticatorRowByAaguid(aaguid, options = {}) {
-    const { scrollBehavior = 'smooth', preResolvedEntry = null } = options || {};
+    const {
+        scrollBehavior = 'smooth',
+        preResolvedEntry = null,
+        deferScroll = false,
+        waitForVisibility = true,
+        focusRow = true,
+    } = options || {};
 
     let entry = preResolvedEntry || null;
     if (!entry) {
@@ -4230,7 +4236,7 @@ async function highlightAuthenticatorRowByAaguid(aaguid, options = {}) {
         hideAuthenticatorDetail();
     }
 
-    if (mdsState.root) {
+    if (waitForVisibility && mdsState.root) {
         await waitForElementVisible(mdsState.root);
     }
 
@@ -4252,7 +4258,11 @@ async function highlightAuthenticatorRowByAaguid(aaguid, options = {}) {
         ? scrollBehavior
         : 'smooth';
 
-    const applied = setHighlightedRow(row, key, { scroll: true, behavior: behaviour, focus: true });
+    const applied = setHighlightedRow(row, key, {
+        scroll: !deferScroll,
+        behavior: behaviour,
+        focus: focusRow && !deferScroll,
+    });
     if (!applied && mdsState.highlightedRowKey === key) {
         mdsState.highlightedRowKey = '';
     }
@@ -4260,10 +4270,28 @@ async function highlightAuthenticatorRowByAaguid(aaguid, options = {}) {
     return { entry, highlighted: Boolean(applied), row: applied ? row : null };
 }
 
+function finaliseHighlightedAuthenticatorRow(options = {}) {
+    if (!mdsState?.highlightedRow || !mdsState.highlightedRowKey) {
+        return false;
+    }
+
+    const behaviour = typeof options.behavior === 'string' && options.behavior
+        ? options.behavior
+        : 'smooth';
+    const shouldFocus = options.focus !== false;
+
+    return setHighlightedRow(mdsState.highlightedRow, mdsState.highlightedRowKey, {
+        scroll: true,
+        behavior: behaviour,
+        focus: shouldFocus,
+    });
+}
+
 if (typeof window !== 'undefined') {
     window.openMdsAuthenticatorModal = openAuthenticatorModalByAaguid;
     window.focusMdsAuthenticator = focusAuthenticatorByAaguid;
     window.highlightMdsAuthenticatorRow = highlightAuthenticatorRowByAaguid;
+    window.finaliseMdsAuthenticatorHighlight = finaliseHighlightedAuthenticatorRow;
     window.waitForMdsLoad = waitForMetadataLoad;
     window.getMdsLoadState = getMdsLoadStateSnapshot;
     window.resolveMdsEntryByAaguid = resolveEntryByAaguid;
