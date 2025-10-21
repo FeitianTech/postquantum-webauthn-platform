@@ -150,6 +150,8 @@ body.modal-open {
     height: var(--header-mini-height, 0px);
     pointer-events: none;
     overflow: hidden;
+    border-bottom: 1px solid rgba(0, 114, 206, 0.2);
+    background: var(--surface-color);
 }
 
 .header-mini__inner {
@@ -157,7 +159,6 @@ body.modal-open {
     align-items: center;
     justify-content: flex-start;
     background: var(--surface-color);
-    border-bottom: 1px solid rgba(0, 114, 206, 0.2);
     padding: 0.5rem 2.5rem;
     transform: translateY(calc((var(--header-mini-progress, 0) - 1) * 100%));
     will-change: transform;
@@ -202,6 +203,23 @@ body.modal-open {
 
 .header__tabs .nav-tabs {
     padding-bottom: 0.3rem;
+}
+
+.header-mini .nav-tabs {
+    height: 100%;
+    align-items: stretch;
+    padding-bottom: 0;
+}
+
+.header-mini .nav-tab {
+    display: flex;
+    align-items: center;
+    padding-top: 0.45rem;
+    padding-bottom: 0.45rem;
+}
+
+.header-mini .nav-tab::after {
+    bottom: 0.1rem;
 }
 
 .header__github-link {
