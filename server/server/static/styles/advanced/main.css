@@ -222,7 +222,7 @@ body.app-loaded > :not(.app-loader) {
 
 .advanced-settings-layout .credentials-column .credentials-panel {
     overflow-y: auto;
-    padding: 0;
+    padding: 0.5rem 0 0;
     background: transparent;
     border: none;
     border-radius: 0;
@@ -340,8 +340,8 @@ body.app-loaded > :not(.app-loader) {
 }
 
 .settings-section-sentinel + .json-editor-card {
-    padding-top: 1.75rem;
-    margin-top: 1.75rem;
+    padding-top: 2.25rem;
+    margin-top: 2.25rem;
 }
 
 .settings-section-sentinel--first + .static-section,

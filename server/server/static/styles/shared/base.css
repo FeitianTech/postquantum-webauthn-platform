@@ -12,12 +12,12 @@
     --muted-text: #5c6c7a;
     --shadow-soft: 0 18px 40px rgba(0, 114, 206, 0.08);
     --shadow-hover: 0 24px 55px rgba(0, 114, 206, 0.18);
-    --global-toast-offset: 6.75rem;
+    --global-toast-offset: 5.5rem;
 }
 
 @media (max-width: 640px) {
     :root {
-        --global-toast-offset: 5.5rem;
+        --global-toast-offset: 4.5rem;
     }
 }
 
