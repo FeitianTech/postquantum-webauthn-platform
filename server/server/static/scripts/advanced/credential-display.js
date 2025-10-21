@@ -2786,14 +2786,22 @@ export function navigateToMdsAuthenticator(aaguid) {
                 }
             }
 
+            if (!resolvedEntry) {
+                if (statusEl) {
+                    setAaguidStatus(statusEl, 'Authenticator metadata not found.', { showSpinner: false });
+                    scheduleClear();
+                }
+                return { highlighted: false, entry: null };
+            }
+
             if (statusEl) {
                 showSpinnerStatus('Locating metadata entry...');
             }
 
-            await waitForNextFrame();
+            await waitForNextFrame(2);
 
             if (switchToMdsTab) {
-                switchToMdsTab('mds', { preserveScroll: true, preserveMessages: true });
+                switchToMdsTab('mds', { preserveMessages: true });
                 await waitForNextFrame(2);
             }
 
@@ -2813,7 +2821,7 @@ export function navigateToMdsAuthenticator(aaguid) {
             const attemptHighlight = async () => {
                 try {
                     const result = await Promise.resolve(highlightRow(aaguid, {
-                        scrollBehavior: 'auto',
+                        scrollBehavior: 'smooth',
                         preResolvedEntry: resolvedEntry,
                     }));
                     return normaliseHighlightResult(result);
