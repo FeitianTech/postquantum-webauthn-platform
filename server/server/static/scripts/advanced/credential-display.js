@@ -30,7 +30,7 @@ import {
     normaliseAaguidValue
 } from './credential-utils.js';
 import { openModal, closeModal } from '../shared/ui.js';
-import { showStatus } from '../shared/status.js';
+import { showStatus, showProgress, hideProgress, dismissAllTransientMessages } from '../shared/status.js';
 import { updateJsonEditor } from './json-editor.js';
 import { checkLargeBlobCapability, updateAuthenticationExtensionAvailability } from './forms.js';
 import { collectSelectedHints, deriveAllowedAttachmentsFromHints } from './hints.js';
@@ -51,6 +51,196 @@ function showSharedCredentialStatus(message, type) {
     SHARED_CREDENTIAL_STATUS_TABS.forEach(tabId => {
         showStatus(tabId, message, type);
     });
+}
+
+function collectCredentialCertificates(cred) {
+    if (!cred || typeof cred !== 'object') {
+        return [];
+    }
+
+    const sources = [
+        cred.attestationCertificate,
+        cred.attestationCertificates,
+        cred.attestation_certificate,
+        cred.attestation_certificates,
+        cred.attestationCertificatesDetails,
+        cred.attestation_certificates_details,
+        cred.properties?.attestationCertificate,
+        cred.properties?.attestationCertificates,
+        cred.properties?.attestation_certificate,
+        cred.properties?.attestation_certificates,
+        cred.relyingParty?.attestationCertificate,
+        cred.relyingParty?.attestationCertificates,
+        cred.relyingParty?.attestation_certificate,
+        cred.relyingParty?.attestation_certificates,
+    ];
+
+    const collected = [];
+    sources.forEach(source => {
+        if (!source) {
+            return;
+        }
+        if (Array.isArray(source)) {
+            source.forEach(item => {
+                if (item) {
+                    collected.push(item);
+                }
+            });
+        } else {
+            collected.push(source);
+        }
+    });
+    return collected;
+}
+
+function deriveCredentialStatusIndicators(cred) {
+    const attestationContext = extractCredentialAttestationContext(cred);
+    const { propertiesData, attestationSummaryData, attestationChecksData } = attestationContext;
+
+    const signatureStatus = normaliseAttestationResultValue(
+        resolveCredentialAttestationValue(
+            cred,
+            'signatureValid',
+            'attestationSignatureValid',
+            attestationContext,
+        ),
+    );
+    const rootStatus = normaliseAttestationResultValue(
+        resolveCredentialAttestationValue(
+            cred,
+            'rootValid',
+            'attestationRootValid',
+            attestationContext,
+        ),
+    );
+    const rpidStatus = normaliseAttestationResultValue(
+        resolveCredentialAttestationValue(
+            cred,
+            'rpIdHashValid',
+            'attestationRpIdHashValid',
+            attestationContext,
+        ),
+    );
+
+    const certificateEntries = collectCredentialCertificates(cred);
+    const certificateAaguidHex = normaliseAaguidValue(
+        extractAaguidFromCertificateEntries(certificateEntries)
+    );
+    const authDataAaguidHex = normaliseAaguidValue(deriveAaguidFromCredentialData(cred));
+
+    let aaguidStatus = null;
+    if (certificateAaguidHex && authDataAaguidHex) {
+        aaguidStatus = certificateAaguidHex === authDataAaguidHex;
+    } else {
+        const aaguidRaw = resolveCredentialAttestationValue(
+            cred,
+            'aaguidMatch',
+            'attestationAaguidMatch',
+            attestationContext,
+        );
+        const normalised = normaliseAttestationResultValue(aaguidRaw);
+        aaguidStatus = typeof normalised === 'boolean' ? normalised : null;
+    }
+
+    const metadataAvailableCandidates = [
+        cred?.metadata?.available,
+        propertiesData?.metadata?.available,
+        attestationSummaryData?.metadata?.available,
+        attestationChecksData?.metadata?.available,
+    ];
+    const metadataAvailable = metadataAvailableCandidates.some(value => {
+        if (typeof value === 'boolean') {
+            return value;
+        }
+        if (typeof value === 'string') {
+            const normalized = value.trim().toLowerCase();
+            return ['true', '1', 'yes', 'available'].includes(normalized);
+        }
+        return false;
+    });
+
+    const primaryAaguidHex = normaliseAaguidValue(
+        cred?.aaguidHex
+        || cred?.aaguid
+        || cred?.aaguidGuid
+        || authDataAaguidHex
+        || certificateAaguidHex
+    );
+
+    let aaguidGuid = '';
+    if (primaryAaguidHex && primaryAaguidHex.length === 32) {
+        try {
+            aaguidGuid = hexToGuid(primaryAaguidHex);
+        } catch (error) {
+            aaguidGuid = '';
+        }
+    }
+
+    return {
+        attestationContext,
+        signatureStatus,
+        rootStatus,
+        rpidStatus,
+        aaguidStatus,
+        metadataAvailable,
+        aaguidGuid,
+    };
+}
+
+function handleCredentialMdsClick(event) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const button = event.currentTarget;
+    const aaguid = button?.getAttribute('data-aaguid');
+    if (!aaguid) {
+        return;
+    }
+
+    dismissAllTransientMessages();
+    showProgress('advanced', 'Locating metadata entry...');
+    showProgress('simple', 'Locating metadata entry...');
+
+    const finish = () => {
+        hideProgress('advanced');
+        hideProgress('simple');
+    };
+
+    let navigationResult;
+    try {
+        navigationResult = navigateToMdsAuthenticator(aaguid);
+    } catch (error) {
+        console.error('Failed to navigate to authenticator metadata.', error);
+        showSharedCredentialStatus('Unable to open authenticator metadata.', 'error');
+        finish();
+        return;
+    }
+
+    if (navigationResult === undefined) {
+        showSharedCredentialStatus('Authenticator metadata entry unavailable.', 'warning');
+        finish();
+        return;
+    }
+
+    Promise.resolve(navigationResult)
+        .then(result => {
+            if (!result) {
+                showSharedCredentialStatus('Authenticator metadata entry unavailable.', 'warning');
+                return;
+            }
+            if (result.error) {
+                showSharedCredentialStatus('Unable to open authenticator metadata.', 'error');
+                return;
+            }
+            if (result.highlighted !== true) {
+                showSharedCredentialStatus('Authenticator metadata not found.', 'warning');
+            }
+        })
+        .catch(error => {
+            console.error('Failed to navigate to authenticator metadata.', error);
+            showSharedCredentialStatus('Unable to open authenticator metadata.', 'error');
+        })
+        .finally(finish);
 }
 
 function normaliseAlgorithmIdentifier(value) {
@@ -2399,35 +2589,15 @@ export function updateCredentialsDisplay() {
 
         const featureText = features.length > 0 ? features.join(' • ') : '';
 
-        const attestationContext = extractCredentialAttestationContext(cred);
-        const signatureRaw = resolveCredentialAttestationValue(
-            cred,
-            'signatureValid',
-            'attestationSignatureValid',
-            attestationContext,
-        );
-        const rootRaw = resolveCredentialAttestationValue(
-            cred,
-            'rootValid',
-            'attestationRootValid',
-            attestationContext,
-        );
-        const rpidRaw = resolveCredentialAttestationValue(
-            cred,
-            'rpIdHashValid',
-            'attestationRpIdHashValid',
-            attestationContext,
-        );
-        const aaguidRaw = resolveCredentialAttestationValue(
-            cred,
-            'aaguidMatch',
-            'attestationAaguidMatch',
-            attestationContext,
-        );
-        const signatureStatus = normaliseAttestationResultValue(signatureRaw);
-        const rootStatus = normaliseAttestationResultValue(rootRaw);
-        const rpidStatus = normaliseAttestationResultValue(rpidRaw);
-        const aaguidStatus = normaliseAttestationResultValue(aaguidRaw);
+        const {
+            signatureStatus,
+            rootStatus,
+            rpidStatus,
+            aaguidStatus,
+            metadataAvailable,
+            aaguidGuid,
+        } = deriveCredentialStatusIndicators(cred);
+
         const pickStatusColor = value => {
             if (value === true) {
                 return '#198754';
@@ -2442,6 +2612,12 @@ export function updateCredentialsDisplay() {
         const rpidColor = pickStatusColor(rpidStatus);
         const aaguidColor = pickStatusColor(aaguidStatus);
 
+        const mdsButtonHtml = (aaguidGuid && (rootStatus === true || metadataAvailable))
+            ? `<button type="button" class="btn btn-small btn-secondary credential-mds-button" data-aaguid="${escapeHtml(aaguidGuid.toLowerCase())}" title="Open authenticator metadata">FIDO MDS</button>`
+            : '';
+        const deleteButtonHtml = `<button class="btn btn-small btn-danger" onclick="event.stopPropagation();deleteCredential(${index})">Delete</button>`;
+        const actionsHtml = `<div class="credential-item-actions">${mdsButtonHtml}${deleteButtonHtml}</div>`;
+
         return `
         <div class="credential-item" role="button" tabindex="0" onclick="showCredentialDetails(${index})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showCredentialDetails(${index});}">
             <div style="flex: 1; min-width: 0;">
@@ -2454,13 +2630,16 @@ export function updateCredentialsDisplay() {
                 </div>
                 ${featureText ? `<div style="font-size: 0.75rem; color: #5c6c7a;">${featureText}</div>` : ''}
             </div>
-            <button class="btn btn-small btn-danger" onclick="event.stopPropagation();deleteCredential(${index})">Delete</button>
+            ${actionsHtml}
         </div>
         `;
     }).join('');
 
     lists.forEach(list => {
         list.innerHTML = itemsHtml;
+        list.querySelectorAll('.credential-mds-button').forEach(button => {
+            button.addEventListener('click', handleCredentialMdsClick);
+        });
     });
 
     runPostUpdate();
@@ -2514,9 +2693,6 @@ export function navigateToMdsAuthenticator(aaguid) {
     const switchToMdsTab = typeof window.switchTab === 'function'
         ? window.switchTab
         : null;
-    if (switchToMdsTab) {
-        switchToMdsTab('mds');
-    }
 
     const highlightRow = typeof window.highlightMdsAuthenticatorRow === 'function'
         ? window.highlightMdsAuthenticatorRow
@@ -2566,8 +2742,8 @@ export function navigateToMdsAuthenticator(aaguid) {
         try {
             if (statusEl) {
                 const message = requiresLoad
-                    ? 'Loading authenticator metadata…'
-                    : 'Locating authenticator entry…';
+                    ? 'Loading authenticator metadata...'
+                    : 'Locating metadata entry...';
                 showSpinnerStatus(message);
             }
 
@@ -2577,7 +2753,7 @@ export function navigateToMdsAuthenticator(aaguid) {
                 } catch (error) {
                     console.warn('Failed to wait for authenticator metadata to load:', error);
                 }
-                showSpinnerStatus('Locating authenticator entry…');
+                showSpinnerStatus('Locating metadata entry...');
             }
 
             const highlightResult = await Promise.resolve(highlightRow(aaguid));
@@ -2593,28 +2769,34 @@ export function navigateToMdsAuthenticator(aaguid) {
             }
 
             if (highlighted) {
+                if (switchToMdsTab) {
+                    switchToMdsTab('mds');
+                }
                 clearAaguidStatus(statusEl);
                 closeCredentialModal();
-                return;
+                return { highlighted: true, entry: resolvedEntry };
             }
 
             if (statusEl) {
                 const message = resolvedEntry
-                    ? 'Unable to locate authenticator entry.'
+                    ? 'Unable to locate metadata entry.'
                     : 'Authenticator metadata not found.';
                 setAaguidStatus(statusEl, message, { showSpinner: false });
                 scheduleClear();
             }
+
+            return { highlighted: false, entry: resolvedEntry };
         } catch (error) {
             console.error('Failed to highlight authenticator row.', error);
             if (statusEl) {
                 setAaguidStatus(statusEl, 'Unable to open authenticator metadata.', { showSpinner: false });
                 scheduleClear();
             }
+            return { highlighted: false, entry: null, error };
         }
     };
 
-    run();
+    return run();
 }
 
 export function closeCredentialModal() {
@@ -3226,9 +3408,7 @@ export async function showCredentialDetails(index) {
     }
 
     const hasAaguid = Boolean(normalizedAaguidHex);
-    const infoButton = (rootVerified || metadataAvailable) && aaguidGuid
-        ? `<button type="button" class="credential-info-button credential-aaguid-button" data-aaguid="${escapeHtml(aaguidGuid.toLowerCase())}" aria-label="View authenticator metadata">Info</button>`
-        : '';
+    const infoButton = '';
 
     const renderAaguidValue = (label, value) => `
             <div class="credential-aaguid-value">
@@ -3354,15 +3534,6 @@ export async function showCredentialDetails(index) {
     const statusEl = modalBody.querySelector('.credential-aaguid-status');
     if (statusEl) {
         clearAaguidStatus(statusEl);
-    }
-    const aaguidButton = modalBody.querySelector('.credential-aaguid-button');
-    if (aaguidButton) {
-        aaguidButton.addEventListener('click', () => {
-            const target = aaguidButton.getAttribute('data-aaguid');
-            if (target) {
-                navigateToMdsAuthenticator(target);
-            }
-        });
     }
     modalBody.scrollTop = 0;
     if (typeof modalBody.scrollTo === 'function') {
@@ -3582,7 +3753,4 @@ export function toggleCredentialDetails(index) {
     if (item.classList.contains('expanded')) {
         item.classList.remove('expanded');
     } else {
-        credItems.forEach(item => item.classList.remove('expanded'));
-        item.classList.add('expanded');
-    }
-}
+        credItems.forEach(item => item.classList.remove('e

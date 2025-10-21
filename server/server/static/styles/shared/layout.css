@@ -388,6 +388,13 @@
     gap: 1rem;
 }
 
+.credential-item-actions {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
 .credential-item:hover {
     border-color: var(--primary-color);
     box-shadow: var(--shadow-soft);
