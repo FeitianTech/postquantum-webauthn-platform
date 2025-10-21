@@ -392,7 +392,7 @@
     display: flex;
     flex-wrap: wrap;
     gap: 0.35rem;
-    margin-top: 0.35rem;
+    margin-top: 0.45rem;
 }
 
 .credential-feature-tag {
@@ -402,7 +402,7 @@
     padding: 0.15rem 0.55rem;
     border: 1px solid rgba(0, 114, 206, 0.25);
     border-radius: 6px;
-    background: rgba(15, 39, 64, 0.04);
+    background: rgba(0, 114, 206, 0.25);
     color: #0f2740;
     font-size: 0.7rem;
     font-weight: 600;
