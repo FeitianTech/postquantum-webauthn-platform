@@ -388,6 +388,28 @@
     gap: 1rem;
 }
 
+.credential-feature-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin-top: 0.35rem;
+}
+
+.credential-feature-tag {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.15rem 0.55rem;
+    border: 1px solid rgba(0, 114, 206, 0.25);
+    border-radius: 6px;
+    background: rgba(15, 39, 64, 0.04);
+    color: #0f2740;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    line-height: 1.2;
+}
+
 .credential-item-actions {
     margin-left: auto;
     display: inline-flex;
