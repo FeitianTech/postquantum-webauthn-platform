@@ -236,6 +236,8 @@ export function resetModalScroll(modal) {
 export function openModal(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) {
+        modal.classList.remove('closing');
+        delete modal.dataset.modalClosing;
         resetModalScroll(modal);
 
         const baseZIndex = ensureModalBaseZIndex(modal);
@@ -254,8 +256,11 @@ export function openModal(modalId) {
 
 export function closeModal(modalId) {
     const modal = document.getElementById(modalId);
-    if (modal) {
-        modal.classList.remove('open');
+    if (!modal) {
+        return;
+    }
+
+    const finalizeClose = () => {
         if (modal.dataset.modalStackZIndex) {
             const baseZIndex = ensureModalBaseZIndex(modal);
             if (modal.dataset.modalBaseZIndex) {
@@ -269,7 +274,74 @@ export function closeModal(modalId) {
         }
         requestAnimationFrame(() => resetModalScroll(modal));
         updateGlobalScrollLock();
+    };
+
+    const isDetailScreen = modal.classList.contains('detail-screen');
+
+    if (!isDetailScreen) {
+        modal.classList.remove('open');
+        finalizeClose();
+        return;
     }
+
+    if (!modal.classList.contains('open')) {
+        modal.classList.remove('closing');
+        delete modal.dataset.modalClosing;
+        finalizeClose();
+        return;
+    }
+
+    if (modal.dataset.modalClosing === 'true') {
+        return;
+    }
+
+    modal.dataset.modalClosing = 'true';
+
+    const scheduleTimeout =
+        typeof window !== 'undefined' && typeof window.setTimeout === 'function'
+            ? window.setTimeout.bind(window)
+            : setTimeout;
+    const cancelTimeout =
+        typeof window !== 'undefined' && typeof window.clearTimeout === 'function'
+            ? window.clearTimeout.bind(window)
+            : clearTimeout;
+
+    let cleanupScheduled = false;
+    let fallbackTimeoutId = null;
+
+    const cleanup = () => {
+        if (cleanupScheduled) {
+            return;
+        }
+        cleanupScheduled = true;
+
+        if (fallbackTimeoutId !== null) {
+            cancelTimeout(fallbackTimeoutId);
+            fallbackTimeoutId = null;
+        }
+
+        modal.removeEventListener('transitionend', handleTransitionEnd);
+        modal.classList.remove('closing');
+        delete modal.dataset.modalClosing;
+
+        finalizeClose();
+    };
+
+    const handleTransitionEnd = event => {
+        if (!event || event.target !== modal || event.propertyName !== 'opacity') {
+            return;
+        }
+        cleanup();
+    };
+
+    modal.addEventListener('transitionend', handleTransitionEnd);
+
+    modal.classList.add('closing');
+    modal.classList.remove('open');
+
+    fallbackTimeoutId = scheduleTimeout(() => {
+        cleanup();
+    }, 700);
 }
 
 export function toggleJsonEditorExpansion(forceCollapse = false) {

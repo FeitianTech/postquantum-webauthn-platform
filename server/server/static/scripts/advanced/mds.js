@@ -4102,6 +4102,10 @@ function closeAuthenticatorModal() {
     };
 
     const beginClose = () => {
+        restoreListSection(mdsState.listSection);
+        if (typeof requestAnimationFrame === 'function') {
+            requestAnimationFrame(() => restoreListSection(mdsState.listSection));
+        }
         modal.classList.remove('mds-detail-page--open');
         modal.classList.add('mds-detail-page--closing');
 
