@@ -56,6 +56,7 @@
     box-sizing: border-box;
     scrollbar-width: thin;
     scrollbar-color: rgba(92, 108, 122, 0.5) transparent;
+    margin: 0;
 }
 
 .json-editor textarea::-webkit-scrollbar {
@@ -105,25 +106,32 @@
     transform: none !important;
     width: 100% !important;
     max-width: none;
-    display: block;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: stretch;
     height: auto !important;
+    min-width: 0;
     min-height: 0;
     aspect-ratio: 3 / 2;
     padding: 0 !important;
     border-radius: 24px !important;
     box-shadow: var(--shadow-soft);
+    overflow: hidden;
 }
 
 .inline-json-editor textarea {
     min-height: 0;
     height: 100%;
     max-height: none;
-    padding-top: 0;
-    padding-bottom: 0;
+    padding: 0 1.25rem;
 }
 
 .inline-json-editor .json-editor-actions {
     display: flex;
+    top: 0.75rem;
+    left: 1.25rem;
+    right: 1.25rem;
 }
 
 .inline-json-editor .json-editor-close-btn {
@@ -257,7 +265,7 @@ body.advanced-inline-json-editor .json-editor-overlay.active {
 
 .progress {
     position: fixed;
-    top: 20px;
+    top: var(--global-toast-offset);
     left: 50%;
     transform: translateX(-50%) translateY(-12px);
     display: flex;
@@ -271,7 +279,7 @@ body.advanced-inline-json-editor .json-editor-overlay.active {
     min-width: 320px;
     max-width: 90vw;
     justify-content: center;
-    z-index: 1000;
+    z-index: 1300;
     opacity: 0;
     visibility: hidden;
     pointer-events: none;
