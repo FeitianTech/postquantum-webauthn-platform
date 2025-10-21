@@ -3152,6 +3152,12 @@ export async function showCredentialDetails(index) {
             ? (certificateAaguidHex === authDataAaguidHex)
             : null,
     );
+    const attestationChecksNoticeHtml = `
+        <p style="margin: 0 0 0.65rem; color: #6c757d; font-size: 0.9rem; line-height: 1.5;">
+            In a formal WebAuthn ceremony, any <strong>false</strong> result in the checks below
+            (Signature, Root, RPID Hash, or AAGUID) would cause registration to fail.
+            This testing playground keeps the registration so you can inspect the data even when a check fails.
+        </p>`;
     const attestationRowsHtml = [
         renderAttestationResultRow('Signature Valid', attestationSignatureValue),
         renderAttestationResultRow('Root Valid', attestationRootValue, rootChecksHtml),
@@ -3265,7 +3271,8 @@ export async function showCredentialDetails(index) {
             <div><strong>Discoverable (resident key):</strong> ${formatBoolean(discoverableValue)}</div>
             <div><strong>Supports largeBlob:</strong> ${formatBoolean(largeBlobSupported)}</div>
             ${minPinLengthValue !== null ? `<div><strong>Authenticator minPinLength:</strong> ${escapeHtml(String(minPinLengthValue))}</div>` : ''}
-            <div style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(0, 114, 206, 0.15);">
+            <div style="margin-top: 0.5rem; padding-top: 0.75rem; border-top: 1px solid rgba(0, 114, 206, 0.15);">
+                ${attestationChecksNoticeHtml}
                 ${attestationRowsHtml}
                 ${metadataWarningHtml}
             </div>

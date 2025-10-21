@@ -4039,7 +4039,7 @@ function openAuthenticatorModal(entry) {
     suppressListSection(mdsState.listSection);
 
     modal.classList.remove('mds-detail-page--open');
-    modal.classList.remove('mds-detail-page--open');
+    modal.classList.remove('mds-detail-page--closing');
     modal.hidden = false;
     modal.setAttribute('aria-hidden', 'false');
     const activateModal = () => {
@@ -4082,9 +4082,9 @@ function closeAuthenticatorModal() {
         typeof mdsState.listScrollTop === 'number' ? mdsState.listScrollTop : null;
 
     const finishClose = () => {
-        modal.classList.remove('mds-detail-page--open');
         modal.hidden = true;
         modal.setAttribute('aria-hidden', 'true');
+        modal.classList.remove('mds-detail-page--closing');
 
         restoreListSection(mdsState.listSection);
 
@@ -4101,7 +4101,45 @@ function closeAuthenticatorModal() {
         mdsState.listScrollTop = null;
     };
 
-    finishClose();
+    const beginClose = () => {
+        modal.classList.remove('mds-detail-page--open');
+        modal.classList.add('mds-detail-page--closing');
+
+        const scheduleTimeout =
+            typeof window !== 'undefined' && typeof window.setTimeout === 'function'
+                ? window.setTimeout.bind(window)
+                : setTimeout;
+        const cancelTimeout =
+            typeof window !== 'undefined' && typeof window.clearTimeout === 'function'
+                ? window.clearTimeout.bind(window)
+                : clearTimeout;
+
+        let timeoutId = null;
+        const clear = () => {
+            if (timeoutId !== null) {
+                cancelTimeout(timeoutId);
+                timeoutId = null;
+            }
+        };
+
+        const handleTransitionEnd = event => {
+            if (event?.target !== modal) {
+                return;
+            }
+            modal.removeEventListener('transitionend', handleTransitionEnd);
+            clear();
+            finishClose();
+        };
+
+        modal.addEventListener('transitionend', handleTransitionEnd);
+        timeoutId = scheduleTimeout(() => {
+            modal.removeEventListener('transitionend', handleTransitionEnd);
+            clear();
+            finishClose();
+        }, 500);
+    };
+
+    beginClose();
 }
 
 async function resolveEntryByAaguid(aaguid) {
