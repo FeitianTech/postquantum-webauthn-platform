@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import os
 import ssl
+import tempfile
 import threading
 import time
 import uuid
@@ -30,6 +31,8 @@ REPORT_HOUR = 9
 LOCK_FILENAME = "webauthn_device_logs.lock"
 STALE_LOCK_MAX_AGE_SECONDS = 6 * 60 * 60  # 6 hours
 STATUS_FILENAME = "webauthn_device_logs.status"
+MAX_LOCK_RECURSION_DEPTH = 3
+LOG_STORAGE_DIRNAME = "webauthn-device-logs"
 
 
 def _env_flag(name: str, default: bool = True) -> bool:
@@ -96,29 +99,30 @@ class RegistrationLogManager:
     """Coordinate log writes and scheduled email delivery."""
 
     def __init__(self) -> None:
-        self.log_dir = Path("/tmp")
-        self._lock_path = self.log_dir / LOCK_FILENAME
-        self._status_path = self.log_dir / STATUS_FILENAME
+        self._write_lock = threading.Lock()
+        self._thread: Optional[threading.Thread] = None
         self._email_config = self._load_email_config()
-        self.enabled = self._email_config is not None and _env_flag(
+        self.delivery_enabled = self._email_config is not None and _env_flag(
             "REGISTRATION_LOG_EMAIL_ENABLED", default=True
         )
-        self._thread: Optional[threading.Thread] = None
-        self._write_lock = threading.Lock()
-        self._last_processed_report_date = self._load_last_processed_report_date()
-
-        if not self.enabled:
-            return
+        self.enabled = True
 
         try:
-            self.log_dir.mkdir(parents=True, exist_ok=True)
-        except Exception:
-            # Fail closed if the log directory cannot be created.
+            self.log_dir = self._initialise_log_dir()
+        except RuntimeError:
             self.enabled = False
+            self.delivery_enabled = False
             return
+
+        self._lock_path = self.log_dir / LOCK_FILENAME
+        self._status_path = self.log_dir / STATUS_FILENAME
+        self._last_processed_report_date = self._load_last_processed_report_date()
 
         # Clean up any stale scheduler lock left over from crashes or deploys.
         self._remove_stale_lock_if_present()
+
+        if not self.delivery_enabled:
+            return
 
         # Process any due reports immediately (e.g., after restarts).
         self._process_due_reports(initial=True)
@@ -144,11 +148,43 @@ class RegistrationLogManager:
         log_path = self._log_path_for_date(report_date)
         try:
             with self._write_lock:
+                if not self.log_dir.exists():
+                    self.log_dir.mkdir(parents=True, exist_ok=True)
                 with log_path.open("a", encoding="utf-8") as handle:
                     handle.write(line + "\n")
+                    handle.flush()
+                    os.fsync(handle.fileno())
         except Exception:
             # Swallow logging errors to avoid impacting request handling.
             return
+
+    def _initialise_log_dir(self) -> Path:
+        configured = os.environ.get("REGISTRATION_LOG_DIRECTORY")
+        candidates: list[Path] = []
+
+        if configured:
+            candidates.append(Path(configured).expanduser())
+        else:
+            data_home = os.environ.get("XDG_DATA_HOME")
+            if data_home:
+                candidates.append(Path(data_home) / LOG_STORAGE_DIRNAME)
+            try:
+                home_dir = Path.home()
+            except Exception:
+                home_dir = None
+            if home_dir:
+                candidates.append(home_dir / f".{LOG_STORAGE_DIRNAME}")
+        candidates.append(Path(tempfile.gettempdir()) / LOG_STORAGE_DIRNAME)
+
+        for candidate in candidates:
+            try:
+                candidate.mkdir(parents=True, exist_ok=True)
+            except Exception:
+                continue
+            if candidate.is_dir():
+                return candidate
+
+        raise RuntimeError("Unable to create log directory")
 
     # Internal helpers -------------------------------------------------
 
@@ -206,12 +242,15 @@ class RegistrationLogManager:
         filename = f"{LOG_PREFIX}{report_date.isoformat()}{LOG_SUFFIX}"
         return self.log_dir / filename
 
-    def _acquire_lock(self) -> bool:
+    def _acquire_lock(self, recursion_depth: int = 0) -> bool:
+        if recursion_depth >= MAX_LOCK_RECURSION_DEPTH:
+            return False
+
         try:
             fd = os.open(self._lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
         except FileExistsError:
             if self._remove_stale_lock_if_present():
-                return self._acquire_lock()
+                return self._acquire_lock(recursion_depth + 1)
             return False
         except OSError:
             return False
@@ -240,7 +279,7 @@ class RegistrationLogManager:
         local_now = now_utc.astimezone(BEIJING_TZ)
         target = local_now.replace(hour=REPORT_HOUR, minute=0, second=0, microsecond=0)
         if local_now >= target:
-            target = (target + timedelta(days=1)).replace(tzinfo=BEIJING_TZ)
+            target = target + timedelta(days=1)
         delta = target - local_now
         seconds = delta.total_seconds()
         return max(seconds, 60.0)
@@ -268,7 +307,7 @@ class RegistrationLogManager:
         return (now_local - timedelta(days=1)).date()
 
     def _process_due_reports(self, *, initial: bool) -> None:
-        if not self.enabled:
+        if not (self.enabled and self.delivery_enabled):
             return
         if not self._acquire_lock():
             return
@@ -278,6 +317,8 @@ class RegistrationLogManager:
             due_through_date = self._scheduled_report_date(now_local)
             attempted = False
             failed = False
+            sent_count = 0
+            empty_count = 0
 
             for report_date, path in self._due_log_files(due_through_date):
                 if (
@@ -287,65 +328,73 @@ class RegistrationLogManager:
                     continue
 
                 attempted = True
-                if self._send_report(report_date, path):
+                send_result = self._send_report(report_date, path)
+
+                if send_result == "sent":
+                    sent_count += 1
                     self._last_processed_report_date = report_date
                     self._store_last_processed_report_date(report_date)
-                else:
+                elif send_result == "empty":
+                    empty_count += 1
+                    self._last_processed_report_date = report_date
+                    self._store_last_processed_report_date(report_date)
+                else:  # "failed"
                     failed = True
                     break
 
-            if not attempted:
+            # Only update status to due_through_date if all reports were processed successfully
+            if not failed and attempted:
                 if (
                     self._last_processed_report_date is None
                     or self._last_processed_report_date < due_through_date
                 ):
                     self._last_processed_report_date = due_through_date
                     self._store_last_processed_report_date(due_through_date)
-                if not initial:
+
+            # Print summary only once per run
+            if not initial:
+                if sent_count > 0:
+                    print(f"Sent {sent_count} device log report(s) and deleted file(s)")
+                elif empty_count > 0 or not attempted:
                     print("No device logs today")
-            elif not failed and (
-                self._last_processed_report_date is None
-                or self._last_processed_report_date < due_through_date
-            ):
-                self._last_processed_report_date = due_through_date
-                self._store_last_processed_report_date(due_through_date)
         finally:
             self._release_lock()
 
-    def _send_report(self, report_date: date, path: Path) -> bool:
+    def _send_report(self, report_date: date, path: Path) -> str:
+        """
+        Send a report for the given date.
+
+        Returns:
+            "sent" if email was successfully sent
+            "empty" if log file was empty (and deleted)
+            "failed" if there was an error
+        """
         try:
             content = path.read_text(encoding="utf-8")
         except FileNotFoundError:
-            return False
+            return "failed"
         except OSError:
-            return False
+            return "failed"
 
         if not content.strip():
             try:
                 path.unlink()
-            except FileNotFoundError:
+            except (FileNotFoundError, OSError):
                 pass
-            except OSError:
-                pass
-            print("No device logs today")
-            return True
+            return "empty"
 
         if not self._email_config:
-            return False
+            return "failed"
 
         subject = f"WebAuthn Device Logs (Beijing time {report_date.isoformat()})"
         if self._deliver_email(subject, content):
             try:
                 path.unlink()
-            except FileNotFoundError:
+            except (FileNotFoundError, OSError):
                 pass
-            except OSError:
-                pass
-            print("Sent device logs and deleted file")
-            return True
+            return "sent"
 
-        print("Email failed — retained log for retry")
-        return False
+        return "failed"
 
     def _remove_stale_lock_if_present(self) -> bool:
         try:
@@ -374,12 +423,12 @@ class RegistrationLogManager:
             if line.startswith("pid="):
                 try:
                     pid = int(line.split("=", 1)[1])
-                except ValueError:
+                except (ValueError, IndexError):
                     pid = None
             if line.startswith("timestamp="):
                 try:
                     timestamp = int(line.split("=", 1)[1])
-                except ValueError:
+                except (ValueError, IndexError):
                     timestamp = None
 
         if pid is not None:
