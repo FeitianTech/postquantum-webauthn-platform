@@ -80,7 +80,7 @@
     top: var(--global-toast-offset);
     left: 50%;
     transform: translateX(-50%) translateY(-12px);
-    z-index: 2000;
+    z-index: 12000;
     min-width: 300px;
     max-width: 90vw;
     box-shadow: var(--shadow-soft);

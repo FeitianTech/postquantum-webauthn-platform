@@ -279,7 +279,7 @@ body.advanced-inline-json-editor .json-editor-overlay.active {
     min-width: 320px;
     max-width: 90vw;
     justify-content: center;
-    z-index: 2000;
+    z-index: 12000;
     opacity: 0;
     visibility: hidden;
     pointer-events: none;
