@@ -141,6 +141,45 @@ body.modal-open {
     pointer-events: none;
 }
 
+.header-mini {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 95;
+    height: var(--header-mini-height, 0px);
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.header-mini__inner {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    background: var(--surface-color);
+    border-bottom: 1px solid rgba(0, 114, 206, 0.2);
+    padding: 0.5rem 2.5rem;
+    transform: translateY(calc((var(--header-mini-progress, 0) - 1) * 100%));
+    will-change: transform;
+}
+
+.header-mini--active {
+    pointer-events: auto;
+}
+
+.header-mini--active .header-mini__inner {
+    box-shadow: 0 4px 16px rgba(0, 29, 61, 0.12);
+}
+
+.header-mini--measuring {
+    visibility: hidden !important;
+    pointer-events: none !important;
+}
+
+.header-mini--measuring .header-mini__inner {
+    transform: none !important;
+}
+
 .header h1 {
     margin: 0;
     font-size: 2.25rem;
