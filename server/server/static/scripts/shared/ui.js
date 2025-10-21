@@ -389,31 +389,32 @@ export function initializeStickyHeader() {
         return;
     }
 
-    const parent = header.parentElement;
-    if (!(parent instanceof HTMLElement)) {
+    const navTabs = header.querySelector('.nav-tabs');
+    if (!(navTabs instanceof HTMLElement)) {
+        header.dataset.stickyInitialized = 'true';
+        return;
+    }
+
+    const root = document.body instanceof HTMLElement ? document.body : header.parentElement;
+    if (!(root instanceof HTMLElement)) {
+        header.dataset.stickyInitialized = 'true';
         return;
     }
 
     header.dataset.stickyInitialized = 'true';
 
-    const sentinel = document.createElement('div');
-    sentinel.className = 'header-sentinel';
-    sentinel.setAttribute('aria-hidden', 'true');
-    if (typeof parent.insertBefore === 'function') {
-        parent.insertBefore(sentinel, header);
-    }
+    const miniHeader = document.createElement('div');
+    miniHeader.className = 'header-mini';
+    miniHeader.setAttribute('aria-hidden', 'true');
 
-    const placeholder = document.createElement('div');
-    placeholder.className = 'header-placeholder';
-    placeholder.setAttribute('aria-hidden', 'true');
-    placeholder.hidden = true;
-    if (typeof header.after === 'function') {
-        header.after(placeholder);
-    } else {
-        parent.insertBefore(placeholder, header.nextSibling);
-    }
+    const miniInner = document.createElement('div');
+    miniInner.className = 'header-mini__inner';
 
-    let isFixed = false;
+    const navClone = navTabs.cloneNode(true);
+    miniInner.appendChild(navClone);
+    miniHeader.appendChild(miniInner);
+
+    root.appendChild(miniHeader);
 
     const raf = typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function'
         ? window.requestAnimationFrame.bind(window)
@@ -443,105 +444,119 @@ export function initializeStickyHeader() {
         return 0;
     };
 
-    const measureHeaderHeight = () => {
+    const clamp01 = value => {
+        if (!Number.isFinite(value)) {
+            return 0;
+        }
+        if (value < 0) {
+            return 0;
+        }
+        if (value > 1) {
+            return 1;
+        }
+        return value;
+    };
+
+    let headerBottom = 0;
+    let miniHeight = 1;
+    let revealRange = 1;
+    let lastProgress = -1;
+    let pendingUpdate = false;
+    let pendingGeometryUpdate = false;
+
+    const applyProgress = progress => {
+        if (Math.abs(progress - lastProgress) < 0.001) {
+            return;
+        }
+
+        lastProgress = progress;
+
+        miniHeader.style.setProperty('--header-mini-progress', progress.toFixed(4));
+
+        if (progress > 0) {
+            miniHeader.classList.add('header-mini--active');
+            miniHeader.removeAttribute('aria-hidden');
+        } else {
+            miniHeader.classList.remove('header-mini--active');
+            miniHeader.setAttribute('aria-hidden', 'true');
+        }
+    };
+
+    const evaluateProgress = () => {
+        pendingUpdate = false;
+
+        const scrollY = getScrollPosition();
+        const delta = scrollY - headerBottom;
+        const rawProgress = delta > 0 ? delta / revealRange : 0;
+        const progress = clamp01(rawProgress);
+
+        applyProgress(progress);
+    };
+
+    const requestProgressEvaluation = () => {
+        if (pendingUpdate) {
+            return;
+        }
+
+        pendingUpdate = true;
+        raf(() => {
+            evaluateProgress();
+        });
+    };
+
+    const measureMiniHeader = () => {
+        miniHeader.classList.add('header-mini--measuring');
+        const previousProgress = miniHeader.style.getPropertyValue('--header-mini-progress');
+        miniHeader.style.setProperty('--header-mini-progress', '1');
+
+        const rect = miniInner.getBoundingClientRect();
+        const measuredHeight = rect && typeof rect.height === 'number' ? rect.height : miniInner.offsetHeight;
+
+        miniHeight = Number.isFinite(measuredHeight) && measuredHeight > 0 ? measuredHeight : 1;
+        revealRange = miniHeight;
+        miniHeader.style.setProperty('--header-mini-height', `${miniHeight}px`);
+
+        if (previousProgress) {
+            miniHeader.style.setProperty('--header-mini-progress', previousProgress);
+        } else {
+            miniHeader.style.setProperty('--header-mini-progress', '0');
+        }
+
+        miniHeader.classList.remove('header-mini--measuring');
+        lastProgress = -1;
+    };
+
+    const measureHeaderBottom = () => {
         const rect = header.getBoundingClientRect();
         const height = rect && typeof rect.height === 'number' ? rect.height : header.offsetHeight;
-        if (Number.isFinite(height) && height > 0) {
-            placeholder.style.height = `${height}px`;
-        }
+        const top = rect && typeof rect.top === 'number' ? rect.top : header.offsetTop || 0;
+        headerBottom = getScrollPosition() + top + (Number.isFinite(height) ? height : 0);
     };
 
-    const syncPlaceholderHeight = () => {
+    const updateGeometry = () => {
+        pendingGeometryUpdate = false;
+        measureHeaderBottom();
+        measureMiniHeader();
+        requestProgressEvaluation();
+    };
+
+    const requestGeometryUpdate = () => {
+        if (pendingGeometryUpdate) {
+            return;
+        }
+
+        pendingGeometryUpdate = true;
         raf(() => {
-            measureHeaderHeight();
+            updateGeometry();
         });
     };
 
-    const applyFixedState = shouldFix => {
-        if (isFixed === shouldFix) {
-            if (shouldFix) {
-                syncPlaceholderHeight();
-            }
-            return;
-        }
-
-        if (shouldFix) {
-            measureHeaderHeight();
-            placeholder.hidden = false;
-            header.classList.add('header--stuck');
-            syncPlaceholderHeight();
-        } else {
-            header.classList.remove('header--stuck');
-            syncPlaceholderHeight();
-            raf(() => {
-                placeholder.hidden = true;
-            });
-        }
-
-        isFixed = shouldFix;
-    };
-
-    const evaluateStickyState = () => {
-        const sentinelRect = sentinel.getBoundingClientRect();
-        const sentinelTop = sentinelRect ? sentinelRect.top : 0;
-
-        if (!isFixed && sentinelTop <= 0 && getScrollPosition() > 0) {
-            applyFixedState(true);
-            return;
-        }
-
-        if (isFixed && sentinelTop > 0) {
-            applyFixedState(false);
-            return;
-        }
-
-        if (isFixed) {
-            syncPlaceholderHeight();
-        }
-    };
-
-    const handlePageshow = () => {
-        raf(() => {
-            measureHeaderHeight();
-            evaluateStickyState();
-        });
-    };
-    window.addEventListener('pageshow', handlePageshow);
-    cleanupHandlers.push(() => {
-        window.removeEventListener('pageshow', handlePageshow);
-    });
-
-    if (typeof ResizeObserver === 'function') {
-        const resizeObserver = new ResizeObserver(() => {
-            measureHeaderHeight();
-            evaluateStickyState();
-        });
-        resizeObserver.observe(header);
-        cleanupHandlers.push(() => {
-            resizeObserver.disconnect();
-        });
-    } else {
-        const handleResize = () => {
-            measureHeaderHeight();
-            evaluateStickyState();
-        };
-        window.addEventListener('resize', handleResize);
-        cleanupHandlers.push(() => {
-            window.removeEventListener('resize', handleResize);
-        });
-    }
-
-    let ticking = false;
     const handleScroll = () => {
-        if (ticking) {
-            return;
-        }
+        requestProgressEvaluation();
+    };
 
-        ticking = true;
-        raf(() => {
-            ticking = false;
-            evaluateStickyState();
-        });
+    const handleResize = () => {
+        requestGeometryUpdate();
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
@@ -549,10 +564,31 @@ export function initializeStickyHeader() {
         window.removeEventListener('scroll', handleScroll);
     });
 
-    raf(() => {
-        measureHeaderHeight();
-        evaluateStickyState();
+    window.addEventListener('resize', handleResize);
+    cleanupHandlers.push(() => {
+        window.removeEventListener('resize', handleResize);
     });
+
+    const handlePageshow = () => {
+        requestGeometryUpdate();
+    };
+
+    window.addEventListener('pageshow', handlePageshow);
+    cleanupHandlers.push(() => {
+        window.removeEventListener('pageshow', handlePageshow);
+    });
+
+    if (typeof ResizeObserver === 'function') {
+        const resizeObserver = new ResizeObserver(() => {
+            requestGeometryUpdate();
+        });
+        resizeObserver.observe(header);
+        cleanupHandlers.push(() => {
+            resizeObserver.disconnect();
+        });
+    }
+
+    requestGeometryUpdate();
 
     window.addEventListener('beforeunload', () => {
         for (const cleanup of cleanupHandlers) {
