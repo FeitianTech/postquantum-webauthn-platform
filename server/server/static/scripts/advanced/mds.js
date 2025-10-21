@@ -4204,8 +4204,13 @@ async function focusAuthenticatorByAaguid(aaguid) {
     return entry;
 }
 
-async function highlightAuthenticatorRowByAaguid(aaguid) {
-    const entry = await resolveEntryByAaguid(aaguid);
+async function highlightAuthenticatorRowByAaguid(aaguid, options = {}) {
+    const { scrollBehavior = 'smooth', preResolvedEntry = null } = options || {};
+
+    let entry = preResolvedEntry || null;
+    if (!entry) {
+        entry = await resolveEntryByAaguid(aaguid);
+    }
     if (!mdsState) {
         return { entry: entry || null, highlighted: false };
     }
@@ -4243,7 +4248,11 @@ async function highlightAuthenticatorRowByAaguid(aaguid) {
 
     await waitForLayoutSettled();
 
-    const applied = setHighlightedRow(row, key, { scroll: true, behavior: 'smooth', focus: true });
+    const behaviour = typeof scrollBehavior === 'string' && scrollBehavior
+        ? scrollBehavior
+        : 'smooth';
+
+    const applied = setHighlightedRow(row, key, { scroll: true, behavior: behaviour, focus: true });
     if (!applied && mdsState.highlightedRowKey === key) {
         mdsState.highlightedRowKey = '';
     }

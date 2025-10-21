@@ -2741,6 +2741,23 @@ export function navigateToMdsAuthenticator(aaguid) {
         setAaguidStatus(statusEl, message, { showSpinner: true });
     };
 
+    const waitForNextFrame = async (count = 1) => {
+        if (count <= 0) {
+            return;
+        }
+        const waitOnce = () => new Promise(resolve => {
+            if (typeof requestAnimationFrame === 'function') {
+                requestAnimationFrame(() => resolve());
+            } else {
+                setTimeout(resolve, 16);
+            }
+        });
+        for (let i = 0; i < count; i += 1) {
+            // eslint-disable-next-line no-await-in-loop
+            await waitOnce();
+        }
+    };
+
     const run = async () => {
         try {
             if (statusEl) {
@@ -2749,6 +2766,8 @@ export function navigateToMdsAuthenticator(aaguid) {
                     : 'Locating metadata entry...';
                 showSpinnerStatus(message);
             }
+
+            await waitForNextFrame();
 
             if (waitForLoad && shouldAwaitLoad) {
                 try {
@@ -2771,11 +2790,11 @@ export function navigateToMdsAuthenticator(aaguid) {
                 showSpinnerStatus('Locating metadata entry...');
             }
 
+            await waitForNextFrame();
+
             if (switchToMdsTab) {
-                switchToMdsTab('mds');
-                if (typeof requestAnimationFrame === 'function') {
-                    await new Promise(resolve => requestAnimationFrame(resolve));
-                }
+                switchToMdsTab('mds', { preserveScroll: true, preserveMessages: true });
+                await waitForNextFrame(2);
             }
 
             const normaliseHighlightResult = result => {
@@ -2793,7 +2812,10 @@ export function navigateToMdsAuthenticator(aaguid) {
 
             const attemptHighlight = async () => {
                 try {
-                    const result = await Promise.resolve(highlightRow(aaguid));
+                    const result = await Promise.resolve(highlightRow(aaguid, {
+                        scrollBehavior: 'auto',
+                        preResolvedEntry: resolvedEntry,
+                    }));
                     return normaliseHighlightResult(result);
                 } catch (error) {
                     console.warn('Failed to highlight authenticator row:', error);

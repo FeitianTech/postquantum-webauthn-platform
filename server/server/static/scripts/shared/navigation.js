@@ -2,8 +2,12 @@ import { state } from './state.js';
 import { updateJsonEditor } from '../advanced/json-editor.js';
 import { dismissAllTransientMessages } from './status.js';
 
-export function switchTab(tab) {
-    dismissAllTransientMessages();
+export function switchTab(tab, options = {}) {
+    const { preserveScroll = false, preserveMessages = false } = options || {};
+
+    if (!preserveMessages) {
+        dismissAllTransientMessages();
+    }
 
     document.querySelectorAll('.tab-content').forEach(content => {
         content.classList.toggle('active', content.id === `${tab}-tab`);
@@ -17,22 +21,24 @@ export function switchTab(tab) {
         updateJsonEditor();
     }
 
-    requestAnimationFrame(() => {
-        if (typeof window.scrollTo === 'function') {
-            try {
-                window.scrollTo({ top: 0, behavior: 'auto' });
-            } catch (error) {
-                window.scrollTo(0, 0);
+    if (!preserveScroll) {
+        requestAnimationFrame(() => {
+            if (typeof window.scrollTo === 'function') {
+                try {
+                    window.scrollTo({ top: 0, behavior: 'auto' });
+                } catch (error) {
+                    window.scrollTo(0, 0);
+                }
+            } else if (typeof document !== 'undefined') {
+                if (document.documentElement) {
+                    document.documentElement.scrollTop = 0;
+                }
+                if (document.body) {
+                    document.body.scrollTop = 0;
+                }
             }
-        } else if (typeof document !== 'undefined') {
-            if (document.documentElement) {
-                document.documentElement.scrollTop = 0;
-            }
-            if (document.body) {
-                document.body.scrollTop = 0;
-            }
-        }
-    });
+        });
+    }
 
     document.dispatchEvent(new CustomEvent('tab:changed', { detail: { tab } }));
 }
