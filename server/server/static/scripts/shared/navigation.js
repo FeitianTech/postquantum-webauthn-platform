@@ -1,7 +1,10 @@
 import { state } from './state.js';
 import { updateJsonEditor } from '../advanced/json-editor.js';
+import { dismissAllTransientMessages } from './status.js';
 
 export function switchTab(tab) {
+    dismissAllTransientMessages();
+
     document.querySelectorAll('.tab-content').forEach(content => {
         content.classList.toggle('active', content.id === `${tab}-tab`);
     });
@@ -36,6 +39,8 @@ export function switchTab(tab) {
 
 export function switchSubTab(subTab) {
     state.currentSubTab = subTab;
+
+    dismissAllTransientMessages();
 
     document.querySelectorAll('.sub-tab').forEach(btn => {
         btn.classList.remove('active');
