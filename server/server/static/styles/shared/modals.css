@@ -175,7 +175,7 @@
 }
 
 .modal.detail-screen .modal-body {
-    padding: clamp(1.75rem, 3.8vh, 2.5rem) clamp(2rem, 5vw, 3.5rem) clamp(2.5rem, 6vh, 3.5rem);
+    padding: clamp(1.55rem, 3.4vh, 2.3rem) clamp(2rem, 5vw, 3.5rem) clamp(2.5rem, 6vh, 3.5rem);
     line-height: 1.7;
 }
 
