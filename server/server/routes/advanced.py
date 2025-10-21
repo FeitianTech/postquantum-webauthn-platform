@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import base64
 import binascii
+import hashlib
 import json
 import math
 import re
@@ -1328,10 +1329,35 @@ def advanced_register_complete():
             "UV": bool(auth_data.flags & auth_data.FLAG.UV),
         }
 
-        authenticator_data_hex = bytes(auth_data).hex()
+        auth_data_bytes = bytes(auth_data)
+        authenticator_data_hex = auth_data_bytes.hex()
+        authenticator_data_hash = hashlib.sha256(auth_data_bytes).hexdigest()
         registration_timestamp = datetime_from_timestamp(credential_info['registration_time'])
 
-        None
+        rp_id_hash_hex = ''
+        rp_id_hash_b64 = ''
+        try:
+            rp_id_hash_bytes = bytes(getattr(auth_data, 'rp_id_hash', b''))
+        except Exception:
+            rp_id_hash_bytes = b''
+        else:
+            rp_id_hash_hex = rp_id_hash_bytes.hex()
+            rp_id_hash_b64 = base64.urlsafe_b64encode(rp_id_hash_bytes).rstrip(b'=').decode('ascii')
+
+        expected_rp_hash_bytes = hashlib.sha256((resolved_rp_id or '').encode('utf-8')).digest()
+        expected_rp_hash_hex = expected_rp_hash_bytes.hex()
+        expected_rp_hash_b64 = base64.urlsafe_b64encode(expected_rp_hash_bytes).rstrip(b'=').decode('ascii')
+
+        if attestation_rp_id_hash_valid is None:
+            attestation_rp_id_hash_valid = rp_id_hash_bytes == expected_rp_hash_bytes
+
+        if rp_id_hash_hex:
+            credential_info['properties']['rpIdHash'] = rp_id_hash_hex
+        if rp_id_hash_b64:
+            credential_info['properties']['rpIdHashBase64'] = rp_id_hash_b64
+        credential_info['properties']['rpIdHashExpected'] = expected_rp_hash_hex
+        credential_info['properties']['rpIdHashExpectedBase64'] = expected_rp_hash_b64
+
         cred_props = (
             client_extension_results.get('credProps')
             if isinstance(client_extension_results, dict)
@@ -1346,6 +1372,7 @@ def advanced_register_complete():
 
         credential_info['properties']['residentKey'] = bool(resident_key_result)
         credential_info['resident_key'] = bool(resident_key_result)
+        credential_info['properties']['authenticatorDataHash'] = authenticator_data_hash
 
         large_blob_result = False
         if isinstance(client_extension_results, dict) and 'largeBlob' in client_extension_results:
@@ -1371,6 +1398,12 @@ def advanced_register_complete():
             "credentialId": credential_id_hex,
             "credentialIdBase64": credential_id_b64,
             "credentialIdBase64Url": credential_id_b64url,
+            "rpIdHash": rp_id_hash_hex,
+            "rpIdHashBase64": rp_id_hash_b64,
+            "rpIdHashExpected": expected_rp_hash_hex,
+            "rpIdHashExpectedBase64": expected_rp_hash_b64,
+            "rpIdHashMatch": bool(attestation_rp_id_hash_valid),
+            "authenticatorDataHash": authenticator_data_hash,
             "device": {
                 "name": "Unknown device",
                 "type": "unknown",
@@ -1379,7 +1412,8 @@ def advanced_register_complete():
             "publicKeyAlgorithm": algo,
             "registrationData": {
                 "authenticatorData": authenticator_data_hex,
-                "clientExtensionResults": client_extension_results,
+                "authenticatorDataHash": authenticator_data_hash,
+                "clientExtensionResults": convert_bytes_for_json(client_extension_results),
                 "flags": flags_dict,
                 "signatureCounter": auth_data.counter,
                 "attestationChecks": attestation_checks_safe,
@@ -1451,6 +1485,7 @@ def advanced_register_complete():
             "attestationStatement": convert_bytes_for_json(attestation_statement),
             "attestationObject": convert_bytes_for_json(credential_info.get('attestation_object')),
             "authenticatorData": authenticator_data_hex,
+            "authenticatorDataHash": authenticator_data_hash,
             "clientDataJSON": convert_bytes_for_json(credential_info.get('client_data_json')),
             "relyingParty": make_json_safe(rp_info),
             "properties": stored_properties,

@@ -324,16 +324,10 @@ export function initializeStickyHeader() {
 
     header.dataset.stickyInitialized = 'true';
 
-    const stickyTrigger = document.createElement('div');
-    stickyTrigger.className = 'header-sticky-trigger';
-    stickyTrigger.setAttribute('aria-hidden', 'true');
-
     const placeholder = document.createElement('div');
     placeholder.className = 'header-placeholder';
     placeholder.setAttribute('aria-hidden', 'true');
     placeholder.hidden = true;
-
-    parent.insertBefore(stickyTrigger, header);
     if (typeof header.after === 'function') {
         header.after(placeholder);
     } else {
@@ -344,6 +338,10 @@ export function initializeStickyHeader() {
     const sentinel = header.querySelector('.header-sentinel');
 
     let isFixed = false;
+    let navOffset = 0;
+    let triggerPosition = header.offsetTop || 0;
+    const ACTIVATION_BUFFER = 6;
+    const RELEASE_BUFFER = 10;
 
     const resolveNavOffset = () => {
         if (sentinel instanceof HTMLElement) {
@@ -357,17 +355,24 @@ export function initializeStickyHeader() {
         return 0;
     };
 
+    const getAnchorTop = () => {
+        if (isFixed) {
+            return placeholder.offsetTop || 0;
+        }
+
+        return header.offsetTop || 0;
+    };
+
+    const computeTriggerPosition = () => {
+        navOffset = resolveNavOffset();
+        triggerPosition = getAnchorTop() + navOffset;
+    };
+
     const updatePlaceholderHeight = () => {
         placeholder.style.height = `${header.offsetHeight}px`;
+        computeTriggerPosition();
     };
 
-    const updateTriggerMetrics = () => {
-        const offset = Math.max(0, resolveNavOffset());
-        stickyTrigger.style.height = '1px';
-        stickyTrigger.style.transform = offset > 0 ? `translateY(${offset}px)` : 'translateY(0)';
-    };
-
-    updateTriggerMetrics();
     updatePlaceholderHeight();
 
     const applyFixedState = shouldFix => {
@@ -378,59 +383,60 @@ export function initializeStickyHeader() {
         isFixed = shouldFix;
         header.classList.toggle('header--stuck', shouldFix);
         placeholder.hidden = !shouldFix;
-        updateTriggerMetrics();
 
         if (shouldFix) {
             updatePlaceholderHeight();
+        } else {
+            computeTriggerPosition();
+        }
+    };
+
+    const evaluateStickyState = () => {
+        if (!isFixed) {
+            computeTriggerPosition();
+        }
+
+        const scrollPosition = window.scrollY ?? window.pageYOffset ?? 0;
+
+        if (!isFixed && scrollPosition >= (triggerPosition + ACTIVATION_BUFFER)) {
+            applyFixedState(true);
+            return;
+        }
+
+        if (isFixed) {
+            computeTriggerPosition();
+            const releaseThreshold = Math.max(0, triggerPosition - RELEASE_BUFFER);
+
+            if (scrollPosition <= releaseThreshold) {
+                applyFixedState(false);
+            }
         }
     };
 
     let resizeObserver = null;
-    let handleResize = null;
     if (typeof ResizeObserver === 'function') {
-        resizeObserver = new ResizeObserver(() => {
-            updateTriggerMetrics();
-            updatePlaceholderHeight();
-        });
+        resizeObserver = new ResizeObserver(updatePlaceholderHeight);
         resizeObserver.observe(header);
-        if (navTabs instanceof HTMLElement) {
-            resizeObserver.observe(navTabs);
-        }
     } else {
-        handleResize = () => {
-            updateTriggerMetrics();
-            updatePlaceholderHeight();
-        };
-        window.addEventListener('resize', handleResize);
+        window.addEventListener('resize', updatePlaceholderHeight);
     }
 
-    const observer = new IntersectionObserver(entries => {
-        entries.forEach(entry => {
-            const shouldFix = entry.boundingClientRect.top < 0 && entry.intersectionRatio <= 0;
-            applyFixedState(shouldFix);
-        });
-    }, { threshold: [0], rootMargin: '-2px 0px 0px 0px' });
-
-    observer.observe(stickyTrigger);
+    window.addEventListener('scroll', evaluateStickyState, { passive: true });
+    evaluateStickyState();
 
     const handlePageshow = () => {
-        updateTriggerMetrics();
         updatePlaceholderHeight();
-        const triggerRect = stickyTrigger.getBoundingClientRect();
-        const shouldFix = triggerRect.top < 0;
-        applyFixedState(shouldFix);
+        evaluateStickyState();
     };
     window.addEventListener('pageshow', handlePageshow);
-
-    handlePageshow();
 
     window.addEventListener('beforeunload', () => {
         if (resizeObserver) {
             resizeObserver.disconnect();
         } else {
-            window.removeEventListener('resize', handleResize);
+            window.removeEventListener('resize', updatePlaceholderHeight);
         }
-        observer.disconnect();
+        window.removeEventListener('scroll', evaluateStickyState);
         window.removeEventListener('pageshow', handlePageshow);
     }, { once: true });
 }
