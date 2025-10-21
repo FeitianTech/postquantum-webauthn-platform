@@ -2,7 +2,7 @@
 
 :root {
     --primary-color: #0072CE;
-    --primary-dark: #005a9c;
+    --primary-dark: #0072CE;
     --primary-soft: #0067b8;
     --primary-light: #5ab6ff;
     --accent-color: #00A651;
@@ -103,11 +103,11 @@ body.modal-open {
     right: 0;
     width: 100%;
     margin: 0;
-    padding-top: 0.75rem;
-    padding-bottom: 0.5rem;
+    padding: 0.5rem 2.5rem;
     box-shadow: none;
     border-bottom: 1px solid rgba(0, 114, 206, 0.2);
     z-index: 90;
+    align-items: center;
 }
 
 .header--stuck .header__branding {
@@ -120,6 +120,13 @@ body.modal-open {
 
 .header--stuck .header__tabs {
     width: 100%;
+    display: flex;
+    align-items: center;
+}
+
+.header--stuck .nav-tab {
+    padding-top: 0.45rem;
+    padding-bottom: 0.45rem;
 }
 
 .header-placeholder {
@@ -131,6 +138,15 @@ body.modal-open {
 
 .header-placeholder[hidden] {
     display: none !important;
+}
+
+.header-sticky-trigger {
+    display: block;
+    width: 100%;
+    height: 1px;
+    margin: 0;
+    padding: 0;
+    pointer-events: none;
 }
 
 .header-sentinel {

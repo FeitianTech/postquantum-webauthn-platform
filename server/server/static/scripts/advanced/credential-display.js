@@ -2314,8 +2314,22 @@ export function updateCredentialsDisplay() {
             'attestationRootValid',
             attestationContext,
         );
+        const rpidRaw = resolveCredentialAttestationValue(
+            cred,
+            'rpIdHashValid',
+            'attestationRpIdHashValid',
+            attestationContext,
+        );
+        const aaguidRaw = resolveCredentialAttestationValue(
+            cred,
+            'aaguidMatch',
+            'attestationAaguidMatch',
+            attestationContext,
+        );
         const signatureStatus = normaliseAttestationResultValue(signatureRaw);
         const rootStatus = normaliseAttestationResultValue(rootRaw);
+        const rpidStatus = normaliseAttestationResultValue(rpidRaw);
+        const aaguidStatus = normaliseAttestationResultValue(aaguidRaw);
         const pickStatusColor = value => {
             if (value === true) {
                 return '#198754';
@@ -2327,6 +2341,8 @@ export function updateCredentialsDisplay() {
         };
         const signatureColor = pickStatusColor(signatureStatus);
         const rootColor = pickStatusColor(rootStatus);
+        const rpidColor = pickStatusColor(rpidStatus);
+        const aaguidColor = pickStatusColor(aaguidStatus);
 
         return `
         <div class="credential-item" role="button" tabindex="0" onclick="showCredentialDetails(${index})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showCredentialDetails(${index});}">
@@ -2335,6 +2351,8 @@ export function updateCredentialsDisplay() {
                 <div style="font-size: 0.75rem; font-weight: 600; margin-bottom: 0.25rem;">
                     <span style="color: ${signatureColor};">Signature</span>
                     <span style="margin-left: 0.75rem; color: ${rootColor};">Root</span>
+                    <span style="margin-left: 0.75rem; color: ${rpidColor};">RPID</span>
+                    <span style="margin-left: 0.75rem; color: ${aaguidColor};">AAGUID</span>
                 </div>
                 ${featureText ? `<div style="font-size: 0.75rem; color: #5c6c7a;">${featureText}</div>` : ''}
             </div>

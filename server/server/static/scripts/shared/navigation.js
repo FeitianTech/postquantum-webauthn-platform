@@ -14,6 +14,23 @@ export function switchTab(tab) {
         updateJsonEditor();
     }
 
+    requestAnimationFrame(() => {
+        if (typeof window.scrollTo === 'function') {
+            try {
+                window.scrollTo({ top: 0, behavior: 'auto' });
+            } catch (error) {
+                window.scrollTo(0, 0);
+            }
+        } else if (typeof document !== 'undefined') {
+            if (document.documentElement) {
+                document.documentElement.scrollTop = 0;
+            }
+            if (document.body) {
+                document.body.scrollTop = 0;
+            }
+        }
+    });
+
     document.dispatchEvent(new CustomEvent('tab:changed', { detail: { tab } }));
 }
 
