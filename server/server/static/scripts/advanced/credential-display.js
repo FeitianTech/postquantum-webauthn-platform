@@ -3153,9 +3153,8 @@ export async function showCredentialDetails(index) {
     );
     const attestationChecksNoticeHtml = `
         <p style="margin: 0 0 0.65rem; color: #6c757d; font-size: 0.9rem; line-height: 1.5;">
-            In a formal WebAuthn ceremony, any <strong>false</strong> result in the checks below
-            (Signature, Root, RPID Hash, or AAGUID) would cause registration to fail.
-            This testing playground keeps the registration so you can inspect the data even when a check fails.
+            In formal WebAuthn, any <strong>false</strong> result below causes registration to fail.
+            This platform keeps registration valid for data inspection purposes. 
         </p>`;
     const attestationRowsHtml = [
         renderAttestationResultRow('Signature Valid', attestationSignatureValue),
