@@ -881,8 +881,8 @@ async function uploadCustomMetadataFiles(files) {
             }
             context.throwIfAborted();
         }, {
-            startMessage: 'MDS is updating…',
-            successMessage: 'Metadata update complete.',
+            startMessage: 'Updating Metadata...',
+            successMessage: 'Completing Metadata Update...',
             cancelMessage: 'Metadata update cancelled.',
             failureMessage: 'Metadata update failed.',
             cancelable: false,
@@ -961,10 +961,10 @@ async function deleteCustomMetadata(storedFilename, options = {}) {
             context.throwIfAborted();
             setCustomMetadataMessage(`${itemName} removed.`, 'success');
         }, {
-            startMessage: 'MDS is updating…',
-            successMessage: 'Metadata update complete.',
-            cancelMessage: 'Metadata update cancelled.',
-            failureMessage: 'Metadata update failed.',
+            startMessage: 'Removing metadata...',
+            successMessage: 'Completing metadata removal...',
+            cancelMessage: 'Metadata removal cancelled.',
+            failureMessage: 'Metadata removal failed.',
             cancelable: false,
         });
     } catch (error) {
