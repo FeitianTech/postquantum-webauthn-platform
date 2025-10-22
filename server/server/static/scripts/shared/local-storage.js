@@ -1,5 +1,6 @@
-const SIMPLE_STORAGE_KEY = 'postquantum-webauthn.simpleCredentials';
-const ADVANCED_STORAGE_KEY = 'postquantum-webauthn.advancedCredentials';
+const SHARED_STORAGE_KEY = 'postquantum-webauthn.credentials';
+const LEGACY_SIMPLE_STORAGE_KEY = 'postquantum-webauthn.simpleCredentials';
+const LEGACY_ADVANCED_STORAGE_KEY = 'postquantum-webauthn.advancedCredentials';
 const CERTIFICATE_COLLECTION_KEYS = [
     'attestationCertificate',
     'attestationCertificates',
@@ -314,6 +315,140 @@ function persistStoredCredentials(storageKey, records) {
     }
 }
 
+function getRecordIdentifier(record) {
+    if (!record || typeof record !== 'object') {
+        return '';
+    }
+    if (isNonEmptyString(record.storageId)) {
+        return `storage:${record.storageId.trim()}`;
+    }
+    const advancedId = normaliseAdvancedCredentialId(record);
+    if (advancedId) {
+        return `id:${advancedId}`;
+    }
+    const simpleId = normaliseCredentialId(record);
+    if (simpleId) {
+        return `id:${simpleId}`;
+    }
+    return '';
+}
+
+function ensureRecordType(record, fallbackType = 'simple') {
+    if (!record || typeof record !== 'object') {
+        return null;
+    }
+    const clone = { ...record };
+    const type = clone.type === 'advanced' ? 'advanced' : (clone.type === 'simple' ? 'simple' : fallbackType);
+    clone.type = type === 'advanced' ? 'advanced' : 'simple';
+    return clone;
+}
+
+function readUnifiedCredentialRecords() {
+    const combined = [];
+    const seen = new Set();
+
+    const addRecords = (records, fallbackType = 'simple') => {
+        if (!Array.isArray(records) || !records.length) {
+            return;
+        }
+        records.forEach(record => {
+            const clone = ensureRecordType(record, fallbackType);
+            if (!clone) {
+                return;
+            }
+            const identifier = getRecordIdentifier(clone);
+            if (!identifier || seen.has(identifier)) {
+                return;
+            }
+            seen.add(identifier);
+            combined.push(clone);
+        });
+    };
+
+    addRecords(readStoredCredentials(SHARED_STORAGE_KEY), 'simple');
+
+    const legacyAdvanced = readStoredCredentials(LEGACY_ADVANCED_STORAGE_KEY);
+    const legacySimple = readStoredCredentials(LEGACY_SIMPLE_STORAGE_KEY);
+
+    let needsMigration = false;
+
+    if (legacyAdvanced.length) {
+        needsMigration = true;
+        addRecords(legacyAdvanced, 'advanced');
+    }
+
+    if (legacySimple.length) {
+        needsMigration = true;
+        addRecords(legacySimple, 'simple');
+    }
+
+    if (needsMigration) {
+        persistUnifiedCredentialRecords(combined);
+    }
+
+    return combined;
+}
+
+function persistUnifiedCredentialRecords(records) {
+    const payload = Array.isArray(records)
+        ? records.filter(item => item && typeof item === 'object')
+        : [];
+    const success = persistStoredCredentials(SHARED_STORAGE_KEY, payload);
+    if (success && typeof window !== 'undefined' && window.localStorage) {
+        try {
+            window.localStorage.removeItem(LEGACY_SIMPLE_STORAGE_KEY);
+        } catch (error) {
+            // Ignore removal errors.
+        }
+        try {
+            window.localStorage.removeItem(LEGACY_ADVANCED_STORAGE_KEY);
+        } catch (error) {
+            // Ignore removal errors.
+        }
+    }
+    return success;
+}
+
+function partitionRecords(records) {
+    const simple = [];
+    const advanced = [];
+
+    if (!Array.isArray(records)) {
+        return { simple, advanced };
+    }
+
+    records.forEach(record => {
+        const clone = ensureRecordType(record);
+        if (!clone) {
+            return;
+        }
+        if (clone.type === 'advanced') {
+            advanced.push(clone);
+        } else {
+            simple.push(clone);
+        }
+    });
+
+    return { simple, advanced };
+}
+
+function persistCredentialPartitions(simpleRecords, advancedRecords) {
+    const preparedSimple = Array.isArray(simpleRecords)
+        ? simpleRecords
+            .filter(item => item && typeof item === 'object')
+            .map(item => ({ ...item, type: 'simple' }))
+        : [];
+
+    const preparedAdvanced = Array.isArray(advancedRecords)
+        ? advancedRecords
+            .map(item => prepareAdvancedCredentialForStorage(item))
+            .filter(Boolean)
+        : [];
+
+    const combined = preparedSimple.concat(preparedAdvanced);
+    return persistUnifiedCredentialRecords(combined);
+}
+
 function normaliseCredentialId(record) {
     if (!record) {
         return '';
@@ -338,7 +473,8 @@ function cloneCredential(record) {
 }
 
 export function getAllSimpleCredentials() {
-    return readStoredCredentials(SIMPLE_STORAGE_KEY).map(cloneCredential).filter(Boolean);
+    const { simple } = partitionRecords(readUnifiedCredentialRecords());
+    return simple.map(cloneCredential).filter(Boolean);
 }
 
 export function getSimpleCredentialsForEmail(email) {
@@ -376,11 +512,33 @@ export function saveSimpleCredential(rawCredential) {
         credential.signCount = 0;
     }
 
-    const stored = readStoredCredentials(SIMPLE_STORAGE_KEY);
-    const filtered = stored.filter(item => normaliseCredentialId(item) !== credentialId);
-    filtered.push(credential);
-    persistStoredCredentials(SIMPLE_STORAGE_KEY, filtered);
-    return credential;
+    const { simple: simpleStored, advanced: advancedStored } = partitionRecords(readUnifiedCredentialRecords());
+
+    const updatedAdvanced = advancedStored.map(record => {
+        const recordId = normaliseAdvancedCredentialId(record) || normaliseCredentialId(record);
+        if (recordId !== credentialId) {
+            return record;
+        }
+        const clone = { ...record };
+        clone.email = credential.email;
+        clone.userName = credential.userName;
+        clone.username = credential.username;
+        clone.signCount = credential.signCount;
+        return clone;
+    });
+
+    const advancedHasMatch = updatedAdvanced.some(record => {
+        const recordId = normaliseAdvancedCredentialId(record) || normaliseCredentialId(record);
+        return recordId === credentialId;
+    });
+
+    const filteredSimple = simpleStored.filter(item => normaliseCredentialId(item) !== credentialId);
+    if (!advancedHasMatch) {
+        filteredSimple.push(credential);
+    }
+
+    const success = persistCredentialPartitions(filteredSimple, updatedAdvanced);
+    return success ? credential : null;
 }
 
 export function removeSimpleCredential(credentialId, email) {
@@ -388,9 +546,11 @@ export function removeSimpleCredential(credentialId, email) {
     if (!id) {
         return false;
     }
-    const stored = readStoredCredentials(SIMPLE_STORAGE_KEY);
+
+    const { simple: simpleStored, advanced: advancedStored } = partitionRecords(readUnifiedCredentialRecords());
     const normalisedEmail = email ? String(email).toLowerCase() : null;
-    const filtered = stored.filter(record => {
+
+    const filteredSimple = simpleStored.filter(record => {
         const recordId = normaliseCredentialId(record);
         if (recordId !== id) {
             return true;
@@ -401,15 +561,17 @@ export function removeSimpleCredential(credentialId, email) {
         }
         return false;
     });
-    const changed = filtered.length !== stored.length;
+
+    const changed = filteredSimple.length !== simpleStored.length;
     if (changed) {
-        persistStoredCredentials(SIMPLE_STORAGE_KEY, filtered);
+        persistCredentialPartitions(filteredSimple, advancedStored);
     }
     return changed;
 }
 
 export function clearSimpleCredentials() {
-    persistStoredCredentials(SIMPLE_STORAGE_KEY, []);
+    const { advanced } = partitionRecords(readUnifiedCredentialRecords());
+    persistCredentialPartitions([], advanced);
 }
 
 export function updateSimpleCredentialSignCount(email, credentialId, signCount) {
@@ -417,10 +579,12 @@ export function updateSimpleCredentialSignCount(email, credentialId, signCount) 
     if (!id) {
         return false;
     }
-    const stored = readStoredCredentials(SIMPLE_STORAGE_KEY);
+
+    const { simple: simpleStored, advanced: advancedStored } = partitionRecords(readUnifiedCredentialRecords());
     const normalisedEmail = email ? String(email).toLowerCase() : null;
     let updated = false;
-    const updatedRecords = stored.map(record => {
+
+    const updatedSimple = simpleStored.map(record => {
         const recordId = normaliseCredentialId(record);
         if (recordId !== id) {
             return record;
@@ -442,9 +606,28 @@ export function updateSimpleCredentialSignCount(email, credentialId, signCount) 
         updated = true;
         return clone;
     });
+
+    const updatedAdvanced = advancedStored.map(record => {
+        const recordId = normaliseAdvancedCredentialId(record) || normaliseCredentialId(record);
+        if (recordId !== id) {
+            return record;
+        }
+        const clone = { ...record };
+        if (typeof signCount === 'number' && Number.isFinite(signCount)) {
+            clone.signCount = signCount;
+        } else if (typeof clone.signCount === 'number' && Number.isFinite(clone.signCount)) {
+            clone.signCount += 1;
+        } else {
+            clone.signCount = 1;
+        }
+        updated = true;
+        return clone;
+    });
+
     if (updated) {
-        persistStoredCredentials(SIMPLE_STORAGE_KEY, updatedRecords);
+        persistCredentialPartitions(updatedSimple, updatedAdvanced);
     }
+
     return updated;
 }
 
@@ -617,11 +800,11 @@ function prepareAdvancedCredentialForStorage(record, options = {}) {
     return clone;
 }
 
-function readAdvancedCredentials() {
-    const stored = readStoredCredentials(ADVANCED_STORAGE_KEY);
+function readAdvancedCredentialPartitions() {
+    const { simple, advanced } = partitionRecords(readUnifiedCredentialRecords());
     let needsPersist = false;
 
-    const clonedRecords = stored
+    const advancedRecords = advanced
         .map(record => {
             const clone = cloneAdvancedStoredRecord(record);
             if (!clone) {
@@ -635,14 +818,10 @@ function readAdvancedCredentials() {
         .filter(Boolean);
 
     if (needsPersist) {
-        persistAdvancedCredentials(clonedRecords);
+        persistCredentialPartitions(simple, advancedRecords);
     }
 
-    return clonedRecords;
-}
-
-function persistAdvancedCredentials(records) {
-    return persistStoredCredentials(ADVANCED_STORAGE_KEY, records);
+    return { simpleRecords: simple, advancedRecords };
 }
 
 function ensureBase64Url(value) {
@@ -683,7 +862,8 @@ function cloneAdvancedCredential(record) {
 }
 
 export function getAllAdvancedCredentials() {
-    return readAdvancedCredentials().map(cloneAdvancedCredential).filter(Boolean);
+    const { advancedRecords } = readAdvancedCredentialPartitions();
+    return advancedRecords.map(cloneAdvancedCredential).filter(Boolean);
 }
 
 export function saveAdvancedCredential(rawCredential) {
@@ -706,12 +886,60 @@ export function saveAdvancedCredential(rawCredential) {
     credential.credentialIdBase64Url = ensureBase64Url(credentialId);
     let storageId = ensureAdvancedCredentialStorageId(credential, { forceNew: !isNonEmptyString(credential.storageId) });
 
-    const stored = readAdvancedCredentials();
-    if (storageId && stored.some(item => item && typeof item === 'object' && item.storageId === storageId)) {
+    const { simpleRecords, advancedRecords } = readAdvancedCredentialPartitions();
+
+    let mergedEmail = credential.email || credential.userName || credential.username || '';
+    let mergedSignCount = Number.isFinite(credential.signCount) ? Number(credential.signCount) : null;
+
+    const filteredSimple = simpleRecords.filter(record => {
+        const recordId = normaliseCredentialId(record);
+        if (recordId !== credentialId) {
+            return true;
+        }
+        if (!mergedEmail) {
+            mergedEmail = record.email || record.userName || record.username || '';
+        }
+        if (!Number.isFinite(mergedSignCount) && Number.isFinite(record.signCount)) {
+            mergedSignCount = Number(record.signCount);
+        }
+        return false;
+    });
+
+    const filteredAdvanced = [];
+    advancedRecords.forEach(record => {
+        if (!record || typeof record !== 'object') {
+            return;
+        }
+        const recordStorageId = isNonEmptyString(record.storageId) ? record.storageId.trim() : '';
+        const recordId = normaliseAdvancedCredentialId(record) || normaliseCredentialId(record);
+        if ((recordStorageId && storageId && recordStorageId === storageId) || (recordId && recordId === credentialId)) {
+            if (!mergedEmail) {
+                mergedEmail = record.email || record.userName || record.username || '';
+            }
+            if (!Number.isFinite(mergedSignCount) && Number.isFinite(record.signCount)) {
+                mergedSignCount = Number(record.signCount);
+            }
+            return;
+        }
+        filteredAdvanced.push(record);
+    });
+
+    credential.email = credential.email || mergedEmail || '';
+    if (!credential.userName && mergedEmail) {
+        credential.userName = mergedEmail;
+    }
+    if (!credential.username && mergedEmail) {
+        credential.username = mergedEmail;
+    }
+    if (!Number.isFinite(credential.signCount)) {
+        credential.signCount = Number.isFinite(mergedSignCount) ? Number(mergedSignCount) : 0;
+    }
+
+    if (storageId && filteredAdvanced.some(item => item && typeof item === 'object' && item.storageId === storageId)) {
         storageId = ensureAdvancedCredentialStorageId(credential, { forceNew: true });
     }
 
-    const sanitisedStored = stored
+    const sanitisedStored = filteredAdvanced
         .map(item => prepareAdvancedCredentialForStorage(item))
         .filter(Boolean);
     const sanitisedCredential = prepareAdvancedCredentialForStorage(credential);
@@ -719,12 +947,12 @@ export function saveAdvancedCredential(rawCredential) {
         return null;
     }
 
-    const updated = sanitisedStored.concat(sanitisedCredential);
-    if (persistAdvancedCredentials(updated)) {
+    const updatedAdvanced = sanitisedStored.concat(sanitisedCredential);
+    if (persistCredentialPartitions(filteredSimple, updatedAdvanced)) {
         return sanitisedCredential;
     }
 
-    const aggressivelyTrimmedStored = stored
+    const aggressivelyTrimmedStored = filteredAdvanced
         .map(item => prepareAdvancedCredentialForStorage(item, { aggressive: true }))
         .filter(Boolean);
     const aggressivelyTrimmedCredential = prepareAdvancedCredentialForStorage(credential, { aggressive: true });
@@ -733,7 +961,7 @@ export function saveAdvancedCredential(rawCredential) {
     }
 
     const aggressiveSet = aggressivelyTrimmedStored.concat(aggressivelyTrimmedCredential);
-    if (persistAdvancedCredentials(aggressiveSet)) {
+    if (persistCredentialPartitions(filteredSimple, aggressiveSet)) {
         return aggressivelyTrimmedCredential;
     }
 
@@ -743,8 +971,8 @@ export function saveAdvancedCredential(rawCredential) {
 export function removeAdvancedCredential(credentialId, storageId = null) {
     const id = credentialId ? String(credentialId) : '';
     const storageKey = isNonEmptyString(storageId) ? storageId.trim() : '';
-    const stored = readAdvancedCredentials();
-    const filtered = stored.filter(record => {
+    const { simpleRecords, advancedRecords } = readAdvancedCredentialPartitions();
+    const filteredAdvanced = advancedRecords.filter(record => {
         if (!record || typeof record !== 'object') {
             return false;
         }
@@ -756,15 +984,16 @@ export function removeAdvancedCredential(credentialId, storageId = null) {
         }
         return normaliseAdvancedCredentialId(record) !== id;
     });
-    const changed = filtered.length !== stored.length;
+    const changed = filteredAdvanced.length !== advancedRecords.length;
     if (changed) {
-        persistAdvancedCredentials(filtered);
+        persistCredentialPartitions(simpleRecords, filteredAdvanced);
     }
     return changed;
 }
 
 export function clearAdvancedCredentials() {
-    persistAdvancedCredentials([]);
+    const { simpleRecords } = readAdvancedCredentialPartitions();
+    persistCredentialPartitions(simpleRecords, []);
 }
 
 export function updateAdvancedCredentialSignCount(credentialId, signCount, storageId = null) {
@@ -774,9 +1003,9 @@ export function updateAdvancedCredentialSignCount(credentialId, signCount, stora
         return false;
     }
 
-    const stored = readAdvancedCredentials();
+    const { simpleRecords, advancedRecords } = readAdvancedCredentialPartitions();
     let updated = false;
-    const updatedRecords = stored.map(record => {
+    const updatedAdvanced = advancedRecords.map(record => {
         if (!record || typeof record !== 'object') {
             return record;
         }
@@ -799,8 +1028,28 @@ export function updateAdvancedCredentialSignCount(credentialId, signCount, stora
         return clone;
     });
 
+    const updatedSimple = simpleRecords.map(record => {
+        if (!record || typeof record !== 'object') {
+            return record;
+        }
+        const recordId = normaliseCredentialId(record);
+        if (!recordId || recordId !== id) {
+            return record;
+        }
+        const clone = { ...record };
+        if (typeof signCount === 'number' && Number.isFinite(signCount)) {
+            clone.signCount = signCount;
+        } else if (typeof clone.signCount === 'number' && Number.isFinite(clone.signCount)) {
+            clone.signCount += 1;
+        } else {
+            clone.signCount = 1;
+        }
+        updated = true;
+        return clone;
+    });
+
     if (updated) {
-        persistAdvancedCredentials(updatedRecords);
+        persistCredentialPartitions(updatedSimple, updatedAdvanced);
     }
 
     return updated;
@@ -817,9 +1066,9 @@ export function updateAdvancedCredentialRegistrationSnapshot(storageId, snapshot
         return false;
     }
 
-    const stored = readAdvancedCredentials();
+    const { simpleRecords, advancedRecords } = readAdvancedCredentialPartitions();
     let updated = false;
-    const updatedRecords = stored.map(record => {
+    const updatedAdvanced = advancedRecords.map(record => {
         if (!record || typeof record !== 'object') {
             return record;
         }
@@ -836,7 +1085,7 @@ export function updateAdvancedCredentialRegistrationSnapshot(storageId, snapshot
         return false;
     }
 
-    const sanitised = updatedRecords
+    const sanitised = updatedAdvanced
         .map(item => prepareAdvancedCredentialForStorage(item))
         .filter(Boolean);
 
@@ -844,7 +1093,7 @@ export function updateAdvancedCredentialRegistrationSnapshot(storageId, snapshot
         return false;
     }
 
-    return persistAdvancedCredentials(sanitised);
+    return persistCredentialPartitions(simpleRecords, sanitised);
 }
 
 function extractAlgorithm(record) {
