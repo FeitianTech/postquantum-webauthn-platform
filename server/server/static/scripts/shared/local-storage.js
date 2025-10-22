@@ -719,6 +719,33 @@ function cloneCredential(record) {
     return { ...record };
 }
 
+export function getAllStoredCredentialsInOrder() {
+    const orderedRecords = readUnifiedCredentialRecords();
+    if (!Array.isArray(orderedRecords) || !orderedRecords.length) {
+        return [];
+    }
+
+    return orderedRecords
+        .map(record => {
+            if (!record || typeof record !== 'object') {
+                return null;
+            }
+
+            if ((record.type || 'simple') === 'advanced') {
+                const clone = cloneAdvancedStoredRecord(record);
+                return clone ? clone : null;
+            }
+
+            const clone = cloneCredential(record);
+            if (!clone) {
+                return null;
+            }
+            clone.type = clone.type === 'advanced' ? 'advanced' : 'simple';
+            return clone;
+        })
+        .filter(Boolean);
+}
+
 export function getAllSimpleCredentials() {
     const { simple } = partitionRecords(readUnifiedCredentialRecords());
     return simple.map(cloneCredential).filter(Boolean);
@@ -1423,6 +1450,7 @@ export function prepareAdvancedCredentialsForServer(credentials = null) {
 
 export default {
     ensureAdvancedCredentialArtifactsSynced,
+    getAllStoredCredentialsInOrder,
     getAllSimpleCredentials,
     getSimpleCredentialsForEmail,
     saveSimpleCredential,

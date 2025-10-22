@@ -44,6 +44,7 @@ import {
     clearAdvancedCredentials as clearLocalAdvancedCredentials,
     updateAdvancedCredentialRegistrationSnapshot,
     ensureAdvancedCredentialArtifactsSynced,
+    getAllStoredCredentialsInOrder,
 } from '../shared/local-storage.js';
 import {
     fetchCredentialArtifact,
@@ -2667,34 +2668,38 @@ export function updateAllowCredentialsDropdown() {
 export async function loadSavedCredentials() {
     await ensureAdvancedCredentialArtifactsSynced();
 
-    const simpleCredentials = getAllSimpleCredentials().map(cred => ({
-        ...cred,
-        type: 'simple',
-        credentialIdHex: getCredentialIdHex(cred),
-        userHandleHex: getCredentialUserHandleHex(cred),
-    }));
+    const orderedRecords = getAllStoredCredentialsInOrder();
 
-    const advancedCredentials = getAllAdvancedCredentials().map(cred => {
-        const relyingPartyInfo = cred && typeof cred === 'object' ? cred.relyingParty : null;
-        const relyingPartyAaguid = relyingPartyInfo && typeof relyingPartyInfo === 'object'
-            ? relyingPartyInfo.aaguid
-            : null;
-        const normalizedAaguidHex = normaliseAaguidValue(
-            cred.aaguidHex || cred.aaguid || relyingPartyAaguid
-        );
+    const mappedCredentials = orderedRecords.map(record => {
+        if ((record.type || 'simple') === 'advanced') {
+            const relyingPartyInfo = record && typeof record === 'object' ? record.relyingParty : null;
+            const relyingPartyAaguid = relyingPartyInfo && typeof relyingPartyInfo === 'object'
+                ? relyingPartyInfo.aaguid
+                : null;
+            const normalizedAaguidHex = normaliseAaguidValue(
+                record.aaguidHex || record.aaguid || relyingPartyAaguid,
+            );
+
+            return {
+                ...record,
+                type: record.type || 'advanced',
+                storageId: record.storageId || record.localStorageId || null,
+                localStorageId: record.storageId || record.localStorageId || null,
+                aaguidHex: normalizedAaguidHex || record.aaguidHex || null,
+                credentialIdHex: getCredentialIdHex(record),
+                userHandleHex: getCredentialUserHandleHex(record),
+            };
+        }
 
         return {
-            ...cred,
-            type: cred.type || 'advanced',
-            storageId: cred.storageId || cred.localStorageId || null,
-            localStorageId: cred.storageId || cred.localStorageId || null,
-            aaguidHex: normalizedAaguidHex || cred.aaguidHex || null,
-            credentialIdHex: getCredentialIdHex(cred),
-            userHandleHex: getCredentialUserHandleHex(cred),
+            ...record,
+            type: 'simple',
+            credentialIdHex: getCredentialIdHex(record),
+            userHandleHex: getCredentialUserHandleHex(record),
         };
     });
 
-    state.storedCredentials = [...advancedCredentials, ...simpleCredentials];
+    state.storedCredentials = mappedCredentials;
     updateCredentialsDisplay();
     updateJsonEditor();
 }

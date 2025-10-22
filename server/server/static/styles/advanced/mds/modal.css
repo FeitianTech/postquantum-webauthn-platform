@@ -24,10 +24,6 @@
     z-index: 1250;
 }
 
-#mds-certificate-modal {
-    z-index: 1300;
-}
-
 .mds-modal[hidden] {
     display: none;
 }
@@ -147,6 +143,13 @@
     align-items: stretch;
 }
 
+#mds-certificate-page .mds-modal__grid {
+    display: flex;
+    flex-direction: column;
+    gap: 1.1rem;
+    align-items: stretch;
+}
+
 .mds-modal__section {
     display: flex;
     flex-direction: column;
@@ -255,11 +258,12 @@
 .mds-certificate-summary {
     display: flex;
     flex-direction: column;
-    gap: 1.1rem;
+    gap: 1.2rem;
     background: rgba(243, 247, 251, 0.65);
     border-radius: 18px;
     padding: 1.15rem 1.3rem;
     box-shadow: inset 0 0 0 1px rgba(0, 114, 206, 0.08);
+    margin-bottom: 1.1rem;
 }
 
 .mds-certificate-summary__section {
@@ -284,10 +288,23 @@
 }
 
 .mds-certificate-summary__label {
-    font-size: 0.78rem;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
+    font-size: 0.88rem;
+    font-weight: 600;
+    text-transform: none;
+    letter-spacing: 0;
     color: var(--muted-text);
+}
+
+.mds-certificate-summary__label--primary {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--primary-dark);
+}
+
+.mds-certificate-summary__heading {
+    font-size: 1.08rem;
+    font-weight: 700;
+    color: var(--primary-dark);
 }
 
 .mds-certificate-summary__value {

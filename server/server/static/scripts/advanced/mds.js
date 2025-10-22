@@ -1896,19 +1896,12 @@ function initializeState(root) {
     }
 
     const listSection = root.querySelector('#mds-list-section');
-    const certificateModal = root.querySelector('#mds-certificate-modal');
-    const certificateClose = root.querySelector('#mds-certificate-modal-close');
-    const certificateBody = root.querySelector('#mds-certificate-modal-body');
+    const certificatePage = root.querySelector('#mds-certificate-page');
+    const certificateClose = root.querySelector('#mds-certificate-page-close');
+    const certificateBody = root.querySelector('#mds-certificate-page-body');
     const certificateSummary = root.querySelector('#mds-certificate-summary');
     if (certificateClose) {
-        certificateClose.addEventListener('click', () => closeCertificateModal());
-    }
-    if (certificateModal) {
-        certificateModal.addEventListener('click', event => {
-            if (event.target === certificateModal) {
-                closeCertificateModal();
-            }
-        });
+        certificateClose.addEventListener('click', () => closeCertificatePage());
     }
 
     const authenticatorModal = root.querySelector('#mds-authenticator-modal');
@@ -1986,12 +1979,14 @@ function initializeState(root) {
         updateOverlayActions: overlayActions,
         updateOverlayCancelHandler: null,
         updateOverlayAllowCancel: false,
-        certificateModal,
-        certificateModalBody: certificateBody,
+        certificatePage,
+        certificatePageBody: certificateBody,
         certificateInput: root.querySelector('#mds-certificate-input'),
         certificateOutput: root.querySelector('#mds-certificate-output'),
-        certificateTitle: root.querySelector('#mds-certificate-modal-title'),
+        certificateTitle: root.querySelector('#mds-certificate-page-title'),
+        certificateSubtitle: root.querySelector('#mds-certificate-page-subtitle'),
         certificateSummary,
+        certificateClose,
         authenticatorModal,
         authenticatorModalContent: root.querySelector('#mds-authenticator-modal-content'),
         authenticatorModalTitle: root.querySelector('#mds-authenticator-modal-title'),
@@ -3002,7 +2997,8 @@ function notifyGlobalScrollLock() {
     const overlayActive = document.getElementById('json-editor-overlay')?.classList.contains('active');
     const modalActive = document.querySelector('.modal.open');
     const mdsModalActive = document.querySelector('.mds-modal:not([hidden])');
-    const shouldLock = Boolean(overlayActive || modalActive || mdsModalActive);
+    const detailPageActive = document.querySelector('.mds-detail-page.mds-detail-page--open');
+    const shouldLock = Boolean(overlayActive || modalActive || mdsModalActive || detailPageActive);
 
     const targets = [document.body, document.documentElement].filter(Boolean);
     targets.forEach(target => target.classList.toggle('modal-open', shouldLock));
@@ -3469,7 +3465,7 @@ function renderAttestationCertificates(certificates) {
         button.type = 'button';
         button.className = 'mds-certificate-button';
         button.textContent = `Certificate ${index + 1}`;
-        button.addEventListener('click', () => openCertificateModal(certificate));
+        button.addEventListener('click', () => openCertificatePage(certificate));
         container.appendChild(button);
         void updateCertificateButtonLabel(button, certificate);
     });
@@ -3818,8 +3814,8 @@ async function updateCertificateButtonLabel(button, certificate) {
     }
 }
 
-async function openCertificateModal(certificate) {
-    if (!mdsState?.certificateModal) {
+async function openCertificatePage(certificate) {
+    if (!mdsState?.certificatePage) {
         return;
     }
 
@@ -3841,31 +3837,58 @@ async function openCertificateModal(certificate) {
     if (mdsState.certificateTitle) {
         mdsState.certificateTitle.textContent = 'Attestation Certificate';
     }
+    if (mdsState.certificateSubtitle) {
+        mdsState.certificateSubtitle.textContent = '';
+        mdsState.certificateSubtitle.hidden = true;
+    }
 
     setCertificateSummaryContent('Decoding certificate…');
+    hideScrollTopButton();
 
-    mdsState.certificateModal.classList.remove('is-closing');
-    mdsState.certificateModal.hidden = false;
-    mdsState.certificateModal.setAttribute('aria-hidden', 'false');
-    if (typeof requestAnimationFrame === 'function') {
-        requestAnimationFrame(() => {
-            if (mdsState?.certificateModal?.hidden) {
-                return;
-            }
-            mdsState.certificateModal.classList.add('is-open');
-        });
-    } else {
-        mdsState.certificateModal.classList.add('is-open');
+    let currentScroll = 0;
+    if (typeof window !== 'undefined') {
+        currentScroll =
+            window.pageYOffset ||
+            document.documentElement?.scrollTop ||
+            document.body?.scrollTop ||
+            0;
     }
+    mdsState.listScrollTop = currentScroll;
+
+    suppressListSection(mdsState.listSection);
+
+    const page = mdsState.certificatePage;
+    page.classList.remove('mds-detail-page--open');
+    page.classList.remove('mds-detail-page--closing');
+    page.hidden = false;
+    page.setAttribute('aria-hidden', 'false');
+
+    const activatePage = () => {
+        if (page.hidden) {
+            return;
+        }
+        page.classList.add('mds-detail-page--open');
+        notifyGlobalScrollLock();
+    };
+    if (typeof requestAnimationFrame === 'function') {
+        requestAnimationFrame(activatePage);
+    } else {
+        activatePage();
+    }
+
     resetScrollPositions(
-        mdsState.certificateModalBody,
-        mdsState.certificateModal,
+        mdsState.certificatePageBody,
+        page,
         mdsState.certificateSummary,
         mdsState.certificateInput,
         mdsState.certificateOutput,
     );
     scheduleCertificateTextareaResize();
-    notifyGlobalScrollLock();
+
+    const focusTarget = mdsState.certificateClose instanceof HTMLElement ? mdsState.certificateClose : null;
+    if (focusTarget) {
+        requestAnimationFrame(() => focusTarget.focus());
+    }
 
     try {
         const details = await decodeCertificate(cleaned);
@@ -3884,6 +3907,16 @@ async function openCertificateModal(certificate) {
         if (subject && mdsState.certificateTitle) {
             mdsState.certificateTitle.textContent = subject;
         }
+        const issuer = details && typeof details.issuer === 'string' ? details.issuer.trim() : '';
+        if (mdsState.certificateSubtitle) {
+            if (issuer) {
+                mdsState.certificateSubtitle.textContent = issuer;
+                mdsState.certificateSubtitle.hidden = false;
+            } else {
+                mdsState.certificateSubtitle.textContent = '';
+                mdsState.certificateSubtitle.hidden = true;
+            }
+        }
         scheduleCertificateTextareaResize();
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Unable to decode certificate.';
@@ -3893,63 +3926,101 @@ async function openCertificateModal(certificate) {
             mdsState.certificateOutput.scrollLeft = 0;
         }
         setCertificateSummaryContent(message);
+        if (mdsState.certificateSubtitle) {
+            mdsState.certificateSubtitle.textContent = '';
+            mdsState.certificateSubtitle.hidden = true;
+        }
         scheduleCertificateTextareaResize();
     }
 }
 
-function closeCertificateModal() {
-    if (!mdsState?.certificateModal) {
+function closeCertificatePage() {
+    if (!mdsState?.certificatePage) {
         return;
     }
 
-    const modal = mdsState.certificateModal;
+    const page = mdsState.certificatePage;
+    if (page.hidden) {
+        return;
+    }
 
-    let completed = false;
-    let fallbackTimeout;
+    const previousScroll =
+        typeof mdsState.listScrollTop === 'number' ? mdsState.listScrollTop : null;
+
+    const clearSubtitle = () => {
+        if (mdsState.certificateSubtitle) {
+            mdsState.certificateSubtitle.textContent = '';
+            mdsState.certificateSubtitle.hidden = true;
+        }
+    };
+
     const finishClose = () => {
-        if (completed) {
-            return;
-        }
-        completed = true;
-        if (fallbackTimeout) {
-            clearTimeout(fallbackTimeout);
-            fallbackTimeout = undefined;
-        }
-        modal.classList.remove('is-open');
-        modal.classList.remove('is-closing');
-        modal.hidden = true;
-        modal.setAttribute('aria-hidden', 'true');
+        page.hidden = true;
+        page.setAttribute('aria-hidden', 'true');
+        page.classList.remove('mds-detail-page--closing');
         resetScrollPositions(
-            mdsState.certificateModalBody,
+            mdsState.certificatePageBody,
+            page,
             mdsState.certificateSummary,
             mdsState.certificateInput,
             mdsState.certificateOutput,
         );
         resetCertificateTextareaHeights();
+        clearSubtitle();
         notifyGlobalScrollLock();
-    };
-
-    if (!modal.classList.contains('is-open')) {
-        finishClose();
-        return;
-    }
-
-    modal.classList.remove('is-open');
-    modal.classList.add('is-closing');
-
-    const handleTransitionEnd = event => {
-        if (event.target !== modal || event.propertyName !== 'opacity') {
-            return;
+        restoreListSection(mdsState.listSection);
+        scheduleScrollTopButtonUpdate();
+        if (previousScroll !== null && typeof window !== 'undefined') {
+            requestAnimationFrame(() => {
+                window.scrollTo(0, previousScroll);
+            });
         }
-        modal.removeEventListener('transitionend', handleTransitionEnd);
-        finishClose();
+        mdsState.listScrollTop = null;
     };
 
-    modal.addEventListener('transitionend', handleTransitionEnd);
-    fallbackTimeout = setTimeout(() => {
-        modal.removeEventListener('transitionend', handleTransitionEnd);
-        finishClose();
-    }, 280);
+    const beginClose = () => {
+        restoreListSection(mdsState.listSection);
+        if (typeof requestAnimationFrame === 'function') {
+            requestAnimationFrame(() => restoreListSection(mdsState.listSection));
+        }
+        page.classList.remove('mds-detail-page--open');
+        page.classList.add('mds-detail-page--closing');
+
+        const scheduleTimeout =
+            typeof window !== 'undefined' && typeof window.setTimeout === 'function'
+                ? window.setTimeout.bind(window)
+                : setTimeout;
+        const cancelTimeout =
+            typeof window !== 'undefined' && typeof window.clearTimeout === 'function'
+                ? window.clearTimeout.bind(window)
+                : clearTimeout;
+
+        let timeoutId = null;
+        const clear = () => {
+            if (timeoutId !== null) {
+                cancelTimeout(timeoutId);
+                timeoutId = null;
+            }
+        };
+
+        const handleTransitionEnd = event => {
+            if (event?.target !== page) {
+                return;
+            }
+            page.removeEventListener('transitionend', handleTransitionEnd);
+            clear();
+            finishClose();
+        };
+
+        page.addEventListener('transitionend', handleTransitionEnd);
+        timeoutId = scheduleTimeout(() => {
+            page.removeEventListener('transitionend', handleTransitionEnd);
+            clear();
+            finishClose();
+        }, 500);
+    };
+
+    beginClose();
 }
 
 function openAuthenticatorRawWindow() {

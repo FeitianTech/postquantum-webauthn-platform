@@ -216,7 +216,6 @@ body.app-loaded > :not(.app-loader) {
     flex-direction: column;
     gap: 1.25rem;
     max-height: calc(100vh - var(--advanced-layout-sticky-top) - 3rem);
-    height: calc(100vh - var(--advanced-layout-sticky-top) - 3rem);
     overflow: visible;
     z-index: 2;
 }
