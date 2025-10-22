@@ -1,5 +1,6 @@
 export const MDS_HTML_PATH = 'templates/advanced/mds-content.html';
 export const MDS_JWS_PATH = 'fido-mds3.jws';
+export const MDS_VERIFIED_JSON_PATH = 'api/mds/metadata/base';
 export const CUSTOM_METADATA_LIST_PATH = 'api/mds/metadata/custom';
 export const CUSTOM_METADATA_UPLOAD_PATH = 'api/mds/metadata/upload';
 export const CUSTOM_METADATA_DELETE_PATH = 'api/mds/metadata/custom';

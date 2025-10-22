@@ -47,6 +47,11 @@ from ..config import (
     create_fido_server,
     determine_rp_id,
 )
+from ..credential_artifacts import (
+    delete_credential_artifact,
+    load_credential_artifact,
+    store_credential_artifact,
+)
 from ..device_logs import record_registration_event
 from ..pqc import (
     PQC_ALGORITHM_ID_TO_NAME,
@@ -111,6 +116,133 @@ for raw_name, alg_id in _COSE_ALGORITHM_NAME_MAP.items():
 
 
 _COSE_ALGORITHM_NUMERIC_PATTERN = re.compile(r"-?\d+")
+
+
+_HEAVY_CREDENTIAL_KEYS = {
+    "attestationObject",
+    "attestation_object",
+    "attestationObjectRaw",
+    "attestation_object_raw",
+    "attestationObjectDecoded",
+    "attestation_object_decoded",
+    "attestationStatement",
+    "attestation_statement",
+    "attestationCertificate",
+    "attestation_certificate",
+    "attestationCertificates",
+    "attestation_certificates",
+    "attestationCertificatesDetails",
+    "attestation_certificates_details",
+    "registrationResponse",
+    "registration_response",
+    "registrationCredential",
+    "registration_credential",
+    "registrationResult",
+    "registration_result",
+    "registrationDetailSnapshot",
+    "registration_detail_snapshot",
+    "registrationDetailHtml",
+    "registration_detail_html",
+    "registrationDetailCombinedHtml",
+    "registration_detail_combined_html",
+    "registrationDetailCopy",
+    "registration_detail_copy",
+    "registrationData",
+    "registration_data",
+    "clientDataJSON",
+    "clientData",
+    "clientDataParsed",
+    "clientDataObject",
+    "client_data_json",
+    "authenticatorData",
+    "authenticator_data",
+    "authenticatorDataHex",
+    "authenticator_data_hex",
+    "authenticatorDataHash",
+    "authenticator_data_hash",
+}
+
+_HEAVY_PROPERTY_KEYS = {
+    "attestationCertificate",
+    "attestationCertificates",
+    "attestation_certificate",
+    "attestation_certificates",
+    "attestationChecks",
+    "attestation_checks",
+    "registrationData",
+    "registration_data",
+}
+
+_HEAVY_RELYING_PARTY_KEYS = {
+    "registrationData",
+    "registration_data",
+    "attestationCertificate",
+    "attestationCertificates",
+    "attestation_certificate",
+    "attestation_certificates",
+}
+
+
+def _generate_storage_id(credential_id: str) -> str:
+    base = credential_id[:24] if credential_id else uuid.uuid4().hex
+    timestamp = format(int(time.time() * 1000), "x")
+    random_segment = uuid.uuid4().hex
+    return f"{base}::{timestamp}::{random_segment}"
+
+
+def _summarize_properties(value: Any) -> Optional[Dict[str, Any]]:
+    if not isinstance(value, Mapping):
+        return None
+
+    summary: Dict[str, Any] = {}
+    for key, item in value.items():
+        if key in _HEAVY_PROPERTY_KEYS:
+            continue
+        summary[key] = item
+    return summary if summary else None
+
+
+def _summarize_relying_party(value: Any) -> Optional[Dict[str, Any]]:
+    if not isinstance(value, Mapping):
+        return None
+
+    summary: Dict[str, Any] = {}
+    for key, item in value.items():
+        if key in _HEAVY_RELYING_PARTY_KEYS:
+            continue
+        summary[key] = item
+    return summary if summary else None
+
+
+def _summarize_stored_credential(
+    stored: Mapping[str, Any],
+    storage_id: str,
+) -> Dict[str, Any]:
+    summary: Dict[str, Any] = {}
+
+    for key, value in stored.items():
+        if key in _HEAVY_CREDENTIAL_KEYS:
+            continue
+        summary[key] = value
+
+    properties_summary = _summarize_properties(summary.get("properties"))
+    if properties_summary is not None:
+        summary["properties"] = properties_summary
+    elif "properties" in summary:
+        summary.pop("properties")
+
+    relying_party_summary = _summarize_relying_party(summary.get("relyingParty"))
+    if relying_party_summary is not None:
+        summary["relyingParty"] = relying_party_summary
+    elif "relyingParty" in summary:
+        summary.pop("relyingParty")
+
+    summary["storageId"] = storage_id
+    summary["localStorageId"] = storage_id
+    summary["artifactVersion"] = 1
+    summary["hasServerArtifact"] = True
+
+    return summary
 
 
 def _extract_credential_id(value: Any) -> Optional[bytes]:
@@ -1499,6 +1631,23 @@ def advanced_register_complete():
 
         stored_credential = convert_bytes_for_json({k: v for k, v in stored_credential.items() if v is not None})
 
+        artifact_record = json.loads(json.dumps(stored_credential))
+        storage_id_source = (
+            artifact_record.get("credentialIdBase64Url")
+            or credential_id_b64url
+            or credential_id_hex
+            or ""
+        )
+        storage_id = _generate_storage_id(str(storage_id_source))
+
+        artifact_payload = {
+            "schemaVersion": 1,
+            "storedCredential": artifact_record,
+        }
+        store_credential_artifact(storage_id, artifact_payload)
+
+        summary_credential = _summarize_stored_credential(artifact_record, storage_id)
+
         metadata_description: Optional[str] = None
         if isinstance(metadata_summary, Mapping):
             raw_description = metadata_summary.get("description")
@@ -1525,11 +1674,66 @@ def advanced_register_complete():
         if warnings:
             response_payload["warnings"] = warnings
 
-        response_payload["storedCredential"] = stored_credential
+        response_payload["storedCredential"] = summary_credential
 
         return jsonify(response_payload)
     except Exception as exc:
         return jsonify({"error": str(exc)}), 400
+
+
+@app.route("/api/advanced/credential-artifacts/<string:storage_id>", methods=["GET"])
+def api_get_advanced_credential_artifact(storage_id: str):
+    artifact = load_credential_artifact(storage_id)
+    if artifact is None:
+        return jsonify({"error": "Credential artifact not found."}), 404
+
+    return jsonify({"storageId": storage_id, "artifact": artifact})
+
+
+@app.route("/api/advanced/credential-artifacts/<string:storage_id>", methods=["PUT"])
+def api_put_advanced_credential_artifact(storage_id: str):
+    data = request.get_json(silent=True) or {}
+    merge = True
+    if isinstance(data, Mapping) and "merge" in data:
+        merge = bool(data.get("merge"))
+
+    artifact_payload = None
+    if isinstance(data, Mapping):
+        candidate = data.get("artifact") or data.get("payload")
+        if isinstance(candidate, Mapping):
+            artifact_payload = candidate  # type: ignore[assignment]
+
+    if artifact_payload is None:
+        return jsonify({"error": "Artifact payload must be an object."}), 400
+
+    if not store_credential_artifact(storage_id, artifact_payload, merge=merge):
+        return jsonify({"error": "Unable to store artifact."}), 400
+
+    return jsonify({"status": "OK"})
+
+
+@app.route(
+    "/api/advanced/credential-artifacts/<string:storage_id>/snapshot",
+    methods=["PUT"],
+)
+def api_put_advanced_credential_snapshot(storage_id: str):
+    data = request.get_json(silent=True) or {}
+    snapshot = data.get("snapshot")
+    if snapshot is not None and not isinstance(snapshot, Mapping):
+        return jsonify({"error": "Snapshot must be an object."}), 400
+
+    payload = {"registrationDetailSnapshot": snapshot}
+    if not store_credential_artifact(storage_id, payload, merge=True):
+        return jsonify({"error": "Unable to store artifact snapshot."}), 400
+
+    return jsonify({"status": "OK"})
+
+
+@app.route("/api/advanced/credential-artifacts/<string:storage_id>", methods=["DELETE"])
+def api_delete_advanced_credential_artifact(storage_id: str):
+    deleted = delete_credential_artifact(storage_id)
+    status = "deleted" if deleted else "absent"
+    return jsonify({"status": status})
 
 
 def datetime_from_timestamp(timestamp: float) -> str:
