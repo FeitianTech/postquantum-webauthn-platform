@@ -965,6 +965,7 @@ async function deleteCustomMetadata(storedFilename, options = {}) {
             successMessage: 'Metadata update complete.',
             cancelMessage: 'Metadata update cancelled.',
             failureMessage: 'Metadata update failed.',
+            cancelable: false,
         });
     } catch (error) {
         if (error && error.name === 'AbortError') {
