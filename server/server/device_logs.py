@@ -67,6 +67,7 @@ class _InterProcessFileLock:
 
         while True:
             try:
+                # Open in append mode to create if doesn't exist, but preserve content
                 file_handle = self._path.open("a+")
             except OSError as e:
                 logger.warning(f"Failed to open lock file: {e}")
@@ -74,6 +75,7 @@ class _InterProcessFileLock:
 
             try:
                 if fcntl is not None:
+                    # Try non-blocking lock
                     fcntl.flock(file_handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
                     self._handle = file_handle
                     self._mode = "fcntl"
@@ -99,6 +101,7 @@ class _InterProcessFileLock:
                             file_handle.close()
                             raise
             except BlockingIOError:
+                # Lock is held by another process, close and retry
                 pass
             except OSError as e:
                 logger.warning(f"Lock acquisition failed: {e}")
@@ -412,12 +415,15 @@ class RegistrationLogManager:
                         status.startup_completed = True
                         self._store_delivery_status(status)
                         logger.info("Verification email sent successfully")
+                        # Don't send daily report on same startup as verification
+                        return
                     else:
                         logger.error("Failed to send verification email")
-                    # Continue to check for daily reports (don't return here)
+                        # If verification fails, still allow daily reports to proceed
+                        # to prevent log accumulation
 
-                # Handle daily report emails
-                if status.startup_completed:
+                # Handle daily report emails (runs after verification on subsequent startups,
+                # or immediately if verification failed)
                     should_send_report = False
 
                     if status.last_sent is None:
@@ -429,26 +435,26 @@ class RegistrationLogManager:
                         if last_sent_local.date() != now_local.date():
                             should_send_report = True
 
-                    if should_send_report:
-                        contents = self._read_log_contents()
-                        if contents is not None and contents.strip():
-                            logger.info(f"Sending daily log report for {now_local.date()}")
-                            if self._send_log_report(now_local, contents):
-                                status.last_sent = now_local
-                                self._store_delivery_status(status)
-                                logger.info("Daily log report sent successfully")
-                            else:
-                                logger.error("Failed to send daily log report")
+                if should_send_report:
+                    contents = self._read_log_contents()
+                    if contents is not None and contents.strip():
+                        logger.info(f"Sending daily log report for {now_local.date()}")
+                        if self._send_log_report(now_local, contents):
+                            status.last_sent = now_local
+                            # Mark verification complete even if it was skipped due to failure
+                            if not status.startup_completed:
+                                status.startup_completed = True
+                            self._store_delivery_status(status)
+                            logger.info("Daily log report sent successfully")
                         else:
-                            logger.info("No log entries to send in daily report")
+                            logger.error("Failed to send daily log report")
+                    else:
+                        logger.info("No log entries to send in daily report")
         finally:
             startup_lock.release()
-            # Clean up lock file after release
-            try:
-                if self._startup_lock_path.exists():
-                    self._startup_lock_path.unlink()
-            except OSError:
-                pass
+            # Note: Do NOT delete the lock file here, as it can cause race conditions
+            # where multiple processes think they acquired the lock.
+            # The lock file will be reused on next startup.
 
     # Filesystem helpers --------------------------------------------
 
