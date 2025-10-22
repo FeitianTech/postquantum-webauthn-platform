@@ -1,7 +1,24 @@
     <div class="header">
         <div class="header__branding">
-            <h1>Post-Quantum WebAuthn Test Platform</h1>
-            <div class="header__tabs">
+            <div class="header__brand-row">
+                <h1>Post-Quantum WebAuthn Test Platform</h1>
+                <button
+                    type="button"
+                    class="header__menu-toggle"
+                    data-header-menu-toggle
+                    aria-controls="primary-navigation"
+                    aria-expanded="false"
+                    aria-label="Toggle navigation"
+                >
+                    <span class="header__menu-toggle-icon" aria-hidden="true">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </span>
+                    <span class="header__menu-toggle-label">Menu</span>
+                </button>
+            </div>
+            <div class="header__tabs" data-header-nav>
                 <div class="header-sentinel" aria-hidden="true"></div>
                 {% include 'shared/navigation.html' %}
             </div>
@@ -20,4 +37,5 @@
                 aria-hidden="true"
             />
         </a>
+        <div class="header__overlay" data-header-overlay hidden aria-hidden="true"></div>
     </div>

@@ -545,6 +545,20 @@
     flex: 1;
 }
 
+@media (max-width: 640px) {
+    .input-with-button {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .input-with-button .btn,
+    .input-with-button .btn-small,
+    .input-with-button .btn-secondary {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
 .btn-small {
     padding: 0.35rem 0.85rem;
     font-size: 0.8rem;
@@ -621,6 +635,93 @@
 @media (max-width: 540px) {
     .checkbox-group.checkbox-group--four-columns {
         grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 1280px) {
+    .two-column,
+    .three-column {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+    }
+
+    .advanced-settings-layout {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 1.75rem;
+    }
+
+    .advanced-settings-layout .form-column,
+    .advanced-settings-layout .credentials-column,
+    .advanced-settings-layout .json-editor-column {
+        grid-column: auto;
+        grid-row: auto;
+    }
+
+    .advanced-settings-layout .credentials-column .column-card,
+    .advanced-settings-layout .json-editor-card {
+        position: static;
+        max-height: none;
+        padding: 1.25rem;
+        background: var(--surface-color);
+        border-radius: 20px;
+        box-shadow: var(--shadow-soft);
+        gap: 1.25rem;
+    }
+
+    .advanced-settings-layout .form-card {
+        min-height: 0;
+    }
+
+    .advanced-settings-layout .credentials-column .credentials-panel {
+        max-height: none;
+        overflow: visible;
+        padding: 0;
+    }
+
+    .advanced-settings-layout .json-editor-card .inline-json-editor {
+        box-shadow: none;
+    }
+}
+
+@media (max-width: 1100px) {
+    .settings-nav-column {
+        width: 100%;
+    }
+
+    .settings-nav {
+        position: static;
+        flex-direction: row;
+        align-items: center;
+        gap: 0.85rem;
+        padding: 0.75rem 1rem;
+        overflow-x: auto;
+        background: var(--surface-color);
+        border-radius: 18px;
+        box-shadow: var(--shadow-soft);
+    }
+
+    .settings-nav__item {
+        flex: 0 0 auto;
+        white-space: nowrap;
+        padding: 0.45rem 0.75rem;
+    }
+}
+
+@media (max-width: 900px) {
+    .credential-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+
+    .credential-item-actions {
+        width: 100%;
+        justify-content: flex-start;
+        margin-left: 0;
+    }
+
+    .form-card {
+        min-height: 0;
     }
 }
 
