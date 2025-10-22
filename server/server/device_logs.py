@@ -4,6 +4,7 @@ from __future__ import annotations
 import base64
 import errno
 import json
+import logging
 import os
 import tempfile
 import threading
@@ -33,6 +34,10 @@ LOG_FILENAME = "webauthn_device_logs.log"
 STATUS_FILENAME = "webauthn_device_logs.status"
 LOG_STORAGE_DIRNAME = "webauthn-device-logs"
 STARTUP_LOCK_FILENAME = "webauthn_device_logs.startup.lock"
+MAX_LOG_SIZE_BYTES = 10 * 1024 * 1024  # 10 MB
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 try:  # Unix platforms
     import fcntl  # type: ignore
@@ -63,7 +68,8 @@ class _InterProcessFileLock:
         while True:
             try:
                 file_handle = self._path.open("a+")
-            except OSError:
+            except OSError as e:
+                logger.warning(f"Failed to open lock file: {e}")
                 return False
 
             try:
@@ -94,7 +100,8 @@ class _InterProcessFileLock:
                             raise
             except BlockingIOError:
                 pass
-            except OSError:
+            except OSError as e:
+                logger.warning(f"Lock acquisition failed: {e}")
                 file_handle.close()
                 raise
 
@@ -128,7 +135,7 @@ class _InterProcessFileLock:
                     pass
             elif mode == "link":
                 try:
-                    os.unlink(self._path)
+                    self._path.unlink()
                 except OSError:
                     pass
         finally:
@@ -146,6 +153,7 @@ class _InterProcessFileLock:
                 if self._stale_timeout is not None:
                     try:
                         if time.time() - self._path.stat().st_mtime > self._stale_timeout:
+                            logger.info(f"Removing stale lock file: {self._path}")
                             self._path.unlink()
                             continue
                     except OSError:
@@ -154,7 +162,8 @@ class _InterProcessFileLock:
                 if not self._sleep_until(deadline, poll_interval):
                     return False
                 continue
-            except OSError:
+            except OSError as e:
+                logger.warning(f"Failed to create lock file: {e}")
                 return False
 
             os.close(fd)
@@ -174,6 +183,15 @@ class _InterProcessFileLock:
         time.sleep(min(poll_interval, remaining))
         return True
 
+    def __enter__(self):
+        if not self.acquire():
+            raise RuntimeError("Failed to acquire lock")
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.release()
+        return False
+
 
 def _env_flag(name: str, default: bool = True) -> bool:
     value = os.environ.get(name)
@@ -192,12 +210,15 @@ def _normalise_aaguid(raw_value: Optional[object]) -> str:
         return str(raw_value)
     if isinstance(raw_value, (bytes, bytearray, memoryview)):
         data = bytes(raw_value)
+        if len(data) == 0:
+            return "unknown-aaguid"
         if len(data) == 16:
             try:
                 return str(uuid.UUID(bytes=data))
             except ValueError:
                 pass
-        return data.hex() or "unknown-aaguid"
+        hex_str = data.hex()
+        return hex_str if hex_str else "unknown-aaguid"
     if isinstance(raw_value, str):
         candidate = raw_value.strip()
         if not candidate:
@@ -258,6 +279,17 @@ class EmailConfig:
     retry_attempts: int
     retry_delay_seconds: float
 
+    def __post_init__(self):
+        """Validate that required fields are not empty."""
+        if not self.email_address or not self.email_address.strip():
+            raise ValueError("Email address cannot be empty")
+        if not self.client_id or not self.client_id.strip():
+            raise ValueError("Client ID cannot be empty")
+        if not self.client_secret or not self.client_secret.strip():
+            raise ValueError("Client secret cannot be empty")
+        if not self.refresh_token or not self.refresh_token.strip():
+            raise ValueError("Refresh token cannot be empty")
+
 
 @dataclass
 class _DeliveryStatus:
@@ -283,15 +315,18 @@ class RegistrationLogManager:
 
         try:
             self.log_dir = self._initialise_log_dir()
-        except RuntimeError:
+        except RuntimeError as e:
+            logger.error(f"Failed to initialize log directory: {e}")
             self.enabled = False
             self.delivery_enabled = False
             return
 
         self._log_path = self.log_dir / LOG_FILENAME
         self._status_path = self.log_dir / STATUS_FILENAME
+        self._startup_lock_path = self.log_dir / STARTUP_LOCK_FILENAME
 
         if not self._ensure_log_dir_exists():
+            logger.error("Log directory does not exist and cannot be created")
             self.enabled = False
             self.delivery_enabled = False
             return
@@ -301,8 +336,10 @@ class RegistrationLogManager:
         else:
             # Ensure log file exists for future writes even when delivery disabled.
             try:
-                self._ensure_log_file_exists()
-            except OSError:
+                with self._write_lock:
+                    self._ensure_log_file_exists()
+            except OSError as e:
+                logger.error(f"Failed to create log file: {e}")
                 self.enabled = False
 
     # Public API -----------------------------------------------------
@@ -320,26 +357,35 @@ class RegistrationLogManager:
         try:
             with self._write_lock:
                 self._ensure_log_file_exists()
+                self._check_log_size()
                 with self._log_path.open("a", encoding="utf-8") as handle:
                     handle.write(line + "\n")
                     handle.flush()
-                    os.fsync(handle.fileno())
-        except Exception:
-            # Swallow logging errors to avoid impacting request handling.
-            return
+                    try:
+                        os.fsync(handle.fileno())
+                    except OSError as e:
+                        logger.warning(f"fsync failed: {e}")
+        except (OSError, IOError) as e:
+            # Log specific file-related errors
+            logger.error(f"Failed to write log entry: {e}")
+        except Exception as e:
+            # Catch unexpected errors but log them
+            logger.exception(f"Unexpected error writing log entry: {e}")
 
     # Startup processing --------------------------------------------
 
     def _handle_startup(self) -> None:
-        startup_lock = _InterProcessFileLock(self.log_dir / STARTUP_LOCK_FILENAME)
+        startup_lock = _InterProcessFileLock(self._startup_lock_path)
         acquired = startup_lock.acquire(timeout=10.0)
 
         if not acquired:
+            logger.info("Another process is handling startup; skipping")
             # Another worker will process startup; still ensure local log file exists.
             with self._write_lock:
                 try:
                     self._ensure_log_file_exists()
-                except OSError:
+                except OSError as e:
+                    logger.error(f"Failed to create log file: {e}")
                     self.enabled = False
                     self.delivery_enabled = False
             return
@@ -348,46 +394,71 @@ class RegistrationLogManager:
             with self._write_lock:
                 try:
                     self._ensure_log_file_exists()
-                except OSError:
+                except OSError as e:
+                    logger.error(f"Failed to create log file: {e}")
                     self.enabled = False
                     self.delivery_enabled = False
                     return
 
-                now_local = datetime.now(tz=BEIJING_TZ)
+                # Reload status after acquiring lock to ensure we have the latest state
                 status = self._load_delivery_status()
+                now_local = datetime.now(tz=BEIJING_TZ)
 
+                # Handle first-time verification email
                 if not status.startup_completed:
+                    logger.info("Sending verification email (first startup)")
                     if self._send_verification_email(now_local):
                         status.last_sent = now_local
                         status.startup_completed = True
                         self._store_delivery_status(status)
-                    return
+                        logger.info("Verification email sent successfully")
+                    else:
+                        logger.error("Failed to send verification email")
+                    # Continue to check for daily reports (don't return here)
 
-                last_sent = status.last_sent
-                if last_sent is not None:
-                    last_sent_local = last_sent.astimezone(BEIJING_TZ)
-                    if last_sent_local.date() == now_local.date():
-                        return
+                # Handle daily report emails
+                if status.startup_completed:
+                    should_send_report = False
 
-                contents = self._read_log_contents()
-                if contents is None or not contents.strip():
-                    return
+                    if status.last_sent is None:
+                        # Verification was sent but no daily report yet
+                        should_send_report = True
+                    else:
+                        # Check if we need to send today's report
+                        last_sent_local = status.last_sent.astimezone(BEIJING_TZ)
+                        if last_sent_local.date() != now_local.date():
+                            should_send_report = True
 
-                if self._send_log_report(now_local, contents):
-                    status.last_sent = now_local
-                    status.startup_completed = True
-                    self._store_delivery_status(status)
+                    if should_send_report:
+                        contents = self._read_log_contents()
+                        if contents is not None and contents.strip():
+                            logger.info(f"Sending daily log report for {now_local.date()}")
+                            if self._send_log_report(now_local, contents):
+                                status.last_sent = now_local
+                                self._store_delivery_status(status)
+                                logger.info("Daily log report sent successfully")
+                            else:
+                                logger.error("Failed to send daily log report")
+                        else:
+                            logger.info("No log entries to send in daily report")
         finally:
             startup_lock.release()
+            # Clean up lock file after release
+            try:
+                if self._startup_lock_path.exists():
+                    self._startup_lock_path.unlink()
+            except OSError:
+                pass
 
     # Filesystem helpers --------------------------------------------
 
     def _ensure_log_dir_exists(self) -> bool:
         try:
             self.log_dir.mkdir(parents=True, exist_ok=True)
-        except OSError:
+            return True
+        except OSError as e:
+            logger.error(f"Failed to create log directory: {e}")
             return False
-        return True
 
     def _ensure_log_file_exists(self) -> None:
         try:
@@ -395,14 +466,33 @@ class RegistrationLogManager:
                 with self._log_path.open("a", encoding="utf-8"):
                     pass
         except OSError as exc:
+            logger.error(f"Failed to create log file: {exc}")
             raise exc
+
+    def _check_log_size(self) -> None:
+        """Check if log file exceeds maximum size and truncate if needed."""
+        try:
+            if self._log_path.exists():
+                size = self._log_path.stat().st_size
+                if size > MAX_LOG_SIZE_BYTES:
+                    logger.warning(f"Log file exceeds {MAX_LOG_SIZE_BYTES} bytes, truncating")
+                    # Keep only the last 80% of the file
+                    with self._log_path.open("r", encoding="utf-8") as f:
+                        lines = f.readlines()
+                    keep_lines = int(len(lines) * 0.8)
+                    with self._log_path.open("w", encoding="utf-8") as f:
+                        f.writelines(lines[-keep_lines:])
+        except OSError as e:
+            logger.warning(f"Failed to check/truncate log size: {e}")
 
     def _read_log_contents(self) -> Optional[str]:
         try:
             return self._log_path.read_text(encoding="utf-8")
         except FileNotFoundError:
+            logger.debug("Log file not found")
             return None
-        except OSError:
+        except OSError as e:
+            logger.error(f"Failed to read log file: {e}")
             return None
 
     def _clear_log(self) -> None:
@@ -410,9 +500,12 @@ class RegistrationLogManager:
             with self._log_path.open("w", encoding="utf-8") as handle:
                 handle.truncate(0)
                 handle.flush()
-                os.fsync(handle.fileno())
-        except OSError:
-            pass
+                try:
+                    os.fsync(handle.fileno())
+                except OSError as e:
+                    logger.warning(f"fsync failed while clearing log: {e}")
+        except OSError as e:
+            logger.error(f"Failed to clear log file: {e}")
 
     # Status helpers ------------------------------------------------
 
@@ -420,8 +513,10 @@ class RegistrationLogManager:
         try:
             raw = self._status_path.read_text(encoding="utf-8").strip()
         except FileNotFoundError:
+            logger.debug("Status file not found, using default status")
             return _DeliveryStatus()
-        except OSError:
+        except OSError as e:
+            logger.error(f"Failed to read status file: {e}")
             return _DeliveryStatus()
 
         if not raw:
@@ -430,7 +525,8 @@ class RegistrationLogManager:
         if raw.startswith("{"):
             try:
                 payload = json.loads(raw)
-            except (ValueError, TypeError):
+            except (ValueError, TypeError) as e:
+                logger.error(f"Failed to parse status JSON: {e}")
                 return _DeliveryStatus()
 
             last_sent_raw = payload.get("last_sent_utc")
@@ -439,6 +535,7 @@ class RegistrationLogManager:
             last_sent = _parse_timestamp(last_sent_raw)
             return _DeliveryStatus(last_sent=last_sent, startup_completed=startup_completed)
 
+        # Legacy format: just a timestamp
         last_sent = _parse_timestamp(raw)
         if last_sent is None:
             return _DeliveryStatus()
@@ -453,11 +550,22 @@ class RegistrationLogManager:
         tmp_path = self._status_path.with_suffix(self._status_path.suffix + ".tmp")
 
         try:
-            tmp_path.write_text(json.dumps(payload), encoding="utf-8")
+            with tmp_path.open("w", encoding="utf-8") as f:
+                json.dump(payload, f)
+                f.flush()
+                try:
+                    os.fsync(f.fileno())
+                except OSError as e:
+                    logger.warning(f"fsync failed while storing status: {e}")
+
+            # Atomic replace
             os.replace(tmp_path, self._status_path)
-        except OSError:
+            logger.debug("Status file updated successfully")
+        except OSError as e:
+            logger.error(f"Failed to store status file: {e}")
             try:
-                tmp_path.unlink()
+                if tmp_path.exists():
+                    tmp_path.unlink()
             except OSError:
                 pass
 
@@ -516,9 +624,11 @@ class RegistrationLogManager:
         for candidate in candidates:
             try:
                 candidate.mkdir(parents=True, exist_ok=True)
-            except Exception:
+            except Exception as e:
+                logger.debug(f"Could not create directory {candidate}: {e}")
                 continue
             if candidate.is_dir():
+                logger.info(f"Using log directory: {candidate}")
                 return candidate
 
         raise RuntimeError("Unable to create log directory")
@@ -530,6 +640,7 @@ class RegistrationLogManager:
         refresh_token = os.environ.get("REGISTRATION_LOG_GMAIL_REFRESH_TOKEN")
 
         if not all([email_address, client_id, client_secret, refresh_token]):
+            logger.info("Email configuration incomplete, delivery disabled")
             return None
 
         try:
@@ -544,14 +655,20 @@ class RegistrationLogManager:
             retry_delay = 5.0
         retry_delay = max(retry_delay, 1.0)
 
-        return EmailConfig(
-            email_address=email_address,
-            client_id=client_id,
-            client_secret=client_secret,
-            refresh_token=refresh_token,
-            retry_attempts=retry_attempts,
-            retry_delay_seconds=retry_delay,
-        )
+        try:
+            config = EmailConfig(
+                email_address=email_address,
+                client_id=client_id,
+                client_secret=client_secret,
+                refresh_token=refresh_token,
+                retry_attempts=retry_attempts,
+                retry_delay_seconds=retry_delay,
+            )
+            logger.info("Email configuration loaded successfully")
+            return config
+        except ValueError as e:
+            logger.error(f"Invalid email configuration: {e}")
+            return None
 
     def _fetch_gmail_access_token(self) -> Optional[str]:
         if not self._email_config:
@@ -576,22 +693,43 @@ class RegistrationLogManager:
         try:
             with urllib_request.urlopen(request, timeout=30) as response:
                 data = response.read()
-        except (urllib_error.HTTPError, urllib_error.URLError):
+        except urllib_error.HTTPError as e:
+            logger.error(f"HTTP error fetching access token: {e.code} {e.reason}")
+            return None
+        except urllib_error.URLError as e:
+            logger.error(f"URL error fetching access token: {e.reason}")
             return None
 
         try:
             token_payload = json.loads(data.decode("utf-8"))
-        except (ValueError, UnicodeDecodeError):
+        except (ValueError, UnicodeDecodeError) as e:
+            logger.error(f"Failed to parse token response: {e}")
             return None
 
         access_token = token_payload.get("access_token")
         if not isinstance(access_token, str) or not access_token:
+            logger.error("Invalid access token in response")
             return None
 
         return access_token
 
+    def _is_retryable_error(self, exc: Exception) -> bool:
+        """Determine if an error is transient and should be retried."""
+        if isinstance(exc, urllib_error.HTTPError):
+            # Retry on server errors (5xx) and rate limits (429)
+            # Don't retry on client errors (4xx) except 429
+            if exc.code >= 500 or exc.code == 429:
+                return True
+            return False
+        if isinstance(exc, urllib_error.URLError):
+            # Network errors are typically retryable
+            return True
+        # Other errors (RuntimeError, ValueError) are not retryable
+        return False
+
     def _deliver_email(self, subject: str, body: str) -> bool:
         if not self._email_config:
+            logger.error("Cannot deliver email: no email configuration")
             return False
 
         message = EmailMessage()
@@ -600,6 +738,7 @@ class RegistrationLogManager:
         message["To"] = self._email_config.email_address
         message.set_content(body)
 
+        last_error = None
         for attempt in range(1, self._email_config.retry_attempts + 1):
             try:
                 access_token = self._fetch_gmail_access_token()
@@ -623,11 +762,23 @@ class RegistrationLogManager:
                     if status is None:
                         status = response.getcode()
                     if 200 <= status < 300:
+                        logger.info(f"Email delivered successfully (attempt {attempt})")
                         return True
                     raise RuntimeError(f"Unexpected Gmail API response status: {status}")
-            except (urllib_error.HTTPError, urllib_error.URLError, RuntimeError, ValueError):
+            except (urllib_error.HTTPError, urllib_error.URLError, RuntimeError, ValueError) as e:
+                last_error = e
+                logger.warning(f"Email delivery attempt {attempt} failed: {e}")
+
                 if attempt >= self._email_config.retry_attempts:
+                    logger.error(f"All {self._email_config.retry_attempts} email delivery attempts failed")
                     return False
+
+                # Only retry if the error is transient
+                if not self._is_retryable_error(e):
+                    logger.error(f"Non-retryable error, not retrying: {e}")
+                    return False
+
+                logger.info(f"Retrying in {self._email_config.retry_delay_seconds} seconds...")
                 time.sleep(self._email_config.retry_delay_seconds)
 
         return False
