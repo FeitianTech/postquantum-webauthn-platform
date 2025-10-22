@@ -1,4 +1,4 @@
-"""Background logging and email delivery for WebAuthn device registrations."""
+"""Startup-driven logging and email delivery for WebAuthn device registrations."""
 from __future__ import annotations
 
 import base64
@@ -9,10 +9,10 @@ import threading
 import time
 import uuid
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timezone
 from email.message import EmailMessage
 from pathlib import Path
-from typing import Iterable, Optional
+from typing import Optional
 
 from urllib import error as urllib_error
 from urllib import parse as urllib_parse
@@ -28,13 +28,8 @@ __all__ = ["record_registration_event"]
 
 BEIJING_TZ = ZoneInfo("Asia/Shanghai")
 TIMEZONE_LABEL = "CST"
-LOG_PREFIX = "webauthn_device_logs_"
-LOG_SUFFIX = ".log"
-REPORT_HOUR = 9
-LOCK_FILENAME = "webauthn_device_logs.lock"
-STALE_LOCK_MAX_AGE_SECONDS = 6 * 60 * 60  # 6 hours
+LOG_FILENAME = "webauthn_device_logs.log"
 STATUS_FILENAME = "webauthn_device_logs.status"
-MAX_LOCK_RECURSION_DEPTH = 3
 LOG_STORAGE_DIRNAME = "webauthn-device-logs"
 
 
@@ -95,11 +90,10 @@ class EmailConfig:
 
 
 class RegistrationLogManager:
-    """Coordinate log writes and scheduled email delivery."""
+    """Coordinate log writes and perform startup email delivery."""
 
     def __init__(self) -> None:
         self._write_lock = threading.Lock()
-        self._thread: Optional[threading.Thread] = None
         self._email_config = self._load_email_config()
         self.delivery_enabled = self._email_config is not None and _env_flag(
             "REGISTRATION_LOG_EMAIL_ENABLED", default=True
@@ -113,49 +107,172 @@ class RegistrationLogManager:
             self.delivery_enabled = False
             return
 
-        self._lock_path = self.log_dir / LOCK_FILENAME
+        self._log_path = self.log_dir / LOG_FILENAME
         self._status_path = self.log_dir / STATUS_FILENAME
-        self._last_processed_report_date = self._load_last_processed_report_date()
 
-        # Clean up any stale scheduler lock left over from crashes or deploys.
-        self._remove_stale_lock_if_present()
-
-        if not self.delivery_enabled:
+        if not self._ensure_log_dir_exists():
+            self.enabled = False
+            self.delivery_enabled = False
             return
 
-        # Process any due reports immediately (e.g., after restarts).
-        self._process_due_reports(initial=True)
+        if self.delivery_enabled:
+            self._handle_startup()
+        else:
+            # Ensure log file exists for future writes even when delivery disabled.
+            try:
+                self._ensure_log_file_exists()
+            except OSError:
+                self.enabled = False
 
-        self._thread = threading.Thread(
-            target=self._run_scheduler,
-            name="RegistrationLogScheduler",
-            daemon=True,
-        )
-        self._thread.start()
+    # Public API -----------------------------------------------------
 
     def record_event(self, aaguid: Optional[object], authenticator_name: Optional[str]) -> None:
         if not self.enabled:
             return
 
         timestamp = datetime.now(tz=BEIJING_TZ)
-        report_date = self._report_date_for_timestamp(timestamp)
         line = (
             f"{timestamp.strftime('%Y-%m-%d %H:%M:%S')} ({TIMEZONE_LABEL}) | "
             f"{_normalise_aaguid(aaguid)} | {_clean_authenticator_name(authenticator_name)}"
         )
 
-        log_path = self._log_path_for_date(report_date)
         try:
             with self._write_lock:
-                if not self.log_dir.exists():
-                    self.log_dir.mkdir(parents=True, exist_ok=True)
-                with log_path.open("a", encoding="utf-8") as handle:
+                self._ensure_log_file_exists()
+                with self._log_path.open("a", encoding="utf-8") as handle:
                     handle.write(line + "\n")
                     handle.flush()
                     os.fsync(handle.fileno())
         except Exception:
             # Swallow logging errors to avoid impacting request handling.
             return
+
+    # Startup processing --------------------------------------------
+
+    def _handle_startup(self) -> None:
+        with self._write_lock:
+            try:
+                self._ensure_log_file_exists()
+            except OSError:
+                self.enabled = False
+                self.delivery_enabled = False
+                return
+            now_local = datetime.now(tz=BEIJING_TZ)
+            last_sent = self._load_last_send_time()
+
+            if last_sent is None:
+                self._send_verification_email(now_local)
+                return
+
+            last_sent_local = last_sent.astimezone(BEIJING_TZ)
+            if last_sent_local.date() == now_local.date():
+                return
+
+            contents = self._read_log_contents()
+            if contents is None or not contents.strip():
+                return
+
+            self._send_log_report(now_local, contents)
+
+    # Filesystem helpers --------------------------------------------
+
+    def _ensure_log_dir_exists(self) -> bool:
+        try:
+            self.log_dir.mkdir(parents=True, exist_ok=True)
+        except OSError:
+            return False
+        return True
+
+    def _ensure_log_file_exists(self) -> None:
+        try:
+            if not self._log_path.exists():
+                with self._log_path.open("a", encoding="utf-8"):
+                    pass
+        except OSError as exc:
+            raise exc
+
+    def _read_log_contents(self) -> Optional[str]:
+        try:
+            return self._log_path.read_text(encoding="utf-8")
+        except FileNotFoundError:
+            return None
+        except OSError:
+            return None
+
+    def _clear_log(self) -> None:
+        try:
+            with self._log_path.open("w", encoding="utf-8") as handle:
+                handle.truncate(0)
+                handle.flush()
+                os.fsync(handle.fileno())
+        except OSError:
+            pass
+
+    # Status helpers ------------------------------------------------
+
+    def _load_last_send_time(self) -> Optional[datetime]:
+        try:
+            raw = self._status_path.read_text(encoding="utf-8").strip()
+        except FileNotFoundError:
+            return None
+        except OSError:
+            return None
+
+        if not raw:
+            return None
+
+        try:
+            parsed = datetime.fromisoformat(raw)
+        except ValueError:
+            try:
+                legacy_date = date.fromisoformat(raw)
+            except ValueError:
+                return None
+            return datetime(legacy_date.year, legacy_date.month, legacy_date.day, tzinfo=BEIJING_TZ)
+
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=timezone.utc)
+
+        return parsed
+
+    def _store_last_send_time(self, timestamp: datetime) -> None:
+        safe_ts = timestamp.astimezone(timezone.utc)
+        try:
+            self._status_path.write_text(safe_ts.isoformat(), encoding="utf-8")
+        except OSError:
+            pass
+
+    # Email helpers -------------------------------------------------
+
+    def _send_verification_email(self, now_local: datetime) -> None:
+        contents = self._read_log_contents()
+        if contents is None:
+            contents = ""
+
+        subject = "WebAuthn Device Logs - verification startup"
+        body_lines = [
+            "Startup verification email for WebAuthn device logs.",
+            "",
+        ]
+        if contents.strip():
+            body_lines.append("Existing log entries:")
+            body_lines.append(contents.rstrip())
+        else:
+            body_lines.append("No device registrations have been recorded yet.")
+        body = "\n".join(body_lines).rstrip() + "\n"
+
+        if self._deliver_email(subject, body):
+            self._clear_log()
+            self._store_last_send_time(now_local)
+
+    def _send_log_report(self, now_local: datetime, contents: str) -> None:
+        subject = f"WebAuthn Device Logs (Beijing time {now_local.date().isoformat()})"
+        body = contents.rstrip() + "\n"
+        if self._deliver_email(subject, body):
+            self._clear_log()
+            self._store_last_send_time(now_local)
+
+    # Internal helpers ---------------------------------------------
 
     def _initialise_log_dir(self) -> Path:
         configured = os.environ.get("REGISTRATION_LOG_DIRECTORY")
@@ -184,8 +301,6 @@ class RegistrationLogManager:
                 return candidate
 
         raise RuntimeError("Unable to create log directory")
-
-    # Internal helpers -------------------------------------------------
 
     def _load_email_config(self) -> Optional[EmailConfig]:
         email_address = os.environ.get("REGISTRATION_LOG_GMAIL_ADDRESS")
@@ -216,279 +331,6 @@ class RegistrationLogManager:
             retry_attempts=retry_attempts,
             retry_delay_seconds=retry_delay,
         )
-
-    def _report_date_for_timestamp(self, ts: datetime) -> date:
-        local_ts = ts.astimezone(BEIJING_TZ)
-        cutoff = local_ts.replace(hour=REPORT_HOUR, minute=0, second=0, microsecond=0)
-        if local_ts < cutoff:
-            return local_ts.date()
-        return (local_ts + timedelta(days=1)).date()
-
-    def _log_path_for_date(self, report_date: date) -> Path:
-        filename = f"{LOG_PREFIX}{report_date.isoformat()}{LOG_SUFFIX}"
-        return self.log_dir / filename
-
-    def _acquire_lock(self, recursion_depth: int = 0) -> bool:
-        if recursion_depth >= MAX_LOCK_RECURSION_DEPTH:
-            return False
-
-        try:
-            fd = os.open(self._lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-        except FileExistsError:
-            if self._remove_stale_lock_if_present():
-                return self._acquire_lock(recursion_depth + 1)
-            return False
-        except OSError:
-            return False
-        else:
-            with os.fdopen(fd, "w", encoding="utf-8") as handle:
-                handle.write(f"pid={os.getpid()}\n")
-                handle.write(f"timestamp={int(time.time())}\n")
-            return True
-
-    def _release_lock(self) -> None:
-        try:
-            os.unlink(self._lock_path)
-        except FileNotFoundError:
-            pass
-        except OSError:
-            pass
-
-    def _run_scheduler(self) -> None:
-        while True:
-            sleep_seconds = self._seconds_until_next_run()
-            time.sleep(sleep_seconds)
-            self._process_due_reports(initial=False)
-
-    def _seconds_until_next_run(self) -> float:
-        now_utc = datetime.now(tz=timezone.utc)
-        local_now = now_utc.astimezone(BEIJING_TZ)
-        target = local_now.replace(hour=REPORT_HOUR, minute=0, second=0, microsecond=0)
-        if local_now >= target:
-            target = target + timedelta(days=1)
-        delta = target - local_now
-        seconds = delta.total_seconds()
-        return max(seconds, 60.0)
-
-    def _due_log_files(self, due_through_date: date) -> Iterable[tuple[date, Path]]:
-        for path in sorted(self.log_dir.glob(f"{LOG_PREFIX}*{LOG_SUFFIX}")):
-            report_date = self._parse_report_date(path.name)
-            if report_date is None or report_date > due_through_date:
-                continue
-            yield report_date, path
-
-    def _parse_report_date(self, filename: str) -> Optional[date]:
-        if not filename.startswith(LOG_PREFIX) or not filename.endswith(LOG_SUFFIX):
-            return None
-        raw = filename[len(LOG_PREFIX) : -len(LOG_SUFFIX)]
-        try:
-            return date.fromisoformat(raw)
-        except ValueError:
-            return None
-
-    def _scheduled_report_date(self, now_local: datetime) -> date:
-        cutoff = now_local.replace(hour=REPORT_HOUR, minute=0, second=0, microsecond=0)
-        if now_local >= cutoff:
-            return now_local.date()
-        return (now_local - timedelta(days=1)).date()
-
-    def _process_due_reports(self, *, initial: bool) -> None:
-        if not (self.enabled and self.delivery_enabled):
-            return
-        if not self._acquire_lock():
-            return
-
-        try:
-            now_local = datetime.now(tz=BEIJING_TZ)
-            due_through_date = self._scheduled_report_date(now_local)
-            attempted = False
-            failed = False
-            sent_count = 0
-            empty_count = 0
-
-            for report_date, path in self._due_log_files(due_through_date):
-                if (
-                    self._last_processed_report_date is not None
-                    and report_date <= self._last_processed_report_date
-                    and not self._should_force_resend(report_date, path, now_local)
-                ):
-                    continue
-
-                attempted = True
-                send_result = self._send_report(report_date, path)
-
-                if send_result == "sent":
-                    sent_count += 1
-                    self._last_processed_report_date = report_date
-                    self._store_last_processed_report_date(report_date)
-                elif send_result == "empty":
-                    empty_count += 1
-                    self._last_processed_report_date = report_date
-                    self._store_last_processed_report_date(report_date)
-                else:  # "failed"
-                    failed = True
-                    break
-
-            # Only update status to due_through_date if all reports were processed successfully
-            if not failed and attempted:
-                if (
-                    self._last_processed_report_date is None
-                    or self._last_processed_report_date < due_through_date
-                ):
-                    self._last_processed_report_date = due_through_date
-                    self._store_last_processed_report_date(due_through_date)
-
-            # Print summary only once per run
-            if not initial:
-                if sent_count > 0:
-                    print(f"Sent {sent_count} device log report(s) and deleted file(s)")
-                elif empty_count > 0 or not attempted:
-                    print("No device logs today")
-        finally:
-            self._release_lock()
-
-    def _send_report(self, report_date: date, path: Path) -> str:
-        """
-        Send a report for the given date.
-
-        Returns:
-            "sent" if email was successfully sent
-            "empty" if log file was empty (and deleted)
-            "failed" if there was an error
-        """
-        try:
-            content = path.read_text(encoding="utf-8")
-        except FileNotFoundError:
-            return "failed"
-        except OSError:
-            return "failed"
-
-        if not content.strip():
-            try:
-                path.unlink()
-            except (FileNotFoundError, OSError):
-                pass
-            return "empty"
-
-        if not self._email_config:
-            return "failed"
-
-        subject = f"WebAuthn Device Logs (Beijing time {report_date.isoformat()})"
-        if self._deliver_email(subject, content):
-            try:
-                path.unlink()
-            except (FileNotFoundError, OSError):
-                pass
-            return "sent"
-
-        return "failed"
-
-    def _remove_stale_lock_if_present(self) -> bool:
-        try:
-            metadata = self._lock_path.read_text(encoding="utf-8")
-        except FileNotFoundError:
-            return False
-        except OSError:
-            metadata = ""
-
-        if not self._is_lock_stale(metadata):
-            return False
-
-        try:
-            self._lock_path.unlink()
-            return True
-        except FileNotFoundError:
-            return False
-        except OSError:
-            return False
-
-    def _is_lock_stale(self, metadata: str) -> bool:
-        pid = None
-        timestamp = None
-
-        for line in metadata.splitlines():
-            if line.startswith("pid="):
-                try:
-                    pid = int(line.split("=", 1)[1])
-                except (ValueError, IndexError):
-                    pid = None
-            if line.startswith("timestamp="):
-                try:
-                    timestamp = int(line.split("=", 1)[1])
-                except (ValueError, IndexError):
-                    timestamp = None
-
-        if pid is not None:
-            if not self._process_alive(pid):
-                return True
-
-        if timestamp is not None:
-            age = time.time() - timestamp
-            if age >= STALE_LOCK_MAX_AGE_SECONDS:
-                return True
-
-        try:
-            stat_result = self._lock_path.stat()
-        except OSError:
-            return False
-
-        age = time.time() - stat_result.st_mtime
-        return age >= STALE_LOCK_MAX_AGE_SECONDS
-
-    @staticmethod
-    def _process_alive(pid: int) -> bool:
-        if pid <= 0:
-            return False
-        try:
-            os.kill(pid, 0)
-        except ProcessLookupError:
-            return False
-        except PermissionError:
-            return True
-        except OSError:
-            return False
-        return True
-
-    def _load_last_processed_report_date(self) -> Optional[date]:
-        try:
-            raw = self._status_path.read_text(encoding="utf-8").strip()
-        except FileNotFoundError:
-            return None
-        except OSError:
-            return None
-
-        if not raw:
-            return None
-
-        try:
-            return date.fromisoformat(raw)
-        except ValueError:
-            return None
-
-    def _store_last_processed_report_date(self, report_date: date) -> None:
-        try:
-            self._status_path.write_text(report_date.isoformat(), encoding="utf-8")
-        except OSError:
-            pass
-
-    def _should_force_resend(self, report_date: date, path: Path, now_local: datetime) -> bool:
-        if now_local.date() <= report_date:
-            return False
-
-        if (now_local.date() - report_date) < timedelta(days=1):
-            return False
-
-        try:
-            stat_result = path.stat()
-        except FileNotFoundError:
-            return False
-        except OSError:
-            return False
-
-        if stat_result.st_size <= 0:
-            return False
-
-        return True
 
     def _fetch_gmail_access_token(self) -> Optional[str]:
         if not self._email_config:
@@ -535,7 +377,7 @@ class RegistrationLogManager:
         message["Subject"] = subject
         message["From"] = self._email_config.email_address
         message["To"] = self._email_config.email_address
-        message.set_content(body.rstrip() + "\n")
+        message.set_content(body)
 
         for attempt in range(1, self._email_config.retry_attempts + 1):
             try:
