@@ -682,7 +682,7 @@ function updateCustomMetadataList(items, targetState = mdsState) {
 function handleCustomPanelKeydown(event) {
     if (event.key === 'Escape') {
         event.stopPropagation();
-        closeCustomMetadataPanel();
+        event.preventDefault();
     }
 }
 
@@ -1729,7 +1729,6 @@ function initializeState(root) {
     const customList = root.querySelector('#mds-custom-list');
     const customDropzone = root.querySelector('#mds-custom-dropzone');
     const customFileInput = root.querySelector('#mds-custom-file-input');
-    const customBackdrop = customPanel?.querySelector('[data-action="close"]');
 
     const overlay = document.createElement('div');
     overlay.id = 'mds-update-overlay';
@@ -1779,13 +1778,6 @@ function initializeState(root) {
 
     if (customPanel) {
         customPanel.addEventListener('keydown', handleCustomPanelKeydown);
-    }
-
-    if (customBackdrop instanceof HTMLElement) {
-        customBackdrop.addEventListener('click', event => {
-            event.preventDefault();
-            closeCustomMetadataPanel();
-        });
     }
 
     if (customPanelClose instanceof HTMLElement) {

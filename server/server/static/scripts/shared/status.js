@@ -27,6 +27,8 @@ export function showStatus(tabId, message, type) {
         return;
     }
 
+    hideAllStatuses();
+
     clearStatusTimeout(statusEl);
 
     statusEl.className = `status ${type}`;
