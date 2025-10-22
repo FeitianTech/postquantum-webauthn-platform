@@ -218,9 +218,13 @@ function showMetadataUpdateOverlay(message, options = {}) {
     const overlay = mdsState?.updateOverlay;
     const messageEl = mdsState?.updateOverlayMessage;
     const cancelButton = mdsState?.updateOverlayCancel;
-    const onCancel = typeof options.onCancel === 'function' ? options.onCancel : null;
+    const actionsEl = mdsState?.updateOverlayActions;
+    const allowCancel = options && Object.prototype.hasOwnProperty.call(options, 'cancelable')
+        ? Boolean(options.cancelable)
+        : true;
+    const onCancel = allowCancel && typeof options.onCancel === 'function' ? options.onCancel : null;
 
-    if (!overlay || !messageEl || !(cancelButton instanceof HTMLButtonElement)) {
+    if (!overlay || !messageEl) {
         return {
             updateMessage() {},
             setCancelable() {},
@@ -228,23 +232,28 @@ function showMetadataUpdateOverlay(message, options = {}) {
         };
     }
 
-    if (mdsState.updateOverlayCancelHandler) {
+    if (cancelButton && mdsState.updateOverlayCancelHandler) {
         cancelButton.removeEventListener('click', mdsState.updateOverlayCancelHandler);
     }
 
-    const handleCancel = event => {
-        event.preventDefault();
-        if (cancelButton.disabled) {
-            return;
-        }
-        cancelButton.blur();
-        if (onCancel) {
-            onCancel();
-        }
-    };
+    let handleCancel = null;
+    if (allowCancel && cancelButton instanceof HTMLButtonElement) {
+        handleCancel = event => {
+            event.preventDefault();
+            if (cancelButton.disabled) {
+                return;
+            }
+            cancelButton.blur();
+            if (onCancel) {
+                onCancel();
+            }
+        };
 
-    cancelButton.addEventListener('click', handleCancel);
-    mdsState.updateOverlayCancelHandler = handleCancel;
+        cancelButton.addEventListener('click', handleCancel);
+        mdsState.updateOverlayCancelHandler = handleCancel;
+    } else {
+        mdsState.updateOverlayCancelHandler = null;
+    }
 
     overlay.hidden = false;
     overlay.removeAttribute('hidden');
@@ -254,11 +263,25 @@ function showMetadataUpdateOverlay(message, options = {}) {
 
     const initialMessage = typeof message === 'string' && message.trim()
         ? message.trim()
-        : 'Updating FIDO MDS metadata…';
+        : 'MDS is updating…';
     messageEl.textContent = initialMessage;
 
-    cancelButton.disabled = false;
-    cancelButton.removeAttribute('aria-disabled');
+    if (cancelButton instanceof HTMLButtonElement) {
+        cancelButton.hidden = !allowCancel;
+        cancelButton.setAttribute('aria-hidden', allowCancel ? 'false' : 'true');
+        cancelButton.disabled = !allowCancel;
+        if (allowCancel) {
+            cancelButton.removeAttribute('aria-disabled');
+        } else {
+            cancelButton.setAttribute('aria-disabled', 'true');
+        }
+    }
+
+    if (actionsEl instanceof HTMLElement) {
+        actionsEl.hidden = !allowCancel;
+    }
+
+    mdsState.updateOverlayAllowCancel = allowCancel;
 
     return {
         updateMessage(text) {
@@ -267,7 +290,7 @@ function showMetadataUpdateOverlay(message, options = {}) {
             }
         },
         setCancelable(isCancelable) {
-            if (!(cancelButton instanceof HTMLButtonElement)) {
+            if (!allowCancel || !(cancelButton instanceof HTMLButtonElement)) {
                 return;
             }
             const enable = Boolean(isCancelable);
@@ -284,10 +307,22 @@ function showMetadataUpdateOverlay(message, options = {}) {
                 overlay.hidden = true;
                 overlay.setAttribute('aria-hidden', 'true');
                 overlay.removeAttribute('aria-busy');
-                if (mdsState.updateOverlayCancelHandler === handleCancel) {
-                    cancelButton.removeEventListener('click', handleCancel);
+                if (cancelButton instanceof HTMLButtonElement) {
+                    if (handleCancel && mdsState.updateOverlayCancelHandler === handleCancel) {
+                        cancelButton.removeEventListener('click', handleCancel);
+                        mdsState.updateOverlayCancelHandler = null;
+                    }
+                    cancelButton.hidden = true;
+                    cancelButton.setAttribute('aria-hidden', 'true');
+                    cancelButton.disabled = true;
+                    cancelButton.setAttribute('aria-disabled', 'true');
+                } else {
                     mdsState.updateOverlayCancelHandler = null;
                 }
+                if (actionsEl instanceof HTMLElement) {
+                    actionsEl.hidden = true;
+                }
+                mdsState.updateOverlayAllowCancel = false;
             };
 
             if (delay > 0) {
@@ -302,7 +337,7 @@ function showMetadataUpdateOverlay(message, options = {}) {
 async function runWithMetadataUpdateOverlay(task, options = {}) {
     const startMessage = typeof options.startMessage === 'string' && options.startMessage.trim()
         ? options.startMessage.trim()
-        : 'Updating FIDO MDS metadata…';
+        : 'MDS is updating…';
     const successMessage = typeof options.successMessage === 'string' && options.successMessage.trim()
         ? options.successMessage.trim()
         : '';
@@ -313,10 +348,14 @@ async function runWithMetadataUpdateOverlay(task, options = {}) {
         ? options.failureMessage.trim()
         : '';
     const closeDelay = Number.isFinite(options.closeDelay) ? Number(options.closeDelay) : 520;
+    const allowCancel = options && Object.prototype.hasOwnProperty.call(options, 'cancelable')
+        ? Boolean(options.cancelable)
+        : true;
 
     const controller = new AbortController();
     const overlayControls = showMetadataUpdateOverlay(startMessage, {
-        onCancel: () => controller.abort(),
+        onCancel: allowCancel ? () => controller.abort() : null,
+        cancelable: allowCancel,
     });
 
     const context = {
@@ -842,10 +881,11 @@ async function uploadCustomMetadataFiles(files) {
             }
             context.throwIfAborted();
         }, {
-            startMessage: 'Updating FIDO MDS metadata…',
+            startMessage: 'MDS is updating…',
             successMessage: 'Metadata update complete.',
             cancelMessage: 'Metadata update cancelled.',
             failureMessage: 'Metadata update failed.',
+            cancelable: false,
         });
     } catch (error) {
         if (error && error.name === 'AbortError') {
@@ -921,7 +961,7 @@ async function deleteCustomMetadata(storedFilename, options = {}) {
             context.throwIfAborted();
             setCustomMetadataMessage(`${itemName} removed.`, 'success');
         }, {
-            startMessage: 'Updating FIDO MDS metadata…',
+            startMessage: 'MDS is updating…',
             successMessage: 'Metadata update complete.',
             cancelMessage: 'Metadata update cancelled.',
             failureMessage: 'Metadata update failed.',
@@ -1767,21 +1807,36 @@ function initializeState(root) {
     overlayDialog.setAttribute('tabindex', '-1');
     overlay.appendChild(overlayDialog);
 
-    const overlayMessage = document.createElement('p');
+    const overlayToast = document.createElement('div');
+    overlayToast.className = 'mds-update-overlay__toast';
+    overlayDialog.appendChild(overlayToast);
+
+    const overlaySpinner = document.createElement('div');
+    overlaySpinner.className = 'mds-update-overlay__spinner';
+    overlaySpinner.setAttribute('aria-hidden', 'true');
+    overlayToast.appendChild(overlaySpinner);
+
+    const overlayMessage = document.createElement('span');
     overlayMessage.className = 'mds-update-overlay__message';
     overlayMessage.id = 'mds-update-overlay-message';
-    overlayMessage.textContent = 'Updating FIDO MDS metadata…';
-    overlayDialog.appendChild(overlayMessage);
+    overlayMessage.textContent = 'MDS is updating…';
+    overlayToast.appendChild(overlayMessage);
     overlay.setAttribute('aria-labelledby', overlayMessage.id);
 
     const overlayActions = document.createElement('div');
     overlayActions.className = 'mds-update-overlay__actions';
+    overlayActions.hidden = true;
+    overlayDialog.appendChild(overlayActions);
+
     const overlayCancel = document.createElement('button');
     overlayCancel.type = 'button';
     overlayCancel.className = 'mds-update-overlay__cancel';
     overlayCancel.textContent = 'Cancel update';
+    overlayCancel.hidden = true;
+    overlayCancel.disabled = true;
+    overlayCancel.setAttribute('aria-hidden', 'true');
+    overlayCancel.setAttribute('aria-disabled', 'true');
     overlayActions.appendChild(overlayCancel);
-    overlayDialog.appendChild(overlayActions);
 
     root.appendChild(overlay);
 
@@ -1999,7 +2054,9 @@ function initializeState(root) {
         updateOverlay: overlay,
         updateOverlayMessage: overlayMessage,
         updateOverlayCancel: overlayCancel,
+        updateOverlayActions: overlayActions,
         updateOverlayCancelHandler: null,
+        updateOverlayAllowCancel: false,
         certificateModal,
         certificateModalBody: certificateBody,
         certificateInput: root.querySelector('#mds-certificate-input'),
