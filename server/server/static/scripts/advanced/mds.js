@@ -158,6 +158,40 @@ function cloneCustomMetadataItem(item) {
     return cloned;
 }
 
+function createAbortError() {
+    try {
+        return new DOMException('Operation aborted', 'AbortError');
+    } catch (error) {
+        const abortError = new Error('Operation aborted');
+        abortError.name = 'AbortError';
+        return abortError;
+    }
+}
+
+function isAbortSignal(value) {
+    return Boolean(value && typeof value === 'object' && 'aborted' in value);
+}
+
+function getAbortSignal(options) {
+    if (!options || typeof options !== 'object') {
+        return null;
+    }
+    if (isAbortSignal(options)) {
+        return options;
+    }
+    const signal = options.signal;
+    if (isAbortSignal(signal)) {
+        return signal;
+    }
+    return null;
+}
+
+function throwIfAborted(signal) {
+    if (signal && signal.aborted) {
+        throw createAbortError();
+    }
+}
+
 function cloneCustomMetadataItems(items) {
     if (!Array.isArray(items)) {
         return [];
@@ -180,9 +214,158 @@ function setButtonBusy(button, busy) {
     }
 }
 
-async function fetchCustomMetadataItems() {
+function showMetadataUpdateOverlay(message, options = {}) {
+    const overlay = mdsState?.updateOverlay;
+    const messageEl = mdsState?.updateOverlayMessage;
+    const cancelButton = mdsState?.updateOverlayCancel;
+    const onCancel = typeof options.onCancel === 'function' ? options.onCancel : null;
+
+    if (!overlay || !messageEl || !(cancelButton instanceof HTMLButtonElement)) {
+        return {
+            updateMessage() {},
+            setCancelable() {},
+            close() {},
+        };
+    }
+
+    if (mdsState.updateOverlayCancelHandler) {
+        cancelButton.removeEventListener('click', mdsState.updateOverlayCancelHandler);
+    }
+
+    const handleCancel = event => {
+        event.preventDefault();
+        if (cancelButton.disabled) {
+            return;
+        }
+        cancelButton.blur();
+        if (onCancel) {
+            onCancel();
+        }
+    };
+
+    cancelButton.addEventListener('click', handleCancel);
+    mdsState.updateOverlayCancelHandler = handleCancel;
+
+    overlay.hidden = false;
+    overlay.removeAttribute('hidden');
+    overlay.classList.add('is-visible');
+    overlay.setAttribute('aria-hidden', 'false');
+    overlay.setAttribute('aria-busy', 'true');
+
+    const initialMessage = typeof message === 'string' && message.trim()
+        ? message.trim()
+        : 'Updating FIDO MDS metadata…';
+    messageEl.textContent = initialMessage;
+
+    cancelButton.disabled = false;
+    cancelButton.removeAttribute('aria-disabled');
+
+    return {
+        updateMessage(text) {
+            if (messageEl) {
+                messageEl.textContent = typeof text === 'string' && text.trim() ? text.trim() : '';
+            }
+        },
+        setCancelable(isCancelable) {
+            if (!(cancelButton instanceof HTMLButtonElement)) {
+                return;
+            }
+            const enable = Boolean(isCancelable);
+            cancelButton.disabled = !enable;
+            if (enable) {
+                cancelButton.removeAttribute('aria-disabled');
+            } else {
+                cancelButton.setAttribute('aria-disabled', 'true');
+            }
+        },
+        close({ delay = 0 } = {}) {
+            const hide = () => {
+                overlay.classList.remove('is-visible');
+                overlay.hidden = true;
+                overlay.setAttribute('aria-hidden', 'true');
+                overlay.removeAttribute('aria-busy');
+                if (mdsState.updateOverlayCancelHandler === handleCancel) {
+                    cancelButton.removeEventListener('click', handleCancel);
+                    mdsState.updateOverlayCancelHandler = null;
+                }
+            };
+
+            if (delay > 0) {
+                setTimeout(hide, delay);
+            } else {
+                hide();
+            }
+        },
+    };
+}
+
+async function runWithMetadataUpdateOverlay(task, options = {}) {
+    const startMessage = typeof options.startMessage === 'string' && options.startMessage.trim()
+        ? options.startMessage.trim()
+        : 'Updating FIDO MDS metadata…';
+    const successMessage = typeof options.successMessage === 'string' && options.successMessage.trim()
+        ? options.successMessage.trim()
+        : '';
+    const cancelMessage = typeof options.cancelMessage === 'string' && options.cancelMessage.trim()
+        ? options.cancelMessage.trim()
+        : 'Metadata update cancelled.';
+    const failureMessage = typeof options.failureMessage === 'string' && options.failureMessage.trim()
+        ? options.failureMessage.trim()
+        : '';
+    const closeDelay = Number.isFinite(options.closeDelay) ? Number(options.closeDelay) : 520;
+
+    const controller = new AbortController();
+    const overlayControls = showMetadataUpdateOverlay(startMessage, {
+        onCancel: () => controller.abort(),
+    });
+
+    const context = {
+        signal: controller.signal,
+        updateStatus: text => overlayControls.updateMessage(text),
+        setCancelable: value => overlayControls.setCancelable(value),
+        throwIfAborted: () => {
+            throwIfAborted(controller.signal);
+        },
+    };
+
     try {
-        const response = await fetch(CUSTOM_METADATA_LIST_PATH, { cache: 'no-store' });
+        const result = await task(context);
+        if (controller.signal.aborted) {
+            overlayControls.updateMessage(cancelMessage);
+            overlayControls.setCancelable(false);
+            overlayControls.close({ delay: 320 });
+        } else {
+            if (successMessage) {
+                overlayControls.updateMessage(successMessage);
+            }
+            overlayControls.setCancelable(false);
+            overlayControls.close({ delay: closeDelay });
+        }
+        return result;
+    } catch (error) {
+        if (controller.signal.aborted) {
+            overlayControls.updateMessage(cancelMessage);
+            overlayControls.setCancelable(false);
+            overlayControls.close({ delay: 320 });
+        } else {
+            if (failureMessage) {
+                overlayControls.updateMessage(failureMessage);
+            }
+            overlayControls.setCancelable(false);
+            overlayControls.close({ delay: 720 });
+        }
+        throw error;
+    }
+}
+
+async function fetchCustomMetadataItems(options = {}) {
+    const signal = getAbortSignal(options);
+    try {
+        const fetchOptions = { cache: 'no-store' };
+        if (signal) {
+            fetchOptions.signal = signal;
+        }
+        const response = await fetch(CUSTOM_METADATA_LIST_PATH, fetchOptions);
         if (!response.ok) {
             if (response.status !== 404) {
                 console.warn(
@@ -195,7 +378,9 @@ async function fetchCustomMetadataItems() {
         const rawItems = Array.isArray(payload?.items) ? payload.items : [];
         return cloneCustomMetadataItems(rawItems);
     } catch (error) {
-        console.warn('Failed to load custom metadata entries.', error);
+        if (!(error && error.name === 'AbortError')) {
+            console.warn('Failed to load custom metadata entries.', error);
+        }
         return [];
     }
 }
@@ -203,21 +388,31 @@ async function fetchCustomMetadataItems() {
 async function getCustomMetadataItems(options = {}) {
     const opts = options && typeof options === 'object' ? options : {};
     const forceReload = Boolean(opts.forceReload);
+    const signal = getAbortSignal(opts);
+    const useSharedPromise = !forceReload && !signal;
 
     if (forceReload) {
         customMetadataCache = null;
     }
 
-    if (customMetadataCache) {
+    if (customMetadataCache && !forceReload) {
         return cloneCustomMetadataItems(customMetadataCache);
     }
 
+    const loadItems = async () => {
+        const items = await fetchCustomMetadataItems({ signal });
+        throwIfAborted(signal);
+        customMetadataCache = items;
+        return items;
+    };
+
+    if (!useSharedPromise) {
+        const loaded = await loadItems();
+        return cloneCustomMetadataItems(loaded);
+    }
+
     if (!customMetadataPromise) {
-        customMetadataPromise = (async () => {
-            const items = await fetchCustomMetadataItems();
-            customMetadataCache = items;
-            return items;
-        })();
+        customMetadataPromise = loadItems();
     }
 
     try {
@@ -274,14 +469,24 @@ function mergeCustomEntriesIntoMetadata(metadata, entries, items) {
 }
 
 async function ensureCustomMetadata(metadata, options = {}) {
+    const signal = getAbortSignal(options);
+    throwIfAborted(signal);
+
     const items = await getCustomMetadataItems(options);
+    throwIfAborted(signal);
+
     customMetadataItems = cloneCustomMetadataItems(items);
     updateCustomMetadataList(customMetadataItems);
+    throwIfAborted(signal);
+
     const entries = extractCustomEntries(customMetadataItems);
+    throwIfAborted(signal);
+
     return mergeCustomEntriesIntoMetadata(metadata, entries, customMetadataItems);
 }
 
-async function refreshCustomMetadataAfterUpload(note) {
+async function refreshCustomMetadataAfterUpload(note, options = {}) {
+    const signal = getAbortSignal(options);
     customMetadataCache = null;
 
     const cached = readMetadataCache();
@@ -292,12 +497,15 @@ async function refreshCustomMetadataAfterUpload(note) {
     }
 
     try {
-        const enhanced = await ensureCustomMetadata(baseMetadata, { forceReload: true });
+        const enhanced = await ensureCustomMetadata(baseMetadata, { forceReload: true, signal });
         if (!enhanced || typeof enhanced !== 'object') {
             throw new Error('No metadata available for refresh.');
         }
 
-        await applyMetadataEntries(enhanced, { note });
+        throwIfAborted(signal);
+
+        await applyMetadataEntries(enhanced, { note, signal });
+        throwIfAborted(signal);
 
         const infoSource =
             cached && cached.info && typeof cached.info === 'object' ? { ...cached.info } : {};
@@ -590,41 +798,60 @@ async function uploadCustomMetadataFiles(files) {
     setCustomMetadataMessage('Uploading metadata…', 'info');
 
     try {
-        const response = await fetch(CUSTOM_METADATA_UPLOAD_PATH, {
-            method: 'POST',
-            body: formData,
+        await runWithMetadataUpdateOverlay(async context => {
+            context.updateStatus('Uploading metadata…');
+            const response = await fetch(CUSTOM_METADATA_UPLOAD_PATH, {
+                method: 'POST',
+                body: formData,
+                signal: context.signal,
+            });
+
+            let payload = null;
+            try {
+                payload = await response.json();
+            } catch (error) {
+                payload = null;
+            }
+
+            context.throwIfAborted();
+
+            const errors = Array.isArray(payload?.errors) ? payload.errors : [];
+            if (!response.ok) {
+                const message =
+                    (payload && typeof payload.error === 'string' && payload.error.trim()) ||
+                    errors.join(' ') ||
+                    'Failed to upload metadata files.';
+                setCustomMetadataMessage(message, 'error');
+                throw new Error(message);
+            }
+
+            customMetadataCache = null;
+            const successMessage =
+                errors.length > 0
+                    ? `Metadata uploaded with warnings: ${errors.join(' ')}`
+                    : 'Metadata uploaded successfully.';
+            setCustomMetadataMessage(successMessage, errors.length ? 'warning' : 'success');
+
+            context.updateStatus('Refreshing metadata…');
+            const refreshNote = 'Custom metadata updated.';
+            const refreshed = await refreshCustomMetadataAfterUpload(refreshNote, { signal: context.signal });
+            context.throwIfAborted();
+            if (!refreshed) {
+                context.updateStatus('Reloading metadata…');
+                await loadMdsData(refreshNote, { forceReload: true, signal: context.signal });
+            }
+            context.throwIfAborted();
+        }, {
+            startMessage: 'Updating FIDO MDS metadata…',
+            successMessage: 'Metadata update complete.',
+            cancelMessage: 'Metadata update cancelled.',
+            failureMessage: 'Metadata update failed.',
         });
-
-        let payload = null;
-        try {
-            payload = await response.json();
-        } catch (error) {
-            payload = null;
-        }
-
-        const errors = Array.isArray(payload?.errors) ? payload.errors : [];
-        if (!response.ok) {
-            const message =
-                (payload && typeof payload.error === 'string' && payload.error.trim()) ||
-                errors.join(' ') ||
-                'Failed to upload metadata files.';
-            setCustomMetadataMessage(message, 'error');
+    } catch (error) {
+        if (error && error.name === 'AbortError') {
+            setCustomMetadataMessage('Metadata update cancelled.', 'warning');
             return;
         }
-
-        customMetadataCache = null;
-        const successMessage =
-            errors.length > 0
-                ? `Metadata uploaded with warnings: ${errors.join(' ')}`
-                : 'Metadata uploaded successfully.';
-        setCustomMetadataMessage(successMessage, errors.length ? 'warning' : 'success');
-
-        const refreshNote = 'Custom metadata updated.';
-        const refreshed = await refreshCustomMetadataAfterUpload(refreshNote);
-        if (!refreshed) {
-            await loadMdsData(refreshNote, { forceReload: true });
-        }
-    } catch (error) {
         console.error('Failed to upload custom metadata files.', error);
         setCustomMetadataMessage('Failed to upload metadata files.', 'error');
     }
@@ -646,42 +873,67 @@ async function deleteCustomMetadata(storedFilename, options = {}) {
         return;
     }
 
+    if (triggerButton) {
+        setButtonBusy(triggerButton, true);
+    }
+
     setCustomMetadataMessage(`Removing ${itemName}…`, 'info');
 
     try {
-        const response = await fetch(
-            `${CUSTOM_METADATA_DELETE_PATH}/${encodeURIComponent(storedFilename)}`,
-            { method: 'DELETE' },
-        );
+        await runWithMetadataUpdateOverlay(async context => {
+            context.updateStatus('Removing metadata…');
+            const response = await fetch(
+                `${CUSTOM_METADATA_DELETE_PATH}/${encodeURIComponent(storedFilename)}`,
+                {
+                    method: 'DELETE',
+                    signal: context.signal,
+                },
+            );
 
-        let payload = null;
-        try {
-            payload = await response.json();
-        } catch (error) {
-            payload = null;
-        }
-
-        if (!response.ok) {
-            const errorMessage =
-                (payload && typeof payload.error === 'string' && payload.error.trim()) ||
-                (payload && typeof payload.message === 'string' && payload.message.trim()) ||
-                'Failed to delete metadata file.';
-            const variant = response.status === 404 ? 'warning' : 'error';
-            setCustomMetadataMessage(errorMessage, variant);
-            if (triggerButton) {
-                setButtonBusy(triggerButton, false);
+            let payload = null;
+            try {
+                payload = await response.json();
+            } catch (error) {
+                payload = null;
             }
-            return;
-        }
 
-        customMetadataCache = null;
-        customMetadataPromise = null;
+            context.throwIfAborted();
 
-        await loadMdsData('Custom metadata updated.', { forceReload: true });
-        setCustomMetadataMessage(`${itemName} removed.`, 'success');
+            if (!response.ok) {
+                const errorMessage =
+                    (payload && typeof payload.error === 'string' && payload.error.trim()) ||
+                    (payload && typeof payload.message === 'string' && payload.message.trim()) ||
+                    'Failed to delete metadata file.';
+                const variant = response.status === 404 ? 'warning' : 'error';
+                setCustomMetadataMessage(errorMessage, variant);
+                if (variant === 'error') {
+                    throw new Error(errorMessage);
+                }
+                context.updateStatus('No metadata changes detected.');
+                return;
+            }
+
+            customMetadataCache = null;
+            customMetadataPromise = null;
+
+            context.updateStatus('Refreshing metadata…');
+            await loadMdsData('Custom metadata updated.', { forceReload: true, signal: context.signal });
+            context.throwIfAborted();
+            setCustomMetadataMessage(`${itemName} removed.`, 'success');
+        }, {
+            startMessage: 'Updating FIDO MDS metadata…',
+            successMessage: 'Metadata update complete.',
+            cancelMessage: 'Metadata update cancelled.',
+            failureMessage: 'Metadata update failed.',
+        });
     } catch (error) {
-        console.error('Failed to delete custom metadata file.', error);
-        setCustomMetadataMessage('Failed to delete metadata file.', 'error');
+        if (error && error.name === 'AbortError') {
+            setCustomMetadataMessage('Metadata update cancelled.', 'warning');
+        } else {
+            console.error('Failed to delete custom metadata file.', error);
+            setCustomMetadataMessage('Failed to delete metadata file.', 'error');
+        }
+    } finally {
         if (triggerButton) {
             setButtonBusy(triggerButton, false);
         }
@@ -1502,6 +1754,37 @@ function initializeState(root) {
     const customFileInput = root.querySelector('#mds-custom-file-input');
     const customBackdrop = customPanel?.querySelector('[data-action="close"]');
 
+    const overlay = document.createElement('div');
+    overlay.id = 'mds-update-overlay';
+    overlay.className = 'mds-update-overlay';
+    overlay.setAttribute('role', 'alertdialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-hidden', 'true');
+    overlay.hidden = true;
+
+    const overlayDialog = document.createElement('div');
+    overlayDialog.className = 'mds-update-overlay__dialog';
+    overlayDialog.setAttribute('tabindex', '-1');
+    overlay.appendChild(overlayDialog);
+
+    const overlayMessage = document.createElement('p');
+    overlayMessage.className = 'mds-update-overlay__message';
+    overlayMessage.id = 'mds-update-overlay-message';
+    overlayMessage.textContent = 'Updating FIDO MDS metadata…';
+    overlayDialog.appendChild(overlayMessage);
+    overlay.setAttribute('aria-labelledby', overlayMessage.id);
+
+    const overlayActions = document.createElement('div');
+    overlayActions.className = 'mds-update-overlay__actions';
+    const overlayCancel = document.createElement('button');
+    overlayCancel.type = 'button';
+    overlayCancel.className = 'mds-update-overlay__cancel';
+    overlayCancel.textContent = 'Cancel update';
+    overlayActions.appendChild(overlayCancel);
+    overlayDialog.appendChild(overlayActions);
+
+    root.appendChild(overlay);
+
     if (customPanel) {
         customPanel.addEventListener('keydown', handleCustomPanelKeydown);
     }
@@ -1713,6 +1996,10 @@ function initializeState(root) {
         updateButtonMode: 'update',
         metadataOverdue: false,
         metadataNextUpdate: null,
+        updateOverlay: overlay,
+        updateOverlayMessage: overlayMessage,
+        updateOverlayCancel: overlayCancel,
+        updateOverlayCancelHandler: null,
         certificateModal,
         certificateModalBody: certificateBody,
         certificateInput: root.querySelector('#mds-certificate-input'),
@@ -1745,7 +2032,13 @@ function initializeState(root) {
     return state;
 }
 
-async function applyMetadataEntries(metadata, { note = '' } = {}) {
+async function applyMetadataEntries(metadata, options = {}) {
+    const opts = options && typeof options === 'object' ? options : {};
+    const noteText = typeof opts.note === 'string' ? opts.note : '';
+    const signal = getAbortSignal(opts);
+
+    throwIfAborted(signal);
+
     if (!mdsState) {
         return;
     }
@@ -1754,6 +2047,8 @@ async function applyMetadataEntries(metadata, { note = '' } = {}) {
     const totalEntries = rawEntries.length;
     const shouldReportProgress = loaderIsActive() && !hasLoaded;
     const entries = [];
+
+    throwIfAborted(signal);
 
     if (shouldReportProgress) {
         const initialProgress = totalEntries ? 58 : 72;
@@ -1767,6 +2062,7 @@ async function applyMetadataEntries(metadata, { note = '' } = {}) {
         let processedCount = 0;
 
         rawEntries.forEach((entry, index) => {
+            throwIfAborted(signal);
             processedCount += 1;
             const transformed = transformEntry(entry, index);
             if (transformed) {
@@ -1792,9 +2088,12 @@ async function applyMetadataEntries(metadata, { note = '' } = {}) {
     setUpdateButtonMode('update');
     resetSortState();
 
+    throwIfAborted(signal);
+
     if (mdsState) {
         const map = new Map();
         mdsData.forEach(item => {
+            throwIfAborted(signal);
             const key = normaliseAaguid(item.aaguid || item.id);
             if (key) {
                 map.set(key, item);
@@ -1819,10 +2118,13 @@ async function applyMetadataEntries(metadata, { note = '' } = {}) {
     updateOptionLists(optionSets);
 
     try {
+        throwIfAborted(signal);
         await populateCertificateDerivedInfo(mdsData);
     } catch (error) {
         console.error('Failed to derive attestation certificate details:', error);
     }
+
+    throwIfAborted(signal);
 
     applyFilters();
     scheduleHorizontalScrollMetricsUpdate();
@@ -1842,8 +2144,8 @@ async function applyMetadataEntries(metadata, { note = '' } = {}) {
         statusParts.push(`Next update recommended by ${nextUpdateFormatted}.`);
     }
 
-    if (note) {
-        statusParts.push(note);
+    if (noteText) {
+        statusParts.push(noteText);
     }
 
     const statusMessage = statusParts.join(' ');
@@ -1913,13 +2215,17 @@ async function loadMdsData(statusNote, options = {}) {
     }
 
     const opts = options && typeof options === 'object' ? options : {};
+    const signal = getAbortSignal(opts);
     const forceReload = Boolean(opts.forceReload);
+
+    throwIfAborted(signal);
 
     if (hasLoaded && !forceReload) {
         return;
     }
 
     if (isLoading && loadPromise) {
+        throwIfAborted(signal);
         await loadPromise;
         return;
     }
@@ -1927,6 +2233,8 @@ async function loadMdsData(statusNote, options = {}) {
     const note = typeof statusNote === 'string' ? statusNote.trim() : '';
     const previousHasLoaded = hasLoaded;
     const trackProgress = loaderIsActive() && !hasLoaded;
+
+    throwIfAborted(signal);
 
     if (trackProgress) {
         loaderSetPhase('Loading authenticator metadata…', { progress: 46 });
@@ -1941,10 +2249,12 @@ async function loadMdsData(statusNote, options = {}) {
     if (!forceReload) {
         if (!hasLoaded) {
             try {
+                throwIfAborted(signal);
                 if (trackProgress && typeof initialMdsJws === 'string' && initialMdsJws) {
                     loaderSetPhase('Applying server metadata snapshot…', { progress: 52 });
                 }
                 const applied = await applyInitialMetadataPayload(note);
+                throwIfAborted(signal);
                 if (applied) {
                     setColumnResizersEnabled(hasLoaded);
                     return;
@@ -1957,15 +2267,21 @@ async function loadMdsData(statusNote, options = {}) {
         const cached = readMetadataCache();
         if (cached?.metadata) {
             try {
+                throwIfAborted(signal);
                 if (trackProgress) {
                     loaderSetPhase('Restoring cached authenticator metadata…', { progress: 52 });
                 }
-                const enhanced = await ensureCustomMetadata(cached.metadata);
-                await applyMetadataEntries(enhanced, { note });
+                const enhanced = await ensureCustomMetadata(cached.metadata, { signal });
+                throwIfAborted(signal);
+                await applyMetadataEntries(enhanced, { note, signal });
+                throwIfAborted(signal);
                 storeMetadataCache(JSON.stringify(enhanced), cached.info || null);
                 setColumnResizersEnabled(hasLoaded);
                 return;
             } catch (error) {
+                if (error && error.name === 'AbortError') {
+                    throw error;
+                }
                 console.warn('Failed to apply cached metadata payload:', error);
                 clearMetadataCache();
             }
@@ -1980,6 +2296,10 @@ async function loadMdsData(statusNote, options = {}) {
     const task = (async () => {
         try {
             const fetchOptions = forceReload ? { cache: 'reload' } : { cache: 'no-cache' };
+            if (signal) {
+                fetchOptions.signal = signal;
+            }
+            throwIfAborted(signal);
             if (trackProgress) {
                 const phaseLabel = forceReload
                     ? 'Refreshing authenticator metadata…'
@@ -1989,7 +2309,8 @@ async function loadMdsData(statusNote, options = {}) {
             const response = await fetch(MDS_JWS_PATH, fetchOptions);
             if (!response.ok) {
                 if (response.status === 404) {
-                    const fallbackMetadata = await ensureCustomMetadata(null);
+                    const fallbackMetadata = await ensureCustomMetadata(null, { signal, forceReload: true });
+                    throwIfAborted(signal);
                     if (Array.isArray(fallbackMetadata.entries) && fallbackMetadata.entries.length) {
                         if (trackProgress) {
                             loaderSetPhase('Loading custom authenticator metadata…', { progress: 54 });
@@ -1997,6 +2318,7 @@ async function loadMdsData(statusNote, options = {}) {
                         const fallbackNoteParts = [note, 'Using uploaded session metadata.'].filter(Boolean);
                         await applyMetadataEntries(fallbackMetadata, {
                             note: fallbackNoteParts.join(' '),
+                            signal,
                         });
                         setUpdateButtonMode('download');
                         setUpdateButtonAttention(false);
@@ -2053,6 +2375,7 @@ async function loadMdsData(statusNote, options = {}) {
                 loaderSetPhase('Decoding metadata payload…', { progress: 56 });
             }
             const jws = await response.text();
+            throwIfAborted(signal);
             const payloadSegment = jws.split('.')[1];
             if (!payloadSegment) {
                 throw new Error('Invalid metadata BLOB format.');
@@ -2061,8 +2384,10 @@ async function loadMdsData(statusNote, options = {}) {
             const payload = decodeBase64Url(payloadSegment);
             const metadata = JSON.parse(payload);
 
-            const enhanced = await ensureCustomMetadata(metadata);
-            await applyMetadataEntries(enhanced, { note });
+            const ensureOptions = forceReload ? { signal, forceReload: true } : { signal };
+            const enhanced = await ensureCustomMetadata(metadata, ensureOptions);
+            throwIfAborted(signal);
+            await applyMetadataEntries(enhanced, { note, signal });
             stateUpdated = true;
 
             const lastModified = response.headers?.get('Last-Modified') || null;
@@ -2073,6 +2398,9 @@ async function loadMdsData(statusNote, options = {}) {
                 cachedAt: new Date().toISOString(),
             });
         } catch (error) {
+            if (error && error.name === 'AbortError') {
+                throw error;
+            }
             console.error('Failed to load FIDO MDS metadata:', error);
             setStatus(
                 `Unable to parse the metadata BLOB. Confirm that <code>${MDS_JWS_PATH}</code> is a valid download from ` +

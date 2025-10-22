@@ -525,6 +525,18 @@ function mergePublicKey(existingPublicKey, latestPublicKey, scope) {
         }
     }
 
+    if (
+        scope === 'authentication'
+        && Array.isArray(existing.allowCredentials)
+        && existing.allowCredentials.length === 0
+    ) {
+        if (!Object.prototype.hasOwnProperty.call(merged, 'allowCredentials')) {
+            merged.allowCredentials = [];
+        } else if (!Array.isArray(merged.allowCredentials)) {
+            merged.allowCredentials = [];
+        }
+    }
+
     return merged;
 }
 
@@ -1372,12 +1384,13 @@ export function updateAuthenticationFormFromJson(publicKey) {
     const allowCredentialsSelect = document.getElementById('allow-credentials');
     if (allowCredentialsSelect) {
         let desiredValue = 'all';
+        let shouldUpdateSelect = true;
 
         if (!Object.prototype.hasOwnProperty.call(publicKey, 'allowCredentials')) {
             desiredValue = 'empty';
         } else if (Array.isArray(publicKey.allowCredentials)) {
             if (publicKey.allowCredentials.length === 0) {
-                desiredValue = 'empty';
+                shouldUpdateSelect = false;
             } else if (publicKey.allowCredentials.length === 1) {
                 const descriptor = publicKey.allowCredentials[0];
                 if (descriptor && typeof descriptor === 'object') {
@@ -1393,7 +1406,7 @@ export function updateAuthenticationFormFromJson(publicKey) {
             }
         }
 
-        if (desiredValue !== 'all' && desiredValue !== 'empty') {
+        if (shouldUpdateSelect && desiredValue !== 'all' && desiredValue !== 'empty') {
             const available = Array.from(allowCredentialsSelect.options)
                 .some(option => option.value === desiredValue);
             if (!available) {
@@ -1401,7 +1414,7 @@ export function updateAuthenticationFormFromJson(publicKey) {
             }
         }
 
-        if (allowCredentialsSelect.value !== desiredValue) {
+        if (shouldUpdateSelect && allowCredentialsSelect.value !== desiredValue) {
             allowCredentialsSelect.value = desiredValue;
             try {
                 allowCredentialsSelect.dispatchEvent(new Event('change', { bubbles: true }));
