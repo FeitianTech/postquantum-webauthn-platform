@@ -13,7 +13,8 @@ import {
 import {
     switchTab,
     switchSubTab,
-    toggleSection
+    toggleSection,
+    initializeNavigationMenu,
 } from './shared/navigation.js';
 import {
     showInfoPopup,
@@ -139,6 +140,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeLoader();
     loaderSetPhase('Preparing application…', { progress: 8 });
 
+    initializeNavigationMenu();
     initializeStickyHeader();
 
     updateFieldLabels();

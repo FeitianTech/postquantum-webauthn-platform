@@ -126,3 +126,25 @@
     border: 1px solid #b6effb;
     color: #055160;
 }
+
+@media (max-width: 640px) {
+    .form-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .form-actions .btn,
+    .form-actions .btn-secondary,
+    .form-actions .btn-danger,
+    .form-actions .btn-success {
+        width: 100%;
+        justify-content: center;
+        margin-right: 0;
+    }
+
+    .status {
+        min-width: 0;
+        width: calc(100vw - 2.5rem);
+        max-width: calc(100vw - 2.5rem);
+    }
+}

@@ -412,18 +412,36 @@ body.app-loaded > :not(.app-loader) {
         max-height: none;
         overflow: visible;
         padding: 1.75rem 1.5rem 2rem;
+        background: var(--surface-color);
+        border-radius: 20px;
+        box-shadow: var(--shadow-soft);
     }
 
     .advanced-settings-layout .credentials-column .column-card {
         position: static;
         max-height: none;
         height: auto;
-        padding: 0;
+        padding: 1.25rem;
+        background: var(--surface-color);
+        border-radius: 20px;
+        box-shadow: var(--shadow-soft);
+        gap: 1.25rem;
     }
 
     .advanced-settings-layout .credentials-column .credentials-panel {
         flex: none;
         overflow: visible;
         padding: 0;
+    }
+
+    .advanced-settings-layout .json-editor-card {
+        padding: 1.25rem;
+        background: var(--surface-color);
+        border-radius: 20px;
+        box-shadow: var(--shadow-soft);
+    }
+
+    .advanced-settings-layout .json-editor-card .inline-json-editor {
+        box-shadow: none;
     }
 }

@@ -2762,7 +2762,7 @@ export function updateCredentialsDisplay() {
 
         const pickStatusColor = value => {
             if (value === true) {
-                return '#198754';
+                return '#11b66d';
             }
             if (value === false) {
                 return '#dc3545';
