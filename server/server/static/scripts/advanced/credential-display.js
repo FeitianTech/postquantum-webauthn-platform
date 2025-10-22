@@ -2056,8 +2056,12 @@ function buildAttestationSection({
     let certificateMessageHtml = '';
 
     if (attestationHasCertificates) {
+        const singleCertificate = certificateInfos.length === 1;
         certificateInfos.forEach((info, displayIndex) => {
-            buttonRowSegments.push(`<button type="button" class="btn btn-small registration-attestation-cert-button" data-cert-index="${displayIndex}">Attestation Certificate ${displayIndex + 1}</button>`);
+            const label = singleCertificate
+                ? 'Attestation Certificate'
+                : `Attestation Certificate ${displayIndex + 1}`;
+            buttonRowSegments.push(`<button type="button" class="btn btn-small registration-attestation-cert-button" data-cert-index="${displayIndex}">${escapeHtml(label)}</button>`);
         });
     } else if (hasAttestationObject || hasAttestationValue || attestationStatementHasContent) {
         certificateMessageHtml = '<div style="font-style: italic; color: #6c757d; margin-top: 0.75rem;">No attestation certificates available.</div>';
@@ -2535,6 +2539,7 @@ function openRegistrationDetailModal(title, bodyHtml) {
 function openAttestationCertificateDetail(index) {
     const visibleCertificates = getVisibleAttestationCertificates();
     const certificate = visibleCertificates[index];
+    const singleCertificate = visibleCertificates.length === 1;
     const normalised = normaliseCertificateEntryForModal(certificate);
     if (!normalised) {
         return;
@@ -2557,7 +2562,11 @@ function openAttestationCertificateDetail(index) {
         sections.push('<div style="font-style: italic; color: #6c757d;">No decoded certificate details available.</div>');
     }
 
-    openRegistrationDetailModal(`Attestation Certificate ${index + 1}`, sections.join(''));
+    const title = singleCertificate
+        ? 'Attestation Certificate'
+        : `Attestation Certificate ${index + 1}`;
+
+    openRegistrationDetailModal(title, sections.join(''));
 }
 
 function openAuthenticatorDataDetail() {

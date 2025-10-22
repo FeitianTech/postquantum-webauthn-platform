@@ -521,15 +521,14 @@
     font-weight: 700;
     font-size: 1.35rem;
     cursor: pointer;
-    box-shadow: 0 18px 40px rgba(15, 39, 64, 0.28);
-    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+    box-shadow: none;
+    transition: transform 0.2s ease, background 0.2s ease;
 }
 
 .mds-scroll-top:hover,
 .mds-scroll-top:focus-visible {
     background: var(--primary-dark);
     transform: translate(-50%, -4px);
-    box-shadow: 0 24px 52px rgba(15, 39, 64, 0.32);
 }
 
 .mds-scroll-top:focus-visible {
