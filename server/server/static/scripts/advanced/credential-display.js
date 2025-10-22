@@ -116,6 +116,49 @@ function collectCredentialCertificates(cred) {
     return collected;
 }
 
+function computeCredentialAaguidMatchStatus(cred, options = {}) {
+    if (!cred || typeof cred !== 'object') {
+        return null;
+    }
+
+    const {
+        certificateEntries,
+        certificateAaguidHex,
+        authDataAaguidHex,
+        attestationContext,
+    } = options || {};
+
+    let certificateHex = certificateAaguidHex;
+    if (certificateHex === undefined) {
+        const entries = certificateEntries !== undefined
+            ? certificateEntries
+            : collectCredentialCertificates(cred);
+        certificateHex = extractAaguidFromCertificateEntries(entries);
+    }
+    certificateHex = normaliseAaguidValue(certificateHex);
+
+    let authDataHex = authDataAaguidHex;
+    if (authDataHex === undefined) {
+        authDataHex = deriveAaguidFromCredentialData(cred);
+    }
+    authDataHex = normaliseAaguidValue(authDataHex);
+
+    if (certificateHex && authDataHex) {
+        return certificateHex === authDataHex;
+    }
+
+    const context = attestationContext
+        || extractCredentialAttestationContext(cred);
+    const rawFallback = resolveCredentialAttestationValue(
+        cred,
+        'aaguidMatch',
+        'attestationAaguidMatch',
+        context,
+    );
+    const fallback = normaliseAttestationResultValue(rawFallback);
+    return typeof fallback === 'boolean' ? fallback : null;
+}
+
 function deriveCredentialStatusIndicators(cred) {
     const attestationContext = extractCredentialAttestationContext(cred);
     const { propertiesData, attestationSummaryData, attestationChecksData } = attestationContext;
@@ -151,19 +194,12 @@ function deriveCredentialStatusIndicators(cred) {
     );
     const authDataAaguidHex = normaliseAaguidValue(deriveAaguidFromCredentialData(cred));
 
-    let aaguidStatus = null;
-    if (certificateAaguidHex && authDataAaguidHex) {
-        aaguidStatus = certificateAaguidHex === authDataAaguidHex;
-    } else {
-        const aaguidRaw = resolveCredentialAttestationValue(
-            cred,
-            'aaguidMatch',
-            'attestationAaguidMatch',
-            attestationContext,
-        );
-        const normalised = normaliseAttestationResultValue(aaguidRaw);
-        aaguidStatus = typeof normalised === 'boolean' ? normalised : null;
-    }
+    const aaguidStatus = computeCredentialAaguidMatchStatus(cred, {
+        certificateEntries,
+        certificateAaguidHex,
+        authDataAaguidHex,
+        attestationContext,
+    });
 
     const metadataAvailableCandidates = [
         cred?.metadata?.available,
@@ -3493,11 +3529,12 @@ export async function showCredentialDetails(index) {
             attestationContext,
         ),
     );
-    const attestationAaguidMatchValue = normaliseAttestationResultValue(
-        (certificateAaguidHex && authDataAaguidHex)
-            ? (certificateAaguidHex === authDataAaguidHex)
-            : null,
-    );
+    const attestationAaguidMatchValue = computeCredentialAaguidMatchStatus(cred, {
+        certificateEntries: fallbackCertificates,
+        certificateAaguidHex,
+        authDataAaguidHex,
+        attestationContext,
+    });
     const attestationChecksNoticeHtml = `
         <p style="margin: 0 0 0.65rem; color: #6c757d; font-size: 0.9rem; line-height: 1.5;">
             In formal WebAuthn, any <strong>false</strong> result below causes registration to fail.

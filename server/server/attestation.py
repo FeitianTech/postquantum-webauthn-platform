@@ -2446,26 +2446,13 @@ def perform_attestation_checks(
             except Exception:
                 pass
 
-    attestation_evidence_available = (
-        attestation_format_value != "none" and bool(attestation_trust_path)
-    )
     credential_aaguid_value = credential_aaguid_bytes if credential_aaguid_bytes else None
     certificate_aaguid_value = certificate_aaguid_bytes if certificate_aaguid_bytes else None
-    metadata_aaguid_value = metadata_aaguid_bytes if metadata_aaguid_bytes else None
 
-    if attestation_evidence_available:
-        if (
-            credential_aaguid_value
-            and certificate_aaguid_value
-            and metadata_aaguid_value
-        ):
-            results["aaguid_match"] = (
-                credential_aaguid_value
-                == certificate_aaguid_value
-                == metadata_aaguid_value
-            )
-        else:
-            results["aaguid_match"] = False
+    if credential_aaguid_value and certificate_aaguid_value:
+        results["aaguid_match"] = (
+            credential_aaguid_value == certificate_aaguid_value
+        )
     else:
         results["aaguid_match"] = None
 
@@ -2483,11 +2470,9 @@ def perform_attestation_checks(
         results["metadata"]["verification_warning"] = metadata_verification_warning
 
     # The AAGUID exposed during registration originates from the attestation
-    # object. When metadata is present we still surface the comparison through
-    # ``results["aaguid_match"]`` for the UI, but avoid reporting the mismatch as
-    # a hard error. Showing it as an error in the relying-party registration
-    # details implied the authenticator supplied conflicting values even though
-    # registration has no separate "device" AAGUID source.
+    # object. Metadata mismatches are surfaced through ``results["metadata"]``,
+    # while ``results["aaguid_match"]`` only reflects whether the authenticator
+    # data and attestation certificate agree.
     if metadata_algorithm_supported is False:
         results["errors"].append("algorithm_not_in_metadata")
 
