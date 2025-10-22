@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import base64
+import errno
 import json
 import os
 import tempfile
@@ -31,6 +32,147 @@ TIMEZONE_LABEL = "CST"
 LOG_FILENAME = "webauthn_device_logs.log"
 STATUS_FILENAME = "webauthn_device_logs.status"
 LOG_STORAGE_DIRNAME = "webauthn-device-logs"
+STARTUP_LOCK_FILENAME = "webauthn_device_logs.startup.lock"
+
+try:  # Unix platforms
+    import fcntl  # type: ignore
+except ImportError:  # pragma: no cover - not available on Windows
+    fcntl = None  # type: ignore[assignment]
+
+try:  # Windows
+    import msvcrt  # type: ignore
+except ImportError:  # pragma: no cover - not available on Unix
+    msvcrt = None  # type: ignore[assignment]
+
+
+class _InterProcessFileLock:
+    """Lightweight cross-process file lock with platform-specific fallbacks."""
+
+    def __init__(self, path: Path, stale_timeout: float = 300.0) -> None:
+        self._path = path
+        self._handle: Optional[object] = None
+        self._mode: Optional[str] = None
+        self._stale_timeout = stale_timeout
+
+    def acquire(self, timeout: float = 10.0, poll_interval: float = 0.1) -> bool:
+        deadline = time.monotonic() + timeout if timeout is not None else None
+
+        if fcntl is None and msvcrt is None:
+            return self._acquire_via_link(deadline, poll_interval)
+
+        while True:
+            try:
+                file_handle = self._path.open("a+")
+            except OSError:
+                return False
+
+            try:
+                if fcntl is not None:
+                    fcntl.flock(file_handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+                    self._handle = file_handle
+                    self._mode = "fcntl"
+                    return True
+
+                if msvcrt is not None:
+                    file_handle.seek(0, os.SEEK_END)
+                    if file_handle.tell() == 0:
+                        file_handle.write("0")
+                        file_handle.flush()
+                        try:
+                            os.fsync(file_handle.fileno())
+                        except OSError:
+                            pass
+                    file_handle.seek(0)
+                    try:
+                        msvcrt.locking(file_handle.fileno(), msvcrt.LK_NBLCK, 1)
+                        self._handle = file_handle
+                        self._mode = "msvcrt"
+                        return True
+                    except OSError as exc:
+                        if exc.errno not in (errno.EACCES, errno.EDEADLK):
+                            file_handle.close()
+                            raise
+            except BlockingIOError:
+                pass
+            except OSError:
+                file_handle.close()
+                raise
+
+            file_handle.close()
+
+            if not self._sleep_until(deadline, poll_interval):
+                return False
+
+        return False
+
+    def release(self) -> None:
+        mode = self._mode
+        handle = self._handle
+        self._mode = None
+        self._handle = None
+
+        if mode is None:
+            return
+
+        try:
+            if mode == "fcntl" and handle is not None and fcntl is not None:
+                try:
+                    fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+                except OSError:
+                    pass
+            elif mode == "msvcrt" and handle is not None and msvcrt is not None:
+                try:
+                    handle.seek(0)
+                    msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+                except OSError:
+                    pass
+            elif mode == "link":
+                try:
+                    os.unlink(self._path)
+                except OSError:
+                    pass
+        finally:
+            if handle is not None:
+                try:
+                    handle.close()
+                except OSError:
+                    pass
+
+    def _acquire_via_link(self, deadline: Optional[float], poll_interval: float) -> bool:
+        while True:
+            try:
+                fd = os.open(self._path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            except FileExistsError:
+                if self._stale_timeout is not None:
+                    try:
+                        if time.time() - self._path.stat().st_mtime > self._stale_timeout:
+                            self._path.unlink()
+                            continue
+                    except OSError:
+                        pass
+
+                if not self._sleep_until(deadline, poll_interval):
+                    return False
+                continue
+            except OSError:
+                return False
+
+            os.close(fd)
+            self._mode = "link"
+            return True
+
+    @staticmethod
+    def _sleep_until(deadline: Optional[float], poll_interval: float) -> bool:
+        if deadline is None:
+            time.sleep(poll_interval)
+            return True
+
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            return False
+
+        time.sleep(min(poll_interval, remaining))
+        return True
 
 
 def _env_flag(name: str, default: bool = True) -> bool:
@@ -150,29 +292,46 @@ class RegistrationLogManager:
     # Startup processing --------------------------------------------
 
     def _handle_startup(self) -> None:
-        with self._write_lock:
-            try:
-                self._ensure_log_file_exists()
-            except OSError:
-                self.enabled = False
-                self.delivery_enabled = False
-                return
-            now_local = datetime.now(tz=BEIJING_TZ)
-            last_sent = self._load_last_send_time()
+        startup_lock = _InterProcessFileLock(self.log_dir / STARTUP_LOCK_FILENAME)
+        acquired = startup_lock.acquire(timeout=10.0)
 
-            if last_sent is None:
-                self._send_verification_email(now_local)
-                return
+        if not acquired:
+            # Another worker will process startup; still ensure local log file exists.
+            with self._write_lock:
+                try:
+                    self._ensure_log_file_exists()
+                except OSError:
+                    self.enabled = False
+                    self.delivery_enabled = False
+            return
 
-            last_sent_local = last_sent.astimezone(BEIJING_TZ)
-            if last_sent_local.date() == now_local.date():
-                return
+        try:
+            with self._write_lock:
+                try:
+                    self._ensure_log_file_exists()
+                except OSError:
+                    self.enabled = False
+                    self.delivery_enabled = False
+                    return
 
-            contents = self._read_log_contents()
-            if contents is None or not contents.strip():
-                return
+                now_local = datetime.now(tz=BEIJING_TZ)
+                last_sent = self._load_last_send_time()
 
-            self._send_log_report(now_local, contents)
+                if last_sent is None:
+                    self._send_verification_email(now_local)
+                    return
+
+                last_sent_local = last_sent.astimezone(BEIJING_TZ)
+                if last_sent_local.date() == now_local.date():
+                    return
+
+                contents = self._read_log_contents()
+                if contents is None or not contents.strip():
+                    return
+
+                self._send_log_report(now_local, contents)
+        finally:
+            startup_lock.release()
 
     # Filesystem helpers --------------------------------------------
 
