@@ -1,8 +1,9 @@
 """Background logging and email delivery for WebAuthn device registrations."""
 from __future__ import annotations
 
+import base64
+import json
 import os
-import ssl
 import tempfile
 import threading
 import time
@@ -13,7 +14,9 @@ from email.message import EmailMessage
 from pathlib import Path
 from typing import Iterable, Optional
 
-import smtplib
+from urllib import error as urllib_error
+from urllib import parse as urllib_parse
+from urllib import request as urllib_request
 
 try:  # Python 3.9+
     from zoneinfo import ZoneInfo
@@ -83,14 +86,10 @@ def _clean_authenticator_name(raw_value: Optional[str]) -> str:
 
 @dataclass
 class EmailConfig:
-    sender: str
-    recipient: str
-    password: str
-    host: str
-    port: int
-    username: str
-    use_tls: bool
-    use_ssl: bool
+    email_address: str
+    client_id: str
+    client_secret: str
+    refresh_token: str
     retry_attempts: int
     retry_delay_seconds: float
 
@@ -189,22 +188,13 @@ class RegistrationLogManager:
     # Internal helpers -------------------------------------------------
 
     def _load_email_config(self) -> Optional[EmailConfig]:
-        sender = os.environ.get("REGISTRATION_LOG_EMAIL_SENDER")
-        recipient = os.environ.get("REGISTRATION_LOG_EMAIL_RECIPIENT")
-        password = os.environ.get("REGISTRATION_LOG_EMAIL_PASSWORD")
-        host = os.environ.get("REGISTRATION_LOG_EMAIL_HOST")
-        if not all([sender, recipient, password, host]):
+        email_address = os.environ.get("REGISTRATION_LOG_GMAIL_ADDRESS")
+        client_id = os.environ.get("REGISTRATION_LOG_GMAIL_CLIENT_ID")
+        client_secret = os.environ.get("REGISTRATION_LOG_GMAIL_CLIENT_SECRET")
+        refresh_token = os.environ.get("REGISTRATION_LOG_GMAIL_REFRESH_TOKEN")
+
+        if not all([email_address, client_id, client_secret, refresh_token]):
             return None
-
-        username = os.environ.get("REGISTRATION_LOG_EMAIL_USERNAME") or sender
-
-        try:
-            port = int(os.environ.get("REGISTRATION_LOG_EMAIL_PORT", "587"))
-        except ValueError:
-            port = 587
-
-        use_ssl = _env_flag("REGISTRATION_LOG_EMAIL_USE_SSL", default=False)
-        use_tls = _env_flag("REGISTRATION_LOG_EMAIL_USE_TLS", default=not use_ssl)
 
         try:
             retry_attempts = int(os.environ.get("REGISTRATION_LOG_EMAIL_RETRY_ATTEMPTS", "3"))
@@ -219,14 +209,10 @@ class RegistrationLogManager:
         retry_delay = max(retry_delay, 1.0)
 
         return EmailConfig(
-            sender=sender,
-            recipient=recipient,
-            password=password,
-            host=host,
-            port=port,
-            username=username,
-            use_tls=use_tls,
-            use_ssl=use_ssl,
+            email_address=email_address,
+            client_id=client_id,
+            client_secret=client_secret,
+            refresh_token=refresh_token,
             retry_attempts=retry_attempts,
             retry_delay_seconds=retry_delay,
         )
@@ -324,6 +310,7 @@ class RegistrationLogManager:
                 if (
                     self._last_processed_report_date is not None
                     and report_date <= self._last_processed_report_date
+                    and not self._should_force_resend(report_date, path, now_local)
                 ):
                     continue
 
@@ -484,36 +471,98 @@ class RegistrationLogManager:
         except OSError:
             pass
 
+    def _should_force_resend(self, report_date: date, path: Path, now_local: datetime) -> bool:
+        if now_local.date() <= report_date:
+            return False
+
+        if (now_local.date() - report_date) < timedelta(days=1):
+            return False
+
+        try:
+            stat_result = path.stat()
+        except FileNotFoundError:
+            return False
+        except OSError:
+            return False
+
+        if stat_result.st_size <= 0:
+            return False
+
+        return True
+
+    def _fetch_gmail_access_token(self) -> Optional[str]:
+        if not self._email_config:
+            return None
+
+        payload = urllib_parse.urlencode(
+            {
+                "client_id": self._email_config.client_id,
+                "client_secret": self._email_config.client_secret,
+                "refresh_token": self._email_config.refresh_token,
+                "grant_type": "refresh_token",
+            }
+        ).encode("utf-8")
+
+        request = urllib_request.Request(
+            "https://oauth2.googleapis.com/token",
+            data=payload,
+            method="POST",
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+        )
+
+        try:
+            with urllib_request.urlopen(request, timeout=30) as response:
+                data = response.read()
+        except (urllib_error.HTTPError, urllib_error.URLError):
+            return None
+
+        try:
+            token_payload = json.loads(data.decode("utf-8"))
+        except (ValueError, UnicodeDecodeError):
+            return None
+
+        access_token = token_payload.get("access_token")
+        if not isinstance(access_token, str) or not access_token:
+            return None
+
+        return access_token
+
     def _deliver_email(self, subject: str, body: str) -> bool:
         if not self._email_config:
             return False
 
         message = EmailMessage()
         message["Subject"] = subject
-        message["From"] = self._email_config.sender
-        message["To"] = self._email_config.recipient
+        message["From"] = self._email_config.email_address
+        message["To"] = self._email_config.email_address
         message.set_content(body.rstrip() + "\n")
 
         for attempt in range(1, self._email_config.retry_attempts + 1):
             try:
-                if self._email_config.use_ssl:
-                    smtp = smtplib.SMTP_SSL(
-                        host=self._email_config.host,
-                        port=self._email_config.port,
-                        context=ssl.create_default_context(),
-                    )
-                else:
-                    smtp = smtplib.SMTP(host=self._email_config.host, port=self._email_config.port)
+                access_token = self._fetch_gmail_access_token()
+                if not access_token:
+                    raise RuntimeError("Unable to obtain Gmail access token")
 
-                with smtp as server:
-                    server.ehlo()
-                    if self._email_config.use_tls and not self._email_config.use_ssl:
-                        server.starttls(context=ssl.create_default_context())
-                        server.ehlo()
-                    server.login(self._email_config.username, self._email_config.password)
-                    server.send_message(message)
-                return True
-            except Exception:
+                encoded_message = base64.urlsafe_b64encode(message.as_bytes()).decode("ascii")
+                request_body = json.dumps({"raw": encoded_message}).encode("utf-8")
+                request = urllib_request.Request(
+                    "https://gmail.googleapis.com/gmail/v1/users/me/messages/send",
+                    data=request_body,
+                    method="POST",
+                    headers={
+                        "Authorization": f"Bearer {access_token}",
+                        "Content-Type": "application/json; charset=utf-8",
+                    },
+                )
+
+                with urllib_request.urlopen(request, timeout=30) as response:
+                    status = getattr(response, "status", None)
+                    if status is None:
+                        status = response.getcode()
+                    if 200 <= status < 300:
+                        return True
+                    raise RuntimeError(f"Unexpected Gmail API response status: {status}")
+            except (urllib_error.HTTPError, urllib_error.URLError, RuntimeError, ValueError):
                 if attempt >= self._email_config.retry_attempts:
                     return False
                 time.sleep(self._email_config.retry_delay_seconds)
