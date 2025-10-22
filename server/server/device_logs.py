@@ -378,6 +378,18 @@ class RegistrationLogManager:
     # Startup processing --------------------------------------------
 
     def _handle_startup(self) -> None:
+        """Handle startup processing with cross-process coordination.
+
+        This routine ensures that only one process sends the verification
+        email for a given deployment. It also determines whether a daily
+        report should be sent based on the last sent timestamp. To avoid
+        duplicate verification emails, the status file is updated only
+        after the email is successfully delivered or explicitly marked.
+        """
+        # Acquire an inter-process lock to ensure only one worker handles
+        # startup tasks at any given time. Without this lock, multiple
+        # workers started simultaneously (for example, in a multi-process
+        # web server) could all attempt to send the verification email.
         startup_lock = _InterProcessFileLock(self._startup_lock_path)
         acquired = startup_lock.acquire(timeout=10.0)
 
@@ -395,6 +407,8 @@ class RegistrationLogManager:
 
         try:
             with self._write_lock:
+                # Ensure the log file is available. If this fails, disable
+                # logging and email delivery to avoid repeated attempts.
                 try:
                     self._ensure_log_file_exists()
                 except OSError as e:
@@ -403,11 +417,17 @@ class RegistrationLogManager:
                     self.delivery_enabled = False
                     return
 
-                # Reload status after acquiring lock to ensure we have the latest state
+                # Reload the status after acquiring the lock to obtain the
+                # most up‑to‑date view of when emails were last sent.
                 status = self._load_delivery_status()
                 now_local = datetime.now(tz=BEIJING_TZ)
 
-                # Handle first-time verification email
+                # If this is the first startup (status.startup_completed is False),
+                # attempt to send a verification email. On success, mark the
+                # startup as completed and record the send time. We return
+                # immediately to avoid sending a daily report on the same
+                # startup. If delivery fails, log an error and continue to
+                # evaluate sending a daily report to avoid log build‑up.
                 if not status.startup_completed:
                     logger.info("Sending verification email (first startup)")
                     if self._send_verification_email(now_local):
@@ -415,33 +435,37 @@ class RegistrationLogManager:
                         status.startup_completed = True
                         self._store_delivery_status(status)
                         logger.info("Verification email sent successfully")
-                        # Don't send daily report on same startup as verification
+                        # Do not send a daily report on the same startup as
+                        # the verification email.
                         return
                     else:
                         logger.error("Failed to send verification email")
-                        # If verification fails, still allow daily reports to proceed
-                        # to prevent log accumulation
+                        # Continue below to determine if a daily report is due.
 
-                # Handle daily report emails (runs after verification on subsequent startups,
-                # or immediately if verification failed)
-                    should_send_report = False
-
-                    if status.last_sent is None:
-                        # Verification was sent but no daily report yet
+                # Determine whether a daily log report should be sent. We only
+                # send a report when there are log entries and either no
+                # previous report has been sent (status.last_sent is None) or
+                # the date has changed relative to the last sent timestamp.
+                should_send_report = False
+                if status.last_sent is None:
+                    # No previous report has been sent; send one now.
+                    should_send_report = True
+                else:
+                    last_sent_local = status.last_sent.astimezone(BEIJING_TZ)
+                    if last_sent_local.date() != now_local.date():
                         should_send_report = True
-                    else:
-                        # Check if we need to send today's report
-                        last_sent_local = status.last_sent.astimezone(BEIJING_TZ)
-                        if last_sent_local.date() != now_local.date():
-                            should_send_report = True
 
+                # Send the daily log report if due. If there are no log
+                # entries, skip sending. After successfully sending the
+                # report, update the status with the new timestamp and mark
+                # startup as complete if it was not already marked (e.g., if
+                # verification failed previously).
                 if should_send_report:
                     contents = self._read_log_contents()
                     if contents is not None and contents.strip():
                         logger.info(f"Sending daily log report for {now_local.date()}")
                         if self._send_log_report(now_local, contents):
                             status.last_sent = now_local
-                            # Mark verification complete even if it was skipped due to failure
                             if not status.startup_completed:
                                 status.startup_completed = True
                             self._store_delivery_status(status)
@@ -452,9 +476,9 @@ class RegistrationLogManager:
                         logger.info("No log entries to send in daily report")
         finally:
             startup_lock.release()
-            # Note: Do NOT delete the lock file here, as it can cause race conditions
-            # where multiple processes think they acquired the lock.
-            # The lock file will be reused on next startup.
+            # Note: Do NOT delete the lock file here. Removing the lock file
+            # can lead to race conditions where multiple processes believe
+            # they have acquired the lock simultaneously.
 
     # Filesystem helpers --------------------------------------------
 
@@ -610,34 +634,36 @@ class RegistrationLogManager:
     # Internal helpers ---------------------------------------------
 
     def _initialise_log_dir(self) -> Path:
+        """Determine where to store logs and status for this deployment.
+
+        The default behaviour is to honour an explicit configuration via the
+        ``REGISTRATION_LOG_DIRECTORY`` environment variable. If not set,
+        logs are stored under the system temporary directory. Sticking to
+        one well‑defined location avoids discrepancies between different
+        worker processes that may have different home or data directories.
+        """
+        # If a specific directory is configured, attempt to use it.
         configured = os.environ.get("REGISTRATION_LOG_DIRECTORY")
-        candidates: list[Path] = []
-
         if configured:
-            candidates.append(Path(configured).expanduser())
-        else:
-            data_home = os.environ.get("XDG_DATA_HOME")
-            if data_home:
-                candidates.append(Path(data_home) / LOG_STORAGE_DIRNAME)
+            path = Path(configured).expanduser()
             try:
-                home_dir = Path.home()
-            except Exception:
-                home_dir = None
-            if home_dir:
-                candidates.append(home_dir / f".{LOG_STORAGE_DIRNAME}")
-        candidates.append(Path(tempfile.gettempdir()) / LOG_STORAGE_DIRNAME)
-
-        for candidate in candidates:
-            try:
-                candidate.mkdir(parents=True, exist_ok=True)
+                path.mkdir(parents=True, exist_ok=True)
+                logger.info(f"Using log directory from REGISTRATION_LOG_DIRECTORY: {path}")
+                return path
             except Exception as e:
-                logger.debug(f"Could not create directory {candidate}: {e}")
-                continue
-            if candidate.is_dir():
-                logger.info(f"Using log directory: {candidate}")
-                return candidate
+                logger.warning(f"Unable to use configured log directory {path}: {e}")
 
-        raise RuntimeError("Unable to create log directory")
+        # Fall back to a stable location under the system temporary directory.
+        # This location is consistent across processes on the same host and
+        # avoids the variability of per‑user home or XDG directories.
+        fallback = Path(tempfile.gettempdir()) / LOG_STORAGE_DIRNAME
+        try:
+            fallback.mkdir(parents=True, exist_ok=True)
+            logger.info(f"Using temporary log directory: {fallback}")
+            return fallback
+        except Exception as e:
+            logger.error(f"Failed to create fallback log directory {fallback}: {e}")
+            raise RuntimeError("Unable to create log directory")
 
     def _load_email_config(self) -> Optional[EmailConfig]:
         email_address = os.environ.get("REGISTRATION_LOG_GMAIL_ADDRESS")
