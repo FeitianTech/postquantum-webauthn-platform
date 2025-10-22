@@ -279,13 +279,14 @@
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: transform 0.15s ease, background 0.2s ease;
+    line-height: 1;
+    transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
     box-shadow: none;
 }
 
 .mds-detail-page__back:hover,
 .mds-detail-page__back:focus-visible {
-    transform: translateY(-1px);
+    background: rgba(0, 114, 206, 0.2);
     outline: none;
 }
 

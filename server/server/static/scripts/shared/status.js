@@ -52,6 +52,8 @@ export function hideStatus(tabIdOrElement) {
 
     clearStatusTimeout(statusEl);
     statusEl.classList.remove('status--visible');
+    statusEl.className = 'status';
+    statusEl.textContent = '';
 }
 
 export function hideAllStatuses() {

@@ -456,6 +456,12 @@ export function createSummaryItem(label, value, options = {}) {
 
     const labelEl = document.createElement('div');
     labelEl.className = 'mds-certificate-summary__label';
+    if (typeof options.variant === 'string') {
+        const variant = options.variant.toLowerCase();
+        if (variant === 'primary') {
+            labelEl.classList.add('mds-certificate-summary__label--primary');
+        }
+    }
     labelEl.textContent = label;
     item.appendChild(labelEl);
 
@@ -528,7 +534,7 @@ export function renderCertificatePublicKey(info) {
     section.className = 'mds-certificate-summary__section';
 
     const title = document.createElement('div');
-    title.className = 'mds-certificate-summary__label';
+    title.className = 'mds-certificate-summary__heading';
     title.textContent = 'Public Key';
     section.appendChild(title);
 
@@ -603,7 +609,7 @@ export function renderCertificateSignature(signature) {
     section.className = 'mds-certificate-summary__section';
 
     const title = document.createElement('div');
-    title.className = 'mds-certificate-summary__label';
+    title.className = 'mds-certificate-summary__heading';
     title.textContent = 'Signature';
     section.appendChild(title);
 
@@ -657,11 +663,11 @@ export function renderCertificateSummary(details) {
     const serialNumber = details.serialNumber || {};
 
     [
-        createSummaryItem('Subject', details.subject),
-        createSummaryItem('Issuer', details.issuer),
-        createSummaryItem('Not Before', formatCertificateDateDisplay(validity.notBefore)),
-        createSummaryItem('Not After', formatCertificateDateDisplay(validity.notAfter)),
-        createSummaryItem('Serial Number', serialNumber.decimal || serialNumber.hex),
+        createSummaryItem('Subject', details.subject, { variant: 'primary' }),
+        createSummaryItem('Issuer', details.issuer, { variant: 'primary' }),
+        createSummaryItem('Not Before', formatCertificateDateDisplay(validity.notBefore), { variant: 'primary' }),
+        createSummaryItem('Not After', formatCertificateDateDisplay(validity.notAfter), { variant: 'primary' }),
+        createSummaryItem('Serial Number', serialNumber.decimal || serialNumber.hex, { variant: 'primary' }),
         serialNumber.hex ? createSummaryItem('Serial Number (Hex)', serialNumber.hex) : null,
     ].forEach(item => {
         if (item) {

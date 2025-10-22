@@ -272,25 +272,30 @@
 
 </div>
 
-<div id="mds-certificate-modal" class="mds-modal" hidden aria-hidden="true">
-    <div class="mds-modal__dialog mds-modal__dialog--certificate" role="dialog" aria-modal="true" aria-labelledby="mds-certificate-modal-title">
-        <div class="mds-modal__header">
-            <h3 id="mds-certificate-modal-title" class="mds-modal__title">Attestation Certificate</h3>
-            <button type="button" id="mds-certificate-modal-close" class="mds-modal__close" aria-label="Close">
-                ×
-            </button>
+<div id="mds-certificate-page" class="mds-detail-page" hidden aria-hidden="true">
+    <div class="mds-detail-page__header">
+        <button
+            type="button"
+            id="mds-certificate-page-close"
+            class="mds-detail-page__back"
+            aria-label="Return to authenticator list"
+            title="Back"
+        >&larr;</button>
+        <div class="mds-detail-page__heading">
+            <h3 id="mds-certificate-page-title" class="mds-detail-page__title">Attestation Certificate</h3>
+            <p id="mds-certificate-page-subtitle" class="mds-detail-page__subtitle" hidden></p>
         </div>
-        <div id="mds-certificate-modal-body" class="mds-modal__body mds-modal__body--certificate">
-            <div id="mds-certificate-summary" class="mds-certificate-summary" aria-live="polite"></div>
-            <div class="mds-modal__grid">
-                <div class="mds-modal__section">
-                    <h4 class="mds-modal__section-title">Input</h4>
-                    <div id="mds-certificate-input" class="mds-modal__textarea" aria-live="polite"></div>
-                </div>
-                <div class="mds-modal__section">
-                    <h4 class="mds-modal__section-title">Decoded Output</h4>
-                    <div id="mds-certificate-output" class="mds-modal__textarea" aria-live="polite"></div>
-                </div>
+    </div>
+    <div id="mds-certificate-page-body" class="mds-detail-page__body">
+        <div id="mds-certificate-summary" class="mds-certificate-summary" aria-live="polite"></div>
+        <div class="mds-modal__grid">
+            <div class="mds-modal__section">
+                <h4 class="mds-modal__section-title">Input</h4>
+                <div id="mds-certificate-input" class="mds-modal__textarea" aria-live="polite"></div>
+            </div>
+            <div class="mds-modal__section">
+                <h4 class="mds-modal__section-title">Decoded Output</h4>
+                <div id="mds-certificate-output" class="mds-modal__textarea" aria-live="polite"></div>
             </div>
         </div>
     </div>
