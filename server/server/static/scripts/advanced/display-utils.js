@@ -2,7 +2,7 @@ import { COSE_ALGORITHM_LABELS, COSE_KEY_TYPE_LABELS } from './constants.js';
 
 export function formatBoolean(value) {
     if (value === true) {
-        return '<span style="color: #0a8754; font-weight: 600;">true</span>';
+        return '<span style="color: #11b66d; font-weight: 600;">true</span>';
     }
     if (value === false) {
         return '<span style="color: #c62828; font-weight: 600;">false</span>';
@@ -10,7 +10,7 @@ export function formatBoolean(value) {
     if (typeof value === 'string') {
         const normalized = value.trim().toLowerCase();
         if (normalized === 'true') {
-            return '<span style="color: #0a8754; font-weight: 600;">true</span>';
+            return '<span style="color: #11b66d; font-weight: 600;">true</span>';
         }
         if (normalized === 'false') {
             return '<span style="color: #c62828; font-weight: 600;">false</span>';

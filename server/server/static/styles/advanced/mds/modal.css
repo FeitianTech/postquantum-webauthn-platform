@@ -187,6 +187,10 @@
     white-space: pre-wrap;
 }
 
+#mds-certificate-page .mds-modal__textarea {
+    background: #ffffff;
+}
+
 .mds-modal__textarea:focus-visible {
     outline: none;
     border-color: var(--primary-color);
