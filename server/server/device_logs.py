@@ -221,6 +221,34 @@ def _clean_authenticator_name(raw_value: Optional[str]) -> str:
     return "Unknown Authenticator"
 
 
+def _parse_timestamp(raw_value: Optional[object]) -> Optional[datetime]:
+    if not raw_value or not isinstance(raw_value, str):
+        return None
+
+    candidate = raw_value.strip()
+    if not candidate:
+        return None
+
+    try:
+        parsed = datetime.fromisoformat(candidate)
+    except ValueError:
+        try:
+            legacy_date = date.fromisoformat(candidate)
+        except ValueError:
+            return None
+        parsed = datetime(
+            legacy_date.year,
+            legacy_date.month,
+            legacy_date.day,
+            tzinfo=BEIJING_TZ,
+        )
+
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+
+    return parsed
+
+
 @dataclass
 class EmailConfig:
     email_address: str
@@ -229,6 +257,17 @@ class EmailConfig:
     refresh_token: str
     retry_attempts: int
     retry_delay_seconds: float
+
+
+@dataclass
+class _DeliveryStatus:
+    last_sent: Optional[datetime] = None
+    startup_completed: bool = False
+
+    def serialise_last_sent(self) -> Optional[str]:
+        if self.last_sent is None:
+            return None
+        return self.last_sent.astimezone(timezone.utc).isoformat()
 
 
 class RegistrationLogManager:
@@ -315,21 +354,29 @@ class RegistrationLogManager:
                     return
 
                 now_local = datetime.now(tz=BEIJING_TZ)
-                last_sent = self._load_last_send_time()
+                status = self._load_delivery_status()
 
-                if last_sent is None:
-                    self._send_verification_email(now_local)
+                if not status.startup_completed:
+                    if self._send_verification_email(now_local):
+                        status.last_sent = now_local
+                        status.startup_completed = True
+                        self._store_delivery_status(status)
                     return
 
-                last_sent_local = last_sent.astimezone(BEIJING_TZ)
-                if last_sent_local.date() == now_local.date():
-                    return
+                last_sent = status.last_sent
+                if last_sent is not None:
+                    last_sent_local = last_sent.astimezone(BEIJING_TZ)
+                    if last_sent_local.date() == now_local.date():
+                        return
 
                 contents = self._read_log_contents()
                 if contents is None or not contents.strip():
                     return
 
-                self._send_log_report(now_local, contents)
+                if self._send_log_report(now_local, contents):
+                    status.last_sent = now_local
+                    status.startup_completed = True
+                    self._store_delivery_status(status)
         finally:
             startup_lock.release()
 
@@ -369,41 +416,54 @@ class RegistrationLogManager:
 
     # Status helpers ------------------------------------------------
 
-    def _load_last_send_time(self) -> Optional[datetime]:
+    def _load_delivery_status(self) -> "_DeliveryStatus":
         try:
             raw = self._status_path.read_text(encoding="utf-8").strip()
         except FileNotFoundError:
-            return None
+            return _DeliveryStatus()
         except OSError:
-            return None
+            return _DeliveryStatus()
 
         if not raw:
-            return None
+            return _DeliveryStatus()
 
-        try:
-            parsed = datetime.fromisoformat(raw)
-        except ValueError:
+        if raw.startswith("{"):
             try:
-                legacy_date = date.fromisoformat(raw)
-            except ValueError:
-                return None
-            return datetime(legacy_date.year, legacy_date.month, legacy_date.day, tzinfo=BEIJING_TZ)
+                payload = json.loads(raw)
+            except (ValueError, TypeError):
+                return _DeliveryStatus()
 
-        if parsed.tzinfo is None:
-            parsed = parsed.replace(tzinfo=timezone.utc)
+            last_sent_raw = payload.get("last_sent_utc")
+            startup_completed = bool(payload.get("startup_completed"))
 
-        return parsed
+            last_sent = _parse_timestamp(last_sent_raw)
+            return _DeliveryStatus(last_sent=last_sent, startup_completed=startup_completed)
 
-    def _store_last_send_time(self, timestamp: datetime) -> None:
-        safe_ts = timestamp.astimezone(timezone.utc)
+        last_sent = _parse_timestamp(raw)
+        if last_sent is None:
+            return _DeliveryStatus()
+        return _DeliveryStatus(last_sent=last_sent, startup_completed=False)
+
+    def _store_delivery_status(self, status: "_DeliveryStatus") -> None:
+        payload = {
+            "last_sent_utc": status.serialise_last_sent(),
+            "startup_completed": status.startup_completed,
+        }
+
+        tmp_path = self._status_path.with_suffix(self._status_path.suffix + ".tmp")
+
         try:
-            self._status_path.write_text(safe_ts.isoformat(), encoding="utf-8")
+            tmp_path.write_text(json.dumps(payload), encoding="utf-8")
+            os.replace(tmp_path, self._status_path)
         except OSError:
-            pass
+            try:
+                tmp_path.unlink()
+            except OSError:
+                pass
 
     # Email helpers -------------------------------------------------
 
-    def _send_verification_email(self, now_local: datetime) -> None:
+    def _send_verification_email(self, now_local: datetime) -> bool:
         contents = self._read_log_contents()
         if contents is None:
             contents = ""
@@ -422,14 +482,16 @@ class RegistrationLogManager:
 
         if self._deliver_email(subject, body):
             self._clear_log()
-            self._store_last_send_time(now_local)
+            return True
+        return False
 
-    def _send_log_report(self, now_local: datetime, contents: str) -> None:
+    def _send_log_report(self, now_local: datetime, contents: str) -> bool:
         subject = f"WebAuthn Device Logs (Beijing time {now_local.date().isoformat()})"
         body = contents.rstrip() + "\n"
         if self._deliver_email(subject, body):
             self._clear_log()
-            self._store_last_send_time(now_local)
+            return True
+        return False
 
     # Internal helpers ---------------------------------------------
 
