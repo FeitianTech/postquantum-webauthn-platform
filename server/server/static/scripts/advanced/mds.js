@@ -1,6 +1,7 @@
 import {
     MDS_HTML_PATH,
     MDS_JWS_PATH,
+    MDS_VERIFIED_JSON_PATH,
     CUSTOM_METADATA_LIST_PATH,
     CUSTOM_METADATA_UPLOAD_PATH,
     CUSTOM_METADATA_DELETE_PATH,
@@ -1434,79 +1435,14 @@ function getMetadataStorage() {
 }
 
 function readMetadataCache() {
-    const storage = getMetadataStorage();
-    if (!storage) {
-        return null;
-    }
-
-    let payload = null;
-    try {
-        payload = storage.getItem(MDS_METADATA_STORAGE_KEY);
-    } catch (error) {
-        console.warn('Failed to read cached metadata payload:', error);
-        return null;
-    }
-
-    if (!payload) {
-        return null;
-    }
-
-    let metadata = null;
-    try {
-        metadata = JSON.parse(payload);
-    } catch (error) {
-        console.warn('Failed to parse cached metadata payload:', error);
-        clearMetadataCache();
-        return null;
-    }
-
-    let info = null;
-    try {
-        const infoRaw = storage.getItem(MDS_METADATA_INFO_KEY);
-        if (infoRaw) {
-            info = JSON.parse(infoRaw);
-        }
-    } catch (error) {
-        info = null;
-    }
-
-    return { metadata, info };
+    return null;
 }
 
-function storeMetadataCache(payload, info) {
-    const storage = getMetadataStorage();
-    if (!storage) {
-        return;
-    }
-
-    try {
-        if (typeof payload !== 'string' || !payload) {
-            storage.removeItem(MDS_METADATA_STORAGE_KEY);
-        } else {
-            storage.setItem(MDS_METADATA_STORAGE_KEY, payload);
-        }
-        if (info && typeof info === 'object') {
-            storage.setItem(MDS_METADATA_INFO_KEY, JSON.stringify(info));
-        } else {
-            storage.removeItem(MDS_METADATA_INFO_KEY);
-        }
-    } catch (error) {
-        console.warn('Failed to cache metadata payload:', error);
-    }
+function storeMetadataCache() {
+    // Disabled to minimise localStorage usage.
 }
 
 function clearMetadataCache() {
-    const storage = getMetadataStorage();
-    if (!storage) {
-        return;
-    }
-    try {
-        storage.removeItem(MDS_METADATA_STORAGE_KEY);
-        storage.removeItem(MDS_METADATA_INFO_KEY);
-    } catch (error) {
-        console.warn('Failed to clear cached metadata payload:', error);
-    }
-
     customMetadataCache = null;
 }
 
@@ -2364,6 +2300,38 @@ async function loadMdsData(statusNote, options = {}) {
                     : 'Downloading authenticator metadata…';
                 loaderSetPhase(phaseLabel, { progress: 52 });
             }
+            let metadataJson = null;
+            try {
+                const jsonResponse = await fetch(MDS_VERIFIED_JSON_PATH, fetchOptions);
+                if (jsonResponse.ok) {
+                    const contentType = jsonResponse.headers?.get('content-type') || '';
+                    if (contentType.includes('application/json')) {
+                        metadataJson = await jsonResponse.json();
+                    }
+                } else if (jsonResponse.status && jsonResponse.status !== 404) {
+                    console.warn('Verified metadata endpoint responded with status', jsonResponse.status);
+                }
+            } catch (error) {
+                if (error && error.name === 'AbortError') {
+                    throw error;
+                }
+                console.warn('Unable to load verified metadata snapshot:', error);
+            }
+
+            if (metadataJson && typeof metadataJson === 'object') {
+                if (trackProgress) {
+                    loaderSetPhase('Applying verified authenticator metadata…', { progress: 56 });
+                }
+                const ensureOptions = forceReload ? { signal, forceReload: true } : { signal };
+                const enhancedMetadata = await ensureCustomMetadata(metadataJson, ensureOptions);
+                throwIfAborted(signal);
+                await applyMetadataEntries(enhancedMetadata, { note, signal });
+                setUpdateButtonMode('update');
+                setUpdateButtonAttention(false);
+                stateUpdated = true;
+                return;
+            }
+
             const response = await fetch(MDS_JWS_PATH, fetchOptions);
             if (!response.ok) {
                 if (response.status === 404) {

@@ -247,6 +247,21 @@ def api_update_mds_metadata():
     return jsonify(payload)
 
 
+@app.route("/api/mds/metadata/base", methods=["GET"])
+def api_get_verified_metadata():
+    metadata_path = os.path.join(basepath, "static", "fido-mds3.verified.json")
+    try:
+        with open(metadata_path, "r", encoding="utf-8") as metadata_file:
+            payload = json.load(metadata_file)
+    except FileNotFoundError:
+        return jsonify({"error": "Verified metadata snapshot is not available."}), 404
+    except json.JSONDecodeError as exc:
+        app.logger.error("Invalid verified metadata snapshot: %s", exc)
+        return jsonify({"error": "Verified metadata snapshot is corrupted."}), 500
+
+    return jsonify(payload)
+
+
 @app.route("/api/mds/metadata/custom", methods=["GET"])
 def api_list_custom_metadata():
     ensure_metadata_session_id()

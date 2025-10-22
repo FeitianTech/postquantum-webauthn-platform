@@ -30,3 +30,6 @@ fido-mds3.jws.meta.json
 
 # Session-scoped metadata uploads
 server/server/static/session-metadata/
+
+# Advanced credential artifact cache
+server/server/static/credential-artifacts/

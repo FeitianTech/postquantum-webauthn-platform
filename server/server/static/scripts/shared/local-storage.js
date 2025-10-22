@@ -1,3 +1,10 @@
+import {
+    fetchCredentialArtifact,
+    uploadCredentialArtifact,
+    updateCredentialSnapshot as uploadSnapshotToServer,
+    deleteCredentialArtifact,
+} from './credential-artifacts-client.js';
+
 const SHARED_STORAGE_KEY = 'postquantum-webauthn.credentials';
 const LEGACY_SIMPLE_STORAGE_KEY = 'postquantum-webauthn.simpleCredentials';
 const LEGACY_ADVANCED_STORAGE_KEY = 'postquantum-webauthn.advancedCredentials';
@@ -20,6 +27,68 @@ const AGGRESSIVE_DROP_KEYS = [
     'attestation_statement',
     'registrationResponse',
     'registration_response',
+];
+const SERVER_ARTIFACT_VERSION = 1;
+const LOCAL_HEAVY_ROOT_KEYS = [
+    'attestationObject',
+    'attestation_object',
+    'attestationObjectRaw',
+    'attestation_object_raw',
+    'attestationObjectDecoded',
+    'attestation_object_decoded',
+    'attestationStatement',
+    'attestation_statement',
+    'attestationCertificate',
+    'attestation_certificate',
+    'attestationCertificates',
+    'attestation_certificates',
+    'attestationCertificatesDetails',
+    'attestation_certificates_details',
+    'registrationResponse',
+    'registration_response',
+    'registrationCredential',
+    'registration_credential',
+    'registrationResult',
+    'registration_result',
+    'registrationDetailSnapshot',
+    'registration_detail_snapshot',
+    'registrationDetailHtml',
+    'registration_detail_html',
+    'registrationDetailCombinedHtml',
+    'registration_detail_combined_html',
+    'registrationDetailCopy',
+    'registration_detail_copy',
+    'registrationData',
+    'registration_data',
+    'clientDataJSON',
+    'clientData',
+    'clientDataParsed',
+    'clientDataObject',
+    'client_data_json',
+    'authenticatorData',
+    'authenticator_data',
+    'authenticatorDataHex',
+    'authenticator_data_hex',
+    'authenticatorDataHash',
+    'authenticator_data_hash',
+];
+const LOCAL_HEAVY_PROPERTY_KEYS = [
+    'attestationCertificate',
+    'attestationCertificates',
+    'attestation_certificate',
+    'attestation_certificates',
+    'attestationChecks',
+    'attestation_checks',
+    'registrationData',
+    'registration_data',
+];
+const LOCAL_HEAVY_RELYING_PARTY_KEYS = [
+    'registrationData',
+    'registration_data',
+    'attestationCertificate',
+    'attestationCertificates',
+    'attestation_certificate',
+    'attestation_certificates',
 ];
 const MAX_SNAPSHOT_HTML_LENGTH = 120000;
 const MAX_DETAIL_STRING_LENGTH = 48000;
@@ -76,6 +145,95 @@ function cloneJsonValue(value) {
     } catch (error) {
         return { ...value };
     }
+}
+
+function removeObjectKeys(target, keys) {
+    if (!target || typeof target !== 'object' || !Array.isArray(keys)) {
+        return;
+    }
+    keys.forEach(key => {
+        if (Object.prototype.hasOwnProperty.call(target, key)) {
+            delete target[key];
+        }
+    });
+}
+
+function summarisePropertiesForLocal(properties) {
+    if (!properties || typeof properties !== 'object') {
+        return null;
+    }
+    const clone = { ...properties };
+    removeObjectKeys(clone, LOCAL_HEAVY_PROPERTY_KEYS);
+    return Object.keys(clone).length ? clone : null;
+}
+
+function summariseRelyingPartyForLocal(relyingParty) {
+    if (!relyingParty || typeof relyingParty !== 'object') {
+        return null;
+    }
+    const clone = { ...relyingParty };
+    removeObjectKeys(clone, LOCAL_HEAVY_RELYING_PARTY_KEYS);
+    return Object.keys(clone).length ? clone : null;
+}
+
+function summariseAdvancedCredentialForLocal(record, storageId, options = {}) {
+    if (!record || typeof record !== 'object') {
+        return null;
+    }
+    const { hasArtifact = true } = options;
+    const summary = { ...record, type: 'advanced' };
+    removeObjectKeys(summary, LOCAL_HEAVY_ROOT_KEYS);
+
+    if (summary.properties && typeof summary.properties === 'object') {
+        const propertiesSummary = summarisePropertiesForLocal(summary.properties);
+        if (propertiesSummary) {
+            summary.properties = propertiesSummary;
+        } else {
+            delete summary.properties;
+        }
+    }
+
+    if (summary.relyingParty && typeof summary.relyingParty === 'object') {
+        const rpSummary = summariseRelyingPartyForLocal(summary.relyingParty);
+        if (rpSummary) {
+            summary.relyingParty = rpSummary;
+        } else {
+            delete summary.relyingParty;
+        }
+    }
+
+    if (storageId && isNonEmptyString(storageId)) {
+        summary.storageId = storageId.trim();
+        summary.localStorageId = summary.storageId;
+    }
+
+    summary.hasServerArtifact = Boolean(hasArtifact);
+    summary.artifactVersion = SERVER_ARTIFACT_VERSION;
+
+    return summary;
+}
+
+function recordHasHeavyData(record) {
+    if (!record || typeof record !== 'object') {
+        return false;
+    }
+    const rootKeyPresent = LOCAL_HEAVY_ROOT_KEYS.some(key => record[key] !== undefined && record[key] !== null);
+    if (rootKeyPresent) {
+        return true;
+    }
+    const props = record.properties;
+    if (props && typeof props === 'object') {
+        if (LOCAL_HEAVY_PROPERTY_KEYS.some(key => props[key] !== undefined && props[key] !== null)) {
+            return true;
+        }
+    }
+    const rp = record.relyingParty;
+    if (rp && typeof rp === 'object') {
+        if (LOCAL_HEAVY_RELYING_PARTY_KEYS.some(key => rp[key] !== undefined && rp[key] !== null)) {
+            return true;
+        }
+    }
+    return false;
 }
 
 function truncateString(value, maxLength) {
@@ -407,6 +565,95 @@ function persistUnifiedCredentialRecords(records) {
         }
     }
     return success;
+}
+
+let advancedArtifactSyncPromise = null;
+
+async function synchroniseAdvancedCredentialArtifacts() {
+    const records = readStoredCredentials(SHARED_STORAGE_KEY);
+    if (!Array.isArray(records) || !records.length) {
+        return false;
+    }
+
+    let changed = false;
+    const updatedRecords = [];
+
+    for (const record of records) {
+        if (!record || typeof record !== 'object') {
+            continue;
+        }
+        if ((record.type || 'simple') !== 'advanced') {
+            updatedRecords.push(record);
+            continue;
+        }
+
+        const working = { ...record, type: 'advanced' };
+        ensureAdvancedCredentialStorageId(working);
+        const storageId = isNonEmptyString(working.storageId) ? working.storageId.trim() : '';
+
+        const needsUpload = (
+            !working.hasServerArtifact
+            || Number(working.artifactVersion) < SERVER_ARTIFACT_VERSION
+        ) && recordHasHeavyData(record);
+
+        let artifactAvailable = Boolean(working.hasServerArtifact);
+
+        if (needsUpload && storageId) {
+            const artifactRecord = cloneJsonValue(record) || record;
+            const payload = {
+                schemaVersion: SERVER_ARTIFACT_VERSION,
+                storedCredential: artifactRecord,
+            };
+            const uploaded = await uploadCredentialArtifact(storageId, payload, { merge: true });
+            if (uploaded) {
+                artifactAvailable = true;
+            }
+        }
+
+        let recordForStorage = record;
+        if (artifactAvailable) {
+            const summary = summariseAdvancedCredentialForLocal(working, storageId, { hasArtifact: artifactAvailable });
+            if (summary) {
+                recordForStorage = summary;
+            }
+            if (recordForStorage !== record) {
+                changed = true;
+            }
+        }
+
+        updatedRecords.push(recordForStorage);
+
+        if (
+            artifactAvailable
+            && (
+                !working.hasServerArtifact
+                || Number(working.artifactVersion) < SERVER_ARTIFACT_VERSION
+                || recordHasHeavyData(record)
+            )
+        ) {
+            changed = true;
+        }
+    }
+
+    if (changed) {
+        persistUnifiedCredentialRecords(updatedRecords);
+    }
+
+    return changed;
+}
+
+export function ensureAdvancedCredentialArtifactsSynced() {
+    if (!advancedArtifactSyncPromise) {
+        advancedArtifactSyncPromise = synchroniseAdvancedCredentialArtifacts()
+            .catch(error => {
+                console.warn('Failed to synchronise advanced credential artifacts', error);
+                return false;
+            })
+            .finally(() => {
+                advancedArtifactSyncPromise = null;
+            });
+    }
+    return advancedArtifactSyncPromise;
 }
 
 function partitionRecords(records) {
@@ -1055,7 +1302,7 @@ export function updateAdvancedCredentialSignCount(credentialId, signCount, stora
     return updated;
 }
 
-export function updateAdvancedCredentialRegistrationSnapshot(storageId, snapshot) {
+export async function updateAdvancedCredentialRegistrationSnapshot(storageId, snapshot) {
     const storageKey = isNonEmptyString(storageId) ? storageId.trim() : '';
     if (!storageKey || !snapshot || typeof snapshot !== 'object') {
         return false;
@@ -1066,34 +1313,7 @@ export function updateAdvancedCredentialRegistrationSnapshot(storageId, snapshot
         return false;
     }
 
-    const { simpleRecords, advancedRecords } = readAdvancedCredentialPartitions();
-    let updated = false;
-    const updatedAdvanced = advancedRecords.map(record => {
-        if (!record || typeof record !== 'object') {
-            return record;
-        }
-        if (record.storageId !== storageKey) {
-            return record;
-        }
-        const clone = { ...record };
-        clone.registrationDetailSnapshot = sanitisedSnapshot;
-        updated = true;
-        return clone;
-    });
-
-    if (!updated) {
-        return false;
-    }
-
-    const sanitised = updatedAdvanced
-        .map(item => prepareAdvancedCredentialForStorage(item))
-        .filter(Boolean);
-
-    if (!sanitised.length) {
-        return false;
-    }
-
-    return persistCredentialPartitions(simpleRecords, sanitised);
+    return uploadSnapshotToServer(storageKey, sanitisedSnapshot);
 }
 
 function extractAlgorithm(record) {
@@ -1202,6 +1422,7 @@ export function prepareAdvancedCredentialsForServer(credentials = null) {
 }
 
 export default {
+    ensureAdvancedCredentialArtifactsSynced,
     getAllSimpleCredentials,
     getSimpleCredentialsForEmail,
     saveSimpleCredential,

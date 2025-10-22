@@ -43,7 +43,12 @@ import {
     removeAdvancedCredential as removeAdvancedCredentialFromLocal,
     clearAdvancedCredentials as clearLocalAdvancedCredentials,
     updateAdvancedCredentialRegistrationSnapshot,
+    ensureAdvancedCredentialArtifactsSynced,
 } from '../shared/local-storage.js';
+import {
+    fetchCredentialArtifact,
+    deleteCredentialArtifact,
+} from '../shared/credential-artifacts-client.js';
 
 const SHARED_CREDENTIAL_STATUS_TABS = ['advanced', 'simple'];
 
@@ -114,6 +119,53 @@ function collectCredentialCertificates(cred) {
         }
     });
     return collected;
+}
+
+async function hydrateCredentialFromServer(cred) {
+    if (!cred || typeof cred !== 'object') {
+        return null;
+    }
+
+    const storageId = cred.storageId || cred.localStorageId || null;
+    if (!storageId || typeof storageId !== 'string' || !storageId.trim()) {
+        cred.__artifactHydrated = 'missing';
+        return null;
+    }
+
+    if (cred.__artifactHydrated === storageId) {
+        return cred;
+    }
+
+    try {
+        const artifact = await fetchCredentialArtifact(storageId);
+        if (!artifact || typeof artifact !== 'object') {
+            cred.__artifactHydrated = 'missing';
+            return null;
+        }
+
+        const storedCredential = artifact.storedCredential && typeof artifact.storedCredential === 'object'
+            ? artifact.storedCredential
+            : artifact;
+
+        if (storedCredential && typeof storedCredential === 'object') {
+            Object.keys(storedCredential).forEach(key => {
+                cred[key] = storedCredential[key];
+            });
+        }
+
+        const snapshotCandidate = artifact.registrationDetailSnapshot
+            || storedCredential?.registrationDetailSnapshot;
+        if (snapshotCandidate && typeof snapshotCandidate === 'object') {
+            cred.registrationDetailSnapshot = snapshotCandidate;
+        }
+
+        cred.__artifactHydrated = storageId;
+        return storedCredential;
+    } catch (error) {
+        console.warn('Unable to fetch credential artifact', error);
+        cred.__artifactHydrated = 'error';
+        return null;
+    }
 }
 
 function computeCredentialAaguidMatchStatus(cred, options = {}) {
@@ -2604,6 +2656,8 @@ export function updateAllowCredentialsDropdown() {
 }
 
 export async function loadSavedCredentials() {
+    await ensureAdvancedCredentialArtifactsSynced();
+
     const simpleCredentials = getAllSimpleCredentials().map(cred => ({
         ...cred,
         type: 'simple',
@@ -3012,6 +3066,10 @@ export async function showCredentialDetails(index) {
     const cred = state.storedCredentials[index];
     if (!cred) {
         return;
+    }
+
+    if (cred.type !== 'simple') {
+        await hydrateCredentialFromServer(cred);
     }
 
     const modalBody = document.getElementById('modalBody');
@@ -3840,7 +3898,7 @@ export async function showRegistrationResultModal(credentialJson, relyingPartyIn
             state: registrationDetail.stateSnapshot || {},
         };
 
-        if (updateAdvancedCredentialRegistrationSnapshot(storageId, snapshotPayload)) {
+        if (await updateAdvancedCredentialRegistrationSnapshot(storageId, snapshotPayload)) {
             await loadSavedCredentials();
         }
     }
@@ -3892,14 +3950,20 @@ export async function deleteCredential(index) {
         state.storedCredentials.splice(index, 1);
         updateCredentialsDisplay();
         showSharedCredentialStatus('Credential removed from this browser.', 'success');
+        if (storageId) {
+            await deleteCredentialArtifact(storageId);
+        }
     } else {
         showSharedCredentialStatus('Unable to remove credential from this browser.', 'error');
     }
 }
 
 export async function clearAllCredentials() {
-    const simpleCount = getAllSimpleCredentials().length;
-    const advancedCount = getAllAdvancedCredentials().length;
+    const simpleCredentials = getAllSimpleCredentials();
+    const advancedCredentials = getAllAdvancedCredentials();
+
+    const simpleCount = simpleCredentials.length;
+    const advancedCount = advancedCredentials.length;
 
     if (simpleCount === 0 && advancedCount === 0) {
         showSharedCredentialStatus('No saved credentials to clear.', 'info');
@@ -3912,6 +3976,14 @@ export async function clearAllCredentials() {
 
     if (advancedCount > 0) {
         clearLocalAdvancedCredentials();
+        const deletionTargets = advancedCredentials
+            .map(item => (item && typeof item === 'object' && (item.storageId || item.localStorageId)) || null)
+            .filter(id => typeof id === 'string' && id.trim());
+        if (deletionTargets.length) {
+            await Promise.allSettled(
+                deletionTargets.map(id => deleteCredentialArtifact(id.trim()))
+            );
+        }
     }
 
     if (simpleCount > 0) {
