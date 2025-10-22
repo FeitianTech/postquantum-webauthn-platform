@@ -692,8 +692,63 @@ function persistCredentialPartitions(simpleRecords, advancedRecords) {
             .filter(Boolean)
         : [];
 
-    const combined = preparedSimple.concat(preparedAdvanced);
-    return persistUnifiedCredentialRecords(combined);
+    const buildEntries = (records, fallbackType) => {
+        return records.map(record => {
+            const key = buildRecordKey(record, fallbackType);
+            return key ? { key, record } : null;
+        }).filter(Boolean);
+    };
+
+    const simpleEntries = buildEntries(preparedSimple, 'simple');
+    const advancedEntries = buildEntries(preparedAdvanced, 'advanced');
+
+    const entryMap = new Map();
+    simpleEntries.forEach(entry => entryMap.set(entry.key, entry));
+    advancedEntries.forEach(entry => entryMap.set(entry.key, entry));
+
+    const current = readUnifiedCredentialRecords();
+    const nextRecords = [];
+
+    if (Array.isArray(current) && current.length) {
+        current.forEach(record => {
+            const key = buildRecordKey(record);
+            if (!key) {
+                return;
+            }
+            const entry = entryMap.get(key);
+            if (entry) {
+                nextRecords.push(entry.record);
+                entryMap.delete(key);
+            }
+        });
+    }
+
+    const appendRemaining = entries => {
+        entries.forEach(entry => {
+            if (!entryMap.has(entry.key)) {
+                return;
+            }
+            nextRecords.push(entry.record);
+            entryMap.delete(entry.key);
+        });
+    };
+
+    appendRemaining(simpleEntries);
+    appendRemaining(advancedEntries);
+
+    return persistUnifiedCredentialRecords(nextRecords);
+}
+
+function buildRecordKey(record, fallbackType = 'simple') {
+    const typed = ensureRecordType(record, fallbackType);
+    if (!typed) {
+        return '';
+    }
+    const identifier = getRecordIdentifier(typed);
+    if (identifier) {
+        return `${typed.type}:${identifier}`;
+    }
+    return `${typed.type}:generated:${generateRandomIdSegment()}`;
 }
 
 function normaliseCredentialId(record) {
