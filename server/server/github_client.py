@@ -2,10 +2,11 @@
 from __future__ import annotations
 
 import base64
+import hashlib
 import json
 import os
 import time
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from urllib import error as urllib_error
 from urllib import request as urllib_request
@@ -13,6 +14,9 @@ from urllib import request as urllib_request
 __all__ = [
     "github_get_json",
     "github_upload_json",
+    "github_upload_file",
+    "github_list_directory",
+    "git_blob_sha",
     "ensure_cleanup_workflow",
     "is_logging_enabled",
 ]
@@ -123,6 +127,13 @@ def _encode_content(data: bytes) -> str:
     return base64.b64encode(data).decode("ascii")
 
 
+def git_blob_sha(data: bytes) -> str:
+    """Return the git blob SHA1 for ``data``."""
+
+    header = f"blob {len(data)}\0".encode("ascii")
+    return hashlib.sha1(header + data).hexdigest()
+
+
 def github_get_json(path: str) -> Tuple[Dict[str, Any], str]:
     """Return the JSON payload and SHA for ``path`` in the log repository."""
 
@@ -168,6 +179,37 @@ def github_upload_json(path: str, obj: Dict[str, Any], sha: Optional[str] = None
 
     url = _api_url(f"contents/{path}")
     _request("PUT", url, body)
+
+
+def github_upload_file(path: str, data: bytes, message: str, sha: Optional[str] = None) -> None:
+    """Create or replace a file at ``path`` with ``data`` in the log repository."""
+
+    body: Dict[str, Any] = {
+        "message": message,
+        "content": _encode_content(data),
+    }
+    if sha:
+        body["sha"] = sha
+
+    url = _api_url(f"contents/{path}")
+    _request("PUT", url, body)
+
+
+def github_list_directory(path: str) -> List[Dict[str, Any]]:
+    """Return the metadata for files within ``path`` in the log repository."""
+
+    url = _api_url(f"contents/{path}")
+    try:
+        _, body = _request("GET", url)
+    except urllib_error.HTTPError as exc:
+        if exc.code == 404:
+            return []
+        raise
+
+    payload = json.loads(body.decode("utf-8"))
+    if not isinstance(payload, list):
+        raise RuntimeError(f"Unexpected response listing directory {path}")
+    return payload
 
 
 def ensure_cleanup_workflow() -> None:

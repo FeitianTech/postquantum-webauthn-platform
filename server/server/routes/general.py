@@ -22,6 +22,7 @@ from ..metadata import (
     expand_metadata_entry_payloads,
     list_session_metadata_items,
     load_metadata_cache_entry,
+    maybe_store_uploaded_metadata_file,
     save_session_metadata_item,
     serialize_session_metadata_item,
 )
@@ -317,6 +318,8 @@ def api_upload_custom_metadata():
         except (TypeError, ValueError) as exc:
             errors.append(f"{trimmed}: {exc}")
             continue
+
+        maybe_store_uploaded_metadata_file(trimmed, raw_bytes)
 
         for index, entry_payload in enumerate(entry_payloads, start=1):
             display_name = (
