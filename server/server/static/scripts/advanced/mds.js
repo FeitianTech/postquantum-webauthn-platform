@@ -49,8 +49,8 @@ let rowHeightLockScheduled = false;
 let horizontalScrollMetricsScheduled = false;
 let initialMdsJws = null;
 let initialMdsInfo = null;
-const MDS_METADATA_STORAGE_KEY = 'fido.mds.metadataPayload';
-const MDS_METADATA_INFO_KEY = 'fido.mds.metadataInfo';
+
+
 let metadataStorageWarningShown = false;
 let isSyncingHorizontalScroll = false;
 
@@ -110,21 +110,6 @@ const FLOATING_SCROLL_SIDE_MARGIN = 16;
 let customMetadataCache = null;
 let customMetadataPromise = null;
 let customMetadataItems = [];
-
-function cloneJsonValue(value) {
-    if (value === undefined) {
-        return undefined;
-    }
-    if (value === null || typeof value !== 'object') {
-        return value;
-    }
-    try {
-        return JSON.parse(JSON.stringify(value));
-    } catch (error) {
-        console.warn('Failed to clone metadata value.', error);
-        return value;
-    }
-}
 
 function cloneMetadataEntry(entry) {
     if (!entry || typeof entry !== 'object') {
@@ -846,7 +831,7 @@ async function uploadCustomMetadataFiles(files) {
                 signal: context.signal,
             });
 
-            let payload = null;
+            let payload;
             try {
                 payload = await response.json();
             } catch (error) {
@@ -931,7 +916,7 @@ async function deleteCustomMetadata(storedFilename, options = {}) {
                 },
             );
 
-            let payload = null;
+            let payload;
             try {
                 payload = await response.json();
             } catch (error) {
@@ -1409,29 +1394,6 @@ function setHighlightedRow(row, key, { scroll = false, behavior = 'smooth', focu
 
     scheduleScrollTopButtonUpdate();
     return true;
-}
-
-function getMetadataStorage() {
-    if (typeof window === 'undefined') {
-        return null;
-    }
-
-    const storageCandidates = ['localStorage', 'sessionStorage'];
-    for (const candidate of storageCandidates) {
-        try {
-            const storage = window[candidate];
-            if (storage) {
-                return storage;
-            }
-        } catch (error) {
-            if (!metadataStorageWarningShown) {
-                console.warn('Metadata storage unavailable:', error);
-                metadataStorageWarningShown = true;
-            }
-        }
-    }
-
-    return null;
 }
 
 function readMetadataCache() {

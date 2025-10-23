@@ -141,6 +141,7 @@ body.modal-open {
     pointer-events: none;
 }
 
+/*noinspection ALL*/
 .header-mini {
     position: fixed;
     top: 0;
@@ -154,6 +155,7 @@ body.modal-open {
     background: var(--surface-color);
 }
 
+/*noinspection ALL*/
 .header-mini__inner {
     display: flex;
     align-items: center;

@@ -120,7 +120,6 @@ export function initializeNavigationMenu() {
     };
 
     const controls = {
-        isOpen: () => open,
         open: () => {
             if (open || !isMobileViewport()) {
                 return;

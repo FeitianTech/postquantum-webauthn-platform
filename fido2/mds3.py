@@ -27,7 +27,18 @@
 
 from __future__ import annotations
 
-from .webauthn import AttestationObject, Aaguid
+import json
+import logging
+from base64 import b64decode, b64encode
+from contextvars import ContextVar
+from dataclasses import dataclass, field
+from datetime import date
+from enum import Enum, unique
+from typing import Sequence, Mapping, Any, Optional, Callable
+
+from cryptography import x509
+from cryptography.hazmat.backends import default_backend
+
 from .attestation.base import (
     Attestation,
     TrustPathEvaluation,
@@ -37,18 +48,7 @@ from .attestation.base import (
 )
 from .cose import CoseKey
 from .utils import websafe_decode, _JsonDataObject
-
-from cryptography import x509
-from cryptography.hazmat.backends import default_backend
-from dataclasses import dataclass, field
-from enum import Enum, unique
-from datetime import date
-from base64 import b64decode, b64encode
-from contextvars import ContextVar
-from typing import Sequence, Mapping, Any, Optional, Callable, List
-
-import json
-import logging
+from .webauthn import AttestationObject, Aaguid
 
 logger = logging.getLogger(__name__)
 

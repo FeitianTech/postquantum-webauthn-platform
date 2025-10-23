@@ -10,10 +10,10 @@ from datetime import datetime, timezone
 from typing import Any, Dict, Iterable, List, Mapping, MutableMapping, Optional, Sequence, Tuple
 
 from flask import abort, jsonify, request, session
+
 from fido2 import cbor
 from fido2.cose import CoseKey
 from fido2.webauthn import AttestedCredentialData, AuthenticatorData, PublicKeyCredentialUserEntity
-
 from ..attachments import normalize_attachment
 from ..attestation import (
     augment_aaguid_fields,
@@ -25,8 +25,7 @@ from ..attestation import (
 )
 from ..config import app, basepath, create_fido_server, determine_rp_id
 from ..device_logs import record_registration_event
-from ..storage import add_public_key_material, convert_bytes_for_json, delkey, extract_credential_data, readkey
-
+from ..storage import add_public_key_material, convert_bytes_for_json, delkey, readkey
 
 _SIMPLE_ALLOWED_ALGORITHMS: Tuple[int, ...] = tuple(
     alg

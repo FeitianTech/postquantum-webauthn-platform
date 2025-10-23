@@ -1504,20 +1504,5 @@ export function prepareAdvancedCredentialsForServer(credentials = null) {
 }
 
 export default {
-    ensureAdvancedCredentialArtifactsSynced,
-    getAllStoredCredentialsInOrder,
-    getAllSimpleCredentials,
-    getSimpleCredentialsForEmail,
-    saveSimpleCredential,
-    removeSimpleCredential,
-    clearSimpleCredentials,
-    updateSimpleCredentialSignCount,
-    prepareCredentialsForServer,
-    getAllAdvancedCredentials,
-    saveAdvancedCredential,
-    removeAdvancedCredential,
-    clearAdvancedCredentials,
-    updateAdvancedCredentialSignCount,
-    updateAdvancedCredentialRegistrationSnapshot,
-    prepareAdvancedCredentialsForServer,
+
 };

@@ -386,7 +386,7 @@ export async function advancedAuthenticate() {
 
         if (!response.ok) {
             let errorText = await response.text();
-            let parsedError = null;
+            let parsedError;
             try {
                 parsedError = JSON.parse(errorText);
             } catch (parseError) {
@@ -477,7 +477,7 @@ export async function advancedAuthenticate() {
             maybeRandomizeAdvancedAuthenticationFields();
         } else {
             let errorText = await result.text();
-            let parsedError = null;
+            let parsedError;
             try {
                 parsedError = JSON.parse(errorText);
             } catch (parseError) {

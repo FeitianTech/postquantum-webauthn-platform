@@ -1962,7 +1962,7 @@ function buildAttestationSection({
     authenticatorDecodeError = '',
 } = {}) {
     const attestationObject = registrationDetailState.attestationObject;
-    const attestationFormatNormalized = typeof attestationFormatRaw === 'string'
+    typeof attestationFormatRaw === 'string'
         ? attestationFormatRaw.trim().toLowerCase()
         : '';
     const attestationStatementObject = attestationStatement && typeof attestationStatement === 'object'
@@ -3171,7 +3171,6 @@ export async function showCredentialDetails(index) {
             : registrationDetailSnapshot;
 
         detailPreparation = applyRegistrationDetailSnapshot(registrationDetailSnapshot) || { ...EMPTY_DETAIL_PREPARATION };
-        preferFallbackCertificates = true;
 
         registrationDetailHtml = typeof registrationDetailSnapshot.html === 'string'
             ? registrationDetailSnapshot.html
@@ -3435,13 +3434,12 @@ export async function showCredentialDetails(index) {
             || [registrationDetailHtml, attestationSectionHtml].filter(Boolean).join('');
 
         if (!detailPreparation && registrationDetailResult.stateSnapshot) {
-            detailPreparation = normaliseDetailPreparationSnapshot(
+            normaliseDetailPreparationSnapshot(
                 registrationDetailResult.stateSnapshot.detailPreparation
             );
         }
 
         if (!registrationDetailSnapshot && registrationDetailResult.stateSnapshot) {
-            snapshotState = registrationDetailResult.stateSnapshot;
         }
     }
 
@@ -3516,7 +3514,7 @@ export async function showCredentialDetails(index) {
         attestationSummaryData?.metadata?.available,
         attestationChecksData?.metadata?.available,
     ];
-    const metadataAvailable = metadataAvailableCandidates.some(value => {
+    metadataAvailableCandidates.some(value => {
         if (typeof value === 'boolean') {
             return value;
         }
@@ -3668,7 +3666,7 @@ export async function showCredentialDetails(index) {
         aaguidHex = deriveAaguidFromCredentialData(cred);
     }
 
-    const rootVerified = attestationRootValue === true ||
+    attestationRootValue === true ||
         (typeof attestationRootValue === 'string' && attestationRootValue.trim().toLowerCase() === 'true');
 
     const { aaguidHex: normalizedAaguidHex, aaguidB64, aaguidB64u } = deriveAaguidDisplayValues(aaguidHex);
@@ -4009,39 +4007,3 @@ export async function clearAllCredentials() {
     showSharedCredentialStatus('All saved credentials removed successfully!', 'success');
 }
 
-export function updateCredentialsList() {
-    updateCredentialsDisplay();
-}
-
-export function generateCredentialDetails(cred) {
-    const algorithmDisplay = describeCredentialAlgorithm(cred);
-    if (cred.type === 'simple') {
-        return `
-            <strong>Type:</strong> Simple Authentication<br>
-            <strong>User:</strong> ${cred.email || cred.username}<br>
-            <strong>Credential ID:</strong> ${cred.credentialId}<br>
-            <strong>Algorithm:</strong> ${algorithmDisplay}
-        `;
-    } else {
-        return `
-            <strong>Type:</strong> Advanced Authentication<br>
-            <strong>User ID:</strong> ${cred.userId}<br>
-            <strong>User Name:</strong> ${cred.userName}<br>
-            <strong>Display Name:</strong> ${cred.displayName || 'N/A'}<br>
-            <strong>Credential ID:</strong> ${cred.credentialId}<br>
-            <strong>Algorithm:</strong> ${algorithmDisplay}
-        `;
-    }
-}
-
-export function toggleCredentialDetails(index) {
-    const credItems = document.querySelectorAll('.credential-item');
-    const item = credItems[index];
-
-    if (item.classList.contains('expanded')) {
-        item.classList.remove('expanded');
-    } else {
-        credItems.forEach(item => item.classList.remove('expanded'));
-        item.classList.add('expanded');
-    }
-}

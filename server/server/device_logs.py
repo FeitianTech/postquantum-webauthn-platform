@@ -113,8 +113,6 @@ class _InterProcessFileLock:
             if not self._sleep_until(deadline, poll_interval):
                 return False
 
-        return False
-
     def release(self) -> None:
         mode = self._mode
         handle = self._handle
