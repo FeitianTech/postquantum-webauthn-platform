@@ -9,6 +9,7 @@ from typing import Any, Dict, Optional, Sequence, Tuple
 
 from urllib import error as urllib_error
 from urllib import request as urllib_request
+from urllib.parse import quote
 
 __all__ = [
     "github_get_json",
@@ -87,9 +88,21 @@ def _token() -> str:
     return token
 
 
+def _encode_api_path(path: str) -> str:
+    """Return ``path`` with each segment percent-encoded for GitHub APIs."""
+
+    stripped = path.lstrip("/")
+    if not stripped:
+        return ""
+
+    segments = stripped.split("/")
+    encoded_segments = [quote(segment, safe="-._~%") for segment in segments]
+    return "/".join(encoded_segments)
+
+
 def _api_url(path: str) -> str:
-    path = path.lstrip("/")
-    return f"{_API_BASE}/repos/{_REPO_OWNER}/{_REPO_NAME}/{path}"
+    encoded = _encode_api_path(path)
+    return f"{_API_BASE}/repos/{_REPO_OWNER}/{_REPO_NAME}/{encoded}"
 
 
 def _request(method: str, url: str, body: Optional[Dict[str, Any]] = None) -> Tuple[int, bytes]:

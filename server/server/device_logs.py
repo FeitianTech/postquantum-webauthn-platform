@@ -179,6 +179,8 @@ class _LogUploadContext:
     attestation_format: str
     signature_algorithm: str
     attestation_bytes: bytes
+    attestation_sha256: str
+    attestation_raw: str
 
 
 def _sanitize_for_path_segment(value: str) -> str:
@@ -224,8 +226,12 @@ def _create_zero_aaguid_filename(attestation_bytes: bytes) -> str:
     return f"{datetime.utcnow().strftime('%Y%m%dT%H%M%S')}-{random_shortid(6)}-{digest}.json"
 
 
-def _create_default_filename(attestation_format: str, signature_algorithm: str, attestation_bytes: bytes) -> str:
-    digest = hashlib.sha256(attestation_bytes).hexdigest()[:16]
+def _create_default_filename(
+    attestation_format: str, signature_algorithm: str, attestation_sha256: str
+) -> str:
+    digest = (attestation_sha256 or "")[:16]
+    if not digest:
+        digest = random_shortid(12)
     format_component = _sanitize_filename_component(attestation_format)
     alg_component = _sanitize_filename_component(signature_algorithm or "unknown")
     return f"{format_component}-{alg_component}-{digest}.json"
@@ -312,6 +318,8 @@ def _find_existing_log(
     attestation_format: str,
     signature_algorithm: str,
     device_name: str,
+    attestation_sha256: str,
+    attestation_raw: str,
 ) -> Optional[Tuple[str, Mapping[str, Any], str]]:
     entries = _list_directory(folder_path)
     for entry in entries:
@@ -331,10 +339,18 @@ def _find_existing_log(
         existing_format = existing_payload.get("attestation_format", "")
         existing_alg = str(existing_payload.get("signature_algorithm", "unknown"))
         existing_device = existing_payload.get("device_name_mds", "unknown")
+        existing_digest = str(existing_payload.get("attestation_sha256", ""))
+        existing_raw = existing_payload.get("raw_attestation_object")
+        digest_matches = False
+        if existing_digest and attestation_sha256:
+            digest_matches = existing_digest == attestation_sha256
+        elif existing_raw and attestation_raw:
+            digest_matches = existing_raw == attestation_raw
         if (
             existing_format == attestation_format
             and str(existing_alg) == str(signature_algorithm)
             and (existing_device or "unknown") == (device_name or "unknown")
+            and digest_matches
         ):
             return file_path, existing_payload, existing_sha
     return None
@@ -350,6 +366,7 @@ def _build_log_payload(event: RegistrationEvent) -> _LogUploadContext:
     attestation_bytes = bytes(event.attestation_object)
     attestation_raw = to_b64url(attestation_bytes)
     attestation_decoded = safe_cbor_decode(attestation_bytes)
+    attestation_sha256 = hashlib.sha256(attestation_bytes).hexdigest()
 
     device_name = event.device_name_mds or "unknown"
     signature_algorithm = _signature_algorithm_from_cose(event.public_key_cose)
@@ -362,6 +379,7 @@ def _build_log_payload(event: RegistrationEvent) -> _LogUploadContext:
         "device_name_mds": device_name,
         "attestation_format": event.attestation_format,
         "signature_algorithm": signature_algorithm,
+        "attestation_sha256": attestation_sha256,
         "raw_attestation_object": attestation_raw,
         "decoded_attestation_object": attestation_decoded,
         "times_registered": 1,
@@ -384,6 +402,8 @@ def _build_log_payload(event: RegistrationEvent) -> _LogUploadContext:
         attestation_format=event.attestation_format,
         signature_algorithm=signature_algorithm,
         attestation_bytes=attestation_bytes,
+        attestation_sha256=attestation_sha256,
+        attestation_raw=attestation_raw,
     )
 
 
@@ -420,6 +440,8 @@ def _upload_worker(
             context.attestation_format,
             context.signature_algorithm,
             context.device_name,
+            context.attestation_sha256,
+            context.attestation_raw,
         )
         if match is not None:
             path, existing_payload, sha = match
@@ -433,7 +455,7 @@ def _upload_worker(
             filename = _create_default_filename(
                 context.attestation_format,
                 context.signature_algorithm,
-                context.attestation_bytes,
+                context.attestation_sha256,
             )
             path = f"{folder_path}/{filename}"
             times_registered = 1
