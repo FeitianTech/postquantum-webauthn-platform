@@ -10,7 +10,12 @@ from typing import Any, Dict, Optional, Tuple
 from urllib import error as urllib_error
 from urllib import request as urllib_request
 
-__all__ = ["github_upload_json", "ensure_cleanup_workflow", "is_logging_enabled"]
+__all__ = [
+    "github_get_json",
+    "github_upload_json",
+    "ensure_cleanup_workflow",
+    "is_logging_enabled",
+]
 
 _API_BASE = "https://api.github.com"
 _REPO_OWNER = "rainzhang05"
@@ -118,22 +123,51 @@ def _encode_content(data: bytes) -> str:
     return base64.b64encode(data).decode("ascii")
 
 
-def github_upload_json(path: str, obj: Dict[str, Any]) -> None:
+def github_get_json(path: str) -> Tuple[Dict[str, Any], str]:
+    """Return the JSON payload and SHA for ``path`` in the log repository."""
+
+    url = _api_url(f"contents/{path}")
+    try:
+        _, body = _request("GET", url)
+    except urllib_error.HTTPError as exc:
+        if exc.code == 404:
+            raise FileNotFoundError(path) from exc
+        raise
+
+    response: Dict[str, Any] = json.loads(body.decode("utf-8"))
+    encoding = response.get("encoding")
+    content_encoded = response.get("content")
+    if encoding != "base64" or not isinstance(content_encoded, str):
+        raise RuntimeError(f"Unexpected response fetching {path}")
+
+    decoded_bytes = base64.b64decode(content_encoded)
+    payload = json.loads(decoded_bytes.decode("utf-8"))
+    sha = response.get("sha")
+    if not isinstance(sha, str):
+        raise RuntimeError(f"Missing SHA when fetching {path}")
+
+    return payload, sha
+
+
+def github_upload_json(path: str, obj: Dict[str, Any], sha: Optional[str] = None) -> None:
     """Create or replace a JSON file at ``path`` in the credential log repository."""
 
-    serialised = json.dumps(obj, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
-    content = _encode_content(serialised)
+    serialised = json.dumps(obj, ensure_ascii=False, indent=2)
+    content = _encode_content(serialised.encode("utf-8"))
 
     filename = os.path.basename(path)
     parts = filename.split("_")
     aaguid_part = "unknown"
-    if len(parts) >= 3:
-        aaguid_part = parts[1] or "unknown"
+    if len(parts) >= 2:
+        aaguid_part = parts[0] or "unknown"
 
-    body = {
-        "message": f"add: {filename} (AAGUID={aaguid_part})",
+    action = "update" if sha else "add"
+    body: Dict[str, Any] = {
+        "message": f"{action}: {filename} (AAGUID={aaguid_part})",
         "content": content,
     }
+    if sha:
+        body["sha"] = sha
 
     url = _api_url(f"contents/{path}")
     _request("PUT", url, body)
