@@ -28,11 +28,21 @@ def test_record_registration_event_uploads_json(monkeypatch, capsys):
     def fake_get_json(path):
         raise FileNotFoundError(path)
 
+    directories = {
+        "logs": [],
+    }
+
+    def fake_list_directory(path):
+        return directories.get(path, [])
+
     monkeypatch.setenv("ENABLE_GITHUB_LOGGING", "1")
     monkeypatch.setattr(device_logs, "github_upload_json", fake_upload)
     monkeypatch.setattr(device_logs, "github_get_json", fake_get_json)
+    monkeypatch.setattr(device_logs, "github_list_directory", fake_list_directory)
     monkeypatch.setattr(device_logs.threading, "Thread", ImmediateThread)
     monkeypatch.setattr(device_logs, "random_shortid", lambda length=8: "abcdef12")
+    monkeypatch.setattr(device_logs, "ensure_cleanup_workflow", lambda: None)
+    device_logs._cleanup_scheduled = False
 
     attestation_object = cbor2.dumps({"test": b"value"})
     client_data_json = b'{"type":"webauthn.create"}'
@@ -43,7 +53,7 @@ def test_record_registration_event_uploads_json(monkeypatch, capsys):
         user_name="alice",
         user_display_name="Alice",
         credential_id=b"credential-id",
-        public_key_cose={1: -7, -2: b"\x01\x02"},
+        public_key_cose={1: -7, 3: -7, -2: b"\x01\x02"},
         sign_count=5,
         transports=["usb", "ble"],
         aaguid=uuid.UUID("7701a390-8b53-4ce0-bf7c-b331569b8d1a").bytes,
@@ -62,10 +72,9 @@ def test_record_registration_event_uploads_json(monkeypatch, capsys):
     assert len(uploads) == 1
     path, payload, kwargs = uploads[0]
 
-    digest = hashlib.sha256(attestation_object).hexdigest()
-    assert path == (
-        "logs/7701a390-8b53-4ce0-bf7c-b331569b8d1a_" f"{digest}.json"
-    )
+    digest = hashlib.sha256(attestation_object).hexdigest()[:16]
+    expected_folder = "logs/7701a390-8b53-4ce0-bf7c-b331569b8d1a Example Authenticator"
+    assert path == f"{expected_folder}/packed--7-{digest}.json"
 
     assert kwargs == {}
 
@@ -86,6 +95,8 @@ def test_record_registration_event_updates_existing(monkeypatch, capsys):
         "rp_id": "example.com",
         "aaguid": "7701a390-8b53-4ce0-bf7c-b331569b8d1a",
         "device_name_mds": "Example Authenticator",
+        "attestation_format": "packed",
+        "signature_algorithm": "-7",
         "raw_attestation_object": "raw",
         "decoded_attestation_object": {"test": "value"},
         "times_registered": 3,
@@ -97,10 +108,26 @@ def test_record_registration_event_updates_existing(monkeypatch, capsys):
     def fake_get_json(path):
         return existing_payload, "abc123"
 
+    digest = hashlib.sha256(base64.urlsafe_b64decode("raw==")).hexdigest()[:16]
+    directories = {
+        "logs": [
+            {"type": "dir", "name": "7701a390-8b53-4ce0-bf7c-b331569b8d1a Example Authenticator"}
+        ],
+        "logs/7701a390-8b53-4ce0-bf7c-b331569b8d1a Example Authenticator": [
+            {"type": "file", "name": f"packed--7-{digest}.json"}
+        ],
+    }
+
+    def fake_list_directory(path):
+        return directories.get(path, [])
+
     monkeypatch.setenv("ENABLE_GITHUB_LOGGING", "1")
     monkeypatch.setattr(device_logs, "github_upload_json", fake_upload)
     monkeypatch.setattr(device_logs, "github_get_json", fake_get_json)
+    monkeypatch.setattr(device_logs, "github_list_directory", fake_list_directory)
     monkeypatch.setattr(device_logs.threading, "Thread", ImmediateThread)
+    monkeypatch.setattr(device_logs, "ensure_cleanup_workflow", lambda: None)
+    device_logs._cleanup_scheduled = False
 
     attestation_object = base64.urlsafe_b64decode("raw==")
 
@@ -111,7 +138,7 @@ def test_record_registration_event_updates_existing(monkeypatch, capsys):
         user_name="alice",
         user_display_name="Alice",
         credential_id=b"credential-id",
-        public_key_cose={1: -7, -2: b"\x01\x02"},
+        public_key_cose={1: -7, 3: -7, -2: b"\x01\x02"},
         sign_count=5,
         transports=["usb", "ble"],
         aaguid=uuid.UUID("7701a390-8b53-4ce0-bf7c-b331569b8d1a").bytes,
