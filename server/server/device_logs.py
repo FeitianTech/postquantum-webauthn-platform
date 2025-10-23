@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import base64
-import hashlib
 import logging
 import secrets
 import threading
@@ -20,7 +19,6 @@ except ImportError:  # pragma: no cover - fallback for very old Python
 
 from .github_client import (
     ensure_cleanup_workflow,
-    github_get_json,
     github_upload_json,
     is_logging_enabled,
 )
@@ -165,11 +163,13 @@ def _schedule_cleanup_workflow_check() -> None:
     thread.start()
 
 
-def _log_path(aaguid: str, attestation_object: bytes) -> str:
-    digest = hashlib.sha256(attestation_object).hexdigest()
-    safe_aaguid = aaguid or "unknown"
-    filename = f"{safe_aaguid}_{digest}.json"
-    return f"{_LOGS_DIR}/{filename}"
+def _log_path(aaguid: str, timestamp: datetime) -> str:
+    folder_name = aaguid or "unknown"
+    if "/" in folder_name or ".." in folder_name:
+        folder_name = "unknown"
+    timestamp_label = timestamp.astimezone(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    filename = f"{timestamp_label}_{random_shortid(6)}.json"
+    return f"{_LOGS_DIR}/{folder_name}/{filename}"
 
 
 def _build_log_payload(event: RegistrationEvent) -> Tuple[str, Mapping[str, Any], Mapping[str, str]]:
@@ -183,7 +183,7 @@ def _build_log_payload(event: RegistrationEvent) -> Tuple[str, Mapping[str, Any]
     attestation_raw = to_b64url(attestation_bytes)
     attestation_decoded = safe_cbor_decode(attestation_bytes)
 
-    path = _log_path(aaguid_str, attestation_bytes)
+    path = _log_path(aaguid_str, event.timestamp)
 
     payload: MutableMapping[str, Any] = {
         "timestamp": timestamp_iso,
@@ -214,37 +214,8 @@ def _upload_worker(
     payload_dict: MutableMapping[str, Any] = dict(payload)
     summary_dict: MutableMapping[str, str] = dict(summary)
 
-    sha: Optional[str] = None
-    attestation_raw = payload_dict.get("raw_attestation_object")
-
     try:
-        existing_payload, existing_sha = github_get_json(path)
-    except FileNotFoundError:
-        pass
-    except Exception as exc:  # pragma: no cover - best-effort logging
-        _logger.warning("Unable to fetch existing credential log %s: %s", path, exc)
-    else:
-        existing_raw = existing_payload.get("raw_attestation_object")
-        if (
-            isinstance(existing_raw, str)
-            and isinstance(attestation_raw, str)
-            and existing_raw == attestation_raw
-        ):
-            existing_times = existing_payload.get("times_registered", 1)
-            try:
-                times_registered = int(existing_times) + 1
-            except Exception:
-                times_registered = 2
-            payload_dict["times_registered"] = times_registered
-            summary_dict["times_registered"] = str(times_registered)
-            summary_dict["action"] = "update"
-            sha = existing_sha
-
-    try:
-        if sha is None:
-            github_upload_json(path, dict(payload_dict))
-        else:
-            github_upload_json(path, dict(payload_dict), sha=sha)
+        github_upload_json(path, dict(payload_dict))
     except Exception as exc:
         print(
             f"[{TIMEZONE_LABEL} {summary_dict.get('timestamp', '')}] "
@@ -252,10 +223,9 @@ def _upload_worker(
         )
         return
 
-    verb = "Updated" if sha else "Uploaded"
     print(
         f"[{TIMEZONE_LABEL} {summary_dict.get('timestamp', '')}] "
-        f"{verb} credential log AAGUID={summary_dict.get('aaguid')} device={summary_dict.get('device')} "
+        f"Uploaded credential log AAGUID={summary_dict.get('aaguid')} device={summary_dict.get('device')} "
         f"times_registered={summary_dict.get('times_registered')}"
     )
 
