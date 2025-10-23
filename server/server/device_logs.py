@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import base64
+import hashlib
 import logging
 import secrets
 import threading
@@ -17,7 +18,12 @@ try:  # Python 3.9+
 except ImportError:  # pragma: no cover - fallback for very old Python
     from backports.zoneinfo import ZoneInfo  # type: ignore
 
-from .github_client import ensure_cleanup_workflow, github_upload_json, is_logging_enabled
+from .github_client import (
+    ensure_cleanup_workflow,
+    github_get_json,
+    github_upload_json,
+    is_logging_enabled,
+)
 
 __all__ = [
     "RegistrationEvent",
@@ -159,84 +165,84 @@ def _schedule_cleanup_workflow_check() -> None:
     thread.start()
 
 
-def _normalise_transports(transports: Optional[Sequence[str]]) -> Sequence[str]:
-    if not transports:
-        return ()
-    normalised = []
-    for item in transports:
-        if isinstance(item, str):
-            stripped = item.strip()
-            if stripped:
-                normalised.append(stripped)
-    return tuple(normalised)
+def _log_path(aaguid: str, attestation_object: bytes) -> str:
+    digest = hashlib.sha256(attestation_object).hexdigest()
+    safe_aaguid = aaguid or "unknown"
+    filename = f"{safe_aaguid}_{digest}.json"
+    return f"{_LOGS_DIR}/{filename}"
 
 
-def _build_log_payload(event: RegistrationEvent) -> Tuple[str, Mapping[str, Any], Mapping[str, str]]:
+def _build_log_payload(event: RegistrationEvent) -> Tuple[str, Mapping[str, Any], Mapping[str, str], Optional[str]]:
     timestamp_utc = event.timestamp.astimezone(timezone.utc).replace(microsecond=0)
     timestamp_iso = timestamp_utc.isoformat().replace("+00:00", "Z")
-    timestamp_filename = timestamp_utc.strftime("%Y-%m-%dT%H-%M-%SZ")
 
     aaguid_bytes = event.aaguid if isinstance(event.aaguid, (bytes, bytearray, memoryview)) else None
     aaguid_str = uuid_bytes_to_str(bytes(aaguid_bytes) if aaguid_bytes else None)
-    random_suffix = random_shortid(8)
-    filename = f"{timestamp_filename}_{aaguid_str}_{random_suffix}.json"
-    path = f"{_LOGS_DIR}/{filename}"
 
-    attestation_raw = to_b64url(bytes(event.attestation_object))
-    attestation_decoded = safe_cbor_decode(event.attestation_object)
+    attestation_bytes = bytes(event.attestation_object)
+    attestation_raw = to_b64url(attestation_bytes)
+    attestation_decoded = safe_cbor_decode(attestation_bytes)
 
-    transports = list(_normalise_transports(event.transports))
+    path = _log_path(aaguid_str, attestation_bytes)
 
-    credential_payload: MutableMapping[str, Any] = {
-        "credential_id": to_b64url(bytes(event.credential_id)),
-        "public_key_cose": _json_safe(dict(event.public_key_cose)),
-        "sign_count": int(event.sign_count),
-        "transports": transports,
-    }
-
-    if aaguid_str != "unknown":
-        credential_payload["aaguid"] = aaguid_str
-    if event.device_name_mds:
-        credential_payload["device_name_mds"] = event.device_name_mds
+    times_registered = 1
+    sha: Optional[str] = None
+    try:
+        existing_payload, existing_sha = github_get_json(path)
+    except FileNotFoundError:
+        pass
+    except Exception as exc:  # pragma: no cover - defensive logging
+        _logger.warning("Unable to fetch existing credential log %s: %s", path, exc)
+    else:
+        existing_raw = existing_payload.get("raw_attestation_object")
+        if isinstance(existing_raw, str) and existing_raw == attestation_raw:
+            existing_times = existing_payload.get("times_registered", 1)
+            try:
+                times_registered = int(existing_times) + 1
+            except Exception:
+                times_registered = 2
+            sha = existing_sha
 
     payload: MutableMapping[str, Any] = {
         "timestamp": timestamp_iso,
         "rp_id": event.rp_id,
-        "user": {
-            "id": to_b64url(bytes(event.user_id)),
-            "name": event.user_name,
-            "display_name": event.user_display_name,
-        },
-        "credential": credential_payload,
-        "attestation": {
-            "format": event.attestation_format,
-            "raw_attestation_object": attestation_raw,
-            "decoded": attestation_decoded,
-        },
-        "client_data_json": to_b64url(bytes(event.client_data_json)),
+        "aaguid": aaguid_str,
+        "device_name_mds": event.device_name_mds or "unknown",
+        "raw_attestation_object": attestation_raw,
+        "decoded_attestation_object": attestation_decoded,
+        "times_registered": times_registered,
     }
 
     timestamp_cst = timestamp_utc.astimezone(BEIJING_TZ)
-    summary = {
+    summary: MutableMapping[str, str] = {
         "timestamp": timestamp_utc.strftime("%Y-%m-%dT%H:%M:%SZ"),
         "timestamp_cst": timestamp_cst.replace(microsecond=0).isoformat(),
         "aaguid": aaguid_str,
         "device": event.device_name_mds or "unknown",
+        "times_registered": str(times_registered),
+        "action": "update" if sha else "create",
     }
 
-    return path, payload, summary
+    return path, payload, summary, sha
 
 
-def _upload_worker(path: str, payload: Mapping[str, Any], summary: Mapping[str, str]) -> None:
+def _upload_worker(
+    path: str,
+    payload: Mapping[str, Any],
+    summary: Mapping[str, str],
+    sha: Optional[str],
+) -> None:
     try:
-        github_upload_json(path, dict(payload))
+        github_upload_json(path, dict(payload), sha=sha)
     except Exception as exc:
         print(f"[{TIMEZONE_LABEL} {summary.get('timestamp', '')}] Failed to upload credential log {path}: {exc}")
         return
 
+    verb = "Updated" if sha else "Uploaded"
     print(
         f"[{TIMEZONE_LABEL} {summary.get('timestamp', '')}] "
-        f"Uploaded credential log AAGUID={summary.get('aaguid')} device={summary.get('device')}"
+        f"{verb} credential log AAGUID={summary.get('aaguid')} device={summary.get('device')} "
+        f"times_registered={summary.get('times_registered')}"
     )
 
 
@@ -247,7 +253,11 @@ def record_registration_event(event: RegistrationEvent) -> None:
         _logger.debug("GitHub credential logging disabled; skipping upload for rp_id=%s", event.rp_id)
         return
 
-    path, payload, summary = _build_log_payload(event)
+    path, payload, summary, sha = _build_log_payload(event)
     _schedule_cleanup_workflow_check()
-    thread = threading.Thread(target=_upload_worker, args=(path, payload, summary), daemon=True)
+    thread = threading.Thread(
+        target=_upload_worker,
+        args=(path, payload, summary, sha),
+        daemon=True,
+    )
     thread.start()
