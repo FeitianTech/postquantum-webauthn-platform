@@ -15,7 +15,7 @@ from datetime import datetime, timezone
 from email.utils import formatdate, parsedate_to_datetime
 from typing import Any, Dict, Iterator, List, Mapping, Optional, Set, Tuple
 
-from flask import has_request_context, session
+from flask import after_this_request, g, has_request_context, request, session
 
 from fido2.mds3 import (
     MetadataBlobPayload,
@@ -74,6 +74,9 @@ _SESSION_METADATA_SUFFIX = ".json"
 _SESSION_METADATA_INFO_SUFFIX = ".meta.json"
 _SESSION_METADATA_SESSION_KEY = "fido.mds.session"
 _SESSION_METADATA_RECOVERY_MARKER = ".last-session-id"
+
+_SESSION_METADATA_COOKIE_NAME = "fido.mds.session"
+_SESSION_METADATA_COOKIE_MAX_AGE = 60 * 60 * 24 * 365  # 1 year
 
 _METADATA_REPO_FOLDER = "metadata"
 
@@ -207,6 +210,37 @@ def _remember_session_identifier(identifier: str) -> None:
         )
 
 
+def _schedule_session_cookie(identifier: str) -> None:
+    if not has_request_context():
+        return
+
+    normalised = _normalise_session_identifier(identifier)
+    if not normalised:
+        return
+
+    secure = bool(request.is_secure)
+    cookie_path = "/"
+    samesite = "None" if secure else "Lax"
+
+    if getattr(g, "_session_metadata_cookie", None) == normalised:
+        return
+
+    g._session_metadata_cookie = normalised
+
+    @after_this_request
+    def _apply_cookie(response):
+        response.set_cookie(
+            _SESSION_METADATA_COOKIE_NAME,
+            normalised,
+            max_age=_SESSION_METADATA_COOKIE_MAX_AGE,
+            httponly=True,
+            secure=secure,
+            samesite=samesite,
+            path=cookie_path,
+        )
+        return response
+
+
 def _load_persisted_session_identifier() -> Optional[str]:
     if not _session_metadata_recovery_enabled():
         return None
@@ -281,11 +315,23 @@ def _get_metadata_session_id(*, create: bool = False) -> Optional[str]:
     if not has_request_context():
         return None
 
+    cookie_identifier = _normalise_session_identifier(
+        request.cookies.get(_SESSION_METADATA_COOKIE_NAME)
+    )
+    if cookie_identifier:
+        session[_SESSION_METADATA_SESSION_KEY] = cookie_identifier
+        _remember_session_identifier(cookie_identifier)
+        _schedule_session_cookie(cookie_identifier)
+        return cookie_identifier
+
     existing = session.get(_SESSION_METADATA_SESSION_KEY)
-    if isinstance(existing, str) and existing.strip():
-        identifier = existing.strip()
-        _remember_session_identifier(identifier)
-        return identifier
+    if isinstance(existing, str):
+        identifier = _normalise_session_identifier(existing)
+        if identifier:
+            session[_SESSION_METADATA_SESSION_KEY] = identifier
+            _remember_session_identifier(identifier)
+            _schedule_session_cookie(identifier)
+            return identifier
 
     if not create:
         return None
@@ -295,6 +341,7 @@ def _get_metadata_session_id(*, create: bool = False) -> Optional[str]:
         identifier = secrets.token_urlsafe(32)
     session[_SESSION_METADATA_SESSION_KEY] = identifier
     _remember_session_identifier(identifier)
+    _schedule_session_cookie(identifier)
     return identifier
 
 
