@@ -156,14 +156,11 @@ def github_upload_json(path: str, obj: Dict[str, Any], sha: Optional[str] = None
     content = _encode_content(serialised.encode("utf-8"))
 
     filename = os.path.basename(path)
-    parts = filename.split("_")
-    aaguid_part = "unknown"
-    if len(parts) >= 2:
-        aaguid_part = parts[0] or "unknown"
+    folder = os.path.basename(os.path.dirname(path)) or "unknown"
 
     action = "update" if sha else "add"
     body: Dict[str, Any] = {
-        "message": f"{action}: {filename} (AAGUID={aaguid_part})",
+        "message": f"{action}: {filename} (AAGUID={folder})",
         "content": content,
     }
     if sha:
