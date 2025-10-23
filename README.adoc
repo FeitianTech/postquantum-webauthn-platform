@@ -274,15 +274,20 @@ Follow these steps to enable the GitHub-based per-credential logging pipeline th
      $env:GITHUB_TOKEN = "ghp_your_token_here"  # makes it available in the current shell
      ```
 
-4. **Start the web service**
-   - Run the Flask application as usual (`python server/server/app.py`).
-   - On import, the logging module spawns a background task that ensures the scheduled cleanup workflow exists in the log repository.
+4. **Enable GitHub logging only in hosted environments**
+   - Set `ENABLE_GITHUB_LOGGING=1` (or `true`, `yes`, `on`) in the deployment environment.
+   - Render and Google Cloud deployments auto-enable logging when their platform-specific environment variables (e.g. `RENDER_SERVICE_ID`, `K_SERVICE`) are present.
+   - Leave the flag unset for local development and automated tests so no GitHub uploads are attempted.
 
-5. **Register a WebAuthn credential**
+5. **Start the web service**
+   - Run the Flask application as usual (`python server/server/app.py`).
+   - When logging is enabled, the module schedules a background task that ensures the scheduled cleanup workflow exists in the log repository the first time a credential is recorded.
+
+6. **Register a WebAuthn credential**
    - Use either the *Simple* or *Advanced* registration flows in the app.
    - After the registration completes, the server immediately uploads a JSON log file to GitHub. No files are written locally.
 
-6. **Verify the upload**
+7. **Verify the upload**
    - Each file is stored under `logs/{timestampUTC}_{aaguid_or_unknown}_{random8}.json`.
    - The JSON includes RP information, user identity, credential data, the raw attestation object (base64url), decoded CBOR (when possible), and the collected client data JSON.
    - Server stdout prints a summary such as:
@@ -290,7 +295,7 @@ Follow these steps to enable the GitHub-based per-credential logging pipeline th
      [CST 2025-10-23T09:41:10Z] Uploaded credential log AAGUID=7701a390-... device=Feitian BioPass
      ```
 
-7. **Automatic cleanup**
+8. **Automatic cleanup**
    - A GitHub Actions workflow (`.github/workflows/cleanup.yml`) deletes JSON logs older than 7 days every night at 00:00 UTC.
    - The helper only creates the workflow if it is missing, so you can customise it in the repository without the server overwriting changes.
 
