@@ -3103,6 +3103,71 @@ function createDetailStickyHeader(page, header, options = {}) {
         });
     }
 
+    let restoreAnimationCancel = null;
+
+    const cancelRestoreAnimation = () => {
+        if (typeof restoreAnimationCancel === 'function') {
+            try {
+                restoreAnimationCancel();
+            } catch (error) {
+                // Ignore cleanup errors.
+            }
+            restoreAnimationCancel = null;
+        }
+    };
+
+    const startRestoreAnimation = () => {
+        if (!miniHeader || miniHeader.hidden) {
+            return null;
+        }
+
+        const scheduleTimeout =
+            typeof window !== 'undefined' && typeof window.setTimeout === 'function'
+                ? window.setTimeout.bind(window)
+                : setTimeout;
+        const cancelTimeout =
+            typeof window !== 'undefined' && typeof window.clearTimeout === 'function'
+                ? window.clearTimeout.bind(window)
+                : clearTimeout;
+
+        let timeoutId = null;
+        let finished = false;
+
+        const handleTransitionEnd = event => {
+            if (!event || (event.target !== miniHeader && event.target !== miniInner)) {
+                return;
+            }
+            cleanup();
+        };
+
+        function cleanup() {
+            if (finished) {
+                return;
+            }
+            finished = true;
+            miniHeader.classList.remove('mds-detail-mini--restoring');
+            miniInner.classList.remove('mds-detail-mini__inner--restoring');
+            miniHeader.removeEventListener('transitionend', handleTransitionEnd);
+            miniInner.removeEventListener('transitionend', handleTransitionEnd);
+            if (timeoutId !== null) {
+                cancelTimeout(timeoutId);
+                timeoutId = null;
+            }
+            restoreAnimationCancel = null;
+        }
+
+        miniHeader.classList.add('mds-detail-mini--restoring');
+        miniInner.classList.add('mds-detail-mini__inner--restoring');
+        miniHeader.addEventListener('transitionend', handleTransitionEnd);
+        miniInner.addEventListener('transitionend', handleTransitionEnd);
+
+        timeoutId = scheduleTimeout(() => {
+            cleanup();
+        }, 360);
+
+        return cleanup;
+    };
+
     const sync = () => {
         if (titleTarget) {
             const titleText = titleSource?.textContent?.trim() || defaultTitle;
@@ -3173,17 +3238,21 @@ function createDetailStickyHeader(page, header, options = {}) {
     const show = () => {
         miniHeader.hidden = false;
         miniHeader.setAttribute('aria-hidden', 'false');
+        cancelRestoreAnimation();
         controller.reset();
+        restoreAnimationCancel = startRestoreAnimation();
         controller.refreshGeometry();
         controller.evaluate();
         sync();
     };
 
     const prepareForClose = () => {
+        cancelRestoreAnimation();
         controller.reset();
     };
 
     const hide = () => {
+        cancelRestoreAnimation();
         miniHeader.hidden = true;
         miniHeader.setAttribute('aria-hidden', 'true');
     };
