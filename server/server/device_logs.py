@@ -173,8 +173,8 @@ def _log_path(aaguid: str, attestation_object: bytes) -> str:
 
 
 def _build_log_payload(event: RegistrationEvent) -> Tuple[str, Mapping[str, Any], Mapping[str, str], Optional[str]]:
-    timestamp_utc = event.timestamp.astimezone(timezone.utc).replace(microsecond=0)
-    timestamp_iso = timestamp_utc.isoformat().replace("+00:00", "Z")
+    timestamp_local = event.timestamp.astimezone(BEIJING_TZ).replace(microsecond=0)
+    timestamp_iso = timestamp_local.isoformat()
 
     aaguid_bytes = event.aaguid if isinstance(event.aaguid, (bytes, bytearray, memoryview)) else None
     aaguid_str = uuid_bytes_to_str(bytes(aaguid_bytes) if aaguid_bytes else None)
@@ -213,10 +213,8 @@ def _build_log_payload(event: RegistrationEvent) -> Tuple[str, Mapping[str, Any]
         "times_registered": times_registered,
     }
 
-    timestamp_cst = timestamp_utc.astimezone(BEIJING_TZ)
     summary: MutableMapping[str, str] = {
-        "timestamp": timestamp_utc.strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "timestamp_cst": timestamp_cst.replace(microsecond=0).isoformat(),
+        "timestamp": timestamp_local.strftime("%Y-%m-%dT%H:%M:%S%z"),
         "aaguid": aaguid_str,
         "device": event.device_name_mds or "unknown",
         "times_registered": str(times_registered),
