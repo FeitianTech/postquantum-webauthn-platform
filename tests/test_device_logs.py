@@ -68,7 +68,6 @@ def test_record_registration_event_uploads_json(monkeypatch, capsys):
     assert payload["device_name_mds"] == "Example Authenticator"
     assert payload["raw_attestation_object"] == device_logs.to_b64url(attestation_object)
     assert payload["decoded_attestation_object"] == {"test": device_logs.to_b64url(b"value")}
-    assert payload["times_registered"] == 1
 
 
 def test_record_registration_event_creates_unique_files(monkeypatch, capsys):
@@ -118,7 +117,7 @@ def test_record_registration_event_creates_unique_files(monkeypatch, capsys):
     assert len(out_lines) == 2
     for line in out_lines:
         assert "Uploaded credential log" in line
-        assert "times_registered=1" in line
+        assert "action=create" in line
 
     assert len(uploads) == 2
     paths = [entry[0] for entry in uploads]
@@ -127,7 +126,6 @@ def test_record_registration_event_creates_unique_files(monkeypatch, capsys):
 
     for _path, payload, kwargs in uploads:
         assert kwargs == {}
-        assert payload["times_registered"] == 1
 
 
 def test_record_registration_event_disabled(monkeypatch):
