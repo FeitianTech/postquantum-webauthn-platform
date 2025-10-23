@@ -3,6 +3,8 @@ let hideTimeout;
 const BASE_MODAL_Z_INDEX = 1200;
 const MODAL_STACK_INCREMENT = 50;
 
+const stickyHeaderControllers = new WeakMap();
+
 function parseModalZIndex(value) {
     if (typeof value === 'number' && !Number.isNaN(value)) {
         return value;
@@ -383,38 +385,100 @@ export function toggleJsonEditorExpansion(forceCollapse = false) {
     updateGlobalScrollLock();
 }
 
-export function initializeStickyHeader() {
-    const header = document.querySelector('.header');
-    if (!(header instanceof HTMLElement) || header.dataset.stickyInitialized === 'true') {
-        return;
+export function initializeStickyHeaderForElement(header, options = {}) {
+    if (!(header instanceof HTMLElement)) {
+        return null;
     }
 
-    const navTabs = header.querySelector('.nav-tabs');
-    if (!(navTabs instanceof HTMLElement)) {
-        header.dataset.stickyInitialized = 'true';
-        return;
+    const existing = stickyHeaderControllers.get(header);
+    if (existing) {
+        return existing;
     }
 
-    const root = document.body instanceof HTMLElement ? document.body : header.parentElement;
+    const {
+        root: rootOption = document.body instanceof HTMLElement ? document.body : header.parentElement,
+        cloneSource = null,
+        cloneSelector = null,
+        createContent = null,
+        miniClass: providedMiniClass = 'header-mini',
+        miniInnerClass: providedMiniInnerClass = null,
+        activeClass: providedActiveClass = null,
+        measuringClass: providedMeasuringClass = null,
+        progressProperty = '--header-mini-progress',
+        heightProperty = '--header-mini-height',
+        scrollTarget = typeof window !== 'undefined' ? window : null,
+    } = options || {};
+
+    const miniClass = typeof providedMiniClass === 'string' && providedMiniClass.trim()
+        ? providedMiniClass.trim()
+        : 'header-mini';
+    const miniInnerClass = typeof providedMiniInnerClass === 'string' && providedMiniInnerClass.trim()
+        ? providedMiniInnerClass.trim()
+        : `${miniClass}__inner`;
+    const activeClass = typeof providedActiveClass === 'string' && providedActiveClass.trim()
+        ? providedActiveClass.trim()
+        : `${miniClass}--active`;
+    const measuringClass = typeof providedMeasuringClass === 'string' && providedMeasuringClass.trim()
+        ? providedMeasuringClass.trim()
+        : `${miniClass}--measuring`;
+
+    let root = rootOption;
+    if (!(root instanceof HTMLElement) && typeof document !== 'undefined') {
+        root = document.body || header.parentElement;
+    }
     if (!(root instanceof HTMLElement)) {
         header.dataset.stickyInitialized = 'true';
-        return;
+        return null;
     }
 
-    header.dataset.stickyInitialized = 'true';
+    let contentNode = null;
+    if (typeof createContent === 'function') {
+        try {
+            contentNode = createContent({ header });
+        } catch (error) {
+            contentNode = null;
+        }
+    }
+
+    if (!(contentNode instanceof Node)) {
+        let sourceNode = null;
+        if (cloneSource instanceof HTMLElement) {
+            sourceNode = cloneSource;
+        } else if (typeof cloneSelector === 'string' && cloneSelector) {
+            const candidate = header.querySelector(cloneSelector);
+            if (candidate instanceof HTMLElement) {
+                sourceNode = candidate;
+            }
+        }
+        if (!(sourceNode instanceof HTMLElement)) {
+            sourceNode = header;
+        }
+        contentNode = sourceNode.cloneNode(true);
+    }
+
+    if (!(contentNode instanceof Node)) {
+        header.dataset.stickyInitialized = 'true';
+        return null;
+    }
 
     const miniHeader = document.createElement('div');
-    miniHeader.className = 'header-mini';
+    miniHeader.className = miniClass;
     miniHeader.setAttribute('aria-hidden', 'true');
 
     const miniInner = document.createElement('div');
-    miniInner.className = 'header-mini__inner';
-
-    const navClone = navTabs.cloneNode(true);
-    miniInner.appendChild(navClone);
+    miniInner.className = miniInnerClass;
+    miniInner.appendChild(contentNode);
     miniHeader.appendChild(miniInner);
 
-    root.appendChild(miniHeader);
+    if (typeof options.insert === 'function') {
+        try {
+            options.insert(miniHeader, { header, root });
+        } catch (error) {
+            root.appendChild(miniHeader);
+        }
+    } else {
+        root.appendChild(miniHeader);
+    }
 
     const raf = typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function'
         ? window.requestAnimationFrame.bind(window)
@@ -422,7 +486,25 @@ export function initializeStickyHeader() {
 
     const cleanupHandlers = [];
 
+    const scrollElement = scrollTarget instanceof HTMLElement ? scrollTarget : (typeof window !== 'undefined' ? window : null);
+    const isElementScrollTarget = scrollElement instanceof HTMLElement;
+
     const getScrollPosition = () => {
+        if (typeof options.getScrollPosition === 'function') {
+            try {
+                const custom = options.getScrollPosition({ header, scrollElement });
+                if (Number.isFinite(custom)) {
+                    return custom;
+                }
+            } catch (error) {
+                // Ignore custom getter errors.
+            }
+        }
+
+        if (isElementScrollTarget) {
+            return Number.isFinite(scrollElement.scrollTop) ? scrollElement.scrollTop : 0;
+        }
+
         if (typeof window !== 'undefined') {
             if (typeof window.scrollY === 'number') {
                 return window.scrollY;
@@ -471,13 +553,17 @@ export function initializeStickyHeader() {
 
         lastProgress = progress;
 
-        miniHeader.style.setProperty('--header-mini-progress', progress.toFixed(4));
+        miniHeader.style.setProperty(progressProperty, progress.toFixed(4));
 
         if (progress > 0) {
-            miniHeader.classList.add('header-mini--active');
+            if (activeClass) {
+                miniHeader.classList.add(activeClass);
+            }
             miniHeader.removeAttribute('aria-hidden');
         } else {
-            miniHeader.classList.remove('header-mini--active');
+            if (activeClass) {
+                miniHeader.classList.remove(activeClass);
+            }
             miniHeader.setAttribute('aria-hidden', 'true');
         }
     };
@@ -485,8 +571,8 @@ export function initializeStickyHeader() {
     const evaluateProgress = () => {
         pendingUpdate = false;
 
-        const scrollY = getScrollPosition();
-        const delta = scrollY - headerBottom;
+        const scrollPosition = getScrollPosition();
+        const delta = scrollPosition - headerBottom;
         const rawProgress = delta > 0 ? delta / revealRange : 0;
         const progress = clamp01(rawProgress);
 
@@ -505,32 +591,58 @@ export function initializeStickyHeader() {
     };
 
     const measureMiniHeader = () => {
-        miniHeader.classList.add('header-mini--measuring');
-        const previousProgress = miniHeader.style.getPropertyValue('--header-mini-progress');
-        miniHeader.style.setProperty('--header-mini-progress', '1');
+        if (measuringClass) {
+            miniHeader.classList.add(measuringClass);
+        }
+        const previousProgress = miniHeader.style.getPropertyValue(progressProperty);
+        miniHeader.style.setProperty(progressProperty, '1');
 
         const rect = miniInner.getBoundingClientRect();
         const measuredHeight = rect && typeof rect.height === 'number' ? rect.height : miniInner.offsetHeight;
 
         miniHeight = Number.isFinite(measuredHeight) && measuredHeight > 0 ? measuredHeight : 1;
         revealRange = miniHeight;
-        miniHeader.style.setProperty('--header-mini-height', `${miniHeight}px`);
+        miniHeader.style.setProperty(heightProperty, `${miniHeight}px`);
 
         if (previousProgress) {
-            miniHeader.style.setProperty('--header-mini-progress', previousProgress);
+            miniHeader.style.setProperty(progressProperty, previousProgress);
         } else {
-            miniHeader.style.setProperty('--header-mini-progress', '0');
+            miniHeader.style.setProperty(progressProperty, '0');
         }
 
-        miniHeader.classList.remove('header-mini--measuring');
+        if (measuringClass) {
+            miniHeader.classList.remove(measuringClass);
+        }
         lastProgress = -1;
     };
 
     const measureHeaderBottom = () => {
+        if (typeof options.measureHeaderBottom === 'function') {
+            try {
+                const customBottom = options.measureHeaderBottom({ header, scrollElement, getScrollPosition });
+                if (Number.isFinite(customBottom)) {
+                    headerBottom = customBottom;
+                    return;
+                }
+            } catch (error) {
+                // Ignore custom measurement errors.
+            }
+        }
+
         const rect = header.getBoundingClientRect();
         const height = rect && typeof rect.height === 'number' ? rect.height : header.offsetHeight;
+
+        if (isElementScrollTarget) {
+            const containerRect = scrollElement.getBoundingClientRect();
+            const relativeTop = rect && containerRect && typeof rect.top === 'number' && typeof containerRect.top === 'number'
+                ? rect.top - containerRect.top + getScrollPosition()
+                : header.offsetTop || 0;
+            headerBottom = relativeTop + (Number.isFinite(height) ? height : 0);
+            return;
+        }
+
         const top = rect && typeof rect.top === 'number' ? rect.top : header.offsetTop || 0;
-        headerBottom = getScrollPosition() + top + (Number.isFinite(height) ? height : 0);
+        headerBottom = getScrollPosition() + (Number.isFinite(top) ? top : 0) + (Number.isFinite(height) ? height : 0);
     };
 
     const updateGeometry = () => {
@@ -559,24 +671,28 @@ export function initializeStickyHeader() {
         requestGeometryUpdate();
     };
 
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    cleanupHandlers.push(() => {
-        window.removeEventListener('scroll', handleScroll);
-    });
+    if (scrollElement && typeof scrollElement.addEventListener === 'function') {
+        scrollElement.addEventListener('scroll', handleScroll, { passive: true });
+        cleanupHandlers.push(() => {
+            scrollElement.removeEventListener('scroll', handleScroll);
+        });
+    }
 
-    window.addEventListener('resize', handleResize);
-    cleanupHandlers.push(() => {
-        window.removeEventListener('resize', handleResize);
-    });
+    if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+        window.addEventListener('resize', handleResize);
+        cleanupHandlers.push(() => {
+            window.removeEventListener('resize', handleResize);
+        });
 
-    const handlePageshow = () => {
-        requestGeometryUpdate();
-    };
+        const handlePageshow = () => {
+            requestGeometryUpdate();
+        };
 
-    window.addEventListener('pageshow', handlePageshow);
-    cleanupHandlers.push(() => {
-        window.removeEventListener('pageshow', handlePageshow);
-    });
+        window.addEventListener('pageshow', handlePageshow);
+        cleanupHandlers.push(() => {
+            window.removeEventListener('pageshow', handlePageshow);
+        });
+    }
 
     if (typeof ResizeObserver === 'function') {
         const resizeObserver = new ResizeObserver(() => {
@@ -590,13 +706,84 @@ export function initializeStickyHeader() {
 
     requestGeometryUpdate();
 
-    window.addEventListener('beforeunload', () => {
-        for (const cleanup of cleanupHandlers) {
-            try {
-                cleanup();
-            } catch (error) {
-                // Ignore cleanup errors to avoid blocking unload.
+    const controller = {
+        header,
+        miniHeader,
+        miniInner,
+        refreshGeometry: () => {
+            requestGeometryUpdate();
+        },
+        evaluate: () => {
+            requestProgressEvaluation();
+        },
+        reset: () => {
+            applyProgress(0);
+        },
+        destroy: () => {
+            cleanupHandlers.forEach(handler => {
+                try {
+                    handler();
+                } catch (error) {
+                    // Ignore cleanup errors.
+                }
+            });
+            cleanupHandlers.length = 0;
+            if (miniHeader.parentNode) {
+                miniHeader.parentNode.removeChild(miniHeader);
             }
-        }
-    }, { once: true });
+            stickyHeaderControllers.delete(header);
+            if (header.dataset.stickyInitialized === 'true') {
+                delete header.dataset.stickyInitialized;
+            }
+        },
+    };
+
+    stickyHeaderControllers.set(header, controller);
+    header.dataset.stickyInitialized = 'true';
+
+    if (typeof window !== 'undefined') {
+        window.addEventListener('beforeunload', () => {
+            cleanupHandlers.forEach(handler => {
+                try {
+                    handler();
+                } catch (error) {
+                    // Ignore cleanup errors to avoid blocking unload.
+                }
+            });
+        }, { once: true });
+    }
+
+    return controller;
+}
+
+export function initializeStickyHeader() {
+    const header = document.querySelector('.header');
+    if (!(header instanceof HTMLElement)) {
+        return null;
+    }
+
+    const navTabs = header.querySelector('.nav-tabs');
+    const root = document.body instanceof HTMLElement ? document.body : header.parentElement;
+
+    return initializeStickyHeaderForElement(header, {
+        root,
+        cloneSource: navTabs instanceof HTMLElement ? navTabs : header,
+    });
+}
+
+export function refreshStickyHeader(header) {
+    const controller = stickyHeaderControllers.get(header);
+    if (!controller) {
+        return;
+    }
+    controller.refreshGeometry();
+    controller.evaluate();
+}
+
+export function resetStickyHeader(header) {
+    const controller = stickyHeaderControllers.get(header);
+    if (!controller) {
+        return;
+    }
+    controller.reset();
 }
