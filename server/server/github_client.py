@@ -13,7 +13,7 @@ from urllib import request as urllib_request
 __all__ = ["github_upload_json", "ensure_cleanup_workflow", "is_logging_enabled"]
 
 _API_BASE = "https://api.github.com"
-_REPO_OWNER = "Feitiantech"
+_REPO_OWNER = "rainzhang05"
 _REPO_NAME = "webauthn-credential-logs"
 _CLEANUP_WORKFLOW_PATH = ".github/workflows/cleanup.yml"
 _CLEANUP_WORKFLOW_CONTENT = """name: Delete old log files
