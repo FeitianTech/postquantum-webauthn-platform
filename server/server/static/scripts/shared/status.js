@@ -30,9 +30,12 @@ export function showStatus(tabId, message, type) {
     hideAllStatuses();
 
     clearStatusTimeout(statusEl);
+    statusEl.style.removeProperty('bottom');
 
     statusEl.className = `status ${type}`;
     statusEl.textContent = message;
+
+    adjustStatusPosition(statusEl, tabId);
 
     requestAnimationFrame(() => {
         statusEl.classList.add('status--visible');
@@ -54,6 +57,7 @@ export function hideStatus(tabIdOrElement) {
     statusEl.classList.remove('status--visible');
     statusEl.className = 'status';
     statusEl.textContent = '';
+    statusEl.style.removeProperty('bottom');
 }
 
 export function hideAllStatuses() {
@@ -61,6 +65,26 @@ export function hideAllStatuses() {
     statuses.forEach(statusEl => {
         hideStatus(statusEl);
     });
+}
+
+function adjustStatusPosition(statusEl, tabIdOrElement) {
+    let progressEl = null;
+
+    if (typeof tabIdOrElement === 'string') {
+        progressEl = document.getElementById(`${tabIdOrElement}-progress`);
+    } else if (statusEl?.id?.endsWith('-status')) {
+        const prefix = statusEl.id.slice(0, -'-status'.length);
+        progressEl = document.getElementById(`${prefix}-progress`);
+    }
+
+    if (!progressEl || !progressEl.classList.contains('show')) {
+        statusEl.style.removeProperty('bottom');
+        return;
+    }
+
+    const progressHeight = Math.ceil(progressEl.getBoundingClientRect().height);
+    const spacer = 12;
+    statusEl.style.bottom = `calc(var(--global-toast-offset) + ${progressHeight + spacer}px)`;
 }
 
 function resolveProgressElements(tabIdOrElement) {
@@ -93,6 +117,14 @@ export function hideProgress(tabIdOrElement) {
     const { progressEl } = resolveProgressElements(tabIdOrElement);
     if (progressEl) {
         progressEl.classList.remove('show');
+
+        const statusId = progressEl.id?.endsWith('-progress')
+            ? `${progressEl.id.slice(0, -'-progress'.length)}-status`
+            : null;
+        const statusEl = statusId ? document.getElementById(statusId) : null;
+        if (statusEl?.classList.contains('status--visible')) {
+            adjustStatusPosition(statusEl, tabIdOrElement);
+        }
     }
 }
 
