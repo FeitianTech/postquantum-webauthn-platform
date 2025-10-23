@@ -296,13 +296,19 @@ class EmailConfig:
 
 @dataclass
 class _DeliveryStatus:
-    last_sent: Optional[datetime] = None
+    last_verification_sent: Optional[datetime] = None
+    last_daily_sent: Optional[datetime] = None
     startup_completed: bool = False
 
-    def serialise_last_sent(self) -> Optional[str]:
-        if self.last_sent is None:
+    def serialise_last_verification(self) -> Optional[str]:
+        if self.last_verification_sent is None:
             return None
-        return self.last_sent.astimezone(timezone.utc).isoformat()
+        return self.last_verification_sent.astimezone(timezone.utc).isoformat()
+
+    def serialise_last_daily(self) -> Optional[str]:
+        if self.last_daily_sent is None:
+            return None
+        return self.last_daily_sent.astimezone(timezone.utc).isoformat()
 
 
 class RegistrationLogManager:
@@ -420,7 +426,7 @@ class RegistrationLogManager:
                 # Reload the status after acquiring the lock to obtain the
                 # most up‑to‑date view of when emails were last sent.
                 status = self._load_delivery_status()
-                now_local = datetime.now(tz=BEIJING_TZ)
+                now_local = self._current_time()
 
                 # If this is the first startup (status.startup_completed is False),
                 # attempt to send a verification email. On success, mark the
@@ -431,7 +437,7 @@ class RegistrationLogManager:
                 if not status.startup_completed:
                     logger.info("Sending verification email (first startup)")
                     if self._send_verification_email(now_local):
-                        status.last_sent = now_local
+                        status.last_verification_sent = now_local
                         status.startup_completed = True
                         self._store_delivery_status(status)
                         logger.info("Verification email sent successfully")
@@ -444,15 +450,16 @@ class RegistrationLogManager:
 
                 # Determine whether a daily log report should be sent. We only
                 # send a report when there are log entries and either no
-                # previous report has been sent (status.last_sent is None) or
-                # the date has changed relative to the last sent timestamp.
+                # previous report has been sent (status.last_daily_sent is
+                # None) or the date has changed relative to the last sent
+                # timestamp.
                 should_send_report = False
-                if status.last_sent is None:
+                if status.last_daily_sent is None:
                     # No previous report has been sent; send one now.
                     should_send_report = True
                 else:
-                    last_sent_local = status.last_sent.astimezone(BEIJING_TZ)
-                    if last_sent_local.date() != now_local.date():
+                    last_daily_local = status.last_daily_sent.astimezone(BEIJING_TZ)
+                    if last_daily_local.date() != now_local.date():
                         should_send_report = True
 
                 # Send the daily log report if due. If there are no log
@@ -465,9 +472,11 @@ class RegistrationLogManager:
                     if contents is not None and contents.strip():
                         logger.info(f"Sending daily log report for {now_local.date()}")
                         if self._send_log_report(now_local, contents):
-                            status.last_sent = now_local
+                            status.last_daily_sent = now_local
                             if not status.startup_completed:
                                 status.startup_completed = True
+                            if status.last_verification_sent is None:
+                                status.last_verification_sent = now_local
                             self._store_delivery_status(status)
                             logger.info("Daily log report sent successfully")
                         else:
@@ -481,6 +490,11 @@ class RegistrationLogManager:
             # they have acquired the lock simultaneously.
 
     # Filesystem helpers --------------------------------------------
+
+    def _current_time(self) -> datetime:
+        """Return the current time in the configured local timezone."""
+
+        return datetime.now(tz=BEIJING_TZ)
 
     def _ensure_log_dir_exists(self) -> bool:
         try:
@@ -559,22 +573,42 @@ class RegistrationLogManager:
                 logger.error(f"Failed to parse status JSON: {e}")
                 return _DeliveryStatus()
 
-            last_sent_raw = payload.get("last_sent_utc")
             startup_completed = bool(payload.get("startup_completed"))
+            last_verification_raw = payload.get("last_verification_sent_utc")
+            last_daily_raw = payload.get("last_daily_sent_utc")
 
-            last_sent = _parse_timestamp(last_sent_raw)
-            return _DeliveryStatus(last_sent=last_sent, startup_completed=startup_completed)
+            # Backwards compatibility with the previous single timestamp format.
+            if last_verification_raw is None and last_daily_raw is None:
+                legacy_last_sent = payload.get("last_sent_utc")
+                last_verification = _parse_timestamp(legacy_last_sent)
+                last_daily = _parse_timestamp(legacy_last_sent)
+            else:
+                last_verification = _parse_timestamp(last_verification_raw)
+                last_daily = _parse_timestamp(last_daily_raw)
+
+            return _DeliveryStatus(
+                last_verification_sent=last_verification,
+                last_daily_sent=last_daily,
+                startup_completed=startup_completed,
+            )
 
         # Legacy format: just a timestamp
-        last_sent = _parse_timestamp(raw)
-        if last_sent is None:
+        legacy_last_sent = _parse_timestamp(raw)
+        if legacy_last_sent is None:
             return _DeliveryStatus()
-        return _DeliveryStatus(last_sent=last_sent, startup_completed=False)
+        return _DeliveryStatus(
+            last_verification_sent=legacy_last_sent,
+            last_daily_sent=legacy_last_sent,
+            startup_completed=False,
+        )
 
     def _store_delivery_status(self, status: "_DeliveryStatus") -> None:
         payload = {
-            "last_sent_utc": status.serialise_last_sent(),
+            "last_verification_sent_utc": status.serialise_last_verification(),
+            "last_daily_sent_utc": status.serialise_last_daily(),
             "startup_completed": status.startup_completed,
+            # Retain the legacy key for compatibility with older deployments.
+            "last_sent_utc": status.serialise_last_daily() or status.serialise_last_verification(),
         }
 
         tmp_path = self._status_path.with_suffix(self._status_path.suffix + ".tmp")
@@ -652,6 +686,18 @@ class RegistrationLogManager:
                 return path
             except Exception as e:
                 logger.warning(f"Unable to use configured log directory {path}: {e}")
+
+        # Next, prefer a per-user data directory which is stable across
+        # processes for the same deployment.
+        home_dir = Path.home()
+        if home_dir.exists():
+            preferred = home_dir / LOG_STORAGE_DIRNAME
+            try:
+                preferred.mkdir(parents=True, exist_ok=True)
+                logger.info(f"Using log directory in home path: {preferred}")
+                return preferred
+            except Exception as e:
+                logger.warning(f"Unable to create home log directory {preferred}: {e}")
 
         # Fall back to a stable location under the system temporary directory.
         # This location is consistent across processes on the same host and
