@@ -3067,6 +3067,7 @@ function createDetailStickyHeader(page, header, options = {}) {
     }
 
     const miniHeader = controller.miniHeader;
+    const miniInner = controller.miniInner;
     miniHeader.hidden = true;
     miniHeader.setAttribute('aria-hidden', 'true');
     miniHeader.dataset.mdsStickyType = type;
@@ -3117,7 +3118,7 @@ function createDetailStickyHeader(page, header, options = {}) {
     };
 
     const startRestoreAnimation = () => {
-        if (!miniHeader || miniHeader.hidden) {
+        if (!miniHeader || miniHeader.hidden || !(miniInner instanceof HTMLElement)) {
             return null;
         }
 
