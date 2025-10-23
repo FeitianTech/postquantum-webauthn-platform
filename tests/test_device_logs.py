@@ -24,6 +24,7 @@ def test_record_registration_event_uploads_json(monkeypatch, capsys):
     def fake_upload(path, payload):
         uploads.append((path, payload))
 
+    monkeypatch.setenv("ENABLE_GITHUB_LOGGING", "1")
     monkeypatch.setattr(device_logs, "github_upload_json", fake_upload)
     monkeypatch.setattr(device_logs.threading, "Thread", ImmediateThread)
     monkeypatch.setattr(device_logs, "random_shortid", lambda length=8: "abcdef12")
@@ -70,6 +71,44 @@ def test_record_registration_event_uploads_json(monkeypatch, capsys):
     assert payload["attestation"]["raw_attestation_object"] == device_logs.to_b64url(attestation_object)
     assert payload["attestation"]["decoded"] == {"test": device_logs.to_b64url(b"value")}
     assert payload["client_data_json"] == device_logs.to_b64url(client_data_json)
+
+
+def test_record_registration_event_disabled(monkeypatch):
+    monkeypatch.delenv("ENABLE_GITHUB_LOGGING", raising=False)
+
+    def disabled_logging():
+        return False
+
+    monkeypatch.setattr(device_logs, "is_logging_enabled", disabled_logging)
+
+    def fail_schedule():
+        raise AssertionError("cleanup workflow should not be scheduled when logging is disabled")
+
+    monkeypatch.setattr(device_logs, "_schedule_cleanup_workflow_check", fail_schedule)
+
+    def fail_upload(*_args, **_kwargs):
+        raise AssertionError("github_upload_json should not be called when logging is disabled")
+
+    monkeypatch.setattr(device_logs, "github_upload_json", fail_upload)
+
+    event = device_logs.RegistrationEvent(
+        timestamp=datetime(2025, 10, 23, 9, 41, 10, tzinfo=timezone.utc),
+        rp_id="example.com",
+        user_id=b"user-id",
+        user_name="alice",
+        user_display_name="Alice",
+        credential_id=b"credential-id",
+        public_key_cose={1: -7},
+        sign_count=0,
+        transports=None,
+        aaguid=None,
+        device_name_mds=None,
+        attestation_format="packed",
+        attestation_object=cbor2.dumps({}),
+        client_data_json=b"{}",
+    )
+
+    device_logs.record_registration_event(event)
 
 
 @pytest.mark.parametrize(

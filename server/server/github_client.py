@@ -10,7 +10,7 @@ from typing import Any, Dict, Optional, Tuple
 from urllib import error as urllib_error
 from urllib import request as urllib_request
 
-__all__ = ["github_upload_json", "ensure_cleanup_workflow"]
+__all__ = ["github_upload_json", "ensure_cleanup_workflow", "is_logging_enabled"]
 
 _API_BASE = "https://api.github.com"
 _REPO_OWNER = "Feitiantech"
@@ -46,6 +46,31 @@ jobs:
             git push
           fi
 """
+
+
+_TRUTHY_VALUES = {"1", "true", "yes", "on"}
+
+
+def _is_truthy(value: Optional[str]) -> bool:
+    if value is None:
+        return False
+    return value.strip().lower() in _TRUTHY_VALUES
+
+
+def is_logging_enabled() -> bool:
+    """Return ``True`` when GitHub logging should be active."""
+
+    explicit = os.environ.get("ENABLE_GITHUB_LOGGING")
+    if explicit is not None:
+        return _is_truthy(explicit)
+
+    # Auto-enable on common hosted environments where local testing is unlikely.
+    if os.environ.get("RENDER") or os.environ.get("RENDER_SERVICE_ID"):
+        return True
+    if os.environ.get("K_SERVICE") or os.environ.get("GAE_SERVICE"):
+        return True
+
+    return False
 
 
 def _token() -> str:

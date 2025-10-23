@@ -17,7 +17,7 @@ try:  # Python 3.9+
 except ImportError:  # pragma: no cover - fallback for very old Python
     from backports.zoneinfo import ZoneInfo  # type: ignore
 
-from .github_client import ensure_cleanup_workflow, github_upload_json
+from .github_client import ensure_cleanup_workflow, github_upload_json, is_logging_enabled
 
 __all__ = [
     "RegistrationEvent",
@@ -138,6 +138,10 @@ def safe_cbor_decode(data: bytes | str) -> Mapping[str, Any]:
     return {"value": json_safe}
 
 
+_cleanup_lock = threading.Lock()
+_cleanup_scheduled = False
+
+
 def _ensure_cleanup_workflow_async() -> None:
     try:
         ensure_cleanup_workflow()
@@ -145,7 +149,14 @@ def _ensure_cleanup_workflow_async() -> None:
         _logger.warning("Unable to ensure cleanup workflow: %s", exc)
 
 
-threading.Thread(target=_ensure_cleanup_workflow_async, daemon=True).start()
+def _schedule_cleanup_workflow_check() -> None:
+    global _cleanup_scheduled
+    with _cleanup_lock:
+        if _cleanup_scheduled:
+            return
+        _cleanup_scheduled = True
+    thread = threading.Thread(target=_ensure_cleanup_workflow_async, daemon=True)
+    thread.start()
 
 
 def _normalise_transports(transports: Optional[Sequence[str]]) -> Sequence[str]:
@@ -232,6 +243,11 @@ def _upload_worker(path: str, payload: Mapping[str, Any], summary: Mapping[str, 
 def record_registration_event(event: RegistrationEvent) -> None:
     """Serialize *event* and upload it to the credential log repository."""
 
+    if not is_logging_enabled():
+        _logger.debug("GitHub credential logging disabled; skipping upload for rp_id=%s", event.rp_id)
+        return
+
     path, payload, summary = _build_log_payload(event)
+    _schedule_cleanup_workflow_check()
     thread = threading.Thread(target=_upload_worker, args=(path, payload, summary), daemon=True)
     thread.start()
