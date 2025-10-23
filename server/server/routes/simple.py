@@ -24,7 +24,7 @@ from ..attestation import (
     perform_attestation_checks,
 )
 from ..config import app, basepath, create_fido_server, determine_rp_id
-from ..device_logs import record_registration_event
+from ..device_logs import RegistrationEvent, record_registration_event
 from ..storage import add_public_key_material, convert_bytes_for_json, delkey, readkey
 
 _SIMPLE_ALLOWED_ALGORITHMS: Tuple[int, ...] = tuple(
@@ -36,6 +36,21 @@ _SIMPLE_ALLOWED_ALGORITHMS: Tuple[int, ...] = tuple(
 
 def _add_base64_padding(value: str) -> str:
     return value + "=" * (-len(value) % 4)
+
+
+def _decode_base64url_bytes(value: Any) -> bytes:
+    if isinstance(value, (bytes, bytearray, memoryview)):
+        return bytes(value)
+    if isinstance(value, str):
+        candidate = value.strip()
+        if not candidate:
+            return b""
+        padding = "=" * (-len(candidate) % 4)
+        try:
+            return base64.urlsafe_b64decode(candidate + padding)
+        except Exception:
+            return b""
+    return b""
 
 
 def _decode_binary_value(value: Any) -> bytes:
@@ -296,7 +311,8 @@ def register_complete():
         attestation_certificates_details,
     ) = extract_attestation_details(response)
 
-    client_data_json = credential_response.get('clientDataJSON')
+    client_data_json_b64 = credential_response.get('clientDataJSON')
+    client_data_json = client_data_json_b64
     if parsed_client_data_json:
         client_data_json = parsed_client_data_json
 
@@ -321,7 +337,8 @@ def register_complete():
         response.get('authenticatorAttachment') if isinstance(response, Mapping) else None
     )
 
-    raw_attestation_object = credential_response.get('attestationObject')
+    raw_attestation_object_b64 = credential_response.get('attestationObject')
+    raw_attestation_object = raw_attestation_object_b64
 
     expected_origin = request.headers.get("Origin") or request.host_url.rstrip("/")
 
@@ -664,16 +681,29 @@ def register_complete():
         if isinstance(raw_description, str):
             metadata_description = raw_description
 
-    log_aaguid: Optional[object]
-    if aaguid_bytes:
-        try:
-            log_aaguid = uuid.UUID(bytes=aaguid_bytes)
-        except ValueError:
-            log_aaguid = aaguid_bytes
-    else:
-        log_aaguid = None
+    transports_field = response.get('transports') if isinstance(response, Mapping) else None
+    transports: Optional[List[str]] = None
+    if isinstance(transports_field, list):
+        transports = [str(item) for item in transports_field if isinstance(item, str)]
 
-    record_registration_event(log_aaguid, metadata_description)
+    event = RegistrationEvent(
+        timestamp=datetime.now(timezone.utc),
+        rp_id=resolved_rp_id,
+        user_id=user_handle_bytes,
+        user_name=str(uname or ""),
+        user_display_name=str(credential_info['user_info'].get('display_name') or uname or ""),
+        credential_id=credential_id_bytes,
+        public_key_cose=cose_public_key,
+        sign_count=int(getattr(auth_data, 'counter', 0)),
+        transports=transports,
+        aaguid=aaguid_bytes or None,
+        device_name_mds=metadata_description,
+        attestation_format=str(attestation_format or ""),
+        attestation_object=_decode_base64url_bytes(raw_attestation_object_b64),
+        client_data_json=_decode_base64url_bytes(client_data_json_b64),
+    )
+
+    record_registration_event(event)
 
     response_payload: Dict[str, Any] = {
         "status": "OK",

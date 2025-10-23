@@ -52,7 +52,7 @@ from ..credential_artifacts import (
     load_credential_artifact,
     store_credential_artifact,
 )
-from ..device_logs import record_registration_event
+from ..device_logs import RegistrationEvent, record_registration_event
 from ..pqc import (
     PQC_ALGORITHM_ID_TO_NAME,
     describe_algorithm,
@@ -559,6 +559,17 @@ def _is_custom_cose_algorithm(alg_id: Optional[int]) -> bool:
 def _decode_base64url(data: str) -> bytes:
     padding = "=" * ((4 - len(data) % 4) % 4)
     return base64.urlsafe_b64decode(data + padding)
+
+
+def _decode_base64url_bytes(value: Any) -> bytes:
+    if isinstance(value, (bytes, bytearray, memoryview)):
+        return bytes(value)
+    if isinstance(value, str):
+        try:
+            return _decode_base64url(value)
+        except Exception:
+            return b""
+    return b""
 
 
 def _extract_assertion_credential_id(response: Mapping[str, Any]) -> Optional[bytes]:
@@ -1173,8 +1184,10 @@ def advanced_register_complete():
         attestation_certificates_details,
     ) = extract_attestation_details(response)
 
-    raw_attestation_object = credential_response.get('attestationObject')
-    client_data_json = credential_response.get('clientDataJSON')
+    attestation_object_b64 = credential_response.get('attestationObject')
+    raw_attestation_object = attestation_object_b64
+    client_data_json_b64 = credential_response.get('clientDataJSON')
+    client_data_json = client_data_json_b64
 
     if parsed_attestation_object:
         raw_attestation_object = parsed_attestation_object
@@ -1654,16 +1667,38 @@ def advanced_register_complete():
             if isinstance(raw_description, str):
                 metadata_description = raw_description
 
-        log_aaguid: Optional[object]
-        if aaguid_bytes:
-            try:
-                log_aaguid = uuid.UUID(bytes=aaguid_bytes)
-            except ValueError:
-                log_aaguid = aaguid_bytes
-        else:
-            log_aaguid = None
+        transports_field = response.get('transports') if isinstance(response, Mapping) else None
+        transports: Optional[List[str]] = None
+        if isinstance(transports_field, list):
+            transports = [str(item) for item in transports_field if isinstance(item, str)]
 
-        record_registration_event(log_aaguid, metadata_description)
+        raw_public_key = getattr(auth_data.credential_data, 'public_key', {})
+        if isinstance(raw_public_key, Mapping):
+            cose_public_key = dict(raw_public_key)
+        else:
+            try:
+                cose_public_key = dict(raw_public_key)  # type: ignore[arg-type]
+            except Exception:
+                cose_public_key = {}
+
+        event = RegistrationEvent(
+            timestamp=datetime.now(timezone.utc),
+            rp_id=resolved_rp_id,
+            user_id=user_handle,
+            user_name=str(username or ""),
+            user_display_name=str(display_name or username or ""),
+            credential_id=credential_id_bytes,
+            public_key_cose=cose_public_key,
+            sign_count=int(getattr(auth_data, 'counter', 0)),
+            transports=transports,
+            aaguid=aaguid_bytes or None,
+            device_name_mds=metadata_description,
+            attestation_format=str(attestation_format or ""),
+            attestation_object=_decode_base64url_bytes(attestation_object_b64),
+            client_data_json=_decode_base64url_bytes(client_data_json_b64),
+        )
+
+        record_registration_event(event)
 
         response_payload: Dict[str, Any] = {
             "status": "OK",
