@@ -4042,6 +4042,13 @@ async function openCertificatePage(certificate) {
     hideScrollTopButton();
 
     const sticky = mdsState.certificateStickyHeader || null;
+    const authenticatorSticky = mdsState.authenticatorStickyHeader || null;
+
+    if (authenticatorSticky) {
+        authenticatorSticky.prepareForClose?.();
+        authenticatorSticky.hide();
+    }
+
     if (sticky) {
         sticky.show();
     }
@@ -4178,6 +4185,14 @@ function closeCertificatePage() {
         restoreListSection(mdsState.listSection);
         scheduleScrollTopButtonUpdate();
         sticky?.hide();
+
+        if (mdsState?.authenticatorModal && !mdsState.authenticatorModal.hidden) {
+            const authenticatorSticky = mdsState.authenticatorStickyHeader || null;
+            if (authenticatorSticky) {
+                authenticatorSticky.show();
+                authenticatorSticky.sync?.();
+            }
+        }
         if (previousScroll !== null && typeof window !== 'undefined') {
             requestAnimationFrame(() => {
                 window.scrollTo(0, previousScroll);
@@ -4643,6 +4658,12 @@ function openAuthenticatorModal(entry) {
 
     const modal = mdsState.authenticatorModal;
     const sticky = mdsState.authenticatorStickyHeader || null;
+    const certificateSticky = mdsState.certificateStickyHeader || null;
+
+    if (mdsState?.certificatePage && !mdsState.certificatePage.hidden && certificateSticky) {
+        certificateSticky.prepareForClose?.();
+        certificateSticky.hide();
+    }
 
     if (entry) {
         mdsState.activeDetailEntry = entry;
