@@ -5,7 +5,7 @@ import base64
 import json
 import os
 import time
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Sequence, Tuple
 
 from urllib import error as urllib_error
 from urllib import request as urllib_request
@@ -13,6 +13,8 @@ from urllib import request as urllib_request
 __all__ = [
     "github_get_json",
     "github_upload_json",
+    "github_list_directory",
+    "github_delete",
     "ensure_cleanup_workflow",
     "is_logging_enabled",
 ]
@@ -155,15 +157,9 @@ def github_upload_json(path: str, obj: Dict[str, Any], sha: Optional[str] = None
     serialised = json.dumps(obj, ensure_ascii=False, indent=2)
     content = _encode_content(serialised.encode("utf-8"))
 
-    filename = os.path.basename(path)
-    parts = filename.split("_")
-    aaguid_part = "unknown"
-    if len(parts) >= 2:
-        aaguid_part = parts[0] or "unknown"
-
     action = "update" if sha else "add"
     body: Dict[str, Any] = {
-        "message": f"{action}: {filename} (AAGUID={aaguid_part})",
+        "message": f"{action}: {path}",
         "content": content,
     }
     if sha:
@@ -171,6 +167,36 @@ def github_upload_json(path: str, obj: Dict[str, Any], sha: Optional[str] = None
 
     url = _api_url(f"contents/{path}")
     _request("PUT", url, body)
+
+
+def github_list_directory(path: str) -> Sequence[Dict[str, Any]]:
+    """Return the list of entries for ``path``."""
+
+    url = _api_url(f"contents/{path}")
+    try:
+        _, body = _request("GET", url)
+    except urllib_error.HTTPError as exc:
+        if exc.code == 404:
+            return []
+        raise
+
+    response = json.loads(body.decode("utf-8"))
+    if isinstance(response, list):
+        return [item for item in response if isinstance(item, dict)]
+    if isinstance(response, dict) and response.get("type") == "dir":
+        return [response]
+    raise RuntimeError(f"Unexpected response listing directory {path}")
+
+
+def github_delete(path: str, sha: str, message: str) -> None:
+    """Delete ``path`` from the credential log repository."""
+
+    body = {
+        "message": message,
+        "sha": sha,
+    }
+    url = _api_url(f"contents/{path}")
+    _request("DELETE", url, body)
 
 
 def ensure_cleanup_workflow() -> None:
