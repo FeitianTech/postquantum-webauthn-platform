@@ -192,14 +192,12 @@ def _build_log_payload(event: RegistrationEvent) -> Tuple[str, Mapping[str, Any]
         "device_name_mds": event.device_name_mds or "unknown",
         "raw_attestation_object": attestation_raw,
         "decoded_attestation_object": attestation_decoded,
-        "times_registered": 1,
     }
 
     summary: MutableMapping[str, str] = {
         "timestamp": timestamp_local.strftime("%Y-%m-%dT%H:%M:%S%z"),
         "aaguid": aaguid_str,
         "device": event.device_name_mds or "unknown",
-        "times_registered": "1",
         "action": "create",
     }
 
@@ -226,7 +224,7 @@ def _upload_worker(
     print(
         f"[{TIMEZONE_LABEL} {summary_dict.get('timestamp', '')}] "
         f"Uploaded credential log AAGUID={summary_dict.get('aaguid')} device={summary_dict.get('device')} "
-        f"times_registered={summary_dict.get('times_registered')}"
+        f"action={summary_dict.get('action')}"
     )
 
 
