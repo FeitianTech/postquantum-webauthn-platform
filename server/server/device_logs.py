@@ -172,7 +172,7 @@ def _log_path(aaguid: str, attestation_object: bytes) -> str:
     return f"{_LOGS_DIR}/{filename}"
 
 
-def _build_log_payload(event: RegistrationEvent) -> Tuple[str, Mapping[str, Any], Mapping[str, str], Optional[str]]:
+def _build_log_payload(event: RegistrationEvent) -> Tuple[str, Mapping[str, Any], Mapping[str, str]]:
     timestamp_local = event.timestamp.astimezone(BEIJING_TZ).replace(microsecond=0)
     timestamp_iso = timestamp_local.isoformat()
 
@@ -185,24 +185,6 @@ def _build_log_payload(event: RegistrationEvent) -> Tuple[str, Mapping[str, Any]
 
     path = _log_path(aaguid_str, attestation_bytes)
 
-    times_registered = 1
-    sha: Optional[str] = None
-    try:
-        existing_payload, existing_sha = github_get_json(path)
-    except FileNotFoundError:
-        pass
-    except Exception as exc:  # pragma: no cover - defensive logging
-        _logger.warning("Unable to fetch existing credential log %s: %s", path, exc)
-    else:
-        existing_raw = existing_payload.get("raw_attestation_object")
-        if isinstance(existing_raw, str) and existing_raw == attestation_raw:
-            existing_times = existing_payload.get("times_registered", 1)
-            try:
-                times_registered = int(existing_times) + 1
-            except Exception:
-                times_registered = 2
-            sha = existing_sha
-
     payload: MutableMapping[str, Any] = {
         "timestamp": timestamp_iso,
         "rp_id": event.rp_id,
@@ -210,37 +192,71 @@ def _build_log_payload(event: RegistrationEvent) -> Tuple[str, Mapping[str, Any]
         "device_name_mds": event.device_name_mds or "unknown",
         "raw_attestation_object": attestation_raw,
         "decoded_attestation_object": attestation_decoded,
-        "times_registered": times_registered,
+        "times_registered": 1,
     }
 
     summary: MutableMapping[str, str] = {
         "timestamp": timestamp_local.strftime("%Y-%m-%dT%H:%M:%S%z"),
         "aaguid": aaguid_str,
         "device": event.device_name_mds or "unknown",
-        "times_registered": str(times_registered),
-        "action": "update" if sha else "create",
+        "times_registered": "1",
+        "action": "create",
     }
 
-    return path, payload, summary, sha
+    return path, payload, summary
 
 
 def _upload_worker(
     path: str,
     payload: Mapping[str, Any],
     summary: Mapping[str, str],
-    sha: Optional[str],
 ) -> None:
+    payload_dict: MutableMapping[str, Any] = dict(payload)
+    summary_dict: MutableMapping[str, str] = dict(summary)
+
+    sha: Optional[str] = None
+    attestation_raw = payload_dict.get("raw_attestation_object")
+
     try:
-        github_upload_json(path, dict(payload), sha=sha)
+        existing_payload, existing_sha = github_get_json(path)
+    except FileNotFoundError:
+        pass
+    except Exception as exc:  # pragma: no cover - best-effort logging
+        _logger.warning("Unable to fetch existing credential log %s: %s", path, exc)
+    else:
+        existing_raw = existing_payload.get("raw_attestation_object")
+        if (
+            isinstance(existing_raw, str)
+            and isinstance(attestation_raw, str)
+            and existing_raw == attestation_raw
+        ):
+            existing_times = existing_payload.get("times_registered", 1)
+            try:
+                times_registered = int(existing_times) + 1
+            except Exception:
+                times_registered = 2
+            payload_dict["times_registered"] = times_registered
+            summary_dict["times_registered"] = str(times_registered)
+            summary_dict["action"] = "update"
+            sha = existing_sha
+
+    try:
+        if sha is None:
+            github_upload_json(path, dict(payload_dict))
+        else:
+            github_upload_json(path, dict(payload_dict), sha=sha)
     except Exception as exc:
-        print(f"[{TIMEZONE_LABEL} {summary.get('timestamp', '')}] Failed to upload credential log {path}: {exc}")
+        print(
+            f"[{TIMEZONE_LABEL} {summary_dict.get('timestamp', '')}] "
+            f"Failed to upload credential log {path}: {exc}"
+        )
         return
 
     verb = "Updated" if sha else "Uploaded"
     print(
-        f"[{TIMEZONE_LABEL} {summary.get('timestamp', '')}] "
-        f"{verb} credential log AAGUID={summary.get('aaguid')} device={summary.get('device')} "
-        f"times_registered={summary.get('times_registered')}"
+        f"[{TIMEZONE_LABEL} {summary_dict.get('timestamp', '')}] "
+        f"{verb} credential log AAGUID={summary_dict.get('aaguid')} device={summary_dict.get('device')} "
+        f"times_registered={summary_dict.get('times_registered')}"
     )
 
 
@@ -251,11 +267,11 @@ def record_registration_event(event: RegistrationEvent) -> None:
         _logger.debug("GitHub credential logging disabled; skipping upload for rp_id=%s", event.rp_id)
         return
 
-    path, payload, summary, sha = _build_log_payload(event)
+    path, payload, summary = _build_log_payload(event)
     _schedule_cleanup_workflow_check()
     thread = threading.Thread(
         target=_upload_worker,
-        args=(path, payload, summary, sha),
+        args=(path, payload, summary),
         daemon=True,
     )
     thread.start()
