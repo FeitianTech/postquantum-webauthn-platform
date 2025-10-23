@@ -160,10 +160,10 @@ def _call_polling(poll_delay, event, on_keepalive, func, *args, **kwargs):
                     on_keepalive = None
                 event.wait(poll_delay)
             else:
-                raise ClientError.ERR.OTHER_ERROR
+                raise ClientError.ERR.OTHER_ERROR()
         except CtapError as e:
             raise _ctap2client_err(e)
-    raise ClientError.ERR.TIMEOUT
+    raise ClientError.ERR.TIMEOUT()
 
 
 class AssertionSelection:
@@ -313,7 +313,7 @@ class DefaultClientDataCollector(ClientDataCollector):
         if rp_id is None:
             url = urlparse(origin)
             if url.scheme != "https" or not url.netloc:
-                raise ClientError.ERR.BAD_REQUEST
+                raise ClientError.ERR.BAD_REQUEST()
             return url.netloc
         else:
             return rp_id
@@ -325,7 +325,7 @@ class DefaultClientDataCollector(ClientDataCollector):
                 return
         except Exception:  # noqa: S110
             pass  # Fall through to ClientError
-        raise ClientError.ERR.BAD_REQUEST
+        raise ClientError.ERR.BAD_REQUEST()
 
     def get_request_type(self, options) -> str:
         """Get the request type for the given options."""
@@ -436,7 +436,7 @@ class _Ctap1ClientBackend(_ClientBackend):
             key_handle = cred.id
             try:
                 self.ctap1.authenticate(dummy_param, app_param, key_handle, True)
-                raise ClientError.ERR.OTHER_ERROR  # Shouldn't happen
+                raise ClientError.ERR.OTHER_ERROR()  # Shouldn't happen
             except ApduError as e:
                 if e.code == APDU.USE_NOT_SATISFIED:
                     _call_polling(
@@ -447,7 +447,7 @@ class _Ctap1ClientBackend(_ClientBackend):
                         dummy_param,
                         dummy_param,
                     )
-                    raise ClientError.ERR.DEVICE_INELIGIBLE
+                    raise ClientError.ERR.DEVICE_INELIGIBLE()
 
         att_obj = AttestationObject.from_ctap1(
             app_param,
@@ -506,7 +506,7 @@ class _Ctap1ClientBackend(_ClientBackend):
             except ClientError as e:
                 if e.code == ClientError.ERR.TIMEOUT:
                     raise  # Other errors are ignored so we move to the next.
-        raise ClientError.ERR.DEVICE_INELIGIBLE
+        raise ClientError.ERR.DEVICE_INELIGIBLE()
 
 
 class _Ctap2ClientAssertionSelection(AssertionSelection):
@@ -530,7 +530,7 @@ class _Ctap2ClientAssertionSelection(AssertionSelection):
                 if output:
                     extension_outputs.update(output)
         except ValueError as e:
-            raise ClientError.ERR.CONFIGURATION_UNSUPPORTED
+            raise ClientError.ERR.CONFIGURATION_UNSUPPORTED()
         return extension_outputs
 
 
@@ -655,7 +655,7 @@ class _Ctap2ClientBackend(_ClientBackend):
             or info.options.get("alwaysUv")
         ):
             if not uv_configured:
-                raise ClientError.ERR.CONFIGURATION_UNSUPPORTED
+                raise ClientError.ERR.CONFIGURATION_UNSUPPORTED()
             return True
         elif mc and uv_configured and not info.options.get("makeCredUvNotRqd"):
             return True
@@ -693,7 +693,7 @@ class _Ctap2ClientBackend(_ClientBackend):
             raise PinRequiredError()
 
         # Client PIN not configured.
-        raise ClientError.ERR.CONFIGURATION_UNSUPPORTED
+        raise ClientError.ERR.CONFIGURATION_UNSUPPORTED()
 
     def _get_auth_params(
         self,
@@ -817,7 +817,7 @@ class _Ctap2ClientBackend(_ClientBackend):
                     if auth_input:
                         extension_inputs.update(auth_input)
             except ValueError as e:
-                raise ClientError.ERR.CONFIGURATION_UNSUPPORTED
+                raise ClientError.ERR.CONFIGURATION_UNSUPPORTED()
 
             can_rk = info.options.get("rk")
             rk = selection.resident_key == ResidentKeyRequirement.REQUIRED or (
@@ -830,7 +830,7 @@ class _Ctap2ClientBackend(_ClientBackend):
                 opts = {}
                 if rk:
                     if not can_rk:
-                        raise ClientError.ERR.CONFIGURATION_UNSUPPORTED
+                        raise ClientError.ERR.CONFIGURATION_UNSUPPORTED()
                     opts["rk"] = True
                 if internal_uv:
                     opts["uv"] = True
@@ -902,7 +902,7 @@ class _Ctap2ClientBackend(_ClientBackend):
                 if output is not None:
                     extension_outputs.update(output)
         except ValueError as e:
-            raise ClientError.ERR.CONFIGURATION_UNSUPPORTED
+            raise ClientError.ERR.CONFIGURATION_UNSUPPORTED()
 
         att_obj = AttestationObject.create(
             att_resp.fmt, att_resp.auth_data, att_resp.att_stmt
@@ -987,7 +987,7 @@ class _Ctap2ClientBackend(_ClientBackend):
                     if inputs:
                         extension_inputs.update(inputs)
             except ValueError as e:
-                raise ClientError.ERR.CONFIGURATION_UNSUPPORTED
+                raise ClientError.ERR.CONFIGURATION_UNSUPPORTED()
 
             opts = {"uv": True} if internal_uv else None
 
