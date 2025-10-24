@@ -25,7 +25,8 @@ _API_BASE = "https://api.github.com"
 _REPO_OWNER = "rainzhang05"
 _REPO_NAME = "webauthn-credential-logs"
 _CLEANUP_WORKFLOW_PATH = ".github/workflows/cleanup.yml"
-_CLEANUP_WORKFLOW_CONTENT = """name: Delete old log files
+_CLEANUP_WORKFLOW_CONTENT = """name: Maintain WebAuthn log retention
+
 on:
   schedule:
     - cron: "0 0 * * *"  # Run daily at midnight UTC
@@ -41,18 +42,88 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Delete logs older than 7 days
+      - name: Apply hybrid retention policy
+        shell: bash
         run: |
-          find logs/ -type f -name "*.json" -mtime +7 -print -delete
+          set -euo pipefail
+
+          THRESHOLD_DAYS=14
+          CUTOFF=$(date -u -d "${THRESHOLD_DAYS} days ago" +%s)
+
+          if command -v jq >/dev/null 2>&1; then
+            JQ_AVAILABLE=1
+          else
+            JQ_AVAILABLE=0
+            echo "Warning: jq not found; attestation-based protection will be skipped."
+          fi
+
+          shopt -s nullglob
+          echo "Starting retention sweep (threshold: ${THRESHOLD_DAYS} days)."
+
+          for dir in logs/*; do
+            if [ ! -d "$dir" ]; then
+              continue
+            fi
+
+            echo "Processing directory: $dir"
+            mapfile -t entries < <(find "$dir" -maxdepth 1 -type f -name '*.json' -printf '%s\t%p\n' | sort -t $'\t' -k1,1nr -k2,2)
+
+            if [ ${#entries[@]} -eq 0 ]; then
+              echo "  No JSON files found, skipping."
+              continue
+            fi
+
+            declare -A protected=()
+            declare -A seen_attfmt=()
+
+            for entry in "${entries[@]:0:3}"; do
+              file=${entry#*$'\t'}
+              protected["$file"]=1
+              echo "  Protecting (size-ranked): $file"
+            done
+
+            for entry in "${entries[@]}"; do
+              file=${entry#*$'\t'}
+              attfmt=""
+              if [ "$JQ_AVAILABLE" -eq 1 ]; then
+                attfmt=$(jq -r 'try .attfmt // empty' "$file" 2>/dev/null || true)
+              fi
+
+              if [ -n "$attfmt" ] && [ -z "${seen_attfmt[$attfmt]+x}" ]; then
+                protected["$file"]=1
+                seen_attfmt["$attfmt"]=1
+                echo "  Protecting (attfmt=$attfmt): $file"
+              fi
+            done
+
+            for entry in "${entries[@]}"; do
+              file=${entry#*$'\t'}
+              if [ -n "${protected[$file]+x}" ]; then
+                continue
+              fi
+
+              mtime=$(stat -c %Y "$file")
+              if [ "$mtime" -le "$CUTOFF" ]; then
+                echo "  Deleting stale file: $file"
+                rm "$file"
+              else
+                echo "  Skipping recent file: $file"
+              fi
+            done
+          done
+
+          echo "Retention sweep complete."
 
       - name: Commit and push if changes
         run: |
-          if [ -n "$(git status --porcelain)" ]; then
+          if [ -n "$(git status --porcelain logs)" ]; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add logs/
-            git commit -m "Auto-delete logs older than 7 days"
+            git add logs
+            git commit -m "Apply WebAuthn log retention policy"
             git push
+          else
+            echo "No changes detected; nothing to commit."
           fi
 """
 
