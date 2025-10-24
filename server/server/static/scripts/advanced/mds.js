@@ -869,7 +869,7 @@ async function uploadCustomMetadataFiles(files) {
             context.throwIfAborted();
         }, {
             startMessage: 'Updating Metadata...',
-            successMessage: 'Completing Metadata Update...',
+            successMessage: 'Completing metadata update...',
             cancelMessage: 'Metadata update cancelled.',
             failureMessage: 'Metadata update failed.',
             cancelable: false,
