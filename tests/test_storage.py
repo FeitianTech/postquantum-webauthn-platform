@@ -137,6 +137,40 @@ def test_iter_credentials_includes_legacy_entries(monkeypatch):
     assert legacy_prefix in prefixes
 
 
+def test_iter_credentials_skips_nested_legacy_duplicates(monkeypatch):
+    session_id = "session-three"
+    primary_name = "dave@example.com"
+    legacy_name = "ellen@example.com"
+
+    primary_blob = storage._credential_blob(primary_name, session_id)
+    legacy_blob = storage._legacy_credential_blob(legacy_name)
+
+    new_prefix = storage._build_search_prefix(storage._credential_prefix(session_id))
+    legacy_prefix = storage._build_search_prefix(storage._USER_FOLDER_PREFIX)
+
+    def fake_list_blob_names(prefix: str):
+        if prefix == new_prefix:
+            yield primary_blob
+        elif prefix == legacy_prefix:
+            yield primary_blob
+            yield legacy_blob
+
+    payloads = {
+        primary_blob: pickle.dumps([["primary"]]),
+        legacy_blob: pickle.dumps([["legacy"]]),
+    }
+
+    monkeypatch.setattr(storage, "list_blob_names", fake_list_blob_names)
+    monkeypatch.setattr(storage, "download_bytes", payloads.get)
+
+    results = dict(storage.iter_credentials(session_id=session_id))
+
+    assert results == {
+        primary_name: [["primary"]],
+        legacy_name: [["legacy"]],
+    }
+
+
 def test_delkey_attempts_legacy_cleanup(monkeypatch):
     name = "carol@example.com"
     session_id = "session-three"
