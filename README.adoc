@@ -1,8 +1,8 @@
 # Post-Quantum WebAuthn Test Platform
 
-**Deployed Web Service (Render):**  https://pqcwebauthn.onrender.com
+**Main Deployment (Google Cloud):** https://webauthnlab.tech
 
-**Backup Deployment (Google Cloud):** https://pqcwebauthn-277359456097.asia-northeast1.run.app
+**Backup Deployment (Render):**  https://pqcwebauthn.onrender.com
 
 This project provides an end-to-end platform for exploring WebAuthn user flows secured by post-quantum cryptography. The hosted demo and local setup instructions help you register authenticators, run authentication process, and compare PQC signature suites in a realistic WebAuthn environment. Decoder is integrated for decoding attestation objects, WebAuthn type CBOR responses, authenticator metadata, etc. A FIDO MDS explorer is also built for direct retrieval of authenticator metadata information, and conducting root certificate verification. 
  
@@ -247,16 +247,5 @@ Running on https://demo.ftsafe.demo:5000/
 ```
 
 Click the link to open the test app in your browser.
-
----
-
-## 📝 Notes
-
-- Credentials are saved as `.pkl` files in:  
-  `server/server`
-
-- Uploaded metadata are saved as `.json` files in:
-  `server/server/static/session/metadata`
-- Deleting credentials or metadata in the test app will also delete the corresponding .json and .pkl files locally.
 
 ---
