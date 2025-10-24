@@ -10,14 +10,55 @@ from google.api_core import exceptions as gcs_exceptions
 from google.cloud import storage
 from google.oauth2 import service_account
 
+__all__ = [
+    "blob_exists",
+    "blob_updated_timestamp",
+    "build_blob_name",
+    "delete_blob",
+    "download_bytes",
+    "gcs_enabled",
+    "list_blob_names",
+    "upload_bytes",
+]
+
 _CLIENT_LOCK = threading.Lock()
 _CLIENT: Optional[storage.Client] = None
 _BUCKET: Optional[storage.Bucket] = None
 
 
+def _env_flag(name: str) -> Optional[bool]:
+    raw = os.environ.get(name)
+    if raw is None:
+        return None
+    normalised = raw.strip().lower()
+    if normalised in {"", "0", "false", "off", "no"}:
+        return False
+    return True
+
+
+def gcs_enabled() -> bool:
+    """Return ``True`` when GCS access should be used for storage."""
+
+    flag = _env_flag("FIDO_SERVER_GCS_ENABLED")
+    if flag is not None:
+        return flag
+
+    # Default to disabled so that local development does not accidentally
+    # interact with production buckets unless explicitly opted in.
+    return False
+
+
 def _build_client() -> storage.Client:
+    credentials_path = os.environ.get("FIDO_SERVER_GCS_CREDENTIALS_FILE")
     credentials_json = os.environ.get("FIDO_SERVER_GCS_CREDENTIALS_JSON")
     project_override = os.environ.get("FIDO_SERVER_GCS_PROJECT")
+
+    if credentials_path:
+        credentials = service_account.Credentials.from_service_account_file(
+            credentials_path
+        )
+        project_id = project_override or credentials.project_id
+        return storage.Client(project=project_id, credentials=credentials)
 
     if credentials_json:
         info = json.loads(credentials_json)
@@ -35,6 +76,9 @@ def _ensure_bucket() -> storage.Bucket:
     global _CLIENT, _BUCKET
 
     with _CLIENT_LOCK:
+        if not gcs_enabled():
+            raise RuntimeError("Google Cloud Storage access is disabled")
+
         if _BUCKET is not None:
             return _BUCKET
 
