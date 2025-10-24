@@ -362,7 +362,9 @@ def ensure_metadata_session_id() -> str:
     return identifier
 
 
-def _session_metadata_directory(session_id: str, *, create: bool = False) -> Optional[str]:
+def _session_metadata_directory(
+    session_id: str, *, create: bool = False, cleanup: bool = True
+) -> Optional[str]:
     if not session_id:
         return None
 
@@ -374,7 +376,8 @@ def _session_metadata_directory(session_id: str, *, create: bool = False) -> Opt
             app.logger.error("Failed to prepare session metadata directory %s: %s", directory, exc)
             raise
         _touch_session_last_access(directory)
-    _maybe_cleanup_inactive_sessions()
+    if cleanup:
+        _maybe_cleanup_inactive_sessions()
     return directory
 
 
@@ -449,13 +452,16 @@ def _maybe_cleanup_inactive_sessions(now: Optional[float] = None) -> None:
             app.logger.warning("Failed to remove inactive metadata session %s: %s", directory, exc)
 
 
-def _note_session_activity(session_id: str) -> None:
-    if not session_id:
+def _note_session_activity(session_id: str, *, directory: Optional[str] = None) -> None:
+    normalised = _normalise_session_identifier(session_id)
+    if not normalised:
         return
 
-    directory = _session_metadata_directory(session_id, create=False)
-    if directory and os.path.isdir(directory):
-        _touch_session_last_access(directory)
+    path = directory or os.path.join(SESSION_METADATA_DIR, normalised)
+    if os.path.isdir(path):
+        _touch_session_last_access(path)
+
+    _maybe_cleanup_inactive_sessions()
 
 
 def _validate_session_metadata_filename(filename: str) -> str:
@@ -822,12 +828,12 @@ def list_session_metadata_items(session_id: Optional[str] = None) -> List[Sessio
         _session_metadata_entry_ids = set()
         return []
 
-    directory = _session_metadata_directory(active_session, create=False)
+    directory = _session_metadata_directory(active_session, create=False, cleanup=False)
     if not directory or not os.path.isdir(directory):
         _session_metadata_entry_ids = set()
         return []
 
-    _note_session_activity(active_session)
+    _note_session_activity(active_session, directory=directory)
 
     try:
         filenames = [
@@ -899,11 +905,11 @@ def delete_session_metadata_item(
         raise ValueError("No active metadata session.")
 
     safe_name = _validate_session_metadata_filename(stored_filename)
-    directory = _session_metadata_directory(active_session, create=False)
+    directory = _session_metadata_directory(active_session, create=False, cleanup=False)
     if not directory or not os.path.isdir(directory):
         return False
 
-    _note_session_activity(active_session)
+    _note_session_activity(active_session, directory=directory)
 
     metadata_path = os.path.join(directory, safe_name)
     if not os.path.exists(metadata_path):
