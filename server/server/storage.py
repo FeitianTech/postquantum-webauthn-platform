@@ -109,6 +109,8 @@ def _list_credential_blob_names(session_id: str) -> Iterable[Tuple[str, str]]:
     for search_prefix in search_prefixes:
         for blob_name in list_blob_names(search_prefix):
             remainder = blob_name[len(search_prefix) :] if search_prefix else blob_name
+            if search_prefix == legacy_prefix and "/" in remainder.strip("/"):
+                continue
             if not remainder.endswith("_credential_data.pkl"):
                 continue
             username = remainder[: -len("_credential_data.pkl")]
