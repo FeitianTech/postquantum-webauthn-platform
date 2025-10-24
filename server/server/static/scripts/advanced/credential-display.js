@@ -76,6 +76,56 @@ const COSE_ALGORITHM_TAG_LABELS = {
     '-65535': 'RS1'
 };
 
+let globalCursorApplyCount = 0;
+let globalCursorPreviousValues = [];
+
+function applyGlobalCursor(cursorStyle) {
+    if (typeof document === 'undefined') {
+        return () => {};
+    }
+
+    const desiredCursor = typeof cursorStyle === 'string' ? cursorStyle.trim() : '';
+    if (!desiredCursor) {
+        return () => {};
+    }
+
+    const elements = [document.body, document.documentElement]
+        .filter(element => element instanceof HTMLElement);
+    if (!elements.length) {
+        return () => {};
+    }
+
+    if (globalCursorApplyCount === 0) {
+        globalCursorPreviousValues = elements.map(element => element.style.cursor || '');
+    }
+
+    globalCursorApplyCount += 1;
+    elements.forEach(element => {
+        element.style.cursor = desiredCursor;
+    });
+
+    let restored = false;
+    return () => {
+        if (restored) {
+            return;
+        }
+        restored = true;
+
+        globalCursorApplyCount = Math.max(0, globalCursorApplyCount - 1);
+        if (globalCursorApplyCount === 0) {
+            elements.forEach((element, index) => {
+                const previousValue = globalCursorPreviousValues[index] || '';
+                if (previousValue) {
+                    element.style.cursor = previousValue;
+                } else {
+                    element.style.removeProperty('cursor');
+                }
+            });
+            globalCursorPreviousValues = [];
+        }
+    };
+}
+
 function showSharedCredentialStatus(message, type) {
     SHARED_CREDENTIAL_STATUS_TABS.forEach(tabId => {
         showStatus(tabId, message, type);
@@ -3079,7 +3129,12 @@ export async function showCredentialDetails(index) {
     }
 
     if (cred.type !== 'simple') {
-        await hydrateCredentialFromServer(cred);
+        const restoreCursor = applyGlobalCursor('progress');
+        try {
+            await hydrateCredentialFromServer(cred);
+        } finally {
+            restoreCursor();
+        }
     }
 
     const modalBody = document.getElementById('modalBody');
