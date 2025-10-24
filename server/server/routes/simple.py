@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import base64
 import hashlib
-import os
 import time
 import uuid
 from datetime import datetime, timezone
@@ -23,9 +22,16 @@ from ..attestation import (
     make_json_safe,
     perform_attestation_checks,
 )
-from ..config import app, basepath, create_fido_server, determine_rp_id
+from ..config import app, create_fido_server, determine_rp_id
 from ..device_logs import RegistrationEvent, record_registration_event
-from ..storage import add_public_key_material, convert_bytes_for_json, delkey, readkey
+from ..storage import (
+    add_public_key_material,
+    convert_bytes_for_json,
+    delkey,
+    iter_credentials,
+    list_credentials,
+    readkey,
+)
 
 _SIMPLE_ALLOWED_ALGORITHMS: Tuple[int, ...] = tuple(
     alg
@@ -809,10 +815,7 @@ def list_credentials():
     if request.method == "DELETE":
         removed = 0
         try:
-            for filename in os.listdir(basepath):
-                if not filename.endswith('_credential_data.pkl'):
-                    continue
-                username = filename.replace('_credential_data.pkl', '')
+            for username in list(list_credentials().keys()):
                 delkey(username)
                 removed += 1
         except Exception:
@@ -850,13 +853,8 @@ def list_credentials():
             target['clientDataJSON'] = client_data_value
 
     try:
-        pkl_files = [f for f in os.listdir(basepath) if f.endswith('_credential_data.pkl')]
-
-        for pkl_file in pkl_files:
-            email = pkl_file.replace('_credential_data.pkl', '')
-
+        for email, user_creds in iter_credentials():
             try:
-                user_creds = readkey(email)
                 for cred in user_creds:
                     try:
                         if isinstance(cred, dict) and 'credential_data' in cred:

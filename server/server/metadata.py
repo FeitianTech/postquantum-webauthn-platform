@@ -25,12 +25,12 @@ from fido2.mds3 import (
     parse_blob,
 )
 
+from . import session_metadata_store
 from .config import (
     MDS_METADATA_CACHE_PATH,
     MDS_METADATA_PATH,
     MDS_METADATA_URL,
     MDS_TLS_ADDITIONAL_TRUST_ANCHORS_PEM,
-    SESSION_METADATA_DIR,
     app,
     FIDO_METADATA_TRUST_ROOT_CERT,
     FIDO_METADATA_TRUST_ROOT_PEM,
@@ -77,7 +77,6 @@ _SESSION_METADATA_SESSION_KEY = "fido.mds.session"
 
 _SESSION_METADATA_COOKIE_NAME = "fido.mds.session"
 _SESSION_METADATA_COOKIE_MAX_AGE = 60 * 60 * 24 * 365  # 1 year
-_SESSION_METADATA_LAST_ACCESS_MARKER = ".last-access"
 _SESSION_METADATA_INACTIVE_AGE = timedelta(days=7)
 _SESSION_METADATA_CLEANUP_INTERVAL = timedelta(hours=6)
 
@@ -261,54 +260,34 @@ def _session_metadata_directory(
     if not session_id:
         return None
 
-    directory = os.path.join(SESSION_METADATA_DIR, session_id)
-    if create:
-        try:
-            os.makedirs(directory, exist_ok=True)
-        except OSError as exc:
-            app.logger.error("Failed to prepare session metadata directory %s: %s", directory, exc)
-            raise
-        _touch_session_last_access(directory)
-    if cleanup:
-        _maybe_cleanup_inactive_sessions()
-    return directory
-
-
-def _touch_session_last_access(directory: str) -> None:
-    marker_path = os.path.join(directory, _SESSION_METADATA_LAST_ACCESS_MARKER)
-    try:
-        with open(marker_path, "a", encoding="utf-8"):
-            os.utime(marker_path, None)
-    except OSError:
-        pass
-
-
-def _resolve_session_last_access(directory: str) -> Optional[float]:
-    marker_path = os.path.join(directory, _SESSION_METADATA_LAST_ACCESS_MARKER)
-    try:
-        return os.path.getmtime(marker_path)
-    except OSError:
-        pass
-
-    latest: Optional[float] = None
-    try:
-        with os.scandir(directory) as entries:
-            for entry in entries:
-                try:
-                    candidate = entry.stat(follow_symlinks=False).st_mtime
-                except OSError:
-                    continue
-                if latest is None or candidate > latest:
-                    latest = candidate
-    except OSError:
+    normalised = _normalise_session_identifier(session_id)
+    if not normalised:
         return None
 
-    if latest is not None:
-        return latest
+    if create:
+        try:
+            session_metadata_store.ensure_session(normalised)
+        except Exception as exc:
+            app.logger.error(
+                "Failed to prepare session metadata storage for %s: %s", normalised, exc
+            )
+            raise
+    if cleanup:
+        _maybe_cleanup_inactive_sessions()
+    return normalised
 
+
+def _touch_session_last_access(session_id: str) -> None:
     try:
-        return os.path.getmtime(directory)
-    except OSError:
+        session_metadata_store.touch_last_access(session_id)
+    except Exception:
+        pass
+
+
+def _resolve_session_last_access(session_id: str) -> Optional[float]:
+    try:
+        return session_metadata_store.resolve_last_access(session_id)
+    except Exception:
         return None
 
 
@@ -323,26 +302,21 @@ def _maybe_cleanup_inactive_sessions(now: Optional[float] = None) -> None:
     cutoff = current_time - _SESSION_METADATA_INACTIVE_AGE.total_seconds()
 
     try:
-        entries = os.listdir(SESSION_METADATA_DIR)
-    except OSError:
+        sessions = session_metadata_store.list_sessions()
+    except Exception:
         return
 
-    for entry in entries:
-        if entry.startswith("."):
-            continue
-
-        directory = os.path.join(SESSION_METADATA_DIR, entry)
-        if not os.path.isdir(directory):
-            continue
-
-        last_access = _resolve_session_last_access(directory)
+    for session_id in sessions:
+        last_access = _resolve_session_last_access(session_id)
         if last_access is None or last_access >= cutoff:
             continue
 
         try:
-            shutil.rmtree(directory)
-        except OSError as exc:
-            app.logger.warning("Failed to remove inactive metadata session %s: %s", directory, exc)
+            session_metadata_store.delete_session(session_id)
+        except Exception as exc:
+            app.logger.warning(
+                "Failed to remove inactive metadata session %s: %s", session_id, exc
+            )
 
 
 def _note_session_activity(session_id: str, *, directory: Optional[str] = None) -> None:
@@ -350,10 +324,7 @@ def _note_session_activity(session_id: str, *, directory: Optional[str] = None) 
     if not normalised:
         return
 
-    path = directory or os.path.join(SESSION_METADATA_DIR, normalised)
-    if os.path.isdir(path):
-        _touch_session_last_access(path)
-
+    _touch_session_last_access(normalised)
     _maybe_cleanup_inactive_sessions()
 
 
@@ -381,26 +352,25 @@ def _validate_session_metadata_filename(filename: str) -> str:
     return trimmed
 
 
-def _prune_session_metadata_directory(directory: str) -> None:
+def _prune_session_metadata_directory(session_id: str) -> None:
     try:
-        entries = os.listdir(directory)
-    except OSError:
-        return
-
-    if entries:
-        return
-
-    try:
-        os.rmdir(directory)
-    except OSError:
+        session_metadata_store.prune_session(session_id)
+    except Exception:
         pass
 
 
-def _load_session_metadata_info(path: str) -> Dict[str, Any]:
+def _load_session_metadata_info(session_id: str, filename: str) -> Dict[str, Any]:
     try:
-        with open(path, "r", encoding="utf-8") as info_file:
-            payload = json.load(info_file)
-    except (OSError, ValueError, TypeError):
+        payload_bytes = session_metadata_store.read_file(session_id, filename)
+    except Exception:
+        return {}
+
+    if not payload_bytes:
+        return {}
+
+    try:
+        payload = json.loads(payload_bytes.decode("utf-8"))
+    except (ValueError, UnicodeDecodeError, AttributeError):
         return {}
 
     if not isinstance(payload, dict):
@@ -671,16 +641,20 @@ def save_session_metadata_item(
     except (TypeError, ValueError) as exc:
         raise ValueError("Metadata JSON contains unsupported types.") from exc
 
-    os.makedirs(directory, exist_ok=True)
     stored_filename = f"{uuid.uuid4().hex}{_SESSION_METADATA_SUFFIX}"
-    metadata_path = os.path.join(directory, stored_filename)
+    json_payload = json.dumps(serialisable_payload, indent=2, sort_keys=True) + "\n"
 
     try:
-        with open(metadata_path, "w", encoding="utf-8") as metadata_file:
-            json.dump(serialisable_payload, metadata_file, indent=2, sort_keys=True)
-            metadata_file.write("\n")
-    except OSError as exc:
-        app.logger.error("Failed to store session metadata %s: %s", metadata_path, exc)
+        session_metadata_store.write_file(
+            directory,
+            stored_filename,
+            json_payload.encode("utf-8"),
+            content_type="application/json",
+        )
+    except Exception as exc:
+        app.logger.error(
+            "Failed to store session metadata %s: %s", stored_filename, exc
+        )
         raise RuntimeError("Failed to store uploaded metadata on the server.") from exc
 
     uploaded_at = datetime.now(timezone.utc).isoformat()
@@ -690,17 +664,23 @@ def save_session_metadata_item(
         "stored_filename": stored_filename,
     }
 
-    info_path = metadata_path + _SESSION_METADATA_INFO_SUFFIX
+    info_json = json.dumps(info_payload, indent=2, sort_keys=True) + "\n"
+    info_filename = f"{stored_filename}{_SESSION_METADATA_INFO_SUFFIX}"
     try:
-        with open(info_path, "w", encoding="utf-8") as info_file:
-            json.dump(info_payload, info_file, indent=2, sort_keys=True)
-            info_file.write("\n")
-    except OSError as exc:
-        app.logger.warning("Failed to store session metadata info for %s: %s", metadata_path, exc)
+        session_metadata_store.write_file(
+            directory,
+            info_filename,
+            info_json.encode("utf-8"),
+            content_type="application/json",
+        )
+    except Exception as exc:
+        app.logger.warning(
+            "Failed to store session metadata info for %s: %s", stored_filename, exc
+        )
 
     try:
-        mtime = os.path.getmtime(metadata_path)
-    except OSError:
+        mtime = session_metadata_store.file_mtime(directory, stored_filename)
+    except Exception:
         mtime = None
 
     return SessionMetadataItem(
@@ -722,7 +702,7 @@ def list_session_metadata_items(session_id: Optional[str] = None) -> List[Sessio
         return []
 
     directory = _session_metadata_directory(active_session, create=False, cleanup=False)
-    if not directory or not os.path.isdir(directory):
+    if not directory:
         _session_metadata_entry_ids = set()
         return []
 
@@ -731,35 +711,37 @@ def list_session_metadata_items(session_id: Optional[str] = None) -> List[Sessio
     try:
         filenames = [
             name
-            for name in os.listdir(directory)
+            for name in session_metadata_store.list_files(directory)
             if name.endswith(_SESSION_METADATA_SUFFIX)
             and not name.endswith(_SESSION_METADATA_INFO_SUFFIX)
         ]
-    except OSError:
+    except Exception:
         return []
 
     items: List[SessionMetadataItem] = []
     for filename in sorted(filenames):
-        metadata_path = os.path.join(directory, filename)
         try:
-            with open(metadata_path, "r", encoding="utf-8") as metadata_file:
-                raw = json.load(metadata_file)
-        except (OSError, ValueError, TypeError) as exc:
-            app.logger.warning("Failed to load session metadata from %s: %s", metadata_path, exc)
+            payload_bytes = session_metadata_store.read_file(directory, filename)
+            raw = json.loads(payload_bytes.decode("utf-8")) if payload_bytes else None
+        except (ValueError, TypeError, UnicodeDecodeError) as exc:
+            app.logger.warning(
+                "Failed to load session metadata from %s/%s: %s", directory, filename, exc
+            )
             continue
 
         try:
             entry, legal_header, payload = build_metadata_entry_components(raw)
         except Exception as exc:  # pylint: disable=broad-except
             app.logger.warning(
-                "Failed to parse session metadata entry from %s: %s",
-                metadata_path,
+                "Failed to parse session metadata entry from %s/%s: %s",
+                directory,
+                filename,
                 exc,
             )
             continue
 
-        info_path = metadata_path + _SESSION_METADATA_INFO_SUFFIX
-        info = _load_session_metadata_info(info_path)
+        info_filename = f"{filename}{_SESSION_METADATA_INFO_SUFFIX}"
+        info = _load_session_metadata_info(directory, info_filename)
 
         raw_uploaded_at = info.get("uploaded_at")
         uploaded_at = raw_uploaded_at.strip() if isinstance(raw_uploaded_at, str) else None
@@ -769,8 +751,8 @@ def list_session_metadata_items(session_id: Optional[str] = None) -> List[Sessio
         )
 
         try:
-            mtime = os.path.getmtime(metadata_path)
-        except OSError:
+            mtime = session_metadata_store.file_mtime(directory, filename)
+        except Exception:
             mtime = None
 
         items.append(
@@ -799,27 +781,32 @@ def delete_session_metadata_item(
 
     safe_name = _validate_session_metadata_filename(stored_filename)
     directory = _session_metadata_directory(active_session, create=False, cleanup=False)
-    if not directory or not os.path.isdir(directory):
+    if not directory:
         return False
 
     _note_session_activity(active_session, directory=directory)
 
-    metadata_path = os.path.join(directory, safe_name)
-    if not os.path.exists(metadata_path):
+    try:
+        exists = session_metadata_store.file_exists(directory, safe_name)
+    except Exception:
+        exists = False
+
+    if not exists:
         return False
 
     try:
-        os.remove(metadata_path)
-    except OSError as exc:
+        session_metadata_store.delete_file(directory, safe_name, missing_ok=False)
+    except Exception as exc:
         app.logger.error(
-            "Failed to delete session metadata %s: %s", metadata_path, exc
+            "Failed to delete session metadata %s/%s: %s", directory, safe_name, exc
         )
         raise RuntimeError("Failed to delete the uploaded metadata file.") from exc
 
-    info_path = metadata_path + _SESSION_METADATA_INFO_SUFFIX
     try:
-        os.remove(info_path)
-    except OSError:
+        session_metadata_store.delete_file(
+            directory, f"{safe_name}{_SESSION_METADATA_INFO_SUFFIX}", missing_ok=True
+        )
+    except Exception:
         pass
 
     _prune_session_metadata_directory(directory)
