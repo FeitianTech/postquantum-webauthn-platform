@@ -79,6 +79,11 @@ const COSE_ALGORITHM_TAG_LABELS = {
 let globalCursorApplyCount = 0;
 let globalCursorPreviousValues = [];
 
+const GLOBAL_CURSOR_CLASS_MAP = new Map([
+    ['progress', 'global-cursor--progress'],
+    ['wait', 'global-cursor--wait'],
+]);
+
 function applyGlobalCursor(cursorStyle) {
     if (typeof document === 'undefined') {
         return () => {};
@@ -96,12 +101,20 @@ function applyGlobalCursor(cursorStyle) {
     }
 
     if (globalCursorApplyCount === 0) {
-        globalCursorPreviousValues = elements.map(element => element.style.cursor || '');
+        globalCursorPreviousValues = elements.map(element => ({
+            cursor: element.style.cursor || '',
+            classes: new Set(Array.from(element.classList || [])),
+        }));
     }
 
     globalCursorApplyCount += 1;
+    const className = GLOBAL_CURSOR_CLASS_MAP.get(desiredCursor) || null;
+
     elements.forEach(element => {
         element.style.cursor = desiredCursor;
+        if (className) {
+            element.classList.add(className);
+        }
     });
 
     let restored = false;
@@ -114,12 +127,22 @@ function applyGlobalCursor(cursorStyle) {
         globalCursorApplyCount = Math.max(0, globalCursorApplyCount - 1);
         if (globalCursorApplyCount === 0) {
             elements.forEach((element, index) => {
-                const previousValue = globalCursorPreviousValues[index] || '';
-                if (previousValue) {
-                    element.style.cursor = previousValue;
+                const previousValue = globalCursorPreviousValues[index] || {};
+                if (typeof previousValue.cursor === 'string' && previousValue.cursor) {
+                    element.style.cursor = previousValue.cursor;
                 } else {
                     element.style.removeProperty('cursor');
                 }
+                const previousClasses = previousValue?.classes;
+                GLOBAL_CURSOR_CLASS_MAP.forEach(candidateClass => {
+                    if (!candidateClass) {
+                        return;
+                    }
+                    const previouslyHadClass = previousClasses instanceof Set && previousClasses.has(candidateClass);
+                    if (!previouslyHadClass) {
+                        element.classList.remove(candidateClass);
+                    }
+                });
             });
             globalCursorPreviousValues = [];
         }
