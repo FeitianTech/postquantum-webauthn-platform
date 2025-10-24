@@ -68,18 +68,54 @@ def _credential_blob(name: str, session_id: str) -> str:
     return build_blob_name(filename, prefix=prefix)
 
 
+def _legacy_credential_blob(name: str) -> str:
+    if not isinstance(name, str):
+        raise ValueError("Credential identifier must be a string")
+    cleaned = name.strip()
+    if not cleaned:
+        raise ValueError("Credential identifier is empty")
+    filename = f"{cleaned}_credential_data.pkl"
+    return build_blob_name(filename, prefix=_USER_FOLDER_PREFIX)
+
+
+def _build_search_prefix(path: str) -> str:
+    base_prefix = path.strip().strip("/")
+    return f"{base_prefix}/" if base_prefix else ""
+
+
+def _candidate_gcs_blob_names(name: str, session_id: str) -> Iterable[str]:
+    seen = set()
+    for blob_name in (
+        _credential_blob(name, session_id),
+        _legacy_credential_blob(name),
+    ):
+        if blob_name in seen:
+            continue
+        seen.add(blob_name)
+        yield blob_name
+
+
 def _list_credential_blob_names(session_id: str) -> Iterable[Tuple[str, str]]:
-    prefix = _credential_prefix(session_id)
-    base_prefix = prefix.strip().strip("/")
-    search_prefix = f"{base_prefix}/" if base_prefix else ""
-    for blob_name in list_blob_names(search_prefix):
-        remainder = blob_name[len(search_prefix) :] if search_prefix else blob_name
-        if not remainder.endswith("_credential_data.pkl"):
-            continue
-        username = remainder[: -len("_credential_data.pkl")]
-        if not username:
-            continue
-        yield username, blob_name
+    search_prefixes = []
+
+    primary_prefix = _build_search_prefix(_credential_prefix(session_id))
+    search_prefixes.append(primary_prefix)
+
+    legacy_prefix = _build_search_prefix(_USER_FOLDER_PREFIX)
+    if legacy_prefix not in search_prefixes:
+        search_prefixes.append(legacy_prefix)
+
+    seen_users = set()
+    for search_prefix in search_prefixes:
+        for blob_name in list_blob_names(search_prefix):
+            remainder = blob_name[len(search_prefix) :] if search_prefix else blob_name
+            if not remainder.endswith("_credential_data.pkl"):
+                continue
+            username = remainder[: -len("_credential_data.pkl")]
+            if not username or username in seen_users:
+                continue
+            seen_users.add(username)
+            yield username, blob_name
 
 
 def _local_directory(session_id: str, *, create: bool = False) -> str:
@@ -139,11 +175,14 @@ def savekey(name: str, key: Any, *, session_id: Optional[str] = None) -> None:
 def readkey(name: str, *, session_id: Optional[str] = None) -> List[Any]:
     resolved_session = _resolve_session_id(session_id)
     if _using_gcs():
-        blob_name = _credential_blob(name, resolved_session)
-        try:
-            payload = download_bytes(blob_name)
-        except Exception:
-            return []
+        payload = None
+        for blob_name in _candidate_gcs_blob_names(name, resolved_session):
+            try:
+                payload = download_bytes(blob_name)
+            except Exception:
+                payload = None
+            if payload:
+                break
         if not payload:
             return []
     else:
@@ -167,11 +206,11 @@ def readkey(name: str, *, session_id: Optional[str] = None) -> List[Any]:
 def delkey(name: str, *, session_id: Optional[str] = None) -> None:
     resolved_session = _resolve_session_id(session_id)
     if _using_gcs():
-        blob_name = _credential_blob(name, resolved_session)
-        try:
-            delete_blob(blob_name, missing_ok=True)
-        except Exception:
-            pass
+        for blob_name in _candidate_gcs_blob_names(name, resolved_session):
+            try:
+                delete_blob(blob_name, missing_ok=True)
+            except Exception:
+                pass
     else:
         try:
             try:
