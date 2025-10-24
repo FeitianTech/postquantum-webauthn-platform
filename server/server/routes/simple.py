@@ -24,6 +24,7 @@ from ..attestation import (
 )
 from ..config import app, create_fido_server, determine_rp_id
 from ..device_logs import RegistrationEvent, record_registration_event
+from ..metadata import ensure_metadata_session_id
 from ..storage import (
     add_public_key_material,
     convert_bytes_for_json,
@@ -812,11 +813,12 @@ def authenticate_complete():
 
 @app.route("/api/credentials", methods=["GET", "DELETE"])
 def list_credentials():
+    metadata_session_id = ensure_metadata_session_id()
     if request.method == "DELETE":
         removed = 0
         try:
-            for username in list(storage_list_credentials().keys()):
-                delkey(username)
+            for username in list(storage_list_credentials(session_id=metadata_session_id).keys()):
+                delkey(username, session_id=metadata_session_id)
                 removed += 1
         except Exception:
             pass
@@ -853,7 +855,7 @@ def list_credentials():
             target['clientDataJSON'] = client_data_value
 
     try:
-        for email, user_creds in iter_credentials():
+        for email, user_creds in iter_credentials(session_id=metadata_session_id):
             try:
                 for cred in user_creds:
                     try:

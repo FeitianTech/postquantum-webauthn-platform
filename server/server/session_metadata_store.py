@@ -36,10 +36,17 @@ __all__ = [
     "write_file",
 ]
 
-_SESSION_PREFIX = os.environ.get("FIDO_SERVER_GCS_SESSION_METADATA_PREFIX", "session-metadata")
+_USER_FOLDER_PREFIX = os.environ.get(
+    "FIDO_SERVER_GCS_USER_FOLDER_PREFIX",
+    os.environ.get("FIDO_SERVER_GCS_SESSION_METADATA_PREFIX", "user-data"),
+)
+_METADATA_SUBDIR = os.environ.get(
+    "FIDO_SERVER_GCS_USER_METADATA_SUBDIR",
+    "metadata",
+)
 _LAST_ACCESS_BLOB = ".last-access"
 
-_LOCAL_INACTIVE_AGE = timedelta(days=7)
+_LOCAL_INACTIVE_AGE = timedelta(days=14)
 _LOCAL_CLEANUP_INTERVAL = timedelta(hours=6)
 _local_last_cleanup: float = 0.0
 
@@ -48,17 +55,27 @@ def _using_gcs() -> bool:
     return gcs_enabled() and bool(os.environ.get("FIDO_SERVER_GCS_BUCKET"))
 
 
-def _session_prefix(session_id: str) -> str:
+def _user_root_prefix(session_id: str) -> str:
     if not session_id:
         raise ValueError("Session identifier is required")
     cleaned = session_id.strip()
     if not cleaned:
         raise ValueError("Session identifier is required")
-    return build_blob_name(cleaned, prefix=_SESSION_PREFIX)
+    return build_blob_name(cleaned, prefix=_USER_FOLDER_PREFIX)
+
+
+def _metadata_prefix(session_id: str) -> str:
+    root = _user_root_prefix(session_id)
+    return build_blob_name(_METADATA_SUBDIR, prefix=root)
+
+
+def _last_access_blob(session_id: str) -> str:
+    root = _user_root_prefix(session_id)
+    return build_blob_name(_LAST_ACCESS_BLOB, prefix=root)
 
 
 def _session_blob(session_id: str, name: str) -> str:
-    prefix = _session_prefix(session_id)
+    prefix = _metadata_prefix(session_id)
     cleaned = name.strip("/")
     if not cleaned:
         raise ValueError("Invalid metadata filename")
@@ -66,7 +83,7 @@ def _session_blob(session_id: str, name: str) -> str:
 
 
 def _base_prefix() -> str:
-    cleaned = (_SESSION_PREFIX or "").strip().strip("/")
+    cleaned = (_USER_FOLDER_PREFIX or "").strip().strip("/")
     return f"{cleaned}/" if cleaned else ""
 
 
@@ -216,7 +233,7 @@ def list_sessions() -> List[str]:
 
 def touch_last_access(session_id: str, *, timestamp: Optional[float] = None) -> None:
     if _using_gcs():
-        marker_name = _session_blob(session_id, _LAST_ACCESS_BLOB)
+        marker_name = _last_access_blob(session_id)
         marker_value = json.dumps({"timestamp": timestamp or time.time()}).encode("utf-8")
         upload_bytes(marker_name, marker_value, content_type="application/json")
         return
@@ -238,7 +255,7 @@ def touch_last_access(session_id: str, *, timestamp: Optional[float] = None) -> 
 
 def resolve_last_access(session_id: str) -> Optional[float]:
     if _using_gcs():
-        marker_name = _session_blob(session_id, _LAST_ACCESS_BLOB)
+        marker_name = _last_access_blob(session_id)
         payload = download_bytes(marker_name)
         if payload:
             try:
@@ -257,7 +274,7 @@ def resolve_last_access(session_id: str) -> Optional[float]:
 
 def list_files(session_id: str) -> List[str]:
     if _using_gcs():
-        prefix = _session_prefix(session_id)
+        prefix = _metadata_prefix(session_id)
         if prefix:
             prefix = prefix + "/"
         names: List[str] = []
@@ -371,7 +388,7 @@ def session_is_empty(session_id: str) -> bool:
 
 def delete_session(session_id: str) -> None:
     if _using_gcs():
-        prefix = _session_prefix(session_id)
+        prefix = _user_root_prefix(session_id)
         if prefix:
             prefix = prefix + "/"
         to_delete: List[str] = []

@@ -60,6 +60,7 @@ from ..pqc import (
     is_pqc_algorithm,
     log_algorithm_selection,
 )
+from ..metadata import ensure_metadata_session_id
 from ..storage import add_public_key_material, convert_bytes_for_json, readkey
 
 
@@ -1157,7 +1158,8 @@ def advanced_register_complete():
     if not username:
         return jsonify({"error": "Username is required in user.name"}), 400
 
-    credentials = readkey(username)
+    metadata_session_id = ensure_metadata_session_id()
+    credentials = readkey(username, session_id=metadata_session_id)
 
     warnings: List[str] = []
 
@@ -1657,7 +1659,11 @@ def advanced_register_complete():
             "schemaVersion": 1,
             "storedCredential": artifact_record,
         }
-        store_credential_artifact(storage_id, artifact_payload)
+        store_credential_artifact(
+            storage_id,
+            artifact_payload,
+            session_id=metadata_session_id,
+        )
 
         summary_credential = _summarize_stored_credential(artifact_record, storage_id)
 
@@ -1718,7 +1724,8 @@ def advanced_register_complete():
 
 @app.route("/api/advanced/credential-artifacts/<string:storage_id>", methods=["GET"])
 def api_get_advanced_credential_artifact(storage_id: str):
-    artifact = load_credential_artifact(storage_id)
+    metadata_session_id = ensure_metadata_session_id()
+    artifact = load_credential_artifact(storage_id, session_id=metadata_session_id)
     if artifact is None:
         return jsonify({"error": "Credential artifact not found."}), 404
 
@@ -1741,7 +1748,13 @@ def api_put_advanced_credential_artifact(storage_id: str):
     if artifact_payload is None:
         return jsonify({"error": "Artifact payload must be an object."}), 400
 
-    if not store_credential_artifact(storage_id, artifact_payload, merge=merge):
+    metadata_session_id = ensure_metadata_session_id()
+    if not store_credential_artifact(
+        storage_id,
+        artifact_payload,
+        merge=merge,
+        session_id=metadata_session_id,
+    ):
         return jsonify({"error": "Unable to store artifact."}), 400
 
     return jsonify({"status": "OK"})
@@ -1758,7 +1771,13 @@ def api_put_advanced_credential_snapshot(storage_id: str):
         return jsonify({"error": "Snapshot must be an object."}), 400
 
     payload = {"registrationDetailSnapshot": snapshot}
-    if not store_credential_artifact(storage_id, payload, merge=True):
+    metadata_session_id = ensure_metadata_session_id()
+    if not store_credential_artifact(
+        storage_id,
+        payload,
+        merge=True,
+        session_id=metadata_session_id,
+    ):
         return jsonify({"error": "Unable to store artifact snapshot."}), 400
 
     return jsonify({"status": "OK"})
@@ -1766,7 +1785,8 @@ def api_put_advanced_credential_snapshot(storage_id: str):
 
 @app.route("/api/advanced/credential-artifacts/<string:storage_id>", methods=["DELETE"])
 def api_delete_advanced_credential_artifact(storage_id: str):
-    deleted = delete_credential_artifact(storage_id)
+    metadata_session_id = ensure_metadata_session_id()
+    deleted = delete_credential_artifact(storage_id, session_id=metadata_session_id)
     status = "deleted" if deleted else "absent"
     return jsonify({"status": status})
 
