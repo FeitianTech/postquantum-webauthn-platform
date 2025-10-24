@@ -29,7 +29,7 @@ from ..storage import (
     convert_bytes_for_json,
     delkey,
     iter_credentials,
-    list_credentials,
+    list_credentials as storage_list_credentials,
     readkey,
 )
 
@@ -815,7 +815,7 @@ def list_credentials():
     if request.method == "DELETE":
         removed = 0
         try:
-            for username in list(list_credentials().keys()):
+            for username in list(storage_list_credentials().keys()):
                 delkey(username)
                 removed += 1
         except Exception:
