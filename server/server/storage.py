@@ -1,12 +1,20 @@
-"""Credential storage helpers for the demo server backed by GCS."""
+"""Credential storage helpers for the demo server backed by pluggable storage."""
 from __future__ import annotations
 
 import base64
 import os
 import pickle
-from typing import Any, Dict, Iterator, List, Tuple
+from typing import Any, Dict, Iterable, Iterator, List, Tuple
 
-from .cloud_storage import build_blob_name, delete_blob, download_bytes, list_blob_names, upload_bytes
+from .cloud_storage import (
+    build_blob_name,
+    delete_blob,
+    download_bytes,
+    gcs_enabled,
+    list_blob_names,
+    upload_bytes,
+)
+from .config import basepath
 
 __all__ = [
     "add_public_key_material",
@@ -21,6 +29,10 @@ __all__ = [
 
 
 _CREDENTIAL_PREFIX = os.environ.get("FIDO_SERVER_GCS_CREDENTIAL_PREFIX", "credentials")
+
+
+def _using_gcs() -> bool:
+    return gcs_enabled() and bool(os.environ.get("FIDO_SERVER_GCS_BUCKET"))
 
 
 def _credential_blob(name: str) -> str:
@@ -46,20 +58,41 @@ def _list_credential_blob_names() -> Iterable[Tuple[str, str]]:
         yield username, blob_name
 
 
+def _local_filename(name: str) -> str:
+    if not isinstance(name, str):
+        raise ValueError("Credential identifier must be a string")
+    cleaned = name.strip()
+    if not cleaned:
+        raise ValueError("Credential identifier is empty")
+    return os.path.join(basepath, f"{cleaned}_credential_data.pkl")
+
+
 def savekey(name: str, key: Any) -> None:
-    blob_name = _credential_blob(name)
     payload = pickle.dumps(key)
-    upload_bytes(blob_name, payload, content_type="application/octet-stream")
+    if _using_gcs():
+        blob_name = _credential_blob(name)
+        upload_bytes(blob_name, payload, content_type="application/octet-stream")
+    else:
+        with open(_local_filename(name), "wb") as f:
+            f.write(payload)
 
 
 def readkey(name: str) -> List[Any]:
-    blob_name = _credential_blob(name)
-    try:
-        payload = download_bytes(blob_name)
-    except Exception:
-        return []
-    if not payload:
-        return []
+    if _using_gcs():
+        blob_name = _credential_blob(name)
+        try:
+            payload = download_bytes(blob_name)
+        except Exception:
+            return []
+        if not payload:
+            return []
+    else:
+        try:
+            with open(_local_filename(name), "rb") as f:
+                payload = f.read()
+        except Exception:
+            return []
+
     try:
         creds = pickle.loads(payload)
     except Exception:
@@ -68,21 +101,53 @@ def readkey(name: str) -> List[Any]:
 
 
 def delkey(name: str) -> None:
-    blob_name = _credential_blob(name)
-    try:
-        delete_blob(blob_name, missing_ok=True)
-    except Exception:
-        pass
+    if _using_gcs():
+        blob_name = _credential_blob(name)
+        try:
+            delete_blob(blob_name, missing_ok=True)
+        except Exception:
+            pass
+    else:
+        try:
+            os.remove(_local_filename(name))
+        except Exception:
+            pass
 
 
 def iter_credentials() -> Iterator[Tuple[str, List[Any]]]:
-    for username, blob_name in _list_credential_blob_names():
-        try:
-            payload = download_bytes(blob_name)
-        except Exception:
-            continue
-        if not payload:
-            continue
+    if _using_gcs():
+        sources: Iterable[Tuple[str, bytes]] = []
+
+        def _download_blob_items() -> Iterable[Tuple[str, bytes]]:
+            for username, blob_name in _list_credential_blob_names():
+                try:
+                    payload = download_bytes(blob_name)
+                except Exception:
+                    continue
+                if payload:
+                    yield username, payload
+
+        sources = _download_blob_items()
+    else:
+        def _read_local_items() -> Iterable[Tuple[str, bytes]]:
+            for entry in os.listdir(basepath):
+                if not entry.endswith("_credential_data.pkl"):
+                    continue
+                username = entry[: -len("_credential_data.pkl")]
+                if not username:
+                    continue
+                path = os.path.join(basepath, entry)
+                try:
+                    with open(path, "rb") as f:
+                        payload = f.read()
+                except Exception:
+                    continue
+                if payload:
+                    yield username, payload
+
+        sources = _read_local_items()
+
+    for username, payload in sources:
         try:
             creds = pickle.loads(payload)
         except Exception:
