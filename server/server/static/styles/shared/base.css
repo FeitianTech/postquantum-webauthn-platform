@@ -235,7 +235,7 @@ body.modal-open {
 }
 
 .header-mini .nav-tab::after {
-    bottom: -0.05rem;
+    content: none;
 }
 
 .header__github-link {
