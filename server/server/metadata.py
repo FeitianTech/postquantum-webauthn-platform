@@ -77,7 +77,7 @@ _SESSION_METADATA_SESSION_KEY = "fido.mds.session"
 
 _SESSION_METADATA_COOKIE_NAME = "fido.mds.session"
 _SESSION_METADATA_COOKIE_MAX_AGE = 60 * 60 * 24 * 365  # 1 year
-_SESSION_METADATA_INACTIVE_AGE = timedelta(days=7)
+_SESSION_METADATA_INACTIVE_AGE = timedelta(days=14)
 _SESSION_METADATA_CLEANUP_INTERVAL = timedelta(hours=6)
 
 _session_metadata_last_cleanup: float = 0.0

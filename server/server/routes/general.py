@@ -3,8 +3,10 @@ from __future__ import annotations
 
 import base64
 import binascii
+import io
 import json
 import os
+import pickle
 from datetime import datetime, timezone
 from threading import Lock
 from typing import Any, Dict
@@ -26,7 +28,7 @@ from ..metadata import (
     save_session_metadata_item,
     serialize_session_metadata_item,
 )
-from ..storage import delkey
+from ..storage import delkey, readkey
 
 
 _metadata_bootstrap_lock = Lock()
@@ -460,7 +462,8 @@ def deletepub():
     email = response.get("email")
     if not email:
         abort(400)
-    delkey(email)
+    metadata_session_id = ensure_metadata_session_id()
+    delkey(email, session_id=metadata_session_id)
     return jsonify({"status": "OK"})
 
 
@@ -469,5 +472,18 @@ def downloadcred():
     name = request.args.get("email")
     if not name:
         abort(400)
+    metadata_session_id = ensure_metadata_session_id()
+    credentials = readkey(name, session_id=metadata_session_id)
+    if not credentials:
+        abort(404)
+
     filename = f"{name}_credential_data.pkl"
-    return send_file(os.path.join(basepath, filename), as_attachment=True, download_name=filename)
+    payload = pickle.dumps(credentials)
+    buffer = io.BytesIO(payload)
+    buffer.seek(0)
+    return send_file(
+        buffer,
+        as_attachment=True,
+        download_name=filename,
+        mimetype="application/octet-stream",
+    )

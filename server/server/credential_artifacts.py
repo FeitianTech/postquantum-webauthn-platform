@@ -27,7 +27,14 @@ __all__ = [
 
 
 _ARTIFACT_DIR = os.path.join(basepath, "static", "credential-artifacts")
-_ARTIFACT_PREFIX = os.environ.get("FIDO_SERVER_GCS_CREDENTIAL_ARTIFACT_PREFIX", "credential-artifacts")
+_USER_FOLDER_PREFIX = os.environ.get(
+    "FIDO_SERVER_GCS_USER_FOLDER_PREFIX",
+    os.environ.get("FIDO_SERVER_GCS_CREDENTIAL_ARTIFACT_PREFIX", "user-data"),
+)
+_ARTIFACT_SUBDIR = os.environ.get(
+    "FIDO_SERVER_GCS_USER_ARTIFACT_SUBDIR",
+    os.environ.get("FIDO_SERVER_GCS_CREDENTIAL_ARTIFACT_PREFIX", "credential-artifacts"),
+)
 _LOCK = threading.RLock()
 
 
@@ -52,9 +59,24 @@ def _artifact_filename(storage_id: str) -> str:
     return f"{digest}.json"
 
 
-def _artifact_blob(storage_id: str) -> str:
+def _user_root_prefix(session_id: str) -> str:
+    if not isinstance(session_id, str):
+        raise ValueError("Session identifier must be a string")
+    cleaned = session_id.strip()
+    if not cleaned:
+        raise ValueError("Session identifier must be a string")
+    return build_blob_name(cleaned, prefix=_USER_FOLDER_PREFIX)
+
+
+def _artifact_prefix(session_id: str) -> str:
+    root = _user_root_prefix(session_id)
+    return build_blob_name(_ARTIFACT_SUBDIR, prefix=root)
+
+
+def _artifact_blob(storage_id: str, session_id: str) -> str:
     filename = _artifact_filename(storage_id)
-    return build_blob_name(filename, prefix=_ARTIFACT_PREFIX)
+    prefix = _artifact_prefix(session_id)
+    return build_blob_name(filename, prefix=prefix)
 
 
 def _using_gcs() -> bool:
@@ -82,9 +104,20 @@ def _write_file(path: str, payload: Dict[str, Any]) -> None:
     os.replace(tmp_path, path)
 
 
-def _read_record(storage_id: str) -> Optional[Dict[str, Any]]:
+def _resolve_session_id(session_id: Optional[str] = None) -> str:
+    if isinstance(session_id, str):
+        trimmed = session_id.strip()
+        if trimmed:
+            return trimmed
+
+    from .metadata import ensure_metadata_session_id  # Local import to avoid cycles
+
+    return ensure_metadata_session_id()
+
+
+def _read_record(storage_id: str, session_id: str) -> Optional[Dict[str, Any]]:
     if _using_gcs():
-        blob_name = _artifact_blob(storage_id)
+        blob_name = _artifact_blob(storage_id, session_id)
         try:
             payload = download_bytes(blob_name)
         except Exception:
@@ -99,9 +132,9 @@ def _read_record(storage_id: str) -> Optional[Dict[str, Any]]:
     return _read_file(_artifact_path(storage_id))
 
 
-def _write_record(storage_id: str, record: Dict[str, Any]) -> None:
+def _write_record(storage_id: str, session_id: str, record: Dict[str, Any]) -> None:
     if _using_gcs():
-        blob_name = _artifact_blob(storage_id)
+        blob_name = _artifact_blob(storage_id, session_id)
         payload = json.dumps(record, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
         upload_bytes(blob_name, payload, content_type="application/json")
         return
@@ -110,9 +143,9 @@ def _write_record(storage_id: str, record: Dict[str, Any]) -> None:
     _write_file(_artifact_path(storage_id), record)
 
 
-def _delete_record(storage_id: str) -> bool:
+def _delete_record(storage_id: str, session_id: str) -> bool:
     if _using_gcs():
-        blob_name = _artifact_blob(storage_id)
+        blob_name = _artifact_blob(storage_id, session_id)
         try:
             existed = blob_exists(blob_name)
         except Exception:
@@ -133,15 +166,21 @@ def _delete_record(storage_id: str) -> bool:
     return True
 
 
-def load_credential_artifact(storage_id: Any) -> Optional[Dict[str, Any]]:
+def load_credential_artifact(
+    storage_id: Any,
+    *,
+    session_id: Optional[str] = None,
+) -> Optional[Dict[str, Any]]:
     """Return the stored artifact payload for ``storage_id`` if available."""
 
     normalised = _normalise_storage_id(storage_id)
     if not normalised:
         return None
 
+    resolved_session = _resolve_session_id(session_id)
+
     with _LOCK:
-        stored = _read_record(normalised)
+        stored = _read_record(normalised, resolved_session)
 
     if not stored or not isinstance(stored, dict):
         return None
@@ -170,6 +209,7 @@ def store_credential_artifact(
     payload: Dict[str, Any],
     *,
     merge: bool = False,
+    session_id: Optional[str] = None,
 ) -> bool:
     """Persist ``payload`` for ``storage_id``.
 
@@ -183,8 +223,10 @@ def store_credential_artifact(
 
     timestamp = time.time()
 
+    resolved_session = _resolve_session_id(session_id)
+
     with _LOCK:
-        existing = _read_record(normalised) if merge else None
+        existing = _read_record(normalised, resolved_session) if merge else None
         base_payload: Dict[str, Any]
         if merge and existing and isinstance(existing, dict):
             current_payload = existing.get("payload")
@@ -205,19 +247,21 @@ def store_credential_artifact(
         }
 
         try:
-            _write_record(normalised, record)
+            _write_record(normalised, resolved_session, record)
         except Exception:
             return False
 
     return True
 
 
-def delete_credential_artifact(storage_id: Any) -> bool:
+def delete_credential_artifact(storage_id: Any, *, session_id: Optional[str] = None) -> bool:
     """Delete the stored artifact for ``storage_id`` if it exists."""
 
     normalised = _normalise_storage_id(storage_id)
     if not normalised:
         return False
 
+    resolved_session = _resolve_session_id(session_id)
+
     with _LOCK:
-        return _delete_record(normalised)
+        return _delete_record(normalised, resolved_session)

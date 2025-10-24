@@ -4,6 +4,7 @@ from __future__ import annotations
 from collections.abc import Iterable, Mapping
 from typing import Any, Dict, List, Optional, Set
 
+from .metadata import ensure_metadata_session_id
 from .storage import extract_credential_data, iter_credentials
 
 __all__ = [
@@ -82,7 +83,8 @@ def resolve_effective_attachments(
 
 def build_credential_attachment_map() -> Dict[bytes, Optional[str]]:
     attachment_map: Dict[bytes, Optional[str]] = {}
-    for email, user_creds in iter_credentials():
+    metadata_session_id = ensure_metadata_session_id()
+    for email, user_creds in iter_credentials(session_id=metadata_session_id):
         for cred in user_creds:
             credential_data = extract_credential_data(cred)
             credential_id: Optional[bytes] = None
