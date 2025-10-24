@@ -37,7 +37,7 @@ COPY fido2 ./fido2
 COPY server ./server
 
 RUN pip install --upgrade pip setuptools wheel && \
-    pip install --prefix=/install --no-cache-dir /opt/liboqs/liboqs_python*.whl pqcrypto gunicorn . ./server && \
+    pip install --prefix=/install --no-cache-dir /opt/liboqs/liboqs_python*.whl pqcrypto gunicorn google-cloud-storage google-auth google-api-core . ./server && \
     apt-get purge -y build-essential cmake git ninja-build pkg-config libssl-dev && \
     apt-get autoremove -y && \
     rm -rf /opt/liboqs/include /opt/liboqs/lib/pkgconfig /var/lib/apt/lists/*
