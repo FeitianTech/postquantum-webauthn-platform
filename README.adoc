@@ -249,5 +249,3 @@ Running on https://demo.ftsafe.demo:5000/
 ```
 
 Click the link to open the test app in your browser.
-
----
