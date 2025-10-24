@@ -7,11 +7,12 @@ import secrets
 import shutil
 import ssl
 import tempfile
+import time
 import urllib.error
 import urllib.request
 import uuid
 from dataclasses import dataclass, replace
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from email.utils import formatdate, parsedate_to_datetime
 from typing import Any, Dict, Iterator, List, Mapping, Optional, Set, Tuple
 
@@ -77,6 +78,11 @@ _SESSION_METADATA_RECOVERY_MARKER = ".last-session-id"
 
 _SESSION_METADATA_COOKIE_NAME = "fido.mds.session"
 _SESSION_METADATA_COOKIE_MAX_AGE = 60 * 60 * 24 * 365  # 1 year
+_SESSION_METADATA_LAST_ACCESS_MARKER = ".last-access"
+_SESSION_METADATA_INACTIVE_AGE = timedelta(days=7)
+_SESSION_METADATA_CLEANUP_INTERVAL = timedelta(hours=6)
+
+_session_metadata_last_cleanup: float = 0.0
 
 _METADATA_REPO_FOLDER = "metadata"
 
@@ -217,6 +223,8 @@ def _schedule_session_cookie(identifier: str) -> None:
     normalised = _normalise_session_identifier(identifier)
     if not normalised:
         return
+
+    _note_session_activity(normalised)
 
     secure = bool(request.is_secure)
     cookie_path = "/"
@@ -365,7 +373,89 @@ def _session_metadata_directory(session_id: str, *, create: bool = False) -> Opt
         except OSError as exc:
             app.logger.error("Failed to prepare session metadata directory %s: %s", directory, exc)
             raise
+        _touch_session_last_access(directory)
+    _maybe_cleanup_inactive_sessions()
     return directory
+
+
+def _touch_session_last_access(directory: str) -> None:
+    marker_path = os.path.join(directory, _SESSION_METADATA_LAST_ACCESS_MARKER)
+    try:
+        with open(marker_path, "a", encoding="utf-8"):
+            os.utime(marker_path, None)
+    except OSError:
+        pass
+
+
+def _resolve_session_last_access(directory: str) -> Optional[float]:
+    marker_path = os.path.join(directory, _SESSION_METADATA_LAST_ACCESS_MARKER)
+    try:
+        return os.path.getmtime(marker_path)
+    except OSError:
+        pass
+
+    latest: Optional[float] = None
+    try:
+        with os.scandir(directory) as entries:
+            for entry in entries:
+                try:
+                    candidate = entry.stat(follow_symlinks=False).st_mtime
+                except OSError:
+                    continue
+                if latest is None or candidate > latest:
+                    latest = candidate
+    except OSError:
+        return None
+
+    if latest is not None:
+        return latest
+
+    try:
+        return os.path.getmtime(directory)
+    except OSError:
+        return None
+
+
+def _maybe_cleanup_inactive_sessions(now: Optional[float] = None) -> None:
+    global _session_metadata_last_cleanup
+
+    current_time = now or time.time()
+    if current_time - _session_metadata_last_cleanup < _SESSION_METADATA_CLEANUP_INTERVAL.total_seconds():
+        return
+
+    _session_metadata_last_cleanup = current_time
+    cutoff = current_time - _SESSION_METADATA_INACTIVE_AGE.total_seconds()
+
+    try:
+        entries = os.listdir(SESSION_METADATA_DIR)
+    except OSError:
+        return
+
+    for entry in entries:
+        if entry.startswith("."):
+            continue
+
+        directory = os.path.join(SESSION_METADATA_DIR, entry)
+        if not os.path.isdir(directory):
+            continue
+
+        last_access = _resolve_session_last_access(directory)
+        if last_access is None or last_access >= cutoff:
+            continue
+
+        try:
+            shutil.rmtree(directory)
+        except OSError as exc:
+            app.logger.warning("Failed to remove inactive metadata session %s: %s", directory, exc)
+
+
+def _note_session_activity(session_id: str) -> None:
+    if not session_id:
+        return
+
+    directory = _session_metadata_directory(session_id, create=False)
+    if directory and os.path.isdir(directory):
+        _touch_session_last_access(directory)
 
 
 def _validate_session_metadata_filename(filename: str) -> str:
@@ -737,6 +827,8 @@ def list_session_metadata_items(session_id: Optional[str] = None) -> List[Sessio
         _session_metadata_entry_ids = set()
         return []
 
+    _note_session_activity(active_session)
+
     try:
         filenames = [
             name
@@ -810,6 +902,8 @@ def delete_session_metadata_item(
     directory = _session_metadata_directory(active_session, create=False)
     if not directory or not os.path.isdir(directory):
         return False
+
+    _note_session_activity(active_session)
 
     metadata_path = os.path.join(directory, safe_name)
     if not os.path.exists(metadata_path):
