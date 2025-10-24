@@ -1550,17 +1550,10 @@ function hideScrollTopButton() {
 }
 
 function scrollMdsSectionToTop() {
-    if (!mdsState) {
-        return;
-    }
-
-    const section = mdsState.root?.querySelector('.mds-section');
-    if (section && typeof section.scrollIntoView === 'function') {
-        section.scrollIntoView({ block: 'start', behavior: 'smooth' });
-    } else if (mdsState.root && typeof mdsState.root.scrollIntoView === 'function') {
-        mdsState.root.scrollIntoView({ block: 'start', behavior: 'smooth' });
-    } else if (typeof window !== 'undefined' && typeof window.scrollTo === 'function') {
+    if (typeof window !== 'undefined' && typeof window.scrollTo === 'function') {
         window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+    } else if (mdsState?.root && typeof mdsState.root.scrollIntoView === 'function') {
+        mdsState.root.scrollIntoView({ block: 'start', behavior: 'smooth' });
     }
 
     scheduleScrollTopButtonUpdate();
