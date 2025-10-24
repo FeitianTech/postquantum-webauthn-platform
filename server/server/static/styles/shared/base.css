@@ -65,6 +65,20 @@ body {
     overflow-x: hidden;
 }
 
+html.global-cursor--progress,
+html.global-cursor--progress *,
+body.global-cursor--progress,
+body.global-cursor--progress * {
+    cursor: progress !important;
+}
+
+html.global-cursor--wait,
+html.global-cursor--wait *,
+body.global-cursor--wait,
+body.global-cursor--wait * {
+    cursor: wait !important;
+}
+
 html.modal-open,
 body.modal-open {
     overflow: hidden;
