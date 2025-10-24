@@ -2577,11 +2577,7 @@ function openAuthenticatorDataDetail() {
     }
 
     const sections = [];
-    const rawHex = typeof data.raw === 'string' && data.raw.trim() !== '' ? data.raw.trim() : null;
-    if (rawHex) {
-        sections.push('<h4 style="margin-bottom: 0.5rem;">Raw authenticatorData (hex)</h4>');
-        sections.push(`<pre class="modal-pre">${escapeHtml(rawHex)}</pre>`);
-    }
+
 
     const jsonString = escapeHtml(JSON.stringify(data, null, 2));
     sections.push(`<textarea class="certificate-textarea" readonly spellcheck="false" wrap="soft">${jsonString}</textarea>`);
