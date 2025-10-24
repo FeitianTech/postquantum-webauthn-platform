@@ -1,12 +1,10 @@
 """Helpers for authenticator attachment hint handling."""
 from __future__ import annotations
 
-import os
 from collections.abc import Iterable, Mapping
 from typing import Any, Dict, List, Optional, Set
 
-from .config import basepath
-from .storage import extract_credential_data, readkey
+from .storage import extract_credential_data, iter_credentials
 
 __all__ = [
     "HINT_TO_ATTACHMENT_MAP",
@@ -84,18 +82,7 @@ def resolve_effective_attachments(
 
 def build_credential_attachment_map() -> Dict[bytes, Optional[str]]:
     attachment_map: Dict[bytes, Optional[str]] = {}
-    try:
-        pkl_files = [f for f in os.listdir(basepath) if f.endswith('_credential_data.pkl')]
-    except Exception:
-        return attachment_map
-
-    for pkl_file in pkl_files:
-        email = pkl_file.replace('_credential_data.pkl', '')
-        try:
-            user_creds = readkey(email)
-        except Exception:
-            continue
-
+    for email, user_creds in iter_credentials():
         for cred in user_creds:
             credential_data = extract_credential_data(cred)
             credential_id: Optional[bytes] = None
