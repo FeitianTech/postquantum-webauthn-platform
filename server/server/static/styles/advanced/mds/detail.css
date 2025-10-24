@@ -379,6 +379,10 @@
 }
 
 .mds-detail-mini--active {
+    pointer-events: none;
+}
+
+.mds-detail-mini--active .mds-detail-mini__content {
     pointer-events: auto;
 }
 
