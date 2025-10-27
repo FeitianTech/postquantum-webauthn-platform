@@ -23,7 +23,61 @@ except Exception:  # pragma: no cover - compatibility shim
         pass
 
 app = Flask(__name__, static_url_path="", template_folder="static/templates")
-app.secret_key = os.urandom(32)  # Used for session.
+
+
+def _resolve_secret_key() -> bytes:
+    """Return the Flask session secret."""
+
+    env_value = os.environ.get("FIDO_SERVER_SECRET_KEY")
+    if isinstance(env_value, str) and env_value:
+        return env_value.encode("utf-8")
+
+    file_path = os.environ.get("FIDO_SERVER_SECRET_KEY_FILE")
+    if isinstance(file_path, str) and file_path:
+        try:
+            with open(file_path, "rb") as key_file:
+                file_value = key_file.read()
+                if file_value:
+                    return file_value
+        except OSError as exc:  # pragma: no cover - depends on deployment
+            app.logger.warning(
+                "Unable to read secret key file %s: %s", file_path, exc
+            )
+
+    default_path = os.path.join(app.instance_path, "session-secret.key")
+
+    try:
+        with open(default_path, "rb") as stored_key:
+            stored_value = stored_key.read()
+            if stored_value:
+                return stored_value
+    except OSError:
+        pass
+
+    secret = os.urandom(32)
+
+    try:
+        os.makedirs(os.path.dirname(default_path), exist_ok=True)
+        fd = os.open(default_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    except FileExistsError:
+        try:
+            with open(default_path, "rb") as stored_key:
+                stored_value = stored_key.read()
+                if stored_value:
+                    return stored_value
+        except OSError:
+            pass
+    except OSError as exc:  # pragma: no cover - depends on deployment
+        app.logger.warning("Unable to store generated session secret: %s", exc)
+        return secret
+    else:
+        with os.fdopen(fd, "wb") as target:
+            target.write(secret)
+
+    return secret
+
+
+app.secret_key = _resolve_secret_key()
 
 
 def _env_flag(name: str) -> Optional[bool]:

@@ -243,6 +243,9 @@ source .venv/bin/activate
 python server/server/app.py
 ```
 
+The first launch writes a Flask session secret to `instance/session-secret.key`. Keep that file alongside the application so
+multiple restarts reuse the same secret; delete it if you need to rotate the key.
+
 Expected output:
 ```
 Running on https://demo.ftsafe.demo:5000/

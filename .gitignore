@@ -33,3 +33,4 @@ server/server/static/session-metadata/
 
 # Advanced credential artifact cache
 server/server/static/credential-artifacts/
+instance/
