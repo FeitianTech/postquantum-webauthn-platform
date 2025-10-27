@@ -89,6 +89,7 @@ import {
     renderFakeAllowCredentialList
 } from './advanced/exclude-credentials.js';
 import { initializeAdvancedSettingsNavigation } from './advanced/settings-nav.js';
+import { initializeAdvancedFloatingActions } from './advanced/floating-actions.js';
 
 registerHintsChangeCallback(() => updateAllowCredentialsDropdown());
 
@@ -145,6 +146,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     updateFieldLabels();
     initializeAdvancedSettingsNavigation();
+    initializeAdvancedFloatingActions();
 
     const jsonEditorElement = document.getElementById('json-editor');
     if (jsonEditorElement) {

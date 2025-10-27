@@ -1,6 +1,7 @@
             <!-- Advanced Authentication Tab -->
             <div id="advanced-tab" class="tab-content">
                 <div class="section">
+                    <div class="advanced-header__sentinel" aria-hidden="true"></div>
                     <div class="advanced-header">
                         <div class="advanced-header__title-row">
                             <h2>Advanced Authentication</h2>
@@ -22,6 +23,17 @@
                                 <button id="registration-tab-btn" class="sub-tab active" onclick="switchSubTab('registration')">Registration</button>
                                 <button id="authentication-tab-btn" class="sub-tab" onclick="switchSubTab('authentication')">Authentication</button>
                             </div>
+                        </div>
+                    </div>
+
+                    <div class="advanced-floating-actions" aria-hidden="true">
+                        <div class="advanced-floating-actions__group active" data-subtab="registration">
+                            <button class="btn" onclick="advancedRegister()">Create Credential</button>
+                            <button type="button" class="btn btn-secondary" onclick="resetRegistrationForm()">Reset</button>
+                        </div>
+                        <div class="advanced-floating-actions__group" data-subtab="authentication">
+                            <button class="btn" onclick="advancedAuthenticate()">Assert Credential</button>
+                            <button type="button" class="btn btn-secondary" onclick="resetAuthenticationForm()">Reset</button>
                         </div>
                     </div>
 

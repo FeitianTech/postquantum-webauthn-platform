@@ -141,6 +141,46 @@ body.app-loaded > :not(.app-loader) {
     border-bottom: none;
 }
 
+.advanced-header__sentinel {
+    position: absolute;
+    top: calc(var(--advanced-layout-sticky-top) - 2.5rem);
+    left: 0;
+    width: 1px;
+    height: 1px;
+    pointer-events: none;
+    opacity: 0;
+}
+
+.advanced-floating-actions {
+    position: sticky;
+    top: var(--advanced-layout-sticky-top);
+    margin: 0 0 0 auto;
+    display: flex;
+    gap: 0.5rem;
+    width: max-content;
+    z-index: 19;
+    opacity: 0;
+    transform: translateY(-0.35rem);
+    pointer-events: none;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.advanced-floating-actions--visible {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+
+.advanced-floating-actions__group {
+    display: none;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.advanced-floating-actions__group.active {
+    display: flex;
+}
+
 .advanced-header__title-row {
     align-items: center;
 }
