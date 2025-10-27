@@ -11,8 +11,8 @@ function isAdvancedTabActive() {
 
 export function initializeAdvancedFloatingActions() {
     const container = document.querySelector('.advanced-floating-actions');
-    const sentinel = document.querySelector('#advanced-tab .advanced-header__sentinel');
-    if (!(container instanceof HTMLElement) || !(sentinel instanceof HTMLElement)) {
+    const header = document.querySelector('#advanced-tab .advanced-header');
+    if (!(container instanceof HTMLElement) || !(header instanceof HTMLElement)) {
         return;
     }
 
@@ -39,69 +39,122 @@ export function initializeAdvancedFloatingActions() {
         container.setAttribute('aria-hidden', shouldShow ? 'false' : 'true');
     };
 
-    let lastVisible = false;
+    let stickyTop = 0;
 
-    const observer = typeof IntersectionObserver === 'function'
-        ? new IntersectionObserver(entries => {
-            const entry = entries && entries.length ? entries[0] : null;
-            if (!entry) {
-                return;
-            }
-            const visible = entry.isIntersecting;
-            const nextVisible = !visible && entry.boundingClientRect.top < 0;
-            if (nextVisible === lastVisible) {
-                applyVisibility(nextVisible);
-                return;
-            }
-            lastVisible = nextVisible;
-            applyVisibility(nextVisible);
-        }, { threshold: [0] })
-        : null;
-
-    if (observer) {
-        observer.observe(sentinel);
-    }
-
-    const handleScrollFallback = () => {
-        if (observer) {
-            return;
+    const evaluateCssToPixels = value => {
+        if (typeof value !== 'string') {
+            return Number.NaN;
         }
-        const rect = sentinel.getBoundingClientRect();
-        const nextVisible = rect.top < 0;
-        if (nextVisible !== lastVisible) {
-            lastVisible = nextVisible;
+        const trimmed = value.trim();
+        if (!trimmed) {
+            return Number.NaN;
         }
-        applyVisibility(lastVisible);
+        if (trimmed.endsWith('px')) {
+            return parseFloat(trimmed);
+        }
+        if (typeof window !== 'undefined' && typeof document !== 'undefined' && document.documentElement instanceof HTMLElement) {
+            const rootFont = window.getComputedStyle(document.documentElement).fontSize;
+            if (trimmed.endsWith('rem')) {
+                const base = parseFloat(trimmed);
+                const rootSize = typeof rootFont === 'string' ? parseFloat(rootFont) : Number.NaN;
+                if (Number.isFinite(base) && Number.isFinite(rootSize)) {
+                    return base * rootSize;
+                }
+            }
+            if (trimmed.endsWith('em')) {
+                const base = parseFloat(trimmed);
+                const headerFont = window.getComputedStyle(header).fontSize;
+                const headerSize = typeof headerFont === 'string' ? parseFloat(headerFont) : Number.NaN;
+                if (Number.isFinite(base) && Number.isFinite(headerSize)) {
+                    return base * headerSize;
+                }
+            }
+        }
+        const numeric = parseFloat(trimmed);
+        if (Number.isFinite(numeric)) {
+            return numeric;
+        }
+        if (typeof document !== 'undefined' && document.body instanceof HTMLElement) {
+            const probe = document.createElement('div');
+            probe.style.position = 'fixed';
+            probe.style.top = trimmed;
+            probe.style.left = '0';
+            probe.style.visibility = 'hidden';
+            probe.style.pointerEvents = 'none';
+            document.body.appendChild(probe);
+            const rect = probe.getBoundingClientRect();
+            document.body.removeChild(probe);
+            if (rect && Number.isFinite(rect.top)) {
+                return rect.top;
+            }
+        }
+        return Number.NaN;
     };
 
-    if (!observer && typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
-        window.addEventListener('scroll', handleScrollFallback, { passive: true });
+    const computeStickyTop = () => {
+        if (typeof window === 'undefined' || typeof window.getComputedStyle !== 'function') {
+            stickyTop = 0;
+            return;
+        }
+        const style = window.getComputedStyle(header);
+        const value = style ? style.getPropertyValue('top') || style.top : '';
+        const parsed = evaluateCssToPixels(value);
+        if (Number.isFinite(parsed)) {
+            stickyTop = parsed;
+            return;
+        }
+        stickyTop = 0;
+    };
+
+    const evaluateVisibility = () => {
+        if (!isAdvancedTabActive()) {
+            applyVisibility(false);
+            return;
+        }
+        const rect = header.getBoundingClientRect();
+        const threshold = stickyTop + 0.5;
+        const stuck = rect.top <= threshold && rect.bottom > threshold;
+        applyVisibility(stuck);
+    };
+
+    const handleScroll = () => {
+        evaluateVisibility();
+    };
+
+    const handleResize = () => {
+        computeStickyTop();
+        evaluateVisibility();
+    };
+
+    if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+        window.addEventListener('scroll', handleScroll, { passive: true });
+        window.addEventListener('resize', handleResize);
+        window.addEventListener('pageshow', handleResize);
+    }
+
+    if (typeof ResizeObserver === 'function') {
+        const resizeObserver = new ResizeObserver(() => {
+            computeStickyTop();
+            evaluateVisibility();
+        });
+        resizeObserver.observe(header);
     }
 
     document.addEventListener('advanced:subtab-changed', () => {
         updateActive();
-        if (!observer) {
-            handleScrollFallback();
-        }
+        evaluateVisibility();
     });
 
     document.addEventListener('tab:changed', event => {
         if (event.detail?.tab === 'advanced') {
             updateActive();
-            if (!observer) {
-                handleScrollFallback();
-            } else {
-                applyVisibility(lastVisible);
-            }
+            handleResize();
             return;
         }
         applyVisibility(false);
     });
 
+    computeStickyTop();
     updateActive();
-    if (!observer) {
-        handleScrollFallback();
-    } else {
-        applyVisibility(false);
-    }
+    evaluateVisibility();
 }
