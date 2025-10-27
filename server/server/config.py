@@ -5,6 +5,7 @@ import base64
 import os
 import re
 import ssl
+import tempfile
 import textwrap
 from typing import Mapping, Optional, Set
 
@@ -46,33 +47,60 @@ def _resolve_secret_key() -> bytes:
 
     default_path = os.path.join(app.instance_path, "session-secret.key")
 
-    try:
-        with open(default_path, "rb") as stored_key:
-            stored_value = stored_key.read()
-            if stored_value:
-                return stored_value
-    except OSError:
-        pass
-
-    secret = os.urandom(32)
-
-    try:
-        os.makedirs(os.path.dirname(default_path), exist_ok=True)
-        fd = os.open(default_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-    except FileExistsError:
+    def _read_stored_key() -> Optional[bytes]:
         try:
             with open(default_path, "rb") as stored_key:
                 stored_value = stored_key.read()
                 if stored_value:
                     return stored_value
+        except FileNotFoundError:
+            return None
         except OSError:
-            pass
+            return None
+        return None
+
+    stored = _read_stored_key()
+    if stored:
+        return stored
+
+    secret = os.urandom(32)
+
+    try:
+        os.makedirs(os.path.dirname(default_path), exist_ok=True)
     except OSError as exc:  # pragma: no cover - depends on deployment
         app.logger.warning("Unable to store generated session secret: %s", exc)
         return secret
-    else:
+
+    try:
+        fd, temp_path = tempfile.mkstemp(
+            prefix="session-secret.", dir=os.path.dirname(default_path)
+        )
+    except OSError as exc:  # pragma: no cover - depends on deployment
+        app.logger.warning("Unable to store generated session secret: %s", exc)
+        return secret
+    try:
         with os.fdopen(fd, "wb") as target:
             target.write(secret)
+            target.flush()
+            os.fsync(target.fileno())
+        try:
+            os.replace(temp_path, default_path)
+        except OSError as exc:  # pragma: no cover - depends on deployment
+            app.logger.warning("Unable to store generated session secret: %s", exc)
+            try:
+                os.unlink(temp_path)
+            except OSError:
+                pass
+    finally:
+        if os.path.exists(temp_path):
+            try:
+                os.unlink(temp_path)
+            except OSError:
+                pass
+
+    stored = _read_stored_key()
+    if stored:
+        return stored
 
     return secret
 
