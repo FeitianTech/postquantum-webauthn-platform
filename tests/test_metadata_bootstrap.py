@@ -1,5 +1,5 @@
-import json
-import threading
+import json  # Needed to persist fake metadata cache snapshots in tests.
+import threading  # Coordinates background refresh completion in tests.
 import time
 from datetime import datetime, timezone
 from types import SimpleNamespace
