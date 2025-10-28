@@ -531,7 +531,7 @@ def _evaluate_mldsa_attestation_root(
     }
 
     if verifier is None:
-        errors.append("metadata_not_available")
+        warnings.append("metadata_not_available")
         return {
             "root_valid": None,
             "metadata_entry": None,
@@ -687,8 +687,10 @@ def _evaluate_classical_attestation_root(
 
     trust_details: Optional[TrustPathEvaluation] = None
 
+    metadata_unavailable = False
     if verifier is None:
-        errors.append("metadata_not_available")
+        metadata_unavailable = True
+        warnings.append("metadata_not_available")
     else:
         try:
             evaluation = verifier.evaluate_attestation(
@@ -708,7 +710,7 @@ def _evaluate_classical_attestation_root(
         candidate_roots.append(trust_details.ca_certificate)
     if metadata_entry is not None:
         candidate_roots.extend(_collect_metadata_root_certificates(metadata_entry))
-    else:
+    elif not metadata_unavailable:
         errors.append("metadata_entry_missing")
 
     trusted_roots = [

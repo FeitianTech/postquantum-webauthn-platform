@@ -52,6 +52,7 @@ __all__ = [
     "download_metadata_blob",
     "get_mds_verifier",
     "load_metadata_cache_entry",
+    "load_cached_metadata_snapshot",
     "ensure_metadata_session_id",
     "list_session_metadata_items",
     "save_session_metadata_item",
@@ -1200,6 +1201,13 @@ def download_metadata_blob(
     )
 
     return True, len(payload), last_modified_iso
+
+
+def load_cached_metadata_snapshot() -> bool:
+    """Warm in-memory caches from the stored MDS metadata when available."""
+
+    metadata, _ = _load_base_metadata()
+    return metadata is not None
 
 
 def _load_base_metadata() -> Tuple[Optional[MetadataBlobPayload], Optional[float]]:
