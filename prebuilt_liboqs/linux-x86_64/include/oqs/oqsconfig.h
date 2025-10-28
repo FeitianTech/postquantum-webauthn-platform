@@ -3,20 +3,20 @@
 /** 
  * Version of liboqs as a string. Equivalent to {MAJOR}.{MINOR}.{PATCH}{PRE_RELEASE} 
  */
-#define OQS_VERSION_TEXT "0.14.1-dev"
+#define OQS_VERSION_TEXT "0.15.0-rc1"
 /** 
  * Version levels of liboqs as integers.
  */
 #define OQS_VERSION_MAJOR 0
-#define OQS_VERSION_MINOR 14
-#define OQS_VERSION_PATCH 1
+#define OQS_VERSION_MINOR 15
+#define OQS_VERSION_PATCH 0
 /** 
  * OQS_VERSION_PRE_RELEASE is defined if this is a pre-release version of liboqs, otherwise it is undefined.
  * Examples: "-dev" or "-rc1".
  */
-#define OQS_VERSION_PRE_RELEASE "-dev"
+#define OQS_VERSION_PRE_RELEASE "-rc1"
 
-#define OQS_COMPILE_BUILD_TARGET "x86_64-Linux-5.15.167.4-microsoft-standard-WSL2"
+#define OQS_COMPILE_BUILD_TARGET "x86_64-Linux-6.6.87.2-microsoft-standard-WSL2"
 #define OQS_DIST_BUILD 1
 #define OQS_DIST_X86_64_BUILD 1
 /* #undef OQS_DIST_X86_BUILD */
@@ -28,11 +28,11 @@
 /* #undef ARCH_ARM64v8 */
 /* #undef ARCH_ARM32v7 */
 #define BUILD_SHARED_LIBS 1
-/* #undef OQS_BUILD_ONLY_LIB */
+#define OQS_BUILD_ONLY_LIB 1
 #define OQS_OPT_TARGET "generic"
 /* #undef USE_COVERAGE */
 /* #undef USE_SANITIZER */
-#define CMAKE_BUILD_TYPE "Release"
+/* #undef CMAKE_BUILD_TYPE */
 
 #define OQS_USE_OPENSSL 1
 /* #undef OQS_USE_AES_OPENSSL */

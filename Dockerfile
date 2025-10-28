@@ -1,5 +1,4 @@
 # syntax=docker/dockerfile:1.7
-
 FROM python:3.12-slim AS python-builder
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -19,6 +18,7 @@ RUN set -eux; \
         pkg-config; \
     rm -rf /var/lib/apt/lists/*
 
+# Copy your prebuilt liboqs bundle
 COPY prebuilt_liboqs/linux-x86_64 /opt/liboqs
 
 RUN set -eux; \
@@ -26,9 +26,7 @@ RUN set -eux; \
     ldconfig; \
     ln -sf /opt/liboqs/lib/liboqs.so /usr/local/lib/liboqs.so; \
     ldconfig; \
-    ls -lah /opt/liboqs/lib/; \
-    ldd /opt/liboqs/lib/liboqs.so.0.14.1-dev; \
-    ldconfig -p | grep liboqs || true
+    ls -lah /opt/liboqs/lib/
 
 WORKDIR /src
 COPY pyproject.toml README.adoc ./
@@ -36,6 +34,7 @@ COPY COPYING COPYING.APLv2 COPYING.MPLv2 ./
 COPY fido2 ./fido2
 COPY server ./server
 
+# Install liboqs-python wheel + dependencies (no build)
 RUN pip install --upgrade pip setuptools wheel && \
     pip install --prefix=/install --no-cache-dir \
         /opt/liboqs/liboqs_python*.whl \
@@ -52,7 +51,6 @@ RUN pip install --upgrade pip setuptools wheel && \
     rm -rf /opt/liboqs/include /opt/liboqs/lib/pkgconfig /var/lib/apt/lists/*
 
 FROM python:3.12-slim AS runtime
-
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     LD_LIBRARY_PATH=/opt/liboqs/lib:/usr/local/lib
@@ -73,7 +71,6 @@ RUN set -eux; \
     rm -rf /usr/local/lib/python3.12/ensurepip
 
 WORKDIR /app
-
 ENV PYTHONPATH=/app:${PYTHONPATH}
 
 CMD ["/bin/sh", "-c", "export LD_PRELOAD=/opt/liboqs/lib/liboqs.so; exec gunicorn --bind 0.0.0.0:${PORT:-8000} server.app:app"]
