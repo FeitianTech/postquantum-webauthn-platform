@@ -639,7 +639,7 @@ export function getCredentialCreationOptions() {
 
     const publicKey = {
         rp: {
-            name: 'Post-Quantum WebAuthn Test Platform',
+            name: 'FIDO2/WebAuthn PQC Developer Tools',
             id: window.location.hostname
         },
         user: {
