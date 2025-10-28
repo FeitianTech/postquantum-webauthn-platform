@@ -8,8 +8,8 @@ import json
 import os
 import pickle
 from datetime import datetime, timezone
-from threading import Lock
-from typing import Any, Dict
+from threading import Lock, Thread
+from typing import Any, Dict, Optional
 
 from flask import abort, jsonify, redirect, render_template, request, send_file
 
@@ -24,6 +24,7 @@ from ..metadata import (
     expand_metadata_entry_payloads,
     list_session_metadata_items,
     load_metadata_cache_entry,
+    load_cached_metadata_snapshot,
     maybe_store_uploaded_metadata_file,
     save_session_metadata_item,
     serialize_session_metadata_item,
@@ -32,7 +33,13 @@ from ..storage import delkey, readkey
 
 
 _metadata_bootstrap_lock = Lock()
-_metadata_bootstrap_state = {"started": False, "completed": False, "marker": None}
+_metadata_bootstrap_state = {
+    "started": False,
+    "completed": False,
+    "marker": None,
+    "cache_loaded": False,
+}
+_metadata_refresh_thread: Optional[Thread] = None
 _METADATA_BOOTSTRAP_ENV_FLAG = "FIDO_SERVER_MDS_BOOTSTRAPPED"
 
 
@@ -75,6 +82,24 @@ def _metadata_refresh_needed_today() -> bool:
 
     today = datetime.now(timezone.utc).date()
     return fetched_at_dt.date() < today
+
+
+def _load_cached_metadata_snapshot_if_available() -> None:
+    """Load any stored metadata snapshot into process memory before serving requests."""
+
+    try:
+        cached = load_cached_metadata_snapshot()
+    except Exception as exc:  # pragma: no cover - defensive
+        app.logger.warning("Failed to load cached FIDO MDS metadata snapshot: %s", exc)
+        return
+
+    if not cached:
+        return
+
+    with _metadata_bootstrap_lock:
+        if not _metadata_bootstrap_state.get("cache_loaded"):
+            _metadata_bootstrap_state["cache_loaded"] = True
+            app.logger.info("Loaded cached FIDO MDS metadata snapshot from disk.")
 
 
 _existing_marker = os.environ.get(_METADATA_BOOTSTRAP_ENV_FLAG)
@@ -127,21 +152,59 @@ def _auto_refresh_metadata() -> None:
     _mark_bootstrap_completed_for_today()
 
 
+def _background_refresh_entry() -> None:
+    """Run the metadata refresh in a background thread."""
+
+    global _metadata_refresh_thread
+
+    app.logger.info("Background FIDO MDS metadata refresh started.")
+    try:
+        _auto_refresh_metadata()
+    finally:
+        app.logger.info("Background FIDO MDS metadata refresh finished.")
+        with _metadata_bootstrap_lock:
+            _metadata_refresh_thread = None
+
+
+def _start_metadata_refresh_worker() -> None:
+    """Launch a daemon thread to refresh the metadata cache when needed."""
+
+    global _metadata_refresh_thread
+
+    with _metadata_bootstrap_lock:
+        thread = _metadata_refresh_thread
+        if thread is not None and thread.is_alive():
+            return
+        if _metadata_bootstrap_state.get("completed"):
+            return
+
+        worker = Thread(target=_background_refresh_entry, name="fido-mds-refresh", daemon=True)
+        _metadata_refresh_thread = worker
+        worker.start()
+
+
 def ensure_metadata_bootstrapped(skip_if_reloader_parent: bool = True) -> None:
     """Ensure the MDS metadata cache is refreshed once per server process."""
 
     if skip_if_reloader_parent and app.debug and os.environ.get("WERKZEUG_RUN_MAIN") != "true":
         return
 
+    _load_cached_metadata_snapshot_if_available()
+
     today_marker = _bootstrap_marker_for_today()
 
     if os.environ.get(_METADATA_BOOTSTRAP_ENV_FLAG) == today_marker:
+        with _metadata_bootstrap_lock:
+            _metadata_bootstrap_state["marker"] = today_marker
+            _metadata_bootstrap_state["completed"] = True
         return
 
     with _metadata_bootstrap_lock:
         if _metadata_bootstrap_state["marker"] != today_marker:
             _metadata_bootstrap_state["completed"] = False
+            _metadata_bootstrap_state["started"] = False
             _metadata_bootstrap_state["marker"] = None
+            _metadata_bootstrap_state["cache_loaded"] = False
         elif _metadata_bootstrap_state["completed"]:
             return
 
@@ -150,19 +213,22 @@ def ensure_metadata_bootstrapped(skip_if_reloader_parent: bool = True) -> None:
         _mark_bootstrap_completed_for_today()
         return
 
-    _auto_refresh_metadata()
+    _start_metadata_refresh_worker()
 
-
-# Refresh eagerly for environments lacking ``before_serving`` (older Flask versions)
-# while still registering the hook when available so each process performs the
-# bootstrap exactly once as it starts handling requests.
-ensure_metadata_bootstrapped()
 
 if hasattr(app, "before_serving"):
 
     @app.before_serving
     def _bootstrap_metadata_before_serving() -> None:
         """Refresh metadata as the server starts handling requests."""
+
+        ensure_metadata_bootstrapped(skip_if_reloader_parent=False)
+
+elif hasattr(app, "before_first_request"):
+
+    @app.before_first_request
+    def _bootstrap_metadata_before_first_request() -> None:
+        """Fallback for Flask versions without ``before_serving``."""
 
         ensure_metadata_bootstrapped(skip_if_reloader_parent=False)
 
