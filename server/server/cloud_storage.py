@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import os
 import threading
+import time
 from typing import Iterable, Optional
 
 from google.api_core import exceptions as gcs_exceptions
@@ -16,6 +17,7 @@ __all__ = [
     "build_blob_name",
     "delete_blob",
     "download_bytes",
+    "ensure_ready",
     "gcs_enabled",
     "list_blob_names",
     "upload_bytes",
@@ -93,6 +95,28 @@ def _ensure_bucket() -> storage.Bucket:
 
         _BUCKET = _CLIENT.bucket(bucket_name)
         return _BUCKET
+
+
+def ensure_ready(*, max_attempts: int = 3, retry_delay: float = 1.0) -> None:
+    """Validate that the configured storage bucket is reachable."""
+
+    last_error: Optional[Exception] = None
+
+    for attempt in range(1, max_attempts + 1):
+        try:
+            bucket = _ensure_bucket()
+            iterator = bucket.list_blobs(max_results=1)
+            for _ in iterator:
+                break
+            return
+        except Exception as exc:  # pragma: no cover - exercised in integration.
+            last_error = exc
+            if attempt >= max_attempts:
+                break
+            time.sleep(retry_delay)
+
+    if last_error:
+        raise last_error
 
 
 def _normalise_prefix(prefix: Optional[str]) -> str:
