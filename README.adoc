@@ -1,4 +1,4 @@
-# Post-Quantum WebAuthn Test Platform
+# FIDO2/WebAuthn Test Platform and Developer Tools
 
 **Main Deployment (Google Cloud):** https://webauthnlab.tech
 
@@ -11,7 +11,8 @@ This project provides an end-to-end platform for exploring WebAuthn user flows s
 ## 💻 Local Setup
 
 **Scope**
-- Includes: Python, virtual environment, Flask, python-fido2, and Post-Quantum Crypto (PQC) algorithm options.
+- Includes: Python, virtual environment, Flask, python-fido2, and Post-Quantum Crypto (PQC) algorithms.
+- Currently supporting ML-DSA 44/65/87 for PQC
 
 ---
 
