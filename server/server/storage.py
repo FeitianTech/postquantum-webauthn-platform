@@ -14,7 +14,7 @@ from .cloud_storage import (
     list_blob_names,
     upload_bytes,
 )
-from .config import basepath
+from .config import app, basepath
 
 __all__ = [
     "add_public_key_material",
@@ -107,17 +107,22 @@ def _list_credential_blob_names(session_id: str) -> Iterable[Tuple[str, str]]:
 
     seen_users = set()
     for search_prefix in search_prefixes:
-        for blob_name in list_blob_names(search_prefix):
-            remainder = blob_name[len(search_prefix) :] if search_prefix else blob_name
-            if search_prefix == legacy_prefix and "/" in remainder.strip("/"):
-                continue
-            if not remainder.endswith("_credential_data.pkl"):
-                continue
-            username = remainder[: -len("_credential_data.pkl")]
-            if not username or username in seen_users:
-                continue
-            seen_users.add(username)
-            yield username, blob_name
+        try:
+            for blob_name in list_blob_names(search_prefix):
+                remainder = blob_name[len(search_prefix) :] if search_prefix else blob_name
+                if search_prefix == legacy_prefix and "/" in remainder.strip("/"):
+                    continue
+                if not remainder.endswith("_credential_data.pkl"):
+                    continue
+                username = remainder[: -len("_credential_data.pkl")]
+                if not username or username in seen_users:
+                    continue
+                seen_users.add(username)
+                yield username, blob_name
+        except Exception as exc:  # pragma: no cover - depends on storage backend
+            app.logger.warning(
+                "Unable to list credential blobs under %s: %s", search_prefix, exc
+            )
 
 
 def _local_directory(session_id: str, *, create: bool = False) -> str:

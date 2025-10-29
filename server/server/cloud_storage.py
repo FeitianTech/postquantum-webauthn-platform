@@ -5,9 +5,10 @@ import json
 import os
 import threading
 import time
-from typing import Iterable, Optional
+from typing import Callable, Iterable, Optional, TypeVar
 
 from google.api_core import exceptions as gcs_exceptions
+from google.auth import exceptions as auth_exceptions
 from google.cloud import storage
 from google.oauth2 import service_account
 
@@ -26,6 +27,17 @@ __all__ = [
 _CLIENT_LOCK = threading.Lock()
 _CLIENT: Optional[storage.Client] = None
 _BUCKET: Optional[storage.Bucket] = None
+
+_RETRYABLE_EXCEPTIONS = (
+    gcs_exceptions.GoogleAPICallError,
+    gcs_exceptions.RetryError,
+    auth_exceptions.RefreshError,
+    OSError,
+)
+_DEFAULT_RETRY_ATTEMPTS = 3
+_DEFAULT_RETRY_BASE_DELAY = 0.5
+
+_T = TypeVar("_T")
 
 
 def _env_flag(name: str) -> Optional[bool]:
@@ -119,6 +131,34 @@ def ensure_ready(*, max_attempts: int = 3, retry_delay: float = 1.0) -> None:
         raise last_error
 
 
+def _with_retry(
+    operation: Callable[[], _T],
+    *,
+    max_attempts: int = _DEFAULT_RETRY_ATTEMPTS,
+    base_delay: float = _DEFAULT_RETRY_BASE_DELAY,
+) -> _T:
+    """Execute ``operation`` with retries for transient failures."""
+
+    last_error: Optional[Exception] = None
+
+    for attempt in range(1, max_attempts + 1):
+        try:
+            return operation()
+        except gcs_exceptions.NotFound:
+            raise
+        except _RETRYABLE_EXCEPTIONS as exc:
+            last_error = exc
+            if attempt >= max_attempts:
+                break
+            delay = base_delay * (2 ** (attempt - 1))
+            time.sleep(delay)
+
+    if last_error is not None:
+        raise last_error
+
+    raise RuntimeError("Retryable operation failed without raising an error")
+
+
 def _normalise_prefix(prefix: Optional[str]) -> str:
     if not prefix:
         return ""
@@ -144,47 +184,72 @@ def build_blob_name(*components: str, prefix: Optional[str] = None) -> str:
 def upload_bytes(blob_name: str, data: bytes, *, content_type: Optional[str] = None) -> None:
     bucket = _ensure_bucket()
     blob = bucket.blob(blob_name)
-    blob.upload_from_string(data, content_type=content_type)
+
+    def _upload() -> None:
+        blob.upload_from_string(data, content_type=content_type)
+
+    _with_retry(_upload)
 
 
 def download_bytes(blob_name: str) -> Optional[bytes]:
     bucket = _ensure_bucket()
     blob = bucket.blob(blob_name)
-    try:
-        return blob.download_as_bytes()
-    except gcs_exceptions.NotFound:
-        return None
+
+    def _download() -> Optional[bytes]:
+        try:
+            return blob.download_as_bytes()
+        except gcs_exceptions.NotFound:
+            return None
+
+    return _with_retry(_download)
 
 
 def delete_blob(blob_name: str, *, missing_ok: bool = True) -> None:
     bucket = _ensure_bucket()
     blob = bucket.blob(blob_name)
-    try:
-        blob.delete()
-    except gcs_exceptions.NotFound:
-        if not missing_ok:
-            raise
+
+    def _delete() -> None:
+        try:
+            blob.delete()
+        except gcs_exceptions.NotFound:
+            if not missing_ok:
+                raise
+
+    _with_retry(_delete)
 
 
 def list_blob_names(prefix: str) -> Iterable[str]:
     bucket = _ensure_bucket()
-    iterator = bucket.list_blobs(prefix=prefix)
-    for blob in iterator:
-        yield blob.name
+
+    def _list() -> Iterable[str]:
+        iterator = bucket.list_blobs(prefix=prefix)
+        return [blob.name for blob in iterator]
+
+    for name in _with_retry(_list):
+        yield name
 
 
 def blob_exists(blob_name: str) -> bool:
     bucket = _ensure_bucket()
-    return bucket.blob(blob_name).exists()
+    blob = bucket.blob(blob_name)
+
+    def _exists() -> bool:
+        return blob.exists()
+
+    return bool(_with_retry(_exists))
 
 
 def blob_updated_timestamp(blob_name: str) -> Optional[float]:
     bucket = _ensure_bucket()
     blob = bucket.blob(blob_name)
-    try:
-        blob.reload()
-    except gcs_exceptions.NotFound:
-        return None
-    if blob.updated is None:
-        return None
-    return blob.updated.timestamp()
+
+    def _resolve_timestamp() -> Optional[float]:
+        try:
+            blob.reload()
+        except gcs_exceptions.NotFound:
+            return None
+        if blob.updated is None:
+            return None
+        return blob.updated.timestamp()
+
+    return _with_retry(_resolve_timestamp)

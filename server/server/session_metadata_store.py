@@ -209,13 +209,16 @@ def list_sessions() -> List[str]:
     if _using_gcs():
         prefix = _base_prefix()
         seen = set()
-        for blob_name in list_blob_names(prefix):
-            remainder = blob_name[len(prefix) :] if prefix else blob_name
-            if not remainder:
-                continue
-            session_component = remainder.split("/", 1)[0].strip()
-            if session_component:
-                seen.add(session_component)
+        try:
+            for blob_name in list_blob_names(prefix):
+                remainder = blob_name[len(prefix) :] if prefix else blob_name
+                if not remainder:
+                    continue
+                session_component = remainder.split("/", 1)[0].strip()
+                if session_component:
+                    seen.add(session_component)
+        except Exception as exc:  # pragma: no cover - depends on storage backend
+            app.logger.warning("Unable to list session metadata blobs: %s", exc)
         return sorted(seen)
 
     try:
@@ -278,15 +281,18 @@ def list_files(session_id: str) -> List[str]:
         if prefix:
             prefix = prefix + "/"
         names: List[str] = []
-        for blob_name in list_blob_names(prefix):
-            remainder = blob_name[len(prefix) :] if prefix else blob_name
-            if not remainder:
-                continue
-            if remainder.endswith("/"):
-                continue
-            if remainder == _LAST_ACCESS_BLOB:
-                continue
-            names.append(remainder)
+        try:
+            for blob_name in list_blob_names(prefix):
+                remainder = blob_name[len(prefix) :] if prefix else blob_name
+                if not remainder:
+                    continue
+                if remainder.endswith("/"):
+                    continue
+                if remainder == _LAST_ACCESS_BLOB:
+                    continue
+                names.append(remainder)
+        except Exception as exc:  # pragma: no cover - depends on storage backend
+            app.logger.warning("Unable to list metadata files for %s: %s", session_id, exc)
         return sorted(names)
 
     directory = _local_session_directory(session_id)
@@ -392,8 +398,13 @@ def delete_session(session_id: str) -> None:
         if prefix:
             prefix = prefix + "/"
         to_delete: List[str] = []
-        for blob_name in list_blob_names(prefix):
-            to_delete.append(blob_name)
+        try:
+            for blob_name in list_blob_names(prefix):
+                to_delete.append(blob_name)
+        except Exception as exc:  # pragma: no cover - depends on storage backend
+            app.logger.warning(
+                "Unable to enumerate metadata for deletion under %s: %s", prefix, exc
+            )
         for blob_name in to_delete:
             delete_blob(blob_name, missing_ok=True)
         return
