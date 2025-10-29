@@ -30,6 +30,8 @@ sys.modules.setdefault("google.api_core", google_api_core_pkg)
 
 google_api_core_exceptions_pkg = types.ModuleType("google.api_core.exceptions")
 setattr(google_api_core_exceptions_pkg, "NotFound", Exception)
+setattr(google_api_core_exceptions_pkg, "GoogleAPICallError", Exception)
+setattr(google_api_core_exceptions_pkg, "RetryError", Exception)
 sys.modules.setdefault("google.api_core.exceptions", google_api_core_exceptions_pkg)
 
 google_cloud_pkg = types.ModuleType("google.cloud")
@@ -73,6 +75,13 @@ google_pkg.oauth2 = google_oauth_pkg
 google_api_core_pkg.exceptions = google_api_core_exceptions_pkg
 google_cloud_pkg.storage = google_cloud_storage_pkg
 google_oauth_pkg.service_account = google_service_account_pkg
+google_auth_pkg = types.ModuleType("google.auth")
+google_auth_pkg.__path__ = []
+sys.modules.setdefault("google.auth", google_auth_pkg)
+google_auth_exceptions_pkg = types.ModuleType("google.auth.exceptions")
+setattr(google_auth_exceptions_pkg, "RefreshError", Exception)
+sys.modules.setdefault("google.auth.exceptions", google_auth_exceptions_pkg)
+google_auth_pkg.exceptions = google_auth_exceptions_pkg
 
 storage = importlib.import_module("server.server.storage")
 
@@ -169,6 +178,44 @@ def test_iter_credentials_skips_nested_legacy_duplicates(monkeypatch):
         primary_name: [["primary"]],
         legacy_name: [["legacy"]],
     }
+
+
+def test_list_credential_blob_names_logs_and_continues(monkeypatch):
+    session_id = "session-log"
+    primary_prefix = storage._build_search_prefix(storage._credential_prefix(session_id))
+    legacy_prefix = storage._build_search_prefix(storage._USER_FOLDER_PREFIX)
+
+    failing_called = {"count": 0}
+
+    def fake_list_blob_names(prefix: str):
+        if prefix == primary_prefix and failing_called["count"] == 0:
+            failing_called["count"] += 1
+
+            class _Generator:
+                def __iter__(self):
+                    return self
+
+                def __next__(self):
+                    raise RuntimeError("temporary failure")
+
+            return _Generator()
+        if prefix == legacy_prefix:
+            return iter([storage._legacy_credential_blob("user@example.com")])
+        return iter([])
+
+    monkeypatch.setattr(storage, "list_blob_names", fake_list_blob_names)
+
+    warnings: list[tuple[tuple[object, ...], dict[str, object]]] = []
+
+    def _fake_warning(*args, **kwargs):
+        warnings.append((args, kwargs))
+
+    monkeypatch.setattr(storage.app.logger, "warning", _fake_warning)
+
+    results = list(storage._list_credential_blob_names(session_id))
+
+    assert results == [("user@example.com", storage._legacy_credential_blob("user@example.com"))]
+    assert any("Unable to list credential blobs" in str(call[0][0]) for call in warnings)
 
 
 def test_delkey_attempts_legacy_cleanup(monkeypatch):
