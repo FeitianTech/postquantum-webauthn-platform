@@ -29,6 +29,7 @@ from ..metadata import (
     save_session_metadata_item,
     serialize_session_metadata_item,
 )
+from ..startup import warm_up_dependencies
 from ..storage import delkey, readkey
 
 
@@ -219,18 +220,18 @@ def ensure_metadata_bootstrapped(skip_if_reloader_parent: bool = True) -> None:
 if hasattr(app, "before_serving"):
 
     @app.before_serving
-    def _bootstrap_metadata_before_serving() -> None:
-        """Refresh metadata as the server starts handling requests."""
+    def _warm_dependencies_before_serving() -> None:
+        """Warm up external dependencies before the server handles requests."""
 
-        ensure_metadata_bootstrapped(skip_if_reloader_parent=False)
+        warm_up_dependencies(skip_if_reloader_parent=False)
 
 elif hasattr(app, "before_first_request"):
 
     @app.before_first_request
-    def _bootstrap_metadata_before_first_request() -> None:
+    def _warm_dependencies_before_first_request() -> None:
         """Fallback for Flask versions without ``before_serving``."""
 
-        ensure_metadata_bootstrapped(skip_if_reloader_parent=False)
+        warm_up_dependencies(skip_if_reloader_parent=False)
 
 
 @app.route("/")
