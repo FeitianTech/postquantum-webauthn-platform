@@ -273,7 +273,7 @@ body.app-loaded > :not(.app-loader) {
 
 @media (min-width: 993px) {
     .advanced-settings-layout {
-        grid-template-columns: minmax(0, 7fr) minmax(280px, 3fr);
+        grid-template-columns: minmax(0, 13fr) minmax(280px, 7fr);
     }
 
     .advanced-settings-layout .form-card .form-pane.active {

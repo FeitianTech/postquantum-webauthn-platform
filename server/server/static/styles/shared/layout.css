@@ -16,7 +16,7 @@
 
 .advanced-settings-layout {
     display: grid;
-    grid-template-columns: minmax(0, 7fr) minmax(280px, 3fr);
+    grid-template-columns: minmax(0, 13fr) minmax(280px, 7fr);
     gap: 2rem;
     margin-top: 0;
     align-items: stretch;
