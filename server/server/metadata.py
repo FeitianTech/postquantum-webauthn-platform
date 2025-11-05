@@ -29,6 +29,7 @@ from . import session_metadata_store
 from .config import (
     MDS_METADATA_CACHE_PATH,
     MDS_METADATA_PATH,
+    MDS_METADATA_VERIFIED_PATH,
     MDS_METADATA_URL,
     MDS_TLS_ADDITIONAL_TRUST_ANCHORS_PEM,
     app,
@@ -66,6 +67,7 @@ __all__ = [
 
 _base_metadata_cache: Optional[MetadataBlobPayload] = None
 _base_metadata_mtime: Optional[float] = None
+_base_metadata_source: Optional[str] = None
 _base_verifier_cache: Optional[MdsAttestationVerifier] = None
 _base_verifier_mtime: Optional[float] = None
 _base_metadata_trust_verified: Optional[bool] = None
@@ -1211,25 +1213,53 @@ def load_cached_metadata_snapshot() -> bool:
 
 
 def _load_base_metadata() -> Tuple[Optional[MetadataBlobPayload], Optional[float]]:
-    global _base_metadata_cache, _base_metadata_mtime
+    global _base_metadata_cache, _base_metadata_mtime, _base_metadata_source
     global _base_metadata_trust_verified, _base_metadata_entry_ids
 
-    try:
-        mtime = os.path.getmtime(MDS_METADATA_PATH)
-    except OSError:
-        mtime = None
+    metadata_exists = os.path.exists(MDS_METADATA_PATH)
+    fallback_exists = os.path.exists(MDS_METADATA_VERIFIED_PATH)
 
-    if _base_metadata_cache is not None and _base_metadata_mtime == mtime:
-        return _base_metadata_cache, mtime
+    if metadata_exists:
+        try:
+            current_mtime = os.path.getmtime(MDS_METADATA_PATH)
+        except OSError:
+            current_mtime = None
+        if (
+            _base_metadata_cache is not None
+            and _base_metadata_source == "jws"
+            and _base_metadata_mtime == current_mtime
+        ):
+            return _base_metadata_cache, current_mtime
+    else:
+        current_mtime = None
+
+    if not metadata_exists and fallback_exists:
+        try:
+            fallback_mtime = os.path.getmtime(MDS_METADATA_VERIFIED_PATH)
+        except OSError:
+            fallback_mtime = None
+        if (
+            _base_metadata_cache is not None
+            and _base_metadata_source == "verified"
+            and _base_metadata_mtime == fallback_mtime
+        ):
+            return _base_metadata_cache, fallback_mtime
+    else:
+        fallback_mtime = None
 
     metadata: Optional[MetadataBlobPayload] = None
     metadata_verified: Optional[bool] = None
-    if mtime is not None:
+    cache_mtime: Optional[float] = None
+    source: Optional[str] = None
+
+    if metadata_exists:
         try:
             with open(MDS_METADATA_PATH, "rb") as blob_file:
                 blob_data = blob_file.read()
             metadata = parse_blob(blob_data, FIDO_METADATA_TRUST_ROOT_CERT)
             metadata_verified = True
+            cache_mtime = current_mtime
+            source = "jws"
         except FileNotFoundError:
             metadata = None
             metadata_verified = None
@@ -1242,16 +1272,61 @@ def _load_base_metadata() -> Tuple[Optional[MetadataBlobPayload], Optional[float
             metadata = None
             metadata_verified = False
 
+    if metadata is None and fallback_exists:
+        fallback_payload, fallback_mtime = _load_verified_metadata_fallback()
+        if fallback_payload is not None:
+            if metadata_exists and metadata_verified is False:
+                app.logger.info(
+                    "Falling back to verified metadata snapshot while %s is unavailable.",
+                    MDS_METADATA_PATH,
+                )
+            metadata = fallback_payload
+            metadata_verified = True
+            cache_mtime = fallback_mtime
+            source = "verified"
+
     if metadata is not None:
         _base_metadata_entry_ids = {id(entry) for entry in metadata.entries}
     else:
         _base_metadata_entry_ids = set()
 
     _base_metadata_trust_verified = metadata_verified
-
     _base_metadata_cache = metadata
-    _base_metadata_mtime = mtime
-    return metadata, mtime
+    _base_metadata_mtime = cache_mtime
+    _base_metadata_source = source
+    return metadata, cache_mtime
+
+
+def _load_verified_metadata_fallback() -> Tuple[Optional[MetadataBlobPayload], Optional[float]]:
+    """Load the bundled verified metadata snapshot as a fallback when JWS is unavailable."""
+
+    try:
+        fallback_mtime = os.path.getmtime(MDS_METADATA_VERIFIED_PATH)
+    except OSError:
+        fallback_mtime = None
+
+    try:
+        with open(MDS_METADATA_VERIFIED_PATH, "r", encoding="utf-8") as fallback_file:
+            payload = json.load(fallback_file)
+    except FileNotFoundError:
+        return None, fallback_mtime
+    except (OSError, json.JSONDecodeError) as exc:
+        app.logger.warning(
+            "Unable to load verified metadata fallback %s: %s",
+            MDS_METADATA_VERIFIED_PATH,
+            exc,
+        )
+        return None, fallback_mtime
+
+    try:
+        return MetadataBlobPayload.from_dict(payload), fallback_mtime
+    except Exception as exc:  # pylint: disable=broad-except
+        app.logger.warning(
+            "Verified metadata fallback %s is invalid: %s",
+            MDS_METADATA_VERIFIED_PATH,
+            exc,
+        )
+        return None, fallback_mtime
 
 
 def metadata_entry_trust_anchor_status(entry: Any) -> Optional[bool]:
@@ -1300,5 +1375,4 @@ def get_mds_verifier() -> Optional[MdsAttestationVerifier]:
 
     metadata = _merge_metadata(base_metadata, session_items)
     return MdsAttestationVerifier(metadata)
-
 

@@ -16,6 +16,7 @@ def metadata_test_env(monkeypatch, tmp_path):
 
     metadata_path = tmp_path / "fido-mds3.jws"
     cache_path = tmp_path / "fido-mds3.jws.meta.json"
+    verified_path = tmp_path / "fido-mds3.verified.json"
 
     load_calls = {"count": 0}
 
@@ -25,6 +26,7 @@ def metadata_test_env(monkeypatch, tmp_path):
 
     monkeypatch.setattr(metadata_module, "MDS_METADATA_PATH", str(metadata_path), raising=False)
     monkeypatch.setattr(metadata_module, "MDS_METADATA_CACHE_PATH", str(cache_path), raising=False)
+    monkeypatch.setattr(metadata_module, "MDS_METADATA_VERIFIED_PATH", str(verified_path), raising=False)
     monkeypatch.setattr(
         metadata_module,
         "load_cached_metadata_snapshot",
@@ -47,6 +49,7 @@ def metadata_test_env(monkeypatch, tmp_path):
 
     monkeypatch.setattr(metadata_module, "_base_metadata_cache", None, raising=False)
     monkeypatch.setattr(metadata_module, "_base_metadata_mtime", None, raising=False)
+    monkeypatch.setattr(metadata_module, "_base_metadata_source", None, raising=False)
     monkeypatch.setattr(metadata_module, "_base_verifier_cache", None, raising=False)
     monkeypatch.setattr(metadata_module, "_base_verifier_mtime", None, raising=False)
     monkeypatch.setattr(metadata_module, "_base_metadata_trust_verified", None, raising=False)
@@ -142,4 +145,3 @@ def test_metadata_not_available_is_warning_pqc():
 
     assert "metadata_not_available" in outcome["warnings"]
     assert "metadata_not_available" not in outcome["errors"]
-
