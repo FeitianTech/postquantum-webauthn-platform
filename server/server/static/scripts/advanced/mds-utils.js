@@ -83,6 +83,97 @@ export function transformEntry(entry, index = 0) {
     };
 }
 
+/**
+ * Lightweight transformation for initial UI display
+ * Only parses fields visible in the list view
+ */
+export function transformEntryLightweight(entry, index = 0) {
+    const metadata = entry?.metadataStatement ?? {};
+    const name = resolveName(metadata, entry);
+    const protocol = formatProtocol(metadata.protocolFamily || metadata.protocolType);
+    const { display: certification, status: certificationStatus } = formatCertification(entry?.statusReports || []);
+    const identifier = resolveIdentifier(entry, metadata);
+    const aaguid = resolveAaguid(entry, metadata) || '';
+    const userVerificationList = extractUserVerification(metadata.userVerificationDetails);
+    const attachmentList = extractList(metadata.attachmentHint).map(formatEnum);
+    const transportsList = extractTransports(metadata);
+    const keyProtectionList = extractList(metadata.keyProtection).map(formatEnum);
+    const algorithmsList = extractList(metadata.authenticationAlgorithms).map(formatEnum);
+    const icon = normaliseIcon(metadata.icon, metadata.iconType);
+
+    const latestStatusDate = latestEffectiveDate(entry?.statusReports || []);
+    const rawDate = entry?.timeOfLastStatusChange || latestStatusDate;
+    const dateUpdated = rawDate ? formatDate(rawDate) : '';
+
+    return {
+        index,
+        name,
+        protocol,
+        certification,
+        certificationStatus,
+        id: identifier,
+        aaguid,
+        icon,
+        userVerification: userVerificationList.join(', '),
+        userVerificationList,
+        attachment: attachmentList.join(', '),
+        attachmentList,
+        transports: transportsList.join(', '),
+        transportsList,
+        keyProtection: keyProtectionList.join(', '),
+        keyProtectionList,
+        algorithms: algorithmsList.join(', '),
+        algorithmsList,
+        certificateAlgorithmInfo: '—',
+        certificateAlgorithmInfoList: [],
+        certificateCommonNames: '—',
+        certificateCommonNameList: [],
+        algorithmInfo: '—',
+        commonName: '—',
+        dateUpdated,
+        dateTooltip: rawDate || undefined,
+        // Defer full parsing
+        metadataStatement: null,
+        rawEntry: null,
+        statusReports: [],
+        attestationCertificates: [],
+        attestationKeyIdentifiers: [],
+        _isLightweight: true, // Flag to indicate lightweight parsing
+        _rawEntry: entry, // Keep reference for on-demand full parsing
+    };
+}
+
+/**
+ * Upgrade a lightweight entry to full entry
+ * Completes parsing of deferred fields
+ */
+export function upgradeEntryToFull(lightweightEntry) {
+    if (!lightweightEntry || !lightweightEntry._isLightweight) {
+        return lightweightEntry; // Already full or invalid
+    }
+
+    const entry = lightweightEntry._rawEntry;
+    if (!entry) {
+        return lightweightEntry;
+    }
+
+    const metadata = entry?.metadataStatement ?? {};
+    const attestationCertificates = extractList(metadata.attestationRootCertificates);
+    const attestationKeyIdentifiers = extractAttestationKeyIdentifiers(metadata, entry);
+
+    // Create full entry
+    return {
+        ...lightweightEntry,
+        metadataStatement: metadata,
+        rawEntry: entry,
+        statusReports: Array.isArray(entry?.statusReports) ? entry.statusReports : [],
+        attestationCertificates,
+        attestationKeyIdentifiers,
+        _isLightweight: false,
+        _rawEntry: undefined, // Remove raw entry reference
+    };
+}
+
 export function extractAttestationKeyIdentifiers(metadata, entry) {
     const map = new Map();
     const addValue = value => {
