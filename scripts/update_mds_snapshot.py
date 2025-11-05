@@ -11,7 +11,6 @@ from pathlib import Path
 
 from fido2.mds3 import parse_blob
 
-from server.server import metadata as metadata_module
 from server.server.config import (
     FIDO_METADATA_TRUST_ROOT_CERT,
     MDS_METADATA_CACHE_PATH,
@@ -19,6 +18,7 @@ from server.server.config import (
     MDS_METADATA_URL,
     MDS_METADATA_VERIFIED_PATH,
 )
+from server.server.metadata import format_last_modified_header, store_metadata_cache_entry
 
 
 def _fetch_remote_blob() -> tuple[bytes, str | None, str | None]:
@@ -49,9 +49,9 @@ def _write_verified_snapshot(blob: bytes) -> None:
 
 
 def _write_cache_state(last_modified: str | None, etag: str | None) -> None:
-    metadata_module._store_metadata_cache_entry(  # type: ignore[attr-defined]
+    store_metadata_cache_entry(
         last_modified_header=last_modified,
-        last_modified_iso=metadata_module._format_last_modified(last_modified),  # type: ignore[attr-defined]
+        last_modified_iso=format_last_modified_header(last_modified),
         etag=etag,
     )
 
