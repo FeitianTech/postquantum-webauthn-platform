@@ -32,6 +32,9 @@ import {
     updateAdvancedCredentialSignCount,
 } from '../shared/local-storage.js';
 
+let advancedRegisterState = null;
+let advancedAuthenticateState = null;
+
 function maybeRandomizeAdvancedRegistrationFields() {
     const userIdInput = document.getElementById('user-id');
     const userNameInput = document.getElementById('user-name');
@@ -193,6 +196,7 @@ export async function advancedRegister() {
         }
 
         const json = await response.json();
+        advancedRegisterState = json?.__session_state ?? null;
 
         const warnings = Array.isArray(json?.warnings)
             ? json.warnings.filter((msg) => typeof msg === 'string' && msg.trim().length > 0)
@@ -203,6 +207,7 @@ export async function advancedRegister() {
 
         const optionsJson = { ...(json || {}) };
         delete optionsJson.warnings;
+        delete optionsJson.__session_state;
 
         const originalExtensions = optionsJson?.publicKey?.extensions;
         createOptions = parseCreationOptionsFromJSON(optionsJson);
@@ -259,7 +264,8 @@ export async function advancedRegister() {
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({
                 ...parsed,
-                __credential_response: credentialJson
+                __credential_response: credentialJson,
+                __session_state: advancedRegisterState,
             }),
         });
 
@@ -318,6 +324,7 @@ export async function advancedRegister() {
             );
 
             setTimeout(loadSavedCredentials, 1000);
+            advancedRegisterState = null;
         } else {
             const errorText = await result.text();
             throw new Error(`Registration failed: ${errorText}`);
@@ -343,6 +350,7 @@ export async function advancedRegister() {
         showStatus('advanced', `Credential registration failed: ${errorMessage}${detailMessage}`, 'error');
     } finally {
         hideProgress('advanced');
+        advancedRegisterState = null;
     }
 }
 
@@ -406,8 +414,11 @@ export async function advancedAuthenticate() {
         }
 
         const json = await response.json();
-        const originalExtensions = json?.publicKey?.extensions;
-        const assertOptions = parseRequestOptionsFromJSON(json);
+        advancedAuthenticateState = json?.__session_state ?? null;
+        const optionsJson = { ...(json || {}) };
+        delete optionsJson.__session_state;
+        const originalExtensions = optionsJson?.publicKey?.extensions;
+        const assertOptions = parseRequestOptionsFromJSON(optionsJson);
 
         const convertedExtensions = convertExtensionsForClient(originalExtensions);
         if (convertedExtensions) {
@@ -456,6 +467,7 @@ export async function advancedAuthenticate() {
                 ...parsed,
                 __assertion_response: assertionJson,
                 __storedCredentials: storedCredentials,
+                __session_state: advancedAuthenticateState,
             }),
         });
 
@@ -475,6 +487,7 @@ export async function advancedAuthenticate() {
             }
 
             maybeRandomizeAdvancedAuthenticationFields();
+            advancedAuthenticateState = null;
         } else {
             let errorText = await result.text();
             let parsedError;
@@ -502,6 +515,7 @@ export async function advancedAuthenticate() {
         showStatus('advanced', `Advanced authentication failed: ${errorMessage}`, 'error');
     } finally {
         hideProgress('advanced');
+        advancedAuthenticateState = null;
     }
 }
 

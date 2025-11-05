@@ -16,6 +16,9 @@ import {
     updateSimpleCredentialSignCount,
 } from '../shared/local-storage.js';
 
+let simpleRegisterState = null;
+let simpleAuthenticateState = null;
+
 export async function simpleRegister() {
     const email = document.getElementById('simple-email').value;
     if (!email) {
@@ -41,8 +44,10 @@ export async function simpleRegister() {
         }
 
         const json = await response.json();
-        const originalExtensions = json?.publicKey?.extensions;
-        const createOptions = parseCreationOptionsFromJSON(json);
+        const { __session_state: sessionState = null, ...optionsWithoutState } = json || {};
+        simpleRegisterState = sessionState;
+        const originalExtensions = optionsWithoutState?.publicKey?.extensions;
+        const createOptions = parseCreationOptionsFromJSON(optionsWithoutState);
 
         const convertedExtensions = convertExtensionsForClient(originalExtensions);
         if (convertedExtensions) {
@@ -59,13 +64,17 @@ export async function simpleRegister() {
         showProgress('simple', 'Connecting your authenticator device...');
 
         const credential = await create(createOptions);
+        const credentialJson = credential.toJSON ? credential.toJSON() : JSON.parse(JSON.stringify(credential));
+        if (simpleRegisterState) {
+            credentialJson.__session_state = simpleRegisterState;
+        }
 
         showProgress('simple', 'Completing registration...');
 
         const result = await fetch(`/api/register/complete?email=${encodeURIComponent(email)}`, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(credential)
+            body: JSON.stringify(credentialJson)
         });
 
         if (result.ok) {
@@ -81,6 +90,7 @@ export async function simpleRegister() {
             }
 
             setTimeout(loadSavedCredentials, 1000);
+            simpleRegisterState = null;
         } else {
             const errorText = await result.text();
             throw new Error(`Registration failed: ${errorText}`);
@@ -101,6 +111,7 @@ export async function simpleRegister() {
         showStatus('simple', errorMessage, 'error');
     } finally {
         hideProgress('simple');
+        simpleRegisterState = null;
     }
 }
 
@@ -139,7 +150,9 @@ export async function simpleAuthenticate() {
         }
 
         const json = await response.json();
-        const getOptions = parseRequestOptionsFromJSON(json);
+        const { __session_state: sessionState = null, ...optionsWithoutState } = json || {};
+        simpleAuthenticateState = sessionState;
+        const getOptions = parseRequestOptionsFromJSON(optionsWithoutState);
 
         state.lastFakeCredLength = 0;
         window.lastFakeCredLength = 0;
@@ -147,13 +160,17 @@ export async function simpleAuthenticate() {
         showProgress('simple', 'Connecting your authenticator device...');
 
         const assertion = await get(getOptions);
+        const assertionJson = assertion.toJSON ? assertion.toJSON() : JSON.parse(JSON.stringify(assertion));
+        if (simpleAuthenticateState) {
+            assertionJson.__session_state = simpleAuthenticateState;
+        }
 
         showProgress('simple', 'Completing authentication...');
 
         const result = await fetch(`/api/authenticate/complete?email=${encodeURIComponent(email)}`, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(assertion)
+            body: JSON.stringify(assertionJson)
         });
 
         if (result.ok) {
@@ -171,6 +188,7 @@ export async function simpleAuthenticate() {
                 );
                 loadSavedCredentials();
             }
+            simpleAuthenticateState = null;
         } else {
             const errorText = await result.text();
             throw new Error(`Authentication failed: ${errorText}`);
@@ -191,5 +209,6 @@ export async function simpleAuthenticate() {
         showStatus('simple', errorMessage, 'error');
     } finally {
         hideProgress('simple');
+        simpleAuthenticateState = null;
     }
 }

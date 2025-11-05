@@ -1092,6 +1092,7 @@ def advanced_register_begin():
     session["advanced_original_request"] = data
 
     response_payload = dict(options)
+    response_payload["__session_state"] = make_json_safe(state)
     if warnings:
         response_payload["warnings"] = warnings
 
@@ -1210,7 +1211,13 @@ def advanced_register_complete():
 
     try:
         state = session.pop("advanced_state", None)
+        if state is None:
+            fallback_state = data.get("__session_state")
+            if isinstance(fallback_state, Mapping):
+                state = fallback_state
         stored_original_request = session.pop("advanced_original_request", None)
+        if stored_original_request is None and isinstance(original_request, Mapping):
+            stored_original_request = original_request
         if state is None:
             return (
                 jsonify(
@@ -1222,12 +1229,20 @@ def advanced_register_complete():
                 400,
             )
 
-        stored_rp = session.get("advanced_rp")
+        stored_rp = session.pop("advanced_rp", None)
         stored_rp_id = None
         stored_rp_name = None
         if isinstance(stored_rp, Mapping):
             stored_rp_id = stored_rp.get("id")
             stored_rp_name = stored_rp.get("name")
+        elif isinstance(public_key, Mapping):
+            rp_candidate = public_key.get("rp")
+            if isinstance(rp_candidate, Mapping):
+                stored_rp_id = rp_candidate.get("id")
+                stored_rp_name = rp_candidate.get("name")
+            rp_id_candidate = public_key.get("rpId")
+            if stored_rp_id is None and isinstance(rp_id_candidate, str):
+                stored_rp_id = rp_id_candidate
 
         resolved_rp_id = determine_rp_id(stored_rp_id)
         register_server = create_fido_server(
@@ -2025,6 +2040,7 @@ def advanced_authenticate_begin():
     }
 
     options_payload = dict(options)
+    options_payload["__session_state"] = make_json_safe(state)
     public_key_dict = options_payload.get("publicKey")
     if isinstance(public_key_dict, Mapping):
         allow_list = public_key_dict.get("allowCredentials")
@@ -2141,6 +2157,22 @@ def advanced_authenticate_complete():
             "error": "The credential used is not discoverable. Please register a resident key credential to authenticate without allowCredentials."
         }), 400
 
+    state = session.pop("advanced_auth_state", None)
+    if state is None:
+        fallback_state = data.get("__session_state")
+        if isinstance(fallback_state, Mapping):
+            state = fallback_state
+    if state is None:
+        session.pop("advanced_auth_rp", None)
+        return (
+            jsonify(
+                {
+                    "error": "Authentication state not found or has expired. Please restart the authentication flow."
+                }
+            ),
+            400,
+        )
+
     try:
         stored_rp = session.pop("advanced_auth_rp", None)
         stored_rp_id = None
@@ -2152,6 +2184,14 @@ def advanced_authenticate_complete():
             fallback_rp = session.get("advanced_rp")
             stored_rp_id = fallback_rp.get("id")
             stored_rp_name = fallback_rp.get("name")
+        elif isinstance(public_key, Mapping):
+            rp_candidate = public_key.get("rp")
+            if isinstance(rp_candidate, Mapping):
+                stored_rp_id = rp_candidate.get("id")
+                stored_rp_name = rp_candidate.get("name")
+            rp_id_candidate = public_key.get("rpId")
+            if stored_rp_id is None and isinstance(rp_id_candidate, str):
+                stored_rp_id = rp_id_candidate
 
         resolved_rp_id = determine_rp_id(stored_rp_id)
         auth_server = create_fido_server(rp_id=resolved_rp_id, rp_name=stored_rp_name)
@@ -2166,7 +2206,7 @@ def advanced_authenticate_complete():
 
         try:
             auth_result = auth_server.authenticate_complete(
-                session.pop("advanced_auth_state"),
+                state,
                 all_credentials,
                 response,
             )

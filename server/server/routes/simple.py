@@ -273,6 +273,7 @@ def register_begin():
     session["register_rp_id"] = rp_id
 
     options_dict = dict(options)
+    options_dict["__session_state"] = make_json_safe(state)
     public_key_options = options_dict.get("publicKey")
     if isinstance(public_key_options, MutableMapping):
         session["simple_register_public_key"] = make_json_safe(public_key_options)
@@ -331,8 +332,25 @@ def register_complete():
 
     min_pin_length_value = extract_min_pin_length(client_extension_results)
 
+    if isinstance(response, dict):
+        state_from_request = response.pop("__session_state", None)
+    else:
+        state_from_request = None
+
     rp_id = session.get("register_rp_id")
     state = session.get("state")
+    if state is None and isinstance(state_from_request, Mapping):
+        state = state_from_request
+    if state is None:
+        return (
+            jsonify(
+                {
+                    "error": "Registration state not found or has expired. Please restart the registration process."
+                }
+            ),
+            400,
+        )
+
     public_key_options_for_checks = session.pop("simple_register_public_key", None)
     resolved_rp_id = rp_id or determine_rp_id()
     server = create_fido_server(rp_id=resolved_rp_id)
@@ -754,7 +772,10 @@ def authenticate_begin():
     session["state"] = state
     session["authenticate_rp_id"] = rp_id
 
-    return jsonify(make_json_safe(dict(options)))
+    options_payload = dict(options)
+    options_payload["__session_state"] = make_json_safe(state)
+
+    return jsonify(make_json_safe(options_payload))
 
 
 @app.route("/api/authenticate/complete", methods=["POST"])
@@ -766,11 +787,21 @@ def authenticate_complete():
     if not credential_data_list:
         abort(400)
 
+    state = session.pop("state", None)
+    state_from_request = None
+    if isinstance(response, Mapping):
+        state_from_request = response.pop("__session_state", None)
+    if state is None and isinstance(state_from_request, Mapping):
+        state = state_from_request
+    if state is None:
+        session.pop("authenticate_rp_id", None)
+        return jsonify({"error": "Authentication state not found or has expired. Please restart the authentication flow."}), 400
+
     rp_id = session.pop("authenticate_rp_id", None)
     server = create_fido_server(rp_id=rp_id)
 
     matched_credential = server.authenticate_complete(
-        session.pop("state"),
+        state,
         credential_data_list,
         response,
     )
