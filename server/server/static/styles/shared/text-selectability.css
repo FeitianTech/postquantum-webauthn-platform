@@ -1,0 +1,387 @@
+/* Text Selectability Rules
+ * This file controls which text elements can be selected by users.
+ * Informational content (text areas, code blocks, credential data) is selectable.
+ * UI elements (buttons, labels, titles, tabs, symbols) are non-selectable.
+ */
+
+/* ==========================================
+ * NON-SELECTABLE UI ELEMENTS
+ * ========================================== */
+
+/* Buttons and button-like elements */
+button,
+.btn,
+.btn-secondary,
+.btn-danger,
+.btn-success,
+.btn-small,
+.link-button,
+.refresh-icon,
+.add-icon,
+.header__menu-toggle,
+.header__github-link,
+.json-editor-close-btn,
+.codec-mode-tab,
+.nav-tab,
+.sub-tab,
+.decoder-raw-button {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+}
+
+/* Headers and titles */
+h1, h2, h3, h4, h5, h6,
+.header h1,
+.header__branding h1,
+.credentials-panel-title,
+.section-header,
+.decoder-summary-header h3,
+.simple-auth-header__title-block h2,
+.advanced-header h2,
+.tab-section-description,
+.decoder-description-title {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+}
+
+/* Labels and form labels */
+label,
+.form-group label,
+.checkbox-label,
+.label-with-info label,
+.decoder-term,
+.codec-encoded-label,
+.form-label-inline label,
+.checkbox-subheading {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+}
+
+/* Navigation elements */
+.nav-tabs,
+.nav-tab,
+.sub-tabs,
+.sub-tab,
+.header__tabs,
+.header-mini,
+.header-sentinel {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+}
+
+/* Status indicators and badges */
+.status,
+.decoder-pill,
+.decoder-type,
+.spinner,
+.progress,
+.app-loader {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+}
+
+/* Info icons and tooltips */
+.info-icon,
+.info-popup,
+.language-toggle,
+.text-en,
+.text-zh {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+}
+
+/* Symbols and icons */
+svg,
+.icon-refresh,
+.header__github-icon,
+.header__menu-toggle-icon,
+.header__menu-toggle-icon span {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+}
+
+/* Dropdown options (when displayed) */
+select option,
+.form-control option {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+}
+
+/* Modal close buttons and overlays */
+.modal-close,
+.json-editor-overlay,
+.header__overlay {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+}
+
+/* Section headers and expandable sections */
+.section-header,
+.expandable-section > .section-header,
+.static-section > .section-header,
+.credentials-panel-header {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+}
+
+/* MDS specific UI elements */
+.mds-header,
+.mds-controls,
+.mds-filter,
+.mds-table th,
+.mds-card-header,
+.mds-status-badge,
+.mds-section-header,
+.mds-section-title,
+.mds-section-description,
+.mds-section-actions,
+.mds-add-metadata-button,
+.mds-header-cell,
+.mds-header-text,
+.mds-sort-button,
+.mds-status,
+.mds-entry-count-inline,
+.mds-custom-panel__dropzone-icon,
+.mds-custom-panel__dropzone-text,
+.mds-custom-panel__hint,
+.mds-custom-panel__close,
+.mds-custom-panel__backdrop {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+}
+
+/* Credential list item controls */
+.credential-item-header,
+.credential-item-actions,
+.credential-delete,
+.credential-view-details,
+.credential-item,
+.credential-feature-tags,
+.credential-feature-tag {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+}
+
+/* Checkbox and radio button text (labels are covered above, but ensure spans within are also non-selectable) */
+.checkbox-label span,
+.checkbox-item span {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+}
+
+/* Menu toggle labels */
+.header__menu-toggle-label {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+}
+
+/* Error messages and hints (descriptive, but typically not copied) */
+.error-message,
+.decoder-warning,
+.info-hint {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+}
+
+/* Format chips and badges */
+.decoder-format-chip,
+.decoder-format-name {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+}
+
+/* Action groups */
+.json-editor-actions,
+.json-editor-inline-buttons,
+.decoder-summary-actions,
+.advanced-header__actions,
+.advanced-header__actions-group {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+}
+
+/* ==========================================
+ * SELECTABLE INFORMATIONAL CONTENT
+ * ========================================== */
+
+/* Text inputs and textareas - explicitly allow selection */
+input[type="text"],
+input[type="number"],
+input[type="email"],
+input[type="password"],
+textarea,
+.form-control {
+    user-select: text;
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+}
+
+/* Code blocks and pre-formatted text */
+code,
+pre,
+.decoder-pre,
+.decoder-inline,
+#decoder-raw-content,
+.codec-encoded-value,
+.decoder-expanded-json {
+    user-select: text;
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+}
+
+/* JSON editor content */
+#json-editor {
+    user-select: text;
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+}
+
+/* Credential IDs and technical data */
+.credential-item-id,
+.decoder-details,
+.decoder-primitive,
+.credential-info-value {
+    user-select: text;
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+}
+
+/* Definition lists containing technical information */
+.decoder-definition .decoder-details,
+.decoder-list {
+    user-select: text;
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+}
+
+/* MDS table data cells (not headers) */
+.mds-table td,
+.mds-cell-content,
+.mds-detail-value {
+    user-select: text;
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+}
+
+/* Informational paragraphs in description areas */
+.decoder-description p,
+.decoder-description-list,
+.decoder-format-note,
+.decoder-description-note,
+.codec-encoded-meta {
+    user-select: text;
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+}
+
+/* Fake credential list (generated credential IDs) */
+.fake-credential-list,
+.fake-credential-item {
+    user-select: text;
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+}
+
+/* Modal content areas with informational text */
+.modal-body pre,
+.modal-body code,
+.modal-content-text {
+    user-select: text;
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+}
+
+/* Registration result data */
+.registration-result-data,
+.credential-details-content {
+    user-select: text;
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+}
+
+/* Status message content (when it contains data to copy) */
+.status-content code,
+.status-content pre {
+    user-select: text;
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+}
+
+/* ==========================================
+ * SPECIAL CASES
+ * ========================================== */
+
+/* Readonly inputs should still be selectable for copying */
+input[readonly] {
+    user-select: text;
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+}
+
+/* Disabled elements should not be selectable */
+input[disabled],
+textarea[disabled],
+button[disabled],
+select[disabled] {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+}
+
+/* Placeholder text should not be independently selectable */
+::placeholder,
+::-webkit-input-placeholder,
+::-moz-placeholder,
+:-ms-input-placeholder {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+}
