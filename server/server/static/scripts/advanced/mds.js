@@ -2,6 +2,7 @@ import {
     MDS_HTML_PATH,
     MDS_JWS_PATH,
     MDS_VERIFIED_JSON_PATH,
+    MDS_VERIFIED_META_PATH,
     CUSTOM_METADATA_LIST_PATH,
     CUSTOM_METADATA_UPLOAD_PATH,
     CUSTOM_METADATA_DELETE_PATH,
@@ -50,6 +51,54 @@ let rowHeightLockScheduled = false;
 let horizontalScrollMetricsScheduled = false;
 let initialMdsJws = null;
 let initialMdsInfo = null;
+
+
+function normaliseSnapshotInfo(info) {
+    if (!info || typeof info !== 'object') {
+        return null;
+    }
+
+    const normalised = {};
+    for (const [key, value] of Object.entries(info)) {
+        if (typeof value === 'string') {
+            normalised[key] = value.trim();
+        } else {
+            normalised[key] = value;
+        }
+    }
+    return normalised;
+}
+
+function extractSnapshotTimestamp(info) {
+    if (!info || typeof info !== 'object') {
+        return null;
+    }
+
+    for (const key of ['last_modified_iso', 'last_modified', 'fetched_at']) {
+        const value = info[key];
+        if (typeof value === 'string' && value.trim()) {
+            return value.trim();
+        }
+    }
+    return null;
+}
+
+function formatSnapshotTimestamp(info) {
+    const raw = extractSnapshotTimestamp(info);
+    if (!raw) {
+        return null;
+    }
+
+    const date = new Date(raw);
+    if (Number.isNaN(date.getTime())) {
+        return raw;
+    }
+
+    return new Intl.DateTimeFormat(undefined, {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+    }).format(date);
+}
 
 
 let metadataStorageWarningShown = false;
@@ -1931,6 +1980,7 @@ function initializeState(root) {
         updateButtonMode: 'update',
         metadataOverdue: false,
         metadataNextUpdate: null,
+        metadataSnapshotInfo: normaliseSnapshotInfo(initialMdsInfo),
         updateOverlay: overlay,
         updateOverlayMessage: overlayMessage,
         updateOverlayCancel: overlayCancel,

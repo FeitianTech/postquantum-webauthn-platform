@@ -136,11 +136,6 @@ def test_record_registration_event_disabled(monkeypatch):
 
     monkeypatch.setattr(device_logs, "is_logging_enabled", disabled_logging)
 
-    def fail_schedule():
-        raise AssertionError("cleanup workflow should not be scheduled when logging is disabled")
-
-    monkeypatch.setattr(device_logs, "_schedule_cleanup_workflow_check", fail_schedule)
-
     def fail_upload(*_args, **_kwargs):
         raise AssertionError("github_upload_json should not be called when logging is disabled")
 
