@@ -16,6 +16,8 @@ import { createFilterDropdown } from './mds-dropdown.js';
 import {
     collectOptionSets,
     transformEntry,
+    transformEntryLightweight,
+    upgradeEntryToFull,
     parseIsoDate,
     formatDate,
     decodeBase64Url,
@@ -36,6 +38,7 @@ import {
     loaderComplete,
 } from '../shared/loader.js';
 import { initializeStickyHeaderForElement } from '../shared/ui.js';
+import { createMdsLazyLoader } from './mds-lazy-loader.js';
 
 let mdsState = null;
 let mdsData = [];
@@ -51,6 +54,8 @@ let rowHeightLockScheduled = false;
 let horizontalScrollMetricsScheduled = false;
 let initialMdsJws = null;
 let initialMdsInfo = null;
+let lazyLoader = null;
+let backgroundLoadingInProgress = false;
 
 
 function normaliseSnapshotInfo(info) {
@@ -2046,6 +2051,7 @@ async function applyMetadataEntries(metadata, options = {}) {
     const opts = options && typeof options === 'object' ? options : {};
     const noteText = typeof opts.note === 'string' ? opts.note : '';
     const signal = getAbortSignal(opts);
+    const useLazyLoading = opts.useLazyLoading !== false; // Enable by default
 
     throwIfAborted(signal);
 
@@ -2056,9 +2062,17 @@ async function applyMetadataEntries(metadata, options = {}) {
     const rawEntries = Array.isArray(metadata?.entries) ? metadata.entries : [];
     const totalEntries = rawEntries.length;
     const shouldReportProgress = loaderIsActive() && !hasLoaded;
-    const entries = [];
-
+    
     throwIfAborted(signal);
+
+    // Use lazy loading for large datasets
+    if (useLazyLoading && totalEntries > 100) {
+        await applyMetadataEntriesLazy(metadata, { ...opts, shouldReportProgress, noteText, signal });
+        return;
+    }
+
+    // Fall back to original full loading for small datasets
+    const entries = [];
 
     if (shouldReportProgress) {
         const initialProgress = totalEntries ? 58 : 72;
@@ -2187,6 +2201,323 @@ async function applyMetadataEntries(metadata, options = {}) {
         loaderSetPhase('Finalising interface…', { progress: 94 });
         loaderComplete({ message: 'Application ready!', delay: 720 });
     }
+}
+
+async function applyMetadataEntriesLazy(metadata, options = {}) {
+    const { shouldReportProgress, noteText, signal } = options;
+    
+    throwIfAborted(signal);
+
+    if (!mdsState) {
+        return;
+    }
+
+    // Initialize lazy loader
+    if (!lazyLoader) {
+        lazyLoader = createMdsLazyLoader();
+    }
+    lazyLoader.initialize(metadata);
+
+    if (shouldReportProgress) {
+        loaderSetPhase('Loading authenticators with optimized parsing…', { progress: 58 });
+        loaderSetMetadataCount(0);
+    }
+
+    // Get ALL raw entries
+    const allRawEntries = lazyLoader.getAllRawEntries();
+    const totalEntries = allRawEntries.length;
+    const entries = [];
+
+    throwIfAborted(signal);
+
+    // Transform ALL entries with lightweight parsing (UI fields only)
+    const progressBase = 58;
+    const progressRange = 32;
+    let processedCount = 0;
+
+    allRawEntries.forEach((entry, index) => {
+        throwIfAborted(signal);
+        processedCount += 1;
+        
+        // Use lightweight transformation for initial load
+        const transformed = transformEntryLightweight(entry, index);
+        if (transformed) {
+            entries.push(transformed);
+            if (shouldReportProgress && processedCount % 100 === 0) {
+                loaderSetMetadataCount(entries.length);
+            }
+        }
+
+        if (shouldReportProgress && processedCount % 100 === 0) {
+            const ratio = processedCount / totalEntries;
+            const progress = progressBase + Math.min(progressRange, ratio * progressRange);
+            loaderSetProgress(progress);
+        }
+    });
+
+    if (shouldReportProgress) {
+        loaderSetMetadataCount(entries.length);
+        loaderSetProgress(90);
+    }
+
+    mdsData = entries;
+    setUpdateButtonMode('update');
+    resetSortState();
+
+    throwIfAborted(signal);
+
+    // Build AAGUID map for all entries
+    if (mdsState) {
+        const map = new Map();
+        mdsData.forEach(item => {
+            const key = normaliseAaguid(item.aaguid || item.id);
+            if (key) {
+                map.set(key, item);
+            }
+        });
+        mdsState.byAaguid = map;
+    }
+
+    // Get last updated date
+    let lastUpdatedDate = '';
+    try {
+        const metaResponse = await fetch(MDS_VERIFIED_META_PATH, { cache: 'no-store' });
+        if (metaResponse.ok) {
+            const metaData = await metaResponse.json();
+            if (metaData?.fetched_at) {
+                lastUpdatedDate = formatDate(metaData.fetched_at);
+            }
+        }
+    } catch (error) {
+        const nextUpdateRaw = typeof metadata?.nextUpdate === 'string' ? metadata.nextUpdate : '';
+        if (nextUpdateRaw) {
+            lastUpdatedDate = formatDate(nextUpdateRaw);
+        }
+    }
+
+    // Collect option sets from all entries
+    const optionSets = collectOptionSets(mdsData);
+    updateOptionLists(optionSets);
+
+    // Apply filters with all entries
+    applyFilters();
+    scheduleHorizontalScrollMetricsUpdate();
+
+    hasLoaded = true;
+
+    // Show initial status
+    const statusParts = [
+        `Loaded ${entries.length.toLocaleString()} authenticators.`
+    ];
+    if (lastUpdatedDate) {
+        statusParts.push(`Last updated: ${lastUpdatedDate}.`);
+    }
+    if (noteText) {
+        statusParts.push(noteText);
+    }
+    statusParts.push('Processing full details in background…');
+
+    const statusMessage = statusParts.join(' ');
+    setStatus(statusMessage, 'info');
+
+    if (!mdsState.defaultStatus) {
+        mdsState.defaultStatus = { html: statusMessage, variant: 'info', title: '' };
+    }
+
+    if (metadata?.legalHeader && mdsState.statusEl) {
+        mdsState.statusEl.setAttribute('title', metadata.legalHeader);
+    }
+
+    setColumnResizersEnabled(true);
+
+    if (shouldReportProgress) {
+        loaderSetMetadataCount(entries.length);
+        loaderSetPhase('Finalising interface…', { progress: 94 });
+        loaderComplete({ message: 'Application ready!', delay: 500 });
+    }
+
+    // Start background loading of full entry details
+    void startBackgroundMetadataLoading(metadata, { signal, lastUpdatedDate });
+}
+
+async function startBackgroundMetadataLoading(metadata, options = {}) {
+    if (backgroundLoadingInProgress || !lazyLoader) {
+        return;
+    }
+
+    backgroundLoadingInProgress = true;
+    const { signal, lastUpdatedDate } = options;
+
+    // Set up progress callback
+    lazyLoader.onProgress((parsed, total, percent) => {
+        if (mdsState?.statusEl && !mdsState.statusEl.hidden) {
+            // Update status occasionally
+            if (parsed % 500 === 0 || parsed === total) {
+                updateBackgroundLoadingStatus(parsed, total, lastUpdatedDate);
+            }
+        }
+    });
+
+    // Set up completion callback
+    lazyLoader.onComplete(() => {
+        finalizeBackgroundLoading(metadata, lastUpdatedDate);
+    });
+
+    // Define batch processor
+    const processBatch = async (batchIndices) => {
+        // Process certificate info for this batch
+        const batchEntries = batchIndices.map(i => mdsData[i]).filter(Boolean);
+        
+        try {
+            await populateCertificateDerivedInfoForBatch(batchEntries);
+        } catch (error) {
+            console.error('Failed to process certificate info for batch:', error);
+        }
+    };
+
+    // Start loading
+    try {
+        await lazyLoader.startBackgroundLoading({ 
+            signal,
+            onBatchProcessed: processBatch
+        });
+    } catch (error) {
+        console.error('Background metadata loading failed:', error);
+    } finally {
+        backgroundLoadingInProgress = false;
+    }
+}
+
+function updateBackgroundLoadingStatus(parsed, total, lastUpdatedDate) {
+    // Just update status message, entries are already in mdsData
+    const percentComplete = Math.round((parsed / total) * 100);
+    const statusParts = [
+        `Loaded ${total.toLocaleString()} authenticators.`
+    ];
+    if (lastUpdatedDate) {
+        statusParts.push(`Last updated: ${lastUpdatedDate}.`);
+    }
+    if (parsed < total) {
+        statusParts.push(`Processing full details… ${percentComplete}% complete`);
+    }
+    
+    const statusMessage = statusParts.join(' ');
+    const variant = parsed < total ? 'info' : 'success';
+    setStatus(statusMessage, variant);
+}
+
+async function populateCertificateDerivedInfoForBatch(entries) {
+    if (!Array.isArray(entries) || !entries.length) {
+        return;
+    }
+
+    const seen = new Set();
+    const certificates = [];
+
+    entries.forEach(entry => {
+        // Upgrade to full entry if lightweight
+        if (entry._isLightweight && entry._rawEntry) {
+            const fullEntry = upgradeEntryToFull(entry);
+            Object.assign(entry, fullEntry);
+        }
+
+        const list = Array.isArray(entry?.attestationCertificates) ? entry.attestationCertificates : [];
+        list.forEach(certificate => {
+            const cleaned = normaliseCertificateBase64(certificate);
+            if (cleaned && !seen.has(cleaned)) {
+                seen.add(cleaned);
+                certificates.push(cleaned);
+            }
+        });
+    });
+
+    if (!certificates.length) {
+        return;
+    }
+
+    const detailMap = new Map();
+
+    const decodeTasks = certificates.map(certificate =>
+        decodeCertificate(certificate)
+            .then(details => ({ certificate, details, error: null }))
+            .catch(error => ({ certificate, details: null, error })),
+    );
+
+    const decodedResults = await Promise.all(decodeTasks);
+    decodedResults.forEach(result => {
+        if (result.error) {
+            console.error('Failed to decode attestation root certificate:', result.error);
+        }
+        detailMap.set(result.certificate, result.details);
+    });
+
+    entries.forEach(entry => {
+        const algorithmSet = new Set();
+        const algorithms = [];
+        const commonNameSet = new Set();
+        const commonNames = [];
+        const list = Array.isArray(entry?.attestationCertificates) ? entry.attestationCertificates : [];
+
+        list.forEach(certificate => {
+            const cleaned = normaliseCertificateBase64(certificate);
+            if (!cleaned) {
+                return;
+            }
+            const details = detailMap.get(cleaned);
+            if (!details || typeof details !== 'object') {
+                return;
+            }
+
+            const algorithmInfo = typeof details.algorithmInfo === 'string' ? details.algorithmInfo.trim() : '';
+            if (algorithmInfo && !algorithmSet.has(algorithmInfo)) {
+                algorithmSet.add(algorithmInfo);
+                algorithms.push(algorithmInfo);
+            }
+
+            const cnValues = Array.isArray(details.subjectCommonNames) ? details.subjectCommonNames : [];
+            cnValues.forEach(name => {
+                if (typeof name !== 'string') {
+                    return;
+                }
+                const trimmed = name.trim();
+                if (trimmed && !commonNameSet.has(trimmed)) {
+                    commonNameSet.add(trimmed);
+                    commonNames.push(trimmed);
+                }
+            });
+        });
+
+        entry.certificateAlgorithmInfoList = algorithms;
+        entry.certificateAlgorithmInfo = algorithms.length ? algorithms.join(', ') : '—';
+        entry.algorithmInfo = entry.certificateAlgorithmInfo;
+        entry.certificateCommonNameList = commonNames;
+        entry.certificateCommonNames = commonNames.length ? commonNames.join(', ') : '—';
+        entry.commonName = entry.certificateCommonNames;
+    });
+}
+
+async function finalizeBackgroundLoading(metadata, lastUpdatedDate) {
+    // Update final status
+    const statusParts = [`Loaded ${mdsData.length.toLocaleString()} authenticators.`];
+    if (lastUpdatedDate) {
+        statusParts.push(`Last updated: ${lastUpdatedDate}.`);
+    }
+    
+    const statusMessage = statusParts.join(' ');
+    setStatus(statusMessage, 'success');
+
+    if (mdsState.defaultStatus) {
+        mdsState.defaultStatus.html = statusMessage;
+        mdsState.defaultStatus.variant = 'success';
+    }
+
+    if (metadata?.legalHeader && mdsState?.statusEl) {
+        if (mdsState.defaultStatus) {
+            mdsState.defaultStatus.title = metadata.legalHeader;
+        }
+    }
+
+    backgroundLoadingInProgress = false;
 }
 
 async function applyInitialMetadataPayload(note) {
@@ -4033,6 +4364,56 @@ async function decodeCertificate(certificateBase64) {
         return certificateCache.get(cleaned);
     }
 
+    // If lazy loading is active and certificate verification is requested,
+    // ensure entries with this certificate are fully parsed
+    if (lazyLoader && !lazyLoader.isFullyLoaded()) {
+        const matchingRawEntries = lazyLoader.findEntriesWithCertificate(cleaned);
+        if (matchingRawEntries.length > 0) {
+            // Ensure these entries are fully parsed in mdsData
+            matchingRawEntries.forEach(rawEntry => {
+                const key = normaliseAaguid(rawEntry?.aaguid || rawEntry?.metadataStatement?.aaguid);
+                
+                // Check if entry already exists in mdsData
+                let existingEntry = null;
+                if (key && mdsState?.byAaguid) {
+                    existingEntry = mdsState.byAaguid.get(key);
+                }
+                
+                if (!existingEntry) {
+                    // Entry not in mdsData yet, search by index
+                    existingEntry = mdsData.find(e => {
+                        const eKey = normaliseAaguid(e?.aaguid || e?.id);
+                        return eKey === key;
+                    });
+                }
+                
+                if (existingEntry) {
+                    // Entry exists but might be lightweight - upgrade it
+                    if (existingEntry._isLightweight) {
+                        const fullEntry = upgradeEntryToFull(existingEntry);
+                        Object.assign(existingEntry, fullEntry);
+                        
+                        // Mark as fully parsed
+                        if (typeof existingEntry.index === 'number') {
+                            lazyLoader.markEntryFullyParsed(existingEntry.index, key);
+                        }
+                    }
+                } else {
+                    // Entry not in mdsData at all - add it with full parsing
+                    const index = mdsData.length;
+                    const transformed = transformEntry(rawEntry, index);
+                    if (transformed) {
+                        mdsData.push(transformed);
+                        if (key && mdsState?.byAaguid) {
+                            mdsState.byAaguid.set(key, transformed);
+                        }
+                        lazyLoader.markEntryFullyParsed(index, key);
+                    }
+                }
+            });
+        }
+    }
+
     const response = await fetch('/api/mds/decode-certificate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
@@ -4757,6 +5138,18 @@ function openAuthenticatorModal(entry) {
         return;
     }
 
+    // Ensure entry is fully parsed before displaying details
+    if (entry && entry._isLightweight) {
+        const fullEntry = upgradeEntryToFull(entry);
+        Object.assign(entry, fullEntry);
+        
+        // Mark as fully parsed in lazy loader
+        if (lazyLoader && typeof entry.index === 'number') {
+            const key = normaliseAaguid(entry.aaguid || entry.id);
+            lazyLoader.markEntryFullyParsed(entry.index, key);
+        }
+    }
+
     const modal = mdsState.authenticatorModal;
     const sticky = mdsState.authenticatorStickyHeader || null;
     const certificateSticky = mdsState.certificateStickyHeader || null;
@@ -4925,21 +5318,76 @@ async function resolveEntryByAaguid(aaguid) {
         return null;
     }
 
-    const cached = mdsState.byAaguid?.get(targetKey) || null;
+    // Check if already in loaded data
+    let cached = mdsState.byAaguid?.get(targetKey) || null;
+    
+    // If found but is lightweight, upgrade it to full
+    if (cached && cached._isLightweight) {
+        const fullEntry = upgradeEntryToFull(cached);
+        Object.assign(cached, fullEntry);
+        
+        // Mark as fully parsed in lazy loader
+        if (lazyLoader && typeof cached.index === 'number') {
+            lazyLoader.markEntryFullyParsed(cached.index, targetKey);
+        }
+        
+        return cached;
+    }
+    
     if (cached) {
         return cached;
     }
 
+    // Search in already loaded entries
     const fallback = mdsData.find(item => {
         const key = normaliseAaguid(item?.aaguid || item?.id);
         return key === targetKey;
     }) || null;
 
-    if (fallback && mdsState.byAaguid) {
-        mdsState.byAaguid.set(targetKey, fallback);
+    if (fallback) {
+        // If found but is lightweight, upgrade it to full
+        if (fallback._isLightweight) {
+            const fullEntry = upgradeEntryToFull(fallback);
+            Object.assign(fallback, fullEntry);
+            
+            // Mark as fully parsed in lazy loader
+            if (lazyLoader && typeof fallback.index === 'number') {
+                lazyLoader.markEntryFullyParsed(fallback.index, targetKey);
+            }
+        }
+        
+        if (mdsState.byAaguid) {
+            mdsState.byAaguid.set(targetKey, fallback);
+        }
+        return fallback;
     }
 
-    return fallback;
+    // If using lazy loading and entry not found in transformed data,
+    // try loading from raw entries
+    if (lazyLoader && !lazyLoader.isFullyLoaded()) {
+        const rawEntry = lazyLoader.getRawEntryByKey(targetKey);
+        if (rawEntry) {
+            // Transform with FULL parsing (not lightweight)
+            const index = mdsData.length;
+            const transformed = transformEntry(rawEntry, index);
+            if (transformed) {
+                mdsData.push(transformed);
+                
+                // Update AAGUID map
+                const key = normaliseAaguid(transformed.aaguid || transformed.id);
+                if (key && mdsState.byAaguid) {
+                    mdsState.byAaguid.set(key, transformed);
+                }
+                
+                // Mark as fully parsed
+                lazyLoader.markEntryFullyParsed(index, key);
+                
+                return transformed;
+            }
+        }
+    }
+
+    return null;
 }
 
 async function openAuthenticatorModalByAaguid(aaguid) {
