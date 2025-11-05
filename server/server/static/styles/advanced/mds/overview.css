@@ -184,7 +184,7 @@
     max-height: min(80vh, 680px);
     background: #ffffff;
     border-radius: 20px;
-    box-shadow: 0 32px 96px rgba(15, 39, 64, 0.32);
+    box-shadow: 0 32px 96px rgba(7, 15, 10, 0.2);
     padding: 2rem 2.25rem;
     display: flex;
     flex-direction: column;
