@@ -1,12 +1,12 @@
 export const MDS_HTML_PATH = 'templates/advanced/mds-content.html';
-export const MDS_JWS_PATH = 'fido-mds3.jws';
+export const MDS_JWS_PATH = 'blob.jwt';
 export const MDS_VERIFIED_JSON_PATH = 'api/mds/metadata/base';
 export const CUSTOM_METADATA_LIST_PATH = 'api/mds/metadata/custom';
 export const CUSTOM_METADATA_UPLOAD_PATH = 'api/mds/metadata/upload';
 export const CUSTOM_METADATA_DELETE_PATH = 'api/mds/metadata/custom';
 export const COLUMN_COUNT = 13;
 export const MISSING_METADATA_MESSAGE =
-    'Metadata has not been downloaded yet. Use the Download Metadata button.';
+    'Packaged FIDO metadata is unavailable. Please verify the bundled snapshot is present.';
 
 export const UPDATE_BUTTON_STATES = {
     update: { label: 'Update Metadata', busyLabel: 'Updating…' },
