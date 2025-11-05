@@ -203,14 +203,13 @@ select option,
     -ms-user-select: none;
 }
 
-/* Error messages and hints (descriptive, but typically not copied) */
+/* Error messages - selectable for bug reports and support */
 .error-message,
-.decoder-warning,
-.info-hint {
-    user-select: none;
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
+.decoder-warning {
+    user-select: text;
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
 }
 
 /* Format chips and badges */
@@ -232,6 +231,14 @@ select option,
     -webkit-user-select: none;
     -moz-user-select: none;
     -ms-user-select: none;
+}
+
+/* Info/hint messages - selectable for debugging purposes */
+.info-hint {
+    user-select: text;
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
 }
 
 /* ==========================================
@@ -357,16 +364,15 @@ pre,
  * ========================================== */
 
 /* Readonly inputs should still be selectable for copying */
-input[readonly] {
+input[readonly],
+textarea[readonly] {
     user-select: text;
     -webkit-user-select: text;
     -moz-user-select: text;
     -ms-user-select: text;
 }
 
-/* Disabled elements should not be selectable */
-input[disabled],
-textarea[disabled],
+/* Disabled elements - buttons should not be selectable, but inputs/textareas should remain selectable for copying values */
 button[disabled],
 select[disabled] {
     user-select: none;
@@ -375,11 +381,17 @@ select[disabled] {
     -ms-user-select: none;
 }
 
+input[disabled],
+textarea[disabled] {
+    user-select: text;
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+}
+
 /* Placeholder text should not be independently selectable */
 ::placeholder,
-::-webkit-input-placeholder,
-::-moz-placeholder,
-:-ms-input-placeholder {
+::-webkit-input-placeholder {
     user-select: none;
     -webkit-user-select: none;
     -moz-user-select: none;
