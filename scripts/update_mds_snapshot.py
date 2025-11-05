@@ -9,6 +9,11 @@ import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    # Allow imports from the repository root when executed as a standalone script.
+    sys.path.insert(0, str(REPO_ROOT))
+
 from fido2.mds3 import parse_blob
 
 from server.server.config import (
