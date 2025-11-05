@@ -51,6 +51,7 @@ html {
     overflow-y: auto;
     overflow-x: hidden;
     scrollbar-gutter: stable;
+    overscroll-behavior: none;
 }
 
 body {
@@ -63,6 +64,7 @@ body {
     flex-direction: column;
     overflow-y: auto;
     overflow-x: hidden;
+    overscroll-behavior: none;
 }
 
 html.global-cursor--progress,
