@@ -32,6 +32,7 @@ from ..storage import (
     iter_credentials,
     list_credentials as storage_list_credentials,
     readkey,
+    savekey,
 )
 
 _SIMPLE_ALLOWED_ALGORITHMS: Tuple[int, ...] = tuple(
@@ -684,6 +685,45 @@ def register_complete():
     }
 
     stored_credential['userHandle'] = user_handle_b64u
+
+    # Persist credential to storage (GCS or local filesystem)
+    # Store complete credential info including attestation data
+    metadata_session_id = ensure_metadata_session_id()
+    existing_credentials = readkey(uname, session_id=metadata_session_id)
+    
+    # Create the credential entry with both credential_data and full info
+    credential_entry = {
+        'credential_data': auth_data.credential_data,
+        'auth_data': auth_data,
+        'user_info': credential_info['user_info'],
+        'registration_time': credential_info['registration_time'],
+        'client_data_json': credential_info.get('client_data_json', ''),
+        'attestation_object': credential_info.get('attestation_object', ''),
+        'attestation_object_raw': credential_info.get('attestation_object_raw', ''),
+        'attestation_format': attestation_format,
+        'attestation_statement': attestation_statement,
+        'attestation_certificate': attestation_certificate_details,
+        'attestation_certificates': attestation_certificates_details,
+        'client_extension_outputs': client_extension_results,
+        'authenticator_attachment': authenticator_attachment_response,
+        'request_params': credential_info.get('request_params', {}),
+        'properties': credential_properties,
+        'relying_party': credential_info.get('relying_party'),
+        'registration_response': credential_info.get('registration_response'),
+    }
+    
+    # Add attestation object decoded if available
+    if parsed_attestation_object:
+        credential_entry['attestation_object_decoded'] = make_json_safe(parsed_attestation_object)
+    
+    # Append to existing credentials list or create new list
+    if isinstance(existing_credentials, list):
+        existing_credentials.append(credential_entry)
+    else:
+        existing_credentials = [credential_entry]
+    
+    # Save to persistent storage
+    savekey(uname, existing_credentials, session_id=metadata_session_id)
 
     session_simple_credentials = session.get('simple_credentials')
     if isinstance(session_simple_credentials, list):
