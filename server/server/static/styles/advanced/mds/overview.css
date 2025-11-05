@@ -167,13 +167,14 @@
     align-items: center;
     justify-content: center;
     padding: 2rem;
+    pointer-events: none;
 }
 
 .mds-custom-panel__backdrop {
     position: absolute;
     inset: 0;
-    background: rgba(11, 27, 43, 0.45);
-    backdrop-filter: blur(3px);
+    background: transparent;
+    backdrop-filter: none;
 }
 
 .mds-custom-panel__dialog {
@@ -183,11 +184,28 @@
     max-height: min(80vh, 680px);
     background: #ffffff;
     border-radius: 20px;
-    box-shadow: 0 28px 80px rgba(11, 27, 43, 0.22);
+    box-shadow: 0 32px 96px rgba(15, 39, 64, 0.32);
     padding: 2rem 2.25rem;
     display: flex;
     flex-direction: column;
     gap: 1.25rem;
+    opacity: 0;
+    transform: translateY(16px);
+    transition: opacity 260ms ease, transform 260ms ease;
+    pointer-events: auto;
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+}
+
+.mds-custom-panel.is-open .mds-custom-panel__dialog {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.mds-custom-panel.is-closing .mds-custom-panel__dialog {
+    opacity: 0;
+    transform: translateY(16px);
 }
 
 @media (max-width: 900px) {

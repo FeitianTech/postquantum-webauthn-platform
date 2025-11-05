@@ -735,6 +735,8 @@ function openCustomMetadataPanel() {
         const panel = mdsState.customPanel;
         panel.hidden = false;
         panel.removeAttribute('hidden');
+        panel.classList.remove('is-closing');
+        void panel.offsetWidth; // Force reflow before toggling transition class.
         panel.classList.add('is-open');
         mdsState.customPanelIsOpen = true;
         mdsState.customPanelReturnFocus =
@@ -754,27 +756,65 @@ function closeCustomMetadataPanel() {
     }
 
     const panel = mdsState.customPanel;
-    panel.classList.remove('is-open');
-    panel.hidden = true;
-    panel.setAttribute('hidden', '');
-    mdsState.customPanelIsOpen = false;
+    const finalizeClose = () => {
+        panel.classList.remove('is-open');
+        panel.classList.remove('is-closing');
+        panel.hidden = true;
+        panel.setAttribute('hidden', '');
+
+        if (mdsState.customDropzone instanceof HTMLElement) {
+            mdsState.customDropzone.classList.remove('is-active');
+        }
+
+        if (mdsState.customPanelReturnFocus instanceof HTMLElement) {
+            try {
+                mdsState.customPanelReturnFocus.focus();
+            } catch (error) {
+                /* ignore focus errors */
+            }
+        }
+        mdsState.customPanelReturnFocus = null;
+    };
 
     if (mdsState.addMetadataButton) {
         mdsState.addMetadataButton.setAttribute('aria-expanded', 'false');
     }
 
-    if (mdsState.customDropzone instanceof HTMLElement) {
-        mdsState.customDropzone.classList.remove('is-active');
+    if (!panel.classList.contains('is-open')) {
+        mdsState.customPanelIsOpen = false;
+        finalizeClose();
+        return;
     }
 
-    if (mdsState.customPanelReturnFocus instanceof HTMLElement) {
-        try {
-            mdsState.customPanelReturnFocus.focus();
-        } catch (error) {
-            /* ignore focus errors */
-        }
+    mdsState.customPanelIsOpen = false;
+    panel.classList.add('is-closing');
+    panel.classList.remove('is-open');
+
+    const dialog = panel.querySelector('.mds-custom-panel__dialog');
+    if (!(dialog instanceof HTMLElement)) {
+        finalizeClose();
+        return;
     }
-    mdsState.customPanelReturnFocus = null;
+
+    let hasClosed = false;
+    const completeClose = () => {
+        if (hasClosed) {
+            return;
+        }
+        hasClosed = true;
+        finalizeClose();
+    };
+
+    const handleTransitionEnd = event => {
+        if (event.target !== dialog) {
+            return;
+        }
+        dialog.removeEventListener('transitionend', handleTransitionEnd);
+        completeClose();
+    };
+
+    dialog.addEventListener('transitionend', handleTransitionEnd);
+    setTimeout(completeClose, 400);
 }
 
 function handleCustomDropzoneDragEnter(event) {
