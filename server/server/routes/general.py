@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 from threading import Lock, Thread
 from typing import Any, Dict, Optional
 
-from flask import abort, jsonify, redirect, render_template, request, send_file
+from flask import abort, jsonify, render_template, request, send_file
 
 from ..attestation import serialize_attestation_certificate
 from ..config import MDS_METADATA_PATH, app, basepath
@@ -236,7 +236,7 @@ elif hasattr(app, "before_first_request"):
 
 @app.route("/")
 def index():
-    return redirect("/index.html")
+    return index_html()
 
 
 @app.route("/index.html")
