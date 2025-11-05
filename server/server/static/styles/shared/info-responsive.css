@@ -247,3 +247,78 @@
         bottom: -0.2rem;
     }
 }
+
+/* Mobile-specific info popup optimizations */
+@media (max-width: 768px) {
+    .info-popup {
+        max-width: calc(100vw - 60px);
+        min-width: 280px;
+        font-size: 12px;
+        padding: 14px;
+    }
+
+    .info-icon {
+        width: 18px;
+        height: 18px;
+        font-size: 11px;
+    }
+
+    .language-toggle {
+        font-size: 9px;
+        padding: 2px 5px;
+    }
+}
+
+@media (max-width: 640px) {
+    .info-popup {
+        position: fixed;
+        top: auto !important;
+        left: 50% !important;
+        bottom: 10%;
+        transform: translateX(-50%) !important;
+        margin: 0;
+        max-width: calc(100vw - 40px);
+        min-width: calc(100vw - 40px);
+        width: calc(100vw - 40px);
+        font-size: 11px;
+        padding: 12px;
+        border-radius: 12px;
+    }
+
+    .info-popup::before,
+    .info-popup::after {
+        display: none; /* Remove arrow on mobile */
+    }
+
+    .info-icon {
+        width: 20px;
+        height: 20px;
+        font-size: 12px;
+    }
+
+    .language-toggle {
+        font-size: 8px;
+        padding: 2px 4px;
+        border-radius: 8px;
+    }
+
+    .label-with-info {
+        flex-wrap: wrap;
+    }
+}
+
+@media (max-width: 480px) {
+    .info-popup {
+        max-width: calc(100vw - 30px);
+        min-width: calc(100vw - 30px);
+        width: calc(100vw - 30px);
+        font-size: 10px;
+        padding: 10px;
+    }
+
+    .info-icon {
+        width: 18px;
+        height: 18px;
+        font-size: 11px;
+    }
+}

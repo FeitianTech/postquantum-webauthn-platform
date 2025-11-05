@@ -324,6 +324,38 @@
         max-width: 100%;
         flex-basis: 100%;
     }
+
+    /* Mobile improvements for simple auth header */
+    .simple-auth-header {
+        gap: 1rem;
+    }
+
+    .simple-auth-header h2 {
+        font-size: 1.5rem;
+    }
+}
+
+@media (max-width: 640px) {
+    .simple-auth-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+
+    .simple-auth-header h2 {
+        font-size: 1.35rem;
+    }
+
+    .simple-layout .simple-credentials-section .credentials-panel {
+        padding: 0;
+        min-height: 0;
+    }
+}
+
+@media (max-width: 480px) {
+    .simple-auth-header h2 {
+        font-size: 1.25rem;
+    }
 }
 
 .section-title-with-action h3 {
@@ -589,6 +621,59 @@
         width: 100%;
         justify-content: center;
     }
+
+    /* Mobile-specific improvements for credentials */
+    .credential-item {
+        padding: 0.85rem;
+    }
+
+    .credential-feature-tags {
+        gap: 0.3rem;
+    }
+
+    .credential-feature-tag {
+        padding: 0.12rem 0.45rem;
+        font-size: 0.65rem;
+    }
+
+    /* Mobile section headers */
+    .section-header {
+        padding: 0.75rem 0.85rem;
+        font-size: 0.95rem;
+    }
+
+    .section-content {
+        padding: 0.9rem 0.85rem;
+    }
+
+    /* Mobile checkbox groups */
+    .checkbox-group {
+        gap: 0.6rem;
+    }
+
+    .checkbox-item .checkbox-label {
+        font-size: 0.9rem;
+    }
+
+    .checkbox-item input[type="checkbox"] {
+        width: 1.1rem;
+        height: 1.1rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .credential-item {
+        padding: 0.75rem;
+    }
+
+    .section-header {
+        padding: 0.65rem 0.75rem;
+        font-size: 0.9rem;
+    }
+
+    .section-content {
+        padding: 0.8rem 0.75rem;
+    }
 }
 
 .btn-small {
@@ -712,6 +797,73 @@
 
     .advanced-settings-layout .json-editor-card .inline-json-editor {
         box-shadow: none;
+    }
+}
+
+@media (max-width: 900px) {
+    /* Mobile-specific advanced header */
+    .advanced-header__title-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+
+    .advanced-header__actions {
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    .advanced-header__actions-group {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+}
+
+@media (max-width: 640px) {
+    .advanced-settings-layout .credentials-column .column-card,
+    .advanced-settings-layout .json-editor-card {
+        padding: 1rem;
+        border-radius: 16px;
+    }
+
+    .advanced-header__title-row h2 {
+        font-size: 1.4rem;
+    }
+
+    .advanced-header__actions-group .btn,
+    .advanced-header__actions-group .btn-secondary {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
+    /* Sub-tabs mobile optimization */
+    .sub-tabs {
+        gap: 0.6rem;
+    }
+
+    .sub-tab {
+        padding: 0.5rem 0.95rem;
+        font-size: 0.85rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .advanced-settings-layout {
+        gap: 1.5rem;
+    }
+
+    .advanced-settings-layout .credentials-column .column-card,
+    .advanced-settings-layout .json-editor-card {
+        padding: 0.85rem;
+    }
+
+    .advanced-header__title-row h2 {
+        font-size: 1.3rem;
+    }
+
+    .sub-tab {
+        padding: 0.5rem 0.85rem;
+        font-size: 0.8rem;
     }
 }
 

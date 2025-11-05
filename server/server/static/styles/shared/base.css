@@ -1110,4 +1110,96 @@ body.header-menu-open {
     .section h2 {
         font-size: 1.45rem;
     }
+
+    /* Mobile-specific header improvements */
+    .header {
+        padding: 0.85rem 1rem;
+    }
+
+    .header h1 {
+        font-size: 1.55rem;
+    }
+
+    .header__github-icon {
+        width: 2.25rem;
+        height: 2.25rem;
+    }
+
+    /* Mobile form optimizations */
+    .form-control {
+        font-size: 16px; /* Prevents iOS zoom on focus */
+        padding: 0.85rem;
+    }
+
+    textarea.form-control {
+        min-height: 150px;
+    }
+
+    /* Mobile button improvements */
+    .btn {
+        padding: 0.75rem 1.2rem;
+        font-size: 0.95rem;
+    }
+
+    .btn-small {
+        padding: 0.5rem 0.9rem;
+        font-size: 0.85rem;
+    }
+
+    /* Mobile codec tabs */
+    .codec-mode-tab {
+        padding: 0.65rem 1.05rem;
+        font-size: 0.85rem;
+    }
+
+    /* Mobile decoder improvements */
+    .decoder-description {
+        padding: 1rem;
+        margin: 1rem 0 0.75rem;
+    }
+
+    .decoder-description-title {
+        font-size: 0.95rem;
+    }
+
+    .decoder-format-name {
+        font-size: 0.9rem;
+    }
+
+    .decoder-format-chip {
+        font-size: 0.8rem;
+    }
+
+    .decoder-format-note,
+    .decoder-description-note {
+        font-size: 0.8rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .content {
+        padding: 1.4rem 1rem 2rem;
+    }
+
+    .section h2 {
+        font-size: 1.35rem;
+    }
+
+    .header {
+        padding: 0.75rem 0.85rem;
+    }
+
+    .header h1 {
+        font-size: 1.35rem;
+    }
+
+    /* Extra small mobile adjustments */
+    .form-control {
+        padding: 0.8rem;
+    }
+
+    .btn {
+        padding: 0.7rem 1rem;
+        font-size: 0.9rem;
+    }
 }

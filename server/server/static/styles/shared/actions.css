@@ -140,11 +140,39 @@
         width: 100%;
         justify-content: center;
         margin-right: 0;
+        margin-bottom: 0.5rem;
+    }
+
+    .form-actions .btn:last-child,
+    .form-actions .btn-secondary:last-child,
+    .form-actions .btn-danger:last-child,
+    .form-actions .btn-success:last-child {
+        margin-bottom: 0;
     }
 
     .status {
         min-width: 0;
         width: calc(100vw - 2.5rem);
         max-width: calc(100vw - 2.5rem);
+        font-size: 0.9rem;
+        padding: 0.85rem;
+    }
+
+    .btn {
+        min-height: 44px; /* Touch-friendly minimum */
+    }
+
+    .btn-small {
+        min-height: 38px;
+    }
+}
+
+@media (max-width: 480px) {
+    .status {
+        width: calc(100vw - 2rem);
+        max-width: calc(100vw - 2rem);
+        font-size: 0.85rem;
+        padding: 0.75rem;
+        border-radius: 14px;
     }
 }

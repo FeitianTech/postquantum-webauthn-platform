@@ -476,11 +476,119 @@
         flex-direction: column;
         align-items: flex-start;
         gap: 0.75rem;
+        padding: 0.75rem 0.85rem;
     }
 
     .mds-detail-page__back {
         width: 2.5rem;
         height: 2.5rem;
         font-size: 1.3rem;
+    }
+
+    .mds-detail-page__title {
+        font-size: 1.3rem;
+    }
+
+    .mds-detail-page__subtitle {
+        font-size: 0.85rem;
+    }
+
+    .mds-detail-page__actions {
+        width: 100%;
+        justify-content: flex-start;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .mds-detail-section {
+        padding: 1rem;
+    }
+
+    .mds-detail-section__title {
+        font-size: 1.1rem;
+    }
+
+    .mds-detail-field {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.35rem;
+    }
+
+    .mds-detail-field__label {
+        font-size: 0.85rem;
+    }
+
+    .mds-detail-field__value {
+        font-size: 0.9rem;
+    }
+
+    .mds-detail-mini__content {
+        gap: 0.5rem;
+        padding: 0.5rem 0.8rem;
+    }
+
+    .mds-detail-mini__title {
+        font-size: 0.95rem;
+    }
+
+    .mds-detail-mini__subtitle {
+        font-size: 0.75rem;
+    }
+
+    .mds-detail-mini__actions {
+        gap: 0.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .mds-detail-page {
+        padding: 1.3rem 0.85rem 1.75rem;
+    }
+
+    .mds-detail-page__header {
+        padding: 0.65rem 0.75rem;
+        gap: 0.6rem;
+    }
+
+    .mds-detail-page__back {
+        width: 2.25rem;
+        height: 2.25rem;
+        font-size: 1.2rem;
+    }
+
+    .mds-detail-page__title {
+        font-size: 1.2rem;
+    }
+
+    .mds-detail-page__subtitle {
+        font-size: 0.8rem;
+    }
+
+    .mds-detail-section {
+        padding: 0.85rem;
+    }
+
+    .mds-detail-section__title {
+        font-size: 1rem;
+    }
+
+    .mds-detail-field__label {
+        font-size: 0.8rem;
+    }
+
+    .mds-detail-field__value {
+        font-size: 0.85rem;
+    }
+
+    .mds-detail-mini__content {
+        padding: 0.45rem 0.7rem;
+    }
+
+    .mds-detail-mini__title {
+        font-size: 0.9rem;
+    }
+
+    .mds-detail-mini__subtitle {
+        font-size: 0.7rem;
     }
 }
