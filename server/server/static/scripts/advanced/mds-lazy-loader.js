@@ -67,7 +67,7 @@ export class MdsLazyLoader {
         for (let i = 0; i < this.allEntries.length; i++) {
             const entry = this.allEntries[i];
             const entryAaguid = this.normalizeKey(entry?.aaguid || entry?.metadataStatement?.aaguid);
-            const entryId = this.normalizeKey(entry?.aaguid || entry?.aaid);
+            const entryId = this.normalizeKey(entry?.aaid);
 
             if (entryAaguid === key || entryId === key) {
                 this.fullyParsedKeys.set(key, entry);
@@ -277,9 +277,9 @@ export class MdsLazyLoader {
     yieldToBrowser() {
         return new Promise(resolve => {
             if (typeof requestIdleCallback === 'function') {
-                requestIdleCallback(() => resolve(), { timeout: BACKGROUND_BATCH_DELAY_MS });
+                requestIdleCallback(resolve, { timeout: BACKGROUND_BATCH_DELAY_MS });
             } else if (typeof requestAnimationFrame === 'function') {
-                setTimeout(() => requestAnimationFrame(() => resolve()), BACKGROUND_BATCH_DELAY_MS);
+                requestAnimationFrame(() => setTimeout(resolve, 0));
             } else {
                 setTimeout(resolve, BACKGROUND_BATCH_DELAY_MS);
             }

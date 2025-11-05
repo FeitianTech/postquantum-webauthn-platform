@@ -2051,7 +2051,7 @@ async function applyMetadataEntries(metadata, options = {}) {
     const opts = options && typeof options === 'object' ? options : {};
     const noteText = typeof opts.note === 'string' ? opts.note : '';
     const signal = getAbortSignal(opts);
-    const useLazyLoading = opts.useLazyLoading !== false; // Enable by default
+    const useLazyLoading = opts.useLazyLoading ?? true; // Enable by default
 
     throwIfAborted(signal);
 
@@ -2234,6 +2234,7 @@ async function applyMetadataEntriesLazy(metadata, options = {}) {
     const progressBase = 58;
     const progressRange = 32;
     let processedCount = 0;
+    const reportInterval = 100; // Report progress every 100 entries
 
     allRawEntries.forEach((entry, index) => {
         throwIfAborted(signal);
@@ -2243,12 +2244,11 @@ async function applyMetadataEntriesLazy(metadata, options = {}) {
         const transformed = transformEntryLightweight(entry, index);
         if (transformed) {
             entries.push(transformed);
-            if (shouldReportProgress && processedCount % 100 === 0) {
-                loaderSetMetadataCount(entries.length);
-            }
         }
 
-        if (shouldReportProgress && processedCount % 100 === 0) {
+        // Report progress periodically
+        if (shouldReportProgress && processedCount % reportInterval === 0) {
+            loaderSetMetadataCount(entries.length);
             const ratio = processedCount / totalEntries;
             const progress = progressBase + Math.min(progressRange, ratio * progressRange);
             loaderSetProgress(progress);
@@ -2337,7 +2337,19 @@ async function applyMetadataEntriesLazy(metadata, options = {}) {
     }
 
     // Start background loading of full entry details
-    void startBackgroundMetadataLoading(metadata, { signal, lastUpdatedDate });
+    startBackgroundMetadataLoading(metadata, { signal, lastUpdatedDate }).catch(error => {
+        console.error('Background metadata loading failed:', error);
+        // Optionally show error status to user
+        if (mdsState?.statusEl) {
+            const currentStatus = mdsState.statusEl.textContent || '';
+            if (currentStatus.includes('Processing full details')) {
+                setStatus(
+                    `${currentStatus.split('Processing')[0]} Background processing encountered an error.`,
+                    'warning'
+                );
+            }
+        }
+    });
 }
 
 async function startBackgroundMetadataLoading(metadata, options = {}) {
@@ -2365,8 +2377,17 @@ async function startBackgroundMetadataLoading(metadata, options = {}) {
 
     // Define batch processor
     const processBatch = async (batchIndices) => {
+        // Validate batch indices and filter out invalid entries
+        const validIndices = batchIndices.filter(i => 
+            typeof i === 'number' && i >= 0 && i < mdsData.length
+        );
+        
+        if (!validIndices.length) {
+            return;
+        }
+        
         // Process certificate info for this batch
-        const batchEntries = batchIndices.map(i => mdsData[i]).filter(Boolean);
+        const batchEntries = validIndices.map(i => mdsData[i]).filter(entry => entry != null);
         
         try {
             await populateCertificateDerivedInfoForBatch(batchEntries);
@@ -2416,7 +2437,7 @@ async function populateCertificateDerivedInfoForBatch(entries) {
 
     entries.forEach(entry => {
         // Upgrade to full entry if lightweight
-        if (entry._isLightweight && entry._rawEntry) {
+        if (entry.isLightweightEntry && entry.deferredRawEntry) {
             const fullEntry = upgradeEntryToFull(entry);
             Object.assign(entry, fullEntry);
         }
@@ -4389,7 +4410,7 @@ async function decodeCertificate(certificateBase64) {
                 
                 if (existingEntry) {
                     // Entry exists but might be lightweight - upgrade it
-                    if (existingEntry._isLightweight) {
+                    if (existingEntry.isLightweightEntry) {
                         const fullEntry = upgradeEntryToFull(existingEntry);
                         Object.assign(existingEntry, fullEntry);
                         
@@ -5139,7 +5160,7 @@ function openAuthenticatorModal(entry) {
     }
 
     // Ensure entry is fully parsed before displaying details
-    if (entry && entry._isLightweight) {
+    if (entry && entry.isLightweightEntry) {
         const fullEntry = upgradeEntryToFull(entry);
         Object.assign(entry, fullEntry);
         
@@ -5322,7 +5343,7 @@ async function resolveEntryByAaguid(aaguid) {
     let cached = mdsState.byAaguid?.get(targetKey) || null;
     
     // If found but is lightweight, upgrade it to full
-    if (cached && cached._isLightweight) {
+    if (cached && cached.isLightweightEntry) {
         const fullEntry = upgradeEntryToFull(cached);
         Object.assign(cached, fullEntry);
         
@@ -5346,7 +5367,7 @@ async function resolveEntryByAaguid(aaguid) {
 
     if (fallback) {
         // If found but is lightweight, upgrade it to full
-        if (fallback._isLightweight) {
+        if (fallback.isLightweightEntry) {
             const fullEntry = upgradeEntryToFull(fallback);
             Object.assign(fallback, fullEntry);
             

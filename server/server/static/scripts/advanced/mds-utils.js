@@ -138,8 +138,8 @@ export function transformEntryLightweight(entry, index = 0) {
         statusReports: [],
         attestationCertificates: [],
         attestationKeyIdentifiers: [],
-        _isLightweight: true, // Flag to indicate lightweight parsing
-        _rawEntry: entry, // Keep reference for on-demand full parsing
+        isLightweightEntry: true, // Flag to indicate lightweight parsing
+        deferredRawEntry: entry, // Keep reference for on-demand full parsing
     };
 }
 
@@ -148,11 +148,11 @@ export function transformEntryLightweight(entry, index = 0) {
  * Completes parsing of deferred fields
  */
 export function upgradeEntryToFull(lightweightEntry) {
-    if (!lightweightEntry || !lightweightEntry._isLightweight) {
+    if (!lightweightEntry || !lightweightEntry.isLightweightEntry) {
         return lightweightEntry; // Already full or invalid
     }
 
-    const entry = lightweightEntry._rawEntry;
+    const entry = lightweightEntry.deferredRawEntry;
     if (!entry) {
         return lightweightEntry;
     }
@@ -169,8 +169,8 @@ export function upgradeEntryToFull(lightweightEntry) {
         statusReports: Array.isArray(entry?.statusReports) ? entry.statusReports : [],
         attestationCertificates,
         attestationKeyIdentifiers,
-        _isLightweight: false,
-        _rawEntry: undefined, // Remove raw entry reference
+        isLightweightEntry: false,
+        deferredRawEntry: undefined, // Remove raw entry reference
     };
 }
 
