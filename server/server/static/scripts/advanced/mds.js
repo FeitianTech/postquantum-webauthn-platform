@@ -2112,8 +2112,23 @@ async function applyMetadataEntries(metadata, options = {}) {
         mdsState.byAaguid = map;
     }
 
-    const nextUpdateRaw = typeof metadata?.nextUpdate === 'string' ? metadata.nextUpdate : '';
-    const nextUpdateFormatted = nextUpdateRaw ? formatDate(nextUpdateRaw) : '';
+    // Try to get last updated date from metadata file's fetched_at
+    let lastUpdatedDate = '';
+    try {
+        const metaResponse = await fetch(MDS_VERIFIED_META_PATH, { cache: 'no-store' });
+        if (metaResponse.ok) {
+            const metaData = await metaResponse.json();
+            if (metaData?.fetched_at) {
+                lastUpdatedDate = formatDate(metaData.fetched_at);
+            }
+        }
+    } catch (error) {
+        // If meta file not available, fall back to nextUpdate from metadata
+        const nextUpdateRaw = typeof metadata?.nextUpdate === 'string' ? metadata.nextUpdate : '';
+        if (nextUpdateRaw) {
+            lastUpdatedDate = formatDate(nextUpdateRaw);
+        }
+    }
 
     const optionSets = collectOptionSets(mdsData);
     updateOptionLists(optionSets);
@@ -2135,8 +2150,8 @@ async function applyMetadataEntries(metadata, options = {}) {
     const statusParts = [`Loaded ${mdsData.length.toLocaleString()} authenticators.`];
     let statusVariant = 'success';
 
-    if (nextUpdateFormatted) {
-        statusParts.push(`Last updated: ${nextUpdateFormatted}.`);
+    if (lastUpdatedDate) {
+        statusParts.push(`Last updated: ${lastUpdatedDate}.`);
     }
 
     if (noteText) {
