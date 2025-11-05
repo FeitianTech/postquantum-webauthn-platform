@@ -1,22 +1,25 @@
 # FIDO2/WebAuthn Test Platform and Developer Tools
 
-**Main Deployment (Google Cloud):** https://webauthnlab.tech
+**Main Deployment:** https://webauthnlab.tech[webauthnlab.tech]
 
-**Backup Deployment (Render):**  https://pqcwebauthn.onrender.com
+**Backup Deployment:** https://pqcwebauthn.onrender.com[pqcwebauthn.onrender.com]
 
 **Note:** Due to the server's automatic shut down during inactivity, a few seconds of cold start is expected.
 
 This project provides an end-to-end platform for exploring WebAuthn user flows secured by post-quantum cryptography. The hosted demo and local setup instructions help you register authenticators, run authentication process, and compare PQC signature suites in a realistic WebAuthn environment. Decoder is integrated for decoding attestation objects, WebAuthn type CBOR responses, authenticator metadata, etc. A FIDO MDS explorer is also built for direct retrieval of authenticator metadata information, and conducting root certificate verification. 
  
-## 💻 Local Setup
+## Local Setup
 
 **Scope**
 - Includes: Python, virtual environment, Flask, python-fido2, and Post-Quantum Crypto (PQC) algorithms.
 - Currently supporting ML-DSA 44/65/87 for PQC
 
----
+> **Note for Developers:**  
+> Setting up and building all local dependencies (Python environment, Flask/FIDO2/Cryptography, PQC libraries, liboqs builds, HTTPS certificates, etc.) requires significant configuration time and toolchain setup.
+> For most use cases, it is far more efficient to use the deployed platform directly instead of running on local environment.
 
-## ✅ Supported Platforms
+
+## Supported Platforms
 
 - Windows 10/11 (64-bit)  
 - macOS (Intel or Apple Silicon)  
@@ -24,14 +27,12 @@ This project provides an end-to-end platform for exploring WebAuthn user flows s
 A modern browser with WebAuthn support is required:
 - Edge, Chrome, Safari, Firefox
 
----
 
 ## 1. Prerequisites
 
 - **Git**: (https://git-scm.com/)  
-- **Python 3.12+ (64-bit)** with pip (https://www.python.org/downloads/)
+- **Python 3.12+ ** with pip (https://www.python.org/downloads/)
 
----
 
 ## 2. Clone the Repository
 
@@ -40,7 +41,6 @@ git clone https://github.com/FeitianTech/postquantum-webauthn-platform.git
 cd postquantum-webauthn-platform
 ```
 
----
 
 ## 3. Setup — pip + venv
 
@@ -74,7 +74,7 @@ pip install -r requirements.txt
 pip install "fido2[pcsc]"
 ```
 
-## 🔐 PQC Setup
+## PQC Setup
 
 ### 1. Activate Your Python Virtual Environment
 
@@ -171,9 +171,8 @@ If installed correctly, you should see something like:
 ```
 This indicates the version number and supported algorithms. Make sure every PQC algorithm that you plan to use appears in the list above.
 
----
 
-## 🔒 mkcert Setup for Local HTTPS
+## mkcert Setup for Local HTTPS
 
 ### 1. Install mkcert
 
@@ -195,7 +194,6 @@ brew install nss   # required for Firefox users
 mkcert -install
 ```
 
----
 
 ### 2. Generate Certificates
 
@@ -211,16 +209,15 @@ cd /path/to/your/project
 mkcert demo.ftsafe.demo
 ```
 
-⚠️ Important:
+Important:
 - WebAuthn only works on secure contexts (HTTPS or localhost).
 - Rename files to:
   - `demo.ftsafe.demo.pem`
   - `demo.ftsafe.demo-key.pem`
   Otherwise, the program will fail to run.
 
----
 
-## 🚀 Quickstart
+## Quickstart
 
 ### 1. Create and Activate Virtual Environment
 
@@ -236,7 +233,6 @@ python3 -m venv .venv
 source .venv/bin/activate
 ```
 
----
 
 ### 2. Run the Server
 
