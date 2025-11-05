@@ -24,12 +24,12 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    padding: 0.6rem 1.2rem;
+    padding: 0.7rem 1.4rem;
     border-radius: 999px;
     border: 1px solid rgba(0, 114, 206, 0.25);
     background: rgba(255, 255, 255, 0.95);
     color: var(--primary-dark);
-    font-size: 0.9rem;
+    font-size: 0.95rem;
     font-weight: 600;
     cursor: pointer;
     box-shadow: none;
@@ -85,14 +85,6 @@
 
 .mds-update-button.is-busy {
     cursor: progress;
-}
-
-.mds-update-button--attention {
-    border-color: rgba(229, 83, 83, 0.45);
-}
-
-.mds-update-button--attention:hover:not(:disabled) {
-    border-color: rgba(229, 83, 83, 0.55);
 }
 
 .mds-section-title h2 {

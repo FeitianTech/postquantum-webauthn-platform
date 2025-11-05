@@ -1978,8 +1978,6 @@ function initializeState(root) {
         customPanelReturnFocus: null,
         updateButton,
         updateButtonMode: 'update',
-        metadataOverdue: false,
-        metadataNextUpdate: null,
         metadataSnapshotInfo: normaliseSnapshotInfo(initialMdsInfo),
         updateOverlay: overlay,
         updateOverlayMessage: overlayMessage,
@@ -2115,16 +2113,7 @@ async function applyMetadataEntries(metadata, options = {}) {
     }
 
     const nextUpdateRaw = typeof metadata?.nextUpdate === 'string' ? metadata.nextUpdate : '';
-    const nextUpdateDate = parseIsoDate(nextUpdateRaw);
     const nextUpdateFormatted = nextUpdateRaw ? formatDate(nextUpdateRaw) : '';
-    const now = Date.now();
-    const isOverdue = Boolean(nextUpdateDate && nextUpdateDate.getTime() <= now);
-
-    if (mdsState) {
-        mdsState.metadataOverdue = isOverdue;
-        mdsState.metadataNextUpdate = nextUpdateRaw || null;
-    }
-    setUpdateButtonAttention(isOverdue);
 
     const optionSets = collectOptionSets(mdsData);
     updateOptionLists(optionSets);
@@ -2146,14 +2135,8 @@ async function applyMetadataEntries(metadata, options = {}) {
     const statusParts = [`Loaded ${mdsData.length.toLocaleString()} authenticators.`];
     let statusVariant = 'success';
 
-    if (isOverdue) {
-        const deadline = nextUpdateFormatted ? ` (${nextUpdateFormatted})` : '';
-        statusParts.push(
-            `The recommended metadata update date has passed${deadline}. Use the <strong>Update Metadata</strong> button to refresh the local file.`,
-        );
-        statusVariant = 'error';
-    } else if (nextUpdateFormatted) {
-        statusParts.push(`Next update recommended by ${nextUpdateFormatted}.`);
+    if (nextUpdateFormatted) {
+        statusParts.push(`Last updated: ${nextUpdateFormatted}.`);
     }
 
     if (noteText) {
@@ -2345,7 +2328,6 @@ async function loadMdsData(statusNote, options = {}) {
                 throwIfAborted(signal);
                 await applyMetadataEntries(enhancedMetadata, { note, signal });
                 setUpdateButtonMode('update');
-                setUpdateButtonAttention(false);
                 stateUpdated = true;
                 return;
             }
@@ -2365,7 +2347,6 @@ async function loadMdsData(statusNote, options = {}) {
                             signal,
                         });
                         setUpdateButtonMode('download');
-                        setUpdateButtonAttention(false);
                         storeMetadataCache(JSON.stringify(fallbackMetadata), {
                             cachedAt: new Date().toISOString(),
                             source: 'session-custom',
@@ -2376,10 +2357,7 @@ async function loadMdsData(statusNote, options = {}) {
 
                     const message = MISSING_METADATA_MESSAGE;
                     setUpdateButtonMode('download');
-                    setUpdateButtonAttention(false);
                     if (mdsState) {
-                        mdsState.metadataOverdue = false;
-                        mdsState.metadataNextUpdate = null;
                         mdsState.byAaguid = new Map();
                     }
                     setStatus(message, 'info');
@@ -2451,11 +2429,6 @@ async function loadMdsData(statusNote, options = {}) {
                     `<a href="https://mds3.fidoalliance.org/" target="_blank" rel="noopener">mds3.fidoalliance.org</a>.`,
                 'error',
             );
-            setUpdateButtonAttention(false);
-            if (mdsState) {
-                mdsState.metadataOverdue = false;
-                mdsState.metadataNextUpdate = null;
-            }
             if (!previousHasLoaded) {
                 clearMetadataCache();
             }
@@ -5687,13 +5660,6 @@ function setUpdateButtonMode(mode) {
     const config = UPDATE_BUTTON_STATES[action] || UPDATE_BUTTON_STATES.update;
 
     mdsState.updateButtonMode = action;
-    if (action === 'download') {
-        setUpdateButtonAttention(false);
-        if (mdsState) {
-            mdsState.metadataOverdue = false;
-            mdsState.metadataNextUpdate = null;
-        }
-    }
 
     button.dataset.action = action;
     button.dataset.idleLabel = config.label;
@@ -5704,20 +5670,7 @@ function setUpdateButtonMode(mode) {
     }
 }
 
-function setUpdateButtonAttention(active) {
-    const button = mdsState?.updateButton;
-    if (!button) {
-        return;
-    }
 
-    const shouldHighlight = Boolean(active);
-    button.classList.toggle('mds-update-button--attention', shouldHighlight);
-    if (shouldHighlight) {
-        button.setAttribute('title', 'Metadata update recommended');
-    } else if (button.title === 'Metadata update recommended') {
-        button.removeAttribute('title');
-    }
-}
 
 async function refreshMetadata() {
     if (isUpdatingMetadata || !mdsState?.updateButton) {
@@ -5773,21 +5726,8 @@ async function refreshMetadata() {
             clearMetadataCache();
             await loadMdsData(note, { forceReload: true });
         } else {
-            const overdue = Boolean(mdsState?.metadataOverdue);
             let message = note || 'Metadata already up to date.';
             let variant = 'info';
-
-            if (overdue) {
-                const formattedDeadline = mdsState?.metadataNextUpdate
-                    ? formatDate(mdsState.metadataNextUpdate)
-                    : '';
-                const deadlineSuffix = formattedDeadline ? ` (${formattedDeadline})` : '';
-                const overdueMessage = `Metadata is still older than the recommended refresh date${deadlineSuffix}. The published file may not have been updated yet.`;
-                message = note ? `${note} ${overdueMessage}` : overdueMessage;
-                variant = 'error';
-                setUpdateButtonAttention(true);
-            }
-
             setStatus(message, variant, { restoreDefault: true, delay: 5000 });
         }
     } catch (error) {
