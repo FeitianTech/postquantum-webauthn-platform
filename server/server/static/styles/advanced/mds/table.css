@@ -387,6 +387,116 @@
     }
 }
 
+/* Mobile optimizations for MDS table */
+@media (max-width: 768px) {
+    .mds-table {
+        min-width: 1200px; /* Reduced from 1500px */
+        font-size: 0.85rem;
+    }
+
+    .mds-table thead th {
+        padding: 0.75rem 0.9rem;
+        font-size: 0.75rem;
+    }
+
+    .mds-filter-row th {
+        padding: 0.55rem 0.9rem;
+    }
+
+    .mds-filter-input {
+        padding: 0.4rem 0.65rem;
+        font-size: 0.8rem;
+    }
+
+    .mds-name-button {
+        font-size: 0.85rem;
+        padding: 0.08rem 0.3rem;
+    }
+
+    .mds-section-header {
+        padding: 0.85rem 1rem;
+    }
+
+    .mds-section-title {
+        font-size: 1.3rem;
+    }
+}
+
+@media (max-width: 640px) {
+    .mds-table {
+        min-width: 1000px; /* Further reduced for mobile */
+        font-size: 0.8rem;
+    }
+
+    .mds-table thead th {
+        padding: 0.65rem 0.75rem;
+        font-size: 0.7rem;
+    }
+
+    .mds-filter-row th {
+        padding: 0.5rem 0.75rem;
+    }
+
+    .mds-filter-input {
+        padding: 0.35rem 0.55rem;
+        font-size: 0.75rem;
+        border-radius: 10px;
+    }
+
+    .mds-name-button {
+        font-size: 0.8rem;
+        padding: 0.06rem 0.25rem;
+    }
+
+    .mds-section-header {
+        padding: 0.75rem 0.85rem;
+        flex-wrap: wrap;
+    }
+
+    .mds-section-title {
+        font-size: 1.2rem;
+    }
+
+    .mds-section-actions {
+        flex-wrap: wrap;
+        gap: 0.4rem;
+    }
+
+    .mds-column-resizer {
+        width: 12px; /* Wider touch target */
+        right: -6px;
+    }
+}
+
+@media (max-width: 480px) {
+    .mds-table {
+        min-width: 900px;
+        font-size: 0.75rem;
+    }
+
+    .mds-table thead th {
+        padding: 0.55rem 0.65rem;
+        font-size: 0.65rem;
+    }
+
+    .mds-filter-row th {
+        padding: 0.45rem 0.65rem;
+    }
+
+    .mds-filter-input {
+        padding: 0.3rem 0.5rem;
+        font-size: 0.7rem;
+    }
+
+    .mds-section-header {
+        padding: 0.65rem 0.75rem;
+    }
+
+    .mds-section-title {
+        font-size: 1.1rem;
+    }
+}
+
 .mds-cell-name {
     text-align: center;
     vertical-align: middle;

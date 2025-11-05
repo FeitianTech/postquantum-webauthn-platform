@@ -206,6 +206,104 @@
         height: 95vh;
         max-height: 95vh;
     }
+
+    .modal-header {
+        margin-bottom: 1.25rem;
+        padding-bottom: 0.85rem;
+    }
+
+    .modal-title {
+        font-size: 1.3rem;
+    }
+
+    .modal-body {
+        padding-right: 0.25rem;
+    }
+
+    .modal.detail-screen .modal-body {
+        padding: 1.3rem 1.5rem 2rem;
+    }
+}
+
+@media (max-width: 640px) {
+    .modal {
+        padding: 1vh 1vw;
+    }
+
+    .modal-content {
+        width: 96vw;
+        max-width: 96vw;
+        height: 92vh;
+        max-height: 92vh;
+        padding: 1.2rem;
+        border-radius: 20px;
+    }
+
+    .modal-content.modal-content-large {
+        width: 98vw;
+        max-width: 98vw;
+        height: 96vh;
+        max-height: 96vh;
+    }
+
+    .modal-header {
+        margin-bottom: 1rem;
+        padding-bottom: 0.75rem;
+        flex-wrap: wrap;
+    }
+
+    .modal-title {
+        font-size: 1.2rem;
+    }
+
+    .modal-close {
+        width: 28px;
+        height: 28px;
+        font-size: 1.3rem;
+    }
+
+    .modal-body {
+        font-size: 0.95rem;
+        padding-right: 0.15rem;
+    }
+
+    .modal.detail-screen .modal-body {
+        padding: 1.1rem 1.2rem 1.8rem;
+    }
+
+    .modal.detail-screen .modal-title {
+        font-size: 1.15rem;
+    }
+
+    .credential-aaguid-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.6rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .modal-content {
+        padding: 1rem;
+        border-radius: 16px;
+    }
+
+    .modal-header {
+        margin-bottom: 0.85rem;
+        padding-bottom: 0.65rem;
+    }
+
+    .modal-title {
+        font-size: 1.1rem;
+    }
+
+    .modal-body {
+        font-size: 0.9rem;
+    }
+
+    .modal.detail-screen .modal-body {
+        padding: 0.95rem 1rem 1.5rem;
+    }
 }
 
 .modal-body p {
