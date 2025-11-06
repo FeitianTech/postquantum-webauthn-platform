@@ -108,12 +108,12 @@
 }
 
 .analyze-browser-panel .mds-custom-panel__dialog {
-    width: min(60vw, 980px);
-    min-width: min(60vw, 980px);
-    max-width: min(92vw, 1100px);
-    height: min(60vh, 760px);
-    min-height: min(60vh, 760px);
-    max-height: min(88vh, 820px);
+    width: min(72vw, 1100px);
+    min-width: min(72vw, 1100px);
+    max-width: min(94vw, 1180px);
+    height: min(72vh, 820px);
+    min-height: min(72vh, 820px);
+    max-height: min(90vh, 900px);
     padding: 2.25rem 2.5rem 2.5rem;
 }
 
@@ -270,7 +270,6 @@
     background: rgba(255, 255, 255, 0.9);
     border-radius: 18px;
     overflow: hidden;
-    box-shadow: 0 12px 36px rgba(15, 39, 64, 0.16);
 }
 
 .analyze-browser-panel__cose-table th,
@@ -297,7 +296,7 @@
     color: var(--primary-dark);
 }
 
-.analyze-browser-panel__alg-desc {
+.analyze-browser-panel__alg-note {
     font-size: 0.82rem;
     font-weight: 500;
     color: var(--muted-text);
@@ -334,16 +333,10 @@
     color: var(--muted-text);
 }
 
-.analyze-browser-panel__note {
-    margin: 0;
-    font-size: 0.85rem;
-    color: var(--muted-text);
-}
-
 @media (max-width: 1100px) {
     .analyze-browser-panel .mds-custom-panel__dialog {
-        width: min(68vw, 960px);
-        min-width: min(68vw, 960px);
+        width: min(78vw, 1020px);
+        min-width: min(78vw, 1020px);
     }
 }
 
@@ -357,10 +350,10 @@
     }
 
     .analyze-browser-panel .mds-custom-panel__dialog {
-        width: min(85vw, 720px);
-        min-width: min(85vw, 720px);
-        height: min(70vh, 760px);
-        min-height: min(70vh, 620px);
+        width: min(90vw, 760px);
+        min-width: min(90vw, 760px);
+        height: min(78vh, 780px);
+        min-height: min(78vh, 640px);
     }
 }
 
@@ -375,8 +368,8 @@
     }
 
     .analyze-browser-panel .mds-custom-panel__dialog {
-        width: 92vw;
-        min-width: 92vw;
-        height: min(80vh, 720px);
+        width: 94vw;
+        min-width: 94vw;
+        height: min(85vh, 760px);
     }
 }
