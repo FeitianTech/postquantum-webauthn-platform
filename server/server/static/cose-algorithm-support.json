@@ -1,0 +1,114 @@
+{
+  "browsers": [
+    {
+      "key": "chromeEdge",
+      "label": "Chrome / Edge"
+    },
+    {
+      "key": "safari",
+      "label": "Safari",
+      "subtitle": "(macOS / iOS)"
+    },
+    {
+      "key": "firefox",
+      "label": "Firefox"
+    },
+    {
+      "key": "androidChrome",
+      "label": "Chrome (Android)"
+    }
+  ],
+  "algorithms": [
+    {
+      "id": -7,
+      "label": "ES256 (-7)",
+      "support": {
+        "chromeEdge": { "status": "yes" },
+        "safari": { "status": "yes", "note": "≥ 17" },
+        "firefox": { "status": "yes", "note": "≥ 125" },
+        "androidChrome": { "status": "yes" }
+      }
+    },
+    {
+      "id": -257,
+      "label": "RS256 (-257)",
+      "support": {
+        "chromeEdge": { "status": "yes" },
+        "safari": { "status": "yes", "note": "≥ 17" },
+        "firefox": { "status": "yes", "note": "≥ 113" },
+        "androidChrome": { "status": "yes" }
+      }
+    },
+    {
+      "id": -8,
+      "label": "EdDSA (-8)",
+      "support": {
+        "chromeEdge": { "status": "yes" },
+        "safari": { "status": "partial", "note": "≥ 17" },
+        "firefox": { "status": "yes", "note": "≥ 125" },
+        "androidChrome": { "status": "yes" }
+      }
+    },
+    {
+      "id": -38,
+      "label": "ES384 (-38)",
+      "support": {
+        "chromeEdge": { "status": "partial" },
+        "safari": { "status": "partial" },
+        "firefox": { "status": "yes", "note": "≥ 125" },
+        "androidChrome": { "status": "partial" }
+      }
+    },
+    {
+      "id": -39,
+      "label": "ES512 (-39)",
+      "support": {
+        "chromeEdge": { "status": "partial" },
+        "safari": { "status": "no" },
+        "firefox": { "status": "partial" },
+        "androidChrome": { "status": "partial" }
+      }
+    },
+    {
+      "id": -65535,
+      "label": "RS1 (-65535)",
+      "note": "Deprecated Algorithm",
+      "support": {
+        "chromeEdge": { "status": "no" },
+        "safari": { "status": "no" },
+        "firefox": { "status": "no" },
+        "androidChrome": { "status": "no" }
+      }
+    },
+    {
+      "id": -47,
+      "label": "ES256K (-47)",
+      "support": {
+        "chromeEdge": { "status": "yes", "note": "≥ 115" },
+        "safari": { "status": "yes", "note": "≥ 123" },
+        "firefox": { "status": "partial" },
+        "androidChrome": { "status": "partial" }
+      }
+    },
+    {
+      "id": -258,
+      "label": "RS384 (-258)",
+      "support": {
+        "chromeEdge": { "status": "partial" },
+        "safari": { "status": "partial" },
+        "firefox": { "status": "partial" },
+        "androidChrome": { "status": "partial" }
+      }
+    },
+    {
+      "id": -259,
+      "label": "RS512 (-259)",
+      "support": {
+        "chromeEdge": { "status": "partial" },
+        "safari": { "status": "partial" },
+        "firefox": { "status": "partial" },
+        "androidChrome": { "status": "partial" }
+      }
+    }
+  ]
+}
