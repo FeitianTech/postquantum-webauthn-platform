@@ -618,7 +618,7 @@ body.header-menu-open {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 0.4rem;
+    gap: 0.95rem;
 }
 
 .decoder-format-name {

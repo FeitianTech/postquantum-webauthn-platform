@@ -38,54 +38,44 @@
                             <div class="status" id="decoder-status"></div>
 
                             <div id="decoder-description" class="decoder-description">
-                                <p class="decoder-description-title">Recognized formats:</p>
+                                <p class="decoder-description-title">Supported Inputs:</p>
                                 <ul class="decoder-description-list">
                                     <li>
-                                        <span class="decoder-format-name">PublicKeyCredential:</span>
-                                        <span class="decoder-format-chip">JSON</span>
-                                    </li>
-                                    <li>
-                                        <span class="decoder-format-name">attestationObject:</span>
-                                        <span class="decoder-format-chip">binary</span>
-                                        <span class="decoder-format-note">(CBOR)</span>
-                                    </li>
-                                    <li>
-                                        <span class="decoder-format-name">authenticatorData:</span>
-                                        <span class="decoder-format-chip">binary</span>
-                                    </li>
-                                    <li>
-                                        <span class="decoder-format-name">WebAuthn client data:</span>
-                                        <span class="decoder-format-chip">JSON</span>
-                                        <span class="decoder-format-chip">binary</span>
-                                    </li>
-                                    <li>
-                                        <span class="decoder-format-name">X.509 certificate:</span>
-                                        <span class="decoder-format-chip">PEM</span>
-                                        <span class="decoder-format-chip">binary-wrapped PEM</span>
-                                        <span class="decoder-format-chip">binary (DER)</span>
-                                    </li>
-                                    <li>
                                         <span class="decoder-format-name">JSON:</span>
-                                        <span class="decoder-format-chip">plain</span>
-                                        <span class="decoder-format-chip">binary</span>
+                                        <span class="decoder-format-chip">PublicKeyCredential (registration)</span>
+                                        <span class="decoder-format-chip">PublicKeyCredential (authentication)</span>
+                                        <span class="decoder-format-chip">Generic JSON payloads</span>
+                                    </li>
+                                    <li>
+                                        <span class="decoder-format-name">JSON (binary):</span>
+                                        <span class="decoder-format-chip">clientDataJSON</span>
+                                        <span class="decoder-format-chip">Generic JSON payloads</span>
                                     </li>
                                     <li>
                                         <span class="decoder-format-name">CBOR:</span>
-                                        <span class="decoder-format-chip">binary</span>
-                                        <span class="decoder-format-chip">CTAP/WebAuthn Data</span>
+                                        <span class="decoder-format-chip">Attestation objects</span>
+                                        <span class="decoder-format-chip">CTAP makeCredential request</span>
+                                        <span class="decoder-format-chip">CTAP makeCredential response</span>
+                                        <span class="decoder-format-chip">CTAP getAssertion request</span>
+                                        <span class="decoder-format-chip">CTAP getAssertion response</span>
+                                        <span class="decoder-format-chip">Generic CBOR payloads</span>
+                                    </li>
+                                    <li>
+                                        <span class="decoder-format-name">Binary:</span>
+                                        <span class="decoder-format-chip">Authenticator data</span>
+                                        <span class="decoder-format-chip">Signature fields</span>
+                                        <span class="decoder-format-chip">Unclassified binary summaries</span>
+                                    </li>
+                                    <li>
+                                        <span class="decoder-format-name">PEM:</span>
+                                        <span class="decoder-format-chip">X.509 certificates</span>
+                                        <span class="decoder-format-chip">Certificate chains</span>
+                                    </li>
+                                    <li>
+                                        <span class="decoder-format-name">DER:</span>
+                                        <span class="decoder-format-chip">X.509 certificates</span>
                                     </li>
                                 </ul>
-                                <p class="decoder-description-note">
-                                    All binary values may be
-                                    <span class="decoder-format-chip">base64</span>,
-                                    <span class="decoder-format-chip">base64url</span>,
-                                    or
-                                    <span class="decoder-format-chip">hex</span>,
-                                    ignoring all whitespace.
-                                </p>
-                                <p class="decoder-description-note">
-                                    Hex also ignores <code>:</code> characters.
-                                </p>
                             </div>
 
                             <div class="form-group">
