@@ -92,6 +92,82 @@ import { initializeAdvancedSettingsNavigation } from './advanced/settings-nav.js
 
 registerHintsChangeCallback(() => updateAllowCredentialsDropdown());
 
+const TEXT_INPUT_TYPES = new Set([
+    'text',
+    'search',
+    'email',
+    'url',
+    'tel',
+    'password',
+    'number'
+]);
+
+// Disable browser spellchecking globally (including dynamically added inputs).
+const shouldDisableSpellcheck = (element) => {
+    if (element instanceof HTMLTextAreaElement) {
+        return true;
+    }
+
+    if (element instanceof HTMLInputElement) {
+        return TEXT_INPUT_TYPES.has((element.type || 'text').toLowerCase());
+    }
+
+    if (!(element instanceof HTMLElement)) {
+        return false;
+    }
+
+    if (element.isContentEditable) {
+        return true;
+    }
+
+    return element.getAttribute('role') === 'textbox';
+};
+
+const applySpellcheckAttributes = (element) => {
+    element.setAttribute('spellcheck', 'false');
+    element.setAttribute('autocorrect', 'off');
+    element.setAttribute('autocapitalize', 'off');
+    element.setAttribute('data-gramm', 'false');
+    element.setAttribute('data-gramm_editor', 'false');
+    element.setAttribute('data-enable-grammarly', 'false');
+
+    if ('spellcheck' in element) {
+        element.spellcheck = false;
+    }
+};
+
+const disableSpellcheckInTree = (root) => {
+    if (!root) {
+        return;
+    }
+
+    if (root instanceof Document) {
+        if (root.documentElement) {
+            applySpellcheckAttributes(root.documentElement);
+        }
+        if (root.body) {
+            applySpellcheckAttributes(root.body);
+        }
+    } else if (root instanceof HTMLElement && shouldDisableSpellcheck(root)) {
+        applySpellcheckAttributes(root);
+    }
+
+    const queryRoot = root instanceof Document || root instanceof DocumentFragment || root instanceof Element
+        ? root
+        : null;
+
+    if (!queryRoot || typeof queryRoot.querySelectorAll !== 'function') {
+        return;
+    }
+
+    const candidates = queryRoot.querySelectorAll('input, textarea, [contenteditable], [role="textbox"]');
+    candidates.forEach((element) => {
+        if (element instanceof HTMLElement && shouldDisableSpellcheck(element)) {
+            applySpellcheckAttributes(element);
+        }
+    });
+};
+
 window.create = create;
 window.get = get;
 window.parseCreationOptionsFromJSON = parseCreationOptionsFromJSON;
@@ -145,6 +221,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
     updateFieldLabels();
     initializeAdvancedSettingsNavigation();
+
+    disableSpellcheckInTree(document);
+
+    const spellcheckObserver = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+            mutation.addedNodes.forEach((node) => {
+                if (node instanceof HTMLElement || node instanceof DocumentFragment) {
+                    disableSpellcheckInTree(node);
+                }
+            });
+        });
+    });
+
+    if (document.body) {
+        spellcheckObserver.observe(document.body, { childList: true, subtree: true });
+    }
 
     const jsonEditorElement = document.getElementById('json-editor');
     if (jsonEditorElement) {
