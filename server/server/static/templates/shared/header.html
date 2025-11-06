@@ -23,19 +23,29 @@
                 {% include 'shared/navigation.html' %}
             </div>
         </div>
-        <a
-            class="header__github-link"
-            href="https://github.com/rainzhang05/python-fido2-webauthn-test"
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="View project on GitHub"
-        >
-            <img
-                class="header__github-icon"
-                src="{{ url_for('static', filename='github-icon.png') }}"
-                alt=""
-                aria-hidden="true"
-            />
-        </a>
+        <div class="header__actions">
+            <button
+                type="button"
+                class="header__analyze-button"
+                id="analyze-browser-button"
+                data-analyze-browser-trigger
+            >
+                Analyze Browser
+            </button>
+            <a
+                class="header__github-link"
+                href="https://github.com/rainzhang05/python-fido2-webauthn-test"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="View project on GitHub"
+            >
+                <img
+                    class="header__github-icon"
+                    src="{{ url_for('static', filename='github-icon.png') }}"
+                    alt=""
+                    aria-hidden="true"
+                />
+            </a>
+        </div>
         <div class="header__overlay" data-header-overlay hidden aria-hidden="true"></div>
     </div>

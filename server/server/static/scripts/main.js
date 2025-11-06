@@ -89,8 +89,11 @@ import {
     renderFakeAllowCredentialList
 } from './advanced/exclude-credentials.js';
 import { initializeAdvancedSettingsNavigation } from './advanced/settings-nav.js';
+import { initializeAnalyzeBrowser } from './shared/analyze-browser.js';
 
 registerHintsChangeCallback(() => updateAllowCredentialsDropdown());
+
+initializeAnalyzeBrowser();
 
 const TEXT_INPUT_TYPES = new Set([
     'text',
