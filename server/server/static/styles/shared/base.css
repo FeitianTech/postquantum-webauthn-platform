@@ -227,6 +227,44 @@ body.modal-open {
     margin: 0;
 }
 
+.header__actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    align-self: center;
+}
+
+.header__analysis-button {
+    padding: 0.6rem 1.2rem;
+    border-radius: 999px;
+    border: 1px solid rgba(0, 114, 206, 0.24);
+    background: linear-gradient(135deg, rgba(0, 114, 206, 0.85), rgba(0, 168, 255, 0.75));
+    color: #ffffff;
+    font-size: 0.95rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    box-shadow: 0 14px 28px rgba(15, 39, 64, 0.22);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.header__analysis-button:focus-visible {
+    outline: 3px solid rgba(255, 255, 255, 0.85);
+    outline-offset: 3px;
+}
+
+.header__analysis-button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 18px 36px rgba(15, 39, 64, 0.28);
+}
+
+.header__analysis-button:active {
+    transform: translateY(0);
+    box-shadow: 0 10px 24px rgba(15, 39, 64, 0.2);
+}
+
 .header__tabs {
     width: 100%;
     position: relative;
@@ -1025,6 +1063,17 @@ body.header-menu-open {
         padding: 1rem 1.4rem;
     }
 
+    .header__actions {
+        justify-content: flex-start;
+        flex-wrap: wrap;
+        width: 100%;
+    }
+
+    .header__analysis-button {
+        flex: 1 1 auto;
+        min-width: 220px;
+    }
+
     .header__branding {
         gap: 0.65rem;
     }
@@ -1118,6 +1167,15 @@ body.header-menu-open {
 
     .header h1 {
         font-size: 1.55rem;
+    }
+
+    .header__actions {
+        gap: 0.65rem;
+    }
+
+    .header__analysis-button {
+        width: 100%;
+        min-width: 0;
     }
 
     .header__github-icon {

@@ -89,6 +89,7 @@ import {
     renderFakeAllowCredentialList
 } from './advanced/exclude-credentials.js';
 import { initializeAdvancedSettingsNavigation } from './advanced/settings-nav.js';
+import { initializeBrowserAnalysis } from './shared/browser-analysis.js';
 
 registerHintsChangeCallback(() => updateAllowCredentialsDropdown());
 
@@ -218,6 +219,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     initializeNavigationMenu();
     initializeStickyHeader();
+    initializeBrowserAnalysis();
 
     updateFieldLabels();
     initializeAdvancedSettingsNavigation();

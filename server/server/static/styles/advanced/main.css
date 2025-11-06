@@ -4,6 +4,7 @@
 @import url('../shared/editor.css');
 @import url('../shared/info-responsive.css');
 @import url('../shared/modals.css');
+@import url('../shared/browser-analysis.css');
 
 .app-loader {
     position: fixed;

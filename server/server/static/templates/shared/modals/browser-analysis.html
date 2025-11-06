@@ -1,0 +1,87 @@
+    <div
+        id="browserAnalysisModal"
+        class="modal browser-analysis-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="browser-analysis-title"
+        aria-hidden="true"
+    >
+        <div class="browser-analysis-modal__content" role="document">
+            <header class="browser-analysis-modal__header">
+                <h2 id="browser-analysis-title" class="browser-analysis-modal__title">
+                    Browser Analysis
+                </h2>
+                <button
+                    type="button"
+                    class="browser-analysis-modal__close"
+                    data-browser-analysis-close
+                    aria-label="Close browser analysis dialog"
+                >
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </header>
+            <div class="browser-analysis-modal__body">
+                <div class="browser-analysis-modal__loading" data-browser-analysis-loading>
+                    <div class="browser-analysis-modal__spinner" aria-hidden="true"></div>
+                    <p class="browser-analysis-modal__loading-text">Analyzing browser …</p>
+                </div>
+                <div class="browser-analysis-modal__results" data-browser-analysis-results hidden>
+                    <section class="browser-analysis-modal__section">
+                        <h3 class="browser-analysis-modal__section-title">Detected environment</h3>
+                        <dl class="browser-analysis-modal__summary-list">
+                            <div class="browser-analysis-modal__summary-item">
+                                <dt>Browser</dt>
+                                <dd data-browser-analysis-browser></dd>
+                            </div>
+                            <div class="browser-analysis-modal__summary-item">
+                                <dt>Browser version</dt>
+                                <dd data-browser-analysis-version></dd>
+                            </div>
+                            <div class="browser-analysis-modal__summary-item">
+                                <dt>Operating system</dt>
+                                <dd data-browser-analysis-os></dd>
+                            </div>
+                        </dl>
+                    </section>
+                    <section class="browser-analysis-modal__section">
+                        <h3 class="browser-analysis-modal__section-title">Capability checks</h3>
+                        <ul class="browser-analysis-modal__capability-list">
+                            <li>
+                                <strong>WebAuthn API available:</strong>
+                                <span data-browser-analysis-webauthn></span>
+                            </li>
+                            <li>
+                                <strong>Platform authenticator:</strong>
+                                <span data-browser-analysis-platform></span>
+                            </li>
+                            <li>
+                                <strong>Cross-platform authenticators:</strong>
+                                <span data-browser-analysis-cross></span>
+                            </li>
+                            <li>
+                                <strong>Supported COSE algorithms:</strong>
+                                <span data-browser-analysis-algorithms></span>
+                            </li>
+                            <li>
+                                <strong>Supported transports:</strong>
+                                <span data-browser-analysis-transports></span>
+                            </li>
+                            <li>
+                                <strong>Supported WebAuthn extensions:</strong>
+                                <span data-browser-analysis-extensions></span>
+                            </li>
+                        </ul>
+                    </section>
+                    <section class="browser-analysis-modal__section">
+                        <h3 class="browser-analysis-modal__section-title">Support matrices</h3>
+                        <p class="browser-analysis-modal__section-description">
+                            The following matrices summarize platform, cross-platform, and COSE key support across major browsers.
+                        </p>
+                        <div class="browser-analysis-modal__matrix" data-browser-analysis-matrix="platform"></div>
+                        <div class="browser-analysis-modal__matrix" data-browser-analysis-matrix="cross"></div>
+                        <div class="browser-analysis-modal__matrix" data-browser-analysis-matrix="cose"></div>
+                    </section>
+                </div>
+            </div>
+        </div>
+    </div>
