@@ -11,6 +11,7 @@ man/*.1
 poetry.lock
 **/_build
 *.venv
+.qoder/
 
 # Unit test / coverage reports
 htmlcov/
