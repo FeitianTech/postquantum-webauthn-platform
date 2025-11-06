@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='styles/advanced/main.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='styles/advanced/mds.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='styles/shared/text-selectability.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/shared/analyze-browser.css') }}">
 </head>
 <body class="app-loading advanced-inline-json-editor">
     <div id="app-loader" class="app-loader" role="status" aria-live="polite" aria-hidden="false">
@@ -41,6 +42,7 @@
 
 {% include 'shared/modals/decoder-raw.html' %}
 {% include 'shared/modals/encoder-raw.html' %}
+{% include 'shared/analyze-browser.html' %}
 
     <div id="json-editor-overlay" class="json-editor-overlay"></div>
     <div

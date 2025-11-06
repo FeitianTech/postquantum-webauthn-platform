@@ -1,0 +1,78 @@
+<div id="analyze-browser-loader" class="analyze-browser-loader" hidden aria-hidden="true">
+    <div class="analyze-browser-loader__dialog" role="alertdialog" aria-live="assertive">
+        <div class="analyze-browser-loader__spinner" aria-hidden="true"></div>
+        <p class="analyze-browser-loader__message">Analyzing browser …</p>
+    </div>
+</div>
+
+<div id="analyze-browser-panel" class="mds-custom-panel analyze-browser-panel" hidden aria-hidden="true">
+    <div class="mds-custom-panel__backdrop" data-action="close"></div>
+    <div class="mds-custom-panel__dialog" role="dialog" aria-modal="true" aria-labelledby="analyze-browser-heading">
+        <button
+            type="button"
+            class="mds-custom-panel__close analyze-browser-panel__close"
+            data-action="close"
+            aria-label="Close browser analysis"
+        >
+            ×
+        </button>
+        <div class="analyze-browser-panel__content">
+            <h2 id="analyze-browser-heading" class="analyze-browser-panel__heading">Browser Analysis</h2>
+            <dl class="analyze-browser-panel__summary">
+                <div class="analyze-browser-panel__summary-item">
+                    <dt>Browser</dt>
+                    <dd id="analyze-browser-name">—</dd>
+                </div>
+                <div class="analyze-browser-panel__summary-item">
+                    <dt>Version</dt>
+                    <dd id="analyze-browser-version">—</dd>
+                </div>
+                <div class="analyze-browser-panel__summary-item">
+                    <dt>System</dt>
+                    <dd id="analyze-browser-system">—</dd>
+                </div>
+            </dl>
+            <section class="analyze-browser-panel__section" aria-labelledby="analyze-browser-capabilities-heading">
+                <h3 id="analyze-browser-capabilities-heading" class="analyze-browser-panel__section-title">Capabilities</h3>
+                <ul class="analyze-browser-panel__feature-list" data-role="feature-list">
+                    <li class="analyze-browser-panel__feature" data-feature="webauthn">
+                        <span class="analyze-browser-panel__feature-label">WebAuthn API</span>
+                        <span class="analyze-browser-panel__feature-value" data-status="unknown">Unknown</span>
+                    </li>
+                    <li class="analyze-browser-panel__feature" data-feature="platform">
+                        <span class="analyze-browser-panel__feature-label">Platform Authenticator</span>
+                        <span class="analyze-browser-panel__feature-value" data-status="unknown">Unknown</span>
+                    </li>
+                    <li class="analyze-browser-panel__feature" data-feature="cross-platform">
+                        <span class="analyze-browser-panel__feature-label">Cross-Platform Authenticator</span>
+                        <span class="analyze-browser-panel__feature-value" data-status="unknown">Unknown</span>
+                    </li>
+                </ul>
+            </section>
+            <section class="analyze-browser-panel__section" aria-labelledby="analyze-browser-transports-heading">
+                <h3 id="analyze-browser-transports-heading" class="analyze-browser-panel__section-title">Transports</h3>
+                <ul class="analyze-browser-panel__transport-list" data-role="transport-list">
+                    <li class="analyze-browser-panel__transport-item analyze-browser-panel__transport-item--empty">—</li>
+                </ul>
+            </section>
+            <section class="analyze-browser-panel__section" aria-labelledby="analyze-browser-cose-heading">
+                <h3 id="analyze-browser-cose-heading" class="analyze-browser-panel__section-title">COSE Algorithm Support (2025)</h3>
+                <div class="analyze-browser-panel__table-wrapper">
+                    <table class="analyze-browser-panel__cose-table">
+                        <thead>
+                            <tr>
+                                <th scope="col">Algorithm</th>
+                                <th scope="col">Chrome / Edge</th>
+                                <th scope="col">Safari<br><span class="analyze-browser-panel__table-subtitle">(macOS / iOS)</span></th>
+                                <th scope="col">Firefox</th>
+                                <th scope="col">Chrome (Android)</th>
+                            </tr>
+                        </thead>
+                        <tbody data-role="cose-table-body"></tbody>
+                    </table>
+                    <p class="analyze-browser-panel__note" id="analyze-browser-cose-note">RS1 (-65535) is a Deprecated Algorithm.</p>
+                </div>
+            </section>
+        </div>
+    </div>
+</div>
