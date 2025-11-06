@@ -94,7 +94,7 @@ body.modal-open {
 .header {
     display: grid;
     grid-template-columns: 1fr auto;
-    align-items: flex-start;
+    align-items: center;
     gap: 1.5rem;
     background: var(--surface-color);
     color: var(--primary-color);

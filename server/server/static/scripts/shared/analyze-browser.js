@@ -547,6 +547,11 @@ function openPanel(panel) {
         return;
     }
 
+    const content = panel.querySelector('.analyze-browser-panel__content');
+    if (content) {
+        content.scrollTop = 0;
+    }
+
     panel.hidden = false;
     panel.setAttribute('aria-hidden', 'false');
     requestAnimationFrame(() => {
