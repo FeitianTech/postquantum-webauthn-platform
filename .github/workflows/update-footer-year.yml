@@ -26,12 +26,15 @@ jobs:
           html_path = Path("server/server/static/templates/index.html")
           text = html_path.read_text(encoding="utf-8")
 
-          updated_text, replacements = re.subn(
-              r"©\s+\d{4}\s+Feitian Technologies Co\., Ltd\.",
-              f"© {current_year} Feitian Technologies Co., Ltd.",
-              text,
-              count=1,
+          pattern = re.compile(
+              r"(?P<prefix>©|&copy;)\s+\d{4}\s+Feitian Technologies Co\., Ltd\."
           )
+
+          def replace(match: re.Match) -> str:
+              prefix = match.group("prefix")
+              return f"{prefix} {current_year} Feitian Technologies Co., Ltd."
+
+          updated_text, replacements = pattern.subn(replace, text, count=1)
 
           if replacements == 0:
               raise SystemExit("No footer year found to update.")
