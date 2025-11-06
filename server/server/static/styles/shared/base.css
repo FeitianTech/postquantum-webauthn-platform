@@ -539,6 +539,21 @@ body.header-menu-open {
     min-width: 0;
 }
 
+.site-footer {
+    margin-top: 4rem;
+    padding: 1.5rem 2.5rem;
+    background: var(--surface-alt);
+    border-top: 1px solid rgba(0, 114, 206, 0.12);
+    color: var(--muted-text);
+    font-size: 0.85rem;
+    text-align: center;
+    line-height: 1.5;
+}
+
+.site-footer p {
+    margin: 0.25rem 0;
+}
+
 @media (max-width: 600px) {
     .simple-username-field {
         flex-basis: 100%;
@@ -549,6 +564,12 @@ body.header-menu-open {
 @media (max-width: 768px) {
     .content {
         padding: 2rem 1.5rem 3rem;
+    }
+
+    .site-footer {
+        margin-top: 3rem;
+        padding: 1.25rem 1.5rem;
+        font-size: 0.8rem;
     }
 }
 
