@@ -1,101 +1,12 @@
 import { updateGlobalScrollLock } from './ui.js';
 
 const MIN_LOADER_DURATION_MS = 600;
-const COSE_SUPPORT_ROWS = [
-    {
-        id: -7,
-        label: 'ES256 (-7)',
-        support: {
-            chromeEdge: { status: 'yes', note: null },
-            safari: { status: 'yes', note: '≥ 17' },
-            firefox: { status: 'yes', note: '≥ 125' },
-            androidChrome: { status: 'yes', note: null },
-        },
-    },
-    {
-        id: -257,
-        label: 'RS256 (-257)',
-        support: {
-            chromeEdge: { status: 'yes', note: null },
-            safari: { status: 'yes', note: '≥ 17' },
-            firefox: { status: 'yes', note: '≥ 113' },
-            androidChrome: { status: 'yes', note: null },
-        },
-    },
-    {
-        id: -8,
-        label: 'EdDSA (-8)',
-        support: {
-            chromeEdge: { status: 'yes', note: null },
-            safari: { status: 'partial', note: '≥ 17' },
-            firefox: { status: 'yes', note: '≥ 125' },
-            androidChrome: { status: 'yes', note: null },
-        },
-    },
-    {
-        id: -38,
-        label: 'ES384 (-38)',
-        support: {
-            chromeEdge: { status: 'partial', note: null },
-            safari: { status: 'partial', note: null },
-            firefox: { status: 'yes', note: '≥ 125' },
-            androidChrome: { status: 'partial', note: null },
-        },
-    },
-    {
-        id: -39,
-        label: 'ES512 (-39)',
-        support: {
-            chromeEdge: { status: 'partial', note: null },
-            safari: { status: 'no', note: null },
-            firefox: { status: 'partial', note: null },
-            androidChrome: { status: 'partial', note: null },
-        },
-    },
-    {
-        id: -65535,
-        label: 'RS1 (-65535)',
-        note: 'Deprecated Algorithm',
-        support: {
-            chromeEdge: { status: 'no', note: null },
-            safari: { status: 'no', note: null },
-            firefox: { status: 'no', note: null },
-            androidChrome: { status: 'no', note: null },
-        },
-    },
-    {
-        id: -47,
-        label: 'ES256K (-47)',
-        support: {
-            chromeEdge: { status: 'yes', note: '≥ 115' },
-            safari: { status: 'yes', note: '≥ 123' },
-            firefox: { status: 'partial', note: null },
-            androidChrome: { status: 'partial', note: null },
-        },
-    },
-    {
-        id: -258,
-        label: 'RS384 (-258)',
-        support: {
-            chromeEdge: { status: 'partial', note: null },
-            safari: { status: 'partial', note: null },
-            firefox: { status: 'partial', note: null },
-            androidChrome: { status: 'partial', note: null },
-        },
-    },
-    {
-        id: -259,
-        label: 'RS512 (-259)',
-        support: {
-            chromeEdge: { status: 'partial', note: null },
-            safari: { status: 'partial', note: null },
-            firefox: { status: 'partial', note: null },
-            androidChrome: { status: 'partial', note: null },
-        },
-    },
-];
+const DEFAULT_COSE_SUPPORT_SOURCE = '/static/cose-algorithm-support.json';
+const VALID_SUPPORT_STATUSES = new Set(['yes', 'partial', 'no']);
 
-const SUPPORT_COLUMN_KEYS = ['chromeEdge', 'safari', 'firefox', 'androidChrome'];
+let coseSupportSource = DEFAULT_COSE_SUPPORT_SOURCE;
+let coseSupportDataCache = null;
+let coseSupportPromise = null;
 const TRANSPORT_CANDIDATES = [
     { key: 'internal', label: 'Internal', test: data => data.platformAuthenticator === true },
     { key: 'usb', label: 'USB', test: () => 'usb' in navigator },
@@ -371,8 +282,9 @@ function renderTransports(listElement, transports) {
 function createSupportCell(row, columnKey) {
     const cell = document.createElement('td');
     const support = row.support[columnKey];
-    const status = support?.status || 'no';
-    const note = support?.note;
+    const statusRaw = typeof support?.status === 'string' ? support.status.toLowerCase() : 'no';
+    const status = VALID_SUPPORT_STATUSES.has(statusRaw) ? statusRaw : 'no';
+    const note = typeof support?.note === 'string' && support.note.trim() !== '' ? support.note : null;
 
     const statusClass = `analyze-browser__support--${status}`;
     const wrapper = document.createElement('span');
@@ -390,14 +302,59 @@ function createSupportCell(row, columnKey) {
     return cell;
 }
 
-function renderCoseTable(tableBody) {
-    if (!tableBody) {
+function renderCoseTable(tableElement, data) {
+    if (!tableElement) {
         return;
     }
 
+    const headerRow = tableElement.querySelector('[data-role="cose-table-header-row"]');
+    const tableBody = tableElement.querySelector('[data-role="cose-table-body"]');
+
+    if (!headerRow || !tableBody) {
+        return;
+    }
+
+    while (headerRow.children.length > 1) {
+        headerRow.removeChild(headerRow.lastElementChild);
+    }
+
+    const browsers = Array.isArray(data?.browsers) ? data.browsers : [];
+    const algorithms = Array.isArray(data?.algorithms) ? data.algorithms : [];
+
+    browsers.forEach(browser => {
+        if (!browser || typeof browser.label !== 'string') {
+            return;
+        }
+
+        const header = document.createElement('th');
+        header.scope = 'col';
+        const label = browser.label;
+        const subtitle = typeof browser.subtitle === 'string' && browser.subtitle.trim() !== '' ? browser.subtitle : null;
+        header.innerHTML = subtitle
+            ? `${label}<br><span class="analyze-browser-panel__table-subtitle">${subtitle}</span>`
+            : label;
+
+        headerRow.appendChild(header);
+    });
+
     tableBody.innerHTML = '';
 
-    COSE_SUPPORT_ROWS.forEach(row => {
+    if (algorithms.length === 0) {
+        const emptyRow = document.createElement('tr');
+        const emptyCell = document.createElement('td');
+        emptyCell.colSpan = Math.max(1, browsers.length) + 1;
+        emptyCell.className = 'analyze-browser-panel__cose-empty';
+        emptyCell.textContent = 'No COSE algorithm data available.';
+        emptyRow.appendChild(emptyCell);
+        tableBody.appendChild(emptyRow);
+        return;
+    }
+
+    algorithms.forEach(row => {
+        if (!row || typeof row.label !== 'string') {
+            return;
+        }
+
         const tr = document.createElement('tr');
 
         const algorithmCell = document.createElement('th');
@@ -407,12 +364,121 @@ function renderCoseTable(tableBody) {
 
         tr.appendChild(algorithmCell);
 
-        SUPPORT_COLUMN_KEYS.forEach(columnKey => {
-            tr.appendChild(createSupportCell(row, columnKey));
+        browsers.forEach(browser => {
+            if (!browser || typeof browser.key !== 'string') {
+                return;
+            }
+
+            tr.appendChild(createSupportCell(row, browser.key));
         });
 
         tableBody.appendChild(tr);
     });
+}
+
+function normalizeSupportEntry(entry) {
+    const statusRaw = typeof entry?.status === 'string' ? entry.status.toLowerCase() : 'no';
+    const status = VALID_SUPPORT_STATUSES.has(statusRaw) ? statusRaw : 'no';
+    const note = typeof entry?.note === 'string' && entry.note.trim() !== '' ? entry.note : null;
+
+    return { status, note };
+}
+
+function normalizeCoseSupportData(raw) {
+    const browsers = Array.isArray(raw?.browsers)
+        ? raw.browsers
+              .map(browser => {
+                  if (!browser || typeof browser.key !== 'string' || typeof browser.label !== 'string') {
+                      return null;
+                  }
+
+                  return {
+                      key: browser.key,
+                      label: browser.label,
+                      subtitle:
+                          typeof browser.subtitle === 'string' && browser.subtitle.trim() !== ''
+                              ? browser.subtitle
+                              : null,
+                  };
+              })
+              .filter(Boolean)
+        : [];
+
+    const browserKeys = browsers.map(browser => browser.key);
+
+    const algorithms = Array.isArray(raw?.algorithms)
+        ? raw.algorithms
+              .map(algorithm => {
+                  if (!algorithm || typeof algorithm.label !== 'string') {
+                      return null;
+                  }
+
+                  const supportEntries = {};
+                  browserKeys.forEach(key => {
+                      supportEntries[key] = normalizeSupportEntry(algorithm.support?.[key]);
+                  });
+
+                  return {
+                      id: typeof algorithm.id === 'number' ? algorithm.id : null,
+                      label: algorithm.label,
+                      note:
+                          typeof algorithm.note === 'string' && algorithm.note.trim() !== ''
+                              ? algorithm.note
+                              : null,
+                      support: supportEntries,
+                  };
+              })
+              .filter(Boolean)
+        : [];
+
+    return { browsers, algorithms };
+}
+
+async function loadCoseSupportData() {
+    if (coseSupportDataCache) {
+        return coseSupportDataCache;
+    }
+
+    if (!coseSupportPromise) {
+        coseSupportPromise = fetch(coseSupportSource, { cache: 'no-store' })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch COSE support data: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(normalizeCoseSupportData)
+            .catch(error => {
+                console.error('Unable to load COSE algorithm support data', error);
+                return { browsers: [], algorithms: [] };
+            })
+            .then(data => {
+                coseSupportDataCache = data;
+                return data;
+            })
+            .finally(() => {
+                coseSupportPromise = null;
+            });
+    }
+
+    return coseSupportPromise;
+}
+
+function ensureCoseTable(panel) {
+    const tableElement = panel.querySelector('[data-role="cose-table"]');
+
+    if (!tableElement || tableElement.dataset.rendered === 'true') {
+        return;
+    }
+
+    loadCoseSupportData()
+        .then(data => {
+            renderCoseTable(tableElement, data);
+            tableElement.dataset.rendered = 'true';
+        })
+        .catch(error => {
+            console.error('Unable to render COSE support table', error);
+        });
 }
 
 function applyAnalysisResults(results) {
@@ -447,10 +513,7 @@ function applyAnalysisResults(results) {
     const transportList = panel.querySelector('[data-role="transport-list"]');
     renderTransports(transportList, results.features.transports);
 
-    const tableBody = panel.querySelector('[data-role="cose-table-body"]');
-    if (tableBody && !tableBody.hasChildNodes()) {
-        renderCoseTable(tableBody);
-    }
+    ensureCoseTable(panel);
 }
 
 function showLoader(loader) {
@@ -542,6 +605,15 @@ export function initializeAnalyzeBrowser() {
     if (!trigger || !loader || !panel) {
         return;
     }
+
+    const tableElement = panel.querySelector('[data-role="cose-table"]');
+    if (tableElement?.dataset.coseSource) {
+        coseSupportSource = tableElement.dataset.coseSource;
+    }
+
+    loadCoseSupportData().catch(error => {
+        console.error('Initial COSE support data fetch failed', error);
+    });
 
     let isRunning = false;
 

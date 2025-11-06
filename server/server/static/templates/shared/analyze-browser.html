@@ -58,14 +58,14 @@
             <section class="analyze-browser-panel__section" aria-labelledby="analyze-browser-cose-heading">
                 <h3 id="analyze-browser-cose-heading" class="analyze-browser-panel__section-title">COSE Algorithm Support (2025)</h3>
                 <div class="analyze-browser-panel__table-wrapper">
-                    <table class="analyze-browser-panel__cose-table">
+                    <table
+                        class="analyze-browser-panel__cose-table"
+                        data-role="cose-table"
+                        data-cose-source="{{ url_for('static', filename='cose-algorithm-support.json') }}"
+                    >
                         <thead>
-                            <tr>
+                            <tr data-role="cose-table-header-row">
                                 <th scope="col">Algorithm</th>
-                                <th scope="col">Chrome / Edge</th>
-                                <th scope="col">Safari<br><span class="analyze-browser-panel__table-subtitle">(macOS / iOS)</span></th>
-                                <th scope="col">Firefox</th>
-                                <th scope="col">Chrome (Android)</th>
                             </tr>
                         </thead>
                         <tbody data-role="cose-table-body"></tbody>

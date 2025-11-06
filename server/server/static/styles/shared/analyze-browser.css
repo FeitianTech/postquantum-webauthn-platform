@@ -108,13 +108,16 @@
 }
 
 .analyze-browser-panel .mds-custom-panel__dialog {
-    width: min(72vw, 1100px);
-    min-width: min(72vw, 1100px);
-    max-width: min(94vw, 1180px);
-    height: min(72vh, 820px);
-    min-height: min(72vh, 820px);
-    max-height: min(90vh, 900px);
-    padding: 2.25rem 2.5rem 2.5rem;
+    width: min(80vw, 1220px);
+    min-width: min(80vw, 1220px);
+    max-width: min(96vw, 1300px);
+    height: min(80vh, 880px);
+    min-height: min(80vh, 880px);
+    max-height: min(92vh, 940px);
+    padding: 2.5rem 2.75rem 2.75rem;
+    display: grid;
+    grid-template-rows: auto 1fr;
+    overflow: hidden;
 }
 
 .analyze-browser-panel__heading {
@@ -128,6 +131,14 @@
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
+    overflow-y: auto;
+    padding-right: 0.35rem;
+    min-height: 0;
+    scrollbar-width: none;
+}
+
+.analyze-browser-panel__content::-webkit-scrollbar {
+    display: none;
 }
 
 .analyze-browser-panel__summary {
@@ -291,6 +302,13 @@
     background: rgba(243, 247, 251, 0.6);
 }
 
+.analyze-browser-panel__cose-empty {
+    text-align: center;
+    padding: 2rem 1rem;
+    font-weight: 600;
+    color: var(--muted-text);
+}
+
 .analyze-browser-panel__alg-name {
     font-weight: 700;
     color: var(--primary-dark);
@@ -335,8 +353,8 @@
 
 @media (max-width: 1100px) {
     .analyze-browser-panel .mds-custom-panel__dialog {
-        width: min(78vw, 1020px);
-        min-width: min(78vw, 1020px);
+        width: min(86vw, 1100px);
+        min-width: min(86vw, 1100px);
     }
 }
 
@@ -350,10 +368,10 @@
     }
 
     .analyze-browser-panel .mds-custom-panel__dialog {
-        width: min(90vw, 760px);
-        min-width: min(90vw, 760px);
-        height: min(78vh, 780px);
-        min-height: min(78vh, 640px);
+        width: min(92vw, 820px);
+        min-width: min(92vw, 820px);
+        height: min(82vh, 820px);
+        min-height: min(82vh, 660px);
     }
 }
 
@@ -370,6 +388,6 @@
     .analyze-browser-panel .mds-custom-panel__dialog {
         width: 94vw;
         min-width: 94vw;
-        height: min(85vh, 760px);
+        height: min(88vh, 780px);
     }
 }
