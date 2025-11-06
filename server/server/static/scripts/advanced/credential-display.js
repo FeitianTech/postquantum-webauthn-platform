@@ -1,4 +1,4 @@
-import { state } from '../shared/state.js';
+import {state} from '../shared/state.js';
 import {
     base64ToBase64Url,
     base64ToHex,
@@ -23,33 +23,30 @@ import {
     deriveAaguidDisplayValues,
     deriveAaguidFromCredentialData,
     extractMinPinLengthValue,
+    getCoseMapValue,
     getCredentialIdHex,
     getCredentialUserHandleHex,
-    getCoseMapValue,
     getStoredCredentialAttachment,
     normaliseAaguidValue
 } from './credential-utils.js';
-import { openModal, closeModal } from '../shared/ui.js';
-import { showStatus, showProgress, hideProgress, dismissAllTransientMessages } from '../shared/status.js';
-import { updateJsonEditor } from './json-editor.js';
-import { checkLargeBlobCapability, updateAuthenticationExtensionAvailability } from './forms.js';
-import { collectSelectedHints, deriveAllowedAttachmentsFromHints } from './hints.js';
-import { ATTACHMENT_LABELS } from './constants.js';
+import {closeModal, openModal} from '../shared/ui.js';
+import {dismissAllTransientMessages, hideProgress, showProgress, showStatus} from '../shared/status.js';
+import {updateJsonEditor} from './json-editor.js';
+import {checkLargeBlobCapability, updateAuthenticationExtensionAvailability} from './forms.js';
+import {collectSelectedHints, deriveAllowedAttachmentsFromHints} from './hints.js';
+import {ATTACHMENT_LABELS} from './constants.js';
 import {
-    getAllSimpleCredentials,
-    removeSimpleCredential as removeSimpleCredentialFromLocal,
-    clearSimpleCredentials as clearLocalSimpleCredentials,
-    getAllAdvancedCredentials,
-    removeAdvancedCredential as removeAdvancedCredentialFromLocal,
     clearAdvancedCredentials as clearLocalAdvancedCredentials,
-    updateAdvancedCredentialRegistrationSnapshot,
+    clearSimpleCredentials as clearLocalSimpleCredentials,
     ensureAdvancedCredentialArtifactsSynced,
+    getAllAdvancedCredentials,
+    getAllSimpleCredentials,
     getAllStoredCredentialsInOrder,
+    removeAdvancedCredential as removeAdvancedCredentialFromLocal,
+    removeSimpleCredential as removeSimpleCredentialFromLocal,
+    updateAdvancedCredentialRegistrationSnapshot,
 } from '../shared/local-storage.js';
-import {
-    fetchCredentialArtifact,
-    deleteCredentialArtifact,
-} from '../shared/credential-artifacts-client.js';
+import {deleteCredentialArtifact, fetchCredentialArtifact,} from '../shared/credential-artifacts-client.js';
 
 const SHARED_CREDENTIAL_STATUS_TABS = ['advanced', 'simple'];
 
@@ -111,7 +108,9 @@ function applyGlobalCursor(cursorStyle) {
     const className = GLOBAL_CURSOR_CLASS_MAP.get(desiredCursor) || null;
 
     elements.forEach(element => {
-        element.style.cursor = desiredCursor;
+        // Use 'wait' cursor for 'progress' to ensure system loading indicator appears
+        // since 'progress' is not consistently supported across platforms
+        element.style.cursor = desiredCursor === 'progress' ? 'wait' : desiredCursor;
         if (className) {
             element.classList.add(className);
         }
