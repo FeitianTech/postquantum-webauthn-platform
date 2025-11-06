@@ -2154,7 +2154,7 @@ function buildAttestationSection({
 
     return `
         <section style="margin-bottom: 1.5rem;">
-            <h3 style="color: #0072CE; margin-bottom: 0.75rem;">Attestation and Authenticator Data</h3>
+            <h3 style="color: #0072CE; margin-bottom: 0.75rem;">Attestation Information</h3>
             ${attestationContent}
             ${buttonRowHtml}
             ${certificateMessageHtml}
@@ -2277,17 +2277,17 @@ async function composeRegistrationDetailHtml({
             <h3 style=\"color: #0072CE; margin-bottom: 0.75rem;\">Authenticator Response</h3>
             <ol style=\"padding-left: 1.25rem; margin: 0;\">
                 <li style=\"margin-bottom: 1rem;\">
-                    <div style=\"font-weight: 600; margin-bottom: 0.5rem;\">Result of navigator.credentials.create()</div>
+                    <div style=\"font-weight: 600; margin-bottom: 0.5rem;\">Response for navigator.credentials.create()</div>
                     ${credentialSection}
                 </li>
                 <li>
-                    <div style=\"font-weight: 600; margin-bottom: 0.5rem;\">Parsed clientDataJSON response</div>
+                    <div style=\"font-weight: 600; margin-bottom: 0.5rem;\">Parsed clientDataJSON</div>
                     ${clientDataSection}
                 </li>
             </ol>
         </section>
         <section style=\"margin-bottom: 1.5rem;\">
-            <h3 style=\"color: #0072CE; margin-bottom: 0.75rem;\">Relying Party extracted information</h3>
+            <h3 style=\"color: #0072CE; margin-bottom: 0.75rem;\">Server-retrieved Data</h3>
             ${relyingPartySection}
         </section>
     `;
