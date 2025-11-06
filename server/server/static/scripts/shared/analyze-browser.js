@@ -1,11 +1,10 @@
 import { updateGlobalScrollLock } from './ui.js';
 
-const MIN_LOADER_DURATION_MS = 1000;
+const MIN_LOADER_DURATION_MS = 600;
 const COSE_SUPPORT_ROWS = [
     {
         id: -7,
         label: 'ES256 (-7)',
-        description: 'ECDSA + SHA-256',
         support: {
             chromeEdge: { status: 'yes', note: null },
             safari: { status: 'yes', note: '≥ 17' },
@@ -16,7 +15,6 @@ const COSE_SUPPORT_ROWS = [
     {
         id: -257,
         label: 'RS256 (-257)',
-        description: 'RSASSA-PKCS1-v1_5 + SHA-256',
         support: {
             chromeEdge: { status: 'yes', note: null },
             safari: { status: 'yes', note: '≥ 17' },
@@ -27,7 +25,6 @@ const COSE_SUPPORT_ROWS = [
     {
         id: -8,
         label: 'EdDSA (-8)',
-        description: 'Ed25519',
         support: {
             chromeEdge: { status: 'yes', note: null },
             safari: { status: 'partial', note: '≥ 17' },
@@ -38,7 +35,6 @@ const COSE_SUPPORT_ROWS = [
     {
         id: -38,
         label: 'ES384 (-38)',
-        description: 'ECDSA + SHA-384',
         support: {
             chromeEdge: { status: 'partial', note: null },
             safari: { status: 'partial', note: null },
@@ -49,7 +45,6 @@ const COSE_SUPPORT_ROWS = [
     {
         id: -39,
         label: 'ES512 (-39)',
-        description: 'ECDSA + SHA-512',
         support: {
             chromeEdge: { status: 'partial', note: null },
             safari: { status: 'no', note: null },
@@ -60,7 +55,7 @@ const COSE_SUPPORT_ROWS = [
     {
         id: -65535,
         label: 'RS1 (-65535)',
-        description: 'RSASSA-PKCS1-v1_5 + SHA-1',
+        note: 'Deprecated Algorithm',
         support: {
             chromeEdge: { status: 'no', note: null },
             safari: { status: 'no', note: null },
@@ -71,7 +66,6 @@ const COSE_SUPPORT_ROWS = [
     {
         id: -47,
         label: 'ES256K (-47)',
-        description: 'ECDSA secp256k1 + SHA-256',
         support: {
             chromeEdge: { status: 'yes', note: '≥ 115' },
             safari: { status: 'yes', note: '≥ 123' },
@@ -82,7 +76,6 @@ const COSE_SUPPORT_ROWS = [
     {
         id: -258,
         label: 'RS384 (-258)',
-        description: 'RSA + SHA-384',
         support: {
             chromeEdge: { status: 'partial', note: null },
             safari: { status: 'partial', note: null },
@@ -93,7 +86,6 @@ const COSE_SUPPORT_ROWS = [
     {
         id: -259,
         label: 'RS512 (-259)',
-        description: 'RSA + SHA-512',
         support: {
             chromeEdge: { status: 'partial', note: null },
             safari: { status: 'partial', note: null },
@@ -113,28 +105,57 @@ const TRANSPORT_CANDIDATES = [
     { key: 'cable', label: 'Cable / Serial', test: () => 'serial' in navigator },
 ];
 
-function detectFromUserAgent() {
-    const navigatorUA = typeof navigator !== 'undefined' ? navigator : null;
-    const uaData = navigatorUA?.userAgentData;
-    if (uaData && Array.isArray(uaData.brands) && uaData.brands.length > 0) {
-        const primaryBrand = uaData.brands.find(brand => /Chrom(e|ium)/i.test(brand.brand)) || uaData.brands[0];
-        const version = primaryBrand?.version ? primaryBrand.version : null;
-        let name = primaryBrand?.brand || 'Unknown Browser';
-        if (/Chromium/i.test(name)) {
-            name = 'Chromium';
-        } else if (/Chrome/i.test(name)) {
-            name = 'Google Chrome';
-        }
-        return {
-            name,
-            version,
-            platform: uaData.platform || navigatorUA?.platform || 'Unknown System',
-        };
+function normalizeBrandName(brand) {
+    if (!brand) {
+        return 'Unknown Browser';
     }
 
-    const ua = navigatorUA?.userAgent || '';
-    const platform = navigatorUA?.platform || 'Unknown System';
+    if (/Chromium/i.test(brand)) {
+        return 'Chromium';
+    }
 
+    if (/Edg/i.test(brand)) {
+        return 'Microsoft Edge';
+    }
+
+    if (/Chrome/i.test(brand)) {
+        return 'Google Chrome';
+    }
+
+    if (/Safari/i.test(brand) && !/Chrome/i.test(brand)) {
+        return 'Safari';
+    }
+
+    if (/Firefox/i.test(brand)) {
+        return 'Mozilla Firefox';
+    }
+
+    return brand;
+}
+
+function selectBrandEntry(brandList) {
+    if (!Array.isArray(brandList) || brandList.length === 0) {
+        return null;
+    }
+
+    const filtered = brandList.filter(brand => {
+        const label = (brand?.brand || '').trim();
+        return label !== '' && !/Not.?A.?Brand/i.test(label);
+    });
+
+    const candidates = filtered.length > 0 ? filtered : brandList;
+
+    return (
+        candidates.find(brand => /Chrom(e|ium)/i.test(brand.brand)) ||
+        candidates.find(brand => /Edg/i.test(brand.brand)) ||
+        candidates.find(brand => /Firefox/i.test(brand.brand)) ||
+        candidates.find(brand => /Safari/i.test(brand.brand)) ||
+        candidates[0]
+    );
+}
+
+function parseFromUserAgentString(uaString, defaultPlatform) {
+    const platform = defaultPlatform || 'Unknown System';
     const browsers = [
         { regex: /(Edg|EdgiOS|EdgA)\/([\d.]+)/, name: 'Microsoft Edge' },
         { regex: /(OPR|OPiOS)\/([\d.]+)/, name: 'Opera' },
@@ -145,7 +166,7 @@ function detectFromUserAgent() {
     ];
 
     for (const browser of browsers) {
-        const match = browser.regex.exec(ua);
+        const match = browser.regex.exec(uaString);
         if (match) {
             return {
                 name: browser.name,
@@ -159,6 +180,91 @@ function detectFromUserAgent() {
         name: 'Unknown Browser',
         version: null,
         platform,
+    };
+}
+
+async function detectBrowser() {
+    const navigatorUA = typeof navigator !== 'undefined' ? navigator : null;
+    const uaString = navigatorUA?.userAgent || '';
+    const fallbackPlatform = navigatorUA?.platform || 'Unknown System';
+
+    const uaFallback = parseFromUserAgentString(uaString, fallbackPlatform);
+
+    let name = uaFallback.name;
+    let version = uaFallback.version;
+    let platform = uaFallback.platform;
+
+    const uaData = navigatorUA?.userAgentData;
+
+    const maybeUpdateFromBrand = brandEntry => {
+        if (!brandEntry) {
+            return;
+        }
+
+        const brandName = (brandEntry.brand || '').trim();
+        if (brandName && !/Not.?A.?Brand/i.test(brandName) && name === 'Unknown Browser') {
+            name = normalizeBrandName(brandName);
+        }
+
+        if (
+            brandName &&
+            !/Not.?A.?Brand/i.test(brandName) &&
+            typeof brandEntry.version === 'string' &&
+            brandEntry.version.trim() !== ''
+        ) {
+            const candidateSegments = brandEntry.version.split('.');
+            const currentSegments = typeof version === 'string' ? version.split('.') : [];
+            const fallbackIsGeneric =
+                currentSegments.length > 1 && currentSegments.slice(1).every(segment => /^0+$/.test(segment));
+            const candidateIsGeneric =
+                candidateSegments.length > 1 && candidateSegments.slice(1).every(segment => /^0+$/.test(segment));
+
+            if (
+                !version ||
+                candidateSegments.length > currentSegments.length ||
+                (fallbackIsGeneric && !candidateIsGeneric)
+            ) {
+                version = brandEntry.version;
+            }
+        }
+    };
+
+    if (uaData) {
+        const brandList = Array.isArray(uaData.brands) ? uaData.brands : null;
+
+        if (typeof uaData.platform === 'string' && uaData.platform.trim() !== '') {
+            platform = uaData.platform;
+        }
+
+        if (typeof uaData.getHighEntropyValues === 'function') {
+            try {
+                const highEntropy = await uaData.getHighEntropyValues(['platform', 'platformVersion', 'fullVersionList']);
+                if (typeof highEntropy?.platform === 'string' && highEntropy.platform.trim() !== '') {
+                    platform = highEntropy.platform;
+                }
+
+                const fullVersionList =
+                    Array.isArray(highEntropy?.fullVersionList) && highEntropy.fullVersionList.length > 0
+                        ? highEntropy.fullVersionList
+                        : brandList;
+
+                const brandEntry = selectBrandEntry(fullVersionList);
+                maybeUpdateFromBrand(brandEntry);
+            } catch (error) {
+                console.warn('Unable to retrieve high-entropy UA data', error);
+                const fallbackBrand = selectBrandEntry(brandList);
+                maybeUpdateFromBrand(fallbackBrand);
+            }
+        } else {
+            const fallbackBrand = selectBrandEntry(brandList);
+            maybeUpdateFromBrand(fallbackBrand);
+        }
+    }
+
+    return {
+        name: name || 'Unknown Browser',
+        version: version || null,
+        platform: platform || 'Unknown System',
     };
 }
 
@@ -247,7 +353,7 @@ function renderTransports(listElement, transports) {
 
     listElement.innerHTML = '';
 
-    const values = transports.length > 0 ? transports : ['No transports detected'];
+    const values = transports.length > 0 ? transports : ['No supported transports detected'];
 
     values.forEach((transport, index) => {
         const item = document.createElement('li');
@@ -296,7 +402,8 @@ function renderCoseTable(tableBody) {
 
         const algorithmCell = document.createElement('th');
         algorithmCell.scope = 'row';
-        algorithmCell.innerHTML = `<span class="analyze-browser-panel__alg-name">${row.label}</span><br><span class="analyze-browser-panel__alg-desc">${row.description}</span>`;
+        const noteHtml = row.note ? `<br><span class="analyze-browser-panel__alg-note">${row.note}</span>` : '';
+        algorithmCell.innerHTML = `<span class="analyze-browser-panel__alg-name">${row.label}</span>${noteHtml}`;
 
         tr.appendChild(algorithmCell);
 
@@ -352,6 +459,7 @@ function showLoader(loader) {
     }
 
     loader.hidden = false;
+    loader.setAttribute('aria-hidden', 'false');
     requestAnimationFrame(() => {
         loader.classList.add('is-open');
         updateGlobalScrollLock();
@@ -364,6 +472,7 @@ function hideLoader(loader) {
     }
 
     loader.classList.remove('is-open');
+    loader.setAttribute('aria-hidden', 'true');
     setTimeout(() => {
         loader.hidden = true;
         updateGlobalScrollLock();
@@ -376,9 +485,15 @@ function openPanel(panel) {
     }
 
     panel.hidden = false;
+    panel.setAttribute('aria-hidden', 'false');
     requestAnimationFrame(() => {
         panel.classList.add('is-open');
         updateGlobalScrollLock();
+
+        const focusTarget = panel.querySelector('[data-action="close"]');
+        if (focusTarget && typeof focusTarget.focus === 'function') {
+            focusTarget.focus({ preventScroll: true });
+        }
     });
 }
 
@@ -389,6 +504,7 @@ function closePanel(panel) {
 
     panel.classList.add('is-closing');
     panel.classList.remove('is-open');
+    panel.setAttribute('aria-hidden', 'true');
 
     setTimeout(() => {
         panel.classList.remove('is-closing');
@@ -399,7 +515,8 @@ function closePanel(panel) {
 
 async function gatherAnalysis() {
     const hasWebAuthn = 'PublicKeyCredential' in window;
-    const [platformAuthenticator, crossPlatform] = await Promise.all([
+    const [browser, platformAuthenticator, crossPlatform] = await Promise.all([
+        detectBrowser(),
         detectPlatformAuthenticator(),
         detectCrossPlatformAuthenticator(hasWebAuthn),
     ]);
@@ -407,7 +524,7 @@ async function gatherAnalysis() {
     const transports = detectTransports({ platformAuthenticator });
 
     return {
-        browser: detectFromUserAgent(),
+        browser,
         features: {
             webauthn: hasWebAuthn,
             platformAuthenticator,
@@ -430,6 +547,9 @@ export function initializeAnalyzeBrowser() {
 
     const handleClose = () => {
         closePanel(panel);
+        if (typeof trigger.focus === 'function') {
+            trigger.focus({ preventScroll: true });
+        }
     };
 
     panel.addEventListener('click', event => {
@@ -468,8 +588,14 @@ export function initializeAnalyzeBrowser() {
         }
 
         if (!results) {
+            const fallbackBrowser = await detectBrowser().catch(() => ({
+                name: 'Unknown Browser',
+                version: null,
+                platform: 'Unknown System',
+            }));
+
             results = {
-                browser: detectFromUserAgent(),
+                browser: fallbackBrowser,
                 features: {
                     webauthn: 'PublicKeyCredential' in window,
                     platformAuthenticator: null,
