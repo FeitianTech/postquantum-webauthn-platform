@@ -35,6 +35,7 @@ from .utils import (
     websafe_encode,
     ByteBuffer,
     _JsonDataObject,
+    hash_with_algorithm,
 )
 from .features import webauthn_json_mapping
 from enum import Enum, EnumMeta, unique, IntFlag
@@ -390,6 +391,14 @@ class CollectedClientData(bytes):
     @property
     def hash(self) -> bytes:
         return sha256(self)
+
+    def get_hash(self, algorithm: str = "SHA-256") -> bytes:
+        """Compute hash of the client data using the specified algorithm.
+
+        :param algorithm: The hash algorithm name (e.g., "SHA-256", "SHA-512", etc.).
+        :return: The computed hash.
+        """
+        return hash_with_algorithm(self, algorithm)
 
 
 class _StringEnumMeta(EnumMeta):

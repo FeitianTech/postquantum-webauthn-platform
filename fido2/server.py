@@ -368,7 +368,7 @@ class Fido2Server:
     ) -> AttestedCredentialData:
         pass
 
-    def authenticate_complete(self, state, credentials, *args, **kwargs):
+    def authenticate_complete(self, state, credentials, *args, hash_algorithm=None, **kwargs):
         """Verify the correctness of the assertion data received from
         the client.
 
@@ -378,7 +378,8 @@ class Fido2Server:
         :param credential_id: The credential id from the client response.
         :param client_data: The client data.
         :param auth_data: The authenticator data.
-        :param signature: The signature provided by the client."""
+        :param signature: The signature provided by the client.
+        :param hash_algorithm: Optional hash algorithm to use (e.g., "SHA-256", "SHA-512", etc.)."""
 
         response = None
         if len(args) == 1 and not kwargs:
@@ -438,7 +439,12 @@ class Fido2Server:
                         authenticator_data_bytes, client_data_json_bytes
                     )
                 try:
-                    cred.public_key.verify(auth_data + client_data.hash, signature)
+                    # Use the specified hash algorithm or default to SHA-256
+                    if hash_algorithm:
+                        client_data_hash = client_data.get_hash(hash_algorithm)
+                    else:
+                        client_data_hash = client_data.hash
+                    cred.public_key.verify(auth_data + client_data_hash, signature)
                 except _InvalidSignature:
                     raise ValueError("Invalid signature.")
                 logger.info(f"Credential authenticated: {credential_id.hex()}")

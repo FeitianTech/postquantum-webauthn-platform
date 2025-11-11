@@ -798,6 +798,31 @@
                                             </div>
                                         </div>
                                     </div>
+                                    <div class="form-group">
+                                        <div class="label-with-info">
+                                            <label for="hash-algorithm-auth">Hash Algorithm</label>
+                                            <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
+                                                <div class="info-popup">
+                                                    <div class="language-toggle" onclick="toggleLanguage(this)">ENG</div>
+                                                    <div class="text-en active">
+                                                        The hashing algorithm to use when hashing the client data JSON during assertion verification. This is a developer tool feature that allows testing different hash algorithms in the signature verification process.
+                                                    </div>
+                                                    <div class="text-zh hidden">
+                                                        在断言验证期间对客户端数据 JSON 进行哈希处理时使用的哈希算法。这是一个开发者工具功能，允许在签名验证过程中测试不同的哈希算法。
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <select id="hash-algorithm-auth" class="form-control">
+                                            <option value="SHA-256" selected>SHA-256</option>
+                                            <option value="SHA-512">SHA-512</option>
+                                            <option value="SHA-384">SHA-384</option>
+                                            <option value="SHA-1">SHA-1</option>
+                                            <option value="SHA3-256">SHA3-256</option>
+                                            <option value="SHA3-384">SHA3-384</option>
+                                            <option value="SHA3-512">SHA3-512</option>
+                                        </select>
+                                    </div>
                                 </div>
                             </div>
 

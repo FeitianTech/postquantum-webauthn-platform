@@ -58,6 +58,13 @@ __all__ = [
     "websafe_encode",
     "websafe_decode",
     "sha256",
+    "sha512",
+    "sha384",
+    "sha1",
+    "sha3_256",
+    "sha3_384",
+    "sha3_512",
+    "hash_with_algorithm",
     "hmac_sha256",
     "bytes2int",
     "int2bytes",
@@ -76,6 +83,96 @@ def sha256(data: bytes) -> bytes:
     h = hashes.Hash(hashes.SHA256(), default_backend())
     h.update(data)
     return h.finalize()
+
+
+def sha512(data: bytes) -> bytes:
+    """Produces a SHA512 hash of the input.
+
+    :param data: The input data to hash.
+    :return: The resulting hash.
+    """
+    h = hashes.Hash(hashes.SHA512(), default_backend())
+    h.update(data)
+    return h.finalize()
+
+
+def sha384(data: bytes) -> bytes:
+    """Produces a SHA384 hash of the input.
+
+    :param data: The input data to hash.
+    :return: The resulting hash.
+    """
+    h = hashes.Hash(hashes.SHA384(), default_backend())
+    h.update(data)
+    return h.finalize()
+
+
+def sha1(data: bytes) -> bytes:
+    """Produces a SHA1 hash of the input.
+
+    :param data: The input data to hash.
+    :return: The resulting hash.
+    """
+    h = hashes.Hash(hashes.SHA1(), default_backend())
+    h.update(data)
+    return h.finalize()
+
+
+def sha3_256(data: bytes) -> bytes:
+    """Produces a SHA3-256 hash of the input.
+
+    :param data: The input data to hash.
+    :return: The resulting hash.
+    """
+    h = hashes.Hash(hashes.SHA3_256(), default_backend())
+    h.update(data)
+    return h.finalize()
+
+
+def sha3_384(data: bytes) -> bytes:
+    """Produces a SHA3-384 hash of the input.
+
+    :param data: The input data to hash.
+    :return: The resulting hash.
+    """
+    h = hashes.Hash(hashes.SHA3_384(), default_backend())
+    h.update(data)
+    return h.finalize()
+
+
+def sha3_512(data: bytes) -> bytes:
+    """Produces a SHA3-512 hash of the input.
+
+    :param data: The input data to hash.
+    :return: The resulting hash.
+    """
+    h = hashes.Hash(hashes.SHA3_512(), default_backend())
+    h.update(data)
+    return h.finalize()
+
+
+def hash_with_algorithm(data: bytes, algorithm: str = "SHA-256") -> bytes:
+    """Produces a hash of the input using the specified algorithm.
+
+    :param data: The input data to hash.
+    :param algorithm: The hash algorithm name (e.g., "SHA-256", "SHA-512", etc.).
+    :return: The resulting hash.
+    """
+    algorithm_map = {
+        "SHA-256": sha256,
+        "SHA-512": sha512,
+        "SHA-384": sha384,
+        "SHA-1": sha1,
+        "SHA3-256": sha3_256,
+        "SHA3-384": sha3_384,
+        "SHA3-512": sha3_512,
+    }
+
+    hash_func = algorithm_map.get(algorithm)
+    if hash_func is None:
+        raise ValueError(f"Unsupported hash algorithm: {algorithm}")
+
+    return hash_func(data)
 
 
 def hmac_sha256(key: bytes, data: bytes) -> bytes:
