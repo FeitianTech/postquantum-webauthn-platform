@@ -2,7 +2,6 @@
 
 image:https://img.shields.io/github/actions/workflow/status/FeitianTech/postquantum-webauthn-platform/ci.yml?label=CI&logo=github[CI,link="https://github.com/FeitianTech/postquantum-webauthn-platform/actions/workflows/ci.yml"]
 image:https://img.shields.io/github/actions/workflow/status/FeitianTech/postquantum-webauthn-platform/ci.yml?label=Build&logo=github[Build,link="https://github.com/FeitianTech/postquantum-webauthn-platform/actions/workflows/ci.yml"]
-image:https://img.shields.io/github/license/FeitianTech/postquantum-webauthn-platform?label=License&logo=open-source-initiative[License,link="COPYING"]
 image:https://img.shields.io/github/commit-activity/m/FeitianTech/postquantum-webauthn-platform?label=Commit%20Activity&logo=github[Commit Activity,link="https://github.com/FeitianTech/postquantum-webauthn-platform/pulse"]
 image:https://img.shields.io/github/last-commit/FeitianTech/postquantum-webauthn-platform?label=Last%20Commit&logo=git[Last Commit,link="https://github.com/FeitianTech/postquantum-webauthn-platform/commits"]
 
