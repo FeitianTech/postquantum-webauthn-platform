@@ -460,6 +460,8 @@ export async function advancedAuthenticate() {
 
         showProgress('advanced', 'Completing authentication...');
 
+        const hashAlgorithm = document.getElementById('hash-algorithm-auth')?.value || 'SHA-256';
+
         const result = await fetch('/api/advanced/authenticate/complete', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
@@ -468,6 +470,7 @@ export async function advancedAuthenticate() {
                 __assertion_response: assertionJson,
                 __storedCredentials: storedCredentials,
                 __session_state: advancedAuthenticateState,
+                __hash_algorithm: hashAlgorithm,
             }),
         });
 

@@ -2204,11 +2204,17 @@ def advanced_authenticate_complete():
         None
         None
 
+        # Extract hash algorithm from request (developer tool feature)
+        hash_algorithm = data.get("__hash_algorithm", "SHA-256")
+        if not isinstance(hash_algorithm, str):
+            hash_algorithm = "SHA-256"
+
         try:
             auth_result = auth_server.authenticate_complete(
                 state,
                 all_credentials,
                 response,
+                hash_algorithm=hash_algorithm,
             )
         except Exception as exc:
             response_mapping: Mapping[str, Any]
