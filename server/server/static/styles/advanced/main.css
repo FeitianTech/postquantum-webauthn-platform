@@ -22,7 +22,7 @@
     padding: 0;
     background: transparent;
     text-align: center;
-    transform: translateY(0);
+    transform: none;
     transition: transform 420ms ease;
     display: flex;
     flex-direction: column;

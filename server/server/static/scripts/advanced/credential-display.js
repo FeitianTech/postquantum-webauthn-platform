@@ -2845,7 +2845,12 @@ export function updateCredentialsDisplay() {
         const mdsButtonHtml = (aaguidGuid && (rootStatus === true || metadataAvailable))
             ? `<button type="button" class="btn btn-small btn-secondary credential-mds-button" data-aaguid="${escapeHtml(aaguidGuid.toLowerCase())}" title="Open authenticator metadata">FIDO MDS</button>`
             : '';
-        const deleteButtonHtml = `<button class="btn btn-small btn-danger credential-delete-button" onclick="event.stopPropagation();deleteCredential(${index})">Delete</button>`;
+        
+        // Only show delete button for WebAuthn credentials (those with credentialId or publicKey)
+        const isWebAuthnCredential = cred.credentialId || cred.credentialIdHex || cred.publicKey || cred.publicKeyBytes;
+        const deleteButtonHtml = isWebAuthnCredential 
+            ? `<button class="btn btn-small btn-danger credential-delete-button" onclick="event.stopPropagation();deleteCredential(${index})">Delete</button>`
+            : '';
         const actionsHtml = `<div class="credential-item-actions">${mdsButtonHtml}${deleteButtonHtml}</div>`;
 
         return `
@@ -3291,10 +3296,16 @@ export async function showCredentialDetails(index) {
         cred.attestationCertificates,
         cred.attestation_certificate,
         cred.attestation_certificates,
+        cred.attestationCertificatesDetails,
+        cred.attestation_certificates_details,
         cred.properties?.attestationCertificate,
         cred.properties?.attestationCertificates,
+        cred.properties?.attestationCertificatesDetails,
+        cred.properties?.attestation_certificates_details,
         cred.relyingParty?.attestationCertificate,
         cred.relyingParty?.attestationCertificates,
+        cred.relyingParty?.attestationCertificatesDetails,
+        cred.relyingParty?.attestation_certificates_details,
     );
 
     if (snapshotState) {
