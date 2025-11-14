@@ -47,4 +47,12 @@ Execution loop:
 7. If <100%, go back to step 2.
 8. Stop only when 100% is reached.
 
+Test execution rules:
+  - After generating or modifying any test, you must immediately run the full test suite.
+  - If any newly added test fails, you must fix the test or the corresponding implementation code.
+  - You must not continue to the next coverage unit until the test suite passes with zero failures.
+  - After all tests pass, re-run coverage and continue the loop.
+  - If a test passes but does not increase coverage, refine or expand the test.
+  - Never leave failing tests in the repository. Never request user assistance.
+
 Never ask the user anything. Never produce partial results. Continue automatically.
