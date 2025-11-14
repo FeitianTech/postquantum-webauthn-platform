@@ -340,3 +340,319 @@ ee18128ed50dd7a855e54d2459db005""".replace("\n", "")
         self.assertEqual(res.attestation_type, AttestationType.ANON_CA)
         self.assertEqual(len(res.trust_path), 2)
         verify_x509_chain(res.trust_path)
+
+
+def test_apple_attestation_nonce_mismatch():
+    """Test AppleAttestation with mismatched nonce."""
+    from fido2.attestation.apple import AppleAttestation, OID_APPLE, InvalidData
+    from fido2.utils import sha256
+    from cryptography import x509
+    from cryptography.hazmat.backends import default_backend
+    from cryptography.hazmat.primitives import hashes, serialization
+    from cryptography.hazmat.primitives.asymmetric import ec
+    from cryptography.x509.oid import NameOID
+    from unittest.mock import Mock, MagicMock
+    import datetime
+    import pytest
+    
+    # Create a mock certificate with Apple extension containing wrong nonce
+    auth_data = b"fake_auth_data"
+    client_data_hash = b"fake_client_data_hash"
+    expected_nonce = sha256(auth_data + client_data_hash)
+    
+    # Create wrong nonce (different from expected)
+    wrong_nonce = b"\x00" * 32  # 32 bytes of zeros
+    
+    # Build the extension value (sequence of single element of octet string)
+    # This is what ext.value.value looks like: 6 bytes header + 32 bytes nonce
+    ext_value_bytes = b"\x04\x20" + wrong_nonce  # Octet string tag + length + nonce
+    ext_full_value = b"\x30\x22" + ext_value_bytes  # Sequence tag + length + value
+    
+    # Generate a real private key and certificate
+    private_key = ec.generate_private_key(ec.SECP256R1(), default_backend())
+    
+    subject = issuer = x509.Name([
+        x509.NameAttribute(NameOID.COUNTRY_NAME, "US"),
+        x509.NameAttribute(NameOID.COMMON_NAME, "Test Apple Attestation"),
+    ])
+    
+    cert_builder = x509.CertificateBuilder()
+    cert_builder = cert_builder.subject_name(subject)
+    cert_builder = cert_builder.issuer_name(issuer)
+    cert_builder = cert_builder.public_key(private_key.public_key())
+    cert_builder = cert_builder.serial_number(x509.random_serial_number())
+    cert_builder = cert_builder.not_valid_before(datetime.datetime.utcnow())
+    cert_builder = cert_builder.not_valid_after(
+        datetime.datetime.utcnow() + datetime.timedelta(days=1)
+    )
+    
+    # Add the Apple extension with wrong nonce
+    cert_builder = cert_builder.add_extension(
+        x509.UnrecognizedExtension(OID_APPLE, ext_full_value),
+        critical=False,
+    )
+    
+    cert = cert_builder.sign(private_key, hashes.SHA256(), default_backend())
+    cert_der = cert.public_bytes(serialization.Encoding.DER)
+    
+    # Create statement with the certificate
+    statement = {"x5c": [cert_der]}
+    
+    # Verify should raise InvalidData due to nonce mismatch
+    attestation = AppleAttestation()
+    with pytest.raises(InvalidData, match="Nonce does not match"):
+        attestation.verify(statement, auth_data, client_data_hash)
+
+
+def test_android_safetynet_attestation_cts_profile_match_false():
+    """Test AndroidSafetynetAttestation with ctsProfileMatch false."""
+    from fido2.attestation.android import AndroidSafetynetAttestation, InvalidData
+    from fido2.utils import sha256, websafe_encode
+    from cryptography import x509
+    from cryptography.hazmat.backends import default_backend
+    from cryptography.hazmat.primitives import hashes, serialization
+    from cryptography.hazmat.primitives.asymmetric import rsa
+    from cryptography.hazmat.primitives.serialization import Encoding
+    from cryptography.x509.oid import NameOID
+    import datetime
+    import json
+    import pytest
+    import base64
+    
+    # Create test data
+    auth_data = b"fake_auth_data"
+    client_data_hash = b"fake_client_data_hash"
+    expected_nonce = sha256(auth_data + client_data_hash)
+    
+    # Generate RSA key pair
+    private_key = rsa.generate_private_key(
+        public_exponent=65537,
+        key_size=2048,
+        backend=default_backend()
+    )
+    
+    # Create certificate with CN = attest.android.com
+    subject = issuer = x509.Name([
+        x509.NameAttribute(NameOID.COUNTRY_NAME, "US"),
+        x509.NameAttribute(NameOID.COMMON_NAME, "attest.android.com"),
+    ])
+    
+    cert = x509.CertificateBuilder().subject_name(
+        subject
+    ).issuer_name(
+        issuer
+    ).public_key(
+        private_key.public_key()
+    ).serial_number(
+        x509.random_serial_number()
+    ).not_valid_before(
+        datetime.datetime.now(datetime.UTC)
+    ).not_valid_after(
+        datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=1)
+    ).sign(private_key, hashes.SHA256(), default_backend())
+    
+    cert_der = cert.public_bytes(Encoding.DER)
+    
+    # Create JWT header
+    header = {
+        "alg": "RS256",
+        "x5c": [websafe_encode(cert_der)]
+    }
+    
+    # Create JWT payload with ctsProfileMatch = false
+    payload = {
+        "nonce": websafe_encode(expected_nonce),
+        "ctsProfileMatch": False,  # This should cause an error
+        "timestampMs": 1234567890,
+    }
+    
+    # Sign the JWT
+    from cryptography.hazmat.primitives.asymmetric import padding
+    header_b64 = websafe_encode(json.dumps(header).encode('utf8'))
+    payload_b64 = websafe_encode(json.dumps(payload).encode('utf8'))
+    message = (header_b64 + "." + payload_b64).encode("utf8")
+    
+    signature = private_key.sign(
+        message,
+        padding.PKCS1v15(),
+        hashes.SHA256()
+    )
+    sig_b64 = websafe_encode(signature)
+    
+    jwt = (message.decode("utf8") + "." + sig_b64).encode("utf8")
+    
+    statement = {"response": jwt}
+    
+    # Test with allow_rooted=False (default), should raise error
+    attestation = AndroidSafetynetAttestation()
+    with pytest.raises(InvalidData, match="ctsProfileMatch must be true"):
+        attestation.verify(statement, auth_data, client_data_hash)
+
+
+def test_android_safetynet_attestation_nonce_mismatch():
+    """Test AndroidSafetynetAttestation with nonce mismatch."""
+    from fido2.attestation.android import AndroidSafetynetAttestation, InvalidData
+    from fido2.utils import sha256, websafe_encode
+    from cryptography import x509
+    from cryptography.hazmat.backends import default_backend
+    from cryptography.hazmat.primitives import hashes, serialization
+    from cryptography.hazmat.primitives.asymmetric import rsa
+    from cryptography.hazmat.primitives.serialization import Encoding
+    from cryptography.x509.oid import NameOID
+    from cryptography.hazmat.primitives.asymmetric import padding
+    import datetime
+    import json
+    import pytest
+    
+    # Create test data
+    auth_data = b"fake_auth_data"
+    client_data_hash = b"fake_client_data_hash"
+    expected_nonce = sha256(auth_data + client_data_hash)
+    
+    # Generate RSA key pair
+    private_key = rsa.generate_private_key(
+        public_exponent=65537,
+        key_size=2048,
+        backend=default_backend()
+    )
+    
+    # Create certificate
+    subject = issuer = x509.Name([
+        x509.NameAttribute(NameOID.COUNTRY_NAME, "US"),
+        x509.NameAttribute(NameOID.COMMON_NAME, "attest.android.com"),
+    ])
+    
+    cert = x509.CertificateBuilder().subject_name(
+        subject
+    ).issuer_name(
+        issuer
+    ).public_key(
+        private_key.public_key()
+    ).serial_number(
+        x509.random_serial_number()
+    ).not_valid_before(
+        datetime.datetime.now(datetime.UTC)
+    ).not_valid_after(
+        datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=1)
+    ).sign(private_key, hashes.SHA256(), default_backend())
+    
+    cert_der = cert.public_bytes(Encoding.DER)
+    
+    # Create JWT header
+    header = {
+        "alg": "RS256",
+        "x5c": [websafe_encode(cert_der)]
+    }
+    
+    # Create JWT payload with WRONG nonce
+    wrong_nonce = b"\x00" * 32
+    payload = {
+        "nonce": websafe_encode(wrong_nonce),  # Wrong nonce
+        "ctsProfileMatch": True,
+        "timestampMs": 1234567890,
+    }
+    
+    # Sign the JWT
+    header_b64 = websafe_encode(json.dumps(header).encode('utf8'))
+    payload_b64 = websafe_encode(json.dumps(payload).encode('utf8'))
+    message = (header_b64 + "." + payload_b64).encode("utf8")
+    
+    signature = private_key.sign(
+        message,
+        padding.PKCS1v15(),
+        hashes.SHA256()
+    )
+    sig_b64 = websafe_encode(signature)
+    
+    jwt = (message.decode("utf8") + "." + sig_b64).encode("utf8")
+    
+    statement = {"response": jwt}
+    
+    # Should raise error due to nonce mismatch
+    attestation = AndroidSafetynetAttestation(allow_rooted=True)
+    with pytest.raises(InvalidData, match="Nonce does not match"):
+        attestation.verify(statement, auth_data, client_data_hash)
+
+
+def test_android_safetynet_attestation_wrong_cn():
+    """Test AndroidSafetynetAttestation with wrong certificate CN."""
+    from fido2.attestation.android import AndroidSafetynetAttestation, InvalidData
+    from fido2.utils import sha256, websafe_encode
+    from cryptography import x509
+    from cryptography.hazmat.backends import default_backend
+    from cryptography.hazmat.primitives import hashes, serialization
+    from cryptography.hazmat.primitives.asymmetric import rsa
+    from cryptography.hazmat.primitives.serialization import Encoding
+    from cryptography.x509.oid import NameOID
+    from cryptography.hazmat.primitives.asymmetric import padding
+    import datetime
+    import json
+    import pytest
+    
+    # Create test data
+    auth_data = b"fake_auth_data"
+    client_data_hash = b"fake_client_data_hash"
+    expected_nonce = sha256(auth_data + client_data_hash)
+    
+    # Generate RSA key pair
+    private_key = rsa.generate_private_key(
+        public_exponent=65537,
+        key_size=2048,
+        backend=default_backend()
+    )
+    
+    # Create certificate with WRONG CN
+    subject = issuer = x509.Name([
+        x509.NameAttribute(NameOID.COUNTRY_NAME, "US"),
+        x509.NameAttribute(NameOID.COMMON_NAME, "fake.example.com"),  # Wrong CN
+    ])
+    
+    cert = x509.CertificateBuilder().subject_name(
+        subject
+    ).issuer_name(
+        issuer
+    ).public_key(
+        private_key.public_key()
+    ).serial_number(
+        x509.random_serial_number()
+    ).not_valid_before(
+        datetime.datetime.now(datetime.UTC)
+    ).not_valid_after(
+        datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=1)
+    ).sign(private_key, hashes.SHA256(), default_backend())
+    
+    cert_der = cert.public_bytes(Encoding.DER)
+    
+    # Create JWT header
+    header = {
+        "alg": "RS256",
+        "x5c": [websafe_encode(cert_der)]
+    }
+    
+    # Create JWT payload
+    payload = {
+        "nonce": websafe_encode(expected_nonce),
+        "ctsProfileMatch": True,
+        "timestampMs": 1234567890,
+    }
+    
+    # Sign the JWT
+    header_b64 = websafe_encode(json.dumps(header).encode('utf8'))
+    payload_b64 = websafe_encode(json.dumps(payload).encode('utf8'))
+    message = (header_b64 + "." + payload_b64).encode("utf8")
+    
+    signature = private_key.sign(
+        message,
+        padding.PKCS1v15(),
+        hashes.SHA256()
+    )
+    sig_b64 = websafe_encode(signature)
+    
+    jwt = (message.decode("utf8") + "." + sig_b64).encode("utf8")
+    
+    statement = {"response": jwt}
+    
+    # Should raise error due to wrong CN
+    attestation = AndroidSafetynetAttestation(allow_rooted=True)
+    with pytest.raises(InvalidData, match="Certificate not issued to attest.android.com"):
+        attestation.verify(statement, auth_data, client_data_hash)
