@@ -365,3 +365,34 @@ def test_warm_up_dependencies_skip_if_reloader_parent(monkeypatch):
     
     # Verify flag was passed
     assert bootstrap_calls == [{"skip_if_reloader_parent": True}]
+
+
+def test_warm_up_dependencies_cleanup_failure(monkeypatch):
+    """Test that cleanup failure during startup is logged but doesn't raise."""
+    monkeypatch.delenv("FIDO_SERVER_GCS_BUCKET", raising=False)
+    
+    from server.server import startup, cloud_storage, session_metadata_store, storage
+    
+    # Mock dependencies
+    monkeypatch.setattr(cloud_storage, "gcs_enabled", lambda: False)
+    
+    # Mock metadata bootstrap
+    general_routes = types.ModuleType("server.server.routes.general")
+    general_routes.ensure_metadata_bootstrapped = lambda **kwargs: None
+    sys.modules["server.server.routes.general"] = general_routes
+    
+    monkeypatch.setattr(session_metadata_store, "ensure_session", lambda sid: None)
+    monkeypatch.setattr(session_metadata_store, "touch_last_access", lambda sid: None)
+    monkeypatch.setattr(storage, "list_credentials", lambda **kwargs: [])
+    
+    # Make delete_session fail
+    def failing_delete(sid):
+        raise RuntimeError("Cleanup failed")
+    
+    monkeypatch.setattr(session_metadata_store, "delete_session", failing_delete)
+    
+    # Verify no exception is raised even though cleanup fails
+    # The failure should just be logged
+    startup.warm_up_dependencies()
+    
+    # Test passes if we get here without exception

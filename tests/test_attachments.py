@@ -277,6 +277,23 @@ def test_normalize_attachment_list_filters_invalid():
     assert result == ["platform", "cross-platform"]
 
 
+def test_normalize_attachment_list_from_unexpected_type():
+    """Test normalize_attachment_list with an unexpected type (int, float, etc)."""
+    from server.server import attachments
+    
+    # Test with integer (not a valid type for attachments)
+    result = attachments.normalize_attachment_list(12345)
+    assert result == []
+    
+    # Test with float
+    result = attachments.normalize_attachment_list(3.14)
+    assert result == []
+    
+    # Test with boolean
+    result = attachments.normalize_attachment_list(True)
+    assert result == []
+
+
 def test_resolve_effective_attachments_from_hints():
     """Test resolving attachments when hints are provided."""
     from server.server import attachments

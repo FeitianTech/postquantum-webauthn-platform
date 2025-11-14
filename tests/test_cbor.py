@@ -211,3 +211,46 @@ class TestFidoCanonical(unittest.TestCase):
         )
 
         self.assertEqual(cbor2hex({True: 0, False: 0}), "a2f400f500")
+
+
+class TestCborErrorPaths(unittest.TestCase):
+    """Test error handling in CBOR encoding/decoding."""
+    
+    def test_load_int_invalid_additional_info(self):
+        """Test load_int with invalid additional information value."""
+        from fido2.cbor import load_int
+        import pytest
+        
+        # Additional information values 28-30 are reserved and should raise ValueError
+        with pytest.raises(ValueError, match="Invalid additional information"):
+            load_int(28, b"\x00\x00\x00\x00")
+        
+        with pytest.raises(ValueError, match="Invalid additional information"):
+            load_int(29, b"\x00\x00\x00\x00")
+        
+        with pytest.raises(ValueError, match="Invalid additional information"):
+            load_int(30, b"\x00\x00\x00\x00")
+    
+    def test_encode_unsupported_type(self):
+        """Test encode with unsupported Python type."""
+        from fido2 import cbor
+        import pytest
+        
+        # Try to encode a complex number (unsupported type)
+        with pytest.raises(ValueError, match="Unsupported value"):
+            cbor.encode(complex(1, 2))
+        
+        # Try to encode a function (unsupported type)
+        with pytest.raises(ValueError, match="Unsupported value"):
+            cbor.encode(lambda x: x)
+    
+    def test_decode_with_extraneous_data(self):
+        """Test decode when there's extra data after the CBOR value."""
+        from fido2 import cbor
+        import pytest
+        
+        # Valid CBOR (integer 42) followed by extra bytes
+        data = b"\x18\x2a\x00\x00\x00"
+        
+        with pytest.raises(ValueError, match="Extraneous data"):
+            cbor.decode(data)
