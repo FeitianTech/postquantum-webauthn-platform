@@ -31,4 +31,3 @@ ENV
 docker-compose*.yml
 .env
 .env.*
-!.env.example
