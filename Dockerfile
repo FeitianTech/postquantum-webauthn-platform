@@ -59,9 +59,7 @@ LABEL maintainer="Post-Quantum WebAuthn Platform" \
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     LD_LIBRARY_PATH=/opt/liboqs/lib:/usr/local/lib \
-    # Local storage path
     FIDO_SERVER_STORAGE_PATH=/app/storage \
-    # Default port
     PORT=8000
 
 RUN set -eux; \
@@ -70,7 +68,6 @@ RUN set -eux; \
         libssl3 \
         curl; \
     rm -rf /var/lib/apt/lists/* /root/.cache; \
-    # Create non-root user for security
     groupadd -r webauthn && useradd -r -g webauthn webauthn
 
 COPY prebuilt_liboqs/linux-x86_64 /opt/liboqs
@@ -82,9 +79,7 @@ RUN set -eux; \
     ln -sf /opt/liboqs/lib/liboqs.so /usr/local/lib/liboqs.so; \
     ldconfig; \
     rm -rf /usr/local/lib/python3.12/ensurepip; \
-    # Create directories for persistent data and local storage
     mkdir -p /app/storage /app/server/session-credentials /app/server/static/session-metadata /app/server/instance; \
-    # Set proper ownership
     chown -R webauthn:webauthn /app
 
 WORKDIR /app
