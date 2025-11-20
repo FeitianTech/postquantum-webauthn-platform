@@ -224,7 +224,11 @@ def api_upload_custom_metadata():
             errors.append(f"{trimmed}: {exc}")
             continue
 
-        maybe_store_uploaded_metadata_file(trimmed, raw_bytes)
+        try:
+            maybe_store_uploaded_metadata_file(trimmed, raw_bytes)
+        except Exception as exc:  # pylint: disable=broad-except
+            app.logger.warning("Non-critical error during metadata file upload: %s", exc)
+            # Continue processing even if GitHub upload fails
 
         for index, entry_payload in enumerate(entry_payloads, start=1):
             display_name = (

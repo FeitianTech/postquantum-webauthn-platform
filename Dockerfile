@@ -61,7 +61,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     LD_LIBRARY_PATH=/opt/liboqs/lib:/usr/local/lib \
     FIDO_SERVER_STORAGE_PATH=/app/storage \
-    PORT=8000
+    PORT=8000 \
+    ENABLE_GITHUB_LOGGING=false
 
 RUN set -eux; \
     apt-get update; \
