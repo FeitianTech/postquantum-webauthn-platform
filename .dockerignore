@@ -26,3 +26,9 @@ venv
 ENV
 .venv
 .DS_Store
+
+# Docker and environment files
+docker-compose*.yml
+.env
+.env.*
+!.env.example

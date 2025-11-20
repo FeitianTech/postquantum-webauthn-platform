@@ -1,0 +1,88 @@
+# Docker Compose configuration
+
+services:
+  webauthn-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: pq-webauthn-server:latest
+    container_name: pq-webauthn-server
+
+    # Restart policy for reliability
+    restart: unless-stopped
+
+    # Port mapping
+    ports:
+      - "${HOST_PORT:-8000}:8000"
+
+    # Environment variables
+    environment:
+      # Server configuration
+      - PORT=8000
+      - FIDO_SERVER_RP_NAME=${FIDO_SERVER_RP_NAME:-Post-Quantum WebAuthn Server}
+      - FIDO_SERVER_RP_ID=${FIDO_SERVER_RP_ID:-}
+      - FIDO_SERVER_SECRET_KEY=${FIDO_SERVER_SECRET_KEY:-}
+
+      # Local storage path (inside container)
+      - FIDO_SERVER_STORAGE_PATH=/app/storage
+
+      # Gunicorn configuration
+      - GUNICORN_WORKERS=${GUNICORN_WORKERS:-2}
+      - GUNICORN_TIMEOUT=${GUNICORN_TIMEOUT:-120}
+
+      # Session metadata recovery on startup
+      - FIDO_SERVER_SESSION_METADATA_RECOVER=${FIDO_SERVER_SESSION_METADATA_RECOVER:-true}
+
+      # Trusted attestation CA configuration (optional)
+      - FIDO_SERVER_TRUSTED_ATTESTATION_CA_SUBJECTS=${FIDO_SERVER_TRUSTED_ATTESTATION_CA_SUBJECTS:-}
+      - FIDO_SERVER_TRUSTED_ATTESTATION_CA_FINGERPRINTS=${FIDO_SERVER_TRUSTED_ATTESTATION_CA_FINGERPRINTS:-}
+
+    # Mount local storage folder
+    # Copy your GCS bucket contents into ./storage before starting
+    volumes:
+      # Main storage folder - mirrors GCS bucket structure
+      # All user data (credentials, metadata) is stored here
+      - ./storage:/app/storage
+      # Instance data (secret keys, etc.)
+      - webauthn-instance:/app/server/instance
+
+    # Health check configuration
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+    # Resource limits (adjust based on your server capacity)
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    # Security options
+    security_opt:
+      - no-new-privileges:true
+
+# Named volumes for data that doesn't need direct access
+volumes:
+  webauthn-instance:
+    driver: local
+    name: pq-webauthn-instance
+
+# Network configuration
+networks:
+  default:
+    name: pq-webauthn-network
+    driver: bridge

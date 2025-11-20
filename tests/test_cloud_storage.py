@@ -1,173 +1,169 @@
-"""Tests for the Google Cloud Storage helpers."""
+"""Tests for the local storage helpers (GCS-compatible interface)."""
 
 from __future__ import annotations
 
-import importlib
-import sys
-import types
+import os
+import tempfile
 
 import pytest
 
-
-def _install_google_stubs():
-    google_pkg = types.ModuleType("google")
-    google_pkg.__path__ = []
-    sys.modules.setdefault("google", google_pkg)
-
-    google_api_core_pkg = sys.modules.setdefault(
-        "google.api_core", types.ModuleType("google.api_core")
-    )
-    google_api_core_pkg.__path__ = []
-    google_api_core_exceptions_pkg = sys.modules.setdefault(
-        "google.api_core.exceptions", types.ModuleType("google.api_core.exceptions")
-    )
-
-    class _BaseError(Exception):
-        pass
-
-    class _NotFound(_BaseError):
-        pass
-
-    class _GoogleAPICallError(_BaseError):
-        pass
-
-    class _RetryError(_BaseError):
-        pass
-
-    google_api_core_exceptions_pkg.NotFound = _NotFound
-    google_api_core_exceptions_pkg.GoogleAPICallError = _GoogleAPICallError
-    google_api_core_exceptions_pkg.RetryError = _RetryError
-    google_api_core_pkg.exceptions = google_api_core_exceptions_pkg
-
-    google_cloud_pkg = sys.modules.setdefault(
-        "google.cloud", types.ModuleType("google.cloud")
-    )
-    google_cloud_pkg.__path__ = []
-    google_cloud_storage_pkg = sys.modules.setdefault(
-        "google.cloud.storage", types.ModuleType("google.cloud.storage")
-    )
-
-    class _DummyClient:
-        def bucket(self, *_args, **_kwargs):  # pragma: no cover - defensive fallback
-            raise RuntimeError("Not configured")
-
-    google_cloud_storage_pkg.Client = _DummyClient
-    google_cloud_pkg.storage = google_cloud_storage_pkg
-
-    google_oauth_pkg = sys.modules.setdefault(
-        "google.oauth2", types.ModuleType("google.oauth2")
-    )
-    google_oauth_pkg.__path__ = []
-    google_service_account_pkg = sys.modules.setdefault(
-        "google.oauth2.service_account",
-        types.ModuleType("google.oauth2.service_account"),
-    )
-
-    class _DummyCredentials:
-        @classmethod
-        def from_service_account_file(cls, *_args, **_kwargs):
-            return cls()
-
-        @classmethod
-        def from_service_account_info(cls, *_args, **_kwargs):
-            return cls()
-
-    google_service_account_pkg.Credentials = _DummyCredentials
-    google_oauth_pkg.service_account = google_service_account_pkg
-
-    google_auth_pkg = sys.modules.setdefault("google.auth", types.ModuleType("google.auth"))
-    google_auth_pkg.__path__ = []
-    google_auth_exceptions_pkg = sys.modules.setdefault(
-        "google.auth.exceptions", types.ModuleType("google.auth.exceptions")
-    )
-
-    class _RefreshError(Exception):
-        pass
-
-    google_auth_exceptions_pkg.RefreshError = _RefreshError
-    google_auth_pkg.exceptions = google_auth_exceptions_pkg
+from server.server import cloud_storage
 
 
-_install_google_stubs()
-cloud_storage = importlib.import_module("server.server.cloud_storage")
+@pytest.fixture
+def temp_storage(monkeypatch):
+    """Create a temporary storage directory for tests."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        monkeypatch.setattr(cloud_storage, "_STORAGE_BASE_PATH", tmpdir)
+        yield tmpdir
 
 
-def test_with_retry_succeeds_after_transient_error(monkeypatch):
-    attempts = {"count": 0}
-
-    class _Blob:
-        def upload_from_string(self, *_args, **_kwargs):
-            attempts["count"] += 1
-            if attempts["count"] < 2:
-                raise cloud_storage.gcs_exceptions.GoogleAPICallError("retry")
-
-    class _Bucket:
-        def blob(self, _name):
-            return _Blob()
-
-    monkeypatch.setattr(cloud_storage, "_ensure_bucket", lambda: _Bucket())
-
-    sleeps = []
-    monkeypatch.setattr(cloud_storage.time, "sleep", lambda delay: sleeps.append(delay))
-
-    cloud_storage.upload_bytes("test", b"data")
-
-    assert attempts["count"] == 2
-    assert sleeps == [cloud_storage._DEFAULT_RETRY_BASE_DELAY]
+def test_gcs_enabled_always_returns_true():
+    """Local storage is always enabled."""
+    assert cloud_storage.gcs_enabled() is True
 
 
-def test_with_retry_raises_after_exhausting_attempts(monkeypatch):
-    class _Blob:
-        def upload_from_string(self, *_args, **_kwargs):
-            raise cloud_storage.gcs_exceptions.GoogleAPICallError("fail")
+def test_ensure_ready_creates_directory(temp_storage):
+    """ensure_ready should create the storage directory if it doesn't exist."""
+    # Remove the directory to test creation
+    os.rmdir(temp_storage)
+    assert not os.path.exists(temp_storage)
 
-    class _Bucket:
-        def blob(self, _name):
-            return _Blob()
+    cloud_storage.ensure_ready()
 
-    monkeypatch.setattr(cloud_storage, "_ensure_bucket", lambda: _Bucket())
-    monkeypatch.setattr(cloud_storage.time, "sleep", lambda _delay: None)
-
-    with pytest.raises(cloud_storage.gcs_exceptions.GoogleAPICallError):
-        cloud_storage.upload_bytes("test", b"data")
+    assert os.path.isdir(temp_storage)
 
 
-def test_list_blob_names_retries_and_returns_results(monkeypatch):
-    call_state = {"attempt": 0}
-
-    class _Bucket:
-        def list_blobs(self, prefix=None, **_kwargs):
-            call_state["attempt"] += 1
-            if call_state["attempt"] == 1:
-                class _Iterator:
-                    def __iter__(self):
-                        return self
-
-                    def __next__(self):
-                        raise cloud_storage.gcs_exceptions.RetryError("transient")
-
-                return _Iterator()
-            return [types.SimpleNamespace(name="one"), types.SimpleNamespace(name="two")]
-
-    monkeypatch.setattr(cloud_storage, "_ensure_bucket", lambda: _Bucket())
-    monkeypatch.setattr(cloud_storage.time, "sleep", lambda _delay: None)
-
-    names = list(cloud_storage.list_blob_names("prefix"))
-
-    assert names == ["one", "two"]
-    assert call_state["attempt"] == 2
+def test_build_blob_name_simple():
+    """build_blob_name should join components correctly."""
+    result = cloud_storage.build_blob_name("file.txt")
+    assert result == "file.txt"
 
 
-def test_download_bytes_handles_not_found(monkeypatch):
-    class _Blob:
-        def download_as_bytes(self):
-            raise cloud_storage.gcs_exceptions.NotFound("missing")
+def test_build_blob_name_with_prefix():
+    """build_blob_name should prepend prefix correctly."""
+    result = cloud_storage.build_blob_name("file.txt", prefix="user-data/session1")
+    assert result == "user-data/session1/file.txt"
 
-    class _Bucket:
-        def blob(self, _name):
-            return _Blob()
 
-    monkeypatch.setattr(cloud_storage, "_ensure_bucket", lambda: _Bucket())
-    monkeypatch.setattr(cloud_storage.time, "sleep", lambda _delay: None)
+def test_build_blob_name_multiple_components():
+    """build_blob_name should join multiple components."""
+    result = cloud_storage.build_blob_name("subdir", "file.txt", prefix="data")
+    assert result == "data/subdir/file.txt"
 
-    assert cloud_storage.download_bytes("missing") is None
+
+def test_build_blob_name_empty_raises():
+    """build_blob_name should raise for empty components."""
+    with pytest.raises(ValueError, match="Invalid blob path"):
+        cloud_storage.build_blob_name("")
+
+
+def test_upload_and_download_bytes(temp_storage):
+    """upload_bytes and download_bytes should work together."""
+    blob_name = "test/data.bin"
+    data = b"hello world"
+
+    cloud_storage.upload_bytes(blob_name, data)
+
+    result = cloud_storage.download_bytes(blob_name)
+    assert result == data
+
+
+def test_upload_creates_directories(temp_storage):
+    """upload_bytes should create parent directories as needed."""
+    blob_name = "deep/nested/path/file.txt"
+    data = b"test data"
+
+    cloud_storage.upload_bytes(blob_name, data)
+
+    expected_path = os.path.join(temp_storage, "deep", "nested", "path", "file.txt")
+    assert os.path.isfile(expected_path)
+
+
+def test_download_missing_returns_none(temp_storage):
+    """download_bytes should return None for missing files."""
+    result = cloud_storage.download_bytes("nonexistent/file.txt")
+    assert result is None
+
+
+def test_delete_blob(temp_storage):
+    """delete_blob should remove the file."""
+    blob_name = "to_delete.txt"
+    cloud_storage.upload_bytes(blob_name, b"data")
+
+    assert cloud_storage.blob_exists(blob_name)
+
+    cloud_storage.delete_blob(blob_name)
+
+    assert not cloud_storage.blob_exists(blob_name)
+
+
+def test_delete_blob_missing_ok(temp_storage):
+    """delete_blob with missing_ok=True should not raise for missing files."""
+    cloud_storage.delete_blob("nonexistent.txt", missing_ok=True)
+
+
+def test_delete_blob_missing_raises(temp_storage):
+    """delete_blob with missing_ok=False should raise for missing files."""
+    with pytest.raises(FileNotFoundError):
+        cloud_storage.delete_blob("nonexistent.txt", missing_ok=False)
+
+
+def test_list_blob_names(temp_storage):
+    """list_blob_names should list all files under a prefix."""
+    # Create some test files
+    cloud_storage.upload_bytes("prefix/file1.txt", b"1")
+    cloud_storage.upload_bytes("prefix/file2.txt", b"2")
+    cloud_storage.upload_bytes("prefix/subdir/file3.txt", b"3")
+    cloud_storage.upload_bytes("other/file4.txt", b"4")
+
+    names = sorted(cloud_storage.list_blob_names("prefix"))
+
+    assert "prefix/file1.txt" in names
+    assert "prefix/file2.txt" in names
+    assert "prefix/subdir/file3.txt" in names
+    assert "other/file4.txt" not in names
+
+
+def test_list_blob_names_empty_prefix(temp_storage):
+    """list_blob_names with empty prefix should list all files."""
+    cloud_storage.upload_bytes("file1.txt", b"1")
+    cloud_storage.upload_bytes("dir/file2.txt", b"2")
+
+    names = sorted(cloud_storage.list_blob_names(""))
+
+    assert "file1.txt" in names
+    assert "dir/file2.txt" in names
+
+
+def test_blob_exists(temp_storage):
+    """blob_exists should return True for existing files."""
+    blob_name = "exists.txt"
+
+    assert not cloud_storage.blob_exists(blob_name)
+
+    cloud_storage.upload_bytes(blob_name, b"data")
+
+    assert cloud_storage.blob_exists(blob_name)
+
+
+def test_blob_updated_timestamp(temp_storage):
+    """blob_updated_timestamp should return the file modification time."""
+    blob_name = "timestamped.txt"
+
+    assert cloud_storage.blob_updated_timestamp(blob_name) is None
+
+    cloud_storage.upload_bytes(blob_name, b"data")
+
+    timestamp = cloud_storage.blob_updated_timestamp(blob_name)
+    assert isinstance(timestamp, float)
+    assert timestamp > 0
+
+
+def test_resolve_path_rejects_directory_traversal(temp_storage):
+    """_resolve_path should reject paths that escape the storage directory."""
+    with pytest.raises(ValueError, match="Invalid blob name"):
+        cloud_storage._resolve_path("../escape.txt")
+
+    with pytest.raises(ValueError, match="Invalid blob name"):
+        cloud_storage._resolve_path("/absolute/path.txt")

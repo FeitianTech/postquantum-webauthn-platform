@@ -1,8 +1,0 @@
-services:
-  - type: web
-    name: python-fido2-webauthn-demo
-    runtime: docker
-    plan: free
-    dockerfilePath: ./Dockerfile
-    dockerContext: .
-    autoDeploy: true

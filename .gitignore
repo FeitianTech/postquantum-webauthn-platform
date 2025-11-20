@@ -31,3 +31,12 @@ server/server/static/session-metadata/
 # Advanced credential artifact cache
 server/server/static/credential-artifacts/
 instance/
+
+# Local storage folder (contains user data from GCS migration)
+storage/*
+!storage/.gitkeep
+
+# Environment files (may contain secrets)
+.env
+.env.*
+!.env.example

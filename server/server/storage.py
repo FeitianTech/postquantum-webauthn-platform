@@ -1,4 +1,4 @@
-"""Credential storage helpers for the demo server backed by pluggable storage."""
+"""Credential storage helpers using local storage with GCS-compatible paths."""
 from __future__ import annotations
 
 import base64
@@ -10,11 +10,10 @@ from .cloud_storage import (
     build_blob_name,
     delete_blob,
     download_bytes,
-    gcs_enabled,
     list_blob_names,
     upload_bytes,
 )
-from .config import app, basepath
+from .config import app
 
 __all__ = [
     "add_public_key_material",
@@ -27,23 +26,22 @@ __all__ = [
     "savekey",
 ]
 
-
+# These prefixes match the GCS bucket structure
+# Users can copy their GCS bucket contents directly to the storage folder
 _USER_FOLDER_PREFIX = os.environ.get(
-    "FIDO_SERVER_GCS_USER_FOLDER_PREFIX",
-    os.environ.get("FIDO_SERVER_GCS_CREDENTIAL_PREFIX", "user-data"),
+    "FIDO_SERVER_USER_FOLDER_PREFIX",
+    os.environ.get("FIDO_SERVER_GCS_USER_FOLDER_PREFIX",
+    os.environ.get("FIDO_SERVER_GCS_CREDENTIAL_PREFIX", "user-data")),
 )
 _USER_CREDENTIAL_SUBDIR = os.environ.get(
-    "FIDO_SERVER_GCS_USER_CREDENTIAL_SUBDIR",
-    os.environ.get("FIDO_SERVER_GCS_CREDENTIAL_PREFIX", "credentials"),
+    "FIDO_SERVER_USER_CREDENTIAL_SUBDIR",
+    os.environ.get("FIDO_SERVER_GCS_USER_CREDENTIAL_SUBDIR",
+    os.environ.get("FIDO_SERVER_GCS_CREDENTIAL_PREFIX", "credentials")),
 )
-_LOCAL_CREDENTIAL_BASE = os.path.join(basepath, "session-credentials")
-
-
-def _using_gcs() -> bool:
-    return gcs_enabled() and bool(os.environ.get("FIDO_SERVER_GCS_BUCKET"))
 
 
 def _user_root_prefix(session_id: str) -> str:
+    """Build the root prefix for a user's data."""
     if not isinstance(session_id, str):
         raise ValueError("Session identifier must be a string")
     cleaned = session_id.strip()
@@ -53,11 +51,13 @@ def _user_root_prefix(session_id: str) -> str:
 
 
 def _credential_prefix(session_id: str) -> str:
+    """Build the prefix for a user's credential files."""
     root = _user_root_prefix(session_id)
     return build_blob_name(_USER_CREDENTIAL_SUBDIR, prefix=root)
 
 
 def _credential_blob(name: str, session_id: str) -> str:
+    """Build the blob name for a credential file."""
     if not isinstance(name, str):
         raise ValueError("Credential identifier must be a string")
     cleaned = name.strip()
@@ -69,6 +69,7 @@ def _credential_blob(name: str, session_id: str) -> str:
 
 
 def _legacy_credential_blob(name: str) -> str:
+    """Build the legacy blob name for backward compatibility."""
     if not isinstance(name, str):
         raise ValueError("Credential identifier must be a string")
     cleaned = name.strip()
@@ -79,11 +80,13 @@ def _legacy_credential_blob(name: str) -> str:
 
 
 def _build_search_prefix(path: str) -> str:
+    """Build a search prefix from a path."""
     base_prefix = path.strip().strip("/")
     return f"{base_prefix}/" if base_prefix else ""
 
 
-def _candidate_gcs_blob_names(name: str, session_id: str) -> Iterable[str]:
+def _candidate_blob_names(name: str, session_id: str) -> Iterable[str]:
+    """Generate candidate blob names for a credential (current and legacy)."""
     seen = set()
     for blob_name in (
         _credential_blob(name, session_id),
@@ -96,6 +99,7 @@ def _candidate_gcs_blob_names(name: str, session_id: str) -> Iterable[str]:
 
 
 def _list_credential_blob_names(session_id: str) -> Iterable[Tuple[str, str]]:
+    """List all credential blob names for a session."""
     search_prefixes = []
 
     primary_prefix = _build_search_prefix(_credential_prefix(session_id))
@@ -109,7 +113,7 @@ def _list_credential_blob_names(session_id: str) -> Iterable[Tuple[str, str]]:
     for search_prefix in search_prefixes:
         try:
             for blob_name in list_blob_names(search_prefix):
-                remainder = blob_name[len(search_prefix) :] if search_prefix else blob_name
+                remainder = blob_name[len(search_prefix):] if search_prefix else blob_name
                 if search_prefix == legacy_prefix and "/" in remainder.strip("/"):
                     continue
                 if not remainder.endswith("_credential_data.pkl"):
@@ -119,89 +123,45 @@ def _list_credential_blob_names(session_id: str) -> Iterable[Tuple[str, str]]:
                     continue
                 seen_users.add(username)
                 yield username, blob_name
-        except Exception as exc:  # pragma: no cover - depends on storage backend
+        except Exception as exc:
             app.logger.warning(
                 "Unable to list credential blobs under %s: %s", search_prefix, exc
             )
 
 
-def _local_directory(session_id: str, *, create: bool = False) -> str:
-    if not isinstance(session_id, str):
-        raise ValueError("Session identifier must be a string")
-    cleaned = session_id.strip()
-    if not cleaned:
-        raise ValueError("Session identifier is empty")
-    directory = os.path.join(_LOCAL_CREDENTIAL_BASE, cleaned)
-    if create:
-        os.makedirs(directory, exist_ok=True)
-    return directory
-
-
-def _legacy_local_filename(name: str) -> str:
-    if not isinstance(name, str):
-        raise ValueError("Credential identifier must be a string")
-    cleaned = name.strip()
-    if not cleaned:
-        raise ValueError("Credential identifier is empty")
-    return os.path.join(basepath, f"{cleaned}_credential_data.pkl")
-
-
-def _local_filename(name: str, session_id: str, *, create: bool = False) -> str:
-    directory = _local_directory(session_id, create=create)
-    if not isinstance(name, str):
-        raise ValueError("Credential identifier must be a string")
-    cleaned = name.strip()
-    if not cleaned:
-        raise ValueError("Credential identifier is empty")
-    return os.path.join(directory, f"{cleaned}_credential_data.pkl")
-
-
 def _resolve_session_id(session_id: Optional[str] = None) -> str:
+    """Resolve the session ID, using the metadata session if not provided."""
     if isinstance(session_id, str):
         trimmed = session_id.strip()
         if trimmed:
             return trimmed
 
-    from .metadata import ensure_metadata_session_id  # Local import to avoid cycles
+    from .metadata import ensure_metadata_session_id
 
     return ensure_metadata_session_id()
 
 
 def savekey(name: str, key: Any, *, session_id: Optional[str] = None) -> None:
+    """Save a credential to storage."""
     payload = pickle.dumps(key)
     resolved_session = _resolve_session_id(session_id)
-    if _using_gcs():
-        blob_name = _credential_blob(name, resolved_session)
-        upload_bytes(blob_name, payload, content_type="application/octet-stream")
-    else:
-        path = _local_filename(name, resolved_session, create=True)
-        with open(path, "wb") as f:
-            f.write(payload)
+    blob_name = _credential_blob(name, resolved_session)
+    upload_bytes(blob_name, payload, content_type="application/octet-stream")
 
 
 def readkey(name: str, *, session_id: Optional[str] = None) -> List[Any]:
+    """Read a credential from storage."""
     resolved_session = _resolve_session_id(session_id)
-    if _using_gcs():
-        payload = None
-        for blob_name in _candidate_gcs_blob_names(name, resolved_session):
-            try:
-                payload = download_bytes(blob_name)
-            except Exception:
-                payload = None
-            if payload:
-                break
-        if not payload:
-            return []
-    else:
+    payload = None
+    for blob_name in _candidate_blob_names(name, resolved_session):
         try:
-            try:
-                with open(_local_filename(name, resolved_session), "rb") as f:
-                    payload = f.read()
-            except FileNotFoundError:
-                with open(_legacy_local_filename(name), "rb") as f:
-                    payload = f.read()
+            payload = download_bytes(blob_name)
         except Exception:
-            return []
+            payload = None
+        if payload:
+            break
+    if not payload:
+        return []
 
     try:
         creds = pickle.loads(payload)
@@ -211,79 +171,27 @@ def readkey(name: str, *, session_id: Optional[str] = None) -> List[Any]:
 
 
 def delkey(name: str, *, session_id: Optional[str] = None) -> None:
+    """Delete a credential from storage."""
     resolved_session = _resolve_session_id(session_id)
-    if _using_gcs():
-        for blob_name in _candidate_gcs_blob_names(name, resolved_session):
-            try:
-                delete_blob(blob_name, missing_ok=True)
-            except Exception:
-                pass
-    else:
+    for blob_name in _candidate_blob_names(name, resolved_session):
         try:
-            try:
-                os.remove(_local_filename(name, resolved_session))
-            except FileNotFoundError:
-                os.remove(_legacy_local_filename(name))
+            delete_blob(blob_name, missing_ok=True)
         except Exception:
             pass
 
 
 def iter_credentials(*, session_id: Optional[str] = None) -> Iterator[Tuple[str, List[Any]]]:
+    """Iterate over all credentials for a session."""
     resolved_session = _resolve_session_id(session_id)
-    if _using_gcs():
 
-        def _download_blob_items() -> Iterable[Tuple[str, bytes]]:
-            for username, blob_name in _list_credential_blob_names(resolved_session):
-                try:
-                    payload = download_bytes(blob_name)
-                except Exception:
-                    continue
-                if payload:
-                    yield username, payload
+    for username, blob_name in _list_credential_blob_names(resolved_session):
+        try:
+            payload = download_bytes(blob_name)
+        except Exception:
+            continue
+        if not payload:
+            continue
 
-        sources: Iterable[Tuple[str, bytes]] = _download_blob_items()
-    else:
-
-        def _read_local_items() -> Iterable[Tuple[str, bytes]]:
-            directory = _local_directory(resolved_session)
-            try:
-                entries = os.listdir(directory)
-            except FileNotFoundError:
-                entries = []
-
-            for entry in entries:
-                if not entry.endswith("_credential_data.pkl"):
-                    continue
-                username = entry[: -len("_credential_data.pkl")]
-                if not username:
-                    continue
-                path = os.path.join(directory, entry)
-                try:
-                    with open(path, "rb") as f:
-                        payload = f.read()
-                except Exception:
-                    continue
-                if payload:
-                    yield username, payload
-
-            for entry in os.listdir(basepath):
-                if not entry.endswith("_credential_data.pkl"):
-                    continue
-                username = entry[: -len("_credential_data.pkl")]
-                if not username:
-                    continue
-                path = os.path.join(basepath, entry)
-                try:
-                    with open(path, "rb") as f:
-                        payload = f.read()
-                except Exception:
-                    continue
-                if payload:
-                    yield username, payload
-
-        sources = _read_local_items()
-
-    for username, payload in sources:
         try:
             creds = pickle.loads(payload)
         except Exception:
@@ -293,6 +201,7 @@ def iter_credentials(*, session_id: Optional[str] = None) -> Iterator[Tuple[str,
 
 
 def list_credentials(*, session_id: Optional[str] = None) -> Dict[str, List[Any]]:
+    """List all credentials for a session."""
     entries: Dict[str, List[Any]] = {}
     for username, creds in iter_credentials(session_id=session_id):
         entries[username] = creds

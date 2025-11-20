@@ -2,18 +2,12 @@
 
 from __future__ import annotations
 
-import os
-
 from . import cloud_storage, session_metadata_store, storage
 from .config import app
 
 __all__ = ["warm_up_dependencies"]
 
 _STARTUP_SESSION_ID = "__startup__"
-
-
-def _should_warm_cloud_storage() -> bool:
-    return cloud_storage.gcs_enabled() and bool(os.environ.get("FIDO_SERVER_GCS_BUCKET"))
 
 
 def warm_up_dependencies(*, skip_if_reloader_parent: bool = False) -> None:
@@ -29,12 +23,12 @@ def warm_up_dependencies(*, skip_if_reloader_parent: bool = False) -> None:
         app.logger.exception("Failed to bootstrap FIDO metadata during startup.")
         raise
 
-    if _should_warm_cloud_storage():
-        try:
-            cloud_storage.ensure_ready()
-        except Exception:
-            app.logger.exception("Failed to verify Google Cloud Storage readiness during startup.")
-            raise
+    # Verify local storage is accessible
+    try:
+        cloud_storage.ensure_ready()
+    except Exception:
+        app.logger.exception("Failed to verify local storage readiness during startup.")
+        raise
 
     try:
         session_metadata_store.ensure_session(_STARTUP_SESSION_ID)

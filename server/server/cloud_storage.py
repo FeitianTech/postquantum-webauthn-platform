@@ -1,16 +1,15 @@
-"""Utilities for interacting with Google Cloud Storage."""
+"""Local storage utilities that mirror the GCS blob storage interface.
+
+This module provides the same API as Google Cloud Storage but uses a local
+filesystem directory. This allows seamless migration from GCS by simply
+copying the bucket contents to the local storage folder.
+"""
 from __future__ import annotations
 
-import json
 import os
-import threading
 import time
-from typing import Callable, Iterable, Optional, TypeVar
-
-from google.api_core import exceptions as gcs_exceptions
-from google.auth import exceptions as auth_exceptions
-from google.cloud import storage
-from google.oauth2 import service_account
+from pathlib import Path
+from typing import Iterable, Optional
 
 __all__ = [
     "blob_exists",
@@ -24,142 +23,47 @@ __all__ = [
     "upload_bytes",
 ]
 
-_CLIENT_LOCK = threading.Lock()
-_CLIENT: Optional[storage.Client] = None
-_BUCKET: Optional[storage.Bucket] = None
-
-_RETRYABLE_EXCEPTIONS = (
-    gcs_exceptions.GoogleAPICallError,
-    gcs_exceptions.RetryError,
-    auth_exceptions.RefreshError,
-    OSError,
+# Base path for local storage - this mirrors the GCS bucket structure
+# Users can copy their GCS bucket contents directly into this folder
+_STORAGE_BASE_PATH = os.environ.get(
+    "FIDO_SERVER_STORAGE_PATH",
+    os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "storage")
 )
-_DEFAULT_RETRY_ATTEMPTS = 3
-_DEFAULT_RETRY_BASE_DELAY = 0.5
-
-_T = TypeVar("_T")
-
-
-def _env_flag(name: str) -> Optional[bool]:
-    raw = os.environ.get(name)
-    if raw is None:
-        return None
-    normalised = raw.strip().lower()
-    if normalised in {"", "0", "false", "off", "no"}:
-        return False
-    return True
 
 
 def gcs_enabled() -> bool:
-    """Return ``True`` when GCS access should be used for storage."""
+    """Return ``True`` - local storage is always enabled.
 
-    flag = _env_flag("FIDO_SERVER_GCS_ENABLED")
-    if flag is not None:
-        return flag
-
-    # Default to disabled so that local development does not accidentally
-    # interact with production buckets unless explicitly opted in.
-    return False
-
-
-def _build_client() -> storage.Client:
-    credentials_path = os.environ.get("FIDO_SERVER_GCS_CREDENTIALS_FILE")
-    credentials_json = os.environ.get("FIDO_SERVER_GCS_CREDENTIALS_JSON")
-    project_override = os.environ.get("FIDO_SERVER_GCS_PROJECT")
-
-    if credentials_path:
-        credentials = service_account.Credentials.from_service_account_file(
-            credentials_path
-        )
-        project_id = project_override or credentials.project_id
-        return storage.Client(project=project_id, credentials=credentials)
-
-    if credentials_json:
-        info = json.loads(credentials_json)
-        credentials = service_account.Credentials.from_service_account_info(info)
-        project_id = project_override or info.get("project_id")
-        return storage.Client(project=project_id, credentials=credentials)
-
-    if project_override:
-        return storage.Client(project=project_override)
-
-    return storage.Client()
-
-
-def _ensure_bucket() -> storage.Bucket:
-    global _CLIENT, _BUCKET
-
-    with _CLIENT_LOCK:
-        if not gcs_enabled():
-            raise RuntimeError("Google Cloud Storage access is disabled")
-
-        if _BUCKET is not None:
-            return _BUCKET
-
-        bucket_name = os.environ.get("FIDO_SERVER_GCS_BUCKET")
-        if not bucket_name:
-            raise RuntimeError(
-                "FIDO_SERVER_GCS_BUCKET must be configured to use cloud storage."
-            )
-
-        if _CLIENT is None:
-            _CLIENT = _build_client()
-
-        _BUCKET = _CLIENT.bucket(bucket_name)
-        return _BUCKET
+    This function is kept for API compatibility with code that checks
+    whether storage is available.
+    """
+    return True
 
 
 def ensure_ready(*, max_attempts: int = 3, retry_delay: float = 1.0) -> None:
-    """Validate that the configured storage bucket is reachable."""
-
-    last_error: Optional[Exception] = None
+    """Validate that the storage directory exists and is accessible."""
+    storage_path = Path(_STORAGE_BASE_PATH)
 
     for attempt in range(1, max_attempts + 1):
         try:
-            bucket = _ensure_bucket()
-            iterator = bucket.list_blobs(max_results=1)
-            for _ in iterator:
-                break
+            # Create the storage directory if it doesn't exist
+            storage_path.mkdir(parents=True, exist_ok=True)
+
+            # Verify we can write to it
+            test_file = storage_path / ".write_test"
+            test_file.write_bytes(b"test")
+            test_file.unlink()
             return
-        except Exception as exc:  # pragma: no cover - exercised in integration.
-            last_error = exc
+        except Exception as exc:
             if attempt >= max_attempts:
-                break
+                raise RuntimeError(
+                    f"Unable to access storage directory {_STORAGE_BASE_PATH}: {exc}"
+                ) from exc
             time.sleep(retry_delay)
-
-    if last_error:
-        raise last_error
-
-
-def _with_retry(
-    operation: Callable[[], _T],
-    *,
-    max_attempts: int = _DEFAULT_RETRY_ATTEMPTS,
-    base_delay: float = _DEFAULT_RETRY_BASE_DELAY,
-) -> _T:
-    """Execute ``operation`` with retries for transient failures."""
-
-    last_error: Optional[Exception] = None
-
-    for attempt in range(1, max_attempts + 1):
-        try:
-            return operation()
-        except gcs_exceptions.NotFound:
-            raise
-        except _RETRYABLE_EXCEPTIONS as exc:
-            last_error = exc
-            if attempt >= max_attempts:
-                break
-            delay = base_delay * (2 ** (attempt - 1))
-            time.sleep(delay)
-
-    if last_error is not None:
-        raise last_error
-
-    raise RuntimeError("Retryable operation failed without raising an error")
 
 
 def _normalise_prefix(prefix: Optional[str]) -> str:
+    """Normalize a prefix string for path construction."""
     if not prefix:
         return ""
     cleaned = prefix.strip().strip("/")
@@ -169,6 +73,7 @@ def _normalise_prefix(prefix: Optional[str]) -> str:
 
 
 def build_blob_name(*components: str, prefix: Optional[str] = None) -> str:
+    """Build a blob path from components, matching GCS blob naming."""
     base = _normalise_prefix(prefix)
     safe_components = []
     for component in components:
@@ -181,75 +86,79 @@ def build_blob_name(*components: str, prefix: Optional[str] = None) -> str:
     return f"{base}{path}" if base else path
 
 
+def _resolve_path(blob_name: str) -> Path:
+    """Convert a blob name to a local filesystem path."""
+    # Ensure the blob_name doesn't escape the storage directory
+    normalized = os.path.normpath(blob_name)
+    if normalized.startswith("..") or os.path.isabs(normalized):
+        raise ValueError(f"Invalid blob name: {blob_name}")
+    return Path(_STORAGE_BASE_PATH) / normalized
+
+
 def upload_bytes(blob_name: str, data: bytes, *, content_type: Optional[str] = None) -> None:
-    bucket = _ensure_bucket()
-    blob = bucket.blob(blob_name)
+    """Upload data to local storage, creating directories as needed."""
+    file_path = _resolve_path(blob_name)
 
-    def _upload() -> None:
-        blob.upload_from_string(data, content_type=content_type)
+    # Create parent directories if they don't exist
+    file_path.parent.mkdir(parents=True, exist_ok=True)
 
-    _with_retry(_upload)
+    # Write the data
+    file_path.write_bytes(data)
 
 
 def download_bytes(blob_name: str) -> Optional[bytes]:
-    bucket = _ensure_bucket()
-    blob = bucket.blob(blob_name)
+    """Download data from local storage, returning None if not found."""
+    file_path = _resolve_path(blob_name)
 
-    def _download() -> Optional[bytes]:
-        try:
-            return blob.download_as_bytes()
-        except gcs_exceptions.NotFound:
-            return None
-
-    return _with_retry(_download)
+    try:
+        return file_path.read_bytes()
+    except FileNotFoundError:
+        return None
+    except IsADirectoryError:
+        return None
 
 
 def delete_blob(blob_name: str, *, missing_ok: bool = True) -> None:
-    bucket = _ensure_bucket()
-    blob = bucket.blob(blob_name)
+    """Delete a file from local storage."""
+    file_path = _resolve_path(blob_name)
 
-    def _delete() -> None:
-        try:
-            blob.delete()
-        except gcs_exceptions.NotFound:
-            if not missing_ok:
-                raise
-
-    _with_retry(_delete)
+    try:
+        file_path.unlink()
+    except FileNotFoundError:
+        if not missing_ok:
+            raise
 
 
 def list_blob_names(prefix: str) -> Iterable[str]:
-    bucket = _ensure_bucket()
+    """List all blob names under a given prefix."""
+    storage_path = Path(_STORAGE_BASE_PATH)
+    prefix_path = storage_path / prefix.strip("/") if prefix else storage_path
 
-    def _list() -> Iterable[str]:
-        iterator = bucket.list_blobs(prefix=prefix)
-        return [blob.name for blob in iterator]
+    if not prefix_path.exists():
+        return
 
-    for name in _with_retry(_list):
-        yield name
+    # Walk through all files under the prefix
+    for file_path in prefix_path.rglob("*"):
+        if file_path.is_file():
+            # Return the path relative to storage base
+            relative_path = file_path.relative_to(storage_path)
+            yield str(relative_path)
 
 
 def blob_exists(blob_name: str) -> bool:
-    bucket = _ensure_bucket()
-    blob = bucket.blob(blob_name)
-
-    def _exists() -> bool:
-        return blob.exists()
-
-    return bool(_with_retry(_exists))
+    """Check if a blob exists in local storage."""
+    file_path = _resolve_path(blob_name)
+    return file_path.is_file()
 
 
 def blob_updated_timestamp(blob_name: str) -> Optional[float]:
-    bucket = _ensure_bucket()
-    blob = bucket.blob(blob_name)
+    """Get the last modified timestamp of a blob."""
+    file_path = _resolve_path(blob_name)
 
-    def _resolve_timestamp() -> Optional[float]:
-        try:
-            blob.reload()
-        except gcs_exceptions.NotFound:
-            return None
-        if blob.updated is None:
-            return None
-        return blob.updated.timestamp()
-
-    return _with_retry(_resolve_timestamp)
+    try:
+        stat = file_path.stat()
+        return stat.st_mtime
+    except FileNotFoundError:
+        return None
+    except IsADirectoryError:
+        return None
