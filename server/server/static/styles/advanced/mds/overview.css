@@ -378,6 +378,27 @@
     overflow-y: auto;
     max-height: 220px;
     padding-right: 0.25rem;
+    flex-shrink: 0;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 114, 206, 0.35) rgba(243, 247, 251, 0.9);
+}
+
+.mds-custom-panel__list::-webkit-scrollbar {
+    width: 8px;
+}
+
+.mds-custom-panel__list::-webkit-scrollbar-track {
+    background: rgba(243, 247, 251, 0.9);
+    border-radius: 999px;
+}
+
+.mds-custom-panel__list::-webkit-scrollbar-thumb {
+    background: rgba(0, 114, 206, 0.35);
+    border-radius: 999px;
+}
+
+.mds-custom-panel__list::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 114, 206, 0.55);
 }
 
 .mds-custom-panel__list-item {
@@ -396,7 +417,7 @@
     color: var(--muted-text);
     text-align: center;
     border-style: dashed;
-    background: rgba(243, 247, 251, 0.6);
+    background: transparent;
 }
 
 .mds-custom-panel__item-name {
