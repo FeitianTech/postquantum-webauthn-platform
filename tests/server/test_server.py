@@ -12,7 +12,7 @@ from fido2.webauthn import (
     UserVerificationRequirement,
 )
 
-from .test_ctap2 import _ATT_CRED_DATA, _CRED_ID
+from ..fido2.test_ctap2 import _ATT_CRED_DATA, _CRED_ID
 
 
 class TestPublicKeyCredentialRpEntity(unittest.TestCase):
