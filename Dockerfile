@@ -38,8 +38,9 @@ COPY server ./server
 # Install liboqs-python wheel + dependencies (no build)
 # NOTE: Google Cloud dependencies removed for offline operation
 # The server will use local file storage instead
-RUN pip install --default-timeout=300 --retries=5 --upgrade pip setuptools wheel && \
-    pip install --default-timeout=300 --retries=5 --prefix=/install --no-cache-dir \
+RUN pip install --default-timeout=1000 --retries=10 --upgrade pip setuptools wheel && \
+    pip install --default-timeout=1000 --retries=10 --prefix=/install --no-cache-dir \
+        cbor2 \
         /opt/liboqs/liboqs_python*.whl \
         pqcrypto \
         gunicorn \
