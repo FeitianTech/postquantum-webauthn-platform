@@ -68,13 +68,15 @@ RUN set -eux; \
     apt-get update; \
     apt-get install -y --no-install-recommends \
         libssl3 \
-        curl; \
+        curl \
+        gosu; \
     rm -rf /var/lib/apt/lists/* /root/.cache; \
     groupadd -r webauthn && useradd -r -g webauthn webauthn
 
 COPY prebuilt_liboqs/linux-x86_64 /opt/liboqs
 COPY --from=python-builder /install /usr/local
 COPY server/server /app/server
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 
 RUN set -eux; \
     echo "/opt/liboqs/lib" > /etc/ld.so.conf.d/liboqs.conf; \
@@ -82,13 +84,11 @@ RUN set -eux; \
     ldconfig; \
     rm -rf /usr/local/lib/python3.12/ensurepip; \
     mkdir -p /app/storage /app/server/session-credentials /app/server/static/session-metadata /app/server/instance; \
-    chown -R webauthn:webauthn /app
+    chown -R webauthn:webauthn /app; \
+    chmod +x /usr/local/bin/docker-entrypoint.sh
 
 WORKDIR /app
 ENV PYTHONPATH=/app:${PYTHONPATH}
-
-# Switch to non-root user
-USER webauthn
 
 # Expose the application port
 EXPOSE 8000
@@ -96,6 +96,9 @@ EXPOSE 8000
 # Health check for container orchestration
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:${PORT:-8000}/ || exit 1
+
+# Use entrypoint script to handle permissions and switch to webauthn user
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 
 # Start the server with gunicorn
 CMD ["/bin/sh", "-c", "export LD_PRELOAD=/opt/liboqs/lib/liboqs.so; exec gunicorn --bind 0.0.0.0:${PORT:-8000} --workers ${GUNICORN_WORKERS:-2} --timeout ${GUNICORN_TIMEOUT:-120} --access-logfile - --error-logfile - server.app:app"]
