@@ -193,9 +193,7 @@
     transform: translateY(16px);
     transition: opacity 260ms ease, transform 260ms ease;
     pointer-events: auto;
-    overflow-y: auto;
-    overflow-x: hidden;
-    overscroll-behavior: contain;
+    overflow: hidden;
 }
 
 .mds-custom-panel.is-open .mds-custom-panel__dialog {
