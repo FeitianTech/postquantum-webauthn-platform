@@ -607,6 +607,12 @@ function setCustomMetadataMessage(message, variant = 'info', targetState = mdsSt
         return;
     }
 
+    // Clear any existing auto-dismiss timeout
+    if (targetState?.customPanelMessageTimeout) {
+        clearTimeout(targetState.customPanelMessageTimeout);
+        targetState.customPanelMessageTimeout = null;
+    }
+
     const variants = ['info', 'success', 'error', 'warning'];
     container.classList.remove(
         ...variants.map(name => `mds-custom-panel__messages--${name}`),
@@ -619,6 +625,16 @@ function setCustomMetadataMessage(message, variant = 'info', targetState = mdsSt
         container.textContent = message.trim();
         container.hidden = false;
         container.removeAttribute('hidden');
+
+        // Auto-dismiss message after 10 seconds
+        if (targetState) {
+            targetState.customPanelMessageTimeout = setTimeout(() => {
+                container.textContent = '';
+                container.hidden = true;
+                container.setAttribute('hidden', '');
+                targetState.customPanelMessageTimeout = null;
+            }, 10000);
+        }
     } else {
         container.textContent = '';
         container.hidden = true;
@@ -829,6 +845,17 @@ function openCustomMetadataPanel() {
 function closeCustomMetadataPanel() {
     if (!mdsState?.customPanel) {
         return;
+    }
+
+    // Clear message timeout and hide messages when closing
+    if (mdsState.customPanelMessageTimeout) {
+        clearTimeout(mdsState.customPanelMessageTimeout);
+        mdsState.customPanelMessageTimeout = null;
+    }
+    if (mdsState.customPanelMessages) {
+        mdsState.customPanelMessages.textContent = '';
+        mdsState.customPanelMessages.hidden = true;
+        mdsState.customPanelMessages.setAttribute('hidden', '');
     }
 
     const panel = mdsState.customPanel;
@@ -2102,6 +2129,7 @@ function initializeState(root) {
         customPanelIsOpen: false,
         customPanelReturnFocus: null,
         customPanelScrollCleanup: null,
+        customPanelMessageTimeout: null,
         updateButton,
         updateButtonMode: 'update',
         metadataSnapshotInfo: normaliseSnapshotInfo(initialMdsInfo),
