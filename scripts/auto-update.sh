@@ -22,17 +22,20 @@ cd "$PROJECT_DIR"
 
 NEEDS_REBUILD=false
 
+# Branch to track (deployment branch has docker-compose.yml)
+BRANCH="deployment"
+
 # --- Check for code updates ---
 log "Checking for code updates..."
 
-git fetch origin main
+git fetch origin "$BRANCH"
 
 LOCAL=$(git rev-parse HEAD)
-REMOTE=$(git rev-parse origin/main)
+REMOTE=$(git rev-parse "origin/$BRANCH")
 
 if [ "$LOCAL" != "$REMOTE" ]; then
     log "Code updates found! Local: $LOCAL, Remote: $REMOTE"
-    git reset --hard origin/main
+    git reset --hard "origin/$BRANCH"
     NEEDS_REBUILD=true
 else
     log "No code updates. Current commit: $LOCAL"
