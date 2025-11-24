@@ -49,3 +49,4 @@ storage/*
 server/server/static/blob.jwt
 server/server/static/fido-mds3.verified.json
 server/server/static/fido-mds3.verified.json.meta.json
+scripts/auto-update.sh
