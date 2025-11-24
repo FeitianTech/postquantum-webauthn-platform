@@ -52,8 +52,12 @@ else
     OLD_MDS_HASH=""
 fi
 
-# Run MDS update script
-python3 "$PROJECT_DIR/scripts/update_mds_snapshot.py" >> "$LOG_FILE" 2>&1 || {
+# Run MDS update script via Docker (dependencies are in container)
+docker run --rm \
+    -v "$PROJECT_DIR:/app" \
+    -w /app \
+    $(docker build -q .) \
+    python scripts/update_mds_snapshot.py >> "$LOG_FILE" 2>&1 || {
     log "Warning: MDS update failed, continuing with existing MDS"
 }
 
