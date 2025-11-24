@@ -693,11 +693,33 @@ def _coerce_mldsa_public_key_bytes(value: Any, parameter_set: Optional[str] = No
             except Exception:
                 pass
         normalized, _ = _unwrap_mldsa_subject_public_key(data, parameter_set)
+
+        # Validate that the extracted public key has the expected length
+        if parameter_set:
+            parameter_details = _get_mldsa_parameter_details(parameter_set)
+            expected_length = parameter_details.get("public_key_length")
+            if expected_length and len(normalized) != expected_length:
+                raise ValueError(
+                    f"ML-DSA public key length mismatch for {parameter_set}: "
+                    f"expected {expected_length} bytes, got {len(normalized)} bytes"
+                )
+
         return normalized
 
     if isinstance(value, ByteBuffer):
         data = value.getvalue()
         normalized, _ = _unwrap_mldsa_subject_public_key(data, parameter_set)
+
+        # Validate that the extracted public key has the expected length
+        if parameter_set:
+            parameter_details = _get_mldsa_parameter_details(parameter_set)
+            expected_length = parameter_details.get("public_key_length")
+            if expected_length and len(normalized) != expected_length:
+                raise ValueError(
+                    f"ML-DSA public key length mismatch for {parameter_set}: "
+                    f"expected {expected_length} bytes, got {len(normalized)} bytes"
+                )
+
         return normalized
 
     public_bytes = getattr(value, "public_bytes", None)
@@ -720,6 +742,14 @@ def _coerce_mldsa_public_key_bytes(value: Any, parameter_set: Optional[str] = No
                 except Exception:
                     continue
             normalized, _ = _unwrap_mldsa_subject_public_key(bytes(data), parameter_set)
+
+            # Validate that the extracted public key has the expected length
+            if parameter_set:
+                parameter_details = _get_mldsa_parameter_details(parameter_set)
+                expected_length = parameter_details.get("public_key_length")
+                if expected_length and len(normalized) != expected_length:
+                    continue  # Try next encoding format
+
             return normalized
 
     raise TypeError("Unable to coerce ML-DSA public key into raw bytes")
