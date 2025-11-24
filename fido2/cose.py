@@ -41,6 +41,7 @@ from cryptography.hazmat.primitives.asymmetric import (
     types,
     ed448,
 )
+from cryptography.exceptions import InvalidSignature as _InvalidSignature
 
 from .utils import ByteBuffer, bytes2int, int2bytes
 
@@ -939,7 +940,7 @@ class MLDSA87(CoseKey):
             if not verifier.verify(
                 bytes(message_bytes), bytes(signature_bytes), bytes(public_key_bytes)
             ):
-                raise ValueError("Invalid ML-DSA-87 signature")
+                raise _InvalidSignature()
 
     @classmethod
     def from_cryptography_key(cls, public_key):
@@ -982,7 +983,7 @@ class MLDSA65(CoseKey):
             if not verifier.verify(
                 bytes(message_bytes), bytes(signature_bytes), bytes(public_key_bytes)
             ):
-                raise ValueError("Invalid ML-DSA-65 signature")
+                raise _InvalidSignature()
 
     @classmethod
     def from_cryptography_key(cls, public_key):
@@ -1025,7 +1026,7 @@ class MLDSA44(CoseKey):
             if not verifier.verify(
                 bytes(message_bytes), bytes(signature_bytes), bytes(public_key_bytes)
             ):
-                raise ValueError("Invalid ML-DSA-44 signature")
+                raise _InvalidSignature()
 
     @classmethod
     def from_cryptography_key(cls, public_key):

@@ -207,6 +207,9 @@ def verify_x509_chain(chain: List[bytes]) -> None:
                     child.tbs_certificate_bytes,
                     ec.ECDSA(child.signature_hash_algorithm),
                 )
+            elif pub is None:
+                # Try ML-DSA certificate verification
+                _verify_mldsa_certificate_signature(child_der, cert_der)
             else:
                 raise ValueError("Unsupported signature key type")
         except _InvalidSignature:
