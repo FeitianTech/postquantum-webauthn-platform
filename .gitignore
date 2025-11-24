@@ -45,9 +45,5 @@ storage/*
 .env
 .env.*
 
-# FIDO MDS files (each server maintains its own local copy)
-server/server/static/blob.jwt
-server/server/static/fido-mds3.verified.json
-server/server/static/fido-mds3.verified.json.meta.json
 scripts/auto-update.sh
 logs/
