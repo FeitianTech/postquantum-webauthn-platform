@@ -183,6 +183,79 @@ def _find_mldsa_der_candidate(
     return None
 
 
+def _unwrap_mldsa_signature(
+    signature: bytes, parameter_set: Optional[str] = None
+) -> tuple[bytes, Optional[bytes]]:
+    """Return raw ML-DSA signature bytes, stripping DER wrappers when present."""
+
+    if not signature:
+        return signature, None
+
+    original = signature
+    view = memoryview(signature)
+
+    # Get expected signature length
+    expected_length: Optional[int] = None
+    if parameter_set:
+        details = _get_mldsa_parameter_details(parameter_set)
+        expected_length = details.get("signature_length")
+
+    # If already correct length, return as-is
+    if expected_length and len(signature) == expected_length:
+        return signature, None
+
+    try:
+        if view[0] == 0x04:  # OCTET STRING
+            length, idx = _parse_der_length(view, 1)
+            end = idx + length
+            if end == len(view):
+                content = bytes(view[idx:end])
+                # If content matches expected length, it's the raw signature
+                if expected_length and len(content) == expected_length:
+                    return content, original
+                # Otherwise, try recursive unwrapping
+                unwrapped, _ = _unwrap_mldsa_signature(content, parameter_set)
+                return unwrapped, original
+        elif view[0] == 0x30:  # SEQUENCE
+            idx = 1
+            seq_length, idx = _parse_der_length(view, idx)
+            seq_end = idx + seq_length
+            if seq_end == len(view):
+                while idx < seq_end:
+                    tag = view[idx]
+                    idx += 1
+                    element_length, idx = _parse_der_length(view, idx)
+                    element_end = idx + element_length
+                    if element_end > seq_end:
+                        break
+                    if tag == 0x04:  # OCTET STRING inside SEQUENCE
+                        candidate = bytes(view[idx:element_end])
+                        unwrapped, _ = _unwrap_mldsa_signature(
+                            candidate, parameter_set
+                        )
+                        return unwrapped, original
+                    idx = element_end
+        elif view[0] == 0x03 and len(view) > 1:  # BIT STRING
+            length, idx = _parse_der_length(view, 1)
+            end = idx + length
+            if end == len(view) and view[idx] == 0x00:  # No unused bits
+                content = bytes(view[idx + 1:end])
+                if expected_length and len(content) == expected_length:
+                    return content, original
+                unwrapped, _ = _unwrap_mldsa_signature(content, parameter_set)
+                return unwrapped, original
+    except Exception:
+        pass
+
+    # Try to find the signature using DER search if length doesn't match
+    if expected_length and len(signature) != expected_length:
+        candidate = _find_mldsa_der_candidate(view, 0, len(view), expected_length)
+        if candidate is not None:
+            return candidate, original
+
+    return signature, None
+
+
 def _unwrap_mldsa_subject_public_key(
     payload: bytes, parameter_set: Optional[str] = None
 ) -> tuple[bytes, Optional[bytes]]:
@@ -1049,7 +1122,7 @@ class MLDSA87(CoseKey):
             if isinstance(message, (bytes, bytearray, memoryview))
             else bytes(message)
         )
-        signature_bytes = (
+        raw_signature_bytes = (
             signature
             if isinstance(signature, (bytes, bytearray, memoryview))
             else bytes(signature)
@@ -1058,6 +1131,11 @@ class MLDSA87(CoseKey):
         # Store raw values before coercion
         raw_public_key = public_key
         raw_signature = signature
+
+        # Unwrap signature if DER-wrapped
+        signature_bytes, wrapped_sig = _unwrap_mldsa_signature(raw_signature_bytes, parameter_set)
+        if wrapped_sig is not None:
+            print(f"[MLDSA-87] Signature was unwrapped: {len(wrapped_sig)} -> {len(signature_bytes)} bytes")
 
         public_key_bytes = _coerce_mldsa_public_key_bytes(public_key, parameter_set)
 
@@ -1110,7 +1188,7 @@ class MLDSA65(CoseKey):
             if isinstance(message, (bytes, bytearray, memoryview))
             else bytes(message)
         )
-        signature_bytes = (
+        raw_signature_bytes = (
             signature
             if isinstance(signature, (bytes, bytearray, memoryview))
             else bytes(signature)
@@ -1119,6 +1197,11 @@ class MLDSA65(CoseKey):
         # Store raw values before coercion
         raw_public_key = public_key
         raw_signature = signature
+
+        # Unwrap signature if DER-wrapped
+        signature_bytes, wrapped_sig = _unwrap_mldsa_signature(raw_signature_bytes, parameter_set)
+        if wrapped_sig is not None:
+            print(f"[MLDSA-65] Signature was unwrapped: {len(wrapped_sig)} -> {len(signature_bytes)} bytes")
 
         public_key_bytes = _coerce_mldsa_public_key_bytes(public_key, parameter_set)
 
@@ -1170,7 +1253,7 @@ class MLDSA44(CoseKey):
             if isinstance(message, (bytes, bytearray, memoryview))
             else bytes(message)
         )
-        signature_bytes = (
+        raw_signature_bytes = (
             signature
             if isinstance(signature, (bytes, bytearray, memoryview))
             else bytes(signature)
@@ -1179,6 +1262,11 @@ class MLDSA44(CoseKey):
         # Store raw values before coercion
         raw_public_key = public_key
         raw_signature = signature
+
+        # Unwrap signature if DER-wrapped
+        signature_bytes, wrapped_sig = _unwrap_mldsa_signature(raw_signature_bytes, parameter_set)
+        if wrapped_sig is not None:
+            print(f"[MLDSA-44] Signature was unwrapped: {len(wrapped_sig)} -> {len(signature_bytes)} bytes")
 
         public_key_bytes = _coerce_mldsa_public_key_bytes(public_key, parameter_set)
 
