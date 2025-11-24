@@ -198,8 +198,10 @@ def _unwrap_mldsa_subject_public_key(
             length, idx = _parse_der_length(view, 1)
             end = idx + length
             if end == len(view):
-                payload = bytes(view[idx:end])
-                return payload, original
+                content = bytes(view[idx:end])
+                # Recursively unwrap in case of nested OCTET STRINGs
+                unwrapped, _ = _unwrap_mldsa_subject_public_key(content, parameter_set)
+                return unwrapped, original
         elif view[0] == 0x30:  # SEQUENCE
             idx = 1
             seq_length, idx = _parse_der_length(view, idx)
