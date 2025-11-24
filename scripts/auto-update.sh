@@ -53,11 +53,14 @@ else
 fi
 
 # Run MDS update script via Docker (dependencies are in container)
+# Use --user to run as host user for write permissions
 docker run --rm \
+    --user "$(id -u):$(id -g)" \
     -v "$PROJECT_DIR:/app" \
     -w /app \
+    --entrypoint python \
     $(docker build -q .) \
-    python scripts/update_mds_snapshot.py >> "$LOG_FILE" 2>&1 || {
+    scripts/update_mds_snapshot.py >> "$LOG_FILE" 2>&1 || {
     log "Warning: MDS update failed, continuing with existing MDS"
 }
 
