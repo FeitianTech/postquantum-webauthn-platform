@@ -200,7 +200,18 @@ def _unwrap_mldsa_subject_public_key(
             end = idx + length
             if end == len(view):
                 content = bytes(view[idx:end])
-                # Recursively unwrap in case of nested OCTET STRINGs
+                # Check if we should recursively unwrap or if this is already the raw key
+                # Get expected length to validate
+                expected_length: Optional[int] = None
+                if parameter_set:
+                    details = _get_mldsa_parameter_details(parameter_set)
+                    expected_length = details.get("public_key_length")
+
+                # If content matches expected length, it's the raw key
+                if expected_length and len(content) == expected_length:
+                    return content, original
+
+                # Otherwise, try recursive unwrapping
                 unwrapped, _ = _unwrap_mldsa_subject_public_key(content, parameter_set)
                 return unwrapped, original
         elif view[0] == 0x30:  # SEQUENCE
