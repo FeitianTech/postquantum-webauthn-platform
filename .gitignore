@@ -28,6 +28,11 @@ htmlcov/
 # Session-scoped metadata uploads
 server/server/static/session-metadata/
 
+# FIDO MDS files (each server maintains its own local copy)
+server/server/static/blob.jwt
+server/server/static/fido-mds3.verified.json
+server/server/static/fido-mds3.verified.json.meta.json
+
 # Advanced credential artifact cache
 server/server/static/credential-artifacts/
 instance/

@@ -1,7 +1,10 @@
 #!/bin/bash
 
 # Auto-update script for postquantum-webauthn-platform
-# This script checks for updates from the remote repository and redeploys if there are changes
+# This script:
+# 1. Checks for code updates from remote repository
+# 2. Updates FIDO MDS locally
+# 3. Redeploys if there are any changes
 
 set -e
 
@@ -17,33 +20,61 @@ log() {
 
 cd "$PROJECT_DIR"
 
-log "Checking for updates..."
+NEEDS_REBUILD=false
 
-# Fetch latest changes
+# --- Check for code updates ---
+log "Checking for code updates..."
+
 git fetch origin main
 
-# Check if there are new commits
 LOCAL=$(git rev-parse HEAD)
 REMOTE=$(git rev-parse origin/main)
 
-if [ "$LOCAL" = "$REMOTE" ]; then
-    log "No updates available. Current commit: $LOCAL"
-    exit 0
+if [ "$LOCAL" != "$REMOTE" ]; then
+    log "Code updates found! Local: $LOCAL, Remote: $REMOTE"
+    git reset --hard origin/main
+    NEEDS_REBUILD=true
+else
+    log "No code updates. Current commit: $LOCAL"
 fi
 
-log "Updates found! Local: $LOCAL, Remote: $REMOTE"
+# --- Update FIDO MDS locally ---
+log "Checking for FIDO MDS updates..."
 
-# Pull the latest changes
-git pull origin main
+# Store hash of current MDS file (if exists)
+MDS_FILE="$PROJECT_DIR/server/server/static/fido-mds3.verified.json"
+if [ -f "$MDS_FILE" ]; then
+    OLD_MDS_HASH=$(md5sum "$MDS_FILE" | cut -d' ' -f1)
+else
+    OLD_MDS_HASH=""
+fi
 
-log "Rebuilding and redeploying Docker containers..."
+# Run MDS update script
+python3 "$PROJECT_DIR/scripts/update_mds_snapshot.py" >> "$LOG_FILE" 2>&1 || {
+    log "Warning: MDS update failed, continuing with existing MDS"
+}
 
-# Rebuild and restart containers
-docker compose up --build -d
+# Check if MDS was updated
+if [ -f "$MDS_FILE" ]; then
+    NEW_MDS_HASH=$(md5sum "$MDS_FILE" | cut -d' ' -f1)
+    if [ "$OLD_MDS_HASH" != "$NEW_MDS_HASH" ]; then
+        log "FIDO MDS updated!"
+        NEEDS_REBUILD=true
+    else
+        log "FIDO MDS is already up to date"
+    fi
+fi
 
-log "Deployment completed successfully!"
+# --- Rebuild if needed ---
+if [ "$NEEDS_REBUILD" = true ]; then
+    log "Rebuilding and redeploying Docker containers..."
+    docker compose up --build -d
+    log "Deployment completed successfully!"
 
-# Optional: Clean up old Docker images
-docker image prune -f >> "$LOG_FILE" 2>&1
+    # Clean up old Docker images
+    docker image prune -f >> "$LOG_FILE" 2>&1
+else
+    log "No changes detected, skipping rebuild"
+fi
 
 log "Auto-update finished."
