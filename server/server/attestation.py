@@ -824,7 +824,7 @@ def _attempt_pqc_attestation_signature_validation(
             return outcome
 
         try:
-            public_key = CoseKey.parse(credential_data.public_key)
+            public_key = cose_cls(credential_data.public_key)
         except Exception as exc:
             outcome["attempted"] = True
             outcome["error"] = f"pqc_attestation_public_key_parse_error: {exc}"
