@@ -5,6 +5,20 @@
 # 1. Checks for code updates from remote repository
 # 2. Updates FIDO MDS locally
 # 3. Redeploys if there are any changes
+#
+# CRON SETUP - Run daily at 9:00 UTC (2-5 AM across US time zones):
+# Add to crontab with: crontab -e
+#
+#   0 9 * * * /path/to/postquantum-webauthn-platform/scripts/auto-update.sh
+#
+# Or install system-wide:
+#   sudo cp /path/to/scripts/auto-update.sh /etc/cron.daily/
+#
+# Time mapping (9:00 UTC):
+#   Eastern:  4 AM EST / 5 AM EDT
+#   Central:  3 AM CST / 4 AM CDT
+#   Mountain: 2 AM MST / 3 AM MDT
+#   Pacific:  1 AM PST / 2 AM PDT
 
 set -e
 
