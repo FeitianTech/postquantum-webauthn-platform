@@ -828,6 +828,115 @@ class CoseKey(dict):
         print("Public Key (hex):", binascii.hexlify(bytes(public_key_bytes)).decode())
         print("===================================")
 
+    def _log_mldsa_detailed_debug(
+        self,
+        parameter_set: str,
+        raw_signature: Any,
+        signature_bytes: bytes,
+        raw_public_key: Any,
+        public_key_bytes: bytes,
+        message_bytes: bytes,
+    ) -> None:
+        """Log detailed MLDSA signature verification debug information."""
+
+        parameter_details = _get_mldsa_parameter_details(parameter_set)
+        expected_sig_len = parameter_details.get("signature_length")
+        expected_pk_len = parameter_details.get("public_key_length")
+
+        print(f"\n{'='*60}")
+        print(f"=== MLDSA DETAILED SIGNATURE DEBUG: {parameter_set} ===")
+        print(f"{'='*60}")
+
+        # Log signature information
+        print(f"\n--- SIGNATURE ANALYSIS ---")
+        print(f"Expected signature length: {expected_sig_len} bytes")
+        print(f"Actual signature length: {len(signature_bytes)} bytes")
+
+        # Identify signature issues
+        if expected_sig_len and len(signature_bytes) != expected_sig_len:
+            print(f"[ISSUE] Signature length mismatch! Expected {expected_sig_len}, got {len(signature_bytes)}")
+        else:
+            print(f"[OK] Signature length matches expected value")
+
+        # Log raw signature info
+        raw_sig_bytes = (
+            raw_signature
+            if isinstance(raw_signature, (bytes, bytearray, memoryview))
+            else bytes(raw_signature) if hasattr(raw_signature, '__bytes__') else None
+        )
+        if raw_sig_bytes is not None:
+            print(f"\nRaw signature input length: {len(raw_sig_bytes)} bytes")
+            print(f"Raw signature (first 64 bytes hex): {binascii.hexlify(raw_sig_bytes[:64]).decode()}...")
+            print(f"Raw signature (last 64 bytes hex): ...{binascii.hexlify(raw_sig_bytes[-64:]).decode()}")
+            if len(raw_sig_bytes) != len(signature_bytes):
+                print(f"[NOTE] Signature was transformed: {len(raw_sig_bytes)} -> {len(signature_bytes)} bytes")
+
+        print(f"\nFinal signature (first 64 bytes hex): {binascii.hexlify(signature_bytes[:64]).decode()}...")
+        print(f"Final signature (last 64 bytes hex): ...{binascii.hexlify(signature_bytes[-64:]).decode()}")
+        print(f"Full signature (hex): {binascii.hexlify(signature_bytes).decode()}")
+
+        # Log public key information
+        print(f"\n--- PUBLIC KEY ANALYSIS ---")
+        print(f"Expected public key length: {expected_pk_len} bytes")
+        print(f"Actual public key length: {len(public_key_bytes)} bytes")
+
+        # Identify public key issues
+        if expected_pk_len and len(public_key_bytes) != expected_pk_len:
+            print(f"[ISSUE] Public key length mismatch! Expected {expected_pk_len}, got {len(public_key_bytes)}")
+        else:
+            print(f"[OK] Public key length matches expected value")
+
+        # Log raw public key info
+        raw_pk_bytes = None
+        if isinstance(raw_public_key, (bytes, bytearray, memoryview)):
+            raw_pk_bytes = bytes(raw_public_key)
+        elif hasattr(raw_public_key, 'getvalue'):
+            raw_pk_bytes = raw_public_key.getvalue()
+        elif hasattr(raw_public_key, '__bytes__'):
+            raw_pk_bytes = bytes(raw_public_key)
+
+        if raw_pk_bytes is not None:
+            print(f"\nRaw public key input length: {len(raw_pk_bytes)} bytes")
+            print(f"Raw public key (first 64 bytes hex): {binascii.hexlify(raw_pk_bytes[:64]).decode()}...")
+            if len(raw_pk_bytes) != len(public_key_bytes):
+                print(f"[NOTE] Public key was transformed/unwrapped: {len(raw_pk_bytes)} -> {len(public_key_bytes)} bytes")
+
+        print(f"\nFinal public key (first 64 bytes hex): {binascii.hexlify(public_key_bytes[:64]).decode()}...")
+        print(f"Final public key (last 64 bytes hex): ...{binascii.hexlify(public_key_bytes[-64:]).decode()}")
+        print(f"Full public key (hex): {binascii.hexlify(public_key_bytes).decode()}")
+
+        # Log message information
+        print(f"\n--- MESSAGE ANALYSIS ---")
+        print(f"Message length: {len(message_bytes)} bytes")
+        print(f"Message (hex): {binascii.hexlify(message_bytes).decode()}")
+
+        # Check for common issues
+        print(f"\n--- POTENTIAL ISSUES CHECK ---")
+
+        # Check for DER wrapping remnants in signature
+        if signature_bytes and signature_bytes[0] in (0x30, 0x04, 0x03):
+            print(f"[WARNING] Signature starts with DER tag 0x{signature_bytes[0]:02x} - may still be DER-wrapped")
+
+        # Check for null bytes
+        null_count_sig = signature_bytes.count(b'\x00'[0])
+        null_count_pk = public_key_bytes.count(b'\x00'[0])
+        if null_count_sig > len(signature_bytes) * 0.1:
+            print(f"[WARNING] High null byte ratio in signature: {null_count_sig}/{len(signature_bytes)}")
+        if null_count_pk > len(public_key_bytes) * 0.1:
+            print(f"[WARNING] High null byte ratio in public key: {null_count_pk}/{len(public_key_bytes)}")
+
+        # Validate signature structure
+        if len(signature_bytes) == 0:
+            print(f"[ERROR] Empty signature!")
+        if len(public_key_bytes) == 0:
+            print(f"[ERROR] Empty public key!")
+        if len(message_bytes) == 0:
+            print(f"[WARNING] Empty message!")
+
+        print(f"\n{'='*60}")
+        print(f"=== END MLDSA DETAILED DEBUG ===")
+        print(f"{'='*60}\n")
+
     @classmethod
     def from_cryptography_key(
         cls: Type[T_CoseKey], public_key: types.PublicKeyTypes
@@ -927,10 +1036,12 @@ class MLDSA87(CoseKey):
 
     def verify(self, message, signature):
         if self[1] != 7:
+            print(f"[MLDSA-87 ERROR] Unsupported parameter: self[1]={self[1]}, expected 7")
             raise ValueError("Unsupported ML-DSA-87 Param")
         oqs_module = _require_oqs()
         public_key = self.get(-1)
         if public_key is None:
+            print(f"[MLDSA-87 ERROR] Public key is None - missing from COSE key structure")
             raise ValueError("Missing ML-DSA-87 public key")
         parameter_set = "ML-DSA-87"
         message_bytes = (
@@ -943,14 +1054,30 @@ class MLDSA87(CoseKey):
             if isinstance(signature, (bytes, bytearray, memoryview))
             else bytes(signature)
         )
+
+        # Store raw values before coercion
+        raw_public_key = public_key
+        raw_signature = signature
+
         public_key_bytes = _coerce_mldsa_public_key_bytes(public_key, parameter_set)
+
+        # Detailed logging
+        self._log_mldsa_detailed_debug(
+            parameter_set, raw_signature, signature_bytes, raw_public_key, public_key_bytes, message_bytes
+        )
         self._log_signature_debug(
             parameter_set, message_bytes, signature_bytes, public_key_bytes
         )
+
         with oqs_module.Signature("ML-DSA-87") as verifier:
-            if not verifier.verify(
+            result = verifier.verify(
                 bytes(message_bytes), bytes(signature_bytes), bytes(public_key_bytes)
-            ):
+            )
+            if result:
+                print(f"[MLDSA-87] Signature verification SUCCEEDED")
+            else:
+                print(f"[MLDSA-87 ERROR] Signature verification FAILED")
+                print(f"[MLDSA-87] OQS verifier returned: {result}")
                 raise _InvalidSignature()
 
     @classmethod
@@ -970,10 +1097,12 @@ class MLDSA65(CoseKey):
 
     def verify(self, message, signature):
         if self[1] != 7:
+            print(f"[MLDSA-65 ERROR] Unsupported parameter: self[1]={self[1]}, expected 7")
             raise ValueError("Unsupported ML-DSA-65 Param")
         oqs_module = _require_oqs()
         public_key = self.get(-1)
         if public_key is None:
+            print(f"[MLDSA-65 ERROR] Public key is None - missing from COSE key structure")
             raise ValueError("Missing ML-DSA-65 public key")
         parameter_set = "ML-DSA-65"
         message_bytes = (
@@ -986,14 +1115,30 @@ class MLDSA65(CoseKey):
             if isinstance(signature, (bytes, bytearray, memoryview))
             else bytes(signature)
         )
+
+        # Store raw values before coercion
+        raw_public_key = public_key
+        raw_signature = signature
+
         public_key_bytes = _coerce_mldsa_public_key_bytes(public_key, parameter_set)
+
+        # Detailed logging
+        self._log_mldsa_detailed_debug(
+            parameter_set, raw_signature, signature_bytes, raw_public_key, public_key_bytes, message_bytes
+        )
         self._log_signature_debug(
             parameter_set, message_bytes, signature_bytes, public_key_bytes
         )
+
         with oqs_module.Signature("ML-DSA-65") as verifier:
-            if not verifier.verify(
+            result = verifier.verify(
                 bytes(message_bytes), bytes(signature_bytes), bytes(public_key_bytes)
-            ):
+            )
+            if result:
+                print(f"[MLDSA-65] Signature verification SUCCEEDED")
+            else:
+                print(f"[MLDSA-65 ERROR] Signature verification FAILED")
+                print(f"[MLDSA-65] OQS verifier returned: {result}")
                 raise _InvalidSignature()
 
     @classmethod
@@ -1012,10 +1157,12 @@ class MLDSA44(CoseKey):
 
     def verify(self, message, signature):
         if self[1] != 7:
+            print(f"[MLDSA-44 ERROR] Unsupported parameter: self[1]={self[1]}, expected 7")
             raise ValueError("Unsupported ML-DSA-44 Param")
         oqs_module = _require_oqs()
         public_key = self.get(-1)
         if public_key is None:
+            print(f"[MLDSA-44 ERROR] Public key is None - missing from COSE key structure")
             raise ValueError("Missing ML-DSA-44 public key")
         parameter_set = "ML-DSA-44"
         message_bytes = (
@@ -1028,15 +1175,30 @@ class MLDSA44(CoseKey):
             if isinstance(signature, (bytes, bytearray, memoryview))
             else bytes(signature)
         )
+
+        # Store raw values before coercion
+        raw_public_key = public_key
+        raw_signature = signature
+
         public_key_bytes = _coerce_mldsa_public_key_bytes(public_key, parameter_set)
+
+        # Detailed logging
+        self._log_mldsa_detailed_debug(
+            parameter_set, raw_signature, signature_bytes, raw_public_key, public_key_bytes, message_bytes
+        )
         self._log_signature_debug(
             parameter_set, message_bytes, signature_bytes, public_key_bytes
         )
 
         with oqs_module.Signature("ML-DSA-44") as verifier:
-            if not verifier.verify(
+            result = verifier.verify(
                 bytes(message_bytes), bytes(signature_bytes), bytes(public_key_bytes)
-            ):
+            )
+            if result:
+                print(f"[MLDSA-44] Signature verification SUCCEEDED")
+            else:
+                print(f"[MLDSA-44 ERROR] Signature verification FAILED")
+                print(f"[MLDSA-44] OQS verifier returned: {result}")
                 raise _InvalidSignature()
 
     @classmethod

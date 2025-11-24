@@ -121,15 +121,24 @@ def _verify_mldsa_certificate_signature(
     child_der: bytes, issuer_der: bytes
 ) -> None:
     """Verify an ML-DSA signed certificate using liboqs."""
+    import binascii
+
+    print(f"\n{'='*60}")
+    print(f"=== MLDSA CERTIFICATE SIGNATURE VERIFICATION DEBUG ===")
+    print(f"{'='*60}")
 
     try:
         child_info = extract_certificate_signature_info(child_der)
     except Exception as exc:  # pragma: no cover - defensive guard
+        print(f"[CERT ERROR] Unable to parse ML-DSA certificate: {exc}")
         raise InvalidSignature(f"Unable to parse ML-DSA certificate: {exc}") from exc
 
     signature_oid = child_info.get("signature_algorithm_oid")
+    print(f"Signature Algorithm OID: {signature_oid}")
+
     mldsa_details = describe_mldsa_oid(signature_oid)
     if not mldsa_details:
+        print(f"[CERT ERROR] Unsupported signature algorithm OID: {signature_oid}")
         raise InvalidSignature(
             f"Unsupported signature algorithm OID for ML-DSA verification: {signature_oid}"
         )
@@ -138,22 +147,28 @@ def _verify_mldsa_certificate_signature(
         "ml_dsa_parameter_set"
     )
     if not parameter_set:
+        print(f"[CERT ERROR] Unable to determine ML-DSA parameter set")
         raise InvalidSignature(
             "Unable to determine ML-DSA parameter set for certificate signature"
         )
 
+    print(f"Parameter Set: {parameter_set}")
+
     try:
         info = extract_certificate_public_key_info(issuer_der)
     except Exception as exc:  # pragma: no cover - defensive guard
+        print(f"[CERT ERROR] Unable to parse issuer public key: {exc}")
         raise InvalidSignature(f"Unable to parse issuer public key: {exc}") from exc
 
     public_key = info.get("subject_public_key")
     if not isinstance(public_key, (bytes, bytearray, memoryview)):
+        print(f"[CERT ERROR] Issuer subject public key missing from certificate")
         raise InvalidSignature("Issuer subject public key missing from certificate")
 
     try:  # pragma: no cover - optional dependency
         import oqs  # type: ignore
     except (ImportError, SystemExit) as exc:  # pragma: no cover - handled by caller
+        print(f"[CERT ERROR] ML-DSA certificate verification requires the 'oqs' package")
         raise InvalidSignature(
             "ML-DSA certificate verification requires the 'oqs' package"
         ) from exc
@@ -161,17 +176,76 @@ def _verify_mldsa_certificate_signature(
     message = bytes(child_info.get("tbs_certificate") or b"")
     signature = bytes(child_info.get("signature") or b"")
     if not message or not signature:
+        print(f"[CERT ERROR] Unable to extract ML-DSA certificate signature payload")
         raise InvalidSignature("Unable to extract ML-DSA certificate signature payload")
     public_key_bytes = bytes(public_key)
 
+    # Get expected lengths
+    expected_lengths = {
+        "ML-DSA-44": {"signature": 2420, "public_key": 1312},
+        "ML-DSA-65": {"signature": 3293, "public_key": 1952},
+        "ML-DSA-87": {"signature": 4595, "public_key": 2592},
+    }
+    expected = expected_lengths.get(parameter_set, {})
+
+    # Log signature details
+    print(f"\n--- CERTIFICATE SIGNATURE ANALYSIS ---")
+    print(f"Expected signature length: {expected.get('signature')} bytes")
+    print(f"Actual signature length: {len(signature)} bytes")
+
+    if expected.get('signature') and len(signature) != expected.get('signature'):
+        print(f"[CERT ISSUE] Signature length mismatch! Expected {expected.get('signature')}, got {len(signature)}")
+    else:
+        print(f"[OK] Signature length matches expected value")
+
+    print(f"\nSignature (first 64 bytes hex): {binascii.hexlify(signature[:64]).decode()}...")
+    print(f"Signature (last 64 bytes hex): ...{binascii.hexlify(signature[-64:]).decode()}")
+    print(f"Full signature (hex): {binascii.hexlify(signature).decode()}")
+
+    # Log public key details
+    print(f"\n--- CERTIFICATE PUBLIC KEY ANALYSIS ---")
+    print(f"Expected public key length: {expected.get('public_key')} bytes")
+    print(f"Actual public key length: {len(public_key_bytes)} bytes")
+
+    if expected.get('public_key') and len(public_key_bytes) != expected.get('public_key'):
+        print(f"[CERT ISSUE] Public key length mismatch! Expected {expected.get('public_key')}, got {len(public_key_bytes)}")
+    else:
+        print(f"[OK] Public key length matches expected value")
+
+    print(f"\nPublic key (first 64 bytes hex): {binascii.hexlify(public_key_bytes[:64]).decode()}...")
+    print(f"Public key (last 64 bytes hex): ...{binascii.hexlify(public_key_bytes[-64:]).decode()}")
+    print(f"Full public key (hex): {binascii.hexlify(public_key_bytes).decode()}")
+
+    # Log message details
+    print(f"\n--- CERTIFICATE MESSAGE (TBS) ANALYSIS ---")
+    print(f"TBS Certificate length: {len(message)} bytes")
+    print(f"TBS Certificate (first 64 bytes hex): {binascii.hexlify(message[:64]).decode()}...")
+
+    # Check for potential issues
+    print(f"\n--- POTENTIAL ISSUES CHECK ---")
+    if signature and signature[0] in (0x30, 0x04, 0x03):
+        print(f"[WARNING] Signature starts with DER tag 0x{signature[0]:02x} - may still be DER-wrapped")
+    if public_key_bytes and public_key_bytes[0] in (0x30, 0x04, 0x03):
+        print(f"[WARNING] Public key starts with DER tag 0x{public_key_bytes[0]:02x} - may still be DER-wrapped")
+
     try:  # pragma: no cover - depends on oqs runtime availability
         with oqs.Signature(parameter_set) as verifier:  # type: ignore[attr-defined]
-            if not verifier.verify(message, signature, public_key_bytes):
+            result = verifier.verify(message, signature, public_key_bytes)
+            if result:
+                print(f"\n[CERT SUCCESS] Certificate signature verification SUCCEEDED")
+            else:
+                print(f"\n[CERT ERROR] Certificate signature verification FAILED")
+                print(f"OQS verifier returned: {result}")
                 raise InvalidSignature("ML-DSA certificate signature verification failed")
     except InvalidSignature:
         raise
     except Exception as exc:  # pragma: no cover - defensive guard
+        print(f"[CERT ERROR] ML-DSA certificate verification error: {exc}")
         raise InvalidSignature(f"ML-DSA certificate verification error: {exc}") from exc
+
+    print(f"\n{'='*60}")
+    print(f"=== END CERTIFICATE SIGNATURE DEBUG ===")
+    print(f"{'='*60}\n")
 
 
 def verify_x509_chain(chain: List[bytes]) -> None:
