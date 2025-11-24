@@ -830,11 +830,6 @@ def _attempt_pqc_attestation_signature_validation(
             outcome["error"] = f"pqc_attestation_public_key_parse_error: {exc}"
             return outcome
 
-        if getattr(public_key, "ALGORITHM", None) != algorithm:
-            outcome["attempted"] = True
-            outcome["error"] = "pqc_attestation_algorithm_mismatch"
-            return outcome
-
     message = bytes(attestation_object.auth_data) + client_data_hash
 
     outcome["attempted"] = True
