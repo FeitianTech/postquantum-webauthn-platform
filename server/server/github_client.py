@@ -39,13 +39,11 @@ def is_logging_enabled() -> bool:
     if explicit is not None:
         return _is_truthy(explicit)
 
-    # Auto-enable on common hosted environments where local testing is unlikely.
-    if os.environ.get("RENDER") or os.environ.get("RENDER_SERVICE_ID"):
-        return True
-    if os.environ.get("K_SERVICE") or os.environ.get("GAE_SERVICE"):
-        return True
-
-    return False
+    # Enable logging by default for all deployments.
+    # This covers hosted environments (Render, Google Cloud) as well as local deployments
+    # (e.g., webauthndev.ftsafe.com). Users can explicitly disable logging by setting
+    # ENABLE_GITHUB_LOGGING=false if needed.
+    return True
 
 
 def _token() -> str:
