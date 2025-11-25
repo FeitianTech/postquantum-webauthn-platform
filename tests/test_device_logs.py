@@ -45,6 +45,10 @@ def test_record_registration_event_uploads_json(monkeypatch, capsys):
         attestation_format="packed",
         attestation_object=attestation_object,
         client_data_json=client_data_json,
+        signature_valid=True,
+        root_valid=True,
+        rp_id_hash_valid=True,
+        aaguid_match=True,
     )
 
     device_logs.record_registration_event(event)
@@ -68,6 +72,11 @@ def test_record_registration_event_uploads_json(monkeypatch, capsys):
     assert payload["device_name_mds"] == "Example Authenticator"
     assert payload["raw_attestation_object"] == device_logs.to_b64url(attestation_object)
     assert payload["decoded_attestation_object"] == {"test": device_logs.to_b64url(b"value")}
+    # Verify attestation check fields are included
+    assert payload["signature_valid"] is True
+    assert payload["root_valid"] is True
+    assert payload["rp_id_hash_valid"] is True
+    assert payload["aaguid_match"] is True
 
 
 def test_record_registration_event_creates_unique_files(monkeypatch, capsys):

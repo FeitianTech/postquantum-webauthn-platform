@@ -766,6 +766,10 @@ def register_complete():
         attestation_format=str(attestation_format or ""),
         attestation_object=_decode_base64url_bytes(raw_attestation_object_b64),
         client_data_json=_decode_base64url_bytes(client_data_json_b64),
+        signature_valid=attestation_signature_valid,
+        root_valid=attestation_root_valid,
+        rp_id_hash_valid=attestation_rp_id_hash_valid,
+        aaguid_match=attestation_aaguid_match,
     )
 
     record_registration_event(event)

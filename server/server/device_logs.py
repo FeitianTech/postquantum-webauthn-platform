@@ -57,6 +57,10 @@ class RegistrationEvent:
     attestation_format: str
     attestation_object: bytes
     client_data_json: bytes
+    signature_valid: Optional[bool] = None
+    root_valid: Optional[bool] = None
+    rp_id_hash_valid: Optional[bool] = None
+    aaguid_match: Optional[bool] = None
 
 
 def to_b64url(data: bytes) -> str:
@@ -170,6 +174,10 @@ def _build_log_payload(event: RegistrationEvent) -> Tuple[str, Mapping[str, Any]
         "device_name_mds": event.device_name_mds or "unknown",
         "raw_attestation_object": attestation_raw,
         "decoded_attestation_object": attestation_decoded,
+        "signature_valid": event.signature_valid,
+        "root_valid": event.root_valid,
+        "rp_id_hash_valid": event.rp_id_hash_valid,
+        "aaguid_match": event.aaguid_match,
     }
 
     summary: MutableMapping[str, str] = {
