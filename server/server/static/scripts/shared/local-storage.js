@@ -4,6 +4,7 @@ import {
     updateCredentialSnapshot as uploadSnapshotToServer,
     deleteCredentialArtifact,
 } from './credential-artifacts-client.js';
+import { state } from './state.js';
 
 const SHARED_STORAGE_KEY = 'postquantum-webauthn.credentials';
 const LEGACY_SIMPLE_STORAGE_KEY = 'postquantum-webauthn.simpleCredentials';
@@ -867,6 +868,14 @@ export function saveSimpleCredential(rawCredential) {
     }
 
     const success = persistCredentialPartitions(filteredSimple, updatedAdvanced);
+    if (success && credentialId) {
+        state.lastRegisteredCredentialId = credentialId;
+        try {
+            localStorage.setItem('postquantum-webauthn.lastRegisteredCredentialId', credentialId);
+        } catch (e) {
+            console.warn('Failed to persist last registered credential ID:', e);
+        }
+    }
     return success ? credential : null;
 }
 
@@ -1278,6 +1287,14 @@ export function saveAdvancedCredential(rawCredential) {
 
     const updatedAdvanced = sanitisedStored.concat(sanitisedCredential);
     if (persistCredentialPartitions(filteredSimple, updatedAdvanced)) {
+        if (credentialId) {
+            state.lastRegisteredCredentialId = credentialId;
+            try {
+                localStorage.setItem('postquantum-webauthn.lastRegisteredCredentialId', credentialId);
+            } catch (e) {
+                console.warn('Failed to persist last registered credential ID:', e);
+            }
+        }
         return sanitisedCredential;
     }
 
@@ -1291,6 +1308,14 @@ export function saveAdvancedCredential(rawCredential) {
 
     const aggressiveSet = aggressivelyTrimmedStored.concat(aggressivelyTrimmedCredential);
     if (persistCredentialPartitions(filteredSimple, aggressiveSet)) {
+        if (credentialId) {
+            state.lastRegisteredCredentialId = credentialId;
+            try {
+                localStorage.setItem('postquantum-webauthn.lastRegisteredCredentialId', credentialId);
+            } catch (e) {
+                console.warn('Failed to persist last registered credential ID:', e);
+            }
+        }
         return aggressivelyTrimmedCredential;
     }
 

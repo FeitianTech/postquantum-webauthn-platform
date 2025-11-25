@@ -2734,6 +2734,16 @@ export function updateAllowCredentialsDropdown() {
 }
 
 export async function loadSavedCredentials() {
+    // Load the last registered credential ID from localStorage
+    try {
+        const storedLastRegistered = localStorage.getItem('postquantum-webauthn.lastRegisteredCredentialId');
+        if (storedLastRegistered) {
+            state.lastRegisteredCredentialId = storedLastRegistered;
+        }
+    } catch (e) {
+        console.warn('Failed to load last registered credential ID:', e);
+    }
+
     await ensureAdvancedCredentialArtifactsSynced();
 
     const orderedRecords = getAllStoredCredentialsInOrder();
@@ -2848,8 +2858,13 @@ export function updateCredentialsDisplay() {
         const deleteButtonHtml = `<button class="btn btn-small btn-danger credential-delete-button" onclick="event.stopPropagation();deleteCredential(${index})">Delete</button>`;
         const actionsHtml = `<div class="credential-item-actions">${mdsButtonHtml}${deleteButtonHtml}</div>`;
 
+        // Check if this is the most recently registered credential
+        const credentialId = cred.credentialIdBase64Url || cred.credentialId || cred.id || '';
+        const isNewlyRegistered = credentialId && state.lastRegisteredCredentialId && credentialId === state.lastRegisteredCredentialId;
+        const borderStyle = isNewlyRegistered ? 'border: 2px solid #5dade2; box-shadow: 0 0 4px rgba(93, 173, 226, 0.3);' : '';
+
         return `
-        <div class="credential-item" role="button" tabindex="0" onclick="showCredentialDetails(${index})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showCredentialDetails(${index});}">
+        <div class="credential-item" role="button" tabindex="0" onclick="showCredentialDetails(${index})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showCredentialDetails(${index});}" style="${borderStyle}">
             <div style="flex: 1; min-width: 0;">
                 <div style="font-weight: 600; color: #0f2740; font-size: 0.95rem; margin-bottom: 0.25rem;">${cred.userName || cred.username || cred.email || 'Unknown User'}</div>
                 <div style="font-size: 0.75rem; font-weight: 600; margin-bottom: 0.25rem;">
