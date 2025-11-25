@@ -8,4 +8,5 @@ export const state = {
     generatedAllowCredentials: [],
     utf8Decoder: typeof TextDecoder !== 'undefined' ? new TextDecoder('utf-8') : null,
     lastRegisteredCredentialId: null, // Track most recently registered credential
+    lastAssertedCredentialId: null, // Track most recently asserted credential for animation
 };

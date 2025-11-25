@@ -2861,10 +2861,13 @@ export function updateCredentialsDisplay() {
         // Check if this is the most recently registered credential
         const credentialId = cred.credentialIdBase64Url || cred.credentialId || cred.id || '';
         const isNewlyRegistered = credentialId && state.lastRegisteredCredentialId && credentialId === state.lastRegisteredCredentialId;
+        const isJustAsserted = credentialId && state.lastAssertedCredentialId && credentialId === state.lastAssertedCredentialId;
+
         const borderStyle = isNewlyRegistered ? 'border: 2px solid #5dade2; box-shadow: 0 0 4px rgba(93, 173, 226, 0.3);' : '';
+        const animationClass = isJustAsserted ? 'credential-asserted-animation' : '';
 
         return `
-        <div class="credential-item" role="button" tabindex="0" onclick="showCredentialDetails(${index})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showCredentialDetails(${index});}" style="${borderStyle}">
+        <div class="credential-item ${animationClass}" role="button" tabindex="0" onclick="showCredentialDetails(${index})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showCredentialDetails(${index});}" style="${borderStyle}">
             <div style="flex: 1; min-width: 0;">
                 <div style="font-weight: 600; color: #0f2740; font-size: 0.95rem; margin-bottom: 0.25rem;">${cred.userName || cred.username || cred.email || 'Unknown User'}</div>
                 <div style="font-size: 0.75rem; font-weight: 600; margin-bottom: 0.25rem;">
@@ -2886,6 +2889,13 @@ export function updateCredentialsDisplay() {
             button.addEventListener('click', handleCredentialMdsClick);
         });
     });
+
+    // Clear the asserted credential ID after animation completes (2.4 seconds)
+    if (state.lastAssertedCredentialId) {
+        setTimeout(() => {
+            state.lastAssertedCredentialId = null;
+        }, 2500);
+    }
 
     runPostUpdate();
 }

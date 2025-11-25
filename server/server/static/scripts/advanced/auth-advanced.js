@@ -486,6 +486,8 @@ export async function advancedAuthenticate() {
                     data.authenticatedCredentialId,
                     typeof data.signCount === 'number' ? data.signCount : undefined,
                 );
+                // Set the asserted credential ID to trigger the glow animation
+                state.lastAssertedCredentialId = data.authenticatedCredentialId;
                 loadSavedCredentials();
             }
 

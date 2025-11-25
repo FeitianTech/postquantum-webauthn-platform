@@ -564,6 +564,38 @@
     background: #c82333;
 }
 
+/* Animation for asserted credential - green glowing border pulsing 3 times */
+@keyframes credential-asserted-glow {
+    0%, 100% {
+        border-color: rgba(0, 114, 206, 0.12);
+        box-shadow: none;
+    }
+    16.67% {
+        border-color: #11b66d;
+        box-shadow: 0 0 8px rgba(17, 182, 109, 0.5), 0 0 16px rgba(17, 182, 109, 0.3);
+    }
+    33.33% {
+        border-color: rgba(0, 114, 206, 0.12);
+        box-shadow: none;
+    }
+    50% {
+        border-color: #11b66d;
+        box-shadow: 0 0 8px rgba(17, 182, 109, 0.5), 0 0 16px rgba(17, 182, 109, 0.3);
+    }
+    66.67% {
+        border-color: rgba(0, 114, 206, 0.12);
+        box-shadow: none;
+    }
+    83.33% {
+        border-color: #11b66d;
+        box-shadow: 0 0 8px rgba(17, 182, 109, 0.5), 0 0 16px rgba(17, 182, 109, 0.3);
+    }
+}
+
+.credential-item.credential-asserted-animation {
+    animation: credential-asserted-glow 2.4s ease-in-out;
+}
+
 .expandable-section {
     margin-bottom: 1rem;
 }
