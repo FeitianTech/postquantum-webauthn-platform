@@ -10956,11 +10956,21 @@
       },
       "statusReports": [
         {
-          "effectiveDate": "2025-09-25",
-          "status": "NOT_FIDO_CERTIFIED"
+          "authenticatorVersion": 1,
+          "certificateNumber": "FIDO20020250827003",
+          "certificationDescriptor": "Securitag Assembly Group FIDO Authenticator NFC",
+          "certificationPolicyVersion": "1.4.0",
+          "certificationRequirementsVersion": "1.5.0",
+          "effectiveDate": "2025-08-27",
+          "status": "FIDO_CERTIFIED_L1"
+        },
+        {
+          "authenticatorVersion": 1,
+          "effectiveDate": "2025-08-27",
+          "status": "FIDO_CERTIFIED"
         }
       ],
-      "timeOfLastStatusChange": "2025-09-25"
+      "timeOfLastStatusChange": "2025-11-25"
     },
     {
       "aaid": "0052#0002",
@@ -47195,5 +47205,5 @@
   ],
   "legalHeader": "Retrieval and use of this BLOB indicates acceptance of the appropriate agreement located at https://fidoalliance.org/metadata/metadata-legal-terms/",
   "nextUpdate": "2025-12-01",
-  "no": 207
+  "no": 208
 }
