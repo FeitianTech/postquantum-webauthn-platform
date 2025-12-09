@@ -91,17 +91,46 @@ def store_metadata_cache_entry(
         pass
 
 
+def _load_cache_headers() -> tuple[str | None, str | None]:
+    try:
+        data = json.loads(MDS_METADATA_CACHE_PATH.read_text(encoding="utf-8"))
+        if isinstance(data, dict):
+            last_modified = data.get("last_modified")
+            etag = data.get("etag")
+            lm = last_modified.strip() if isinstance(last_modified, str) and last_modified.strip() else None
+            et = etag.strip() if isinstance(etag, str) and etag.strip() else None
+            return lm, et
+    except Exception:
+        pass
+    return None, None
+
+
 def _fetch_remote_blob() -> tuple[bytes, str | None, str | None]:
-    request = urllib.request.Request(
-        MDS_METADATA_URL,
-        headers={"User-Agent": "webauthnlab-mds-updater"},
-    )
-    with urllib.request.urlopen(request, timeout=120) as response:  # noqa: S310 - trusted host
-        payload = response.read()
-        headers = response.headers or {}
-        last_modified = headers.get("Last-Modified")
-        etag = headers.get("ETag")
-    return payload, last_modified, etag
+    last_modified, etag = _load_cache_headers()
+    headers = {
+        "User-Agent": "webauthnlab-mds-updater",
+        # Avoid intermediary caches returning stale content
+        "Cache-Control": "no-cache",
+        "Pragma": "no-cache",
+    }
+    if last_modified:
+        headers["If-Modified-Since"] = last_modified
+    if etag:
+        headers["If-None-Match"] = etag
+
+    request = urllib.request.Request(MDS_METADATA_URL, headers=headers)
+    try:
+        with urllib.request.urlopen(request, timeout=120) as response:  # noqa: S310 - trusted host
+            payload = response.read()
+            resp_headers = response.headers or {}
+            last_modified = resp_headers.get("Last-Modified")
+            etag = resp_headers.get("ETag")
+            return payload, last_modified, etag
+    except urllib.error.HTTPError as exc:
+        # Treat 304 Not Modified as up-to-date
+        if getattr(exc, "code", None) == 304:
+            return b"", last_modified, etag
+        raise
 
 
 def _write_blob(blob: bytes) -> None:
@@ -143,9 +172,16 @@ def main() -> int:
         print(f"::error::Failed to download metadata BLOB: {exc}")
         return 1
 
+    # 304 Not Modified yields empty body in our fetch wrapper
+    if new_blob == b"":
+        print("Packaged metadata is already up to date; no changes made.")
+        _write_cache_state(last_modified, etag)
+        return 0
+
     current_path = Path(MDS_METADATA_PATH)
     if current_path.exists() and current_path.read_bytes() == new_blob:
         print("Packaged metadata is already up to date; no changes made.")
+        _write_cache_state(last_modified, etag)
         return 0
 
     _write_blob(new_blob)
