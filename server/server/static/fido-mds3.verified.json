@@ -30736,11 +30736,21 @@
       },
       "statusReports": [
         {
-          "effectiveDate": "2025-11-25",
-          "status": "NOT_FIDO_CERTIFIED"
+          "authenticatorVersion": 262656,
+          "certificateNumber": "FIDO20020251010002",
+          "certificationDescriptor": "HID Crescendo Key V3 - Enterprise Edition",
+          "certificationPolicyVersion": "1.4.0",
+          "certificationRequirementsVersion": "1.5.0",
+          "effectiveDate": "2025-10-10",
+          "status": "FIDO_CERTIFIED_L1"
+        },
+        {
+          "authenticatorVersion": 262656,
+          "effectiveDate": "2025-10-10",
+          "status": "FIDO_CERTIFIED"
         }
       ],
-      "timeOfLastStatusChange": "2025-11-25"
+      "timeOfLastStatusChange": "2025-12-11"
     },
     {
       "aaguid": "e77e3c64-05e3-428b-8824-0cbeb04b829d",
@@ -47784,5 +47794,5 @@
   ],
   "legalHeader": "Retrieval and use of this BLOB indicates acceptance of the appropriate agreement located at https://fidoalliance.org/metadata/metadata-legal-terms/",
   "nextUpdate": "2026-01-01",
-  "no": 213
+  "no": 214
 }
