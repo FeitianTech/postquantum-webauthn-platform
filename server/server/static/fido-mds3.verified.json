@@ -8758,11 +8758,21 @@
       },
       "statusReports": [
         {
-          "effectiveDate": "2022-11-29",
-          "status": "NOT_FIDO_CERTIFIED"
+          "authenticatorVersion": 262145,
+          "certificateNumber": "FIDO20020251027001",
+          "certificationDescriptor": "Idem Key (Consumer Profile)",
+          "certificationPolicyVersion": "1.4.0",
+          "certificationRequirementsVersion": "1.5.0",
+          "effectiveDate": "2025-10-27",
+          "status": "FIDO_CERTIFIED_L2"
+        },
+        {
+          "authenticatorVersion": 262145,
+          "effectiveDate": "2025-10-27",
+          "status": "FIDO_CERTIFIED"
         }
       ],
-      "timeOfLastStatusChange": "2022-11-29"
+      "timeOfLastStatusChange": "2025-12-19"
     },
     {
       "aaguid": "ee041bce-25e5-4cdb-8f86-897fd6418464",
@@ -23390,11 +23400,21 @@
       },
       "statusReports": [
         {
-          "effectiveDate": "2025-12-12",
-          "status": "NOT_FIDO_CERTIFIED"
+          "authenticatorVersion": 2570,
+          "certificateNumber": "FIDO20020251208001",
+          "certificationDescriptor": "Clife Key 2 NFC",
+          "certificationPolicyVersion": "1.4.0",
+          "certificationRequirementsVersion": "1.5.0",
+          "effectiveDate": "2025-12-08",
+          "status": "FIDO_CERTIFIED_L1"
+        },
+        {
+          "authenticatorVersion": 2570,
+          "effectiveDate": "2025-12-08",
+          "status": "FIDO_CERTIFIED"
         }
       ],
-      "timeOfLastStatusChange": "2025-12-12"
+      "timeOfLastStatusChange": "2025-12-19"
     },
     {
       "attestationCertificateKeyIdentifiers": [
@@ -44980,11 +45000,21 @@
       },
       "statusReports": [
         {
-          "effectiveDate": "2025-12-12",
-          "status": "NOT_FIDO_CERTIFIED"
+          "authenticatorVersion": 2570,
+          "certificateNumber": "FIDO20020251208002",
+          "certificationDescriptor": "Clife Key 2 ",
+          "certificationPolicyVersion": "1.4.0",
+          "certificationRequirementsVersion": "1.5.0",
+          "effectiveDate": "2025-12-08",
+          "status": "FIDO_CERTIFIED_L1"
+        },
+        {
+          "authenticatorVersion": 2570,
+          "effectiveDate": "2025-12-08",
+          "status": "FIDO_CERTIFIED"
         }
       ],
-      "timeOfLastStatusChange": "2025-12-12"
+      "timeOfLastStatusChange": "2025-12-19"
     },
     {
       "aaguid": "ec31b4cc-2acc-4b8e-9c01-bade00ccbe26",
@@ -48185,5 +48215,5 @@
   ],
   "legalHeader": "Retrieval and use of this BLOB indicates acceptance of the appropriate agreement located at https://fidoalliance.org/metadata/metadata-legal-terms/",
   "nextUpdate": "2026-01-01",
-  "no": 216
+  "no": 217
 }
