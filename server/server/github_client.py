@@ -39,6 +39,9 @@ def is_logging_enabled() -> bool:
     if explicit is not None:
         return _is_truthy(explicit)
 
+    if os.environ.get("GITHUB_TOKEN"):
+        return True
+
     # Auto-enable on common hosted environments where local testing is unlikely.
     if os.environ.get("RENDER") or os.environ.get("RENDER_SERVICE_ID"):
         return True
