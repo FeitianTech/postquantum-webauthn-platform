@@ -75,6 +75,7 @@ const COSE_ALGORITHM_TAG_LABELS = {
 
 let globalCursorApplyCount = 0;
 let globalCursorPreviousValues = [];
+let assertedAnimationCleanupTimer = null;
 
 const GLOBAL_CURSOR_CLASS_MAP = new Map([
     ['progress', 'global-cursor--progress'],
@@ -2883,18 +2884,36 @@ export function updateCredentialsDisplay() {
         `;
     }).join('');
 
+    const assertedItems = [];
     lists.forEach(list => {
         list.innerHTML = itemsHtml;
         list.querySelectorAll('.credential-mds-button').forEach(button => {
             button.addEventListener('click', handleCredentialMdsClick);
         });
+        assertedItems.push(...list.querySelectorAll('.credential-asserted-animation'));
     });
 
-    // Clear the asserted credential ID after animation completes (2.4 seconds)
     if (state.lastAssertedCredentialId) {
-        setTimeout(() => {
+        let cleaned = false;
+        const finalizeAssertedAnimation = () => {
+            if (cleaned) {
+                return;
+            }
+            cleaned = true;
+            assertedItems.forEach(item => {
+                item.classList.remove('credential-asserted-animation');
+            });
             state.lastAssertedCredentialId = null;
-        }, 2500);
+        };
+
+        assertedItems.forEach(item => {
+            item.addEventListener('animationend', finalizeAssertedAnimation, { once: true });
+        });
+
+        if (assertedAnimationCleanupTimer) {
+            clearTimeout(assertedAnimationCleanupTimer);
+        }
+        assertedAnimationCleanupTimer = setTimeout(finalizeAssertedAnimation, 2600);
     }
 
     runPostUpdate();
@@ -4104,4 +4123,3 @@ export async function clearAllCredentials() {
 
     showSharedCredentialStatus('All saved credentials removed successfully!', 'success');
 }
-
