@@ -7824,11 +7824,21 @@
       },
       "statusReports": [
         {
-          "effectiveDate": "2025-11-14",
-          "status": "NOT_FIDO_CERTIFIED"
+          "authenticatorVersion": 1,
+          "certificateNumber": "U2F00020250729001",
+          "certificationDescriptor": "Hyper FIDO Pro NFC",
+          "certificationPolicyVersion": "1.4.0",
+          "certificationRequirementsVersion": "1.5.0",
+          "effectiveDate": "2025-07-29",
+          "status": "FIDO_CERTIFIED_L2"
+        },
+        {
+          "authenticatorVersion": 1,
+          "effectiveDate": "2025-07-29",
+          "status": "FIDO_CERTIFIED"
         }
       ],
-      "timeOfLastStatusChange": "2025-11-14"
+      "timeOfLastStatusChange": "2026-01-06"
     },
     {
       "aaguid": "a4e9fc6d-4cbe-4758-b8ba-37598bb5bbaa",
@@ -28175,11 +28185,21 @@
       },
       "statusReports": [
         {
-          "effectiveDate": "2025-11-14",
-          "status": "NOT_FIDO_CERTIFIED"
+          "authenticatorVersion": 1,
+          "certificateNumber": "U2F00020250729002",
+          "certificationDescriptor": "Hyper FIDO Pro",
+          "certificationPolicyVersion": "1.4.0",
+          "certificationRequirementsVersion": "1.5.0",
+          "effectiveDate": "2025-07-29",
+          "status": "FIDO_CERTIFIED_L1"
+        },
+        {
+          "authenticatorVersion": 1,
+          "effectiveDate": "2025-07-29",
+          "status": "FIDO_CERTIFIED"
         }
       ],
-      "timeOfLastStatusChange": "2025-11-14"
+      "timeOfLastStatusChange": "2026-01-06"
     },
     {
       "aaguid": "4e2ddbc2-2687-4709-8551-cb66c9776bfe",
@@ -48215,5 +48235,5 @@
   ],
   "legalHeader": "Retrieval and use of this BLOB indicates acceptance of the appropriate agreement located at https://fidoalliance.org/metadata/metadata-legal-terms/",
   "nextUpdate": "2026-02-01",
-  "no": 218
+  "no": 219
 }
