@@ -21,15 +21,14 @@ function setBodyMenuState(open) {
     if (typeof document === 'undefined') {
         return;
     }
-    const body = document.body instanceof HTMLElement ? document.body : null;
-    if (!body) {
+    const targets = [document.body, document.documentElement]
+        .filter((element) => element instanceof HTMLElement);
+    if (!targets.length) {
         return;
     }
-    if (open) {
-        body.classList.add('header-menu-open');
-    } else {
-        body.classList.remove('header-menu-open');
-    }
+    targets.forEach(target => {
+        target.classList.toggle('header-menu-open', open);
+    });
 }
 
 export function switchTab(tab, options = {}) {

@@ -88,6 +88,7 @@
     transform: translateY(-12px);
 }
 
+html.app-loading,
 body.app-loading {
     overflow: hidden;
 }

@@ -130,8 +130,13 @@ function ensureInitialized() {
         els.root.setAttribute('aria-hidden', 'false');
     }
 
-    if (typeof document !== 'undefined' && document.body) {
-        document.body.classList.add(BODY_LOADING_CLASS);
+    if (typeof document !== 'undefined') {
+        if (document.body) {
+            document.body.classList.add(BODY_LOADING_CLASS);
+        }
+        if (document.documentElement) {
+            document.documentElement.classList.add(BODY_LOADING_CLASS);
+        }
     }
 
     return els;
@@ -183,6 +188,10 @@ function revealApplication() {
 
     document.body.classList.remove(BODY_LOADING_CLASS);
     document.body.classList.add(BODY_LOADED_CLASS);
+    if (document.documentElement) {
+        document.documentElement.classList.remove(BODY_LOADING_CLASS);
+        document.documentElement.classList.add(BODY_LOADED_CLASS);
+    }
 }
 
 export function initializeLoader() {

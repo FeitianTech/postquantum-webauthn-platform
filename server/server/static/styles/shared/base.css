@@ -62,9 +62,7 @@ body {
     min-height: 100vh;
     display: flex;
     flex-direction: column;
-    overflow-y: auto;
     overflow-x: hidden;
-    overscroll-behavior: none;
 }
 
 html.global-cursor--progress,
@@ -371,6 +369,7 @@ body.modal-open {
     pointer-events: auto;
 }
 
+html.header-menu-open,
 body.header-menu-open {
     overflow: hidden;
 }
