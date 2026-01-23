@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from . import cloud_storage, session_metadata_store, storage
+from . import cloud_storage, mds_auto_update, session_metadata_store, storage
 from .config import app
 
 __all__ = ["warm_up_dependencies"]
@@ -38,11 +38,18 @@ def warm_up_dependencies(*, skip_if_reloader_parent: bool = False) -> None:
         app.logger.exception("Failed to verify session storage readiness during startup.")
         raise
     finally:
-        try:
-            session_metadata_store.delete_session(_STARTUP_SESSION_ID)
-        except Exception:
-            app.logger.warning(
-                "Failed to clean up startup session %s.",
-                _STARTUP_SESSION_ID,
-                exc_info=True,
-            )
+    try:
+        session_metadata_store.delete_session(_STARTUP_SESSION_ID)
+    except Exception:
+        app.logger.warning(
+            "Failed to clean up startup session %s.",
+            _STARTUP_SESSION_ID,
+            exc_info=True,
+        )
+
+    try:
+        mds_auto_update.ensure_mds_auto_update_running(
+            skip_if_reloader_parent=skip_if_reloader_parent
+        )
+    except Exception:
+        app.logger.exception("Failed to start FIDO MDS auto-update thread.")

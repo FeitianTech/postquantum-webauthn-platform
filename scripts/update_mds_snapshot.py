@@ -3,11 +3,12 @@
 
 from __future__ import annotations
 
+import argparse
 import base64
 import json
 import sys
 import urllib.request
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from email.utils import parsedate_to_datetime
 from pathlib import Path
 
@@ -105,7 +106,34 @@ def _load_cache_headers() -> tuple[str | None, str | None]:
     return None, None
 
 
-def _fetch_remote_blob() -> tuple[bytes, str | None, str | None]:
+def _load_existing_next_update() -> date | None:
+    try:
+        payload = json.loads(MDS_METADATA_VERIFIED_PATH.read_text(encoding="utf-8"))
+    except (OSError, ValueError, TypeError):
+        return None
+    if not isinstance(payload, dict):
+        return None
+    raw_value = payload.get("nextUpdate") or payload.get("next_update")
+    if not isinstance(raw_value, str):
+        return None
+    try:
+        return date.fromisoformat(raw_value)
+    except ValueError:
+        return None
+
+
+def _should_force_refresh(force_flag: bool) -> bool:
+    if force_flag:
+        return True
+    if not MDS_METADATA_VERIFIED_PATH.exists():
+        return True
+    next_update = _load_existing_next_update()
+    if next_update is None:
+        return True
+    return next_update <= datetime.now(timezone.utc).date()
+
+
+def _fetch_remote_blob(force: bool = False) -> tuple[bytes, str | None, str | None]:
     last_modified, etag = _load_cache_headers()
     headers = {
         "User-Agent": "webauthnlab-mds-updater",
@@ -113,10 +141,11 @@ def _fetch_remote_blob() -> tuple[bytes, str | None, str | None]:
         "Cache-Control": "no-cache",
         "Pragma": "no-cache",
     }
-    if last_modified:
-        headers["If-Modified-Since"] = last_modified
-    if etag:
-        headers["If-None-Match"] = etag
+    if not force:
+        if last_modified:
+            headers["If-Modified-Since"] = last_modified
+        if etag:
+            headers["If-None-Match"] = etag
 
     request = urllib.request.Request(MDS_METADATA_URL, headers=headers)
     try:
@@ -165,15 +194,35 @@ def _write_cache_state(last_modified: str | None, etag: str | None) -> None:
             cache_path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
+def _parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Refresh the packaged FIDO MDS snapshot when the remote BLOB changes."
+    )
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Force a full download, ignoring cached ETag/Last-Modified headers.",
+    )
+    return parser.parse_args()
+
+
 def main() -> int:
+    args = _parse_args()
+    force_refresh = _should_force_refresh(args.force)
+    if force_refresh and not args.force:
+        print("Local metadata snapshot is stale or missing; forcing refresh.")
+
     try:
-        new_blob, last_modified, etag = _fetch_remote_blob()
+        new_blob, last_modified, etag = _fetch_remote_blob(force=force_refresh)
     except Exception as exc:  # pragma: no cover - network failure propagates
         print(f"::error::Failed to download metadata BLOB: {exc}")
         return 1
 
     # 304 Not Modified yields empty body in our fetch wrapper
     if new_blob == b"":
+        if force_refresh and not MDS_METADATA_VERIFIED_PATH.exists():
+            print("::error::Remote returned 304 without a local snapshot.")
+            return 1
         print("Packaged metadata is already up to date; no changes made.")
         _write_cache_state(last_modified, etag)
         return 0

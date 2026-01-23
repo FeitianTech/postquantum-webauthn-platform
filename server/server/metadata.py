@@ -5,10 +5,13 @@ import json
 import os
 import secrets
 import time
+import urllib.error
+import urllib.request
 import uuid
 from dataclasses import dataclass, replace
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
+from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional, Set, Tuple
 
 from flask import after_this_request, g, has_request_context, request, session
@@ -17,6 +20,7 @@ from fido2.mds3 import (
     MetadataBlobPayload,
     MetadataBlobPayloadEntry,
     MdsAttestationVerifier,
+    parse_blob,
 )
 
 from . import session_metadata_store
@@ -25,6 +29,7 @@ from .config import (
     MDS_METADATA_PATH,
     MDS_METADATA_VERIFIED_PATH,
     MDS_METADATA_URL,
+    FIDO_METADATA_TRUST_ROOT_CERT,
     app,
 )
 from .github_client import (
@@ -915,6 +920,34 @@ def load_metadata_cache_entry() -> Dict[str, Optional[str]]:
     }
 
 
+def _atomic_write_bytes(path: str, payload: bytes) -> None:
+    directory = os.path.dirname(path)
+    if directory:
+        os.makedirs(directory, exist_ok=True)
+    temp_path = f"{path}.tmp"
+    with open(temp_path, "wb") as target:
+        target.write(payload)
+        target.flush()
+        os.fsync(target.fileno())
+    os.replace(temp_path, path)
+
+
+def _atomic_write_text(path: str, payload: str) -> None:
+    directory = os.path.dirname(path)
+    if directory:
+        os.makedirs(directory, exist_ok=True)
+    temp_path = f"{path}.tmp"
+    with open(temp_path, "w", encoding="utf-8") as target:
+        target.write(payload)
+        target.flush()
+        os.fsync(target.fileno())
+    os.replace(temp_path, path)
+
+
+def _atomic_write_json(path: str, payload: Mapping[str, Any]) -> None:
+    _atomic_write_text(path, json.dumps(payload, indent=2, sort_keys=True) + "\n")
+
+
 def _store_metadata_cache_entry(
     *,
     last_modified_header: Optional[str],
@@ -931,10 +964,7 @@ def _store_metadata_cache_entry(
     }
 
     try:
-        os.makedirs(os.path.dirname(MDS_METADATA_CACHE_PATH), exist_ok=True)
-        with open(MDS_METADATA_CACHE_PATH, "w", encoding="utf-8") as cache_file:
-            json.dump(payload, cache_file, indent=2, sort_keys=True)
-            cache_file.write("\n")
+        _atomic_write_json(MDS_METADATA_CACHE_PATH, payload)
     except OSError:
         pass
 
@@ -968,6 +998,140 @@ def download_metadata_blob(
     raise RuntimeError(
         "Runtime metadata downloads are disabled; use the CI snapshot updater instead."
     )
+
+
+def _load_existing_next_update() -> Optional[date]:
+    try:
+        payload = json.loads(Path(MDS_METADATA_VERIFIED_PATH).read_text(encoding="utf-8"))
+    except (OSError, ValueError, TypeError):
+        return None
+    if not isinstance(payload, dict):
+        return None
+    raw_value = payload.get("nextUpdate") or payload.get("next_update")
+    if not isinstance(raw_value, str):
+        return None
+    try:
+        return date.fromisoformat(raw_value)
+    except ValueError:
+        return None
+
+
+def _should_force_refresh(force_flag: bool) -> bool:
+    if force_flag:
+        return True
+    if not os.path.exists(MDS_METADATA_VERIFIED_PATH):
+        return True
+    next_update = _load_existing_next_update()
+    if next_update is None:
+        return True
+    return next_update <= datetime.now(timezone.utc).date()
+
+
+def _read_local_blob() -> Optional[bytes]:
+    try:
+        return Path(MDS_METADATA_PATH).read_bytes()
+    except OSError:
+        return None
+
+
+def _build_verified_snapshot(blob: bytes) -> Dict[str, Any]:
+    payload = parse_blob(blob, FIDO_METADATA_TRUST_ROOT_CERT)
+    return dict(payload)
+
+
+def _write_blob(blob: bytes) -> None:
+    _atomic_write_bytes(MDS_METADATA_PATH, blob)
+
+
+def _write_verified_snapshot(snapshot: Mapping[str, Any]) -> None:
+    _atomic_write_json(MDS_METADATA_VERIFIED_PATH, snapshot)
+
+
+def _fetch_remote_metadata_blob(*, force: bool) -> Tuple[bytes, Optional[str], Optional[str]]:
+    cache = load_metadata_cache_entry()
+    last_modified = cache.get("last_modified")
+    etag = cache.get("etag")
+
+    headers = {
+        "User-Agent": "webauthnlab-mds-updater",
+        "Cache-Control": "no-cache",
+        "Pragma": "no-cache",
+    }
+    if not force:
+        if last_modified:
+            headers["If-Modified-Since"] = last_modified
+        if etag:
+            headers["If-None-Match"] = etag
+
+    request = urllib.request.Request(MDS_METADATA_URL, headers=headers)
+    try:
+        with urllib.request.urlopen(request, timeout=120) as response:  # noqa: S310 - trusted host
+            payload = response.read()
+            response_headers = response.headers or {}
+            last_modified = response_headers.get("Last-Modified")
+            etag = response_headers.get("ETag")
+            return payload, last_modified, etag
+    except urllib.error.HTTPError as exc:
+        if getattr(exc, "code", None) == 304:
+            return b"", last_modified, etag
+        retry_after = None
+        if exc.headers:
+            retry_after = exc.headers.get("Retry-After")
+        raise MetadataDownloadError(
+            f"Failed to download metadata BLOB (HTTP {exc.code}).",
+            status_code=exc.code,
+            retry_after=retry_after,
+        ) from exc
+    except urllib.error.URLError as exc:
+        raise MetadataDownloadError(f"Failed to download metadata BLOB: {exc}") from exc
+
+
+def refresh_metadata_snapshot(*, force: bool = False) -> bool:
+    """Refresh the packaged FIDO MDS snapshot when the remote BLOB changes."""
+
+    force_refresh = _should_force_refresh(force)
+    payload, last_modified, etag = _fetch_remote_metadata_blob(force=force_refresh)
+
+    def _store_cache() -> None:
+        store_metadata_cache_entry(
+            last_modified_header=last_modified,
+            last_modified_iso=_format_last_modified(last_modified),
+            etag=etag,
+        )
+
+    local_blob = _read_local_blob()
+
+    if payload == b"":
+        if not os.path.exists(MDS_METADATA_VERIFIED_PATH):
+            if local_blob:
+                snapshot = _build_verified_snapshot(local_blob)
+                _write_verified_snapshot(snapshot)
+                _store_cache()
+                _load_base_metadata()
+                return True
+            raise MetadataDownloadError(
+                "Remote returned 304 without a local metadata snapshot.",
+                status_code=304,
+            )
+        _store_cache()
+        return False
+
+    if local_blob is not None and local_blob == payload:
+        if not os.path.exists(MDS_METADATA_VERIFIED_PATH):
+            snapshot = _build_verified_snapshot(payload)
+            _write_verified_snapshot(snapshot)
+            _store_cache()
+            _load_base_metadata()
+            return True
+        _store_cache()
+        return False
+
+    snapshot = _build_verified_snapshot(payload)
+    _write_verified_snapshot(snapshot)
+    _write_blob(payload)
+    _store_cache()
+    _load_base_metadata()
+    return True
 
 
 def load_cached_metadata_snapshot() -> bool:
