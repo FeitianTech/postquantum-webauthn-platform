@@ -9,7 +9,7 @@ import urllib.error
 import urllib.request
 import uuid
 from dataclasses import dataclass, replace
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional, Set, Tuple
@@ -1000,33 +1000,6 @@ def download_metadata_blob(
     )
 
 
-def _load_existing_next_update() -> Optional[date]:
-    try:
-        payload = json.loads(Path(MDS_METADATA_VERIFIED_PATH).read_text(encoding="utf-8"))
-    except (OSError, ValueError, TypeError):
-        return None
-    if not isinstance(payload, dict):
-        return None
-    raw_value = payload.get("nextUpdate") or payload.get("next_update")
-    if not isinstance(raw_value, str):
-        return None
-    try:
-        return date.fromisoformat(raw_value)
-    except ValueError:
-        return None
-
-
-def _should_force_refresh(force_flag: bool) -> bool:
-    if force_flag:
-        return True
-    if not os.path.exists(MDS_METADATA_VERIFIED_PATH):
-        return True
-    next_update = _load_existing_next_update()
-    if next_update is None:
-        return True
-    return next_update <= datetime.now(timezone.utc).date()
-
-
 def _read_local_blob() -> Optional[bytes]:
     try:
         return Path(MDS_METADATA_PATH).read_bytes()
@@ -1047,21 +1020,12 @@ def _write_verified_snapshot(snapshot: Mapping[str, Any]) -> None:
     _atomic_write_json(MDS_METADATA_VERIFIED_PATH, snapshot)
 
 
-def _fetch_remote_metadata_blob(*, force: bool) -> Tuple[bytes, Optional[str], Optional[str]]:
-    cache = load_metadata_cache_entry()
-    last_modified = cache.get("last_modified")
-    etag = cache.get("etag")
+def _fetch_remote_metadata_blob() -> Tuple[bytes, Optional[str], Optional[str]]:
+    """Always perform an unconditional fetch of the FIDO MDS BLOB."""
 
     headers = {
         "User-Agent": "webauthnlab-mds-updater",
-        "Cache-Control": "no-cache",
-        "Pragma": "no-cache",
     }
-    if not force:
-        if last_modified:
-            headers["If-Modified-Since"] = last_modified
-        if etag:
-            headers["If-None-Match"] = etag
 
     request = urllib.request.Request(MDS_METADATA_URL, headers=headers)
     try:
@@ -1072,8 +1036,6 @@ def _fetch_remote_metadata_blob(*, force: bool) -> Tuple[bytes, Optional[str], O
             etag = response_headers.get("ETag")
             return payload, last_modified, etag
     except urllib.error.HTTPError as exc:
-        if getattr(exc, "code", None) == 304:
-            return b"", last_modified, etag
         retry_after = None
         if exc.headers:
             retry_after = exc.headers.get("Retry-After")
@@ -1086,11 +1048,14 @@ def _fetch_remote_metadata_blob(*, force: bool) -> Tuple[bytes, Optional[str], O
         raise MetadataDownloadError(f"Failed to download metadata BLOB: {exc}") from exc
 
 
-def refresh_metadata_snapshot(*, force: bool = False) -> bool:
-    """Refresh the packaged FIDO MDS snapshot when the remote BLOB changes."""
+def refresh_metadata_snapshot() -> bool:
+    """Refresh the packaged FIDO MDS snapshot when the remote BLOB changes.
 
-    force_refresh = _should_force_refresh(force)
-    payload, last_modified, etag = _fetch_remote_metadata_blob(force=force_refresh)
+    Always performs an unconditional download and compares bytes locally
+    to determine whether the snapshot needs updating.
+    """
+
+    payload, last_modified, etag = _fetch_remote_metadata_blob()
 
     def _store_cache() -> None:
         store_metadata_cache_entry(
@@ -1100,21 +1065,6 @@ def refresh_metadata_snapshot(*, force: bool = False) -> bool:
         )
 
     local_blob = _read_local_blob()
-
-    if payload == b"":
-        if not os.path.exists(MDS_METADATA_VERIFIED_PATH):
-            if local_blob:
-                snapshot = _build_verified_snapshot(local_blob)
-                _write_verified_snapshot(snapshot)
-                _store_cache()
-                _load_base_metadata()
-                return True
-            raise MetadataDownloadError(
-                "Remote returned 304 without a local metadata snapshot.",
-                status_code=304,
-            )
-        _store_cache()
-        return False
 
     if local_blob is not None and local_blob == payload:
         if not os.path.exists(MDS_METADATA_VERIFIED_PATH):

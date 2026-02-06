@@ -17,7 +17,6 @@ except ImportError:  # pragma: no cover - Windows fallback
 from . import metadata
 from .config import (
     MDS_AUTO_UPDATE_ENABLED,
-    MDS_AUTO_UPDATE_FORCE_REFRESH,
     MDS_AUTO_UPDATE_INTERVAL_SECONDS,
     app,
 )
@@ -84,7 +83,7 @@ def _run_update_if_due() -> None:
         if not _is_check_due():
             return
         try:
-            updated = metadata.refresh_metadata_snapshot(force=MDS_AUTO_UPDATE_FORCE_REFRESH)
+            updated = metadata.refresh_metadata_snapshot()
         except metadata.MetadataDownloadError as exc:
             if exc.retry_after:
                 app.logger.warning(

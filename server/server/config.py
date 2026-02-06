@@ -132,11 +132,6 @@ if _session_metadata_recover_flag is not None:
 _mds_auto_update_flag = _env_flag("FIDO_SERVER_MDS_AUTO_UPDATE")
 MDS_AUTO_UPDATE_ENABLED = _mds_auto_update_flag if _mds_auto_update_flag is not None else False
 
-_mds_auto_update_force_flag = _env_flag("FIDO_SERVER_MDS_AUTO_UPDATE_FORCE")
-MDS_AUTO_UPDATE_FORCE_REFRESH = (
-    _mds_auto_update_force_flag if _mds_auto_update_force_flag is not None else False
-)
-
 _mds_interval_raw = os.environ.get("FIDO_SERVER_MDS_AUTO_UPDATE_INTERVAL_SECONDS", "3600")
 try:
     MDS_AUTO_UPDATE_INTERVAL_SECONDS = int(_mds_interval_raw)
