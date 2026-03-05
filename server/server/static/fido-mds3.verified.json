@@ -12193,13 +12193,19 @@
       "aaguid": "3b1adb99-0dfe-46fd-90b8-7f7614a4de2a",
       "metadataStatement": {
         "aaguid": "3b1adb99-0dfe-46fd-90b8-7f7614a4de2a",
+        "alternativeDescriptions": {
+          "en-US": "GoTrust Idem Key FIDO2 Authenticator"
+        },
         "attachmentHint": [
-          "external"
+          "external",
+          "wired",
+          "wireless",
+          "nfc"
         ],
         "attestationRootCertificates": [
-          "MIIBqTCCAU+gAwIBAgIBATAKBggqhkjOPQQDAjA7MSAwHgYDVQQDDBdHb1RydXN0IEZJRE8yIFJvb3QgQ0EgMTEXMBUGA1UECgwOR29UcnVzdElEIEluYy4wIBcNMjEwMzAyMDYxODQ4WhgPMjA1MTAyMjMwNjE4NDhaMDsxIDAeBgNVBAMMF0dvVHJ1c3QgRklETzIgUm9vdCBDQSAxMRcwFQYDVQQKDA5Hb1RydXN0SUQgSW5jLjBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABIzkMdtNZt0ZOzO+u1f2EKZRSnfhvywbhonBF9NSPq2WG7nuRi/yvZ8lDjwp5darQ6OdZg+HqbSSeXJXw7UpclSjQjBAMA8GA1UdEwQIMAYBAf8CAQAwDgYDVR0PAQH/BAQDAgEGMB0GA1UdDgQWBBRjWxTo1Eq33ZrxfLDWssddbD/vZTAKBggqhkjOPQQDAgNIADBFAiB+E09GzmcYlM95qT/afnPU9q6XJmxOSKWARO5+kgUnWgIhAIa9n5p40tcGfmeF6/WvYojANuykQqhVk8Wnfg15S69r",
           "MIIBzTCCAXOgAwIBAgIJALS3SibGDXTPMAoGCCqGSM49BAMCMDsxIDAeBgNVBAMMF0dvVHJ1c3QgRklETzIgUm9vdCBDQSAxMRcwFQYDVQQKDA5Hb1RydXN0SUQgSW5jLjAeFw0xOTEyMDQwNjU5NDBaFw00OTExMjYwNjU5NDBaMDsxIDAeBgNVBAMMF0dvVHJ1c3QgRklETzIgUm9vdCBDQSAxMRcwFQYDVQQKDA5Hb1RydXN0SUQgSW5jLjBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABA5mjYsjowAI0jnpi//CJ3KnzhGbTUmstNWqN78ioG1CTK9gPgPl9UiFOJO/v+FfFK+Pxv10c604dvlIDAbKw+ijYDBeMAwGA1UdEwEB/wQCMAAwDgYDVR0PAQH/BAQDAgEGMB0GA1UdDgQWBBSgWtY0nEcmPmGDLuCwceKeJPScozAfBgNVHSMEGDAWgBSgWtY0nEcmPmGDLuCwceKeJPScozAKBggqhkjOPQQDAgNIADBFAiAxoVs6qj7DX2xixCjjcDUdxBTJmSTLb0f1rRGwrABzTQIhAPt0P32qzAeepF4//tgzxqNoKkWDcaPPSXrg+xzrlVHw",
-          "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"
+          "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"
         ],
         "attestationTypes": [
           "basic_full"
@@ -12214,7 +12220,7 @@
           ],
           "maxMsgSize": 1024,
           "options": {
-            "clientPin": true,
+            "clientPin": false,
             "plat": false,
             "rk": true,
             "up": true
@@ -12254,12 +12260,17 @@
         "userVerificationDetails": [
           [
             {
+              "userVerificationMethod": "presence_internal"
+            }
+          ],
+          [
+            {
               "userVerificationMethod": "none"
             }
           ],
           [
             {
-              "userVerificationMethod": "passcode_external"
+              "userVerificationMethod": "presence_internal"
             },
             {
               "caDesc": {
@@ -12268,12 +12279,7 @@
                 "maxRetries": 8,
                 "minLength": 4
               },
-              "userVerificationMethod": "presence_internal"
-            }
-          ],
-          [
-            {
-              "userVerificationMethod": "presence_internal"
+              "userVerificationMethod": "passcode_external"
             }
           ],
           [
@@ -49868,5 +49874,5 @@
   ],
   "legalHeader": "Retrieval and use of this BLOB indicates acceptance of the appropriate agreement located at https://fidoalliance.org/metadata/metadata-legal-terms/",
   "nextUpdate": "2026-04-01",
-  "no": 233
+  "no": 234
 }
