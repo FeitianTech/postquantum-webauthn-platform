@@ -6779,6 +6779,15 @@
       "statusReports": [
         {
           "authenticatorVersion": 1,
+          "certificateNumber": "FIDO20020260320001",
+          "certificationDescriptor": "Swissbit iShield Key 2 ",
+          "certificationPolicyVersion": "1.4.0",
+          "certificationRequirementsVersion": "1.5.0",
+          "effectiveDate": "2026-03-20",
+          "status": "FIDO_CERTIFIED_L2"
+        },
+        {
+          "authenticatorVersion": 1,
           "certificateNumber": "FIDO20020250227003",
           "certificationDescriptor": "Swissbit iShield Key 2",
           "certificationPolicyVersion": "1.4.0",
@@ -6792,7 +6801,7 @@
           "status": "FIDO_CERTIFIED"
         }
       ],
-      "timeOfLastStatusChange": "2025-03-25"
+      "timeOfLastStatusChange": "2026-03-20"
     },
     {
       "aaguid": "72c6b72d-8512-4c66-8359-9d3d10d9222f",
@@ -11185,11 +11194,21 @@
       },
       "statusReports": [
         {
-          "effectiveDate": "2025-12-04",
-          "status": "NOT_FIDO_CERTIFIED"
+          "authenticatorVersion": 1,
+          "certificateNumber": "FIDO20020251017003",
+          "certificationDescriptor": "Infineon SECORA\u2122 ID Key S USB Consumer Edition",
+          "certificationPolicyVersion": "1.4.0",
+          "certificationRequirementsVersion": "1.5.0",
+          "effectiveDate": "2025-10-17",
+          "status": "FIDO_CERTIFIED_L3plus"
+        },
+        {
+          "authenticatorVersion": 1,
+          "effectiveDate": "2025-10-17",
+          "status": "FIDO_CERTIFIED"
         }
       ],
-      "timeOfLastStatusChange": "2025-12-04"
+      "timeOfLastStatusChange": "2026-03-20"
     },
     {
       "aaid": "0052#0002",
@@ -13196,6 +13215,15 @@
       "statusReports": [
         {
           "authenticatorVersion": 1,
+          "certificateNumber": "FIDO20020260320003",
+          "certificationDescriptor": "Swissbit iShield Key 2 FIPS",
+          "certificationPolicyVersion": "1.4.0",
+          "certificationRequirementsVersion": "1.5.0",
+          "effectiveDate": "2026-03-20",
+          "status": "FIDO_CERTIFIED_L2"
+        },
+        {
+          "authenticatorVersion": 1,
           "certificateNumber": "FIDO20020250227001",
           "certificationDescriptor": "Swissbit iShield Key 2 FIPS",
           "certificationPolicyVersion": "1.4.0",
@@ -13209,7 +13237,7 @@
           "status": "FIDO_CERTIFIED"
         }
       ],
-      "timeOfLastStatusChange": "2025-03-25"
+      "timeOfLastStatusChange": "2026-03-20"
     },
     {
       "aaguid": "61250591-b2bc-4456-b719-0b17be90bb30",
@@ -16165,11 +16193,21 @@
       },
       "statusReports": [
         {
-          "effectiveDate": "2025-12-18",
-          "status": "NOT_FIDO_CERTIFIED"
+          "authenticatorVersion": 1,
+          "certificateNumber": "FIDO20020251209001",
+          "certificationDescriptor": "StarKey FIDO NFC",
+          "certificationPolicyVersion": "1.4.0",
+          "certificationRequirementsVersion": "1.5.0",
+          "effectiveDate": "2025-12-09",
+          "status": "FIDO_CERTIFIED_L1"
+        },
+        {
+          "authenticatorVersion": 1,
+          "effectiveDate": "2025-12-09",
+          "status": "FIDO_CERTIFIED"
         }
       ],
-      "timeOfLastStatusChange": "2025-12-18"
+      "timeOfLastStatusChange": "2026-03-20"
     },
     {
       "attestationCertificateKeyIdentifiers": [
@@ -23453,6 +23491,15 @@
       "statusReports": [
         {
           "authenticatorVersion": 1,
+          "certificateNumber": "FIDO20020260320002",
+          "certificationDescriptor": "Swissbit iShield Key 2 FIPS Enterprise",
+          "certificationPolicyVersion": "1.4.0",
+          "certificationRequirementsVersion": "1.5.0",
+          "effectiveDate": "2026-03-20",
+          "status": "FIDO_CERTIFIED_L2"
+        },
+        {
+          "authenticatorVersion": 1,
           "certificateNumber": "FIDO20020250227002",
           "certificationDescriptor": "Swissbit iShield Key 2 FIPS Enterprise",
           "certificationPolicyVersion": "1.4.0",
@@ -23466,7 +23513,7 @@
           "status": "FIDO_CERTIFIED"
         }
       ],
-      "timeOfLastStatusChange": "2025-03-25"
+      "timeOfLastStatusChange": "2026-03-20"
     },
     {
       "aaguid": "b415094c-49d3-4c8b-b3fe-7d0ad28a6bc4",
@@ -29122,11 +29169,21 @@
       },
       "statusReports": [
         {
-          "effectiveDate": "2025-01-27",
-          "status": "NOT_FIDO_CERTIFIED"
+          "authenticatorVersion": 1,
+          "certificateNumber": "FIDO20020241227003",
+          "certificationDescriptor": "SECORA\u2122 ID V2 FIDO2.1 L1",
+          "certificationPolicyVersion": "1.4.0",
+          "certificationRequirementsVersion": "1.5.0",
+          "effectiveDate": "2024-12-27",
+          "status": "FIDO_CERTIFIED_L1"
+        },
+        {
+          "authenticatorVersion": 1,
+          "effectiveDate": "2024-12-27",
+          "status": "FIDO_CERTIFIED"
         }
       ],
-      "timeOfLastStatusChange": "2025-01-27"
+      "timeOfLastStatusChange": "2026-03-20"
     },
     {
       "aaguid": "be727034-574a-f799-5c76-0929e0430973",
@@ -30257,11 +30314,21 @@
       },
       "statusReports": [
         {
-          "effectiveDate": "2025-12-04",
-          "status": "NOT_FIDO_CERTIFIED"
+          "authenticatorVersion": 1,
+          "certificateNumber": "FIDO20020250912001",
+          "certificationDescriptor": "SECORA\u2122 ID V2 Pay Edition",
+          "certificationPolicyVersion": "1.4.0",
+          "certificationRequirementsVersion": "1.5.0",
+          "effectiveDate": "2025-09-12",
+          "status": "FIDO_CERTIFIED_L1"
+        },
+        {
+          "authenticatorVersion": 1,
+          "effectiveDate": "2025-09-12",
+          "status": "FIDO_CERTIFIED"
         }
       ],
-      "timeOfLastStatusChange": "2025-12-04"
+      "timeOfLastStatusChange": "2026-03-20"
     },
     {
       "aaguid": "a7fc3f84-86a3-4da4-a3d7-eb6485a066d8",
@@ -42320,11 +42387,21 @@
       },
       "statusReports": [
         {
-          "effectiveDate": "2025-12-18",
-          "status": "NOT_FIDO_CERTIFIED"
+          "authenticatorVersion": 1,
+          "certificateNumber": "U2F000020251209001",
+          "certificationDescriptor": "StarKey FIDO NFC",
+          "certificationPolicyVersion": "1.4.0",
+          "certificationRequirementsVersion": "1.5.0",
+          "effectiveDate": "2025-12-09",
+          "status": "FIDO_CERTIFIED_L1"
+        },
+        {
+          "authenticatorVersion": 1,
+          "effectiveDate": "2025-12-09",
+          "status": "FIDO_CERTIFIED"
         }
       ],
-      "timeOfLastStatusChange": "2025-12-18"
+      "timeOfLastStatusChange": "2026-03-20"
     },
     {
       "aaguid": "3b24bf49-1d45-4484-a917-13175df0867b",
@@ -43213,6 +43290,15 @@
       "statusReports": [
         {
           "authenticatorVersion": 2,
+          "certificateNumber": "FIDO20020260120002",
+          "certificationDescriptor": "eToken Fusion Bio 2",
+          "certificationPolicyVersion": "1.4.0",
+          "certificationRequirementsVersion": "1.5.0",
+          "effectiveDate": "2026-01-20",
+          "status": "FIDO_CERTIFIED_L2"
+        },
+        {
+          "authenticatorVersion": 2,
           "certificateNumber": "FIDO20020250801001",
           "certificationDescriptor": "eToken Fusion BIO",
           "certificationPolicyVersion": "1.4.0",
@@ -43226,7 +43312,7 @@
           "status": "FIDO_CERTIFIED"
         }
       ],
-      "timeOfLastStatusChange": "2026-02-11"
+      "timeOfLastStatusChange": "2026-03-20"
     },
     {
       "aaguid": "57235694-51a5-4a4d-a81a-f42185df6502",
@@ -44708,11 +44794,21 @@
       },
       "statusReports": [
         {
-          "effectiveDate": "2025-12-04",
-          "status": "NOT_FIDO_CERTIFIED"
+          "authenticatorVersion": 1,
+          "certificateNumber": "FIDO20020250929002",
+          "certificationDescriptor": "SECORA\u2122 ID V2 Pay Edition M",
+          "certificationPolicyVersion": "1.4.0",
+          "certificationRequirementsVersion": "1.5.0",
+          "effectiveDate": "2025-09-29",
+          "status": "FIDO_CERTIFIED_L1"
+        },
+        {
+          "authenticatorVersion": 1,
+          "effectiveDate": "2025-09-29",
+          "status": "FIDO_CERTIFIED"
         }
       ],
-      "timeOfLastStatusChange": "2025-12-04"
+      "timeOfLastStatusChange": "2026-03-20"
     },
     {
       "aaid": "0024#2341",
@@ -47887,6 +47983,15 @@
       "statusReports": [
         {
           "authenticatorVersion": 6,
+          "certificateNumber": "FIDO20020260120001",
+          "certificationDescriptor": "eToken FIDO NFC",
+          "certificationPolicyVersion": "1.4.0",
+          "certificationRequirementsVersion": "1.5.0",
+          "effectiveDate": "2026-01-20",
+          "status": "FIDO_CERTIFIED_L2"
+        },
+        {
+          "authenticatorVersion": 6,
           "certificateNumber": "FIDO20020250728002",
           "certificationDescriptor": "eToken FIDO NFC",
           "certificationPolicyVersion": "1.4.0",
@@ -47900,7 +48005,7 @@
           "status": "FIDO_CERTIFIED"
         }
       ],
-      "timeOfLastStatusChange": "2026-02-11"
+      "timeOfLastStatusChange": "2026-03-20"
     },
     {
       "aaguid": "95442b2e-f15e-4def-b270-efb106facb4e",
@@ -49379,6 +49484,15 @@
       "statusReports": [
         {
           "authenticatorVersion": 1,
+          "certificateNumber": "FIDO20020260320004",
+          "certificationDescriptor": "Swissbit iShield Key 2 Enterprise",
+          "certificationPolicyVersion": "1.4.0",
+          "certificationRequirementsVersion": "1.5.0",
+          "effectiveDate": "2026-03-20",
+          "status": "FIDO_CERTIFIED_L2"
+        },
+        {
+          "authenticatorVersion": 1,
           "certificateNumber": "FIDO20020250227004",
           "certificationDescriptor": "Swissbit iShield Key 2 Enterprise",
           "certificationPolicyVersion": "1.4.0",
@@ -49392,7 +49506,7 @@
           "status": "FIDO_CERTIFIED"
         }
       ],
-      "timeOfLastStatusChange": "2025-03-25"
+      "timeOfLastStatusChange": "2026-03-20"
     },
     {
       "aaguid": "87c13177-85d6-40ac-8c61-fe7ab3de9dfb",
@@ -50426,5 +50540,5 @@
   ],
   "legalHeader": "Retrieval and use of this BLOB indicates acceptance of the appropriate agreement located at https://fidoalliance.org/metadata/metadata-legal-terms/",
   "nextUpdate": "2026-04-01",
-  "no": 236
+  "no": 237
 }
