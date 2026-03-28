@@ -60,6 +60,8 @@ body {
     color: var(--text-color);
     background-color: var(--surface-color);
     min-height: 100vh;
+    display: flex;
+    flex-direction: column;
     overscroll-behavior: none;
 }
 
@@ -536,8 +538,9 @@ body.header-menu-open {
 }
 
 .site-footer {
-    margin-top: 4rem;
-    padding: 1.5rem 2.5rem;
+    margin-top: auto;
+    flex-shrink: 0;
+    padding: 2rem 2.5rem 1.5rem;
     background: var(--surface-alt);
     border-top: 1px solid rgba(0, 114, 206, 0.12);
     color: var(--muted-text);
@@ -563,8 +566,8 @@ body.header-menu-open {
     }
 
     .site-footer {
-        margin-top: 3rem;
-        padding: 1.25rem 1.5rem;
+        margin-top: auto;
+        padding: 1.75rem 1.5rem 1.25rem;
         font-size: 0.8rem;
     }
 }
