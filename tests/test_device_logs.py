@@ -1,8 +1,21 @@
+import sys
+import types
 import uuid
 from datetime import datetime, timezone
+from pathlib import Path
 
 import cbor2
 import pytest
+
+_ROOT = Path(__file__).resolve().parents[1]
+
+server_pkg = types.ModuleType("server")
+server_pkg.__path__ = [str(_ROOT / "server")]
+sys.modules.setdefault("server", server_pkg)
+
+server_server_pkg = types.ModuleType("server.server")
+server_server_pkg.__path__ = [str(_ROOT / "server" / "server")]
+sys.modules.setdefault("server.server", server_server_pkg)
 
 from server.server import device_logs
 
@@ -168,6 +181,47 @@ def test_record_registration_event_disabled(monkeypatch):
     )
 
     device_logs.record_registration_event(event)
+
+
+def test_record_registration_event_uploads_inline_on_cloud_run(monkeypatch, capsys):
+    uploads = []
+
+    def fake_upload(path, payload, **kwargs):
+        uploads.append((path, payload, kwargs))
+
+    def fail_thread(*_args, **_kwargs):
+        raise AssertionError("Threaded upload should not be used on Cloud Run by default")
+
+    monkeypatch.setenv("ENABLE_GITHUB_LOGGING", "1")
+    monkeypatch.setenv("K_SERVICE", "pqc-webauthn")
+    monkeypatch.delenv("GITHUB_LOG_ASYNC", raising=False)
+    monkeypatch.setattr(device_logs, "github_upload_json", fake_upload)
+    monkeypatch.setattr(device_logs.threading, "Thread", fail_thread)
+    monkeypatch.setattr(device_logs, "random_shortid", lambda length=8: "inline01")
+
+    event = device_logs.RegistrationEvent(
+        timestamp=datetime(2025, 10, 23, 9, 41, 10, tzinfo=timezone.utc),
+        rp_id="example.com",
+        user_id=b"user-id",
+        user_name="alice",
+        user_display_name="Alice",
+        credential_id=b"credential-id",
+        public_key_cose={1: -7},
+        sign_count=0,
+        transports=None,
+        aaguid=uuid.UUID("7701a390-8b53-4ce0-bf7c-b331569b8d1a").bytes,
+        device_name_mds="Example Authenticator",
+        attestation_format="packed",
+        attestation_object=cbor2.dumps({}),
+        client_data_json=b"{}",
+    )
+
+    device_logs.record_registration_event(event)
+
+    out = capsys.readouterr().out.strip()
+    assert "Uploaded credential log" in out
+    assert len(uploads) == 1
+    assert uploads[0][0].endswith("_inline01.json")
 
 
 @pytest.mark.parametrize(

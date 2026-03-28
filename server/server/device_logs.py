@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import base64
 import logging
+import os
 import secrets
 import threading
 import uuid
@@ -37,6 +38,8 @@ _logger = logging.getLogger(__name__)
 BEIJING_TZ = ZoneInfo("Asia/Shanghai")
 TIMEZONE_LABEL = "CST"
 _LOGS_DIR = "logs"
+_TRUTHY_VALUES = {"1", "true", "yes", "on"}
+_FALSY_VALUES = {"0", "false", "no", "off", ""}
 
 
 @dataclass(frozen=True)
@@ -214,6 +217,25 @@ def _upload_worker(
     )
 
 
+def _should_upload_async() -> bool:
+    """Return ``True`` when uploads should be handed off to a background thread."""
+
+    explicit = os.environ.get("GITHUB_LOG_ASYNC")
+    if explicit is not None:
+        normalised = explicit.strip().lower()
+        if normalised in _TRUTHY_VALUES:
+            return True
+        if normalised in _FALSY_VALUES:
+            return False
+
+    # Cloud Run request-based services can throttle CPU after the HTTP response is
+    # sent, so background uploads may never complete. Prefer inline delivery there.
+    if os.environ.get("K_SERVICE"):
+        return False
+
+    return True
+
+
 def record_registration_event(event: RegistrationEvent) -> None:
     """Serialize *event* and upload it to the credential log repository."""
 
@@ -222,6 +244,10 @@ def record_registration_event(event: RegistrationEvent) -> None:
         return
 
     path, payload, summary = _build_log_payload(event)
+    if not _should_upload_async():
+        _upload_worker(path, payload, summary)
+        return
+
     thread = threading.Thread(
         target=_upload_worker,
         args=(path, payload, summary),

@@ -12,6 +12,7 @@ from urllib import error as urllib_error
 from urllib import request as urllib_request
 
 __all__ = [
+    "credential_log_repository",
     "github_get_json",
     "github_upload_json",
     "github_upload_file",
@@ -21,8 +22,8 @@ __all__ = [
 ]
 
 _API_BASE = "https://api.github.com"
-_REPO_OWNER = "rainzhang05"
-_REPO_NAME = "webauthn-credential-logs"
+_DEFAULT_REPO_OWNER = "rainzhang05"
+_DEFAULT_REPO_NAME = "CredentialLogs"
 _TRUTHY_VALUES = {"1", "true", "yes", "on"}
 
 
@@ -46,16 +47,34 @@ def is_logging_enabled() -> bool:
     return True
 
 
+def credential_log_repository() -> Tuple[str, str]:
+    """Return the owner/name pair for the credential log repository."""
+
+    owner = os.environ.get("GITHUB_LOG_REPO_OWNER", _DEFAULT_REPO_OWNER).strip()
+    name = os.environ.get("GITHUB_LOG_REPO_NAME", _DEFAULT_REPO_NAME).strip()
+
+    if not owner:
+        owner = _DEFAULT_REPO_OWNER
+    if not name:
+        name = _DEFAULT_REPO_NAME
+
+    return owner, name
+
+
 def _token() -> str:
     token = os.environ.get("GITHUB_TOKEN")
     if not token:
-        raise RuntimeError("GITHUB_TOKEN environment variable is required for credential logging")
+        owner, name = credential_log_repository()
+        raise RuntimeError(
+            f"GITHUB_TOKEN environment variable is required for credential logging to {owner}/{name}"
+        )
     return token
 
 
 def _api_url(path: str) -> str:
     path = path.lstrip("/")
-    return f"{_API_BASE}/repos/{_REPO_OWNER}/{_REPO_NAME}/{path}"
+    owner, name = credential_log_repository()
+    return f"{_API_BASE}/repos/{owner}/{name}/{path}"
 
 
 def _request(method: str, url: str, body: Optional[Dict[str, Any]] = None) -> Tuple[int, bytes]:

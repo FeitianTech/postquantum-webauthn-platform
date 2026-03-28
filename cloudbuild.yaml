@@ -40,6 +40,7 @@ steps:
           --allow-unauthenticated \
           --min-instances=0 \
           --max-instances=3 \
+          --update-env-vars=GITHUB_LOG_REPO_OWNER=rainzhang05,GITHUB_LOG_REPO_NAME=CredentialLogs,GITHUB_LOG_ASYNC=0 \
           --execution-environment=gen2 \
           --project $PROJECT_ID
 
