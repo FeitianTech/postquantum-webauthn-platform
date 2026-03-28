@@ -344,10 +344,18 @@ def test_determine_rp_id_with_request_context():
         rp_id = determine_rp_id()
         assert rp_id == "localhost"
     
-    # IPv6 localhost - the host header includes brackets
+    # IPv6 localhost from a raw host value without brackets.
     with app.test_request_context(
         "http://[::1]/path",
         headers={"Host": "::1"}  # Without brackets in header
+    ):
+        rp_id = determine_rp_id()
+        assert rp_id == "localhost"
+
+    # IPv6 localhost with the bracketed host:port form browsers send.
+    with app.test_request_context(
+        "http://[::1]:8443/path",
+        headers={"Host": "[::1]:8443"}
     ):
         rp_id = determine_rp_id()
         assert rp_id == "localhost"

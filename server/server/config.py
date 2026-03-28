@@ -2,12 +2,14 @@
 from __future__ import annotations
 
 import base64
+import ipaddress
 import os
 import re
 import ssl
 import tempfile
 import textwrap
 from typing import Mapping, Optional, Set
+from urllib.parse import urlsplit
 
 import fido2.features
 from flask import Flask, has_request_context, request
@@ -188,14 +190,65 @@ def determine_rp_id(explicit_id: Optional[str] = None) -> str:
         return configured_id.strip()
 
     if has_request_context():
-        host = request.host.split(":", 1)[0].strip().lower()
+        host = _resolve_request_host()
         if host in {"", None}:
             return "localhost"
+        try:
+            if ipaddress.ip_address(host).is_loopback:
+                return "localhost"
+        except ValueError:
+            pass
         if host in {"127.0.0.1", "::1"}:
             return "localhost"
         return host
 
     return "localhost"
+
+
+def _resolve_request_host() -> Optional[str]:
+    """Return the current request host without port decoration."""
+
+    if not has_request_context():
+        return None
+
+    for raw_host in (
+        request.headers.get("Host"),
+        request.environ.get("HTTP_HOST"),
+        request.environ.get("SERVER_NAME"),
+    ):
+        host = _normalise_request_host(raw_host)
+        if host:
+            return host
+
+    return None
+
+
+def _normalise_request_host(raw_host: Optional[str]) -> Optional[str]:
+    """Normalise a raw host header into a lowercase hostname or IP literal."""
+
+    if not isinstance(raw_host, str):
+        return None
+
+    host = raw_host.strip().lower()
+    if not host:
+        return None
+
+    if host.startswith("["):
+        closing_index = host.find("]")
+        if closing_index != -1:
+            unwrapped = host[1:closing_index].strip()
+            return unwrapped or None
+
+    if host.count(":") > 1:
+        # Treat unbracketed multi-colon values as IPv6 literals without ports.
+        return host
+
+    parsed = urlsplit(f"//{host}")
+    normalised = parsed.hostname
+    if isinstance(normalised, str) and normalised.strip():
+        return normalised.strip().lower()
+
+    return host
 
 
 def build_rp_entity(
