@@ -60,10 +60,6 @@ body {
     color: var(--text-color);
     background-color: var(--surface-color);
     min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    overflow-y: auto;
-    overflow-x: hidden;
     overscroll-behavior: none;
 }
 
