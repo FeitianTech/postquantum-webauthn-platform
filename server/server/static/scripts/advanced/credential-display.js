@@ -9,7 +9,8 @@ import {
     base64UrlToUtf8String,
     bytesToHex,
     hexToGuid,
-    hexToUint8Array
+    hexToUint8Array,
+    normalizeToHex
 } from '../shared/binary-utils.js';
 import {
     describeCoseAlgorithm,
@@ -75,6 +76,7 @@ const COSE_ALGORITHM_TAG_LABELS = {
 
 let globalCursorApplyCount = 0;
 let globalCursorPreviousValues = [];
+let queuedAuthenticatedCredentialHex = '';
 
 const GLOBAL_CURSOR_CLASS_MAP = new Map([
     ['progress', 'global-cursor--progress'],
@@ -152,6 +154,18 @@ function showSharedCredentialStatus(message, type) {
     SHARED_CREDENTIAL_STATUS_TABS.forEach(tabId => {
         showStatus(tabId, message, type);
     });
+}
+
+function normaliseCredentialIdToHex(credentialId) {
+    if (typeof credentialId !== 'string') {
+        return '';
+    }
+    const normalized = normalizeToHex(credentialId.trim());
+    return normalized ? normalized.toLowerCase() : '';
+}
+
+export function queueAuthenticatedCredentialFlash(credentialId) {
+    queuedAuthenticatedCredentialHex = normaliseCredentialIdToHex(credentialId);
 }
 
 function collectCredentialCertificates(cred) {
@@ -2774,6 +2788,7 @@ export async function loadSavedCredentials() {
 
 export function updateCredentialsDisplay() {
     const hasCredentials = state.storedCredentials.length > 0;
+    const flashCredentialHex = queuedAuthenticatedCredentialHex;
     const runPostUpdate = () => {
         checkLargeBlobCapability();
         updateAllowCredentialsDropdown();
@@ -2798,11 +2813,17 @@ export function updateCredentialsDisplay() {
         lists.forEach(list => {
             list.innerHTML = emptyStateHtml;
         });
+        queuedAuthenticatedCredentialHex = '';
         runPostUpdate();
         return;
     }
 
     const itemsHtml = state.storedCredentials.map((cred, index) => {
+        const credentialIdHex = getCredentialIdHex(cred);
+        const shouldFlashCredential = Boolean(flashCredentialHex) && credentialIdHex === flashCredentialHex;
+        const credentialItemClass = shouldFlashCredential
+            ? 'credential-item credential-item--recent-auth'
+            : 'credential-item';
         const featureLabels = [];
         const algorithmTag = describeCredentialAlgorithmTag(cred);
         if (algorithmTag) {
@@ -2849,7 +2870,7 @@ export function updateCredentialsDisplay() {
         const actionsHtml = `<div class="credential-item-actions">${mdsButtonHtml}${deleteButtonHtml}</div>`;
 
         return `
-        <div class="credential-item" role="button" tabindex="0" onclick="showCredentialDetails(${index})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showCredentialDetails(${index});}">
+        <div class="${credentialItemClass}" role="button" tabindex="0" onclick="showCredentialDetails(${index})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showCredentialDetails(${index});}">
             <div style="flex: 1; min-width: 0;">
                 <div style="font-weight: 600; color: #0f2740; font-size: 0.95rem; margin-bottom: 0.25rem;">${cred.userName || cred.username || cred.email || 'Unknown User'}</div>
                 <div style="font-size: 0.75rem; font-weight: 600; margin-bottom: 0.25rem;">
@@ -2872,6 +2893,7 @@ export function updateCredentialsDisplay() {
         });
     });
 
+    queuedAuthenticatedCredentialHex = '';
     runPostUpdate();
 }
 
@@ -4079,4 +4101,3 @@ export async function clearAllCredentials() {
 
     showSharedCredentialStatus('All saved credentials removed successfully!', 'success');
 }
-

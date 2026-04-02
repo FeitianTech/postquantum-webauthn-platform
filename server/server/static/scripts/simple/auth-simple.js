@@ -6,7 +6,7 @@ import {
 } from '../shared/webauthn-json.browser-ponyfill.js';
 import { convertExtensionsForClient } from '../shared/binary-utils.js';
 import { showStatus, hideStatus, showProgress, hideProgress } from '../shared/status.js';
-import { loadSavedCredentials } from '../advanced/credential-display.js';
+import { loadSavedCredentials, queueAuthenticatedCredentialFlash } from '../advanced/credential-display.js';
 import { printRegistrationDebug, printAuthenticationDebug } from '../shared/auth-debug.js';
 import { state } from '../shared/state.js';
 import {
@@ -186,6 +186,7 @@ export async function simpleAuthenticate() {
                     data.authenticatedCredentialId,
                     typeof data.signCount === 'number' ? data.signCount : undefined
                 );
+                queueAuthenticatedCredentialFlash(data.authenticatedCredentialId);
                 loadSavedCredentials();
             }
             simpleAuthenticateState = null;

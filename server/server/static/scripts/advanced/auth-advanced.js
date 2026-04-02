@@ -23,7 +23,7 @@ import {
 } from '../shared/status.js';
 import { randomizeChallenge, randomizePrfEval, randomizeLargeBlobWrite } from './forms.js';
 import { randomizeUserIdentity } from '../shared/username.js';
-import { showRegistrationResultModal, loadSavedCredentials } from './credential-display.js';
+import { showRegistrationResultModal, loadSavedCredentials, queueAuthenticatedCredentialFlash } from './credential-display.js';
 import { printRegistrationDebug, printAuthenticationDebug } from '../shared/auth-debug.js';
 import { state } from '../shared/state.js';
 import {
@@ -486,6 +486,7 @@ export async function advancedAuthenticate() {
                     data.authenticatedCredentialId,
                     typeof data.signCount === 'number' ? data.signCount : undefined,
                 );
+                queueAuthenticatedCredentialFlash(data.authenticatedCredentialId);
                 loadSavedCredentials();
             }
 

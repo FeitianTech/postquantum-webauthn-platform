@@ -519,6 +519,33 @@
     animation: fadeInSoft 240ms ease;
 }
 
+@keyframes credentialAuthFlashGreen {
+    0% {
+        border-color: rgba(0, 114, 206, 0.12);
+        box-shadow: none;
+    }
+    18% {
+        border-color: #11b66d;
+        box-shadow: 0 0 0 2px rgba(17, 182, 109, 0.32);
+    }
+    50% {
+        border-color: rgba(0, 114, 206, 0.12);
+        box-shadow: none;
+    }
+    68% {
+        border-color: #11b66d;
+        box-shadow: 0 0 0 2px rgba(17, 182, 109, 0.32);
+    }
+    100% {
+        border-color: rgba(0, 114, 206, 0.12);
+        box-shadow: none;
+    }
+}
+
+.credential-item--recent-auth {
+    animation: credentialAuthFlashGreen 900ms ease-in-out 1;
+}
+
 .credential-delete {
     background: #dc3545;
     color: white;
