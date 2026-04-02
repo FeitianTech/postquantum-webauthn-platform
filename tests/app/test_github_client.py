@@ -5,18 +5,18 @@ from pathlib import Path
 
 import pytest
 
-_ROOT = Path(__file__).resolve().parents[1]
+_ROOT = Path(__file__).resolve().parents[2]
 
 server_pkg = types.ModuleType("server")
 server_pkg.__path__ = [str(_ROOT / "server")]
 sys.modules.setdefault("server", server_pkg)
 
-server_server_pkg = types.ModuleType("server.server")
-server_server_pkg.__path__ = [str(_ROOT / "server" / "server")]
-sys.modules.setdefault("server.server", server_server_pkg)
+server_server_pkg = types.ModuleType("server.app")
+server_server_pkg.__path__ = [str(_ROOT / "server" / "app")]
+sys.modules.setdefault("server.app", server_server_pkg)
 
-from server.server import github_client
-from server.server.github_client import is_logging_enabled
+from server.app import github_client
+from server.app.github_client import is_logging_enabled
 
 
 def test_is_logging_enabled_default(monkeypatch):

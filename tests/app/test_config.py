@@ -1,4 +1,4 @@
-"""Tests for server/server/config.py module."""
+"""Tests for server/app/config.py module."""
 
 from __future__ import annotations
 
@@ -11,16 +11,16 @@ from unittest import mock
 
 import pytest
 
-_ROOT = Path(__file__).resolve().parents[1]
+_ROOT = Path(__file__).resolve().parents[2]
 
 # Setup module structure
 server_pkg = types.ModuleType("server")
 server_pkg.__path__ = [str(_ROOT / "server")]
 sys.modules.setdefault("server", server_pkg)
 
-server_server_pkg = types.ModuleType("server.server")
-server_server_pkg.__path__ = [str(_ROOT / "server" / "server")]
-sys.modules.setdefault("server.server", server_server_pkg)
+server_server_pkg = types.ModuleType("server.app")
+server_server_pkg.__path__ = [str(_ROOT / "server" / "app")]
+sys.modules.setdefault("server.app", server_server_pkg)
 
 # Mock Google Cloud modules
 google_pkg = types.ModuleType("google")
@@ -85,7 +85,7 @@ google_auth_pkg.exceptions = google_auth_exceptions_pkg
 
 def test_env_flag_with_none():
     """Test _env_flag when env var is not set."""
-    from server.server.config import _env_flag
+    from server.app.config import _env_flag
     
     with mock.patch.dict(os.environ, {}, clear=False):
         if "TEST_FLAG" in os.environ:
@@ -95,7 +95,7 @@ def test_env_flag_with_none():
 
 def test_env_flag_with_false_values():
     """Test _env_flag with various false values."""
-    from server.server.config import _env_flag
+    from server.app.config import _env_flag
     
     false_values = ["", "0", "false", "off", "no", "  false  ", "  0  "]
     for value in false_values:
@@ -105,7 +105,7 @@ def test_env_flag_with_false_values():
 
 def test_env_flag_with_true_values():
     """Test _env_flag with various true values."""
-    from server.server.config import _env_flag
+    from server.app.config import _env_flag
     
     true_values = ["1", "true", "yes", "on", "True", "YES", "  1  ", "anything"]
     for value in true_values:
@@ -122,7 +122,7 @@ def test_resolve_secret_key_from_env():
     with mock.patch.dict(os.environ, {"FIDO_SERVER_SECRET_KEY": test_key}, clear=False):
         # Import after setting env var
         import importlib
-        from server.server import config
+        from server.app import config
         importlib.reload(config)
         
         # The key should be set
@@ -144,7 +144,7 @@ def test_resolve_secret_key_from_file(tmp_path):
             del os.environ["FIDO_SERVER_SECRET_KEY"]
         
         import importlib
-        from server.server import config
+        from server.app import config
         importlib.reload(config)
         
         # The key should be set
@@ -165,10 +165,10 @@ def test_resolve_secret_key_generates_and_stores(tmp_path, monkeypatch):
         env_clear["FIDO_SERVER_SECRET_KEY_FILE"] = None
     
     with mock.patch.dict(os.environ, env_clear, clear=False):
-        from server.server.config import _resolve_secret_key
+        from server.app.config import _resolve_secret_key
         
         # Mock the app.instance_path
-        with mock.patch("server.server.config.app") as mock_app:
+        with mock.patch("server.app.config.app") as mock_app:
             mock_app.instance_path = str(instance_path)
             mock_app.logger = mock.MagicMock()
             
@@ -186,7 +186,7 @@ def test_resolve_secret_key_generates_and_stores(tmp_path, monkeypatch):
 
 def test_parse_trusted_ca_subjects():
     """Test parsing of trusted CA subjects."""
-    from server.server.config import _parse_trusted_ca_subjects
+    from server.app.config import _parse_trusted_ca_subjects
     
     # Test None input
     assert _parse_trusted_ca_subjects(None) is None
@@ -218,7 +218,7 @@ def test_parse_trusted_ca_subjects():
 
 def test_basepath():
     """Test basepath configuration."""
-    from server.server.config import basepath
+    from server.app.config import basepath
     
     # basepath should be a valid path (could be str or Path)
     assert basepath is not None
@@ -230,7 +230,7 @@ def test_basepath():
 
 def test_mds_metadata_paths():
     """Test MDS metadata path constants."""
-    from server.server.config import (
+    from server.app.config import (
         MDS_METADATA_PATH,
         MDS_METADATA_CACHE_PATH,
         MDS_METADATA_VERIFIED_PATH,
@@ -255,7 +255,7 @@ def test_mds_metadata_paths():
 
 def test_mds_metadata_url():
     """Test MDS metadata URL constant."""
-    from server.server.config import MDS_METADATA_URL
+    from server.app.config import MDS_METADATA_URL
     
     # Should be a string URL
     assert isinstance(MDS_METADATA_URL, str)
@@ -264,7 +264,7 @@ def test_mds_metadata_url():
 
 def test_create_fido_server():
     """Test that create_fido_server function works."""
-    from server.server.config import create_fido_server
+    from server.app.config import create_fido_server
     from fido2.server import Fido2Server
     
     # Should create a Fido2Server instance
@@ -286,7 +286,7 @@ def test_create_fido_server():
 
 def test_build_rp_entity():
     """Test build_rp_entity function."""
-    from server.server.config import build_rp_entity
+    from server.app.config import build_rp_entity
     from fido2.webauthn import PublicKeyCredentialRpEntity
     
     # Test with explicit rp_id
@@ -307,7 +307,7 @@ def test_build_rp_entity():
 
 def test_determine_rp_id():
     """Test determine_rp_id function."""
-    from server.server.config import determine_rp_id
+    from server.app.config import determine_rp_id
     
     # Test with explicit ID
     rp_id = determine_rp_id("example.com")
@@ -320,7 +320,7 @@ def test_determine_rp_id():
 
 def test_determine_rp_id_with_request_context():
     """Test determine_rp_id with Flask request context."""
-    from server.server.config import determine_rp_id, app
+    from server.app.config import determine_rp_id, app
     
     with app.test_request_context(
         "https://example.com/path",

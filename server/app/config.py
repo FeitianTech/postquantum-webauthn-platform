@@ -4,6 +4,7 @@ from __future__ import annotations
 import base64
 import ipaddress
 import os
+from pathlib import Path
 import re
 import ssl
 import tempfile
@@ -25,7 +26,18 @@ except Exception:  # pragma: no cover - compatibility shim
     except Exception:  # pragma: no cover - compatibility shim
         pass
 
-app = Flask(__name__, static_url_path="", template_folder="static/templates")
+_PACKAGE_ROOT = Path(__file__).resolve().parent
+_PROJECT_ROOT = _PACKAGE_ROOT.parents[1]
+_FRONTEND_ROOT = _PROJECT_ROOT / "frontend"
+_FRONTEND_STATIC_ROOT = _FRONTEND_ROOT / "static"
+_FRONTEND_TEMPLATE_ROOT = _FRONTEND_ROOT / "templates"
+
+app = Flask(
+    __name__,
+    static_folder=str(_FRONTEND_STATIC_ROOT),
+    static_url_path="",
+    template_folder=str(_FRONTEND_TEMPLATE_ROOT),
+)
 
 
 def _resolve_secret_key() -> bytes:
@@ -291,10 +303,12 @@ basepath = os.path.abspath(os.path.dirname(__file__))
 
 MDS_METADATA_URL = "https://mds3.fidoalliance.org/"
 MDS_METADATA_FILENAME = "blob.jwt"
-MDS_METADATA_PATH = os.path.join(basepath, "static", MDS_METADATA_FILENAME)
-MDS_METADATA_VERIFIED_PATH = os.path.join(basepath, "static", "fido-mds3.verified.json")
+MDS_METADATA_PATH = os.path.join(str(_FRONTEND_STATIC_ROOT), MDS_METADATA_FILENAME)
+MDS_METADATA_VERIFIED_PATH = os.path.join(
+    str(_FRONTEND_STATIC_ROOT), "fido-mds3.verified.json"
+)
 MDS_METADATA_CACHE_PATH = MDS_METADATA_VERIFIED_PATH + ".meta.json"
-SESSION_METADATA_DIR = os.path.join(basepath, "static", "session-metadata")
+SESSION_METADATA_DIR = os.path.join(str(_FRONTEND_STATIC_ROOT), "session-metadata")
 
 FIDO_METADATA_TRUST_ROOT_B64 = (
     "MIIDXzCCAkegAwIBAgILBAAAAAABIVhTCKIwDQYJKoZIhvcNAQELBQAwTDEgMB4G"

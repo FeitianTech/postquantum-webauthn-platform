@@ -26,10 +26,12 @@ htmlcov/
 *.pem
 
 # Session-scoped metadata uploads
-server/server/static/session-metadata/
+frontend/static/session-metadata/
+server/app/static/session-metadata/
 
 # Advanced credential artifact cache
-server/server/static/credential-artifacts/
+frontend/static/credential-artifacts/
+server/app/static/credential-artifacts/
 instance/
 
 .DS_Store

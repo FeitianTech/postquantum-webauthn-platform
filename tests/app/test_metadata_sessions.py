@@ -4,9 +4,9 @@ from flask import session as flask_session
 
 @pytest.fixture
 def session_metadata_env(monkeypatch, tmp_path):
-    config = pytest.importorskip("server.server.config")
-    metadata = pytest.importorskip("server.server.metadata")
-    session_store = pytest.importorskip("server.server.session_metadata_store")
+    config = pytest.importorskip("server.app.config")
+    metadata = pytest.importorskip("server.app.metadata")
+    session_store = pytest.importorskip("server.app.session_metadata_store")
 
     session_dir = tmp_path / "sessions"
     session_dir.mkdir()
@@ -57,7 +57,7 @@ def test_session_metadata_is_isolated(session_metadata_env):
 
 
 def test_runtime_metadata_download_disabled():
-    metadata = pytest.importorskip("server.server.metadata")
+    metadata = pytest.importorskip("server.app.metadata")
     with pytest.raises(RuntimeError):
         metadata.download_metadata_blob()
 

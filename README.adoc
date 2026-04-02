@@ -240,7 +240,7 @@ source .venv/bin/activate
 ### 2. Run the Server
 
 ```bash
-python server/server/app.py
+python server/app/app.py
 ```
 
 The first launch writes a Flask session secret to `instance/session-secret.key`. Keep that file alongside the application so

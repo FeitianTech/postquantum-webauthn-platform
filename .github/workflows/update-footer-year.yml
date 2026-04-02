@@ -23,7 +23,7 @@ jobs:
           import re
 
           current_year = datetime.now(timezone.utc).year
-          html_path = Path("server/server/static/templates/index.html")
+          html_path = Path("frontend/templates/index.html")
           text = html_path.read_text(encoding="utf-8")
 
           pattern = re.compile(

@@ -32,6 +32,7 @@ WORKDIR /src
 COPY pyproject.toml README.adoc ./
 COPY COPYING COPYING.APLv2 COPYING.MPLv2 ./
 COPY fido2 ./fido2
+COPY frontend ./frontend
 COPY server ./server
 
 # Install Python dependencies into /install
@@ -66,7 +67,8 @@ RUN apt-get update && \
 # Copy liboqs and Python packages from builder
 COPY prebuilt_liboqs/linux-x86_64 /opt/liboqs
 COPY --from=builder /install /usr/local
-COPY server/server /app/server
+COPY server/app /app/server
+COPY frontend /app/frontend
 
 RUN echo "/opt/liboqs/lib" > /etc/ld.so.conf.d/liboqs.conf && ldconfig \
     && ln -sf /opt/liboqs/lib/liboqs.so /usr/local/lib/liboqs.so \

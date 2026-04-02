@@ -36,11 +36,11 @@ jobs:
           import importlib
 
           modules = [
-              "server.server.app",
-              "server.server.metadata",
-              "server.server.routes.advanced",
-              "server.server.routes.general",
-              "server.server.routes.simple",
+              "server.app.app",
+              "server.app.metadata",
+              "server.app.routes.advanced",
+              "server.app.routes.general",
+              "server.app.routes.simple",
           ]
 
           for module in modules:

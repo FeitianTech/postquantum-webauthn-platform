@@ -10,16 +10,16 @@ from pathlib import Path
 
 import pytest
 
-_ROOT = Path(__file__).resolve().parents[1]
+_ROOT = Path(__file__).resolve().parents[2]
 
 # Setup module structure
 server_pkg = types.ModuleType("server")
 server_pkg.__path__ = [str(_ROOT / "server")]
 sys.modules.setdefault("server", server_pkg)
 
-server_server_pkg = types.ModuleType("server.server")
-server_server_pkg.__path__ = [str(_ROOT / "server" / "server")]
-sys.modules.setdefault("server.server", server_server_pkg)
+server_server_pkg = types.ModuleType("server.app")
+server_server_pkg.__path__ = [str(_ROOT / "server" / "app")]
+sys.modules.setdefault("server.app", server_server_pkg)
 
 
 @pytest.fixture(autouse=True)
@@ -90,7 +90,7 @@ def test_should_warm_cloud_storage_disabled(monkeypatch):
     """Test that cloud storage warming is disabled when GCS is disabled."""
     monkeypatch.delenv("FIDO_SERVER_GCS_BUCKET", raising=False)
     
-    from server.server import startup, cloud_storage
+    from server.app import startup, cloud_storage
     
     monkeypatch.setattr(cloud_storage, "gcs_enabled", lambda: False)
     
@@ -101,7 +101,7 @@ def test_should_warm_cloud_storage_no_bucket(monkeypatch):
     """Test that cloud storage warming is disabled when no bucket is set."""
     monkeypatch.delenv("FIDO_SERVER_GCS_BUCKET", raising=False)
     
-    from server.server import startup, cloud_storage
+    from server.app import startup, cloud_storage
     
     monkeypatch.setattr(cloud_storage, "gcs_enabled", lambda: True)
     
@@ -112,7 +112,7 @@ def test_should_warm_cloud_storage_enabled(monkeypatch):
     """Test that cloud storage warming is enabled when GCS is configured."""
     monkeypatch.setenv("FIDO_SERVER_GCS_BUCKET", "test-bucket")
     
-    from server.server import startup, cloud_storage
+    from server.app import startup, cloud_storage
     
     monkeypatch.setattr(cloud_storage, "gcs_enabled", lambda: True)
     
@@ -123,7 +123,7 @@ def test_startup_fail_fast_defaults_to_fast(monkeypatch):
     monkeypatch.delenv("FIDO_SERVER_STARTUP_MODE", raising=False)
     monkeypatch.delenv("FIDO_SERVER_STARTUP_FAIL_FAST", raising=False)
 
-    from server.server import startup
+    from server.app import startup
 
     assert startup.startup_fail_fast_enabled() is False
 
@@ -132,7 +132,7 @@ def test_startup_fail_fast_honors_strict_mode(monkeypatch):
     monkeypatch.setenv("FIDO_SERVER_STARTUP_MODE", "strict")
     monkeypatch.delenv("FIDO_SERVER_STARTUP_FAIL_FAST", raising=False)
 
-    from server.server import startup
+    from server.app import startup
 
     assert startup.startup_fail_fast_enabled() is True
 
@@ -141,7 +141,7 @@ def test_warm_up_dependencies_success(monkeypatch):
     """Test successful startup dependency warming."""
     monkeypatch.delenv("FIDO_SERVER_GCS_BUCKET", raising=False)
     
-    from server.server import startup, cloud_storage, session_metadata_store
+    from server.app import startup, cloud_storage, session_metadata_store
     
     # Mock all dependencies
     monkeypatch.setattr(cloud_storage, "gcs_enabled", lambda: False)
@@ -151,9 +151,9 @@ def test_warm_up_dependencies_success(monkeypatch):
         metadata_bootstrapped.append(kwargs)
     
     # Create a mock for ensure_metadata_bootstrapped
-    general_routes = types.ModuleType("server.server.routes.general")
+    general_routes = types.ModuleType("server.app.routes.general")
     general_routes.ensure_metadata_bootstrapped = mock_bootstrap
-    monkeypatch.setitem(sys.modules, "server.server.routes.general", general_routes)
+    monkeypatch.setitem(sys.modules, "server.app.routes.general", general_routes)
     
     session_ops = []
     monkeypatch.setattr(
@@ -188,7 +188,7 @@ def test_warm_up_dependencies_with_gcs(monkeypatch):
     """Test startup with cloud storage warming."""
     monkeypatch.setenv("FIDO_SERVER_GCS_BUCKET", "test-bucket")
     
-    from server.server import startup, cloud_storage, session_metadata_store
+    from server.app import startup, cloud_storage, session_metadata_store
     
     # Mock dependencies
     monkeypatch.setattr(cloud_storage, "gcs_enabled", lambda: True)
@@ -197,9 +197,9 @@ def test_warm_up_dependencies_with_gcs(monkeypatch):
     monkeypatch.setattr(cloud_storage, "ensure_ready", lambda: gcs_ready.append(True))
     
     # Mock metadata bootstrap
-    general_routes = types.ModuleType("server.server.routes.general")
+    general_routes = types.ModuleType("server.app.routes.general")
     general_routes.ensure_metadata_bootstrapped = lambda **kwargs: None
-    monkeypatch.setitem(sys.modules, "server.server.routes.general", general_routes)
+    monkeypatch.setitem(sys.modules, "server.app.routes.general", general_routes)
     
     monkeypatch.setattr(session_metadata_store, "ensure_session", lambda sid: None)
     monkeypatch.setattr(session_metadata_store, "touch_last_access", lambda sid: None)
@@ -216,14 +216,14 @@ def test_warm_up_dependencies_metadata_bootstrap_failure(monkeypatch):
     """Test startup failure during metadata bootstrap."""
     monkeypatch.delenv("FIDO_SERVER_GCS_BUCKET", raising=False)
     
-    from server.server import startup
+    from server.app import startup
     
     # Mock metadata bootstrap to fail
-    general_routes = types.ModuleType("server.server.routes.general")
+    general_routes = types.ModuleType("server.app.routes.general")
     general_routes.ensure_metadata_bootstrapped = lambda **kwargs: (_ for _ in ()).throw(
         RuntimeError("Bootstrap failed")
     )
-    monkeypatch.setitem(sys.modules, "server.server.routes.general", general_routes)
+    monkeypatch.setitem(sys.modules, "server.app.routes.general", general_routes)
     
     # Verify exception is raised
     with pytest.raises(RuntimeError, match="Bootstrap failed"):
@@ -234,7 +234,7 @@ def test_warm_up_dependencies_gcs_failure(monkeypatch):
     """Test startup failure during GCS check."""
     monkeypatch.setenv("FIDO_SERVER_GCS_BUCKET", "test-bucket")
     
-    from server.server import startup, cloud_storage
+    from server.app import startup, cloud_storage
     
     # Mock GCS to fail
     monkeypatch.setattr(cloud_storage, "gcs_enabled", lambda: True)
@@ -245,9 +245,9 @@ def test_warm_up_dependencies_gcs_failure(monkeypatch):
     )
     
     # Mock metadata bootstrap
-    general_routes = types.ModuleType("server.server.routes.general")
+    general_routes = types.ModuleType("server.app.routes.general")
     general_routes.ensure_metadata_bootstrapped = lambda **kwargs: None
-    monkeypatch.setitem(sys.modules, "server.server.routes.general", general_routes)
+    monkeypatch.setitem(sys.modules, "server.app.routes.general", general_routes)
     
     # Verify exception is raised
     with pytest.raises(RuntimeError, match="GCS failed"):
@@ -258,15 +258,15 @@ def test_warm_up_dependencies_session_storage_failure(monkeypatch):
     """Test startup failure during session storage check."""
     monkeypatch.delenv("FIDO_SERVER_GCS_BUCKET", raising=False)
     
-    from server.server import startup, cloud_storage, session_metadata_store
+    from server.app import startup, cloud_storage, session_metadata_store
     
     # Mock dependencies
     monkeypatch.setattr(cloud_storage, "gcs_enabled", lambda: False)
     
     # Mock metadata bootstrap
-    general_routes = types.ModuleType("server.server.routes.general")
+    general_routes = types.ModuleType("server.app.routes.general")
     general_routes.ensure_metadata_bootstrapped = lambda **kwargs: None
-    monkeypatch.setitem(sys.modules, "server.server.routes.general", general_routes)
+    monkeypatch.setitem(sys.modules, "server.app.routes.general", general_routes)
     
     # Mock session storage to fail
     monkeypatch.setattr(
@@ -284,15 +284,15 @@ def test_warm_up_dependencies_cleanup_on_success(monkeypatch):
     """Test that startup session is cleaned up on success."""
     monkeypatch.delenv("FIDO_SERVER_GCS_BUCKET", raising=False)
     
-    from server.server import startup, cloud_storage, session_metadata_store
+    from server.app import startup, cloud_storage, session_metadata_store
     
     # Mock dependencies
     monkeypatch.setattr(cloud_storage, "gcs_enabled", lambda: False)
     
     # Mock metadata bootstrap
-    general_routes = types.ModuleType("server.server.routes.general")
+    general_routes = types.ModuleType("server.app.routes.general")
     general_routes.ensure_metadata_bootstrapped = lambda **kwargs: None
-    monkeypatch.setitem(sys.modules, "server.server.routes.general", general_routes)
+    monkeypatch.setitem(sys.modules, "server.app.routes.general", general_routes)
     
     deleted_sessions = []
     monkeypatch.setattr(session_metadata_store, "ensure_session", lambda sid: None)
@@ -314,15 +314,15 @@ def test_warm_up_dependencies_cleanup_on_failure(monkeypatch):
     """Test that startup session cleanup is attempted even on failure."""
     monkeypatch.delenv("FIDO_SERVER_GCS_BUCKET", raising=False)
     
-    from server.server import startup, cloud_storage, session_metadata_store
+    from server.app import startup, cloud_storage, session_metadata_store
     
     # Mock dependencies
     monkeypatch.setattr(cloud_storage, "gcs_enabled", lambda: False)
     
     # Mock metadata bootstrap
-    general_routes = types.ModuleType("server.server.routes.general")
+    general_routes = types.ModuleType("server.app.routes.general")
     general_routes.ensure_metadata_bootstrapped = lambda **kwargs: None
-    monkeypatch.setitem(sys.modules, "server.server.routes.general", general_routes)
+    monkeypatch.setitem(sys.modules, "server.app.routes.general", general_routes)
     
     deleted_sessions = []
     monkeypatch.setattr(session_metadata_store, "ensure_session", lambda sid: None)
@@ -351,15 +351,15 @@ def test_warm_up_dependencies_skip_if_reloader_parent(monkeypatch):
     """Test that reloader parent flag is passed to metadata bootstrap."""
     monkeypatch.delenv("FIDO_SERVER_GCS_BUCKET", raising=False)
     
-    from server.server import startup, cloud_storage, session_metadata_store
+    from server.app import startup, cloud_storage, session_metadata_store
     
     # Mock dependencies
     monkeypatch.setattr(cloud_storage, "gcs_enabled", lambda: False)
     
     bootstrap_calls = []
-    general_routes = types.ModuleType("server.server.routes.general")
+    general_routes = types.ModuleType("server.app.routes.general")
     general_routes.ensure_metadata_bootstrapped = lambda **kwargs: bootstrap_calls.append(kwargs)
-    monkeypatch.setitem(sys.modules, "server.server.routes.general", general_routes)
+    monkeypatch.setitem(sys.modules, "server.app.routes.general", general_routes)
     
     monkeypatch.setattr(session_metadata_store, "ensure_session", lambda sid: None)
     monkeypatch.setattr(session_metadata_store, "touch_last_access", lambda sid: None)
@@ -377,7 +377,7 @@ def test_warm_up_dependencies_fast_mode_skips_heavy_checks(monkeypatch):
 
     monkeypatch.setenv("FIDO_SERVER_GCS_BUCKET", "test-bucket")
 
-    from server.server import startup, cloud_storage, session_metadata_store
+    from server.app import startup, cloud_storage, session_metadata_store
 
     monkeypatch.setattr(cloud_storage, "gcs_enabled", lambda: True)
 
@@ -385,9 +385,9 @@ def test_warm_up_dependencies_fast_mode_skips_heavy_checks(monkeypatch):
     gcs_calls = []
     session_calls = []
 
-    general_routes = types.ModuleType("server.server.routes.general")
+    general_routes = types.ModuleType("server.app.routes.general")
     general_routes.ensure_metadata_bootstrapped = lambda **kwargs: bootstrap_calls.append(kwargs)
-    monkeypatch.setitem(sys.modules, "server.server.routes.general", general_routes)
+    monkeypatch.setitem(sys.modules, "server.app.routes.general", general_routes)
 
     monkeypatch.setattr(cloud_storage, "ensure_ready", lambda: gcs_calls.append(True))
     monkeypatch.setattr(session_metadata_store, "ensure_session", lambda sid: session_calls.append(("ensure", sid)))
@@ -406,7 +406,7 @@ def test_warm_up_dependencies_fast_mode_does_not_raise(monkeypatch):
     monkeypatch.setenv("FIDO_SERVER_WARM_SESSION_STORAGE", "1")
     monkeypatch.delenv("FIDO_SERVER_GCS_BUCKET", raising=False)
 
-    from server.server import startup, cloud_storage, session_metadata_store
+    from server.app import startup, cloud_storage, session_metadata_store
 
     monkeypatch.setattr(cloud_storage, "gcs_enabled", lambda: False)
     monkeypatch.setattr(

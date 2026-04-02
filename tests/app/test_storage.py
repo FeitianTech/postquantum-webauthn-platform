@@ -10,15 +10,15 @@ from pathlib import Path
 
 import pytest
 
-_ROOT = Path(__file__).resolve().parents[1]
+_ROOT = Path(__file__).resolve().parents[2]
 
 server_pkg = types.ModuleType("server")
 server_pkg.__path__ = [str(_ROOT / "server")]
 sys.modules.setdefault("server", server_pkg)
 
-server_server_pkg = types.ModuleType("server.server")
-server_server_pkg.__path__ = [str(_ROOT / "server" / "server")]
-sys.modules.setdefault("server.server", server_server_pkg)
+server_server_pkg = types.ModuleType("server.app")
+server_server_pkg.__path__ = [str(_ROOT / "server" / "app")]
+sys.modules.setdefault("server.app", server_server_pkg)
 
 google_pkg = types.ModuleType("google")
 google_pkg.__path__ = []
@@ -83,7 +83,7 @@ setattr(google_auth_exceptions_pkg, "RefreshError", Exception)
 sys.modules.setdefault("google.auth.exceptions", google_auth_exceptions_pkg)
 google_auth_pkg.exceptions = google_auth_exceptions_pkg
 
-storage = importlib.import_module("server.server.storage")
+storage = importlib.import_module("server.app.storage")
 
 
 @pytest.fixture(autouse=True)

@@ -7,17 +7,17 @@ from pathlib import Path
 import cbor2
 import pytest
 
-_ROOT = Path(__file__).resolve().parents[1]
+_ROOT = Path(__file__).resolve().parents[2]
 
 server_pkg = types.ModuleType("server")
 server_pkg.__path__ = [str(_ROOT / "server")]
 sys.modules.setdefault("server", server_pkg)
 
-server_server_pkg = types.ModuleType("server.server")
-server_server_pkg.__path__ = [str(_ROOT / "server" / "server")]
-sys.modules.setdefault("server.server", server_server_pkg)
+server_server_pkg = types.ModuleType("server.app")
+server_server_pkg.__path__ = [str(_ROOT / "server" / "app")]
+sys.modules.setdefault("server.app", server_server_pkg)
 
-from server.server import device_logs
+from server.app import device_logs
 
 
 class ImmediateThread:

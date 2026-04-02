@@ -6,8 +6,8 @@ import pytest
 
 @pytest.fixture
 def packaged_metadata_env(monkeypatch, tmp_path):
-    general_module = pytest.importorskip("server.server.routes.general")
-    metadata_module = pytest.importorskip("server.server.metadata")
+    general_module = pytest.importorskip("server.app.routes.general")
+    metadata_module = pytest.importorskip("server.app.metadata")
 
     verified_path = tmp_path / "fido-mds3.verified.json"
     cache_path = tmp_path / "fido-mds3.verified.json.meta.json"
@@ -69,7 +69,7 @@ def test_packaged_metadata_bootstraps_without_download(packaged_metadata_env):
 
 
 def test_metadata_not_available_is_warning_classical():
-    from server.server import attestation
+    from server.app import attestation
 
     attestation_object = type("obj", (), {"att_stmt": {}})()
     attestation_result = type(
@@ -91,7 +91,7 @@ def test_metadata_not_available_is_warning_classical():
 
 
 def test_metadata_not_available_is_warning_pqc():
-    from server.server import attestation
+    from server.app import attestation
 
     attestation_object = type("obj", (), {"att_stmt": {}})()
     outcome = attestation._evaluate_mldsa_attestation_root(
@@ -106,8 +106,8 @@ def test_metadata_not_available_is_warning_pqc():
 
 
 def test_index_html_skips_eager_bootstrap_by_default(monkeypatch):
-    general_module = pytest.importorskip("server.server.routes.general")
-    config_module = pytest.importorskip("server.server.config")
+    general_module = pytest.importorskip("server.app.routes.general")
+    config_module = pytest.importorskip("server.app.config")
 
     bootstrap_calls = []
 
@@ -136,8 +136,8 @@ def test_index_html_skips_eager_bootstrap_by_default(monkeypatch):
 
 
 def test_index_html_bootstraps_when_strict(monkeypatch):
-    general_module = pytest.importorskip("server.server.routes.general")
-    config_module = pytest.importorskip("server.server.config")
+    general_module = pytest.importorskip("server.app.routes.general")
+    config_module = pytest.importorskip("server.app.config")
 
     bootstrap_calls = []
 

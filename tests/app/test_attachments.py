@@ -9,16 +9,16 @@ from pathlib import Path
 
 import pytest
 
-_ROOT = Path(__file__).resolve().parents[1]
+_ROOT = Path(__file__).resolve().parents[2]
 
 # Setup module structure
 server_pkg = types.ModuleType("server")
 server_pkg.__path__ = [str(_ROOT / "server")]
 sys.modules.setdefault("server", server_pkg)
 
-server_server_pkg = types.ModuleType("server.server")
-server_server_pkg.__path__ = [str(_ROOT / "server" / "server")]
-sys.modules.setdefault("server.server", server_server_pkg)
+server_server_pkg = types.ModuleType("server.app")
+server_server_pkg.__path__ = [str(_ROOT / "server" / "app")]
+sys.modules.setdefault("server.app", server_server_pkg)
 
 
 @pytest.fixture(autouse=True)
@@ -86,7 +86,7 @@ def _mock_dependencies(monkeypatch):
 
 def test_hint_to_attachment_map():
     """Test that the hint-to-attachment mapping is correctly defined."""
-    from server.server import attachments
+    from server.app import attachments
     
     assert attachments.HINT_TO_ATTACHMENT_MAP == {
         "security-key": "cross-platform",
@@ -97,7 +97,7 @@ def test_hint_to_attachment_map():
 
 def test_normalize_attachment_with_string():
     """Test normalizing valid attachment strings."""
-    from server.server import attachments
+    from server.app import attachments
     
     assert attachments.normalize_attachment("platform") == "platform"
     assert attachments.normalize_attachment("cross-platform") == "cross-platform"
@@ -107,7 +107,7 @@ def test_normalize_attachment_with_string():
 
 def test_normalize_attachment_with_empty():
     """Test normalizing empty or whitespace-only strings."""
-    from server.server import attachments
+    from server.app import attachments
     
     assert attachments.normalize_attachment("") is None
     assert attachments.normalize_attachment("   ") is None
@@ -115,7 +115,7 @@ def test_normalize_attachment_with_empty():
 
 def test_normalize_attachment_with_non_string():
     """Test normalizing non-string values."""
-    from server.server import attachments
+    from server.app import attachments
     
     assert attachments.normalize_attachment(None) is None
     assert attachments.normalize_attachment(123) is None
@@ -125,7 +125,7 @@ def test_normalize_attachment_with_non_string():
 
 def test_derive_allowed_attachments_from_hints_security_key():
     """Test deriving attachments from security-key hint."""
-    from server.server import attachments
+    from server.app import attachments
     
     result = attachments.derive_allowed_attachments_from_hints(["security-key"])
     assert result == ["cross-platform"]
@@ -133,7 +133,7 @@ def test_derive_allowed_attachments_from_hints_security_key():
 
 def test_derive_allowed_attachments_from_hints_hybrid():
     """Test deriving attachments from hybrid hint."""
-    from server.server import attachments
+    from server.app import attachments
     
     result = attachments.derive_allowed_attachments_from_hints(["hybrid"])
     assert result == ["cross-platform"]
@@ -141,7 +141,7 @@ def test_derive_allowed_attachments_from_hints_hybrid():
 
 def test_derive_allowed_attachments_from_hints_client_device():
     """Test deriving attachments from client-device hint."""
-    from server.server import attachments
+    from server.app import attachments
     
     result = attachments.derive_allowed_attachments_from_hints(["client-device"])
     assert result == ["platform"]
@@ -149,7 +149,7 @@ def test_derive_allowed_attachments_from_hints_client_device():
 
 def test_derive_allowed_attachments_from_hints_multiple():
     """Test deriving attachments from multiple hints."""
-    from server.server import attachments
+    from server.app import attachments
     
     result = attachments.derive_allowed_attachments_from_hints(
         ["security-key", "client-device"]
@@ -159,7 +159,7 @@ def test_derive_allowed_attachments_from_hints_multiple():
 
 def test_derive_allowed_attachments_from_hints_duplicates():
     """Test that duplicate hints don't create duplicate attachments."""
-    from server.server import attachments
+    from server.app import attachments
     
     result = attachments.derive_allowed_attachments_from_hints(
         ["security-key", "hybrid", "security-key"]
@@ -169,7 +169,7 @@ def test_derive_allowed_attachments_from_hints_duplicates():
 
 def test_derive_allowed_attachments_from_hints_case_insensitive():
     """Test that hints are case-insensitive."""
-    from server.server import attachments
+    from server.app import attachments
     
     result = attachments.derive_allowed_attachments_from_hints(
         ["Security-Key", "CLIENT-DEVICE"]
@@ -179,7 +179,7 @@ def test_derive_allowed_attachments_from_hints_case_insensitive():
 
 def test_derive_allowed_attachments_from_hints_with_whitespace():
     """Test that hints with whitespace are handled."""
-    from server.server import attachments
+    from server.app import attachments
     
     result = attachments.derive_allowed_attachments_from_hints(
         ["  security-key  ", "client-device"]
@@ -189,7 +189,7 @@ def test_derive_allowed_attachments_from_hints_with_whitespace():
 
 def test_derive_allowed_attachments_from_hints_unknown():
     """Test that unknown hints are ignored."""
-    from server.server import attachments
+    from server.app import attachments
     
     result = attachments.derive_allowed_attachments_from_hints(
         ["unknown-hint", "security-key"]
@@ -199,7 +199,7 @@ def test_derive_allowed_attachments_from_hints_unknown():
 
 def test_derive_allowed_attachments_from_hints_non_strings():
     """Test that non-string hints are ignored."""
-    from server.server import attachments
+    from server.app import attachments
     
     result = attachments.derive_allowed_attachments_from_hints(
         [None, 123, "security-key", []]
@@ -209,7 +209,7 @@ def test_derive_allowed_attachments_from_hints_non_strings():
 
 def test_derive_allowed_attachments_from_hints_empty():
     """Test deriving attachments from empty hints."""
-    from server.server import attachments
+    from server.app import attachments
     
     assert attachments.derive_allowed_attachments_from_hints([]) == []
     assert attachments.derive_allowed_attachments_from_hints(None) == []
@@ -217,7 +217,7 @@ def test_derive_allowed_attachments_from_hints_empty():
 
 def test_normalize_attachment_list_from_list():
     """Test normalizing a list of attachments."""
-    from server.server import attachments
+    from server.app import attachments
     
     result = attachments.normalize_attachment_list(
         ["platform", "cross-platform", "Platform"]
@@ -227,7 +227,7 @@ def test_normalize_attachment_list_from_list():
 
 def test_normalize_attachment_list_from_mapping():
     """Test normalizing attachments from a mapping."""
-    from server.server import attachments
+    from server.app import attachments
     
     result = attachments.normalize_attachment_list(
         {"key1": "platform", "key2": "cross-platform"}
@@ -237,7 +237,7 @@ def test_normalize_attachment_list_from_mapping():
 
 def test_normalize_attachment_list_from_string():
     """Test that strings return empty list."""
-    from server.server import attachments
+    from server.app import attachments
     
     assert attachments.normalize_attachment_list("platform") == []
     assert attachments.normalize_attachment_list("") == []
@@ -245,21 +245,21 @@ def test_normalize_attachment_list_from_string():
 
 def test_normalize_attachment_list_from_none():
     """Test that None returns empty list."""
-    from server.server import attachments
+    from server.app import attachments
     
     assert attachments.normalize_attachment_list(None) == []
 
 
 def test_normalize_attachment_list_from_bytes():
     """Test that bytes return empty list."""
-    from server.server import attachments
+    from server.app import attachments
     
     assert attachments.normalize_attachment_list(b"platform") == []
 
 
 def test_normalize_attachment_list_removes_duplicates():
     """Test that duplicates are removed."""
-    from server.server import attachments
+    from server.app import attachments
     
     result = attachments.normalize_attachment_list(
         ["platform", "platform", "cross-platform"]
@@ -269,7 +269,7 @@ def test_normalize_attachment_list_removes_duplicates():
 
 def test_normalize_attachment_list_filters_invalid():
     """Test that invalid values are filtered out."""
-    from server.server import attachments
+    from server.app import attachments
     
     result = attachments.normalize_attachment_list(
         ["platform", None, 123, "", "cross-platform"]
@@ -279,7 +279,7 @@ def test_normalize_attachment_list_filters_invalid():
 
 def test_resolve_effective_attachments_from_hints():
     """Test resolving attachments when hints are provided."""
-    from server.server import attachments
+    from server.app import attachments
     
     result = attachments.resolve_effective_attachments(["security-key"])
     assert result == ["cross-platform"]
@@ -287,7 +287,7 @@ def test_resolve_effective_attachments_from_hints():
 
 def test_resolve_effective_attachments_from_requested():
     """Test resolving attachments from requested attachment when no hints."""
-    from server.server import attachments
+    from server.app import attachments
     
     result = attachments.resolve_effective_attachments([], "platform")
     assert result == ["platform"]
@@ -295,7 +295,7 @@ def test_resolve_effective_attachments_from_requested():
 
 def test_resolve_effective_attachments_hints_take_priority():
     """Test that hints take priority over requested attachment."""
-    from server.server import attachments
+    from server.app import attachments
     
     result = attachments.resolve_effective_attachments(
         ["security-key"], "platform"
@@ -305,7 +305,7 @@ def test_resolve_effective_attachments_hints_take_priority():
 
 def test_resolve_effective_attachments_empty():
     """Test resolving attachments when nothing is provided."""
-    from server.server import attachments
+    from server.app import attachments
     
     result = attachments.resolve_effective_attachments([])
     assert result == []
@@ -316,7 +316,7 @@ def test_resolve_effective_attachments_empty():
 
 def test_build_credential_attachment_map(monkeypatch):
     """Test building credential attachment map."""
-    from server.server import attachments
+    from server.app import attachments
     
     # Mock the ensure_metadata_session_id in attachments module
     monkeypatch.setattr(attachments, "ensure_metadata_session_id", lambda: "test-session")
@@ -368,7 +368,7 @@ def test_build_credential_attachment_map(monkeypatch):
 
 def test_build_credential_attachment_map_with_objects(monkeypatch):
     """Test building attachment map with object-style credentials."""
-    from server.server import attachments
+    from server.app import attachments
     
     monkeypatch.setattr(attachments, "ensure_metadata_session_id", lambda: "test-session")
     
@@ -402,7 +402,7 @@ def test_build_credential_attachment_map_with_objects(monkeypatch):
 
 def test_build_credential_attachment_map_no_attachment(monkeypatch):
     """Test building map with credentials that have no attachment info."""
-    from server.server import attachments
+    from server.app import attachments
     
     monkeypatch.setattr(attachments, "ensure_metadata_session_id", lambda: "test-session")
     
@@ -427,7 +427,7 @@ def test_build_credential_attachment_map_no_attachment(monkeypatch):
 
 def test_build_credential_attachment_map_invalid_credential_id(monkeypatch):
     """Test that credentials with invalid ID are skipped."""
-    from server.server import attachments
+    from server.app import attachments
     
     monkeypatch.setattr(attachments, "ensure_metadata_session_id", lambda: "test-session")
     
@@ -459,7 +459,7 @@ def test_build_credential_attachment_map_invalid_credential_id(monkeypatch):
 
 def test_build_credential_attachment_map_memoryview(monkeypatch):
     """Test that memoryview credential IDs are handled."""
-    from server.server import attachments
+    from server.app import attachments
     
     monkeypatch.setattr(attachments, "ensure_metadata_session_id", lambda: "test-session")
     

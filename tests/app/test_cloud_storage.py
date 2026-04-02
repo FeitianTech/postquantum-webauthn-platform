@@ -89,7 +89,7 @@ def _install_google_stubs():
 
 
 _install_google_stubs()
-cloud_storage = importlib.import_module("server.server.cloud_storage")
+cloud_storage = importlib.import_module("server.app.cloud_storage")
 
 
 def test_with_retry_succeeds_after_transient_error(monkeypatch):

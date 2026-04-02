@@ -15,13 +15,12 @@ from fido2.mds3 import parse_blob
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
-BASE_DIR = REPO_ROOT / "server" / "server"
-STATIC_DIR = BASE_DIR / "static"
+FRONTEND_STATIC_DIR = REPO_ROOT / "frontend" / "static"
 
 MDS_METADATA_URL = "https://mds3.fidoalliance.org/"
 MDS_METADATA_FILENAME = "blob.jwt"
-MDS_METADATA_PATH = STATIC_DIR / MDS_METADATA_FILENAME
-MDS_METADATA_VERIFIED_PATH = STATIC_DIR / "fido-mds3.verified.json"
+MDS_METADATA_PATH = FRONTEND_STATIC_DIR / MDS_METADATA_FILENAME
+MDS_METADATA_VERIFIED_PATH = FRONTEND_STATIC_DIR / "fido-mds3.verified.json"
 MDS_METADATA_CACHE_PATH = Path(str(MDS_METADATA_VERIFIED_PATH) + ".meta.json")
 
 FIDO_METADATA_TRUST_ROOT_B64 = (

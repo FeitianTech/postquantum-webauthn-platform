@@ -17,7 +17,7 @@ from .cloud_storage import (
     gcs_enabled,
     upload_bytes,
 )
-from .config import basepath
+from .config import _FRONTEND_STATIC_ROOT
 
 __all__ = [
     "store_credential_artifact",
@@ -26,7 +26,7 @@ __all__ = [
 ]
 
 
-_ARTIFACT_DIR = os.path.join(basepath, "static", "credential-artifacts")
+_ARTIFACT_DIR = os.path.join(str(_FRONTEND_STATIC_ROOT), "credential-artifacts")
 _USER_FOLDER_PREFIX = os.environ.get(
     "FIDO_SERVER_GCS_USER_FOLDER_PREFIX",
     os.environ.get("FIDO_SERVER_GCS_CREDENTIAL_ARTIFACT_PREFIX", "user-data"),

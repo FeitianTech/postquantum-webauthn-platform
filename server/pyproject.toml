@@ -5,7 +5,7 @@ description = "Example server for python-fido2"
 authors = ["Rain Zhang <rainzhang.zty@gmail.com>"]
 license = "Apache-2"
 packages = [
-  { include = "server" },
+  { include = "app" },
 ]
 
 [tool.poetry.dependencies]
@@ -20,4 +20,4 @@ requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
-server = "server.server:main"
+server = "app:main"
