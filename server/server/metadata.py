@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import os
 import secrets
+import threading
 import time
 import uuid
 from dataclasses import dataclass, replace
@@ -69,9 +70,17 @@ _SESSION_METADATA_SESSION_KEY = "fido.mds.session"
 _SESSION_METADATA_COOKIE_NAME = "fido.mds.session"
 _SESSION_METADATA_COOKIE_MAX_AGE = 60 * 60 * 24 * 365  # 1 year
 _SESSION_METADATA_INACTIVE_AGE = timedelta(days=14)
-_SESSION_METADATA_CLEANUP_INTERVAL = timedelta(hours=6)
+
+_SESSION_METADATA_CLEANUP_INTERVAL_SECONDS_ENV = (
+    "FIDO_SERVER_SESSION_METADATA_CLEANUP_INTERVAL_SECONDS"
+)
+_SESSION_METADATA_CLEANUP_INTERVAL_HOURS_ENV = "FIDO_SERVER_SESSION_METADATA_CLEANUP_HOURS"
+_SESSION_METADATA_CLEANUP_ASYNC_ENV = "FIDO_SERVER_SESSION_METADATA_CLEANUP_ASYNC"
 
 _session_metadata_last_cleanup: float = 0.0
+_session_cleanup_worker: Optional[threading.Thread] = None
+_session_cleanup_pending: bool = False
+_session_cleanup_lock = threading.Lock()
 
 _METADATA_REPO_FOLDER = "metadata"
 
@@ -88,6 +97,57 @@ _METADATA_STATEMENT_REQUIRED_DEFAULTS: Mapping[str, Any] = {
     "tcDisplay": [],
     "attestationRootCertificates": [],
 }
+
+
+def _env_flag(name: str) -> Optional[bool]:
+    raw = os.environ.get(name)
+    if raw is None:
+        return None
+
+    normalised = raw.strip().lower()
+    if normalised in {"", "0", "false", "off", "no"}:
+        return False
+    return True
+
+
+def _resolve_cleanup_interval() -> timedelta:
+    raw_seconds = os.environ.get(_SESSION_METADATA_CLEANUP_INTERVAL_SECONDS_ENV)
+    if raw_seconds is not None:
+        try:
+            seconds = float(raw_seconds)
+            if seconds >= 0:
+                return timedelta(seconds=seconds)
+        except ValueError:
+            app.logger.warning(
+                "Invalid value for %s: %r",
+                _SESSION_METADATA_CLEANUP_INTERVAL_SECONDS_ENV,
+                raw_seconds,
+            )
+
+    raw_hours = os.environ.get(_SESSION_METADATA_CLEANUP_INTERVAL_HOURS_ENV)
+    if raw_hours is not None:
+        try:
+            hours = float(raw_hours)
+            if hours >= 0:
+                return timedelta(hours=hours)
+        except ValueError:
+            app.logger.warning(
+                "Invalid value for %s: %r",
+                _SESSION_METADATA_CLEANUP_INTERVAL_HOURS_ENV,
+                raw_hours,
+            )
+
+    return timedelta(hours=6)
+
+
+_SESSION_METADATA_CLEANUP_INTERVAL = _resolve_cleanup_interval()
+
+
+def _cleanup_async_enabled() -> bool:
+    explicit = _env_flag(_SESSION_METADATA_CLEANUP_ASYNC_ENV)
+    if explicit is None:
+        return True
+    return explicit
 
 
 def _safe_metadata_repo_filename(filename: str) -> str:
@@ -264,7 +324,7 @@ def _session_metadata_directory(
             )
             raise
     if cleanup:
-        _maybe_cleanup_inactive_sessions()
+        _schedule_inactive_session_cleanup()
     return normalised
 
 
@@ -310,13 +370,73 @@ def _maybe_cleanup_inactive_sessions(now: Optional[float] = None) -> None:
             )
 
 
+def _run_inactive_session_cleanup_worker() -> None:
+    global _session_cleanup_worker, _session_cleanup_pending
+
+    while True:
+        try:
+            _maybe_cleanup_inactive_sessions()
+        except Exception as exc:  # pragma: no cover - defensive logging
+            app.logger.warning(
+                "Unexpected failure while cleaning inactive metadata sessions: %s",
+                exc,
+                exc_info=True,
+            )
+
+        with _session_cleanup_lock:
+            if _session_cleanup_pending:
+                _session_cleanup_pending = False
+                continue
+
+            _session_cleanup_worker = None
+            return
+
+
+def _schedule_inactive_session_cleanup() -> None:
+    global _session_cleanup_worker, _session_cleanup_pending
+
+    current_time = time.time()
+    if (
+        current_time - _session_metadata_last_cleanup
+        < _SESSION_METADATA_CLEANUP_INTERVAL.total_seconds()
+    ):
+        return
+
+    if not _cleanup_async_enabled():
+        _maybe_cleanup_inactive_sessions(now=current_time)
+        return
+
+    worker: Optional[threading.Thread] = None
+
+    with _session_cleanup_lock:
+        if _session_cleanup_worker is not None and _session_cleanup_worker.is_alive():
+            _session_cleanup_pending = True
+            return
+
+        worker = threading.Thread(
+            target=_run_inactive_session_cleanup_worker,
+            name="session-metadata-cleanup",
+            daemon=True,
+        )
+        _session_cleanup_worker = worker
+
+    try:
+        worker.start()
+    except RuntimeError:  # pragma: no cover - defensive fallback
+        with _session_cleanup_lock:
+            if _session_cleanup_worker is worker:
+                _session_cleanup_worker = None
+                _session_cleanup_pending = False
+        _maybe_cleanup_inactive_sessions(now=current_time)
+
+
 def _note_session_activity(session_id: str, *, directory: Optional[str] = None) -> None:
     normalised = _normalise_session_identifier(session_id)
     if not normalised:
         return
 
     _touch_session_last_access(normalised)
-    _maybe_cleanup_inactive_sessions()
+    _schedule_inactive_session_cleanup()
 
 
 def _validate_session_metadata_filename(filename: str) -> str:

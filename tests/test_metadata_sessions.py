@@ -60,3 +60,20 @@ def test_runtime_metadata_download_disabled():
     metadata = pytest.importorskip("server.server.metadata")
     with pytest.raises(RuntimeError):
         metadata.download_metadata_blob()
+
+
+def test_note_session_activity_schedules_cleanup(session_metadata_env, monkeypatch):
+    _, metadata = session_metadata_env
+
+    calls = []
+    monkeypatch.setattr(metadata, "_touch_session_last_access", lambda sid: calls.append(("touch", sid)))
+    monkeypatch.setattr(metadata, "_schedule_inactive_session_cleanup", lambda: calls.append(("schedule", None)))
+    monkeypatch.setattr(
+        metadata,
+        "_maybe_cleanup_inactive_sessions",
+        lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("inline cleanup should not run")),
+    )
+
+    metadata._note_session_activity("session-123")
+
+    assert calls == [("touch", "session-123"), ("schedule", None)]

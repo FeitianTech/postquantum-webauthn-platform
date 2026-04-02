@@ -103,3 +103,63 @@ def test_metadata_not_available_is_warning_pqc():
 
     assert "metadata_not_available" in outcome["warnings"]
     assert "metadata_not_available" not in outcome["errors"]
+
+
+def test_index_html_skips_eager_bootstrap_by_default(monkeypatch):
+    general_module = pytest.importorskip("server.server.routes.general")
+    config_module = pytest.importorskip("server.server.config")
+
+    bootstrap_calls = []
+
+    monkeypatch.delenv("FIDO_SERVER_EAGER_INDEX_METADATA_BOOTSTRAP", raising=False)
+    monkeypatch.setattr(
+        general_module,
+        "startup_fail_fast_enabled",
+        lambda: False,
+        raising=False,
+    )
+    monkeypatch.setattr(
+        general_module,
+        "ensure_metadata_bootstrapped",
+        lambda **kwargs: bootstrap_calls.append(kwargs),
+        raising=False,
+    )
+    monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id", raising=False)
+    monkeypatch.setattr(general_module, "load_metadata_cache_entry", lambda: {}, raising=False)
+    monkeypatch.setattr(general_module, "render_template", lambda *_args, **_kwargs: "ok", raising=False)
+
+    with config_module.app.test_request_context("/index.html"):
+        result = general_module.index_html()
+
+    assert result == "ok"
+    assert bootstrap_calls == []
+
+
+def test_index_html_bootstraps_when_strict(monkeypatch):
+    general_module = pytest.importorskip("server.server.routes.general")
+    config_module = pytest.importorskip("server.server.config")
+
+    bootstrap_calls = []
+
+    monkeypatch.delenv("FIDO_SERVER_EAGER_INDEX_METADATA_BOOTSTRAP", raising=False)
+    monkeypatch.setattr(
+        general_module,
+        "startup_fail_fast_enabled",
+        lambda: True,
+        raising=False,
+    )
+    monkeypatch.setattr(
+        general_module,
+        "ensure_metadata_bootstrapped",
+        lambda **kwargs: bootstrap_calls.append(kwargs),
+        raising=False,
+    )
+    monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id", raising=False)
+    monkeypatch.setattr(general_module, "load_metadata_cache_entry", lambda: {}, raising=False)
+    monkeypatch.setattr(general_module, "render_template", lambda *_args, **_kwargs: "ok", raising=False)
+
+    with config_module.app.test_request_context("/index.html"):
+        result = general_module.index_html()
+
+    assert result == "ok"
+    assert bootstrap_calls == [{"skip_if_reloader_parent": False}]

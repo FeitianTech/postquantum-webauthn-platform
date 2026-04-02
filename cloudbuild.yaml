@@ -34,13 +34,14 @@ steps:
           --image gcr.io/$PROJECT_ID/pqc-webauthn \
           --region us-central1 \
           --platform managed \
-          --cpu=0.5 \
+          --cpu=2 \
           --memory=512Mi \
+          --cpu-boost \
           --port=8080 \
           --allow-unauthenticated \
-          --min-instances=0 \
-          --max-instances=3 \
-          --update-env-vars=GITHUB_LOG_REPO_OWNER=rainzhang05,GITHUB_LOG_REPO_NAME=CredentialLogs,GITHUB_LOG_ASYNC=0 \
+          --min-instances=1 \
+          --max-instances=40 \
+          --update-env-vars=GITHUB_LOG_REPO_OWNER=rainzhang05,GITHUB_LOG_REPO_NAME=CredentialLogs,GITHUB_LOG_ASYNC=0,FIDO_SERVER_STARTUP_MODE=fast,FIDO_SERVER_SESSION_METADATA_CLEANUP_ASYNC=1,FIDO_SERVER_EAGER_INDEX_METADATA_BOOTSTRAP=0 \
           --execution-environment=gen2 \
           --project $PROJECT_ID
 

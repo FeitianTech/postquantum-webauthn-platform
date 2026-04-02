@@ -28,7 +28,7 @@ from ..metadata import (
     serialize_session_metadata_item,
     _load_base_metadata,
 )
-from ..startup import warm_up_dependencies
+from ..startup import startup_fail_fast_enabled, warm_up_dependencies
 from ..storage import delkey, readkey
 
 
@@ -40,6 +40,25 @@ _metadata_bootstrap_state = {
     "cache_loaded": False,
 }
 _METADATA_BOOTSTRAP_ENV_FLAG = "FIDO_SERVER_MDS_BOOTSTRAPPED"
+_INDEX_EAGER_METADATA_ENV_FLAG = "FIDO_SERVER_EAGER_INDEX_METADATA_BOOTSTRAP"
+
+
+def _env_flag(name: str) -> Optional[bool]:
+    raw = os.environ.get(name)
+    if raw is None:
+        return None
+
+    normalised = raw.strip().lower()
+    if normalised in {"", "0", "false", "off", "no"}:
+        return False
+    return True
+
+
+def _should_bootstrap_metadata_on_index() -> bool:
+    explicit = _env_flag(_INDEX_EAGER_METADATA_ENV_FLAG)
+    if explicit is not None:
+        return explicit
+    return startup_fail_fast_enabled()
 
 
 def _bootstrap_marker_for_today() -> str:
@@ -139,7 +158,8 @@ def index():
 
 @app.route("/index.html")
 def index_html():
-    ensure_metadata_bootstrapped(skip_if_reloader_parent=False)
+    if _should_bootstrap_metadata_on_index():
+        ensure_metadata_bootstrapped(skip_if_reloader_parent=False)
     ensure_metadata_session_id()
 
     initial_mds_blob = None
