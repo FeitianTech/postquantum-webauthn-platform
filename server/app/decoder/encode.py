@@ -1296,11 +1296,30 @@ def _require_certificate_bytes(entry: Any, index: int) -> bytes:
     if isinstance(entry, Mapping):
         pem = entry.get("pem")
         if isinstance(pem, str) and pem.strip():
-            body = "".join(re.findall(r"[A-Za-z0-9+/=]", pem))
+            pem_text = pem.strip()
+            has_markers = "-----BEGIN" in pem_text or "-----END" in pem_text
+            if has_markers:
+                body_lines = []
+                for line in pem_text.splitlines():
+                    stripped = line.strip()
+                    if not stripped or stripped.startswith("-----"):
+                        continue
+                    body_lines.append(stripped)
+                body = "".join(body_lines)
+            else:
+                body = pem_text
+
+            body = "".join(re.findall(r"[A-Za-z0-9+/=]", body))
+            if not body:
+                raise ValueError("Unable to decode certificate PEM contents.")
+            padding = "=" * ((4 - len(body) % 4) % 4)
             try:
-                return base64.b64decode(body)
+                decoded_body = base64.b64decode(body + padding, validate=True)
             except (ValueError, binascii.Error) as exc:
                 raise ValueError("Unable to decode certificate PEM contents.") from exc
+            if not decoded_body:
+                raise ValueError("Unable to decode certificate PEM contents.")
+            return decoded_body
     raise ValueError(f"Unable to recover certificate bytes for x5c[{index}].")
 
 
@@ -1444,11 +1463,24 @@ def _maybe_decode_bytes(value: Any) -> Optional[bytes]:
 
         pem_value = value.get("pem")
         if isinstance(pem_value, str) and pem_value.strip():
-            body = "".join(re.findall(r"[A-Za-z0-9+/=]", pem_value))
+            pem_text = pem_value.strip()
+            has_markers = "-----BEGIN" in pem_text or "-----END" in pem_text
+            if has_markers:
+                body_lines = []
+                for line in pem_text.splitlines():
+                    stripped = line.strip()
+                    if not stripped or stripped.startswith("-----"):
+                        continue
+                    body_lines.append(stripped)
+                body = "".join(body_lines)
+            else:
+                body = pem_text
+
+            body = "".join(re.findall(r"[A-Za-z0-9+/=]", body))
             if body:
                 padding = (-len(body)) % 4
                 try:
-                    return base64.b64decode(body + "=" * padding)
+                    return base64.b64decode(body + "=" * padding, validate=True)
                 except (ValueError, binascii.Error):
                     pass
 
