@@ -27,7 +27,20 @@ except Exception:  # pragma: no cover - compatibility shim
         pass
 
 _PACKAGE_ROOT = Path(__file__).resolve().parent
-_PROJECT_ROOT = _PACKAGE_ROOT.parents[1]
+
+
+def _discover_project_root(package_root: Path) -> Path:
+    """Locate the repository/application root across supported layouts."""
+
+    for candidate in package_root.parents:
+        if (candidate / "frontend").is_dir():
+            return candidate
+
+    # Fallback keeps previous behavior for environments without frontend files.
+    return package_root.parents[1]
+
+
+_PROJECT_ROOT = _discover_project_root(_PACKAGE_ROOT)
 _FRONTEND_ROOT = _PROJECT_ROOT / "frontend"
 _FRONTEND_STATIC_ROOT = _FRONTEND_ROOT / "static"
 _FRONTEND_TEMPLATE_ROOT = _FRONTEND_ROOT / "templates"
