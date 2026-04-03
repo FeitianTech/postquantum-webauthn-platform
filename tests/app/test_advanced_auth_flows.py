@@ -231,3 +231,126 @@ def test_advanced_authenticate_complete_custom_algorithm_bypass(monkeypatch):
     assert payload["authenticatedCredentialId"] == encoded_id
     assert payload["customAlgorithmBypass"] is True
     assert payload["algorithm"] == custom_alg
+
+
+def test_advanced_authenticate_complete_custom_algorithm_bypass_requires_requested_algorithm_match(monkeypatch):
+    config_module = pytest.importorskip("server.app.config")
+    advanced_module = pytest.importorskip("server.app.routes.advanced")
+    pytest.importorskip("server.app.app")
+
+    credential_id = b"advanced-custom-alg-mismatch"
+    encoded_id = _b64url(credential_id)
+    stored_custom_alg = -99999
+    requested_alg = -99998
+
+    class _FailingServer:
+        allowed_algorithms = []
+
+        def authenticate_complete(self, *_args, **_kwargs):
+            raise ValueError("Invalid signature.")
+
+    monkeypatch.setattr(advanced_module, "create_fido_server", lambda **_kwargs: _FailingServer(), raising=False)
+    monkeypatch.setattr(advanced_module, "determine_rp_id", lambda value=None: value or "example.com", raising=False)
+    monkeypatch.setattr(advanced_module, "_derive_algorithms_from_credentials", lambda _credentials: [], raising=False)
+    monkeypatch.setattr(
+        advanced_module,
+        "_parse_client_supplied_credentials",
+        lambda _raw: (
+            [
+                {
+                    "id": credential_id,
+                    "data": object(),
+                    "attachment": None,
+                    "algorithm": stored_custom_alg,
+                    "resident": True,
+                }
+            ],
+            [],
+        ),
+        raising=False,
+    )
+
+    with config_module.app.test_client() as client:
+        with client.session_transaction() as session_state:
+            session_state["advanced_auth_state"] = {"challenge": "state"}
+            session_state["advanced_auth_rp"] = {"id": "example.com", "name": "Example"}
+
+        response = client.post(
+            "/api/advanced/authenticate/complete",
+            json={
+                "publicKey": {
+                    "challenge": "AQID",
+                    "allowCredentials": [
+                        {"type": "public-key", "id": encoded_id, "alg": requested_alg}
+                    ],
+                },
+                "__storedCredentials": [{}],
+                "__assertion_response": {"rawId": encoded_id, "response": {}},
+            },
+        )
+
+    assert response.status_code == 400
+    payload = response.get_json()
+    assert payload["error"] == "Invalid signature."
+    assert payload["failedCredentialId"] == encoded_id
+
+
+def test_advanced_authenticate_complete_custom_algorithm_bypass_rejects_non_signature_errors(monkeypatch):
+    config_module = pytest.importorskip("server.app.config")
+    advanced_module = pytest.importorskip("server.app.routes.advanced")
+    pytest.importorskip("server.app.app")
+
+    credential_id = b"advanced-custom-alg-non-signature"
+    encoded_id = _b64url(credential_id)
+    custom_alg = -99999
+
+    class _FailingServer:
+        allowed_algorithms = []
+
+        def authenticate_complete(self, *_args, **_kwargs):
+            raise ValueError("backend timeout")
+
+    monkeypatch.setattr(advanced_module, "create_fido_server", lambda **_kwargs: _FailingServer(), raising=False)
+    monkeypatch.setattr(advanced_module, "determine_rp_id", lambda value=None: value or "example.com", raising=False)
+    monkeypatch.setattr(advanced_module, "_derive_algorithms_from_credentials", lambda _credentials: [], raising=False)
+    monkeypatch.setattr(
+        advanced_module,
+        "_parse_client_supplied_credentials",
+        lambda _raw: (
+            [
+                {
+                    "id": credential_id,
+                    "data": object(),
+                    "attachment": None,
+                    "algorithm": custom_alg,
+                    "resident": True,
+                }
+            ],
+            [],
+        ),
+        raising=False,
+    )
+
+    with config_module.app.test_client() as client:
+        with client.session_transaction() as session_state:
+            session_state["advanced_auth_state"] = {"challenge": "state"}
+            session_state["advanced_auth_rp"] = {"id": "example.com", "name": "Example"}
+
+        response = client.post(
+            "/api/advanced/authenticate/complete",
+            json={
+                "publicKey": {
+                    "challenge": "AQID",
+                    "allowCredentials": [
+                        {"type": "public-key", "id": encoded_id, "alg": custom_alg}
+                    ],
+                },
+                "__storedCredentials": [{}],
+                "__assertion_response": {"rawId": encoded_id, "response": {}},
+            },
+        )
+
+    assert response.status_code == 400
+    payload = response.get_json()
+    assert payload["error"] == "backend timeout"
+    assert payload["failedCredentialId"] == encoded_id
