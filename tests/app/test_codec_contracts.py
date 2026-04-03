@@ -52,6 +52,20 @@ def test_codec_api_encode_requires_format():
     assert response.get_json()["error"] == "Encoder format must be provided."
 
 
+def test_codec_api_encode_returns_422_for_unsupported_format():
+    config_module = pytest.importorskip("server.app.config")
+    pytest.importorskip("server.app.app")
+
+    with config_module.app.test_client() as client:
+        response = client.post(
+            "/api/codec",
+            json={"mode": "encode", "format": "unknown_format", "payload": "{\"a\":1}"},
+        )
+
+    assert response.status_code == 422
+    assert response.get_json()["error"] == "Unsupported encoder format: unknown_format"
+
+
 def test_codec_api_returns_422_for_invalid_decode_payload():
     config_module = pytest.importorskip("server.app.config")
     pytest.importorskip("server.app.app")
@@ -132,3 +146,32 @@ def test_client_data_encode_decode_contract():
     assert decoded["type"].startswith("WebAuthn client data")
     assert decoded["data"]["type"] == "webauthn.create"
     assert decoded["data"]["origin"] == "https://example.com"
+
+
+def test_normalize_encoding_format_aliases_and_case_insensitive():
+    encode_module = pytest.importorskip("server.app.decoder.encode")
+
+    assert encode_module._normalize_encoding_format("  WebAuthn client data  ") == "client-data"
+    assert encode_module._normalize_encoding_format("PUBLIC KEY CREDENTIAL") == "public-key-credential"
+    assert encode_module._normalize_encoding_format("cbor (ctap/webauthn data)") == "ctap-webauthn"
+
+
+def test_normalize_encoding_format_rejects_unknown_values():
+    encode_module = pytest.importorskip("server.app.decoder.encode")
+
+    with pytest.raises(ValueError, match="Unsupported encoder format"):
+        encode_module._normalize_encoding_format("totally-unknown")
+
+
+def test_encode_ctap_webauthn_requires_mandatory_fields_for_make_credential_request():
+    encode_module = pytest.importorskip("server.app.decoder.encode")
+
+    client_data_hash = base64.urlsafe_b64encode(b"\x00" * 32).decode("ascii").rstrip("=")
+
+    with pytest.raises(ValueError, match=r"Missing field 0x03 \(user\)"):
+        encode_module._encode_ctap_webauthn_value(
+            {
+                "1": client_data_hash,
+                "2": {"id": "example.com", "name": "Example RP"},
+            }
+        )
