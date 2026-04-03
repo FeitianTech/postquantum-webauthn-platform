@@ -113,3 +113,48 @@ def test_resolve_effective_metadata_entry_accepts_hyphenated_aaguid(monkeypatch)
     assert resolved is not None
     assert resolved["entryId"] == "aaguid:aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
     assert resolved["metadataStatement"]["description"] == "Packaged authenticator"
+
+
+def test_load_effective_full_snapshot_prefers_session_entry(monkeypatch):
+    metadata = pytest.importorskip("server.app.metadata")
+
+    base_snapshot = {
+        "meta": {"entryCount": 1, "source": "packaged"},
+        "entries": [
+            {
+                "entryId": "aaguid:aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+                "aaguid": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+                "name": "Packaged authenticator",
+                "metadataStatement": {"description": "Packaged authenticator"},
+                "statusReports": [],
+                "isLightweightEntry": False,
+            }
+        ],
+    }
+
+    session_item = metadata.SessionMetadataItem(
+        filename="custom.json",
+        payload={
+            "aaguid": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+            "metadataStatement": {
+                "description": "Session authenticator",
+                "aaguid": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+            },
+            "statusReports": [],
+        },
+        legal_header=None,
+        entry=None,
+        uploaded_at="2026-04-02T00:00:00+00:00",
+        original_filename="custom.json",
+        mtime=None,
+    )
+
+    monkeypatch.setattr(metadata, "_load_base_full_snapshot", lambda: (base_snapshot, 1.0), raising=False)
+    monkeypatch.setattr(metadata, "list_session_metadata_items", lambda: [session_item], raising=False)
+
+    snapshot = metadata.load_effective_full_snapshot()
+
+    assert snapshot["meta"]["entryCount"] == 1
+    assert snapshot["meta"]["customEntryCount"] == 1
+    assert snapshot["entries"][0]["source"] == "session"
+    assert snapshot["entries"][0]["metadataStatement"]["description"] == "Session authenticator"

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import base64
+import gzip
 import ipaddress
 import os
 from pathlib import Path
@@ -137,6 +138,75 @@ def _resolve_secret_key() -> bytes:
 
 
 app.secret_key = _resolve_secret_key()
+
+_COMPRESSIBLE_MIMETYPES = {
+    "application/javascript",
+    "application/json",
+    "application/manifest+json",
+    "application/xml",
+    "image/svg+xml",
+    "text/css",
+    "text/html",
+    "text/javascript",
+    "text/plain",
+    "text/xml",
+}
+_DEFAULT_COMPRESSION_MIN_SIZE = 512
+
+
+def _accepts_gzip() -> bool:
+    if not has_request_context():
+        return False
+    accepted = request.headers.get("Accept-Encoding", "")
+    return "gzip" in accepted.lower()
+
+
+def _append_vary(existing: Optional[str], value: str) -> str:
+    tokens = [token.strip() for token in (existing or "").split(",") if token.strip()]
+    lowered = {token.lower() for token in tokens}
+    if value.lower() not in lowered:
+        tokens.append(value)
+    return ", ".join(tokens)
+
+
+@app.after_request
+def maybe_compress_response(response):
+    if not _accepts_gzip():
+        return response
+
+    if response.status_code < 200 or response.status_code >= 300:
+        return response
+
+    if response.headers.get("Content-Encoding"):
+        return response
+
+    mimetype = (response.mimetype or "").lower()
+    if mimetype not in _COMPRESSIBLE_MIMETYPES and not mimetype.startswith("text/"):
+        return response
+
+    if response.direct_passthrough:
+        response.direct_passthrough = False
+
+    try:
+        payload = response.get_data()
+    except Exception:  # pragma: no cover - depends on response type
+        return response
+
+    min_size = app.config.get("RESPONSE_COMPRESSION_MIN_SIZE", _DEFAULT_COMPRESSION_MIN_SIZE)
+    if not payload or len(payload) < int(min_size):
+        return response
+
+    compressed = gzip.compress(payload, compresslevel=6)
+    if len(compressed) >= len(payload):
+        return response
+
+    response.set_data(compressed)
+    response.headers["Content-Encoding"] = "gzip"
+    response.headers["Content-Length"] = str(len(compressed))
+    response.headers["Vary"] = _append_vary(response.headers.get("Vary"), "Accept-Encoding")
+    response.headers.pop("ETag", None)
+    response.headers.pop("Content-MD5", None)
+    return response
 
 
 def _env_flag(name: str) -> Optional[bool]:

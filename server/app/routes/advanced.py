@@ -1747,6 +1747,34 @@ def api_get_advanced_credential_artifact(storage_id: str):
     return jsonify({"storageId": storage_id, "artifact": artifact})
 
 
+@app.route("/api/advanced/credential-artifacts/bulk", methods=["POST"])
+def api_get_advanced_credential_artifacts_bulk():
+    data = request.get_json(silent=True) or {}
+    raw_storage_ids = data.get("storageIds")
+    if not isinstance(raw_storage_ids, list):
+        return jsonify({"error": "storageIds must be an array."}), 400
+
+    storage_ids: List[str] = []
+    seen = set()
+    for candidate in raw_storage_ids:
+        if not isinstance(candidate, str):
+            continue
+        trimmed = candidate.strip()
+        if not trimmed or trimmed in seen:
+            continue
+        seen.add(trimmed)
+        storage_ids.append(trimmed)
+
+    metadata_session_id = ensure_metadata_session_id()
+    artifacts: Dict[str, Any] = {}
+    for storage_id in storage_ids:
+        artifact = load_credential_artifact(storage_id, session_id=metadata_session_id)
+        if artifact is not None:
+            artifacts[storage_id] = artifact
+
+    return jsonify({"artifacts": artifacts})
+
+
 @app.route("/api/advanced/credential-artifacts/<string:storage_id>", methods=["PUT"])
 def api_put_advanced_credential_artifact(storage_id: str):
     data = request.get_json(silent=True) or {}

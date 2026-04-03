@@ -1,5 +1,7 @@
 from datetime import datetime, timezone
+import gzip
 import json
+import io
 
 import pytest
 
@@ -63,6 +65,8 @@ def packaged_metadata_env(monkeypatch, tmp_path):
     monkeypatch.setattr(metadata_module, "_base_metadata_entry_ids", set(), raising=False)
     monkeypatch.setattr(metadata_module, "_base_explorer_snapshot_cache", None, raising=False)
     monkeypatch.setattr(metadata_module, "_base_explorer_snapshot_mtime", None, raising=False)
+    monkeypatch.setattr(metadata_module, "_base_full_snapshot_cache", None, raising=False)
+    monkeypatch.setattr(metadata_module, "_base_full_snapshot_mtime", None, raising=False)
 
     monkeypatch.setattr(
         general_module,
@@ -206,6 +210,27 @@ def test_explorer_metadata_route_sets_no_store_headers(monkeypatch):
     assert response.headers["Vary"] == "Cookie"
 
 
+def test_full_explorer_metadata_route_sets_no_store_headers(monkeypatch):
+    general_module = pytest.importorskip("server.app.routes.general")
+    config_module = pytest.importorskip("server.app.config")
+
+    monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id", raising=False)
+    monkeypatch.setattr(
+        general_module,
+        "load_effective_full_snapshot",
+        lambda: {"meta": {"entryCount": 1}, "entries": [{"entryId": "aaguid:test", "metadataStatement": {}}]},
+        raising=False,
+    )
+
+    with config_module.app.test_client() as client:
+        response = client.get("/api/mds/metadata/explorer/full")
+
+    assert response.status_code == 200
+    assert response.get_json()["meta"]["entryCount"] == 1
+    assert response.headers["Cache-Control"] == "no-store"
+    assert response.headers["Vary"] == "Cookie"
+
+
 def test_resolve_metadata_entry_requires_exactly_one_lookup(monkeypatch):
     general_module = pytest.importorskip("server.app.routes.general")
     config_module = pytest.importorskip("server.app.config")
@@ -277,3 +302,85 @@ def test_index_page_no_longer_emits_global_loader(monkeypatch):
     assert response.status_code == 200
     assert 'id="app-loader"' not in body
     assert 'templates/advanced/mds-content.html' not in body
+    assert 'fido-mds3.explorer.bootstrap.js' in body
+    assert '__INITIAL_CREDENTIAL_RECORDS__' in body
+
+
+def test_upload_custom_metadata_returns_rebuilt_snapshot(monkeypatch):
+    general_module = pytest.importorskip("server.app.routes.general")
+    config_module = pytest.importorskip("server.app.config")
+
+    monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id", raising=False)
+    monkeypatch.setattr(
+        general_module,
+        "expand_metadata_entry_payloads",
+        lambda payload: [payload],
+        raising=False,
+    )
+    monkeypatch.setattr(general_module, "maybe_store_uploaded_metadata_file", lambda *_args, **_kwargs: False, raising=False)
+    monkeypatch.setattr(
+        general_module,
+        "save_session_metadata_item",
+        lambda payload, original_filename=None: {"payload": payload, "original_filename": original_filename},
+        raising=False,
+    )
+    monkeypatch.setattr(
+        general_module,
+        "serialize_session_metadata_item",
+        lambda item: {"storedFilename": "custom.json", "originalFilename": item["original_filename"]},
+        raising=False,
+    )
+    monkeypatch.setattr(
+        general_module,
+        "load_effective_full_snapshot",
+        lambda: {"meta": {"entryCount": 1}, "entries": [{"entryId": "aaguid:test"}]},
+        raising=False,
+    )
+
+    with config_module.app.test_client() as client:
+        response = client.post(
+            "/api/mds/metadata/upload",
+            data={"files": (io.BytesIO(b'{"metadataStatement":{"description":"Demo"}}'), "custom.json")},
+            content_type="multipart/form-data",
+        )
+
+    assert response.status_code == 200
+    assert response.get_json()["snapshot"]["meta"]["entryCount"] == 1
+
+
+def test_delete_custom_metadata_returns_rebuilt_snapshot(monkeypatch):
+    general_module = pytest.importorskip("server.app.routes.general")
+    config_module = pytest.importorskip("server.app.config")
+
+    monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id", raising=False)
+    monkeypatch.setattr(general_module, "delete_session_metadata_item", lambda _name: True, raising=False)
+    monkeypatch.setattr(
+        general_module,
+        "load_effective_full_snapshot",
+        lambda: {"meta": {"entryCount": 3}, "entries": [{"entryId": "aaguid:test"}]},
+        raising=False,
+    )
+
+    with config_module.app.test_client() as client:
+        response = client.delete("/api/mds/metadata/custom/custom.json")
+
+    assert response.status_code == 200
+    assert response.get_json()["snapshot"]["meta"]["entryCount"] == 3
+
+
+def test_index_page_supports_gzip_compression(monkeypatch):
+    general_module = pytest.importorskip("server.app.routes.general")
+    config_module = pytest.importorskip("server.app.config")
+
+    monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id", raising=False)
+    monkeypatch.setattr(general_module, "load_packaged_explorer_summary", lambda: {"entryCount": 0}, raising=False)
+    monkeypatch.setattr(general_module, "_should_bootstrap_metadata_on_index", lambda: False, raising=False)
+
+    with config_module.app.test_client() as client:
+        response = client.get("/index.html", headers={"Accept-Encoding": "gzip"})
+
+    assert response.status_code == 200
+    assert response.headers.get("Content-Encoding") == "gzip"
+    assert "Accept-Encoding" in response.headers.get("Vary", "")
+    body = gzip.decompress(response.data).decode("utf-8")
+    assert "<!DOCTYPE html>" in body

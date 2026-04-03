@@ -37,6 +37,7 @@ from .github_client import (
 )
 from .mds_snapshot import (
     build_entry_id,
+    build_bootstrap_snapshot,
     build_explorer_entry,
     build_explorer_snapshot,
     normalise_aaguid_key,
@@ -52,6 +53,7 @@ __all__ = [
     "load_cached_metadata_snapshot",
     "load_packaged_explorer_summary",
     "load_effective_explorer_snapshot",
+    "load_effective_full_snapshot",
     "resolve_effective_metadata_entry",
     "ensure_metadata_session_id",
     "list_session_metadata_items",
@@ -73,6 +75,8 @@ _base_metadata_trust_verified: Optional[bool] = None
 _base_metadata_entry_ids: Set[int] = set()
 _base_explorer_snapshot_cache: Optional[Dict[str, Any]] = None
 _base_explorer_snapshot_mtime: Optional[Tuple[Optional[float], Optional[float]]] = None
+_base_full_snapshot_cache: Optional[Dict[str, Any]] = None
+_base_full_snapshot_mtime: Optional[float] = None
 _session_metadata_entry_ids: Set[int] = set()
 
 _SESSION_METADATA_SUFFIX = ".json"
@@ -1226,6 +1230,30 @@ def _load_base_explorer_snapshot() -> Tuple[Optional[Dict[str, Any]], Optional[T
     return snapshot, cache_marker
 
 
+def _load_base_full_snapshot() -> Tuple[Optional[Dict[str, Any]], Optional[float]]:
+    global _base_full_snapshot_cache, _base_full_snapshot_mtime
+
+    try:
+        verified_mtime = os.path.getmtime(MDS_METADATA_VERIFIED_PATH)
+    except OSError:
+        verified_mtime = None
+
+    if (
+        _base_full_snapshot_cache is not None
+        and _base_full_snapshot_mtime == verified_mtime
+    ):
+        return _base_full_snapshot_cache, verified_mtime
+
+    snapshot: Optional[Dict[str, Any]] = None
+    payload = _load_verified_metadata_payload()
+    if payload is not None:
+        snapshot = build_bootstrap_snapshot(payload, load_metadata_cache_entry())
+
+    _base_full_snapshot_cache = snapshot
+    _base_full_snapshot_mtime = verified_mtime
+    return snapshot, verified_mtime
+
+
 def load_packaged_explorer_summary() -> Dict[str, Any]:
     snapshot, _ = _load_base_explorer_snapshot()
     if snapshot and isinstance(snapshot.get("meta"), Mapping):
@@ -1236,6 +1264,34 @@ def load_packaged_explorer_summary() -> Dict[str, Any]:
         return {}
 
     return build_explorer_snapshot(payload, load_metadata_cache_entry()).get("meta", {})
+
+
+def _build_session_snapshot_entry(
+    item: SessionMetadataItem,
+    *,
+    index: int,
+    include_detail: bool,
+    include_raw_entry: bool = True,
+    compact_detail: bool = False,
+) -> Optional[Dict[str, Any]]:
+    payload = item.payload
+    if not isinstance(payload, Mapping):
+        return None
+
+    return build_explorer_entry(
+        payload,
+        index=index,
+        source="session",
+        trust_anchor_status=False,
+        snapshot_meta={
+            "generatedAt": item.uploaded_at,
+            "fetchedAt": item.uploaded_at,
+        },
+        include_detail=include_detail,
+        include_raw_entry=include_raw_entry,
+        compact_detail=compact_detail,
+        source_info=_session_item_source_info(item),
+    )
 
 
 def _session_item_source_info(item: SessionMetadataItem) -> Dict[str, Any]:
@@ -1279,9 +1335,14 @@ def _entry_matches_lookup(
     return False
 
 
-def load_effective_explorer_snapshot() -> Dict[str, Any]:
-    base_snapshot, _ = _load_base_explorer_snapshot()
-    base_meta = {}
+def _compose_effective_snapshot(
+    base_snapshot: Optional[Mapping[str, Any]],
+    *,
+    include_detail: bool,
+    include_raw_entry: bool = True,
+    compact_detail: bool = False,
+) -> Dict[str, Any]:
+    base_meta: Dict[str, Any] = {}
     base_entries: List[Dict[str, Any]] = []
 
     if base_snapshot:
@@ -1296,21 +1357,16 @@ def load_effective_explorer_snapshot() -> Dict[str, Any]:
     seen_aaguids: Set[str] = set()
 
     for index, item in enumerate(session_items):
-        payload = item.payload
-        if not isinstance(payload, Mapping):
-            continue
-        custom_entry = build_explorer_entry(
-            payload,
+        custom_entry = _build_session_snapshot_entry(
+            item,
             index=index,
-            source="session",
-            trust_anchor_status=False,
-            snapshot_meta={
-                "generatedAt": item.uploaded_at,
-                "fetchedAt": item.uploaded_at,
-            },
-            include_detail=False,
-            source_info=_session_item_source_info(item),
+            include_detail=include_detail,
+            include_raw_entry=include_raw_entry,
+            compact_detail=compact_detail,
         )
+        if custom_entry is None:
+            continue
+
         aaguid_key = normalise_aaguid_key(custom_entry.get("aaguid"))
         if aaguid_key:
             if aaguid_key in seen_aaguids:
@@ -1332,6 +1388,21 @@ def load_effective_explorer_snapshot() -> Dict[str, Any]:
     meta["hasCustomEntries"] = bool(custom_entries)
 
     return {"meta": meta, "entries": effective_entries}
+
+
+def load_effective_explorer_snapshot() -> Dict[str, Any]:
+    base_snapshot, _ = _load_base_explorer_snapshot()
+    return _compose_effective_snapshot(base_snapshot, include_detail=False)
+
+
+def load_effective_full_snapshot() -> Dict[str, Any]:
+    base_snapshot, _ = _load_base_full_snapshot()
+    return _compose_effective_snapshot(
+        base_snapshot,
+        include_detail=True,
+        include_raw_entry=False,
+        compact_detail=True,
+    )
 
 
 def resolve_effective_metadata_entry(

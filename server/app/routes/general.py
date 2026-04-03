@@ -9,7 +9,7 @@ import os
 import pickle
 from datetime import datetime, timezone
 from threading import Lock
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Mapping, Optional
 
 from flask import abort, jsonify, render_template, request, send_file
 
@@ -23,6 +23,7 @@ from ..metadata import (
     list_session_metadata_items,
     load_cached_metadata_snapshot,
     load_effective_explorer_snapshot,
+    load_effective_full_snapshot,
     load_packaged_explorer_summary,
     maybe_store_uploaded_metadata_file,
     resolve_effective_metadata_entry,
@@ -192,6 +193,18 @@ def api_get_explorer_metadata():
     return _no_store_json_response(snapshot)
 
 
+@app.route("/api/mds/metadata/explorer/full", methods=["GET"])
+def api_get_full_explorer_metadata():
+    ensure_metadata_session_id()
+    snapshot = load_effective_full_snapshot()
+    if not snapshot.get("entries") and not snapshot.get("meta"):
+        return _no_store_json_response(
+            {"error": "Verified metadata snapshot is not available."},
+            status=404,
+        )
+    return _no_store_json_response(snapshot)
+
+
 @app.route("/api/mds/metadata/resolve", methods=["GET"])
 def api_resolve_metadata_entry():
     ensure_metadata_session_id()
@@ -321,8 +334,10 @@ def api_upload_custom_metadata():
     response: Dict[str, Any] = {"items": saved_items}
     if errors:
         response["errors"] = errors
+    if saved_items:
+        response["snapshot"] = load_effective_full_snapshot()
 
-    return jsonify(response), status_code
+    return _no_store_json_response(response, status=status_code)
 
 
 @app.route("/api/mds/metadata/custom/<string:stored_filename>", methods=["DELETE"])
@@ -336,12 +351,14 @@ def api_delete_custom_metadata(stored_filename: str):
         return jsonify({"error": str(exc)}), 500
 
     if not deleted:
-        return (
-            jsonify({"deleted": False, "message": "Metadata entry not found."}),
-            404,
+        return _no_store_json_response(
+            {"deleted": False, "message": "Metadata entry not found."},
+            status=404,
         )
 
-    return jsonify({"deleted": True})
+    return _no_store_json_response(
+        {"deleted": True, "snapshot": load_effective_full_snapshot()}
+    )
 
 
 def _perform_decode(decoder_input: str):
