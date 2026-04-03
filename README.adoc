@@ -14,12 +14,12 @@ This project provides an end-to-end platform for exploring WebAuthn user flows s
 ## Local Setup
 
 **Scope**
-- Includes: Python, virtual environment, Flask, python-fido2, and Post-Quantum Crypto (PQC) algorithms.
-- Currently supporting ML-DSA 44/65/87 for PQC
+- Uses the same repo `Dockerfile` as deployment.
+- Includes the app, the local `fido2/` library copy, prebuilt `liboqs`, and PQC support used in production images.
+- Supports the ML-DSA 44/65/87 PQC algorithms bundled by the current container build.
 
 > **Note for Developers:**  
-> Setting up and building all local dependencies (Python environment, Flask/FIDO2/Cryptography, PQC libraries, liboqs builds, HTTPS certificates, etc.) requires significant configuration time and toolchain setup.
-> For most use cases, it is far more efficient to use the deployed platform directly instead of running on local environment.
+> The recommended local workflow is Docker-based so local development matches deployment as closely as possible. The steps below replace the older manual `venv`/`mkcert` setup path.
 
 
 ## Supported Platforms
@@ -33,8 +33,8 @@ A modern browser with WebAuthn support is required:
 
 ## 1. Prerequisites
 
-- **Git**: (https://git-scm.com/)  
-- **Python 3.12+ ** with pip (https://www.python.org/downloads/)
+- **Git**: https://git-scm.com/
+- **Docker Desktop / Docker Engine** with `docker build` and `docker run` available locally
 
 
 ## 2. Clone the Repository
@@ -45,210 +45,46 @@ cd postquantum-webauthn-platform
 ```
 
 
-## 3. Setup — pip + venv
-
-### Windows (PowerShell)
-
-```powershell
-# Create and activate a virtual environment
-py -3.12 -m venv .venv
-.\.venv\scripts\activate
-
-# Upgrade pip and install runtime dependencies
-python -m pip install --upgrade pip
-pip install -r requirements.txt
-
-# Optional: PC/SC smart card extras
-pip install "fido2[pcsc]"
-```
-
-### macOS
+## 3. Build the Local Image
 
 ```bash
-# Create and activate a virtual environment
-python3 -m venv .venv
-source .venv/bin/activate
-
-# Upgrade pip and install runtime dependencies
-python -m pip install --upgrade pip
-pip install -r requirements.txt
-
-# Optional: PC/SC smart card extras
-pip install "fido2[pcsc]"
+docker build -t pqc-webauthn-local .
 ```
 
-## PQC Setup
+This uses the same `Dockerfile` that is used for deployment targets.
 
-### 1. Activate Your Python Virtual Environment
-
-**Windows (PowerShell):**
-```powershell
-.\.venv\scripts\activate
-```
-
-**macOS:**
-```bash
-source .venv/bin/activate
-```
-
-### 2. Install PQC Cryptography Libraries
-
-**Using pip / virtualenv**
-```bash
-pip install ".[pqc]"
-python -c "import oqs"
-```
-### 3. Install Open Quantum Safe (OQS) Libraries
-
-#### Install `liboqs`
-
-##### Windows
-
-```powershell
-# Clone liboqs
-git clone --branch main https://github.com/open-quantum-safe/liboqs.git
-cd liboqs
-
-# Configure build
-cmake -S . -B build -DOQS_BUILD_SHARED_LIBS=ON -DOQS_USE_OPENSSL=OFF
-
-# Build in Release mode
-cmake --build build --config Release
-```
-Output: build\bin\Release\oqs.dll
-
-Copy the DLL into your Python venv so oqs can find it:
-
-```
-copy build\bin\Release\oqs.dll C:\path\to\your\venv\Lib\site-packages\oqs\
-```
-
-Or add the folder to your PATH.
-
-##### macOS
-```
-# Clone liboqs
-git clone --branch main https://github.com/open-quantum-safe/liboqs.git
-cd liboqs
-
-# Configure build
-cmake -S . -B build -DOQS_BUILD_SHARED_LIBS=ON -DOQS_USE_OPENSSL=OFF
-
-# Build in Release mode
-cmake --build build --config Release
-
-# Install the library (requires sudo)
-sudo cmake --install build
-```
-
-#### 4. Install liboqs-python
-
-Make sure you already built and installed **liboqs** (the C library).  
-Now, clone and install the Python wrapper:
+## 4. Run the Container
 
 ```bash
-# Go to home directory
-cd ~
-
-# Clone liboqs-python
-git clone https://github.com/open-quantum-safe/liboqs-python.git
-cd liboqs-python
-
-# Install into your active virtual environment
-pip install .
+docker run --rm -p 8000:8000 --name pqc-webauthn-local pqc-webauthn-local
 ```
 
-#### 5. Verify Installation
+Open the platform at `http://localhost:8000`.
 
-From your **project root** (where your `.venv` is located):
+Because localhost is treated as a secure context by modern browsers, this local Docker workflow does not require the older `mkcert` certificate setup.
+
+## 5. Optional: Persist the Flask Session Secret
+
+The container creates a Flask session secret on first launch. To keep the same secret across restarts, mount a local directory to the container instance path:
 
 ```bash
-cd ~/postquantum-webauthn-platform
-python -c "import oqs; print(oqs.get_version()); print(oqs.get_enabled_sigs())"
+mkdir -p instance
+docker run --rm \
+  -p 8000:8000 \
+  --name pqc-webauthn-local \
+  -v "$(pwd)/instance:/app/instance" \
+  pqc-webauthn-local
 ```
 
-If installed correctly, you should see something like: 
-```
-0.14.0-dev
-['ML-DSA-44', 'ML-DSA-65', 'ML-DSA-87', ...]
-```
-This indicates the version number and supported algorithms. Make sure every PQC algorithm that you plan to use appears in the list above.
-
-
-## mkcert Setup for Local HTTPS
-
-### 1. Install mkcert
-
-#### Windows
-```bash
-# Install Chocolatey
-Set-ExecutionPolicy Bypass -Scope Process -Force; `
-  [System.Net.ServicePointManager]::SecurityProtocol = `
-  [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; `
-  iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
-# Install mkcert via Chocolatey
-choco install mkcert -y
-```
-
-#### macOS
-```bash
-brew install mkcert
-brew install nss   # required for Firefox users
-mkcert -install
-```
-
-
-### 2. Generate Certificates
-
-**Windows (PowerShell)**
-```powershell
-cd C:\path\to\your\project
-mkcert demo.ftsafe.demo
-```
-
-**macOS (Terminal)**
-```bash
-cd /path/to/your/project
-mkcert demo.ftsafe.demo
-```
-
-Important:
-- WebAuthn only works on secure contexts (HTTPS or localhost).
-- Rename files to:
-  - `demo.ftsafe.demo.pem`
-  - `demo.ftsafe.demo-key.pem`
-  Otherwise, the program will fail to run.
-
+This keeps `session-secret.key` in your local `instance/` directory so subsequent runs reuse it. Delete that file if you want to rotate the secret.
 
 ## Quickstart
 
-### 1. Create and Activate Virtual Environment
-
-**Windows (PowerShell)**
-```powershell
-py -3 -m venv .venv
-.\.venv\scripts\activate
-```
-
-**macOS**
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
+git clone https://github.com/FeitianTech/postquantum-webauthn-platform.git
+cd postquantum-webauthn-platform
+docker build -t pqc-webauthn-local .
+docker run --rm -p 8000:8000 --name pqc-webauthn-local pqc-webauthn-local
 ```
 
-
-### 2. Run the Server
-
-```bash
-python server/app/app.py
-```
-
-The first launch writes a Flask session secret to `instance/session-secret.key`. Keep that file alongside the application so
-multiple restarts reuse the same secret; delete it if you need to rotate the key.
-
-Expected output:
-```
-Running on https://demo.ftsafe.demo:5000/
-```
-
-Click the link to open the test app in your browser.
+Then open `http://localhost:8000` in your browser.
