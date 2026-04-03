@@ -1,5 +1,6 @@
 import pytest
 from flask import session as flask_session
+from types import SimpleNamespace
 
 
 @pytest.fixture
@@ -77,3 +78,38 @@ def test_note_session_activity_schedules_cleanup(session_metadata_env, monkeypat
     metadata._note_session_activity("session-123")
 
     assert calls == [("touch", "session-123"), ("schedule", None)]
+
+
+def test_resolve_effective_metadata_entry_accepts_hyphenated_aaguid(monkeypatch):
+    metadata = pytest.importorskip("server.app.metadata")
+
+    base_entry = {
+        "aaguid": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        "metadataStatement": {
+            "description": "Packaged authenticator",
+            "aaguid": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        },
+        "statusReports": [],
+    }
+
+    monkeypatch.setattr(metadata, "list_session_metadata_items", lambda: [], raising=False)
+    monkeypatch.setattr(
+        metadata,
+        "load_packaged_explorer_summary",
+        lambda: {"generatedAt": "2026-04-02T00:00:00+00:00", "no": 1},
+        raising=False,
+    )
+    monkeypatch.setattr(
+        metadata,
+        "_load_base_metadata",
+        lambda: (SimpleNamespace(entries=[base_entry]), "packaged"),
+        raising=False,
+    )
+
+    resolved = metadata.resolve_effective_metadata_entry(
+        aaguid="aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+    )
+
+    assert resolved is not None
+    assert resolved["entryId"] == "aaguid:aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+    assert resolved["metadataStatement"]["description"] == "Packaged authenticator"

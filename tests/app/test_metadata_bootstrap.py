@@ -11,6 +11,7 @@ def packaged_metadata_env(monkeypatch, tmp_path):
 
     verified_path = tmp_path / "fido-mds3.verified.json"
     cache_path = tmp_path / "fido-mds3.verified.json.meta.json"
+    explorer_path = tmp_path / "fido-mds3.explorer.json"
 
     payload = {
         "legalHeader": "test header",
@@ -18,7 +19,19 @@ def packaged_metadata_env(monkeypatch, tmp_path):
         "nextUpdate": "2099-01-01",
         "entries": [],
     }
+    explorer_payload = {
+        "meta": {
+            "entryCount": 0,
+            "generatedAt": datetime.now(timezone.utc).isoformat(),
+            "legalHeader": "test header",
+            "nextUpdate": "2099-01-01",
+            "no": 1,
+            "source": "packaged",
+        },
+        "entries": [],
+    }
     verified_path.write_text(json.dumps(payload), encoding="utf-8")
+    explorer_path.write_text(json.dumps(explorer_payload), encoding="utf-8")
     cache_path.write_text(
         json.dumps(
             {
@@ -26,6 +39,10 @@ def packaged_metadata_env(monkeypatch, tmp_path):
                 "last_modified_iso": None,
                 "etag": None,
                 "fetched_at": datetime.now(timezone.utc).isoformat(),
+                "generated_at": datetime.now(timezone.utc).isoformat(),
+                "no": 1,
+                "nextUpdate": "2099-01-01",
+                "entryCount": 0,
             }
         ),
         encoding="utf-8",
@@ -33,6 +50,7 @@ def packaged_metadata_env(monkeypatch, tmp_path):
 
     monkeypatch.setattr(metadata_module, "MDS_METADATA_VERIFIED_PATH", str(verified_path), raising=False)
     monkeypatch.setattr(metadata_module, "MDS_METADATA_CACHE_PATH", str(cache_path), raising=False)
+    monkeypatch.setattr(metadata_module, "MDS_EXPLORER_PATH", str(explorer_path), raising=False)
     monkeypatch.setattr(general_module, "MDS_METADATA_VERIFIED_PATH", str(verified_path), raising=False)
 
     # Reset cached state.
@@ -43,6 +61,8 @@ def packaged_metadata_env(monkeypatch, tmp_path):
     monkeypatch.setattr(metadata_module, "_base_verifier_mtime", None, raising=False)
     monkeypatch.setattr(metadata_module, "_base_metadata_trust_verified", None, raising=False)
     monkeypatch.setattr(metadata_module, "_base_metadata_entry_ids", set(), raising=False)
+    monkeypatch.setattr(metadata_module, "_base_explorer_snapshot_cache", None, raising=False)
+    monkeypatch.setattr(metadata_module, "_base_explorer_snapshot_mtime", None, raising=False)
 
     monkeypatch.setattr(
         general_module,
@@ -125,7 +145,7 @@ def test_index_html_skips_eager_bootstrap_by_default(monkeypatch):
         raising=False,
     )
     monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id", raising=False)
-    monkeypatch.setattr(general_module, "load_metadata_cache_entry", lambda: {}, raising=False)
+    monkeypatch.setattr(general_module, "load_packaged_explorer_summary", lambda: {}, raising=False)
     monkeypatch.setattr(general_module, "render_template", lambda *_args, **_kwargs: "ok", raising=False)
 
     with config_module.app.test_request_context("/index.html"):
@@ -155,7 +175,7 @@ def test_index_html_bootstraps_when_strict(monkeypatch):
         raising=False,
     )
     monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id", raising=False)
-    monkeypatch.setattr(general_module, "load_metadata_cache_entry", lambda: {}, raising=False)
+    monkeypatch.setattr(general_module, "load_packaged_explorer_summary", lambda: {}, raising=False)
     monkeypatch.setattr(general_module, "render_template", lambda *_args, **_kwargs: "ok", raising=False)
 
     with config_module.app.test_request_context("/index.html"):
@@ -165,45 +185,95 @@ def test_index_html_bootstraps_when_strict(monkeypatch):
     assert bootstrap_calls == [{"skip_if_reloader_parent": False}]
 
 
-def test_mds_fragment_route_is_served(monkeypatch):
+def test_explorer_metadata_route_sets_no_store_headers(monkeypatch):
     general_module = pytest.importorskip("server.app.routes.general")
     config_module = pytest.importorskip("server.app.config")
 
-    rendered = {}
-
-    def _render_template(name, *_args, **_kwargs):
-        rendered["name"] = name
-        return "mds-fragment"
-
-    monkeypatch.setattr(general_module, "render_template", _render_template, raising=False)
+    monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id", raising=False)
+    monkeypatch.setattr(
+        general_module,
+        "load_effective_explorer_snapshot",
+        lambda: {"meta": {"entryCount": 1}, "entries": [{"entryId": "aaguid:test"}]},
+        raising=False,
+    )
 
     with config_module.app.test_client() as client:
-        response = client.get("/templates/advanced/mds-content.html")
+        response = client.get("/api/mds/metadata/explorer")
 
     assert response.status_code == 200
-    assert response.data == b"mds-fragment"
-    assert rendered.get("name") == "advanced/mds-content.html"
+    assert response.get_json() == {"meta": {"entryCount": 1}, "entries": [{"entryId": "aaguid:test"}]}
+    assert response.headers["Cache-Control"] == "no-store"
+    assert response.headers["Vary"] == "Cookie"
 
 
-def test_mds_fragment_route_survives_config_reload(monkeypatch):
-    import importlib
-
+def test_resolve_metadata_entry_requires_exactly_one_lookup(monkeypatch):
     general_module = pytest.importorskip("server.app.routes.general")
     config_module = pytest.importorskip("server.app.config")
 
-    importlib.reload(config_module)
-
-    rendered = {}
-
-    def _render_template(name, *_args, **_kwargs):
-        rendered["name"] = name
-        return "mds-fragment"
-
-    monkeypatch.setattr(general_module, "render_template", _render_template, raising=False)
+    monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id", raising=False)
 
     with config_module.app.test_client() as client:
-        response = client.get("/templates/advanced/mds-content.html")
+        response = client.get("/api/mds/metadata/resolve")
+
+    assert response.status_code == 400
+    assert response.get_json()["error"] == "Provide exactly one of entryId, aaguid, or aaid."
+
+
+def test_resolve_metadata_entry_returns_not_found(monkeypatch):
+    general_module = pytest.importorskip("server.app.routes.general")
+    config_module = pytest.importorskip("server.app.config")
+
+    monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id", raising=False)
+    monkeypatch.setattr(
+        general_module,
+        "resolve_effective_metadata_entry",
+        lambda **_kwargs: None,
+        raising=False,
+    )
+
+    with config_module.app.test_client() as client:
+        response = client.get("/api/mds/metadata/resolve?aaguid=aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
+
+    assert response.status_code == 404
+    assert response.get_json()["error"] == "Metadata entry not found."
+
+
+def test_resolve_metadata_entry_returns_entry(monkeypatch):
+    general_module = pytest.importorskip("server.app.routes.general")
+    config_module = pytest.importorskip("server.app.config")
+
+    monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id", raising=False)
+    monkeypatch.setattr(
+        general_module,
+        "resolve_effective_metadata_entry",
+        lambda **_kwargs: {"entryId": "aaguid:aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", "name": "Demo"},
+        raising=False,
+    )
+
+    with config_module.app.test_client() as client:
+        response = client.get("/api/mds/metadata/resolve?aaguid=aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
 
     assert response.status_code == 200
-    assert response.data == b"mds-fragment"
-    assert rendered.get("name") == "advanced/mds-content.html"
+    assert response.get_json() == {
+        "entry": {
+            "entryId": "aaguid:aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+            "name": "Demo",
+        }
+    }
+
+
+def test_index_page_no_longer_emits_global_loader(monkeypatch):
+    general_module = pytest.importorskip("server.app.routes.general")
+    config_module = pytest.importorskip("server.app.config")
+
+    monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id", raising=False)
+    monkeypatch.setattr(general_module, "load_packaged_explorer_summary", lambda: {"entryCount": 0}, raising=False)
+    monkeypatch.setattr(general_module, "_should_bootstrap_metadata_on_index", lambda: False, raising=False)
+
+    with config_module.app.test_client() as client:
+        response = client.get("/index.html")
+
+    body = response.get_data(as_text=True)
+    assert response.status_code == 200
+    assert 'id="app-loader"' not in body
+    assert 'templates/advanced/mds-content.html' not in body
