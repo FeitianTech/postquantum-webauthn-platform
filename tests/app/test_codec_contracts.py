@@ -369,3 +369,79 @@ def test_classify_ctap_numeric_mapping_requires_exact_client_data_hash_length_fo
                 2: {"id": "example.com", "name": "Example"},
             }
         )
+
+
+def test_encode_ctap_webauthn_rejects_duplicate_fields_after_key_normalization():
+    encode_module = pytest.importorskip("server.app.decoder.encode")
+
+    with pytest.raises(ValueError, match=r"Duplicate field 0x01"):
+        encode_module._encode_ctap_webauthn_value(
+            {
+                "1 (clientDataHash)": _b64url(b"\x00" * 32),
+                "01": _b64url(b"\x11" * 32),
+                "2": {"id": "example.com", "name": "Example"},
+                "3": {
+                    "id": _b64url(b"user-id"),
+                    "name": "user@example.com",
+                    "displayName": "User",
+                },
+                "4": [{"type": "public-key", "alg": -7}],
+            }
+        )
+
+
+def test_encode_ctap_webauthn_preserves_unknown_extra_numeric_fields():
+    encode_module = pytest.importorskip("server.app.decoder.encode")
+
+    result = encode_module._encode_ctap_webauthn_value(
+        {
+            "1": "example.com",
+            "2": _b64url(b"\x22" * 32),
+            "42": "debug-metadata",
+        }
+    )
+
+    assert result["success"] is True
+    assert result["type"] == "CBOR (CTAP/WebAuthn Data) (encoded getAssertionRequest)"
+    encoded = result["data"]["encodedValue"]
+    assert encoded["42"] == "debug-metadata"
+    decoded = result["data"]["ctapDecoded"]["getAssertionRequest"]
+    assert decoded["42"] == "debug-metadata"
+
+
+def test_encode_payload_text_cbor_is_deterministic_across_equivalent_permutations():
+    decoder_module = pytest.importorskip("server.app.decoder")
+
+    variants = [
+        json.dumps(
+            {
+                "z": 1,
+                "nested": {"b": 2, "a": 1},
+                "k": [3, {"y": 2, "x": 1}],
+                "blob": {"alpha": [1, 2], "beta": {"m": True, "n": None}},
+            }
+        ),
+        json.dumps(
+            {
+                "blob": {"beta": {"n": None, "m": True}, "alpha": [1, 2]},
+                "k": [3, {"x": 1, "y": 2}],
+                "nested": {"a": 1, "b": 2},
+                "z": 1,
+            }
+        ),
+        json.dumps(
+            {
+                "nested": {"a": 1, "b": 2},
+                "z": 1,
+                "blob": {"alpha": [1, 2], "beta": {"m": True, "n": None}},
+                "k": [3, {"x": 1, "y": 2}],
+            }
+        ),
+    ]
+
+    encoded_hex_values = [
+        decoder_module.encode_payload_text(payload, "cbor")["data"]["binary"]["hex"]
+        for payload in variants
+    ]
+
+    assert len(set(encoded_hex_values)) == 1
