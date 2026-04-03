@@ -1,17 +1,14 @@
 [run]
 branch = True
-include =
-    server/app/app.py
-    server/app/attachments.py
-    server/app/cloud_storage.py
-    server/app/credential_artifacts.py
-    server/app/device_logs.py
-    server/app/github_client.py
-    server/app/session_metadata_store.py
-    server/app/startup.py
-    server/app/storage.py
+source =
+    fido2
+    scripts
+    server
 
 [report]
+omit =
+    tests/*
+    */tests/*
 exclude_lines =
     pragma: no cover
     raise NotImplementedError
