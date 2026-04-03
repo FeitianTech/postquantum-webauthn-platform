@@ -67,6 +67,10 @@ def test_is_logging_enabled_empty_string(monkeypatch):
     assert is_logging_enabled() is False
 
 
+def test_is_truthy_returns_false_for_none():
+    assert github_client._is_truthy(None) is False
+
+
 def test_api_url_uses_default_log_repository(monkeypatch):
     monkeypatch.delenv("GITHUB_LOG_REPO_OWNER", raising=False)
     monkeypatch.delenv("GITHUB_LOG_REPO_NAME", raising=False)
@@ -258,6 +262,14 @@ def test_request_raises_after_retrying_url_error(monkeypatch):
     assert sleeps == [1]
 
 
+def test_request_raises_runtime_when_retry_loop_is_bypassed(monkeypatch):
+    monkeypatch.setenv("GITHUB_TOKEN", "token-123")
+    monkeypatch.setattr(github_client, "range", lambda _n: [], raising=False)
+
+    with pytest.raises(RuntimeError, match="failed after retries"):
+        github_client._request("GET", "https://api.github.com/example")
+
+
 def test_github_get_json_decodes_base64_payload_and_returns_sha(monkeypatch):
     payload = {"hello": "world"}
     encoded_payload = base64.b64encode(json.dumps(payload).encode("utf-8")).decode("ascii")
@@ -296,6 +308,25 @@ def test_github_get_json_translates_404_to_file_not_found(monkeypatch):
 
     with pytest.raises(FileNotFoundError, match="logs/missing.json"):
         github_client.github_get_json("logs/missing.json")
+
+
+def test_github_get_json_reraises_non_404_http_error(monkeypatch):
+    monkeypatch.setattr(
+        github_client,
+        "_request",
+        lambda _method, _url: (_ for _ in ()).throw(
+            HTTPError(
+                url="https://api.github.com/example",
+                code=500,
+                msg="Server Error",
+                hdrs=None,
+                fp=io.BytesIO(b""),
+            )
+        ),
+    )
+
+    with pytest.raises(HTTPError):
+        github_client.github_get_json("logs/example.json")
 
 
 def test_github_get_json_raises_on_unexpected_encoding(monkeypatch):
@@ -387,6 +418,23 @@ def test_github_upload_file_passes_message_content_and_optional_sha(monkeypatch)
     assert base64.b64decode(captured["body"]["content"]) == b"\x00\x01\x02"
 
 
+def test_github_upload_file_omits_sha_when_not_provided(monkeypatch):
+    captured = {}
+
+    def _fake_request(method, url, body=None):
+        captured["method"] = method
+        captured["url"] = url
+        captured["body"] = body
+        return 200, b"{}"
+
+    monkeypatch.setattr(github_client, "_request", _fake_request)
+
+    github_client.github_upload_file("logs/test.bin", b"\x00", "binary upload")
+
+    assert captured["method"] == "PUT"
+    assert "sha" not in captured["body"]
+
+
 def test_github_list_directory_returns_list_payload(monkeypatch):
     directory_payload = [{"name": "a.json"}, {"name": "b.json"}]
 
@@ -417,6 +465,25 @@ def test_github_list_directory_returns_empty_list_on_404(monkeypatch):
     )
 
     assert github_client.github_list_directory("missing") == []
+
+
+def test_github_list_directory_reraises_non_404_http_error(monkeypatch):
+    monkeypatch.setattr(
+        github_client,
+        "_request",
+        lambda _method, _url: (_ for _ in ()).throw(
+            HTTPError(
+                url="https://api.github.com/example",
+                code=500,
+                msg="Server Error",
+                hdrs=None,
+                fp=io.BytesIO(b""),
+            )
+        ),
+    )
+
+    with pytest.raises(HTTPError):
+        github_client.github_list_directory("logs")
 
 
 def test_github_list_directory_raises_on_non_list_response(monkeypatch):
