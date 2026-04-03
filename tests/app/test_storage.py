@@ -271,3 +271,81 @@ def test_resolve_session_id_falls_back_to_metadata_session(monkeypatch):
     )
 
     assert storage._resolve_session_id("   ") == "fallback-session-id"
+
+
+def test_savekey_uploads_payload_to_session_scoped_gcs_blob(monkeypatch):
+    uploads = []
+
+    monkeypatch.setattr(
+        storage,
+        "upload_bytes",
+        lambda blob_name, payload, *, content_type=None: uploads.append((blob_name, payload, content_type)),
+    )
+
+    value = [{"credential_data": "saved"}]
+    storage.savekey("alice@example.com", value, session_id="session-save")
+
+    assert len(uploads) == 1
+    blob_name, payload, content_type = uploads[0]
+    assert blob_name == storage._credential_blob("alice@example.com", "session-save")
+    assert pickle.loads(payload) == value
+    assert content_type == "application/octet-stream"
+
+
+def test_readkey_returns_empty_when_gcs_download_fails_or_missing(monkeypatch):
+    calls = []
+
+    def fake_download(blob_name: str):
+        calls.append(blob_name)
+        if len(calls) == 1:
+            raise RuntimeError("temporary failure")
+        return None
+
+    monkeypatch.setattr(storage, "download_bytes", fake_download)
+
+    result = storage.readkey("alice@example.com", session_id="session-read")
+
+    assert result == []
+    assert len(calls) >= 2
+
+
+def test_delkey_swallows_gcs_delete_exceptions(monkeypatch):
+    monkeypatch.setattr(
+        storage,
+        "delete_blob",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("delete failed")),
+    )
+
+    storage.delkey("alice@example.com", session_id="session-delete")
+
+
+def test_iter_credentials_gcs_skips_failed_empty_and_non_list_payloads(monkeypatch):
+    session_id = "session-iter"
+
+    blobs = [
+        ("alice", "blob-a"),
+        ("bob", "blob-b"),
+        ("carol", "blob-c"),
+        ("dave", "blob-d"),
+    ]
+
+    monkeypatch.setattr(storage, "_list_credential_blob_names", lambda _sid: blobs)
+
+    payloads = {
+        "blob-a": RuntimeError("download failed"),
+        "blob-b": b"",
+        "blob-c": pickle.dumps({"not": "a-list"}),
+        "blob-d": pickle.dumps([{"ok": True}]),
+    }
+
+    def fake_download(blob_name: str):
+        payload = payloads[blob_name]
+        if isinstance(payload, Exception):
+            raise payload
+        return payload
+
+    monkeypatch.setattr(storage, "download_bytes", fake_download)
+
+    assert list(storage.iter_credentials(session_id=session_id)) == [
+        ("dave", [{"ok": True}])
+    ]
