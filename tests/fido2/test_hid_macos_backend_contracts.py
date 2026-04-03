@@ -1,11 +1,16 @@
 from __future__ import annotations
 
 import ctypes
+import sys
 from queue import Queue
 
 import pytest
 
 from fido2.hid.base import HidDescriptor
+
+
+if sys.platform != "darwin":
+    pytest.skip("macOS-only backend contracts", allow_module_level=True)
 
 
 macos = pytest.importorskip("fido2.hid.macos")
