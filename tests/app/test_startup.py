@@ -137,6 +137,48 @@ def test_startup_fail_fast_honors_strict_mode(monkeypatch):
     assert startup.startup_fail_fast_enabled() is True
 
 
+def test_env_flag_parses_false_values(monkeypatch):
+    from server.app import startup
+
+    monkeypatch.setenv("FIDO_SERVER_TEST_FLAG", "0")
+    assert startup._env_flag("FIDO_SERVER_TEST_FLAG") is False
+
+
+def test_startup_fail_fast_honors_explicit_env_override(monkeypatch):
+    from server.app import startup
+
+    monkeypatch.setenv("FIDO_SERVER_STARTUP_FAIL_FAST", "false")
+    monkeypatch.setenv("FIDO_SERVER_STARTUP_MODE", "strict")
+
+    assert startup.startup_fail_fast_enabled() is False
+
+
+def test_startup_fail_fast_honors_non_blocking_mode(monkeypatch):
+    from server.app import startup
+
+    monkeypatch.delenv("FIDO_SERVER_STARTUP_FAIL_FAST", raising=False)
+    monkeypatch.setenv("FIDO_SERVER_STARTUP_MODE", "non-blocking")
+
+    assert startup.startup_fail_fast_enabled() is False
+
+
+def test_should_warm_metadata_honors_env_override(monkeypatch):
+    from server.app import startup
+
+    monkeypatch.setenv("FIDO_SERVER_WARM_METADATA", "0")
+
+    assert startup._should_warm_metadata(fail_fast=True) is False
+
+
+def test_should_warm_cloud_storage_for_mode_honors_env_override(monkeypatch):
+    from server.app import startup
+
+    monkeypatch.setenv("FIDO_SERVER_WARM_CLOUD_STORAGE", "1")
+    monkeypatch.setattr(startup, "_should_warm_cloud_storage_configured", lambda: True)
+
+    assert startup._should_warm_cloud_storage_for_mode(fail_fast=False) is True
+
+
 def test_warm_up_dependencies_success(monkeypatch):
     """Test successful startup dependency warming."""
     monkeypatch.delenv("FIDO_SERVER_GCS_BUCKET", raising=False)
@@ -416,3 +458,33 @@ def test_warm_up_dependencies_fast_mode_does_not_raise(monkeypatch):
     )
 
     startup.warm_up_dependencies(fail_fast=False)
+
+
+def test_warm_up_dependencies_logs_cleanup_warning_when_delete_fails(monkeypatch):
+    monkeypatch.delenv("FIDO_SERVER_GCS_BUCKET", raising=False)
+
+    from server.app import startup, cloud_storage, session_metadata_store
+
+    monkeypatch.setenv("FIDO_SERVER_WARM_METADATA", "0")
+    monkeypatch.setenv("FIDO_SERVER_WARM_CLOUD_STORAGE", "0")
+    monkeypatch.setenv("FIDO_SERVER_WARM_SESSION_STORAGE", "1")
+    monkeypatch.setattr(cloud_storage, "gcs_enabled", lambda: False)
+
+    monkeypatch.setattr(session_metadata_store, "ensure_session", lambda sid: None)
+    monkeypatch.setattr(session_metadata_store, "touch_last_access", lambda sid: None)
+    monkeypatch.setattr(
+        session_metadata_store,
+        "delete_session",
+        lambda sid: (_ for _ in ()).throw(RuntimeError("cleanup failed")),
+    )
+
+    warnings = []
+    monkeypatch.setattr(startup.app.logger, "warning", lambda *args, **kwargs: warnings.append((args, kwargs)))
+
+    startup.warm_up_dependencies(fail_fast=False)
+
+    assert warnings
+    assert any(
+        "Failed to clean up startup session" in (args[0] if args else "")
+        for args, _kwargs in warnings
+    )
