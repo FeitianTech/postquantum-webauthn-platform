@@ -287,7 +287,7 @@ def test_resolve_metadata_entry_returns_entry(monkeypatch):
     }
 
 
-def test_index_page_no_longer_emits_global_loader(monkeypatch):
+def test_index_page_emits_accessible_global_loader_markup(monkeypatch):
     general_module = pytest.importorskip("server.app.routes.general")
     config_module = pytest.importorskip("server.app.config")
 
@@ -300,7 +300,10 @@ def test_index_page_no_longer_emits_global_loader(monkeypatch):
 
     body = response.get_data(as_text=True)
     assert response.status_code == 200
-    assert 'id="app-loader"' not in body
+    assert 'id="app-loader"' in body
+    assert 'class="app-loader"' in body
+    assert 'role="status"' in body
+    assert 'aria-live="polite"' in body
     assert 'templates/advanced/mds-content.html' not in body
     assert 'fido-mds3.explorer.bootstrap.js' in body
     assert '__INITIAL_CREDENTIAL_RECORDS__' in body
