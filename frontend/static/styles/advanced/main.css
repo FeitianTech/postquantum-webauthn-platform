@@ -59,6 +59,34 @@
     font-weight: 400;
 }
 
+.app-loader__copy {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.app-loader__progress {
+    width: min(320px, 100%);
+}
+
+.app-loader__progress-track {
+    width: 100%;
+    height: 0.5rem;
+    overflow: hidden;
+    border-radius: 999px;
+    background: var(--surface-alt);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28);
+}
+
+.app-loader__progress-fill {
+    width: 0;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--primary-color), var(--primary-light));
+    box-shadow: 0 0 18px var(--blue-ring);
+    transition: width 180ms ease;
+}
+
 .app-loader__percentage {
     margin: 0;
     font-size: 0.875rem;
@@ -73,6 +101,25 @@
 @keyframes app-loader-spin {
     0%   { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
+}
+
+@media (max-width: 640px) {
+    .app-loader__dialog {
+        gap: 1.15rem;
+    }
+
+    .app-loader__title {
+        font-size: 1.05rem;
+        white-space: normal;
+    }
+
+    .app-loader__status {
+        font-size: 0.875rem;
+    }
+
+    .app-loader__progress {
+        width: 100%;
+    }
 }
 
 .app-loader--hidden {

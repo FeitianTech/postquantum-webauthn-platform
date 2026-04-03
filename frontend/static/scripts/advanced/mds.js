@@ -31,7 +31,6 @@ import {
     renderCertificateSummary,
 } from './mds-utils.js';
 import {
-    loaderComplete,
     loaderIsActive,
     loaderSetMetadataCount,
     loaderSetPhase,
@@ -2419,7 +2418,6 @@ async function applyMetadataEntries(metadata, options = {}) {
     if (shouldReportProgress) {
         loaderSetMetadataCount(entries.length);
         loaderSetPhase('Finalising interface…', { progress: 94 });
-        loaderComplete({ message: 'Application ready!', delay: 720 });
     }
 }
 
@@ -2549,7 +2547,6 @@ async function applyMetadataEntriesLazy(metadata, options = {}) {
     if (shouldReportProgress) {
         loaderSetMetadataCount(entries.length);
         loaderSetPhase('Finalising interface…', { progress: 94 });
-        loaderComplete({ message: 'Application ready!', delay: 500 });
     }
 
     // Start background loading of full entry details
@@ -3045,7 +3042,7 @@ async function loadMdsData(statusNote, options = {}) {
     }
 }
 
-async function waitForMetadataLoad() {
+export async function waitForMetadataLoad() {
     const ready = await waitForStateReady();
     if (!ready || !mdsState) {
         return false;
