@@ -80,3 +80,53 @@ def test_try_decode_cbor_reports_extra_cbor_objects_as_malformed():
     assert result["inputEncoding"] == "base64url"
     malformed = result.get("malformed", [])
     assert any("additional CBOR object" in message for message in malformed)
+
+
+def test_parse_cbor_item_rejects_break_code_outside_indefinite_container():
+    decode_module = pytest.importorskip("server.app.decoder.decode")
+
+    with pytest.raises(
+        decode_module._CborDecodingError,
+        match="Unexpected break code outside indefinite container",
+    ):
+        decode_module._parse_cbor_item(b"\xff", 0)
+
+
+def test_parse_cbor_item_rejects_non_bytes_segment_in_indefinite_byte_string():
+    decode_module = pytest.importorskip("server.app.decoder.decode")
+
+    # 0x5f => start indefinite byte string; next chunk is text string (major type 3).
+    payload = b"\x5f\x61a\xff"
+
+    with pytest.raises(
+        decode_module._CborDecodingError,
+        match="Indefinite byte string segment is not a byte string",
+    ):
+        decode_module._parse_cbor_item(payload, 0)
+
+
+def test_try_decode_cbor_handles_ctap_prefix_without_payload():
+    decode_module = pytest.importorskip("server.app.decoder.decode")
+
+    result = decode_module._try_decode_cbor(b"\x01", "hex")
+
+    assert result is not None
+    assert result["format"] == "CBOR"
+    assert result["decoded"]["decodedValue"]["summary"] == "Empty CBOR payload"
+    assert result["decoded"]["ctap"]["kind"] == "command"
+    assert result["decoded"]["ctap"]["payloadLength"] == 0
+
+
+def test_try_decode_cbor_treats_ctap_padding_bytes_as_additional_objects():
+    decode_module = pytest.importorskip("server.app.decoder.decode")
+
+    payload = b"\x01" + cbor2.dumps({"a": 1}) + b"\x00\xff"
+
+    result = decode_module._try_decode_cbor(payload, "base64url")
+
+    assert result is not None
+    assert result["format"] == "CBOR"
+    ctap = result["decoded"]["ctap"]
+    assert ctap["kind"] == "command"
+    malformed = result.get("malformed", [])
+    assert any("additional CBOR object" in message for message in malformed)
