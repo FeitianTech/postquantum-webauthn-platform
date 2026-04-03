@@ -81,7 +81,16 @@ function extractSnapshotTimestamp(info) {
         return null;
     }
 
-    for (const key of ['last_modified_iso', 'last_modified', 'fetched_at']) {
+    for (const key of [
+        'generatedAt',
+        'generated_at',
+        'fetchedAt',
+        'fetched_at',
+        'lastModifiedIso',
+        'last_modified_iso',
+        'lastModified',
+        'last_modified',
+    ]) {
         const value = info[key];
         if (typeof value === 'string' && value.trim()) {
             return value.trim();
@@ -115,10 +124,7 @@ function formatInitialExplorerStatus(info) {
     const parts = [];
     const entryCount = Number.isFinite(info.entryCount) ? Number(info.entryCount) : null;
     const snapshotNo = Number.isFinite(info.no) ? Number(info.no) : null;
-    const fetchedAt = formatSnapshotTimestamp(info);
-    const nextUpdate = typeof info.nextUpdate === 'string' && info.nextUpdate
-        ? formatDate(info.nextUpdate)
-        : '';
+    const lastUpdated = formatSnapshotTimestamp(info);
 
     if (snapshotNo !== null) {
         parts.push(`Snapshot ${snapshotNo}`);
@@ -126,11 +132,8 @@ function formatInitialExplorerStatus(info) {
     if (entryCount !== null) {
         parts.push(`${entryCount.toLocaleString()} authenticators`);
     }
-    if (fetchedAt) {
-        parts.push(`packaged ${fetchedAt}`);
-    }
-    if (nextUpdate) {
-        parts.push(`next update ${nextUpdate}`);
+    if (lastUpdated) {
+        parts.push(`last updated ${lastUpdated}`);
     }
 
     if (!parts.length) {
@@ -2348,21 +2351,16 @@ async function applyMetadataEntries(metadata, options = {}) {
         mdsState.byAaguid = map;
     }
 
-    // Try to get last updated date from metadata file's fetched_at
-    let lastUpdatedDate = '';
-    try {
-        const metaResponse = await fetch(MDS_VERIFIED_META_PATH, { cache: 'no-store' });
-        if (metaResponse.ok) {
-            const metaData = await metaResponse.json();
-            if (metaData?.fetched_at) {
-                lastUpdatedDate = formatDate(metaData.fetched_at);
+    let lastUpdatedDate = formatSnapshotTimestamp(metadata?.meta || metadata) || formatSnapshotTimestamp(initialMdsInfo) || '';
+    if (!lastUpdatedDate) {
+        try {
+            const metaResponse = await fetch(MDS_VERIFIED_META_PATH, { cache: 'no-store' });
+            if (metaResponse.ok) {
+                const metaData = await metaResponse.json();
+                lastUpdatedDate = formatSnapshotTimestamp(metaData) || '';
             }
-        }
-    } catch (error) {
-        // If meta file not available, fall back to nextUpdate from metadata
-        const nextUpdateRaw = typeof metadata?.nextUpdate === 'string' ? metadata.nextUpdate : '';
-        if (nextUpdateRaw) {
-            lastUpdatedDate = formatDate(nextUpdateRaw);
+        } catch (error) {
+            lastUpdatedDate = '';
         }
     }
 
@@ -2500,20 +2498,16 @@ async function applyMetadataEntriesLazy(metadata, options = {}) {
         mdsState.byAaguid = map;
     }
 
-    // Get last updated date
-    let lastUpdatedDate = '';
-    try {
-        const metaResponse = await fetch(MDS_VERIFIED_META_PATH, { cache: 'no-store' });
-        if (metaResponse.ok) {
-            const metaData = await metaResponse.json();
-            if (metaData?.fetched_at) {
-                lastUpdatedDate = formatDate(metaData.fetched_at);
+    let lastUpdatedDate = formatSnapshotTimestamp(metadata?.meta || metadata) || formatSnapshotTimestamp(initialMdsInfo) || '';
+    if (!lastUpdatedDate) {
+        try {
+            const metaResponse = await fetch(MDS_VERIFIED_META_PATH, { cache: 'no-store' });
+            if (metaResponse.ok) {
+                const metaData = await metaResponse.json();
+                lastUpdatedDate = formatSnapshotTimestamp(metaData) || '';
             }
-        }
-    } catch (error) {
-        const nextUpdateRaw = typeof metadata?.nextUpdate === 'string' ? metadata.nextUpdate : '';
-        if (nextUpdateRaw) {
-            lastUpdatedDate = formatDate(nextUpdateRaw);
+        } catch (error) {
+            lastUpdatedDate = '';
         }
     }
 
@@ -2768,11 +2762,9 @@ function buildLoadedStatus(snapshot, note) {
     const entryCount = Array.isArray(snapshot?.entries) ? snapshot.entries.length : 0;
     const parts = [`Loaded ${entryCount.toLocaleString()} authenticators.`];
 
-    const packagedAt = formatSnapshotTimestamp(meta);
-    if (packagedAt) {
-        parts.push(`Packaged ${packagedAt}.`);
-    } else if (typeof meta?.nextUpdate === 'string' && meta.nextUpdate) {
-        parts.push(`Next update ${formatDate(meta.nextUpdate)}.`);
+    const lastUpdated = formatSnapshotTimestamp(meta);
+    if (lastUpdated) {
+        parts.push(`Last updated ${lastUpdated}.`);
     }
 
     if (Number.isFinite(meta?.customEntryCount) && meta.customEntryCount > 0) {
