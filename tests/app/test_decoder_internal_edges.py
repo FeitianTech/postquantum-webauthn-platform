@@ -13,6 +13,15 @@ def test_decode_binary_input_prefers_hex_when_candidate_is_valid_hex():
     assert encoding == "hex"
 
 
+def test_decode_binary_input_prefers_hex_for_ambiguous_alphabetic_payload():
+    decode_module = pytest.importorskip("server.app.decoder.decode")
+
+    decoded, encoding = decode_module._decode_binary_input("AAAA")
+
+    assert decoded == bytes.fromhex("AAAA")
+    assert encoding == "hex"
+
+
 def test_decode_binary_input_accepts_base64url_without_padding():
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
