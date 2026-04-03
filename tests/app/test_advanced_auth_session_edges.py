@@ -265,3 +265,159 @@ def test_advanced_authenticate_complete_rejects_attachment_not_allowed_by_sessio
 
         with client.session_transaction() as session_state:
             assert "advanced_authenticate_allowed_attachments" not in session_state
+
+
+def test_advanced_authenticate_complete_forwards_hash_algorithm_override(monkeypatch):
+    config_module = pytest.importorskip("server.app.config")
+    advanced_module = pytest.importorskip("server.app.routes.advanced")
+    pytest.importorskip("server.app.app")
+
+    credential_id = b"advanced-hash-forward"
+    encoded_id = _b64url(credential_id)
+    captured = {}
+
+    class _FakeServer:
+        allowed_algorithms = []
+
+        def authenticate_complete(self, *_args, **kwargs):
+            captured["hash_algorithm"] = kwargs.get("hash_algorithm")
+            return _AuthResult({3: -7})
+
+    monkeypatch.setattr(advanced_module, "create_fido_server", lambda **_kwargs: _FakeServer(), raising=False)
+    monkeypatch.setattr(advanced_module, "determine_rp_id", lambda value=None: value or "example.com", raising=False)
+    monkeypatch.setattr(advanced_module, "_derive_algorithms_from_credentials", lambda _credentials: [], raising=False)
+    monkeypatch.setattr(
+        advanced_module,
+        "_parse_client_supplied_credentials",
+        lambda _raw: (
+            [{"id": credential_id, "data": object(), "attachment": None, "algorithm": -7, "resident": True}],
+            [],
+        ),
+        raising=False,
+    )
+
+    with config_module.app.test_client() as client:
+        with client.session_transaction() as session_state:
+            session_state["advanced_auth_state"] = {"challenge": "state"}
+            session_state["advanced_auth_rp"] = {"id": "example.com", "name": "Example"}
+
+        response = client.post(
+            "/api/advanced/authenticate/complete",
+            json={
+                "__hash_algorithm": "SHA-512",
+                "publicKey": {
+                    "challenge": "AQID",
+                    "allowCredentials": [{"type": "public-key", "id": encoded_id}],
+                },
+                "__storedCredentials": [{}],
+                "__assertion_response": {"rawId": encoded_id, "response": {}},
+            },
+        )
+
+    assert response.status_code == 200
+    assert captured["hash_algorithm"] == "SHA-512"
+
+
+def test_advanced_authenticate_complete_defaults_hash_algorithm_when_override_invalid(monkeypatch):
+    config_module = pytest.importorskip("server.app.config")
+    advanced_module = pytest.importorskip("server.app.routes.advanced")
+    pytest.importorskip("server.app.app")
+
+    credential_id = b"advanced-hash-default"
+    encoded_id = _b64url(credential_id)
+    captured = {}
+
+    class _FakeServer:
+        allowed_algorithms = []
+
+        def authenticate_complete(self, *_args, **kwargs):
+            captured["hash_algorithm"] = kwargs.get("hash_algorithm")
+            return _AuthResult({3: -7})
+
+    monkeypatch.setattr(advanced_module, "create_fido_server", lambda **_kwargs: _FakeServer(), raising=False)
+    monkeypatch.setattr(advanced_module, "determine_rp_id", lambda value=None: value or "example.com", raising=False)
+    monkeypatch.setattr(advanced_module, "_derive_algorithms_from_credentials", lambda _credentials: [], raising=False)
+    monkeypatch.setattr(
+        advanced_module,
+        "_parse_client_supplied_credentials",
+        lambda _raw: (
+            [{"id": credential_id, "data": object(), "attachment": None, "algorithm": -7, "resident": True}],
+            [],
+        ),
+        raising=False,
+    )
+
+    with config_module.app.test_client() as client:
+        with client.session_transaction() as session_state:
+            session_state["advanced_auth_state"] = {"challenge": "state"}
+            session_state["advanced_auth_rp"] = {"id": "example.com", "name": "Example"}
+
+        response = client.post(
+            "/api/advanced/authenticate/complete",
+            json={
+                "__hash_algorithm": {"invalid": True},
+                "publicKey": {
+                    "challenge": "AQID",
+                    "allowCredentials": [{"type": "public-key", "id": encoded_id}],
+                },
+                "__storedCredentials": [{}],
+                "__assertion_response": {"rawId": encoded_id, "response": {}},
+            },
+        )
+
+    assert response.status_code == 200
+    assert captured["hash_algorithm"] == "SHA-256"
+
+
+def test_advanced_authenticate_complete_omits_sign_count_for_malformed_authenticator_data(monkeypatch):
+    config_module = pytest.importorskip("server.app.config")
+    advanced_module = pytest.importorskip("server.app.routes.advanced")
+    pytest.importorskip("server.app.app")
+
+    credential_id = b"advanced-malformed-authdata"
+    encoded_id = _b64url(credential_id)
+
+    class _FakeServer:
+        allowed_algorithms = []
+
+        def authenticate_complete(self, *_args, **_kwargs):
+            return _AuthResult({3: -7})
+
+    monkeypatch.setattr(advanced_module, "create_fido_server", lambda **_kwargs: _FakeServer(), raising=False)
+    monkeypatch.setattr(advanced_module, "determine_rp_id", lambda value=None: value or "example.com", raising=False)
+    monkeypatch.setattr(advanced_module, "_derive_algorithms_from_credentials", lambda _credentials: [], raising=False)
+    monkeypatch.setattr(
+        advanced_module,
+        "_parse_client_supplied_credentials",
+        lambda _raw: (
+            [{"id": credential_id, "data": object(), "attachment": None, "algorithm": -7, "resident": True}],
+            [],
+        ),
+        raising=False,
+    )
+
+    with config_module.app.test_client() as client:
+        with client.session_transaction() as session_state:
+            session_state["advanced_auth_state"] = {"challenge": "state"}
+            session_state["advanced_auth_rp"] = {"id": "example.com", "name": "Example"}
+
+        response = client.post(
+            "/api/advanced/authenticate/complete",
+            json={
+                "publicKey": {
+                    "challenge": "AQID",
+                    "allowCredentials": [{"type": "public-key", "id": encoded_id}],
+                },
+                "__storedCredentials": [{}],
+                "__assertion_response": {
+                    "rawId": encoded_id,
+                    "response": {"authenticatorData": "%%not-valid%%"},
+                },
+            },
+        )
+
+    assert response.status_code == 200
+    payload = response.get_json()
+    assert payload["status"] == "OK"
+    assert payload["authenticatedCredentialId"] == encoded_id
+    assert "signCount" not in payload
