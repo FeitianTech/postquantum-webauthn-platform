@@ -112,7 +112,7 @@ def test_enumerate_parses_pnpinfo_and_description(monkeypatch):
         olen.contents.value = len(payload)
         return 0
 
-    monkeypatch.setattr(freebsd.libc, "sysctlbyname", _sysctlbyname)
+    monkeypatch.setattr(freebsd.libc, "sysctlbyname", _sysctlbyname, raising=False)
 
     devices = list(freebsd._enumerate())
 
@@ -143,7 +143,7 @@ def test_enumerate_skips_failed_pnpinfo_and_sets_none_for_missing_desc(monkeypat
             return -1
         return -1
 
-    monkeypatch.setattr(freebsd.libc, "sysctlbyname", _sysctlbyname)
+    monkeypatch.setattr(freebsd.libc, "sysctlbyname", _sysctlbyname, raising=False)
 
     devices = list(freebsd._enumerate())
 
