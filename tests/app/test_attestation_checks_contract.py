@@ -1,6 +1,6 @@
 import base64
 import hashlib
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -54,6 +54,39 @@ class _FakeRegistrationResponse:
                 "attestation_object": attestation_object,
             },
         )()
+
+
+class _FakeSubject:
+    def __init__(self, text: str):
+        self._text = text
+
+    def rfc4514_string(self) -> str:
+        return self._text
+
+
+class _FakeExtensionResult:
+    def __init__(self, value):
+        self.value = value
+
+
+class _FakeExtensions:
+    def __init__(self, extension_map, missing_exception):
+        self._extension_map = extension_map
+        self._missing_exception = missing_exception
+
+    def get_extension_for_class(self, extension_cls):
+        if extension_cls in self._extension_map:
+            return _FakeExtensionResult(self._extension_map[extension_cls])
+        raise self._missing_exception()
+
+
+class _FakeCertificate:
+    def __init__(self, *, subject: str, extension_map, missing_exception):
+        now = datetime.now(timezone.utc)
+        self.subject = _FakeSubject(subject)
+        self.not_valid_before_utc = now - timedelta(days=1)
+        self.not_valid_after_utc = now + timedelta(days=1)
+        self.extensions = _FakeExtensions(extension_map, missing_exception)
 
 
 def test_perform_attestation_checks_reports_core_validation_failures(monkeypatch):
@@ -283,3 +316,195 @@ def test_evaluate_mldsa_attestation_root_reports_missing_metadata_entry():
 
     assert outcome["root_valid"] is None
     assert "pqc_metadata_entry_missing" in outcome["errors"]
+
+
+def test_check_pqc_certificate_constraints_rejects_leaf_ca_certificate(monkeypatch):
+    attestation_module = pytest.importorskip("server.app.attestation")
+
+    class _MissingExtension(Exception):
+        pass
+
+    fake_cert = _FakeCertificate(
+        subject="CN=Leaf",
+        extension_map={
+            attestation_module.x509.BasicConstraints: attestation_module.x509.BasicConstraints(
+                ca=True,
+                path_length=None,
+            )
+        },
+        missing_exception=_MissingExtension,
+    )
+
+    monkeypatch.setattr(attestation_module.x509, "ExtensionNotFound", _MissingExtension, raising=False)
+    monkeypatch.setattr(attestation_module.x509, "load_der_x509_certificate", lambda _cert: fake_cert)
+
+    error = attestation_module._check_pqc_certificate_constraints(
+        b"leaf",
+        now=datetime.now(timezone.utc),
+        is_leaf=True,
+        remaining_subordinates=0,
+    )
+
+    assert error == "pqc_basic_constraints_leaf_ca: CN=Leaf"
+
+
+def test_check_pqc_certificate_constraints_requires_basic_constraints_for_non_leaf(monkeypatch):
+    attestation_module = pytest.importorskip("server.app.attestation")
+
+    class _MissingExtension(Exception):
+        pass
+
+    fake_cert = _FakeCertificate(
+        subject="CN=Intermediate",
+        extension_map={},
+        missing_exception=_MissingExtension,
+    )
+
+    monkeypatch.setattr(attestation_module.x509, "ExtensionNotFound", _MissingExtension, raising=False)
+    monkeypatch.setattr(attestation_module.x509, "load_der_x509_certificate", lambda _cert: fake_cert)
+
+    error = attestation_module._check_pqc_certificate_constraints(
+        b"intermediate",
+        now=datetime.now(timezone.utc),
+        is_leaf=False,
+        remaining_subordinates=1,
+    )
+
+    assert error == "pqc_basic_constraints_missing: CN=Intermediate"
+
+
+def test_check_pqc_certificate_constraints_accepts_path_length_equal_to_remaining(monkeypatch):
+    attestation_module = pytest.importorskip("server.app.attestation")
+
+    class _MissingExtension(Exception):
+        pass
+
+    fake_cert = _FakeCertificate(
+        subject="CN=PathLenOK",
+        extension_map={
+            attestation_module.x509.BasicConstraints: attestation_module.x509.BasicConstraints(
+                ca=True,
+                path_length=2,
+            )
+        },
+        missing_exception=_MissingExtension,
+    )
+
+    monkeypatch.setattr(attestation_module.x509, "ExtensionNotFound", _MissingExtension, raising=False)
+    monkeypatch.setattr(attestation_module.x509, "load_der_x509_certificate", lambda _cert: fake_cert)
+
+    error = attestation_module._check_pqc_certificate_constraints(
+        b"ca-cert",
+        now=datetime.now(timezone.utc),
+        is_leaf=False,
+        remaining_subordinates=2,
+    )
+
+    assert error is None
+
+
+def test_check_pqc_certificate_constraints_rejects_negative_policy_constraints(monkeypatch):
+    attestation_module = pytest.importorskip("server.app.attestation")
+
+    class _MissingExtension(Exception):
+        pass
+
+    fake_policy = type(
+        "_FakePolicyConstraints",
+        (),
+        {
+            "require_explicit_policy": -1,
+            "inhibit_policy_mapping": 0,
+        },
+    )()
+
+    fake_cert = _FakeCertificate(
+        subject="CN=PolicyInvalid",
+        extension_map={
+            attestation_module.x509.BasicConstraints: attestation_module.x509.BasicConstraints(
+                ca=True,
+                path_length=None,
+            ),
+            attestation_module.x509.PolicyConstraints: fake_policy,
+        },
+        missing_exception=_MissingExtension,
+    )
+
+    monkeypatch.setattr(attestation_module.x509, "ExtensionNotFound", _MissingExtension, raising=False)
+    monkeypatch.setattr(attestation_module.x509, "load_der_x509_certificate", lambda _cert: fake_cert)
+
+    error = attestation_module._check_pqc_certificate_constraints(
+        b"policy",
+        now=datetime.now(timezone.utc),
+        is_leaf=False,
+        remaining_subordinates=0,
+    )
+
+    assert error == "pqc_policy_constraints_invalid: CN=PolicyInvalid"
+
+
+def test_resolve_root_validity_returns_none_when_all_checks_unknown():
+    attestation_module = pytest.importorskip("server.app.attestation")
+
+    assert (
+        attestation_module._resolve_root_validity(
+            {
+                "trusted_ca": None,
+                "chain": None,
+                "fido_mds": None,
+            }
+        )
+        is None
+    )
+
+
+def test_evaluate_mldsa_attestation_root_reports_missing_metadata_roots(monkeypatch):
+    attestation_module = pytest.importorskip("server.app.attestation")
+
+    fake_entry = {"metadata_statement": {}}
+    verifier = type(
+        "_Verifier",
+        (),
+        {"find_entry_by_aaguid": lambda self, _aaguid: fake_entry},
+    )()
+    attestation_object = type("_AttestationObject", (), {"att_stmt": {}})()
+
+    monkeypatch.setattr(attestation_module, "_collect_metadata_root_certificates", lambda _entry: [], raising=False)
+
+    outcome = attestation_module._evaluate_mldsa_attestation_root(
+        attestation_object,
+        bytes.fromhex("00112233445566778899aabbccddeeff"),
+        verifier,
+        datetime.now(timezone.utc),
+    )
+
+    assert "pqc_metadata_root_missing" in outcome["errors"]
+    assert outcome["checks"]["trusted_ca"] is False
+    assert outcome["root_valid"] is None
+
+
+def test_evaluate_mldsa_attestation_root_marks_chain_missing_when_no_x5c(monkeypatch):
+    attestation_module = pytest.importorskip("server.app.attestation")
+
+    fake_entry = {"metadata_statement": {}}
+    verifier = type(
+        "_Verifier",
+        (),
+        {"find_entry_by_aaguid": lambda self, _aaguid: fake_entry},
+    )()
+    attestation_object = type("_AttestationObject", (), {"att_stmt": {}})()
+
+    monkeypatch.setattr(attestation_module, "_collect_metadata_root_certificates", lambda _entry: [b"trusted-root"], raising=False)
+    monkeypatch.setattr(attestation_module, "_is_trusted_ca_certificate", lambda *_args, **_kwargs: True, raising=False)
+
+    outcome = attestation_module._evaluate_mldsa_attestation_root(
+        attestation_object,
+        bytes.fromhex("00112233445566778899aabbccddeeff"),
+        verifier,
+        datetime.now(timezone.utc),
+    )
+
+    assert "pqc_attestation_chain_missing" in outcome["errors"]
+    assert outcome["checks"]["trusted_ca"] is True
+    assert outcome["checks"]["chain"] is False
+    assert outcome["root_valid"] is None
