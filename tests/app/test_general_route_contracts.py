@@ -423,3 +423,162 @@ def test_metadata_routes_cover_verified_snapshot_and_custom_error_branches(monke
             "deleted": False,
             "message": "Metadata entry not found.",
         }
+
+
+def test_general_helper_bootstrap_and_empty_snapshot_branches(monkeypatch):
+    general_module = pytest.importorskip("server.app.routes.general")
+    config_module = pytest.importorskip("server.app.config")
+    pytest.importorskip("server.app.app")
+
+    flag_name = "TEST_GENERAL_ENV_FLAG"
+    monkeypatch.delenv(flag_name, raising=False)
+    assert general_module._env_flag(flag_name) is None
+
+    monkeypatch.setenv(flag_name, " off ")
+    assert general_module._env_flag(flag_name) is False
+
+    monkeypatch.setenv(flag_name, "yes")
+    assert general_module._env_flag(flag_name) is True
+
+    monkeypatch.setattr(general_module, "startup_fail_fast_enabled", lambda: True, raising=False)
+    monkeypatch.setenv(general_module._INDEX_EAGER_METADATA_ENV_FLAG, "0")
+    assert general_module._should_bootstrap_metadata_on_index() is False
+    monkeypatch.setenv(general_module._INDEX_EAGER_METADATA_ENV_FLAG, "1")
+    assert general_module._should_bootstrap_metadata_on_index() is True
+
+    state = {
+        "started": False,
+        "completed": False,
+        "marker": None,
+        "cache_loaded": False,
+    }
+    monkeypatch.setattr(general_module, "_metadata_bootstrap_state", state, raising=False)
+
+    monkeypatch.setattr(general_module, "load_cached_metadata_snapshot", lambda: {}, raising=False)
+    general_module._load_cached_metadata_snapshot_if_available()
+    assert state["cache_loaded"] is False
+
+    monkeypatch.setattr(general_module, "load_cached_metadata_snapshot", lambda: {"meta": {}}, raising=False)
+    general_module._load_cached_metadata_snapshot_if_available()
+    assert state["cache_loaded"] is True
+    general_module._load_cached_metadata_snapshot_if_available()
+    assert state["cache_loaded"] is True
+
+    load_calls = []
+    monkeypatch.setattr(general_module, "_load_cached_metadata_snapshot_if_available", lambda: load_calls.append("load"), raising=False)
+    monkeypatch.setattr(general_module.app, "debug", True, raising=False)
+    monkeypatch.delenv("WERKZEUG_RUN_MAIN", raising=False)
+    general_module.ensure_metadata_bootstrapped(skip_if_reloader_parent=True)
+    assert load_calls == []
+
+    today = general_module._bootstrap_marker_for_today()
+    monkeypatch.setattr(
+        general_module,
+        "_metadata_bootstrap_state",
+        {
+            "started": False,
+            "completed": True,
+            "marker": today,
+            "cache_loaded": False,
+        },
+        raising=False,
+    )
+    monkeypatch.setattr(general_module.app, "debug", False, raising=False)
+    load_calls.clear()
+    monkeypatch.setattr(general_module, "_load_cached_metadata_snapshot_if_available", lambda: load_calls.append("load"), raising=False)
+    monkeypatch.setattr(
+        general_module,
+        "_load_base_metadata",
+        lambda: (_ for _ in ()).throw(AssertionError("_load_base_metadata should not be called")),
+        raising=False,
+    )
+    general_module.ensure_metadata_bootstrapped(skip_if_reloader_parent=False)
+    assert load_calls == ["load"]
+
+    marked = []
+    monkeypatch.setattr(
+        general_module,
+        "_metadata_bootstrap_state",
+        {
+            "started": False,
+            "completed": False,
+            "marker": None,
+            "cache_loaded": False,
+        },
+        raising=False,
+    )
+    monkeypatch.setattr(general_module, "_load_cached_metadata_snapshot_if_available", lambda: None, raising=False)
+    monkeypatch.setattr(general_module, "_load_base_metadata", lambda: (None, None), raising=False)
+    monkeypatch.setattr(general_module, "_mark_bootstrap_completed_for_today", lambda: marked.append(True), raising=False)
+    general_module.ensure_metadata_bootstrapped(skip_if_reloader_parent=False)
+    assert marked == [True]
+
+    with config_module.app.test_client() as client:
+        monkeypatch.setattr(general_module, "_should_bootstrap_metadata_on_index", lambda: False, raising=False)
+        monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id", raising=False)
+        monkeypatch.setattr(general_module, "load_packaged_explorer_summary", lambda: {}, raising=False)
+        monkeypatch.setattr(general_module, "render_template", lambda *_args, **_kwargs: "index-body", raising=False)
+        index_response = client.get("/")
+        assert index_response.status_code == 200
+        assert index_response.get_data(as_text=True) == "index-body"
+
+        monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id", raising=False)
+        monkeypatch.setattr(general_module, "load_effective_explorer_snapshot", lambda: {}, raising=False)
+        monkeypatch.setattr(general_module, "load_effective_full_snapshot", lambda: {}, raising=False)
+
+        explorer_missing = client.get("/api/mds/metadata/explorer")
+        assert explorer_missing.status_code == 404
+        assert explorer_missing.get_json() == {
+            "error": "Verified metadata snapshot is not available."
+        }
+
+        full_explorer_missing = client.get("/api/mds/metadata/explorer/full")
+        assert full_explorer_missing.status_code == 404
+        assert full_explorer_missing.get_json() == {
+            "error": "Verified metadata snapshot is not available."
+        }
+
+    class _Files:
+        def __init__(self, entries):
+            self._entries = list(entries)
+
+        def getlist(self, name):
+            assert name == "files"
+            return list(self._entries)
+
+    class _Storage:
+        def __init__(self, filename, data):
+            self.filename = filename
+            self._data = data
+
+        def read(self):
+            return self._data
+
+    def _unpack(result):
+        if isinstance(result, tuple):
+            response, status = result
+            return response, status
+        return result, result.status_code
+
+    monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id", raising=False)
+    monkeypatch.setattr(general_module, "expand_metadata_entry_payloads", lambda payload: [payload], raising=False)
+    monkeypatch.setattr(general_module, "maybe_store_uploaded_metadata_file", lambda *_args, **_kwargs: None, raising=False)
+    monkeypatch.setattr(
+        general_module,
+        "save_session_metadata_item",
+        lambda _payload, original_filename=None: {"originalFilename": original_filename},
+        raising=False,
+    )
+    monkeypatch.setattr(general_module, "serialize_session_metadata_item", lambda item: item, raising=False)
+    monkeypatch.setattr(general_module, "load_effective_full_snapshot", lambda: {"meta": {"entryCount": 1}}, raising=False)
+
+    with config_module.app.app_context():
+        monkeypatch.setattr(
+            general_module,
+            "request",
+            SimpleNamespace(files=_Files([_Storage("   ", b"{}")])) ,
+            raising=False,
+        )
+        response, status = _unpack(general_module.api_upload_custom_metadata())
+        assert status == 200
+        assert response.get_json()["items"] == [{"originalFilename": "metadata.json"}]
