@@ -5,9 +5,9 @@ image:https://img.shields.io/github/actions/workflow/status/FeitianTech/postquan
 image:https://img.shields.io/github/commit-activity/m/FeitianTech/postquantum-webauthn-platform?label=Commit%20Activity&logo=github[Commit Activity,link="https://github.com/FeitianTech/postquantum-webauthn-platform/pulse"]
 image:https://img.shields.io/github/last-commit/FeitianTech/postquantum-webauthn-platform?label=Last%20Commit&logo=git[Last Commit,link="https://github.com/FeitianTech/postquantum-webauthn-platform/commits"]
 
-**Server Deployment (Limited FIDO MDS Update):** https://webauthndev.ftsafe.com[webauthndev.ftsafe.com] (Currently unavailable due to server issues)
+**Google Cloud Deployment (Full FIDO MDS):** https://webauthnlab.tech (A few seconds of cold start is expected)
 
-**Cloud Deployment (Full FIDO MDS):** https://webauthnlab.tech (A few seconds of cold start is expected)
+**Server Deployment (Limited FIDO MDS Update):** https://webauthndev.ftsafe.com[webauthndev.ftsafe.com] (Currently unavailable due to server issues)
 
 This project provides an end-to-end platform for exploring WebAuthn user flows secured by post-quantum cryptography. The hosted demo and local setup instructions help you register authenticators, run authentication process, and compare PQC signature suites in a realistic WebAuthn environment. Decoder is integrated for decoding attestation objects, WebAuthn type CBOR responses, authenticator metadata, etc. A FIDO MDS explorer is also built for direct retrieval of authenticator metadata information, and conducting root certificate verification. 
  
