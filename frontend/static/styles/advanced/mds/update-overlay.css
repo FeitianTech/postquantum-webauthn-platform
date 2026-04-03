@@ -1,3 +1,5 @@
+/* ─── MDS Update Overlay ──────────────────────────────────── */
+
 .mds-update-overlay {
     position: fixed;
     inset: 0;
@@ -5,19 +7,19 @@
     align-items: center;
     justify-content: center;
     padding: 24px;
-    background-color: rgba(12, 22, 36, 0.6);
+    background: rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
     z-index: 12000;
 }
 
-.mds-update-overlay.is-visible {
-    display: flex;
-}
+.mds-update-overlay.is-visible { display: flex; }
 
 .mds-update-overlay__dialog {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 1.25rem;
+    gap: 1rem;
     outline: none;
 }
 
@@ -26,75 +28,60 @@
     align-items: center;
     justify-content: center;
     gap: 0.75rem;
-    padding: 1rem 1.25rem;
-    background: var(--primary-color);
+    padding: 1rem 1.5rem;
+    background: var(--text-color);
     color: #ffffff;
-    border-radius: 18px;
-    box-shadow: var(--shadow-soft);
-    min-width: 320px;
-    max-width: min(420px, 90vw);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-modal);
+    min-width: 300px;
+    max-width: min(400px, 90vw);
     text-align: center;
 }
 
 .mds-update-overlay__spinner {
-    width: 20px;
-    height: 20px;
-    border: 3px solid rgba(255, 255, 255, 0.35);
+    width: 18px;
+    height: 18px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
     border-radius: 50%;
     border-top-color: #ffffff;
-    animation: mds-update-overlay-spin 1s ease-in-out infinite;
+    animation: mds-update-overlay-spin 0.8s linear infinite;
+    flex-shrink: 0;
 }
 
 .mds-update-overlay__message {
-    font-size: 1rem;
+    font-size: 0.9375rem;
     line-height: 1.5;
     font-weight: 500;
     margin: 0;
 }
 
-.mds-update-overlay__actions {
-    display: flex;
-    justify-content: center;
-}
+.mds-update-overlay__actions { display: flex; justify-content: center; }
 
 .mds-update-overlay__cancel {
-    font-size: 0.9375rem;
+    font-size: 0.875rem;
+    font-family: var(--font-sans);
+    font-weight: 600;
     line-height: 1;
-    padding: 0.5rem 1.5rem;
-    border-radius: 999px;
-    border: 1px solid rgba(255, 255, 255, 0.85);
-    background-color: transparent;
+    padding: 0.5rem 1.25rem;
+    border-radius: var(--radius-pill);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    background: transparent;
     color: #ffffff;
     cursor: pointer;
-    transition: background-color 0.16s ease, border-color 0.16s ease, color 0.16s ease;
+    transition: background var(--transition-base), border-color var(--transition-base);
 }
 
 .mds-update-overlay__cancel:hover:not(:disabled):not([aria-disabled='true']) {
-    background-color: rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.75);
 }
 
 .mds-update-overlay__cancel:disabled,
 .mds-update-overlay__cancel[aria-disabled='true'] {
-    opacity: 0.65;
+    opacity: 0.55;
     cursor: not-allowed;
 }
 
 @keyframes mds-update-overlay-spin {
-    to {
-        transform: rotate(360deg);
-    }
-}
-
-@media (prefers-color-scheme: dark) {
-    .mds-update-overlay {
-        background-color: rgba(4, 9, 16, 0.7);
-    }
-
-    .mds-update-overlay__toast {
-        box-shadow: 0 18px 36px rgba(0, 0, 0, 0.45);
-    }
-
-    .mds-update-overlay__cancel {
-        border-color: rgba(255, 255, 255, 0.75);
-    }
+    to { transform: rotate(360deg); }
 }
