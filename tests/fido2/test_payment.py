@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import json
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
 
 from fido2.payment import (
     CollectedClientAdditionalPaymentData,
+    CollectedClientPaymentData,
     PaymentClientDataCollector,
 )
 from fido2.ctap2.extensions import (
@@ -356,4 +358,137 @@ def test_payment_client_data_collector_non_payment():
     
     client_data, rp_id = collector.collect_client_data(options)
     assert client_data.type == "webauthn.get"
+
+
+def test_payment_client_data_collector_request_options_payment_get_flow():
+    """Document current payment.get failure mode for request options."""
+    collector = PaymentClientDataCollector("https://example.com")
+
+    payment_inputs = {
+        "isPayment": True,
+        "rpId": "merchant.example",
+        "topOrigin": "https://shop.example",
+        "payeeName": "Example Store",
+        "payeeOrigin": "https://shop.example",
+        "total": {"currency": "USD", "value": "10.00"},
+        "instrument": {
+            "displayName": "Visa **** 0001",
+            "icon": "https://example.com/card.png",
+        },
+    }
+
+    options = PublicKeyCredentialRequestOptions(
+        challenge=b"test-challenge",
+        rp_id="merchant.example",
+        extensions={"payment": payment_inputs},
+    )
+
+    with pytest.raises(AttributeError, match="_data"):
+        collector.collect_client_data(options)
+
+
+def test_collected_client_payment_data_create_maps_payment_payload_when_base_sets_data(monkeypatch):
+    """Exercise CollectedClientPaymentData.create/__init__ mapping logic."""
+    import fido2.payment as payment_module
+
+    def _fake_base_init(self, serialized: bytes):
+        payload = json.loads(serialized.decode("utf-8"))
+        object.__setattr__(self, "_data", payload)
+        object.__setattr__(self, "type", payload["type"])
+        object.__setattr__(self, "challenge", payload["challenge"])
+        object.__setattr__(self, "origin", payload["origin"])
+        object.__setattr__(self, "cross_origin", payload.get("crossOrigin", False))
+
+    monkeypatch.setattr(payment_module.CollectedClientData, "__init__", _fake_base_init)
+    monkeypatch.setattr(
+        payment_module.CollectedClientAdditionalPaymentData,
+        "from_dict",
+        classmethod(lambda _cls, data: SimpleNamespace(mapped=data)),
+    )
+
+    result = payment_module.CollectedClientPaymentData.create(
+        type="payment.get",
+        challenge="challenge-token",
+        origin="https://example.com",
+        payment={"marker": "ok"},
+    )
+
+    assert isinstance(result, CollectedClientPaymentData)
+    assert result.payment.mapped == {"marker": "ok"}
+
+
+def test_payment_client_data_collector_request_options_payment_branch_returns_tuple(monkeypatch):
+    """Ensure request-option payment branch returns patched payment client data tuple."""
+    collector = PaymentClientDataCollector("https://example.com")
+
+    payment_inputs = {
+        "isPayment": True,
+        "rpId": "merchant.example",
+        "topOrigin": "https://shop.example",
+        "total": {"currency": "USD", "value": "10.00"},
+        "instrument": {
+            "displayName": "Visa **** 0001",
+            "icon": "https://example.com/card.png",
+        },
+    }
+
+    options = PublicKeyCredentialRequestOptions(
+        challenge=b"test-challenge",
+        rp_id="merchant.example",
+        extensions={"payment": payment_inputs},
+    )
+
+    marker = object()
+    monkeypatch.setattr(
+        CollectedClientPaymentData,
+        "create",
+        classmethod(lambda _cls, **_kwargs: marker),
+    )
+
+    client_data, rp_id = collector.collect_client_data(options)
+
+    assert client_data is marker
+    assert rp_id == "merchant.example"
+
+
+def test_payment_client_data_collector_payment_inputs_unknown_options_fall_back(monkeypatch):
+    """Payment inputs on unknown option types should fall back to default collection."""
+    import fido2.payment as payment_module
+
+    collector = PaymentClientDataCollector("https://example.com")
+
+    class UnknownOptions:
+        extensions = {
+            "payment": {
+                "isPayment": True,
+                "rpId": "merchant.example",
+                "topOrigin": "https://shop.example",
+                "total": {"currency": "USD", "value": "10.00"},
+                "instrument": {
+                    "displayName": "Visa **** 0001",
+                    "icon": "https://example.com/card.png",
+                },
+            }
+        }
+
+    options = UnknownOptions()
+    verify_calls = []
+
+    monkeypatch.setattr(collector, "get_rp_id", lambda _options, _origin: "merchant.example")
+    monkeypatch.setattr(
+        collector,
+        "verify_rp_id",
+        lambda rp_id, origin: verify_calls.append((rp_id, origin)),
+    )
+    monkeypatch.setattr(
+        payment_module.DefaultClientDataCollector,
+        "collect_client_data",
+        lambda _self, _options: ("fallback-client-data", "merchant.example"),
+    )
+
+    client_data, rp_id = collector.collect_client_data(options)
+
+    assert client_data == "fallback-client-data"
+    assert rp_id == "merchant.example"
+    assert verify_calls == [("merchant.example", "https://example.com")]
 
