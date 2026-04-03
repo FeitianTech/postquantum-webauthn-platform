@@ -348,9 +348,57 @@ def _decode_client_binary(value: Any) -> bytes:
             raise ValueError("invalid binary value") from exc
 
     if isinstance(value, Mapping):
-        for key in ("$base64url", "base64url", "$base64", "base64", "$hex", "hex"):
-            if key in value and value[key] is not None:
-                return _decode_client_binary(value[key])
+        if "$hex" in value or "hex" in value:
+            hex_candidate = value.get("$hex")
+            if hex_candidate is None:
+                hex_candidate = value.get("hex")
+
+            if isinstance(hex_candidate, str):
+                stripped = hex_candidate.strip()
+                if not stripped:
+                    raise ValueError("empty binary value")
+                try:
+                    return bytes.fromhex(stripped)
+                except ValueError as exc:
+                    raise ValueError("invalid binary value") from exc
+
+            return _decode_client_binary(hex_candidate)
+
+        if "$base64url" in value or "base64url" in value:
+            b64u_candidate = value.get("$base64url")
+            if b64u_candidate is None:
+                b64u_candidate = value.get("base64url")
+
+            if isinstance(b64u_candidate, str):
+                stripped = b64u_candidate.strip()
+                if not stripped:
+                    raise ValueError("empty binary value")
+                if not re.fullmatch(r"[A-Za-z0-9_-]+", stripped):
+                    raise ValueError("invalid binary value")
+                try:
+                    padding = "=" * ((4 - len(stripped) % 4) % 4)
+                    return base64.urlsafe_b64decode(stripped + padding)
+                except (ValueError, TypeError, binascii.Error) as exc:
+                    raise ValueError("invalid binary value") from exc
+
+            return _decode_client_binary(b64u_candidate)
+
+        if "$base64" in value or "base64" in value:
+            b64_candidate = value.get("$base64")
+            if b64_candidate is None:
+                b64_candidate = value.get("base64")
+
+            if isinstance(b64_candidate, str):
+                stripped = b64_candidate.strip()
+                if not stripped:
+                    raise ValueError("empty binary value")
+                try:
+                    padding = "=" * ((4 - len(stripped) % 4) % 4)
+                    return base64.b64decode(stripped + padding)
+                except (ValueError, TypeError, binascii.Error) as exc:
+                    raise ValueError("invalid binary value") from exc
+
+            return _decode_client_binary(b64_candidate)
 
     raise ValueError("unsupported binary value type")
 

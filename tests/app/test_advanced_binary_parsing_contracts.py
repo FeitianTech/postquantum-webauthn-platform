@@ -46,6 +46,28 @@ def test_decode_client_binary_accepts_base64url_mapping_key():
     assert decoded == raw
 
 
+def test_decode_client_binary_honors_explicit_hex_wrapper():
+    advanced_module = pytest.importorskip("server.app.routes.advanced")
+
+    decoded = advanced_module._decode_client_binary({"$hex": "0011223344556677"})
+
+    assert decoded == bytes.fromhex("0011223344556677")
+
+
+def test_decode_client_binary_rejects_invalid_explicit_hex_wrapper():
+    advanced_module = pytest.importorskip("server.app.routes.advanced")
+
+    with pytest.raises(ValueError, match="invalid binary value"):
+        advanced_module._decode_client_binary({"$hex": "zz"})
+
+
+def test_decode_client_binary_rejects_invalid_explicit_base64url_wrapper():
+    advanced_module = pytest.importorskip("server.app.routes.advanced")
+
+    with pytest.raises(ValueError, match="invalid binary value"):
+        advanced_module._decode_client_binary({"$base64url": "%%%"})
+
+
 def test_decode_client_binary_rejects_invalid_string_value():
     advanced_module = pytest.importorskip("server.app.routes.advanced")
 
