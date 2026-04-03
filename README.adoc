@@ -88,3 +88,17 @@ docker run --rm -p 8000:8000 --name pqc-webauthn-local pqc-webauthn-local
 ```
 
 Then open `http://localhost:8000` in your browser.
+
+## Testing
+
+The repository now has both Python and frontend test entry points:
+
+```bash
+npm install
+npm run test:frontend
+npm run test:frontend:coverage
+npm run test:python
+npm run test:python:coverage
+```
+
+Frontend tests run with Vitest + jsdom and collect coverage across `frontend/static/**/*.js`, with uncovered modules included in the report output. Coverage reports are written to `coverage/frontend/`.

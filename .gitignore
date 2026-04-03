@@ -18,6 +18,8 @@ htmlcov/
 .tox/
 .coverage
 .coverage.*
+coverage/
+node_modules/
 
 # Registration data for authenticators
 *.pkl
