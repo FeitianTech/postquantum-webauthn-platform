@@ -45,12 +45,16 @@ _FRONTEND_ROOT = _PROJECT_ROOT / "frontend"
 _FRONTEND_STATIC_ROOT = _FRONTEND_ROOT / "static"
 _FRONTEND_TEMPLATE_ROOT = _FRONTEND_ROOT / "templates"
 
-app = Flask(
-    __name__,
-    static_folder=str(_FRONTEND_STATIC_ROOT),
-    static_url_path="",
-    template_folder=str(_FRONTEND_TEMPLATE_ROOT),
-)
+_existing_app = globals().get("app")
+if isinstance(_existing_app, Flask):
+    app = _existing_app
+else:
+    app = Flask(
+        __name__,
+        static_folder=str(_FRONTEND_STATIC_ROOT),
+        static_url_path="",
+        template_folder=str(_FRONTEND_TEMPLATE_ROOT),
+    )
 
 
 def _resolve_secret_key() -> bytes:
