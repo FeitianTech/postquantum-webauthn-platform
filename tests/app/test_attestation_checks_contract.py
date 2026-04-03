@@ -297,6 +297,48 @@ def test_verify_pqc_attestation_chain_reports_untrusted_root(monkeypatch):
     assert errors == ["pqc_root_not_in_trusted_list"]
 
 
+def test_verify_pqc_attestation_chain_invokes_signature_verification_for_each_non_root_link(monkeypatch):
+    attestation_module = pytest.importorskip("server.app.attestation")
+
+    monkeypatch.setattr(
+        attestation_module,
+        "_check_pqc_certificate_constraints",
+        lambda *_args, **_kwargs: None,
+        raising=False,
+    )
+    monkeypatch.setattr(
+        attestation_module,
+        "_is_trusted_ca_certificate",
+        lambda *_args, **_kwargs: True,
+        raising=False,
+    )
+
+    observed_pairs = []
+
+    def _capture_signature_pair(cert_der, issuer_der):
+        observed_pairs.append((cert_der, issuer_der))
+
+    monkeypatch.setattr(
+        attestation_module,
+        "_verify_mldsa_certificate_signature",
+        _capture_signature_pair,
+        raising=False,
+    )
+
+    valid, errors = attestation_module._verify_pqc_attestation_chain(
+        [b"leaf", b"intermediate"],
+        b"root",
+        now=datetime.now(timezone.utc),
+    )
+
+    assert valid is True
+    assert errors == []
+    assert observed_pairs == [
+        (b"leaf", b"intermediate"),
+        (b"intermediate", b"root"),
+    ]
+
+
 def test_evaluate_mldsa_attestation_root_reports_missing_metadata_entry():
     attestation_module = pytest.importorskip("server.app.attestation")
 
