@@ -184,6 +184,86 @@ def test_resolve_root_validity_matrix(checks, expected):
     assert attestation_module._resolve_root_validity(checks) is expected
 
 
+@pytest.mark.parametrize(
+    "checks,expected",
+    [
+        ({"trusted_ca": True, "chain": True, "fido_mds": False}, True),
+        ({"trusted_ca": True, "chain": False, "fido_mds": True}, True),
+        ({"trusted_ca": False, "chain": None, "fido_mds": False}, False),
+        ({"trusted_ca": None, "chain": True, "fido_mds": False}, None),
+    ],
+)
+def test_resolve_root_validity_additional_matrix_cases(checks, expected):
+    attestation_module = pytest.importorskip("server.app.attestation")
+
+    assert attestation_module._resolve_root_validity(checks) is expected
+
+
+def test_verify_pqc_attestation_chain_requires_non_empty_trust_path():
+    attestation_module = pytest.importorskip("server.app.attestation")
+
+    valid, errors = attestation_module._verify_pqc_attestation_chain(
+        [],
+        b"root",
+        now=datetime.now(timezone.utc),
+    )
+
+    assert valid is False
+    assert errors == ["pqc_attestation_chain_missing"]
+
+
+def test_verify_pqc_attestation_chain_returns_constraint_error_early(monkeypatch):
+    attestation_module = pytest.importorskip("server.app.attestation")
+
+    monkeypatch.setattr(
+        attestation_module,
+        "_check_pqc_certificate_constraints",
+        lambda *_args, **_kwargs: "pqc_basic_constraints_not_ca: Test CA",
+        raising=False,
+    )
+
+    valid, errors = attestation_module._verify_pqc_attestation_chain(
+        [b"leaf"],
+        b"root",
+        now=datetime.now(timezone.utc),
+    )
+
+    assert valid is False
+    assert errors == ["pqc_basic_constraints_not_ca: Test CA"]
+
+
+def test_verify_pqc_attestation_chain_reports_untrusted_root(monkeypatch):
+    attestation_module = pytest.importorskip("server.app.attestation")
+
+    monkeypatch.setattr(
+        attestation_module,
+        "_check_pqc_certificate_constraints",
+        lambda *_args, **_kwargs: None,
+        raising=False,
+    )
+    monkeypatch.setattr(
+        attestation_module,
+        "_verify_mldsa_certificate_signature",
+        lambda *_args, **_kwargs: None,
+        raising=False,
+    )
+    monkeypatch.setattr(
+        attestation_module,
+        "_is_trusted_ca_certificate",
+        lambda *_args, **_kwargs: False,
+        raising=False,
+    )
+
+    valid, errors = attestation_module._verify_pqc_attestation_chain(
+        [b"leaf"],
+        b"root",
+        now=datetime.now(timezone.utc),
+    )
+
+    assert valid is False
+    assert errors == ["pqc_root_not_in_trusted_list"]
+
+
 def test_evaluate_mldsa_attestation_root_reports_missing_metadata_entry():
     attestation_module = pytest.importorskip("server.app.attestation")
 
