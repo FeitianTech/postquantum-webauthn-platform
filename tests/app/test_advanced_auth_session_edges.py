@@ -178,3 +178,90 @@ def test_advanced_authenticate_complete_invalid_request_state_fallback_returns_4
 
         with client.session_transaction() as session_state:
             assert "advanced_auth_rp" not in session_state
+
+
+def test_advanced_authenticate_complete_reports_cookie_restore_failure(monkeypatch):
+    config_module = pytest.importorskip("server.app.config")
+    advanced_module = pytest.importorskip("server.app.routes.advanced")
+    pytest.importorskip("server.app.app")
+
+    monkeypatch.setattr(
+        advanced_module,
+        "_parse_client_supplied_credentials",
+        lambda _raw: ([], []),
+        raising=False,
+    )
+
+    with config_module.app.test_client() as client:
+        with client.session_transaction() as session_state:
+            session_state["advanced_auth_credentials_meta"] = {
+                "count": 50,
+                "resident_count": 10,
+            }
+
+        response = client.post(
+            "/api/advanced/authenticate/complete",
+            json={
+                "publicKey": {"challenge": "AQID"},
+                "__storedCredentials": [{"record": 1}],
+                "__assertion_response": {"response": {}},
+            },
+        )
+
+        assert response.status_code == 400
+        payload = response.get_json()
+        assert "session cookie exceeded" in payload["error"]
+
+        with client.session_transaction() as session_state:
+            assert "advanced_auth_credentials_meta" not in session_state
+
+
+def test_advanced_authenticate_complete_requires_attachment_when_session_scopes_allowed_attachments():
+    config_module = pytest.importorskip("server.app.config")
+    pytest.importorskip("server.app.routes.advanced")
+    pytest.importorskip("server.app.app")
+
+    with config_module.app.test_client() as client:
+        with client.session_transaction() as session_state:
+            session_state["advanced_authenticate_allowed_attachments"] = ["platform"]
+
+        response = client.post(
+            "/api/advanced/authenticate/complete",
+            json={
+                "publicKey": {"challenge": "AQID"},
+                "__assertion_response": {"response": {}},
+            },
+        )
+
+        assert response.status_code == 400
+        assert "Authenticator attachment could not be determined" in response.get_json()["error"]
+
+        with client.session_transaction() as session_state:
+            assert "advanced_authenticate_allowed_attachments" not in session_state
+
+
+def test_advanced_authenticate_complete_rejects_attachment_not_allowed_by_session_scope():
+    config_module = pytest.importorskip("server.app.config")
+    pytest.importorskip("server.app.routes.advanced")
+    pytest.importorskip("server.app.app")
+
+    with config_module.app.test_client() as client:
+        with client.session_transaction() as session_state:
+            session_state["advanced_authenticate_allowed_attachments"] = ["platform"]
+
+        response = client.post(
+            "/api/advanced/authenticate/complete",
+            json={
+                "publicKey": {"challenge": "AQID"},
+                "__assertion_response": {
+                    "authenticatorAttachment": "cross-platform",
+                    "response": {},
+                },
+            },
+        )
+
+        assert response.status_code == 400
+        assert "Authenticator attachment is not permitted by the selected hints" in response.get_json()["error"]
+
+        with client.session_transaction() as session_state:
+            assert "advanced_authenticate_allowed_attachments" not in session_state
