@@ -339,6 +339,68 @@ def test_verify_pqc_attestation_chain_invokes_signature_verification_for_each_no
     ]
 
 
+def test_verify_pqc_attestation_chain_reports_invalid_signature_error(monkeypatch):
+    attestation_module = pytest.importorskip("server.app.attestation")
+
+    monkeypatch.setattr(
+        attestation_module,
+        "_check_pqc_certificate_constraints",
+        lambda *_args, **_kwargs: None,
+        raising=False,
+    )
+
+    def _raise_invalid_signature(_cert_der, _issuer_der):
+        raise attestation_module.InvalidSignature("invalid signature")
+
+    monkeypatch.setattr(
+        attestation_module,
+        "_verify_mldsa_certificate_signature",
+        _raise_invalid_signature,
+        raising=False,
+    )
+
+    valid, errors = attestation_module._verify_pqc_attestation_chain(
+        [b"leaf"],
+        b"root",
+        now=datetime.now(timezone.utc),
+    )
+
+    assert valid is False
+    assert len(errors) == 1
+    assert errors[0].startswith("pqc_certificate_signature_invalid:")
+
+
+def test_verify_pqc_attestation_chain_reports_unexpected_signature_error(monkeypatch):
+    attestation_module = pytest.importorskip("server.app.attestation")
+
+    monkeypatch.setattr(
+        attestation_module,
+        "_check_pqc_certificate_constraints",
+        lambda *_args, **_kwargs: None,
+        raising=False,
+    )
+
+    def _raise_unexpected_error(_cert_der, _issuer_der):
+        raise RuntimeError("verifier exploded")
+
+    monkeypatch.setattr(
+        attestation_module,
+        "_verify_mldsa_certificate_signature",
+        _raise_unexpected_error,
+        raising=False,
+    )
+
+    valid, errors = attestation_module._verify_pqc_attestation_chain(
+        [b"leaf"],
+        b"root",
+        now=datetime.now(timezone.utc),
+    )
+
+    assert valid is False
+    assert len(errors) == 1
+    assert errors[0].startswith("pqc_certificate_signature_error:")
+
+
 def test_evaluate_mldsa_attestation_root_reports_missing_metadata_entry():
     attestation_module = pytest.importorskip("server.app.attestation")
 
