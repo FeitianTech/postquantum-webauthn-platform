@@ -106,28 +106,41 @@
 /* ─── MDS status ──────────────────────────────────────────── */
 
 .mds-status {
+    --mds-status-accent: var(--border);
+    position: relative;
     padding: 0.875rem 1rem;
     border-radius: var(--radius-md);
     border: 1px solid var(--border);
-    border-left: 3px solid var(--border);
     background: var(--surface-alt);
     color: var(--muted-text);
     font-size: 0.875rem;
     line-height: 1.6;
+    overflow: hidden;
+}
+
+.mds-status::before {
+    content: '';
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 3px;
+    background: var(--mds-status-accent);
+    border-top-left-radius: inherit;
+    border-bottom-left-radius: inherit;
+    pointer-events: none;
 }
 
 .mds-status a { color: var(--primary-color); font-weight: 600; text-decoration: none; }
 .mds-status a:hover { text-decoration: underline; }
 
 .mds-status-success {
-    border-left-color: #16a34a;
+    --mds-status-accent: #16a34a;
     background: #f0fdf4;
     color: var(--text-color);
     border-color: #bbf7d0;
 }
 
 .mds-status-error {
-    border-left-color: #dc2626;
+    --mds-status-accent: #dc2626;
     background: #fef2f2;
     color: #7f1d1d;
     border-color: #fecaca;
