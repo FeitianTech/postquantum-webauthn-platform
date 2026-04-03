@@ -917,16 +917,15 @@ def advanced_register_begin():
             else:
                 temp_server.allowed_algorithms = filtered_allowed
 
-            if pqc_available_ids:
-                if fallback_applied:
-                    warning_message = (
-                        f"Unsupported PQC algorithms were skipped ({missing_names}); "
-                        "falling back to classical algorithms."
-                    )
-                else:
-                    warning_message = (
-                        f"Unsupported PQC algorithms were skipped ({missing_names})."
-                    )
+            if fallback_applied:
+                warning_message = (
+                    f"Unsupported PQC algorithms were skipped ({missing_names}); "
+                    "falling back to classical algorithms."
+                )
+            else:
+                warning_message = (
+                    f"Unsupported PQC algorithms were skipped ({missing_names})."
+                )
 
             warnings.append(warning_message)
 
