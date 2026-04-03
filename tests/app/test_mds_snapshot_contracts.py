@@ -215,3 +215,75 @@ def test_json_compaction_entry_id_meta_and_snapshot_builders(monkeypatch):
 
     bootstrap = m.build_bootstrap_snapshot({'entries': []}, {'generated_at': '2026-01-01T00:00:00+00:00'})
     assert bootstrap['meta']['entryCount'] == 0
+
+
+def test_mds_snapshot_residual_branch_cases(monkeypatch):
+    # format_guid_candidate fallback through str(value)
+    assert m.format_guid_candidate(12345) == ''
+
+    # certification formatting with empty status and descriptor-only payload
+    cert_text, cert_status = m._format_certification([
+        {'effectiveDate': '2026-01-01', 'certificationDescriptor': 'Only Descriptor'}
+    ])
+    assert cert_status == ''
+    assert cert_text == 'Only Descriptor'
+
+    # descriptor-missing path with status + certificate number
+    cert_text2, cert_status2 = m._format_certification([
+        {'effectiveDate': '2026-01-01', 'status': 'FIDO_CERTIFIED_L1', 'certificateNumber': '42'}
+    ])
+    assert cert_status2 == 'FIDO_CERTIFIED_L1'
+    assert '(42)' in cert_text2
+
+    # user verification ignores non-mapping entries
+    assert m._extract_user_verification([['not-a-mapping']]) == []
+    assert m._extract_user_verification([[{}]]) == []
+
+    # resolve_name should fall through empty mapping/status values
+    name = m._resolve_name(
+        {
+            'description': {'en': '   '},
+            'alternativeDescriptions': {'en': '   '},
+        },
+        {'statusReports': ['not-a-mapping', {'certificationDescriptor': '   '}]},
+    )
+    assert name == 'Unknown Authenticator'
+
+    # attestation key identifiers ignore None/whitespace and dedupe case-insensitively
+    key_ids = m._extract_attestation_key_identifiers(
+        {'attestationCertificateKeyIdentifiers': [None, '   ', 'A']},
+        {'attestationCertificateKeyIdentifiers': ['a', 'B']},
+    )
+    assert key_ids == ['A', 'B']
+
+    # force defensive candidate-empty branch via helper monkeypatch
+    original_extract_list = m._extract_list
+    monkeypatch.setattr(m, '_extract_list', lambda _value: [None, '', 'A'])
+    forced = m._extract_attestation_key_identifiers({}, {})
+    assert forced == ['A']
+    monkeypatch.setattr(m, '_extract_list', original_extract_list)
+
+    assert m._normalise_signature_algorithm_name('   ') == ''
+    assert m._format_enum('A--B') == 'A B'
+    assert m._format_hash_value('   ') == ''
+    assert m._format_hash_value('abc-123') == 'ABC123'
+    assert m._decode_der_certificate('   ') is None
+
+    # summarizer: duplicate algorithms and non-string/blank CN values are skipped
+    class _FakeCert:
+        signature_hash_algorithm = types.SimpleNamespace(name='sha256')
+        signature_algorithm_oid = types.SimpleNamespace(_name='ecdsa-with-SHA256', dotted_string='1.2.3')
+        subject = types.SimpleNamespace(
+            get_attributes_for_oid=lambda _oid: [
+                types.SimpleNamespace(value=123),
+                types.SimpleNamespace(value='   '),
+                types.SimpleNamespace(value='CN-Valid'),
+            ]
+        )
+
+    monkeypatch.setattr(m, '_decode_der_certificate', lambda _value: b'der')
+    monkeypatch.setattr(m.x509, 'load_der_x509_certificate', lambda _der: _FakeCert())
+
+    algs, cns = m._summarise_attestation_certificates(['cert-a', 'cert-b'])
+    assert algs == ['ECDSA_SHA256']
+    assert cns == ['CN-Valid']
