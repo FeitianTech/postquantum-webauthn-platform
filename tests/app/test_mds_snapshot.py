@@ -107,3 +107,25 @@ def test_build_bootstrap_snapshot_keeps_detail_without_raw_entry():
 
 def test_normalise_aaguid_key_handles_hyphenated_values():
     assert normalise_aaguid_key("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa") == "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+
+
+def test_normalise_aaguid_key_returns_empty_for_invalid_values():
+    assert normalise_aaguid_key(None) == ""
+    assert normalise_aaguid_key("") == ""
+    assert normalise_aaguid_key("not-a-guid") == ""
+
+
+def test_build_explorer_entry_keeps_unparseable_status_date_text():
+    payload = _sample_payload()["entries"][0]
+    payload["timeOfLastStatusChange"] = "not-a-date"
+
+    entry = build_explorer_entry(
+        payload,
+        source="session",
+        trust_anchor_status=True,
+        snapshot_meta={"generatedAt": "2026-04-01T00:00:00+00:00", "no": 240},
+    )
+
+    assert entry["timeOfLastStatusChange"] == "not-a-date"
+    assert entry["dateTooltip"] == "not-a-date"
+    assert entry["dateUpdated"] == "not-a-date"
