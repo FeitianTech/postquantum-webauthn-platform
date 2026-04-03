@@ -39,11 +39,15 @@
 .json-editor-help code { font-family: var(--font-mono); }
 
 .json-editor textarea {
+    appearance: none;
+    -webkit-appearance: none;
     width: 100%;
     min-height: 520px;
     background: var(--surface-color);
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
+    box-shadow: none;
+    background-clip: padding-box;
     outline: none;
     resize: none;
     font-family: inherit;
@@ -362,8 +366,8 @@ select.form-control option { padding: 0.5rem 0.85rem; }
 }
 
 .btn.refresh-icon svg {
-    width: 14px;
-    height: 14px;
+    width: 13px;
+    height: 13px;
     stroke: currentColor;
     fill: none;
     stroke-width: 2;
@@ -506,7 +510,7 @@ select.form-control option { padding: 0.5rem 0.85rem; }
     .progress .spinner { width: 15px; height: 15px; border-width: 2px; }
     .btn.refresh-icon,
     .btn.add-icon { min-width: 36px; width: 36px; height: 36px; border-radius: var(--radius-sm); }
-    .btn.refresh-icon svg { width: 14px; height: 14px; }
+    .btn.refresh-icon svg { width: 13px; height: 13px; }
     select.form-control { font-size: 16px; }
 }
 
