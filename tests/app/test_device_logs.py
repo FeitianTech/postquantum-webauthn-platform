@@ -232,6 +232,10 @@ def test_safe_cbor_decode_failure(payload):
     assert device_logs.safe_cbor_decode(payload) == {"error": "decode_failed"}
 
 
+def test_to_b64url_returns_empty_for_empty_bytes():
+    assert device_logs.to_b64url(b"") == ""
+
+
 def test_random_shortid_returns_hex_with_requested_length():
     value = device_logs.random_shortid(7)
 
@@ -250,6 +254,14 @@ def test_uuid_bytes_to_str_handles_none_and_non_uuid_lengths():
     assert device_logs.uuid_bytes_to_str(b"abc") == device_logs.to_b64url(b"abc")
 
 
+def test_uuid_bytes_to_str_handles_memoryview_value():
+    raw = memoryview(b"\x00" * 16)
+
+    value = device_logs.uuid_bytes_to_str(raw)
+
+    assert value == device_logs.to_b64url(raw)
+
+
 def test_safe_cbor_decode_accepts_base64url_string_payload():
     payload = cbor2.dumps({"nested": [b"a", {"k": b"b"}]})
 
@@ -261,6 +273,28 @@ def test_safe_cbor_decode_accepts_base64url_string_payload():
             {"k": device_logs.to_b64url(b"b")},
         ]
     }
+
+
+def test_safe_cbor_decode_rejects_invalid_base64url_string():
+    assert device_logs.safe_cbor_decode("***") == {"error": "decode_failed"}
+
+
+def test_safe_cbor_decode_handles_base64_decoder_exceptions(monkeypatch):
+    monkeypatch.setattr(
+        device_logs.base64,
+        "urlsafe_b64decode",
+        lambda _value: (_ for _ in ()).throw(ValueError("invalid-base64")),
+    )
+
+    assert device_logs.safe_cbor_decode("abc") == {"error": "decode_failed"}
+
+
+def test_safe_cbor_decode_wraps_non_mapping_values_under_value_key():
+    payload = cbor2.dumps(["a", "b"])
+
+    decoded = device_logs.safe_cbor_decode(payload)
+
+    assert decoded == {"value": ["a", "b"]}
 
 
 def test_json_safe_converts_nested_bytes_datetime_and_uuid():
@@ -314,6 +348,13 @@ def test_should_upload_async_defaults_to_background_off_cloud_run(monkeypatch):
     monkeypatch.delenv("K_SERVICE", raising=False)
 
     assert device_logs._should_upload_async() is True
+
+
+def test_should_upload_async_unknown_override_falls_back_to_cloud_run_policy(monkeypatch):
+    monkeypatch.setenv("GITHUB_LOG_ASYNC", "maybe")
+    monkeypatch.setenv("K_SERVICE", "service-name")
+
+    assert device_logs._should_upload_async() is False
 
 
 def test_upload_worker_logs_failure_without_raising(monkeypatch, capsys):
