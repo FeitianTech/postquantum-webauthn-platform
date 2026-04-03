@@ -243,6 +243,8 @@ document.addEventListener('DOMContentLoaded', () => {
         jsonEditorElement.setAttribute('data-enable-grammarly', 'false');
     }
 
+    loadSavedCredentials();
+
     setTimeout(() => {
         randomizeUserIdentity();
         randomizeChallenge('reg');
@@ -264,7 +266,6 @@ document.addEventListener('DOMContentLoaded', () => {
             prfAuthSecond.disabled = true;
         }
 
-        loadSavedCredentials();
         updateJsonEditor();
         renderFakeExcludeCredentialList();
         renderFakeAllowCredentialList();
@@ -492,9 +493,6 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => {
         updateJsonEditor();
     }, 200);
-    setTimeout(() => {
-        loadSavedCredentials();
-    }, 300);
     setTimeout(() => {
         checkLargeBlobCapability();
     }, 500);

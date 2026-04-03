@@ -1,8 +1,7 @@
 import {
-    fetchCredentialArtifact,
+    fetchCredentialArtifactsBulk,
     uploadCredentialArtifact,
     updateCredentialSnapshot as uploadSnapshotToServer,
-    deleteCredentialArtifact,
 } from './credential-artifacts-client.js';
 
 const SHARED_STORAGE_KEY = 'postquantum-webauthn.credentials';
@@ -50,8 +49,6 @@ const LOCAL_HEAVY_ROOT_KEYS = [
     'registration_credential',
     'registrationResult',
     'registration_result',
-    'registrationDetailSnapshot',
-    'registration_detail_snapshot',
     'registrationDetailHtml',
     'registration_detail_html',
     'registrationDetailCombinedHtml',
@@ -135,6 +132,22 @@ const SNAPSHOT_AUTH_DATA_STRIP_KEYS = [
     'rawBytes',
     'raw_bytes',
 ];
+let bootUnifiedCredentialRecords = (
+    typeof window !== 'undefined'
+    && Array.isArray(window.__INITIAL_CREDENTIAL_RECORDS__)
+)
+    ? window.__INITIAL_CREDENTIAL_RECORDS__.filter(item => item && typeof item === 'object')
+    : null;
+
+function setBootUnifiedCredentialRecords(records) {
+    bootUnifiedCredentialRecords = Array.isArray(records)
+        ? records.filter(item => item && typeof item === 'object')
+        : null;
+
+    if (typeof window !== 'undefined') {
+        window.__INITIAL_CREDENTIAL_RECORDS__ = bootUnifiedCredentialRecords || [];
+    }
+}
 
 function cloneJsonValue(value) {
     if (!value || typeof value !== 'object') {
@@ -183,6 +196,11 @@ function summariseAdvancedCredentialForLocal(record, storageId, options = {}) {
     const { hasArtifact = true } = options;
     const summary = { ...record, type: 'advanced' };
     removeObjectKeys(summary, LOCAL_HEAVY_ROOT_KEYS);
+
+    const snapshot = sanitiseRegistrationDetailSnapshot(record.registrationDetailSnapshot);
+    if (snapshot) {
+        summary.registrationDetailSnapshot = snapshot;
+    }
 
     if (summary.properties && typeof summary.properties === 'object') {
         const propertiesSummary = summarisePropertiesForLocal(summary.properties);
@@ -523,6 +541,11 @@ function readUnifiedCredentialRecords() {
         });
     };
 
+    if (Array.isArray(bootUnifiedCredentialRecords)) {
+        addRecords(bootUnifiedCredentialRecords, 'simple');
+        return combined;
+    }
+
     addRecords(readStoredCredentials(SHARED_STORAGE_KEY), 'simple');
 
     const legacyAdvanced = readStoredCredentials(LEGACY_ADVANCED_STORAGE_KEY);
@@ -544,6 +567,7 @@ function readUnifiedCredentialRecords() {
         persistUnifiedCredentialRecords(combined);
     }
 
+    setBootUnifiedCredentialRecords(combined);
     return combined;
 }
 
@@ -552,6 +576,9 @@ function persistUnifiedCredentialRecords(records) {
         ? records.filter(item => item && typeof item === 'object')
         : [];
     const success = persistStoredCredentials(SHARED_STORAGE_KEY, payload);
+    if (success) {
+        setBootUnifiedCredentialRecords(payload);
+    }
     if (success && typeof window !== 'undefined' && window.localStorage) {
         try {
             window.localStorage.removeItem(LEGACY_SIMPLE_STORAGE_KEY);
@@ -568,6 +595,7 @@ function persistUnifiedCredentialRecords(records) {
 }
 
 let advancedArtifactSyncPromise = null;
+let advancedSnapshotSyncPromise = null;
 
 async function synchroniseAdvancedCredentialArtifacts() {
     const records = readStoredCredentials(SHARED_STORAGE_KEY);
@@ -654,6 +682,102 @@ export function ensureAdvancedCredentialArtifactsSynced() {
             });
     }
     return advancedArtifactSyncPromise;
+}
+
+async function synchroniseAdvancedCredentialSnapshots() {
+    const records = readUnifiedCredentialRecords();
+    if (!Array.isArray(records) || !records.length) {
+        return false;
+    }
+
+    const missingStorageIds = [];
+    const seen = new Set();
+
+    records.forEach(record => {
+        if (!record || typeof record !== 'object' || (record.type || 'simple') !== 'advanced') {
+            return;
+        }
+
+        if (record.registrationDetailSnapshot && typeof record.registrationDetailSnapshot === 'object') {
+            return;
+        }
+        if (!record.hasServerArtifact) {
+            return;
+        }
+
+        const storageId = isNonEmptyString(record.storageId)
+            ? record.storageId.trim()
+            : (isNonEmptyString(record.localStorageId) ? record.localStorageId.trim() : '');
+        if (!storageId || seen.has(storageId)) {
+            return;
+        }
+
+        seen.add(storageId);
+        missingStorageIds.push(storageId);
+    });
+
+    if (!missingStorageIds.length) {
+        return false;
+    }
+
+    const artifacts = await fetchCredentialArtifactsBulk(missingStorageIds);
+    if (!artifacts || typeof artifacts !== 'object') {
+        return false;
+    }
+
+    let changed = false;
+    const updatedRecords = records.map(record => {
+        if (!record || typeof record !== 'object' || (record.type || 'simple') !== 'advanced') {
+            return record;
+        }
+
+        const storageId = isNonEmptyString(record.storageId)
+            ? record.storageId.trim()
+            : (isNonEmptyString(record.localStorageId) ? record.localStorageId.trim() : '');
+        if (!storageId) {
+            return record;
+        }
+
+        const artifact = artifacts[storageId];
+        if (!artifact || typeof artifact !== 'object') {
+            return record;
+        }
+
+        const snapshotCandidate = artifact.registrationDetailSnapshot
+            || artifact.storedCredential?.registrationDetailSnapshot;
+        const snapshot = sanitiseRegistrationDetailSnapshot(snapshotCandidate);
+        if (!snapshot) {
+            return record;
+        }
+
+        changed = true;
+        return {
+            ...record,
+            registrationDetailSnapshot: snapshot,
+            hasServerArtifact: true,
+            artifactVersion: SERVER_ARTIFACT_VERSION,
+        };
+    });
+
+    if (changed) {
+        persistUnifiedCredentialRecords(updatedRecords);
+    }
+
+    return changed;
+}
+
+export function ensureAdvancedCredentialSnapshotsPrefetched() {
+    if (!advancedSnapshotSyncPromise) {
+        advancedSnapshotSyncPromise = synchroniseAdvancedCredentialSnapshots()
+            .catch(error => {
+                console.warn('Failed to prefetch advanced credential snapshots', error);
+                return false;
+            })
+            .finally(() => {
+                advancedSnapshotSyncPromise = null;
+            });
+    }
+    return advancedSnapshotSyncPromise;
 }
 
 function partitionRecords(records) {
@@ -1395,7 +1519,35 @@ export async function updateAdvancedCredentialRegistrationSnapshot(storageId, sn
         return false;
     }
 
-    return uploadSnapshotToServer(storageKey, sanitisedSnapshot);
+    const records = readUnifiedCredentialRecords();
+    let changed = false;
+    const updatedRecords = records.map(record => {
+        if (!record || typeof record !== 'object' || (record.type || 'simple') !== 'advanced') {
+            return record;
+        }
+
+        const recordStorageId = isNonEmptyString(record.storageId)
+            ? record.storageId.trim()
+            : (isNonEmptyString(record.localStorageId) ? record.localStorageId.trim() : '');
+        if (recordStorageId !== storageKey) {
+            return record;
+        }
+
+        changed = true;
+        return {
+            ...record,
+            registrationDetailSnapshot: sanitisedSnapshot,
+            hasServerArtifact: true,
+            artifactVersion: SERVER_ARTIFACT_VERSION,
+        };
+    });
+
+    if (changed) {
+        persistUnifiedCredentialRecords(updatedRecords);
+    }
+
+    const uploaded = await uploadSnapshotToServer(storageKey, sanitisedSnapshot);
+    return changed || uploaded;
 }
 
 function extractAlgorithm(record) {

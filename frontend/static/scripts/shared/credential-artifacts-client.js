@@ -51,6 +51,31 @@ export async function fetchCredentialArtifact(storageId) {
     return null;
 }
 
+export async function fetchCredentialArtifactsBulk(storageIds) {
+    const normalizedIds = Array.isArray(storageIds)
+        ? storageIds
+            .map(normaliseStorageId)
+            .filter(Boolean)
+        : [];
+    if (!normalizedIds.length) {
+        return {};
+    }
+
+    try {
+        const result = await jsonFetch(`${ARTIFACT_ENDPOINT_BASE}/bulk`, {
+            method: 'POST',
+            body: JSON.stringify({ storageIds: normalizedIds }),
+        });
+        if (result && typeof result === 'object' && result.artifacts && typeof result.artifacts === 'object') {
+            return result.artifacts;
+        }
+    } catch (error) {
+        console.warn('Failed to fetch credential artifacts in bulk', error);
+    }
+
+    return {};
+}
+
 export async function uploadCredentialArtifact(storageId, artifact, { merge = true } = {}) {
     const normalised = normaliseStorageId(storageId);
     if (!normalised || !artifact || typeof artifact !== 'object') {
@@ -103,4 +128,3 @@ export async function deleteCredentialArtifact(storageId) {
         return false;
     }
 }
-

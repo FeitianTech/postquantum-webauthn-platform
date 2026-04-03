@@ -40,6 +40,7 @@ import {
     clearAdvancedCredentials as clearLocalAdvancedCredentials,
     clearSimpleCredentials as clearLocalSimpleCredentials,
     ensureAdvancedCredentialArtifactsSynced,
+    ensureAdvancedCredentialSnapshotsPrefetched,
     getAllAdvancedCredentials,
     getAllSimpleCredentials,
     getAllStoredCredentialsInOrder,
@@ -77,6 +78,7 @@ const COSE_ALGORITHM_TAG_LABELS = {
 let globalCursorApplyCount = 0;
 let globalCursorPreviousValues = [];
 let pendingCredentialFlash = null;
+let credentialBackgroundWarmupPromise = null;
 
 const CREDENTIAL_FLASH_CLASS_BY_VARIANT = {
     success: 'credential-item--recent-auth-success',
@@ -153,6 +155,31 @@ function applyGlobalCursor(cursorStyle) {
             globalCursorPreviousValues = [];
         }
     };
+}
+
+function scheduleCredentialBackgroundWarmup() {
+    if (!credentialBackgroundWarmupPromise) {
+        credentialBackgroundWarmupPromise = (async () => {
+            const [artifactChanged, snapshotChanged] = await Promise.all([
+                ensureAdvancedCredentialArtifactsSynced(),
+                ensureAdvancedCredentialSnapshotsPrefetched(),
+            ]);
+            const changed = Boolean(artifactChanged || snapshotChanged);
+            if (changed) {
+                await loadSavedCredentials();
+            }
+            return changed;
+        })()
+            .catch(error => {
+                console.warn('Failed to warm saved credential state', error);
+                return false;
+            })
+            .finally(() => {
+                credentialBackgroundWarmupPromise = null;
+            });
+    }
+
+    return credentialBackgroundWarmupPromise;
 }
 
 function showSharedCredentialStatus(message, type) {
@@ -304,6 +331,7 @@ async function hydrateCredentialFromServer(cred) {
             || storedCredential?.registrationDetailSnapshot;
         if (snapshotCandidate && typeof snapshotCandidate === 'object') {
             cred.registrationDetailSnapshot = snapshotCandidate;
+            void updateAdvancedCredentialRegistrationSnapshot(storageId, snapshotCandidate);
         }
 
         cred.__artifactHydrated = storageId;
@@ -2808,8 +2836,6 @@ export function updateAllowCredentialsDropdown() {
 }
 
 export async function loadSavedCredentials() {
-    await ensureAdvancedCredentialArtifactsSynced();
-
     const orderedRecords = getAllStoredCredentialsInOrder();
 
     const mappedCredentials = orderedRecords.map(record => {
@@ -2844,6 +2870,7 @@ export async function loadSavedCredentials() {
     state.storedCredentials = mappedCredentials;
     updateCredentialsDisplay();
     updateJsonEditor();
+    void scheduleCredentialBackgroundWarmup();
 }
 
 export function updateCredentialsDisplay() {
@@ -3212,7 +3239,13 @@ export async function showCredentialDetails(index) {
         return;
     }
 
-    if (cred.type !== 'simple') {
+    const hasLocalRegistrationSnapshot = Boolean(
+        cred.type !== 'simple'
+        && cred.registrationDetailSnapshot
+        && typeof cred.registrationDetailSnapshot === 'object',
+    );
+
+    if (cred.type !== 'simple' && !hasLocalRegistrationSnapshot) {
         const restoreCursor = applyGlobalCursor('progress');
         try {
             await hydrateCredentialFromServer(cred);
