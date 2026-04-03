@@ -214,6 +214,8 @@
 .mds-custom-panel.is-closing .mds-custom-panel__dialog { opacity: 0; transform: translateY(10px); }
 
 .mds-custom-panel__close {
+    appearance: none;
+    -webkit-appearance: none;
     position: absolute;
     top: 0.85rem;
     right: 0.85rem;
@@ -230,7 +232,21 @@
     align-items: center;
     justify-content: center;
     transition: background var(--transition-base), color var(--transition-base);
-    line-height: 1;
+    line-height: 0;
+    padding: 0;
+    font-size: 0;
+}
+
+.mds-custom-panel__close svg {
+    width: 0.95rem;
+    height: 0.95rem;
+    display: block;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 2.2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    pointer-events: none;
 }
 
 .mds-custom-panel__close:hover { background: var(--surface-alt); color: var(--text-color); }

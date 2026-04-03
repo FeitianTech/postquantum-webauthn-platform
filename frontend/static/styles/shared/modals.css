@@ -137,9 +137,10 @@
 }
 
 .modal-close {
+    appearance: none;
+    -webkit-appearance: none;
     background: transparent;
     border: 1px solid var(--border);
-    font-size: 1.35rem;
     cursor: pointer;
     color: var(--muted-text);
     padding: 0;
@@ -150,8 +151,21 @@
     justify-content: center;
     border-radius: 50%;
     transition: background-color var(--transition-base), color var(--transition-base);
-    line-height: 1;
+    line-height: 0;
     flex-shrink: 0;
+    font-size: 0;
+}
+
+.modal-close svg {
+    width: 0.95rem;
+    height: 0.95rem;
+    display: block;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 2.2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    pointer-events: none;
 }
 
 .modal-close:hover {
@@ -205,7 +219,7 @@
     .modal-content.modal-content-large { width: 98vw; max-width: 98vw; height: 96vh; max-height: 96vh; }
     .modal-header { margin-bottom: 1rem; padding-bottom: 0.75rem; flex-wrap: wrap; }
     .modal-title { font-size: 1.1rem; }
-    .modal-close { width: 2.25rem; height: 2.25rem; font-size: 1.2rem; }
+    .modal-close { width: 2.25rem; height: 2.25rem; font-size: 0; }
     .modal-body { font-size: 0.9rem; padding-right: 0.15rem; }
     .modal.detail-screen .modal-body { padding: 1rem 1.1rem 1.5rem; }
     .modal.detail-screen .modal-title { font-size: 1.05rem; }

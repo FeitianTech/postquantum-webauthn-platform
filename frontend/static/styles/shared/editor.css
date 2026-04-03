@@ -13,7 +13,7 @@
     display: flex;
     flex-direction: column;
     flex: 1 1 auto;
-    box-shadow: var(--shadow-soft);
+    box-shadow: none;
     overflow: hidden;
 }
 
@@ -42,8 +42,9 @@
 .json-editor textarea {
     width: 100%;
     min-height: 520px;
-    background: transparent;
-    border: none;
+    background: var(--surface-color);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
     outline: none;
     resize: none;
     font-family: inherit;
@@ -57,6 +58,12 @@
     scrollbar-width: thin;
     scrollbar-color: rgba(0, 0, 0, 0.18) transparent;
     margin: 0;
+    transition: border-color var(--transition-base), box-shadow var(--transition-base);
+}
+
+.json-editor textarea:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px var(--blue-ring);
 }
 
 .json-editor textarea::-webkit-scrollbar { width: 6px; }
@@ -82,7 +89,7 @@
     z-index: 1100;
     padding: 2.5rem 1.5rem 1.5rem;
     border-radius: var(--radius-2xl);
-    box-shadow: var(--shadow-modal);
+    box-shadow: none;
     border: 1px solid var(--border);
 }
 
@@ -105,7 +112,7 @@
     aspect-ratio: 3 / 2;
     padding: 0 !important;
     border-radius: var(--radius-2xl) !important;
-    box-shadow: var(--shadow-soft);
+    box-shadow: none;
     overflow: hidden;
     border: 1px solid var(--border);
 }
@@ -203,6 +210,8 @@ body.advanced-inline-json-editor .json-editor-overlay.active { display: none; }
 }
 
 .json-editor-close-btn {
+    appearance: none;
+    -webkit-appearance: none;
     width: 2.25rem;
     height: 2.25rem;
     border-radius: 50%;
@@ -218,9 +227,22 @@ body.advanced-inline-json-editor .json-editor-overlay.active { display: none; }
     cursor: pointer;
     pointer-events: auto;
     box-shadow: var(--shadow-soft);
+    padding: 0;
+    font-size: 0;
+    line-height: 0;
 }
 
-.json-editor-close-btn span { margin-top: -0.1rem; }
+.json-editor-close-btn svg {
+    width: 0.95rem;
+    height: 0.95rem;
+    display: block;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 2.2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    pointer-events: none;
+}
 
 #json-editor-container.expanded .json-editor-actions { display: flex; }
 #json-editor-container.expanded .json-editor-close-btn { display: inline-flex; }
@@ -488,7 +510,7 @@ select.form-control option { padding: 0.5rem 0.85rem; }
         flex: 1;
         min-width: 0;
     }
-    .json-editor-close-btn { width: 1.9rem; height: 1.9rem; font-size: 1.1rem; }
+    .json-editor-close-btn { width: 1.9rem; height: 1.9rem; font-size: 0; }
     .progress { min-width: 240px; padding: 0.65rem 0.85rem; font-size: 0.825rem; border-radius: var(--radius-md); }
     .progress .spinner { width: 15px; height: 15px; border-width: 2px; }
     .btn.refresh-icon,

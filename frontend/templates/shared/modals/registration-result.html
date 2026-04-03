@@ -3,7 +3,12 @@
         <div class="modal-content detail-screen__content">
             <div class="modal-header">
                 <h2 class="modal-title">Registration Details</h2>
-                <button class="modal-close" onclick="closeRegistrationResultModal()">&times;</button>
+                <button type="button" class="modal-close" aria-label="Close registration details" onclick="closeRegistrationResultModal()">
+                    <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+                        <path d="M4 4l8 8" />
+                        <path d="M12 4 4 12" />
+                    </svg>
+                </button>
             </div>
             <div class="modal-body" id="registrationResultBody">
                 <!-- Populated after advanced registration -->
@@ -15,7 +20,12 @@
         <div class="modal-content detail-screen__content">
             <div class="modal-header">
                 <h2 class="modal-title" id="registrationDetailModalTitle">Detail</h2>
-                <button class="modal-close" onclick="closeRegistrationDetailModal()">&times;</button>
+                <button type="button" class="modal-close" aria-label="Close registration detail" onclick="closeRegistrationDetailModal()">
+                    <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+                        <path d="M4 4l8 8" />
+                        <path d="M12 4 4 12" />
+                    </svg>
+                </button>
             </div>
             <div class="modal-body" id="registrationDetailModalBody">
                 <!-- Populated dynamically when viewing registration data details -->
