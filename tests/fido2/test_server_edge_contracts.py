@@ -131,6 +131,7 @@ def test_register_complete_response_parsing_validation_and_attestation_callback(
         classmethod(lambda _cls, _response: registration),
     )
 
+    assert server.register_complete(state, {"dummy": True}) is good_auth_data
     assert server.register_complete(state, response={"dummy": True}) is good_auth_data
 
     with pytest.raises(TypeError, match="incorrect arguments"):
@@ -375,6 +376,39 @@ def test_authenticate_complete_response_parsing_validation_and_signature_paths(m
             auth_data=good_auth_data,
             signature=b"sig",
         )
+
+    class _NoDebugPublicKey:
+        def __init__(self):
+            self.verify_calls = []
+
+        def verify(self, data, signature):
+            self.verify_calls.append((data, signature))
+
+    no_debug_pub = _NoDebugPublicKey()
+    no_debug_cred = SimpleNamespace(credential_id=b"cred-3", public_key=no_debug_pub)
+    assert (
+        server.authenticate_complete(
+            state,
+            [no_debug_cred],
+            credential_id=b"cred-3",
+            client_data=good_client_data,
+            auth_data=good_auth_data,
+            signature=b"sig",
+        )
+        is no_debug_cred
+    )
+    assert no_debug_pub.verify_calls == [
+        (bytes(good_auth_data) + b"client-hash-default", b"sig")
+    ]
+
+
+def test_authenticate_begin_without_credentials_emits_empty_allow_list_path():
+    server = _make_server(verify_origin=lambda _origin: True)
+
+    request, state = server.authenticate_begin(credentials=None, challenge=b"D" * 16)
+
+    assert request.public_key.allow_credentials is None
+    assert state["challenge"] == websafe_encode(b"D" * 16)
 
 
 def test_verify_app_id_and_u2f_server_wrappers_and_fallback(monkeypatch):
