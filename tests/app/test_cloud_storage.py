@@ -570,3 +570,74 @@ def test_blob_updated_timestamp_returns_epoch_seconds(monkeypatch):
     monkeypatch.setattr(cloud_storage, "_ensure_bucket", lambda: _Bucket())
 
     assert cloud_storage.blob_updated_timestamp("existing") == updated.timestamp()
+
+
+def test_ensure_ready_handles_non_empty_iterator(monkeypatch):
+    class _Bucket:
+        def list_blobs(self, max_results=1):
+            assert max_results == 1
+            return iter([object()])
+
+    monkeypatch.setattr(cloud_storage, "_ensure_bucket", lambda: _Bucket())
+
+    cloud_storage.ensure_ready(max_attempts=1)
+
+
+def test_with_retry_raises_runtime_when_no_attempts_configured():
+    with pytest.raises(RuntimeError, match="failed without raising"):
+        cloud_storage._with_retry(lambda: "ok", max_attempts=0)
+
+
+def test_normalise_prefix_handles_empty_inputs():
+    assert cloud_storage._normalise_prefix(None) == ""
+    assert cloud_storage._normalise_prefix("///") == ""
+
+
+def test_ensure_bucket_reuses_existing_client(monkeypatch):
+    calls = {"bucket": 0}
+    expected_bucket = object()
+
+    class _Client:
+        def bucket(self, name):
+            calls["bucket"] += 1
+            assert name == "configured-bucket"
+            return expected_bucket
+
+    monkeypatch.setattr(cloud_storage, "_CLIENT", _Client())
+    monkeypatch.setattr(cloud_storage, "_BUCKET", None)
+    monkeypatch.setattr(cloud_storage, "gcs_enabled", lambda: True)
+    monkeypatch.setenv("FIDO_SERVER_GCS_BUCKET", "configured-bucket")
+    monkeypatch.setattr(
+        cloud_storage,
+        "_build_client",
+        lambda: (_ for _ in ()).throw(AssertionError("_build_client should not be called")),
+    )
+
+    bucket = cloud_storage._ensure_bucket()
+
+    assert bucket is expected_bucket
+    assert calls["bucket"] == 1
+
+
+def test_delete_blob_ignores_not_found_when_missing_ok_true(monkeypatch):
+    class _Blob:
+        def delete(self):
+            raise cloud_storage.gcs_exceptions.NotFound("missing")
+
+    class _Bucket:
+        def blob(self, _name):
+            return _Blob()
+
+    monkeypatch.setattr(cloud_storage, "_ensure_bucket", lambda: _Bucket())
+
+    cloud_storage.delete_blob("missing", missing_ok=True)
+
+
+def test_ensure_ready_with_zero_attempts_returns_without_error(monkeypatch):
+    monkeypatch.setattr(
+        cloud_storage,
+        "_ensure_bucket",
+        lambda: (_ for _ in ()).throw(AssertionError("_ensure_bucket should not be called")),
+    )
+
+    cloud_storage.ensure_ready(max_attempts=0)
