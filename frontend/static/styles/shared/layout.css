@@ -519,22 +519,26 @@
     animation: fadeInSoft 240ms ease;
 }
 
-@keyframes credentialAuthFlashGreen {
+@keyframes credentialAuthFlashBorder {
     0% {
         border-color: rgba(0, 114, 206, 0.12);
         box-shadow: none;
     }
-    18% {
-        border-color: #11b66d;
-        box-shadow: 0 0 0 2px rgba(17, 182, 109, 0.32);
+    16% {
+        border-color: var(--credential-flash-color, #11b66d);
+        box-shadow: 0 0 0 3px var(--credential-flash-shadow, rgba(17, 182, 109, 0.3));
     }
-    50% {
+    38% {
         border-color: rgba(0, 114, 206, 0.12);
         box-shadow: none;
     }
-    68% {
-        border-color: #11b66d;
-        box-shadow: 0 0 0 2px rgba(17, 182, 109, 0.32);
+    62% {
+        border-color: var(--credential-flash-color, #11b66d);
+        box-shadow: 0 0 0 3px var(--credential-flash-shadow, rgba(17, 182, 109, 0.3));
+    }
+    84% {
+        border-color: rgba(0, 114, 206, 0.12);
+        box-shadow: none;
     }
     100% {
         border-color: rgba(0, 114, 206, 0.12);
@@ -542,8 +546,19 @@
     }
 }
 
-.credential-item--recent-auth {
-    animation: credentialAuthFlashGreen 900ms ease-in-out 1;
+.credential-item--recent-auth-success,
+.credential-item--recent-auth-failure {
+    animation: credentialAuthFlashBorder 1500ms ease-in-out 1;
+}
+
+.credential-item--recent-auth-success {
+    --credential-flash-color: #11b66d;
+    --credential-flash-shadow: rgba(17, 182, 109, 0.3);
+}
+
+.credential-item--recent-auth-failure {
+    --credential-flash-color: #dc3545;
+    --credential-flash-shadow: rgba(220, 53, 69, 0.28);
 }
 
 .credential-delete {

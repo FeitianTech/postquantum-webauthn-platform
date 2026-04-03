@@ -76,7 +76,12 @@ const COSE_ALGORITHM_TAG_LABELS = {
 
 let globalCursorApplyCount = 0;
 let globalCursorPreviousValues = [];
-let queuedAuthenticatedCredentialHex = '';
+let pendingCredentialFlash = null;
+
+const CREDENTIAL_FLASH_CLASS_BY_VARIANT = {
+    success: 'credential-item--recent-auth-success',
+    failure: 'credential-item--recent-auth-failure',
+};
 
 const GLOBAL_CURSOR_CLASS_MAP = new Map([
     ['progress', 'global-cursor--progress'],
@@ -165,7 +170,62 @@ function normaliseCredentialIdToHex(credentialId) {
 }
 
 export function queueAuthenticatedCredentialFlash(credentialId) {
-    queuedAuthenticatedCredentialHex = normaliseCredentialIdToHex(credentialId);
+    const credentialHex = normaliseCredentialIdToHex(credentialId);
+    pendingCredentialFlash = credentialHex
+        ? { credentialHex, variant: 'success' }
+        : null;
+}
+
+export function queueFailedCredentialFlash(credentialId) {
+    const credentialHex = normaliseCredentialIdToHex(credentialId);
+    pendingCredentialFlash = credentialHex
+        ? { credentialHex, variant: 'failure' }
+        : null;
+}
+
+function getVisibleCredentialLists() {
+    return Array.from(document.querySelectorAll('[data-credentials-list]')).filter(list => {
+        const tabContent = list.closest('.tab-content');
+        return !(tabContent instanceof HTMLElement) || tabContent.classList.contains('active');
+    });
+}
+
+function playCredentialFlash(element, variant) {
+    if (!(element instanceof HTMLElement)) {
+        return;
+    }
+
+    const flashClass = CREDENTIAL_FLASH_CLASS_BY_VARIANT[variant] || CREDENTIAL_FLASH_CLASS_BY_VARIANT.success;
+    const allFlashClasses = Object.values(CREDENTIAL_FLASH_CLASS_BY_VARIANT);
+    allFlashClasses.forEach(className => element.classList.remove(className));
+
+    // Force a layout read so re-applying the class reliably restarts the animation.
+    void element.offsetWidth;
+    element.classList.add(flashClass);
+
+    let cleanupTimer = null;
+    const cleanup = () => {
+        if (cleanupTimer !== null) {
+            window.clearTimeout(cleanupTimer);
+            cleanupTimer = null;
+        }
+        element.classList.remove(flashClass);
+        element.removeEventListener('animationend', cleanup);
+    };
+
+    element.addEventListener('animationend', cleanup);
+    cleanupTimer = window.setTimeout(cleanup, 2200);
+}
+
+function triggerCredentialFlash(flashRequest) {
+    if (!flashRequest || !flashRequest.credentialHex) {
+        return;
+    }
+
+    const selector = `.credential-item[data-credential-id="${flashRequest.credentialHex}"]`;
+    getVisibleCredentialLists().forEach(list => {
+        list.querySelectorAll(selector).forEach(item => playCredentialFlash(item, flashRequest.variant));
+    });
 }
 
 function collectCredentialCertificates(cred) {
@@ -2788,7 +2848,7 @@ export async function loadSavedCredentials() {
 
 export function updateCredentialsDisplay() {
     const hasCredentials = state.storedCredentials.length > 0;
-    const flashCredentialHex = queuedAuthenticatedCredentialHex;
+    const flashRequest = pendingCredentialFlash;
     const runPostUpdate = () => {
         checkLargeBlobCapability();
         updateAllowCredentialsDropdown();
@@ -2813,17 +2873,13 @@ export function updateCredentialsDisplay() {
         lists.forEach(list => {
             list.innerHTML = emptyStateHtml;
         });
-        queuedAuthenticatedCredentialHex = '';
+        pendingCredentialFlash = null;
         runPostUpdate();
         return;
     }
 
     const itemsHtml = state.storedCredentials.map((cred, index) => {
         const credentialIdHex = getCredentialIdHex(cred);
-        const shouldFlashCredential = Boolean(flashCredentialHex) && credentialIdHex === flashCredentialHex;
-        const credentialItemClass = shouldFlashCredential
-            ? 'credential-item credential-item--recent-auth'
-            : 'credential-item';
         const featureLabels = [];
         const algorithmTag = describeCredentialAlgorithmTag(cred);
         if (algorithmTag) {
@@ -2870,7 +2926,7 @@ export function updateCredentialsDisplay() {
         const actionsHtml = `<div class="credential-item-actions">${mdsButtonHtml}${deleteButtonHtml}</div>`;
 
         return `
-        <div class="${credentialItemClass}" role="button" tabindex="0" onclick="showCredentialDetails(${index})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showCredentialDetails(${index});}">
+        <div class="credential-item" data-credential-id="${escapeHtml((credentialIdHex || '').toLowerCase())}" role="button" tabindex="0" onclick="showCredentialDetails(${index})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showCredentialDetails(${index});}">
             <div style="flex: 1; min-width: 0;">
                 <div style="font-weight: 600; color: #0f2740; font-size: 0.95rem; margin-bottom: 0.25rem;">${cred.userName || cred.username || cred.email || 'Unknown User'}</div>
                 <div style="font-size: 0.75rem; font-weight: 600; margin-bottom: 0.25rem;">
@@ -2893,7 +2949,12 @@ export function updateCredentialsDisplay() {
         });
     });
 
-    queuedAuthenticatedCredentialHex = '';
+    pendingCredentialFlash = null;
+    if (flashRequest) {
+        requestAnimationFrame(() => {
+            triggerCredentialFlash(flashRequest);
+        });
+    }
     runPostUpdate();
 }
 

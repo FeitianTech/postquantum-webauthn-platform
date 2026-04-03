@@ -61,6 +61,20 @@ def _decode_base64url_bytes(value: Any) -> bytes:
     return b""
 
 
+def _extract_assertion_credential_id(response: Mapping[str, Any]) -> Optional[bytes]:
+    raw_id: Any = None
+    if isinstance(response, Mapping):
+        raw_id = response.get("rawId") or response.get("id")
+
+    if isinstance(raw_id, (bytes, bytearray, memoryview)):
+        return bytes(raw_id)
+
+    if isinstance(raw_id, str):
+        return _decode_base64url_bytes(raw_id) or None
+
+    return None
+
+
 def _decode_binary_value(value: Any) -> bytes:
     if value is None:
         raise ValueError("missing binary value")
@@ -844,13 +858,29 @@ def authenticate_complete():
     rp_id = session.pop("authenticate_rp_id", None)
     server = create_fido_server(rp_id=rp_id)
 
-    matched_credential = server.authenticate_complete(
-        state,
-        credential_data_list,
-        response,
-    )
+    response_mapping: Mapping[str, Any]
+    response_mapping = response if isinstance(response, Mapping) else {}
 
-    credential_response = response.get('response', {}) if isinstance(response, Mapping) else {}
+    try:
+        matched_credential = server.authenticate_complete(
+            state,
+            credential_data_list,
+            response,
+        )
+    except Exception as exc:
+        failed_credential_id = None
+        credential_id_bytes = _extract_assertion_credential_id(response_mapping)
+        if credential_id_bytes:
+            failed_credential_id = base64.urlsafe_b64encode(credential_id_bytes).decode("ascii").rstrip("=")
+
+        response_payload: Dict[str, Any] = {"error": str(exc)}
+        if failed_credential_id is not None:
+            response_payload["failedCredentialId"] = failed_credential_id
+
+        session.pop('simple_credentials_email', None)
+        return jsonify(response_payload), 400
+
+    credential_response = response_mapping.get('response', {}) if isinstance(response_mapping, Mapping) else {}
     auth_data_b64 = credential_response.get('authenticatorData') if isinstance(credential_response, Mapping) else None
     sign_count = None
     if isinstance(auth_data_b64, str):

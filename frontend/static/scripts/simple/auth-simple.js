@@ -6,7 +6,12 @@ import {
 } from '../shared/webauthn-json.browser-ponyfill.js';
 import { convertExtensionsForClient } from '../shared/binary-utils.js';
 import { showStatus, hideStatus, showProgress, hideProgress } from '../shared/status.js';
-import { loadSavedCredentials, queueAuthenticatedCredentialFlash } from '../advanced/credential-display.js';
+import {
+    loadSavedCredentials,
+    queueAuthenticatedCredentialFlash,
+    queueFailedCredentialFlash,
+    updateCredentialsDisplay,
+} from '../advanced/credential-display.js';
 import { printRegistrationDebug, printAuthenticationDebug } from '../shared/auth-debug.js';
 import { state } from '../shared/state.js';
 import {
@@ -192,7 +197,22 @@ export async function simpleAuthenticate() {
             simpleAuthenticateState = null;
         } else {
             const errorText = await result.text();
-            throw new Error(`Authentication failed: ${errorText}`);
+            let parsedError = null;
+            try {
+                parsedError = JSON.parse(errorText);
+            } catch (parseError) {
+                parsedError = null;
+            }
+
+            if (parsedError && typeof parsedError.failedCredentialId === 'string') {
+                queueFailedCredentialFlash(parsedError.failedCredentialId);
+                updateCredentialsDisplay();
+            }
+
+            const message = parsedError && typeof parsedError.error === 'string'
+                ? parsedError.error
+                : (errorText || `Authentication failed (${result.status})`);
+            throw new Error(message);
         }
 
     } catch (error) {

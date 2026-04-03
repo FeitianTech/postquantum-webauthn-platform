@@ -2153,9 +2153,12 @@ def advanced_authenticate_complete():
     selected_record = credential_lookup.get(credential_id_bytes) if credential_id_bytes else None
 
     if resident_key_only and selected_record is not None and not selected_record.get("resident"):
-        return jsonify({
+        response_payload = {
             "error": "The credential used is not discoverable. Please register a resident key credential to authenticate without allowCredentials."
-        }), 400
+        }
+        if credential_id_bytes:
+            response_payload["failedCredentialId"] = base64.urlsafe_b64encode(credential_id_bytes).decode('ascii').rstrip('=')
+        return jsonify(response_payload), 400
 
     state = session.pop("advanced_auth_state", None)
     if state is None:
@@ -2302,4 +2305,10 @@ def advanced_authenticate_complete():
 
         return jsonify(response_payload)
     except Exception as exc:
-        return jsonify({"error": str(exc)}), 400
+        response_payload: Dict[str, Any] = {"error": str(exc)}
+        failed_credential_id = credential_id_bytes
+        if not failed_credential_id and isinstance(response, Mapping):
+            failed_credential_id = _extract_assertion_credential_id(response)
+        if failed_credential_id:
+            response_payload["failedCredentialId"] = base64.urlsafe_b64encode(failed_credential_id).decode('ascii').rstrip('=')
+        return jsonify(response_payload), 400
