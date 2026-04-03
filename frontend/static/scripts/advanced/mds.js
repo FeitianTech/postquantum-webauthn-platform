@@ -1,5 +1,6 @@
 import {
     MDS_EXPLORER_PATH,
+    MDS_EXPLORER_FULL_PATH,
     MDS_RESOLVE_PATH,
     MDS_VERIFIED_META_PATH,
     CUSTOM_METADATA_LIST_PATH,
@@ -52,6 +53,7 @@ let columnResizerMetricsScheduled = false;
 let rowHeightLockScheduled = false;
 let horizontalScrollMetricsScheduled = false;
 let initialMdsInfo = null;
+let initialMdsSnapshot = null;
 let explorerPreloadPromise = null;
 const resolvedEntryCache = new Map();
 let lazyLoader = null;
@@ -136,6 +138,31 @@ function formatInitialExplorerStatus(info) {
     }
 
     return `${parts.join(' • ')}. Explorer data is loading in the background.`;
+}
+
+function hasInlineDetail(entry) {
+    return Boolean(
+        entry
+        && typeof entry === 'object'
+        && entry.isLightweightEntry !== true
+        && entry.metadataStatement
+        && typeof entry.metadataStatement === 'object',
+    );
+}
+
+function getInitialSnapshotPayload() {
+    if (!initialMdsSnapshot || typeof initialMdsSnapshot !== 'object') {
+        return null;
+    }
+    if (!Array.isArray(initialMdsSnapshot.entries)) {
+        return null;
+    }
+    if (!initialMdsSnapshot.meta || typeof initialMdsSnapshot.meta !== 'object') {
+        return null;
+    }
+    const snapshot = initialMdsSnapshot;
+    initialMdsSnapshot = null;
+    return snapshot;
 }
 
 function setRetryButtonVisible(visible) {
@@ -1075,11 +1102,11 @@ async function uploadCustomMetadataFiles(files) {
                     : 'Metadata uploaded successfully.';
             setCustomMetadataMessage(successMessage, errors.length ? 'warning' : 'success');
 
-            context.updateStatus('Refreshing metadata…');
             const refreshNote = 'Custom metadata updated.';
-            const refreshed = await refreshCustomMetadataAfterUpload(refreshNote, { signal: context.signal });
-            context.throwIfAborted();
-            if (!refreshed) {
+            if (payload?.snapshot && typeof payload.snapshot === 'object') {
+                context.updateStatus('Applying metadata…');
+                applyExplorerSnapshot(payload.snapshot, refreshNote);
+            } else {
                 context.updateStatus('Reloading metadata…');
                 await loadMdsData(refreshNote, { forceReload: true, signal: context.signal });
             }
@@ -1160,8 +1187,13 @@ async function deleteCustomMetadata(storedFilename, options = {}) {
             customMetadataCache = null;
             customMetadataPromise = null;
 
-            context.updateStatus('Refreshing metadata…');
-            await loadMdsData('Custom metadata updated.', { forceReload: true, signal: context.signal });
+            if (payload?.snapshot && typeof payload.snapshot === 'object') {
+                context.updateStatus('Applying metadata…');
+                applyExplorerSnapshot(payload.snapshot, 'Custom metadata updated.');
+            } else {
+                context.updateStatus('Refreshing metadata…');
+                await loadMdsData('Custom metadata updated.', { forceReload: true, signal: context.signal });
+            }
             context.throwIfAborted();
             setCustomMetadataMessage(`${itemName} removed.`, 'success');
         }, {
@@ -1189,10 +1221,18 @@ if (typeof window !== 'undefined') {
     if (window.__INITIAL_MDS_INFO__ && typeof window.__INITIAL_MDS_INFO__ === 'object') {
         initialMdsInfo = window.__INITIAL_MDS_INFO__;
     }
+    if (window.__INITIAL_MDS_SNAPSHOT__ && typeof window.__INITIAL_MDS_SNAPSHOT__ === 'object') {
+        initialMdsSnapshot = window.__INITIAL_MDS_SNAPSHOT__;
+    }
     try {
         delete window.__INITIAL_MDS_INFO__;
     } catch (error) {
         window.__INITIAL_MDS_INFO__ = undefined;
+    }
+    try {
+        delete window.__INITIAL_MDS_SNAPSHOT__;
+    } catch (error) {
+        window.__INITIAL_MDS_SNAPSHOT__ = undefined;
     }
 }
 
@@ -1814,7 +1854,12 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
-    void loadMdsData();
+    const bootstrapSnapshot = getInitialSnapshotPayload();
+    if (bootstrapSnapshot) {
+        applyExplorerSnapshot(bootstrapSnapshot);
+    } else {
+        void loadMdsData();
+    }
 });
 
 document.addEventListener('tab:changed', event => {
@@ -2786,6 +2831,9 @@ function applyExplorerSnapshot(snapshot, note = '') {
         .map(entry => cloneMetadataEntry(entry))
         .filter(entry => entry && typeof entry === 'object')
         .map(entry => {
+            if (hasInlineDetail(entry)) {
+                entry.isLightweightEntry = false;
+            }
             const cached = entry.entryId ? resolvedEntryCache.get(entry.entryId) : null;
             return cached && typeof cached === 'object' ? { ...entry, ...cached } : entry;
         });
@@ -2935,7 +2983,7 @@ async function loadMdsData(statusNote, options = {}) {
         }
 
         try {
-            const response = await fetch(MDS_EXPLORER_PATH, fetchOptions);
+            const response = await fetch(MDS_EXPLORER_FULL_PATH, fetchOptions);
             let payload = null;
             try {
                 payload = await response.json();
@@ -4299,7 +4347,6 @@ function renderAttestationCertificates(certificates) {
         button.textContent = `Certificate ${index + 1}`;
         button.addEventListener('click', () => openCertificatePage(certificate));
         container.appendChild(button);
-        void updateCertificateButtonLabel(button, certificate);
     });
 
     return container;
@@ -4425,12 +4472,29 @@ function getAuthenticatorRawData(entry) {
         base.metadataStatement = metadata;
     }
 
+    if (
+        base.metadataStatement
+        && typeof base.metadataStatement === 'object'
+        && base.metadataStatement.attestationRootCertificates === undefined
+        && Array.isArray(entry.attestationCertificates)
+        && entry.attestationCertificates.length
+    ) {
+        base.metadataStatement.attestationRootCertificates = entry.attestationCertificates;
+    }
+
     if (base.attestationCertificateKeyIdentifiers === undefined) {
         const identifiers = Array.isArray(entry.attestationKeyIdentifiers)
             ? entry.attestationKeyIdentifiers
             : [];
         if (identifiers.length) {
             base.attestationCertificateKeyIdentifiers = identifiers;
+            if (
+                base.metadataStatement
+                && typeof base.metadataStatement === 'object'
+                && base.metadataStatement.attestationCertificateKeyIdentifiers === undefined
+            ) {
+                base.metadataStatement.attestationCertificateKeyIdentifiers = identifiers;
+            }
         }
     }
 
@@ -5342,7 +5406,7 @@ async function openAuthenticatorModal(entry) {
         return;
     }
 
-    if (entry && (!entry.metadataStatement || !entry.rawEntry)) {
+    if (entry && !hasInlineDetail(entry)) {
         const query = {};
         if (typeof entry.entryId === 'string' && entry.entryId) {
             query.entryId = entry.entryId;
@@ -5529,7 +5593,7 @@ async function resolveEntryByAaguid(aaguid) {
     }
 
     const cached = mdsState.byAaguid?.get(targetKey) || null;
-    if (cached && cached.metadataStatement && cached.rawEntry) {
+    if (cached && hasInlineDetail(cached)) {
         return cached;
     }
 
