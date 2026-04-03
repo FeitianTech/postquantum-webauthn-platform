@@ -370,7 +370,13 @@ def register_complete():
     resolved_rp_id = rp_id or determine_rp_id()
     server = create_fido_server(rp_id=resolved_rp_id)
 
-    auth_data = server.register_complete(state, response)
+    try:
+        auth_data = server.register_complete(state, response)
+    except Exception as exc:
+        session.pop("state", None)
+        session.pop("register_rp_id", None)
+        return jsonify({"error": str(exc)}), 400
+
     session.pop("state", None)
 
     authenticator_attachment_response = normalize_attachment(
