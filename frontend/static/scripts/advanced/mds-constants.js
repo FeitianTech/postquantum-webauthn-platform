@@ -1,6 +1,5 @@
-export const MDS_HTML_PATH = 'templates/advanced/mds-content.html';
-export const MDS_JWS_PATH = 'blob.jwt';
-export const MDS_VERIFIED_JSON_PATH = 'api/mds/metadata/base';
+export const MDS_EXPLORER_PATH = 'api/mds/metadata/explorer';
+export const MDS_RESOLVE_PATH = 'api/mds/metadata/resolve';
 export const MDS_VERIFIED_META_PATH = 'fido-mds3.verified.json.meta.json';
 export const CUSTOM_METADATA_LIST_PATH = 'api/mds/metadata/custom';
 export const CUSTOM_METADATA_UPLOAD_PATH = 'api/mds/metadata/upload';
@@ -10,8 +9,8 @@ export const MISSING_METADATA_MESSAGE =
     'Packaged FIDO metadata is unavailable. Please verify the bundled snapshot is present.';
 
 export const UPDATE_BUTTON_STATES = {
-    update: { label: 'Update Metadata', busyLabel: 'Updating…' },
-    download: { label: 'Download Metadata', busyLabel: 'Downloading…' },
+    update: { label: 'Refresh Metadata', busyLabel: 'Refreshing…' },
+    download: { label: 'Refresh Metadata', busyLabel: 'Refreshing…' },
 };
 
 export const CERTIFICATION_OPTIONS = [

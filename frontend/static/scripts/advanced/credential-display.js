@@ -3018,17 +3018,9 @@ export function navigateToMdsAuthenticator(aaguid) {
 
     const modalBody = document.getElementById('modalBody');
     const statusEl = modalBody ? modalBody.querySelector('.credential-aaguid-status') : null;
-    const getLoadState = typeof window.getMdsLoadState === 'function'
-        ? window.getMdsLoadState
-        : null;
-    const waitForLoad = typeof window.waitForMdsLoad === 'function'
-        ? window.waitForMdsLoad
-        : null;
     const resolveEntryByAaguidGlobal = typeof window.resolveMdsEntryByAaguid === 'function'
         ? window.resolveMdsEntryByAaguid
         : null;
-    const initialState = getLoadState ? getLoadState() : null;
-    const shouldAwaitLoad = !initialState || initialState.isLoading || !initialState.hasLoaded;
 
     let clearTimer = null;
     const scheduleClear = () => {
@@ -3074,20 +3066,11 @@ export function navigateToMdsAuthenticator(aaguid) {
     const run = async () => {
         try {
             if (statusEl) {
-                const message = shouldAwaitLoad
-                    ? 'Loading authenticator metadata...'
-                    : 'Locating metadata entry...';
-                showSpinnerStatus(message);
+                showSpinnerStatus('Locating metadata entry...');
             }
 
-            await waitForNextFrame();
-
-            if (waitForLoad && shouldAwaitLoad) {
-                try {
-                    await waitForLoad();
-                } catch (error) {
-                    console.warn('Failed to wait for authenticator metadata to load:', error);
-                }
+            if (switchToMdsTab) {
+                switchToMdsTab('mds', { preserveMessages: true });
             }
 
             let resolvedEntry = null;
@@ -3161,10 +3144,6 @@ export function navigateToMdsAuthenticator(aaguid) {
 
             if (statusEl) {
                 showSpinnerStatus('Opening authenticator metadata...');
-            }
-
-            if (switchToMdsTab) {
-                switchToMdsTab('mds', { preserveMessages: true });
             }
 
             await waitForNextFrame(2);

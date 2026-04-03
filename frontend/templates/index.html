@@ -10,18 +10,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='styles/shared/text-selectability.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='styles/shared/analyze-browser.css') }}">
 </head>
-<body class="app-loading advanced-inline-json-editor">
-    <div id="app-loader" class="app-loader" role="status" aria-live="polite" aria-hidden="false">
-        <div class="app-loader__dialog" role="alertdialog" aria-modal="true">
-            <h1 class="app-loader__title">FIDO2/WebAuthn PQC Developer Tools</h1>
-            <div class="app-loader__spinner" role="presentation" aria-hidden="true"></div>
-            <p id="app-loader-status" class="app-loader__status">Preparing application…</p>
-            <p class="app-loader__percentage" aria-live="polite">
-                <span id="app-loader-percentage">0%</span>
-            </p>
-        </div>
-    </div>
-
+<body class="advanced-inline-json-editor">
 {% include 'shared/header.html' %}
 
     <div class="container">
@@ -49,56 +38,9 @@
         <p>&copy; 2026 Feitian Technologies Co., Ltd. All rights reserved.</p>
         <p>This is an independent testing platform and is <strong>not affiliated with or endorsed by</strong> the FIDO Alliance, W3C, or Open Quantum Safe.</p>
     </footer>
-    <div
-        id="initial-mds-bootstrap"
-        data-jws='{{ initial_mds_blob | tojson }}'
-        data-info='{{ initial_mds_info | tojson }}'
-        hidden
-    ></div>
     <script>
         (function () {
-            const bootstrapEl = document.getElementById('initial-mds-bootstrap');
-
-            if (!bootstrapEl) {
-                return;
-            }
-
-            let initialJws = null;
-            let initialInfo = null;
-
-            const { jws: rawJws, info: rawInfo } = bootstrapEl.dataset;
-
-            if (typeof rawJws === 'string' && rawJws) {
-                try {
-                    const parsedJws = JSON.parse(rawJws);
-
-                    if (typeof parsedJws === 'string' && parsedJws) {
-                        initialJws = parsedJws;
-                    }
-                } catch (error) {
-                    console.error('Failed to parse initial MDS bootstrap JWS.', error);
-                }
-            }
-
-            if (typeof rawInfo === 'string' && rawInfo) {
-                try {
-                    const parsedInfo = JSON.parse(rawInfo);
-
-                    if (parsedInfo && typeof parsedInfo === 'object') {
-                        initialInfo = parsedInfo;
-                    }
-                } catch (error) {
-                    console.error('Failed to parse initial MDS bootstrap info.', error);
-                }
-            }
-
-            if (typeof initialJws === 'string') {
-                window.__INITIAL_MDS_JWS__ = initialJws;
-            }
-
-            if (initialInfo && typeof initialInfo === 'object') {
-                window.__INITIAL_MDS_INFO__ = initialInfo;
-            }
+            window.__INITIAL_MDS_INFO__ = {{ initial_mds_info | tojson }};
         })();
     </script>
     <script type="module" src="{{ url_for('static', filename='scripts/advanced/mds.js') }}"></script>

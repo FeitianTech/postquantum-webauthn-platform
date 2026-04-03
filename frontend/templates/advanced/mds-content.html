@@ -51,7 +51,12 @@
     </div>
 
     <div id="mds-status" class="mds-status mds-status-info">
-        Metadata is loaded from the packaged FIDO snapshot bundled with this site.
+        Packaged FIDO metadata is available. Explorer data is loading in the background.
+    </div>
+    <div class="mds-status-actions">
+        <button type="button" id="mds-retry-button" class="mds-retry-button" hidden>
+            Retry
+        </button>
     </div>
 
     <div class="mds-table-container" id="mds-table-container">
@@ -246,7 +251,7 @@
             </thead>
             <tbody id="mds-table-body">
                 <tr class="mds-empty-row">
-                    <td colspan="13">Metadata has not been downloaded yet. Use the Download Metadata button.</td>
+                    <td colspan="13">Authenticator metadata is loading…</td>
                 </tr>
             </tbody>
         </table>

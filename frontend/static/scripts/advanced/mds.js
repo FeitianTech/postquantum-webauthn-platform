@@ -1,7 +1,6 @@
 import {
-    MDS_HTML_PATH,
-    MDS_JWS_PATH,
-    MDS_VERIFIED_JSON_PATH,
+    MDS_EXPLORER_PATH,
+    MDS_RESOLVE_PATH,
     MDS_VERIFIED_META_PATH,
     CUSTOM_METADATA_LIST_PATH,
     CUSTOM_METADATA_UPLOAD_PATH,
@@ -31,11 +30,11 @@ import {
     renderCertificateSummary,
 } from './mds-utils.js';
 import {
+    loaderComplete,
     loaderIsActive,
+    loaderSetMetadataCount,
     loaderSetPhase,
     loaderSetProgress,
-    loaderSetMetadataCount,
-    loaderComplete,
 } from '../shared/loader.js';
 import { initializeStickyHeaderForElement } from '../shared/ui.js';
 import { createMdsLazyLoader } from './mds-lazy-loader.js';
@@ -52,8 +51,9 @@ let scrollTopButtonUpdateScheduled = false;
 let columnResizerMetricsScheduled = false;
 let rowHeightLockScheduled = false;
 let horizontalScrollMetricsScheduled = false;
-let initialMdsJws = null;
 let initialMdsInfo = null;
+let explorerPreloadPromise = null;
+const resolvedEntryCache = new Map();
 let lazyLoader = null;
 let backgroundLoadingInProgress = false;
 
@@ -103,6 +103,49 @@ function formatSnapshotTimestamp(info) {
         dateStyle: 'medium',
         timeStyle: 'short',
     }).format(date);
+}
+
+function formatInitialExplorerStatus(info) {
+    if (!info || typeof info !== 'object') {
+        return 'Packaged FIDO metadata is available. Explorer data is loading in the background.';
+    }
+
+    const parts = [];
+    const entryCount = Number.isFinite(info.entryCount) ? Number(info.entryCount) : null;
+    const snapshotNo = Number.isFinite(info.no) ? Number(info.no) : null;
+    const fetchedAt = formatSnapshotTimestamp(info);
+    const nextUpdate = typeof info.nextUpdate === 'string' && info.nextUpdate
+        ? formatDate(info.nextUpdate)
+        : '';
+
+    if (snapshotNo !== null) {
+        parts.push(`Snapshot ${snapshotNo}`);
+    }
+    if (entryCount !== null) {
+        parts.push(`${entryCount.toLocaleString()} authenticators`);
+    }
+    if (fetchedAt) {
+        parts.push(`packaged ${fetchedAt}`);
+    }
+    if (nextUpdate) {
+        parts.push(`next update ${nextUpdate}`);
+    }
+
+    if (!parts.length) {
+        return 'Packaged FIDO metadata is available. Explorer data is loading in the background.';
+    }
+
+    return `${parts.join(' • ')}. Explorer data is loading in the background.`;
+}
+
+function setRetryButtonVisible(visible) {
+    const button = mdsState?.retryButton;
+    if (!(button instanceof HTMLButtonElement)) {
+        return;
+    }
+
+    button.hidden = !visible;
+    button.setAttribute('aria-hidden', visible ? 'false' : 'true');
 }
 
 
@@ -1143,17 +1186,12 @@ async function deleteCustomMetadata(storedFilename, options = {}) {
 }
 
 if (typeof window !== 'undefined') {
-    if (typeof window.__INITIAL_MDS_JWS__ === 'string' && window.__INITIAL_MDS_JWS__) {
-        initialMdsJws = window.__INITIAL_MDS_JWS__;
-    }
     if (window.__INITIAL_MDS_INFO__ && typeof window.__INITIAL_MDS_INFO__ === 'object') {
         initialMdsInfo = window.__INITIAL_MDS_INFO__;
     }
     try {
-        delete window.__INITIAL_MDS_JWS__;
         delete window.__INITIAL_MDS_INFO__;
     } catch (error) {
-        window.__INITIAL_MDS_JWS__ = undefined;
         window.__INITIAL_MDS_INFO__ = undefined;
     }
 }
@@ -1581,6 +1619,8 @@ function storeMetadataCache() {
 
 function clearMetadataCache() {
     customMetadataCache = null;
+    resolvedEntryCache.clear();
+    explorerPreloadPromise = null;
 }
 
 function lockRowHeights() {
@@ -1744,22 +1784,27 @@ if (typeof window !== 'undefined') {
     window.addEventListener('resize', handleWindowScroll);
 }
 
-document.addEventListener('DOMContentLoaded', async () => {
+document.addEventListener('DOMContentLoaded', () => {
     const tabElement = document.getElementById('mds-tab');
     if (!tabElement) {
         return;
     }
 
     try {
-        const response = await fetch(MDS_HTML_PATH, { cache: 'no-store' });
-        if (!response.ok) {
-            throw new Error(`Unable to load ${MDS_HTML_PATH}`);
-        }
-        const markup = await response.text();
-        tabElement.innerHTML = markup;
         mdsState = initializeState(tabElement);
         updateSortButtonState();
         setUpdateButtonMode('update');
+        const initialStatus = formatInitialExplorerStatus(mdsState?.metadataSnapshotInfo);
+        if (initialStatus) {
+            setStatus(initialStatus, 'info');
+            if (mdsState) {
+                mdsState.defaultStatus = {
+                    html: initialStatus,
+                    variant: 'info',
+                    title: '',
+                };
+            }
+        }
     } catch (error) {
         console.error('Failed to initialise the FIDO MDS tab:', error);
         tabElement.innerHTML = `
@@ -2018,6 +2063,16 @@ function initializeState(root) {
         scrollTopButton.setAttribute('aria-hidden', 'true');
     }
 
+    const retryButton = root.querySelector('#mds-retry-button');
+    if (retryButton instanceof HTMLButtonElement) {
+        retryButton.addEventListener('click', event => {
+            event.preventDefault();
+            void refreshMetadata();
+        });
+        retryButton.hidden = true;
+        retryButton.setAttribute('aria-hidden', 'true');
+    }
+
     const updateButton = root.querySelector('#mds-update-button');
     if (updateButton) {
         updateButton.addEventListener('click', () => {
@@ -2084,6 +2139,7 @@ function initializeState(root) {
         countEl: root.querySelector('#mds-entry-count'),
         totalEl: root.querySelector('#mds-total-count'),
         statusEl,
+        retryButton,
         defaultStatus,
         statusResetTimer: null,
         columnWidths: null,
@@ -2662,34 +2718,179 @@ async function finalizeBackgroundLoading(metadata, lastUpdatedDate) {
     backgroundLoadingInProgress = false;
 }
 
-async function applyInitialMetadataPayload(note) {
-    if (initialMdsJws === null || typeof initialMdsJws !== 'string') {
-        initialMdsJws = null;
-        initialMdsInfo = initialMdsInfo && typeof initialMdsInfo === 'object' ? initialMdsInfo : null;
-        return false;
+function buildLoadedStatus(snapshot, note) {
+    const meta = snapshot?.meta && typeof snapshot.meta === 'object' ? snapshot.meta : {};
+    const entryCount = Array.isArray(snapshot?.entries) ? snapshot.entries.length : 0;
+    const parts = [`Loaded ${entryCount.toLocaleString()} authenticators.`];
+
+    const packagedAt = formatSnapshotTimestamp(meta);
+    if (packagedAt) {
+        parts.push(`Packaged ${packagedAt}.`);
+    } else if (typeof meta?.nextUpdate === 'string' && meta.nextUpdate) {
+        parts.push(`Next update ${formatDate(meta.nextUpdate)}.`);
     }
 
-    const snapshotJws = initialMdsJws;
-    const snapshotInfo = initialMdsInfo && typeof initialMdsInfo === 'object' ? initialMdsInfo : null;
-    initialMdsJws = null;
-    initialMdsInfo = null;
+    if (Number.isFinite(meta?.customEntryCount) && meta.customEntryCount > 0) {
+        const count = Number(meta.customEntryCount);
+        const suffix = count === 1 ? 'entry' : 'entries';
+        parts.push(`Including ${count.toLocaleString()} session metadata ${suffix}.`);
+    }
 
-    try {
-        const payloadSegment = snapshotJws.split('.')[1];
-        if (!payloadSegment) {
-            throw new Error('Invalid metadata BLOB format.');
+    if (note) {
+        parts.push(note);
+    }
+
+    return parts.join(' ');
+}
+
+function resetExplorerState(message, variant = 'info') {
+    mdsData = [];
+    filteredData = [];
+    hasLoaded = true;
+    resolvedEntryCache.clear();
+
+    if (mdsState) {
+        mdsState.byAaguid = new Map();
+    }
+
+    updateCount(0, 0);
+    setColumnResizersEnabled(false);
+    setStatus(message, variant);
+    setRetryButtonVisible(false);
+
+    if (mdsState) {
+        mdsState.defaultStatus = { html: message, variant, title: '' };
+        if (mdsState.tableBody) {
+            const tbody = mdsState.tableBody;
+            tbody.innerHTML = '';
+            const emptyRow = document.createElement('tr');
+            emptyRow.className = 'mds-empty-row';
+            const cell = document.createElement('td');
+            cell.colSpan = COLUMN_COUNT;
+            cell.textContent = message;
+            emptyRow.appendChild(cell);
+            tbody.appendChild(emptyRow);
         }
-        const payload = decodeBase64Url(payloadSegment);
-        const metadata = JSON.parse(payload);
-
-        const enhancedMetadata = await ensureCustomMetadata(metadata);
-        await applyMetadataEntries(enhancedMetadata, { note });
-        storeMetadataCache(JSON.stringify(enhancedMetadata), snapshotInfo);
-        return true;
-    } catch (error) {
-        console.error('Failed to apply initial metadata payload:', error);
-        return false;
     }
+}
+
+function applyExplorerSnapshot(snapshot, note = '') {
+    if (!mdsState) {
+        return;
+    }
+
+    const meta = snapshot?.meta && typeof snapshot.meta === 'object' ? snapshot.meta : {};
+    const incomingEntries = Array.isArray(snapshot?.entries) ? snapshot.entries : [];
+    mdsState.metadataSnapshotInfo = normaliseSnapshotInfo(meta);
+    const entries = incomingEntries
+        .map(entry => cloneMetadataEntry(entry))
+        .filter(entry => entry && typeof entry === 'object')
+        .map(entry => {
+            const cached = entry.entryId ? resolvedEntryCache.get(entry.entryId) : null;
+            return cached && typeof cached === 'object' ? { ...entry, ...cached } : entry;
+        });
+
+    mdsData = entries;
+    resetSortState();
+    setUpdateButtonMode('update');
+
+    const byAaguid = new Map();
+    entries.forEach(entry => {
+        const key = normaliseAaguid(entry?.aaguid || entry?.id);
+        if (key) {
+            byAaguid.set(key, entry);
+        }
+        if (entry?.entryId) {
+            resolvedEntryCache.set(entry.entryId, entry);
+        }
+    });
+    mdsState.byAaguid = byAaguid;
+
+    updateOptionLists(collectOptionSets(entries));
+    applyFilters();
+    scheduleHorizontalScrollMetricsUpdate();
+    setColumnResizersEnabled(Boolean(entries.length));
+    setRetryButtonVisible(false);
+
+    hasLoaded = true;
+
+    const statusMessage = buildLoadedStatus(snapshot, note);
+    const statusVariant = entries.length ? 'success' : 'info';
+    setStatus(statusMessage, statusVariant);
+
+    mdsState.defaultStatus = {
+        html: statusMessage,
+        variant: statusVariant,
+        title: typeof meta.legalHeader === 'string' ? meta.legalHeader : '',
+    };
+
+    if (mdsState.statusEl) {
+        if (mdsState.defaultStatus.title) {
+            mdsState.statusEl.setAttribute('title', mdsState.defaultStatus.title);
+        } else {
+            mdsState.statusEl.removeAttribute('title');
+        }
+    }
+}
+
+function integrateResolvedEntry(entry) {
+    if (!entry || typeof entry !== 'object') {
+        return null;
+    }
+
+    const key = normaliseAaguid(entry.aaguid || entry.id);
+    let target = null;
+
+    if (key && mdsState?.byAaguid?.has(key)) {
+        target = mdsState.byAaguid.get(key);
+    } else if (entry.entryId) {
+        target = mdsData.find(item => item?.entryId === entry.entryId) || null;
+    }
+
+    if (target && target !== entry) {
+        Object.assign(target, entry, { isLightweightEntry: false });
+        entry = target;
+    } else if (!target && hasLoaded) {
+        mdsData.push(entry);
+        applyFilters({ preserveTableScroll: true });
+    }
+
+    if (entry.entryId) {
+        resolvedEntryCache.set(entry.entryId, entry);
+    }
+    if (key && mdsState?.byAaguid) {
+        mdsState.byAaguid.set(key, entry);
+    }
+
+    return entry;
+}
+
+async function resolveMetadataEntry(query) {
+    const params = new URLSearchParams();
+    Object.entries(query || {}).forEach(([key, value]) => {
+        if (typeof value === 'string' && value) {
+            params.set(key, value);
+        }
+    });
+
+    if (!params.toString()) {
+        return null;
+    }
+
+    const response = await fetch(`${MDS_RESOLVE_PATH}?${params.toString()}`, {
+        cache: 'no-store',
+    });
+    if (!response.ok) {
+        return null;
+    }
+
+    const payload = await response.json();
+    const resolved = payload?.entry;
+    if (!resolved || typeof resolved !== 'object') {
+        return null;
+    }
+
+    return integrateResolvedEntry(resolved);
 }
 
 async function loadMdsData(statusNote, options = {}) {
@@ -2700,229 +2901,89 @@ async function loadMdsData(statusNote, options = {}) {
     const opts = options && typeof options === 'object' ? options : {};
     const signal = getAbortSignal(opts);
     const forceReload = Boolean(opts.forceReload);
+    const note = typeof statusNote === 'string' ? statusNote.trim() : '';
 
     throwIfAborted(signal);
+
+    if (isLoading && loadPromise) {
+        await loadPromise;
+        if (!forceReload) {
+            return;
+        }
+    }
 
     if (hasLoaded && !forceReload) {
         return;
     }
 
-    if (isLoading && loadPromise) {
-        throwIfAborted(signal);
-        await loadPromise;
-        return;
-    }
-
-    const note = typeof statusNote === 'string' ? statusNote.trim() : '';
-    const previousHasLoaded = hasLoaded;
-    const trackProgress = loaderIsActive() && !hasLoaded;
-
-    throwIfAborted(signal);
-
-    if (trackProgress) {
-        loaderSetPhase('Loading authenticator metadata…', { progress: 46 });
-        loaderSetMetadataCount(0);
-    }
-
     if (forceReload) {
-        initialMdsJws = null;
-        initialMdsInfo = null;
+        explorerPreloadPromise = null;
+        resolvedEntryCache.clear();
     }
 
-    if (!forceReload) {
-        if (!hasLoaded) {
-            try {
-                throwIfAborted(signal);
-                if (trackProgress && typeof initialMdsJws === 'string' && initialMdsJws) {
-                    loaderSetPhase('Applying server metadata snapshot…', { progress: 52 });
-                }
-                const applied = await applyInitialMetadataPayload(note);
-                throwIfAborted(signal);
-                if (applied) {
-                    setColumnResizersEnabled(hasLoaded);
-                    return;
-                }
-            } catch (error) {
-                console.warn('Failed to apply server-provided metadata payload:', error);
-            }
-        }
-
-        const cached = readMetadataCache();
-        if (cached?.metadata) {
-            try {
-                throwIfAborted(signal);
-                if (trackProgress) {
-                    loaderSetPhase('Restoring cached authenticator metadata…', { progress: 52 });
-                }
-                const enhanced = await ensureCustomMetadata(cached.metadata, { signal });
-                throwIfAborted(signal);
-                await applyMetadataEntries(enhanced, { note, signal });
-                throwIfAborted(signal);
-                storeMetadataCache(JSON.stringify(enhanced), cached.info || null);
-                setColumnResizersEnabled(hasLoaded);
-                return;
-            } catch (error) {
-                if (error && error.name === 'AbortError') {
-                    throw error;
-                }
-                console.warn('Failed to apply cached metadata payload:', error);
-                clearMetadataCache();
-            }
-        }
-    }
-
-    setStatus('Loading metadata BLOB…', 'info');
-    setColumnResizersEnabled(false);
     isLoading = true;
-    let stateUpdated = false;
+    setRetryButtonVisible(false);
+    setStatus(forceReload ? 'Refreshing authenticator explorer…' : 'Loading authenticator explorer…', 'info');
+    setColumnResizersEnabled(false);
 
     const task = (async () => {
+        const fetchOptions = {
+            cache: forceReload ? 'reload' : 'no-store',
+        };
+        if (signal) {
+            fetchOptions.signal = signal;
+        }
+
         try {
-            const fetchOptions = forceReload ? { cache: 'reload' } : { cache: 'no-cache' };
-            if (signal) {
-                fetchOptions.signal = signal;
-            }
-            throwIfAborted(signal);
-            if (trackProgress) {
-                const phaseLabel = forceReload
-                    ? 'Refreshing authenticator metadata…'
-                    : 'Downloading authenticator metadata…';
-                loaderSetPhase(phaseLabel, { progress: 52 });
-            }
-            let metadataJson = null;
+            const response = await fetch(MDS_EXPLORER_PATH, fetchOptions);
+            let payload = null;
             try {
-                const jsonResponse = await fetch(MDS_VERIFIED_JSON_PATH, fetchOptions);
-                if (jsonResponse.ok) {
-                    const contentType = jsonResponse.headers?.get('content-type') || '';
-                    if (contentType.includes('application/json')) {
-                        metadataJson = await jsonResponse.json();
-                    }
-                } else if (jsonResponse.status && jsonResponse.status !== 404) {
-                    console.warn('Verified metadata endpoint responded with status', jsonResponse.status);
-                }
+                payload = await response.json();
             } catch (error) {
-                if (error && error.name === 'AbortError') {
-                    throw error;
-                }
-                console.warn('Unable to load verified metadata snapshot:', error);
+                payload = null;
             }
 
-            if (metadataJson && typeof metadataJson === 'object') {
-                if (trackProgress) {
-                    loaderSetPhase('Applying verified authenticator metadata…', { progress: 56 });
-                }
-                const ensureOptions = forceReload ? { signal, forceReload: true } : { signal };
-                const enhancedMetadata = await ensureCustomMetadata(metadataJson, ensureOptions);
-                throwIfAborted(signal);
-                await applyMetadataEntries(enhancedMetadata, { note, signal });
-                setUpdateButtonMode('update');
-                stateUpdated = true;
-                return;
-            }
-
-            const response = await fetch(MDS_JWS_PATH, fetchOptions);
             if (!response.ok) {
                 if (response.status === 404) {
-                    const fallbackMetadata = await ensureCustomMetadata(null, { signal, forceReload: true });
-                    throwIfAborted(signal);
-                    if (Array.isArray(fallbackMetadata.entries) && fallbackMetadata.entries.length) {
-                        if (trackProgress) {
-                            loaderSetPhase('Loading custom authenticator metadata…', { progress: 54 });
-                        }
-                        const fallbackNoteParts = [note, 'Using uploaded session metadata.'].filter(Boolean);
-                        await applyMetadataEntries(fallbackMetadata, {
-                            note: fallbackNoteParts.join(' '),
-                            signal,
-                        });
-                        setUpdateButtonMode('download');
-                        storeMetadataCache(JSON.stringify(fallbackMetadata), {
-                            cachedAt: new Date().toISOString(),
-                            source: 'session-custom',
-                        });
-                        stateUpdated = true;
-                        return;
-                    }
-
-                    const message = MISSING_METADATA_MESSAGE;
-                    setUpdateButtonMode('download');
-                    if (mdsState) {
-                        mdsState.byAaguid = new Map();
-                    }
-                    setStatus(message, 'info');
-                    if (mdsState) {
-                        mdsState.defaultStatus = { html: message, variant: 'info', title: '' };
-                    }
-                    mdsData = [];
-                    filteredData = [];
-                    updateCount(0, 0);
-                    if (mdsState?.tableBody) {
-                        const tbody = mdsState.tableBody;
-                        tbody.innerHTML = '';
-                        const emptyRow = document.createElement('tr');
-                        emptyRow.className = 'mds-empty-row';
-                        const cell = document.createElement('td');
-                        cell.colSpan = COLUMN_COUNT;
-                        cell.textContent = message;
-                        emptyRow.appendChild(cell);
-                        tbody.appendChild(emptyRow);
-                    }
-                    hideScrollTopButton();
-                    resetSortState();
-                    scheduleHorizontalScrollMetricsUpdate();
-                    clearMetadataCache();
-                    stateUpdated = true;
-                    hasLoaded = false;
-                    if (trackProgress) {
-                        loaderSetPhase('Metadata unavailable. Continuing without authenticator data.', { progress: 92 });
-                        loaderComplete({ message: 'Application ready!', delay: 720 });
-                    }
+                    resetExplorerState(
+                        payload && typeof payload.error === 'string' && payload.error
+                            ? payload.error
+                            : MISSING_METADATA_MESSAGE,
+                        'info',
+                    );
                     return;
                 }
-                throw new Error(`Unexpected response status: ${response.status}`);
+
+                throw new Error(
+                    payload && typeof payload.error === 'string' && payload.error
+                        ? payload.error
+                        : `Explorer request failed with status ${response.status}.`,
+                );
             }
 
-            if (trackProgress) {
-                loaderSetPhase('Decoding metadata payload…', { progress: 56 });
-            }
-            const jws = await response.text();
-            throwIfAborted(signal);
-            const payloadSegment = jws.split('.')[1];
-            if (!payloadSegment) {
-                throw new Error('Invalid metadata BLOB format.');
+            if (!payload || typeof payload !== 'object') {
+                throw new Error('Explorer response was not valid JSON.');
             }
 
-            const payload = decodeBase64Url(payloadSegment);
-            const metadata = JSON.parse(payload);
-
-            const ensureOptions = forceReload ? { signal, forceReload: true } : { signal };
-            const enhanced = await ensureCustomMetadata(metadata, ensureOptions);
-            throwIfAborted(signal);
-            await applyMetadataEntries(enhanced, { note, signal });
-            stateUpdated = true;
-
-            const lastModified = response.headers?.get('Last-Modified') || null;
-            const etag = response.headers?.get('ETag') || null;
-            storeMetadataCache(JSON.stringify(enhanced), {
-                lastModified,
-                etag,
-                cachedAt: new Date().toISOString(),
-            });
+            applyExplorerSnapshot(payload, note);
         } catch (error) {
             if (error && error.name === 'AbortError') {
                 throw error;
             }
-            console.error('Failed to load FIDO MDS metadata:', error);
-            setStatus(
-                `Unable to parse the metadata BLOB. Confirm that <code>${MDS_JWS_PATH}</code> is a valid download from ` +
-                    `<a href="https://mds3.fidoalliance.org/" target="_blank" rel="noopener">mds3.fidoalliance.org</a>.`,
-                'error',
-            );
-            if (!previousHasLoaded) {
-                clearMetadataCache();
-            }
-            if (trackProgress) {
-                loaderSetPhase('Unable to load authenticator metadata. Continuing with limited data.', { progress: 92 });
-                loaderComplete({ message: 'Application ready!', delay: 720 });
+
+            console.error('Failed to load FIDO MDS explorer data:', error);
+            const message =
+                error instanceof Error && error.message
+                    ? error.message
+                    : 'Unable to load the packaged authenticator explorer.';
+            setStatus(message, 'error');
+            setRetryButtonVisible(true);
+
+            if (!hasLoaded) {
+                hasLoaded = false;
+                setColumnResizersEnabled(false);
+            } else {
+                setColumnResizersEnabled(true);
             }
         } finally {
             isLoading = false;
@@ -2930,16 +2991,17 @@ async function loadMdsData(statusNote, options = {}) {
     })();
 
     loadPromise = task;
+    explorerPreloadPromise = task;
+
     try {
         await task;
     } finally {
         if (loadPromise === task) {
             loadPromise = null;
         }
-        if (!stateUpdated && previousHasLoaded) {
-            hasLoaded = true;
+        if (explorerPreloadPromise === task && !isLoading) {
+            explorerPreloadPromise = null;
         }
-        setColumnResizersEnabled(hasLoaded);
     }
 }
 
@@ -3930,7 +3992,7 @@ function showAuthenticatorDetail(entry, options = {}) {
         }
     }
 
-    openAuthenticatorModal(sourceEntry);
+    void openAuthenticatorModal(sourceEntry);
 }
 
 function hideAuthenticatorDetail() {
@@ -5275,20 +5337,28 @@ function restoreListSection(section) {
     apply('userSelect', 'mdsDetailUserSelect');
 }
 
-function openAuthenticatorModal(entry) {
+async function openAuthenticatorModal(entry) {
     if (!mdsState?.authenticatorModal) {
         return;
     }
 
-    // Ensure entry is fully parsed before displaying details
-    if (entry && entry.isLightweightEntry) {
-        const fullEntry = upgradeEntryToFull(entry);
-        Object.assign(entry, fullEntry);
-        
-        // Mark as fully parsed in lazy loader
-        if (lazyLoader && typeof entry.index === 'number') {
-            const key = normaliseAaguid(entry.aaguid || entry.id);
-            lazyLoader.markEntryFullyParsed(entry.index, key);
+    if (entry && (!entry.metadataStatement || !entry.rawEntry)) {
+        const query = {};
+        if (typeof entry.entryId === 'string' && entry.entryId) {
+            query.entryId = entry.entryId;
+        } else if (typeof entry.aaguid === 'string' && entry.aaguid) {
+            query.aaguid = normaliseAaguid(entry.aaguid);
+        } else if (typeof entry.id === 'string' && entry.id) {
+            query.aaid = entry.id;
+        }
+
+        try {
+            const resolved = await resolveMetadataEntry(query);
+            if (resolved) {
+                entry = resolved;
+            }
+        } catch (error) {
+            console.warn('Failed to resolve full authenticator metadata entry.', error);
         }
     }
 
@@ -5450,86 +5520,25 @@ async function resolveEntryByAaguid(aaguid) {
         return null;
     }
 
-    if (!hasLoaded) {
-        await loadMdsData();
-    } else if (isLoading && loadPromise) {
-        await loadPromise;
-    }
-
-    if (!mdsState) {
-        return null;
-    }
-
-    // Check if already in loaded data
-    let cached = mdsState.byAaguid?.get(targetKey) || null;
-    
-    // If found but is lightweight, upgrade it to full
-    if (cached && cached.isLightweightEntry) {
-        const fullEntry = upgradeEntryToFull(cached);
-        Object.assign(cached, fullEntry);
-        
-        // Mark as fully parsed in lazy loader
-        if (lazyLoader && typeof cached.index === 'number') {
-            lazyLoader.markEntryFullyParsed(cached.index, targetKey);
+    if (isLoading && loadPromise) {
+        try {
+            await loadPromise;
+        } catch (error) {
+            // Continue to resolve via the server even if preload failed.
         }
-        
-        return cached;
     }
-    
-    if (cached) {
+
+    const cached = mdsState.byAaguid?.get(targetKey) || null;
+    if (cached && cached.metadataStatement && cached.rawEntry) {
         return cached;
     }
 
-    // Search in already loaded entries
-    const fallback = mdsData.find(item => {
-        const key = normaliseAaguid(item?.aaguid || item?.id);
-        return key === targetKey;
-    }) || null;
-
-    if (fallback) {
-        // If found but is lightweight, upgrade it to full
-        if (fallback.isLightweightEntry) {
-            const fullEntry = upgradeEntryToFull(fallback);
-            Object.assign(fallback, fullEntry);
-            
-            // Mark as fully parsed in lazy loader
-            if (lazyLoader && typeof fallback.index === 'number') {
-                lazyLoader.markEntryFullyParsed(fallback.index, targetKey);
-            }
-        }
-        
-        if (mdsState.byAaguid) {
-            mdsState.byAaguid.set(targetKey, fallback);
-        }
-        return fallback;
+    const resolved = await resolveMetadataEntry({ aaguid: targetKey });
+    if (resolved) {
+        return resolved;
     }
 
-    // If using lazy loading and entry not found in transformed data,
-    // try loading from raw entries
-    if (lazyLoader && !lazyLoader.isFullyLoaded()) {
-        const rawEntry = lazyLoader.getRawEntryByKey(targetKey);
-        if (rawEntry) {
-            // Transform with FULL parsing (not lightweight)
-            const index = mdsData.length;
-            const transformed = transformEntry(rawEntry, index);
-            if (transformed) {
-                mdsData.push(transformed);
-                
-                // Update AAGUID map
-                const key = normaliseAaguid(transformed.aaguid || transformed.id);
-                if (key && mdsState.byAaguid) {
-                    mdsState.byAaguid.set(key, transformed);
-                }
-                
-                // Mark as fully parsed
-                lazyLoader.markEntryFullyParsed(index, key);
-                
-                return transformed;
-            }
-        }
-    }
-
-    return null;
+    return cached || null;
 }
 
 async function openAuthenticatorModalByAaguid(aaguid) {
@@ -5537,7 +5546,7 @@ async function openAuthenticatorModalByAaguid(aaguid) {
     if (!entry) {
         return null;
     }
-    openAuthenticatorModal(entry);
+    await openAuthenticatorModal(entry);
     return entry;
 }
 
@@ -6278,13 +6287,13 @@ function setUpdateButtonMode(mode) {
 
 
 async function refreshMetadata() {
-    if (isUpdatingMetadata || !mdsState?.updateButton) {
+    if (isUpdatingMetadata) {
         return;
     }
 
     if (isLoading) {
         setStatus(
-            'Metadata is currently loading. Please wait for the current operation to finish before requesting another update.',
+            'Metadata is currently loading. Please wait for the current operation to finish.',
             'info',
         );
         return;
@@ -6292,58 +6301,27 @@ async function refreshMetadata() {
 
     isUpdatingMetadata = true;
     setUpdateButtonBusy(true);
+    if (mdsState?.retryButton instanceof HTMLButtonElement) {
+        mdsState.retryButton.disabled = true;
+    }
 
     try {
-        const action = mdsState?.updateButtonMode === 'download' ? 'download' : 'update';
-        const inProgressMessage =
-            action === 'download' ? 'Downloading metadata BLOB…' : 'Updating metadata BLOB…';
-        setStatus(inProgressMessage, 'info');
-
-        const response = await fetch('/api/mds/update', {
-            method: 'POST',
-            headers: { Accept: 'application/json' },
-            cache: 'no-store',
-        });
-
-        let payload;
-        try {
-            payload = await response.json();
-        } catch (error) {
-            payload = null;
-        }
-
-        if (!response.ok) {
-            const message =
-                (payload && typeof payload.message === 'string' && payload.message.trim()) ||
-                `Update request failed with status ${response.status}.`;
-            throw new Error(message);
-        }
-
-        const payloadMessage =
-            (payload && typeof payload.message === 'string' && payload.message.trim()) || '';
-        const shouldReload = (payload && payload.updated) || !hasLoaded;
-        const note =
-            action === 'download' && shouldReload
-                ? ['Download complete.', payloadMessage].filter(Boolean).join(' ')
-                : payloadMessage;
-
-        if (shouldReload) {
-            clearMetadataCache();
-            await loadMdsData(note, { forceReload: true });
-        } else {
-            let message = note || 'Metadata already up to date.';
-            let variant = 'info';
-            setStatus(message, variant, { restoreDefault: true, delay: 5000 });
-        }
+        setStatus('Refreshing authenticator explorer…', 'info');
+        clearMetadataCache();
+        await loadMdsData('Explorer refreshed.', { forceReload: true });
     } catch (error) {
-        console.error('Failed to update metadata BLOB:', error);
+        console.error('Failed to refresh authenticator explorer:', error);
         const message =
             error instanceof Error && error.message
                 ? error.message
-                : 'Unable to update the metadata BLOB. Check the server logs for more details.';
+                : 'Unable to refresh the packaged authenticator explorer.';
         setStatus(message, 'error');
+        setRetryButtonVisible(true);
     } finally {
         setUpdateButtonBusy(false);
+        if (mdsState?.retryButton instanceof HTMLButtonElement) {
+            mdsState.retryButton.disabled = false;
+        }
         isUpdatingMetadata = false;
     }
 }

@@ -5,12 +5,6 @@ import {
     parseRequestOptionsFromJSON
 } from './shared/webauthn-json.browser-ponyfill.js';
 import {
-    initializeLoader,
-    loaderIsActive,
-    loaderSetPhase,
-    loaderSetProgress
-} from './shared/loader.js';
-import {
     switchTab,
     switchSubTab,
     toggleSection,
@@ -216,9 +210,6 @@ window.applyJsonChanges = applyJsonChanges;
 window.cancelJsonEdit = cancelJsonEdit;
 
 document.addEventListener('DOMContentLoaded', () => {
-    initializeLoader();
-    loaderSetPhase('Preparing application…', { progress: 8 });
-
     initializeNavigationMenu();
     initializeStickyHeader();
 
@@ -278,10 +269,6 @@ document.addEventListener('DOMContentLoaded', () => {
         renderFakeExcludeCredentialList();
         renderFakeAllowCredentialList();
         updateAuthenticationExtensionAvailability();
-
-        if (loaderIsActive()) {
-            loaderSetProgress(18);
-        }
     }, 100);
 
     setTimeout(() => {
@@ -500,29 +487,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         });
-
-        if (loaderIsActive()) {
-            loaderSetProgress(26);
-        }
     }, 100);
 
     setTimeout(() => {
         updateJsonEditor();
-        if (loaderIsActive()) {
-            loaderSetProgress(32);
-        }
     }, 200);
     setTimeout(() => {
         loadSavedCredentials();
-        if (loaderIsActive()) {
-            loaderSetProgress(38);
-        }
     }, 300);
     setTimeout(() => {
         checkLargeBlobCapability();
-        if (loaderIsActive()) {
-            loaderSetProgress(44);
-        }
     }, 500);
 
     const formFields = [
