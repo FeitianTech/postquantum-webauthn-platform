@@ -1,5 +1,6 @@
 import base64
 import pickle
+from types import SimpleNamespace
 
 import pytest
 
@@ -140,4 +141,285 @@ def test_decode_and_certificate_routes_cover_error_and_success_paths(monkeypatch
                 "length": len(b"good-cert"),
                 "hex": b"good-cert".hex(),
             }
+        }
+
+
+def test_metadata_routes_cover_verified_snapshot_and_custom_error_branches(monkeypatch, tmp_path):
+    general_module = pytest.importorskip("server.app.routes.general")
+    config_module = pytest.importorskip("server.app.config")
+    pytest.importorskip("server.app.app")
+
+    with config_module.app.test_client() as client:
+        missing_path = tmp_path / "missing.json"
+        monkeypatch.setattr(general_module, "MDS_METADATA_VERIFIED_PATH", str(missing_path), raising=False)
+
+        missing_response = client.get("/api/mds/metadata/base")
+        assert missing_response.status_code == 404
+        assert missing_response.get_json() == {
+            "error": "Verified metadata snapshot is not available."
+        }
+
+        corrupted_path = tmp_path / "corrupted.json"
+        corrupted_path.write_text("{bad", encoding="utf-8")
+        monkeypatch.setattr(general_module, "MDS_METADATA_VERIFIED_PATH", str(corrupted_path), raising=False)
+
+        corrupted_response = client.get("/api/mds/metadata/base")
+        assert corrupted_response.status_code == 500
+        assert corrupted_response.get_json() == {
+            "error": "Verified metadata snapshot is corrupted."
+        }
+
+        valid_path = tmp_path / "valid.json"
+        valid_payload = {"entries": [{"entryId": "test-entry"}]}
+        valid_path.write_text('{"entries":[{"entryId":"test-entry"}]}', encoding="utf-8")
+        monkeypatch.setattr(general_module, "MDS_METADATA_VERIFIED_PATH", str(valid_path), raising=False)
+
+        valid_response = client.get("/api/mds/metadata/base")
+        assert valid_response.status_code == 200
+        assert valid_response.get_json() == valid_payload
+
+        session_calls = []
+        monkeypatch.setattr(
+            general_module,
+            "ensure_metadata_session_id",
+            lambda: session_calls.append("called") or "session-abc",
+            raising=False,
+        )
+        monkeypatch.setattr(
+            general_module,
+            "list_session_metadata_items",
+            lambda: [{"storedFilename": "one.json"}],
+            raising=False,
+        )
+        monkeypatch.setattr(
+            general_module,
+            "serialize_session_metadata_item",
+            lambda item: {"storedFilename": item["storedFilename"], "label": "demo"},
+            raising=False,
+        )
+
+        list_response = client.get("/api/mds/metadata/custom")
+        assert list_response.status_code == 200
+        assert list_response.get_json() == {
+            "items": [{"storedFilename": "one.json", "label": "demo"}]
+        }
+        assert session_calls
+
+    def _unpack(result):
+        if isinstance(result, tuple):
+            response, status = result
+            return response, status
+        return result, result.status_code
+
+    class _Files:
+        def __init__(self, entries):
+            self._entries = list(entries)
+
+        def getlist(self, name):
+            assert name == "files"
+            return list(self._entries)
+
+    class _Storage:
+        def __init__(self, filename, data=None, exc=None):
+            self.filename = filename
+            self._data = data
+            self._exc = exc
+
+        def read(self):
+            if self._exc is not None:
+                raise self._exc
+            return self._data
+
+    monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-abc", raising=False)
+
+    with config_module.app.app_context():
+        monkeypatch.setattr(general_module, "request", SimpleNamespace(files=None), raising=False)
+        response, status = _unpack(general_module.api_upload_custom_metadata())
+        assert status == 400
+        assert response.get_json() == {
+            "items": [],
+            "errors": ["No JSON files were provided."],
+        }
+
+        monkeypatch.setattr(
+            general_module,
+            "request",
+            SimpleNamespace(files=_Files([_Storage("note.txt", b"{}")])) ,
+            raising=False,
+        )
+        response, status = _unpack(general_module.api_upload_custom_metadata())
+        assert status == 400
+        assert response.get_json() == {
+            "items": [],
+            "errors": ["note.txt is not a JSON file."],
+        }
+
+        monkeypatch.setattr(
+            general_module,
+            "request",
+            SimpleNamespace(files=_Files([_Storage("bad.json", exc=RuntimeError("disk read failed"))])),
+            raising=False,
+        )
+        response, status = _unpack(general_module.api_upload_custom_metadata())
+        assert status == 400
+        assert response.get_json() == {
+            "items": [],
+            "errors": ["Failed to read bad.json: disk read failed"],
+        }
+
+        monkeypatch.setattr(
+            general_module,
+            "request",
+            SimpleNamespace(files=_Files([_Storage("utf8.json", b"\xff")])) ,
+            raising=False,
+        )
+        response, status = _unpack(general_module.api_upload_custom_metadata())
+        assert status == 400
+        assert response.get_json() == {
+            "items": [],
+            "errors": ["utf8.json is not valid UTF-8 JSON."],
+        }
+
+        monkeypatch.setattr(
+            general_module,
+            "request",
+            SimpleNamespace(files=_Files([_Storage("syntax.json", b"{not-json")])) ,
+            raising=False,
+        )
+        response, status = _unpack(general_module.api_upload_custom_metadata())
+        assert status == 400
+        assert response.get_json()["items"] == []
+        assert "syntax.json:" in response.get_json()["errors"][0]
+
+        monkeypatch.setattr(
+            general_module,
+            "request",
+            SimpleNamespace(files=_Files([_Storage("array.json", b"[]")])) ,
+            raising=False,
+        )
+        response, status = _unpack(general_module.api_upload_custom_metadata())
+        assert status == 400
+        assert response.get_json() == {
+            "items": [],
+            "errors": ["array.json must contain a JSON object."],
+        }
+
+        monkeypatch.setattr(
+            general_module,
+            "expand_metadata_entry_payloads",
+            lambda _payload: (_ for _ in ()).throw(ValueError("bad metadata object")),
+            raising=False,
+        )
+        monkeypatch.setattr(
+            general_module,
+            "request",
+            SimpleNamespace(files=_Files([_Storage("expand.json", b"{}")])) ,
+            raising=False,
+        )
+        response, status = _unpack(general_module.api_upload_custom_metadata())
+        assert status == 400
+        assert response.get_json() == {
+            "items": [],
+            "errors": ["expand.json: bad metadata object"],
+        }
+
+        monkeypatch.setattr(
+            general_module,
+            "expand_metadata_entry_payloads",
+            lambda _payload: [{"entry": 1}, {"entry": 2}],
+            raising=False,
+        )
+        monkeypatch.setattr(
+            general_module,
+            "maybe_store_uploaded_metadata_file",
+            lambda *_args, **_kwargs: None,
+            raising=False,
+        )
+
+        def _save_item(entry_payload, original_filename=None):
+            if entry_payload.get("entry") == 1:
+                raise ValueError("duplicate entry")
+            return {"storedFilename": "stored-2.json", "originalFilename": original_filename}
+
+        monkeypatch.setattr(general_module, "save_session_metadata_item", _save_item, raising=False)
+        monkeypatch.setattr(
+            general_module,
+            "serialize_session_metadata_item",
+            lambda item: item,
+            raising=False,
+        )
+        monkeypatch.setattr(
+            general_module,
+            "load_effective_full_snapshot",
+            lambda: {"meta": {"entryCount": 1}},
+            raising=False,
+        )
+        monkeypatch.setattr(
+            general_module,
+            "request",
+            SimpleNamespace(files=_Files([_Storage("mixed.json", b"{}")])) ,
+            raising=False,
+        )
+        response, status = _unpack(general_module.api_upload_custom_metadata())
+        payload = response.get_json()
+        assert status == 200
+        assert payload["items"] == [
+            {
+                "storedFilename": "stored-2.json",
+                "originalFilename": "mixed.json (entry 2)",
+            }
+        ]
+        assert payload["errors"] == ["mixed.json (entry 1): duplicate entry"]
+        assert payload["snapshot"] == {"meta": {"entryCount": 1}}
+
+        monkeypatch.setattr(
+            general_module,
+            "save_session_metadata_item",
+            lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("persistence down")),
+            raising=False,
+        )
+        monkeypatch.setattr(
+            general_module,
+            "request",
+            SimpleNamespace(files=_Files([_Storage("fatal.json", b"{}")])) ,
+            raising=False,
+        )
+        response, status = _unpack(general_module.api_upload_custom_metadata())
+        assert status == 500
+        assert response.get_json() == {"error": "persistence down"}
+
+    with config_module.app.test_client() as client:
+        monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-abc", raising=False)
+
+        monkeypatch.setattr(
+            general_module,
+            "delete_session_metadata_item",
+            lambda _name: (_ for _ in ()).throw(ValueError("invalid filename")),
+            raising=False,
+        )
+        delete_value_error = client.delete("/api/mds/metadata/custom/invalid")
+        assert delete_value_error.status_code == 400
+        assert delete_value_error.get_json() == {"error": "invalid filename"}
+
+        monkeypatch.setattr(
+            general_module,
+            "delete_session_metadata_item",
+            lambda _name: (_ for _ in ()).throw(RuntimeError("storage unavailable")),
+            raising=False,
+        )
+        delete_runtime_error = client.delete("/api/mds/metadata/custom/invalid")
+        assert delete_runtime_error.status_code == 500
+        assert delete_runtime_error.get_json() == {"error": "storage unavailable"}
+
+        monkeypatch.setattr(
+            general_module,
+            "delete_session_metadata_item",
+            lambda _name: False,
+            raising=False,
+        )
+        delete_not_found = client.delete("/api/mds/metadata/custom/missing.json")
+        assert delete_not_found.status_code == 404
+        assert delete_not_found.get_json() == {
+            "deleted": False,
+            "message": "Metadata entry not found.",
         }
