@@ -152,6 +152,7 @@ _COMPRESSIBLE_MIMETYPES = {
     "text/xml",
 }
 _DEFAULT_COMPRESSION_MIN_SIZE = 512
+_RESPONSE_COMPRESSION_MARKER = "_postquantum_response_compression"
 
 
 def _accepts_gzip() -> bool:
@@ -169,7 +170,6 @@ def _append_vary(existing: Optional[str], value: str) -> str:
     return ", ".join(tokens)
 
 
-@app.after_request
 def maybe_compress_response(response):
     if not _accepts_gzip():
         return response
@@ -207,6 +207,24 @@ def maybe_compress_response(response):
     response.headers.pop("ETag", None)
     response.headers.pop("Content-MD5", None)
     return response
+
+
+setattr(maybe_compress_response, _RESPONSE_COMPRESSION_MARKER, True)
+
+
+def _register_after_request_once(flask_app: Flask, handler) -> None:
+    existing_handlers = flask_app.after_request_funcs.setdefault(None, [])
+    for existing in existing_handlers:
+        if getattr(existing, _RESPONSE_COMPRESSION_MARKER, False):
+            return
+
+    if flask_app._got_first_request:
+        return
+
+    flask_app.after_request(handler)
+
+
+_register_after_request_once(app, maybe_compress_response)
 
 
 def _env_flag(name: str) -> Optional[bool]:
