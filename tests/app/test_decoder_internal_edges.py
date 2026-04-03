@@ -114,6 +114,57 @@ def test_parse_cbor_item_rejects_non_bytes_segment_in_indefinite_byte_string():
         decode_module._parse_cbor_item(payload, 0)
 
 
+def test_parse_cbor_item_rejects_non_text_segment_in_indefinite_text_string():
+    decode_module = pytest.importorskip("server.app.decoder.decode")
+
+    # 0x7f => start indefinite text string; next chunk is byte string (major type 2).
+    payload = b"\x7f\x41a\xff"
+
+    with pytest.raises(
+        decode_module._CborDecodingError,
+        match="Indefinite text string segment is not a text string",
+    ):
+        decode_module._parse_cbor_item(payload, 0)
+
+
+def test_parse_cbor_item_indefinite_map_with_orphan_key_keeps_completed_pairs():
+    decode_module = pytest.importorskip("server.app.decoder.decode")
+
+    # 0xbf => indefinite map: {"a": 1, "b": <missing-value>}
+    payload = b"\xbf\x61a\x01\x61b\xff"
+
+    node, offset = decode_module._parse_cbor_item(payload, 0)
+
+    assert node["majorType"] == 5
+    assert node["type"] == "map"
+    assert node["indefinite"] is True
+    assert node["length"] == 1
+    assert node["summary"] == "map[1]"
+    assert node["entries"][0]["value"]["value"] == 1
+    # The trailing break byte remains unread because the orphan key has no value.
+    assert offset == len(payload) - 1
+
+
+def test_parse_cbor_item_indefinite_array_without_break_keeps_parsed_items():
+    decode_module = pytest.importorskip("server.app.decoder.decode")
+
+    # 0x9f => indefinite array containing a single nested definite array [1, 2],
+    # with no break byte for the outer container.
+    payload = b"\x9f\x82\x01\x02"
+
+    node, offset = decode_module._parse_cbor_item(payload, 0)
+
+    assert offset == len(payload)
+    assert node["majorType"] == 4
+    assert node["type"] == "array"
+    assert node["indefinite"] is True
+    assert node["length"] == 1
+    assert node["summary"] == "array[1]"
+    nested = node["items"][0]
+    assert nested["type"] == "array"
+    assert nested["length"] == 2
+
+
 def test_try_decode_cbor_handles_ctap_prefix_without_payload():
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
