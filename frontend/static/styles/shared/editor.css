@@ -2,7 +2,6 @@
 
 .json-editor {
     background: var(--surface-color);
-    border: 1px solid var(--border);
     border-radius: var(--radius-xl);
     padding: 2rem 1.5rem 1.5rem;
     font-family: var(--font-mono);
@@ -84,7 +83,6 @@
     padding: 2.5rem 1.5rem 1.5rem;
     border-radius: var(--radius-2xl);
     box-shadow: none;
-    border: 1px solid var(--border);
 }
 
 #json-editor-container.expanded textarea { min-height: unset; height: 100%; }
@@ -108,7 +106,6 @@
     border-radius: var(--radius-2xl) !important;
     box-shadow: none;
     overflow: hidden;
-    border: 1px solid var(--border);
 }
 
 .inline-json-editor textarea {
@@ -365,8 +362,8 @@ select.form-control option { padding: 0.5rem 0.85rem; }
 }
 
 .btn.refresh-icon svg {
-    width: 16px;
-    height: 16px;
+    width: 14px;
+    height: 14px;
     stroke: currentColor;
     fill: none;
     stroke-width: 2;
@@ -509,7 +506,7 @@ select.form-control option { padding: 0.5rem 0.85rem; }
     .progress .spinner { width: 15px; height: 15px; border-width: 2px; }
     .btn.refresh-icon,
     .btn.add-icon { min-width: 36px; width: 36px; height: 36px; border-radius: var(--radius-sm); }
-    .btn.refresh-icon svg { width: 16px; height: 16px; }
+    .btn.refresh-icon svg { width: 14px; height: 14px; }
     select.form-control { font-size: 16px; }
 }
 
