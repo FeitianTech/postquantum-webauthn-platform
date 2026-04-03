@@ -303,3 +303,69 @@ def test_codec_api_decodes_attestation_object_contract():
     assert data["type"] == "Attestation object"
     assert data["data"]["attestationObject"]["fmt"] == "none"
     assert data["data"]["authenticatorData"]["counter"] == 9
+
+
+def test_classify_ctap_numeric_mapping_requires_field_two():
+    encode_module = pytest.importorskip("server.app.decoder.encode")
+
+    with pytest.raises(ValueError, match=r"Missing field 0x02"):
+        encode_module._classify_ctap_numeric_mapping({1: "example.com"})
+
+
+def test_classify_ctap_numeric_mapping_rejects_short_auth_data_for_signature_response():
+    encode_module = pytest.importorskip("server.app.decoder.encode")
+
+    with pytest.raises(
+        ValueError,
+        match=r"must contain authenticator data for GetAssertion response",
+    ):
+        encode_module._classify_ctap_numeric_mapping(
+            {
+                1: "credential",
+                2: b"\x00" * 36,
+                3: b"\x01" * 64,
+            }
+        )
+
+
+def test_classify_ctap_numeric_mapping_uses_field_two_length_boundaries_for_string_field_one():
+    encode_module = pytest.importorskip("server.app.decoder.encode")
+
+    get_assertion_request = encode_module._classify_ctap_numeric_mapping(
+        {
+            1: "example.com",
+            2: b"\x00" * 32,
+        }
+    )
+    assert get_assertion_request == "getAssertionRequest"
+
+    make_credential_response = encode_module._classify_ctap_numeric_mapping(
+        {
+            1: "example.com",
+            2: b"\x00" * 37,
+        }
+    )
+    assert make_credential_response == "makeCredentialResponse"
+
+    with pytest.raises(ValueError, match=r"length is not valid"):
+        encode_module._classify_ctap_numeric_mapping(
+            {
+                1: "example.com",
+                2: b"\x00" * 33,
+            }
+        )
+
+
+def test_classify_ctap_numeric_mapping_requires_exact_client_data_hash_length_for_make_credential_request():
+    encode_module = pytest.importorskip("server.app.decoder.encode")
+
+    with pytest.raises(
+        ValueError,
+        match=r"clientDataHash\) must be exactly 32 bytes",
+    ):
+        encode_module._classify_ctap_numeric_mapping(
+            {
+                1: b"\x01" * 31,
+                2: {"id": "example.com", "name": "Example"},
+            }
+        )
