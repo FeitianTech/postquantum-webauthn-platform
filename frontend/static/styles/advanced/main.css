@@ -172,7 +172,9 @@ body.app-loaded > :not(.app-loader) {
     background: transparent;
     padding: 0;
     margin-top: 0;
+    border: none;
     border-top: none;
+    border-radius: 0;
     position: static;
     display: flex;
     flex-direction: column;
@@ -319,6 +321,7 @@ body.app-loaded > :not(.app-loader) {
 .settings-section-sentinel + .json-editor-card {
     padding-top: 2.25rem;
     margin-top: 2.25rem;
+    border-top: none;
 }
 
 .settings-section-sentinel--first + .static-section,
@@ -411,11 +414,11 @@ body.app-loaded > :not(.app-loader) {
     }
 
     .advanced-settings-layout .json-editor-card {
-        padding: 1.25rem;
-        background: var(--surface-color);
-        border-radius: var(--radius-xl);
-        border: 1px solid var(--border);
-        box-shadow: var(--shadow-soft);
+        padding: 1.25rem 0 0;
+        background: transparent;
+        border-radius: 0;
+        border: none;
+        box-shadow: none;
     }
 
     .advanced-settings-layout .json-editor-card .inline-json-editor {

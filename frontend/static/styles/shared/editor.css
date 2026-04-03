@@ -1,8 +1,8 @@
 /* ─── JSON Editor ─────────────────────────────────────────── */
 
 .json-editor {
-    background: var(--surface-color);
-    border-radius: var(--radius-xl);
+    background: transparent;
+    border-radius: 0;
     padding: 2rem 1.5rem 1.5rem;
     font-family: var(--font-mono);
     font-size: 0.875rem;
@@ -13,7 +13,7 @@
     flex-direction: column;
     flex: 1 1 auto;
     box-shadow: none;
-    overflow: hidden;
+    overflow: visible;
 }
 
 .json-editor-help {
@@ -41,6 +41,7 @@
 .json-editor textarea {
     appearance: none;
     -webkit-appearance: none;
+    display: block;
     width: 100%;
     min-height: 520px;
     background: var(--surface-color);
@@ -107,9 +108,10 @@
     min-height: 0;
     aspect-ratio: 3 / 2;
     padding: 0 !important;
-    border-radius: var(--radius-2xl) !important;
+    border-radius: 0 !important;
     box-shadow: none;
-    overflow: hidden;
+    overflow: visible;
+    background: transparent;
 }
 
 .inline-json-editor textarea {
