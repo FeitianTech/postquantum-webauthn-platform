@@ -1,0 +1,229 @@
+import base64
+import hashlib
+
+import pytest
+
+
+def _b64url(data: bytes) -> str:
+    return base64.urlsafe_b64encode(data).decode("ascii").rstrip("=")
+
+
+class _FakeCredentialData:
+    def __init__(self, credential_id: bytes, *, algorithm: int = -7):
+        self.credential_id = credential_id
+        self.public_key = {1: 2, 3: algorithm, -1: 1, -2: b"\x01" * 32, -3: b"\x02" * 32}
+        self.aaguid = bytes.fromhex("00112233445566778899aabbccddeeff")
+
+
+class _FakeAuthData:
+    class FLAG:
+        UP = 0x01
+        UV = 0x04
+        BE = 0x08
+        BS = 0x10
+        AT = 0x40
+        ED = 0x80
+
+    def __init__(self, *, credential_id: bytes, rp_id: str, counter: int = 7, algorithm: int = -7):
+        self.credential_data = _FakeCredentialData(credential_id, algorithm=algorithm)
+        self.rp_id_hash = hashlib.sha256(rp_id.encode("utf-8")).digest()
+        self.flags = self.FLAG.UP | self.FLAG.AT
+        self.counter = counter
+        self.extensions = {}
+
+    def __bytes__(self):
+        return self.rp_id_hash + bytes([self.flags]) + int(self.counter).to_bytes(4, "big")
+
+
+class _SimpleFakeServer:
+    def __init__(self, auth_data):
+        self._auth_data = auth_data
+
+    def register_complete(self, *_args, **_kwargs):
+        return self._auth_data
+
+
+def test_simple_register_complete_returns_500_when_savekey_fails(monkeypatch):
+    config_module = pytest.importorskip("server.app.config")
+    simple_module = pytest.importorskip("server.app.routes.simple")
+    pytest.importorskip("server.app.app")
+
+    credential_id = b"simple-savekey-fail"
+    rp_id = "example.com"
+
+    auth_data = _FakeAuthData(credential_id=credential_id, rp_id=rp_id)
+
+    monkeypatch.setattr(simple_module, "determine_rp_id", lambda: rp_id, raising=False)
+    monkeypatch.setattr(
+        simple_module,
+        "create_fido_server",
+        lambda **_kwargs: _SimpleFakeServer(auth_data),
+        raising=False,
+    )
+    monkeypatch.setattr(
+        simple_module,
+        "extract_attestation_details",
+        lambda _response: ("none", {}, None, None, {}, None, []),
+        raising=False,
+    )
+    monkeypatch.setattr(
+        simple_module,
+        "perform_attestation_checks",
+        lambda *_args, **_kwargs: {
+            "signature_valid": True,
+            "root_valid": True,
+            "rp_id_hash_valid": True,
+            "aaguid_match": True,
+            "warnings": [],
+        },
+        raising=False,
+    )
+    monkeypatch.setattr(simple_module, "extract_min_pin_length", lambda _ext: None, raising=False)
+    monkeypatch.setattr(simple_module, "add_public_key_material", lambda *_args, **_kwargs: None, raising=False)
+    monkeypatch.setattr(simple_module, "ensure_metadata_session_id", lambda: "session-id", raising=False)
+    monkeypatch.setattr(simple_module, "readkey", lambda *_args, **_kwargs: [], raising=False)
+    monkeypatch.setattr(
+        simple_module,
+        "savekey",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("storage unavailable")),
+        raising=False,
+    )
+    monkeypatch.setattr(simple_module, "record_registration_event", lambda *_args, **_kwargs: None, raising=False)
+
+    with config_module.app.test_client() as client:
+        with client.session_transaction() as session_state:
+            session_state["state"] = {"challenge": "state"}
+            session_state["register_rp_id"] = rp_id
+            session_state["simple_register_public_key"] = {"challenge": "AQID"}
+
+        response = client.post(
+            "/api/register/complete?email=user@example.com",
+            json={
+                "rawId": _b64url(credential_id),
+                "response": {
+                    "attestationObject": _b64url(b"attestation"),
+                    "clientDataJSON": _b64url(b"client-data"),
+                },
+            },
+        )
+
+    assert response.status_code == 500
+    assert response.get_json() == {"error": "Unable to persist registered credential."}
+
+
+def _install_advanced_register_common_monkeypatches(monkeypatch, advanced_module, auth_data, rp_id):
+    class _AdvancedFakeServer:
+        def register_complete(self, *_args, **_kwargs):
+            return auth_data
+
+    monkeypatch.setattr(advanced_module, "determine_rp_id", lambda value=None: value or rp_id, raising=False)
+    monkeypatch.setattr(
+        advanced_module,
+        "create_fido_server",
+        lambda **_kwargs: _AdvancedFakeServer(),
+        raising=False,
+    )
+    monkeypatch.setattr(advanced_module, "ensure_metadata_session_id", lambda: "session-id", raising=False)
+    monkeypatch.setattr(advanced_module, "readkey", lambda *_args, **_kwargs: [], raising=False)
+    monkeypatch.setattr(
+        advanced_module,
+        "extract_attestation_details",
+        lambda _response: ("none", {}, None, None, {}, None, []),
+        raising=False,
+    )
+    monkeypatch.setattr(
+        advanced_module,
+        "perform_attestation_checks",
+        lambda *_args, **_kwargs: {
+            "signature_valid": True,
+            "root_valid": True,
+            "rp_id_hash_valid": True,
+            "aaguid_match": True,
+            "warnings": [],
+        },
+        raising=False,
+    )
+    monkeypatch.setattr(advanced_module, "add_public_key_material", lambda *_args, **_kwargs: None, raising=False)
+    monkeypatch.setattr(advanced_module, "augment_aaguid_fields", lambda *_args, **_kwargs: None, raising=False)
+    monkeypatch.setattr(advanced_module, "record_registration_event", lambda *_args, **_kwargs: None, raising=False)
+
+
+def test_advanced_register_complete_returns_500_when_artifact_store_returns_false(monkeypatch):
+    config_module = pytest.importorskip("server.app.config")
+    advanced_module = pytest.importorskip("server.app.routes.advanced")
+    pytest.importorskip("server.app.app")
+
+    credential_id = b"advanced-store-false"
+    rp_id = "example.com"
+    auth_data = _FakeAuthData(credential_id=credential_id, rp_id=rp_id)
+
+    _install_advanced_register_common_monkeypatches(monkeypatch, advanced_module, auth_data, rp_id)
+    monkeypatch.setattr(advanced_module, "store_credential_artifact", lambda *_args, **_kwargs: False, raising=False)
+
+    payload = {
+        "publicKey": {
+            "challenge": "AQID",
+            "rp": {"id": rp_id, "name": "Example"},
+            "user": {"name": "user@example.com", "displayName": "User"},
+        },
+        "__credential_response": {
+            "rawId": _b64url(credential_id),
+            "response": {
+                "attestationObject": _b64url(b"attestation"),
+                "clientDataJSON": _b64url(b"client-data"),
+            },
+        },
+    }
+
+    with config_module.app.test_client() as client:
+        with client.session_transaction() as session_state:
+            session_state["advanced_state"] = {"challenge": "state"}
+            session_state["advanced_rp"] = {"id": rp_id, "name": "Example"}
+
+        response = client.post("/api/advanced/register/complete", json=payload)
+
+    assert response.status_code == 500
+    assert response.get_json() == {"error": "Unable to persist credential artifact."}
+
+
+def test_advanced_register_complete_returns_500_when_artifact_store_raises(monkeypatch):
+    config_module = pytest.importorskip("server.app.config")
+    advanced_module = pytest.importorskip("server.app.routes.advanced")
+    pytest.importorskip("server.app.app")
+
+    credential_id = b"advanced-store-raises"
+    rp_id = "example.com"
+    auth_data = _FakeAuthData(credential_id=credential_id, rp_id=rp_id)
+
+    _install_advanced_register_common_monkeypatches(monkeypatch, advanced_module, auth_data, rp_id)
+    monkeypatch.setattr(
+        advanced_module,
+        "store_credential_artifact",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("artifact store down")),
+        raising=False,
+    )
+
+    payload = {
+        "publicKey": {
+            "challenge": "AQID",
+            "rp": {"id": rp_id, "name": "Example"},
+            "user": {"name": "user@example.com", "displayName": "User"},
+        },
+        "__credential_response": {
+            "rawId": _b64url(credential_id),
+            "response": {
+                "attestationObject": _b64url(b"attestation"),
+                "clientDataJSON": _b64url(b"client-data"),
+            },
+        },
+    }
+
+    with config_module.app.test_client() as client:
+        with client.session_transaction() as session_state:
+            session_state["advanced_state"] = {"challenge": "state"}
+            session_state["advanced_rp"] = {"id": rp_id, "name": "Example"}
+
+        response = client.post("/api/advanced/register/complete", json=payload)
+
+    assert response.status_code == 500
+    assert response.get_json() == {"error": "Unable to persist credential artifact."}

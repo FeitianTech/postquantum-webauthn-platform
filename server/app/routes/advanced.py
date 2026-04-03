@@ -1673,11 +1673,25 @@ def advanced_register_complete():
             "schemaVersion": 1,
             "storedCredential": artifact_record,
         }
-        store_credential_artifact(
-            storage_id,
-            artifact_payload,
-            session_id=metadata_session_id,
-        )
+        try:
+            artifact_stored = store_credential_artifact(
+                storage_id,
+                artifact_payload,
+                session_id=metadata_session_id,
+            )
+        except Exception:
+            app.logger.exception(
+                "Failed to store advanced credential artifact for user %s",
+                username,
+            )
+            return jsonify({"error": "Unable to persist credential artifact."}), 500
+
+        if not artifact_stored:
+            app.logger.error(
+                "Advanced credential artifact was not stored for user %s",
+                username,
+            )
+            return jsonify({"error": "Unable to persist credential artifact."}), 500
 
         summary_credential = _summarize_stored_credential(artifact_record, storage_id)
 

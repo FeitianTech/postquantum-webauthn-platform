@@ -743,7 +743,11 @@ def register_complete():
         existing_credentials = [credential_entry]
     
     # Save to persistent storage
-    savekey(uname, existing_credentials, session_id=metadata_session_id)
+    try:
+        savekey(uname, existing_credentials, session_id=metadata_session_id)
+    except Exception:
+        app.logger.exception("Failed to persist registered credential for %s", uname)
+        return jsonify({"error": "Unable to persist registered credential."}), 500
 
     session_simple_credentials = session.get('simple_credentials')
     if isinstance(session_simple_credentials, list):

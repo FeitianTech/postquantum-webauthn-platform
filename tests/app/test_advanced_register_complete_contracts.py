@@ -240,6 +240,7 @@ def test_advanced_register_complete_success_contract_propagates_warnings_and_rec
                 "session_id": session_id,
             }
         )
+        return True
 
     monkeypatch.setattr(advanced_module, "create_fido_server", lambda **_kwargs: _FakeServer(), raising=False)
     monkeypatch.setattr(advanced_module, "determine_rp_id", lambda value=None: value or rp_id, raising=False)
