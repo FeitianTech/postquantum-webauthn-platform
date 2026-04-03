@@ -11,9 +11,12 @@ from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 from pathlib import Path
 
-from fido2.mds3 import parse_blob
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from fido2.mds3 import parse_blob
+from server.app.mds_snapshot import build_explorer_snapshot
 
 FRONTEND_STATIC_DIR = REPO_ROOT / "frontend" / "static"
 
@@ -22,6 +25,8 @@ MDS_METADATA_FILENAME = "blob.jwt"
 MDS_METADATA_PATH = FRONTEND_STATIC_DIR / MDS_METADATA_FILENAME
 MDS_METADATA_VERIFIED_PATH = FRONTEND_STATIC_DIR / "fido-mds3.verified.json"
 MDS_METADATA_CACHE_PATH = Path(str(MDS_METADATA_VERIFIED_PATH) + ".meta.json")
+MDS_EXPLORER_PATH = FRONTEND_STATIC_DIR / "fido-mds3.explorer.json"
+MDS_EXPLORER_META_PATH = Path(str(MDS_EXPLORER_PATH) + ".meta.json")
 
 FIDO_METADATA_TRUST_ROOT_B64 = (
     "MIIDXzCCAkegAwIBAgILBAAAAAABIVhTCKIwDQYJKoZIhvcNAQELBQAwTDEgMB4G"
@@ -73,12 +78,21 @@ def store_metadata_cache_entry(
     last_modified_header: str | None,
     last_modified_iso: str | None,
     etag: str | None,
+    fetched_at: str | None = None,
+    generated_at: str | None = None,
+    snapshot_no: int | None = None,
+    next_update: str | None = None,
+    entry_count: int | None = None,
 ) -> None:
     payload = {
         "last_modified": last_modified_header,
         "last_modified_iso": last_modified_iso,
         "etag": etag,
-        "fetched_at": datetime.now(timezone.utc).isoformat(),
+        "fetched_at": fetched_at or datetime.now(timezone.utc).isoformat(),
+        "generated_at": generated_at or fetched_at or datetime.now(timezone.utc).isoformat(),
+        "no": snapshot_no,
+        "nextUpdate": next_update,
+        "entryCount": entry_count,
     }
     try:
         MDS_METADATA_CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -109,30 +123,98 @@ def _write_blob(blob: bytes) -> None:
     path.write_bytes(blob)
 
 
-def _write_verified_snapshot(blob: bytes) -> None:
+def _serialise_json(value: object) -> str:
+    return json.dumps(value, indent=2, sort_keys=True) + "\n"
+
+
+def _write_if_changed(path: Path, payload: str | bytes) -> bool:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if isinstance(payload, str):
+        new_bytes = payload.encode("utf-8")
+    else:
+        new_bytes = payload
+
+    if path.exists() and path.read_bytes() == new_bytes:
+        return False
+
+    path.write_bytes(new_bytes)
+    return True
+
+
+def _load_existing_cache() -> dict[str, object]:
+    if not MDS_METADATA_CACHE_PATH.exists():
+        return {}
+    try:
+        data = json.loads(MDS_METADATA_CACHE_PATH.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def _build_cache_state(
+    *,
+    last_modified: str | None,
+    etag: str | None,
+    existing_cache: dict[str, object],
+    blob_unchanged: bool,
+    verified_snapshot: dict[str, object],
+) -> dict[str, object]:
+    now_iso = datetime.now(timezone.utc).isoformat()
+    if blob_unchanged:
+        fetched_at = (
+            existing_cache.get("fetched_at")
+            if isinstance(existing_cache.get("fetched_at"), str)
+            else None
+        ) or now_iso
+        generated_at = (
+            existing_cache.get("generated_at")
+            if isinstance(existing_cache.get("generated_at"), str)
+            else None
+        ) or fetched_at
+        resolved_last_modified = (
+            existing_cache.get("last_modified")
+            if isinstance(existing_cache.get("last_modified"), str)
+            else last_modified
+        )
+        resolved_last_modified_iso = (
+            existing_cache.get("last_modified_iso")
+            if isinstance(existing_cache.get("last_modified_iso"), str)
+            else format_last_modified_header(last_modified)
+        )
+        resolved_etag = (
+            existing_cache.get("etag")
+            if isinstance(existing_cache.get("etag"), str)
+            else etag
+        )
+    else:
+        fetched_at = now_iso
+        generated_at = now_iso
+        resolved_last_modified = last_modified
+        resolved_last_modified_iso = format_last_modified_header(last_modified)
+        resolved_etag = etag
+
+    entries = verified_snapshot.get("entries")
+    entry_count = len(entries) if isinstance(entries, list) else 0
+
+    return {
+        "last_modified": resolved_last_modified,
+        "last_modified_iso": resolved_last_modified_iso,
+        "etag": resolved_etag,
+        "fetched_at": fetched_at,
+        "generated_at": generated_at,
+        "no": verified_snapshot.get("no"),
+        "nextUpdate": verified_snapshot.get("nextUpdate"),
+        "entryCount": entry_count,
+    }
+
+
+def _build_verified_snapshot(blob: bytes) -> dict[str, object]:
     payload = parse_blob(blob, FIDO_METADATA_TRUST_ROOT_CERT)
-    snapshot = dict(payload)
-    target = Path(MDS_METADATA_VERIFIED_PATH)
-    target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(json.dumps(snapshot, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return dict(payload)
 
 
-def _write_cache_state(last_modified: str | None, etag: str | None) -> None:
-    store_metadata_cache_entry(
-        last_modified_header=last_modified,
-        last_modified_iso=format_last_modified_header(last_modified),
-        etag=etag,
-    )
-
-    cache_path = Path(MDS_METADATA_CACHE_PATH)
-    if cache_path.exists():
-        try:
-            data = json.loads(cache_path.read_text(encoding="utf-8"))
-        except json.JSONDecodeError:  # pragma: no cover - unexpected format
-            data = {}
-        if "fetched_at" not in data or not data["fetched_at"]:
-            data["fetched_at"] = datetime.now(timezone.utc).isoformat()
-            cache_path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+def _write_cache_state(cache_state: dict[str, object]) -> bool:
+    return _write_if_changed(MDS_METADATA_CACHE_PATH, _serialise_json(cache_state))
 
 
 def main() -> int:
@@ -143,15 +225,31 @@ def main() -> int:
         return 1
 
     current_path = Path(MDS_METADATA_PATH)
-    if current_path.exists() and current_path.read_bytes() == new_blob:
+    blob_unchanged = current_path.exists() and current_path.read_bytes() == new_blob
+
+    verified_snapshot = _build_verified_snapshot(new_blob)
+    existing_cache = _load_existing_cache()
+    cache_state = _build_cache_state(
+        last_modified=last_modified,
+        etag=etag,
+        existing_cache=existing_cache,
+        blob_unchanged=blob_unchanged,
+        verified_snapshot=verified_snapshot,
+    )
+    explorer_snapshot = build_explorer_snapshot(verified_snapshot, cache_state)
+    explorer_meta = explorer_snapshot.get("meta", {})
+
+    changed = False
+    changed |= _write_if_changed(MDS_METADATA_PATH, new_blob)
+    changed |= _write_if_changed(MDS_METADATA_VERIFIED_PATH, _serialise_json(verified_snapshot))
+    changed |= _write_cache_state(cache_state)
+    changed |= _write_if_changed(MDS_EXPLORER_PATH, _serialise_json(explorer_snapshot))
+    changed |= _write_if_changed(MDS_EXPLORER_META_PATH, _serialise_json(explorer_meta))
+
+    if changed:
+        print("Packaged metadata snapshot refreshed.")
+    else:
         print("Packaged metadata is already up to date; no changes made.")
-        return 0
-
-    _write_blob(new_blob)
-    _write_verified_snapshot(new_blob)
-    _write_cache_state(last_modified, etag)
-
-    print("Packaged metadata snapshot refreshed.")
     return 0
 
 

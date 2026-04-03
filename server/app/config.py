@@ -325,6 +325,8 @@ MDS_METADATA_VERIFIED_PATH = os.path.join(
     str(_FRONTEND_STATIC_ROOT), "fido-mds3.verified.json"
 )
 MDS_METADATA_CACHE_PATH = MDS_METADATA_VERIFIED_PATH + ".meta.json"
+MDS_EXPLORER_PATH = os.path.join(str(_FRONTEND_STATIC_ROOT), "fido-mds3.explorer.json")
+MDS_EXPLORER_META_PATH = MDS_EXPLORER_PATH + ".meta.json"
 SESSION_METADATA_DIR = os.path.join(str(_FRONTEND_STATIC_ROOT), "session-metadata")
 
 FIDO_METADATA_TRUST_ROOT_B64 = (
@@ -439,6 +441,8 @@ __all__ = [
     "rp",
     "server",
     "MDS_METADATA_CACHE_PATH",
+    "MDS_EXPLORER_META_PATH",
+    "MDS_EXPLORER_PATH",
     "MDS_METADATA_FILENAME",
     "MDS_METADATA_PATH",
     "MDS_METADATA_VERIFIED_PATH",
