@@ -235,3 +235,39 @@ def test_delkey_attempts_legacy_cleanup(monkeypatch):
 
     assert deleted[0][0] == new_blob
     assert (legacy_blob, True) in deleted
+
+
+def test_readkey_returns_empty_list_for_corrupted_payload(monkeypatch):
+    monkeypatch.setattr(storage, "download_bytes", lambda _blob_name: b"not-a-valid-pickle")
+
+    result = storage.readkey("broken@example.com", session_id="session-corrupt")
+
+    assert result == []
+
+
+def test_iter_credentials_skips_corrupted_payload(monkeypatch):
+    session_id = "session-corrupt-iter"
+    username = "broken@example.com"
+    blob_name = storage._credential_blob(username, session_id)
+    primary_prefix = storage._build_search_prefix(storage._credential_prefix(session_id))
+
+    def fake_list_blob_names(prefix: str):
+        if prefix == primary_prefix:
+            yield blob_name
+
+    monkeypatch.setattr(storage, "list_blob_names", fake_list_blob_names)
+    monkeypatch.setattr(storage, "download_bytes", lambda _blob_name: b"not-a-valid-pickle")
+
+    assert list(storage.iter_credentials(session_id=session_id)) == []
+
+
+def test_resolve_session_id_falls_back_to_metadata_session(monkeypatch):
+    metadata_module = importlib.import_module("server.app.metadata")
+    monkeypatch.setattr(
+        metadata_module,
+        "ensure_metadata_session_id",
+        lambda: "fallback-session-id",
+        raising=False,
+    )
+
+    assert storage._resolve_session_id("   ") == "fallback-session-id"
