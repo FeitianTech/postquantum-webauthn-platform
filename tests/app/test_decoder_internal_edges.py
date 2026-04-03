@@ -190,3 +190,100 @@ def test_try_decode_cbor_treats_ctap_padding_bytes_as_additional_objects():
     assert ctap["kind"] == "command"
     malformed = result.get("malformed", [])
     assert any("additional CBOR object" in message for message in malformed)
+
+
+def test_structure_to_value_preserves_integer_map_keys():
+    decode_module = pytest.importorskip("server.app.decoder.decode")
+
+    structure = {
+        "majorType": 5,
+        "type": "map",
+        "entries": [
+            {
+                "key": {"majorType": 0, "type": "unsigned", "value": 1},
+                "value": {"majorType": 3, "type": "text string", "value": "first"},
+            },
+            {
+                "key": {"majorType": 0, "type": "unsigned", "value": 2},
+                "value": {"majorType": 3, "type": "text string", "value": "second"},
+            },
+        ],
+    }
+
+    value = decode_module._structure_to_value(structure)
+
+    assert value == {1: "first", 2: "second"}
+
+
+def test_structure_to_value_falls_back_to_string_for_unhashable_keys():
+    decode_module = pytest.importorskip("server.app.decoder.decode")
+
+    structure = {
+        "majorType": 5,
+        "type": "map",
+        "entries": [
+            {
+                "key": {
+                    "majorType": 4,
+                    "type": "array",
+                    "items": [
+                        {"majorType": 0, "type": "unsigned", "value": 1},
+                        {"majorType": 0, "type": "unsigned", "value": 2},
+                    ],
+                },
+                "value": {"majorType": 3, "type": "text string", "value": "value"},
+            }
+        ],
+    }
+
+    value = decode_module._structure_to_value(structure)
+
+    assert value == {"[1, 2]": "value"}
+
+
+def test_lenient_decode_from_indefinite_array_without_break_keeps_items():
+    decode_module = pytest.importorskip("server.app.decoder.decode")
+
+    payload = b"\x9f\x01\x02"
+
+    value, offset = decode_module._lenient_decode_from(payload)
+
+    assert value == [1, 2]
+    assert offset == len(payload)
+
+
+def test_lenient_decode_from_indefinite_map_with_orphan_key_keeps_completed_pairs():
+    decode_module = pytest.importorskip("server.app.decoder.decode")
+
+    payload = b"\xbf\x61k\x01\x61m"
+
+    value, offset = decode_module._lenient_decode_from(payload)
+
+    assert value == {"k": 1}
+    assert offset == len(payload)
+
+
+def test_decode_cbor_sequence_uses_lenient_fallback_for_reserved_additional_info_payload():
+    decode_module = pytest.importorskip("server.app.decoder.decode")
+
+    structures, values, consumed_total, remaining = decode_module._decode_cbor_sequence(b"\x1c")
+
+    assert consumed_total == 1
+    assert remaining == b""
+    assert values == [28]
+    assert len(structures) == 1
+    assert structures[0]["lenient"] is True
+    assert structures[0]["summary"] == "Decoded value (lenient)"
+
+
+def test_expand_cbor_value_stringifies_mapping_keys_and_summarizes_binary_values():
+    decode_module = pytest.importorskip("server.app.decoder.decode")
+
+    expanded = decode_module._expand_cbor_value(
+        {1: b"\xaa\xbb", "nested": [b"\xcc", {2: b"\xdd"}]}
+    )
+
+    assert sorted(expanded.keys()) == ["1", "nested"]
+    assert expanded["1"]["hex"] == "aabb"
+    assert expanded["nested"][0]["hex"] == "cc"
+    assert expanded["nested"][1]["2"]["hex"] == "dd"
