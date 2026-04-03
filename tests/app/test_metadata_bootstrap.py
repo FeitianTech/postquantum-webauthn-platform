@@ -304,6 +304,10 @@ def test_index_page_emits_accessible_global_loader_markup(monkeypatch):
     assert 'class="app-loader"' in body
     assert 'role="status"' in body
     assert 'aria-live="polite"' in body
+    assert '>Loading<' in body
+    assert 'id="app-loader-status"' not in body
+    assert 'id="app-loader-progress"' not in body
+    assert 'id="app-loader-percentage"' not in body
     assert 'templates/advanced/mds-content.html' not in body
     assert 'fido-mds3.explorer.bootstrap.js' in body
     assert '__INITIAL_CREDENTIAL_RECORDS__' in body
