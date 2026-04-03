@@ -41,8 +41,147 @@
     <script>
         (function () {
             window.__INITIAL_MDS_INFO__ = {{ initial_mds_info | tojson }};
+            const SHARED_STORAGE_KEY = 'postquantum-webauthn.credentials';
+            const LEGACY_SIMPLE_STORAGE_KEY = 'postquantum-webauthn.simpleCredentials';
+            const LEGACY_ADVANCED_STORAGE_KEY = 'postquantum-webauthn.advancedCredentials';
+
+            function safeParse(json) {
+                if (typeof json !== 'string') {
+                    return [];
+                }
+                try {
+                    const parsed = JSON.parse(json);
+                    if (Array.isArray(parsed)) {
+                        return parsed.filter(item => item && typeof item === 'object');
+                    }
+                } catch (error) {
+                    return [];
+                }
+                return [];
+            }
+
+            function readStoredCredentials(storageKey) {
+                if (typeof window === 'undefined' || !window.localStorage) {
+                    return [];
+                }
+                try {
+                    return safeParse(window.localStorage.getItem(storageKey));
+                } catch (error) {
+                    return [];
+                }
+            }
+
+            function isNonEmptyString(value) {
+                return typeof value === 'string' && value.trim() !== '';
+            }
+
+            function normaliseCredentialId(record) {
+                if (!record || typeof record !== 'object') {
+                    return '';
+                }
+                const candidates = [
+                    record.credentialIdBase64Url,
+                    record.credentialId,
+                    record.id,
+                ];
+                for (const candidate of candidates) {
+                    if (typeof candidate === 'string' && candidate.trim()) {
+                        return candidate.trim();
+                    }
+                }
+                return '';
+            }
+
+            function normaliseAdvancedCredentialId(record) {
+                if (!record || typeof record !== 'object') {
+                    return '';
+                }
+                const candidates = [
+                    record.credentialIdBase64Url,
+                    record.credentialIdBase64URL,
+                    record.credentialIdBase64,
+                    record.credentialId,
+                    record.id,
+                ];
+                for (const candidate of candidates) {
+                    if (typeof candidate === 'string' && candidate.trim()) {
+                        return candidate.trim();
+                    }
+                }
+                return '';
+            }
+
+            function ensureRecordType(record, fallbackType) {
+                if (!record || typeof record !== 'object') {
+                    return null;
+                }
+                const clone = { ...record };
+                clone.type = clone.type === 'advanced'
+                    ? 'advanced'
+                    : (clone.type === 'simple' ? 'simple' : fallbackType);
+                return clone;
+            }
+
+            function getRecordIdentifier(record) {
+                if (!record || typeof record !== 'object') {
+                    return '';
+                }
+                if (isNonEmptyString(record.storageId)) {
+                    return `storage:${record.storageId.trim()}`;
+                }
+                const advancedId = normaliseAdvancedCredentialId(record);
+                if (advancedId) {
+                    return `id:${advancedId}`;
+                }
+                const simpleId = normaliseCredentialId(record);
+                if (simpleId) {
+                    return `id:${simpleId}`;
+                }
+                return '';
+            }
+
+            const combined = [];
+            const seen = new Set();
+
+            function addRecords(records, fallbackType) {
+                if (!Array.isArray(records) || !records.length) {
+                    return;
+                }
+                records.forEach(record => {
+                    const clone = ensureRecordType(record, fallbackType);
+                    if (!clone) {
+                        return;
+                    }
+                    const identifier = getRecordIdentifier(clone);
+                    if (!identifier || seen.has(identifier)) {
+                        return;
+                    }
+                    seen.add(identifier);
+                    combined.push(clone);
+                });
+            }
+
+            addRecords(readStoredCredentials(SHARED_STORAGE_KEY), 'simple');
+
+            const legacyAdvanced = readStoredCredentials(LEGACY_ADVANCED_STORAGE_KEY);
+            const legacySimple = readStoredCredentials(LEGACY_SIMPLE_STORAGE_KEY);
+
+            if (legacyAdvanced.length || legacySimple.length) {
+                addRecords(legacyAdvanced, 'advanced');
+                addRecords(legacySimple, 'simple');
+                try {
+                    window.localStorage.setItem(SHARED_STORAGE_KEY, JSON.stringify(combined));
+                    window.localStorage.removeItem(LEGACY_SIMPLE_STORAGE_KEY);
+                    window.localStorage.removeItem(LEGACY_ADVANCED_STORAGE_KEY);
+                } catch (error) {
+                    // Ignore storage migration failures during boot.
+                }
+            }
+
+            window.__INITIAL_CREDENTIAL_RECORDS__ = combined;
         })();
     </script>
+    <script src="{{ url_for('static', filename='fido-mds3.explorer.bootstrap.js') }}"></script>
     <script type="module" src="{{ url_for('static', filename='scripts/advanced/mds.js') }}"></script>
     <script type="module" src="{{ url_for('static', filename='scripts/main.js') }}"></script>
 </body>

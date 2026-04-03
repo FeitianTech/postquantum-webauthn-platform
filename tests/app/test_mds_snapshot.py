@@ -2,6 +2,7 @@ import copy
 
 from server.app.mds_snapshot import (
     build_entry_id,
+    build_bootstrap_snapshot,
     build_explorer_entry,
     build_explorer_snapshot,
     normalise_aaguid_key,
@@ -35,7 +36,8 @@ def _sample_payload():
                     "attachmentHint": ["wired"],
                     "keyProtection": ["hardware"],
                     "authenticationAlgorithms": ["secp256r1_ecdsa_sha256_raw"],
-                    "attestationRootCertificates": [],
+                    "attestationRootCertificates": ["CERTIFICATE"],
+                    "attestationCertificateKeyIdentifiers": ["KEY-ID"],
                 },
             }
         ],
@@ -83,6 +85,23 @@ def test_build_explorer_entry_includes_detail_fields_when_requested():
     assert entry["source"] == "session"
     assert entry["sourceInfo"] == {"storedFilename": "custom.json"}
     assert entry["trustAnchorStatus"] is False
+    assert entry["isLightweightEntry"] is False
+
+
+def test_build_bootstrap_snapshot_keeps_detail_without_raw_entry():
+    payload = _sample_payload()
+    cache_info = {"generated_at": "2026-04-01T00:00:00+00:00"}
+
+    snapshot = build_bootstrap_snapshot(payload, cache_info)
+    entry = snapshot["entries"][0]
+
+    assert entry["metadataStatement"]["description"] == "Demo Authenticator"
+    assert entry["rawEntry"] is None
+    assert entry["statusReports"][0]["status"] == "FIDO_CERTIFIED_L1"
+    assert entry["attestationCertificates"] == ["CERTIFICATE"]
+    assert entry["attestationKeyIdentifiers"] == ["KEY-ID"]
+    assert "attestationRootCertificates" not in entry["metadataStatement"]
+    assert "attestationCertificateKeyIdentifiers" not in entry["metadataStatement"]
     assert entry["isLightweightEntry"] is False
 
 

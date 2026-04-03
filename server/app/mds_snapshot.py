@@ -13,6 +13,7 @@ from cryptography.x509.oid import NameOID
 
 __all__ = [
     "build_entry_id",
+    "build_bootstrap_snapshot",
     "build_explorer_entry",
     "build_explorer_snapshot",
     "build_snapshot_meta",
@@ -450,6 +451,21 @@ def _canonical_json(value: Any) -> str:
     return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
 
 
+def _compact_metadata_statement(metadata_mapping: Mapping[str, Any]) -> Dict[str, Any]:
+    compact = dict(metadata_mapping)
+    for key in (
+        "attestationRootCertificates",
+        "attestation_root_certificates",
+        "attestationCertificateKeyIdentifiers",
+        "attestation_certificate_key_identifiers",
+        "icon",
+        "iconType",
+        "icon_type",
+    ):
+        compact.pop(key, None)
+    return compact
+
+
 def build_entry_id(entry_payload: Mapping[str, Any]) -> str:
     metadata = _mapping_value(entry_payload, "metadataStatement", "metadata_statement")
     metadata_mapping = metadata if isinstance(metadata, Mapping) else {}
@@ -506,6 +522,8 @@ def build_explorer_entry(
     trust_anchor_status: Optional[bool],
     snapshot_meta: Optional[Mapping[str, Any]] = None,
     include_detail: bool = False,
+    include_raw_entry: bool = True,
+    compact_detail: bool = False,
     source_info: Optional[Mapping[str, Any]] = None,
 ) -> Dict[str, Any]:
     metadata = _mapping_value(entry_payload, "metadataStatement", "metadata_statement")
@@ -599,10 +617,15 @@ def build_explorer_entry(
     }
 
     if include_detail:
+        detail_metadata = (
+            _compact_metadata_statement(metadata_mapping)
+            if compact_detail
+            else dict(metadata_mapping)
+        )
         entry.update(
             {
-                "metadataStatement": dict(metadata_mapping),
-                "rawEntry": dict(entry_payload),
+                "metadataStatement": detail_metadata,
+                "rawEntry": dict(entry_payload) if include_raw_entry else None,
                 "statusReports": [dict(report) for report in status_reports],
                 "attestationCertificates": [str(value) for value in attestation_certificates if value],
                 "attestationKeyIdentifiers": attestation_key_identifiers,
@@ -630,6 +653,9 @@ def build_explorer_snapshot(
     *,
     source: str = "packaged",
     trust_anchor_status: Optional[bool] = True,
+    include_detail: bool = False,
+    include_raw_entry: bool = True,
+    compact_detail: bool = False,
 ) -> Dict[str, Any]:
     snapshot_meta = build_snapshot_meta(payload, cache_info, source=source)
     entries = [
@@ -639,7 +665,9 @@ def build_explorer_snapshot(
             source=source,
             trust_anchor_status=trust_anchor_status,
             snapshot_meta=snapshot_meta,
-            include_detail=False,
+            include_detail=include_detail,
+            include_raw_entry=include_raw_entry,
+            compact_detail=compact_detail,
         )
         for index, entry_payload in enumerate(_extract_list(_mapping_value(payload, "entries")))
         if isinstance(entry_payload, Mapping)
@@ -650,3 +678,21 @@ def build_explorer_snapshot(
         "meta": snapshot_meta,
         "entries": entries,
     }
+
+
+def build_bootstrap_snapshot(
+    payload: Mapping[str, Any],
+    cache_info: Optional[Mapping[str, Any]] = None,
+    *,
+    source: str = "packaged",
+    trust_anchor_status: Optional[bool] = True,
+) -> Dict[str, Any]:
+    return build_explorer_snapshot(
+        payload,
+        cache_info,
+        source=source,
+        trust_anchor_status=trust_anchor_status,
+        include_detail=True,
+        include_raw_entry=False,
+        compact_detail=True,
+    )

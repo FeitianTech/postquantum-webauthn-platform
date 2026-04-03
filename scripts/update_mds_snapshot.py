@@ -16,7 +16,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from fido2.mds3 import parse_blob
-from server.app.mds_snapshot import build_explorer_snapshot
+from server.app.mds_snapshot import build_bootstrap_snapshot, build_explorer_snapshot
 
 FRONTEND_STATIC_DIR = REPO_ROOT / "frontend" / "static"
 
@@ -27,6 +27,8 @@ MDS_METADATA_VERIFIED_PATH = FRONTEND_STATIC_DIR / "fido-mds3.verified.json"
 MDS_METADATA_CACHE_PATH = Path(str(MDS_METADATA_VERIFIED_PATH) + ".meta.json")
 MDS_EXPLORER_PATH = FRONTEND_STATIC_DIR / "fido-mds3.explorer.json"
 MDS_EXPLORER_META_PATH = Path(str(MDS_EXPLORER_PATH) + ".meta.json")
+MDS_BOOTSTRAP_JS_PATH = FRONTEND_STATIC_DIR / "fido-mds3.explorer.bootstrap.js"
+MDS_BOOTSTRAP_META_PATH = FRONTEND_STATIC_DIR / "fido-mds3.explorer.bootstrap.meta.json"
 
 FIDO_METADATA_TRUST_ROOT_B64 = (
     "MIIDXzCCAkegAwIBAgILBAAAAAABIVhTCKIwDQYJKoZIhvcNAQELBQAwTDEgMB4G"
@@ -125,6 +127,15 @@ def _write_blob(blob: bytes) -> None:
 
 def _serialise_json(value: object) -> str:
     return json.dumps(value, indent=2, sort_keys=True) + "\n"
+
+
+def _serialise_bootstrap_script(snapshot: dict[str, object]) -> str:
+    payload = json.dumps(snapshot, separators=(",", ":"), ensure_ascii=False, sort_keys=True)
+    return (
+        "(function () {\n"
+        f"  window.__INITIAL_MDS_SNAPSHOT__ = {payload};\n"
+        "})();\n"
+    )
 
 
 def _write_if_changed(path: Path, payload: str | bytes) -> bool:
@@ -238,6 +249,8 @@ def main() -> int:
     )
     explorer_snapshot = build_explorer_snapshot(verified_snapshot, cache_state)
     explorer_meta = explorer_snapshot.get("meta", {})
+    bootstrap_snapshot = build_bootstrap_snapshot(verified_snapshot, cache_state)
+    bootstrap_meta = bootstrap_snapshot.get("meta", {})
 
     changed = False
     changed |= _write_if_changed(MDS_METADATA_PATH, new_blob)
@@ -245,6 +258,8 @@ def main() -> int:
     changed |= _write_cache_state(cache_state)
     changed |= _write_if_changed(MDS_EXPLORER_PATH, _serialise_json(explorer_snapshot))
     changed |= _write_if_changed(MDS_EXPLORER_META_PATH, _serialise_json(explorer_meta))
+    changed |= _write_if_changed(MDS_BOOTSTRAP_JS_PATH, _serialise_bootstrap_script(bootstrap_snapshot))
+    changed |= _write_if_changed(MDS_BOOTSTRAP_META_PATH, _serialise_json(bootstrap_meta))
 
     if changed:
         print("Packaged metadata snapshot refreshed.")
