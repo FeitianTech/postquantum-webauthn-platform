@@ -21,9 +21,11 @@ from ..metadata import (
     delete_session_metadata_item,
     expand_metadata_entry_payloads,
     list_session_metadata_items,
-    load_metadata_cache_entry,
     load_cached_metadata_snapshot,
+    load_effective_explorer_snapshot,
+    load_packaged_explorer_summary,
     maybe_store_uploaded_metadata_file,
+    resolve_effective_metadata_entry,
     save_session_metadata_item,
     serialize_session_metadata_item,
     _load_base_metadata,
@@ -162,22 +164,64 @@ def index_html():
         ensure_metadata_bootstrapped(skip_if_reloader_parent=False)
     ensure_metadata_session_id()
 
-    initial_mds_blob = None
-
-    initial_mds_info = load_metadata_cache_entry()
+    initial_mds_info = load_packaged_explorer_summary()
 
     return render_template(
         "index.html",
-        initial_mds_blob=initial_mds_blob,
         initial_mds_info=initial_mds_info,
     )
 
 
-@app.route("/templates/advanced/mds-content.html")
-def mds_content_html():
-    """Serve the MDS tab HTML fragment expected by frontend bootstrap."""
+def _no_store_json_response(payload: Mapping[str, Any], status: int = 200):
+    response = jsonify(payload)
+    response.status_code = status
+    response.headers["Cache-Control"] = "no-store"
+    response.headers["Vary"] = "Cookie"
+    return response
 
-    return render_template("advanced/mds-content.html")
+
+@app.route("/api/mds/metadata/explorer", methods=["GET"])
+def api_get_explorer_metadata():
+    ensure_metadata_session_id()
+    snapshot = load_effective_explorer_snapshot()
+    if not snapshot.get("entries") and not snapshot.get("meta"):
+        return _no_store_json_response(
+            {"error": "Verified metadata snapshot is not available."},
+            status=404,
+        )
+    return _no_store_json_response(snapshot)
+
+
+@app.route("/api/mds/metadata/resolve", methods=["GET"])
+def api_resolve_metadata_entry():
+    ensure_metadata_session_id()
+
+    requested = {
+        "entry_id": request.args.get("entryId", type=str),
+        "aaguid": request.args.get("aaguid", type=str),
+        "aaid": request.args.get("aaid", type=str),
+    }
+    provided = {
+        key: value.strip()
+        for key, value in requested.items()
+        if isinstance(value, str) and value.strip()
+    }
+
+    if len(provided) != 1:
+        return _no_store_json_response(
+            {"error": "Provide exactly one of entryId, aaguid, or aaid."},
+            status=400,
+        )
+
+    resolved = resolve_effective_metadata_entry(
+        entry_id=provided.get("entry_id"),
+        aaguid=provided.get("aaguid"),
+        aaid=provided.get("aaid"),
+    )
+    if resolved is None:
+        return _no_store_json_response({"error": "Metadata entry not found."}, status=404)
+
+    return _no_store_json_response({"entry": resolved})
 
 
 @app.route("/api/mds/metadata/base", methods=["GET"])
