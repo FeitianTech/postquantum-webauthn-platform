@@ -445,3 +445,129 @@ def test_encode_payload_text_cbor_is_deterministic_across_equivalent_permutation
     ]
 
     assert len(set(encoded_hex_values)) == 1
+
+
+def test_codec_api_encode_pem_binary_contract():
+    config_module = pytest.importorskip("server.app.config")
+    pytest.importorskip("server.app.app")
+
+    payload_bytes = bytes(range(48))
+    request_payload = {
+        "mode": "encode",
+        "format": "pem",
+        "payload": json.dumps(
+            {
+                "value": {"base64url": _b64url(payload_bytes)},
+                "pemLabel": "demo cert",
+            }
+        ),
+    }
+
+    with config_module.app.test_client() as client:
+        response = client.post("/api/codec", json=request_payload)
+
+    assert response.status_code == 200
+    data = response.get_json()
+    assert data["success"] is True
+    assert data["type"] == "PEM (encoded)"
+
+    pem_lines = data["data"]["pem"].splitlines()
+    assert pem_lines[0] == "-----BEGIN DEMO_CERT-----"
+    assert pem_lines[-1] == "-----END DEMO_CERT-----"
+    restored = base64.b64decode("".join(pem_lines[1:-1]))
+    assert restored == payload_bytes
+
+
+def test_codec_api_encode_der_from_nested_binary_payload():
+    config_module = pytest.importorskip("server.app.config")
+    pytest.importorskip("server.app.app")
+
+    payload_bytes = b"\x10\x11\x12\x13\x14"
+    request_payload = {
+        "mode": "encode",
+        "format": "der",
+        "payload": json.dumps({"binary": {"base64url": _b64url(payload_bytes)}}),
+    }
+
+    with config_module.app.test_client() as client:
+        response = client.post("/api/codec", json=request_payload)
+
+    assert response.status_code == 200
+    data = response.get_json()
+    assert data["success"] is True
+    assert data["type"] == "DER (encoded)"
+    assert data["data"]["binary"]["hex"] == payload_bytes.hex()
+    assert data["data"]["derBase64"] == base64.b64encode(payload_bytes).decode("ascii")
+
+
+def test_codec_api_encode_client_data_contract():
+    config_module = pytest.importorskip("server.app.config")
+    pytest.importorskip("server.app.app")
+
+    client_data = {
+        "type": "webauthn.get",
+        "challenge": "AQID",
+        "origin": "https://example.com",
+        "crossOrigin": False,
+    }
+
+    with config_module.app.test_client() as client:
+        response = client.post(
+            "/api/codec",
+            json={
+                "mode": "encode",
+                "format": "webauthn client data",
+                "payload": json.dumps(client_data),
+            },
+        )
+
+    assert response.status_code == 200
+    data = response.get_json()
+    assert data["success"] is True
+    assert data["type"] == "WebAuthn client data (encoded)"
+    assert data["data"]["clientDataJSON"]["json"]["type"] == "webauthn.get"
+    assert data["data"]["clientDataJSON"]["json"]["origin"] == "https://example.com"
+
+
+def test_codec_api_encode_maps_value_error_to_422(monkeypatch):
+    config_module = pytest.importorskip("server.app.config")
+    pytest.importorskip("server.app.app")
+    general_module = pytest.importorskip("server.app.routes.general")
+
+    monkeypatch.setattr(
+        general_module,
+        "encode_payload_text",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(ValueError("bad encode request")),
+        raising=False,
+    )
+
+    with config_module.app.test_client() as client:
+        response = client.post(
+            "/api/codec",
+            json={"mode": "encode", "format": "cbor", "payload": "{}"},
+        )
+
+    assert response.status_code == 422
+    assert response.get_json() == {"error": "bad encode request"}
+
+
+def test_codec_api_encode_maps_unexpected_error_to_500(monkeypatch):
+    config_module = pytest.importorskip("server.app.config")
+    pytest.importorskip("server.app.app")
+    general_module = pytest.importorskip("server.app.routes.general")
+
+    monkeypatch.setattr(
+        general_module,
+        "encode_payload_text",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("encoder crashed")),
+        raising=False,
+    )
+
+    with config_module.app.test_client() as client:
+        response = client.post(
+            "/api/codec",
+            json={"mode": "encode", "format": "cbor", "payload": "{}"},
+        )
+
+    assert response.status_code == 500
+    assert response.get_json() == {"error": "Unable to encode payload."}
