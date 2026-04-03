@@ -173,6 +173,13 @@ def index_html():
     )
 
 
+@app.route("/templates/advanced/mds-content.html")
+def mds_content_html():
+    """Serve the MDS tab HTML fragment expected by frontend bootstrap."""
+
+    return render_template("advanced/mds-content.html")
+
+
 @app.route("/api/mds/metadata/base", methods=["GET"])
 def api_get_verified_metadata():
     metadata_path = MDS_METADATA_VERIFIED_PATH

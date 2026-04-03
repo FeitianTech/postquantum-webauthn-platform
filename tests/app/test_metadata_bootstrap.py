@@ -163,3 +163,23 @@ def test_index_html_bootstraps_when_strict(monkeypatch):
 
     assert result == "ok"
     assert bootstrap_calls == [{"skip_if_reloader_parent": False}]
+
+
+def test_mds_fragment_route_is_served(monkeypatch):
+    general_module = pytest.importorskip("server.app.routes.general")
+    config_module = pytest.importorskip("server.app.config")
+
+    rendered = {}
+
+    def _render_template(name, *_args, **_kwargs):
+        rendered["name"] = name
+        return "mds-fragment"
+
+    monkeypatch.setattr(general_module, "render_template", _render_template, raising=False)
+
+    with config_module.app.test_client() as client:
+        response = client.get("/templates/advanced/mds-content.html")
+
+    assert response.status_code == 200
+    assert response.data == b"mds-fragment"
+    assert rendered.get("name") == "advanced/mds-content.html"
