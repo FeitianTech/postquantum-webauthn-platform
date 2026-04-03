@@ -257,6 +257,13 @@ def test_normalize_attachment_list_from_bytes():
     assert attachments.normalize_attachment_list(b"platform") == []
 
 
+def test_normalize_attachment_list_from_non_iterable_value():
+    """Test that non-iterable values are rejected."""
+    from server.app import attachments
+
+    assert attachments.normalize_attachment_list(12345) == []
+
+
 def test_normalize_attachment_list_removes_duplicates():
     """Test that duplicates are removed."""
     from server.app import attachments
@@ -482,3 +489,51 @@ def test_build_credential_attachment_map_memoryview(monkeypatch):
     
     assert b"cred-mem" in result
     assert result[b"cred-mem"] == "platform"
+
+
+def test_build_credential_attachment_map_skips_invalid_object_credential_ids(monkeypatch):
+    """Test object-backed credentials with invalid IDs are skipped safely."""
+    from server.app import attachments
+
+    monkeypatch.setattr(attachments, "ensure_metadata_session_id", lambda: "test-session")
+
+    class _CredData:
+        def __init__(self, credential_id):
+            self.credential_id = credential_id
+
+    bad_cred = object()
+    good_cred = object()
+    test_credentials = [("user@example.com", [bad_cred, good_cred])]
+
+    monkeypatch.setattr(attachments, "iter_credentials", lambda **kwargs: iter(test_credentials))
+    monkeypatch.setattr(
+        attachments,
+        "extract_credential_data",
+        lambda cred: _CredData("not-bytes") if cred is bad_cred else _CredData(b"cred-good"),
+    )
+
+    result = attachments.build_credential_attachment_map()
+
+    assert result == {b"cred-good": None}
+
+
+def test_build_credential_attachment_map_handles_non_mapping_credentials(monkeypatch):
+    """Test non-mapping credential containers still produce attachment entries."""
+    from server.app import attachments
+
+    monkeypatch.setattr(attachments, "ensure_metadata_session_id", lambda: "test-session")
+
+    class _CredData:
+        credential_id = b"cred-object"
+
+    class _CredentialObject:
+        pass
+
+    test_credentials = [("user@example.com", [_CredentialObject()])]
+
+    monkeypatch.setattr(attachments, "iter_credentials", lambda **kwargs: iter(test_credentials))
+    monkeypatch.setattr(attachments, "extract_credential_data", lambda _cred: _CredData())
+
+    result = attachments.build_credential_attachment_map()
+
+    assert result == {b"cred-object": None}
