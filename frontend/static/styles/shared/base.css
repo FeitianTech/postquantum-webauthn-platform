@@ -263,17 +263,17 @@ body.modal-open { overflow-x: hidden; }
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 2.25rem;
-    height: 2.25rem;
+    width: 2.65rem;
+    height: 2.65rem;
     border-radius: var(--radius-sm);
     background: transparent;
-    transition: opacity var(--transition-base);
+    transition: transform var(--transition-base);
     border: none;
     flex-shrink: 0;
-    opacity: 0.6;
+    opacity: 1;
 }
 
-.header__github-link:hover { opacity: 1; }
+.header__github-link:hover { transform: translateY(-1px); }
 
 .header__github-link:focus-visible {
     outline: 2px solid var(--blue-ring);
@@ -281,7 +281,7 @@ body.modal-open { overflow-x: hidden; }
     opacity: 1;
 }
 
-.header__github-icon { display: block; width: 1.5rem; height: 1.5rem; }
+.header__github-icon { display: block; width: 1.85rem; height: 1.85rem; }
 
 /* ─── Container / Content ─────────────────────────────────── */
 
@@ -325,17 +325,17 @@ body.modal-open { overflow-x: hidden; }
 /* ─── Navigation tabs ─────────────────────────────────────── */
 
 .nav-tabs {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    display: flex;
     align-items: stretch;
-    justify-content: stretch;
-    gap: 0.4rem;
+    justify-content: flex-start;
+    gap: 0;
     background: transparent;
     border-radius: 0;
     box-shadow: none;
     margin: 0;
     padding: 0 0 0.25rem;
-    width: 100%;
+    width: max-content;
+    max-width: 100%;
 }
 
 .nav-tab {
@@ -347,7 +347,7 @@ body.modal-open { overflow-x: hidden; }
     background: transparent;
     border: none;
     cursor: pointer;
-    font-size: clamp(0.82rem, 0.4vw + 0.72rem, 0.9rem);
+    font-size: 0.9rem;
     font-family: var(--font-sans);
     color: var(--muted-text);
     transition: color var(--transition-base);
@@ -355,10 +355,14 @@ body.modal-open { overflow-x: hidden; }
     letter-spacing: 0;
     white-space: nowrap;
     text-align: center;
-    width: 100%;
-    min-width: 0;
+    flex: 0 0 auto;
     min-height: 2.65rem;
 }
+
+.nav-tab[data-tab="simple"] { width: 12.25rem; }
+.nav-tab[data-tab="advanced"] { width: 13.5rem; }
+.nav-tab[data-tab="codec"] { width: 6.25rem; }
+.nav-tab[data-tab="mds"] { width: 14.75rem; }
 
 .nav-tab.active { color: var(--text-color); font-weight: 600; }
 

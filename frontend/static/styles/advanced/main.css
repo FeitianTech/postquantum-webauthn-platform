@@ -187,6 +187,7 @@ body.app-loaded > :not(.app-loader) {
     font-weight: 600;
     letter-spacing: -0.01em;
     color: var(--text-color);
+    text-transform: none;
 }
 
 .advanced-settings-layout .json-editor-card .inline-json-editor {

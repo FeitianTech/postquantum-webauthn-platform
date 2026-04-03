@@ -58,12 +58,6 @@
     scrollbar-width: thin;
     scrollbar-color: rgba(0, 0, 0, 0.18) transparent;
     margin: 0;
-    transition: border-color var(--transition-base), box-shadow var(--transition-base);
-}
-
-.json-editor textarea:focus {
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px var(--blue-ring);
 }
 
 .json-editor textarea::-webkit-scrollbar { width: 6px; }
@@ -371,8 +365,8 @@ select.form-control option { padding: 0.5rem 0.85rem; }
 }
 
 .btn.refresh-icon svg {
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
     stroke: currentColor;
     fill: none;
     stroke-width: 2;
