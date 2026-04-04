@@ -66,4 +66,26 @@ describe('json-editor-utils', () => {
     handleJsonEditorKeydown(braceEvent);
     expect(braceEditor.value).toBe('{}');
   });
+
+  it('handles collapsed wrap, dedent auto-indent branch, and modifier key bypass', () => {
+    const collapsed = createEditor('', 0, 0);
+    wrapSelectionWithPair(collapsed, '[', ']');
+    expect(collapsed.value).toBe('[]');
+    expect(collapsed.selectionStart).toBe(1);
+
+    const dedentEditor = createEditor('{\n  \n}', 4, 4);
+    applyJsonEditorAutoIndent(dedentEditor);
+    expect(dedentEditor.value).toContain('\n');
+
+    const nonTextareaEvent = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true });
+    Object.defineProperty(nonTextareaEvent, 'target', { value: document.createElement('div') });
+    expect(() => handleJsonEditorKeydown(nonTextareaEvent)).not.toThrow();
+
+    const bypassEditor = createEditor('value', 5, 5);
+    const bypassEvent = new KeyboardEvent('keydown', { key: '{', bubbles: true, ctrlKey: true });
+    Object.defineProperty(bypassEvent, 'target', { value: bypassEditor });
+    Object.defineProperty(bypassEvent, 'preventDefault', { value: () => {} });
+    handleJsonEditorKeydown(bypassEvent);
+    expect(bypassEditor.value).toBe('value');
+  });
 });

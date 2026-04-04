@@ -65,6 +65,11 @@ describe('codec UI', () => {
     expect(document.getElementById('codec-encode-panel').hidden).toBe(false);
     expect(hideStatus).toHaveBeenCalledWith('decoder');
     expect(hideStatus).toHaveBeenCalledWith('encoder');
+
+    const content = document.getElementById('codec-mode-content');
+    expect(content.classList.contains('codec-mode-animating')).toBe(true);
+    content.dispatchEvent(new Event('animationend'));
+    expect(content.classList.contains('codec-mode-animating')).toBe(false);
   });
 
   it('clears codec fields and modal state', () => {
@@ -261,6 +266,29 @@ describe('codec UI', () => {
     expect(document.getElementById('encoded-content').textContent).toContain('Encoded output');
     expect(document.getElementById('encoded-content').textContent).toContain('Byte length: 4');
     expect(document.getElementById('encoder-toggle-raw').disabled).toBe(false);
+  });
+
+  it('accepts integer-byte arrays and nested array/object payloads for binary encode formats', async () => {
+    switchCodecMode('encode');
+    document.getElementById('encoder-format').value = 'pem';
+
+    document.getElementById('encoder-input').value = '{"bytes":[1,2,3,4]}';
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: vi.fn().mockResolvedValue({ success: true, type: 'PEM', encodedValue: 'LS0tLUJFR0lO' }),
+    });
+    await processCodec('encode');
+    expect(fetch).toHaveBeenCalledTimes(1);
+
+    document.getElementById('encoder-input').value = '{"bytes":[{"value":"QUJD"}]}';
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: vi.fn().mockResolvedValue({ success: true, type: 'PEM', encodedValue: 'LS0tLUVORA==' }),
+    });
+    await processCodec('encode');
+    expect(fetch).toHaveBeenCalledTimes(2);
   });
 
   it('clears encode mode state and respects raw toggle guard rails', () => {

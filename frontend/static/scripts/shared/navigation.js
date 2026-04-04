@@ -17,6 +17,11 @@ function getHeaderMenuControls() {
     return headerMenuControls;
 }
 
+export function resetNavigationMenuStateForTests() {
+    headerMenuControls = null;
+    setBodyMenuState(false);
+}
+
 function setBodyMenuState(open) {
     if (typeof document === 'undefined') {
         return;

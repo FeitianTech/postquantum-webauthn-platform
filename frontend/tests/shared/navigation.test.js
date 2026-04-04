@@ -44,9 +44,12 @@ function buildTabDom() {
 }
 
 describe('navigation', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     buildTabDom();
     state.currentSubTab = 'registration';
+
+    const { resetNavigationMenuStateForTests } = await loadNavigation();
+    resetNavigationMenuStateForTests();
   });
 
   it('switches top-level tabs and emits events', async () => {
@@ -76,6 +79,42 @@ describe('navigation', () => {
     controls.close({ focusToggle: true, allowDesktop: true });
     expect(document.body.classList.contains('header-menu-open')).toBe(false);
     expect(document.querySelector('[data-header-overlay]').hidden).toBe(true);
+  });
+
+  it('handles toggle/overlay/escape/resize/orientation listeners for header menu', async () => {
+    const { initializeNavigationMenu } = await loadNavigation();
+    window.innerWidth = 700;
+
+    const controls = initializeNavigationMenu();
+    const toggle = document.querySelector('[data-header-menu-toggle]');
+    const overlay = document.querySelector('[data-header-overlay]');
+
+    toggle.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    expect(document.body.classList.contains('header-menu-open')).toBe(true);
+
+    overlay.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(document.body.classList.contains('header-menu-open')).toBe(false);
+
+    controls.open();
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    expect(document.body.classList.contains('header-menu-open')).toBe(false);
+
+    controls.open();
+    window.innerWidth = 1200;
+    window.dispatchEvent(new Event('resize'));
+    expect(document.body.classList.contains('header-menu-open')).toBe(false);
+
+    window.innerWidth = 700;
+    controls.open();
+    window.dispatchEvent(new Event('orientationchange'));
+    expect(document.body.classList.contains('header-menu-open')).toBe(true);
+
+    // desktop click should no-op from handler guard
+    window.innerWidth = 1200;
+    toggle.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    expect(document.body.classList.contains('header-menu-open')).toBe(true);
+
+    controls.close({ allowDesktop: true });
   });
 
   it('switches advanced subtabs and toggles collapsible sections', async () => {
