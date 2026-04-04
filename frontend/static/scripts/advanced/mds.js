@@ -4759,25 +4759,63 @@ async function openCertificatePage(certificate) {
         return;
     }
 
+    let details = null;
+    let decodeError = null;
+    try {
+        details = await decodeCertificate(cleaned);
+    } catch (error) {
+        decodeError = error;
+    }
+
     if (mdsState.certificateInput) {
         setCertificateFieldContent(mdsState.certificateInput, formatCertificateInput(cleaned));
         mdsState.certificateInput.scrollTop = 0;
         mdsState.certificateInput.scrollLeft = 0;
     }
-    if (mdsState.certificateOutput) {
-        setCertificateFieldContent(mdsState.certificateOutput, 'Decoding certificate…');
-        mdsState.certificateOutput.scrollTop = 0;
-        mdsState.certificateOutput.scrollLeft = 0;
-    }
-    if (mdsState.certificateTitle) {
-        mdsState.certificateTitle.textContent = 'Attestation Certificate';
-    }
-    if (mdsState.certificateSubtitle) {
-        mdsState.certificateSubtitle.textContent = '';
-        mdsState.certificateSubtitle.hidden = true;
+
+    if (decodeError) {
+        const message = decodeError instanceof Error ? decodeError.message : 'Unable to decode certificate.';
+        if (mdsState.certificateOutput) {
+            setCertificateFieldContent(mdsState.certificateOutput, message);
+            mdsState.certificateOutput.scrollTop = 0;
+            mdsState.certificateOutput.scrollLeft = 0;
+        }
+        setCertificateSummaryContent(message);
+        if (mdsState.certificateTitle) {
+            mdsState.certificateTitle.textContent = 'Attestation Certificate';
+        }
+        if (mdsState.certificateSubtitle) {
+            mdsState.certificateSubtitle.textContent = '';
+            mdsState.certificateSubtitle.hidden = true;
+        }
+    } else {
+        if (mdsState.certificateOutput) {
+            setCertificateFieldContent(mdsState.certificateOutput, formatCertificateOutput(details));
+            mdsState.certificateOutput.scrollTop = 0;
+            mdsState.certificateOutput.scrollLeft = 0;
+        }
+        const summaryContent = renderCertificateSummary(details);
+        if (summaryContent) {
+            setCertificateSummaryContent(summaryContent);
+        } else {
+            setCertificateSummaryContent('No decoded certificate details available.');
+        }
+        const subject = details && typeof details.subject === 'string' ? details.subject.trim() : '';
+        if (mdsState.certificateTitle) {
+            mdsState.certificateTitle.textContent = subject || 'Attestation Certificate';
+        }
+        const issuer = details && typeof details.issuer === 'string' ? details.issuer.trim() : '';
+        if (mdsState.certificateSubtitle) {
+            if (issuer) {
+                mdsState.certificateSubtitle.textContent = issuer;
+                mdsState.certificateSubtitle.hidden = false;
+            } else {
+                mdsState.certificateSubtitle.textContent = '';
+                mdsState.certificateSubtitle.hidden = true;
+            }
+        }
     }
 
-    setCertificateSummaryContent('Decoding certificate…');
     hideScrollTopButton();
 
     const sticky = mdsState.certificateStickyHeader || null;
@@ -4839,50 +4877,7 @@ async function openCertificatePage(certificate) {
         requestAnimationFrame(() => focusTarget.focus());
     }
 
-    try {
-        const details = await decodeCertificate(cleaned);
-        if (mdsState.certificateOutput) {
-            setCertificateFieldContent(mdsState.certificateOutput, formatCertificateOutput(details));
-            mdsState.certificateOutput.scrollTop = 0;
-            mdsState.certificateOutput.scrollLeft = 0;
-        }
-        const summaryContent = renderCertificateSummary(details);
-        if (summaryContent) {
-            setCertificateSummaryContent(summaryContent);
-        } else {
-            setCertificateSummaryContent('No decoded certificate details available.');
-        }
-        const subject = details && typeof details.subject === 'string' ? details.subject.trim() : '';
-        if (subject && mdsState.certificateTitle) {
-            mdsState.certificateTitle.textContent = subject;
-        }
-        const issuer = details && typeof details.issuer === 'string' ? details.issuer.trim() : '';
-        if (mdsState.certificateSubtitle) {
-            if (issuer) {
-                mdsState.certificateSubtitle.textContent = issuer;
-                mdsState.certificateSubtitle.hidden = false;
-            } else {
-                mdsState.certificateSubtitle.textContent = '';
-                mdsState.certificateSubtitle.hidden = true;
-            }
-        }
-        scheduleCertificateTextareaResize();
-        sticky?.sync();
-    } catch (error) {
-        const message = error instanceof Error ? error.message : 'Unable to decode certificate.';
-        if (mdsState.certificateOutput) {
-            setCertificateFieldContent(mdsState.certificateOutput, message);
-            mdsState.certificateOutput.scrollTop = 0;
-            mdsState.certificateOutput.scrollLeft = 0;
-        }
-        setCertificateSummaryContent(message);
-        if (mdsState.certificateSubtitle) {
-            mdsState.certificateSubtitle.textContent = '';
-            mdsState.certificateSubtitle.hidden = true;
-        }
-        scheduleCertificateTextareaResize();
-        sticky?.sync();
-    }
+    sticky?.sync();
 }
 
 function closeCertificatePage() {
