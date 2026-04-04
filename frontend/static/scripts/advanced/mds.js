@@ -5073,7 +5073,6 @@ function openAuthenticatorRawWindow() {
             padding: 1rem 1.5rem;
             background: #ffffff;
             border-bottom: 1px solid rgba(15, 39, 64, 0.12);
-            box-shadow: 0 6px 18px rgba(15, 39, 64, 0.05);
         }
         h1 {
             margin: 0;

@@ -6,7 +6,6 @@
     background: var(--surface-color);
     border: 1px solid var(--border);
     border-radius: var(--radius-xl);
-    box-shadow: var(--shadow-soft);
     display: flex;
     flex-direction: column;
     gap: 1.25rem;
@@ -212,7 +211,6 @@
     padding: 0.9rem 1.25rem;
     border-radius: var(--radius-xl);
     border: 1px solid var(--border);
-    box-shadow: var(--shadow-soft);
     width: 100%;
     margin: 0;
 }
@@ -327,7 +325,6 @@
     background: rgba(255, 255, 255, 0.97);
     border-radius: var(--radius-xl);
     padding: 0.6rem 1rem;
-    box-shadow: var(--shadow-hover);
     border: 1px solid var(--border);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);

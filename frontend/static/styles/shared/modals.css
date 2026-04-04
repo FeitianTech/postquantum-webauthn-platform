@@ -64,7 +64,6 @@
     position: relative;
     display: flex;
     flex-direction: column;
-    box-shadow: var(--shadow-modal);
     transform: translateY(12px) scale(0.99);
     opacity: 0;
     transition: transform 180ms ease, opacity 180ms ease;
@@ -80,7 +79,6 @@
     border-radius: 0;
     border: none;
     padding: 0;
-    box-shadow: none;
     transform: translateY(28px);
     opacity: 0;
     --detail-screen-transform-delay: 0ms;
@@ -388,9 +386,9 @@
 }
 
 .certificate-textarea:focus {
-    outline: none;
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
     border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px var(--blue-ring);
 }
 
 /* ─── Registration detail ─────────────────────────────────── */

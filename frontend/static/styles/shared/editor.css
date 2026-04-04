@@ -12,7 +12,6 @@
     display: flex;
     flex-direction: column;
     flex: 1 1 auto;
-    box-shadow: none;
     overflow: visible;
 }
 
@@ -47,7 +46,6 @@
     background: var(--surface-color);
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
-    box-shadow: none;
     background-clip: padding-box;
     outline: none;
     resize: none;
@@ -87,7 +85,6 @@
     z-index: 1100;
     padding: 2.5rem 1.5rem 1.5rem;
     border-radius: var(--radius-2xl);
-    box-shadow: none;
 }
 
 #json-editor-container.expanded textarea { min-height: unset; height: 100%; }
@@ -109,7 +106,6 @@
     aspect-ratio: 3 / 2;
     padding: 0 !important;
     border-radius: 0 !important;
-    box-shadow: none;
     overflow: visible;
     background: transparent;
 }
@@ -191,7 +187,6 @@ body.advanced-inline-json-editor .json-editor-overlay.active { display: none; }
     margin: 0;
     transition: color var(--transition-base), background-color var(--transition-base), border-color var(--transition-base);
     pointer-events: auto;
-    box-shadow: var(--shadow-soft);
 }
 
 .json-editor-inline-buttons .btn:hover,
@@ -223,7 +218,6 @@ body.advanced-inline-json-editor .json-editor-overlay.active { display: none; }
     transition: background-color var(--transition-base);
     cursor: pointer;
     pointer-events: auto;
-    box-shadow: var(--shadow-soft);
     padding: 0;
     font-size: 0;
     line-height: 0;
@@ -272,7 +266,6 @@ body.advanced-inline-json-editor .json-editor-overlay.active { display: none; }
     background: var(--text-color);
     color: #ffffff;
     border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-modal);
     min-width: 300px;
     max-width: 90vw;
     justify-content: center;
@@ -326,8 +319,8 @@ select.form-control {
 select.form-control:focus,
 select.form-control:focus-visible {
     border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px var(--blue-ring);
-    outline: none;
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
 }
 
 select.form-control option { padding: 0.5rem 0.85rem; }
@@ -363,7 +356,6 @@ select.form-control option { padding: 0.5rem 0.85rem; }
     align-items: center;
     justify-content: center;
     padding: 0;
-    box-shadow: none;
     position: relative;
 }
 
@@ -390,7 +382,6 @@ select.form-control option { padding: 0.5rem 0.85rem; }
     align-items: center;
     justify-content: center;
     padding: 0;
-    box-shadow: none;
     position: relative;
 }
 

@@ -96,7 +96,10 @@
     outline: none;
 }
 
-.mds-sort-button:focus-visible { box-shadow: 0 0 0 2px var(--blue-ring); }
+.mds-sort-button:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+}
 
 .mds-sort-button[data-sort-direction='asc'],
 .mds-sort-button[data-sort-direction='desc'] { color: var(--text-color); }
@@ -122,15 +125,15 @@
     font-family: var(--font-sans);
     font-size: 0.78125rem;
     color: var(--text-color);
-    transition: border-color var(--transition-base), box-shadow var(--transition-base);
+    transition: border-color var(--transition-base), outline-color var(--transition-base);
 }
 
 .mds-filter-input::placeholder { color: var(--muted-light); }
 
 .mds-filter-input:focus {
-    outline: none;
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
     border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px var(--blue-ring);
 }
 
 /* Filter dropdown */
@@ -142,7 +145,6 @@
     background: var(--surface-color);
     border-radius: var(--radius-md);
     border: 1px solid var(--border);
-    box-shadow: var(--shadow-modal);
     padding: 0.25rem 0;
     max-height: min(520px, 72vh);
     overflow-y: auto;
@@ -207,7 +209,8 @@
 
 .mds-table tbody tr.mds-row--highlight td {
     background: var(--blue-faint);
-    box-shadow: inset 0 0 0 1px var(--blue-border);
+    outline: 1px solid var(--blue-border);
+    outline-offset: -1px;
     color: var(--primary-color);
 }
 
@@ -344,7 +347,8 @@
 }
 
 .mds-name-button:focus-visible {
-    box-shadow: 0 0 0 2px var(--blue-ring);
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
     border-radius: var(--radius-xs);
 }
 

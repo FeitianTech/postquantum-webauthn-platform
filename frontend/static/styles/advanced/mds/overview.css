@@ -193,7 +193,6 @@
     background: var(--surface-color);
     border: 1px solid var(--border);
     border-radius: var(--radius-xl);
-    box-shadow: var(--shadow-modal);
     padding: 1.75rem 1.75rem;
     display: flex;
     flex-direction: column;
@@ -405,15 +404,14 @@
     font-weight: 700;
     font-size: 1.1rem;
     cursor: pointer;
-    box-shadow: var(--shadow-hover);
-    transition: transform 0.2s ease, background var(--transition-base), box-shadow var(--transition-base);
+    transition: transform 0.2s ease, background var(--transition-base), border-color var(--transition-base);
 }
 
 .mds-scroll-top:hover,
 .mds-scroll-top:focus-visible {
     background: var(--surface-alt);
     transform: translate(-50%, -2px);
-    box-shadow: var(--shadow-modal);
+    border-color: rgba(0, 0, 0, 0.14);
 }
 
 .mds-scroll-top:focus-visible { outline: 2px solid var(--blue-ring); outline-offset: 2px; }

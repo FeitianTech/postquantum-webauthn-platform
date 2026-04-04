@@ -239,7 +239,6 @@
 .simple-layout .simple-credentials-section .credentials-panel {
     background: transparent;
     border: none;
-    box-shadow: none;
     padding: 0;
     min-height: 0;
 }
@@ -345,7 +344,8 @@
 
 .form-control.error {
     border-color: #dc2626;
-    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15);
+    outline: 2px solid rgba(220, 38, 38, 0.4);
+    outline-offset: 2px;
 }
 
 .error-message {
@@ -366,7 +366,6 @@
     flex: 1 1 auto;
     max-height: none;
     overflow-y: auto;
-    box-shadow: var(--shadow-soft);
 }
 
 .credentials-panel h3 {
@@ -387,7 +386,7 @@
     padding: 0.85rem 1rem;
     margin-bottom: 0.65rem;
     cursor: pointer;
-    transition: border-color var(--transition-base), box-shadow var(--transition-base), transform var(--transition-fast);
+    transition: border-color var(--transition-base), transform var(--transition-fast);
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -434,7 +433,6 @@
 
 .credential-item:hover {
     border-color: rgba(0, 114, 206, 0.35);
-    box-shadow: var(--shadow-soft);
     transform: translateY(-1px);
 }
 
@@ -461,12 +459,12 @@
 
 /* Flash animation */
 @keyframes credentialAuthFlashBorder {
-    0%   { border-color: var(--border); box-shadow: none; }
-    16%  { border-color: var(--credential-flash-color, #16a34a); box-shadow: 0 0 0 3px var(--credential-flash-shadow, rgba(22, 163, 74, 0.2)); }
-    38%  { border-color: var(--border); box-shadow: none; }
-    62%  { border-color: var(--credential-flash-color, #16a34a); box-shadow: 0 0 0 3px var(--credential-flash-shadow, rgba(22, 163, 74, 0.2)); }
-    84%  { border-color: var(--border); box-shadow: none; }
-    100% { border-color: var(--border); box-shadow: none; }
+    0%   { border-color: var(--border); }
+    16%  { border-color: var(--credential-flash-color, #16a34a); }
+    38%  { border-color: var(--border); }
+    62%  { border-color: var(--credential-flash-color, #16a34a); }
+    84%  { border-color: var(--border); }
+    100% { border-color: var(--border); }
 }
 
 .credential-item--recent-auth-success,
@@ -476,12 +474,10 @@
 
 .credential-item--recent-auth-success {
     --credential-flash-color: #16a34a;
-    --credential-flash-shadow: rgba(22, 163, 74, 0.2);
 }
 
 .credential-item--recent-auth-failure {
     --credential-flash-color: #dc2626;
-    --credential-flash-shadow: rgba(220, 38, 38, 0.2);
 }
 
 .credential-delete {
@@ -665,7 +661,6 @@
         padding: 1.25rem;
         background: var(--surface-color);
         border-radius: var(--radius-xl);
-        box-shadow: var(--shadow-soft);
         border: 1px solid var(--border);
         gap: 1.25rem;
     }
@@ -678,7 +673,6 @@
         padding: 0;
     }
 
-    .advanced-settings-layout .json-editor-card .inline-json-editor { box-shadow: none; }
 }
 
 @media (max-width: 900px) {
@@ -733,7 +727,6 @@
         overflow-x: auto;
         background: var(--surface-color);
         border-radius: var(--radius-xl);
-        box-shadow: var(--shadow-soft);
         border: 1px solid var(--border);
     }
 

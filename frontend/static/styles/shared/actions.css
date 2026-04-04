@@ -19,7 +19,6 @@
         background-color var(--transition-base),
         color var(--transition-base),
         border-color var(--transition-base),
-        box-shadow var(--transition-base),
         transform var(--transition-fast);
     margin-right: 0.5rem;
     margin-bottom: 0.5rem;
@@ -101,7 +100,6 @@
     z-index: 12000;
     min-width: 300px;
     max-width: 90vw;
-    box-shadow: var(--shadow-modal);
     opacity: 0;
     visibility: hidden;
     pointer-events: none;

@@ -32,7 +32,6 @@
     background: var(--text-color);
     color: #ffffff;
     border-radius: var(--radius-xl);
-    box-shadow: var(--shadow-modal);
     min-width: 300px;
     max-width: min(400px, 90vw);
     text-align: center;

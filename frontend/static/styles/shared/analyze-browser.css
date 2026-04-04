@@ -30,7 +30,6 @@
     background: var(--surface-color);
     border-radius: var(--radius-lg);
     border: 1px solid var(--border);
-    box-shadow: var(--shadow-modal);
     padding: 1.25rem 1.75rem;
     display: flex;
     align-items: center;
@@ -96,7 +95,8 @@
 }
 
 .header__analyze-button:focus-visible {
-    box-shadow: 0 0 0 3px var(--blue-ring);
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
 }
 
 .header__analyze-button:disabled {

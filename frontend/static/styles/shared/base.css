@@ -33,10 +33,10 @@
     --border:        rgba(0, 0, 0, 0.08);
     --border-soft:   rgba(0, 0, 0, 0.05);
 
-    /* Shadows — intentionally minimal */
-    --shadow-soft:   0 1px 4px rgba(0, 0, 0, 0.06), 0 4px 16px rgba(0, 0, 0, 0.06);
-    --shadow-hover:  0 2px 8px rgba(0, 0, 0, 0.08), 0 8px 28px rgba(0, 0, 0, 0.10);
-    --shadow-modal:  0 4px 24px rgba(0, 0, 0, 0.12), 0 16px 64px rgba(0, 0, 0, 0.12);
+    /* Flat UI — no elevation shadows (legacy var names kept for compatibility) */
+    --shadow-soft:   none;
+    --shadow-hover:  none;
+    --shadow-modal:  none;
 
     /* Spacing & radius */
     --radius-xs:  4px;
@@ -134,7 +134,6 @@ body.modal-open { overflow-x: hidden; }
     background: var(--surface-color);
     color: var(--primary-color);
     padding: 0.9rem 2.5rem;
-    box-shadow: none;
     border-bottom: 1px solid var(--border);
     border-radius: 0;
     position: relative;
@@ -155,7 +154,6 @@ body.modal-open { overflow-x: hidden; }
     margin: 0;
     padding-top: 0.65rem;
     padding-bottom: 0.5rem;
-    box-shadow: none;
     border-bottom: 1px solid var(--border);
     z-index: 90;
     background: rgba(255, 255, 255, 0.96);
@@ -204,7 +202,6 @@ body.modal-open { overflow-x: hidden; }
 }
 
 .header-mini--active { pointer-events: auto; }
-.header-mini--active .header-mini__inner { box-shadow: none; }
 
 .header-mini--measuring { visibility: hidden !important; pointer-events: none !important; }
 .header-mini--measuring .header-mini__inner { transform: none !important; }
@@ -304,7 +301,6 @@ body.modal-open { overflow-x: hidden; }
     min-height: 100%;
     background: var(--surface-color);
     border-radius: 0;
-    box-shadow: none;
     padding: 2.5rem clamp(2rem, 6vw, 4rem) 4rem;
 }
 
@@ -334,7 +330,6 @@ body.modal-open { overflow-x: hidden; }
     gap: 0;
     background: transparent;
     border-radius: 0;
-    box-shadow: none;
     margin: 0;
     padding: 0 0 0.25rem;
     width: max-content;
@@ -531,15 +526,15 @@ body.header-menu-open { overflow: hidden; }
     border-radius: var(--radius-md);
     font-size: 0.9375rem;
     font-family: var(--font-sans);
-    transition: border-color var(--transition-base), box-shadow var(--transition-base);
+    transition: border-color var(--transition-base), outline-color var(--transition-base);
     background: var(--surface-color);
     color: var(--text-color);
 }
 
 .form-control:focus {
-    outline: none;
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
     border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px var(--blue-ring);
 }
 
 .form-control::placeholder { color: var(--muted-light); }
@@ -572,14 +567,14 @@ body.header-menu-open { overflow: hidden; }
     background-size: 0.7rem;
     padding-right: 2.5rem;
     color: var(--text-color);
-    transition: border-color var(--transition-base), box-shadow var(--transition-base);
+    transition: border-color var(--transition-base), outline-color var(--transition-base);
     cursor: pointer;
 }
 
 .form-column select.form-control:focus {
     border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px var(--blue-ring);
-    outline: none;
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
 }
 
 .form-column select.form-control:hover { border-color: rgba(0, 0, 0, 0.16); }
@@ -688,8 +683,8 @@ body.header-menu-open { overflow: hidden; }
 }
 
 .codec-mode-tab:focus-visible {
-    outline: none;
-    box-shadow: 0 0 0 3px var(--blue-ring);
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
 }
 
 .codec-mode-content { position: relative; }
@@ -711,7 +706,6 @@ body.header-menu-open { overflow: hidden; }
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
     background: var(--surface-color);
-    box-shadow: var(--shadow-soft);
     display: flex;
     flex-direction: column;
     gap: 1rem;
@@ -754,7 +748,6 @@ body.header-menu-open { overflow: hidden; }
     cursor: not-allowed;
     opacity: 0.45;
     transform: none;
-    box-shadow: none;
 }
 
 #decoder-raw-content {
@@ -870,9 +863,9 @@ body.header-menu-open { overflow: hidden; }
 
 .decoder-expanded-json:focus,
 .decoder-expanded-json:focus-visible {
-    outline: none;
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
     border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px var(--blue-ring);
 }
 
 .decoder-definition {

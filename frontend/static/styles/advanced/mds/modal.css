@@ -32,7 +32,6 @@
     background: var(--surface-color);
     border-radius: var(--radius-xl);
     border: 1px solid var(--border);
-    box-shadow: var(--shadow-modal);
     width: 95vw;
     max-width: 95vw;
     height: 95vh;
@@ -200,13 +199,13 @@
     overflow-wrap: anywhere;
     word-break: break-word;
     white-space: pre-wrap;
-    transition: border-color var(--transition-base), box-shadow var(--transition-base);
+    transition: border-color var(--transition-base), outline-color var(--transition-base);
 }
 
 .mds-modal__textarea:focus-visible {
-    outline: none;
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
     border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px var(--blue-ring);
 }
 
 /* ─── Modal headings ───────────────────────────────────────── */
@@ -233,7 +232,6 @@
 .mds-detail--modal {
     margin: 0;
     padding: 0;
-    box-shadow: none;
     background: transparent;
     border: none;
 }

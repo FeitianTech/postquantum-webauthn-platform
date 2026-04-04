@@ -132,7 +132,6 @@ body.app-loaded > :not(.app-loader) {
 }
 
 .advanced-settings-layout .form-card {
-    box-shadow: none;
     background: transparent;
     padding: 0;
     min-height: 0;
@@ -142,7 +141,6 @@ body.app-loaded > :not(.app-loader) {
     background: transparent;
     border: none;
     border-radius: 0;
-    box-shadow: none;
     padding: 0;
 }
 
@@ -158,7 +156,6 @@ body.app-loaded > :not(.app-loader) {
 }
 
 .advanced-settings-layout .json-editor-card {
-    box-shadow: none;
     background: transparent;
     padding: 0;
     margin-top: 0;
@@ -182,10 +179,6 @@ body.app-loaded > :not(.app-loader) {
     text-transform: none;
 }
 
-.advanced-settings-layout .json-editor-card .inline-json-editor {
-    box-shadow: var(--shadow-soft);
-}
-
 /* ─── Credentials column ───────────────────────────────────── */
 
 .advanced-settings-layout .credentials-column .column-card {
@@ -194,7 +187,6 @@ body.app-loaded > :not(.app-loader) {
     padding: 0;
     background: transparent;
     border-radius: 0;
-    box-shadow: none;
     display: flex;
     flex-direction: column;
     gap: 1.25rem;
@@ -210,7 +202,6 @@ body.app-loaded > :not(.app-loader) {
     background: transparent;
     border: none;
     border-radius: 0;
-    box-shadow: none;
     min-height: 0;
     position: relative;
     z-index: 2;
@@ -382,7 +373,6 @@ body.app-loaded > :not(.app-loader) {
         background: var(--surface-color);
         border-radius: var(--radius-xl);
         border: 1px solid var(--border);
-        box-shadow: var(--shadow-soft);
     }
 
     .advanced-settings-layout .credentials-column .column-card {
@@ -393,7 +383,6 @@ body.app-loaded > :not(.app-loader) {
         background: var(--surface-color);
         border-radius: var(--radius-xl);
         border: 1px solid var(--border);
-        box-shadow: var(--shadow-soft);
         gap: 1.25rem;
     }
 
@@ -408,10 +397,5 @@ body.app-loaded > :not(.app-loader) {
         background: transparent;
         border-radius: 0;
         border: none;
-        box-shadow: none;
-    }
-
-    .advanced-settings-layout .json-editor-card .inline-json-editor {
-        box-shadow: none;
     }
 }
