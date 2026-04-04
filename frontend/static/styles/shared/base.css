@@ -235,7 +235,7 @@ body.modal-open { overflow-x: hidden; }
 
 .header__brand-row h1 {
     margin: 0;
-    padding-left: 0.85rem;
+    padding-left: calc(0.85rem + 10px);
 }
 
 .header__tabs {
