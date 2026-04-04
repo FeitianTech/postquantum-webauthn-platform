@@ -2,9 +2,8 @@
 
 [![CI](https://img.shields.io/github/actions/workflow/status/feitiantech/postquantum-webauthn-platform/ci-python.yml?label=CI&logo=github)](https://github.com/feitiantech/postquantum-webauthn-platform/actions/workflows/ci-python.yml)
 [![Build](https://img.shields.io/github/actions/workflow/status/feitiantech/postquantum-webauthn-platform/ci-docker.yml?label=Build&logo=docker)](https://github.com/feitiantech/postquantum-webauthn-platform/actions/workflows/ci-docker.yml)
-[![Python Test Coverage](https://img.shields.io/badge/Python%20Coverage-88%25-brightgreen?logo=python)](#testing)
-[![Frontend Test Coverage](https://img.shields.io/badge/Frontend%20Coverage-64.33%25-yellow?logo=javascript)](#testing)
-[![Commit Activity](https://img.shields.io/github/commit-activity/m/feitiantech/postquantum-webauthn-platform?label=Commit%20Activity&logo=github)](https://github.com/feitiantech/postquantum-webauthn-platform/pulse)
+[![Python Test Coverage](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Ffeitiantech%2Fpostquantum-webauthn-platform%2Fmain%2F.github%2Fbadges%2Fpython-coverage.json)](#testing)
+[![Frontend Test Coverage](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Ffeitiantech%2Fpostquantum-webauthn-platform%2Fmain%2F.github%2Fbadges%2Ffrontend-coverage.json)](#testing)
 
 **Google Cloud Deployment (Full FIDO MDS):** https://webauthnlab.tech (A few seconds of cold start is expected)
 
@@ -94,3 +93,5 @@ npm run test:python:coverage
 ```
 
 Frontend tests run with Vitest + jsdom and collect coverage across `frontend/static/**/*.js`, with uncovered modules included in the report output. Coverage reports are written to `coverage/frontend/`.
+
+The README coverage badges use [shields.io endpoint badges](https://shields.io/documentation/endpoint) backed by JSON in [`.github/badges/`](.github/badges/); those files are refreshed on each push to `main` by [`.github/workflows/update-coverage-badges.yml`](.github/workflows/update-coverage-badges.yml) from the current Python and frontend line-coverage results.
