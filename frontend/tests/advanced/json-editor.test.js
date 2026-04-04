@@ -114,7 +114,7 @@ vi.mock('../../static/scripts/advanced/exclude-credentials.js', () => ({
   setFakeExcludeCredentials: vi.fn(),
 }));
 
-import { applyHintsToCheckboxes } from '../../static/scripts/advanced/hints.js';
+import { applyHintsToCheckboxes, registerHintsChangeCallback } from '../../static/scripts/advanced/hints.js';
 import {
   getFakeAllowCredentials,
   getFakeExcludeCredentials,
@@ -321,6 +321,89 @@ describe('json-editor', () => {
 
     expect(getFakeExcludeCredentials).toHaveBeenCalled();
     expect(getFakeAllowCredentials).toHaveBeenCalled();
+  });
+
+  it('removes allowCredentials when explicit empty selection has no fake overrides', () => {
+    state.currentSubTab = 'authentication';
+    getFakeAllowCredentials.mockReturnValueOnce([]);
+    document.getElementById('allow-credentials').value = 'empty';
+
+    const requestOptions = getCredentialRequestOptions();
+
+    expect(requestOptions.publicKey.allowCredentials).toBeUndefined();
+    expect(requestOptions.publicKey.hints).toEqual(['hybrid']);
+  });
+
+  it('filters selected credentials by hint-derived attachment and falls back when selected id is missing', () => {
+    state.currentSubTab = 'authentication';
+    state.storedCredentials = [
+      {
+        credentialIdHex: 'aa11',
+        userHandleHex: 'aabbccdd',
+        attachment: 'platform',
+      },
+      {
+        credentialIdHex: 'bb22',
+        userHandleHex: 'aabbccdd',
+        attachment: 'cross-platform',
+      },
+    ];
+
+    getFakeAllowCredentials.mockReturnValueOnce([]);
+    document.getElementById('allow-credentials').value = 'aa11';
+    const disallowedSelection = getCredentialRequestOptions();
+    expect(disallowedSelection.publicKey.allowCredentials).toEqual([]);
+
+    getFakeAllowCredentials.mockReturnValueOnce([]);
+    document.getElementById('allow-credentials').value = 'does-not-exist';
+    const fallbackSelection = getCredentialRequestOptions();
+    expect(fallbackSelection.publicKey.allowCredentials).toEqual([
+      {
+        type: 'public-key',
+        id: { $hex: 'bb22' },
+      },
+    ]);
+  });
+
+  it('prunes unsupported authentication properties while preserving explicit empty allowCredentials', () => {
+    state.currentSubTab = 'authentication';
+    document.getElementById('allow-credentials').value = 'aa11';
+    getFakeAllowCredentials.mockReturnValueOnce([]);
+
+    document.getElementById('json-editor').value = JSON.stringify({
+      publicKey: {
+        challenge: { $hex: '9988' },
+        timeout: 1200,
+        userVerification: 'preferred',
+        allowCredentials: [],
+        unsupportedAuthenticationToggle: true,
+      },
+      debugMetadata: {
+        source: 'test',
+      },
+    });
+
+    resetJsonEditor();
+
+    const resetPayload = JSON.parse(document.getElementById('json-editor').value);
+    expect(resetPayload.publicKey.allowCredentials).toEqual([]);
+    expect(resetPayload.publicKey.unsupportedAuthenticationToggle).toBeUndefined();
+    expect(resetPayload.debugMetadata).toEqual({ source: 'test' });
+  });
+
+  it('refreshes editor state when a hints callback is registered and invoked', () => {
+    state.currentSubTab = 'registration';
+    document.getElementById('user-name').value = 'callback-user';
+
+    registerHintsChangeCallback(() => updateJsonEditor());
+    const registeredCallback = registerHintsChangeCallback.mock.calls.at(-1)?.[0];
+    expect(typeof registeredCallback).toBe('function');
+
+    registeredCallback();
+
+    const payload = JSON.parse(document.getElementById('json-editor').value);
+    expect(payload.publicKey.user.name).toBe('callback-user');
+    expect(document.querySelector('.json-editor-column h3').textContent).toContain('CredentialCreationOptions');
   });
 
   it('updates JSON editor content and title for registration/authentication subtabs', () => {
