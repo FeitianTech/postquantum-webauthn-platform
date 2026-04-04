@@ -152,8 +152,8 @@ def _normalise_pqc_algorithm_identifier(value: Any) -> Optional[int]:
         if mapped is not None:
             return mapped
 
-        for name, alg_id in PQC_ALGORITHM_ID_TO_NAME.items():
-            if name.lower() in lowered:
+        for alg_id, name in PQC_ALGORITHM_ID_TO_NAME.items():
+            if isinstance(name, str) and name.lower() in lowered:
                 return alg_id
 
         match = re.search(r"-?\d+", stripped)
@@ -1079,7 +1079,7 @@ def _coerce_attestation_certificate_bytes(value: Any) -> Optional[bytes]:
         return bytes(value)
 
     if isinstance(value, ByteBuffer):
-        return bytes(value)
+        return value.getvalue()
 
     if isinstance(value, str):
         cleaned = "".join(value.split())
