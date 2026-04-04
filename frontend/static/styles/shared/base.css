@@ -233,7 +233,10 @@ body.modal-open { overflow-x: hidden; }
     width: 100%;
 }
 
-.header__brand-row h1 { margin: 0; }
+.header__brand-row h1 {
+    margin: 0;
+    padding-left: 0.85rem;
+}
 
 .header__tabs {
     width: 100%;
