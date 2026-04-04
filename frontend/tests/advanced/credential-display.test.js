@@ -182,6 +182,7 @@ import { showStatus } from '../../static/scripts/shared/status.js';
 import {
   clearAdvancedCredentials,
   clearSimpleCredentials,
+  ensureAdvancedCredentialArtifactsSynced,
   getAllAdvancedCredentials,
   getAllSimpleCredentials,
   getAllStoredCredentialsInOrder,
@@ -424,6 +425,66 @@ describe('credential-display', () => {
     expect(document.body.innerHTML).toContain('No credentials registered yet.');
   });
 
+  it('cleans up flash animation class after card animation ends', async () => {
+    state.storedCredentials = [
+      {
+        type: 'advanced',
+        userName: 'Flash User',
+        credentialIdHex: 'cafebabe',
+        userHandleHex: '00aa',
+        algorithm: -7,
+        attestationSummary: {
+          signatureValid: true,
+          rootValid: true,
+          rpIdHashValid: true,
+        },
+      },
+    ];
+
+    queueAuthenticatedCredentialFlash('cafebabe');
+    updateCredentialsDisplay();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const card = document.querySelector('[data-credential-id="cafebabe"]');
+    expect(card).not.toBeNull();
+    expect(card.classList.contains('credential-item--recent-auth-success')).toBe(true);
+
+    card.dispatchEvent(new Event('animationend'));
+    expect(card.classList.contains('credential-item--recent-auth-success')).toBe(false);
+  });
+
+  it('drives MDS navigation via card action button and reports unavailable metadata', async () => {
+    state.storedCredentials = [
+      {
+        type: 'advanced',
+        userName: 'MDS Action User',
+        credentialIdHex: '112233',
+        userHandleHex: '445566',
+        aaguidHex: '00112233445566778899aabbccddeeff',
+        algorithm: -7,
+        attestationSummary: {
+          signatureValid: true,
+          rootValid: true,
+          rpIdHashValid: true,
+        },
+      },
+    ];
+
+    updateCredentialsDisplay();
+
+    const mdsButton = document.querySelector('.credential-mds-button');
+    expect(mdsButton).not.toBeNull();
+
+    // Force navigateToMdsAuthenticator() to return undefined from missing integration.
+    delete window.highlightMdsAuthenticatorRow;
+
+    mdsButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(showStatus).toHaveBeenCalledWith('advanced', 'Authenticator metadata entry unavailable.', 'warning');
+    expect(showStatus).toHaveBeenCalledWith('simple', 'Authenticator metadata entry unavailable.', 'warning');
+  });
+
   it('loads saved credentials from storage records and refreshes dependent UI', async () => {
     getAllStoredCredentialsInOrder.mockReturnValue([
       {
@@ -451,6 +512,26 @@ describe('credential-display', () => {
     expect(state.storedCredentials[1].type).toBe('advanced');
     expect(state.storedCredentials[1].storageId).toBe('storage-1');
     expect(updateJsonEditor).toHaveBeenCalled();
+  });
+
+  it('continues loading when credential warmup background sync rejects', async () => {
+    getAllStoredCredentialsInOrder.mockReturnValue([
+      {
+        type: 'advanced',
+        userName: 'Advanced User',
+        storageId: 'storage-warmup',
+        credentialIdHex: 'beef',
+        userHandleHex: 'face',
+      },
+    ]);
+
+    ensureAdvancedCredentialArtifactsSynced.mockRejectedValueOnce(new Error('warmup failed'));
+
+    await loadSavedCredentials();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(state.storedCredentials).toHaveLength(1);
+    expect(state.storedCredentials[0].storageId).toBe('storage-warmup');
   });
 
   it('navigates to MDS authenticator entries and handles missing metadata entries', async () => {
@@ -743,6 +824,64 @@ describe('credential-display', () => {
     authButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     expect(document.getElementById('registrationDetailModalTitle').textContent).toContain('Authenticator Data');
     expect(document.getElementById('registrationDetailModalBody').innerHTML).toContain('001122');
+  });
+
+  it('restores legacy snapshot certificate visibility when indices are missing', async () => {
+    state.storedCredentials = [
+      {
+        type: 'advanced',
+        userName: 'Legacy Snapshot User',
+        credentialId: 'AQID',
+        credentialIdHex: '010203',
+        userHandle: 'BAUG',
+        userHandleHex: '040506',
+        storageId: 'legacy-snapshot-storage',
+        aaguidHex: '00112233445566778899aabbccddeeff',
+        registrationDetailSnapshot: {
+          html: '<section>legacy snapshot</section>',
+          attestationSectionHtml: '',
+          combinedHtml: `
+            <section>
+              <button type="button" class="btn btn-small registration-attestation-cert-button" data-cert-index="0">Attestation Certificate</button>
+            </section>
+          `,
+          state: {
+            attestationObject: {
+              fmt: 'packed',
+              attStmt: {},
+            },
+            attestationCertificates: [
+              {
+                parsedX5c: {
+                  summary: 'Legacy snapshot certificate summary',
+                },
+              },
+            ],
+            visibleAttestationCertificateIndices: [],
+            authenticatorData: {
+              value: '001122',
+            },
+            authenticatorDataHex: '001122',
+            authenticatorDataHash: 'aabb',
+            detailPreparation: {
+              attestationObjectValue: '',
+              attestationDecodeError: '',
+              authenticatorDataValue: '',
+              authenticatorDecodeError: '',
+            },
+          },
+        },
+      },
+    ];
+
+    await showCredentialDetails(0);
+
+    const certButton = document.querySelector('.registration-attestation-cert-button');
+    expect(certButton).not.toBeNull();
+
+    certButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(openModal).toHaveBeenCalledWith('registrationDetailModal');
+    expect(document.getElementById('registrationDetailModalBody').innerHTML).toContain('Legacy snapshot certificate summary');
   });
 
   it('keeps state intact when delete/clear confirmations are cancelled', async () => {
