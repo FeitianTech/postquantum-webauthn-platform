@@ -692,4 +692,224 @@ describe('mds explorer', () => {
     await new Promise((resolve) => setTimeout(resolve, 550));
     expect(document.getElementById('mds-certificate-page').hidden).toBe(true);
   });
+
+  it('handles custom panel wheel/touch guards, drag leave cleanup, and file-input uploads', async () => {
+    globalThis.fetch = vi.fn((url) => {
+      if (String(url).includes('api/mds/metadata/upload')) {
+        return Promise.resolve(
+          jsonResponse({
+            snapshot: {
+              meta: {
+                entryCount: 2,
+                no: 11,
+                generatedAt: '2026-04-06T12:00:00Z',
+              },
+              entries: makeSnapshotEntries(),
+              legalHeader: 'Uploaded legal header',
+            },
+            errors: [],
+          }),
+        );
+      }
+
+      if (String(url).includes('/api/mds/decode-certificate')) {
+        return Promise.resolve(
+          jsonResponse({
+            details: {
+              summary: 'Certificate summary details',
+            },
+          }),
+        );
+      }
+
+      if (String(url).includes('fido-mds3.verified.json.meta.json')) {
+        return Promise.resolve(jsonResponse({ generatedAt: '2026-04-06T12:00:00Z' }));
+      }
+
+      return Promise.resolve(
+        jsonResponse({
+          meta: {
+            entryCount: 2,
+            no: 11,
+            generatedAt: '2026-04-06T12:00:00Z',
+          },
+          entries: makeSnapshotEntries(),
+          legalHeader: 'FIDO legal header',
+        }),
+      );
+    });
+
+    await import('../../static/scripts/advanced/mds.js');
+    document.dispatchEvent(new Event('DOMContentLoaded'));
+    await waitForCondition(() => document.querySelectorAll('#mds-table-body tr').length === 2, 1200);
+
+    const addButton = document.getElementById('mds-add-metadata-button');
+    const panel = document.getElementById('mds-custom-metadata-panel');
+    const panelClose = document.getElementById('mds-custom-panel-close');
+    const dropzone = document.getElementById('mds-custom-dropzone');
+    const fileInput = document.getElementById('mds-custom-file-input');
+    const messages = document.getElementById('mds-custom-messages');
+
+    addButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(panel.classList.contains('is-open')).toBe(true);
+
+    const dialog = panel.querySelector('.mds-custom-panel__dialog');
+    Object.defineProperty(dialog, 'scrollHeight', { configurable: true, value: 400 });
+    Object.defineProperty(dialog, 'clientHeight', { configurable: true, value: 200 });
+    dialog.scrollTop = 0;
+
+    const wheelEvent = new WheelEvent('wheel', { bubbles: true, cancelable: true, deltaY: -30 });
+    dialog.dispatchEvent(wheelEvent);
+    expect(wheelEvent.defaultPrevented).toBe(true);
+
+    const touchStart = new Event('touchstart', { bubbles: true, cancelable: true });
+    Object.defineProperty(touchStart, 'touches', {
+      configurable: true,
+      value: [{ clientY: 100 }],
+    });
+    dialog.dispatchEvent(touchStart);
+
+    const touchMove = new Event('touchmove', { bubbles: true, cancelable: true });
+    Object.defineProperty(touchMove, 'touches', {
+      configurable: true,
+      value: [{ clientY: 130 }],
+    });
+    dialog.dispatchEvent(touchMove);
+    expect(touchMove.defaultPrevented).toBe(true);
+
+    dropzone.dispatchEvent(eventWithDataTransfer('dragenter'));
+    expect(dropzone.classList.contains('is-active')).toBe(true);
+
+    const dragLeaveEvent = new Event('dragleave', { bubbles: true, cancelable: true });
+    dropzone.dispatchEvent(dragLeaveEvent);
+    expect(dropzone.classList.contains('is-active')).toBe(false);
+
+    const validFile = new File(['{"meta":{},"entries":[]}'], 'custom-upload.json', {
+      type: 'application/json',
+    });
+    Object.defineProperty(fileInput, 'files', {
+      configurable: true,
+      value: [validFile],
+    });
+
+    fileInput.dispatchEvent(new Event('change', { bubbles: true }));
+
+    await waitForCondition(
+      () => messages.textContent.includes('Metadata uploaded successfully.'),
+      1200,
+    );
+
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      'api/mds/metadata/upload',
+      expect.objectContaining({ method: 'POST' }),
+    );
+
+    panelClose.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    dialog.dispatchEvent(new Event('transitionend', { bubbles: true }));
+    await Promise.resolve();
+    expect(panel.hidden).toBe(true);
+  });
+
+  it('supports sorting on every table column and finalizing deferred row highlight', async () => {
+    await import('../../static/scripts/advanced/mds.js');
+    document.dispatchEvent(new Event('DOMContentLoaded'));
+    await waitForCondition(() => document.querySelectorAll('#mds-table-body tr').length === 2, 1200);
+
+    const sortButtons = Array.from(document.querySelectorAll('.mds-sort-button'));
+    expect(sortButtons.length).toBeGreaterThan(5);
+
+    sortButtons.forEach((button) => {
+      button.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      expect(button.getAttribute('data-sort-direction')).not.toBe('none');
+    });
+
+    const highlighted = await window.highlightMdsAuthenticatorRow('00112233-4455-6677-8899-aabbccddeeff', {
+      deferScroll: true,
+      waitForVisibility: true,
+      focusRow: false,
+    });
+    expect(highlighted.highlighted).toBe(true);
+
+    const finalized = window.finaliseMdsAuthenticatorHighlight({ behavior: 'auto', focus: false });
+    expect(finalized).toBe(true);
+    expect(document.querySelector('tr.mds-row--highlight')).not.toBeNull();
+  });
+
+  it('falls back to raw-view line rendering when JSON serialization throws and reuses popup window', async () => {
+    const entries = makeSnapshotEntries();
+    entries[0] = {
+      ...entries[0],
+      rawEntry: {
+        aaguid: '00112233-4455-6677-8899-aabbccddeeff',
+        metadataStatement: {
+          description: 'Raw fallback key',
+        },
+        nested: {
+          mode: 'fallback',
+          values: ['one', 'two'],
+        },
+        toJSON() {
+          throw new Error('serialization blocked');
+        },
+      },
+    };
+
+    window.__INITIAL_MDS_SNAPSHOT__ = {
+      meta: {
+        entryCount: 2,
+        no: 12,
+        generatedAt: '2026-04-06T13:00:00Z',
+      },
+      entries,
+      legalHeader: 'FIDO legal header',
+    };
+
+    const popupDocument = document.implementation.createHTMLDocument('popup');
+    const popupWindow = {
+      closed: false,
+      document: popupDocument,
+      focus: vi.fn(),
+      resizeTo: vi.fn(),
+      onbeforeunload: null,
+    };
+
+    window.open = vi.fn(() => popupWindow);
+
+    globalThis.fetch = vi.fn((url) => {
+      if (String(url).includes('/api/mds/decode-certificate')) {
+        return Promise.resolve(
+          jsonResponse({
+            details: {
+              summary: 'Popup certificate summary',
+            },
+          }),
+        );
+      }
+      return Promise.resolve(jsonResponse({ items: [] }));
+    });
+
+    await import('../../static/scripts/advanced/mds.js');
+    document.dispatchEvent(new Event('DOMContentLoaded'));
+    await waitForCondition(() => document.querySelectorAll('#mds-table-body tr').length === 2, 1200);
+
+    const firstNameButton = document.querySelector('.mds-name-button');
+    firstNameButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await waitForCondition(
+      () => document.getElementById('mds-authenticator-modal-content').textContent.includes('Alpha Key'),
+      1200,
+    );
+
+    const rawButton = document.getElementById('mds-authenticator-modal-raw');
+    expect(rawButton.disabled).toBe(false);
+
+    rawButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    rawButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+    const rawTextarea = popupDocument.getElementById('mds-raw-textarea');
+    expect(window.open).toHaveBeenCalled();
+    expect(rawTextarea).not.toBeNull();
+    expect(rawTextarea.value).toContain('nested:');
+    expect(popupWindow.resizeTo).toHaveBeenCalled();
+    expect(popupWindow.focus).toHaveBeenCalled();
+  });
 });
