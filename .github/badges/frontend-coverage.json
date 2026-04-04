@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "label": "Frontend coverage",
-  "message": "88.23%",
-  "color": "brightgreen",
+  "message": "75.19%",
+  "color": "yellow",
   "namedLogo": "javascript",
   "cacheSeconds": 120
 }
