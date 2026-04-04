@@ -195,6 +195,9 @@ import { state } from '../../static/scripts/shared/state.js';
 import {
   autoResizeCertificateTextareas,
   clearAllCredentials,
+  closeCredentialModal,
+  closeRegistrationDetailModal,
+  closeRegistrationResultModal,
   deleteCredential,
   formatCertificateDetails,
   loadSavedCredentials,
@@ -620,5 +623,181 @@ describe('credential-display', () => {
 
     const textarea = document.querySelector('#registrationDetailModalBody textarea');
     expect(textarea.style.overflowY).toBe('hidden');
+  });
+
+  it('handles navigation integration gaps and highlight finalization fallback states', async () => {
+    document.getElementById('modalBody').innerHTML = `
+      <div class="credential-aaguid-status">
+        <span class="credential-aaguid-spinner" hidden></span>
+        <span class="credential-aaguid-status-text"></span>
+      </div>
+    `;
+
+    delete window.highlightMdsAuthenticatorRow;
+    const unavailable = navigateToMdsAuthenticator('00112233-4455-6677-8899-aabbccddeeff');
+    expect(unavailable).toBeUndefined();
+
+    window.highlightMdsAuthenticatorRow = vi.fn()
+      .mockResolvedValueOnce({ highlighted: true, entry: { aaguid: '00112233445566778899aabbccddeeff' } })
+      .mockResolvedValueOnce({ highlighted: false, entry: { aaguid: '00112233445566778899aabbccddeeff' } });
+    window.finaliseMdsAuthenticatorHighlight = vi.fn(() => false);
+    window.resolveMdsEntryByAaguid = vi.fn().mockResolvedValue({ aaguid: '00112233445566778899aabbccddeeff' });
+
+    const result = await navigateToMdsAuthenticator('00112233-4455-6677-8899-aabbccddeeff');
+    expect(result).toEqual(
+      expect.objectContaining({
+        highlighted: false,
+        entry: expect.objectContaining({ aaguid: '00112233445566778899aabbccddeeff' }),
+      }),
+    );
+
+    const statusText = document.querySelector('.credential-aaguid-status-text')?.textContent || '';
+    expect(statusText).toContain('Unable to locate metadata entry.');
+  });
+
+  it('renders decode failures in registration-result modal without crashing', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 400,
+      json: vi.fn().mockResolvedValue({ error: 'decode failed' }),
+      text: vi.fn().mockResolvedValue('decode failed'),
+    });
+
+    await showRegistrationResultModal(
+      {
+        id: 'credential-error',
+        response: {
+          clientDataJSON: btoa(JSON.stringify({ challenge: 'x' })).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, ''),
+          attestationObject: 'not-decodable-attestation',
+          authenticatorData: 'not-decodable-auth-data',
+        },
+      },
+      {
+        attestationFmt: 'packed',
+      },
+    );
+
+    expect(openModal).toHaveBeenCalledWith('registrationResultModal');
+    const resultHtml = document.getElementById('registrationResultBody').innerHTML;
+    expect(resultHtml).toContain('decode failed');
+  });
+
+  it('uses snapshot detail buttons for certificate/authenticator drill-down modals', async () => {
+    state.storedCredentials = [
+      {
+        type: 'advanced',
+        userName: 'Snapshot User',
+        credentialId: 'AQID',
+        credentialIdHex: '010203',
+        userHandle: 'BAUG',
+        userHandleHex: '040506',
+        storageId: 'snapshot-storage',
+        aaguidHex: '00112233445566778899aabbccddeeff',
+        registrationDetailSnapshot: {
+          html: '<section>snapshot intro</section>',
+          attestationSectionHtml: '',
+          combinedHtml: `
+            <section>
+              <button type="button" class="btn btn-small registration-attestation-cert-button" data-cert-index="0">Attestation Certificate</button>
+              <button type="button" class="btn btn-small btn-secondary registration-authenticator-data-button">Authenticator Data</button>
+            </section>
+          `,
+          state: {
+            attestationObject: {
+              fmt: 'packed',
+              attStmt: {},
+            },
+            attestationCertificates: [
+              {
+                parsedX5c: {
+                  summary: 'Snapshot certificate summary',
+                },
+              },
+            ],
+            visibleAttestationCertificateIndices: [0],
+            authenticatorData: {
+              raw: '001122',
+            },
+            authenticatorDataHex: '001122',
+            authenticatorDataHash: 'aa55',
+            detailPreparation: {
+              attestationObjectValue: '',
+              attestationDecodeError: '',
+              authenticatorDataValue: '',
+              authenticatorDecodeError: '',
+            },
+          },
+        },
+      },
+    ];
+
+    await showCredentialDetails(0);
+    expect(openModal).toHaveBeenCalledWith('credentialModal');
+
+    const certButton = document.querySelector('.registration-attestation-cert-button');
+    certButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(openModal).toHaveBeenCalledWith('registrationDetailModal');
+    expect(document.getElementById('registrationDetailModalTitle').textContent).toContain('Attestation Certificate');
+
+    const authButton = document.querySelector('.registration-authenticator-data-button');
+    authButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(document.getElementById('registrationDetailModalTitle').textContent).toContain('Authenticator Data');
+    expect(document.getElementById('registrationDetailModalBody').innerHTML).toContain('001122');
+  });
+
+  it('keeps state intact when delete/clear confirmations are cancelled', async () => {
+    state.storedCredentials = [
+      {
+        type: 'simple',
+        userName: 'Cancel User',
+        credentialIdBase64Url: 'cancel-id',
+        credentialId: 'cancel-id',
+        email: 'cancel@example.com',
+      },
+    ];
+
+    globalThis.confirm = vi.fn(() => false);
+
+    await deleteCredential(0);
+    expect(removeSimpleCredential).not.toHaveBeenCalled();
+
+    getAllSimpleCredentials.mockReturnValue([{ id: 's1' }]);
+    getAllAdvancedCredentials.mockReturnValue([{ storageId: 'a1' }]);
+
+    await clearAllCredentials();
+    expect(clearSimpleCredentials).not.toHaveBeenCalled();
+    expect(clearAdvancedCredentials).not.toHaveBeenCalled();
+  });
+
+  it('exposes modal close helpers through exported wrappers', () => {
+    closeCredentialModal();
+    closeRegistrationResultModal();
+    closeRegistrationDetailModal();
+
+    expect(closeModal).toHaveBeenCalledWith('credentialModal');
+    expect(closeModal).toHaveBeenCalledWith('registrationResultModal');
+    expect(closeModal).toHaveBeenCalledWith('registrationDetailModal');
+  });
+
+  it('still opens credential details when artifact hydration fails', async () => {
+    fetchCredentialArtifact.mockRejectedValueOnce(new Error('artifact unavailable'));
+
+    state.storedCredentials = [
+      {
+        type: 'advanced',
+        userName: 'Hydrate Failure User',
+        credentialId: 'AQID',
+        credentialIdHex: '010203',
+        userHandle: 'BAUG',
+        userHandleHex: '040506',
+        storageId: 'hydrate-failure-storage',
+        aaguidHex: '00112233445566778899aabbccddeeff',
+      },
+    ];
+
+    await showCredentialDetails(0);
+    expect(fetchCredentialArtifact).toHaveBeenCalledWith('hydrate-failure-storage');
+    expect(openModal).toHaveBeenCalledWith('credentialModal');
+    expect(document.getElementById('modalBody').innerHTML).toContain('Authenticator Response');
   });
 });
