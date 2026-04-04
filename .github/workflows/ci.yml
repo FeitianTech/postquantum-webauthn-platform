@@ -48,6 +48,13 @@ jobs:
               print(f"Imported {module}")
           PY
 
+      - name: Run workflow updater contract tests
+        run: |
+          pytest -q \
+            tests/app/test_update_mds_snapshot.py \
+            tests/app/test_update_footer_year.py \
+            tests/app/test_server_package_exports.py
+
       - name: Run pytest
         run: |
           pytest -v --maxfail=1 --disable-warnings -q

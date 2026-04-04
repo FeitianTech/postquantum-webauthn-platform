@@ -15,36 +15,13 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v6
 
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+
       - name: Update footer year
-        run: |
-          python3 <<'PYTHON'
-          from datetime import datetime, timezone
-          from pathlib import Path
-          import re
-
-          current_year = datetime.now(timezone.utc).year
-          html_path = Path("frontend/templates/index.html")
-          text = html_path.read_text(encoding="utf-8")
-
-          pattern = re.compile(
-              r"(?P<prefix>©|&copy;)\s+\d{4}\s+Feitian Technologies Co\., Ltd\."
-          )
-
-          def replace(match: re.Match) -> str:
-              prefix = match.group("prefix")
-              return f"{prefix} {current_year} Feitian Technologies Co., Ltd."
-
-          updated_text, replacements = pattern.subn(replace, text, count=1)
-
-          if replacements == 0:
-              raise SystemExit("No footer year found to update.")
-
-          if text != updated_text:
-              html_path.write_text(updated_text, encoding="utf-8")
-              print(f"Updated footer year to {current_year}")
-          else:
-              print("Footer year already up to date.")
-          PYTHON
+        run: python scripts/update_footer_year.py
 
       - name: Detect changes
         id: changes

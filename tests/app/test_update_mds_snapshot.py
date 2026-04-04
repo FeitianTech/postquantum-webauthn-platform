@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import builtins
 import importlib.util
 import json
 import sys
@@ -56,6 +57,29 @@ def test_module_import_inserts_repo_root_when_missing(monkeypatch):
     try:
         spec.loader.exec_module(module)
         assert sys.path[0] == repo_root
+    finally:
+        sys.modules.pop(module_name, None)
+
+
+def test_module_import_does_not_require_flask_dependency(monkeypatch):
+    module_name = "_update_mds_snapshot_no_flask_import_test"
+    module_file = Path(updater.__file__).resolve()
+    original_import = builtins.__import__
+
+    def _guarded_import(name, globals=None, locals=None, fromlist=(), level=0):
+        if name == "flask" or name.startswith("flask."):
+            raise AssertionError("update_mds_snapshot import unexpectedly requires flask")
+        return original_import(name, globals, locals, fromlist, level)
+
+    monkeypatch.setattr(builtins, "__import__", _guarded_import)
+
+    spec = importlib.util.spec_from_file_location(module_name, module_file)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+
+    sys.modules[module_name] = module
+    try:
+        spec.loader.exec_module(module)
     finally:
         sys.modules.pop(module_name, None)
 
