@@ -433,4 +433,64 @@ describe('auth-advanced', () => {
     expect(showStatus).toHaveBeenCalledWith('advanced', 'Invalid hint configuration for test', 'error');
     expect(hideProgress).toHaveBeenCalledWith('advanced');
   });
+
+  it('maps advanced authentication InvalidState and Security errors to friendly messages', async () => {
+    document.getElementById('json-editor').value = JSON.stringify({
+      publicKey: {
+        challenge: { $hex: '1234' },
+      },
+    });
+
+    ensureAuthenticationHintsAllowed.mockReturnValue([]);
+    parseRequestOptionsFromJSON.mockReturnValue({ publicKey: {} });
+    fetch.mockResolvedValue(jsonResponse({ publicKey: { challenge: { $base64url: 'AQID' } } }));
+
+    const invalidState = new Error('invalid state');
+    invalidState.name = 'InvalidStateError';
+    get.mockRejectedValueOnce(invalidState);
+    await advancedAuthenticate();
+    expect(showStatus).toHaveBeenCalledWith(
+      'advanced',
+      'Advanced authentication failed: Invalid authenticator state - please try again',
+      'error',
+    );
+
+    const securityError = new Error('security issue');
+    securityError.name = 'SecurityError';
+    get.mockRejectedValueOnce(securityError);
+    await advancedAuthenticate();
+    expect(showStatus).toHaveBeenCalledWith(
+      'advanced',
+      'Advanced authentication failed: Security error - check your connection and try again',
+      'error',
+    );
+  });
+
+  it('surfaces hint-enforcement failures during advanced registration', async () => {
+    document.getElementById('json-editor').value = JSON.stringify({
+      publicKey: {
+        rp: { id: 'example.com', name: 'Example RP' },
+        user: {
+          id: { $hex: 'aabbccdd' },
+          name: 'alice',
+          displayName: 'Alice',
+        },
+        challenge: { $hex: 'abcd' },
+        pubKeyCredParams: [{ type: 'public-key', alg: -7 }],
+      },
+    });
+
+    enforceAuthenticatorAttachmentWithHints.mockImplementation(() => {
+      throw new Error('Unsupported hint combination');
+    });
+
+    parseCreationOptionsFromJSON.mockReturnValue({ publicKey: {} });
+    fetch.mockResolvedValueOnce(jsonResponse({ publicKey: { challenge: { $base64url: 'AQID' } } }));
+
+    await advancedRegister();
+
+    expect(showStatus).toHaveBeenCalledWith('advanced', 'Unsupported hint combination', 'error');
+    const finalMessage = showStatus.mock.calls.at(-1)[1];
+    expect(finalMessage).toContain('Credential registration failed: Unsupported hint combination');
+  });
 });

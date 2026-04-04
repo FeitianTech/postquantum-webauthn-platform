@@ -155,4 +155,108 @@ describe('auth-simple', () => {
     expect(updateCredentialsDisplay).toHaveBeenCalled();
     expect(showStatus).toHaveBeenCalledWith('simple', 'Bad assertion', 'error');
   });
+
+  it('maps registration and authentication WebAuthn error names to friendly messages', async () => {
+    document.getElementById('simple-email').value = 'user@example.com';
+
+    parseCreationOptionsFromJSON.mockReturnValue({ publicKey: {} });
+    create.mockRejectedValueOnce({ name: 'NotSupportedError', message: 'not supported' });
+    fetch.mockResolvedValueOnce(jsonResponse({ publicKey: {} }));
+
+    await simpleRegister();
+    expect(showStatus).toHaveBeenCalledWith('simple', 'WebAuthn is not supported in this browser', 'error');
+
+    getSimpleCredentialsForEmail.mockReturnValue([{ credentialId: 'cred-1', publicKey: 'cHVibGlj' }]);
+    prepareCredentialsForServer.mockReturnValue([{ credentialId: 'cred-1', publicKey: 'cHVibGlj' }]);
+    parseRequestOptionsFromJSON.mockReturnValue({ publicKey: {} });
+    fetch.mockResolvedValueOnce(jsonResponse({ publicKey: {} }));
+    get.mockRejectedValueOnce({ name: 'SecurityError', message: 'security issue' });
+
+    await simpleAuthenticate();
+    expect(showStatus).toHaveBeenCalledWith('simple', 'Security error - check your connection and try again', 'error');
+  });
+
+  it('falls back to status-code auth failure message and maps InvalidState errors', async () => {
+    document.getElementById('simple-email').value = 'user@example.com';
+
+    getSimpleCredentialsForEmail.mockReturnValue([{ credentialId: 'cred-1', publicKey: 'cHVibGlj' }]);
+    prepareCredentialsForServer.mockReturnValue([{ credentialId: 'cred-1', publicKey: 'cHVibGlj' }]);
+    parseRequestOptionsFromJSON.mockReturnValue({ publicKey: {} });
+    get.mockResolvedValueOnce({ toJSON: () => ({ id: 'cred-1' }) });
+    fetch.mockResolvedValueOnce(jsonResponse({ publicKey: {} }));
+    fetch.mockResolvedValueOnce({
+      ok: false,
+      status: 401,
+      text: vi.fn().mockResolvedValue(''),
+      json: vi.fn().mockRejectedValue(new Error('no json')),
+    });
+
+    await simpleAuthenticate();
+    expect(showStatus).toHaveBeenCalledWith('simple', 'Authentication failed (401)', 'error');
+
+    get.mockRejectedValueOnce({ name: 'InvalidStateError', message: 'invalid state' });
+    fetch.mockResolvedValueOnce(jsonResponse({ publicKey: {} }));
+
+    await simpleAuthenticate();
+    expect(showStatus).toHaveBeenCalledWith('simple', 'Authenticator error or invalid credential', 'error');
+  });
+
+  it('reports begin-404 registration guidance and maps NotSupported auth errors', async () => {
+    document.getElementById('simple-email').value = 'user@example.com';
+
+    getSimpleCredentialsForEmail.mockReturnValue([{ credentialId: 'cred-1', publicKey: 'cHVibGlj' }]);
+    prepareCredentialsForServer.mockReturnValue([{ credentialId: 'cred-1', publicKey: 'cHVibGlj' }]);
+
+    fetch.mockResolvedValueOnce({
+      ok: false,
+      status: 404,
+      text: vi.fn().mockResolvedValue('not found'),
+      json: vi.fn().mockRejectedValue(new Error('no json')),
+    });
+
+    await simpleAuthenticate();
+    expect(showStatus).toHaveBeenCalledWith('simple', 'No credentials found for this username. Please register first.', 'error');
+
+    parseRequestOptionsFromJSON.mockReturnValue({ publicKey: {} });
+    fetch.mockResolvedValueOnce(jsonResponse({ publicKey: {} }));
+    get.mockRejectedValueOnce({ name: 'NotSupportedError', message: 'unsupported' });
+
+    await simpleAuthenticate();
+    expect(showStatus).toHaveBeenCalledWith('simple', 'WebAuthn is not supported in this browser', 'error');
+  });
+
+  it('handles missing stored credentials, begin server errors, and NotAllowed authentication mapping', async () => {
+    document.getElementById('simple-email').value = 'user@example.com';
+
+    getSimpleCredentialsForEmail.mockReturnValueOnce([]);
+    await simpleAuthenticate();
+    expect(showStatus).toHaveBeenCalledWith(
+      'simple',
+      'No credentials stored in this browser for the provided username. Please register first.',
+      'error',
+    );
+
+    getSimpleCredentialsForEmail.mockReturnValueOnce([{ credentialId: 'cred-1', publicKey: 'cHVibGlj' }]);
+    prepareCredentialsForServer.mockReturnValueOnce([{ credentialId: 'cred-1', publicKey: 'cHVibGlj' }]);
+    fetch.mockResolvedValueOnce({
+      ok: false,
+      status: 500,
+      text: vi.fn().mockResolvedValue('backend down'),
+      json: vi.fn().mockRejectedValue(new Error('no json')),
+    });
+    await simpleAuthenticate();
+    expect(showStatus).toHaveBeenCalledWith('simple', 'Server error: backend down', 'error');
+
+    getSimpleCredentialsForEmail.mockReturnValueOnce([{ credentialId: 'cred-1', publicKey: 'cHVibGlj' }]);
+    prepareCredentialsForServer.mockReturnValueOnce([{ credentialId: 'cred-1', publicKey: 'cHVibGlj' }]);
+    parseRequestOptionsFromJSON.mockReturnValueOnce({ publicKey: {} });
+    fetch.mockResolvedValueOnce(jsonResponse({ publicKey: {} }));
+
+    const cancelled = new Error('cancelled');
+    cancelled.name = 'NotAllowedError';
+    get.mockRejectedValueOnce(cancelled);
+
+    await simpleAuthenticate();
+    expect(showStatus).toHaveBeenCalledWith('simple', 'User cancelled or authenticator not available', 'error');
+  });
 });

@@ -220,4 +220,41 @@ describe('json-editor validation edge cases', () => {
     });
     expect(allowSelect.value).toBe('aa11');
   });
+
+  it('validates authentication allowCredentials descriptor transports and type fields', () => {
+    state.currentSubTab = 'authentication';
+    document.getElementById('json-editor').value = JSON.stringify({
+      publicKey: {
+        challenge: { $hex: 'cafe' },
+        allowCredentials: [
+          {
+            type: 'wrong-type',
+            id: { $hex: 'aa11' },
+            transports: ['usb'],
+          },
+        ],
+      },
+    });
+
+    saveJsonEditor();
+    let message = showStatus.mock.calls.at(-1)[1];
+    expect(message).toContain('type must be "public-key"');
+
+    document.getElementById('json-editor').value = JSON.stringify({
+      publicKey: {
+        challenge: { $hex: 'beef' },
+        allowCredentials: [
+          {
+            type: 'public-key',
+            id: { $hex: 'aa11' },
+            transports: ['usb', 10],
+          },
+        ],
+      },
+    });
+
+    saveJsonEditor();
+    message = showStatus.mock.calls.at(-1)[1];
+    expect(message).toContain('transports must be an array of strings');
+  });
 });

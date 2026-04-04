@@ -88,4 +88,18 @@ describe('json-editor-utils', () => {
     handleJsonEditorKeydown(bypassEvent);
     expect(bypassEditor.value).toBe('value');
   });
+
+  it('dedents tab- and single-space-indented content in shift-tab flows', () => {
+    const multiline = createEditor('\tline1\n line2', 0, '\tline1\n line2'.length);
+    applyTabIndentation(multiline, true);
+    expect(multiline.value).toBe('line1\nline2');
+
+    const tabLine = createEditor('\tline', 5, 5);
+    applyTabIndentation(tabLine, true);
+    expect(tabLine.value).toBe('line');
+
+    const singleSpaceLine = createEditor(' line', 5, 5);
+    applyTabIndentation(singleSpaceLine, true);
+    expect(singleSpaceLine.value).toBe('line');
+  });
 });

@@ -125,4 +125,66 @@ describe('forms', () => {
     checkLargeBlobCapability({ selectedCredential: { largeBlobSupported: false } });
     expect(document.getElementById('large-blob-capability-message').textContent).toContain('Selected credential does not support largeBlob.');
   });
+
+  it('resolves selected credential by id and disables unsupported auth extensions', async () => {
+    const { updateAuthenticationExtensionAvailability } = await loadFormsModule();
+
+    state.storedCredentials = [
+      {
+        credentialIdHex: '414243',
+        largeBlobSupported: false,
+        clientExtensionOutputs: {},
+      },
+    ];
+
+    document.getElementById('allow-credentials').value = '414243';
+    updateAuthenticationExtensionAvailability();
+
+    expect(document.getElementById('large-blob-auth').disabled).toBe(true);
+    expect(document.getElementById('prf-eval-first-auth').disabled).toBe(true);
+    expect(document.getElementById('prf-capability-message').textContent).toContain('Selected credential does not support the prf extension.');
+  });
+
+  it('hides prf message when auth inputs are missing and reports no-credential support message', async () => {
+    const { updateAuthenticationExtensionAvailability } = await loadFormsModule();
+
+    document.getElementById('prf-eval-first-auth').remove();
+    document.getElementById('prf-eval-second-auth').remove();
+
+    state.storedCredentials = [];
+    updateAuthenticationExtensionAvailability();
+
+    expect(document.getElementById('prf-capability-message').style.display).toBe('none');
+    expect(document.getElementById('large-blob-capability-message').textContent).toContain('No largeBlob capable credentials available');
+  });
+
+  it('shows no-prf-capability message when no credentials are available', async () => {
+    const { updateAuthenticationExtensionAvailability } = await loadFormsModule();
+
+    state.storedCredentials = [];
+    document.getElementById('allow-credentials').value = 'all';
+
+    updateAuthenticationExtensionAvailability();
+
+    expect(document.getElementById('prf-capability-message').textContent).toContain('No credentials with prf support available.');
+    expect(document.getElementById('prf-eval-first-auth').disabled).toBe(true);
+  });
+
+  it('shows no-prf-capability message when stored credentials exist but none support prf', async () => {
+    const { updateAuthenticationExtensionAvailability } = await loadFormsModule();
+
+    state.storedCredentials = [
+      {
+        credentialIdHex: 'aa11',
+        largeBlobSupported: true,
+        clientExtensionOutputs: {},
+      },
+    ];
+    document.getElementById('allow-credentials').value = 'all';
+
+    updateAuthenticationExtensionAvailability();
+
+    expect(document.getElementById('prf-capability-message').textContent).toContain('No credentials with prf support available.');
+    expect(document.getElementById('prf-eval-first-auth').disabled).toBe(true);
+  });
 });

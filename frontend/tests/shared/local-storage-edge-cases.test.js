@@ -146,4 +146,97 @@ describe('local-storage edge cases', () => {
     expect(payload[0].publicKey).toMatch(/^[A-Za-z0-9_-]+$/);
     expect(payload[0].resident).toBe(false);
   });
+
+  it('filters boot records and clears simple/advanced partitions independently', async () => {
+    window.__INITIAL_CREDENTIAL_RECORDS__ = [
+      null,
+      'not-an-object',
+      {
+        type: 'simple',
+        credentialId: 'boot-simple',
+        email: 'boot@example.com',
+        publicKey: 'cHVibGlj',
+      },
+      {
+        type: 'advanced',
+        credentialId: 'boot-advanced',
+        storageId: 'boot-advanced::storage',
+        publicKey: 'cHVibGlj',
+      },
+    ];
+
+    const storage = await loadLocalStorageModule();
+    const ordered = storage.getAllStoredCredentialsInOrder();
+    expect(ordered).toHaveLength(2);
+
+    storage.clearSimpleCredentials();
+    expect(storage.getAllSimpleCredentials()).toHaveLength(0);
+    expect(storage.getAllAdvancedCredentials()).toHaveLength(1);
+
+    storage.clearAdvancedCredentials();
+    expect(storage.getAllAdvancedCredentials()).toHaveLength(0);
+  });
+
+  it('updates sign counts across partitions and handles snapshot prefetch failures', async () => {
+    const storage = await loadLocalStorageModule();
+
+    const savedAdvanced = storage.saveAdvancedCredential({
+      credentialId: 'shared-counter',
+      publicKey: 'cHVibGlj',
+      storageId: 'shared-counter::storage',
+    });
+    expect(savedAdvanced).not.toBeNull();
+
+    expect(storage.updateSimpleCredentialSignCount('', 'shared-counter')).toBe(true);
+    expect(storage.getAllAdvancedCredentials()[0].signCount).toBe(1);
+
+    storage.saveSimpleCredential({
+      credentialId: 'simple-counter',
+      email: 'simple@example.com',
+      publicKey: 'cHVibGlj',
+      signCount: 2,
+    });
+
+    expect(storage.updateAdvancedCredentialSignCount('simple-counter')).toBe(true);
+    expect(storage.getAllSimpleCredentials()[0].signCount).toBe(3);
+
+    fetchCredentialArtifactsBulk.mockRejectedValueOnce(new Error('prefetch failed'));
+    await expect(storage.ensureAdvancedCredentialSnapshotsPrefetched()).resolves.toBe(false);
+  });
+
+  it('summarizes heavy advanced fields before persisting synced artifacts', async () => {
+    localStorage.setItem(SHARED_STORAGE_KEY, JSON.stringify([
+      {
+        type: 'advanced',
+        credentialId: 'summary-target',
+        storageId: 'summary-target::storage',
+        publicKey: 'cHVibGlj',
+        hasServerArtifact: false,
+        attestationObject: 'heavy-object',
+        properties: {
+          registrationData: { authenticatorData: 'aa' },
+          customFlag: true,
+        },
+        relyingParty: {
+          attestationObject: 'heavy-rp-object',
+          displayName: 'RP Display',
+        },
+      },
+    ]));
+
+    uploadCredentialArtifact.mockResolvedValueOnce(true);
+
+    const storage = await loadLocalStorageModule();
+    const changed = await storage.ensureAdvancedCredentialArtifactsSynced();
+
+    expect(changed).toBe(true);
+
+    const records = JSON.parse(localStorage.getItem(SHARED_STORAGE_KEY));
+    const stored = records[0];
+    expect(stored.hasServerArtifact).toBe(true);
+    expect(stored.attestationObject).toBeUndefined();
+    expect(stored.properties.customFlag).toBe(true);
+    expect(stored.properties.registrationData).toBeUndefined();
+    expect(stored.relyingParty.displayName).toBe('RP Display');
+  });
 });
