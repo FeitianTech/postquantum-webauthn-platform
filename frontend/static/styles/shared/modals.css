@@ -36,6 +36,8 @@
     justify-content: flex-start;
     flex-direction: column;
     transition: opacity 380ms ease, visibility 0s linear 380ms;
+    /* Same horizontal inset as .modal.detail-screen .modal-body */
+    --detail-screen-padding-x: clamp(1.75rem, 5vw, 3rem);
 }
 
 .modal.detail-screen.open { transition: opacity 380ms ease, visibility 0s linear 0s; }
@@ -120,7 +122,7 @@
 
 .modal.detail-screen .modal-header {
     margin-bottom: 0;
-    padding: clamp(0.6rem, 1.9vw, 1rem) clamp(1.25rem, 3.4vw, 2rem) clamp(0.35rem, 1.2vh, 0.55rem);
+    padding: clamp(0.6rem, 1.9vw, 1rem) var(--detail-screen-padding-x) clamp(0.35rem, 1.2vh, 0.55rem);
     border-bottom: 1px solid var(--border-soft);
 }
 
@@ -191,7 +193,7 @@
 }
 
 .modal.detail-screen .modal-body {
-    padding: clamp(1.4rem, 3.4vh, 2rem) clamp(1.75rem, 5vw, 3rem) clamp(2rem, 6vh, 3rem);
+    padding: clamp(1.4rem, 3.4vh, 2rem) var(--detail-screen-padding-x) clamp(2rem, 6vh, 3rem);
     line-height: 1.7;
 }
 
@@ -208,7 +210,8 @@
     .modal-header { margin-bottom: 1.25rem; padding-bottom: 0.85rem; }
     .modal-title { font-size: 1.2rem; }
     .modal-body { padding-right: 0.25rem; }
-    .modal.detail-screen .modal-body { padding: 1.25rem 1.5rem 1.75rem; }
+    .modal.detail-screen { --detail-screen-padding-x: 1.5rem; }
+    .modal.detail-screen .modal-body { padding: 1.25rem var(--detail-screen-padding-x) 1.75rem; }
 }
 
 @media (max-width: 640px) {
@@ -219,7 +222,8 @@
     .modal-title { font-size: 1.1rem; }
     .modal-close { width: 2.25rem; height: 2.25rem; font-size: 0; }
     .modal-body { font-size: 0.9rem; padding-right: 0.15rem; }
-    .modal.detail-screen .modal-body { padding: 1rem 1.1rem 1.5rem; }
+    .modal.detail-screen { --detail-screen-padding-x: 1.1rem; }
+    .modal.detail-screen .modal-body { padding: 1rem var(--detail-screen-padding-x) 1.5rem; }
     .modal.detail-screen .modal-title { font-size: 1.05rem; }
     .credential-aaguid-row { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
 }
@@ -229,7 +233,8 @@
     .modal-header { margin-bottom: 0.85rem; padding-bottom: 0.6rem; }
     .modal-title { font-size: 1rem; }
     .modal-body { font-size: 0.875rem; }
-    .modal.detail-screen .modal-body { padding: 0.9rem 0.9rem 1.25rem; }
+    .modal.detail-screen { --detail-screen-padding-x: 0.9rem; }
+    .modal.detail-screen .modal-body { padding: 0.9rem var(--detail-screen-padding-x) 1.25rem; }
 }
 
 /* ─── Modal body typography ───────────────────────────────── */
