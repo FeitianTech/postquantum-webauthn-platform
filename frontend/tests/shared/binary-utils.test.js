@@ -51,6 +51,24 @@ describe('binary-utils', () => {
     expect(getCurrentBinaryFormat()).toBe('hex');
     expect(currentFormatToJsonFormat('414243')).toEqual({ $hex: '414243' });
     expect(currentFormatToBase64Url('414243')).toBe('QUJD');
+
+    window.__binaryFormat = 'b64';
+    expect(getCurrentBinaryFormat()).toBe('b64');
+    expect(currentFormatToJsonFormat('QUJD')).toEqual({ $base64: 'QUJD' });
+
+    window.__binaryFormat = 'b64u';
+    expect(getCurrentBinaryFormat()).toBe('b64u');
+    expect(currentFormatToJsonFormat('QUJD')).toEqual({ $base64url: 'QUJD' });
+
+    window.__binaryFormat = 'js';
+    expect(getCurrentBinaryFormat()).toBe('js');
+    expect(currentFormatToJsonFormat('new Uint8Array([1,2])')).toEqual({ $js: 'new Uint8Array([1,2])' });
+
+    window.__binaryFormat = 'unexpected-format';
+    expect(getCurrentBinaryFormat()).toBe('unexpected-format');
+    expect(currentFormatToJsonFormat('414243')).toEqual({ $base64url: '' });
+
+    delete window.__binaryFormat;
   });
 
   it('handles array and buffer conversions', () => {
@@ -93,8 +111,9 @@ describe('binary-utils', () => {
       prf: {
         eval: { first: { $hex: '41424344' } },
         evalByCredential: {
-          cred1: { second: { $base64url: 'QUJDRA' } },
+          cred1: { first: { $hex: '4142' }, second: { $base64url: 'QUJDRA' } },
         },
+        passthrough: 'keep-me',
       },
       credProps: true,
       custom: 'value',
@@ -104,9 +123,12 @@ describe('binary-utils', () => {
     expect(converted.enforceCredentialProtectionPolicy).toBe(true);
     expect(converted.largeBlob.write).toBeInstanceOf(ArrayBuffer);
     expect(converted.prf.eval.first).toBeInstanceOf(ArrayBuffer);
+    expect(converted.prf.evalByCredential.cred1.first).toBeInstanceOf(ArrayBuffer);
     expect(converted.prf.evalByCredential.cred1.second).toBeInstanceOf(ArrayBuffer);
+    expect(converted.prf.passthrough).toBe('keep-me');
     expect(converted.credProps).toBe(true);
     expect(converted.custom).toBe('value');
+    expect(convertExtensionsForClient(null)).toBeUndefined();
 
     state.utf8Decoder = originalDecoder;
   });
@@ -127,8 +149,18 @@ describe('binary-utils', () => {
     });
 
     expect(normalizeToHex('414243')).toBe('414243');
+    expect(normalizeToHex('   ')).toBe('');
     expect(normalizeToHex('QUJD')).toBe('414243');
     expect(normalizeToHex({ $base64: 'QUJD' })).toBe('414243');
+    expect(normalizeToHex({ $hex: '414243' })).toBe('414243');
+    expect(normalizeToHex({ $base64url: 'QUJD' })).toBe('414243');
     expect(normalizeToHex({ $js: 'new Uint8Array([65, 66])' })).toBe('4142');
+    expect(normalizeToHex('###not-binary###')).toBe('');
+    expect(normalizeToHex({ unsupported: true })).toBe('');
+
+    expect(sortObjectKeys([{ z: 1, a: 2 }, { b: { d: 4, c: 3 } }])).toEqual([
+      { a: 2, z: 1 },
+      { b: { c: 3, d: 4 } },
+    ]);
   });
 });

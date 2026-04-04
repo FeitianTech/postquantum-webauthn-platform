@@ -476,8 +476,15 @@ export function sortObjectKeys(value) {
 }
 
 const ACTIVE_BINARY_FORMAT = 'hex';
-
 export function getCurrentBinaryFormat() {
+    if (typeof window !== 'undefined') {
+        const runtimeFormat = typeof window.__binaryFormat === 'string'
+            ? window.__binaryFormat.trim().toLowerCase()
+            : '';
+        if (runtimeFormat) {
+            return runtimeFormat;
+        }
+    }
     return ACTIVE_BINARY_FORMAT;
 }
 
