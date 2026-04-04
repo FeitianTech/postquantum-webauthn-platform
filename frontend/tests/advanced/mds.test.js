@@ -253,6 +253,18 @@ async function waitForCondition(predicate, timeoutMs = 800, intervalMs = 20) {
   return false;
 }
 
+function eventWithDataTransfer(type, files = []) {
+  const event = new Event(type, { bubbles: true, cancelable: true });
+  Object.defineProperty(event, 'dataTransfer', {
+    configurable: true,
+    value: {
+      files,
+      dropEffect: 'copy',
+    },
+  });
+  return event;
+}
+
 describe('mds explorer', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -424,5 +436,260 @@ describe('mds explorer', () => {
 
     const loaded = await module.waitForMetadataLoad();
     expect(loaded).toBe(true);
+  });
+
+  it('handles custom metadata panel interactions, drag/drop uploads, and warning paths', async () => {
+    globalThis.fetch = vi.fn((url, options = {}) => {
+      if (String(url).includes('api/mds/metadata/upload')) {
+        return Promise.resolve(
+          jsonResponse({
+            snapshot: {
+              meta: {
+                entryCount: 2,
+                no: 9,
+                generatedAt: '2026-04-05T12:00:00Z',
+              },
+              entries: makeSnapshotEntries(),
+              legalHeader: 'Uploaded legal header',
+            },
+            errors: ['Duplicate entry ignored.'],
+          }),
+        );
+      }
+
+      if (String(url).includes('/api/mds/decode-certificate')) {
+        return Promise.resolve(
+          jsonResponse({
+            details: {
+              summary: 'Certificate summary details',
+            },
+          }),
+        );
+      }
+
+      if (String(url).includes('fido-mds3.verified.json.meta.json')) {
+        return Promise.resolve(jsonResponse({ generatedAt: '2026-04-05T12:00:00Z' }));
+      }
+
+      if (String(url).includes('api/mds/metadata/explorer/full')) {
+        return Promise.resolve(
+          jsonResponse({
+            meta: {
+              entryCount: 2,
+              no: 8,
+              generatedAt: '2026-04-04T12:00:00Z',
+            },
+            entries: makeSnapshotEntries(),
+            legalHeader: 'FIDO legal header',
+          }),
+        );
+      }
+
+      return Promise.resolve(jsonResponse({ items: [] }));
+    });
+
+    const module = await import('../../static/scripts/advanced/mds.js');
+    document.dispatchEvent(new Event('DOMContentLoaded'));
+    await waitForCondition(() => document.querySelectorAll('#mds-table-body tr').length === 2, 1000);
+
+    const addButton = document.getElementById('mds-add-metadata-button');
+    const panel = document.getElementById('mds-custom-metadata-panel');
+    const panelClose = document.getElementById('mds-custom-panel-close');
+    const dropzone = document.getElementById('mds-custom-dropzone');
+    const messages = document.getElementById('mds-custom-messages');
+
+    addButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(panel.classList.contains('is-open')).toBe(true);
+
+    const keydown = new KeyboardEvent('keydown', {
+      key: 'Escape',
+      bubbles: true,
+      cancelable: true,
+    });
+    panel.dispatchEvent(keydown);
+    expect(keydown.defaultPrevented).toBe(true);
+
+    dropzone.dispatchEvent(eventWithDataTransfer('dragenter'));
+    expect(dropzone.classList.contains('is-active')).toBe(true);
+
+    const invalidFile = new File(['not-json'], 'notes.txt', { type: 'text/plain' });
+    const validFile = new File(['{"meta":{},"entries":[]}'], 'custom-aaguid.json', {
+      type: 'application/json',
+    });
+
+    dropzone.dispatchEvent(eventWithDataTransfer('drop', [invalidFile, validFile]));
+
+    await waitForCondition(
+      () => messages.textContent.includes('Metadata uploaded with warnings:'),
+      1200,
+    );
+
+    expect(messages.textContent).toContain('Metadata uploaded with warnings:');
+    expect(document.getElementById('mds-status').textContent).toContain('Custom metadata updated.');
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      'api/mds/metadata/upload',
+      expect.objectContaining({ method: 'POST' }),
+    );
+
+    panelClose.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await new Promise((resolve) => setTimeout(resolve, 450));
+    expect(panel.hidden).toBe(true);
+
+    const loaded = await module.waitForMetadataLoad();
+    expect(loaded).toBe(true);
+  });
+
+  it('resolves lightweight entries for modal detail and opens raw-view popup', async () => {
+    const lightweightEntries = makeSnapshotEntries();
+    lightweightEntries[0] = {
+      ...lightweightEntries[0],
+      name: 'Lightweight Alpha',
+      metadataStatement: null,
+      isLightweightEntry: true,
+      rawEntry: null,
+    };
+
+    const resolvedEntry = {
+      ...makeSnapshotEntries()[0],
+      name: 'Resolved Alpha',
+      isLightweightEntry: false,
+    };
+
+    window.__INITIAL_MDS_SNAPSHOT__ = {
+      meta: {
+        entryCount: 2,
+        no: 10,
+        generatedAt: '2026-04-05T13:00:00Z',
+      },
+      entries: lightweightEntries,
+      legalHeader: 'FIDO legal header',
+    };
+
+    const popupDocument = document.implementation.createHTMLDocument('popup');
+    const popupWindow = {
+      closed: false,
+      document: popupDocument,
+      focus: vi.fn(),
+      resizeTo: vi.fn(),
+      onbeforeunload: null,
+    };
+
+    window.open = vi.fn(() => popupWindow);
+
+    globalThis.fetch = vi.fn((url) => {
+      if (String(url).includes('api/mds/metadata/resolve')) {
+        return Promise.resolve(jsonResponse({ entry: resolvedEntry }));
+      }
+      if (String(url).includes('/api/mds/decode-certificate')) {
+        return Promise.resolve(
+          jsonResponse({
+            details: {
+              summary: 'Resolved certificate summary',
+              subject: 'CN=Resolved Subject',
+              issuer: 'CN=Resolved Issuer',
+            },
+          }),
+        );
+      }
+      return Promise.resolve(jsonResponse({ items: [] }));
+    });
+
+    const module = await import('../../static/scripts/advanced/mds.js');
+    document.dispatchEvent(new Event('DOMContentLoaded'));
+    await waitForCondition(() => document.querySelectorAll('#mds-table-body tr').length === 2, 1200);
+
+    const firstNameButton = document.querySelector('.mds-name-button');
+    firstNameButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+    await waitForCondition(
+      () => document.getElementById('mds-authenticator-modal-content').textContent.includes('Resolved Alpha'),
+      1200,
+    );
+
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('api/mds/metadata/resolve'),
+      expect.objectContaining({ cache: 'no-store' }),
+    );
+
+    const rawButton = document.getElementById('mds-authenticator-modal-raw');
+    expect(rawButton.disabled).toBe(false);
+
+    rawButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+    const rawTextarea = popupDocument.getElementById('mds-raw-textarea');
+    expect(window.open).toHaveBeenCalled();
+    expect(rawTextarea).not.toBeNull();
+    expect(rawTextarea.value).toContain('metadataStatement');
+
+    const highlighted = await window.highlightMdsAuthenticatorRow('00112233-4455-6677-8899-aabbccddeeff', {
+      waitForVisibility: false,
+      scrollBehavior: 'auto',
+    });
+    expect(highlighted.highlighted).toBe(true);
+
+    const focused = await window.focusMdsAuthenticator('00112233-4455-6677-8899-aabbccddeeff');
+    expect(focused?.name).toBe('Resolved Alpha');
+
+    const opened = await window.openMdsAuthenticatorModal('00112233-4455-6677-8899-aabbccddeeff');
+    expect(opened?.name).toBe('Resolved Alpha');
+
+    const loadState = window.getMdsLoadState();
+    expect(loadState).toEqual(expect.objectContaining({ hasLoaded: true }));
+
+    const loaded = await module.waitForMetadataLoad();
+    expect(loaded).toBe(true);
+  });
+
+  it('shows decode failure messages on certificate page when decode endpoint errors', async () => {
+    globalThis.fetch = vi.fn((url) => {
+      if (String(url).includes('/api/mds/decode-certificate')) {
+        return Promise.resolve({
+          ok: false,
+          status: 500,
+          json: vi.fn().mockResolvedValue({ error: 'decode failed' }),
+          text: vi.fn().mockResolvedValue('decode failed'),
+        });
+      }
+
+      if (String(url).includes('fido-mds3.verified.json.meta.json')) {
+        return Promise.resolve(jsonResponse({ generatedAt: '2026-04-04T12:00:00Z' }));
+      }
+
+      return Promise.resolve(
+        jsonResponse({
+          meta: {
+            entryCount: 2,
+            no: 8,
+            generatedAt: '2026-04-04T12:00:00Z',
+          },
+          entries: makeSnapshotEntries(),
+          legalHeader: 'FIDO legal header',
+        }),
+      );
+    });
+
+    await import('../../static/scripts/advanced/mds.js');
+    document.dispatchEvent(new Event('DOMContentLoaded'));
+    await waitForCondition(() => document.querySelectorAll('#mds-table-body tr').length === 2, 1200);
+
+    const nameButton = document.querySelector('.mds-name-button');
+    nameButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await waitForCondition(() => document.querySelector('.mds-certificate-button') !== null, 1200);
+
+    const certButton = document.querySelector('.mds-certificate-button');
+    certButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+    await waitForCondition(
+      () => document.getElementById('mds-certificate-output').value.includes('Certificate decode failed with status 500'),
+      1200,
+    );
+
+    expect(document.getElementById('mds-certificate-summary').textContent).toContain(
+      'Certificate decode failed with status 500',
+    );
+
+    document.getElementById('mds-certificate-page-close').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await new Promise((resolve) => setTimeout(resolve, 550));
+    expect(document.getElementById('mds-certificate-page').hidden).toBe(true);
   });
 });
