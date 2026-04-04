@@ -45,8 +45,8 @@
     width: 3.5rem;
     height: 3.5rem;
     border-radius: 50%;
-    border: 2.5px solid var(--border);
-    border-top-color: var(--primary-color);
+    border: 2.5px solid rgba(17, 24, 39, 0.14);
+    border-top-color: var(--text-color);
     animation: app-loader-spin 0.8s linear infinite;
 }
 

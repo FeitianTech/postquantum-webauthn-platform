@@ -233,7 +233,6 @@
 
 .simple-layout .simple-auth-section .simple-username-input { max-width: none; }
 .simple-layout .simple-auth-section .input-with-button { width: 100%; }
-.simple-layout .simple-auth-section .btn.refresh-icon { flex-shrink: 0; }
 
 .simple-layout .simple-credentials-section .column-card,
 .simple-layout .simple-credentials-section .credentials-panel {
@@ -557,10 +556,18 @@
 
 .input-with-button {
     display: flex;
+    align-items: center;
     gap: 0.5rem;
 }
 
 .input-with-button input { flex: 1; }
+
+/* Match row height: base .btn margins would float the icon above the text field */
+.input-with-button > .btn {
+    margin-bottom: 0;
+    margin-right: 0;
+    flex-shrink: 0;
+}
 
 @media (max-width: 640px) {
     .input-with-button {
