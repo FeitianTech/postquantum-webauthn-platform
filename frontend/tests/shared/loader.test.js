@@ -69,4 +69,46 @@ describe('loader', () => {
     expect(document.getElementById('app-loader').classList.contains('app-loader--hidden')).toBe(true);
     expect(document.getElementById('app-loader').getAttribute('aria-hidden')).toBe('true');
   });
+
+  it('handles missing loader root and still reveals application on complete', async () => {
+    document.body.innerHTML = '<div id="app"></div>';
+    const {
+      initializeLoader,
+      loaderComplete,
+      loaderIsActive,
+    } = await loadLoaderModule();
+
+    initializeLoader();
+    expect(loaderIsActive()).toBe(false);
+
+    loaderComplete();
+    expect(document.body.classList.contains('app-loaded')).toBe(true);
+  });
+
+  it('ignores invalid phase/progress values and prevents progress from regressing', async () => {
+    const {
+      initializeLoader,
+      loaderSetPhase,
+      loaderSetProgress,
+      loaderComplete,
+    } = await loadLoaderModule();
+
+    initializeLoader();
+
+    loaderSetPhase('', { progress: Number.NaN });
+    expect(document.getElementById('app-loader-status').textContent).toBe('');
+
+    loaderSetProgress(30);
+    vi.advanceTimersByTime(2000);
+    expect(document.getElementById('app-loader-progress').getAttribute('aria-valuenow')).toBe('30');
+
+    // Regression request should keep current rendered value.
+    loaderSetProgress(5);
+    vi.advanceTimersByTime(200);
+    expect(document.getElementById('app-loader-progress').getAttribute('aria-valuenow')).toBe('30');
+
+    loaderComplete('done');
+    vi.advanceTimersByTime(1000);
+    expect(document.body.classList.contains('app-loaded')).toBe(true);
+  });
 });

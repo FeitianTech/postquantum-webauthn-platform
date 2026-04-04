@@ -252,4 +252,44 @@ describe('settings-nav', () => {
 
     expect(navItems[0].classList.contains('settings-nav__item--active')).toBe(true);
   });
+
+  it('ignores empty intersections and missing click targets while reacting to tab events', () => {
+    const observers = [];
+    class FakeIntersectionObserver {
+      constructor(callback) {
+        this.callback = callback;
+        observers.push(this);
+      }
+
+      observe() {}
+      disconnect() {}
+    }
+
+    globalThis.IntersectionObserver = FakeIntersectionObserver;
+
+    state.currentSubTab = 'registration';
+    initializeAdvancedSettingsNavigation();
+
+    const navItems = Array.from(document.querySelectorAll('.settings-nav__item'));
+
+    // visible.length === 0 branch
+    observers[0].callback([
+      {
+        isIntersecting: false,
+        boundingClientRect: { top: 5 },
+        target: document.getElementById('reg-a'),
+      },
+    ]);
+
+    // missing sentinel branch
+    navItems[1].dataset.registrationTarget = 'missing-target';
+    navItems[1].dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+    // event listeners around observeSections
+    document.dispatchEvent(new CustomEvent('advanced:subtab-changed', { detail: { subTab: 'registration' } }));
+    document.dispatchEvent(new CustomEvent('tab:changed', { detail: { tab: 'simple' } }));
+    document.dispatchEvent(new CustomEvent('tab:changed', { detail: { tab: 'advanced' } }));
+
+    expect(navItems[0].classList.contains('settings-nav__item--active')).toBe(true);
+  });
 });

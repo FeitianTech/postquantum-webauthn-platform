@@ -315,4 +315,49 @@ describe('codec UI', () => {
     expect(document.getElementById('encoder-output').classList.contains('is-visible')).toBe(false);
     expect(document.getElementById('encoder-raw-content').textContent).toBe('');
   });
+
+  it('registers DOMContentLoaded initialization when document is still loading', async () => {
+    const readyStateDescriptor = Object.getOwnPropertyDescriptor(document, 'readyState');
+    const addSpy = vi.spyOn(document, 'addEventListener');
+
+    try {
+      Object.defineProperty(document, 'readyState', {
+        configurable: true,
+        get: () => 'loading',
+      });
+
+      vi.resetModules();
+      await import('../../static/scripts/decoder/codec.js');
+
+      expect(addSpy).toHaveBeenCalledWith('DOMContentLoaded', expect.any(Function));
+    } finally {
+      if (readyStateDescriptor) {
+        Object.defineProperty(document, 'readyState', readyStateDescriptor);
+      }
+      addSpy.mockRestore();
+    }
+  });
+
+  it('renders decodedValue labels and rejects boolean payloads for binary encode formats', async () => {
+    document.getElementById('decoder-input').value = 'AQID';
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: vi.fn().mockResolvedValue({
+        success: true,
+        data: {
+          decodedValue: 'decoded-text',
+        },
+      }),
+    });
+
+    await processCodec('decode');
+    expect(document.getElementById('decoded-content').textContent).toContain('Decoded value');
+
+    switchCodecMode('encode');
+    document.getElementById('encoder-format').value = 'pem';
+    document.getElementById('encoder-input').value = '{"bytes":true}';
+    await processCodec('encode');
+    expect(showStatus).toHaveBeenLastCalledWith('encoder', 'Input cannot be converted into pem.', 'error');
+  });
 });

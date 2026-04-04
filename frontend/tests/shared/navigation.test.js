@@ -133,4 +133,66 @@ describe('navigation', () => {
     toggleSection('details');
     expect(document.getElementById('details').classList.contains('expanded')).toBe(false);
   });
+
+  it('falls back to parent and onclick-header resolution when toggling sections', async () => {
+    const { toggleSection } = await loadNavigation();
+
+    document.body.innerHTML = `
+      <div id="wrapper-a">
+        <div class="section-header"><span class="expand-icon"></span></div>
+        <div id="parent-fallback"></div>
+      </div>
+      <div id="target-container">
+        <div id="query-fallback"></div>
+      </div>
+      <div class="section-header" onclick="toggleSection('query-fallback')"><span class="expand-icon"></span></div>
+    `;
+
+    toggleSection('parent-fallback');
+    expect(document.getElementById('parent-fallback').classList.contains('expanded')).toBe(true);
+
+    toggleSection('query-fallback');
+    expect(document.getElementById('query-fallback').classList.contains('expanded')).toBe(true);
+  });
+
+  it('supports explicit event/header inputs when toggling sections', async () => {
+    const { toggleSection } = await loadNavigation();
+
+    document.body.innerHTML = `
+      <div class="section-header" id="header-a"><span class="expand-icon" id="icon-a"></span></div>
+      <div id="explicit-details"></div>
+    `;
+
+    const header = document.getElementById('header-a');
+    const icon = document.getElementById('icon-a');
+    const content = document.getElementById('explicit-details');
+
+    toggleSection('explicit-details', { currentTarget: header });
+    expect(content.classList.contains('expanded')).toBe(true);
+
+    toggleSection('explicit-details', { target: icon });
+    expect(content.classList.contains('expanded')).toBe(false);
+
+    toggleSection('explicit-details', header);
+    expect(content.classList.contains('expanded')).toBe(true);
+  });
+
+  it('registers resize/orientation listeners on first init and no-ops for missing sections', async () => {
+    vi.resetModules();
+    buildTabDom();
+
+    const addSpy = vi.spyOn(window, 'addEventListener');
+    const { initializeNavigationMenu, toggleSection } = await import('../../static/scripts/shared/navigation.js');
+
+    window.innerWidth = 700;
+    const controls = initializeNavigationMenu();
+
+    expect(addSpy).toHaveBeenCalledWith('resize', expect.any(Function));
+    expect(addSpy).toHaveBeenCalledWith('orientationchange', expect.any(Function));
+
+    expect(() => toggleSection('missing-section')).not.toThrow();
+
+    controls.close({ allowDesktop: true });
+    addSpy.mockRestore();
+  });
 });

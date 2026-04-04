@@ -65,6 +65,14 @@ describe('ui shared helpers', () => {
     await vi.runAllTimersAsync();
     expect(popup.classList.contains('show')).toBe(false);
 
+    document.body.innerHTML += `
+      <div id="icon-2">
+        <div class="info-popup show"></div>
+      </div>
+    `;
+    showInfoPopup(icon);
+    expect(document.querySelector('#icon-2 .info-popup').classList.contains('show')).toBe(false);
+
     const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     toggleLanguage(document.createElement('button'));
     expect(errSpy).toHaveBeenCalled();
@@ -98,6 +106,12 @@ describe('ui shared helpers', () => {
     expect(modalA.classList.contains('closing')).toBe(true);
     modalA.dispatchEvent(new TransitionEvent('transitionend', { propertyName: 'opacity' }));
     await vi.runAllTimersAsync();
+    expect(modalA.classList.contains('closing')).toBe(false);
+
+    // detail-screen fallback timeout path
+    openModal('modal-a');
+    closeModal('modal-a');
+    await vi.advanceTimersByTimeAsync(710);
     expect(modalA.classList.contains('closing')).toBe(false);
 
     // non-detail immediate close path
@@ -146,6 +160,17 @@ describe('ui shared helpers', () => {
 
   it('initializes sticky headers and supports refresh/reset/destroy lifecycle', async () => {
     vi.useFakeTimers();
+    const resizeObservers = [];
+    globalThis.ResizeObserver = class ResizeObserver {
+      constructor(callback) {
+        this.callback = callback;
+        resizeObservers.push(this);
+      }
+
+      observe() {}
+      disconnect() {}
+    };
+
     document.body.innerHTML = `
       <header class="header" style="height: 60px;">
         <div class="nav-tabs"><button>One</button></div>
@@ -156,6 +181,12 @@ describe('ui shared helpers', () => {
     const controller = initializeStickyHeaderForElement(header, {
       activeClass: 'header-mini--active',
       measuringClass: 'header-mini--measuring',
+      insert: () => {
+        throw new Error('insert failure');
+      },
+      getScrollPosition: () => {
+        throw new Error('scroll accessor failed');
+      },
     });
 
     expect(controller).toBeTruthy();
@@ -164,6 +195,12 @@ describe('ui shared helpers', () => {
     controller.refreshGeometry();
     controller.evaluate();
     controller.reset();
+
+    window.dispatchEvent(new Event('scroll'));
+    window.dispatchEvent(new Event('resize'));
+    window.dispatchEvent(new Event('pageshow'));
+    resizeObservers.forEach((observer) => observer.callback());
+    window.dispatchEvent(new Event('beforeunload'));
 
     refreshStickyHeader(header);
     resetStickyHeader(header);
@@ -189,5 +226,103 @@ describe('ui shared helpers', () => {
     expect(() => toggleJsonEditorExpansion()).not.toThrow();
     expect(initializeStickyHeaderForElement(null)).toBeNull();
     expect(initializeStickyHeader()).toBeNull();
+  });
+
+  it('supports sticky header calculations with element scroll targets and unknown refresh/reset headers', () => {
+    document.body.innerHTML = `
+      <div id="scroll-host" style="height:120px; overflow:auto; position:relative;">
+        <header class="header" style="height:40px; position:relative;">
+          <div class="nav-tabs"><button>One</button></div>
+        </header>
+        <div style="height:600px;"></div>
+      </div>
+    `;
+
+    const header = document.querySelector('.header');
+    const host = document.getElementById('scroll-host');
+
+    const controller = initializeStickyHeaderForElement(header, {
+      scrollTarget: host,
+      root: host,
+      cloneSource: header.querySelector('.nav-tabs'),
+    });
+
+    expect(controller).toBeTruthy();
+    host.scrollTop = 60;
+    host.dispatchEvent(new Event('scroll'));
+    controller.refreshGeometry();
+    controller.evaluate();
+
+    expect(() => refreshStickyHeader(document.createElement('header'))).not.toThrow();
+    expect(() => resetStickyHeader(document.createElement('header'))).not.toThrow();
+
+    controller.destroy();
+  });
+
+  it('uses custom header-bottom measurement and clamps negative progress values', () => {
+    document.body.innerHTML = `
+      <div id="scroll-host" style="height:120px; overflow:auto; position:relative;">
+        <header class="header" style="height:40px; position:relative;">
+          <div class="nav-tabs"><button>One</button></div>
+        </header>
+        <div style="height:400px;"></div>
+      </div>
+    `;
+
+    const header = document.querySelector('.header');
+    const host = document.getElementById('scroll-host');
+
+    const controller = initializeStickyHeaderForElement(header, {
+      scrollTarget: host,
+      root: host,
+      cloneSource: header.querySelector('.nav-tabs'),
+      getScrollPosition: () => -50,
+      measureHeaderBottom: () => 10,
+    });
+
+    controller.refreshGeometry();
+    controller.evaluate();
+
+    const miniHeader = host.querySelector('.header-mini');
+    expect(miniHeader).not.toBeNull();
+    expect(['', '0']).toContain(miniHeader.style.getPropertyValue('--header-progress'));
+
+    controller.destroy();
+  });
+
+  it('falls back to page/document scroll positions and handles non-finite custom scroll values', () => {
+    const scrollYDescriptor = Object.getOwnPropertyDescriptor(window, 'scrollY');
+    const pageYOffsetDescriptor = Object.getOwnPropertyDescriptor(window, 'pageYOffset');
+
+    document.body.innerHTML = `
+      <header class="header" style="height:40px; position:relative;">
+        <div class="nav-tabs"><button>One</button></div>
+      </header>
+    `;
+
+    const header = document.querySelector('.header');
+
+    try {
+      Object.defineProperty(window, 'scrollY', { configurable: true, value: undefined });
+      Object.defineProperty(window, 'pageYOffset', { configurable: true, value: 24 });
+
+      const controller = initializeStickyHeaderForElement(header, {
+        root: document.body,
+        cloneSource: header.querySelector('.nav-tabs'),
+        measureHeaderBottom: () => 20,
+        getScrollPosition: () => Number.NaN,
+      });
+
+      controller.refreshGeometry();
+      controller.evaluate();
+      controller.destroy();
+    } finally {
+      if (scrollYDescriptor) {
+        Object.defineProperty(window, 'scrollY', scrollYDescriptor);
+      }
+      if (pageYOffsetDescriptor) {
+        Object.defineProperty(window, 'pageYOffset', pageYOffsetDescriptor);
+      }
+    }
   });
 });
