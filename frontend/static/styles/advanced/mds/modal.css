@@ -199,13 +199,13 @@
     overflow-wrap: anywhere;
     word-break: break-word;
     white-space: pre-wrap;
-    transition: border-color var(--transition-base), outline-color var(--transition-base);
+    transition: border-color var(--transition-base);
 }
 
+.mds-modal__textarea:focus,
 .mds-modal__textarea:focus-visible {
-    outline: 2px solid var(--primary-color);
-    outline-offset: 2px;
-    border-color: var(--primary-color);
+    outline: none;
+    border-color: var(--border);
 }
 
 /* ─── Modal headings ───────────────────────────────────────── */

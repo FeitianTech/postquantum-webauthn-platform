@@ -526,15 +526,15 @@ body.header-menu-open { overflow: hidden; }
     border-radius: var(--radius-md);
     font-size: 0.9375rem;
     font-family: var(--font-sans);
-    transition: border-color var(--transition-base), outline-color var(--transition-base);
+    transition: border-color var(--transition-base);
     background: var(--surface-color);
     color: var(--text-color);
 }
 
-.form-control:focus {
-    outline: 2px solid var(--primary-color);
-    outline-offset: 2px;
-    border-color: var(--primary-color);
+.form-control:focus,
+.form-control:focus-visible {
+    outline: none;
+    border-color: var(--border);
 }
 
 .form-control::placeholder { color: var(--muted-light); }
@@ -567,14 +567,14 @@ body.header-menu-open { overflow: hidden; }
     background-size: 0.7rem;
     padding-right: 2.5rem;
     color: var(--text-color);
-    transition: border-color var(--transition-base), outline-color var(--transition-base);
+    transition: border-color var(--transition-base);
     cursor: pointer;
 }
 
-.form-column select.form-control:focus {
-    border-color: var(--primary-color);
-    outline: 2px solid var(--primary-color);
-    outline-offset: 2px;
+.form-column select.form-control:focus,
+.form-column select.form-control:focus-visible {
+    outline: none;
+    border-color: var(--border);
 }
 
 .form-column select.form-control:hover { border-color: rgba(0, 0, 0, 0.16); }
@@ -863,9 +863,8 @@ body.header-menu-open { overflow: hidden; }
 
 .decoder-expanded-json:focus,
 .decoder-expanded-json:focus-visible {
-    outline: 2px solid var(--primary-color);
-    outline-offset: 2px;
-    border-color: var(--primary-color);
+    outline: none;
+    border-color: var(--border);
 }
 
 .decoder-definition {

@@ -318,9 +318,8 @@ select.form-control {
 
 select.form-control:focus,
 select.form-control:focus-visible {
-    border-color: var(--primary-color);
-    outline: 2px solid var(--primary-color);
-    outline-offset: 2px;
+    outline: none;
+    border-color: var(--border);
 }
 
 select.form-control option { padding: 0.5rem 0.85rem; }

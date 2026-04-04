@@ -125,15 +125,15 @@
     font-family: var(--font-sans);
     font-size: 0.78125rem;
     color: var(--text-color);
-    transition: border-color var(--transition-base), outline-color var(--transition-base);
+    transition: border-color var(--transition-base);
 }
 
 .mds-filter-input::placeholder { color: var(--muted-light); }
 
-.mds-filter-input:focus {
-    outline: 2px solid var(--primary-color);
-    outline-offset: 2px;
-    border-color: var(--primary-color);
+.mds-filter-input:focus,
+.mds-filter-input:focus-visible {
+    outline: none;
+    border-color: var(--border);
 }
 
 /* Filter dropdown */
