@@ -7,8 +7,10 @@
     "test:frontend:coverage": "vitest run --coverage",
     "test:python": "python -m pytest -q",
     "test:python:coverage": "coverage run -m pytest -q -p no:cov && coverage report -m",
+    "test:python:coverage:json": "coverage run -m pytest -q -p no:cov && coverage json -o coverage/python-coverage.json",
+    "coverage:badges": "npm run test:frontend:coverage && npm run test:python:coverage:json && python scripts/generate_coverage_badges.py",
     "test:all": "npm run test:frontend && npm run test:python",
-    "test:all:coverage": "npm run test:frontend:coverage && npm run test:python:coverage"
+    "test:all:coverage": "npm run coverage:badges"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "^4.1.2",

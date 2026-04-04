@@ -94,4 +94,11 @@ npm run test:python:coverage
 
 Frontend tests run with Vitest + jsdom and collect coverage across `frontend/static/**/*.js`, with uncovered modules included in the report output. Coverage reports are written to `coverage/frontend/`.
 
-The README coverage badges use [shields.io endpoint badges](https://shields.io/documentation/endpoint) backed by JSON in [`.github/badges/`](.github/badges/); those files are refreshed on each push to `main` by [`.github/workflows/update-coverage-badges.yml`](.github/workflows/update-coverage-badges.yml) from the current Python and frontend line-coverage results.
+The README coverage badges use [shields.io endpoint badges](https://shields.io/documentation/endpoint) backed by committed JSON in [`.github/badges/`](.github/badges/). Refresh them locally (Python needs `coverage` and `pytest` on your PATH, same as CI):
+
+```bash
+npm install
+npm run coverage:badges
+```
+
+That runs frontend coverage, then Python coverage, then writes both badge files. Commit the updated `.github/badges/*.json` with your changes. For a text-only Python report without updating badges, use `npm run test:python:coverage`.

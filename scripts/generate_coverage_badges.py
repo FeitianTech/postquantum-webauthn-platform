@@ -8,6 +8,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 BADGES_DIR = ROOT / ".github" / "badges"
+# Written by `npm run test:python:coverage:json` (gitignored)
+DEFAULT_PYTHON_COVERAGE_JSON = ROOT / "coverage" / "python-coverage.json"
 
 
 def color(pct: float) -> str:
@@ -24,11 +26,13 @@ def fmt_pct(pct: float) -> str:
 
 
 def load_python_percent() -> float:
-    path = Path(os.environ.get("PYTHON_COVERAGE_JSON", "")).expanduser()
+    env = os.environ.get("PYTHON_COVERAGE_JSON", "").strip()
+    path = Path(env).expanduser() if env else DEFAULT_PYTHON_COVERAGE_JSON
     if not path.is_file():
         raise FileNotFoundError(
-            "Set PYTHON_COVERAGE_JSON to the path from `coverage json -o ...` "
-            f"(tried {path or '(unset)'})"
+            "Missing Python coverage JSON. Run: npm run test:python:coverage:json "
+            f"(needs pip install coverage pytest), or set PYTHON_COVERAGE_JSON. "
+            f"Expected: {path}"
         )
     with path.open(encoding="utf-8") as f:
         data = json.load(f)
