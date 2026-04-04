@@ -19,9 +19,6 @@ This project provides an end-to-end platform for exploring WebAuthn user flows s
 - Includes the app, the local `fido2/` library copy, prebuilt `liboqs`, and PQC support used in production images.
 - Supports ML-DSA 44/65/87 PQC algorithms bundled by the current container build.
 
-> **Note for Developers**
-> The recommended local workflow is Docker Compose-based so local development matches deployment behavior as closely as possible.
-
 ### Supported Platforms
 
 - Windows 10/11 (64-bit)
