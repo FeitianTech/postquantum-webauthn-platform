@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "label": "Python coverage",
-  "message": "95.11%",
+  "label": "Python (combined)",
+  "message": "96.93%",
   "color": "brightgreen",
   "namedLogo": "python",
   "cacheSeconds": 120

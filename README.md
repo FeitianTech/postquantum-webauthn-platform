@@ -2,8 +2,8 @@
 
 [![CI](https://img.shields.io/github/actions/workflow/status/feitiantech/postquantum-webauthn-platform/ci-python.yml?label=CI\&logo=github)](https://github.com/feitiantech/postquantum-webauthn-platform/actions/workflows/ci-python.yml)
 [![Build](https://img.shields.io/github/actions/workflow/status/feitiantech/postquantum-webauthn-platform/ci-docker.yml?label=Build\&logo=docker)](https://github.com/feitiantech/postquantum-webauthn-platform/actions/workflows/ci-docker.yml)
-[![Python Test Coverage](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Ffeitiantech%2Fpostquantum-webauthn-platform%2Fmain%2F.github%2Fbadges%2Fpython-coverage.json)](#testing)
-[![Frontend Test Coverage](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Ffeitiantech%2Fpostquantum-webauthn-platform%2Fmain%2F.github%2Fbadges%2Ffrontend-coverage.json)](#testing)
+[![Python combined coverage](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Ffeitiantech%2Fpostquantum-webauthn-platform%2Fmain%2F.github%2Fbadges%2Fpython-coverage.json)](#testing)
+[![Frontend combined coverage](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Ffeitiantech%2Fpostquantum-webauthn-platform%2Fmain%2F.github%2Fbadges%2Ffrontend-coverage.json)](#testing)
 
 ---
 

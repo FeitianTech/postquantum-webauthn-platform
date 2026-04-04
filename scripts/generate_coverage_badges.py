@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
+from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 BADGES_DIR = ROOT / ".github" / "badges"
@@ -25,7 +26,7 @@ def fmt_pct(pct: float) -> str:
     return f"{s}%"
 
 
-def load_python_percent() -> float:
+def _load_python_coverage_doc() -> dict[str, Any]:
     env = os.environ.get("PYTHON_COVERAGE_JSON", "").strip()
     path = Path(env).expanduser() if env else DEFAULT_PYTHON_COVERAGE_JSON
     if not path.is_file():
@@ -35,11 +36,19 @@ def load_python_percent() -> float:
             f"Expected: {path}"
         )
     with path.open(encoding="utf-8") as f:
-        data = json.load(f)
+        return json.load(f)
+
+
+def load_python_percent() -> float:
+    """Combined Python % from coverage.py (statement + branch; matches `coverage report` TOTAL)."""
+
+    data = _load_python_coverage_doc()
     return float(data["totals"]["percent_covered"])
 
 
 def load_frontend_percent() -> float:
+    """Aggregate frontend line coverage % (all instrumented static JS), Vitest istanbul json-summary."""
+
     path = ROOT / "coverage" / "frontend" / "coverage-summary.json"
     if not path.is_file():
         raise FileNotFoundError(f"Run frontend coverage first (missing {path})")
@@ -69,8 +78,8 @@ def write_badge(name: str, label: str, pct: float, named_logo: str) -> None:
 def main() -> int:
     py = load_python_percent()
     fe = load_frontend_percent()
-    write_badge("python-coverage.json", "Python coverage", py, "python")
-    write_badge("frontend-coverage.json", "Frontend coverage", fe, "javascript")
+    write_badge("python-coverage.json", "Python (combined)", py, "python")
+    write_badge("frontend-coverage.json", "Frontend (combined)", fe, "javascript")
     return 0
 
 

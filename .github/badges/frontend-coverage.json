@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "label": "Frontend coverage",
+  "label": "Frontend (combined)",
   "message": "90%",
   "color": "brightgreen",
   "namedLogo": "javascript",

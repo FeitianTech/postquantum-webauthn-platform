@@ -50,7 +50,10 @@ def test_load_frontend_percent_reads_summary_and_raises_when_missing(tmp_path, m
     monkeypatch.setattr(badges, "ROOT", tmp_path, raising=False)
 
     summary_path = tmp_path / "coverage" / "frontend" / "coverage-summary.json"
-    _write_json(summary_path, {"total": {"lines": {"pct": 98.7}}})
+    _write_json(
+        summary_path,
+        {"total": {"lines": {"pct": 98.7, "covered": 987, "total": 1000}}},
+    )
     assert badges.load_frontend_percent() == 98.7
 
     summary_path.unlink()
@@ -61,12 +64,12 @@ def test_load_frontend_percent_reads_summary_and_raises_when_missing(tmp_path, m
 def test_write_badge_creates_parent_and_writes_expected_payload(tmp_path, monkeypatch):
     monkeypatch.setattr(badges, "BADGES_DIR", tmp_path / "badges", raising=False)
 
-    badges.write_badge("python-coverage.json", "Python coverage", 95.5, "python")
+    badges.write_badge("python-coverage.json", "Python (combined)", 95.5, "python")
 
     payload = json.loads((tmp_path / "badges" / "python-coverage.json").read_text(encoding="utf-8"))
     assert payload == {
         "schemaVersion": 1,
-        "label": "Python coverage",
+        "label": "Python (combined)",
         "message": "95.5%",
         "color": "brightgreen",
         "namedLogo": "python",
@@ -92,7 +95,7 @@ def test_main_generates_frontend_and_python_badges_from_coverage_inputs(tmp_path
     )
     _write_json(
         tmp_path / "coverage" / "frontend" / "coverage-summary.json",
-        {"total": {"lines": {"pct": 97.4}}},
+        {"total": {"lines": {"pct": 97.4, "covered": 974, "total": 1000}}},
     )
 
     assert badges.main() == 0
@@ -104,5 +107,7 @@ def test_main_generates_frontend_and_python_badges_from_coverage_inputs(tmp_path
         (tmp_path / ".github" / "badges" / "frontend-coverage.json").read_text(encoding="utf-8")
     )
 
+    assert python_badge["label"] == "Python (combined)"
     assert python_badge["message"] == "96.2%"
+    assert frontend_badge["label"] == "Frontend (combined)"
     assert frontend_badge["message"] == "97.4%"
