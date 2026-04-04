@@ -1,104 +1,80 @@
 # FIDO2/WebAuthn Test Platform and Developer Tools
 
-[![CI](https://img.shields.io/github/actions/workflow/status/feitiantech/postquantum-webauthn-platform/ci-python.yml?label=CI&logo=github)](https://github.com/feitiantech/postquantum-webauthn-platform/actions/workflows/ci-python.yml)
-[![Build](https://img.shields.io/github/actions/workflow/status/feitiantech/postquantum-webauthn-platform/ci-docker.yml?label=Build&logo=docker)](https://github.com/feitiantech/postquantum-webauthn-platform/actions/workflows/ci-docker.yml)
+[![CI](https://img.shields.io/github/actions/workflow/status/feitiantech/postquantum-webauthn-platform/ci-python.yml?label=CI\&logo=github)](https://github.com/feitiantech/postquantum-webauthn-platform/actions/workflows/ci-python.yml)
+[![Build](https://img.shields.io/github/actions/workflow/status/feitiantech/postquantum-webauthn-platform/ci-docker.yml?label=Build\&logo=docker)](https://github.com/feitiantech/postquantum-webauthn-platform/actions/workflows/ci-docker.yml)
 [![Python Test Coverage](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Ffeitiantech%2Fpostquantum-webauthn-platform%2Fmain%2F.github%2Fbadges%2Fpython-coverage.json)](#testing)
 [![Frontend Test Coverage](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Ffeitiantech%2Fpostquantum-webauthn-platform%2Fmain%2F.github%2Fbadges%2Ffrontend-coverage.json)](#testing)
 
-**Google Cloud Deployment (Full FIDO MDS):** https://webauthnlab.tech (A few seconds of cold start is expected)
+---
 
-**Server Deployment (Limited FIDO MDS Update):** [webauthndev.ftsafe.com](https://webauthndev.ftsafe.com) (Currently unavailable due to server issues)
+## Overview
 
-This project provides an end-to-end platform for exploring WebAuthn user flows secured by post-quantum cryptography. The hosted demo and local setup instructions help you register authenticators, run authentication processes, and compare PQC signature suites in a realistic WebAuthn environment. A decoder is integrated for decoding attestation objects, WebAuthn CBOR responses, authenticator metadata, and related structures. A FIDO MDS explorer is also included for direct retrieval of authenticator metadata and root certificate verification.
+This project provides an end-to-end platform for testing and exploring WebAuthn user flows with support for Post-Quantum Cryptography algorithms.
+
+A **codec** is integrated for:
+
+* Encoding and decoding attestation objects
+* Parsing WebAuthn CBOR responses
+* Processing authenticator metadata
+* Handling related WebAuthn structures
+
+A **FIDO MDS explorer** is included for:
+
+* Direct retrieval of authenticator metadata
+* Root certificate verification
+
+For PQC support, the following algorithms are available:
+
+* **ML-DSA 44**
+* **ML-DSA 65**
+* **ML-DSA 87**
+
+---
+
+## Deployments
+
+| Environment                 | Description             | URL                                                        |
+| --------------------------- | ----------------------- | ---------------------------------------------------------- |
+| **Google Cloud Deployment** | Full FIDO MDS Support   | https://webauthnlab.tech                                   |
+| **Server Deployment**       | Limited FIDO MDS Update | https://webauthndev.ftsafe.com *(Temporarily Unavailable)* |
+
+---
 
 ## Local Setup
 
-### Scope
+### Prerequisites
 
-- Uses the same repo `Dockerfile` as deployment.
-- Includes the app, the local `fido2/` library copy, prebuilt `liboqs`, and PQC support used in production images.
-- Supports ML-DSA 44/65/87 PQC algorithms bundled by the current container build.
+Ensure the following are available locally:
 
-### Supported Platforms
+* **Docker Desktop** or **Docker Engine**
+* **Docker Compose** (`docker compose`)
+* A modern browser with WebAuthn support (Edge, Chrome, Safari, Firefox, etc.)
 
-- Windows 10/11 (64-bit)
-- macOS (Intel or Apple Silicon)
+---
 
-A modern browser with WebAuthn support is required:
-
-- Edge
-- Chrome
-- Safari
-- Firefox
-
-### 1. Prerequisites
-
-- **Git**: https://git-scm.com/
-- **Docker Desktop / Docker Engine** with Docker Compose (`docker compose`) available locally
-
-### 2. Clone the Repository
+### Step 1 — Clone the Repository
 
 ```bash
 git clone https://github.com/FeitianTech/postquantum-webauthn-platform.git
 cd postquantum-webauthn-platform
 ```
 
-### 3. Start the Local Stack
+---
+
+### Step 2 — Start the Local Stack
+
+Run the following command:
 
 ```bash
 docker compose up -d
 ```
 
-Open the platform at `http://localhost:8000`.
+---
 
-Because localhost is treated as a secure context by modern browsers, this Docker Compose workflow does not require the older `mkcert` certificate setup.
+### Step 3 — Access the Platform
 
-### 4. Useful Docker Compose Commands
+Open the following address in your browser:
 
-```bash
-docker compose logs -f
-docker compose down
+```text
+http://localhost:8000
 ```
-
-To rebuild after local source changes that affect the image:
-
-```bash
-docker compose up -d --build
-```
-
-### Flask Session Secret Persistence
-
-The included Compose configuration mounts `./instance` to `/app/instance`, so `session-secret.key` is persisted across restarts automatically. Delete `instance/session-secret.key` if you want to rotate the secret.
-
-## Quickstart
-
-```bash
-git clone https://github.com/FeitianTech/postquantum-webauthn-platform.git
-cd postquantum-webauthn-platform
-docker compose up -d
-```
-
-Then open `http://localhost:8000` in your browser.
-
-## Testing
-
-The repository has both Python and frontend test entry points:
-
-```bash
-npm install
-npm run test:frontend
-npm run test:frontend:coverage
-npm run test:python
-npm run test:python:coverage
-```
-
-Frontend tests run with Vitest + jsdom and collect coverage across `frontend/static/**/*.js`, with uncovered modules included in the report output. Coverage reports are written to `coverage/frontend/`.
-
-The README coverage badges use [shields.io endpoint badges](https://shields.io/documentation/endpoint) backed by committed JSON in [`.github/badges/`](.github/badges/). Refresh them locally (Python needs `coverage` and `pytest` on your PATH, same as CI):
-
-```bash
-npm install
-npm run coverage:badges
-```
-
-That runs frontend coverage, then Python coverage, then writes both badge files. Commit the updated `.github/badges/*.json` with your changes. For a text-only Python report without updating badges, use `npm run test:python:coverage`.
