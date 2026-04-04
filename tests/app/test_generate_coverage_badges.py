@@ -70,6 +70,7 @@ def test_write_badge_creates_parent_and_writes_expected_payload(tmp_path, monkey
         "message": "95.5%",
         "color": "brightgreen",
         "namedLogo": "python",
+        "cacheSeconds": badges.BADGE_CACHE_SECONDS,
     }
 
 

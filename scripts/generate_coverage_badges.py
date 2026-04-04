@@ -48,6 +48,10 @@ def load_frontend_percent() -> float:
     return float(data["total"]["lines"]["pct"])
 
 
+# shields.io endpoint cache; keep modest so README badges refresh soon after JSON updates on main.
+BADGE_CACHE_SECONDS = 120
+
+
 def write_badge(name: str, label: str, pct: float, named_logo: str) -> None:
     payload = {
         "schemaVersion": 1,
@@ -55,6 +59,7 @@ def write_badge(name: str, label: str, pct: float, named_logo: str) -> None:
         "message": fmt_pct(pct),
         "color": color(pct),
         "namedLogo": named_logo,
+        "cacheSeconds": BADGE_CACHE_SECONDS,
     }
     out = BADGES_DIR / name
     out.parent.mkdir(parents=True, exist_ok=True)
