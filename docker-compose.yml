@@ -1,0 +1,13 @@
+services:
+  webauthn:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pqc-webauthn-local
+    ports:
+      - "8000:8000"
+    environment:
+      PORT: "8000"
+    volumes:
+      - ./instance:/app/instance
+    restart: unless-stopped

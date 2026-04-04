@@ -29,7 +29,7 @@ RUN echo "/opt/liboqs/lib" > /etc/ld.so.conf.d/liboqs.conf && ldconfig \
 
 # Copy app source
 WORKDIR /src
-COPY pyproject.toml README.adoc ./
+COPY pyproject.toml README.md ./
 COPY COPYING COPYING.APLv2 COPYING.MPLv2 ./
 COPY fido2 ./fido2
 COPY frontend ./frontend

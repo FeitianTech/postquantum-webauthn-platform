@@ -24,7 +24,7 @@ include = [
   { path = "COPYING", format = "sdist"},
   { path = "COPYING.MPLv2", format = "sdist"},
   { path = "COPYING.APLv2", format = "sdist"},
-  { path = "README.adoc", format = "sdist"},
+  { path = "README.md", format = "sdist"},
   { path= "server/", format = "sdist"},
 ]
 
