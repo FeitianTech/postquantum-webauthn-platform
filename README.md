@@ -1,9 +1,11 @@
 # FIDO2/WebAuthn Test Platform and Developer Tools
 
-[![CI](https://img.shields.io/github/actions/workflow/status/FeitianTech/postquantum-webauthn-platform/ci.yml?label=CI&logo=github)](https://github.com/FeitianTech/postquantum-webauthn-platform/actions/workflows/ci.yml)
-[![Build](https://img.shields.io/github/actions/workflow/status/FeitianTech/postquantum-webauthn-platform/ci.yml?label=Build&logo=github)](https://github.com/FeitianTech/postquantum-webauthn-platform/actions/workflows/ci.yml)
-[![Commit Activity](https://img.shields.io/github/commit-activity/m/FeitianTech/postquantum-webauthn-platform?label=Commit%20Activity&logo=github)](https://github.com/FeitianTech/postquantum-webauthn-platform/pulse)
-[![Last Commit](https://img.shields.io/github/last-commit/FeitianTech/postquantum-webauthn-platform?label=Last%20Commit&logo=git)](https://github.com/FeitianTech/postquantum-webauthn-platform/commits)
+[![Python Coverage](https://img.shields.io/badge/Python%20Coverage-88%25-brightgreen?logo=python)](#testing)
+[![Frontend Coverage](https://img.shields.io/badge/Frontend%20Coverage-64.33%25-yellow?logo=javascript)](#testing)
+[![CI](https://img.shields.io/github/actions/workflow/status/feitiantech/postquantum-webauthn-platform/ci-python.yml?label=CI&logo=github)](https://github.com/feitiantech/postquantum-webauthn-platform/actions/workflows/ci-python.yml)
+[![Build](https://img.shields.io/github/actions/workflow/status/feitiantech/postquantum-webauthn-platform/ci-docker.yml?label=Build&logo=docker)](https://github.com/feitiantech/postquantum-webauthn-platform/actions/workflows/ci-docker.yml)
+[![Commit Activity](https://img.shields.io/github/commit-activity/m/feitiantech/postquantum-webauthn-platform?label=Commit%20Activity&logo=github)](https://github.com/feitiantech/postquantum-webauthn-platform/pulse)
+[![Last Commit](https://img.shields.io/github/last-commit/feitiantech/postquantum-webauthn-platform?label=Last%20Commit&logo=git)](https://github.com/feitiantech/postquantum-webauthn-platform/commits)
 
 **Google Cloud Deployment (Full FIDO MDS):** https://webauthnlab.tech (A few seconds of cold start is expected)
 
