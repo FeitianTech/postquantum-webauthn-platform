@@ -3002,7 +3002,21 @@ async function loadMdsData(statusNote, options = {}) {
                 throw new Error('Explorer response was not valid JSON.');
             }
 
-            applyExplorerSnapshot(payload, note);
+            const payloadEntries = Array.isArray(payload.entries) ? payload.entries : [];
+            const shouldUseLegacyEntryParser =
+                payloadEntries.length > 0
+                && payloadEntries.some(entry => {
+                    if (!entry || typeof entry !== 'object') {
+                        return true;
+                    }
+                    return !Object.prototype.hasOwnProperty.call(entry, 'entryId');
+                });
+
+            if (shouldUseLegacyEntryParser) {
+                await applyMetadataEntries(payload, { note, signal });
+            } else {
+                applyExplorerSnapshot(payload, note);
+            }
         } catch (error) {
             if (error && error.name === 'AbortError') {
                 throw error;

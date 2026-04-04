@@ -157,6 +157,39 @@ function makeSnapshotEntries() {
   ];
 }
 
+function makeRawMetadataEntries(count = 2) {
+  return Array.from({ length: count }, (_, index) => {
+    const suffix = String(index + 1).padStart(12, '0');
+    const status = index % 2 === 0 ? 'FIDO_CERTIFIED_L1' : 'NOT_FIDO_CERTIFIED';
+
+    return {
+      aaguid: `00112233-4455-6677-8899-${suffix}`,
+      metadataStatement: {
+        description: `Raw Key ${index + 1}`,
+        protocolFamily: 'fido2',
+        userVerificationDetails: [[{ userVerificationMethod: 'presence_internal' }]],
+        attachmentHint: [index % 2 === 0 ? 'internal' : 'external'],
+        transports: ['usb'],
+        keyProtection: ['hardware'],
+        authenticationAlgorithms: ['secp256r1_ecdsa_sha256_raw'],
+        attestationRootCertificates: ['Q0VSVA=='],
+        authenticatorGetInfo: {
+          versions: ['FIDO_2_0'],
+          transports: ['usb'],
+        },
+      },
+      statusReports: [
+        {
+          status,
+          effectiveDate: `2026-04-${String((index % 9) + 1).padStart(2, '0')}`,
+          certificationDescriptor: status,
+        },
+      ],
+      timeOfLastStatusChange: '2026-04-06T00:00:00Z',
+    };
+  });
+}
+
 function jsonResponse(payload, ok = true, status = 200) {
   return {
     ok,
@@ -354,5 +387,86 @@ describe('mds edge cases', () => {
     await waitForCondition(() => messages.textContent.includes('Failed to upload metadata files.'), 1200);
 
     expect(messages.className).toContain('mds-custom-panel__messages--error');
+  });
+
+  it('parses legacy raw explorer payloads when transformed entry ids are absent', async () => {
+    const rawEntries = makeRawMetadataEntries(2);
+
+    globalThis.fetch = vi.fn((url) => {
+      if (String(url).includes('api/mds/metadata/explorer/full')) {
+        return Promise.resolve(jsonResponse({
+          meta: { entryCount: 2, no: 85, generatedAt: '2026-04-06T00:00:00Z' },
+          entries: rawEntries,
+          legalHeader: 'Legacy metadata header',
+        }));
+      }
+      if (String(url).includes('/api/mds/decode-certificate')) {
+        return Promise.resolve(jsonResponse({
+          details: {
+            algorithmInfo: 'RSA 2048',
+            subjectCommonNames: ['CN=Legacy Raw Device'],
+          },
+        }));
+      }
+      if (String(url).includes('fido-mds3.verified.json.meta.json')) {
+        return Promise.resolve(jsonResponse({ generatedAt: '2026-04-06T00:00:00Z' }));
+      }
+      return Promise.resolve(jsonResponse({ items: [] }));
+    });
+
+    const module = await import('../../static/scripts/advanced/mds.js');
+    document.dispatchEvent(new Event('DOMContentLoaded'));
+
+    await waitForCondition(() => document.querySelectorAll('#mds-table-body tr').length === 2, 1600);
+
+    expect(document.getElementById('mds-status').textContent).toContain('Loaded 2 authenticators.');
+    expect(document.getElementById('mds-table-body').textContent).toContain('Raw Key 1');
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      '/api/mds/decode-certificate',
+      expect.objectContaining({ method: 'POST' }),
+    );
+
+    const loaded = await module.waitForMetadataLoad();
+    expect(loaded).toBe(true);
+  });
+
+  it('uses lazy/background parsing for large legacy raw payloads', async () => {
+    const rawEntries = makeRawMetadataEntries(130);
+
+    globalThis.fetch = vi.fn((url) => {
+      if (String(url).includes('api/mds/metadata/explorer/full')) {
+        return Promise.resolve(jsonResponse({
+          meta: { entryCount: 130, no: 86, generatedAt: '2026-04-06T00:00:00Z' },
+          entries: rawEntries,
+          legalHeader: 'Large legacy metadata header',
+        }));
+      }
+      if (String(url).includes('/api/mds/decode-certificate')) {
+        return Promise.resolve(jsonResponse({
+          details: {
+            algorithmInfo: 'RSA 2048',
+            subjectCommonNames: ['CN=Large Legacy Device'],
+          },
+        }));
+      }
+      if (String(url).includes('fido-mds3.verified.json.meta.json')) {
+        return Promise.resolve(jsonResponse({ generatedAt: '2026-04-06T00:00:00Z' }));
+      }
+      return Promise.resolve(jsonResponse({ items: [] }));
+    });
+
+    await import('../../static/scripts/advanced/mds.js');
+    document.dispatchEvent(new Event('DOMContentLoaded'));
+
+    await waitForCondition(() => {
+      const text = document.getElementById('mds-entry-count').textContent || '';
+      return Number(text.replace(/,/g, '')) === 130;
+    }, 2500);
+
+    const statusEl = document.getElementById('mds-status');
+    expect(statusEl.textContent).toContain('Loaded 130 authenticators.');
+
+    await waitForCondition(() => statusEl.classList.contains('mds-status-success'), 2500);
+    expect(statusEl.textContent).toContain('Loaded 130 authenticators.');
   });
 });
