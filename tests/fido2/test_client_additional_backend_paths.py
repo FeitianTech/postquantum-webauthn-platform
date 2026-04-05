@@ -317,3 +317,94 @@ def test_fido2client_get_assertion_starts_and_cancels_timeout_timer(monkeypatch)
     assert _FakeTimer.created
     assert _FakeTimer.created[0].started is True
     assert _FakeTimer.created[0].cancelled is True
+
+
+def test_user_interaction_prompt_and_ctap1_unexpected_authenticate_success(monkeypatch):
+    ui = client_mod.UserInteraction()
+    ui.prompt_up()
+
+    backend = client_mod._Ctap1ClientBackend(object(), _UI())
+    backend.ctap1 = types.SimpleNamespace(
+        authenticate=lambda *_args, **_kwargs: b"unexpected-success",
+        register=lambda *_args, **_kwargs: b"reg",
+    )
+
+    with pytest.raises(client_mod.ClientError) as err:
+        backend.do_make_credential(
+            _creation_options(excludeCredentials=[{"type": "public-key", "id": b"cred"}]),
+            CollectedClientData.create(
+                type=CollectedClientData.TYPE.CREATE,
+                challenge=b"challenge",
+                origin="https://example.com",
+            ),
+            "example.com",
+            None,
+            None,
+        )
+
+    assert err.value.code == client_mod.ClientError.ERR.OTHER_ERROR
+
+
+def test_ctap1_do_get_assertion_success_path_and_ctap2_filter_multiple_matches(monkeypatch):
+    backend = client_mod._Ctap1ClientBackend(object(), _UI())
+    backend.ctap1 = types.SimpleNamespace(authenticate=lambda *_args, **_kwargs: b"auth")
+
+    assertion = types.SimpleNamespace(
+        credential={"type": "public-key", "id": b"asserted-id"},
+        auth_data=b"auth",
+        signature=b"sig",
+        user=None,
+    )
+    monkeypatch.setattr(
+        client_mod,
+        "_call_polling",
+        lambda *_args, **_kwargs: b"auth-response",
+        raising=False,
+    )
+    monkeypatch.setattr(
+        client_mod.AssertionResponse,
+        "from_ctap1",
+        staticmethod(lambda *_args, **_kwargs: assertion),
+        raising=False,
+    )
+
+    selection = backend.do_get_assertion(
+        _request_options(),
+        CollectedClientData.create(
+            type=CollectedClientData.TYPE.GET,
+            challenge=b"challenge",
+            origin="https://example.com",
+        ),
+        "example.com",
+        None,
+    )
+    assert selection.get_assertions()[0] is assertion
+
+    backend2, ctap2 = _make_ctap2_backend(monkeypatch, extensions=[])
+    backend2.info.max_creds_in_list = 2
+    ctap2.info.max_creds_in_list = 2
+
+    class _Proto:
+        VERSION = 1
+
+        def authenticate(self, _token, _message):
+            return b"pin-auth"
+
+    ctap2.get_assertions = lambda *_args, **_kwargs: [
+        types.SimpleNamespace(credential={"type": "public-key", "id": b"selected"})
+    ]
+
+    selected = backend2._filter_creds(
+        "example.com",
+        [
+            PublicKeyCredentialDescriptor(type="public-key", id=b"cred-a"),
+            PublicKeyCredentialDescriptor(type="public-key", id=b"cred-b"),
+        ],
+        _Proto(),
+        None,
+        None,
+        None,
+    )
+
+    assert isinstance(selected, PublicKeyCredentialDescriptor)
+    assert selected.id == b"selected"
