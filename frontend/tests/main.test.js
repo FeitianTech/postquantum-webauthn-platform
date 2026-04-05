@@ -335,4 +335,58 @@ describe('main startup and wiring', () => {
       delay: 420,
     });
   });
+
+  it('handles deferred listener edge branches and mutation-driven spellcheck hardening', async () => {
+    await importMainFresh();
+
+    document.dispatchEvent(new Event('DOMContentLoaded'));
+    await vi.runAllTimersAsync();
+
+    const largeBlobAuth = document.getElementById('large-blob-auth');
+    largeBlobAuth.dispatchEvent(new Event('change', { bubbles: true }));
+
+    const credProtect = document.getElementById('cred-protect');
+    const enforceCredProtect = document.getElementById('enforce-cred-protect');
+    credProtect.value = 'required';
+    credProtect.dispatchEvent(new Event('change', { bubbles: true }));
+    expect(enforceCredProtect.disabled).toBe(false);
+
+    const residentKey = document.getElementById('resident-key');
+    const largeBlobReg = document.getElementById('large-blob-reg');
+    residentKey.value = 'preferred';
+    largeBlobReg.value = 'required';
+    residentKey.dispatchEvent(new Event('change', { bubbles: true }));
+    expect(largeBlobReg.value).toBe('');
+
+    const removeExcludeBefore = removeFakeExcludeCredential.mock.calls.length;
+    document.getElementById('fake-cred-generated-list').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(removeFakeExcludeCredential).toHaveBeenCalledTimes(removeExcludeBefore);
+
+    const removeAllowBefore = removeFakeAllowCredential.mock.calls.length;
+    document.getElementById('fake-cred-auth-generated-list').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(removeFakeAllowCredential).toHaveBeenCalledTimes(removeAllowBefore);
+
+    document.getElementById('prf-eval-first-reg').dispatchEvent(new Event('input', { bubbles: true }));
+    document.getElementById('prf-eval-first-auth').dispatchEvent(new Event('blur', { bubbles: true }));
+    expect(validatePrfInputs).toHaveBeenCalled();
+    expect(validatePrfEvalInputs).toHaveBeenCalled();
+
+    const dynamicInput = document.createElement('input');
+    dynamicInput.type = 'text';
+    document.body.appendChild(dynamicInput);
+
+    const editable = document.createElement('div');
+    editable.contentEditable = 'true';
+    document.body.appendChild(editable);
+
+    const roleTextbox = document.createElement('div');
+    roleTextbox.setAttribute('role', 'textbox');
+    document.body.appendChild(roleTextbox);
+
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(dynamicInput.getAttribute('spellcheck')).toBe('false');
+    expect(roleTextbox.getAttribute('spellcheck')).toBe('false');
+  });
 });

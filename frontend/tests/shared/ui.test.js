@@ -325,4 +325,163 @@ describe('ui shared helpers', () => {
       }
     }
   });
+
+  it('covers popup guards, language text fallback errors, and detail modal close reentry edge cases', async () => {
+    vi.useFakeTimers();
+
+    document.body.innerHTML = `
+      <div id="icon-empty"></div>
+      <div id="icon-with-popup">
+        <div class="info-popup" data-english-dimensions="true" data-english-text-height="18px">
+          <button id="toggle-language">ENG</button>
+          <div class="text-en active">English</div>
+          <div class="text-zh hidden">中文</div>
+        </div>
+      </div>
+      <div id="modal-no-text" class="info-popup">
+        <button id="missing-text-toggle">ENG</button>
+      </div>
+      <div id="modal-detail" class="modal detail-screen" style="z-index: 1400"></div>
+      <div id="modal-other" class="modal open" data-modal-stack-z-index="1600"></div>
+    `;
+
+    const iconEmpty = document.getElementById('icon-empty');
+    expect(() => showInfoPopup(iconEmpty)).not.toThrow();
+    expect(() => hideInfoPopup(iconEmpty)).not.toThrow();
+
+    const iconWithPopup = document.getElementById('icon-with-popup');
+    const popup = iconWithPopup.querySelector('.info-popup');
+    const languageToggle = document.getElementById('toggle-language');
+
+    hideInfoPopup(iconWithPopup);
+    showInfoPopup(iconWithPopup);
+    popup.dispatchEvent(new Event('mouseenter'));
+
+    toggleLanguage(languageToggle);
+    expect(popup.querySelector('.text-zh').style.height).toBe('18px');
+
+    toggleLanguage(languageToggle);
+    expect(popup.querySelector('.text-en').style.height).toBe('18px');
+
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    toggleLanguage(document.getElementById('missing-text-toggle'));
+    expect(errorSpy).toHaveBeenCalled();
+    errorSpy.mockRestore();
+
+    const detailModal = document.getElementById('modal-detail');
+    detailModal.dataset.modalStackZIndex = '1700';
+    delete detailModal.dataset.modalBaseZIndex;
+
+    closeModal('modal-detail');
+    expect(detailModal.classList.contains('closing')).toBe(false);
+
+    detailModal.classList.add('open');
+    detailModal.dataset.modalClosing = 'true';
+    closeModal('modal-detail');
+    expect(detailModal.dataset.modalClosing).toBe('true');
+    delete detailModal.dataset.modalClosing;
+
+    closeModal('modal-detail');
+    detailModal.dispatchEvent(new TransitionEvent('transitionend', { propertyName: 'transform' }));
+    detailModal.dispatchEvent(new TransitionEvent('transitionend', { propertyName: 'opacity' }));
+    await vi.advanceTimersByTimeAsync(710);
+
+    expect(detailModal.classList.contains('closing')).toBe(false);
+  });
+
+  it('covers sticky header root fallback, clone selector fallback, and requestAnimationFrame fallback timing', async () => {
+    vi.useFakeTimers();
+
+    const rafDescriptor = Object.getOwnPropertyDescriptor(window, 'requestAnimationFrame');
+    const scrollYDescriptor = Object.getOwnPropertyDescriptor(window, 'scrollY');
+    const pageYOffsetDescriptor = Object.getOwnPropertyDescriptor(window, 'pageYOffset');
+
+    document.body.innerHTML = `
+      <div id="sticky-root">
+        <header class="header" id="sticky-header" style="height: 40px; position: relative;">
+          <div class="nav-tabs"><button>Tab</button></div>
+        </header>
+      </div>
+    `;
+
+    const header = document.getElementById('sticky-header');
+    document.documentElement.scrollTop = 24;
+    document.body.scrollTop = 12;
+
+    try {
+      Object.defineProperty(window, 'requestAnimationFrame', { configurable: true, value: undefined });
+      Object.defineProperty(window, 'scrollY', { configurable: true, value: undefined });
+      Object.defineProperty(window, 'pageYOffset', { configurable: true, value: undefined });
+
+      const controller = initializeStickyHeaderForElement(header, {
+        root: {},
+        cloneSelector: '.nav-tabs',
+        createContent: () => {
+          throw new Error('content factory failed');
+        },
+        getScrollPosition: () => Number.POSITIVE_INFINITY,
+      });
+
+      expect(controller).toBeTruthy();
+      controller.refreshGeometry();
+      controller.evaluate();
+      await vi.runAllTimersAsync();
+      controller.destroy();
+    } finally {
+      if (rafDescriptor) {
+        Object.defineProperty(window, 'requestAnimationFrame', rafDescriptor);
+      }
+      if (scrollYDescriptor) {
+        Object.defineProperty(window, 'scrollY', scrollYDescriptor);
+      }
+      if (pageYOffsetDescriptor) {
+        Object.defineProperty(window, 'pageYOffset', pageYOffsetDescriptor);
+      }
+    }
+  });
+
+  it('captures baseline popup dimensions on first language toggle and applies them to styles', () => {
+    document.body.innerHTML = `
+      <div class="info-popup">
+        <button id="lang-toggle">ENG</button>
+        <div class="text-en active">English</div>
+        <div class="text-zh hidden">中文</div>
+      </div>
+    `;
+
+    const popup = document.querySelector('.info-popup');
+    const toggle = document.getElementById('lang-toggle');
+    const enText = popup.querySelector('.text-en');
+
+    const styleSpy = vi.spyOn(window, 'getComputedStyle').mockImplementation((element) => {
+      if (element === enText) {
+        return { width: '88px', height: '16px' };
+      }
+      return { width: '140px', height: '42px' };
+    });
+
+    toggleLanguage(toggle);
+
+    expect(popup.getAttribute('data-english-dimensions')).toBe('true');
+    expect(popup.getAttribute('data-english-width')).toBe('140px');
+    expect(popup.getAttribute('data-english-height')).toBe('42px');
+    expect(popup.getAttribute('data-english-text-height')).toBe('16px');
+    expect(popup.style.width).toBe('140px');
+    expect(popup.style.height).toBe('42px');
+    expect(popup.style.minHeight).toBe('42px');
+
+    styleSpy.mockRestore();
+  });
+
+  it('cancels pending popup hide timeout when pointer re-enters popup', async () => {
+    vi.useFakeTimers();
+    const { icon, popup } = buildInfoPopupDom();
+
+    showInfoPopup(icon);
+    popup.dispatchEvent(new Event('mouseleave'));
+    popup.dispatchEvent(new Event('mouseenter'));
+
+    await vi.advanceTimersByTimeAsync(250);
+    expect(popup.classList.contains('show')).toBe(true);
+  });
 });

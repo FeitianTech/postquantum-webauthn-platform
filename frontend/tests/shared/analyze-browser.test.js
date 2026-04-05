@@ -208,4 +208,166 @@ describe('analyze-browser', () => {
     warnSpy.mockRestore();
     errorSpy.mockRestore();
   });
+
+  it('normalizes major browser brands and falls back to UA parsing when client hints are unavailable', async () => {
+    vi.useFakeTimers();
+    buildAnalyzeDom();
+
+    fetch.mockResolvedValue(mockSuccessfulFetchResponse());
+    globalThis.PublicKeyCredential = {
+      isUserVerifyingPlatformAuthenticatorAvailable: vi.fn(async () => false),
+      isConditionalMediationAvailable: vi.fn(async () => false),
+    };
+
+    const { initializeAnalyzeBrowser } = await loadAnalyzeBrowser();
+    initializeAnalyzeBrowser();
+
+    const trigger = document.querySelector('[data-analyze-browser-trigger]');
+    const closeButton = document.querySelector('[data-action="close"]');
+
+    const brandCases = [
+      { brand: 'Edg', expected: 'Microsoft Edge' },
+      { brand: 'Chrome', expected: 'Google Chrome' },
+      { brand: 'Safari', expected: 'Safari' },
+      { brand: 'Firefox', expected: 'Mozilla Firefox' },
+      { brand: 'Brave', expected: 'Brave' },
+    ];
+
+    for (const { brand, expected } of brandCases) {
+      Object.defineProperty(navigator, 'userAgent', {
+        configurable: true,
+        value: 'CustomAgent/1.0',
+      });
+
+      Object.defineProperty(navigator, 'userAgentData', {
+        configurable: true,
+        value: {
+          brands: [{ brand: 'Not A Brand', version: '99' }, { brand, version: '120.0.0.0' }],
+          platform: 'TestOS',
+          getHighEntropyValues: vi.fn(async () => ({
+            platform: 'TestOS',
+            fullVersionList: [{ brand, version: '120.1.2.3' }],
+          })),
+        },
+      });
+
+      trigger.click();
+      await vi.runAllTimersAsync();
+
+      expect(document.getElementById('analyze-browser-name').textContent).toBe(expected);
+
+      closeButton.click();
+      await vi.runAllTimersAsync();
+    }
+
+    Object.defineProperty(navigator, 'userAgent', {
+      configurable: true,
+      value: 'Mozilla/5.0 Firefox/124.0',
+    });
+    Object.defineProperty(navigator, 'userAgentData', {
+      configurable: true,
+      value: {
+        brands: [{ brand: 'Firefox', version: '124.0.0.0' }],
+        platform: 'Linux',
+        // No getHighEntropyValues: should use fallback brand selection path.
+      },
+    });
+
+    trigger.click();
+    await vi.runAllTimersAsync();
+
+    expect(document.getElementById('analyze-browser-name').textContent).toBe('Mozilla Firefox');
+    expect(document.getElementById('analyze-browser-version').textContent).toBe('124.0.0.0');
+  });
+
+  it('handles sparse panel markup and close interactions before panel is open', async () => {
+    vi.useFakeTimers();
+    buildAnalyzeDom();
+
+    // Remove one feature container entirely and strip the value element from another.
+    document.querySelector('[data-feature="platform"]').remove();
+    document
+      .querySelector('[data-feature="cross-platform"] .analyze-browser-panel__feature-value')
+      .remove();
+
+    // Remove transport list so rendering function no-ops safely.
+    document.querySelector('[data-role="transport-list"]').remove();
+
+    // Keep table element but remove expected header/body role targets.
+    const table = document.querySelector('[data-role="cose-table"]');
+    table.innerHTML = `
+      <thead><tr><th>Algorithm</th><th>Legacy</th></tr></thead>
+      <tbody><tr><td>placeholder</td></tr></tbody>
+    `;
+
+    fetch.mockResolvedValue(mockSuccessfulFetchResponse());
+    globalThis.PublicKeyCredential = {
+      isUserVerifyingPlatformAuthenticatorAvailable: vi.fn(async () => false),
+      isConditionalMediationAvailable: vi.fn(async () => false),
+    };
+
+    const { initializeAnalyzeBrowser } = await loadAnalyzeBrowser();
+    initializeAnalyzeBrowser();
+
+    const panel = document.getElementById('analyze-browser-panel');
+    const closeButton = panel.querySelector('[data-action="close"]');
+    const trigger = document.querySelector('[data-analyze-browser-trigger]');
+
+    // Exercise close path when panel is not currently open.
+    closeButton.click();
+    await vi.runAllTimersAsync();
+
+    // Exercise click delegation guard for non-HTMLElement targets.
+    const textNode = document.createTextNode('text-node-click-target');
+    panel.appendChild(textNode);
+    textNode.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+    trigger.click();
+    await vi.runAllTimersAsync();
+
+    expect(panel.hidden).toBe(false);
+    expect(panel.classList.contains('is-open')).toBe(true);
+  });
+
+  it('falls back safely when analysis throws and ignores concurrent trigger clicks', async () => {
+    vi.useFakeTimers();
+    buildAnalyzeDom();
+
+    fetch.mockResolvedValue(mockSuccessfulFetchResponse());
+
+    const badUaData = { platform: 'ErrOS' };
+    Object.defineProperty(badUaData, 'brands', {
+      configurable: true,
+      get() {
+        throw new Error('brand access failed');
+      },
+    });
+
+    Object.defineProperty(navigator, 'userAgentData', {
+      configurable: true,
+      value: badUaData,
+    });
+
+    globalThis.PublicKeyCredential = {
+      isConditionalMediationAvailable: vi.fn(async () => false),
+    };
+
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const { initializeAnalyzeBrowser } = await loadAnalyzeBrowser();
+    initializeAnalyzeBrowser();
+
+    const trigger = document.querySelector('[data-analyze-browser-trigger]');
+
+    trigger.click();
+    trigger.click(); // should be ignored while first run is active
+    await vi.runAllTimersAsync();
+
+    expect(trigger.disabled).toBe(false);
+    expect(document.getElementById('analyze-browser-name').textContent).toBe('Unknown Browser');
+    expect(document.getElementById('analyze-browser-system').textContent).toBe('Unknown System');
+    expect(errorSpy).toHaveBeenCalled();
+
+    errorSpy.mockRestore();
+  });
 });
