@@ -204,3 +204,30 @@ def test_win_api_assertion_and_attestation_destructors_call_webauthn_free(monkey
 
     assert len(free_assertion.calls) == 1
     assert len(free_attestation.calls) == 1
+
+
+def test_win_api_option_structs_cover_legacy_credential_list_fallback(monkeypatch):
+    module = _load_win_api_module(monkeypatch, api_version=9)
+
+    # Simulate legacy struct versions where allow/exclude pointer lists are unavailable.
+    monkeypatch.setattr(
+        module,
+        "get_version",
+        lambda class_name: {
+            "WebAuthNGetAssertionOptions": 1,
+            "WebAuthNMakeCredentialOptions": 1,
+        }.get(class_name, 1),
+        raising=False,
+    )
+
+    get_opts = module.WebAuthNGetAssertionOptions(
+        credentials=[{"type": "public-key", "id": b"cred-a"}]
+    )
+    assert get_opts.dwVersion == 1
+    assert get_opts.CredentialList.cCredentials == 1
+
+    make_opts = module.WebAuthNMakeCredentialOptions(
+        credentials=[{"type": "public-key", "id": b"cred-b"}]
+    )
+    assert make_opts.dwVersion == 1
+    assert make_opts.CredentialList.cCredentials == 1
