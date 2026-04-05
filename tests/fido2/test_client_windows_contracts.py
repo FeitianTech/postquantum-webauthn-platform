@@ -766,3 +766,136 @@ def test_get_assertion_maps_oserror_to_client_error(monkeypatch):
 
     assert err.value.code == ClientError.ERR.OTHER_ERROR
     assert isinstance(err.value.cause, OSError)
+
+
+def test_make_credential_credprotect_credblob_and_pre_v7_hmac_outputs(monkeypatch):
+    captured = {}
+
+    def _make_impl(_handle, _rp, _user, _params, _client_data, make_options, out_ptr):
+        captured["options"] = make_options
+        out_ptr.contents = types.SimpleNamespace(
+            attestation_object=_attestation_object_bytes(),
+            dwVersion=6,
+            bResidentKey=False,
+            pHmacSecret=types.SimpleNamespace(
+                contents=types.SimpleNamespace(first=b"first", second=b"second")
+            ),
+            bLargeBlobSupported=False,
+        )
+
+    windows_mod, _fake_webauthn, _win_api_mod = _load_windows_module(
+        monkeypatch,
+        api_version=9,
+        make_impl=_make_impl,
+    )
+    _patch_ctypes_boundary(monkeypatch, windows_mod)
+
+    client = windows_mod.WindowsClient(_Collector(), allow_hmac_secret=True)
+
+    options = _creation_options(
+        attestation="none",
+        extensions={
+            "credentialProtectionPolicy": "required",
+            "enforceCredentialProtectionPolicy": True,
+            "credBlob": b"cred-blob",
+            "minPinLength": False,
+            "hmacCreateSecret": True,
+            "hmacGetSecret": {"salt1": b"S" * 32, "salt2": b"T" * 32},
+        },
+        hints=[],
+    )
+
+    response = client.make_credential(options)
+
+    extension_ids = {ext.identifier for ext in captured["options"].extensions}
+    assert extension_ids == {"credProtect", "credBlob", "hmac-secret"}
+
+    ext = response.client_extension_results
+    assert ext.hmac_create_secret is True
+    # Version 6 does not expose pHmacSecret outputs from the platform.
+    assert ext.hmac_get_secret is None
+
+
+def test_make_credential_hmac_get_secret_includes_second_output_for_version7(monkeypatch):
+    def _make_impl(_handle, _rp, _user, _params, _client_data, _make_options, out_ptr):
+        out_ptr.contents = types.SimpleNamespace(
+            attestation_object=_attestation_object_bytes(),
+            dwVersion=7,
+            bResidentKey=False,
+            pHmacSecret=types.SimpleNamespace(
+                contents=types.SimpleNamespace(first=b"secret-one", second=b"secret-two")
+            ),
+            bLargeBlobSupported=False,
+        )
+
+    windows_mod, _fake_webauthn, _win_api_mod = _load_windows_module(
+        monkeypatch,
+        api_version=9,
+        make_impl=_make_impl,
+    )
+    _patch_ctypes_boundary(monkeypatch, windows_mod)
+
+    client = windows_mod.WindowsClient(_Collector(), allow_hmac_secret=True)
+    response = client.make_credential(
+        _creation_options(
+            attestation="none",
+            extensions={
+                "hmacCreateSecret": True,
+                "hmacGetSecret": {"salt1": b"U" * 32, "salt2": b"V" * 32},
+            },
+            hints=[],
+        )
+    )
+
+    ext = response.client_extension_results
+    assert isinstance(ext.hmac_get_secret, HMACGetSecretOutput)
+    assert ext.hmac_get_secret.output1 == b"secret-one"
+    assert ext.hmac_get_secret.output2 == b"secret-two"
+
+
+def test_get_assertion_includes_getcredblob_extension_and_hmac_second_output(monkeypatch):
+    captured = {}
+
+    def _get_impl(_handle, _rp_id, _client_data, get_options, out_ptr):
+        captured["options"] = get_options
+        out_ptr.contents = types.SimpleNamespace(
+            dwVersion=3,
+            auth_data=_assertion_auth_data_bytes(),
+            pHmacSecret=types.SimpleNamespace(
+                contents=types.SimpleNamespace(first=b"hmac-one", second=b"hmac-two")
+            ),
+            dwCredLargeBlobStatus=0,
+            cred_large_blob=b"",
+            Credential=types.SimpleNamespace(
+                pwszCredentialType="public-key",
+                id=b"assert-id",
+            ),
+            signature=b"signature",
+            user_id=b"",
+        )
+
+    windows_mod, _fake_webauthn, _win_api_mod = _load_windows_module(
+        monkeypatch,
+        api_version=9,
+        get_impl=_get_impl,
+    )
+    _patch_ctypes_boundary(monkeypatch, windows_mod)
+
+    client = windows_mod.WindowsClient(_Collector(), allow_hmac_secret=True)
+    selection = client.get_assertion(
+        _request_options(
+            extensions={
+                "getCredBlob": True,
+                "hmacGetSecret": {"salt1": b"X" * 32, "salt2": b"Y" * 32},
+            },
+            hints=[],
+        )
+    )
+
+    assert {ext.identifier for ext in captured["options"].extensions} == {"credBlob"}
+
+    response = selection.get_response(0)
+    ext = response.client_extension_results
+    assert isinstance(ext.hmac_get_secret, HMACGetSecretOutput)
+    assert ext.hmac_get_secret.output1 == b"hmac-one"
+    assert ext.hmac_get_secret.output2 == b"hmac-two"
