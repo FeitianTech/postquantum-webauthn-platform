@@ -195,4 +195,100 @@ describe('navigation', () => {
     controls.close({ allowDesktop: true });
     addSpy.mockRestore();
   });
+
+  it('reuses initialized controls and exercises switchTab scroll fallbacks', async () => {
+    const { initializeNavigationMenu, switchTab } = await loadNavigation();
+    window.innerWidth = 700;
+
+    const controls = initializeNavigationMenu();
+    const sameControls = initializeNavigationMenu();
+    expect(sameControls).toBe(controls);
+
+    controls.open();
+    expect(document.body.classList.contains('header-menu-open')).toBe(true);
+
+    const closeSpy = vi.spyOn(controls, 'close');
+
+    const originalScrollTo = window.scrollTo;
+    window.scrollTo = vi.fn((...args) => {
+      if (typeof args[0] === 'object') {
+        throw new Error('object form not supported');
+      }
+    });
+
+    switchTab('simple', { preserveMessages: true });
+    await new Promise(resolve => requestAnimationFrame(resolve));
+    expect(closeSpy).toHaveBeenCalledWith({ focusToggle: false, allowDesktop: true });
+    expect(window.scrollTo).toHaveBeenCalledWith(0, 0);
+
+    window.scrollTo = undefined;
+    document.documentElement.scrollTop = 18;
+    document.body.scrollTop = 14;
+
+    switchTab('simple');
+    await new Promise(resolve => requestAnimationFrame(resolve));
+    expect(document.documentElement.scrollTop).toBe(0);
+    expect(document.body.scrollTop).toBe(0);
+
+    window.scrollTo = originalScrollTo;
+  });
+
+  it('handles initialization guard paths and desktop open/close menu constraints', async () => {
+    let module = await loadNavigation();
+
+    document.body.innerHTML = '<div id="no-header"></div>';
+    module.resetNavigationMenuStateForTests();
+    expect(module.initializeNavigationMenu()).toBeNull();
+
+    document.body.innerHTML = `
+      <div class="header">
+        <button data-header-menu-toggle aria-expanded="false"></button>
+        <div data-header-nav><div class="nav-tabs"><button class="nav-tab" data-tab="simple"></button></div></div>
+      </div>
+    `;
+    module.resetNavigationMenuStateForTests();
+    expect(module.initializeNavigationMenu()).toBeNull();
+
+    buildTabDom();
+    module.resetNavigationMenuStateForTests();
+    const controls = module.initializeNavigationMenu();
+
+    window.innerWidth = 1200;
+    controls.open();
+    expect(document.body.classList.contains('header-menu-open')).toBe(false);
+
+    window.innerWidth = 700;
+    controls.open();
+    expect(document.body.classList.contains('header-menu-open')).toBe(true);
+
+    window.innerWidth = 1200;
+    controls.close();
+    expect(document.body.classList.contains('header-menu-open')).toBe(true);
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    expect(document.body.classList.contains('header-menu-open')).toBe(true);
+
+    document.querySelector('.nav-tab').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(document.body.classList.contains('header-menu-open')).toBe(false);
+  });
+
+  it('resolves section headers through parent query fallback when direct siblings are absent', async () => {
+    const { toggleSection } = await loadNavigation();
+
+    document.body.innerHTML = `
+      <div id="outer">
+        <div id="inner">
+          <div class="wrapper">
+            <div class="section-header" id="nested-header"><span class="expand-icon"></span></div>
+          </div>
+          <div id="query-target"></div>
+        </div>
+      </div>
+    `;
+
+    toggleSection('query-target');
+
+    expect(document.getElementById('query-target').classList.contains('expanded')).toBe(true);
+    expect(document.getElementById('nested-header').classList.contains('expanded')).toBe(true);
+  });
 });

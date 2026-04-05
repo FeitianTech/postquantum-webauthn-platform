@@ -111,4 +111,31 @@ describe('loader', () => {
     vi.advanceTimersByTime(1000);
     expect(document.body.classList.contains('app-loaded')).toBe(true);
   });
+
+  it('ignores phase/progress updates after completion and treats repeated completion as a no-op', async () => {
+    const {
+      initializeLoader,
+      loaderComplete,
+      loaderIsActive,
+      loaderSetPhase,
+      loaderSetProgress,
+    } = await loadLoaderModule();
+
+    initializeLoader();
+    loaderSetProgress(3);
+    vi.advanceTimersByTime(400);
+    expect(document.getElementById('app-loader-progress').getAttribute('aria-valuenow')).toBe('3');
+
+    loaderComplete({ message: 'Finished', delay: 0 });
+    vi.advanceTimersByTime(10);
+    expect(loaderIsActive()).toBe(false);
+
+    const statusBefore = document.getElementById('app-loader-status').textContent;
+    loaderSetPhase('Ignored phase update', { progress: 55 });
+    loaderSetProgress(90);
+    loaderComplete({ message: 'Second completion should no-op' });
+
+    expect(document.getElementById('app-loader-status').textContent).toBe(statusBefore);
+    expect(document.body.classList.contains('app-loaded')).toBe(true);
+  });
 });

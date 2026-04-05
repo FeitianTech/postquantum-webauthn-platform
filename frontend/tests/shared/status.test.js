@@ -80,4 +80,23 @@ describe('status helpers', () => {
     expect(document.getElementById('simple-status').className).toBe('status');
     expect(document.getElementById('simple-progress').classList.contains('show')).toBe(false);
   });
+
+  it('no-ops for missing targets and supports element-driven progress/status resolution', () => {
+    expect(() => showStatus('missing-tab', 'No target', 'info')).not.toThrow();
+    expect(() => hideStatus('missing-tab')).not.toThrow();
+    expect(() => hideStatus(document.createElement('div'))).not.toThrow();
+
+    showStatus('simple', 'Visible', 'info');
+    showProgress('simple', 'Working');
+
+    const simpleStatus = document.getElementById('simple-status');
+    const simpleProgress = document.getElementById('simple-progress');
+    simpleStatus.classList.add('status--visible');
+
+    hideProgress(simpleProgress);
+    expect(simpleStatus.classList.contains('status--visible')).toBe(true);
+    expect(simpleStatus.style.bottom).toBe('');
+
+    expect(() => hideProgress(123)).not.toThrow();
+  });
 });
