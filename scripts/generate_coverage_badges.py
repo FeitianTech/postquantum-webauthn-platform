@@ -78,8 +78,8 @@ def write_badge(name: str, label: str, pct: float, named_logo: str) -> None:
 def main() -> int:
     py = load_python_percent()
     fe = load_frontend_percent()
-    write_badge("python-coverage.json", "Python (combined)", py, "python")
-    write_badge("frontend-coverage.json", "Frontend (combined)", fe, "javascript")
+    write_badge("python-coverage.json", "Python", py, "python")
+    write_badge("frontend-coverage.json", "Frontend", fe, "javascript")
     return 0
 
 
