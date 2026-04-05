@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import {
   deriveAaguidDisplayValues,
@@ -175,5 +175,58 @@ describe('credential-utils', () => {
       aaguidB64: '',
       aaguidB64u: '',
     });
+  });
+
+  it('covers additional malformed and fallback credential parsing branches', () => {
+    expect(normaliseAaguidValue('0011:2233')).toBe('00112233');
+    expect(normaliseAaguidValue(new Uint8Array([1, 2, 3, 4]).buffer)).toBe('01020304');
+    expect(normaliseAaguidValue({ unknown: true })).toBe('');
+
+    expect(normalizeMinPinLengthValue('   ')).toBeNull();
+    expect(extractMinPinLengthValue({
+      clientExtensionOutputs: { minPinLength: '10' },
+    })).toBe(10);
+
+    expect(extractAuthenticatorDataHex('   ')).toBe('');
+    expect(extractAuthenticatorDataHex('_w')).toBe('ff');
+    expect(extractAuthenticatorDataHex('@@@')).toBe('');
+    expect(extractAuthenticatorDataHex([1, Symbol('x')])).toBe('');
+    expect(extractAuthenticatorDataHex(new Uint8Array([7, 8]).buffer)).toBe('0708');
+    expect(extractAuthenticatorDataHex({ unsupported: true })).toBe('');
+
+    expect(extractAaguidFromAuthDataHex('00')).toBe('');
+    expect(deriveAaguidFromCredentialData({})).toBe('');
+
+    expect(getCoseMapValue({ '-7': 'es256' }, -8)).toBeUndefined();
+    expect(getCredentialIdHex({})).toBe('');
+    expect(getCredentialUserHandleHex(null)).toBe('');
+    expect(getCredentialUserHandleHex({})).toBe('');
+    expect(getStoredCredentialAttachment(null)).toBe('');
+
+    expect(extractHexFromJsonFormat('QUJD')).toBe('414243');
+    expect(extractHexFromJsonFormat({ unsupported: true })).toBe('');
+  });
+
+  it('falls back to empty encoded AAGUID display fields when base64 conversion fails', async () => {
+    vi.resetModules();
+    vi.doMock('../../static/scripts/shared/binary-utils.js', async () => {
+      const actual = await vi.importActual('../../static/scripts/shared/binary-utils.js');
+      return {
+        ...actual,
+        hexToBase64: vi.fn(() => {
+          throw new Error('hex conversion failed');
+        }),
+      };
+    });
+
+    const reloaded = await import('../../static/scripts/advanced/credential-utils.js');
+    expect(reloaded.deriveAaguidDisplayValues('00112233445566778899aabbccddeeff')).toEqual({
+      aaguidHex: '00112233445566778899aabbccddeeff',
+      aaguidB64: '',
+      aaguidB64u: '',
+    });
+
+    vi.doUnmock('../../static/scripts/shared/binary-utils.js');
+    vi.resetModules();
   });
 });

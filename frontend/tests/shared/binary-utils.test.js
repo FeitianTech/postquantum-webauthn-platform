@@ -11,9 +11,13 @@ import {
   base64UrlToJson,
   base64UrlToUint8Array,
   base64UrlToUtf8String,
+  bytesToHex,
   bufferSourceToUint8Array,
+  convertCredProtectValue,
   convertExtensionsForClient,
   convertFormat,
+  convertLargeBlobExtension,
+  convertPrfExtension,
   currentFormatToBase64Url,
   currentFormatToJsonFormat,
   generateRandomHex,
@@ -162,5 +166,73 @@ describe('binary-utils', () => {
       { a: 2, z: 1 },
       { b: { c: 3, d: 4 } },
     ]);
+  });
+
+  it('covers conversion and extension fallback branches for malformed or alternate inputs', () => {
+    expect(hexToBase64Url('f')).toBe('Dw');
+    expect(bytesToHex(null)).toBe('');
+    expect(base64UrlToHexFixed('QQ')).toBe('41');
+
+    expect(convertFormat('QUJD', 'b64', 'hex')).toBe('414243');
+    expect(convertFormat('new Uint8Array([65, 66])', 'js', 'hex')).toBe('4142');
+    expect(convertFormat('4142', 'hex', 'b64')).toBe('QUI=');
+    expect(convertFormat('4142', 'hex', 'js')).toBe('new Uint8Array([65, 66])');
+    expect(convertFormat('4142', 'hex', 'unknown')).toBe('4142');
+
+    expect(hexToUint8Array('zz')).toBeNull();
+    expect(arrayBufferToHex(null)).toBe('');
+    expect(arrayBufferToHex({})).toBe('');
+    expect(normalizeClientExtensionResults(42)).toBe(42);
+
+    const rawBuffer = new Uint8Array([1, 2, 3]).buffer;
+    expect(jsonValueToUint8Array(rawBuffer)).toEqual(new Uint8Array([1, 2, 3]));
+    expect(jsonValueToUint8Array('   ')).toBeNull();
+    expect(jsonValueToUint8Array('QQ')).toEqual(new Uint8Array([65]));
+    expect(jsonValueToUint8Array({ $js: '[1,2,3]' })).toEqual(new Uint8Array([1, 2, 3]));
+
+    expect(convertCredProtectValue('userVerificationRequired')).toBe('userVerificationRequired');
+    expect(convertCredProtectValue(true)).toBe(true);
+
+    expect(convertLargeBlobExtension(null)).toBeNull();
+    expect(convertLargeBlobExtension('required')).toEqual({ support: 'required' });
+    expect(convertLargeBlobExtension(7)).toBe(7);
+
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    expect(convertLargeBlobExtension({ support: { $js: 'not-json' } })).toEqual({ support: 'not-json' });
+    warnSpy.mockRestore();
+
+    expect(convertPrfExtension('not-object')).toBe('not-object');
+    const convertedPrf = convertPrfExtension({
+      eval: {
+        first: { $hex: '41' },
+        second: { $base64url: 'Qg' },
+      },
+      evalByCredential: {
+        credA: {
+          first: { $hex: '43' },
+          second: { $base64: 'RA==' },
+        },
+      },
+      passthrough: 'keep',
+    });
+    expect(convertedPrf.eval.second).toBeInstanceOf(ArrayBuffer);
+    expect(convertedPrf.evalByCredential.credA.second).toBeInstanceOf(ArrayBuffer);
+    expect(convertedPrf.passthrough).toBe('keep');
+  });
+
+  it('returns null for utf8 and json decode failures without throwing', () => {
+    const originalDecoder = state.utf8Decoder;
+    state.utf8Decoder = {
+      decode() {
+        throw new Error('decode failure');
+      },
+    };
+
+    expect(base64UrlToUtf8String('QQ')).toBeNull();
+
+    state.utf8Decoder = new TextDecoder('utf-8');
+    expect(base64UrlToJson('QQ')).toBeNull();
+
+    state.utf8Decoder = originalDecoder;
   });
 });

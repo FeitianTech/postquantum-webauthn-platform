@@ -15,6 +15,21 @@ async function loadFormsModule() {
   return import('../../static/scripts/advanced/forms.js');
 }
 
+async function loadFormsModuleWithBinaryOverrides(overrides = {}) {
+  vi.resetModules();
+  vi.doMock('../../static/scripts/shared/binary-utils.js', async () => {
+    const actual = await vi.importActual('../../static/scripts/shared/binary-utils.js');
+    return {
+      ...actual,
+      ...overrides,
+    };
+  });
+
+  const module = await import('../../static/scripts/advanced/forms.js');
+  vi.doUnmock('../../static/scripts/shared/binary-utils.js');
+  return module;
+}
+
 function buildFormDom() {
   document.body.innerHTML = `
     <label for="user-id">User ID</label>
@@ -186,5 +201,93 @@ describe('forms', () => {
 
     expect(document.getElementById('prf-capability-message').textContent).toContain('No credentials with prf support available.');
     expect(document.getElementById('prf-eval-first-auth').disabled).toBe(true);
+  });
+
+  it('validates alternate binary formats, malformed values, and missing controls safely', async () => {
+    const { validateHexInput, validateLargeBlobWriteInput, validatePrfInputs } = await loadFormsModule();
+
+    window.__binaryFormat = 'b64';
+    document.getElementById('user-id').value = 'QQ==';
+    expect(validateHexInput('user-id', 'user-id-error', 1)).toBe(true);
+
+    window.__binaryFormat = 'b64u';
+    document.getElementById('user-id').value = 'QQ';
+    expect(validateHexInput('user-id', 'user-id-error', 1)).toBe(true);
+
+    window.__binaryFormat = 'js';
+    document.getElementById('user-id').value = 'new Uint8Array([65, 66])';
+    expect(validateHexInput('user-id', 'user-id-error', 1)).toBe(true);
+
+    window.__binaryFormat = 'b64';
+    document.getElementById('user-id').value = '@@@@';
+    expect(validateHexInput('user-id', 'user-id-error', 1)).toBe(false);
+
+    expect(validateHexInput('missing-input', 'missing-error', 1)).toBe(true);
+
+    document.getElementById('prf-eval-first-auth').remove();
+    document.getElementById('prf-eval-second-auth').remove();
+    expect(validatePrfInputs('auth')).toBeUndefined();
+
+    const largeBlobInput = document.getElementById('large-blob-write');
+    largeBlobInput.disabled = true;
+    largeBlobInput.value = '';
+    expect(validateLargeBlobWriteInput()).toBe(true);
+
+    delete window.__binaryFormat;
+  });
+
+  it('evaluates largeBlob/prf capability across object, scalar, and property-backed credential payloads', async () => {
+    const { checkLargeBlobCapability, updateAuthenticationExtensionAvailability } = await loadFormsModule();
+
+    state.storedCredentials = [null];
+    checkLargeBlobCapability();
+    expect(document.getElementById('large-blob-capability-message').textContent).toContain(
+      'No largeBlob capable credentials available',
+    );
+
+    document.getElementById('large-blob-auth').value = 'write';
+    checkLargeBlobCapability({ selectedCredential: { clientExtensionOutputs: { largeBlob: { supported: true } } } });
+    expect(document.getElementById('large-blob-auth').disabled).toBe(false);
+    expect(document.getElementById('large-blob-write').disabled).toBe(false);
+
+    checkLargeBlobCapability({ selectedCredential: { clientExtensionOutputs: { largeBlob: 'present' } } });
+    expect(document.getElementById('large-blob-auth').disabled).toBe(false);
+
+    checkLargeBlobCapability({ selectedCredential: { properties: { largeBlob: true } } });
+    expect(document.getElementById('large-blob-auth').disabled).toBe(false);
+
+    const allowSelect = document.getElementById('allow-credentials');
+    allowSelect.value = '414243';
+
+    state.storedCredentials = [{ credentialIdHex: '414243', clientExtensionOutputs: { prf: { custom: true } } }];
+    updateAuthenticationExtensionAvailability();
+    expect(document.getElementById('prf-eval-first-auth').disabled).toBe(false);
+
+    state.storedCredentials = [{ credentialIdHex: '414243', clientExtensionOutputs: { prf: 'supported' } }];
+    updateAuthenticationExtensionAvailability();
+    expect(document.getElementById('prf-eval-first-auth').disabled).toBe(false);
+
+    state.storedCredentials = [{ credentialIdHex: '414243', properties: { prf: true } }];
+    updateAuthenticationExtensionAvailability();
+    expect(document.getElementById('prf-eval-first-auth').disabled).toBe(false);
+  });
+
+  it('disables secondary PRF inputs when formatted random output is empty', async () => {
+    const { randomizePrfEval } = await loadFormsModuleWithBinaryOverrides({
+      convertFormat: vi.fn(() => ''),
+      generateRandomHex: vi.fn(() => 'aa'),
+    });
+
+    const secondInput = document.getElementById('prf-eval-second-auth');
+    const secondButton = secondInput.nextElementSibling;
+    secondInput.value = 'deadbeef';
+    secondInput.disabled = false;
+    secondButton.disabled = false;
+
+    randomizePrfEval('first', 'auth');
+
+    expect(secondInput.disabled).toBe(true);
+    expect(secondButton.disabled).toBe(true);
+    expect(secondInput.value).toBe('');
   });
 });
