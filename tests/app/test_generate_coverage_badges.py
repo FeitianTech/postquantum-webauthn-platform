@@ -107,7 +107,7 @@ def test_main_generates_frontend_and_python_badges_from_coverage_inputs(tmp_path
         (tmp_path / ".github" / "badges" / "frontend-coverage.json").read_text(encoding="utf-8")
     )
 
-    assert python_badge["label"] == "Python (combined)"
+    assert python_badge["label"] == "Python"
     assert python_badge["message"] == "96.2%"
-    assert frontend_badge["label"] == "Frontend (combined)"
+    assert frontend_badge["label"] == "Frontend"
     assert frontend_badge["message"] == "97.4%"
