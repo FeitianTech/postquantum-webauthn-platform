@@ -123,7 +123,7 @@ describe('analyze-browser', () => {
     }));
     expect(values[0].status).toBe('true');
     expect(values[1].status).toBe('true');
-    expect(values[2].status).toBe('false');
+    expect(values[2].status).toBe('true');
 
     const transportText = panel.querySelector('[data-role="transport-list"]').textContent;
     expect(transportText).toContain('Internal');
@@ -191,6 +191,43 @@ describe('analyze-browser', () => {
     trigger.click();
     expect(loader.hidden).toBe(true);
     expect(panel.hidden).toBe(false);
+  });
+
+  it('renders unknown algorithm support states explicitly', async () => {
+    vi.useFakeTimers();
+    buildAnalyzeDom({ coseSource: '/unknown-cose.json' });
+
+    globalThis.PublicKeyCredential = {
+      isUserVerifyingPlatformAuthenticatorAvailable: vi.fn(async () => true),
+      isConditionalMediationAvailable: vi.fn(async () => false),
+    };
+
+    fetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        browsers: [{ key: 'chrome', label: 'Chrome' }],
+        algorithms: [
+          {
+            id: -50,
+            label: 'ML-DSA-87 (PQC) (-50)',
+            support: {
+              chrome: { status: 'unknown', note: 'experimental' },
+            },
+          },
+        ],
+      }),
+    });
+
+    const { initializeAnalyzeBrowser } = await loadAnalyzeBrowser();
+    initializeAnalyzeBrowser();
+
+    document.querySelector('[data-analyze-browser-trigger]').click();
+    await vi.runAllTimersAsync();
+
+    const tbodyText = document.querySelector('[data-role="cose-table-body"]').textContent;
+    expect(tbodyText).toContain('Unknown');
+    expect(tbodyText).toContain('experimental');
   });
 
   it('handles COSE fetch failures and browser capability fallback paths', async () => {

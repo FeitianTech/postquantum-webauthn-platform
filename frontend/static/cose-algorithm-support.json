@@ -1,4 +1,8 @@
 {
+  "metadata": {
+    "lastReviewed": "2026-04-05",
+    "notes": "Unknown indicates the project has no reliable, cross-browser verification data for that algorithm support state."
+  },
   "browsers": [
     {
       "key": "chromeEdge",
@@ -22,91 +26,373 @@
       "id": -7,
       "label": "ES256 (-7)",
       "support": {
-        "chromeEdge": { "status": "yes" },
-        "safari": { "status": "yes", "note": "≥ 17" },
-        "firefox": { "status": "yes", "note": "≥ 125" },
-        "androidChrome": { "status": "yes" }
-      }
-    },
-    {
-      "id": -257,
-      "label": "RS256 (-257)",
-      "support": {
-        "chromeEdge": { "status": "yes" },
-        "safari": { "status": "yes", "note": "≥ 17" },
-        "firefox": { "status": "yes", "note": "≥ 113" },
-        "androidChrome": { "status": "yes" }
+        "chromeEdge": {
+          "status": "yes"
+        },
+        "safari": {
+          "status": "yes",
+          "note": "≥ 17"
+        },
+        "firefox": {
+          "status": "yes",
+          "note": "≥ 125"
+        },
+        "androidChrome": {
+          "status": "yes"
+        }
       }
     },
     {
       "id": -8,
       "label": "EdDSA (-8)",
       "support": {
-        "chromeEdge": { "status": "yes" },
-        "safari": { "status": "partial", "note": "≥ 17" },
-        "firefox": { "status": "yes", "note": "≥ 125" },
-        "androidChrome": { "status": "yes" }
+        "chromeEdge": {
+          "status": "yes"
+        },
+        "safari": {
+          "status": "partial",
+          "note": "≥ 17"
+        },
+        "firefox": {
+          "status": "yes",
+          "note": "≥ 125"
+        },
+        "androidChrome": {
+          "status": "yes"
+        }
       }
     },
     {
-      "id": -38,
-      "label": "ES384 (-38)",
+      "id": -19,
+      "label": "Ed25519 (-19)",
       "support": {
-        "chromeEdge": { "status": "partial" },
-        "safari": { "status": "partial" },
-        "firefox": { "status": "yes", "note": "≥ 125" },
-        "androidChrome": { "status": "partial" }
-      }
-    },
-    {
-      "id": -39,
-      "label": "ES512 (-39)",
-      "support": {
-        "chromeEdge": { "status": "partial" },
-        "safari": { "status": "no" },
-        "firefox": { "status": "partial" },
-        "androidChrome": { "status": "partial" }
-      }
-    },
-    {
-      "id": -65535,
-      "label": "RS1 (-65535)",
-      "note": "Deprecated Algorithm",
-      "support": {
-        "chromeEdge": { "status": "no" },
-        "safari": { "status": "no" },
-        "firefox": { "status": "no" },
-        "androidChrome": { "status": "no" }
+        "chromeEdge": {
+          "status": "unknown"
+        },
+        "safari": {
+          "status": "unknown"
+        },
+        "firefox": {
+          "status": "unknown"
+        },
+        "androidChrome": {
+          "status": "unknown"
+        }
       }
     },
     {
       "id": -47,
       "label": "ES256K (-47)",
       "support": {
-        "chromeEdge": { "status": "yes", "note": "≥ 115" },
-        "safari": { "status": "yes", "note": "≥ 123" },
-        "firefox": { "status": "partial" },
-        "androidChrome": { "status": "partial" }
+        "chromeEdge": {
+          "status": "yes",
+          "note": "≥ 115"
+        },
+        "safari": {
+          "status": "yes",
+          "note": "≥ 123"
+        },
+        "firefox": {
+          "status": "partial"
+        },
+        "androidChrome": {
+          "status": "partial"
+        }
+      }
+    },
+    {
+      "id": -35,
+      "label": "ES384 (-35)",
+      "support": {
+        "chromeEdge": {
+          "status": "partial"
+        },
+        "safari": {
+          "status": "partial"
+        },
+        "firefox": {
+          "status": "yes",
+          "note": "≥ 125"
+        },
+        "androidChrome": {
+          "status": "partial"
+        }
+      }
+    },
+    {
+      "id": -36,
+      "label": "ES512 (-36)",
+      "support": {
+        "chromeEdge": {
+          "status": "partial"
+        },
+        "safari": {
+          "status": "no"
+        },
+        "firefox": {
+          "status": "partial"
+        },
+        "androidChrome": {
+          "status": "partial"
+        }
+      }
+    },
+    {
+      "id": -257,
+      "label": "RS256 (-257)",
+      "support": {
+        "chromeEdge": {
+          "status": "yes"
+        },
+        "safari": {
+          "status": "yes",
+          "note": "≥ 17"
+        },
+        "firefox": {
+          "status": "yes",
+          "note": "≥ 113"
+        },
+        "androidChrome": {
+          "status": "yes"
+        }
       }
     },
     {
       "id": -258,
       "label": "RS384 (-258)",
       "support": {
-        "chromeEdge": { "status": "partial" },
-        "safari": { "status": "partial" },
-        "firefox": { "status": "partial" },
-        "androidChrome": { "status": "partial" }
+        "chromeEdge": {
+          "status": "partial"
+        },
+        "safari": {
+          "status": "partial"
+        },
+        "firefox": {
+          "status": "partial"
+        },
+        "androidChrome": {
+          "status": "partial"
+        }
       }
     },
     {
       "id": -259,
       "label": "RS512 (-259)",
       "support": {
-        "chromeEdge": { "status": "partial" },
-        "safari": { "status": "partial" },
-        "firefox": { "status": "partial" },
-        "androidChrome": { "status": "partial" }
+        "chromeEdge": {
+          "status": "partial"
+        },
+        "safari": {
+          "status": "partial"
+        },
+        "firefox": {
+          "status": "partial"
+        },
+        "androidChrome": {
+          "status": "partial"
+        }
+      }
+    },
+    {
+      "id": -37,
+      "label": "PS256 (-37)",
+      "support": {
+        "chromeEdge": {
+          "status": "unknown"
+        },
+        "safari": {
+          "status": "unknown"
+        },
+        "firefox": {
+          "status": "unknown"
+        },
+        "androidChrome": {
+          "status": "unknown"
+        }
+      }
+    },
+    {
+      "id": -38,
+      "label": "PS384 (-38)",
+      "support": {
+        "chromeEdge": {
+          "status": "unknown"
+        },
+        "safari": {
+          "status": "unknown"
+        },
+        "firefox": {
+          "status": "unknown"
+        },
+        "androidChrome": {
+          "status": "unknown"
+        }
+      }
+    },
+    {
+      "id": -39,
+      "label": "PS512 (-39)",
+      "support": {
+        "chromeEdge": {
+          "status": "unknown"
+        },
+        "safari": {
+          "status": "unknown"
+        },
+        "firefox": {
+          "status": "unknown"
+        },
+        "androidChrome": {
+          "status": "unknown"
+        }
+      }
+    },
+    {
+      "id": -9,
+      "label": "ESP256 (-9)",
+      "support": {
+        "chromeEdge": {
+          "status": "unknown"
+        },
+        "safari": {
+          "status": "unknown"
+        },
+        "firefox": {
+          "status": "unknown"
+        },
+        "androidChrome": {
+          "status": "unknown"
+        }
+      }
+    },
+    {
+      "id": -51,
+      "label": "ESP384 (-51)",
+      "support": {
+        "chromeEdge": {
+          "status": "unknown"
+        },
+        "safari": {
+          "status": "unknown"
+        },
+        "firefox": {
+          "status": "unknown"
+        },
+        "androidChrome": {
+          "status": "unknown"
+        }
+      }
+    },
+    {
+      "id": -52,
+      "label": "ESP512 (-52)",
+      "support": {
+        "chromeEdge": {
+          "status": "unknown"
+        },
+        "safari": {
+          "status": "unknown"
+        },
+        "firefox": {
+          "status": "unknown"
+        },
+        "androidChrome": {
+          "status": "unknown"
+        }
+      }
+    },
+    {
+      "id": -53,
+      "label": "Ed448 (-53)",
+      "support": {
+        "chromeEdge": {
+          "status": "unknown"
+        },
+        "safari": {
+          "status": "unknown"
+        },
+        "firefox": {
+          "status": "unknown"
+        },
+        "androidChrome": {
+          "status": "unknown"
+        }
+      }
+    },
+    {
+      "id": -50,
+      "label": "ML-DSA-87 (PQC) (-50)",
+      "note": "Experimental post-quantum support; browser behavior is implementation-dependent.",
+      "support": {
+        "chromeEdge": {
+          "status": "unknown"
+        },
+        "safari": {
+          "status": "unknown"
+        },
+        "firefox": {
+          "status": "unknown"
+        },
+        "androidChrome": {
+          "status": "unknown"
+        }
+      }
+    },
+    {
+      "id": -49,
+      "label": "ML-DSA-65 (PQC) (-49)",
+      "note": "Experimental post-quantum support; browser behavior is implementation-dependent.",
+      "support": {
+        "chromeEdge": {
+          "status": "unknown"
+        },
+        "safari": {
+          "status": "unknown"
+        },
+        "firefox": {
+          "status": "unknown"
+        },
+        "androidChrome": {
+          "status": "unknown"
+        }
+      }
+    },
+    {
+      "id": -48,
+      "label": "ML-DSA-44 (PQC) (-48)",
+      "note": "Experimental post-quantum support; browser behavior is implementation-dependent.",
+      "support": {
+        "chromeEdge": {
+          "status": "unknown"
+        },
+        "safari": {
+          "status": "unknown"
+        },
+        "firefox": {
+          "status": "unknown"
+        },
+        "androidChrome": {
+          "status": "unknown"
+        }
+      }
+    },
+    {
+      "id": -65535,
+      "label": "RS1 (-65535)",
+      "note": "Deprecated algorithm.",
+      "support": {
+        "chromeEdge": {
+          "status": "no"
+        },
+        "safari": {
+          "status": "no"
+        },
+        "firefox": {
+          "status": "no"
+        },
+        "androidChrome": {
+          "status": "no"
+        }
       }
     }
   ]

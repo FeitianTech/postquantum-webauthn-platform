@@ -2,13 +2,14 @@ import { updateGlobalScrollLock } from './ui.js';
 
 const MIN_LOADER_DURATION_MS = 600;
 const DEFAULT_COSE_SUPPORT_SOURCE = '/static/cose-algorithm-support.json';
-const VALID_SUPPORT_STATUSES = new Set(['yes', 'partial', 'no']);
+const VALID_SUPPORT_STATUSES = new Set(['yes', 'partial', 'no', 'unknown']);
 
 let coseSupportSource = DEFAULT_COSE_SUPPORT_SOURCE;
 let coseSupportDataCache = null;
 let coseSupportPromise = null;
 const TRANSPORT_CANDIDATES = [
     { key: 'internal', label: 'Internal', test: data => data.platformAuthenticator === true },
+    { key: 'hybrid', label: 'Hybrid', test: data => data.clientCapabilities?.hybridTransport === true },
     { key: 'usb', label: 'USB', test: () => 'usb' in navigator },
     { key: 'hid', label: 'HID', test: () => 'hid' in navigator },
     { key: 'nfc', label: 'NFC', test: () => 'nfc' in navigator },
@@ -195,21 +196,69 @@ async function detectPlatformAuthenticator() {
     return null;
 }
 
-async function detectCrossPlatformAuthenticator(hasWebAuthn) {
+async function detectClientCapabilities(hasWebAuthn) {
+    if (!hasWebAuthn || !('PublicKeyCredential' in window)) {
+        return null;
+    }
+
+    if (typeof PublicKeyCredential.getClientCapabilities !== 'function') {
+        return null;
+    }
+
+    try {
+        const raw = await PublicKeyCredential.getClientCapabilities();
+        if (!raw || typeof raw !== 'object') {
+            return null;
+        }
+
+        const entries = raw instanceof Map ? Array.from(raw.entries()) : Object.entries(raw);
+        const normalized = {};
+        entries.forEach(([key, value]) => {
+            if (typeof key === 'string' && typeof value === 'boolean') {
+                normalized[key] = value;
+            }
+        });
+
+        return Object.keys(normalized).length > 0 ? normalized : null;
+    } catch (error) {
+        console.warn('Failed to query WebAuthn client capabilities', error);
+    }
+
+    return null;
+}
+
+async function detectCrossPlatformAuthenticator(hasWebAuthn, clientCapabilities) {
     if (!hasWebAuthn) {
         return false;
     }
 
-    if (typeof PublicKeyCredential?.isConditionalMediationAvailable === 'function') {
+    if (typeof PublicKeyCredential?.isExternalCTAP2SecurityKeySupported === 'function') {
         try {
-            return await PublicKeyCredential.isConditionalMediationAvailable();
+            return await PublicKeyCredential.isExternalCTAP2SecurityKeySupported();
         } catch (error) {
-            console.warn('Failed to query conditional mediation availability', error);
+            console.warn('Failed to query external CTAP2 authenticator support', error);
         }
     }
 
-    if ('hid' in navigator || 'usb' in navigator || 'nfc' in navigator || 'bluetooth' in navigator) {
+    if (typeof clientCapabilities?.hybridTransport === 'boolean') {
+        return clientCapabilities.hybridTransport;
+    }
+
+    const hasExternalTransportApi =
+        'hid' in navigator || 'usb' in navigator || 'nfc' in navigator || 'bluetooth' in navigator || 'serial' in navigator;
+    if (hasExternalTransportApi) {
         return true;
+    }
+
+    if (typeof PublicKeyCredential?.isConditionalMediationAvailable === 'function') {
+        try {
+            const conditionalMediation = await PublicKeyCredential.isConditionalMediationAvailable();
+            if (conditionalMediation === false) {
+                return null;
+            }
+        } catch (error) {
+            console.warn('Failed to query conditional mediation availability', error);
+        }
     }
 
     return null;
@@ -230,6 +279,19 @@ function detectTransports(data) {
 
     const unique = Array.from(new Set(transports));
     return unique;
+}
+
+function getSupportLabel(status) {
+    if (status === 'yes') {
+        return 'Yes';
+    }
+    if (status === 'partial') {
+        return 'Partial';
+    }
+    if (status === 'no') {
+        return 'No';
+    }
+    return 'Unknown';
 }
 
 function setFeatureValue(container, value) {
@@ -282,14 +344,14 @@ function renderTransports(listElement, transports) {
 function createSupportCell(row, columnKey) {
     const cell = document.createElement('td');
     const support = row.support[columnKey];
-    const statusRaw = typeof support?.status === 'string' ? support.status.toLowerCase() : 'no';
-    const status = VALID_SUPPORT_STATUSES.has(statusRaw) ? statusRaw : 'no';
+    const statusRaw = typeof support?.status === 'string' ? support.status.toLowerCase() : 'unknown';
+    const status = VALID_SUPPORT_STATUSES.has(statusRaw) ? statusRaw : 'unknown';
     const note = typeof support?.note === 'string' && support.note.trim() !== '' ? support.note : null;
 
     const statusClass = `analyze-browser__support--${status}`;
     const wrapper = document.createElement('span');
     wrapper.className = `analyze-browser__support ${statusClass}`;
-    wrapper.textContent = status === 'yes' ? 'Yes' : status === 'partial' ? 'Partial' : 'No';
+    wrapper.textContent = getSupportLabel(status);
 
     if (note) {
         const noteElement = document.createElement('span');
@@ -377,14 +439,16 @@ function renderCoseTable(tableElement, data) {
 }
 
 function normalizeSupportEntry(entry) {
-    const statusRaw = typeof entry?.status === 'string' ? entry.status.toLowerCase() : 'no';
-    const status = VALID_SUPPORT_STATUSES.has(statusRaw) ? statusRaw : 'no';
+    const statusRaw = typeof entry?.status === 'string' ? entry.status.toLowerCase() : 'unknown';
+    const status = VALID_SUPPORT_STATUSES.has(statusRaw) ? statusRaw : 'unknown';
     const note = typeof entry?.note === 'string' && entry.note.trim() !== '' ? entry.note : null;
 
     return { status, note };
 }
 
 function normalizeCoseSupportData(raw) {
+    const metadata = raw && typeof raw.metadata === 'object' ? raw.metadata : null;
+
     const browsers = Array.isArray(raw?.browsers)
         ? raw.browsers
               .map(browser => {
@@ -431,7 +495,7 @@ function normalizeCoseSupportData(raw) {
               .filter(Boolean)
         : [];
 
-    return { browsers, algorithms };
+    return { metadata, browsers, algorithms };
 }
 
 async function loadCoseSupportData() {
@@ -583,13 +647,15 @@ function closePanel(panel) {
 
 async function gatherAnalysis() {
     const hasWebAuthn = 'PublicKeyCredential' in window;
-    const [browser, platformAuthenticator, crossPlatform] = await Promise.all([
+    const [browser, platformAuthenticator, clientCapabilities] = await Promise.all([
         detectBrowser(),
         detectPlatformAuthenticator(),
-        detectCrossPlatformAuthenticator(hasWebAuthn),
+        detectClientCapabilities(hasWebAuthn),
     ]);
 
-    const transports = detectTransports({ platformAuthenticator });
+    const crossPlatform = await detectCrossPlatformAuthenticator(hasWebAuthn, clientCapabilities);
+
+    const transports = detectTransports({ platformAuthenticator, clientCapabilities });
 
     return {
         browser,

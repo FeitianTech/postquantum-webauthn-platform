@@ -333,6 +333,7 @@
 .analyze-browser__support--yes   { color: #15803d; }
 .analyze-browser__support--partial { color: #d97706; }
 .analyze-browser__support--no    { color: #b91c1c; }
+.analyze-browser__support--unknown { color: var(--muted-text); }
 
 .analyze-browser__support-note { font-size: 0.775rem; font-weight: 500; color: var(--muted-text); }
 
