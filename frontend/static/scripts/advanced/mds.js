@@ -57,6 +57,9 @@ let explorerPreloadPromise = null;
 const resolvedEntryCache = new Map();
 let lazyLoader = null;
 let backgroundLoadingInProgress = false;
+let certificateCursorRequestCount = 0;
+
+const MDS_CERTIFICATE_LOADING_CURSOR_CLASS = 'mds-certificate-loading-cursor';
 
 
 function normaliseSnapshotInfo(info) {
@@ -4348,7 +4351,7 @@ function renderAttestationCertificates(certificates) {
         button.type = 'button';
         button.className = 'mds-certificate-button';
         button.textContent = `Certificate ${index + 1}`;
-        button.addEventListener('click', () => openCertificatePage(certificate));
+        button.addEventListener('click', () => openCertificatePage(certificate, button));
         container.appendChild(button);
     });
 
@@ -4747,6 +4750,25 @@ function setCertificateFieldContent(field, value) {
     }
 }
 
+function applyCertificateLoadingCursorVisibility() {
+    const shouldShow = certificateCursorRequestCount > 0;
+    [document.documentElement, document.body].forEach(target => {
+        if (target) {
+            target.classList.toggle(MDS_CERTIFICATE_LOADING_CURSOR_CLASS, shouldShow);
+        }
+    });
+}
+
+function beginCertificateLoadingCursor() {
+    certificateCursorRequestCount += 1;
+    applyCertificateLoadingCursorVisibility();
+}
+
+function endCertificateLoadingCursor() {
+    certificateCursorRequestCount = Math.max(0, certificateCursorRequestCount - 1);
+    applyCertificateLoadingCursorVisibility();
+}
+
 async function updateCertificateButtonLabel(button, certificate) {
     if (!(button instanceof HTMLElement)) {
         return;
@@ -4763,7 +4785,7 @@ async function updateCertificateButtonLabel(button, certificate) {
     }
 }
 
-async function openCertificatePage(certificate) {
+async function openCertificatePage(certificate, sourceButton = null) {
     if (!mdsState?.certificatePage) {
         return;
     }
@@ -4773,12 +4795,29 @@ async function openCertificatePage(certificate) {
         return;
     }
 
+    const triggerButton = sourceButton instanceof HTMLButtonElement ? sourceButton : null;
+
+    if (triggerButton) {
+        triggerButton.classList.add('is-loading');
+        triggerButton.setAttribute('aria-busy', 'true');
+        triggerButton.disabled = true;
+    }
+
+    beginCertificateLoadingCursor();
+
     let details = null;
     let decodeError = null;
     try {
         details = await decodeCertificate(cleaned);
     } catch (error) {
         decodeError = error;
+    } finally {
+        endCertificateLoadingCursor();
+        if (triggerButton) {
+            triggerButton.classList.remove('is-loading');
+            triggerButton.removeAttribute('aria-busy');
+            triggerButton.disabled = false;
+        }
     }
 
     if (mdsState.certificateInput) {

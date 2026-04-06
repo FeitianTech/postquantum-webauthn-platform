@@ -14,7 +14,6 @@ async function loadAnalyzeBrowser() {
 function buildAnalyzeDom() {
   document.body.innerHTML = `
     <button data-analyze-browser-trigger>Analyze</button>
-    <div id="analyze-browser-loader" hidden aria-hidden="true"></div>
     <div id="analyze-browser-panel" hidden aria-hidden="true">
       <div class="analyze-browser-panel__content"></div>
       <button data-action="close">Close</button>
@@ -118,7 +117,7 @@ describe('analyze-browser', () => {
     expect(updateGlobalScrollLock).toHaveBeenCalled();
   });
 
-  it('shows browser loader only on first analysis run per page session', async () => {
+  it('reuses cached analysis results on subsequent opens in the same page session', async () => {
     vi.useFakeTimers();
     buildAnalyzeDom();
 
@@ -144,21 +143,19 @@ describe('analyze-browser', () => {
 
     const trigger = document.querySelector('[data-analyze-browser-trigger]');
     const panel = document.getElementById('analyze-browser-panel');
-    const loader = document.getElementById('analyze-browser-loader');
 
     trigger.click();
-    expect(loader.hidden).toBe(false);
-
     await vi.runAllTimersAsync();
     expect(panel.hidden).toBe(false);
-    expect(loader.hidden).toBe(true);
+    expect(globalThis.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable).toHaveBeenCalledTimes(1);
 
     panel.querySelector('[data-action="close"]').click();
     await vi.runAllTimersAsync();
     expect(panel.hidden).toBe(true);
 
     trigger.click();
-    expect(loader.hidden).toBe(true);
+    await vi.runAllTimersAsync();
+    expect(globalThis.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable).toHaveBeenCalledTimes(1);
     expect(panel.hidden).toBe(false);
   });
 

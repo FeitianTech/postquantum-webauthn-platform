@@ -1,6 +1,5 @@
 import { updateGlobalScrollLock } from './ui.js';
 
-const MIN_LOADER_DURATION_MS = 600;
 const TRANSPORT_CANDIDATES = [
     { key: 'internal', label: 'Internal', test: data => data.platformAuthenticator === true },
     { key: 'hybrid', label: 'Hybrid', test: data => data.clientCapabilities?.hybridTransport === true },
@@ -432,32 +431,6 @@ function applyAnalysisResults(results) {
     renderTransports(transportList, results.features.transports);
 }
 
-function showLoader(loader) {
-    if (!loader) {
-        return;
-    }
-
-    loader.hidden = false;
-    loader.setAttribute('aria-hidden', 'false');
-    requestAnimationFrame(() => {
-        loader.classList.add('is-open');
-        updateGlobalScrollLock();
-    });
-}
-
-function hideLoader(loader) {
-    if (!loader) {
-        return;
-    }
-
-    loader.classList.remove('is-open');
-    loader.setAttribute('aria-hidden', 'true');
-    setTimeout(() => {
-        loader.hidden = true;
-        updateGlobalScrollLock();
-    }, 260);
-}
-
 function openPanel(panel) {
     if (!panel) {
         return;
@@ -523,10 +496,9 @@ async function gatherAnalysis() {
 
 export function initializeAnalyzeBrowser() {
     const trigger = document.querySelector('[data-analyze-browser-trigger]');
-    const loader = document.getElementById('analyze-browser-loader');
     const panel = document.getElementById('analyze-browser-panel');
 
-    if (!trigger || !loader || !panel) {
+    if (!trigger || !panel) {
         return;
     }
 
@@ -572,10 +544,8 @@ export function initializeAnalyzeBrowser() {
 
         isRunning = true;
         trigger.disabled = true;
-        showLoader(loader);
 
         try {
-            const start = performance.now();
             let results = null;
             try {
                 results = await gatherAnalysis();
@@ -600,12 +570,6 @@ export function initializeAnalyzeBrowser() {
                     },
                 };
             }
-
-            const elapsed = performance.now() - start;
-            const remaining = Math.max(0, MIN_LOADER_DURATION_MS - elapsed);
-            await new Promise(resolve => setTimeout(resolve, remaining));
-
-            hideLoader(loader);
 
             analysisResultsCache = results;
             hasCompletedInitialAnalysis = true;

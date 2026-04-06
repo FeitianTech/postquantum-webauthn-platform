@@ -211,16 +211,12 @@ export function updateGlobalScrollLock() {
     const modalActive = document.querySelector('.modal.open');
     const mdsModalActive = document.querySelector('.mds-modal:not([hidden])');
     const mdsDetailActive = document.querySelector('.mds-detail-page--open');
-    const analyzeLoaderActive = document
-        .getElementById('analyze-browser-loader')
-        ?.classList.contains('is-open');
 
     const shouldLock = Boolean(
         overlayActive ||
         modalActive ||
         mdsModalActive ||
-        mdsDetailActive ||
-        analyzeLoaderActive
+        mdsDetailActive
     );
 
     const targets = [document.body, document.documentElement].filter(Boolean);

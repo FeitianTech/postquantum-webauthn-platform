@@ -83,7 +83,6 @@ describe('ui shared helpers', () => {
     vi.useFakeTimers();
     document.body.innerHTML = `
       <div id="json-editor-overlay" class="active"></div>
-      <div id="analyze-browser-loader" class="is-open"></div>
       <div class="analyze-browser-panel is-open"></div>
       <div id="modal-a" class="modal detail-screen">
         <div class="modal-content" style="overflow:auto;height:50px">x</div>
@@ -126,7 +125,6 @@ describe('ui shared helpers', () => {
     expect(modalA.querySelector('textarea').scrollTop).toBe(0);
 
     document.getElementById('json-editor-overlay').classList.remove('active');
-    document.getElementById('analyze-browser-loader').classList.remove('is-open');
     document.querySelector('.analyze-browser-panel').classList.remove('is-open');
     document.querySelectorAll('.modal').forEach((m) => m.classList.remove('open'));
     updateGlobalScrollLock();

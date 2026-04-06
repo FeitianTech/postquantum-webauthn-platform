@@ -411,6 +411,83 @@ describe('mds explorer', () => {
     expect(document.getElementById('mds-custom-metadata-panel').hidden).toBe(true);
   });
 
+  it('shows loading cursor state while certificate decoding is in progress', async () => {
+    let delayDecode = false;
+    let resolveDelayedDecode = null;
+
+    globalThis.fetch = vi.fn((url) => {
+      if (String(url).includes('/api/mds/decode-certificate')) {
+        if (!delayDecode) {
+          return Promise.resolve(
+            jsonResponse({
+              details: {
+                summary: 'Certificate summary details',
+              },
+            }),
+          );
+        }
+
+        return new Promise((resolve) => {
+          resolveDelayedDecode = () => {
+            resolve(
+              jsonResponse({
+                details: {
+                  summary: 'Delayed certificate summary',
+                },
+              }),
+            );
+          };
+        });
+      }
+
+      if (String(url).includes('fido-mds3.verified.json.meta.json')) {
+        return Promise.resolve(jsonResponse({ generatedAt: '2026-04-04T12:00:00Z' }));
+      }
+
+      return Promise.resolve(
+        jsonResponse({
+          meta: {
+            entryCount: 2,
+            no: 8,
+            generatedAt: '2026-04-04T12:00:00Z',
+          },
+          entries: makeSnapshotEntries(),
+          legalHeader: 'FIDO legal header',
+        }),
+      );
+    });
+
+    await import('../../static/scripts/advanced/mds.js');
+    document.dispatchEvent(new Event('DOMContentLoaded'));
+    await waitForCondition(() => document.querySelectorAll('#mds-table-body tr').length === 2, 1200);
+
+    const nameButton = document.querySelector('.mds-name-button');
+    nameButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await waitForCondition(() => document.querySelector('.mds-certificate-button') !== null, 1200);
+
+    delayDecode = true;
+    const certButton = document.querySelector('.mds-certificate-button');
+    certButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+    expect(document.body.classList.contains('mds-certificate-loading-cursor')).toBe(true);
+    expect(document.documentElement.classList.contains('mds-certificate-loading-cursor')).toBe(true);
+    expect(certButton.classList.contains('is-loading')).toBe(true);
+    expect(certButton.disabled).toBe(true);
+
+    expect(resolveDelayedDecode).toBeTypeOf('function');
+    resolveDelayedDecode();
+
+    await waitForCondition(
+      () => document.getElementById('mds-certificate-output').value.includes('Delayed certificate summary'),
+      1200,
+    );
+
+    expect(document.body.classList.contains('mds-certificate-loading-cursor')).toBe(false);
+    expect(document.documentElement.classList.contains('mds-certificate-loading-cursor')).toBe(false);
+    expect(certButton.classList.contains('is-loading')).toBe(false);
+    expect(certButton.disabled).toBe(false);
+  });
+
   it('falls back to empty-state message when explorer endpoint returns 404', async () => {
     window.__INITIAL_MDS_INFO__ = {};
     window.__INITIAL_MDS_SNAPSHOT__ = {};

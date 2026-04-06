@@ -154,6 +154,15 @@
     outline: none;
 }
 
+.mds-certificate-button.is-loading {
+    cursor: progress;
+}
+
+.mds-certificate-loading-cursor,
+.mds-certificate-loading-cursor * {
+    cursor: progress !important;
+}
+
 /* ─── Status table ────────────────────────────────────────── */
 
 .mds-status-table { width: 100%; border-collapse: collapse; font-size: 0.8125rem; }
