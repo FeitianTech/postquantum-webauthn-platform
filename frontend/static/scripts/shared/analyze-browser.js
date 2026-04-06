@@ -1,12 +1,6 @@
 import { updateGlobalScrollLock } from './ui.js';
 
 const MIN_LOADER_DURATION_MS = 600;
-const DEFAULT_COSE_SUPPORT_SOURCE = '/static/cose-algorithm-support.json';
-const VALID_SUPPORT_STATUSES = new Set(['yes', 'partial', 'no', 'unknown']);
-
-let coseSupportSource = DEFAULT_COSE_SUPPORT_SOURCE;
-let coseSupportDataCache = null;
-let coseSupportPromise = null;
 const TRANSPORT_CANDIDATES = [
     { key: 'internal', label: 'Internal', test: data => data.platformAuthenticator === true },
     { key: 'hybrid', label: 'Hybrid', test: data => data.clientCapabilities?.hybridTransport === true },
@@ -66,8 +60,63 @@ function selectBrandEntry(brandList) {
     );
 }
 
-function parseFromUserAgentString(uaString, defaultPlatform) {
-    const platform = defaultPlatform || 'Unknown System';
+function normalizeSystemName(rawPlatform, uaString, maxTouchPoints) {
+    const rawValue = typeof rawPlatform === 'string' ? rawPlatform.trim() : '';
+    const normalizedPlatform = rawValue.toLowerCase();
+    const normalizedUa = typeof uaString === 'string' ? uaString.toLowerCase() : '';
+
+    const uaLooksAppleMobile = /\b(iphone|ipad|ipod)\b/.test(normalizedUa);
+    const uaLooksAndroid = /\bandroid\b/.test(normalizedUa);
+    const uaLooksWindows = /\bwindows nt\b/.test(normalizedUa);
+    const uaLooksMac = /\b(macintosh|mac os x|macos)\b/.test(normalizedUa);
+    const uaLooksChromeOs = /\bcros\b/.test(normalizedUa);
+    const isLikelyIpadDesktopMode =
+        (normalizedPlatform === 'macintel' || normalizedPlatform === 'mac') &&
+        Number(maxTouchPoints || 0) > 1 &&
+        (uaLooksAppleMobile || /\bmobile\b/.test(normalizedUa));
+
+    if (isLikelyIpadDesktopMode || /\bipad\b/.test(normalizedUa) || /^ipad/.test(normalizedPlatform)) {
+        return 'iPadOS';
+    }
+
+    if (uaLooksAppleMobile || /^iphone/.test(normalizedPlatform) || /^ipod/.test(normalizedPlatform) || normalizedPlatform === 'ios') {
+        return 'iOS';
+    }
+
+    if (uaLooksAndroid || /^android/.test(normalizedPlatform)) {
+        return 'Android';
+    }
+
+    if (
+        normalizedPlatform === 'macintel' ||
+        /^mac/.test(normalizedPlatform) ||
+        normalizedPlatform === 'darwin' ||
+        uaLooksMac
+    ) {
+        return 'macOS';
+    }
+
+    if (/^win/.test(normalizedPlatform) || uaLooksWindows) {
+        return 'Windows';
+    }
+
+    if (/\bcros\b/.test(normalizedPlatform) || /chrome\s?os/.test(normalizedPlatform) || uaLooksChromeOs) {
+        return 'ChromeOS';
+    }
+
+    if (/\blinux\b/.test(normalizedPlatform) || /\blinux\b/.test(normalizedUa)) {
+        return 'Linux';
+    }
+
+    if (/\b(freebsd|openbsd|netbsd|bsd)\b/.test(normalizedPlatform) || /\b(freebsd|openbsd|netbsd)\b/.test(normalizedUa)) {
+        return 'BSD';
+    }
+
+    return 'Unknown System';
+}
+
+function parseFromUserAgentString(uaString, defaultPlatform, maxTouchPoints) {
+    const platform = normalizeSystemName(defaultPlatform, uaString, maxTouchPoints);
     const browsers = [
         { regex: /(Edg|EdgiOS|EdgA)\/([\d.]+)/, name: 'Microsoft Edge' },
         { regex: /(OPR|OPiOS)\/([\d.]+)/, name: 'Opera' },
@@ -95,12 +144,33 @@ function parseFromUserAgentString(uaString, defaultPlatform) {
     };
 }
 
+function safeReadUserAgentDataBrands(uaData) {
+    try {
+        const brands = uaData?.brands;
+        return Array.isArray(brands) ? brands : null;
+    } catch (error) {
+        console.warn('Unable to read UA brand list', error);
+        return null;
+    }
+}
+
+function safeReadUserAgentDataPlatform(uaData) {
+    try {
+        const platform = uaData?.platform;
+        return typeof platform === 'string' ? platform : null;
+    } catch (error) {
+        console.warn('Unable to read UA platform', error);
+        return null;
+    }
+}
+
 async function detectBrowser() {
     const navigatorUA = typeof navigator !== 'undefined' ? navigator : null;
     const uaString = navigatorUA?.userAgent || '';
     const fallbackPlatform = navigatorUA?.platform || 'Unknown System';
+    const maxTouchPoints = Number(navigatorUA?.maxTouchPoints || 0);
 
-    const uaFallback = parseFromUserAgentString(uaString, fallbackPlatform);
+    const uaFallback = parseFromUserAgentString(uaString, fallbackPlatform, maxTouchPoints);
 
     let name = uaFallback.name;
     let version = uaFallback.version;
@@ -142,10 +212,11 @@ async function detectBrowser() {
     };
 
     if (uaData) {
-        const brandList = Array.isArray(uaData.brands) ? uaData.brands : null;
+        const brandList = safeReadUserAgentDataBrands(uaData);
 
-        if (typeof uaData.platform === 'string' && uaData.platform.trim() !== '') {
-            platform = uaData.platform;
+        const uaPlatform = safeReadUserAgentDataPlatform(uaData);
+        if (typeof uaPlatform === 'string' && uaPlatform.trim() !== '') {
+            platform = uaPlatform;
         }
 
         if (typeof uaData.getHighEntropyValues === 'function') {
@@ -176,7 +247,7 @@ async function detectBrowser() {
     return {
         name: name || 'Unknown Browser',
         version: version || null,
-        platform: platform || 'Unknown System',
+        platform: normalizeSystemName(platform, uaString, maxTouchPoints),
     };
 }
 
@@ -281,19 +352,6 @@ function detectTransports(data) {
     return unique;
 }
 
-function getSupportLabel(status) {
-    if (status === 'yes') {
-        return 'Yes';
-    }
-    if (status === 'partial') {
-        return 'Partial';
-    }
-    if (status === 'no') {
-        return 'No';
-    }
-    return 'Unknown';
-}
-
 function setFeatureValue(container, value) {
     if (!container) {
         return;
@@ -341,210 +399,6 @@ function renderTransports(listElement, transports) {
     });
 }
 
-function createSupportCell(row, columnKey) {
-    const cell = document.createElement('td');
-    const support = row.support[columnKey];
-    const statusRaw = typeof support?.status === 'string' ? support.status.toLowerCase() : 'unknown';
-    const status = VALID_SUPPORT_STATUSES.has(statusRaw) ? statusRaw : 'unknown';
-    const note = typeof support?.note === 'string' && support.note.trim() !== '' ? support.note : null;
-
-    const statusClass = `analyze-browser__support--${status}`;
-    const wrapper = document.createElement('span');
-    wrapper.className = `analyze-browser__support ${statusClass}`;
-    wrapper.textContent = getSupportLabel(status);
-
-    if (note) {
-        const noteElement = document.createElement('span');
-        noteElement.className = 'analyze-browser__support-note';
-        noteElement.textContent = note;
-        wrapper.appendChild(noteElement);
-    }
-
-    cell.appendChild(wrapper);
-    return cell;
-}
-
-function renderCoseTable(tableElement, data) {
-    if (!tableElement) {
-        return;
-    }
-
-    const headerRow = tableElement.querySelector('[data-role="cose-table-header-row"]');
-    const tableBody = tableElement.querySelector('[data-role="cose-table-body"]');
-
-    if (!headerRow || !tableBody) {
-        return;
-    }
-
-    while (headerRow.children.length > 1) {
-        headerRow.removeChild(headerRow.lastElementChild);
-    }
-
-    const browsers = Array.isArray(data?.browsers) ? data.browsers : [];
-    const algorithms = Array.isArray(data?.algorithms) ? data.algorithms : [];
-
-    browsers.forEach(browser => {
-        if (!browser || typeof browser.label !== 'string') {
-            return;
-        }
-
-        const header = document.createElement('th');
-        header.scope = 'col';
-        const label = browser.label;
-        const subtitle = typeof browser.subtitle === 'string' && browser.subtitle.trim() !== '' ? browser.subtitle : null;
-        header.innerHTML = subtitle
-            ? `${label}<br><span class="analyze-browser-panel__table-subtitle">${subtitle}</span>`
-            : label;
-
-        headerRow.appendChild(header);
-    });
-
-    tableBody.innerHTML = '';
-
-    if (algorithms.length === 0) {
-        const emptyRow = document.createElement('tr');
-        const emptyCell = document.createElement('td');
-        emptyCell.colSpan = Math.max(1, browsers.length) + 1;
-        emptyCell.className = 'analyze-browser-panel__cose-empty';
-        emptyCell.textContent = 'No COSE algorithm data available.';
-        emptyRow.appendChild(emptyCell);
-        tableBody.appendChild(emptyRow);
-        return;
-    }
-
-    algorithms.forEach(row => {
-        if (!row || typeof row.label !== 'string') {
-            return;
-        }
-
-        const tr = document.createElement('tr');
-
-        const algorithmCell = document.createElement('th');
-        algorithmCell.scope = 'row';
-        const noteHtml = row.note ? `<br><span class="analyze-browser-panel__alg-note">${row.note}</span>` : '';
-        algorithmCell.innerHTML = `<span class="analyze-browser-panel__alg-name">${row.label}</span>${noteHtml}`;
-
-        tr.appendChild(algorithmCell);
-
-        browsers.forEach(browser => {
-            if (!browser || typeof browser.key !== 'string') {
-                return;
-            }
-
-            tr.appendChild(createSupportCell(row, browser.key));
-        });
-
-        tableBody.appendChild(tr);
-    });
-}
-
-function normalizeSupportEntry(entry) {
-    const statusRaw = typeof entry?.status === 'string' ? entry.status.toLowerCase() : 'unknown';
-    const status = VALID_SUPPORT_STATUSES.has(statusRaw) ? statusRaw : 'unknown';
-    const note = typeof entry?.note === 'string' && entry.note.trim() !== '' ? entry.note : null;
-
-    return { status, note };
-}
-
-function normalizeCoseSupportData(raw) {
-    const metadata = raw && typeof raw.metadata === 'object' ? raw.metadata : null;
-
-    const browsers = Array.isArray(raw?.browsers)
-        ? raw.browsers
-              .map(browser => {
-                  if (!browser || typeof browser.key !== 'string' || typeof browser.label !== 'string') {
-                      return null;
-                  }
-
-                  return {
-                      key: browser.key,
-                      label: browser.label,
-                      subtitle:
-                          typeof browser.subtitle === 'string' && browser.subtitle.trim() !== ''
-                              ? browser.subtitle
-                              : null,
-                  };
-              })
-              .filter(Boolean)
-        : [];
-
-    const browserKeys = browsers.map(browser => browser.key);
-
-    const algorithms = Array.isArray(raw?.algorithms)
-        ? raw.algorithms
-              .map(algorithm => {
-                  if (!algorithm || typeof algorithm.label !== 'string') {
-                      return null;
-                  }
-
-                  const supportEntries = {};
-                  browserKeys.forEach(key => {
-                      supportEntries[key] = normalizeSupportEntry(algorithm.support?.[key]);
-                  });
-
-                  return {
-                      id: typeof algorithm.id === 'number' ? algorithm.id : null,
-                      label: algorithm.label,
-                      note:
-                          typeof algorithm.note === 'string' && algorithm.note.trim() !== ''
-                              ? algorithm.note
-                              : null,
-                      support: supportEntries,
-                  };
-              })
-              .filter(Boolean)
-        : [];
-
-    return { metadata, browsers, algorithms };
-}
-
-async function loadCoseSupportData() {
-    if (coseSupportDataCache) {
-        return coseSupportDataCache;
-    }
-
-    if (!coseSupportPromise) {
-        coseSupportPromise = fetch(coseSupportSource, { cache: 'no-store' })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`Failed to fetch COSE support data: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(normalizeCoseSupportData)
-            .catch(error => {
-                console.error('Unable to load COSE algorithm support data', error);
-                return { browsers: [], algorithms: [] };
-            })
-            .then(data => {
-                coseSupportDataCache = data;
-                return data;
-            })
-            .finally(() => {
-                coseSupportPromise = null;
-            });
-    }
-
-    return coseSupportPromise;
-}
-
-function ensureCoseTable(panel) {
-    const tableElement = panel.querySelector('[data-role="cose-table"]');
-
-    if (!tableElement || tableElement.dataset.rendered === 'true') {
-        return;
-    }
-
-    loadCoseSupportData()
-        .then(data => {
-            renderCoseTable(tableElement, data);
-            tableElement.dataset.rendered = 'true';
-        })
-        .catch(error => {
-            console.error('Unable to render COSE support table', error);
-        });
-}
-
 function applyAnalysisResults(results) {
     const panel = document.getElementById('analyze-browser-panel');
     if (!panel) {
@@ -576,8 +430,6 @@ function applyAnalysisResults(results) {
 
     const transportList = panel.querySelector('[data-role="transport-list"]');
     renderTransports(transportList, results.features.transports);
-
-    ensureCoseTable(panel);
 }
 
 function showLoader(loader) {
@@ -634,6 +486,11 @@ function closePanel(panel) {
         return;
     }
 
+    const content = panel.querySelector('.analyze-browser-panel__content');
+    if (content) {
+        content.scrollTop = 0;
+    }
+
     panel.classList.remove('is-open');
     panel.classList.remove('is-closing');
     panel.setAttribute('aria-hidden', 'true');
@@ -672,15 +529,6 @@ export function initializeAnalyzeBrowser() {
     if (!trigger || !loader || !panel) {
         return;
     }
-
-    const tableElement = panel.querySelector('[data-role="cose-table"]');
-    if (tableElement?.dataset.coseSource) {
-        coseSupportSource = tableElement.dataset.coseSource;
-    }
-
-    loadCoseSupportData().catch(error => {
-        console.error('Initial COSE support data fetch failed', error);
-    });
 
     let isRunning = false;
     let hasCompletedInitialAnalysis = false;

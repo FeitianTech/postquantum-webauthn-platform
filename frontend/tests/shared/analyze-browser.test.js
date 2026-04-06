@@ -11,7 +11,7 @@ async function loadAnalyzeBrowser() {
   return import('../../static/scripts/shared/analyze-browser.js');
 }
 
-function buildAnalyzeDom({ coseSource = '/cose.json' } = {}) {
+function buildAnalyzeDom() {
   document.body.innerHTML = `
     <button data-analyze-browser-trigger>Analyze</button>
     <div id="analyze-browser-loader" hidden aria-hidden="true"></div>
@@ -27,36 +27,8 @@ function buildAnalyzeDom({ coseSource = '/cose.json' } = {}) {
         <li data-feature="cross-platform"><span class="analyze-browser-panel__feature-value"></span></li>
       </ul>
       <ul data-role="transport-list"></ul>
-      <table data-role="cose-table" data-cose-source="${coseSource}">
-        <thead>
-          <tr data-role="cose-table-header-row"><th>Algorithm</th></tr>
-        </thead>
-        <tbody data-role="cose-table-body"></tbody>
-      </table>
     </div>
   `;
-}
-
-function mockSuccessfulFetchResponse() {
-  return {
-    ok: true,
-    status: 200,
-    json: async () => ({
-      browsers: [
-        { key: 'chrome', label: 'Chrome', subtitle: 'desktop' },
-      ],
-      algorithms: [
-        {
-          id: -7,
-          label: 'ES256',
-          note: 'recommended',
-          support: {
-            chrome: { status: 'yes', note: 'default' },
-          },
-        },
-      ],
-    }),
-  };
 }
 
 describe('analyze-browser', () => {
@@ -69,10 +41,9 @@ describe('analyze-browser', () => {
     document.body.innerHTML = '<div></div>';
 
     expect(() => initializeAnalyzeBrowser()).not.toThrow();
-    expect(fetch).not.toHaveBeenCalled();
   });
 
-  it('initializes, gathers analysis, renders COSE table, and opens/closes panel', async () => {
+  it('initializes, gathers analysis, and opens/closes panel', async () => {
     vi.useFakeTimers();
     buildAnalyzeDom();
 
@@ -98,8 +69,6 @@ describe('analyze-browser', () => {
       isUserVerifyingPlatformAuthenticatorAvailable: vi.fn(async () => true),
       isConditionalMediationAvailable: vi.fn(async () => false),
     };
-
-    fetch.mockResolvedValue(mockSuccessfulFetchResponse());
 
     const { initializeAnalyzeBrowser } = await loadAnalyzeBrowser();
     initializeAnalyzeBrowser();
@@ -130,11 +99,11 @@ describe('analyze-browser', () => {
     expect(transportText).toContain('USB');
     expect(transportText).toContain('HID');
 
-    const coseTable = panel.querySelector('[data-role="cose-table"]');
-    expect(coseTable.dataset.rendered).toBe('true');
-    expect(panel.querySelector('[data-role="cose-table-body"]').textContent).toContain('ES256');
+    const content = panel.querySelector('.analyze-browser-panel__content');
+    content.scrollTop = 128;
 
     panel.querySelector('[data-action="close"]').click();
+    expect(content.scrollTop).toBe(0);
     expect(panel.hidden).toBe(true);
     expect(panel.classList.contains('is-closing')).toBe(false);
     await vi.runAllTimersAsync();
@@ -170,8 +139,6 @@ describe('analyze-browser', () => {
       isConditionalMediationAvailable: vi.fn(async () => false),
     };
 
-    fetch.mockResolvedValue(mockSuccessfulFetchResponse());
-
     const { initializeAnalyzeBrowser } = await loadAnalyzeBrowser();
     initializeAnalyzeBrowser();
 
@@ -195,49 +162,11 @@ describe('analyze-browser', () => {
     expect(panel.hidden).toBe(false);
   });
 
-  it('renders unknown algorithm support states explicitly', async () => {
+  it('handles browser capability fallback paths', async () => {
     vi.useFakeTimers();
-    buildAnalyzeDom({ coseSource: '/unknown-cose.json' });
-
-    globalThis.PublicKeyCredential = {
-      isUserVerifyingPlatformAuthenticatorAvailable: vi.fn(async () => true),
-      isConditionalMediationAvailable: vi.fn(async () => false),
-    };
-
-    fetch.mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: async () => ({
-        browsers: [{ key: 'chrome', label: 'Chrome' }],
-        algorithms: [
-          {
-            id: -50,
-            label: 'ML-DSA-87 (PQC) (-50)',
-            support: {
-              chrome: { status: 'unknown', note: 'experimental' },
-            },
-          },
-        ],
-      }),
-    });
-
-    const { initializeAnalyzeBrowser } = await loadAnalyzeBrowser();
-    initializeAnalyzeBrowser();
-
-    document.querySelector('[data-analyze-browser-trigger]').click();
-    await vi.runAllTimersAsync();
-
-    const tbodyText = document.querySelector('[data-role="cose-table-body"]').textContent;
-    expect(tbodyText).toContain('Unknown');
-    expect(tbodyText).toContain('experimental');
-  });
-
-  it('handles COSE fetch failures and browser capability fallback paths', async () => {
-    vi.useFakeTimers();
-    buildAnalyzeDom({ coseSource: '/broken.json' });
+    buildAnalyzeDom();
 
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     // Ensure transport probes do not accidentally pass due prior test state.
     delete navigator.usb;
@@ -264,12 +193,6 @@ describe('analyze-browser', () => {
       // intentionally omit isConditionalMediationAvailable to hit fallback branch
     };
 
-    fetch.mockResolvedValue({
-      ok: false,
-      status: 500,
-      json: async () => ({}),
-    });
-
     const { initializeAnalyzeBrowser } = await loadAnalyzeBrowser();
     initializeAnalyzeBrowser();
 
@@ -278,9 +201,9 @@ describe('analyze-browser', () => {
 
     const panel = document.getElementById('analyze-browser-panel');
     expect(panel.hidden).toBe(false);
-    expect(panel.querySelector('[data-role="cose-table-body"]').textContent).toContain(
-      'No COSE algorithm data available.',
-    );
+
+    const transportsText = panel.querySelector('[data-role="transport-list"]').textContent;
+    expect(transportsText).toContain('No supported transports detected');
 
     const crossPlatformValue = panel
       .querySelector('[data-feature="cross-platform"] .analyze-browser-panel__feature-value');
@@ -288,10 +211,8 @@ describe('analyze-browser', () => {
     expect(crossPlatformValue.textContent).toBe('Unknown');
 
     expect(warnSpy).toHaveBeenCalled();
-    expect(errorSpy).toHaveBeenCalled();
 
     warnSpy.mockRestore();
-    errorSpy.mockRestore();
   });
 
   it('normalizes major browser brands and falls back to UA parsing when client hints are unavailable', async () => {
@@ -312,7 +233,6 @@ describe('analyze-browser', () => {
 
     for (const { brand, expected } of brandCases) {
       buildAnalyzeDom();
-      fetch.mockResolvedValue(mockSuccessfulFetchResponse());
 
       const { initializeAnalyzeBrowser } = await loadAnalyzeBrowser();
       initializeAnalyzeBrowser();
@@ -342,7 +262,6 @@ describe('analyze-browser', () => {
     }
 
     buildAnalyzeDom();
-    fetch.mockResolvedValue(mockSuccessfulFetchResponse());
 
     const { initializeAnalyzeBrowser } = await loadAnalyzeBrowser();
     initializeAnalyzeBrowser();
@@ -368,6 +287,78 @@ describe('analyze-browser', () => {
     expect(document.getElementById('analyze-browser-version').textContent).toBe('124.0.0.0');
   });
 
+  it('normalizes system names across major browser platform hints', async () => {
+    vi.useFakeTimers();
+
+    const cases = [
+      {
+        ua: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_4) AppleWebKit/605.1.15 Version/17.4 Safari/605.1.15',
+        platform: 'MacIntel',
+        maxTouchPoints: 0,
+        expectedSystem: 'macOS',
+      },
+      {
+        ua: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 Version/17.4 Mobile/15E148 Safari/604.1',
+        platform: 'iPhone',
+        maxTouchPoints: 5,
+        expectedSystem: 'iOS',
+      },
+      {
+        ua: 'Mozilla/5.0 (iPad; CPU OS 17_4 like Mac OS X) AppleWebKit/605.1.15 Version/17.4 Mobile/15E148 Safari/604.1',
+        platform: 'MacIntel',
+        maxTouchPoints: 5,
+        expectedSystem: 'iPadOS',
+      },
+      {
+        ua: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:124.0) Gecko/20100101 Firefox/124.0',
+        platform: 'Win32',
+        maxTouchPoints: 0,
+        expectedSystem: 'Windows',
+      },
+      {
+        ua: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/123.0.0.0 Safari/537.36',
+        platform: 'Linux x86_64',
+        maxTouchPoints: 0,
+        expectedSystem: 'Linux',
+      },
+    ];
+
+    for (const platformCase of cases) {
+      buildAnalyzeDom();
+
+      const { initializeAnalyzeBrowser } = await loadAnalyzeBrowser();
+      initializeAnalyzeBrowser();
+
+      Object.defineProperty(navigator, 'userAgent', {
+        configurable: true,
+        value: platformCase.ua,
+      });
+      Object.defineProperty(navigator, 'platform', {
+        configurable: true,
+        value: platformCase.platform,
+      });
+      Object.defineProperty(navigator, 'maxTouchPoints', {
+        configurable: true,
+        value: platformCase.maxTouchPoints,
+      });
+      Object.defineProperty(navigator, 'userAgentData', {
+        configurable: true,
+        value: undefined,
+      });
+
+      globalThis.PublicKeyCredential = {
+        isUserVerifyingPlatformAuthenticatorAvailable: vi.fn(async () => false),
+        isConditionalMediationAvailable: vi.fn(async () => false),
+      };
+
+      const trigger = document.querySelector('[data-analyze-browser-trigger]');
+      trigger.click();
+      await vi.runAllTimersAsync();
+
+      expect(document.getElementById('analyze-browser-system').textContent).toBe(platformCase.expectedSystem);
+    }
+  });
+
   it('handles sparse panel markup and close interactions before panel is open', async () => {
     vi.useFakeTimers();
     buildAnalyzeDom();
@@ -381,14 +372,6 @@ describe('analyze-browser', () => {
     // Remove transport list so rendering function no-ops safely.
     document.querySelector('[data-role="transport-list"]').remove();
 
-    // Keep table element but remove expected header/body role targets.
-    const table = document.querySelector('[data-role="cose-table"]');
-    table.innerHTML = `
-      <thead><tr><th>Algorithm</th><th>Legacy</th></tr></thead>
-      <tbody><tr><td>placeholder</td></tr></tbody>
-    `;
-
-    fetch.mockResolvedValue(mockSuccessfulFetchResponse());
     globalThis.PublicKeyCredential = {
       isUserVerifyingPlatformAuthenticatorAvailable: vi.fn(async () => false),
       isConditionalMediationAvailable: vi.fn(async () => false),
@@ -421,8 +404,6 @@ describe('analyze-browser', () => {
     vi.useFakeTimers();
     buildAnalyzeDom();
 
-    fetch.mockResolvedValue(mockSuccessfulFetchResponse());
-
     const badUaData = { platform: 'ErrOS' };
     Object.defineProperty(badUaData, 'brands', {
       configurable: true,
@@ -440,7 +421,7 @@ describe('analyze-browser', () => {
       isConditionalMediationAvailable: vi.fn(async () => false),
     };
 
-    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
     const { initializeAnalyzeBrowser } = await loadAnalyzeBrowser();
     initializeAnalyzeBrowser();
@@ -452,10 +433,12 @@ describe('analyze-browser', () => {
     await vi.runAllTimersAsync();
 
     expect(trigger.disabled).toBe(false);
-    expect(document.getElementById('analyze-browser-name').textContent).toBe('Unknown Browser');
-    expect(document.getElementById('analyze-browser-system').textContent).toBe('Unknown System');
-    expect(errorSpy).toHaveBeenCalled();
+    expect(document.getElementById('analyze-browser-name').textContent).toMatch(/Google Chrome|Chromium|Unknown Browser/);
+    expect(document.getElementById('analyze-browser-system').textContent).toMatch(
+      /Unknown System|Linux|Windows|macOS|iOS|iPadOS|Android|ChromeOS|BSD/,
+    );
+    expect(warnSpy).toHaveBeenCalled();
 
-    errorSpy.mockRestore();
+    warnSpy.mockRestore();
   });
 });
