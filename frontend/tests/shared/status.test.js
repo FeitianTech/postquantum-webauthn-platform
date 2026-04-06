@@ -38,7 +38,7 @@ describe('status helpers', () => {
     expect(status.textContent).toBe('Saved');
     expect(status.style.bottom).toContain('36px');
 
-    vi.advanceTimersByTime(10000);
+    vi.advanceTimersByTime(5000);
     expect(status.className).toBe('status');
     expect(status.textContent).toBe('');
   });

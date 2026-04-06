@@ -97,7 +97,7 @@
     bottom: var(--global-toast-offset);
     left: 50%;
     transform: translateX(-50%) translateY(10px);
-    z-index: 12000;
+    z-index: var(--z-layer-toast);
     min-width: 300px;
     max-width: 90vw;
     opacity: 0;

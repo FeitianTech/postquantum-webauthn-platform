@@ -58,6 +58,9 @@
 
     /* Misc */
     --global-toast-offset: 2.75rem;
+    --z-layer-toast: 2147483000;
+    --z-layer-progress: 2147482999;
+    --z-layer-overlay: 2147482800;
 }
 
 @media (max-width: 640px) {

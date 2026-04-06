@@ -1,4 +1,4 @@
-const STATUS_TIMEOUT_MS = 10000;
+const STATUS_TIMEOUT_MS = 5000;
 
 function resolveStatusElement(tabIdOrElement) {
     if (typeof tabIdOrElement === 'string') {
