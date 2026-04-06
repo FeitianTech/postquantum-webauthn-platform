@@ -147,6 +147,52 @@ describe('analyze-browser', () => {
     expect(updateGlobalScrollLock).toHaveBeenCalled();
   });
 
+  it('shows browser loader only on first analysis run per page session', async () => {
+    vi.useFakeTimers();
+    buildAnalyzeDom();
+
+    Object.defineProperty(navigator, 'userAgentData', {
+      configurable: true,
+      value: {
+        brands: [{ brand: 'Chromium', version: '123.0.0.0' }],
+        platform: 'macOS',
+        getHighEntropyValues: vi.fn(async () => ({
+          platform: 'macOS',
+          fullVersionList: [{ brand: 'Chromium', version: '123.0.0.0' }],
+        })),
+      },
+    });
+
+    globalThis.PublicKeyCredential = {
+      isUserVerifyingPlatformAuthenticatorAvailable: vi.fn(async () => true),
+      isConditionalMediationAvailable: vi.fn(async () => false),
+    };
+
+    fetch.mockResolvedValue(mockSuccessfulFetchResponse());
+
+    const { initializeAnalyzeBrowser } = await loadAnalyzeBrowser();
+    initializeAnalyzeBrowser();
+
+    const trigger = document.querySelector('[data-analyze-browser-trigger]');
+    const panel = document.getElementById('analyze-browser-panel');
+    const loader = document.getElementById('analyze-browser-loader');
+
+    trigger.click();
+    expect(loader.hidden).toBe(false);
+
+    await vi.runAllTimersAsync();
+    expect(panel.hidden).toBe(false);
+    expect(loader.hidden).toBe(true);
+
+    panel.querySelector('[data-action="close"]').click();
+    await vi.runAllTimersAsync();
+    expect(panel.hidden).toBe(true);
+
+    trigger.click();
+    expect(loader.hidden).toBe(true);
+    expect(panel.hidden).toBe(false);
+  });
+
   it('handles COSE fetch failures and browser capability fallback paths', async () => {
     vi.useFakeTimers();
     buildAnalyzeDom({ coseSource: '/broken.json' });
@@ -211,19 +257,11 @@ describe('analyze-browser', () => {
 
   it('normalizes major browser brands and falls back to UA parsing when client hints are unavailable', async () => {
     vi.useFakeTimers();
-    buildAnalyzeDom();
 
-    fetch.mockResolvedValue(mockSuccessfulFetchResponse());
     globalThis.PublicKeyCredential = {
       isUserVerifyingPlatformAuthenticatorAvailable: vi.fn(async () => false),
       isConditionalMediationAvailable: vi.fn(async () => false),
     };
-
-    const { initializeAnalyzeBrowser } = await loadAnalyzeBrowser();
-    initializeAnalyzeBrowser();
-
-    const trigger = document.querySelector('[data-analyze-browser-trigger]');
-    const closeButton = document.querySelector('[data-action="close"]');
 
     const brandCases = [
       { brand: 'Edg', expected: 'Microsoft Edge' },
@@ -234,6 +272,12 @@ describe('analyze-browser', () => {
     ];
 
     for (const { brand, expected } of brandCases) {
+      buildAnalyzeDom();
+      fetch.mockResolvedValue(mockSuccessfulFetchResponse());
+
+      const { initializeAnalyzeBrowser } = await loadAnalyzeBrowser();
+      initializeAnalyzeBrowser();
+
       Object.defineProperty(navigator, 'userAgent', {
         configurable: true,
         value: 'CustomAgent/1.0',
@@ -251,14 +295,18 @@ describe('analyze-browser', () => {
         },
       });
 
+      const trigger = document.querySelector('[data-analyze-browser-trigger]');
       trigger.click();
       await vi.runAllTimersAsync();
 
       expect(document.getElementById('analyze-browser-name').textContent).toBe(expected);
-
-      closeButton.click();
-      await vi.runAllTimersAsync();
     }
+
+    buildAnalyzeDom();
+    fetch.mockResolvedValue(mockSuccessfulFetchResponse());
+
+    const { initializeAnalyzeBrowser } = await loadAnalyzeBrowser();
+    initializeAnalyzeBrowser();
 
     Object.defineProperty(navigator, 'userAgent', {
       configurable: true,
@@ -273,6 +321,7 @@ describe('analyze-browser', () => {
       },
     });
 
+    const trigger = document.querySelector('[data-analyze-browser-trigger]');
     trigger.click();
     await vi.runAllTimersAsync();
 

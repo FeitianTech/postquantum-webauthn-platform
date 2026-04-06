@@ -621,6 +621,8 @@ export function initializeAnalyzeBrowser() {
     });
 
     let isRunning = false;
+    let hasCompletedInitialAnalysis = false;
+    let analysisResultsCache = null;
 
     const handleClose = () => {
         closePanel(panel);
@@ -652,47 +654,58 @@ export function initializeAnalyzeBrowser() {
             return;
         }
 
+        if (hasCompletedInitialAnalysis && analysisResultsCache) {
+            applyAnalysisResults(analysisResultsCache);
+            openPanel(panel);
+            return;
+        }
+
         isRunning = true;
         trigger.disabled = true;
         showLoader(loader);
 
-        const start = performance.now();
-        let results = null;
         try {
-            results = await gatherAnalysis();
-        } catch (error) {
-            console.error('Browser analysis failed', error);
+            const start = performance.now();
+            let results = null;
+            try {
+                results = await gatherAnalysis();
+            } catch (error) {
+                console.error('Browser analysis failed', error);
+            }
+
+            if (!results) {
+                const fallbackBrowser = await detectBrowser().catch(() => ({
+                    name: 'Unknown Browser',
+                    version: null,
+                    platform: 'Unknown System',
+                }));
+
+                results = {
+                    browser: fallbackBrowser,
+                    features: {
+                        webauthn: 'PublicKeyCredential' in window,
+                        platformAuthenticator: null,
+                        crossPlatform: null,
+                        transports: [],
+                    },
+                };
+            }
+
+            const elapsed = performance.now() - start;
+            const remaining = Math.max(0, MIN_LOADER_DURATION_MS - elapsed);
+
+            await new Promise(resolve => setTimeout(resolve, remaining));
+
+            hideLoader(loader);
+
+            analysisResultsCache = results;
+            hasCompletedInitialAnalysis = true;
+
+            applyAnalysisResults(results);
+            openPanel(panel);
+        } finally {
+            trigger.disabled = false;
+            isRunning = false;
         }
-
-        if (!results) {
-            const fallbackBrowser = await detectBrowser().catch(() => ({
-                name: 'Unknown Browser',
-                version: null,
-                platform: 'Unknown System',
-            }));
-
-            results = {
-                browser: fallbackBrowser,
-                features: {
-                    webauthn: 'PublicKeyCredential' in window,
-                    platformAuthenticator: null,
-                    crossPlatform: null,
-                    transports: [],
-                },
-            };
-        }
-
-        const elapsed = performance.now() - start;
-        const remaining = Math.max(0, MIN_LOADER_DURATION_MS - elapsed);
-
-        await new Promise(resolve => setTimeout(resolve, remaining));
-
-        hideLoader(loader);
-
-        applyAnalysisResults(results);
-        openPanel(panel);
-
-        trigger.disabled = false;
-        isRunning = false;
     });
 }
