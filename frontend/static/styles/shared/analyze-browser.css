@@ -3,7 +3,7 @@
 .analyze-browser-loader {
     position: fixed;
     inset: 0;
-    z-index: 240;
+    z-index: var(--z-layer-overlay);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -106,17 +106,26 @@
 
 /* ─── Analyze browser panel ───────────────────────────────── */
 
+.analyze-browser-panel { z-index: calc(var(--z-layer-overlay) - 1); }
+
 .analyze-browser-panel .mds-custom-panel__dialog {
-    width: min(80vw, 1220px);
-    min-width: min(80vw, 1220px);
-    max-width: min(96vw, 1300px);
-    height: min(80vh, 880px);
-    min-height: min(80vh, 880px);
-    max-height: min(92vh, 940px);
-    padding: 0 3rem 0 3rem;
+    width: min(76vw, 980px);
+    max-width: 96vw;
+    height: min(78vh, 760px);
+    min-height: min(64vh, 560px);
+    max-height: 92vh;
+    padding: 0 1.75rem;
     display: grid;
     grid-template-rows: auto 1fr;
     overflow: hidden;
+}
+
+.analyze-browser-panel .mds-custom-panel__backdrop { z-index: 0; }
+.analyze-browser-panel .mds-custom-panel__dialog { z-index: 1; }
+
+.analyze-browser-panel__close {
+    z-index: 10;
+    background: var(--surface-color);
 }
 
 .analyze-browser-panel__heading {
@@ -130,9 +139,9 @@
 .analyze-browser-panel__content {
     display: flex;
     flex-direction: column;
-    gap: 1.25rem;
+    gap: 1rem;
     overflow-y: auto;
-    padding: 1.75rem 0.25rem 1.75rem 0;
+    padding: 1.25rem 0.15rem 1.25rem 0;
     min-height: 0;
     scrollbar-width: none;
 }
@@ -178,11 +187,11 @@
 .analyze-browser-panel__section {
     display: flex;
     flex-direction: column;
-    gap: 0.85rem;
+    gap: 0.75rem;
     background: var(--surface-alt);
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
-    padding: 1rem 1.25rem 1.25rem;
+    padding: 0.9rem 1rem 1rem;
 }
 
 .analyze-browser-panel__section-title {
@@ -341,8 +350,7 @@
 
 @media (max-width: 1100px) {
     .analyze-browser-panel .mds-custom-panel__dialog {
-        width: min(86vw, 1100px);
-        min-width: min(86vw, 1100px);
+        width: min(88vw, 920px);
     }
 }
 
@@ -352,9 +360,8 @@
 
     .analyze-browser-panel .mds-custom-panel__dialog {
         width: min(92vw, 820px);
-        min-width: min(92vw, 820px);
-        height: min(82vh, 820px);
-        min-height: min(82vh, 660px);
+        height: min(82vh, 720px);
+        min-height: min(70vh, 560px);
     }
 }
 
@@ -364,8 +371,8 @@
 
     .analyze-browser-panel .mds-custom-panel__dialog {
         width: 94vw;
-        min-width: 94vw;
         height: min(88vh, 780px);
-        padding: 0 1.25rem;
+        min-height: min(72vh, 540px);
+        padding: 0 1rem;
     }
 }

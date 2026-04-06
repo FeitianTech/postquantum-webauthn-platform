@@ -634,15 +634,11 @@ function closePanel(panel) {
         return;
     }
 
-    panel.classList.add('is-closing');
     panel.classList.remove('is-open');
+    panel.classList.remove('is-closing');
     panel.setAttribute('aria-hidden', 'true');
-
-    setTimeout(() => {
-        panel.classList.remove('is-closing');
-        panel.hidden = true;
-        updateGlobalScrollLock();
-    }, 260);
+    panel.hidden = true;
+    updateGlobalScrollLock();
 }
 
 async function gatherAnalysis() {
@@ -759,7 +755,6 @@ export function initializeAnalyzeBrowser() {
 
             const elapsed = performance.now() - start;
             const remaining = Math.max(0, MIN_LOADER_DURATION_MS - elapsed);
-
             await new Promise(resolve => setTimeout(resolve, remaining));
 
             hideLoader(loader);

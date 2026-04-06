@@ -135,6 +135,8 @@ describe('analyze-browser', () => {
     expect(panel.querySelector('[data-role="cose-table-body"]').textContent).toContain('ES256');
 
     panel.querySelector('[data-action="close"]').click();
+    expect(panel.hidden).toBe(true);
+    expect(panel.classList.contains('is-closing')).toBe(false);
     await vi.runAllTimersAsync();
     expect(panel.hidden).toBe(true);
 
