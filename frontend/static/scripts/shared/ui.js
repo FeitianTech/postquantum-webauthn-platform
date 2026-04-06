@@ -214,15 +214,13 @@ export function updateGlobalScrollLock() {
     const analyzeLoaderActive = document
         .getElementById('analyze-browser-loader')
         ?.classList.contains('is-open');
-    const analyzePanelActive = document.querySelector('.analyze-browser-panel.is-open');
 
     const shouldLock = Boolean(
         overlayActive ||
         modalActive ||
         mdsModalActive ||
         mdsDetailActive ||
-        analyzeLoaderActive ||
-        analyzePanelActive
+        analyzeLoaderActive
     );
 
     const targets = [document.body, document.documentElement].filter(Boolean);
