@@ -29,6 +29,7 @@ from .config import (
     MDS_METADATA_URL,
     app,
 )
+from .env_flags import parse_env_flag
 from .github_client import (
     git_blob_sha,
     github_list_directory,
@@ -116,14 +117,7 @@ _METADATA_STATEMENT_REQUIRED_DEFAULTS: Mapping[str, Any] = {
 
 
 def _env_flag(name: str) -> Optional[bool]:
-    raw = os.environ.get(name)
-    if raw is None:
-        return None
-
-    normalised = raw.strip().lower()
-    if normalised in {"", "0", "false", "off", "no"}:
-        return False
-    return True
+    return parse_env_flag(name)
 
 
 def _resolve_cleanup_interval() -> timedelta:

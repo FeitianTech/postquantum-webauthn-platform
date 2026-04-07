@@ -18,6 +18,8 @@ from flask import Flask, has_request_context, request
 from fido2.server import Fido2Server
 from fido2.webauthn import PublicKeyCredentialRpEntity
 
+from .env_flags import parse_env_flag
+
 # Enable webauthn-json mapping if available (compatible across fido2 versions)
 try:  # pragma: no cover - compatibility shim
     fido2.features.webauthn_json_mapping.enabled = True
@@ -229,15 +231,7 @@ _register_after_request_once(app, maybe_compress_response)
 
 def _env_flag(name: str) -> Optional[bool]:
     """Return ``True`` or ``False`` when the named env var is explicitly set."""
-
-    raw_value = os.environ.get(name)
-    if raw_value is None:
-        return None
-
-    normalised = raw_value.strip().lower()
-    if normalised in {"", "0", "false", "off", "no"}:
-        return False
-    return True
+    return parse_env_flag(name)
 
 _DEFAULT_RP_NAME = os.environ.get("FIDO_SERVER_RP_NAME", "Demo server")
 _DEFAULT_RP_ID = os.environ.get("FIDO_SERVER_RP_ID")

@@ -12,6 +12,8 @@ from google.auth import exceptions as auth_exceptions
 from google.cloud import storage
 from google.oauth2 import service_account
 
+from .env_flags import parse_env_flag
+
 __all__ = [
     "blob_exists",
     "blob_updated_timestamp",
@@ -41,13 +43,7 @@ _T = TypeVar("_T")
 
 
 def _env_flag(name: str) -> Optional[bool]:
-    raw = os.environ.get(name)
-    if raw is None:
-        return None
-    normalised = raw.strip().lower()
-    if normalised in {"", "0", "false", "off", "no"}:
-        return False
-    return True
+    return parse_env_flag(name)
 
 
 def gcs_enabled() -> bool:

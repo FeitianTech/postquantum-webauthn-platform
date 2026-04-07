@@ -16,6 +16,7 @@ from flask import abort, jsonify, render_template, request, send_file
 from ..attestation import serialize_attestation_certificate
 from ..config import MDS_METADATA_VERIFIED_PATH, app
 from ..decoder import decode_payload_text, encode_payload_text
+from ..env_flags import parse_env_flag
 from ..metadata import (
     ensure_metadata_session_id,
     delete_session_metadata_item,
@@ -47,14 +48,7 @@ _INDEX_EAGER_METADATA_ENV_FLAG = "FIDO_SERVER_EAGER_INDEX_METADATA_BOOTSTRAP"
 
 
 def _env_flag(name: str) -> Optional[bool]:
-    raw = os.environ.get(name)
-    if raw is None:
-        return None
-
-    normalised = raw.strip().lower()
-    if normalised in {"", "0", "false", "off", "no"}:
-        return False
-    return True
+    return parse_env_flag(name)
 
 
 def _should_bootstrap_metadata_on_index() -> bool:

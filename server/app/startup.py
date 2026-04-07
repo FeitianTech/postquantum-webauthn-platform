@@ -7,6 +7,7 @@ from typing import Optional
 
 from . import cloud_storage, session_metadata_store
 from .config import app
+from .env_flags import parse_env_flag
 
 __all__ = ["warm_up_dependencies"]
 
@@ -19,14 +20,7 @@ _WARM_SESSION_STORAGE_ENV = "FIDO_SERVER_WARM_SESSION_STORAGE"
 
 
 def _env_flag(name: str) -> Optional[bool]:
-    raw = os.environ.get(name)
-    if raw is None:
-        return None
-
-    normalised = raw.strip().lower()
-    if normalised in {"", "0", "false", "off", "no"}:
-        return False
-    return True
+    return parse_env_flag(name)
 
 
 def startup_fail_fast_enabled() -> bool:
