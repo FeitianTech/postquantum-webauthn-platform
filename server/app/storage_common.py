@@ -5,6 +5,8 @@ from __future__ import annotations
 import os
 from typing import Any, Callable, Optional
 
+from .cloud_storage import build_blob_name
+
 
 def using_gcs_backend(is_enabled: Callable[[], bool]) -> bool:
     """Return ``True`` when cloud storage is enabled and bucket-configured."""
@@ -31,3 +33,47 @@ def resolve_session_id(session_id: Optional[str], fallback: Callable[[], str]) -
         if trimmed:
             return trimmed
     return fallback()
+
+
+def build_session_root_prefix(
+    session_id: Any,
+    *,
+    user_folder_prefix: str,
+    type_error: str = "Session identifier must be a string",
+    empty_error: str = "Session identifier is empty",
+) -> str:
+    """Build a session root blob prefix for a module-specific user folder."""
+
+    cleaned = normalize_nonempty_str(
+        session_id,
+        type_error=type_error,
+        empty_error=empty_error,
+    )
+    return build_blob_name(cleaned, prefix=user_folder_prefix)
+
+
+def build_session_scoped_prefix(
+    session_id: Any,
+    *,
+    user_folder_prefix: str,
+    subdir: str,
+    type_error: str = "Session identifier must be a string",
+    empty_error: str = "Session identifier is empty",
+) -> str:
+    """Build a ``<user-folder>/<session>/<subdir>`` blob prefix."""
+
+    root = build_session_root_prefix(
+        session_id,
+        user_folder_prefix=user_folder_prefix,
+        type_error=type_error,
+        empty_error=empty_error,
+    )
+    return build_blob_name(subdir, prefix=root)
+
+
+def resolve_metadata_session_id(session_id: Optional[str] = None) -> str:
+    """Resolve a session id using metadata fallback with lazy import cycle-avoidance."""
+
+    from .metadata import ensure_metadata_session_id
+
+    return resolve_session_id(session_id, ensure_metadata_session_id)

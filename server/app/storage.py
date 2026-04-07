@@ -16,8 +16,9 @@ from .cloud_storage import (
 )
 from .config import app, basepath
 from .storage_common import (
-    normalize_nonempty_str,
-    resolve_session_id as _resolve_session_id_common,
+    build_session_root_prefix,
+    build_session_scoped_prefix,
+    resolve_metadata_session_id,
     using_gcs_backend,
 )
 
@@ -49,17 +50,18 @@ def _using_gcs() -> bool:
 
 
 def _user_root_prefix(session_id: str) -> str:
-    cleaned = normalize_nonempty_str(
+    return build_session_root_prefix(
         session_id,
-        type_error="Session identifier must be a string",
-        empty_error="Session identifier is empty",
+        user_folder_prefix=_USER_FOLDER_PREFIX,
     )
-    return build_blob_name(cleaned, prefix=_USER_FOLDER_PREFIX)
 
 
 def _credential_prefix(session_id: str) -> str:
-    root = _user_root_prefix(session_id)
-    return build_blob_name(_USER_CREDENTIAL_SUBDIR, prefix=root)
+    return build_session_scoped_prefix(
+        session_id,
+        user_folder_prefix=_USER_FOLDER_PREFIX,
+        subdir=_USER_CREDENTIAL_SUBDIR,
+    )
 
 
 def _credential_blob(name: str, session_id: str) -> str:
@@ -162,9 +164,7 @@ def _local_filename(name: str, session_id: str, *, create: bool = False) -> str:
 
 
 def _resolve_session_id(session_id: Optional[str] = None) -> str:
-    from .metadata import ensure_metadata_session_id  # Local import to avoid cycles
-
-    return _resolve_session_id_common(session_id, ensure_metadata_session_id)
+    return resolve_metadata_session_id(session_id)
 
 
 def savekey(name: str, key: Any, *, session_id: Optional[str] = None) -> None:
