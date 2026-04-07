@@ -8,8 +8,15 @@ from pathlib import Path
 import pytest
 
 
+def _repo_root() -> Path:
+    for candidate in Path(__file__).resolve().parents:
+        if (candidate / "fido2" / "client" / "win_api.py").is_file():
+            return candidate
+    raise FileNotFoundError("Unable to locate repository root containing fido2/client/win_api.py")
+
+
 def _load_win_api_module(monkeypatch, *, api_version: int = 9):
-    win_api_path = Path(__file__).resolve().parents[2] / "fido2" / "client" / "win_api.py"
+    win_api_path = _repo_root() / "fido2" / "client" / "win_api.py"
     module_name = f"fido2.client._win_api_contracts_{api_version}_{id(monkeypatch)}"
 
     class _FakeFunction:

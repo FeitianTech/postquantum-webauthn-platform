@@ -29,6 +29,13 @@ from fido2.webauthn import (
 )
 
 
+def _repo_root() -> Path:
+    for candidate in Path(__file__).resolve().parents:
+        if (candidate / "fido2" / "client" / "windows.py").is_file():
+            return candidate
+    raise FileNotFoundError("Unable to locate repository root containing fido2/client/windows.py")
+
+
 class _FromStringEnum(IntEnum):
     @classmethod
     def from_string(cls, value: str):
@@ -338,7 +345,7 @@ def _load_windows_module(
     make_impl=None,
     get_impl=None,
 ):
-    windows_path = Path(__file__).resolve().parents[2] / "fido2" / "client" / "windows.py"
+    windows_path = _repo_root() / "fido2" / "client" / "windows.py"
     module_name = (
         f"fido2.client._windows_contracts_{api_version}_{id(make_impl)}_{id(get_impl)}"
     )

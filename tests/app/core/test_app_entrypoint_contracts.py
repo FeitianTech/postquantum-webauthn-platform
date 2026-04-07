@@ -46,9 +46,8 @@ def test_main_bootstraps_metadata_and_starts_tls_server(monkeypatch):
 
     assert calls["bootstrap"] == {"skip_if_reloader_parent": False}
     assert calls["run"] == {
-        "host": "demo.ftsafe.demo",
-        "port": 5000,
-        "ssl_context": ("demo.ftsafe.demo.pem", "demo.ftsafe.demo-key.pem"),
+        "host": "localhost",
+        "port": 8000,
         "debug": True,
     }
 
@@ -74,4 +73,4 @@ def test_main_skips_bootstrap_when_hook_is_not_callable(monkeypatch):
     app_module.main()
 
     assert len(runs) == 1
-    assert runs[0]["host"] == "demo.ftsafe.demo"
+    assert runs[0]["host"] == "localhost"

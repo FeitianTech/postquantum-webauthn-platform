@@ -16,6 +16,15 @@ from fido2.hid.base import HidDescriptor
 hid = pytest.importorskip("fido2.hid")
 
 
+def _repo_root() -> Path:
+    for candidate in Path(__file__).resolve().parents:
+        if (candidate / "fido2" / "ctap.py").is_file() and (
+            candidate / "fido2" / "hid" / "__init__.py"
+        ).is_file():
+            return candidate
+    raise FileNotFoundError("Unable to locate repository root containing fido2/hid")
+
+
 class _Conn:
     def __init__(self, responses=None):
         self.responses = list(responses or [])
@@ -45,7 +54,7 @@ def _packet(channel: int, cmd: int, payload: bytes, packet_size: int):
 
 
 def _load_hid_module_for_platform(monkeypatch, platform: str, backend_name: str):
-    init_path = Path(__file__).resolve().parents[2] / "fido2" / "hid" / "__init__.py"
+    init_path = _repo_root() / "fido2" / "hid" / "__init__.py"
     module_name = f"fido2.hid._platform_branch_{platform}"
     backend_mod_name = f"fido2.hid.{backend_name}"
 
@@ -173,7 +182,7 @@ def test_platform_branch_selects_expected_backend_modules(monkeypatch):
 
 
 def test_platform_branch_raises_for_unsupported_platform(monkeypatch):
-    init_path = Path(__file__).resolve().parents[2] / "fido2" / "hid" / "__init__.py"
+    init_path = _repo_root() / "fido2" / "hid" / "__init__.py"
     module_name = "fido2.hid._platform_branch_unsupported"
 
     monkeypatch.setattr(sys, "platform", "plan9")

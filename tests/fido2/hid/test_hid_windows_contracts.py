@@ -8,8 +8,15 @@ from pathlib import Path
 import pytest
 
 
+def _repo_root() -> Path:
+    for candidate in Path(__file__).resolve().parents:
+        if (candidate / "fido2" / "hid" / "windows.py").is_file():
+            return candidate
+    raise FileNotFoundError("Unable to locate repository root containing fido2/hid/windows.py")
+
+
 def _load_hid_windows_module(monkeypatch):
-    module_path = Path(__file__).resolve().parents[2] / "fido2" / "hid" / "windows.py"
+    module_path = _repo_root() / "fido2" / "hid" / "windows.py"
     module_name = f"fido2.hid._windows_contracts_{id(monkeypatch)}"
 
     class _FakeFunction:
