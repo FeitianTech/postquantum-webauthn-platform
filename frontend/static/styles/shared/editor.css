@@ -96,6 +96,7 @@
     transform: none !important;
     width: 100% !important;
     max-width: none;
+    z-index: auto !important;
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
