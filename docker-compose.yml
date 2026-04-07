@@ -4,7 +4,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: pqc-webauthn-local
+    container_name: WebAuthnServer
     ports:
       - "8000:8000"
     environment:
