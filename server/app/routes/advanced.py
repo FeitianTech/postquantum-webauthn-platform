@@ -260,13 +260,11 @@ def _extract_credential_id(value: Any) -> Optional[bytes]:
 
 
 def _extract_credential_algorithm(value: Any) -> Optional[int]:
-    None
     if isinstance(value, Mapping):
         public_key_value = value.get("public_key") or value.get("publicKey")
     else:
         public_key_value = getattr(value, "public_key", None)
 
-    None
     if isinstance(public_key_value, Mapping):
         if 3 in public_key_value:
             raw_alg = public_key_value[3]
