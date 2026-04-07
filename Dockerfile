@@ -78,4 +78,4 @@ WORKDIR /app
 ENV PYTHONPATH=/app:${PYTHONPATH}
 
 # Gunicorn with 1 worker + 2 threads for fast start
-CMD ["sh", "-c", "export LD_PRELOAD=/opt/liboqs/lib/liboqs.so; exec gunicorn --workers=1 --threads=2 --bind 0.0.0.0:${PORT:-8000} server.app:app"]
+CMD ["sh", "-c", "export LD_PRELOAD=/opt/liboqs/lib/liboqs.so; echo \"[startup] Listening at http://localhost:${PORT:-8000}\"; exec gunicorn --log-level warning --workers=1 --threads=2 --bind 0.0.0.0:${PORT:-8000} server.app:app"]
