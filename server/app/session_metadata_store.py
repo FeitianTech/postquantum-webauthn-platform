@@ -19,7 +19,11 @@ from .cloud_storage import (
     upload_bytes,
 )
 from .config import SESSION_METADATA_DIR, app
-from .storage_common import using_gcs_backend
+from .storage_common import (
+    build_session_root_prefix,
+    build_session_scoped_prefix,
+    using_gcs_backend,
+)
 
 __all__ = [
     "delete_file",
@@ -57,17 +61,22 @@ def _using_gcs() -> bool:
 
 
 def _user_root_prefix(session_id: str) -> str:
-    if not session_id:
-        raise ValueError("Session identifier is required")
-    cleaned = session_id.strip()
-    if not cleaned:
-        raise ValueError("Session identifier is required")
-    return build_blob_name(cleaned, prefix=_USER_FOLDER_PREFIX)
+    return build_session_root_prefix(
+        session_id,
+        user_folder_prefix=_USER_FOLDER_PREFIX,
+        type_error="Session identifier is required",
+        empty_error="Session identifier is required",
+    )
 
 
 def _metadata_prefix(session_id: str) -> str:
-    root = _user_root_prefix(session_id)
-    return build_blob_name(_METADATA_SUBDIR, prefix=root)
+    return build_session_scoped_prefix(
+        session_id,
+        user_folder_prefix=_USER_FOLDER_PREFIX,
+        subdir=_METADATA_SUBDIR,
+        type_error="Session identifier is required",
+        empty_error="Session identifier is required",
+    )
 
 
 def _last_access_blob(session_id: str) -> str:

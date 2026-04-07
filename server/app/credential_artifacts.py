@@ -19,8 +19,9 @@ from .cloud_storage import (
 )
 from .config import _FRONTEND_STATIC_ROOT
 from .storage_common import (
-    normalize_nonempty_str,
-    resolve_session_id as _resolve_session_id_common,
+    build_session_root_prefix,
+    build_session_scoped_prefix,
+    resolve_metadata_session_id,
     using_gcs_backend,
 )
 
@@ -65,17 +66,22 @@ def _artifact_filename(storage_id: str) -> str:
 
 
 def _user_root_prefix(session_id: str) -> str:
-    cleaned = normalize_nonempty_str(
+    return build_session_root_prefix(
         session_id,
+        user_folder_prefix=_USER_FOLDER_PREFIX,
         type_error="Session identifier must be a string",
         empty_error="Session identifier must be a string",
     )
-    return build_blob_name(cleaned, prefix=_USER_FOLDER_PREFIX)
 
 
 def _artifact_prefix(session_id: str) -> str:
-    root = _user_root_prefix(session_id)
-    return build_blob_name(_ARTIFACT_SUBDIR, prefix=root)
+    return build_session_scoped_prefix(
+        session_id,
+        user_folder_prefix=_USER_FOLDER_PREFIX,
+        subdir=_ARTIFACT_SUBDIR,
+        type_error="Session identifier must be a string",
+        empty_error="Session identifier must be a string",
+    )
 
 
 def _artifact_blob(storage_id: str, session_id: str) -> str:
@@ -110,9 +116,7 @@ def _write_file(path: str, payload: Dict[str, Any]) -> None:
 
 
 def _resolve_session_id(session_id: Optional[str] = None) -> str:
-    from .metadata import ensure_metadata_session_id  # Local import to avoid cycles
-
-    return _resolve_session_id_common(session_id, ensure_metadata_session_id)
+    return resolve_metadata_session_id(session_id)
 
 
 def _read_record(storage_id: str, session_id: str) -> Optional[Dict[str, Any]]:
