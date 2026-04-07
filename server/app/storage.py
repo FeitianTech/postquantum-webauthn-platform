@@ -15,6 +15,11 @@ from .cloud_storage import (
     upload_bytes,
 )
 from .config import app, basepath
+from .storage_common import (
+    normalize_nonempty_str,
+    resolve_session_id as _resolve_session_id_common,
+    using_gcs_backend,
+)
 
 __all__ = [
     "add_public_key_material",
@@ -40,15 +45,15 @@ _LOCAL_CREDENTIAL_BASE = os.path.join(basepath, "session-credentials")
 
 
 def _using_gcs() -> bool:
-    return gcs_enabled() and bool(os.environ.get("FIDO_SERVER_GCS_BUCKET"))
+    return using_gcs_backend(gcs_enabled)
 
 
 def _user_root_prefix(session_id: str) -> str:
-    if not isinstance(session_id, str):
-        raise ValueError("Session identifier must be a string")
-    cleaned = session_id.strip()
-    if not cleaned:
-        raise ValueError("Session identifier is empty")
+    cleaned = normalize_nonempty_str(
+        session_id,
+        type_error="Session identifier must be a string",
+        empty_error="Session identifier is empty",
+    )
     return build_blob_name(cleaned, prefix=_USER_FOLDER_PREFIX)
 
 
@@ -157,14 +162,9 @@ def _local_filename(name: str, session_id: str, *, create: bool = False) -> str:
 
 
 def _resolve_session_id(session_id: Optional[str] = None) -> str:
-    if isinstance(session_id, str):
-        trimmed = session_id.strip()
-        if trimmed:
-            return trimmed
-
     from .metadata import ensure_metadata_session_id  # Local import to avoid cycles
 
-    return ensure_metadata_session_id()
+    return _resolve_session_id_common(session_id, ensure_metadata_session_id)
 
 
 def savekey(name: str, key: Any, *, session_id: Optional[str] = None) -> None:
