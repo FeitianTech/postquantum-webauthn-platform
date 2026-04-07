@@ -72,6 +72,11 @@ describe('auth-simple', () => {
     expect(showStatus).toHaveBeenCalledWith('simple', 'Please enter a username.', 'error');
   });
 
+  it('rejects authentication without a username', async () => {
+    await simpleAuthenticate();
+    expect(showStatus).toHaveBeenCalledWith('simple', 'Please enter a username.', 'error');
+  });
+
   it('registers a credential successfully', async () => {
     document.getElementById('simple-email').value = 'user@example.com';
     parseCreationOptionsFromJSON.mockReturnValue({ publicKey: {} });
@@ -173,6 +178,22 @@ describe('auth-simple', () => {
     get.mockRejectedValueOnce({ name: 'SecurityError', message: 'security issue' });
 
     await simpleAuthenticate();
+    expect(showStatus).toHaveBeenCalledWith('simple', 'Security error - check your connection and try again', 'error');
+  });
+
+  it('maps registration InvalidState and Security errors to friendly messages', async () => {
+    document.getElementById('simple-email').value = 'user@example.com';
+
+    parseCreationOptionsFromJSON.mockReturnValue({ publicKey: {} });
+
+    fetch.mockResolvedValueOnce(jsonResponse({ publicKey: {} }));
+    create.mockRejectedValueOnce({ name: 'InvalidStateError', message: 'already registered' });
+    await simpleRegister();
+    expect(showStatus).toHaveBeenCalledWith('simple', 'Authenticator is already registered for this account', 'error');
+
+    fetch.mockResolvedValueOnce(jsonResponse({ publicKey: {} }));
+    create.mockRejectedValueOnce({ name: 'SecurityError', message: 'security issue' });
+    await simpleRegister();
     expect(showStatus).toHaveBeenCalledWith('simple', 'Security error - check your connection and try again', 'error');
   });
 

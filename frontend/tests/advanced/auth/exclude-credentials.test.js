@@ -50,6 +50,8 @@ describe('exclude-credentials', () => {
 
     expect(removeFakeExcludeCredential(0)).toBe(true);
     expect(removeFakeAllowCredential(0)).toBe(true);
+    expect(removeFakeExcludeCredential(99)).toBe(false);
+    expect(removeFakeAllowCredential(-1)).toBe(false);
 
     clearFakeExcludeCredentials();
     clearFakeAllowCredentials();
@@ -60,5 +62,25 @@ describe('exclude-credentials', () => {
   it('rejects invalid fake credential lengths', () => {
     expect(createFakeExcludeCredential(0)).toBeNull();
     expect(showStatus).toHaveBeenCalled();
+  });
+
+  it('truncates oversized credential lengths and skips invalid entries while rendering', () => {
+    const large = createFakeExcludeCredential(9000);
+    expect(large).toHaveLength(8192);
+    expect(showStatus).toHaveBeenCalledWith(
+      'advanced',
+      'Credential IDs are limited to 4096 bytes. Generated value truncated to maximum length.',
+      'info',
+    );
+
+    state.generatedAllowCredentials = ['abcd', '', '0011', null];
+    renderFakeAllowCredentialList();
+    expect(document.querySelectorAll('#fake-cred-auth-generated-list .fake-credential-item')).toHaveLength(2);
+  });
+
+  it('returns early when list container is missing', () => {
+    document.body.innerHTML = '';
+    expect(() => renderFakeExcludeCredentialList()).not.toThrow();
+    expect(() => renderFakeAllowCredentialList()).not.toThrow();
   });
 });

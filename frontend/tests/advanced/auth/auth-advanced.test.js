@@ -416,6 +416,68 @@ describe('auth-advanced', () => {
     expect(hideProgress).toHaveBeenCalledWith('advanced');
   });
 
+  it('reports begin-time 404 failures with missing-credential guidance when error payload is plain text', async () => {
+    document.getElementById('json-editor').value = JSON.stringify({
+      publicKey: {
+        challenge: { $hex: '1234' },
+      },
+    });
+
+    ensureAuthenticationHintsAllowed.mockReturnValue([]);
+    prepareAdvancedCredentialsForServer.mockReturnValue([]);
+
+    fetch.mockResolvedValueOnce({
+      ok: false,
+      status: 404,
+      text: vi.fn().mockResolvedValue('not found'),
+      json: vi.fn().mockRejectedValue(new Error('no-json')),
+    });
+
+    await advancedAuthenticate();
+
+    const finalMessage = showStatus.mock.calls.at(-1)[1];
+    expect(finalMessage).toContain('Advanced authentication failed: No credentials detected. Please register a credential first.');
+    expect(hideProgress).toHaveBeenCalledWith('advanced');
+  });
+
+  it('falls back to status-code completion errors when completion payload is non-json', async () => {
+    document.getElementById('json-editor').value = JSON.stringify({
+      publicKey: {
+        challenge: { $hex: '1234' },
+      },
+    });
+
+    ensureAuthenticationHintsAllowed.mockReturnValue([]);
+    prepareAdvancedCredentialsForServer.mockReturnValue([{ credentialId: 'credential-1', publicKey: 'PUB' }]);
+    parseRequestOptionsFromJSON.mockReturnValue({ publicKey: {} });
+
+    get.mockResolvedValue({
+      toJSON: () => ({ id: 'assertion-1' }),
+    });
+
+    fetch.mockResolvedValueOnce(
+      jsonResponse({
+        __session_state: 'session-auth-3',
+        publicKey: {
+          challenge: { $base64url: 'AQID' },
+        },
+      }),
+    );
+
+    fetch.mockResolvedValueOnce({
+      ok: false,
+      status: 502,
+      text: vi.fn().mockResolvedValue(''),
+      json: vi.fn().mockRejectedValue(new Error('no-json')),
+    });
+
+    await advancedAuthenticate();
+
+    const finalMessage = showStatus.mock.calls.at(-1)[1];
+    expect(finalMessage).toContain('Advanced authentication failed: Authentication failed (502)');
+    expect(hideProgress).toHaveBeenCalledWith('advanced');
+  });
+
   it('short-circuits authentication when hint validation fails', async () => {
     document.getElementById('json-editor').value = JSON.stringify({
       publicKey: {
@@ -462,6 +524,18 @@ describe('auth-advanced', () => {
     expect(showStatus).toHaveBeenCalledWith(
       'advanced',
       'Advanced authentication failed: Security error - check your connection and try again',
+      'error',
+    );
+
+    const notAllowed = new Error('cancelled');
+    notAllowed.name = 'NotAllowedError';
+    get.mockRejectedValueOnce(notAllowed);
+    fetch.mockResolvedValueOnce(jsonResponse({ publicKey: { challenge: { $base64url: 'AQID' } } }));
+
+    await advancedAuthenticate();
+    expect(showStatus).toHaveBeenCalledWith(
+      'advanced',
+      'Advanced authentication failed: User cancelled or no compatible authenticator detected',
       'error',
     );
   });

@@ -180,6 +180,14 @@ describe('settings-nav', () => {
     buildSettingsNavDom();
   });
 
+  it('no-ops when nav is missing or when nav has no items', () => {
+    document.body.innerHTML = '';
+    expect(() => initializeAdvancedSettingsNavigation()).not.toThrow();
+
+    document.body.innerHTML = '<nav class="settings-nav"></nav>';
+    expect(() => initializeAdvancedSettingsNavigation()).not.toThrow();
+  });
+
   it('activates sections, handles clicks, and reacts to intersection updates', () => {
     const observers = [];
     class FakeIntersectionObserver {
@@ -285,11 +293,43 @@ describe('settings-nav', () => {
     navItems[1].dataset.registrationTarget = 'missing-target';
     navItems[1].dispatchEvent(new MouseEvent('click', { bubbles: true }));
 
+    // missing targetId branch
+    delete navItems[1].dataset.registrationTarget;
+    delete navItems[1].dataset.authenticationTarget;
+    navItems[1].dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
     // event listeners around observeSections
     document.dispatchEvent(new CustomEvent('advanced:subtab-changed', { detail: { subTab: 'registration' } }));
     document.dispatchEvent(new CustomEvent('tab:changed', { detail: { tab: 'simple' } }));
     document.dispatchEvent(new CustomEvent('tab:changed', { detail: { tab: 'advanced' } }));
 
     expect(navItems[0].classList.contains('settings-nav__item--active')).toBe(true);
+  });
+
+  it('deduplicates observed sections when multiple items point to the same target', () => {
+    buildSettingsNavDom();
+    const observers = [];
+    class FakeIntersectionObserver {
+      constructor(callback) {
+        this.callback = callback;
+        this.observed = [];
+        observers.push(this);
+      }
+
+      observe(element) {
+        this.observed.push(element);
+      }
+      disconnect() {}
+    }
+
+    globalThis.IntersectionObserver = FakeIntersectionObserver;
+    state.currentSubTab = 'registration';
+
+    const navItems = Array.from(document.querySelectorAll('.settings-nav__item'));
+    navItems[1].dataset.registrationTarget = navItems[0].dataset.registrationTarget;
+
+    initializeAdvancedSettingsNavigation();
+
+    expect(observers[0].observed).toHaveLength(1);
   });
 });

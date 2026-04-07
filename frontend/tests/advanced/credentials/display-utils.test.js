@@ -14,6 +14,7 @@ describe('display-utils', () => {
     expect(formatBoolean(true)).toContain('true');
     expect(formatBoolean(false)).toContain('false');
     expect(formatBoolean(' true ')).toContain('true');
+    expect(formatBoolean(' FALSE ')).toContain('false');
     expect(formatBoolean(null)).toContain('N/A');
     expect(formatBoolean('<unsafe>')).toContain('&lt;unsafe&gt;');
   });
@@ -31,7 +32,10 @@ describe('display-utils', () => {
     expect(describeCoseKeyType(undefined)).toBe('Unknown');
 
     expect(describeMldsaParameterSet(-48)).toBe('ML-DSA-44');
+    expect(describeMldsaParameterSet(-49)).toBe('ML-DSA-65');
+    expect(describeMldsaParameterSet('-50')).toBe('ML-DSA-87');
     expect(describeMldsaParameterSet('unknown')).toBe('');
+    expect(escapeHtml(null)).toBe('');
     expect(escapeHtml(`'"<&>`)).toBe('&#39;&quot;&lt;&amp;&gt;');
   });
 });
