@@ -21,6 +21,22 @@ function clearStatusTimeout(statusEl) {
     delete statusEl.dataset.statusTimeoutId;
 }
 
+function ensureStatusRootLayer(statusEl) {
+    if (!(statusEl instanceof Element)) {
+        return;
+    }
+
+    if (!(document.body instanceof HTMLBodyElement)) {
+        return;
+    }
+
+    if (statusEl.parentElement === document.body) {
+        return;
+    }
+
+    document.body.appendChild(statusEl);
+}
+
 export function showStatus(tabId, message, type) {
     const statusEl = resolveStatusElement(tabId);
     if (!statusEl) {
@@ -28,6 +44,7 @@ export function showStatus(tabId, message, type) {
     }
 
     hideAllStatuses();
+    ensureStatusRootLayer(statusEl);
 
     clearStatusTimeout(statusEl);
     statusEl.style.removeProperty('bottom');
