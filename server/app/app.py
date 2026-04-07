@@ -64,9 +64,8 @@ def main() -> None:
     # not allow Webauthn in case of TLS certificate errors.
     # See https://lists.w3.org/Archives/Public/public-webauthn/2022Nov/0135.html
     app.run(
-        host="demo.ftsafe.demo",
-        port=5000,
-        ssl_context=("demo.ftsafe.demo.pem", "demo.ftsafe.demo-key.pem"),
+        host="localhost",
+        port=8000,
         debug=True,
     )
 
