@@ -19,6 +19,7 @@ from .cloud_storage import (
     upload_bytes,
 )
 from .config import SESSION_METADATA_DIR, app
+from .storage_common import using_gcs_backend
 
 __all__ = [
     "delete_file",
@@ -52,7 +53,7 @@ _local_last_cleanup: float = 0.0
 
 
 def _using_gcs() -> bool:
-    return gcs_enabled() and bool(os.environ.get("FIDO_SERVER_GCS_BUCKET"))
+    return using_gcs_backend(gcs_enabled)
 
 
 def _user_root_prefix(session_id: str) -> str:
