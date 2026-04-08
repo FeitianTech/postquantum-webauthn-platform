@@ -90,14 +90,13 @@ vi.mock('../../../static/scripts/shared/local-storage.js', () => ({
 }));
 
 vi.mock('../../../static/scripts/shared/credential-artifacts-client.js', () => ({
-  deleteCredentialArtifact: vi.fn().mockResolvedValue(undefined),
+  deleteCredentialArtifact: vi.fn().mockResolvedValue({ ok: true, status: 'deleted', httpStatus: 200 }),
   fetchCredentialArtifact: vi.fn().mockResolvedValue(null),
 }));
 
 import { openModal } from '../../../static/scripts/shared/ui.js';
 import { showStatus } from '../../../static/scripts/shared/status.js';
 import {
-  clearAdvancedCredentials,
   getAllAdvancedCredentials,
   getAllSimpleCredentials,
   removeAdvancedCredential,
@@ -174,29 +173,46 @@ describe('credential-display edge cases', () => {
 
     removeSimpleCredential.mockReturnValueOnce(false);
     removeAdvancedCredential.mockReturnValueOnce(false);
+    deleteCredentialArtifact.mockResolvedValueOnce({ ok: true, status: 'deleted', httpStatus: 200 });
 
     await deleteCredential(0);
     await deleteCredential(1);
 
     expect(showStatus).toHaveBeenCalledWith('advanced', 'Unable to remove credential from this browser.', 'error');
     expect(showStatus).toHaveBeenCalledWith('simple', 'Unable to remove credential from this browser.', 'error');
-    expect(deleteCredentialArtifact).not.toHaveBeenCalledWith('advanced-storage');
+    expect(showStatus).toHaveBeenCalledWith('advanced', 'Credential was deleted from server but could not be removed locally.', 'error');
+    expect(showStatus).toHaveBeenCalledWith('simple', 'Credential was deleted from server but could not be removed locally.', 'error');
+    expect(deleteCredentialArtifact).toHaveBeenCalledWith('advanced-storage');
   });
 
-  it('continues clear-all flow even when server artifact deletion rejects', async () => {
+  it('keeps failed advanced deletions local during clear-all and reports error status', async () => {
     getAllSimpleCredentials.mockReturnValue([]);
     getAllAdvancedCredentials.mockReturnValue([
-      { storageId: 'adv-storage-1' },
-      { storageId: '   ' },
+      { storageId: 'adv-storage-1', credentialIdBase64Url: 'adv-id-1' },
+      { credentialIdBase64Url: 'local-only-id' },
     ]);
-    deleteCredentialArtifact.mockRejectedValueOnce(new Error('network-failure'));
+    deleteCredentialArtifact.mockResolvedValueOnce({
+      ok: false,
+      status: 'failed',
+      httpStatus: null,
+      error: 'network-failure',
+    });
 
     await clearAllCredentials();
 
-    expect(clearAdvancedCredentials).toHaveBeenCalled();
     expect(deleteCredentialArtifact).toHaveBeenCalledWith('adv-storage-1');
-    expect(showStatus).toHaveBeenCalledWith('advanced', 'All saved credentials removed successfully!', 'success');
-    expect(showStatus).toHaveBeenCalledWith('simple', 'All saved credentials removed successfully!', 'success');
+    expect(removeAdvancedCredential).toHaveBeenCalledWith('local-only-id', null);
+    expect(removeAdvancedCredential).not.toHaveBeenCalledWith('adv-id-1', 'adv-storage-1');
+    expect(showStatus).toHaveBeenCalledWith(
+      'advanced',
+      expect.stringContaining('Clearing completed with issues'),
+      'error',
+    );
+    expect(showStatus).toHaveBeenCalledWith(
+      'simple',
+      expect.stringContaining('Clearing completed with issues'),
+      'error',
+    );
   });
 
   it('shows metadata lookup fallback status and clears it after timeout', async () => {

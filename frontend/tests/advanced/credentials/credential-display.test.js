@@ -171,7 +171,7 @@ vi.mock('../../../static/scripts/shared/local-storage.js', () => ({
 }));
 
 vi.mock('../../../static/scripts/shared/credential-artifacts-client.js', () => ({
-  deleteCredentialArtifact: vi.fn().mockResolvedValue(undefined),
+  deleteCredentialArtifact: vi.fn().mockResolvedValue({ ok: true, status: 'deleted', httpStatus: 200 }),
   fetchCredentialArtifact: vi.fn().mockResolvedValue(null),
 }));
 
@@ -180,7 +180,6 @@ import { checkLargeBlobCapability, updateAuthenticationExtensionAvailability } f
 import { closeModal, openModal } from '../../../static/scripts/shared/ui.js';
 import { showStatus } from '../../../static/scripts/shared/status.js';
 import {
-  clearAdvancedCredentials,
   clearSimpleCredentials,
   ensureAdvancedCredentialArtifactsSynced,
   getAllAdvancedCredentials,
@@ -663,6 +662,13 @@ describe('credential-display', () => {
         credentialId: 'simple-id',
         email: 'simple@example.com',
       },
+    ];
+
+    getAllStoredCredentialsInOrder.mockReturnValueOnce([]);
+    await deleteCredential(0);
+    expect(removeSimpleCredential).toHaveBeenCalledWith('simple-id', 'simple@example.com');
+
+    state.storedCredentials = [
       {
         type: 'advanced',
         userName: 'Advanced One',
@@ -672,19 +678,18 @@ describe('credential-display', () => {
       },
     ];
 
-    await deleteCredential(0);
-    expect(removeSimpleCredential).toHaveBeenCalledWith('simple-id', 'simple@example.com');
-
+    getAllStoredCredentialsInOrder.mockReturnValueOnce([]);
     await deleteCredential(0);
     expect(removeAdvancedCredential).toHaveBeenCalledWith('advanced-id', 'storage-advanced');
     expect(deleteCredentialArtifact).toHaveBeenCalledWith('storage-advanced');
 
     getAllSimpleCredentials.mockReturnValue([{ id: 1 }]);
-    getAllAdvancedCredentials.mockReturnValue([{ storageId: 'storage-a' }]);
+    getAllAdvancedCredentials.mockReturnValue([{ storageId: 'storage-a', credentialIdBase64Url: 'advanced-clear-id' }]);
+    getAllStoredCredentialsInOrder.mockReturnValueOnce([]);
 
     await clearAllCredentials();
     expect(clearSimpleCredentials).toHaveBeenCalled();
-    expect(clearAdvancedCredentials).toHaveBeenCalled();
+    expect(removeAdvancedCredential).toHaveBeenCalledWith('advanced-clear-id', 'storage-a');
     expect(deleteCredentialArtifact).toHaveBeenCalledWith('storage-a');
 
     getAllSimpleCredentials.mockReturnValue([]);
@@ -905,7 +910,7 @@ describe('credential-display', () => {
 
     await clearAllCredentials();
     expect(clearSimpleCredentials).not.toHaveBeenCalled();
-    expect(clearAdvancedCredentials).not.toHaveBeenCalled();
+    expect(deleteCredentialArtifact).not.toHaveBeenCalled();
   });
 
   it('exposes modal close helpers through exported wrappers', () => {

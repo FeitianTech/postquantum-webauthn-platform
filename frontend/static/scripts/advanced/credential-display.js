@@ -37,7 +37,6 @@ import {checkLargeBlobCapability, updateAuthenticationExtensionAvailability} fro
 import {collectSelectedHints, deriveAllowedAttachmentsFromHints} from './hints.js';
 import {ATTACHMENT_LABELS} from './constants.js';
 import {
-    clearAdvancedCredentials as clearLocalAdvancedCredentials,
     clearSimpleCredentials as clearLocalSimpleCredentials,
     ensureAdvancedCredentialArtifactsSynced,
     ensureAdvancedCredentialSnapshotsPrefetched,
@@ -79,6 +78,7 @@ let globalCursorApplyCount = 0;
 let globalCursorPreviousValues = [];
 let pendingCredentialFlash = null;
 let credentialBackgroundWarmupPromise = null;
+let credentialDeletionInProgress = false;
 
 const CREDENTIAL_FLASH_CLASS_BY_VARIANT = {
     success: 'credential-item--recent-auth-success',
@@ -186,6 +186,23 @@ function showSharedCredentialStatus(message, type) {
     SHARED_CREDENTIAL_STATUS_TABS.forEach(tabId => {
         showStatus(tabId, message, type);
     });
+}
+
+function showSharedCredentialProgress(message) {
+    SHARED_CREDENTIAL_STATUS_TABS.forEach(tabId => {
+        showProgress(tabId, message);
+    });
+}
+
+function hideSharedCredentialProgress() {
+    SHARED_CREDENTIAL_STATUS_TABS.forEach(tabId => {
+        hideProgress(tabId);
+    });
+}
+
+function setCredentialDeletionInProgress(inProgress) {
+    credentialDeletionInProgress = Boolean(inProgress);
+    updateCredentialsDisplay();
 }
 
 function normaliseCredentialIdToHex(credentialId) {
@@ -2885,7 +2902,7 @@ export function updateCredentialsDisplay() {
     const clearButtons = document.querySelectorAll('[data-credentials-clear]');
     clearButtons.forEach(button => {
         if (button instanceof HTMLButtonElement) {
-            button.disabled = !hasCredentials;
+            button.disabled = !hasCredentials || credentialDeletionInProgress;
         }
     });
 
@@ -2949,7 +2966,10 @@ export function updateCredentialsDisplay() {
         const mdsButtonHtml = (aaguidGuid && (rootStatus === true || metadataAvailable))
             ? `<button type="button" class="btn btn-small btn-secondary credential-mds-button" data-aaguid="${escapeHtml(aaguidGuid.toLowerCase())}" title="Open authenticator metadata">FIDO MDS</button>`
             : '';
-        const deleteButtonHtml = `<button class="btn btn-small btn-danger credential-delete-button" onclick="event.stopPropagation();deleteCredential(${index})">Delete</button>`;
+        const deleteButtonDisabledAttributes = credentialDeletionInProgress
+            ? ' disabled aria-disabled="true"'
+            : '';
+        const deleteButtonHtml = `<button class="btn btn-small btn-danger credential-delete-button"${deleteButtonDisabledAttributes} onclick="event.stopPropagation();deleteCredential(${index})">Delete</button>`;
         const actionsHtml = `<div class="credential-item-actions">${mdsButtonHtml}${deleteButtonHtml}</div>`;
 
         return `
@@ -4100,6 +4120,11 @@ export async function showRegistrationResultModal(credentialJson, relyingPartyIn
 }
 
 export async function deleteCredential(index) {
+    if (credentialDeletionInProgress) {
+        showSharedCredentialStatus('A credential deletion is already in progress.', 'info');
+        return;
+    }
+
     const credential = state.storedCredentials[index];
     if (!credential) {
         return;
@@ -4110,35 +4135,74 @@ export async function deleteCredential(index) {
         return;
     }
 
+    setCredentialDeletionInProgress(true);
+    dismissAllTransientMessages();
+    showSharedCredentialProgress('Deleting credential...');
+
     const identifier = credential.credentialIdBase64Url || credential.credentialId || credential.id;
     const storageId = credential.storageId || credential.localStorageId || null;
 
-    if (credential.type === 'simple') {
-        const removed = removeSimpleCredentialFromLocal(identifier, credential.email || credential.userName || credential.username);
-        if (removed) {
-            state.storedCredentials.splice(index, 1);
-            updateCredentialsDisplay();
-            showSharedCredentialStatus('Credential removed from this browser.', 'success');
-        } else {
-            showSharedCredentialStatus('Unable to remove credential from this browser.', 'error');
+    try {
+        if (credential.type === 'simple') {
+            const removed = removeSimpleCredentialFromLocal(
+                identifier,
+                credential.email || credential.userName || credential.username,
+            );
+            if (removed) {
+                await loadSavedCredentials();
+                showSharedCredentialStatus('Deletion successful.', 'success');
+            } else {
+                showSharedCredentialStatus('Unable to remove credential from this browser.', 'error');
+            }
+            return;
         }
-        return;
-    }
 
-    const removedAdvanced = removeAdvancedCredentialFromLocal(identifier, storageId);
-    if (removedAdvanced) {
-        state.storedCredentials.splice(index, 1);
-        updateCredentialsDisplay();
-        showSharedCredentialStatus('Credential removed from this browser.', 'success');
         if (storageId) {
-            await deleteCredentialArtifact(storageId);
+            const deleteResult = await deleteCredentialArtifact(storageId);
+            if (deleteResult.status === 'failed') {
+                showSharedCredentialStatus(
+                    deleteResult.error || 'Unable to delete credential from server storage.',
+                    'error',
+                );
+                return;
+            }
+
+            const removedAdvanced = removeAdvancedCredentialFromLocal(identifier, storageId);
+            if (!removedAdvanced) {
+                showSharedCredentialStatus('Credential was deleted from server but could not be removed locally.', 'error');
+                return;
+            }
+
+            await loadSavedCredentials();
+            if (deleteResult.status === 'absent') {
+                showSharedCredentialStatus('Credential was already absent from server storage and has been removed locally.', 'warning');
+                return;
+            }
+
+            showSharedCredentialStatus('Deletion successful.', 'success');
+            return;
         }
-    } else {
-        showSharedCredentialStatus('Unable to remove credential from this browser.', 'error');
+
+        const removedAdvanced = removeAdvancedCredentialFromLocal(identifier, storageId);
+        if (!removedAdvanced) {
+            showSharedCredentialStatus('Unable to remove credential from this browser.', 'error');
+            return;
+        }
+
+        await loadSavedCredentials();
+        showSharedCredentialStatus('Deletion successful.', 'success');
+    } finally {
+        hideSharedCredentialProgress();
+        setCredentialDeletionInProgress(false);
     }
 }
 
 export async function clearAllCredentials() {
+    if (credentialDeletionInProgress) {
+        showSharedCredentialStatus('A credential deletion is already in progress.', 'info');
+        return;
+    }
+
     const simpleCredentials = getAllSimpleCredentials();
     const advancedCredentials = getAllAdvancedCredentials();
 
@@ -4154,23 +4218,97 @@ export async function clearAllCredentials() {
         return;
     }
 
-    if (advancedCount > 0) {
-        clearLocalAdvancedCredentials();
-        const deletionTargets = advancedCredentials
-            .map(item => (item && typeof item === 'object' && (item.storageId || item.localStorageId)) || null)
-            .filter(id => typeof id === 'string' && id.trim());
-        if (deletionTargets.length) {
-            await Promise.allSettled(
-                deletionTargets.map(id => deleteCredentialArtifact(id.trim()))
-            );
+    setCredentialDeletionInProgress(true);
+    dismissAllTransientMessages();
+    showSharedCredentialProgress('Clearing all credentials...');
+
+    let deletedCount = 0;
+    let absentCount = 0;
+    let failedCount = 0;
+
+    try {
+        if (simpleCount > 0) {
+            clearLocalSimpleCredentials();
+            deletedCount += simpleCount;
         }
+
+        const advancedDeleteOperations = advancedCredentials.map(async credential => {
+            const identifier = credential?.credentialIdBase64Url || credential?.credentialId || credential?.id;
+            const storageId = (credential && typeof credential === 'object' && (credential.storageId || credential.localStorageId)) || null;
+
+            if (!storageId || typeof storageId !== 'string' || !storageId.trim()) {
+                const removedLocal = removeAdvancedCredentialFromLocal(identifier, null);
+                return {
+                    status: removedLocal ? 'deleted' : 'failed',
+                };
+            }
+
+            const deleteResult = await deleteCredentialArtifact(storageId.trim());
+            if (deleteResult.status === 'failed') {
+                return {
+                    status: 'failed',
+                    error: deleteResult.error || 'Unable to delete credential from server storage.',
+                };
+            }
+
+            const removedLocal = removeAdvancedCredentialFromLocal(identifier, storageId.trim());
+            if (!removedLocal) {
+                return {
+                    status: 'failed',
+                    error: 'Credential was deleted from server but could not be removed locally.',
+                };
+            }
+
+            return {
+                status: deleteResult.status,
+            };
+        });
+
+        const advancedResults = await Promise.all(advancedDeleteOperations);
+        advancedResults.forEach(result => {
+            if (result.status === 'deleted') {
+                deletedCount += 1;
+                return;
+            }
+            if (result.status === 'absent') {
+                absentCount += 1;
+                return;
+            }
+            failedCount += 1;
+        });
+
+        await loadSavedCredentials();
+
+        if (failedCount > 0) {
+            const noun = failedCount === 1 ? 'credential' : 'credentials';
+            const verb = failedCount === 1 ? 'was' : 'were';
+            showSharedCredentialStatus(
+                `Clearing completed with issues: ${failedCount} ${noun} could not be deleted from server storage and ${verb} kept.`,
+                'error',
+            );
+            return;
+        }
+
+        if (absentCount > 0) {
+            const noun = absentCount === 1 ? 'credential was' : 'credentials were';
+            showSharedCredentialStatus(
+                `Clearing complete. ${absentCount} ${noun} already absent from server storage.`,
+                'warning',
+            );
+            return;
+        }
+
+        if (deletedCount > 0) {
+            showSharedCredentialStatus('Deletion successful.', 'success');
+            return;
+        }
+
+        showSharedCredentialStatus('No saved credentials to clear.', 'info');
+    } catch (error) {
+        console.error('Failed to clear saved credentials.', error);
+        showSharedCredentialStatus('Failed to clear all credentials. Please try again.', 'error');
+    } finally {
+        hideSharedCredentialProgress();
+        setCredentialDeletionInProgress(false);
     }
-
-    if (simpleCount > 0) {
-        clearLocalSimpleCredentials();
-    }
-
-    await loadSavedCredentials();
-
-    showSharedCredentialStatus('All saved credentials removed successfully!', 'success');
 }

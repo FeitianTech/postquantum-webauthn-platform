@@ -277,26 +277,39 @@ def test_put_snapshot_route_stores_snapshot_using_merge(monkeypatch):
 
 
 @pytest.mark.parametrize(
-    "deleted,expected_status",
+    "delete_status,expected_http_status,expected_payload",
     [
-        (True, "deleted"),
-        (False, "absent"),
+        ("deleted", 200, {"status": "deleted"}),
+        ("absent", 200, {"status": "absent"}),
+        (
+            "failed",
+            500,
+            {
+                "status": "failed",
+                "error": "Unable to delete credential artifact.",
+            },
+        ),
     ],
 )
-def test_delete_credential_artifact_route_reports_status(monkeypatch, deleted, expected_status):
+def test_delete_credential_artifact_route_reports_status(
+    monkeypatch,
+    delete_status,
+    expected_http_status,
+    expected_payload,
+):
     advanced_module = pytest.importorskip("server.app.routes.advanced")
     config_module = pytest.importorskip("server.app.config")
 
     monkeypatch.setattr(advanced_module, "ensure_metadata_session_id", lambda: "session-id", raising=False)
     monkeypatch.setattr(
         advanced_module,
-        "delete_credential_artifact",
-        lambda storage_id, *, session_id=None: deleted,
+        "delete_credential_artifact_with_status",
+        lambda storage_id, *, session_id=None: delete_status,
         raising=False,
     )
 
     with config_module.app.test_client() as client:
         response = client.delete("/api/advanced/credential-artifacts/cred-6")
 
-    assert response.status_code == 200
-    assert response.get_json() == {"status": expected_status}
+    assert response.status_code == expected_http_status
+    assert response.get_json() == expected_payload

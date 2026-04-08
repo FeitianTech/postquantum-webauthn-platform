@@ -48,7 +48,7 @@ from ..config import (
     determine_rp_id,
 )
 from ..credential_artifacts import (
-    delete_credential_artifact,
+    delete_credential_artifact_with_status,
     load_credential_artifact,
     store_credential_artifact,
 )
@@ -1887,10 +1887,22 @@ def api_put_advanced_credential_snapshot(storage_id: str):
 
 @app.route("/api/advanced/credential-artifacts/<string:storage_id>", methods=["DELETE"])
 def api_delete_advanced_credential_artifact(storage_id: str):
+    if not isinstance(storage_id, str) or not storage_id.strip():
+        return jsonify({"status": "failed", "error": "Invalid storage identifier."}), 400
+
     metadata_session_id = ensure_metadata_session_id()
-    deleted = delete_credential_artifact(storage_id, session_id=metadata_session_id)
-    status = "deleted" if deleted else "absent"
-    return jsonify({"status": status})
+    status = delete_credential_artifact_with_status(
+        storage_id,
+        session_id=metadata_session_id,
+    )
+
+    if status == "deleted":
+        return jsonify({"status": "deleted"})
+
+    if status == "absent":
+        return jsonify({"status": "absent"})
+
+    return jsonify({"status": "failed", "error": "Unable to delete credential artifact."}), 500
 
 
 def datetime_from_timestamp(timestamp: float) -> str:

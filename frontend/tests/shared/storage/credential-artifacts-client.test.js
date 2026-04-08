@@ -101,17 +101,47 @@ describe('credential-artifacts-client', () => {
   });
 
   it('deleteCredentialArtifact validates and handles delete outcomes', async () => {
-    await expect(deleteCredentialArtifact('')).resolves.toBe(false);
+    await expect(deleteCredentialArtifact('')).resolves.toEqual(
+      expect.objectContaining({
+        ok: false,
+        status: 'failed',
+      }),
+    );
 
-    fetch.mockResolvedValueOnce(jsonResponse({ ok: true }));
-    await expect(deleteCredentialArtifact(' id ')).resolves.toBe(true);
+    fetch.mockResolvedValueOnce(jsonResponse({ status: 'deleted' }));
+    await expect(deleteCredentialArtifact(' id ')).resolves.toEqual({
+      ok: true,
+      status: 'deleted',
+      httpStatus: 200,
+    });
 
     const [, options] = fetch.mock.calls[0];
     expect(options.method).toBe('DELETE');
 
+    fetch.mockResolvedValueOnce(jsonResponse({ status: 'absent' }));
+    await expect(deleteCredentialArtifact('id')).resolves.toEqual({
+      ok: false,
+      status: 'absent',
+      httpStatus: 200,
+    });
+
+    fetch.mockResolvedValueOnce(jsonResponse({ status: 'failed', error: 'delete failed' }, { ok: false, status: 500 }));
+    await expect(deleteCredentialArtifact('id')).resolves.toEqual({
+      ok: false,
+      status: 'failed',
+      httpStatus: 500,
+      error: 'delete failed',
+    });
+
     fetch.mockRejectedValueOnce(new Error('delete failed'));
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    await expect(deleteCredentialArtifact('id')).resolves.toBe(false);
+    await expect(deleteCredentialArtifact('id')).resolves.toEqual(
+      expect.objectContaining({
+        ok: false,
+        status: 'failed',
+        httpStatus: null,
+      }),
+    );
     expect(warnSpy).toHaveBeenCalled();
     warnSpy.mockRestore();
   });

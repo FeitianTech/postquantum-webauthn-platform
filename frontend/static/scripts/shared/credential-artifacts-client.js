@@ -115,16 +115,78 @@ export async function updateCredentialSnapshot(storageId, snapshot) {
 export async function deleteCredentialArtifact(storageId) {
     const normalised = normaliseStorageId(storageId);
     if (!normalised) {
-        return false;
+        return {
+            ok: false,
+            status: 'failed',
+            httpStatus: null,
+            error: 'Invalid storage identifier.',
+        };
     }
 
     try {
-        await jsonFetch(`${ARTIFACT_ENDPOINT_BASE}/${encodeURIComponent(normalised)}`, {
+        const response = await fetch(`${ARTIFACT_ENDPOINT_BASE}/${encodeURIComponent(normalised)}`, {
             method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
         });
-        return true;
+
+        const contentType = response.headers.get('content-type') || '';
+        let payload = null;
+
+        if (contentType.includes('application/json')) {
+            try {
+                payload = await response.json();
+            } catch (error) {
+                payload = null;
+            }
+        } else {
+            try {
+                const text = await response.text();
+                if (typeof text === 'string' && text.trim()) {
+                    payload = { error: text.trim() };
+                }
+            } catch (error) {
+                payload = null;
+            }
+        }
+
+        const status = typeof payload?.status === 'string'
+            ? payload.status.trim().toLowerCase()
+            : 'failed';
+
+        if (response.ok && status === 'deleted') {
+            return {
+                ok: true,
+                status: 'deleted',
+                httpStatus: response.status,
+            };
+        }
+
+        if (status === 'absent') {
+            return {
+                ok: false,
+                status: 'absent',
+                httpStatus: response.status,
+            };
+        }
+
+        const errorMessage = typeof payload?.error === 'string' && payload.error.trim()
+            ? payload.error.trim()
+            : `Request failed with status ${response.status}`;
+
+        return {
+            ok: false,
+            status: 'failed',
+            httpStatus: response.status,
+            error: errorMessage,
+        };
     } catch (error) {
         console.warn('Failed to delete credential artifact', error);
-        return false;
+        return {
+            ok: false,
+            status: 'failed',
+            httpStatus: null,
+            error: error instanceof Error ? error.message : 'Delete request failed.',
+        };
     }
 }

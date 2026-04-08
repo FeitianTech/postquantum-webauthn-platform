@@ -29,6 +29,7 @@ __all__ = [
     "store_credential_artifact",
     "load_credential_artifact",
     "delete_credential_artifact",
+    "delete_credential_artifact_with_status",
 ]
 
 
@@ -269,3 +270,48 @@ def delete_credential_artifact(storage_id: Any, *, session_id: Optional[str] = N
 
     with _LOCK:
         return _delete_record(normalised, resolved_session)
+
+
+def delete_credential_artifact_with_status(
+    storage_id: Any,
+    *,
+    session_id: Optional[str] = None,
+) -> str:
+    """Delete the stored artifact for ``storage_id`` and return a status string.
+
+    Returns one of:
+    - ``"deleted"`` when the artifact existed and was deleted.
+    - ``"absent"`` when the artifact was already missing.
+    - ``"failed"`` when the deletion could not be confirmed.
+    """
+
+    normalised = _normalise_storage_id(storage_id)
+    if not normalised:
+        return "failed"
+
+    resolved_session = _resolve_session_id(session_id)
+
+    with _LOCK:
+        if _using_gcs():
+            blob_name = _artifact_blob(normalised, resolved_session)
+            try:
+                existed = blob_exists(blob_name)
+            except Exception:
+                return "failed"
+
+            try:
+                delete_blob(blob_name, missing_ok=True)
+            except Exception:
+                return "failed"
+
+            return "deleted" if existed else "absent"
+
+        path = _artifact_path(normalised)
+        try:
+            os.remove(path)
+        except FileNotFoundError:
+            return "absent"
+        except OSError:
+            return "failed"
+
+    return "deleted"
