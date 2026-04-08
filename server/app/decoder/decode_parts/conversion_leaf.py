@@ -1,16 +1,12 @@
 """Leaf conversion helpers used by decoder result payload builders."""
 from __future__ import annotations
 
-import base64
-import binascii
 import uuid
-from typing import Any, Dict, List, Mapping, Optional
+from typing import Any, Dict, Mapping, Optional
 
-from ...attestation import make_json_safe, serialize_attestation_certificate
+from ...attestation import make_json_safe
 from .binary_extract import (
     _convert_cose_key_for_display,
-    _extract_authenticator_bytes,
-    _extract_authenticator_bytes_from_attestation,
     _resolve_cose_algorithm,
 )
 
@@ -48,160 +44,6 @@ def _build_credential_overview(decoded: Mapping[str, Any]) -> Dict[str, Any]:
         overview["rawJson"] = raw_json
 
     return overview
-
-
-def _convert_attestation_entry(entry: Any) -> Dict[str, Any]:
-    if not isinstance(entry, Mapping):
-        return {}
-
-    details = entry.get("details") if isinstance(entry.get("details"), Mapping) else entry
-    payload: Dict[str, Any] = {}
-
-    fmt = None
-    if isinstance(details, Mapping):
-        fmt = details.get("attestationFormat") or details.get("fmt")
-        cbor_section = details.get("cbor") if isinstance(details.get("cbor"), Mapping) else None
-        if fmt is None and isinstance(cbor_section, Mapping):
-            fmt = cbor_section.get("fmt")
-    if fmt:
-        payload["fmt"] = fmt
-
-    raw_value = entry.get("raw")
-    if isinstance(raw_value, str) and raw_value:
-        payload["raw"] = raw_value
-
-    att_stmt = _convert_attestation_statement(details)
-    if att_stmt:
-        if "x5c" in att_stmt and not att_stmt["x5c"]:
-            certificate_detail = None
-            if isinstance(details, Mapping):
-                certificate_detail = details.get("attestationCertificate")
-                if certificate_detail is None:
-                    certificates_list = details.get("attestationCertificates")
-                    if isinstance(certificates_list, list) and certificates_list:
-                        certificate_detail = certificates_list[0]
-            if certificate_detail is not None:
-                converted = _convert_certificate_payload(certificate_detail)
-                if converted:
-                    att_stmt["x5c"] = [converted]
-        payload["attStmt"] = att_stmt
-
-    return payload
-
-
-def _convert_attestation_statement(details: Any) -> Dict[str, Any]:
-    if not isinstance(details, Mapping):
-        return {}
-
-    statement = details.get("attestationStatement") if isinstance(details.get("attestationStatement"), Mapping) else None
-    if statement is None:
-        cbor_section = details.get("cbor") if isinstance(details.get("cbor"), Mapping) else None
-        if isinstance(cbor_section, Mapping):
-            possible = cbor_section.get("attStmt")
-            if isinstance(possible, Mapping):
-                statement = possible
-
-    if not isinstance(statement, Mapping):
-        return {}
-
-    payload: Dict[str, Any] = {}
-    for key, value in statement.items():
-        if key == "x5c":
-            payload["x5c"] = _convert_certificate_chain(value)
-        else:
-            payload[key] = value
-    return payload
-
-
-def _convert_certificate_chain(value: Any) -> List[Dict[str, Any]]:
-    if not isinstance(value, list):
-        return []
-
-    certificates: List[Dict[str, Any]] = []
-    for item in value:
-        cert_payload = _convert_certificate_bytes(item)
-        if cert_payload:
-            certificates.append(cert_payload)
-    return certificates
-
-
-def _convert_certificate_bytes(value: Any) -> Dict[str, Any]:
-    cert_bytes: Optional[bytes] = None
-    if isinstance(value, (bytes, bytearray)):
-        cert_bytes = bytes(value)
-    elif isinstance(value, str):
-        cleaned = "".join(value.split())
-        padding = (-len(cleaned)) % 4
-        try:
-            cert_bytes = base64.b64decode(cleaned + "=" * padding)
-        except (ValueError, binascii.Error):
-            cert_bytes = None
-    elif isinstance(value, Mapping):
-        return _convert_certificate_payload(value)
-
-    if cert_bytes is None:
-        return {}
-
-    parsed = serialize_attestation_certificate(cert_bytes)
-    if not isinstance(parsed, Mapping):
-        return {}
-
-    parsed_copy = dict(parsed)
-    parsed_copy["derBase64"] = parsed.get("derBase64") or base64.b64encode(cert_bytes).decode("ascii")
-    parsed_copy.setdefault("pem", parsed.get("pem"))
-    return _convert_certificate_payload(parsed_copy, cert_bytes)
-
-
-def _convert_certificate_payload(
-    entry: Mapping[str, Any], cert_bytes: Optional[bytes] = None
-) -> Dict[str, Any]:
-    if not isinstance(entry, Mapping):
-        return {}
-
-    payload: Dict[str, Any] = {}
-
-    if cert_bytes is None:
-        der_base64 = entry.get("derBase64")
-        if isinstance(der_base64, str):
-            try:
-                cert_bytes = base64.b64decode(der_base64)
-            except (ValueError, binascii.Error):
-                cert_bytes = None
-
-    if cert_bytes is not None:
-        payload["raw"] = cert_bytes.hex()
-
-    pem_value = entry.get("pem")
-    if isinstance(pem_value, str) and pem_value.strip():
-        payload["pem"] = pem_value
-
-    parsed_entry = {key: value for key, value in entry.items() if key != "summary"}
-    payload["parsedX5c"] = parsed_entry
-
-    return payload
-
-
-def _build_authenticator_section(
-    response: Any,
-    attestation_entry: Any,
-) -> Dict[str, Any]:
-    response_mapping = response if isinstance(response, Mapping) else {}
-    attestation_mapping = attestation_entry if isinstance(attestation_entry, Mapping) else {}
-
-    auth_bytes = _extract_authenticator_bytes(response_mapping, attestation_entry)
-
-    details = None
-    auth_entry = response_mapping.get("authenticatorData")
-    if isinstance(auth_entry, Mapping):
-        details = auth_entry.get("details")
-    if details is None and isinstance(attestation_mapping.get("details"), Mapping):
-        details = attestation_mapping["details"].get("authenticatorData")
-
-    fallback_alg = None
-    if isinstance(response_mapping, Mapping):
-        fallback_alg = response_mapping.get("publicKeyAlgorithm")
-
-    return _build_authenticator_data_payload(auth_bytes, details, fallback_alg)
 
 
 def _build_authenticator_data_payload(
