@@ -7,6 +7,7 @@ import hashlib
 import json
 import math
 import re
+import sys
 import string
 import struct
 import uuid
@@ -30,6 +31,138 @@ from ..attestation import (
     serialize_attestation_certificate,
     summarize_authenticator_extensions,
 )
+from .decode_parts.key_utils import (
+    MISSING as _MISSING,
+    coerce_cbor_bytes as _coerce_cbor_bytes,
+    generate_key_variants as _generate_key_variants,
+    get_mapping_entry as _get_mapping_entry,
+    hex_json_safe as _hex_json_safe,
+    int_to_key_bytes as _int_to_key_bytes,
+    key_variant_identity as _key_variant_identity,
+    make_hex_only as _make_hex_only,
+    stringify_mapping_keys as _stringify_mapping_keys,
+)
+from .decode_parts.certificate_extensions import (
+    _DEVICE_IDENTIFIER_NAMES,
+    _build_certificate_extensions_lines,
+    _format_certificate_extension_header,
+    _format_certificate_extension_value,
+    _format_device_identifier_line,
+)
+from .decode_parts.certificate_summary import (
+    _build_certificate_summary_lines as _build_certificate_summary_lines_impl,
+    _build_fingerprint_lines,
+    _build_signature_lines,
+    _build_subject_key_identifier_lines,
+    _build_subject_public_key_info_lines,
+    _format_certificate_time,
+    _format_public_key_point_lines,
+)
+from .decode_parts import cbor_core as _cbor_core
+from .decode_parts.cbor_sequence import _decode_cbor_sequence_impl
+from .decode_parts import ctap_repair_leaf as _ctap_repair_leaf
+from .decode_parts.ctap_classify import (
+    _GET_ASSERTION_REQUEST_LABELS,
+    _GET_ASSERTION_RESPONSE_LABELS,
+    _MAKE_CREDENTIAL_REQUEST_LABELS,
+    _MAKE_CREDENTIAL_RESPONSE_LABELS,
+    _build_labeled_ctap_map,
+    _classify_ctap_map,
+    _format_ctap_entry_key,
+    _looks_like_get_assertion_output,
+    _looks_like_get_assertion_request,
+    _looks_like_make_credential_output,
+    _looks_like_make_credential_request,
+    _resolve_ctap_label,
+)
+from .decode_parts.binary_extract import (
+    _convert_cose_key_for_display,
+    _decode_base64_field,
+    _extract_bytes_from_binary,
+    _extract_hex_from_binary,
+    _resolve_cose_algorithm,
+)
+from .decode_parts.summary_leaf import (
+    _append_multiline_field,
+    _append_simple_field,
+    _build_authenticator_data_lines,
+    _collect_attested_info,
+    _format_boolean,
+    _format_counter_value,
+    _format_flag_line,
+    _format_json_block,
+    _parse_attested_data,
+)
+from .decode_parts.conversion_leaf import (
+    _build_authenticator_data_payload,
+    _build_credential_overview,
+    _build_credential_payload,
+    _build_flag_payload,
+    _collect_response_extras,
+    _convert_client_data_entry,
+)
+from .decode_parts.ctap_convert_leaf import (
+    _attempt_decode_cbor_map,
+    _convert_ctap_credential_descriptor,
+    _convert_optional_ctap_field,
+    _normalize_user_mapping,
+)
+from .decode_parts.conversion_cert_leaf import (
+    _convert_attestation_entry_impl,
+    _convert_attestation_statement_impl,
+    _convert_certificate_bytes_impl,
+    _convert_certificate_chain_impl,
+    _convert_certificate_payload_impl,
+)
+
+
+def _extract_authenticator_bytes(response: Any, attestation_entry: Any = None) -> Optional[bytes]:
+    module = sys.modules.get(__name__)
+    extract_bytes = getattr(module, "_extract_bytes_from_binary", _extract_bytes_from_binary)
+    extract_from_attestation = getattr(
+        module,
+        "_extract_authenticator_bytes_from_attestation",
+        _extract_authenticator_bytes_from_attestation,
+    )
+
+    if isinstance(response, Mapping):
+        auth_entry = response.get("authenticatorData")
+        auth_bytes = extract_bytes(auth_entry)
+        if auth_bytes is not None:
+            return auth_bytes
+        if attestation_entry is None:
+            attestation_entry = response.get("attestationObject")
+    return extract_from_attestation(attestation_entry)
+
+
+def _extract_authenticator_bytes_from_attestation(attestation_entry: Any) -> Optional[bytes]:
+    module = sys.modules.get(__name__)
+    extract_bytes = getattr(module, "_extract_bytes_from_binary", _extract_bytes_from_binary)
+    attestation_class = getattr(module, "AttestationObject", AttestationObject)
+
+    attestation_bytes = extract_bytes(attestation_entry)
+    if attestation_bytes is None and isinstance(attestation_entry, Mapping):
+        raw_value = attestation_entry.get("raw")
+        if isinstance(raw_value, str) and raw_value:
+            cleaned = "".join(raw_value.split())
+            padding = (-len(cleaned)) % 4
+            try:
+                attestation_bytes = base64.b64decode(cleaned + "=" * padding)
+            except (ValueError, binascii.Error):
+                attestation_bytes = None
+
+    if attestation_bytes is None:
+        return None
+
+    try:
+        attestation = attestation_class(attestation_bytes)
+    except Exception:
+        return None
+
+    try:
+        return bytes(attestation.auth_data)
+    except Exception:
+        return None
 
 __all__ = ["decode_payload_text"]
 
@@ -76,113 +209,61 @@ def _is_padding_bytes(data: bytes) -> bool:
         return True
     return all(byte in (0x00, 0xFF) for byte in data)
 
-_MISSING = object()
+
+# Compatibility shims for tests and callers that monkeypatch decoder-local helpers.
+_CborDecodingError = _cbor_core._CborDecodingError
+_ensure_cbor_available = _cbor_core._ensure_cbor_available
+_float_summary = _cbor_core._float_summary
+_read_cbor_length = _cbor_core._read_cbor_length
+_lenient_read_uint = _cbor_core._lenient_read_uint
+_lenient_decode_from = _cbor_core._lenient_decode_from
+_structure_to_value = _cbor_core._structure_to_value
 
 
-def _int_to_key_bytes(value: int) -> bytes:
-    if value == 0:
-        return b"\x00"
-    length = max(1, (value.bit_length() + 7) // 8)
-    return value.to_bytes(length, "big", signed=False)
+def _parse_cbor_item(data: bytes, offset: int) -> Tuple[Dict[str, Any], int]:
+    original_read_cbor_length = _cbor_core._read_cbor_length
+    original_ensure_cbor_available = _cbor_core._ensure_cbor_available
+    original_float_summary = _cbor_core._float_summary
+    try:
+        _cbor_core._read_cbor_length = _read_cbor_length
+        _cbor_core._ensure_cbor_available = _ensure_cbor_available
+        _cbor_core._float_summary = _float_summary
+        return _cbor_core._parse_cbor_item(data, offset)
+    finally:
+        _cbor_core._read_cbor_length = original_read_cbor_length
+        _cbor_core._ensure_cbor_available = original_ensure_cbor_available
+        _cbor_core._float_summary = original_float_summary
 
 
-def _generate_key_variants(key: Any) -> Iterable[Any]:
-    yield key
-
-    if isinstance(key, int):
-        yield str(key)
-        if key >= 0:
-            yield _int_to_key_bytes(key)
-        return
-
-    if isinstance(key, str):
-        stripped = key.strip()
-        if not stripped:
-            return
-        if stripped.isdigit():
-            numeric = int(stripped, 10)
-            yield numeric
-            if numeric >= 0:
-                yield _int_to_key_bytes(numeric)
-        elif stripped.lower().startswith("0x"):
-            try:
-                numeric = int(stripped, 16)
-            except ValueError:
-                return
-            yield numeric
-            if numeric >= 0:
-                yield _int_to_key_bytes(numeric)
-        return
-
-    if isinstance(key, (bytes, bytearray)):
-        raw = bytes(key)
-        yield raw
-        if 1 <= len(raw) <= 8:
-            numeric = int.from_bytes(raw, "big", signed=False)
-            yield numeric
-            yield str(numeric)
-        return
-
-    if isinstance(key, ByteBuffer):
-        raw = key.getvalue()
-        yield raw
-        if 1 <= len(raw) <= 8:
-            numeric = int.from_bytes(raw, "big", signed=False)
-            yield numeric
-            yield str(numeric)
+def _decode_cbor_structure(data: bytes) -> Tuple[Dict[str, Any], int]:
+    node, offset = _parse_cbor_item(data, 0)
+    node.setdefault("byteLength", offset)
+    return node, offset
 
 
-def _key_variant_identity(key: Any) -> Tuple[str, Any]:
-    if isinstance(key, (bytes, bytearray)):
-        return ("bytes", bytes(key))
-    return ("other", key)
+_derive_alg_from_auth_data = _ctap_repair_leaf._derive_alg_from_auth_data
+_extract_mapping_bytes = _ctap_repair_leaf._extract_mapping_bytes
+_extract_mapping_string = _ctap_repair_leaf._extract_mapping_string
+_locate_get_assertion_trailing_offset = _ctap_repair_leaf._locate_get_assertion_trailing_offset
+_merge_ctap_make_credential = _ctap_repair_leaf._merge_ctap_make_credential
+_merge_trailing_signature = _ctap_repair_leaf._merge_trailing_signature
+_repair_make_credential_entries = _ctap_repair_leaf._repair_make_credential_entries
+_split_get_assertion_trailing_fields = _ctap_repair_leaf._split_get_assertion_trailing_fields
 
 
-def _get_mapping_entry(mapping: Mapping[Any, Any], *keys: Any) -> Any:
-    if not isinstance(mapping, Mapping):
-        return _MISSING
+def _extract_get_assertion_trailing_from_raw(
+    raw_bytes: bytes,
+) -> Tuple[Optional[bytes], Dict[int, Any]]:
+    original_locate_trailing_offset = _ctap_repair_leaf._locate_get_assertion_trailing_offset
+    original_lenient_decode = _ctap_repair_leaf._lenient_decode_from
+    try:
+        _ctap_repair_leaf._locate_get_assertion_trailing_offset = _locate_get_assertion_trailing_offset
+        _ctap_repair_leaf._lenient_decode_from = _lenient_decode_from
+        return _ctap_repair_leaf._extract_get_assertion_trailing_from_raw(raw_bytes)
+    finally:
+        _ctap_repair_leaf._locate_get_assertion_trailing_offset = original_locate_trailing_offset
+        _ctap_repair_leaf._lenient_decode_from = original_lenient_decode
 
-    seen: set = set()
-    for original in keys:
-        for variant in _generate_key_variants(original):
-            identity = _key_variant_identity(variant)
-            if identity in seen:
-                continue
-            seen.add(identity)
-            candidate = mapping.get(variant, _MISSING)
-            if candidate is not _MISSING:
-                return candidate
-    return _MISSING
-
-
-def _coerce_cbor_bytes(value: Any) -> Optional[bytes]:
-    if isinstance(value, ByteBuffer):
-        return value.getvalue()
-    if isinstance(value, (bytes, bytearray, memoryview)):
-        return bytes(value)
-    return None
-
-
-def _stringify_mapping_keys(value: Any) -> Any:
-    if isinstance(value, Mapping):
-        return {str(key): _stringify_mapping_keys(val) for key, val in value.items()}
-    if isinstance(value, list):
-        return [_stringify_mapping_keys(item) for item in value]
-    return value
-def _make_hex_only(value: Any) -> Any:
-    if isinstance(value, ByteBuffer):
-        return value.getvalue().hex()
-    if isinstance(value, (bytes, bytearray, memoryview)):
-        return bytes(value).hex()
-    if isinstance(value, Mapping):
-        return {str(key): _make_hex_only(val) for key, val in value.items()}
-    if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
-        return [_make_hex_only(item) for item in value]
-    return value
-
-
-def _hex_json_safe(value: Any) -> Any:
-    return _make_hex_only(value)
 
 
 def _json_safe_with_stringified_keys(value: Any) -> Any:
@@ -514,466 +595,6 @@ def _try_decode_authenticator_data(data: bytes, encoding: str) -> Optional[Dict[
     }
 
 
-class _CborDecodingError(ValueError):
-    """Internal error raised when a CBOR payload cannot be parsed."""
-
-    def __init__(self, message: str, offset: int) -> None:
-        super().__init__(message)
-        self.offset = offset
-
-
-def _ensure_cbor_available(data: bytes, offset: int, length: int) -> None:
-    if length < 0 or offset + length > len(data):
-        raise _CborDecodingError("Unexpected end of CBOR data.", offset)
-
-
-def _read_cbor_length(
-    info: int, data: bytes, offset: int, *, allow_indefinite: bool = False
-) -> Tuple[Optional[int], int]:
-    if info < 24:
-        return info, offset
-    if info == 24:
-        _ensure_cbor_available(data, offset, 1)
-        return data[offset], offset + 1
-    if info == 25:
-        _ensure_cbor_available(data, offset, 2)
-        return int.from_bytes(data[offset : offset + 2], "big"), offset + 2
-    if info == 26:
-        _ensure_cbor_available(data, offset, 4)
-        return int.from_bytes(data[offset : offset + 4], "big"), offset + 4
-    if info == 27:
-        _ensure_cbor_available(data, offset, 8)
-        return int.from_bytes(data[offset : offset + 8], "big"), offset + 8
-    if info == 30:
-        _ensure_cbor_available(data, offset, 8)
-        return int.from_bytes(data[offset : offset + 8], "big"), offset + 8
-    if info == 31 and allow_indefinite:
-        return None, offset
-    raise _CborDecodingError("Unsupported CBOR additional information.", offset)
-
-
-def _float_summary(value: float) -> str:
-    if math.isnan(value):
-        return "float(NaN)"
-    if math.isinf(value):
-        return "float(+Infinity)" if value > 0 else "float(-Infinity)"
-    return f"float({value})"
-
-
-def _parse_cbor_item(data: bytes, offset: int) -> Tuple[Dict[str, Any], int]:
-    if offset >= len(data):
-        raise _CborDecodingError("Unexpected end of CBOR data.", offset)
-
-    initial = data[offset]
-    offset += 1
-    major_type = initial >> 5
-    info = initial & 0x1F
-
-    if major_type == 0:
-        if info == 30:
-            node = {
-                "majorType": 0,
-                "type": "unsigned",
-                "value": 30,
-                "summary": "30",
-            }
-            return node, offset
-        value, offset = _read_cbor_length(info, data, offset)
-        if value is None:
-            raise _CborDecodingError("Invalid indefinite length for unsigned integer.", offset)
-        node = {"majorType": 0, "type": "unsigned", "value": value, "summary": str(value)}
-        return node, offset
-
-    if major_type == 1:
-        if info == 30:
-            actual = -31
-            node = {"majorType": 1, "type": "negative", "value": actual, "summary": str(actual)}
-            return node, offset
-        value, offset = _read_cbor_length(info, data, offset)
-        if value is None:
-            raise _CborDecodingError("Invalid indefinite length for negative integer.", offset)
-        actual = -1 - value
-        node = {"majorType": 1, "type": "negative", "value": actual, "summary": str(actual)}
-        return node, offset
-
-    if major_type == 2:
-        length, offset = _read_cbor_length(info, data, offset, allow_indefinite=True)
-        if length is None:
-            segments: List[Dict[str, Any]] = []
-            raw_segments: List[bytes] = []
-            while True:
-                if offset >= len(data):
-                    break
-                if data[offset] == 0xFF:
-                    offset += 1
-                    break
-                try:
-                    segment, offset = _parse_cbor_item(data, offset)
-                except _CborDecodingError:
-                    break
-                if segment.get("majorType") != 2:
-                    raise _CborDecodingError(
-                        "Indefinite byte string segment is not a byte string.", offset
-                    )
-                segments.append(segment)
-                segment_hex = segment.get("hex")
-                segment_data = bytes.fromhex(segment_hex) if isinstance(segment_hex, str) else b""
-                raw_segments.append(segment_data)
-            raw = b"".join(raw_segments)
-            node = {
-                "majorType": 2,
-                "type": "byte string",
-                "length": len(raw),
-                "hex": raw.hex(),
-                "base64": base64.b64encode(raw).decode("ascii"),
-                "base64url": encode_base64url(raw),
-                "indefinite": True,
-                "chunks": segments,
-            }
-            node["summary"] = f"bytes[{node['length']}]"
-            return node, offset
-        try:
-            _ensure_cbor_available(data, offset, length)
-        except _CborDecodingError:
-            available = max(len(data) - offset, 0)
-            raw = data[offset : offset + available]
-            offset += available
-            node = {
-                "majorType": 2,
-                "type": "byte string",
-                "length": length,
-                "hex": raw.hex(),
-                "base64": base64.b64encode(raw).decode("ascii"),
-                "base64url": encode_base64url(raw),
-                "truncated": True,
-            }
-            node["summary"] = f"bytes[{available}] (truncated from {length})"
-            return node, offset
-        raw = data[offset : offset + length]
-        offset += length
-        node = {
-            "majorType": 2,
-            "type": "byte string",
-            "length": length,
-            "hex": raw.hex(),
-            "base64": base64.b64encode(raw).decode("ascii"),
-            "base64url": encode_base64url(raw),
-        }
-        node["summary"] = f"bytes[{length}]"
-        return node, offset
-
-    if major_type == 3:
-        length, offset = _read_cbor_length(info, data, offset, allow_indefinite=True)
-        if length is None:
-            segments: List[Dict[str, Any]] = []
-            text_parts: List[str] = []
-            while True:
-                if offset >= len(data):
-                    break
-                if data[offset] == 0xFF:
-                    offset += 1
-                    break
-                try:
-                    segment, offset = _parse_cbor_item(data, offset)
-                except _CborDecodingError:
-                    break
-                if segment.get("majorType") != 3:
-                    raise _CborDecodingError(
-                        "Indefinite text string segment is not a text string.", offset
-                    )
-                segments.append(segment)
-                text_parts.append(str(segment.get("value", "")))
-            value = "".join(text_parts)
-            byte_length = len(value.encode("utf-8"))
-            node = {
-                "majorType": 3,
-                "type": "text string",
-                "length": byte_length,
-                "value": value,
-                "indefinite": True,
-                "segments": segments,
-            }
-            summary = value if len(value) <= 32 else f"{value[:29]}..."
-            node["summary"] = f'"{summary}"'
-            return node, offset
-        _ensure_cbor_available(data, offset, length)
-        raw = data[offset : offset + length]
-        offset += length
-        try:
-            value = raw.decode("utf-8")
-            summary = value if len(value) <= 32 else f"{value[:29]}..."
-            node = {
-                "majorType": 3,
-                "type": "text string",
-                "length": length,
-                "value": value,
-                "summary": f'"{summary}"',
-            }
-        except UnicodeDecodeError:
-            node = {
-                "majorType": 3,
-                "type": "text string",
-                "length": length,
-                "hex": raw.hex(),
-                "error": "Invalid UTF-8 in text string.",
-                "summary": f"text[{length}]",
-            }
-        return node, offset
-
-    if major_type == 4:
-        length, offset = _read_cbor_length(info, data, offset, allow_indefinite=True)
-        items: List[Dict[str, Any]] = []
-        if length is None:
-            while True:
-                if offset >= len(data):
-                    break
-                if data[offset] == 0xFF:
-                    offset += 1
-                    break
-                try:
-                    item, offset = _parse_cbor_item(data, offset)
-                except _CborDecodingError:
-                    break
-                items.append(item)
-            length = len(items)
-            node = {
-                "majorType": 4,
-                "type": "array",
-                "length": length,
-                "items": items,
-                "indefinite": True,
-            }
-        else:
-            for _ in range(length):
-                if offset >= len(data):
-                    break
-                try:
-                    item, offset = _parse_cbor_item(data, offset)
-                except _CborDecodingError:
-                    break
-                items.append(item)
-            node = {"majorType": 4, "type": "array", "length": length, "items": items}
-        node["summary"] = f"array[{node['length']}]"
-        return node, offset
-
-    if major_type == 5:
-        length, offset = _read_cbor_length(info, data, offset, allow_indefinite=True)
-        entries: List[Dict[str, Any]] = []
-        if length is None:
-            while True:
-                if offset >= len(data):
-                    break
-                if data[offset] == 0xFF:
-                    offset += 1
-                    break
-                try:
-                    key, offset = _parse_cbor_item(data, offset)
-                    if offset >= len(data):
-                        break
-                    if data[offset] == 0xFF:
-                        break
-                    value, offset = _parse_cbor_item(data, offset)
-                except _CborDecodingError:
-                    break
-                entry = {
-                    "keySummary": key.get("summary"),
-                    "key": key,
-                    "value": value,
-                }
-                summary = value.get("summary")
-                if summary is not None:
-                    entry["valueSummary"] = summary
-                entries.append(entry)
-            length = len(entries)
-            node = {
-                "majorType": 5,
-                "type": "map",
-                "length": length,
-                "entries": entries,
-                "indefinite": True,
-            }
-        else:
-            for _ in range(length):
-                if offset >= len(data):
-                    break
-                try:
-                    key, offset = _parse_cbor_item(data, offset)
-                    value, offset = _parse_cbor_item(data, offset)
-                except _CborDecodingError:
-                    break
-                entry = {
-                    "keySummary": key.get("summary"),
-                    "key": key,
-                    "value": value,
-                }
-                summary = value.get("summary")
-                if summary is not None:
-                    entry["valueSummary"] = summary
-                entries.append(entry)
-            node = {"majorType": 5, "type": "map", "length": length, "entries": entries}
-        node["summary"] = f"map[{node['length']}]"
-        return node, offset
-
-    if major_type == 6:
-        tag_value, offset = _read_cbor_length(info, data, offset)
-        if tag_value is None:
-            raise _CborDecodingError("Invalid indefinite length for CBOR tag.", offset)
-        tagged_item, offset = _parse_cbor_item(data, offset)
-        node = {
-            "majorType": 6,
-            "type": "tag",
-            "tag": tag_value,
-            "value": tagged_item,
-            "summary": f"tag({tag_value})",
-        }
-        return node, offset
-
-    if major_type == 7:
-        if info == 20:
-            return {"majorType": 7, "type": "boolean", "value": False, "summary": "false"}, offset
-        if info == 21:
-            return {"majorType": 7, "type": "boolean", "value": True, "summary": "true"}, offset
-        if info == 22:
-            return {"majorType": 7, "type": "null", "summary": "null"}, offset
-        if info == 23:
-            return {"majorType": 7, "type": "undefined", "summary": "undefined"}, offset
-        if info == 24:
-            _ensure_cbor_available(data, offset, 1)
-            simple_value = data[offset]
-            offset += 1
-            summary = f"simple({simple_value})"
-            return {
-                "majorType": 7,
-                "type": "simple",
-                "value": simple_value,
-                "summary": summary,
-            }, offset
-        if info == 25:
-            _ensure_cbor_available(data, offset, 2)
-            raw = data[offset : offset + 2]
-            offset += 2
-            value = struct.unpack(">e", raw)[0]
-            return {
-                "majorType": 7,
-                "type": "float",
-                "precision": "half",
-                "value": value,
-                "summary": _float_summary(value),
-            }, offset
-        if info == 26:
-            _ensure_cbor_available(data, offset, 4)
-            raw = data[offset : offset + 4]
-            offset += 4
-            value = struct.unpack(">f", raw)[0]
-            return {
-                "majorType": 7,
-                "type": "float",
-                "precision": "single",
-                "value": value,
-                "summary": _float_summary(value),
-            }, offset
-        if info == 27:
-            _ensure_cbor_available(data, offset, 8)
-            raw = data[offset : offset + 8]
-            offset += 8
-            value = struct.unpack(">d", raw)[0]
-            return {
-                "majorType": 7,
-                "type": "float",
-                "precision": "double",
-                "value": value,
-                "summary": _float_summary(value),
-            }, offset
-        if info == 31:
-            raise _CborDecodingError("Unexpected break code outside indefinite container.", offset)
-        summary = f"simple({info})"
-        return {"majorType": 7, "type": "simple", "value": info, "summary": summary}, offset
-
-    raise _CborDecodingError("Unsupported CBOR major type.", offset)
-
-
-def _decode_cbor_structure(data: bytes) -> Tuple[Dict[str, Any], int]:
-    node, offset = _parse_cbor_item(data, 0)
-    node.setdefault("byteLength", offset)
-    return node, offset
-
-
-def _structure_to_value(node: Mapping[str, Any]) -> Any:
-    major_type = node.get("majorType")
-    node_type = node.get("type")
-
-    if major_type in (0, 1, 7):
-        if node_type == "null":
-            return None
-        if node_type == "undefined":
-            return None
-        if node_type == "boolean":
-            return bool(node.get("value"))
-        return node.get("value")
-
-    if major_type == 2:
-        hex_value = node.get("hex")
-        if isinstance(hex_value, str):
-            try:
-                return bytes.fromhex(hex_value)
-            except ValueError:
-                return b""
-        chunks = node.get("chunks")
-        if isinstance(chunks, Sequence):
-            return b"".join(
-                bytes(_structure_to_value(chunk) or b"")  # type: ignore[arg-type]
-                for chunk in chunks
-            )
-        return b""
-
-    if major_type == 3:
-        text_value = node.get("value")
-        if isinstance(text_value, str):
-            return text_value
-        return ""
-
-    if major_type == 4:
-        items = node.get("items")
-        if not isinstance(items, Sequence):
-            return []
-        return [_structure_to_value(item) for item in items]
-
-    if major_type == 5:
-        entries = node.get("entries")
-        if not isinstance(entries, Sequence):
-            return {}
-        result: Dict[Any, Any] = {}
-        for entry in entries:
-            if not isinstance(entry, Mapping):
-                continue
-            key_node = entry.get("key")
-            value_node = entry.get("value")
-            key = _structure_to_value(key_node) if isinstance(key_node, Mapping) else None
-            value = (
-                _structure_to_value(value_node)
-                if isinstance(value_node, Mapping)
-                else value_node
-            )
-            if key is None:
-                continue
-            try:
-                result[key] = value
-            except TypeError:
-                result[str(key)] = value
-        return result
-
-    if major_type == 6:
-        tagged_value = node.get("value")
-        converted = (
-            _structure_to_value(tagged_value)
-            if isinstance(tagged_value, Mapping)
-            else tagged_value
-        )
-        return {"tag": node.get("tag"), "value": converted}
-
-    return node.get("value")
-
-
 def _expand_cbor_value(value: Any) -> Any:
     if isinstance(value, ByteBuffer):
         return _binary_summary(value.getvalue())
@@ -989,583 +610,22 @@ def _expand_cbor_value(value: Any) -> Any:
     return make_json_safe(value)
 
 
-def _lenient_read_uint(info: int, data: bytes, offset: int) -> Tuple[int, int]:
-    if info <= 23:
-        return info, offset
-    if info == 24:
-        if offset >= len(data):
-            return 0, offset
-        return data[offset], offset + 1
-    if info == 25:
-        if offset + 2 > len(data):
-            return 0, len(data)
-        return int.from_bytes(data[offset : offset + 2], "big"), offset + 2
-    if info == 26:
-        if offset + 4 > len(data):
-            return 0, len(data)
-        return int.from_bytes(data[offset : offset + 4], "big"), offset + 4
-    if info == 27:
-        if offset + 8 > len(data):
-            return 0, len(data)
-        return int.from_bytes(data[offset : offset + 8], "big"), offset + 8
-    if info in {28, 29, 30}:
-        return info, offset
-    return 0, offset
-
-
-def _lenient_decode_from(data: bytes, offset: int = 0) -> Tuple[Any, int]:
-    if offset >= len(data):
-        return None, len(data)
-
-    initial = data[offset]
-    offset += 1
-    major_type = initial >> 5
-    info = initial & 0x1F
-
-    if major_type == 0:
-        value, offset = _lenient_read_uint(info, data, offset)
-        return value, offset
-
-    if major_type == 1:
-        value, offset = _lenient_read_uint(info, data, offset)
-        return -1 - value, offset
-
-    if major_type == 2:
-        if info == 31:
-            chunks: List[bytes] = []
-            while offset < len(data):
-                if data[offset] == 0xFF:
-                    offset += 1
-                    break
-                chunk, offset = _lenient_decode_from(data, offset)
-                if isinstance(chunk, bytes):
-                    chunks.append(chunk)
-                else:
-                    break
-            return b"".join(chunks), offset
-        length, offset = _lenient_read_uint(info, data, offset)
-        length = min(length, len(data) - offset)
-        raw = data[offset : offset + length]
-        offset += length
-        return raw, offset
-
-    if major_type == 3:
-        if info == 31:
-            parts: List[str] = []
-            while offset < len(data):
-                if data[offset] == 0xFF:
-                    offset += 1
-                    break
-                segment, offset = _lenient_decode_from(data, offset)
-                if isinstance(segment, str):
-                    parts.append(segment)
-            return "".join(parts), offset
-        length, offset = _lenient_read_uint(info, data, offset)
-        length = min(length, len(data) - offset)
-        raw = data[offset : offset + length]
-        offset += length
-        try:
-            value = raw.decode("utf-8")
-        except UnicodeDecodeError:
-            value = raw.decode("utf-8", errors="replace")
-        return value, offset
-
-    if major_type == 4:
-        items: List[Any] = []
-        if info == 31:
-            while offset < len(data):
-                if data[offset] == 0xFF:
-                    offset += 1
-                    break
-                item, offset = _lenient_decode_from(data, offset)
-                if item is None and offset >= len(data):
-                    break
-                items.append(item)
-            return items, offset
-        length, offset = _lenient_read_uint(info, data, offset)
-        for _ in range(length):
-            if offset >= len(data):
-                break
-            item, offset = _lenient_decode_from(data, offset)
-            if item is None and offset >= len(data):
-                break
-            items.append(item)
-        return items, offset
-
-    if major_type == 5:
-        mapping: Dict[Any, Any] = {}
-        if info == 31:
-            while offset < len(data):
-                if data[offset] == 0xFF:
-                    offset += 1
-                    break
-                key, offset = _lenient_decode_from(data, offset)
-                value, offset = _lenient_decode_from(data, offset)
-                if key is None or value is None:
-                    break
-                try:
-                    mapping[key] = value
-                except TypeError:
-                    mapping[str(key)] = value
-            return mapping, offset
-        length, offset = _lenient_read_uint(info, data, offset)
-        for _ in range(length):
-            if offset >= len(data):
-                break
-            key, offset = _lenient_decode_from(data, offset)
-            if key is None and offset >= len(data):
-                break
-            value, offset = _lenient_decode_from(data, offset)
-            if value is None and offset >= len(data):
-                break
-            try:
-                mapping[key] = value
-            except TypeError:
-                mapping[str(key)] = value
-        return mapping, offset
-
-    if major_type == 6:
-        tag_value, offset = _lenient_read_uint(info, data, offset)
-        tagged_item, offset = _lenient_decode_from(data, offset)
-        return {"tag": tag_value, "value": tagged_item}, offset
-
-    if major_type == 7:
-        if info == 20:
-            return False, offset
-        if info == 21:
-            return True, offset
-        if info == 22:
-            return None, offset
-        if info == 23:
-            return None, offset
-        if info == 24:
-            if offset < len(data):
-                value = data[offset]
-            else:
-                value = 0
-            return value, offset + 1
-        if info == 25:
-            if offset + 2 <= len(data):
-                raw = data[offset : offset + 2]
-                offset += 2
-                return struct.unpack(">e", raw)[0], offset
-            return 0.0, len(data)
-        if info == 26:
-            if offset + 4 <= len(data):
-                raw = data[offset : offset + 4]
-                offset += 4
-                return struct.unpack(">f", raw)[0], offset
-            return 0.0, len(data)
-        if info == 27:
-            if offset + 8 <= len(data):
-                raw = data[offset : offset + 8]
-                offset += 8
-                return struct.unpack(">d", raw)[0], offset
-            return 0.0, len(data)
-        return info, offset
-
-    return None, offset
-
-
 def _decode_cbor_sequence(payload: bytes) -> Tuple[List[Dict[str, Any]], List[Any], int, bytes]:
-    structures: List[Dict[str, Any]] = []
-    values: List[Any] = []
-    consumed_total = 0
-    remaining = payload
+    def _cbor2_decode_with_consumed(data: bytes) -> Tuple[Any, int]:
+        fp = BytesIO(data)
+        decoder = cbor2.CBORDecoder(fp)
+        return decoder.decode(), fp.tell()
 
-    while remaining:
-        None
-        predecoded_structure: Optional[Dict[str, Any]] = None
-        try:
-            value, rest_after_value = cbor.decode_from(remaining)
-            consumed_value = len(remaining) - len(rest_after_value)
-        except Exception:
-            try:
-                fp = BytesIO(remaining)
-                decoder = cbor2.CBORDecoder(fp)
-                value = decoder.decode()
-            except Exception:
-                try:
-                    structure, consumed_fallback = _decode_cbor_structure(remaining)
-                except _CborDecodingError:
-                    try:
-                        value, consumed_fallback = _lenient_decode_from(remaining)
-                    except Exception:
-                        break
-                    else:
-                        consumed_value = consumed_fallback
-                        remaining[consumed_fallback:]
-                        structure = {
-                            "summary": "Decoded value (lenient)",
-                            "type": type(value).__name__,
-                            "value": _json_safe_with_stringified_keys(value),
-                            "byteLength": consumed_fallback,
-                            "lenient": True,
-                        }
-                        predecoded_structure = structure
-                else:
-                    value = _structure_to_value(structure)
-                    consumed_value = consumed_fallback
-                    remaining[consumed_fallback:]
-                    predecoded_structure = structure
-            else:
-                consumed_value = fp.tell()
-                remaining[consumed_value:]
-
-        if consumed_value is None or consumed_value <= 0:
-            break
-
-        try:
-            if predecoded_structure is not None:
-                structure = predecoded_structure
-                consumed_struct = predecoded_structure.get("byteLength", consumed_value)
-            else:
-                structure, consumed_struct = _decode_cbor_structure(remaining)
-            consumed = consumed_struct
-        except _CborDecodingError:
-            structure = {
-                "summary": "Decoded value",
-                "type": type(value).__name__,
-                "value": _json_safe_with_stringified_keys(value),
-                "byteLength": consumed_value,
-            }
-            consumed = consumed_value
-        else:
-            if consumed <= 0:
-                consumed = consumed_value
-
-        if consumed <= 0:
-            break
-
-        structures.append(structure)
-        values.append(value)
-        consumed_total += consumed
-        remaining = remaining[consumed:]
-
-    return structures, values, consumed_total, remaining
-
-
-def _merge_ctap_make_credential(
-    structure: Dict[str, Any],
-    value: Mapping[Any, Any],
-    extra_structures: List[Dict[str, Any]],
-    extra_values: List[Any],
-) -> Tuple[Dict[str, Any], Mapping[Any, Any], List[Dict[str, Any]], List[Any], Optional[bytes]]:
-    signature_bytes: Optional[bytes] = None
-
-    if isinstance(value, Mapping) and value.get("al&") == "sig":
-        normalized_value = dict(value)
-        normalized_value.pop("al&", None)
-
-        def _extract_alg(mapping: Mapping[Any, Any]) -> Optional[int]:
-            for key in ("alg", "algorithm", 1, "1", 3, "3"):
-                raw = mapping.get(key)
-                if isinstance(raw, int):
-                    return raw
-            return None
-
-        def _extract_sig(mapping: Mapping[Any, Any]) -> Optional[bytes]:
-            for key in ("sig", "signature", 2, "2", 3, "3"):
-                if key in mapping:
-                    coerced = _coerce_cbor_bytes(mapping[key])
-                    if coerced is not None:
-                        return coerced
-            return None
-
-        alg_value = _extract_alg(normalized_value)
-        truncated_sig = _coerce_cbor_bytes(normalized_value.pop("sig", None))
-        if truncated_sig is None:
-            truncated_sig = _coerce_cbor_bytes(normalized_value.pop("signature", None))
-        normalized_value.pop("alg", None)
-        normalized_value.pop("algorithm", None)
-        normalized_value.pop("attStmt", None)
-        normalized_value.pop("attstmt", None)
-
-        att_structure_override: Optional[Dict[str, Any]] = None
-        att_stmt_base: Optional[Mapping[Any, Any]] = None
-
-        if extra_values:
-            candidate = extra_values[0]
-            if isinstance(candidate, Mapping):
-                candidate_alg = _extract_alg(candidate)
-                candidate_sig = _extract_sig(candidate)
-                if candidate_alg is not None or candidate_sig is not None:
-                    alg_value = candidate_alg if candidate_alg is not None else alg_value
-                    if candidate_sig is not None:
-                        signature_bytes = candidate_sig
-                    att_stmt_base = candidate
-                    extra_values = extra_values[1:]
-                    if extra_structures:
-                        att_structure_override = extra_structures[0]
-                        extra_structures = extra_structures[1:]
-            elif isinstance(candidate, (bytes, bytearray, memoryview, ByteBuffer)):
-                signature_bytes = _coerce_cbor_bytes(candidate)
-                extra_values = extra_values[1:]
-                if extra_structures:
-                    extra_structures = extra_structures[1:]
-
-        if signature_bytes is None:
-            signature_bytes = truncated_sig
-
-        if signature_bytes is not None:
-            if alg_value is None:
-                alg_value = -7
-
-            if att_stmt_base is not None:
-                att_stmt = dict(att_stmt_base)
-                att_stmt.pop("sig", None)
-                att_stmt.pop("signature", None)
-                att_stmt.pop("alg", None)
-                att_stmt.pop("algorithm", None)
-                att_stmt["alg"] = alg_value
-                att_stmt["sig"] = signature_bytes
-            else:
-                att_stmt = {"alg": alg_value, "sig": signature_bytes}
-            normalized_value[3] = att_stmt
-
-            if isinstance(att_structure_override, Mapping):
-                att_structure = att_structure_override
-            else:
-                att_structure, _ = _decode_cbor_structure(cbor.encode(att_stmt))
-
-            entries = structure.get("entries")
-            if isinstance(entries, list) and entries:
-                entries[-1] = {
-                    "keySummary": "3",
-                    "key": {"majorType": 0, "type": "unsigned", "value": 3, "summary": "3"},
-                    "value": att_structure,
-                    "valueSummary": att_structure.get("summary") if isinstance(att_structure, Mapping) else None,
-                }
-            structure["length"] = len(entries) if isinstance(entries, list) else structure.get("length", 3)
-            value = normalized_value
-            return structure, value, extra_structures, extra_values, signature_bytes
-
-    return structure, value, extra_structures, extra_values, None
-
-
-def _repair_make_credential_entries(
-    structure: Dict[str, Any],
-    value: Mapping[Any, Any],
-    *,
-    default_alg: int = -50,
-) -> Tuple[Dict[str, Any], Mapping[Any, Any], Optional[bytes]]:
-    if not isinstance(value, dict):
-        return structure, value, None
-
-    signature_key = None
-    None
-    entries = structure.get("entries")
-    if isinstance(entries, list):
-        for idx, entry in enumerate(entries):
-            key_info = entry.get("key") if isinstance(entry, Mapping) else None
-            if not isinstance(key_info, Mapping):
-                continue
-            major_type = key_info.get("majorType")
-            if major_type in {2, 7} or (major_type == 0 and key_info.get("value") == 13):
-                signature_key = key_info
-                entry
-                entries.pop(idx)
-                break
-
-    signature_bytes: Optional[bytes] = None
-    if signature_key is not None:
-        hex_value = signature_key.get("hex")
-        if isinstance(hex_value, str):
-            try:
-                signature_bytes = bytes.fromhex(hex_value)
-            except ValueError:
-                signature_bytes = None
-
-    polished_value = dict(value)
-    pop_keys: List[Any] = []
-    for key in list(polished_value.keys()):
-        if isinstance(key, (bytes, bytearray)):
-            pop_keys.append(key)
-    for key in pop_keys:
-        polished_value.pop(key, None)
-
-    if 13 in polished_value and 3 not in polished_value:
-        raw_entry = polished_value.pop(13)
-        if isinstance(raw_entry, list):
-            segments: List[bytes] = []
-            alg_candidate: Optional[int] = None
-            for item in raw_entry:
-                if isinstance(item, (bytes, bytearray)):
-                    segments.append(bytes(item))
-                elif isinstance(item, Mapping) and alg_candidate is None:
-                    for possible in item.values():
-                        if isinstance(possible, int):
-                            alg_candidate = possible
-                            break
-            if segments:
-                signature_bytes = b"".join(segments)
-                if alg_candidate is not None:
-                    default_alg = alg_candidate
-
-    if signature_bytes is not None:
-        polished_value[3] = {"sig": signature_bytes, "alg": default_alg}
-        att_stmt_structure, _ = _decode_cbor_structure(
-            cbor.encode({"sig": signature_bytes, "alg": default_alg})
-        )
-        if isinstance(entries, list):
-            entries.append(
-                {
-                    "keySummary": "3",
-                    "key": {"majorType": 0, "type": "unsigned", "value": 3, "summary": "3"},
-                    "value": att_stmt_structure,
-                    "valueSummary": att_stmt_structure.get("summary"),
-                }
-            )
-            structure["length"] = len(entries)
-            structure["summary"] = f"map[{len(entries)}]"
-
-    return structure, polished_value, signature_bytes
-
-
-def _locate_get_assertion_trailing_offset(raw_bytes: bytes, signature_start: int) -> int:
-    if not raw_bytes or signature_start >= len(raw_bytes):
-        return len(raw_bytes)
-
-    search_start = max(signature_start, len(raw_bytes) - 2048)
-    for idx in range(search_start, len(raw_bytes)):
-        if raw_bytes[idx] != 0x04:
-            continue
-        key, after_key = _lenient_decode_from(raw_bytes, idx)
-        if key != 4 or after_key <= idx:
-            continue
-        value, after_value = _lenient_decode_from(raw_bytes, after_key)
-        if after_value <= after_key:
-            continue
-        if isinstance(value, Mapping):
-            string_keys = {str(k) for k in value.keys()}
-            if string_keys.intersection({"id", "name", "displayName"}):
-                return idx
-        if isinstance(value, list):
-            # Some authenticators wrap user structures; ensure strings exist within the payload.
-            flattened = []
-            for item in value:
-                if isinstance(item, Mapping):
-                    flattened.extend(str(k) for k in item.keys())
-            if any(key in {"id", "name", "displayName"} for key in flattened):
-                return idx
-    return len(raw_bytes)
-
-
-def _extract_get_assertion_trailing_from_raw(
-    raw_bytes: bytes,
-) -> Tuple[Optional[bytes], Dict[int, Any]]:
-    if not raw_bytes:
-        return None, {}
-
-    signature_offset: Optional[int] = None
-    length_size = 0
-    for prefix, size in ((0x58, 1), (0x59, 2), (0x5A, 4), (0x5B, 8)):
-        marker = bytes((3, prefix))
-        idx = raw_bytes.find(marker)
-        if idx != -1:
-            signature_offset = idx
-            length_size = size
-            break
-
-    if signature_offset is None or length_size == 0:
-        return None, {}
-
-    length_bytes = raw_bytes[signature_offset + 2 : signature_offset + 2 + length_size]
-    if len(length_bytes) != length_size:
-        return None, {}
-
-    declared_length = int.from_bytes(length_bytes, "big")
-    value_offset = signature_offset + 2 + length_size
-    declared_end = value_offset + declared_length
-
-    if declared_end > len(raw_bytes):
-        trailing_offset = _locate_get_assertion_trailing_offset(raw_bytes, value_offset)
-    else:
-        trailing_offset = declared_end
-
-    signature_bytes = raw_bytes[value_offset:trailing_offset]
-    trailing_fields: Dict[int, Any] = {}
-
-    cursor = trailing_offset
-    while cursor < len(raw_bytes):
-        key, after_key = _lenient_decode_from(raw_bytes, cursor)
-        if after_key <= cursor or not isinstance(key, int):
-            break
-        value, after_value = _lenient_decode_from(raw_bytes, after_key)
-        if after_value <= after_key:
-            break
-        try:
-            encoded_value = cbor.encode(value)
-        except Exception:  # pragma: no cover - defensive encoding guard
-            encoded_value = None
-        if encoded_value is not None:
-            expected_end = after_key + len(encoded_value)
-            if expected_end <= len(raw_bytes):
-                after_value = min(after_value, expected_end)
-        trailing_fields[int(key)] = value
-        cursor = after_value
-
-    if 5 not in trailing_fields and trailing_offset < len(raw_bytes):
-        idx = raw_bytes.rfind(b"\x05", trailing_offset)
-        if idx != -1:
-            key_candidate, after_key_candidate = _lenient_decode_from(raw_bytes, idx)
-            if key_candidate == 5 and after_key_candidate > idx:
-                value_candidate, after_value_candidate = _lenient_decode_from(
-                    raw_bytes, after_key_candidate
-                )
-                if after_value_candidate > after_key_candidate:
-                    trailing_fields[5] = value_candidate
-
-    return (signature_bytes if signature_bytes else None), trailing_fields
-
-
-def _split_get_assertion_trailing_fields(
-    signature_bytes: bytes,
-) -> Tuple[bytes, Dict[int, Any]]:
-    if not signature_bytes:
-        return signature_bytes, {}
-
-    start_search = max(0, len(signature_bytes) - 1024)
-    for offset in range(start_search, len(signature_bytes)):
-        if signature_bytes[offset] != 0x04:
-            continue
-
-        key, after_key = _lenient_decode_from(signature_bytes, offset)
-        if key != 4 or after_key <= offset:
-            continue
-
-        value, after_value = _lenient_decode_from(signature_bytes, after_key)
-        if after_value <= after_key:
-            continue
-
-        trailing_fields: Dict[int, Any] = {4: value}
-        cursor = after_value
-        success = True
-
-        while cursor < len(signature_bytes):
-            next_key, after_next_key = _lenient_decode_from(signature_bytes, cursor)
-            if (
-                after_next_key <= cursor
-                or next_key is None
-                or not isinstance(next_key, int)
-                or next_key < 4
-                or next_key > 8
-            ):
-                success = False
-                break
-
-            next_value, after_next_value = _lenient_decode_from(signature_bytes, after_next_key)
-            if after_next_value <= after_next_key:
-                success = False
-                break
-
-            trailing_fields[int(next_key)] = next_value
-            cursor = after_next_value
-
-        if success and cursor == len(signature_bytes):
-            return signature_bytes[:offset], trailing_fields
-
-    return signature_bytes, {}
+    return _decode_cbor_sequence_impl(
+        payload,
+        cbor_decode_from=cbor.decode_from,
+        cbor_decoder_factory=_cbor2_decode_with_consumed,
+        decode_cbor_structure=_decode_cbor_structure,
+        structure_to_value=_structure_to_value,
+        lenient_decode_from=lambda data, offset=0: _lenient_decode_from(data, offset),
+        json_safe_with_stringified_keys=_json_safe_with_stringified_keys,
+        cbor_error_type=_CborDecodingError,
+    )
 
 
 def _repair_get_assertion_entries(
@@ -1693,199 +753,6 @@ def _repair_get_assertion_entries(
     return structure, recovered_value, signature_bytes
 
 
-def _derive_alg_from_auth_data(auth_data_bytes: Optional[bytes]) -> Optional[int]:
-    if not auth_data_bytes:
-        return None
-    try:
-        auth_data = AuthenticatorData(auth_data_bytes)
-    except Exception:
-        return None
-
-    credential = getattr(auth_data, "credential_data", None)
-    if credential is None:
-        return None
-
-    public_key = getattr(credential, "public_key", None)
-    alg_value = getattr(public_key, "alg", None)
-    return alg_value if isinstance(alg_value, int) else None
-
-
-def _merge_trailing_signature(
-    structure: Dict[str, Any],
-    value: Mapping[Any, Any],
-    trailing: bytes,
-) -> Optional[Tuple[Dict[str, Any], Mapping[Any, Any], bytes, bytes]]:
-    if not trailing or _is_padding_bytes(trailing):
-        return None
-
-    fmt_entry = _get_mapping_entry(value, 1, "1", "fmt")
-    fmt = fmt_entry if fmt_entry is not _MISSING else None
-    if fmt != "packed":
-        return None
-
-    if _get_mapping_entry(value, 3, "3", "signature") is not _MISSING:
-        return None
-
-    if not isinstance(structure, Mapping):
-        return None
-
-    auth_data_entry = _get_mapping_entry(value, 2, "2", "authData")
-    auth_data_bytes = _coerce_cbor_bytes(auth_data_entry)
-    alg_value = _derive_alg_from_auth_data(auth_data_bytes)
-    signature_bytes = bytes(trailing)
-
-    att_stmt: Dict[str, Any] = {"sig": signature_bytes}
-    if alg_value is not None:
-        att_stmt["alg"] = alg_value
-
-    att_structure, _ = _decode_cbor_structure(cbor.encode(att_stmt))
-
-    updated_structure = dict(structure)
-    entries_source = structure.get("entries")
-    entries: List[Dict[str, Any]] = (
-        list(entries_source) if isinstance(entries_source, list) else []
-    )
-    entries.append(
-        {
-            "keySummary": "3",
-            "key": {"majorType": 0, "type": "unsigned", "value": 3, "summary": "3"},
-            "value": att_structure,
-            "valueSummary": att_structure.get("summary") if isinstance(att_structure, Mapping) else None,
-        }
-    )
-    updated_structure["entries"] = entries
-    updated_structure["length"] = len(entries)
-    updated_structure["summary"] = f"map[{len(entries)}]"
-
-    updated_value = dict(value)
-    updated_value[3] = att_stmt
-
-    return updated_structure, updated_value, signature_bytes, b""
-
-
-def _extract_mapping_string(value: Mapping[Any, Any], keys: Iterable[Any]) -> Optional[str]:
-    if not isinstance(value, Mapping):
-        return None
-    candidate = _get_mapping_entry(value, *keys)
-    if candidate is _MISSING:
-        return None
-    if isinstance(candidate, str):
-        stripped = candidate.strip()
-        if stripped:
-            return stripped
-    return None
-
-
-def _extract_mapping_bytes(value: Mapping[Any, Any], keys: Iterable[Any]) -> Optional[bytes]:
-    if not isinstance(value, Mapping):
-        return None
-    candidate = _get_mapping_entry(value, *keys)
-    if candidate is _MISSING:
-        return None
-    candidate_bytes = _coerce_cbor_bytes(candidate)
-    if candidate_bytes is not None:
-        return candidate_bytes
-    return None
-
-
-_MAKE_CREDENTIAL_REQUEST_LABELS: Dict[Any, str] = {
-    1: "clientDataHash",
-    "clientDataHash": "clientDataHash",
-    2: "rp",
-    "rp": "rp",
-    3: "user",
-    "user": "user",
-    4: "pubKeyCredParams",
-    "pubKeyCredParams": "pubKeyCredParams",
-    5: "excludeList",
-    "excludeList": "excludeList",
-    6: "extensions",
-    "extensions": "extensions",
-    7: "options",
-    "options": "options",
-    8: "pinUvAuthParam",
-    "pinUvAuthParam": "pinUvAuthParam",
-    9: "pinUvAuthProtocol",
-    "pinUvAuthProtocol": "pinUvAuthProtocol",
-    10: "enterpriseAttestation",
-    "enterpriseAttestation": "enterpriseAttestation",
-    11: "largeBlobKey",
-    "largeBlobKey": "largeBlobKey",
-}
-
-_GET_ASSERTION_REQUEST_LABELS: Dict[Any, str] = {
-    1: "rpId",
-    "rpId": "rpId",
-    2: "clientDataHash",
-    "clientDataHash": "clientDataHash",
-    3: "allowList",
-    "allowList": "allowList",
-    4: "extensions",
-    "extensions": "extensions",
-    5: "options",
-    "options": "options",
-    6: "pinUvAuthParam",
-    "pinUvAuthParam": "pinUvAuthParam",
-    7: "pinUvAuthProtocol",
-    "pinUvAuthProtocol": "pinUvAuthProtocol",
-    8: "largeBlobKey",
-    "largeBlobKey": "largeBlobKey",
-}
-
-_MAKE_CREDENTIAL_RESPONSE_LABELS: Dict[Any, str] = {
-    1: "fmt",
-    "fmt": "fmt",
-    2: "authData",
-    "authData": "authData",
-    3: "attStmt",
-    "attStmt": "attStmt",
-    4: "epAtt",
-    "epAtt": "epAtt",
-    5: "largeBlobKey",
-    "largeBlobKey": "largeBlobKey",
-    6: "extensions",
-    "extensions": "extensions",
-}
-
-_GET_ASSERTION_RESPONSE_LABELS: Dict[Any, str] = {
-    1: "credential",
-    "credential": "credential",
-    2: "authData",
-    "authData": "authData",
-    3: "signature",
-    "signature": "signature",
-    4: "user",
-    "user": "user",
-    5: "numberOfCredentials",
-    "numberOfCredentials": "numberOfCredentials",
-    6: "userSelected",
-    "userSelected": "userSelected",
-    7: "largeBlobKey",
-    "largeBlobKey": "largeBlobKey",
-    8: "extensions",
-    "extensions": "extensions",
-}
-
-
-def _resolve_ctap_label(label_map: Mapping[Any, str], key: Any) -> Optional[str]:
-    if key in label_map:
-        return label_map[key]
-    key_str = str(key)
-    if key_str in label_map:
-        return label_map[key_str]
-    return None
-
-
-def _format_ctap_entry_key(key: Any, label: Optional[str]) -> str:
-    if isinstance(key, (bytes, bytearray)):
-        key_display = bytes(key).hex()
-    else:
-        key_display = str(key)
-    if label:
-        return f"{key_display} ({label})"
-    return key_display
-
-
 def _convert_ctap_allow_list(entry: Any) -> Any:
     if isinstance(entry, Sequence) and not isinstance(entry, (str, bytes, bytearray)):
         return [_convert_ctap_credential_descriptor(item) for item in entry]
@@ -1927,133 +794,6 @@ def _convert_ctap_user_field(value: Any) -> Any:
     if value is None:
         return None
     return _convert_ctap_user(value)
-
-
-def _build_labeled_ctap_map(
-    mapping: Mapping[Any, Any],
-    labels: Mapping[Any, str],
-    handlers: Mapping[Any, Callable[[Any], Any]],
-    *,
-    missing_keys: Sequence[Any] = (),
-) -> Dict[str, Any]:
-    result: Dict[str, Any] = {}
-    seen_keys: set = set()
-    seen_labels: set = set()
-
-    if isinstance(mapping, Mapping):
-        for key in mapping:
-            label = _resolve_ctap_label(labels, key)
-            formatted_key = _format_ctap_entry_key(key, label)
-            handler: Optional[Callable[[Any], Any]] = None
-            if label is not None and label in handlers:
-                handler = handlers[label]
-            elif key in handlers:
-                handler = handlers[key]
-            elif str(key) in handlers:
-                handler = handlers[str(key)]
-            value = mapping[key]
-            if handler is not None:
-                result[formatted_key] = handler(value)
-            else:
-                result[formatted_key] = _hex_json_safe(value)
-            seen_keys.add(key)
-            seen_keys.add(str(key))
-            if label is not None:
-                seen_labels.add(label)
-
-    for missing in missing_keys:
-        label = _resolve_ctap_label(labels, missing)
-        if missing in seen_keys or str(missing) in seen_keys:
-            continue
-        if label is not None and label in seen_labels:
-            continue
-        formatted_key = _format_ctap_entry_key(missing, label)
-        handler: Optional[Callable[[Any], Any]] = None
-        if label is not None and label in handlers:
-            handler = handlers[label]
-        elif missing in handlers:
-            handler = handlers[missing]
-        elif str(missing) in handlers:
-            handler = handlers[str(missing)]
-        if handler is not None:
-            result.setdefault(formatted_key, handler(None))
-        else:
-            result.setdefault(formatted_key, None)
-
-    return result
-
-
-def _looks_like_make_credential_request(value: Mapping[Any, Any]) -> bool:
-    client_hash_entry = _get_mapping_entry(value, 1, "1", "clientDataHash")
-    client_hash_bytes = _coerce_cbor_bytes(client_hash_entry)
-    if client_hash_bytes is None:
-        return False
-    if _extract_mapping_string(value, (1, "1", "fmt")) is not None:
-        return False
-    if _extract_mapping_bytes(value, (2, "2", "authData")) is not None:
-        return False
-    rp_entry = _get_mapping_entry(value, 2, "2", "rp")
-    user_entry = _get_mapping_entry(value, 3, "3", "user")
-    if rp_entry is _MISSING or user_entry is _MISSING:
-        return False
-    return True
-
-
-def _looks_like_get_assertion_request(value: Mapping[Any, Any]) -> bool:
-    if not isinstance(value, Mapping):
-        return False
-    rp_candidate = value.get(1, _MISSING)
-    if isinstance(rp_candidate, str) and rp_candidate.strip():
-        pass
-    else:
-        rp_candidate = value.get("rpId", _MISSING)
-        if not isinstance(rp_candidate, str) or not rp_candidate.strip():
-            return False
-    client_entry = value.get(2, _MISSING)
-    if client_entry is _MISSING:
-        client_entry = value.get("clientDataHash", _MISSING)
-    if client_entry is _MISSING or _coerce_cbor_bytes(client_entry) is None:
-        return False
-    signature_candidate = value.get(3, _MISSING)
-    if signature_candidate is _MISSING:
-        signature_candidate = value.get("signature", _MISSING)
-    if signature_candidate is not _MISSING and _coerce_cbor_bytes(signature_candidate) is not None:
-        return False
-    auth_candidate = value.get("authData", _MISSING)
-    if auth_candidate is not _MISSING and _coerce_cbor_bytes(auth_candidate) is not None:
-        return False
-    return True
-
-
-def _looks_like_make_credential_output(value: Mapping[Any, Any]) -> bool:
-    fmt_value = _extract_mapping_string(value, (1, "1", "fmt"))
-    auth_data_bytes = _extract_mapping_bytes(value, (2, "2", "authData"))
-    att_stmt_value = _get_mapping_entry(value, 3, "3", "attStmt")
-    if att_stmt_value is _MISSING:
-        att_stmt_value = None
-    att_stmt_bytes = _coerce_cbor_bytes(att_stmt_value)
-    att_stmt_map = att_stmt_value if isinstance(att_stmt_value, Mapping) else None
-    return fmt_value is not None and auth_data_bytes is not None and (
-        att_stmt_map is not None or att_stmt_bytes is not None
-    )
-
-
-def _looks_like_get_assertion_output(value: Mapping[Any, Any]) -> bool:
-    auth_data_bytes = _extract_mapping_bytes(value, (2, "2", "authData"))
-    signature_bytes = _extract_mapping_bytes(value, (3, "3", "signature"))
-    return auth_data_bytes is not None and signature_bytes is not None
-
-
-def _classify_ctap_map(value: Mapping[Any, Any]) -> str:
-    if _looks_like_make_credential_output(value):
-        return "make_credential_output"
-    if _looks_like_get_assertion_output(value):
-        return "get_assertion_output"
-    if _looks_like_make_credential_request(value):
-        return "make_credential_input"
-    if _looks_like_get_assertion_request(value):
-        return "get_assertion_input"
-    return "other"
 
 
 def _summarize_bytes_for_json(data: bytes) -> Dict[str, Any]:
@@ -2415,7 +1155,6 @@ def _try_decode_cbor(data: bytes, encoding: str) -> Optional[Dict[str, Any]]:
                     base_structure, working_value, signature_bytes, remaining = trailing_signature_result
                     merged_signature = signature_bytes
                     consumed_total += len(signature_bytes)
-                []
                 extra_values = []
             else:
                 classification = _classify_ctap_map(working_value)
@@ -2430,7 +1169,6 @@ def _try_decode_cbor(data: bytes, encoding: str) -> Optional[Dict[str, Any]]:
             )
             if assertion_sig is not None:
                 merged_signature = merged_signature or assertion_sig
-            []
             extra_values = []
         elif classification == "other" and fmt_candidate is None:
             temp_structure = dict(base_structure)
@@ -2445,10 +1183,8 @@ def _try_decode_cbor(data: bytes, encoding: str) -> Optional[Dict[str, Any]]:
             )
             if assertion_sig is not None:
                 classification = "get_assertion_output"
-                temp_structure
                 working_value = temp_value
                 merged_signature = merged_signature or assertion_sig
-                []
                 extra_values = []
         if classification == "other" and fmt_candidate is None and auth_candidate is not None:
             if ctap_details is not None and ctap_details.get("kind") == "status":
@@ -2694,72 +1430,6 @@ def _interpret_get_assertion_request_map(value: Mapping[Any, Any]) -> Optional[D
         _GET_ASSERTION_REQUEST_LABELS,
         _GET_ASSERTION_REQUEST_HANDLERS,
     )
-
-
-def _convert_optional_ctap_field(value: Any) -> Any:
-    data_bytes = _coerce_cbor_bytes(value)
-    if data_bytes is not None:
-        return data_bytes.hex()
-    return _hex_json_safe(value)
-
-
-def _convert_ctap_credential_descriptor(entry: Any) -> Any:
-    data_bytes = _coerce_cbor_bytes(entry)
-    if data_bytes is not None:
-        return data_bytes.hex()
-    if not isinstance(entry, Mapping):
-        return _hex_json_safe(entry)
-
-    descriptor: Dict[str, Any] = {}
-    id_value = _get_mapping_entry(entry, "id", 1)
-    if id_value is not _MISSING:
-        id_bytes = _coerce_cbor_bytes(id_value)
-        if id_bytes is not None:
-            descriptor["id"] = id_bytes.hex()
-
-    type_value = _get_mapping_entry(entry, "type", 2)
-    if type_value is not _MISSING:
-        descriptor["type"] = _hex_json_safe(type_value)
-
-    transports_value = _get_mapping_entry(entry, "transports", 3)
-    if transports_value is not _MISSING:
-        descriptor["transports"] = _hex_json_safe(transports_value)
-
-    for key in entry:
-        if key in {"id", "type", "transports"} or key in {1, 2, 3}:
-            continue
-        descriptor[str(key)] = _hex_json_safe(entry[key])
-
-    return descriptor
-
-
-def _attempt_decode_cbor_map(data: bytes) -> Optional[Mapping[Any, Any]]:
-    try:
-        decoded = cbor2.loads(data)
-    except Exception:  # pragma: no cover - defensive
-        return None
-    return decoded if isinstance(decoded, Mapping) else None
-
-
-def _normalize_user_mapping(entry: Mapping[Any, Any]) -> Mapping[Any, Any]:
-    normalized: Dict[Any, Any] = {}
-    for key, value in entry.items():
-        if isinstance(key, ByteBuffer):
-            candidate_key = key.getvalue()
-        else:
-            candidate_key = key
-
-        if isinstance(candidate_key, (bytes, bytearray, memoryview)):
-            raw_key = bytes(candidate_key)
-            try:
-                normalized_key: Any = raw_key.decode("utf-8")
-            except UnicodeDecodeError:
-                normalized_key = raw_key.hex()
-        else:
-            normalized_key = candidate_key
-
-        normalized[normalized_key] = value
-    return normalized
 
 
 def _convert_user_text_value(value: Any) -> Any:
@@ -3279,169 +1949,54 @@ def _convert_certificate_result(result: Mapping[str, Any]) -> Dict[str, Any]:
     return certificate_payload or {}
 
 
-def _build_credential_overview(decoded: Mapping[str, Any]) -> Dict[str, Any]:
-    if not isinstance(decoded, Mapping):
-        return {}
-
-    overview: Dict[str, Any] = {}
-    for key in ("id", "type", "authenticatorAttachment"):
-        value = decoded.get(key)
-        if value is not None:
-            overview[key] = value
-
-    transports = decoded.get("transports")
-    if transports is not None:
-        overview["transports"] = make_json_safe(transports)
-
-    raw_id = decoded.get("rawId")
-    if isinstance(raw_id, Mapping):
-        raw_payload: Dict[str, Any] = {}
-        raw_value = raw_id.get("raw")
-        if raw_value is not None:
-            raw_payload["raw"] = raw_value
-        binary = raw_id.get("binary")
-        if binary is not None:
-            raw_payload["binary"] = make_json_safe(binary)
-        if raw_payload:
-            overview["rawId"] = raw_payload
-    elif raw_id is not None:
-        overview["rawId"] = raw_id
-
-    raw_json = decoded.get("rawJson")
-    if isinstance(raw_json, str) and raw_json.strip():
-        overview["rawJson"] = raw_json
-
-    return overview
-
-
 def _convert_attestation_entry(entry: Any) -> Dict[str, Any]:
-    if not isinstance(entry, Mapping):
-        return {}
-
-    details = entry.get("details") if isinstance(entry.get("details"), Mapping) else entry
-    payload: Dict[str, Any] = {}
-
-    fmt = None
-    if isinstance(details, Mapping):
-        fmt = details.get("attestationFormat") or details.get("fmt")
-        cbor_section = details.get("cbor") if isinstance(details.get("cbor"), Mapping) else None
-        if fmt is None and isinstance(cbor_section, Mapping):
-            fmt = cbor_section.get("fmt")
-    if fmt:
-        payload["fmt"] = fmt
-
-    raw_value = entry.get("raw")
-    if isinstance(raw_value, str) and raw_value:
-        payload["raw"] = raw_value
-
-    att_stmt = _convert_attestation_statement(details)
-    if att_stmt:
-        if "x5c" in att_stmt and not att_stmt["x5c"]:
-            certificate_detail = None
-            if isinstance(details, Mapping):
-                certificate_detail = details.get("attestationCertificate")
-                if certificate_detail is None:
-                    certificates_list = details.get("attestationCertificates")
-                    if isinstance(certificates_list, list) and certificates_list:
-                        certificate_detail = certificates_list[0]
-            if certificate_detail is not None:
-                converted = _convert_certificate_payload(certificate_detail)
-                if converted:
-                    att_stmt["x5c"] = [converted]
-        payload["attStmt"] = att_stmt
-
-    return payload
+    return _convert_attestation_entry_impl(
+        entry,
+        convert_attestation_statement=_convert_attestation_statement,
+        convert_certificate_payload=lambda payload, cert_bytes=None: _convert_certificate_payload(
+            payload, cert_bytes
+        ),
+    )
 
 
 def _convert_attestation_statement(details: Any) -> Dict[str, Any]:
-    if not isinstance(details, Mapping):
-        return {}
-
-    statement = details.get("attestationStatement") if isinstance(details.get("attestationStatement"), Mapping) else None
-    if statement is None:
-        cbor_section = details.get("cbor") if isinstance(details.get("cbor"), Mapping) else None
-        if isinstance(cbor_section, Mapping):
-            possible = cbor_section.get("attStmt")
-            if isinstance(possible, Mapping):
-                statement = possible
-
-    if not isinstance(statement, Mapping):
-        return {}
-
-    payload: Dict[str, Any] = {}
-    for key, value in statement.items():
+    payload = _convert_attestation_statement_impl(
+        details,
+        convert_certificate_chain=_convert_certificate_chain,
+    )
+    normalized: Dict[str, Any] = {}
+    for key, value in payload.items():
         if key == "x5c":
-            payload["x5c"] = _convert_certificate_chain(value)
+            normalized[key] = value
         else:
-            payload[key] = _hex_json_safe(value)
-    return payload
+            normalized[key] = _hex_json_safe(value)
+    return normalized
 
 
 def _convert_certificate_chain(value: Any) -> List[Dict[str, Any]]:
-    if not isinstance(value, list):
-        return []
-
-    certificates: List[Dict[str, Any]] = []
-    for item in value:
-        cert_payload = _convert_certificate_bytes(item)
-        if cert_payload:
-            certificates.append(cert_payload)
-    return certificates
+    return _convert_certificate_chain_impl(
+        value,
+        convert_certificate_bytes=_convert_certificate_bytes,
+    )
 
 
 def _convert_certificate_bytes(value: Any) -> Dict[str, Any]:
-    cert_bytes: Optional[bytes] = None
-    if isinstance(value, (bytes, bytearray)):
-        cert_bytes = bytes(value)
-    elif isinstance(value, str):
-        cleaned = "".join(value.split())
-        padding = (-len(cleaned)) % 4
-        try:
-            cert_bytes = base64.b64decode(cleaned + "=" * padding)
-        except (ValueError, binascii.Error):
-            cert_bytes = None
-    elif isinstance(value, Mapping):
-        return _convert_certificate_payload(value)
-
-    if cert_bytes is None:
-        return {}
-
-    parsed = serialize_attestation_certificate(cert_bytes)
-    if not isinstance(parsed, Mapping):
-        return {}
-
-    parsed_copy = dict(parsed)
-    parsed_copy["derBase64"] = parsed.get("derBase64") or base64.b64encode(cert_bytes).decode("ascii")
-    parsed_copy.setdefault("pem", parsed.get("pem"))
-    return _convert_certificate_payload(parsed_copy, cert_bytes)
+    return _convert_certificate_bytes_impl(
+        value,
+        serializer=serialize_attestation_certificate,
+        convert_certificate_payload=lambda payload, cert_bytes=None: _convert_certificate_payload(
+            payload, cert_bytes
+        ),
+    )
 
 
 def _convert_certificate_payload(
     entry: Mapping[str, Any], cert_bytes: Optional[bytes] = None
 ) -> Dict[str, Any]:
-    if not isinstance(entry, Mapping):
-        return {}
-
-    payload: Dict[str, Any] = {}
-
-    if cert_bytes is None:
-        der_base64 = entry.get("derBase64")
-        if isinstance(der_base64, str):
-            try:
-                cert_bytes = base64.b64decode(der_base64)
-            except (ValueError, binascii.Error):
-                cert_bytes = None
-
-    if cert_bytes is not None:
-        payload["raw"] = cert_bytes.hex()
-
-    pem_value = entry.get("pem")
-    if isinstance(pem_value, str) and pem_value.strip():
-        payload["pem"] = pem_value
-
-    parsed_entry = {key: value for key, value in entry.items() if key != "summary"}
-    payload["parsedX5c"] = _hex_json_safe(parsed_entry)
-
+    payload = _convert_certificate_payload_impl(entry, cert_bytes)
+    parsed_entry = payload.get("parsedX5c")
+    if parsed_entry is not None:
+        payload["parsedX5c"] = _hex_json_safe(parsed_entry)
     return payload
 
 
@@ -3466,269 +2021,6 @@ def _build_authenticator_section(
         fallback_alg = response_mapping.get("publicKeyAlgorithm")
 
     return _build_authenticator_data_payload(auth_bytes, details, fallback_alg)
-
-
-def _build_authenticator_data_payload(
-    auth_bytes: Optional[bytes],
-    details: Any,
-    fallback_alg: Optional[Any] = None,
-) -> Dict[str, Any]:
-    if auth_bytes is None and not isinstance(details, Mapping):
-        return {}
-
-    payload: Dict[str, Any] = {}
-
-    if auth_bytes is not None:
-        payload["raw"] = auth_bytes.hex()
-
-    rp_hash_hex = None
-    if isinstance(details, Mapping):
-        rp_info = details.get("rpIdHash")
-        if isinstance(rp_info, Mapping):
-            rp_hash_hex = rp_info.get("hex") or rp_info.get("value")
-        elif isinstance(rp_info, str):
-            rp_hash_hex = rp_info
-    if rp_hash_hex is None and auth_bytes is not None and len(auth_bytes) >= 32:
-        rp_hash_hex = auth_bytes[:32].hex()
-    if rp_hash_hex:
-        payload["rpIdHash"] = rp_hash_hex
-
-    flags_info = details.get("flags") if isinstance(details, Mapping) else None
-    flags_byte = auth_bytes[32] if auth_bytes is not None and len(auth_bytes) > 32 else None
-    auth_length = len(auth_bytes) if auth_bytes is not None else None
-    flags_payload = _build_flag_payload(flags_info, flags_byte, auth_length)
-    if flags_payload:
-        payload["flags"] = flags_payload
-
-    counter_value = None
-    if isinstance(details, Mapping):
-        counter_value = details.get("signCount")
-    if counter_value is None and auth_bytes is not None and len(auth_bytes) >= 37:
-        counter_value = int.from_bytes(auth_bytes[33:37], "big")
-    if counter_value is not None:
-        try:
-            payload["counter"] = int(counter_value)
-        except (TypeError, ValueError):
-            payload["counter"] = counter_value
-
-    credential_details = details.get("attestedCredentialData") if isinstance(details, Mapping) else None
-    credential_payload = _build_credential_payload(credential_details, auth_bytes, fallback_alg)
-    if credential_payload:
-        payload["credential"] = credential_payload
-
-    extensions = details.get("extensions") if isinstance(details, Mapping) else None
-    if extensions is not None:
-        payload["extensions"] = make_json_safe(extensions)
-
-    return payload
-
-
-def _build_flag_payload(
-    flag_details: Any,
-    flags_byte: Optional[int],
-    auth_byte_length: Optional[int] = None,
-) -> Dict[str, Any]:
-    if flag_details is None and flags_byte is None:
-        return {}
-
-    if flag_details is None and auth_byte_length is not None and auth_byte_length < 37:
-        return {}
-
-    payload: Dict[str, Any] = {}
-
-    bitfield = None
-    hex_value = None
-    up = uv = be = bs = at = ed = None
-
-    if isinstance(flag_details, Mapping):
-        bitfield = flag_details.get("bitfield")
-        value = flag_details.get("value")
-        try:
-            hex_value = f"{int(value):02x}".upper()
-        except (TypeError, ValueError):
-            hex_value = None
-        up = flag_details.get("userPresent")
-        uv = flag_details.get("userVerified")
-        be = flag_details.get("backupEligible")
-        bs = flag_details.get("backupState")
-        at = flag_details.get("attestedCredentialData")
-        ed = flag_details.get("extensionData")
-        if flags_byte is None:
-            try:
-                flags_byte = int(value)
-            except (TypeError, ValueError):
-                flags_byte = None
-
-    if flags_byte is not None:
-        if bitfield is None:
-            bitfield = f"{flags_byte:08b}"
-        if hex_value is None:
-            hex_value = f"{flags_byte:02x}".upper()
-        if up is None:
-            up = bool(flags_byte & 0x01)
-        if uv is None:
-            uv = bool(flags_byte & 0x04)
-        if be is None:
-            be = bool(flags_byte & 0x08)
-        if bs is None:
-            bs = bool(flags_byte & 0x10)
-        if at is None:
-            at = bool(flags_byte & 0x40)
-        if ed is None:
-            ed = bool(flags_byte & 0x80)
-
-    if bitfield:
-        payload["bin"] = bitfield.replace("0b", "")[-8:].zfill(8)
-    if hex_value:
-        payload["hex"] = hex_value
-        payload["raw"] = hex_value
-    if up is not None:
-        payload["UP"] = bool(up)
-    if uv is not None:
-        payload["UV"] = bool(uv)
-    if be is not None:
-        payload["BE"] = bool(be)
-    if bs is not None:
-        payload["BS"] = bool(bs)
-    if at is not None:
-        payload["AT"] = bool(at)
-    if ed is not None:
-        payload["ED"] = bool(ed)
-
-    return payload
-
-
-def _build_credential_payload(
-    credential_details: Any,
-    auth_bytes: Optional[bytes],
-    fallback_alg: Optional[Any] = None,
-) -> Dict[str, Any]:
-    if credential_details is None and auth_bytes is None:
-        return {}
-
-    aaguid_hex = None
-    aaguid_uuid = None
-    credential_id_hex = None
-    credential_id_length = None
-    cose_key: Optional[Mapping[str, Any]] = None
-
-    if isinstance(credential_details, Mapping):
-        aaguid_uuid = credential_details.get("aaguid")
-        aaguid_hex = credential_details.get("aaguidHex")
-        credential_id_info = credential_details.get("credentialId")
-        if isinstance(credential_id_info, Mapping):
-            credential_id_hex = credential_id_info.get("hex")
-            length_value = credential_id_info.get("length")
-            try:
-                credential_id_length = f"{int(length_value):04x}".upper()
-            except (TypeError, ValueError):
-                if isinstance(length_value, str):
-                    credential_id_length = length_value
-        public_key_info = credential_details.get("publicKey")
-        if isinstance(public_key_info, Mapping):
-            cose_key = public_key_info
-
-    attested_raw_hex = None
-    public_key_raw_hex = None
-    if auth_bytes is not None and len(auth_bytes) > 37:
-        attested_bytes = auth_bytes[37:]
-        attested_raw_hex = attested_bytes.hex()
-        if len(attested_bytes) >= 18:
-            aaguid_bytes = attested_bytes[:16]
-            length_bytes = attested_bytes[16:18]
-            cred_length = int.from_bytes(length_bytes, "big")
-            credential_bytes = attested_bytes[18 : 18 + cred_length]
-            public_key_bytes = attested_bytes[18 + cred_length :]
-            if not aaguid_hex:
-                aaguid_hex = aaguid_bytes.hex()
-            if not aaguid_uuid:
-                try:
-                    aaguid_uuid = str(uuid.UUID(bytes=aaguid_bytes))
-                except Exception:
-                    aaguid_uuid = None
-            if credential_id_hex is None:
-                credential_id_hex = credential_bytes.hex()
-            if credential_id_length is None:
-                credential_id_length = f"{cred_length:04x}".upper()
-            if public_key_bytes:
-                public_key_raw_hex = public_key_bytes.hex()
-
-    public_key_payload: Dict[str, Any] = {}
-    if cose_key is not None:
-        cose_display = _convert_cose_key_for_display(cose_key)
-        public_key_payload["cose"] = make_json_safe(cose_display)
-        alg_label = _resolve_cose_algorithm(cose_key, fallback_alg)
-    else:
-        alg_label = _resolve_cose_algorithm({}, fallback_alg)
-    if alg_label is not None:
-        public_key_payload["alg"] = alg_label
-    if public_key_raw_hex:
-        public_key_payload["raw"] = public_key_raw_hex
-    if not public_key_payload:
-        public_key_payload = {}
-
-    credential_payload: Dict[str, Any] = {}
-    if attested_raw_hex:
-        credential_payload["raw"] = attested_raw_hex
-    if aaguid_hex or aaguid_uuid:
-        aaguid_payload: Dict[str, Any] = {}
-        if aaguid_hex:
-            aaguid_payload["raw"] = aaguid_hex
-        if aaguid_uuid:
-            aaguid_payload["uuid"] = aaguid_uuid
-        credential_payload["aaguid"] = aaguid_payload
-    if credential_id_length:
-        credential_payload["credentialIdLength"] = credential_id_length
-    if credential_id_hex:
-        credential_payload["credentialId"] = credential_id_hex
-    if public_key_payload:
-        credential_payload["publicKey"] = public_key_payload
-
-    return credential_payload
-
-
-def _convert_client_data_entry(entry: Any) -> Dict[str, Any]:
-    if not isinstance(entry, Mapping):
-        return {}
-
-    details = entry.get("details") if isinstance(entry.get("details"), Mapping) else entry
-    if not isinstance(details, Mapping):
-        return {}
-
-    payload: Dict[str, Any] = {}
-    for key in ("type", "origin", "crossOrigin"):
-        if key in details:
-            payload[key] = make_json_safe(details.get(key))
-
-    challenge_info = details.get("challenge")
-    if isinstance(challenge_info, Mapping):
-        challenge_value = (
-            challenge_info.get("raw")
-            or challenge_info.get("base64url")
-            or challenge_info.get("base64")
-        )
-        if challenge_value is not None:
-            payload["challenge"] = challenge_value
-        else:
-            payload["challenge"] = make_json_safe(challenge_info)
-    elif details.get("challenge") is not None:
-        payload["challenge"] = details.get("challenge")
-
-    return payload
-
-
-def _collect_response_extras(response: Any) -> Dict[str, Any]:
-    if not isinstance(response, Mapping):
-        return {}
-
-    extras: Dict[str, Any] = {}
-    for field in ("signature", "userHandle", "publicKey", "publicKeyAlgorithm"):
-        if field in response and response[field] is not None:
-            extras[field] = make_json_safe(response[field])
-
-    return extras
-
-
 def _format_result_summary(result: Dict[str, Any]) -> str:
     base_type = _base_type(result.get("format"))
     formatter = {
@@ -3907,11 +2199,6 @@ def _format_generic_summary(result: Dict[str, Any]) -> List[str]:
     return lines
 
 
-_DEVICE_IDENTIFIER_NAMES: Dict[str, str] = {
-    "1.3.6.1.4.1.41482.1.1": "Security Key by Yubico Series",
-}
-
-
 def _build_certificate_summary_lines(decoded: Any) -> List[str]:
     if not isinstance(decoded, Mapping):
         return []
@@ -3967,600 +2254,6 @@ def _build_certificate_summary_lines(decoded: Any) -> List[str]:
         lines.extend(ski_lines)
 
     return [line for line in lines if line is not None]
-
-
-def _format_certificate_time(value: Any) -> Optional[str]:
-    if isinstance(value, str):
-        text = value.strip()
-        if not text:
-            return None
-        normalized = text.replace("Z", "+00:00")
-        try:
-            timestamp = datetime.fromisoformat(normalized)
-        except ValueError:
-            return text
-        if timestamp.tzinfo is not None:
-            timestamp = timestamp.astimezone(timezone.utc).replace(tzinfo=None)
-        return timestamp.isoformat()
-    return None
-
-
-def _build_subject_public_key_info_lines(info: Any) -> List[str]:
-    if not isinstance(info, Mapping):
-        return []
-
-    lines: List[str] = ["Subject Public Key Info:"]
-
-    key_type = info.get("type")
-    if key_type:
-        lines.append(f"Type: {key_type}")
-
-    key_size = info.get("keySize")
-    if isinstance(key_size, int):
-        lines.append(f"Public-Key: ({key_size} bit)")
-
-    point_lines = _format_public_key_point_lines(info.get("uncompressedPoint"))
-    if point_lines:
-        lines.append("pub:")
-        lines.extend(point_lines)
-
-    curve = info.get("curve")
-    if not curve and isinstance(info.get("algorithm"), Mapping):
-        curve = info["algorithm"].get("namedCurve")
-    if curve:
-        lines.append(f"Curve: {curve}")
-
-    return [line for line in lines if line]
-
-
-def _format_public_key_point_lines(point: Any) -> List[str]:
-    if isinstance(point, str) and point.strip():
-        return format_hex_string_lines(point)
-    return []
-
-
-def _build_certificate_extensions_lines(extensions: Any) -> List[str]:
-    if not isinstance(extensions, list) or not extensions:
-        return []
-
-    lines: List[str] = ["X509v3 extensions:"]
-    for extension in extensions:
-        if not isinstance(extension, Mapping):
-            continue
-        header = _format_certificate_extension_header(extension)
-        if header:
-            lines.append(f"{header}:")
-        value_lines = _format_certificate_extension_value(extension.get("value"))
-        lines.extend(value_lines)
-    return lines
-
-
-def _format_certificate_extension_header(extension: Mapping[str, Any]) -> Optional[str]:
-    display_header = extension.get("displayHeader")
-    if isinstance(display_header, str) and display_header.strip():
-        return display_header.strip()
-
-    include_oid = extension.get("includeOidInHeader", True)
-    oid = extension.get("oid")
-    friendly = extension.get("friendlyName") or extension.get("name")
-
-    parts: List[str] = []
-    if include_oid and oid:
-        parts.append(str(oid))
-    if friendly and friendly != oid:
-        friendly_part = f"({friendly})" if include_oid and parts else str(friendly)
-        parts.append(friendly_part)
-
-    if not parts:
-        if oid:
-            parts.append(str(oid))
-        elif friendly:
-            parts.append(str(friendly))
-        else:
-            return None
-
-    return " ".join(parts)
-
-
-def _format_certificate_extension_value(value: Any) -> List[str]:
-    if value is None:
-        return []
-
-    if isinstance(value, Mapping):
-        lines: List[str] = []
-        hex_value = None
-        device_identifier = None
-
-        for key, entry in value.items():
-            if entry in (None, ""):
-                continue
-            key_lower = str(key).lower()
-            if key_lower == "hex value":
-                hex_value = str(entry)
-            elif key_lower == "device identifier":
-                device_identifier = entry
-            elif isinstance(entry, (Mapping, list, tuple)):
-                lines.append(f"{key}:")
-                lines.extend(_format_certificate_extension_value(entry))
-            else:
-                lines.append(f"{key}: {entry}")
-
-        ordered: List[str] = []
-        if hex_value is not None:
-            ordered.append(f"Hex value: {hex_value}")
-        if device_identifier is not None:
-            ordered.append(_format_device_identifier_line(device_identifier))
-        ordered.extend(lines)
-        return ordered
-
-    if isinstance(value, (list, tuple)):
-        lines: List[str] = []
-        for item in value:
-            if item in (None, ""):
-                continue
-            if isinstance(item, (Mapping, list, tuple)):
-                lines.extend(_format_certificate_extension_value(item))
-            else:
-                lines.append(str(item))
-        return lines
-
-    return [str(value)]
-
-
-def _format_device_identifier_line(identifier: Any) -> str:
-    if not isinstance(identifier, str):
-        return str(identifier)
-    cleaned = identifier.strip()
-    friendly = _DEVICE_IDENTIFIER_NAMES.get(cleaned)
-    return f"{cleaned} ({friendly})" if friendly else cleaned
-
-
-def _build_signature_lines(signature: Any) -> List[str]:
-    if not isinstance(signature, Mapping):
-        return []
-
-    lines: List[str] = []
-    algorithm = signature.get("algorithm")
-    if algorithm:
-        lines.append(f"Signature Algorithm: {algorithm}")
-
-    hex_lines: List[str]
-    signature_lines = signature.get("lines")
-    if isinstance(signature_lines, list) and signature_lines:
-        hex_lines = [line for line in signature_lines if line]
-    else:
-        hex_value = signature.get("hex")
-        if isinstance(hex_value, str) and hex_value.strip():
-            hex_lines = format_hex_string_lines(hex_value)
-        else:
-            hex_lines = []
-
-    lines.extend(hex_lines)
-    return lines
-
-
-def _build_fingerprint_lines(fingerprints: Any) -> List[str]:
-    if not isinstance(fingerprints, Mapping):
-        return []
-
-    ordered: List[Tuple[str, List[str]]] = []
-    for label in ("md5", "sha1", "sha256"):
-        value = fingerprints.get(label)
-        if isinstance(value, str) and value.strip():
-            ordered.append((label.upper(), format_hex_string_lines(value)))
-
-    if not ordered:
-        return []
-
-    lines: List[str] = ["Fingerprint:"]
-    for name, hex_lines in ordered:
-        lines.append(f"{name}:")
-        lines.extend(hex_lines)
-    return lines
-
-
-def _build_subject_key_identifier_lines(decoded: Mapping[str, Any]) -> List[str]:
-    extensions = decoded.get("extensions") if isinstance(decoded, Mapping) else None
-    if isinstance(extensions, list):
-        for extension in extensions:
-            if not isinstance(extension, Mapping):
-                continue
-            oid = str(extension.get("oid") or "")
-            if oid == "2.5.29.14":
-                value = extension.get("value")
-                if isinstance(value, Mapping):
-                    for key in ("Subject Key Identifier", "subjectKeyIdentifier", "value"):
-                        digest = value.get(key)
-                        if isinstance(digest, str) and digest.strip():
-                            return format_hex_string_lines(digest)
-                raw_bytes = extension.get("bytes")
-                if isinstance(raw_bytes, (bytes, bytearray)):
-                    return format_hex_bytes_lines(bytes(raw_bytes))
-
-    if isinstance(decoded, Mapping):
-        der_b64 = decoded.get("derBase64")
-        if isinstance(der_b64, str) and der_b64.strip():
-            try:
-                der_bytes = base64.b64decode(der_b64, validate=True)
-            except (ValueError, binascii.Error):
-                der_bytes = None
-            if der_bytes:
-                try:
-                    certificate = x509.load_der_x509_certificate(der_bytes)
-                except Exception:
-                    certificate = None
-                if certificate is not None:
-                    try:
-                        ski_extension = certificate.extensions.get_extension_for_oid(
-                            ExtensionOID.SUBJECT_KEY_IDENTIFIER
-                        )
-                    except x509.ExtensionNotFound:
-                        try:
-                            derived = x509.SubjectKeyIdentifier.from_public_key(
-                                certificate.public_key()
-                            )
-                        except Exception:
-                            digest_bytes = None
-                        else:
-                            digest_bytes = derived.digest
-                    else:
-                        digest_bytes = ski_extension.value.digest
-                    if digest_bytes:
-                        return format_hex_bytes_lines(digest_bytes)
-
-    public_key_info = decoded.get("publicKeyInfo") if isinstance(decoded, Mapping) else None
-    if isinstance(public_key_info, Mapping):
-        spki_b64 = public_key_info.get("subjectPublicKeyInfoBase64")
-        if isinstance(spki_b64, str) and spki_b64.strip():
-            cleaned = re.sub(r"\s+", "", spki_b64)
-            try:
-                spki_bytes = base64.b64decode(cleaned, validate=True)
-            except (ValueError, binascii.Error):
-                pass
-            else:
-                digest = hashlib.sha1(spki_bytes).digest()
-                return format_hex_bytes_lines(digest)
-
-    return []
-
-
-def _append_simple_field(lines: List[str], label: str, value: Optional[Any], default: str = "(none)") -> None:
-    if value is None:
-        lines.append(f"{label}:\t{default}")
-    else:
-        lines.append(f"{label}:\t{value}")
-
-
-def _append_multiline_field(
-    lines: List[str],
-    label: str,
-    content_lines: Iterable[str],
-    *,
-    indent_str: str = "",
-    default: str = "(none)",
-    force_multiline: bool = False,
-) -> None:
-    filtered = [line for line in content_lines if line is not None]
-    if not filtered:
-        lines.append(f"{label}:\t{default}")
-        return
-    if len(filtered) == 1 and not force_multiline:
-        lines.append(f"{label}:\t{filtered[0]}")
-        return
-    lines.append(f"{label}:\t")
-    prefix = indent_str
-    for line in filtered:
-        lines.append(f"{prefix}{line}")
-
-
-def _format_json_block(value: Any) -> List[str]:
-    if value is None:
-        return []
-    try:
-        return json.dumps(value, indent=2, sort_keys=False).splitlines()
-    except (TypeError, ValueError):
-        return [str(value)]
-
-
-def _format_boolean(value: Any) -> Optional[str]:
-    if isinstance(value, bool):
-        return "true" if value else "false"
-    if isinstance(value, (int, float)) and value in (0, 1):
-        return "true" if bool(value) else "false"
-    if isinstance(value, str):
-        lowered = value.strip().lower()
-        if lowered in {"true", "false"}:
-            return lowered
-    return None
-
-
-def _format_counter_value(counter: Any) -> Optional[str]:
-    try:
-        count = int(counter)
-    except (TypeError, ValueError):
-        return None
-    if count < 0:
-        return str(count)
-    return f"0x{count:08x}={count}"
-
-
-def _format_flag_line(flags: Any) -> Optional[str]:
-    if not isinstance(flags, Mapping):
-        return None
-    try:
-        value = int(flags.get("value"))
-    except (TypeError, ValueError):
-        return None
-    bitfield = flags.get("bitfield")
-    if not isinstance(bitfield, str) or not bitfield.startswith("0b"):
-        bitfield = f"0b{value:08b}"
-    components = [
-        f"UP:{1 if flags.get('userPresent') else 0}",
-        f"UV:{1 if flags.get('userVerified') else 0}",
-        f"BE:{1 if flags.get('backupEligibility') else 0}",
-        f"BS:{1 if flags.get('backupState') else 0}",
-        f"AT:{1 if flags.get('attestedCredentialDataIncluded') else 0}",
-        f"ED:{1 if flags.get('extensionDataIncluded') else 0}",
-    ]
-    return f"0x{value:02x}={bitfield}= {' '.join(components)}"
-
-
-def _build_authenticator_data_lines(
-    auth_bytes: Optional[bytes], auth_details: Optional[Mapping[str, Any]]
-) -> List[str]:
-    if auth_bytes:
-        rp = auth_bytes[:32].hex()
-        lines = [rp]
-        if len(auth_bytes) > 32:
-            lines.append(auth_bytes[32:33].hex())
-        if len(auth_bytes) > 33:
-            lines.append(auth_bytes[33:37].hex())
-        if len(auth_bytes) > 37:
-            remainder = auth_bytes[37:].hex()
-            if remainder:
-                lines.append(remainder)
-        return lines
-
-    if isinstance(auth_details, Mapping):
-        rp_info = auth_details.get("rpIdHash")
-        if isinstance(rp_info, Mapping):
-            rp_hex = rp_info.get("hex")
-            if isinstance(rp_hex, str) and rp_hex:
-                return [rp_hex]
-
-    return []
-
-
-def _parse_attested_data(auth_bytes: Optional[bytes]) -> Optional[Dict[str, bytes]]:
-    if not auth_bytes or len(auth_bytes) <= 37:
-        return None
-    remainder = auth_bytes[37:]
-    if len(remainder) < 18:
-        return {"raw": remainder}
-    aaguid = remainder[:16]
-    length_bytes = remainder[16:18]
-    credential_length = int.from_bytes(length_bytes, "big")
-    credential_section = remainder[18:]
-    if len(credential_section) < credential_length:
-        credential_id = credential_section
-        public_key = b""
-    else:
-        credential_id = credential_section[:credential_length]
-        public_key = credential_section[credential_length:]
-    return {
-        "aaguid": aaguid,
-        "length_bytes": length_bytes,
-        "credential_id": credential_id,
-        "public_key": public_key,
-    }
-
-
-def _collect_attested_info(
-    attested: Mapping[str, Any], auth_bytes: Optional[bytes], fallback_alg: Optional[Any] = None
-) -> Dict[str, Any]:
-    parsed = _parse_attested_data(auth_bytes)
-    credential_lines: List[str] = []
-    credential_id_hex: Optional[str] = None
-    aaguid_lines: List[str] = []
-
-    if parsed and "aaguid" in parsed and isinstance(parsed["aaguid"], bytes):
-        credential_lines.append(parsed["aaguid"].hex())
-        aaguid_hex = parsed["aaguid"].hex()
-    else:
-        aaguid_hex = attested.get("aaguidHex") if isinstance(attested, Mapping) else None
-        if isinstance(aaguid_hex, str):
-            credential_lines.append(aaguid_hex)
-
-    aaguid_display = attested.get("aaguid") if isinstance(attested, Mapping) else None
-    if isinstance(aaguid_display, str) and aaguid_display:
-        aaguid_lines.extend(filter(None, [aaguid_hex, aaguid_display]))
-    elif aaguid_hex:
-        aaguid_lines.append(aaguid_hex)
-
-    if parsed and "length_bytes" in parsed and isinstance(parsed["length_bytes"], bytes):
-        credential_lines.append(parsed["length_bytes"].hex())
-    else:
-        credential = attested.get("credentialId") if isinstance(attested, Mapping) else None
-        if isinstance(credential, Mapping):
-            length = credential.get("length")
-            if isinstance(length, int):
-                credential_lines.append(length.to_bytes(2, "big").hex())
-
-    if parsed and "credential_id" in parsed and isinstance(parsed["credential_id"], bytes):
-        credential_id_hex = parsed["credential_id"].hex()
-        credential_lines.append(credential_id_hex)
-    else:
-        credential = attested.get("credentialId") if isinstance(attested, Mapping) else None
-        if isinstance(credential, Mapping):
-            credential_id_hex = credential.get("hex")
-            if isinstance(credential_id_hex, str):
-                credential_lines.append(credential_id_hex)
-
-    if parsed and "public_key" in parsed and isinstance(parsed["public_key"], bytes):
-        public_key_bytes = parsed["public_key"]
-        if public_key_bytes:
-            credential_lines.append(public_key_bytes.hex())
-    else:
-        b""
-
-    public_key = attested.get("publicKey") if isinstance(attested, Mapping) else None
-    algorithm_label = _resolve_cose_algorithm(public_key, fallback_alg)
-    public_key_lines = _format_json_block(_convert_cose_key_for_display(public_key))
-
-    info = {
-        "credential_lines": credential_lines,
-        "aaguid_lines": aaguid_lines or ([aaguid_hex] if aaguid_hex else []),
-        "credential_id": credential_id_hex,
-        "algorithm": algorithm_label,
-        "public_key_lines": public_key_lines,
-    }
-
-    has_content = any(
-        bool(info.get(key)) for key in ("credential_lines", "aaguid_lines", "credential_id", "public_key_lines")
-    )
-    return info if has_content else {}
-
-
-_COSE_ALG_LABELS: Dict[int, str] = {
-    -8: "EdDSA",
-    -7: "ES256",
-    -35: "ES256K",
-    -36: "ES384",
-    -37: "ES512",
-    -257: "RS256",
-    -258: "RS384",
-    -259: "RS512",
-}
-
-
-def _resolve_cose_algorithm(public_key: Any, fallback: Optional[Any] = None) -> Optional[str]:
-    alg_value: Optional[Any] = None
-    if isinstance(public_key, Mapping):
-        if 3 in public_key:
-            alg_value = public_key[3]
-        elif "3" in public_key:
-            alg_value = public_key["3"]
-        elif "alg" in public_key:
-            alg_value = public_key["alg"]
-
-    if alg_value is None:
-        if isinstance(fallback, Mapping):
-            alg_value = fallback.get("publicKeyAlgorithm")
-        elif isinstance(fallback, int):
-            alg_value = fallback
-
-    if alg_value is None:
-        return None
-
-    try:
-        alg_int = int(alg_value)
-    except (TypeError, ValueError):
-        return str(alg_value)
-    return _COSE_ALG_LABELS.get(alg_int, str(alg_int))
-
-
-def _convert_cose_key_for_display(public_key: Any) -> Any:
-    if isinstance(public_key, Mapping):
-        return {key: _convert_cose_key_for_display(value) for key, value in public_key.items()}
-    if isinstance(public_key, list):
-        return [_convert_cose_key_for_display(item) for item in public_key]
-    if isinstance(public_key, str):
-        decoded = _decode_base64_field(public_key)
-        if decoded is not None:
-            return decoded.hex()
-    return public_key
-
-
-def _decode_base64_field(value: str) -> Optional[bytes]:
-    cleaned = value.strip()
-    if not cleaned:
-        return None
-    normalized = cleaned.replace('-', '+').replace('_', '/')
-    padding = (-len(normalized)) % 4
-    try:
-        decoded = base64.b64decode(normalized + '=' * padding)
-    except (ValueError, binascii.Error):
-        return None
-
-    if base64.urlsafe_b64encode(decoded).rstrip(b'=') == cleaned.encode('ascii').rstrip(b'='):
-        return decoded
-    if base64.b64encode(decoded).rstrip(b'=') == normalized.encode('ascii').rstrip(b'='):
-        return decoded
-    return None
-
-
-def _extract_hex_from_binary(entry: Any) -> Optional[str]:
-    if not isinstance(entry, Mapping):
-        return None
-    direct_hex = entry.get("hex")
-    if isinstance(direct_hex, str) and direct_hex:
-        return direct_hex
-    binary = entry.get("binary")
-    if isinstance(binary, Mapping):
-        hex_value = binary.get("hex")
-        if isinstance(hex_value, str) and hex_value:
-            return hex_value
-    return None
-
-
-def _extract_bytes_from_binary(entry: Any) -> Optional[bytes]:
-    if not isinstance(entry, Mapping):
-        return None
-    hex_value = _extract_hex_from_binary(entry)
-    if isinstance(hex_value, str):
-        cleaned = "".join(hex_value.split())
-        try:
-            return bytes.fromhex(cleaned)
-        except ValueError:
-            pass
-
-    raw_value = entry.get("raw")
-    if isinstance(raw_value, str) and raw_value:
-        cleaned = "".join(raw_value.split())
-        padding = (-len(cleaned)) % 4
-        try:
-            return base64.urlsafe_b64decode(cleaned + "=" * padding)
-        except (ValueError, binascii.Error):
-            return None
-
-    return None
-
-
-def _extract_authenticator_bytes(response: Any, attestation_entry: Any = None) -> Optional[bytes]:
-    if isinstance(response, Mapping):
-        auth_entry = response.get("authenticatorData")
-        auth_bytes = _extract_bytes_from_binary(auth_entry)
-        if auth_bytes is not None:
-            return auth_bytes
-        if attestation_entry is None:
-            attestation_entry = response.get("attestationObject")
-    return _extract_authenticator_bytes_from_attestation(attestation_entry)
-
-
-def _extract_authenticator_bytes_from_attestation(attestation_entry: Any) -> Optional[bytes]:
-    attestation_bytes = _extract_bytes_from_binary(attestation_entry)
-    if attestation_bytes is None and isinstance(attestation_entry, Mapping):
-        raw_value = attestation_entry.get("raw")
-        if isinstance(raw_value, str) and raw_value:
-            cleaned = "".join(raw_value.split())
-            padding = (-len(cleaned)) % 4
-            try:
-                attestation_bytes = base64.b64decode(cleaned + "=" * padding)
-            except (ValueError, binascii.Error):
-                attestation_bytes = None
-
-    if attestation_bytes is None:
-        return None
-
-    try:
-        attestation = AttestationObject(attestation_bytes)
-    except Exception:  # pragma: no cover - defensive against malformed input
-        return None
-
-    try:
-        return bytes(attestation.auth_data)
-    except Exception:  # pragma: no cover - defensive
-        return None
 
 
 def _extend_with_authenticator_details(
