@@ -1,5 +1,4 @@
 import {
-    MDS_EXPLORER_PATH,
     MDS_EXPLORER_FULL_PATH,
     MDS_RESOLVE_PATH,
     MDS_VERIFIED_META_PATH,
@@ -18,25 +17,62 @@ import {
     transformEntry,
     transformEntryLightweight,
     upgradeEntryToFull,
-    parseIsoDate,
-    formatDate,
-    decodeBase64Url,
     formatEnum,
     normaliseEnumKey,
     normaliseAaguid,
-    formatDetailValue,
-    formatGuidCandidate,
-    formatUpv,
-    extractList,
     renderCertificateSummary,
 } from './mds-utils.js';
+import { buildDetailContent } from './mds/detail-content.js';
+import { formatDetailSubtitle } from './mds/detail-user-sections.js';
+import { getAuthenticatorRawData } from './mds/raw-data.js';
+import { stringifyAuthenticatorRawData } from './mds/raw-stringify.js';
+import { openAuthenticatorRawWindow as openAuthenticatorRawDataWindow } from './mds/raw-window.js';
+import {
+    createIconCell as createIconCellFromModule,
+    createIdCell as createIdCellFromModule,
+    createNameCell as createNameCellFromModule,
+    createTagCell as createTagCellFromModule,
+    createTextCell as createTextCellFromModule,
+} from './mds/table-cells.js';
+import {
+    setStatus as setStatusInState,
+    setUpdateButtonBusy as setUpdateButtonBusyInState,
+    setUpdateButtonMode as setUpdateButtonModeInState,
+    updateCount as updateCountInState,
+    updateOptionLists as updateOptionListsInState,
+} from './mds/status-controls.js';
+import {
+    applyCertificateLoadingCursorVisibility as applyCertificateLoadingCursorVisibilityByCount,
+    formatCertificateInput as formatCertificateInputValue,
+    formatCertificateOutput as formatCertificateOutputValue,
+    normaliseCertificateBase64 as normaliseCertificateBase64Value,
+    setCertificateFieldContent as setCertificateFieldContentValue,
+    setCertificateSummaryContent as setCertificateSummaryContentInState,
+} from './mds/certificate-utils.js';
+import {
+    applyRowHighlightByKey as applyRowHighlightByKeyInState,
+    clearRowHighlight as clearRowHighlightInState,
+    findRowByKey as findRowByKeyInState,
+    hideAuthenticatorDetail as hideAuthenticatorDetailInState,
+    isElementVisible as isElementVisibleInDom,
+    showAuthenticatorDetail as showAuthenticatorDetailInState,
+    waitForElementVisible as waitForElementVisibleInDom,
+} from './mds/row-highlight.js';
+import { createColumnResizerController } from './mds/column-resizers.js';
+import { createDetailStickyHeader } from './mds/detail-sticky-header.js';
+import {
+    notifyGlobalScrollLock,
+    resetCertificateTextareaHeights,
+    restoreListSection,
+    scheduleCertificateTextareaResize,
+    suppressListSection,
+} from './mds/detail-layout.js';
 import {
     loaderIsActive,
     loaderSetMetadataCount,
     loaderSetPhase,
     loaderSetProgress,
 } from '../shared/loader.js';
-import { initializeStickyHeaderForElement } from '../shared/ui.js';
 import { createMdsLazyLoader } from './mds-lazy-loader.js';
 
 let mdsState = null;
@@ -180,8 +216,6 @@ function setRetryButtonVisible(visible) {
     button.setAttribute('aria-hidden', visible ? 'false' : 'true');
 }
 
-
-let metadataStorageWarningShown = false;
 let isSyncingHorizontalScroll = false;
 
 const SORT_NONE = 'none';
@@ -236,6 +270,16 @@ const SORT_ACCESSORS = {
 const DEFAULT_MIN_COLUMN_WIDTH = 64;
 const FLOATING_SCROLL_BOTTOM_MARGIN = 24;
 const FLOATING_SCROLL_SIDE_MARGIN = 16;
+
+const columnResizerController = createColumnResizerController({
+    getState: () => mdsState,
+    isLoading: () => isLoading,
+    hasLoaded: () => hasLoaded,
+    defaultMinColumnWidth: DEFAULT_MIN_COLUMN_WIDTH,
+    scheduleColumnResizerMetricsUpdate: () => scheduleColumnResizerMetricsUpdate(),
+    scheduleHorizontalScrollMetricsUpdate: () => scheduleHorizontalScrollMetricsUpdate(),
+    scheduleRowHeightLock: () => scheduleRowHeightLock(),
+});
 
 let customMetadataCache = null;
 let customMetadataPromise = null;
@@ -638,42 +682,6 @@ async function ensureCustomMetadata(metadata, options = {}) {
     throwIfAborted(signal);
 
     return mergeCustomEntriesIntoMetadata(metadata, entries, customMetadataItems);
-}
-
-async function refreshCustomMetadataAfterUpload(note, options = {}) {
-    const signal = getAbortSignal(options);
-    customMetadataCache = null;
-
-    const cached = readMetadataCache();
-    const baseMetadata = cached && typeof cached.metadata === 'object' ? cached.metadata : null;
-
-    if (!baseMetadata) {
-        return false;
-    }
-
-    try {
-        const enhanced = await ensureCustomMetadata(baseMetadata, { forceReload: true, signal });
-        if (!enhanced || typeof enhanced !== 'object') {
-            throw new Error('No metadata available for refresh.');
-        }
-
-        throwIfAborted(signal);
-
-        await applyMetadataEntries(enhanced, { note, signal });
-        throwIfAborted(signal);
-
-        const infoSource =
-            cached && cached.info && typeof cached.info === 'object' ? { ...cached.info } : {};
-        infoSource.cachedAt = new Date().toISOString();
-        if (!infoSource.source) {
-            infoSource.source = 'session-custom';
-        }
-        storeMetadataCache(JSON.stringify(enhanced), infoSource);
-        return true;
-    } catch (error) {
-        console.warn('Fast custom metadata refresh failed. Falling back to full reload.', error);
-        return false;
-    }
 }
 
 function setCustomMetadataMessage(message, variant = 'info', targetState = mdsState) {
@@ -1652,14 +1660,6 @@ function setHighlightedRow(row, key, { scroll = false, behavior = 'smooth', focu
 
     scheduleScrollTopButtonUpdate();
     return true;
-}
-
-function readMetadataCache() {
-    return null;
-}
-
-function storeMetadataCache() {
-    // Disabled to minimise localStorage usage.
 }
 
 function clearMetadataCache() {
@@ -2643,7 +2643,10 @@ function updateBackgroundLoadingStatus(parsed, total, lastUpdatedDate) {
     setStatus(statusMessage, variant);
 }
 
-async function populateCertificateDerivedInfoForBatch(entries) {
+async function populateCertificateDerivedInfoInternal(
+    entries,
+    { upgradeLightweightEntries = false } = {},
+) {
     if (!Array.isArray(entries) || !entries.length) {
         return;
     }
@@ -2652,8 +2655,7 @@ async function populateCertificateDerivedInfoForBatch(entries) {
     const certificates = [];
 
     entries.forEach(entry => {
-        // Upgrade to full entry if lightweight
-        if (entry.isLightweightEntry && entry.deferredRawEntry) {
+        if (upgradeLightweightEntries && entry.isLightweightEntry && entry.deferredRawEntry) {
             const fullEntry = upgradeEntryToFull(entry);
             Object.assign(entry, fullEntry);
         }
@@ -2730,6 +2732,12 @@ async function populateCertificateDerivedInfoForBatch(entries) {
         entry.certificateCommonNameList = commonNames;
         entry.certificateCommonNames = commonNames.length ? commonNames.join(', ') : '—';
         entry.commonName = entry.certificateCommonNames;
+    });
+}
+
+async function populateCertificateDerivedInfoForBatch(entries) {
+    await populateCertificateDerivedInfoInternal(entries, {
+        upgradeLightweightEntries: true,
     });
 }
 
@@ -3308,87 +3316,7 @@ function handleSortButtonClick(sortKey) {
 }
 
 async function populateCertificateDerivedInfo(entries) {
-    if (!Array.isArray(entries) || !entries.length) {
-        return;
-    }
-
-    const seen = new Set();
-    const certificates = [];
-
-    entries.forEach(entry => {
-        const list = Array.isArray(entry?.attestationCertificates) ? entry.attestationCertificates : [];
-        list.forEach(certificate => {
-            const cleaned = normaliseCertificateBase64(certificate);
-            if (cleaned && !seen.has(cleaned)) {
-                seen.add(cleaned);
-                certificates.push(cleaned);
-            }
-        });
-    });
-
-    if (!certificates.length) {
-        return;
-    }
-
-    const detailMap = new Map();
-
-    const decodeTasks = certificates.map(certificate =>
-        decodeCertificate(certificate)
-            .then(details => ({ certificate, details, error: null }))
-            .catch(error => ({ certificate, details: null, error })),
-    );
-
-    const decodedResults = await Promise.all(decodeTasks);
-    decodedResults.forEach(result => {
-        if (result.error) {
-            console.error('Failed to decode attestation root certificate:', result.error);
-        }
-        detailMap.set(result.certificate, result.details);
-    });
-
-    entries.forEach(entry => {
-        const algorithmSet = new Set();
-        const algorithms = [];
-        const commonNameSet = new Set();
-        const commonNames = [];
-        const list = Array.isArray(entry?.attestationCertificates) ? entry.attestationCertificates : [];
-
-        list.forEach(certificate => {
-            const cleaned = normaliseCertificateBase64(certificate);
-            if (!cleaned) {
-                return;
-            }
-            const details = detailMap.get(cleaned);
-            if (!details || typeof details !== 'object') {
-                return;
-            }
-
-            const algorithmInfo = typeof details.algorithmInfo === 'string' ? details.algorithmInfo.trim() : '';
-            if (algorithmInfo && !algorithmSet.has(algorithmInfo)) {
-                algorithmSet.add(algorithmInfo);
-                algorithms.push(algorithmInfo);
-            }
-
-            const cnValues = Array.isArray(details.subjectCommonNames) ? details.subjectCommonNames : [];
-            cnValues.forEach(name => {
-                if (typeof name !== 'string') {
-                    return;
-                }
-                const trimmed = name.trim();
-                if (trimmed && !commonNameSet.has(trimmed)) {
-                    commonNameSet.add(trimmed);
-                    commonNames.push(trimmed);
-                }
-            });
-        });
-
-        entry.certificateAlgorithmInfoList = algorithms;
-        entry.certificateAlgorithmInfo = algorithms.length ? algorithms.join(', ') : '—';
-        entry.algorithmInfo = entry.certificateAlgorithmInfo;
-        entry.certificateCommonNameList = commonNames;
-        entry.certificateCommonNames = commonNames.length ? commonNames.join(', ') : '—';
-        entry.commonName = entry.certificateCommonNames;
-    });
+    await populateCertificateDerivedInfoInternal(entries);
 }
 
 function resetFilters() {
@@ -3529,24 +3457,6 @@ function renderTable(entries, options = {}) {
     scheduleRowHeightLock();
 }
 
-function formatDetailSubtitle(entry) {
-    if (!entry) {
-        return '';
-    }
-
-    const parts = [];
-    if (entry.aaguid) {
-        parts.push(`AAGUID: ${entry.aaguid}`);
-    }
-    if (entry.id && entry.id !== entry.aaguid) {
-        parts.push(`ID: ${entry.id}`);
-    }
-    if (entry.protocol) {
-        parts.push(entry.protocol);
-    }
-    return parts.join(' • ');
-}
-
 function applyDetailHeader(entry, titleEl, subtitleEl) {
     if (titleEl) {
         titleEl.textContent = entry?.name?.trim() ? entry.name : 'Authenticator';
@@ -3563,7 +3473,9 @@ function populateDetailContent(target, entry) {
         return;
     }
     target.innerHTML = '';
-    const content = buildDetailContent(entry);
+    const content = buildDetailContent(entry, {
+        onOpenCertificatePage: openCertificatePage,
+    });
     if (content) {
         target.appendChild(content);
     }
@@ -3594,1039 +3506,49 @@ function resetScrollPositions(...elements) {
     }
 }
 
-function notifyGlobalScrollLock() {
-    if (typeof window !== 'undefined' && typeof window.updateGlobalScrollLock === 'function') {
-        window.updateGlobalScrollLock();
-        return;
-    }
-
-    if (typeof document === 'undefined') {
-        return;
-    }
-
-    const overlayActive = document.getElementById('json-editor-overlay')?.classList.contains('active');
-    const modalActive = document.querySelector('.modal.open');
-    const mdsModalActive = document.querySelector('.mds-modal:not([hidden])');
-    const detailPageActive = document.querySelector('.mds-detail-page.mds-detail-page--open');
-    const shouldLock = Boolean(overlayActive || modalActive || mdsModalActive || detailPageActive);
-
-    const targets = [document.body, document.documentElement].filter(Boolean);
-    targets.forEach(target => target.classList.toggle('modal-open', shouldLock));
-}
-
-function createDetailStickyHeader(page, header, options = {}) {
-    if (!(page instanceof HTMLElement) || !(header instanceof HTMLElement)) {
-        return null;
-    }
-
-    const { defaultTitle = '', type = 'detail', onBack = null } = options || {};
-
-    const backSource = header.querySelector('.mds-detail-page__back');
-    const titleSource = header.querySelector('.mds-detail-page__title');
-    const subtitleSource = header.querySelector('.mds-detail-page__subtitle');
-    const actionsSource = header.querySelector('.mds-detail-page__actions');
-
-    const controller = initializeStickyHeaderForElement(header, {
-        root: document.body instanceof HTMLElement ? document.body : header.parentElement,
-        scrollTarget: page,
-        miniClass: 'mds-detail-mini',
-        miniInnerClass: 'mds-detail-mini__inner',
-        activeClass: 'mds-detail-mini--active',
-        measuringClass: 'mds-detail-mini--measuring',
-        createContent: () => {
-            const wrapper = document.createElement('div');
-            wrapper.className = 'mds-detail-mini__content';
-
-            if (backSource instanceof HTMLElement) {
-                const backButton = backSource.cloneNode(true);
-                backButton.removeAttribute('id');
-                backButton.classList.add('mds-detail-mini__back');
-                wrapper.appendChild(backButton);
-            }
-
-            const heading = document.createElement('div');
-            heading.className = 'mds-detail-mini__heading';
-
-            const title = document.createElement('h3');
-            title.className = 'mds-detail-page__title mds-detail-mini__title';
-            title.textContent = titleSource?.textContent?.trim() || defaultTitle;
-            heading.appendChild(title);
-
-            const subtitle = document.createElement('p');
-            subtitle.className = 'mds-detail-page__subtitle mds-detail-mini__subtitle';
-            const subtitleText = subtitleSource?.textContent?.trim() || '';
-            if (subtitleText) {
-                subtitle.textContent = subtitleText;
-            } else {
-                subtitle.textContent = '';
-                subtitle.hidden = true;
-                subtitle.setAttribute('aria-hidden', 'true');
-            }
-            heading.appendChild(subtitle);
-
-            wrapper.appendChild(heading);
-
-            if (actionsSource instanceof HTMLElement && actionsSource.children.length > 0) {
-                const actions = actionsSource.cloneNode(true);
-                actions.removeAttribute('id');
-                actions.classList.add('mds-detail-mini__actions');
-                const buttons = actions.querySelectorAll('button');
-                buttons.forEach(button => {
-                    button.classList.add('mds-detail-mini__action');
-                    button.removeAttribute('id');
-                });
-                wrapper.appendChild(actions);
-            }
-
-            return wrapper;
-        },
-    });
-
-    if (!controller) {
-        return null;
-    }
-
-    const miniHeader = controller.miniHeader;
-    const miniInner = controller.miniInner;
-    miniHeader.hidden = true;
-    miniHeader.setAttribute('aria-hidden', 'true');
-    miniHeader.dataset.mdsStickyType = type;
-
-    const backTarget = miniHeader.querySelector('.mds-detail-mini__back');
-    if (backTarget instanceof HTMLElement && backSource instanceof HTMLElement) {
-        backTarget.addEventListener('click', event => {
-            event.preventDefault();
-            if (typeof onBack === 'function') {
-                onBack();
-            } else if (typeof backSource.click === 'function') {
-                backSource.click();
-            }
-        });
-    }
-
-    const titleTarget = miniHeader.querySelector('.mds-detail-mini__title');
-    const subtitleTarget = miniHeader.querySelector('.mds-detail-mini__subtitle');
-    const actionsTarget = miniHeader.querySelector('.mds-detail-mini__actions');
-
-    const actionPairs = [];
-    if (actionsSource instanceof HTMLElement && actionsTarget instanceof HTMLElement) {
-        const sourceButtons = Array.from(actionsSource.querySelectorAll('button'));
-        const targetButtons = Array.from(actionsTarget.querySelectorAll('button'));
-        targetButtons.forEach((button, index) => {
-            const sourceButton = sourceButtons[index] || null;
-            button.addEventListener('click', event => {
-                event.preventDefault();
-                if (sourceButton && typeof sourceButton.click === 'function') {
-                    sourceButton.click();
-                }
-            });
-            actionPairs.push({ source: sourceButton, target: button });
-        });
-    }
-
-    let restoreAnimationCancel = null;
-
-    const cancelRestoreAnimation = () => {
-        if (typeof restoreAnimationCancel === 'function') {
-            try {
-                restoreAnimationCancel();
-            } catch (error) {
-                // Ignore cleanup errors.
-            }
-            restoreAnimationCancel = null;
-        }
-    };
-
-    const startRestoreAnimation = () => {
-        if (!miniHeader || miniHeader.hidden || !(miniInner instanceof HTMLElement)) {
-            return null;
-        }
-
-        const scheduleTimeout =
-            typeof window !== 'undefined' && typeof window.setTimeout === 'function'
-                ? window.setTimeout.bind(window)
-                : setTimeout;
-        const cancelTimeout =
-            typeof window !== 'undefined' && typeof window.clearTimeout === 'function'
-                ? window.clearTimeout.bind(window)
-                : clearTimeout;
-
-        let timeoutId = null;
-        let finished = false;
-
-        const handleTransitionEnd = event => {
-            if (!event || (event.target !== miniHeader && event.target !== miniInner)) {
-                return;
-            }
-            cleanup();
-        };
-
-        function cleanup() {
-            if (finished) {
-                return;
-            }
-            finished = true;
-            miniHeader.classList.remove('mds-detail-mini--restoring');
-            miniInner.classList.remove('mds-detail-mini__inner--restoring');
-            miniHeader.removeEventListener('transitionend', handleTransitionEnd);
-            miniInner.removeEventListener('transitionend', handleTransitionEnd);
-            if (timeoutId !== null) {
-                cancelTimeout(timeoutId);
-                timeoutId = null;
-            }
-            restoreAnimationCancel = null;
-        }
-
-        miniHeader.classList.add('mds-detail-mini--restoring');
-        miniInner.classList.add('mds-detail-mini__inner--restoring');
-        miniHeader.addEventListener('transitionend', handleTransitionEnd);
-        miniInner.addEventListener('transitionend', handleTransitionEnd);
-
-        timeoutId = scheduleTimeout(() => {
-            cleanup();
-        }, 360);
-
-        return cleanup;
-    };
-
-    const sync = () => {
-        if (titleTarget) {
-            const titleText = titleSource?.textContent?.trim() || defaultTitle;
-            titleTarget.textContent = titleText;
-            titleTarget.setAttribute('title', titleText);
-        }
-
-        if (subtitleTarget) {
-            const subtitleText = subtitleSource?.textContent?.trim() || '';
-            if (subtitleText) {
-                subtitleTarget.textContent = subtitleText;
-                subtitleTarget.hidden = false;
-                subtitleTarget.setAttribute('aria-hidden', 'false');
-            } else {
-                subtitleTarget.textContent = '';
-                subtitleTarget.hidden = true;
-                subtitleTarget.setAttribute('aria-hidden', 'true');
-            }
-        }
-
-        actionPairs.forEach(({ source, target }) => {
-            if (!target) {
-                return;
-            }
-            if (!source) {
-                target.disabled = true;
-                target.setAttribute('aria-disabled', 'true');
-                target.setAttribute('tabindex', '-1');
-                return;
-            }
-
-            target.disabled = source.disabled;
-            if (source.hasAttribute('aria-disabled')) {
-                target.setAttribute('aria-disabled', source.getAttribute('aria-disabled'));
-            } else {
-                target.setAttribute('aria-disabled', source.disabled ? 'true' : 'false');
-            }
-
-            if (source.hasAttribute('title')) {
-                target.setAttribute('title', source.getAttribute('title'));
-            } else {
-                target.removeAttribute('title');
-            }
-
-            if (source.hasAttribute('aria-label')) {
-                target.setAttribute('aria-label', source.getAttribute('aria-label'));
-            } else {
-                target.removeAttribute('aria-label');
-            }
-
-            if (source.hasAttribute('data-tooltip')) {
-                target.setAttribute('data-tooltip', source.getAttribute('data-tooltip'));
-            } else {
-                target.removeAttribute('data-tooltip');
-            }
-
-            const textContent = source.textContent || '';
-            target.textContent = textContent;
-
-            if (source.hasAttribute('tabindex')) {
-                target.setAttribute('tabindex', source.getAttribute('tabindex'));
-            } else {
-                target.removeAttribute('tabindex');
-            }
-        });
-    };
-
-    const show = () => {
-        miniHeader.hidden = false;
-        miniHeader.setAttribute('aria-hidden', 'false');
-        cancelRestoreAnimation();
-        controller.reset();
-        restoreAnimationCancel = startRestoreAnimation();
-        controller.refreshGeometry();
-        controller.evaluate();
-        sync();
-    };
-
-    const prepareForClose = () => {
-        cancelRestoreAnimation();
-        controller.reset();
-    };
-
-    const hide = () => {
-        cancelRestoreAnimation();
-        miniHeader.hidden = true;
-        miniHeader.setAttribute('aria-hidden', 'true');
-    };
-
-    return {
-        controller,
-        header,
-        page,
-        show,
-        hide,
-        sync,
-        prepareForClose,
-        miniHeader,
-    };
-}
-
-function resizeCertificateTextareas() {
-    if (!mdsState) {
-        return;
-    }
-
-    const fields = [mdsState.certificateInput, mdsState.certificateOutput];
-    fields.forEach(field => {
-        if (!(field instanceof HTMLElement)) {
-            return;
-        }
-        if (field instanceof HTMLTextAreaElement) {
-            field.style.height = 'auto';
-            field.style.overflowY = 'hidden';
-            field.style.overflowX = 'hidden';
-            const { scrollHeight } = field;
-            if (Number.isFinite(scrollHeight)) {
-                field.style.height = `${scrollHeight}px`;
-            }
-            return;
-        }
-
-        field.style.removeProperty('height');
-    });
-}
-
-function scheduleCertificateTextareaResize() {
-    const adjust = () => resizeCertificateTextareas();
-    if (typeof requestAnimationFrame === 'function') {
-        requestAnimationFrame(() => requestAnimationFrame(adjust));
-    } else {
-        setTimeout(adjust, 0);
-    }
-}
-
-function resetCertificateTextareaHeights() {
-    if (!mdsState) {
-        return;
-    }
-    [mdsState.certificateInput, mdsState.certificateOutput].forEach(field => {
-        if (field instanceof HTMLElement) {
-            field.style.height = '';
-        }
-    });
-}
-
 function clearRowHighlight() {
-    if (!mdsState) {
-        return;
-    }
-    if (mdsState.tableBody) {
-        mdsState.tableBody.querySelectorAll('tr.mds-row--highlight').forEach(row => {
-            row.classList.remove('mds-row--highlight');
-        });
-    }
-    mdsState.highlightedRow = null;
-    mdsState.highlightedRowKey = '';
+    return clearRowHighlightInState(mdsState);
 }
 
 function findRowByKey(key) {
-    if (!mdsState?.tableBody || !key) {
-        return null;
-    }
-    const normalised = key.toLowerCase();
-    const rows = mdsState.tableBody.querySelectorAll('tr[data-aaguid]');
-    for (const row of rows) {
-        if ((row.dataset.aaguid || '').toLowerCase() === normalised) {
-            return row;
-        }
-    }
-    return null;
+    return findRowByKeyInState(mdsState, key);
 }
 
 function applyRowHighlightByKey(key, options = {}) {
-    if (!mdsState || !key) {
-        return false;
-    }
-
-    const row = findRowByKey(key);
-    if (!row) {
-        return false;
-    }
-
-    const applied = setHighlightedRow(row, key, options);
-    return applied ? row : false;
+    return applyRowHighlightByKeyInState(mdsState, key, setHighlightedRow, options);
 }
 
 function isElementVisible(element) {
-    if (!(element instanceof HTMLElement)) {
-        return false;
-    }
-    if (element.offsetParent !== null) {
-        return true;
-    }
-    const style = window.getComputedStyle ? window.getComputedStyle(element) : null;
-    if (!style) {
-        return false;
-    }
-    return style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0';
+    return isElementVisibleInDom(element);
 }
 
 function waitForElementVisible(element, { timeout = 2000, interval = 32 } = {}) {
-    if (isElementVisible(element)) {
-        return Promise.resolve(true);
-    }
-
-    return new Promise(resolve => {
-        const start = Date.now();
-        const check = () => {
-            if (isElementVisible(element)) {
-                resolve(true);
-                return;
-            }
-            if (Date.now() - start >= timeout) {
-                resolve(false);
-                return;
-            }
-            if (typeof requestAnimationFrame === 'function') {
-                requestAnimationFrame(check);
-            } else {
-                setTimeout(check, interval);
-            }
-        };
-        check();
-    });
+    return waitForElementVisibleInDom(element, { timeout, interval });
 }
 
 function showAuthenticatorDetail(entry, options = {}) {
-    if (!mdsState || !entry) {
-        return;
-    }
-
-    clearRowHighlight();
-
-    const key = normaliseAaguid(entry.aaguid || entry.id);
-    let sourceEntry = entry;
-    if (key && mdsState.byAaguid?.has(key)) {
-        sourceEntry = mdsState.byAaguid.get(key);
-    } else if (typeof entry.index === 'number' && mdsData[entry.index]) {
-        sourceEntry = mdsData[entry.index];
-    }
-
-    mdsState.activeDetailEntry = sourceEntry;
-
-    const { scrollIntoView = false } = options;
-    if (scrollIntoView && key) {
-        const row = findRowByKey(key);
-        if (row) {
-            const scroll = () => scrollRowIntoView(row, { behavior: 'smooth' });
-            if (typeof requestAnimationFrame === 'function') {
-                requestAnimationFrame(scroll);
-            } else {
-                scroll();
-            }
-        }
-    }
-
-    void openAuthenticatorModal(sourceEntry);
+    return showAuthenticatorDetailInState({
+        state: mdsState,
+        entry,
+        options,
+        mdsData,
+        normaliseAaguid,
+        clearRowHighlight: clearRowHighlightInState,
+        findRowByKey: findRowByKeyInState,
+        scrollRowIntoView,
+        openAuthenticatorModal,
+    });
 }
 
 function hideAuthenticatorDetail() {
-    if (!mdsState) {
-        return;
-    }
-
-    closeAuthenticatorModal();
-}
-
-function buildDetailContent(entry) {
-    const fragment = document.createDocumentFragment();
-    const metadata = entry?.metadataStatement ?? {};
-
-    const overviewSection = createDetailSection('Overview');
-    const overviewItems = [];
-    overviewItems.push({ label: 'Identifier', value: entry.id || '—' });
-    if (entry.aaguid) {
-        overviewItems.push({ label: 'AAGUID', value: entry.aaguid });
-    }
-    if (entry.protocol) {
-        overviewItems.push({ label: 'Protocol', value: entry.protocol });
-    }
-    if (entry.certification) {
-        overviewItems.push({ label: 'Certification', value: entry.certification });
-    }
-    if (metadata.authenticatorVersion !== undefined && metadata.authenticatorVersion !== null) {
-        overviewItems.push({ label: 'Authenticator Version', value: String(metadata.authenticatorVersion) });
-    }
-    if (entry.dateUpdated) {
-        overviewItems.push({ label: 'Date Updated', value: entry.dateUpdated });
-    }
-    appendDetailGrid(overviewSection, overviewItems);
-    fragment.appendChild(overviewSection);
-
-    const metadataSection = createDetailSection('Metadata Statement');
-    const metadataItems = [];
-    if (metadata.description) {
-        metadataItems.push({ label: 'Description', value: String(metadata.description) });
-    }
-    if (metadata.legalHeader) {
-        metadataItems.push({ label: 'Legal Header', value: String(metadata.legalHeader) });
-    }
-    if (metadata.schema !== undefined && metadata.schema !== null) {
-        metadataItems.push({ label: 'Schema', value: String(metadata.schema) });
-    }
-    if (metadata.cryptoStrength !== undefined && metadata.cryptoStrength !== null) {
-        metadataItems.push({ label: 'Crypto Strength', value: String(metadata.cryptoStrength) });
-    }
-    const keyIdentifierNode = createCodeValueList(entry.attestationKeyIdentifiers);
-    if (keyIdentifierNode) {
-        metadataItems.push({ label: 'Attestation Certificate Key IDs', node: keyIdentifierNode });
-    }
-    const upvValues = formatUpv(metadata.upv);
-    if (upvValues.length) {
-        metadataItems.push({ label: 'UPV', value: upvValues.join(', ') });
-    }
-    appendDetailGrid(metadataSection, metadataItems);
-
-    const algorithmChips = createChipList('Authentication Algorithms', formatRawListValues(metadata.authenticationAlgorithms));
-    if (algorithmChips) {
-        metadataSection.appendChild(algorithmChips);
-    }
-    const encodingChips = createChipList('Public Key Algorithms', formatRawListValues(metadata.publicKeyAlgAndEncodings));
-    if (encodingChips) {
-        metadataSection.appendChild(encodingChips);
-    }
-    const attestationChips = createChipList('Attestation Types', formatRawListValues(metadata.attestationTypes));
-    if (attestationChips) {
-        metadataSection.appendChild(attestationChips);
-    }
-    const keyProtectionChips = createChipList('Key Protection', formatRawListValues(metadata.keyProtection));
-    if (keyProtectionChips) {
-        metadataSection.appendChild(keyProtectionChips);
-    }
-    const matcherChips = createChipList('Matcher Protection', formatRawListValues(metadata.matcherProtection));
-    if (matcherChips) {
-        metadataSection.appendChild(matcherChips);
-    }
-    const attachmentChips = createChipList('Attachment Hints', formatRawListValues(metadata.attachmentHint));
-    if (attachmentChips) {
-        metadataSection.appendChild(attachmentChips);
-    }
-    const displayChips = createChipList('TC Display', formatRawListValues(metadata.tcDisplay));
-    if (displayChips) {
-        metadataSection.appendChild(displayChips);
-    }
-    fragment.appendChild(metadataSection);
-
-    const userVerificationContent = renderUserVerificationDetails(metadata.userVerificationDetails);
-    if (userVerificationContent) {
-        const userSection = createDetailSection('User Verification Details');
-        userSection.appendChild(userVerificationContent);
-        fragment.appendChild(userSection);
-    }
-
-    const certificatesContent = renderAttestationCertificates(entry.attestationCertificates);
-    if (certificatesContent) {
-        const certificateSection = createDetailSection('Attestation Root Certificates');
-        certificateSection.appendChild(certificatesContent);
-        fragment.appendChild(certificateSection);
-    }
-
-    const authenticatorInfoSection = renderAuthenticatorInfo(metadata.authenticatorGetInfo);
-    if (authenticatorInfoSection) {
-        fragment.appendChild(authenticatorInfoSection);
-    }
-
-    const statusContent = renderStatusReports(entry.statusReports);
-    if (statusContent) {
-        const statusSection = createDetailSection('Status Reports');
-        statusSection.appendChild(statusContent);
-        fragment.appendChild(statusSection);
-    }
-
-    return fragment;
-}
-
-function createDetailSection(title) {
-    const section = document.createElement('section');
-    section.className = 'mds-detail-section';
-    if (title) {
-        const heading = document.createElement('h4');
-        heading.className = 'mds-detail-section__title';
-        heading.textContent = title;
-        section.appendChild(heading);
-    }
-    return section;
-}
-
-function appendDetailGrid(section, items) {
-    if (!section || !Array.isArray(items) || !items.length) {
-        return;
-    }
-
-    const valid = items.filter(item => {
-        if (!item || typeof item.label !== 'string') {
-            return false;
-        }
-        if (item.node instanceof Node) {
-            return true;
-        }
-        const value = item.value;
-        if (Array.isArray(value)) {
-            return value.length > 0;
-        }
-        return value !== undefined && value !== null && String(value).trim() !== '';
+    return hideAuthenticatorDetailInState({
+        state: mdsState,
+        closeAuthenticatorModal,
     });
-
-    if (!valid.length) {
-        return;
-    }
-
-    const grid = document.createElement('div');
-    grid.className = 'mds-detail-grid';
-
-    valid.forEach(item => {
-        const cell = document.createElement('div');
-        cell.className = 'mds-detail-item';
-        const labelEl = document.createElement('div');
-        labelEl.className = 'mds-detail-item__label';
-        labelEl.textContent = item.label;
-        const valueEl = document.createElement('div');
-        valueEl.className = 'mds-detail-item__value';
-        if (item.node instanceof Node) {
-            valueEl.appendChild(item.node);
-        } else if (Array.isArray(item.value)) {
-            valueEl.textContent = item.value.join(', ');
-        } else {
-            valueEl.textContent = String(item.value);
-        }
-        cell.appendChild(labelEl);
-        cell.appendChild(valueEl);
-        grid.appendChild(cell);
-    });
-
-    section.appendChild(grid);
-}
-
-function createChipList(label, values) {
-    const items = Array.isArray(values) ? values.filter(Boolean) : [];
-    if (!items.length) {
-        return null;
-    }
-
-    const wrapper = document.createElement('div');
-    wrapper.className = 'mds-detail-item';
-    const labelEl = document.createElement('div');
-    labelEl.className = 'mds-detail-item__label';
-    labelEl.textContent = label;
-    const list = document.createElement('div');
-    list.className = 'mds-detail-list';
-    items.forEach(value => {
-        const chip = document.createElement('span');
-        chip.className = 'mds-detail-chip';
-        chip.textContent = value;
-        list.appendChild(chip);
-    });
-    wrapper.appendChild(labelEl);
-    wrapper.appendChild(list);
-    return wrapper;
-}
-
-function createCodeValueList(values) {
-    const items = extractList(values)
-        .map(value => (value === undefined || value === null ? '' : String(value).trim()))
-        .filter(Boolean);
-    if (!items.length) {
-        return null;
-    }
-
-    const container = document.createElement('div');
-    container.className = 'mds-detail-code-values';
-    items.forEach(value => {
-        const code = document.createElement('code');
-        code.className = 'mds-detail-code';
-        code.textContent = value;
-        container.appendChild(code);
-    });
-    return container;
-}
-
-function renderUserVerificationDetails(details) {
-    const groups = Array.isArray(details) ? details : [];
-    if (!groups.length) {
-        return null;
-    }
-
-    const container = document.createElement('div');
-    container.className = 'mds-detail-groups';
-
-    groups.forEach((group, index) => {
-        const entries = Array.isArray(group) ? group : [group];
-        const validEntries = entries.filter(item => item && typeof item === 'object');
-        if (!validEntries.length) {
-            return;
-        }
-
-        const card = document.createElement('div');
-        card.className = 'mds-detail-card';
-        const title = document.createElement('div');
-        title.className = 'mds-detail-card__title';
-        title.textContent = `Combination ${index + 1}`;
-        card.appendChild(title);
-
-        const content = document.createElement('div');
-        content.className = 'mds-detail-card__content';
-
-        validEntries.forEach(item => {
-            const method = item.userVerificationMethod !== undefined && item.userVerificationMethod !== null
-                ? String(item.userVerificationMethod)
-                : '';
-            if (method) {
-                const methodEl = document.createElement('div');
-                methodEl.textContent = method;
-                content.appendChild(methodEl);
-            }
-
-            const caDesc = item.caDesc && typeof item.caDesc === 'object' ? item.caDesc : null;
-            if (caDesc) {
-                const parts = [];
-                if (caDesc.base !== undefined) {
-                    parts.push(`Base: ${caDesc.base}`);
-                }
-                if (caDesc.minLength !== undefined) {
-                    parts.push(`Min length: ${caDesc.minLength}`);
-                }
-                if (caDesc.maxRetries !== undefined) {
-                    parts.push(`Max retries: ${caDesc.maxRetries}`);
-                }
-                if (caDesc.blockSlowdown !== undefined) {
-                    parts.push(`Block slowdown: ${caDesc.blockSlowdown}`);
-                }
-                if (parts.length) {
-                    const info = document.createElement('small');
-                    info.textContent = parts.join(' • ');
-                    content.appendChild(info);
-                }
-            }
-        });
-
-        if (content.childElementCount) {
-            card.appendChild(content);
-            container.appendChild(card);
-        }
-    });
-
-    return container.childElementCount ? container : null;
-}
-
-function renderAttestationCertificates(certificates) {
-    const values = Array.isArray(certificates) ? certificates.filter(Boolean) : [];
-    if (!values.length) {
-        return null;
-    }
-
-    const container = document.createElement('div');
-    container.className = 'mds-certificates';
-
-    values.forEach((certificate, index) => {
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.className = 'mds-certificate-button';
-        button.textContent = `Certificate ${index + 1}`;
-        button.addEventListener('click', () => openCertificatePage(certificate, button));
-        container.appendChild(button);
-    });
-
-    return container;
-}
-
-function toRawDisplayString(value) {
-    if (value === undefined || value === null) {
-        return '';
-    }
-    if (typeof value === 'string') {
-        return value;
-    }
-    if (typeof value === 'number' || typeof value === 'bigint') {
-        return String(value);
-    }
-    if (typeof value === 'boolean') {
-        return value ? 'true' : 'false';
-    }
-    try {
-        return JSON.stringify(value);
-    } catch (error) {
-        try {
-            return String(value);
-        } catch (stringError) {
-            return '';
-        }
-    }
-}
-
-function formatRawListValues(value) {
-    return extractList(value)
-        .map(item => toRawDisplayString(item))
-        .filter(text => text !== '');
-}
-
-function formatAuthenticatorInfoValues(value) {
-    return formatRawListValues(value);
-}
-
-function renderAuthenticatorInfo(info) {
-    if (!info || typeof info !== 'object') {
-        return null;
-    }
-
-    const section = createDetailSection('Authenticator Get Info');
-    const gridItems = [];
-
-    if (info.aaguid) {
-        gridItems.push({ label: 'AAGUID', value: formatGuidCandidate(info.aaguid) || String(info.aaguid) });
-    }
-    const numericKeys = [
-        ['maxMsgSize', 'Max Message Size'],
-        ['maxCredentialCountInList', 'Max Credential Count'],
-        ['maxCredentialIdLength', 'Max Credential ID Length'],
-        ['maxSerializedLargeBlobArray', 'Max Serialized Large Blob Array'],
-        ['minPINLength', 'Min PIN Length'],
-        ['firmwareVersion', 'Firmware Version'],
-        ['maxCredBlobLength', 'Max Cred Blob Length'],
-        ['maxRPIDsForSetMinPINLength', 'Max RP IDs for Set Min PIN Length'],
-        ['remainingDiscoverableCredentials', 'Remaining Discoverable Credentials'],
-    ];
-    numericKeys.forEach(([key, label]) => {
-        if (info[key] !== undefined && info[key] !== null) {
-            gridItems.push({ label, value: String(info[key]) });
-        }
-    });
-    appendDetailGrid(section, gridItems);
-
-    const versionChips = createChipList('Versions', formatAuthenticatorInfoValues(info.versions));
-    if (versionChips) {
-        section.appendChild(versionChips);
-    }
-    const extensionChips = createChipList('Extensions', formatAuthenticatorInfoValues(info.extensions));
-    if (extensionChips) {
-        section.appendChild(extensionChips);
-    }
-    const transportChips = createChipList('Transports', formatAuthenticatorInfoValues(info.transports));
-    if (transportChips) {
-        section.appendChild(transportChips);
-    }
-    const algorithmChips = createChipList('Algorithms', formatAuthenticatorInfoValues(info.algorithms));
-    if (algorithmChips) {
-        section.appendChild(algorithmChips);
-    }
-    const pinProtocols = formatAuthenticatorInfoValues(info.pinUvAuthProtocols);
-    if (pinProtocols.length) {
-        const chip = createChipList('pinUvAuth Protocols', pinProtocols);
-        if (chip) {
-            section.appendChild(chip);
-        }
-    }
-
-    const optionEntries = info.options && typeof info.options === 'object'
-        ? Object.entries(info.options).filter(([, value]) => value !== undefined && value !== null)
-        : [];
-    if (optionEntries.length) {
-        const optionChips = createChipList(
-            'Options',
-            optionEntries.map(([key, value]) => `${key}: ${formatDetailValue(value)}`),
-        );
-        if (optionChips) {
-            section.appendChild(optionChips);
-        }
-    }
-
-    return section;
-}
-
-function getAuthenticatorRawData(entry) {
-    if (!entry || typeof entry !== 'object') {
-        return null;
-    }
-
-    const rawEntry = entry.rawEntry;
-    const base = rawEntry && typeof rawEntry === 'object' && !Array.isArray(rawEntry)
-        ? { ...rawEntry }
-        : {};
-
-    const metadata = entry.metadataStatement && typeof entry.metadataStatement === 'object'
-        ? entry.metadataStatement
-        : null;
-    if (metadata && base.metadataStatement === undefined) {
-        base.metadataStatement = metadata;
-    }
-
-    if (
-        base.metadataStatement
-        && typeof base.metadataStatement === 'object'
-        && base.metadataStatement.attestationRootCertificates === undefined
-        && Array.isArray(entry.attestationCertificates)
-        && entry.attestationCertificates.length
-    ) {
-        base.metadataStatement.attestationRootCertificates = entry.attestationCertificates;
-    }
-
-    if (base.attestationCertificateKeyIdentifiers === undefined) {
-        const identifiers = Array.isArray(entry.attestationKeyIdentifiers)
-            ? entry.attestationKeyIdentifiers
-            : [];
-        if (identifiers.length) {
-            base.attestationCertificateKeyIdentifiers = identifiers;
-            if (
-                base.metadataStatement
-                && typeof base.metadataStatement === 'object'
-                && base.metadataStatement.attestationCertificateKeyIdentifiers === undefined
-            ) {
-                base.metadataStatement.attestationCertificateKeyIdentifiers = identifiers;
-            }
-        }
-    }
-
-    if (base.statusReports === undefined && Array.isArray(entry.statusReports) && entry.statusReports.length) {
-        base.statusReports = entry.statusReports;
-    }
-
-    if (base.aaguid === undefined && entry.aaguid) {
-        base.aaguid = entry.aaguid;
-    }
-
-    if (base.id === undefined && entry.id) {
-        base.id = entry.id;
-    }
-
-    if (base.timeOfLastStatusChange === undefined) {
-        if (rawEntry && typeof rawEntry === 'object' && rawEntry.timeOfLastStatusChange) {
-            base.timeOfLastStatusChange = rawEntry.timeOfLastStatusChange;
-        } else if (entry.timeOfLastStatusChange) {
-            base.timeOfLastStatusChange = entry.timeOfLastStatusChange;
-        }
-    }
-
-    return Object.keys(base).length ? base : null;
-}
-
-function renderStatusReports(reports) {
-    const list = Array.isArray(reports) ? reports : [];
-    if (!list.length) {
-        return null;
-    }
-
-    const table = document.createElement('table');
-    table.className = 'mds-status-table';
-    const thead = document.createElement('thead');
-    const headRow = document.createElement('tr');
-    ['Status', 'Effective Date', 'Authenticator Version', 'Certificate Number', 'Descriptor'].forEach(label => {
-        const th = document.createElement('th');
-        th.textContent = label;
-        headRow.appendChild(th);
-    });
-    thead.appendChild(headRow);
-    table.appendChild(thead);
-
-    const tbody = document.createElement('tbody');
-    list.forEach(report => {
-        if (!report || typeof report !== 'object') {
-            return;
-        }
-        const row = document.createElement('tr');
-
-        const statusCell = document.createElement('td');
-        statusCell.textContent = report.status !== undefined && report.status !== null
-            ? String(report.status)
-            : '—';
-        row.appendChild(statusCell);
-
-        const dateCell = document.createElement('td');
-        dateCell.textContent = report.effectiveDate !== undefined && report.effectiveDate !== null
-            ? String(report.effectiveDate)
-            : '—';
-        row.appendChild(dateCell);
-
-        const versionCell = document.createElement('td');
-        versionCell.textContent = report.authenticatorVersion !== undefined && report.authenticatorVersion !== null
-            ? String(report.authenticatorVersion)
-            : '—';
-        row.appendChild(versionCell);
-
-        const certificateCell = document.createElement('td');
-        certificateCell.textContent = report.certificateNumber ? String(report.certificateNumber) : '—';
-        row.appendChild(certificateCell);
-
-        const descriptorCell = document.createElement('td');
-        const descriptorContainer = document.createElement('div');
-        descriptorContainer.className = 'mds-status-descriptor';
-
-        const descriptorParts = [];
-        if (report.certificationDescriptor) {
-            descriptorParts.push(String(report.certificationDescriptor));
-        }
-        if (report.url) {
-            descriptorParts.push(String(report.url));
-        }
-        if (descriptorParts.length) {
-            const descriptorLine = document.createElement('div');
-            descriptorLine.textContent = descriptorParts.join(' • ');
-            descriptorContainer.appendChild(descriptorLine);
-        }
-
-        const metadataLines = [];
-        if (report.certificationPolicyVersion) {
-            metadataLines.push(`Policy: ${report.certificationPolicyVersion}`);
-        }
-        if (report.certificationRequirementsVersion) {
-            metadataLines.push(`Requirements: ${report.certificationRequirementsVersion}`);
-        }
-        if (report.timeOfLastStatusChange) {
-            metadataLines.push(`Changed: ${formatDate(report.timeOfLastStatusChange)}`);
-        }
-        if (metadataLines.length) {
-            const metaLine = document.createElement('div');
-            metaLine.className = 'mds-status-meta';
-            metaLine.textContent = metadataLines.join(' • ');
-            descriptorContainer.appendChild(metaLine);
-        }
-
-        if (!descriptorContainer.childElementCount) {
-            descriptorContainer.textContent = '—';
-        }
-
-        descriptorCell.appendChild(descriptorContainer);
-        row.appendChild(descriptorCell);
-
-        tbody.appendChild(row);
-    });
-
-    table.appendChild(tbody);
-    return table;
 }
 
 function normaliseCertificateBase64(value) {
-    if (typeof value !== 'string') {
-        return '';
-    }
-    return value.replace(/\s+/g, '').trim();
+    return normaliseCertificateBase64Value(value);
 }
 
 async function decodeCertificate(certificateBase64) {
@@ -4707,56 +3629,27 @@ async function decodeCertificate(certificateBase64) {
 }
 
 function formatCertificateInput(value) {
-    return typeof value === 'string' ? value : '';
+    return formatCertificateInputValue(value);
 }
 
 function formatCertificateOutput(details) {
-    if (!details || typeof details !== 'object') {
-        return 'No decoded certificate details available.';
-    }
-    if (typeof details.summary === 'string' && details.summary.trim()) {
-        return details.summary.trim();
-    }
-    return JSON.stringify(details, null, 2);
+    return formatCertificateOutputValue(details);
 }
 
 
 function setCertificateSummaryContent(content) {
-    if (!mdsState?.certificateSummary) {
-        return;
-    }
-    const container = mdsState.certificateSummary;
-    container.innerHTML = '';
-    if (content instanceof Node) {
-        container.appendChild(content);
-    } else if (typeof content === 'string' && content.trim()) {
-        const message = document.createElement('div');
-        message.className = 'mds-certificate-summary__value';
-        message.textContent = content;
-        container.appendChild(message);
-    }
+    return setCertificateSummaryContentInState(mdsState, content);
 }
 
 function setCertificateFieldContent(field, value) {
-    if (!(field instanceof HTMLElement)) {
-        return;
-    }
-
-    const content = typeof value === 'string' ? value : '';
-    if ('value' in field) {
-        field.value = content;
-    } else {
-        field.textContent = content;
-    }
+    return setCertificateFieldContentValue(field, value);
 }
 
 function applyCertificateLoadingCursorVisibility() {
-    const shouldShow = certificateCursorRequestCount > 0;
-    [document.documentElement, document.body].forEach(target => {
-        if (target) {
-            target.classList.toggle(MDS_CERTIFICATE_LOADING_CURSOR_CLASS, shouldShow);
-        }
-    });
+    return applyCertificateLoadingCursorVisibilityByCount(
+        certificateCursorRequestCount,
+        MDS_CERTIFICATE_LOADING_CURSOR_CLASS,
+    );
 }
 
 function beginCertificateLoadingCursor() {
@@ -4767,22 +3660,6 @@ function beginCertificateLoadingCursor() {
 function endCertificateLoadingCursor() {
     certificateCursorRequestCount = Math.max(0, certificateCursorRequestCount - 1);
     applyCertificateLoadingCursorVisibility();
-}
-
-async function updateCertificateButtonLabel(button, certificate) {
-    if (!(button instanceof HTMLElement)) {
-        return;
-    }
-    try {
-        const details = await decodeCertificate(certificate);
-        const subject = details && typeof details.subject === 'string' ? details.subject.trim() : '';
-        if (subject) {
-            button.textContent = subject;
-            button.title = subject;
-        }
-    } catch (error) {
-        // Leave default label on failure.
-    }
 }
 
 async function openCertificatePage(certificate, sourceButton = null) {
@@ -4923,7 +3800,7 @@ async function openCertificatePage(certificate, sourceButton = null) {
         mdsState.certificateInput,
         mdsState.certificateOutput,
     );
-    scheduleCertificateTextareaResize();
+    scheduleCertificateTextareaResize(mdsState);
 
     const focusTarget = mdsState.certificateClose instanceof HTMLElement ? mdsState.certificateClose : null;
     if (focusTarget) {
@@ -4966,7 +3843,7 @@ function closeCertificatePage() {
             mdsState.certificateInput,
             mdsState.certificateOutput,
         );
-        resetCertificateTextareaHeights();
+        resetCertificateTextareaHeights(mdsState);
         clearSubtitle();
         notifyGlobalScrollLock();
         restoreListSection(mdsState.listSection);
@@ -5035,345 +3912,12 @@ function closeCertificatePage() {
 }
 
 function openAuthenticatorRawWindow() {
-    if (!mdsState) {
-        return;
-    }
-
-    const entry = mdsState.activeDetailEntry;
-    const rawData = getAuthenticatorRawData(entry);
-    if (!rawData) {
-        return;
-    }
-
-    const rawText = stringifyAuthenticatorRawData(rawData);
-    if (!rawText || typeof window === 'undefined') {
-        return;
-    }
-
-    const viewportWidth = Number.isFinite(window.innerWidth) && window.innerWidth > 0
-        ? window.innerWidth
-        : (window.screen && Number.isFinite(window.screen.availWidth) ? window.screen.availWidth : 1280);
-    const viewportHeight = Number.isFinite(window.innerHeight) && window.innerHeight > 0
-        ? window.innerHeight
-        : (window.screen && Number.isFinite(window.screen.availHeight) ? window.screen.availHeight : 720);
-
-    const width = Math.max(Math.round(viewportWidth * 0.8), 640);
-    const height = Math.max(Math.round(viewportHeight * 0.8), 480);
-    const features = `popup=yes,width=${width},height=${height},resizable=yes,scrollbars=yes`;
-    const viewerName = 'mdsAuthenticatorRawViewer';
-
-    let viewer = mdsState.authenticatorRawWindow;
-    if (!viewer || viewer.closed) {
-        viewer = window.open('', viewerName, features);
-    } else {
-        viewer.focus();
-        try {
-            viewer.resizeTo(width, height);
-        } catch (error) {
-            // Ignore resize errors caused by browser restrictions.
-        }
-    }
-
-    if (!viewer) {
-        return;
-    }
-
-    mdsState.authenticatorRawWindow = viewer;
-
-    let doc;
-    try {
-        doc = viewer.document;
-    } catch (error) {
-        return;
-    }
-
-    if (!doc) {
-        return;
-    }
-
-    const titleParts = [];
-    if (entry?.name && typeof entry.name === 'string' && entry.name.trim()) {
-        titleParts.push(entry.name.trim());
-    }
-    titleParts.push('Authenticator Raw Data');
-    const titleText = titleParts.join(' – ');
-    const subtitleText = formatDetailSubtitle(entry);
-
-    const template = `<!doctype html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <title>Authenticator Raw Data</title>
-    <style>
-        :root { color-scheme: light; }
-        body {
-            margin: 0;
-            font-family: 'SFMono-Regular', 'JetBrains Mono', 'Fira Code', monospace;
-            background: #f4f7fb;
-            color: #0f2740;
-        }
-        .raw-window {
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-        }
-        header {
-            padding: 1rem 1.5rem;
-            background: #ffffff;
-            border-bottom: 1px solid rgba(15, 39, 64, 0.12);
-        }
-        h1 {
-            margin: 0;
-            font-size: 1.1rem;
-            font-weight: 700;
-        }
-        p {
-            margin: 0.35rem 0 0;
-            font-size: 0.85rem;
-            color: #48607a;
-        }
-        textarea {
-            flex: 1;
-            width: 100%;
-            border: none;
-            resize: none;
-            padding: 1.25rem;
-            background: #ffffff;
-            font-family: 'SFMono-Regular', 'JetBrains Mono', 'Fira Code', monospace;
-            font-size: 0.85rem;
-            line-height: 1.5;
-            color: inherit;
-            box-sizing: border-box;
-            outline: none;
-        }
-        textarea:focus {
-            outline: none;
-        }
-    </style>
-</head>
-<body>
-    <div class="raw-window">
-        <header>
-            <h1 id="mds-raw-title">Authenticator Raw Data</h1>
-            <p id="mds-raw-subtitle" style="display: none;"></p>
-        </header>
-        <textarea id="mds-raw-textarea" readonly spellcheck="false" wrap="off" aria-label="Raw authenticator metadata"></textarea>
-    </div>
-</body>
-</html>`;
-
-    doc.open();
-    doc.write(template);
-    doc.close();
-
-    doc.title = titleText;
-
-    const titleEl = doc.getElementById('mds-raw-title');
-    if (titleEl) {
-        titleEl.textContent = titleText;
-    }
-
-    const subtitleEl = doc.getElementById('mds-raw-subtitle');
-    if (subtitleEl) {
-        if (subtitleText) {
-            subtitleEl.textContent = subtitleText;
-            subtitleEl.style.display = '';
-        } else {
-            subtitleEl.textContent = '';
-            subtitleEl.style.display = 'none';
-        }
-    }
-
-    const textarea = doc.getElementById('mds-raw-textarea');
-    if (textarea) {
-        textarea.value = rawText;
-        textarea.scrollTop = 0;
-        textarea.scrollLeft = 0;
-        if (typeof textarea.setSelectionRange === 'function') {
-            try {
-                textarea.setSelectionRange(0, 0);
-            } catch (error) {
-                // Ignore selection errors in unsupported browsers.
-            }
-        }
-        if (typeof textarea.focus === 'function') {
-            textarea.focus();
-        }
-    }
-
-    try {
-        viewer.focus();
-    } catch (error) {
-        // Some browsers may block programmatic focus; ignore.
-    }
-
-    try {
-        viewer.onbeforeunload = () => {
-            if (mdsState && mdsState.authenticatorRawWindow === viewer) {
-                mdsState.authenticatorRawWindow = null;
-            }
-        };
-    } catch (error) {
-        // Ignore if the viewer does not permit assigning event handlers.
-    }
-}
-
-const RAW_TEXT_INDENT = '    ';
-
-function stringifyAuthenticatorRawData(value) {
-    const seen = typeof WeakSet === 'function' ? new WeakSet() : null;
-    const replacer = (key, currentValue) => {
-        if (typeof currentValue === 'bigint') {
-            return currentValue.toString();
-        }
-        if (typeof Map !== 'undefined' && currentValue instanceof Map) {
-            return Object.fromEntries(currentValue);
-        }
-        if (typeof Set !== 'undefined' && currentValue instanceof Set) {
-            return Array.from(currentValue);
-        }
-        if (typeof ArrayBuffer !== 'undefined') {
-            if (currentValue instanceof ArrayBuffer) {
-                return Array.from(new Uint8Array(currentValue));
-            }
-            if (typeof ArrayBuffer.isView === 'function' && ArrayBuffer.isView(currentValue)) {
-                const view = new Uint8Array(
-                    currentValue.buffer,
-                    currentValue.byteOffset || 0,
-                    currentValue.byteLength || currentValue.length || 0,
-                );
-                return Array.from(view);
-            }
-        }
-        if (currentValue && typeof currentValue === 'object' && seen) {
-            if (seen.has(currentValue)) {
-                return '[Circular]';
-            }
-            seen.add(currentValue);
-        }
-        return currentValue;
-    };
-
-    try {
-        return JSON.stringify(value, replacer, 4);
-    } catch (error) {
-        const lines = buildAuthenticatorRawLines(value);
-        return lines.join('\n');
-    }
-}
-
-function buildAuthenticatorRawLines(value, depth = 0, label) {
-    const indent = RAW_TEXT_INDENT.repeat(depth);
-    const lines = [];
-
-    const addLine = text => {
-        if (text !== undefined && text !== null) {
-            lines.push(text);
-        }
-    };
-
-    if (label !== undefined) {
-        if (Array.isArray(value)) {
-            addLine(`${indent}${label}:`);
-            if (!value.length) {
-                addLine(`${indent}${RAW_TEXT_INDENT}[]`);
-                return lines;
-            }
-            value.forEach(item => {
-                if (Array.isArray(item) || isPlainObject(item)) {
-                    const childLines = buildAuthenticatorRawLines(item, depth + 1);
-                    lines.push(...childLines);
-                } else {
-                    addLine(`${indent}${RAW_TEXT_INDENT}${formatRawPrimitive(item)}`);
-                }
-            });
-            return lines;
-        }
-
-        if (isPlainObject(value)) {
-            addLine(`${indent}${label}:`);
-            const keys = Object.keys(value);
-            if (!keys.length) {
-                addLine(`${indent}${RAW_TEXT_INDENT}{}`);
-                return lines;
-            }
-            keys.forEach(key => {
-                const childLines = buildAuthenticatorRawLines(value[key], depth + 1, key);
-                lines.push(...childLines);
-            });
-            return lines;
-        }
-
-        addLine(`${indent}${label}: ${formatRawPrimitive(value)}`);
-        return lines;
-    }
-
-    if (Array.isArray(value)) {
-        if (!value.length) {
-            addLine(`${indent}[]`);
-            return lines;
-        }
-        value.forEach(item => {
-            if (Array.isArray(item) || isPlainObject(item)) {
-                const childLines = buildAuthenticatorRawLines(item, depth + 1);
-                lines.push(...childLines);
-            } else {
-                addLine(`${indent}${RAW_TEXT_INDENT}${formatRawPrimitive(item)}`);
-            }
-        });
-        return lines;
-    }
-
-    if (isPlainObject(value)) {
-        const keys = Object.keys(value);
-        if (!keys.length) {
-            addLine(`${indent}{}`);
-            return lines;
-        }
-        keys.forEach(key => {
-            const childLines = buildAuthenticatorRawLines(value[key], depth, key);
-            lines.push(...childLines);
-        });
-        return lines;
-    }
-
-    addLine(`${indent}${formatRawPrimitive(value)}`);
-    return lines;
-}
-
-function formatRawPrimitive(value) {
-    if (value === undefined) {
-        return 'undefined';
-    }
-    if (value === null) {
-        return 'null';
-    }
-    if (typeof value === 'string') {
-        try {
-            return JSON.stringify(value);
-        } catch (error) {
-            return `"${value.replace(/"/g, '\\"')}"`;
-        }
-    }
-    if (typeof value === 'number' || typeof value === 'bigint') {
-        return String(value);
-    }
-    if (typeof value === 'boolean') {
-        return value ? 'true' : 'false';
-    }
-    try {
-        return JSON.stringify(value);
-    } catch (error) {
-        try {
-            return String(value);
-        } catch (stringError) {
-            return '';
-        }
-    }
-}
-
-function isPlainObject(value) {
-    return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+    openAuthenticatorRawDataWindow({
+        state: mdsState,
+        formatDetailSubtitle,
+        getAuthenticatorRawData,
+        stringifyAuthenticatorRawData,
+    });
 }
 
 function updateAuthenticatorRawButton(entry) {
@@ -5395,46 +3939,6 @@ function updateAuthenticatorRawButton(entry) {
     }
 
     mdsState?.authenticatorStickyHeader?.sync();
-}
-
-function suppressListSection(section) {
-    if (!section) {
-        return;
-    }
-    if (!('mdsDetailVisibility' in section.dataset)) {
-        section.dataset.mdsDetailVisibility = section.style.visibility || '';
-    }
-    if (!('mdsDetailPointerEvents' in section.dataset)) {
-        section.dataset.mdsDetailPointerEvents = section.style.pointerEvents || '';
-    }
-    if (!('mdsDetailUserSelect' in section.dataset)) {
-        section.dataset.mdsDetailUserSelect = section.style.userSelect || '';
-    }
-    section.setAttribute('aria-hidden', 'true');
-    section.style.visibility = 'hidden';
-    section.style.pointerEvents = 'none';
-    section.style.userSelect = 'none';
-}
-
-function restoreListSection(section) {
-    if (!section) {
-        return;
-    }
-    section.removeAttribute('aria-hidden');
-    const toCssProperty = name => name.replace(/[A-Z]/g, match => `-${match.toLowerCase()}`);
-    const apply = (property, key) => {
-        const value = section.dataset[key];
-        if (value !== undefined && value !== null && value !== '') {
-            section.style[property] = value;
-        } else {
-            section.style[property] = '';
-            section.style.removeProperty(toCssProperty(property));
-        }
-        delete section.dataset[key];
-    };
-    apply('visibility', 'mdsDetailVisibility');
-    apply('pointerEvents', 'mdsDetailPointerEvents');
-    apply('userSelect', 'mdsDetailUserSelect');
 }
 
 async function openAuthenticatorModal(entry) {
@@ -5755,633 +4259,91 @@ if (typeof window !== 'undefined') {
 }
 
 function stabiliseColumnWidths() {
-    if (!mdsState?.table) {
-        return;
-    }
-    if (mdsState.root instanceof HTMLElement && mdsState.root.offsetParent === null) {
-        return;
-    }
-    const updateMinWidths = () => {
-        const measured = computeColumnMinWidths();
-        if (measured.length) {
-            mdsState.columnMinWidths = measured;
-        }
-    };
-
-    updateMinWidths();
-
-    if (!Array.isArray(mdsState.columnWidths) || !mdsState.columnWidths.length) {
-        requestAnimationFrame(() => {
-            if (!mdsState?.table) {
-                return;
-            }
-
-            updateMinWidths();
-
-            const headerCells = mdsState.table.querySelectorAll('thead tr:first-child th');
-            if (!headerCells.length) {
-                return;
-            }
-            const widths = Array.from(headerCells).map(cell => Math.round(cell.getBoundingClientRect().width));
-            if (!widths.length || widths.some(width => width === 0)) {
-                if (mdsState) {
-                    mdsState.columnWidthAttempts = (mdsState.columnWidthAttempts || 0) + 1;
-                    if (mdsState.columnWidthAttempts < 5) {
-                        requestAnimationFrame(stabiliseColumnWidths);
-                    }
-                }
-                return;
-            }
-            const normalised = normaliseColumnWidths(widths);
-            mdsState.columnWidths = normalised;
-            mdsState.columnWidthAttempts = 0;
-            applyColumnWidths(normalised);
-        });
-        return;
-    }
-
-    const adjusted = normaliseColumnWidths(mdsState.columnWidths);
-    mdsState.columnWidths = adjusted;
-    applyColumnWidths(adjusted);
+    return columnResizerController.stabiliseColumnWidths();
 }
 
 function applyColumnWidths(widths) {
-    if (!mdsState?.table || !Array.isArray(widths) || !widths.length) {
-        return;
-    }
-
-    mdsState.table.style.tableLayout = 'fixed';
-
-    const tableHead = mdsState.table.tHead;
-    if (tableHead) {
-        Array.from(tableHead.rows).forEach(row => applyWidthsToCells(row.cells, widths));
-    }
-
-    if (mdsState.tableBody) {
-        Array.from(mdsState.tableBody.rows).forEach(row => applyWidthsToCells(row.cells, widths));
-    }
-
-    scheduleColumnResizerMetricsUpdate();
-    scheduleHorizontalScrollMetricsUpdate();
-    scheduleRowHeightLock();
+    return columnResizerController.applyColumnWidths(widths);
 }
 
 function updateColumnResizerMetrics() {
-    if (!mdsState?.table || !(mdsState.table instanceof HTMLElement)) {
-        return;
-    }
-
-    const table = mdsState.table;
-    if (table.offsetParent === null) {
-        table.style.setProperty('--mds-resizer-extend', '0px');
-        return;
-    }
-
-    const headerRow = table.tHead?.rows?.[0];
-    if (!headerRow) {
-        table.style.setProperty('--mds-resizer-extend', '0px');
-        return;
-    }
-
-    let headerHeight = 0;
-    if (typeof headerRow.getBoundingClientRect === 'function') {
-        const rect = headerRow.getBoundingClientRect();
-        if (rect && Number.isFinite(rect.height)) {
-            headerHeight = rect.height;
-        }
-    }
-    if (!headerHeight && headerRow instanceof HTMLElement) {
-        headerHeight = headerRow.offsetHeight || 0;
-    }
-
-    const tableHeight = table.offsetHeight || 0;
-    const extend = Math.max(Math.round(tableHeight - headerHeight), 0);
-    table.style.setProperty('--mds-resizer-extend', `${extend}px`);
+    return columnResizerController.updateColumnResizerMetrics();
 }
 
 function applyWidthsToCells(cells, widths) {
-    if (!cells || !widths) {
-        return;
-    }
-
-    let columnIndex = 0;
-    Array.from(cells).forEach(cell => {
-        const span = cell.colSpan || 1;
-        if (span === 1) {
-            const width = widths[columnIndex];
-            if (width && Number.isFinite(width)) {
-                const widthPx = `${width}px`;
-                cell.style.width = widthPx;
-                cell.style.minWidth = widthPx;
-                cell.style.maxWidth = widthPx;
-            }
-        }
-        columnIndex += span;
-    });
+    return columnResizerController.applyWidthsToCells(cells, widths);
 }
 
 function normaliseColumnWidths(widths) {
-    if (!Array.isArray(widths)) {
-        return [];
-    }
-    return widths.map(value => {
-        if (!Number.isFinite(value) || value <= 0) {
-            return DEFAULT_MIN_COLUMN_WIDTH;
-        }
-        return Math.max(Math.round(value), DEFAULT_MIN_COLUMN_WIDTH);
-    });
+    return columnResizerController.normaliseColumnWidths(widths);
 }
 
 function computeColumnMinWidths(state = mdsState) {
-    if (!state?.table?.tHead) {
-        return [];
-    }
-
-    const headerRow = state.table.tHead.rows[0];
-    if (!headerRow) {
-        return [];
-    }
-
-    const columnCount = headerRow.cells.length;
-    if (!columnCount) {
-        return [];
-    }
-
-    return new Array(columnCount).fill(DEFAULT_MIN_COLUMN_WIDTH);
+    return columnResizerController.computeColumnMinWidths(state);
 }
 
 function ensureColumnMetrics(state = mdsState) {
-    if (!state?.table?.tHead) {
-        return false;
-    }
-    const headerRow = state.table.tHead.rows[0];
-    if (!headerRow) {
-        return false;
-    }
-
-    const columnCount = headerRow.cells.length;
-    if (!columnCount) {
-        return false;
-    }
-
-    const minWidths = computeColumnMinWidths(state);
-    if (minWidths.length) {
-        state.columnMinWidths = minWidths;
-    }
-    if (!Array.isArray(state.columnMinWidths) || state.columnMinWidths.length < columnCount) {
-        const fallback = new Array(columnCount).fill(DEFAULT_MIN_COLUMN_WIDTH);
-        if (Array.isArray(state.columnMinWidths)) {
-            state.columnMinWidths.forEach((value, index) => {
-                fallback[index] = Math.max(DEFAULT_MIN_COLUMN_WIDTH, Math.round(value || 0));
-            });
-        }
-        state.columnMinWidths = fallback;
-    } else {
-        state.columnMinWidths = state.columnMinWidths.map(value =>
-            Math.max(DEFAULT_MIN_COLUMN_WIDTH, Math.round(value || 0)),
-        );
-    }
-
-    let widths;
-    if (!Array.isArray(state.columnWidths) || state.columnWidths.length < columnCount) {
-        widths = Array.from(headerRow.cells).map(cell => {
-            const rect = cell.getBoundingClientRect();
-            const rectWidth = Number.isFinite(rect?.width) ? Math.round(rect.width) : DEFAULT_MIN_COLUMN_WIDTH;
-            return Math.max(rectWidth, DEFAULT_MIN_COLUMN_WIDTH);
-        });
-    } else {
-        widths = state.columnWidths.slice();
-    }
-
-    state.columnWidths = normaliseColumnWidths(widths);
-    return true;
+    return columnResizerController.ensureColumnMetrics(state);
 }
 
 function setColumnResizersEnabled(enabled, state = mdsState) {
-    if (!state) {
-        return;
-    }
-
-    const allow = Boolean(enabled);
-    state.columnResizersEnabled = allow;
-
-    if (!allow && state.columnResizeState) {
-        handleColumnResizeEnd();
-    }
-
-    const resizers = Array.isArray(state.columnResizers) ? state.columnResizers : [];
-    resizers.forEach(resizer => {
-        if (!(resizer instanceof HTMLElement)) {
-            return;
-        }
-        resizer.classList.toggle('is-disabled', !allow);
-        if (allow) {
-            resizer.removeAttribute('aria-disabled');
-        } else {
-            resizer.setAttribute('aria-disabled', 'true');
-        }
-    });
-
-    if (allow) {
-        scheduleColumnResizerMetricsUpdate();
-    }
+    return columnResizerController.setColumnResizersEnabled(enabled, state);
 }
 
 function setupColumnResizers(state = mdsState) {
-    if (!state?.table?.tHead) {
-        return;
-    }
-    const headerRow = state.table.tHead.rows[0];
-    if (!headerRow) {
-        return;
-    }
-
-    state.columnResizers = Array.isArray(state.columnResizers) ? state.columnResizers : [];
-
-    Array.from(headerRow.cells).forEach((cell, index) => {
-        if (!cell || index === headerRow.cells.length - 1) {
-            return;
-        }
-        if (cell.querySelector('.mds-column-resizer')) {
-            return;
-        }
-        const resizer = document.createElement('div');
-        resizer.className = 'mds-column-resizer';
-        resizer.dataset.columnIndex = String(index);
-        resizer.setAttribute('aria-hidden', 'true');
-        resizer.setAttribute('role', 'presentation');
-        resizer.tabIndex = -1;
-        resizer.title = 'Drag to resize column';
-        resizer.addEventListener('pointerdown', handleColumnResizeStart);
-        resizer.addEventListener('click', event => {
-            event.preventDefault();
-            event.stopPropagation();
-        });
-        cell.appendChild(resizer);
-        state.columnResizers.push(resizer);
-    });
-
-    scheduleColumnResizerMetricsUpdate();
+    return columnResizerController.setupColumnResizers(state);
 }
 
 function handleColumnResizeStart(event) {
-    if (!mdsState) {
-        return;
-    }
-    if (event.button !== undefined && event.button !== 0) {
-        return;
-    }
-    const target = event.currentTarget;
-    if (!(target instanceof HTMLElement)) {
-        return;
-    }
-    if (isLoading || !hasLoaded || !mdsState.columnResizersEnabled) {
-        event.preventDefault();
-        event.stopPropagation();
-        return;
-    }
-    const columnIndex = Number.parseInt(target.dataset.columnIndex || '', 10);
-    if (!Number.isFinite(columnIndex)) {
-        return;
-    }
-
-    if (!ensureColumnMetrics()) {
-        return;
-    }
-
-    const widths = Array.isArray(mdsState.columnWidths) ? mdsState.columnWidths.slice() : [];
-    if (columnIndex >= widths.length - 1) {
-        return;
-    }
-
-    const startLeft = widths[columnIndex];
-    if (!Number.isFinite(startLeft)) {
-        return;
-    }
-
-    const minWidths = Array.isArray(mdsState.columnMinWidths) ? mdsState.columnMinWidths : [];
-    let minLeft = Number.isFinite(minWidths[columnIndex]) ? Math.round(minWidths[columnIndex]) : DEFAULT_MIN_COLUMN_WIDTH;
-    if (!Number.isFinite(minLeft) || minLeft <= 0) {
-        minLeft = DEFAULT_MIN_COLUMN_WIDTH;
-    }
-    minLeft = Math.max(minLeft, DEFAULT_MIN_COLUMN_WIDTH);
-
-    event.preventDefault();
-    event.stopPropagation();
-
-    const resizeState = {
-        activeResizer: target,
-        columnIndex,
-        pointerId: event.pointerId,
-        startX: event.clientX,
-        startLeft,
-        minLeft,
-        listenerTarget: target,
-    };
-
-    mdsState.columnResizeState = resizeState;
-
-    if (mdsState.tableContainer) {
-        mdsState.tableContainer.classList.add('mds-table-container--resizing');
-    }
-
-    target.classList.add('is-active');
-
-    let useDocumentListeners = false;
-    if (typeof target.setPointerCapture === 'function') {
-        try {
-            target.setPointerCapture(event.pointerId);
-        } catch (error) {
-            useDocumentListeners = true;
-        }
-    } else {
-        useDocumentListeners = true;
-    }
-
-    if (useDocumentListeners && typeof document !== 'undefined') {
-        resizeState.listenerTarget = document;
-    }
-
-    const listenerTarget = resizeState.listenerTarget;
-    if (listenerTarget) {
-        listenerTarget.addEventListener('pointermove', handleColumnResizeMove);
-        listenerTarget.addEventListener('pointerup', handleColumnResizeEnd);
-        listenerTarget.addEventListener('pointercancel', handleColumnResizeEnd);
-    }
+    return columnResizerController.handleColumnResizeStart(event);
 }
 
 function handleColumnResizeMove(event) {
-    if (!mdsState?.columnResizeState) {
-        return;
-    }
-    const state = mdsState.columnResizeState;
-    if (state.pointerId !== undefined && event.pointerId !== undefined && state.pointerId !== event.pointerId) {
-        return;
-    }
-
-    const widths = Array.isArray(mdsState.columnWidths) ? mdsState.columnWidths.slice() : [];
-    if (!widths.length) {
-        return;
-    }
-
-    const leftIndex = state.columnIndex;
-    if (!Number.isFinite(leftIndex) || leftIndex < 0 || leftIndex >= widths.length) {
-        return;
-    }
-
-    const minLeft = state.minLeft || DEFAULT_MIN_COLUMN_WIDTH;
-
-    let delta = event.clientX - state.startX;
-    if (!Number.isFinite(delta)) {
-        delta = 0;
-    }
-    const maxNegativeDelta = state.startLeft - minLeft;
-    if (Number.isFinite(maxNegativeDelta) && maxNegativeDelta >= 0) {
-        delta = Math.max(delta, -maxNegativeDelta);
-    }
-
-    let newLeft = state.startLeft + delta;
-    if (!Number.isFinite(newLeft)) {
-        newLeft = state.startLeft;
-    }
-
-    widths[leftIndex] = Math.max(minLeft, Math.round(newLeft));
-
-    mdsState.columnWidths = widths;
-    const normalised = normaliseColumnWidths(widths);
-    mdsState.columnWidths = normalised;
-    applyColumnWidths(normalised);
-
-    if (typeof window !== 'undefined' && window.getSelection) {
-        const selection = window.getSelection();
-        if (selection && typeof selection.removeAllRanges === 'function') {
-            selection.removeAllRanges();
-        }
-    }
-
-    event.preventDefault();
-    event.stopPropagation();
+    return columnResizerController.handleColumnResizeMove(event);
 }
 
 function handleColumnResizeEnd(event) {
-    const state = mdsState?.columnResizeState;
-    if (!state) {
-        return;
-    }
-
-    const target = state.activeResizer;
-    if (target instanceof HTMLElement) {
-        target.classList.remove('is-active');
-        if (typeof target.releasePointerCapture === 'function' && state.pointerId !== undefined) {
-            try {
-                target.releasePointerCapture(state.pointerId);
-            } catch (error) {
-                // Ignore errors when releasing capture.
-            }
-        }
-    }
-
-    const listenerTarget = state.listenerTarget || target;
-    if (listenerTarget) {
-        listenerTarget.removeEventListener('pointermove', handleColumnResizeMove);
-        listenerTarget.removeEventListener('pointerup', handleColumnResizeEnd);
-        listenerTarget.removeEventListener('pointercancel', handleColumnResizeEnd);
-    }
-
-    if (mdsState.tableContainer) {
-        mdsState.tableContainer.classList.remove('mds-table-container--resizing');
-    }
-
-    mdsState.columnResizeState = null;
-    if (event) {
-        event.preventDefault();
-        event.stopPropagation();
-    }
-
-    const minWidths = computeColumnMinWidths();
-    if (minWidths.length) {
-        mdsState.columnMinWidths = minWidths;
-    }
-    if (Array.isArray(mdsState.columnWidths)) {
-        const normalised = normaliseColumnWidths(mdsState.columnWidths);
-        mdsState.columnWidths = normalised;
-        applyColumnWidths(normalised);
-    }
+    return columnResizerController.handleColumnResizeEnd(event);
 }
 
 function createTextCell(text, title) {
-    const cell = document.createElement('td');
-    cell.textContent = text;
-    if (title) {
-        cell.title = title;
-    }
-    return cell;
+    return createTextCellFromModule(text, title);
 }
 
 function createNameCell(entry) {
-    const cell = document.createElement('td');
-    cell.classList.add('mds-cell-name');
-    const label = entry?.name || '—';
-    const trimmed = label.trim();
-
-    if (!entry || !trimmed || trimmed === '—') {
-        cell.textContent = label || '—';
-        return cell;
-    }
-
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'mds-name-button';
-    button.textContent = label;
-    button.addEventListener('click', event => {
-        event.preventDefault();
-        event.stopPropagation();
-        showAuthenticatorDetail(entry);
+    return createNameCellFromModule(entry, {
+        onShowAuthenticatorDetail: selectedEntry => {
+            showAuthenticatorDetail(selectedEntry);
+        },
     });
-    cell.appendChild(button);
-    return cell;
 }
 
 function createIdCell(id) {
-    const cell = createTextCell(id || '—');
-    cell.classList.add('mds-cell-id');
-    return cell;
+    return createIdCellFromModule(id);
 }
 
 function createIconCell(entry) {
-    const cell = document.createElement('td');
-    const wrapper = document.createElement('div');
-    wrapper.className = 'mds-icon-wrapper';
-
-    if (entry.icon) {
-        const img = document.createElement('img');
-        img.src = entry.icon;
-        img.alt = `${entry.name || 'Authenticator'} icon`;
-        wrapper.appendChild(img);
-    } else {
-        const placeholder = document.createElement('span');
-        placeholder.className = 'mds-icon-placeholder';
-        placeholder.textContent = 'N/A';
-        wrapper.appendChild(placeholder);
-    }
-
-    cell.appendChild(wrapper);
-    return cell;
+    return createIconCellFromModule(entry);
 }
 
 function createTagCell(items, neutral = false) {
-    const cell = document.createElement('td');
-    const values = Array.isArray(items) ? items : [];
-
-    if (!values.length) {
-        cell.textContent = '—';
-        return cell;
-    }
-
-    const group = document.createElement('div');
-    group.className = 'mds-tag-group';
-
-    values.forEach(value => {
-        const tag = document.createElement('span');
-        tag.className = neutral ? 'mds-tag mds-tag--neutral' : 'mds-tag';
-        tag.textContent = value;
-        group.appendChild(tag);
-    });
-
-    cell.appendChild(group);
-    return cell;
+    return createTagCellFromModule(items, neutral);
 }
 
 function updateCount(filtered, total) {
-    if (mdsState?.countEl) {
-        mdsState.countEl.textContent = filtered.toLocaleString();
-    }
-    if (mdsState?.totalEl) {
-        mdsState.totalEl.textContent = total ? `of ${total.toLocaleString()} total` : '';
-    }
+    return updateCountInState(mdsState, filtered, total);
 }
 
 function setStatus(message, variant, options = {}) {
-    if (!mdsState?.statusEl) {
-        return;
-    }
-
-    const statusEl = mdsState.statusEl;
-    const { restoreDefault = false, delay = 5000 } = options;
-
-    if (mdsState.statusResetTimer) {
-        window.clearTimeout(mdsState.statusResetTimer);
-        mdsState.statusResetTimer = null;
-    }
-
-    statusEl.classList.remove('mds-status-info', 'mds-status-success', 'mds-status-error');
-    statusEl.classList.add(`mds-status-${variant}`);
-    statusEl.innerHTML = message;
-
-    if (restoreDefault && mdsState.defaultStatus) {
-        const timeout = Number.isFinite(delay) ? Math.max(0, delay) : 5000;
-        mdsState.statusResetTimer = window.setTimeout(() => {
-            if (!mdsState?.statusEl || !mdsState?.defaultStatus) {
-                return;
-            }
-            const target = mdsState.statusEl;
-            const defaults = mdsState.defaultStatus;
-            target.classList.remove('mds-status-info', 'mds-status-success', 'mds-status-error');
-            target.classList.add(`mds-status-${defaults.variant}`);
-            target.innerHTML = defaults.html;
-            if (defaults.title) {
-                target.setAttribute('title', defaults.title);
-            } else {
-                target.removeAttribute('title');
-            }
-            mdsState.statusResetTimer = null;
-        }, timeout);
-    }
+    return setStatusInState(mdsState, message, variant, options);
 }
 
 function setUpdateButtonBusy(isBusy) {
-    const button = mdsState?.updateButton;
-    if (!button) {
-        return;
-    }
-
-    if (isBusy) {
-        button.disabled = true;
-        button.classList.add('is-busy');
-        button.setAttribute('aria-busy', 'true');
-        const mode = mdsState?.updateButtonMode || 'update';
-        const config = UPDATE_BUTTON_STATES[mode] || UPDATE_BUTTON_STATES.update;
-        button.textContent = config.busyLabel;
-        return;
-    }
-
-    button.disabled = false;
-    button.classList.remove('is-busy');
-    button.removeAttribute('aria-busy');
-    const mode = mdsState?.updateButtonMode || 'update';
-    const config = UPDATE_BUTTON_STATES[mode] || UPDATE_BUTTON_STATES.update;
-    button.textContent = config.label;
-    button.blur();
+    return setUpdateButtonBusyInState(mdsState, isBusy, UPDATE_BUTTON_STATES);
 }
 
 function setUpdateButtonMode(mode) {
-    const button = mdsState?.updateButton;
-    if (!button) {
-        return;
-    }
-
-    const action = mode === 'download' ? 'download' : 'update';
-    const config = UPDATE_BUTTON_STATES[action] || UPDATE_BUTTON_STATES.update;
-
-    mdsState.updateButtonMode = action;
-
-    button.dataset.action = action;
-    button.dataset.idleLabel = config.label;
-    button.dataset.busyLabel = config.busyLabel;
-
-    if (!button.classList.contains('is-busy')) {
-        button.textContent = config.label;
-    }
+    return setUpdateButtonModeInState(mdsState, mode, UPDATE_BUTTON_STATES);
 }
 
 
@@ -6427,24 +4389,5 @@ async function refreshMetadata() {
 }
 
 function updateOptionLists(optionSets) {
-    if (!mdsState) {
-        return;
-    }
-
-    Object.entries(optionSets).forEach(([key, values]) => {
-        const dropdown = mdsState.dropdowns[key];
-        if (!dropdown) {
-            return;
-        }
-        const config = FILTER_LOOKUP[key];
-        const optionList = Array.from(values).filter(Boolean);
-        if (config?.staticOptions) {
-            const staticValues = config.staticOptions
-                .map(option => formatEnum(option))
-                .filter(Boolean);
-            optionList.push(...staticValues);
-        }
-        const unique = Array.from(new Set(optionList));
-        dropdown.setOptions(unique);
-    });
+    return updateOptionListsInState(mdsState, optionSets, FILTER_LOOKUP, formatEnum);
 }
