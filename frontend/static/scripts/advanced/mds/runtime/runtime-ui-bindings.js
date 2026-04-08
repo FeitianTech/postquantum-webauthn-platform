@@ -1,5 +1,5 @@
-import { normaliseAaguid } from '../mds-utils.js';
-import { hasInlineDetail as hasInlineDetailValue } from './metadata-helpers.js';
+import { normaliseAaguid } from '../../mds-utils.js';
+import { hasInlineDetail as hasInlineDetailValue } from '../metadata/metadata-helpers.js';
 import { createDetailRuntime } from './runtime-detail-runtime.js';
 import { createAuthenticatorNavigationAdapters } from './runtime-authenticator-navigation-adapters.js';
 

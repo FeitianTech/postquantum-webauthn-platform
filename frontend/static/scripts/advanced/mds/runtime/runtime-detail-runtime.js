@@ -1,34 +1,34 @@
-import { COLUMN_COUNT } from '../mds-constants.js';
-import { normaliseAaguid, renderCertificateSummary } from '../mds-utils.js';
-import { buildDetailContent } from './detail-content.js';
-import { formatDetailSubtitle } from './detail-user-sections.js';
-import { getAuthenticatorRawData } from './raw-data.js';
-import { stringifyAuthenticatorRawData } from './raw-stringify.js';
-import { openAuthenticatorRawWindow as openAuthenticatorRawDataWindow } from './raw-window.js';
+import { COLUMN_COUNT } from '../../mds-constants.js';
+import { normaliseAaguid, renderCertificateSummary } from '../../mds-utils.js';
+import { buildDetailContent } from '../detail-content.js';
+import { formatDetailSubtitle } from '../detail-user-sections.js';
+import { getAuthenticatorRawData } from '../raw-data.js';
+import { stringifyAuthenticatorRawData } from '../raw-stringify.js';
+import { openAuthenticatorRawWindow as openAuthenticatorRawDataWindow } from '../raw-window.js';
 import {
     createIconCell as createIconCellFromModule,
     createIdCell as createIdCellFromModule,
     createNameCell as createNameCellFromModule,
     createTagCell as createTagCellFromModule,
     createTextCell as createTextCellFromModule,
-} from './table-cells.js';
+} from '../table-cells.js';
 import {
     applyCertificateLoadingCursorVisibility as applyCertificateLoadingCursorVisibilityByCount,
     formatCertificateInput as formatCertificateInputValue,
     formatCertificateOutput as formatCertificateOutputValue,
     setCertificateFieldContent as setCertificateFieldContentValue,
     setCertificateSummaryContent as setCertificateSummaryContentInState,
-} from './certificate-utils.js';
+} from '../certificate-utils.js';
 import {
     closeCertificatePageInState,
     openCertificatePageInState,
-} from './certificate-page.js';
+} from '../certificate-page.js';
 import {
     closeAuthenticatorModalInState,
     openAuthenticatorModalInState,
     openAuthenticatorRawWindowInState,
     updateAuthenticatorRawButtonInState,
-} from './authenticator-modal.js';
+} from '../authenticator-modal.js';
 import {
     applyRowHighlightByKey as applyRowHighlightByKeyInState,
     clearRowHighlight as clearRowHighlightInState,
@@ -37,15 +37,15 @@ import {
     isElementVisible as isElementVisibleInDom,
     showAuthenticatorDetail as showAuthenticatorDetailInState,
     waitForElementVisible as waitForElementVisibleInDom,
-} from './row-highlight.js';
+} from '../row-highlight.js';
 import {
     notifyGlobalScrollLock,
     resetCertificateTextareaHeights,
     restoreListSection,
     scheduleCertificateTextareaResize,
     suppressListSection,
-} from './detail-layout.js';
-import { renderMdsTable } from './table-render.js';
+} from '../detail-layout.js';
+import { renderMdsTable } from '../table-render.js';
 import { createMdsDetailViewAdapters } from './runtime-detail-view-adapters.js';
 
 const MDS_CERTIFICATE_LOADING_CURSOR_CLASS = 'mds-certificate-loading-cursor';

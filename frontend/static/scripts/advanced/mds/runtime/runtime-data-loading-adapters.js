@@ -2,14 +2,14 @@ import {
     applyMetadataEntriesInState,
     applyMetadataEntriesLazyInState,
     startBackgroundMetadataLoadingInState,
-} from './metadata-entry-loading.js';
+} from '../metadata/metadata-entry-loading.js';
 import {
     buildLoadedStatus as buildLoadedStatusFromSnapshot,
     finalizeBackgroundLoading as finalizeBackgroundLoadingState,
     populateCertificateDerivedInfoForBatch as populateCertificateDerivedInfoForBatchEntries,
     populateCertificateDerivedInfoInternal as populateCertificateDerivedInfoForEntries,
     updateBackgroundLoadingStatus as updateBackgroundLoadingStatusForProgress,
-} from './metadata-derived-info.js';
+} from '../metadata/metadata-derived-info.js';
 
 export function createMdsDataLoadingAdapters(config = {}) {
     const {

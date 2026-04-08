@@ -4,7 +4,7 @@ import {
     loadMdsDataInState,
     resetExplorerStateInState,
     resolveMetadataEntryInState,
-} from './explorer-state-loader.js';
+} from '../metadata/explorer-state-loader.js';
 
 export function createMdsDataExplorerAdapters(config = {}) {
     const {

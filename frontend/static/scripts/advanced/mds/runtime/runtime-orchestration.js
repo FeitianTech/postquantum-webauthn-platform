@@ -1,17 +1,17 @@
-import { FILTER_CONFIG, FILTER_LOOKUP } from '../mds-constants.js';
-import { createFilterDropdown } from '../mds-dropdown.js';
-import { formatEnum } from '../mds-utils.js';
+import { FILTER_CONFIG, FILTER_LOOKUP } from '../../mds-constants.js';
+import { createFilterDropdown } from '../../mds-dropdown.js';
+import { formatEnum } from '../../mds-utils.js';
 import {
     formatSnapshotTimestamp as formatSnapshotTimestampValue,
     normaliseSnapshotInfo as normaliseSnapshotInfoValue,
-} from './metadata-helpers.js';
+} from '../metadata/metadata-helpers.js';
 import {
     DEFAULT_SORT_DIRECTION,
     DEFAULT_SORT_KEY,
     SORT_NONE,
-} from './sort-filter-controller.js';
-import { initializeMdsState } from './state-initializer.js';
-import { createStateInitializerDeps } from './state-init-deps.js';
+} from '../sort-filter-controller.js';
+import { initializeMdsState } from '../state/state-initializer.js';
+import { createStateInitializerDeps } from '../state/state-init-deps.js';
 import { createDataRuntime } from './runtime-data-runtime.js';
 import { createUiRuntimeBindings } from './runtime-ui-bindings.js';
 import { createBootstrapRuntimeConfig } from './runtime-bootstrap-config.js';

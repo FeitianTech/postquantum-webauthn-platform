@@ -1,22 +1,22 @@
 import {
     CUSTOM_METADATA_DELETE_PATH,
     CUSTOM_METADATA_UPLOAD_PATH,
-} from '../mds-constants.js';
+} from '../../mds-constants.js';
 import {
     normaliseFileList as normaliseFileListValue,
     splitAcceptedFiles as splitAcceptedFilesValue,
-} from './metadata-helpers.js';
+} from '../metadata/metadata-helpers.js';
 import {
     closeCustomMetadataPanel as closeCustomMetadataPanelInState,
     handleCustomPanelKeydown as handleCustomPanelKeydownValue,
     openCustomMetadataPanel as openCustomMetadataPanelInState,
     setCustomMetadataMessage as setCustomMetadataMessageInState,
     updateCustomMetadataList as updateCustomMetadataListInState,
-} from './custom-panel-utils.js';
+} from '../custom/custom-panel-utils.js';
 import {
     deleteCustomMetadataInState,
     uploadCustomMetadataFilesInState,
-} from './custom-metadata-actions.js';
+} from '../custom/custom-metadata-actions.js';
 import { createCustomMetadataAdapters } from './runtime-custom-metadata-adapters.js';
 
 export function createCustomMetadataRuntime({

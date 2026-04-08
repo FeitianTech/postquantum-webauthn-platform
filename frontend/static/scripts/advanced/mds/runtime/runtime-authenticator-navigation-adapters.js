@@ -4,7 +4,7 @@ import {
     highlightAuthenticatorRowByAaguidInState,
     openAuthenticatorModalByAaguidInState,
     resolveEntryByAaguidInState,
-} from './authenticator-navigation.js';
+} from '../authenticator-navigation.js';
 
 export function createAuthenticatorNavigationAdapters(config = {}) {
     const {

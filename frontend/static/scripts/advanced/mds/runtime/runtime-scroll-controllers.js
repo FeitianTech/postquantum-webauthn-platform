@@ -1,7 +1,7 @@
 import { createMdsScrollNavigationAdapters } from './runtime-scroll-navigation-adapters.js';
 import { createMdsSchedulers } from './runtime-schedulers.js';
-import { createColumnResizerController } from './column-resizers.js';
-import { createSortFilterController } from './sort-filter-controller.js';
+import { createColumnResizerController } from '../column-resizers.js';
+import { createSortFilterController } from '../sort-filter-controller.js';
 import {
     clearHorizontalFloatingStyles as clearHorizontalFloatingStylesInDom,
     handleWindowScroll as handleWindowScrollEvents,
@@ -13,19 +13,19 @@ import {
     updateFloatingHorizontalScrollPosition as updateFloatingHorizontalScrollPositionInState,
     updateHorizontalScrollMetrics as updateHorizontalScrollMetricsInState,
     updateScrollTopButtonVisibility as updateScrollTopButtonVisibilityInState,
-} from './scroll-metrics.js';
+} from '../scroll-metrics.js';
 import {
     focusRowButton as focusRowButtonInDom,
     scrollRowIntoView as scrollRowIntoViewInDom,
     waitForLayoutSettled as waitForLayoutSettledInDom,
     waitForRowByKey as waitForRowByKeyInDom,
     waitForStateReady as waitForStateReadyInDom,
-} from './navigation-utils.js';
+} from '../navigation-utils.js';
 import {
     applyRowHeightLockToRow,
     lockRowHeightsInState,
     setHighlightedRowInState,
-} from './row-layout.js';
+} from '../row-layout.js';
 
 export function createScrollControllers({
     getState,
