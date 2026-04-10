@@ -8,8 +8,8 @@ export default defineConfig({
         url: 'http://localhost/',
       },
     },
-    setupFiles: ['./frontend/tests/setup.js'],
-    include: ['frontend/tests/**/*.test.js'],
+    setupFiles: ['./tests/frontend/setup.js'],
+    include: ['tests/frontend/**/*.test.js'],
     coverage: {
       provider: 'v8',
       all: true,
@@ -19,7 +19,7 @@ export default defineConfig({
         'frontend/static/**/*.js',
       ],
       exclude: [
-        'frontend/tests/**',
+        'tests/frontend/**',
         'frontend/static/scripts/advanced/mds.js',
         'frontend/static/scripts/advanced/credential-display.js',
         'frontend/static/scripts/shared/local-storage.js',
