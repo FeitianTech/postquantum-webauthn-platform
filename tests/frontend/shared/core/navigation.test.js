@@ -4,16 +4,16 @@ vi.mock('../../../../frontend/static/scripts/advanced/json-editor.js', () => ({
   updateJsonEditor: vi.fn(),
 }));
 
-vi.mock('../../../../frontend/static/scripts/shared/status.js', () => ({
+vi.mock('../../../../frontend/static/scripts/shared/ui/status.js', () => ({
   dismissAllTransientMessages: vi.fn(),
 }));
 
 import { updateJsonEditor } from '../../../../frontend/static/scripts/advanced/json-editor.js';
 import { state } from '../../../../frontend/static/scripts/shared/state.js';
-import { dismissAllTransientMessages } from '../../../../frontend/static/scripts/shared/status.js';
+import { dismissAllTransientMessages } from '../../../../frontend/static/scripts/shared/ui/status.js';
 
 async function loadNavigation() {
-  return import('../../../../frontend/static/scripts/shared/navigation.js');
+  return import('../../../../frontend/static/scripts/shared/ui/navigation.js');
 }
 
 function buildTabDom() {
@@ -182,7 +182,7 @@ describe('navigation', () => {
     buildTabDom();
 
     const addSpy = vi.spyOn(window, 'addEventListener');
-    const { initializeNavigationMenu, toggleSection } = await import('../../../../frontend/static/scripts/shared/navigation.js');
+    const { initializeNavigationMenu, toggleSection } = await import('../../../../frontend/static/scripts/shared/ui/navigation.js');
 
     window.innerWidth = 700;
     const controls = initializeNavigationMenu();

@@ -6,8 +6,8 @@ import {
     getStoredCredentialAttachment,
     normaliseAaguidValue,
 } from './credential-utils.js';
-import {closeModal} from '../shared/ui.js';
-import {dismissAllTransientMessages} from '../shared/status.js';
+import {closeModal} from '../shared/ui/core.js';
+import {dismissAllTransientMessages} from '../shared/ui/status.js';
 import {updateJsonEditor} from './json-editor.js';
 import {checkLargeBlobCapability, updateAuthenticationExtensionAvailability} from './forms.js';
 import {collectSelectedHints, deriveAllowedAttachmentsFromHints} from './hints.js';
@@ -69,8 +69,8 @@ import {
     removeAdvancedCredential as removeAdvancedCredentialFromLocal,
     removeSimpleCredential as removeSimpleCredentialFromLocal,
     updateAdvancedCredentialRegistrationSnapshot,
-} from '../shared/local-storage.js';
-import {deleteCredentialArtifact, fetchCredentialArtifact} from '../shared/credential-artifacts-client.js';
+} from '../shared/storage/local.js';
+import {deleteCredentialArtifact, fetchCredentialArtifact} from '../shared/storage/artifacts-client.js';
 
 export {queueAuthenticatedCredentialFlash, queueFailedCredentialFlash};
 export {formatCertificateDetails, autoResizeCertificateTextareas};

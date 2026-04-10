@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('../../../../frontend/static/scripts/shared/binary-utils.js', () => {
+vi.mock('../../../../frontend/static/scripts/shared/utils/binary.js', () => {
   const toBytesFromBase64 = (input) => {
     if (typeof input !== 'string' || !input.trim()) {
       return null;
@@ -124,12 +124,12 @@ vi.mock('../../../../frontend/static/scripts/advanced/credential-utils.js', () =
   }),
 }));
 
-vi.mock('../../../../frontend/static/scripts/shared/ui.js', () => ({
+vi.mock('../../../../frontend/static/scripts/shared/ui/core.js', () => ({
   closeModal: vi.fn(),
   openModal: vi.fn(),
 }));
 
-vi.mock('../../../../frontend/static/scripts/shared/status.js', () => ({
+vi.mock('../../../../frontend/static/scripts/shared/ui/status.js', () => ({
   dismissAllTransientMessages: vi.fn(),
   hideProgress: vi.fn(),
   showProgress: vi.fn(),
@@ -157,7 +157,7 @@ vi.mock('../../../../frontend/static/scripts/advanced/constants.js', () => ({
   },
 }));
 
-vi.mock('../../../../frontend/static/scripts/shared/local-storage.js', () => ({
+vi.mock('../../../../frontend/static/scripts/shared/storage/local.js', () => ({
   clearAdvancedCredentials: vi.fn(),
   clearSimpleCredentials: vi.fn(),
   ensureAdvancedCredentialArtifactsSynced: vi.fn().mockResolvedValue(false),
@@ -170,15 +170,15 @@ vi.mock('../../../../frontend/static/scripts/shared/local-storage.js', () => ({
   updateAdvancedCredentialRegistrationSnapshot: vi.fn().mockResolvedValue(false),
 }));
 
-vi.mock('../../../../frontend/static/scripts/shared/credential-artifacts-client.js', () => ({
+vi.mock('../../../../frontend/static/scripts/shared/storage/artifacts-client.js', () => ({
   deleteCredentialArtifact: vi.fn().mockResolvedValue({ ok: true, status: 'deleted', httpStatus: 200 }),
   fetchCredentialArtifact: vi.fn().mockResolvedValue(null),
 }));
 
 import { deriveAllowedAttachmentsFromHints } from '../../../../frontend/static/scripts/advanced/hints.js';
 import { checkLargeBlobCapability, updateAuthenticationExtensionAvailability } from '../../../../frontend/static/scripts/advanced/forms.js';
-import { closeModal, openModal } from '../../../../frontend/static/scripts/shared/ui.js';
-import { showStatus } from '../../../../frontend/static/scripts/shared/status.js';
+import { closeModal, openModal } from '../../../../frontend/static/scripts/shared/ui/core.js';
+import { showStatus } from '../../../../frontend/static/scripts/shared/ui/status.js';
 import {
   clearSimpleCredentials,
   ensureAdvancedCredentialArtifactsSynced,
@@ -188,8 +188,8 @@ import {
   removeAdvancedCredential,
   removeSimpleCredential,
   updateAdvancedCredentialRegistrationSnapshot,
-} from '../../../../frontend/static/scripts/shared/local-storage.js';
-import { deleteCredentialArtifact, fetchCredentialArtifact } from '../../../../frontend/static/scripts/shared/credential-artifacts-client.js';
+} from '../../../../frontend/static/scripts/shared/storage/local.js';
+import { deleteCredentialArtifact, fetchCredentialArtifact } from '../../../../frontend/static/scripts/shared/storage/artifacts-client.js';
 import { updateJsonEditor } from '../../../../frontend/static/scripts/advanced/json-editor.js';
 import { state } from '../../../../frontend/static/scripts/shared/state.js';
 import {

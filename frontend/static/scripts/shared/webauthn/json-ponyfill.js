@@ -190,4 +190,4 @@ export {
   getRequestFromJSON as parseRequestOptionsFromJSON,
   supported
 };
-//# sourceMappingURL=webauthn-json.browser-ponyfill.js.map
+//# sourceMappingURL=json-ponyfill.js.map

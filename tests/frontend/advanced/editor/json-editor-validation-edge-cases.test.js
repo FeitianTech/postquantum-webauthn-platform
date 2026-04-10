@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('../../../../frontend/static/scripts/shared/binary-utils.js', () => ({
+vi.mock('../../../../frontend/static/scripts/shared/utils/binary.js', () => ({
   base64ToHex: vi.fn((value) => String(value || '').toLowerCase()),
   base64UrlToHex: vi.fn((value) => String(value || '').toLowerCase()),
   convertFormat: vi.fn((value) => value),
@@ -35,7 +35,7 @@ vi.mock('../../../../frontend/static/scripts/advanced/credential-utils.js', () =
   }),
 }));
 
-vi.mock('../../../../frontend/static/scripts/shared/status.js', () => ({
+vi.mock('../../../../frontend/static/scripts/shared/ui/status.js', () => ({
   showStatus: vi.fn(),
 }));
 
@@ -45,8 +45,8 @@ vi.mock('../../../../frontend/static/scripts/advanced/exclude-credentials.js', (
   setFakeExcludeCredentials: vi.fn(),
 }));
 
-import { currentFormatToJsonFormat } from '../../../../frontend/static/scripts/shared/binary-utils.js';
-import { showStatus } from '../../../../frontend/static/scripts/shared/status.js';
+import { currentFormatToJsonFormat } from '../../../../frontend/static/scripts/shared/utils/binary.js';
+import { showStatus } from '../../../../frontend/static/scripts/shared/ui/status.js';
 import { state } from '../../../../frontend/static/scripts/shared/state.js';
 import {
   applyJsonChanges,

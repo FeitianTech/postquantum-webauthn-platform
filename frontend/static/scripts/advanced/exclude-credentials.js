@@ -1,6 +1,6 @@
 import { state } from '../shared/state.js';
-import { generateRandomHex, convertFormat, getCurrentBinaryFormat } from '../shared/binary-utils.js';
-import { showStatus } from '../shared/status.js';
+import { generateRandomHex, convertFormat, getCurrentBinaryFormat } from '../shared/utils/binary.js';
+import { showStatus } from '../shared/ui/status.js';
 
 const LIST_CONFIG = {
     exclude: {

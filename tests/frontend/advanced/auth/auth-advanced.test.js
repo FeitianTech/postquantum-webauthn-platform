@@ -1,13 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('../../../../frontend/static/scripts/shared/webauthn-json.browser-ponyfill.js', () => ({
+vi.mock('../../../../frontend/static/scripts/shared/webauthn/json-ponyfill.js', () => ({
   create: vi.fn(),
   get: vi.fn(),
   parseCreationOptionsFromJSON: vi.fn((value) => value),
   parseRequestOptionsFromJSON: vi.fn((value) => value),
 }));
 
-vi.mock('../../../../frontend/static/scripts/shared/binary-utils.js', () => ({
+vi.mock('../../../../frontend/static/scripts/shared/utils/binary.js', () => ({
   convertExtensionsForClient: vi.fn((value) => value),
   normalizeClientExtensionResults: vi.fn((value) => value),
   bufferSourceToUint8Array: vi.fn((value) => {
@@ -28,7 +28,7 @@ vi.mock('../../../../frontend/static/scripts/advanced/hints.js', () => ({
   enforceAuthenticatorAttachmentWithHints: vi.fn(() => []),
 }));
 
-vi.mock('../../../../frontend/static/scripts/shared/status.js', () => ({
+vi.mock('../../../../frontend/static/scripts/shared/ui/status.js', () => ({
   showStatus: vi.fn(),
   hideStatus: vi.fn(),
   showProgress: vi.fn(),
@@ -41,7 +41,7 @@ vi.mock('../../../../frontend/static/scripts/advanced/forms.js', () => ({
   randomizeLargeBlobWrite: vi.fn(),
 }));
 
-vi.mock('../../../../frontend/static/scripts/shared/username.js', () => ({
+vi.mock('../../../../frontend/static/scripts/shared/auth/username.js', () => ({
   randomizeUserIdentity: vi.fn(),
 }));
 
@@ -53,12 +53,12 @@ vi.mock('../../../../frontend/static/scripts/advanced/credential-display.js', ()
   updateCredentialsDisplay: vi.fn(),
 }));
 
-vi.mock('../../../../frontend/static/scripts/shared/auth-debug.js', () => ({
+vi.mock('../../../../frontend/static/scripts/shared/debug/auth.js', () => ({
   printRegistrationDebug: vi.fn(),
   printAuthenticationDebug: vi.fn(),
 }));
 
-vi.mock('../../../../frontend/static/scripts/shared/local-storage.js', () => ({
+vi.mock('../../../../frontend/static/scripts/shared/storage/local.js', () => ({
   saveAdvancedCredential: vi.fn(),
   prepareAdvancedCredentialsForServer: vi.fn(() => []),
   updateAdvancedCredentialSignCount: vi.fn(),
@@ -69,21 +69,21 @@ import {
   get,
   parseCreationOptionsFromJSON,
   parseRequestOptionsFromJSON,
-} from '../../../../frontend/static/scripts/shared/webauthn-json.browser-ponyfill.js';
+} from '../../../../frontend/static/scripts/shared/webauthn/json-ponyfill.js';
 import {
   bufferSourceToUint8Array,
   bytesToHex,
   convertExtensionsForClient,
   normalizeClientExtensionResults,
-} from '../../../../frontend/static/scripts/shared/binary-utils.js';
+} from '../../../../frontend/static/scripts/shared/utils/binary.js';
 import {
   applyAuthenticatorAttachmentPreference,
   enforceAuthenticatorAttachmentWithHints,
   ensureAuthenticationHintsAllowed,
 } from '../../../../frontend/static/scripts/advanced/hints.js';
-import { hideProgress, showStatus } from '../../../../frontend/static/scripts/shared/status.js';
+import { hideProgress, showStatus } from '../../../../frontend/static/scripts/shared/ui/status.js';
 import { randomizeChallenge, randomizeLargeBlobWrite, randomizePrfEval } from '../../../../frontend/static/scripts/advanced/forms.js';
-import { randomizeUserIdentity } from '../../../../frontend/static/scripts/shared/username.js';
+import { randomizeUserIdentity } from '../../../../frontend/static/scripts/shared/auth/username.js';
 import {
   loadSavedCredentials,
   queueAuthenticatedCredentialFlash,
@@ -91,12 +91,12 @@ import {
   showRegistrationResultModal,
   updateCredentialsDisplay,
 } from '../../../../frontend/static/scripts/advanced/credential-display.js';
-import { printAuthenticationDebug, printRegistrationDebug } from '../../../../frontend/static/scripts/shared/auth-debug.js';
+import { printAuthenticationDebug, printRegistrationDebug } from '../../../../frontend/static/scripts/shared/debug/auth.js';
 import {
   prepareAdvancedCredentialsForServer,
   saveAdvancedCredential,
   updateAdvancedCredentialSignCount,
-} from '../../../../frontend/static/scripts/shared/local-storage.js';
+} from '../../../../frontend/static/scripts/shared/storage/local.js';
 import { state } from '../../../../frontend/static/scripts/shared/state.js';
 import { advancedAuthenticate, advancedRegister } from '../../../../frontend/static/scripts/advanced/auth-advanced.js';
 

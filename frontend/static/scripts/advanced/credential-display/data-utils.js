@@ -1,4 +1,4 @@
-import {base64ToBase64Url} from '../../shared/binary-utils.js';
+import {base64ToBase64Url} from '../../shared/utils/binary.js';
 
 export function normalizeClientDataString(value) {
     if (typeof value !== 'string') {

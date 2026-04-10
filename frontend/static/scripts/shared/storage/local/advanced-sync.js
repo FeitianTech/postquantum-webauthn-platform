@@ -1,7 +1,7 @@
 import {
     fetchCredentialArtifactsBulk,
     uploadCredentialArtifact,
-} from '../credential-artifacts-client.js';
+} from '../artifacts-client.js';
 import {
     SERVER_ARTIFACT_VERSION,
     SHARED_STORAGE_KEY,

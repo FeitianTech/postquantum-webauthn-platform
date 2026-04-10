@@ -6,7 +6,7 @@ import {
   fetchCredentialArtifactsBulk,
   updateCredentialSnapshot,
   uploadCredentialArtifact,
-} from '../../../../frontend/static/scripts/shared/credential-artifacts-client.js';
+} from '../../../../frontend/static/scripts/shared/storage/artifacts-client.js';
 
 function jsonResponse(data, { ok = true, status = 200, contentType = 'application/json' } = {}) {
   return {

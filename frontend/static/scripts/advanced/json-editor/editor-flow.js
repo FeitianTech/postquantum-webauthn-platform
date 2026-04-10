@@ -1,6 +1,6 @@
 import { state } from '../../shared/state.js';
-import { sortObjectKeys } from '../../shared/binary-utils.js';
-import { showStatus } from '../../shared/status.js';
+import { sortObjectKeys } from '../../shared/utils/binary.js';
+import { showStatus } from '../../shared/ui/status.js';
 import {
     getAdvancedAssertOptions,
     getAdvancedCreateOptions,

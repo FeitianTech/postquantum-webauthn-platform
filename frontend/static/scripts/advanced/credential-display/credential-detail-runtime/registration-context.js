@@ -1,6 +1,6 @@
 import {
     base64ToBase64Url,
-} from '../../../shared/binary-utils.js';
+} from '../../../shared/utils/binary.js';
 import {
     deriveAaguidFromCredentialData,
     normaliseAaguidValue,

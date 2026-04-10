@@ -6,9 +6,9 @@ import {
     base64ToHex,
     base64UrlToHexFixed,
     jsToHex
-} from '../shared/binary-utils.js';
+} from '../shared/utils/binary.js';
 import { getCredentialIdHex } from './credential-utils.js';
-import { showStatus } from '../shared/status.js';
+import { showStatus } from '../shared/ui/status.js';
 import { updateJsonEditor } from './json-editor.js';
 
 function credentialSupportsLargeBlob(cred) {

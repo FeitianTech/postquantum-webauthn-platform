@@ -1,4 +1,4 @@
-import { updateCredentialSnapshot as uploadSnapshotToServer } from '../credential-artifacts-client.js';
+import { updateCredentialSnapshot as uploadSnapshotToServer } from '../artifacts-client.js';
 import { SERVER_ARTIFACT_VERSION } from './constants.js';
 import { isNonEmptyString } from './common.js';
 import { sanitiseRegistrationDetailSnapshot } from './snapshot-sanitize.js';

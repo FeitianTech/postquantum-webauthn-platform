@@ -3,23 +3,23 @@ import {
     get,
     parseCreationOptionsFromJSON,
     parseRequestOptionsFromJSON
-} from '../shared/webauthn-json.browser-ponyfill.js';
-import { convertExtensionsForClient } from '../shared/binary-utils.js';
-import { showStatus, hideStatus, showProgress, hideProgress } from '../shared/status.js';
+} from '../shared/webauthn/json-ponyfill.js';
+import { convertExtensionsForClient } from '../shared/utils/binary.js';
+import { showStatus, hideStatus, showProgress, hideProgress } from '../shared/ui/status.js';
 import {
     loadSavedCredentials,
     queueAuthenticatedCredentialFlash,
     queueFailedCredentialFlash,
     updateCredentialsDisplay,
 } from '../advanced/credential-display.js';
-import { printRegistrationDebug, printAuthenticationDebug } from '../shared/auth-debug.js';
+import { printRegistrationDebug, printAuthenticationDebug } from '../shared/debug/auth.js';
 import { state } from '../shared/state.js';
 import {
     getSimpleCredentialsForEmail,
     saveSimpleCredential,
     prepareCredentialsForServer,
     updateSimpleCredentialSignCount,
-} from '../shared/local-storage.js';
+} from '../shared/storage/local.js';
 
 let simpleRegisterState = null;
 let simpleAuthenticateState = null;

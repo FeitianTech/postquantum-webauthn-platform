@@ -1,11 +1,11 @@
 import {
     base64UrlToJson,
     base64UrlToUtf8String,
-} from '../../shared/binary-utils.js';
+} from '../../shared/utils/binary.js';
 import {
     escapeHtml,
 } from '../display-utils.js';
-import {closeModal, openModal} from '../../shared/ui.js';
+import {closeModal, openModal} from '../../shared/ui/core.js';
 import {
     formatCertificateDetails,
     autoResizeCertificateTextareas,

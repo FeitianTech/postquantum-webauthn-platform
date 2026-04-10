@@ -34,7 +34,7 @@ import {
   normalizeClientExtensionResults,
   normalizeToHex,
   sortObjectKeys,
-} from '../../../../frontend/static/scripts/shared/binary-utils.js';
+} from '../../../../frontend/static/scripts/shared/utils/binary.js';
 
 describe('binary-utils', () => {
   it('converts between supported binary formats', () => {

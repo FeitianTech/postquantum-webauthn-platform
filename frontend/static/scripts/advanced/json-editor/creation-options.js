@@ -3,7 +3,7 @@ import {
     convertFormat,
     currentFormatToJsonFormat,
     getCurrentBinaryFormat,
-} from '../../shared/binary-utils.js';
+} from '../../shared/utils/binary.js';
 import {
     collectSelectedHints,
     enforceAuthenticatorAttachmentWithHints,

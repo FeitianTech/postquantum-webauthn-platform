@@ -8,7 +8,7 @@ import {
   hideStatus,
   showProgress,
   showStatus,
-} from '../../../../frontend/static/scripts/shared/status.js';
+} from '../../../../frontend/static/scripts/shared/ui/status.js';
 
 function buildDom() {
   document.body.innerHTML = `

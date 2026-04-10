@@ -1,5 +1,5 @@
-import { updateJsonEditor } from '../advanced/json-editor.js';
-import { randomizeUserId } from '../advanced/forms.js';
+import { updateJsonEditor } from '../../advanced/json-editor.js';
+import { randomizeUserId } from '../../advanced/forms.js';
 
 export function generateRandom10DigitUsername() {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';

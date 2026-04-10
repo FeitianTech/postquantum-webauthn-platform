@@ -1,4 +1,4 @@
-import {hideProgress, showProgress, showStatus} from '../../shared/status.js';
+import {hideProgress, showProgress, showStatus} from '../../shared/ui/status.js';
 
 const SHARED_CREDENTIAL_STATUS_TABS = ['advanced', 'simple'];
 

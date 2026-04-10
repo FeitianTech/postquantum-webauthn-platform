@@ -1,13 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('../../frontend/static/scripts/shared/webauthn-json.browser-ponyfill.js', () => ({
+vi.mock('../../frontend/static/scripts/shared/webauthn/json-ponyfill.js', () => ({
   create: vi.fn(),
   get: vi.fn(),
   parseCreationOptionsFromJSON: vi.fn(),
   parseRequestOptionsFromJSON: vi.fn(),
 }));
 
-vi.mock('../../frontend/static/scripts/shared/navigation.js', () => ({
+vi.mock('../../frontend/static/scripts/shared/ui/navigation.js', () => ({
   switchTab: vi.fn(),
   switchSubTab: vi.fn(),
   toggleSection: vi.fn(),
@@ -17,7 +17,7 @@ vi.mock('../../frontend/static/scripts/shared/navigation.js', () => ({
   })),
 }));
 
-vi.mock('../../frontend/static/scripts/shared/ui.js', () => ({
+vi.mock('../../frontend/static/scripts/shared/ui/core.js', () => ({
   showInfoPopup: vi.fn(),
   hideInfoPopup: vi.fn(),
   toggleLanguage: vi.fn(),
@@ -46,7 +46,7 @@ vi.mock('../../frontend/static/scripts/advanced/resets.js', () => ({
   resetAuthenticationForm: vi.fn(),
 }));
 
-vi.mock('../../frontend/static/scripts/shared/username.js', () => ({
+vi.mock('../../frontend/static/scripts/shared/auth/username.js', () => ({
   initializeSimpleUsername: vi.fn(),
   randomizeUserIdentity: vi.fn(),
   randomizeSimpleUsername: vi.fn(),
@@ -117,11 +117,11 @@ vi.mock('../../frontend/static/scripts/advanced/settings-nav.js', () => ({
   initializeAdvancedSettingsNavigation: vi.fn(),
 }));
 
-vi.mock('../../frontend/static/scripts/shared/analyze-browser.js', () => ({
+vi.mock('../../frontend/static/scripts/shared/browser/analyze.js', () => ({
   initializeAnalyzeBrowser: vi.fn(),
 }));
 
-vi.mock('../../frontend/static/scripts/shared/loader.js', () => ({
+vi.mock('../../frontend/static/scripts/shared/utils/loader.js', () => ({
   initializeLoader: vi.fn(),
   loaderComplete: vi.fn(),
   loaderSetPhase: vi.fn(),
@@ -135,11 +135,11 @@ import { initializeAdvancedSettingsNavigation } from '../../frontend/static/scri
 import { loadSavedCredentials, updateAllowCredentialsDropdown } from '../../frontend/static/scripts/advanced/credential-display.js';
 import { updateJsonEditor, updateJsonFromForm } from '../../frontend/static/scripts/advanced/json-editor.js';
 import { handleJsonEditorKeydown } from '../../frontend/static/scripts/advanced/json-editor-utils.js';
-import { initializeNavigationMenu } from '../../frontend/static/scripts/shared/navigation.js';
-import { initializeSimpleUsername, randomizeUserIdentity } from '../../frontend/static/scripts/shared/username.js';
-import { closeModal, initializeStickyHeader, toggleJsonEditorExpansion } from '../../frontend/static/scripts/shared/ui.js';
-import { initializeAnalyzeBrowser } from '../../frontend/static/scripts/shared/analyze-browser.js';
-import { initializeLoader, loaderComplete, loaderSetPhase } from '../../frontend/static/scripts/shared/loader.js';
+import { initializeNavigationMenu } from '../../frontend/static/scripts/shared/ui/navigation.js';
+import { initializeSimpleUsername, randomizeUserIdentity } from '../../frontend/static/scripts/shared/auth/username.js';
+import { closeModal, initializeStickyHeader, toggleJsonEditorExpansion } from '../../frontend/static/scripts/shared/ui/core.js';
+import { initializeAnalyzeBrowser } from '../../frontend/static/scripts/shared/browser/analyze.js';
+import { initializeLoader, loaderComplete, loaderSetPhase } from '../../frontend/static/scripts/shared/utils/loader.js';
 
 function buildDom() {
   document.body.innerHTML = `

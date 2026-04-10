@@ -1,4 +1,4 @@
-import { initializeStickyHeaderForElement } from '../../shared/ui.js';
+import { initializeStickyHeaderForElement } from '../../shared/ui/core.js';
 
 export function createDetailStickyHeader(page, header, options = {}) {
     if (!(page instanceof HTMLElement) || !(header instanceof HTMLElement)) {

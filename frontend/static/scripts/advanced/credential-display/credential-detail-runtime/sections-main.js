@@ -1,7 +1,7 @@
 import {
     base64ToBase64Url,
     base64UrlToHex,
-} from '../../../shared/binary-utils.js';
+} from '../../../shared/utils/binary.js';
 import {
     describeCoseAlgorithm,
     describeCoseKeyType,

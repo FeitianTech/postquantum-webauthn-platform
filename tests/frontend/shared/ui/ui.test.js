@@ -13,7 +13,7 @@ import {
   toggleJsonEditorExpansion,
   toggleLanguage,
   updateGlobalScrollLock,
-} from '../../../../frontend/static/scripts/shared/ui.js';
+} from '../../../../frontend/static/scripts/shared/ui/core.js';
 
 function buildInfoPopupDom() {
   document.body.innerHTML = `

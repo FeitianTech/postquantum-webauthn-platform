@@ -1,5 +1,5 @@
 import {state} from '../../../shared/state.js';
-import {openModal} from '../../../shared/ui.js';
+import {openModal} from '../../../shared/ui/core.js';
 import {
     extractCredentialAttestationContext,
 } from '../attestation-context.js';

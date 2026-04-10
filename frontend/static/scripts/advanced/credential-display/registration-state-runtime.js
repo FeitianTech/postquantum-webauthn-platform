@@ -4,7 +4,7 @@ import {
     base64UrlToUint8Array,
     bytesToHex,
     hexToUint8Array,
-} from '../../shared/binary-utils.js';
+} from '../../shared/utils/binary.js';
 import {addCertificatesToRegistrationState} from './certificate-state.js';
 import {cloneJson} from './data-utils.js';
 import {decodePayloadThroughApi} from './registration-result.js';

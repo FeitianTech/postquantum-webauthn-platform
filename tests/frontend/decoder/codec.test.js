@@ -1,19 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('../../../frontend/static/scripts/shared/status.js', () => ({
+vi.mock('../../../frontend/static/scripts/shared/ui/status.js', () => ({
   hideProgress: vi.fn(),
   hideStatus: vi.fn(),
   showProgress: vi.fn(),
   showStatus: vi.fn(),
 }));
 
-vi.mock('../../../frontend/static/scripts/shared/ui.js', () => ({
+vi.mock('../../../frontend/static/scripts/shared/ui/core.js', () => ({
   closeModal: vi.fn(),
   openModal: vi.fn(),
 }));
 
-import { hideProgress, hideStatus, showStatus } from '../../../frontend/static/scripts/shared/status.js';
-import { closeModal, openModal } from '../../../frontend/static/scripts/shared/ui.js';
+import { hideProgress, hideStatus, showStatus } from '../../../frontend/static/scripts/shared/ui/status.js';
+import { closeModal, openModal } from '../../../frontend/static/scripts/shared/ui/core.js';
 import { clearCodec, processCodec, switchCodecMode, toggleRawCodec } from '../../../frontend/static/scripts/decoder/codec.js';
 
 function buildCodecDom() {

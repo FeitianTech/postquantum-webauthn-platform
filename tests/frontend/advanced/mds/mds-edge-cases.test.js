@@ -1,13 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('../../../../frontend/static/scripts/shared/loader.js', () => ({
+vi.mock('../../../../frontend/static/scripts/shared/utils/loader.js', () => ({
   loaderIsActive: vi.fn(() => false),
   loaderSetMetadataCount: vi.fn(),
   loaderSetPhase: vi.fn(),
   loaderSetProgress: vi.fn(),
 }));
 
-vi.mock('../../../../frontend/static/scripts/shared/ui.js', () => ({
+vi.mock('../../../../frontend/static/scripts/shared/ui/core.js', () => ({
   initializeStickyHeaderForElement: vi.fn(() => {
     const miniHeader = document.createElement('div');
     const miniInner = document.createElement('div');

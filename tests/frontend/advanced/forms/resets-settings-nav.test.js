@@ -6,7 +6,7 @@ vi.mock('../../../../frontend/static/scripts/advanced/forms.js', () => ({
   updateAuthenticationExtensionAvailability: vi.fn(),
 }));
 
-vi.mock('../../../../frontend/static/scripts/shared/username.js', () => ({
+vi.mock('../../../../frontend/static/scripts/shared/auth/username.js', () => ({
   randomizeUserIdentity: vi.fn(),
 }));
 
@@ -34,7 +34,7 @@ import {
 } from '../../../../frontend/static/scripts/advanced/exclude-credentials.js';
 import { updateAllowCredentialsDropdown } from '../../../../frontend/static/scripts/advanced/credential-display.js';
 import { updateJsonEditor } from '../../../../frontend/static/scripts/advanced/json-editor.js';
-import { randomizeUserIdentity } from '../../../../frontend/static/scripts/shared/username.js';
+import { randomizeUserIdentity } from '../../../../frontend/static/scripts/shared/auth/username.js';
 import {
   resetAuthenticationForm,
   resetRegistrationForm,

@@ -1,4 +1,4 @@
-import { hideStatus } from '../../shared/status.js';
+import { hideStatus } from '../../shared/ui/status.js';
 import { MODE_CONFIG } from './constants.js';
 
 let currentCodecMode = 'decode';

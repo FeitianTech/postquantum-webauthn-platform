@@ -1,4 +1,4 @@
-import {normalizeToHex} from '../../shared/binary-utils.js';
+import {normalizeToHex} from '../../shared/utils/binary.js';
 import {
     clearPendingCredentialFlash,
     getPendingCredentialFlash,

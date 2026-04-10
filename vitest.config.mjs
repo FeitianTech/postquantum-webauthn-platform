@@ -22,7 +22,7 @@ export default defineConfig({
         'tests/frontend/**',
         'frontend/static/scripts/advanced/mds.js',
         'frontend/static/scripts/advanced/credential-display.js',
-        'frontend/static/scripts/shared/local-storage.js',
+        'frontend/static/scripts/shared/storage/local.js',
         'frontend/static/scripts/advanced/json-editor.js',
         'frontend/static/scripts/decoder/codec.js',
         'frontend/static/scripts/decoder/codec/**',

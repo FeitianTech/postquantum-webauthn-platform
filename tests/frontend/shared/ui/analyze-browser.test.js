@@ -1,14 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('../../../../frontend/static/scripts/shared/ui.js', () => ({
+vi.mock('../../../../frontend/static/scripts/shared/ui/core.js', () => ({
   updateGlobalScrollLock: vi.fn(),
 }));
 
-import { updateGlobalScrollLock } from '../../../../frontend/static/scripts/shared/ui.js';
+import { updateGlobalScrollLock } from '../../../../frontend/static/scripts/shared/ui/core.js';
 
 async function loadAnalyzeBrowser() {
   vi.resetModules();
-  return import('../../../../frontend/static/scripts/shared/analyze-browser.js');
+  return import('../../../../frontend/static/scripts/shared/browser/analyze.js');
 }
 
 function buildAnalyzeDom() {

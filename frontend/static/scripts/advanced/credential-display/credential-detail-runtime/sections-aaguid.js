@@ -1,6 +1,6 @@
 import {
     hexToGuid,
-} from '../../../shared/binary-utils.js';
+} from '../../../shared/utils/binary.js';
 import {
     escapeHtml,
 } from '../../display-utils.js';

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('../../../../frontend/static/scripts/shared/binary-utils.js', () => ({
+vi.mock('../../../../frontend/static/scripts/shared/utils/binary.js', () => ({
   base64UrlToHex: vi.fn((value) => `hex:${value}`),
 }));
 
@@ -11,8 +11,8 @@ vi.mock('../../../../frontend/static/scripts/advanced/credential-utils.js', () =
 import {
   printAuthenticationDebug,
   printRegistrationDebug,
-} from '../../../../frontend/static/scripts/shared/auth-debug.js';
-import { base64UrlToHex } from '../../../../frontend/static/scripts/shared/binary-utils.js';
+} from '../../../../frontend/static/scripts/shared/debug/auth.js';
+import { base64UrlToHex } from '../../../../frontend/static/scripts/shared/utils/binary.js';
 import { extractHexFromJsonFormat } from '../../../../frontend/static/scripts/advanced/credential-utils.js';
 
 function collectLogs(logSpy) {

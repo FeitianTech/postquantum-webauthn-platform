@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('../../../../frontend/static/scripts/shared/status.js', () => ({
+vi.mock('../../../../frontend/static/scripts/shared/ui/status.js', () => ({
   showStatus: vi.fn(),
 }));
 
 import { state } from '../../../../frontend/static/scripts/shared/state.js';
-import { showStatus } from '../../../../frontend/static/scripts/shared/status.js';
+import { showStatus } from '../../../../frontend/static/scripts/shared/ui/status.js';
 import {
   clearFakeAllowCredentials,
   clearFakeExcludeCredentials,

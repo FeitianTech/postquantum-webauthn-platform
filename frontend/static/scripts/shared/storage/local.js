@@ -1,10 +1,10 @@
 import {
     cloneAdvancedStoredRecord,
-} from './local-storage/advanced-storage-shaping.js';
+} from './local/advanced-storage-shaping.js';
 import {
     ensureAdvancedCredentialArtifactsSynced,
     ensureAdvancedCredentialSnapshotsPrefetched,
-} from './local-storage/advanced-sync.js';
+} from './local/advanced-sync.js';
 import {
     clearAdvancedCredentials,
     getAllAdvancedCredentials,
@@ -13,8 +13,8 @@ import {
     saveAdvancedCredential,
     updateAdvancedCredentialRegistrationSnapshot,
     updateAdvancedCredentialSignCount,
-} from './local-storage/advanced-credentials.js';
-import { readUnifiedCredentialRecords } from './local-storage/storage-core.js';
+} from './local/advanced-credentials.js';
+import { readUnifiedCredentialRecords } from './local/storage-core.js';
 import {
     clearSimpleCredentials,
     getAllSimpleCredentials,
@@ -23,7 +23,7 @@ import {
     removeSimpleCredential,
     saveSimpleCredential,
     updateSimpleCredentialSignCount,
-} from './local-storage/simple-credentials.js';
+} from './local/simple-credentials.js';
 
 function cloneCredential(record) {
     if (!record || typeof record !== 'object') {

@@ -1,4 +1,4 @@
-import { updateGlobalScrollLock } from './ui.js';
+import { updateGlobalScrollLock } from '../ui/core.js';
 
 const TRANSPORT_CANDIDATES = [
     { key: 'internal', label: 'Internal', test: data => data.platformAuthenticator === true },

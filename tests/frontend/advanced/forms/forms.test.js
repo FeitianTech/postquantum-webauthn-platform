@@ -4,7 +4,7 @@ vi.mock('../../../../frontend/static/scripts/advanced/json-editor.js', () => ({
   updateJsonEditor: vi.fn(),
 }));
 
-vi.mock('../../../../frontend/static/scripts/shared/status.js', () => ({
+vi.mock('../../../../frontend/static/scripts/shared/ui/status.js', () => ({
   showStatus: vi.fn(),
 }));
 
@@ -17,8 +17,8 @@ async function loadFormsModule() {
 
 async function loadFormsModuleWithBinaryOverrides(overrides = {}) {
   vi.resetModules();
-  vi.doMock('../../../../frontend/static/scripts/shared/binary-utils.js', async () => {
-    const actual = await vi.importActual('../../../../frontend/static/scripts/shared/binary-utils.js');
+  vi.doMock('../../../../frontend/static/scripts/shared/utils/binary.js', async () => {
+    const actual = await vi.importActual('../../../../frontend/static/scripts/shared/utils/binary.js');
     return {
       ...actual,
       ...overrides,
@@ -26,7 +26,7 @@ async function loadFormsModuleWithBinaryOverrides(overrides = {}) {
   });
 
   const module = await import('../../../../frontend/static/scripts/advanced/forms.js');
-  vi.doUnmock('../../../../frontend/static/scripts/shared/binary-utils.js');
+  vi.doUnmock('../../../../frontend/static/scripts/shared/utils/binary.js');
   return module;
 }
 

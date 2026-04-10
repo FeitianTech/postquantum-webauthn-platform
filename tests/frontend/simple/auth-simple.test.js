@@ -1,17 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('../../../frontend/static/scripts/shared/webauthn-json.browser-ponyfill.js', () => ({
+vi.mock('../../../frontend/static/scripts/shared/webauthn/json-ponyfill.js', () => ({
   create: vi.fn(),
   get: vi.fn(),
   parseCreationOptionsFromJSON: vi.fn((value) => value),
   parseRequestOptionsFromJSON: vi.fn((value) => value),
 }));
 
-vi.mock('../../../frontend/static/scripts/shared/binary-utils.js', () => ({
+vi.mock('../../../frontend/static/scripts/shared/utils/binary.js', () => ({
   convertExtensionsForClient: vi.fn((value) => value),
 }));
 
-vi.mock('../../../frontend/static/scripts/shared/status.js', () => ({
+vi.mock('../../../frontend/static/scripts/shared/ui/status.js', () => ({
   hideProgress: vi.fn(),
   hideStatus: vi.fn(),
   showProgress: vi.fn(),
@@ -25,12 +25,12 @@ vi.mock('../../../frontend/static/scripts/advanced/credential-display.js', () =>
   updateCredentialsDisplay: vi.fn(),
 }));
 
-vi.mock('../../../frontend/static/scripts/shared/auth-debug.js', () => ({
+vi.mock('../../../frontend/static/scripts/shared/debug/auth.js', () => ({
   printAuthenticationDebug: vi.fn(),
   printRegistrationDebug: vi.fn(),
 }));
 
-vi.mock('../../../frontend/static/scripts/shared/local-storage.js', () => ({
+vi.mock('../../../frontend/static/scripts/shared/storage/local.js', () => ({
   getSimpleCredentialsForEmail: vi.fn(),
   prepareCredentialsForServer: vi.fn((value) => value),
   saveSimpleCredential: vi.fn(),
@@ -42,11 +42,11 @@ import {
   get,
   parseCreationOptionsFromJSON,
   parseRequestOptionsFromJSON,
-} from '../../../frontend/static/scripts/shared/webauthn-json.browser-ponyfill.js';
-import { convertExtensionsForClient } from '../../../frontend/static/scripts/shared/binary-utils.js';
+} from '../../../frontend/static/scripts/shared/webauthn/json-ponyfill.js';
+import { convertExtensionsForClient } from '../../../frontend/static/scripts/shared/utils/binary.js';
 import { loadSavedCredentials, queueAuthenticatedCredentialFlash, queueFailedCredentialFlash, updateCredentialsDisplay } from '../../../frontend/static/scripts/advanced/credential-display.js';
-import { getSimpleCredentialsForEmail, prepareCredentialsForServer, saveSimpleCredential, updateSimpleCredentialSignCount } from '../../../frontend/static/scripts/shared/local-storage.js';
-import { hideProgress, showStatus } from '../../../frontend/static/scripts/shared/status.js';
+import { getSimpleCredentialsForEmail, prepareCredentialsForServer, saveSimpleCredential, updateSimpleCredentialSignCount } from '../../../frontend/static/scripts/shared/storage/local.js';
+import { hideProgress, showStatus } from '../../../frontend/static/scripts/shared/ui/status.js';
 import { state } from '../../../frontend/static/scripts/shared/state.js';
 import { simpleAuthenticate, simpleRegister } from '../../../frontend/static/scripts/simple/auth-simple.js';
 

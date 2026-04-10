@@ -1,4 +1,4 @@
-import {openModal} from '../../shared/ui.js';
+import {openModal} from '../../shared/ui/core.js';
 import {collectTruthyEntries} from './data-utils.js';
 
 export async function decodePayloadThroughApi(payload) {

@@ -43,9 +43,9 @@ Important frontend entry points:
   Shared saved-credential list, card rendering, credential detail modal, list refresh behavior.
 - `frontend/static/scripts/advanced/json-editor.js`
   Advanced JSON editor state and synchronization.
-- `frontend/static/scripts/shared/navigation.js`
+- `frontend/static/scripts/shared/ui/navigation.js`
   Top-level tab switching and advanced sub-tab switching.
-- `frontend/static/scripts/shared/local-storage.js`
+- `frontend/static/scripts/shared/storage/local.js`
   Browser-side stored credential records and serialization sent back to the server.
 - `frontend/static/styles/shared/layout.css`
   Shared layout and credential card animation styles.

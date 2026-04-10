@@ -1,8 +1,8 @@
 import {
     hideProgress,
     hideStatus,
-} from '../../shared/status.js';
-import { closeModal, openModal } from '../../shared/ui.js';
+} from '../../shared/ui/status.js';
+import { closeModal, openModal } from '../../shared/ui/core.js';
 import {
     resetScrollPosition,
     updateDecoderEmptyState,

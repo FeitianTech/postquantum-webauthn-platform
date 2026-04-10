@@ -3,13 +3,13 @@ import {
     get,
     parseCreationOptionsFromJSON,
     parseRequestOptionsFromJSON
-} from './shared/webauthn-json.browser-ponyfill.js';
+} from './shared/webauthn/json-ponyfill.js';
 import {
     switchTab,
     switchSubTab,
     toggleSection,
     initializeNavigationMenu,
-} from './shared/navigation.js';
+} from './shared/ui/navigation.js';
 import {
     showInfoPopup,
     hideInfoPopup,
@@ -18,7 +18,7 @@ import {
     updateGlobalScrollLock,
     closeModal,
     initializeStickyHeader,
-} from './shared/ui.js';
+} from './shared/ui/core.js';
 import {
     updateFieldLabels,
     randomizeChallenge,
@@ -36,7 +36,7 @@ import {
     resetRegistrationForm,
     resetAuthenticationForm
 } from './advanced/resets.js';
-import { initializeSimpleUsername, randomizeUserIdentity, randomizeSimpleUsername } from './shared/username.js';
+import { initializeSimpleUsername, randomizeUserIdentity, randomizeSimpleUsername } from './shared/auth/username.js';
 import {
     simpleRegister,
     simpleAuthenticate
@@ -84,12 +84,12 @@ import {
     renderFakeAllowCredentialList
 } from './advanced/exclude-credentials.js';
 import { initializeAdvancedSettingsNavigation } from './advanced/settings-nav.js';
-import { initializeAnalyzeBrowser } from './shared/analyze-browser.js';
+import { initializeAnalyzeBrowser } from './shared/browser/analyze.js';
 import {
     initializeLoader,
     loaderComplete,
     loaderSetPhase,
-} from './shared/loader.js';
+} from './shared/utils/loader.js';
 
 registerHintsChangeCallback(() => updateAllowCredentialsDropdown());
 

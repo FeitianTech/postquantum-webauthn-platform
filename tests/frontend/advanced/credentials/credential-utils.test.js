@@ -209,8 +209,8 @@ describe('credential-utils', () => {
 
   it('falls back to empty encoded AAGUID display fields when base64 conversion fails', async () => {
     vi.resetModules();
-    vi.doMock('../../../../frontend/static/scripts/shared/binary-utils.js', async () => {
-      const actual = await vi.importActual('../../../../frontend/static/scripts/shared/binary-utils.js');
+    vi.doMock('../../../../frontend/static/scripts/shared/utils/binary.js', async () => {
+      const actual = await vi.importActual('../../../../frontend/static/scripts/shared/utils/binary.js');
       return {
         ...actual,
         hexToBase64: vi.fn(() => {
@@ -226,7 +226,7 @@ describe('credential-utils', () => {
       aaguidB64u: '',
     });
 
-    vi.doUnmock('../../../../frontend/static/scripts/shared/binary-utils.js');
+    vi.doUnmock('../../../../frontend/static/scripts/shared/utils/binary.js');
     vi.resetModules();
   });
 });

@@ -1,4 +1,4 @@
-import { base64UrlToHex } from '../../shared/binary-utils.js';
+import { base64UrlToHex } from '../../shared/utils/binary.js';
 
 export function decodeJsonBinaryToHex(value) {
     if (!value) {

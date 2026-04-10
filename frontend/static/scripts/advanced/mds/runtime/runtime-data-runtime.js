@@ -24,7 +24,7 @@ import {
     loaderSetMetadataCount,
     loaderSetPhase,
     loaderSetProgress,
-} from '../../../shared/loader.js';
+} from '../../../shared/utils/loader.js';
 import {
     getAbortSignal as getAbortSignalValue,
     throwIfAborted as throwIfAbortedValue,

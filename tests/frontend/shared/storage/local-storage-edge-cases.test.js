@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('../../../../frontend/static/scripts/shared/credential-artifacts-client.js', () => ({
+vi.mock('../../../../frontend/static/scripts/shared/storage/artifacts-client.js', () => ({
   fetchCredentialArtifactsBulk: vi.fn(),
   updateCredentialSnapshot: vi.fn(),
   uploadCredentialArtifact: vi.fn(),
@@ -10,11 +10,11 @@ import {
   fetchCredentialArtifactsBulk,
   updateCredentialSnapshot,
   uploadCredentialArtifact,
-} from '../../../../frontend/static/scripts/shared/credential-artifacts-client.js';
+} from '../../../../frontend/static/scripts/shared/storage/artifacts-client.js';
 
 async function loadLocalStorageModule() {
   vi.resetModules();
-  return import('../../../../frontend/static/scripts/shared/local-storage.js');
+  return import('../../../../frontend/static/scripts/shared/storage/local.js');
 }
 
 const SHARED_STORAGE_KEY = 'postquantum-webauthn.credentials';

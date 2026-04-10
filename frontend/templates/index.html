@@ -55,7 +55,7 @@
         (function () {
             window.__INITIAL_MDS_INFO__ = {{ initial_mds_info | tojson }};
             // Legacy credential migration and deduplication are handled by
-            // frontend/static/scripts/shared/local-storage.js.
+            // frontend/static/scripts/shared/storage/local.js.
             // Keep this global contract for startup/tests.
             window.__INITIAL_CREDENTIAL_RECORDS__ = null;
         })();

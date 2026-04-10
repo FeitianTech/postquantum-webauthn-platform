@@ -13,7 +13,7 @@ import { randomizeUserId } from '../../../../frontend/static/scripts/advanced/fo
 
 async function loadUsernameModule() {
   vi.resetModules();
-  return import('../../../../frontend/static/scripts/shared/username.js');
+  return import('../../../../frontend/static/scripts/shared/auth/username.js');
 }
 
 describe('username helpers', () => {

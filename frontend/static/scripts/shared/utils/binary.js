@@ -1,4 +1,4 @@
-import { state } from './state.js';
+import { state } from '../state.js';
 
 export function isValidHex(str) {
     return /^[0-9a-fA-F]*$/.test(str) && str.length > 0;

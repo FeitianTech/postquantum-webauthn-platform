@@ -20,7 +20,7 @@ describe('loader', () => {
 
   async function loadLoaderModule() {
     vi.resetModules();
-    return import('../../../../frontend/static/scripts/shared/loader.js');
+    return import('../../../../frontend/static/scripts/shared/utils/loader.js');
   }
 
   it('initializes and updates progress state', async () => {
