@@ -28,12 +28,10 @@ node_modules/
 *.pem
 
 # Session-scoped metadata uploads
-frontend/static/session-metadata/
-server/app/static/session-metadata/
+server/runtime/session-metadata/
 
 # Advanced credential artifact cache
-frontend/static/credential-artifacts/
-server/app/static/credential-artifacts/
+server/runtime/credential-artifacts/
 instance/
 
 .DS_Store

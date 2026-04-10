@@ -47,6 +47,12 @@ _PROJECT_ROOT = _discover_project_root(_PACKAGE_ROOT)
 _FRONTEND_ROOT = _PROJECT_ROOT / "frontend"
 _FRONTEND_STATIC_ROOT = _FRONTEND_ROOT / "static"
 _FRONTEND_TEMPLATE_ROOT = _FRONTEND_ROOT / "templates"
+_SERVER_RUNTIME_ROOT = Path(
+    os.environ.get(
+        "FIDO_SERVER_RUNTIME_ROOT",
+        str(_PROJECT_ROOT / "server" / "runtime"),
+    )
+)
 
 _existing_app = globals().get("app")
 if isinstance(_existing_app, Flask):
@@ -409,7 +415,10 @@ MDS_METADATA_VERIFIED_PATH = os.path.join(
 MDS_METADATA_CACHE_PATH = MDS_METADATA_VERIFIED_PATH + ".meta.json"
 MDS_EXPLORER_PATH = os.path.join(str(_FRONTEND_STATIC_ROOT), "fido-mds3.explorer.json")
 MDS_EXPLORER_META_PATH = MDS_EXPLORER_PATH + ".meta.json"
-SESSION_METADATA_DIR = os.path.join(str(_FRONTEND_STATIC_ROOT), "session-metadata")
+SESSION_METADATA_DIR = os.environ.get(
+    "FIDO_SERVER_SESSION_METADATA_DIR",
+    os.path.join(str(_SERVER_RUNTIME_ROOT), "session-metadata"),
+)
 
 FIDO_METADATA_TRUST_ROOT_B64 = (
     "MIIDXzCCAkegAwIBAgILBAAAAAABIVhTCKIwDQYJKoZIhvcNAQELBQAwTDEgMB4G"
