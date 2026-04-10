@@ -16,6 +16,12 @@ import {
 } from './mode.js';
 import { renderDecodedResult } from './render-sections.js';
 
+function updateDecodeEmptyState(mode) {
+    if (mode === 'decode') {
+        updateDecoderEmptyState();
+    }
+}
+
 export async function processCodec(mode = getSelectedDecoderMode()) {
     const config = resolveCodecConfig(mode);
     if (!config) {
@@ -33,9 +39,7 @@ export async function processCodec(mode = getSelectedDecoderMode()) {
             ? 'Encoder input is empty. Provide JSON to encode.'
             : 'Codec input is empty. Please paste something to process.';
         showStatus(config.statusKey, message, 'error');
-        if (mode === 'decode') {
-            updateDecoderEmptyState();
-        }
+        updateDecodeEmptyState(mode);
         return;
     }
 
@@ -92,9 +96,7 @@ export async function processCodec(mode = getSelectedDecoderMode()) {
     }
     hideStatus(config.statusKey);
 
-    if (mode === 'decode') {
-        updateDecoderEmptyState();
-    }
+    updateDecodeEmptyState(mode);
 
     const actionText = mode === 'encode' ? 'Encoding…' : 'Decoding…';
     showProgress(config.statusKey, actionText);
@@ -152,9 +154,7 @@ export async function processCodec(mode = getSelectedDecoderMode()) {
             : 'Response decoded successfully!';
         showStatus(config.statusKey, successMessage, 'success');
 
-        if (mode === 'decode') {
-            updateDecoderEmptyState();
-        }
+        updateDecodeEmptyState(mode);
     } catch (error) {
         if (outputPanel) {
             outputPanel.classList.remove('is-visible');
@@ -170,13 +170,9 @@ export async function processCodec(mode = getSelectedDecoderMode()) {
         const failurePrefix = mode === 'encode' ? 'Encoding failed' : 'Decoding failed';
         showStatus(config.statusKey, `${failurePrefix}: ${message}`, 'error');
 
-        if (mode === 'decode') {
-            updateDecoderEmptyState();
-        }
+        updateDecodeEmptyState(mode);
     } finally {
         hideProgress(config.statusKey);
-        if (mode === 'decode') {
-            updateDecoderEmptyState();
-        }
+        updateDecodeEmptyState(mode);
     }
 }
