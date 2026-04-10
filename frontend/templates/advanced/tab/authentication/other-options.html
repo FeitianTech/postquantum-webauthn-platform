@@ -1,0 +1,113 @@
+<div id="authentication-other-options" class="settings-section-sentinel" data-scroll-target="other-options-auth"></div>
+<div class="expandable-section">
+    <div class="section-header">
+        <span>Other Options</span>
+    </div>
+    <div id="other-options-auth" class="section-content">
+        <div class="form-group">
+            <div class="label-with-info">
+                <label for="challenge-auth">Challenge (hex)</label>
+                <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
+                    <div class="info-popup">
+                        <div class="language-toggle" onclick="toggleLanguage(this)">ENG</div>
+                        <div class="text-en active">
+                            The cryptographic challenge to be signed by the authenticator, used to prevent replay attacks.
+                        </div>
+                        <div class="text-zh hidden">
+                            要由认证器签名的加密挑战，用于防止重放攻击。
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="input-with-button">
+                <input type="text" id="challenge-auth" class="form-control" placeholder="Auto-generated hex value">
+                <button class="btn btn-small refresh-icon" onclick="randomizeChallenge('auth')" title="Generate new random challenge">
+                    {% include 'advanced/tab/_refresh-icon.html' %}
+                </button>
+            </div>
+            <div id="challenge-auth-error" class="error-message">Invalid hex value (minimum 16 bytes required)</div>
+        </div>
+        <div class="form-group">
+            <div class="label-with-info">
+                <label for="timeout-auth">Timeout (milliseconds)</label>
+                <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
+                    <div class="info-popup">
+                        <div class="language-toggle" onclick="toggleLanguage(this)">ENG</div>
+                        <div class="text-en active">
+                            How long the Relying Party (RP) is willing to wait for the authentication ceremony to complete. If the authentication ceremony takes longer than this (or the adjusted value, in case the client overrides it), the ceremony will be aborted with a timeout message shown to the user. This may be silently overridden by the client.
+                        </div>
+                        <div class="text-zh hidden">
+                            依赖方（RP）等待身份验证完成的时间。如果身份验证时间超过此值，验证过程将被中止，并向用户显示超时消息。时间数值可能会被客户端静默覆盖。
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <input type="number" id="timeout-auth" class="form-control" value="90000" min="1">
+        </div>
+        <div class="form-group">
+            <div class="label-with-info">
+                <label>Hints</label>
+                <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
+                    <div class="info-popup">
+                        <div class="language-toggle" onclick="toggleLanguage(this)">ENG</div>
+                        <div class="text-en active">
+                            Registration hints to guide the user-agent in interacting with the user.<br><br>
+                            These hints are not requirements, and do not bind the user-agent, but may guide it in providing the best experience by using contextual information that the Relying Party has about the request. Hints are provided in order of decreasing preference so, if two hints are contradictory, the first one controls. Hints may also overlap: if a more-specific hint is defined a Relying Party may still wish to send less specific ones for user-agents that may not recognise the more specific one. In this case the most specific hint should be sent before the less-specific ones.<br><br>
+                            Hints MAY contradict information contained in credential transports and authenticatorAttachment. When this occurs, the hints take precedence.
+                        </div>
+                        <div class="text-zh hidden">
+                            注册提示用于指导用户代理与用户交互。<br><br>
+                            这些提示不是强制要求，也不约束用户代理，但可利用依赖方掌握的上下文信息，引导其提供最佳体验。提示按优先级从高到低排列，因此若两个提示相互矛盾，则以前面的提示为准。提示也可以有重叠：如果定义了更具体的提示，依赖方仍可同时发送不那么具体的提示，以便那些可能无法识别更具体提示的用户代理使用。在这种情况下，应先发送最具体的提示，再发送较不具体的提示。<br><br>
+                            提示可以与凭据传输方式和 authenticatorAttachment 中的信息相矛盾。如发生矛盾，应以提示为准。
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="checkbox-group">
+                <div class="checkbox-item">
+                    <label class="checkbox-label" for="hint-client-device-auth">
+                        <input type="checkbox" id="hint-client-device-auth">
+                        <span>Client-device</span>
+                    </label>
+                </div>
+                <div class="checkbox-item">
+                    <label class="checkbox-label" for="hint-hybrid-auth">
+                        <input type="checkbox" id="hint-hybrid-auth">
+                        <span>Hybrid</span>
+                    </label>
+                </div>
+                <div class="checkbox-item">
+                    <label class="checkbox-label" for="hint-security-key-auth">
+                        <input type="checkbox" id="hint-security-key-auth">
+                        <span>Security-key</span>
+                    </label>
+                </div>
+            </div>
+        </div>
+        <div class="form-group">
+            <div class="label-with-info">
+                <label for="hash-algorithm-auth">Hash Algorithm</label>
+                <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
+                    <div class="info-popup">
+                        <div class="language-toggle" onclick="toggleLanguage(this)">ENG</div>
+                        <div class="text-en active">
+                            The hashing algorithm to use when hashing the client data JSON during assertion verification. This is a developer tool feature that allows testing different hash algorithms in the signature verification process.
+                        </div>
+                        <div class="text-zh hidden">
+                            在断言验证期间对客户端数据 JSON 进行哈希处理时使用的哈希算法。这是一个开发者工具功能，允许在签名验证过程中测试不同的哈希算法。
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <select id="hash-algorithm-auth" class="form-control">
+                <option value="SHA-256" selected>SHA-256</option>
+                <option value="SHA-512">SHA-512</option>
+                <option value="SHA-384">SHA-384</option>
+                <option value="SHA-1">SHA-1</option>
+                <option value="SHA3-256">SHA3-256</option>
+                <option value="SHA3-384">SHA3-384</option>
+                <option value="SHA3-512">SHA3-512</option>
+            </select>
+        </div>
+    </div>
+</div>

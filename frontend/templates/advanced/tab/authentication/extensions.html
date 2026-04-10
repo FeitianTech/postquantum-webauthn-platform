@@ -1,0 +1,110 @@
+<div id="authentication-extensions" class="settings-section-sentinel" data-scroll-target="extensions-auth"></div>
+<div class="expandable-section">
+    <div class="section-header">
+        <span>Extensions</span>
+    </div>
+    <div id="extensions-auth" class="section-content">
+        <div class="form-group">
+            <div class="label-with-info">
+                <label for="large-blob-auth">largeBlob</label>
+                <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
+                    <div class="info-popup">
+                        <div class="language-toggle" onclick="toggleLanguage(this)">ENG</div>
+                        <div class="text-en active">
+                            Request the Large blob storage (largeBlob) extension. This extension may be used to store arbitrary data with the credential.<br><br>
+                            If set to "read", the output will be of the form largeBlob: { blob: ArrayBuffer } if both client and authenticator support the extension and the authenticator contains a matching BLOB value. Otherwise the output will be largeBlob: {} if the client supports the extension.<br><br>
+                            If set to "write", the output will be largeBlob: { written: true } if the BLOB was successfully written to the authenticator, and otherwise largeBlob: { written: false } if the client supports the extension.<br><br>
+                            If the client does not support the extension, no largeBlob output will be present.
+                        </div>
+                        <div class="text-zh hidden">
+                            请求Large blob 存储（largeBlob）扩展。此扩展可用于与凭据一起存储任意数据。<br><br>
+                            如果设置为"read"，如果客户端和认证器都支持该扩展且认证器包含匹配的 BLOB 值，输出将为 largeBlob: { blob: ArrayBuffer }。否则，如果客户端支持该扩展，输出将为 largeBlob: {}。<br><br>
+                            如果设置为"write"，如果 BLOB 成功写入认证器，输出将为 largeBlob: { written: true }，否则如果客户端支持该扩展，将为 largeBlob: { written: false }。<br><br>
+                            如果客户端不支持该扩展，将不存在 largeBlob 输出。
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <select id="large-blob-auth" class="form-control">
+                <option value="">Unspecified (default)</option>
+                <option value="read">Read</option>
+                <option value="write">Write</option>
+            </select>
+            <div id="large-blob-capability-message" class="error-message" style="color: #6c757d; display: none;">No largeBlob capable credentials available</div>
+        </div>
+        <div class="form-group">
+            <div class="label-with-info">
+                <label for="large-blob-write">largeBlob write</label>
+                <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
+                    <div class="info-popup">
+                        <div class="language-toggle" onclick="toggleLanguage(this)">ENG</div>
+                        <div class="text-en active">
+                            The BLOB value to write to the authenticator.
+                        </div>
+                        <div class="text-zh hidden">
+                            要写入认证器的 BLOB 值。
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="input-with-button">
+                <input type="text" id="large-blob-write" class="form-control" placeholder="Hex value" disabled>
+                <button class="btn btn-small refresh-icon" onclick="randomizeLargeBlobWrite()" disabled title="Generate random large blob data">
+                    {% include 'advanced/tab/_refresh-icon.html' %}
+                </button>
+            </div>
+            <div id="large-blob-write-error" class="error-message">Invalid hex value</div>
+        </div>
+        <div class="form-group">
+            <div class="label-with-info">
+                <label for="prf-eval-first-auth">prf eval first</label>
+                <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
+                    <div class="info-popup">
+                        <div class="language-toggle" onclick="toggleLanguage(this)">ENG</div>
+                        <div class="text-en active">
+                            Request the Pseudo-random function (prf) extension and set the first prf extension input to evaluate. This extension may be used to derive deterministically-random values to use as key material, for example.<br><br>
+                            If set, the client extension outputs will include a prf.results.first output if the client and authenticator both support the extension.
+                        </div>
+                        <div class="text-zh hidden">
+                            请求伪随机函数（prf）扩展并设置要评估的第一个 prf 扩展输入。例如，此扩展可用于派生确定性随机值作为密钥材料。<br><br>
+                            如果设置，如果客户端和认证器都支持该扩展，客户端扩展输出将包含 prf.results.first 输出。
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="input-with-button">
+                <input type="text" id="prf-eval-first-auth" class="form-control" placeholder="Hex value">
+                <button class="btn btn-small refresh-icon" onclick="randomizePrfEval('first', 'auth')" title="Generate random PRF evaluation data">
+                    {% include 'advanced/tab/_refresh-icon.html' %}
+                </button>
+            </div>
+            <div id="prf-eval-first-auth-error" class="error-message">Invalid hex value (exactly 32 bytes required)</div>
+            <div id="prf-capability-message" class="error-message info-hint" style="display: none;">Selected credential does not support the prf extension.</div>
+        </div>
+        <div class="form-group">
+            <div class="label-with-info">
+                <label for="prf-eval-second-auth">prf eval second</label>
+                <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
+                    <div class="info-popup">
+                        <div class="language-toggle" onclick="toggleLanguage(this)">ENG</div>
+                        <div class="text-en active">
+                            The second prf extension input to evaluate. If set, the client extension outputs will include a prf.results.second output if the client and authenticator both support the extension.<br><br>
+                            A second output may be useful to rotate key material via a single WebAuthn ceremony.
+                        </div>
+                        <div class="text-zh hidden">
+                            要评估的第二个 prf 扩展输入。如果设置，如果客户端和认证器都支持该扩展，客户端扩展输出将包含 prf.results.second 输出。<br><br>
+                            第二个输出可能有助于通过单个 WebAuthn 仪式轮换密钥材料。
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="input-with-button">
+                <input type="text" id="prf-eval-second-auth" class="form-control" placeholder="Hex value" disabled>
+                <button class="btn btn-small refresh-icon" onclick="randomizePrfEval('second', 'auth')" disabled title="Generate random PRF evaluation data">
+                    {% include 'advanced/tab/_refresh-icon.html' %}
+                </button>
+            </div>
+            <div id="prf-eval-second-auth-error" class="error-message">Invalid hex value (exactly 32 bytes required)</div>
+        </div>
+    </div>
+</div>
