@@ -25,6 +25,7 @@ export default defineConfig({
         'frontend/static/scripts/shared/local-storage.js',
         'frontend/static/scripts/advanced/json-editor.js',
         'frontend/static/scripts/decoder/codec.js',
+        'frontend/static/scripts/decoder/codec/**',
       ],
     },
   },
