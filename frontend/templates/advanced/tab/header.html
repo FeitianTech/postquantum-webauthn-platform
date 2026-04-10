@@ -1,0 +1,23 @@
+<div class="advanced-header">
+    <div class="advanced-header__title-row">
+        <h2>Advanced Authentication</h2>
+        <div class="advanced-header__actions">
+            <div class="advanced-header__actions-group active" data-subtab="registration">
+                <button class="btn" onclick="advancedRegister()">Create Credential</button>
+                <button type="button" class="btn btn-secondary" onclick="resetRegistrationForm()">Reset</button>
+            </div>
+            <div class="advanced-header__actions-group" data-subtab="authentication">
+                <button class="btn" onclick="advancedAuthenticate()">Assert Credential</button>
+                <button type="button" class="btn btn-secondary" onclick="resetAuthenticationForm()">Reset</button>
+            </div>
+        </div>
+    </div>
+    <p class="tab-section-description">Configure WebAuthn registration and authentication requests with detailed settings.</p>
+    <div class="advanced-header__meta">
+        <div class="status" id="advanced-status"></div>
+        <div class="sub-tabs">
+            <button id="registration-tab-btn" class="sub-tab active" onclick="switchSubTab('registration')">Registration</button>
+            <button id="authentication-tab-btn" class="sub-tab" onclick="switchSubTab('authentication')">Authentication</button>
+        </div>
+    </div>
+</div>
