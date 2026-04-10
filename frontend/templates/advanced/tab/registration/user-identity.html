@@ -1,0 +1,26 @@
+<div id="registration-user-identity" class="settings-section-sentinel settings-section-sentinel--first" data-scroll-target="user-identity"></div>
+<div class="static-section">
+    <div class="section-header section-header--static expanded">
+        <span>User Identity</span>
+    </div>
+    <div id="user-identity" class="section-content expanded">
+        <div class="form-group">
+            <label for="user-id">User ID (hex)</label>
+            <div class="input-with-button">
+                <input type="text" id="user-id" class="form-control" placeholder="Auto-generated hex value">
+                <button class="btn btn-small refresh-icon" onclick="randomizeUserIdentity()" title="Generate a new random User ID and username" aria-label="Generate a new random User ID and username">
+                    {% include 'advanced/tab/_refresh-icon.html' %}
+                </button>
+            </div>
+            <div id="user-id-error" class="error-message">Invalid hex value (1-64 bytes required)</div>
+        </div>
+        <div class="form-group">
+            <label for="user-name">User Name</label>
+            <input type="text" id="user-name" class="form-control" placeholder="Enter username">
+        </div>
+        <div class="form-group">
+            <label for="user-display-name">Display Name</label>
+            <input type="text" id="user-display-name" class="form-control" placeholder="Auto-generated from username" readonly style="background-color: #f8f9fa; color: #6c757d;">
+        </div>
+    </div>
+</div>

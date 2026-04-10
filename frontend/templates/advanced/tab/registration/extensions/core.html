@@ -1,0 +1,81 @@
+<div class="form-group">
+    <div class="label-with-info">
+        <label class="checkbox-label" for="cred-props">
+            <input type="checkbox" id="cred-props" checked>
+            <span>credProps</span>
+        </label>
+        <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
+            <div class="info-popup">
+                <div class="language-toggle" onclick="toggleLanguage(this)">ENG</div>
+                <div class="text-en active">
+                    Request the Credential Properties (credProps) extension. This extension may report properties such as whether a discoverable or non-discoverable credential was created.
+                </div>
+                <div class="text-zh hidden">
+                    请求凭据属性（credProps）扩展。此扩展可能报告属性，例如是否创建了可发现或不可发现的凭据。
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="form-group">
+    <div class="label-with-info">
+        <label class="checkbox-label" for="min-pin-length">
+            <input type="checkbox" id="min-pin-length">
+            <span>minPinLength</span>
+        </label>
+        <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
+            <div class="info-popup">
+                <div class="language-toggle" onclick="toggleLanguage(this)">ENG</div>
+                <div class="text-en active">
+                    Request the Minimum PIN Length Extension (minPinLength). This extension may report the authenticator's currently configured minimum PIN length if the Relying Party (RP) is authorized to receive this value.
+                </div>
+                <div class="text-zh hidden">
+                    请求最小 PIN 长度扩展（minPinLength）。如果依赖方（RP）被授权接收此值，此扩展可能报告认证器当前配置的最小 PIN 长度。
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="form-group">
+    <div class="label-with-info">
+        <label for="cred-protect">credProtect</label>
+        <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
+            <div class="info-popup">
+                <div class="language-toggle" onclick="toggleLanguage(this)">ENG</div>
+                <div class="text-en active">
+                    Request the Credential protection (credProtect) extension. This extension sets whether the authenticator requires user verification (UV) before revealing the existence of a credential. If it does, that also means that the authenticator requires UV before allowing authentication using that credential.
+                </div>
+                <div class="text-zh hidden">
+                    请求凭据保护（credProtect）扩展。此扩展设置认证器在显示凭据存在之前是否需要用户验证（UV）。如果需要，这也意味着认证器在允许使用该凭据进行身份验证之前需要 UV。
+                </div>
+            </div>
+        </div>
+    </div>
+    <select id="cred-protect" class="form-control">
+        <option value="">Unspecified (default)</option>
+        <option value="userVerificationOptional">userVerificationOptional</option>
+        <option value="userVerificationOptionalWithCredentialIDList">userVerificationOptionalWithCredentialIDList</option>
+        <option value="userVerificationRequired">userVerificationRequired</option>
+    </select>
+</div>
+<div class="form-group">
+    <div class="label-with-info">
+        <label class="checkbox-label" for="enforce-cred-protect">
+            <input type="checkbox" id="enforce-cred-protect" checked disabled>
+            <span>Enforce credProtect</span>
+        </label>
+        <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
+            <div class="info-popup">
+                <div class="language-toggle" onclick="toggleLanguage(this)">ENG</div>
+                <div class="text-en active">
+                    Whether to enforce the selected credProtect policy, if any, meaning the registration should fail rather than create a credential that does not satisfy the credProtect policy.<br><br>
+                    If this is checked and credProtect is set to userVerificationOptionalWithCredentialIDList or userVerificationRequired, and the authenticator cannot satisfy that policy, then the registration will fail. If this is not checked, the registration MAY proceed even if the authenticator cannot satisfy the chosen policy.
+                </div>
+                <div class="text-zh hidden">
+                    是否强制执行所选的 credProtect 策略（如果有），意味着注册应该失败而不是创建不满足 credProtect 策略的凭据。<br><br>
+                    如果选中此项且 credProtect 设置为 userVerificationOptionalWithCredentialIDList 或 userVerificationRequired，并且认证器无法满足该策略，则注册将失败。如果未选中，即使认证器无法满足所选策略，注册也可能继续。
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,139 @@
+<div id="registration-authenticator-selection" class="settings-section-sentinel" data-scroll-target="authenticator-selection"></div>
+<div class="expandable-section">
+    <div class="section-header">
+        <span>Authenticator Selection</span>
+    </div>
+    <div id="authenticator-selection" class="section-content">
+        <div class="form-group">
+            <div class="label-with-info">
+                <label for="authenticator-attachment">Authenticator Attachment</label>
+                <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
+                    <div class="info-popup">
+                        <div class="language-toggle" onclick="toggleLanguage(this)">ENG</div>
+                        <div class="text-en active">
+                            Select whether an authenticator integrated into the client platform ("platform") or an external device ("cross-platform") should be used. If unspecified, either kind of authenticator is allowed. By default, a cross-platform authenticator is requested.
+                        </div>
+                        <div class="text-zh hidden">
+                            选择是否使用集成在客户端平台中的认证器（“platform”）或外部设备（“cross-platform”）。如果未指定，允许使用任一类型的认证器。默认情况下，将请求 cross-platform 认证器。
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <select id="authenticator-attachment" class="form-control">
+                <option value="cross-platform">Cross-Platform (default)</option>
+                <option value="platform">Platform</option>
+                <option value="unspecified">Unspecified</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <div class="label-with-info">
+                <label for="resident-key">Resident Key</label>
+                <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
+                    <div class="info-popup">
+                        <div class="language-toggle" onclick="toggleLanguage(this)">ENG</div>
+                        <div class="text-en active">
+                            A resident key can be used for "username-less" authentication, i.e., with an empty allowCredentials parameter.<br><br>
+                            If "discouraged", a non-resident key will be created if possible. If "preferred", a resident key will be created if possible. If "required", a resident key will be created and the user is shown an error if this fails. If unspecified, the default is "discouraged".
+                        </div>
+                        <div class="text-zh hidden">
+                            常驻密钥可用于“无用户名”身份验证，即使用空的 allowCredentials 参数。<br><br>
+                            如果设为"discouraged"，在可能的情况下将创建非常驻密钥。如果设为"preferred"，在可能的情况下将创建常驻密钥。如果设为"required"，将创建常驻密钥，失败时向用户显示错误。如果未指定（选择unspecified），将默认为"discouraged"。
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <select id="resident-key" class="form-control">
+                <option value="discouraged">Discouraged (default)</option>
+                <option value="preferred">Preferred</option>
+                <option value="required">Required</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <div class="label-with-info">
+                <label for="user-verification-reg">User Verification</label>
+                <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
+                    <div class="info-popup">
+                        <div class="language-toggle" onclick="toggleLanguage(this)">ENG</div>
+                        <div class="text-en active">
+                            Select whether user verification (UV), for example a PIN or biometric, should be used.<br><br>
+                            If "discouraged", UV will not be used if possible. If "preferred", UV will be used if possible. If "required", UV will be used and the user is shown an error if this fails. If no preference is set, the default is "preferred".
+                        </div>
+                        <div class="text-zh hidden">
+                            选择是否应使用用户验证（UV），例如 PIN 或生物识别。<br><br>
+                            如果设为"discouraged"，在可能的情况下不会使用 UV。如果设为"preferred"，在可能的情况下会使用 UV。如果设为"required"，会使用 UV，失败时向用户显示错误。如果未设置偏好，默认值为"preferred"。
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <select id="user-verification-reg" class="form-control">
+                <option value="preferred">Preferred (default)</option>
+                <option value="discouraged">Discouraged</option>
+                <option value="required">Required</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <div class="label-with-info">
+                <label for="attestation">Attestation</label>
+                <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
+                    <div class="info-popup">
+                        <div class="language-toggle" onclick="toggleLanguage(this)">ENG</div>
+                        <div class="text-en active">
+                            Select whether the Relying Party (RP) requires authenticator attestation. Attestation is a way to prove what kind of authenticator is used.<br><br>
+                            If "none", no authenticator attestation will be returned. If "indirect", some kind of attestation will be returned if possible, but it may be anonymized by an attestation proxy. If "direct", the authenticator's original attestation will be returned, if any. If "enterprise", the authenticator is requested to produce an individually identifying attestation. By default, "direct" is used.
+                        </div>
+                        <div class="text-zh hidden">
+                            选择依赖方（RP）是否需要认证器证明。证明是一种证明使用何种认证器的方式。<br><br>
+                            如果选择"none"，将不返回认证器证明。如果选择"indirect"，在可能的情况下会返回某种证明，但可能被证明代理匿名化。如果选择"direct"，将返回认证器的原始证明（如果有）。如果选择"enterprise"，请求认证器产生个别标识证明。默认情况下，使用"direct"。
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <select id="attestation" class="form-control">
+                <option value="direct">Direct (default)</option>
+                <option value="none">None</option>
+                <option value="indirect">Indirect</option>
+                <option value="enterprise">Enterprise</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <div class="label-with-info">
+                <label class="checkbox-label" for="exclude-credentials">
+                    <input type="checkbox" id="exclude-credentials" checked>
+                    <span>Exclude Credentials</span>
+                </label>
+                <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
+                    <div class="info-popup">
+                        <div class="language-toggle" onclick="toggleLanguage(this)">ENG</div>
+                        <div class="text-en active">
+                            Whether to include an excludeCredentials argument. This is used to prevent creating multiple credentials for the same account by excluding already registered credentials during registration.
+                        </div>
+                        <div class="text-zh hidden">
+                            是否包含 excludeCredentials 参数。这用于在注册过程中排除已注册的凭据，防止为同一账户创建多个凭据。
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="form-group">
+            <div class="label-with-info">
+                <label for="fake-cred-length-reg">Fake credential ID length</label>
+                <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
+                    <div class="info-popup">
+                        <div class="language-toggle" onclick="toggleLanguage(this)">ENG</div>
+                        <div class="text-en active">
+                            Add a random credential ID of the given length to excludeCredentials. May be useful for testing edge cases and conformance.
+                        </div>
+                        <div class="text-zh hidden">
+                            向 excludeCredentials 添加指定长度的随机凭据 ID。可能对测试个别情况和一致性有用。
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="input-with-button">
+                <input type="number" id="fake-cred-length-reg" class="form-control" value="128" min="1">
+                <button type="button" id="fake-cred-generate" class="btn btn-small add-icon" title="Generate fake credential ID" aria-label="Generate fake credential ID"></button>
+            </div>
+            <div id="fake-cred-generated-list" class="fake-credential-list" aria-live="polite"></div>
+        </div>
+    </div>
+</div>

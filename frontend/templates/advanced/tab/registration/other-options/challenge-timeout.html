@@ -1,0 +1,40 @@
+<div class="form-group">
+    <div class="label-with-info">
+        <label for="challenge-reg">Challenge (hex)</label>
+        <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
+            <div class="info-popup">
+                <div class="language-toggle" onclick="toggleLanguage(this)">ENG</div>
+                <div class="text-en active">
+                    The cryptographic challenge to be signed by the authenticator, used to prevent replay attacks.
+                </div>
+                <div class="text-zh hidden">
+                    由认证器签名的加密挑战值，用于防止重放攻击。
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="input-with-button">
+        <input type="text" id="challenge-reg" class="form-control" placeholder="Auto-generated hex value">
+        <button class="btn btn-small refresh-icon" onclick="randomizeChallenge('reg')" title="Generate new random challenge">
+            {% include 'advanced/tab/_refresh-icon.html' %}
+        </button>
+    </div>
+    <div id="challenge-reg-error" class="error-message">Invalid hex value (minimum 16 bytes required)</div>
+</div>
+<div class="form-group">
+    <div class="label-with-info">
+        <label for="timeout-reg">Timeout (milliseconds)</label>
+        <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
+            <div class="info-popup">
+                <div class="language-toggle" onclick="toggleLanguage(this)">ENG</div>
+                <div class="text-en active">
+                    How long the Relying Party (RP) is willing to wait for the registration ceremony to complete. If the registration ceremony takes longer than this (or the adjusted value, in case the client overrides it), the ceremony will be aborted with a timeout message shown to the user. This may be silently overridden by the client.
+                </div>
+                <div class="text-zh hidden">
+                    依赖方（RP）等待注册完成的时间。如果注册仪式超过此时间，注册将被中止并向用户显示超时消息。客户端可能会覆盖此设置。
+                </div>
+            </div>
+        </div>
+    </div>
+    <input type="number" id="timeout-reg" class="form-control" value="90000" min="1">
+</div>
