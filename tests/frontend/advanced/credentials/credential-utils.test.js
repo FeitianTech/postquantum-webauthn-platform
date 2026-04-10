@@ -14,7 +14,7 @@ import {
   normaliseAaguidValue,
   normalizeAttachmentValue,
   normalizeMinPinLengthValue,
-} from '../../../../frontend/static/scripts/advanced/credential-utils.js';
+} from '../../../../frontend/static/scripts/advanced/credentials/utils.js';
 
 describe('credential-utils', () => {
   it('normalizes aaguid values from multiple encodings', () => {
@@ -219,7 +219,7 @@ describe('credential-utils', () => {
       };
     });
 
-    const reloaded = await import('../../../../frontend/static/scripts/advanced/credential-utils.js');
+    const reloaded = await import('../../../../frontend/static/scripts/advanced/credentials/utils.js');
     expect(reloaded.deriveAaguidDisplayValues('00112233445566778899aabbccddeeff')).toEqual({
       aaguidHex: '00112233445566778899aabbccddeeff',
       aaguidB64: '',

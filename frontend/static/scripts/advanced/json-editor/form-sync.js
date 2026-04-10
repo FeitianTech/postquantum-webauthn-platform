@@ -3,7 +3,7 @@ import { applyHintsToCheckboxes } from '../auth/hints.js';
 import {
     extractHexFromJsonFormat,
     getCredentialIdHex,
-} from '../credential-utils.js';
+} from '../credentials/utils.js';
 import { setFakeExcludeCredentials } from '../auth/exclude-credentials.js';
 import {
     applyRegistrationAlgorithmSelection,

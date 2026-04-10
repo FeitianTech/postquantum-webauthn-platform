@@ -1,64 +1,64 @@
-import {state} from '../shared/state.js';
-import {escapeHtml} from './ui/display-utils.js';
+import {state} from '../../shared/state.js';
+import {escapeHtml} from '../ui/display-utils.js';
 import {
     getCredentialIdHex,
     getCredentialUserHandleHex,
     getStoredCredentialAttachment,
     normaliseAaguidValue,
-} from './credential-utils.js';
-import {closeModal} from '../shared/ui/core.js';
-import {dismissAllTransientMessages} from '../shared/ui/status.js';
-import {updateJsonEditor} from './json-editor.js';
-import {checkLargeBlobCapability, updateAuthenticationExtensionAvailability} from './auth/forms.js';
-import {collectSelectedHints, deriveAllowedAttachmentsFromHints} from './auth/hints.js';
-import {ATTACHMENT_LABELS} from './constants.js';
+} from './utils.js';
+import {closeModal} from '../../shared/ui/core.js';
+import {dismissAllTransientMessages} from '../../shared/ui/status.js';
+import {updateJsonEditor} from '../editor/index.js';
+import {checkLargeBlobCapability, updateAuthenticationExtensionAvailability} from '../auth/forms.js';
+import {collectSelectedHints, deriveAllowedAttachmentsFromHints} from '../auth/hints.js';
+import {ATTACHMENT_LABELS} from '../constants.js';
 import {
     clearCredentialFlashQueue,
     queueAuthenticatedCredentialFlash,
     queueFailedCredentialFlash,
     readPendingCredentialFlash,
     triggerCredentialFlash,
-} from './credential-display/flash.js';
+} from '../credential-display/flash.js';
 import {
     getCredentialBackgroundWarmupPromise,
     isCredentialDeletionInProgress,
     setCredentialBackgroundWarmupPromise,
     setCredentialDeletionInProgressFlag,
-} from './credential-display/state.js';
+} from '../credential-display/state.js';
 import {
     hideSharedCredentialProgress,
     showSharedCredentialProgress,
     showSharedCredentialStatus,
-} from './credential-display/shared-status.js';
+} from '../credential-display/shared-status.js';
 import {
     loadSavedCredentialsRuntime,
     updateAllowCredentialsDropdownRuntime,
     updateCredentialsDisplayRuntime,
-} from './credential-display/list-render.js';
+} from '../credential-display/list-render.js';
 import {
     autoResizeCertificateTextareas,
     formatCertificateDetails,
-} from './credential-display/formatting.js';
+} from '../credential-display/formatting.js';
 import {
     describeCredentialAlgorithm,
     describeCredentialAlgorithmTag,
-} from './credential-display/algorithm.js';
-import {deriveCredentialStatusIndicators} from './credential-display/attestation-context.js';
+} from '../credential-display/algorithm.js';
+import {deriveCredentialStatusIndicators} from '../credential-display/attestation-context.js';
 import {
     handleCredentialMdsClickRuntime,
     navigateToMdsAuthenticatorRuntime,
-} from './credential-display/navigation.js';
+} from '../credential-display/navigation.js';
 import {
     clearAllCredentialsRuntime,
     deleteCredentialRuntime,
-} from './credential-display/deletion.js';
-import {showRegistrationResultModalRuntime} from './credential-display/registration-result.js';
+} from '../credential-display/deletion.js';
+import {showRegistrationResultModalRuntime} from '../credential-display/registration-result.js';
 import {
     bindRegistrationDetailButtons as bindRegistrationDetailButtonsRuntime,
     closeRegistrationDetailModalRuntime,
     composeRegistrationDetailHtml as composeRegistrationDetailHtmlRuntime,
-} from './credential-display/registration-compose-runtime.js';
-import {showCredentialDetailsRuntime} from './credential-display/credential-detail-runtime.js';
+} from '../credential-display/registration-compose-runtime.js';
+import {showCredentialDetailsRuntime} from '../credential-display/credential-detail-runtime.js';
 import {
     clearSimpleCredentials as clearLocalSimpleCredentials,
     ensureAdvancedCredentialArtifactsSynced,
@@ -69,8 +69,8 @@ import {
     removeAdvancedCredential as removeAdvancedCredentialFromLocal,
     removeSimpleCredential as removeSimpleCredentialFromLocal,
     updateAdvancedCredentialRegistrationSnapshot,
-} from '../shared/storage/local.js';
-import {deleteCredentialArtifact, fetchCredentialArtifact} from '../shared/storage/artifacts-client.js';
+} from '../../shared/storage/local.js';
+import {deleteCredentialArtifact, fetchCredentialArtifact} from '../../shared/storage/artifacts-client.js';
 
 export {queueAuthenticatedCredentialFlash, queueFailedCredentialFlash};
 export {formatCertificateDetails, autoResizeCertificateTextareas};

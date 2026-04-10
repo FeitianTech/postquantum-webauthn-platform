@@ -8,7 +8,7 @@ import {
     deriveAaguidDisplayValues,
     deriveAaguidFromCredentialData,
     normaliseAaguidValue,
-} from '../../credential-utils.js';
+} from '../../credentials/utils.js';
 
 function renderAaguidValue(label, value) {
     return `

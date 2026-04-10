@@ -98,7 +98,7 @@ vi.mock('../../../../frontend/static/scripts/advanced/ui/display-utils.js', () =
   renderAttestationResultRow: vi.fn((label, value, suffix = '') => `<div>${label}:${String(value)}${suffix}</div>`),
 }));
 
-vi.mock('../../../../frontend/static/scripts/advanced/credential-utils.js', () => ({
+vi.mock('../../../../frontend/static/scripts/advanced/credentials/utils.js', () => ({
   deriveAaguidDisplayValues: vi.fn((value) => {
     const clean = typeof value === 'string' ? value.replace(/[^0-9a-f]/gi, '').toLowerCase() : '';
     if (clean.length !== 32) {
@@ -136,7 +136,7 @@ vi.mock('../../../../frontend/static/scripts/shared/ui/status.js', () => ({
   showStatus: vi.fn(),
 }));
 
-vi.mock('../../../../frontend/static/scripts/advanced/json-editor.js', () => ({
+vi.mock('../../../../frontend/static/scripts/advanced/editor/index.js', () => ({
   updateJsonEditor: vi.fn(),
 }));
 
@@ -190,7 +190,7 @@ import {
   updateAdvancedCredentialRegistrationSnapshot,
 } from '../../../../frontend/static/scripts/shared/storage/local.js';
 import { deleteCredentialArtifact, fetchCredentialArtifact } from '../../../../frontend/static/scripts/shared/storage/artifacts-client.js';
-import { updateJsonEditor } from '../../../../frontend/static/scripts/advanced/json-editor.js';
+import { updateJsonEditor } from '../../../../frontend/static/scripts/advanced/editor/index.js';
 import { state } from '../../../../frontend/static/scripts/shared/state.js';
 import {
   autoResizeCertificateTextareas,
@@ -208,7 +208,7 @@ import {
   showRegistrationResultModal,
   updateAllowCredentialsDropdown,
   updateCredentialsDisplay,
-} from '../../../../frontend/static/scripts/advanced/credential-display.js';
+} from '../../../../frontend/static/scripts/advanced/credentials/index.js';
 
 function buildDom() {
   document.body.innerHTML = `

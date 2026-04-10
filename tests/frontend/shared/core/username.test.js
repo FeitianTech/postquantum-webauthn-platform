@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('../../../../frontend/static/scripts/advanced/json-editor.js', () => ({
+vi.mock('../../../../frontend/static/scripts/advanced/editor/index.js', () => ({
   updateJsonEditor: vi.fn(),
 }));
 
@@ -8,7 +8,7 @@ vi.mock('../../../../frontend/static/scripts/advanced/auth/forms.js', () => ({
   randomizeUserId: vi.fn(),
 }));
 
-import { updateJsonEditor } from '../../../../frontend/static/scripts/advanced/json-editor.js';
+import { updateJsonEditor } from '../../../../frontend/static/scripts/advanced/editor/index.js';
 import { randomizeUserId } from '../../../../frontend/static/scripts/advanced/auth/forms.js';
 
 async function loadUsernameModule() {

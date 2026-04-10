@@ -4,9 +4,9 @@ import {
     updateAuthenticationExtensionAvailability
 } from '../auth/forms.js';
 import { randomizeUserIdentity } from '../../shared/auth/username.js';
-import { updateJsonEditor } from '../json-editor.js';
+import { updateJsonEditor } from '../editor/index.js';
 import { clearFakeExcludeCredentials, clearFakeAllowCredentials } from '../auth/exclude-credentials.js';
-import { updateAllowCredentialsDropdown } from '../credential-display.js';
+import { updateAllowCredentialsDropdown } from '../credentials/index.js';
 
 export function resetRegistrationForm() {
     randomizeUserIdentity();

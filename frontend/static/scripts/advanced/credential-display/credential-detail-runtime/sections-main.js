@@ -9,7 +9,7 @@ import {
 } from '../../ui/display-utils.js';
 import {
     getCoseMapValue,
-} from '../../credential-utils.js';
+} from '../../credentials/utils.js';
 import {
     resolveCredentialAlgorithmIdentifier,
 } from '../algorithm.js';

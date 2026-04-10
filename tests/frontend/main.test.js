@@ -69,7 +69,7 @@ vi.mock('../../frontend/static/scripts/decoder/codec.js', () => ({
   switchCodecMode: vi.fn(),
 }));
 
-vi.mock('../../frontend/static/scripts/advanced/json-editor.js', () => ({
+vi.mock('../../frontend/static/scripts/advanced/editor/index.js', () => ({
   saveJsonEditor: vi.fn(),
   resetJsonEditor: vi.fn(),
   updateJsonEditor: vi.fn(),
@@ -80,7 +80,7 @@ vi.mock('../../frontend/static/scripts/advanced/json-editor.js', () => ({
   cancelJsonEdit: vi.fn(),
 }));
 
-vi.mock('../../frontend/static/scripts/advanced/credential-display.js', () => ({
+vi.mock('../../frontend/static/scripts/advanced/credentials/index.js', () => ({
   loadSavedCredentials: vi.fn().mockResolvedValue(undefined),
   showCredentialDetails: vi.fn(),
   navigateToMdsAuthenticator: vi.fn(),
@@ -100,7 +100,7 @@ vi.mock('../../frontend/static/scripts/advanced/auth/hints.js', () => ({
   registerHintsChangeCallback: vi.fn(),
 }));
 
-vi.mock('../../frontend/static/scripts/advanced/json-editor-utils.js', () => ({
+vi.mock('../../frontend/static/scripts/advanced/editor/utils.js', () => ({
   handleJsonEditorKeydown: vi.fn(),
 }));
 
@@ -132,9 +132,9 @@ import { checkLargeBlobCapability, randomizeChallenge, randomizeLargeBlobWrite, 
 import { registerHintsChangeCallback } from '../../frontend/static/scripts/advanced/auth/hints.js';
 import { waitForMetadataLoad } from '../../frontend/static/scripts/advanced/mds.js';
 import { initializeAdvancedSettingsNavigation } from '../../frontend/static/scripts/advanced/ui/settings-nav.js';
-import { loadSavedCredentials, updateAllowCredentialsDropdown } from '../../frontend/static/scripts/advanced/credential-display.js';
-import { updateJsonEditor, updateJsonFromForm } from '../../frontend/static/scripts/advanced/json-editor.js';
-import { handleJsonEditorKeydown } from '../../frontend/static/scripts/advanced/json-editor-utils.js';
+import { loadSavedCredentials, updateAllowCredentialsDropdown } from '../../frontend/static/scripts/advanced/credentials/index.js';
+import { updateJsonEditor, updateJsonFromForm } from '../../frontend/static/scripts/advanced/editor/index.js';
+import { handleJsonEditorKeydown } from '../../frontend/static/scripts/advanced/editor/utils.js';
 import { initializeNavigationMenu } from '../../frontend/static/scripts/shared/ui/navigation.js';
 import { initializeSimpleUsername, randomizeUserIdentity } from '../../frontend/static/scripts/shared/auth/username.js';
 import { closeModal, initializeStickyHeader, toggleJsonEditorExpansion } from '../../frontend/static/scripts/shared/ui/core.js';

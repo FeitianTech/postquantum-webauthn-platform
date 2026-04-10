@@ -29,7 +29,7 @@ vi.mock('../../../../frontend/static/scripts/advanced/ui/display-utils.js', () =
   renderAttestationResultRow: vi.fn((label, value) => `<div>${label}:${String(value)}</div>`),
 }));
 
-vi.mock('../../../../frontend/static/scripts/advanced/credential-utils.js', () => ({
+vi.mock('../../../../frontend/static/scripts/advanced/credentials/utils.js', () => ({
   deriveAaguidDisplayValues: vi.fn(() => ({ aaguidHex: '', aaguidB64: '', aaguidB64u: '' })),
   deriveAaguidFromCredentialData: vi.fn(() => ''),
   extractMinPinLengthValue: vi.fn(() => null),
@@ -55,7 +55,7 @@ vi.mock('../../../../frontend/static/scripts/shared/ui/status.js', () => ({
   showStatus: vi.fn(),
 }));
 
-vi.mock('../../../../frontend/static/scripts/advanced/json-editor.js', () => ({
+vi.mock('../../../../frontend/static/scripts/advanced/editor/index.js', () => ({
   updateJsonEditor: vi.fn(),
 }));
 
@@ -110,7 +110,7 @@ import {
   navigateToMdsAuthenticator,
   showCredentialDetails,
   showRegistrationResultModal,
-} from '../../../../frontend/static/scripts/advanced/credential-display.js';
+} from '../../../../frontend/static/scripts/advanced/credentials/index.js';
 
 function buildDom() {
   document.body.innerHTML = `

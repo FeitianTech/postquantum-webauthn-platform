@@ -6,7 +6,7 @@ import {
     bufferSourceToUint8Array,
     hexToBase64,
     normalizeToHex
-} from '../shared/utils/binary.js';
+} from '../../shared/utils/binary.js';
 
 export function normaliseAaguidValue(value) {
     if (value === null || value === undefined) {

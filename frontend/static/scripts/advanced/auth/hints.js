@@ -10,7 +10,7 @@ import {
     getCredentialIdHex,
     getStoredCredentialAttachment,
     normalizeAttachmentValue
-} from '../credential-utils.js';
+} from '../credentials/utils.js';
 
 const registrationHintCallbacks = new Set();
 

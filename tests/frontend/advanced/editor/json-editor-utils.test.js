@@ -5,7 +5,7 @@ import {
   applyTabIndentation,
   handleJsonEditorKeydown,
   wrapSelectionWithPair,
-} from '../../../../frontend/static/scripts/advanced/json-editor-utils.js';
+} from '../../../../frontend/static/scripts/advanced/editor/utils.js';
 
 function createEditor(value, selectionStart = value.length, selectionEnd = selectionStart) {
   const editor = document.createElement('textarea');

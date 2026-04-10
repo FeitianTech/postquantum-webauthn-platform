@@ -1,5 +1,5 @@
 import { state } from '../state.js';
-import { updateJsonEditor } from '../../advanced/json-editor.js';
+import { updateJsonEditor } from '../../advanced/editor/index.js';
 import { dismissAllTransientMessages } from './status.js';
 
 const HEADER_MOBILE_BREAKPOINT = 900;

@@ -11,7 +11,7 @@ import {
     queueAuthenticatedCredentialFlash,
     queueFailedCredentialFlash,
     updateCredentialsDisplay,
-} from '../advanced/credential-display.js';
+} from '../advanced/credentials/index.js';
 import { printRegistrationDebug, printAuthenticationDebug } from '../shared/debug/auth.js';
 import { state } from '../shared/state.js';
 import {

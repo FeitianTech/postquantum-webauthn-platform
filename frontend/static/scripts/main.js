@@ -60,7 +60,7 @@ import {
     editAssertOptions,
     applyJsonChanges,
     cancelJsonEdit
-} from './advanced/json-editor.js';
+} from './advanced/editor/index.js';
 import {
     loadSavedCredentials,
     showCredentialDetails,
@@ -71,10 +71,10 @@ import {
     deleteCredential,
     clearAllCredentials,
     updateAllowCredentialsDropdown
-} from './advanced/credential-display.js';
+} from './advanced/credentials/index.js';
 import { waitForMetadataLoad } from './advanced/mds.js';
 import { registerHintsChangeCallback } from './advanced/auth/hints.js';
-import { handleJsonEditorKeydown } from './advanced/json-editor-utils.js';
+import { handleJsonEditorKeydown } from './advanced/editor/utils.js';
 import {
     createFakeExcludeCredential,
     removeFakeExcludeCredential,

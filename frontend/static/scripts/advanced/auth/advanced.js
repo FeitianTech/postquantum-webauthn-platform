@@ -29,7 +29,7 @@ import {
     queueAuthenticatedCredentialFlash,
     queueFailedCredentialFlash,
     updateCredentialsDisplay,
-} from '../credential-display.js';
+} from '../credentials/index.js';
 import { printRegistrationDebug, printAuthenticationDebug } from '../../shared/debug/auth.js';
 import { state } from '../../shared/state.js';
 import {

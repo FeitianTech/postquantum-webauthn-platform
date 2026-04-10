@@ -45,7 +45,7 @@ vi.mock('../../../../frontend/static/scripts/shared/auth/username.js', () => ({
   randomizeUserIdentity: vi.fn(),
 }));
 
-vi.mock('../../../../frontend/static/scripts/advanced/credential-display.js', () => ({
+vi.mock('../../../../frontend/static/scripts/advanced/credentials/index.js', () => ({
   showRegistrationResultModal: vi.fn().mockResolvedValue(undefined),
   loadSavedCredentials: vi.fn(),
   queueAuthenticatedCredentialFlash: vi.fn(),
@@ -90,7 +90,7 @@ import {
   queueFailedCredentialFlash,
   showRegistrationResultModal,
   updateCredentialsDisplay,
-} from '../../../../frontend/static/scripts/advanced/credential-display.js';
+} from '../../../../frontend/static/scripts/advanced/credentials/index.js';
 import { printAuthenticationDebug, printRegistrationDebug } from '../../../../frontend/static/scripts/shared/debug/auth.js';
 import {
   prepareAdvancedCredentialsForServer,

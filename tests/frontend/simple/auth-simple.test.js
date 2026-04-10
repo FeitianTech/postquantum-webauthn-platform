@@ -18,7 +18,7 @@ vi.mock('../../../frontend/static/scripts/shared/ui/status.js', () => ({
   showStatus: vi.fn(),
 }));
 
-vi.mock('../../../frontend/static/scripts/advanced/credential-display.js', () => ({
+vi.mock('../../../frontend/static/scripts/advanced/credentials/index.js', () => ({
   loadSavedCredentials: vi.fn(),
   queueAuthenticatedCredentialFlash: vi.fn(),
   queueFailedCredentialFlash: vi.fn(),
@@ -44,7 +44,7 @@ import {
   parseRequestOptionsFromJSON,
 } from '../../../frontend/static/scripts/shared/webauthn/json-ponyfill.js';
 import { convertExtensionsForClient } from '../../../frontend/static/scripts/shared/utils/binary.js';
-import { loadSavedCredentials, queueAuthenticatedCredentialFlash, queueFailedCredentialFlash, updateCredentialsDisplay } from '../../../frontend/static/scripts/advanced/credential-display.js';
+import { loadSavedCredentials, queueAuthenticatedCredentialFlash, queueFailedCredentialFlash, updateCredentialsDisplay } from '../../../frontend/static/scripts/advanced/credentials/index.js';
 import { getSimpleCredentialsForEmail, prepareCredentialsForServer, saveSimpleCredential, updateSimpleCredentialSignCount } from '../../../frontend/static/scripts/shared/storage/local.js';
 import { hideProgress, showStatus } from '../../../frontend/static/scripts/shared/ui/status.js';
 import { state } from '../../../frontend/static/scripts/shared/state.js';

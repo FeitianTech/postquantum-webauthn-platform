@@ -11,7 +11,7 @@ import {
 import {
     getCredentialIdHex,
     getCredentialUserHandleHex,
-} from '../credential-utils.js';
+} from '../credentials/utils.js';
 import { getFakeExcludeCredentials } from '../auth/exclude-credentials.js';
 import { appendSelectedAlgorithmParams } from './algorithms.js';
 

@@ -17,7 +17,7 @@ vi.mock('../../../../frontend/static/scripts/advanced/auth/hints.js', () => ({
   registerHintsChangeCallback: vi.fn(),
 }));
 
-vi.mock('../../../../frontend/static/scripts/advanced/credential-utils.js', () => ({
+vi.mock('../../../../frontend/static/scripts/advanced/credentials/utils.js', () => ({
   getCredentialIdHex: vi.fn((cred) => cred?.credentialIdHex || ''),
   getCredentialUserHandleHex: vi.fn((cred) => cred?.userHandleHex || ''),
   getStoredCredentialAttachment: vi.fn((cred) => cred?.attachment || null),
@@ -53,7 +53,7 @@ import {
   resetJsonEditor,
   saveJsonEditor,
   updateAuthenticationFormFromJson,
-} from '../../../../frontend/static/scripts/advanced/json-editor.js';
+} from '../../../../frontend/static/scripts/advanced/editor/index.js';
 
 function buildDom() {
   document.body.innerHTML = `

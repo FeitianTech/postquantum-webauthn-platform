@@ -1,4 +1,4 @@
-import { JSON_EDITOR_INDENT_UNIT } from './constants.js';
+import { JSON_EDITOR_INDENT_UNIT } from '../constants.js';
 
 export function wrapSelectionWithPair(editor, opening, closing) {
     const start = editor.selectionStart;

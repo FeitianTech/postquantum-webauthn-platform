@@ -7,9 +7,9 @@ import {
     base64UrlToHexFixed,
     jsToHex
 } from '../../shared/utils/binary.js';
-import { getCredentialIdHex } from '../credential-utils.js';
+import { getCredentialIdHex } from '../credentials/utils.js';
 import { showStatus } from '../../shared/ui/status.js';
-import { updateJsonEditor } from '../json-editor.js';
+import { updateJsonEditor } from '../editor/index.js';
 
 function credentialSupportsLargeBlob(cred) {
     if (!cred || typeof cred !== 'object') {

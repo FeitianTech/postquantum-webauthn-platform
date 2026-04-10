@@ -10,7 +10,7 @@ vi.mock('../../../../frontend/static/scripts/shared/auth/username.js', () => ({
   randomizeUserIdentity: vi.fn(),
 }));
 
-vi.mock('../../../../frontend/static/scripts/advanced/json-editor.js', () => ({
+vi.mock('../../../../frontend/static/scripts/advanced/editor/index.js', () => ({
   updateJsonEditor: vi.fn(),
 }));
 
@@ -19,7 +19,7 @@ vi.mock('../../../../frontend/static/scripts/advanced/auth/exclude-credentials.j
   clearFakeAllowCredentials: vi.fn(),
 }));
 
-vi.mock('../../../../frontend/static/scripts/advanced/credential-display.js', () => ({
+vi.mock('../../../../frontend/static/scripts/advanced/credentials/index.js', () => ({
   updateAllowCredentialsDropdown: vi.fn(),
 }));
 
@@ -32,8 +32,8 @@ import {
   clearFakeAllowCredentials,
   clearFakeExcludeCredentials,
 } from '../../../../frontend/static/scripts/advanced/auth/exclude-credentials.js';
-import { updateAllowCredentialsDropdown } from '../../../../frontend/static/scripts/advanced/credential-display.js';
-import { updateJsonEditor } from '../../../../frontend/static/scripts/advanced/json-editor.js';
+import { updateAllowCredentialsDropdown } from '../../../../frontend/static/scripts/advanced/credentials/index.js';
+import { updateJsonEditor } from '../../../../frontend/static/scripts/advanced/editor/index.js';
 import { randomizeUserIdentity } from '../../../../frontend/static/scripts/shared/auth/username.js';
 import {
   resetAuthenticationForm,

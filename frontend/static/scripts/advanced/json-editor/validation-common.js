@@ -1,4 +1,4 @@
-import { extractHexFromJsonFormat } from '../credential-utils.js';
+import { extractHexFromJsonFormat } from '../credentials/utils.js';
 import {
     assertAllowedKeys,
     assertPlainObject,

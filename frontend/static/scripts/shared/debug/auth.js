@@ -1,5 +1,5 @@
 import { base64UrlToHex } from '../utils/binary.js';
-import { extractHexFromJsonFormat } from '../../advanced/credential-utils.js';
+import { extractHexFromJsonFormat } from '../../advanced/credentials/utils.js';
 
 export function printRegistrationDebug(credential, createOptions, serverResponse) {
     const clientExtensions = credential.getClientExtensionResults

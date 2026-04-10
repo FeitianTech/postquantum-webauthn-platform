@@ -4,7 +4,7 @@ vi.mock('../../../../frontend/static/scripts/shared/utils/binary.js', () => ({
   base64UrlToHex: vi.fn((value) => `hex:${value}`),
 }));
 
-vi.mock('../../../../frontend/static/scripts/advanced/credential-utils.js', () => ({
+vi.mock('../../../../frontend/static/scripts/advanced/credentials/utils.js', () => ({
   extractHexFromJsonFormat: vi.fn((value) => `fmt:${JSON.stringify(value)}`),
 }));
 
@@ -13,7 +13,7 @@ import {
   printRegistrationDebug,
 } from '../../../../frontend/static/scripts/shared/debug/auth.js';
 import { base64UrlToHex } from '../../../../frontend/static/scripts/shared/utils/binary.js';
-import { extractHexFromJsonFormat } from '../../../../frontend/static/scripts/advanced/credential-utils.js';
+import { extractHexFromJsonFormat } from '../../../../frontend/static/scripts/advanced/credentials/utils.js';
 
 function collectLogs(logSpy) {
   return logSpy.mock.calls.map((call) => call.join(' '));

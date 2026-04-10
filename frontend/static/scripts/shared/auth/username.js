@@ -1,4 +1,4 @@
-import { updateJsonEditor } from '../../advanced/json-editor.js';
+import { updateJsonEditor } from '../../advanced/editor/index.js';
 import { randomizeUserId } from '../../advanced/auth/forms.js';
 
 export function generateRandom10DigitUsername() {

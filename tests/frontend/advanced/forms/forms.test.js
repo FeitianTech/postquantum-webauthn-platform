@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('../../../../frontend/static/scripts/advanced/json-editor.js', () => ({
+vi.mock('../../../../frontend/static/scripts/advanced/editor/index.js', () => ({
   updateJsonEditor: vi.fn(),
 }));
 
@@ -9,7 +9,7 @@ vi.mock('../../../../frontend/static/scripts/shared/ui/status.js', () => ({
 }));
 
 import { state } from '../../../../frontend/static/scripts/shared/state.js';
-import { updateJsonEditor } from '../../../../frontend/static/scripts/advanced/json-editor.js';
+import { updateJsonEditor } from '../../../../frontend/static/scripts/advanced/editor/index.js';
 
 async function loadFormsModule() {
   return import('../../../../frontend/static/scripts/advanced/auth/forms.js');

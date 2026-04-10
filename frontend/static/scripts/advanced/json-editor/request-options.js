@@ -11,7 +11,7 @@ import {
 import {
     getCredentialIdHex,
     getStoredCredentialAttachment,
-} from '../credential-utils.js';
+} from '../credentials/utils.js';
 import { getFakeAllowCredentials } from '../auth/exclude-credentials.js';
 
 export function getCredentialRequestOptions() {
