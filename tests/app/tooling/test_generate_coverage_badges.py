@@ -4,7 +4,7 @@ import json
 
 import pytest
 
-import scripts.generate_coverage_badges as badges
+import tools.generate_coverage_badges as badges
 
 
 def _write_json(path, payload) -> None:

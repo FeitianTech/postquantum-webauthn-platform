@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-import scripts.update_mds_snapshot as updater
+import tools.update_mds_snapshot as updater
 
 
 @pytest.fixture

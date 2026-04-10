@@ -2,7 +2,7 @@
 branch = True
 source =
     fido2
-    scripts
+    tools
     server
 
 [report]

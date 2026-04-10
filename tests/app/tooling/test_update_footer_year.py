@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-import scripts.update_footer_year as updater
+import tools.update_footer_year as updater
 
 
 def test_update_footer_year_updates_first_footer_match_only(tmp_path: Path):

@@ -28,7 +28,7 @@ jobs:
           pip install -r requirements.txt
 
       - name: Refresh packaged metadata snapshot
-        run: python scripts/update_mds_snapshot.py
+        run: python tools/update_mds_snapshot.py
 
       - name: Commit and push changes
         if: ${{ !cancelled() }}

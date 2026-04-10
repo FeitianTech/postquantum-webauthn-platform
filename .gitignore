@@ -19,7 +19,6 @@ htmlcov/
 .coverage
 .coverage.*
 coverage/
-output/
 node_modules/
 
 # Registration data for authenticators

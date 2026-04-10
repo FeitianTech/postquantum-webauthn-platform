@@ -139,7 +139,7 @@ def download_metadata_blob(
 
     Runtime downloads are no longer supported. The packaged snapshot is
     refreshed exclusively by the CI workflow that invokes
-    ``scripts/update_mds_snapshot.py``.
+    ``tools/update_mds_snapshot.py``.
     """
 
     _ = (source_url, destination)

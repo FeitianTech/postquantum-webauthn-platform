@@ -21,7 +21,7 @@ jobs:
           python-version: '3.11'
 
       - name: Update footer year
-        run: python scripts/update_footer_year.py
+        run: python tools/update_footer_year.py
 
       - name: Detect changes
         id: changes
