@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { createMdsLazyLoader, MdsLazyLoader } from '../../../../frontend/static/scripts/advanced/mds-lazy-loader.js';
+import { createMdsLazyLoader, MdsLazyLoader } from '../../../../frontend/static/scripts/advanced/mds/lazy-loader.js';
 
 describe('mds-lazy-loader', () => {
   beforeEach(() => {

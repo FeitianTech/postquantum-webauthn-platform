@@ -242,7 +242,7 @@ describe('mds explorer column resizing', () => {
   });
 
   it('resizes a column on pointer drag and tears down resize state on pointerup', async () => {
-    await import('../../../../frontend/static/scripts/advanced/mds.js');
+    await import('../../../../frontend/static/scripts/advanced/mds/index.js');
     document.dispatchEvent(new Event('DOMContentLoaded'));
 
     await waitForCondition(() => document.querySelectorAll('#mds-table-body tr').length === 1, 1200);

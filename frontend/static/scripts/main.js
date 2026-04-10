@@ -72,7 +72,7 @@ import {
     clearAllCredentials,
     updateAllowCredentialsDropdown
 } from './advanced/credentials/index.js';
-import { waitForMetadataLoad } from './advanced/mds.js';
+import { waitForMetadataLoad } from './advanced/mds/index.js';
 import { registerHintsChangeCallback } from './advanced/auth/hints.js';
 import { handleJsonEditorKeydown } from './advanced/editor/utils.js';
 import {

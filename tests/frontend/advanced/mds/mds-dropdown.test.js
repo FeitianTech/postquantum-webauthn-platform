@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { FilterDropdown, createFilterDropdown } from '../../../../frontend/static/scripts/advanced/mds-dropdown.js';
+import { FilterDropdown, createFilterDropdown } from '../../../../frontend/static/scripts/advanced/mds/dropdown.js';
 
 function setupDom() {
   document.body.innerHTML = `

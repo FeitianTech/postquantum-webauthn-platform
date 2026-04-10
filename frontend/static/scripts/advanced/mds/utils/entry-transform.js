@@ -1,4 +1,4 @@
-import { CERTIFICATION_OPTIONS } from '../mds-constants.js';
+import { CERTIFICATION_OPTIONS } from '../constants.js';
 import { extractAttestationKeyIdentifiers, extractList, extractTransports, extractUserVerification } from './extractors.js';
 import { formatCertification, formatDate, formatEnum, formatProtocol } from './formatters.js';
 import { normaliseIcon, resolveAaguid, resolveIdentifier, resolveName } from './resolvers.js';

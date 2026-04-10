@@ -1,6 +1,6 @@
-import { FILTER_CONFIG, FILTER_LOOKUP } from '../../mds-constants.js';
-import { createFilterDropdown } from '../../mds-dropdown.js';
-import { formatEnum } from '../../mds-utils.js';
+import { FILTER_CONFIG, FILTER_LOOKUP } from '../constants.js';
+import { createFilterDropdown } from '../dropdown.js';
+import { formatEnum } from '../utils.js';
 import {
     formatSnapshotTimestamp as formatSnapshotTimestampValue,
     normaliseSnapshotInfo as normaliseSnapshotInfoValue,

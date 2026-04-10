@@ -1,24 +1,24 @@
-import { FILTER_LOOKUP, UPDATE_BUTTON_STATES } from './mds-constants.js';
-import { formatEnum, normaliseAaguid, normaliseEnumKey, transformEntry, upgradeEntryToFull } from './mds-utils.js';
+import { FILTER_LOOKUP, UPDATE_BUTTON_STATES } from './constants.js';
+import { formatEnum, normaliseAaguid, normaliseEnumKey, transformEntry, upgradeEntryToFull } from './utils.js';
 import {
     setStatus as setStatusInState,
     setUpdateButtonBusy as setUpdateButtonBusyInState,
     setUpdateButtonMode as setUpdateButtonModeInState,
     updateCount as updateCountInState,
     updateOptionLists as updateOptionListsInState,
-} from './mds/status-controls.js';
-import { normaliseCertificateBase64 as normaliseCertificateBase64Value } from './mds/certificate-utils.js';
-import { runWithMetadataUpdateOverlayInState, showMetadataUpdateOverlayInState } from './mds/custom/update-overlay.js';
-import { decodeCertificateWithState } from './mds/metadata/certificate-decode.js';
-import { refreshMetadataInState } from './mds/runtime/runtime-refresh-metadata.js';
-import { createCustomMetadataRuntime } from './mds/runtime/runtime-custom-metadata-runtime.js';
-import { createScrollControllers } from './mds/runtime/runtime-scroll-controllers.js';
-import { setupMdsRuntimeOrchestration } from './mds/runtime/runtime-orchestration.js';
+} from './status-controls.js';
+import { normaliseCertificateBase64 as normaliseCertificateBase64Value } from './certificate-utils.js';
+import { runWithMetadataUpdateOverlayInState, showMetadataUpdateOverlayInState } from './custom/update-overlay.js';
+import { decodeCertificateWithState } from './metadata/certificate-decode.js';
+import { refreshMetadataInState } from './runtime/runtime-refresh-metadata.js';
+import { createCustomMetadataRuntime } from './runtime/runtime-custom-metadata-runtime.js';
+import { createScrollControllers } from './runtime/runtime-scroll-controllers.js';
+import { setupMdsRuntimeOrchestration } from './runtime/runtime-orchestration.js';
 import {
     formatInitialExplorerStatus as formatInitialExplorerStatusValue,
-} from './mds/metadata/metadata-helpers.js';
-import { setButtonBusy as setButtonBusyValue, throwIfAborted as throwIfAbortedValue } from './mds/custom/custom-panel-utils.js';
-import { createDetailStickyHeader } from './mds/detail-sticky-header.js';
+} from './metadata/metadata-helpers.js';
+import { setButtonBusy as setButtonBusyValue, throwIfAborted as throwIfAbortedValue } from './custom/custom-panel-utils.js';
+import { createDetailStickyHeader } from './detail-sticky-header.js';
 
 let mdsState = null;
 let mdsData = [];

@@ -1,7 +1,7 @@
 import {
     CUSTOM_METADATA_DELETE_PATH,
     CUSTOM_METADATA_UPLOAD_PATH,
-} from '../../mds-constants.js';
+} from '../constants.js';
 import {
     normaliseFileList as normaliseFileListValue,
     splitAcceptedFiles as splitAcceptedFilesValue,

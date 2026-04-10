@@ -1,5 +1,5 @@
-import { COLUMN_COUNT } from '../../mds-constants.js';
-import { normaliseAaguid, renderCertificateSummary } from '../../mds-utils.js';
+import { COLUMN_COUNT } from '../constants.js';
+import { normaliseAaguid, renderCertificateSummary } from '../utils.js';
 import { buildDetailContent } from '../detail-content.js';
 import { formatDetailSubtitle } from '../detail-user-sections.js';
 import { getAuthenticatorRawData } from '../raw-data.js';

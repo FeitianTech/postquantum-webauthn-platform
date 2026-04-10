@@ -1,4 +1,4 @@
-import { formatDetailValue, formatGuidCandidate } from '../mds-utils.js';
+import { formatDetailValue, formatGuidCandidate } from './utils.js';
 import {
     appendDetailGrid,
     createChipList,

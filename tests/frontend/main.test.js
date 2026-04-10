@@ -92,7 +92,7 @@ vi.mock('../../frontend/static/scripts/advanced/credentials/index.js', () => ({
   updateAllowCredentialsDropdown: vi.fn(),
 }));
 
-vi.mock('../../frontend/static/scripts/advanced/mds.js', () => ({
+vi.mock('../../frontend/static/scripts/advanced/mds/index.js', () => ({
   waitForMetadataLoad: vi.fn().mockResolvedValue(true),
 }));
 
@@ -130,7 +130,7 @@ vi.mock('../../frontend/static/scripts/shared/utils/loader.js', () => ({
 import { createFakeAllowCredential, createFakeExcludeCredential, removeFakeAllowCredential, removeFakeExcludeCredential } from '../../frontend/static/scripts/advanced/auth/exclude-credentials.js';
 import { checkLargeBlobCapability, randomizeChallenge, randomizeLargeBlobWrite, randomizePrfEval, updateAuthenticationExtensionAvailability, updateFieldLabels, validateChallengeInputs, validateLargeBlobWriteInput, validatePrfEvalInputs, validatePrfInputs, validateUserIdInput } from '../../frontend/static/scripts/advanced/auth/forms.js';
 import { registerHintsChangeCallback } from '../../frontend/static/scripts/advanced/auth/hints.js';
-import { waitForMetadataLoad } from '../../frontend/static/scripts/advanced/mds.js';
+import { waitForMetadataLoad } from '../../frontend/static/scripts/advanced/mds/index.js';
 import { initializeAdvancedSettingsNavigation } from '../../frontend/static/scripts/advanced/ui/settings-nav.js';
 import { loadSavedCredentials, updateAllowCredentialsDropdown } from '../../frontend/static/scripts/advanced/credentials/index.js';
 import { updateJsonEditor, updateJsonFromForm } from '../../frontend/static/scripts/advanced/editor/index.js';

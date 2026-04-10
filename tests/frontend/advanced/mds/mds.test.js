@@ -333,7 +333,7 @@ describe('mds explorer', () => {
   });
 
   it('initializes from bootstrap snapshot and supports filtering, sorting, detail, and refresh actions', async () => {
-    const module = await import('../../../../frontend/static/scripts/advanced/mds.js');
+    const module = await import('../../../../frontend/static/scripts/advanced/mds/index.js');
 
     document.dispatchEvent(new Event('DOMContentLoaded'));
     await waitForCondition(() => document.querySelectorAll('#mds-table-body tr').length === 2, 1000);
@@ -457,7 +457,7 @@ describe('mds explorer', () => {
       );
     });
 
-    await import('../../../../frontend/static/scripts/advanced/mds.js');
+    await import('../../../../frontend/static/scripts/advanced/mds/index.js');
     document.dispatchEvent(new Event('DOMContentLoaded'));
     await waitForCondition(() => document.querySelectorAll('#mds-table-body tr').length === 2, 1200);
 
@@ -501,7 +501,7 @@ describe('mds explorer', () => {
       return Promise.resolve(jsonResponse({ items: [] }));
     });
 
-    const module = await import('../../../../frontend/static/scripts/advanced/mds.js');
+    const module = await import('../../../../frontend/static/scripts/advanced/mds/index.js');
     document.dispatchEvent(new Event('DOMContentLoaded'));
     await waitForCondition(
       () => document.getElementById('mds-status').textContent.includes('Packaged metadata missing.'),
@@ -565,7 +565,7 @@ describe('mds explorer', () => {
       return Promise.resolve(jsonResponse({ items: [] }));
     });
 
-    const module = await import('../../../../frontend/static/scripts/advanced/mds.js');
+    const module = await import('../../../../frontend/static/scripts/advanced/mds/index.js');
     document.dispatchEvent(new Event('DOMContentLoaded'));
     await waitForCondition(() => document.querySelectorAll('#mds-table-body tr').length === 2, 1000);
 
@@ -671,7 +671,7 @@ describe('mds explorer', () => {
       return Promise.resolve(jsonResponse({ items: [] }));
     });
 
-    const module = await import('../../../../frontend/static/scripts/advanced/mds.js');
+    const module = await import('../../../../frontend/static/scripts/advanced/mds/index.js');
     document.dispatchEvent(new Event('DOMContentLoaded'));
     await waitForCondition(() => document.querySelectorAll('#mds-table-body tr').length === 2, 1200);
 
@@ -745,7 +745,7 @@ describe('mds explorer', () => {
       );
     });
 
-    await import('../../../../frontend/static/scripts/advanced/mds.js');
+    await import('../../../../frontend/static/scripts/advanced/mds/index.js');
     document.dispatchEvent(new Event('DOMContentLoaded'));
     await waitForCondition(() => document.querySelectorAll('#mds-table-body tr').length === 2, 1200);
 
@@ -816,7 +816,7 @@ describe('mds explorer', () => {
       );
     });
 
-    await import('../../../../frontend/static/scripts/advanced/mds.js');
+    await import('../../../../frontend/static/scripts/advanced/mds/index.js');
     document.dispatchEvent(new Event('DOMContentLoaded'));
     await waitForCondition(() => document.querySelectorAll('#mds-table-body tr').length === 2, 1200);
 
@@ -888,7 +888,7 @@ describe('mds explorer', () => {
   });
 
   it('supports sorting on every table column and finalizing deferred row highlight', async () => {
-    await import('../../../../frontend/static/scripts/advanced/mds.js');
+    await import('../../../../frontend/static/scripts/advanced/mds/index.js');
     document.dispatchEvent(new Event('DOMContentLoaded'));
     await waitForCondition(() => document.querySelectorAll('#mds-table-body tr').length === 2, 1200);
 
@@ -965,7 +965,7 @@ describe('mds explorer', () => {
       return Promise.resolve(jsonResponse({ items: [] }));
     });
 
-    await import('../../../../frontend/static/scripts/advanced/mds.js');
+    await import('../../../../frontend/static/scripts/advanced/mds/index.js');
     document.dispatchEvent(new Event('DOMContentLoaded'));
     await waitForCondition(() => document.querySelectorAll('#mds-table-body tr').length === 2, 1200);
 

@@ -1,4 +1,4 @@
-import { extractList } from '../mds-utils.js';
+import { extractList } from './utils.js';
 
 export function createDetailSection(title) {
     const section = document.createElement('section');

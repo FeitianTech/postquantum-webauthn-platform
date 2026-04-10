@@ -261,7 +261,7 @@ describe('mds edge cases', () => {
       return Promise.resolve(jsonResponse({ items: [] }));
     });
 
-    await import('../../../../frontend/static/scripts/advanced/mds.js');
+    await import('../../../../frontend/static/scripts/advanced/mds/index.js');
     document.dispatchEvent(new Event('DOMContentLoaded'));
 
     await waitForCondition(() => {
@@ -288,7 +288,7 @@ describe('mds edge cases', () => {
       return Promise.resolve(jsonResponse({ items: [] }));
     });
 
-    await import('../../../../frontend/static/scripts/advanced/mds.js');
+    await import('../../../../frontend/static/scripts/advanced/mds/index.js');
     document.dispatchEvent(new Event('DOMContentLoaded'));
 
     document.getElementById('mds-update-button').dispatchEvent(new MouseEvent('click', { bubbles: true }));
@@ -319,7 +319,7 @@ describe('mds edge cases', () => {
 
     globalThis.fetch = vi.fn(() => Promise.resolve(jsonResponse({ items: [] })));
 
-    await import('../../../../frontend/static/scripts/advanced/mds.js');
+    await import('../../../../frontend/static/scripts/advanced/mds/index.js');
     document.dispatchEvent(new Event('DOMContentLoaded'));
     await waitForCondition(() => document.querySelectorAll('#mds-table-body tr').length === 1, 1200);
 
@@ -367,7 +367,7 @@ describe('mds edge cases', () => {
       return Promise.resolve(jsonResponse({ items: [] }));
     });
 
-    await import('../../../../frontend/static/scripts/advanced/mds.js');
+    await import('../../../../frontend/static/scripts/advanced/mds/index.js');
     document.dispatchEvent(new Event('DOMContentLoaded'));
     await waitForCondition(() => document.querySelectorAll('#mds-table-body tr').length === 1, 1200);
 
@@ -414,7 +414,7 @@ describe('mds edge cases', () => {
       return Promise.resolve(jsonResponse({ items: [] }));
     });
 
-    const module = await import('../../../../frontend/static/scripts/advanced/mds.js');
+    const module = await import('../../../../frontend/static/scripts/advanced/mds/index.js');
     document.dispatchEvent(new Event('DOMContentLoaded'));
 
     await waitForCondition(() => document.querySelectorAll('#mds-table-body tr').length === 2, 1600);
@@ -455,7 +455,7 @@ describe('mds edge cases', () => {
       return Promise.resolve(jsonResponse({ items: [] }));
     });
 
-    await import('../../../../frontend/static/scripts/advanced/mds.js');
+    await import('../../../../frontend/static/scripts/advanced/mds/index.js');
     document.dispatchEvent(new Event('DOMContentLoaded'));
 
     await waitForCondition(() => {

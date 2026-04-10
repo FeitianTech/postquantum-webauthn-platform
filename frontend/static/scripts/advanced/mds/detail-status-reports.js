@@ -1,4 +1,4 @@
-import { formatDate } from '../mds-utils.js';
+import { formatDate } from './utils.js';
 
 export function renderStatusReports(reports) {
     const list = Array.isArray(reports) ? reports : [];

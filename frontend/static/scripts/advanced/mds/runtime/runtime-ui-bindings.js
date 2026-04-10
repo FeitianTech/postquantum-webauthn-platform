@@ -1,4 +1,4 @@
-import { normaliseAaguid } from '../../mds-utils.js';
+import { normaliseAaguid } from '../utils.js';
 import { hasInlineDetail as hasInlineDetailValue } from '../metadata/metadata-helpers.js';
 import { createDetailRuntime } from './runtime-detail-runtime.js';
 import { createAuthenticatorNavigationAdapters } from './runtime-authenticator-navigation-adapters.js';

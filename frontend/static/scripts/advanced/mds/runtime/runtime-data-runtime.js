@@ -4,21 +4,21 @@ import {
     MDS_RESOLVE_PATH,
     MDS_VERIFIED_META_PATH,
     MISSING_METADATA_MESSAGE,
-} from '../../mds-constants.js';
+} from '../constants.js';
 import {
     collectOptionSets,
     normaliseAaguid,
     transformEntry,
     transformEntryLightweight,
     upgradeEntryToFull,
-} from '../../mds-utils.js';
+} from '../utils.js';
 import {
     cloneMetadataEntry as cloneMetadataEntryValue,
     hasInlineDetail as hasInlineDetailValue,
     normaliseSnapshotInfo as normaliseSnapshotInfoValue,
 } from '../metadata/metadata-helpers.js';
 import { createMdsDataAdapters } from './runtime-data-adapters.js';
-import { createMdsLazyLoader } from '../../mds-lazy-loader.js';
+import { createMdsLazyLoader } from '../lazy-loader.js';
 import {
     loaderIsActive,
     loaderSetMetadataCount,

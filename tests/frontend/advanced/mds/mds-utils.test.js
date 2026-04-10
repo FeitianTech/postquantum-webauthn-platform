@@ -33,7 +33,7 @@ import {
   transformEntry,
   transformEntryLightweight,
   upgradeEntryToFull,
-} from '../../../../frontend/static/scripts/advanced/mds-utils.js';
+} from '../../../../frontend/static/scripts/advanced/mds/utils.js';
 
 function createSampleStatusReports() {
   return [

@@ -1,4 +1,4 @@
-import { formatUpv } from '../mds-utils.js';
+import { formatUpv } from './utils.js';
 import {
     appendDetailGrid,
     createChipList,

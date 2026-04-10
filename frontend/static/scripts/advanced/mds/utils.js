@@ -3,7 +3,7 @@ export {
     transformEntry,
     transformEntryLightweight,
     upgradeEntryToFull,
-} from './mds-utils/entry-transform.js';
+} from './utils/entry-transform.js';
 
 export {
     extractAttestationKeyIdentifiers,
@@ -11,7 +11,7 @@ export {
     extractList,
     extractTransports,
     extractUserVerification,
-} from './mds-utils/extractors.js';
+} from './utils/extractors.js';
 
 export {
     formatCertificateDateDisplay,
@@ -24,7 +24,7 @@ export {
     formatUpv,
     normaliseEnumKey,
     parseIsoDate,
-} from './mds-utils/formatters.js';
+} from './utils/formatters.js';
 
 export {
     formatGuidCandidate,
@@ -33,9 +33,9 @@ export {
     resolveAaguid,
     resolveIdentifier,
     resolveName,
-} from './mds-utils/resolvers.js';
+} from './utils/resolvers.js';
 
-export { latestEffectiveDate } from './mds-utils/status-reports.js';
+export { latestEffectiveDate } from './utils/status-reports.js';
 
 export {
     createSummaryItem,
@@ -44,4 +44,4 @@ export {
     renderCertificatePublicKey,
     renderCertificateSignature,
     renderCertificateSummary,
-} from './mds-utils/certificate-render.js';
+} from './utils/certificate-render.js';
