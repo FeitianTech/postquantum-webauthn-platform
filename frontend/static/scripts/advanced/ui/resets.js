@@ -2,11 +2,11 @@ import {
     randomizeChallenge,
     validatePrfInputs,
     updateAuthenticationExtensionAvailability
-} from './forms.js';
-import { randomizeUserIdentity } from '../shared/auth/username.js';
-import { updateJsonEditor } from './json-editor.js';
-import { clearFakeExcludeCredentials, clearFakeAllowCredentials } from './exclude-credentials.js';
-import { updateAllowCredentialsDropdown } from './credential-display.js';
+} from '../auth/forms.js';
+import { randomizeUserIdentity } from '../../shared/auth/username.js';
+import { updateJsonEditor } from '../json-editor.js';
+import { clearFakeExcludeCredentials, clearFakeAllowCredentials } from '../auth/exclude-credentials.js';
+import { updateAllowCredentialsDropdown } from '../credential-display.js';
 
 export function resetRegistrationForm() {
     randomizeUserIdentity();

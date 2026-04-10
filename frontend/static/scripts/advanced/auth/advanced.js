@@ -3,13 +3,13 @@ import {
     get,
     parseCreationOptionsFromJSON,
     parseRequestOptionsFromJSON
-} from '../shared/webauthn/json-ponyfill.js';
+} from '../../shared/webauthn/json-ponyfill.js';
 import {
     convertExtensionsForClient,
     normalizeClientExtensionResults,
     bufferSourceToUint8Array,
     bytesToHex,
-} from '../shared/utils/binary.js';
+} from '../../shared/utils/binary.js';
 import {
     ensureAuthenticationHintsAllowed,
     applyAuthenticatorAttachmentPreference,
@@ -20,23 +20,23 @@ import {
     hideStatus,
     showProgress,
     hideProgress
-} from '../shared/ui/status.js';
+} from '../../shared/ui/status.js';
 import { randomizeChallenge, randomizePrfEval, randomizeLargeBlobWrite } from './forms.js';
-import { randomizeUserIdentity } from '../shared/auth/username.js';
+import { randomizeUserIdentity } from '../../shared/auth/username.js';
 import {
     showRegistrationResultModal,
     loadSavedCredentials,
     queueAuthenticatedCredentialFlash,
     queueFailedCredentialFlash,
     updateCredentialsDisplay,
-} from './credential-display.js';
-import { printRegistrationDebug, printAuthenticationDebug } from '../shared/debug/auth.js';
-import { state } from '../shared/state.js';
+} from '../credential-display.js';
+import { printRegistrationDebug, printAuthenticationDebug } from '../../shared/debug/auth.js';
+import { state } from '../../shared/state.js';
 import {
     saveAdvancedCredential,
     prepareAdvancedCredentialsForServer,
     updateAdvancedCredentialSignCount,
-} from '../shared/storage/local.js';
+} from '../../shared/storage/local.js';
 
 let advancedRegisterState = null;
 let advancedAuthenticateState = null;

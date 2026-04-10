@@ -9,7 +9,7 @@ vi.mock('../../../../frontend/static/scripts/shared/utils/binary.js', () => ({
   sortObjectKeys: vi.fn((value) => value),
 }));
 
-vi.mock('../../../../frontend/static/scripts/advanced/hints.js', () => ({
+vi.mock('../../../../frontend/static/scripts/advanced/auth/hints.js', () => ({
   collectSelectedHints: vi.fn((scope) => (scope === 'authentication' ? ['hybrid'] : ['client-device'])),
   deriveAllowedAttachmentsFromHints: vi.fn(() => []),
   enforceAuthenticatorAttachmentWithHints: vi.fn(),
@@ -39,7 +39,7 @@ vi.mock('../../../../frontend/static/scripts/shared/ui/status.js', () => ({
   showStatus: vi.fn(),
 }));
 
-vi.mock('../../../../frontend/static/scripts/advanced/exclude-credentials.js', () => ({
+vi.mock('../../../../frontend/static/scripts/advanced/auth/exclude-credentials.js', () => ({
   getFakeExcludeCredentials: vi.fn(() => []),
   getFakeAllowCredentials: vi.fn(() => []),
   setFakeExcludeCredentials: vi.fn(),

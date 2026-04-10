@@ -20,7 +20,7 @@ vi.mock('../../../../frontend/static/scripts/shared/utils/binary.js', () => ({
   normalizeToHex: vi.fn((value) => String(value || '').replace(/[^0-9a-f]/gi, '').toLowerCase()),
 }));
 
-vi.mock('../../../../frontend/static/scripts/advanced/display-utils.js', () => ({
+vi.mock('../../../../frontend/static/scripts/advanced/ui/display-utils.js', () => ({
   describeCoseAlgorithm: vi.fn((alg) => `ALG(${String(alg)})`),
   describeCoseKeyType: vi.fn((type) => `KEYTYPE(${String(type)})`),
   describeMldsaParameterSet: vi.fn(() => ''),
@@ -59,12 +59,12 @@ vi.mock('../../../../frontend/static/scripts/advanced/json-editor.js', () => ({
   updateJsonEditor: vi.fn(),
 }));
 
-vi.mock('../../../../frontend/static/scripts/advanced/forms.js', () => ({
+vi.mock('../../../../frontend/static/scripts/advanced/auth/forms.js', () => ({
   checkLargeBlobCapability: vi.fn(),
   updateAuthenticationExtensionAvailability: vi.fn(),
 }));
 
-vi.mock('../../../../frontend/static/scripts/advanced/hints.js', () => ({
+vi.mock('../../../../frontend/static/scripts/advanced/auth/hints.js', () => ({
   collectSelectedHints: vi.fn(() => []),
   deriveAllowedAttachmentsFromHints: vi.fn(() => []),
 }));

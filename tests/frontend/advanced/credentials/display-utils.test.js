@@ -7,7 +7,7 @@ import {
   escapeHtml,
   formatBoolean,
   renderAttestationResultRow,
-} from '../../../../frontend/static/scripts/advanced/display-utils.js';
+} from '../../../../frontend/static/scripts/advanced/ui/display-utils.js';
 
 describe('display-utils', () => {
   it('formats booleans and fallback values safely', () => {

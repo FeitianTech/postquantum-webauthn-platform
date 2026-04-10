@@ -1,4 +1,4 @@
-import { state } from '../shared/state.js';
+import { state } from '../../shared/state.js';
 import {
     convertFormat,
     generateRandomHex,
@@ -6,10 +6,10 @@ import {
     base64ToHex,
     base64UrlToHexFixed,
     jsToHex
-} from '../shared/utils/binary.js';
-import { getCredentialIdHex } from './credential-utils.js';
-import { showStatus } from '../shared/ui/status.js';
-import { updateJsonEditor } from './json-editor.js';
+} from '../../shared/utils/binary.js';
+import { getCredentialIdHex } from '../credential-utils.js';
+import { showStatus } from '../../shared/ui/status.js';
+import { updateJsonEditor } from '../json-editor.js';
 
 function credentialSupportsLargeBlob(cred) {
     if (!cred || typeof cred !== 'object') {

@@ -52,7 +52,7 @@ vi.mock('../../../../frontend/static/scripts/shared/utils/binary.js', () => {
   };
 });
 
-vi.mock('../../../../frontend/static/scripts/advanced/hints.js', () => ({
+vi.mock('../../../../frontend/static/scripts/advanced/auth/hints.js', () => ({
   collectSelectedHints: vi.fn((scope) => (scope === 'authentication' ? ['hybrid'] : ['client-device'])),
   deriveAllowedAttachmentsFromHints: vi.fn((hints) => {
     const result = [];
@@ -108,18 +108,18 @@ vi.mock('../../../../frontend/static/scripts/shared/ui/status.js', () => ({
   showStatus: vi.fn(),
 }));
 
-vi.mock('../../../../frontend/static/scripts/advanced/exclude-credentials.js', () => ({
+vi.mock('../../../../frontend/static/scripts/advanced/auth/exclude-credentials.js', () => ({
   getFakeExcludeCredentials: vi.fn(() => ['ff99']),
   getFakeAllowCredentials: vi.fn(() => ['ee88']),
   setFakeExcludeCredentials: vi.fn(),
 }));
 
-import { applyHintsToCheckboxes, registerHintsChangeCallback } from '../../../../frontend/static/scripts/advanced/hints.js';
+import { applyHintsToCheckboxes, registerHintsChangeCallback } from '../../../../frontend/static/scripts/advanced/auth/hints.js';
 import {
   getFakeAllowCredentials,
   getFakeExcludeCredentials,
   setFakeExcludeCredentials,
-} from '../../../../frontend/static/scripts/advanced/exclude-credentials.js';
+} from '../../../../frontend/static/scripts/advanced/auth/exclude-credentials.js';
 import { showStatus } from '../../../../frontend/static/scripts/shared/ui/status.js';
 import { state } from '../../../../frontend/static/scripts/shared/state.js';
 import {

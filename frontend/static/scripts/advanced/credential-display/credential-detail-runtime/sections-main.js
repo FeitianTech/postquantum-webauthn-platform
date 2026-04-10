@@ -6,7 +6,7 @@ import {
     describeCoseAlgorithm,
     describeCoseKeyType,
     describeMldsaParameterSet,
-} from '../../display-utils.js';
+} from '../../ui/display-utils.js';
 import {
     getCoseMapValue,
 } from '../../credential-utils.js';

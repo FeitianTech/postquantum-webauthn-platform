@@ -7,12 +7,12 @@ import {
 import {
     collectSelectedHints,
     deriveAllowedAttachmentsFromHints,
-} from '../hints.js';
+} from '../auth/hints.js';
 import {
     getCredentialIdHex,
     getStoredCredentialAttachment,
 } from '../credential-utils.js';
-import { getFakeAllowCredentials } from '../exclude-credentials.js';
+import { getFakeAllowCredentials } from '../auth/exclude-credentials.js';
 
 export function getCredentialRequestOptions() {
     const challenge = document.getElementById('challenge-auth')?.value || '';

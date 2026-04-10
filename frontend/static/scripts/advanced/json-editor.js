@@ -1,4 +1,4 @@
-import { registerHintsChangeCallback } from './hints.js';
+import { registerHintsChangeCallback } from './auth/hints.js';
 import { updateJsonEditor } from './json-editor/editor-flow.js';
 
 registerHintsChangeCallback(() => updateJsonEditor());

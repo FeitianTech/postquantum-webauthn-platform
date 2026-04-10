@@ -18,7 +18,7 @@ import {
   renderFakeAllowCredentialList,
   renderFakeExcludeCredentialList,
   setFakeExcludeCredentials,
-} from '../../../../frontend/static/scripts/advanced/exclude-credentials.js';
+} from '../../../../frontend/static/scripts/advanced/auth/exclude-credentials.js';
 
 describe('exclude-credentials', () => {
   beforeEach(() => {

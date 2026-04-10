@@ -1,4 +1,4 @@
-import { state } from '../shared/state.js';
+import { state } from '../../shared/state.js';
 
 function getTargetId(item) {
     if (!item || !item.dataset) {

@@ -27,7 +27,7 @@ vi.mock('../../frontend/static/scripts/shared/ui/core.js', () => ({
   initializeStickyHeader: vi.fn(),
 }));
 
-vi.mock('../../frontend/static/scripts/advanced/forms.js', () => ({
+vi.mock('../../frontend/static/scripts/advanced/auth/forms.js', () => ({
   updateFieldLabels: vi.fn(),
   randomizeChallenge: vi.fn(),
   randomizePrfEval: vi.fn(),
@@ -41,7 +41,7 @@ vi.mock('../../frontend/static/scripts/advanced/forms.js', () => ({
   updateAuthenticationExtensionAvailability: vi.fn(),
 }));
 
-vi.mock('../../frontend/static/scripts/advanced/resets.js', () => ({
+vi.mock('../../frontend/static/scripts/advanced/ui/resets.js', () => ({
   resetRegistrationForm: vi.fn(),
   resetAuthenticationForm: vi.fn(),
 }));
@@ -57,7 +57,7 @@ vi.mock('../../frontend/static/scripts/simple/auth-simple.js', () => ({
   simpleAuthenticate: vi.fn(),
 }));
 
-vi.mock('../../frontend/static/scripts/advanced/auth-advanced.js', () => ({
+vi.mock('../../frontend/static/scripts/advanced/auth/advanced.js', () => ({
   advancedRegister: vi.fn(),
   advancedAuthenticate: vi.fn(),
 }));
@@ -96,7 +96,7 @@ vi.mock('../../frontend/static/scripts/advanced/mds.js', () => ({
   waitForMetadataLoad: vi.fn().mockResolvedValue(true),
 }));
 
-vi.mock('../../frontend/static/scripts/advanced/hints.js', () => ({
+vi.mock('../../frontend/static/scripts/advanced/auth/hints.js', () => ({
   registerHintsChangeCallback: vi.fn(),
 }));
 
@@ -104,7 +104,7 @@ vi.mock('../../frontend/static/scripts/advanced/json-editor-utils.js', () => ({
   handleJsonEditorKeydown: vi.fn(),
 }));
 
-vi.mock('../../frontend/static/scripts/advanced/exclude-credentials.js', () => ({
+vi.mock('../../frontend/static/scripts/advanced/auth/exclude-credentials.js', () => ({
   createFakeExcludeCredential: vi.fn(() => true),
   removeFakeExcludeCredential: vi.fn(() => true),
   renderFakeExcludeCredentialList: vi.fn(),
@@ -113,7 +113,7 @@ vi.mock('../../frontend/static/scripts/advanced/exclude-credentials.js', () => (
   renderFakeAllowCredentialList: vi.fn(),
 }));
 
-vi.mock('../../frontend/static/scripts/advanced/settings-nav.js', () => ({
+vi.mock('../../frontend/static/scripts/advanced/ui/settings-nav.js', () => ({
   initializeAdvancedSettingsNavigation: vi.fn(),
 }));
 
@@ -127,11 +127,11 @@ vi.mock('../../frontend/static/scripts/shared/utils/loader.js', () => ({
   loaderSetPhase: vi.fn(),
 }));
 
-import { createFakeAllowCredential, createFakeExcludeCredential, removeFakeAllowCredential, removeFakeExcludeCredential } from '../../frontend/static/scripts/advanced/exclude-credentials.js';
-import { checkLargeBlobCapability, randomizeChallenge, randomizeLargeBlobWrite, randomizePrfEval, updateAuthenticationExtensionAvailability, updateFieldLabels, validateChallengeInputs, validateLargeBlobWriteInput, validatePrfEvalInputs, validatePrfInputs, validateUserIdInput } from '../../frontend/static/scripts/advanced/forms.js';
-import { registerHintsChangeCallback } from '../../frontend/static/scripts/advanced/hints.js';
+import { createFakeAllowCredential, createFakeExcludeCredential, removeFakeAllowCredential, removeFakeExcludeCredential } from '../../frontend/static/scripts/advanced/auth/exclude-credentials.js';
+import { checkLargeBlobCapability, randomizeChallenge, randomizeLargeBlobWrite, randomizePrfEval, updateAuthenticationExtensionAvailability, updateFieldLabels, validateChallengeInputs, validateLargeBlobWriteInput, validatePrfEvalInputs, validatePrfInputs, validateUserIdInput } from '../../frontend/static/scripts/advanced/auth/forms.js';
+import { registerHintsChangeCallback } from '../../frontend/static/scripts/advanced/auth/hints.js';
 import { waitForMetadataLoad } from '../../frontend/static/scripts/advanced/mds.js';
-import { initializeAdvancedSettingsNavigation } from '../../frontend/static/scripts/advanced/settings-nav.js';
+import { initializeAdvancedSettingsNavigation } from '../../frontend/static/scripts/advanced/ui/settings-nav.js';
 import { loadSavedCredentials, updateAllowCredentialsDropdown } from '../../frontend/static/scripts/advanced/credential-display.js';
 import { updateJsonEditor, updateJsonFromForm } from '../../frontend/static/scripts/advanced/json-editor.js';
 import { handleJsonEditorKeydown } from '../../frontend/static/scripts/advanced/json-editor-utils.js';

@@ -1,4 +1,4 @@
-import {describeCoseAlgorithm} from '../display-utils.js';
+import {describeCoseAlgorithm} from '../ui/display-utils.js';
 
 const COSE_ALGORITHM_TAG_LABELS = {
     '-53': 'ED448',

@@ -9,7 +9,7 @@ import {
   ensureAuthenticationHintsAllowed,
   normalizeHintValue,
   registerHintsChangeCallback,
-} from '../../../../frontend/static/scripts/advanced/hints.js';
+} from '../../../../frontend/static/scripts/advanced/auth/hints.js';
 
 describe('hints', () => {
   beforeEach(() => {

@@ -12,7 +12,7 @@ import { state } from '../../../../frontend/static/scripts/shared/state.js';
 import { updateJsonEditor } from '../../../../frontend/static/scripts/advanced/json-editor.js';
 
 async function loadFormsModule() {
-  return import('../../../../frontend/static/scripts/advanced/forms.js');
+  return import('../../../../frontend/static/scripts/advanced/auth/forms.js');
 }
 
 async function loadFormsModuleWithBinaryOverrides(overrides = {}) {
@@ -25,7 +25,7 @@ async function loadFormsModuleWithBinaryOverrides(overrides = {}) {
     };
   });
 
-  const module = await import('../../../../frontend/static/scripts/advanced/forms.js');
+  const module = await import('../../../../frontend/static/scripts/advanced/auth/forms.js');
   vi.doUnmock('../../../../frontend/static/scripts/shared/utils/binary.js');
   return module;
 }

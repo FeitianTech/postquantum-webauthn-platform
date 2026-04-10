@@ -3,7 +3,7 @@ import {
     currentFormatToJsonFormat,
     getCurrentBinaryFormat,
 } from '../../shared/utils/binary.js';
-import { collectSelectedHints } from '../hints.js';
+import { collectSelectedHints } from '../auth/hints.js';
 import { appendSelectedAlgorithmLabels } from './algorithms.js';
 
 export function getAdvancedCreateOptions() {

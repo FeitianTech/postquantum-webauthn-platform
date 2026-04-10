@@ -22,7 +22,7 @@ vi.mock('../../../../frontend/static/scripts/shared/utils/binary.js', () => ({
   bytesToHex: vi.fn((bytes) => Array.from(bytes || []).map((byte) => byte.toString(16).padStart(2, '0')).join('')),
 }));
 
-vi.mock('../../../../frontend/static/scripts/advanced/hints.js', () => ({
+vi.mock('../../../../frontend/static/scripts/advanced/auth/hints.js', () => ({
   ensureAuthenticationHintsAllowed: vi.fn(() => []),
   applyAuthenticatorAttachmentPreference: vi.fn(),
   enforceAuthenticatorAttachmentWithHints: vi.fn(() => []),
@@ -35,7 +35,7 @@ vi.mock('../../../../frontend/static/scripts/shared/ui/status.js', () => ({
   hideProgress: vi.fn(),
 }));
 
-vi.mock('../../../../frontend/static/scripts/advanced/forms.js', () => ({
+vi.mock('../../../../frontend/static/scripts/advanced/auth/forms.js', () => ({
   randomizeChallenge: vi.fn(),
   randomizePrfEval: vi.fn(),
   randomizeLargeBlobWrite: vi.fn(),
@@ -80,9 +80,9 @@ import {
   applyAuthenticatorAttachmentPreference,
   enforceAuthenticatorAttachmentWithHints,
   ensureAuthenticationHintsAllowed,
-} from '../../../../frontend/static/scripts/advanced/hints.js';
+} from '../../../../frontend/static/scripts/advanced/auth/hints.js';
 import { hideProgress, showStatus } from '../../../../frontend/static/scripts/shared/ui/status.js';
-import { randomizeChallenge, randomizeLargeBlobWrite, randomizePrfEval } from '../../../../frontend/static/scripts/advanced/forms.js';
+import { randomizeChallenge, randomizeLargeBlobWrite, randomizePrfEval } from '../../../../frontend/static/scripts/advanced/auth/forms.js';
 import { randomizeUserIdentity } from '../../../../frontend/static/scripts/shared/auth/username.js';
 import {
   loadSavedCredentials,
@@ -98,7 +98,7 @@ import {
   updateAdvancedCredentialSignCount,
 } from '../../../../frontend/static/scripts/shared/storage/local.js';
 import { state } from '../../../../frontend/static/scripts/shared/state.js';
-import { advancedAuthenticate, advancedRegister } from '../../../../frontend/static/scripts/advanced/auth-advanced.js';
+import { advancedAuthenticate, advancedRegister } from '../../../../frontend/static/scripts/advanced/auth/advanced.js';
 
 function jsonResponse(payload, ok = true, status = 200) {
   return {

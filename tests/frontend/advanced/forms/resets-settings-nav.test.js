@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('../../../../frontend/static/scripts/advanced/forms.js', () => ({
+vi.mock('../../../../frontend/static/scripts/advanced/auth/forms.js', () => ({
   randomizeChallenge: vi.fn(),
   validatePrfInputs: vi.fn(),
   updateAuthenticationExtensionAvailability: vi.fn(),
@@ -14,7 +14,7 @@ vi.mock('../../../../frontend/static/scripts/advanced/json-editor.js', () => ({
   updateJsonEditor: vi.fn(),
 }));
 
-vi.mock('../../../../frontend/static/scripts/advanced/exclude-credentials.js', () => ({
+vi.mock('../../../../frontend/static/scripts/advanced/auth/exclude-credentials.js', () => ({
   clearFakeExcludeCredentials: vi.fn(),
   clearFakeAllowCredentials: vi.fn(),
 }));
@@ -27,19 +27,19 @@ import {
   randomizeChallenge,
   updateAuthenticationExtensionAvailability,
   validatePrfInputs,
-} from '../../../../frontend/static/scripts/advanced/forms.js';
+} from '../../../../frontend/static/scripts/advanced/auth/forms.js';
 import {
   clearFakeAllowCredentials,
   clearFakeExcludeCredentials,
-} from '../../../../frontend/static/scripts/advanced/exclude-credentials.js';
+} from '../../../../frontend/static/scripts/advanced/auth/exclude-credentials.js';
 import { updateAllowCredentialsDropdown } from '../../../../frontend/static/scripts/advanced/credential-display.js';
 import { updateJsonEditor } from '../../../../frontend/static/scripts/advanced/json-editor.js';
 import { randomizeUserIdentity } from '../../../../frontend/static/scripts/shared/auth/username.js';
 import {
   resetAuthenticationForm,
   resetRegistrationForm,
-} from '../../../../frontend/static/scripts/advanced/resets.js';
-import { initializeAdvancedSettingsNavigation } from '../../../../frontend/static/scripts/advanced/settings-nav.js';
+} from '../../../../frontend/static/scripts/advanced/ui/resets.js';
+import { initializeAdvancedSettingsNavigation } from '../../../../frontend/static/scripts/advanced/ui/settings-nav.js';
 import { state } from '../../../../frontend/static/scripts/shared/state.js';
 
 function buildResetDom() {

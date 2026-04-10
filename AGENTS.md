@@ -37,7 +37,7 @@ Important frontend entry points:
 
 - `frontend/static/scripts/simple/auth-simple.js`
   Simple register/authenticate flows.
-- `frontend/static/scripts/advanced/auth-advanced.js`
+- `frontend/static/scripts/advanced/auth/advanced.js`
   Advanced register/authenticate flows.
 - `frontend/static/scripts/advanced/credential-display.js`
   Shared saved-credential list, card rendering, credential detail modal, list refresh behavior.
@@ -105,12 +105,12 @@ The saved credential cards shown in simple and advanced tabs are rendered by the
   `frontend/static/scripts/simple/auth-simple.js`
   `server/app/routes/simple.py`
 - Advanced auth UX:
-  `frontend/static/scripts/advanced/auth-advanced.js`
+  `frontend/static/scripts/advanced/auth/advanced.js`
   `server/app/routes/advanced.py`
 - JSON editor or advanced request shaping:
   `frontend/static/scripts/advanced/json-editor.js`
-  `frontend/static/scripts/advanced/forms.js`
-  `frontend/static/scripts/advanced/hints.js`
+  `frontend/static/scripts/advanced/auth/forms.js`
+  `frontend/static/scripts/advanced/auth/hints.js`
 
 ## Testing Guidance
 

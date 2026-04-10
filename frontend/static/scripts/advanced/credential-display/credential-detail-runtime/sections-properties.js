@@ -2,7 +2,7 @@ import {
     escapeHtml,
     formatBoolean,
     renderAttestationResultRow,
-} from '../../display-utils.js';
+} from '../../ui/display-utils.js';
 import {
     extractMinPinLengthValue,
 } from '../../credential-utils.js';

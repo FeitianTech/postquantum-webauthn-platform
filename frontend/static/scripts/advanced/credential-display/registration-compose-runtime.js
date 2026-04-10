@@ -4,7 +4,7 @@ import {
 } from '../../shared/utils/binary.js';
 import {
     escapeHtml,
-} from '../display-utils.js';
+} from '../ui/display-utils.js';
 import {closeModal, openModal} from '../../shared/ui/core.js';
 import {
     formatCertificateDetails,

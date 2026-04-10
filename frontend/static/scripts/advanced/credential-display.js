@@ -1,5 +1,5 @@
 import {state} from '../shared/state.js';
-import {escapeHtml} from './display-utils.js';
+import {escapeHtml} from './ui/display-utils.js';
 import {
     getCredentialIdHex,
     getCredentialUserHandleHex,
@@ -9,8 +9,8 @@ import {
 import {closeModal} from '../shared/ui/core.js';
 import {dismissAllTransientMessages} from '../shared/ui/status.js';
 import {updateJsonEditor} from './json-editor.js';
-import {checkLargeBlobCapability, updateAuthenticationExtensionAvailability} from './forms.js';
-import {collectSelectedHints, deriveAllowedAttachmentsFromHints} from './hints.js';
+import {checkLargeBlobCapability, updateAuthenticationExtensionAvailability} from './auth/forms.js';
+import {collectSelectedHints, deriveAllowedAttachmentsFromHints} from './auth/hints.js';
 import {ATTACHMENT_LABELS} from './constants.js';
 import {
     clearCredentialFlashQueue,

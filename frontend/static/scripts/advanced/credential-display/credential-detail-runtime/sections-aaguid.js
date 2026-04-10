@@ -3,7 +3,7 @@ import {
 } from '../../../shared/utils/binary.js';
 import {
     escapeHtml,
-} from '../../display-utils.js';
+} from '../../ui/display-utils.js';
 import {
     deriveAaguidDisplayValues,
     deriveAaguidFromCredentialData,

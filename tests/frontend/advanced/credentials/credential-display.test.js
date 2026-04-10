@@ -89,7 +89,7 @@ vi.mock('../../../../frontend/static/scripts/shared/utils/binary.js', () => {
   };
 });
 
-vi.mock('../../../../frontend/static/scripts/advanced/display-utils.js', () => ({
+vi.mock('../../../../frontend/static/scripts/advanced/ui/display-utils.js', () => ({
   describeCoseAlgorithm: vi.fn((alg) => `ALG(${String(alg)})`),
   describeCoseKeyType: vi.fn((value) => `KEYTYPE(${String(value)})`),
   describeMldsaParameterSet: vi.fn(() => ''),
@@ -140,12 +140,12 @@ vi.mock('../../../../frontend/static/scripts/advanced/json-editor.js', () => ({
   updateJsonEditor: vi.fn(),
 }));
 
-vi.mock('../../../../frontend/static/scripts/advanced/forms.js', () => ({
+vi.mock('../../../../frontend/static/scripts/advanced/auth/forms.js', () => ({
   checkLargeBlobCapability: vi.fn(),
   updateAuthenticationExtensionAvailability: vi.fn(),
 }));
 
-vi.mock('../../../../frontend/static/scripts/advanced/hints.js', () => ({
+vi.mock('../../../../frontend/static/scripts/advanced/auth/hints.js', () => ({
   collectSelectedHints: vi.fn(() => []),
   deriveAllowedAttachmentsFromHints: vi.fn(() => []),
 }));
@@ -175,8 +175,8 @@ vi.mock('../../../../frontend/static/scripts/shared/storage/artifacts-client.js'
   fetchCredentialArtifact: vi.fn().mockResolvedValue(null),
 }));
 
-import { deriveAllowedAttachmentsFromHints } from '../../../../frontend/static/scripts/advanced/hints.js';
-import { checkLargeBlobCapability, updateAuthenticationExtensionAvailability } from '../../../../frontend/static/scripts/advanced/forms.js';
+import { deriveAllowedAttachmentsFromHints } from '../../../../frontend/static/scripts/advanced/auth/hints.js';
+import { checkLargeBlobCapability, updateAuthenticationExtensionAvailability } from '../../../../frontend/static/scripts/advanced/auth/forms.js';
 import { closeModal, openModal } from '../../../../frontend/static/scripts/shared/ui/core.js';
 import { showStatus } from '../../../../frontend/static/scripts/shared/ui/status.js';
 import {

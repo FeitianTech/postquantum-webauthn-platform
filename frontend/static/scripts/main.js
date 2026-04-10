@@ -31,11 +31,11 @@ import {
     validateLargeBlobWriteInput,
     checkLargeBlobCapability,
     updateAuthenticationExtensionAvailability
-} from './advanced/forms.js';
+} from './advanced/auth/forms.js';
 import {
     resetRegistrationForm,
     resetAuthenticationForm
-} from './advanced/resets.js';
+} from './advanced/ui/resets.js';
 import { initializeSimpleUsername, randomizeUserIdentity, randomizeSimpleUsername } from './shared/auth/username.js';
 import {
     simpleRegister,
@@ -44,7 +44,7 @@ import {
 import {
     advancedRegister,
     advancedAuthenticate
-} from './advanced/auth-advanced.js';
+} from './advanced/auth/advanced.js';
 import {
     processCodec,
     clearCodec,
@@ -73,7 +73,7 @@ import {
     updateAllowCredentialsDropdown
 } from './advanced/credential-display.js';
 import { waitForMetadataLoad } from './advanced/mds.js';
-import { registerHintsChangeCallback } from './advanced/hints.js';
+import { registerHintsChangeCallback } from './advanced/auth/hints.js';
 import { handleJsonEditorKeydown } from './advanced/json-editor-utils.js';
 import {
     createFakeExcludeCredential,
@@ -82,8 +82,8 @@ import {
     createFakeAllowCredential,
     removeFakeAllowCredential,
     renderFakeAllowCredentialList
-} from './advanced/exclude-credentials.js';
-import { initializeAdvancedSettingsNavigation } from './advanced/settings-nav.js';
+} from './advanced/auth/exclude-credentials.js';
+import { initializeAdvancedSettingsNavigation } from './advanced/ui/settings-nav.js';
 import { initializeAnalyzeBrowser } from './shared/browser/analyze.js';
 import {
     initializeLoader,

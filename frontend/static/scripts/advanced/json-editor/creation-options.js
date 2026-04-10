@@ -7,12 +7,12 @@ import {
 import {
     collectSelectedHints,
     enforceAuthenticatorAttachmentWithHints,
-} from '../hints.js';
+} from '../auth/hints.js';
 import {
     getCredentialIdHex,
     getCredentialUserHandleHex,
 } from '../credential-utils.js';
-import { getFakeExcludeCredentials } from '../exclude-credentials.js';
+import { getFakeExcludeCredentials } from '../auth/exclude-credentials.js';
 import { appendSelectedAlgorithmParams } from './algorithms.js';
 
 export function getCredentialCreationOptions() {

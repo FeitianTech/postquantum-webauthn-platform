@@ -1,4 +1,4 @@
-import { COSE_ALGORITHM_LABELS, COSE_KEY_TYPE_LABELS } from './constants.js';
+import { COSE_ALGORITHM_LABELS, COSE_KEY_TYPE_LABELS } from '../constants.js';
 
 export function formatBoolean(value) {
     if (value === true) {

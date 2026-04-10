@@ -1,16 +1,16 @@
-import { HINT_ATTACHMENT_MAP } from './constants.js';
-import { state } from '../shared/state.js';
+import { HINT_ATTACHMENT_MAP } from '../constants.js';
+import { state } from '../../shared/state.js';
 import {
     convertFormat,
     currentFormatToJsonFormat,
     getCurrentBinaryFormat
-} from '../shared/utils/binary.js';
+} from '../../shared/utils/binary.js';
 import {
     extractHexFromJsonFormat,
     getCredentialIdHex,
     getStoredCredentialAttachment,
     normalizeAttachmentValue
-} from './credential-utils.js';
+} from '../credential-utils.js';
 
 const registrationHintCallbacks = new Set();
 

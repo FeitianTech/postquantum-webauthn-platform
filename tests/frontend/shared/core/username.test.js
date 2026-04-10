@@ -4,12 +4,12 @@ vi.mock('../../../../frontend/static/scripts/advanced/json-editor.js', () => ({
   updateJsonEditor: vi.fn(),
 }));
 
-vi.mock('../../../../frontend/static/scripts/advanced/forms.js', () => ({
+vi.mock('../../../../frontend/static/scripts/advanced/auth/forms.js', () => ({
   randomizeUserId: vi.fn(),
 }));
 
 import { updateJsonEditor } from '../../../../frontend/static/scripts/advanced/json-editor.js';
-import { randomizeUserId } from '../../../../frontend/static/scripts/advanced/forms.js';
+import { randomizeUserId } from '../../../../frontend/static/scripts/advanced/auth/forms.js';
 
 async function loadUsernameModule() {
   vi.resetModules();

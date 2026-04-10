@@ -1,10 +1,10 @@
 import { state } from '../../shared/state.js';
-import { applyHintsToCheckboxes } from '../hints.js';
+import { applyHintsToCheckboxes } from '../auth/hints.js';
 import {
     extractHexFromJsonFormat,
     getCredentialIdHex,
 } from '../credential-utils.js';
-import { setFakeExcludeCredentials } from '../exclude-credentials.js';
+import { setFakeExcludeCredentials } from '../auth/exclude-credentials.js';
 import {
     applyRegistrationAlgorithmSelection,
     clearRegistrationAlgorithmCheckboxesForFormSync,
