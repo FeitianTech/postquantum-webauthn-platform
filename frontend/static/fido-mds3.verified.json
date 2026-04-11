@@ -20662,11 +20662,26 @@
       },
       "statusReports": [
         {
-          "effectiveDate": "2024-10-08",
-          "status": "NOT_FIDO_CERTIFIED"
+          "authenticatorVersion": 12,
+          "certificateNumber": "FIDO20020250210001",
+          "certificationDescriptor": "GoldKey Security Token",
+          "certificationPolicyVersion": "1.4.0",
+          "certificationRequirementsVersion": "1.5.0",
+          "effectiveDate": "2025-02-10",
+          "status": "FIDO_CERTIFIED_L1"
+        },
+        {
+          "authenticatorVersion": 12,
+          "effectiveDate": "2025-02-10",
+          "status": "FIDO_CERTIFIED"
+        },
+        {
+          "authenticatorVersion": 12,
+          "effectiveDate": "2025-02-10",
+          "status": "FIDO_CERTIFIED"
         }
       ],
-      "timeOfLastStatusChange": "2024-10-08"
+      "timeOfLastStatusChange": "2026-04-10"
     },
     {
       "aaguid": "b93fd961-f2e6-462f-b122-82002247de78",
@@ -50701,5 +50716,5 @@
   ],
   "legalHeader": "Retrieval and use of this BLOB indicates acceptance of the appropriate agreement located at https://fidoalliance.org/metadata/metadata-legal-terms/",
   "nextUpdate": "2026-05-01",
-  "no": 240
+  "no": 241
 }
