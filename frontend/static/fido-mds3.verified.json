@@ -12188,11 +12188,21 @@
       },
       "statusReports": [
         {
-          "effectiveDate": "2025-10-06",
-          "status": "NOT_FIDO_CERTIFIED"
+          "authenticatorVersion": 1,
+          "certificateNumber": "FIDO20020241122001",
+          "certificationDescriptor": "VeriMark(TM) Guard 2.1 Fingerprint Security Key",
+          "certificationPolicyVersion": "1.4.0",
+          "certificationRequirementsVersion": "1.5.0",
+          "effectiveDate": "2024-11-22",
+          "status": "FIDO_CERTIFIED_L1"
+        },
+        {
+          "authenticatorVersion": 1,
+          "effectiveDate": "2024-11-22",
+          "status": "FIDO_CERTIFIED"
         }
       ],
-      "timeOfLastStatusChange": "2025-10-06"
+      "timeOfLastStatusChange": "2026-05-06"
     },
     {
       "aaguid": "50cbf15a-238c-4457-8f16-812c43bf3c49",
@@ -24281,11 +24291,21 @@
       },
       "statusReports": [
         {
-          "effectiveDate": "2026-03-16",
-          "status": "NOT_FIDO_CERTIFIED"
+          "authenticatorVersion": 10000,
+          "certificateNumber": "FIDO20020260213001",
+          "certificationDescriptor": "PocketKey+ Bio",
+          "certificationPolicyVersion": "1.4.0",
+          "certificationRequirementsVersion": "1.5.0",
+          "effectiveDate": "2026-02-13",
+          "status": "FIDO_CERTIFIED_L1"
+        },
+        {
+          "authenticatorVersion": 10000,
+          "effectiveDate": "2026-02-13",
+          "status": "FIDO_CERTIFIED"
         }
       ],
-      "timeOfLastStatusChange": "2026-03-16"
+      "timeOfLastStatusChange": "2026-05-06"
     },
     {
       "aaid": "0024#2331",
@@ -43797,11 +43817,21 @@
       },
       "statusReports": [
         {
-          "effectiveDate": "2025-10-06",
-          "status": "NOT_FIDO_CERTIFIED"
+          "authenticatorVersion": 2,
+          "certificateNumber": "U2F100020241122001",
+          "certificationDescriptor": "VeriMark(TM) Guard 2.1 Fingerprint Security Key",
+          "certificationPolicyVersion": "1.4.0",
+          "certificationRequirementsVersion": "1.5.0",
+          "effectiveDate": "2024-11-22",
+          "status": "FIDO_CERTIFIED_L1"
+        },
+        {
+          "authenticatorVersion": 2,
+          "effectiveDate": "2024-11-22",
+          "status": "FIDO_CERTIFIED"
         }
       ],
-      "timeOfLastStatusChange": "2025-10-06"
+      "timeOfLastStatusChange": "2026-05-06"
     },
     {
       "attestationCertificateKeyIdentifiers": [
@@ -57377,5 +57407,5 @@
   ],
   "legalHeader": "Retrieval and use of this BLOB indicates acceptance of the appropriate agreement located at https://fidoalliance.org/metadata/metadata-legal-terms/",
   "nextUpdate": "2026-06-01",
-  "no": 251
+  "no": 252
 }
