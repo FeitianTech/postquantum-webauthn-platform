@@ -16,9 +16,9 @@
           "basic_full"
         ],
         "authenticationAlgorithms": [
+          "secp256r1_ecdsa_sha256_raw",
           "secp256k1_ecdsa_sha256_raw",
-          "ed25519_eddsa_sha512_raw",
-          "secp256r1_ecdsa_sha256_raw"
+          "ed25519_eddsa_sha512_raw"
         ],
         "authenticatorGetInfo": {
           "aaguid": "fcb1bcb4f370078c6993bc24d0ae3fbe",
@@ -879,8 +879,8 @@
         ],
         "authenticationAlgorithms": [
           "secp384r1_ecdsa_sha384_raw",
-          "secp256r1_ecdsa_sha256_raw",
-          "ed25519_eddsa_sha512_raw"
+          "ed25519_eddsa_sha512_raw",
+          "secp256r1_ecdsa_sha256_raw"
         ],
         "authenticatorGetInfo": {
           "aaguid": "2772ce93eb4b40908b73330f48477d73",
@@ -1473,9 +1473,9 @@
           "basic_full"
         ],
         "authenticationAlgorithms": [
-          "secp384r1_ecdsa_sha384_raw",
+          "secp256r1_ecdsa_sha256_raw",
           "ed25519_eddsa_sha512_raw",
-          "secp256r1_ecdsa_sha256_raw"
+          "secp384r1_ecdsa_sha384_raw"
         ],
         "authenticatorGetInfo": {
           "aaguid": "90636e1fef8243bfbdcf5255f139d12f",
@@ -2446,8 +2446,8 @@
           "basic_full"
         ],
         "authenticationAlgorithms": [
-          "ed25519_eddsa_sha512_raw",
-          "secp256r1_ecdsa_sha256_raw"
+          "secp256r1_ecdsa_sha256_raw",
+          "ed25519_eddsa_sha512_raw"
         ],
         "authenticatorGetInfo": {
           "aaguid": "c5ef55ffad9a4b9fb580adebafe026d0",
@@ -3319,8 +3319,8 @@
           "basic_full"
         ],
         "authenticationAlgorithms": [
-          "secp256r1_ecdsa_sha256_raw",
-          "rsassa_pss_sha256_raw"
+          "rsassa_pss_sha256_raw",
+          "secp256r1_ecdsa_sha256_raw"
         ],
         "authenticatorGetInfo": {
           "aaguid": "69700f79d1fb472ebd9ba3a3b9a9eda0",
@@ -58148,6 +58148,6 @@
     }
   ],
   "legalHeader": "Retrieval and use of this BLOB indicates acceptance of the appropriate agreement located at https://fidoalliance.org/metadata/metadata-legal-terms/",
-  "nextUpdate": "2026-06-01",
-  "no": 257
+  "nextUpdate": "2026-07-01",
+  "no": 258
 }
