@@ -6,6 +6,8 @@ from __future__ import annotations
 import base64
 import json
 import sys
+import time
+import urllib.error
 import urllib.request
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
@@ -22,6 +24,11 @@ FRONTEND_STATIC_DIR = REPO_ROOT / "frontend" / "static"
 
 MDS_METADATA_URL = "https://mds3.fidoalliance.org/"
 MDS_METADATA_FILENAME = "blob.jwt"
+
+MDS_DOWNLOAD_MAX_ATTEMPTS = 5
+MDS_DOWNLOAD_BACKOFF_BASE_SECONDS = 10
+MDS_RETRYABLE_STATUS_CODES = frozenset({429, 500, 502, 503, 504})
+MDS_RETRY_AFTER_CAP_SECONDS = 120
 MDS_METADATA_PATH = FRONTEND_STATIC_DIR / MDS_METADATA_FILENAME
 MDS_METADATA_VERIFIED_PATH = FRONTEND_STATIC_DIR / "fido-mds3.verified.json"
 MDS_METADATA_CACHE_PATH = Path(str(MDS_METADATA_VERIFIED_PATH) + ".meta.json")
@@ -117,6 +124,44 @@ def _fetch_remote_blob() -> tuple[bytes, str | None, str | None]:
         last_modified = headers.get("Last-Modified")
         etag = headers.get("ETag")
     return payload, last_modified, etag
+
+
+def _parse_retry_after(value: str | None) -> int | None:
+    if not value:
+        return None
+    value = value.strip()
+    if value.isdigit():
+        seconds = int(value)
+    else:
+        retry_at = _parse_http_datetime(value)
+        if retry_at is None:
+            return None
+        seconds = int((retry_at - datetime.now(timezone.utc)).total_seconds())
+    seconds = max(0, seconds)
+    return min(seconds, MDS_RETRY_AFTER_CAP_SECONDS)
+
+
+def _fetch_remote_blob_with_retry() -> tuple[bytes, str | None, str | None]:
+    for attempt in range(1, MDS_DOWNLOAD_MAX_ATTEMPTS + 1):
+        try:
+            return _fetch_remote_blob()
+        except urllib.error.HTTPError as exc:
+            if exc.code not in MDS_RETRYABLE_STATUS_CODES or attempt == MDS_DOWNLOAD_MAX_ATTEMPTS:
+                raise
+            backoff = MDS_DOWNLOAD_BACKOFF_BASE_SECONDS * (2 ** (attempt - 1))
+            if exc.code == 429:
+                retry_after = _parse_retry_after(
+                    exc.headers.get("Retry-After") if exc.headers else None
+                )
+                if retry_after is not None:
+                    backoff = retry_after
+            print(
+                f"::warning::Retrying FIDO MDS download (attempt {attempt + 1}/"
+                f"{MDS_DOWNLOAD_MAX_ATTEMPTS}) after {exc.code} response. "
+                f"Waiting {backoff}s..."
+            )
+            time.sleep(backoff)
+    raise RuntimeError("FIDO MDS download retries exhausted")  # pragma: no cover - defensive
 
 
 def _write_blob(blob: bytes) -> None:
@@ -230,7 +275,7 @@ def _write_cache_state(cache_state: dict[str, object]) -> bool:
 
 def main() -> int:
     try:
-        new_blob, last_modified, etag = _fetch_remote_blob()
+        new_blob, last_modified, etag = _fetch_remote_blob_with_retry()
     except Exception as exc:  # pragma: no cover - network failure propagates
         print(f"::error::Failed to download metadata BLOB: {exc}")
         return 1
