@@ -5,6 +5,6 @@ cbor2>=5.6.4
 certifi>=2026.6.17  # optional: improves TLS validation for metadata downloads
 gunicorn>=23.0.0,<24.0
 google-api-core>=2.31.0
-google-auth>=2.50.0
+google-auth>=2.55.1
 google-cloud-core>=2.6.0
 google-cloud-storage>=3.9.0
