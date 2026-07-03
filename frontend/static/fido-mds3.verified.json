@@ -16,9 +16,9 @@
           "basic_full"
         ],
         "authenticationAlgorithms": [
-          "secp256r1_ecdsa_sha256_raw",
           "secp256k1_ecdsa_sha256_raw",
-          "ed25519_eddsa_sha512_raw"
+          "ed25519_eddsa_sha512_raw",
+          "secp256r1_ecdsa_sha256_raw"
         ],
         "authenticatorGetInfo": {
           "aaguid": "fcb1bcb4f370078c6993bc24d0ae3fbe",
@@ -471,9 +471,9 @@
           "basic_full"
         ],
         "authenticationAlgorithms": [
+          "secp384r1_ecdsa_sha384_raw",
           "secp256r1_ecdsa_sha256_raw",
-          "ed25519_eddsa_sha512_raw",
-          "secp384r1_ecdsa_sha384_raw"
+          "ed25519_eddsa_sha512_raw"
         ],
         "authenticatorGetInfo": {
           "aaguid": "9eb7eabc9db549a1b6c3555a802093f4",
@@ -878,8 +878,8 @@
           "basic_full"
         ],
         "authenticationAlgorithms": [
-          "secp256r1_ecdsa_sha256_raw",
           "secp384r1_ecdsa_sha384_raw",
+          "secp256r1_ecdsa_sha256_raw",
           "ed25519_eddsa_sha512_raw"
         ],
         "authenticatorGetInfo": {
@@ -1473,9 +1473,9 @@
           "basic_full"
         ],
         "authenticationAlgorithms": [
-          "secp256r1_ecdsa_sha256_raw",
+          "secp384r1_ecdsa_sha384_raw",
           "ed25519_eddsa_sha512_raw",
-          "secp384r1_ecdsa_sha384_raw"
+          "secp256r1_ecdsa_sha256_raw"
         ],
         "authenticatorGetInfo": {
           "aaguid": "90636e1fef8243bfbdcf5255f139d12f",
@@ -2446,8 +2446,8 @@
           "basic_full"
         ],
         "authenticationAlgorithms": [
-          "secp256r1_ecdsa_sha256_raw",
-          "ed25519_eddsa_sha512_raw"
+          "ed25519_eddsa_sha512_raw",
+          "secp256r1_ecdsa_sha256_raw"
         ],
         "authenticatorGetInfo": {
           "aaguid": "c5ef55ffad9a4b9fb580adebafe026d0",
@@ -36157,6 +36157,15 @@
       "statusReports": [
         {
           "authenticatorVersion": 33619976,
+          "certificateNumber": "FIDO20020260523001",
+          "certificationDescriptor": "NEOWAVE Badgeo",
+          "certificationPolicyVersion": "1.4.0",
+          "certificationRequirementsVersion": "1.5.0",
+          "effectiveDate": "2026-05-23",
+          "status": "FIDO_CERTIFIED_L2"
+        },
+        {
+          "authenticatorVersion": 33619976,
           "certificateNumber": "FIDO20020251104001",
           "certificationDescriptor": "Neowave Badgeo FIDO2 (CTAP2.1)",
           "certificationPolicyVersion": "1.4.0",
@@ -36170,7 +36179,7 @@
           "status": "FIDO_CERTIFIED"
         }
       ],
-      "timeOfLastStatusChange": "2025-11-21"
+      "timeOfLastStatusChange": "2026-07-02"
     },
     {
       "aaguid": "1f8e43df-71ff-e11d-bea3-c4ee7003b232",
@@ -47788,6 +47797,15 @@
       "statusReports": [
         {
           "authenticatorVersion": 33619976,
+          "certificateNumber": "FIDO20020260523002",
+          "certificationDescriptor": "NEOWAVE Winkeo2J FIDO2",
+          "certificationPolicyVersion": "1.4.0",
+          "certificationRequirementsVersion": "1.5.0",
+          "effectiveDate": "2026-05-23",
+          "status": "FIDO_CERTIFIED_L2"
+        },
+        {
+          "authenticatorVersion": 33619976,
           "certificateNumber": "FIDO20020251104002",
           "certificationDescriptor": "NEOWAVE WINKEO V2.0",
           "certificationPolicyVersion": "1.4.0",
@@ -47806,7 +47824,7 @@
           "status": "FIDO_CERTIFIED"
         }
       ],
-      "timeOfLastStatusChange": "2025-12-05"
+      "timeOfLastStatusChange": "2026-07-02"
     },
     {
       "attestationCertificateKeyIdentifiers": [
@@ -58682,5 +58700,5 @@
   ],
   "legalHeader": "Retrieval and use of this BLOB indicates acceptance of the appropriate agreement located at https://fidoalliance.org/metadata/metadata-legal-terms/",
   "nextUpdate": "2026-08-01",
-  "no": 264
+  "no": 265
 }
