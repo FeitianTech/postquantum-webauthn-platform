@@ -1409,10 +1409,10 @@
           ],
           [
             {
-              "userVerificationMethod": "passcode_external"
+              "userVerificationMethod": "presence_internal"
             },
             {
-              "userVerificationMethod": "presence_internal"
+              "userVerificationMethod": "passcode_external"
             }
           ]
         ]
@@ -1510,10 +1510,10 @@
           ],
           [
             {
-              "userVerificationMethod": "presence_internal"
+              "userVerificationMethod": "passcode_external"
             },
             {
-              "userVerificationMethod": "passcode_external"
+              "userVerificationMethod": "presence_internal"
             }
           ],
           [
@@ -3327,6 +3327,9 @@
           ],
           [
             {
+              "userVerificationMethod": "presence_internal"
+            },
+            {
               "caDesc": {
                 "base": 10,
                 "blockSlowdown": 0,
@@ -3334,9 +3337,6 @@
                 "minLength": 4
               },
               "userVerificationMethod": "passcode_internal"
-            },
-            {
-              "userVerificationMethod": "presence_internal"
             }
           ],
           [
@@ -3351,10 +3351,10 @@
           ],
           [
             {
-              "userVerificationMethod": "presence_internal"
+              "userVerificationMethod": "passcode_external"
             },
             {
-              "userVerificationMethod": "passcode_external"
+              "userVerificationMethod": "presence_internal"
             }
           ],
           [
@@ -3593,10 +3593,10 @@
           ],
           [
             {
-              "userVerificationMethod": "presence_internal"
+              "userVerificationMethod": "passcode_external"
             },
             {
-              "userVerificationMethod": "passcode_external"
+              "userVerificationMethod": "presence_internal"
             }
           ],
           [
@@ -3901,10 +3901,10 @@
           ],
           [
             {
-              "userVerificationMethod": "presence_internal"
+              "userVerificationMethod": "passcode_external"
             },
             {
-              "userVerificationMethod": "passcode_external"
+              "userVerificationMethod": "presence_internal"
             }
           ]
         ]
@@ -5702,10 +5702,10 @@
         "userVerificationDetails": [
           [
             {
-              "userVerificationMethod": "presence_internal"
+              "userVerificationMethod": "fingerprint_internal"
             },
             {
-              "userVerificationMethod": "fingerprint_internal"
+              "userVerificationMethod": "presence_internal"
             }
           ]
         ]
@@ -6378,9 +6378,6 @@
           ],
           [
             {
-              "userVerificationMethod": "presence_internal"
-            },
-            {
               "caDesc": {
                 "base": 64,
                 "blockSlowdown": 0,
@@ -6388,6 +6385,9 @@
                 "minLength": 8
               },
               "userVerificationMethod": "passcode_external"
+            },
+            {
+              "userVerificationMethod": "presence_internal"
             }
           ],
           [
@@ -6820,9 +6820,6 @@
         "userVerificationDetails": [
           [
             {
-              "userVerificationMethod": "presence_internal"
-            },
-            {
               "caDesc": {
                 "base": 64,
                 "blockSlowdown": 0,
@@ -6830,6 +6827,9 @@
                 "minLength": 4
               },
               "userVerificationMethod": "passcode_external"
+            },
+            {
+              "userVerificationMethod": "presence_internal"
             }
           ],
           [
@@ -9176,6 +9176,9 @@
           ],
           [
             {
+              "userVerificationMethod": "presence_internal"
+            },
+            {
               "caDesc": {
                 "base": 64,
                 "blockSlowdown": 0,
@@ -9183,9 +9186,6 @@
                 "minLength": 4
               },
               "userVerificationMethod": "passcode_external"
-            },
-            {
-              "userVerificationMethod": "presence_internal"
             }
           ]
         ]
@@ -10501,10 +10501,10 @@
         "userVerificationDetails": [
           [
             {
-              "userVerificationMethod": "presence_internal"
+              "userVerificationMethod": "passcode_external"
             },
             {
-              "userVerificationMethod": "passcode_external"
+              "userVerificationMethod": "presence_internal"
             }
           ],
           [
@@ -11286,9 +11286,6 @@
         "userVerificationDetails": [
           [
             {
-              "userVerificationMethod": "none"
-            },
-            {
               "userVerificationMethod": "presence_internal"
             },
             {
@@ -11299,6 +11296,9 @@
                 "minLength": 4
               },
               "userVerificationMethod": "passcode_external"
+            },
+            {
+              "userVerificationMethod": "none"
             }
           ]
         ]
@@ -13271,6 +13271,9 @@
           ],
           [
             {
+              "userVerificationMethod": "presence_internal"
+            },
+            {
               "caDesc": {
                 "base": 64,
                 "blockSlowdown": 0,
@@ -13278,9 +13281,6 @@
                 "minLength": 4
               },
               "userVerificationMethod": "passcode_external"
-            },
-            {
-              "userVerificationMethod": "presence_internal"
             }
           ]
         ]
@@ -13499,9 +13499,6 @@
           ],
           [
             {
-              "userVerificationMethod": "presence_internal"
-            },
-            {
               "caDesc": {
                 "base": 10,
                 "blockSlowdown": 0,
@@ -13509,6 +13506,9 @@
                 "minLength": 4
               },
               "userVerificationMethod": "passcode_external"
+            },
+            {
+              "userVerificationMethod": "presence_internal"
             }
           ]
         ]
@@ -13913,6 +13913,9 @@
           ],
           [
             {
+              "userVerificationMethod": "presence_internal"
+            },
+            {
               "caDesc": {
                 "base": 10,
                 "blockSlowdown": 0,
@@ -13920,9 +13923,6 @@
                 "minLength": 4
               },
               "userVerificationMethod": "passcode_external"
-            },
-            {
-              "userVerificationMethod": "presence_internal"
             }
           ],
           [
@@ -14060,6 +14060,9 @@
         "userVerificationDetails": [
           [
             {
+              "userVerificationMethod": "presence_internal"
+            },
+            {
               "caDesc": {
                 "base": 10,
                 "blockSlowdown": 0,
@@ -14067,9 +14070,6 @@
                 "minLength": 4
               },
               "userVerificationMethod": "passcode_external"
-            },
-            {
-              "userVerificationMethod": "presence_internal"
             }
           ]
         ]
@@ -14654,10 +14654,10 @@
           ],
           [
             {
-              "userVerificationMethod": "passcode_internal"
+              "userVerificationMethod": "presence_internal"
             },
             {
-              "userVerificationMethod": "presence_internal"
+              "userVerificationMethod": "passcode_internal"
             }
           ],
           [
@@ -15023,10 +15023,10 @@
           ],
           [
             {
-              "userVerificationMethod": "passcode_external"
+              "userVerificationMethod": "presence_internal"
             },
             {
-              "userVerificationMethod": "presence_internal"
+              "userVerificationMethod": "passcode_external"
             }
           ],
           [
@@ -15934,7 +15934,7 @@
         "userVerificationDetails": [
           [
             {
-              "userVerificationMethod": "eyeprint_internal"
+              "userVerificationMethod": "fingerprint_internal"
             },
             {
               "userVerificationMethod": "passcode_internal"
@@ -15943,7 +15943,7 @@
               "userVerificationMethod": "presence_internal"
             },
             {
-              "userVerificationMethod": "fingerprint_internal"
+              "userVerificationMethod": "eyeprint_internal"
             },
             {
               "userVerificationMethod": "faceprint_internal"
@@ -17727,7 +17727,7 @@
               "userVerificationMethod": "location_internal"
             },
             {
-              "userVerificationMethod": "presence_internal"
+              "userVerificationMethod": "faceprint_internal"
             },
             {
               "userVerificationMethod": "passcode_internal"
@@ -17736,7 +17736,7 @@
               "userVerificationMethod": "fingerprint_internal"
             },
             {
-              "userVerificationMethod": "faceprint_internal"
+              "userVerificationMethod": "presence_internal"
             }
           ]
         ]
@@ -17916,9 +17916,6 @@
           ],
           [
             {
-              "userVerificationMethod": "presence_internal"
-            },
-            {
               "caDesc": {
                 "base": 10,
                 "blockSlowdown": 0,
@@ -17926,6 +17923,9 @@
                 "minLength": 4
               },
               "userVerificationMethod": "passcode_external"
+            },
+            {
+              "userVerificationMethod": "presence_internal"
             }
           ],
           [
@@ -18787,6 +18787,112 @@
         }
       ],
       "timeOfLastStatusChange": "2024-11-12"
+    },
+    {
+      "aaguid": "19bca99b-7c09-44fe-a969-8cba45764542",
+      "metadataStatement": {
+        "aaguid": "19bca99b-7c09-44fe-a969-8cba45764542",
+        "attachmentHint": [
+          "external",
+          "wired",
+          "wireless",
+          "nfc"
+        ],
+        "attestationRootCertificates": [
+          "MIIC+jCCAqGgAwIBAgIUcX2ojMrk7m8CdV1xMA/1dRijV/UwCgYIKoZIzj0EAwIwazELMAkGA1UEBhMCVVMxEzARBgNVBAoMCkhJRCBHbG9iYWwxIjAgBgNVBAsMGUF1dGhlbnRpY2F0b3IgQXR0ZXN0YXRpb24xIzAhBgNVBAMMGkZJRE8gQXR0ZXN0YXRpb24gUm9vdCBDQSAyMB4XDTI0MTAzMDE4MTY0MloXDTQ5MTAzMDE4MTY0MlowZjELMAkGA1UEBhMCVVMxEzARBgNVBAoMCkhJRCBHbG9iYWwxIjAgBgNVBAsMGUF1dGhlbnRpY2F0b3IgQXR0ZXN0YXRpb24xHjAcBgNVBAMMFUZJRE8gQXR0ZXN0YXRpb24gQ0EgOTBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABPVQFsP7jLJgcLlc1R3jRmlHvIk5jZQB652DUmD1RGMt7ygeWVZ5cmWEb6B1w/PqpJUUJ7126qgWOT220pXb2SijggEmMIIBIjAOBgNVHQ8BAf8EBAMCAYYwEgYDVR0TAQH/BAgwBgEB/wIBADAfBgNVHSMEGDAWgBS76Dpl93vB2h5FDLvyMMvUByj3izAdBgNVHQ4EFgQUBtxL1RMjMC3G8v+9DxLqZ1pMOtkwRAYDVR0fBD0wOzA5oDegNYYzaHR0cDovL2NybC5oeWRyYW50aWQuY29tL0ZJRE9BdHRlc3RhdGlvblJvb3RDQTIuY3JsMHYGCCsGAQUFBwEBBGowaDA/BggrBgEFBQcwAoYzaHR0cDovL2NybC5oeWRyYW50aWQuY29tL0ZJRE9BdHRlc3RhdGlvblJvb3RDQTIucDdjMCUGCCsGAQUFBzABhhlodHRwOi8vb2NzcC5oeWRyYW50aWQuY29tMAoGCCqGSM49BAMCA0cAMEQCIGseXev6N2lDwgvClSyLGRuYZmqim1tkXW5rAM1hSDHqAiAIdbWCBMSlCxK3MDmE5IgLk/PYOdYEbRdtpPBaZUYzoA=="
+        ],
+        "attestationTypes": [
+          "basic_full"
+        ],
+        "authenticationAlgorithms": [
+          "secp256r1_ecdsa_sha256_raw"
+        ],
+        "authenticatorGetInfo": {
+          "aaguid": "19bca99b7c0944fea9698cba45764542",
+          "certifications": {
+            "FIPS-CMVP-3": 2
+          },
+          "extensions": [
+            "credProtect",
+            "hmac-secret"
+          ],
+          "firmwareVersion": 262144,
+          "forcePINChange": false,
+          "maxCredentialCountInList": 1,
+          "maxCredentialIdLength": 94,
+          "maxMsgSize": 510,
+          "minPINLength": 6,
+          "options": {
+            "alwaysUv": true,
+            "authnrCfg": true,
+            "clientPin": true,
+            "credMgmt": true,
+            "makeCredUvNotRqd": false,
+            "pinUvAuthToken": true,
+            "rk": true,
+            "setMinPINLength": true
+          },
+          "pinUvAuthProtocols": [
+            2
+          ],
+          "remainingDiscoverableCredentials": 30,
+          "transports": [
+            "nfc",
+            "usb"
+          ],
+          "versions": [
+            "FIDO_2_0",
+            "FIDO_2_1"
+          ]
+        },
+        "authenticatorVersion": 262144,
+        "cryptoStrength": 128,
+        "description": "HID Crescendo Key V3 FIPS",
+        "icon": "data:image/png;base64,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",
+        "keyProtection": [
+          "hardware",
+          "secure_element"
+        ],
+        "legalHeader": "Submission of this statement and retrieval and use of this statement indicates acceptance of the appropriate agreement located at https://fidoalliance.org/metadata/metadata-legal-terms/.",
+        "matcherProtection": [
+          "on_chip"
+        ],
+        "protocolFamily": "fido2",
+        "publicKeyAlgAndEncodings": [
+          "cose"
+        ],
+        "schema": 3,
+        "tcDisplay": [],
+        "upv": [
+          {
+            "major": 1,
+            "minor": 1
+          },
+          {
+            "major": 1,
+            "minor": 0
+          }
+        ],
+        "userVerificationDetails": [
+          [
+            {
+              "userVerificationMethod": "presence_internal"
+            }
+          ],
+          [
+            {
+              "userVerificationMethod": "passcode_external"
+            }
+          ]
+        ]
+      },
+      "statusReports": [
+        {
+          "effectiveDate": "2026-07-21",
+          "status": "NOT_FIDO_CERTIFIED"
+        }
+      ],
+      "timeOfLastStatusChange": "2026-07-21"
     },
     {
       "aaguid": "def8ab1a-9f91-44f1-a103-088d8dc7d681",
@@ -20212,10 +20318,10 @@
           ],
           [
             {
-              "userVerificationMethod": "passcode_external"
+              "userVerificationMethod": "presence_internal"
             },
             {
-              "userVerificationMethod": "presence_internal"
+              "userVerificationMethod": "passcode_external"
             }
           ],
           [
@@ -22304,10 +22410,10 @@
           ],
           [
             {
-              "userVerificationMethod": "presence_internal"
+              "userVerificationMethod": "passcode_external"
             },
             {
-              "userVerificationMethod": "passcode_external"
+              "userVerificationMethod": "presence_internal"
             }
           ]
         ]
@@ -23892,6 +23998,9 @@
           ],
           [
             {
+              "userVerificationMethod": "presence_internal"
+            },
+            {
               "caDesc": {
                 "base": 10,
                 "blockSlowdown": 0,
@@ -23899,9 +24008,6 @@
                 "minLength": 6
               },
               "userVerificationMethod": "passcode_external"
-            },
-            {
-              "userVerificationMethod": "presence_internal"
             }
           ]
         ]
@@ -26598,13 +26704,13 @@
         "userVerificationDetails": [
           [
             {
+              "userVerificationMethod": "presence_internal"
+            },
+            {
               "userVerificationMethod": "fingerprint_internal"
             },
             {
               "userVerificationMethod": "passcode_internal"
-            },
-            {
-              "userVerificationMethod": "presence_internal"
             }
           ]
         ]
@@ -27129,9 +27235,6 @@
           ],
           [
             {
-              "userVerificationMethod": "presence_internal"
-            },
-            {
               "caDesc": {
                 "base": 64,
                 "blockSlowdown": 0,
@@ -27139,6 +27242,9 @@
                 "minLength": 4
               },
               "userVerificationMethod": "passcode_external"
+            },
+            {
+              "userVerificationMethod": "presence_internal"
             }
           ],
           [
@@ -29263,10 +29369,10 @@
           ],
           [
             {
-              "userVerificationMethod": "passcode_external"
+              "userVerificationMethod": "presence_internal"
             },
             {
-              "userVerificationMethod": "presence_internal"
+              "userVerificationMethod": "passcode_external"
             }
           ],
           [
@@ -30633,10 +30739,10 @@
         "userVerificationDetails": [
           [
             {
-              "userVerificationMethod": "presence_internal"
+              "userVerificationMethod": "passcode_external"
             },
             {
-              "userVerificationMethod": "passcode_external"
+              "userVerificationMethod": "presence_internal"
             }
           ],
           [
@@ -31187,10 +31293,10 @@
               "userVerificationMethod": "fingerprint_internal"
             },
             {
-              "userVerificationMethod": "passcode_internal"
+              "userVerificationMethod": "presence_internal"
             },
             {
-              "userVerificationMethod": "presence_internal"
+              "userVerificationMethod": "passcode_internal"
             }
           ]
         ]
@@ -31819,10 +31925,10 @@
           ],
           [
             {
-              "userVerificationMethod": "passcode_external"
+              "userVerificationMethod": "presence_internal"
             },
             {
-              "userVerificationMethod": "presence_internal"
+              "userVerificationMethod": "passcode_external"
             }
           ],
           [
@@ -33732,6 +33838,9 @@
           ],
           [
             {
+              "userVerificationMethod": "presence_internal"
+            },
+            {
               "caDesc": {
                 "base": 10,
                 "blockSlowdown": 0,
@@ -33739,9 +33848,6 @@
                 "minLength": 4
               },
               "userVerificationMethod": "passcode_external"
-            },
-            {
-              "userVerificationMethod": "presence_internal"
             }
           ],
           [
@@ -34464,10 +34570,10 @@
           ],
           [
             {
-              "userVerificationMethod": "passcode_external"
+              "userVerificationMethod": "presence_internal"
             },
             {
-              "userVerificationMethod": "presence_internal"
+              "userVerificationMethod": "passcode_external"
             }
           ]
         ]
@@ -34802,9 +34908,6 @@
           ],
           [
             {
-              "userVerificationMethod": "presence_internal"
-            },
-            {
               "caDesc": {
                 "base": 10,
                 "blockSlowdown": 0,
@@ -34812,6 +34915,9 @@
                 "minLength": 4
               },
               "userVerificationMethod": "passcode_internal"
+            },
+            {
+              "userVerificationMethod": "presence_internal"
             }
           ],
           [
@@ -35111,6 +35217,9 @@
           ],
           [
             {
+              "userVerificationMethod": "presence_internal"
+            },
+            {
               "caDesc": {
                 "base": 10,
                 "blockSlowdown": 0,
@@ -35118,9 +35227,6 @@
                 "minLength": 4
               },
               "userVerificationMethod": "passcode_external"
-            },
-            {
-              "userVerificationMethod": "presence_internal"
             }
           ],
           [
@@ -37177,10 +37283,10 @@
           ],
           [
             {
-              "userVerificationMethod": "presence_internal"
+              "userVerificationMethod": "passcode_external"
             },
             {
-              "userVerificationMethod": "passcode_external"
+              "userVerificationMethod": "presence_internal"
             }
           ],
           [
@@ -38765,6 +38871,9 @@
         "userVerificationDetails": [
           [
             {
+              "userVerificationMethod": "presence_internal"
+            },
+            {
               "caDesc": {
                 "base": 10,
                 "blockSlowdown": 0,
@@ -38772,9 +38881,6 @@
                 "minLength": 4
               },
               "userVerificationMethod": "passcode_external"
-            },
-            {
-              "userVerificationMethod": "presence_internal"
             }
           ],
           [
@@ -40666,13 +40772,13 @@
         "userVerificationDetails": [
           [
             {
-              "userVerificationMethod": "presence_internal"
+              "userVerificationMethod": "fingerprint_internal"
             },
             {
               "userVerificationMethod": "passcode_external"
             },
             {
-              "userVerificationMethod": "fingerprint_internal"
+              "userVerificationMethod": "presence_internal"
             }
           ],
           [
@@ -41360,6 +41466,9 @@
           ],
           [
             {
+              "userVerificationMethod": "presence_internal"
+            },
+            {
               "caDesc": {
                 "base": 64,
                 "blockSlowdown": 0,
@@ -41367,9 +41476,6 @@
                 "minLength": 4
               },
               "userVerificationMethod": "passcode_external"
-            },
-            {
-              "userVerificationMethod": "presence_internal"
             }
           ],
           [
@@ -42291,10 +42397,10 @@
         "userVerificationDetails": [
           [
             {
-              "userVerificationMethod": "fingerprint_internal"
+              "userVerificationMethod": "presence_internal"
             },
             {
-              "userVerificationMethod": "presence_internal"
+              "userVerificationMethod": "fingerprint_internal"
             }
           ]
         ]
@@ -42507,10 +42613,10 @@
           ],
           [
             {
-              "userVerificationMethod": "passcode_external"
+              "userVerificationMethod": "presence_internal"
             },
             {
-              "userVerificationMethod": "presence_internal"
+              "userVerificationMethod": "passcode_external"
             }
           ],
           [
@@ -42840,6 +42946,15 @@
           ],
           [
             {
+              "caDesc": {
+                "base": 10,
+                "blockSlowdown": 0,
+                "maxRetries": 8,
+                "minLength": 4
+              },
+              "userVerificationMethod": "passcode_external"
+            },
+            {
               "baDesc": {
                 "blockSlowdown": 1,
                 "maxRetries": 5,
@@ -42848,15 +42963,6 @@
                 "selfAttestedFRR": 0.3
               },
               "userVerificationMethod": "fingerprint_internal"
-            },
-            {
-              "caDesc": {
-                "base": 10,
-                "blockSlowdown": 0,
-                "maxRetries": 8,
-                "minLength": 4
-              },
-              "userVerificationMethod": "passcode_external"
             }
           ]
         ]
@@ -45678,6 +45784,9 @@
           ],
           [
             {
+              "userVerificationMethod": "presence_internal"
+            },
+            {
               "caDesc": {
                 "base": 64,
                 "blockSlowdown": 0,
@@ -45685,9 +45794,6 @@
                 "minLength": 4
               },
               "userVerificationMethod": "passcode_external"
-            },
-            {
-              "userVerificationMethod": "presence_internal"
             }
           ]
         ]
@@ -45773,13 +45879,13 @@
         "userVerificationDetails": [
           [
             {
+              "userVerificationMethod": "passcode_external"
+            },
+            {
               "userVerificationMethod": "fingerprint_internal"
             },
             {
               "userVerificationMethod": "presence_internal"
-            },
-            {
-              "userVerificationMethod": "passcode_external"
             }
           ]
         ]
@@ -46350,10 +46456,10 @@
         "userVerificationDetails": [
           [
             {
-              "userVerificationMethod": "presence_internal"
+              "userVerificationMethod": "passcode_external"
             },
             {
-              "userVerificationMethod": "passcode_external"
+              "userVerificationMethod": "presence_internal"
             }
           ],
           [
@@ -47229,10 +47335,10 @@
           ],
           [
             {
-              "userVerificationMethod": "passcode_internal"
+              "userVerificationMethod": "presence_internal"
             },
             {
-              "userVerificationMethod": "presence_internal"
+              "userVerificationMethod": "passcode_internal"
             }
           ]
         ]
@@ -47852,10 +47958,10 @@
           ],
           [
             {
-              "userVerificationMethod": "presence_internal"
+              "userVerificationMethod": "passcode_external"
             },
             {
-              "userVerificationMethod": "passcode_external"
+              "userVerificationMethod": "presence_internal"
             }
           ],
           [
@@ -47994,10 +48100,10 @@
         "userVerificationDetails": [
           [
             {
-              "userVerificationMethod": "presence_internal"
+              "userVerificationMethod": "passcode_external"
             },
             {
-              "userVerificationMethod": "passcode_external"
+              "userVerificationMethod": "presence_internal"
             }
           ]
         ]
@@ -49015,9 +49121,6 @@
           ],
           [
             {
-              "userVerificationMethod": "presence_internal"
-            },
-            {
               "caDesc": {
                 "base": 10,
                 "blockSlowdown": 0,
@@ -49025,6 +49128,9 @@
                 "minLength": 4
               },
               "userVerificationMethod": "passcode_external"
+            },
+            {
+              "userVerificationMethod": "presence_internal"
             }
           ],
           [
@@ -49194,9 +49300,6 @@
           ],
           [
             {
-              "userVerificationMethod": "presence_internal"
-            },
-            {
               "baDesc": {
                 "blockSlowdown": 0,
                 "maxRetries": 5,
@@ -49205,6 +49308,9 @@
                 "selfAttestedFRR": 1e-05
               },
               "userVerificationMethod": "fingerprint_internal"
+            },
+            {
+              "userVerificationMethod": "presence_internal"
             }
           ],
           [
@@ -50393,10 +50499,10 @@
         "userVerificationDetails": [
           [
             {
-              "userVerificationMethod": "passcode_external"
+              "userVerificationMethod": "presence_internal"
             },
             {
-              "userVerificationMethod": "presence_internal"
+              "userVerificationMethod": "passcode_external"
             }
           ],
           [
@@ -50530,6 +50636,9 @@
           ],
           [
             {
+              "userVerificationMethod": "passcode_external"
+            },
+            {
               "caDesc": {
                 "base": 64,
                 "blockSlowdown": 0,
@@ -50537,9 +50646,6 @@
                 "minLength": 4
               },
               "userVerificationMethod": "presence_internal"
-            },
-            {
-              "userVerificationMethod": "passcode_external"
             }
           ],
           [
@@ -51124,9 +51230,6 @@
           ],
           [
             {
-              "userVerificationMethod": "presence_internal"
-            },
-            {
               "caDesc": {
                 "base": 64,
                 "blockSlowdown": 0,
@@ -51134,6 +51237,9 @@
                 "minLength": 4
               },
               "userVerificationMethod": "passcode_external"
+            },
+            {
+              "userVerificationMethod": "presence_internal"
             }
           ],
           [
@@ -51968,6 +52074,9 @@
           ],
           [
             {
+              "userVerificationMethod": "presence_internal"
+            },
+            {
               "caDesc": {
                 "base": 10,
                 "blockSlowdown": 0,
@@ -51975,9 +52084,6 @@
                 "minLength": 4
               },
               "userVerificationMethod": "passcode_external"
-            },
-            {
-              "userVerificationMethod": "presence_internal"
             }
           ],
           [
@@ -52461,6 +52567,9 @@
         "userVerificationDetails": [
           [
             {
+              "userVerificationMethod": "presence_internal"
+            },
+            {
               "baDesc": {
                 "blockSlowdown": 0,
                 "maxRetries": 5,
@@ -52469,9 +52578,6 @@
                 "selfAttestedFRR": 1e-05
               },
               "userVerificationMethod": "fingerprint_internal"
-            },
-            {
-              "userVerificationMethod": "presence_internal"
             }
           ],
           [
@@ -52837,10 +52943,10 @@
           ],
           [
             {
-              "userVerificationMethod": "passcode_external"
+              "userVerificationMethod": "presence_internal"
             },
             {
-              "userVerificationMethod": "presence_internal"
+              "userVerificationMethod": "passcode_external"
             }
           ],
           [
@@ -53377,9 +53483,6 @@
           ],
           [
             {
-              "userVerificationMethod": "presence_internal"
-            },
-            {
               "baDesc": {
                 "blockSlowdown": 0,
                 "maxRetries": 3,
@@ -53388,6 +53491,9 @@
                 "selfAttestedFRR": 0.03
               },
               "userVerificationMethod": "fingerprint_internal"
+            },
+            {
+              "userVerificationMethod": "presence_internal"
             }
           ]
         ]
@@ -53778,10 +53884,10 @@
           ],
           [
             {
-              "userVerificationMethod": "presence_internal"
+              "userVerificationMethod": "passcode_external"
             },
             {
-              "userVerificationMethod": "passcode_external"
+              "userVerificationMethod": "presence_internal"
             }
           ],
           [
@@ -54451,9 +54557,6 @@
         "userVerificationDetails": [
           [
             {
-              "userVerificationMethod": "presence_internal"
-            },
-            {
               "caDesc": {
                 "base": 10,
                 "blockSlowdown": 0,
@@ -54461,6 +54564,9 @@
                 "minLength": 4
               },
               "userVerificationMethod": "passcode_external"
+            },
+            {
+              "userVerificationMethod": "presence_internal"
             }
           ],
           [
@@ -55601,10 +55707,10 @@
         "userVerificationDetails": [
           [
             {
-              "userVerificationMethod": "presence_internal"
+              "userVerificationMethod": "passcode_external"
             },
             {
-              "userVerificationMethod": "passcode_external"
+              "userVerificationMethod": "presence_internal"
             }
           ],
           [
@@ -56219,6 +56325,9 @@
           ],
           [
             {
+              "userVerificationMethod": "presence_internal"
+            },
+            {
               "caDesc": {
                 "base": 10,
                 "blockSlowdown": 0,
@@ -56226,9 +56335,6 @@
                 "minLength": 4
               },
               "userVerificationMethod": "passcode_external"
-            },
-            {
-              "userVerificationMethod": "presence_internal"
             }
           ]
         ]
@@ -56333,13 +56439,13 @@
         "userVerificationDetails": [
           [
             {
-              "userVerificationMethod": "fingerprint_internal"
-            },
-            {
               "userVerificationMethod": "presence_internal"
             },
             {
               "userVerificationMethod": "passcode_internal"
+            },
+            {
+              "userVerificationMethod": "fingerprint_internal"
             }
           ]
         ]
@@ -56472,6 +56578,9 @@
           ],
           [
             {
+              "userVerificationMethod": "presence_internal"
+            },
+            {
               "caDesc": {
                 "base": 64,
                 "blockSlowdown": 0,
@@ -56479,9 +56588,6 @@
                 "minLength": 4
               },
               "userVerificationMethod": "passcode_external"
-            },
-            {
-              "userVerificationMethod": "presence_internal"
             }
           ]
         ]
@@ -58213,6 +58319,9 @@
         "userVerificationDetails": [
           [
             {
+              "userVerificationMethod": "presence_internal"
+            },
+            {
               "caDesc": {
                 "base": 64,
                 "blockSlowdown": 0,
@@ -58220,9 +58329,6 @@
                 "minLength": 4
               },
               "userVerificationMethod": "passcode_external"
-            },
-            {
-              "userVerificationMethod": "presence_internal"
             }
           ]
         ]
@@ -58919,5 +59025,5 @@
   ],
   "legalHeader": "Retrieval and use of this BLOB indicates acceptance of the appropriate agreement located at https://fidoalliance.org/metadata/metadata-legal-terms/",
   "nextUpdate": "2026-08-01",
-  "no": 270
+  "no": 271
 }
