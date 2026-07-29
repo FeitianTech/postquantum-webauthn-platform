@@ -36730,11 +36730,21 @@
       },
       "statusReports": [
         {
-          "effectiveDate": "2026-04-03",
-          "status": "NOT_FIDO_CERTIFIED"
+          "authenticatorVersion": 256,
+          "certificateNumber": "FIDO20020250811002",
+          "certificationDescriptor": "Thetis Pro Series FIDO2 LV2 Security Key",
+          "certificationPolicyVersion": "1.4.0",
+          "certificationRequirementsVersion": "1.5.0",
+          "effectiveDate": "2025-08-11",
+          "status": "FIDO_CERTIFIED_L2"
+        },
+        {
+          "authenticatorVersion": 256,
+          "effectiveDate": "2025-08-11",
+          "status": "FIDO_CERTIFIED"
         }
       ],
-      "timeOfLastStatusChange": "2026-04-03"
+      "timeOfLastStatusChange": "2026-07-28"
     },
     {
       "attestationCertificateKeyIdentifiers": [
@@ -59446,5 +59456,5 @@
   ],
   "legalHeader": "Retrieval and use of this BLOB indicates acceptance of the appropriate agreement located at https://fidoalliance.org/metadata/metadata-legal-terms/",
   "nextUpdate": "2026-08-01",
-  "no": 273
+  "no": 274
 }
