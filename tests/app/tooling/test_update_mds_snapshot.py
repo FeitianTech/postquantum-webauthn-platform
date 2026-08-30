@@ -8,8 +8,15 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
+from cryptography import x509
 
 import tools.update_mds_snapshot as updater
+
+
+def test_metadata_trust_root_is_globalsign_r46():
+    certificate = x509.load_der_x509_certificate(updater.FIDO_METADATA_TRUST_ROOT_CERT)
+
+    assert certificate.subject.rfc4514_string() == "CN=GlobalSign Root R46,O=GlobalSign nv-sa,C=BE"
 
 
 @pytest.fixture
