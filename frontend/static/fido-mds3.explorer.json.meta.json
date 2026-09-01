@@ -1,12 +1,12 @@
 {
   "entryCount": 509,
-  "etag": "277",
-  "fetchedAt": "2026-08-30T21:59:13.650023+00:00",
-  "generatedAt": "2026-08-30T21:59:13.650023+00:00",
-  "lastModified": "Tue, 25 Aug 2026 12:31:33 GMT",
-  "lastModifiedIso": "2026-08-25T12:31:33+00:00",
+  "etag": "278",
+  "fetchedAt": "2026-09-01T03:06:13.832425+00:00",
+  "generatedAt": "2026-09-01T03:06:13.832425+00:00",
+  "lastModified": "Tue, 01 Sep 2026 00:01:24 GMT",
+  "lastModifiedIso": "2026-09-01T00:01:24+00:00",
   "legalHeader": "Retrieval and use of this BLOB indicates acceptance of the appropriate agreement located at https://fidoalliance.org/metadata/metadata-legal-terms/",
-  "nextUpdate": "2026-09-01",
-  "no": 277,
+  "nextUpdate": "2026-10-01",
+  "no": 278,
   "source": "packaged"
 }
