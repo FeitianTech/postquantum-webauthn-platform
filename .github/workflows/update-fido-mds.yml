@@ -32,7 +32,6 @@ jobs:
         run: python tools/update_mds_snapshot.py
 
       - name: Commit and push changes
-        if: ${{ !cancelled() }}
         run: |
           if git diff --quiet; then
             echo "No metadata updates detected."

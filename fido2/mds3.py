@@ -41,6 +41,7 @@ from cryptography.hazmat.backends import default_backend
 
 from .attestation.base import (
     Attestation,
+    InvalidSignature,
     TrustPathEvaluation,
     UntrustedAttestation,
     verify_x509_chain,
@@ -527,6 +528,30 @@ class MdsAttestationVerifier(AttestationVerifier):
         )
 
 
+def _verify_blob_certificate_chain(chain: Sequence[bytes], trust_root: bytes) -> None:
+    """Verify an MDS JWT x5c chain against a pinned trust root.
+
+    FIDO MDS may include extra certificates after a path already reaches a trusted
+    root, such as a GlobalSign R3→R46 cross-certificate for legacy trust stores.
+    RFC 5280 path validation terminates at the first trusted root, so those extra
+    certificates are ignored rather than requiring a single linear chain.
+    """
+    if not chain:
+        verify_x509_chain([trust_root])
+        return
+
+    last_error: Optional[InvalidSignature] = None
+    for end in range(1, len(chain) + 1):
+        try:
+            verify_x509_chain(list(chain[:end]) + [trust_root])
+            return
+        except InvalidSignature as exc:
+            last_error = exc
+    if last_error is not None:
+        raise last_error
+    raise InvalidSignature()  # pragma: no cover - loop always records an error
+
+
 def parse_blob(blob: bytes, trust_root: Optional[bytes]) -> MetadataBlobPayload:
     """Parse a FIDO MDS3 blob and verifies its signature.
 
@@ -549,7 +574,7 @@ def parse_blob(blob: bytes, trust_root: Optional[bytes]) -> MetadataBlobPayload:
         if chain:
             leaf_der = chain[0]
 
-        verify_x509_chain(chain + [trust_root])
+        _verify_blob_certificate_chain(chain, trust_root)
 
         if leaf_der is None:
             leaf_der = trust_root
