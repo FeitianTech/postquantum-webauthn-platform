@@ -8,19 +8,21 @@ from types import SimpleNamespace
 import pytest
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives.asymmetric import ec, rsa
 from cryptography.x509.oid import NameOID
 
-from fido2.attestation.base import UntrustedAttestation
+from fido2.attestation.base import InvalidSignature, UntrustedAttestation, verify_x509_chain
 from fido2.mds3 import (
     AuthenticatorStatus,
     MdsAttestationVerifier,
     StatusReport,
     _last_entry,
     _last_lookup_source,
+    _verify_blob_certificate_chain,
     filter_attestation_key_compromised,
     parse_blob,
 )
+from fido2.utils import websafe_encode
 
 
 def _b64url_json(value: dict) -> str:
@@ -45,20 +47,78 @@ def _build_blob(header: dict, payload: dict) -> bytes:
     return f"{_b64url_json(header)}.{_b64url_json(payload)}.AA".encode("ascii")
 
 
-def _self_signed_der(common_name: str) -> bytes:
-    key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
-    name = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, common_name)])
+def _cert_der(*, subject_cn: str, issuer_cn: str, public_key, issuer_key) -> bytes:
+    subject = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, subject_cn)])
+    issuer = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, issuer_cn)])
     cert = (
         x509.CertificateBuilder()
-        .subject_name(name)
-        .issuer_name(name)
-        .public_key(key.public_key())
+        .subject_name(subject)
+        .issuer_name(issuer)
+        .public_key(public_key)
         .serial_number(x509.random_serial_number())
         .not_valid_before(datetime.now(timezone.utc) - timedelta(days=1))
         .not_valid_after(datetime.now(timezone.utc) + timedelta(days=30))
-        .sign(key, hashes.SHA256())
+        .sign(issuer_key, hashes.SHA256())
     )
     return cert.public_bytes(serialization.Encoding.DER)
+
+
+def _self_signed_der(common_name: str) -> bytes:
+    key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    return _cert_der(
+        subject_cn=common_name,
+        issuer_cn=common_name,
+        public_key=key.public_key(),
+        issuer_key=key,
+    )
+
+
+def _mds_transition_certs():
+    legacy_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    current_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    intermediate_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    leaf_key = ec.generate_private_key(ec.SECP256R1())
+
+    return SimpleNamespace(
+        leaf=_cert_der(
+            subject_cn="mds.example.org",
+            issuer_cn="Intermediate CA",
+            public_key=leaf_key.public_key(),
+            issuer_key=intermediate_key,
+        ),
+        intermediate=_cert_der(
+            subject_cn="Intermediate CA",
+            issuer_cn="Current Root R46",
+            public_key=intermediate_key.public_key(),
+            issuer_key=current_key,
+        ),
+        cross=_cert_der(
+            subject_cn="Current Root R46",
+            issuer_cn="Legacy Root R3",
+            public_key=current_key.public_key(),
+            issuer_key=legacy_key,
+        ),
+        current_root=_cert_der(
+            subject_cn="Current Root R46",
+            issuer_cn="Current Root R46",
+            public_key=current_key.public_key(),
+            issuer_key=current_key,
+        ),
+        legacy_root=_cert_der(
+            subject_cn="Legacy Root R3",
+            issuer_cn="Legacy Root R3",
+            public_key=legacy_key.public_key(),
+            issuer_key=legacy_key,
+        ),
+        unrelated=_self_signed_der("Unrelated Root"),
+        leaf_key=leaf_key,
+    )
+
+
+def _build_signed_blob(header: dict, payload: dict, leaf_key) -> bytes:
+    message = f"{_b64url_json(header)}.{_b64url_json(payload)}".encode("ascii")
+    signature = leaf_key.sign(message, ec.ECDSA(hashes.SHA256()))
+    return message + b"." + websafe_encode(signature).encode("ascii")
 
 
 def test_filter_attestation_key_compromised_branches():
@@ -260,3 +320,63 @@ def test_parse_blob_trust_anchor_paths_cover_leaf_fallback_and_public_key_errors
     )
     with pytest.raises(ValueError, match="does not expose a supported public key"):
         parse_blob(_build_blob({"alg": "ES256"}, _minimal_payload()), b"trust-root")
+
+
+def test_verify_blob_certificate_chain_tries_prefixes_until_trust_root_matches(monkeypatch):
+    import fido2.mds3 as mds3_module
+
+    calls = []
+
+    def _verify(chain):
+        calls.append(list(chain))
+        if len(chain) != 3:
+            raise InvalidSignature("incomplete path")
+
+    monkeypatch.setattr(mds3_module, "verify_x509_chain", _verify, raising=False)
+    _verify_blob_certificate_chain([b"leaf", b"ca", b"cross"], b"root")
+    assert calls == [
+        [b"leaf", b"root"],
+        [b"leaf", b"ca", b"root"],
+    ]
+
+
+def test_verify_blob_certificate_chain_raises_when_no_prefix_reaches_trust_root(monkeypatch):
+    import fido2.mds3 as mds3_module
+
+    monkeypatch.setattr(
+        mds3_module,
+        "verify_x509_chain",
+        lambda _chain: (_ for _ in ()).throw(InvalidSignature("bad chain")),
+        raising=False,
+    )
+    with pytest.raises(InvalidSignature, match="bad chain"):
+        _verify_blob_certificate_chain([b"leaf", b"ca"], b"root")
+
+
+def test_verify_blob_certificate_chain_accepts_mds_cross_certificate_topology():
+    certs = _mds_transition_certs()
+    chain = [certs.leaf, certs.intermediate, certs.cross]
+
+    with pytest.raises(InvalidSignature):
+        verify_x509_chain(chain + [certs.current_root])
+
+    _verify_blob_certificate_chain(chain, certs.current_root)
+    _verify_blob_certificate_chain(chain, certs.legacy_root)
+    _verify_blob_certificate_chain([certs.leaf, certs.intermediate], certs.current_root)
+
+    with pytest.raises(InvalidSignature):
+        _verify_blob_certificate_chain(chain, certs.unrelated)
+
+
+def test_parse_blob_accepts_extra_cross_certificate_in_x5c():
+    certs = _mds_transition_certs()
+    header = {
+        "alg": "ES256",
+        "x5c": [
+            base64.b64encode(certs.leaf).decode("ascii"),
+            base64.b64encode(certs.intermediate).decode("ascii"),
+            base64.b64encode(certs.cross).decode("ascii"),
+        ],
+    }
+    parsed = parse_blob(_build_signed_blob(header, _minimal_payload(), certs.leaf_key), certs.current_root)
+    assert parsed.no == 1
