@@ -20,10 +20,11 @@ def _maybe_cleanup_inactive_sessions(now: Optional[float] = None) -> None:
     global _session_metadata_last_cleanup
 
     current_time = now or time.time()
-    if current_time - _session_metadata_last_cleanup < _SESSION_METADATA_CLEANUP_INTERVAL.total_seconds():
-        return
+    with _session_cleanup_lock:
+        if current_time - _session_metadata_last_cleanup < _SESSION_METADATA_CLEANUP_INTERVAL.total_seconds():
+            return
+        _session_metadata_last_cleanup = current_time
 
-    _session_metadata_last_cleanup = current_time
     cutoff = current_time - _SESSION_METADATA_INACTIVE_AGE.total_seconds()
 
     try:
