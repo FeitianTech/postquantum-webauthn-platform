@@ -29,7 +29,6 @@ function collectJavaScriptFiles(root) {
 describe('frontend import smoke test', () => {
   it('imports every frontend JavaScript module without throwing', async () => {
     const files = collectJavaScriptFiles(scriptsRoot);
-    files.push(path.join(frontendRoot, 'static', 'fido-mds3.explorer.bootstrap.js'));
 
     for (const file of files) {
       const moduleUrl = pathToFileURL(file).href;

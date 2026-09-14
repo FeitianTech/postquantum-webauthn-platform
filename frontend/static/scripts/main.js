@@ -72,7 +72,7 @@ import {
     clearAllCredentials,
     updateAllowCredentialsDropdown
 } from './advanced/credentials/index.js';
-import { waitForMetadataLoad } from './advanced/mds/index.js';
+import './advanced/mds/index.js';
 import { registerHintsChangeCallback } from './advanced/auth/hints.js';
 import { handleJsonEditorKeydown } from './advanced/editor/utils.js';
 import {
@@ -522,16 +522,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
             await loadSavedCredentials();
 
-            const deferredStartupTasks = runDeferredStartupTasks(jsonEditorElement);
-            let metadataReady = false;
-
-            try {
-                metadataReady = await waitForMetadataLoad();
-            } catch (error) {
-                console.error('Failed while waiting for metadata startup to finish.', error);
-            }
-
-            await deferredStartupTasks;
+            // The FIDO MDS explorer loads in the background after this point
+            // (see advanced/mds/runtime/bootstrap.js), so it never delays the
+            // rest of the application.
+            await runDeferredStartupTasks(jsonEditorElement);
 
             const formFields = [
                 'user-name', 'user-display-name', 'attestation',
@@ -547,16 +541,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
-            loaderSetPhase(
-                metadataReady
-                    ? 'Opening workspace…'
-                    : 'Opening workspace with limited metadata…',
-                { progress: 96 },
-            );
+            loaderSetPhase('Opening workspace…', { progress: 96 });
             loaderComplete({
-                message: metadataReady ? 'Application ready!' : 'Application ready with limited metadata.',
+                message: 'Application ready!',
                 delay: 420,
             });
+            document.dispatchEvent(new CustomEvent('app:ready'));
         } catch (error) {
             console.error('Application startup failed.', error);
             loaderSetPhase('Opening workspace with limited startup…', { progress: 96 });

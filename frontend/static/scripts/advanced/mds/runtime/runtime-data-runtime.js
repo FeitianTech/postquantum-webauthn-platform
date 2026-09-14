@@ -18,6 +18,7 @@ import {
     normaliseSnapshotInfo as normaliseSnapshotInfoValue,
 } from '../metadata/metadata-helpers.js';
 import { createMdsDataAdapters } from './runtime-data-adapters.js';
+import { createExplorerSource } from '../metadata/explorer-source.js';
 import { createMdsLazyLoader } from '../lazy-loader.js';
 import {
     loaderIsActive,
@@ -110,6 +111,7 @@ export function createDataRuntime({
         hasInlineDetail: hasInlineDetailValue,
         mdsResolvePath: MDS_RESOLVE_PATH,
         mdsExplorerFullPath: MDS_EXPLORER_FULL_PATH,
+        explorerSource: createExplorerSource(initialMdsInfo),
         missingMetadataMessage: MISSING_METADATA_MESSAGE,
         waitForStateReady,
         upgradeEntryToFull,
