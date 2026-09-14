@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 import os
+import threading
 from typing import Optional
 
 from . import cloud_storage, session_metadata_store
 from .config import app
 from .env_flags import parse_env_flag
 
-__all__ = ["warm_up_dependencies"]
+__all__ = ["start_background_warmup", "warm_up_dependencies"]
 
 _STARTUP_SESSION_ID = "__startup__"
 _STARTUP_MODE_ENV = "FIDO_SERVER_STARTUP_MODE"
@@ -17,10 +18,53 @@ _STARTUP_FAIL_FAST_ENV = "FIDO_SERVER_STARTUP_FAIL_FAST"
 _WARM_METADATA_ENV = "FIDO_SERVER_WARM_METADATA"
 _WARM_CLOUD_STORAGE_ENV = "FIDO_SERVER_WARM_CLOUD_STORAGE"
 _WARM_SESSION_STORAGE_ENV = "FIDO_SERVER_WARM_SESSION_STORAGE"
+_BACKGROUND_WARMUP_ENV = "FIDO_SERVER_BACKGROUND_WARMUP"
 
 
 def _env_flag(name: str) -> Optional[bool]:
     return parse_env_flag(name)
+
+
+def background_warmup_enabled() -> bool:
+    """Return ``True`` when caches should be warmed after the worker starts."""
+
+    explicit = _env_flag(_BACKGROUND_WARMUP_ENV)
+    if explicit is not None:
+        return explicit
+    # Cloud Run sets K_SERVICE; local development keeps lazy loading.
+    return bool(os.environ.get("K_SERVICE"))
+
+
+def _run_background_warmup() -> None:
+    if _should_warm_cloud_storage_configured():
+        try:
+            cloud_storage._ensure_bucket()
+        except Exception:
+            app.logger.warning("Background cloud storage warm-up failed.", exc_info=True)
+
+    try:
+        from .metadata import load_cached_metadata_snapshot
+
+        load_cached_metadata_snapshot()
+    except Exception:
+        app.logger.warning("Background metadata warm-up failed.", exc_info=True)
+
+
+def start_background_warmup() -> Optional[threading.Thread]:
+    """Warm slow dependencies without delaying the worker from serving requests.
+
+    Requests that need the same data while warm-up runs wait on the shared cache
+    locks instead of loading it a second time.
+    """
+
+    if not background_warmup_enabled():
+        return None
+
+    thread = threading.Thread(
+        target=_run_background_warmup, name="startup-warmup", daemon=True
+    )
+    thread.start()
+    return thread
 
 
 def startup_fail_fast_enabled() -> bool:
