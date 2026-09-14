@@ -26,7 +26,7 @@ vi.mock('../../../../frontend/static/scripts/shared/ui/core.js', () => ({
 
 function buildMdsDom() {
   document.body.innerHTML = `
-    <div id="mds-tab">
+    <div id="mds-tab" class="active">
       <div id="mds-status" class="mds-status mds-status-info">Initial status</div>
       <button id="mds-retry-button">Retry</button>
       <button id="mds-update-button">Refresh Metadata</button>

@@ -233,7 +233,7 @@ describe('main startup and wiring', () => {
     expect(updateFieldLabels).toHaveBeenCalledTimes(1);
     expect(initializeAdvancedSettingsNavigation).toHaveBeenCalledTimes(1);
     expect(loadSavedCredentials).toHaveBeenCalledTimes(1);
-    expect(waitForMetadataLoad).toHaveBeenCalledTimes(1);
+    expect(waitForMetadataLoad).not.toHaveBeenCalled();
     expect(loaderComplete).toHaveBeenCalledWith({
       message: 'Application ready!',
       delay: 420,
@@ -307,17 +307,21 @@ describe('main startup and wiring', () => {
     expect(window.clearDecoder).toBeDefined();
   });
 
-  it('completes startup with limited metadata when metadata wait fails', async () => {
-    waitForMetadataLoad.mockRejectedValueOnce(new Error('metadata failure'));
+  it('completes startup without waiting for FIDO MDS metadata and announces readiness', async () => {
+    waitForMetadataLoad.mockImplementation(() => new Promise(() => {}));
+    const readyListener = vi.fn();
+    document.addEventListener('app:ready', readyListener);
 
     await importMainFresh();
     document.dispatchEvent(new Event('DOMContentLoaded'));
     await vi.runAllTimersAsync();
 
     expect(loaderComplete).toHaveBeenCalledWith({
-      message: 'Application ready with limited metadata.',
+      message: 'Application ready!',
       delay: 420,
     });
+    expect(readyListener).toHaveBeenCalled();
+    document.removeEventListener('app:ready', readyListener);
   });
 
   it('falls back to partial startup when initialization throws', async () => {
