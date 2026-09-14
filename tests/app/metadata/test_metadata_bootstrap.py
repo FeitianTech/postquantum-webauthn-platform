@@ -309,7 +309,12 @@ def test_index_page_emits_accessible_global_loader_markup(monkeypatch):
     assert 'id="app-loader-progress"' not in body
     assert 'id="app-loader-percentage"' not in body
     assert 'templates/advanced/mds-content.html' not in body
-    assert 'fido-mds3.explorer.bootstrap.js' in body
+    # MDS data must not block page rendering: no synchronous snapshot script.
+    assert 'fido-mds3.explorer.bootstrap.js' not in body
+    assert '"snapshotUrl": "/assets/' in body
+    assert '/fido-mds3.explorer.full.json"' in body
+    assert 'src="/assets/' in body and '/scripts/main.js"' in body
+    assert '"customEntriesState": "unknown"' in body
     assert '__INITIAL_CREDENTIAL_RECORDS__' in body
 
 

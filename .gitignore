@@ -34,5 +34,9 @@ server/runtime/session-metadata/
 server/runtime/credential-artifacts/
 instance/
 
+# Build-time static asset outputs (tools/build_static_assets.py)
+frontend/BUILD_ID
+frontend/static/**/*.gz
+
 .DS_Store
 .env

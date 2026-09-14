@@ -160,6 +160,7 @@ _COMPRESSIBLE_MIMETYPES = {
     "text/xml",
 }
 _DEFAULT_COMPRESSION_MIN_SIZE = 512
+_FAST_COMPRESSION_THRESHOLD = 256 * 1024
 _RESPONSE_COMPRESSION_MARKER = "_postquantum_response_compression"
 
 
@@ -204,7 +205,10 @@ def maybe_compress_response(response):
     if not payload or len(payload) < int(min_size):
         return response
 
-    compressed = gzip.compress(payload, compresslevel=6)
+    # Large bodies (e.g. a per-session MDS snapshot) favour speed over ratio;
+    # static assets are precompressed at build time instead.
+    compresslevel = 1 if len(payload) > _FAST_COMPRESSION_THRESHOLD else 6
+    compressed = gzip.compress(payload, compresslevel=compresslevel)
     if len(compressed) >= len(payload):
         return response
 

@@ -11,10 +11,11 @@ from datetime import datetime, timezone
 from threading import Lock
 from typing import Any, Dict, Mapping, Optional
 
-from flask import abort, jsonify, render_template, request, send_file
+from flask import abort, g, jsonify, render_template, request, send_file, session
 
 from ..attestation import serialize_attestation_certificate
 from ..config import MDS_METADATA_VERIFIED_PATH, app
+from ..static_assets import asset_url
 from ..decoder import decode_payload_text, encode_payload_text
 from ..env_flags import parse_env_flag
 from ..metadata import (
@@ -131,21 +132,13 @@ def ensure_metadata_bootstrapped(skip_if_reloader_parent: bool = True) -> None:
     _mark_bootstrap_completed_for_today()
 
 
-if hasattr(app, "before_serving"):
+@app.route("/healthz")
+def healthz():
+    """Cheap liveness endpoint that touches no session or storage state."""
 
-    @app.before_serving
-    def _warm_dependencies_before_serving() -> None:
-        """Warm up external dependencies before the server handles requests."""
-
-        warm_up_dependencies(skip_if_reloader_parent=False)
-
-elif hasattr(app, "before_first_request"):
-
-    @app.before_first_request
-    def _warm_dependencies_before_first_request() -> None:
-        """Fallback for Flask versions without ``before_serving``."""
-
-        warm_up_dependencies(skip_if_reloader_parent=False)
+    response = app.response_class("ok", mimetype="text/plain")
+    response.headers["Cache-Control"] = "no-store"
+    return response
 
 
 @app.route("/")
@@ -153,13 +146,43 @@ def index():
     return index_html()
 
 
+_MDS_EXPLORER_FULL_STATIC_FILENAME = "fido-mds3.explorer.full.json"
+_MDS_CUSTOM_ENTRIES_SESSION_KEY = "fido.mds.custom"
+
+
+def _remember_custom_entries_state(snapshot: Any) -> None:
+    """Record whether this session has uploaded metadata.
+
+    The page uses this to load the cacheable packaged snapshot for sessions
+    without custom entries instead of the per-session explorer API.
+    """
+
+    meta = snapshot.get("meta") if isinstance(snapshot, Mapping) else None
+    if not isinstance(meta, Mapping) or not isinstance(meta.get("hasCustomEntries"), bool):
+        return
+    state = "present" if meta["hasCustomEntries"] else "none"
+    if session.get(_MDS_CUSTOM_ENTRIES_SESSION_KEY) != state:
+        session[_MDS_CUSTOM_ENTRIES_SESSION_KEY] = state
+
+
+def _initial_custom_entries_state(metadata_session_id: Optional[str]) -> str:
+    if metadata_session_id and getattr(g, "_mds_session_new", None) == metadata_session_id:
+        return "none"
+    stored = session.get(_MDS_CUSTOM_ENTRIES_SESSION_KEY)
+    return stored if stored in ("none", "present") else "unknown"
+
+
 @app.route("/index.html")
 def index_html():
     if _should_bootstrap_metadata_on_index():
         ensure_metadata_bootstrapped(skip_if_reloader_parent=False)
-    ensure_metadata_session_id()
+    metadata_session_id = ensure_metadata_session_id()
 
-    initial_mds_info = load_packaged_explorer_summary()
+    initial_mds_info = dict(load_packaged_explorer_summary() or {})
+    initial_mds_info["snapshotUrl"] = asset_url(_MDS_EXPLORER_FULL_STATIC_FILENAME)
+    initial_mds_info["customEntriesState"] = _initial_custom_entries_state(
+        metadata_session_id
+    )
 
     return render_template(
         "index.html",
@@ -184,6 +207,7 @@ def api_get_explorer_metadata():
             {"error": "Verified metadata snapshot is not available."},
             status=404,
         )
+    _remember_custom_entries_state(snapshot)
     return _no_store_json_response(snapshot)
 
 
@@ -196,6 +220,7 @@ def api_get_full_explorer_metadata():
             {"error": "Verified metadata snapshot is not available."},
             status=404,
         )
+    _remember_custom_entries_state(snapshot)
     return _no_store_json_response(snapshot)
 
 
