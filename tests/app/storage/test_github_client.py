@@ -145,7 +145,8 @@ def test_request_sets_expected_headers_and_json_body(monkeypatch):
 
     captured = {}
 
-    def _fake_urlopen(request_obj):
+    def _fake_urlopen(request_obj, timeout=None):
+        captured["timeout"] = timeout
         header_items = {
             key.lower(): value for key, value in request_obj.header_items()
         }
@@ -181,7 +182,7 @@ def test_request_retries_once_on_5xx_http_error(monkeypatch):
     calls = {"count": 0}
     sleeps = []
 
-    def _fake_urlopen(_request_obj):
+    def _fake_urlopen(_request_obj, timeout=None):
         calls["count"] += 1
         if calls["count"] == 1:
             raise HTTPError(
@@ -210,7 +211,7 @@ def test_request_does_not_retry_on_4xx_http_error(monkeypatch):
     calls = {"count": 0}
     sleeps = []
 
-    def _fake_urlopen(_request_obj):
+    def _fake_urlopen(_request_obj, timeout=None):
         calls["count"] += 1
         raise HTTPError(
             url="https://api.github.com/example",
@@ -236,7 +237,7 @@ def test_request_retries_once_on_url_error(monkeypatch):
     calls = {"count": 0}
     sleeps = []
 
-    def _fake_urlopen(_request_obj):
+    def _fake_urlopen(_request_obj, timeout=None):
         calls["count"] += 1
         if calls["count"] == 1:
             raise URLError("network down")
@@ -260,7 +261,7 @@ def test_request_raises_after_retrying_url_error(monkeypatch):
     monkeypatch.setattr(
         github_client.urllib_request,
         "urlopen",
-        lambda _request_obj: (_ for _ in ()).throw(URLError("still down")),
+        lambda _request_obj, timeout=None: (_ for _ in ()).throw(URLError("still down")),
     )
     monkeypatch.setattr(github_client.time, "sleep", lambda seconds: sleeps.append(seconds))
 
@@ -268,6 +269,45 @@ def test_request_raises_after_retrying_url_error(monkeypatch):
         github_client._request("GET", "https://api.github.com/example")
 
     assert sleeps == [1]
+
+
+def test_request_passes_configured_timeout(monkeypatch):
+    monkeypatch.setenv("GITHUB_TOKEN", "token-123")
+    captured = []
+
+    def _fake_urlopen(_request_obj, timeout=None):
+        captured.append(timeout)
+        return _FakeResponse(status=200, body=b"ok")
+
+    monkeypatch.setattr(github_client.urllib_request, "urlopen", _fake_urlopen)
+
+    monkeypatch.delenv("GITHUB_HTTP_TIMEOUT_SECONDS", raising=False)
+    github_client._request("GET", "https://api.github.com/example")
+    monkeypatch.setenv("GITHUB_HTTP_TIMEOUT_SECONDS", "2.5")
+    github_client._request("GET", "https://api.github.com/example")
+    monkeypatch.setenv("GITHUB_HTTP_TIMEOUT_SECONDS", "invalid")
+    github_client._request("GET", "https://api.github.com/example")
+
+    assert captured == [4.0, 2.5, 4.0]
+
+
+def test_request_does_not_retry_timeouts(monkeypatch):
+    monkeypatch.setenv("GITHUB_TOKEN", "token-123")
+    calls = {"count": 0}
+    sleeps = []
+
+    def _fake_urlopen(_request_obj, timeout=None):
+        calls["count"] += 1
+        raise URLError(TimeoutError("timed out"))
+
+    monkeypatch.setattr(github_client.urllib_request, "urlopen", _fake_urlopen)
+    monkeypatch.setattr(github_client.time, "sleep", lambda seconds: sleeps.append(seconds))
+
+    with pytest.raises(URLError):
+        github_client._request("GET", "https://api.github.com/example")
+
+    assert calls["count"] == 1
+    assert sleeps == []
 
 
 def test_request_raises_runtime_when_retry_loop_is_bypassed(monkeypatch):
