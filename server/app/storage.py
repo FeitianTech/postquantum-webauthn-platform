@@ -175,8 +175,15 @@ def savekey(name: str, key: Any, *, session_id: Optional[str] = None) -> None:
         upload_bytes(blob_name, payload, content_type="application/octet-stream")
     else:
         path = _local_filename(name, resolved_session, create=True)
-        with open(path, "wb") as f:
-            f.write(payload)
+        # Write-then-rename so concurrent readers never see a truncated file.
+        tmp_path = f"{path}.tmp.{os.urandom(6).hex()}"
+        try:
+            with open(tmp_path, "wb") as f:
+                f.write(payload)
+            os.replace(tmp_path, path)
+        finally:
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
 
 
 def readkey(name: str, *, session_id: Optional[str] = None) -> List[Any]:

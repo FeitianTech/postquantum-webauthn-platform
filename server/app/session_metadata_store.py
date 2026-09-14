@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import os
 import shutil
+import threading
 import time
 from datetime import timedelta
 from typing import List, Optional
@@ -54,6 +55,7 @@ _LAST_ACCESS_BLOB = ".last-access"
 _LOCAL_INACTIVE_AGE = timedelta(days=14)
 _LOCAL_CLEANUP_INTERVAL = timedelta(hours=6)
 _local_last_cleanup: float = 0.0
+_local_cleanup_lock = threading.Lock()
 
 
 def _using_gcs() -> bool:
@@ -171,10 +173,11 @@ def _local_maybe_cleanup(now: Optional[float] = None) -> None:
     global _local_last_cleanup
 
     current_time = now or time.time()
-    if current_time - _local_last_cleanup < _LOCAL_CLEANUP_INTERVAL.total_seconds():
-        return
+    with _local_cleanup_lock:
+        if current_time - _local_last_cleanup < _LOCAL_CLEANUP_INTERVAL.total_seconds():
+            return
+        _local_last_cleanup = current_time
 
-    _local_last_cleanup = current_time
     cutoff = current_time - _LOCAL_INACTIVE_AGE.total_seconds()
 
     try:
