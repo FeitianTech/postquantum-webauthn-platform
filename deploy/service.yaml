@@ -1,0 +1,70 @@
+# Cloud Run service definition for pqcwebauthn (asia-northeast1).
+#
+# Apply with deploy/apply-service-config.sh, which substitutes the currently
+# deployed image for IMAGE_PLACEHOLDER. Pushes to main only update the image
+# (see cloudbuild.yaml), so settings in this file persist across deploys.
+#
+# Secrets are referenced from Secret Manager; never put secret values here.
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: pqcwebauthn
+  labels:
+    cloud.googleapis.com/location: asia-northeast1
+  annotations:
+    run.googleapis.com/ingress: all
+spec:
+  template:
+    metadata:
+      annotations:
+        # gen1 starts small containers faster; revisit with a tagged gen2 revision.
+        run.googleapis.com/execution-environment: gen1
+        run.googleapis.com/startup-cpu-boost: "true"
+        # Request-based billing: CPU is only allocated while serving requests.
+        run.googleapis.com/cpu-throttling: "true"
+        autoscaling.knative.dev/minScale: "0"
+        autoscaling.knative.dev/maxScale: "10"
+    spec:
+      serviceAccountName: pqcwebauthn-run@feitian-project.iam.gserviceaccount.com
+      # One instance serves a whole page load (HTML plus its static assets);
+      # matches GUNICORN_THREADS below.
+      containerConcurrency: 16
+      timeoutSeconds: 300
+      containers:
+        - image: IMAGE_PLACEHOLDER
+          ports:
+            - name: http1
+              containerPort: 8080
+          resources:
+            limits:
+              cpu: "2"
+              memory: 1Gi
+          startupProbe:
+            tcpSocket:
+              port: 8080
+            timeoutSeconds: 240
+            periodSeconds: 240
+            failureThreshold: 1
+          env:
+            - name: FIDO_SERVER_GCS_ENABLED
+              value: "true"
+            - name: FIDO_SERVER_GCS_BUCKET
+              value: pqcwebauthn
+            - name: FIDO_SERVER_GCS_PROJECT
+              value: feitian-project
+            - name: GUNICORN_THREADS
+              value: "16"
+            - name: FIDO_SERVER_BACKGROUND_WARMUP
+              value: "1"
+            - name: GITHUB_HTTP_TIMEOUT_SECONDS
+              value: "4"
+            - name: GITHUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: pqcwebauthn-github-token
+                  key: latest
+            - name: FIDO_SERVER_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: pqcwebauthn-session-key
+                  key: latest
