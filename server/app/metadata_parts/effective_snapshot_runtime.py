@@ -79,16 +79,29 @@ def _compose_effective_snapshot(
     compact_detail: bool = False,
 ) -> Dict[str, Any]:
     base_meta: Dict[str, Any] = {}
-    base_entries: List[Dict[str, Any]] = []
+    raw_base_entries: List[Mapping[str, Any]] = []
 
     if base_snapshot:
         if isinstance(base_snapshot.get("meta"), Mapping):
             base_meta = dict(base_snapshot["meta"])
         raw_entries = base_snapshot.get("entries")
         if isinstance(raw_entries, list):
-            base_entries = [dict(entry) for entry in raw_entries if isinstance(entry, Mapping)]
+            raw_base_entries = [entry for entry in raw_entries if isinstance(entry, Mapping)]
 
     session_items = list_session_metadata_items()
+
+    if not session_items:
+        # Sessions without uploads (nearly all of them) share the cached base
+        # entries; the result is only serialised, so copying 500+ entries per
+        # request is unnecessary.
+        meta = dict(base_meta)
+        meta["entryCount"] = len(raw_base_entries)
+        meta["baseEntryCount"] = len(raw_base_entries)
+        meta["customEntryCount"] = 0
+        meta["hasCustomEntries"] = False
+        return {"meta": meta, "entries": raw_base_entries}
+
+    base_entries = [dict(entry) for entry in raw_base_entries]
     custom_entries: List[Dict[str, Any]] = []
     seen_aaguids: Set[str] = set()
 

@@ -14,7 +14,7 @@ from typing import Any, Callable, Dict, Mapping, Optional, Set, Tuple
 from flask import after_this_request, g, has_request_context, request, session
 from fido2.mds3 import MetadataBlobPayload, MetadataBlobPayloadEntry, MdsAttestationVerifier
 from . import session_metadata_store
-from .config import (MDS_EXPLORER_PATH, MDS_METADATA_CACHE_PATH, MDS_METADATA_PATH,
+from .config import (MDS_EXPLORER_FULL_PATH, MDS_EXPLORER_PATH, MDS_METADATA_CACHE_PATH, MDS_METADATA_PATH,
                      MDS_METADATA_VERIFIED_PATH, MDS_METADATA_URL, app)
 from .env_flags import parse_env_flag
 from .github_client import git_blob_sha, github_list_directory, github_upload_file, is_logging_enabled
@@ -63,6 +63,11 @@ _SESSION_METADATA_SESSION_KEY = "fido.mds.session"
 _SESSION_METADATA_COOKIE_NAME = "fido.mds.session"
 _SESSION_METADATA_COOKIE_MAX_AGE = 60 * 60 * 24 * 365  # 1 year
 _SESSION_METADATA_INACTIVE_AGE = timedelta(days=14)
+# Page views refresh the session's last-access marker at most this often; the
+# marker only needs to be accurate relative to the 14-day inactivity cutoff.
+_SESSION_METADATA_TOUCH_KEY = "fido.mds.touched_at"
+_SESSION_METADATA_TOUCH_THROTTLE_ENV = "FIDO_SERVER_SESSION_TOUCH_THROTTLE_SECONDS"
+_SESSION_METADATA_TOUCH_THROTTLE_DEFAULT_SECONDS = 1800.0
 
 _SESSION_METADATA_CLEANUP_INTERVAL_SECONDS_ENV = (
     "FIDO_SERVER_SESSION_METADATA_CLEANUP_INTERVAL_SECONDS"
@@ -194,6 +199,7 @@ _install_runtime_bindings(
                 "_load_base_metadata",
                 "_load_verified_metadata_fallback",
                 "_load_verified_metadata_payload",
+                "_load_packaged_explorer_meta",
                 "_load_base_explorer_snapshot",
                 "_load_base_full_snapshot",
                 "load_packaged_explorer_summary",

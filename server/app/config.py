@@ -415,6 +415,10 @@ MDS_METADATA_VERIFIED_PATH = os.path.join(
 MDS_METADATA_CACHE_PATH = MDS_METADATA_VERIFIED_PATH + ".meta.json"
 MDS_EXPLORER_PATH = os.path.join(str(_FRONTEND_STATIC_ROOT), "fido-mds3.explorer.json")
 MDS_EXPLORER_META_PATH = MDS_EXPLORER_PATH + ".meta.json"
+# Explorer snapshot with inline details, served to browsers as a static file.
+MDS_EXPLORER_FULL_PATH = os.path.join(
+    str(_FRONTEND_STATIC_ROOT), "fido-mds3.explorer.full.json"
+)
 SESSION_METADATA_DIR = os.environ.get(
     "FIDO_SERVER_SESSION_METADATA_DIR",
     os.path.join(str(_SERVER_RUNTIME_ROOT), "session-metadata"),
