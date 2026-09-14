@@ -1,16 +1,12 @@
 """Utilities for interacting with Google Cloud Storage."""
 from __future__ import annotations
 
+import importlib
 import json
 import os
 import threading
 import time
-from typing import Callable, Iterable, Optional, TypeVar
-
-from google.api_core import exceptions as gcs_exceptions
-from google.auth import exceptions as auth_exceptions
-from google.cloud import storage
-from google.oauth2 import service_account
+from typing import Any, Callable, Iterable, Optional, Tuple, TypeVar
 
 from .env_flags import parse_env_flag
 
@@ -26,20 +22,62 @@ __all__ = [
     "upload_bytes",
 ]
 
-_CLIENT_LOCK = threading.Lock()
-_CLIENT: Optional[storage.Client] = None
-_BUCKET: Optional[storage.Bucket] = None
+# The Google client libraries take most of the application's import time, so
+# they are loaded on first use rather than when the server starts.
+_LAZY_MODULES = {
+    "gcs_exceptions": "google.api_core.exceptions",
+    "auth_exceptions": "google.auth.exceptions",
+    "storage": "google.cloud.storage",
+    "service_account": "google.oauth2.service_account",
+}
+_LAZY_IMPORT_LOCK = threading.Lock()
 
-_RETRYABLE_EXCEPTIONS = (
-    gcs_exceptions.GoogleAPICallError,
-    gcs_exceptions.RetryError,
-    auth_exceptions.RefreshError,
-    OSError,
-)
+_CLIENT_LOCK = threading.Lock()
+_CLIENT: Optional[Any] = None
+_BUCKET: Optional[Any] = None
+
+_RETRYABLE_EXCEPTIONS_CACHE: Optional[Tuple[type, ...]] = None
 _DEFAULT_RETRY_ATTEMPTS = 3
 _DEFAULT_RETRY_BASE_DELAY = 0.5
 
 _T = TypeVar("_T")
+
+
+def _lazy(name: str) -> Any:
+    module = globals().get(name)
+    if module is None:
+        with _LAZY_IMPORT_LOCK:
+            module = globals().get(name)
+            if module is None:
+                module = importlib.import_module(_LAZY_MODULES[name])
+                globals()[name] = module
+    return module
+
+
+def __getattr__(name: str) -> Any:
+    if name in _LAZY_MODULES:
+        return _lazy(name)
+    if name == "_RETRYABLE_EXCEPTIONS":
+        return _retryable_exceptions()
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
+def _retryable_exceptions() -> Tuple[type, ...]:
+    global _RETRYABLE_EXCEPTIONS_CACHE
+
+    if _RETRYABLE_EXCEPTIONS_CACHE is None:
+        gcs_exceptions = _lazy("gcs_exceptions")
+        _RETRYABLE_EXCEPTIONS_CACHE = (
+            gcs_exceptions.GoogleAPICallError,
+            gcs_exceptions.RetryError,
+            _lazy("auth_exceptions").RefreshError,
+            OSError,
+        )
+    return _RETRYABLE_EXCEPTIONS_CACHE
+
+
+def _not_found_error() -> type:
+    return _lazy("gcs_exceptions").NotFound
 
 
 def _env_flag(name: str) -> Optional[bool]:
@@ -58,13 +96,14 @@ def gcs_enabled() -> bool:
     return False
 
 
-def _build_client() -> storage.Client:
+def _build_client() -> Any:
+    storage = _lazy("storage")
     credentials_path = os.environ.get("FIDO_SERVER_GCS_CREDENTIALS_FILE")
     credentials_json = os.environ.get("FIDO_SERVER_GCS_CREDENTIALS_JSON")
     project_override = os.environ.get("FIDO_SERVER_GCS_PROJECT")
 
     if credentials_path:
-        credentials = service_account.Credentials.from_service_account_file(
+        credentials = _lazy("service_account").Credentials.from_service_account_file(
             credentials_path
         )
         project_id = project_override or credentials.project_id
@@ -72,7 +111,7 @@ def _build_client() -> storage.Client:
 
     if credentials_json:
         info = json.loads(credentials_json)
-        credentials = service_account.Credentials.from_service_account_info(info)
+        credentials = _lazy("service_account").Credentials.from_service_account_info(info)
         project_id = project_override or info.get("project_id")
         return storage.Client(project=project_id, credentials=credentials)
 
@@ -82,7 +121,7 @@ def _build_client() -> storage.Client:
     return storage.Client()
 
 
-def _ensure_bucket() -> storage.Bucket:
+def _ensure_bucket() -> Any:
     global _CLIENT, _BUCKET
 
     with _CLIENT_LOCK:
@@ -140,9 +179,9 @@ def _with_retry(
     for attempt in range(1, max_attempts + 1):
         try:
             return operation()
-        except gcs_exceptions.NotFound:
+        except _not_found_error():
             raise
-        except _RETRYABLE_EXCEPTIONS as exc:
+        except _retryable_exceptions() as exc:
             last_error = exc
             if attempt >= max_attempts:
                 break
@@ -194,7 +233,7 @@ def download_bytes(blob_name: str) -> Optional[bytes]:
     def _download() -> Optional[bytes]:
         try:
             return blob.download_as_bytes()
-        except gcs_exceptions.NotFound:
+        except _not_found_error():
             return None
 
     return _with_retry(_download)
@@ -207,7 +246,7 @@ def delete_blob(blob_name: str, *, missing_ok: bool = True) -> None:
     def _delete() -> None:
         try:
             blob.delete()
-        except gcs_exceptions.NotFound:
+        except _not_found_error():
             if not missing_ok:
                 raise
 
@@ -242,7 +281,7 @@ def blob_updated_timestamp(blob_name: str) -> Optional[float]:
     def _resolve_timestamp() -> Optional[float]:
         try:
             blob.reload()
-        except gcs_exceptions.NotFound:
+        except _not_found_error():
             return None
         if blob.updated is None:
             return None
