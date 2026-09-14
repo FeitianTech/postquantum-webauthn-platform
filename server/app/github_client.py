@@ -77,6 +77,20 @@ def _api_url(path: str) -> str:
     return f"{_API_BASE}/repos/{owner}/{name}/{path}"
 
 
+_DEFAULT_HTTP_TIMEOUT_SECONDS = 4.0
+
+
+def _http_timeout() -> float:
+    """Return the per-request GitHub timeout so a slow API cannot stall requests."""
+
+    raw = os.environ.get("GITHUB_HTTP_TIMEOUT_SECONDS")
+    try:
+        value = float(raw) if raw else _DEFAULT_HTTP_TIMEOUT_SECONDS
+    except ValueError:
+        return _DEFAULT_HTTP_TIMEOUT_SECONDS
+    return value if value > 0 else _DEFAULT_HTTP_TIMEOUT_SECONDS
+
+
 def _request(method: str, url: str, body: Optional[Dict[str, Any]] = None) -> Tuple[int, bytes]:
     data = None
     if body is not None:
@@ -89,17 +103,19 @@ def _request(method: str, url: str, body: Optional[Dict[str, Any]] = None) -> Tu
     if body is not None:
         req.add_header("Content-Type", "application/json")
 
+    timeout = _http_timeout()
     for attempt in range(2):
         try:
-            with urllib_request.urlopen(req) as resp:
+            with urllib_request.urlopen(req, timeout=timeout) as resp:
                 return resp.getcode(), resp.read()
         except urllib_error.HTTPError as exc:
             if 500 <= exc.code < 600 and attempt == 0:
                 time.sleep(1)
                 continue
             raise
-        except urllib_error.URLError:
-            if attempt == 0:
+        except urllib_error.URLError as exc:
+            # Retrying a timeout would double the worst-case request latency.
+            if attempt == 0 and not isinstance(exc.reason, TimeoutError):
                 time.sleep(1)
                 continue
             raise
