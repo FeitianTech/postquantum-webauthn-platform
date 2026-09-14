@@ -50,6 +50,12 @@ _base_explorer_snapshot_mtime: Optional[Tuple[Optional[float], Optional[float]]]
 _base_full_snapshot_cache: Optional[Dict[str, Any]] = None
 _base_full_snapshot_mtime: Optional[float] = None
 _session_metadata_entry_ids: Set[int] = set()
+# Locks live here because the metadata_parts runtime functions execute against
+# this module's globals.
+_base_metadata_lock = threading.RLock()
+_base_explorer_snapshot_lock = threading.RLock()
+_base_full_snapshot_lock = threading.RLock()
+_base_verifier_lock = threading.RLock()
 
 _SESSION_METADATA_SUFFIX = ".json"
 _SESSION_METADATA_INFO_SUFFIX = ".meta.json"
