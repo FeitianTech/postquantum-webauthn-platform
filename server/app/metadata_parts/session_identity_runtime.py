@@ -75,6 +75,9 @@ def _get_metadata_session_id(*, create: bool = False) -> Optional[str]:
 
     identifier = secrets.token_urlsafe(32)
     session[_SESSION_METADATA_SESSION_KEY] = identifier
+    # A brand-new session has nothing stored yet, so it does not need a
+    # last-access marker until it writes data (writes refresh it themselves).
+    g._mds_session_new = identifier
     _schedule_session_cookie(identifier)
     return identifier
 
@@ -115,6 +118,35 @@ def _note_session_activity(session_id: str, *, directory: Optional[str] = None) 
     normalised = _normalise_session_identifier(session_id)
     if not normalised:
         return
+
+    if has_request_context():
+        # Refreshing the marker is a storage write, so do it at most once per
+        # request and at most once per throttle window per session.
+        if getattr(g, "_mds_session_touched", None) == normalised:
+            return
+        g._mds_session_touched = normalised
+
+        now = time.time()
+        if getattr(g, "_mds_session_new", None) == normalised:
+            session[_SESSION_METADATA_TOUCH_KEY] = now
+            _schedule_inactive_session_cleanup()
+            return
+
+        raw_throttle = os.environ.get(_SESSION_METADATA_TOUCH_THROTTLE_ENV)
+        try:
+            throttle = (
+                float(raw_throttle)
+                if raw_throttle
+                else _SESSION_METADATA_TOUCH_THROTTLE_DEFAULT_SECONDS
+            )
+        except ValueError:
+            throttle = _SESSION_METADATA_TOUCH_THROTTLE_DEFAULT_SECONDS
+
+        last_touch = session.get(_SESSION_METADATA_TOUCH_KEY)
+        if isinstance(last_touch, (int, float)) and 0 <= now - last_touch < throttle:
+            _schedule_inactive_session_cleanup()
+            return
+        session[_SESSION_METADATA_TOUCH_KEY] = now
 
     _touch_session_last_access(normalised)
     _schedule_inactive_session_cleanup()
