@@ -52,18 +52,31 @@ def _merge_metadata(
 
 
 def metadata_entry_trust_anchor_status(entry: Any) -> Optional[bool]:
-    """Return whether *entry* originates from a trust-anchored metadata source."""
+    """Return whether *entry* originates from a trust-anchored metadata source.
+
+    Returns ``False`` for session-uploaded entries, the base trust flag for
+    entries from the packaged FIDO MDS snapshot, and ``None`` when the origin
+    cannot be established. Unknown entries are never reported as trusted.
+    """
 
     if entry is None or not isinstance(entry, MetadataBlobPayloadEntry):
         return None
 
     entry_id = id(entry)
+
+    # Session-uploaded entries are tracked per request (see get_mds_verifier) so
+    # that concurrent requests from other sessions cannot change the outcome.
+    request_session_ids = (
+        getattr(g, "_mds_session_entry_ids", None) if has_request_context() else None
+    )
+    if request_session_ids and entry_id in request_session_ids:
+        return False
     if entry_id in _session_metadata_entry_ids:
         return False
     if entry_id in _base_metadata_entry_ids:
         return _base_metadata_trust_verified
 
-    return _base_metadata_trust_verified
+    return None
 
 
 def get_mds_verifier() -> Optional[MdsAttestationVerifier]:
@@ -73,6 +86,17 @@ def get_mds_verifier() -> Optional[MdsAttestationVerifier]:
 
     base_metadata, base_mtime = _load_base_metadata()
     session_items = list_session_metadata_items()
+
+    if has_request_context():
+        # Holding the entry objects on ``g`` keeps their ids valid for the
+        # lifetime of the request.
+        session_entries = tuple(
+            entry
+            for entry in (getattr(item, "entry", None) for item in session_items)
+            if entry is not None
+        )
+        g._mds_session_entries = session_entries
+        g._mds_session_entry_ids = frozenset(id(entry) for entry in session_entries)
 
     if not session_items:
         if base_metadata is None:
@@ -87,10 +111,18 @@ def get_mds_verifier() -> Optional[MdsAttestationVerifier]:
         ):
             return _base_verifier_cache
 
-        verifier = MdsAttestationVerifier(base_metadata)
-        _base_verifier_cache = verifier
-        _base_verifier_mtime = base_mtime
-        return verifier
+        with _base_verifier_lock:
+            if (
+                _base_verifier_cache is not None
+                and _base_verifier_mtime is not None
+                and _base_verifier_mtime == base_mtime
+            ):
+                return _base_verifier_cache
+
+            verifier = MdsAttestationVerifier(base_metadata)
+            _base_verifier_cache = verifier
+            _base_verifier_mtime = base_mtime
+            return verifier
 
     if base_metadata is None and not session_items:
         return None

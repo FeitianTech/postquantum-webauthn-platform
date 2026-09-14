@@ -111,15 +111,12 @@ def save_session_metadata_item(
 
 
 def list_session_metadata_items(session_id: Optional[str] = None) -> List[SessionMetadataItem]:
-    global _session_metadata_entry_ids
     active_session = session_id or _get_metadata_session_id(create=False)
     if not active_session:
-        _session_metadata_entry_ids = set()
         return []
 
     directory = _session_metadata_directory(active_session, create=False, cleanup=False)
     if not directory:
-        _session_metadata_entry_ids = set()
         return []
 
     _note_session_activity(active_session, directory=directory)
@@ -184,7 +181,6 @@ def list_session_metadata_items(session_id: Optional[str] = None) -> List[Sessio
         )
 
     items.sort(key=lambda item: item.mtime or 0, reverse=True)
-    _session_metadata_entry_ids = {id(item.entry) for item in items}
     return items
 
 

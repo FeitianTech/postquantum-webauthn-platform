@@ -712,7 +712,7 @@ def test_lookup_compose_resolve_trust_and_verifier_edge_paths(metadata_module, m
     metadata_module._session_metadata_entry_ids = set()
     metadata_module._base_metadata_entry_ids = set()
     metadata_module._base_metadata_trust_verified = False
-    assert metadata_module.metadata_entry_trust_anchor_status(entry) is False
+    assert metadata_module.metadata_entry_trust_anchor_status(entry) is None
 
     monkeypatch.setattr(metadata_module, "_load_base_metadata", lambda: (None, 77.0), raising=False)
     monkeypatch.setattr(metadata_module, "list_session_metadata_items", lambda: [], raising=False)
