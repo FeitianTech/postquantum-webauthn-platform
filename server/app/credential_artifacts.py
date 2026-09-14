@@ -45,7 +45,14 @@ _ARTIFACT_SUBDIR = os.environ.get(
     "FIDO_SERVER_GCS_USER_ARTIFACT_SUBDIR",
     os.environ.get("FIDO_SERVER_GCS_CREDENTIAL_ARTIFACT_PREFIX", "credential-artifacts"),
 )
-_LOCK = threading.RLock()
+# Striped per-key locks: serialise read-merge-write for one artifact without
+# making every artifact operation in the process wait on network I/O.
+_LOCK_STRIPES = tuple(threading.RLock() for _ in range(64))
+
+
+def _lock_for(storage_id: str, session_id: str) -> threading.RLock:
+    digest = hashlib.sha256(f"{session_id}\0{storage_id}".encode("utf-8")).digest()
+    return _LOCK_STRIPES[digest[0] % len(_LOCK_STRIPES)]
 
 
 def _normalise_storage_id(storage_id: Any) -> Optional[str]:
@@ -187,7 +194,7 @@ def load_credential_artifact(
 
     resolved_session = _resolve_session_id(session_id)
 
-    with _LOCK:
+    with _lock_for(normalised, resolved_session):
         stored = _read_record(normalised, resolved_session)
 
     if not stored or not isinstance(stored, dict):
@@ -233,7 +240,7 @@ def store_credential_artifact(
 
     resolved_session = _resolve_session_id(session_id)
 
-    with _LOCK:
+    with _lock_for(normalised, resolved_session):
         existing = _read_record(normalised, resolved_session) if merge else None
         base_payload: Dict[str, Any]
         if merge and existing and isinstance(existing, dict):
@@ -271,7 +278,7 @@ def delete_credential_artifact(storage_id: Any, *, session_id: Optional[str] = N
 
     resolved_session = _resolve_session_id(session_id)
 
-    with _LOCK:
+    with _lock_for(normalised, resolved_session):
         return _delete_record(normalised, resolved_session)
 
 
@@ -294,7 +301,7 @@ def delete_credential_artifact_with_status(
 
     resolved_session = _resolve_session_id(session_id)
 
-    with _LOCK:
+    with _lock_for(normalised, resolved_session):
         if _using_gcs():
             blob_name = _artifact_blob(normalised, resolved_session)
             try:
