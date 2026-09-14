@@ -1,6 +1,7 @@
 /* Post-Quantum WebAuthn Platform — Refined Design System */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+/* Web fonts are linked from templates/index.html so they load in parallel
+   with the stylesheets instead of after this nested @import chain. */
 
 :root {
     /* Core palette */
