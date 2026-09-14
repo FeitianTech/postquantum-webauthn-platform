@@ -1,52 +1,43 @@
-# Google Cloud Deployment Configuration File
+# Mirrors the Cloud Build trigger "postquantum-webauthn-platform" (push to main),
+# which builds the image and rolls it out to Cloud Run.
+#
+# The deploy step only changes the image. Service settings (concurrency,
+# scaling, secrets, service account) live in deploy/service.yaml and are applied
+# with deploy/apply-service-config.sh.
 
 steps:
-  # Build Docker image with BuildKit
-  - name: 'gcr.io/cloud-builders/docker'
-    id: 'Build Docker Image'
-    env:
-      - 'DOCKER_BUILDKIT=1'          # Enable BuildKit
-      - 'BUILDKIT_PROGRESS=plain'    # Show detailed logs (optional)
+  - name: gcr.io/cloud-builders/docker
+    id: Build
     args:
-      [
-        'build',
-        '-t', 'gcr.io/$PROJECT_ID/pqc-webauthn',
-        '.'
-      ]
+      - build
+      - -t
+      - asia-northeast1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/postquantum-webauthn-platform/pqcwebauthn:$COMMIT_SHA
+      - .
 
-  # Push the image to Google Artifact Registry
-  - name: 'gcr.io/cloud-builders/docker'
-    id: 'Push Image'
+  - name: gcr.io/cloud-builders/docker
+    id: Push
     args:
-      [
-        'push',
-        'gcr.io/$PROJECT_ID/pqc-webauthn'
-      ]
+      - push
+      - asia-northeast1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/postquantum-webauthn-platform/pqcwebauthn:$COMMIT_SHA
 
-  # Deploy to Cloud Run
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    id: 'Deploy to Cloud Run'
-    entrypoint: 'bash'
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    id: Deploy
+    entrypoint: gcloud
     args:
-      - '-c'
-      - |
-        gcloud run deploy pqc-webauthn \
-          --image gcr.io/$PROJECT_ID/pqc-webauthn \
-          --region us-central1 \
-          --platform managed \
-          --cpu=2 \
-          --memory=512Mi \
-          --cpu-boost \
-          --port=8080 \
-          --allow-unauthenticated \
-          --min-instances=1 \
-          --max-instances=40 \
-          --update-env-vars=GITHUB_LOG_REPO_OWNER=rainzhang05,GITHUB_LOG_REPO_NAME=CredentialLogs,GITHUB_LOG_ASYNC=0,FIDO_SERVER_STARTUP_MODE=fast,FIDO_SERVER_SESSION_METADATA_CLEANUP_ASYNC=1,FIDO_SERVER_EAGER_INDEX_METADATA_BOOTSTRAP=0 \
-          --execution-environment=gen2 \
-          --project $PROJECT_ID
+      - run
+      - services
+      - update
+      - pqcwebauthn
+      - --platform=managed
+      - --image=asia-northeast1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/postquantum-webauthn-platform/pqcwebauthn:$COMMIT_SHA
+      - --labels=managed-by=gcp-cloud-build-deploy-cloud-run,commit-sha=$COMMIT_SHA,gcb-build-id=$BUILD_ID
+      - --region=asia-northeast1
+      - --quiet
 
 images:
-  - 'gcr.io/$PROJECT_ID/pqc-webauthn'
+  - asia-northeast1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/postquantum-webauthn-platform/pqcwebauthn:$COMMIT_SHA
 
-# Optional timeout
-timeout: '1500s'
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+timeout: 1500s
