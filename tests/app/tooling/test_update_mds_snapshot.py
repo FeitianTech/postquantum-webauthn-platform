@@ -38,13 +38,13 @@ def isolated_mds_paths(monkeypatch, tmp_path):
     )
     monkeypatch.setattr(
         updater,
-        "MDS_BOOTSTRAP_JS_PATH",
-        static_dir / "fido-mds3.explorer.bootstrap.js",
+        "MDS_EXPLORER_FULL_PATH",
+        static_dir / "fido-mds3.explorer.full.json",
     )
     monkeypatch.setattr(
         updater,
-        "MDS_BOOTSTRAP_META_PATH",
-        static_dir / "fido-mds3.explorer.bootstrap.meta.json",
+        "MDS_EXPLORER_FULL_META_PATH",
+        static_dir / "fido-mds3.explorer.full.json.meta.json",
     )
     return static_dir
 
@@ -208,15 +208,20 @@ def test_write_blob_write_if_changed_and_serialisers(isolated_mds_paths, tmp_pat
     serialised_json = updater._serialise_json({"b": 2, "a": 1})
     assert serialised_json == '{\n  "a": 1,\n  "b": 2\n}\n'
 
-    bootstrap_script = updater._serialise_bootstrap_script({"b": 2, "a": 1})
-    assert bootstrap_script.startswith("(function () {\n")
-    assert bootstrap_script.endswith("})();\n")
-    assignment_line = bootstrap_script.splitlines()[1]
-    prefix = "  window.__INITIAL_MDS_SNAPSHOT__ = "
-    assert assignment_line.startswith(prefix)
-    payload_json = assignment_line[len(prefix) : -1]
-    assert payload_json == '{"a":1,"b":2}'
-    assert json.loads(payload_json) == {"a": 1, "b": 2}
+    compact_json = updater._serialise_compact_json({"b": 2, "a": "é"})
+    assert compact_json == '{"a":"é","b":2}\n'
+
+    finalised = updater._finalise_base_full_snapshot(
+        {"entries": [{"name": "a"}, {"name": "b"}], "meta": {"no": 5}}
+    )
+    assert finalised["entries"] == [{"name": "a"}, {"name": "b"}]
+    assert finalised["meta"] == {
+        "no": 5,
+        "entryCount": 2,
+        "baseEntryCount": 2,
+        "customEntryCount": 0,
+        "hasCustomEntries": False,
+    }
 
 
 def test_load_existing_cache_handles_missing_invalid_and_non_dict(isolated_mds_paths):
@@ -359,7 +364,7 @@ def test_main_reports_refresh_then_up_to_date(monkeypatch, isolated_mds_paths, c
     monkeypatch.setattr(
         updater,
         "build_bootstrap_snapshot",
-        lambda _verified, _cache: {"entries": [{"name": "demo"}], "meta": {"kind": "bootstrap"}},
+        lambda _verified, _cache: {"entries": [{"name": "demo"}], "meta": {"kind": "full"}},
     )
 
     first = updater.main()
@@ -370,8 +375,18 @@ def test_main_reports_refresh_then_up_to_date(monkeypatch, isolated_mds_paths, c
     assert updater.MDS_METADATA_PATH.read_bytes() == b"same-blob"
     assert json.loads(updater.MDS_METADATA_VERIFIED_PATH.read_text(encoding="utf-8"))["no"] == 99
     assert json.loads(updater.MDS_EXPLORER_META_PATH.read_text(encoding="utf-8")) == {"kind": "explorer"}
-    assert json.loads(updater.MDS_BOOTSTRAP_META_PATH.read_text(encoding="utf-8")) == {"kind": "bootstrap"}
-    assert "window.__INITIAL_MDS_SNAPSHOT__" in updater.MDS_BOOTSTRAP_JS_PATH.read_text(encoding="utf-8")
+    expected_full_meta = {
+        "kind": "full",
+        "entryCount": 1,
+        "baseEntryCount": 1,
+        "customEntryCount": 0,
+        "hasCustomEntries": False,
+    }
+    assert json.loads(updater.MDS_EXPLORER_FULL_META_PATH.read_text(encoding="utf-8")) == expected_full_meta
+    assert json.loads(updater.MDS_EXPLORER_FULL_PATH.read_text(encoding="utf-8")) == {
+        "entries": [{"name": "demo"}],
+        "meta": expected_full_meta,
+    }
 
     second = updater.main()
     second_output = capsys.readouterr().out

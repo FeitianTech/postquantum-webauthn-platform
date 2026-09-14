@@ -233,6 +233,7 @@ def test_load_base_explorer_snapshot_prefers_packaged_explorer_when_newer(metada
 
 
 def test_load_packaged_explorer_summary_and_get_mds_verifier_cache_paths(metadata_module, monkeypatch):
+    monkeypatch.setattr(metadata_module, "_load_packaged_explorer_meta", lambda: None, raising=False)
     monkeypatch.setattr(metadata_module, "_load_base_explorer_snapshot", lambda: (None, None), raising=False)
     monkeypatch.setattr(
         metadata_module,
