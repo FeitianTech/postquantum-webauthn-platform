@@ -18,6 +18,11 @@ loglevel = os.environ.get("GUNICORN_LOG_LEVEL", "warning")
 
 
 def post_worker_init(worker):
-    from server.app.startup import start_background_warmup
+    # The image copies server/app to /app/server, so the module path differs
+    # between the container and a repository checkout.
+    try:
+        from server.startup import start_background_warmup
+    except ImportError:
+        from server.app.startup import start_background_warmup
 
     start_background_warmup()
