@@ -21,3 +21,29 @@ jobs:
 
       - name: Build Docker image
         run: docker build -t pqc-webauthn .
+
+      - name: Start container and check it serves requests
+        run: |
+          docker run -d --name pqc-webauthn -p 8080:8080 \
+            -e PORT=8080 \
+            -e FIDO_SERVER_GCS_ENABLED=0 \
+            -e FIDO_SERVER_SECRET_KEY=ci-only-secret \
+            pqc-webauthn
+          start=$(date +%s)
+          until curl -fsS http://localhost:8080/healthz > /dev/null; do
+            if [ $(( $(date +%s) - start )) -gt 20 ]; then
+              echo "Container did not become ready within 20 seconds."
+              docker logs pqc-webauthn
+              exit 1
+            fi
+            sleep 0.2
+          done
+          echo "Ready after $(( $(date +%s) - start ))s"
+          curl -fsS -o /dev/null -w 'GET / status=%{http_code} ttfb=%{time_starttransfer}s\n' http://localhost:8080/
+          main_js=$(curl -fsS http://localhost:8080/ | grep -o '/assets/[^"]*/scripts/main.js' | head -1)
+          curl -fsS -D - -o /dev/null -H 'Accept-Encoding: gzip' "http://localhost:8080${main_js}" \
+            | grep -i -E '^(cache-control: public, max-age=31536000, immutable|content-encoding: gzip)'
+
+      - name: Show container logs
+        if: always()
+        run: docker logs pqc-webauthn || true
