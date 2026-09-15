@@ -77,11 +77,11 @@ def test_touch_outside_request_context_is_unthrottled(touch_env):
     assert calls == ["session-a", "session-a"]
 
 
-def test_healthz_sets_no_session_cookie():
+def test_health_endpoint_sets_no_session_cookie():
     config = pytest.importorskip("server.app.config")
     pytest.importorskip("server.app.app")
 
-    response = config.app.test_client().get("/healthz")
+    response = config.app.test_client().get("/health")
 
     assert response.status_code == 200
     assert response.get_data(as_text=True) == "ok"

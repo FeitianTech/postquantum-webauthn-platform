@@ -132,9 +132,12 @@ def ensure_metadata_bootstrapped(skip_if_reloader_parent: bool = True) -> None:
     _mark_bootstrap_completed_for_today()
 
 
-@app.route("/healthz")
-def healthz():
-    """Cheap liveness endpoint that touches no session or storage state."""
+@app.route("/health")
+def health():
+    """Cheap liveness endpoint that touches no session or storage state.
+
+    Not ``/healthz``: Cloud Run reserves URL paths ending in ``z``.
+    """
 
     response = app.response_class("ok", mimetype="text/plain")
     response.headers["Cache-Control"] = "no-store"

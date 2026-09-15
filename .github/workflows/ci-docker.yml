@@ -30,7 +30,7 @@ jobs:
             -e FIDO_SERVER_SECRET_KEY=ci-only-secret \
             pqc-webauthn
           start=$(date +%s)
-          until curl -fsS http://localhost:8080/healthz > /dev/null; do
+          until curl -fsS http://localhost:8080/health > /dev/null; do
             if [ $(( $(date +%s) - start )) -gt 20 ]; then
               echo "Container did not become ready within 20 seconds."
               docker logs pqc-webauthn
