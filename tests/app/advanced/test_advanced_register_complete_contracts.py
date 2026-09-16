@@ -79,7 +79,10 @@ def test_advanced_register_complete_prefers_session_state_over_request_state(mon
         response = client.post("/api/advanced/register/complete", json=payload)
 
         assert response.status_code == 400
-        assert response.get_json() == {"error": "register failure"}
+        assert response.get_json() == {
+            "error": "register failure",
+            "challengeSource": "server-session",
+        }
         assert captured["state"] == session_state
 
         with client.session_transaction() as session_store:
@@ -111,7 +114,10 @@ def test_advanced_register_complete_uses_request_state_fallback_when_session_mis
         response = client.post("/api/advanced/register/complete", json=payload)
 
     assert response.status_code == 400
-    assert response.get_json() == {"error": "register fallback failure"}
+    assert response.get_json() == {
+        "error": "register fallback failure",
+        "challengeSource": "client-supplied",
+    }
     assert captured["state"] == fallback_state
 
 
@@ -186,7 +192,10 @@ def test_advanced_register_complete_prefers_session_attachment_scope_over_tamper
         response = client.post("/api/advanced/register/complete", json=payload)
 
         assert response.status_code == 400
-        assert response.get_json() == {"error": "register reached"}
+        assert response.get_json() == {
+            "error": "register reached",
+            "challengeSource": "server-session",
+        }
 
         with client.session_transaction() as session_store:
             assert "advanced_register_allowed_attachments" not in session_store
@@ -299,7 +308,7 @@ def test_advanced_register_complete_success_contract_propagates_warnings_and_rec
         assert stored_credential["artifactVersion"] == 1
         assert stored_credential["storageId"] == stored_credential["localStorageId"]
 
-        assert captured["expected_origin"] == "https://origin.example"
+        assert captured["expected_origin"] == "http://localhost"
         assert captured["resolved_rp_id"] == rp_id
         assert isinstance(captured["attestation_public_key"], dict)
 

@@ -296,6 +296,9 @@ def test_advanced_register_complete_returns_400_when_add_public_key_material_rai
             assert "advanced_register_allowed_attachments" not in session_state
 
     assert response.status_code == 400
-    assert response.get_json() == {"error": "public key material unavailable"}
+    assert response.get_json() == {
+        "error": "public key material unavailable",
+        "challengeSource": "server-session",
+    }
     assert artifact_store_calls == []
     assert registration_events == []
