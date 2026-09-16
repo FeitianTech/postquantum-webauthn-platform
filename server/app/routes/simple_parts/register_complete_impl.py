@@ -40,16 +40,17 @@ def register_complete_impl(simple_module: Any):
 
     min_pin_length_value = simple_module.extract_min_pin_length(client_extension_results)
 
+    # A client-supplied ``__session_state`` is stripped and ignored: accepting
+    # it would let the caller choose the challenge it is verified against.
     if isinstance(response, dict):
-        state_from_request = response.pop("__session_state", None)
-    else:
-        state_from_request = None
+        response.pop("__session_state", None)
 
     rp_id = simple_module.session.get("register_rp_id")
     state = simple_module.session.get("state")
-    if state is None and isinstance(state_from_request, Mapping):
-        state = state_from_request
     if state is None:
+        # Drop any stale ceremony leftovers so the next attempt starts clean.
+        simple_module.session.pop("register_rp_id", None)
+        simple_module.session.pop("simple_register_public_key", None)
         return (
             simple_module.jsonify(
                 {
@@ -79,7 +80,28 @@ def register_complete_impl(simple_module: Any):
     raw_attestation_object_b64 = credential_response.get("attestationObject")
     raw_attestation_object = raw_attestation_object_b64
 
-    expected_origin = simple_module.request.headers.get("Origin") or simple_module.request.host_url.rstrip("/")
+    # The origin the ceremony claims, read from clientDataJSON -- NOT from the
+    # request's own Origin header, which the caller also controls.
+    ceremony_origin = simple_module.extract_client_data_origin(credential_response)
+    if not simple_module.is_origin_allowed(ceremony_origin):
+        simple_module.session.pop("register_rp_id", None)
+        return (
+            simple_module.jsonify(
+                {
+                    "error": (
+                        "Ceremony origin is not permitted by the configured "
+                        "FIDO_SERVER_ALLOWED_ORIGINS allowlist."
+                    )
+                }
+            ),
+            400,
+        )
+
+    # determine_expected_origin only echoes a candidate that is itself
+    # allowlisted, so this can never become a self-referential comparison.
+    expected_origin = simple_module.determine_expected_origin(ceremony_origin) or (
+        simple_module.request.host_url.rstrip("/")
+    )
 
     attestation_checks = simple_module.perform_attestation_checks(
         response if isinstance(response, Mapping) else {},
@@ -114,6 +136,22 @@ def register_complete_impl(simple_module: Any):
         "attestation_aaguid_match": attestation_checks.get("aaguid_match"),
         "attestation_checks_safe": simple_module.make_json_safe(attestation_checks),
     }
+
+    attestation_errors = attestation_checks.get("errors")
+    if isinstance(attestation_errors, list) and attestation_errors:
+        simple_module.session.pop("register_rp_id", None)
+        return (
+            simple_module.jsonify(
+                {
+                    "error": "Registration verification failed.",
+                    "verified": False,
+                    "attestationErrors": [
+                        str(message) for message in attestation_errors
+                    ],
+                }
+            ),
+            400,
+        )
 
     initialize_registration_context_impl(simple_module, ctx)
     populate_authenticator_data_context_impl(simple_module, ctx)
