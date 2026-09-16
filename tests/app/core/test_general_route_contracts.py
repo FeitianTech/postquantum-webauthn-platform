@@ -1,4 +1,5 @@
 import base64
+import json
 import pickle
 from types import SimpleNamespace
 
@@ -51,10 +52,14 @@ def test_deletepub_and_downloadcred_contracts(monkeypatch):
 
         download_ok = client.get("/api/downloadcred?email=user@example.com")
         assert download_ok.status_code == 200
-        assert download_ok.mimetype == "application/octet-stream"
+        assert download_ok.mimetype == "application/json"
         assert "attachment;" in download_ok.headers.get("Content-Disposition", "")
-        assert "user@example.com_credential_data.pkl" in download_ok.headers.get("Content-Disposition", "")
-        assert pickle.loads(download_ok.data) == stored_credentials
+        assert "user@example.com_credential_data.json" in download_ok.headers.get("Content-Disposition", "")
+        envelope = json.loads(download_ok.data)
+        assert envelope["version"] == 1 and envelope["encoding"] == "base64url"
+        assert envelope["credentials"] == stored_credentials
+        with pytest.raises(pickle.UnpicklingError):
+            pickle.loads(download_ok.data)
 
 
 def test_decode_and_certificate_routes_cover_error_and_success_paths(monkeypatch):

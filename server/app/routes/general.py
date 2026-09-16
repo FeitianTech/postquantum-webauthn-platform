@@ -6,7 +6,6 @@ import binascii
 import io
 import json
 import os
-import pickle
 from datetime import datetime, timezone
 from threading import Lock
 from typing import Any, Dict, Mapping, Optional
@@ -34,7 +33,7 @@ from ..metadata import (
     _load_base_metadata,
 )
 from ..startup import startup_fail_fast_enabled, warm_up_dependencies
-from ..storage import delkey, readkey
+from ..storage import delkey, encode_records, readkey
 
 
 _metadata_bootstrap_lock = Lock()
@@ -490,13 +489,13 @@ def downloadcred():
     if not credentials:
         abort(404)
 
-    filename = f"{name}_credential_data.pkl"
-    payload = pickle.dumps(credentials)
+    filename = f"{name}_credential_data.json"
+    payload = encode_records(credentials)
     buffer = io.BytesIO(payload)
     buffer.seek(0)
     return send_file(
         buffer,
         as_attachment=True,
         download_name=filename,
-        mimetype="application/octet-stream",
+        mimetype="application/json",
     )
