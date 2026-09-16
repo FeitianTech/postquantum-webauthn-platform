@@ -131,7 +131,7 @@ export async function applyMetadataEntriesLazyInState(metadata, options = {}, de
 
     const statusMessage = statusParts.join(' ');
     setStatus(statusMessage, 'info');
-    setDefaultStatus({ html: statusMessage, variant: 'info', title: '' });
+    setDefaultStatus({ text: statusMessage, variant: 'info', title: '' });
 
     if (metadata?.legalHeader) {
         setStatusTitle(metadata.legalHeader);

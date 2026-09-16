@@ -6,6 +6,7 @@ import {
     describeCoseAlgorithm,
     describeCoseKeyType,
     describeMldsaParameterSet,
+    escapeHtml,
 } from '../../ui/display-utils.js';
 import {
     getCoseMapValue,
@@ -23,14 +24,14 @@ function buildEncodedIdentifierSection({
 
     return `
         <div style="margin-top: 0.5rem;">
-            <div><strong>${title}</strong></div>
+            <div><strong>${escapeHtml(title)}</strong></div>
             <div style="font-family: 'Courier New', monospace; font-size: 0.9rem; margin-left: 1rem; word-break: break-word; overflow-wrap: anywhere;">
                 <div><strong>b64</strong></div>
-                <div class="credential-code-block">${base64Value}</div>
+                <div class="credential-code-block">${escapeHtml(base64Value)}</div>
                 <div><strong>b64u</strong></div>
-                <div class="credential-code-block">${encodedValue}</div>
+                <div class="credential-code-block">${escapeHtml(encodedValue)}</div>
                 <div><strong>hex</strong></div>
-                <div class="credential-code-block">${hexValue}</div>
+                <div class="credential-code-block">${escapeHtml(hexValue)}</div>
             </div>
         </div>`;
 }
@@ -40,8 +41,8 @@ export function buildUserInfoSection(cred, aaguidSectionHtml) {
     <div style="margin-bottom: 1.5rem;">
         <h4 style="color: #0072CE; margin-bottom: 0.5rem;">User info at creation</h4>
         <div style="font-size: 0.9rem; line-height: 1.4;">
-            <div><strong>Name:</strong> ${cred.userName || cred.email || 'N/A'}</div>
-            <div style="margin-bottom: 0.5rem;"><strong>Display name:</strong> ${cred.displayName || cred.userName || cred.email || 'N/A'}</div>
+            <div><strong>Name:</strong> ${escapeHtml(cred.userName || cred.email || 'N/A')}</div>
+            <div style="margin-bottom: 0.5rem;"><strong>Display name:</strong> ${escapeHtml(cred.displayName || cred.userName || cred.email || 'N/A')}</div>
         </div>`;
 
     if (cred.userHandle) {
@@ -68,7 +69,7 @@ export function buildAttestationFormatSection(attestationFormatDisplay) {
     return `
     <div style="margin-bottom: 1.5rem;">
         <h4 style="color: #0072CE; margin-bottom: 0.5rem;">Attestation Format</h4>
-        <div style="font-size: 0.9rem;">${attestationFormatDisplay}</div>
+        <div style="font-size: 0.9rem;">${escapeHtml(attestationFormatDisplay)}</div>
     </div>`;
 }
 
@@ -81,8 +82,8 @@ export function buildAuthenticatorDataSection(cred) {
         <div style="margin-bottom: 1.5rem;">
             <h4 style="color: #0072CE; margin-bottom: 0.5rem;">Authenticator Data (registration)</h4>
             <div style="font-size: 0.9rem; line-height: 1.4;">
-                <div><strong>AT:</strong> ${cred.flags.at}, <strong>BE:</strong> ${cred.flags.be}, <strong>BS:</strong> ${cred.flags.bs}, <strong>ED:</strong> ${cred.flags.ed}, <strong>UP:</strong> ${cred.flags.up}, <strong>UV:</strong> ${cred.flags.uv}</div>
-                <div><strong>Signature Counter:</strong> ${cred.signCount || 0}</div>
+                <div><strong>AT:</strong> ${escapeHtml(String(cred.flags.at))}, <strong>BE:</strong> ${escapeHtml(String(cred.flags.be))}, <strong>BS:</strong> ${escapeHtml(String(cred.flags.bs))}, <strong>ED:</strong> ${escapeHtml(String(cred.flags.ed))}, <strong>UP:</strong> ${escapeHtml(String(cred.flags.up))}, <strong>UV:</strong> ${escapeHtml(String(cred.flags.uv))}</div>
+                <div><strong>Signature Counter:</strong> ${escapeHtml(cred.signCount || 0)}</div>
             </div>
         </div>`;
 }
@@ -95,7 +96,7 @@ export function buildExtensionsSection(cred) {
     return `
         <div style="margin-bottom: 1.5rem;">
             <h4 style="color: #0072CE; margin-bottom: 0.5rem;">Client extension outputs (registration)</h4>
-            <div class="credential-code-block" style="font-size: 0.9rem; border-radius: 16px;">${JSON.stringify(cred.clientExtensionOutputs, null, 2)}</div>
+            <div class="credential-code-block" style="font-size: 0.9rem; border-radius: 16px;">${escapeHtml(JSON.stringify(cred.clientExtensionOutputs, null, 2))}</div>
         </div>`;
 }
 
@@ -118,19 +119,19 @@ export function buildPublicKeySection(cred) {
     const coseKeyTypeValue = cred.publicKeyType ?? getCoseMapValue(coseMap, 1);
 
     const coseKeyTypeLine = coseKeyTypeValue !== undefined && coseKeyTypeValue !== null
-        ? `<div><strong>COSE key type:</strong> ${describeCoseKeyType(coseKeyTypeValue)}</div>`
+        ? `<div><strong>COSE key type:</strong> ${escapeHtml(describeCoseKeyType(coseKeyTypeValue))}</div>`
         : '';
 
     const parameterSet = describeMldsaParameterSet(fallbackAlgorithm);
     const parameterSetLine = parameterSet
-        ? `<div><strong>ML-DSA parameter set:</strong> ${parameterSet}</div>`
+        ? `<div><strong>ML-DSA parameter set:</strong> ${escapeHtml(parameterSet)}</div>`
         : '';
 
     return `
         <div style="margin-bottom: 1.5rem;">
             <h4 style="color: #0072CE; margin-bottom: 0.5rem;">Public Key</h4>
             <div style="font-size: 0.9rem;">
-                <div><strong>Algorithm:</strong> ${algorithmName}</div>
+                <div><strong>Algorithm:</strong> ${escapeHtml(algorithmName)}</div>
                 ${coseKeyTypeLine}
                 ${parameterSetLine}
             </div>
