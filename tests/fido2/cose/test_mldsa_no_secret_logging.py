@@ -9,11 +9,11 @@ the same two values at ``INFO``.
 from __future__ import annotations
 
 import logging
-from types import SimpleNamespace
 
 import pytest
 
 from fido2 import cose
+from tests.pqc import mldsa_helpers
 
 
 _SECRET_MARKERS = (
@@ -25,39 +25,21 @@ _SECRET_MARKERS = (
 )
 
 
-class _Verifier:
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc, tb):
-        return False
-
-    def verify(self, _message, _signature, _public_key):
-        return True
-
-
-@pytest.fixture
-def stub_oqs(monkeypatch):
-    fake_oqs = SimpleNamespace(Signature=lambda _mechanism: _Verifier())
-    monkeypatch.setattr(cose, "_require_oqs", lambda: fake_oqs, raising=False)
-    monkeypatch.setattr(
-        cose,
-        "_coerce_mldsa_public_key_bytes",
-        lambda _value, _ps: b"\xab\xcd public key bytes",
-        raising=False,
-    )
-    return fake_oqs
-
-
 @pytest.mark.parametrize("cls", [cose.MLDSA87, cose.MLDSA65, cose.MLDSA44])
-def test_mldsa_verify_writes_nothing_to_stdout(cls, stub_oqs, capsys, caplog):
+def test_mldsa_verify_writes_nothing_to_stdout(cls, capsys, caplog):
     authenticator_data = b"\x01\x02authenticator data"
     client_data_json = b'{"challenge":"S3CR3T-CHALLENGE","type":"webauthn.get"}'
-    signature = b"\xde\xad\xbe\xef signature"
+    parameter_set = {
+        cose.MLDSA44: "ML-DSA-44",
+        cose.MLDSA65: "ML-DSA-65",
+        cose.MLDSA87: "ML-DSA-87",
+    }[cls]
+    message = authenticator_data + client_data_json
+    signature = mldsa_helpers.sign(parameter_set, message)
 
-    key = cls({1: 7, 3: cls.ALGORITHM, -1: b"pk"})
+    key = mldsa_helpers.cose_key(parameter_set)
     with caplog.at_level(logging.DEBUG):
-        key.verify(authenticator_data + client_data_json, signature)
+        key.verify(message, signature)
 
     captured = capsys.readouterr()
     assert captured.out == ""

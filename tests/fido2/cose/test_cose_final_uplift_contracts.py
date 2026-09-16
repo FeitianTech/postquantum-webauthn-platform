@@ -5,6 +5,7 @@ from types import SimpleNamespace
 import pytest
 
 from fido2 import cose
+from tests.pqc import mldsa_helpers
 
 
 def _der_sequence(content: bytes) -> bytes:
@@ -327,20 +328,11 @@ def test_cosekey_iter_subclasses_duplicate_path_and_no_debug_dump(capsys):
         (cose.MLDSA44, "ML-DSA-44"),
     ],
 )
-def test_mldsa_verify_success_paths(monkeypatch, cls, name):
-    class _Verifier:
-        def __enter__(self):
-            return self
+def test_mldsa_verify_success_paths(cls, name):
+    key = mldsa_helpers.cose_key(name)
+    assert isinstance(key, cls)
+    key.verify(b"message", mldsa_helpers.sign(name, b"message"))
 
-        def __exit__(self, exc_type, exc, tb):
-            return False
-
-        def verify(self, _message, _signature, _public_key):
-            return True
-
-    fake_oqs = SimpleNamespace(Signature=lambda mechanism: _Verifier())
-    monkeypatch.setattr(cose, "_require_oqs", lambda: fake_oqs, raising=False)
-    monkeypatch.setattr(cose, "_coerce_mldsa_public_key_bytes", lambda _value, _ps: b"public", raising=False)
-
-    key = cls({1: 7, 3: cls.ALGORITHM, -1: b"pk"})
-    key.verify(b"message", b"signature")
+    # The same key accepts a SubjectPublicKeyInfo encoding of itself.
+    spki_key = cls({1: 7, 3: cls.ALGORITHM, -1: mldsa_helpers.spki_der(name)})
+    spki_key.verify(b"message", mldsa_helpers.sign(name, b"message"))
