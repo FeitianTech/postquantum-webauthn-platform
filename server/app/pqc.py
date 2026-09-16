@@ -53,7 +53,7 @@ def detect_available_pqc_algorithms() -> Tuple[Set[int], Optional[str]]:
             "Install the python-fido2-webauthn-test[pqc] extra and ensure liboqs is present."
         )
     except Exception as exc:  # pragma: no cover - defensive logging path
-        app.logger.exception("Failed to enumerate oqs signature mechanisms: %%s", exc)
+        app.logger.exception("Failed to enumerate oqs signature mechanisms: %s", exc)
         return set(), "Unable to enumerate post-quantum algorithms from the oqs bindings."
 
     available_ids = {
