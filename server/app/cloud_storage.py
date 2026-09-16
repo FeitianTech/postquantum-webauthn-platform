@@ -19,6 +19,7 @@ __all__ = [
     "ensure_ready",
     "gcs_enabled",
     "list_blob_names",
+    "normalise_blob_prefix",
     "upload_bytes",
 ]
 
@@ -194,7 +195,9 @@ def _with_retry(
     raise RuntimeError("Retryable operation failed without raising an error")
 
 
-def _normalise_prefix(prefix: Optional[str]) -> str:
+def normalise_blob_prefix(prefix: Optional[str]) -> str:
+    """Return ``prefix`` as an empty string or a single trailing-slash prefix."""
+
     if not prefix:
         return ""
     cleaned = prefix.strip().strip("/")
@@ -203,8 +206,12 @@ def _normalise_prefix(prefix: Optional[str]) -> str:
     return cleaned + "/"
 
 
+# Historic private alias; kept so existing callers/tests keep working.
+_normalise_prefix = normalise_blob_prefix
+
+
 def build_blob_name(*components: str, prefix: Optional[str] = None) -> str:
-    base = _normalise_prefix(prefix)
+    base = normalise_blob_prefix(prefix)
     safe_components = []
     for component in components:
         if not component:
