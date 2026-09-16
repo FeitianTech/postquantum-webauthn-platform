@@ -19,8 +19,10 @@ from .cloud_storage import (
 )
 from .config import _SERVER_RUNTIME_ROOT
 from .storage_common import (
+    assert_contained_blob_name,
     build_session_root_prefix,
     build_session_scoped_prefix,
+    resolve_contained_path,
     resolve_metadata_session_id,
     using_gcs_backend,
 )
@@ -67,8 +69,9 @@ def _normalise_storage_id(storage_id: Any) -> Optional[str]:
 
 
 def _artifact_path(storage_id: str) -> str:
-    filename = _artifact_filename(storage_id)
-    return os.path.join(_ARTIFACT_DIR, filename)
+    # ``_artifact_filename`` is a SHA-256 digest, so it cannot traverse today.
+    # The containment check keeps that true if the naming scheme ever changes.
+    return resolve_contained_path(_ARTIFACT_DIR, _artifact_filename(storage_id))
 
 
 def _artifact_filename(storage_id: str) -> str:
@@ -98,7 +101,7 @@ def _artifact_prefix(session_id: str) -> str:
 def _artifact_blob(storage_id: str, session_id: str) -> str:
     filename = _artifact_filename(storage_id)
     prefix = _artifact_prefix(session_id)
-    return build_blob_name(filename, prefix=prefix)
+    return assert_contained_blob_name(build_blob_name(filename, prefix=prefix), prefix=prefix)
 
 
 def _using_gcs() -> bool:
