@@ -288,7 +288,7 @@ def test_coerce_mldsa_public_key_bytes_spki_and_public_bytes_attempt_branches(mo
         cose._coerce_mldsa_public_key_bytes(_PublicKeyEmpty())
 
 
-def test_cosekey_iter_subclasses_duplicate_path_and_debug_with_context(capsys):
+def test_cosekey_iter_subclasses_duplicate_path_and_no_debug_dump(capsys):
     class _A(cose.CoseKey):
         ALGORITHM = 90001
 
@@ -304,13 +304,19 @@ def test_cosekey_iter_subclasses_duplicate_path_and_debug_with_context(capsys):
     iterated = list(cose.CoseKey._iter_subclasses())
     assert _D in iterated
 
+    # The assertion-context capture and the signature debug dump are gone: they
+    # printed authenticatorData, clientDataJSON (which carries the ceremony
+    # challenge), the signature and the public key to stdout on every ML-DSA
+    # verification, unconditionally.
     key = cose.CoseKey({})
-    key.set_assertion_debug_data(b"auth", b"client")
-    key._log_signature_debug("ALG", b"message", b"signature", b"public")
-    output = capsys.readouterr().out
-    assert "Authenticator Data (hex):" in output
-    assert "61757468" in output
-    assert "Client Data JSON (hex):" in output
+    for removed in (
+        "set_assertion_debug_data",
+        "_consume_assertion_debug_data",
+        "_log_signature_debug",
+        "_assertion_debug_context",
+    ):
+        assert not hasattr(key, removed), f"{removed} should have been removed"
+    assert capsys.readouterr().out == ""
 
 
 @pytest.mark.parametrize(

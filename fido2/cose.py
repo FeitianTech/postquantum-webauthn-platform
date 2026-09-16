@@ -27,7 +27,6 @@
 
 from __future__ import annotations
 
-import binascii
 from typing import Sequence, Type, Mapping, Any, TypeVar, Optional, Iterable, Dict
 
 from cryptography.hazmat.backends import default_backend
@@ -659,7 +658,6 @@ def extract_certificate_public_key_info(cert_der: bytes) -> Dict[str, Any]:
     }
 
     parameter_set = _ML_DSA_OID_TO_PARAMETER_SET.get(algorithm_oid)
-    {}
     if parameter_set is not None:
         subject_public_key, wrapped_subject_public_key = _unwrap_mldsa_subject_public_key(
             subject_public_key, parameter_set
@@ -733,8 +731,6 @@ class CoseKey(dict):
 
     ALGORITHM: int = None  # type: ignore
 
-    _assertion_debug_context: Optional[Dict[str, bytes]] = None
-
     def verify(self, message: bytes, signature: bytes) -> None:
         """Validates a digital signature over a given message.
 
@@ -742,47 +738,6 @@ class CoseKey(dict):
         :param signature: The signature to check.
         """
         raise NotImplementedError("Signature verification not supported.")
-
-    def set_assertion_debug_data(
-        self, authenticator_data: bytes, client_data_json: bytes
-    ) -> None:
-        """Store assertion context for later debug logging."""
-
-        self._assertion_debug_context = {
-            "authenticator_data": bytes(authenticator_data),
-            "client_data_json": bytes(client_data_json),
-        }
-
-    def _consume_assertion_debug_data(self) -> Optional[Dict[str, bytes]]:
-        context = self._assertion_debug_context
-        self._assertion_debug_context = None
-        return context
-
-    def _log_signature_debug(
-        self,
-        algorithm_label: str,
-        message_bytes: bytes,
-        signature_bytes: bytes,
-        public_key_bytes: bytes,
-    ) -> None:
-        context = self._consume_assertion_debug_data()
-        print(f"=== {algorithm_label} Verification Debug ===")
-        if context is not None:
-            print(
-                "Authenticator Data (hex):",
-                binascii.hexlify(context["authenticator_data"]).decode(),
-            )
-            print(
-                "Client Data JSON (hex):",
-                binascii.hexlify(context["client_data_json"]).decode(),
-            )
-        else:
-            print("Authenticator Data (hex): <not available>")
-            print("Client Data JSON (hex): <not available>")
-        print("Message (hex):", binascii.hexlify(bytes(message_bytes)).decode())
-        print("Signature (hex):", binascii.hexlify(bytes(signature_bytes)).decode())
-        print("Public Key (hex):", binascii.hexlify(bytes(public_key_bytes)).decode())
-        print("===================================")
 
     @classmethod
     def from_cryptography_key(
@@ -879,7 +834,8 @@ class UnsupportedKey(CoseKey):
 
 class MLDSA87(CoseKey):
     ALGORITHM = -50
-    _HASH_ALG = hashes.SHA256()
+    # NB: no ``_HASH_ALG`` -- ML-DSA signs the message directly (pure mode), so
+    # there is no prehash to name here.
 
     def verify(self, message, signature):
         if self[1] != 7:
@@ -900,9 +856,6 @@ class MLDSA87(CoseKey):
             else bytes(signature)
         )
         public_key_bytes = _coerce_mldsa_public_key_bytes(public_key, parameter_set)
-        self._log_signature_debug(
-            parameter_set, message_bytes, signature_bytes, public_key_bytes
-        )
         with oqs_module.Signature("ML-DSA-87") as verifier:
             if not verifier.verify(
                 bytes(message_bytes), bytes(signature_bytes), bytes(public_key_bytes)
@@ -922,7 +875,8 @@ class MLDSA87(CoseKey):
 
 class MLDSA65(CoseKey):
     ALGORITHM = -49
-    _HASH_ALG = hashes.SHA256()
+    # NB: no ``_HASH_ALG`` -- ML-DSA signs the message directly (pure mode), so
+    # there is no prehash to name here.
 
     def verify(self, message, signature):
         if self[1] != 7:
@@ -943,9 +897,6 @@ class MLDSA65(CoseKey):
             else bytes(signature)
         )
         public_key_bytes = _coerce_mldsa_public_key_bytes(public_key, parameter_set)
-        self._log_signature_debug(
-            parameter_set, message_bytes, signature_bytes, public_key_bytes
-        )
         with oqs_module.Signature("ML-DSA-65") as verifier:
             if not verifier.verify(
                 bytes(message_bytes), bytes(signature_bytes), bytes(public_key_bytes)
@@ -964,7 +915,8 @@ class MLDSA65(CoseKey):
 
 class MLDSA44(CoseKey):
     ALGORITHM = -48
-    _HASH_ALG = hashes.SHA256()
+    # NB: no ``_HASH_ALG`` -- ML-DSA signs the message directly (pure mode), so
+    # there is no prehash to name here.
 
     def verify(self, message, signature):
         if self[1] != 7:
@@ -985,9 +937,6 @@ class MLDSA44(CoseKey):
             else bytes(signature)
         )
         public_key_bytes = _coerce_mldsa_public_key_bytes(public_key, parameter_set)
-        self._log_signature_debug(
-            parameter_set, message_bytes, signature_bytes, public_key_bytes
-        )
 
         with oqs_module.Signature("ML-DSA-44") as verifier:
             if not verifier.verify(

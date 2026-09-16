@@ -1,3 +1,4 @@
+import logging
 from types import SimpleNamespace
 
 import pytest
@@ -235,7 +236,7 @@ def test_register_complete_response_parsing_validation_and_attestation_callback(
     assert attestation_calls == [(att_attestation, b"att-hash")]
 
 
-def test_authenticate_complete_response_parsing_validation_and_signature_paths(monkeypatch):
+def test_authenticate_complete_response_parsing_validation_and_signature_paths(monkeypatch, caplog):
     challenge = b"C" * 16
     server = _make_server(verify_origin=lambda origin: origin == "https://ok.example")
     state = {"challenge": websafe_encode(challenge), "user_verification": None}
@@ -251,17 +252,26 @@ def test_authenticate_complete_response_parsing_validation_and_signature_paths(m
     pub = _PublicKey()
     cred = SimpleNamespace(credential_id=b"cred-1", public_key=pub)
 
-    result = server.authenticate_complete(
-        state,
-        [cred],
-        credential_id=b"cred-1",
-        client_data=good_client_data,
-        auth_data=good_auth_data,
-        signature=b"sig",
-        hash_algorithm="SHA-512",
-    )
+    with caplog.at_level(logging.DEBUG, logger=server_module.logger.name):
+        result = server.authenticate_complete(
+            state,
+            [cred],
+            credential_id=b"cred-1",
+            client_data=good_client_data,
+            auth_data=good_auth_data,
+            signature=b"sig",
+            hash_algorithm="SHA-512",
+        )
     assert result is cred
-    assert pub.debug_calls == [(bytes(good_auth_data), bytes(good_client_data))]
+    # clientDataJSON carries the ceremony challenge and used to be logged, in
+    # hex, at INFO on every authentication. It must not appear at any level.
+    assert bytes(good_client_data).hex() not in caplog.text
+    assert bytes(good_auth_data).hex() not in caplog.text
+    assert "Verifying assertion" not in caplog.text
+    # authenticate_complete used to hand authenticatorData and clientDataJSON to
+    # the key for a stdout debug dump (and log them itself at INFO).  The fake
+    # key still offers the hook; the server must no longer reach for it.
+    assert pub.debug_calls == []
     assert pub.verify_calls == [(bytes(good_auth_data) + b"client-hash-alt", b"sig")]
 
     authentication = SimpleNamespace(
