@@ -204,8 +204,13 @@ def test_perform_attestation_checks_uses_pqc_fallback_when_signature_verificatio
         rp_id="example.com",
     )
 
-    assert result["signature_valid"] is True
-    assert "attestation_invalid" in "\n".join(result["errors"]) or result["errors"] == []
+    # The PQC fallback checks the SIGNATURE ONLY -- it skips the packed
+    # attestation certificate policy checks. Its result is therefore reported
+    # separately and must neither become the overall verdict nor erase the
+    # errors that the full verification produced.
+    assert result["signature_valid"] is False
+    assert result["pqc_signature_valid"] is True
+    assert "attestation_invalid" in "\n".join(result["errors"])
 
 
 def test_perform_attestation_checks_pqc_branch_surfaces_root_check_details(monkeypatch):

@@ -34,6 +34,7 @@ def _resolve_signature_validation(
             attestation_errors.append(f"attestation_error: {exc}")
             signature_valid = False
 
+    pqc_signature_valid: Optional[bool] = None
     if signature_valid is False and attestation_format_value != "none":
         pqc_outcome = _attempt_pqc_attestation_signature_validation(
             attestation_object, client_data_hash
@@ -41,15 +42,23 @@ def _resolve_signature_validation(
         if pqc_outcome.get("attempted"):
             pqc_error = pqc_outcome.get("error")
             if pqc_outcome.get("success"):
-                signature_valid = True
+                # The PQC fallback checks the attestation SIGNATURE only; it
+                # skips the packed-attestation certificate policy checks
+                # (Subject OU, AAGUID extension match, Basic Constraints).
+                # It is therefore reported as its own result and must never
+                # overwrite the overall verdict or erase the errors that the
+                # full verification produced.
+                pqc_signature_valid = True
                 attestation_result = pqc_outcome.get("attestation_result")
-                attestation_errors = []
-            elif pqc_error:
-                attestation_errors.append(str(pqc_error))
+            else:
+                pqc_signature_valid = False
+                if pqc_error:
+                    attestation_errors.append(str(pqc_error))
 
     return {
         "attestation_format_value": attestation_format_value,
         "signature_valid": signature_valid,
+        "pqc_signature_valid": pqc_signature_valid,
         "attestation_result": attestation_result,
         "attestation_errors": attestation_errors,
     }
