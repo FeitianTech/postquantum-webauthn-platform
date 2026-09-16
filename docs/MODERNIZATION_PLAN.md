@@ -5,6 +5,41 @@ Living plan. Status: **in progress**. Owner: tech lead (Claude). Started 2026-09
 Every finding below was verified by reading source or by execution. Claims that
 turned out to be wrong are recorded in "Rejected findings" so nobody re-raises them.
 
+## Progress
+
+### Batch 1 — P0 security — DONE, pushed 2026-09-16
+Closed: S1 challenge bypass, S2 signature bypass, S3 RP-ID/origin allowlist, S4 stored XSS,
+S5 advisory checks now gate, S6 PQC error laundering, S7 headers/cookies/ProxyFix,
+S8 ML-DSA secret logging, S9 metadata IDOR, S10 path traversal + pickle.
+
+Verified by the tech lead, not by agent report: the original S1 PoC now returns HTTP 400;
+the new security tests fail 36/42 against the unfixed code in a clean worktree; an `os.system`
+pickle gadget executes under stock `pickle` and is refused by the restricted unpickler;
+`X-Forwarded-Host: attacker.example` does not move `request.host` or the RP ID.
+
+Tests: Python 1412 → **1623**, frontend 244 → **278**. Coverage badges after push:
+Python 95.02% → 94.61%, frontend 82.45% → 82.71%.
+
+### Local development
+Tests previously ran against the global interpreter, whose packages matched nothing in
+`requirements.txt` (cryptography 44.0.3, fido2 2.1.1, gunicorn 23). A project venv now exists:
+`.venv` (gitignored), built from `requirements.txt`. Run tests with
+`.venv/bin/python -m pytest -q`. It currently carries `cryptography` 50.0.1 (see C1).
+
+### Follow-ups raised during batch 1
+- `routes/general.py:494` `downloadcred` still serves `pickle.dumps(credentials)` as a `.pkl`
+  download — the mirror image of S10; anything that loads it gets code execution.
+- A traversal `?email=` now raises `ValueError` in storage → HTTP 500. Map to 400 in routes.
+- `session_metadata_store.py` builds paths via the same shared prefix helpers; not yet contained.
+- `storage.py` `convert_bytes_for_json` emits standard base64 while storage uses base64url.
+  Unifying needs a paired frontend change: `binary.js` decodes it with bare `atob()`.
+- CSP ships with `script-src 'self' 'unsafe-inline'` — **not strict**. Blockers: 125 inline
+  `on*=` handlers in templates, the inline bootstrap `<script>` in `index.html`, 5 inline
+  `style=` attributes. `test_csp_script_src_is_documented_as_not_strict` fails once they are gone.
+- `_schedule_session_cookie` still sets `SameSite=None` on the metadata cookie over HTTPS.
+- `fido2/server.py:438` eagerly f-string-logs every authenticated credential ID.
+- A custom `FIDO_SERVER_CREDENTIAL_DIR` inside the repo is not gitignored.
+
 ---
 
 ## P0 — Security. Ship before anything else.
@@ -188,6 +223,16 @@ And it unlocks:
   container, so `detect_available_pqc_algorithms()` returns an empty set locally.
 - **PQC that can be tested in CI at all** (see T1).
 
+**Verified 2026-09-16 on the tech lead's machine (macOS arm64, Python 3.14):**
+- The **entire current suite passes on `cryptography` 50.0.1 with zero code changes**
+  (1623/1623). The `<45` cap was never load-bearing.
+- Native ML-DSA-44/65/87: generate, sign, verify; a one-bit-flipped signature raises
+  `InvalidSignature`; a truncated public key raises `ValueError` (liboqs zero-padded it);
+  SPKI DER round-trips via `load_der_public_key`; and `x509.CertificateBuilder().sign(sk, None)`
+  produces ML-DSA-signed certificates — so real packed-attestation tests are possible.
+- API detail: `from_public_bytes` lives on the public ABC (`mldsa.MLDSA44PublicKey`), **not** on
+  the Rust-backed concrete type that `type(public_key)` returns.
+
 ### C2. Un-fork the library — ML-DSA as a plugin, not a 13,611-line fork
 The vendored `fido2/` is python-fido2 **v1.2.1-dev.0** and it *shadows* the pip-installed
 `fido2` 2.2.1 on import, making the `requirements.txt` pin dead weight. Upstream has no
@@ -209,6 +254,18 @@ as `InvalidData`. Fail-closed today, but any future `except InvalidData: warn` b
 which uses underscored ones. Every lookup returns `None`, so the PQC certificate panel
 silently omits NIST level, key size and mechanism name. `fido2/cose.py:417-418` uses the
 correct spelling — the two modules disagree. Moot if C1 lands; fix now if C1 slips.
+
+### C5. ML-DSA signature lengths are pre-standard Dilithium sizes — display bug
+`fido2/cose.py:389-391` lists signature lengths `2420 / 3293 / 4595`. FIPS 204 final is
+**`2420 / 3309 / 4627`** (verified against `cryptography` output). 3293 and 4595 are
+CRYSTALS-Dilithium Round 3 sizes; FIPS 204 widened the challenge seed to 48 and 64 bytes for
+the higher levels, adding exactly 16 and 32 bytes. Display-only: `signature_length` feeds
+`ml_dsa_parameter_details` in the certificate panel and is never enforced.
+
+Compounding it, `_get_mldsa_parameter_details` claims to consult oqs, but uses
+`details.setdefault(...)` (`:420-421`), which never overwrites the hardcoded default — so even
+correct oqs values are unreachable. `tests/fido2/cose/test_cose_additional_branch_contracts.py:71,85,153`
+assert the wrong values. Moot once C1 lands; the replacement must use FIPS 204 constants.
 
 ---
 
@@ -560,6 +617,8 @@ waves. Only `main.js` is preloaded; no `modulepreload` for the other 166. A sing
   across `pqc.py`, `fido2/cose.py`, `advanced_parts/constants.py`, `packed.py` and three
   frontend modules, matching IANA. (An earlier brief of mine stated these reversed; that was
   my error, not the code's.)
+- **"ML-DSA key/signature lengths are correct per FIPS 204"** (PQC audit) — **false** for
+  signature lengths; see C5. Key lengths are correct.
 - **The ML-DSA verification core is sound.** Real liboqs calls, correct
   `authenticatorData || clientDataHash` message, `kty=7` (AKP) enforced, key at label `-1`,
   fail-closed error handling throughout. The crypto is not theater — the harness around it is.
