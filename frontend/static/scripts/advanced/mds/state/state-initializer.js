@@ -59,7 +59,7 @@ export function initializeMdsState(root, deps) {
             variant = 'error';
         }
         defaultStatus = {
-            html: statusEl.innerHTML,
+            text: (statusEl.textContent || '').trim(),
             variant,
             title: statusEl.getAttribute('title') || '',
         };

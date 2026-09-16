@@ -61,7 +61,7 @@ export function createMdsDataLoadingAdapters(config = {}) {
             return;
         }
         state.defaultStatus = {
-            html: typeof value.html === 'string' ? value.html : '',
+            text: typeof value.text === 'string' ? value.text : '',
             variant: typeof value.variant === 'string' ? value.variant : 'info',
             title: typeof value.title === 'string' ? value.title : '',
         };

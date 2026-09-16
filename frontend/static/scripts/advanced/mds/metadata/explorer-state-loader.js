@@ -30,7 +30,7 @@ export function resetExplorerStateInState(message, variant = 'info', deps = {}) 
     setRetryButtonVisible(false);
 
     if (state) {
-        state.defaultStatus = { html: message, variant, title: '' };
+        state.defaultStatus = { text: message, variant, title: '' };
         if (state.tableBody) {
             const tbody = state.tableBody;
             tbody.innerHTML = '';
@@ -118,7 +118,7 @@ export function applyExplorerSnapshotInState(snapshot, note = '', deps = {}) {
     setStatus(statusMessage, statusVariant);
 
     state.defaultStatus = {
-        html: statusMessage,
+        text: statusMessage,
         variant: statusVariant,
         title: typeof meta.legalHeader === 'string' ? meta.legalHeader : '',
     };

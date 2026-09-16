@@ -151,7 +151,7 @@ export async function applyMetadataEntriesInState(metadata, options = {}, deps =
     setStatus(statusMessage, 'success');
 
     setDefaultStatus({
-        html: statusMessage,
+        text: statusMessage,
         variant: 'success',
         title: typeof metadata?.legalHeader === 'string' ? metadata.legalHeader : '',
     });

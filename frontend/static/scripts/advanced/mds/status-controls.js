@@ -7,6 +7,12 @@ export function updateCount(state, filtered, total) {
     }
 }
 
+function renderStatusText(element, value) {
+    // Status strings carry server errors and MDS-derived values, so they are
+    // written as text nodes only. Never assign them through innerHTML.
+    element.textContent = value === undefined || value === null ? '' : String(value);
+}
+
 export function setStatus(state, message, variant, options = {}) {
     if (!state?.statusEl) {
         return;
@@ -22,7 +28,7 @@ export function setStatus(state, message, variant, options = {}) {
 
     statusEl.classList.remove('mds-status-info', 'mds-status-success', 'mds-status-error');
     statusEl.classList.add(`mds-status-${variant}`);
-    statusEl.innerHTML = message;
+    renderStatusText(statusEl, message);
 
     if (restoreDefault && state.defaultStatus) {
         const timeout = Number.isFinite(delay) ? Math.max(0, delay) : 5000;
@@ -34,7 +40,7 @@ export function setStatus(state, message, variant, options = {}) {
             const defaults = state.defaultStatus;
             target.classList.remove('mds-status-info', 'mds-status-success', 'mds-status-error');
             target.classList.add(`mds-status-${defaults.variant}`);
-            target.innerHTML = defaults.html;
+            renderStatusText(target, defaults.text);
             if (defaults.title) {
                 target.setAttribute('title', defaults.title);
             } else {

@@ -129,6 +129,23 @@ export async function loadSavedCredentialsRuntime(deps) {
     void scheduleCredentialBackgroundWarmup();
 }
 
+function readCredentialIndex(element) {
+    const rawIndex = element?.dataset?.credentialIndex;
+    if (typeof rawIndex !== 'string' || rawIndex.trim() === '') {
+        return null;
+    }
+    const parsed = Number.parseInt(rawIndex, 10);
+    return Number.isInteger(parsed) && parsed >= 0 ? parsed : null;
+}
+
+function resolveCredentialAction(candidate, globalName) {
+    if (typeof candidate === 'function') {
+        return candidate;
+    }
+    const globalCandidate = typeof window !== 'undefined' ? window[globalName] : undefined;
+    return typeof globalCandidate === 'function' ? globalCandidate : null;
+}
+
 export function updateCredentialsDisplayRuntime(deps) {
     const {
         state,
@@ -144,7 +161,12 @@ export function updateCredentialsDisplayRuntime(deps) {
         escapeHtml,
         handleCredentialMdsClick,
         triggerCredentialFlash,
+        showCredentialDetails,
+        deleteCredential,
     } = deps;
+
+    const openCredentialDetails = resolveCredentialAction(showCredentialDetails, 'showCredentialDetails');
+    const removeCredential = resolveCredentialAction(deleteCredential, 'deleteCredential');
 
     const hasCredentials = state.storedCredentials.length > 0;
     const flashRequest = readPendingCredentialFlash();
@@ -225,13 +247,13 @@ export function updateCredentialsDisplayRuntime(deps) {
         const deleteButtonDisabledAttributes = deletionInProgress
             ? ' disabled aria-disabled="true"'
             : '';
-        const deleteButtonHtml = `<button class="btn btn-small btn-danger credential-delete-button"${deleteButtonDisabledAttributes} onclick="event.stopPropagation();deleteCredential(${index})">Delete</button>`;
+        const deleteButtonHtml = `<button class="btn btn-small btn-danger credential-delete-button"${deleteButtonDisabledAttributes} data-credential-index="${index}">Delete</button>`;
         const actionsHtml = `<div class="credential-item-actions">${mdsButtonHtml}${deleteButtonHtml}</div>`;
 
         return `
-        <div class="credential-item" data-credential-id="${escapeHtml((credentialIdHex || '').toLowerCase())}" role="button" tabindex="0" onclick="showCredentialDetails(${index})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showCredentialDetails(${index});}">
+        <div class="credential-item" data-credential-id="${escapeHtml((credentialIdHex || '').toLowerCase())}" data-credential-index="${index}" role="button" tabindex="0">
             <div style="flex: 1; min-width: 0;">
-                <div style="font-weight: 600; color: #0f2740; font-size: 0.95rem; margin-bottom: 0.25rem;">${cred.userName || cred.username || cred.email || 'Unknown User'}</div>
+                <div style="font-weight: 600; color: #0f2740; font-size: 0.95rem; margin-bottom: 0.25rem;">${escapeHtml(cred.userName || cred.username || cred.email || 'Unknown User')}</div>
                 <div style="font-size: 0.75rem; font-weight: 600; margin-bottom: 0.25rem;">
                     <span style="color: ${signatureColor};">Signature</span>
                     <span style="margin-left: 0.75rem; color: ${rootColor};">Root</span>
@@ -249,6 +271,32 @@ export function updateCredentialsDisplayRuntime(deps) {
         list.innerHTML = itemsHtml;
         list.querySelectorAll('.credential-mds-button').forEach(button => {
             button.addEventListener('click', handleCredentialMdsClick);
+        });
+        list.querySelectorAll('.credential-delete-button').forEach(button => {
+            button.addEventListener('click', event => {
+                event.stopPropagation();
+                const index = readCredentialIndex(button);
+                if (index === null || !removeCredential) {
+                    return;
+                }
+                removeCredential(index);
+            });
+        });
+        list.querySelectorAll('.credential-item').forEach(item => {
+            const index = readCredentialIndex(item);
+            if (index === null || !openCredentialDetails) {
+                return;
+            }
+            item.addEventListener('click', () => {
+                openCredentialDetails(index);
+            });
+            item.addEventListener('keydown', event => {
+                if (event.key !== 'Enter' && event.key !== ' ') {
+                    return;
+                }
+                event.preventDefault();
+                openCredentialDetails(index);
+            });
         });
     });
 

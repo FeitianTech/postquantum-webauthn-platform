@@ -1,0 +1,593 @@
+# Modernization Program
+
+Living plan. Status: **in progress**. Owner: tech lead (Claude). Started 2026-09-15.
+
+Every finding below was verified by reading source or by execution. Claims that
+turned out to be wrong are recorded in "Rejected findings" so nobody re-raises them.
+
+---
+
+## P0 — Security. Ship before anything else.
+
+The repository currently accepts forged WebAuthn registrations. Restructuring a
+system that does that would be the wrong order of work.
+
+### S1. `__session_state` challenge bypass — CRITICAL, PoC-confirmed
+Every `/begin` returns the server state (containing the challenge) to the client;
+every `/complete` accepts it back when the Flask session is empty. The server ends up
+comparing the client's challenge against the client's own value.
+
+A cold POST to `/api/register/complete` — no session cookie, no prior `/begin`,
+attacker-chosen challenge — returns `HTTP 200 {"status":"OK"}`.
+
+Sites: `simple_parts/register_begin_impl.py:39`, `simple_parts/register_complete_impl.py:44-51`,
+`simple_parts/authenticate_impl.py:35,50-52`, `advanced_parts/register_begin_impl.py:175`,
+`advanced_parts/register_complete_state_impl.py:17-21`,
+`advanced_parts/authenticate_begin_impl.py:241`, `advanced_parts/authenticate_complete_impl.py:122-126`.
+
+**Design:** simple flow strict (remove entirely). Advanced flow keeps the capability
+— it is a request editor and legitimately needs client-supplied challenges — but must
+stamp `challengeSource: "server-session" | "client-supplied"` on every response.
+Permissive is acceptable; dishonest is not.
+
+### S2. Custom-algorithm signature bypass — CRITICAL
+`advanced_parts/authenticate_complete_impl.py:178-208`. On verification failure the
+handler substring-matches the error for `("signature","algorithm","unsupported","verify")`
+and, if the client-declared algorithm is outside the known-name map, returns `status: OK`.
+It logs its own behavior: *"Accepting assertion ... without signature verification."*
+
+`stored_alg_value` comes from `entry.get("algorithm")` (`parsing_helpers_impl.py:109-110`),
+a field independent of the COSE key's own label `3` — so a real ML-DSA key plus
+`"algorithm": -12345` reaches it. **Delete the branch.**
+
+### S3. RP ID / origin from attacker-controlled input — CRITICAL
+`config.py:303-326` derives RP ID from the `Host` header; `register_complete_state_impl.py:46-53`
+and `authenticate_complete_impl.py:149-156` further fall back to the request body.
+No origin allowlist exists. Add `FIDO_SERVER_ALLOWED_ORIGINS`; keep Host-derivation
+as a dev-only fallback with a startup warning.
+
+### S4. Stored XSS in credential UI — CRITICAL, confirmed
+`credential-display/list-render.js:234` interpolates `cred.userName` unescaped into
+`innerHTML` (line 249) while lines 196/223/232 of the *same literal* call `escapeHtml`.
+Same bug at `credential-detail-runtime/sections-main.js:43-44`. Value flows from the
+server response and the advanced tab's editable `publicKey.user.name`, persists to
+localStorage, replays on every page load.
+
+Further sinks: `sections-main.js:29,31,33,71,84,85,98,121,133`;
+`mds/status-controls.js:25,37` (raw `error.message`); and
+`registration-result.js:76-78`, which persists *composed HTML* into localStorage —
+`snapshot-sanitize.js:206-217` passes it through with only `truncateString`.
+
+### S4-followup. Latent remote-HTML sink and deferred snapshot refactor
+Raised during the S4 fix; **not** regressions, but tracked so they are not lost.
+
+1. **Cross-layer safety dependency (do next).**
+   `credential-detail-runtime/snapshot-context.js:25-30` accepts
+   `registrationDetailHtml` / `registration_detail_html` /
+   `registrationDetailCombinedHtml` / `registration_detail_combined_html` as **raw HTML**
+   into `modalBody.innerHTML`. Nothing produces them today only because a Python strip-list
+   at `routes/advanced_parts/constants.py:82-87` removes them — but
+   `advanced/credentials/index.js:110-140` `hydrateCredentialFromServer` copies **every**
+   key from the server artifact onto `cred`. The safety property lives in a different
+   language and layer from the code that depends on it, with no test linking the two.
+   One strip-list edit makes this a live remote-HTML sink. Fix on the **frontend** side
+   (stop accepting raw HTML keys) so the invariant is local.
+
+2. **Snapshot stores composed HTML — deferred, needs a schema change.**
+   `registration-result.js:72-78` persists rendered HTML to localStorage. Every
+   interpolation currently passes through `escapeHtml`, so it is inert today and a
+   regression test now locks that. Storing structured data instead requires extending the
+   snapshot schema with new sanitised fields plus a node-based renderer, because
+   `snapshot-sanitize.js:134-189` and `shared/storage/local/constants.js` strip the
+   underlying data — the composed HTML is currently the only retained record of three
+   rendered sections. Design change, not an edit.
+
+3. `snapshot-sanitize.js:206-217` truncates stored HTML with `slice(0, 120000)`, which can
+   cut a tag or entity in half. Not an XSS vector; can yield malformed markup.
+
+4. **125 inline `on*=` handlers remain, now all in `frontend/templates/*.html`** — zero
+   remain in `frontend/static/scripts`. Clearing the templates is the remaining
+   prerequisite for a CSP without `'unsafe-inline'` (Q3/S7).
+
+### S5. Advisory checks never gate — MAJOR
+`attestation_parts/checks_*.py` compute `origin_mismatch`, `algorithm_not_allowed`,
+`attestation_signature_invalid`, `cose_key_error` into `results["errors"]` — which no
+caller reads (`advanced_parts/register_complete_impl.py:84-88`,
+`simple_parts/register_complete_impl.py:111-115`). Failures return HTTP 200.
+
+Related: `expected_origin = request.headers.get("Origin")` (`register_complete_impl.py:74`,
+`simple_parts/register_complete_impl.py:82`) is self-referential — the attacker sets
+both the header and `clientDataJSON.origin`.
+
+### S6. PQC attestation error laundering — MAJOR
+`checks_attestation_runtime.py:37-48`: on failure a PQC fallback re-runs a bare signature
+check and on success sets `signature_valid = True` **and clears `attestation_errors = []`**
+(line 46). The fallback skips the packed-attestation cert policy (Subject OU, AAGUID
+extension match, Basic Constraints). Never clear errors; report `pqcSignatureValid` separately.
+
+### S7. Transport-layer hardening — MAJOR
+No CSP, X-Frame-Options, X-Content-Type-Options, HSTS, Referrer-Policy, or
+Permissions-Policy on any response. `SESSION_COOKIE_SECURE` never set;
+`PERMANENT_SESSION_LIFETIME` 31 days. Needs `ProxyFix` for Cloud Run's TLS-terminating proxy.
+Note: a real CSP is blocked until the 145 inline `on*=` handlers are removed (see Q3).
+
+### S8. Unconditional secret-adjacent logging — MAJOR
+`fido2/cose.py:761-785` `_log_signature_debug` `print()`s authenticatorData,
+clientDataJSON (contains the challenge), signature and public key on **every** ML-DSA
+verification (`:903,946,988`), mirrored at `fido2/server.py:432-436`. No flag, no logger.
+
+### S9. Metadata session IDOR — MAJOR
+`metadata_parts/session_identity_runtime.py:57-63` accepts the `fido.mds.session` cookie
+verbatim as the session id. Path traversal is blocked; namespace isolation is not.
+
+### S11. signCount regression and challenge replay are absent from the PRODUCT — MAJOR
+Not merely untested. `grep` for any comparison of `signCount` against a stored value across
+`server/` and `fido2/` returns nothing; it is parsed and echoed into responses
+(`simple_parts/authenticate_impl.py:97-124`) but never validated. Cloned-authenticator
+detection (WebAuthn L3 §7.2 step 21) does not exist. The words "replay", "already used" and
+"challenge reuse" appear nowhere in `server/`, `fido2/` or `tests/`.
+
+### S10. Path traversal + pickle deserialization in credential storage — CRITICAL
+Found by the tech lead after the audits; **no audit agent surfaced this**.
+
+`storage.py:156` builds the path as `os.path.join(directory, f"{name.strip()}_credential_data.pkl")`
+with **no separator or `..` sanitization**. `name` is `request.args.get("email")`
+(`simple_parts/register_complete_impl.py:16`, `simple_parts/authenticate_impl.py:7`,
+`general.py:485`). Verified: `?email=../../../../../../private/tmp/X` resolves outside the
+repository root.
+
+The stored format is `pickle` (`storage.py:171` `pickle.dumps`, `:214` and `:295`
+`pickle.loads`). So the chain is:
+- **arbitrary file write** via `savekey` (`register_complete_context_b_impl.py:79`)
+- **arbitrary file delete** via `delkey` (`general.py:479`, `credentials_route_impl.py:18`)
+- **arbitrary file read into `pickle.loads`** via the authenticate path → code execution
+  if an attacker can land crafted bytes at any reachable path (e.g. via the custom-metadata
+  upload endpoint) and then traverse to it
+
+Reachable **unauthenticated** — S1 already proved `/api/register/complete` needs no session.
+
+Fix: reject any `name` containing a path separator, `..`, or a null byte; resolve and assert
+the final path stays under the credential root (the codebase already imports
+`werkzeug.security.safe_join` in `static_assets.py` — use it). Separately, **replace pickle
+with JSON**; pickle is not a safe format for data that crosses a trust boundary, and the
+stored value is a plain list of credential records.
+
+Also relocate the store: `storage.py:45` writes into `basepath` = `server/app/`, i.e. the
+**source tree**. It belongs under `instance/`.
+
+---
+
+## P1 — Crypto modernization. The highest-leverage change in the repo.
+
+### C1. Migrate ML-DSA from liboqs to `cryptography` >= 50
+`cryptography` 50.0.1 ships native ML-DSA-44/65/87: `MLDSA{44,65,87}PublicKey`
+with `from_public_bytes()`/`verify()`, ML-DSA OIDs in both `SignatureAlgorithmOID`
+and `PublicKeyAlgorithmOID`, and ML-DSA in `PublicKeyTypes` (so `load_der_public_key()`
+and `cert.public_key()` handle it natively).
+
+The blocker is one constraint: `cryptography>=2.6,<45` in `requirements.txt:3` and
+`pyproject.toml:33`, inherited from upstream Yubico python-fido2 1.x and never revisited.
+
+Lifting it deletes, in one move:
+- `prebuilt_liboqs/` — a committed 13MB binary blob, `liboqs.so.0.14.1-dev` (a *dev*
+  build, untagged, no checksum/SBOM/provenance), **linux-x86_64 only**
+- the `liboqs_python-0.14.0` wheel
+- `LD_PRELOAD=/opt/liboqs/lib/liboqs.so` in the Docker CMD, plus the `ldconfig` +
+  symlink + `LD_LIBRARY_PATH` layers — four overlapping mechanisms for one library load
+- **~670 lines of hand-rolled DER/ASN.1 parsing** at `fido2/cose.py:56-726`
+  (`_parse_der_length`, `_decode_der_oid`, `_parse_spki_algorithm_info`, and
+  `_scan_certificate_for_subject_public_key_info`, which *heuristically scans* a
+  certificate for anything the right length). Origin: commit `09ae779 "Bypass x509 for
+  MLDSA metadata and attestation"` — it exists only because cryptography 44 lacked the OIDs.
+- the `SystemExit`-catching import guards at `pqc.py:27`, `cose.py:49`, `base.py:156`,
+  which defend against `oqs/oqs.py:225` running `subprocess.call(shell=True)` to
+  **git-clone and CMake-build liboqs from the internet** on import
+
+And it unlocks:
+- **PQC that works on macOS/ARM.** Today `import oqs` fails outside the x86-64
+  container, so `detect_available_pqc_algorithms()` returns an empty set locally.
+- **PQC that can be tested in CI at all** (see T1).
+
+### C2. Un-fork the library — ML-DSA as a plugin, not a 13,611-line fork
+The vendored `fido2/` is python-fido2 **v1.2.1-dev.0** and it *shadows* the pip-installed
+`fido2` 2.2.1 on import, making the `requirements.txt` pin dead weight. Upstream has no
+ML-DSA, so the fork cannot simply be deleted — but upstream's `CoseKey.for_alg()`
+resolves via recursive `__subclasses__()`, so **ML-DSA can be a small plugin package
+registering `CoseKey` subclasses**. Target: depend on upstream fido2, ship ~150 lines
+of ML-DSA COSE keys, delete the fork.
+
+Sequencing: C1 first (it removes most of the fork's delta), then C2.
+
+### C3. Error taxonomy
+ML-DSA failure raises `ValueError`, not `cryptography.exceptions.InvalidSignature`, so
+`packed.py:150` never catches it and `@catch_builtins` relabels a **forged signature**
+as `InvalidData`. Fail-closed today, but any future `except InvalidData: warn` becomes a hole.
+
+### C4. liboqs `details` keys are dead
+`attestation_parts/certificate_public_key_leaf.py:51,54,87,90` reads hyphenated keys
+(`"claimed-nist-level"`, `"length-signature"`) that do not exist in liboqs-python 0.14.0,
+which uses underscored ones. Every lookup returns `None`, so the PQC certificate panel
+silently omits NIST level, key size and mechanism name. `fido2/cose.py:417-418` uses the
+correct spelling — the two modules disagree. Moot if C1 lands; fix now if C1 slips.
+
+---
+
+## P2 — Structural. Blocked on P2.0.
+
+### P2.0. Undo the globals-injection machinery — MUST precede any file moves
+`attestation.py:132-156`, `metadata.py:105` and `decoder/decode.py:284` rebuild every
+split function with the *parent's* globals:
+`types.FunctionType(func.__code__, globals(), ...)`.
+
+Consequences, verified by execution:
+- `metadata_parts/env_runtime.py` imports **only** `from __future__ import annotations`,
+  yet its functions use `os`, `app`, `timedelta`. Calling one directly:
+  `NameError: name '_SESSION_METADATA_CLEANUP_ASYNC_ENV' is not defined`.
+- **163 cross-module calls** whose callee lives in a sibling that is never imported
+  (decode_parts 90, attestation_parts 55, metadata_parts 18).
+- 7 modules carry `# pyright: reportUndefinedVariable=false` as a self-admission.
+- Routes use a parallel hack: 33 one-line forwarders passing `sys.modules[__name__]`
+  back into their own fragments — **539 references** to `advanced_module`/`simple_module`.
+
+No type checker, IDE or linter can see any of this. Until it is reversed, no tool can
+tell you what a file move broke.
+
+### P2.1. The split is mechanical, not semantic
+- **73 of 87 parts modules (83%) have exactly one importer. Zero are imported by any test.**
+- **All 87 are ≤400 LOC (max 398)** while 5 *unsplit* server files exceed 400 (up to
+  `mds_snapshot.py` at 698). The ceiling applies only to files that were split — a line
+  budget, not a design.
+- 23 commits titled `refactor: split …` over 2026-04-08→10.
+- 14,720 of 20,645 server LOC (71%) now live in `*_parts/`; 849 of the 1,523 façade LOC
+  (55%) is pure plumbing.
+
+Genuine exceptions — leave alone: `encode_parts` (fan-in 3-8), `shared/storage/local`,
+`decoder/codec`.
+
+### P2.2. `config.py` is a god module (563 LOC, 13 concerns)
+Flask app singleton + session-secret persistence + embedded PEM trust anchors + RP-ID
+resolution + gzip middleware + path discovery. **Importing it writes a file to disk**
+(`_resolve_secret_key()` at line 148). It carries a re-import guard so `importlib.reload`
+works, because tests reload it. `tests/conftest.py` has **no app fixture**; 146
+`test_client` calls reach for the global. `pqc.py` imports the web framework solely for
+`app.logger`. Extract `create_app()`.
+
+### P2.3. Container layout — 1 line, removes 3 hacks
+`Dockerfile:70` `COPY server/app /app/server` collapses a directory level, so `server.app`
+means a package in a checkout and a module in the image. Fix to `COPY server /app/server`,
+which deletes the `gunicorn.conf.py:23-26` dual-import fallback, the
+`server/app/__init__.py:9-20` `__getattr__` shim, and the `fido2`-directory probe at
+`app.py:13-24`. Already caused commit `4491f6a`.
+
+### P2.4. Target layout
+```
+server/app/
+  config/     settings.py, rp.py, secrets.py, trust_anchors.py
+  wsgi.py     create_app()
+  encoding.py THE base64url/hex module (kills 16 decoders, 7 encoders)
+  webauthn/   attestation.py, trust.py, pqc.py, metadata.py
+  decoder/    cbor.py, ctap.py, certificates.py, summary.py
+  routes/     simple.py, advanced.py, general.py  (thin)
+  storage/    credentials.py, sessions.py, cloud.py
+```
+
+### P2.5. Dead code — NOT this repo's problem
+Python: ~2 LOC prod-dead. JS: 31 unused exports, ~754 LOC. Commented-out code:
+effectively zero. Unreachable branches: zero. The problem is fragmentation and
+duplication, not accumulation.
+
+---
+
+## P3 — Codec. The tool's defining job, currently unperformed.
+
+A CTAP developer tool exists to tell you whether bytes on the wire are spec-legal.
+This one answers `success: true` for **plain English prose**.
+
+### D1. Canonicity is enforced nowhere — CRITICAL
+All verified through `decode_payload_text`, each returning `success: true, malformed: []`:
+non-minimal int length; map keys out of CTAP2 order; **duplicate map key (entry silently
+lost)**; indefinite-length (forbidden by CTAP2); bytestring declaring 8 bytes with 2
+present; array declaring 10 with 1; reserved additional-info 30. Despite its name,
+`cbor_strict.py` is the most permissive parser in the repo.
+
+### D2. The 4-decoder fallback cascade destroys validation — CRITICAL
+`cbor_sequence.py:23-52` tries 4 decoders in order, taking the first that doesn't throw.
+Decoder 4 (`cbor_lenient.py`) **never throws** — 200/200 random blobs "decoded". Only
+level 4 sets a marker; a 1→2 fallback is invisible.
+
+### D3. `fido2/cbor.py:166` silently corrupts major type 7 — CRITICAL
+All of major type 7 maps to `load_bool` (`return ai == 21`): `null` → `False`,
+`undefined` → `False`, any float → `False` **consuming zero payload bytes** → stream
+desync. No exception, so the cascade never falls through. This is decoder #1, tried first.
+
+### D4. "Repair" silently fabricates data — CRITICAL
+Zero repair markers reach the response. `ctap_repair_make.py:77` fabricates `alg = -7`;
+`:115,169` fabricate `alg = -50` (ML-DSA-87) for unidentifiable input. `:205-255` takes
+**trailing garbage** and injects it as an attestation signature, then returns `b""` as
+the remainder — **suppressing the "Trailing N bytes" warning**, the one honest diagnostic.
+`:21` pattern-matches the literal magic string `"al&"`. Verified: authData with AT clear
+but attested data present → **127 of 164 bytes dropped**, `malformed: []`.
+
+### D5. Wrong COSE algorithm labels — CRITICAL, one-line fix
+`decode_parts/binary_extract.py:13-15` has `-35: ES256K, -36: ES384, -37: ES512`.
+Correct: `-35: ES384, -36: ES512, -37: PS256`; ES256K is `-47`. **Every P-384, P-521 and
+RSA-PSS credential is displayed with the wrong algorithm name.** The repo's own
+`pqc.py::describe_algorithm` is correct — delete the table and call it. Net line removal.
+
+### D6. Base64 accepts arbitrary text — CRITICAL
+`pipeline_runtime.py:239-242` calls `urlsafe_b64decode` without `validate=True`; Python
+silently discards non-alphabet characters. `"Hello, this is plain text!"` → accepted as
+base64url → `{"success": true, "type": "CBOR"}`. Same class of bug on the credential-ID
+intake path (`advanced_parts/binary_helpers_impl.py:21-30`,
+`simple_parts/binary_helpers_impl.py:53-61`) and at `routes/general.py:454-460`, where a
+base64url cert decodes *successfully but wrong* (36 bytes for a 39-byte cert).
+
+### D7. Two incompatible "canonical" orderings — MAJOR
+`fido2/cbor.py:77-79` sorts major-type-first (CTAP2-correct);
+`encode_parts/cbor_canonical.py:118` sorts length-first (RFC 7049). Verified divergence
+on `{24: 0, "": 0}`. The encoder's output is not CTAP2-canonical.
+
+### D8. Feature gaps — MAJOR
+No ML-DSA in the decoder (`-48/-49/-50` render as bare strings; COSE kty 7 unhandled) —
+squarely at odds with the project's name. CTAP2 command table has **2 entries**, status
+table **1**, no error table (`fido2/ctap.py:111-171` has all ~45, unused).
+`authenticatorGetInfo` entirely unsupported. **Two fabricated CTAP field labels** that
+the encoder will *emit*, producing CBOR no authenticator accepts: `11: "largeBlobKey"`
+in makeCredential (0x0B is `attestationFormatsPreference` in CTAP 2.2) and
+`8: "largeBlobKey"` in getAssertion (**0x08 does not exist**). Extensions: only
+`credProtect`. Attestation formats: no dispatch on `fmt` at all.
+
+### D9. Highest-value single feature
+A canonicity validator that runs on every decode and **reports** (not rejects):
+non-minimal lengths, key order, duplicate keys, indefinite-length, reserved
+additional-info, trailing bytes. This is the subsystem's largest gap.
+
+---
+
+## P4 — Tests. Better than feared, with one precisely shaped blind spot.
+
+**Correction to an earlier hypothesis of mine:** I inferred from "1412 tests in 4 seconds"
+that the suite must be shallow. A mutation campaign (150 mutants sabotaging real security
+checks) disproved that. The suite is fast because it is a well-isolated unit suite.
+
+| Measure | Result |
+|---|---|
+| Real behavior assertions | 1291/1385 = **93.2%** |
+| Tautological (mock-only) | 3 = **0.2%** |
+| Mutation score, `server/app/routes/` | **100%** |
+| Mutation score, `server/app/` overall | **88.2%** |
+| Mutation score, `server/app/decoder/` | **80.0%** |
+| Frontend real-behavior assertions | **98.8%**, badge honest (82.73% with excludes stripped) |
+
+Classical crypto is genuinely defended: mutations making `CoseKey.verify()`, `ES256.verify()`,
+`verify_rp_id()` or the server's origin/challenge/RP-ID-hash/UP/UV checks unconditionally
+pass were **all caught**, largely by the vendored upstream Yubico tests using real vectors.
+
+### T1. ML-DSA has no real cryptographic test — CRITICAL
+`tests/pqc/test_mldsa_registration_authentication.py`, despite its "end-to-end" docstring:
+- `:43` key is `bytes(idx % 256 for idx in range(key_length))` — literally 0,1,2,3…
+- `:58` "signature" is a SHA-256 digest
+- `:71` monkeypatches `_verify_attestation`
+- `:105` **monkeypatches `cose_cls.verify` itself**
+
+Proof it is hollow: the "signature verification always succeeds" mutation **failed zero**
+`tests/pqc/` tests. `oqs` is not installed in CI (`ci-python.yml:27-30`) or locally.
+Real ML-DSA sign/verify: zero occurrences repo-wide. **If oqs integration broke tomorrow,
+1412 tests would still pass.** Line `:105` is the single line most responsible for false
+confidence. (Fix lands with C1, which makes ML-DSA testable on every platform.)
+
+### T2. Negative tests are serialized, masking parallel holes — MAJOR
+5 of the 8 guards in `fido2/server.py` are covered by a **single** 165-LOC test function
+(`tests/fido2/server/test_server_edge_contracts.py:238`) containing ~10 sequential
+`pytest.raises` blocks. Demonstrated: deleting the origin check, the RP-ID-hash check and
+the user-present check **simultaneously — three auth bypasses — produced exactly ONE test
+failure.** Split into one parametrized case per guard.
+
+Those tests also use `_FakeClientData`/`_FakeAuthData`/`_PublicKey(raise_invalid=True)`
+(`:17,:40,:64`) — they prove the `if` statements are wired, not that verification works.
+
+### T3. The suite pins the current internal structure — blocks P2
+- **1104/1803 (61%)** of `monkeypatch.setattr` calls patch an attribute **on the module
+  under test**; **466 (26%)** patch a **private helper** of it. Some use `raising=False`,
+  so after a rename they will silently stop patching and still pass.
+- **2021 references to private production symbols** (`decode_module._parse_cbor_item` 41,
+  `_lenient_decode_from` 39, `advanced_module._decode_client_binary` 19…).
+- Example of a test asserting nothing: `tests/app/decoder/test_decoder_coverage_uplift_branches.py:17`
+  stubs `_describe_authenticator_data_bytes` to return `{"parsed": True}` then asserts the
+  result contains `{"parsed": True}`.
+- `tests/app/advanced/test_advanced_branch_focus_contracts.py` patches
+  `_parse_client_supplied_credentials` **14 times** — the route tests never parse a real credential.
+- **`tests/conftest.py` is 33 lines and defines zero fixtures**; 51 fixtures total across
+  200 files. The substitute is 854 `importorskip` preambles.
+- 15 tests exceed 100 LOC (worst: `test_general_route_contracts.py:147`, 279 LOC, 37 asserts).
+
+### T4. Surviving mutants are all boundary conditions, in the decoder
+The 16-point gap between 96% line coverage and 80% decoder mutation score is entirely
+boundary discrimination: `ctap_runtime_parse.py:202` `<=`→`<` survives (infinite-loop guard),
+`ctap_repair_leaf.py:31`, `cbor_strict.py:54`, `ctap_repair_make.py:57`,
+`details_runtime.py:211` `return False`→`True`.
+
+### T5. Coverage is reported, never enforced
+`tools/generate_coverage_badges.py:64-83` writes a shields payload with no minimum and no
+non-zero exit. No `fail_under` in `.coveragerc`, no `thresholds` in `vitest.config.mjs`.
+Coverage can go 95% → 5% with every check green.
+
+### T6. The module that touches `navigator.credentials` is untested and invisible
+`frontend/static/scripts/shared/webauthn/json-ponyfill.js` (193 LOC) is absent from the
+coverage denominator in every configuration — its trailing `sourceMappingURL` remaps outside
+`coverage.include` — and it is `vi.mock`ed in all three tests that touch it. It performs the
+actual `navigator.credentials.create/get` calls and base64url⇄ArrayBuffer conversion.
+Also, `vitest.config.mjs:23,24,26` exclude three files deleted in past refactors — silent no-ops.
+
+## P5 — CI/CD and automation. The user's "all future updates automated" goal.
+
+### A1. Seven dependency declaration sites, none authoritative
+`requirements.txt`, root `pyproject.toml` (which is the *vendored library's* manifest —
+the app has no package identity of its own), `server/pyproject.toml`, a hardcoded bare-name
+list at `Dockerfile:41-47`, `package.json`, and two vendored binaries.
+
+- **`server/pyproject.toml:13` `Flask = "^2.0"` vs `requirements.txt:1` `Flask>=3.1.3,<4.0`
+  are mutually exclusive.** The Dockerfile installs `./server` and never reads
+  `requirements.txt`, so the image resolves Flask 2.x while CI tests Flask 3.x. Not drift
+  risk — current divergence.
+- **`.gitignore:11` ignores `poetry.lock`.** No lockfile, no SBOM; every build re-resolves
+  against live PyPI. Two builds of one commit can differ.
+- Dependabot PRs update a file production never reads.
+- `pyproject.toml:37-39` declares `pycose`, `pyjwt`, `requests` — **zero imports** repo-wide.
+- Three Python versions in play (`^3.8` EOL in both pyprojects, 3.12 in Docker/CI, 3.11 in
+  two workflows), zero matrix.
+
+**Target:** one source of truth (root `pyproject.toml` or `uv`), commit the lock, un-ignore
+it, Dockerfile installs only from the lock, delete `requirements.txt`, `requires-python = ">=3.12"`.
+
+### A2. No linting, type-checking or security scanning anywhere
+No ruff/mypy/bandit/pip-audit/npm-audit/CodeQL/Trivy in any of six workflows. No config
+file for any of them — `.ruff_cache/0.15.6/` proves ruff has been run locally, ad hoc,
+on defaults, gating nothing.
+
+### A3. Daily unreviewed auto-commits deploy straight to production — CRITICAL
+`update-fido-mds.yml`, `update-coverage-badges.yml` and `update-footer-year.yml` all hold
+`contents: write` and push directly to `main`. Pushes authored by `GITHUB_TOKEN` do **not**
+re-trigger workflows, so these bypass all CI — while still firing the Cloud Build
+push-to-main trigger. `update-fido-mds.yml:42` uses `git add -A`. These must open PRs.
+
+### A4. `cloudbuild.yaml` has no test step
+GitHub Actions and Cloud Build are independent pipelines. **A red CI does not block a
+production deploy.**
+
+### A5. MDS snapshots are ~30MB of tracked files rewritten daily
+`blob.jwt` (10M), `fido-mds3.verified.json` (7.1M), `explorer.full.json` (7.1M),
+`explorer.json` (5.5M). 79 "Update FIDO MDS snapshot" commits; `.git` is **189MB** and
+grows unboundedly. Every daily commit invalidates the Docker layer — directly at odds with
+the cold-start work in `deploy/README.md` on a `minScale: "0"` service. Move to the GCS
+bucket that already exists (`deploy/service.yaml:52`).
+
+### A6. Other gaps
+Dependabot has **no npm ecosystem** despite `package-lock.json`. All actions pinned to
+mutable major tags, never SHAs, in workflows holding `contents: write`. No release
+automation, tags, or changelog — the deployed artifact is identified only by `$COMMIT_SHA`.
+No preview/staging; `cloudbuild.yaml:26-35` shifts 100% of traffic immediately with no
+health gate and no rollback. `render.yaml` is stale (pre-rename project name, no secret
+key). `docker-compose.yml` bind-mounts `./instance`, sharing the developer's real secret
+into the container. Container **runs as root**, no `HEALTHCHECK`. `ci-*.yml` run twice per
+same-repo PR. No dependency caching anywhere.
+Undocumented: every registration attempts to upload to a hardcoded personal GitHub repo,
+`rainzhang05/CredentialLogs` (`github_client.py:25-26`) — should be opt-in and configurable.
+
+---
+
+## Q — Quality / UX
+
+### Q1. Browser analysis is measuring the wrong APIs — CRITICAL
+`shared/browser/analyze.js:3-11` tests **WebUSB / WebHID / Web NFC / Web Bluetooth /
+Web Serial** — none of which are WebAuthn transports. Consequences: USB/HID/Cable listed
+on every Chromium desktop with no authenticator present; never listed on Safari/Firefox,
+which do drive USB keys. `'nfc' in navigator` is never true anywhere (the shipped surface
+is `NDEFReader`), so NFC is never reported even on Android. `smart-card` (L3) missing.
+
+`detectCrossPlatformAuthenticator:300-335` returns `true` on every Chromium desktop
+unconditionally, and its `isConditionalMediationAvailable()` branch is **dead code** —
+both paths return `null`.
+
+`getClientCapabilities()` results are collected at `:274-292` then discarded except
+`hybridTransport`; `passkeyPlatformAuthenticator`, `conditionalCreate/Get`,
+`extension:prf`, `extension:largeBlob` are all thrown away.
+
+Misidentification: **Brave/Arc/Samsung/Vivaldi/Yandex all report "Google Chrome"**
+(`:186` applies the UA-CH brand only when UA parsing already failed); Edge and Opera show
+the **Chromium** build number (`:53-59` checks `/Chrom(e|ium)/` before `Edg`); **iPad
+reports macOS** (`:72-75` — the `maxTouchPoints` discriminator is defeated by an
+`&&` with a UA check that is always false in desktop mode).
+
+Note this is masked by the test suite: `analyze-browser.test.js:237` sets a synthetic UA so
+the brand path opens; the Brave case passes in test and fails in Brave.
+
+### Q2. UI has no dark mode and fails contrast
+Zero `prefers-color-scheme`/`[data-theme]`/`color-scheme` anywhere. 46 CSS custom
+properties and 684 `var()` uses, against **134 hardcoded color literals in CSS + 43 in JS**.
+The credential UI is styled entirely by **68 inline `style="..."` attributes emitted from
+JS** — unthemeable by construction. Six tokens fail AA (`--muted-light` 2.54,
+`#11b66d` 2.65, `--primary-light` 2.19, `--accent-color` 3.19). The true/false green/red
+pair is **color-only** with no text or icon differentiator, in a tool whose entire purpose
+is signalling pass/fail.
+
+### Q3. Accessibility
+Primary tab bar has no `role="tablist"/"tab"`, no `aria-selected`, no `aria-controls`
+(the *decoder* sub-tabs got it right). The three largest modals have no `role="dialog"`,
+`aria-modal` or `aria-labelledby`. **No focus management anywhere** — `openModal`
+(`shared/ui/core.js:244-263`) only toggles classes: no focus move, no trap, no inert
+background, no restore. 14 form controls with neither `<label for>` nor `aria-label`.
+23 `outline: none`. Zero `prefers-reduced-motion`.
+
+### Q4. Frontend architecture
+**54 window globals** (42 from `main.js:441-483`, 7 from `mds/runtime/bootstrap.js:130-136`).
+The `bootstrap.js` seven are not template handlers — they are a **hidden circular dependency
+laundered through `window`**: `credential-display/navigation.js:50,54,65,196` reaches the
+MDS module via `window.*` instead of importing it.
+
+**145 inline `on*=` attributes** across 24 templates, plus 2 generated into `innerHTML` at
+`list-render.js:228,232` — these hard-block any CSP.
+
+No build step: `tools/build_static_assets.py` only hashes and gzips. **All 167 modules
+(852 KB) are eagerly reachable from `main.js` with zero dynamic `import()`**; the ~75-module
+MDS subtree loads even though it is not the default tab. Max import depth 7 → ~8 serialized
+waves. Only `main.js` is preloaded; no `modulepreload` for the other 166. A single global
+`BUILD_ID` over all static files means one CSS edit invalidates all 167 cached JS modules.
+
+### Q5. Duplication (the real cleanup target)
+| Concept | Implementations |
+|---|---|
+| base64url decode | 13 named (PY) + 30 inline + 5 JS |
+| base64url encode | 3 PY + 32 inline + 4 JS |
+| CBOR codecs | 5 |
+| Credential sanitizers | 16 JS + 4 PY |
+| AAGUID normalization | 4 PY + 3 JS — **dashed vs dashless, used as Map keys on opposite sides of the UI** |
+| env-flag parsing | 3 parsers + 4 wrappers — **deny-list vs allow-list: `ENABLE_GITHUB_LOGGING=y` means *off* in one and *on* in the other** |
+
+---
+
+## Rejected findings — do not re-raise
+
+- **`instance/session-secret.key` is not committed.** `git log --all` empty, `.gitignore:35`
+  covers it, local file is `0600`. The secret-key resolution (`config.py:69-145`,
+  env → file → atomic generate with `fsync`) is genuinely well-written.
+- **The 854 `pytest.importorskip` calls do not mask breakage.** They target *first-party*
+  modules (`server.app.config` etc.). Verified by injecting a `raise` into `config.py`:
+  pytest exits **1** with 701 failures. It is a style smell — `importorskip` is for optional
+  third-party deps — not a correctness hole. The "tests/pqc skips wholesale" claim is false;
+  nothing skips today.
+- **COSE algorithm IDs are correct and consistent.** `-48`=ML-DSA-44, `-49`=65, `-50`=87
+  across `pqc.py`, `fido2/cose.py`, `advanced_parts/constants.py`, `packed.py` and three
+  frontend modules, matching IANA. (An earlier brief of mine stated these reversed; that was
+  my error, not the code's.)
+- **The ML-DSA verification core is sound.** Real liboqs calls, correct
+  `authenticatorData || clientDataHash` message, `kty=7` (AKP) enforced, key at label `-1`,
+  fail-closed error handling throughout. The crypto is not theater — the harness around it is.
+- **`static_assets.py` is well-built** (`safe_join`, ETags, gzip, correct
+  immutable-vs-revalidate). Preserve it through any refactor.
+- **The test suite is NOT a coverage farm.** 93.2% real assertions, 100% mutation score on
+  route handlers, 88.2% on app code, classical crypto defended by real vectors. My inference
+  from the 4-second runtime was wrong; it is fast because it is well-isolated unit tests.
+  The blind spot is specific (ML-DSA), not general.
+- **Dead code is not this repo's problem** (~2 LOC Python, ~754 LOC JS).
+- **Zero JS import cycles.**
+
+---
+
+## Execution order
+
+1. **P0 security** — S1/S2/S3/S5/S6 (backend), S4 (frontend). *In flight.*
+2. **S7/S8/S9** — headers, cookies, debug logging, IDOR.
+3. **C1** — lift the `cryptography` cap, migrate ML-DSA, delete liboqs + 670 DER lines.
+4. **T1/T2** — real ML-DSA round trip with bit-flip rejection; split the serialized negative tests; implement signCount + replay checks (S11).
+5. **A1** — dependency single source of truth + committed lock + resolve Flask 2/3.
+6. **A2/A3/A4** — lint/type/security gates; bots open PRs; test gate before deploy.
+7. **D5/D6/D3** — one-line correctness fixes in the codec.
+8. **P2.0** — undo globals injection. **Gate for everything below.**
+9. **P2.3/P2.2** — container layout, `create_app()`.
+10. **P2.4** — re-merge along responsibility lines; unify encoding (Q5).
+11. **D1/D2/D4/D9** — make the codec honest; canonicity validator.
+12. **Q1** — rewrite browser/capability detection.
+13. **C2** — un-fork fido2, ML-DSA as a plugin.
+14. **A5/A6** — MDS out of git, release automation, preview/rollback.
+15. **Q2/Q3/Q4** — design tokens, dark mode, a11y, CSP (needs Q4 inline handlers gone).

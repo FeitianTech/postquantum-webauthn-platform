@@ -241,6 +241,8 @@ export function updateCredentialsDisplay() {
         escapeHtml,
         handleCredentialMdsClick,
         triggerCredentialFlash,
+        showCredentialDetails,
+        deleteCredential,
     });
 }
 

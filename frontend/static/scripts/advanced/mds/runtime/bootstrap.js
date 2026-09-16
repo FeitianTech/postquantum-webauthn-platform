@@ -84,7 +84,7 @@ export function bootstrapMds(deps = {}) {
             if (initialStatus) {
                 setStatus(initialStatus, 'info');
                 setDefaultStatus({
-                    html: initialStatus,
+                    text: initialStatus,
                     variant: 'info',
                     title: '',
                 });

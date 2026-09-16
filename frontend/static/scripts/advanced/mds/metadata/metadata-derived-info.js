@@ -129,7 +129,7 @@ export function finalizeBackgroundLoading({ metadata, lastUpdatedDate, mdsData, 
     setStatus(statusMessage, 'success');
 
     if (state?.defaultStatus) {
-        state.defaultStatus.html = statusMessage;
+        state.defaultStatus.text = statusMessage;
         state.defaultStatus.variant = 'success';
     }
 
