@@ -37,6 +37,7 @@ from cryptography.hazmat.primitives.asymmetric import (
     rsa,
     padding,
     ed25519,
+    mldsa,
     types,
     ed448,
 )
@@ -393,6 +394,62 @@ _ML_DSA_PARAMETER_SET_DEFAULTS: Dict[str, Dict[str, Optional[int]]] = {
     "ML-DSA-65": {"public_key_length": 1952, "signature_length": 3309},
     "ML-DSA-87": {"public_key_length": 2592, "signature_length": 4627},
 }
+
+
+_MLDSA_PUBLIC_KEY_CLASSES: Dict[str, Any] = {
+    "ML-DSA-44": mldsa.MLDSA44PublicKey,
+    "ML-DSA-65": mldsa.MLDSA65PublicKey,
+    "ML-DSA-87": mldsa.MLDSA87PublicKey,
+}
+
+# Usable with isinstance() to recognise any ML-DSA public key.
+MLDSA_PUBLIC_KEY_TYPES: tuple = tuple(_MLDSA_PUBLIC_KEY_CLASSES.values())
+
+
+def load_mldsa_public_key(parameter_set: str, public_key: Any):
+    """Return a ``cryptography`` ML-DSA public key for *parameter_set*.
+
+    Accepts raw key bytes, a SubjectPublicKeyInfo structure, or an existing
+    ``cryptography`` public key object.  Raises ``ValueError`` when the key is
+    not a well-formed key of the expected parameter set.
+    """
+
+    key_cls = _MLDSA_PUBLIC_KEY_CLASSES.get(parameter_set)
+    if key_cls is None:
+        raise ValueError(f"Unsupported ML-DSA parameter set: {parameter_set}")
+
+    if isinstance(public_key, key_cls):
+        return public_key
+
+    key_bytes = _coerce_mldsa_public_key_bytes(public_key, parameter_set)
+    expected_length = _ML_DSA_PARAMETER_SET_DEFAULTS[parameter_set]["public_key_length"]
+    if len(key_bytes) != expected_length:
+        raise ValueError(
+            f"{parameter_set} public key must be {expected_length} bytes, "
+            f"got {len(key_bytes)}"
+        )
+    # from_public_bytes() lives on the public ABC, not on the concrete class.
+    return key_cls.from_public_bytes(key_bytes)
+
+
+def _verify_mldsa_signature(
+    parameter_set: str, cose_key: Mapping[int, Any], message, signature
+) -> None:
+    """Verify an ML-DSA COSE signature.
+
+    Raises ``cryptography.exceptions.InvalidSignature`` when the signature does
+    not verify, and ``ValueError`` when the COSE key itself is malformed.
+    """
+
+    if cose_key[1] != 7:
+        raise ValueError(f"Unsupported {parameter_set} Param")
+    public_key = cose_key.get(-1)
+    if public_key is None:
+        raise ValueError(f"Missing {parameter_set} public key")
+
+    verifier = load_mldsa_public_key(parameter_set, public_key)
+    # ML-DSA is used in pure mode: the message is signed directly, unprehashed.
+    verifier.verify(bytes(signature), bytes(message))
 
 
 def _get_mldsa_parameter_details(parameter_set: Optional[str]) -> Dict[str, Optional[int]]:
@@ -841,29 +898,7 @@ class MLDSA87(CoseKey):
     # there is no prehash to name here.
 
     def verify(self, message, signature):
-        if self[1] != 7:
-            raise ValueError("Unsupported ML-DSA-87 Param")
-        oqs_module = _require_oqs()
-        public_key = self.get(-1)
-        if public_key is None:
-            raise ValueError("Missing ML-DSA-87 public key")
-        parameter_set = "ML-DSA-87"
-        message_bytes = (
-            message
-            if isinstance(message, (bytes, bytearray, memoryview))
-            else bytes(message)
-        )
-        signature_bytes = (
-            signature
-            if isinstance(signature, (bytes, bytearray, memoryview))
-            else bytes(signature)
-        )
-        public_key_bytes = _coerce_mldsa_public_key_bytes(public_key, parameter_set)
-        with oqs_module.Signature("ML-DSA-87") as verifier:
-            if not verifier.verify(
-                bytes(message_bytes), bytes(signature_bytes), bytes(public_key_bytes)
-            ):
-                raise ValueError("Invalid ML-DSA-87 signature")
+        _verify_mldsa_signature("ML-DSA-87", self, message, signature)
 
     @classmethod
     def from_cryptography_key(cls, public_key):
@@ -882,29 +917,7 @@ class MLDSA65(CoseKey):
     # there is no prehash to name here.
 
     def verify(self, message, signature):
-        if self[1] != 7:
-            raise ValueError("Unsupported ML-DSA-65 Param")
-        oqs_module = _require_oqs()
-        public_key = self.get(-1)
-        if public_key is None:
-            raise ValueError("Missing ML-DSA-65 public key")
-        parameter_set = "ML-DSA-65"
-        message_bytes = (
-            message
-            if isinstance(message, (bytes, bytearray, memoryview))
-            else bytes(message)
-        )
-        signature_bytes = (
-            signature
-            if isinstance(signature, (bytes, bytearray, memoryview))
-            else bytes(signature)
-        )
-        public_key_bytes = _coerce_mldsa_public_key_bytes(public_key, parameter_set)
-        with oqs_module.Signature("ML-DSA-65") as verifier:
-            if not verifier.verify(
-                bytes(message_bytes), bytes(signature_bytes), bytes(public_key_bytes)
-            ):
-                raise ValueError("Invalid ML-DSA-65 signature")
+        _verify_mldsa_signature("ML-DSA-65", self, message, signature)
 
     @classmethod
     def from_cryptography_key(cls, public_key):
@@ -922,30 +935,7 @@ class MLDSA44(CoseKey):
     # there is no prehash to name here.
 
     def verify(self, message, signature):
-        if self[1] != 7:
-            raise ValueError("Unsupported ML-DSA-44 Param")
-        oqs_module = _require_oqs()
-        public_key = self.get(-1)
-        if public_key is None:
-            raise ValueError("Missing ML-DSA-44 public key")
-        parameter_set = "ML-DSA-44"
-        message_bytes = (
-            message
-            if isinstance(message, (bytes, bytearray, memoryview))
-            else bytes(message)
-        )
-        signature_bytes = (
-            signature
-            if isinstance(signature, (bytes, bytearray, memoryview))
-            else bytes(signature)
-        )
-        public_key_bytes = _coerce_mldsa_public_key_bytes(public_key, parameter_set)
-
-        with oqs_module.Signature("ML-DSA-44") as verifier:
-            if not verifier.verify(
-                bytes(message_bytes), bytes(signature_bytes), bytes(public_key_bytes)
-            ):
-                raise ValueError("Invalid ML-DSA-44 signature")
+        _verify_mldsa_signature("ML-DSA-44", self, message, signature)
 
     @classmethod
     def from_cryptography_key(cls, public_key):

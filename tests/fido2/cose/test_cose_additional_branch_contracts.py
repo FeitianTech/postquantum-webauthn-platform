@@ -6,11 +6,13 @@ from types import SimpleNamespace
 
 import pytest
 from cryptography import x509
+from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec, ed448, ed25519, rsa
 from cryptography.x509.oid import NameOID
 
 from fido2 import cose
+from tests.pqc import mldsa_helpers
 
 
 def _self_signed_cert_der(private_key) -> bytes:
@@ -187,26 +189,33 @@ def test_cosekey_parse_for_name_and_no_debug_context_paths(capsys):
     ],
 )
 def test_mldsa_verify_error_and_invalid_signature_paths(
-    monkeypatch, cls, alg_id, param_name, missing_key_error
+    cls, alg_id, param_name, missing_key_error
 ):
-    wrong_param_key = cls({1: 1, 3: alg_id, -1: b"pub"})
+    real_key_bytes = mldsa_helpers.public_key_bytes(param_name)
+
+    wrong_param_key = cls({1: 1, 3: alg_id, -1: real_key_bytes})
     with pytest.raises(ValueError, match="Unsupported"):
         wrong_param_key.verify(b"msg", b"sig")
 
     missing_pub_key = cls({1: 7, 3: alg_id})
-    monkeypatch.setattr(cose, "_require_oqs", lambda: SimpleNamespace(), raising=False)
     with pytest.raises(ValueError, match=missing_key_error):
         missing_pub_key.verify(b"msg", b"sig")
 
-    fake_oqs = SimpleNamespace(
-        Signature=lambda _name: _FakeOqsVerifier(should_verify=False)
-    )
-    monkeypatch.setattr(cose, "_require_oqs", lambda: fake_oqs, raising=False)
-    monkeypatch.setattr(cose, "_coerce_mldsa_public_key_bytes", lambda _v, _p: b"pk", raising=False)
+    # A public key of the wrong length is rejected before any verification.
+    short_key = cls({1: 7, 3: alg_id, -1: real_key_bytes[:-1]})
+    with pytest.raises(ValueError, match="public key must be"):
+        short_key.verify(b"msg", mldsa_helpers.sign(param_name, b"msg"))
 
-    key = cls({1: 7, 3: alg_id, -1: b"pub"})
-    with pytest.raises(ValueError, match=f"Invalid {param_name} signature"):
-        key.verify(bytearray(b"msg"), memoryview(b"sig"))
+    # A forged signature raises InvalidSignature, never ValueError: the
+    # @catch_builtins decorator on the attestation verifiers would otherwise
+    # relabel a forgery as InvalidData.
+    key = cls({1: 7, 3: alg_id, -1: real_key_bytes})
+    signature = mldsa_helpers.sign(param_name, b"msg")
+    with pytest.raises(InvalidSignature):
+        key.verify(bytearray(b"msg"), memoryview(mldsa_helpers.flip_bit(signature)))
+
+    # ... and a genuine signature still verifies through the same call shapes.
+    key.verify(bytearray(b"msg"), memoryview(signature))
 
 
 @pytest.mark.parametrize(

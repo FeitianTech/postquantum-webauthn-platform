@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import builtins
+import datetime
 import sys
 import types
 
@@ -8,9 +9,12 @@ import pytest
 
 from cryptography import x509
 from cryptography.exceptions import InvalidSignature as CryptoInvalidSignature
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import ec
 
 import fido2.attestation.base as base
 import fido2.attestation.packed as packed
+from tests.pqc import mldsa_helpers
 
 
 def test_catch_builtins_wraps_common_exceptions():
@@ -22,100 +26,69 @@ def test_catch_builtins_wraps_common_exceptions():
         _boom()
 
 
-def test_verify_mldsa_certificate_signature_error_paths_and_success(monkeypatch):
-    # parse child error
-    monkeypatch.setattr(base, 'extract_certificate_signature_info', lambda _der: (_ for _ in ()).throw(RuntimeError('parse child')))
+def _ec_certificate_der() -> bytes:
+    key = ec.generate_private_key(ec.SECP256R1())
+    name = x509.Name([x509.NameAttribute(x509.NameOID.COMMON_NAME, 'classical')])
+    now = datetime.datetime(2026, 1, 1, tzinfo=datetime.timezone.utc)
+    cert = (
+        x509.CertificateBuilder()
+        .subject_name(name)
+        .issuer_name(name)
+        .public_key(key.public_key())
+        .serial_number(7)
+        .not_valid_before(now - datetime.timedelta(days=1))
+        .not_valid_after(now + datetime.timedelta(days=1))
+        .sign(key, hashes.SHA256())
+    )
+    return cert.public_bytes(serialization.Encoding.DER)
+
+
+def test_verify_mldsa_certificate_signature_rejects_malformed_input():
     with pytest.raises(base.InvalidSignature, match='Unable to parse ML-DSA certificate'):
-        base._verify_mldsa_certificate_signature(b'child', b'issuer')
+        base._verify_mldsa_certificate_signature(b'not a certificate', b'issuer')
 
-    monkeypatch.setattr(
-        base,
-        'extract_certificate_signature_info',
-        lambda _der: {'signature_algorithm_oid': '1.2.3', 'tbs_certificate': b'm', 'signature': b's'},
-    )
-    monkeypatch.setattr(base, 'describe_mldsa_oid', lambda _oid: None)
-    with pytest.raises(base.InvalidSignature, match='Unsupported signature algorithm OID'):
-        base._verify_mldsa_certificate_signature(b'child', b'issuer')
-
-    monkeypatch.setattr(base, 'describe_mldsa_oid', lambda _oid: {'unexpected': True})
-    with pytest.raises(base.InvalidSignature, match='Unable to determine ML-DSA parameter set'):
-        base._verify_mldsa_certificate_signature(b'child', b'issuer')
-
-    monkeypatch.setattr(base, 'describe_mldsa_oid', lambda _oid: {'mlDsaParameterSet': 'ML-DSA-44'})
-    monkeypatch.setattr(base, 'extract_certificate_public_key_info', lambda _der: (_ for _ in ()).throw(RuntimeError('parse issuer')))
+    mldsa_der = mldsa_helpers.certificate('ML-DSA-44')
     with pytest.raises(base.InvalidSignature, match='Unable to parse issuer public key'):
-        base._verify_mldsa_certificate_signature(b'child', b'issuer')
+        base._verify_mldsa_certificate_signature(mldsa_der, b'not a certificate')
 
-    monkeypatch.setattr(base, 'extract_certificate_public_key_info', lambda _der: {'subject_public_key': None})
-    with pytest.raises(base.InvalidSignature, match='Issuer subject public key missing'):
-        base._verify_mldsa_certificate_signature(b'child', b'issuer')
+    with pytest.raises(base.InvalidSignature, match='Unsupported signature algorithm OID'):
+        base._verify_mldsa_certificate_signature(_ec_certificate_der(), mldsa_der)
 
-    monkeypatch.setattr(base, 'extract_certificate_public_key_info', lambda _der: {'subject_public_key': b'pk'})
+    with pytest.raises(base.InvalidSignature, match='not an ML-DSA key'):
+        base._verify_mldsa_certificate_signature(mldsa_der, _ec_certificate_der())
 
-    orig_import = builtins.__import__
+    # Issuer holds an ML-DSA key of a different parameter set than the one the
+    # certificate says signed it.
+    with pytest.raises(base.InvalidSignature, match='does not match the certificate'):
+        base._verify_mldsa_certificate_signature(
+            mldsa_der, mldsa_helpers.certificate('ML-DSA-65')
+        )
 
-    def _import_block_oqs(name, *args, **kwargs):
-        if name == 'oqs':
-            raise ImportError('missing oqs')
-        return orig_import(name, *args, **kwargs)
 
-    monkeypatch.setattr(builtins, '__import__', _import_block_oqs)
-    with pytest.raises(base.InvalidSignature, match="requires the 'oqs' package"):
-        base._verify_mldsa_certificate_signature(b'child', b'issuer')
-
-    monkeypatch.setattr(builtins, '__import__', orig_import)
-
-    # missing payload path
-    monkeypatch.setattr(
-        base,
-        'extract_certificate_signature_info',
-        lambda _der: {'signature_algorithm_oid': '1.2.3', 'tbs_certificate': b'', 'signature': b''},
+@pytest.mark.parametrize('parameter_set', mldsa_helpers.PARAMETER_SETS)
+def test_verify_mldsa_certificate_signature_accepts_only_the_real_issuer(parameter_set):
+    issued = mldsa_helpers.certificate(
+        parameter_set,
+        label='leaf',
+        issuer_label='ca',
+        common_name=f'{parameter_set} leaf',
     )
+    real_issuer = mldsa_helpers.certificate(parameter_set, label='ca', ca=True)
+    other_issuer = mldsa_helpers.certificate(parameter_set, label='impostor', ca=True)
 
-    class _SigAlwaysTrue:
-        def __init__(self, _param):
-            pass
+    base._verify_mldsa_certificate_signature(issued, real_issuer)
+    base.verify_x509_chain([issued, real_issuer])
 
-        def __enter__(self):
-            return self
-
-        def __exit__(self, exc_type, exc, tb):
-            return False
-
-        def verify(self, _m, _s, _pk):
-            return True
-
-    monkeypatch.setitem(sys.modules, 'oqs', types.SimpleNamespace(Signature=_SigAlwaysTrue))
-    with pytest.raises(base.InvalidSignature, match='Unable to extract ML-DSA certificate signature payload'):
-        base._verify_mldsa_certificate_signature(b'child', b'issuer')
-
-    # verification false path
-    monkeypatch.setattr(
-        base,
-        'extract_certificate_signature_info',
-        lambda _der: {'signature_algorithm_oid': '1.2.3', 'tbs_certificate': b'm', 'signature': b's'},
-    )
-
-    class _SigFalse(_SigAlwaysTrue):
-        def verify(self, _m, _s, _pk):
-            return False
-
-    monkeypatch.setitem(sys.modules, 'oqs', types.SimpleNamespace(Signature=_SigFalse))
     with pytest.raises(base.InvalidSignature, match='verification failed'):
-        base._verify_mldsa_certificate_signature(b'child', b'issuer')
+        base._verify_mldsa_certificate_signature(issued, other_issuer)
+    with pytest.raises(base.InvalidSignature):
+        base.verify_x509_chain([issued, other_issuer])
 
-    # generic runtime error path
-    class _SigRaises(_SigAlwaysTrue):
-        def verify(self, _m, _s, _pk):
-            raise RuntimeError('runtime')
-
-    monkeypatch.setitem(sys.modules, 'oqs', types.SimpleNamespace(Signature=_SigRaises))
-    with pytest.raises(base.InvalidSignature, match='verification error'):
-        base._verify_mldsa_certificate_signature(b'child', b'issuer')
-
-    # success
-    monkeypatch.setitem(sys.modules, 'oqs', types.SimpleNamespace(Signature=_SigAlwaysTrue))
-    base._verify_mldsa_certificate_signature(b'child', b'issuer')
+    # A single flipped bit anywhere in the signed certificate is rejected.
+    tampered = bytearray(issued)
+    tampered[-1] ^= 0x01
+    with pytest.raises(base.InvalidSignature, match='verification failed'):
+        base._verify_mldsa_certificate_signature(bytes(tampered), real_issuer)
 
 
 class _FakeVerifier(base.AttestationVerifier):
