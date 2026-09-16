@@ -6,6 +6,7 @@ import gzip
 import json
 import ipaddress
 import os
+from datetime import timedelta
 from pathlib import Path
 import re
 import ssl
@@ -16,6 +17,7 @@ from urllib.parse import urlsplit
 
 import fido2.features
 from flask import Flask, has_request_context, request
+from werkzeug.middleware.proxy_fix import ProxyFix
 from fido2.server import Fido2Server
 from fido2.webauthn import PublicKeyCredentialRpEntity
 
@@ -243,6 +245,246 @@ _register_after_request_once(app, maybe_compress_response)
 def _env_flag(name: str) -> Optional[bool]:
     """Return ``True`` or ``False`` when the named env var is explicitly set."""
     return parse_env_flag(name)
+
+
+# ---------------------------------------------------------------------------
+# Transport hardening: reverse proxy, session cookie, security headers.
+# ---------------------------------------------------------------------------
+
+_PROXY_FIX_MARKER = "_postquantum_proxy_fix"
+
+
+def _running_behind_managed_proxy() -> bool:
+    """Return ``True`` when the platform terminates TLS in front of this process.
+
+    Cloud Run sets ``K_SERVICE``; the rest of the codebase already treats that as
+    the "running on Cloud Run" signal (see ``startup.py`` and ``device_logs.py``).
+    """
+
+    return bool(os.environ.get("K_SERVICE"))
+
+
+def _should_trust_proxy_headers() -> bool:
+    """Return ``True`` when ``X-Forwarded-*`` headers may be believed."""
+
+    explicit = _env_flag("FIDO_SERVER_TRUST_PROXY")
+    if explicit is not None:
+        return explicit
+    return _running_behind_managed_proxy()
+
+
+def _apply_proxy_fix(flask_app: Flask) -> bool:
+    """Honour the forwarded scheme/client IP, but never the forwarded host.
+
+    Cloud Run speaks plain HTTP to the container, so ``request.is_secure`` and
+    ``request.scheme`` are wrong -- HSTS would never be emitted and a ``Secure``
+    session cookie would look unnecessary -- unless ``X-Forwarded-Proto`` is
+    honoured.
+
+    ``x_host``, ``x_port`` and ``x_prefix`` are deliberately left at ``0``.  When
+    no ``FIDO_SERVER_RP_ID`` is configured this app derives the WebAuthn RP ID
+    from the request ``Host`` header (``determine_rp_id`` ->
+    ``_resolve_request_host``), and ``request.headers["Host"]`` is a live view of
+    ``environ["HTTP_HOST"]`` -- precisely the value ``ProxyFix(x_host=1)``
+    overwrites from the client-supplied ``X-Forwarded-Host``.  Trusting it would
+    hand an attacker control of the RP ID and of the expected origin derived from
+    ``request.host_url``, reintroducing the Host-header injection the RP ID
+    configuration exists to prevent.  Cloud Run forwards the original ``Host``
+    unchanged, so only the scheme and the client IP need correcting.
+    """
+
+    if getattr(flask_app.wsgi_app, _PROXY_FIX_MARKER, False):
+        return False
+
+    wrapped = ProxyFix(
+        flask_app.wsgi_app,
+        x_for=1,
+        x_proto=1,
+        x_host=0,
+        x_port=0,
+        x_prefix=0,
+    )
+    setattr(wrapped, _PROXY_FIX_MARKER, True)
+    flask_app.wsgi_app = wrapped
+    return True
+
+
+if _should_trust_proxy_headers():
+    _apply_proxy_fix(app)
+
+
+# Session state here is short-lived ceremony state (WebAuthn challenges and the
+# metadata-session pointer), not a signed-in user session, so the 31-day Flask
+# default is far longer than anything needs to live.
+_DEFAULT_SESSION_LIFETIME_SECONDS = 30 * 60
+
+
+def _resolve_session_lifetime_seconds() -> int:
+    raw = os.environ.get("FIDO_SERVER_SESSION_LIFETIME_SECONDS")
+    if raw:
+        try:
+            parsed = int(float(raw.strip()))
+        except (TypeError, ValueError):
+            return _DEFAULT_SESSION_LIFETIME_SECONDS
+        if parsed > 0:
+            return parsed
+    return _DEFAULT_SESSION_LIFETIME_SECONDS
+
+
+def _resolve_session_cookie_secure() -> bool:
+    """Return the ``Secure`` flag for the Flask session cookie.
+
+    A ``Secure`` cookie is never sent back over ``http://``, which would break
+    both localhost development and the Werkzeug test client, so this defaults to
+    ``True`` only where TLS is known to be terminated in front of the app.
+    ``FIDO_SERVER_SESSION_COOKIE_SECURE`` forces it either way for deployments
+    behind some other HTTPS proxy.
+    """
+
+    explicit = _env_flag("FIDO_SERVER_SESSION_COOKIE_SECURE")
+    if explicit is not None:
+        return explicit
+    return _running_behind_managed_proxy()
+
+
+app.config.update(
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SECURE=_resolve_session_cookie_secure(),
+    # WebAuthn ceremonies are same-site fetches from our own page, so "Lax" costs
+    # nothing and keeps the cookie off cross-site POSTs.
+    SESSION_COOKIE_SAMESITE="Lax",
+    PERMANENT_SESSION_LIFETIME=timedelta(seconds=_resolve_session_lifetime_seconds()),
+)
+
+
+_SECURITY_HEADERS_MARKER = "_postquantum_security_headers"
+
+# TODO(csp-strict): drop ``'unsafe-inline'`` from ``script-src`` (ideally moving to
+# a per-response nonce) once the inline event handlers are gone.
+#
+# BLOCKER: ``frontend/templates/**/*.html`` still carries 125 inline ``on*="..."``
+# attributes -- concentrated in the advanced registration/authentication option
+# panels -- plus the inline ``<script>`` in ``frontend/templates/index.html`` that
+# seeds ``window.__INITIAL_MDS_INFO__``.  Inline event handlers cannot be
+# nonced; they need either ``'unsafe-inline'`` or ``'unsafe-hashes'`` with a hash
+# per handler.  Shipping ``script-src 'self'`` today would dead-stop the UI, so
+# the handlers have to be moved into ``frontend/static/scripts`` first.
+#
+# Be clear about what this buys: with ``'unsafe-inline'`` present the script
+# policy blocks third-party script origins, ``eval``/``new Function`` and
+# ``javascript:`` URLs, but it does NOT stop an injected inline ``<script>`` or
+# ``on*=`` attribute.  It is defence in depth, not XSS containment.  The
+# non-script directives below are genuinely strict.
+_DEFAULT_CONTENT_SECURITY_POLICY = "; ".join(
+    (
+        "default-src 'self'",
+        "base-uri 'self'",
+        "object-src 'none'",
+        # Clickjacking a WebAuthn RP lets an attacker drive a real ceremony
+        # behind an invisible overlay, so framing is refused outright.
+        "frame-ancestors 'none'",
+        "frame-src 'none'",
+        "form-action 'self'",
+        "img-src 'self' data:",
+        "font-src 'self' https://fonts.gstatic.com",
+        # 5 inline style="" attributes in the templates, plus the Google Fonts
+        # stylesheet linked from index.html.
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+        # See TODO(csp-strict) above: 125 inline on*= handlers block 'self'-only.
+        "script-src 'self' 'unsafe-inline'",
+        "connect-src 'self'",
+        "manifest-src 'self'",
+        "worker-src 'self'",
+    )
+)
+
+_DEFAULT_PERMISSIONS_POLICY = ", ".join(
+    (
+        "accelerometer=()",
+        "autoplay=()",
+        "camera=()",
+        "display-capture=()",
+        "encrypted-media=()",
+        "fullscreen=(self)",
+        "geolocation=()",
+        "gyroscope=()",
+        "magnetometer=()",
+        "microphone=()",
+        "midi=()",
+        "payment=()",
+        "picture-in-picture=()",
+        # The point of the whole app: only this origin may run WebAuthn
+        # ceremonies, and no embedded document may run them on our behalf.
+        "publickey-credentials-create=(self)",
+        "publickey-credentials-get=(self)",
+        "screen-wake-lock=()",
+        "usb=()",
+        "xr-spatial-tracking=()",
+    )
+)
+
+_DEFAULT_STRICT_TRANSPORT_SECURITY = "max-age=31536000; includeSubDomains"
+
+app.config.setdefault(
+    "CONTENT_SECURITY_POLICY",
+    os.environ.get("FIDO_SERVER_CONTENT_SECURITY_POLICY")
+    or _DEFAULT_CONTENT_SECURITY_POLICY,
+)
+app.config.setdefault(
+    "PERMISSIONS_POLICY",
+    os.environ.get("FIDO_SERVER_PERMISSIONS_POLICY") or _DEFAULT_PERMISSIONS_POLICY,
+)
+app.config.setdefault(
+    "STRICT_TRANSPORT_SECURITY",
+    os.environ.get("FIDO_SERVER_STRICT_TRANSPORT_SECURITY")
+    or _DEFAULT_STRICT_TRANSPORT_SECURITY,
+)
+
+
+def set_security_headers(response):
+    """Attach the baseline security headers to every response."""
+
+    headers = response.headers
+    headers.setdefault("X-Content-Type-Options", "nosniff")
+    # Belt and braces with frame-ancestors for pre-CSP2 browsers.
+    headers.setdefault("X-Frame-Options", "DENY")
+    headers.setdefault("Referrer-Policy", "no-referrer")
+
+    policy = app.config.get("CONTENT_SECURITY_POLICY")
+    if policy:
+        headers.setdefault("Content-Security-Policy", policy)
+
+    permissions_policy = app.config.get("PERMISSIONS_POLICY")
+    if permissions_policy:
+        headers.setdefault("Permissions-Policy", permissions_policy)
+
+    # HSTS is meaningless on a plain-HTTP response and actively harmful in a
+    # local http:// workflow, so it is emitted only for requests that actually
+    # arrived over TLS (which needs ProxyFix behind Cloud Run, see above).
+    hsts = app.config.get("STRICT_TRANSPORT_SECURITY")
+    if hsts and has_request_context() and request.is_secure:
+        headers.setdefault("Strict-Transport-Security", hsts)
+
+    return response
+
+
+setattr(set_security_headers, _SECURITY_HEADERS_MARKER, True)
+
+
+def _register_security_headers_once(flask_app: Flask, handler) -> None:
+    existing_handlers = flask_app.after_request_funcs.setdefault(None, [])
+    for existing in existing_handlers:
+        if getattr(existing, _SECURITY_HEADERS_MARKER, False):
+            return
+
+    if flask_app._got_first_request:
+        return
+
+    flask_app.after_request(handler)
+
+
+_register_security_headers_once(app, set_security_headers)
+
 
 _DEFAULT_RP_NAME = os.environ.get("FIDO_SERVER_RP_NAME", "Demo server")
 _DEFAULT_RP_ID = os.environ.get("FIDO_SERVER_RP_ID")
@@ -739,6 +981,7 @@ __all__ = [
     "app",
     "basepath",
     "build_rp_entity",
+    "set_security_headers",
     "create_fido_server",
     "determine_expected_origin",
     "determine_rp_id",
