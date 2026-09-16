@@ -502,6 +502,26 @@ No ruff/mypy/bandit/pip-audit/npm-audit/CodeQL/Trivy in any of six workflows. No
 file for any of them — `.ruff_cache/0.15.6/` proves ruff has been run locally, ad hoc,
 on defaults, gating nothing.
 
+### A2-scoping. Ruff baseline (measured 2026-09-16, ruff 0.16.8, default rules)
+A lint gate cannot be switched on directly — the current tree has never been linted. Top categories:
+
+| Rule | Count | Note |
+|---|---|---|
+| F821 undefined-name | **1008** | the globals-injection hack (P2.0); 65 of 67 files are split-fragments |
+| UP006/UP035/UP045/UP007 | ~1509 | pre-PEP585/604 typing — gated on the `requires-python >= 3.12` bump (A1) |
+| F401 unused-import | 321 | autofixable, low-risk |
+| BLE001 blind-except | 181 | the broad `except Exception` the audits flagged |
+| S110/S112 try-except-pass/continue | 37 | the silent-swallow antipattern |
+| F822 undefined-export | 26 | `__all__` entries with no matching name — check for real dead exports |
+
+**F821 is a progress meter for P2.0**: it is ~100% caused by the runtime `FunctionType(..., globals())`
+rebinding and should collapse toward 0 when the reflection hack is undone. Do not enable F821 until then.
+
+**Phased rollout:** (1) a minimal ruleset that is cheap to reach green — F401, I001, RUF100, F811,
+obvious bug-catchers — gated in CI first; (2) UP* typing modernization *after* A1 sets the Python floor;
+(3) F821 *after* P2.0. Autofixing the ~1500 UP* now would create a repo-wide diff that collides with
+every in-flight workstream, so it waits.
+
 ### A3. Daily unreviewed auto-commits deploy straight to production — CRITICAL
 `update-fido-mds.yml`, `update-coverage-badges.yml` and `update-footer-year.yml` all hold
 `contents: write` and push directly to `main`. Pushes authored by `GITHUB_TOKEN` do **not**
