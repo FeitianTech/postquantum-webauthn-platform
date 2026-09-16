@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib
+import json
 import pickle
 import sys
 import types
@@ -296,8 +297,16 @@ def test_savekey_uploads_payload_to_session_scoped_gcs_blob(monkeypatch):
     assert len(uploads) == 1
     blob_name, payload, content_type = uploads[0]
     assert blob_name == storage._credential_blob("alice@example.com", "session-save")
-    assert pickle.loads(payload) == value
-    assert content_type == "application/octet-stream"
+    # Credentials are stored as JSON, never pickle: the payload must parse as
+    # JSON and must not be loadable as a pickle.
+    envelope = json.loads(payload.decode("utf-8"))
+    assert envelope["version"] == 1
+    assert envelope["encoding"] == "base64url"
+    assert envelope["credentials"] == value
+    assert blob_name.endswith("_credential_data.json")
+    assert content_type == "application/json"
+    with pytest.raises(Exception):
+        pickle.loads(payload)
 
 
 def test_readkey_returns_empty_when_gcs_download_fails_or_missing(monkeypatch):
