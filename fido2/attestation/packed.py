@@ -51,31 +51,9 @@ from cryptography.hazmat.backends import default_backend
 OID_AAGUID = x509.ObjectIdentifier("1.3.6.1.4.1.45724.1.1.4")
 
 
-def _certificate_uses_mldsa(cert_bytes: Optional[bytes]) -> bool:
-    if not cert_bytes:
-        return False
-
-    try:
-        info = extract_certificate_public_key_info(cert_bytes)
-    except Exception:
-        return False
-
-    return info.get("ml_dsa_parameter_set") is not None
-
-
 def _validate_packed_cert(cert, aaguid, *, cert_bytes: Optional[bytes] = None):
     # https://www.w3.org/TR/webauthn/#packed-attestation-cert-requirements
-    try:
-        _validate_cert_common(cert)
-    except InvalidData as exc:
-        message = str(exc)
-        if (
-            "Basic Constraints" in message
-            and _certificate_uses_mldsa(cert_bytes)
-        ):
-            pass
-        else:
-            raise
+    _validate_cert_common(cert)
 
     c = cert.subject.get_attributes_for_oid(x509.NameOID.COUNTRY_NAME)
     if not c:
