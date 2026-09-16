@@ -5,7 +5,10 @@ from typing import Any, Dict, List, Mapping, Optional
 from .register_complete_finalize_impl import finalize_registration_completion
 from .register_complete_material_impl import build_registration_material
 from .register_complete_setup_impl import prepare_register_complete_inputs
-from .register_complete_state_impl import resolve_state_and_registration_server
+from .register_complete_state_impl import (
+    CHALLENGE_SOURCE_CLIENT,
+    resolve_state_and_registration_server,
+)
 
 
 def advanced_register_complete_impl(advanced_module: Any):
@@ -40,6 +43,10 @@ def advanced_register_complete_impl(advanced_module: Any):
 
     warnings: List[str] = []
 
+    # Always reported, even on the error paths below: the advanced flow is
+    # allowed to be permissive, but never allowed to be silent about it.
+    state_trace: Dict[str, Any] = {"challengeSource": CHALLENGE_SOURCE_CLIENT}
+
     try:
         state_ctx, state_error = resolve_state_and_registration_server(
             advanced_module,
@@ -50,11 +57,17 @@ def advanced_register_complete_impl(advanced_module: Any):
             attestation_format=attestation_format,
             attestation_statement=attestation_statement,
             raw_attestation_object=raw_attestation_object,
+            trace=state_trace,
         )
         if state_error is not None:
-            return state_error
+            return _with_challenge_source(advanced_module, state_error, state_trace)
         if state_ctx is None:
-            return advanced_module.jsonify({"error": "Registration state not found"}), 400
+            return advanced_module.jsonify(
+                {
+                    "error": "Registration state not found",
+                    "challengeSource": state_trace["challengeSource"],
+                }
+            ), 400
 
         state = state_ctx["state"]
         stored_original_request = state_ctx["storedOriginalRequest"]
@@ -71,7 +84,25 @@ def advanced_register_complete_impl(advanced_module: Any):
             stored_public_key if isinstance(stored_public_key, Mapping) else public_key
         )
 
-        expected_origin = advanced_module.request.headers.get("Origin") or advanced_module.request.host_url.rstrip("/")
+        # The origin the ceremony claims, read from clientDataJSON -- NOT from
+        # the request's own Origin header, which the caller also controls.
+        ceremony_origin = advanced_module.extract_client_data_origin(
+            response.get("response") if isinstance(response, Mapping) else None
+        )
+        if not advanced_module.is_origin_allowed(ceremony_origin):
+            return advanced_module.jsonify(
+                {
+                    "error": (
+                        "Ceremony origin is not permitted by the configured "
+                        "FIDO_SERVER_ALLOWED_ORIGINS allowlist."
+                    ),
+                    "challengeSource": state_trace["challengeSource"],
+                }
+            ), 400
+
+        expected_origin = advanced_module.determine_expected_origin(ceremony_origin) or (
+            advanced_module.request.host_url.rstrip("/")
+        )
         attestation_checks = advanced_module.perform_attestation_checks(
             response if isinstance(response, Mapping) else {},
             state if isinstance(state, Mapping) else None,
@@ -95,12 +126,24 @@ def advanced_register_complete_impl(advanced_module: Any):
                     if stripped:
                         warnings.append(stripped)
 
+        attestation_errors: List[str] = []
+        raw_attestation_errors = attestation_checks.get("errors")
+        if isinstance(raw_attestation_errors, list):
+            attestation_errors = [
+                str(message) for message in raw_attestation_errors if str(message).strip()
+            ]
+
         attestation_summary = {
             "signatureValid": attestation_signature_valid,
             "rootValid": attestation_root_valid,
             "rpIdHashValid": attestation_rp_id_hash_valid,
             "aaguidMatch": attestation_aaguid_match,
+            "errors": attestation_errors,
+            "verified": not attestation_errors,
         }
+        pqc_signature_valid = attestation_checks.get("pqc_signature_valid")
+        if pqc_signature_valid is not None:
+            attestation_summary["pqcSignatureValid"] = pqc_signature_valid
         metadata_summary = attestation_checks_safe.get("metadata")
         if isinstance(metadata_summary, Mapping):
             attestation_summary["metadata"] = metadata_summary
@@ -212,6 +255,9 @@ def advanced_register_complete_impl(advanced_module: Any):
             "attestationAaguidMatch": attestation_aaguid_match,
             "attestationChecks": attestation_checks_safe,
             "attestationSummary": attestation_summary,
+            "attestationErrors": attestation_errors,
+            "attestationVerified": not attestation_errors,
+            "challengeSource": state_trace["challengeSource"],
         }
 
         extensions_requested = public_key.get("extensions", {})
@@ -281,4 +327,28 @@ def advanced_register_complete_impl(advanced_module: Any):
             display_name=display_name,
         )
     except Exception as exc:
-        return advanced_module.jsonify({"error": str(exc)}), 400
+        return advanced_module.jsonify(
+            {
+                "error": str(exc),
+                "challengeSource": state_trace["challengeSource"],
+            }
+        ), 400
+
+
+def _with_challenge_source(
+    advanced_module: Any,
+    error_response: Any,
+    state_trace: Mapping[str, Any],
+) -> Any:
+    """Re-emit an early error response with the challenge source attached."""
+
+    payload, status = error_response if isinstance(error_response, tuple) else (error_response, 200)
+    try:
+        body = payload.get_json(silent=True) or {}
+    except Exception:
+        return error_response
+    if not isinstance(body, Mapping):
+        return error_response
+    merged = dict(body)
+    merged.setdefault("challengeSource", state_trace.get("challengeSource"))
+    return advanced_module.jsonify(merged), status

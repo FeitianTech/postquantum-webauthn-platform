@@ -2,6 +2,11 @@ from __future__ import annotations
 
 from typing import Any, Dict, Mapping, Optional, Tuple
 
+#: The ceremony challenge was taken from the server-side Flask session.
+CHALLENGE_SOURCE_SERVER = "server-session"
+#: The ceremony challenge was taken from the request body (request-editor mode).
+CHALLENGE_SOURCE_CLIENT = "client-supplied"
+
 
 def resolve_state_and_registration_server(
     advanced_module: Any,
@@ -13,12 +18,21 @@ def resolve_state_and_registration_server(
     attestation_format: Any,
     attestation_statement: Any,
     raw_attestation_object: Any,
+    trace: Optional[Dict[str, Any]] = None,
 ) -> Tuple[Optional[Dict[str, Any]], Optional[Any]]:
     state = advanced_module.session.pop("advanced_state", None)
+    challenge_source = CHALLENGE_SOURCE_SERVER if state is not None else None
     if state is None:
         fallback_state = data.get("__session_state")
         if isinstance(fallback_state, Mapping):
             state = fallback_state
+            challenge_source = CHALLENGE_SOURCE_CLIENT
+
+    # Record where the challenge came from before anything below can raise, so
+    # that the caller can always report it -- the advanced flow may be
+    # permissive, but it must never be silent about it.
+    if trace is not None and challenge_source is not None:
+        trace["challengeSource"] = challenge_source
 
     stored_original_request = advanced_module.session.pop("advanced_original_request", None)
     if stored_original_request is None and isinstance(original_request, Mapping):
@@ -68,4 +82,5 @@ def resolve_state_and_registration_server(
         "storedOriginalRequest": stored_original_request,
         "resolvedRpId": resolved_rp_id,
         "authData": auth_data,
+        "challengeSource": challenge_source,
     }, None
