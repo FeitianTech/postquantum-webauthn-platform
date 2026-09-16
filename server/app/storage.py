@@ -49,6 +49,7 @@ __all__ = [
     "add_public_key_material",
     "convert_bytes_for_json",
     "delkey",
+    "encode_records",
     "extract_credential_data",
     "iter_credentials",
     "list_credentials",
@@ -250,6 +251,12 @@ def _encode_records(records: Any) -> bytes:
         "credentials": [_encode_value(item) for item in items],
     }
     return json.dumps(envelope, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+
+
+def encode_records(records: Any) -> bytes:
+    """Public: serialise credentials to the versioned JSON envelope for export."""
+
+    return _encode_records(records)
 
 
 def _decode_records(payload: bytes) -> Optional[List[Any]]:
