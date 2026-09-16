@@ -23,7 +23,14 @@ from ..attestation import (
     make_json_safe,
     perform_attestation_checks,
 )
-from ..config import app, create_fido_server, determine_rp_id
+from ..config import (
+    app,
+    create_fido_server,
+    determine_expected_origin,
+    determine_rp_id,
+    extract_client_data_origin,
+    is_origin_allowed,
+)
 from ..device_logs import RegistrationEvent, record_registration_event
 from ..metadata import ensure_metadata_session_id
 from ..storage import (
