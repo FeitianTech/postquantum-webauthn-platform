@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from datetime import datetime, timezone
 
+import itsdangerous
 import pytest
 from flask import g, session
 
@@ -177,9 +178,20 @@ def test_prune_helper_and_request_session_identifier_paths(monkeypatch):
     )
     metadata_module._prune_session_metadata_directory("session-1")
 
+    # Only a cookie signed with the application secret names a namespace; an
+    # unsigned one is ignored (it would otherwise be an IDOR).
+    sealed = itsdangerous.URLSafeTimedSerializer(
+        config_module.app.secret_key, salt="fido.mds.session-cookie.v1"
+    ).dumps("cookie-session")
     with config_module.app.test_request_context(
         "/",
         headers={"Cookie": f"{metadata_module._SESSION_METADATA_COOKIE_NAME}=cookie-session"},
+    ):
+        assert metadata_module._get_metadata_session_id(create=False) is None
+
+    with config_module.app.test_request_context(
+        "/",
+        headers={"Cookie": f"{metadata_module._SESSION_METADATA_COOKIE_NAME}={sealed}"},
     ):
         identifier = metadata_module._get_metadata_session_id(create=False)
         assert identifier == "cookie-session"

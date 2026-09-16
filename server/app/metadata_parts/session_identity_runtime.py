@@ -17,6 +17,14 @@ def _normalise_session_identifier(value: Any) -> Optional[str]:
     return trimmed
 
 
+# NOTE: every function in this module is rebound onto ``server.app.metadata``'s
+# globals by ``_install_runtime_bindings``, so only names that exist there are
+# resolvable at call time.  That is why the cookie signing below is written
+# inline (with a literal salt) instead of being factored into helpers here.
+#
+# Salt for the metadata-session recovery cookie; the key is ``app.secret_key``.
+
+
 def _schedule_session_cookie(identifier: str) -> None:
     if not has_request_context():
         return
@@ -34,13 +42,27 @@ def _schedule_session_cookie(identifier: str) -> None:
     if getattr(g, "_session_metadata_cookie", None) == normalised:
         return
 
+    # The recovery cookie is client storage.  Handing back a bare namespace name
+    # lets anyone who can set a cookie point themselves at another visitor's
+    # namespace, so the value that leaves the server is signed with the
+    # application secret and the signature is re-checked on the way back in.
+    secret = app.secret_key
+    if not secret:
+        return
+
+    from itsdangerous import URLSafeTimedSerializer
+
+    sealed = URLSafeTimedSerializer(
+        secret, salt="fido.mds.session-cookie.v1"
+    ).dumps(normalised)
+
     g._session_metadata_cookie = normalised
 
     @after_this_request
     def _apply_cookie(response):
         response.set_cookie(
             _SESSION_METADATA_COOKIE_NAME,
-            normalised,
+            sealed,
             max_age=_SESSION_METADATA_COOKIE_MAX_AGE,
             httponly=True,
             secure=secure,
@@ -54,14 +76,9 @@ def _get_metadata_session_id(*, create: bool = False) -> Optional[str]:
     if not has_request_context():
         return None
 
-    cookie_identifier = _normalise_session_identifier(
-        request.cookies.get(_SESSION_METADATA_COOKIE_NAME)
-    )
-    if cookie_identifier:
-        session[_SESSION_METADATA_SESSION_KEY] = cookie_identifier
-        _schedule_session_cookie(cookie_identifier)
-        return cookie_identifier
-
+    # The signed Flask session is authoritative.  It is authenticated with the
+    # application secret, so a caller cannot point it at somebody else's
+    # namespace.
     existing = session.get(_SESSION_METADATA_SESSION_KEY)
     if isinstance(existing, str):
         identifier = _normalise_session_identifier(existing)
@@ -69,6 +86,34 @@ def _get_metadata_session_id(*, create: bool = False) -> Optional[str]:
             session[_SESSION_METADATA_SESSION_KEY] = identifier
             _schedule_session_cookie(identifier)
             return identifier
+
+    # Otherwise fall back to the long-lived recovery cookie, so a returning
+    # visitor keeps their namespace after the (much shorter lived) Flask session
+    # has expired.  Only a cookie this server signed is honoured; a forged or
+    # replayed-from-elsewhere value is ignored and a fresh namespace is minted
+    # instead, which is what stops one caller reading another's stored metadata
+    # and credential artifacts.
+    cookie_identifier = None
+    raw_cookie = request.cookies.get(_SESSION_METADATA_COOKIE_NAME)
+    secret = app.secret_key
+    if isinstance(raw_cookie, str) and raw_cookie and secret:
+        from itsdangerous import BadSignature, URLSafeTimedSerializer
+
+        try:
+            unsealed = URLSafeTimedSerializer(
+                secret, salt="fido.mds.session-cookie.v1"
+            ).loads(raw_cookie, max_age=_SESSION_METADATA_COOKIE_MAX_AGE)
+        except BadSignature:
+            # Also covers SignatureExpired / BadTimeSignature.
+            unsealed = None
+        except Exception:
+            unsealed = None
+        cookie_identifier = _normalise_session_identifier(unsealed)
+
+    if cookie_identifier:
+        session[_SESSION_METADATA_SESSION_KEY] = cookie_identifier
+        _schedule_session_cookie(cookie_identifier)
+        return cookie_identifier
 
     if not create:
         return None
