@@ -30,7 +30,7 @@ include = [
 
 [tool.poetry.dependencies]
 python = "^3.8"
-cryptography = ">=2.6, !=35, <45"
+cryptography = ">=49"      # native ML-DSA-44/65/87 sign/verify and ML-DSA x509
 pyscard = {version = "^1.9 || ^2", optional = true}
 
 cbor2 = "^5.6.4"           # CBOR parsing
