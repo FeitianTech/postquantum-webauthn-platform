@@ -170,7 +170,9 @@ def test_advanced_authenticate_complete_missing_state_returns_400(monkeypatch):
             assert "advanced_auth_rp" not in session_state
 
 
-def test_advanced_authenticate_complete_custom_algorithm_bypass(monkeypatch):
+def test_advanced_authenticate_complete_custom_algorithm_does_not_bypass_verification(monkeypatch):
+    """A custom/unknown declared algorithm must never yield status OK."""
+
     config_module = pytest.importorskip("server.app.config")
     advanced_module = pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
@@ -225,12 +227,14 @@ def test_advanced_authenticate_complete_custom_algorithm_bypass(monkeypatch):
             },
         )
 
-    assert response.status_code == 200
+    assert response.status_code == 400
     payload = response.get_json()
-    assert payload["status"] == "OK"
-    assert payload["authenticatedCredentialId"] == encoded_id
-    assert payload["customAlgorithmBypass"] is True
-    assert payload["algorithm"] == custom_alg
+    assert payload["status"] != "OK"
+    assert payload["verified"] is False
+    assert payload["signatureVerified"] is False
+    assert payload["failedCredentialId"] == encoded_id
+    # The old bypass marker must be gone entirely.
+    assert "customAlgorithmBypass" not in payload
 
 
 def test_advanced_authenticate_complete_custom_algorithm_bypass_requires_requested_algorithm_match(monkeypatch):

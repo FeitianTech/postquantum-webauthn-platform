@@ -3,6 +3,48 @@ from __future__ import annotations
 import base64
 from typing import Any, Dict, List, Mapping, Optional
 
+from fido2.cose import CoseKey, UnsupportedKey
+
+#: The ceremony challenge was taken from the server-side Flask session.
+CHALLENGE_SOURCE_SERVER = "server-session"
+#: The ceremony challenge was taken from the request body (request-editor mode).
+CHALLENGE_SOURCE_CLIENT = "client-supplied"
+
+
+def _credential_cose_algorithm(record: Optional[Mapping[str, Any]]) -> Optional[int]:
+    """Return the algorithm the credential's own COSE key declares (label 3).
+
+    This is deliberately read from the parsed COSE key rather than from the
+    client-supplied ``algorithm``/``publicKeyAlgorithm`` field, which is an
+    independent, attacker-controlled value.
+    """
+
+    if not isinstance(record, Mapping):
+        return None
+    credential_data = record.get("data")
+    public_key = getattr(credential_data, "public_key", None)
+    if public_key is None:
+        return None
+    try:
+        algorithm = public_key[3]
+    except Exception:
+        try:
+            algorithm = public_key.get(3)  # type: ignore[union-attr]
+        except Exception:
+            return None
+    return algorithm if isinstance(algorithm, int) else None
+
+
+def _server_supports_algorithm(algorithm: Optional[int]) -> bool:
+    """Return ``True`` when this server can actually verify ``algorithm``."""
+
+    if not isinstance(algorithm, int):
+        return False
+    try:
+        return CoseKey.for_alg(algorithm) is not UnsupportedKey
+    except Exception:
+        return False
+
 
 def advanced_authenticate_complete_impl(advanced_module: Any):
     data = advanced_module.request.get_json(silent=True) or {}
@@ -120,6 +162,7 @@ def advanced_authenticate_complete_impl(advanced_module: Any):
         return advanced_module.jsonify(response_payload), 400
 
     state = advanced_module.session.pop("advanced_auth_state", None)
+    challenge_source = CHALLENGE_SOURCE_SERVER if state is not None else CHALLENGE_SOURCE_CLIENT
     if state is None:
         fallback_state = data.get("__session_state")
         if isinstance(fallback_state, Mapping):
@@ -131,7 +174,23 @@ def advanced_authenticate_complete_impl(advanced_module: Any):
                 "error": (
                     "Authentication state not found or has expired. "
                     "Please restart the authentication flow."
-                )
+                ),
+                "challengeSource": challenge_source,
+            }
+        ), 400
+
+    ceremony_origin = advanced_module.extract_client_data_origin(
+        response.get("response") if isinstance(response, Mapping) else None
+    )
+    if not advanced_module.is_origin_allowed(ceremony_origin):
+        advanced_module.session.pop("advanced_auth_rp", None)
+        return advanced_module.jsonify(
+            {
+                "error": (
+                    "Ceremony origin is not permitted by the configured "
+                    "FIDO_SERVER_ALLOWED_ORIGINS allowlist."
+                ),
+                "challengeSource": challenge_source,
             }
         ), 400
 
@@ -162,8 +221,6 @@ def advanced_authenticate_complete_impl(advanced_module: Any):
         if derived_algorithms:
             auth_server.allowed_algorithms = derived_algorithms
 
-        fallback_used = False
-
         hash_algorithm = data.get("__hash_algorithm", "SHA-256")
         if not isinstance(hash_algorithm, str):
             hash_algorithm = "SHA-256"
@@ -176,36 +233,61 @@ def advanced_authenticate_complete_impl(advanced_module: Any):
                 hash_algorithm=hash_algorithm,
             )
         except Exception as exc:
+            # An assertion whose signature does not verify is NEVER reported as
+            # OK. The only distinction made here is a diagnostic one: whether
+            # this server can verify the credential's algorithm at all.
             response_mapping = response if isinstance(response, Mapping) else {}
             credential_id = advanced_module._extract_assertion_credential_id(response_mapping)
             record = credential_lookup.get(credential_id) if credential_id else None
-            stored_alg_value: Optional[int] = None
-            if isinstance(record, Mapping):
-                stored_alg = record.get("algorithm")
-                if isinstance(stored_alg, int):
-                    stored_alg_value = stored_alg
 
-            requested_alg = advanced_module._extract_requested_assertion_algorithm(public_key, credential_id)
-            error_message = str(exc).lower()
-            signature_related = (
-                not error_message
-                or any(keyword in error_message for keyword in ("signature", "algorithm", "unsupported", "verify"))
-            )
-
-            if (
-                stored_alg_value is not None
-                and advanced_module._is_custom_cose_algorithm(stored_alg_value)
-                and (requested_alg is None or requested_alg == stored_alg_value)
-                and signature_related
-            ):
-                fallback_used = True
-                auth_alg = stored_alg_value
-                advanced_module.app.logger.warning(
-                    "Accepting assertion using custom COSE algorithm %d without signature verification.",
-                    stored_alg_value,
+            # Read the algorithm from the credential's own COSE key, not from
+            # the client-supplied "algorithm" field next to it.
+            credential_alg = _credential_cose_algorithm(record)
+            failed_credential_id = None
+            if credential_id:
+                failed_credential_id = (
+                    base64.urlsafe_b64encode(credential_id).decode("ascii").rstrip("=")
                 )
-            else:
-                raise
+
+            if credential_alg is not None and not _server_supports_algorithm(credential_alg):
+                advanced_module.app.logger.warning(
+                    "Assertion uses COSE algorithm %d which this server cannot verify; "
+                    "no signature verification was performed.",
+                    credential_alg,
+                )
+                unsupported_payload: Dict[str, Any] = {
+                    "status": "UNSUPPORTED_ALGORITHM",
+                    "verified": False,
+                    "signatureVerified": False,
+                    "error": (
+                        f"COSE algorithm {credential_alg} is not supported by this server. "
+                        "No signature verification was performed, so this assertion is "
+                        "NOT verified."
+                    ),
+                    "algorithm": credential_alg,
+                    "algorithmDescription": advanced_module.describe_algorithm(credential_alg),
+                    "challengeSource": challenge_source,
+                    "verificationError": str(exc),
+                }
+                if failed_credential_id is not None:
+                    unsupported_payload["failedCredentialId"] = failed_credential_id
+                return advanced_module.jsonify(unsupported_payload), 400
+
+            signature_payload: Dict[str, Any] = {
+                "status": "VERIFICATION_FAILED",
+                "verified": False,
+                "signatureVerified": False,
+                "error": str(exc),
+                "challengeSource": challenge_source,
+            }
+            if credential_alg is not None:
+                signature_payload["algorithm"] = credential_alg
+                signature_payload["algorithmDescription"] = advanced_module.describe_algorithm(
+                    credential_alg
+                )
+            if failed_credential_id is not None:
+                signature_payload["failedCredentialId"] = failed_credential_id
+            return advanced_module.jsonify(signature_payload), 400
         else:
             try:
                 result_public_key = getattr(auth_result, "public_key", None)
@@ -239,10 +321,13 @@ def advanced_authenticate_complete_impl(advanced_module: Any):
             debug_info["algorithm"] = auth_alg
             debug_info["algorithmDescription"] = advanced_module.describe_algorithm(auth_alg)
 
-        if fallback_used:
-            debug_info["customAlgorithmBypass"] = True
-
-        response_payload: Dict[str, Any] = {"status": "OK", **debug_info}
+        response_payload: Dict[str, Any] = {
+            "status": "OK",
+            "verified": True,
+            "signatureVerified": True,
+            "challengeSource": challenge_source,
+            **debug_info,
+        }
         if authenticated_id is not None:
             response_payload["authenticatedCredentialId"] = authenticated_id
         if sign_count_value is not None:
@@ -250,7 +335,10 @@ def advanced_authenticate_complete_impl(advanced_module: Any):
 
         return advanced_module.jsonify(response_payload)
     except Exception as exc:
-        response_payload: Dict[str, Any] = {"error": str(exc)}
+        response_payload: Dict[str, Any] = {
+            "error": str(exc),
+            "challengeSource": challenge_source,
+        }
         failed_credential_id = credential_id_bytes
         if not failed_credential_id and isinstance(response, Mapping):
             failed_credential_id = advanced_module._extract_assertion_credential_id(response)
