@@ -385,10 +385,13 @@ _ALGORITHM_OID_NAMES: Dict[str, str] = {
 }
 
 
+# FIPS 204 (final) sizes.  The pre-standard CRYSTALS-Dilithium Round 3 signature
+# sizes were 2420/3293/4595; FIPS 204 widened the challenge seed for the two
+# higher parameter sets, which added 16 and 32 bytes respectively.
 _ML_DSA_PARAMETER_SET_DEFAULTS: Dict[str, Dict[str, Optional[int]]] = {
     "ML-DSA-44": {"public_key_length": 1312, "signature_length": 2420},
-    "ML-DSA-65": {"public_key_length": 1952, "signature_length": 3293},
-    "ML-DSA-87": {"public_key_length": 2592, "signature_length": 4595},
+    "ML-DSA-65": {"public_key_length": 1952, "signature_length": 3309},
+    "ML-DSA-87": {"public_key_length": 2592, "signature_length": 4627},
 }
 
 
