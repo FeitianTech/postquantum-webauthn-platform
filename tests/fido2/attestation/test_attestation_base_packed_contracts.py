@@ -311,13 +311,6 @@ class _AuthData(bytes):
 
 
 def test_packed_helpers_and_verify_paths(monkeypatch):
-    # _certificate_uses_mldsa
-    assert packed._certificate_uses_mldsa(None) is False
-    monkeypatch.setattr(packed, 'extract_certificate_public_key_info', lambda _b: (_ for _ in ()).throw(RuntimeError('bad')))
-    assert packed._certificate_uses_mldsa(b'cert') is False
-    monkeypatch.setattr(packed, 'extract_certificate_public_key_info', lambda _b: {'ml_dsa_parameter_set': 'ML-DSA-44'})
-    assert packed._certificate_uses_mldsa(b'cert') is True
-
     # _validate_packed_cert basic subject checks
     with pytest.raises(packed.InvalidData, match='C set'):
         packed._validate_packed_cert(_fake_cert(with_c=False), b'\x01' * 16)
@@ -339,12 +332,11 @@ def test_packed_helpers_and_verify_paths(monkeypatch):
     with pytest.raises(packed.InvalidData, match='does not match'):
         packed._validate_packed_cert(_fake_cert(ext=mismatch_ext), b'\x01' * 16)
 
-    # Missing basic constraints can be tolerated for ML-DSA certs
-    monkeypatch.setattr(packed, '_certificate_uses_mldsa', lambda _bytes: True)
-    packed._validate_packed_cert(_fake_cert(with_bc=False), b'\x01' * 16, cert_bytes=b'mldsa')
-
-    # ...but not for non-ML-DSA certs
-    monkeypatch.setattr(packed, '_certificate_uses_mldsa', lambda _bytes: False)
+    # Basic Constraints are required for every packed attestation certificate,
+    # ML-DSA included: the old exemption was a workaround for the hand-rolled
+    # DER parser, not for any real authenticator.
+    with pytest.raises(packed.InvalidData, match='Basic Constraints'):
+        packed._validate_packed_cert(_fake_cert(with_bc=False), b'\x01' * 16, cert_bytes=b'mldsa')
     with pytest.raises(packed.InvalidData, match='Basic Constraints'):
         packed._validate_packed_cert(_fake_cert(with_bc=False), b'\x01' * 16, cert_bytes=b'normal')
 
