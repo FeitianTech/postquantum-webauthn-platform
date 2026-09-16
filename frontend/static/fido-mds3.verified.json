@@ -1107,8 +1107,8 @@
         ],
         "authenticationAlgorithms": [
           "secp384r1_ecdsa_sha384_raw",
-          "ed25519_eddsa_sha512_raw",
-          "secp256r1_ecdsa_sha256_raw"
+          "secp256r1_ecdsa_sha256_raw",
+          "ed25519_eddsa_sha512_raw"
         ],
         "authenticatorGetInfo": {
           "aaguid": "2772ce93eb4b40908b73330f48477d73",
@@ -1701,8 +1701,8 @@
           "basic_full"
         ],
         "authenticationAlgorithms": [
-          "ed25519_eddsa_sha512_raw",
           "secp384r1_ecdsa_sha384_raw",
+          "ed25519_eddsa_sha512_raw",
           "secp256r1_ecdsa_sha256_raw"
         ],
         "authenticatorGetInfo": {
@@ -19705,11 +19705,21 @@
       },
       "statusReports": [
         {
-          "effectiveDate": "2026-07-21",
-          "status": "NOT_FIDO_CERTIFIED"
+          "authenticatorVersion": 262144,
+          "certificateNumber": "FIDO20020260715001",
+          "certificationDescriptor": "HID Crescendo Key V3 FIPS",
+          "certificationPolicyVersion": "1.4.0",
+          "certificationRequirementsVersion": "1.6.0",
+          "effectiveDate": "2026-07-15",
+          "status": "FIDO_CERTIFIED_L2"
+        },
+        {
+          "authenticatorVersion": 262144,
+          "effectiveDate": "2026-07-15",
+          "status": "FIDO_CERTIFIED"
         }
       ],
-      "timeOfLastStatusChange": "2026-07-21"
+      "timeOfLastStatusChange": "2026-09-15"
     },
     {
       "aaguid": "def8ab1a-9f91-44f1-a103-088d8dc7d681",
@@ -60794,5 +60804,5 @@
   ],
   "legalHeader": "Retrieval and use of this BLOB indicates acceptance of the appropriate agreement located at https://fidoalliance.org/metadata/metadata-legal-terms/",
   "nextUpdate": "2026-10-01",
-  "no": 281
+  "no": 282
 }
