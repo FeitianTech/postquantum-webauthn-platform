@@ -42,7 +42,15 @@ from ..attestation import (
     perform_attestation_checks,
     summarize_authenticator_extensions,
 )
-from ..config import app, build_rp_entity, create_fido_server, determine_rp_id
+from ..config import (
+    app,
+    build_rp_entity,
+    create_fido_server,
+    determine_expected_origin,
+    determine_rp_id,
+    extract_client_data_origin,
+    is_origin_allowed,
+)
 from ..credential_artifacts import (
     delete_credential_artifact_with_status,
     load_credential_artifact,
