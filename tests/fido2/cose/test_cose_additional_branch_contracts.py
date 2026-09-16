@@ -68,7 +68,7 @@ def test_get_optional_oqs_and_parameter_details_with_fake_oqs(monkeypatch):
     assert cose._get_optional_oqs() is fake_oqs
     details = cose._get_mldsa_parameter_details("ML-DSA-65")
     assert details["public_key_length"] == 1952
-    assert details["signature_length"] == 3293
+    assert details["signature_length"] == 3309
 
 
 def test_get_mldsa_parameter_details_handles_missing_or_failing_oqs(monkeypatch):
@@ -82,7 +82,7 @@ def test_get_mldsa_parameter_details_handles_missing_or_failing_oqs(monkeypatch)
 
     monkeypatch.setattr(cose, "_get_optional_oqs", lambda: _BrokenOqs(), raising=False)
     fallback = cose._get_mldsa_parameter_details("ML-DSA-87")
-    assert fallback["signature_length"] == 4595
+    assert fallback["signature_length"] == 4627
 
 
 def test_der_integer_and_oid_and_skip_error_branches():
@@ -150,7 +150,7 @@ def test_extract_certificate_public_key_info_mldsa_metadata_fields(monkeypatch):
     monkeypatch.setattr(
         cose,
         "_get_mldsa_parameter_details",
-        lambda _ps: {"public_key_length": 1952, "signature_length": 3293},
+        lambda _ps: {"public_key_length": 1952, "signature_length": 3309},
         raising=False,
     )
 
