@@ -16,6 +16,7 @@ def perform_attestation_checks(
     results: Dict[str, Any] = {
         "attestation_format": None,
         "signature_valid": None,
+        "pqc_signature_valid": None,
         "root_valid": None,
         "rp_id_hash_valid": None,
         "aaguid_match": None,
@@ -75,6 +76,7 @@ def perform_attestation_checks(
         results["errors"].append(error_message)
 
     results["signature_valid"] = signature_ctx["signature_valid"]
+    results["pqc_signature_valid"] = signature_ctx.get("pqc_signature_valid")
 
     root_ctx = _evaluate_root_validation(
         results,
