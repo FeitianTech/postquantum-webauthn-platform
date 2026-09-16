@@ -161,20 +161,21 @@ def test_extract_certificate_public_key_info_mldsa_metadata_fields(monkeypatch):
     assert info["wrapped_subject_public_key"] == b"PUBKEY"
 
 
-def test_cosekey_parse_for_name_and_debug_context_paths(capsys):
+def test_cosekey_parse_for_name_and_no_debug_context_paths(capsys):
     assert cose.CoseKey.for_name("DoesNotExist") is cose.UnsupportedKey
     with pytest.raises(ValueError, match="must be provided"):
         cose.CoseKey.parse({1: 2, 3: 0})
 
+    # No key holds assertion context for later logging any more.
     key = cose.CoseKey({})
-    key.set_assertion_debug_data(b"auth", b"client")
-    consumed = key._consume_assertion_debug_data()
-    assert consumed == {"authenticator_data": b"auth", "client_data_json": b"client"}
-    assert key._consume_assertion_debug_data() is None
-
-    key._log_signature_debug("ALG", b"message", b"signature", b"public")
-    out = capsys.readouterr().out
-    assert "<not available>" in out
+    for removed in (
+        "set_assertion_debug_data",
+        "_consume_assertion_debug_data",
+        "_log_signature_debug",
+        "_assertion_debug_context",
+    ):
+        assert not hasattr(key, removed), f"{removed} should have been removed"
+    assert capsys.readouterr().out == ""
 
 
 @pytest.mark.parametrize(
