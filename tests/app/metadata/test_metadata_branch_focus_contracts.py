@@ -4,6 +4,7 @@ import json
 from datetime import datetime, timedelta
 from types import SimpleNamespace
 
+import itsdangerous
 import pytest
 from flask import ctx, g, session
 
@@ -76,9 +77,17 @@ def test_session_cookie_scheduler_branches_and_after_request_cookie(metadata_mod
 
         response = request_ctx._after_request_functions[0](config.app.response_class("ok"))
         set_cookie = response.headers["Set-Cookie"]
-        assert f"{metadata_module._SESSION_METADATA_COOKIE_NAME}=session-cookie" in set_cookie
+        assert set_cookie.startswith(f"{metadata_module._SESSION_METADATA_COOKIE_NAME}=")
         assert "Secure" in set_cookie
         assert "SameSite=None" in set_cookie
+
+        # The namespace name is signed with the application secret rather than
+        # emitted verbatim, so a caller cannot rewrite it to somebody else's.
+        cookie_value = set_cookie.split(";", 1)[0].split("=", 1)[1]
+        assert cookie_value != "session-cookie"
+        assert itsdangerous.URLSafeTimedSerializer(
+            config.app.secret_key, salt="fido.mds.session-cookie.v1"
+        ).loads(cookie_value) == "session-cookie"
 
     assert touched == ["session-cookie", "session-cookie"]
 
@@ -99,9 +108,22 @@ def test_get_session_id_and_ensure_paths_cover_invalid_existing_and_error_branch
     )
     monkeypatch.setattr(metadata_module.secrets, "token_urlsafe", lambda _n: "generated-session")
 
+    # An unsigned cookie naming a namespace is ignored: trusting it verbatim was
+    # an IDOR, since any caller could name another visitor's namespace.
     with config.app.test_request_context(
         "/",
         headers={"Cookie": f"{metadata_module._SESSION_METADATA_COOKIE_NAME}=cookie-session"},
+    ):
+        session[metadata_module._SESSION_METADATA_SESSION_KEY] = ".invalid"
+        assert metadata_module._get_metadata_session_id(create=False) is None
+
+    # A cookie this server signed still restores the namespace it names.
+    sealed = itsdangerous.URLSafeTimedSerializer(
+        config.app.secret_key, salt="fido.mds.session-cookie.v1"
+    ).dumps("cookie-session")
+    with config.app.test_request_context(
+        "/",
+        headers={"Cookie": f"{metadata_module._SESSION_METADATA_COOKIE_NAME}={sealed}"},
     ):
         session[metadata_module._SESSION_METADATA_SESSION_KEY] = ".invalid"
         assert metadata_module._get_metadata_session_id(create=False) == "cookie-session"
