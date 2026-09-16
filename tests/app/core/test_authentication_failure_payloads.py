@@ -96,7 +96,12 @@ def test_advanced_authentication_failure_returns_failed_credential_id(monkeypatc
         )
 
     assert response.status_code == 400
+    # A failed signature is now an explicit non-OK verdict, not a bare error.
     assert response.get_json() == {
+        "status": "VERIFICATION_FAILED",
+        "verified": False,
+        "signatureVerified": False,
         "error": "Invalid signature.",
         "failedCredentialId": encoded_id,
+        "challengeSource": "server-session",
     }
