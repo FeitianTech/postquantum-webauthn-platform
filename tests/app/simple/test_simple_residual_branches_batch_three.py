@@ -57,7 +57,12 @@ class _BadCredentialId:
 
 
 class _AuthenticationServer:
-    def authenticate_complete(self, *_args, **_kwargs):
+    def __init__(self, captured=None):
+        self._captured = captured
+
+    def authenticate_complete(self, state, *_args, **_kwargs):
+        if self._captured is not None:
+            self._captured["state"] = state
         return SimpleNamespace(credential_id=_BadCredentialId())
 
 
@@ -196,12 +201,14 @@ def test_register_complete_handles_algorithm_and_large_blob_residual_paths(
     assert payload["storedCredential"]["userHandle"] == _b64url(b"string-user-handle")
 
 
-def test_authenticate_complete_uses_request_state_fallback_and_handles_bad_matched_credential_id(
+def test_authenticate_complete_ignores_request_state_and_handles_bad_matched_credential_id(
     monkeypatch,
 ):
     config_module = pytest.importorskip("server.app.config")
     simple_module = pytest.importorskip("server.app.routes.simple")
     pytest.importorskip("server.app.app")
+
+    captured = {}
 
     monkeypatch.setattr(
         simple_module,
@@ -212,7 +219,7 @@ def test_authenticate_complete_uses_request_state_fallback_and_handles_bad_match
     monkeypatch.setattr(
         simple_module,
         "create_fido_server",
-        lambda **_kwargs: _AuthenticationServer(),
+        lambda **_kwargs: _AuthenticationServer(captured),
         raising=False,
     )
 
@@ -220,6 +227,7 @@ def test_authenticate_complete_uses_request_state_fallback_and_handles_bad_match
         with client.session_transaction() as session_state:
             session_state["simple_credentials"] = [{"credentialId": "AQ"}]
             session_state["authenticate_rp_id"] = "example.com"
+            session_state["state"] = {"challenge": "from-session"}
 
         response = client.post(
             "/api/authenticate/complete?email=user@example.com",
@@ -234,3 +242,5 @@ def test_authenticate_complete_uses_request_state_fallback_and_handles_bad_match
     assert payload["status"] == "OK"
     assert "authenticatedCredentialId" not in payload
     assert "signCount" not in payload
+    # The request-supplied state must have been discarded outright.
+    assert captured["state"] == {"challenge": "from-session"}

@@ -85,7 +85,9 @@ def test_simple_register_begin_persists_state_and_filters_algorithms(monkeypatch
             {"type": "public-key", "alg": -257},
             {"type": "public-key", "alg": -7},
         ]
-        assert payload["__session_state"] == state
+        # The ceremony state (and therefore the challenge) must never be
+        # returned to the client: it lives only in the server-side session.
+        assert "__session_state" not in payload
 
         with client.session_transaction() as session_state:
             assert session_state["state"] == state
@@ -163,7 +165,9 @@ def test_simple_authenticate_complete_success_returns_sign_count(monkeypatch):
             assert "simple_credentials_email" not in session_state
 
 
-def test_simple_authenticate_complete_uses_request_state_fallback(monkeypatch):
+def test_simple_authenticate_complete_rejects_request_state_fallback(monkeypatch):
+    """A client-supplied ``__session_state`` must never become the challenge."""
+
     config_module = pytest.importorskip("server.app.config")
     simple_module = pytest.importorskip("server.app.routes.simple")
     pytest.importorskip("server.app.app")
@@ -188,6 +192,7 @@ def test_simple_authenticate_complete_uses_request_state_fallback(monkeypatch):
         with client.session_transaction() as session_state:
             session_state["simple_credentials"] = [{"credentialId": _b64url(credential_id)}]
             session_state["authenticate_rp_id"] = "example.com"
+            # Deliberately no server-issued "state" in the session.
 
         response = client.post(
             "/api/authenticate/complete?email=user@example.com",
@@ -198,8 +203,10 @@ def test_simple_authenticate_complete_uses_request_state_fallback(monkeypatch):
             },
         )
 
-        assert response.status_code == 200
-        assert captured["state"] == {"challenge": "fallback-state"}
+        assert response.status_code == 400
+        assert "state" in response.get_json()["error"].lower()
+        # Verification must not even have been attempted.
+        assert "state" not in captured
 
 
 def test_simple_authenticate_complete_missing_state_returns_400(monkeypatch):
@@ -233,7 +240,9 @@ def test_simple_authenticate_complete_missing_state_returns_400(monkeypatch):
             assert session_state.get("simple_credentials_email") == "user@example.com"
 
 
-def test_simple_register_complete_accepts_request_state_fallback_and_persists(monkeypatch):
+def test_simple_register_complete_rejects_request_state_fallback(monkeypatch):
+    """A cold /complete with a self-chosen challenge must be rejected."""
+
     config_module = pytest.importorskip("server.app.config")
     simple_module = pytest.importorskip("server.app.routes.simple")
     pytest.importorskip("server.app.app")
@@ -311,16 +320,13 @@ def test_simple_register_complete_accepts_request_state_fallback_and_persists(mo
             },
         )
 
-        assert response.status_code == 200
+        assert response.status_code == 400
         payload = response.get_json()
-        assert payload["status"] == "OK"
-        assert payload["storedCredential"]["credentialIdBase64Url"] == _b64url(credential_id)
-        assert captured["state"] == request_state
-        assert saved["email"] == "user@example.com"
-        assert saved["session_id"] == "session-id"
-        assert isinstance(saved["credentials"], list)
-        assert len(saved["credentials"]) == 1
+        assert payload.get("status") != "OK"
+        assert "state" in payload["error"].lower()
+        # Neither verification nor persistence may have happened.
+        assert "state" not in captured
+        assert saved == {}
 
         with client.session_transaction() as session_state:
             assert "state" not in session_state
-            assert "register_rp_id" not in session_state

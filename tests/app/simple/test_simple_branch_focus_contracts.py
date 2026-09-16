@@ -110,7 +110,11 @@ def test_simple_register_begin_clears_cached_session_fields_when_client_credenti
         )
 
         assert response.status_code == 200
-        assert response.get_json()["__session_state"] == {"challenge": "simple-register-state"}
+        # The ceremony state stays server-side and is never echoed back.
+        assert "__session_state" not in response.get_json()
+
+        with client.session_transaction() as session_state:
+            assert session_state["state"] == {"challenge": "simple-register-state"}
 
         with client.session_transaction() as session_state:
             assert "simple_credentials" not in session_state

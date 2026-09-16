@@ -36,7 +36,9 @@ def register_begin_impl(simple_module: Any):
     simple_module.session["register_rp_id"] = rp_id
 
     options_dict = dict(options)
-    options_dict["__session_state"] = simple_module.make_json_safe(state)
+    # The ceremony state (and therefore the challenge) is deliberately NOT
+    # returned to the client: the simple flow binds the challenge to the
+    # server-side session only.
     public_key_options = options_dict.get("publicKey")
     if isinstance(public_key_options, MutableMapping):
         simple_module.session["simple_register_public_key"] = simple_module.make_json_safe(public_key_options)

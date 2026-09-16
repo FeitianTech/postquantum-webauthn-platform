@@ -66,8 +66,12 @@ def test_simple_register_begin_accepts_existing_credentials_alias(monkeypatch):
 
         assert response.status_code == 200
         payload = response.get_json()
-        assert payload["__session_state"] == {"challenge": "simple-register-state"}
+        # The ceremony state stays server-side and is never echoed back.
+        assert "__session_state" not in payload
         assert captured["credential_count"] == 1
+
+        with client.session_transaction() as session_state:
+            assert session_state["state"] == {"challenge": "simple-register-state"}
 
         with client.session_transaction() as session_state:
             assert len(session_state["simple_credentials"]) == 1
@@ -96,8 +100,12 @@ def test_simple_authenticate_begin_accepts_stored_credentials_alias(monkeypatch)
 
         assert response.status_code == 200
         payload = response.get_json()
-        assert payload["__session_state"] == {"challenge": "simple-auth-state"}
+        # The ceremony state stays server-side and is never echoed back.
+        assert "__session_state" not in payload
         assert captured["credential_count"] == 1
+
+        with client.session_transaction() as session_state:
+            assert session_state["state"] == {"challenge": "simple-auth-state"}
 
         with client.session_transaction() as session_state:
             assert len(session_state["simple_credentials"]) == 1

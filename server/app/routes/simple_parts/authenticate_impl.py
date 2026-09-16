@@ -32,7 +32,7 @@ def authenticate_begin_impl(simple_module: Any):
     simple_module.session["authenticate_rp_id"] = rp_id
 
     options_payload = dict(options)
-    options_payload["__session_state"] = simple_module.make_json_safe(state)
+    # The ceremony state (and therefore the challenge) stays server-side.
 
     return simple_module.jsonify(simple_module.make_json_safe(options_payload))
 
@@ -45,11 +45,10 @@ def authenticate_complete_impl(simple_module: Any):
         simple_module.abort(400)
 
     state = simple_module.session.pop("state", None)
-    state_from_request = None
+    # A client-supplied ``__session_state`` is stripped and ignored: accepting
+    # it would let the caller choose the challenge it is verified against.
     if isinstance(response, Mapping):
-        state_from_request = response.pop("__session_state", None)
-    if state is None and isinstance(state_from_request, Mapping):
-        state = state_from_request
+        response.pop("__session_state", None)
     if state is None:
         simple_module.session.pop("authenticate_rp_id", None)
         return (

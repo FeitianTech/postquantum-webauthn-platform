@@ -58,7 +58,9 @@ def test_simple_register_complete_returns_400_and_cleans_state_when_verification
             assert "simple_register_public_key" not in session_state
 
 
-def test_simple_register_complete_uses_request_state_fallback_on_verification_failure(monkeypatch):
+def test_simple_register_complete_rejects_request_state_fallback_before_verification(monkeypatch):
+    """The request-supplied state must be discarded before any verification."""
+
     config_module = pytest.importorskip("server.app.config")
     simple_module = pytest.importorskip("server.app.routes.simple")
     pytest.importorskip("server.app.app")
@@ -91,8 +93,10 @@ def test_simple_register_complete_uses_request_state_fallback_on_verification_fa
         )
 
         assert response.status_code == 400
-        assert response.get_json() == {"error": "fallback verification failed"}
-        assert captured["state"] == fallback_state
+        # Rejected for a missing session state, NOT by the verifier: the
+        # client-supplied challenge never reaches register_complete at all.
+        assert "state" in response.get_json()["error"].lower()
+        assert "state" not in captured
 
         with client.session_transaction() as session_state:
             assert "register_rp_id" not in session_state
