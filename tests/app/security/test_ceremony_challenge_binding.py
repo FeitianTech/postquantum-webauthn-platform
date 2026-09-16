@@ -276,3 +276,27 @@ def test_advanced_complete_always_reports_challenge_source_even_on_error(
 
     assert response.status_code == 400
     assert "challengeSource" in response.get_json()
+
+
+def test_advanced_authenticate_complete_always_reports_challenge_source(
+    config_module, advanced_module
+):
+    """Including on the early input-validation errors."""
+
+    client = config_module.app.test_client()
+
+    # Missing assertion response -- rejected before any state is resolved.
+    missing = client.post("/api/advanced/authenticate/complete", json={})
+    assert missing.status_code == 400
+    assert missing.get_json()["challengeSource"] == "client-supplied"
+
+    # Present but unusable credentials.
+    no_creds = client.post(
+        "/api/advanced/authenticate/complete",
+        json={
+            "publicKey": {"challenge": "AQID"},
+            "__assertion_response": {"rawId": "AQID", "response": {}},
+        },
+    )
+    assert no_creds.status_code == 404
+    assert no_creds.get_json()["challengeSource"] == "client-supplied"

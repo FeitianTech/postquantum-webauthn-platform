@@ -49,17 +49,27 @@ def _server_supports_algorithm(algorithm: Optional[int]) -> bool:
 def advanced_authenticate_complete_impl(advanced_module: Any):
     data = advanced_module.request.get_json(silent=True) or {}
 
+    # Determined up front (peek, not pop) so that every response below can
+    # report it: the advanced flow may be permissive, never silent.
+    challenge_source = (
+        CHALLENGE_SOURCE_SERVER
+        if advanced_module.session.get("advanced_auth_state") is not None
+        else CHALLENGE_SOURCE_CLIENT
+    )
+
+    def _fail(payload: Dict[str, Any], status: int = 400):
+        payload.setdefault("challengeSource", challenge_source)
+        return advanced_module.jsonify(payload), status
+
     response = data.get("__assertion_response")
     if not response:
-        return advanced_module.jsonify({"error": "Assertion response is required"}), 400
+        return _fail({"error": "Assertion response is required"})
 
     original_request = {key: value for key, value in data.items() if not key.startswith("__")}
 
     public_key_raw = original_request.get("publicKey")
     if not isinstance(public_key_raw, Mapping):
-        return advanced_module.jsonify(
-            {"error": "Invalid request: Missing publicKey in JSON editor content"},
-        ), 400
+        return _fail({"error": "Invalid request: Missing publicKey in JSON editor content"})
 
     public_key = public_key_raw
 
@@ -88,17 +98,17 @@ def advanced_authenticate_complete_impl(advanced_module: Any):
             response.get("authenticatorAttachment") if isinstance(response, Mapping) else None
         )
         if response_attachment is None:
-            return advanced_module.jsonify(
+            return _fail(
                 {
                     "error": (
                         "Authenticator attachment could not be determined to enforce selected hints."
                     )
                 }
-            ), 400
+            )
         if response_attachment not in allowed_attachments:
-            return advanced_module.jsonify(
-                {"error": "Authenticator attachment is not permitted by the selected hints."},
-            ), 400
+            return _fail(
+                {"error": "Authenticator attachment is not permitted by the selected hints."}
+            )
 
     raw_credentials_input: Optional[List[Any]] = None
     for field in ("__storedCredentials", "storedCredentials", "credentials"):
@@ -122,7 +132,7 @@ def advanced_authenticate_complete_impl(advanced_module: Any):
     if not stored_records:
         if isinstance(raw_credentials_input, list) and raw_credentials_input:
             advanced_module.session.pop("advanced_auth_credentials_meta", None)
-            return advanced_module.jsonify(
+            return _fail(
                 {
                     "error": (
                         "Stored credentials could not be restored from the browser session. "
@@ -130,9 +140,9 @@ def advanced_authenticate_complete_impl(advanced_module: Any):
                         "Please clear some saved credentials or restart the authentication flow and try again."
                     )
                 }
-            ), 400
+            )
         advanced_module.session.pop("advanced_auth_credentials_meta", None)
-        return advanced_module.jsonify({"error": "No credentials found"}), 404
+        return _fail({"error": "No credentials found"}, 404)
 
     advanced_module.session.pop("advanced_auth_credentials_meta", None)
 
@@ -159,10 +169,9 @@ def advanced_authenticate_complete_impl(advanced_module: Any):
             response_payload["failedCredentialId"] = (
                 base64.urlsafe_b64encode(credential_id_bytes).decode("ascii").rstrip("=")
             )
-        return advanced_module.jsonify(response_payload), 400
+        return _fail(response_payload)
 
     state = advanced_module.session.pop("advanced_auth_state", None)
-    challenge_source = CHALLENGE_SOURCE_SERVER if state is not None else CHALLENGE_SOURCE_CLIENT
     if state is None:
         fallback_state = data.get("__session_state")
         if isinstance(fallback_state, Mapping):

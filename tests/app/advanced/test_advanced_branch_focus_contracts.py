@@ -305,7 +305,10 @@ def test_advanced_authenticate_complete_requires_assertion_response():
         )
 
     assert response.status_code == 400
-    assert response.get_json() == {"error": "Assertion response is required"}
+    assert response.get_json() == {
+        "error": "Assertion response is required",
+        "challengeSource": "client-supplied",
+    }
 
 
 def test_advanced_authenticate_complete_requires_public_key_payload():
@@ -319,7 +322,10 @@ def test_advanced_authenticate_complete_requires_public_key_payload():
         )
 
     assert response.status_code == 400
-    assert response.get_json() == {"error": "Invalid request: Missing publicKey in JSON editor content"}
+    assert response.get_json() == {
+        "error": "Invalid request: Missing publicKey in JSON editor content",
+        "challengeSource": "client-supplied",
+    }
 
 
 def test_advanced_authenticate_complete_uses_legacy_session_credentials_fallback(monkeypatch):
@@ -394,7 +400,10 @@ def test_advanced_authenticate_complete_returns_404_when_no_credentials_found_an
         )
 
         assert response.status_code == 404
-        assert response.get_json() == {"error": "No credentials found"}
+        assert response.get_json() == {
+            "error": "No credentials found",
+            "challengeSource": "client-supplied",
+        }
 
         with client.session_transaction() as session_state:
             assert "advanced_auth_credentials_meta" not in session_state
