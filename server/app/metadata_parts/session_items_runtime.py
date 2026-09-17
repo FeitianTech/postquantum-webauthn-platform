@@ -1,18 +1,32 @@
 """Session metadata item dataclass and CRUD helpers."""
 from __future__ import annotations
 
+import json
+import uuid
+from collections.abc import Mapping
 from dataclasses import dataclass
+from datetime import datetime, timezone
+from typing import Any
+
+from fido2.mds3 import MetadataBlobPayloadEntry
+
+from .. import session_metadata_store
+from ..config import app
+from .runtime_state import (
+    _SESSION_METADATA_INFO_SUFFIX,
+    _SESSION_METADATA_SUFFIX,
+)
 
 
 @dataclass(frozen=True)
 class SessionMetadataItem:
     filename: str
-    payload: Dict[str, Any]
-    legal_header: Optional[str]
+    payload: dict[str, Any]
+    legal_header: str | None
     entry: MetadataBlobPayloadEntry
-    uploaded_at: Optional[str]
-    original_filename: Optional[str]
-    mtime: Optional[float]
+    uploaded_at: str | None
+    original_filename: str | None
+    mtime: float | None
 
 
 def _prune_session_metadata_directory(session_id: str) -> None:
@@ -22,7 +36,7 @@ def _prune_session_metadata_directory(session_id: str) -> None:
         pass
 
 
-def _load_session_metadata_info(session_id: str, filename: str) -> Dict[str, Any]:
+def _load_session_metadata_info(session_id: str, filename: str) -> dict[str, Any]:
     try:
         payload_bytes = session_metadata_store.read_file(session_id, filename)
     except Exception:
@@ -45,7 +59,7 @@ def _load_session_metadata_info(session_id: str, filename: str) -> Dict[str, Any
 def save_session_metadata_item(
     raw_payload: Mapping[str, Any],
     *,
-    original_filename: Optional[str] = None,
+    original_filename: str | None = None,
 ) -> SessionMetadataItem:
     session_id = ensure_metadata_session_id()
     directory = _session_metadata_directory(session_id, create=True)
@@ -112,7 +126,7 @@ def save_session_metadata_item(
     )
 
 
-def list_session_metadata_items(session_id: Optional[str] = None) -> List[SessionMetadataItem]:
+def list_session_metadata_items(session_id: str | None = None) -> list[SessionMetadataItem]:
     active_session = session_id or _get_metadata_session_id(create=False)
     if not active_session:
         return []
@@ -133,7 +147,7 @@ def list_session_metadata_items(session_id: Optional[str] = None) -> List[Sessio
     except Exception:
         return []
 
-    items: List[SessionMetadataItem] = []
+    items: list[SessionMetadataItem] = []
     for filename in sorted(filenames):
         try:
             payload_bytes = session_metadata_store.read_file(directory, filename)
@@ -187,7 +201,7 @@ def list_session_metadata_items(session_id: Optional[str] = None) -> List[Sessio
 
 
 def delete_session_metadata_item(
-    stored_filename: str, session_id: Optional[str] = None
+    stored_filename: str, session_id: str | None = None
 ) -> bool:
     active_session = session_id or _get_metadata_session_id(create=False)
     if not active_session:
@@ -227,8 +241,8 @@ def delete_session_metadata_item(
     return True
 
 
-def serialize_session_metadata_item(item: SessionMetadataItem) -> Dict[str, Any]:
-    source: Dict[str, Any] = {
+def serialize_session_metadata_item(item: SessionMetadataItem) -> dict[str, Any]:
+    source: dict[str, Any] = {
         "storedFilename": item.filename,
     }
     if item.original_filename:
@@ -238,7 +252,7 @@ def serialize_session_metadata_item(item: SessionMetadataItem) -> Dict[str, Any]
     if item.mtime is not None:
         source["modifiedAt"] = datetime.fromtimestamp(item.mtime, timezone.utc).isoformat()
 
-    payload: Dict[str, Any] = {
+    payload: dict[str, Any] = {
         "entry": item.payload,
         "source": source,
     }
