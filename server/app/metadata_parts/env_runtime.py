@@ -1,8 +1,19 @@
 """Environment and cleanup interval helpers for metadata runtime."""
 from __future__ import annotations
 
+import os
+from datetime import timedelta
 
-def _env_flag(name: str) -> Optional[bool]:
+from ..config import app
+from ..env_flags import parse_env_flag
+from .runtime_state import (
+    _SESSION_METADATA_CLEANUP_ASYNC_ENV,
+    _SESSION_METADATA_CLEANUP_INTERVAL_HOURS_ENV,
+    _SESSION_METADATA_CLEANUP_INTERVAL_SECONDS_ENV,
+)
+
+
+def _env_flag(name: str) -> bool | None:
     return parse_env_flag(name)
 
 
