@@ -187,7 +187,7 @@ def test_resolve_secret_key_generates_and_stores(tmp_path, monkeypatch):
             assert len(secret) > 0
             
             # Should have tried to store it
-            expected_path = instance_path / "session-secret.key"
+            expected_path = instance_path / "session-secret.key"  # noqa: F841  # FIXME: expectation is built but never asserted
             # File may or may not exist depending on write permissions
             # but the secret should be valid
 

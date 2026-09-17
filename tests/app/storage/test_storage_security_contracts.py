@@ -178,7 +178,7 @@ def test_traversal_never_creates_anything_outside_the_root(local_store):
     store = local_store.storage
     outside = local_store.tmp_path / "outside"
     outside.mkdir()
-    escape = f"../../outside/pwned"
+    escape = "../../outside/pwned"
 
     with pytest.raises(ValueError):
         store.savekey(escape, [{"credential_data": "x"}], session_id="session-a")

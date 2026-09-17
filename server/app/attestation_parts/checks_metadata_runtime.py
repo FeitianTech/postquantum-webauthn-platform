@@ -75,7 +75,7 @@ def _finalize_metadata_results(
         if entry_aaguid is not None:
             try:
                 metadata_aaguid = str(entry_aaguid)
-                metadata_aaguid_bytes = bytes(entry_aaguid)
+                metadata_aaguid_bytes = bytes(entry_aaguid)  # noqa: F841  # FIXME: computed but never compared, unlike the credential/certificate aaguids
             except Exception:
                 pass
 

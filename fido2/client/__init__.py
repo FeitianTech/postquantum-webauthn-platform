@@ -530,7 +530,7 @@ class _Ctap2ClientAssertionSelection(AssertionSelection):
                 output = ext.prepare_outputs(assertion, self._pin_token)
                 if output:
                     extension_outputs.update(output)
-        except ValueError as e:
+        except ValueError:
             raise ClientError.ERR.CONFIGURATION_UNSUPPORTED()
         return extension_outputs
 
@@ -902,7 +902,7 @@ class _Ctap2ClientBackend(_ClientBackend):
                 output = ext.prepare_outputs(att_resp, pin_token)
                 if output is not None:
                     extension_outputs.update(output)
-        except ValueError as e:
+        except ValueError:
             raise ClientError.ERR.CONFIGURATION_UNSUPPORTED()
 
         att_obj = AttestationObject.create(

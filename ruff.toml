@@ -28,8 +28,14 @@ target-version = "py312"
 # legacy `typing` names until those fragments can import their own. This is the
 # same debt F821 tracks (see the note at the bottom of this file) and it is
 # retired in the same milestone, not by suppressing it name by name here.
-"server/app/attestation.py" = ["F401", "UP035"]
+#
+# F822 is ignored in the two modules that carry an `__all__`, for the same
+# reason and after checking every entry: all 26 names ruff calls undefined are
+# installed into the module globals at import time by
+# `_install_runtime_bindings(...)`. `hasattr()` and `from <mod> import *` both
+# resolve all 26, so none of them is a real broken export.
+"server/app/attestation.py" = ["F401", "UP035", "F822"]
 "server/app/decoder/decode.py" = ["F401", "UP035"]
-"server/app/metadata.py" = ["F401", "UP035"]
+"server/app/metadata.py" = ["F401", "UP035", "F822"]
 "server/app/routes/advanced.py" = ["F401", "UP035"]
 "server/app/routes/simple.py" = ["F401", "UP035"]

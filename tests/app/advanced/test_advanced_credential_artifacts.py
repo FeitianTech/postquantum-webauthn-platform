@@ -126,7 +126,7 @@ def test_get_credential_artifact_route_returns_404_when_missing(monkeypatch):
 
 
 def test_put_credential_artifact_route_requires_object_payload(monkeypatch):
-    advanced_module = pytest.importorskip("server.app.routes.advanced")
+    pytest.importorskip("server.app.routes.advanced")
     config_module = pytest.importorskip("server.app.config")
 
     with config_module.app.test_client() as client:
@@ -228,7 +228,7 @@ def test_put_credential_artifact_route_returns_400_when_store_fails(monkeypatch)
 
 
 def test_put_snapshot_route_rejects_non_object_snapshot(monkeypatch):
-    advanced_module = pytest.importorskip("server.app.routes.advanced")
+    pytest.importorskip("server.app.routes.advanced")
     config_module = pytest.importorskip("server.app.config")
 
     with config_module.app.test_client() as client:
