@@ -1,0 +1,127 @@
+name: CI / Security
+
+on:
+  # push is filtered to main so a same-repo PR is checked once (by
+  # pull_request) instead of twice; main still gets a post-merge run.
+  push:
+    branches: [main]
+  pull_request:
+  # New advisories land without anyone touching the code, so the same gates run
+  # weekly. A failure here is the alert.
+  schedule:
+    - cron: '0 3 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-security-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python-dependencies:
+    name: Python dependency audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          version: "0.12.15"
+
+      # Audits exactly what uv.lock pins, so the audit cannot drift from what
+      # the image installs. --locked fails if the lock is out of date.
+      - name: Export the locked dependency set
+        run: uv export --locked --no-emit-local -o requirements-audit.txt
+
+      # No exclusions: the locked set has no known advisories today, so any
+      # finding is a real regression. pip-audit is a developer tool, not an
+      # application dependency, so it is run with uvx like ruff.
+      - name: Audit the locked dependencies
+        run: uvx pip-audit@2.9.0 --requirement requirements-audit.txt --disable-pip
+
+  npm-dependencies:
+    name: npm dependency audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "20"
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      # Nothing in package.json ships: the production tree is empty and
+      # `npm audit --omit=dev` reports zero. The threshold is therefore about
+      # the test toolchain. It sits at high because the four high advisories
+      # that were open (vite, undici) are fixed by the overrides in
+      # package.json, while the three remaining moderate ones are a path
+      # traversal in @vitest/mocker that only affects the test runner. Their
+      # fix is vitest 4.1.11, which npm 10.9.8 cannot resolve (arborist crashes
+      # in #loadPeerSet). Lower this to moderate once that install works.
+      - name: Audit npm dependencies
+        run: npm audit --audit-level=high
+
+      # Recorded even when it passes, so a moderate finding is visible rather
+      # than silently tolerated.
+      - name: Report advisories below the failure threshold
+        if: always()
+        run: npm audit --audit-level=low || true
+
+  container-image:
+    name: Container image scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Build the image
+        run: docker build -t pqc-webauthn:scan .
+
+      # --ignore-unfixed is the justification-bearing flag: the base image
+      # carries HIGH findings in util-linux, ncurses and systemd that Debian
+      # has not released a fix for, and a gate that can only be satisfied by
+      # waiting on someone else is a gate that gets disabled. Everything Debian
+      # has fixed must be fixed here, which the runtime stage's apt-get upgrade
+      # takes care of. The scan is currently clean at this threshold.
+      - name: Scan the image for fixable HIGH and CRITICAL vulnerabilities
+        run: |
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -v "$HOME/.cache/trivy:/root/.cache/trivy" \
+            aquasec/trivy:0.69.0 image \
+              --scanners vuln \
+              --severity HIGH,CRITICAL \
+              --ignore-unfixed \
+              --exit-code 1 \
+              --skip-version-check \
+              pqc-webauthn:scan
+
+      # Visibility into what is being accepted, without failing on it.
+      - name: Report unfixed findings
+        if: always()
+        run: |
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -v "$HOME/.cache/trivy:/root/.cache/trivy" \
+            aquasec/trivy:0.69.0 image \
+              --scanners vuln \
+              --severity HIGH,CRITICAL \
+              --exit-code 0 \
+              --skip-version-check \
+              pqc-webauthn:scan || true
