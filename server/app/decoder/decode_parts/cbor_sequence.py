@@ -7,21 +7,21 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 def _decode_cbor_sequence_impl(
     payload: bytes,
     *,
-    cbor_decode_from: Callable[[bytes], Tuple[Any, bytes]],
-    cbor_decoder_factory: Callable[[bytes], Tuple[Any, int]],
-    decode_cbor_structure: Callable[[bytes], Tuple[Dict[str, Any], int]],
-    structure_to_value: Callable[[Dict[str, Any]], Any],
-    lenient_decode_from: Callable[[bytes, int], Tuple[Any, int]],
+    cbor_decode_from: Callable[[bytes], tuple[Any, bytes]],
+    cbor_decoder_factory: Callable[[bytes], tuple[Any, int]],
+    decode_cbor_structure: Callable[[bytes], tuple[dict[str, Any], int]],
+    structure_to_value: Callable[[dict[str, Any]], Any],
+    lenient_decode_from: Callable[[bytes, int], tuple[Any, int]],
     json_safe_with_stringified_keys: Callable[[Any], Any],
     cbor_error_type: type,
-) -> Tuple[List[Dict[str, Any]], List[Any], int, bytes]:
-    structures: List[Dict[str, Any]] = []
-    values: List[Any] = []
+) -> tuple[list[dict[str, Any]], list[Any], int, bytes]:
+    structures: list[dict[str, Any]] = []
+    values: list[Any] = []
     consumed_total = 0
     remaining = payload
 
     while remaining:
-        predecoded_structure: Optional[Dict[str, Any]] = None
+        predecoded_structure: Optional[dict[str, Any]] = None
         try:
             value, rest_after_value = cbor_decode_from(remaining)
             consumed_value = len(remaining) - len(rest_after_value)

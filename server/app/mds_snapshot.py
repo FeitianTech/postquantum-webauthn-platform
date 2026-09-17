@@ -38,7 +38,7 @@ def _string_or_none(value: Any) -> Optional[str]:
     return None
 
 
-def _extract_list(value: Any) -> List[Any]:
+def _extract_list(value: Any) -> list[Any]:
     if value in (None, ""):
         return []
     if isinstance(value, list):
@@ -87,7 +87,7 @@ def _format_date(value: Any) -> str:
     return parsed.strftime("%b %d, %Y").replace(" 0", " ")
 
 
-def _extract_byte_array(value: Any) -> Optional[List[int]]:
+def _extract_byte_array(value: Any) -> Optional[list[int]]:
     if value is None:
         return None
     if isinstance(value, list) and all(isinstance(item, int) for item in value):
@@ -140,7 +140,7 @@ def _format_enum(value: Any) -> str:
     if value in (None, ""):
         return ""
 
-    parts: List[str] = []
+    parts: list[str] = []
     for raw_part in str(value).split("_"):
         for sub_part in raw_part.split("-"):
             text = sub_part.strip()
@@ -175,7 +175,7 @@ def _format_protocol(protocol: Any) -> str:
     return formatted
 
 
-def _format_certification(status_reports: Any) -> Tuple[str, str]:
+def _format_certification(status_reports: Any) -> tuple[str, str]:
     reports = [report for report in _extract_list(status_reports) if isinstance(report, Mapping)]
     if not reports:
         return "", ""
@@ -220,7 +220,7 @@ def _latest_effective_date(status_reports: Any) -> str:
     return _string_or_none(_mapping_value(latest, "effectiveDate", "effective_date")) or ""
 
 
-def _extract_user_verification(details: Any) -> List[str]:
+def _extract_user_verification(details: Any) -> list[str]:
     values = set()
     for group in _extract_list(details):
         if not isinstance(group, list):
@@ -233,7 +233,7 @@ def _extract_user_verification(details: Any) -> List[str]:
     return sorted(values)
 
 
-def _extract_transports(metadata: Mapping[str, Any]) -> List[str]:
+def _extract_transports(metadata: Mapping[str, Any]) -> list[str]:
     info = _mapping_value(metadata, "authenticatorGetInfo", "authenticator_get_info")
     info_transports = _extract_list(_mapping_value(info, "transports")) if isinstance(info, Mapping) else []
     metadata_transports = _extract_list(_mapping_value(metadata, "transports"))
@@ -309,9 +309,9 @@ def _resolve_aaguid(entry: Mapping[str, Any], metadata: Mapping[str, Any]) -> st
 
 def _extract_attestation_key_identifiers(
     metadata: Mapping[str, Any], entry: Mapping[str, Any]
-) -> List[str]:
+) -> list[str]:
     seen = set()
-    values: List[str] = []
+    values: list[str] = []
     for candidate in (
         *_extract_list(
             _mapping_value(
@@ -402,9 +402,9 @@ def _decode_der_certificate(value: Any) -> Optional[bytes]:
         return None
 
 
-def _summarise_attestation_certificates(certificates: Sequence[Any]) -> Tuple[List[str], List[str]]:
-    algorithm_infos: List[str] = []
-    common_names: List[str] = []
+def _summarise_attestation_certificates(certificates: Sequence[Any]) -> tuple[list[str], list[str]]:
+    algorithm_infos: list[str] = []
+    common_names: list[str] = []
     seen_algorithms = set()
     seen_common_names = set()
 
@@ -451,7 +451,7 @@ def _canonical_json(value: Any) -> str:
     return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
 
 
-def _compact_metadata_statement(metadata_mapping: Mapping[str, Any]) -> Dict[str, Any]:
+def _compact_metadata_statement(metadata_mapping: Mapping[str, Any]) -> dict[str, Any]:
     compact = dict(metadata_mapping)
     for key in (
         "attestationRootCertificates",
@@ -493,7 +493,7 @@ def build_snapshot_meta(
     cache_info: Optional[Mapping[str, Any]] = None,
     *,
     source: str = "packaged",
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     metadata = dict(cache_info or {})
     generated_at = _string_or_none(_mapping_value(metadata, "generated_at"))
     if not generated_at:
@@ -525,7 +525,7 @@ def build_explorer_entry(
     include_raw_entry: bool = True,
     compact_detail: bool = False,
     source_info: Optional[Mapping[str, Any]] = None,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     metadata = _mapping_value(entry_payload, "metadataStatement", "metadata_statement")
     metadata_mapping = metadata if isinstance(metadata, Mapping) else {}
     status_reports = [
@@ -578,7 +578,7 @@ def build_explorer_entry(
     algorithm_info_list, common_name_list = _summarise_attestation_certificates(attestation_certificates)
     source_info_payload = dict(source_info) if isinstance(source_info, Mapping) else None
 
-    entry: Dict[str, Any] = {
+    entry: dict[str, Any] = {
         "entryId": build_entry_id(entry_payload),
         "index": index,
         "name": name,
@@ -656,7 +656,7 @@ def build_explorer_snapshot(
     include_detail: bool = False,
     include_raw_entry: bool = True,
     compact_detail: bool = False,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     snapshot_meta = build_snapshot_meta(payload, cache_info, source=source)
     entries = [
         build_explorer_entry(
@@ -686,7 +686,7 @@ def build_bootstrap_snapshot(
     *,
     source: str = "packaged",
     trust_anchor_status: Optional[bool] = True,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     return build_explorer_snapshot(
         payload,
         cache_info,

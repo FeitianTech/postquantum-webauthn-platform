@@ -12,18 +12,18 @@ from .config import app
 
 
 # COSE algorithm identifiers mapped to their FIPS 204 parameter set names.
-PQC_ALGORITHM_ID_TO_NAME: Dict[int, str] = {
+PQC_ALGORITHM_ID_TO_NAME: dict[int, str] = {
     -50: "ML-DSA-87",
     -49: "ML-DSA-65",
     -48: "ML-DSA-44",
 }
 
-_PQC_ALGORITHM_NAME_TO_ID: Dict[str, int] = {
+_PQC_ALGORITHM_NAME_TO_ID: dict[str, int] = {
     name: alg_id for alg_id, name in PQC_ALGORITHM_ID_TO_NAME.items()
 }
 
 
-def _load_enabled_mechanisms() -> Set[str]:
+def _load_enabled_mechanisms() -> set[str]:
     """Return the ML-DSA parameter sets ``cryptography`` can verify."""
 
     from cryptography.hazmat.primitives.asymmetric import mldsa
@@ -40,7 +40,7 @@ def _load_enabled_mechanisms() -> Set[str]:
     }
 
 
-def detect_available_pqc_algorithms() -> Tuple[Set[int], Optional[str]]:
+def detect_available_pqc_algorithms() -> tuple[set[int], Optional[str]]:
     """Detect the ML-DSA algorithms this build can verify."""
 
     try:

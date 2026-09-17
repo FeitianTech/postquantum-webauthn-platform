@@ -41,7 +41,7 @@ def record_sign_count(record: Mapping[str, Any]) -> Optional[int]:
     return _as_counter(getattr(record.get("auth_data"), "counter", None))
 
 
-def load_server_records_impl(simple_module: Any, uname: Any) -> Tuple[Optional[List[Any]], Optional[str]]:
+def load_server_records_impl(simple_module: Any, uname: Any) -> tuple[Optional[list[Any]], Optional[str]]:
     """Read the caller's server-side credential records, or ``(None, None)``."""
 
     if not isinstance(uname, str) or not uname:
@@ -59,7 +59,7 @@ def load_server_records_impl(simple_module: Any, uname: Any) -> Tuple[Optional[L
     return records, session_id
 
 
-def find_server_record_index(records: Optional[List[Any]], credential_id: bytes) -> Optional[int]:
+def find_server_record_index(records: Optional[list[Any]], credential_id: bytes) -> Optional[int]:
     if not records:
         return None
     for index, record in enumerate(records):

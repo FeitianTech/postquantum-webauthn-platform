@@ -7,7 +7,7 @@ from typing import Any, Dict, Mapping, Optional
 
 from fido2.webauthn import AttestationObject
 
-_COSE_ALG_LABELS: Dict[int, str] = {
+_COSE_ALG_LABELS: dict[int, str] = {
     -8: "EdDSA",
     -7: "ES256",
     -35: "ES256K",

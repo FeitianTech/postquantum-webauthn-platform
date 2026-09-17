@@ -103,7 +103,7 @@ class InMemoryChallengeRegistry(ChallengeRegistry):
         self._ttl = float(ttl_seconds)
         self._clock = clock
         self._lock = threading.Lock()
-        self._expiry_by_challenge: Dict[str, float] = {}
+        self._expiry_by_challenge: dict[str, float] = {}
 
     def consume(self, challenge: str) -> bool:
         now = self._clock()

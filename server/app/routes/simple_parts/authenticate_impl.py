@@ -17,7 +17,7 @@ def authenticate_begin_impl(simple_module: Any):
     uname = simple_module.request.args.get("email")
     payload = simple_module.request.get_json(silent=True) or {}
 
-    raw_credentials: List[Any] = []
+    raw_credentials: list[Any] = []
     if isinstance(payload, Mapping):
         candidate_credentials = payload.get("credentials") or payload.get("storedCredentials")
         if isinstance(candidate_credentials, list):
@@ -124,7 +124,7 @@ def authenticate_complete_impl(simple_module: Any):
                 simple_module.base64.urlsafe_b64encode(credential_id_bytes).decode("ascii").rstrip("=")
             )
 
-        response_payload: Dict[str, Any] = {"error": str(exc)}
+        response_payload: dict[str, Any] = {"error": str(exc)}
         if failed_credential_id is not None:
             response_payload["failedCredentialId"] = failed_credential_id
 
@@ -221,7 +221,7 @@ def authenticate_complete_impl(simple_module: Any):
         "hintsUsed": [],
     }
 
-    response_payload: Dict[str, Any] = {
+    response_payload: dict[str, Any] = {
         "status": "OK",
         **debug_info,
     }

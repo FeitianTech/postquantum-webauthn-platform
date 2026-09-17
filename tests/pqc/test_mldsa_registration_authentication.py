@@ -66,7 +66,7 @@ def _register(
     server: Fido2Server,
     credential_label: str = "credential",
     statement_signer: Optional[str] = None,
-    x5c: Optional[List[bytes]] = None,
+    x5c: Optional[list[bytes]] = None,
     tamper_signature: bool = False,
 ):
     """Drive a complete registration ceremony and return the stored auth data."""

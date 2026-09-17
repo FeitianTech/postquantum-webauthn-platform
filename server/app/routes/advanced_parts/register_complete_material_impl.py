@@ -12,7 +12,7 @@ def build_registration_material(
     attestation_certificate_details: Any,
     attestation_certificates_details: Any,
     client_extension_results: Any,
-    credential_info: Dict[str, Any],
+    credential_info: dict[str, Any],
     response: Any,
     user_handle: bytes,
     resolved_rp_id: str,
@@ -20,7 +20,7 @@ def build_registration_material(
     attestation_rp_id_hash_valid: Any,
     attestation_checks_safe: Any,
     attestation_summary: Any,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     credential_data = auth_data.credential_data
     credential_id_bytes = getattr(credential_data, "credential_id", b"") or b""
     credential_id_hex = credential_id_bytes.hex() if credential_id_bytes else None
@@ -179,7 +179,7 @@ def build_registration_material(
             public_key_b64 = advanced_module.base64.b64encode(public_key_cbor_bytes).decode("ascii")
             public_key_b64url = advanced_module.base64.urlsafe_b64encode(public_key_cbor_bytes).rstrip(b"=").decode("ascii")
 
-    stored_credential: Dict[str, Any] = {
+    stored_credential: dict[str, Any] = {
         "type": "advanced",
         "userName": credential_info["user_info"]["name"],
         "displayName": credential_info["user_info"]["display_name"],

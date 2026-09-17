@@ -16,7 +16,7 @@ _float_summary = _strict._float_summary
 _read_cbor_length = _strict._read_cbor_length
 
 
-def _parse_cbor_item(data: bytes, offset: int) -> Tuple[Dict[str, Any], int]:
+def _parse_cbor_item(data: bytes, offset: int) -> tuple[dict[str, Any], int]:
     original_read_cbor_length = _strict._read_cbor_length
     original_ensure_cbor_available = _strict._ensure_cbor_available
     original_float_summary = _strict._float_summary
@@ -31,7 +31,7 @@ def _parse_cbor_item(data: bytes, offset: int) -> Tuple[Dict[str, Any], int]:
         _strict._float_summary = original_float_summary
 
 
-def _decode_cbor_structure(data: bytes) -> Tuple[Dict[str, Any], int]:
+def _decode_cbor_structure(data: bytes) -> tuple[dict[str, Any], int]:
     node, offset = _parse_cbor_item(data, 0)
     node.setdefault("byteLength", offset)
     return node, offset
@@ -41,9 +41,9 @@ def _structure_to_value(node: Mapping[str, Any]) -> Any:
     return _lenient._structure_to_value(node)
 
 
-def _lenient_read_uint(info: int, data: bytes, offset: int) -> Tuple[int, int]:
+def _lenient_read_uint(info: int, data: bytes, offset: int) -> tuple[int, int]:
     return _lenient._lenient_read_uint(info, data, offset)
 
 
-def _lenient_decode_from(data: bytes, offset: int = 0) -> Tuple[Any, int]:
+def _lenient_decode_from(data: bytes, offset: int = 0) -> tuple[Any, int]:
     return _lenient._lenient_decode_from(data, offset)

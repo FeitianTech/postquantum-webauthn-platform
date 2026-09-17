@@ -7,12 +7,12 @@ def configure_allowed_algorithms(
     advanced_module: Any,
     public_key: Mapping[str, Any],
     temp_server: Any,
-    warnings: List[str],
+    warnings: list[str],
 ) -> None:
     pub_key_cred_params = public_key.get("pubKeyCredParams", [])
     if pub_key_cred_params:
-        allowed_algorithms: List[Any] = []
-        normalized_params: List[Dict[str, Any]] = []
+        allowed_algorithms: list[Any] = []
+        normalized_params: list[dict[str, Any]] = []
         for param in pub_key_cred_params:
             raw_alg_value: Any
             if isinstance(param, Mapping):
@@ -124,7 +124,7 @@ def configure_allowed_algorithms(
         warnings.append(f"Unsupported PQC algorithms were skipped ({missing_names}).")
 
 
-def build_exclude_list(advanced_module: Any, public_key: Mapping[str, Any]) -> List[Any]:
+def build_exclude_list(advanced_module: Any, public_key: Mapping[str, Any]) -> list[Any]:
     exclude_list = []
     exclude_credentials = public_key.get("excludeCredentials") if "excludeCredentials" in public_key else None
     if isinstance(exclude_credentials, list):
@@ -143,9 +143,9 @@ def build_exclude_list(advanced_module: Any, public_key: Mapping[str, Any]) -> L
     return exclude_list
 
 
-def build_processed_extensions(advanced_module: Any, public_key: Mapping[str, Any]) -> Dict[str, Any]:
+def build_processed_extensions(advanced_module: Any, public_key: Mapping[str, Any]) -> dict[str, Any]:
     extensions = public_key.get("extensions", {})
-    processed_extensions: Dict[str, Any] = {}
+    processed_extensions: dict[str, Any] = {}
 
     for ext_name, ext_value in extensions.items():
         if ext_name == "credProps":

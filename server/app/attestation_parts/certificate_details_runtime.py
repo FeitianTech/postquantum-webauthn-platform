@@ -72,23 +72,23 @@ def _coerce_attestation_certificate_bytes(value: Any) -> Optional[bytes]:
 
 def extract_attestation_details(
     response: Any,
-) -> Tuple[
+) -> tuple[
     str,
-    Dict[str, Any],
+    dict[str, Any],
     Optional[str],
     Optional[str],
-    Dict[str, Any],
-    Optional[Dict[str, Any]],
-    List[Dict[str, Any]],
+    dict[str, Any],
+    Optional[dict[str, Any]],
+    list[dict[str, Any]],
 ]:
     """Parse attestation information from a registration response structure."""
     attestation_format = "none"
-    attestation_statement: Dict[str, Any] = {}
+    attestation_statement: dict[str, Any] = {}
     attestation_object_b64: Optional[str] = None
     client_data_b64: Optional[str] = None
-    client_extension_results: Dict[str, Any] = {}
-    attestation_certificate: Optional[Dict[str, Any]] = None
-    attestation_certificates: List[Dict[str, Any]] = []
+    client_extension_results: dict[str, Any] = {}
+    attestation_certificate: Optional[dict[str, Any]] = None
+    attestation_certificates: list[dict[str, Any]] = []
 
     if not isinstance(response, dict):
         return (

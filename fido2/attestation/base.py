@@ -89,7 +89,7 @@ class AttestationResult:
     """The result of verifying an attestation."""
 
     attestation_type: AttestationType
-    trust_path: List[bytes]
+    trust_path: list[bytes]
 
 
 @dataclass
@@ -99,7 +99,7 @@ class TrustPathEvaluation:
     attestation_result: Optional[AttestationResult]
     ca_certificate: Optional[bytes]
     chain_valid: Optional[bool]
-    errors: List[str]
+    errors: list[str]
 
 
 def catch_builtins(f):
@@ -158,7 +158,7 @@ def _verify_mldsa_certificate_signature(
         ) from exc
 
 
-def verify_x509_chain(chain: List[bytes]) -> None:
+def verify_x509_chain(chain: list[bytes]) -> None:
     """Verifies a chain of certificates.
 
     Checks that the first item in the chain is signed by the next, and so on.
@@ -218,7 +218,7 @@ class Attestation(abc.ABC):
         """
 
     @staticmethod
-    def for_type(fmt: str) -> Type[Attestation]:
+    def for_type(fmt: str) -> type[Attestation]:
         """Get an Attestation subclass type for the given format."""
         for cls in Attestation.__subclasses__():
             if getattr(cls, "FORMAT", None) == fmt:
@@ -294,7 +294,7 @@ class AttestationVerifier(abc.ABC):
     ) -> TrustPathEvaluation:
         """Return detailed information about the attestation trust path."""
 
-        errors: List[str] = []
+        errors: list[str] = []
 
         att_verifier: Attestation = UnsupportedAttestation(attestation_object.fmt)
         for at in self._attestation_types:

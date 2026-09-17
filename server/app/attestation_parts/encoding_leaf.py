@@ -10,7 +10,7 @@ def colon_hex(data: bytes) -> str:
     return ":".join(f"{byte:02x}" for byte in data)
 
 
-def format_hex_bytes_lines(data: bytes, bytes_per_line: int = 16) -> List[str]:
+def format_hex_bytes_lines(data: bytes, bytes_per_line: int = 16) -> list[str]:
     """Return colon separated hex grouped across multiple lines."""
     if not data:
         return []
@@ -25,7 +25,7 @@ def format_hex_bytes_lines(data: bytes, bytes_per_line: int = 16) -> List[str]:
     return lines
 
 
-def format_hex_string_lines(hex_string: str, bytes_per_line: int = 16) -> List[str]:
+def format_hex_string_lines(hex_string: str, bytes_per_line: int = 16) -> list[str]:
     cleaned = "".join(hex_string.split()).replace(":", "")
     if len(cleaned) % 2:
         cleaned = "0" + cleaned

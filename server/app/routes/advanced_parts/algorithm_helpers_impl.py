@@ -93,8 +93,8 @@ def _extract_credential_algorithm_impl(advanced_module: Any, value: Any) -> Opti
 def _derive_algorithms_from_credentials_impl(
     advanced_module: Any,
     credentials: Iterable[Any],
-) -> List[PublicKeyCredentialParameters]:
-    seen: Dict[int, PublicKeyCredentialParameters] = {}
+) -> list[PublicKeyCredentialParameters]:
+    seen: dict[int, PublicKeyCredentialParameters] = {}
     for credential in credentials:
         alg_value = advanced_module._extract_credential_algorithm(credential)
         if alg_value is None or alg_value in seen:

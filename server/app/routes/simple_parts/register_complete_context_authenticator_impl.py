@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any, Dict
 
 
-def populate_authenticator_data_context_impl(simple_module: Any, ctx: Dict[str, Any]) -> None:
+def populate_authenticator_data_context_impl(simple_module: Any, ctx: dict[str, Any]) -> None:
     try:
         auth_data_bytes = bytes(ctx["auth_data"])
     except Exception:

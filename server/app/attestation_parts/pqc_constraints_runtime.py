@@ -125,10 +125,10 @@ def _verify_pqc_attestation_chain(
     root: bytes,
     *,
     now: datetime,
-) -> Tuple[bool, List[str]]:
+) -> tuple[bool, list[str]]:
     """Verify a PQC attestation chain against *root* including constraints."""
 
-    errors: List[str] = []
+    errors: list[str] = []
     if not trust_path:
         return False, ["pqc_attestation_chain_missing"]
 

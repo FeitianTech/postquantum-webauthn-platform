@@ -314,7 +314,7 @@ def api_upload_custom_metadata():
             continue
 
         try:
-            payload: Dict[str, Any] = json.loads(text)
+            payload: dict[str, Any] = json.loads(text)
         except ValueError as exc:
             errors.append(f"{trimmed}: {exc}")
             continue
@@ -352,7 +352,7 @@ def api_upload_custom_metadata():
             saved_items.append(serialize_session_metadata_item(item))
 
     status_code = 200 if saved_items else 400
-    response: Dict[str, Any] = {"items": saved_items}
+    response: dict[str, Any] = {"items": saved_items}
     if errors:
         response["errors"] = errors
     if saved_items:

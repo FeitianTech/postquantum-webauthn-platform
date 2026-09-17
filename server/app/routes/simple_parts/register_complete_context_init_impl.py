@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any, Dict, List, Mapping
 
 
-def initialize_registration_context_impl(simple_module: Any, ctx: Dict[str, Any]) -> None:
+def initialize_registration_context_impl(simple_module: Any, ctx: dict[str, Any]) -> None:
     attestation_summary = {
         "signatureValid": ctx["attestation_signature_valid"],
         "rootValid": ctx["attestation_root_valid"],
@@ -16,9 +16,9 @@ def initialize_registration_context_impl(simple_module: Any, ctx: Dict[str, Any]
         attestation_summary["metadata"] = metadata_summary
 
     warnings_summary = ctx["attestation_checks_safe"].get("warnings")
-    warnings: List[str] = []
+    warnings: list[str] = []
     if isinstance(warnings_summary, list):
-        filtered_warnings: List[Any] = []
+        filtered_warnings: list[Any] = []
         for message in warnings_summary:
             if isinstance(message, str):
                 stripped = message.strip()
@@ -30,7 +30,7 @@ def initialize_registration_context_impl(simple_module: Any, ctx: Dict[str, Any]
         if filtered_warnings:
             attestation_summary["warnings"] = filtered_warnings
 
-    credential_info: Dict[str, Any] = {
+    credential_info: dict[str, Any] = {
         "credential_data": ctx["auth_data"].credential_data,
         "auth_data": ctx["auth_data"],
         "user_info": {

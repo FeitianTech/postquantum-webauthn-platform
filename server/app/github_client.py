@@ -47,7 +47,7 @@ def is_logging_enabled() -> bool:
     return True
 
 
-def credential_log_repository() -> Tuple[str, str]:
+def credential_log_repository() -> tuple[str, str]:
     """Return the owner/name pair for the credential log repository."""
 
     owner = os.environ.get("GITHUB_LOG_REPO_OWNER", _DEFAULT_REPO_OWNER).strip()
@@ -91,7 +91,7 @@ def _http_timeout() -> float:
     return value if value > 0 else _DEFAULT_HTTP_TIMEOUT_SECONDS
 
 
-def _request(method: str, url: str, body: Optional[Dict[str, Any]] = None) -> Tuple[int, bytes]:
+def _request(method: str, url: str, body: Optional[dict[str, Any]] = None) -> tuple[int, bytes]:
     data = None
     if body is not None:
         data = json.dumps(body).encode("utf-8")
@@ -133,7 +133,7 @@ def git_blob_sha(data: bytes) -> str:
     return hashlib.sha1(header + data).hexdigest()
 
 
-def github_get_json(path: str) -> Tuple[Dict[str, Any], str]:
+def github_get_json(path: str) -> tuple[dict[str, Any], str]:
     """Return the JSON payload and SHA for ``path`` in the log repository."""
 
     url = _api_url(f"contents/{path}")
@@ -144,7 +144,7 @@ def github_get_json(path: str) -> Tuple[Dict[str, Any], str]:
             raise FileNotFoundError(path) from exc
         raise
 
-    response: Dict[str, Any] = json.loads(body.decode("utf-8"))
+    response: dict[str, Any] = json.loads(body.decode("utf-8"))
     encoding = response.get("encoding")
     content_encoded = response.get("content")
     if encoding != "base64" or not isinstance(content_encoded, str):
@@ -159,7 +159,7 @@ def github_get_json(path: str) -> Tuple[Dict[str, Any], str]:
     return payload, sha
 
 
-def github_upload_json(path: str, obj: Dict[str, Any], sha: Optional[str] = None) -> None:
+def github_upload_json(path: str, obj: dict[str, Any], sha: Optional[str] = None) -> None:
     """Create or replace a JSON file at ``path`` in the credential log repository."""
 
     serialised = json.dumps(obj, ensure_ascii=False, indent=2)
@@ -169,7 +169,7 @@ def github_upload_json(path: str, obj: Dict[str, Any], sha: Optional[str] = None
     folder = os.path.basename(os.path.dirname(path)) or "unknown"
 
     action = "update" if sha else "add"
-    body: Dict[str, Any] = {
+    body: dict[str, Any] = {
         "message": f"{action}: {filename} (AAGUID={folder})",
         "content": content,
     }
@@ -183,7 +183,7 @@ def github_upload_json(path: str, obj: Dict[str, Any], sha: Optional[str] = None
 def github_upload_file(path: str, data: bytes, message: str, sha: Optional[str] = None) -> None:
     """Create or replace a file at ``path`` with ``data`` in the log repository."""
 
-    body: Dict[str, Any] = {
+    body: dict[str, Any] = {
         "message": message,
         "content": _encode_content(data),
     }
@@ -194,7 +194,7 @@ def github_upload_file(path: str, data: bytes, message: str, sha: Optional[str] 
     _request("PUT", url, body)
 
 
-def github_list_directory(path: str) -> List[Dict[str, Any]]:
+def github_list_directory(path: str) -> list[dict[str, Any]]:
     """Return the metadata for files within ``path`` in the log repository."""
 
     url = _api_url(f"contents/{path}")

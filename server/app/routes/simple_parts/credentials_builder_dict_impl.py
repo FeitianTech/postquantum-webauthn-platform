@@ -4,7 +4,7 @@ from typing import Any, Dict, Mapping, MutableMapping
 
 
 def add_registration_metadata_impl(
-    simple_module: Any, target: Dict[str, Any], source: Mapping[str, Any]
+    simple_module: Any, target: dict[str, Any], source: Mapping[str, Any]
 ) -> None:
     registration_response = source.get("registration_response")
     if registration_response is None:
@@ -35,7 +35,7 @@ def add_registration_metadata_impl(
 
 def build_credential_info_from_dict_credential_data_impl(
     simple_module: Any, email: str, cred: Mapping[str, Any]
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     cred_data = cred["credential_data"]
     auth_data = cred["auth_data"]
     user_info = cred["user_info"]

@@ -141,15 +141,15 @@ def _generate_storage_id(credential_id: str) -> str:
     return _generate_storage_id_impl(_self_module(), credential_id)
 
 
-def _summarize_properties(value: Any) -> Optional[Dict[str, Any]]:
+def _summarize_properties(value: Any) -> Optional[dict[str, Any]]:
     return _summarize_properties_impl(_self_module(), value)
 
 
-def _summarize_relying_party(value: Any) -> Optional[Dict[str, Any]]:
+def _summarize_relying_party(value: Any) -> Optional[dict[str, Any]]:
     return _summarize_relying_party_impl(_self_module(), value)
 
 
-def _summarize_stored_credential(stored: Mapping[str, Any], storage_id: str) -> Dict[str, Any]:
+def _summarize_stored_credential(stored: Mapping[str, Any], storage_id: str) -> dict[str, Any]:
     return _summarize_stored_credential_impl(_self_module(), stored, storage_id)
 
 
@@ -177,11 +177,11 @@ def _decode_client_binary(value: Any) -> bytes:
     return _decode_client_binary_impl(_self_module(), value)
 
 
-def _parse_client_supplied_credentials(raw_credentials: Any) -> tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+def _parse_client_supplied_credentials(raw_credentials: Any) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     return _parse_client_supplied_credentials_impl(_self_module(), raw_credentials)
 
 
-def _derive_algorithms_from_credentials(credentials: Iterable[Any]) -> List[PublicKeyCredentialParameters]:
+def _derive_algorithms_from_credentials(credentials: Iterable[Any]) -> list[PublicKeyCredentialParameters]:
     return _derive_algorithms_from_credentials_impl(_self_module(), credentials)
 
 

@@ -37,7 +37,7 @@ _CLIENT_LOCK = threading.Lock()
 _CLIENT: Optional[Any] = None
 _BUCKET: Optional[Any] = None
 
-_RETRYABLE_EXCEPTIONS_CACHE: Optional[Tuple[type, ...]] = None
+_RETRYABLE_EXCEPTIONS_CACHE: Optional[tuple[type, ...]] = None
 _DEFAULT_RETRY_ATTEMPTS = 3
 _DEFAULT_RETRY_BASE_DELAY = 0.5
 
@@ -63,7 +63,7 @@ def __getattr__(name: str) -> Any:
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
-def _retryable_exceptions() -> Tuple[type, ...]:
+def _retryable_exceptions() -> tuple[type, ...]:
     global _RETRYABLE_EXCEPTIONS_CACHE
 
     if _RETRYABLE_EXCEPTIONS_CACHE is None:

@@ -21,7 +21,7 @@ from .ctap_fields import (
 
 def _encode_ctap_from_decoded(
     decoded: Mapping[str, Any]
-) -> Tuple[Optional[Dict[int, Any]], Optional[str]]:
+) -> tuple[Optional[dict[int, Any]], Optional[str]]:
     if not isinstance(decoded, Mapping):
         return None, None
 
@@ -41,7 +41,7 @@ def _encode_ctap_from_decoded(
 
 def _encode_ctap_from_structure(
     structure: Mapping[str, Any]
-) -> Tuple[Optional[Dict[int, Any]], Optional[str]]:
+) -> tuple[Optional[dict[int, Any]], Optional[str]]:
     if not isinstance(structure, Mapping):
         return None, None
 
@@ -63,7 +63,7 @@ def _encode_ctap_from_structure(
 def _determine_ctap_prefix(
     metadata: Optional[Mapping[str, Any]],
     kind: Optional[str],
-) -> Tuple[Optional[int], Optional[str]]:
+) -> tuple[Optional[int], Optional[str]]:
     if isinstance(metadata, Mapping):
         code = metadata.get("code")
         if not isinstance(code, int):
@@ -83,8 +83,8 @@ def _determine_ctap_prefix(
     return None, None
 
 
-def _encode_make_credential_request(structure: Mapping[str, Any]) -> Dict[int, Any]:
-    mapping: Dict[int, Any] = {}
+def _encode_make_credential_request(structure: Mapping[str, Any]) -> dict[int, Any]:
+    mapping: dict[int, Any] = {}
 
     mapping[1] = _require_bytes(_get_ctap_field_value(structure, "clientDataHash", 1), "clientDataHash")
     mapping[2] = _restore_generic_structure(
@@ -128,8 +128,8 @@ def _encode_make_credential_request(structure: Mapping[str, Any]) -> Dict[int, A
     return mapping
 
 
-def _encode_get_assertion_request(structure: Mapping[str, Any]) -> Dict[int, Any]:
-    mapping: Dict[int, Any] = {}
+def _encode_get_assertion_request(structure: Mapping[str, Any]) -> dict[int, Any]:
+    mapping: dict[int, Any] = {}
 
     mapping[1] = _ensure_text(
         _get_ctap_field_value(structure, "rpId", 1), "rpId"
@@ -165,8 +165,8 @@ def _encode_get_assertion_request(structure: Mapping[str, Any]) -> Dict[int, Any
     return mapping
 
 
-def _encode_make_credential_response(structure: Mapping[str, Any]) -> Dict[int, Any]:
-    mapping: Dict[int, Any] = {}
+def _encode_make_credential_response(structure: Mapping[str, Any]) -> dict[int, Any]:
+    mapping: dict[int, Any] = {}
 
     mapping[1] = _ensure_text(_get_ctap_field_value(structure, "fmt", 1), "fmt")
     mapping[2] = _require_bytes(_get_ctap_field_value(structure, "authData", 2), "authData")
@@ -190,8 +190,8 @@ def _encode_make_credential_response(structure: Mapping[str, Any]) -> Dict[int, 
     return mapping
 
 
-def _encode_get_assertion_response(structure: Mapping[str, Any]) -> Dict[int, Any]:
-    mapping: Dict[int, Any] = {}
+def _encode_get_assertion_response(structure: Mapping[str, Any]) -> dict[int, Any]:
+    mapping: dict[int, Any] = {}
 
     credential = _get_ctap_field_value(structure, "credential", 1)
     if credential is not None:

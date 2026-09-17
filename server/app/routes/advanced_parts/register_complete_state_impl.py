@@ -18,8 +18,8 @@ def resolve_state_and_registration_server(
     attestation_format: Any,
     attestation_statement: Any,
     raw_attestation_object: Any,
-    trace: Optional[Dict[str, Any]] = None,
-) -> Tuple[Optional[Dict[str, Any]], Optional[Any]]:
+    trace: Optional[dict[str, Any]] = None,
+) -> tuple[Optional[dict[str, Any]], Optional[Any]]:
     state = advanced_module.session.pop("advanced_state", None)
     challenge_source = CHALLENGE_SOURCE_SERVER if state is not None else None
     if state is None:

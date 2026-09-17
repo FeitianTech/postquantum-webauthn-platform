@@ -5,7 +5,7 @@ import string
 import uuid
 from typing import Any, Dict, Mapping, MutableMapping, Optional
 
-CRED_PROTECT_LABELS: Dict[Any, str] = {
+CRED_PROTECT_LABELS: dict[Any, str] = {
     1: "userVerificationOptional",
     2: "userVerificationOptionalWithCredentialIDList",
     3: "userVerificationRequired",
@@ -134,9 +134,9 @@ def extract_min_pin_length(extension_results: Any) -> Optional[int]:
     return None
 
 
-def summarize_authenticator_extensions(extensions: Mapping[str, Any]) -> Dict[str, Any]:
+def summarize_authenticator_extensions(extensions: Mapping[str, Any]) -> dict[str, Any]:
     """Augment authenticator extension outputs with human friendly metadata."""
-    summary: Dict[str, Any] = {}
+    summary: dict[str, Any] = {}
     for name, ext_value in extensions.items():
         summary[name] = ext_value
         if name == "credProtect":

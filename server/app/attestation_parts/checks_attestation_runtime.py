@@ -7,10 +7,10 @@ from typing import Any, Dict, List, Mapping, Optional
 def _resolve_signature_validation(
     attestation_object: Any,
     client_data_hash: bytes,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     attestation_format_value = (attestation_object.fmt or "").lower()
     attestation_result = None
-    attestation_errors: List[str] = []
+    attestation_errors: list[str] = []
 
     if attestation_format_value == "none":
         signature_valid = None
@@ -67,8 +67,8 @@ def _resolve_signature_validation(
 def _collect_attestation_trust_path(
     attestation_result: Any,
     attestation_object: Any,
-) -> List[bytes]:
-    attestation_trust_path: List[bytes] = []
+) -> list[bytes]:
+    attestation_trust_path: list[bytes] = []
     if attestation_result is not None:
         trust_path_candidate = getattr(attestation_result, "trust_path", None)
         if trust_path_candidate:
@@ -81,7 +81,7 @@ def _collect_attestation_trust_path(
 
 
 def _evaluate_root_validation(
-    results: Dict[str, Any],
+    results: dict[str, Any],
     *,
     algorithm: Optional[int],
     attestation_object: Any,
@@ -90,7 +90,7 @@ def _evaluate_root_validation(
     credential_aaguid_bytes: bytes,
     signature_valid: Optional[bool],
     attestation_format_value: str,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     attestation_trust_path = _collect_attestation_trust_path(
         attestation_result,
         attestation_object,
@@ -105,7 +105,7 @@ def _evaluate_root_validation(
     now = datetime.now(timezone.utc)
     root_valid: Optional[bool] = None
     verifier = None
-    root_check_details: Optional[Dict[str, Optional[bool]]] = None
+    root_check_details: Optional[dict[str, Optional[bool]]] = None
 
     pqc_registration = isinstance(algorithm, int) and is_pqc_algorithm(algorithm)
     if pqc_registration:

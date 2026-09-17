@@ -7,7 +7,7 @@ from typing import Any, Dict, Iterable, List, Mapping, Optional
 from .binary_extract import _convert_cose_key_for_display, _resolve_cose_algorithm
 
 
-def _append_simple_field(lines: List[str], label: str, value: Optional[Any], default: str = "(none)") -> None:
+def _append_simple_field(lines: list[str], label: str, value: Optional[Any], default: str = "(none)") -> None:
     if value is None:
         lines.append(f"{label}:\t{default}")
     else:
@@ -15,7 +15,7 @@ def _append_simple_field(lines: List[str], label: str, value: Optional[Any], def
 
 
 def _append_multiline_field(
-    lines: List[str],
+    lines: list[str],
     label: str,
     content_lines: Iterable[str],
     *,
@@ -36,7 +36,7 @@ def _append_multiline_field(
         lines.append(f"{prefix}{line}")
 
 
-def _format_json_block(value: Any) -> List[str]:
+def _format_json_block(value: Any) -> list[str]:
     if value is None:
         return []
     try:
@@ -90,7 +90,7 @@ def _format_flag_line(flags: Any) -> Optional[str]:
 
 def _build_authenticator_data_lines(
     auth_bytes: Optional[bytes], auth_details: Optional[Mapping[str, Any]]
-) -> List[str]:
+) -> list[str]:
     if auth_bytes:
         rp = auth_bytes[:32].hex()
         lines = [rp]
@@ -114,7 +114,7 @@ def _build_authenticator_data_lines(
     return []
 
 
-def _parse_attested_data(auth_bytes: Optional[bytes]) -> Optional[Dict[str, bytes]]:
+def _parse_attested_data(auth_bytes: Optional[bytes]) -> Optional[dict[str, bytes]]:
     if not auth_bytes or len(auth_bytes) <= 37:
         return None
     remainder = auth_bytes[37:]
@@ -140,11 +140,11 @@ def _parse_attested_data(auth_bytes: Optional[bytes]) -> Optional[Dict[str, byte
 
 def _collect_attested_info(
     attested: Mapping[str, Any], auth_bytes: Optional[bytes], fallback_alg: Optional[Any] = None
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     parsed = _parse_attested_data(auth_bytes)
-    credential_lines: List[str] = []
+    credential_lines: list[str] = []
     credential_id_hex: Optional[str] = None
-    aaguid_lines: List[str] = []
+    aaguid_lines: list[str] = []
 
     if parsed and "aaguid" in parsed and isinstance(parsed["aaguid"], bytes):
         credential_lines.append(parsed["aaguid"].hex())

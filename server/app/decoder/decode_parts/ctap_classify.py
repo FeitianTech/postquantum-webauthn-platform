@@ -6,7 +6,7 @@ from typing import Any, Callable, Dict, Mapping, Optional, Sequence
 from .ctap_repair_leaf import _extract_mapping_bytes, _extract_mapping_string
 from .key_utils import MISSING, coerce_cbor_bytes as _coerce_cbor_bytes, get_mapping_entry as _get_mapping_entry, hex_json_safe as _hex_json_safe
 
-_MAKE_CREDENTIAL_REQUEST_LABELS: Dict[Any, str] = {
+_MAKE_CREDENTIAL_REQUEST_LABELS: dict[Any, str] = {
     1: "clientDataHash",
     "clientDataHash": "clientDataHash",
     2: "rp",
@@ -31,7 +31,7 @@ _MAKE_CREDENTIAL_REQUEST_LABELS: Dict[Any, str] = {
     "largeBlobKey": "largeBlobKey",
 }
 
-_GET_ASSERTION_REQUEST_LABELS: Dict[Any, str] = {
+_GET_ASSERTION_REQUEST_LABELS: dict[Any, str] = {
     1: "rpId",
     "rpId": "rpId",
     2: "clientDataHash",
@@ -50,7 +50,7 @@ _GET_ASSERTION_REQUEST_LABELS: Dict[Any, str] = {
     "largeBlobKey": "largeBlobKey",
 }
 
-_MAKE_CREDENTIAL_RESPONSE_LABELS: Dict[Any, str] = {
+_MAKE_CREDENTIAL_RESPONSE_LABELS: dict[Any, str] = {
     1: "fmt",
     "fmt": "fmt",
     2: "authData",
@@ -65,7 +65,7 @@ _MAKE_CREDENTIAL_RESPONSE_LABELS: Dict[Any, str] = {
     "extensions": "extensions",
 }
 
-_GET_ASSERTION_RESPONSE_LABELS: Dict[Any, str] = {
+_GET_ASSERTION_RESPONSE_LABELS: dict[Any, str] = {
     1: "credential",
     "credential": "credential",
     2: "authData",
@@ -110,8 +110,8 @@ def _build_labeled_ctap_map(
     handlers: Mapping[Any, Callable[[Any], Any]],
     *,
     missing_keys: Sequence[Any] = (),
-) -> Dict[str, Any]:
-    result: Dict[str, Any] = {}
+) -> dict[str, Any]:
+    result: dict[str, Any] = {}
     seen_keys: set = set()
     seen_labels: set = set()
 

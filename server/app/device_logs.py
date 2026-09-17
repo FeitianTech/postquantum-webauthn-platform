@@ -157,7 +157,7 @@ def _log_path(aaguid: str, timestamp: datetime) -> str:
     return f"{_LOGS_DIR}/{folder_name}/{filename}"
 
 
-def _build_log_payload(event: RegistrationEvent) -> Tuple[str, Mapping[str, Any], Mapping[str, str]]:
+def _build_log_payload(event: RegistrationEvent) -> tuple[str, Mapping[str, Any], Mapping[str, str]]:
     timestamp_local = event.timestamp.astimezone(BEIJING_TZ).replace(microsecond=0)
     timestamp_iso = timestamp_local.isoformat()
 

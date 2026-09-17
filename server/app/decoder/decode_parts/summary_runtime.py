@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any, Dict, List, Mapping, Optional
 
 
-def _format_result_summary(result: Dict[str, Any]) -> str:
+def _format_result_summary(result: dict[str, Any]) -> str:
     base_type = _base_type(result.get("format"))
     formatter = {
         "PublicKeyCredential": _format_public_key_credential_summary,
@@ -26,7 +26,7 @@ def _base_type(format_label: Optional[str]) -> str:
     if separator != -1:
         return format_label[:separator]
     return format_label
-def _format_public_key_credential_summary(result: Dict[str, Any]) -> List[str]:
+def _format_public_key_credential_summary(result: dict[str, Any]) -> list[str]:
     base_type = _base_type(result.get("format"))
     decoded = result.get("decoded") if isinstance(result.get("decoded"), Mapping) else {}
     response = decoded.get("response") if isinstance(decoded, Mapping) else {}
@@ -42,7 +42,7 @@ def _format_public_key_credential_summary(result: Dict[str, Any]) -> List[str]:
 
     auth_bytes = _extract_authenticator_bytes(response, attestation_entry)
 
-    lines: List[str] = [f"Detected type:\t{base_type}"]
+    lines: list[str] = [f"Detected type:\t{base_type}"]
     _extend_with_authenticator_details(lines, auth_details, auth_bytes, response)
     _extend_with_authenticator_extensions(lines, auth_details)
     _extend_with_client_extensions(lines, decoded.get("clientExtensionResults") if isinstance(decoded, Mapping) else None)
@@ -53,13 +53,13 @@ def _format_public_key_credential_summary(result: Dict[str, Any]) -> List[str]:
     return lines
 
 
-def _format_attestation_object_summary(result: Dict[str, Any]) -> List[str]:
+def _format_attestation_object_summary(result: dict[str, Any]) -> list[str]:
     base_type = _base_type(result.get("format"))
     decoded = result.get("decoded") if isinstance(result.get("decoded"), Mapping) else {}
     auth_details = decoded.get("authenticatorData") if isinstance(decoded, Mapping) else None
 
-    lines: List[str] = [f"Detected type:\t{base_type}"]
-    attestation_entry: Dict[str, Any] = {"binary": result.get("binary")} if result.get("binary") else {}
+    lines: list[str] = [f"Detected type:\t{base_type}"]
+    attestation_entry: dict[str, Any] = {"binary": result.get("binary")} if result.get("binary") else {}
     auth_bytes = _extract_authenticator_bytes_from_attestation(attestation_entry)
     _extend_with_authenticator_details(lines, auth_details, auth_bytes)
     _extend_with_authenticator_extensions(lines, auth_details)
@@ -70,35 +70,35 @@ def _format_attestation_object_summary(result: Dict[str, Any]) -> List[str]:
     return lines
 
 
-def _format_authenticator_data_summary(result: Dict[str, Any]) -> List[str]:
+def _format_authenticator_data_summary(result: dict[str, Any]) -> list[str]:
     base_type = _base_type(result.get("format"))
     decoded = result.get("decoded") if isinstance(result.get("decoded"), Mapping) else {}
     auth_bytes = _extract_bytes_from_binary(result.get("binary"))
 
-    lines: List[str] = [f"Detected type:\t{base_type}"]
+    lines: list[str] = [f"Detected type:\t{base_type}"]
     _extend_with_authenticator_details(lines, decoded, auth_bytes)
     _extend_with_authenticator_extensions(lines, decoded)
     _extend_with_client_extensions(lines, None)
     return lines
 
 
-def _format_client_data_summary(result: Dict[str, Any]) -> List[str]:
+def _format_client_data_summary(result: dict[str, Any]) -> list[str]:
     base_type = _base_type(result.get("format"))
     decoded = result.get("decoded") if isinstance(result.get("decoded"), Mapping) else {}
 
-    lines: List[str] = [f"Detected type:\t{base_type}"]
+    lines: list[str] = [f"Detected type:\t{base_type}"]
     _extend_with_client_data_details(lines, decoded)
     return lines
 
 
-def _format_certificate_summary(result: Dict[str, Any]) -> List[str]:
+def _format_certificate_summary(result: dict[str, Any]) -> list[str]:
     base_type = _base_type(result.get("format"))
     decoded = result.get("decoded") if isinstance(result.get("decoded"), Mapping) else {}
     certificate_lines = _build_certificate_summary_lines(decoded)
     if not certificate_lines:
         certificate_lines = _format_json_block(decoded)
 
-    lines: List[str] = [f"Detected type:\t{base_type}"]
+    lines: list[str] = [f"Detected type:\t{base_type}"]
     _append_multiline_field(
         lines,
         "Certificate",
@@ -109,22 +109,22 @@ def _format_certificate_summary(result: Dict[str, Any]) -> List[str]:
     return lines
 
 
-def _format_json_summary(result: Dict[str, Any]) -> List[str]:
+def _format_json_summary(result: dict[str, Any]) -> list[str]:
     decoded = result.get("decoded")
     json_lines = _format_json_block(decoded)
-    lines: List[str] = ["Detected type:\tJSON"]
+    lines: list[str] = ["Detected type:\tJSON"]
     _append_multiline_field(lines, "JSON", json_lines, indent_str="  ")
     return lines
 
 
-def _format_cbor_summary(result: Dict[str, Any]) -> List[str]:
+def _format_cbor_summary(result: dict[str, Any]) -> list[str]:
     decoded = result.get("decoded") if isinstance(result.get("decoded"), Mapping) else {}
     decoded_value = decoded.get("decodedValue") if isinstance(decoded, Mapping) else None
     expanded_json = decoded.get("expandedJson") if isinstance(decoded, Mapping) else None
     ctap_info = decoded.get("ctap") if isinstance(decoded, Mapping) else None
     ctap_decoded = decoded.get("ctapDecoded") if isinstance(decoded, Mapping) else None
 
-    lines: List[str] = ["Detected type:\tCBOR"]
+    lines: list[str] = ["Detected type:\tCBOR"]
 
     if isinstance(ctap_info, Mapping):
         meaning = ctap_info.get("meaning") or ctap_info.get("description")
@@ -140,7 +140,7 @@ def _format_cbor_summary(result: Dict[str, Any]) -> List[str]:
             _append_simple_field(lines, "CBOR payload length", payload_length)
 
     if isinstance(ctap_decoded, Mapping) and ctap_decoded:
-        response_labels: List[str] = []
+        response_labels: list[str] = []
         if "makeCredentialResponse" in ctap_decoded:
             response_labels.append("MakeCredential response")
         if "getAssertionResponse" in ctap_decoded:
@@ -164,9 +164,9 @@ def _format_cbor_summary(result: Dict[str, Any]) -> List[str]:
     return lines
 
 
-def _format_generic_summary(result: Dict[str, Any]) -> List[str]:
+def _format_generic_summary(result: dict[str, Any]) -> list[str]:
     base_type = _base_type(result.get("format"))
-    lines: List[str] = [f"Detected type:\t{base_type}"]
+    lines: list[str] = [f"Detected type:\t{base_type}"]
 
     decoded = result.get("decoded")
     if decoded is not None:
@@ -179,11 +179,11 @@ def _format_generic_summary(result: Dict[str, Any]) -> List[str]:
     return lines
 
 
-def _build_certificate_summary_lines(decoded: Any) -> List[str]:
+def _build_certificate_summary_lines(decoded: Any) -> list[str]:
     if not isinstance(decoded, Mapping):
         return []
 
-    lines: List[str] = []
+    lines: list[str] = []
 
     version = decoded.get("version")
     if isinstance(version, Mapping):
@@ -237,7 +237,7 @@ def _build_certificate_summary_lines(decoded: Any) -> List[str]:
 
 
 def _extend_with_authenticator_details(
-    lines: List[str],
+    lines: list[str],
     auth_details: Optional[Mapping[str, Any]],
     auth_bytes: Optional[bytes],
     response_context: Optional[Mapping[str, Any]] = None,
@@ -248,7 +248,7 @@ def _extend_with_authenticator_details(
     rp_hex = None
     flags_info = None
     sign_count = None
-    attested_info: Optional[Dict[str, Any]] = None
+    attested_info: Optional[dict[str, Any]] = None
 
     if isinstance(auth_details, Mapping):
         rp_info = auth_details.get("rpIdHash")
@@ -286,7 +286,7 @@ def _extend_with_authenticator_details(
         )
 
 
-def _extend_with_authenticator_extensions(lines: List[str], auth_details: Any) -> None:
+def _extend_with_authenticator_extensions(lines: list[str], auth_details: Any) -> None:
     if not isinstance(auth_details, Mapping):
         _append_simple_field(lines, "Authenticator extensions", None)
         return
@@ -306,7 +306,7 @@ def _extend_with_authenticator_extensions(lines: List[str], auth_details: Any) -
     _append_multiline_field(lines, "Authenticator extensions", _format_json_block(content), indent_str="  ")
 
 
-def _extend_with_client_extensions(lines: List[str], extensions: Any) -> None:
+def _extend_with_client_extensions(lines: list[str], extensions: Any) -> None:
     if extensions is None:
         _append_simple_field(lines, "Client extensions", None)
         return
@@ -314,7 +314,7 @@ def _extend_with_client_extensions(lines: List[str], extensions: Any) -> None:
 
 
 def _extend_with_attestation_section(
-    lines: List[str],
+    lines: list[str],
     attestation_entry: Any,
     attestation_details: Any,
     *,
@@ -346,14 +346,14 @@ def _extend_with_attestation_section(
         _append_simple_field(lines, "Att. certificates", None)
 
 
-def _extend_with_client_data_entry(lines: List[str], client_data_entry: Any) -> None:
+def _extend_with_client_data_entry(lines: list[str], client_data_entry: Any) -> None:
     details = None
     if isinstance(client_data_entry, Mapping):
         details = client_data_entry.get("details")
     _extend_with_client_data_details(lines, details)
 
 
-def _extend_with_client_data_details(lines: List[str], details: Any) -> None:
+def _extend_with_client_data_details(lines: list[str], details: Any) -> None:
     if not isinstance(details, Mapping):
         _append_simple_field(lines, "Client data", None)
         _append_simple_field(lines, "Type", None)
@@ -363,7 +363,7 @@ def _extend_with_client_data_details(lines: List[str], details: Any) -> None:
         return
 
     raw_json = details.get("rawJson")
-    client_data_lines: List[str]
+    client_data_lines: list[str]
     if isinstance(raw_json, Mapping):
         client_data_lines = _format_json_block(raw_json)
     else:

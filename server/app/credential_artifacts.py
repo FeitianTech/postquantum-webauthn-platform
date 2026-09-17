@@ -112,7 +112,7 @@ def _ensure_directory() -> None:
     os.makedirs(_ARTIFACT_DIR, exist_ok=True)
 
 
-def _read_file(path: str) -> Optional[Dict[str, Any]]:
+def _read_file(path: str) -> Optional[dict[str, Any]]:
     try:
         with open(path, "r", encoding="utf-8") as handle:
             return json.load(handle)
@@ -122,7 +122,7 @@ def _read_file(path: str) -> Optional[Dict[str, Any]]:
         return None
 
 
-def _write_file(path: str, payload: Dict[str, Any]) -> None:
+def _write_file(path: str, payload: dict[str, Any]) -> None:
     tmp_path = f"{path}.tmp"
     with open(tmp_path, "w", encoding="utf-8") as handle:
         json.dump(payload, handle, ensure_ascii=False, separators=(",", ":"))
@@ -133,7 +133,7 @@ def _resolve_session_id(session_id: Optional[str] = None) -> str:
     return resolve_metadata_session_id(session_id)
 
 
-def _read_record(storage_id: str, session_id: str) -> Optional[Dict[str, Any]]:
+def _read_record(storage_id: str, session_id: str) -> Optional[dict[str, Any]]:
     if _using_gcs():
         blob_name = _artifact_blob(storage_id, session_id)
         try:
@@ -150,7 +150,7 @@ def _read_record(storage_id: str, session_id: str) -> Optional[Dict[str, Any]]:
     return _read_file(_artifact_path(storage_id))
 
 
-def _write_record(storage_id: str, session_id: str, record: Dict[str, Any]) -> None:
+def _write_record(storage_id: str, session_id: str, record: dict[str, Any]) -> None:
     if _using_gcs():
         blob_name = _artifact_blob(storage_id, session_id)
         payload = json.dumps(record, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
@@ -188,7 +188,7 @@ def load_credential_artifact(
     storage_id: Any,
     *,
     session_id: Optional[str] = None,
-) -> Optional[Dict[str, Any]]:
+) -> Optional[dict[str, Any]]:
     """Return the stored artifact payload for ``storage_id`` if available."""
 
     normalised = _normalise_storage_id(storage_id)
@@ -210,7 +210,7 @@ def load_credential_artifact(
     return None
 
 
-def _merge_payload(base: Dict[str, Any], update: Dict[str, Any]) -> Dict[str, Any]:
+def _merge_payload(base: dict[str, Any], update: dict[str, Any]) -> dict[str, Any]:
     for key, value in update.items():
         if (
             isinstance(value, dict)
@@ -224,7 +224,7 @@ def _merge_payload(base: Dict[str, Any], update: Dict[str, Any]) -> Dict[str, An
 
 def store_credential_artifact(
     storage_id: Any,
-    payload: Dict[str, Any],
+    payload: dict[str, Any],
     *,
     merge: bool = False,
     session_id: Optional[str] = None,
@@ -245,7 +245,7 @@ def store_credential_artifact(
 
     with _lock_for(normalised, resolved_session):
         existing = _read_record(normalised, resolved_session) if merge else None
-        base_payload: Dict[str, Any]
+        base_payload: dict[str, Any]
         if merge and existing and isinstance(existing, dict):
             current_payload = existing.get("payload")
             if isinstance(current_payload, dict):

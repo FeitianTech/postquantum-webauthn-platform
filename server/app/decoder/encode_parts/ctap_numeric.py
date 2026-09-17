@@ -8,7 +8,7 @@ from .binary_decode import _maybe_decode_bytes
 from .constants import _CTAP_LABELED_KEY_PATTERN
 
 
-def _extract_ctap_numeric_payload(parsed: Any) -> Tuple[Dict[int, Any], str]:
+def _extract_ctap_numeric_payload(parsed: Any) -> tuple[dict[int, Any], str]:
     """Locate and sanitize a CTAP/WebAuthn numeric-keyed mapping within ``parsed``."""
 
     def _enqueue_candidates(queue: deque[Any], value: Any, visited: set[int]) -> None:
@@ -36,7 +36,7 @@ def _extract_ctap_numeric_payload(parsed: Any) -> Tuple[Dict[int, Any], str]:
         try:
             numeric_map = _sanitize_ctap_numeric_mapping(candidate)
         except ValueError:
-            salvage_map: Dict[int, Any] = {}
+            salvage_map: dict[int, Any] = {}
             salvage_error: Optional[ValueError] = None
             if isinstance(candidate, Mapping):
                 for key, value in candidate.items():
@@ -88,8 +88,8 @@ def _extract_ctap_numeric_payload(parsed: Any) -> Tuple[Dict[int, Any], str]:
     )
 
 
-def _sanitize_ctap_numeric_mapping(parsed: Mapping[Any, Any]) -> Dict[int, Any]:
-    numeric_map: Dict[int, Any] = {}
+def _sanitize_ctap_numeric_mapping(parsed: Mapping[Any, Any]) -> dict[int, Any]:
+    numeric_map: dict[int, Any] = {}
     for key, value in parsed.items():
         index = _coerce_ctap_numeric_key(key)
         if index is None:
@@ -198,7 +198,7 @@ def _normalize_ctap_extra_value(value: Any) -> Any:
         return decoded
 
     if isinstance(value, Mapping):
-        cleaned: Dict[str, Any] = {}
+        cleaned: dict[str, Any] = {}
         for key, entry in value.items():
             cleaned[_sanitize_nested_extra_key(key)] = _normalize_ctap_extra_value(entry)
         return cleaned

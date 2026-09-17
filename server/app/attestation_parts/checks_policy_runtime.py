@@ -28,8 +28,8 @@ def _resolve_uv_required(
 
 def _collect_allowed_algorithms(
     public_key_options: Optional[Mapping[str, Any]],
-) -> List[int]:
-    allowed_algorithms: List[int] = []
+) -> list[int]:
+    allowed_algorithms: list[int] = []
     if isinstance(public_key_options, Mapping):
         params = public_key_options.get("pubKeyCredParams")
         if isinstance(params, list):

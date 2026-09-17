@@ -8,11 +8,11 @@ from typing import Any, Callable, Dict, List, Mapping, Optional
 
 def _convert_certificate_payload_impl(
     entry: Mapping[str, Any], cert_bytes: Optional[bytes] = None
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     if not isinstance(entry, Mapping):
         return {}
 
-    payload: Dict[str, Any] = {}
+    payload: dict[str, Any] = {}
 
     if cert_bytes is None:
         der_base64 = entry.get("derBase64")
@@ -39,8 +39,8 @@ def _convert_certificate_bytes_impl(
     value: Any,
     *,
     serializer: Callable[[bytes], Any],
-    convert_certificate_payload: Callable[[Mapping[str, Any], Optional[bytes]], Dict[str, Any]],
-) -> Dict[str, Any]:
+    convert_certificate_payload: Callable[[Mapping[str, Any], Optional[bytes]], dict[str, Any]],
+) -> dict[str, Any]:
     cert_bytes: Optional[bytes] = None
     if isinstance(value, (bytes, bytearray)):
         cert_bytes = bytes(value)
@@ -70,12 +70,12 @@ def _convert_certificate_bytes_impl(
 def _convert_certificate_chain_impl(
     value: Any,
     *,
-    convert_certificate_bytes: Callable[[Any], Dict[str, Any]],
-) -> List[Dict[str, Any]]:
+    convert_certificate_bytes: Callable[[Any], dict[str, Any]],
+) -> list[dict[str, Any]]:
     if not isinstance(value, list):
         return []
 
-    certificates: List[Dict[str, Any]] = []
+    certificates: list[dict[str, Any]] = []
     for item in value:
         cert_payload = convert_certificate_bytes(item)
         if cert_payload:
@@ -86,8 +86,8 @@ def _convert_certificate_chain_impl(
 def _convert_attestation_statement_impl(
     details: Any,
     *,
-    convert_certificate_chain: Callable[[Any], List[Dict[str, Any]]],
-) -> Dict[str, Any]:
+    convert_certificate_chain: Callable[[Any], list[dict[str, Any]]],
+) -> dict[str, Any]:
     if not isinstance(details, Mapping):
         return {}
 
@@ -102,7 +102,7 @@ def _convert_attestation_statement_impl(
     if not isinstance(statement, Mapping):
         return {}
 
-    payload: Dict[str, Any] = {}
+    payload: dict[str, Any] = {}
     for key, value in statement.items():
         if key == "x5c":
             payload["x5c"] = convert_certificate_chain(value)
@@ -114,14 +114,14 @@ def _convert_attestation_statement_impl(
 def _convert_attestation_entry_impl(
     entry: Any,
     *,
-    convert_attestation_statement: Callable[[Any], Dict[str, Any]],
-    convert_certificate_payload: Callable[[Mapping[str, Any], Optional[bytes]], Dict[str, Any]],
-) -> Dict[str, Any]:
+    convert_attestation_statement: Callable[[Any], dict[str, Any]],
+    convert_certificate_payload: Callable[[Mapping[str, Any], Optional[bytes]], dict[str, Any]],
+) -> dict[str, Any]:
     if not isinstance(entry, Mapping):
         return {}
 
     details = entry.get("details") if isinstance(entry.get("details"), Mapping) else entry
-    payload: Dict[str, Any] = {}
+    payload: dict[str, Any] = {}
 
     fmt = None
     if isinstance(details, Mapping):

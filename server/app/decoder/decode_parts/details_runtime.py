@@ -9,7 +9,7 @@ from __future__ import annotations
 from typing import Any, Dict, Mapping, Optional
 
 
-def _describe_client_data_from_bytes(data: bytes) -> Dict[str, Any]:
+def _describe_client_data_from_bytes(data: bytes) -> dict[str, Any]:
     text = data.decode("utf-8")
     parsed = json.loads(text)
     details = _build_client_data_details(parsed, raw_text=text)
@@ -31,7 +31,7 @@ def _describe_client_data_from_bytes(data: bytes) -> Dict[str, Any]:
     return details
 
 
-def _describe_authenticator_data_bytes(data: bytes) -> Dict[str, Any]:
+def _describe_authenticator_data_bytes(data: bytes) -> dict[str, Any]:
     auth_data = AuthenticatorData(data)
     flags = auth_data.flags
 
@@ -47,7 +47,7 @@ def _describe_authenticator_data_bytes(data: bytes) -> Dict[str, Any]:
         "flagsSet": [flag.name for flag in AuthenticatorData.FLAG if flags & flag],
     }
 
-    details: Dict[str, Any] = {
+    details: dict[str, Any] = {
         "rpIdHash": {
             "hex": auth_data.rp_id_hash.hex(),
             "base64url": encode_base64url(auth_data.rp_id_hash),
@@ -67,7 +67,7 @@ def _describe_authenticator_data_bytes(data: bytes) -> Dict[str, Any]:
 
     extensions = auth_data.extensions
     if extensions is not None:
-        extensions_payload: Dict[str, Any] = {
+        extensions_payload: dict[str, Any] = {
             "raw": make_json_safe(extensions),
         }
         if isinstance(extensions, Mapping):
@@ -79,9 +79,9 @@ def _describe_authenticator_data_bytes(data: bytes) -> Dict[str, Any]:
     return details
 
 
-def _parse_attestation_object(data: bytes) -> Dict[str, Any]:
+def _parse_attestation_object(data: bytes) -> dict[str, Any]:
     attestation = AttestationObject(data)
-    details: Dict[str, Any] = {
+    details: dict[str, Any] = {
         "attestationFormat": attestation.fmt,
         "attestationStatement": make_json_safe(attestation.att_stmt),
         "authenticatorData": _describe_authenticator_data_bytes(bytes(attestation.auth_data)),
@@ -95,7 +95,7 @@ def _parse_attestation_object(data: bytes) -> Dict[str, Any]:
     return details
 
 
-def _extract_attestation_certificate(att_stmt: Mapping[str, Any]) -> Optional[Dict[str, Any]]:
+def _extract_attestation_certificate(att_stmt: Mapping[str, Any]) -> Optional[dict[str, Any]]:
     if not isinstance(att_stmt, Mapping):
         return None
 
@@ -130,8 +130,8 @@ def _extract_attestation_certificate(att_stmt: Mapping[str, Any]) -> Optional[Di
 
 def _build_client_data_details(
     parsed: Mapping[str, Any], raw_text: Optional[str] = None
-) -> Dict[str, Any]:
-    details: Dict[str, Any] = {}
+) -> dict[str, Any]:
+    details: dict[str, Any] = {}
 
     type_value = parsed.get("type")
     if type_value is not None:
@@ -139,7 +139,7 @@ def _build_client_data_details(
 
     challenge_value = parsed.get("challenge")
     if challenge_value is not None:
-        challenge_info: Dict[str, Any] = {"raw": challenge_value}
+        challenge_info: dict[str, Any] = {"raw": challenge_value}
         if isinstance(challenge_value, str):
             try:
                 challenge_bytes, challenge_encoding = _decode_binary_input(challenge_value)
@@ -170,7 +170,7 @@ def _build_client_data_details(
     return details
 
 
-def _binary_summary(data: bytes, encoding: Optional[str] = None) -> Dict[str, Any]:
+def _binary_summary(data: bytes, encoding: Optional[str] = None) -> dict[str, Any]:
     summary = {
         "length": len(data),
         "base64": base64.b64encode(data).decode("ascii"),

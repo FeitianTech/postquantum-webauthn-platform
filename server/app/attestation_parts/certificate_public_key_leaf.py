@@ -4,13 +4,13 @@ import base64
 from typing import Any, Dict, List, Mapping, Optional, Tuple
 
 
-def _build_unknown_public_key_info(cert_bytes: bytes, error: Exception) -> Tuple[Dict[str, Any], List[Tuple[str, Any]]]:
+def _build_unknown_public_key_info(cert_bytes: bytes, error: Exception) -> tuple[dict[str, Any], list[tuple[str, Any]]]:
     try:
         parsed = extract_certificate_public_key_info(cert_bytes)
     except Exception:
         parsed = {}
 
-    algorithm_details: Dict[str, Any] = {"name": "Unknown"}
+    algorithm_details: dict[str, Any] = {"name": "Unknown"}
     public_key_bytes = parsed.get("subject_public_key")
     wrapped_public_key_bytes = parsed.get("wrapped_subject_public_key")
     spki_bytes = parsed.get("subject_public_key_info")
@@ -37,7 +37,7 @@ def _build_unknown_public_key_info(cert_bytes: bytes, error: Exception) -> Tuple
     if isinstance(parameters, (bytes, bytearray)) and parameters:
         algorithm_details["parametersHex"] = bytes(parameters).hex()
 
-    info: Dict[str, Any] = {
+    info: dict[str, Any] = {
         "type": algorithm_details.get("name", "Unsupported"),
         "algorithm": algorithm_details,
     }
@@ -72,7 +72,7 @@ def _build_unknown_public_key_info(cert_bytes: bytes, error: Exception) -> Tuple
     if key_size_bits:
         info["keySize"] = key_size_bits
 
-    summary_entries: List[Tuple[str, Any]] = []
+    summary_entries: list[tuple[str, Any]] = []
 
     def _append_summary(label: str, value: Any) -> None:
         if value in (None, ""):
@@ -106,7 +106,7 @@ def _build_unknown_public_key_info(cert_bytes: bytes, error: Exception) -> Tuple
     return info, summary_entries
 
 
-def _serialize_public_key_info(public_key: Any) -> Dict[str, Any]:
+def _serialize_public_key_info(public_key: Any) -> dict[str, Any]:
     info = {
         "type": public_key.__class__.__name__,
         "keySize": getattr(public_key, "key_size", None),

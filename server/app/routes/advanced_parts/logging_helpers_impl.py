@@ -13,11 +13,11 @@ def _log_authenticator_attestation_response_impl(
     if auth_data is None:
         return
 
-    payload: Dict[str, Any] = {}
+    payload: dict[str, Any] = {}
     if attestation_format:
         payload["fmt"] = attestation_format
 
-    auth_data_payload: Dict[str, Any] = {}
+    auth_data_payload: dict[str, Any] = {}
     rp_id_hash = getattr(auth_data, "rp_id_hash", None)
     if isinstance(rp_id_hash, (bytes, bytearray, memoryview)):
         auth_data_payload["rpIdHash"] = bytes(rp_id_hash).hex()
@@ -25,7 +25,7 @@ def _log_authenticator_attestation_response_impl(
     flags_value = getattr(auth_data, "flags", None)
     if isinstance(flags_value, int):
         auth_data_payload["flags"] = {"value": flags_value, "hex": f"0x{flags_value:02x}"}
-        flag_breakdown: Dict[str, bool] = {}
+        flag_breakdown: dict[str, bool] = {}
         flag_names = ("UP", "UV", "BE", "BS", "AT", "ED")
         flag_enum = getattr(auth_data, "FLAG", None)
         for name in flag_names:
@@ -46,7 +46,7 @@ def _log_authenticator_attestation_response_impl(
 
     credential_data = getattr(auth_data, "credential_data", None)
     if credential_data is not None:
-        credential_payload: Dict[str, Any] = {}
+        credential_payload: dict[str, Any] = {}
 
         aaguid_value = getattr(credential_data, "aaguid", None)
         if isinstance(aaguid_value, (bytes, bytearray, memoryview)):

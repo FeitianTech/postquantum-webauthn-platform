@@ -17,7 +17,7 @@ def advanced_authenticate_begin_impl(advanced_module: Any):
         return advanced_module.jsonify({"error": "Missing required field: challenge"}), 400
 
     raw_hints = public_key.get("hints")
-    hints_list: List[str] = []
+    hints_list: list[str] = []
     if isinstance(raw_hints, list):
         hints_list = [item for item in raw_hints if isinstance(item, str)]
 
@@ -54,7 +54,7 @@ def advanced_authenticate_begin_impl(advanced_module: Any):
     elif user_verification == "discouraged":
         uv_req = advanced_module.UserVerificationRequirement.DISCOURAGED
 
-    raw_credentials_input: List[Any] = []
+    raw_credentials_input: list[Any] = []
     for field in ("__storedCredentials", "storedCredentials", "credentials"):
         candidate = data.get(field)
         if isinstance(candidate, list):
@@ -67,18 +67,18 @@ def advanced_authenticate_begin_impl(advanced_module: Any):
             {"error": "No credentials detected. Please register a credential first."},
         ), 404
 
-    credential_lookup: Dict[bytes, Dict[str, Any]] = {
+    credential_lookup: dict[bytes, dict[str, Any]] = {
         bytes(record["id"]): record
         for record in stored_records
         if isinstance(record.get("id"), (bytes, bytearray, memoryview))
     }
 
     raw_allow_credentials = public_key.get("allowCredentials")
-    allow_credentials: List[Any] = list(raw_allow_credentials) if isinstance(raw_allow_credentials, list) else []
+    allow_credentials: list[Any] = list(raw_allow_credentials) if isinstance(raw_allow_credentials, list) else []
     allow_credentials_present = bool(allow_credentials)
     resident_key_only = not allow_credentials_present
-    credentials_for_begin: List[Any] = []
-    resident_records: List[Dict[str, Any]] = []
+    credentials_for_begin: list[Any] = []
+    resident_records: list[dict[str, Any]] = []
 
     if allow_credentials_present:
         seen_ids: set[bytes] = set()
@@ -222,7 +222,7 @@ def advanced_authenticate_begin_impl(advanced_module: Any):
         else:
             processed_extensions[ext_name] = ext_value
 
-    credentials_argument: Optional[List[Any]] = credentials_for_begin if credentials_for_begin else None
+    credentials_argument: Optional[list[Any]] = credentials_for_begin if credentials_for_begin else None
     options, state = temp_server.authenticate_begin(
         credentials_argument,
         user_verification=uv_req,

@@ -174,18 +174,18 @@ def _extract_authenticator_bytes_from_attestation(attestation_entry: Any) -> Opt
 
 __all__ = ["decode_payload_text"]
 
-_CTAP_COMMAND_MAP: Dict[int, str] = {
+_CTAP_COMMAND_MAP: dict[int, str] = {
     0x01: "AuthenticatorMakeCredential command",
     0x02: "AuthenticatorGetAssertion command",
 }
 
-_CTAP_STATUS_MAP: Dict[int, str] = {
+_CTAP_STATUS_MAP: dict[int, str] = {
     0x00: "Success status",
 }
 
 
 
-def _extract_ctap_prefix(data: bytes) -> Tuple[Optional[Dict[str, Any]], bytes]:
+def _extract_ctap_prefix(data: bytes) -> tuple[Optional[dict[str, Any]], bytes]:
     if not data:
         return None, data
     code = data[0]
@@ -228,7 +228,7 @@ _lenient_decode_from = _cbor_core._lenient_decode_from
 _structure_to_value = _cbor_core._structure_to_value
 
 
-def _parse_cbor_item(data: bytes, offset: int) -> Tuple[Dict[str, Any], int]:
+def _parse_cbor_item(data: bytes, offset: int) -> tuple[dict[str, Any], int]:
     original_read_cbor_length = _cbor_core._read_cbor_length
     original_ensure_cbor_available = _cbor_core._ensure_cbor_available
     original_float_summary = _cbor_core._float_summary
@@ -243,7 +243,7 @@ def _parse_cbor_item(data: bytes, offset: int) -> Tuple[Dict[str, Any], int]:
         _cbor_core._float_summary = original_float_summary
 
 
-def _decode_cbor_structure(data: bytes) -> Tuple[Dict[str, Any], int]:
+def _decode_cbor_structure(data: bytes) -> tuple[dict[str, Any], int]:
     node, offset = _parse_cbor_item(data, 0)
     node.setdefault("byteLength", offset)
     return node, offset
@@ -261,7 +261,7 @@ _split_get_assertion_trailing_fields = _ctap_repair_leaf._split_get_assertion_tr
 
 def _extract_get_assertion_trailing_from_raw(
     raw_bytes: bytes,
-) -> Tuple[Optional[bytes], Dict[int, Any]]:
+) -> tuple[Optional[bytes], dict[int, Any]]:
     original_locate_trailing_offset = _ctap_repair_leaf._locate_get_assertion_trailing_offset
     original_lenient_decode = _ctap_repair_leaf._lenient_decode_from
     try:
@@ -304,7 +304,7 @@ def _install_runtime_bindings(bindings: Mapping[str, Callable[..., Any]]) -> Non
         globals()[_name] = _bind_runtime_function(_func)
 
 
-_RUNTIME_REBOUND_CACHE: Dict[Callable[..., Any], Callable[..., Any]] = {}
+_RUNTIME_REBOUND_CACHE: dict[Callable[..., Any], Callable[..., Any]] = {}
 
 _PEM_CERT_PATTERN = re.compile(
     r"-----BEGIN CERTIFICATE-----\s*(?P<body>.*?)\s*-----END CERTIFICATE-----",
@@ -312,7 +312,7 @@ _PEM_CERT_PATTERN = re.compile(
 )
 
 
-def decode_payload_text(value: str) -> Dict[str, Any]:
+def decode_payload_text(value: str) -> dict[str, Any]:
     """Decode ``value`` into a structured representation."""
 
     trimmed = value.strip()
@@ -331,7 +331,7 @@ def decode_payload_text(value: str) -> Dict[str, Any]:
     return _prepare_decoder_response(result)
 
 
-_PIPELINE_RUNTIME_BINDINGS: Dict[str, Callable[..., Any]] = {
+_PIPELINE_RUNTIME_BINDINGS: dict[str, Callable[..., Any]] = {
     "_decode_json_object": _pipeline_runtime._decode_json_object,
     "_decode_public_key_credential": _pipeline_runtime._decode_public_key_credential,
     "_decode_pem_certificates": _pipeline_runtime._decode_pem_certificates,
@@ -346,13 +346,13 @@ _PIPELINE_RUNTIME_BINDINGS: Dict[str, Callable[..., Any]] = {
     "_expand_cbor_value": _pipeline_runtime._expand_cbor_value,
 }
 
-_CBOR_RUNTIME_BINDINGS: Dict[str, Callable[..., Any]] = {
+_CBOR_RUNTIME_BINDINGS: dict[str, Callable[..., Any]] = {
     "_decode_cbor_sequence": _cbor_runtime._decode_cbor_sequence,
     "_repair_get_assertion_entries": _cbor_runtime._repair_get_assertion_entries,
     "_try_decode_cbor": _cbor_runtime._try_decode_cbor,
 }
 
-_CTAP_PARSE_RUNTIME_BINDINGS: Dict[str, Callable[..., Any]] = {
+_CTAP_PARSE_RUNTIME_BINDINGS: dict[str, Callable[..., Any]] = {
     "_convert_ctap_allow_list": _ctap_runtime_parse._convert_ctap_allow_list,
     "_convert_pub_key_cred_params": _ctap_runtime_parse._convert_pub_key_cred_params,
     "_convert_auth_data_field": _ctap_runtime_parse._convert_auth_data_field,
@@ -370,7 +370,7 @@ _CTAP_PARSE_RUNTIME_BINDINGS: Dict[str, Callable[..., Any]] = {
     "_convert_ctap_user": _ctap_runtime_parse._convert_ctap_user,
 }
 
-_CTAP_INTERPRET_RUNTIME_BINDINGS: Dict[str, Callable[..., Any]] = {
+_CTAP_INTERPRET_RUNTIME_BINDINGS: dict[str, Callable[..., Any]] = {
     "_build_make_credential_request_expanded_json": _ctap_runtime_interpret._build_make_credential_request_expanded_json,
     "_build_get_assertion_request_expanded_json": _ctap_runtime_interpret._build_get_assertion_request_expanded_json,
     "_build_make_credential_expanded_json": _ctap_runtime_interpret._build_make_credential_expanded_json,
@@ -392,7 +392,7 @@ _install_runtime_bindings(
 )
 
 
-_MAKE_CREDENTIAL_REQUEST_HANDLERS: Dict[Any, Callable[[Any], Any]] = {
+_MAKE_CREDENTIAL_REQUEST_HANDLERS: dict[Any, Callable[[Any], Any]] = {
     "clientDataHash": _convert_optional_ctap_field,
     "rp": _hex_json_safe,
     "user": _convert_ctap_user_field,
@@ -406,7 +406,7 @@ _MAKE_CREDENTIAL_REQUEST_HANDLERS: Dict[Any, Callable[[Any], Any]] = {
     "largeBlobKey": _convert_optional_ctap_field,
 }
 
-_GET_ASSERTION_REQUEST_HANDLERS: Dict[Any, Callable[[Any], Any]] = {
+_GET_ASSERTION_REQUEST_HANDLERS: dict[Any, Callable[[Any], Any]] = {
     "rpId": _hex_json_safe,
     "clientDataHash": _convert_optional_ctap_field,
     "allowList": _convert_ctap_allow_list,
@@ -417,7 +417,7 @@ _GET_ASSERTION_REQUEST_HANDLERS: Dict[Any, Callable[[Any], Any]] = {
     "largeBlobKey": _convert_optional_ctap_field,
 }
 
-_MAKE_CREDENTIAL_RESPONSE_HANDLERS: Dict[Any, Callable[[Any], Any]] = {
+_MAKE_CREDENTIAL_RESPONSE_HANDLERS: dict[Any, Callable[[Any], Any]] = {
     "fmt": _hex_json_safe,
     "authData": _convert_auth_data_field,
     "attStmt": _convert_att_stmt_field,
@@ -426,7 +426,7 @@ _MAKE_CREDENTIAL_RESPONSE_HANDLERS: Dict[Any, Callable[[Any], Any]] = {
     "extensions": _convert_optional_ctap_field,
 }
 
-_GET_ASSERTION_RESPONSE_HANDLERS: Dict[Any, Callable[[Any], Any]] = {
+_GET_ASSERTION_RESPONSE_HANDLERS: dict[Any, Callable[[Any], Any]] = {
     "credential": _convert_ctap_credential_descriptor,
     "authData": _convert_auth_data_field,
     "signature": _convert_signature_field,
@@ -437,7 +437,7 @@ _GET_ASSERTION_RESPONSE_HANDLERS: Dict[Any, Callable[[Any], Any]] = {
     "extensions": _convert_optional_ctap_field,
 }
 
-_DETAILS_RUNTIME_BINDINGS: Dict[str, Callable[..., Any]] = {
+_DETAILS_RUNTIME_BINDINGS: dict[str, Callable[..., Any]] = {
     "_describe_client_data_from_bytes": _details_runtime._describe_client_data_from_bytes,
     "_describe_authenticator_data_bytes": _details_runtime._describe_authenticator_data_bytes,
     "_parse_attestation_object": _details_runtime._parse_attestation_object,
@@ -449,7 +449,7 @@ _DETAILS_RUNTIME_BINDINGS: Dict[str, Callable[..., Any]] = {
     "_is_client_data_dict": _details_runtime._is_client_data_dict,
 }
 
-_RESULT_RUNTIME_BINDINGS: Dict[str, Callable[..., Any]] = {
+_RESULT_RUNTIME_BINDINGS: dict[str, Callable[..., Any]] = {
     "_prepare_decoder_response": _result_runtime._prepare_decoder_response,
     "_build_decoder_payload": _result_runtime._build_decoder_payload,
     "_convert_result_to_data": _result_runtime._convert_result_to_data,
@@ -466,7 +466,7 @@ _RESULT_RUNTIME_BINDINGS: Dict[str, Callable[..., Any]] = {
     "_build_authenticator_section": _result_runtime._build_authenticator_section,
 }
 
-_SUMMARY_RUNTIME_BINDINGS: Dict[str, Callable[..., Any]] = {
+_SUMMARY_RUNTIME_BINDINGS: dict[str, Callable[..., Any]] = {
     "_format_result_summary": _summary_runtime._format_result_summary,
     "_base_type": _summary_runtime._base_type,
     "_format_public_key_credential_summary": _summary_runtime._format_public_key_credential_summary,

@@ -11,11 +11,11 @@ from .binary_extract import (
 )
 
 
-def _build_credential_overview(decoded: Mapping[str, Any]) -> Dict[str, Any]:
+def _build_credential_overview(decoded: Mapping[str, Any]) -> dict[str, Any]:
     if not isinstance(decoded, Mapping):
         return {}
 
-    overview: Dict[str, Any] = {}
+    overview: dict[str, Any] = {}
     for key in ("id", "type", "authenticatorAttachment"):
         value = decoded.get(key)
         if value is not None:
@@ -27,7 +27,7 @@ def _build_credential_overview(decoded: Mapping[str, Any]) -> Dict[str, Any]:
 
     raw_id = decoded.get("rawId")
     if isinstance(raw_id, Mapping):
-        raw_payload: Dict[str, Any] = {}
+        raw_payload: dict[str, Any] = {}
         raw_value = raw_id.get("raw")
         if raw_value is not None:
             raw_payload["raw"] = raw_value
@@ -50,11 +50,11 @@ def _build_authenticator_data_payload(
     auth_bytes: Optional[bytes],
     details: Any,
     fallback_alg: Optional[Any] = None,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     if auth_bytes is None and not isinstance(details, Mapping):
         return {}
 
-    payload: Dict[str, Any] = {}
+    payload: dict[str, Any] = {}
 
     if auth_bytes is not None:
         payload["raw"] = auth_bytes.hex()
@@ -105,14 +105,14 @@ def _build_flag_payload(
     flag_details: Any,
     flags_byte: Optional[int],
     auth_byte_length: Optional[int] = None,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     if flag_details is None and flags_byte is None:
         return {}
 
     if flag_details is None and auth_byte_length is not None and auth_byte_length < 37:
         return {}
 
-    payload: Dict[str, Any] = {}
+    payload: dict[str, Any] = {}
 
     bitfield = None
     hex_value = None
@@ -180,7 +180,7 @@ def _build_credential_payload(
     credential_details: Any,
     auth_bytes: Optional[bytes],
     fallback_alg: Optional[Any] = None,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     if credential_details is None and auth_bytes is None:
         return {}
 
@@ -231,7 +231,7 @@ def _build_credential_payload(
             if public_key_bytes:
                 public_key_raw_hex = public_key_bytes.hex()
 
-    public_key_payload: Dict[str, Any] = {}
+    public_key_payload: dict[str, Any] = {}
     if cose_key is not None:
         cose_display = _convert_cose_key_for_display(cose_key)
         public_key_payload["cose"] = make_json_safe(cose_display)
@@ -245,11 +245,11 @@ def _build_credential_payload(
     if not public_key_payload:
         public_key_payload = {}
 
-    credential_payload: Dict[str, Any] = {}
+    credential_payload: dict[str, Any] = {}
     if attested_raw_hex:
         credential_payload["raw"] = attested_raw_hex
     if aaguid_hex or aaguid_uuid:
-        aaguid_payload: Dict[str, Any] = {}
+        aaguid_payload: dict[str, Any] = {}
         if aaguid_hex:
             aaguid_payload["raw"] = aaguid_hex
         if aaguid_uuid:
@@ -265,7 +265,7 @@ def _build_credential_payload(
     return credential_payload
 
 
-def _convert_client_data_entry(entry: Any) -> Dict[str, Any]:
+def _convert_client_data_entry(entry: Any) -> dict[str, Any]:
     if not isinstance(entry, Mapping):
         return {}
 
@@ -273,7 +273,7 @@ def _convert_client_data_entry(entry: Any) -> Dict[str, Any]:
     if not isinstance(details, Mapping):
         return {}
 
-    payload: Dict[str, Any] = {}
+    payload: dict[str, Any] = {}
     for key in ("type", "origin", "crossOrigin"):
         if key in details:
             payload[key] = make_json_safe(details.get(key))
@@ -295,11 +295,11 @@ def _convert_client_data_entry(entry: Any) -> Dict[str, Any]:
     return payload
 
 
-def _collect_response_extras(response: Any) -> Dict[str, Any]:
+def _collect_response_extras(response: Any) -> dict[str, Any]:
     if not isinstance(response, Mapping):
         return {}
 
-    extras: Dict[str, Any] = {}
+    extras: dict[str, Any] = {}
     for field in ("signature", "userHandle", "publicKey", "publicKeyAlgorithm"):
         if field in response and response[field] is not None:
             extras[field] = make_json_safe(response[field])

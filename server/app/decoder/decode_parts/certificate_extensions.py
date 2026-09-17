@@ -3,16 +3,16 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Mapping, Optional
 
-_DEVICE_IDENTIFIER_NAMES: Dict[str, str] = {
+_DEVICE_IDENTIFIER_NAMES: dict[str, str] = {
     "1.3.6.1.4.1.41482.1.1": "Security Key by Yubico Series",
 }
 
 
-def _build_certificate_extensions_lines(extensions: Any) -> List[str]:
+def _build_certificate_extensions_lines(extensions: Any) -> list[str]:
     if not isinstance(extensions, list) or not extensions:
         return []
 
-    lines: List[str] = ["X509v3 extensions:"]
+    lines: list[str] = ["X509v3 extensions:"]
     for extension in extensions:
         if not isinstance(extension, Mapping):
             continue
@@ -33,7 +33,7 @@ def _format_certificate_extension_header(extension: Mapping[str, Any]) -> Option
     oid = extension.get("oid")
     friendly = extension.get("friendlyName") or extension.get("name")
 
-    parts: List[str] = []
+    parts: list[str] = []
     if include_oid and oid:
         parts.append(str(oid))
     if friendly and friendly != oid:
@@ -51,12 +51,12 @@ def _format_certificate_extension_header(extension: Mapping[str, Any]) -> Option
     return " ".join(parts)
 
 
-def _format_certificate_extension_value(value: Any) -> List[str]:
+def _format_certificate_extension_value(value: Any) -> list[str]:
     if value is None:
         return []
 
     if isinstance(value, Mapping):
-        lines: List[str] = []
+        lines: list[str] = []
         hex_value = None
         device_identifier = None
 
@@ -74,7 +74,7 @@ def _format_certificate_extension_value(value: Any) -> List[str]:
             else:
                 lines.append(f"{key}: {entry}")
 
-        ordered: List[str] = []
+        ordered: list[str] = []
         if hex_value is not None:
             ordered.append(f"Hex value: {hex_value}")
         if device_identifier is not None:
@@ -83,7 +83,7 @@ def _format_certificate_extension_value(value: Any) -> List[str]:
         return ordered
 
     if isinstance(value, (list, tuple)):
-        lines: List[str] = []
+        lines: list[str] = []
         for item in value:
             if item in (None, ""):
                 continue

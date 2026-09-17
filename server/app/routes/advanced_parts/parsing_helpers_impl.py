@@ -66,12 +66,12 @@ def _select_first_impl(_advanced_module: Any, mapping: Mapping[str, Any], keys: 
 def _parse_client_supplied_credentials_impl(
     advanced_module: Any,
     raw_credentials: Any,
-) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     if not isinstance(raw_credentials, list):
         return [], []
 
-    records: List[Dict[str, Any]] = []
-    serialized: List[Dict[str, Any]] = []
+    records: list[dict[str, Any]] = []
+    serialized: list[dict[str, Any]] = []
 
     for entry in raw_credentials:
         if not isinstance(entry, Mapping):
@@ -146,7 +146,7 @@ def _parse_client_supplied_credentials_impl(
                 }
             )
 
-            serialized_entry: Dict[str, Any] = {
+            serialized_entry: dict[str, Any] = {
                 "credentialId": base64.urlsafe_b64encode(credential_id_bytes).decode("ascii").rstrip("="),
                 "publicKey": base64.urlsafe_b64encode(public_key_bytes).decode("ascii").rstrip("="),
                 "signCount": int(entry.get("signCount")) if isinstance(entry.get("signCount"), int) else 0,

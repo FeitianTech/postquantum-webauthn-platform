@@ -92,7 +92,7 @@ __all__ = [
 
 AAGUID_EXTENSION_OID = ObjectIdentifier("1.3.6.1.4.1.45724.1.1.4")
 
-EXTENSION_DISPLAY_METADATA: Dict[str, Dict[str, Any]] = {
+EXTENSION_DISPLAY_METADATA: dict[str, dict[str, Any]] = {
     "1.3.6.1.4.1.41482.13.1": {
         "friendly_name": "Yubico: Firmware version",
     },
@@ -126,7 +126,7 @@ _PQC_ALGORITHM_NAME_TO_ID = {
 }
 _HASH_NORMALISE_PATTERN = _certificate_signature_leaf._HASH_NORMALISE_PATTERN
 
-_RUNTIME_REBOUND_CACHE: Dict[Callable[..., Any], Callable[..., Any]] = {}
+_RUNTIME_REBOUND_CACHE: dict[Callable[..., Any], Callable[..., Any]] = {}
 
 
 def _run_with_attestation_globals(func: Callable[..., Any], *args: Any, **kwargs: Any) -> Any:
@@ -156,7 +156,7 @@ def _install_runtime_bindings(bindings: Mapping[str, Callable[..., Any]]) -> Non
         globals()[_name] = _bind_runtime_function(_func)
 
 
-_AAGUID_LEAF_BINDINGS: Dict[str, Callable[..., Any]] = {
+_AAGUID_LEAF_BINDINGS: dict[str, Callable[..., Any]] = {
     "describe_cred_protect": _aaguid_leaf.describe_cred_protect,
     "coerce_non_negative_int": _aaguid_leaf.coerce_non_negative_int,
     "normalize_aaguid_string": _aaguid_leaf.normalize_aaguid_string,
@@ -166,7 +166,7 @@ _AAGUID_LEAF_BINDINGS: Dict[str, Callable[..., Any]] = {
     "summarize_authenticator_extensions": _aaguid_leaf.summarize_authenticator_extensions,
 }
 
-_TRUST_RUNTIME_BINDINGS: Dict[str, Callable[..., Any]] = {
+_TRUST_RUNTIME_BINDINGS: dict[str, Callable[..., Any]] = {
     "_ensure_utc_datetime": _trust_runtime._ensure_utc_datetime,
     "_certificate_datetime": _trust_runtime._certificate_datetime,
     "_coerce_bytes": _trust_runtime._coerce_bytes,
@@ -180,29 +180,29 @@ _TRUST_RUNTIME_BINDINGS: Dict[str, Callable[..., Any]] = {
     "_describe_certificate_subject": _trust_runtime._describe_certificate_subject,
 }
 
-_TRUST_CA_RUNTIME_BINDINGS: Dict[str, Callable[..., Any]] = {
+_TRUST_CA_RUNTIME_BINDINGS: dict[str, Callable[..., Any]] = {
     "_trusted_ca_subjects": _trust_ca_runtime._trusted_ca_subjects,
     "_trusted_ca_fingerprints": _trust_ca_runtime._trusted_ca_fingerprints,
     "_certificate_fingerprint": _trust_ca_runtime._certificate_fingerprint,
     "_is_trusted_ca_certificate": _trust_ca_runtime._is_trusted_ca_certificate,
 }
 
-_PQC_RUNTIME_BINDINGS: Dict[str, Callable[..., Any]] = {
+_PQC_RUNTIME_BINDINGS: dict[str, Callable[..., Any]] = {
     "_evaluate_mldsa_attestation_root": _pqc_runtime._evaluate_mldsa_attestation_root,
     "_attempt_pqc_attestation_signature_validation": _pqc_runtime._attempt_pqc_attestation_signature_validation,
 }
 
-_PQC_CONSTRAINTS_RUNTIME_BINDINGS: Dict[str, Callable[..., Any]] = {
+_PQC_CONSTRAINTS_RUNTIME_BINDINGS: dict[str, Callable[..., Any]] = {
     "_normalise_pqc_algorithm_identifier": _pqc_constraints_runtime._normalise_pqc_algorithm_identifier,
     "_check_pqc_certificate_constraints": _pqc_constraints_runtime._check_pqc_certificate_constraints,
     "_verify_pqc_attestation_chain": _pqc_constraints_runtime._verify_pqc_attestation_chain,
 }
 
-_CLASSICAL_RUNTIME_BINDINGS: Dict[str, Callable[..., Any]] = {
+_CLASSICAL_RUNTIME_BINDINGS: dict[str, Callable[..., Any]] = {
     "_evaluate_classical_attestation_root": _classical_runtime._evaluate_classical_attestation_root,
 }
 
-_CERTIFICATE_BINDINGS: Dict[str, Callable[..., Any]] = {
+_CERTIFICATE_BINDINGS: dict[str, Callable[..., Any]] = {
     "format_x509_name": _certificate_signature_leaf.format_x509_name,
     "_format_algorithm_component": _certificate_signature_leaf._format_algorithm_component,
     "_format_hash_value": _certificate_signature_leaf._format_hash_value,
@@ -220,7 +220,7 @@ _CERTIFICATE_BINDINGS: Dict[str, Callable[..., Any]] = {
     "serialize_attestation_certificate": _certificate_serialize_runtime.serialize_attestation_certificate,
 }
 
-_CHECKS_BINDINGS: Dict[str, Callable[..., Any]] = {
+_CHECKS_BINDINGS: dict[str, Callable[..., Any]] = {
     "_coerce_expected_bytes": _checks_input_runtime._coerce_expected_bytes,
     "_resolve_expected_challenge": _checks_input_runtime._resolve_expected_challenge,
     "_populate_client_data_results": _checks_input_runtime._populate_client_data_results,

@@ -24,7 +24,7 @@ def _ensure_cbor_available(data: bytes, offset: int, length: int) -> None:
 
 def _read_cbor_length(
     info: int, data: bytes, offset: int, *, allow_indefinite: bool = False
-) -> Tuple[Optional[int], int]:
+) -> tuple[Optional[int], int]:
     if info < 24:
         return info, offset
     if info == 24:
@@ -55,7 +55,7 @@ def _float_summary(value: float) -> str:
     return f"float({value})"
 
 
-def _parse_cbor_item(data: bytes, offset: int) -> Tuple[Dict[str, Any], int]:
+def _parse_cbor_item(data: bytes, offset: int) -> tuple[dict[str, Any], int]:
     if offset >= len(data):
         raise _CborDecodingError("Unexpected end of CBOR data.", offset)
 
@@ -94,8 +94,8 @@ def _parse_cbor_item(data: bytes, offset: int) -> Tuple[Dict[str, Any], int]:
     if major_type == 2:
         length, offset = _read_cbor_length(info, data, offset, allow_indefinite=True)
         if length is None:
-            segments: List[Dict[str, Any]] = []
-            raw_segments: List[bytes] = []
+            segments: list[dict[str, Any]] = []
+            raw_segments: list[bytes] = []
             while True:
                 if offset >= len(data):
                     break
@@ -160,8 +160,8 @@ def _parse_cbor_item(data: bytes, offset: int) -> Tuple[Dict[str, Any], int]:
     if major_type == 3:
         length, offset = _read_cbor_length(info, data, offset, allow_indefinite=True)
         if length is None:
-            segments: List[Dict[str, Any]] = []
-            text_parts: List[str] = []
+            segments: list[dict[str, Any]] = []
+            text_parts: list[str] = []
             while True:
                 if offset >= len(data):
                     break
@@ -217,7 +217,7 @@ def _parse_cbor_item(data: bytes, offset: int) -> Tuple[Dict[str, Any], int]:
 
     if major_type == 4:
         length, offset = _read_cbor_length(info, data, offset, allow_indefinite=True)
-        items: List[Dict[str, Any]] = []
+        items: list[dict[str, Any]] = []
         if length is None:
             while True:
                 if offset >= len(data):
@@ -253,7 +253,7 @@ def _parse_cbor_item(data: bytes, offset: int) -> Tuple[Dict[str, Any], int]:
 
     if major_type == 5:
         length, offset = _read_cbor_length(info, data, offset, allow_indefinite=True)
-        entries: List[Dict[str, Any]] = []
+        entries: list[dict[str, Any]] = []
         if length is None:
             while True:
                 if offset >= len(data):
@@ -387,7 +387,7 @@ def _parse_cbor_item(data: bytes, offset: int) -> Tuple[Dict[str, Any], int]:
     raise _CborDecodingError("Unsupported CBOR major type.", offset)
 
 
-def _decode_cbor_structure(data: bytes) -> Tuple[Dict[str, Any], int]:
+def _decode_cbor_structure(data: bytes) -> tuple[dict[str, Any], int]:
     node, offset = _parse_cbor_item(data, 0)
     node.setdefault("byteLength", offset)
     return node, offset

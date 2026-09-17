@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional
 
 
-def _parse_fido_transport_bitfield(raw_value: bytes) -> List[str]:
+def _parse_fido_transport_bitfield(raw_value: bytes) -> list[str]:
     if not raw_value:
         return []
 
@@ -44,7 +44,7 @@ def _serialize_extension_value(ext: Any) -> Any:
             "Hex value": hex_lines if hex_lines else colon_hex(value.digest),
         }
     if isinstance(value, x509.AuthorityKeyIdentifier):
-        serialized: Dict[str, Any] = {}
+        serialized: dict[str, Any] = {}
         if value.key_identifier:
             hex_lines = format_hex_bytes_lines(value.key_identifier)
             serialized["Hex value"] = hex_lines if hex_lines else colon_hex(value.key_identifier)
@@ -86,7 +86,7 @@ def _serialize_extension_value(ext: Any) -> Any:
             except Exception:  # pragma: no cover - defensive
                 text_value = None
 
-            payload: Dict[str, Any] = {"Hex value": raw_hex}
+            payload: dict[str, Any] = {"Hex value": raw_hex}
             if text_value:
                 payload["Device identifier"] = text_value
             return payload

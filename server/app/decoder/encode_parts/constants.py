@@ -7,7 +7,7 @@ from typing import Dict, Sequence, Tuple
 
 _CTAP_LABELED_KEY_PATTERN = re.compile(r"^\s*(-?\d+)\s*\(([^)]+)\)\s*$")
 
-_CTAP_FIELD_LABELS: Dict[str, Dict[int, str]] = {
+_CTAP_FIELD_LABELS: dict[str, dict[int, str]] = {
     "makeCredentialRequest": {
         1: "clientDataHash",
         2: "rp",
@@ -51,14 +51,14 @@ _CTAP_FIELD_LABELS: Dict[str, Dict[int, str]] = {
     },
 }
 
-_CTAP_REQUIRED_FIELDS: Dict[str, Sequence[int]] = {
+_CTAP_REQUIRED_FIELDS: dict[str, Sequence[int]] = {
     "makeCredentialRequest": (1, 2, 3, 4),
     "getAssertionRequest": (1, 2),
     "makeCredentialResponse": (1, 2),
     "getAssertionResponse": (2, 3),
 }
 
-_CTAP_PREFIX_DETAILS: Dict[str, Tuple[int, str]] = {
+_CTAP_PREFIX_DETAILS: dict[str, tuple[int, str]] = {
     "makeCredentialRequest": (0x01, "command"),
     "getAssertionRequest": (0x02, "command"),
     "makeCredentialResponse": (0x00, "status"),

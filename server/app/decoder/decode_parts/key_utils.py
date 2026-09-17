@@ -61,7 +61,7 @@ def generate_key_variants(key: Any) -> Iterable[Any]:
             yield str(numeric)
 
 
-def key_variant_identity(key: Any) -> Tuple[str, Any]:
+def key_variant_identity(key: Any) -> tuple[str, Any]:
     if isinstance(key, (bytes, bytearray)):
         return ("bytes", bytes(key))
     return ("other", key)

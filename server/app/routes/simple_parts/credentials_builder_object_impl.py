@@ -7,7 +7,7 @@ from .credentials_builder_dict_impl import add_registration_metadata_impl
 
 def build_credential_info_from_object_credential_data_impl(
     simple_module: Any, email: str, cred: Mapping[str, Any]
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     cred_data = cred["credential_data"]
     auth_data = cred["auth_data"]
     user_info = cred["user_info"]
@@ -92,7 +92,7 @@ def build_credential_info_from_object_credential_data_impl(
     return credential_info
 
 
-def build_credential_info_from_bare_credential_impl(simple_module: Any, email: str, cred: Any) -> Dict[str, Any]:
+def build_credential_info_from_bare_credential_impl(simple_module: Any, email: str, cred: Any) -> dict[str, Any]:
     aaguid_hex = simple_module.coerce_aaguid_hex(getattr(cred, "aaguid", None))
 
     credential_info = {

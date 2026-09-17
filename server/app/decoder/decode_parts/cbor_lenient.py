@@ -49,7 +49,7 @@ def _structure_to_value(node: Mapping[str, Any]) -> Any:
         entries = node.get("entries")
         if not isinstance(entries, Sequence):
             return {}
-        result: Dict[Any, Any] = {}
+        result: dict[Any, Any] = {}
         for entry in entries:
             if not isinstance(entry, Mapping):
                 continue
@@ -81,7 +81,7 @@ def _structure_to_value(node: Mapping[str, Any]) -> Any:
     return node.get("value")
 
 
-def _lenient_read_uint(info: int, data: bytes, offset: int) -> Tuple[int, int]:
+def _lenient_read_uint(info: int, data: bytes, offset: int) -> tuple[int, int]:
     if info <= 23:
         return info, offset
     if info == 24:
@@ -105,7 +105,7 @@ def _lenient_read_uint(info: int, data: bytes, offset: int) -> Tuple[int, int]:
     return 0, offset
 
 
-def _lenient_decode_from(data: bytes, offset: int = 0) -> Tuple[Any, int]:
+def _lenient_decode_from(data: bytes, offset: int = 0) -> tuple[Any, int]:
     if offset >= len(data):
         return None, len(data)
 
@@ -124,7 +124,7 @@ def _lenient_decode_from(data: bytes, offset: int = 0) -> Tuple[Any, int]:
 
     if major_type == 2:
         if info == 31:
-            chunks: List[bytes] = []
+            chunks: list[bytes] = []
             while offset < len(data):
                 if data[offset] == 0xFF:
                     offset += 1
@@ -143,7 +143,7 @@ def _lenient_decode_from(data: bytes, offset: int = 0) -> Tuple[Any, int]:
 
     if major_type == 3:
         if info == 31:
-            parts: List[str] = []
+            parts: list[str] = []
             while offset < len(data):
                 if data[offset] == 0xFF:
                     offset += 1
@@ -163,7 +163,7 @@ def _lenient_decode_from(data: bytes, offset: int = 0) -> Tuple[Any, int]:
         return value, offset
 
     if major_type == 4:
-        items: List[Any] = []
+        items: list[Any] = []
         if info == 31:
             while offset < len(data):
                 if data[offset] == 0xFF:
@@ -185,7 +185,7 @@ def _lenient_decode_from(data: bytes, offset: int = 0) -> Tuple[Any, int]:
         return items, offset
 
     if major_type == 5:
-        mapping: Dict[Any, Any] = {}
+        mapping: dict[Any, Any] = {}
         if info == 31:
             while offset < len(data):
                 if data[offset] == 0xFF:

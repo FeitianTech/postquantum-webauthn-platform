@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Mapping, MutableMapping, Optional, Tuple
 def prepare_register_complete_inputs(
     advanced_module: Any,
     data: Mapping[str, Any],
-) -> Tuple[Optional[Dict[str, Any]], Optional[Any]]:
+) -> tuple[Optional[dict[str, Any]], Optional[Any]]:
     response = data.get("__credential_response")
     if not response:
         return None, (advanced_module.jsonify({"error": "Credential response is required"}), 400)
@@ -15,7 +15,7 @@ def prepare_register_complete_inputs(
     original_request = {key: value for key, value in data.items() if not key.startswith("__")}
 
     original_public_key = original_request.get("publicKey") if isinstance(original_request, Mapping) else None
-    original_hints: List[str] = []
+    original_hints: list[str] = []
     if isinstance(original_public_key, Mapping):
         raw_hints = original_public_key.get("hints")
         if isinstance(raw_hints, list):

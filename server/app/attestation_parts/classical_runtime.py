@@ -10,14 +10,14 @@ def _evaluate_classical_attestation_root(
     client_data_hash: bytes,
     verifier: Optional[Any],
     now: datetime,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Evaluate attestation trust using classical x509 verification."""
 
-    warnings: List[str] = []
-    errors: List[str] = []
+    warnings: list[str] = []
+    errors: list[str] = []
     metadata_entry: Optional[Any] = None
     metadata_lookup_source: Optional[str] = None
-    checks: Dict[str, Optional[bool]] = {
+    checks: dict[str, Optional[bool]] = {
         "trusted_ca": None,
         "chain": None,
         "fido_mds": None,
@@ -75,7 +75,7 @@ def _evaluate_classical_attestation_root(
             if trust_details.errors:
                 errors.extend(trust_details.errors)
 
-    candidate_roots: List[bytes] = []
+    candidate_roots: list[bytes] = []
     if trust_details is not None and trust_details.ca_certificate:
         candidate_roots.append(trust_details.ca_certificate)
     if metadata_entry is not None:

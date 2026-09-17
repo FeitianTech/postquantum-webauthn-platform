@@ -218,7 +218,7 @@ def ensure_session(session_id: str) -> None:
         _local_maybe_cleanup()
 
 
-def list_sessions() -> List[str]:
+def list_sessions() -> list[str]:
     if _using_gcs():
         prefix = _base_prefix()
         seen = set()
@@ -239,7 +239,7 @@ def list_sessions() -> List[str]:
     except OSError:
         return []
 
-    sessions: List[str] = []
+    sessions: list[str] = []
     for entry in entries:
         path = os.path.join(SESSION_METADATA_DIR, entry)
         if os.path.isdir(path) and not entry.startswith("."):
@@ -288,12 +288,12 @@ def resolve_last_access(session_id: str) -> Optional[float]:
     return _local_resolve_last_access(directory)
 
 
-def list_files(session_id: str) -> List[str]:
+def list_files(session_id: str) -> list[str]:
     if _using_gcs():
         prefix = _metadata_prefix(session_id)
         if prefix:
             prefix = prefix + "/"
-        names: List[str] = []
+        names: list[str] = []
         try:
             for blob_name in list_blob_names(prefix):
                 remainder = blob_name[len(prefix) :] if prefix else blob_name
@@ -317,7 +317,7 @@ def list_files(session_id: str) -> List[str]:
     except OSError:
         return []
 
-    names: List[str] = []
+    names: list[str] = []
     for entry in entries:
         if entry == _LAST_ACCESS_BLOB or entry.startswith("."):
             continue
@@ -410,7 +410,7 @@ def delete_session(session_id: str) -> None:
         prefix = _user_root_prefix(session_id)
         if prefix:
             prefix = prefix + "/"
-        to_delete: List[str] = []
+        to_delete: list[str] = []
         try:
             for blob_name in list_blob_names(prefix):
                 to_delete.append(blob_name)

@@ -19,7 +19,7 @@ def advanced_register_begin_impl(advanced_module: Any):
 
     public_key = data["publicKey"]
 
-    warnings: List[str] = []
+    warnings: list[str] = []
 
     if not public_key.get("rp"):
         return advanced_module.jsonify({"error": "Missing required field: rp"}), 400
@@ -110,7 +110,7 @@ def advanced_register_begin_impl(advanced_module: Any):
         public_key["authenticatorSelection"] = auth_selection
 
     raw_hints = public_key.get("hints")
-    hints_list: List[str] = []
+    hints_list: list[str] = []
     if isinstance(raw_hints, list):
         hints_list = [item for item in raw_hints if isinstance(item, str)]
 

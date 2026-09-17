@@ -11,7 +11,7 @@ from typing import Any, Dict, Mapping, Optional
 
 def _build_make_credential_request_expanded_json(
     value: Mapping[Any, Any]
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     return _build_labeled_ctap_map(
         value,
         _MAKE_CREDENTIAL_REQUEST_LABELS,
@@ -21,7 +21,7 @@ def _build_make_credential_request_expanded_json(
 
 def _build_get_assertion_request_expanded_json(
     value: Mapping[Any, Any]
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     return _build_labeled_ctap_map(
         value,
         _GET_ASSERTION_REQUEST_LABELS,
@@ -29,7 +29,7 @@ def _build_get_assertion_request_expanded_json(
     )
 
 
-def _build_make_credential_expanded_json(value: Mapping[Any, Any]) -> Dict[str, Any]:
+def _build_make_credential_expanded_json(value: Mapping[Any, Any]) -> dict[str, Any]:
     return _build_labeled_ctap_map(
         value,
         _MAKE_CREDENTIAL_RESPONSE_LABELS,
@@ -37,7 +37,7 @@ def _build_make_credential_expanded_json(value: Mapping[Any, Any]) -> Dict[str, 
     )
 
 
-def _build_get_assertion_expanded_json(value: Mapping[Any, Any], raw_bytes: Optional[bytes] = None) -> Dict[str, Any]:
+def _build_get_assertion_expanded_json(value: Mapping[Any, Any], raw_bytes: Optional[bytes] = None) -> dict[str, Any]:
     result = _build_labeled_ctap_map(
         value,
         _GET_ASSERTION_RESPONSE_LABELS,
@@ -91,7 +91,7 @@ def _build_get_assertion_expanded_json(value: Mapping[Any, Any], raw_bytes: Opti
     return result
 
 
-def _interpret_ctap_cbor_value(value: Any) -> Optional[Dict[str, Any]]:
+def _interpret_ctap_cbor_value(value: Any) -> Optional[dict[str, Any]]:
     if isinstance(value, Mapping):
         interpreted = _interpret_make_credential_map(value)
         if interpreted is not None:
@@ -108,7 +108,7 @@ def _interpret_ctap_cbor_value(value: Any) -> Optional[Dict[str, Any]]:
     return None
 
 
-def _interpret_make_credential_map(value: Mapping[Any, Any]) -> Optional[Dict[str, Any]]:
+def _interpret_make_credential_map(value: Mapping[Any, Any]) -> Optional[dict[str, Any]]:
     fmt = _get_mapping_entry(value, 1, "1", "fmt")
     fmt = fmt if fmt is not _MISSING else None
     auth_data_entry = _get_mapping_entry(value, 2, "2", "authData")
@@ -123,7 +123,7 @@ def _interpret_make_credential_map(value: Mapping[Any, Any]) -> Optional[Dict[st
     if att_stmt_map is None and att_stmt_bytes is None and att_stmt_entry is not None:
         return None
 
-    interpreted: Dict[str, Any] = {}
+    interpreted: dict[str, Any] = {}
     interpreted["1 (fmt)"] = fmt
 
     auth_data_details, auth_trailing = _format_auth_data_for_expanded_json(auth_data_bytes)
@@ -168,7 +168,7 @@ def _interpret_make_credential_map(value: Mapping[Any, Any]) -> Optional[Dict[st
     return interpreted
 
 
-def _interpret_get_assertion_map(value: Mapping[Any, Any]) -> Optional[Dict[str, Any]]:
+def _interpret_get_assertion_map(value: Mapping[Any, Any]) -> Optional[dict[str, Any]]:
     if _looks_like_get_assertion_request(value):
         return None
     auth_data_entry = _get_mapping_entry(value, 2, "2", "authData")
@@ -178,7 +178,7 @@ def _interpret_get_assertion_map(value: Mapping[Any, Any]) -> Optional[Dict[str,
     if auth_data_bytes is None:
         return None
 
-    interpreted: Dict[str, Any] = {}
+    interpreted: dict[str, Any] = {}
 
     credential_entry = _get_mapping_entry(value, 1, "1", "credential")
     if credential_entry is not _MISSING and credential_entry is not None:
@@ -241,7 +241,7 @@ def _interpret_get_assertion_map(value: Mapping[Any, Any]) -> Optional[Dict[str,
     return interpreted
 
 
-def _interpret_make_credential_request_map(value: Mapping[Any, Any]) -> Optional[Dict[str, Any]]:
+def _interpret_make_credential_request_map(value: Mapping[Any, Any]) -> Optional[dict[str, Any]]:
     if not _looks_like_make_credential_request(value):
         return None
     return _build_labeled_ctap_map(
@@ -251,7 +251,7 @@ def _interpret_make_credential_request_map(value: Mapping[Any, Any]) -> Optional
     )
 
 
-def _interpret_get_assertion_request_map(value: Mapping[Any, Any]) -> Optional[Dict[str, Any]]:
+def _interpret_get_assertion_request_map(value: Mapping[Any, Any]) -> Optional[dict[str, Any]]:
     if not _looks_like_get_assertion_request(value):
         return None
     return _build_labeled_ctap_map(

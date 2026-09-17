@@ -492,7 +492,7 @@ app.config.setdefault("FIDO_SERVER_RP_NAME", _DEFAULT_RP_NAME)
 app.config.setdefault("FIDO_SERVER_RP_ID", _DEFAULT_RP_ID)
 
 
-def _parse_allowed_origins(raw_value: Optional[str]) -> Optional[Tuple[str, ...]]:
+def _parse_allowed_origins(raw_value: Optional[str]) -> Optional[tuple[str, ...]]:
     """Normalise a comma/newline separated allowlist of exact origins."""
 
     if raw_value is None:
@@ -548,7 +548,7 @@ app.config.setdefault(
 )
 
 
-def get_allowed_origins() -> Optional[Tuple[str, ...]]:
+def get_allowed_origins() -> Optional[tuple[str, ...]]:
     """Return the configured exact-origin allowlist, or ``None`` when unset."""
 
     configured = app.config.get("FIDO_SERVER_ALLOWED_ORIGINS")
@@ -643,7 +643,7 @@ if _session_metadata_recover_flag is not None:
     app.config["SESSION_METADATA_RECOVER_ON_START"] = _session_metadata_recover_flag
 
 
-def _parse_trusted_ca_subjects(raw_value: Optional[str]) -> Optional[Set[str]]:
+def _parse_trusted_ca_subjects(raw_value: Optional[str]) -> Optional[set[str]]:
     """Normalise a comma or newline separated list of CA subject names."""
 
     if raw_value is None:
@@ -656,7 +656,7 @@ def _parse_trusted_ca_subjects(raw_value: Optional[str]) -> Optional[Set[str]]:
     return subjects
 
 
-def _parse_trusted_ca_fingerprints(raw_value: Optional[str]) -> Optional[Set[str]]:
+def _parse_trusted_ca_fingerprints(raw_value: Optional[str]) -> Optional[set[str]]:
     """Normalise a list of hexadecimal fingerprints for trusted CA certificates."""
 
     if raw_value is None:

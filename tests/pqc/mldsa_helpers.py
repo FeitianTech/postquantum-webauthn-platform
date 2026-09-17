@@ -18,7 +18,7 @@ from cryptography.x509.oid import NameOID
 
 from fido2 import cose
 
-PARAMETER_SETS: Tuple[str, str, str] = ("ML-DSA-44", "ML-DSA-65", "ML-DSA-87")
+PARAMETER_SETS: tuple[str, str, str] = ("ML-DSA-44", "ML-DSA-65", "ML-DSA-87")
 
 COSE_KEY_CLASSES = {
     "ML-DSA-44": cose.MLDSA44,
@@ -185,7 +185,7 @@ def certificate(
     return cert.public_bytes(serialization.Encoding.DER)
 
 
-def certificate_and_key(parameter_set: str, **kwargs: Any) -> Tuple[bytes, Any]:
+def certificate_and_key(parameter_set: str, **kwargs: Any) -> tuple[bytes, Any]:
     """Return ``(der, private_key)`` for a certificate built by :func:`certificate`."""
 
     label = kwargs.get("label", "attestation")

@@ -26,7 +26,7 @@ def _prepare_encoder_response(
     *,
     qualifier: Optional[str] = None,
     warnings: Optional[Sequence[str]] = None,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     type_label = base_type
     if qualifier:
         type_label = f"{base_type} ({qualifier})"
@@ -76,7 +76,7 @@ def _normalize_encoding_format(value: str) -> str:
     raise ValueError(f"Unsupported encoder format: {value}")
 
 
-def _encode_json_value(parsed: Any) -> Dict[str, Any]:
+def _encode_json_value(parsed: Any) -> dict[str, Any]:
     text = json.dumps(parsed, indent=2, ensure_ascii=False)
     data_bytes = text.encode("utf-8")
     payload = {
@@ -87,7 +87,7 @@ def _encode_json_value(parsed: Any) -> Dict[str, Any]:
     return _prepare_encoder_response("JSON", payload, qualifier="encoded")
 
 
-def _encode_public_key_credential(parsed: Any) -> Dict[str, Any]:
+def _encode_public_key_credential(parsed: Any) -> dict[str, Any]:
     if not isinstance(parsed, Mapping):
         raise ValueError("PublicKeyCredential encoding expects a JSON object.")
 
@@ -102,7 +102,7 @@ def _encode_public_key_credential(parsed: Any) -> Dict[str, Any]:
     )
 
 
-def _encode_client_data(parsed: Any) -> Dict[str, Any]:
+def _encode_client_data(parsed: Any) -> dict[str, Any]:
     if not isinstance(parsed, Mapping):
         raise ValueError("WebAuthn client data must be provided as a JSON object.")
 
@@ -118,7 +118,7 @@ def _encode_client_data(parsed: Any) -> Dict[str, Any]:
     )
 
 
-def _encode_authenticator_data(parsed: Any) -> Dict[str, Any]:
+def _encode_authenticator_data(parsed: Any) -> dict[str, Any]:
     data_bytes = _extract_binary_input(parsed, "authenticatorData")
     details = _describe_authenticator_data_bytes(data_bytes)
 
@@ -133,7 +133,7 @@ def _encode_authenticator_data(parsed: Any) -> Dict[str, Any]:
     )
 
 
-def _encode_attestation_object(parsed: Any) -> Dict[str, Any]:
+def _encode_attestation_object(parsed: Any) -> dict[str, Any]:
     data_bytes = _extract_binary_input(parsed, "attestationObject")
     decoded = _parse_attestation_object(data_bytes)
     payload = {
@@ -147,7 +147,7 @@ def _encode_attestation_object(parsed: Any) -> Dict[str, Any]:
     )
 
 
-def _encode_x509_certificate(parsed: Any) -> Dict[str, Any]:
+def _encode_x509_certificate(parsed: Any) -> dict[str, Any]:
     data_bytes = _extract_binary_input(parsed, "certificate")
     details = serialize_attestation_certificate(data_bytes)
     payload = {
@@ -165,9 +165,9 @@ def _encode_binary_variant(
     base_type: str,
     encoding: str,
     output_key: str,
-    output_value: Callable[[Dict[str, Any], bytes], Any],
+    output_value: Callable[[dict[str, Any], bytes], Any],
     qualifier: str,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     data_bytes = _extract_generic_binary_payload(parsed)
     summary = _binary_summary(data_bytes, encoding)
     payload = {
@@ -177,7 +177,7 @@ def _encode_binary_variant(
     return _prepare_encoder_response(base_type, payload, qualifier=qualifier)
 
 
-def _encode_hex_value(parsed: Any) -> Dict[str, Any]:
+def _encode_hex_value(parsed: Any) -> dict[str, Any]:
     return _encode_binary_variant(
         parsed,
         base_type="Hex",
@@ -188,7 +188,7 @@ def _encode_hex_value(parsed: Any) -> Dict[str, Any]:
     )
 
 
-def _encode_base64_value(parsed: Any) -> Dict[str, Any]:
+def _encode_base64_value(parsed: Any) -> dict[str, Any]:
     return _encode_binary_variant(
         parsed,
         base_type="Base64",
@@ -199,7 +199,7 @@ def _encode_base64_value(parsed: Any) -> Dict[str, Any]:
     )
 
 
-def _encode_base64url_value(parsed: Any) -> Dict[str, Any]:
+def _encode_base64url_value(parsed: Any) -> dict[str, Any]:
     return _encode_binary_variant(
         parsed,
         base_type="Base64URL",
@@ -210,7 +210,7 @@ def _encode_base64url_value(parsed: Any) -> Dict[str, Any]:
     )
 
 
-def _encode_binary_value(parsed: Any) -> Dict[str, Any]:
+def _encode_binary_value(parsed: Any) -> dict[str, Any]:
     return _encode_binary_variant(
         parsed,
         base_type="Binary data",
@@ -221,7 +221,7 @@ def _encode_binary_value(parsed: Any) -> Dict[str, Any]:
     )
 
 
-def _encode_der_value(parsed: Any) -> Dict[str, Any]:
+def _encode_der_value(parsed: Any) -> dict[str, Any]:
     return _encode_binary_variant(
         parsed,
         base_type="DER",
@@ -232,7 +232,7 @@ def _encode_der_value(parsed: Any) -> Dict[str, Any]:
     )
 
 
-def _encode_pem_value(parsed: Any) -> Dict[str, Any]:
+def _encode_pem_value(parsed: Any) -> dict[str, Any]:
     data_bytes = _extract_generic_binary_payload(parsed)
     summary = _binary_summary(data_bytes, "pem")
     label = _determine_pem_label(parsed)

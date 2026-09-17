@@ -226,7 +226,7 @@ def _decode_value(value: Any) -> Any:
             return decoded
     if tag == _T_MAP:
         entries = raw if isinstance(raw, list) else []
-        decoded_map: Dict[Any, Any] = {}
+        decoded_map: dict[Any, Any] = {}
         for entry in entries:
             if isinstance(entry, list) and len(entry) == 2:
                 decoded_map[_decode_value(entry[0])] = _decode_value(entry[1])
@@ -259,7 +259,7 @@ def encode_records(records: Any) -> bytes:
     return _encode_records(records)
 
 
-def _decode_records(payload: bytes) -> Optional[List[Any]]:
+def _decode_records(payload: bytes) -> Optional[list[Any]]:
     """Decode a JSON credential payload, or return ``None`` if it is not JSON."""
 
     try:
@@ -275,7 +275,7 @@ def _decode_records(payload: bytes) -> Optional[List[Any]]:
     return None
 
 
-def _load_payload(payload: bytes, *, source: str) -> Optional[List[Any]]:
+def _load_payload(payload: bytes, *, source: str) -> Optional[list[Any]]:
     """Turn stored bytes into a credential list, JSON first, legacy pickle second.
 
     The format is sniffed from the content rather than the file extension so a
@@ -379,7 +379,7 @@ def _strip_credential_suffix(remainder: str) -> Optional[str]:
     return None
 
 
-def _list_credential_blob_names(session_id: str) -> Iterable[Tuple[str, str]]:
+def _list_credential_blob_names(session_id: str) -> Iterable[tuple[str, str]]:
     search_prefixes = []
 
     primary_prefix = _build_search_prefix(_credential_prefix(session_id))
@@ -513,7 +513,7 @@ def savekey(name: str, key: Any, *, session_id: Optional[str] = None) -> None:
     _discard_superseded_pickle(name, resolved_session)
 
 
-def readkey(name: str, *, session_id: Optional[str] = None) -> List[Any]:
+def readkey(name: str, *, session_id: Optional[str] = None) -> list[Any]:
     resolved_session = _resolve_session_id(session_id)
     if _using_gcs():
         for blob_name in _candidate_gcs_blob_names(name, resolved_session):
@@ -560,7 +560,7 @@ def delkey(name: str, *, session_id: Optional[str] = None) -> None:
             pass
 
 
-def _iter_local_directory(directory: str) -> Iterable[Tuple[str, bytes, str]]:
+def _iter_local_directory(directory: str) -> Iterable[tuple[str, bytes, str]]:
     try:
         entries = os.listdir(directory)
     except OSError:
@@ -582,11 +582,11 @@ def _iter_local_directory(directory: str) -> Iterable[Tuple[str, bytes, str]]:
             yield username, payload, path
 
 
-def iter_credentials(*, session_id: Optional[str] = None) -> Iterator[Tuple[str, List[Any]]]:
+def iter_credentials(*, session_id: Optional[str] = None) -> Iterator[tuple[str, list[Any]]]:
     resolved_session = _resolve_session_id(session_id)
     if _using_gcs():
 
-        def _download_blob_items() -> Iterable[Tuple[str, bytes, str]]:
+        def _download_blob_items() -> Iterable[tuple[str, bytes, str]]:
             for username, blob_name in _list_credential_blob_names(resolved_session):
                 try:
                     payload = download_bytes(blob_name)
@@ -595,10 +595,10 @@ def iter_credentials(*, session_id: Optional[str] = None) -> Iterator[Tuple[str,
                 if payload:
                     yield username, payload, blob_name
 
-        sources: Iterable[Tuple[str, bytes, str]] = _download_blob_items()
+        sources: Iterable[tuple[str, bytes, str]] = _download_blob_items()
     else:
 
-        def _read_local_items() -> Iterable[Tuple[str, bytes, str]]:
+        def _read_local_items() -> Iterable[tuple[str, bytes, str]]:
             directories = [_LOCAL_CREDENTIAL_BASE]
             if _LEGACY_LOCAL_CREDENTIAL_BASE != _LOCAL_CREDENTIAL_BASE:
                 directories.append(_LEGACY_LOCAL_CREDENTIAL_BASE)
@@ -631,8 +631,8 @@ def iter_credentials(*, session_id: Optional[str] = None) -> Iterator[Tuple[str,
         yield username, creds
 
 
-def list_credentials(*, session_id: Optional[str] = None) -> Dict[str, List[Any]]:
-    entries: Dict[str, List[Any]] = {}
+def list_credentials(*, session_id: Optional[str] = None) -> dict[str, list[Any]]:
+    entries: dict[str, list[Any]] = {}
     for username, creds in iter_credentials(session_id=session_id):
         entries[username] = creds
     return entries
@@ -656,7 +656,7 @@ def convert_bytes_for_json(obj: Any) -> Any:
     return obj
 
 
-def add_public_key_material(target: Dict[str, Any], public_key: Any) -> None:
+def add_public_key_material(target: dict[str, Any], public_key: Any) -> None:
     """Populate JSON-friendly COSE public key details if available."""
     if not isinstance(public_key, dict):
         return

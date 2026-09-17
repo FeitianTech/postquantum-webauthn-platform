@@ -100,7 +100,7 @@ class AttestedCredentialData(bytes):
         return repr(self)
 
     @staticmethod
-    def _parse(data: bytes) -> Tuple[bytes, bytes, CoseKey, bytes]:
+    def _parse(data: bytes) -> tuple[bytes, bytes, CoseKey, bytes]:
         """Parse the components of an AttestedCredentialData from a binary
         string, and return them.
 
@@ -132,7 +132,7 @@ class AttestedCredentialData(bytes):
         )
 
     @classmethod
-    def unpack_from(cls, data: bytes) -> Tuple[AttestedCredentialData, bytes]:
+    def unpack_from(cls, data: bytes) -> tuple[AttestedCredentialData, bytes]:
         """Unpack an AttestedCredentialData from a byte string, returning it and
         any remaining data.
 

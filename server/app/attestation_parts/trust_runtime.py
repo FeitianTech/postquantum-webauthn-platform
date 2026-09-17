@@ -34,13 +34,13 @@ def _coerce_bytes(value: Any) -> Optional[bytes]:
     return None
 
 
-def _collect_trust_path_entries(x5c: Any) -> List[bytes]:
+def _collect_trust_path_entries(x5c: Any) -> list[bytes]:
     """Coerce an ``x5c`` attestation entry into a list of DER certificates."""
 
     if not isinstance(x5c, Sequence):
         return []
 
-    trust_path: List[bytes] = []
+    trust_path: list[bytes] = []
     for entry in x5c:
         data = _coerce_bytes(entry)
         if data:
@@ -128,10 +128,10 @@ def _extract_attestation_leaf_certificate(
     return _coerce_certificate_bytes(chain[0])
 
 
-def _collect_metadata_root_certificates(metadata_entry: Any) -> List[bytes]:
+def _collect_metadata_root_certificates(metadata_entry: Any) -> list[bytes]:
     """Extract attestation root certificates from a metadata entry."""
 
-    roots: List[bytes] = []
+    roots: list[bytes] = []
     metadata_statement = getattr(metadata_entry, "metadata_statement", None)
     candidates: Any = None
     if metadata_statement is not None:

@@ -278,7 +278,7 @@ class _DataClassMapping(Mapping[_T, Any]):
 
     def __post_init__(self):
         hints = get_type_hints(type(self))
-        self._field_keys: Dict[_T, Field[Any]]
+        self._field_keys: dict[_T, Field[Any]]
         object.__setattr__(self, "_field_keys", {})
 
         for f in fields(self):  # type: ignore
@@ -361,11 +361,11 @@ class _DataClassMapping(Mapping[_T, Any]):
 
     @overload
     @classmethod
-    def from_dict(cls: Type[_S], data: None) -> None: ...
+    def from_dict(cls: type[_S], data: None) -> None: ...
 
     @overload
     @classmethod
-    def from_dict(cls: Type[_S], data: Mapping[_T, Any]) -> _S: ...
+    def from_dict(cls: type[_S], data: Mapping[_T, Any]) -> _S: ...
 
     @classmethod
     def from_dict(cls, data):
