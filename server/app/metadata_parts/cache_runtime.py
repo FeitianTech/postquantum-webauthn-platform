@@ -1,6 +1,14 @@
 """Metadata cache and HTTP header helpers."""
 from __future__ import annotations
 
+import json
+import os
+from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
+from typing import Any
+
+from ..config import MDS_METADATA_CACHE_PATH
+
 
 class MetadataDownloadError(Exception):
     """Raised when the FIDO MDS metadata cannot be downloaded."""
@@ -9,15 +17,15 @@ class MetadataDownloadError(Exception):
         self,
         message: str,
         *,
-        status_code: Optional[int] = None,
-        retry_after: Optional[str] = None,
+        status_code: int | None = None,
+        retry_after: str | None = None,
     ) -> None:
         super().__init__(message)
         self.status_code = status_code
         self.retry_after = retry_after
 
 
-def _parse_http_datetime(value: Optional[str]) -> Optional[datetime]:
+def _parse_http_datetime(value: str | None) -> datetime | None:
     """Best-effort parsing of an HTTP date header into an aware datetime."""
 
     if not value:
@@ -36,7 +44,7 @@ def _parse_http_datetime(value: Optional[str]) -> Optional[datetime]:
     return parsed
 
 
-def _format_last_modified(header: Optional[str]) -> Optional[str]:
+def _format_last_modified(header: str | None) -> str | None:
     """Convert an HTTP Last-Modified header to an ISO formatted string."""
 
     if not header:
@@ -49,13 +57,13 @@ def _format_last_modified(header: Optional[str]) -> Optional[str]:
     return parsed.isoformat()
 
 
-def format_last_modified_header(header: Optional[str]) -> Optional[str]:
+def format_last_modified_header(header: str | None) -> str | None:
     """Public helper for converting HTTP Last-Modified headers to ISO format."""
 
     return _format_last_modified(header)
 
 
-def _clean_metadata_cache_value(value: Any) -> Optional[str]:
+def _clean_metadata_cache_value(value: Any) -> str | None:
     """Return a trimmed string value from cached metadata state if present."""
 
     if isinstance(value, str):
@@ -65,7 +73,7 @@ def _clean_metadata_cache_value(value: Any) -> Optional[str]:
     return None
 
 
-def load_metadata_cache_entry() -> Dict[str, Optional[str]]:
+def load_metadata_cache_entry() -> dict[str, str | None]:
     """Load cached metadata headers used for conditional download requests."""
 
     try:
@@ -94,9 +102,9 @@ def load_metadata_cache_entry() -> Dict[str, Optional[str]]:
 
 def _store_metadata_cache_entry(
     *,
-    last_modified_header: Optional[str],
-    last_modified_iso: Optional[str],
-    etag: Optional[str],
+    last_modified_header: str | None,
+    last_modified_iso: str | None,
+    etag: str | None,
 ) -> None:
     """Persist cached metadata download headers for future requests."""
 
@@ -118,9 +126,9 @@ def _store_metadata_cache_entry(
 
 def store_metadata_cache_entry(
     *,
-    last_modified_header: Optional[str],
-    last_modified_iso: Optional[str],
-    etag: Optional[str],
+    last_modified_header: str | None,
+    last_modified_iso: str | None,
+    etag: str | None,
 ) -> None:
     """Persist cached metadata headers for the packaged snapshot."""
 
@@ -132,9 +140,9 @@ def store_metadata_cache_entry(
 
 
 def download_metadata_blob(
-    source_url: Optional[str] = None,
-    destination: Optional[str] = None,
-) -> Tuple[bool, int, Optional[str]]:
+    source_url: str | None = None,
+    destination: str | None = None,
+) -> tuple[bool, int, str | None]:
     """Fetch the FIDO MDS metadata BLOB and store it locally.
 
     Runtime downloads are no longer supported. The packaged snapshot is
