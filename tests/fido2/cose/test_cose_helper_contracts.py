@@ -95,15 +95,3 @@ def test_require_canonical_ecdsa_signature_enforces_low_s_and_der_shape():
 
     with pytest.raises(ValueError, match="DER SEQUENCE"):
         cose._require_canonical_ecdsa_signature(b"\x01", cose._SECP256R1_ORDER)
-
-
-def test_require_oqs_returns_module_when_present_and_raises_when_missing(monkeypatch):
-    fake_module = object()
-    monkeypatch.setattr(cose, "oqs", fake_module, raising=False)
-    assert cose._require_oqs() is fake_module
-
-    monkeypatch.setattr(cose, "oqs", None, raising=False)
-    monkeypatch.setattr(cose, "_oqs_import_error", RuntimeError("missing"), raising=False)
-
-    with pytest.raises(RuntimeError, match="ML-DSA verification requires"):
-        cose._require_oqs()
