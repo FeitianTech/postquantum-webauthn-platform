@@ -82,15 +82,9 @@ __all__ = ["MetadataDownloadError", "download_metadata_blob", "get_mds_verifier"
            "delete_session_metadata_item", "expand_metadata_entry_payloads",
            "metadata_entry_trust_anchor_status", "maybe_store_uploaded_metadata_file"]
 
-_base_explorer_snapshot_cache: dict[str, Any] | None = None
-_base_explorer_snapshot_mtime: tuple[float | None, float | None] | None = None
-_base_full_snapshot_cache: dict[str, Any] | None = None
-_base_full_snapshot_mtime: float | None = None
 _session_metadata_entry_ids: set[int] = set()
 # Locks live here because the metadata_parts runtime functions execute against
 # this module's globals.
-_base_explorer_snapshot_lock = threading.RLock()
-_base_full_snapshot_lock = threading.RLock()
 
 _session_metadata_last_cleanup: float = 0.0
 _session_cleanup_worker: threading.Thread | None = None

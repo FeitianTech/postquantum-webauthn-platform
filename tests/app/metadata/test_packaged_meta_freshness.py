@@ -26,8 +26,6 @@ def metadata_module(monkeypatch, tmp_path, metadata_runtime_state):
 
     monkeypatch.setattr(module, "MDS_METADATA_VERIFIED_PATH", str(verified_path), raising=False)
     monkeypatch.setattr(module, "MDS_EXPLORER_PATH", str(explorer_path), raising=False)
-    monkeypatch.setattr(module, "_base_explorer_snapshot_cache", None, raising=False)
-    monkeypatch.setattr(module, "_base_explorer_snapshot_mtime", None, raising=False)
 
     builds = []
     monkeypatch.setattr(
