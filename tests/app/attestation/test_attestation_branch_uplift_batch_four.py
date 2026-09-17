@@ -15,7 +15,7 @@ def test_hex_format_helpers_cover_empty_odd_and_invalid_inputs():
     assert attestation_module.format_hex_string_lines("zz") == ["zz"]
 
 
-def test_extract_certificate_aaguid_handles_missing_and_nonstandard_extension_shapes(monkeypatch):
+def test_extract_certificate_aaguid_handles_missing_and_nonstandard_extension_shapes(monkeypatch, encoding_leaf):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     assert attestation_module._extract_certificate_aaguid(b"") == b""
@@ -47,10 +47,9 @@ def test_extract_certificate_aaguid_handles_missing_and_nonstandard_extension_sh
                 return _BytesExtension()
 
     monkeypatch.setattr(
-        attestation_module,
+        encoding_leaf,
         "decode_asn1_octet_string",
         lambda _value: b"\x00" * 5,
-        raising=False,
     )
     monkeypatch.setattr(
         attestation_module.x509,

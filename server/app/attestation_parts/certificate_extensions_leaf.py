@@ -4,8 +4,8 @@ from typing import Any
 
 from cryptography import x509
 
+from . import encoding_leaf
 from .certificate_signature_leaf import format_x509_name
-from .encoding_leaf import colon_hex, decode_asn1_octet_string, format_hex_bytes_lines
 
 
 def _parse_fido_transport_bitfield(raw_value: bytes) -> list[str]:
@@ -44,15 +44,15 @@ def _parse_fido_transport_bitfield(raw_value: bytes) -> list[str]:
 def _serialize_extension_value(ext: Any) -> Any:
     value = ext.value
     if isinstance(value, x509.SubjectKeyIdentifier):
-        hex_lines = format_hex_bytes_lines(value.digest)
+        hex_lines = encoding_leaf.format_hex_bytes_lines(value.digest)
         return {
-            "Hex value": hex_lines if hex_lines else colon_hex(value.digest),
+            "Hex value": hex_lines if hex_lines else encoding_leaf.colon_hex(value.digest),
         }
     if isinstance(value, x509.AuthorityKeyIdentifier):
         serialized: dict[str, Any] = {}
         if value.key_identifier:
-            hex_lines = format_hex_bytes_lines(value.key_identifier)
-            serialized["Hex value"] = hex_lines if hex_lines else colon_hex(value.key_identifier)
+            hex_lines = encoding_leaf.format_hex_bytes_lines(value.key_identifier)
+            serialized["Hex value"] = hex_lines if hex_lines else encoding_leaf.colon_hex(value.key_identifier)
         if value.authority_cert_serial_number is not None:
             serialized["Authority Cert Serial Number"] = (
                 f"{value.authority_cert_serial_number} "
@@ -74,7 +74,7 @@ def _serialize_extension_value(ext: Any) -> Any:
         oid = ext.oid.dotted_string
 
         if oid == "1.3.6.1.4.1.41482.13.1":
-            version_bytes = decode_asn1_octet_string(raw_bytes)
+            version_bytes = encoding_leaf.decode_asn1_octet_string(raw_bytes)
             if version_bytes:
                 version_components = "".join(
                     f"{byte}." for byte in version_bytes
@@ -84,7 +84,7 @@ def _serialize_extension_value(ext: Any) -> Any:
             return {"Hex value": raw_hex}
 
         if oid == "1.3.6.1.4.1.41482.2":
-            identifier_bytes = decode_asn1_octet_string(raw_bytes)
+            identifier_bytes = encoding_leaf.decode_asn1_octet_string(raw_bytes)
             text_value: str | None
             try:
                 text_value = identifier_bytes.decode("ascii").strip()
@@ -97,7 +97,7 @@ def _serialize_extension_value(ext: Any) -> Any:
             return payload
 
         if oid == "1.3.6.1.4.1.41482.1.1":
-            identifier_bytes = decode_asn1_octet_string(raw_bytes)
+            identifier_bytes = encoding_leaf.decode_asn1_octet_string(raw_bytes)
             try:
                 identifier_text = identifier_bytes.decode("ascii").strip()
             except Exception:  # pragma: no cover - defensive
@@ -108,7 +108,7 @@ def _serialize_extension_value(ext: Any) -> Any:
             return {"Hex value": raw_hex}
 
         if oid == "1.3.6.1.4.1.45724.1.1.4":
-            aaguid_bytes = decode_asn1_octet_string(raw_bytes)
+            aaguid_bytes = encoding_leaf.decode_asn1_octet_string(raw_bytes)
             if len(aaguid_bytes) == 16:
                 return {"AAGUID": aaguid_bytes.hex()}
             return {"Hex value": raw_hex}

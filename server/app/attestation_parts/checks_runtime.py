@@ -5,6 +5,7 @@ from typing import Any
 
 from fido2.webauthn import AuthenticatorData, RegistrationResponse
 
+from . import encoding_leaf
 from .checks_attestation_runtime import (
     _evaluate_root_validation,
     _resolve_signature_validation,
@@ -16,7 +17,6 @@ from .checks_input_runtime import (
     _resolve_expected_challenge,
 )
 from .checks_metadata_runtime import _finalize_metadata_results
-from .encoding_leaf import encode_base64url
 
 
 def perform_attestation_checks(
@@ -83,8 +83,8 @@ def perform_attestation_checks(
     client_data_hash = client_data.hash
     verification_data = bytes(auth_data_obj) + client_data_hash
     results["hash_binding"] = {
-        "client_data_hash": encode_base64url(client_data_hash),
-        "verification_data": encode_base64url(verification_data),
+        "client_data_hash": encoding_leaf.encode_base64url(client_data_hash),
+        "verification_data": encoding_leaf.encode_base64url(verification_data),
     }
 
     signature_ctx = _resolve_signature_validation(attestation_object, client_data_hash)

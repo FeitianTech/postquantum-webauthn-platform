@@ -8,8 +8,8 @@ from typing import Any
 from fido2.utils import ByteBuffer, websafe_decode
 from fido2.webauthn import RegistrationResponse
 
+from . import encoding_leaf
 from .certificate_serialize_runtime import serialize_attestation_certificate
-from .encoding_leaf import encode_base64url
 
 
 def _coerce_attestation_certificate_bytes(value: Any) -> bytes | None:
@@ -125,7 +125,7 @@ def extract_attestation_details(
     attestation_object = registration.response.attestation_object
     attestation_format = getattr(attestation_object, "fmt", None) or "none"
     attestation_statement = attestation_object.att_stmt or {}
-    attestation_object_b64 = encode_base64url(bytes(attestation_object))
+    attestation_object_b64 = encoding_leaf.encode_base64url(bytes(attestation_object))
 
     if isinstance(attestation_statement, Mapping):
         cert_chain = attestation_statement.get("x5c") or []
@@ -156,7 +156,7 @@ def extract_attestation_details(
     client_data = registration.response.client_data
     client_data_b64 = getattr(client_data, "b64", None)
     if client_data_b64 is None:
-        client_data_b64 = encode_base64url(bytes(client_data))
+        client_data_b64 = encoding_leaf.encode_base64url(bytes(client_data))
 
     extension_outputs = registration.client_extension_results
     if extension_outputs:
