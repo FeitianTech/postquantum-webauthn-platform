@@ -18,9 +18,9 @@ from . import (
     certificate_signature_leaf,
     certificate_summary_runtime,
     encoding_leaf,
+    trust_runtime,
 )
 from .runtime_state import EXTENSION_DISPLAY_METADATA
-from .trust_runtime import _certificate_datetime, _ensure_utc_datetime
 
 
 def _serialize_attestation_certificate_fallback(
@@ -90,8 +90,8 @@ def serialize_attestation_certificate(cert_bytes: bytes) -> Any:
     version_number = certificate.version.value + 1
     version_hex = f"0x{certificate.version.value:x}"
 
-    not_valid_before = _certificate_datetime(certificate, "not_valid_before")
-    not_valid_after = _certificate_datetime(certificate, "not_valid_after")
+    not_valid_before = trust_runtime._certificate_datetime(certificate, "not_valid_before")
+    not_valid_after = trust_runtime._certificate_datetime(certificate, "not_valid_after")
 
     extensions = []
     for ext in certificate.extensions:
@@ -201,7 +201,7 @@ def serialize_attestation_certificate(cert_bytes: bytes) -> Any:
     subject_common_names = certificate_signature_leaf._extract_common_names(certificate.subject)
 
     def _isoformat(value: datetime) -> str:
-        return _ensure_utc_datetime(value).isoformat()
+        return trust_runtime._ensure_utc_datetime(value).isoformat()
 
     return {
         "version": {

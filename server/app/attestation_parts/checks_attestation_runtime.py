@@ -13,12 +13,12 @@ from fido2.attestation import (
 
 from ..metadata import get_mds_verifier
 from ..pqc import is_pqc_algorithm
+from . import trust_runtime
 from .classical_runtime import _evaluate_classical_attestation_root
 from .pqc_runtime import (
     _attempt_pqc_attestation_signature_validation,
     _evaluate_mldsa_attestation_root,
 )
-from .trust_runtime import _collect_trust_path_entries, _extract_certificate_aaguid
 
 
 def _resolve_signature_validation(
@@ -91,7 +91,7 @@ def _collect_attestation_trust_path(
         if trust_path_candidate:
             attestation_trust_path = list(trust_path_candidate)
     if not attestation_trust_path and isinstance(attestation_object.att_stmt, Mapping):
-        attestation_trust_path = _collect_trust_path_entries(
+        attestation_trust_path = trust_runtime._collect_trust_path_entries(
             attestation_object.att_stmt.get("x5c")
         )
     return attestation_trust_path
@@ -115,7 +115,7 @@ def _evaluate_root_validation(
 
     certificate_aaguid_bytes = b""
     if attestation_trust_path:
-        certificate_aaguid_bytes = _extract_certificate_aaguid(attestation_trust_path[0])
+        certificate_aaguid_bytes = trust_runtime._extract_certificate_aaguid(attestation_trust_path[0])
 
     metadata_entry = None
     metadata_lookup_source: str | None = None

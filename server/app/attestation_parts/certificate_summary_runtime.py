@@ -9,8 +9,7 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec, ed448, ed25519, rsa
 from cryptography.x509.oid import ExtensionOID
 
-from . import certificate_signature_leaf, encoding_leaf
-from .trust_runtime import _ensure_utc_datetime
+from . import certificate_signature_leaf, encoding_leaf, trust_runtime
 
 
 def _build_certificate_summary(
@@ -39,7 +38,7 @@ def _build_certificate_summary(
             summary_lines.append("")
 
     def _isoformat(value: datetime) -> str:
-        return _ensure_utc_datetime(value).isoformat()
+        return trust_runtime._ensure_utc_datetime(value).isoformat()
 
     _append_line(f"Version: {version_number} ({version_hex})")
     _append_line(
