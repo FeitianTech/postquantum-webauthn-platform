@@ -1,6 +1,21 @@
 """Base metadata and packaged snapshot loading helpers."""
 from __future__ import annotations
 
+import json
+import os
+from collections.abc import Mapping
+from typing import Any
+
+from fido2.mds3 import MetadataBlobPayload
+
+from ..config import (
+    MDS_EXPLORER_FULL_PATH,
+    MDS_EXPLORER_PATH,
+    MDS_METADATA_VERIFIED_PATH,
+    app,
+)
+from ..mds_snapshot import build_bootstrap_snapshot, build_explorer_snapshot
+
 
 def load_cached_metadata_snapshot() -> bool:
     """Warm in-memory caches from the stored MDS metadata when available."""
@@ -9,7 +24,7 @@ def load_cached_metadata_snapshot() -> bool:
     return metadata is not None
 
 
-def _load_base_metadata() -> Tuple[Optional[MetadataBlobPayload], Optional[float]]:
+def _load_base_metadata() -> tuple[MetadataBlobPayload | None, float | None]:
     global _base_metadata_cache, _base_metadata_mtime, _base_metadata_source
     global _base_metadata_trust_verified, _base_metadata_entry_ids
 
@@ -53,7 +68,7 @@ def _load_base_metadata() -> Tuple[Optional[MetadataBlobPayload], Optional[float
         return metadata, fallback_mtime
 
 
-def _load_verified_metadata_fallback() -> Tuple[Optional[MetadataBlobPayload], Optional[float]]:
+def _load_verified_metadata_fallback() -> tuple[MetadataBlobPayload | None, float | None]:
     """Load the bundled verified metadata snapshot shipped with the application."""
 
     try:
@@ -85,7 +100,7 @@ def _load_verified_metadata_fallback() -> Tuple[Optional[MetadataBlobPayload], O
         return None, fallback_mtime
 
 
-def _load_verified_metadata_payload() -> Optional[Dict[str, Any]]:
+def _load_verified_metadata_payload() -> dict[str, Any] | None:
     try:
         with open(MDS_METADATA_VERIFIED_PATH, "r", encoding="utf-8") as fallback_file:
             payload = json.load(fallback_file)
@@ -97,7 +112,7 @@ def _load_verified_metadata_payload() -> Optional[Dict[str, Any]]:
     return payload
 
 
-def _load_packaged_explorer_meta(snapshot_path: Optional[str] = None) -> Optional[Dict[str, Any]]:
+def _load_packaged_explorer_meta(snapshot_path: str | None = None) -> dict[str, Any] | None:
     """Return a packaged snapshot's meta when it describes the verified snapshot.
 
     The snapshot tool writes every packaged file and its meta in one run, so
@@ -133,7 +148,7 @@ def _load_packaged_explorer_meta(snapshot_path: Optional[str] = None) -> Optiona
     return explorer_meta
 
 
-def _load_base_explorer_snapshot() -> Tuple[Optional[Dict[str, Any]], Optional[Tuple[Optional[float], Optional[float]]]]:
+def _load_base_explorer_snapshot() -> tuple[dict[str, Any] | None, tuple[float | None, float | None] | None]:
     global _base_explorer_snapshot_cache, _base_explorer_snapshot_mtime
 
     try:
@@ -160,7 +175,7 @@ def _load_base_explorer_snapshot() -> Tuple[Optional[Dict[str, Any]], Optional[T
         ):
             return _base_explorer_snapshot_cache, cache_marker
 
-        snapshot: Optional[Dict[str, Any]] = None
+        snapshot: dict[str, Any] | None = None
 
         packaged_is_current = explorer_mtime is not None and (
             verified_mtime is None
@@ -186,7 +201,7 @@ def _load_base_explorer_snapshot() -> Tuple[Optional[Dict[str, Any]], Optional[T
         return snapshot, cache_marker
 
 
-def _load_base_full_snapshot() -> Tuple[Optional[Dict[str, Any]], Optional[float]]:
+def _load_base_full_snapshot() -> tuple[dict[str, Any] | None, float | None]:
     global _base_full_snapshot_cache, _base_full_snapshot_mtime
 
     try:
@@ -207,7 +222,7 @@ def _load_base_full_snapshot() -> Tuple[Optional[Dict[str, Any]], Optional[float
         ):
             return _base_full_snapshot_cache, verified_mtime
 
-        snapshot: Optional[Dict[str, Any]] = None
+        snapshot: dict[str, Any] | None = None
 
         # The packaged full snapshot is built by the same code as the fallback
         # below; loading it avoids re-parsing every attestation certificate.
@@ -230,7 +245,7 @@ def _load_base_full_snapshot() -> Tuple[Optional[Dict[str, Any]], Optional[float
         return snapshot, verified_mtime
 
 
-def load_packaged_explorer_summary() -> Dict[str, Any]:
+def load_packaged_explorer_summary() -> dict[str, Any]:
     # The summary is only the snapshot's meta block, which the packaged meta
     # file already holds; avoid parsing the multi-megabyte snapshot for it.
     if _base_explorer_snapshot_cache is None:
