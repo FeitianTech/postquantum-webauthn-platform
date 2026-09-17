@@ -36,6 +36,11 @@ jobs:
           uv sync --locked --python 3.12
           echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
 
+      # Ruff is deliberately kept out of uv.lock and the venv: it is a developer
+      # tool, not an application dependency. uvx runs a pinned copy on demand.
+      - name: Run ruff
+        run: uvx ruff@0.16.8 check --output-format github .
+
       - name: Run syntax check
         run: python -m compileall -x '/\.venv/' .
 
