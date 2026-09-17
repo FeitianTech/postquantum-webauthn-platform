@@ -24,14 +24,20 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v10
+        with:
+          version: "0.12.15"
+
+      # Installs exactly what uv.lock pins (the same lock the Docker image
+      # installs from); --locked fails if the lock is out of date.
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install pytest
+          uv sync --locked --python 3.12
+          echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
 
       - name: Run syntax check
-        run: python -m compileall .
+        run: python -m compileall -x '/\.venv/' .
 
       - name: Run import check
         run: |
