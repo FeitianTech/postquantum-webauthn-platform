@@ -201,7 +201,7 @@ def verify_x509_chain(chain: list[bytes]) -> None:
         except _InvalidSignature:
             raise InvalidSignature()
 
-        child, child_der = cert, cert_der
+        child, child_der = cert, cert_der  # noqa: F841  # child_der is vestigial, kept to match upstream
 
 
 class Attestation(abc.ABC):
