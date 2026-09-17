@@ -3,6 +3,21 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
+from fido2.webauthn import AuthenticatorData, RegistrationResponse
+
+from .checks_attestation_runtime import (
+    _evaluate_root_validation,
+    _resolve_signature_validation,
+)
+from .checks_input_runtime import (
+    _populate_authenticator_data_results,
+    _populate_client_data_results,
+    _populate_rp_id_hash_result,
+    _resolve_expected_challenge,
+)
+from .checks_metadata_runtime import _finalize_metadata_results
+from .encoding_leaf import encode_base64url
+
 
 def perform_attestation_checks(
     response: Mapping[str, Any],
