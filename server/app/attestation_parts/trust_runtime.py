@@ -3,7 +3,8 @@ from __future__ import annotations
 import base64
 import binascii
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Mapping, Optional, Sequence, Set
+from typing import Any, Dict, List, Optional, Set
+from collections.abc import Mapping, Sequence
 
 
 def _ensure_utc_datetime(value: datetime) -> datetime:

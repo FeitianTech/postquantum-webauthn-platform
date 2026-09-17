@@ -2,7 +2,8 @@
 from __future__ import annotations
 
 import re
-from typing import Dict, Sequence, Tuple
+from typing import Dict, Tuple
+from collections.abc import Sequence
 
 
 _CTAP_LABELED_KEY_PATTERN = re.compile(r"^\s*(-?\d+)\s*\(([^)]+)\)\s*$")

@@ -6,7 +6,8 @@ facade module, preserving monkeypatch-driven behavior in tests.
 # pyright: reportUndefinedVariable=false
 from __future__ import annotations
 
-from typing import Any, Dict, List, Mapping
+from typing import Any, Dict, List
+from collections.abc import Mapping
 
 
 def _prepare_decoder_response(result: dict[str, Any]) -> dict[str, Any]:

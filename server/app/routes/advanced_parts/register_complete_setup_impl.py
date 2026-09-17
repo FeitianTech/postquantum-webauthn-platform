@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Mapping, MutableMapping, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
+from collections.abc import Mapping, MutableMapping
 
 
 def prepare_register_complete_inputs(

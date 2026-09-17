@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, Dict, List, Mapping, Sequence, Tuple
+from typing import Any, Dict, List, Tuple
+from collections.abc import Mapping, Sequence
 
 
 def _build_certificate_summary(

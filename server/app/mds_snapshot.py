@@ -5,7 +5,8 @@ import base64
 import hashlib
 import json
 from datetime import date, datetime, timezone
-from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
+from typing import Any, Dict, List, Optional, Tuple
+from collections.abc import Mapping, Sequence
 
 from cryptography import x509
 from cryptography.exceptions import UnsupportedAlgorithm

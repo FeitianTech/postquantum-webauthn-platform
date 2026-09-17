@@ -57,7 +57,8 @@ from cryptography.hazmat.primitives import constant_time
 from cryptography.exceptions import InvalidSignature as _InvalidSignature
 from dataclasses import replace
 from urllib.parse import urlparse
-from typing import Sequence, Mapping, Optional, Callable, Union, Tuple, Any, overload
+from typing import Optional, Union, Tuple, Any, overload
+from collections.abc import Sequence, Mapping, Callable
 
 import os
 import logging

@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import re
-from typing import Any, List, Mapping
+from typing import Any, List
+from collections.abc import Mapping
 
 
 _HASH_NORMALISE_PATTERN = re.compile(r"sha-?(\d{3})$", re.IGNORECASE)

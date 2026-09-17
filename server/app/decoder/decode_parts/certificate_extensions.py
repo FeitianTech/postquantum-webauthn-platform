@@ -1,7 +1,8 @@
 """Helpers for formatting X.509 extension display output."""
 from __future__ import annotations
 
-from typing import Any, Dict, List, Mapping, Optional
+from typing import Any, Dict, List, Optional
+from collections.abc import Mapping
 
 _DEVICE_IDENTIFIER_NAMES: dict[str, str] = {
     "1.3.6.1.4.1.41482.1.1": "Security Key by Yubico Series",

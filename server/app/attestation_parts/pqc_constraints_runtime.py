@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import re
 from datetime import datetime
-from typing import Any, List, Optional, Sequence, Tuple
+from typing import Any, List, Optional, Tuple
+from collections.abc import Sequence
 
 
 def _normalise_pqc_algorithm_identifier(value: Any) -> Optional[int]:

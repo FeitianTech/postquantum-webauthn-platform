@@ -8,7 +8,8 @@ import json
 import os
 from datetime import datetime, timezone
 from threading import Lock
-from typing import Any, Dict, Mapping, Optional
+from typing import Any, Dict, Optional
+from collections.abc import Mapping
 
 from flask import abort, g, jsonify, render_template, request, send_file, session
 

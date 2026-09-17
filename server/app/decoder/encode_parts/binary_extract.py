@@ -4,7 +4,8 @@ from __future__ import annotations
 import re
 import textwrap
 from collections import deque
-from typing import Any, Mapping, Sequence
+from typing import Any
+from collections.abc import Mapping, Sequence
 
 from .binary_decode import _maybe_decode_bytes, _require_bytes
 

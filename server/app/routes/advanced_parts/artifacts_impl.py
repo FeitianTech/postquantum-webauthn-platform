@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Mapping
+from typing import Any, Dict, List
+from collections.abc import Mapping
 
 
 def api_get_advanced_credential_artifact_impl(advanced_module: Any, storage_id: str):

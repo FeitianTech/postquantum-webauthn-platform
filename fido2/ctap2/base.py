@@ -32,7 +32,8 @@ import struct
 from dataclasses import Field, dataclass, field, fields
 from enum import IntEnum, unique
 from threading import Event
-from typing import Any, Callable, Mapping
+from typing import Any
+from collections.abc import Callable, Mapping
 
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes

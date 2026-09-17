@@ -27,7 +27,8 @@
 
 from __future__ import annotations
 
-from typing import Sequence, Type, Mapping, Any, TypeVar, Optional, Iterable, Dict
+from typing import Type, Any, TypeVar, Optional, Dict
+from collections.abc import Sequence, Mapping, Iterable
 
 from cryptography import x509
 from cryptography.exceptions import UnsupportedAlgorithm

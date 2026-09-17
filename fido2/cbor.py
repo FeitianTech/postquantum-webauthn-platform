@@ -40,7 +40,8 @@ python-fido2 2.0.
 from __future__ import annotations
 
 import struct
-from typing import Any, Tuple, Union, Sequence, Mapping, Type, Callable
+from typing import Any, Tuple, Union, Type
+from collections.abc import Sequence, Mapping, Callable
 
 
 CborType = Union[int, bool, str, bytes, Sequence[Any], Mapping[Any, Any]]

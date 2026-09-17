@@ -30,7 +30,8 @@ from __future__ import annotations
 import logging
 import struct
 from enum import IntEnum, unique
-from typing import Any, Mapping, Sequence
+from typing import Any
+from collections.abc import Mapping, Sequence
 
 from .. import cbor
 from ..ctap import CtapError

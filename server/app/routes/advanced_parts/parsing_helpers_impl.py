@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import base64
-from typing import Any, Dict, Iterable, List, Mapping, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
+from collections.abc import Iterable, Mapping
 
 from fido2 import cbor
 from fido2.cose import CoseKey

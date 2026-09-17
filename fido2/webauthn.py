@@ -40,7 +40,8 @@ from .utils import (
 from .features import webauthn_json_mapping
 from enum import Enum, EnumMeta, unique, IntFlag
 from dataclasses import dataclass, field
-from typing import Any, Mapping, Optional, Sequence, Tuple, Union, cast
+from typing import Any, Optional, Tuple, Union, cast
+from collections.abc import Mapping, Sequence
 import struct
 import json
 

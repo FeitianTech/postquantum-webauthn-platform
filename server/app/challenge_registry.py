@@ -31,7 +31,8 @@ from __future__ import annotations
 import os
 import threading
 import time
-from typing import Any, Callable, Dict, Mapping, MutableMapping, Optional
+from typing import Any, Dict, Optional
+from collections.abc import Callable, Mapping, MutableMapping
 
 __all__ = [
     "CHALLENGE_EXPIRED",
