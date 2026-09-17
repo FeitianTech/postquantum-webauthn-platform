@@ -159,6 +159,60 @@ lock by design — run it via `uvx ruff@0.16.8 ...` so it cannot drift into the 
 **Residual risk:** the GitHub Actions and Dependabot changes are untested until pushed —
 they cannot run locally. Watch the first CI run after this lands.
 
+### Phase 4 — A2 lint baseline and gate — DONE (2026-09-17), verified
+Standalone `ruff.toml` (kept out of the vendored library's manifest so it stays diffable
+against upstream). **3705 findings to 1655**, of which 1008 is the deliberately-ungated F821.
+Gated set `["E4","E7","E9","F","I","UP006","UP007","UP035","UP045"]` passes at **zero** and is
+wired into CI. UP006 723 to 0, UP035 298 to 0, UP045 523 to 0, F401 625 to 0, I001 111 to 0.
+Suite held at 1689 / 278 at every commit; the agent reverted three times rather than force a fix.
+
+Coverage floors added and verified to bite: Python `fail_under = 95` (measured 95.42; exits 2
+at 97, 0 at 95), vitest thresholds 82/66/91/82. **Critically, the agent noticed neither floor
+ran on PRs** — `ci-python.yml` ran bare pytest and `ci-frontend.yml` ran vitest without
+`--coverage`, so the floors would only have fired in the badge workflow after merge. Coverage
+is now wired into both jobs; without that, "coverage cannot silently collapse" was false.
+
+`ruff format` deliberately NOT gated: it would rewrite 268 of 387 files (~14k lines).
+RUF100 deliberately ungated — under this narrow a gate it calls 79 live markers dead,
+including the `# noqa: F401` re-exports in vendored `fido2/**/__init__.py`. 7 genuinely stale
+markers removed by hand.
+
+**F822: 26 findings, 0 real bugs.** Tech-lead re-verified at runtime: all 13 `__all__` entries
+in `attestation.py` and all 19 in `metadata.py` resolve via `hasattr` — they are installed by
+`_install_runtime_bindings(...)` at import. Ignored in those two files only.
+
+### CORRECTION TO THE STRUCTURAL PLAN — there are FIVE namespace carriers, not three
+My earlier analysis named three modules that rebind fragments with
+`types.FunctionType(func.__code__, globals(), ...)`: `attestation.py`, `metadata.py`,
+`decoder/decode.py`. Phase 4 found two more with the **same coupling by a different
+mechanism**: `routes/advanced.py` and `routes/simple.py` pass themselves into their fragments
+via `_self_module()`, which then read names straight off the module
+(`advanced_module.request.get_json(...)`).
+
+**Verified by the tech lead:** deleting `import math` from `routes/advanced.py` — which ruff
+calls unused — breaks 2 tests, because fragments reach it as `advanced_module.math`.
+Confirmed live fragment uses: `advanced_module.jsonify` 52, `advanced_module.session` 25,
+`advanced_module.uuid` 3, `advanced_module.hashlib`/`json`/`time` 2 each.
+
+These two produce **no F821**, so **the F821 meter understates the debt by two modules**.
+M3 must cover five carriers. Track `_self_module`/`advanced_module`/`simple_module`
+reference count (539 at last audit) as the second meter.
+
+### Real bugs found in Phase 4, queued not fixed
+`simple_parts/credentials_route_impl.py` — four blanket handlers:
+- DELETE returns `{"status":"OK","removed":N}` after swallowing deletion failures, so a
+  partial or total failure reports success. Note `delkey` now raises on a rejected name.
+- The listing path nests THREE blanket handlers (drop-a-credential, drop-a-user,
+  return-empty), so a listing failure returns **HTTP 200 with `[]`** — indistinguishable
+  from "you have no credentials".
+
+Also: `checks_metadata_runtime.py:78` computes `metadata_aaguid_bytes` and never compares it,
+unlike the credential/certificate aaguids — incomplete work, marked FIXME.
+`tests/app/core/test_config.py:190` builds `expected_path` and never asserts on it.
+S110/S112 triage (all 32 read): 14 load-bearing, 13 masking real errors, 4 genuine bugs,
+1 needs review. BLE001 sample of 20: 16 load-bearing, 4 silently swallow — extrapolates to
+~35 of 175 worth review.
+
 ### Local development
 Tests previously ran against the global interpreter, whose packages matched nothing in
 `requirements.txt` (cryptography 44.0.3, fido2 2.1.1, gunicorn 23). A project venv now exists:
