@@ -20,6 +20,44 @@ pickle gadget executes under stock `pickle` and is refused by the restricted unp
 Tests: Python 1412 → **1623**, frontend 244 → **278**. Coverage badges after push:
 Python 95.02% → 94.61%, frontend 82.45% → 82.71%.
 
+### Batch 2 — C1 ML-DSA migration to `cryptography` — CODE DONE, infra pending (2026-09-16)
+Verification, certificate parsing, detection and metadata all run on `cryptography`.
+**Zero `oqs` references remain in `fido2/` or `server/` (only prose).**
+
+- ML-DSA-44/65/87 verify via `cryptography`; a tampered signature raises
+  `InvalidSignature` (**C3 fixed**), a truncated key raises `ValueError`.
+- ~670-line hand-rolled DER/ASN.1 block deleted. What survives (~60 lines,
+  `_parse_der_length`/`_parse_der_integer`) backs `_require_canonical_ecdsa_signature`,
+  which is **ECDSA** canonical-signature enforcement — correctly retained.
+  `fido2/cose.py` 1322 → ~990 lines; 544 deletions vs 202 insertions across cose.py + base.py.
+- **C4 fixed**: the certificate panel now reports `claimedNistLevel` and
+  `signatureLengthBytes`, sourced from the parsed certificate. It had *never* worked —
+  the old code read hyphenated liboqs keys that never existed.
+- **C5 fixed** (both parts): FIPS 204 sizes 2420/3309/4627, and the `setdefault` "enrichment"
+  that could never overwrite is gone.
+- **T1 fixed**: `tests/pqc/` no longer monkeypatches `verify` or injects a fake `oqs` module.
+  Real keypairs, real signatures, bit-flip rejection, and real ML-DSA self-signed
+  certificates through the packed-attestation policy checks.
+- `cryptography>=49` in both `requirements.txt` and `pyproject.toml`; the `<45` cap is gone.
+- Tests 1623 → **1653** passing. PQC now works on macOS/arm64 and in CI without liboqs.
+
+**Process note:** the first migration agent committed a broken tree (a deleted DER helper
+still had a live caller, 54 failures) because it never ran the full suite, then misread its
+own commits as a rival agent and stopped. A second agent died on a rate limit. The tech lead
+finished the work. Lesson recorded: **agents must run the full suite before committing**, and
+a shared `main` makes "is someone else editing?" genuinely ambiguous to a subagent.
+
+**Still pending (infra only, no code depends on it):**
+- `prebuilt_liboqs/` — 13MB committed binary blob + wheel, deletable
+- `Dockerfile` — 14 lines of liboqs wiring: `LD_PRELOAD`, `ldconfig`, symlink,
+  `LD_LIBRARY_PATH`, the wheel install, `pqcrypto`, and the `sh -c` wrapper that exists
+  only to set `LD_PRELOAD`
+- `pyproject.toml:43` `pqc = ["oqs", "pqcrypto"]` extra
+- `docker-compose.yml` pins `linux/amd64`; with liboqs gone, arm64 becomes buildable
+- Stale comment `tests/app/security/test_pqc_attestation_reporting.py:140` claims liboqs is
+  unavailable so real ML-DSA signatures cannot be produced — no longer true; that test can
+  now be upgraded to real crypto
+
 ### Local development
 Tests previously ran against the global interpreter, whose packages matched nothing in
 `requirements.txt` (cryptography 44.0.3, fido2 2.1.1, gunicorn 23). A project venv now exists:
