@@ -10,7 +10,7 @@ from flask import ctx, g, session
 
 
 @pytest.fixture
-def metadata_module(monkeypatch):
+def metadata_module(monkeypatch, metadata_runtime_state):
     module = pytest.importorskip("server.app.metadata")
 
     monkeypatch.setattr(module, "_base_metadata_cache", None, raising=False)
@@ -643,7 +643,9 @@ def test_cache_and_bootstrap_fallback_helpers(metadata_module, monkeypatch, tmp_
     ]
 
 
-def test_lookup_compose_resolve_trust_and_verifier_edge_paths(metadata_module, monkeypatch):
+def test_lookup_compose_resolve_trust_and_verifier_edge_paths(
+    metadata_module, metadata_runtime_state, monkeypatch
+):
     assert (
         metadata_module._entry_matches_lookup(
             {"metadataStatement": 123},

@@ -4,7 +4,7 @@ import pytest
 
 
 @pytest.fixture
-def metadata_module(monkeypatch):
+def metadata_module(monkeypatch, metadata_runtime_state):
     module = pytest.importorskip("server.app.metadata")
 
     monkeypatch.setattr(module, "_SESSION_METADATA_CLEANUP_INTERVAL", timedelta(seconds=1), raising=False)
