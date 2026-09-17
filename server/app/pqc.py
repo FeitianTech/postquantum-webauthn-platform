@@ -1,13 +1,17 @@
-"""Helpers for integrating liboqs-backed ML-DSA algorithms into the demo server."""
+"""Helpers for integrating ML-DSA algorithms into the demo server.
+
+Signing and verification are provided by ``cryptography``, which has native
+ML-DSA support.  liboqs is no longer required.
+"""
 
 from __future__ import annotations
 
-from typing import Callable, Dict, Iterable, Optional, Sequence, Set, Tuple
+from typing import Dict, Optional, Set, Tuple
 
 from .config import app
 
 
-# COSE algorithm identifiers mapped to their liboqs mechanism names.
+# COSE algorithm identifiers mapped to their FIPS 204 parameter set names.
 PQC_ALGORITHM_ID_TO_NAME: Dict[int, str] = {
     -50: "ML-DSA-87",
     -49: "ML-DSA-65",
@@ -19,42 +23,36 @@ _PQC_ALGORITHM_NAME_TO_ID: Dict[str, int] = {
 }
 
 
-def _load_enabled_mechanisms() -> Iterable[str]:
-    """Query liboqs for the list of enabled signature mechanisms."""
+def _load_enabled_mechanisms() -> Set[str]:
+    """Return the ML-DSA parameter sets ``cryptography`` can verify."""
 
-    try:  # pragma: no cover - exercised in environments with oqs available
-        import oqs  # type: ignore
-    except (ImportError, SystemExit):  # pragma: no cover - explicit messaging handled by caller
-        raise ImportError("oqs bindings are unavailable")
+    from cryptography.hazmat.primitives.asymmetric import mldsa
 
-    enabled: Iterable[str]
-    get_enabled: Optional[Callable[[], Sequence[str]]] = getattr(
-        oqs, "get_enabled_sig_mechanisms", None
-    )
-    if callable(get_enabled):
-        enabled = get_enabled()
-    else:  # pragma: no cover - compatibility fallback for older oqs builds
-        algorithms_attr = getattr(getattr(oqs, "Signature", None), "algorithms", None)
-        if algorithms_attr is None:
-            enabled = ()
-        else:
-            enabled = algorithms_attr
-    return [str(name) for name in enabled]
+    key_classes = {
+        "ML-DSA-44": "MLDSA44PublicKey",
+        "ML-DSA-65": "MLDSA65PublicKey",
+        "ML-DSA-87": "MLDSA87PublicKey",
+    }
+    return {
+        mechanism
+        for mechanism, attribute in key_classes.items()
+        if getattr(mldsa, attribute, None) is not None
+    }
 
 
 def detect_available_pqc_algorithms() -> Tuple[Set[int], Optional[str]]:
-    """Detect ML-DSA algorithms exposed by liboqs' Python bindings."""
+    """Detect the ML-DSA algorithms this build can verify."""
 
     try:
-        mechanism_names = set(_load_enabled_mechanisms())
+        mechanism_names = _load_enabled_mechanisms()
     except ImportError:
         return set(), (
-            "Post-quantum algorithms require the 'oqs' Python bindings (liboqs). "
-            "Install the python-fido2-webauthn-test[pqc] extra and ensure liboqs is present."
+            "Post-quantum algorithms require a cryptography build with ML-DSA support. "
+            "Install cryptography>=49."
         )
     except Exception as exc:  # pragma: no cover - defensive logging path
-        app.logger.exception("Failed to enumerate oqs signature mechanisms: %s", exc)
-        return set(), "Unable to enumerate post-quantum algorithms from the oqs bindings."
+        app.logger.exception("Failed to enumerate ML-DSA mechanisms: %s", exc)
+        return set(), "Unable to determine which post-quantum algorithms are available."
 
     available_ids = {
         alg_id
@@ -71,9 +69,9 @@ def detect_available_pqc_algorithms() -> Tuple[Set[int], Optional[str]]:
         if alg_id not in available_ids
     ]
     return available_ids, (
-        "The installed 'oqs' bindings do not include support for: "
+        "The installed cryptography build does not support: "
         + ", ".join(missing)
-        + ". Rebuild liboqs with ML-DSA enabled or install an updated wheel."
+        + ". Upgrade cryptography to a release providing all ML-DSA parameter sets."
     )
 
 
