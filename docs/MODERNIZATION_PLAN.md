@@ -124,6 +124,41 @@ Also noted: the builder stage still installs `build-essential`, `git`, `libssl-d
 `pkg-config`; `cryptography` wheels bundle OpenSSL so these may be removable. The
 `apt-get purge` in the builder stage is a no-op because that stage is discarded.
 
+### Phase 3 — A1 dependency single source of truth — DONE (2026-09-17), verified
+`server/pyproject.toml` is now the app's only dependency manifest; `uv.lock` (39 packages,
+hashed) is committed at the root; `requirements.txt` is **deleted**. The Docker image exports
+the lock and installs with `pip --require-hashes`; CI runs `uv sync --locked --python 3.12`;
+Dependabot targets `uv.lock`. Python floor raised to 3.12 in both manifests. The root
+pyproject stays the vendored library's manifest (fido2 is NOT un-vendored).
+
+Tech-lead verification — built a fresh image and read its metadata:
+
+| Package | Before | After |
+|---|---|---|
+| Flask | **2.3.3** | **3.1.3** |
+| cbor2 | **5.9.0** | **6.1.4** |
+| cryptography | 50.0.1 | 50.0.1 |
+| gunicorn / google-* | unchanged | unchanged |
+
+**Production and CI now run the same versions.** Container re-verified: `/health` 200,
+`/` 200 with CSP header, PQC `{-48,-49,-50}`. Stale-lock detection confirmed — editing
+`server/pyproject.toml` without re-locking makes `uv lock --check` fail. All six workflow
+YAMLs parse. Suite **1689**.
+
+Agent found a SECOND split I had not listed: cbor2 was capped at `^5.6.4` in the vendored
+library's manifest, so the image ran 5.9.0 while CI tested 6.1.4. The vendored fido2 never
+imports cbor2 (only `server/app` does), so it was removed from the library manifest.
+The old image also paired Flask 2.3.3 with Werkzeug 3.1.8 — a combination nothing tested.
+Removing the three unimported deps also dropped asn1crypto, attrs, certvalidator, ecdsa,
+oscrypto and six from the image.
+
+**Local development (UPDATED):** `.venv` is now synced from `uv.lock`, not `requirements.txt`.
+Use `uv sync --locked`. Run tests with `.venv/bin/python -m pytest -q`. ruff is NOT in the
+lock by design — run it via `uvx ruff@0.16.8 ...` so it cannot drift into the app's deps.
+
+**Residual risk:** the GitHub Actions and Dependabot changes are untested until pushed —
+they cannot run locally. Watch the first CI run after this lands.
+
 ### Local development
 Tests previously ran against the global interpreter, whose packages matched nothing in
 `requirements.txt` (cryptography 44.0.3, fido2 2.1.1, gunicorn 23). A project venv now exists:
