@@ -21,12 +21,17 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v7
         with:
-          python-version: '3.11'
+          python-version: '3.12'
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v10
+        with:
+          version: "0.12.15"
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          uv sync --locked --no-dev --python 3.12
+          echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
 
       - name: Refresh packaged metadata snapshot
         run: python tools/update_mds_snapshot.py
