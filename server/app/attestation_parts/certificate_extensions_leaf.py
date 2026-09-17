@@ -2,6 +2,11 @@ from __future__ import annotations
 
 from typing import Any
 
+from cryptography import x509
+
+from .certificate_signature_leaf import format_x509_name
+from .encoding_leaf import colon_hex, decode_asn1_octet_string, format_hex_bytes_lines
+
 
 def _parse_fido_transport_bitfield(raw_value: bytes) -> list[str]:
     if not raw_value:
