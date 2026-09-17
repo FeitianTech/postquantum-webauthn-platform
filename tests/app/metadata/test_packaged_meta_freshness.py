@@ -24,17 +24,16 @@ def metadata_module(monkeypatch, tmp_path, metadata_runtime_state, cache_runtime
     os.utime(explorer_path, (1_000.0, 1_000.0))
     os.utime(verified_path, (1_000.5, 1_000.5))
 
-    monkeypatch.setattr(snapshot_runtime, "MDS_METADATA_VERIFIED_PATH", str(verified_path), raising=False)
-    monkeypatch.setattr(snapshot_runtime, "MDS_EXPLORER_PATH", str(explorer_path), raising=False)
+    monkeypatch.setattr(snapshot_runtime, "MDS_METADATA_VERIFIED_PATH", str(verified_path))
+    monkeypatch.setattr(snapshot_runtime, "MDS_EXPLORER_PATH", str(explorer_path))
 
     builds = []
     monkeypatch.setattr(
         snapshot_runtime,
         "build_explorer_snapshot",
         lambda payload, cache: builds.append(1) or {"entries": [], "meta": {"source": "rebuilt"}},
-        raising=False,
     )
-    monkeypatch.setattr(cache_runtime, "load_metadata_cache_entry", lambda: None, raising=False)
+    monkeypatch.setattr(cache_runtime, "load_metadata_cache_entry", lambda: None)
 
     module._test_paths = (verified_path, explorer_path)
     module._test_builds = builds
@@ -86,7 +85,6 @@ def test_summary_reads_meta_file_without_loading_snapshot(metadata_module, monke
         snapshot_runtime,
         "_load_base_explorer_snapshot",
         lambda: pytest.fail("summary should not load the full explorer snapshot"),
-        raising=False,
     )
 
     summary = metadata_module.load_packaged_explorer_summary()

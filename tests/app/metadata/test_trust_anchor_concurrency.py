@@ -80,7 +80,6 @@ def test_session_entries_stay_untrusted_while_other_sessions_run(metadata_module
             if getattr(g, "_test_has_custom_metadata", False)
             else []
         ),
-        raising=False,
     )
 
     app = app_config.app
@@ -134,7 +133,7 @@ def test_concurrent_cold_loads_parse_base_metadata_once(metadata_module, monkeyp
     verified_path = tmp_path / "fido-mds3.verified.json"
     verified_path.write_text("{}", encoding="utf-8")
     monkeypatch.setattr(
-        snapshot_runtime, "MDS_METADATA_VERIFIED_PATH", str(verified_path), raising=False
+        snapshot_runtime, "MDS_METADATA_VERIFIED_PATH", str(verified_path)
     )
     verified_mtime = os.path.getmtime(verified_path)
 
@@ -144,7 +143,7 @@ def test_concurrent_cold_loads_parse_base_metadata_once(metadata_module, monkeyp
         return SimpleNamespace(entries=()), verified_mtime
 
     monkeypatch.setattr(
-        snapshot_runtime, "_load_verified_metadata_fallback", _slow_fallback, raising=False
+        snapshot_runtime, "_load_verified_metadata_fallback", _slow_fallback
     )
 
     threads = [

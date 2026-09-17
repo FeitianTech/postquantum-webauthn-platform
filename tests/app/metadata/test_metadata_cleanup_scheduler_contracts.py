@@ -26,7 +26,6 @@ def test_schedule_inactive_session_cleanup_runs_inline_when_async_disabled(metad
         cleanup_runtime,
         "_maybe_cleanup_inactive_sessions",
         lambda now=None: observed_now.append(now),
-        raising=False,
     )
 
     metadata_module._schedule_inactive_session_cleanup()
@@ -52,7 +51,6 @@ def test_schedule_inactive_session_cleanup_marks_pending_when_worker_alive(metad
         lambda *args, **kwargs: (_ for _ in ()).throw(
             AssertionError("inline cleanup should not run when worker is alive")
         ),
-        raising=False,
     )
 
     metadata_module._schedule_inactive_session_cleanup()
@@ -82,7 +80,6 @@ def test_schedule_inactive_session_cleanup_falls_back_inline_when_thread_start_f
         cleanup_runtime,
         "_maybe_cleanup_inactive_sessions",
         lambda now=None: observed_now.append(now),
-        raising=False,
     )
 
     metadata_module._schedule_inactive_session_cleanup()
@@ -101,7 +98,6 @@ def test_run_inactive_session_cleanup_worker_drains_pending_before_teardown(meta
         cleanup_runtime,
         "_maybe_cleanup_inactive_sessions",
         lambda: runs.append("cleanup"),
-        raising=False,
     )
 
     metadata_module._run_inactive_session_cleanup_worker()
@@ -126,7 +122,6 @@ def test_maybe_cleanup_inactive_sessions_deletes_only_stale_and_continues_on_del
         session_store,
         "list_sessions",
         lambda: ["stale-error", "stale-ok", "fresh", "unknown"],
-        raising=False,
     )
 
     last_access = {
@@ -139,7 +134,6 @@ def test_maybe_cleanup_inactive_sessions_deletes_only_stale_and_continues_on_del
         cleanup_runtime,
         "_resolve_session_last_access",
         lambda session_id: last_access[session_id],
-        raising=False,
     )
 
     delete_attempts = []

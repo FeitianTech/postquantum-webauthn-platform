@@ -127,7 +127,6 @@ def test_aaguid_extraction_merge_and_source_info_helpers(monkeypatch, payload_ru
         payload_runtime,
         "_extract_entry_aaguid",
         lambda entry: metadata_module._normalise_aaguid(str(getattr(entry, "aaguid", ""))),
-        raising=False,
     )
 
     merged = metadata_module._merge_metadata(base_metadata, [session_item])
@@ -153,7 +152,7 @@ def test_cache_cleaning_formatting_and_store_helper(tmp_path, monkeypatch, cache
     assert metadata_module._format_last_modified("not-a-date") == "not-a-date"
 
     cache_path = tmp_path / "cache" / "metadata-cache.json"
-    monkeypatch.setattr(cache_runtime, "MDS_METADATA_CACHE_PATH", str(cache_path), raising=False)
+    monkeypatch.setattr(cache_runtime, "MDS_METADATA_CACHE_PATH", str(cache_path))
 
     metadata_module._store_metadata_cache_entry(
         last_modified_header="Wed, 21 Oct 2015 07:28:00 GMT",

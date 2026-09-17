@@ -35,20 +35,18 @@ def test_safe_filename_and_upload_flow_handles_skip_update_and_disabled_logging(
     content = b"metadata-payload"
 
     uploads = []
-    monkeypatch.setattr(upload_runtime, "is_logging_enabled", lambda: True, raising=False)
-    monkeypatch.setattr(upload_runtime, "git_blob_sha", lambda _content: "sha-content", raising=False)
+    monkeypatch.setattr(upload_runtime, "is_logging_enabled", lambda: True)
+    monkeypatch.setattr(upload_runtime, "git_blob_sha", lambda _content: "sha-content")
 
     monkeypatch.setattr(
         upload_runtime,
         "github_list_directory",
         lambda _folder: [{"type": "file", "name": "metadata.json", "sha": "sha-content"}],
-        raising=False,
     )
     monkeypatch.setattr(
         upload_runtime,
         "github_upload_file",
         lambda *args, **kwargs: uploads.append((args, kwargs)),
-        raising=False,
     )
 
     assert metadata_module.maybe_store_uploaded_metadata_file("metadata.json", content) is False
@@ -65,7 +63,6 @@ def test_safe_filename_and_upload_flow_handles_skip_update_and_disabled_logging(
                 "path": "metadata/metadata.json",
             }
         ],
-        raising=False,
     )
 
     assert metadata_module.maybe_store_uploaded_metadata_file(" metadata.json ", content) is True
@@ -73,7 +70,7 @@ def test_safe_filename_and_upload_flow_handles_skip_update_and_disabled_logging(
     assert uploads[-1][0][2] == "metadata: update metadata.json"
     assert uploads[-1][1]["sha"] == "old-sha"
 
-    monkeypatch.setattr(upload_runtime, "is_logging_enabled", lambda: False, raising=False)
+    monkeypatch.setattr(upload_runtime, "is_logging_enabled", lambda: False)
     assert metadata_module.maybe_store_uploaded_metadata_file("metadata.json", content) is False
 
 
@@ -178,7 +175,7 @@ def test_entry_lookup_and_snapshot_composition_deduplicate_by_aaguid(metadata_mo
         ],
     }
 
-    monkeypatch.setattr(items_runtime, "list_session_metadata_items", lambda: [object()], raising=False)
+    monkeypatch.setattr(items_runtime, "list_session_metadata_items", lambda: [object()])
     monkeypatch.setattr(
         effective_runtime,
         "_build_session_snapshot_entry",
@@ -187,7 +184,6 @@ def test_entry_lookup_and_snapshot_composition_deduplicate_by_aaguid(metadata_mo
             "source": "session",
             "aaguid": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
         },
-        raising=False,
     )
 
     snapshot = metadata_module._compose_effective_snapshot(base_snapshot, include_detail=False)
@@ -215,8 +211,8 @@ def test_load_base_explorer_snapshot_prefers_packaged_explorer_when_newer(metada
     os.utime(verified_path, (now - 10, now - 10))
     os.utime(explorer_path, (now, now))
 
-    monkeypatch.setattr(snapshot_runtime, "MDS_METADATA_VERIFIED_PATH", str(verified_path), raising=False)
-    monkeypatch.setattr(snapshot_runtime, "MDS_EXPLORER_PATH", str(explorer_path), raising=False)
+    monkeypatch.setattr(snapshot_runtime, "MDS_METADATA_VERIFIED_PATH", str(verified_path))
+    monkeypatch.setattr(snapshot_runtime, "MDS_EXPLORER_PATH", str(explorer_path))
     monkeypatch.setattr(metadata_runtime_state, "_base_explorer_snapshot_cache", None)
     monkeypatch.setattr(metadata_runtime_state, "_base_explorer_snapshot_mtime", None)
 
@@ -227,19 +223,17 @@ def test_load_base_explorer_snapshot_prefers_packaged_explorer_when_newer(metada
 
 
 def test_load_packaged_explorer_summary_and_get_mds_verifier_cache_paths(metadata_module, monkeypatch, snapshot_runtime, items_runtime, verifier_runtime):
-    monkeypatch.setattr(snapshot_runtime, "_load_packaged_explorer_meta", lambda: None, raising=False)
-    monkeypatch.setattr(snapshot_runtime, "_load_base_explorer_snapshot", lambda: (None, None), raising=False)
+    monkeypatch.setattr(snapshot_runtime, "_load_packaged_explorer_meta", lambda: None)
+    monkeypatch.setattr(snapshot_runtime, "_load_base_explorer_snapshot", lambda: (None, None))
     monkeypatch.setattr(
         snapshot_runtime,
         "_load_verified_metadata_payload",
         lambda: {"legalHeader": "L", "no": 1, "nextUpdate": "2099-01-01", "entries": []},
-        raising=False,
     )
     monkeypatch.setattr(
         snapshot_runtime,
         "build_explorer_snapshot",
         lambda payload, _cache: {"meta": {"entryCount": len(payload.get("entries", []))}},
-        raising=False,
     )
 
     summary = metadata_module.load_packaged_explorer_summary()
@@ -253,9 +247,9 @@ def test_load_packaged_explorer_summary_and_get_mds_verifier_cache_paths(metadat
             created.append(metadata)
 
     fake_metadata = SimpleNamespace(entries=[])
-    monkeypatch.setattr(snapshot_runtime, "_load_base_metadata", lambda: (fake_metadata, 123.0), raising=False)
-    monkeypatch.setattr(items_runtime, "list_session_metadata_items", lambda: [], raising=False)
-    monkeypatch.setattr(verifier_runtime, "MdsAttestationVerifier", _FakeVerifier, raising=False)
+    monkeypatch.setattr(snapshot_runtime, "_load_base_metadata", lambda: (fake_metadata, 123.0))
+    monkeypatch.setattr(items_runtime, "list_session_metadata_items", lambda: [])
+    monkeypatch.setattr(verifier_runtime, "MdsAttestationVerifier", _FakeVerifier)
 
     first = metadata_module.get_mds_verifier()
     second = metadata_module.get_mds_verifier()
