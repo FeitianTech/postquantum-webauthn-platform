@@ -8,7 +8,6 @@ import pytest
 
 from fido2.hid.base import HidDescriptor
 
-
 if sys.platform != "darwin":
     pytest.skip("macOS-only backend contracts", allow_module_level=True)
 

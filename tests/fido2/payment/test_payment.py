@@ -7,14 +7,14 @@ from types import SimpleNamespace
 
 import pytest
 
+from fido2.ctap2.extensions import (
+    PaymentCredentialInstrument,
+    PaymentCurrencyAmount,
+)
 from fido2.payment import (
     CollectedClientAdditionalPaymentData,
     CollectedClientPaymentData,
     PaymentClientDataCollector,
-)
-from fido2.ctap2.extensions import (
-    PaymentCredentialInstrument,
-    PaymentCurrencyAmount,
 )
 from fido2.webauthn import (
     AuthenticatorAttachment,

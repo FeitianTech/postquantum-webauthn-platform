@@ -1,6 +1,8 @@
 """Session metadata item dataclass and CRUD helpers."""
 from __future__ import annotations
+
 from dataclasses import dataclass
+
 
 @dataclass(frozen=True)
 class SessionMetadataItem:

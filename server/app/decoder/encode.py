@@ -2,10 +2,14 @@
 from __future__ import annotations
 
 import json
-from typing import Any
 from collections.abc import Callable
+from typing import Any
 
-from cbor2 import CBORTag, CBORSimpleValue, undefined  # noqa: F401  # split-module namespace surface
+from cbor2 import (  # noqa: F401  # split-module namespace surface
+    CBORSimpleValue,
+    CBORTag,
+    undefined,
+)
 
 # NOTE: This module is a compatibility facade. Many imported names are
 # intentionally re-exported for callers/tests that access encoder internals
@@ -20,7 +24,7 @@ from .encode_parts.binary_extract import (
     _extract_binary_input,  # noqa: F401  # split-module namespace surface
     _extract_generic_binary_payload,  # noqa: F401  # split-module namespace surface
     _normalize_pem_label,  # noqa: F401  # split-module namespace surface
-    )
+)
 from .encode_parts.cbor_canonical import (
     _CanonicalCBOREncoder,  # noqa: F401  # split-module namespace surface
     _encode_canonical_float,  # noqa: F401  # split-module namespace surface
@@ -40,8 +44,8 @@ from .encode_parts.ctap_fields import (
     _ctap_key_matches,  # noqa: F401  # split-module namespace surface
     _encode_allow_list,  # noqa: F401  # split-module namespace surface
     _encode_attestation_statement,  # noqa: F401  # split-module namespace surface
-    _encode_ctap_user,  # noqa: F401  # split-module namespace surface
     _encode_credential_descriptor,  # noqa: F401  # split-module namespace surface
+    _encode_ctap_user,  # noqa: F401  # split-module namespace surface
     _ensure_bool,  # noqa: F401  # split-module namespace surface
     _ensure_int,  # noqa: F401  # split-module namespace surface
     _ensure_text,  # noqa: F401  # split-module namespace surface

@@ -6,7 +6,7 @@ import types
 
 import pytest
 
-from fido2.ctap import CtapError, STATUS
+from fido2.ctap import STATUS, CtapError
 from fido2.hid import CAPABILITY, CTAPHID
 
 

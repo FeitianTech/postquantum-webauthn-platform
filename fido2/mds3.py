@@ -30,27 +30,27 @@ from __future__ import annotations
 import json
 import logging
 from base64 import b64decode, b64encode
+from collections.abc import Callable, Mapping, Sequence
 from contextvars import ContextVar
 from dataclasses import dataclass, field
 from datetime import date
 from enum import Enum, unique
 from typing import Any
-from collections.abc import Sequence, Mapping, Callable
 
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 
 from .attestation.base import (
     Attestation,
+    AttestationVerifier,
     InvalidSignature,
     TrustPathEvaluation,
     UntrustedAttestation,
     verify_x509_chain,
-    AttestationVerifier,
 )
 from .cose import CoseKey
-from .utils import websafe_decode, _JsonDataObject
-from .webauthn import AttestationObject, Aaguid
+from .utils import _JsonDataObject, websafe_decode
+from .webauthn import Aaguid, AttestationObject
 
 logger = logging.getLogger(__name__)
 

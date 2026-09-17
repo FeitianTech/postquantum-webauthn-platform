@@ -4,9 +4,9 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
+from collections.abc import Mapping, Sequence
 from datetime import date, datetime, timezone
 from typing import Any
-from collections.abc import Mapping, Sequence
 
 from cryptography import x509
 from cryptography.exceptions import UnsupportedAlgorithm

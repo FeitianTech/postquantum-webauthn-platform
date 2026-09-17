@@ -25,8 +25,9 @@
 # ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-from fido2.hid.base import parse_report_descriptor
 import pytest
+
+from fido2.hid.base import parse_report_descriptor
 
 
 def test_parse_report_descriptor_1():

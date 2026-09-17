@@ -30,11 +30,11 @@ from __future__ import annotations
 import abc
 import logging
 import os
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from enum import IntEnum, IntFlag, unique
 from threading import Event
 from typing import Any, ClassVar
-from collections.abc import Callable, Mapping
 
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes

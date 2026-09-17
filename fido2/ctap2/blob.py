@@ -30,8 +30,8 @@ from __future__ import annotations
 import os
 import struct
 import zlib
-from typing import Any, cast
 from collections.abc import Mapping, Sequence
+from typing import Any, cast
 
 from cryptography.exceptions import InvalidTag
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM

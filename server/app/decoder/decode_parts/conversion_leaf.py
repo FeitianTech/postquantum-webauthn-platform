@@ -2,8 +2,8 @@
 from __future__ import annotations
 
 import uuid
-from typing import Any
 from collections.abc import Mapping
+from typing import Any
 
 from ...attestation import make_json_safe
 from .binary_extract import (

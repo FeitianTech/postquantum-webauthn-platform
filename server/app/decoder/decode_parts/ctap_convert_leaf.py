@@ -1,13 +1,17 @@
 """CTAP user/descriptor conversion leaf helpers."""
 from __future__ import annotations
 
-from typing import Any
 from collections.abc import Mapping
+from typing import Any
 
 import cbor2
+
 from fido2.utils import ByteBuffer
 
-from .key_utils import MISSING, coerce_cbor_bytes as _coerce_cbor_bytes, get_mapping_entry as _get_mapping_entry, hex_json_safe as _hex_json_safe
+from .key_utils import MISSING
+from .key_utils import coerce_cbor_bytes as _coerce_cbor_bytes
+from .key_utils import get_mapping_entry as _get_mapping_entry
+from .key_utils import hex_json_safe as _hex_json_safe
 
 
 def _convert_optional_ctap_field(value: Any) -> Any:

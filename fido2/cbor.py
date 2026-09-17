@@ -40,9 +40,8 @@ python-fido2 2.0.
 from __future__ import annotations
 
 import struct
+from collections.abc import Callable, Mapping, Sequence
 from typing import Any
-from collections.abc import Sequence, Mapping, Callable
-
 
 CborType = int | bool | str | bytes | Sequence[Any] | Mapping[Any, Any]
 

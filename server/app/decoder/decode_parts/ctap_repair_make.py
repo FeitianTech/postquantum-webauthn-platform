@@ -1,14 +1,16 @@
 """CTAP make-credential and shared repair leaf helpers."""
 from __future__ import annotations
 
-from typing import Any
 from collections.abc import Iterable, Mapping
+from typing import Any
 
 from fido2 import cbor
 from fido2.webauthn import AuthenticatorData
 
 from .cbor_core import _decode_cbor_structure
-from .key_utils import MISSING, coerce_cbor_bytes as _coerce_cbor_bytes, get_mapping_entry as _get_mapping_entry
+from .key_utils import MISSING
+from .key_utils import coerce_cbor_bytes as _coerce_cbor_bytes
+from .key_utils import get_mapping_entry as _get_mapping_entry
 
 
 def _merge_ctap_make_credential(

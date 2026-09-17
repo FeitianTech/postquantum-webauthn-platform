@@ -9,6 +9,7 @@ from urllib.error import HTTPError, URLError
 
 import pytest
 
+
 def _discover_repo_root(start: Path) -> Path:
     for candidate in start.parents:
         if (candidate / "server").is_dir() and (candidate / "tests").is_dir():

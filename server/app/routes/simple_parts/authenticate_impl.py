@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from typing import Any
 from collections.abc import Mapping
+from typing import Any
 
 from ...sign_count import SIGN_COUNT_REGRESSED, sign_count_status
 from .sign_count_impl import (

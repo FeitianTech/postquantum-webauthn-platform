@@ -16,7 +16,11 @@ def _b64url(data: bytes) -> str:
 
 def _build_auth_and_attestation_bytes() -> tuple[bytes, bytes]:
     from fido2.cose import CoseKey
-    from fido2.webauthn import AttestationObject, AttestedCredentialData, AuthenticatorData
+    from fido2.webauthn import (
+        AttestationObject,
+        AttestedCredentialData,
+        AuthenticatorData,
+    )
 
     credential_id = b"encode-format-cred"
     public_key = CoseKey.parse({1: 2, 3: -7, -1: 1, -2: b"\x01" * 32, -3: b"\x02" * 32})

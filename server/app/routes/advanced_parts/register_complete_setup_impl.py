@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from typing import Any
 from collections.abc import Mapping, MutableMapping
+from typing import Any
 
 
 def prepare_register_complete_inputs(

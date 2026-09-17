@@ -29,29 +29,28 @@
 
 from __future__ import annotations
 
-from .base import (
-    Attestation,
-    AttestationType,
-    AttestationResult,
-    InvalidData,
-    InvalidSignature,
-    catch_builtins,
-    _validate_cert_common,
-)
-from ..cose import CoseKey
-from ..utils import bytes2int, ByteBuffer
-
-from enum import IntEnum, unique
-from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives.asymmetric import rsa, ec
-from cryptography.hazmat.primitives import hashes
-from cryptography import x509
-from cryptography.exceptions import InvalidSignature as _InvalidSignature
+import struct
 from dataclasses import dataclass
+from enum import IntEnum, unique
 from typing import cast
 
-import struct
+from cryptography import x509
+from cryptography.exceptions import InvalidSignature as _InvalidSignature
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.asymmetric import ec, rsa
 
+from ..cose import CoseKey
+from ..utils import ByteBuffer, bytes2int
+from .base import (
+    Attestation,
+    AttestationResult,
+    AttestationType,
+    InvalidData,
+    InvalidSignature,
+    _validate_cert_common,
+    catch_builtins,
+)
 
 TPM_ALG_NULL = 0x0010
 OID_AIK_CERTIFICATE = x509.ObjectIdentifier("2.23.133.8.3")

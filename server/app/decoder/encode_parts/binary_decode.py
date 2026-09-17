@@ -5,8 +5,8 @@ import base64
 import binascii
 import re
 import string
-from typing import Any
 from collections.abc import Mapping, Sequence
+from typing import Any
 
 
 def _decode_pem_text(

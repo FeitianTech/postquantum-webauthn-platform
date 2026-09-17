@@ -1,7 +1,7 @@
-from datetime import datetime, timezone
 import gzip
-import json
 import io
+import json
+from datetime import datetime, timezone
 
 import pytest
 

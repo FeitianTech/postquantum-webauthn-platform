@@ -6,9 +6,9 @@ import unittest
 
 import pytest
 
-from fido2.rpid import verify_rp_id
-from fido2.ctap import STATUS, CtapError, CtapDevice
+from fido2.ctap import STATUS, CtapDevice, CtapError
 from fido2.ctap1 import ApduError, RegistrationData, SignatureData
+from fido2.rpid import verify_rp_id
 
 
 class TestRpIdAdditional(unittest.TestCase):

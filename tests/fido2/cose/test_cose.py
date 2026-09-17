@@ -31,6 +31,20 @@ from __future__ import absolute_import, unicode_literals
 import unittest
 from binascii import a2b_hex
 
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.asymmetric import (
+    ec,
+    padding,
+    rsa,
+    utils,
+)
+from cryptography.hazmat.primitives.asymmetric import (
+    ed448 as crypto_ed448,
+)
+from cryptography.hazmat.primitives.asymmetric import (
+    ed25519 as crypto_ed25519,
+)
+
 from fido2 import cbor, cose
 from fido2.cose import (
     ES256,
@@ -48,19 +62,11 @@ from fido2.cose import (
     RS384,
     RS512,
     CoseKey,
-    Ed25519,
     Ed448,
+    Ed25519,
     EdDSA,
     UnsupportedKey,
 )
-from cryptography.hazmat.primitives.asymmetric import (
-    ec,
-    ed448 as crypto_ed448,
-    ed25519 as crypto_ed25519,
-    rsa,
-)
-from cryptography.hazmat.primitives.asymmetric import padding, utils
-from cryptography.hazmat.primitives import hashes
 
 _ES256_KEY = a2b_hex(
     b"A5010203262001215820A5FD5CE1B1C458C530A54FA61B31BF6B04BE8B97AFDE54DD8CBB69275A8A1BE1225820FA3A3231DD9DEED9D1897BE5A6228C59501E4BCD12975D3DFF730F01278EA61C"  # noqa E501

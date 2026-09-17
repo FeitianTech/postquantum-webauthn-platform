@@ -4,10 +4,10 @@ import types
 
 import pytest
 
-from fido2.ctap import CtapError
 import fido2.ctap2.bio as bio_module
 import fido2.ctap2.config as config_module
 import fido2.ctap2.credman as credman_module
+from fido2.ctap import CtapError
 
 
 class _Protocol:

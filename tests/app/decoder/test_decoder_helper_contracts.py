@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+
 from fido2.utils import ByteBuffer
 
 

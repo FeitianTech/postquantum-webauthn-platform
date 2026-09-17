@@ -1,8 +1,8 @@
 """CTAP/WebAuthn structure encoders."""
 from __future__ import annotations
 
-from typing import Any
 from collections.abc import Mapping
+from typing import Any
 
 from .binary_decode import _require_bytes
 from .binary_extract import _restore_generic_structure
@@ -10,8 +10,8 @@ from .constants import _CTAP_PREFIX_DETAILS
 from .ctap_fields import (
     _encode_allow_list,
     _encode_attestation_statement,
-    _encode_ctap_user,
     _encode_credential_descriptor,
+    _encode_ctap_user,
     _ensure_bool,
     _ensure_int,
     _ensure_text,

@@ -1,8 +1,8 @@
 """CBOR sequence decoding orchestration extracted from decode facade."""
 from __future__ import annotations
 
-from typing import Any
 from collections.abc import Callable
+from typing import Any
 
 
 def _decode_cbor_sequence_impl(

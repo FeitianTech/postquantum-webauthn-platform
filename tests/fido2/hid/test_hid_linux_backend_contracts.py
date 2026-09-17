@@ -5,7 +5,6 @@ import struct
 
 import pytest
 
-
 linux = pytest.importorskip("fido2.hid.linux")
 base = pytest.importorskip("fido2.hid.base")
 

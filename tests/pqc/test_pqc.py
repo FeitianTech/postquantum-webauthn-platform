@@ -3,8 +3,6 @@
 from __future__ import annotations
 
 
-
-
 def test_pqc_algorithm_id_to_name_mapping():
     """Test that PQC algorithm constants are correctly defined."""
     from server.app import pqc

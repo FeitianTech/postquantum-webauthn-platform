@@ -140,11 +140,12 @@ class DeviceManager:
             pytest.exit("No Authenticator selected")
 
     def _connect_pcsc(self, reader, reconnect=True):
-        from fido2.pcsc import CtapPcscDevice
-        from smartcard.Exceptions import NoCardException, CardConnectionException
+        from smartcard.Exceptions import CardConnectionException, NoCardException
         from smartcard.ExclusiveConnectCardConnection import (
             ExclusiveConnectCardConnection,
         )
+
+        from fido2.pcsc import CtapPcscDevice
 
         logger.debug(f"(Re-)connect over NFC using reader: {reader.name}")
         event = Event()

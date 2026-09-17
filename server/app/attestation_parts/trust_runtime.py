@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import base64
 import binascii
+from collections.abc import Mapping, Sequence
 from datetime import datetime, timezone
 from typing import Any
-from collections.abc import Mapping, Sequence
 
 
 def _ensure_utc_datetime(value: datetime) -> datetime:

@@ -13,7 +13,6 @@ from __future__ import annotations
 import datetime
 
 import pytest
-
 from cryptography import x509
 from cryptography.hazmat.primitives.asymmetric import mldsa
 from cryptography.hazmat.primitives.serialization import Encoding

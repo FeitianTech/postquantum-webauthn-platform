@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import builtins
 import gzip
-from pathlib import Path
 import types
+from pathlib import Path
 from unittest import mock
 
 from flask import Flask

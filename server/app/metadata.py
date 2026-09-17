@@ -1,5 +1,6 @@
 """Metadata handling utilities for the WebAuthn demo server."""
 from __future__ import annotations
+
 import json
 import os
 import secrets
@@ -7,20 +8,44 @@ import threading
 import time
 import types
 import uuid
+from collections.abc import Callable, Mapping
 from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
 from typing import Any, Dict, Optional, Set, Tuple
-from collections.abc import Callable, Mapping
+
 from flask import after_this_request, g, has_request_context, request, session
-from fido2.mds3 import MetadataBlobPayload, MetadataBlobPayloadEntry, MdsAttestationVerifier
+
+from fido2.mds3 import (
+    MdsAttestationVerifier,
+    MetadataBlobPayload,
+    MetadataBlobPayloadEntry,
+)
+
 from . import session_metadata_store
-from .config import (MDS_EXPLORER_FULL_PATH, MDS_EXPLORER_PATH, MDS_METADATA_CACHE_PATH, MDS_METADATA_PATH,
-                     MDS_METADATA_VERIFIED_PATH, MDS_METADATA_URL, app)
+from .config import (
+    MDS_EXPLORER_FULL_PATH,
+    MDS_EXPLORER_PATH,
+    MDS_METADATA_CACHE_PATH,
+    MDS_METADATA_PATH,
+    MDS_METADATA_URL,
+    MDS_METADATA_VERIFIED_PATH,
+    app,
+)
 from .env_flags import parse_env_flag
-from .github_client import git_blob_sha, github_list_directory, github_upload_file, is_logging_enabled
-from .mds_snapshot import (build_entry_id, build_bootstrap_snapshot, build_explorer_entry,
-                           build_explorer_snapshot, normalise_aaguid_key)
+from .github_client import (
+    git_blob_sha,
+    github_list_directory,
+    github_upload_file,
+    is_logging_enabled,
+)
+from .mds_snapshot import (
+    build_bootstrap_snapshot,
+    build_entry_id,
+    build_explorer_entry,
+    build_explorer_snapshot,
+    normalise_aaguid_key,
+)
 from .metadata_parts import base_snapshot_runtime as _base_snapshot_runtime
 from .metadata_parts import cache_runtime as _cache_runtime
 from .metadata_parts import effective_snapshot_runtime as _effective_snapshot_runtime
@@ -31,6 +56,7 @@ from .metadata_parts import session_identity_runtime as _session_identity_runtim
 from .metadata_parts import session_items_runtime as _session_items_runtime
 from .metadata_parts import upload_runtime as _upload_runtime
 from .metadata_parts import verifier_runtime as _verifier_runtime
+
 __all__ = ["MetadataDownloadError", "download_metadata_blob", "get_mds_verifier",
            "load_metadata_cache_entry", "format_last_modified_header", "store_metadata_cache_entry",
            "load_cached_metadata_snapshot", "load_packaged_explorer_summary", "load_effective_explorer_snapshot",

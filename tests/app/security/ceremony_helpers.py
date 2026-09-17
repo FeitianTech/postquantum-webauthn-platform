@@ -12,11 +12,12 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
-from typing import Any
 from collections.abc import Mapping
+from typing import Any
 
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import ec, ed25519
+
 from fido2 import cbor
 from fido2.cose import ES256, EdDSA
 

@@ -27,22 +27,23 @@
 
 from __future__ import annotations
 
+import abc
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
+from enum import IntEnum, unique
+from functools import wraps
+from typing import Any
+
+from cryptography import x509
+from cryptography.exceptions import InvalidSignature as _InvalidSignature
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives.asymmetric import ec, padding, rsa
+
 from ..cose import (
     MLDSA_PUBLIC_KEY_TYPES,
     describe_mldsa_oid,
 )
-from ..webauthn import AuthenticatorData, AttestationObject
-from enum import IntEnum, unique
-from cryptography import x509
-from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives.asymmetric import padding, ec, rsa
-from cryptography.exceptions import InvalidSignature as _InvalidSignature
-from dataclasses import dataclass
-from functools import wraps
-from typing import Any
-from collections.abc import Mapping, Sequence
-
-import abc
+from ..webauthn import AttestationObject, AuthenticatorData
 
 
 class InvalidAttestation(Exception):

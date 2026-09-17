@@ -42,11 +42,11 @@ Definitions taken from https://github.com/microsoft/webauthn/blob/master/webauth
 from __future__ import annotations
 
 import ctypes
+from collections.abc import Mapping, Sequence
 from ctypes import LibraryLoader, WinDLL  # type: ignore
 from ctypes.wintypes import BOOL, DWORD, HWND, LONG, LPCWSTR, WORD
 from enum import IntEnum, unique
 from typing import Any
-from collections.abc import Mapping, Sequence
 
 # Not implemented: Platform credentials support, listing of built-in authenticators
 

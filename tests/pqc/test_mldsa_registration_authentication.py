@@ -26,7 +26,6 @@ from fido2.webauthn import (
     CollectedClientData,
     PublicKeyCredentialRpEntity,
 )
-
 from tests.pqc import mldsa_helpers as mldsa
 
 ORIGIN = "https://example.com"

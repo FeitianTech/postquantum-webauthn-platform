@@ -6,8 +6,8 @@ facade module, preserving monkeypatch-driven behavior in tests.
 # pyright: reportUndefinedVariable=false
 from __future__ import annotations
 
-from typing import Any
 from collections.abc import Mapping, Sequence
+from typing import Any
 
 
 def _decode_json_object(value: Any, raw_text: str | None = None) -> dict[str, Any]:

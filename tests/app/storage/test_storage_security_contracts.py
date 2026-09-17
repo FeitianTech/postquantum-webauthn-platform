@@ -53,7 +53,6 @@ storage = importlib.import_module("server.app.storage")
 from fido2.cose import ES256  # noqa: E402
 from fido2.webauthn import AttestedCredentialData, AuthenticatorData  # noqa: E402
 
-
 # Every one of these must be refused outright, not sanitised into something
 # that happens to land inside the root.
 TRAVERSAL_NAMES = [

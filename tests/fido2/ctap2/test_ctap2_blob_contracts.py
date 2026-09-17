@@ -5,8 +5,8 @@ import zlib
 
 import pytest
 
-from fido2 import cbor
 import fido2.ctap2.blob as blob
+from fido2 import cbor
 
 
 class _FakeCtap:

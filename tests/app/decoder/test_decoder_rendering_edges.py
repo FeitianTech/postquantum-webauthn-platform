@@ -20,7 +20,11 @@ def _build_authenticator_data_bytes() -> bytes:
 
 def _build_attestation_object_bytes() -> tuple[bytes, bytes]:
     from fido2.cose import CoseKey
-    from fido2.webauthn import AttestationObject, AttestedCredentialData, AuthenticatorData
+    from fido2.webauthn import (
+        AttestationObject,
+        AttestedCredentialData,
+        AuthenticatorData,
+    )
 
     credential_id = b"decode-edge-cred"
     cose_key = CoseKey.parse({1: 2, 3: -7, -1: 1, -2: b"\x03" * 32, -3: b"\x04" * 32})

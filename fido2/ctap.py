@@ -28,9 +28,9 @@
 from __future__ import annotations
 
 import abc
+from collections.abc import Callable, Iterator
 from enum import IntEnum, unique
 from threading import Event
-from collections.abc import Callable, Iterator
 
 
 @unique

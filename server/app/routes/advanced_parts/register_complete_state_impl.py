@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from typing import Any
 from collections.abc import Mapping
+from typing import Any
 
 #: The ceremony challenge was taken from the server-side Flask session.
 CHALLENGE_SOURCE_SERVER = "server-session"

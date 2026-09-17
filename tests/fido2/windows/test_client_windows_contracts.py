@@ -20,8 +20,8 @@ from fido2.ctap2.extensions import (
 from fido2.utils import websafe_encode
 from fido2.webauthn import (
     Aaguid,
-    AttestedCredentialData,
     AttestationObject,
+    AttestedCredentialData,
     AuthenticatorData,
     CollectedClientData,
     PublicKeyCredentialCreationOptions,

@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Sequence
 from datetime import datetime
 from typing import Any
-from collections.abc import Sequence
 
 
 def _normalise_pqc_algorithm_identifier(value: Any) -> int | None:

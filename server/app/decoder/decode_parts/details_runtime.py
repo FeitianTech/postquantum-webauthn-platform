@@ -6,8 +6,8 @@ facade module, preserving monkeypatch-driven behavior in tests.
 # pyright: reportUndefinedVariable=false
 from __future__ import annotations
 
-from typing import Any
 from collections.abc import Mapping
+from typing import Any
 
 
 def _describe_client_data_from_bytes(data: bytes) -> dict[str, Any]:

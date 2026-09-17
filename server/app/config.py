@@ -3,22 +3,23 @@ from __future__ import annotations
 
 import base64
 import gzip
-import json
 import ipaddress
+import json
 import os
-from datetime import timedelta
-from pathlib import Path
 import re
 import ssl
 import tempfile
 import textwrap
-from typing import Any
 from collections.abc import Mapping
+from datetime import timedelta
+from pathlib import Path
+from typing import Any
 from urllib.parse import urlsplit
 
-import fido2.features
 from flask import Flask, has_request_context, request
 from werkzeug.middleware.proxy_fix import ProxyFix
+
+import fido2.features
 from fido2.server import Fido2Server
 from fido2.webauthn import PublicKeyCredentialRpEntity
 

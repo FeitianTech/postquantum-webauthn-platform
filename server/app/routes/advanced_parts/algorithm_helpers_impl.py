@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from typing import Any
 from collections.abc import Iterable, Mapping
+from typing import Any
 
 from fido2.webauthn import (
     PublicKeyCredentialParameters,

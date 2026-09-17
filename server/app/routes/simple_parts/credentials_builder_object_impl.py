@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from typing import Any
 from collections.abc import Mapping, MutableMapping
+from typing import Any
 
 from .credentials_builder_dict_impl import add_registration_metadata_impl
 

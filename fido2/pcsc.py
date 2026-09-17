@@ -30,8 +30,8 @@ from __future__ import annotations
 
 import logging
 import struct
-from threading import Event
 from collections.abc import Callable, Iterator
+from threading import Event
 
 from smartcard import System
 from smartcard.CardConnection import CardConnection

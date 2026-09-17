@@ -1,8 +1,8 @@
 import copy
 
 from server.app.mds_snapshot import (
-    build_entry_id,
     build_bootstrap_snapshot,
+    build_entry_id,
     build_explorer_entry,
     build_explorer_snapshot,
     normalise_aaguid_key,
