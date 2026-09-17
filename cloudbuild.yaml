@@ -4,10 +4,43 @@
 # The deploy step only changes the image. Service settings (concurrency,
 # scaling, secrets, service account) live in deploy/service.yaml and are applied
 # with deploy/apply-service-config.sh.
+#
+# GitHub Actions and Cloud Build are independent pipelines: a red CI run does
+# not stop a trigger from firing. The test steps below are therefore the gate
+# that actually stands between a commit on main and production. They run first
+# and in parallel; Build waits for both, so a failing suite fails the build
+# before an image is ever pushed.
 
 steps:
+  - name: python:3.12-slim
+    id: Python tests
+    waitFor: ['-']
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        set -euo pipefail
+        # The same uv version the image and CI install from uv.lock with.
+        pip install --no-cache-dir --quiet "uv==0.12.15"
+        uv sync --locked --python 3.12
+        .venv/bin/python -m pytest -q
+
+  - name: node:20-slim
+    id: Frontend tests
+    waitFor: ['-']
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        set -euo pipefail
+        npm ci
+        npm run test:frontend
+
   - name: gcr.io/cloud-builders/docker
     id: Build
+    waitFor:
+      - Python tests
+      - Frontend tests
     args:
       - build
       - -t
