@@ -213,6 +213,56 @@ S110/S112 triage (all 32 read): 14 load-bearing, 13 masking real errors, 4 genui
 1 needs review. BLE001 sample of 20: 16 load-bearing, 4 silently swallow — extrapolates to
 ~35 of 175 worth review.
 
+### Phase 5 — A3/A4/A5/A6 guardrails — DONE (2026-09-17), verified. **M2 COMPLETE.**
+Bots no longer push to `main`: a local composite action `.github/actions/open-bot-pr` commits an
+explicit pathspec onto a fixed bot branch and opens a PR. `update-fido-mds.yml` dropped to
+**`contents: read`** entirely — with the snapshot untracked it has nothing to commit, so it is now
+a daily canary that downloads the BLOB and verifies it against the pinned trust root.
+`cloudbuild.yaml` gained parallel Python and frontend test steps that `Build` waits on, so a
+deploy cannot happen without tests. All 15 `uses:` pinned to full SHAs. Double-run fixed.
+New `ci-security.yml`: pip-audit (clean), `npm audit --audit-level=high` (4 highs fixed via
+overrides), Trivy HIGH/CRITICAL on the image (13 fixable fixed via `apt-get upgrade`).
+
+**MDS snapshots out of git.** All SEVEN artifacts untracked (the three `.meta.json` companions
+too — `_load_packaged_explorer_meta` compares them, so splitting generations would let them
+disagree). New `server/app/mds_provisioning.py` resolves in three tiers: local files → GCS
+(`gs://$FIDO_SERVER_GCS_BUCKET/mds/`, existing bucket and service account) → upstream fetch with
+trust-root verification, then uploads to GCS so the next cold start stops at tier 2.
+
+Tech-lead verification: built the image and ran it with **no snapshot, no GCS, no upstream** —
+`/health` 200, `/` 200, PQC `{-48,-49,-50}`, and `/api/mds/metadata/base` returns 404, which is
+the documented clean fallback (pre-existing missing-snapshot behaviour, not a new failure mode).
+Image contains zero snapshot files. Tracked working tree **34.9MB → ~6.4MB**.
+Suite 1689 → **1714**, vitest 278, ruff clean.
+
+### CRITICAL CATCH — `astral-sh/setup-uv@v10` never resolved
+The agent found that `astral-sh/setup-uv` publishes **no floating major tag**. Tech-lead
+confirmed with `git ls-remote`: only `v10.0.0`, `v10.0.1`, `v10.1.0` exist; a bare `v10` ref
+does not. **The CI introduced in Phase 3 and pushed to `main` would have failed at the
+"Set up uv" step** — it was broken for two pushes and nobody could see it locally. Now pinned
+to v10.1.0's SHA (`bec219d...`, verified against ls-remote). This is exactly the residual risk
+flagged in Phase 3: workflow changes cannot be validated locally. **Watch the next Actions run.**
+
+### Operator actions REQUIRED — not doable from the repo
+1. **Configure branch protection on `main`.** The bots still need `contents: write` to push a
+   *branch*; there is no finer permission. Only branch protection actually enforces the PR flow.
+2. **Set a `BOT_PR_TOKEN` secret** (PAT or App token). GitHub does not start workflow runs for
+   events signed by `GITHUB_TOKEN`, so bot PRs will sit with **no checks** until someone pushes
+   to them. The action falls back to `GITHUB_TOKEN` — it works, it just will not auto-trigger CI.
+3. **No GCP credentials exist in Actions**, so no workflow can seed the MDS bucket. Production
+   self-heals via tier 3. An operator can seed it with
+   `FIDO_SERVER_GCS_ENABLED=1 FIDO_SERVER_GCS_BUCKET=pqcwebauthn python tools/update_mds_snapshot.py --gcs-upload`.
+
+**History rewrite (tech lead's call, NOT attempted):** `.git` is 155MB (pack 146MiB); the 216 MDS
+blobs are 911.6MB raw / **79.1MB packed**, so a rewrite would reclaim ~79MB (~54% of the pack),
+taking `.git` to ~70MB. Growth has stopped regardless.
+
+Noted: reported image growth of +55MB from `apt-get upgrade` did not reproduce for the tech lead
+(342MB → 344MB, +2MB) — likely base-image digest drift. `ci-frontend.yml` still uses
+`npm install` rather than `npm ci`. Trust root duplicated in `config.py` and
+`tools/update_mds_snapshot.py`. 3 moderate dev-only npm advisories remain visible but ungated
+(`@vitest/mocker`; the fix needs vitest 4.1.11, which npm 10.9.8 cannot install).
+
 ### Local development
 Tests previously ran against the global interpreter, whose packages matched nothing in
 `requirements.txt` (cryptography 44.0.3, fido2 2.1.1, gunicorn 23). A project venv now exists:
