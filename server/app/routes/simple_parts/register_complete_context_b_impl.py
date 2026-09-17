@@ -42,7 +42,7 @@ def build_stored_credential_context_impl(simple_module: Any, ctx: dict[str, Any]
     ctx["stored_credential"] = stored_credential
 
 
-def _persist_registered_credential_entry_impl(simple_module: Any, ctx: dict[str, Any]) -> Optional[Any]:
+def _persist_registered_credential_entry_impl(simple_module: Any, ctx: dict[str, Any]) -> Any | None:
     metadata_session_id = simple_module.ensure_metadata_session_id()
     existing_credentials = simple_module.readkey(ctx["uname"], session_id=metadata_session_id)
 
@@ -107,14 +107,14 @@ def _update_session_simple_credentials_impl(simple_module: Any, ctx: dict[str, A
 
 
 def _record_registration_event_impl(simple_module: Any, ctx: dict[str, Any]) -> None:
-    metadata_description: Optional[str] = None
+    metadata_description: str | None = None
     if isinstance(ctx["metadata_summary"], Mapping):
         raw_description = ctx["metadata_summary"].get("description")
         if isinstance(raw_description, str):
             metadata_description = raw_description
 
     transports_field = ctx["response"].get("transports") if isinstance(ctx["response"], Mapping) else None
-    transports: Optional[list[str]] = None
+    transports: list[str] | None = None
     if isinstance(transports_field, list):
         transports = [str(item) for item in transports_field if isinstance(item, str)]
 
@@ -144,7 +144,7 @@ def _record_registration_event_impl(simple_module: Any, ctx: dict[str, Any]) -> 
     simple_module.record_registration_event(event)
 
 
-def persist_registration_context_impl(simple_module: Any, ctx: dict[str, Any]) -> Optional[Any]:
+def persist_registration_context_impl(simple_module: Any, ctx: dict[str, Any]) -> Any | None:
     persist_response = _persist_registered_credential_entry_impl(simple_module, ctx)
     if persist_response is not None:
         return persist_response

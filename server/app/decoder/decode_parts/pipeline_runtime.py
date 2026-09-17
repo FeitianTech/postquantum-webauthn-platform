@@ -10,7 +10,7 @@ from typing import Any, Dict, Optional, Tuple
 from collections.abc import Mapping, Sequence
 
 
-def _decode_json_object(value: Any, raw_text: Optional[str] = None) -> dict[str, Any]:
+def _decode_json_object(value: Any, raw_text: str | None = None) -> dict[str, Any]:
     if isinstance(value, Mapping) and _is_public_key_credential(value):
         return _decode_public_key_credential(value, raw_text=raw_text)
 
@@ -30,7 +30,7 @@ def _decode_json_object(value: Any, raw_text: Optional[str] = None) -> dict[str,
 
 
 def _decode_public_key_credential(
-    credential: Mapping[str, Any], raw_text: Optional[str] = None
+    credential: Mapping[str, Any], raw_text: str | None = None
 ) -> dict[str, Any]:
     response = credential.get("response")
     response_mapping: Mapping[str, Any] = response if isinstance(response, Mapping) else {}
@@ -247,7 +247,7 @@ def _decode_binary_input(value: str) -> tuple[bytes, str]:
         ) from exc
 
 
-def _decode_binary_field(value: Any) -> Optional[tuple[bytes, str]]:
+def _decode_binary_field(value: Any) -> tuple[bytes, str] | None:
     if isinstance(value, str):
         try:
             return _decode_binary_input(value)
@@ -258,7 +258,7 @@ def _decode_binary_field(value: Any) -> Optional[tuple[bytes, str]]:
     return None
 
 
-def _try_parse_json(value: str) -> Optional[Any]:
+def _try_parse_json(value: str) -> Any | None:
     try:
         return json.loads(value)
     except (ValueError, TypeError):
@@ -269,7 +269,7 @@ def _looks_like_pem(value: str) -> bool:
     return "-----BEGIN CERTIFICATE-----" in value.upper()
 
 
-def _try_decode_certificate_bytes(data: bytes, encoding: str) -> Optional[dict[str, Any]]:
+def _try_decode_certificate_bytes(data: bytes, encoding: str) -> dict[str, Any] | None:
     try:
         x509.load_der_x509_certificate(data)
     except Exception:
@@ -283,7 +283,7 @@ def _try_decode_certificate_bytes(data: bytes, encoding: str) -> Optional[dict[s
     }
 
 
-def _try_decode_attestation_object(data: bytes, encoding: str) -> Optional[dict[str, Any]]:
+def _try_decode_attestation_object(data: bytes, encoding: str) -> dict[str, Any] | None:
     try:
         details = _parse_attestation_object(data)
     except Exception:
@@ -297,7 +297,7 @@ def _try_decode_attestation_object(data: bytes, encoding: str) -> Optional[dict[
     }
 
 
-def _try_decode_authenticator_data(data: bytes, encoding: str) -> Optional[dict[str, Any]]:
+def _try_decode_authenticator_data(data: bytes, encoding: str) -> dict[str, Any] | None:
     try:
         details = _describe_authenticator_data_bytes(data)
     except Exception:

@@ -6,9 +6,9 @@ from collections.abc import Mapping
 
 def perform_attestation_checks(
     response: Mapping[str, Any],
-    state: Optional[Mapping[str, Any]],
-    public_key_options: Optional[Mapping[str, Any]],
-    auth_data: Optional[Any],
+    state: Mapping[str, Any] | None,
+    public_key_options: Mapping[str, Any] | None,
+    auth_data: Any | None,
     expected_origin: str,
     rp_id: str,
 ) -> dict[str, Any]:

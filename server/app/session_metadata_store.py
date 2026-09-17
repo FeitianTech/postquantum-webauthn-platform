@@ -111,7 +111,7 @@ def _normalise_local_session_id(session_id: str) -> str:
     return trimmed
 
 
-def _local_session_directory(session_id: str, *, create: bool = False) -> Optional[str]:
+def _local_session_directory(session_id: str, *, create: bool = False) -> str | None:
     try:
         normalised = _normalise_local_session_id(session_id)
     except ValueError:
@@ -140,14 +140,14 @@ def _local_touch_last_access(directory: str) -> None:
         pass
 
 
-def _local_resolve_last_access(directory: str) -> Optional[float]:
+def _local_resolve_last_access(directory: str) -> float | None:
     marker_path = os.path.join(directory, _LAST_ACCESS_BLOB)
     try:
         return os.path.getmtime(marker_path)
     except OSError:
         pass
 
-    latest: Optional[float] = None
+    latest: float | None = None
     try:
         with os.scandir(directory) as entries:
             for entry in entries:
@@ -169,7 +169,7 @@ def _local_resolve_last_access(directory: str) -> Optional[float]:
         return None
 
 
-def _local_maybe_cleanup(now: Optional[float] = None) -> None:
+def _local_maybe_cleanup(now: float | None = None) -> None:
     global _local_last_cleanup
 
     current_time = now or time.time()
@@ -247,7 +247,7 @@ def list_sessions() -> list[str]:
     return sorted(sessions)
 
 
-def touch_last_access(session_id: str, *, timestamp: Optional[float] = None) -> None:
+def touch_last_access(session_id: str, *, timestamp: float | None = None) -> None:
     if _using_gcs():
         marker_name = _last_access_blob(session_id)
         marker_value = json.dumps({"timestamp": timestamp or time.time()}).encode("utf-8")
@@ -269,7 +269,7 @@ def touch_last_access(session_id: str, *, timestamp: Optional[float] = None) -> 
         _local_touch_last_access(directory)
 
 
-def resolve_last_access(session_id: str) -> Optional[float]:
+def resolve_last_access(session_id: str) -> float | None:
     if _using_gcs():
         marker_name = _last_access_blob(session_id)
         payload = download_bytes(marker_name)
@@ -327,7 +327,7 @@ def list_files(session_id: str) -> list[str]:
     return sorted(names)
 
 
-def read_file(session_id: str, name: str) -> Optional[bytes]:
+def read_file(session_id: str, name: str) -> bytes | None:
     if _using_gcs():
         blob_name = _session_blob(session_id, name)
         return download_bytes(blob_name)
@@ -344,7 +344,7 @@ def read_file(session_id: str, name: str) -> Optional[bytes]:
         return None
 
 
-def write_file(session_id: str, name: str, data: bytes, *, content_type: Optional[str] = None) -> None:
+def write_file(session_id: str, name: str, data: bytes, *, content_type: str | None = None) -> None:
     if _using_gcs():
         blob_name = _session_blob(session_id, name)
         upload_bytes(blob_name, data, content_type=content_type)
@@ -385,7 +385,7 @@ def delete_file(session_id: str, name: str, *, missing_ok: bool = True) -> None:
     _local_note_activity(session_id)
 
 
-def file_mtime(session_id: str, name: str) -> Optional[float]:
+def file_mtime(session_id: str, name: str) -> float | None:
     if _using_gcs():
         blob_name = _session_blob(session_id, name)
         return blob_updated_timestamp(blob_name)

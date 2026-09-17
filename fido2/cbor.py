@@ -40,11 +40,11 @@ python-fido2 2.0.
 from __future__ import annotations
 
 import struct
-from typing import Any, Tuple, Union, Type
+from typing import Any
 from collections.abc import Sequence, Mapping, Callable
 
 
-CborType = Union[int, bool, str, bytes, Sequence[Any], Mapping[Any, Any]]
+CborType = int | bool | str | bytes | Sequence[Any] | Mapping[Any, Any]
 
 
 # TODO 2.0: Make dump_x/load_x functions private

@@ -48,9 +48,9 @@ def _build_credential_overview(decoded: Mapping[str, Any]) -> dict[str, Any]:
 
 
 def _build_authenticator_data_payload(
-    auth_bytes: Optional[bytes],
+    auth_bytes: bytes | None,
     details: Any,
-    fallback_alg: Optional[Any] = None,
+    fallback_alg: Any | None = None,
 ) -> dict[str, Any]:
     if auth_bytes is None and not isinstance(details, Mapping):
         return {}
@@ -104,8 +104,8 @@ def _build_authenticator_data_payload(
 
 def _build_flag_payload(
     flag_details: Any,
-    flags_byte: Optional[int],
-    auth_byte_length: Optional[int] = None,
+    flags_byte: int | None,
+    auth_byte_length: int | None = None,
 ) -> dict[str, Any]:
     if flag_details is None and flags_byte is None:
         return {}
@@ -179,8 +179,8 @@ def _build_flag_payload(
 
 def _build_credential_payload(
     credential_details: Any,
-    auth_bytes: Optional[bytes],
-    fallback_alg: Optional[Any] = None,
+    auth_bytes: bytes | None,
+    fallback_alg: Any | None = None,
 ) -> dict[str, Any]:
     if credential_details is None and auth_bytes is None:
         return {}
@@ -189,7 +189,7 @@ def _build_credential_payload(
     aaguid_uuid = None
     credential_id_hex = None
     credential_id_length = None
-    cose_key: Optional[Mapping[str, Any]] = None
+    cose_key: Mapping[str, Any] | None = None
 
     if isinstance(credential_details, Mapping):
         aaguid_uuid = credential_details.get("aaguid")

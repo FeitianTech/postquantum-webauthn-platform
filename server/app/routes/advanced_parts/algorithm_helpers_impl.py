@@ -24,7 +24,7 @@ def _normalize_algorithm_name_key_impl(advanced_module: Any, name: str) -> str:
 def _lookup_named_cose_algorithm_impl(
     advanced_module: Any,
     name: str,
-) -> Optional[int]:
+) -> int | None:
     normalized_name = advanced_module._normalize_algorithm_name_key(name)
     if not normalized_name:
         return None
@@ -42,7 +42,7 @@ def _lookup_named_cose_algorithm_impl(
 def _coerce_cose_algorithm_impl(
     advanced_module: Any,
     value: Any,
-) -> Optional[int]:
+) -> int | None:
     if isinstance(value, bool):
         return None
     if isinstance(value, int):
@@ -71,7 +71,7 @@ def _coerce_cose_algorithm_impl(
     return None
 
 
-def _extract_credential_algorithm_impl(advanced_module: Any, value: Any) -> Optional[int]:
+def _extract_credential_algorithm_impl(advanced_module: Any, value: Any) -> int | None:
     if isinstance(value, Mapping):
         public_key_value = value.get("public_key") or value.get("publicKey")
     else:
@@ -108,7 +108,7 @@ def _derive_algorithms_from_credentials_impl(
     return list(seen.values())
 
 
-def _is_custom_cose_algorithm_impl(advanced_module: Any, alg_id: Optional[int]) -> bool:
+def _is_custom_cose_algorithm_impl(advanced_module: Any, alg_id: int | None) -> bool:
     if alg_id is None:
         return False
     if alg_id in advanced_module._COSE_ALGORITHM_NAME_MAP.values():
@@ -121,8 +121,8 @@ def _is_custom_cose_algorithm_impl(advanced_module: Any, alg_id: Optional[int]) 
 def _extract_requested_assertion_algorithm_impl(
     advanced_module: Any,
     public_key: Mapping[str, Any],
-    credential_id: Optional[bytes],
-) -> Optional[int]:
+    credential_id: bytes | None,
+) -> int | None:
     requested_alg = advanced_module._coerce_cose_algorithm(public_key.get("alg"))
     if isinstance(requested_alg, int):
         return requested_alg
@@ -131,7 +131,7 @@ def _extract_requested_assertion_algorithm_impl(
     if not isinstance(allow_credentials, list):
         return None
 
-    fallback_alg: Optional[int] = None
+    fallback_alg: int | None = None
     for entry in allow_credentials:
         if not isinstance(entry, Mapping):
             continue

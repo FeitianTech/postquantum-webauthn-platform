@@ -8,16 +8,16 @@ from collections.abc import Mapping, Sequence
 def _evaluate_mldsa_attestation_root(
     attestation_object: Any,
     aaguid_bytes: bytes,
-    verifier: Optional[Any],
+    verifier: Any | None,
     now: datetime,
 ) -> dict[str, Any]:
     """Determine ML-DSA attestation root status using PQC-only verification."""
 
     warnings: list[str] = []
     errors: list[str] = []
-    metadata_entry: Optional[Any] = None
-    metadata_lookup_source: Optional[str] = None
-    checks: dict[str, Optional[bool]] = {
+    metadata_entry: Any | None = None
+    metadata_lookup_source: str | None = None
+    checks: dict[str, bool | None] = {
         "trusted_ca": None,
         "chain": None,
         "fido_mds": None,

@@ -8,7 +8,7 @@ from collections.abc import Iterable, Mapping
 from .binary_extract import _convert_cose_key_for_display, _resolve_cose_algorithm
 
 
-def _append_simple_field(lines: list[str], label: str, value: Optional[Any], default: str = "(none)") -> None:
+def _append_simple_field(lines: list[str], label: str, value: Any | None, default: str = "(none)") -> None:
     if value is None:
         lines.append(f"{label}:\t{default}")
     else:
@@ -46,7 +46,7 @@ def _format_json_block(value: Any) -> list[str]:
         return [str(value)]
 
 
-def _format_boolean(value: Any) -> Optional[str]:
+def _format_boolean(value: Any) -> str | None:
     if isinstance(value, bool):
         return "true" if value else "false"
     if isinstance(value, (int, float)) and value in (0, 1):
@@ -58,7 +58,7 @@ def _format_boolean(value: Any) -> Optional[str]:
     return None
 
 
-def _format_counter_value(counter: Any) -> Optional[str]:
+def _format_counter_value(counter: Any) -> str | None:
     try:
         count = int(counter)
     except (TypeError, ValueError):
@@ -68,7 +68,7 @@ def _format_counter_value(counter: Any) -> Optional[str]:
     return f"0x{count:08x}={count}"
 
 
-def _format_flag_line(flags: Any) -> Optional[str]:
+def _format_flag_line(flags: Any) -> str | None:
     if not isinstance(flags, Mapping):
         return None
     try:
@@ -90,7 +90,7 @@ def _format_flag_line(flags: Any) -> Optional[str]:
 
 
 def _build_authenticator_data_lines(
-    auth_bytes: Optional[bytes], auth_details: Optional[Mapping[str, Any]]
+    auth_bytes: bytes | None, auth_details: Mapping[str, Any] | None
 ) -> list[str]:
     if auth_bytes:
         rp = auth_bytes[:32].hex()
@@ -115,7 +115,7 @@ def _build_authenticator_data_lines(
     return []
 
 
-def _parse_attested_data(auth_bytes: Optional[bytes]) -> Optional[dict[str, bytes]]:
+def _parse_attested_data(auth_bytes: bytes | None) -> dict[str, bytes] | None:
     if not auth_bytes or len(auth_bytes) <= 37:
         return None
     remainder = auth_bytes[37:]
@@ -140,11 +140,11 @@ def _parse_attested_data(auth_bytes: Optional[bytes]) -> Optional[dict[str, byte
 
 
 def _collect_attested_info(
-    attested: Mapping[str, Any], auth_bytes: Optional[bytes], fallback_alg: Optional[Any] = None
+    attested: Mapping[str, Any], auth_bytes: bytes | None, fallback_alg: Any | None = None
 ) -> dict[str, Any]:
     parsed = _parse_attested_data(auth_bytes)
     credential_lines: list[str] = []
-    credential_id_hex: Optional[str] = None
+    credential_id_hex: str | None = None
     aaguid_lines: list[str] = []
 
     if parsed and "aaguid" in parsed and isinstance(parsed["aaguid"], bytes):

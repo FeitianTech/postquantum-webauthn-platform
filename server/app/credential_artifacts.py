@@ -57,7 +57,7 @@ def _lock_for(storage_id: str, session_id: str) -> threading.RLock:
     return _LOCK_STRIPES[digest[0] % len(_LOCK_STRIPES)]
 
 
-def _normalise_storage_id(storage_id: Any) -> Optional[str]:
+def _normalise_storage_id(storage_id: Any) -> str | None:
     if not isinstance(storage_id, str):
         return None
 
@@ -112,7 +112,7 @@ def _ensure_directory() -> None:
     os.makedirs(_ARTIFACT_DIR, exist_ok=True)
 
 
-def _read_file(path: str) -> Optional[dict[str, Any]]:
+def _read_file(path: str) -> dict[str, Any] | None:
     try:
         with open(path, "r", encoding="utf-8") as handle:
             return json.load(handle)
@@ -129,11 +129,11 @@ def _write_file(path: str, payload: dict[str, Any]) -> None:
     os.replace(tmp_path, path)
 
 
-def _resolve_session_id(session_id: Optional[str] = None) -> str:
+def _resolve_session_id(session_id: str | None = None) -> str:
     return resolve_metadata_session_id(session_id)
 
 
-def _read_record(storage_id: str, session_id: str) -> Optional[dict[str, Any]]:
+def _read_record(storage_id: str, session_id: str) -> dict[str, Any] | None:
     if _using_gcs():
         blob_name = _artifact_blob(storage_id, session_id)
         try:
@@ -187,8 +187,8 @@ def _delete_record(storage_id: str, session_id: str) -> bool:
 def load_credential_artifact(
     storage_id: Any,
     *,
-    session_id: Optional[str] = None,
-) -> Optional[dict[str, Any]]:
+    session_id: str | None = None,
+) -> dict[str, Any] | None:
     """Return the stored artifact payload for ``storage_id`` if available."""
 
     normalised = _normalise_storage_id(storage_id)
@@ -227,7 +227,7 @@ def store_credential_artifact(
     payload: dict[str, Any],
     *,
     merge: bool = False,
-    session_id: Optional[str] = None,
+    session_id: str | None = None,
 ) -> bool:
     """Persist ``payload`` for ``storage_id``.
 
@@ -272,7 +272,7 @@ def store_credential_artifact(
     return True
 
 
-def delete_credential_artifact(storage_id: Any, *, session_id: Optional[str] = None) -> bool:
+def delete_credential_artifact(storage_id: Any, *, session_id: str | None = None) -> bool:
     """Delete the stored artifact for ``storage_id`` if it exists."""
 
     normalised = _normalise_storage_id(storage_id)
@@ -288,7 +288,7 @@ def delete_credential_artifact(storage_id: Any, *, session_id: Optional[str] = N
 def delete_credential_artifact_with_status(
     storage_id: Any,
     *,
-    session_id: Optional[str] = None,
+    session_id: str | None = None,
 ) -> str:
     """Delete the stored artifact for ``storage_id`` and return a status string.
 

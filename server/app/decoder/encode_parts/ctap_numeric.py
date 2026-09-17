@@ -29,7 +29,7 @@ def _extract_ctap_numeric_payload(parsed: Any) -> tuple[dict[int, Any], str]:
     candidates: deque[Any] = deque()
     _enqueue_candidates(candidates, parsed, visited)
 
-    classification_error: Optional[ValueError] = None
+    classification_error: ValueError | None = None
 
     while candidates:
         candidate = candidates.popleft()
@@ -38,7 +38,7 @@ def _extract_ctap_numeric_payload(parsed: Any) -> tuple[dict[int, Any], str]:
             numeric_map = _sanitize_ctap_numeric_mapping(candidate)
         except ValueError:
             salvage_map: dict[int, Any] = {}
-            salvage_error: Optional[ValueError] = None
+            salvage_error: ValueError | None = None
             if isinstance(candidate, Mapping):
                 for key, value in candidate.items():
                     try:
@@ -107,7 +107,7 @@ def _sanitize_ctap_numeric_mapping(parsed: Mapping[Any, Any]) -> dict[int, Any]:
     return numeric_map
 
 
-def _coerce_ctap_numeric_key(key: Any) -> Optional[int]:
+def _coerce_ctap_numeric_key(key: Any) -> int | None:
     if isinstance(key, int):
         index = key
     elif isinstance(key, str):

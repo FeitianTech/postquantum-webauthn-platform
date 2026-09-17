@@ -110,7 +110,7 @@ def _decode_base64url_bytes_impl(advanced_module: Any, value: Any) -> bytes:
 def _extract_assertion_credential_id_impl(
     advanced_module: Any,
     response: Mapping[str, Any],
-) -> Optional[bytes]:
+) -> bytes | None:
     raw_id: Any = None
     if isinstance(response, Mapping):
         raw_id = response.get("rawId") or response.get("id")

@@ -106,7 +106,8 @@ def test_attestation_and_assertion_response_from_dict_clientdata_alias_paths(mon
     assert attestation_response["extensionResults"] == {"credProps": {"rk": True}}
     assert (
         AuthenticatorAttestationResponse._parse_value(
-            Optional[Mapping[str, Any]], extension_results
+            Optional[Mapping[str, Any]],  # noqa: UP045  # runtime value
+            extension_results,
         )
         is extension_results
     )
@@ -127,7 +128,8 @@ def test_attestation_and_assertion_response_from_dict_clientdata_alias_paths(mon
     }
     assert (
         AuthenticatorAssertionResponse._parse_value(
-            Optional[Mapping[str, Any]], assertion_extensions
+            Optional[Mapping[str, Any]],  # noqa: UP045  # runtime value
+            assertion_extensions,
         )
         is assertion_extensions
     )

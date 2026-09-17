@@ -13,7 +13,7 @@ def _decode_pem_text(
     pem_text: str,
     *,
     require_non_empty: bool = False,
-) -> Optional[bytes]:
+) -> bytes | None:
     has_markers = "-----BEGIN" in pem_text or "-----END" in pem_text
     if has_markers:
         body_lines = []
@@ -48,7 +48,7 @@ def _require_bytes(value: Any, field_name: str) -> bytes:
     return decoded
 
 
-def _maybe_decode_bytes(value: Any) -> Optional[bytes]:
+def _maybe_decode_bytes(value: Any) -> bytes | None:
     if isinstance(value, (bytes, bytearray, memoryview)):
         return bytes(value)
 

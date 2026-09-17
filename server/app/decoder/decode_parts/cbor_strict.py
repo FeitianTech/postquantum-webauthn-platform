@@ -24,7 +24,7 @@ def _ensure_cbor_available(data: bytes, offset: int, length: int) -> None:
 
 def _read_cbor_length(
     info: int, data: bytes, offset: int, *, allow_indefinite: bool = False
-) -> tuple[Optional[int], int]:
+) -> tuple[int | None, int]:
     if info < 24:
         return info, offset
     if info == 24:

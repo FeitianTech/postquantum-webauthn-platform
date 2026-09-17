@@ -85,7 +85,7 @@ def get_mapping_entry(mapping: Mapping[Any, Any], *keys: Any) -> Any:
     return MISSING
 
 
-def coerce_cbor_bytes(value: Any) -> Optional[bytes]:
+def coerce_cbor_bytes(value: Any) -> bytes | None:
     if isinstance(value, ByteBuffer):
         return value.getvalue()
     if isinstance(value, (bytes, bytearray, memoryview)):

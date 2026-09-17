@@ -73,7 +73,7 @@ def _build_certificate_summary_lines(decoded: Any) -> list[str]:
     return [line for line in lines if line is not None]
 
 
-def _format_certificate_time(value: Any) -> Optional[str]:
+def _format_certificate_time(value: Any) -> str | None:
     if isinstance(value, str):
         text = value.strip()
         if not text:

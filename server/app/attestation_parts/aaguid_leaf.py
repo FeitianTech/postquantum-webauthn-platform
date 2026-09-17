@@ -22,7 +22,7 @@ def describe_cred_protect(value: Any) -> Any:
     return CRED_PROTECT_LABELS.get(value, value)
 
 
-def coerce_non_negative_int(value: Any) -> Optional[int]:
+def coerce_non_negative_int(value: Any) -> int | None:
     if isinstance(value, bool):
         return None
     if isinstance(value, int):
@@ -43,7 +43,7 @@ def coerce_non_negative_int(value: Any) -> Optional[int]:
     return None
 
 
-def normalize_aaguid_string(value: Any) -> Optional[str]:
+def normalize_aaguid_string(value: Any) -> str | None:
     if isinstance(value, str):
         cleaned = "".join(ch for ch in value if ch in string.hexdigits)
         if len(cleaned) == 32:
@@ -51,7 +51,7 @@ def normalize_aaguid_string(value: Any) -> Optional[str]:
     return None
 
 
-def coerce_aaguid_hex(value: Any) -> Optional[str]:
+def coerce_aaguid_hex(value: Any) -> str | None:
     if value is None:
         return None
 
@@ -88,7 +88,7 @@ def augment_aaguid_fields(container: MutableMapping[str, Any]) -> None:
         return
 
     raw_value = container.get("aaguid")
-    aaguid_hex: Optional[str] = None
+    aaguid_hex: str | None = None
 
     if isinstance(raw_value, (bytes, bytearray, memoryview)):
         aaguid_hex = bytes(raw_value).hex()
@@ -117,7 +117,7 @@ def augment_aaguid_fields(container: MutableMapping[str, Any]) -> None:
         container.pop("aaguidRaw", None)
 
 
-def extract_min_pin_length(extension_results: Any) -> Optional[int]:
+def extract_min_pin_length(extension_results: Any) -> int | None:
     if not isinstance(extension_results, Mapping):
         return None
 

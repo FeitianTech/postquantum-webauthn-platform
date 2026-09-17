@@ -46,7 +46,7 @@ def normalize_nonempty_str(value: Any, *, type_error: str, empty_error: str) -> 
     return cleaned
 
 
-def resolve_session_id(session_id: Optional[str], fallback: Callable[[], str]) -> str:
+def resolve_session_id(session_id: str | None, fallback: Callable[[], str]) -> str:
     """Resolve an explicit session id or fall back to ``fallback`` when absent."""
 
     if isinstance(session_id, str):
@@ -92,7 +92,7 @@ def build_session_scoped_prefix(
     return build_blob_name(subdir, prefix=root)
 
 
-def resolve_metadata_session_id(session_id: Optional[str] = None) -> str:
+def resolve_metadata_session_id(session_id: str | None = None) -> str:
     """Resolve a session id using metadata fallback with lazy import cycle-avoidance."""
 
     from .metadata import ensure_metadata_session_id
@@ -176,7 +176,7 @@ def resolve_contained_path(
 def assert_contained_blob_name(
     blob_name: str,
     *,
-    prefix: Optional[str] = None,
+    prefix: str | None = None,
     error: str = "Resolved object key escapes the storage prefix",
 ) -> str:
     """Return ``blob_name`` after proving it stays under ``prefix``.

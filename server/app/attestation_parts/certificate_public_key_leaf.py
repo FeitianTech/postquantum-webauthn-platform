@@ -21,7 +21,7 @@ def _build_unknown_public_key_info(cert_bytes: bytes, error: Exception) -> tuple
     if isinstance(parsed.get("algorithm_oid"), str):
         algorithm_details["oid"] = parsed["algorithm_oid"]
 
-    mldsa_details: Optional[Mapping[str, Any]] = None
+    mldsa_details: Mapping[str, Any] | None = None
     parameter_set = parsed.get("ml_dsa_parameter_set")
     if isinstance(parameter_set, str):
         algorithm_details["mlDsaParameterSet"] = parameter_set
@@ -46,8 +46,8 @@ def _build_unknown_public_key_info(cert_bytes: bytes, error: Exception) -> tuple
     if isinstance(spki_bytes, (bytes, bytearray)) and spki_bytes:
         info["subjectPublicKeyInfoBase64"] = base64.b64encode(bytes(spki_bytes)).decode("ascii")
 
-    key_size_bits: Optional[int] = None
-    raw_bytes: Optional[bytes] = None
+    key_size_bits: int | None = None
+    raw_bytes: bytes | None = None
     if isinstance(public_key_bytes, (bytes, bytearray)):
         candidate = bytes(public_key_bytes)
         if candidate:

@@ -96,7 +96,7 @@ def _parse_attestation_object(data: bytes) -> dict[str, Any]:
     return details
 
 
-def _extract_attestation_certificate(att_stmt: Mapping[str, Any]) -> Optional[dict[str, Any]]:
+def _extract_attestation_certificate(att_stmt: Mapping[str, Any]) -> dict[str, Any] | None:
     if not isinstance(att_stmt, Mapping):
         return None
 
@@ -105,7 +105,7 @@ def _extract_attestation_certificate(att_stmt: Mapping[str, Any]) -> Optional[di
         return None
 
     first_entry = chain[0]
-    cert_bytes: Optional[bytes]
+    cert_bytes: bytes | None
 
     if isinstance(first_entry, str):
         cleaned = "".join(first_entry.split())
@@ -130,7 +130,7 @@ def _extract_attestation_certificate(att_stmt: Mapping[str, Any]) -> Optional[di
 
 
 def _build_client_data_details(
-    parsed: Mapping[str, Any], raw_text: Optional[str] = None
+    parsed: Mapping[str, Any], raw_text: str | None = None
 ) -> dict[str, Any]:
     details: dict[str, Any] = {}
 
@@ -171,7 +171,7 @@ def _build_client_data_details(
     return details
 
 
-def _binary_summary(data: bytes, encoding: Optional[str] = None) -> dict[str, Any]:
+def _binary_summary(data: bytes, encoding: str | None = None) -> dict[str, Any]:
     summary = {
         "length": len(data),
         "base64": base64.b64encode(data).decode("ascii"),
@@ -184,7 +184,7 @@ def _binary_summary(data: bytes, encoding: Optional[str] = None) -> dict[str, An
     return summary
 
 
-def _try_decode_utf8(data: bytes) -> Optional[str]:
+def _try_decode_utf8(data: bytes) -> str | None:
     try:
         return data.decode("utf-8")
     except UnicodeDecodeError:

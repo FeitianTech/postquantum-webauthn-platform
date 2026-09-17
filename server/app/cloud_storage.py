@@ -35,10 +35,10 @@ _LAZY_MODULES = {
 _LAZY_IMPORT_LOCK = threading.Lock()
 
 _CLIENT_LOCK = threading.Lock()
-_CLIENT: Optional[Any] = None
-_BUCKET: Optional[Any] = None
+_CLIENT: Any | None = None
+_BUCKET: Any | None = None
 
-_RETRYABLE_EXCEPTIONS_CACHE: Optional[tuple[type, ...]] = None
+_RETRYABLE_EXCEPTIONS_CACHE: tuple[type, ...] | None = None
 _DEFAULT_RETRY_ATTEMPTS = 3
 _DEFAULT_RETRY_BASE_DELAY = 0.5
 
@@ -82,7 +82,7 @@ def _not_found_error() -> type:
     return _lazy("gcs_exceptions").NotFound
 
 
-def _env_flag(name: str) -> Optional[bool]:
+def _env_flag(name: str) -> bool | None:
     return parse_env_flag(name)
 
 
@@ -149,7 +149,7 @@ def _ensure_bucket() -> Any:
 def ensure_ready(*, max_attempts: int = 3, retry_delay: float = 1.0) -> None:
     """Validate that the configured storage bucket is reachable."""
 
-    last_error: Optional[Exception] = None
+    last_error: Exception | None = None
 
     for attempt in range(1, max_attempts + 1):
         try:
@@ -176,7 +176,7 @@ def _with_retry(
 ) -> _T:
     """Execute ``operation`` with retries for transient failures."""
 
-    last_error: Optional[Exception] = None
+    last_error: Exception | None = None
 
     for attempt in range(1, max_attempts + 1):
         try:
@@ -196,7 +196,7 @@ def _with_retry(
     raise RuntimeError("Retryable operation failed without raising an error")
 
 
-def normalise_blob_prefix(prefix: Optional[str]) -> str:
+def normalise_blob_prefix(prefix: str | None) -> str:
     """Return ``prefix`` as an empty string or a single trailing-slash prefix."""
 
     if not prefix:
@@ -211,7 +211,7 @@ def normalise_blob_prefix(prefix: Optional[str]) -> str:
 _normalise_prefix = normalise_blob_prefix
 
 
-def build_blob_name(*components: str, prefix: Optional[str] = None) -> str:
+def build_blob_name(*components: str, prefix: str | None = None) -> str:
     base = normalise_blob_prefix(prefix)
     safe_components = []
     for component in components:
@@ -224,7 +224,7 @@ def build_blob_name(*components: str, prefix: Optional[str] = None) -> str:
     return f"{base}{path}" if base else path
 
 
-def upload_bytes(blob_name: str, data: bytes, *, content_type: Optional[str] = None) -> None:
+def upload_bytes(blob_name: str, data: bytes, *, content_type: str | None = None) -> None:
     bucket = _ensure_bucket()
     blob = bucket.blob(blob_name)
 
@@ -234,11 +234,11 @@ def upload_bytes(blob_name: str, data: bytes, *, content_type: Optional[str] = N
     _with_retry(_upload)
 
 
-def download_bytes(blob_name: str) -> Optional[bytes]:
+def download_bytes(blob_name: str) -> bytes | None:
     bucket = _ensure_bucket()
     blob = bucket.blob(blob_name)
 
-    def _download() -> Optional[bytes]:
+    def _download() -> bytes | None:
         try:
             return blob.download_as_bytes()
         except _not_found_error():
@@ -282,11 +282,11 @@ def blob_exists(blob_name: str) -> bool:
     return bool(_with_retry(_exists))
 
 
-def blob_updated_timestamp(blob_name: str) -> Optional[float]:
+def blob_updated_timestamp(blob_name: str) -> float | None:
     bucket = _ensure_bucket()
     blob = bucket.blob(blob_name)
 
-    def _resolve_timestamp() -> Optional[float]:
+    def _resolve_timestamp() -> float | None:
         try:
             blob.reload()
         except _not_found_error():

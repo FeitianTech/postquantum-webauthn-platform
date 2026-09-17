@@ -16,7 +16,7 @@ from .constants import _CTAP_LABELED_KEY_PATTERN
 def _get_ctap_field_value(
     structure: Mapping[str, Any],
     label: str,
-    index: Optional[int] = None,
+    index: int | None = None,
 ) -> Any:
     candidates = {label.lower()}
     if index is not None:

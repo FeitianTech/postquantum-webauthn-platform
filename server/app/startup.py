@@ -21,7 +21,7 @@ _WARM_SESSION_STORAGE_ENV = "FIDO_SERVER_WARM_SESSION_STORAGE"
 _BACKGROUND_WARMUP_ENV = "FIDO_SERVER_BACKGROUND_WARMUP"
 
 
-def _env_flag(name: str) -> Optional[bool]:
+def _env_flag(name: str) -> bool | None:
     return parse_env_flag(name)
 
 
@@ -50,7 +50,7 @@ def _run_background_warmup() -> None:
         app.logger.warning("Background metadata warm-up failed.", exc_info=True)
 
 
-def start_background_warmup() -> Optional[threading.Thread]:
+def start_background_warmup() -> threading.Thread | None:
     """Warm slow dependencies without delaying the worker from serving requests.
 
     Requests that need the same data while warm-up runs wait on the shared cache
@@ -116,7 +116,7 @@ def _should_warm_cloud_storage() -> bool:
 def warm_up_dependencies(
     *,
     skip_if_reloader_parent: bool = False,
-    fail_fast: Optional[bool] = None,
+    fail_fast: bool | None = None,
 ) -> None:
     """Run lightweight checks that ensure critical dependencies are ready."""
 

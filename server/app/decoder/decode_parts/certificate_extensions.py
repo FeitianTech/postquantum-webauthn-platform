@@ -25,7 +25,7 @@ def _build_certificate_extensions_lines(extensions: Any) -> list[str]:
     return lines
 
 
-def _format_certificate_extension_header(extension: Mapping[str, Any]) -> Optional[str]:
+def _format_certificate_extension_header(extension: Mapping[str, Any]) -> str | None:
     display_header = extension.get("displayHeader")
     if isinstance(display_header, str) and display_header.strip():
         return display_header.strip()

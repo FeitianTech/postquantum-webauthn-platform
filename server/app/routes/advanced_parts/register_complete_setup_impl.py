@@ -7,7 +7,7 @@ from collections.abc import Mapping, MutableMapping
 def prepare_register_complete_inputs(
     advanced_module: Any,
     data: Mapping[str, Any],
-) -> tuple[Optional[dict[str, Any]], Optional[Any]]:
+) -> tuple[dict[str, Any] | None, Any | None]:
     response = data.get("__credential_response")
     if not response:
         return None, (advanced_module.jsonify({"error": "Credential response is required"}), 400)

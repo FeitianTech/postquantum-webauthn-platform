@@ -31,7 +31,7 @@ def _mapping_value(mapping: Mapping[str, Any], *keys: str) -> Any:
     return None
 
 
-def _string_or_none(value: Any) -> Optional[str]:
+def _string_or_none(value: Any) -> str | None:
     if isinstance(value, str):
         text = value.strip()
         if text:
@@ -49,7 +49,7 @@ def _extract_list(value: Any) -> list[Any]:
     return [value]
 
 
-def _parse_date(value: Any) -> Optional[datetime]:
+def _parse_date(value: Any) -> datetime | None:
     if isinstance(value, datetime):
         if value.tzinfo is None:
             return value.replace(tzinfo=timezone.utc)
@@ -88,7 +88,7 @@ def _format_date(value: Any) -> str:
     return parsed.strftime("%b %d, %Y").replace(" 0", " ")
 
 
-def _extract_byte_array(value: Any) -> Optional[list[int]]:
+def _extract_byte_array(value: Any) -> list[int] | None:
     if value is None:
         return None
     if isinstance(value, list) and all(isinstance(item, int) for item in value):
@@ -387,7 +387,7 @@ def _derive_certificate_algorithm_info(algorithm_name: str, hash_name: str) -> s
     return "_".join(components)
 
 
-def _decode_der_certificate(value: Any) -> Optional[bytes]:
+def _decode_der_certificate(value: Any) -> bytes | None:
     if isinstance(value, (bytes, bytearray, memoryview)):
         return bytes(value)
     if not isinstance(value, str):
@@ -491,7 +491,7 @@ def build_entry_id(entry_payload: Mapping[str, Any]) -> str:
 
 def build_snapshot_meta(
     payload: Mapping[str, Any],
-    cache_info: Optional[Mapping[str, Any]] = None,
+    cache_info: Mapping[str, Any] | None = None,
     *,
     source: str = "packaged",
 ) -> dict[str, Any]:
@@ -520,12 +520,12 @@ def build_explorer_entry(
     *,
     index: int = 0,
     source: str,
-    trust_anchor_status: Optional[bool],
-    snapshot_meta: Optional[Mapping[str, Any]] = None,
+    trust_anchor_status: bool | None,
+    snapshot_meta: Mapping[str, Any] | None = None,
     include_detail: bool = False,
     include_raw_entry: bool = True,
     compact_detail: bool = False,
-    source_info: Optional[Mapping[str, Any]] = None,
+    source_info: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     metadata = _mapping_value(entry_payload, "metadataStatement", "metadata_statement")
     metadata_mapping = metadata if isinstance(metadata, Mapping) else {}
@@ -650,10 +650,10 @@ def build_explorer_entry(
 
 def build_explorer_snapshot(
     payload: Mapping[str, Any],
-    cache_info: Optional[Mapping[str, Any]] = None,
+    cache_info: Mapping[str, Any] | None = None,
     *,
     source: str = "packaged",
-    trust_anchor_status: Optional[bool] = True,
+    trust_anchor_status: bool | None = True,
     include_detail: bool = False,
     include_raw_entry: bool = True,
     compact_detail: bool = False,
@@ -683,10 +683,10 @@ def build_explorer_snapshot(
 
 def build_bootstrap_snapshot(
     payload: Mapping[str, Any],
-    cache_info: Optional[Mapping[str, Any]] = None,
+    cache_info: Mapping[str, Any] | None = None,
     *,
     source: str = "packaged",
-    trust_anchor_status: Optional[bool] = True,
+    trust_anchor_status: bool | None = True,
 ) -> dict[str, Any]:
     return build_explorer_snapshot(
         payload,

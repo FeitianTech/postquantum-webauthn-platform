@@ -93,7 +93,7 @@ class InMemoryChallengeRegistry(ChallengeRegistry):
 
     def __init__(
         self,
-        ttl_seconds: Optional[float] = None,
+        ttl_seconds: float | None = None,
         *,
         clock: Callable[[], float] = time.monotonic,
     ) -> None:

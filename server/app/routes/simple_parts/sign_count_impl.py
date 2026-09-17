@@ -20,13 +20,13 @@ from collections.abc import Iterable, Mapping
 RECORD_SIGN_COUNT_KEY = "sign_count"
 
 
-def _as_counter(value: Any) -> Optional[int]:
+def _as_counter(value: Any) -> int | None:
     if isinstance(value, bool) or not isinstance(value, int) or value < 0:
         return None
     return value
 
 
-def record_credential_id(record: Any) -> Optional[bytes]:
+def record_credential_id(record: Any) -> bytes | None:
     if not isinstance(record, Mapping):
         return None
     credential_id = getattr(record.get("credential_data"), "credential_id", None)
@@ -35,14 +35,14 @@ def record_credential_id(record: Any) -> Optional[bytes]:
     return None
 
 
-def record_sign_count(record: Mapping[str, Any]) -> Optional[int]:
+def record_sign_count(record: Mapping[str, Any]) -> int | None:
     counter = _as_counter(record.get(RECORD_SIGN_COUNT_KEY))
     if counter is not None:
         return counter
     return _as_counter(getattr(record.get("auth_data"), "counter", None))
 
 
-def load_server_records_impl(simple_module: Any, uname: Any) -> tuple[Optional[list[Any]], Optional[str]]:
+def load_server_records_impl(simple_module: Any, uname: Any) -> tuple[list[Any] | None, str | None]:
     """Read the caller's server-side credential records, or ``(None, None)``."""
 
     if not isinstance(uname, str) or not uname:
@@ -60,7 +60,7 @@ def load_server_records_impl(simple_module: Any, uname: Any) -> tuple[Optional[l
     return records, session_id
 
 
-def find_server_record_index(records: Optional[list[Any]], credential_id: bytes) -> Optional[int]:
+def find_server_record_index(records: list[Any] | None, credential_id: bytes) -> int | None:
     if not records:
         return None
     for index, record in enumerate(records):
@@ -71,7 +71,7 @@ def find_server_record_index(records: Optional[list[Any]], credential_id: bytes)
 
 def client_supplied_sign_count_impl(
     simple_module: Any, session_credentials: Iterable[Any], credential_id: bytes
-) -> Optional[int]:
+) -> int | None:
     for entry in session_credentials or ():
         if not isinstance(entry, Mapping):
             continue
@@ -88,7 +88,7 @@ def client_supplied_sign_count_impl(
 
 
 def resolve_stored_sign_count(
-    server_record: Optional[Mapping[str, Any]], client_supplied: Optional[int]
+    server_record: Mapping[str, Any] | None, client_supplied: int | None
 ) -> int:
     candidates = [
         value

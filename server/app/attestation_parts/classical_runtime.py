@@ -8,16 +8,16 @@ def _evaluate_classical_attestation_root(
     attestation_object: Any,
     attestation_result: Any,
     client_data_hash: bytes,
-    verifier: Optional[Any],
+    verifier: Any | None,
     now: datetime,
 ) -> dict[str, Any]:
     """Evaluate attestation trust using classical x509 verification."""
 
     warnings: list[str] = []
     errors: list[str] = []
-    metadata_entry: Optional[Any] = None
-    metadata_lookup_source: Optional[str] = None
-    checks: dict[str, Optional[bool]] = {
+    metadata_entry: Any | None = None
+    metadata_lookup_source: str | None = None
+    checks: dict[str, bool | None] = {
         "trusted_ca": None,
         "chain": None,
         "fido_mds": None,
@@ -25,7 +25,7 @@ def _evaluate_classical_attestation_root(
 
     trust_path = list(getattr(attestation_result, "trust_path", []) or [])
 
-    manual_chain_valid: Optional[bool] = None
+    manual_chain_valid: bool | None = None
     if trust_path:
         manual_chain_valid = True
         try:
@@ -55,7 +55,7 @@ def _evaluate_classical_attestation_root(
                 f"certificate_out_of_validity: {cert.subject.rfc4514_string()}"
             )
 
-    trust_details: Optional[TrustPathEvaluation] = None
+    trust_details: TrustPathEvaluation | None = None
 
     metadata_unavailable = False
     if verifier is None:
@@ -87,7 +87,7 @@ def _evaluate_classical_attestation_root(
         root for root in candidate_roots if _is_trusted_ca_certificate(root)
     ]
 
-    trusted_ca: Optional[bool]
+    trusted_ca: bool | None
     if trusted_roots:
         trusted_ca = True
     elif candidate_roots:
@@ -106,7 +106,7 @@ def _evaluate_classical_attestation_root(
             checks["fido_mds"] = False
             errors.append("metadata_not_fido_trusted")
 
-    chain_valid: Optional[bool] = None
+    chain_valid: bool | None = None
     if trust_details is not None:
         chain_valid = trust_details.chain_valid
     if chain_valid is None:

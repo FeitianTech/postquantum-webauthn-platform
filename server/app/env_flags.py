@@ -8,7 +8,7 @@ from typing import Optional
 __all__ = ["parse_env_flag"]
 
 
-def parse_env_flag(name: str) -> Optional[bool]:
+def parse_env_flag(name: str) -> bool | None:
     """Return ``True``/``False`` when ``name`` is explicitly set, otherwise ``None``."""
 
     raw = os.environ.get(name)

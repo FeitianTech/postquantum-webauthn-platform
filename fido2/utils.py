@@ -210,7 +210,7 @@ def int2bytes(value: int, minlen: int = -1) -> bytes:
     return bytes(reversed(ba))
 
 
-def websafe_decode(data: Union[str, bytes]) -> bytes:
+def websafe_decode(data: str | bytes) -> bytes:
     """Decodes a websafe-base64 encoded string.
     See: "Base 64 Encoding with URL and Filename Safe Alphabet" from Section 5
     in RFC4648 without padding.
@@ -252,7 +252,7 @@ class ByteBuffer(BytesIO):
         s = struct.Struct(fmt)
         return s.unpack(self.read(s.size))[0]
 
-    def read(self, size: Optional[int] = -1) -> bytes:
+    def read(self, size: int | None = -1) -> bytes:
         """Like BytesIO.read(), but checks the number of bytes read and raises an error
         if fewer bytes were read than expected.
         """
@@ -320,7 +320,7 @@ class _DataClassMapping(Mapping[_T, Any]):
 
     @classmethod
     def _parse_value(cls, t, value):
-        if Optional[t] == t:  # Optional, get the type
+        if Optional[t] == t:  # noqa: UP045  # runtime value, not an annotation
             t = t.__args__[0]
 
         # Check if type is already correct
@@ -414,7 +414,7 @@ class _JsonDataObject(_DataClassMapping[str]):
 
     @classmethod
     def _parse_value(cls, t, value):
-        if Optional[t] == t:  # Optional, get the type
+        if Optional[t] == t:  # noqa: UP045  # runtime value, not an annotation
             t2 = t.__args__[0]
         else:
             t2 = t

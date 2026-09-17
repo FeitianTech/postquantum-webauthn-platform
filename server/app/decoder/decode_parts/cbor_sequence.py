@@ -22,7 +22,7 @@ def _decode_cbor_sequence_impl(
     remaining = payload
 
     while remaining:
-        predecoded_structure: Optional[dict[str, Any]] = None
+        predecoded_structure: dict[str, Any] | None = None
         try:
             value, rest_after_value = cbor_decode_from(remaining)
             consumed_value = len(remaining) - len(rest_after_value)
