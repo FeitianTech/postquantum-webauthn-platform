@@ -8,7 +8,7 @@ from cryptography import x509
 from fido2.attestation import InvalidSignature, verify_x509_chain
 from fido2.attestation.base import TrustPathEvaluation
 
-from ..metadata import metadata_entry_trust_anchor_status
+from .. import metadata
 from . import trust_ca_runtime, trust_runtime
 
 
@@ -107,7 +107,7 @@ def _evaluate_classical_attestation_root(
     checks["trusted_ca"] = trusted_ca
 
     if trusted_ca is True and metadata_entry is not None:
-        fido_status = metadata_entry_trust_anchor_status(metadata_entry)
+        fido_status = metadata.metadata_entry_trust_anchor_status(metadata_entry)
         if fido_status is True:
             checks["fido_mds"] = True
         elif fido_status is False:

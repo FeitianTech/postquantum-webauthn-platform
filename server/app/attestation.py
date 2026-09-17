@@ -48,6 +48,7 @@ from fido2.webauthn import (
     RegistrationResponse,
 )
 
+from . import metadata
 from .attestation_parts import (
     aaguid_leaf,
     certificate_details_runtime,

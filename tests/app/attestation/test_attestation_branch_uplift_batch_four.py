@@ -267,7 +267,7 @@ def test_check_pqc_certificate_constraints_reports_validity_basic_constraints_an
     )
 
 
-def test_evaluate_mldsa_attestation_root_covers_untrusted_root_and_fido_status_paths(monkeypatch, trust_runtime, trust_ca_runtime):
+def test_evaluate_mldsa_attestation_root_covers_untrusted_root_and_fido_status_paths(monkeypatch, trust_runtime, trust_ca_runtime, metadata_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     metadata_entry = SimpleNamespace(metadata_statement=SimpleNamespace())
@@ -284,7 +284,7 @@ def test_evaluate_mldsa_attestation_root_covers_untrusted_root_and_fido_status_p
     assert "attestation_root_not_trusted" in untrusted["errors"]
 
     monkeypatch.setattr(trust_ca_runtime, "_is_trusted_ca_certificate", lambda *_args, **_kwargs: True)
-    monkeypatch.setattr(attestation_module, "metadata_entry_trust_anchor_status", lambda _entry: False, raising=False)
+    monkeypatch.setattr(metadata_module, "metadata_entry_trust_anchor_status", lambda _entry: False)
     monkeypatch.setattr(trust_runtime, "_collect_trust_path_entries", lambda _x5c: [])
 
     fido_false = attestation_module._evaluate_mldsa_attestation_root(

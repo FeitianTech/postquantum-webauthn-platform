@@ -81,7 +81,7 @@ def test_perform_attestation_checks_reports_client_authenticator_mismatches(monk
     assert "attested_credential_data_missing" in result["errors"]
 
 
-def test_perform_attestation_checks_classical_success_path_populates_metadata(monkeypatch, classical_runtime):
+def test_perform_attestation_checks_classical_success_path_populates_metadata(monkeypatch, classical_runtime, metadata_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     flags = int(attestation_module.AuthenticatorData.FLAG.UP | attestation_module.AuthenticatorData.FLAG.AT)
@@ -112,7 +112,7 @@ def test_perform_attestation_checks_classical_success_path_populates_metadata(mo
         raising=False,
     )
     monkeypatch.setattr(attestation_module.Attestation, "for_type", lambda _fmt: (lambda: _FakeAttestation()), raising=False)
-    monkeypatch.setattr(attestation_module, "get_mds_verifier", lambda: object(), raising=False)
+    monkeypatch.setattr(metadata_module, "get_mds_verifier", lambda: object())
     monkeypatch.setattr(
         classical_runtime,
         "_evaluate_classical_attestation_root",
@@ -144,7 +144,7 @@ def test_perform_attestation_checks_classical_success_path_populates_metadata(mo
     assert result["metadata"]["source"] == "aaguid"
 
 
-def test_perform_attestation_checks_uses_pqc_fallback_when_signature_verification_fails(monkeypatch, classical_runtime, pqc_runtime):
+def test_perform_attestation_checks_uses_pqc_fallback_when_signature_verification_fails(monkeypatch, classical_runtime, pqc_runtime, metadata_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     flags = int(attestation_module.AuthenticatorData.FLAG.UP | attestation_module.AuthenticatorData.FLAG.AT)
@@ -178,7 +178,7 @@ def test_perform_attestation_checks_uses_pqc_fallback_when_signature_verificatio
             "error": None,
         },
     )
-    monkeypatch.setattr(attestation_module, "get_mds_verifier", lambda: object(), raising=False)
+    monkeypatch.setattr(metadata_module, "get_mds_verifier", lambda: object())
     monkeypatch.setattr(
         classical_runtime,
         "_evaluate_classical_attestation_root",
@@ -210,7 +210,7 @@ def test_perform_attestation_checks_uses_pqc_fallback_when_signature_verificatio
     assert "attestation_invalid" in "\n".join(result["errors"])
 
 
-def test_perform_attestation_checks_pqc_branch_surfaces_root_check_details(monkeypatch, pqc_runtime):
+def test_perform_attestation_checks_pqc_branch_surfaces_root_check_details(monkeypatch, pqc_runtime, metadata_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     flags = int(attestation_module.AuthenticatorData.FLAG.UP | attestation_module.AuthenticatorData.FLAG.AT)
@@ -229,7 +229,7 @@ def test_perform_attestation_checks_pqc_branch_surfaces_root_check_details(monke
         lambda _response: _registration_for(attestation_object, client_data),
         raising=False,
     )
-    monkeypatch.setattr(attestation_module, "get_mds_verifier", lambda: object(), raising=False)
+    monkeypatch.setattr(metadata_module, "get_mds_verifier", lambda: object())
     monkeypatch.setattr(
         pqc_runtime,
         "_evaluate_mldsa_attestation_root",

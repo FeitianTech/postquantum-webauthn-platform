@@ -52,7 +52,7 @@ def _registration(attestation_object, client_data, extension_results):
     )
 
 
-def test_extract_attestation_details_handles_non_dict_and_certificate_edge_cases(monkeypatch):
+def test_extract_attestation_details_handles_non_dict_and_certificate_edge_cases(monkeypatch, serialize_runtime):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     defaults = attestation_module.extract_attestation_details(["not-a-dict"])
@@ -83,10 +83,9 @@ def test_extract_attestation_details_handles_non_dict_and_certificate_edge_cases
         raising=False,
     )
     monkeypatch.setattr(
-        attestation_module,
+        serialize_runtime,
         "serialize_attestation_certificate",
         lambda _cert: None,
-        raising=False,
     )
 
     extracted = attestation_module.extract_attestation_details({"ok": True})
@@ -187,7 +186,7 @@ def test_perform_attestation_checks_challenge_coercion_and_uv_requirement_paths(
     assert result["authenticator_data"]["user_verification_required"] is True
 
 
-def test_perform_attestation_checks_classical_lookup_and_aaguid_parse_failure_paths(monkeypatch, classical_runtime):
+def test_perform_attestation_checks_classical_lookup_and_aaguid_parse_failure_paths(monkeypatch, classical_runtime, metadata_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     class _SparsePublicKey(dict):
@@ -231,7 +230,7 @@ def test_perform_attestation_checks_classical_lookup_and_aaguid_parse_failure_pa
         ,
         raising=False,
     )
-    monkeypatch.setattr(attestation_module, "get_mds_verifier", lambda: object(), raising=False)
+    monkeypatch.setattr(metadata_module, "get_mds_verifier", lambda: object())
     monkeypatch.setattr(
         classical_runtime,
         "_evaluate_classical_attestation_root",

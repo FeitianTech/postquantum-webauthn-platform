@@ -103,7 +103,7 @@ def test_perform_attestation_checks_unsupported_format_sets_signature_and_root_f
     assert any(error.startswith("unsupported_attestation:") for error in result["errors"])
 
 
-def test_perform_attestation_checks_warns_when_metadata_verifier_unavailable(monkeypatch):
+def test_perform_attestation_checks_warns_when_metadata_verifier_unavailable(monkeypatch, metadata_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     challenge = b"metadata-unavailable"
@@ -131,7 +131,7 @@ def test_perform_attestation_checks_warns_when_metadata_verifier_unavailable(mon
             return attestation_module.AttestationResult(attestation_module.AttestationType.BASIC, [])
 
     monkeypatch.setattr(attestation_module.Attestation, "for_type", lambda _fmt: _PassingAttestation)
-    monkeypatch.setattr(attestation_module, "get_mds_verifier", lambda: None)
+    monkeypatch.setattr(metadata_module, "get_mds_verifier", lambda: None)
 
     result = _perform_checks(
         attestation_module,
@@ -147,7 +147,7 @@ def test_perform_attestation_checks_warns_when_metadata_verifier_unavailable(mon
     assert "trust_path_missing" in result["errors"]
 
 
-def test_perform_attestation_checks_captures_verifier_evaluation_exception(monkeypatch):
+def test_perform_attestation_checks_captures_verifier_evaluation_exception(monkeypatch, metadata_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     challenge = b"verifier-exception"
@@ -179,7 +179,7 @@ def test_perform_attestation_checks_captures_verifier_evaluation_exception(monke
             raise RuntimeError("verifier exploded")
 
     monkeypatch.setattr(attestation_module.Attestation, "for_type", lambda _fmt: _PassingAttestation)
-    monkeypatch.setattr(attestation_module, "get_mds_verifier", lambda: _FailingVerifier())
+    monkeypatch.setattr(metadata_module, "get_mds_verifier", lambda: _FailingVerifier())
 
     result = _perform_checks(
         attestation_module,
@@ -195,7 +195,7 @@ def test_perform_attestation_checks_captures_verifier_evaluation_exception(monke
     assert result["root_checks"]["trusted_ca"] is False
 
 
-def test_perform_attestation_checks_flags_algorithm_not_in_metadata_when_root_is_valid(monkeypatch):
+def test_perform_attestation_checks_flags_algorithm_not_in_metadata_when_root_is_valid(monkeypatch, metadata_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     challenge = b"metadata-algorithm"
@@ -263,7 +263,7 @@ def test_perform_attestation_checks_flags_algorithm_not_in_metadata_when_root_is
             return evaluation
 
     monkeypatch.setattr(attestation_module.Attestation, "for_type", lambda _fmt: _PassingAttestation)
-    monkeypatch.setattr(attestation_module, "get_mds_verifier", lambda: _Verifier())
+    monkeypatch.setattr(metadata_module, "get_mds_verifier", lambda: _Verifier())
 
     result = _perform_checks(
         attestation_module,

@@ -93,7 +93,7 @@ def test_perform_attestation_checks_rejects_non_mapping_response():
     assert result["errors"] == ["registration_response_invalid"]
 
 
-def test_perform_attestation_checks_coerces_challenge_from_base64_and_hex_wrappers(monkeypatch):
+def test_perform_attestation_checks_coerces_challenge_from_base64_and_hex_wrappers(monkeypatch, metadata_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     flags = int(attestation_module.AuthenticatorData.FLAG.UP | attestation_module.AuthenticatorData.FLAG.AT)
@@ -108,7 +108,7 @@ def test_perform_attestation_checks_coerces_challenge_from_base64_and_hex_wrappe
         lambda _response: _registration(attestation_object, client_data),
         raising=False,
     )
-    monkeypatch.setattr(attestation_module, "get_mds_verifier", lambda: None, raising=False)
+    monkeypatch.setattr(metadata_module, "get_mds_verifier", lambda: None)
 
     result = attestation_module.perform_attestation_checks(
         response={"dummy": True},
@@ -127,7 +127,7 @@ def test_perform_attestation_checks_coerces_challenge_from_base64_and_hex_wrappe
     assert "challenge_mismatch" not in result["errors"]
 
 
-def test_perform_attestation_checks_accepts_base64url_wrapped_challenge_and_enum_uv(monkeypatch):
+def test_perform_attestation_checks_accepts_base64url_wrapped_challenge_and_enum_uv(monkeypatch, metadata_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     flags = int(
@@ -146,7 +146,7 @@ def test_perform_attestation_checks_accepts_base64url_wrapped_challenge_and_enum
         lambda _response: _registration(attestation_object, client_data),
         raising=False,
     )
-    monkeypatch.setattr(attestation_module, "get_mds_verifier", lambda: None, raising=False)
+    monkeypatch.setattr(metadata_module, "get_mds_verifier", lambda: None)
 
     result = attestation_module.perform_attestation_checks(
         response={"dummy": True},
@@ -166,7 +166,7 @@ def test_perform_attestation_checks_accepts_base64url_wrapped_challenge_and_enum
     assert result["authenticator_data"]["user_verification_satisfied"] is True
 
 
-def test_perform_attestation_checks_handles_broken_credential_shapes(monkeypatch):
+def test_perform_attestation_checks_handles_broken_credential_shapes(monkeypatch, metadata_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     class _BrokenPublicKey:
@@ -196,7 +196,7 @@ def test_perform_attestation_checks_handles_broken_credential_shapes(monkeypatch
         lambda _response: _registration(attestation_object, client_data),
         raising=False,
     )
-    monkeypatch.setattr(attestation_module, "get_mds_verifier", lambda: None, raising=False)
+    monkeypatch.setattr(metadata_module, "get_mds_verifier", lambda: None)
 
     result = attestation_module.perform_attestation_checks(
         response={"dummy": True},
@@ -215,7 +215,7 @@ def test_perform_attestation_checks_handles_broken_credential_shapes(monkeypatch
     assert any(err.startswith("cose_key_error:") for err in result["errors"])
 
 
-def test_perform_attestation_checks_uses_fallback_metadata_lookup_and_mapping_roots(monkeypatch):
+def test_perform_attestation_checks_uses_fallback_metadata_lookup_and_mapping_roots(monkeypatch, metadata_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     class _MetadataAaguid:
@@ -242,7 +242,7 @@ def test_perform_attestation_checks_uses_fallback_metadata_lookup_and_mapping_ro
         lambda _response: _registration(attestation_object, client_data),
         raising=False,
     )
-    monkeypatch.setattr(attestation_module, "get_mds_verifier", lambda: verifier, raising=False)
+    monkeypatch.setattr(metadata_module, "get_mds_verifier", lambda: verifier)
 
     result = attestation_module.perform_attestation_checks(
         response={"dummy": True},
@@ -259,7 +259,7 @@ def test_perform_attestation_checks_uses_fallback_metadata_lookup_and_mapping_ro
     assert result["metadata"]["aaguid"] == "00112233-4455-6677-8899-aabbccddeeff"
 
 
-def test_perform_attestation_checks_ignores_metadata_fallback_lookup_exceptions(monkeypatch):
+def test_perform_attestation_checks_ignores_metadata_fallback_lookup_exceptions(monkeypatch, metadata_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     class _FailingVerifier:
@@ -277,7 +277,7 @@ def test_perform_attestation_checks_ignores_metadata_fallback_lookup_exceptions(
         lambda _response: _registration(attestation_object, client_data),
         raising=False,
     )
-    monkeypatch.setattr(attestation_module, "get_mds_verifier", lambda: _FailingVerifier(), raising=False)
+    monkeypatch.setattr(metadata_module, "get_mds_verifier", lambda: _FailingVerifier())
 
     result = attestation_module.perform_attestation_checks(
         response={"dummy": True},
@@ -383,7 +383,7 @@ def test_evaluate_classical_attestation_root_reports_untrusted_root_and_mds_erro
     assert outcome["metadata_lookup_source"] == "aaguid"
 
 
-def test_evaluate_classical_attestation_root_forces_chain_false_on_expired_leaf(monkeypatch, trust_runtime, trust_ca_runtime):
+def test_evaluate_classical_attestation_root_forces_chain_false_on_expired_leaf(monkeypatch, trust_runtime, trust_ca_runtime, metadata_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     now = datetime.now(timezone.utc)
@@ -409,7 +409,7 @@ def test_evaluate_classical_attestation_root_forces_chain_false_on_expired_leaf(
     monkeypatch.setattr(attestation_module.x509, "load_der_x509_certificate", lambda _der: expired_cert, raising=False)
     monkeypatch.setattr(trust_runtime, "_collect_metadata_root_certificates", lambda _entry: [])
     monkeypatch.setattr(trust_ca_runtime, "_is_trusted_ca_certificate", lambda _root: True)
-    monkeypatch.setattr(attestation_module, "metadata_entry_trust_anchor_status", lambda _entry: False, raising=False)
+    monkeypatch.setattr(metadata_module, "metadata_entry_trust_anchor_status", lambda _entry: False)
 
     verifier = SimpleNamespace(evaluate_attestation=lambda _obj, _hash: evaluation)
     outcome = attestation_module._evaluate_classical_attestation_root(

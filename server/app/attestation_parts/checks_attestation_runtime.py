@@ -11,7 +11,7 @@ from fido2.attestation import (
     UnsupportedType,
 )
 
-from ..metadata import get_mds_verifier
+from .. import metadata
 from ..pqc import is_pqc_algorithm
 from . import classical_runtime, pqc_runtime, trust_runtime
 
@@ -121,7 +121,7 @@ def _evaluate_root_validation(
 
     pqc_registration = isinstance(algorithm, int) and is_pqc_algorithm(algorithm)
     if pqc_registration:
-        verifier = get_mds_verifier()
+        verifier = metadata.get_mds_verifier()
         pqc_outcome = pqc_runtime._evaluate_mldsa_attestation_root(
             attestation_object,
             credential_aaguid_bytes,
@@ -139,7 +139,7 @@ def _evaluate_root_validation(
         if pqc_warnings:
             results["warnings"].extend(str(warn) for warn in pqc_warnings)
     elif signature_valid and attestation_result is not None:
-        verifier = get_mds_verifier()
+        verifier = metadata.get_mds_verifier()
         classical_outcome = classical_runtime._evaluate_classical_attestation_root(
             attestation_object,
             attestation_result,

@@ -8,8 +8,7 @@ from typing import Any
 from fido2.utils import ByteBuffer, websafe_decode
 from fido2.webauthn import RegistrationResponse
 
-from . import encoding_leaf
-from .certificate_serialize_runtime import serialize_attestation_certificate
+from . import certificate_serialize_runtime, encoding_leaf
 
 
 def _coerce_attestation_certificate_bytes(value: Any) -> bytes | None:
@@ -139,7 +138,7 @@ def extract_attestation_details(
                     continue
 
                 try:
-                    certificate_details = serialize_attestation_certificate(certificate_bytes)
+                    certificate_details = certificate_serialize_runtime.serialize_attestation_certificate(certificate_bytes)
                 except Exception as cert_error:  # pragma: no cover - defensive
                     certificate_details = {"error": str(cert_error)}
                 else:
