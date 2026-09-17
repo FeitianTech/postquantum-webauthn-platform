@@ -9,10 +9,6 @@ import pytest
 @pytest.fixture
 def metadata_module(monkeypatch, metadata_runtime_state):
     module = pytest.importorskip("server.app.metadata")
-    monkeypatch.setattr(module, "_base_explorer_snapshot_cache", None, raising=False)
-    monkeypatch.setattr(module, "_base_explorer_snapshot_mtime", None, raising=False)
-    monkeypatch.setattr(module, "_base_full_snapshot_cache", None, raising=False)
-    monkeypatch.setattr(module, "_base_full_snapshot_mtime", None, raising=False)
     return module
 
 

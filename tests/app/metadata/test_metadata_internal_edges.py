@@ -10,10 +10,6 @@ import pytest
 def metadata_module(monkeypatch, metadata_runtime_state):
     module = pytest.importorskip("server.app.metadata")
 
-    monkeypatch.setattr(module, "_base_explorer_snapshot_cache", None, raising=False)
-    monkeypatch.setattr(module, "_base_explorer_snapshot_mtime", None, raising=False)
-    monkeypatch.setattr(module, "_base_full_snapshot_cache", None, raising=False)
-    monkeypatch.setattr(module, "_base_full_snapshot_mtime", None, raising=False)
 
     return module
 
@@ -200,7 +196,7 @@ def test_entry_lookup_and_snapshot_composition_deduplicate_by_aaguid(metadata_mo
     assert [entry["entryId"] for entry in snapshot["entries"]] == ["session-1", "base-2"]
 
 
-def test_load_base_explorer_snapshot_prefers_packaged_explorer_when_newer(metadata_module, monkeypatch, tmp_path):
+def test_load_base_explorer_snapshot_prefers_packaged_explorer_when_newer(metadata_module, monkeypatch, tmp_path, metadata_runtime_state):
     verified_path = tmp_path / "verified.json"
     explorer_path = tmp_path / "explorer.json"
 
@@ -219,8 +215,8 @@ def test_load_base_explorer_snapshot_prefers_packaged_explorer_when_newer(metada
 
     monkeypatch.setattr(metadata_module, "MDS_METADATA_VERIFIED_PATH", str(verified_path), raising=False)
     monkeypatch.setattr(metadata_module, "MDS_EXPLORER_PATH", str(explorer_path), raising=False)
-    monkeypatch.setattr(metadata_module, "_base_explorer_snapshot_cache", None, raising=False)
-    monkeypatch.setattr(metadata_module, "_base_explorer_snapshot_mtime", None, raising=False)
+    monkeypatch.setattr(metadata_runtime_state, "_base_explorer_snapshot_cache", None)
+    monkeypatch.setattr(metadata_runtime_state, "_base_explorer_snapshot_mtime", None)
 
     snapshot, marker = metadata_module._load_base_explorer_snapshot()
 

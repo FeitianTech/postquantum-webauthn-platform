@@ -147,8 +147,6 @@ def _load_packaged_explorer_meta(snapshot_path: str | None = None) -> dict[str, 
 
 
 def _load_base_explorer_snapshot() -> tuple[dict[str, Any] | None, tuple[float | None, float | None] | None]:
-    global _base_explorer_snapshot_cache, _base_explorer_snapshot_mtime
-
     try:
         explorer_mtime = os.path.getmtime(MDS_EXPLORER_PATH)
     except OSError:
@@ -161,17 +159,17 @@ def _load_base_explorer_snapshot() -> tuple[dict[str, Any] | None, tuple[float |
 
     cache_marker = (explorer_mtime, verified_mtime)
     if (
-        _base_explorer_snapshot_cache is not None
-        and _base_explorer_snapshot_mtime == cache_marker
+        _state._base_explorer_snapshot_cache is not None
+        and _state._base_explorer_snapshot_mtime == cache_marker
     ):
-        return _base_explorer_snapshot_cache, cache_marker
+        return _state._base_explorer_snapshot_cache, cache_marker
 
-    with _base_explorer_snapshot_lock:
+    with _state._base_explorer_snapshot_lock:
         if (
-            _base_explorer_snapshot_cache is not None
-            and _base_explorer_snapshot_mtime == cache_marker
+            _state._base_explorer_snapshot_cache is not None
+            and _state._base_explorer_snapshot_mtime == cache_marker
         ):
-            return _base_explorer_snapshot_cache, cache_marker
+            return _state._base_explorer_snapshot_cache, cache_marker
 
         snapshot: dict[str, Any] | None = None
 
@@ -194,31 +192,29 @@ def _load_base_explorer_snapshot() -> tuple[dict[str, Any] | None, tuple[float |
             if payload is not None:
                 snapshot = build_explorer_snapshot(payload, load_metadata_cache_entry())
 
-        _base_explorer_snapshot_cache = snapshot
-        _base_explorer_snapshot_mtime = cache_marker
+        _state._base_explorer_snapshot_cache = snapshot
+        _state._base_explorer_snapshot_mtime = cache_marker
         return snapshot, cache_marker
 
 
 def _load_base_full_snapshot() -> tuple[dict[str, Any] | None, float | None]:
-    global _base_full_snapshot_cache, _base_full_snapshot_mtime
-
     try:
         verified_mtime = os.path.getmtime(MDS_METADATA_VERIFIED_PATH)
     except OSError:
         verified_mtime = None
 
     if (
-        _base_full_snapshot_cache is not None
-        and _base_full_snapshot_mtime == verified_mtime
+        _state._base_full_snapshot_cache is not None
+        and _state._base_full_snapshot_mtime == verified_mtime
     ):
-        return _base_full_snapshot_cache, verified_mtime
+        return _state._base_full_snapshot_cache, verified_mtime
 
-    with _base_full_snapshot_lock:
+    with _state._base_full_snapshot_lock:
         if (
-            _base_full_snapshot_cache is not None
-            and _base_full_snapshot_mtime == verified_mtime
+            _state._base_full_snapshot_cache is not None
+            and _state._base_full_snapshot_mtime == verified_mtime
         ):
-            return _base_full_snapshot_cache, verified_mtime
+            return _state._base_full_snapshot_cache, verified_mtime
 
         snapshot: dict[str, Any] | None = None
 
@@ -238,15 +234,15 @@ def _load_base_full_snapshot() -> tuple[dict[str, Any] | None, float | None]:
             if payload is not None:
                 snapshot = build_bootstrap_snapshot(payload, load_metadata_cache_entry())
 
-        _base_full_snapshot_cache = snapshot
-        _base_full_snapshot_mtime = verified_mtime
+        _state._base_full_snapshot_cache = snapshot
+        _state._base_full_snapshot_mtime = verified_mtime
         return snapshot, verified_mtime
 
 
 def load_packaged_explorer_summary() -> dict[str, Any]:
     # The summary is only the snapshot's meta block, which the packaged meta
     # file already holds; avoid parsing the multi-megabyte snapshot for it.
-    if _base_explorer_snapshot_cache is None:
+    if _state._base_explorer_snapshot_cache is None:
         packaged_meta = _load_packaged_explorer_meta()
         if packaged_meta is not None:
             return dict(packaged_meta)
