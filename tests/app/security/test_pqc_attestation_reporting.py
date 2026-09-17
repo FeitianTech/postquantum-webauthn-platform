@@ -134,35 +134,102 @@ def test_non_pqc_attestation_leaves_pqc_field_unset(attestation_module):
     assert result["errors"]
 
 
-def test_pqc_fallback_success_does_not_become_the_verdict(attestation_module, monkeypatch):
-    """The laundering case itself.
+def _mldsa_basic_attestation_response(authenticator, *, challenge, signing_key=None):
+    """A packed basic attestation with a genuine ML-DSA-44 signature.
 
-    liboqs is not available in this environment, so a genuine ML-DSA signature
-    cannot be produced here. This test therefore drives the fallback's *output
-    contract* directly: even when the bare signature check succeeds, it must
-    not promote ``signature_valid`` or clear the errors the full verification
-    produced. (No verification function is weakened -- the stub makes the
-    fallback report success, which is the case that used to launder.)
+    The x5c certificate is a real ML-DSA-44 certificate, but it lacks the
+    packed-attestation policy extensions (Basic Constraints etc.), so full
+    packed verification genuinely fails while the bare signature check the
+    PQC fallback performs genuinely succeeds.
     """
 
-    from types import SimpleNamespace
+    import datetime
+    import hashlib
+
+    from cryptography import x509
+    from cryptography.hazmat.primitives import serialization
+    from cryptography.hazmat.primitives.asymmetric import mldsa
+    from cryptography.x509.oid import NameOID
+
+    certificate_key = mldsa.MLDSA44PrivateKey.generate()
+    name = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "No policy extensions")])
+    now = datetime.datetime.now(datetime.timezone.utc)
+    certificate = (
+        x509.CertificateBuilder()
+        .subject_name(name)
+        .issuer_name(name)
+        .public_key(certificate_key.public_key())
+        .serial_number(x509.random_serial_number())
+        .not_valid_before(now - datetime.timedelta(days=1))
+        .not_valid_after(now + datetime.timedelta(days=30))
+        .sign(certificate_key, None)
+    )
+
+    data = client_data(challenge=challenge, ceremony_type="webauthn.create")
+    auth_data = authenticator.authenticator_data(rp_id=RP_ID)
+    signer = signing_key or certificate_key
+    signature = signer.sign(auth_data + hashlib.sha256(data).digest())
+    att_obj = attestation_object(
+        auth_data,
+        fmt="packed",
+        att_stmt={
+            "alg": MLDSA44_ALG,
+            "sig": signature,
+            "x5c": [certificate.public_bytes(serialization.Encoding.DER)],
+        },
+    )
+    return {
+        "id": b64u(authenticator.credential_id),
+        "rawId": b64u(authenticator.credential_id),
+        "type": "public-key",
+        "response": {
+            "clientDataJSON": b64u(data),
+            "attestationObject": b64u(att_obj),
+        },
+        "clientExtensionResults": {},
+    }
+
+
+def test_pqc_fallback_success_does_not_become_the_verdict(attestation_module):
+    """The laundering case itself, driven with real ML-DSA crypto.
+
+    The attestation signature is a genuine ML-DSA-44 signature from the x5c
+    certificate's key, so the fallback's bare signature check succeeds. The
+    certificate fails the packed policy checks, so that success must not
+    promote ``signature_valid`` or clear the errors full verification produced.
+    """
 
     authenticator = Authenticator()
     challenge = b"\x64" * 32
-    response = _packed_registration_response(
-        authenticator, challenge=challenge, attestation_alg=MLDSA44_ALG
+    response = _mldsa_basic_attestation_response(authenticator, challenge=challenge)
+
+    result = attestation_module.perform_attestation_checks(
+        response,
+        {"challenge": challenge},
+        None,
+        None,
+        ORIGIN,
+        RP_ID,
     )
 
-    monkeypatch.setattr(
-        attestation_module,
-        "_attempt_pqc_attestation_signature_validation",
-        lambda *_a, **_k: {
-            "attempted": True,
-            "success": True,
-            "attestation_result": SimpleNamespace(trust_path=[]),
-            "error": None,
-        },
-        raising=False,
+    # The bare signature check genuinely passed...
+    assert result["pqc_signature_valid"] is True
+    # ...but it is NOT the verdict, and the errors survive.
+    assert result["signature_valid"] is False
+    assert result["errors"], "the PQC fallback must not clear attestation errors"
+
+
+def test_pqc_fallback_rejects_signature_from_another_mldsa_key(attestation_module):
+    """The fallback's success above depends on the signature, not the shape."""
+
+    from cryptography.hazmat.primitives.asymmetric import mldsa
+
+    authenticator = Authenticator()
+    challenge = b"\x65" * 32
+    response = _mldsa_basic_attestation_response(
+        authenticator,
+        challenge=challenge,
+        signing_key=mldsa.MLDSA44PrivateKey.generate(),
     )
 
     result = attestation_module.perform_attestation_checks(
@@ -174,8 +241,6 @@ def test_pqc_fallback_success_does_not_become_the_verdict(attestation_module, mo
         RP_ID,
     )
 
-    # The bare signature check passed...
-    assert result["pqc_signature_valid"] is True
-    # ...but it is NOT the verdict, and the errors survive.
+    assert result["pqc_signature_valid"] is False
     assert result["signature_valid"] is False
-    assert result["errors"], "the PQC fallback must not clear attestation errors"
+    assert result["errors"]
