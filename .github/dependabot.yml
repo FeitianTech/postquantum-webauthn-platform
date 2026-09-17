@@ -19,6 +19,10 @@ updates:
       - dependency-name: "python"
         versions:
           - ">=3.13"
+      # fido2 is the vendored copy in this repo, not the PyPI package of the
+      # same name. Dependabot fails the whole uv run trying to resolve it
+      # ("fido2 | unknown_error"), and a bump would replace local source.
+      - dependency-name: "fido2"
   - package-ecosystem: "docker"
     directory: "/"
     schedule:
