@@ -263,6 +263,54 @@ Noted: reported image growth of +55MB from `apt-get upgrade` did not reproduce f
 `tools/update_mds_snapshot.py`. 3 moderate dev-only npm advisories remain visible but ungated
 (`@vitest/mocker`; the fix needs vitest 4.1.11, which npm 10.9.8 cannot install).
 
+### Phase 6 — M3 pilot: unwind the globals carrier in `metadata` — DONE (2026-09-17), verified
+Four staged passes over 24 commits: give fragments real imports (inert while the carrier lives,
+so safe first) -> move 15 caches, 5 locks and 14 constants into a new leaf
+`metadata_parts/runtime_state.py` (all 8 `global` statements gone) -> route cross-fragment calls
+through `other_runtime.foo()` so patching the defining module still intercepts -> delete the
+carrier. `metadata.py` 258 -> **127 lines**, now a re-export shim.
+
+| Metric | Before | After |
+|---|---|---|
+| F821 repo-wide | 1008 | **557** |
+| F821 in `metadata_parts` | 450 | **0** |
+| `metadata.py` carrier refs | present | **0** |
+| ruff per-file-ignores | 5 modules | **4** |
+
+Remaining F821: `decode_parts` 366, `attestation_parts` 175, `decoder/decode.py` 16.
+Public API intact — all 19 `__all__` entries resolve; 7 modules still import from
+`server.app.metadata`. Suite unchanged at 1708/278, ruff green.
+
+**Tech-lead verification — collected test IDs diffed across the phase: zero added, zero
+removed.** A pure refactor at the test level, which is exactly right.
+
+**Fault injection reproduced independently.** Renaming `_base_metadata_trust_verified` at its
+definition now produces **43 loud errors** (86 `AttributeError` mentions) — matching the agent's
+number exactly. On the old code the same rename left **112 tests passing while patching
+nothing**. This is the real win: the tests were silently vacuous and are now honest.
+
+Technique worth reusing for the remaining carriers: re-exports written as **assignments**
+(`_load_base_metadata = base_snapshot_runtime._load_base_metadata`) rather than imports, since
+an assignment counts as a use and pyflakes then sees no unused import — that is what let
+`metadata.py` come off the F401/UP035 ignore list.
+
+**Corrections to my own briefing (my errors, not the agent's):**
+- The 7 `# pyright: reportUndefinedVariable=false` markers are in `decoder/decode_parts/`,
+  NOT `metadata_parts/`. None were droppable in this phase.
+- I quoted a 1714 pytest baseline; the real baseline at `origin/main` was **1708**. Verified in
+  a clean worktree. No tests were lost — my earlier figure was stale.
+
+**Import cycle unchanged and not breakable here:** `ensure_metadata_session_id` lives in
+`session_identity_runtime`, which needs `..session_metadata_store` -> `storage_common`. Pointing
+`storage_common` at the fragment just re-forms the cycle one hop over. The function-level import
+at `storage_common.py:98` stays; edge count identical.
+
+**Found but not fixed:** three dead `monkeypatch.setattr(metadata, "SESSION_METADATA_DIR", ...)`
+patches deleted — that name never existed on `metadata.py`, and `raising=False` hid the no-op for
+its entire life. `MetadataDownloadError` is in `__all__` but never raised or caught
+(`download_metadata_blob` raises `RuntimeError`) — dead public API. Two pre-existing
+builtin-shadow patches (`config.open`, `github_client.range`) left alone.
+
 ### Local development
 Tests previously ran against the global interpreter, whose packages matched nothing in
 `requirements.txt` (cryptography 44.0.3, fido2 2.1.1, gunicorn 23). A project venv now exists:
