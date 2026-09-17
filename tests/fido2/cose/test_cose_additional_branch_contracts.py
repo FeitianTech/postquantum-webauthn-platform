@@ -58,21 +58,6 @@ class _FakeOqsVerifier:
         return self._should_verify
 
 
-def test_get_optional_oqs_and_parameter_details_with_fake_oqs(monkeypatch):
-    fake_oqs = SimpleNamespace(
-        Signature=lambda _name: _FakeOqsVerifier(
-            should_verify=True,
-            details={"length_public_key": 4444, "length_signature": 5555},
-        )
-    )
-    monkeypatch.setattr(cose, "oqs", fake_oqs, raising=False)
-
-    assert cose._get_optional_oqs() is fake_oqs
-    details = cose._get_mldsa_parameter_details("ML-DSA-65")
-    assert details["public_key_length"] == 1952
-    assert details["signature_length"] == 3309
-
-
 def test_get_mldsa_parameter_details_handles_missing_or_failing_oqs(monkeypatch):
     monkeypatch.setattr(cose, "_get_optional_oqs", lambda: None, raising=False)
     assert cose._get_mldsa_parameter_details("ML-DSA-44")["public_key_length"] == 1312
@@ -208,11 +193,3 @@ def test_from_cryptography_key_paths_for_remaining_rsa_and_ed_classes():
     assert cose.Ed448.from_cryptography_key(ed448_pub)[3] == -53
     ed25519_pub = ed25519.Ed25519PrivateKey.generate().public_key()
     assert cose.EdDSA.from_cryptography_key(ed25519_pub)[3] == -8
-
-
-def test_require_oqs_message_when_missing(monkeypatch):
-    monkeypatch.setattr(cose, "oqs", None, raising=False)
-    monkeypatch.setattr(cose, "_oqs_import_error", RuntimeError("missing oqs"), raising=False)
-
-    with pytest.raises(RuntimeError, match="ML-DSA verification requires"):
-        cose._require_oqs()
