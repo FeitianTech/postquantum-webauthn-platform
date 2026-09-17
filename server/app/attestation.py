@@ -65,6 +65,7 @@ from .attestation_parts import (
     encoding_leaf,
     pqc_constraints_runtime,
     pqc_runtime,
+    runtime_state,
     trust_ca_runtime,
     trust_runtime,
 )
@@ -97,36 +98,9 @@ __all__ = [
     "summarize_authenticator_extensions",
 ]
 
-AAGUID_EXTENSION_OID = ObjectIdentifier("1.3.6.1.4.1.45724.1.1.4")
-
-EXTENSION_DISPLAY_METADATA: dict[str, dict[str, Any]] = {
-    "1.3.6.1.4.1.41482.13.1": {
-        "friendly_name": "Yubico: Firmware version",
-    },
-    "1.3.6.1.4.1.41482.2": {
-        "friendly_name": "Yubico: Device identifier",
-    },
-    "1.3.6.1.4.1.41482.1.1": {
-        "friendly_name": "Security Key by Yubico Series",
-    },
-    "1.3.6.1.4.1.45724.1.1.4": {
-        "friendly_name": "FIDO: Device AAGUID",
-    },
-    "1.3.6.1.4.1.45724.2.1.1": {
-        "friendly_name": "FIDO: Transports",
-    },
-    "2.5.29.14": {
-        "friendly_name": "Subject key id",
-    },
-    "2.5.29.35": {
-        "friendly_name": "Authority key identifier",
-    },
-    "2.5.29.19": {
-        "friendly_name": "X509v3 Basic Constraints",
-        "header": "X509v3 Basic Constraints",
-        "include_oid_in_header": False,
-    },
-}
+# Constants shared with the fragments.
+AAGUID_EXTENSION_OID = runtime_state.AAGUID_EXTENSION_OID
+EXTENSION_DISPLAY_METADATA = runtime_state.EXTENSION_DISPLAY_METADATA
 
 _PQC_ALGORITHM_NAME_TO_ID = {
     name.lower(): alg_id for alg_id, name in PQC_ALGORITHM_ID_TO_NAME.items()
