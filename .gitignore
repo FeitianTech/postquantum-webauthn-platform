@@ -8,7 +8,6 @@ dist/
 .ropeproject/
 ChangeLog
 man/*.1
-poetry.lock
 **/_build
 *.venv
 .qoder/
