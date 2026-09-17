@@ -159,6 +159,43 @@ If you are changing only UI logic plus lightweight server responses, prefer targ
   A stale lock fails the Docker build and CI.
 - The root `pyproject.toml` is the vendored `fido2/` library's manifest, not the app's.
 
+## CI, Deploys And Bots
+
+- Two independent pipelines run on a push to `main`: GitHub Actions
+  (`.github/workflows/ci-*.yml`) and Cloud Build (`cloudbuild.yaml`). A red CI
+  run does not stop Cloud Build, so `cloudbuild.yaml` runs pytest and vitest
+  itself before it builds an image. Keep that gate: it is the only thing
+  between a commit and production.
+- `ci-*.yml` run on `pull_request` and on `push` to `main` only. Do not drop the
+  branch filter; without it a same-repo PR runs everything twice.
+- Every action is pinned to a commit SHA with the version in a trailing comment.
+  Dependabot bumps both. Do not reintroduce a floating tag -- and note that
+  `astral-sh/setup-uv` publishes no floating major tag at all.
+- No workflow pushes to `main`. `update-coverage-badges.yml` and
+  `update-footer-year.yml` commit to a bot branch through
+  `.github/actions/open-bot-pr` and open a pull request, staging an explicit
+  path list rather than `git add -A`. GitHub does not start workflow runs for
+  events signed by `GITHUB_TOKEN`, so set a `BOT_PR_TOKEN` secret if those pull
+  requests should get CI automatically. Enforcement still depends on branch
+  protection on `main`, which lives in repository settings, not here.
+- `ci-security.yml` fails the build on a `pip-audit` finding against `uv.lock`,
+  on `npm audit --audit-level=high`, and on a fixable HIGH/CRITICAL Trivy
+  finding in the image. Each threshold is justified in a comment next to it. If
+  a scan starts failing, fix the dependency -- do not widen the threshold.
+- The runtime stage of the `Dockerfile` runs `apt-get upgrade`. Removing it puts
+  thirteen fixable HIGH/CRITICAL Debian CVEs back into the image.
+
+## The FIDO MDS Snapshot
+
+- The ~30MB generated snapshot under `frontend/static/` is **not tracked in git**
+  and **not baked into the image**. `server/app/mds_provisioning.py` fetches it at
+  runtime: local files, then Cloud Storage, then a verified upstream refresh.
+- Working locally: run `python tools/update_mds_snapshot.py` once. Without it the
+  metadata APIs return 404 and the explorer is empty; that is the documented
+  fallback, not a bug.
+- Never commit those files and never write a test that reads the real snapshot
+  path. `docs/MDS_SNAPSHOT.md` has the full picture.
+
 ## Repo-Specific Gotchas
 
 - The frontend is plain JS modules, not React/Vue.
