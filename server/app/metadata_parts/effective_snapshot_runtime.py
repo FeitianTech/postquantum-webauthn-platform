@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
 from ..mds_snapshot import build_entry_id, build_explorer_entry, normalise_aaguid_key
+from . import base_snapshot_runtime, session_items_runtime
 
 if TYPE_CHECKING:  # annotation-only, so no runtime import edge is needed
     from .session_items_runtime import SessionMetadataItem
@@ -97,7 +98,7 @@ def _compose_effective_snapshot(
         if isinstance(raw_entries, list):
             raw_base_entries = [entry for entry in raw_entries if isinstance(entry, Mapping)]
 
-    session_items = list_session_metadata_items()
+    session_items = session_items_runtime.list_session_metadata_items()
 
     if not session_items:
         # Sessions without uploads (nearly all of them) share the cached base
@@ -149,12 +150,12 @@ def _compose_effective_snapshot(
 
 
 def load_effective_explorer_snapshot() -> dict[str, Any]:
-    base_snapshot, _ = _load_base_explorer_snapshot()
+    base_snapshot, _ = base_snapshot_runtime._load_base_explorer_snapshot()
     return _compose_effective_snapshot(base_snapshot, include_detail=False)
 
 
 def load_effective_full_snapshot() -> dict[str, Any]:
-    base_snapshot, _ = _load_base_full_snapshot()
+    base_snapshot, _ = base_snapshot_runtime._load_base_full_snapshot()
     return _compose_effective_snapshot(
         base_snapshot,
         include_detail=True,
@@ -169,8 +170,8 @@ def resolve_effective_metadata_entry(
     aaguid: str | None = None,
     aaid: str | None = None,
 ) -> dict[str, Any] | None:
-    base_summary = load_packaged_explorer_summary()
-    session_items = list_session_metadata_items()
+    base_summary = base_snapshot_runtime.load_packaged_explorer_summary()
+    session_items = session_items_runtime.list_session_metadata_items()
     seen_aaguids: set[str] = set()
 
     for index, item in enumerate(session_items):
@@ -197,7 +198,7 @@ def resolve_effective_metadata_entry(
         if aaguid_key:
             seen_aaguids.add(aaguid_key)
 
-    base_metadata, _ = _load_base_metadata()
+    base_metadata, _ = base_snapshot_runtime._load_base_metadata()
     if base_metadata is None:
         return None
 

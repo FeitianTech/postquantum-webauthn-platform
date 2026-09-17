@@ -59,3 +59,24 @@ def payload_runtime():
     """The fragment that defines the entry payload helpers."""
 
     return pytest.importorskip("server.app.metadata_parts.entry_payload_runtime")
+
+
+@pytest.fixture
+def snapshot_runtime():
+    """The fragment that defines the base/explorer/full snapshot loaders."""
+
+    return pytest.importorskip("server.app.metadata_parts.base_snapshot_runtime")
+
+
+@pytest.fixture
+def items_runtime():
+    """The fragment that defines the session metadata item helpers."""
+
+    return pytest.importorskip("server.app.metadata_parts.session_items_runtime")
+
+
+@pytest.fixture
+def cache_runtime():
+    """The fragment that defines the metadata cache helpers."""
+
+    return pytest.importorskip("server.app.metadata_parts.cache_runtime")

@@ -128,7 +128,7 @@ def test_metadata_cache_and_verified_fallback_residual_error_paths(metadata_modu
     assert mtime == 123.0
 
 
-def test_base_explorer_snapshot_and_summary_and_resolution_session_match(metadata_module, monkeypatch):
+def test_base_explorer_snapshot_and_summary_and_resolution_session_match(metadata_module, monkeypatch, snapshot_runtime, items_runtime):
     def _getmtime(path):
         raise OSError("mtime-missing")
 
@@ -175,7 +175,7 @@ def test_base_explorer_snapshot_and_summary_and_resolution_session_match(metadat
     assert metadata_module.load_packaged_explorer_summary() == {"entryCount": 2}
 
     item = SimpleNamespace(payload={"aaguid": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"}, uploaded_at="now")
-    monkeypatch.setattr(metadata_module, "list_session_metadata_items", lambda: [item], raising=False)
+    monkeypatch.setattr(items_runtime, "list_session_metadata_items", lambda: [item], raising=False)
     monkeypatch.setattr(metadata_module, "_entry_matches_lookup", lambda *_args, **_kwargs: True, raising=False)
     monkeypatch.setattr(metadata_module, "_session_item_source_info", lambda _item: {"source": "session"}, raising=False)
     monkeypatch.setattr(

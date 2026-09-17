@@ -15,6 +15,7 @@ from ..config import (
     app,
 )
 from ..mds_snapshot import build_bootstrap_snapshot, build_explorer_snapshot
+from . import cache_runtime
 from . import runtime_state as _state
 
 
@@ -190,7 +191,7 @@ def _load_base_explorer_snapshot() -> tuple[dict[str, Any] | None, tuple[float |
         if snapshot is None:
             payload = _load_verified_metadata_payload()
             if payload is not None:
-                snapshot = build_explorer_snapshot(payload, load_metadata_cache_entry())
+                snapshot = build_explorer_snapshot(payload, cache_runtime.load_metadata_cache_entry())
 
         _state._base_explorer_snapshot_cache = snapshot
         _state._base_explorer_snapshot_mtime = cache_marker
@@ -232,7 +233,7 @@ def _load_base_full_snapshot() -> tuple[dict[str, Any] | None, float | None]:
         if snapshot is None:
             payload = _load_verified_metadata_payload()
             if payload is not None:
-                snapshot = build_bootstrap_snapshot(payload, load_metadata_cache_entry())
+                snapshot = build_bootstrap_snapshot(payload, cache_runtime.load_metadata_cache_entry())
 
         _state._base_full_snapshot_cache = snapshot
         _state._base_full_snapshot_mtime = verified_mtime
@@ -255,4 +256,4 @@ def load_packaged_explorer_summary() -> dict[str, Any]:
     if payload is None:
         return {}
 
-    return build_explorer_snapshot(payload, load_metadata_cache_entry()).get("meta", {})
+    return build_explorer_snapshot(payload, cache_runtime.load_metadata_cache_entry()).get("meta", {})

@@ -13,6 +13,7 @@ from fido2.mds3 import (
     MetadataBlobPayloadEntry,
 )
 
+from . import base_snapshot_runtime, entry_payload_runtime, session_items_runtime
 from . import runtime_state as _state
 
 if TYPE_CHECKING:  # annotation-only, so no runtime import edge is needed
@@ -28,7 +29,7 @@ def _merge_metadata(
 
     for item in session_items:
         entry = item.entry
-        aaguid = _extract_entry_aaguid(entry)
+        aaguid = entry_payload_runtime._extract_entry_aaguid(entry)
         if aaguid and aaguid in seen_aaguids:
             continue
         if aaguid:
@@ -38,7 +39,7 @@ def _merge_metadata(
     base_entries: list[MetadataBlobPayloadEntry] = []
     if base_metadata is not None:
         for entry in base_metadata.entries:
-            aaguid = _extract_entry_aaguid(entry)
+            aaguid = entry_payload_runtime._extract_entry_aaguid(entry)
             if aaguid and aaguid in seen_aaguids:
                 continue
             base_entries.append(entry)
@@ -99,8 +100,8 @@ def metadata_entry_trust_anchor_status(entry: Any) -> bool | None:
 def get_mds_verifier() -> MdsAttestationVerifier | None:
     """Return an MDS attestation verifier using session metadata when available."""
 
-    base_metadata, base_mtime = _load_base_metadata()
-    session_items = list_session_metadata_items()
+    base_metadata, base_mtime = base_snapshot_runtime._load_base_metadata()
+    session_items = session_items_runtime.list_session_metadata_items()
 
     if has_request_context():
         # Holding the entry objects on ``g`` keeps their ids valid for the
