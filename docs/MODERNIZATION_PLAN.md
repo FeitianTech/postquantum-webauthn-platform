@@ -95,6 +95,35 @@ identity rather than browser namespace — an architectural change (see M3/M4), 
   store using `ifGenerationMatch=0` (create-if-absent) so the first write wins across
   instances, with a lifecycle rule for cleanup. **Decision pending.**
 
+### Phase 2 — liboqs infrastructure removal — DONE (2026-09-17), verified
+`prebuilt_liboqs/` deleted (13MB binary + wheel). Dockerfile lost all four overlapping
+library-load mechanisms (`LD_LIBRARY_PATH`, the `COPY`, the `ldconfig`/symlink dance,
+`LD_PRELOAD`), plus `cmake`/`ninja-build`/`CMAKE_BUILD_PARALLEL_LEVEL` and the `pqcrypto`
+install. CMD is now exec form, so gunicorn is PID 1 and receives SIGTERM directly.
+`pqc` extra dropped; `platform: linux/amd64` pin removed from docker-compose.
+
+Tech-lead verification inside the built image (not taken on report): `/health` → 200 `ok`;
+`detect_available_pqc_algorithms()` → `{-48,-49,-50}` with no error; ML-DSA sign/verify works;
+`oqs` absent; `cryptography` 50.0.1. Image 350MB → 327MB (89.3 → 83.3MB compressed);
+**arm64 now builds natively for the first time**. Suite 1688 → **1689**.
+
+The extra test is a genuine negative: the same attestation signed by a DIFFERENT ML-DSA key
+asserts `pqc_signature_valid is False`, proving the positive case depends on the signature
+rather than the payload shape.
+
+### CRITICAL — production ships Flask 2.3.3 while CI tests Flask 3.1.3 (CONFIRMED)
+No longer an inference from manifests. Verified by running the built image:
+`Flask 2.3.3`, Python 3.12.14, cryptography 50.0.1.
+Cause: the Docker build never reads `requirements.txt` (which says `Flask>=3.1.3,<4.0`).
+Deps reach the image via `pip install .` + `./server`, and `server/pyproject.toml:13` pins
+`Flask = "^2.0"`. So the gunicorn and `google-*` pins in `requirements.txt` do not apply to the
+image either. **Production runs a Flask major version behind what CI tests.** This raises the
+priority of the dependency single-source-of-truth work — see A1.
+
+Also noted: the builder stage still installs `build-essential`, `git`, `libssl-dev`,
+`pkg-config`; `cryptography` wheels bundle OpenSSL so these may be removable. The
+`apt-get purge` in the builder stage is a no-op because that stage is discarded.
+
 ### Local development
 Tests previously ran against the global interpreter, whose packages matched nothing in
 `requirements.txt` (cryptography 44.0.3, fido2 2.1.1, gunicorn 23). A project venv now exists:
