@@ -209,7 +209,6 @@ _CERTIFICATE_BINDINGS: Dict[str, Callable[..., Any]] = {
     "_normalise_signature_algorithm_name": _certificate_signature_leaf._normalise_signature_algorithm_name,
     "_derive_certificate_algorithm_info": _certificate_signature_leaf._derive_certificate_algorithm_info,
     "_extract_common_names": _certificate_signature_leaf._extract_common_names,
-    "_load_oqs_signature_details": _certificate_public_key_leaf._load_oqs_signature_details,
     "_build_unknown_public_key_info": _certificate_public_key_leaf._build_unknown_public_key_info,
     "_serialize_public_key_info": _certificate_public_key_leaf._serialize_public_key_info,
     "_serialize_extension_value": _certificate_extensions_leaf._serialize_extension_value,
