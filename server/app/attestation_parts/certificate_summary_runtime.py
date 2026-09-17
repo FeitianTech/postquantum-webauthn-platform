@@ -9,8 +9,7 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec, ed448, ed25519, rsa
 from cryptography.x509.oid import ExtensionOID
 
-from . import encoding_leaf
-from .certificate_signature_leaf import format_x509_name
+from . import certificate_signature_leaf, encoding_leaf
 from .trust_runtime import _ensure_utc_datetime
 
 
@@ -47,7 +46,7 @@ def _build_certificate_summary(
         f"Certificate Serial Number: {serial_decimal} ({serial_hex})"
     )
     _append_line(f"Signature Algorithm: {signature_algorithm}")
-    _append_line(f"Issuer: {format_x509_name(certificate.issuer)}")
+    _append_line(f"Issuer: {certificate_signature_leaf.format_x509_name(certificate.issuer)}")
 
     _append_blank_line()
     _append_line("Validity:")
@@ -55,7 +54,7 @@ def _build_certificate_summary(
     _append_line(f"    Not After: {_isoformat(not_valid_after)}")
 
     _append_blank_line()
-    _append_line(f"Subject: {format_x509_name(certificate.subject)}")
+    _append_line(f"Subject: {certificate_signature_leaf.format_x509_name(certificate.subject)}")
 
     pk_summary_entries: list[tuple[str, Any]] = []
     if public_key is None:

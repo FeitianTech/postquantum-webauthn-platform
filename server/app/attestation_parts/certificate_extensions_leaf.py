@@ -4,8 +4,7 @@ from typing import Any
 
 from cryptography import x509
 
-from . import encoding_leaf
-from .certificate_signature_leaf import format_x509_name
+from . import certificate_signature_leaf, encoding_leaf
 
 
 def _parse_fido_transport_bitfield(raw_value: bytes) -> list[str]:
@@ -60,7 +59,7 @@ def _serialize_extension_value(ext: Any) -> Any:
             )
         if value.authority_cert_issuer:
             serialized["Authority Cert Issuer"] = [
-                format_x509_name(name) for name in value.authority_cert_issuer
+                certificate_signature_leaf.format_x509_name(name) for name in value.authority_cert_issuer
             ]
         return serialized
     if isinstance(value, x509.BasicConstraints):

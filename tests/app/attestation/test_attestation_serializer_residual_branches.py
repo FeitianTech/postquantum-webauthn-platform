@@ -8,7 +8,7 @@ from cryptography import x509
 from cryptography.exceptions import UnsupportedAlgorithm
 
 
-def test_attestation_helper_residual_branches(monkeypatch):
+def test_attestation_helper_residual_branches(monkeypatch, public_key_leaf):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     assert attestation_module._normalise_pqc_algorithm_identifier("   ") is None
@@ -63,7 +63,7 @@ def test_attestation_helper_residual_branches(monkeypatch):
     )
 
     monkeypatch.setattr(
-        attestation_module,
+        public_key_leaf,
         "_build_unknown_public_key_info",
         lambda _cert, _err: (
             {"type": "Unknown", "algorithm": {"name": "Unknown"}},
@@ -72,7 +72,6 @@ def test_attestation_helper_residual_branches(monkeypatch):
                 ("Nested", ["line-a", "line-b"]),
             ],
         ),
-        raising=False,
     )
     fallback = attestation_module._serialize_attestation_certificate_fallback(
         b"\x30\x82\x01\x00",
@@ -82,7 +81,7 @@ def test_attestation_helper_residual_branches(monkeypatch):
     assert "Nested:" in fallback["summary"]
 
 
-def test_serialize_attestation_certificate_mocked_certificate_residual_paths(monkeypatch):
+def test_serialize_attestation_certificate_mocked_certificate_residual_paths(monkeypatch, extensions_leaf, public_key_leaf):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     class _Extensions(list):
@@ -146,7 +145,7 @@ def test_serialize_attestation_certificate_mocked_certificate_residual_paths(mon
     monkeypatch.setattr(attestation_module, "describe_mldsa_oid_name", lambda _oid: "FriendlySig", raising=False)
     monkeypatch.setattr(attestation_module, "describe_mldsa_oid", lambda _oid: {}, raising=False)
     monkeypatch.setattr(
-        attestation_module,
+        public_key_leaf,
         "_build_unknown_public_key_info",
         lambda _cert, _err: (
             {"type": "Unknown", "algorithm": {"name": "Unknown"}},
@@ -156,7 +155,6 @@ def test_serialize_attestation_certificate_mocked_certificate_residual_paths(mon
                 ("Structured", [None, {"inner": "value"}]),
             ],
         ),
-        raising=False,
     )
     monkeypatch.setitem(
         attestation_module.EXTENSION_DISPLAY_METADATA,
@@ -169,10 +167,9 @@ def test_serialize_attestation_certificate_mocked_certificate_residual_paths(mon
         {"include_oid_in_header": False},
     )
     monkeypatch.setattr(
-        attestation_module,
+        extensions_leaf,
         "_serialize_extension_value",
         lambda _ext: {"skip": "", "nested": [None, {"k": "v"}]},
-        raising=False,
     )
 
     serialized = attestation_module.serialize_attestation_certificate(b"\x30\x82\x01\x00")
