@@ -9,7 +9,7 @@ from __future__ import annotations
 from typing import Any, Dict, Mapping, Optional, Sequence, Tuple
 
 
-def _decode_json_object(value: Any, raw_text: Optional[str] = None) -> Dict[str, Any]:
+def _decode_json_object(value: Any, raw_text: Optional[str] = None) -> dict[str, Any]:
     if isinstance(value, Mapping) and _is_public_key_credential(value):
         return _decode_public_key_credential(value, raw_text=raw_text)
 
@@ -30,18 +30,18 @@ def _decode_json_object(value: Any, raw_text: Optional[str] = None) -> Dict[str,
 
 def _decode_public_key_credential(
     credential: Mapping[str, Any], raw_text: Optional[str] = None
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     response = credential.get("response")
     response_mapping: Mapping[str, Any] = response if isinstance(response, Mapping) else {}
 
-    response_details: Dict[str, Any] = {
+    response_details: dict[str, Any] = {
         key: value
         for key, value in response_mapping.items()
         if key
         not in {"attestationObject", "clientDataJSON", "authenticatorData", "signature", "userHandle"}
     }
 
-    decoded: Dict[str, Any] = {
+    decoded: dict[str, Any] = {
         "id": credential.get("id"),
         "type": credential.get("type"),
     }
@@ -130,7 +130,7 @@ def _decode_public_key_credential(
     }
 
 
-def _decode_pem_certificates(text: str) -> Dict[str, Any]:
+def _decode_pem_certificates(text: str) -> dict[str, Any]:
     certificates = []
     for match in _PEM_CERT_PATTERN.finditer(text):
         body = re.sub(r"[^A-Za-z0-9+/=]", "", match.group("body"))
@@ -149,7 +149,7 @@ def _decode_pem_certificates(text: str) -> Dict[str, Any]:
         serialize_attestation_certificate(cert_bytes) for cert_bytes in certificates
     ]
 
-    payload: Dict[str, Any]
+    payload: dict[str, Any]
     if len(decoded_details) == 1:
         payload = decoded_details[0]
     else:
@@ -164,7 +164,7 @@ def _decode_pem_certificates(text: str) -> Dict[str, Any]:
     }
 
 
-def _decode_binary_payload(data: bytes, encoding: str) -> Dict[str, Any]:
+def _decode_binary_payload(data: bytes, encoding: str) -> dict[str, Any]:
     text_version = _try_decode_utf8(data)
 
     if text_version and _looks_like_pem(text_version):
@@ -214,7 +214,7 @@ def _decode_binary_payload(data: bytes, encoding: str) -> Dict[str, Any]:
     }
 
 
-def _decode_binary_input(value: str) -> Tuple[bytes, str]:
+def _decode_binary_input(value: str) -> tuple[bytes, str]:
     cleaned = "".join(value.split())
     if not cleaned:
         raise ValueError("No binary data present.")
@@ -246,7 +246,7 @@ def _decode_binary_input(value: str) -> Tuple[bytes, str]:
         ) from exc
 
 
-def _decode_binary_field(value: Any) -> Optional[Tuple[bytes, str]]:
+def _decode_binary_field(value: Any) -> Optional[tuple[bytes, str]]:
     if isinstance(value, str):
         try:
             return _decode_binary_input(value)
@@ -268,7 +268,7 @@ def _looks_like_pem(value: str) -> bool:
     return "-----BEGIN CERTIFICATE-----" in value.upper()
 
 
-def _try_decode_certificate_bytes(data: bytes, encoding: str) -> Optional[Dict[str, Any]]:
+def _try_decode_certificate_bytes(data: bytes, encoding: str) -> Optional[dict[str, Any]]:
     try:
         x509.load_der_x509_certificate(data)
     except Exception:
@@ -282,7 +282,7 @@ def _try_decode_certificate_bytes(data: bytes, encoding: str) -> Optional[Dict[s
     }
 
 
-def _try_decode_attestation_object(data: bytes, encoding: str) -> Optional[Dict[str, Any]]:
+def _try_decode_attestation_object(data: bytes, encoding: str) -> Optional[dict[str, Any]]:
     try:
         details = _parse_attestation_object(data)
     except Exception:
@@ -296,7 +296,7 @@ def _try_decode_attestation_object(data: bytes, encoding: str) -> Optional[Dict[
     }
 
 
-def _try_decode_authenticator_data(data: bytes, encoding: str) -> Optional[Dict[str, Any]]:
+def _try_decode_authenticator_data(data: bytes, encoding: str) -> Optional[dict[str, Any]]:
     try:
         details = _describe_authenticator_data_bytes(data)
     except Exception:
@@ -316,7 +316,7 @@ def _expand_cbor_value(value: Any) -> Any:
     if isinstance(value, (bytes, bytearray, memoryview)):
         return _binary_summary(bytes(value))
     if isinstance(value, Mapping):
-        expanded: Dict[str, Any] = {}
+        expanded: dict[str, Any] = {}
         for key, entry in value.items():
             expanded[str(key)] = _expand_cbor_value(entry)
         return expanded

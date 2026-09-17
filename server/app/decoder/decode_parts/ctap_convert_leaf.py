@@ -23,7 +23,7 @@ def _convert_ctap_credential_descriptor(entry: Any) -> Any:
     if not isinstance(entry, Mapping):
         return _hex_json_safe(entry)
 
-    descriptor: Dict[str, Any] = {}
+    descriptor: dict[str, Any] = {}
     id_value = _get_mapping_entry(entry, "id", 1)
     if id_value is not MISSING:
         id_bytes = _coerce_cbor_bytes(id_value)
@@ -55,7 +55,7 @@ def _attempt_decode_cbor_map(data: bytes) -> Optional[Mapping[Any, Any]]:
 
 
 def _normalize_user_mapping(entry: Mapping[Any, Any]) -> Mapping[Any, Any]:
-    normalized: Dict[Any, Any] = {}
+    normalized: dict[Any, Any] = {}
     for key, value in entry.items():
         if isinstance(key, ByteBuffer):
             candidate_key = key.getvalue()

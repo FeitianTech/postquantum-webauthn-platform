@@ -60,7 +60,7 @@ def _resolve_expected_challenge(
 
 
 def _populate_client_data_results(
-    results: Dict[str, Any],
+    results: dict[str, Any],
     *,
     client_data: Any,
     expected_challenge_bytes: bytes,
@@ -108,7 +108,7 @@ def _populate_client_data_results(
 
 
 def _populate_rp_id_hash_result(
-    results: Dict[str, Any],
+    results: dict[str, Any],
     *,
     auth_data_obj: Any,
     rp_id: str,
@@ -125,12 +125,12 @@ def _populate_rp_id_hash_result(
 
 
 def _populate_authenticator_data_results(
-    results: Dict[str, Any],
+    results: dict[str, Any],
     *,
     auth_data_obj: Any,
     state: Optional[Mapping[str, Any]],
     public_key_options: Optional[Mapping[str, Any]],
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     flags = auth_data_obj.flags
     user_present = bool(flags & AuthenticatorData.FLAG.UP)
     user_verified = bool(flags & AuthenticatorData.FLAG.UV)

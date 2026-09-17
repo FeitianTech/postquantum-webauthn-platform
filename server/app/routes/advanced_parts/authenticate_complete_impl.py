@@ -63,7 +63,7 @@ def advanced_authenticate_complete_impl(advanced_module: Any):
         else CHALLENGE_SOURCE_CLIENT
     )
 
-    def _fail(payload: Dict[str, Any], status: int = 400):
+    def _fail(payload: dict[str, Any], status: int = 400):
         payload.setdefault("challengeSource", challenge_source)
         return advanced_module.jsonify(payload), status
 
@@ -84,7 +84,7 @@ def advanced_authenticate_complete_impl(advanced_module: Any):
     resident_key_only = not allow_credentials_list
 
     raw_hints = public_key.get("hints")
-    hints_list: List[str] = []
+    hints_list: list[str] = []
     if isinstance(raw_hints, list):
         hints_list = [item for item in raw_hints if isinstance(item, str)]
 
@@ -116,15 +116,15 @@ def advanced_authenticate_complete_impl(advanced_module: Any):
                 {"error": "Authenticator attachment is not permitted by the selected hints."}
             )
 
-    raw_credentials_input: Optional[List[Any]] = None
+    raw_credentials_input: Optional[list[Any]] = None
     for field in ("__storedCredentials", "storedCredentials", "credentials"):
         candidate = data.get(field)
         if isinstance(candidate, list):
             raw_credentials_input = candidate
             break
 
-    stored_records: List[Dict[str, Any]] = []
-    serialized_credentials: List[Dict[str, Any]] = []
+    stored_records: list[dict[str, Any]] = []
+    serialized_credentials: list[dict[str, Any]] = []
     if isinstance(raw_credentials_input, list):
         stored_records, serialized_credentials = advanced_module._parse_client_supplied_credentials(raw_credentials_input)
 
@@ -152,7 +152,7 @@ def advanced_authenticate_complete_impl(advanced_module: Any):
 
     advanced_module.session.pop("advanced_auth_credentials_meta", None)
 
-    credential_lookup: Dict[bytes, Dict[str, Any]] = {
+    credential_lookup: dict[bytes, dict[str, Any]] = {
         bytes(record["id"]): record
         for record in stored_records
         if isinstance(record.get("id"), (bytes, bytearray, memoryview))
@@ -278,7 +278,7 @@ def advanced_authenticate_complete_impl(advanced_module: Any):
                     "no signature verification was performed.",
                     credential_alg,
                 )
-                unsupported_payload: Dict[str, Any] = {
+                unsupported_payload: dict[str, Any] = {
                     "status": "UNSUPPORTED_ALGORITHM",
                     "verified": False,
                     "signatureVerified": False,
@@ -297,7 +297,7 @@ def advanced_authenticate_complete_impl(advanced_module: Any):
                     unsupported_payload["failedCredentialId"] = failed_credential_id
                 return advanced_module.jsonify(unsupported_payload), 400
 
-            signature_payload: Dict[str, Any] = {
+            signature_payload: dict[str, Any] = {
                 "status": "VERIFICATION_FAILED",
                 "verified": False,
                 "signatureVerified": False,
@@ -325,7 +325,7 @@ def advanced_authenticate_complete_impl(advanced_module: Any):
 
         advanced_module.log_algorithm_selection("authentication", auth_alg)
 
-        debug_info: Dict[str, Any] = {"hintsUsed": public_key.get("hints", [])}
+        debug_info: dict[str, Any] = {"hintsUsed": public_key.get("hints", [])}
 
         authenticated_id = None
         if credential_id_bytes:
@@ -346,7 +346,7 @@ def advanced_authenticate_complete_impl(advanced_module: Any):
             debug_info["algorithm"] = auth_alg
             debug_info["algorithmDescription"] = advanced_module.describe_algorithm(auth_alg)
 
-        response_payload: Dict[str, Any] = {
+        response_payload: dict[str, Any] = {
             "status": "OK",
             "verified": True,
             "signatureVerified": True,
@@ -369,7 +369,7 @@ def advanced_authenticate_complete_impl(advanced_module: Any):
 
         return advanced_module.jsonify(response_payload)
     except Exception as exc:
-        response_payload: Dict[str, Any] = {
+        response_payload: dict[str, Any] = {
             "error": str(exc),
             "challengeSource": challenge_source,
             "challengeStatus": challenge_status,

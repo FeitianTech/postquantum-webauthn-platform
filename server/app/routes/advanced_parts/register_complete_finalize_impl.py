@@ -6,14 +6,14 @@ from typing import Any, Dict, List, Mapping, Optional
 def finalize_registration_completion(
     advanced_module: Any,
     *,
-    stored_credential: Dict[str, Any],
-    rp_info: Dict[str, Any],
+    stored_credential: dict[str, Any],
+    rp_info: dict[str, Any],
     metadata_summary: Any,
     response: Any,
     metadata_session_id: str,
     username: str,
-    warnings: List[str],
-    debug_info: Dict[str, Any],
+    warnings: list[str],
+    debug_info: dict[str, Any],
     algoname: str,
     resolved_rp_id: str,
     credential_id_bytes: bytes,
@@ -63,7 +63,7 @@ def finalize_registration_completion(
             metadata_description = raw_description
 
     transports_field = response.get("transports") if isinstance(response, Mapping) else None
-    transports: Optional[List[str]] = None
+    transports: Optional[list[str]] = None
     if isinstance(transports_field, list):
         transports = [str(item) for item in transports_field if isinstance(item, str)]
 
@@ -95,7 +95,7 @@ def finalize_registration_completion(
 
     advanced_module.record_registration_event(event)
 
-    response_payload: Dict[str, Any] = {
+    response_payload: dict[str, Any] = {
         "status": "OK",
         "algo": algoname,
         **debug_info,

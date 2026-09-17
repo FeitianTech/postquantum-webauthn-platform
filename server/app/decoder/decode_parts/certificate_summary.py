@@ -15,11 +15,11 @@ from ...attestation import format_hex_bytes_lines, format_hex_string_lines
 from .certificate_extensions import _build_certificate_extensions_lines
 
 
-def _build_certificate_summary_lines(decoded: Any) -> List[str]:
+def _build_certificate_summary_lines(decoded: Any) -> list[str]:
     if not isinstance(decoded, Mapping):
         return []
 
-    lines: List[str] = []
+    lines: list[str] = []
 
     version = decoded.get("version")
     if isinstance(version, Mapping):
@@ -88,11 +88,11 @@ def _format_certificate_time(value: Any) -> Optional[str]:
     return None
 
 
-def _build_subject_public_key_info_lines(info: Any) -> List[str]:
+def _build_subject_public_key_info_lines(info: Any) -> list[str]:
     if not isinstance(info, Mapping):
         return []
 
-    lines: List[str] = ["Subject Public Key Info:"]
+    lines: list[str] = ["Subject Public Key Info:"]
 
     key_type = info.get("type")
     if key_type:
@@ -116,22 +116,22 @@ def _build_subject_public_key_info_lines(info: Any) -> List[str]:
     return [line for line in lines if line]
 
 
-def _format_public_key_point_lines(point: Any) -> List[str]:
+def _format_public_key_point_lines(point: Any) -> list[str]:
     if isinstance(point, str) and point.strip():
         return format_hex_string_lines(point)
     return []
 
 
-def _build_signature_lines(signature: Any) -> List[str]:
+def _build_signature_lines(signature: Any) -> list[str]:
     if not isinstance(signature, Mapping):
         return []
 
-    lines: List[str] = []
+    lines: list[str] = []
     algorithm = signature.get("algorithm")
     if algorithm:
         lines.append(f"Signature Algorithm: {algorithm}")
 
-    hex_lines: List[str]
+    hex_lines: list[str]
     signature_lines = signature.get("lines")
     if isinstance(signature_lines, list) and signature_lines:
         hex_lines = [line for line in signature_lines if line]
@@ -146,11 +146,11 @@ def _build_signature_lines(signature: Any) -> List[str]:
     return lines
 
 
-def _build_fingerprint_lines(fingerprints: Any) -> List[str]:
+def _build_fingerprint_lines(fingerprints: Any) -> list[str]:
     if not isinstance(fingerprints, Mapping):
         return []
 
-    ordered: List[Tuple[str, List[str]]] = []
+    ordered: list[tuple[str, list[str]]] = []
     for label in ("md5", "sha1", "sha256"):
         value = fingerprints.get(label)
         if isinstance(value, str) and value.strip():
@@ -159,14 +159,14 @@ def _build_fingerprint_lines(fingerprints: Any) -> List[str]:
     if not ordered:
         return []
 
-    lines: List[str] = ["Fingerprint:"]
+    lines: list[str] = ["Fingerprint:"]
     for name, hex_lines in ordered:
         lines.append(f"{name}:")
         lines.extend(hex_lines)
     return lines
 
 
-def _build_subject_key_identifier_lines(decoded: Mapping[str, Any]) -> List[str]:
+def _build_subject_key_identifier_lines(decoded: Mapping[str, Any]) -> list[str]:
     extensions = decoded.get("extensions") if isinstance(decoded, Mapping) else None
     if isinstance(extensions, list):
         for extension in extensions:

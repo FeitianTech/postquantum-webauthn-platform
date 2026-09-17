@@ -94,17 +94,17 @@ class _CanonicalCBOREncoder:
             chunks.append(encoded_key + encoded_value)
         return prefix + b"".join(chunks)
 
-    def _canonicalize_map(self, mapping: Mapping[Any, Any]) -> Dict[Any, Any]:
+    def _canonicalize_map(self, mapping: Mapping[Any, Any]) -> dict[Any, Any]:
         sorted_items = self._sorted_map_items(mapping)
-        result: Dict[Any, Any] = {}
+        result: dict[Any, Any] = {}
         for _encoded_key, key, value in sorted_items:
             result[key] = self._canonicalize(value)
         return result
 
     def _sorted_map_items(
         self, mapping: Mapping[Any, Any]
-    ) -> List[Tuple[bytes, Any, Any]]:
-        encoded_items: List[Tuple[bytes, Any, Any]] = []
+    ) -> list[tuple[bytes, Any, Any]]:
+        encoded_items: list[tuple[bytes, Any, Any]] = []
         seen_keys: set[bytes] = set()
         for key, value in mapping.items():
             encoded_key = self._encode(key)

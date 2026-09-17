@@ -94,8 +94,8 @@ def _derive_certificate_algorithm_info(signature_info: Mapping[str, Any]) -> str
     return "_".join(components)
 
 
-def _extract_common_names(name: Any) -> List[str]:
-    values: List[str] = []
+def _extract_common_names(name: Any) -> list[str]:
+    values: list[str] = []
     for attribute in name.get_attributes_for_oid(NameOID.COMMON_NAME):
         value = attribute.value
         if isinstance(value, str):

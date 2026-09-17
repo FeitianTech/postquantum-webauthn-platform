@@ -9,8 +9,8 @@ from __future__ import annotations
 from typing import Any, Dict, List, Mapping, Optional, Tuple
 
 
-def _decode_cbor_sequence(payload: bytes) -> Tuple[List[Dict[str, Any]], List[Any], int, bytes]:
-    def _cbor2_decode_with_consumed(data: bytes) -> Tuple[Any, int]:
+def _decode_cbor_sequence(payload: bytes) -> tuple[list[dict[str, Any]], list[Any], int, bytes]:
+    def _cbor2_decode_with_consumed(data: bytes) -> tuple[Any, int]:
         fp = BytesIO(data)
         decoder = cbor2.CBORDecoder(fp)
         return decoder.decode(), fp.tell()
@@ -28,10 +28,10 @@ def _decode_cbor_sequence(payload: bytes) -> Tuple[List[Dict[str, Any]], List[An
 
 
 def _repair_get_assertion_entries(
-    structure: Dict[str, Any],
+    structure: dict[str, Any],
     value: Mapping[Any, Any],
     raw_bytes: Optional[bytes] = None,
-) -> Tuple[Dict[str, Any], Mapping[Any, Any], Optional[bytes]]:
+) -> tuple[dict[str, Any], Mapping[Any, Any], Optional[bytes]]:
     if not isinstance(value, dict):
         return structure, value, None
 
@@ -70,7 +70,7 @@ def _repair_get_assertion_entries(
         entries.pop(idx)
 
     recovered_value = dict(value)
-    recovered_fields: Dict[int, Any] = {}
+    recovered_fields: dict[int, Any] = {}
 
     if raw_bytes:
         raw_signature, raw_field_map = _extract_get_assertion_trailing_from_raw(raw_bytes)
@@ -152,7 +152,7 @@ def _repair_get_assertion_entries(
     return structure, recovered_value, signature_bytes
 
 
-def _try_decode_cbor(data: bytes, encoding: str) -> Optional[Dict[str, Any]]:
+def _try_decode_cbor(data: bytes, encoding: str) -> Optional[dict[str, Any]]:
     if not data:
         return None
 
@@ -160,7 +160,7 @@ def _try_decode_cbor(data: bytes, encoding: str) -> Optional[Dict[str, Any]]:
     ctap_details = dict(ctap_info) if ctap_info is not None else None
 
     if not payload:
-        decoded_payload: Dict[str, Any] = {
+        decoded_payload: dict[str, Any] = {
             "decodedValue": {"summary": "Empty CBOR payload", "byteLength": 0},
         }
         if ctap_details is not None:
@@ -254,10 +254,10 @@ def _try_decode_cbor(data: bytes, encoding: str) -> Optional[Dict[str, Any]]:
 
         base_value = working_value
 
-    decoded_payload: Dict[str, Any] = {}
+    decoded_payload: dict[str, Any] = {}
 
-    expanded_json: Optional[Dict[str, Any]] = None
-    ctap_decoded: Optional[Dict[str, Any]] = None
+    expanded_json: Optional[dict[str, Any]] = None
+    ctap_decoded: Optional[dict[str, Any]] = None
     hex_decoded_value: Optional[Any] = None
 
     if isinstance(base_value, Mapping):
@@ -286,7 +286,7 @@ def _try_decode_cbor(data: bytes, encoding: str) -> Optional[Dict[str, Any]]:
     if ctap_decoded is None and hex_decoded_value is not None:
         decoded_payload["decodedValue"] = _stringify_mapping_keys(_hex_json_safe(hex_decoded_value))
 
-    warnings: List[str] = []
+    warnings: list[str] = []
 
     if ctap_details is not None:
         ctap_details["payloadLength"] = consumed_total
@@ -311,7 +311,7 @@ def _try_decode_cbor(data: bytes, encoding: str) -> Optional[Dict[str, Any]]:
             ctap_details["trailingBytesHex"] = trailing.hex()
         decoded_payload["ctap"] = _stringify_mapping_keys(ctap_details)
 
-    result: Dict[str, Any] = {
+    result: dict[str, Any] = {
         "format": "CBOR",
         "inputEncoding": encoding,
         "decoded": decoded_payload,

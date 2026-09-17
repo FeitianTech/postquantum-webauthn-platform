@@ -131,7 +131,7 @@ class TpmAttestationFormat:
 
     name: bytes
     data: bytes
-    clock_info: Tuple[int, int, int, bool]
+    clock_info: tuple[int, int, int, bool]
     firmware_version: int
     attested: TpmsCertifyInfo
 

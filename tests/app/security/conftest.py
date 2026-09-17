@@ -29,10 +29,10 @@ def advanced_module():
 
 
 @pytest.fixture
-def simple_storage(simple_module, monkeypatch) -> Dict[str, Any]:
+def simple_storage(simple_module, monkeypatch) -> dict[str, Any]:
     """Neutralise simple-flow persistence and capture what it would store."""
 
-    saved: Dict[str, Any] = {}
+    saved: dict[str, Any] = {}
 
     def _savekey(email, credentials, *, session_id=None):
         saved["email"] = email
@@ -48,10 +48,10 @@ def simple_storage(simple_module, monkeypatch) -> Dict[str, Any]:
 
 
 @pytest.fixture
-def advanced_storage(advanced_module, monkeypatch) -> List[Any]:
+def advanced_storage(advanced_module, monkeypatch) -> list[Any]:
     """Neutralise advanced-flow persistence and capture stored artifacts."""
 
-    stored: List[Any] = []
+    stored: list[Any] = []
 
     def _store(storage_id, payload, *, session_id=None):
         stored.append((storage_id, payload, session_id))

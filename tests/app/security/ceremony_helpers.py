@@ -123,7 +123,7 @@ class Authenticator:
         declared_algorithm: Optional[int] = None,
         cose_key_bytes: Optional[bytes] = None,
         resident: bool = True,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Build the client-supplied credential record the advanced tab sends.
 
         ``declared_algorithm`` populates the ``algorithm`` field, which is
@@ -131,7 +131,7 @@ class Authenticator:
         heart of the custom-algorithm bypass.
         """
 
-        entry: Dict[str, Any] = {
+        entry: dict[str, Any] = {
             "credentialId": b64u(self.credential_id),
             "publicKey": b64u(
                 self.cose_key_bytes if cose_key_bytes is None else cose_key_bytes
@@ -179,7 +179,7 @@ def registration_payload(
     cross_origin: bool = False,
     cose_key_bytes: Optional[bytes] = None,
     counter: int = 0,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Build a complete, genuinely-signed registration response."""
 
     data = client_data(
@@ -209,7 +209,7 @@ def assertion_payload(
     rp_id: str = RP_ID,
     counter: int = 1,
     valid_signature: bool = True,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Build an assertion response.
 
     With ``valid_signature=False`` the signature is a real signature over the
@@ -243,7 +243,7 @@ def advanced_public_key_options(
     challenge: bytes,
     rp_id: str = RP_ID,
     username: str = "user@example.com",
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     return {
         "rp": {"id": rp_id, "name": "Demo server"},
         "user": {

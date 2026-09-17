@@ -10,10 +10,10 @@ def perform_attestation_checks(
     auth_data: Optional[Any],
     expected_origin: str,
     rp_id: str,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Execute a comprehensive set of attestation validation checks."""
 
-    results: Dict[str, Any] = {
+    results: dict[str, Any] = {
         "attestation_format": None,
         "signature_valid": None,
         "pqc_signature_valid": None,

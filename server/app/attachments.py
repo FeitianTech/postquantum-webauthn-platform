@@ -17,7 +17,7 @@ __all__ = [
 ]
 
 
-HINT_TO_ATTACHMENT_MAP: Dict[str, str] = {
+HINT_TO_ATTACHMENT_MAP: dict[str, str] = {
     "security-key": "cross-platform",
     "hybrid": "cross-platform",
     "client-device": "platform",
@@ -31,11 +31,11 @@ def normalize_attachment(value: Any) -> Optional[str]:
     return normalized or None
 
 
-def derive_allowed_attachments_from_hints(hints: Optional[Iterable[str]]) -> List[str]:
-    allowed: List[str] = []
+def derive_allowed_attachments_from_hints(hints: Optional[Iterable[str]]) -> list[str]:
+    allowed: list[str] = []
     if not hints:
         return allowed
-    seen: Set[str] = set()
+    seen: set[str] = set()
     for hint in hints:
         if not isinstance(hint, str):
             continue
@@ -46,7 +46,7 @@ def derive_allowed_attachments_from_hints(hints: Optional[Iterable[str]]) -> Lis
     return allowed
 
 
-def normalize_attachment_list(raw_values: Any) -> List[str]:
+def normalize_attachment_list(raw_values: Any) -> list[str]:
     if isinstance(raw_values, Mapping):
         candidates: Iterable[Any] = raw_values.values()
     elif isinstance(raw_values, (str, bytes, bytearray)) or raw_values is None:
@@ -56,8 +56,8 @@ def normalize_attachment_list(raw_values: Any) -> List[str]:
     else:
         return []
 
-    normalized: List[str] = []
-    seen: Set[str] = set()
+    normalized: list[str] = []
+    seen: set[str] = set()
     for candidate in candidates:
         normalized_value = normalize_attachment(candidate)
         if normalized_value and normalized_value not in seen:
@@ -69,7 +69,7 @@ def normalize_attachment_list(raw_values: Any) -> List[str]:
 def resolve_effective_attachments(
     hints: Iterable[str],
     requested_attachment: Optional[str] = None,
-) -> List[str]:
+) -> list[str]:
     resolved = derive_allowed_attachments_from_hints(hints)
     if resolved:
         return resolved
@@ -81,8 +81,8 @@ def resolve_effective_attachments(
     return []
 
 
-def build_credential_attachment_map() -> Dict[bytes, Optional[str]]:
-    attachment_map: Dict[bytes, Optional[str]] = {}
+def build_credential_attachment_map() -> dict[bytes, Optional[str]]:
+    attachment_map: dict[bytes, Optional[str]] = {}
     metadata_session_id = ensure_metadata_session_id()
     for email, user_creds in iter_credentials(session_id=metadata_session_id):
         for cred in user_creds:

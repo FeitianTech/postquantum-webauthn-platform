@@ -4,14 +4,14 @@ from typing import Any, Dict, Optional
 
 
 def _finalize_metadata_results(
-    results: Dict[str, Any],
+    results: dict[str, Any],
     *,
     metadata_entry: Any,
     metadata_lookup_source: Optional[str],
     verifier: Any,
     credential_aaguid_bytes: bytes,
     certificate_aaguid_bytes: bytes,
-    root_check_details: Optional[Dict[str, Optional[bool]]],
+    root_check_details: Optional[dict[str, Optional[bool]]],
     root_valid: Optional[bool],
 ) -> None:
     metadata_description: Optional[str] = None

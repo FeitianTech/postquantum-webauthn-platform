@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any, Dict, Mapping
 
 
-def populate_rp_debug_context_impl(simple_module: Any, ctx: Dict[str, Any]) -> None:
+def populate_rp_debug_context_impl(simple_module: Any, ctx: dict[str, Any]) -> None:
     registration_timestamp = simple_module.datetime.fromtimestamp(
         ctx["credential_info"]["registration_time"], simple_module.timezone.utc
     ).isoformat()
@@ -55,7 +55,7 @@ def populate_rp_debug_context_impl(simple_module: Any, ctx: Dict[str, Any]) -> N
     if ctx["warnings"]:
         rp_registration_data["warnings"] = ctx["warnings"]
 
-    rp_info: Dict[str, Any] = {
+    rp_info: dict[str, Any] = {
         "attestationFmt": ctx["attestation_format"],
         "createdAt": registration_timestamp,
         "credentialId": credential_id_hex,

@@ -164,7 +164,7 @@ class Fido2Server:
         authenticator_attachment: Optional[AuthenticatorAttachment] = None,
         challenge: Optional[bytes] = None,
         extensions=None,
-    ) -> Tuple[CredentialCreationOptions, Any]:
+    ) -> tuple[CredentialCreationOptions, Any]:
         """Return a PublicKeyCredentialCreationOptions registration object and
         the internal state dictionary that needs to be passed as is to the
         corresponding `register_complete` call.
@@ -311,7 +311,7 @@ class Fido2Server:
         user_verification: Optional[UserVerificationRequirement] = None,
         challenge: Optional[bytes] = None,
         extensions=None,
-    ) -> Tuple[CredentialRequestOptions, Any]:
+    ) -> tuple[CredentialRequestOptions, Any]:
         """Return a PublicKeyCredentialRequestOptions assertion object and the internal
         state dictionary that needs to be passed as is to the corresponding
         `authenticate_complete` call.

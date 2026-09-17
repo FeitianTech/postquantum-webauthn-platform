@@ -44,12 +44,12 @@ _base_metadata_source: Optional[str] = None
 _base_verifier_cache: Optional[MdsAttestationVerifier] = None
 _base_verifier_mtime: Optional[float] = None
 _base_metadata_trust_verified: Optional[bool] = None
-_base_metadata_entry_ids: Set[int] = set()
-_base_explorer_snapshot_cache: Optional[Dict[str, Any]] = None
-_base_explorer_snapshot_mtime: Optional[Tuple[Optional[float], Optional[float]]] = None
-_base_full_snapshot_cache: Optional[Dict[str, Any]] = None
+_base_metadata_entry_ids: set[int] = set()
+_base_explorer_snapshot_cache: Optional[dict[str, Any]] = None
+_base_explorer_snapshot_mtime: Optional[tuple[Optional[float], Optional[float]]] = None
+_base_full_snapshot_cache: Optional[dict[str, Any]] = None
 _base_full_snapshot_mtime: Optional[float] = None
-_session_metadata_entry_ids: Set[int] = set()
+_session_metadata_entry_ids: set[int] = set()
 # Locks live here because the metadata_parts runtime functions execute against
 # this module's globals.
 _base_metadata_lock = threading.RLock()
@@ -96,7 +96,7 @@ _METADATA_STATEMENT_REQUIRED_DEFAULTS: Mapping[str, Any] = {
 }
 SessionMetadataItem = _session_items_runtime.SessionMetadataItem
 MetadataDownloadError = _cache_runtime.MetadataDownloadError
-_RUNTIME_REBOUND_CACHE: Dict[Callable[..., Any], Callable[..., Any]] = {}
+_RUNTIME_REBOUND_CACHE: dict[Callable[..., Any], Callable[..., Any]] = {}
 
 
 def _run_with_metadata_globals(func: Callable[..., Any], *args: Any, **kwargs: Any) -> Any:
@@ -125,7 +125,7 @@ def _install_runtime_bindings(bindings: Mapping[str, Callable[..., Any]]) -> Non
         globals()[_name] = _bind_runtime_function(_func)
 
 
-def _binding_dict(module: Any, names: Tuple[str, ...]) -> Dict[str, Callable[..., Any]]:
+def _binding_dict(module: Any, names: tuple[str, ...]) -> dict[str, Callable[..., Any]]:
     return {name: getattr(module, name) for name in names}
 
 

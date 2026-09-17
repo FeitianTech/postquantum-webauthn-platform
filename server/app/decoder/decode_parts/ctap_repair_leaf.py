@@ -46,7 +46,7 @@ def _locate_get_assertion_trailing_offset(raw_bytes: bytes, signature_start: int
 
 def _extract_get_assertion_trailing_from_raw(
     raw_bytes: bytes,
-) -> Tuple[Optional[bytes], Dict[int, Any]]:
+) -> tuple[Optional[bytes], dict[int, Any]]:
     if not raw_bytes:
         return None, {}
 
@@ -77,7 +77,7 @@ def _extract_get_assertion_trailing_from_raw(
         trailing_offset = declared_end
 
     signature_bytes = raw_bytes[value_offset:trailing_offset]
-    trailing_fields: Dict[int, Any] = {}
+    trailing_fields: dict[int, Any] = {}
 
     cursor = trailing_offset
     while cursor < len(raw_bytes):
@@ -114,7 +114,7 @@ def _extract_get_assertion_trailing_from_raw(
 
 def _split_get_assertion_trailing_fields(
     signature_bytes: bytes,
-) -> Tuple[bytes, Dict[int, Any]]:
+) -> tuple[bytes, dict[int, Any]]:
     if not signature_bytes:
         return signature_bytes, {}
 
@@ -131,7 +131,7 @@ def _split_get_assertion_trailing_fields(
         if after_value <= after_key:
             continue
 
-        trailing_fields: Dict[int, Any] = {4: value}
+        trailing_fields: dict[int, Any] = {4: value}
         cursor = after_value
         success = True
 

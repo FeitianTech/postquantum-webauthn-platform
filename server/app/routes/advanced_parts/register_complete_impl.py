@@ -41,11 +41,11 @@ def advanced_register_complete_impl(advanced_module: Any):
     min_pin_length_value = prepared["minPinLengthValue"]
     authenticator_attachment_response = prepared["authenticatorAttachmentResponse"]
 
-    warnings: List[str] = []
+    warnings: list[str] = []
 
     # Always reported, even on the error paths below: the advanced flow is
     # allowed to be permissive, but never allowed to be silent about it.
-    state_trace: Dict[str, Any] = {"challengeSource": CHALLENGE_SOURCE_CLIENT}
+    state_trace: dict[str, Any] = {"challengeSource": CHALLENGE_SOURCE_CLIENT}
 
     try:
         state_ctx, state_error = resolve_state_and_registration_server(
@@ -126,7 +126,7 @@ def advanced_register_complete_impl(advanced_module: Any):
                     if stripped:
                         warnings.append(stripped)
 
-        attestation_errors: List[str] = []
+        attestation_errors: list[str] = []
         raw_attestation_errors = attestation_checks.get("errors")
         if isinstance(raw_attestation_errors, list):
             attestation_errors = [
@@ -151,7 +151,7 @@ def advanced_register_complete_impl(advanced_module: Any):
         if isinstance(warnings_summary, list) and warnings_summary:
             attestation_summary["warnings"] = warnings_summary
 
-        authenticator_extensions_summary: Dict[str, Any] = {}
+        authenticator_extensions_summary: dict[str, Any] = {}
         if hasattr(auth_data, "extensions"):
             authenticator_extensions = getattr(auth_data, "extensions")
             if isinstance(authenticator_extensions, Mapping):

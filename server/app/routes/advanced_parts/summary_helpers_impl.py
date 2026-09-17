@@ -13,11 +13,11 @@ def _generate_storage_id_impl(advanced_module: Any, credential_id: str) -> str:
 def _summarize_properties_impl(
     advanced_module: Any,
     value: Any,
-) -> Optional[Dict[str, Any]]:
+) -> Optional[dict[str, Any]]:
     if not isinstance(value, Mapping):
         return None
 
-    summary: Dict[str, Any] = {}
+    summary: dict[str, Any] = {}
     for key, item in value.items():
         if key in advanced_module._HEAVY_PROPERTY_KEYS:
             continue
@@ -28,11 +28,11 @@ def _summarize_properties_impl(
 def _summarize_relying_party_impl(
     advanced_module: Any,
     value: Any,
-) -> Optional[Dict[str, Any]]:
+) -> Optional[dict[str, Any]]:
     if not isinstance(value, Mapping):
         return None
 
-    summary: Dict[str, Any] = {}
+    summary: dict[str, Any] = {}
     for key, item in value.items():
         if key in advanced_module._HEAVY_RELYING_PARTY_KEYS:
             continue
@@ -44,8 +44,8 @@ def _summarize_stored_credential_impl(
     advanced_module: Any,
     stored: Mapping[str, Any],
     storage_id: str,
-) -> Dict[str, Any]:
-    summary: Dict[str, Any] = {}
+) -> dict[str, Any]:
+    summary: dict[str, Any] = {}
 
     for key, value in stored.items():
         if key in advanced_module._HEAVY_CREDENTIAL_KEYS:

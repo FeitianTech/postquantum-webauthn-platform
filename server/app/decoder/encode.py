@@ -91,7 +91,7 @@ from .encode_parts.handlers_cbor import (
 __all__ = ["encode_payload_text"]
 
 
-def encode_payload_text(value: str, target_format: str) -> Dict[str, Any]:
+def encode_payload_text(value: str, target_format: str) -> dict[str, Any]:
     """Encode ``value`` into the requested ``target_format``."""
 
     trimmed = value.strip()
@@ -113,7 +113,7 @@ def encode_payload_text(value: str, target_format: str) -> Dict[str, Any]:
     return handler(parsed)
 
 
-_ENCODING_HANDLERS: Dict[str, Callable[[Any], Dict[str, Any]]] = {
+_ENCODING_HANDLERS: dict[str, Callable[[Any], dict[str, Any]]] = {
     "json": _encode_json_value,
     "public-key-credential": _encode_public_key_credential,
     "client-data": _encode_client_data,

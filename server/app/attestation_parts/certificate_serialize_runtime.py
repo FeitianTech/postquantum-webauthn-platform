@@ -9,7 +9,7 @@ from typing import Any, Dict
 
 def _serialize_attestation_certificate_fallback(
     cert_bytes: bytes, error: Exception
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Return certificate metadata when DER parsing fails."""
 
     der_base64 = base64.b64encode(cert_bytes).decode("ascii")

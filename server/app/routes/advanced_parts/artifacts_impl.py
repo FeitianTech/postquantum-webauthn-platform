@@ -18,7 +18,7 @@ def api_get_advanced_credential_artifacts_bulk_impl(advanced_module: Any):
     if not isinstance(raw_storage_ids, list):
         return advanced_module.jsonify({"error": "storageIds must be an array."}), 400
 
-    storage_ids: List[str] = []
+    storage_ids: list[str] = []
     seen = set()
     for candidate in raw_storage_ids:
         if not isinstance(candidate, str):
@@ -30,7 +30,7 @@ def api_get_advanced_credential_artifacts_bulk_impl(advanced_module: Any):
         storage_ids.append(trimmed)
 
     metadata_session_id = advanced_module.ensure_metadata_session_id()
-    artifacts: Dict[str, Any] = {}
+    artifacts: dict[str, Any] = {}
     for storage_id in storage_ids:
         artifact = advanced_module.load_credential_artifact(storage_id, session_id=metadata_session_id)
         if artifact is not None:

@@ -52,7 +52,7 @@ def _convert_ctap_user_field(value: Any) -> Any:
     return _convert_ctap_user(value)
 
 
-def _summarize_bytes_for_json(data: bytes) -> Dict[str, Any]:
+def _summarize_bytes_for_json(data: bytes) -> dict[str, Any]:
     return {
         "length": len(data),
         "hex": data.hex(),
@@ -61,8 +61,8 @@ def _summarize_bytes_for_json(data: bytes) -> Dict[str, Any]:
     }
 
 
-def _parse_authenticator_data_bytes(data: bytes) -> Tuple[Dict[str, Any], bytes, bytes]:
-    details: Dict[str, Any] = {}
+def _parse_authenticator_data_bytes(data: bytes) -> tuple[dict[str, Any], bytes, bytes]:
+    details: dict[str, Any] = {}
     if len(data) < 37:
         details["parseError"] = "Authenticator data shorter than minimum header."
         return details, data, b""
@@ -88,7 +88,7 @@ def _parse_authenticator_data_bytes(data: bytes) -> Tuple[Dict[str, Any], bytes,
     }
     details["signCount"] = sign_count
 
-    def _decode_cbor_item(buffer: bytes) -> Tuple[Any, int]:
+    def _decode_cbor_item(buffer: bytes) -> tuple[Any, int]:
         value, consumed = _lenient_decode_from(buffer, 0)
         return value, consumed
 
@@ -97,7 +97,7 @@ def _parse_authenticator_data_bytes(data: bytes) -> Tuple[Dict[str, Any], bytes,
 
     attested_trailing = b""
     if at_flag:
-        attested: Dict[str, Any] = {}
+        attested: dict[str, Any] = {}
         remaining = len(data) - offset
         if remaining < 18:
             attested["parseError"] = "Attested credential data truncated."
@@ -159,17 +159,17 @@ def _parse_authenticator_data_bytes(data: bytes) -> Tuple[Dict[str, Any], bytes,
     return details, trimmed, trailing
 
 
-def _format_auth_data_for_expanded_json(auth_data_bytes: bytes) -> Tuple[Dict[str, Any], bytes]:
+def _format_auth_data_for_expanded_json(auth_data_bytes: bytes) -> tuple[dict[str, Any], bytes]:
     details, trimmed, trailing = _parse_authenticator_data_bytes(auth_data_bytes)
-    formatted: Dict[str, Any] = dict(details)
+    formatted: dict[str, Any] = dict(details)
     formatted.setdefault("raw", trimmed.hex())
     if trailing:
         formatted["trailingBytesHex"] = trailing.hex()
     return formatted, trailing
 
 
-def _format_att_stmt_for_expanded_json(att_stmt: Any) -> Dict[str, Any]:
-    formatted: Dict[str, Any] = {}
+def _format_att_stmt_for_expanded_json(att_stmt: Any) -> dict[str, Any]:
+    formatted: dict[str, Any] = {}
 
     if isinstance(att_stmt, Mapping):
         for key, value in att_stmt.items():
@@ -194,8 +194,8 @@ def _format_att_stmt_for_expanded_json(att_stmt: Any) -> Dict[str, Any]:
     return formatted
 
 
-def _decode_trailing_map(data: bytes) -> Dict[Any, Any]:
-    mapping: Dict[Any, Any] = {}
+def _decode_trailing_map(data: bytes) -> dict[Any, Any]:
+    mapping: dict[Any, Any] = {}
     offset = 0
     while offset < len(data):
         key, new_offset = _lenient_decode_from(data, offset)
@@ -213,8 +213,8 @@ def _decode_trailing_map(data: bytes) -> Dict[Any, Any]:
     return mapping
 
 
-def _extract_lenient_map_entries(raw_bytes: Optional[bytes]) -> List[Tuple[Any, Any]]:
-    entries: List[Tuple[Any, Any]] = []
+def _extract_lenient_map_entries(raw_bytes: Optional[bytes]) -> list[tuple[Any, Any]]:
+    entries: list[tuple[Any, Any]] = []
     if not raw_bytes:
         return entries
     offset = 0
@@ -305,7 +305,7 @@ def _convert_ctap_user(entry: Any) -> Any:
 
     normalized_entry = _normalize_user_mapping(entry)
 
-    user: Dict[str, Any] = {}
+    user: dict[str, Any] = {}
     id_value = _get_mapping_entry(normalized_entry, "id", 1)
     if id_value is not _MISSING:
         id_bytes = _coerce_cbor_bytes(id_value)

@@ -40,8 +40,8 @@ _PUBLIC_KEY_FIELD_PRECEDENCE = (
 )
 
 
-def _serialize_credential_for_session_impl(simple_module: Any, entry: Mapping[str, Any]) -> Dict[str, Any]:
-    serialized: Dict[str, Any] = {}
+def _serialize_credential_for_session_impl(simple_module: Any, entry: Mapping[str, Any]) -> dict[str, Any]:
+    serialized: dict[str, Any] = {}
     for source_key, dest_key in (
         ("email", "email"),
         ("userName", "userName"),
@@ -87,12 +87,12 @@ def _serialize_credential_for_session_impl(simple_module: Any, entry: Mapping[st
 
 def _parse_client_credentials_impl(
     simple_module: Any, raw_credentials: Any
-) -> Tuple[List[Any], List[Dict[str, Any]]]:
+) -> tuple[list[Any], list[dict[str, Any]]]:
     if not isinstance(raw_credentials, list):
         return [], []
 
-    attested_credentials: List[Any] = []
-    serialized_entries: List[Dict[str, Any]] = []
+    attested_credentials: list[Any] = []
+    serialized_entries: list[dict[str, Any]] = []
 
     for entry in raw_credentials:
         if not isinstance(entry, Mapping):

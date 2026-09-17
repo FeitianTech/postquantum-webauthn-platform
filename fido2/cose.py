@@ -132,19 +132,19 @@ _SECP521R1_ORDER = int(
 )
 
 
-_ML_DSA_OID_TO_PARAMETER_SET: Dict[str, str] = {
+_ML_DSA_OID_TO_PARAMETER_SET: dict[str, str] = {
     "2.16.840.1.101.3.4.3.17": "ML-DSA-44",
     "2.16.840.1.101.3.4.3.18": "ML-DSA-65",
     "2.16.840.1.101.3.4.3.19": "ML-DSA-87",
 }
 
 
-_ALGORITHM_OID_NAMES: Dict[str, str] = {
+_ALGORITHM_OID_NAMES: dict[str, str] = {
     oid: "ML-DSA" for oid in _ML_DSA_OID_TO_PARAMETER_SET
 }
 
 
-_ML_DSA_PARAMETER_SET_TO_OID: Dict[str, str] = {
+_ML_DSA_PARAMETER_SET_TO_OID: dict[str, str] = {
     parameter_set: oid for oid, parameter_set in _ML_DSA_OID_TO_PARAMETER_SET.items()
 }
 
@@ -152,7 +152,7 @@ _ML_DSA_PARAMETER_SET_TO_OID: Dict[str, str] = {
 # FIPS 204 (final) sizes.  The pre-standard CRYSTALS-Dilithium Round 3 signature
 # sizes were 2420/3293/4595; FIPS 204 widened the challenge seed for the two
 # higher parameter sets, which added 16 and 32 bytes respectively.
-_ML_DSA_PARAMETER_SET_DEFAULTS: Dict[str, Dict[str, Optional[int]]] = {
+_ML_DSA_PARAMETER_SET_DEFAULTS: dict[str, dict[str, Optional[int]]] = {
     "ML-DSA-44": {
         "public_key_length": 1312,
         "signature_length": 2420,
@@ -171,7 +171,7 @@ _ML_DSA_PARAMETER_SET_DEFAULTS: Dict[str, Dict[str, Optional[int]]] = {
 }
 
 
-_MLDSA_PUBLIC_KEY_CLASSES: Dict[str, Any] = {
+_MLDSA_PUBLIC_KEY_CLASSES: dict[str, Any] = {
     "ML-DSA-44": mldsa.MLDSA44PublicKey,
     "ML-DSA-65": mldsa.MLDSA65PublicKey,
     "ML-DSA-87": mldsa.MLDSA87PublicKey,
@@ -227,7 +227,7 @@ def _verify_mldsa_signature(
     verifier.verify(bytes(signature), bytes(message))
 
 
-def _get_mldsa_parameter_details(parameter_set: Optional[str]) -> Dict[str, Optional[int]]:
+def _get_mldsa_parameter_details(parameter_set: Optional[str]) -> dict[str, Optional[int]]:
     """Return the FIPS 204 parameter lengths for *parameter_set*."""
 
     if not parameter_set:
@@ -236,7 +236,7 @@ def _get_mldsa_parameter_details(parameter_set: Optional[str]) -> Dict[str, Opti
     return dict(_ML_DSA_PARAMETER_SET_DEFAULTS.get(parameter_set, {}))
 
 
-def describe_mldsa_oid(oid: Optional[str]) -> Optional[Dict[str, str]]:
+def describe_mldsa_oid(oid: Optional[str]) -> Optional[dict[str, str]]:
     """Return descriptive ML-DSA metadata for a certificate algorithm OID."""
 
     if not oid:
@@ -287,7 +287,7 @@ def _load_certificate(cert_der: bytes) -> x509.Certificate:
         raise ValueError(f"Unable to parse certificate: {exc}") from exc
 
 
-def extract_certificate_signature_info(cert_der: bytes) -> Dict[str, Any]:
+def extract_certificate_signature_info(cert_der: bytes) -> dict[str, Any]:
     """Return signature metadata for a DER-encoded certificate."""
 
     certificate = _load_certificate(cert_der)
@@ -320,13 +320,13 @@ def _subject_public_key_bytes(public_key: Any) -> Optional[bytes]:
         return None
 
 
-def extract_certificate_public_key_info(cert_der: bytes) -> Dict[str, Any]:
+def extract_certificate_public_key_info(cert_der: bytes) -> dict[str, Any]:
     """Extract public key metadata from an X.509 certificate."""
 
     certificate = _load_certificate(cert_der)
     algorithm_oid = certificate.public_key_algorithm_oid.dotted_string
 
-    info: Dict[str, Any] = {
+    info: dict[str, Any] = {
         "algorithm_oid": algorithm_oid,
         "algorithm_parameters": None,
     }
@@ -432,7 +432,7 @@ class CoseKey(dict):
 
     @classmethod
     def from_cryptography_key(
-        cls: Type[T_CoseKey], public_key: types.PublicKeyTypes
+        cls: type[T_CoseKey], public_key: types.PublicKeyTypes
     ) -> T_CoseKey:
         """Converts a PublicKey object from Cryptography into a COSE key.
 
@@ -442,11 +442,11 @@ class CoseKey(dict):
         raise NotImplementedError("Creation from cryptography not supported.")
 
     @staticmethod
-    def _iter_subclasses() -> Iterable[Type["CoseKey"]]:
+    def _iter_subclasses() -> Iterable[type["CoseKey"]]:
         """Yield all subclasses of ``CoseKey`` recursively."""
 
-        seen: set[Type["CoseKey"]] = set()
-        stack: list[Type["CoseKey"]] = list(CoseKey.__subclasses__())
+        seen: set[type["CoseKey"]] = set()
+        stack: list[type["CoseKey"]] = list(CoseKey.__subclasses__())
 
         while stack:
             cls = stack.pop()
@@ -457,7 +457,7 @@ class CoseKey(dict):
             stack.extend(cls.__subclasses__())
 
     @staticmethod
-    def for_alg(alg: int) -> Type[CoseKey]:
+    def for_alg(alg: int) -> type[CoseKey]:
         """Get a subclass of CoseKey corresponding to an algorithm identifier.
 
         :param alg: The COSE identifier of the algorithm.
@@ -469,7 +469,7 @@ class CoseKey(dict):
         return UnsupportedKey
 
     @staticmethod
-    def for_name(name: str) -> Type[CoseKey]:
+    def for_name(name: str) -> type[CoseKey]:
         """Get a subclass of CoseKey corresponding to an algorithm identifier.
 
         :param alg: The COSE identifier of the algorithm.
@@ -491,7 +491,7 @@ class CoseKey(dict):
     @staticmethod
     def supported_algorithms() -> Sequence[int]:
         """Get a list of all supported algorithm identifiers"""
-        algs: Sequence[Type[CoseKey]] = [
+        algs: Sequence[type[CoseKey]] = [
             MLDSA44,
             MLDSA65,
             MLDSA87,

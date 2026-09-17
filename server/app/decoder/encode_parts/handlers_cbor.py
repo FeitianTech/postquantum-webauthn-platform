@@ -19,7 +19,7 @@ from .ctap_numeric import _extract_ctap_numeric_payload, _normalize_ctap_extra_v
 from .handlers_basic import _prepare_encoder_response
 
 
-def _encode_cbor_value(parsed: Any, *, base_type: str = "CBOR (canonical)") -> Dict[str, Any]:
+def _encode_cbor_value(parsed: Any, *, base_type: str = "CBOR (canonical)") -> dict[str, Any]:
     ctap_source: Optional[Mapping[str, Any]] = None
     ctap_kind: Optional[str] = None
     ctap_metadata: Optional[Mapping[str, Any]] = None
@@ -53,7 +53,7 @@ def _encode_cbor_value(parsed: Any, *, base_type: str = "CBOR (canonical)") -> D
             bytes([prefix_code]) + payload_bytes if prefix_code is not None else payload_bytes
         )
         canonical_structure = _canonicalize_cbor_structure(encoded_map)
-        payload: Dict[str, Any] = {
+        payload: dict[str, Any] = {
             "binary": _binary_summary(full_bytes, "cbor"),
             "encodedValue": _stringify_mapping_keys(
                 _hex_json_safe(canonical_structure)
@@ -88,7 +88,7 @@ def _encode_cbor_value(parsed: Any, *, base_type: str = "CBOR (canonical)") -> D
     return _prepare_encoder_response(base_type, payload, qualifier="encoded")
 
 
-def _encode_ctap_webauthn_value(parsed: Any) -> Dict[str, Any]:
+def _encode_ctap_webauthn_value(parsed: Any) -> dict[str, Any]:
     numeric_map, ctap_type = _extract_ctap_numeric_payload(parsed)
 
     field_labels = _CTAP_FIELD_LABELS.get(ctap_type, {})
@@ -120,7 +120,7 @@ def _encode_ctap_webauthn_value(parsed: Any) -> Dict[str, Any]:
         if index in encoded_map
     }
 
-    extras: Dict[int, Any] = {}
+    extras: dict[int, Any] = {}
     for index, value in numeric_map.items():
         if index not in field_labels:
             extras[index] = _normalize_ctap_extra_value(value)
@@ -140,7 +140,7 @@ def _encode_ctap_webauthn_value(parsed: Any) -> Dict[str, Any]:
     canonical_encoded_map = _canonicalize_cbor_structure(encoded_map)
     canonical_decoded_structure = _canonicalize_cbor_structure(decoded_structure)
 
-    payload: Dict[str, Any] = {
+    payload: dict[str, Any] = {
         "binary": _binary_summary(full_bytes, "cbor"),
         "encodedValue": _stringify_mapping_keys(
             _hex_json_safe(canonical_encoded_map)
@@ -163,5 +163,5 @@ def _encode_ctap_webauthn_value(parsed: Any) -> Dict[str, Any]:
     )
 
 
-def _encode_cose_value(parsed: Any) -> Dict[str, Any]:
+def _encode_cose_value(parsed: Any) -> dict[str, Any]:
     return _encode_cbor_value(parsed, base_type="COSE")

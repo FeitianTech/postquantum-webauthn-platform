@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from typing import Dict, Set
 
-COSE_ALGORITHM_NAME_MAP: Dict[str, int] = {
+COSE_ALGORITHM_NAME_MAP: dict[str, int] = {
     "ML-DSA-87": -50,
     "ML-DSA-65": -49,
     "ML-DSA-44": -48,
@@ -48,7 +48,7 @@ def _normalize_algorithm_name_key_seed(name: str) -> str:
     return sanitized
 
 
-COSE_ALGORITHM_NAME_LOOKUP: Dict[str, int] = {}
+COSE_ALGORITHM_NAME_LOOKUP: dict[str, int] = {}
 for _raw_name, _alg_id in COSE_ALGORITHM_NAME_MAP.items():
     _normalized_key = _normalize_algorithm_name_key_seed(_raw_name)
     if _normalized_key:
@@ -56,7 +56,7 @@ for _raw_name, _alg_id in COSE_ALGORITHM_NAME_MAP.items():
 
 COSE_ALGORITHM_NUMERIC_PATTERN = re.compile(r"-?\d+")
 
-HEAVY_CREDENTIAL_KEYS: Set[str] = {
+HEAVY_CREDENTIAL_KEYS: set[str] = {
     "attestationObject",
     "attestation_object",
     "attestationObjectRaw",
@@ -100,7 +100,7 @@ HEAVY_CREDENTIAL_KEYS: Set[str] = {
     "authenticator_data_hash",
 }
 
-HEAVY_PROPERTY_KEYS: Set[str] = {
+HEAVY_PROPERTY_KEYS: set[str] = {
     "attestationCertificate",
     "attestationCertificates",
     "attestation_certificate",
@@ -111,7 +111,7 @@ HEAVY_PROPERTY_KEYS: Set[str] = {
     "registration_data",
 }
 
-HEAVY_RELYING_PARTY_KEYS: Set[str] = {
+HEAVY_RELYING_PARTY_KEYS: set[str] = {
     "registrationData",
     "registration_data",
     "attestationCertificate",

@@ -22,7 +22,7 @@ def list_credentials_impl(simple_module: Any):
 
         return simple_module.jsonify({"status": "OK", "removed": removed})
 
-    credentials: List[Dict[str, Any]] = []
+    credentials: list[dict[str, Any]] = []
 
     try:
         for email, user_creds in simple_module.iter_credentials(session_id=metadata_session_id):

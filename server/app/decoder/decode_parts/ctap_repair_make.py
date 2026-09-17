@@ -11,11 +11,11 @@ from .key_utils import MISSING, coerce_cbor_bytes as _coerce_cbor_bytes, get_map
 
 
 def _merge_ctap_make_credential(
-    structure: Dict[str, Any],
+    structure: dict[str, Any],
     value: Mapping[Any, Any],
-    extra_structures: List[Dict[str, Any]],
-    extra_values: List[Any],
-) -> Tuple[Dict[str, Any], Mapping[Any, Any], List[Dict[str, Any]], List[Any], Optional[bytes]]:
+    extra_structures: list[dict[str, Any]],
+    extra_values: list[Any],
+) -> tuple[dict[str, Any], Mapping[Any, Any], list[dict[str, Any]], list[Any], Optional[bytes]]:
     signature_bytes: Optional[bytes] = None
 
     if isinstance(value, Mapping) and value.get("al&") == "sig":
@@ -46,7 +46,7 @@ def _merge_ctap_make_credential(
         normalized_value.pop("attStmt", None)
         normalized_value.pop("attstmt", None)
 
-        att_structure_override: Optional[Dict[str, Any]] = None
+        att_structure_override: Optional[dict[str, Any]] = None
         att_stmt_base: Optional[Mapping[Any, Any]] = None
 
         if extra_values:
@@ -109,11 +109,11 @@ def _merge_ctap_make_credential(
 
 
 def _repair_make_credential_entries(
-    structure: Dict[str, Any],
+    structure: dict[str, Any],
     value: Mapping[Any, Any],
     *,
     default_alg: int = -50,
-) -> Tuple[Dict[str, Any], Mapping[Any, Any], Optional[bytes]]:
+) -> tuple[dict[str, Any], Mapping[Any, Any], Optional[bytes]]:
     if not isinstance(value, dict):
         return structure, value, None
 
@@ -140,7 +140,7 @@ def _repair_make_credential_entries(
                 signature_bytes = None
 
     polished_value = dict(value)
-    pop_keys: List[Any] = []
+    pop_keys: list[Any] = []
     for key in list(polished_value.keys()):
         if isinstance(key, (bytes, bytearray)):
             pop_keys.append(key)
@@ -150,7 +150,7 @@ def _repair_make_credential_entries(
     if 13 in polished_value and 3 not in polished_value:
         raw_entry = polished_value.pop(13)
         if isinstance(raw_entry, list):
-            segments: List[bytes] = []
+            segments: list[bytes] = []
             alg_candidate: Optional[int] = None
             for item in raw_entry:
                 if isinstance(item, (bytes, bytearray)):
@@ -203,10 +203,10 @@ def _derive_alg_from_auth_data(auth_data_bytes: Optional[bytes]) -> Optional[int
 
 
 def _merge_trailing_signature(
-    structure: Dict[str, Any],
+    structure: dict[str, Any],
     value: Mapping[Any, Any],
     trailing: bytes,
-) -> Optional[Tuple[Dict[str, Any], Mapping[Any, Any], bytes, bytes]]:
+) -> Optional[tuple[dict[str, Any], Mapping[Any, Any], bytes, bytes]]:
     if not trailing or all(byte in (0x00, 0xFF) for byte in trailing):
         return None
 
@@ -226,7 +226,7 @@ def _merge_trailing_signature(
     alg_value = _derive_alg_from_auth_data(auth_data_bytes)
     signature_bytes = bytes(trailing)
 
-    att_stmt: Dict[str, Any] = {"sig": signature_bytes}
+    att_stmt: dict[str, Any] = {"sig": signature_bytes}
     if alg_value is not None:
         att_stmt["alg"] = alg_value
 
@@ -234,7 +234,7 @@ def _merge_trailing_signature(
 
     updated_structure = dict(structure)
     entries_source = structure.get("entries")
-    entries: List[Dict[str, Any]] = (
+    entries: list[dict[str, Any]] = (
         list(entries_source) if isinstance(entries_source, list) else []
     )
     entries.append(

@@ -125,7 +125,7 @@ def register_complete_impl(simple_module: Any):
         resolved_rp_id,
     )
 
-    ctx: Dict[str, Any] = {
+    ctx: dict[str, Any] = {
         "uname": uname,
         "response": response,
         "credential_response": credential_response,

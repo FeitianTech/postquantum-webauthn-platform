@@ -9,14 +9,14 @@ def _evaluate_mldsa_attestation_root(
     aaguid_bytes: bytes,
     verifier: Optional[Any],
     now: datetime,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Determine ML-DSA attestation root status using PQC-only verification."""
 
-    warnings: List[str] = []
-    errors: List[str] = []
+    warnings: list[str] = []
+    errors: list[str] = []
     metadata_entry: Optional[Any] = None
     metadata_lookup_source: Optional[str] = None
-    checks: Dict[str, Optional[bool]] = {
+    checks: dict[str, Optional[bool]] = {
         "trusted_ca": None,
         "chain": None,
         "fido_mds": None,
@@ -97,7 +97,7 @@ def _evaluate_mldsa_attestation_root(
         errors.append("pqc_attestation_chain_missing")
     else:
         chain_valid = False
-        chain_errors: List[str] = []
+        chain_errors: list[str] = []
         for root in trusted_roots:
             valid, attempt_errors = _verify_pqc_attestation_chain(
                 trust_path,
@@ -128,10 +128,10 @@ def _evaluate_mldsa_attestation_root(
 
 def _attempt_pqc_attestation_signature_validation(
     attestation_object: Any, client_data_hash: bytes
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Best-effort PQC attestation verification fallback using cryptography."""
 
-    outcome: Dict[str, Any] = {
+    outcome: dict[str, Any] = {
         "attempted": False,
         "success": False,
         "attestation_result": None,

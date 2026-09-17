@@ -9,11 +9,11 @@ from __future__ import annotations
 from typing import Any, Dict, List, Mapping
 
 
-def _prepare_decoder_response(result: Dict[str, Any]) -> Dict[str, Any]:
+def _prepare_decoder_response(result: dict[str, Any]) -> dict[str, Any]:
     return _build_decoder_payload(result)
 
 
-def _build_decoder_payload(result: Dict[str, Any]) -> Dict[str, Any]:
+def _build_decoder_payload(result: dict[str, Any]) -> dict[str, Any]:
     base_type = _base_type(result.get("format"))
     data = _convert_result_to_data(base_type, result)
     malformed = result.get("malformed")
@@ -23,7 +23,7 @@ def _build_decoder_payload(result: Dict[str, Any]) -> Dict[str, Any]:
     type_label = base_type
     if base_type == "CBOR":
         decoded = result.get("decoded")
-        qualifiers: List[str] = []
+        qualifiers: list[str] = []
         if isinstance(decoded, Mapping):
             ctap_info = decoded.get("ctap")
             if isinstance(ctap_info, Mapping):
@@ -61,7 +61,7 @@ def _build_decoder_payload(result: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-def _convert_result_to_data(base_type: str, result: Dict[str, Any]) -> Any:
+def _convert_result_to_data(base_type: str, result: dict[str, Any]) -> Any:
     if base_type == "PublicKeyCredential":
         return _convert_public_key_credential_data(result)
     if base_type == "Attestation object":
@@ -77,7 +77,7 @@ def _convert_result_to_data(base_type: str, result: Dict[str, Any]) -> Any:
     if base_type == "CBOR":
         decoded = result.get("decoded")
         if isinstance(decoded, Mapping):
-            payload: Dict[str, Any] = {}
+            payload: dict[str, Any] = {}
             if "ctapDecoded" in decoded:
                 payload["ctapDecoded"] = _stringify_mapping_keys(
                     _hex_json_safe(decoded["ctapDecoded"])
@@ -106,11 +106,11 @@ def _convert_result_to_data(base_type: str, result: Dict[str, Any]) -> Any:
     return {}
 
 
-def _convert_public_key_credential_data(result: Mapping[str, Any]) -> Dict[str, Any]:
+def _convert_public_key_credential_data(result: Mapping[str, Any]) -> dict[str, Any]:
     decoded = result.get("decoded") if isinstance(result.get("decoded"), Mapping) else {}
     response = decoded.get("response") if isinstance(decoded, Mapping) else {}
 
-    payload: Dict[str, Any] = {}
+    payload: dict[str, Any] = {}
 
     credential_overview = _build_credential_overview(decoded)
     if credential_overview:
@@ -144,11 +144,11 @@ def _convert_public_key_credential_data(result: Mapping[str, Any]) -> Dict[str, 
     return payload
 
 
-def _convert_attestation_object_data(result: Mapping[str, Any]) -> Dict[str, Any]:
+def _convert_attestation_object_data(result: Mapping[str, Any]) -> dict[str, Any]:
     decoded = result.get("decoded") if isinstance(result.get("decoded"), Mapping) else {}
 
     attestation_section = _convert_attestation_entry(decoded)
-    payload: Dict[str, Any] = {}
+    payload: dict[str, Any] = {}
     if attestation_section:
         if "raw" not in attestation_section:
             binary_info = result.get("binary") if isinstance(result.get("binary"), Mapping) else None
@@ -174,7 +174,7 @@ def _convert_attestation_object_data(result: Mapping[str, Any]) -> Dict[str, Any
     return payload
 
 
-def _convert_authenticator_data_result(result: Mapping[str, Any]) -> Dict[str, Any]:
+def _convert_authenticator_data_result(result: Mapping[str, Any]) -> dict[str, Any]:
     decoded = result.get("decoded") if isinstance(result.get("decoded"), Mapping) else {}
     result.get("binary")
     auth_bytes = _extract_bytes_from_binary(result.get("binary"))
@@ -188,12 +188,12 @@ def _convert_authenticator_data_result(result: Mapping[str, Any]) -> Dict[str, A
     return authenticator_section or {}
 
 
-def _convert_client_data_result(result: Mapping[str, Any]) -> Dict[str, Any]:
+def _convert_client_data_result(result: Mapping[str, Any]) -> dict[str, Any]:
     decoded = result.get("decoded") if isinstance(result.get("decoded"), Mapping) else {}
     return _convert_client_data_entry(decoded) or {}
 
 
-def _convert_certificate_result(result: Mapping[str, Any]) -> Dict[str, Any]:
+def _convert_certificate_result(result: Mapping[str, Any]) -> dict[str, Any]:
     decoded = result.get("decoded") if isinstance(result.get("decoded"), Mapping) else {}
 
     if not decoded:
@@ -209,7 +209,7 @@ def _convert_certificate_result(result: Mapping[str, Any]) -> Dict[str, Any]:
     return certificate_payload or {}
 
 
-def _convert_attestation_entry(entry: Any) -> Dict[str, Any]:
+def _convert_attestation_entry(entry: Any) -> dict[str, Any]:
     return _convert_attestation_entry_impl(
         entry,
         convert_attestation_statement=_convert_attestation_statement,
@@ -219,12 +219,12 @@ def _convert_attestation_entry(entry: Any) -> Dict[str, Any]:
     )
 
 
-def _convert_attestation_statement(details: Any) -> Dict[str, Any]:
+def _convert_attestation_statement(details: Any) -> dict[str, Any]:
     payload = _convert_attestation_statement_impl(
         details,
         convert_certificate_chain=_convert_certificate_chain,
     )
-    normalized: Dict[str, Any] = {}
+    normalized: dict[str, Any] = {}
     for key, value in payload.items():
         if key == "x5c":
             normalized[key] = value
@@ -233,14 +233,14 @@ def _convert_attestation_statement(details: Any) -> Dict[str, Any]:
     return normalized
 
 
-def _convert_certificate_chain(value: Any) -> List[Dict[str, Any]]:
+def _convert_certificate_chain(value: Any) -> list[dict[str, Any]]:
     return _convert_certificate_chain_impl(
         value,
         convert_certificate_bytes=_convert_certificate_bytes,
     )
 
 
-def _convert_certificate_bytes(value: Any) -> Dict[str, Any]:
+def _convert_certificate_bytes(value: Any) -> dict[str, Any]:
     return _convert_certificate_bytes_impl(
         value,
         serializer=serialize_attestation_certificate,
@@ -252,7 +252,7 @@ def _convert_certificate_bytes(value: Any) -> Dict[str, Any]:
 
 def _convert_certificate_payload(
     entry: Mapping[str, Any], cert_bytes: Optional[bytes] = None
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     payload = _convert_certificate_payload_impl(entry, cert_bytes)
     parsed_entry = payload.get("parsedX5c")
     if parsed_entry is not None:
@@ -263,7 +263,7 @@ def _convert_certificate_payload(
 def _build_authenticator_section(
     response: Any,
     attestation_entry: Any,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     response_mapping = response if isinstance(response, Mapping) else {}
     attestation_mapping = attestation_entry if isinstance(attestation_entry, Mapping) else {}
 

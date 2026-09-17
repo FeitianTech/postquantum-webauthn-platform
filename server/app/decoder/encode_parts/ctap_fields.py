@@ -95,7 +95,7 @@ def _encode_attestation_statement(value: Any) -> Any:
     if not isinstance(value, Mapping):
         return _require_bytes(value, "attStmt")
 
-    statement: Dict[str, Any] = {}
+    statement: dict[str, Any] = {}
     for key, entry in value.items():
         if key == "sig":
             statement["sig"] = _require_bytes(entry, "attStmt.sig")
@@ -114,9 +114,9 @@ def _encode_attestation_statement(value: Any) -> Any:
     return statement
 
 
-def _encode_ctap_user(value: Any) -> Dict[str, Any]:
+def _encode_ctap_user(value: Any) -> dict[str, Any]:
     mapping = _require_mapping(value, "user")
-    result: Dict[str, Any] = {}
+    result: dict[str, Any] = {}
 
     if "id" in mapping:
         result["id"] = _require_bytes(mapping["id"], "user.id")
@@ -136,7 +136,7 @@ def _encode_ctap_user(value: Any) -> Dict[str, Any]:
     return result
 
 
-def _encode_allow_list(value: Any) -> List[Any]:
+def _encode_allow_list(value: Any) -> list[Any]:
     if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
         return [_encode_credential_descriptor(item) for item in value]
     raise ValueError("allowList must be an array of credential descriptors.")
@@ -148,7 +148,7 @@ def _encode_credential_descriptor(value: Any) -> Any:
         return decoded
 
     mapping = _require_mapping(value, "credential descriptor")
-    descriptor: Dict[str, Any] = {}
+    descriptor: dict[str, Any] = {}
 
     if "type" in mapping:
         descriptor["type"] = _ensure_text(mapping["type"], "credential.type")

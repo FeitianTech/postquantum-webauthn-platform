@@ -15,12 +15,12 @@ def _build_certificate_summary(
     not_valid_before: datetime,
     not_valid_after: datetime,
     public_key: Any,
-    fallback_public_key_summary: Sequence[Tuple[str, Any]],
+    fallback_public_key_summary: Sequence[tuple[str, Any]],
     extensions: Sequence[Mapping[str, Any]],
     signature_lines: Sequence[str],
     fingerprints: Mapping[str, str],
 ) -> str:
-    summary_lines: List[str] = []
+    summary_lines: list[str] = []
 
     def _append_line(line: str) -> None:
         summary_lines.append(line)
@@ -47,7 +47,7 @@ def _build_certificate_summary(
     _append_blank_line()
     _append_line(f"Subject: {format_x509_name(certificate.subject)}")
 
-    pk_summary_entries: List[Tuple[str, Any]] = []
+    pk_summary_entries: list[tuple[str, Any]] = []
     if public_key is None:
         pk_summary_entries.extend(fallback_public_key_summary)
     elif isinstance(public_key, ec.EllipticCurvePublicKey):
@@ -140,7 +140,7 @@ def _build_certificate_summary(
             if isinstance(header_override, str) and header_override.strip():
                 header = header_override.strip()
             else:
-                header_parts: List[str] = []
+                header_parts: list[str] = []
                 if include_oid and oid:
                     header_parts.append(oid)
                 display_name = friendly or (name if name and name != oid else None)
@@ -183,7 +183,7 @@ def _build_certificate_summary(
             ExtensionOID.SUBJECT_KEY_IDENTIFIER
         )
     except x509.ExtensionNotFound:
-        ski_lines: List[str] = []
+        ski_lines: list[str] = []
     else:
         ski_lines = format_hex_bytes_lines(ski_extension.value.digest)
 

@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Mapping, MutableMapping
 def register_begin_impl(simple_module: Any):
     payload = simple_module.request.get_json(silent=True) or {}
 
-    existing_credentials_raw: List[Any] = []
+    existing_credentials_raw: list[Any] = []
     if isinstance(payload, Mapping):
         raw_candidates = payload.get("credentials") or payload.get("existingCredentials")
         if isinstance(raw_candidates, list):
@@ -50,8 +50,8 @@ def register_begin_impl(simple_module: Any):
         public_key_options = options_dict.get("publicKey")
         if isinstance(public_key_options, MutableMapping):
             params = public_key_options.get("pubKeyCredParams")
-            allowed_params: List[Dict[str, Any]] = []
-            existing_param_map: Dict[int, Dict[str, Any]] = {}
+            allowed_params: list[dict[str, Any]] = []
+            existing_param_map: dict[int, dict[str, Any]] = {}
             if isinstance(params, list):
                 for param in params:
                     if isinstance(param, MutableMapping):

@@ -64,7 +64,7 @@ from .simple_parts.credentials_route_impl import list_credentials_impl
 from .simple_parts.register_begin_impl import register_begin_impl
 from .simple_parts.register_complete_impl import register_complete_impl
 
-_SIMPLE_ALLOWED_ALGORITHMS: Tuple[int, ...] = tuple(
+_SIMPLE_ALLOWED_ALGORITHMS: tuple[int, ...] = tuple(
     alg
     for alg in (-50, -49, -48, -8, -7, -257, -35)
     if alg in set(CoseKey.supported_algorithms())
@@ -112,11 +112,11 @@ def _select_first(mapping: Mapping[str, Any], keys: Sequence[str]) -> Any:
     return _select_first_impl(_self_module(), mapping, keys)
 
 
-def _serialize_credential_for_session(entry: Mapping[str, Any]) -> Dict[str, Any]:
+def _serialize_credential_for_session(entry: Mapping[str, Any]) -> dict[str, Any]:
     return _serialize_credential_for_session_impl(_self_module(), entry)
 
 
-def _parse_client_credentials(raw_credentials: Any) -> Tuple[List[AttestedCredentialData], List[Dict[str, Any]]]:
+def _parse_client_credentials(raw_credentials: Any) -> tuple[list[AttestedCredentialData], list[dict[str, Any]]]:
     return _parse_client_credentials_impl(_self_module(), raw_credentials)
 
 
