@@ -27,8 +27,13 @@ jobs:
         with:
           node-version: "20"
 
+      # npm ci, not npm install: it installs exactly what package-lock.json
+      # pins, fails if the lock and package.json disagree, and never rewrites
+      # the lock. vitest pulls rolldown, whose per-platform native bindings are
+      # optional dependencies, so a lock regenerated against a partial tree can
+      # silently drop the runner's binding and break this job.
       - name: Install frontend dependencies
-        run: npm install
+        run: npm ci
 
       # --coverage so the thresholds in vitest.config.mjs are enforced here too.
       - name: Run frontend tests
