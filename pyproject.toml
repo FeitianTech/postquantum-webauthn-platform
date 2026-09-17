@@ -40,7 +40,6 @@ requests = "^2.32.3"       # Fetching metadata/trust anchors
 
 [tool.poetry.extras]
 pcsc = ["pyscard"]
-pqc = ["oqs", "pqcrypto"]
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
