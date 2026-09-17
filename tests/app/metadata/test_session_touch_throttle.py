@@ -12,10 +12,11 @@ from flask import session
 def touch_env(monkeypatch):
     metadata = pytest.importorskip("server.app.metadata")
     config = pytest.importorskip("server.app.config")
+    cleanup = pytest.importorskip("server.app.metadata_parts.session_cleanup_runtime")
 
     calls = []
-    monkeypatch.setattr(metadata, "_touch_session_last_access", lambda sid: calls.append(sid))
-    monkeypatch.setattr(metadata, "_schedule_inactive_session_cleanup", lambda: None)
+    monkeypatch.setattr(cleanup, "_touch_session_last_access", lambda sid: calls.append(sid))
+    monkeypatch.setattr(cleanup, "_schedule_inactive_session_cleanup", lambda: None)
     monkeypatch.delenv(metadata._SESSION_METADATA_TOUCH_THROTTLE_ENV, raising=False)
     return metadata, config.app, calls
 

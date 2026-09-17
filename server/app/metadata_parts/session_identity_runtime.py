@@ -10,6 +10,7 @@ from flask import after_this_request, g, has_request_context, request, session
 
 from .. import session_metadata_store
 from ..config import app
+from . import session_cleanup_runtime
 from .runtime_state import (
     _SESSION_METADATA_COOKIE_MAX_AGE,
     _SESSION_METADATA_COOKIE_NAME,
@@ -174,7 +175,7 @@ def _session_metadata_directory(
             )
             raise
     if cleanup:
-        _schedule_inactive_session_cleanup()
+        session_cleanup_runtime._schedule_inactive_session_cleanup()
     return normalised
 
 
@@ -193,7 +194,7 @@ def _note_session_activity(session_id: str, *, directory: str | None = None) -> 
         now = time.time()
         if getattr(g, "_mds_session_new", None) == normalised:
             session[_SESSION_METADATA_TOUCH_KEY] = now
-            _schedule_inactive_session_cleanup()
+            session_cleanup_runtime._schedule_inactive_session_cleanup()
             return
 
         raw_throttle = os.environ.get(_SESSION_METADATA_TOUCH_THROTTLE_ENV)
@@ -208,12 +209,12 @@ def _note_session_activity(session_id: str, *, directory: str | None = None) -> 
 
         last_touch = session.get(_SESSION_METADATA_TOUCH_KEY)
         if isinstance(last_touch, (int, float)) and 0 <= now - last_touch < throttle:
-            _schedule_inactive_session_cleanup()
+            session_cleanup_runtime._schedule_inactive_session_cleanup()
             return
         session[_SESSION_METADATA_TOUCH_KEY] = now
 
-    _touch_session_last_access(normalised)
-    _schedule_inactive_session_cleanup()
+    session_cleanup_runtime._touch_session_last_access(normalised)
+    session_cleanup_runtime._schedule_inactive_session_cleanup()
 
 
 def _validate_session_metadata_filename(filename: str) -> str:
