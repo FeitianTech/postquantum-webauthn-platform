@@ -1,13 +1,28 @@
 """Metadata merge, trust-anchor, and verifier helpers."""
 from __future__ import annotations
 
+from dataclasses import replace
+from datetime import datetime, timezone
+from typing import TYPE_CHECKING, Any
+
+from flask import g, has_request_context
+
+from fido2.mds3 import (
+    MdsAttestationVerifier,
+    MetadataBlobPayload,
+    MetadataBlobPayloadEntry,
+)
+
+if TYPE_CHECKING:  # annotation-only, so no runtime import edge is needed
+    from .session_items_runtime import SessionMetadataItem
+
 
 def _merge_metadata(
-    base_metadata: Optional[MetadataBlobPayload],
-    session_items: List[SessionMetadataItem],
+    base_metadata: MetadataBlobPayload | None,
+    session_items: list[SessionMetadataItem],
 ) -> MetadataBlobPayload:
-    custom_entries: List[MetadataBlobPayloadEntry] = []
-    seen_aaguids: Set[str] = set()
+    custom_entries: list[MetadataBlobPayloadEntry] = []
+    seen_aaguids: set[str] = set()
 
     for item in session_items:
         entry = item.entry
@@ -18,7 +33,7 @@ def _merge_metadata(
             seen_aaguids.add(aaguid)
         custom_entries.append(entry)
 
-    base_entries: List[MetadataBlobPayloadEntry] = []
+    base_entries: list[MetadataBlobPayloadEntry] = []
     if base_metadata is not None:
         for entry in base_metadata.entries:
             aaguid = _extract_entry_aaguid(entry)
@@ -51,7 +66,7 @@ def _merge_metadata(
     )
 
 
-def metadata_entry_trust_anchor_status(entry: Any) -> Optional[bool]:
+def metadata_entry_trust_anchor_status(entry: Any) -> bool | None:
     """Return whether *entry* originates from a trust-anchored metadata source.
 
     Returns ``False`` for session-uploaded entries, the base trust flag for
@@ -79,7 +94,7 @@ def metadata_entry_trust_anchor_status(entry: Any) -> Optional[bool]:
     return None
 
 
-def get_mds_verifier() -> Optional[MdsAttestationVerifier]:
+def get_mds_verifier() -> MdsAttestationVerifier | None:
     """Return an MDS attestation verifier using session metadata when available."""
 
     global _base_verifier_cache, _base_verifier_mtime
