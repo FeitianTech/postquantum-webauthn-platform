@@ -80,7 +80,7 @@ def test_note_session_activity_schedules_cleanup(session_metadata_env, monkeypat
     assert calls == [("touch", "session-123"), ("schedule", None)]
 
 
-def test_resolve_effective_metadata_entry_accepts_hyphenated_aaguid(monkeypatch):
+def test_resolve_effective_metadata_entry_accepts_hyphenated_aaguid(monkeypatch, snapshot_runtime, items_runtime):
     metadata = pytest.importorskip("server.app.metadata")
 
     base_entry = {
@@ -92,15 +92,15 @@ def test_resolve_effective_metadata_entry_accepts_hyphenated_aaguid(monkeypatch)
         "statusReports": [],
     }
 
-    monkeypatch.setattr(metadata, "list_session_metadata_items", lambda: [], raising=False)
+    monkeypatch.setattr(items_runtime, "list_session_metadata_items", lambda: [], raising=False)
     monkeypatch.setattr(
-        metadata,
+        snapshot_runtime,
         "load_packaged_explorer_summary",
         lambda: {"generatedAt": "2026-04-02T00:00:00+00:00", "no": 1},
         raising=False,
     )
     monkeypatch.setattr(
-        metadata,
+        snapshot_runtime,
         "_load_base_metadata",
         lambda: (SimpleNamespace(entries=[base_entry]), "packaged"),
         raising=False,
@@ -115,7 +115,7 @@ def test_resolve_effective_metadata_entry_accepts_hyphenated_aaguid(monkeypatch)
     assert resolved["metadataStatement"]["description"] == "Packaged authenticator"
 
 
-def test_load_effective_full_snapshot_prefers_session_entry(monkeypatch):
+def test_load_effective_full_snapshot_prefers_session_entry(monkeypatch, snapshot_runtime, items_runtime):
     metadata = pytest.importorskip("server.app.metadata")
 
     base_snapshot = {
@@ -149,8 +149,8 @@ def test_load_effective_full_snapshot_prefers_session_entry(monkeypatch):
         mtime=None,
     )
 
-    monkeypatch.setattr(metadata, "_load_base_full_snapshot", lambda: (base_snapshot, 1.0), raising=False)
-    monkeypatch.setattr(metadata, "list_session_metadata_items", lambda: [session_item], raising=False)
+    monkeypatch.setattr(snapshot_runtime, "_load_base_full_snapshot", lambda: (base_snapshot, 1.0), raising=False)
+    monkeypatch.setattr(items_runtime, "list_session_metadata_items", lambda: [session_item], raising=False)
 
     snapshot = metadata.load_effective_full_snapshot()
 

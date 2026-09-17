@@ -56,7 +56,7 @@ def test_base_entry_reports_base_trust(metadata_module, metadata_runtime_state):
     assert metadata_module.metadata_entry_trust_anchor_status(entry) is True
 
 
-def test_session_entries_stay_untrusted_while_other_sessions_run(metadata_module, monkeypatch, metadata_runtime_state):
+def test_session_entries_stay_untrusted_while_other_sessions_run(metadata_module, monkeypatch, metadata_runtime_state, items_runtime, snapshot_runtime):
     base_entry = _entry(metadata_module, "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")
     custom_entry = _entry(metadata_module, "cccccccc-cccc-cccc-cccc-cccccccccccc")
     base_metadata = metadata_module.MetadataBlobPayload(
@@ -68,10 +68,10 @@ def test_session_entries_stay_untrusted_while_other_sessions_run(metadata_module
     metadata_runtime_state._base_metadata_entry_ids = {id(base_entry)}
 
     monkeypatch.setattr(
-        metadata_module, "_load_base_metadata", lambda: (base_metadata, 1.0), raising=False
+        snapshot_runtime, "_load_base_metadata", lambda: (base_metadata, 1.0)
     )
     monkeypatch.setattr(
-        metadata_module,
+        items_runtime,
         "list_session_metadata_items",
         lambda: (
             [SimpleNamespace(entry=custom_entry, legal_header="")]

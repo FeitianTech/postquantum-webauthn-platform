@@ -151,7 +151,7 @@ def test_build_metadata_entry_components_and_expand_payloads(metadata_module):
         metadata_module.expand_metadata_entry_payloads({"entries": ["bad-entry"]})
 
 
-def test_entry_lookup_and_snapshot_composition_deduplicate_by_aaguid(metadata_module, monkeypatch):
+def test_entry_lookup_and_snapshot_composition_deduplicate_by_aaguid(metadata_module, monkeypatch, items_runtime):
     payload = {
         "aaguid": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
         "aaid": "A1B2#0001",
@@ -176,7 +176,7 @@ def test_entry_lookup_and_snapshot_composition_deduplicate_by_aaguid(metadata_mo
         ],
     }
 
-    monkeypatch.setattr(metadata_module, "list_session_metadata_items", lambda: [object()], raising=False)
+    monkeypatch.setattr(items_runtime, "list_session_metadata_items", lambda: [object()], raising=False)
     monkeypatch.setattr(
         metadata_module,
         "_build_session_snapshot_entry",
@@ -224,7 +224,7 @@ def test_load_base_explorer_snapshot_prefers_packaged_explorer_when_newer(metada
     assert marker is not None
 
 
-def test_load_packaged_explorer_summary_and_get_mds_verifier_cache_paths(metadata_module, monkeypatch):
+def test_load_packaged_explorer_summary_and_get_mds_verifier_cache_paths(metadata_module, monkeypatch, snapshot_runtime, items_runtime):
     monkeypatch.setattr(metadata_module, "_load_packaged_explorer_meta", lambda: None, raising=False)
     monkeypatch.setattr(metadata_module, "_load_base_explorer_snapshot", lambda: (None, None), raising=False)
     monkeypatch.setattr(
@@ -251,8 +251,8 @@ def test_load_packaged_explorer_summary_and_get_mds_verifier_cache_paths(metadat
             created.append(metadata)
 
     fake_metadata = SimpleNamespace(entries=[])
-    monkeypatch.setattr(metadata_module, "_load_base_metadata", lambda: (fake_metadata, 123.0), raising=False)
-    monkeypatch.setattr(metadata_module, "list_session_metadata_items", lambda: [], raising=False)
+    monkeypatch.setattr(snapshot_runtime, "_load_base_metadata", lambda: (fake_metadata, 123.0), raising=False)
+    monkeypatch.setattr(items_runtime, "list_session_metadata_items", lambda: [], raising=False)
     monkeypatch.setattr(metadata_module, "MdsAttestationVerifier", _FakeVerifier, raising=False)
 
     first = metadata_module.get_mds_verifier()

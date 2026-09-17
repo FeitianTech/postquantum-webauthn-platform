@@ -9,7 +9,7 @@ import pytest
 
 
 @pytest.fixture
-def metadata_module(monkeypatch, tmp_path, metadata_runtime_state):
+def metadata_module(monkeypatch, tmp_path, metadata_runtime_state, cache_runtime):
     module = pytest.importorskip("server.app.metadata")
 
     verified_path = tmp_path / "fido-mds3.verified.json"
@@ -34,7 +34,7 @@ def metadata_module(monkeypatch, tmp_path, metadata_runtime_state):
         lambda payload, cache: builds.append(1) or {"entries": [], "meta": {"source": "rebuilt"}},
         raising=False,
     )
-    monkeypatch.setattr(module, "load_metadata_cache_entry", lambda: None, raising=False)
+    monkeypatch.setattr(cache_runtime, "load_metadata_cache_entry", lambda: None, raising=False)
 
     module._test_paths = (verified_path, explorer_path)
     module._test_builds = builds
@@ -79,11 +79,11 @@ def test_mismatched_meta_rebuilds_from_verified_snapshot(metadata_module):
     assert metadata_module._test_builds == [1]
 
 
-def test_summary_reads_meta_file_without_loading_snapshot(metadata_module, monkeypatch):
+def test_summary_reads_meta_file_without_loading_snapshot(metadata_module, monkeypatch, snapshot_runtime):
     verified_path, explorer_path = metadata_module._test_paths
     _write_meta(verified_path, explorer_path)
     monkeypatch.setattr(
-        metadata_module,
+        snapshot_runtime,
         "_load_base_explorer_snapshot",
         lambda: pytest.fail("summary should not load the full explorer snapshot"),
         raising=False,
