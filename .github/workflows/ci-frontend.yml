@@ -25,7 +25,10 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: "20"
+          # Node 22, not 20: jsdom 30 pulls undici 8, which calls
+          # webidl.util.markAsUncloneable -- absent before Node 22, so every
+          # test worker fails to start on 20. Node 20 is also past end of life.
+          node-version: "22"
 
       # npm ci, not npm install: it installs exactly what package-lock.json
       # pins, fails if the lock and package.json disagree, and never rewrites

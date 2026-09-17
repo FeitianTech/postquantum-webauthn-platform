@@ -25,7 +25,8 @@ steps:
         uv sync --locked --python 3.12
         .venv/bin/python -m pytest -q
 
-  - name: node:20-slim
+  # node:22-slim: jsdom 30 pulls undici 8, which needs Node 22 or newer.
+  - name: node:22-slim
     id: Frontend tests
     waitFor: ['-']
     entrypoint: bash
