@@ -145,7 +145,7 @@ def test_coerce_attestation_certificate_bytes_string_path_uses_websafe_decode_fa
     assert attestation_module._coerce_attestation_certificate_bytes("AQI") is None
 
 
-def test_evaluate_mldsa_attestation_root_clears_chain_errors_after_later_success(monkeypatch, trust_runtime, trust_ca_runtime):
+def test_evaluate_mldsa_attestation_root_clears_chain_errors_after_later_success(monkeypatch, trust_runtime, trust_ca_runtime, pqc_constraints_runtime):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     metadata_entry = SimpleNamespace(metadata_statement=SimpleNamespace())
@@ -176,12 +176,11 @@ def test_evaluate_mldsa_attestation_root_clears_chain_errors_after_later_success
         lambda _x5c: [b"leaf"],
     )
     monkeypatch.setattr(
-        attestation_module,
+        pqc_constraints_runtime,
         "_verify_pqc_attestation_chain",
         lambda _trust_path, root, now: (False, ["dup", "dup"])
         if root == b"root-a"
         else (True, []),
-        raising=False,
     )
 
     outcome = attestation_module._evaluate_mldsa_attestation_root(
@@ -195,7 +194,7 @@ def test_evaluate_mldsa_attestation_root_clears_chain_errors_after_later_success
     assert "dup" not in outcome["errors"]
 
 
-def test_evaluate_mldsa_attestation_root_deduplicates_chain_errors_when_all_roots_fail(monkeypatch, trust_runtime, trust_ca_runtime):
+def test_evaluate_mldsa_attestation_root_deduplicates_chain_errors_when_all_roots_fail(monkeypatch, trust_runtime, trust_ca_runtime, pqc_constraints_runtime):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     metadata_entry = SimpleNamespace(metadata_statement=SimpleNamespace())
@@ -226,10 +225,9 @@ def test_evaluate_mldsa_attestation_root_deduplicates_chain_errors_when_all_root
         lambda _x5c: [b"leaf"],
     )
     monkeypatch.setattr(
-        attestation_module,
+        pqc_constraints_runtime,
         "_verify_pqc_attestation_chain",
         lambda _trust_path, _root, now: (False, ["dup", "dup"]),
-        raising=False,
     )
 
     outcome = attestation_module._evaluate_mldsa_attestation_root(
@@ -250,9 +248,7 @@ def test_normalise_signature_algorithm_name_covers_ed448_and_dsa_paths():
     assert attestation_module._normalise_signature_algorithm_name("dsa-with-sha1") == "DSA"
 
 
-def test_perform_attestation_checks_coerces_string_challenge_via_utf8_fallback_and_records_attestation_error(
-    monkeypatch,
-):
+def test_perform_attestation_checks_coerces_string_challenge_via_utf8_fallback_and_records_attestation_error(monkeypatch, pqc_runtime):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     flags = int(attestation_module.AuthenticatorData.FLAG.UP | attestation_module.AuthenticatorData.FLAG.AT)
@@ -291,10 +287,9 @@ def test_perform_attestation_checks_coerces_string_challenge_via_utf8_fallback_a
         raising=False,
     )
     monkeypatch.setattr(
-        attestation_module,
+        pqc_runtime,
         "_attempt_pqc_attestation_signature_validation",
         lambda _att_obj, _client_hash: {"attempted": False, "success": False, "error": None},
-        raising=False,
     )
     monkeypatch.setattr(attestation_module, "get_mds_verifier", lambda: None, raising=False)
 

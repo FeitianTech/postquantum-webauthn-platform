@@ -13,12 +13,7 @@ from fido2.attestation import (
 
 from ..metadata import get_mds_verifier
 from ..pqc import is_pqc_algorithm
-from . import trust_runtime
-from .classical_runtime import _evaluate_classical_attestation_root
-from .pqc_runtime import (
-    _attempt_pqc_attestation_signature_validation,
-    _evaluate_mldsa_attestation_root,
-)
+from . import classical_runtime, pqc_runtime, trust_runtime
 
 
 def _resolve_signature_validation(
@@ -53,7 +48,7 @@ def _resolve_signature_validation(
 
     pqc_signature_valid: bool | None = None
     if signature_valid is False and attestation_format_value != "none":
-        pqc_outcome = _attempt_pqc_attestation_signature_validation(
+        pqc_outcome = pqc_runtime._attempt_pqc_attestation_signature_validation(
             attestation_object, client_data_hash
         )
         if pqc_outcome.get("attempted"):
@@ -127,7 +122,7 @@ def _evaluate_root_validation(
     pqc_registration = isinstance(algorithm, int) and is_pqc_algorithm(algorithm)
     if pqc_registration:
         verifier = get_mds_verifier()
-        pqc_outcome = _evaluate_mldsa_attestation_root(
+        pqc_outcome = pqc_runtime._evaluate_mldsa_attestation_root(
             attestation_object,
             credential_aaguid_bytes,
             verifier,
@@ -145,7 +140,7 @@ def _evaluate_root_validation(
             results["warnings"].extend(str(warn) for warn in pqc_warnings)
     elif signature_valid and attestation_result is not None:
         verifier = get_mds_verifier()
-        classical_outcome = _evaluate_classical_attestation_root(
+        classical_outcome = classical_runtime._evaluate_classical_attestation_root(
             attestation_object,
             attestation_result,
             client_data_hash,

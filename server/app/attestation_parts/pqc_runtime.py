@@ -9,11 +9,7 @@ from fido2.cose import CoseKey, extract_certificate_public_key_info
 
 from ..metadata import metadata_entry_trust_anchor_status
 from ..pqc import is_pqc_algorithm
-from . import trust_ca_runtime, trust_runtime
-from .pqc_constraints_runtime import (
-    _normalise_pqc_algorithm_identifier,
-    _verify_pqc_attestation_chain,
-)
+from . import pqc_constraints_runtime, trust_ca_runtime, trust_runtime
 
 
 def _evaluate_mldsa_attestation_root(
@@ -111,7 +107,7 @@ def _evaluate_mldsa_attestation_root(
         chain_valid = False
         chain_errors: list[str] = []
         for root in trusted_roots:
-            valid, attempt_errors = _verify_pqc_attestation_chain(
+            valid, attempt_errors = pqc_constraints_runtime._verify_pqc_attestation_chain(
                 trust_path,
                 root,
                 now=now,
@@ -154,7 +150,7 @@ def _attempt_pqc_attestation_signature_validation(
     if not isinstance(statement, Mapping):
         return outcome
 
-    algorithm = _normalise_pqc_algorithm_identifier(statement.get("alg"))
+    algorithm = pqc_constraints_runtime._normalise_pqc_algorithm_identifier(statement.get("alg"))
     if algorithm is None or not is_pqc_algorithm(algorithm):
         return outcome
 
