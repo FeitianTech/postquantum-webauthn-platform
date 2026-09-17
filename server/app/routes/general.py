@@ -17,6 +17,7 @@ from ..attestation import serialize_attestation_certificate
 from ..config import MDS_METADATA_VERIFIED_PATH, app
 from ..decoder import decode_payload_text, encode_payload_text
 from ..env_flags import parse_env_flag
+from ..mds_provisioning import ensure_snapshot_available
 from ..metadata import (
     _load_base_metadata,
     delete_session_metadata_item,
@@ -105,6 +106,10 @@ def ensure_metadata_bootstrapped(skip_if_reloader_parent: bool = True) -> None:
 
     if skip_if_reloader_parent and app.debug and os.environ.get("WERKZEUG_RUN_MAIN") != "true":
         return
+
+    # The snapshot is not tracked in git nor baked into the image, so make sure
+    # it is on disk before anything tries to read it.
+    ensure_snapshot_available()
 
     _load_cached_metadata_snapshot_if_available()
 

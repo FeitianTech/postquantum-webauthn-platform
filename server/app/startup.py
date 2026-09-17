@@ -41,6 +41,15 @@ def _run_background_warmup() -> None:
         except Exception:
             app.logger.warning("Background cloud storage warm-up failed.", exc_info=True)
 
+    # The MDS snapshot is provisioned at runtime rather than shipped in the
+    # image, so a cold instance fetches it here instead of on the first request.
+    try:
+        from .mds_provisioning import ensure_snapshot_available
+
+        ensure_snapshot_available()
+    except Exception:
+        app.logger.warning("Background MDS snapshot provisioning failed.", exc_info=True)
+
     try:
         from .metadata import load_cached_metadata_snapshot
 
