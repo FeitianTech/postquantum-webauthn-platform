@@ -6,13 +6,21 @@ source =
     server
 
 [report]
-# A floor, not a target: measured 95.42% on 2026-09-17. Set just under it so a
-# real regression fails but ordinary churn does not. Raise it when coverage
-# rises; never lower it to go green.
+# A floor, not a target: measured 95.36% on a macOS checkout and 95.74% on the
+# Linux CI runner on 2026-09-17, once the platform-only backend below stopped
+# being measured. Set just under both so a real regression fails but ordinary
+# churn does not. Raise it when coverage rises; never lower it to go green.
 fail_under = 95
 omit =
     tests/*
     */tests/*
+    # Only tests/fido2/hid/test_hid_macos_backend_contracts.py reaches this, and
+    # that module skips itself off Darwin. Measuring it made the total depend on
+    # the runner's OS: 100% on a macOS checkout, 0% on the Linux CI runner, which
+    # is a 1.3-point swing and the reason the floor could not hold on both. The
+    # other hid backends stay measured; they are driven through mocked ctypes and
+    # do not need their own platform.
+    fido2/hid/macos.py
 exclude_lines =
     pragma: no cover
     raise NotImplementedError
