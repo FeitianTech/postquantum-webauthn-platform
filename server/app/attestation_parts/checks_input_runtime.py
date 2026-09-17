@@ -9,8 +9,8 @@ from fido2.cose import CoseKey
 from fido2.utils import ByteBuffer, websafe_decode
 from fido2.webauthn import AuthenticatorData, CollectedClientData
 
+from . import encoding_leaf
 from .checks_policy_runtime import _collect_allowed_algorithms, _resolve_uv_required
-from .encoding_leaf import encode_base64url
 
 
 def _coerce_expected_bytes(value: Any) -> bytes:
@@ -89,9 +89,9 @@ def _populate_client_data_results(
         "expected_type": CollectedClientData.TYPE.CREATE.value,
         "type_valid": client_data.type
         == CollectedClientData.TYPE.CREATE.value,
-        "challenge": encode_base64url(client_data.challenge),
+        "challenge": encoding_leaf.encode_base64url(client_data.challenge),
         "expected_challenge": (
-            encode_base64url(expected_challenge_bytes)
+            encoding_leaf.encode_base64url(expected_challenge_bytes)
             if expected_challenge_bytes
             else None
         ),

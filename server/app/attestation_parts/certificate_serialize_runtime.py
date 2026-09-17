@@ -12,6 +12,7 @@ from cryptography.hazmat.primitives import hashes, serialization
 
 from fido2.cose import describe_mldsa_oid, describe_mldsa_oid_name
 
+from . import encoding_leaf
 from .certificate_extensions_leaf import _serialize_extension_value
 from .certificate_public_key_leaf import (
     _build_unknown_public_key_info,
@@ -23,7 +24,6 @@ from .certificate_signature_leaf import (
     format_x509_name,
 )
 from .certificate_summary_runtime import _build_certificate_summary
-from .encoding_leaf import colon_hex, format_hex_bytes_lines
 from .runtime_state import EXTENSION_DISPLAY_METADATA
 from .trust_runtime import _certificate_datetime, _ensure_utc_datetime
 
@@ -158,9 +158,9 @@ def serialize_attestation_certificate(cert_bytes: bytes) -> Any:
         public_key_info = _serialize_public_key_info(public_key)
 
     signature_bytes = certificate.signature
-    signature_lines = format_hex_bytes_lines(signature_bytes)
+    signature_lines = encoding_leaf.format_hex_bytes_lines(signature_bytes)
     signature_hex = signature_bytes.hex()
-    signature_colon = colon_hex(signature_bytes)
+    signature_colon = encoding_leaf.colon_hex(signature_bytes)
 
     try:
         signature_hash_algorithm = certificate.signature_hash_algorithm

@@ -9,7 +9,7 @@ from cryptography.hazmat.primitives.asymmetric import ec, ed448, ed25519, rsa
 
 from fido2.cose import extract_certificate_public_key_info
 
-from .encoding_leaf import colon_hex, format_hex_bytes_lines
+from . import encoding_leaf
 
 
 def _build_unknown_public_key_info(cert_bytes: bytes, error: Exception) -> tuple[dict[str, Any], list[tuple[str, Any]]]:
@@ -60,15 +60,15 @@ def _build_unknown_public_key_info(cert_bytes: bytes, error: Exception) -> tuple
         if candidate:
             raw_bytes = candidate
             info["publicKeyBase64"] = base64.b64encode(raw_bytes).decode("ascii")
-            info["publicKeyHex"] = colon_hex(raw_bytes)
-            info["publicKeyHexLines"] = format_hex_bytes_lines(raw_bytes)
+            info["publicKeyHex"] = encoding_leaf.colon_hex(raw_bytes)
+            info["publicKeyHexLines"] = encoding_leaf.format_hex_bytes_lines(raw_bytes)
             key_size_bits = len(raw_bytes) * 8
 
     if isinstance(wrapped_public_key_bytes, (bytes, bytearray)):
         wrapped_bytes = bytes(wrapped_public_key_bytes)
         if wrapped_bytes and (raw_bytes is None or wrapped_bytes != raw_bytes):
             info["wrappedPublicKeyBase64"] = base64.b64encode(wrapped_bytes).decode("ascii")
-            info["wrappedPublicKeyHexLines"] = format_hex_bytes_lines(wrapped_bytes)
+            info["wrappedPublicKeyHexLines"] = encoding_leaf.format_hex_bytes_lines(wrapped_bytes)
 
     if isinstance(mldsa_details, Mapping):
         length_public_key = mldsa_details.get("public_key_length")
@@ -135,7 +135,7 @@ def _serialize_public_key_info(public_key: Any) -> dict[str, Any]:
             {
                 "type": "ECC",
                 "curve": curve_name,
-                "uncompressedPoint": colon_hex(
+                "uncompressedPoint": encoding_leaf.colon_hex(
                     public_key.public_bytes(
                         encoding=serialization.Encoding.X962,
                         format=serialization.PublicFormat.UncompressedPoint,
@@ -170,7 +170,7 @@ def _serialize_public_key_info(public_key: Any) -> dict[str, Any]:
         info.update(
             {
                 "type": public_key.__class__.__name__,
-                "publicKeyHex": colon_hex(
+                "publicKeyHex": encoding_leaf.colon_hex(
                     public_key.public_bytes(
                         encoding=serialization.Encoding.Raw,
                         format=serialization.PublicFormat.Raw,

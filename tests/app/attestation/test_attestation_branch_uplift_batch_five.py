@@ -113,7 +113,7 @@ def test_extract_attestation_details_keeps_non_mapping_extension_outputs(monkeyp
     assert extracted[4] == ["raw-extension"]
 
 
-def test_serialize_extension_value_unrecognized_oid_fallback_paths(monkeypatch):
+def test_serialize_extension_value_unrecognized_oid_fallback_paths(monkeypatch, encoding_leaf):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     firmware_oid = ObjectIdentifier("1.3.6.1.4.1.41482.13.1")
@@ -127,7 +127,7 @@ def test_serialize_extension_value_unrecognized_oid_fallback_paths(monkeypatch):
             return b"\xff\xfe"
         return b"short"
 
-    monkeypatch.setattr(attestation_module, "decode_asn1_octet_string", _decode_stub, raising=False)
+    monkeypatch.setattr(encoding_leaf, "decode_asn1_octet_string", _decode_stub)
 
     firmware_ext = SimpleNamespace(
         oid=firmware_oid,

@@ -11,7 +11,7 @@ from cryptography import x509
 from fido2.utils import ByteBuffer
 from fido2.webauthn import Aaguid
 
-from .encoding_leaf import decode_asn1_octet_string
+from . import encoding_leaf
 from .runtime_state import AAGUID_EXTENSION_OID
 
 
@@ -93,7 +93,7 @@ def _extract_certificate_aaguid(cert_der: bytes) -> bytes:
     if raw_value is None:
         return b""
 
-    decoded = decode_asn1_octet_string(raw_value)
+    decoded = encoding_leaf.decode_asn1_octet_string(raw_value)
     if len(decoded) == 16:
         return decoded
     if len(raw_value) == 16:

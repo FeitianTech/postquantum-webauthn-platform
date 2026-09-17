@@ -9,8 +9,8 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec, ed448, ed25519, rsa
 from cryptography.x509.oid import ExtensionOID
 
+from . import encoding_leaf
 from .certificate_signature_leaf import format_x509_name
-from .encoding_leaf import format_hex_bytes_lines, format_hex_string_lines
 from .trust_runtime import _ensure_utc_datetime
 
 
@@ -64,7 +64,7 @@ def _build_certificate_summary(
         pk_summary_entries.append(("Type", "ECC"))
         if public_key.key_size:
             pk_summary_entries.append(("Public-Key", f"({public_key.key_size} bit)"))
-        ecc_point_lines = format_hex_bytes_lines(
+        ecc_point_lines = encoding_leaf.format_hex_bytes_lines(
             public_key.public_bytes(
                 encoding=serialization.Encoding.X962,
                 format=serialization.PublicFormat.UncompressedPoint,
@@ -81,7 +81,7 @@ def _build_certificate_summary(
             pk_summary_entries.append(("Public-Key", f"({public_key.key_size} bit)"))
         numbers = public_key.public_numbers()
         modulus_bytes = numbers.n.to_bytes((numbers.n.bit_length() + 7) // 8, "big")
-        modulus_lines = format_hex_bytes_lines(modulus_bytes)
+        modulus_lines = encoding_leaf.format_hex_bytes_lines(modulus_bytes)
         if modulus_lines:
             pk_summary_entries.append(("Modulus", modulus_lines))
         pk_summary_entries.append(("Exponent", str(numbers.e)))
@@ -92,7 +92,7 @@ def _build_certificate_summary(
             encoding=serialization.Encoding.Raw,
             format=serialization.PublicFormat.Raw,
         )
-        raw_lines = format_hex_bytes_lines(raw_bytes)
+        raw_lines = encoding_leaf.format_hex_bytes_lines(raw_bytes)
         if raw_lines:
             pk_summary_entries.append(("Public Key", raw_lines))
     else:
@@ -183,7 +183,7 @@ def _build_certificate_summary(
             hex_value = fingerprints.get(label)
             if not hex_value:
                 continue
-            colon_lines = format_hex_string_lines(hex_value)
+            colon_lines = encoding_leaf.format_hex_string_lines(hex_value)
             _append_line(f"    {label.upper()}:")
             for line in colon_lines:
                 _append_line(f"        {line}")
@@ -195,7 +195,7 @@ def _build_certificate_summary(
     except x509.ExtensionNotFound:
         ski_lines: list[str] = []
     else:
-        ski_lines = format_hex_bytes_lines(ski_extension.value.digest)
+        ski_lines = encoding_leaf.format_hex_bytes_lines(ski_extension.value.digest)
 
     if ski_lines:
         _append_blank_line()
