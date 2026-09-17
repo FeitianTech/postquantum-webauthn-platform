@@ -58,18 +58,24 @@ class _FakeOqsVerifier:
         return self._should_verify
 
 
-def test_get_mldsa_parameter_details_handles_missing_or_failing_oqs(monkeypatch):
-    monkeypatch.setattr(cose, "_get_optional_oqs", lambda: None, raising=False)
-    assert cose._get_mldsa_parameter_details("ML-DSA-44")["public_key_length"] == 1312
+def test_get_mldsa_parameter_details_reports_fips204_sizes():
+    """Lengths come from FIPS 204 constants, with no runtime probe involved."""
+
+    assert cose._get_mldsa_parameter_details("ML-DSA-44") == {
+        "public_key_length": 1312,
+        "signature_length": 2420,
+        "claimed_nist_level": 2,
+    }
+    assert cose._get_mldsa_parameter_details("ML-DSA-65")["signature_length"] == 3309
+    assert cose._get_mldsa_parameter_details("ML-DSA-87")["signature_length"] == 4627
+
     assert cose._get_mldsa_parameter_details(None) == {}
+    assert cose._get_mldsa_parameter_details("Not-A-Parameter-Set") == {}
 
-    class _BrokenOqs:
-        def Signature(self, _name):
-            raise RuntimeError("broken")
-
-    monkeypatch.setattr(cose, "_get_optional_oqs", lambda: _BrokenOqs(), raising=False)
-    fallback = cose._get_mldsa_parameter_details("ML-DSA-87")
-    assert fallback["signature_length"] == 4627
+    # The returned mapping must be a copy: callers mutate it into display payloads.
+    details = cose._get_mldsa_parameter_details("ML-DSA-44")
+    details["public_key_length"] = 1
+    assert cose._get_mldsa_parameter_details("ML-DSA-44")["public_key_length"] == 1312
 
 
 def test_cosekey_parse_for_name_and_no_debug_context_paths(capsys):
