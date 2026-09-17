@@ -1,0 +1,64 @@
+name: Open a bot pull request
+description: >-
+  Commit the given paths onto a fixed bot branch and open (or update) a pull
+  request against the default branch. Bots never push to main: their changes go
+  through the same review and CI as anyone else's.
+
+inputs:
+  branch:
+    description: Bot branch to force-push. Reused across runs so repeated runs update one pull request.
+    required: true
+  commit-message:
+    description: Commit subject.
+    required: true
+  paths:
+    description: Explicit, space-separated list of paths to stage. Never "-A".
+    required: true
+  title:
+    description: Pull request title.
+    required: true
+  body:
+    description: Pull request body.
+    required: true
+  token:
+    description: >-
+      Token used to push and to open the pull request. GITHUB_TOKEN works, but
+      GitHub does not start workflow runs for events it signs, so the pull
+      request will have no checks until a human pushes to it or closes and
+      reopens it. Pass a PAT or GitHub App token to have CI run automatically.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Commit to the bot branch and open a pull request
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+        BRANCH: ${{ inputs.branch }}
+        COMMIT_MESSAGE: ${{ inputs.commit-message }}
+        PR_TITLE: ${{ inputs.title }}
+        PR_BODY: ${{ inputs.body }}
+        PATHS: ${{ inputs.paths }}
+      run: |
+        set -euo pipefail
+
+        base="${GITHUB_REF_NAME}"
+        git config user.name "github-actions[bot]"
+        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+        git checkout -B "$BRANCH"
+        # Word splitting is intended: PATHS is an explicit list of pathspecs.
+        # shellcheck disable=SC2086
+        git add -- $PATHS
+        git commit -m "$COMMIT_MESSAGE"
+        git push --force origin "$BRANCH"
+
+        existing="$(gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number // empty')"
+        if [ -n "$existing" ]; then
+          echo "Updated existing pull request #${existing}." >> "$GITHUB_STEP_SUMMARY"
+          exit 0
+        fi
+
+        url="$(gh pr create --base "$base" --head "$BRANCH" --title "$PR_TITLE" --body "$PR_BODY")"
+        echo "Opened ${url}." >> "$GITHUB_STEP_SUMMARY"

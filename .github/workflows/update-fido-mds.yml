@@ -5,18 +5,26 @@ on:
     - cron: '0 0 * * *'  # daily at 00:00 UTC
   workflow_dispatch:
 
+# The snapshot is no longer tracked in git (see docs/MDS_SNAPSHOT.md): the
+# server provisions it at runtime from Cloud Storage. This workflow therefore
+# writes nothing to the repository at all — it is a canary that fails loudly if
+# the FIDO Alliance BLOB stops being reachable or stops verifying against the
+# pinned trust root, which is what would silently break the explorer.
+permissions:
+  contents: read
+
+concurrency:
+  group: fido-mds-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  update:
+  verify:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    permissions:
-      contents: write  # REQUIRED for git push with GITHUB_TOKEN
 
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
@@ -33,17 +41,7 @@ jobs:
           uv sync --locked --no-dev --python 3.12
           echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
 
-      - name: Refresh packaged metadata snapshot
-        run: python tools/update_mds_snapshot.py
-
-      - name: Commit and push changes
-        run: |
-          if git diff --quiet; then
-            echo "No metadata updates detected."
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git commit -m "Update FIDO MDS snapshot"
-          git push
+      # Downloads the BLOB and verifies its signature chain against the pinned
+      # GlobalSign R46 root, then discards it. Nothing is written or committed.
+      - name: Verify the upstream metadata BLOB
+        run: python tools/update_mds_snapshot.py --verify-only
