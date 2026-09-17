@@ -1,0 +1,11 @@
+# Ruff configuration for the whole repository.
+#
+# This lives in a standalone ruff.toml rather than in the root pyproject.toml
+# because that file is the vendored `fido2/` library's upstream Poetry manifest.
+# Repo-wide tooling policy does not belong in a vendored manifest, and keeping
+# it out means the manifest stays diffable against upstream python-fido2.
+
+# The app and the vendored library both declare requires-python >= 3.12
+# (server/pyproject.toml and pyproject.toml), so PEP 585/604 syntax is valid
+# everywhere and the UP modernisation rules are safe to apply.
+target-version = "py312"
