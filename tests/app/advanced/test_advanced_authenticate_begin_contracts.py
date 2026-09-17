@@ -179,7 +179,8 @@ def test_advanced_authenticate_begin_uses_allow_credentials_subset_and_dedupes(m
                 "resident_count": 1,
             }
             assert session_state["advanced_authenticate_allowed_attachments"] == []
-            assert session_state["advanced_auth_state"] == {"challenge": "state-token"}
+            assert session_state["advanced_auth_state"]["challenge"] == "state-token"
+            assert isinstance(session_state["advanced_auth_state"]["issued_at"], float)
             assert session_state["advanced_auth_rp"]["id"] == "example.com"
 
 

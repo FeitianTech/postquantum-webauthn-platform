@@ -213,3 +213,88 @@ def test_simple_counter_with_base64url_only_characters_is_read_correctly(
     assert response.status_code == 200, response.get_json()
     assert response.get_json()["signCount"] == counter
     assert credential_store(authenticator.credential_id) == counter
+
+
+# --------------------------------------------------------------------------
+# ADVANCED flow -- permissive, but reports the counter verdict honestly.
+# --------------------------------------------------------------------------
+
+
+def _advanced_authenticate(config_module, authenticator, *, stored_sign_count, counter):
+    stored_entry = authenticator.stored_credential_entry(declared_algorithm=-7)
+    if stored_sign_count is not None:
+        stored_entry["signCount"] = stored_sign_count
+
+    client = config_module.app.test_client()
+    begin = client.post(
+        "/api/advanced/authenticate/begin",
+        json={
+            "publicKey": {"challenge": {"$base64url": b64u(b"\x61" * 32)}},
+            "__storedCredentials": [stored_entry],
+        },
+    )
+    assert begin.status_code == 200, begin.get_json()
+    challenge = unb64u(begin.get_json()["publicKey"]["challenge"])
+
+    return client.post(
+        "/api/advanced/authenticate/complete",
+        json={
+            "publicKey": {"challenge": {"$base64url": b64u(challenge)}},
+            "__storedCredentials": [stored_entry],
+            "__assertion_response": assertion_payload(
+                authenticator, challenge=challenge, counter=counter
+            ),
+        },
+        headers={"Origin": ORIGIN},
+    )
+
+
+@pytest.mark.parametrize(
+    ("stored", "received"),
+    [(10, 3), (10, 10), (7, 0)],
+    ids=["backwards", "equal", "dropped-to-zero"],
+)
+def test_advanced_reports_regressed_without_rejecting(
+    config_module, advanced_module, stored, received
+):
+    authenticator = Authenticator()
+
+    response = _advanced_authenticate(
+        config_module, authenticator, stored_sign_count=stored, counter=received
+    )
+
+    # Not rejected: the signature genuinely verified ...
+    assert response.status_code == 200, response.get_json()
+    body = response.get_json()
+    assert body["status"] == "OK"
+    assert body["signatureVerified"] is True
+    assert body["signCount"] == received
+    # ... but the counter verdict is reported, not hidden.
+    assert body["signCountStatus"] == "regressed"
+
+
+def test_advanced_reports_ok_for_an_increasing_counter(config_module, advanced_module):
+    authenticator = Authenticator()
+
+    response = _advanced_authenticate(
+        config_module, authenticator, stored_sign_count=3, counter=4
+    )
+
+    assert response.status_code == 200, response.get_json()
+    assert response.get_json()["status"] == "OK"
+    assert response.get_json()["signCountStatus"] == "ok"
+
+
+@pytest.mark.parametrize("stored", [0, None], ids=["stored-zero", "stored-absent"])
+def test_advanced_reports_not_supported_for_zero_counters(
+    config_module, advanced_module, stored
+):
+    authenticator = Authenticator()
+
+    response = _advanced_authenticate(
+        config_module, authenticator, stored_sign_count=stored, counter=0
+    )
+
+    assert response.status_code == 200, response.get_json()
+    assert response.get_json()["status"] == "OK"
+    assert response.get_json()["signCountStatus"] == "not-supported"

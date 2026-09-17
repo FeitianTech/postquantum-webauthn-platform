@@ -73,7 +73,7 @@ def test_advanced_authentication_failure_returns_failed_credential_id(monkeypatc
 
     with config_module.app.test_client() as client:
         with client.session_transaction() as session:
-            session["advanced_auth_state"] = {"challenge": "test"}
+            session["advanced_auth_state"] = {"challenge": "test", "issued_at": time.time()}
             session["advanced_auth_rp"] = {"id": "example.com", "name": "Example"}
 
         response = client.post(
@@ -105,4 +105,5 @@ def test_advanced_authentication_failure_returns_failed_credential_id(monkeypatc
         "error": "Invalid signature.",
         "failedCredentialId": encoded_id,
         "challengeSource": "server-session",
+        "challengeStatus": "fresh",
     }
