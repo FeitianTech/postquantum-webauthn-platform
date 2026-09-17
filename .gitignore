@@ -33,6 +33,17 @@ server/runtime/session-metadata/
 server/runtime/credential-artifacts/
 instance/
 
+# Generated FIDO MDS snapshot (tools/update_mds_snapshot.py). ~30MB that used to
+# be rewritten daily by a bot; the server now provisions it at runtime from the
+# Cloud Storage bucket, so it is never committed. See docs/MDS_SNAPSHOT.md.
+frontend/static/blob.jwt
+frontend/static/fido-mds3.verified.json
+frontend/static/fido-mds3.verified.json.meta.json
+frontend/static/fido-mds3.explorer.json
+frontend/static/fido-mds3.explorer.json.meta.json
+frontend/static/fido-mds3.explorer.full.json
+frontend/static/fido-mds3.explorer.full.json.meta.json
+
 # Build-time static asset outputs (tools/build_static_assets.py)
 frontend/BUILD_ID
 frontend/static/**/*.gz

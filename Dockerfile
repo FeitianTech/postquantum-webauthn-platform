@@ -59,6 +59,10 @@ COPY server/app /app/server
 COPY frontend /app/frontend
 COPY gunicorn.conf.py /app/gunicorn.conf.py
 COPY tools/build_static_assets.py /tmp/build_static_assets.py
+# The MDS snapshot is not in the image (see .dockerignore); the server fetches it
+# from Cloud Storage on a cold start and falls back to this updater, which
+# verifies the BLOB against the pinned trust root before writing it.
+COPY tools/__init__.py tools/update_mds_snapshot.py /app/tools/
 
 # Precompile the server's bytecode at build time; PYTHONDONTWRITEBYTECODE only
 # stops writes at runtime, so every cold start would otherwise recompile it.

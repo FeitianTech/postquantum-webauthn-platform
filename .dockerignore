@@ -26,3 +26,13 @@ venv
 ENV
 .venv
 .DS_Store
+
+# The MDS snapshot is provisioned at runtime, not baked into the image: keeping
+# it out of the build context stops a daily refresh invalidating a 30MB layer.
+frontend/static/blob.jwt
+frontend/static/fido-mds3.verified.json
+frontend/static/fido-mds3.verified.json.meta.json
+frontend/static/fido-mds3.explorer.json
+frontend/static/fido-mds3.explorer.json.meta.json
+frontend/static/fido-mds3.explorer.full.json
+frontend/static/fido-mds3.explorer.full.json.meta.json
