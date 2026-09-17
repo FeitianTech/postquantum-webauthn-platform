@@ -5,10 +5,16 @@ from typing import Any, Dict, List, Mapping, Optional
 
 from fido2.cose import CoseKey, UnsupportedKey
 
+from ...sign_count import sign_count_status
+
 #: The ceremony challenge was taken from the server-side Flask session.
 CHALLENGE_SOURCE_SERVER = "server-session"
 #: The ceremony challenge was taken from the request body (request-editor mode).
 CHALLENGE_SOURCE_CLIENT = "client-supplied"
+
+#: A client-supplied challenge is not single-use tracked: the request editor
+#: chooses it, so there is nothing for the server to consume.
+CHALLENGE_STATUS_NOT_TRACKED = "not-tracked"
 
 
 def _credential_cose_algorithm(record: Optional[Mapping[str, Any]]) -> Optional[int]:
@@ -172,7 +178,13 @@ def advanced_authenticate_complete_impl(advanced_module: Any):
         return _fail(response_payload)
 
     state = advanced_module.session.pop("advanced_auth_state", None)
-    if state is None:
+    if state is not None:
+        # The request editor is permissive, so a replayed or stale server
+        # challenge is reported via ``challengeStatus`` rather than rejected.
+        # It is still consumed, so a replay is always labelled as one.
+        challenge_status = advanced_module.consume_ceremony_state(state)
+    else:
+        challenge_status = CHALLENGE_STATUS_NOT_TRACKED
         fallback_state = data.get("__session_state")
         if isinstance(fallback_state, Mapping):
             state = fallback_state
@@ -185,6 +197,7 @@ def advanced_authenticate_complete_impl(advanced_module: Any):
                     "Please restart the authentication flow."
                 ),
                 "challengeSource": challenge_source,
+                "challengeStatus": challenge_status,
             }
         ), 400
 
@@ -200,6 +213,7 @@ def advanced_authenticate_complete_impl(advanced_module: Any):
                     "FIDO_SERVER_ALLOWED_ORIGINS allowlist."
                 ),
                 "challengeSource": challenge_source,
+                "challengeStatus": challenge_status,
             }
         ), 400
 
@@ -276,6 +290,7 @@ def advanced_authenticate_complete_impl(advanced_module: Any):
                     "algorithm": credential_alg,
                     "algorithmDescription": advanced_module.describe_algorithm(credential_alg),
                     "challengeSource": challenge_source,
+                    "challengeStatus": challenge_status,
                     "verificationError": str(exc),
                 }
                 if failed_credential_id is not None:
@@ -288,6 +303,7 @@ def advanced_authenticate_complete_impl(advanced_module: Any):
                 "signatureVerified": False,
                 "error": str(exc),
                 "challengeSource": challenge_source,
+                "challengeStatus": challenge_status,
             }
             if credential_alg is not None:
                 signature_payload["algorithm"] = credential_alg
@@ -335,18 +351,28 @@ def advanced_authenticate_complete_impl(advanced_module: Any):
             "verified": True,
             "signatureVerified": True,
             "challengeSource": challenge_source,
+            "challengeStatus": challenge_status,
             **debug_info,
         }
         if authenticated_id is not None:
             response_payload["authenticatedCredentialId"] = authenticated_id
         if sign_count_value is not None:
             response_payload["signCount"] = sign_count_value
+            # Reported, never enforced: the stored value is whatever the
+            # request editor sent, so this is a diagnostic, not a clone check.
+            stored_sign_count = (
+                selected_record.get("signCount", 0) if isinstance(selected_record, Mapping) else 0
+            )
+            response_payload["signCountStatus"] = sign_count_status(
+                stored_sign_count, sign_count_value
+            )
 
         return advanced_module.jsonify(response_payload)
     except Exception as exc:
         response_payload: Dict[str, Any] = {
             "error": str(exc),
             "challengeSource": challenge_source,
+            "challengeStatus": challenge_status,
         }
         failed_credential_id = credential_id_bytes
         if not failed_credential_id and isinstance(response, Mapping):

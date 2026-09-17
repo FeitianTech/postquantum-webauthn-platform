@@ -212,3 +212,101 @@ def test_simple_ceremonies_succeed_back_to_back_and_clear_session_state(
             assert "state" not in session
             assert "authenticate_rp_id" not in session
             assert "simple_credentials" not in session
+
+
+# --------------------------------------------------------------------------
+# ADVANCED flow -- replays are reported, not rejected.
+# --------------------------------------------------------------------------
+
+
+def _advanced_begin(client, stored_entry, challenge=b"\x71" * 32):
+    begin = client.post(
+        "/api/advanced/authenticate/begin",
+        json={
+            "publicKey": {"challenge": {"$base64url": b64u(challenge)}},
+            "__storedCredentials": [stored_entry],
+        },
+    )
+    assert begin.status_code == 200, begin.get_json()
+    return begin.get_json()
+
+
+def _advanced_complete(client, stored_entry, assertion, challenge, **extra):
+    return client.post(
+        "/api/advanced/authenticate/complete",
+        json={
+            "publicKey": {"challenge": {"$base64url": b64u(challenge)}},
+            "__storedCredentials": [stored_entry],
+            "__assertion_response": assertion,
+            **extra,
+        },
+        headers={"Origin": ORIGIN},
+    )
+
+
+def test_advanced_replayed_server_challenge_is_reported_as_replayed(
+    config_module, advanced_module
+):
+    authenticator = Authenticator()
+    stored_entry = authenticator.stored_credential_entry(declared_algorithm=-7)
+    client = config_module.app.test_client()
+
+    body = _advanced_begin(client, stored_entry)
+    challenge = unb64u(body["publicKey"]["challenge"])
+    cookie_with_state = _snapshot_cookie(client)
+    assertion = assertion_payload(authenticator, challenge=challenge, counter=1)
+
+    first = _advanced_complete(client, stored_entry, assertion, challenge)
+    assert first.status_code == 200, first.get_json()
+    assert first.get_json()["challengeSource"] == "server-session"
+    assert first.get_json()["challengeStatus"] == "fresh"
+
+    _restore_cookie(client, cookie_with_state)
+    replay = _advanced_complete(client, stored_entry, assertion, challenge)
+
+    # Permissive: the request editor is not blocked ...
+    assert replay.status_code == 200, replay.get_json()
+    # ... but it is never told the challenge was fresh.
+    assert replay.get_json()["challengeSource"] == "server-session"
+    assert replay.get_json()["challengeStatus"] == "replayed"
+
+
+def test_advanced_replay_is_reported_on_failure_responses_too(config_module, advanced_module):
+    authenticator = Authenticator()
+    stored_entry = authenticator.stored_credential_entry(declared_algorithm=-7)
+    client = config_module.app.test_client()
+
+    challenge = unb64u(_advanced_begin(client, stored_entry)["publicKey"]["challenge"])
+    cookie_with_state = _snapshot_cookie(client)
+    bad = assertion_payload(authenticator, challenge=challenge, valid_signature=False)
+
+    first = _advanced_complete(client, stored_entry, bad, challenge)
+    assert first.status_code == 400
+    assert first.get_json()["challengeStatus"] == "fresh"
+
+    _restore_cookie(client, cookie_with_state)
+    replay = _advanced_complete(client, stored_entry, bad, challenge)
+    assert replay.status_code == 400
+    assert replay.get_json()["challengeStatus"] == "replayed"
+
+
+def test_advanced_client_supplied_challenge_is_reported_as_not_tracked(
+    config_module, advanced_module
+):
+    authenticator = Authenticator()
+    stored_entry = authenticator.stored_credential_entry(declared_algorithm=-7)
+    challenge = b"\x72" * 32
+    client = config_module.app.test_client()
+
+    # No /begin: the request editor supplies its own state.
+    response = _advanced_complete(
+        client,
+        stored_entry,
+        assertion_payload(authenticator, challenge=challenge, counter=1),
+        challenge,
+        __session_state={"challenge": b64u(challenge), "user_verification": "discouraged"},
+    )
+
+    assert response.status_code == 200, response.get_json()
+    assert response.get_json()["challengeSource"] == "client-supplied"
+    assert response.get_json()["challengeStatus"] == "not-tracked"

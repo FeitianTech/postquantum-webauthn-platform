@@ -230,7 +230,9 @@ def advanced_authenticate_begin_impl(advanced_module: Any):
         extensions=processed_extensions if processed_extensions else None,
     )
 
-    advanced_module.session["advanced_auth_state"] = state
+    # Stamped so /complete can tell a fresh state from one replayed out of an
+    # old cookie. The copy echoed to the request editor is left unstamped.
+    advanced_module.session["advanced_auth_state"] = advanced_module.stamp_ceremony_state(dict(state))
     advanced_module.session["advanced_auth_rp"] = {"id": resolved_rp_id, "name": stored_rp_name}
     advanced_module.session["advanced_auth_credentials_meta"] = {
         "count": len(serialized_credentials),

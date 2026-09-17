@@ -29,6 +29,7 @@ from fido2.webauthn import (
     UserVerificationRequirement,
 )
 
+from ..challenge_registry import consume_ceremony_state, stamp_ceremony_state
 from ..attachments import (
     normalize_attachment,
     normalize_attachment_list,

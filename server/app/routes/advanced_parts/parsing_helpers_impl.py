@@ -140,6 +140,9 @@ def _parse_client_supplied_credentials_impl(
                     "attachment": attachment_value,
                     "algorithm": algorithm_value,
                     "resident": bool(resident_flag),
+                    "signCount": int(entry.get("signCount"))
+                    if isinstance(entry.get("signCount"), int) and not isinstance(entry.get("signCount"), bool)
+                    else 0,
                 }
             )
 
