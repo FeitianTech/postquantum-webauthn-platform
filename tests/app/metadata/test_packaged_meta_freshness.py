@@ -9,7 +9,7 @@ import pytest
 
 
 @pytest.fixture
-def metadata_module(monkeypatch, tmp_path):
+def metadata_module(monkeypatch, tmp_path, metadata_runtime_state):
     module = pytest.importorskip("server.app.metadata")
 
     verified_path = tmp_path / "fido-mds3.verified.json"

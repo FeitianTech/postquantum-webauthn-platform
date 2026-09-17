@@ -4,7 +4,7 @@ import pytest
 
 
 @pytest.fixture
-def metadata_local_env(monkeypatch, tmp_path):
+def metadata_local_env(monkeypatch, tmp_path, metadata_runtime_state):
     metadata = pytest.importorskip("server.app.metadata")
     session_store = pytest.importorskip("server.app.session_metadata_store")
     config = pytest.importorskip("server.app.config")

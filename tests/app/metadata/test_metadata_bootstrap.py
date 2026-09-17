@@ -7,7 +7,7 @@ import pytest
 
 
 @pytest.fixture
-def packaged_metadata_env(monkeypatch, tmp_path):
+def packaged_metadata_env(monkeypatch, tmp_path, metadata_runtime_state):
     general_module = pytest.importorskip("server.app.routes.general")
     metadata_module = pytest.importorskip("server.app.metadata")
 

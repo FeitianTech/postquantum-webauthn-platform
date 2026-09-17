@@ -12,7 +12,7 @@ from flask import g
 
 
 @pytest.fixture
-def metadata_module(monkeypatch):
+def metadata_module(monkeypatch, metadata_runtime_state):
     module = pytest.importorskip("server.app.metadata")
 
     monkeypatch.setattr(module, "_base_metadata_cache", None, raising=False)
