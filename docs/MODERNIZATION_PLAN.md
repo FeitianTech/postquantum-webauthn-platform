@@ -311,6 +311,80 @@ its entire life. `MetadataDownloadError` is in `__all__` but never raised or cau
 (`download_metadata_blob` raises `RuntimeError`) — dead public API. Two pre-existing
 builtin-shadow patches (`config.open`, `github_client.range`) left alone.
 
+### Phase 7 — M3: unwind the globals carrier in `attestation` — DONE (2026-09-17), verified
+Same staged approach as the metadata pilot, over 25 commits: bare-name fragment imports in the
+carrier -> give each fragment real imports (inert while the carrier lives) -> a leaf
+`attestation_parts/runtime_state.py` for the shared constants -> route cross-fragment calls
+through `other_runtime.foo()` -> delete the carrier. `attestation.py` 263 -> **154 lines**, now a
+re-export shim.
+
+| Metric | Before | After |
+|---|---|---|
+| F821 repo-wide | 557 | **382** |
+| F821 in `attestation_parts` | 175 | **0** |
+| `attestation.py` carrier refs | present | **0** |
+| ruff per-file-ignores | 4 modules | **3** |
+| `raising=False` in `tests/app/attestation/` | 131 | **0** |
+
+Remaining F821: `decode_parts` 366, `decoder/decode.py` 16. `attestation.py` came **off** the
+`["F401", "UP035", "F822"]` ignore list — it passes the full gated rule set unsuppressed. The
+assignment trick from the metadata phase carried over unchanged. Suite unchanged at 1708/278.
+
+**Collected test IDs diffed across the phase: zero added, zero removed**, despite ~160 patch
+lines being rewritten.
+
+**Prerequisite the metadata phase did not need.** `attestation.py` imported its fragments as
+`_trust_runtime` etc., where `metadata.py` used bare names. Since a rebound fragment resolves
+`trust_runtime.foo()` in the *carrier's* globals, stage C would have raised `NameError` on every
+converted call. Renaming those 17 imports had to come first. Worth checking before starting on
+`decoder/decode.py` and the two route carriers.
+
+**Fault injection — and a correction to the expected shape of the result.** Method: rename a
+symbol at its definition *and* every production call site (a faithful "the symbol moved"
+simulation), leaving the test patches pointed at the old name. Across the 14 private helpers the
+tests patch, covering 41 patch sites:
+
+| | Before | After |
+|---|---|---|
+| Patchers that passed silently | **3** | **0** |
+| Patchers that failed | 38 | **41** |
+| Failures raised *at the patch line* | **0** | **41** (82 `AttributeError` mentions) |
+
+This is a much smaller silent-pass count than metadata's 112, and the reason is instructive:
+metadata's injected symbol was mutable *state* that tests reset to a value it already held, so
+the patch was a no-op even when it worked. Attestation's symbols are *functions* replaced with
+behaviour-changing stubs, so losing the stub usually changes an assertion somewhere downstream.
+The real improvement here is therefore diagnostic quality rather than raw count: before, a moved
+symbol could never fail at the patch itself, because `raising=False` guaranteed the patch could
+not complain — the suite reported an assertion mismatch several frames away, or nothing at all.
+Now all 41 fail with an `AttributeError` naming the missing symbol at the line that patches it.
+
+**`raising=False` audit: 131 -> 0.** Every site was re-pointed at the module that actually owns
+the attribute, and the attribute was confirmed to exist at each one. The 11 remaining facade
+patches are all `monkeypatch.setitem` on shared dicts (`EXTENSION_DISPLAY_METADATA`,
+`app.config`), which mutate the same object the fragments read and are correct as they stand.
+
+**Fragments are now independently usable.** Before, `import
+server.app.attestation_parts.trust_ca_runtime` succeeded but every call raised `NameError`;
+`trust_ca_runtime._certificate_fingerprint(b"x")` now works from a bare import. That is why no
+test had ever imported a fragment directly.
+
+**Import cycle unchanged.** `config`, `metadata` and `pqc` have no back-edge to `attestation`
+(verified by import), so giving the fragments real `..config` / `..metadata` / `..pqc` edges
+added no cycle — it only made an edge that already existed at the carrier level explicit. The
+latent risk is now retired rather than hidden behind globals injection.
+
+**Found but not fixed:**
+- `_check_pqc_certificate_constraints` is called from a sibling in its own module. Its 5 patches
+  could not move during stage C — an intra-file call still resolves through the carrier — so they
+  moved with the carrier deletion. Any remaining carrier will have the same ordering constraint.
+- `attestation.py` no longer re-exports `_HASH_NORMALISE_PATTERN`; it was an alias of
+  `certificate_signature_leaf._HASH_NORMALISE_PATTERN` that nothing in the repo ever read.
+- `is_pqc_algorithm` is still imported by name rather than through `..pqc`. No test patches it,
+  so there is nothing to intercept; revisit if that changes.
+- `server/app/decoder/decode.py` still imports 7 names from `attestation.py` and snapshots them
+  into its own carrier globals. That coupling is unchanged and belongs to the decoder milestone.
+
 ### Local development
 Tests previously ran against the global interpreter, whose packages matched nothing in
 `requirements.txt` (cryptography 44.0.3, fido2 2.1.1, gunicorn 23). A project venv now exists:
