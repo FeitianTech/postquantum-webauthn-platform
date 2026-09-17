@@ -37,23 +37,31 @@ target-version = "py312"
 #     They are worth adopting, but one rule group at a time with the suite green.
 select = ["E4", "E7", "E9", "F", "I", "UP006", "UP007", "UP035", "UP045"]
 
-# F821 stays off on purpose. All 1008 hits come from the split-module runtime
-# hack described under [lint.per-file-ignores] below: attestation.py, decoder/decode.py
-# and metadata.py rebuild their fragments' functions against the parent's
-# globals, so the fragments genuinely do not import the names they use, and the
-# `*_parts/` files are undefined-name soup by design. Turning F821 on now would
-# mean 1008 permanent suppressions and would destroy the one number that tells
-# us whether the hack is being unwound. It is our progress meter: it comes on,
-# unsuppressed, in the milestone that removes the rebinding.
+# F821 stays off on purpose. The remaining 557 hits come from the split-module
+# runtime hack described under [lint.per-file-ignores] below: attestation.py and
+# decoder/decode.py rebuild their fragments' functions against the parent's
+# globals, so the fragments genuinely do not import the names they use, and
+# those `*_parts/` files are undefined-name soup by design. Turning F821 on now
+# would mean 557 permanent suppressions and would destroy the one number that
+# tells us whether the hack is being unwound. It is our progress meter: it comes
+# on, unsuppressed, in the milestone that removes the last rebinding.
+#
+# It was 1008 until metadata.py was unwound. `server/app/metadata_parts/` is at
+# zero and stays there: every fragment resolves its own names through real
+# imports, and the shared caches live in `metadata_parts/runtime_state.py`.
+# Measure progress with:
+#   uvx ruff@0.16.8 check server fido2 tools --select F821 --no-cache \
+#     --isolated --target-version py312 | grep -c F821
 ignore = ["F821"]
 
 [lint.per-file-ignores]
-# F401 is structurally wrong in the five "parent" modules of the split-module
-# layout. Each one is a namespace carrier for its `*_parts/` fragments:
+# F401 is structurally wrong in the four remaining "parent" modules of the
+# split-module layout. Each one is a namespace carrier for its `*_parts/`
+# fragments:
 #
-#   * attestation.py, decoder/decode.py and metadata.py rebuild fragment
-#     functions with `types.FunctionType(func.__code__, globals(), ...)`, so the
-#     parent's module globals are the namespace those functions resolve against;
+#   * attestation.py and decoder/decode.py rebuild fragment functions with
+#     `types.FunctionType(func.__code__, globals(), ...)`, so the parent's module
+#     globals are the namespace those functions resolve against;
 #   * routes/advanced.py and routes/simple.py pass themselves (`_self_module()`)
 #     into their fragments, which then read names straight off the module
 #     (e.g. `advanced_module.request.get_json(...)`).
@@ -66,13 +74,15 @@ ignore = ["F821"]
 # same debt F821 tracks (see the `ignore` note above) and it is
 # retired in the same milestone, not by suppressing it name by name here.
 #
-# F822 is ignored in the two modules that carry an `__all__`, for the same
-# reason and after checking every entry: all 26 names ruff calls undefined are
-# installed into the module globals at import time by
-# `_install_runtime_bindings(...)`. `hasattr()` and `from <mod> import *` both
-# resolve all 26, so none of them is a real broken export.
+# F822 is ignored in attestation.py, for the same reason and after checking
+# every entry: the names ruff calls undefined are installed into the module
+# globals at import time by `_install_runtime_bindings(...)`. `hasattr()` and
+# `from <mod> import *` both resolve them, so none is a real broken export.
+#
+# metadata.py used to need all three. It no longer does: it is a thin re-export
+# of `metadata_parts`, every name in its `__all__` is a plain assignment, and
+# nothing it imports is unused.
 "server/app/attestation.py" = ["F401", "UP035", "F822"]
 "server/app/decoder/decode.py" = ["F401", "UP035"]
-"server/app/metadata.py" = ["F401", "UP035", "F822"]
 "server/app/routes/advanced.py" = ["F401", "UP035"]
 "server/app/routes/simple.py" = ["F401", "UP035"]
