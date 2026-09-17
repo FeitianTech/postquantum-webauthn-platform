@@ -180,6 +180,15 @@ If you are changing only UI logic plus lightweight server responses, prefer targ
 - Coverage is a gate, not a published number: the floors in `.coveragerc` and
   `vitest.config.mjs` fail CI, and there is no coverage badge or badge workflow.
   Do not add one back.
+- `fido2/hid/macos.py` is omitted from coverage on purpose: its only test module
+  skips itself off Darwin, so measuring it made the total depend on the runner's
+  OS and the floor could not hold on both.
+- Frontend installs use `npm ci` everywhere. `package-lock.json` must list all
+  fifteen `@rolldown/binding-*` platform packages -- vitest pulls rolldown and
+  the Linux runner needs its own. If a lock regeneration drops them, delete
+  `node_modules` and `package-lock.json` and run `npm install` from clean; npm
+  prunes foreign-platform optional dependencies when it reconciles against a
+  partial tree (npm/cli#4828).
 - `ci-security.yml` fails the build on a `pip-audit` finding against `uv.lock`,
   on `npm audit --audit-level=high`, and on a fixable HIGH/CRITICAL Trivy
   finding in the image. Each threshold is justified in a comment next to it. If
