@@ -4,6 +4,22 @@ from collections.abc import Mapping
 from datetime import datetime, timezone
 from typing import Any
 
+from fido2.attestation import (
+    Attestation,
+    InvalidData,
+    InvalidSignature,
+    UnsupportedType,
+)
+
+from ..metadata import get_mds_verifier
+from ..pqc import is_pqc_algorithm
+from .classical_runtime import _evaluate_classical_attestation_root
+from .pqc_runtime import (
+    _attempt_pqc_attestation_signature_validation,
+    _evaluate_mldsa_attestation_root,
+)
+from .trust_runtime import _collect_trust_path_entries, _extract_certificate_aaguid
+
 
 def _resolve_signature_validation(
     attestation_object: Any,
