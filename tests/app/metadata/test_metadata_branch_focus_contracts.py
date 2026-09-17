@@ -16,8 +16,6 @@ def metadata_module(monkeypatch, metadata_runtime_state):
     monkeypatch.setattr(module, "_base_metadata_cache", None, raising=False)
     monkeypatch.setattr(module, "_base_metadata_mtime", None, raising=False)
     monkeypatch.setattr(module, "_base_metadata_source", None, raising=False)
-    monkeypatch.setattr(module, "_base_verifier_cache", None, raising=False)
-    monkeypatch.setattr(module, "_base_verifier_mtime", None, raising=False)
     monkeypatch.setattr(module, "_base_metadata_trust_verified", None, raising=False)
     monkeypatch.setattr(module, "_base_metadata_entry_ids", set(), raising=False)
     monkeypatch.setattr(module, "_base_explorer_snapshot_cache", None, raising=False)
@@ -741,7 +739,7 @@ def test_lookup_compose_resolve_trust_and_verifier_edge_paths(
     monkeypatch.setattr(metadata_module, "_load_base_metadata", lambda: (None, 77.0), raising=False)
     monkeypatch.setattr(metadata_module, "list_session_metadata_items", lambda: [], raising=False)
     assert metadata_module.get_mds_verifier() is None
-    assert metadata_module._base_verifier_mtime == 77.0
+    assert metadata_runtime_state._base_verifier_mtime == 77.0
 
     created = []
 
