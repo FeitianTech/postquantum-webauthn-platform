@@ -50,9 +50,9 @@ def packaged_metadata_env(monkeypatch, tmp_path, metadata_runtime_state, snapsho
         encoding="utf-8",
     )
 
-    monkeypatch.setattr(snapshot_runtime, "MDS_METADATA_VERIFIED_PATH", str(verified_path), raising=False)
-    monkeypatch.setattr(cache_runtime, "MDS_METADATA_CACHE_PATH", str(cache_path), raising=False)
-    monkeypatch.setattr(snapshot_runtime, "MDS_EXPLORER_PATH", str(explorer_path), raising=False)
+    monkeypatch.setattr(snapshot_runtime, "MDS_METADATA_VERIFIED_PATH", str(verified_path))
+    monkeypatch.setattr(cache_runtime, "MDS_METADATA_CACHE_PATH", str(cache_path))
+    monkeypatch.setattr(snapshot_runtime, "MDS_EXPLORER_PATH", str(explorer_path))
     monkeypatch.setattr(general_module, "MDS_METADATA_VERIFIED_PATH", str(verified_path), raising=False)
 
     # Reset cached state.

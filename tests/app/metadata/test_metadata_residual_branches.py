@@ -83,7 +83,6 @@ def test_save_session_metadata_item_runtime_warning_and_mtime_fallback(metadata_
         session_store,
         "write_file",
         _write_file,
-        raising=False,
     )
     monkeypatch.setattr(
         session_store,
@@ -134,7 +133,7 @@ def test_base_explorer_snapshot_and_summary_and_resolution_session_match(metadat
         raise OSError("mtime-missing")
 
     monkeypatch.setattr(os.path, "getmtime", _getmtime, raising=False)
-    monkeypatch.setattr(snapshot_runtime, "_load_verified_metadata_payload", lambda: None, raising=False)
+    monkeypatch.setattr(snapshot_runtime, "_load_verified_metadata_payload", lambda: None)
     snapshot, marker = metadata_module._load_base_explorer_snapshot()
     assert snapshot is None
     assert marker == (None, None)
@@ -155,13 +154,11 @@ def test_base_explorer_snapshot_and_summary_and_resolution_session_match(metadat
         snapshot_runtime,
         "_load_verified_metadata_payload",
         lambda: {"legalHeader": "L", "no": 1, "nextUpdate": "2099-01-01", "entries": []},
-        raising=False,
     )
     monkeypatch.setattr(
         snapshot_runtime,
         "build_explorer_snapshot",
         lambda _payload, _cache: {"meta": {"entryCount": 0}},
-        raising=False,
     )
     snapshot, marker = metadata_module._load_base_explorer_snapshot()
     assert snapshot == {"meta": {"entryCount": 0}}
@@ -171,19 +168,17 @@ def test_base_explorer_snapshot_and_summary_and_resolution_session_match(metadat
         snapshot_runtime,
         "_load_base_explorer_snapshot",
         lambda: ({"meta": MappingProxyType({"entryCount": 2})}, (1.0, 1.0)),
-        raising=False,
     )
     assert metadata_module.load_packaged_explorer_summary() == {"entryCount": 2}
 
     item = SimpleNamespace(payload={"aaguid": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"}, uploaded_at="now")
-    monkeypatch.setattr(items_runtime, "list_session_metadata_items", lambda: [item], raising=False)
-    monkeypatch.setattr(effective_runtime, "_entry_matches_lookup", lambda *_args, **_kwargs: True, raising=False)
-    monkeypatch.setattr(effective_runtime, "_session_item_source_info", lambda _item: {"source": "session"}, raising=False)
+    monkeypatch.setattr(items_runtime, "list_session_metadata_items", lambda: [item])
+    monkeypatch.setattr(effective_runtime, "_entry_matches_lookup", lambda *_args, **_kwargs: True)
+    monkeypatch.setattr(effective_runtime, "_session_item_source_info", lambda _item: {"source": "session"})
     monkeypatch.setattr(
         effective_runtime,
         "build_explorer_entry",
         lambda payload, **_kwargs: {"source": "session", "payload": payload},
-        raising=False,
     )
     resolved = metadata_module.resolve_effective_metadata_entry(entry_id="any")
     assert resolved["source"] == "session"

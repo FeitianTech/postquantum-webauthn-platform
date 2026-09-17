@@ -90,18 +90,16 @@ def test_resolve_effective_metadata_entry_accepts_hyphenated_aaguid(monkeypatch,
         "statusReports": [],
     }
 
-    monkeypatch.setattr(items_runtime, "list_session_metadata_items", lambda: [], raising=False)
+    monkeypatch.setattr(items_runtime, "list_session_metadata_items", lambda: [])
     monkeypatch.setattr(
         snapshot_runtime,
         "load_packaged_explorer_summary",
         lambda: {"generatedAt": "2026-04-02T00:00:00+00:00", "no": 1},
-        raising=False,
     )
     monkeypatch.setattr(
         snapshot_runtime,
         "_load_base_metadata",
         lambda: (SimpleNamespace(entries=[base_entry]), "packaged"),
-        raising=False,
     )
 
     resolved = metadata.resolve_effective_metadata_entry(
@@ -147,8 +145,8 @@ def test_load_effective_full_snapshot_prefers_session_entry(monkeypatch, snapsho
         mtime=None,
     )
 
-    monkeypatch.setattr(snapshot_runtime, "_load_base_full_snapshot", lambda: (base_snapshot, 1.0), raising=False)
-    monkeypatch.setattr(items_runtime, "list_session_metadata_items", lambda: [session_item], raising=False)
+    monkeypatch.setattr(snapshot_runtime, "_load_base_full_snapshot", lambda: (base_snapshot, 1.0))
+    monkeypatch.setattr(items_runtime, "list_session_metadata_items", lambda: [session_item])
 
     snapshot = metadata.load_effective_full_snapshot()
 

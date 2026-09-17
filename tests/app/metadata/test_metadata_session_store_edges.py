@@ -138,7 +138,7 @@ def test_load_verified_metadata_helpers_handle_invalid_and_missing_payloads(meta
     metadata, _session_store, _app = metadata_local_env
 
     verified_path = tmp_path / "verified.json"
-    monkeypatch.setattr(snapshot_runtime, "MDS_METADATA_VERIFIED_PATH", str(verified_path), raising=False)
+    monkeypatch.setattr(snapshot_runtime, "MDS_METADATA_VERIFIED_PATH", str(verified_path))
 
     assert metadata._load_verified_metadata_payload() is None
 
