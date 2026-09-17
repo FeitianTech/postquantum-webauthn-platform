@@ -1,8 +1,27 @@
 """Session identifier, cookie, and directory helpers."""
 from __future__ import annotations
 
+import os
+import secrets
+import time
+from typing import Any
 
-def _normalise_session_identifier(value: Any) -> Optional[str]:
+from flask import after_this_request, g, has_request_context, request, session
+
+from .. import session_metadata_store
+from ..config import app
+from .runtime_state import (
+    _SESSION_METADATA_COOKIE_MAX_AGE,
+    _SESSION_METADATA_COOKIE_NAME,
+    _SESSION_METADATA_SESSION_KEY,
+    _SESSION_METADATA_SUFFIX,
+    _SESSION_METADATA_TOUCH_KEY,
+    _SESSION_METADATA_TOUCH_THROTTLE_DEFAULT_SECONDS,
+    _SESSION_METADATA_TOUCH_THROTTLE_ENV,
+)
+
+
+def _normalise_session_identifier(value: Any) -> str | None:
     if not isinstance(value, str):
         return None
 
@@ -72,7 +91,7 @@ def _schedule_session_cookie(identifier: str) -> None:
         return response
 
 
-def _get_metadata_session_id(*, create: bool = False) -> Optional[str]:
+def _get_metadata_session_id(*, create: bool = False) -> str | None:
     if not has_request_context():
         return None
 
@@ -138,7 +157,7 @@ def ensure_metadata_session_id() -> str:
 
 def _session_metadata_directory(
     session_id: str, *, create: bool = False, cleanup: bool = True
-) -> Optional[str]:
+) -> str | None:
     if not session_id:
         return None
 
@@ -159,7 +178,7 @@ def _session_metadata_directory(
     return normalised
 
 
-def _note_session_activity(session_id: str, *, directory: Optional[str] = None) -> None:
+def _note_session_activity(session_id: str, *, directory: str | None = None) -> None:
     normalised = _normalise_session_identifier(session_id)
     if not normalised:
         return
