@@ -29,10 +29,10 @@ from __future__ import annotations
 
 import logging
 import struct
+from collections.abc import Callable, Mapping
 from enum import IntEnum, unique
 from threading import Event
 from typing import Any
-from collections.abc import Callable, Mapping
 
 from .. import cbor
 from ..ctap import CtapError

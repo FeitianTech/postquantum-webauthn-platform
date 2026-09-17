@@ -6,21 +6,21 @@ import binascii
 import io
 import json
 import os
+from collections.abc import Mapping
 from datetime import datetime, timezone
 from threading import Lock
 from typing import Any
-from collections.abc import Mapping
 
 from flask import abort, g, jsonify, render_template, request, send_file, session
 
 from ..attestation import serialize_attestation_certificate
 from ..config import MDS_METADATA_VERIFIED_PATH, app
-from ..static_assets import asset_url
 from ..decoder import decode_payload_text, encode_payload_text
 from ..env_flags import parse_env_flag
 from ..metadata import (
-    ensure_metadata_session_id,
+    _load_base_metadata,
     delete_session_metadata_item,
+    ensure_metadata_session_id,
     expand_metadata_entry_payloads,
     list_session_metadata_items,
     load_cached_metadata_snapshot,
@@ -31,11 +31,10 @@ from ..metadata import (
     resolve_effective_metadata_entry,
     save_session_metadata_item,
     serialize_session_metadata_item,
-    _load_base_metadata,
 )
 from ..startup import startup_fail_fast_enabled
+from ..static_assets import asset_url
 from ..storage import delkey, encode_records, readkey
-
 
 _metadata_bootstrap_lock = Lock()
 _metadata_bootstrap_state = {

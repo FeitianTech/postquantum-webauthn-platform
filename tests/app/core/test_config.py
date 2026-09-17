@@ -128,6 +128,7 @@ def test_resolve_secret_key_from_env():
     with mock.patch.dict(os.environ, {"FIDO_SERVER_SECRET_KEY": test_key}, clear=False):
         # Import after setting env var
         import importlib
+
         from server.app import config
         importlib.reload(config)
         
@@ -150,6 +151,7 @@ def test_resolve_secret_key_from_file(tmp_path):
             del os.environ["FIDO_SERVER_SECRET_KEY"]
         
         import importlib
+
         from server.app import config
         importlib.reload(config)
         
@@ -236,12 +238,13 @@ def test_basepath():
 
 def test_mds_metadata_paths():
     """Test MDS metadata path constants."""
+    from pathlib import Path
+
     from server.app.config import (
-        MDS_METADATA_PATH,
         MDS_METADATA_CACHE_PATH,
+        MDS_METADATA_PATH,
         MDS_METADATA_VERIFIED_PATH,
     )
-    from pathlib import Path
     
     # All paths should exist as strings or Path objects
     assert MDS_METADATA_PATH is not None
@@ -270,8 +273,8 @@ def test_mds_metadata_url():
 
 def test_create_fido_server():
     """Test that create_fido_server function works."""
-    from server.app.config import create_fido_server
     from fido2.server import Fido2Server
+    from server.app.config import create_fido_server
     
     # Should create a Fido2Server instance
     server = create_fido_server()
@@ -292,8 +295,8 @@ def test_create_fido_server():
 
 def test_build_rp_entity():
     """Test build_rp_entity function."""
-    from server.app.config import build_rp_entity
     from fido2.webauthn import PublicKeyCredentialRpEntity
+    from server.app.config import build_rp_entity
     
     # Test with explicit rp_id
     rp = build_rp_entity(rp_id="example.com")
@@ -326,7 +329,7 @@ def test_determine_rp_id():
 
 def test_determine_rp_id_with_request_context():
     """Test determine_rp_id with Flask request context."""
-    from server.app.config import determine_rp_id, app
+    from server.app.config import app, determine_rp_id
     
     with app.test_request_context(
         "https://example.com/path",

@@ -9,9 +9,9 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 
+import fido2.ctap2.base as base_module
 from fido2 import cbor
 from fido2.ctap import CtapError
-import fido2.ctap2.base as base_module
 from fido2.webauthn import AuthenticatorData
 
 

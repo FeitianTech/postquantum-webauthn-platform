@@ -29,9 +29,9 @@ from __future__ import annotations
 
 import ctypes
 import logging
+from collections.abc import Mapping, Sequence
 from threading import Thread
 from typing import Any, cast
-from collections.abc import Mapping, Sequence
 
 from ..ctap2 import AssertionResponse
 from ..ctap2.extensions import (

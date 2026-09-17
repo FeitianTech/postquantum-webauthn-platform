@@ -16,7 +16,11 @@ def _b64url(data: bytes) -> str:
 
 def _build_attestation_object(*, rp_id: str = "example.com", counter: int = 1, credential_id: bytes = b"codec-cred"):
     from fido2.cose import CoseKey
-    from fido2.webauthn import AttestationObject, AttestedCredentialData, AuthenticatorData
+    from fido2.webauthn import (
+        AttestationObject,
+        AttestedCredentialData,
+        AuthenticatorData,
+    )
 
     cose_key = CoseKey.parse(
         {

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-
 import pytest
 
 from fido2 import cose

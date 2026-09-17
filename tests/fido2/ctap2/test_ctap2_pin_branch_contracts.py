@@ -5,8 +5,8 @@ import types
 
 import pytest
 
-from fido2.utils import hmac_sha256
 from fido2.ctap2.pin import ClientPin, PinProtocolV1, PinProtocolV2, _pad_pin
+from fido2.utils import hmac_sha256
 
 
 class _DummyProtocol:

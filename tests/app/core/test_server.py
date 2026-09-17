@@ -11,7 +11,6 @@ from fido2.webauthn import (
     PublicKeyCredentialRpEntity,
     UserVerificationRequirement,
 )
-
 from tests.fido2.ctap2.test_ctap2 import _ATT_CRED_DATA, _CRED_ID
 
 

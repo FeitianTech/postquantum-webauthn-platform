@@ -2,8 +2,8 @@
 # pyright: reportUndefinedVariable=false
 from __future__ import annotations
 
-from typing import Any
 from collections.abc import Mapping
+from typing import Any
 
 
 def _format_result_summary(result: dict[str, Any]) -> str:

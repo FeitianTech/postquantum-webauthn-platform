@@ -3,8 +3,8 @@ from __future__ import annotations
 
 import base64
 import binascii
-from typing import Any
 from collections.abc import Mapping
+from typing import Any
 
 from fido2.webauthn import AttestationObject
 

@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import base64
-from typing import Any
 from collections.abc import Mapping
+from typing import Any
 
 from fido2.utils import ByteBuffer
 

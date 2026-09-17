@@ -10,7 +10,8 @@ def __getattr__(name: str) -> Any:
     if name not in __all__:
         raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
-    from .app import app as flask_app, main as app_main
+    from .app import app as flask_app
+    from .app import main as app_main
 
     resolved = {
         "app": flask_app,

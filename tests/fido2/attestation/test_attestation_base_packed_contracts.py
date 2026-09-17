@@ -4,7 +4,6 @@ import datetime
 import types
 
 import pytest
-
 from cryptography import x509
 from cryptography.exceptions import InvalidSignature as CryptoInvalidSignature
 from cryptography.hazmat.primitives import hashes, serialization

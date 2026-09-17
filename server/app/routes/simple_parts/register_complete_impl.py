@@ -1,16 +1,18 @@
 from __future__ import annotations
 
-from typing import Any
 from collections.abc import Mapping
+from typing import Any
 
-from .register_complete_context_authenticator_impl import populate_authenticator_data_context_impl
-from .register_complete_context_init_impl import initialize_registration_context_impl
-from .register_complete_context_rp_debug_impl import populate_rp_debug_context_impl
+from .register_complete_context_authenticator_impl import (
+    populate_authenticator_data_context_impl,
+)
 from .register_complete_context_b_impl import (
     build_register_complete_response_payload_impl,
     build_stored_credential_context_impl,
     persist_registration_context_impl,
 )
+from .register_complete_context_init_impl import initialize_registration_context_impl
+from .register_complete_context_rp_debug_impl import populate_rp_debug_context_impl
 
 
 def register_complete_impl(simple_module: Any):

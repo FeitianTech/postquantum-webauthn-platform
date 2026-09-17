@@ -5,6 +5,7 @@ import hashlib
 
 import cbor2
 import pytest
+
 from fido2.cose import CoseKey
 from fido2.webauthn import AttestationObject, AttestedCredentialData, AuthenticatorData
 

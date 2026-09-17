@@ -7,19 +7,20 @@ import hashlib
 import json
 import math
 import re
-import sys
 import string
 import struct
+import sys
 import types
 import uuid
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from datetime import datetime, timezone
 from io import BytesIO
 from typing import Any, Dict, List, Optional, Tuple
-from collections.abc import Callable, Iterable, Mapping, Sequence
 
 import cbor2
 from cryptography import x509
 from cryptography.x509.oid import ExtensionOID
+
 from fido2 import cbor
 from fido2.utils import ByteBuffer
 from fido2.webauthn import AttestationObject, AuthenticatorData, CollectedClientData
@@ -33,17 +34,23 @@ from ..attestation import (
     serialize_attestation_certificate,
     summarize_authenticator_extensions,
 )
-from .decode_parts.key_utils import (
-    MISSING as _MISSING,
-    coerce_cbor_bytes as _coerce_cbor_bytes,
-    generate_key_variants as _generate_key_variants,
-    get_mapping_entry as _get_mapping_entry,
-    hex_json_safe as _hex_json_safe,
-    int_to_key_bytes as _int_to_key_bytes,
-    key_variant_identity as _key_variant_identity,
-    make_hex_only as _make_hex_only,
-    stringify_mapping_keys as _stringify_mapping_keys,
+from .decode_parts import cbor_core as _cbor_core
+from .decode_parts import cbor_runtime as _cbor_runtime
+from .decode_parts import ctap_repair_leaf as _ctap_repair_leaf
+from .decode_parts import ctap_runtime_interpret as _ctap_runtime_interpret
+from .decode_parts import ctap_runtime_parse as _ctap_runtime_parse
+from .decode_parts import details_runtime as _details_runtime
+from .decode_parts import pipeline_runtime as _pipeline_runtime
+from .decode_parts import result_runtime as _result_runtime
+from .decode_parts import summary_runtime as _summary_runtime
+from .decode_parts.binary_extract import (
+    _convert_cose_key_for_display,
+    _decode_base64_field,
+    _extract_bytes_from_binary,
+    _extract_hex_from_binary,
+    _resolve_cose_algorithm,
 )
+from .decode_parts.cbor_sequence import _decode_cbor_sequence_impl
 from .decode_parts.certificate_extensions import (
     _DEVICE_IDENTIFIER_NAMES,
     _build_certificate_extensions_lines,
@@ -53,6 +60,8 @@ from .decode_parts.certificate_extensions import (
 )
 from .decode_parts.certificate_summary import (
     _build_certificate_summary_lines as _build_certificate_summary_lines_impl,
+)
+from .decode_parts.certificate_summary import (
     _build_fingerprint_lines,
     _build_signature_lines,
     _build_subject_key_identifier_lines,
@@ -60,9 +69,21 @@ from .decode_parts.certificate_summary import (
     _format_certificate_time,
     _format_public_key_point_lines,
 )
-from .decode_parts import cbor_core as _cbor_core
-from .decode_parts.cbor_sequence import _decode_cbor_sequence_impl
-from .decode_parts import ctap_repair_leaf as _ctap_repair_leaf
+from .decode_parts.conversion_cert_leaf import (
+    _convert_attestation_entry_impl,
+    _convert_attestation_statement_impl,
+    _convert_certificate_bytes_impl,
+    _convert_certificate_chain_impl,
+    _convert_certificate_payload_impl,
+)
+from .decode_parts.conversion_leaf import (
+    _build_authenticator_data_payload,
+    _build_credential_overview,
+    _build_credential_payload,
+    _build_flag_payload,
+    _collect_response_extras,
+    _convert_client_data_entry,
+)
 from .decode_parts.ctap_classify import (
     _GET_ASSERTION_REQUEST_LABELS,
     _GET_ASSERTION_RESPONSE_LABELS,
@@ -77,12 +98,38 @@ from .decode_parts.ctap_classify import (
     _looks_like_make_credential_request,
     _resolve_ctap_label,
 )
-from .decode_parts.binary_extract import (
-    _convert_cose_key_for_display,
-    _decode_base64_field,
-    _extract_bytes_from_binary,
-    _extract_hex_from_binary,
-    _resolve_cose_algorithm,
+from .decode_parts.ctap_convert_leaf import (
+    _attempt_decode_cbor_map,
+    _convert_ctap_credential_descriptor,
+    _convert_optional_ctap_field,
+    _normalize_user_mapping,
+)
+from .decode_parts.key_utils import (
+    MISSING as _MISSING,
+)
+from .decode_parts.key_utils import (
+    coerce_cbor_bytes as _coerce_cbor_bytes,
+)
+from .decode_parts.key_utils import (
+    generate_key_variants as _generate_key_variants,
+)
+from .decode_parts.key_utils import (
+    get_mapping_entry as _get_mapping_entry,
+)
+from .decode_parts.key_utils import (
+    hex_json_safe as _hex_json_safe,
+)
+from .decode_parts.key_utils import (
+    int_to_key_bytes as _int_to_key_bytes,
+)
+from .decode_parts.key_utils import (
+    key_variant_identity as _key_variant_identity,
+)
+from .decode_parts.key_utils import (
+    make_hex_only as _make_hex_only,
+)
+from .decode_parts.key_utils import (
+    stringify_mapping_keys as _stringify_mapping_keys,
 )
 from .decode_parts.summary_leaf import (
     _append_multiline_field,
@@ -95,34 +142,6 @@ from .decode_parts.summary_leaf import (
     _format_json_block,
     _parse_attested_data,
 )
-from .decode_parts.conversion_leaf import (
-    _build_authenticator_data_payload,
-    _build_credential_overview,
-    _build_credential_payload,
-    _build_flag_payload,
-    _collect_response_extras,
-    _convert_client_data_entry,
-)
-from .decode_parts.ctap_convert_leaf import (
-    _attempt_decode_cbor_map,
-    _convert_ctap_credential_descriptor,
-    _convert_optional_ctap_field,
-    _normalize_user_mapping,
-)
-from .decode_parts.conversion_cert_leaf import (
-    _convert_attestation_entry_impl,
-    _convert_attestation_statement_impl,
-    _convert_certificate_bytes_impl,
-    _convert_certificate_chain_impl,
-    _convert_certificate_payload_impl,
-)
-from .decode_parts import ctap_runtime_parse as _ctap_runtime_parse
-from .decode_parts import ctap_runtime_interpret as _ctap_runtime_interpret
-from .decode_parts import summary_runtime as _summary_runtime
-from .decode_parts import pipeline_runtime as _pipeline_runtime
-from .decode_parts import details_runtime as _details_runtime
-from .decode_parts import result_runtime as _result_runtime
-from .decode_parts import cbor_runtime as _cbor_runtime
 
 
 def _extract_authenticator_bytes(response: Any, attestation_entry: Any = None) -> bytes | None:

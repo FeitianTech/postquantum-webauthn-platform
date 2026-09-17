@@ -15,7 +15,6 @@ import pytest
 from fido2 import cose
 from tests.pqc import mldsa_helpers
 
-
 _SECRET_MARKERS = (
     "Verification Debug",
     "Authenticator Data",

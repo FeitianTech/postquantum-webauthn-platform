@@ -4,7 +4,6 @@ from __future__ import annotations
 import re
 from collections.abc import Sequence
 
-
 _CTAP_LABELED_KEY_PATTERN = re.compile(r"^\s*(-?\d+)\s*\(([^)]+)\)\s*$")
 
 _CTAP_FIELD_LABELS: dict[str, dict[int, str]] = {

@@ -11,7 +11,11 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec, rsa
 from cryptography.x509.oid import NameOID
 
-from fido2.attestation.base import InvalidSignature, UntrustedAttestation, verify_x509_chain
+from fido2.attestation.base import (
+    InvalidSignature,
+    UntrustedAttestation,
+    verify_x509_chain,
+)
 from fido2.mds3 import (
     AuthenticatorStatus,
     MdsAttestationVerifier,

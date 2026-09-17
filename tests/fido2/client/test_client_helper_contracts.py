@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from threading import Event
 import types
+from threading import Event
 
 import pytest
 

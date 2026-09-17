@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from datetime import datetime, timezone
 from typing import Any
-from collections.abc import Mapping
 
 
 def _resolve_signature_validation(

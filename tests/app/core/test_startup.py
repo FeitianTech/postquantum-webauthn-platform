@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pytest
 
+
 def _discover_repo_root(start: Path) -> Path:
     for candidate in start.parents:
         if (candidate / "server").is_dir() and (candidate / "tests").is_dir():
@@ -96,7 +97,7 @@ def test_should_warm_cloud_storage_disabled(monkeypatch):
     """Test that cloud storage warming is disabled when GCS is disabled."""
     monkeypatch.delenv("FIDO_SERVER_GCS_BUCKET", raising=False)
     
-    from server.app import startup, cloud_storage
+    from server.app import cloud_storage, startup
     
     monkeypatch.setattr(cloud_storage, "gcs_enabled", lambda: False)
     
@@ -107,7 +108,7 @@ def test_should_warm_cloud_storage_no_bucket(monkeypatch):
     """Test that cloud storage warming is disabled when no bucket is set."""
     monkeypatch.delenv("FIDO_SERVER_GCS_BUCKET", raising=False)
     
-    from server.app import startup, cloud_storage
+    from server.app import cloud_storage, startup
     
     monkeypatch.setattr(cloud_storage, "gcs_enabled", lambda: True)
     
@@ -118,7 +119,7 @@ def test_should_warm_cloud_storage_enabled(monkeypatch):
     """Test that cloud storage warming is enabled when GCS is configured."""
     monkeypatch.setenv("FIDO_SERVER_GCS_BUCKET", "test-bucket")
     
-    from server.app import startup, cloud_storage
+    from server.app import cloud_storage, startup
     
     monkeypatch.setattr(cloud_storage, "gcs_enabled", lambda: True)
     
@@ -189,7 +190,7 @@ def test_warm_up_dependencies_success(monkeypatch):
     """Test successful startup dependency warming."""
     monkeypatch.delenv("FIDO_SERVER_GCS_BUCKET", raising=False)
     
-    from server.app import startup, cloud_storage, session_metadata_store
+    from server.app import cloud_storage, session_metadata_store, startup
     
     # Mock all dependencies
     monkeypatch.setattr(cloud_storage, "gcs_enabled", lambda: False)
@@ -236,7 +237,7 @@ def test_warm_up_dependencies_with_gcs(monkeypatch):
     """Test startup with cloud storage warming."""
     monkeypatch.setenv("FIDO_SERVER_GCS_BUCKET", "test-bucket")
     
-    from server.app import startup, cloud_storage, session_metadata_store
+    from server.app import cloud_storage, session_metadata_store, startup
     
     # Mock dependencies
     monkeypatch.setattr(cloud_storage, "gcs_enabled", lambda: True)
@@ -282,7 +283,7 @@ def test_warm_up_dependencies_gcs_failure(monkeypatch):
     """Test startup failure during GCS check."""
     monkeypatch.setenv("FIDO_SERVER_GCS_BUCKET", "test-bucket")
     
-    from server.app import startup, cloud_storage
+    from server.app import cloud_storage, startup
     
     # Mock GCS to fail
     monkeypatch.setattr(cloud_storage, "gcs_enabled", lambda: True)
@@ -306,7 +307,7 @@ def test_warm_up_dependencies_session_storage_failure(monkeypatch):
     """Test startup failure during session storage check."""
     monkeypatch.delenv("FIDO_SERVER_GCS_BUCKET", raising=False)
     
-    from server.app import startup, cloud_storage, session_metadata_store
+    from server.app import cloud_storage, session_metadata_store, startup
     
     # Mock dependencies
     monkeypatch.setattr(cloud_storage, "gcs_enabled", lambda: False)
@@ -332,7 +333,7 @@ def test_warm_up_dependencies_cleanup_on_success(monkeypatch):
     """Test that startup session is cleaned up on success."""
     monkeypatch.delenv("FIDO_SERVER_GCS_BUCKET", raising=False)
     
-    from server.app import startup, cloud_storage, session_metadata_store
+    from server.app import cloud_storage, session_metadata_store, startup
     
     # Mock dependencies
     monkeypatch.setattr(cloud_storage, "gcs_enabled", lambda: False)
@@ -362,7 +363,7 @@ def test_warm_up_dependencies_cleanup_on_failure(monkeypatch):
     """Test that startup session cleanup is attempted even on failure."""
     monkeypatch.delenv("FIDO_SERVER_GCS_BUCKET", raising=False)
     
-    from server.app import startup, cloud_storage, session_metadata_store
+    from server.app import cloud_storage, session_metadata_store, startup
     
     # Mock dependencies
     monkeypatch.setattr(cloud_storage, "gcs_enabled", lambda: False)
@@ -399,7 +400,7 @@ def test_warm_up_dependencies_skip_if_reloader_parent(monkeypatch):
     """Test that reloader parent flag is passed to metadata bootstrap."""
     monkeypatch.delenv("FIDO_SERVER_GCS_BUCKET", raising=False)
     
-    from server.app import startup, cloud_storage, session_metadata_store
+    from server.app import cloud_storage, session_metadata_store, startup
     
     # Mock dependencies
     monkeypatch.setattr(cloud_storage, "gcs_enabled", lambda: False)
@@ -425,7 +426,7 @@ def test_warm_up_dependencies_fast_mode_skips_heavy_checks(monkeypatch):
 
     monkeypatch.setenv("FIDO_SERVER_GCS_BUCKET", "test-bucket")
 
-    from server.app import startup, cloud_storage, session_metadata_store
+    from server.app import cloud_storage, session_metadata_store, startup
 
     monkeypatch.setattr(cloud_storage, "gcs_enabled", lambda: True)
 
@@ -454,7 +455,7 @@ def test_warm_up_dependencies_fast_mode_does_not_raise(monkeypatch):
     monkeypatch.setenv("FIDO_SERVER_WARM_SESSION_STORAGE", "1")
     monkeypatch.delenv("FIDO_SERVER_GCS_BUCKET", raising=False)
 
-    from server.app import startup, cloud_storage, session_metadata_store
+    from server.app import cloud_storage, session_metadata_store, startup
 
     monkeypatch.setattr(cloud_storage, "gcs_enabled", lambda: False)
     monkeypatch.setattr(
@@ -469,7 +470,7 @@ def test_warm_up_dependencies_fast_mode_does_not_raise(monkeypatch):
 def test_warm_up_dependencies_logs_cleanup_warning_when_delete_fails(monkeypatch):
     monkeypatch.delenv("FIDO_SERVER_GCS_BUCKET", raising=False)
 
-    from server.app import startup, cloud_storage, session_metadata_store
+    from server.app import cloud_storage, session_metadata_store, startup
 
     monkeypatch.setenv("FIDO_SERVER_WARM_METADATA", "0")
     monkeypatch.setenv("FIDO_SERVER_WARM_CLOUD_STORAGE", "0")

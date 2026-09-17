@@ -5,6 +5,7 @@ import hashlib
 import json
 
 import pytest
+
 from fido2.cose import CoseKey
 from fido2.utils import ByteBuffer
 from fido2.webauthn import AttestationObject, AttestedCredentialData, AuthenticatorData

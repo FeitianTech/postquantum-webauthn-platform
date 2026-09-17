@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from typing import Any
 from collections.abc import Iterable, Mapping
+from typing import Any
 
 
 def advanced_authenticate_begin_impl(advanced_module: Any):

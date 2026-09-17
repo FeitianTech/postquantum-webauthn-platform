@@ -31,9 +31,9 @@ import logging
 import os
 import struct
 import sys
+from collections.abc import Callable, Iterator
 from enum import IntEnum, IntFlag, unique
 from threading import Event
-from collections.abc import Callable, Iterator
 
 from ..ctap import STATUS, CtapDevice, CtapError
 from ..utils import LOG_LEVEL_TRAFFIC

@@ -6,8 +6,8 @@ facade module, preserving monkeypatch-driven behavior in tests.
 # pyright: reportUndefinedVariable=false
 from __future__ import annotations
 
-from typing import Any
 from collections.abc import Mapping
+from typing import Any
 
 
 def _decode_cbor_sequence(payload: bytes) -> tuple[list[dict[str, Any]], list[Any], int, bytes]:

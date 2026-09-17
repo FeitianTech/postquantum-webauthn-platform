@@ -3,11 +3,11 @@ from __future__ import annotations
 
 import math
 import struct
-from typing import Any
 from collections.abc import Iterable, Mapping
+from typing import Any
 
 import cbor2
-from cbor2 import CBORTag, CBORSimpleValue, undefined
+from cbor2 import CBORSimpleValue, CBORTag, undefined
 
 
 def _canonical_cbor_dumps(value: Any) -> bytes:

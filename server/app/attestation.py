@@ -10,9 +10,15 @@ import string
 import textwrap
 import types
 import uuid
+from collections.abc import Callable, Mapping, MutableMapping, Sequence
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Set, Tuple
-from collections.abc import Callable, Mapping, MutableMapping, Sequence
+
+from cryptography import x509
+from cryptography.exceptions import UnsupportedAlgorithm
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import ec, ed448, ed25519, rsa
+from cryptography.x509.oid import ExtensionOID, NameOID, ObjectIdentifier
 
 from fido2.attestation import (
     Attestation,
@@ -23,8 +29,10 @@ from fido2.attestation import (
     UnsupportedType,
     verify_x509_chain,
 )
-from fido2.attestation.base import TrustPathEvaluation
-from fido2.attestation.base import _verify_mldsa_certificate_signature
+from fido2.attestation.base import (
+    TrustPathEvaluation,
+    _verify_mldsa_certificate_signature,
+)
 from fido2.cose import (
     CoseKey,
     describe_mldsa_oid,
@@ -33,21 +41,41 @@ from fido2.cose import (
 )
 from fido2.utils import ByteBuffer, websafe_decode
 from fido2.webauthn import (
-    AuthenticatorData,
+    Aaguid,
     AttestationObject,
+    AuthenticatorData,
     CollectedClientData,
     RegistrationResponse,
-    Aaguid,
 )
-from cryptography import x509
-from cryptography.exceptions import UnsupportedAlgorithm
-from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.hazmat.primitives.asymmetric import ec, ed25519, ed448, rsa
-from cryptography.x509.oid import ExtensionOID, NameOID, ObjectIdentifier
 
-from .config import app
-from .metadata import get_mds_verifier, metadata_entry_trust_anchor_status
-from .pqc import PQC_ALGORITHM_ID_TO_NAME, is_pqc_algorithm
+from .attestation_parts import aaguid_leaf as _aaguid_leaf
+from .attestation_parts import (
+    certificate_details_runtime as _certificate_details_runtime,
+)
+from .attestation_parts import (
+    certificate_extensions_leaf as _certificate_extensions_leaf,
+)
+from .attestation_parts import (
+    certificate_public_key_leaf as _certificate_public_key_leaf,
+)
+from .attestation_parts import (
+    certificate_serialize_runtime as _certificate_serialize_runtime,
+)
+from .attestation_parts import certificate_signature_leaf as _certificate_signature_leaf
+from .attestation_parts import (
+    certificate_summary_runtime as _certificate_summary_runtime,
+)
+from .attestation_parts import checks_attestation_runtime as _checks_attestation_runtime
+from .attestation_parts import checks_input_runtime as _checks_input_runtime
+from .attestation_parts import checks_metadata_runtime as _checks_metadata_runtime
+from .attestation_parts import checks_policy_runtime as _checks_policy_runtime
+from .attestation_parts import checks_runtime as _checks_runtime
+from .attestation_parts import classical_runtime as _classical_runtime
+from .attestation_parts import pqc_constraints_runtime as _pqc_constraints_runtime
+from .attestation_parts import pqc_runtime as _pqc_runtime
+from .attestation_parts import trust_ca_runtime as _trust_ca_runtime
+from .attestation_parts import trust_runtime as _trust_runtime
+from .attestation_parts.aaguid_leaf import CRED_PROTECT_LABELS
 from .attestation_parts.encoding_leaf import (
     colon_hex,
     decode_asn1_octet_string,
@@ -56,24 +84,9 @@ from .attestation_parts.encoding_leaf import (
     format_hex_string_lines,
     make_json_safe,
 )
-from .attestation_parts.aaguid_leaf import CRED_PROTECT_LABELS
-from .attestation_parts import aaguid_leaf as _aaguid_leaf
-from .attestation_parts import trust_runtime as _trust_runtime
-from .attestation_parts import trust_ca_runtime as _trust_ca_runtime
-from .attestation_parts import pqc_runtime as _pqc_runtime
-from .attestation_parts import pqc_constraints_runtime as _pqc_constraints_runtime
-from .attestation_parts import classical_runtime as _classical_runtime
-from .attestation_parts import certificate_details_runtime as _certificate_details_runtime
-from .attestation_parts import certificate_signature_leaf as _certificate_signature_leaf
-from .attestation_parts import certificate_public_key_leaf as _certificate_public_key_leaf
-from .attestation_parts import certificate_extensions_leaf as _certificate_extensions_leaf
-from .attestation_parts import certificate_summary_runtime as _certificate_summary_runtime
-from .attestation_parts import certificate_serialize_runtime as _certificate_serialize_runtime
-from .attestation_parts import checks_input_runtime as _checks_input_runtime
-from .attestation_parts import checks_policy_runtime as _checks_policy_runtime
-from .attestation_parts import checks_attestation_runtime as _checks_attestation_runtime
-from .attestation_parts import checks_metadata_runtime as _checks_metadata_runtime
-from .attestation_parts import checks_runtime as _checks_runtime
+from .config import app
+from .metadata import get_mds_verifier, metadata_entry_trust_anchor_status
+from .pqc import PQC_ALGORITHM_ID_TO_NAME, is_pqc_algorithm
 
 __all__ = [
     "CRED_PROTECT_LABELS",

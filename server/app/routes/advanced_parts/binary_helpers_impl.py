@@ -3,8 +3,8 @@ from __future__ import annotations
 import base64
 import binascii
 import re
-from typing import Any
 from collections.abc import Mapping
+from typing import Any
 
 
 def _decode_client_binary_impl(_advanced_module: Any, value: Any) -> bytes:

@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import hashlib
+from collections.abc import Mapping
 from types import MappingProxyType
 from typing import Any, Optional
-from collections.abc import Mapping
 
 import pytest
 

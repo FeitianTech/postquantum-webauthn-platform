@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from typing import Any
 from collections.abc import Mapping
+from typing import Any
 
 
 def _generate_storage_id_impl(advanced_module: Any, credential_id: str) -> str:

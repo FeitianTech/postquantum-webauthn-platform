@@ -2,8 +2,8 @@
 from __future__ import annotations
 
 import json
-from typing import Any
 from collections.abc import Callable, Mapping, Sequence
+from typing import Any
 
 from ...attestation import make_json_safe, serialize_attestation_certificate
 from ..decode import (

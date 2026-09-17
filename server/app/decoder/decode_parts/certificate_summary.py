@@ -5,9 +5,9 @@ import base64
 import binascii
 import hashlib
 import re
+from collections.abc import Mapping
 from datetime import datetime, timezone
 from typing import Any
-from collections.abc import Mapping
 
 from cryptography import x509
 from cryptography.x509.oid import ExtensionOID

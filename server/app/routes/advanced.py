@@ -10,11 +10,12 @@ import re
 import sys
 import time
 import uuid
+from collections.abc import Iterable, Mapping, MutableMapping
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
-from collections.abc import Iterable, Mapping, MutableMapping
 
 from flask import jsonify, request, session
+
 from fido2 import cbor
 from fido2.cose import CoseKey
 from fido2.webauthn import (
@@ -30,7 +31,6 @@ from fido2.webauthn import (
     UserVerificationRequirement,
 )
 
-from ..challenge_registry import consume_ceremony_state, stamp_ceremony_state
 from ..attachments import (
     normalize_attachment,
     normalize_attachment_list,
@@ -44,6 +44,7 @@ from ..attestation import (
     perform_attestation_checks,
     summarize_authenticator_extensions,
 )
+from ..challenge_registry import consume_ceremony_state, stamp_ceremony_state
 from ..config import (
     app,
     build_rp_entity,
@@ -84,16 +85,10 @@ from .advanced_parts.artifacts_impl import (
     api_put_advanced_credential_artifact_impl,
     api_put_advanced_credential_snapshot_impl,
 )
-from .advanced_parts.constants import (
-    COSE_ALGORITHM_NAME_LOOKUP,
-    COSE_ALGORITHM_NAME_MAP,
-    COSE_ALGORITHM_NUMERIC_PATTERN,
-    HEAVY_CREDENTIAL_KEYS,
-    HEAVY_PROPERTY_KEYS,
-    HEAVY_RELYING_PARTY_KEYS,
-)
 from .advanced_parts.authenticate_begin_impl import advanced_authenticate_begin_impl
-from .advanced_parts.authenticate_complete_impl import advanced_authenticate_complete_impl
+from .advanced_parts.authenticate_complete_impl import (
+    advanced_authenticate_complete_impl,
+)
 from .advanced_parts.binary_helpers_impl import (
     _decode_base64url_bytes_impl,
     _decode_base64url_impl,
@@ -101,6 +96,14 @@ from .advanced_parts.binary_helpers_impl import (
     _encode_base64url_impl,
     _extract_assertion_credential_id_impl,
     _extract_binary_value_impl,
+)
+from .advanced_parts.constants import (
+    COSE_ALGORITHM_NAME_LOOKUP,
+    COSE_ALGORITHM_NAME_MAP,
+    COSE_ALGORITHM_NUMERIC_PATTERN,
+    HEAVY_CREDENTIAL_KEYS,
+    HEAVY_PROPERTY_KEYS,
+    HEAVY_RELYING_PARTY_KEYS,
 )
 from .advanced_parts.logging_helpers_impl import (
     _log_authenticator_attestation_response_impl,

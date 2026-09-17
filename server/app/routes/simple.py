@@ -6,22 +6,21 @@ import hashlib
 import sys
 import time
 import uuid
+from collections.abc import Mapping, Sequence
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
-from collections.abc import Mapping, Sequence
 
 from flask import abort, jsonify, request, session
 
 from fido2 import cbor
 from fido2.cose import CoseKey
-from fido2.webauthn import AttestedCredentialData, AuthenticatorData, PublicKeyCredentialUserEntity
-from ..attachments import normalize_attachment
-from ..challenge_registry import (
-    CHALLENGE_FRESH,
-    CHALLENGE_REPLAYED,
-    consume_ceremony_state,
-    stamp_ceremony_state,
+from fido2.webauthn import (
+    AttestedCredentialData,
+    AuthenticatorData,
+    PublicKeyCredentialUserEntity,
 )
+
+from ..attachments import normalize_attachment
 from ..attestation import (
     augment_aaguid_fields,
     coerce_aaguid_hex,
@@ -29,6 +28,12 @@ from ..attestation import (
     extract_min_pin_length,
     make_json_safe,
     perform_attestation_checks,
+)
+from ..challenge_registry import (
+    CHALLENGE_FRESH,
+    CHALLENGE_REPLAYED,
+    consume_ceremony_state,
+    stamp_ceremony_state,
 )
 from ..config import (
     app,
@@ -45,11 +50,16 @@ from ..storage import (
     convert_bytes_for_json,
     delkey,
     iter_credentials,
-    list_credentials as storage_list_credentials,
     readkey,
     savekey,
 )
-from .simple_parts.authenticate_impl import authenticate_begin_impl, authenticate_complete_impl
+from ..storage import (
+    list_credentials as storage_list_credentials,
+)
+from .simple_parts.authenticate_impl import (
+    authenticate_begin_impl,
+    authenticate_complete_impl,
+)
 from .simple_parts.binary_helpers_impl import (
     _add_base64_padding_impl,
     _decode_base64url_bytes_impl,

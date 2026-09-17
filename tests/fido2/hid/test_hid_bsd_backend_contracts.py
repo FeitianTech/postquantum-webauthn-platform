@@ -4,7 +4,6 @@ import errno
 
 import pytest
 
-
 netbsd = pytest.importorskip("fido2.hid.netbsd")
 openbsd = pytest.importorskip("fido2.hid.openbsd")
 base = pytest.importorskip("fido2.hid.base")

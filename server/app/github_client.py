@@ -7,7 +7,6 @@ import json
 import os
 import time
 from typing import Any
-
 from urllib import error as urllib_error
 from urllib import request as urllib_request
 

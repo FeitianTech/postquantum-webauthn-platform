@@ -4,6 +4,7 @@ import base64
 from types import SimpleNamespace
 
 import pytest
+
 from fido2.utils import ByteBuffer
 
 

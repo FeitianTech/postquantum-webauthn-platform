@@ -27,25 +27,25 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable, Mapping, Sequence
 from typing import Any, TypeVar
-from collections.abc import Sequence, Mapping, Iterable
 
 from cryptography import x509
 from cryptography.exceptions import UnsupportedAlgorithm
 from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import (
     ec,
-    rsa,
-    padding,
+    ed448,
     ed25519,
     mldsa,
+    padding,
+    rsa,
     types,
-    ed448,
 )
 
 from .utils import ByteBuffer, bytes2int, int2bytes
+
 
 def _parse_der_length(data: memoryview, idx: int) -> tuple[int, int]:
     """Parse a DER length field and return (length, new_index)."""

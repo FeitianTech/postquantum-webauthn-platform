@@ -12,8 +12,8 @@ from __future__ import annotations
 import gzip
 import hashlib
 import sys
-from pathlib import Path
 from collections.abc import Iterator
+from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_STATIC_ROOT = REPO_ROOT / "frontend" / "static"

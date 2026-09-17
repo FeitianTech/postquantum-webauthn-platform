@@ -7,10 +7,10 @@ import os
 import secrets
 import threading
 import uuid
+from collections.abc import Mapping, MutableMapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
-from collections.abc import Mapping, MutableMapping, Sequence
 
 import cbor2
 

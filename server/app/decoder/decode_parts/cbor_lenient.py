@@ -2,8 +2,8 @@
 from __future__ import annotations
 
 import struct
-from typing import Any
 from collections.abc import Mapping, Sequence
+from typing import Any
 
 
 def _structure_to_value(node: Mapping[str, Any]) -> Any:

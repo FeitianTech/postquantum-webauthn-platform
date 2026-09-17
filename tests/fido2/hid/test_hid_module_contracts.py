@@ -12,7 +12,6 @@ import pytest
 from fido2.ctap import CtapError
 from fido2.hid.base import HidDescriptor
 
-
 hid = pytest.importorskip("fido2.hid")
 
 

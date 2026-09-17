@@ -1,6 +1,7 @@
+from types import SimpleNamespace
+
 import pytest
 from flask import session as flask_session
-from types import SimpleNamespace
 
 
 @pytest.fixture
