@@ -3,6 +3,15 @@ import hashlib
 
 import pytest
 
+from fido2.attestation import (
+    Attestation,
+    AttestationResult,
+    AttestationType,
+    InvalidSignature,
+)
+from fido2.attestation.base import TrustPathEvaluation
+from fido2.webauthn import Aaguid, RegistrationResponse
+
 
 def _b64url(data: bytes) -> str:
     return base64.urlsafe_b64encode(data).decode("ascii").rstrip("=")
@@ -87,7 +96,7 @@ def test_perform_attestation_checks_unsupported_format_sets_signature_and_root_f
     )()
 
     registration = _FakeRegistrationResponse(client_data, attestation_object)
-    monkeypatch.setattr(attestation_module.RegistrationResponse, "from_dict", lambda _value: registration)
+    monkeypatch.setattr(RegistrationResponse, "from_dict", lambda _value: registration)
 
     result = _perform_checks(
         attestation_module,
@@ -124,13 +133,13 @@ def test_perform_attestation_checks_warns_when_metadata_verifier_unavailable(mon
     )()
 
     registration = _FakeRegistrationResponse(client_data, attestation_object)
-    monkeypatch.setattr(attestation_module.RegistrationResponse, "from_dict", lambda _value: registration)
+    monkeypatch.setattr(RegistrationResponse, "from_dict", lambda _value: registration)
 
     class _PassingAttestation:
         def verify(self, *_args, **_kwargs):
-            return attestation_module.AttestationResult(attestation_module.AttestationType.BASIC, [])
+            return AttestationResult(AttestationType.BASIC, [])
 
-    monkeypatch.setattr(attestation_module.Attestation, "for_type", lambda _fmt: _PassingAttestation)
+    monkeypatch.setattr(Attestation, "for_type", lambda _fmt: _PassingAttestation)
     monkeypatch.setattr(metadata_module, "get_mds_verifier", lambda: None)
 
     result = _perform_checks(
@@ -168,17 +177,17 @@ def test_perform_attestation_checks_captures_verifier_evaluation_exception(monke
     )()
 
     registration = _FakeRegistrationResponse(client_data, attestation_object)
-    monkeypatch.setattr(attestation_module.RegistrationResponse, "from_dict", lambda _value: registration)
+    monkeypatch.setattr(RegistrationResponse, "from_dict", lambda _value: registration)
 
     class _PassingAttestation:
         def verify(self, *_args, **_kwargs):
-            return attestation_module.AttestationResult(attestation_module.AttestationType.BASIC, [])
+            return AttestationResult(AttestationType.BASIC, [])
 
     class _FailingVerifier:
         def evaluate_attestation(self, *_args, **_kwargs):
             raise RuntimeError("verifier exploded")
 
-    monkeypatch.setattr(attestation_module.Attestation, "for_type", lambda _fmt: _PassingAttestation)
+    monkeypatch.setattr(Attestation, "for_type", lambda _fmt: _PassingAttestation)
     monkeypatch.setattr(metadata_module, "get_mds_verifier", lambda: _FailingVerifier())
 
     result = _perform_checks(
@@ -217,13 +226,13 @@ def test_perform_attestation_checks_flags_algorithm_not_in_metadata_when_root_is
     )()
 
     registration = _FakeRegistrationResponse(client_data, attestation_object)
-    monkeypatch.setattr(attestation_module.RegistrationResponse, "from_dict", lambda _value: registration)
+    monkeypatch.setattr(RegistrationResponse, "from_dict", lambda _value: registration)
 
     class _PassingAttestation:
         def verify(self, *_args, **_kwargs):
-            return attestation_module.AttestationResult(attestation_module.AttestationType.BASIC, [])
+            return AttestationResult(AttestationType.BASIC, [])
 
-    trust_path = attestation_module.TrustPathEvaluation(
+    trust_path = TrustPathEvaluation(
         attestation_result=None,
         ca_certificate=b"trusted-ca",
         chain_valid=True,
@@ -244,7 +253,7 @@ def test_perform_attestation_checks_flags_algorithm_not_in_metadata_when_root_is
         (),
         {
             "metadata_statement": metadata_statement,
-            "aaguid": attestation_module.Aaguid.fromhex("00112233445566778899aabbccddeeff"),
+            "aaguid": Aaguid.fromhex("00112233445566778899aabbccddeeff"),
         },
     )()
 
@@ -262,7 +271,7 @@ def test_perform_attestation_checks_flags_algorithm_not_in_metadata_when_root_is
         def evaluate_attestation(self, *_args, **_kwargs):
             return evaluation
 
-    monkeypatch.setattr(attestation_module.Attestation, "for_type", lambda _fmt: _PassingAttestation)
+    monkeypatch.setattr(Attestation, "for_type", lambda _fmt: _PassingAttestation)
     monkeypatch.setattr(metadata_module, "get_mds_verifier", lambda: _Verifier())
 
     result = _perform_checks(
@@ -303,13 +312,13 @@ def test_perform_attestation_checks_reports_pqc_algorithm_mismatch_during_fallba
     )()
 
     registration = _FakeRegistrationResponse(client_data, attestation_object)
-    monkeypatch.setattr(attestation_module.RegistrationResponse, "from_dict", lambda _value: registration)
+    monkeypatch.setattr(RegistrationResponse, "from_dict", lambda _value: registration)
 
     class _FailingAttestation:
         def verify(self, *_args, **_kwargs):
-            raise attestation_module.InvalidSignature("bad signature")
+            raise InvalidSignature("bad signature")
 
-    monkeypatch.setattr(attestation_module.Attestation, "for_type", lambda _fmt: _FailingAttestation)
+    monkeypatch.setattr(Attestation, "for_type", lambda _fmt: _FailingAttestation)
 
     result = _perform_checks(
         attestation_module,

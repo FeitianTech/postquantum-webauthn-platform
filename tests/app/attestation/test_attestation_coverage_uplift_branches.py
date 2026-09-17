@@ -1,10 +1,16 @@
 from __future__ import annotations
 
+import base64
 import hashlib
 from datetime import datetime, timezone
 from types import SimpleNamespace
 
 import pytest
+from cryptography import x509
+
+from fido2.attestation import Attestation
+from fido2.cose import CoseKey
+from fido2.webauthn import AuthenticatorData, RegistrationResponse
 
 
 class _CredentialData:
@@ -50,10 +56,9 @@ def test_coerce_certificate_bytes_falls_back_to_hex_parsing_when_base64_decode_f
     attestation_module = pytest.importorskip("server.app.attestation")
 
     monkeypatch.setattr(
-        attestation_module.base64,
+        base64,
         "b64decode",
         lambda *_args, **_kwargs: (_ for _ in ()).throw(ValueError("bad-base64")),
-        raising=False,
     )
 
     assert attestation_module._coerce_certificate_bytes("0a0b") == b"\x0a\x0b"
@@ -77,34 +82,29 @@ def test_extract_certificate_aaguid_handles_non_hex_string_extension_values(monk
         extensions = _Extensions()
 
     monkeypatch.setattr(
-        attestation_module.x509,
+        x509,
         "load_der_x509_certificate",
         lambda _data: _Certificate(),
-        raising=False,
     )
 
     extracted = attestation_module._extract_certificate_aaguid(b"cert")
     assert extracted == b"Z" * 16
 
 
-def test_attempt_pqc_attestation_signature_validation_reports_public_key_construction_errors(
-    monkeypatch,
-):
+def test_attempt_pqc_attestation_signature_validation_reports_public_key_construction_errors(monkeypatch, pqc_runtime):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     monkeypatch.setattr(
-        attestation_module,
+        pqc_runtime,
         "extract_certificate_public_key_info",
         lambda _cert: {"subject_public_key": b"pub"},
-        raising=False,
     )
     monkeypatch.setattr(
-        attestation_module.CoseKey,
+        CoseKey,
         "for_alg",
         lambda _alg: (
             lambda _mapping: (_ for _ in ()).throw(ValueError("invalid-public-key"))
         ),
-        raising=False,
     )
 
     outcome = attestation_module._attempt_pqc_attestation_signature_validation(
@@ -119,28 +119,25 @@ def test_attempt_pqc_attestation_signature_validation_reports_public_key_constru
     assert outcome["error"].startswith("pqc_attestation_public_key_invalid:")
 
 
-def test_coerce_attestation_certificate_bytes_string_path_uses_websafe_decode_fallback(monkeypatch):
+def test_coerce_attestation_certificate_bytes_string_path_uses_websafe_decode_fallback(monkeypatch, details_runtime):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     monkeypatch.setattr(
-        attestation_module.base64,
+        base64,
         "b64decode",
         lambda *_args, **_kwargs: (_ for _ in ()).throw(ValueError("bad-base64")),
-        raising=False,
     )
     monkeypatch.setattr(
-        attestation_module,
+        details_runtime,
         "websafe_decode",
         lambda _value: b"\x01\x02",
-        raising=False,
     )
     assert attestation_module._coerce_attestation_certificate_bytes("AQI") == b"\x01\x02"
 
     monkeypatch.setattr(
-        attestation_module,
+        details_runtime,
         "websafe_decode",
         lambda _value: (_ for _ in ()).throw(ValueError("bad-websafe")),
-        raising=False,
     )
     assert attestation_module._coerce_attestation_certificate_bytes("AQI") is None
 
@@ -246,32 +243,29 @@ def test_normalise_signature_algorithm_name_covers_ed448_and_dsa_paths():
     assert attestation_module._normalise_signature_algorithm_name("dsa-with-sha1") == "DSA"
 
 
-def test_perform_attestation_checks_coerces_string_challenge_via_utf8_fallback_and_records_attestation_error(monkeypatch, pqc_runtime, metadata_module):
+def test_perform_attestation_checks_coerces_string_challenge_via_utf8_fallback_and_records_attestation_error(monkeypatch, pqc_runtime, metadata_module, details_runtime):
     attestation_module = pytest.importorskip("server.app.attestation")
 
-    flags = int(attestation_module.AuthenticatorData.FLAG.UP | attestation_module.AuthenticatorData.FLAG.AT)
+    flags = int(AuthenticatorData.FLAG.UP | AuthenticatorData.FLAG.AT)
     auth_data = _AuthData(rp_id="example.com", flags=flags)
     challenge = b"raw:text:challenge"
     client_data = _ClientData(challenge=challenge, origin="https://example.com")
     attestation_object = SimpleNamespace(fmt="packed", att_stmt={}, auth_data=auth_data)
 
     monkeypatch.setattr(
-        attestation_module.RegistrationResponse,
+        RegistrationResponse,
         "from_dict",
         lambda _response: _registration(attestation_object, client_data),
-        raising=False,
     )
     monkeypatch.setattr(
-        attestation_module,
+        details_runtime,
         "websafe_decode",
         lambda _value: (_ for _ in ()).throw(ValueError("bad-websafe")),
-        raising=False,
     )
     monkeypatch.setattr(
-        attestation_module.base64,
+        base64,
         "b64decode",
         lambda *_args, **_kwargs: (_ for _ in ()).throw(ValueError("bad-base64")),
-        raising=False,
     )
 
     class _AttestationVerifier:
@@ -279,10 +273,9 @@ def test_perform_attestation_checks_coerces_string_challenge_via_utf8_fallback_a
             raise RuntimeError("boom")
 
     monkeypatch.setattr(
-        attestation_module.Attestation,
+        Attestation,
         "for_type",
         lambda _fmt: _AttestationVerifier,
-        raising=False,
     )
     monkeypatch.setattr(
         pqc_runtime,
@@ -308,17 +301,16 @@ def test_perform_attestation_checks_coerces_string_challenge_via_utf8_fallback_a
 def test_perform_attestation_checks_falls_back_to_public_key_options_when_state_hex_wrapper_is_invalid(monkeypatch, metadata_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
-    flags = int(attestation_module.AuthenticatorData.FLAG.UP | attestation_module.AuthenticatorData.FLAG.AT)
+    flags = int(AuthenticatorData.FLAG.UP | AuthenticatorData.FLAG.AT)
     auth_data = _AuthData(rp_id="example.com", flags=flags)
     challenge = b"fallback-challenge"
     client_data = _ClientData(challenge=challenge, origin="https://example.com")
     attestation_object = SimpleNamespace(fmt="none", att_stmt={}, auth_data=auth_data)
 
     monkeypatch.setattr(
-        attestation_module.RegistrationResponse,
+        RegistrationResponse,
         "from_dict",
         lambda _response: _registration(attestation_object, client_data),
-        raising=False,
     )
     monkeypatch.setattr(metadata_module, "get_mds_verifier", lambda: None)
 

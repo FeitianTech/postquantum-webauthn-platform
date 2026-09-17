@@ -3,6 +3,9 @@ from types import SimpleNamespace
 
 import pytest
 
+from fido2.attestation import Attestation, InvalidSignature
+from fido2.webauthn import AuthenticatorData, CollectedClientData, RegistrationResponse
+
 
 class _FakeCredentialData:
     def __init__(self, alg: int):
@@ -51,10 +54,9 @@ def test_perform_attestation_checks_reports_client_authenticator_mismatches(monk
     )
 
     monkeypatch.setattr(
-        attestation_module.RegistrationResponse,
+        RegistrationResponse,
         "from_dict",
         lambda _response: _registration_for(attestation_object, client_data),
-        raising=False,
     )
 
     result = attestation_module.perform_attestation_checks(
@@ -84,12 +86,12 @@ def test_perform_attestation_checks_reports_client_authenticator_mismatches(monk
 def test_perform_attestation_checks_classical_success_path_populates_metadata(monkeypatch, classical_runtime, metadata_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
-    flags = int(attestation_module.AuthenticatorData.FLAG.UP | attestation_module.AuthenticatorData.FLAG.AT)
+    flags = int(AuthenticatorData.FLAG.UP | AuthenticatorData.FLAG.AT)
     auth_data = _FakeAuthData(rp_id="example.com", flags=flags, counter=7, alg=-7)
     attestation_object = SimpleNamespace(fmt="packed", att_stmt={"alg": -7}, auth_data=auth_data)
     client_data = _FakeClientData(
         challenge=b"expected",
-        type_value=attestation_module.CollectedClientData.TYPE.CREATE.value,
+        type_value=CollectedClientData.TYPE.CREATE.value,
         origin="https://example.com",
         cross_origin=False,
     )
@@ -106,12 +108,11 @@ def test_perform_attestation_checks_classical_success_path_populates_metadata(mo
     metadata_entry = SimpleNamespace(metadata_statement=metadata_statement, aaguid=b"\x00" * 16)
 
     monkeypatch.setattr(
-        attestation_module.RegistrationResponse,
+        RegistrationResponse,
         "from_dict",
         lambda _response: _registration_for(attestation_object, client_data),
-        raising=False,
     )
-    monkeypatch.setattr(attestation_module.Attestation, "for_type", lambda _fmt: (lambda: _FakeAttestation()), raising=False)
+    monkeypatch.setattr(Attestation, "for_type", lambda _fmt: (lambda: _FakeAttestation()))
     monkeypatch.setattr(metadata_module, "get_mds_verifier", lambda: object())
     monkeypatch.setattr(
         classical_runtime,
@@ -147,27 +148,26 @@ def test_perform_attestation_checks_classical_success_path_populates_metadata(mo
 def test_perform_attestation_checks_uses_pqc_fallback_when_signature_verification_fails(monkeypatch, classical_runtime, pqc_runtime, metadata_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
-    flags = int(attestation_module.AuthenticatorData.FLAG.UP | attestation_module.AuthenticatorData.FLAG.AT)
+    flags = int(AuthenticatorData.FLAG.UP | AuthenticatorData.FLAG.AT)
     auth_data = _FakeAuthData(rp_id="example.com", flags=flags, counter=1, alg=-7)
     attestation_object = SimpleNamespace(fmt="packed", att_stmt={"alg": -7}, auth_data=auth_data)
     client_data = _FakeClientData(
         challenge=b"expected",
-        type_value=attestation_module.CollectedClientData.TYPE.CREATE.value,
+        type_value=CollectedClientData.TYPE.CREATE.value,
         origin="https://example.com",
         cross_origin=False,
     )
 
     class _FailingAttestation:
         def verify(self, _att_stmt, _auth_data, _client_data_hash):
-            raise attestation_module.InvalidSignature("bad signature")
+            raise InvalidSignature("bad signature")
 
     monkeypatch.setattr(
-        attestation_module.RegistrationResponse,
+        RegistrationResponse,
         "from_dict",
         lambda _response: _registration_for(attestation_object, client_data),
-        raising=False,
     )
-    monkeypatch.setattr(attestation_module.Attestation, "for_type", lambda _fmt: (lambda: _FailingAttestation()), raising=False)
+    monkeypatch.setattr(Attestation, "for_type", lambda _fmt: (lambda: _FailingAttestation()))
     monkeypatch.setattr(
         pqc_runtime,
         "_attempt_pqc_attestation_signature_validation",
@@ -213,21 +213,20 @@ def test_perform_attestation_checks_uses_pqc_fallback_when_signature_verificatio
 def test_perform_attestation_checks_pqc_branch_surfaces_root_check_details(monkeypatch, pqc_runtime, metadata_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
-    flags = int(attestation_module.AuthenticatorData.FLAG.UP | attestation_module.AuthenticatorData.FLAG.AT)
+    flags = int(AuthenticatorData.FLAG.UP | AuthenticatorData.FLAG.AT)
     auth_data = _FakeAuthData(rp_id="example.com", flags=flags, counter=2, alg=-49)
     attestation_object = SimpleNamespace(fmt="none", att_stmt={"alg": -49}, auth_data=auth_data)
     client_data = _FakeClientData(
         challenge=b"expected",
-        type_value=attestation_module.CollectedClientData.TYPE.CREATE.value,
+        type_value=CollectedClientData.TYPE.CREATE.value,
         origin="https://example.com",
         cross_origin=False,
     )
 
     monkeypatch.setattr(
-        attestation_module.RegistrationResponse,
+        RegistrationResponse,
         "from_dict",
         lambda _response: _registration_for(attestation_object, client_data),
-        raising=False,
     )
     monkeypatch.setattr(metadata_module, "get_mds_verifier", lambda: object())
     monkeypatch.setattr(

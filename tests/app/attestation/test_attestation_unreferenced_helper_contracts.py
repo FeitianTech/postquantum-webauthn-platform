@@ -112,7 +112,7 @@ def test_fallback_certificate_serialization_and_unknown_public_key_info_helpers(
     attestation_module = pytest.importorskip("server.app.attestation")
 
     monkeypatch.setattr(
-        attestation_module,
+        public_key_leaf,
         "extract_certificate_public_key_info",
         lambda _cert: {
             "algorithm_name": "ML-DSA",
@@ -128,7 +128,6 @@ def test_fallback_certificate_serialization_and_unknown_public_key_info_helpers(
                 "claimed_nist_level": 3,
             },
         },
-        raising=False,
     )
 
     info, summary = attestation_module._build_unknown_public_key_info(b"\x01\x02", RuntimeError("bad cert"))
