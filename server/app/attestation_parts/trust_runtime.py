@@ -6,6 +6,14 @@ from collections.abc import Mapping, Sequence
 from datetime import datetime, timezone
 from typing import Any
 
+from cryptography import x509
+
+from fido2.utils import ByteBuffer
+from fido2.webauthn import Aaguid
+
+from .encoding_leaf import decode_asn1_octet_string
+from .runtime_state import AAGUID_EXTENSION_OID
+
 
 def _ensure_utc_datetime(value: datetime) -> datetime:
     """Return ``value`` normalised to a timezone-aware UTC datetime."""
