@@ -85,10 +85,6 @@ __all__ = ["MetadataDownloadError", "download_metadata_blob", "get_mds_verifier"
 # Locks live here because the metadata_parts runtime functions execute against
 # this module's globals.
 
-_session_metadata_last_cleanup: float = 0.0
-_session_cleanup_worker: threading.Thread | None = None
-_session_cleanup_pending: bool = False
-_session_cleanup_lock = threading.Lock()
 SessionMetadataItem = _session_items_runtime.SessionMetadataItem
 MetadataDownloadError = _cache_runtime.MetadataDownloadError
 _RUNTIME_REBOUND_CACHE: dict[Callable[..., Any], Callable[..., Any]] = {}

@@ -6,6 +6,7 @@ import time
 
 from .. import session_metadata_store
 from ..config import app
+from . import runtime_state as _state
 from .runtime_state import _SESSION_METADATA_INACTIVE_AGE
 
 
@@ -24,13 +25,11 @@ def _resolve_session_last_access(session_id: str) -> float | None:
 
 
 def _maybe_cleanup_inactive_sessions(now: float | None = None) -> None:
-    global _session_metadata_last_cleanup
-
     current_time = now or time.time()
-    with _session_cleanup_lock:
-        if current_time - _session_metadata_last_cleanup < _SESSION_METADATA_CLEANUP_INTERVAL.total_seconds():
+    with _state._session_cleanup_lock:
+        if current_time - _state._session_metadata_last_cleanup < _SESSION_METADATA_CLEANUP_INTERVAL.total_seconds():
             return
-        _session_metadata_last_cleanup = current_time
+        _state._session_metadata_last_cleanup = current_time
 
     cutoff = current_time - _SESSION_METADATA_INACTIVE_AGE.total_seconds()
 
@@ -53,8 +52,6 @@ def _maybe_cleanup_inactive_sessions(now: float | None = None) -> None:
 
 
 def _run_inactive_session_cleanup_worker() -> None:
-    global _session_cleanup_worker, _session_cleanup_pending
-
     while True:
         try:
             _maybe_cleanup_inactive_sessions()
@@ -65,21 +62,19 @@ def _run_inactive_session_cleanup_worker() -> None:
                 exc_info=True,
             )
 
-        with _session_cleanup_lock:
-            if _session_cleanup_pending:
-                _session_cleanup_pending = False
+        with _state._session_cleanup_lock:
+            if _state._session_cleanup_pending:
+                _state._session_cleanup_pending = False
                 continue
 
-            _session_cleanup_worker = None
+            _state._session_cleanup_worker = None
             return
 
 
 def _schedule_inactive_session_cleanup() -> None:
-    global _session_cleanup_worker, _session_cleanup_pending
-
     current_time = time.time()
     if (
-        current_time - _session_metadata_last_cleanup
+        current_time - _state._session_metadata_last_cleanup
         < _SESSION_METADATA_CLEANUP_INTERVAL.total_seconds()
     ):
         return
@@ -90,9 +85,9 @@ def _schedule_inactive_session_cleanup() -> None:
 
     worker: threading.Thread | None = None
 
-    with _session_cleanup_lock:
-        if _session_cleanup_worker is not None and _session_cleanup_worker.is_alive():
-            _session_cleanup_pending = True
+    with _state._session_cleanup_lock:
+        if _state._session_cleanup_worker is not None and _state._session_cleanup_worker.is_alive():
+            _state._session_cleanup_pending = True
             return
 
         worker = threading.Thread(
@@ -100,13 +95,13 @@ def _schedule_inactive_session_cleanup() -> None:
             name="session-metadata-cleanup",
             daemon=True,
         )
-        _session_cleanup_worker = worker
+        _state._session_cleanup_worker = worker
 
     try:
         worker.start()
     except RuntimeError:  # pragma: no cover - defensive fallback
-        with _session_cleanup_lock:
-            if _session_cleanup_worker is worker:
-                _session_cleanup_worker = None
-                _session_cleanup_pending = False
+        with _state._session_cleanup_lock:
+            if _state._session_cleanup_worker is worker:
+                _state._session_cleanup_worker = None
+                _state._session_cleanup_pending = False
         _maybe_cleanup_inactive_sessions(now=current_time)

@@ -8,14 +8,11 @@ def metadata_module(monkeypatch, metadata_runtime_state):
     module = pytest.importorskip("server.app.metadata")
 
     monkeypatch.setattr(module, "_SESSION_METADATA_CLEANUP_INTERVAL", timedelta(seconds=1), raising=False)
-    monkeypatch.setattr(module, "_session_metadata_last_cleanup", 0.0, raising=False)
-    monkeypatch.setattr(module, "_session_cleanup_worker", None, raising=False)
-    monkeypatch.setattr(module, "_session_cleanup_pending", False, raising=False)
 
     return module
 
 
-def test_schedule_inactive_session_cleanup_runs_inline_when_async_disabled(metadata_module, monkeypatch):
+def test_schedule_inactive_session_cleanup_runs_inline_when_async_disabled(metadata_module, monkeypatch, metadata_runtime_state):
     observed_now = []
 
     monkeypatch.setattr(metadata_module.time, "time", lambda: 100.0)
@@ -30,11 +27,11 @@ def test_schedule_inactive_session_cleanup_runs_inline_when_async_disabled(metad
     metadata_module._schedule_inactive_session_cleanup()
 
     assert observed_now == [100.0]
-    assert metadata_module._session_cleanup_worker is None
-    assert metadata_module._session_cleanup_pending is False
+    assert metadata_runtime_state._session_cleanup_worker is None
+    assert metadata_runtime_state._session_cleanup_pending is False
 
 
-def test_schedule_inactive_session_cleanup_marks_pending_when_worker_alive(metadata_module, monkeypatch):
+def test_schedule_inactive_session_cleanup_marks_pending_when_worker_alive(metadata_module, monkeypatch, metadata_runtime_state):
     class _AliveWorker:
         def is_alive(self):
             return True
@@ -43,7 +40,7 @@ def test_schedule_inactive_session_cleanup_marks_pending_when_worker_alive(metad
 
     monkeypatch.setattr(metadata_module.time, "time", lambda: 100.0)
     monkeypatch.setattr(metadata_module, "_cleanup_async_enabled", lambda: True, raising=False)
-    monkeypatch.setattr(metadata_module, "_session_cleanup_worker", alive_worker, raising=False)
+    monkeypatch.setattr(metadata_runtime_state, "_session_cleanup_worker", alive_worker)
     monkeypatch.setattr(
         metadata_module,
         "_maybe_cleanup_inactive_sessions",
@@ -55,13 +52,13 @@ def test_schedule_inactive_session_cleanup_marks_pending_when_worker_alive(metad
 
     metadata_module._schedule_inactive_session_cleanup()
 
-    assert metadata_module._session_cleanup_worker is alive_worker
-    assert metadata_module._session_cleanup_pending is True
+    assert metadata_runtime_state._session_cleanup_worker is alive_worker
+    assert metadata_runtime_state._session_cleanup_pending is True
 
 
 def test_schedule_inactive_session_cleanup_falls_back_inline_when_thread_start_fails(
     metadata_module, monkeypatch
-):
+, metadata_runtime_state):
     observed_now = []
 
     class _FailingThread:
@@ -87,15 +84,15 @@ def test_schedule_inactive_session_cleanup_falls_back_inline_when_thread_start_f
     metadata_module._schedule_inactive_session_cleanup()
 
     assert observed_now == [250.0]
-    assert metadata_module._session_cleanup_worker is None
-    assert metadata_module._session_cleanup_pending is False
+    assert metadata_runtime_state._session_cleanup_worker is None
+    assert metadata_runtime_state._session_cleanup_pending is False
 
 
-def test_run_inactive_session_cleanup_worker_drains_pending_before_teardown(metadata_module, monkeypatch):
+def test_run_inactive_session_cleanup_worker_drains_pending_before_teardown(metadata_module, monkeypatch, metadata_runtime_state):
     runs = []
 
-    monkeypatch.setattr(metadata_module, "_session_cleanup_worker", object(), raising=False)
-    monkeypatch.setattr(metadata_module, "_session_cleanup_pending", True, raising=False)
+    monkeypatch.setattr(metadata_runtime_state, "_session_cleanup_worker", object())
+    monkeypatch.setattr(metadata_runtime_state, "_session_cleanup_pending", True)
     monkeypatch.setattr(
         metadata_module,
         "_maybe_cleanup_inactive_sessions",
@@ -106,16 +103,16 @@ def test_run_inactive_session_cleanup_worker_drains_pending_before_teardown(meta
     metadata_module._run_inactive_session_cleanup_worker()
 
     assert runs == ["cleanup", "cleanup"]
-    assert metadata_module._session_cleanup_pending is False
-    assert metadata_module._session_cleanup_worker is None
+    assert metadata_runtime_state._session_cleanup_pending is False
+    assert metadata_runtime_state._session_cleanup_worker is None
 
 
 def test_maybe_cleanup_inactive_sessions_deletes_only_stale_and_continues_on_delete_errors(
     metadata_module, monkeypatch
-):
+, metadata_runtime_state):
     now = 2_000_000.0
 
-    monkeypatch.setattr(metadata_module, "_session_metadata_last_cleanup", 0.0, raising=False)
+    monkeypatch.setattr(metadata_runtime_state, "_session_metadata_last_cleanup", 0.0)
     monkeypatch.setattr(
         metadata_module,
         "_SESSION_METADATA_CLEANUP_INTERVAL",
@@ -168,5 +165,5 @@ def test_maybe_cleanup_inactive_sessions_deletes_only_stale_and_continues_on_del
     metadata_module._maybe_cleanup_inactive_sessions(now=now)
 
     assert delete_attempts == ["stale-error", "stale-ok"]
-    assert metadata_module._session_metadata_last_cleanup == now
+    assert metadata_runtime_state._session_metadata_last_cleanup == now
     assert any("Failed to remove inactive metadata session" in str(call[0][0]) for call in warnings)
