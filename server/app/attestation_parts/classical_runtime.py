@@ -3,6 +3,19 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
+from cryptography import x509
+
+from fido2.attestation import InvalidSignature, verify_x509_chain
+from fido2.attestation.base import TrustPathEvaluation
+
+from ..metadata import metadata_entry_trust_anchor_status
+from .trust_ca_runtime import _is_trusted_ca_certificate
+from .trust_runtime import (
+    _certificate_datetime,
+    _collect_metadata_root_certificates,
+    _resolve_root_validity,
+)
+
 
 def _evaluate_classical_attestation_root(
     attestation_object: Any,
