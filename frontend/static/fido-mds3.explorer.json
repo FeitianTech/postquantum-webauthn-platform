@@ -6069,7 +6069,7 @@
     },
     {
       "aaguid": "7e3f3d30-3557-4442-bdae-139312178b39",
-      "algorithmInfo": "ECDSA_SHA256",
+      "algorithmInfo": "\u2014",
       "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
       "algorithmsList": [
         "SECP256R1 Ecdsa SHA256 Raw"
@@ -6081,17 +6081,13 @@
       ],
       "attestationCertificates": [],
       "attestationKeyIdentifiers": [],
-      "certificateAlgorithmInfo": "ECDSA_SHA256",
-      "certificateAlgorithmInfoList": [
-        "ECDSA_SHA256"
-      ],
-      "certificateCommonNameList": [
-        "RSA FIDO CA Root"
-      ],
-      "certificateCommonNames": "RSA FIDO CA Root",
+      "certificateAlgorithmInfo": "\u2014",
+      "certificateAlgorithmInfoList": [],
+      "certificateCommonNameList": [],
+      "certificateCommonNames": "\u2014",
       "certification": "FIDO Certified L1 \u2022 DS100 \u2022 (FIDO20020221007001)",
       "certificationStatus": "FIDO_CERTIFIED_L1",
-      "commonName": "RSA FIDO CA Root",
+      "commonName": "\u2014",
       "dateTooltip": "2022-10-07",
       "dateUpdated": "Oct 7, 2022",
       "entryId": "aaguid:7e3f3d30-3557-4442-bdae-139312178b39",
@@ -8255,7 +8251,7 @@
     },
     {
       "aaguid": "8681a073-5f50-4d52-bce4-e21658d207b3",
-      "algorithmInfo": "ECDSA_SHA256",
+      "algorithmInfo": "\u2014",
       "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
       "algorithmsList": [
         "SECP256R1 Ecdsa SHA256 Raw"
@@ -8267,17 +8263,13 @@
       ],
       "attestationCertificates": [],
       "attestationKeyIdentifiers": [],
-      "certificateAlgorithmInfo": "ECDSA_SHA256",
-      "certificateAlgorithmInfoList": [
-        "ECDSA_SHA256"
-      ],
-      "certificateCommonNameList": [
-        "RSA Software-Based FIDO Authenticators Root CA"
-      ],
-      "certificateCommonNames": "RSA Software-Based FIDO Authenticators Root CA",
+      "certificateAlgorithmInfo": "\u2014",
+      "certificateAlgorithmInfoList": [],
+      "certificateCommonNameList": [],
+      "certificateCommonNames": "\u2014",
       "certification": "FIDO Certified L1 \u2022 RSA Authenticator for iOS \u2022 (FIDO20020240822003)",
       "certificationStatus": "FIDO_CERTIFIED_L1",
-      "commonName": "RSA Software-Based FIDO Authenticators Root CA",
+      "commonName": "\u2014",
       "dateTooltip": "2024-09-10",
       "dateUpdated": "Sep 10, 2024",
       "entryId": "aaguid:8681a073-5f50-4d52-bce4-e21658d207b3",
@@ -9358,7 +9350,7 @@
     },
     {
       "aaguid": "59f85fe7-faa5-4c92-9f52-697b9d4d5473",
-      "algorithmInfo": "ECDSA_SHA256",
+      "algorithmInfo": "\u2014",
       "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
       "algorithmsList": [
         "SECP256R1 Ecdsa SHA256 Raw"
@@ -9370,17 +9362,13 @@
       ],
       "attestationCertificates": [],
       "attestationKeyIdentifiers": [],
-      "certificateAlgorithmInfo": "ECDSA_SHA256",
-      "certificateAlgorithmInfoList": [
-        "ECDSA_SHA256"
-      ],
-      "certificateCommonNameList": [
-        "RSA Software-Based FIDO Authenticators Root CA"
-      ],
-      "certificateCommonNames": "RSA Software-Based FIDO Authenticators Root CA",
+      "certificateAlgorithmInfo": "\u2014",
+      "certificateAlgorithmInfoList": [],
+      "certificateCommonNameList": [],
+      "certificateCommonNames": "\u2014",
       "certification": "FIDO Certified L1 \u2022 RSA Authenticator for Android \u2022 (FIDO20020240822002)",
       "certificationStatus": "FIDO_CERTIFIED_L1",
-      "commonName": "RSA Software-Based FIDO Authenticators Root CA",
+      "commonName": "\u2014",
       "dateTooltip": "2024-09-10",
       "dateUpdated": "Sep 10, 2024",
       "entryId": "aaguid:59f85fe7-faa5-4c92-9f52-697b9d4d5473",
@@ -11259,7 +11247,7 @@
     },
     {
       "aaguid": "",
-      "algorithmInfo": "ECDSA_SHA256",
+      "algorithmInfo": "\u2014",
       "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
       "algorithmsList": [
         "SECP256R1 Ecdsa SHA256 Raw"
@@ -11271,17 +11259,13 @@
       ],
       "attestationCertificates": [],
       "attestationKeyIdentifiers": [],
-      "certificateAlgorithmInfo": "ECDSA_SHA256",
-      "certificateAlgorithmInfoList": [
-        "ECDSA_SHA256"
-      ],
-      "certificateCommonNameList": [
-        "RSA FIDO CA Root"
-      ],
-      "certificateCommonNames": "RSA FIDO CA Root",
+      "certificateAlgorithmInfo": "\u2014",
+      "certificateAlgorithmInfoList": [],
+      "certificateCommonNameList": [],
+      "certificateCommonNames": "\u2014",
       "certification": "FIDO Certified L1 \u2022 RSA DS100 \u2022 (U2F100020230501001)",
       "certificationStatus": "FIDO_CERTIFIED_L1",
-      "commonName": "RSA FIDO CA Root",
+      "commonName": "\u2014",
       "dateTooltip": "2024-09-10",
       "dateUpdated": "Sep 10, 2024",
       "entryId": "akid:2806df6c60b1656a78f97a28e168e5ec8d2937b4",
@@ -14141,7 +14125,7 @@
     },
     {
       "aaguid": "f7c558a0-f465-11e8-b568-0800200c9a66",
-      "algorithmInfo": "ECDSA_SHA256",
+      "algorithmInfo": "\u2014",
       "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
       "algorithmsList": [
         "SECP256R1 Ecdsa SHA256 Raw"
@@ -14155,17 +14139,13 @@
       ],
       "attestationCertificates": [],
       "attestationKeyIdentifiers": [],
-      "certificateAlgorithmInfo": "ECDSA_SHA256",
-      "certificateAlgorithmInfoList": [
-        "ECDSA_SHA256"
-      ],
-      "certificateCommonNameList": [
-        "FIDO2.0 Authenticator Root Certificate"
-      ],
-      "certificateCommonNames": "FIDO2.0 Authenticator Root Certificate",
+      "certificateAlgorithmInfo": "\u2014",
+      "certificateAlgorithmInfoList": [],
+      "certificateCommonNameList": [],
+      "certificateCommonNames": "\u2014",
       "certification": "FIDO Certified L1 \u2022 KONA FIDO2 BIOPASS \u2022 (FIDO20020190402001)",
       "certificationStatus": "FIDO_CERTIFIED_L1",
-      "commonName": "FIDO2.0 Authenticator Root Certificate",
+      "commonName": "\u2014",
       "dateTooltip": "2020-04-29",
       "dateUpdated": "Apr 29, 2020",
       "entryId": "aaguid:f7c558a0-f465-11e8-b568-0800200c9a66",
@@ -24215,7 +24195,7 @@
     },
     {
       "aaguid": "53414d53-554e-4700-0000-000000000000",
-      "algorithmInfo": "ECDSA_SHA256",
+      "algorithmInfo": "\u2014",
       "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
       "algorithmsList": [
         "SECP256R1 Ecdsa SHA256 Raw"
@@ -24226,17 +24206,13 @@
       ],
       "attestationCertificates": [],
       "attestationKeyIdentifiers": [],
-      "certificateAlgorithmInfo": "ECDSA_SHA256",
-      "certificateAlgorithmInfoList": [
-        "ECDSA_SHA256"
-      ],
-      "certificateCommonNameList": [
-        "Samsung Electronics CA"
-      ],
-      "certificateCommonNames": "Samsung Electronics CA",
+      "certificateAlgorithmInfo": "\u2014",
+      "certificateAlgorithmInfoList": [],
+      "certificateCommonNameList": [],
+      "certificateCommonNames": "\u2014",
       "certification": "NOT FIDO Certified",
       "certificationStatus": "NOT_FIDO_CERTIFIED",
-      "commonName": "Samsung Electronics CA",
+      "commonName": "\u2014",
       "dateTooltip": "2024-03-12",
       "dateUpdated": "Mar 12, 2024",
       "entryId": "aaguid:53414d53-554e-4700-0000-000000000000",
