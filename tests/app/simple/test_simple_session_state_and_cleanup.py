@@ -79,7 +79,7 @@ def test_authenticate_complete_invalid_request_state_fallback_returns_400(monkey
             assert session_state.get("simple_credentials_email") == "user@example.com"
 
 
-def test_authenticate_complete_malformed_authenticator_data_omits_sign_count(monkeypatch):
+def test_authenticate_complete_malformed_authenticator_data_is_rejected(monkeypatch):
     config_module = pytest.importorskip("server.app.config")
     simple_module = pytest.importorskip("server.app.routes.simple")
     pytest.importorskip("server.app.app")
@@ -113,10 +113,11 @@ def test_authenticate_complete_malformed_authenticator_data_omits_sign_count(mon
             },
         )
 
-        assert response.status_code == 200
+        # An unreadable counter cannot pass the signCount check.
+        assert response.status_code == 400
         payload = response.get_json()
-        assert payload["status"] == "OK"
-        assert payload["authenticatedCredentialId"] == _b64url(credential_id)
+        assert payload.get("status") != "OK"
+        assert "signature counter could not be read" in payload["error"]
         assert "signCount" not in payload
 
         with client.session_transaction() as session_state:

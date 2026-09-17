@@ -178,6 +178,7 @@ def registration_payload(
     rp_id: str = RP_ID,
     cross_origin: bool = False,
     cose_key_bytes: Optional[bytes] = None,
+    counter: int = 0,
 ) -> Dict[str, Any]:
     """Build a complete, genuinely-signed registration response."""
 
@@ -186,7 +187,7 @@ def registration_payload(
         cross_origin=cross_origin,
     )
     auth_data = authenticator.authenticator_data(
-        rp_id=rp_id, cose_key_bytes=cose_key_bytes
+        rp_id=rp_id, cose_key_bytes=cose_key_bytes, counter=counter
     )
     return {
         "id": b64u(authenticator.credential_id),

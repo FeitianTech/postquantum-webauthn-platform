@@ -48,6 +48,8 @@ def _persist_registered_credential_entry_impl(simple_module: Any, ctx: Dict[str,
     credential_entry = {
         "credential_data": ctx["auth_data"].credential_data,
         "auth_data": ctx["auth_data"],
+        # Advanced on every successful authentication; see sign_count_impl.
+        "sign_count": int(getattr(ctx["auth_data"], "counter", 0)),
         "user_info": ctx["credential_info"]["user_info"],
         "registration_time": ctx["credential_info"]["registration_time"],
         "client_data_json": ctx["credential_info"].get("client_data_json", ""),
