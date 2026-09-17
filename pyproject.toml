@@ -29,7 +29,7 @@ include = [
 ]
 
 [tool.poetry.dependencies]
-python = "^3.8"
+python = "^3.12"
 cryptography = ">=49"      # native ML-DSA-44/65/87 sign/verify and ML-DSA x509
 pyscard = {version = "^1.9 || ^2", optional = true}
 
