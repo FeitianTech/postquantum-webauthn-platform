@@ -4,6 +4,24 @@ from collections.abc import Mapping, Sequence
 from datetime import datetime
 from typing import Any
 
+from fido2.attestation import AttestationResult, AttestationType
+from fido2.cose import CoseKey, extract_certificate_public_key_info
+
+from ..metadata import metadata_entry_trust_anchor_status
+from ..pqc import is_pqc_algorithm
+from .pqc_constraints_runtime import (
+    _normalise_pqc_algorithm_identifier,
+    _verify_pqc_attestation_chain,
+)
+from .trust_ca_runtime import _is_trusted_ca_certificate
+from .trust_runtime import (
+    _coerce_bytes,
+    _collect_metadata_root_certificates,
+    _collect_trust_path_entries,
+    _find_metadata_entry_for_aaguid,
+    _resolve_root_validity,
+)
+
 
 def _evaluate_mldsa_attestation_root(
     attestation_object: Any,
