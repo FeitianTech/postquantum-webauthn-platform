@@ -1,7 +1,10 @@
 name: CI / Python
 
 on:
+  # push is filtered to main so a same-repo PR is checked once (by
+  # pull_request) instead of twice; main still gets a post-merge run.
   push:
+    branches: [main]
   pull_request:
 
 permissions:
