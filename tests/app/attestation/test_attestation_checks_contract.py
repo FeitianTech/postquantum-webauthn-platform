@@ -265,7 +265,7 @@ def test_verify_pqc_attestation_chain_returns_constraint_error_early(monkeypatch
     assert errors == ["pqc_basic_constraints_not_ca: Test CA"]
 
 
-def test_verify_pqc_attestation_chain_reports_untrusted_root(monkeypatch):
+def test_verify_pqc_attestation_chain_reports_untrusted_root(monkeypatch, trust_ca_runtime):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     monkeypatch.setattr(
@@ -281,10 +281,9 @@ def test_verify_pqc_attestation_chain_reports_untrusted_root(monkeypatch):
         raising=False,
     )
     monkeypatch.setattr(
-        attestation_module,
+        trust_ca_runtime,
         "_is_trusted_ca_certificate",
         lambda *_args, **_kwargs: False,
-        raising=False,
     )
 
     valid, errors = attestation_module._verify_pqc_attestation_chain(
@@ -297,7 +296,7 @@ def test_verify_pqc_attestation_chain_reports_untrusted_root(monkeypatch):
     assert errors == ["pqc_root_not_in_trusted_list"]
 
 
-def test_verify_pqc_attestation_chain_invokes_signature_verification_for_each_non_root_link(monkeypatch):
+def test_verify_pqc_attestation_chain_invokes_signature_verification_for_each_non_root_link(monkeypatch, trust_ca_runtime):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     monkeypatch.setattr(
@@ -307,10 +306,9 @@ def test_verify_pqc_attestation_chain_invokes_signature_verification_for_each_no
         raising=False,
     )
     monkeypatch.setattr(
-        attestation_module,
+        trust_ca_runtime,
         "_is_trusted_ca_certificate",
         lambda *_args, **_kwargs: True,
-        raising=False,
     )
 
     observed_pairs = []
@@ -587,7 +585,7 @@ def test_evaluate_mldsa_attestation_root_reports_missing_metadata_roots(monkeypa
     assert outcome["root_valid"] is None
 
 
-def test_evaluate_mldsa_attestation_root_marks_chain_missing_when_no_x5c(monkeypatch, trust_runtime):
+def test_evaluate_mldsa_attestation_root_marks_chain_missing_when_no_x5c(monkeypatch, trust_runtime, trust_ca_runtime):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     fake_entry = {"metadata_statement": {}}
@@ -599,7 +597,7 @@ def test_evaluate_mldsa_attestation_root_marks_chain_missing_when_no_x5c(monkeyp
     attestation_object = type("_AttestationObject", (), {"att_stmt": {}})()
 
     monkeypatch.setattr(trust_runtime, "_collect_metadata_root_certificates", lambda _entry: [b"trusted-root"])
-    monkeypatch.setattr(attestation_module, "_is_trusted_ca_certificate", lambda *_args, **_kwargs: True, raising=False)
+    monkeypatch.setattr(trust_ca_runtime, "_is_trusted_ca_certificate", lambda *_args, **_kwargs: True)
 
     outcome = attestation_module._evaluate_mldsa_attestation_root(
         attestation_object,
