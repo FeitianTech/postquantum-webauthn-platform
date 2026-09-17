@@ -46,31 +46,6 @@ from cryptography.hazmat.primitives.asymmetric import (
 
 from .utils import ByteBuffer, bytes2int, int2bytes
 
-try:  # pragma: no cover - exercised indirectly in tests
-    import oqs  # type: ignore
-except (ImportError, SystemExit) as _oqs_error:  # pragma: no cover - handled in verification
-    oqs = None  # type: ignore
-    _oqs_import_error: Optional[BaseException] = _oqs_error
-else:  # pragma: no cover - module imported successfully
-    _oqs_import_error = None
-
-
-def _require_oqs():  # pragma: no cover - exercised in tests when oqs is missing
-    if oqs is not None:  # type: ignore[name-defined]
-        return oqs  # type: ignore[return-value]
-    message = (
-        "ML-DSA verification requires the 'oqs' package. Install the "
-        "python-fido2-webauthn-test[pqc] extra to enable post-quantum algorithms."
-    )
-    raise RuntimeError(message) from _oqs_import_error
-
-
-def _get_optional_oqs():
-    """Return the oqs module when available without raising."""
-
-    return oqs  # type: ignore[name-defined,return-value]
-
-
 def _parse_der_length(data: memoryview, idx: int) -> tuple[int, int]:
     """Parse a DER length field and return (length, new_index)."""
 
@@ -253,34 +228,12 @@ def _verify_mldsa_signature(
 
 
 def _get_mldsa_parameter_details(parameter_set: Optional[str]) -> Dict[str, Optional[int]]:
-    """Return expected ML-DSA parameter lengths, consulting oqs when available."""
+    """Return the FIPS 204 parameter lengths for *parameter_set*."""
 
     if not parameter_set:
         return {}
 
-    details: Dict[str, Optional[int]] = dict(
-        _ML_DSA_PARAMETER_SET_DEFAULTS.get(parameter_set, {})
-    )
-
-    oqs_module = _get_optional_oqs()
-    if oqs_module is None:
-        return details
-
-    try:  # pragma: no cover - depends on optional oqs installation
-        with oqs_module.Signature(parameter_set) as signature:
-            signature_details = getattr(signature, "details", None)
-    except BaseException:
-        return details
-
-    if isinstance(signature_details, Mapping):
-        public_key_length = signature_details.get("length_public_key")
-        signature_length = signature_details.get("length_signature")
-        if public_key_length:
-            details.setdefault("public_key_length", int(public_key_length))
-        if signature_length:
-            details.setdefault("signature_length", int(signature_length))
-
-    return details
+    return dict(_ML_DSA_PARAMETER_SET_DEFAULTS.get(parameter_set, {}))
 
 
 def describe_mldsa_oid(oid: Optional[str]) -> Optional[Dict[str, str]]:

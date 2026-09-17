@@ -129,7 +129,7 @@ def _evaluate_mldsa_attestation_root(
 def _attempt_pqc_attestation_signature_validation(
     attestation_object: Any, client_data_hash: bytes
 ) -> Dict[str, Any]:
-    """Best-effort PQC attestation verification fallback using liboqs."""
+    """Best-effort PQC attestation verification fallback using cryptography."""
 
     outcome: Dict[str, Any] = {
         "attempted": False,
