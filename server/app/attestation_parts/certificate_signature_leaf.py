@@ -4,6 +4,8 @@ import re
 from collections.abc import Mapping
 from typing import Any
 
+from cryptography.x509.oid import NameOID
+
 _HASH_NORMALISE_PATTERN = re.compile(r"sha-?(\d{3})$", re.IGNORECASE)
 
 
