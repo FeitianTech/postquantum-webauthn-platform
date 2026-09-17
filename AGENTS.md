@@ -136,6 +136,15 @@ Repo test layout:
 
 If you are changing only UI logic plus lightweight server responses, prefer targeted tests over the full suite first.
 
+## Python Dependencies
+
+- App dependencies are declared only in `server/pyproject.toml`; resolved versions are locked in `uv.lock`.
+  The Docker image, CI and local venvs all install from that lock.
+- Set up or refresh a local venv: `uv sync --locked`
+- Add or change a dependency: edit `server/pyproject.toml`, run `uv lock`, commit both files.
+  A stale lock fails the Docker build and CI.
+- The root `pyproject.toml` is the vendored `fido2/` library's manifest, not the app's.
+
 ## Repo-Specific Gotchas
 
 - The frontend is plain JS modules, not React/Vue.
