@@ -6,6 +6,10 @@ source =
     server
 
 [report]
+# A floor, not a target: measured 95.42% on 2026-09-17. Set just under it so a
+# real regression fails but ordinary churn does not. Raise it when coverage
+# rises; never lower it to go green.
+fail_under = 95
 omit =
     tests/*
     */tests/*

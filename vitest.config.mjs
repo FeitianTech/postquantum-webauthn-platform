@@ -20,13 +20,20 @@ export default defineConfig({
       ],
       exclude: [
         'tests/frontend/**',
-        'frontend/static/scripts/advanced/mds.js',
-        'frontend/static/scripts/advanced/credential-display.js',
         'frontend/static/scripts/shared/storage/local.js',
-        'frontend/static/scripts/advanced/json-editor.js',
         'frontend/static/scripts/decoder/codec.js',
         'frontend/static/scripts/decoder/codec/**',
       ],
+      // A floor, not a target. Set just under the numbers measured on
+      // 2026-09-17 (82.59 statements / 66.46 branches / 91.33 functions /
+      // 82.71 lines) so a real regression fails the run but ordinary churn
+      // does not. Raise these when coverage rises; never lower them to go green.
+      thresholds: {
+        statements: 82,
+        branches: 66,
+        functions: 91,
+        lines: 82,
+      },
     },
   },
 });
