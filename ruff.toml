@@ -10,6 +10,43 @@
 # everywhere and the UP modernisation rules are safe to apply.
 target-version = "py312"
 
+[lint]
+# The gated set: every rule here is at zero today and is one we are confident
+# stays at zero. CI fails the build on any violation (.github/workflows/ci-python.yml).
+#
+#   E4/E7/E9  import placement, statement-level errors, syntax errors
+#   F         pyflakes -- undefined names, unused imports, broken __all__, dead locals
+#   I         import sorting
+#   UP006/UP007/UP035/UP045  PEP 585/604 typing, valid because the floor is 3.12
+#
+# Deliberately NOT gated, and why:
+#   BLE001 (175), S110 (21), S112 (11)  reconnaissance only. A read of 32 of the
+#     S110/S112 sites and a 20-site BLE001 sample put roughly 4 in 5 in the
+#     "load-bearing defensive handler" bucket and the rest in "silently swallows
+#     a failure". Splitting them needs a human decision per site, so they stay
+#     out of the gate rather than being mass-rewritten or mass-suppressed.
+#   RUF100 (86)  its answer depends on which rules are selected, and with a gate
+#     this narrow it calls 79 live markers dead: the blanket `# noqa` on long
+#     fixture lines (E501 is not gated), `# noqa: S101` in tests, and the
+#     `# noqa: F401` re-export markers in vendored `fido2/**/__init__.py`, which
+#     ruff only skips because `ignore-init-module-imports` still defaults to
+#     true and which come back the moment that deprecated default is dropped.
+#     Deleting them would be churn against upstream that we would have to undo.
+#     The 7 that were genuinely stale have been removed by hand.
+#   The rest of UP, plus B/C4/SIM/RUF012/TRY/DTZ/...  all still have findings.
+#     They are worth adopting, but one rule group at a time with the suite green.
+select = ["E4", "E7", "E9", "F", "I", "UP006", "UP007", "UP035", "UP045"]
+
+# F821 stays off on purpose. All 1008 hits come from the split-module runtime
+# hack described under per-file-ignores below: attestation.py, decoder/decode.py
+# and metadata.py rebuild their fragments' functions against the parent's
+# globals, so the fragments genuinely do not import the names they use, and the
+# `*_parts/` files are undefined-name soup by design. Turning F821 on now would
+# mean 1008 permanent suppressions and would destroy the one number that tells
+# us whether the hack is being unwound. It is our progress meter: it comes on,
+# unsuppressed, in the milestone that removes the rebinding.
+ignore = ["F821"]
+
 [lint.per-file-ignores]
 # F401 is structurally wrong in the five "parent" modules of the split-module
 # layout. Each one is a namespace carrier for its `*_parts/` fragments:

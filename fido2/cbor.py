@@ -128,7 +128,7 @@ def load_bool(ai: int, data: bytes) -> tuple[bool, bytes]:
 
 
 def load_bytes(ai: int, data: bytes) -> tuple[bytes, bytes]:
-    l, data = load_int(ai, data)
+    l, data = load_int(ai, data)  # noqa: E741  # upstream name, kept for diffability
     return data[:l], data[l:]
 
 
@@ -138,7 +138,7 @@ def load_text(ai: int, data: bytes) -> tuple[str, bytes]:
 
 
 def load_array(ai: int, data: bytes) -> tuple[Sequence[CborType], bytes]:
-    l, data = load_int(ai, data)
+    l, data = load_int(ai, data)  # noqa: E741  # upstream name, kept for diffability
     values = []
     for i in range(l):
         val, data = decode_from(data)
@@ -147,7 +147,7 @@ def load_array(ai: int, data: bytes) -> tuple[Sequence[CborType], bytes]:
 
 
 def load_map(ai: int, data: bytes) -> tuple[Mapping[CborType, CborType], bytes]:
-    l, data = load_int(ai, data)
+    l, data = load_int(ai, data)  # noqa: E741  # upstream name, kept for diffability
     values = {}
     for i in range(l):
         k, data = decode_from(data)

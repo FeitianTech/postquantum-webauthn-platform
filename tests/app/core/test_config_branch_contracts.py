@@ -139,7 +139,9 @@ def test_register_after_request_once_guard_paths(monkeypatch):
     calls = []
     monkeypatch.setattr(flask_app, "after_request", lambda handler: calls.append(handler), raising=False)
 
-    existing = lambda response: response
+    def existing(response):
+        return response
+
     setattr(existing, marker, True)
     flask_app.after_request_funcs.setdefault(None, []).append(existing)
 
@@ -152,7 +154,9 @@ def test_register_after_request_once_guard_paths(monkeypatch):
     assert calls == []
 
     monkeypatch.setattr(flask_app, "_got_first_request", False, raising=False)
-    handler = lambda response: response
+    def handler(response):
+        return response
+
     config_module._register_after_request_once(flask_app, handler)
     assert calls == [handler]
 

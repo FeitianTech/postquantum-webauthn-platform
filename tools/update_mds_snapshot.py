@@ -17,8 +17,12 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from fido2.mds3 import parse_blob
-from server.app.mds_snapshot import build_bootstrap_snapshot, build_explorer_snapshot
+# Imported after the sys.path bootstrap above.
+from fido2.mds3 import parse_blob  # noqa: E402
+from server.app.mds_snapshot import (  # noqa: E402
+    build_bootstrap_snapshot,
+    build_explorer_snapshot,
+)
 
 FRONTEND_STATIC_DIR = REPO_ROOT / "frontend" / "static"
 
