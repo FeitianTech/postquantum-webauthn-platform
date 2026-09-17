@@ -13,7 +13,7 @@
     "test:all:coverage": "npm run coverage:badges"
   },
   "devDependencies": {
-    "@vitest/coverage-v8": "^4.1.2",
+    "@vitest/coverage-v8": "^5.0.0",
     "jsdom": "^29.0.1",
     "vitest": "^4.1.2"
   },
