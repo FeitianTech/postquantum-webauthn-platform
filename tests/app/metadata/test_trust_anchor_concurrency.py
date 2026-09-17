@@ -132,9 +132,16 @@ def test_session_entries_stay_untrusted_while_other_sessions_run(metadata_module
     assert base_results == [True] * iterations
 
 
-def test_concurrent_cold_loads_parse_base_metadata_once(metadata_module, monkeypatch):
+def test_concurrent_cold_loads_parse_base_metadata_once(metadata_module, monkeypatch, tmp_path):
     calls = []
-    verified_mtime = os.path.getmtime(metadata_module.MDS_METADATA_VERIFIED_PATH)
+
+    # The real snapshot is generated, not tracked, so this stands in for it.
+    verified_path = tmp_path / "fido-mds3.verified.json"
+    verified_path.write_text("{}", encoding="utf-8")
+    monkeypatch.setattr(
+        metadata_module, "MDS_METADATA_VERIFIED_PATH", str(verified_path), raising=False
+    )
+    verified_mtime = os.path.getmtime(verified_path)
 
     def _slow_fallback():
         calls.append(1)

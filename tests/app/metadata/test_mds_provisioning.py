@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import gzip
+import sys
 
 import pytest
 
@@ -152,3 +153,84 @@ def test_the_blob_prefix_is_configurable(monkeypatch):
 
     monkeypatch.setenv("FIDO_SERVER_MDS_GCS_PREFIX", "snapshots/fido")
     assert provisioning.snapshot_blob_name("blob.jwt") == "snapshots/fido/blob.jwt"
+
+
+def test_an_incompressible_payload_gets_no_gzip_sibling(static_root, monkeypatch):
+    monkeypatch.setattr(provisioning.gzip, "compress", lambda data, **kwargs: data + b"pad")
+
+    provisioning.write_snapshot_file("fido-mds3.explorer.full.json", b"z" * 4096)
+
+    assert not (static_root / "fido-mds3.explorer.full.json.gz").exists()
+
+
+def test_upstream_refresh_runs_the_packaged_updater(static_root, monkeypatch):
+    from tools import update_mds_snapshot
+
+    monkeypatch.setattr(update_mds_snapshot, "main", lambda: 0)
+    assert provisioning._refresh_from_upstream() is True
+
+    monkeypatch.setattr(update_mds_snapshot, "main", lambda: 1)
+    assert provisioning._refresh_from_upstream() is False
+
+
+def test_a_failing_updater_is_reported_rather_than_raised(static_root, monkeypatch):
+    from tools import update_mds_snapshot
+
+    def _raise():
+        raise RuntimeError("upstream is down")
+
+    monkeypatch.setattr(update_mds_snapshot, "main", _raise)
+
+    assert provisioning._refresh_from_upstream() is False
+
+
+def test_upstream_refresh_reports_a_build_without_the_updater(static_root, monkeypatch):
+    # Setting a sys.modules entry to None makes importing that name raise.
+    monkeypatch.setitem(sys.modules, "tools", None)
+    monkeypatch.setitem(sys.modules, "tools.update_mds_snapshot", None)
+    monkeypatch.setitem(sys.modules, "update_mds_snapshot", None)
+
+    assert provisioning._refresh_from_upstream() is False
+
+
+def test_upload_publishes_only_the_files_that_exist(static_root, monkeypatch):
+    uploaded = []
+    monkeypatch.setattr(provisioning.cloud_storage, "gcs_enabled", lambda: True)
+    monkeypatch.setattr(
+        provisioning.cloud_storage,
+        "upload_bytes",
+        lambda name, data, content_type=None: uploaded.append((name, content_type)),
+    )
+    (static_root / "blob.jwt").write_bytes(b"blob")
+    (static_root / "fido-mds3.verified.json").write_bytes(b"{}")
+
+    provisioning._upload_to_gcs(provisioning.SNAPSHOT_FILENAMES)
+
+    assert uploaded == [
+        ("mds/blob.jwt", None),
+        ("mds/fido-mds3.verified.json", "application/json"),
+    ]
+
+
+def test_upload_is_skipped_when_cloud_storage_is_disabled(static_root, monkeypatch):
+    monkeypatch.setattr(provisioning.cloud_storage, "gcs_enabled", lambda: False)
+
+    def _fail(*args, **kwargs):  # pragma: no cover - must not be reached
+        raise AssertionError("Nothing may be uploaded with Cloud Storage disabled.")
+
+    monkeypatch.setattr(provisioning.cloud_storage, "upload_bytes", _fail)
+    (static_root / "blob.jwt").write_bytes(b"blob")
+
+    provisioning._upload_to_gcs(provisioning.SNAPSHOT_FILENAMES)
+
+
+def test_an_upload_error_does_not_propagate(static_root, monkeypatch):
+    monkeypatch.setattr(provisioning.cloud_storage, "gcs_enabled", lambda: True)
+
+    def _raise(name, data, content_type=None):
+        raise RuntimeError("bucket unreachable")
+
+    monkeypatch.setattr(provisioning.cloud_storage, "upload_bytes", _raise)
+    (static_root / "blob.jwt").write_bytes(b"blob")
+
+    provisioning._upload_to_gcs(provisioning.SNAPSHOT_FILENAMES)
