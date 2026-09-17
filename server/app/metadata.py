@@ -14,27 +14,12 @@ from .metadata_parts import (
     effective_snapshot_runtime,
     entry_payload_runtime,
     env_runtime,
+    runtime_state,
     session_cleanup_runtime,
     session_identity_runtime,
     session_items_runtime,
     upload_runtime,
     verifier_runtime,
-)
-from .metadata_parts.runtime_state import (
-    _METADATA_REPO_FOLDER,
-    _METADATA_STATEMENT_REQUIRED_DEFAULTS,
-    _SESSION_METADATA_CLEANUP_ASYNC_ENV,
-    _SESSION_METADATA_CLEANUP_INTERVAL_HOURS_ENV,
-    _SESSION_METADATA_CLEANUP_INTERVAL_SECONDS_ENV,
-    _SESSION_METADATA_COOKIE_MAX_AGE,
-    _SESSION_METADATA_COOKIE_NAME,
-    _SESSION_METADATA_INACTIVE_AGE,
-    _SESSION_METADATA_INFO_SUFFIX,
-    _SESSION_METADATA_SESSION_KEY,
-    _SESSION_METADATA_SUFFIX,
-    _SESSION_METADATA_TOUCH_KEY,
-    _SESSION_METADATA_TOUCH_THROTTLE_DEFAULT_SECONDS,
-    _SESSION_METADATA_TOUCH_THROTTLE_ENV,
 )
 
 __all__ = ["MetadataDownloadError", "download_metadata_blob", "get_mds_verifier",
@@ -47,6 +32,22 @@ __all__ = ["MetadataDownloadError", "download_metadata_blob", "get_mds_verifier"
 
 MetadataDownloadError = cache_runtime.MetadataDownloadError
 SessionMetadataItem = session_items_runtime.SessionMetadataItem
+
+# Constants shared with the fragments.
+_METADATA_REPO_FOLDER = runtime_state._METADATA_REPO_FOLDER
+_METADATA_STATEMENT_REQUIRED_DEFAULTS = runtime_state._METADATA_STATEMENT_REQUIRED_DEFAULTS
+_SESSION_METADATA_CLEANUP_ASYNC_ENV = runtime_state._SESSION_METADATA_CLEANUP_ASYNC_ENV
+_SESSION_METADATA_CLEANUP_INTERVAL_HOURS_ENV = runtime_state._SESSION_METADATA_CLEANUP_INTERVAL_HOURS_ENV
+_SESSION_METADATA_CLEANUP_INTERVAL_SECONDS_ENV = runtime_state._SESSION_METADATA_CLEANUP_INTERVAL_SECONDS_ENV
+_SESSION_METADATA_COOKIE_MAX_AGE = runtime_state._SESSION_METADATA_COOKIE_MAX_AGE
+_SESSION_METADATA_COOKIE_NAME = runtime_state._SESSION_METADATA_COOKIE_NAME
+_SESSION_METADATA_INACTIVE_AGE = runtime_state._SESSION_METADATA_INACTIVE_AGE
+_SESSION_METADATA_INFO_SUFFIX = runtime_state._SESSION_METADATA_INFO_SUFFIX
+_SESSION_METADATA_SESSION_KEY = runtime_state._SESSION_METADATA_SESSION_KEY
+_SESSION_METADATA_SUFFIX = runtime_state._SESSION_METADATA_SUFFIX
+_SESSION_METADATA_TOUCH_KEY = runtime_state._SESSION_METADATA_TOUCH_KEY
+_SESSION_METADATA_TOUCH_THROTTLE_DEFAULT_SECONDS = runtime_state._SESSION_METADATA_TOUCH_THROTTLE_DEFAULT_SECONDS
+_SESSION_METADATA_TOUCH_THROTTLE_ENV = runtime_state._SESSION_METADATA_TOUCH_THROTTLE_ENV
 
 # Cache and HTTP header helpers.
 _parse_http_datetime = cache_runtime._parse_http_datetime

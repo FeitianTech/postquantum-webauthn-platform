@@ -144,9 +144,13 @@ If you are changing only UI logic plus lightweight server responses, prefer targ
   `uv.lock` and the venv, so do not `uv add` it.
 - CI fails on any violation of the gated set (`E4`, `E7`, `E9`, `F`, `I`,
   `UP006/UP007/UP035/UP045`). It is at zero; keep it there.
-- `F821` is off on purpose and `F401`/`UP035` are ignored in the five
+- `F821` is off on purpose and `F401`/`UP035` are ignored in the four remaining
   split-module namespace carriers. `ruff.toml` explains why; read it before
-  changing either.
+  changing either. `server/app/metadata.py` was the first carrier unwound and is
+  no longer one of them: `metadata_parts/` resolves its own names through real
+  imports, its shared caches live in `metadata_parts/runtime_state.py`, and its
+  F821 count is zero and gated by nothing but that fact -- do not reintroduce
+  globals rebinding there.
 - Do not run `ruff format` -- the repo is not format-clean and it would rewrite
   about 69% of the files.
 
