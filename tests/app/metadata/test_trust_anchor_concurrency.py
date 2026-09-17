@@ -16,7 +16,6 @@ def metadata_module(monkeypatch, metadata_runtime_state):
     module = pytest.importorskip("server.app.metadata")
 
     monkeypatch.setattr(metadata_runtime_state, "_base_metadata_trust_verified", True)
-    monkeypatch.setattr(module, "_session_metadata_entry_ids", set(), raising=False)
 
     return module
 

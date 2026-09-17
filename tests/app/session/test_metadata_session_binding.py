@@ -20,6 +20,7 @@ def session_env(monkeypatch, tmp_path):
     config = pytest.importorskip("server.app.config")
     metadata = pytest.importorskip("server.app.metadata")
     session_store = pytest.importorskip("server.app.session_metadata_store")
+    runtime_state = pytest.importorskip("server.app.metadata_parts.runtime_state")
     pytest.importorskip("server.app.app")
 
     session_dir = tmp_path / "sessions"
@@ -33,7 +34,7 @@ def session_env(monkeypatch, tmp_path):
     monkeypatch.setattr(session_store, "gcs_enabled", lambda: False, raising=False)
     monkeypatch.setattr(session_store, "_using_gcs", lambda: False, raising=False)
     monkeypatch.setattr(session_store, "_local_last_cleanup", 0.0, raising=False)
-    monkeypatch.setattr(metadata, "_session_metadata_entry_ids", set(), raising=False)
+    monkeypatch.setattr(runtime_state, "_session_metadata_entry_ids", set())
     monkeypatch.setattr(metadata, "_session_metadata_last_cleanup", 0.0, raising=False)
 
     return config.app, metadata
