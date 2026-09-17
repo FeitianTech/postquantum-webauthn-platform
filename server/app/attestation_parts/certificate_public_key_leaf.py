@@ -4,6 +4,13 @@ import base64
 from collections.abc import Mapping
 from typing import Any
 
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import ec, ed448, ed25519, rsa
+
+from fido2.cose import extract_certificate_public_key_info
+
+from .encoding_leaf import colon_hex, format_hex_bytes_lines
+
 
 def _build_unknown_public_key_info(cert_bytes: bytes, error: Exception) -> tuple[dict[str, Any], list[tuple[str, Any]]]:
     try:
