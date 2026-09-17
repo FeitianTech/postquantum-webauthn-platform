@@ -1,6 +1,13 @@
 """Session cleanup worker and scheduling helpers."""
 from __future__ import annotations
 
+import threading
+import time
+
+from .. import session_metadata_store
+from ..config import app
+from .runtime_state import _SESSION_METADATA_INACTIVE_AGE
+
 
 def _touch_session_last_access(session_id: str) -> None:
     try:
@@ -9,14 +16,14 @@ def _touch_session_last_access(session_id: str) -> None:
         pass
 
 
-def _resolve_session_last_access(session_id: str) -> Optional[float]:
+def _resolve_session_last_access(session_id: str) -> float | None:
     try:
         return session_metadata_store.resolve_last_access(session_id)
     except Exception:
         return None
 
 
-def _maybe_cleanup_inactive_sessions(now: Optional[float] = None) -> None:
+def _maybe_cleanup_inactive_sessions(now: float | None = None) -> None:
     global _session_metadata_last_cleanup
 
     current_time = now or time.time()
@@ -81,7 +88,7 @@ def _schedule_inactive_session_cleanup() -> None:
         _maybe_cleanup_inactive_sessions(now=current_time)
         return
 
-    worker: Optional[threading.Thread] = None
+    worker: threading.Thread | None = None
 
     with _session_cleanup_lock:
         if _session_cleanup_worker is not None and _session_cleanup_worker.is_alive():
