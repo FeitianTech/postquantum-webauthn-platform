@@ -5,6 +5,13 @@ import hashlib
 from collections.abc import Mapping
 from typing import Any
 
+from fido2.cose import CoseKey
+from fido2.utils import ByteBuffer, websafe_decode
+from fido2.webauthn import AuthenticatorData, CollectedClientData
+
+from .checks_policy_runtime import _collect_allowed_algorithms, _resolve_uv_required
+from .encoding_leaf import encode_base64url
+
 
 def _coerce_expected_bytes(value: Any) -> bytes:
     if value is None:
