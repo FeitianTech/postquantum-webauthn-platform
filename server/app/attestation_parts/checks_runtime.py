@@ -5,18 +5,12 @@ from typing import Any
 
 from fido2.webauthn import AuthenticatorData, RegistrationResponse
 
-from . import encoding_leaf
-from .checks_attestation_runtime import (
-    _evaluate_root_validation,
-    _resolve_signature_validation,
+from . import (
+    checks_attestation_runtime,
+    checks_input_runtime,
+    checks_metadata_runtime,
+    encoding_leaf,
 )
-from .checks_input_runtime import (
-    _populate_authenticator_data_results,
-    _populate_client_data_results,
-    _populate_rp_id_hash_result,
-    _resolve_expected_challenge,
-)
-from .checks_metadata_runtime import _finalize_metadata_results
 
 
 def perform_attestation_checks(
@@ -63,17 +57,17 @@ def perform_attestation_checks(
     else:
         auth_data_obj = attestation_object.auth_data
 
-    expected_challenge_bytes = _resolve_expected_challenge(state, public_key_options)
-    _populate_client_data_results(
+    expected_challenge_bytes = checks_input_runtime._resolve_expected_challenge(state, public_key_options)
+    checks_input_runtime._populate_client_data_results(
         results,
         client_data=client_data,
         expected_challenge_bytes=expected_challenge_bytes,
         expected_origin=expected_origin,
     )
 
-    _populate_rp_id_hash_result(results, auth_data_obj=auth_data_obj, rp_id=rp_id)
+    checks_input_runtime._populate_rp_id_hash_result(results, auth_data_obj=auth_data_obj, rp_id=rp_id)
 
-    auth_ctx = _populate_authenticator_data_results(
+    auth_ctx = checks_input_runtime._populate_authenticator_data_results(
         results,
         auth_data_obj=auth_data_obj,
         state=state,
@@ -87,14 +81,14 @@ def perform_attestation_checks(
         "verification_data": encoding_leaf.encode_base64url(verification_data),
     }
 
-    signature_ctx = _resolve_signature_validation(attestation_object, client_data_hash)
+    signature_ctx = checks_attestation_runtime._resolve_signature_validation(attestation_object, client_data_hash)
     for error_message in signature_ctx["attestation_errors"]:
         results["errors"].append(error_message)
 
     results["signature_valid"] = signature_ctx["signature_valid"]
     results["pqc_signature_valid"] = signature_ctx.get("pqc_signature_valid")
 
-    root_ctx = _evaluate_root_validation(
+    root_ctx = checks_attestation_runtime._evaluate_root_validation(
         results,
         algorithm=auth_ctx["algorithm"],
         attestation_object=attestation_object,
@@ -105,7 +99,7 @@ def perform_attestation_checks(
         attestation_format_value=signature_ctx["attestation_format_value"],
     )
 
-    _finalize_metadata_results(
+    checks_metadata_runtime._finalize_metadata_results(
         results,
         metadata_entry=root_ctx["metadata_entry"],
         metadata_lookup_source=root_ctx["metadata_lookup_source"],

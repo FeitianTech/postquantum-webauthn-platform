@@ -145,7 +145,7 @@ def test_coerce_attestation_certificate_bytes_string_path_uses_websafe_decode_fa
     assert attestation_module._coerce_attestation_certificate_bytes("AQI") is None
 
 
-def test_evaluate_mldsa_attestation_root_clears_chain_errors_after_later_success(monkeypatch, trust_runtime, trust_ca_runtime, pqc_constraints_runtime):
+def test_evaluate_mldsa_attestation_root_clears_chain_errors_after_later_success(monkeypatch, trust_runtime, trust_ca_runtime, pqc_constraints_runtime, metadata_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     metadata_entry = SimpleNamespace(metadata_statement=SimpleNamespace())
@@ -165,10 +165,9 @@ def test_evaluate_mldsa_attestation_root_clears_chain_errors_after_later_success
         lambda _root, allow_subject_parsing=False: True,
     )
     monkeypatch.setattr(
-        attestation_module,
+        metadata_module,
         "metadata_entry_trust_anchor_status",
         lambda _entry: None,
-        raising=False,
     )
     monkeypatch.setattr(
         trust_runtime,
@@ -194,7 +193,7 @@ def test_evaluate_mldsa_attestation_root_clears_chain_errors_after_later_success
     assert "dup" not in outcome["errors"]
 
 
-def test_evaluate_mldsa_attestation_root_deduplicates_chain_errors_when_all_roots_fail(monkeypatch, trust_runtime, trust_ca_runtime, pqc_constraints_runtime):
+def test_evaluate_mldsa_attestation_root_deduplicates_chain_errors_when_all_roots_fail(monkeypatch, trust_runtime, trust_ca_runtime, pqc_constraints_runtime, metadata_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     metadata_entry = SimpleNamespace(metadata_statement=SimpleNamespace())
@@ -214,10 +213,9 @@ def test_evaluate_mldsa_attestation_root_deduplicates_chain_errors_when_all_root
         lambda _root, allow_subject_parsing=False: True,
     )
     monkeypatch.setattr(
-        attestation_module,
+        metadata_module,
         "metadata_entry_trust_anchor_status",
         lambda _entry: None,
-        raising=False,
     )
     monkeypatch.setattr(
         trust_runtime,
@@ -248,7 +246,7 @@ def test_normalise_signature_algorithm_name_covers_ed448_and_dsa_paths():
     assert attestation_module._normalise_signature_algorithm_name("dsa-with-sha1") == "DSA"
 
 
-def test_perform_attestation_checks_coerces_string_challenge_via_utf8_fallback_and_records_attestation_error(monkeypatch, pqc_runtime):
+def test_perform_attestation_checks_coerces_string_challenge_via_utf8_fallback_and_records_attestation_error(monkeypatch, pqc_runtime, metadata_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     flags = int(attestation_module.AuthenticatorData.FLAG.UP | attestation_module.AuthenticatorData.FLAG.AT)
@@ -291,7 +289,7 @@ def test_perform_attestation_checks_coerces_string_challenge_via_utf8_fallback_a
         "_attempt_pqc_attestation_signature_validation",
         lambda _att_obj, _client_hash: {"attempted": False, "success": False, "error": None},
     )
-    monkeypatch.setattr(attestation_module, "get_mds_verifier", lambda: None, raising=False)
+    monkeypatch.setattr(metadata_module, "get_mds_verifier", lambda: None)
 
     result = attestation_module.perform_attestation_checks(
         response={"dummy": True},
@@ -307,9 +305,7 @@ def test_perform_attestation_checks_coerces_string_challenge_via_utf8_fallback_a
     assert any(err.startswith("attestation_error:") for err in result["errors"])
 
 
-def test_perform_attestation_checks_falls_back_to_public_key_options_when_state_hex_wrapper_is_invalid(
-    monkeypatch,
-):
+def test_perform_attestation_checks_falls_back_to_public_key_options_when_state_hex_wrapper_is_invalid(monkeypatch, metadata_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     flags = int(attestation_module.AuthenticatorData.FLAG.UP | attestation_module.AuthenticatorData.FLAG.AT)
@@ -324,7 +320,7 @@ def test_perform_attestation_checks_falls_back_to_public_key_options_when_state_
         lambda _response: _registration(attestation_object, client_data),
         raising=False,
     )
-    monkeypatch.setattr(attestation_module, "get_mds_verifier", lambda: None, raising=False)
+    monkeypatch.setattr(metadata_module, "get_mds_verifier", lambda: None)
 
     result = attestation_module.perform_attestation_checks(
         response={"dummy": True},

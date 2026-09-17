@@ -7,7 +7,7 @@ from typing import Any
 from fido2.attestation import AttestationResult, AttestationType
 from fido2.cose import CoseKey, extract_certificate_public_key_info
 
-from ..metadata import metadata_entry_trust_anchor_status
+from .. import metadata
 from ..pqc import is_pqc_algorithm
 from . import pqc_constraints_runtime, trust_ca_runtime, trust_runtime
 
@@ -88,7 +88,7 @@ def _evaluate_mldsa_attestation_root(
 
     checks["trusted_ca"] = True
 
-    fido_status = metadata_entry_trust_anchor_status(metadata_entry)
+    fido_status = metadata.metadata_entry_trust_anchor_status(metadata_entry)
     if fido_status is True:
         checks["fido_mds"] = True
     elif fido_status is False:

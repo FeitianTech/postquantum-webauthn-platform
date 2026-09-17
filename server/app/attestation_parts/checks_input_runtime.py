@@ -9,8 +9,7 @@ from fido2.cose import CoseKey
 from fido2.utils import ByteBuffer, websafe_decode
 from fido2.webauthn import AuthenticatorData, CollectedClientData
 
-from . import encoding_leaf
-from .checks_policy_runtime import _collect_allowed_algorithms, _resolve_uv_required
+from . import checks_policy_runtime, encoding_leaf
 
 
 def _coerce_expected_bytes(value: Any) -> bytes:
@@ -144,7 +143,7 @@ def _populate_authenticator_data_results(
     user_verified = bool(flags & AuthenticatorData.FLAG.UV)
     attested_credential_included = bool(flags & AuthenticatorData.FLAG.AT)
 
-    uv_required = _resolve_uv_required(state, public_key_options)
+    uv_required = checks_policy_runtime._resolve_uv_required(state, public_key_options)
     uv_satisfied = user_verified or not uv_required
 
     if not user_present:
@@ -154,7 +153,7 @@ def _populate_authenticator_data_results(
     if not attested_credential_included:
         results["errors"].append("attested_credential_data_missing")
 
-    allowed_algorithms = _collect_allowed_algorithms(public_key_options)
+    allowed_algorithms = checks_policy_runtime._collect_allowed_algorithms(public_key_options)
 
     credential_data = getattr(auth_data_obj, "credential_data", None)
     credential_id_length: int | None = None

@@ -4,7 +4,7 @@ from typing import Any
 
 from fido2.webauthn import Aaguid
 
-from ..metadata import get_mds_verifier
+from .. import metadata
 
 
 def _finalize_metadata_results(
@@ -32,7 +32,7 @@ def _finalize_metadata_results(
             aaguid_obj = None
         if aaguid_obj is not None:
             if verifier is None:
-                verifier = get_mds_verifier()
+                verifier = metadata.get_mds_verifier()
             if verifier is not None:
                 try:
                     fallback_entry = verifier.find_entry_by_aaguid(aaguid_obj)
