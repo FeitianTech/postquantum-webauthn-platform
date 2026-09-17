@@ -38,7 +38,7 @@ target-version = "py312"
 select = ["E4", "E7", "E9", "F", "I", "UP006", "UP007", "UP035", "UP045"]
 
 # F821 stays off on purpose. All 1008 hits come from the split-module runtime
-# hack described under per-file-ignores below: attestation.py, decoder/decode.py
+# hack described under [lint.per-file-ignores] below: attestation.py, decoder/decode.py
 # and metadata.py rebuild their fragments' functions against the parent's
 # globals, so the fragments genuinely do not import the names they use, and the
 # `*_parts/` files are undefined-name soup by design. Turning F821 on now would
@@ -63,7 +63,7 @@ ignore = ["F821"]
 # here for the same reason: the fragments still write `Dict`/`List`/`Set`/
 # `Tuple` and resolve them through the parent, so the parent has to keep the
 # legacy `typing` names until those fragments can import their own. This is the
-# same debt F821 tracks (see the note at the bottom of this file) and it is
+# same debt F821 tracks (see the `ignore` note above) and it is
 # retired in the same milestone, not by suppressing it name by name here.
 #
 # F822 is ignored in the two modules that carry an `__all__`, for the same
