@@ -136,6 +136,20 @@ Repo test layout:
 
 If you are changing only UI logic plus lightweight server responses, prefer targeted tests over the full suite first.
 
+## Linting
+
+- Ruff config lives in the root `ruff.toml`, not in `pyproject.toml` (that file is
+  the vendored `fido2/` library's manifest).
+- Run it with `uvx ruff@0.16.8 check .` Ruff is deliberately kept out of
+  `uv.lock` and the venv, so do not `uv add` it.
+- CI fails on any violation of the gated set (`E4`, `E7`, `E9`, `F`, `I`,
+  `UP006/UP007/UP035/UP045`). It is at zero; keep it there.
+- `F821` is off on purpose and `F401`/`UP035` are ignored in the five
+  split-module namespace carriers. `ruff.toml` explains why; read it before
+  changing either.
+- Do not run `ruff format` -- the repo is not format-clean and it would rewrite
+  about 69% of the files.
+
 ## Python Dependencies
 
 - App dependencies are declared only in `server/pyproject.toml`; resolved versions are locked in `uv.lock`.
