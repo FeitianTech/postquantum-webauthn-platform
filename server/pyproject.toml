@@ -1,23 +1,47 @@
-[tool.poetry]
+# The application's dependency manifest and the single place its dependencies
+# are declared. Resolved versions are locked in /uv.lock, which the Docker
+# image, CI and local venvs all install from. After editing, run `uv lock`.
+
+[project]
 name = "fido2-example-server"
 version = "0.1.0"
 description = "Example server for python-fido2"
-authors = ["Rain Zhang <rainzhang.zty@gmail.com>"]
-license = "Apache-2"
+authors = [{ name = "Rain Zhang", email = "rainzhang.zty@gmail.com" }]
+license = "Apache-2.0"
+requires-python = ">=3.12"
+dependencies = [
+    "fido2",                              # vendored library at the repository root
+    "Flask>=3.1.3,<4",
+    "cryptography>=49",                   # first release with working ML-DSA + ML-DSA x509
+    "cbor2>=5.6.4",
+    "gunicorn>=26.2.0,<27",
+    "google-api-core>=2.36.0",
+    "google-auth>=2.58.0",
+    "google-cloud-core>=2.7.0",
+    "google-cloud-storage>=3.14.1",
+]
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "coverage",
+]
+
+[project.scripts]
+server = "app:main"
+
+[tool.poetry]
 packages = [
   { include = "app" },
 ]
 
-[tool.poetry.dependencies]
-python = "^3.12"
-Flask = "^2.0"
-fido2 = {path = ".."}
+[tool.uv]
+# The app runs from source (gunicorn server.app:app); uv only installs its dependencies.
+package = false
 
-[tool.poetry.dev-dependencies]
+[tool.uv.sources]
+fido2 = { path = "..", editable = true }
 
 [build-system]
-requires = ["poetry-core>=1.0.0"]
+requires = ["poetry-core>=2.0.0"]
 build-backend = "poetry.core.masonry.api"
-
-[tool.poetry.scripts]
-server = "app:main"
