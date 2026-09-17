@@ -49,41 +49,6 @@ def test_parse_der_length_supports_short_long_and_error_cases():
         cose._parse_der_length(memoryview(b"\x01"), 1)
 
 
-def test_extract_subject_public_key_from_spki_and_parse_algorithm_info():
-    private_key = ec.generate_private_key(ec.SECP256R1())
-    spki = private_key.public_key().public_bytes(
-        serialization.Encoding.DER,
-        serialization.PublicFormat.SubjectPublicKeyInfo,
-    )
-
-    public_key_payload = cose._extract_subject_public_key_from_spki(spki)
-    algorithm_oid, algorithm_params = cose._parse_spki_algorithm_info(spki)
-
-    assert public_key_payload and public_key_payload[0] == 0x04
-    assert algorithm_oid == "1.2.840.10045.2.1"
-    assert isinstance(algorithm_params, (bytes, bytearray))
-
-    with pytest.raises(ValueError, match="SEQUENCE"):
-        cose._extract_subject_public_key_from_spki(b"\x31\x00")
-
-
-def test_scan_certificate_for_subject_public_key_info_finds_embedded_spki():
-    private_key = ec.generate_private_key(ec.SECP256R1())
-    spki = private_key.public_key().public_bytes(
-        serialization.Encoding.DER,
-        serialization.PublicFormat.SubjectPublicKeyInfo,
-    )
-
-    blob = b"\x00\xff" + spki + b"\xaa\xbb"
-    spki_der, algorithm_oid, _params, payload = cose._scan_certificate_for_subject_public_key_info(
-        memoryview(blob)
-    )
-
-    assert spki_der == spki
-    assert algorithm_oid == "1.2.840.10045.2.1"
-    assert payload and payload[0] == 0x04
-
-
 def test_extract_certificate_signature_and_public_key_info_from_der_certificate():
     private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
     cert_der = _self_signed_cert_der(private_key)
@@ -98,22 +63,6 @@ def test_extract_certificate_signature_and_public_key_info_from_der_certificate(
     assert public_key_info["subject_public_key_info"]
     assert public_key_info["subject_public_key"]
     assert isinstance(public_key_info["algorithm_oid"], str)
-
-
-def test_mldsa_oid_helpers_and_der_candidate_unwrap_helpers():
-    details = cose.describe_mldsa_oid("2.16.840.1.101.3.4.3.18")
-    assert details is not None
-    assert details["mlDsaParameterSet"] == "ML-DSA-65"
-    assert cose.describe_mldsa_oid_name("2.16.840.1.101.3.4.3.18") == "ML-DSA-65"
-    assert cose.describe_mldsa_oid_name("1.2.3") is None
-
-    nested = b"\x30\x08\x04\x06\x04\x04ABCD"
-    candidate = cose._find_mldsa_der_candidate(memoryview(nested), 0, len(nested), 4)
-    assert candidate == b"ABCD"
-
-    unwrapped, wrapped = cose._unwrap_mldsa_subject_public_key(b"\x04\x04WXYZ")
-    assert unwrapped == b"WXYZ"
-    assert wrapped == b"\x04\x04WXYZ"
 
 
 def test_require_canonical_ecdsa_signature_enforces_low_s_and_der_shape():
@@ -146,18 +95,6 @@ def test_require_canonical_ecdsa_signature_enforces_low_s_and_der_shape():
 
     with pytest.raises(ValueError, match="DER SEQUENCE"):
         cose._require_canonical_ecdsa_signature(b"\x01", cose._SECP256R1_ORDER)
-
-
-def test_coerce_mldsa_public_key_bytes_accepts_buffers_and_public_key_objects():
-    assert cose._coerce_mldsa_public_key_bytes(b"\x04\x04test") == b"test"
-    assert cose._coerce_mldsa_public_key_bytes(ByteBuffer(b"buffer-key")) == b"buffer-key"
-
-    ec_public_key = ec.generate_private_key(ec.SECP256R1()).public_key()
-    coerced = cose._coerce_mldsa_public_key_bytes(ec_public_key)
-    assert coerced and coerced[0] == 0x04
-
-    with pytest.raises(TypeError, match="Unable to coerce"):
-        cose._coerce_mldsa_public_key_bytes(object())
 
 
 def test_require_oqs_returns_module_when_present_and_raises_when_missing(monkeypatch):

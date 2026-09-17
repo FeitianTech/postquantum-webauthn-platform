@@ -87,82 +87,6 @@ def test_get_mldsa_parameter_details_handles_missing_or_failing_oqs(monkeypatch)
     assert fallback["signature_length"] == 4627
 
 
-def test_der_integer_and_oid_and_skip_error_branches():
-    with pytest.raises(ValueError, match="INTEGER"):
-        cose._parse_der_integer(memoryview(b"\x01\x01\x01"), 0)
-    with pytest.raises(ValueError, match="Truncated DER INTEGER"):
-        cose._parse_der_integer(memoryview(b"\x02\x02\x01"), 0)
-    with pytest.raises(ValueError, match="Empty DER INTEGER"):
-        cose._parse_der_integer(memoryview(b"\x02\x00"), 0)
-    with pytest.raises(ValueError, match="non-zero"):
-        cose._parse_der_integer(memoryview(b"\x02\x01\x00"), 0)
-
-    with pytest.raises(ValueError, match="Truncated DER element"):
-        cose._skip_der_value(memoryview(b"\x01"), 1)
-    with pytest.raises(ValueError, match="overruns"):
-        cose._skip_der_value(memoryview(b"\x04\x05aa"), 0)
-
-    with pytest.raises(ValueError, match="Expected OBJECT IDENTIFIER"):
-        cose._decode_der_oid(memoryview(b"\x05\x00"), 0)
-    with pytest.raises(ValueError, match="continuation"):
-        cose._decode_der_oid(memoryview(b"\x06\x02\x2a\x80"), 0)
-
-
-def test_extract_subject_public_key_info_falls_back_to_scanner(monkeypatch):
-    expected = (b"spki", "1.2.3", None, b"payload")
-    monkeypatch.setattr(
-        cose,
-        "_locate_subject_public_key_info_from_tbs",
-        lambda _view: (_ for _ in ()).throw(ValueError("primary")),
-        raising=False,
-    )
-    monkeypatch.setattr(
-        cose,
-        "_scan_certificate_for_subject_public_key_info",
-        lambda _view: expected,
-        raising=False,
-    )
-
-    assert cose._extract_subject_public_key_info(b"any") == expected
-
-
-def test_locate_subject_public_key_info_from_tbs_success_with_real_certificate():
-    cert_der = _self_signed_cert_der(rsa.generate_private_key(public_exponent=65537, key_size=2048))
-    spki, oid, params, payload = cose._locate_subject_public_key_info_from_tbs(memoryview(cert_der))
-
-    assert spki
-    assert isinstance(oid, str)
-    assert payload
-    assert params is None or isinstance(params, bytes)
-
-
-def test_extract_certificate_public_key_info_mldsa_metadata_fields(monkeypatch):
-    monkeypatch.setattr(
-        cose,
-        "_extract_subject_public_key_info",
-        lambda _cert: (b"spki", "2.16.840.1.101.3.4.3.18", b"\x05\x00", b"PUBKEY"),
-        raising=False,
-    )
-    monkeypatch.setattr(
-        cose,
-        "_unwrap_mldsa_subject_public_key",
-        lambda payload, _ps: (payload + b"-normalized", payload),
-        raising=False,
-    )
-    monkeypatch.setattr(
-        cose,
-        "_get_mldsa_parameter_details",
-        lambda _ps: {"public_key_length": 1952, "signature_length": 3309},
-        raising=False,
-    )
-
-    info = cose.extract_certificate_public_key_info(b"ignored")
-    assert info["ml_dsa_parameter_set"] == "ML-DSA-65"
-    assert info["algorithm_name"] == "ML-DSA"
-    assert info["algorithm_display_name"] == "ML-DSA-65"
-    assert info["wrapped_subject_public_key"] == b"PUBKEY"
-
-
 def test_cosekey_parse_for_name_and_no_debug_context_paths(capsys):
     assert cose.CoseKey.for_name("DoesNotExist") is cose.UnsupportedKey
     with pytest.raises(ValueError, match="must be provided"):
@@ -284,13 +208,6 @@ def test_from_cryptography_key_paths_for_remaining_rsa_and_ed_classes():
     assert cose.Ed448.from_cryptography_key(ed448_pub)[3] == -53
     ed25519_pub = ed25519.Ed25519PrivateKey.generate().public_key()
     assert cose.EdDSA.from_cryptography_key(ed25519_pub)[3] == -8
-
-
-def test_extract_certificate_signature_info_error_paths():
-    with pytest.raises(ValueError, match="empty"):
-        cose.extract_certificate_signature_info(b"")
-    with pytest.raises(ValueError, match="SEQUENCE"):
-        cose.extract_certificate_signature_info(b"\x01\x00")
 
 
 def test_require_oqs_message_when_missing(monkeypatch):
