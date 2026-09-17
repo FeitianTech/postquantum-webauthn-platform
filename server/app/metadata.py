@@ -1,71 +1,25 @@
-"""Metadata handling utilities for the WebAuthn demo server."""
+"""Metadata handling utilities for the WebAuthn demo server.
+
+The implementation lives in :mod:`server.app.metadata_parts`; this module is the
+public face of it and re-exports the pieces callers use. Each fragment resolves
+its own names through its own imports, so a name here is the same object the
+fragment defines -- patching one of these re-exports changes what callers of
+*this module* see, not what the fragments call.
+"""
 from __future__ import annotations
 
-import json
-import os
-import secrets
-import threading
-import time
-import types
-import uuid
-from collections.abc import Callable, Mapping
-from dataclasses import replace
-from datetime import datetime, timedelta, timezone
-from email.utils import parsedate_to_datetime
-from typing import Any, Dict, Optional, Set, Tuple
-
-from flask import after_this_request, g, has_request_context, request, session
-
-from fido2.mds3 import (
-    MdsAttestationVerifier,
-    MetadataBlobPayload,
-    MetadataBlobPayloadEntry,
-)
-
-from . import session_metadata_store
-from .config import (
-    MDS_EXPLORER_FULL_PATH,
-    MDS_EXPLORER_PATH,
-    MDS_METADATA_CACHE_PATH,
-    MDS_METADATA_PATH,
-    MDS_METADATA_URL,
-    MDS_METADATA_VERIFIED_PATH,
-    app,
-)
-from .env_flags import parse_env_flag
-from .github_client import (
-    git_blob_sha,
-    github_list_directory,
-    github_upload_file,
-    is_logging_enabled,
-)
-from .mds_snapshot import (
-    build_bootstrap_snapshot,
-    build_entry_id,
-    build_explorer_entry,
-    build_explorer_snapshot,
-    normalise_aaguid_key,
-)
 from .metadata_parts import (
     base_snapshot_runtime,
     cache_runtime,
+    effective_snapshot_runtime,
     entry_payload_runtime,
     env_runtime,
     session_cleanup_runtime,
     session_identity_runtime,
     session_items_runtime,
+    upload_runtime,
+    verifier_runtime,
 )
-from .metadata_parts import base_snapshot_runtime as _base_snapshot_runtime
-from .metadata_parts import cache_runtime as _cache_runtime
-from .metadata_parts import effective_snapshot_runtime as _effective_snapshot_runtime
-from .metadata_parts import entry_payload_runtime as _entry_payload_runtime
-from .metadata_parts import env_runtime as _env_runtime
-from .metadata_parts import runtime_state as _state
-from .metadata_parts import session_cleanup_runtime as _session_cleanup_runtime
-from .metadata_parts import session_identity_runtime as _session_identity_runtime
-from .metadata_parts import session_items_runtime as _session_items_runtime
-from .metadata_parts import upload_runtime as _upload_runtime
-from .metadata_parts import verifier_runtime as _verifier_runtime
 from .metadata_parts.runtime_state import (
     _METADATA_REPO_FOLDER,
     _METADATA_STATEMENT_REQUIRED_DEFAULTS,
@@ -91,139 +45,82 @@ __all__ = ["MetadataDownloadError", "download_metadata_blob", "get_mds_verifier"
            "delete_session_metadata_item", "expand_metadata_entry_payloads",
            "metadata_entry_trust_anchor_status", "maybe_store_uploaded_metadata_file"]
 
-# Locks live here because the metadata_parts runtime functions execute against
-# this module's globals.
+MetadataDownloadError = cache_runtime.MetadataDownloadError
+SessionMetadataItem = session_items_runtime.SessionMetadataItem
 
-SessionMetadataItem = _session_items_runtime.SessionMetadataItem
-MetadataDownloadError = _cache_runtime.MetadataDownloadError
-_RUNTIME_REBOUND_CACHE: dict[Callable[..., Any], Callable[..., Any]] = {}
+# Cache and HTTP header helpers.
+_parse_http_datetime = cache_runtime._parse_http_datetime
+_format_last_modified = cache_runtime._format_last_modified
+format_last_modified_header = cache_runtime.format_last_modified_header
+_clean_metadata_cache_value = cache_runtime._clean_metadata_cache_value
+load_metadata_cache_entry = cache_runtime.load_metadata_cache_entry
+_store_metadata_cache_entry = cache_runtime._store_metadata_cache_entry
+store_metadata_cache_entry = cache_runtime.store_metadata_cache_entry
+download_metadata_blob = cache_runtime.download_metadata_blob
 
+# Environment and cleanup interval helpers.
+_env_flag = env_runtime._env_flag
+_resolve_cleanup_interval = env_runtime._resolve_cleanup_interval
+_cleanup_async_enabled = env_runtime._cleanup_async_enabled
 
-def _run_with_metadata_globals(func: Callable[..., Any], *args: Any, **kwargs: Any) -> Any:
-    rebound = _RUNTIME_REBOUND_CACHE.get(func)
-    if rebound is None:
-        rebound = types.FunctionType(
-            func.__code__,
-            globals(),
-            name=func.__name__,
-            argdefs=func.__defaults__,
-            closure=func.__closure__,
-        )
-        rebound.__kwdefaults__ = getattr(func, "__kwdefaults__", None)
-        _RUNTIME_REBOUND_CACHE[func] = rebound
-    return rebound(*args, **kwargs)
+# Repository upload helpers.
+_safe_metadata_repo_filename = upload_runtime._safe_metadata_repo_filename
+maybe_store_uploaded_metadata_file = upload_runtime.maybe_store_uploaded_metadata_file
 
+# Entry payload normalisation and expansion.
+_clone_json_value = entry_payload_runtime._clone_json_value
+_normalise_status_reports = entry_payload_runtime._normalise_status_reports
+_normalise_attestation_identifiers = entry_payload_runtime._normalise_attestation_identifiers
+_normalise_metadata_statement = entry_payload_runtime._normalise_metadata_statement
+build_metadata_entry_components = entry_payload_runtime.build_metadata_entry_components
+expand_metadata_entry_payloads = entry_payload_runtime.expand_metadata_entry_payloads
+_normalise_aaguid = entry_payload_runtime._normalise_aaguid
+_extract_entry_aaguid = entry_payload_runtime._extract_entry_aaguid
 
-def _bind_runtime_function(func: Callable[..., Any]) -> Callable[..., Any]:
-    def _wrapped(*args: Any, **kwargs: Any) -> Any:
-        return _run_with_metadata_globals(func, *args, **kwargs)
-    return _wrapped
+# Packaged snapshot loaders.
+load_cached_metadata_snapshot = base_snapshot_runtime.load_cached_metadata_snapshot
+_load_base_metadata = base_snapshot_runtime._load_base_metadata
+_load_verified_metadata_fallback = base_snapshot_runtime._load_verified_metadata_fallback
+_load_verified_metadata_payload = base_snapshot_runtime._load_verified_metadata_payload
+_load_packaged_explorer_meta = base_snapshot_runtime._load_packaged_explorer_meta
+_load_base_explorer_snapshot = base_snapshot_runtime._load_base_explorer_snapshot
+_load_base_full_snapshot = base_snapshot_runtime._load_base_full_snapshot
+load_packaged_explorer_summary = base_snapshot_runtime.load_packaged_explorer_summary
 
+# Session cleanup worker and scheduling.
+_touch_session_last_access = session_cleanup_runtime._touch_session_last_access
+_resolve_session_last_access = session_cleanup_runtime._resolve_session_last_access
+_maybe_cleanup_inactive_sessions = session_cleanup_runtime._maybe_cleanup_inactive_sessions
+_run_inactive_session_cleanup_worker = session_cleanup_runtime._run_inactive_session_cleanup_worker
+_schedule_inactive_session_cleanup = session_cleanup_runtime._schedule_inactive_session_cleanup
 
-def _install_runtime_bindings(bindings: Mapping[str, Callable[..., Any]]) -> None:
-    for _name, _func in bindings.items():
-        globals()[_name] = _bind_runtime_function(_func)
+# Session identifier, cookie, and directory helpers.
+_normalise_session_identifier = session_identity_runtime._normalise_session_identifier
+_schedule_session_cookie = session_identity_runtime._schedule_session_cookie
+_get_metadata_session_id = session_identity_runtime._get_metadata_session_id
+ensure_metadata_session_id = session_identity_runtime.ensure_metadata_session_id
+_session_metadata_directory = session_identity_runtime._session_metadata_directory
+_note_session_activity = session_identity_runtime._note_session_activity
+_validate_session_metadata_filename = session_identity_runtime._validate_session_metadata_filename
 
+# Session metadata item CRUD.
+_prune_session_metadata_directory = session_items_runtime._prune_session_metadata_directory
+_load_session_metadata_info = session_items_runtime._load_session_metadata_info
+save_session_metadata_item = session_items_runtime.save_session_metadata_item
+list_session_metadata_items = session_items_runtime.list_session_metadata_items
+delete_session_metadata_item = session_items_runtime.delete_session_metadata_item
+serialize_session_metadata_item = session_items_runtime.serialize_session_metadata_item
 
-def _binding_dict(module: Any, names: tuple[str, ...]) -> dict[str, Callable[..., Any]]:
-    return {name: getattr(module, name) for name in names}
+# Effective (base + session) snapshot composition.
+_build_session_snapshot_entry = effective_snapshot_runtime._build_session_snapshot_entry
+_session_item_source_info = effective_snapshot_runtime._session_item_source_info
+_entry_matches_lookup = effective_snapshot_runtime._entry_matches_lookup
+_compose_effective_snapshot = effective_snapshot_runtime._compose_effective_snapshot
+load_effective_explorer_snapshot = effective_snapshot_runtime.load_effective_explorer_snapshot
+load_effective_full_snapshot = effective_snapshot_runtime.load_effective_full_snapshot
+resolve_effective_metadata_entry = effective_snapshot_runtime.resolve_effective_metadata_entry
 
-
-_install_runtime_bindings(
-    {
-        **_binding_dict(_env_runtime, ("_env_flag", "_resolve_cleanup_interval", "_cleanup_async_enabled")),
-        **_binding_dict(_upload_runtime, ("_safe_metadata_repo_filename", "maybe_store_uploaded_metadata_file")),
-        **_binding_dict(
-            _entry_payload_runtime,
-            (
-                "_clone_json_value",
-                "_normalise_status_reports",
-                "_normalise_attestation_identifiers",
-                "_normalise_metadata_statement",
-                "build_metadata_entry_components",
-                "expand_metadata_entry_payloads",
-                "_normalise_aaguid",
-                "_extract_entry_aaguid",
-            ),
-        ),
-        **_binding_dict(
-            _session_cleanup_runtime,
-            (
-                "_touch_session_last_access",
-                "_resolve_session_last_access",
-                "_maybe_cleanup_inactive_sessions",
-                "_run_inactive_session_cleanup_worker",
-                "_schedule_inactive_session_cleanup",
-            ),
-        ),
-        **_binding_dict(
-            _session_identity_runtime,
-            (
-                "_normalise_session_identifier",
-                "_schedule_session_cookie",
-                "_get_metadata_session_id",
-                "ensure_metadata_session_id",
-                "_session_metadata_directory",
-                "_note_session_activity",
-                "_validate_session_metadata_filename",
-            ),
-        ),
-        **_binding_dict(
-            _session_items_runtime,
-            (
-                "_prune_session_metadata_directory",
-                "_load_session_metadata_info",
-                "save_session_metadata_item",
-                "list_session_metadata_items",
-                "delete_session_metadata_item",
-                "serialize_session_metadata_item",
-            ),
-        ),
-        **_binding_dict(
-            _cache_runtime,
-            (
-                "_parse_http_datetime",
-                "_format_last_modified",
-                "format_last_modified_header",
-                "_clean_metadata_cache_value",
-                "load_metadata_cache_entry",
-                "_store_metadata_cache_entry",
-                "store_metadata_cache_entry",
-                "download_metadata_blob",
-            ),
-        ),
-        **_binding_dict(
-            _base_snapshot_runtime,
-            (
-                "load_cached_metadata_snapshot",
-                "_load_base_metadata",
-                "_load_verified_metadata_fallback",
-                "_load_verified_metadata_payload",
-                "_load_packaged_explorer_meta",
-                "_load_base_explorer_snapshot",
-                "_load_base_full_snapshot",
-                "load_packaged_explorer_summary",
-            ),
-        ),
-        **_binding_dict(
-            _effective_snapshot_runtime,
-            (
-                "_build_session_snapshot_entry",
-                "_session_item_source_info",
-                "_entry_matches_lookup",
-                "_compose_effective_snapshot",
-                "load_effective_explorer_snapshot",
-                "load_effective_full_snapshot",
-                "resolve_effective_metadata_entry",
-            ),
-        ),
-        **_binding_dict(
-            _verifier_runtime,
-            (
-                "_merge_metadata",
-                "metadata_entry_trust_anchor_status",
-                "get_mds_verifier",
-            ),
-        ),
-    }
-)
+# Metadata merge, trust anchor, and verifier.
+_merge_metadata = verifier_runtime._merge_metadata
+metadata_entry_trust_anchor_status = verifier_runtime.metadata_entry_trust_anchor_status
+get_mds_verifier = verifier_runtime.get_mds_verifier

@@ -7,6 +7,8 @@ import itsdangerous
 import pytest
 from flask import g, session
 
+from fido2.mds3 import MetadataBlobPayload, MetadataBlobPayloadEntry
+
 
 def _entry_payload(*, aaguid: str, description: str):
     return {
@@ -85,9 +87,9 @@ def test_aaguid_extraction_merge_and_source_info_helpers(monkeypatch, payload_ru
         description="Base unique",
     )
 
-    session_entry = metadata_module.MetadataBlobPayloadEntry.from_dict(session_payload)
-    base_entry_same = metadata_module.MetadataBlobPayloadEntry.from_dict(base_payload_same)
-    base_entry_other = metadata_module.MetadataBlobPayloadEntry.from_dict(base_payload_other)
+    session_entry = MetadataBlobPayloadEntry.from_dict(session_payload)
+    base_entry_same = MetadataBlobPayloadEntry.from_dict(base_payload_same)
+    base_entry_other = MetadataBlobPayloadEntry.from_dict(base_payload_other)
 
     assert (
         metadata_module._normalise_aaguid(" AAAA-BBBB-CCCC-DDDD-EEEEFFFF0000 ")
@@ -114,7 +116,7 @@ def test_aaguid_extraction_merge_and_source_info_helpers(monkeypatch, payload_ru
         mtime=1.0,
     )
 
-    base_metadata = metadata_module.MetadataBlobPayload(
+    base_metadata = MetadataBlobPayload(
         legal_header="",
         no=7,
         next_update=datetime.now(timezone.utc).date(),
@@ -140,7 +142,7 @@ def test_aaguid_extraction_merge_and_source_info_helpers(monkeypatch, payload_ru
     assert "modifiedAt" in source_info
 
 
-def test_cache_cleaning_formatting_and_store_helper(tmp_path, monkeypatch):
+def test_cache_cleaning_formatting_and_store_helper(tmp_path, monkeypatch, cache_runtime):
     metadata_module = pytest.importorskip("server.app.metadata")
 
     assert metadata_module._clean_metadata_cache_value("  etag-value  ") == "etag-value"
@@ -151,7 +153,7 @@ def test_cache_cleaning_formatting_and_store_helper(tmp_path, monkeypatch):
     assert metadata_module._format_last_modified("not-a-date") == "not-a-date"
 
     cache_path = tmp_path / "cache" / "metadata-cache.json"
-    monkeypatch.setattr(metadata_module, "MDS_METADATA_CACHE_PATH", str(cache_path), raising=False)
+    monkeypatch.setattr(cache_runtime, "MDS_METADATA_CACHE_PATH", str(cache_path), raising=False)
 
     metadata_module._store_metadata_cache_entry(
         last_modified_header="Wed, 21 Oct 2015 07:28:00 GMT",
@@ -166,12 +168,12 @@ def test_cache_cleaning_formatting_and_store_helper(tmp_path, monkeypatch):
     assert stored["fetched_at"]
 
 
-def test_prune_helper_and_request_session_identifier_paths(monkeypatch):
+def test_prune_helper_and_request_session_identifier_paths(monkeypatch, session_store, app_config):
     metadata_module = pytest.importorskip("server.app.metadata")
     config_module = pytest.importorskip("server.app.config")
 
     monkeypatch.setattr(
-        metadata_module.session_metadata_store,
+        session_store,
         "prune_session",
         lambda _sid: (_ for _ in ()).throw(RuntimeError("ignore prune errors")),
         raising=False,

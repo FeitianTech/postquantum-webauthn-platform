@@ -7,6 +7,7 @@ import time
 from typing import Any
 
 from flask import after_this_request, g, has_request_context, request, session
+from itsdangerous import BadSignature, URLSafeTimedSerializer
 
 from .. import session_metadata_store
 from ..config import app
@@ -37,11 +38,6 @@ def _normalise_session_identifier(value: Any) -> str | None:
     return trimmed
 
 
-# NOTE: every function in this module is rebound onto ``server.app.metadata``'s
-# globals by ``_install_runtime_bindings``, so only names that exist there are
-# resolvable at call time.  That is why the cookie signing below is written
-# inline (with a literal salt) instead of being factored into helpers here.
-#
 # Salt for the metadata-session recovery cookie; the key is ``app.secret_key``.
 
 
@@ -69,8 +65,6 @@ def _schedule_session_cookie(identifier: str) -> None:
     secret = app.secret_key
     if not secret:
         return
-
-    from itsdangerous import URLSafeTimedSerializer
 
     sealed = URLSafeTimedSerializer(
         secret, salt="fido.mds.session-cookie.v1"
@@ -117,8 +111,6 @@ def _get_metadata_session_id(*, create: bool = False) -> str | None:
     raw_cookie = request.cookies.get(_SESSION_METADATA_COOKIE_NAME)
     secret = app.secret_key
     if isinstance(raw_cookie, str) and raw_cookie and secret:
-        from itsdangerous import BadSignature, URLSafeTimedSerializer
-
         try:
             unsealed = URLSafeTimedSerializer(
                 secret, salt="fido.mds.session-cookie.v1"

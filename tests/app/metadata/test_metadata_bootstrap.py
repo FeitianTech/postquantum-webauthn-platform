@@ -7,7 +7,7 @@ import pytest
 
 
 @pytest.fixture
-def packaged_metadata_env(monkeypatch, tmp_path, metadata_runtime_state):
+def packaged_metadata_env(monkeypatch, tmp_path, metadata_runtime_state, snapshot_runtime, cache_runtime):
     general_module = pytest.importorskip("server.app.routes.general")
     metadata_module = pytest.importorskip("server.app.metadata")
 
@@ -50,9 +50,9 @@ def packaged_metadata_env(monkeypatch, tmp_path, metadata_runtime_state):
         encoding="utf-8",
     )
 
-    monkeypatch.setattr(metadata_module, "MDS_METADATA_VERIFIED_PATH", str(verified_path), raising=False)
-    monkeypatch.setattr(metadata_module, "MDS_METADATA_CACHE_PATH", str(cache_path), raising=False)
-    monkeypatch.setattr(metadata_module, "MDS_EXPLORER_PATH", str(explorer_path), raising=False)
+    monkeypatch.setattr(snapshot_runtime, "MDS_METADATA_VERIFIED_PATH", str(verified_path), raising=False)
+    monkeypatch.setattr(cache_runtime, "MDS_METADATA_CACHE_PATH", str(cache_path), raising=False)
+    monkeypatch.setattr(snapshot_runtime, "MDS_EXPLORER_PATH", str(explorer_path), raising=False)
     monkeypatch.setattr(general_module, "MDS_METADATA_VERIFIED_PATH", str(verified_path), raising=False)
 
     # Reset cached state.
@@ -118,7 +118,7 @@ def test_metadata_not_available_is_warning_pqc():
     assert "metadata_not_available" not in outcome["errors"]
 
 
-def test_index_html_skips_eager_bootstrap_by_default(monkeypatch):
+def test_index_html_skips_eager_bootstrap_by_default(monkeypatch, app_config):
     general_module = pytest.importorskip("server.app.routes.general")
     config_module = pytest.importorskip("server.app.config")
 
@@ -148,7 +148,7 @@ def test_index_html_skips_eager_bootstrap_by_default(monkeypatch):
     assert bootstrap_calls == []
 
 
-def test_index_html_bootstraps_when_strict(monkeypatch):
+def test_index_html_bootstraps_when_strict(monkeypatch, app_config):
     general_module = pytest.importorskip("server.app.routes.general")
     config_module = pytest.importorskip("server.app.config")
 
@@ -178,7 +178,7 @@ def test_index_html_bootstraps_when_strict(monkeypatch):
     assert bootstrap_calls == [{"skip_if_reloader_parent": False}]
 
 
-def test_explorer_metadata_route_sets_no_store_headers(monkeypatch):
+def test_explorer_metadata_route_sets_no_store_headers(monkeypatch, app_config):
     general_module = pytest.importorskip("server.app.routes.general")
     config_module = pytest.importorskip("server.app.config")
 
@@ -199,7 +199,7 @@ def test_explorer_metadata_route_sets_no_store_headers(monkeypatch):
     assert response.headers["Vary"] == "Cookie"
 
 
-def test_full_explorer_metadata_route_sets_no_store_headers(monkeypatch):
+def test_full_explorer_metadata_route_sets_no_store_headers(monkeypatch, app_config):
     general_module = pytest.importorskip("server.app.routes.general")
     config_module = pytest.importorskip("server.app.config")
 
@@ -220,7 +220,7 @@ def test_full_explorer_metadata_route_sets_no_store_headers(monkeypatch):
     assert response.headers["Vary"] == "Cookie"
 
 
-def test_resolve_metadata_entry_requires_exactly_one_lookup(monkeypatch):
+def test_resolve_metadata_entry_requires_exactly_one_lookup(monkeypatch, app_config):
     general_module = pytest.importorskip("server.app.routes.general")
     config_module = pytest.importorskip("server.app.config")
 
@@ -233,7 +233,7 @@ def test_resolve_metadata_entry_requires_exactly_one_lookup(monkeypatch):
     assert response.get_json()["error"] == "Provide exactly one of entryId, aaguid, or aaid."
 
 
-def test_resolve_metadata_entry_returns_not_found(monkeypatch):
+def test_resolve_metadata_entry_returns_not_found(monkeypatch, app_config):
     general_module = pytest.importorskip("server.app.routes.general")
     config_module = pytest.importorskip("server.app.config")
 
@@ -252,7 +252,7 @@ def test_resolve_metadata_entry_returns_not_found(monkeypatch):
     assert response.get_json()["error"] == "Metadata entry not found."
 
 
-def test_resolve_metadata_entry_returns_entry(monkeypatch):
+def test_resolve_metadata_entry_returns_entry(monkeypatch, app_config):
     general_module = pytest.importorskip("server.app.routes.general")
     config_module = pytest.importorskip("server.app.config")
 
@@ -276,7 +276,7 @@ def test_resolve_metadata_entry_returns_entry(monkeypatch):
     }
 
 
-def test_index_page_emits_accessible_global_loader_markup(monkeypatch):
+def test_index_page_emits_accessible_global_loader_markup(monkeypatch, app_config):
     general_module = pytest.importorskip("server.app.routes.general")
     config_module = pytest.importorskip("server.app.config")
 
@@ -307,7 +307,7 @@ def test_index_page_emits_accessible_global_loader_markup(monkeypatch):
     assert '__INITIAL_CREDENTIAL_RECORDS__' in body
 
 
-def test_upload_custom_metadata_returns_rebuilt_snapshot(monkeypatch):
+def test_upload_custom_metadata_returns_rebuilt_snapshot(monkeypatch, app_config):
     general_module = pytest.importorskip("server.app.routes.general")
     config_module = pytest.importorskip("server.app.config")
 
@@ -349,7 +349,7 @@ def test_upload_custom_metadata_returns_rebuilt_snapshot(monkeypatch):
     assert response.get_json()["snapshot"]["meta"]["entryCount"] == 1
 
 
-def test_delete_custom_metadata_returns_rebuilt_snapshot(monkeypatch):
+def test_delete_custom_metadata_returns_rebuilt_snapshot(monkeypatch, app_config):
     general_module = pytest.importorskip("server.app.routes.general")
     config_module = pytest.importorskip("server.app.config")
 
@@ -369,7 +369,7 @@ def test_delete_custom_metadata_returns_rebuilt_snapshot(monkeypatch):
     assert response.get_json()["snapshot"]["meta"]["entryCount"] == 3
 
 
-def test_index_page_supports_gzip_compression(monkeypatch):
+def test_index_page_supports_gzip_compression(monkeypatch, app_config):
     general_module = pytest.importorskip("server.app.routes.general")
     config_module = pytest.importorskip("server.app.config")
 

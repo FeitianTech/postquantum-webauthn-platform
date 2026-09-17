@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import io
+import os
 from types import MappingProxyType, SimpleNamespace
 
 import pytest
@@ -12,14 +13,14 @@ def metadata_module(monkeypatch, metadata_runtime_state):
     return module
 
 
-def test_metadata_validation_and_info_loader_residual_guards(metadata_module, monkeypatch):
+def test_metadata_validation_and_info_loader_residual_guards(metadata_module, monkeypatch, session_store):
     with pytest.raises(ValueError):
         metadata_module._validate_session_metadata_filename(123)
     with pytest.raises(ValueError):
         metadata_module._validate_session_metadata_filename("entry.txt")
 
     monkeypatch.setattr(
-        metadata_module.session_metadata_store,
+        session_store,
         "read_file",
         lambda *_args, **_kwargs: (_ for _ in ()).throw(OSError("missing")),
         raising=False,
@@ -27,7 +28,7 @@ def test_metadata_validation_and_info_loader_residual_guards(metadata_module, mo
     assert metadata_module._load_session_metadata_info("session", "entry.meta.json") == {}
 
     monkeypatch.setattr(
-        metadata_module.session_metadata_store,
+        session_store,
         "read_file",
         lambda *_args, **_kwargs: b"[]",
         raising=False,
@@ -53,7 +54,7 @@ def test_metadata_build_and_expand_residual_paths(metadata_module):
     assert metadata_module.expand_metadata_entry_payloads(raw_payload) == [raw_payload]
 
 
-def test_save_session_metadata_item_runtime_warning_and_mtime_fallback(metadata_module, monkeypatch, identity_runtime, payload_runtime):
+def test_save_session_metadata_item_runtime_warning_and_mtime_fallback(metadata_module, monkeypatch, identity_runtime, payload_runtime, session_store):
     monkeypatch.setattr(identity_runtime, "ensure_metadata_session_id", lambda: "session-1")
     monkeypatch.setattr(
         identity_runtime,
@@ -79,13 +80,13 @@ def test_save_session_metadata_item_runtime_warning_and_mtime_fallback(metadata_
             raise RuntimeError("info-write-failure")
 
     monkeypatch.setattr(
-        metadata_module.session_metadata_store,
+        session_store,
         "write_file",
         _write_file,
         raising=False,
     )
     monkeypatch.setattr(
-        metadata_module.session_metadata_store,
+        session_store,
         "file_mtime",
         lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("mtime-failure")),
         raising=False,
@@ -96,19 +97,19 @@ def test_save_session_metadata_item_runtime_warning_and_mtime_fallback(metadata_
     assert saved.original_filename == "demo.json"
 
 
-def test_metadata_cache_and_verified_fallback_residual_error_paths(metadata_module, monkeypatch):
+def test_metadata_cache_and_verified_fallback_residual_error_paths(metadata_module, monkeypatch, snapshot_runtime, cache_runtime):
     monkeypatch.setattr(
-        metadata_module,
-        "open",
+        cache_runtime,
+        "open",  # shadows the builtin; the module has none
         lambda *_args, **_kwargs: (_ for _ in ()).throw(OSError("open-failure")),
         raising=False,
     )
     assert metadata_module.load_metadata_cache_entry() == {}
 
-    monkeypatch.setattr(metadata_module.os.path, "getmtime", lambda _path: (_ for _ in ()).throw(OSError("no-mtime")), raising=False)
+    monkeypatch.setattr(os.path, "getmtime", lambda _path: (_ for _ in ()).throw(OSError("no-mtime")), raising=False)
     monkeypatch.setattr(
-        metadata_module,
-        "open",
+        snapshot_runtime,
+        "open",  # shadows the builtin; the module has none
         lambda *_args, **_kwargs: (_ for _ in ()).throw(FileNotFoundError("missing")),
         raising=False,
     )
@@ -116,10 +117,10 @@ def test_metadata_cache_and_verified_fallback_residual_error_paths(metadata_modu
     assert loaded is None
     assert mtime is None
 
-    monkeypatch.setattr(metadata_module.os.path, "getmtime", lambda _path: 123.0, raising=False)
+    monkeypatch.setattr(os.path, "getmtime", lambda _path: 123.0, raising=False)
     monkeypatch.setattr(
-        metadata_module,
-        "open",
+        snapshot_runtime,
+        "open",  # shadows the builtin; the module has none
         lambda *_args, **_kwargs: io.StringIO("{invalid-json"),
         raising=False,
     )
@@ -128,36 +129,36 @@ def test_metadata_cache_and_verified_fallback_residual_error_paths(metadata_modu
     assert mtime == 123.0
 
 
-def test_base_explorer_snapshot_and_summary_and_resolution_session_match(metadata_module, monkeypatch, snapshot_runtime, items_runtime):
+def test_base_explorer_snapshot_and_summary_and_resolution_session_match(metadata_module, monkeypatch, snapshot_runtime, items_runtime, effective_runtime):
     def _getmtime(path):
         raise OSError("mtime-missing")
 
-    monkeypatch.setattr(metadata_module.os.path, "getmtime", _getmtime, raising=False)
-    monkeypatch.setattr(metadata_module, "_load_verified_metadata_payload", lambda: None, raising=False)
+    monkeypatch.setattr(os.path, "getmtime", _getmtime, raising=False)
+    monkeypatch.setattr(snapshot_runtime, "_load_verified_metadata_payload", lambda: None, raising=False)
     snapshot, marker = metadata_module._load_base_explorer_snapshot()
     assert snapshot is None
     assert marker == (None, None)
 
     def _getmtime_ordered(path):
-        if path == metadata_module.MDS_EXPLORER_PATH:
+        if path == snapshot_runtime.MDS_EXPLORER_PATH:
             return 10.0
         return 5.0
 
-    monkeypatch.setattr(metadata_module.os.path, "getmtime", _getmtime_ordered, raising=False)
+    monkeypatch.setattr(os.path, "getmtime", _getmtime_ordered, raising=False)
     monkeypatch.setattr(
-        metadata_module,
-        "open",
+        snapshot_runtime,
+        "open",  # shadows the builtin; the module has none
         lambda *_args, **_kwargs: (_ for _ in ()).throw(OSError("explorer-open-failure")),
         raising=False,
     )
     monkeypatch.setattr(
-        metadata_module,
+        snapshot_runtime,
         "_load_verified_metadata_payload",
         lambda: {"legalHeader": "L", "no": 1, "nextUpdate": "2099-01-01", "entries": []},
         raising=False,
     )
     monkeypatch.setattr(
-        metadata_module,
+        snapshot_runtime,
         "build_explorer_snapshot",
         lambda _payload, _cache: {"meta": {"entryCount": 0}},
         raising=False,
@@ -167,7 +168,7 @@ def test_base_explorer_snapshot_and_summary_and_resolution_session_match(metadat
     assert marker == (10.0, 5.0)
 
     monkeypatch.setattr(
-        metadata_module,
+        snapshot_runtime,
         "_load_base_explorer_snapshot",
         lambda: ({"meta": MappingProxyType({"entryCount": 2})}, (1.0, 1.0)),
         raising=False,
@@ -176,10 +177,10 @@ def test_base_explorer_snapshot_and_summary_and_resolution_session_match(metadat
 
     item = SimpleNamespace(payload={"aaguid": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"}, uploaded_at="now")
     monkeypatch.setattr(items_runtime, "list_session_metadata_items", lambda: [item], raising=False)
-    monkeypatch.setattr(metadata_module, "_entry_matches_lookup", lambda *_args, **_kwargs: True, raising=False)
-    monkeypatch.setattr(metadata_module, "_session_item_source_info", lambda _item: {"source": "session"}, raising=False)
+    monkeypatch.setattr(effective_runtime, "_entry_matches_lookup", lambda *_args, **_kwargs: True, raising=False)
+    monkeypatch.setattr(effective_runtime, "_session_item_source_info", lambda _item: {"source": "session"}, raising=False)
     monkeypatch.setattr(
-        metadata_module,
+        effective_runtime,
         "build_explorer_entry",
         lambda payload, **_kwargs: {"source": "session", "payload": payload},
         raising=False,
