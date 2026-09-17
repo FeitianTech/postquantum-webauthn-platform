@@ -22,11 +22,14 @@ target-version = "py312"
 #     (e.g. `advanced_module.request.get_json(...)`).
 #
 # Either way the parent imports names its own body never mentions, ruff reports
-# them unused, and deleting them breaks the app at runtime. This is the same
-# debt F821 tracks (see the note at the bottom of this file) and it is retired
-# in the same milestone, not by suppressing it name by name here.
-"server/app/attestation.py" = ["F401"]
-"server/app/decoder/decode.py" = ["F401"]
-"server/app/metadata.py" = ["F401"]
-"server/app/routes/advanced.py" = ["F401"]
-"server/app/routes/simple.py" = ["F401"]
+# them unused, and deleting them breaks the app at runtime. UP035 is ignored
+# here for the same reason: the fragments still write `Dict`/`List`/`Set`/
+# `Tuple` and resolve them through the parent, so the parent has to keep the
+# legacy `typing` names until those fragments can import their own. This is the
+# same debt F821 tracks (see the note at the bottom of this file) and it is
+# retired in the same milestone, not by suppressing it name by name here.
+"server/app/attestation.py" = ["F401", "UP035"]
+"server/app/decoder/decode.py" = ["F401", "UP035"]
+"server/app/metadata.py" = ["F401", "UP035"]
+"server/app/routes/advanced.py" = ["F401", "UP035"]
+"server/app/routes/simple.py" = ["F401", "UP035"]
