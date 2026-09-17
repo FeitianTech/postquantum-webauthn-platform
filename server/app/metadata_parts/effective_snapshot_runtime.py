@@ -1,6 +1,15 @@
 """Effective snapshot composition and metadata entry resolution helpers."""
 from __future__ import annotations
 
+from collections.abc import Mapping
+from datetime import datetime, timezone
+from typing import TYPE_CHECKING, Any
+
+from ..mds_snapshot import build_entry_id, build_explorer_entry, normalise_aaguid_key
+
+if TYPE_CHECKING:  # annotation-only, so no runtime import edge is needed
+    from .session_items_runtime import SessionMetadataItem
+
 
 def _build_session_snapshot_entry(
     item: SessionMetadataItem,
@@ -9,7 +18,7 @@ def _build_session_snapshot_entry(
     include_detail: bool,
     include_raw_entry: bool = True,
     compact_detail: bool = False,
-) -> Optional[Dict[str, Any]]:
+) -> dict[str, Any] | None:
     payload = item.payload
     if not isinstance(payload, Mapping):
         return None
@@ -30,8 +39,8 @@ def _build_session_snapshot_entry(
     )
 
 
-def _session_item_source_info(item: SessionMetadataItem) -> Dict[str, Any]:
-    info: Dict[str, Any] = {"storedFilename": item.filename}
+def _session_item_source_info(item: SessionMetadataItem) -> dict[str, Any]:
+    info: dict[str, Any] = {"storedFilename": item.filename}
     if item.original_filename:
         info["originalFilename"] = item.original_filename
     if item.uploaded_at:
@@ -44,9 +53,9 @@ def _session_item_source_info(item: SessionMetadataItem) -> Dict[str, Any]:
 def _entry_matches_lookup(
     entry_payload: Mapping[str, Any],
     *,
-    entry_id: Optional[str] = None,
-    aaguid: Optional[str] = None,
-    aaid: Optional[str] = None,
+    entry_id: str | None = None,
+    aaguid: str | None = None,
+    aaid: str | None = None,
 ) -> bool:
     if entry_id:
         return build_entry_id(entry_payload) == entry_id
@@ -72,14 +81,14 @@ def _entry_matches_lookup(
 
 
 def _compose_effective_snapshot(
-    base_snapshot: Optional[Mapping[str, Any]],
+    base_snapshot: Mapping[str, Any] | None,
     *,
     include_detail: bool,
     include_raw_entry: bool = True,
     compact_detail: bool = False,
-) -> Dict[str, Any]:
-    base_meta: Dict[str, Any] = {}
-    raw_base_entries: List[Mapping[str, Any]] = []
+) -> dict[str, Any]:
+    base_meta: dict[str, Any] = {}
+    raw_base_entries: list[Mapping[str, Any]] = []
 
     if base_snapshot:
         if isinstance(base_snapshot.get("meta"), Mapping):
@@ -102,8 +111,8 @@ def _compose_effective_snapshot(
         return {"meta": meta, "entries": raw_base_entries}
 
     base_entries = [dict(entry) for entry in raw_base_entries]
-    custom_entries: List[Dict[str, Any]] = []
-    seen_aaguids: Set[str] = set()
+    custom_entries: list[dict[str, Any]] = []
+    seen_aaguids: set[str] = set()
 
     for index, item in enumerate(session_items):
         custom_entry = _build_session_snapshot_entry(
@@ -139,12 +148,12 @@ def _compose_effective_snapshot(
     return {"meta": meta, "entries": effective_entries}
 
 
-def load_effective_explorer_snapshot() -> Dict[str, Any]:
+def load_effective_explorer_snapshot() -> dict[str, Any]:
     base_snapshot, _ = _load_base_explorer_snapshot()
     return _compose_effective_snapshot(base_snapshot, include_detail=False)
 
 
-def load_effective_full_snapshot() -> Dict[str, Any]:
+def load_effective_full_snapshot() -> dict[str, Any]:
     base_snapshot, _ = _load_base_full_snapshot()
     return _compose_effective_snapshot(
         base_snapshot,
@@ -156,13 +165,13 @@ def load_effective_full_snapshot() -> Dict[str, Any]:
 
 def resolve_effective_metadata_entry(
     *,
-    entry_id: Optional[str] = None,
-    aaguid: Optional[str] = None,
-    aaid: Optional[str] = None,
-) -> Optional[Dict[str, Any]]:
+    entry_id: str | None = None,
+    aaguid: str | None = None,
+    aaid: str | None = None,
+) -> dict[str, Any] | None:
     base_summary = load_packaged_explorer_summary()
     session_items = list_session_metadata_items()
-    seen_aaguids: Set[str] = set()
+    seen_aaguids: set[str] = set()
 
     for index, item in enumerate(session_items):
         payload = item.payload
