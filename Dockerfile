@@ -17,24 +17,26 @@ RUN set -eux; \
         pkg-config; \
     rm -rf /var/lib/apt/lists/*
 
+# uv reads the lockfile; the version is pinned so builds do not drift with uv releases.
+COPY --from=ghcr.io/astral-sh/uv:0.12.15 /uv /usr/local/bin/uv
+
 # Copy app source
 WORKDIR /src
-COPY pyproject.toml README.md ./
+COPY pyproject.toml uv.lock README.md ./
+COPY server/pyproject.toml ./server/pyproject.toml
 COPY COPYING COPYING.APLv2 COPYING.MPLv2 ./
 COPY fido2 ./fido2
-COPY server ./server
 
-# Install Python dependencies into /install. ./server is installed for its
-# declared dependencies (Flask); the server code itself runs from /app/server.
+# Install Python dependencies into /install from uv.lock, the same lock CI and
+# local venvs install from. --locked fails the build if the lock is stale, and
+# --require-hashes rejects anything not pinned by it. The vendored fido2 library
+# is installed from source without dependencies (its own deps are in the lock).
 RUN pip install --upgrade pip setuptools wheel && \
-    pip install --prefix=/install --no-cache-dir \
-        gunicorn \
-        google-api-core \
-        google-auth \
-        google-cloud-core \
-        google-cloud-storage \
-        . \
-        ./server && \
+    uv export --locked --no-dev --no-emit-local --package fido2-example-server \
+        -o /tmp/requirements.txt && \
+    pip install --prefix=/install --no-cache-dir --no-deps --require-hashes \
+        -r /tmp/requirements.txt && \
+    pip install --prefix=/install --no-cache-dir --no-deps . && \
     # Remove build tools
     apt-get purge -y build-essential git pkg-config libssl-dev && \
     apt-get autoremove -y && \
