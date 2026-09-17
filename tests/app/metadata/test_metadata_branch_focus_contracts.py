@@ -141,12 +141,12 @@ def test_get_session_id_and_ensure_paths_cover_invalid_existing_and_error_branch
 
 
 def test_session_directory_touch_and_resolve_error_paths(metadata_module, monkeypatch):
+    cleanup = pytest.importorskip("server.app.metadata_parts.session_cleanup_runtime")
     schedule_calls = []
     monkeypatch.setattr(
-        metadata_module,
+        cleanup,
         "_schedule_inactive_session_cleanup",
         lambda: schedule_calls.append(True),
-        raising=False,
     )
 
     assert metadata_module._session_metadata_directory("", create=False) is None
