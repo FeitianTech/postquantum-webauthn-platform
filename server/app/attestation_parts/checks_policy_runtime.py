@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Any, List, Mapping, Optional
+from typing import Any, List, Optional
+from collections.abc import Mapping
 
 
 def _resolve_uv_required(

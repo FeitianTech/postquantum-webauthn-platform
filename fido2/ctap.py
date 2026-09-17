@@ -30,7 +30,7 @@ from __future__ import annotations
 import abc
 from enum import IntEnum, unique
 from threading import Event
-from typing import Callable, Iterator
+from collections.abc import Callable, Iterator
 
 
 @unique

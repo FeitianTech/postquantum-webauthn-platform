@@ -11,7 +11,8 @@ import sys
 import time
 import uuid
 from datetime import datetime, timezone
-from typing import Any, Dict, Iterable, List, Mapping, MutableMapping, Optional
+from typing import Any, Dict, List, Optional
+from collections.abc import Iterable, Mapping, MutableMapping
 
 from flask import jsonify, request, session
 from fido2 import cbor

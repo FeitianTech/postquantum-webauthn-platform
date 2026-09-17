@@ -2,7 +2,8 @@
 from __future__ import annotations
 
 import json
-from typing import Any, Callable, Dict
+from typing import Any, Dict
+from collections.abc import Callable
 
 import cbor2
 from cbor2 import CBORTag, CBORSimpleValue, undefined

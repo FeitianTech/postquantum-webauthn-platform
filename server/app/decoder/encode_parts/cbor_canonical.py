@@ -3,7 +3,8 @@ from __future__ import annotations
 
 import math
 import struct
-from typing import Any, Dict, Iterable, List, Mapping, Tuple
+from typing import Any, Dict, List, Tuple
+from collections.abc import Iterable, Mapping
 
 import cbor2
 from cbor2 import CBORTag, CBORSimpleValue, undefined

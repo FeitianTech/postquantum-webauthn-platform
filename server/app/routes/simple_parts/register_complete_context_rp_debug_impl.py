@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Any, Dict, Mapping
+from typing import Any, Dict
+from collections.abc import Mapping
 
 
 def populate_rp_debug_context_impl(simple_module: Any, ctx: dict[str, Any]) -> None:

@@ -1,7 +1,8 @@
 """CTAP/WebAuthn structure encoders."""
 from __future__ import annotations
 
-from typing import Any, Dict, Mapping, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
+from collections.abc import Mapping
 
 from .binary_decode import _require_bytes
 from .binary_extract import _restore_generic_structure

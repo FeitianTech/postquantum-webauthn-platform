@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import base64
-from typing import Any, Dict, List, Mapping, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
+from collections.abc import Mapping
 
 
 def _build_unknown_public_key_info(cert_bytes: bytes, error: Exception) -> tuple[dict[str, Any], list[tuple[str, Any]]]:

@@ -1,7 +1,8 @@
 from collections import UserDict
 from dataclasses import dataclass, field
 import hashlib
-from typing import Mapping, Optional, Sequence
+from typing import Optional
+from collections.abc import Mapping, Sequence
 
 import pytest
 

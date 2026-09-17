@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Mapping, Optional
+from typing import Any, Dict, List, Optional
+from collections.abc import Mapping
 
 from .register_complete_finalize_impl import finalize_registration_completion
 from .register_complete_material_impl import build_registration_material

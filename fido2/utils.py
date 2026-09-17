@@ -41,16 +41,14 @@ from abc import abstractmethod
 from typing import (
     Union,
     Optional,
-    Sequence,
-    Mapping,
     Dict,
     Any,
     TypeVar,
-    Hashable,
     get_type_hints,
     overload,
     Type,
 )
+from collections.abc import Sequence, Mapping, Hashable
 import struct
 import warnings
 

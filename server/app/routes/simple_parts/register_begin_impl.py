@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Mapping, MutableMapping
+from typing import Any, Dict, List
+from collections.abc import Mapping, MutableMapping
 
 
 def register_begin_impl(simple_module: Any):

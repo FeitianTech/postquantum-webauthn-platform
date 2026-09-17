@@ -33,7 +33,7 @@ import struct
 import sys
 from enum import IntEnum, IntFlag, unique
 from threading import Event
-from typing import Callable, Iterator
+from collections.abc import Callable, Iterator
 
 from ..ctap import STATUS, CtapDevice, CtapError
 from ..utils import LOG_LEVEL_TRAFFIC

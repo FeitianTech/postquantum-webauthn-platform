@@ -6,7 +6,8 @@ import json
 import os
 import threading
 import time
-from typing import Any, Callable, Iterable, Optional, Tuple, TypeVar
+from typing import Any, Optional, Tuple, TypeVar
+from collections.abc import Callable, Iterable
 
 from .env_flags import parse_env_flag
 

@@ -10,7 +10,8 @@ import uuid
 from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
-from typing import Any, Callable, Dict, Mapping, Optional, Set, Tuple
+from typing import Any, Dict, Optional, Set, Tuple
+from collections.abc import Callable, Mapping
 from flask import after_this_request, g, has_request_context, request, session
 from fido2.mds3 import MetadataBlobPayload, MetadataBlobPayloadEntry, MdsAttestationVerifier
 from . import session_metadata_store

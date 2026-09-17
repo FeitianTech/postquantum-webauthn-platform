@@ -30,7 +30,8 @@ from __future__ import annotations
 import abc
 from dataclasses import dataclass
 from enum import Enum, unique
-from typing import Any, Mapping, cast
+from typing import Any, cast
+from collections.abc import Mapping
 
 from ..utils import _JsonDataObject, sha256, websafe_encode
 from ..webauthn import (

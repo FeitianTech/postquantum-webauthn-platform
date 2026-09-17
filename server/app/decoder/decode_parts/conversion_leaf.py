@@ -2,7 +2,8 @@
 from __future__ import annotations
 
 import uuid
-from typing import Any, Dict, Mapping, Optional
+from typing import Any, Dict, Optional
+from collections.abc import Mapping
 
 from ...attestation import make_json_safe
 from .binary_extract import (

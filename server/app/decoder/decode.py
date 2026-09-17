@@ -14,7 +14,8 @@ import types
 import uuid
 from datetime import datetime, timezone
 from io import BytesIO
-from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
+from typing import Any, Dict, List, Optional, Tuple
+from collections.abc import Callable, Iterable, Mapping, Sequence
 
 import cbor2
 from cryptography import x509

@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, Dict, List, Mapping, Optional, Sequence
+from typing import Any, Dict, List, Optional
+from collections.abc import Mapping, Sequence
 
 
 def _evaluate_mldsa_attestation_root(

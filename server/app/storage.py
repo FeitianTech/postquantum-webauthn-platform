@@ -21,7 +21,8 @@ import io
 import json
 import os
 import pickle
-from typing import Any, Dict, Iterable, Iterator, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
+from collections.abc import Iterable, Iterator
 
 from fido2.webauthn import AttestedCredentialData, AuthenticatorData
 

@@ -1,7 +1,8 @@
 """CBOR/CTAP-focused encoder handlers."""
 from __future__ import annotations
 
-from typing import Any, Dict, Mapping, Optional
+from typing import Any, Dict, Optional
+from collections.abc import Mapping
 
 from ..decode import _binary_summary, _hex_json_safe, _stringify_mapping_keys
 from .cbor_canonical import _canonical_cbor_dumps, _canonicalize_cbor_structure

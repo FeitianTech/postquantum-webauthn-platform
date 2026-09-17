@@ -3,7 +3,8 @@ from __future__ import annotations
 
 import base64
 import binascii
-from typing import Any, Callable, Dict, List, Mapping, Optional
+from typing import Any, Dict, List, Optional
+from collections.abc import Callable, Mapping
 
 
 def _convert_certificate_payload_impl(

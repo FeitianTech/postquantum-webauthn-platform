@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Any, Dict, Mapping
+from typing import Any, Dict
+from collections.abc import Mapping
 
 from .register_complete_context_authenticator_impl import populate_authenticator_data_context_impl
 from .register_complete_context_init_impl import initialize_registration_context_impl

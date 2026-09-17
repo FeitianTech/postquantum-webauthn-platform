@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Any, Iterable, Mapping, Optional, Sequence
+from typing import Any, Optional
+from collections.abc import Iterable, Mapping, Sequence
 
 
 def _add_base64_padding_impl(_simple_module: Any, value: str) -> str:

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Any, Dict, Mapping, MutableMapping
+from typing import Any, Dict
+from collections.abc import Mapping, MutableMapping
 
 
 def add_registration_metadata_impl(

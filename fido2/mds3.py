@@ -34,7 +34,8 @@ from contextvars import ContextVar
 from dataclasses import dataclass, field
 from datetime import date
 from enum import Enum, unique
-from typing import Sequence, Mapping, Any, Optional, Callable
+from typing import Any, Optional
+from collections.abc import Sequence, Mapping, Callable
 
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend

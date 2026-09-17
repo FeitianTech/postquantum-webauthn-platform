@@ -7,7 +7,8 @@ import sys
 import time
 import uuid
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
+from typing import Any, Dict, List, Optional, Tuple
+from collections.abc import Mapping, Sequence
 
 from flask import abort, jsonify, request, session
 

@@ -1,7 +1,8 @@
 """CTAP map labeling and shape-classification helpers."""
 from __future__ import annotations
 
-from typing import Any, Callable, Dict, Mapping, Optional, Sequence
+from typing import Any, Dict, Optional
+from collections.abc import Callable, Mapping, Sequence
 
 from .ctap_repair_leaf import _extract_mapping_bytes, _extract_mapping_string
 from .key_utils import MISSING, coerce_cbor_bytes as _coerce_cbor_bytes, get_mapping_entry as _get_mapping_entry, hex_json_safe as _hex_json_safe

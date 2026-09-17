@@ -31,7 +31,8 @@ import logging
 import struct
 from enum import IntEnum, unique
 from threading import Event
-from typing import Any, Callable, Mapping
+from typing import Any
+from collections.abc import Callable, Mapping
 
 from .. import cbor
 from ..ctap import CtapError

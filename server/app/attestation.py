@@ -11,7 +11,8 @@ import textwrap
 import types
 import uuid
 from datetime import datetime, timezone
-from typing import Any, Callable, Dict, List, Mapping, MutableMapping, Optional, Sequence, Set, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
+from collections.abc import Callable, Mapping, MutableMapping, Sequence
 
 from fido2.attestation import (
     Attestation,

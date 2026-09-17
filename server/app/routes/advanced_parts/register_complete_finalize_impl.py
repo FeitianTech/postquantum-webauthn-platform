@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Mapping, Optional
+from typing import Any, Dict, List, Optional
+from collections.abc import Mapping
 
 
 def finalize_registration_completion(

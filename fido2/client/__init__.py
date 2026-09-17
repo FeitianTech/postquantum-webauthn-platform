@@ -32,7 +32,8 @@ import logging
 from dataclasses import replace
 from enum import IntEnum, unique
 from threading import Event, Timer
-from typing import Any, Callable, Mapping, Sequence, overload
+from typing import Any, overload
+from collections.abc import Callable, Mapping, Sequence
 from urllib.parse import urlparse
 
 from ..cose import ES256

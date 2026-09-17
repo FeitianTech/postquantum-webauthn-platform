@@ -2,7 +2,8 @@
 from __future__ import annotations
 
 import json
-from typing import Any, Dict, Iterable, List, Mapping, Optional
+from typing import Any, Dict, List, Optional
+from collections.abc import Iterable, Mapping
 
 from .binary_extract import _convert_cose_key_for_display, _resolve_cose_algorithm
 

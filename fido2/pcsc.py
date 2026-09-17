@@ -31,7 +31,7 @@ from __future__ import annotations
 import logging
 import struct
 from threading import Event
-from typing import Callable, Iterator
+from collections.abc import Callable, Iterator
 
 from smartcard import System
 from smartcard.CardConnection import CardConnection

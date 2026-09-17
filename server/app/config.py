@@ -12,7 +12,8 @@ import re
 import ssl
 import tempfile
 import textwrap
-from typing import Any, Mapping, Optional, Set, Tuple
+from typing import Any, Optional, Set, Tuple
+from collections.abc import Mapping
 from urllib.parse import urlsplit
 
 import fido2.features

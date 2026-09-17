@@ -1,7 +1,8 @@
 """CTAP repair and trailing-merge leaf helpers."""
 from __future__ import annotations
 
-from typing import Any, Dict, Mapping, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
+from collections.abc import Mapping
 
 from fido2 import cbor
 

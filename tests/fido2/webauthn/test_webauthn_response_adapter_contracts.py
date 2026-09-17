@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import hashlib
 from types import MappingProxyType
-from typing import Any, Mapping, Optional
+from typing import Any, Optional
+from collections.abc import Mapping
 
 import pytest
 
