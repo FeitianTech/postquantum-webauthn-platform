@@ -1,6 +1,18 @@
 """Repository upload helpers for metadata JSON payloads."""
 from __future__ import annotations
 
+import os
+from collections.abc import Mapping
+
+from ..config import app
+from ..github_client import (
+    git_blob_sha,
+    github_list_directory,
+    github_upload_file,
+    is_logging_enabled,
+)
+from .runtime_state import _METADATA_REPO_FOLDER
+
 
 def _safe_metadata_repo_filename(filename: str) -> str:
     candidate = os.path.basename(filename.strip()) if isinstance(filename, str) else ""
@@ -24,8 +36,8 @@ def maybe_store_uploaded_metadata_file(filename: str, content: bytes) -> bool:
         return False
 
     blob_sha = git_blob_sha(content)
-    existing_sha_for_name: Optional[str] = None
-    path_for_name: Optional[str] = None
+    existing_sha_for_name: str | None = None
+    path_for_name: str | None = None
 
     for item in existing_items:
         if not isinstance(item, Mapping):
