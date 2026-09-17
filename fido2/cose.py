@@ -29,6 +29,8 @@ from __future__ import annotations
 
 from typing import Sequence, Type, Mapping, Any, TypeVar, Optional, Iterable, Dict
 
+from cryptography import x509
+from cryptography.exceptions import UnsupportedAlgorithm
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives import serialization
@@ -86,153 +88,6 @@ def _parse_der_length(data: memoryview, idx: int) -> tuple[int, int]:
     length = int.from_bytes(data[idx : idx + num_bytes], "big")
     idx += num_bytes
     return length, idx
-
-
-def _extract_subject_public_key_from_spki(spki_der: bytes) -> bytes:
-    """Extract the BIT STRING payload from a SubjectPublicKeyInfo structure."""
-
-    view = memoryview(spki_der)
-    idx = 0
-    if not view:
-        raise ValueError("Empty SubjectPublicKeyInfo structure")
-    if view[idx] != 0x30:
-        raise ValueError("SubjectPublicKeyInfo must be a SEQUENCE")
-    idx += 1
-    seq_len, idx = _parse_der_length(view, idx)
-    end_of_spki = idx + seq_len
-    if end_of_spki > len(view):
-        raise ValueError("SubjectPublicKeyInfo length exceeds buffer size")
-
-    if idx >= end_of_spki or view[idx] != 0x30:
-        raise ValueError("AlgorithmIdentifier must be present in SubjectPublicKeyInfo")
-    idx += 1
-    algo_len, idx = _parse_der_length(view, idx)
-    idx += algo_len
-    if idx > end_of_spki:
-        raise ValueError("AlgorithmIdentifier overruns SubjectPublicKeyInfo")
-
-    if idx >= end_of_spki or view[idx] != 0x03:
-        raise ValueError("SubjectPublicKeyInfo must contain a BIT STRING public key")
-    idx += 1
-    bitstring_len, idx = _parse_der_length(view, idx)
-    if idx + bitstring_len > end_of_spki:
-        raise ValueError("SubjectPublicKey BIT STRING overruns SubjectPublicKeyInfo")
-    if bitstring_len == 0:
-        raise ValueError("SubjectPublicKey BIT STRING is empty")
-
-    unused_bits = view[idx]
-    idx += 1
-    payload = bytes(view[idx : idx + bitstring_len - 1])
-    if unused_bits != 0:
-        raise ValueError("Unsupported SubjectPublicKey BIT STRING padding")
-    return payload
-
-
-def _find_mldsa_der_candidate(
-    view: memoryview,
-    start: int,
-    end: int,
-    expected_length: int,
-    depth: int = 8,
-) -> Optional[bytes]:
-    """Recursively search DER structures for an OCTET STRING of the given length."""
-
-    if depth <= 0:
-        return None
-
-    idx = start
-    while idx < end:
-        if idx >= len(view):
-            return None
-        tag = view[idx]
-        idx += 1
-        try:
-            length, idx = _parse_der_length(view, idx)
-        except Exception:
-            return None
-
-        content_end = idx + length
-        if content_end > end:
-            return None
-
-        content_view = view[idx:content_end]
-        if len(content_view) == expected_length:
-            return bytes(content_view)
-
-        candidate: Optional[bytes] = None
-        if tag in (0x30, 0x31):  # SEQUENCE or SET
-            candidate = _find_mldsa_der_candidate(
-                view, idx, content_end, expected_length, depth - 1
-            )
-        elif tag == 0x04:  # OCTET STRING
-            candidate = _find_mldsa_der_candidate(
-                content_view, 0, len(content_view), expected_length, depth - 1
-            )
-        elif tag == 0x03 and length > 0:  # BIT STRING
-            if content_view[0] == 0x00:
-                candidate = _find_mldsa_der_candidate(
-                    content_view, 1, len(content_view), expected_length, depth - 1
-                )
-
-        if candidate is not None:
-            return candidate
-
-        idx = content_end
-
-    return None
-
-
-def _unwrap_mldsa_subject_public_key(
-    payload: bytes, parameter_set: Optional[str] = None
-) -> tuple[bytes, Optional[bytes]]:
-    """Return raw ML-DSA public key bytes, stripping DER wrappers when present."""
-
-    if not payload:
-        return payload, None
-
-    original = payload
-    view = memoryview(payload)
-
-    try:
-        if view[0] == 0x04:  # OCTET STRING
-            length, idx = _parse_der_length(view, 1)
-            end = idx + length
-            if end == len(view):
-                payload = bytes(view[idx:end])
-                return payload, original
-        elif view[0] == 0x30:  # SEQUENCE
-            idx = 1
-            seq_length, idx = _parse_der_length(view, idx)
-            seq_end = idx + seq_length
-            if seq_end == len(view):
-                while idx < seq_end:
-                    tag = view[idx]
-                    idx += 1
-                    element_length, idx = _parse_der_length(view, idx)
-                    element_end = idx + element_length
-                    if element_end > seq_end:
-                        break
-                    if tag == 0x04:  # OCTET STRING inside SEQUENCE
-                        candidate = bytes(view[idx:element_end])
-                        unwrapped, _ = _unwrap_mldsa_subject_public_key(
-                            candidate, parameter_set
-                        )
-                        return unwrapped, original
-                    idx = element_end
-    except Exception:
-        pass
-
-    expected_length: Optional[int] = None
-    if parameter_set:
-        parameter_details = _get_mldsa_parameter_details(parameter_set)
-        expected_length = parameter_details.get("public_key_length")
-
-    if expected_length and len(payload) != expected_length:
-        candidate = _find_mldsa_der_candidate(view, 0, len(view), expected_length)
-        if candidate is not None:
-            return candidate, original
-
-    return payload, None
 
 
 def _parse_der_integer(view: memoryview, idx: int) -> tuple[int, int]:
@@ -302,78 +157,6 @@ _SECP521R1_ORDER = int(
 )
 
 
-def _skip_der_value(view: memoryview, idx: int) -> int:
-    """Advance *idx* past a single DER element."""
-
-    if idx >= len(view):
-        raise ValueError("Truncated DER element")
-    idx += 1
-    length, idx = _parse_der_length(view, idx)
-    end = idx + length
-    if end > len(view):
-        raise ValueError("DER element overruns buffer")
-    return end
-
-
-def _decode_der_oid(view: memoryview, idx: int) -> tuple[str, int]:
-    """Decode an OBJECT IDENTIFIER at *idx* returning dotted string and new index."""
-
-    if idx >= len(view) or view[idx] != 0x06:
-        raise ValueError("Expected OBJECT IDENTIFIER")
-    idx += 1
-    length, idx = _parse_der_length(view, idx)
-    end = idx + length
-    if end > len(view) or length <= 0:
-        raise ValueError("Invalid OBJECT IDENTIFIER length")
-
-    body = view[idx:end]
-    idx = end
-
-    first = body[0]
-    oid_numbers = [str(first // 40), str(first % 40)]
-    value = 0
-    for byte in body[1:]:
-        value = (value << 7) | (byte & 0x7F)
-        if byte & 0x80:
-            continue
-        oid_numbers.append(str(value))
-        value = 0
-    if body[-1] & 0x80:
-        raise ValueError("Invalid OBJECT IDENTIFIER continuation byte")
-    if value:
-        oid_numbers.append(str(value))
-    return ".".join(oid_numbers), idx
-
-
-def _parse_spki_algorithm_info(spki_der: bytes) -> tuple[str, Optional[bytes]]:
-    """Return (OID, parameters) from a SubjectPublicKeyInfo structure."""
-
-    view = memoryview(spki_der)
-    idx = 0
-    if not view or view[idx] != 0x30:
-        raise ValueError("SubjectPublicKeyInfo must be a SEQUENCE")
-    idx += 1
-    total_len, idx = _parse_der_length(view, idx)
-    end = idx + total_len
-    if end > len(view):
-        raise ValueError("SubjectPublicKeyInfo length exceeds buffer size")
-
-    if idx >= end or view[idx] != 0x30:
-        raise ValueError("SubjectPublicKeyInfo missing AlgorithmIdentifier")
-    idx += 1
-    algo_len, idx = _parse_der_length(view, idx)
-    algo_end = idx + algo_len
-    if algo_end > end:
-        raise ValueError("AlgorithmIdentifier overruns SubjectPublicKeyInfo")
-
-    algorithm_oid, value_idx = _decode_der_oid(view, idx)
-    parameters: Optional[bytes] = None
-    if value_idx < algo_end:
-        parameters = bytes(view[value_idx:algo_end])
-
-    return algorithm_oid, parameters
-
-
 _ML_DSA_OID_TO_PARAMETER_SET: Dict[str, str] = {
     "2.16.840.1.101.3.4.3.17": "ML-DSA-44",
     "2.16.840.1.101.3.4.3.18": "ML-DSA-65",
@@ -386,13 +169,30 @@ _ALGORITHM_OID_NAMES: Dict[str, str] = {
 }
 
 
+_ML_DSA_PARAMETER_SET_TO_OID: Dict[str, str] = {
+    parameter_set: oid for oid, parameter_set in _ML_DSA_OID_TO_PARAMETER_SET.items()
+}
+
+
 # FIPS 204 (final) sizes.  The pre-standard CRYSTALS-Dilithium Round 3 signature
 # sizes were 2420/3293/4595; FIPS 204 widened the challenge seed for the two
 # higher parameter sets, which added 16 and 32 bytes respectively.
 _ML_DSA_PARAMETER_SET_DEFAULTS: Dict[str, Dict[str, Optional[int]]] = {
-    "ML-DSA-44": {"public_key_length": 1312, "signature_length": 2420},
-    "ML-DSA-65": {"public_key_length": 1952, "signature_length": 3309},
-    "ML-DSA-87": {"public_key_length": 2592, "signature_length": 4627},
+    "ML-DSA-44": {
+        "public_key_length": 1312,
+        "signature_length": 2420,
+        "claimed_nist_level": 2,
+    },
+    "ML-DSA-65": {
+        "public_key_length": 1952,
+        "signature_length": 3309,
+        "claimed_nist_level": 3,
+    },
+    "ML-DSA-87": {
+        "public_key_length": 2592,
+        "signature_length": 4627,
+        "claimed_nist_level": 5,
+    },
 }
 
 
@@ -523,209 +323,85 @@ def describe_mldsa_oid_name(oid: Optional[str]) -> Optional[str]:
     return None
 
 
+def _load_certificate(cert_der: bytes) -> x509.Certificate:
+    """Parse a DER certificate, raising ValueError on malformed input."""
+
+    try:
+        return x509.load_der_x509_certificate(bytes(cert_der))
+    except ValueError:
+        raise
+    except Exception as exc:  # pragma: no cover - defensive guard
+        raise ValueError(f"Unable to parse certificate: {exc}") from exc
+
+
 def extract_certificate_signature_info(cert_der: bytes) -> Dict[str, Any]:
     """Return signature metadata for a DER-encoded certificate."""
 
-    view = memoryview(cert_der)
-    idx = 0
-    if not view:
-        raise ValueError("Certificate buffer is empty")
-    if view[idx] != 0x30:
-        raise ValueError("Certificate must be a SEQUENCE")
-    idx += 1
-    cert_len, idx = _parse_der_length(view, idx)
-    cert_end = idx + cert_len
-    if cert_end > len(view):
-        raise ValueError("Certificate length exceeds buffer size")
-
-    if idx >= cert_end or view[idx] != 0x30:
-        raise ValueError("Certificate missing TBSCertificate")
-    tbs_start = idx
-    idx += 1
-    tbs_len, idx = _parse_der_length(view, idx)
-    tbs_end = idx + tbs_len
-    if tbs_end > cert_end:
-        raise ValueError("TBSCertificate overruns Certificate")
-    tbs_certificate = bytes(view[tbs_start:tbs_end])
-
-    idx = tbs_end
-    if idx >= cert_end or view[idx] != 0x30:
-        raise ValueError("Certificate missing signatureAlgorithm")
-    idx += 1
-    sigalg_len, idx = _parse_der_length(view, idx)
-    sigalg_end = idx + sigalg_len
-    if sigalg_end > cert_end:
-        raise ValueError("signatureAlgorithm overruns Certificate")
-
-    signature_algorithm_oid, _ = _decode_der_oid(view, idx)
-
-    idx = sigalg_end
-    if idx >= cert_end or view[idx] != 0x03:
-        raise ValueError("Certificate missing signatureValue")
-    idx += 1
-    sig_len, idx = _parse_der_length(view, idx)
-    sig_end = idx + sig_len
-    if sig_end > cert_end:
-        raise ValueError("signatureValue overruns Certificate")
-    if sig_len == 0:
-        raise ValueError("signatureValue is empty")
-
-    unused_bits = view[idx]
-    if unused_bits != 0:
-        raise ValueError("Unsupported signatureValue with unused bits")
-    signature = bytes(view[idx + 1 : sig_end])
-
+    certificate = _load_certificate(cert_der)
     return {
-        "tbs_certificate": tbs_certificate,
-        "signature": signature,
-        "signature_algorithm_oid": signature_algorithm_oid,
+        "tbs_certificate": certificate.tbs_certificate_bytes,
+        "signature": certificate.signature,
+        "signature_algorithm_oid": certificate.signature_algorithm_oid.dotted_string,
     }
 
 
-def _locate_subject_public_key_info_from_tbs(
-    view: memoryview,
-) -> tuple[bytes, str, Optional[bytes], bytes]:
-    """Locate SubjectPublicKeyInfo by walking the TBSCertificate structure."""
+def _subject_public_key_bytes(public_key: Any) -> Optional[bytes]:
+    """Return the SubjectPublicKey BIT STRING payload for a parsed public key."""
 
-    idx = 0
-    if not view or view[idx] != 0x30:
-        raise ValueError("Certificate must be a SEQUENCE")
-    idx += 1
-    cert_len, idx = _parse_der_length(view, idx)
-    cert_end = idx + cert_len
-    if cert_end > len(view):
-        raise ValueError("Certificate length exceeds buffer size")
-
-    if idx >= cert_end or view[idx] != 0x30:
-        raise ValueError("Certificate missing TBSCertificate")
-    idx += 1
-    tbs_len, idx = _parse_der_length(view, idx)
-    tbs_end = idx + tbs_len
-    if tbs_end > cert_end:
-        raise ValueError("TBSCertificate overruns Certificate")
-
-    if idx < tbs_end and view[idx] == 0xA0:
-        idx = _skip_der_value(view, idx)
-    idx = _skip_der_value(view, idx)  # serialNumber
-    idx = _skip_der_value(view, idx)  # signature
-    idx = _skip_der_value(view, idx)  # issuer
-    idx = _skip_der_value(view, idx)  # validity
-    idx = _skip_der_value(view, idx)  # subject
-
-    if idx >= tbs_end or view[idx] != 0x30:
-        raise ValueError("TBSCertificate missing subjectPublicKeyInfo")
-    spki_start = idx
-    idx += 1
-    spki_len, idx = _parse_der_length(view, idx)
-    spki_end = idx + spki_len
-    if spki_end > tbs_end:
-        raise ValueError("subjectPublicKeyInfo overruns TBSCertificate")
-
-    spki_der = bytes(view[spki_start:spki_end])
-    algorithm_oid, algorithm_params = _parse_spki_algorithm_info(spki_der)
-    subject_public_key = _extract_subject_public_key_from_spki(spki_der)
-    return spki_der, algorithm_oid, algorithm_params, subject_public_key
-
-
-def _scan_certificate_for_subject_public_key_info(
-    view: memoryview,
-) -> tuple[bytes, str, Optional[bytes], bytes]:
-    """Search a DER-encoded certificate for a SubjectPublicKeyInfo structure."""
-
-    length = len(view)
-    for offset in range(length):
-        if view[offset] != 0x30:
-            continue
-        try:
-            seq_len, content_idx = _parse_der_length(view, offset + 1)
-        except Exception:
-            continue
-        seq_end = content_idx + seq_len
-        if seq_end > length or seq_len <= 0:
-            continue
-
-        inner_idx = content_idx
-        if inner_idx >= seq_end or view[inner_idx] != 0x30:
-            continue
-        try:
-            algo_len, algo_idx = _parse_der_length(view, inner_idx + 1)
-        except Exception:
-            continue
-        algo_end = algo_idx + algo_len
-        if algo_end > seq_end or algo_len <= 0:
-            continue
-
-        try:
-            algorithm_oid, value_idx = _decode_der_oid(view, algo_idx)
-        except Exception:
-            continue
-
-        parameters: Optional[bytes] = None
-        if value_idx < algo_end:
-            parameters = bytes(view[value_idx:algo_end])
-
-        bitstring_idx = algo_end
-        if bitstring_idx >= seq_end or view[bitstring_idx] != 0x03:
-            continue
-        try:
-            bit_len, bit_content_idx = _parse_der_length(view, bitstring_idx + 1)
-        except Exception:
-            continue
-        bit_end = bit_content_idx + bit_len
-        if bit_end > seq_end or bit_len <= 0:
-            continue
-
-        unused_bits = view[bit_content_idx]
-        if unused_bits != 0:
-            continue
-        payload = bytes(view[bit_content_idx + 1 : bit_end])
-        if not payload:
-            continue
-
-        spki_der = bytes(view[offset:seq_end])
-        return spki_der, algorithm_oid, parameters, payload
-
-    raise ValueError("Unable to locate SubjectPublicKeyInfo in certificate")
-
-
-def _extract_subject_public_key_info(
-    cert_der: bytes,
-) -> tuple[bytes, str, Optional[bytes], bytes]:
-    """Return SubjectPublicKeyInfo components from *cert_der*."""
-
-    view = memoryview(cert_der)
+    if isinstance(public_key, MLDSA_PUBLIC_KEY_TYPES):
+        return public_key.public_bytes_raw()
+    if isinstance(public_key, ec.EllipticCurvePublicKey):
+        return public_key.public_bytes(
+            serialization.Encoding.X962,
+            serialization.PublicFormat.UncompressedPoint,
+        )
+    if isinstance(public_key, rsa.RSAPublicKey):
+        return public_key.public_bytes(
+            serialization.Encoding.DER, serialization.PublicFormat.PKCS1
+        )
     try:
-        return _locate_subject_public_key_info_from_tbs(view)
-    except Exception as primary_error:
-        try:
-            return _scan_certificate_for_subject_public_key_info(view)
-        except Exception:
-            raise primary_error
+        return public_key.public_bytes(
+            serialization.Encoding.Raw, serialization.PublicFormat.Raw
+        )
+    except Exception:
+        return None
 
 
 def extract_certificate_public_key_info(cert_der: bytes) -> Dict[str, Any]:
     """Extract public key metadata from an X.509 certificate."""
 
-    spki_der, algorithm_oid, algorithm_params, subject_public_key = (
-        _extract_subject_public_key_info(cert_der)
-    )
-    wrapped_subject_public_key: Optional[bytes] = None
+    certificate = _load_certificate(cert_der)
+    algorithm_oid = certificate.public_key_algorithm_oid.dotted_string
 
     info: Dict[str, Any] = {
         "algorithm_oid": algorithm_oid,
-        "algorithm_parameters": algorithm_params,
-        "subject_public_key_info": spki_der,
+        "algorithm_parameters": None,
     }
+
+    try:
+        public_key = certificate.public_key()
+    except (UnsupportedAlgorithm, ValueError):
+        # A key algorithm cryptography cannot parse: report what the
+        # certificate declares and leave the key material out rather than
+        # guessing at it.
+        public_key = None
+
+    if public_key is not None:
+        info["subject_public_key_info"] = public_key.public_bytes(
+            serialization.Encoding.DER,
+            serialization.PublicFormat.SubjectPublicKeyInfo,
+        )
+        subject_public_key = _subject_public_key_bytes(public_key)
+        if subject_public_key is not None:
+            info["subject_public_key"] = subject_public_key
 
     parameter_set = _ML_DSA_OID_TO_PARAMETER_SET.get(algorithm_oid)
     if parameter_set is not None:
-        subject_public_key, wrapped_subject_public_key = _unwrap_mldsa_subject_public_key(
-            subject_public_key, parameter_set
-        )
         info["ml_dsa_parameter_set"] = parameter_set
         parameter_details = _get_mldsa_parameter_details(parameter_set)
         if parameter_details:
             info["ml_dsa_parameter_details"] = parameter_details
+
     algorithm_name = _ALGORITHM_OID_NAMES.get(algorithm_oid)
     if algorithm_name is not None:
         info["algorithm_name"] = algorithm_name
@@ -733,54 +409,56 @@ def extract_certificate_public_key_info(cert_der: bytes) -> Dict[str, Any]:
     if display_name is not None:
         info["algorithm_display_name"] = display_name
 
-    info["subject_public_key"] = subject_public_key
-    if wrapped_subject_public_key is not None:
-        info["wrapped_subject_public_key"] = wrapped_subject_public_key
-
     return info
 
 
 def _coerce_mldsa_public_key_bytes(value: Any, parameter_set: Optional[str] = None) -> bytes:
-    """Convert assorted public key representations into raw ML-DSA bytes."""
+    """Convert assorted public key representations into raw ML-DSA bytes.
+
+    Accepts raw key bytes, a SubjectPublicKeyInfo structure (DER or PEM) and
+    ``cryptography`` public key objects.
+    """
+
+    if isinstance(value, ByteBuffer):
+        value = value.getvalue()
 
     if isinstance(value, (bytes, bytearray, memoryview)):
         data = bytes(value)
-        if data.startswith(b"\x30"):
+        if data.startswith(b"\x30") or data.startswith(b"-----BEGIN"):
             try:
-                data = _extract_subject_public_key_from_spki(data)
+                loaded = (
+                    serialization.load_pem_public_key(data)
+                    if data.startswith(b"-----BEGIN")
+                    else serialization.load_der_public_key(data)
+                )
             except Exception:
-                pass
-        normalized, _ = _unwrap_mldsa_subject_public_key(data, parameter_set)
-        return normalized
+                return data
+            return _coerce_mldsa_public_key_bytes(loaded, parameter_set)
+        return data
 
-    if isinstance(value, ByteBuffer):
-        data = value.getvalue()
-        normalized, _ = _unwrap_mldsa_subject_public_key(data, parameter_set)
-        return normalized
+    if isinstance(value, MLDSA_PUBLIC_KEY_TYPES):
+        return value.public_bytes_raw()
+
+    public_bytes_raw = getattr(value, "public_bytes_raw", None)
+    if callable(public_bytes_raw):
+        try:
+            return bytes(public_bytes_raw())
+        except Exception:
+            pass
 
     public_bytes = getattr(value, "public_bytes", None)
-    if callable(public_bytes):  # pragma: no branch - exercised in tests
-        attempts: Iterable[tuple[serialization.Encoding, serialization.PublicFormat]] = (
-            (serialization.Encoding.Raw, serialization.PublicFormat.Raw),
-            (serialization.Encoding.DER, serialization.PublicFormat.SubjectPublicKeyInfo),
-            (serialization.Encoding.PEM, serialization.PublicFormat.SubjectPublicKeyInfo),
-        )
-        for encoding, fmt in attempts:
-            try:
-                data = public_bytes(encoding, fmt)
-            except Exception:
-                continue
-            if not data:
-                continue
-            if fmt is serialization.PublicFormat.SubjectPublicKeyInfo:
-                try:
-                    data = _extract_subject_public_key_from_spki(data)
-                except Exception:
-                    continue
-            normalized, _ = _unwrap_mldsa_subject_public_key(bytes(data), parameter_set)
-            return normalized
+    if callable(public_bytes):
+        try:
+            return bytes(
+                public_bytes(
+                    serialization.Encoding.Raw, serialization.PublicFormat.Raw
+                )
+            )
+        except Exception:
+            pass
 
     raise TypeError("Unable to coerce ML-DSA public key into raw bytes")
+
 
 class CoseKey(dict):
     """A COSE formatted public key.
