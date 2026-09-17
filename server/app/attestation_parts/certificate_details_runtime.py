@@ -5,6 +5,12 @@ import binascii
 from collections.abc import Mapping
 from typing import Any
 
+from fido2.utils import ByteBuffer, websafe_decode
+from fido2.webauthn import RegistrationResponse
+
+from .certificate_serialize_runtime import serialize_attestation_certificate
+from .encoding_leaf import encode_base64url
+
 
 def _coerce_attestation_certificate_bytes(value: Any) -> bytes | None:
     """Return raw certificate bytes for attestation payload *value*."""
