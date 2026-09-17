@@ -19,7 +19,6 @@ def metadata_local_env(monkeypatch, tmp_path, metadata_runtime_state):
     monkeypatch.setattr(session_store, "gcs_enabled", lambda: False, raising=False)
     monkeypatch.setattr(session_store, "_using_gcs", lambda: False, raising=False)
 
-    monkeypatch.setattr(metadata, "_session_metadata_last_cleanup", 0.0, raising=False)
 
     return metadata, session_store, config.app
 

@@ -156,7 +156,7 @@ def test_concurrent_cold_loads_parse_base_metadata_once(metadata_module, monkeyp
     assert len(calls) == 1
 
 
-def test_concurrent_cleanup_checks_run_cleanup_once(metadata_module, monkeypatch):
+def test_concurrent_cleanup_checks_run_cleanup_once(metadata_module, monkeypatch, metadata_runtime_state):
     calls = []
 
     def _slow_list_sessions():
@@ -164,7 +164,7 @@ def test_concurrent_cleanup_checks_run_cleanup_once(metadata_module, monkeypatch
         time.sleep(0.05)
         return []
 
-    monkeypatch.setattr(metadata_module, "_session_metadata_last_cleanup", 0.0, raising=False)
+    monkeypatch.setattr(metadata_runtime_state, "_session_metadata_last_cleanup", 0.0)
     monkeypatch.setattr(
         metadata_module.session_metadata_store, "list_sessions", _slow_list_sessions
     )
