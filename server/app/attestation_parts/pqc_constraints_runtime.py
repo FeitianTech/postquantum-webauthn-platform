@@ -5,6 +5,15 @@ from collections.abc import Sequence
 from datetime import datetime
 from typing import Any
 
+from cryptography import x509
+
+from fido2.attestation import InvalidSignature
+from fido2.attestation.base import _verify_mldsa_certificate_signature
+
+from ..pqc import PQC_ALGORITHM_ID_TO_NAME, is_pqc_algorithm
+from .trust_ca_runtime import _is_trusted_ca_certificate
+from .trust_runtime import _certificate_datetime, _describe_certificate_subject
+
 
 def _normalise_pqc_algorithm_identifier(value: Any) -> int | None:
     """Return the COSE identifier for a PQC algorithm when discernible."""
