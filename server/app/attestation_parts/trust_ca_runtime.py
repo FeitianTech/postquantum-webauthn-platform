@@ -2,6 +2,10 @@ from __future__ import annotations
 
 import hashlib
 
+from cryptography import x509
+
+from ..config import app
+
 
 def _trusted_ca_subjects() -> set[str] | None:
     subjects = app.config.get("TRUSTED_ATTESTATION_CA_SUBJECTS")
