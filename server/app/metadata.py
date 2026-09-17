@@ -46,6 +46,15 @@ from .mds_snapshot import (
     build_explorer_snapshot,
     normalise_aaguid_key,
 )
+from .metadata_parts import (
+    base_snapshot_runtime,
+    cache_runtime,
+    entry_payload_runtime,
+    env_runtime,
+    session_cleanup_runtime,
+    session_identity_runtime,
+    session_items_runtime,
+)
 from .metadata_parts import base_snapshot_runtime as _base_snapshot_runtime
 from .metadata_parts import cache_runtime as _cache_runtime
 from .metadata_parts import effective_snapshot_runtime as _effective_snapshot_runtime
@@ -218,5 +227,3 @@ _install_runtime_bindings(
         ),
     }
 )
-
-_SESSION_METADATA_CLEANUP_INTERVAL = _resolve_cleanup_interval()
