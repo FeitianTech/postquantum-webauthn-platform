@@ -15,11 +15,7 @@ from flask import g
 def metadata_module(monkeypatch, metadata_runtime_state):
     module = pytest.importorskip("server.app.metadata")
 
-    monkeypatch.setattr(module, "_base_metadata_cache", None, raising=False)
-    monkeypatch.setattr(module, "_base_metadata_mtime", None, raising=False)
-    monkeypatch.setattr(module, "_base_metadata_source", None, raising=False)
-    monkeypatch.setattr(module, "_base_metadata_trust_verified", True, raising=False)
-    monkeypatch.setattr(module, "_base_metadata_entry_ids", set(), raising=False)
+    monkeypatch.setattr(metadata_runtime_state, "_base_metadata_trust_verified", True)
     monkeypatch.setattr(module, "_session_metadata_entry_ids", set(), raising=False)
 
     return module
@@ -54,14 +50,14 @@ def test_unknown_entry_is_never_reported_as_trusted(metadata_module):
     assert metadata_module.metadata_entry_trust_anchor_status(entry) is None
 
 
-def test_base_entry_reports_base_trust(metadata_module):
+def test_base_entry_reports_base_trust(metadata_module, metadata_runtime_state):
     entry = _entry(metadata_module, "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
-    metadata_module._base_metadata_entry_ids = {id(entry)}
+    metadata_runtime_state._base_metadata_entry_ids = {id(entry)}
 
     assert metadata_module.metadata_entry_trust_anchor_status(entry) is True
 
 
-def test_session_entries_stay_untrusted_while_other_sessions_run(metadata_module, monkeypatch):
+def test_session_entries_stay_untrusted_while_other_sessions_run(metadata_module, monkeypatch, metadata_runtime_state):
     base_entry = _entry(metadata_module, "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")
     custom_entry = _entry(metadata_module, "cccccccc-cccc-cccc-cccc-cccccccccccc")
     base_metadata = metadata_module.MetadataBlobPayload(
@@ -70,7 +66,7 @@ def test_session_entries_stay_untrusted_while_other_sessions_run(metadata_module
         next_update=None,
         entries=(base_entry,),
     )
-    metadata_module._base_metadata_entry_ids = {id(base_entry)}
+    metadata_runtime_state._base_metadata_entry_ids = {id(base_entry)}
 
     monkeypatch.setattr(
         metadata_module, "_load_base_metadata", lambda: (base_metadata, 1.0), raising=False

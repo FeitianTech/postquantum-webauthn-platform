@@ -15,6 +15,7 @@ from ..config import (
     app,
 )
 from ..mds_snapshot import build_bootstrap_snapshot, build_explorer_snapshot
+from . import runtime_state as _state
 
 
 def load_cached_metadata_snapshot() -> bool:
@@ -25,46 +26,43 @@ def load_cached_metadata_snapshot() -> bool:
 
 
 def _load_base_metadata() -> tuple[MetadataBlobPayload | None, float | None]:
-    global _base_metadata_cache, _base_metadata_mtime, _base_metadata_source
-    global _base_metadata_trust_verified, _base_metadata_entry_ids
-
     try:
         verified_mtime = os.path.getmtime(MDS_METADATA_VERIFIED_PATH)
     except OSError:
         verified_mtime = None
 
     if (
-        _base_metadata_cache is not None
-        and _base_metadata_source == "verified"
-        and _base_metadata_mtime == verified_mtime
+        _state._base_metadata_cache is not None
+        and _state._base_metadata_source == "verified"
+        and _state._base_metadata_mtime == verified_mtime
     ):
-        return _base_metadata_cache, verified_mtime
+        return _state._base_metadata_cache, verified_mtime
 
     # Concurrent requests on a cold instance wait for a single parse of the
     # multi-megabyte snapshot instead of each loading their own copy.
-    with _base_metadata_lock:
+    with _state._base_metadata_lock:
         if (
-            _base_metadata_cache is not None
-            and _base_metadata_source == "verified"
-            and _base_metadata_mtime == verified_mtime
+            _state._base_metadata_cache is not None
+            and _state._base_metadata_source == "verified"
+            and _state._base_metadata_mtime == verified_mtime
         ):
-            return _base_metadata_cache, verified_mtime
+            return _state._base_metadata_cache, verified_mtime
 
         metadata, fallback_mtime = _load_verified_metadata_fallback()
 
         # Entry ids are published before the trust flag so a concurrent reader
         # can only ever observe "not yet trusted", never a stale trusted state.
         if metadata is not None:
-            _base_metadata_entry_ids = {id(entry) for entry in metadata.entries}
-            _base_metadata_trust_verified = True
-            _base_metadata_source = "verified"
+            _state._base_metadata_entry_ids = {id(entry) for entry in metadata.entries}
+            _state._base_metadata_trust_verified = True
+            _state._base_metadata_source = "verified"
         else:
-            _base_metadata_trust_verified = None
-            _base_metadata_entry_ids = set()
-            _base_metadata_source = None
+            _state._base_metadata_trust_verified = None
+            _state._base_metadata_entry_ids = set()
+            _state._base_metadata_source = None
 
-        _base_metadata_cache = metadata
-        _base_metadata_mtime = fallback_mtime
+        _state._base_metadata_cache = metadata
+        _state._base_metadata_mtime = fallback_mtime
         return metadata, fallback_mtime
 
 
