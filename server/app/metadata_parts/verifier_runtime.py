@@ -13,6 +13,8 @@ from fido2.mds3 import (
     MetadataBlobPayloadEntry,
 )
 
+from . import runtime_state as _state
+
 if TYPE_CHECKING:  # annotation-only, so no runtime import edge is needed
     from .session_items_runtime import SessionMetadataItem
 
@@ -97,8 +99,6 @@ def metadata_entry_trust_anchor_status(entry: Any) -> bool | None:
 def get_mds_verifier() -> MdsAttestationVerifier | None:
     """Return an MDS attestation verifier using session metadata when available."""
 
-    global _base_verifier_cache, _base_verifier_mtime
-
     base_metadata, base_mtime = _load_base_metadata()
     session_items = list_session_metadata_items()
 
@@ -115,28 +115,28 @@ def get_mds_verifier() -> MdsAttestationVerifier | None:
 
     if not session_items:
         if base_metadata is None:
-            _base_verifier_cache = None
-            _base_verifier_mtime = base_mtime
+            _state._base_verifier_cache = None
+            _state._base_verifier_mtime = base_mtime
             return None
 
         if (
-            _base_verifier_cache is not None
-            and _base_verifier_mtime is not None
-            and _base_verifier_mtime == base_mtime
+            _state._base_verifier_cache is not None
+            and _state._base_verifier_mtime is not None
+            and _state._base_verifier_mtime == base_mtime
         ):
-            return _base_verifier_cache
+            return _state._base_verifier_cache
 
-        with _base_verifier_lock:
+        with _state._base_verifier_lock:
             if (
-                _base_verifier_cache is not None
-                and _base_verifier_mtime is not None
-                and _base_verifier_mtime == base_mtime
+                _state._base_verifier_cache is not None
+                and _state._base_verifier_mtime is not None
+                and _state._base_verifier_mtime == base_mtime
             ):
-                return _base_verifier_cache
+                return _state._base_verifier_cache
 
             verifier = MdsAttestationVerifier(base_metadata)
-            _base_verifier_cache = verifier
-            _base_verifier_mtime = base_mtime
+            _state._base_verifier_cache = verifier
+            _state._base_verifier_mtime = base_mtime
             return verifier
 
     if base_metadata is None and not session_items:

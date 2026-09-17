@@ -51,6 +51,7 @@ from .metadata_parts import cache_runtime as _cache_runtime
 from .metadata_parts import effective_snapshot_runtime as _effective_snapshot_runtime
 from .metadata_parts import entry_payload_runtime as _entry_payload_runtime
 from .metadata_parts import env_runtime as _env_runtime
+from .metadata_parts import runtime_state as _state
 from .metadata_parts import session_cleanup_runtime as _session_cleanup_runtime
 from .metadata_parts import session_identity_runtime as _session_identity_runtime
 from .metadata_parts import session_items_runtime as _session_items_runtime
@@ -84,8 +85,6 @@ __all__ = ["MetadataDownloadError", "download_metadata_blob", "get_mds_verifier"
 _base_metadata_cache: MetadataBlobPayload | None = None
 _base_metadata_mtime: float | None = None
 _base_metadata_source: str | None = None
-_base_verifier_cache: MdsAttestationVerifier | None = None
-_base_verifier_mtime: float | None = None
 _base_metadata_trust_verified: bool | None = None
 _base_metadata_entry_ids: set[int] = set()
 _base_explorer_snapshot_cache: dict[str, Any] | None = None
@@ -98,7 +97,6 @@ _session_metadata_entry_ids: set[int] = set()
 _base_metadata_lock = threading.RLock()
 _base_explorer_snapshot_lock = threading.RLock()
 _base_full_snapshot_lock = threading.RLock()
-_base_verifier_lock = threading.RLock()
 
 _session_metadata_last_cleanup: float = 0.0
 _session_cleanup_worker: threading.Thread | None = None

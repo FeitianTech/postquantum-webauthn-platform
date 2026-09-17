@@ -59,8 +59,6 @@ def packaged_metadata_env(monkeypatch, tmp_path, metadata_runtime_state):
     monkeypatch.setattr(metadata_module, "_base_metadata_cache", None, raising=False)
     monkeypatch.setattr(metadata_module, "_base_metadata_mtime", None, raising=False)
     monkeypatch.setattr(metadata_module, "_base_metadata_source", None, raising=False)
-    monkeypatch.setattr(metadata_module, "_base_verifier_cache", None, raising=False)
-    monkeypatch.setattr(metadata_module, "_base_verifier_mtime", None, raising=False)
     monkeypatch.setattr(metadata_module, "_base_metadata_trust_verified", None, raising=False)
     monkeypatch.setattr(metadata_module, "_base_metadata_entry_ids", set(), raising=False)
     monkeypatch.setattr(metadata_module, "_base_explorer_snapshot_cache", None, raising=False)
