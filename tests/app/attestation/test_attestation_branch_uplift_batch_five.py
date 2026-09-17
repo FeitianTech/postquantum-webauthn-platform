@@ -187,7 +187,7 @@ def test_perform_attestation_checks_challenge_coercion_and_uv_requirement_paths(
     assert result["authenticator_data"]["user_verification_required"] is True
 
 
-def test_perform_attestation_checks_classical_lookup_and_aaguid_parse_failure_paths(monkeypatch):
+def test_perform_attestation_checks_classical_lookup_and_aaguid_parse_failure_paths(monkeypatch, classical_runtime):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     class _SparsePublicKey(dict):
@@ -233,7 +233,7 @@ def test_perform_attestation_checks_classical_lookup_and_aaguid_parse_failure_pa
     )
     monkeypatch.setattr(attestation_module, "get_mds_verifier", lambda: object(), raising=False)
     monkeypatch.setattr(
-        attestation_module,
+        classical_runtime,
         "_evaluate_classical_attestation_root",
         lambda *_args, **_kwargs: {
             "root_valid": None,
@@ -243,7 +243,6 @@ def test_perform_attestation_checks_classical_lookup_and_aaguid_parse_failure_pa
             "errors": [],
             "warnings": [],
         },
-        raising=False,
     )
     monkeypatch.setattr(attestation_module.CoseKey, "parse", lambda _value: object(), raising=False)
     monkeypatch.setattr(
