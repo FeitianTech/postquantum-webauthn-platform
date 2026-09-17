@@ -122,19 +122,11 @@ def test_fallback_certificate_serialization_and_unknown_public_key_info_helpers(
             "subject_public_key_info": b"\x30\x03\x01\x02\x03",
             "wrapped_subject_public_key": b"\x04\x04ABCD",
             "algorithm_parameters": b"\x05\x00",
-        },
-        raising=False,
-    )
-    monkeypatch.setattr(
-        attestation_module,
-        "_load_oqs_signature_details",
-        lambda _mechanism: {
-            "claimed-nist-level": 3,
-            "length-signature": 3293,
-            "length-public-key": 1952,
-            "description": "ML-DSA mechanism",
-            "sig-name": "ML-DSA-65",
-            "sig-family": "post-quantum",
+            "ml_dsa_parameter_details": {
+                "public_key_length": 1952,
+                "signature_length": 3309,
+                "claimed_nist_level": 3,
+            },
         },
         raising=False,
     )
@@ -160,32 +152,8 @@ def test_fallback_certificate_serialization_and_unknown_public_key_info_helpers(
     assert "Fingerprints" in fallback["summary"]
 
 
-def test_oqs_details_loader_and_public_key_serialization_paths(monkeypatch):
+def test_public_key_serialization_paths(monkeypatch):
     attestation_module = pytest.importorskip("server.app.attestation")
-
-    class _FakeSignature:
-        def __init__(self, _mechanism):
-            self.details = {"claimed-nist-level": 5}
-
-        def __enter__(self):
-            return self
-
-        def __exit__(self, exc_type, exc, tb):
-            return False
-
-    fake_oqs = SimpleNamespace(Signature=_FakeSignature)
-    monkeypatch.setitem(sys.modules, "oqs", fake_oqs)
-    details = attestation_module._load_oqs_signature_details("ML-DSA-87")
-    assert details["mechanism"] == "ML-DSA-87"
-    assert details["claimed-nist-level"] == 5
-
-    class _BrokenSignatureModule:
-        class Signature:
-            def __init__(self, _mechanism):
-                raise RuntimeError("cannot init")
-
-    monkeypatch.setitem(sys.modules, "oqs", _BrokenSignatureModule)
-    assert attestation_module._load_oqs_signature_details("ML-DSA-65") is None
 
     ec_info = attestation_module._serialize_public_key_info(ec.generate_private_key(ec.SECP256R1()).public_key())
     rsa_info = attestation_module._serialize_public_key_info(rsa.generate_private_key(public_exponent=65537, key_size=2048).public_key())
