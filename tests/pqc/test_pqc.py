@@ -2,44 +2,8 @@
 
 from __future__ import annotations
 
-import importlib
-import sys
-import types
-from unittest.mock import MagicMock
 
 import pytest
-
-
-def _setup_oqs_mock(enabled_mechanisms=None):
-    """Create a mock oqs module for testing."""
-    if enabled_mechanisms is None:
-        enabled_mechanisms = ["ML-DSA-44", "ML-DSA-65", "ML-DSA-87"]
-    
-    oqs_mock = types.ModuleType("oqs")
-    oqs_mock.get_enabled_sig_mechanisms = lambda: enabled_mechanisms
-    
-    # Add a Signature class for older compatibility
-    signature_class = type("Signature", (), {"algorithms": enabled_mechanisms})
-    oqs_mock.Signature = signature_class
-    
-    sys.modules["oqs"] = oqs_mock
-    return oqs_mock
-
-
-def _remove_oqs_mock():
-    """Remove the oqs mock from sys.modules."""
-    if "oqs" in sys.modules:
-        del sys.modules["oqs"]
-
-
-@pytest.fixture(autouse=True)
-def _reload_pqc():
-    """Reload pqc module after each test to get fresh state."""
-    yield
-    _remove_oqs_mock()
-    # Force reload if module was already imported
-    if "server.app.pqc" in sys.modules:
-        importlib.reload(sys.modules["server.app.pqc"])
 
 
 def test_pqc_algorithm_id_to_name_mapping():
@@ -124,68 +88,65 @@ def test_describe_algorithm_for_unknown():
     assert pqc.describe_algorithm(123) == "COSE alg 123"
 
 
-def test_detect_available_pqc_algorithms_all_available(monkeypatch):
-    """Test detection when all PQC algorithms are available."""
-    _setup_oqs_mock(["ML-DSA-44", "ML-DSA-65", "ML-DSA-87", "Other-Algo"])
-    
+def test_detect_available_pqc_algorithms_all_available():
+    """cryptography ships all three ML-DSA parameter sets, so all are offered."""
     from server.app import pqc
-    
+
     available, error = pqc.detect_available_pqc_algorithms()
-    
+
     assert available == {-48, -49, -50}
     assert error is None
 
 
 def test_detect_available_pqc_algorithms_partial_available(monkeypatch):
-    """Test detection when only some PQC algorithms are available."""
-    _setup_oqs_mock(["ML-DSA-44", "ML-DSA-65"])
-    
+    """A build missing a parameter set offers the rest and names the gap."""
     from server.app import pqc
-    
+
+    monkeypatch.setattr(
+        pqc, "_load_enabled_mechanisms", lambda: {"ML-DSA-44", "ML-DSA-65"}
+    )
     available, error = pqc.detect_available_pqc_algorithms()
-    
+
     assert available == {-48, -49}
     assert error is not None
     assert "ML-DSA-87" in error
 
 
 def test_detect_available_pqc_algorithms_none_available(monkeypatch):
-    """Test detection when no PQC algorithms are available."""
-    _setup_oqs_mock([])
-    
+    """With no ML-DSA support at all, every parameter set is reported missing."""
     from server.app import pqc
-    
+
+    monkeypatch.setattr(pqc, "_load_enabled_mechanisms", lambda: set())
     available, error = pqc.detect_available_pqc_algorithms()
-    
+
     assert available == set()
     assert error is not None
-    assert "ML-DSA-44" in error
-    assert "ML-DSA-65" in error
-    assert "ML-DSA-87" in error
+    for mechanism in ("ML-DSA-44", "ML-DSA-65", "ML-DSA-87"):
+        assert mechanism in error
 
 
-def test_detect_available_pqc_algorithms_import_error():
-    """Test detection when oqs is not available."""
-    _remove_oqs_mock()
-    
+def test_detect_available_pqc_algorithms_import_error(monkeypatch):
+    """A cryptography build without the mldsa module degrades with guidance."""
     from server.app import pqc
-    
+
+    def _raise():
+        raise ImportError("no mldsa module")
+
+    monkeypatch.setattr(pqc, "_load_enabled_mechanisms", _raise)
     available, error = pqc.detect_available_pqc_algorithms()
-    
+
     assert available == set()
     assert error is not None
-    assert "oqs" in error.lower()
-    assert "liboqs" in error.lower()
+    assert "cryptography" in error.lower()
+    # The old message named a package that does not exist.
+    assert "oqs" not in error.lower()
 
 
-def test_load_enabled_mechanisms_with_get_enabled_sig_mechanisms():
-    """Test loading mechanisms using the modern API."""
-    _setup_oqs_mock(["ML-DSA-44", "ML-DSA-65"])
-    
+def test_load_enabled_mechanisms_reports_cryptography_support():
+    """The probe reads real cryptography key classes, not a stubbed module."""
     from server.app import pqc
-    
-    mechanisms = list(pqc._load_enabled_mechanisms())
-    assert mechanisms == ["ML-DSA-44", "ML-DSA-65"]
+
+    assert pqc._load_enabled_mechanisms() == {"ML-DSA-44", "ML-DSA-65", "ML-DSA-87"}
 
 
 def test_log_algorithm_selection_with_none(monkeypatch):
