@@ -102,9 +102,7 @@ __all__ = [
 AAGUID_EXTENSION_OID = runtime_state.AAGUID_EXTENSION_OID
 EXTENSION_DISPLAY_METADATA = runtime_state.EXTENSION_DISPLAY_METADATA
 
-_PQC_ALGORITHM_NAME_TO_ID = {
-    name.lower(): alg_id for alg_id, name in PQC_ALGORITHM_ID_TO_NAME.items()
-}
+_PQC_ALGORITHM_NAME_TO_ID = pqc_constraints_runtime._PQC_ALGORITHM_NAME_TO_ID
 _HASH_NORMALISE_PATTERN = certificate_signature_leaf._HASH_NORMALISE_PATTERN
 
 _RUNTIME_REBOUND_CACHE: dict[Callable[..., Any], Callable[..., Any]] = {}

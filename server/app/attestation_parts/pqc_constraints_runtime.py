@@ -14,6 +14,10 @@ from ..pqc import PQC_ALGORITHM_ID_TO_NAME, is_pqc_algorithm
 from .trust_ca_runtime import _is_trusted_ca_certificate
 from .trust_runtime import _certificate_datetime, _describe_certificate_subject
 
+_PQC_ALGORITHM_NAME_TO_ID = {
+    name.lower(): alg_id for alg_id, name in PQC_ALGORITHM_ID_TO_NAME.items()
+}
+
 
 def _normalise_pqc_algorithm_identifier(value: Any) -> int | None:
     """Return the COSE identifier for a PQC algorithm when discernible."""
