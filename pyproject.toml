@@ -34,9 +34,6 @@ cryptography = ">=49"      # native ML-DSA-44/65/87 sign/verify and ML-DSA x509
 pyscard = {version = "^1.9 || ^2", optional = true}
 
 cbor2 = "^5.6.4"           # CBOR parsing
-pycose = "^1.0.0"          # COSE key handling
-pyjwt = "^2.9.0"           # JWT validation (for MDS)
-requests = "^2.32.3"       # Fetching metadata/trust anchors
 
 [tool.poetry.extras]
 pcsc = ["pyscard"]
