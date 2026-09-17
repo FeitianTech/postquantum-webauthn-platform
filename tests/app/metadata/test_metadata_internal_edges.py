@@ -14,8 +14,6 @@ def metadata_module(monkeypatch, metadata_runtime_state):
     monkeypatch.setattr(module, "_base_explorer_snapshot_mtime", None, raising=False)
     monkeypatch.setattr(module, "_base_full_snapshot_cache", None, raising=False)
     monkeypatch.setattr(module, "_base_full_snapshot_mtime", None, raising=False)
-    monkeypatch.setattr(module, "_base_metadata_cache", None, raising=False)
-    monkeypatch.setattr(module, "_base_metadata_mtime", None, raising=False)
 
     return module
 
@@ -268,7 +266,7 @@ def test_load_packaged_explorer_summary_and_get_mds_verifier_cache_paths(metadat
     assert created == [fake_metadata]
 
 
-def test_metadata_entry_trust_anchor_status_uses_session_and_base_entry_sets(metadata_module):
+def test_metadata_entry_trust_anchor_status_uses_session_and_base_entry_sets(metadata_module, metadata_runtime_state):
     entry = metadata_module.MetadataBlobPayloadEntry.from_dict(
         {
             "statusReports": [],
@@ -290,11 +288,11 @@ def test_metadata_entry_trust_anchor_status_uses_session_and_base_entry_sets(met
     )
 
     metadata_module._session_metadata_entry_ids = {id(entry)}
-    metadata_module._base_metadata_entry_ids = set()
-    metadata_module._base_metadata_trust_verified = True
+    metadata_runtime_state._base_metadata_entry_ids = set()
+    metadata_runtime_state._base_metadata_trust_verified = True
     assert metadata_module.metadata_entry_trust_anchor_status(entry) is False
 
     metadata_module._session_metadata_entry_ids = set()
-    metadata_module._base_metadata_entry_ids = {id(entry)}
-    metadata_module._base_metadata_trust_verified = True
+    metadata_runtime_state._base_metadata_entry_ids = {id(entry)}
+    metadata_runtime_state._base_metadata_trust_verified = True
     assert metadata_module.metadata_entry_trust_anchor_status(entry) is True

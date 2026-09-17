@@ -90,8 +90,8 @@ def metadata_entry_trust_anchor_status(entry: Any) -> bool | None:
         return False
     if entry_id in _session_metadata_entry_ids:
         return False
-    if entry_id in _base_metadata_entry_ids:
-        return _base_metadata_trust_verified
+    if entry_id in _state._base_metadata_entry_ids:
+        return _state._base_metadata_trust_verified
 
     return None
 

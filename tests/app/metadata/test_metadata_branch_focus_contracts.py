@@ -13,11 +13,6 @@ from flask import ctx, g, session
 def metadata_module(monkeypatch, metadata_runtime_state):
     module = pytest.importorskip("server.app.metadata")
 
-    monkeypatch.setattr(module, "_base_metadata_cache", None, raising=False)
-    monkeypatch.setattr(module, "_base_metadata_mtime", None, raising=False)
-    monkeypatch.setattr(module, "_base_metadata_source", None, raising=False)
-    monkeypatch.setattr(module, "_base_metadata_trust_verified", None, raising=False)
-    monkeypatch.setattr(module, "_base_metadata_entry_ids", set(), raising=False)
     monkeypatch.setattr(module, "_base_explorer_snapshot_cache", None, raising=False)
     monkeypatch.setattr(module, "_base_explorer_snapshot_mtime", None, raising=False)
     monkeypatch.setattr(module, "_base_full_snapshot_cache", None, raising=False)
@@ -464,7 +459,7 @@ def test_save_list_delete_serialize_and_datetime_edge_paths(metadata_module, mon
     assert metadata_module.format_last_modified_header("Thu, 01 Jan 1970 00:00:00 GMT") == "2026-01-01T00:00:00+00:00"
 
 
-def test_cache_and_bootstrap_fallback_helpers(metadata_module, monkeypatch, tmp_path):
+def test_cache_and_bootstrap_fallback_helpers(metadata_module, monkeypatch, tmp_path, metadata_runtime_state):
     cache_path = tmp_path / "cache" / "metadata-cache.json"
     monkeypatch.setattr(metadata_module, "MDS_METADATA_CACHE_PATH", str(cache_path), raising=False)
 
@@ -537,8 +532,8 @@ def test_cache_and_bootstrap_fallback_helpers(metadata_module, monkeypatch, tmp_
     monkeypatch.setattr(metadata_module, "_load_verified_metadata_fallback", lambda: (None, None), raising=False)
     metadata_value, marker = metadata_module._load_base_metadata()
     assert metadata_value is None and marker is None
-    assert metadata_module._base_metadata_source is None
-    assert metadata_module._base_metadata_trust_verified is None
+    assert metadata_runtime_state._base_metadata_source is None
+    assert metadata_runtime_state._base_metadata_trust_verified is None
 
     verified_path = tmp_path / "verified.json"
     monkeypatch.setattr(metadata_module, "MDS_METADATA_VERIFIED_PATH", str(verified_path), raising=False)
@@ -732,8 +727,8 @@ def test_lookup_compose_resolve_trust_and_verifier_edge_paths(
 
     entry = metadata_module.MetadataBlobPayloadEntry.from_dict(_minimal_entry_payload())
     metadata_module._session_metadata_entry_ids = set()
-    metadata_module._base_metadata_entry_ids = set()
-    metadata_module._base_metadata_trust_verified = False
+    metadata_runtime_state._base_metadata_entry_ids = set()
+    metadata_runtime_state._base_metadata_trust_verified = False
     assert metadata_module.metadata_entry_trust_anchor_status(entry) is None
 
     monkeypatch.setattr(metadata_module, "_load_base_metadata", lambda: (None, 77.0), raising=False)

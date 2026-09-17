@@ -13,8 +13,6 @@ def metadata_module(monkeypatch, metadata_runtime_state):
     monkeypatch.setattr(module, "_base_explorer_snapshot_mtime", None, raising=False)
     monkeypatch.setattr(module, "_base_full_snapshot_cache", None, raising=False)
     monkeypatch.setattr(module, "_base_full_snapshot_mtime", None, raising=False)
-    monkeypatch.setattr(module, "_base_metadata_cache", None, raising=False)
-    monkeypatch.setattr(module, "_base_metadata_mtime", None, raising=False)
     return module
 
 
