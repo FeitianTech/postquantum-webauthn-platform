@@ -10,12 +10,8 @@
     "test:all": "npm run test:frontend && npm run test:python"
   },
   "devDependencies": {
-    "@vitest/coverage-v8": "^4.1.2",
-    "jsdom": "^29.0.1",
-    "vitest": "^4.1.2"
-  },
-  "overrides": {
-    "vite": "^8.3.0",
-    "undici": "^7.24.8"
+    "@vitest/coverage-v8": "^5.0.1",
+    "jsdom": "^30.1.0",
+    "vitest": "^5.0.1"
   }
 }

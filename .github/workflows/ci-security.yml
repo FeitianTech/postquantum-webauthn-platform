@@ -66,15 +66,12 @@ jobs:
         run: npm ci
 
       # Nothing in package.json ships: the production tree is empty and
-      # `npm audit --omit=dev` reports zero. The threshold is therefore about
-      # the test toolchain. It sits at high because the four high advisories
-      # that were open (vite, undici) are fixed by the overrides in
-      # package.json, while the three remaining moderate ones are a path
-      # traversal in @vitest/mocker that only affects the test runner. Their
-      # fix is vitest 4.1.11, which npm 10.9.8 cannot resolve (arborist crashes
-      # in #loadPeerSet). Lower this to moderate once that install works.
+      # `npm audit --omit=dev` reports zero, so this threshold is about the test
+      # toolchain. The tree is clean at every level after the vitest 5 and jsdom
+      # 30 upgrade, so the gate sits at moderate, the usual actionable bar. Fix
+      # the dependency rather than raising this back to high.
       - name: Audit npm dependencies
-        run: npm audit --audit-level=high
+        run: npm audit --audit-level=moderate
 
       # Recorded even when it passes, so a moderate finding is visible rather
       # than silently tolerated.
