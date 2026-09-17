@@ -171,13 +171,15 @@ If you are changing only UI logic plus lightweight server responses, prefer targ
 - Every action is pinned to a commit SHA with the version in a trailing comment.
   Dependabot bumps both. Do not reintroduce a floating tag -- and note that
   `astral-sh/setup-uv` publishes no floating major tag at all.
-- No workflow pushes to `main`. `update-coverage-badges.yml` and
-  `update-footer-year.yml` commit to a bot branch through
-  `.github/actions/open-bot-pr` and open a pull request, staging an explicit
-  path list rather than `git add -A`. GitHub does not start workflow runs for
-  events signed by `GITHUB_TOKEN`, so set a `BOT_PR_TOKEN` secret if those pull
-  requests should get CI automatically. Enforcement still depends on branch
-  protection on `main`, which lives in repository settings, not here.
+- No workflow pushes to `main`. `update-footer-year.yml` commits to a bot branch
+  through `.github/actions/open-bot-pr` and opens a pull request, staging an
+  explicit path list rather than `git add -A`. GitHub does not start workflow
+  runs for events signed by `GITHUB_TOKEN`, so set a `BOT_PR_TOKEN` secret if
+  those pull requests should get CI automatically. Enforcement still depends on
+  branch protection on `main`, which lives in repository settings, not here.
+- Coverage is a gate, not a published number: the floors in `.coveragerc` and
+  `vitest.config.mjs` fail CI, and there is no coverage badge or badge workflow.
+  Do not add one back.
 - `ci-security.yml` fails the build on a `pip-audit` finding against `uv.lock`,
   on `npm audit --audit-level=high`, and on a fixable HIGH/CRITICAL Trivy
   finding in the image. Each threshold is justified in a comment next to it. If
