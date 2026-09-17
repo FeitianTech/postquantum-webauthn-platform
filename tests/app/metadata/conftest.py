@@ -80,3 +80,45 @@ def cache_runtime():
     """The fragment that defines the metadata cache helpers."""
 
     return pytest.importorskip("server.app.metadata_parts.cache_runtime")
+
+
+@pytest.fixture
+def upload_runtime():
+    """The fragment that defines the repository upload helpers."""
+
+    return pytest.importorskip("server.app.metadata_parts.upload_runtime")
+
+
+@pytest.fixture
+def effective_runtime():
+    """The fragment that composes base and session snapshots."""
+
+    return pytest.importorskip("server.app.metadata_parts.effective_snapshot_runtime")
+
+
+@pytest.fixture
+def session_store():
+    """The storage module the metadata fragments write through."""
+
+    return pytest.importorskip("server.app.session_metadata_store")
+
+
+@pytest.fixture
+def app_config():
+    """The app config module, for the Flask app and its logger."""
+
+    return pytest.importorskip("server.app.config")
+
+
+@pytest.fixture
+def cleanup_runtime():
+    """The fragment that defines the session cleanup worker and scheduler."""
+
+    return pytest.importorskip("server.app.metadata_parts.session_cleanup_runtime")
+
+
+@pytest.fixture
+def verifier_runtime():
+    """The fragment that defines the metadata merge and verifier helpers."""
+
+    return pytest.importorskip("server.app.metadata_parts.verifier_runtime")

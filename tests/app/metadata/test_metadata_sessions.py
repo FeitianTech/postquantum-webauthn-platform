@@ -5,16 +5,14 @@ from flask import session as flask_session
 
 
 @pytest.fixture
-def session_metadata_env(monkeypatch, tmp_path, metadata_runtime_state):
-    config = pytest.importorskip("server.app.config")
+def session_metadata_env(monkeypatch, tmp_path, metadata_runtime_state, session_store, app_config):
     metadata = pytest.importorskip("server.app.metadata")
     session_store = pytest.importorskip("server.app.session_metadata_store")
 
     session_dir = tmp_path / "sessions"
     session_dir.mkdir()
 
-    monkeypatch.setattr(config, "SESSION_METADATA_DIR", str(session_dir), raising=False)
-    monkeypatch.setattr(metadata, "SESSION_METADATA_DIR", str(session_dir), raising=False)
+    monkeypatch.setattr(app_config, "SESSION_METADATA_DIR", str(session_dir), raising=False)
     monkeypatch.setattr(session_store, "SESSION_METADATA_DIR", str(session_dir), raising=False)
 
     monkeypatch.setattr(session_store, "gcs_enabled", lambda: False, raising=False)
@@ -22,7 +20,7 @@ def session_metadata_env(monkeypatch, tmp_path, metadata_runtime_state):
     monkeypatch.setattr(session_store, "_local_last_cleanup", 0.0, raising=False)
 
 
-    return config.app, metadata
+    return app_config.app, metadata
 
 
 def _sample_entry(description: str) -> dict:
@@ -62,7 +60,7 @@ def test_runtime_metadata_download_disabled():
         metadata.download_metadata_blob()
 
 
-def test_note_session_activity_schedules_cleanup(session_metadata_env, monkeypatch):
+def test_note_session_activity_schedules_cleanup(session_metadata_env, monkeypatch, cleanup_runtime):
     _, metadata = session_metadata_env
 
     calls = []
@@ -70,7 +68,7 @@ def test_note_session_activity_schedules_cleanup(session_metadata_env, monkeypat
     monkeypatch.setattr(cleanup, "_touch_session_last_access", lambda sid: calls.append(("touch", sid)))
     monkeypatch.setattr(cleanup, "_schedule_inactive_session_cleanup", lambda: calls.append(("schedule", None)))
     monkeypatch.setattr(
-        metadata,
+        cleanup_runtime,
         "_maybe_cleanup_inactive_sessions",
         lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("inline cleanup should not run")),
     )

@@ -148,7 +148,7 @@ def test_upstream_refresh_defaults_to_the_cloud_storage_setting(monkeypatch):
     assert provisioning.upstream_refresh_enabled() is False
 
 
-def test_the_blob_prefix_is_configurable(monkeypatch):
+def test_the_blob_prefix_is_configurable(monkeypatch, app_config):
     assert provisioning.snapshot_blob_name("blob.jwt") == "mds/blob.jwt"
 
     monkeypatch.setenv("FIDO_SERVER_MDS_GCS_PREFIX", "snapshots/fido")

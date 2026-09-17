@@ -10,6 +10,8 @@ from types import SimpleNamespace
 import pytest
 from flask import g
 
+from fido2.mds3 import MetadataBlobPayload, MetadataBlobPayloadEntry
+
 
 @pytest.fixture
 def metadata_module(monkeypatch, metadata_runtime_state):
@@ -21,7 +23,7 @@ def metadata_module(monkeypatch, metadata_runtime_state):
 
 
 def _entry(module, aaguid: str):
-    return module.MetadataBlobPayloadEntry.from_dict(
+    return MetadataBlobPayloadEntry.from_dict(
         {
             "aaguid": aaguid,
             "statusReports": [],
@@ -56,10 +58,10 @@ def test_base_entry_reports_base_trust(metadata_module, metadata_runtime_state):
     assert metadata_module.metadata_entry_trust_anchor_status(entry) is True
 
 
-def test_session_entries_stay_untrusted_while_other_sessions_run(metadata_module, monkeypatch, metadata_runtime_state, items_runtime, snapshot_runtime):
+def test_session_entries_stay_untrusted_while_other_sessions_run(metadata_module, monkeypatch, metadata_runtime_state, items_runtime, snapshot_runtime, app_config):
     base_entry = _entry(metadata_module, "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")
     custom_entry = _entry(metadata_module, "cccccccc-cccc-cccc-cccc-cccccccccccc")
-    base_metadata = metadata_module.MetadataBlobPayload(
+    base_metadata = MetadataBlobPayload(
         legal_header="",
         no=1,
         next_update=None,
@@ -81,7 +83,7 @@ def test_session_entries_stay_untrusted_while_other_sessions_run(metadata_module
         raising=False,
     )
 
-    app = metadata_module.app
+    app = app_config.app
     iterations = 200
     barrier = threading.Barrier(2)
     observed = []
@@ -125,14 +127,14 @@ def test_session_entries_stay_untrusted_while_other_sessions_run(metadata_module
     assert base_results == [True] * iterations
 
 
-def test_concurrent_cold_loads_parse_base_metadata_once(metadata_module, monkeypatch, tmp_path):
+def test_concurrent_cold_loads_parse_base_metadata_once(metadata_module, monkeypatch, tmp_path, snapshot_runtime):
     calls = []
 
     # The real snapshot is generated, not tracked, so this stands in for it.
     verified_path = tmp_path / "fido-mds3.verified.json"
     verified_path.write_text("{}", encoding="utf-8")
     monkeypatch.setattr(
-        metadata_module, "MDS_METADATA_VERIFIED_PATH", str(verified_path), raising=False
+        snapshot_runtime, "MDS_METADATA_VERIFIED_PATH", str(verified_path), raising=False
     )
     verified_mtime = os.path.getmtime(verified_path)
 
@@ -142,7 +144,7 @@ def test_concurrent_cold_loads_parse_base_metadata_once(metadata_module, monkeyp
         return SimpleNamespace(entries=()), verified_mtime
 
     monkeypatch.setattr(
-        metadata_module, "_load_verified_metadata_fallback", _slow_fallback, raising=False
+        snapshot_runtime, "_load_verified_metadata_fallback", _slow_fallback, raising=False
     )
 
     threads = [
@@ -156,7 +158,7 @@ def test_concurrent_cold_loads_parse_base_metadata_once(metadata_module, monkeyp
     assert len(calls) == 1
 
 
-def test_concurrent_cleanup_checks_run_cleanup_once(metadata_module, monkeypatch, metadata_runtime_state):
+def test_concurrent_cleanup_checks_run_cleanup_once(metadata_module, monkeypatch, metadata_runtime_state, session_store):
     calls = []
 
     def _slow_list_sessions():
@@ -166,7 +168,7 @@ def test_concurrent_cleanup_checks_run_cleanup_once(metadata_module, monkeypatch
 
     monkeypatch.setattr(metadata_runtime_state, "_session_metadata_last_cleanup", 0.0)
     monkeypatch.setattr(
-        metadata_module.session_metadata_store, "list_sessions", _slow_list_sessions
+        session_store, "list_sessions", _slow_list_sessions
     )
 
     now = time.time()
