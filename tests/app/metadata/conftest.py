@@ -41,3 +41,21 @@ def metadata_runtime_state(monkeypatch):
     for name, default in _RUNTIME_STATE_DEFAULTS.items():
         monkeypatch.setattr(state, name, set() if default is frozenset() else default)
     return state
+
+
+@pytest.fixture
+def identity_runtime():
+    """The fragment that defines the session identity helpers.
+
+    Patch here rather than on ``server.app.metadata``: the other fragments call
+    these through this module, so this is the binding that is actually read.
+    """
+
+    return pytest.importorskip("server.app.metadata_parts.session_identity_runtime")
+
+
+@pytest.fixture
+def payload_runtime():
+    """The fragment that defines the entry payload helpers."""
+
+    return pytest.importorskip("server.app.metadata_parts.entry_payload_runtime")
