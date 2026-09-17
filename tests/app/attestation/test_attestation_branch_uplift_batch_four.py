@@ -101,7 +101,7 @@ def test_collect_metadata_roots_handles_singleton_and_missing_candidates():
     assert attestation_module._collect_metadata_root_certificates({"other": "value"}) == []
 
 
-def test_trusted_ca_helpers_cover_list_configs_and_subject_parse_failure(monkeypatch):
+def test_trusted_ca_helpers_cover_list_configs_and_subject_parse_failure(monkeypatch, trust_ca_runtime):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     monkeypatch.setitem(
@@ -119,10 +119,9 @@ def test_trusted_ca_helpers_cover_list_configs_and_subject_parse_failure(monkeyp
     assert attestation_module._trusted_ca_fingerprints() == {"AA", "BB"}
 
     monkeypatch.setattr(
-        attestation_module,
+        trust_ca_runtime,
         "_certificate_fingerprint",
         lambda _cert_bytes: "NO_MATCH",
-        raising=False,
     )
     monkeypatch.setattr(
         attestation_module.x509,
@@ -268,13 +267,13 @@ def test_check_pqc_certificate_constraints_reports_validity_basic_constraints_an
     )
 
 
-def test_evaluate_mldsa_attestation_root_covers_untrusted_root_and_fido_status_paths(monkeypatch, trust_runtime):
+def test_evaluate_mldsa_attestation_root_covers_untrusted_root_and_fido_status_paths(monkeypatch, trust_runtime, trust_ca_runtime):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     metadata_entry = SimpleNamespace(metadata_statement=SimpleNamespace())
     monkeypatch.setattr(trust_runtime, "_find_metadata_entry_for_aaguid", lambda *_args, **_kwargs: metadata_entry)
     monkeypatch.setattr(trust_runtime, "_collect_metadata_root_certificates", lambda _entry: [b"root"])
-    monkeypatch.setattr(attestation_module, "_is_trusted_ca_certificate", lambda *_args, **_kwargs: False, raising=False)
+    monkeypatch.setattr(trust_ca_runtime, "_is_trusted_ca_certificate", lambda *_args, **_kwargs: False)
 
     untrusted = attestation_module._evaluate_mldsa_attestation_root(
         SimpleNamespace(att_stmt={"x5c": [b"leaf"]}),
@@ -284,7 +283,7 @@ def test_evaluate_mldsa_attestation_root_covers_untrusted_root_and_fido_status_p
     )
     assert "attestation_root_not_trusted" in untrusted["errors"]
 
-    monkeypatch.setattr(attestation_module, "_is_trusted_ca_certificate", lambda *_args, **_kwargs: True, raising=False)
+    monkeypatch.setattr(trust_ca_runtime, "_is_trusted_ca_certificate", lambda *_args, **_kwargs: True)
     monkeypatch.setattr(attestation_module, "metadata_entry_trust_anchor_status", lambda _entry: False, raising=False)
     monkeypatch.setattr(trust_runtime, "_collect_trust_path_entries", lambda _x5c: [])
 

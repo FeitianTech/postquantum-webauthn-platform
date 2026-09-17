@@ -9,8 +9,7 @@ from fido2.attestation import InvalidSignature, verify_x509_chain
 from fido2.attestation.base import TrustPathEvaluation
 
 from ..metadata import metadata_entry_trust_anchor_status
-from . import trust_runtime
-from .trust_ca_runtime import _is_trusted_ca_certificate
+from . import trust_ca_runtime, trust_runtime
 
 
 def _evaluate_classical_attestation_root(
@@ -93,7 +92,7 @@ def _evaluate_classical_attestation_root(
         errors.append("metadata_entry_missing")
 
     trusted_roots = [
-        root for root in candidate_roots if _is_trusted_ca_certificate(root)
+        root for root in candidate_roots if trust_ca_runtime._is_trusted_ca_certificate(root)
     ]
 
     trusted_ca: bool | None
