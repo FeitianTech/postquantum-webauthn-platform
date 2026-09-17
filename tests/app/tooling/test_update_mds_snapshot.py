@@ -392,3 +392,86 @@ def test_main_reports_refresh_then_up_to_date(monkeypatch, isolated_mds_paths, c
     second_output = capsys.readouterr().out
     assert second == 0
     assert "already up to date" in second_output
+
+
+@pytest.fixture
+def stubbed_refresh(monkeypatch, isolated_mds_paths):
+    """A successful refresh with the network and snapshot builders stubbed out."""
+
+    monkeypatch.setattr(
+        updater,
+        "_fetch_remote_blob",
+        lambda: (b"a-blob", "Wed, 03 Apr 2026 00:00:00 GMT", '"etag"'),
+    )
+    monkeypatch.setattr(
+        updater,
+        "_build_verified_snapshot",
+        lambda _blob: {"entries": [{"aaguid": "x"}], "no": 42, "nextUpdate": "2026-12-01"},
+    )
+    monkeypatch.setattr(
+        updater,
+        "build_explorer_snapshot",
+        lambda _verified, _cache: {"entries": [], "meta": {"kind": "explorer"}},
+    )
+    monkeypatch.setattr(
+        updater,
+        "build_bootstrap_snapshot",
+        lambda _verified, _cache: {"entries": [], "meta": {"kind": "full"}},
+    )
+    return isolated_mds_paths
+
+
+def test_verify_only_checks_the_blob_without_writing_files(stubbed_refresh, capsys):
+    assert updater.main(["--verify-only"]) == 0
+
+    assert "no. 42" in capsys.readouterr().out
+    assert not updater.MDS_METADATA_PATH.exists()
+    assert not updater.MDS_METADATA_VERIFIED_PATH.exists()
+
+
+def test_gcs_upload_publishes_every_snapshot_file(stubbed_refresh, monkeypatch, capsys):
+    from server.app import cloud_storage, mds_provisioning
+
+    uploaded = {}
+    monkeypatch.setattr(cloud_storage, "gcs_enabled", lambda: True)
+    monkeypatch.setattr(
+        cloud_storage,
+        "upload_bytes",
+        lambda name, data, content_type=None: uploaded.__setitem__(name, data),
+    )
+    monkeypatch.setattr(
+        mds_provisioning, "_FRONTEND_STATIC_ROOT", stubbed_refresh, raising=False
+    )
+
+    assert updater.main(["--gcs-upload"]) == 0
+    assert sorted(uploaded) == sorted(
+        f"mds/{name}" for name in mds_provisioning.SNAPSHOT_FILENAMES
+    )
+    assert uploaded["mds/blob.jwt"] == b"a-blob"
+
+
+def test_gcs_upload_fails_loudly_when_cloud_storage_is_disabled(
+    stubbed_refresh, monkeypatch, capsys
+):
+    from server.app import cloud_storage
+
+    monkeypatch.setattr(cloud_storage, "gcs_enabled", lambda: False)
+
+    assert updater.main(["--gcs-upload"]) == 1
+    assert "Cloud Storage is disabled" in capsys.readouterr().out
+
+
+def test_gcs_upload_refuses_to_publish_an_incomplete_snapshot(
+    isolated_mds_paths, monkeypatch, capsys
+):
+    from server.app import cloud_storage
+
+    monkeypatch.setattr(cloud_storage, "gcs_enabled", lambda: True)
+
+    def _fail(*args, **kwargs):  # pragma: no cover - must not be reached
+        raise AssertionError("An incomplete snapshot must not be published.")
+
+    monkeypatch.setattr(cloud_storage, "upload_bytes", _fail)
+
+    assert updater._publish_to_cloud_storage() == 1
+    assert "is missing; nothing published" in capsys.readouterr().out

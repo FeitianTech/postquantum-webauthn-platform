@@ -19,10 +19,17 @@ if str(REPO_ROOT) not in sys.path:
 
 # Imported after the sys.path bootstrap above.
 from fido2.mds3 import parse_blob  # noqa: E402
-from server.app.mds_snapshot import (  # noqa: E402
-    build_bootstrap_snapshot,
-    build_explorer_snapshot,
-)
+
+try:  # A repository checkout.
+    from server.app.mds_snapshot import (  # noqa: E402
+        build_bootstrap_snapshot,
+        build_explorer_snapshot,
+    )
+except ModuleNotFoundError:  # The image copies server/app to /app/server.
+    from server.mds_snapshot import (  # noqa: E402
+        build_bootstrap_snapshot,
+        build_explorer_snapshot,
+    )
 
 FRONTEND_STATIC_DIR = REPO_ROOT / "frontend" / "static"
 
@@ -295,7 +302,43 @@ def _write_cache_state(cache_state: dict[str, object]) -> bool:
     return _write_if_changed(MDS_METADATA_CACHE_PATH, _serialise_json(cache_state))
 
 
-def main() -> int:
+def _publish_to_cloud_storage() -> int:
+    """Upload the snapshot files to the bucket the server provisions from."""
+
+    try:
+        from server.app import cloud_storage, mds_provisioning
+    except ModuleNotFoundError:  # The image copies server/app to /app/server.
+        from server import cloud_storage, mds_provisioning
+
+    if not cloud_storage.gcs_enabled():
+        print(
+            "::error::Cloud Storage is disabled; set FIDO_SERVER_GCS_ENABLED=1 "
+            "and FIDO_SERVER_GCS_BUCKET to publish the snapshot."
+        )
+        return 1
+
+    for filename in mds_provisioning.SNAPSHOT_FILENAMES:
+        path = FRONTEND_STATIC_DIR / filename
+        if not path.is_file():
+            print(f"::error::Snapshot file {filename} is missing; nothing published.")
+            return 1
+
+    for filename in mds_provisioning.SNAPSHOT_FILENAMES:
+        blob_name = mds_provisioning.snapshot_blob_name(filename)
+        cloud_storage.upload_bytes(
+            blob_name,
+            (FRONTEND_STATIC_DIR / filename).read_bytes(),
+            content_type="application/json" if filename.endswith(".json") else None,
+        )
+        print(f"Published {filename} to {blob_name}.")
+    return 0
+
+
+def main(argv: list[str] | None = None) -> int:
+    arguments = sys.argv[1:] if argv is None else argv
+    publish = "--gcs-upload" in arguments
+    verify_only = "--verify-only" in arguments
+
     try:
         new_blob, last_modified, etag = _fetch_remote_blob_with_retry()
     except Exception as exc:  # pragma: no cover - network failure propagates
@@ -323,6 +366,13 @@ def main() -> int:
     )
     full_meta = full_snapshot.get("meta", {})
 
+    if verify_only:
+        print(
+            "Downloaded and verified the metadata BLOB "
+            f"(no. {verified_snapshot.get('no')}); nothing written."
+        )
+        return 0
+
     changed = False
     changed |= _write_if_changed(MDS_METADATA_PATH, new_blob)
     changed |= _write_if_changed(MDS_METADATA_VERIFIED_PATH, _serialise_json(verified_snapshot))
@@ -336,6 +386,9 @@ def main() -> int:
         print("Packaged metadata snapshot refreshed.")
     else:
         print("Packaged metadata is already up to date; no changes made.")
+
+    if publish:
+        return _publish_to_cloud_storage()
     return 0
 
 
