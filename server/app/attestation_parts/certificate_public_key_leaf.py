@@ -4,28 +4,6 @@ import base64
 from typing import Any, Dict, List, Mapping, Optional, Tuple
 
 
-def _load_oqs_signature_details(mechanism: str) -> Optional[Dict[str, Any]]:
-    """Retrieve signature metadata for *mechanism* from liboqs when available."""
-
-    try:  # pragma: no cover - exercised when oqs bindings are installed
-        import oqs  # type: ignore
-    except (ImportError, SystemExit):  # pragma: no cover - absence handled by caller
-        return None
-
-    try:  # pragma: no cover - defensive handling around oqs interaction
-        with oqs.Signature(mechanism) as signature:  # type: ignore[attr-defined]
-            details = getattr(signature, "details", None)
-    except BaseException:
-        return None
-
-    if not isinstance(details, Mapping):
-        return None
-
-    normalized: Dict[str, Any] = {str(key): value for key, value in details.items()}
-    normalized["mechanism"] = mechanism
-    return normalized
-
-
 def _build_unknown_public_key_info(cert_bytes: bytes, error: Exception) -> Tuple[Dict[str, Any], List[Tuple[str, Any]]]:
     try:
         parsed = extract_certificate_public_key_info(cert_bytes)
@@ -42,16 +20,17 @@ def _build_unknown_public_key_info(cert_bytes: bytes, error: Exception) -> Tuple
     if isinstance(parsed.get("algorithm_oid"), str):
         algorithm_details["oid"] = parsed["algorithm_oid"]
 
-    oqs_details: Optional[Mapping[str, Any]] = None
+    mldsa_details: Optional[Mapping[str, Any]] = None
     parameter_set = parsed.get("ml_dsa_parameter_set")
     if isinstance(parameter_set, str):
         algorithm_details["mlDsaParameterSet"] = parameter_set
-        oqs_details = _load_oqs_signature_details(parameter_set)
-        if isinstance(oqs_details, Mapping):
-            claimed_level = oqs_details.get("claimed-nist-level")
+        candidate = parsed.get("ml_dsa_parameter_details")
+        if isinstance(candidate, Mapping):
+            mldsa_details = candidate
+            claimed_level = candidate.get("claimed_nist_level")
             if claimed_level is not None:
                 algorithm_details["claimedNistLevel"] = claimed_level
-            length_signature = oqs_details.get("length-signature")
+            length_signature = candidate.get("signature_length")
             if isinstance(length_signature, int):
                 algorithm_details["signatureLengthBytes"] = length_signature
     parameters = parsed.get("algorithm_parameters")
@@ -83,20 +62,12 @@ def _build_unknown_public_key_info(cert_bytes: bytes, error: Exception) -> Tuple
             info["wrappedPublicKeyBase64"] = base64.b64encode(wrapped_bytes).decode("ascii")
             info["wrappedPublicKeyHexLines"] = format_hex_bytes_lines(wrapped_bytes)
 
-    if isinstance(oqs_details, Mapping):
-        length_public_key = oqs_details.get("length-public-key")
+    if isinstance(mldsa_details, Mapping):
+        length_public_key = mldsa_details.get("public_key_length")
         if isinstance(length_public_key, int) and length_public_key > 0:
             key_size_bits = length_public_key * 8
-        for field in ("description", "sig-name", "sig-family"):
-            value = oqs_details.get(field)
-            if value:
-                info_key = {
-                    "description": "mechanismDescription",
-                    "sig-name": "mechanismName",
-                    "sig-family": "mechanismFamily",
-                }.get(field)
-                if info_key:
-                    info[info_key] = value
+        info["mechanismName"] = parameter_set
+        info["mechanismFamily"] = "ML-DSA"
 
     if key_size_bits:
         info["keySize"] = key_size_bits
