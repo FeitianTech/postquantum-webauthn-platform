@@ -2,6 +2,10 @@ from __future__ import annotations
 
 from typing import Any
 
+from fido2.webauthn import Aaguid
+
+from ..metadata import get_mds_verifier
+
 
 def _finalize_metadata_results(
     results: dict[str, Any],
