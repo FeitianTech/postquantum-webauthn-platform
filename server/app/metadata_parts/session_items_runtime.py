@@ -12,6 +12,7 @@ from fido2.mds3 import MetadataBlobPayloadEntry
 
 from .. import session_metadata_store
 from ..config import app
+from . import entry_payload_runtime, session_identity_runtime
 from .runtime_state import (
     _SESSION_METADATA_INFO_SUFFIX,
     _SESSION_METADATA_SUFFIX,
@@ -61,12 +62,12 @@ def save_session_metadata_item(
     *,
     original_filename: str | None = None,
 ) -> SessionMetadataItem:
-    session_id = ensure_metadata_session_id()
-    directory = _session_metadata_directory(session_id, create=True)
+    session_id = session_identity_runtime.ensure_metadata_session_id()
+    directory = session_identity_runtime._session_metadata_directory(session_id, create=True)
     if not directory:
         raise RuntimeError("Unable to resolve session metadata storage path.")
 
-    entry, legal_header, payload = build_metadata_entry_components(raw_payload)
+    entry, legal_header, payload = entry_payload_runtime.build_metadata_entry_components(raw_payload)
 
     try:
         serialisable_payload = json.loads(json.dumps(raw_payload))
@@ -127,15 +128,15 @@ def save_session_metadata_item(
 
 
 def list_session_metadata_items(session_id: str | None = None) -> list[SessionMetadataItem]:
-    active_session = session_id or _get_metadata_session_id(create=False)
+    active_session = session_id or session_identity_runtime._get_metadata_session_id(create=False)
     if not active_session:
         return []
 
-    directory = _session_metadata_directory(active_session, create=False, cleanup=False)
+    directory = session_identity_runtime._session_metadata_directory(active_session, create=False, cleanup=False)
     if not directory:
         return []
 
-    _note_session_activity(active_session, directory=directory)
+    session_identity_runtime._note_session_activity(active_session, directory=directory)
 
     try:
         filenames = [
@@ -159,7 +160,7 @@ def list_session_metadata_items(session_id: str | None = None) -> list[SessionMe
             continue
 
         try:
-            entry, legal_header, payload = build_metadata_entry_components(raw)
+            entry, legal_header, payload = entry_payload_runtime.build_metadata_entry_components(raw)
         except Exception as exc:  # pylint: disable=broad-except
             app.logger.warning(
                 "Failed to parse session metadata entry from %s/%s: %s",
@@ -203,16 +204,16 @@ def list_session_metadata_items(session_id: str | None = None) -> list[SessionMe
 def delete_session_metadata_item(
     stored_filename: str, session_id: str | None = None
 ) -> bool:
-    active_session = session_id or _get_metadata_session_id(create=False)
+    active_session = session_id or session_identity_runtime._get_metadata_session_id(create=False)
     if not active_session:
         raise ValueError("No active metadata session.")
 
-    safe_name = _validate_session_metadata_filename(stored_filename)
-    directory = _session_metadata_directory(active_session, create=False, cleanup=False)
+    safe_name = session_identity_runtime._validate_session_metadata_filename(stored_filename)
+    directory = session_identity_runtime._session_metadata_directory(active_session, create=False, cleanup=False)
     if not directory:
         return False
 
-    _note_session_activity(active_session, directory=directory)
+    session_identity_runtime._note_session_activity(active_session, directory=directory)
 
     try:
         exists = session_metadata_store.file_exists(directory, safe_name)

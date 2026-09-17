@@ -53,28 +53,25 @@ def test_metadata_build_and_expand_residual_paths(metadata_module):
     assert metadata_module.expand_metadata_entry_payloads(raw_payload) == [raw_payload]
 
 
-def test_save_session_metadata_item_runtime_warning_and_mtime_fallback(metadata_module, monkeypatch):
-    monkeypatch.setattr(metadata_module, "ensure_metadata_session_id", lambda: "session-1", raising=False)
+def test_save_session_metadata_item_runtime_warning_and_mtime_fallback(metadata_module, monkeypatch, identity_runtime, payload_runtime):
+    monkeypatch.setattr(identity_runtime, "ensure_metadata_session_id", lambda: "session-1")
     monkeypatch.setattr(
-        metadata_module,
+        identity_runtime,
         "_session_metadata_directory",
         lambda *_args, **_kwargs: None,
-        raising=False,
     )
     with pytest.raises(RuntimeError, match="Unable to resolve session metadata storage path"):
         metadata_module.save_session_metadata_item({"anything": True})
 
     monkeypatch.setattr(
-        metadata_module,
+        identity_runtime,
         "_session_metadata_directory",
         lambda *_args, **_kwargs: "session-dir",
-        raising=False,
     )
     monkeypatch.setattr(
-        metadata_module,
+        payload_runtime,
         "build_metadata_entry_components",
         lambda _payload: ({"entry": "ok"}, None, {"payload": True}),
-        raising=False,
     )
 
     def _write_file(_directory, filename, *_args, **_kwargs):

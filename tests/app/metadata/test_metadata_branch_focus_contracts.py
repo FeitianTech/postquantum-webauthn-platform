@@ -38,7 +38,7 @@ def _minimal_entry_payload(*, aaguid: str = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa
     }
 
 
-def test_session_cookie_scheduler_branches_and_after_request_cookie(metadata_module, monkeypatch):
+def test_session_cookie_scheduler_branches_and_after_request_cookie(metadata_module, monkeypatch, identity_runtime):
     config = pytest.importorskip("server.app.config")
 
     touched = []
@@ -82,7 +82,7 @@ def test_session_cookie_scheduler_branches_and_after_request_cookie(metadata_mod
 
 def test_get_session_id_and_ensure_paths_cover_invalid_existing_and_error_branch(
     metadata_module, monkeypatch
-):
+, identity_runtime):
     config = pytest.importorskip("server.app.config")
 
     assert metadata_module._get_metadata_session_id(create=True) is None
@@ -325,29 +325,28 @@ class _NotJSONSerializable:
     pass
 
 
-def test_save_list_delete_serialize_and_datetime_edge_paths(metadata_module, monkeypatch):
-    monkeypatch.setattr(metadata_module, "ensure_metadata_session_id", lambda: "session-a", raising=False)
-    monkeypatch.setattr(metadata_module, "_session_metadata_directory", lambda *_args, **_kwargs: "session-a", raising=False)
+def test_save_list_delete_serialize_and_datetime_edge_paths(metadata_module, monkeypatch, identity_runtime, payload_runtime):
+    monkeypatch.setattr(identity_runtime, "ensure_metadata_session_id", lambda: "session-a")
+    monkeypatch.setattr(identity_runtime, "_session_metadata_directory", lambda *_args, **_kwargs: "session-a")
     monkeypatch.setattr(
-        metadata_module,
+        payload_runtime,
         "build_metadata_entry_components",
         lambda _raw: (
             metadata_module.MetadataBlobPayloadEntry.from_dict(_minimal_entry_payload()),
             None,
             {"metadataStatement": {"description": "x"}},
         ),
-        raising=False,
     )
 
     with pytest.raises(ValueError, match="unsupported types"):
         metadata_module.save_session_metadata_item({"bad": _NotJSONSerializable()})
 
-    monkeypatch.setattr(metadata_module, "_get_metadata_session_id", lambda **_kwargs: "session-a", raising=False)
-    monkeypatch.setattr(metadata_module, "_session_metadata_directory", lambda *_args, **_kwargs: None, raising=False)
+    monkeypatch.setattr(identity_runtime, "_get_metadata_session_id", lambda **_kwargs: "session-a")
+    monkeypatch.setattr(identity_runtime, "_session_metadata_directory", lambda *_args, **_kwargs: None)
     assert metadata_module.list_session_metadata_items() == []
 
-    monkeypatch.setattr(metadata_module, "_session_metadata_directory", lambda *_args, **_kwargs: "session-a", raising=False)
-    monkeypatch.setattr(metadata_module, "_note_session_activity", lambda *_args, **_kwargs: None, raising=False)
+    monkeypatch.setattr(identity_runtime, "_session_metadata_directory", lambda *_args, **_kwargs: "session-a")
+    monkeypatch.setattr(identity_runtime, "_note_session_activity", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(
         metadata_module.session_metadata_store,
         "list_files",
@@ -390,10 +389,10 @@ def test_save_list_delete_serialize_and_datetime_edge_paths(metadata_module, mon
     assert listed[0].uploaded_at == "2026-04-04T00:00:00+00:00"
     assert listed[0].original_filename == "original.json"
 
-    monkeypatch.setattr(metadata_module, "_session_metadata_directory", lambda *_args, **_kwargs: None, raising=False)
+    monkeypatch.setattr(identity_runtime, "_session_metadata_directory", lambda *_args, **_kwargs: None)
     assert metadata_module.delete_session_metadata_item("entry.json", session_id="session-a") is False
 
-    monkeypatch.setattr(metadata_module, "_session_metadata_directory", lambda *_args, **_kwargs: "session-a", raising=False)
+    monkeypatch.setattr(identity_runtime, "_session_metadata_directory", lambda *_args, **_kwargs: "session-a")
     monkeypatch.setattr(
         metadata_module.session_metadata_store,
         "file_exists",
