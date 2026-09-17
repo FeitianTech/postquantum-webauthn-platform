@@ -48,8 +48,12 @@ FROM python:3.12-slim AS runtime
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
-# Only install minimal runtime deps
+# Only install minimal runtime deps. The upgrade pulls the base image's Debian
+# packages up to current security releases: without it the image ships whatever
+# perl-base, gzip, libpcre2 and libsqlite3 were current when the python:3.12-slim
+# tag was built, which the Trivy gate in ci-security.yml rejects.
 RUN apt-get update && \
+    apt-get upgrade -y --no-install-recommends && \
     apt-get install -y --no-install-recommends libssl3 && \
     rm -rf /var/lib/apt/lists/* /root/.cache
 

@@ -4,6 +4,12 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+  # package-lock.json is what npm audit in ci-security.yml gates on.
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+
   # uv.lock is the Python lockfile the image, CI and local venvs install from.
   - package-ecosystem: "uv"
     directory: "/"
