@@ -1,6 +1,15 @@
 """Metadata entry payload normalisation and expansion helpers."""
 from __future__ import annotations
 
+import json
+from collections.abc import Mapping
+from datetime import datetime, timezone
+from typing import Any
+
+from fido2.mds3 import MetadataBlobPayloadEntry
+
+from .runtime_state import _METADATA_STATEMENT_REQUIRED_DEFAULTS
+
 
 def _clone_json_value(value: Any) -> Any:
     if value is None:
@@ -13,8 +22,8 @@ def _clone_json_value(value: Any) -> Any:
         return None
 
 
-def _normalise_status_reports(raw: Mapping[str, Any]) -> List[Dict[str, Any]]:
-    reports: List[Dict[str, Any]] = []
+def _normalise_status_reports(raw: Mapping[str, Any]) -> list[dict[str, Any]]:
+    reports: list[dict[str, Any]] = []
     value = raw.get("statusReports")
     if not isinstance(value, list):
         return reports
@@ -26,12 +35,12 @@ def _normalise_status_reports(raw: Mapping[str, Any]) -> List[Dict[str, Any]]:
     return reports
 
 
-def _normalise_attestation_identifiers(raw: Mapping[str, Any]) -> Optional[List[str]]:
+def _normalise_attestation_identifiers(raw: Mapping[str, Any]) -> list[str] | None:
     identifiers = raw.get("attestationCertificateKeyIdentifiers")
     if not isinstance(identifiers, list):
         return None
 
-    filtered: List[str] = []
+    filtered: list[str] = []
     for identifier in identifiers:
         if isinstance(identifier, str):
             trimmed = identifier.strip()
@@ -40,8 +49,8 @@ def _normalise_attestation_identifiers(raw: Mapping[str, Any]) -> Optional[List[
     return filtered or None
 
 
-def _normalise_metadata_statement(raw: Mapping[str, Any]) -> Tuple[Dict[str, Any], Optional[str]]:
-    legal_header: Optional[str] = None
+def _normalise_metadata_statement(raw: Mapping[str, Any]) -> tuple[dict[str, Any], str | None]:
+    legal_header: str | None = None
     raw_legal_header = raw.get("legalHeader")
     if isinstance(raw_legal_header, str):
         legal_header = raw_legal_header.strip() or None
@@ -59,7 +68,7 @@ def _normalise_metadata_statement(raw: Mapping[str, Any]) -> Tuple[Dict[str, Any
         "aaguid",
     }
 
-    metadata_statement: Dict[str, Any] = {}
+    metadata_statement: dict[str, Any] = {}
     for key, value in metadata_source.items():
         if metadata_source is raw and key in excluded_keys:
             continue
@@ -101,15 +110,15 @@ def _normalise_metadata_statement(raw: Mapping[str, Any]) -> Tuple[Dict[str, Any
     return metadata_statement, legal_header
 
 
-def build_metadata_entry_components(raw: Mapping[str, Any]) -> Tuple[
+def build_metadata_entry_components(raw: Mapping[str, Any]) -> tuple[
     MetadataBlobPayloadEntry,
-    Optional[str],
-    Dict[str, Any],
+    str | None,
+    dict[str, Any],
 ]:
     if not isinstance(raw, Mapping):
         raise TypeError("Metadata JSON must be an object.")
 
-    payload: Dict[str, Any] = {}
+    payload: dict[str, Any] = {}
     payload["statusReports"] = _normalise_status_reports(raw)
 
     time_of_last_status_change = raw.get("timeOfLastStatusChange")
@@ -136,7 +145,7 @@ def build_metadata_entry_components(raw: Mapping[str, Any]) -> Tuple[
     return entry, legal_header, payload_clone
 
 
-def expand_metadata_entry_payloads(raw: Mapping[str, Any]) -> List[Mapping[str, Any]]:
+def expand_metadata_entry_payloads(raw: Mapping[str, Any]) -> list[Mapping[str, Any]]:
     """Expand a JSON payload into individual metadata entries.
 
     The FIDO Metadata BLOB contains an ``entries`` list with metadata
@@ -156,12 +165,12 @@ def expand_metadata_entry_payloads(raw: Mapping[str, Any]) -> List[Mapping[str, 
     if not entries_value:
         raise ValueError("Metadata JSON does not contain any entries.")
 
-    legal_header: Optional[str] = None
+    legal_header: str | None = None
     raw_legal_header = raw.get("legalHeader")
     if isinstance(raw_legal_header, str) and raw_legal_header.strip():
         legal_header = raw_legal_header.strip()
 
-    expanded: List[Mapping[str, Any]] = []
+    expanded: list[Mapping[str, Any]] = []
     for index, entry in enumerate(entries_value):
         if not isinstance(entry, Mapping):
             raise ValueError(f"Entry {index + 1} is not a JSON object.")
@@ -178,14 +187,14 @@ def expand_metadata_entry_payloads(raw: Mapping[str, Any]) -> List[Mapping[str, 
     return expanded
 
 
-def _normalise_aaguid(value: Any) -> Optional[str]:
+def _normalise_aaguid(value: Any) -> str | None:
     if not isinstance(value, str):
         return None
     cleaned = value.strip().replace("-", "").lower()
     return cleaned or None
 
 
-def _extract_entry_aaguid(entry: MetadataBlobPayloadEntry) -> Optional[str]:
+def _extract_entry_aaguid(entry: MetadataBlobPayloadEntry) -> str | None:
     direct = _normalise_aaguid(getattr(entry, "aaguid", None))
     if direct:
         return direct
