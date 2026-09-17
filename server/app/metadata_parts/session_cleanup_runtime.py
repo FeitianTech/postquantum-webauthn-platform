@@ -6,6 +6,7 @@ import time
 
 from .. import session_metadata_store
 from ..config import app
+from . import env_runtime
 from . import runtime_state as _state
 from .runtime_state import _SESSION_METADATA_INACTIVE_AGE
 
@@ -27,7 +28,7 @@ def _resolve_session_last_access(session_id: str) -> float | None:
 def _maybe_cleanup_inactive_sessions(now: float | None = None) -> None:
     current_time = now or time.time()
     with _state._session_cleanup_lock:
-        if current_time - _state._session_metadata_last_cleanup < _SESSION_METADATA_CLEANUP_INTERVAL.total_seconds():
+        if current_time - _state._session_metadata_last_cleanup < env_runtime._SESSION_METADATA_CLEANUP_INTERVAL.total_seconds():
             return
         _state._session_metadata_last_cleanup = current_time
 
@@ -75,11 +76,11 @@ def _schedule_inactive_session_cleanup() -> None:
     current_time = time.time()
     if (
         current_time - _state._session_metadata_last_cleanup
-        < _SESSION_METADATA_CLEANUP_INTERVAL.total_seconds()
+        < env_runtime._SESSION_METADATA_CLEANUP_INTERVAL.total_seconds()
     ):
         return
 
-    if not _cleanup_async_enabled():
+    if not env_runtime._cleanup_async_enabled():
         _maybe_cleanup_inactive_sessions(now=current_time)
         return
 

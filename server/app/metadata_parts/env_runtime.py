@@ -52,3 +52,6 @@ def _cleanup_async_enabled() -> bool:
     if explicit is None:
         return True
     return explicit
+
+
+_SESSION_METADATA_CLEANUP_INTERVAL = _resolve_cleanup_interval()
