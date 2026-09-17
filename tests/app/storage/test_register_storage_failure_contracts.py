@@ -1,5 +1,6 @@
 import base64
 import hashlib
+import time
 
 import pytest
 
@@ -92,7 +93,7 @@ def test_simple_register_complete_returns_500_when_savekey_fails(monkeypatch):
 
     with config_module.app.test_client() as client:
         with client.session_transaction() as session_state:
-            session_state["state"] = {"challenge": "state"}
+            session_state["state"] = {"challenge": "state", "issued_at": time.time()}
             session_state["register_rp_id"] = rp_id
             session_state["simple_register_public_key"] = {"challenge": "AQID"}
 

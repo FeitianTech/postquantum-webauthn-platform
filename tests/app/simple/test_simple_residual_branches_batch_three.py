@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import time
 from types import SimpleNamespace
 
 import pytest
@@ -180,7 +181,7 @@ def test_register_complete_handles_algorithm_and_large_blob_residual_paths(
 
     with config_module.app.test_client() as client:
         with client.session_transaction() as session_state:
-            session_state["state"] = {"challenge": "register-state"}
+            session_state["state"] = {"challenge": "register-state", "issued_at": time.time()}
             session_state["register_rp_id"] = "example.com"
             session_state["simple_register_public_key"] = {"challenge": "AQID"}
 
@@ -227,7 +228,7 @@ def test_authenticate_complete_ignores_request_state_and_handles_bad_matched_cre
         with client.session_transaction() as session_state:
             session_state["simple_credentials"] = [{"credentialId": "AQ"}]
             session_state["authenticate_rp_id"] = "example.com"
-            session_state["state"] = {"challenge": "from-session"}
+            session_state["state"] = {"challenge": "from-session", "issued_at": time.time()}
 
         response = client.post(
             "/api/authenticate/complete?email=user@example.com",
@@ -243,4 +244,4 @@ def test_authenticate_complete_ignores_request_state_and_handles_bad_matched_cre
     assert "authenticatedCredentialId" not in payload
     assert "signCount" not in payload
     # The request-supplied state must have been discarded outright.
-    assert captured["state"] == {"challenge": "from-session"}
+    assert captured["state"]["challenge"] == "from-session"

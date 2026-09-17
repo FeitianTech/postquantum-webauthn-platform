@@ -1,5 +1,6 @@
 import base64
 import hashlib
+import time
 
 import pytest
 
@@ -90,7 +91,8 @@ def test_simple_register_begin_persists_state_and_filters_algorithms(monkeypatch
         assert "__session_state" not in payload
 
         with client.session_transaction() as session_state:
-            assert session_state["state"] == state
+            assert session_state["state"]["challenge"] == state["challenge"]
+            assert isinstance(session_state["state"]["issued_at"], float)
             assert session_state["register_rp_id"] == "example.com"
             assert session_state["simple_credentials"] == [
                 {"credentialId": "cred-1", "publicKey": "pk-1", "aaguid": "ag-1"}
@@ -138,7 +140,7 @@ def test_simple_authenticate_complete_success_returns_sign_count(monkeypatch):
     with config_module.app.test_client() as client:
         with client.session_transaction() as session_state:
             session_state["simple_credentials"] = [{"credentialId": _b64url(credential_id)}]
-            session_state["state"] = {"challenge": "auth-state"}
+            session_state["state"] = {"challenge": "auth-state", "issued_at": time.time()}
             session_state["authenticate_rp_id"] = "example.com"
             session_state["simple_credentials_email"] = "user@example.com"
 

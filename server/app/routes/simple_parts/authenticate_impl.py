@@ -28,7 +28,8 @@ def authenticate_begin_impl(simple_module: Any):
         credential_data_list,
         user_verification="discouraged",
     )
-    simple_module.session["state"] = state
+    # Stamped so /complete can refuse a stale state replayed from an old cookie.
+    simple_module.session["state"] = simple_module.stamp_ceremony_state(dict(state))
     simple_module.session["authenticate_rp_id"] = rp_id
 
     options_payload = dict(options)
@@ -37,14 +38,34 @@ def authenticate_begin_impl(simple_module: Any):
     return simple_module.jsonify(simple_module.make_json_safe(options_payload))
 
 
+def _challenge_rejection_message(replayed: bool) -> str:
+    if replayed:
+        return (
+            "This authentication challenge has already been used. "
+            "Please restart the authentication flow."
+        )
+    return "Authentication challenge has expired. Please restart the authentication flow."
+
+
 def authenticate_complete_impl(simple_module: Any):
     response = simple_module.request.get_json(silent=True)
+
+    # Popping the state is not enough on its own: the session is a client-side
+    # cookie, so an earlier copy that still holds this state can be resent.
+    # Consuming the challenge server-side -- before anything can fail -- is
+    # what makes it single-use.
+    state = simple_module.session.pop("state", None)
+    challenge_verdict = (
+        simple_module.consume_ceremony_state(state) if state is not None else None
+    )
+
     session_credentials = simple_module.session.pop("simple_credentials", [])
     credential_data_list, _ = simple_module._parse_client_credentials(session_credentials)
     if not credential_data_list:
+        simple_module.session.pop("authenticate_rp_id", None)
+        simple_module.session.pop("simple_credentials_email", None)
         simple_module.abort(400)
 
-    state = simple_module.session.pop("state", None)
     # A client-supplied ``__session_state`` is stripped and ignored: accepting
     # it would let the caller choose the challenge it is verified against.
     if isinstance(response, Mapping):
@@ -61,6 +82,19 @@ def authenticate_complete_impl(simple_module: Any):
         )
 
     rp_id = simple_module.session.pop("authenticate_rp_id", None)
+    if challenge_verdict != simple_module.CHALLENGE_FRESH:
+        simple_module.session.pop("simple_credentials_email", None)
+        return (
+            simple_module.jsonify(
+                {
+                    "error": _challenge_rejection_message(
+                        challenge_verdict == simple_module.CHALLENGE_REPLAYED
+                    )
+                }
+            ),
+            400,
+        )
+
     server = simple_module.create_fido_server(rp_id=rp_id)
 
     response_mapping: Mapping[str, Any]
