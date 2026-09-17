@@ -9,6 +9,8 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec, ed25519, rsa
 from cryptography.x509.oid import NameOID, ObjectIdentifier
 
+from fido2.webauthn import RegistrationResponse
+
 
 def _build_certificate(
     subject_key,
@@ -134,10 +136,9 @@ def test_extract_attestation_details_populates_chain_and_extension_outputs(monke
     )
 
     monkeypatch.setattr(
-        attestation_module.RegistrationResponse,
+        RegistrationResponse,
         "from_dict",
         lambda _response: fake_registration,
-        raising=False,
     )
 
     (

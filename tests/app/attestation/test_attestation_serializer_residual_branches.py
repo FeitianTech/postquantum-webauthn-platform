@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import uuid
 from datetime import datetime
 from types import SimpleNamespace
 
@@ -26,10 +27,9 @@ def test_attestation_helper_residual_branches(monkeypatch, public_key_leaf):
     attestation_module.augment_aaguid_fields(("not", "mutable"))
 
     monkeypatch.setattr(
-        attestation_module.uuid,
+        uuid,
         "UUID",
         lambda *args, **kwargs: (_ for _ in ()).throw(ValueError("bad-uuid")),
-        raising=False,
     )
     container = {"aaguid": b"\x01" * 16}
     attestation_module.augment_aaguid_fields(container)
@@ -81,7 +81,7 @@ def test_attestation_helper_residual_branches(monkeypatch, public_key_leaf):
     assert "Nested:" in fallback["summary"]
 
 
-def test_serialize_attestation_certificate_mocked_certificate_residual_paths(monkeypatch, extensions_leaf, public_key_leaf):
+def test_serialize_attestation_certificate_mocked_certificate_residual_paths(monkeypatch, extensions_leaf, public_key_leaf, serialize_runtime):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     class _Extensions(list):
@@ -137,13 +137,12 @@ def test_serialize_attestation_certificate_mocked_certificate_residual_paths(mon
             return b"\x30\x82\x01\x00"
 
     monkeypatch.setattr(
-        attestation_module.x509,
+        x509,
         "load_der_x509_certificate",
         lambda _der: _Certificate(),
-        raising=False,
     )
-    monkeypatch.setattr(attestation_module, "describe_mldsa_oid_name", lambda _oid: "FriendlySig", raising=False)
-    monkeypatch.setattr(attestation_module, "describe_mldsa_oid", lambda _oid: {}, raising=False)
+    monkeypatch.setattr(serialize_runtime, "describe_mldsa_oid_name", lambda _oid: "FriendlySig")
+    monkeypatch.setattr(serialize_runtime, "describe_mldsa_oid", lambda _oid: {})
     monkeypatch.setattr(
         public_key_leaf,
         "_build_unknown_public_key_info",

@@ -6,6 +6,8 @@ from types import SimpleNamespace
 import pytest
 from cryptography import x509
 
+from fido2.webauthn import Aaguid
+
 
 def test_hex_format_helpers_cover_empty_odd_and_invalid_inputs():
     attestation_module = pytest.importorskip("server.app.attestation")
@@ -27,10 +29,9 @@ def test_extract_certificate_aaguid_handles_missing_and_nonstandard_extension_sh
                 raise x509.ExtensionNotFound("missing", x509.ObjectIdentifier("1.2.3"))
 
     monkeypatch.setattr(
-        attestation_module.x509,
+        x509,
         "load_der_x509_certificate",
         lambda _der: _MissingExtensionCert(),
-        raising=False,
     )
     assert attestation_module._extract_certificate_aaguid(b"cert") == b""
 
@@ -52,10 +53,9 @@ def test_extract_certificate_aaguid_handles_missing_and_nonstandard_extension_sh
         lambda _value: b"\x00" * 5,
     )
     monkeypatch.setattr(
-        attestation_module.x509,
+        x509,
         "load_der_x509_certificate",
         lambda _der: _BytesCert(),
-        raising=False,
     )
     assert attestation_module._extract_certificate_aaguid(b"cert") == (b"\x01" * 16)
 
@@ -72,10 +72,9 @@ def test_extract_certificate_aaguid_handles_missing_and_nonstandard_extension_sh
                 return _NoUsableExtension()
 
     monkeypatch.setattr(
-        attestation_module.x509,
+        x509,
         "load_der_x509_certificate",
         lambda _der: _NoUsableCert(),
-        raising=False,
     )
     assert attestation_module._extract_certificate_aaguid(b"cert") == b""
 
@@ -124,10 +123,9 @@ def test_trusted_ca_helpers_cover_list_configs_and_subject_parse_failure(monkeyp
         lambda _cert_bytes: "NO_MATCH",
     )
     monkeypatch.setattr(
-        attestation_module.x509,
+        x509,
         "load_der_x509_certificate",
         lambda _der: (_ for _ in ()).throw(ValueError("cannot parse subject")),
-        raising=False,
     )
 
     assert attestation_module._is_trusted_ca_certificate(b"cert", allow_subject_parsing=True) is False
@@ -137,14 +135,13 @@ def test_find_metadata_entry_for_aaguid_handles_parse_and_lookup_failures(monkey
     attestation_module = pytest.importorskip("server.app.attestation")
 
     monkeypatch.setattr(
-        attestation_module.Aaguid,
+        Aaguid,
         "fromhex",
         lambda _hex: (_ for _ in ()).throw(ValueError("bad-aaguid")),
-        raising=False,
     )
     assert attestation_module._find_metadata_entry_for_aaguid(object(), b"\x00" * 16) is None
 
-    monkeypatch.setattr(attestation_module.Aaguid, "fromhex", lambda _hex: object(), raising=False)
+    monkeypatch.setattr(Aaguid, "fromhex", lambda _hex: object())
 
     class _Verifier:
         def find_entry_by_aaguid(self, _aaguid):
@@ -179,7 +176,7 @@ def test_check_pqc_certificate_constraints_reports_validity_basic_constraints_an
         "_certificate_datetime",
         lambda _cert, attr: now + timedelta(days=1) if attr == "not_valid_before" else now + timedelta(days=2),
     )
-    monkeypatch.setattr(attestation_module.x509, "load_der_x509_certificate", lambda _der: _Cert({}), raising=False)
+    monkeypatch.setattr(x509, "load_der_x509_certificate", lambda _der: _Cert({}))
     assert "pqc_certificate_out_of_validity" in attestation_module._check_pqc_certificate_constraints(
         b"cert",
         now=now,
@@ -195,10 +192,9 @@ def test_check_pqc_certificate_constraints_reports_validity_basic_constraints_an
     )
     not_ca = x509.BasicConstraints(ca=False, path_length=None)
     monkeypatch.setattr(
-        attestation_module.x509,
+        x509,
         "load_der_x509_certificate",
         lambda _der: _Cert({x509.BasicConstraints: not_ca}),
-        raising=False,
     )
     assert "pqc_basic_constraints_not_ca" in attestation_module._check_pqc_certificate_constraints(
         b"cert",
@@ -209,7 +205,7 @@ def test_check_pqc_certificate_constraints_reports_validity_basic_constraints_an
 
     # Path length branch.
     with_path_len = _Cert({x509.BasicConstraints: x509.BasicConstraints(ca=True, path_length=0)})
-    monkeypatch.setattr(attestation_module.x509, "load_der_x509_certificate", lambda _der: with_path_len, raising=False)
+    monkeypatch.setattr(x509, "load_der_x509_certificate", lambda _der: with_path_len)
     assert "pqc_basic_constraints_path_length" in attestation_module._check_pqc_certificate_constraints(
         b"cert",
         now=now,
@@ -234,7 +230,7 @@ def test_check_pqc_certificate_constraints_reports_validity_basic_constraints_an
             ),
         }
     )
-    monkeypatch.setattr(attestation_module.x509, "load_der_x509_certificate", lambda _der: leaf_usage_invalid, raising=False)
+    monkeypatch.setattr(x509, "load_der_x509_certificate", lambda _der: leaf_usage_invalid)
     assert "pqc_key_usage_leaf_invalid" in attestation_module._check_pqc_certificate_constraints(
         b"cert",
         now=now,
@@ -258,7 +254,7 @@ def test_check_pqc_certificate_constraints_reports_validity_basic_constraints_an
             ),
         }
     )
-    monkeypatch.setattr(attestation_module.x509, "load_der_x509_certificate", lambda _der: ca_usage_invalid, raising=False)
+    monkeypatch.setattr(x509, "load_der_x509_certificate", lambda _der: ca_usage_invalid)
     assert "pqc_key_usage_ca_invalid" in attestation_module._check_pqc_certificate_constraints(
         b"cert",
         now=now,

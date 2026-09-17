@@ -3,6 +3,10 @@ import hashlib
 from datetime import datetime, timedelta, timezone
 
 import pytest
+from cryptography import x509
+
+from fido2.attestation import InvalidSignature
+from fido2.webauthn import RegistrationResponse
 
 
 def _b64url(data: bytes) -> str:
@@ -111,7 +115,7 @@ def test_perform_attestation_checks_reports_core_validation_failures(monkeypatch
     )()
 
     registration = _FakeRegistrationResponse(client_data, attestation_object)
-    monkeypatch.setattr(attestation_module.RegistrationResponse, "from_dict", lambda _value: registration)
+    monkeypatch.setattr(RegistrationResponse, "from_dict", lambda _value: registration)
 
     result = attestation_module.perform_attestation_checks(
         response={"raw": "value"},
@@ -159,7 +163,7 @@ def test_perform_attestation_checks_accepts_valid_none_attestation(monkeypatch):
     )()
 
     registration = _FakeRegistrationResponse(client_data, attestation_object)
-    monkeypatch.setattr(attestation_module.RegistrationResponse, "from_dict", lambda _value: registration)
+    monkeypatch.setattr(RegistrationResponse, "from_dict", lambda _value: registration)
 
     result = attestation_module.perform_attestation_checks(
         response={"raw": "value"},
@@ -185,7 +189,7 @@ def test_perform_attestation_checks_returns_registration_parse_error(monkeypatch
     def _raise_parse_error(_value):
         raise ValueError("invalid payload")
 
-    monkeypatch.setattr(attestation_module.RegistrationResponse, "from_dict", _raise_parse_error)
+    monkeypatch.setattr(RegistrationResponse, "from_dict", _raise_parse_error)
 
     result = attestation_module.perform_attestation_checks(
         response={"broken": True},
@@ -245,14 +249,13 @@ def test_verify_pqc_attestation_chain_requires_non_empty_trust_path():
     assert errors == ["pqc_attestation_chain_missing"]
 
 
-def test_verify_pqc_attestation_chain_returns_constraint_error_early(monkeypatch):
+def test_verify_pqc_attestation_chain_returns_constraint_error_early(monkeypatch, pqc_constraints_runtime):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     monkeypatch.setattr(
-        attestation_module,
+        pqc_constraints_runtime,
         "_check_pqc_certificate_constraints",
         lambda *_args, **_kwargs: "pqc_basic_constraints_not_ca: Test CA",
-        raising=False,
     )
 
     valid, errors = attestation_module._verify_pqc_attestation_chain(
@@ -265,20 +268,18 @@ def test_verify_pqc_attestation_chain_returns_constraint_error_early(monkeypatch
     assert errors == ["pqc_basic_constraints_not_ca: Test CA"]
 
 
-def test_verify_pqc_attestation_chain_reports_untrusted_root(monkeypatch, trust_ca_runtime):
+def test_verify_pqc_attestation_chain_reports_untrusted_root(monkeypatch, trust_ca_runtime, pqc_constraints_runtime):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     monkeypatch.setattr(
-        attestation_module,
+        pqc_constraints_runtime,
         "_check_pqc_certificate_constraints",
         lambda *_args, **_kwargs: None,
-        raising=False,
     )
     monkeypatch.setattr(
-        attestation_module,
+        pqc_constraints_runtime,
         "_verify_mldsa_certificate_signature",
         lambda *_args, **_kwargs: None,
-        raising=False,
     )
     monkeypatch.setattr(
         trust_ca_runtime,
@@ -296,14 +297,13 @@ def test_verify_pqc_attestation_chain_reports_untrusted_root(monkeypatch, trust_
     assert errors == ["pqc_root_not_in_trusted_list"]
 
 
-def test_verify_pqc_attestation_chain_invokes_signature_verification_for_each_non_root_link(monkeypatch, trust_ca_runtime):
+def test_verify_pqc_attestation_chain_invokes_signature_verification_for_each_non_root_link(monkeypatch, trust_ca_runtime, pqc_constraints_runtime):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     monkeypatch.setattr(
-        attestation_module,
+        pqc_constraints_runtime,
         "_check_pqc_certificate_constraints",
         lambda *_args, **_kwargs: None,
-        raising=False,
     )
     monkeypatch.setattr(
         trust_ca_runtime,
@@ -317,10 +317,9 @@ def test_verify_pqc_attestation_chain_invokes_signature_verification_for_each_no
         observed_pairs.append((cert_der, issuer_der))
 
     monkeypatch.setattr(
-        attestation_module,
+        pqc_constraints_runtime,
         "_verify_mldsa_certificate_signature",
         _capture_signature_pair,
-        raising=False,
     )
 
     valid, errors = attestation_module._verify_pqc_attestation_chain(
@@ -337,24 +336,22 @@ def test_verify_pqc_attestation_chain_invokes_signature_verification_for_each_no
     ]
 
 
-def test_verify_pqc_attestation_chain_reports_invalid_signature_error(monkeypatch):
+def test_verify_pqc_attestation_chain_reports_invalid_signature_error(monkeypatch, pqc_constraints_runtime):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     monkeypatch.setattr(
-        attestation_module,
+        pqc_constraints_runtime,
         "_check_pqc_certificate_constraints",
         lambda *_args, **_kwargs: None,
-        raising=False,
     )
 
     def _raise_invalid_signature(_cert_der, _issuer_der):
-        raise attestation_module.InvalidSignature("invalid signature")
+        raise InvalidSignature("invalid signature")
 
     monkeypatch.setattr(
-        attestation_module,
+        pqc_constraints_runtime,
         "_verify_mldsa_certificate_signature",
         _raise_invalid_signature,
-        raising=False,
     )
 
     valid, errors = attestation_module._verify_pqc_attestation_chain(
@@ -368,24 +365,22 @@ def test_verify_pqc_attestation_chain_reports_invalid_signature_error(monkeypatc
     assert errors[0].startswith("pqc_certificate_signature_invalid:")
 
 
-def test_verify_pqc_attestation_chain_reports_unexpected_signature_error(monkeypatch):
+def test_verify_pqc_attestation_chain_reports_unexpected_signature_error(monkeypatch, pqc_constraints_runtime):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     monkeypatch.setattr(
-        attestation_module,
+        pqc_constraints_runtime,
         "_check_pqc_certificate_constraints",
         lambda *_args, **_kwargs: None,
-        raising=False,
     )
 
     def _raise_unexpected_error(_cert_der, _issuer_der):
         raise RuntimeError("verifier exploded")
 
     monkeypatch.setattr(
-        attestation_module,
+        pqc_constraints_runtime,
         "_verify_mldsa_certificate_signature",
         _raise_unexpected_error,
-        raising=False,
     )
 
     valid, errors = attestation_module._verify_pqc_attestation_chain(
@@ -429,7 +424,7 @@ def test_check_pqc_certificate_constraints_rejects_leaf_ca_certificate(monkeypat
     fake_cert = _FakeCertificate(
         subject="CN=Leaf",
         extension_map={
-            attestation_module.x509.BasicConstraints: attestation_module.x509.BasicConstraints(
+            x509.BasicConstraints: x509.BasicConstraints(
                 ca=True,
                 path_length=None,
             )
@@ -437,8 +432,8 @@ def test_check_pqc_certificate_constraints_rejects_leaf_ca_certificate(monkeypat
         missing_exception=_MissingExtension,
     )
 
-    monkeypatch.setattr(attestation_module.x509, "ExtensionNotFound", _MissingExtension, raising=False)
-    monkeypatch.setattr(attestation_module.x509, "load_der_x509_certificate", lambda _cert: fake_cert)
+    monkeypatch.setattr(x509, "ExtensionNotFound", _MissingExtension)
+    monkeypatch.setattr(x509, "load_der_x509_certificate", lambda _cert: fake_cert)
 
     error = attestation_module._check_pqc_certificate_constraints(
         b"leaf",
@@ -462,8 +457,8 @@ def test_check_pqc_certificate_constraints_requires_basic_constraints_for_non_le
         missing_exception=_MissingExtension,
     )
 
-    monkeypatch.setattr(attestation_module.x509, "ExtensionNotFound", _MissingExtension, raising=False)
-    monkeypatch.setattr(attestation_module.x509, "load_der_x509_certificate", lambda _cert: fake_cert)
+    monkeypatch.setattr(x509, "ExtensionNotFound", _MissingExtension)
+    monkeypatch.setattr(x509, "load_der_x509_certificate", lambda _cert: fake_cert)
 
     error = attestation_module._check_pqc_certificate_constraints(
         b"intermediate",
@@ -484,7 +479,7 @@ def test_check_pqc_certificate_constraints_accepts_path_length_equal_to_remainin
     fake_cert = _FakeCertificate(
         subject="CN=PathLenOK",
         extension_map={
-            attestation_module.x509.BasicConstraints: attestation_module.x509.BasicConstraints(
+            x509.BasicConstraints: x509.BasicConstraints(
                 ca=True,
                 path_length=2,
             )
@@ -492,8 +487,8 @@ def test_check_pqc_certificate_constraints_accepts_path_length_equal_to_remainin
         missing_exception=_MissingExtension,
     )
 
-    monkeypatch.setattr(attestation_module.x509, "ExtensionNotFound", _MissingExtension, raising=False)
-    monkeypatch.setattr(attestation_module.x509, "load_der_x509_certificate", lambda _cert: fake_cert)
+    monkeypatch.setattr(x509, "ExtensionNotFound", _MissingExtension)
+    monkeypatch.setattr(x509, "load_der_x509_certificate", lambda _cert: fake_cert)
 
     error = attestation_module._check_pqc_certificate_constraints(
         b"ca-cert",
@@ -523,17 +518,17 @@ def test_check_pqc_certificate_constraints_rejects_negative_policy_constraints(m
     fake_cert = _FakeCertificate(
         subject="CN=PolicyInvalid",
         extension_map={
-            attestation_module.x509.BasicConstraints: attestation_module.x509.BasicConstraints(
+            x509.BasicConstraints: x509.BasicConstraints(
                 ca=True,
                 path_length=None,
             ),
-            attestation_module.x509.PolicyConstraints: fake_policy,
+            x509.PolicyConstraints: fake_policy,
         },
         missing_exception=_MissingExtension,
     )
 
-    monkeypatch.setattr(attestation_module.x509, "ExtensionNotFound", _MissingExtension, raising=False)
-    monkeypatch.setattr(attestation_module.x509, "load_der_x509_certificate", lambda _cert: fake_cert)
+    monkeypatch.setattr(x509, "ExtensionNotFound", _MissingExtension)
+    monkeypatch.setattr(x509, "load_der_x509_certificate", lambda _cert: fake_cert)
 
     error = attestation_module._check_pqc_certificate_constraints(
         b"policy",

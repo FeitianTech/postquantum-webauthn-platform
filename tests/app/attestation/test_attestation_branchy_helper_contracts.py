@@ -10,6 +10,11 @@ import pytest
 from cryptography import x509
 from cryptography.x509.oid import NameOID, ObjectIdentifier
 
+from fido2.attestation import InvalidSignature
+from fido2.attestation.base import TrustPathEvaluation
+from fido2.cose import CoseKey
+from fido2.webauthn import AuthenticatorData, RegistrationResponse
+
 
 def _b64url(data: bytes) -> str:
     return base64.urlsafe_b64encode(data).decode("ascii").rstrip("=")
@@ -96,17 +101,16 @@ def test_perform_attestation_checks_rejects_non_mapping_response():
 def test_perform_attestation_checks_coerces_challenge_from_base64_and_hex_wrappers(monkeypatch, metadata_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
-    flags = int(attestation_module.AuthenticatorData.FLAG.UP | attestation_module.AuthenticatorData.FLAG.AT)
+    flags = int(AuthenticatorData.FLAG.UP | AuthenticatorData.FLAG.AT)
     auth_data = _AuthData(rp_id="example.com", flags=flags)
     challenge = b"challenge-from-hex"
     client_data = _ClientData(challenge=challenge, origin="https://example.com")
     attestation_object = SimpleNamespace(fmt="none", att_stmt={}, auth_data=auth_data)
 
     monkeypatch.setattr(
-        attestation_module.RegistrationResponse,
+        RegistrationResponse,
         "from_dict",
         lambda _response: _registration(attestation_object, client_data),
-        raising=False,
     )
     monkeypatch.setattr(metadata_module, "get_mds_verifier", lambda: None)
 
@@ -131,9 +135,9 @@ def test_perform_attestation_checks_accepts_base64url_wrapped_challenge_and_enum
     attestation_module = pytest.importorskip("server.app.attestation")
 
     flags = int(
-        attestation_module.AuthenticatorData.FLAG.UP
-        | attestation_module.AuthenticatorData.FLAG.UV
-        | attestation_module.AuthenticatorData.FLAG.AT
+        AuthenticatorData.FLAG.UP
+        | AuthenticatorData.FLAG.UV
+        | AuthenticatorData.FLAG.AT
     )
     auth_data = _AuthData(rp_id="example.com", flags=flags)
     challenge = b"challenge-base64url"
@@ -141,10 +145,9 @@ def test_perform_attestation_checks_accepts_base64url_wrapped_challenge_and_enum
     attestation_object = SimpleNamespace(fmt="none", att_stmt={}, auth_data=auth_data)
 
     monkeypatch.setattr(
-        attestation_module.RegistrationResponse,
+        RegistrationResponse,
         "from_dict",
         lambda _response: _registration(attestation_object, client_data),
-        raising=False,
     )
     monkeypatch.setattr(metadata_module, "get_mds_verifier", lambda: None)
 
@@ -181,7 +184,7 @@ def test_perform_attestation_checks_handles_broken_credential_shapes(monkeypatch
         public_key=_BrokenPublicKey(),
         aaguid=object(),
     )
-    flags = int(attestation_module.AuthenticatorData.FLAG.UP | attestation_module.AuthenticatorData.FLAG.AT)
+    flags = int(AuthenticatorData.FLAG.UP | AuthenticatorData.FLAG.AT)
     auth_data = _AuthData(
         rp_id="example.com",
         flags=flags,
@@ -191,10 +194,9 @@ def test_perform_attestation_checks_handles_broken_credential_shapes(monkeypatch
     attestation_object = SimpleNamespace(fmt="none", att_stmt={}, auth_data=auth_data)
 
     monkeypatch.setattr(
-        attestation_module.RegistrationResponse,
+        RegistrationResponse,
         "from_dict",
         lambda _response: _registration(attestation_object, client_data),
-        raising=False,
     )
     monkeypatch.setattr(metadata_module, "get_mds_verifier", lambda: None)
 
@@ -231,16 +233,15 @@ def test_perform_attestation_checks_uses_fallback_metadata_lookup_and_mapping_ro
     )
     verifier = SimpleNamespace(find_entry_by_aaguid=lambda _aaguid: metadata_entry)
 
-    flags = int(attestation_module.AuthenticatorData.FLAG.UP | attestation_module.AuthenticatorData.FLAG.AT)
+    flags = int(AuthenticatorData.FLAG.UP | AuthenticatorData.FLAG.AT)
     auth_data = _AuthData(rp_id="example.com", flags=flags)
     client_data = _ClientData(challenge=b"meta", origin="https://example.com")
     attestation_object = SimpleNamespace(fmt="none", att_stmt={}, auth_data=auth_data)
 
     monkeypatch.setattr(
-        attestation_module.RegistrationResponse,
+        RegistrationResponse,
         "from_dict",
         lambda _response: _registration(attestation_object, client_data),
-        raising=False,
     )
     monkeypatch.setattr(metadata_module, "get_mds_verifier", lambda: verifier)
 
@@ -266,16 +267,15 @@ def test_perform_attestation_checks_ignores_metadata_fallback_lookup_exceptions(
         def find_entry_by_aaguid(self, _aaguid):
             raise RuntimeError("lookup failure")
 
-    flags = int(attestation_module.AuthenticatorData.FLAG.UP | attestation_module.AuthenticatorData.FLAG.AT)
+    flags = int(AuthenticatorData.FLAG.UP | AuthenticatorData.FLAG.AT)
     auth_data = _AuthData(rp_id="example.com", flags=flags)
     client_data = _ClientData(challenge=b"meta2", origin="https://example.com")
     attestation_object = SimpleNamespace(fmt="none", att_stmt={}, auth_data=auth_data)
 
     monkeypatch.setattr(
-        attestation_module.RegistrationResponse,
+        RegistrationResponse,
         "from_dict",
         lambda _response: _registration(attestation_object, client_data),
-        raising=False,
     )
     monkeypatch.setattr(metadata_module, "get_mds_verifier", lambda: _FailingVerifier())
 
@@ -308,7 +308,7 @@ def test_evaluate_classical_attestation_root_handles_missing_trust_path_and_meta
     assert outcome["root_valid"] is None
 
 
-def test_evaluate_classical_attestation_root_records_parse_and_verifier_failures(monkeypatch):
+def test_evaluate_classical_attestation_root_records_parse_and_verifier_failures(monkeypatch, classical_runtime):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     class _FailingVerifier:
@@ -316,16 +316,14 @@ def test_evaluate_classical_attestation_root_records_parse_and_verifier_failures
             raise RuntimeError("verifier exploded")
 
     monkeypatch.setattr(
-        attestation_module,
+        classical_runtime,
         "verify_x509_chain",
-        lambda _chain: (_ for _ in ()).throw(attestation_module.InvalidSignature("bad chain")),
-        raising=False,
+        lambda _chain: (_ for _ in ()).throw(InvalidSignature("bad chain")),
     )
     monkeypatch.setattr(
-        attestation_module.x509,
+        x509,
         "load_der_x509_certificate",
         lambda _der: (_ for _ in ()).throw(ValueError("bad cert")),
-        raising=False,
     )
 
     outcome = attestation_module._evaluate_classical_attestation_root(
@@ -342,7 +340,7 @@ def test_evaluate_classical_attestation_root_records_parse_and_verifier_failures
     assert outcome["checks"]["trusted_ca"] is False
 
 
-def test_evaluate_classical_attestation_root_reports_untrusted_root_and_mds_errors(monkeypatch, trust_runtime, trust_ca_runtime):
+def test_evaluate_classical_attestation_root_reports_untrusted_root_and_mds_errors(monkeypatch, trust_runtime, trust_ca_runtime, classical_runtime):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     now = datetime.now(timezone.utc)
@@ -351,7 +349,7 @@ def test_evaluate_classical_attestation_root_reports_untrusted_root_and_mds_erro
         not_valid_before_utc=now - timedelta(days=1),
         not_valid_after_utc=now + timedelta(days=1),
     )
-    trust_details = attestation_module.TrustPathEvaluation(
+    trust_details = TrustPathEvaluation(
         attestation_result=None,
         ca_certificate=b"root-ca",
         chain_valid=True,
@@ -363,8 +361,8 @@ def test_evaluate_classical_attestation_root_reports_untrusted_root_and_mds_erro
         metadata_lookup_source="aaguid",
     )
 
-    monkeypatch.setattr(attestation_module, "verify_x509_chain", lambda _chain: None, raising=False)
-    monkeypatch.setattr(attestation_module.x509, "load_der_x509_certificate", lambda _der: valid_cert, raising=False)
+    monkeypatch.setattr(classical_runtime, "verify_x509_chain", lambda _chain: None)
+    monkeypatch.setattr(x509, "load_der_x509_certificate", lambda _der: valid_cert)
     monkeypatch.setattr(trust_runtime, "_collect_metadata_root_certificates", lambda _entry: [b"meta-root"])
     monkeypatch.setattr(trust_ca_runtime, "_is_trusted_ca_certificate", lambda _root: False)
 
@@ -383,7 +381,7 @@ def test_evaluate_classical_attestation_root_reports_untrusted_root_and_mds_erro
     assert outcome["metadata_lookup_source"] == "aaguid"
 
 
-def test_evaluate_classical_attestation_root_forces_chain_false_on_expired_leaf(monkeypatch, trust_runtime, trust_ca_runtime, metadata_module):
+def test_evaluate_classical_attestation_root_forces_chain_false_on_expired_leaf(monkeypatch, trust_runtime, trust_ca_runtime, metadata_module, classical_runtime):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     now = datetime.now(timezone.utc)
@@ -392,7 +390,7 @@ def test_evaluate_classical_attestation_root_forces_chain_false_on_expired_leaf(
         not_valid_before_utc=now - timedelta(days=10),
         not_valid_after_utc=now - timedelta(seconds=1),
     )
-    trust_details = attestation_module.TrustPathEvaluation(
+    trust_details = TrustPathEvaluation(
         attestation_result=None,
         ca_certificate=b"trusted-root",
         chain_valid=True,
@@ -405,8 +403,8 @@ def test_evaluate_classical_attestation_root_forces_chain_false_on_expired_leaf(
         metadata_lookup_source="aaguid",
     )
 
-    monkeypatch.setattr(attestation_module, "verify_x509_chain", lambda _chain: None, raising=False)
-    monkeypatch.setattr(attestation_module.x509, "load_der_x509_certificate", lambda _der: expired_cert, raising=False)
+    monkeypatch.setattr(classical_runtime, "verify_x509_chain", lambda _chain: None)
+    monkeypatch.setattr(x509, "load_der_x509_certificate", lambda _der: expired_cert)
     monkeypatch.setattr(trust_runtime, "_collect_metadata_root_certificates", lambda _entry: [])
     monkeypatch.setattr(trust_ca_runtime, "_is_trusted_ca_certificate", lambda _root: True)
     monkeypatch.setattr(metadata_module, "metadata_entry_trust_anchor_status", lambda _entry: False)
@@ -428,16 +426,15 @@ def test_evaluate_classical_attestation_root_forces_chain_false_on_expired_leaf(
     assert outcome["root_valid"] is False
 
 
-def test_attempt_pqc_attestation_signature_validation_covers_trust_path_error_paths(monkeypatch):
+def test_attempt_pqc_attestation_signature_validation_covers_trust_path_error_paths(monkeypatch, pqc_runtime):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     auth_data = SimpleNamespace(credential_data=SimpleNamespace(public_key={}), __bytes__=lambda self=None: b"auth")
 
     monkeypatch.setattr(
-        attestation_module.CoseKey,
+        CoseKey,
         "for_alg",
         lambda _alg: (_ for _ in ()).throw(RuntimeError("unsupported")),
-        raising=False,
     )
     unsupported = attestation_module._attempt_pqc_attestation_signature_validation(
         SimpleNamespace(att_stmt={"alg": -49, "sig": b"sig"}, auth_data=auth_data),
@@ -446,12 +443,11 @@ def test_attempt_pqc_attestation_signature_validation_covers_trust_path_error_pa
     assert unsupported["attempted"] is True
     assert unsupported["error"].startswith("pqc_attestation_unsupported_algorithm:")
 
-    monkeypatch.setattr(attestation_module.CoseKey, "for_alg", lambda _alg: (lambda _map: object()), raising=False)
+    monkeypatch.setattr(CoseKey, "for_alg", lambda _alg: (lambda _map: object()))
     monkeypatch.setattr(
-        attestation_module,
+        pqc_runtime,
         "extract_certificate_public_key_info",
         lambda _cert: (_ for _ in ()).throw(ValueError("bad cert key")),
-        raising=False,
     )
     key_error = attestation_module._attempt_pqc_attestation_signature_validation(
         SimpleNamespace(att_stmt={"alg": -49, "sig": b"sig", "x5c": [b"cert"]}, auth_data=auth_data),
@@ -460,10 +456,9 @@ def test_attempt_pqc_attestation_signature_validation_covers_trust_path_error_pa
     assert key_error["error"].startswith("pqc_attestation_public_key_error:")
 
     monkeypatch.setattr(
-        attestation_module,
+        pqc_runtime,
         "extract_certificate_public_key_info",
         lambda _cert: {"subject_public_key": None},
-        raising=False,
     )
     missing_key = attestation_module._attempt_pqc_attestation_signature_validation(
         SimpleNamespace(att_stmt={"alg": -49, "sig": b"sig", "x5c": [b"cert"]}, auth_data=auth_data),
@@ -472,7 +467,7 @@ def test_attempt_pqc_attestation_signature_validation_covers_trust_path_error_pa
     assert missing_key["error"] == "pqc_attestation_public_key_missing"
 
 
-def test_attempt_pqc_attestation_signature_validation_verification_failure_and_success(monkeypatch):
+def test_attempt_pqc_attestation_signature_validation_verification_failure_and_success(monkeypatch, pqc_runtime):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     class _VerifyFails:
@@ -490,13 +485,12 @@ def test_attempt_pqc_attestation_signature_validation_verification_failure_and_s
             return b"auth-data"
 
     monkeypatch.setattr(
-        attestation_module,
+        pqc_runtime,
         "extract_certificate_public_key_info",
         lambda _cert: {"subject_public_key": b"public-key"},
-        raising=False,
     )
 
-    monkeypatch.setattr(attestation_module.CoseKey, "for_alg", lambda _alg: (lambda _map: _VerifyFails()), raising=False)
+    monkeypatch.setattr(CoseKey, "for_alg", lambda _alg: (lambda _map: _VerifyFails()))
     verify_failed = attestation_module._attempt_pqc_attestation_signature_validation(
         SimpleNamespace(att_stmt={"alg": -49, "sig": b"sig", "x5c": [b"cert"]}, auth_data=_AuthData()),
         b"client-hash",
@@ -505,7 +499,7 @@ def test_attempt_pqc_attestation_signature_validation_verification_failure_and_s
     assert verify_failed["success"] is False
     assert verify_failed["error"].startswith("pqc_attestation_verification_failed:")
 
-    monkeypatch.setattr(attestation_module.CoseKey, "for_alg", lambda _alg: (lambda _map: _VerifyPasses()), raising=False)
+    monkeypatch.setattr(CoseKey, "for_alg", lambda _alg: (lambda _map: _VerifyPasses()))
     verified = attestation_module._attempt_pqc_attestation_signature_validation(
         SimpleNamespace(att_stmt={"alg": -49, "sig": b"sig", "x5c": [b"cert"]}, auth_data=_AuthData()),
         b"client-hash",
@@ -518,7 +512,7 @@ def test_attempt_pqc_attestation_signature_validation_verification_failure_and_s
 def test_attempt_pqc_attestation_signature_validation_covers_no_chain_branches(monkeypatch):
     attestation_module = pytest.importorskip("server.app.attestation")
 
-    monkeypatch.setattr(attestation_module.CoseKey, "for_alg", lambda _alg: object(), raising=False)
+    monkeypatch.setattr(CoseKey, "for_alg", lambda _alg: object())
 
     missing_credential = attestation_module._attempt_pqc_attestation_signature_validation(
         SimpleNamespace(att_stmt={"alg": -49, "sig": b"sig"}, auth_data=SimpleNamespace(credential_data=None, __bytes__=lambda self=None: b"auth")),
@@ -527,10 +521,9 @@ def test_attempt_pqc_attestation_signature_validation_covers_no_chain_branches(m
     assert missing_credential["error"] == "pqc_attestation_credential_data_missing"
 
     monkeypatch.setattr(
-        attestation_module.CoseKey,
+        CoseKey,
         "parse",
         lambda _pk: (_ for _ in ()).throw(ValueError("cannot parse")),
-        raising=False,
     )
     parse_error = attestation_module._attempt_pqc_attestation_signature_validation(
         SimpleNamespace(

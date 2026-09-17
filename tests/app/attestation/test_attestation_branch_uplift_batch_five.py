@@ -7,6 +7,10 @@ import pytest
 from cryptography import x509
 from cryptography.x509.oid import ObjectIdentifier
 
+from fido2.attestation import Attestation
+from fido2.cose import CoseKey
+from fido2.webauthn import Aaguid, AuthenticatorData, RegistrationResponse
+
 
 class _ClientData:
     def __init__(self, challenge: bytes):
@@ -52,7 +56,7 @@ def _registration(attestation_object, client_data, extension_results):
     )
 
 
-def test_extract_attestation_details_handles_non_dict_and_certificate_edge_cases(monkeypatch, serialize_runtime):
+def test_extract_attestation_details_handles_non_dict_and_certificate_edge_cases(monkeypatch, serialize_runtime, details_runtime):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     defaults = attestation_module.extract_attestation_details(["not-a-dict"])
@@ -71,16 +75,14 @@ def test_extract_attestation_details_handles_non_dict_and_certificate_edge_cases
     )
 
     monkeypatch.setattr(
-        attestation_module.RegistrationResponse,
+        RegistrationResponse,
         "from_dict",
         lambda _response: registration,
-        raising=False,
     )
     monkeypatch.setattr(
-        attestation_module,
+        details_runtime,
         "_coerce_attestation_certificate_bytes",
         lambda entry: None if entry == "bad" else b"cert-bytes",
-        raising=False,
     )
     monkeypatch.setattr(
         serialize_runtime,
@@ -102,10 +104,9 @@ def test_extract_attestation_details_keeps_non_mapping_extension_outputs(monkeyp
     registration = _registration(attestation_object, _ClientData(b"challenge"), ["raw-extension"])
 
     monkeypatch.setattr(
-        attestation_module.RegistrationResponse,
+        RegistrationResponse,
         "from_dict",
         lambda _response: registration,
-        raising=False,
     )
 
     extracted = attestation_module.extract_attestation_details({"ok": True})
@@ -149,9 +150,9 @@ def test_serialize_extension_value_unrecognized_oid_fallback_paths(monkeypatch, 
 def test_perform_attestation_checks_challenge_coercion_and_uv_requirement_paths(monkeypatch):
     attestation_module = pytest.importorskip("server.app.attestation")
 
-    auth_data_override = attestation_module.AuthenticatorData.create(
+    auth_data_override = AuthenticatorData.create(
         hashlib.sha256(b"example.com").digest(),
-        attestation_module.AuthenticatorData.FLAG.UP,
+        AuthenticatorData.FLAG.UP,
         1,
     )
 
@@ -162,10 +163,9 @@ def test_perform_attestation_checks_challenge_coercion_and_uv_requirement_paths(
     )
 
     monkeypatch.setattr(
-        attestation_module.RegistrationResponse,
+        RegistrationResponse,
         "from_dict",
         lambda _response: registration,
-        raising=False,
     )
 
     result = attestation_module.perform_attestation_checks(
@@ -205,8 +205,8 @@ def test_perform_attestation_checks_classical_lookup_and_aaguid_parse_failure_pa
     )
     auth_data = _AuthData(
         rp_id_hash=hashlib.sha256(b"example.com").digest(),
-        flags=attestation_module.AuthenticatorData.FLAG.UP
-        | attestation_module.AuthenticatorData.FLAG.AT,
+        flags=AuthenticatorData.FLAG.UP
+        | AuthenticatorData.FLAG.AT,
         counter=3,
         credential_data=credential_data,
     )
@@ -218,17 +218,15 @@ def test_perform_attestation_checks_classical_lookup_and_aaguid_parse_failure_pa
     )
 
     monkeypatch.setattr(
-        attestation_module.RegistrationResponse,
+        RegistrationResponse,
         "from_dict",
         lambda _response: registration,
-        raising=False,
     )
     monkeypatch.setattr(
-        attestation_module.Attestation,
+        Attestation,
         "for_type",
         lambda _fmt: type("_Verifier", (), {"verify": lambda self, *_args: SimpleNamespace(trust_path=[])})
         ,
-        raising=False,
     )
     monkeypatch.setattr(metadata_module, "get_mds_verifier", lambda: object())
     monkeypatch.setattr(
@@ -243,12 +241,11 @@ def test_perform_attestation_checks_classical_lookup_and_aaguid_parse_failure_pa
             "warnings": [],
         },
     )
-    monkeypatch.setattr(attestation_module.CoseKey, "parse", lambda _value: object(), raising=False)
+    monkeypatch.setattr(CoseKey, "parse", lambda _value: object())
     monkeypatch.setattr(
-        attestation_module.Aaguid,
+        Aaguid,
         "fromhex",
         lambda _hex: (_ for _ in ()).throw(ValueError("bad-aaguid")),
-        raising=False,
     )
 
     result = attestation_module.perform_attestation_checks(
