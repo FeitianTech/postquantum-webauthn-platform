@@ -46,7 +46,10 @@ def register_complete_impl(simple_module: Any):
         response.pop("__session_state", None)
 
     rp_id = simple_module.session.get("register_rp_id")
-    state = simple_module.session.get("state")
+    # Popping the state is not enough on its own: the session is a client-side
+    # cookie, so an earlier copy that still holds this state can be resent.
+    # Consuming the challenge server-side is what makes it single-use.
+    state = simple_module.session.pop("state", None)
     if state is None:
         # Drop any stale ceremony leftovers so the next attempt starts clean.
         simple_module.session.pop("register_rp_id", None)
@@ -60,6 +63,19 @@ def register_complete_impl(simple_module: Any):
             400,
         )
 
+    challenge_verdict = simple_module.consume_ceremony_state(state)
+    if challenge_verdict != simple_module.CHALLENGE_FRESH:
+        simple_module.session.pop("register_rp_id", None)
+        simple_module.session.pop("simple_register_public_key", None)
+        if challenge_verdict == simple_module.CHALLENGE_REPLAYED:
+            message = (
+                "This registration challenge has already been used. "
+                "Please restart the registration process."
+            )
+        else:
+            message = "Registration challenge has expired. Please restart the registration process."
+        return simple_module.jsonify({"error": message}), 400
+
     public_key_options_for_checks = simple_module.session.pop("simple_register_public_key", None)
     resolved_rp_id = rp_id or simple_module.determine_rp_id()
     server = simple_module.create_fido_server(rp_id=resolved_rp_id)
@@ -67,11 +83,8 @@ def register_complete_impl(simple_module: Any):
     try:
         auth_data = server.register_complete(state, response)
     except Exception as exc:
-        simple_module.session.pop("state", None)
         simple_module.session.pop("register_rp_id", None)
         return simple_module.jsonify({"error": str(exc)}), 400
-
-    simple_module.session.pop("state", None)
 
     authenticator_attachment_response = simple_module.normalize_attachment(
         response.get("authenticatorAttachment") if isinstance(response, Mapping) else None

@@ -1,4 +1,5 @@
 import base64
+import time
 
 import pytest
 
@@ -40,7 +41,7 @@ def test_simple_register_complete_returns_400_and_cleans_state_when_verification
 
     with config_module.app.test_client() as client:
         with client.session_transaction() as session_state:
-            session_state["state"] = {"challenge": "session-state"}
+            session_state["state"] = {"challenge": "session-state", "issued_at": time.time()}
             session_state["register_rp_id"] = "example.com"
             session_state["simple_register_public_key"] = {"challenge": "saved"}
 

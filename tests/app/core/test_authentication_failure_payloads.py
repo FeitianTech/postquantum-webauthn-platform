@@ -1,4 +1,5 @@
 import base64
+import time
 
 import pytest
 
@@ -25,7 +26,7 @@ def test_simple_authentication_failure_returns_failed_credential_id(monkeypatch)
     with config_module.app.test_client() as client:
         with client.session_transaction() as session:
             session["simple_credentials"] = [{"credentialIdBase64Url": encoded_id}]
-            session["state"] = {"challenge": "test"}
+            session["state"] = {"challenge": "test", "issued_at": time.time()}
             session["authenticate_rp_id"] = "example.com"
 
         response = client.post(

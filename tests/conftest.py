@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import pytest
+
 
 def pytest_addoption(parser):
     parser.addoption("--reader", action="store")
@@ -31,3 +33,22 @@ def pytest_ignore_collect(collection_path, config):
         return False
 
     return tests_index + 1 < len(parts) and parts[tests_index + 1] == "device"
+
+
+@pytest.fixture(autouse=True)
+def _isolated_challenge_registry(monkeypatch):
+    """Give every test its own single-use challenge registry.
+
+    The registry is process-global, and many tests reuse fixed challenge
+    strings; without this, one test's consumed challenge would read as a
+    replay in the next.
+    """
+
+    try:
+        from server.app import challenge_registry
+    except Exception:  # pragma: no cover - app not importable in this run
+        yield None
+        return
+    registry = challenge_registry.InMemoryChallengeRegistry()
+    monkeypatch.setattr(challenge_registry, "_registry", registry)
+    yield registry

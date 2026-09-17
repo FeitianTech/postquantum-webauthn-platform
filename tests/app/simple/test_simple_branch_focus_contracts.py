@@ -1,5 +1,6 @@
 import base64
 import hashlib
+import time
 
 import pytest
 
@@ -114,7 +115,8 @@ def test_simple_register_begin_clears_cached_session_fields_when_client_credenti
         assert "__session_state" not in response.get_json()
 
         with client.session_transaction() as session_state:
-            assert session_state["state"] == {"challenge": "simple-register-state"}
+            assert session_state["state"]["challenge"] == "simple-register-state"
+            assert isinstance(session_state["state"]["issued_at"], float)
 
         with client.session_transaction() as session_state:
             assert "simple_credentials" not in session_state
@@ -153,7 +155,7 @@ def test_simple_authenticate_complete_aborts_when_session_credentials_cannot_be_
     with config_module.app.test_client() as client:
         with client.session_transaction() as session_state:
             session_state["simple_credentials"] = [{"credentialId": "stale"}]
-            session_state["state"] = {"challenge": "auth-state"}
+            session_state["state"] = {"challenge": "auth-state", "issued_at": time.time()}
             session_state["authenticate_rp_id"] = "example.com"
 
         response = client.post(
@@ -225,7 +227,7 @@ def test_simple_register_complete_covers_warning_metadata_transport_and_session_
 
     with config_module.app.test_client() as client:
         with client.session_transaction() as session_state:
-            session_state["state"] = {"challenge": "register-state"}
+            session_state["state"] = {"challenge": "register-state", "issued_at": time.time()}
             session_state["register_rp_id"] = rp_id
             session_state["simple_register_public_key"] = {"challenge": "AQID"}
             session_state["simple_credentials"] = [

@@ -15,6 +15,12 @@ from fido2 import cbor
 from fido2.cose import CoseKey
 from fido2.webauthn import AttestedCredentialData, AuthenticatorData, PublicKeyCredentialUserEntity
 from ..attachments import normalize_attachment
+from ..challenge_registry import (
+    CHALLENGE_FRESH,
+    CHALLENGE_REPLAYED,
+    consume_ceremony_state,
+    stamp_ceremony_state,
+)
 from ..attestation import (
     augment_aaguid_fields,
     coerce_aaguid_hex,

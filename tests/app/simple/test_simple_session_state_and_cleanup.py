@@ -1,4 +1,5 @@
 import base64
+import time
 
 import pytest
 
@@ -100,7 +101,7 @@ def test_authenticate_complete_malformed_authenticator_data_omits_sign_count(mon
     with config_module.app.test_client() as client:
         with client.session_transaction() as session_state:
             session_state["simple_credentials"] = [{"credentialId": _b64url(credential_id)}]
-            session_state["state"] = {"challenge": "auth-state"}
+            session_state["state"] = {"challenge": "auth-state", "issued_at": time.time()}
             session_state["authenticate_rp_id"] = "example.com"
             session_state["simple_credentials_email"] = "user@example.com"
 

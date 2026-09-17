@@ -32,7 +32,8 @@ def register_begin_impl(simple_module: Any):
         authenticator_attachment="cross-platform",
     )
 
-    simple_module.session["state"] = state
+    # Stamped so /complete can refuse a stale state replayed from an old cookie.
+    simple_module.session["state"] = simple_module.stamp_ceremony_state(dict(state))
     simple_module.session["register_rp_id"] = rp_id
 
     options_dict = dict(options)
