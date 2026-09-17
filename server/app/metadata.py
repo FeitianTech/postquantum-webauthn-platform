@@ -82,7 +82,6 @@ __all__ = ["MetadataDownloadError", "download_metadata_blob", "get_mds_verifier"
            "delete_session_metadata_item", "expand_metadata_entry_payloads",
            "metadata_entry_trust_anchor_status", "maybe_store_uploaded_metadata_file"]
 
-_session_metadata_entry_ids: set[int] = set()
 # Locks live here because the metadata_parts runtime functions execute against
 # this module's globals.
 

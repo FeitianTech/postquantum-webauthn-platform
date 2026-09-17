@@ -13,7 +13,6 @@ from flask import ctx, g, session
 def metadata_module(monkeypatch, metadata_runtime_state):
     module = pytest.importorskip("server.app.metadata")
 
-    monkeypatch.setattr(module, "_session_metadata_entry_ids", set(), raising=False)
 
     return module
 
@@ -722,7 +721,7 @@ def test_lookup_compose_resolve_trust_and_verifier_edge_paths(
     assert metadata_module.metadata_entry_trust_anchor_status(object()) is None
 
     entry = metadata_module.MetadataBlobPayloadEntry.from_dict(_minimal_entry_payload())
-    metadata_module._session_metadata_entry_ids = set()
+    metadata_runtime_state._session_metadata_entry_ids = set()
     metadata_runtime_state._base_metadata_entry_ids = set()
     metadata_runtime_state._base_metadata_trust_verified = False
     assert metadata_module.metadata_entry_trust_anchor_status(entry) is None

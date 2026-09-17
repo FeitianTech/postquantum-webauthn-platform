@@ -283,12 +283,12 @@ def test_metadata_entry_trust_anchor_status_uses_session_and_base_entry_sets(met
         }
     )
 
-    metadata_module._session_metadata_entry_ids = {id(entry)}
+    metadata_runtime_state._session_metadata_entry_ids = {id(entry)}
     metadata_runtime_state._base_metadata_entry_ids = set()
     metadata_runtime_state._base_metadata_trust_verified = True
     assert metadata_module.metadata_entry_trust_anchor_status(entry) is False
 
-    metadata_module._session_metadata_entry_ids = set()
+    metadata_runtime_state._session_metadata_entry_ids = set()
     metadata_runtime_state._base_metadata_entry_ids = {id(entry)}
     metadata_runtime_state._base_metadata_trust_verified = True
     assert metadata_module.metadata_entry_trust_anchor_status(entry) is True
