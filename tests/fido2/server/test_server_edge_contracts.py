@@ -445,7 +445,9 @@ def test_verify_app_id_and_u2f_server_wrappers_and_fallback(monkeypatch):
     monkeypatch.setattr(server_module.Fido2Server, "__init__", _fake_server_init)
 
     rp = PublicKeyCredentialRpEntity(name="Example", id="example.com")
-    custom_verify = lambda _origin: True
+    def custom_verify(_origin):
+        return True
+
     u2f_custom = server_module.U2FFido2Server(
         "https://app.example",
         rp,

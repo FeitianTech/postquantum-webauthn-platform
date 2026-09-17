@@ -50,10 +50,10 @@ config_module = _import_module(f"{_import_base}.config")
 app = config_module.app
 
 # Import the route modules so their decorators register endpoints with Flask.
-static_assets = _import_module(f"{_import_base}.static_assets")  # noqa: F401
-advanced = _import_module(f"{_import_base}.routes.advanced")  # noqa: F401
-general = _import_module(f"{_import_base}.routes.general")  # noqa: F401
-simple = _import_module(f"{_import_base}.routes.simple")  # noqa: F401
+static_assets = _import_module(f"{_import_base}.static_assets")
+advanced = _import_module(f"{_import_base}.routes.advanced")
+general = _import_module(f"{_import_base}.routes.general")
+simple = _import_module(f"{_import_base}.routes.simple")
 
 
 def main() -> None:

@@ -28,8 +28,9 @@ server_server_pkg = types.ModuleType("server.app")
 server_server_pkg.__path__ = [str(_ROOT / "server" / "app")]
 sys.modules.setdefault("server.app", server_server_pkg)
 
-from server.app import github_client
-from server.app.github_client import is_logging_enabled
+# Imported after the sys.path bootstrap above.
+from server.app import github_client  # noqa: E402
+from server.app.github_client import is_logging_enabled  # noqa: E402
 
 
 class _FakeResponse:

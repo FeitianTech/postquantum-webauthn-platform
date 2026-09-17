@@ -26,7 +26,8 @@ server_server_pkg = types.ModuleType("server.app")
 server_server_pkg.__path__ = [str(_ROOT / "server" / "app")]
 sys.modules.setdefault("server.app", server_server_pkg)
 
-from server.app import device_logs
+# Imported after the sys.path bootstrap above.
+from server.app import device_logs  # noqa: E402
 
 
 class ImmediateThread:

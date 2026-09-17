@@ -183,7 +183,9 @@ def test_get_uv_token_and_retry_helpers(monkeypatch):
     )
 
     event = object()
-    on_keepalive = lambda _status: None
+    def on_keepalive(_status):
+        return None
+
     uv_token = client_pin.get_uv_token(
         permissions=ClientPin.PERMISSION.GET_ASSERTION,
         permissions_rpid="example.com",
