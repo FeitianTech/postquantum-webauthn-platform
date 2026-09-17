@@ -385,6 +385,57 @@ latent risk is now retired rather than hidden behind globals injection.
 - `server/app/decoder/decode.py` still imports 7 names from `attestation.py` and snapshots them
   into its own carrier globals. That coupling is unchanged and belongs to the decoder milestone.
 
+### Phase 7 — M3: unwind the `attestation` carrier — DONE (2026-09-17), verified
+
+| Metric | Before | After |
+|---|---|---|
+| F821 repo-wide | 557 | **382** |
+| F821 in `attestation_parts` | 175 | **0** |
+| `raising=False` in attestation tests | 131 | **0** |
+| `attestation.py` | 263 lines, carrier | **154**, re-export shim |
+| ruff carrier ignores | 4 modules | **3** |
+
+`attestation.py` came off the F401/UP035/F822 ignore list unsuppressed. All 13 `__all__` entries
+resolve. Suite 1708/278, ruff green. **Collected test IDs identical — 0 added, 0 removed** —
+despite ~160 patch lines rewritten.
+
+**New process finding for the remaining carriers (Stage 0).** `attestation.py` imported its
+fragments under aliases (`_trust_runtime`) where `metadata.py` used bare names. A rebound
+fragment resolves `trust_runtime.foo()` in the *carrier's* globals, so every cross-fragment
+conversion would have raised `NameError` until those 17 imports were renamed first. **Check
+import aliasing before starting the decoder and route carriers.**
+
+Also: `attestation_parts` had **no** `global` statements, locks or caches — unlike
+`metadata_parts` — so the state-extraction stage was trivial (two constants).
+Enumeration cross-checked two ways: ruff F821 against a runtime walk of every fragment
+function's `co_names` including nested code objects, intersected with `vars(attestation)`.
+They agreed exactly, confirming F821 is authoritative for this job.
+
+**Tech-lead verification of the structural win.** The agent's illustration
+(`_certificate_fingerprint`) was a poor example — it works pre-phase too, since it only used
+names it already had. I found one that genuinely failed: `serialize_attestation_certificate`
+called from a bare fragment import raises
+`NameError: name '_build_unknown_public_key_info' is not defined` at `origin/main`, and works
+after. Fragments really are independently usable now.
+
+**Fault injection — smaller number than metadata, and the agent explained why rather than
+dressing it up.** Across 14 private helpers tests patch (41 sites): silent passes **3 to 0**,
+failures 38 to 41, and crucially **failures at the patch line 0 to 41**. Metadata's injected
+symbol was mutable state reset to a value it already held (vacuous even when working);
+attestation's are functions replaced with behaviour-changing stubs, so losing the stub trips an
+assertion a few frames downstream instead. The win here is diagnostic: with `raising=False`
+gone, all 41 now raise `AttributeError` naming the missing symbol **on the patch line itself**.
+
+**Metric to track: `raising=False` repo-wide is 868.** That is the remaining silent-no-op
+surface; each carrier unwind cuts into it (attestation contributed 131).
+
+**Found but not fixed:** `_check_pqc_certificate_constraints` is called from a sibling inside
+its own module, so its 5 patches could not move during the cross-fragment stage — an intra-file
+call still routes through the carrier until deletion. **The remaining carriers have the same
+ordering constraint.** `decoder/decode.py` still snapshots 7 names from `attestation.py` into
+its own carrier globals — a cross-carrier dependency for the decoder phase.
+Dropped `attestation._HASH_NORMALISE_PATTERN`, an alias nothing read.
+
 ### Local development
 Tests previously ran against the global interpreter, whose packages matched nothing in
 `requirements.txt` (cryptography 44.0.3, fido2 2.1.1, gunicorn 23). A project venv now exists:
