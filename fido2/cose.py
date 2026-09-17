@@ -27,7 +27,7 @@
 
 from __future__ import annotations
 
-from typing import Type, Any, TypeVar, Optional, Dict
+from typing import Any, TypeVar
 from collections.abc import Sequence, Mapping, Iterable
 
 from cryptography import x509

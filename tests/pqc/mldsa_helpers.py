@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import datetime
 from functools import lru_cache
-from typing import Any, Optional, Tuple
+from typing import Any
 
 from cryptography import x509
 from cryptography.hazmat.primitives import serialization

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import os
 import threading
-from typing import Optional
 
 from . import cloud_storage, session_metadata_store
 from .config import app

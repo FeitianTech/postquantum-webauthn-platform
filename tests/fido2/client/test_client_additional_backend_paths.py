@@ -5,7 +5,6 @@ import types
 import pytest
 
 import fido2.client as client_mod
-from fido2.ctap import CtapError
 from fido2.webauthn import (
     CollectedClientData,
     PublicKeyCredentialCreationOptions,

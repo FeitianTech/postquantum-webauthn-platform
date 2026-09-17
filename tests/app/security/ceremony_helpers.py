@@ -12,7 +12,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
-from typing import Any, Dict, Optional
+from typing import Any
 from collections.abc import Mapping
 
 from cryptography.hazmat.primitives import hashes

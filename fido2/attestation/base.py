@@ -39,7 +39,7 @@ from cryptography.hazmat.primitives.asymmetric import padding, ec, rsa
 from cryptography.exceptions import InvalidSignature as _InvalidSignature
 from dataclasses import dataclass
 from functools import wraps
-from typing import List, Type, Optional, Any
+from typing import Any
 from collections.abc import Mapping, Sequence
 
 import abc

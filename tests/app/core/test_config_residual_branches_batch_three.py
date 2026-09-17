@@ -4,7 +4,6 @@ import importlib
 import io
 from types import SimpleNamespace
 
-import pytest
 
 import server.app.config as config_module
 

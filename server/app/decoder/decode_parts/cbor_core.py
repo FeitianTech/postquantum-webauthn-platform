@@ -5,7 +5,7 @@ forwarding strict/lenient logic into smaller split modules.
 """
 from __future__ import annotations
 
-from typing import Any, Dict, Tuple
+from typing import Any
 from collections.abc import Mapping
 
 from . import cbor_lenient as _lenient

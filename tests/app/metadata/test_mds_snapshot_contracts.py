@@ -3,7 +3,6 @@ from __future__ import annotations
 from datetime import date, datetime, timezone
 import types
 
-import pytest
 
 import server.app.mds_snapshot as m
 

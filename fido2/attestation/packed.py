@@ -36,7 +36,6 @@ from .base import (
     catch_builtins,
     _validate_cert_common,
 )
-from typing import Optional
 
 from ..cose import CoseKey, extract_certificate_public_key_info
 

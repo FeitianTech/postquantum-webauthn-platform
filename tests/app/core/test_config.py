@@ -4,12 +4,10 @@ from __future__ import annotations
 
 import os
 import sys
-import tempfile
 import types
 from pathlib import Path
 from unittest import mock
 
-import pytest
 
 def _discover_repo_root(start: Path) -> Path:
     for candidate in start.parents:

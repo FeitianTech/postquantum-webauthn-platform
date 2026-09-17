@@ -39,14 +39,11 @@ from io import BytesIO
 from dataclasses import fields, Field
 from abc import abstractmethod
 from typing import (
-    Union,
     Optional,
-    Dict,
     Any,
     TypeVar,
     get_type_hints,
     overload,
-    Type,
 )
 from collections.abc import Sequence, Mapping, Hashable
 import struct

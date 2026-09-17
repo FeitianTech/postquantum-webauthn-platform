@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
 def _parse_fido_transport_bitfield(raw_value: bytes) -> list[str]:

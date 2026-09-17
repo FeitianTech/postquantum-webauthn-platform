@@ -1,7 +1,7 @@
 """CTAP field lookup/coercion helpers and nested structure encoders."""
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 from collections.abc import Iterable, Mapping, Sequence
 
 from .binary_decode import (

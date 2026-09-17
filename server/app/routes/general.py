@@ -8,7 +8,7 @@ import json
 import os
 from datetime import datetime, timezone
 from threading import Lock
-from typing import Any, Dict, Optional
+from typing import Any
 from collections.abc import Mapping
 
 from flask import abort, g, jsonify, render_template, request, send_file, session
@@ -33,7 +33,7 @@ from ..metadata import (
     serialize_session_metadata_item,
     _load_base_metadata,
 )
-from ..startup import startup_fail_fast_enabled, warm_up_dependencies
+from ..startup import startup_fail_fast_enabled
 from ..storage import delkey, encode_records, readkey
 
 

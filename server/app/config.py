@@ -12,7 +12,7 @@ import re
 import ssl
 import tempfile
 import textwrap
-from typing import Any, Optional, Set, Tuple
+from typing import Any
 from collections.abc import Mapping
 from urllib.parse import urlsplit
 

@@ -6,7 +6,6 @@ ML-DSA support.  liboqs is no longer required.
 
 from __future__ import annotations
 
-from typing import Dict, Optional, Set, Tuple
 
 from .config import app
 

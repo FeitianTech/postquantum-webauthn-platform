@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import hashlib
-from typing import Optional, Set
 
 
 def _trusted_ca_subjects() -> set[str] | None:

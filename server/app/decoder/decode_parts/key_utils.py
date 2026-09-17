@@ -1,7 +1,7 @@
 """Key and binary coercion helpers for decoder internals."""
 from __future__ import annotations
 
-from typing import Any, Optional, Tuple
+from typing import Any
 from collections.abc import Iterable, Mapping, Sequence
 
 from fido2.utils import ByteBuffer

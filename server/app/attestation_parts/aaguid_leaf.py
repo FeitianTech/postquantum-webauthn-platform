@@ -3,7 +3,7 @@ from __future__ import annotations
 import math
 import string
 import uuid
-from typing import Any, Dict, Optional
+from typing import Any
 from collections.abc import Mapping, MutableMapping
 
 CRED_PROTECT_LABELS: dict[Any, str] = {

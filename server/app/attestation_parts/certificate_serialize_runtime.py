@@ -4,7 +4,7 @@ import base64
 import hashlib
 import textwrap
 from datetime import datetime
-from typing import Any, Dict
+from typing import Any
 
 
 def _serialize_attestation_certificate_fallback(

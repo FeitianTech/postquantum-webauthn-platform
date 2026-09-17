@@ -1,7 +1,7 @@
 """Helpers for formatting X.509 extension display output."""
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 from collections.abc import Mapping
 
 _DEVICE_IDENTIFIER_NAMES: dict[str, str] = {
