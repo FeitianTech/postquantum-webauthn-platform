@@ -58,6 +58,43 @@ a shared `main` makes "is someone else editing?" genuinely ambiguous to a subage
   unavailable so real ML-DSA signatures cannot be produced — no longer true; that test can
   now be upgraded to real crypto
 
+### Phase 1 — S11 signCount + replay — DONE (2026-09-17), verified
+Challenge single-use via `server/app/challenge_registry.py` (in-process, TTL 10 min,
+`FIDO_SERVER_CHALLENGE_TTL_SECONDS`); `/begin` stamps `issued_at` inside the signed state and
+`/complete` consumes the challenge BEFORE verifying, so a failed attempt burns it too. A state
+older than the TTL or missing `issued_at` is refused — without that, an old cookie could be
+replayed once the registry forgot the entry. simple flow rejects; advanced reports
+`challengeStatus` (fresh/replayed/expired/not-tracked) and `signCountStatus`
+(ok/regressed/not-supported).
+
+Tech-lead verification (not taken on report): new tests run against unmodified `origin/main`
+in a clean worktree give **22 failed / 1 passed** on the end-to-end tests — the one pass is the
+plain happy path — plus 12 registry tests that cannot import. 34/35 fail on revert, as claimed.
+Suite 1653 → **1688**.
+
+Bonus fix found by the agent: the counter was decoded with standard base64 while
+authenticatorData is base64url, so the counter was misread or dropped whenever the encoding
+contained `-` or `_`.
+
+**KNOWN LIMITATION — the simple-flow clone check is weak by design.** The authoritative server
+record is keyed by the browser's own namespace cookie, and the stored counter is
+`max(server record, counter the browser sent)`. An attacker with a cloned key using a fresh
+browser has no server record, so the only "stored" value is the one they supply — they simply
+send a high counter and never trip the check. It reliably catches regressions **within the same
+browser**, not a clone used elsewhere. Closing this needs a credential store keyed by user
+identity rather than browser namespace — an architectural change (see M3/M4), not a patch.
+
+**Follow-ups queued:**
+- Counter save is read-modify-write with no locking; two concurrent authentications can both
+  succeed with the same counter.
+- Advanced register/complete has no replay reporting; advanced authenticate errors raised
+  before the state loads leave the state unconsumed.
+- The simple credential list API still shows the registration-time counter — the builders read
+  `auth_data.counter` instead of the new `sign_count` field.
+- Multi-instance replay: registry is per-instance, `maxScale: 10`. Agent recommends a GCS
+  store using `ifGenerationMatch=0` (create-if-absent) so the first write wins across
+  instances, with a lifecycle rule for cleanup. **Decision pending.**
+
 ### Local development
 Tests previously ran against the global interpreter, whose packages matched nothing in
 `requirements.txt` (cryptography 44.0.3, fido2 2.1.1, gunicorn 23). A project venv now exists:
