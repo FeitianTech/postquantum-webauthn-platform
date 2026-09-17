@@ -2,6 +2,16 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Mapping
 
+from ...sign_count import SIGN_COUNT_REGRESSED, sign_count_status
+from .sign_count_impl import (
+    RECORD_SIGN_COUNT_KEY,
+    client_supplied_sign_count_impl,
+    find_server_record_index,
+    load_server_records_impl,
+    record_sign_count,
+    resolve_stored_sign_count,
+)
+
 
 def authenticate_begin_impl(simple_module: Any):
     uname = simple_module.request.args.get("email")
@@ -121,27 +131,91 @@ def authenticate_complete_impl(simple_module: Any):
         simple_module.session.pop("simple_credentials_email", None)
         return simple_module.jsonify(response_payload), 400
 
-    credential_response = (
-        response_mapping.get("response", {}) if isinstance(response_mapping, Mapping) else {}
-    )
-    auth_data_b64 = (
-        credential_response.get("authenticatorData") if isinstance(credential_response, Mapping) else None
-    )
-    sign_count = None
-    if isinstance(auth_data_b64, str):
-        try:
-            auth_data_bytes = simple_module.base64.b64decode(simple_module._add_base64_padding(auth_data_b64))
-            sign_count = simple_module.AuthenticatorData(auth_data_bytes).counter
-        except Exception:
-            sign_count = None
-
-    authenticated_id = None
     try:
-        credential_id_bytes = bytes(getattr(matched_credential, "credential_id", b""))
-        if credential_id_bytes:
-            authenticated_id = simple_module.base64.urlsafe_b64encode(credential_id_bytes).decode("ascii").rstrip("=")
+        authenticated_id_bytes = bytes(getattr(matched_credential, "credential_id", b"") or b"")
     except Exception:
-        authenticated_id = None
+        authenticated_id_bytes = b""
+    authenticated_id = (
+        simple_module.base64.urlsafe_b64encode(authenticated_id_bytes).decode("ascii").rstrip("=")
+        if authenticated_id_bytes
+        else None
+    )
+
+    # The counter comes from the authenticatorData the signature was just
+    # verified over. It is base64url: the standard-alphabet decode used here
+    # previously silently dropped '-' and '_' and could misread the counter.
+    credential_response = response_mapping.get("response")
+    auth_data_value = (
+        credential_response.get("authenticatorData")
+        if isinstance(credential_response, Mapping)
+        else None
+    )
+    try:
+        sign_count = simple_module.AuthenticatorData(
+            simple_module._decode_base64url_bytes(auth_data_value)
+        ).counter
+    except Exception:
+        sign_count = None
+
+    uname = simple_module.request.args.get("email")
+    simple_module.session.pop("simple_credentials_email", None)
+
+    if sign_count is None or not authenticated_id_bytes:
+        return (
+            simple_module.jsonify(
+                {
+                    "error": (
+                        "The signature counter could not be read from the authenticator "
+                        "data, so authentication was rejected."
+                    )
+                }
+            ),
+            400,
+        )
+
+    server_records, metadata_session_id = load_server_records_impl(simple_module, uname)
+    record_index = find_server_record_index(server_records, authenticated_id_bytes)
+    server_record = server_records[record_index] if record_index is not None else None
+    stored_sign_count = resolve_stored_sign_count(
+        server_record,
+        client_supplied_sign_count_impl(simple_module, session_credentials, authenticated_id_bytes),
+    )
+
+    if sign_count_status(stored_sign_count, sign_count) == SIGN_COUNT_REGRESSED:
+        simple_module.app.logger.warning(
+            "Rejected assertion for credential %s: signature counter %d did not "
+            "increase past stored %d (possible cloned authenticator)",
+            authenticated_id,
+            sign_count,
+            stored_sign_count,
+        )
+        return (
+            simple_module.jsonify(
+                {
+                    "error": (
+                        f"Signature counter did not increase (stored {stored_sign_count}, "
+                        f"received {sign_count}). This authenticator may have been cloned, "
+                        "so authentication was rejected."
+                    ),
+                    "failedCredentialId": authenticated_id,
+                    "signCountStatus": SIGN_COUNT_REGRESSED,
+                }
+            ),
+            400,
+        )
+
+    if server_record is not None and record_sign_count(server_record) != sign_count:
+        server_record[RECORD_SIGN_COUNT_KEY] = sign_count
+        try:
+            simple_module.savekey(uname, server_records, session_id=metadata_session_id)
+        except Exception:
+            simple_module.app.logger.exception(
+                "Failed to persist signature counter for %s", authenticated_id
+            )
+            return (
+                simple_module.jsonify({"error": "Unable to persist the signature counter."}),
+                500,
+            )
 
     debug_info = {
         "hintsUsed": [],
@@ -151,11 +225,7 @@ def authenticate_complete_impl(simple_module: Any):
         "status": "OK",
         **debug_info,
     }
-    if authenticated_id is not None:
-        response_payload["authenticatedCredentialId"] = authenticated_id
-    if sign_count is not None:
-        response_payload["signCount"] = sign_count
-
-    simple_module.session.pop("simple_credentials_email", None)
+    response_payload["authenticatedCredentialId"] = authenticated_id
+    response_payload["signCount"] = sign_count
 
     return simple_module.jsonify(response_payload)

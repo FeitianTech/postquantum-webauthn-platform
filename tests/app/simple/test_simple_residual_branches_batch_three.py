@@ -238,10 +238,11 @@ def test_authenticate_complete_ignores_request_state_and_handles_bad_matched_cre
             },
         )
 
-    assert response.status_code == 200
+    # Without a readable credential id and counter the signCount check cannot
+    # run, so the simple flow must refuse rather than report OK.
+    assert response.status_code == 400
     payload = response.get_json()
-    assert payload["status"] == "OK"
-    assert "authenticatedCredentialId" not in payload
+    assert payload.get("status") != "OK"
     assert "signCount" not in payload
     # The request-supplied state must have been discarded outright.
     assert captured["state"]["challenge"] == "from-session"
