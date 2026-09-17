@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import base64
 import hashlib
 from datetime import datetime, timezone
 from types import SimpleNamespace

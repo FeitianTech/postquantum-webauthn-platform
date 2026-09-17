@@ -7,7 +7,6 @@ from cryptography.hazmat.primitives.asymmetric import ec, rsa, utils
 from cryptography.x509.oid import NameOID
 
 from fido2 import cose
-from fido2.utils import ByteBuffer
 
 
 def _self_signed_cert_der(private_key):

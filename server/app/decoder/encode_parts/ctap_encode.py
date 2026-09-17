@@ -1,7 +1,7 @@
 """CTAP/WebAuthn structure encoders."""
 from __future__ import annotations
 
-from typing import Any, Dict, Optional, Tuple
+from typing import Any
 from collections.abc import Mapping
 
 from .binary_decode import _require_bytes

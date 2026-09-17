@@ -7,7 +7,6 @@ import shutil
 import threading
 import time
 from datetime import timedelta
-from typing import List, Optional
 
 from .cloud_storage import (
     blob_exists,

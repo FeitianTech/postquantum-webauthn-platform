@@ -7,7 +7,7 @@ import json
 import os
 import threading
 import time
-from typing import Any, Dict, Optional
+from typing import Any
 
 from .cloud_storage import (
     blob_exists,

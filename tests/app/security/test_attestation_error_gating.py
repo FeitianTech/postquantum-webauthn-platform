@@ -14,7 +14,6 @@ from __future__ import annotations
 
 from .ceremony_helpers import (
     ORIGIN,
-    RP_ID,
     Authenticator,
     advanced_public_key_options,
     registration_payload,

@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime
 from types import SimpleNamespace
 
 import pytest
 from cryptography import x509
 from cryptography.exceptions import UnsupportedAlgorithm
-from cryptography.x509.oid import ObjectIdentifier
 
 
 def test_attestation_helper_residual_branches(monkeypatch):

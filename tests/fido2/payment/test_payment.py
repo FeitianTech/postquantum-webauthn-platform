@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 from types import SimpleNamespace
-from unittest.mock import MagicMock
 
 import pytest
 
@@ -21,7 +20,6 @@ from fido2.webauthn import (
     AuthenticatorAttachment,
     AuthenticatorSelectionCriteria,
     PublicKeyCredentialCreationOptions,
-    PublicKeyCredentialDescriptor,
     PublicKeyCredentialParameters,
     PublicKeyCredentialRequestOptions,
     PublicKeyCredentialRpEntity,

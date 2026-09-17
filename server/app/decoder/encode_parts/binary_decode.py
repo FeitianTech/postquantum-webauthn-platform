@@ -5,7 +5,7 @@ import base64
 import binascii
 import re
 import string
-from typing import Any, Optional
+from typing import Any
 from collections.abc import Mapping, Sequence
 
 

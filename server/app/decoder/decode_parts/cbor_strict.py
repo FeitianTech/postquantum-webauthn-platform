@@ -4,7 +4,7 @@ from __future__ import annotations
 import base64
 import math
 import struct
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from ...attestation import encode_base64url
 

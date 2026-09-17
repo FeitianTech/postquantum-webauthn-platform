@@ -10,12 +10,10 @@ stopped checking anything, these tests fail.
 from __future__ import annotations
 
 import hashlib
-from typing import List, Optional
 
 import pytest
 from cryptography.exceptions import InvalidSignature
 
-from fido2 import cose
 from fido2.attestation import Attestation, AttestationVerifier, UntrustedAttestation
 from fido2.attestation.base import InvalidData
 from fido2.attestation.base import InvalidSignature as AttestationInvalidSignature

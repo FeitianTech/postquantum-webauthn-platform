@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import struct
-from typing import Any, Dict, List, Tuple
+from typing import Any
 from collections.abc import Mapping, Sequence
 
 

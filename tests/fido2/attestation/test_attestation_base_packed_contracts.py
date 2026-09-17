@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-import builtins
 import datetime
-import sys
 import types
 
 import pytest

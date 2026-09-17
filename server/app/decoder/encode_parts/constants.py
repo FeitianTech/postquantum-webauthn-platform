@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import re
-from typing import Dict, Tuple
 from collections.abc import Sequence
 
 

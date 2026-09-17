@@ -11,7 +11,7 @@ two, and a missing copy simply does not contribute.
 """
 from __future__ import annotations
 
-from typing import Any, List, Optional, Tuple
+from typing import Any
 from collections.abc import Iterable, Mapping
 
 #: Key under which the server-side credential record keeps its latest counter.

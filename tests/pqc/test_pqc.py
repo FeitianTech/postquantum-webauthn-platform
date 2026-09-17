@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 
-import pytest
 
 
 def test_pqc_algorithm_id_to_name_mapping():

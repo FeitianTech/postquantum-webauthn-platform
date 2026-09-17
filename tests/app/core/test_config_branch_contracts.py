@@ -7,7 +7,6 @@ import types
 from unittest import mock
 
 from flask import Flask
-import pytest
 
 import server.app.config as config_module
 

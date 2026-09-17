@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from collections import deque
-from typing import Any, Dict, Optional, Tuple
+from typing import Any
 from collections.abc import Mapping, Sequence
 
 from .binary_decode import _maybe_decode_bytes

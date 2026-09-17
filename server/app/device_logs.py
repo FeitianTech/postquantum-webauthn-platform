@@ -9,7 +9,7 @@ import threading
 import uuid
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Any, Optional, Tuple
+from typing import Any
 from collections.abc import Mapping, MutableMapping, Sequence
 
 import cbor2

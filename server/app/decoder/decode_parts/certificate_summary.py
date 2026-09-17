@@ -6,7 +6,7 @@ import binascii
 import hashlib
 import re
 from datetime import datetime, timezone
-from typing import Any, List, Optional, Tuple
+from typing import Any
 from collections.abc import Mapping
 
 from cryptography import x509

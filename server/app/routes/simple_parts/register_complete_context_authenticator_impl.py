@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any
 
 
 def populate_authenticator_data_context_impl(simple_module: Any, ctx: dict[str, Any]) -> None:

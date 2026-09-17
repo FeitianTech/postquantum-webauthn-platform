@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 from datetime import datetime
-from typing import Any, List, Optional, Tuple
+from typing import Any
 from collections.abc import Sequence
 
 

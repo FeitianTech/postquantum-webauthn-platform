@@ -3,7 +3,7 @@ from __future__ import annotations
 import base64
 import binascii
 import re
-from typing import Any, Optional
+from typing import Any
 from collections.abc import Mapping
 
 

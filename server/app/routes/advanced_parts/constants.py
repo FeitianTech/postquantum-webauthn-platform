@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import re
-from typing import Dict, Set
 
 COSE_ALGORITHM_NAME_MAP: dict[str, int] = {
     "ML-DSA-87": -50,

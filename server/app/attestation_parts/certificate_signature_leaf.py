@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from typing import Any, List
+from typing import Any
 from collections.abc import Mapping
 
 

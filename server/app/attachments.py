@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable, Mapping
-from typing import Any, Dict, List, Optional, Set
+from typing import Any
 
 from .metadata import ensure_metadata_session_id
 from .storage import extract_credential_data, iter_credentials

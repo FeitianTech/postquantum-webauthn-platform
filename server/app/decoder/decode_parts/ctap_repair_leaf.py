@@ -1,19 +1,19 @@
 """CTAP repair and trailing-merge leaf helpers."""
 from __future__ import annotations
 
-from typing import Any, Dict, Optional, Tuple
+from typing import Any
 from collections.abc import Mapping
 
 from fido2 import cbor
 
 from .cbor_core import _lenient_decode_from
 from .ctap_repair_make import (
-    _derive_alg_from_auth_data,
-    _extract_mapping_bytes,
-    _extract_mapping_string,
-    _merge_ctap_make_credential,
-    _merge_trailing_signature,
-    _repair_make_credential_entries,
+    _derive_alg_from_auth_data,  # noqa: F401  # split-module namespace surface
+    _extract_mapping_bytes,  # noqa: F401  # split-module namespace surface
+    _extract_mapping_string,  # noqa: F401  # split-module namespace surface
+    _merge_ctap_make_credential,  # noqa: F401  # split-module namespace surface
+    _merge_trailing_signature,  # noqa: F401  # split-module namespace surface
+    _repair_make_credential_entries,  # noqa: F401  # split-module namespace surface
 )
 
 

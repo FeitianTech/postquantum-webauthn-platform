@@ -26,7 +26,6 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 
-from typing import Optional
 
 import warnings
 

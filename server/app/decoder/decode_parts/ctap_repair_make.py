@@ -1,7 +1,7 @@
 """CTAP make-credential and shared repair leaf helpers."""
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 from collections.abc import Iterable, Mapping
 
 from fido2 import cbor

@@ -34,7 +34,7 @@ from contextvars import ContextVar
 from dataclasses import dataclass, field
 from datetime import date
 from enum import Enum, unique
-from typing import Any, Optional
+from typing import Any
 from collections.abc import Sequence, Mapping, Callable
 
 from cryptography import x509
