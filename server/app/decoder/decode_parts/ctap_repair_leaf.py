@@ -47,11 +47,11 @@ def _locate_get_assertion_trailing_offset(raw_bytes: bytes, signature_start: int
 
 def _extract_get_assertion_trailing_from_raw(
     raw_bytes: bytes,
-) -> tuple[Optional[bytes], dict[int, Any]]:
+) -> tuple[bytes | None, dict[int, Any]]:
     if not raw_bytes:
         return None, {}
 
-    signature_offset: Optional[int] = None
+    signature_offset: int | None = None
     length_size = 0
     for prefix, size in ((0x58, 1), (0x59, 2), (0x5A, 4), (0x5B, 8)):
         marker = bytes((3, prefix))

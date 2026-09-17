@@ -80,7 +80,7 @@ def _serialize_extension_value(ext: Any) -> Any:
 
         if oid == "1.3.6.1.4.1.41482.2":
             identifier_bytes = decode_asn1_octet_string(raw_bytes)
-            text_value: Optional[str]
+            text_value: str | None
             try:
                 text_value = identifier_bytes.decode("ascii").strip()
             except Exception:  # pragma: no cover - defensive

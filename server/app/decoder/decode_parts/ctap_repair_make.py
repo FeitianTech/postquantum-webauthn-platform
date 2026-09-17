@@ -16,21 +16,21 @@ def _merge_ctap_make_credential(
     value: Mapping[Any, Any],
     extra_structures: list[dict[str, Any]],
     extra_values: list[Any],
-) -> tuple[dict[str, Any], Mapping[Any, Any], list[dict[str, Any]], list[Any], Optional[bytes]]:
-    signature_bytes: Optional[bytes] = None
+) -> tuple[dict[str, Any], Mapping[Any, Any], list[dict[str, Any]], list[Any], bytes | None]:
+    signature_bytes: bytes | None = None
 
     if isinstance(value, Mapping) and value.get("al&") == "sig":
         normalized_value = dict(value)
         normalized_value.pop("al&", None)
 
-        def _extract_alg(mapping: Mapping[Any, Any]) -> Optional[int]:
+        def _extract_alg(mapping: Mapping[Any, Any]) -> int | None:
             for key in ("alg", "algorithm", 1, "1", 3, "3"):
                 raw = mapping.get(key)
                 if isinstance(raw, int):
                     return raw
             return None
 
-        def _extract_sig(mapping: Mapping[Any, Any]) -> Optional[bytes]:
+        def _extract_sig(mapping: Mapping[Any, Any]) -> bytes | None:
             for key in ("sig", "signature", 2, "2", 3, "3"):
                 if key in mapping:
                     coerced = _coerce_cbor_bytes(mapping[key])
@@ -47,8 +47,8 @@ def _merge_ctap_make_credential(
         normalized_value.pop("attStmt", None)
         normalized_value.pop("attstmt", None)
 
-        att_structure_override: Optional[dict[str, Any]] = None
-        att_stmt_base: Optional[Mapping[Any, Any]] = None
+        att_structure_override: dict[str, Any] | None = None
+        att_stmt_base: Mapping[Any, Any] | None = None
 
         if extra_values:
             candidate = extra_values[0]
@@ -114,7 +114,7 @@ def _repair_make_credential_entries(
     value: Mapping[Any, Any],
     *,
     default_alg: int = -50,
-) -> tuple[dict[str, Any], Mapping[Any, Any], Optional[bytes]]:
+) -> tuple[dict[str, Any], Mapping[Any, Any], bytes | None]:
     if not isinstance(value, dict):
         return structure, value, None
 
@@ -131,7 +131,7 @@ def _repair_make_credential_entries(
                 entries.pop(idx)
                 break
 
-    signature_bytes: Optional[bytes] = None
+    signature_bytes: bytes | None = None
     if signature_key is not None:
         hex_value = signature_key.get("hex")
         if isinstance(hex_value, str):
@@ -152,7 +152,7 @@ def _repair_make_credential_entries(
         raw_entry = polished_value.pop(13)
         if isinstance(raw_entry, list):
             segments: list[bytes] = []
-            alg_candidate: Optional[int] = None
+            alg_candidate: int | None = None
             for item in raw_entry:
                 if isinstance(item, (bytes, bytearray)):
                     segments.append(bytes(item))
@@ -186,7 +186,7 @@ def _repair_make_credential_entries(
     return structure, polished_value, signature_bytes
 
 
-def _derive_alg_from_auth_data(auth_data_bytes: Optional[bytes]) -> Optional[int]:
+def _derive_alg_from_auth_data(auth_data_bytes: bytes | None) -> int | None:
     if not auth_data_bytes:
         return None
     try:
@@ -207,7 +207,7 @@ def _merge_trailing_signature(
     structure: dict[str, Any],
     value: Mapping[Any, Any],
     trailing: bytes,
-) -> Optional[tuple[dict[str, Any], Mapping[Any, Any], bytes, bytes]]:
+) -> tuple[dict[str, Any], Mapping[Any, Any], bytes, bytes] | None:
     if not trailing or all(byte in (0x00, 0xFF) for byte in trailing):
         return None
 
@@ -256,7 +256,7 @@ def _merge_trailing_signature(
     return updated_structure, updated_value, signature_bytes, b""
 
 
-def _extract_mapping_string(value: Mapping[Any, Any], keys: Iterable[Any]) -> Optional[str]:
+def _extract_mapping_string(value: Mapping[Any, Any], keys: Iterable[Any]) -> str | None:
     if not isinstance(value, Mapping):
         return None
     candidate = _get_mapping_entry(value, *keys)
@@ -269,7 +269,7 @@ def _extract_mapping_string(value: Mapping[Any, Any], keys: Iterable[Any]) -> Op
     return None
 
 
-def _extract_mapping_bytes(value: Mapping[Any, Any], keys: Iterable[Any]) -> Optional[bytes]:
+def _extract_mapping_bytes(value: Mapping[Any, Any], keys: Iterable[Any]) -> bytes | None:
     if not isinstance(value, Mapping):
         return None
     candidate = _get_mapping_entry(value, *keys)

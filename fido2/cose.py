@@ -153,7 +153,7 @@ _ML_DSA_PARAMETER_SET_TO_OID: dict[str, str] = {
 # FIPS 204 (final) sizes.  The pre-standard CRYSTALS-Dilithium Round 3 signature
 # sizes were 2420/3293/4595; FIPS 204 widened the challenge seed for the two
 # higher parameter sets, which added 16 and 32 bytes respectively.
-_ML_DSA_PARAMETER_SET_DEFAULTS: dict[str, dict[str, Optional[int]]] = {
+_ML_DSA_PARAMETER_SET_DEFAULTS: dict[str, dict[str, int | None]] = {
     "ML-DSA-44": {
         "public_key_length": 1312,
         "signature_length": 2420,
@@ -228,7 +228,7 @@ def _verify_mldsa_signature(
     verifier.verify(bytes(signature), bytes(message))
 
 
-def _get_mldsa_parameter_details(parameter_set: Optional[str]) -> dict[str, Optional[int]]:
+def _get_mldsa_parameter_details(parameter_set: str | None) -> dict[str, int | None]:
     """Return the FIPS 204 parameter lengths for *parameter_set*."""
 
     if not parameter_set:
@@ -237,7 +237,7 @@ def _get_mldsa_parameter_details(parameter_set: Optional[str]) -> dict[str, Opti
     return dict(_ML_DSA_PARAMETER_SET_DEFAULTS.get(parameter_set, {}))
 
 
-def describe_mldsa_oid(oid: Optional[str]) -> Optional[dict[str, str]]:
+def describe_mldsa_oid(oid: str | None) -> dict[str, str] | None:
     """Return descriptive ML-DSA metadata for a certificate algorithm OID."""
 
     if not oid:
@@ -255,7 +255,7 @@ def describe_mldsa_oid(oid: Optional[str]) -> Optional[dict[str, str]]:
     }
 
 
-def describe_mldsa_oid_name(oid: Optional[str]) -> Optional[str]:
+def describe_mldsa_oid_name(oid: str | None) -> str | None:
     """Return a user-friendly label for a recognised ML-DSA certificate OID."""
 
     details = describe_mldsa_oid(oid)
@@ -299,7 +299,7 @@ def extract_certificate_signature_info(cert_der: bytes) -> dict[str, Any]:
     }
 
 
-def _subject_public_key_bytes(public_key: Any) -> Optional[bytes]:
+def _subject_public_key_bytes(public_key: Any) -> bytes | None:
     """Return the SubjectPublicKey BIT STRING payload for a parsed public key."""
 
     if isinstance(public_key, MLDSA_PUBLIC_KEY_TYPES):
@@ -366,7 +366,7 @@ def extract_certificate_public_key_info(cert_der: bytes) -> dict[str, Any]:
     return info
 
 
-def _coerce_mldsa_public_key_bytes(value: Any, parameter_set: Optional[str] = None) -> bytes:
+def _coerce_mldsa_public_key_bytes(value: Any, parameter_set: str | None = None) -> bytes:
     """Convert assorted public key representations into raw ML-DSA bytes.
 
     Accepts raw key bytes, a SubjectPublicKeyInfo structure (DER or PEM) and

@@ -21,10 +21,10 @@ from .handlers_basic import _prepare_encoder_response
 
 
 def _encode_cbor_value(parsed: Any, *, base_type: str = "CBOR (canonical)") -> dict[str, Any]:
-    ctap_source: Optional[Mapping[str, Any]] = None
-    ctap_kind: Optional[str] = None
-    ctap_metadata: Optional[Mapping[str, Any]] = None
-    encoded_map: Optional[Mapping[Any, Any]] = None
+    ctap_source: Mapping[str, Any] | None = None
+    ctap_kind: str | None = None
+    ctap_metadata: Mapping[str, Any] | None = None
+    encoded_map: Mapping[Any, Any] | None = None
 
     if isinstance(parsed, Mapping):
         ctap_metadata = parsed.get("ctap") if isinstance(parsed.get("ctap"), Mapping) else None

@@ -25,7 +25,7 @@ def _certificate_datetime(cert: Any, attribute: str) -> datetime:
     return _ensure_utc_datetime(value)
 
 
-def _coerce_bytes(value: Any) -> Optional[bytes]:
+def _coerce_bytes(value: Any) -> bytes | None:
     """Return ``value`` as ``bytes`` when possible."""
 
     if isinstance(value, ByteBuffer):
@@ -65,7 +65,7 @@ def _extract_certificate_aaguid(cert_der: bytes) -> bytes:
     except x509.ExtensionNotFound:
         return b""
 
-    raw_value: Optional[bytes] = None
+    raw_value: bytes | None = None
     value = extension.value
 
     if isinstance(value, x509.UnrecognizedExtension):
@@ -93,7 +93,7 @@ def _extract_certificate_aaguid(cert_der: bytes) -> bytes:
     return b""
 
 
-def _coerce_certificate_bytes(value: Any) -> Optional[bytes]:
+def _coerce_certificate_bytes(value: Any) -> bytes | None:
     """Decode certificate data from common encodings into raw DER bytes."""
 
     byte_value = _coerce_bytes(value)
@@ -117,7 +117,7 @@ def _coerce_certificate_bytes(value: Any) -> Optional[bytes]:
 
 def _extract_attestation_leaf_certificate(
     attestation_object: Any,
-) -> Optional[bytes]:
+) -> bytes | None:
     """Return the first certificate from an attestation statement."""
 
     att_stmt = getattr(attestation_object, "att_stmt", None)
@@ -165,7 +165,7 @@ def _collect_metadata_root_certificates(metadata_entry: Any) -> list[bytes]:
     return roots
 
 
-def _find_metadata_entry_for_aaguid(verifier: Any, aaguid_bytes: bytes) -> Optional[Any]:
+def _find_metadata_entry_for_aaguid(verifier: Any, aaguid_bytes: bytes) -> Any | None:
     """Lookup metadata by AAGUID without invoking attestation verification."""
 
     if verifier is None or not aaguid_bytes:
@@ -180,7 +180,7 @@ def _find_metadata_entry_for_aaguid(verifier: Any, aaguid_bytes: bytes) -> Optio
         return None
 
 
-def _resolve_root_validity(checks: Mapping[str, Optional[bool]]) -> Optional[bool]:
+def _resolve_root_validity(checks: Mapping[str, bool | None]) -> bool | None:
     """Normalise root validity so red is only shown after explicit failures."""
 
     trusted = checks.get("trusted_ca")

@@ -6,7 +6,7 @@ from collections.abc import Mapping
 
 def _log_authenticator_attestation_response_impl(
     advanced_module: Any,
-    attestation_format: Optional[str],
+    attestation_format: str | None,
     auth_data: Any,
     attestation_statement: Any,
     raw_attestation_object: Any,
@@ -64,7 +64,7 @@ def _log_authenticator_attestation_response_impl(
             public_key_dict = dict(public_key_value)
             credential_payload["credentialPublicKey"] = advanced_module.make_json_safe(public_key_dict)
 
-            algorithm_value: Optional[int] = None
+            algorithm_value: int | None = None
             if 3 in public_key_dict:
                 algorithm_value = advanced_module._coerce_cose_algorithm(public_key_dict[3])
             elif "alg" in public_key_dict:

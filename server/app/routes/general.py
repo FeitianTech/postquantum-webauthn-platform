@@ -48,7 +48,7 @@ _METADATA_BOOTSTRAP_ENV_FLAG = "FIDO_SERVER_MDS_BOOTSTRAPPED"
 _INDEX_EAGER_METADATA_ENV_FLAG = "FIDO_SERVER_EAGER_INDEX_METADATA_BOOTSTRAP"
 
 
-def _env_flag(name: str) -> Optional[bool]:
+def _env_flag(name: str) -> bool | None:
     return parse_env_flag(name)
 
 
@@ -168,7 +168,7 @@ def _remember_custom_entries_state(snapshot: Any) -> None:
         session[_MDS_CUSTOM_ENTRIES_SESSION_KEY] = state
 
 
-def _initial_custom_entries_state(metadata_session_id: Optional[str]) -> str:
+def _initial_custom_entries_state(metadata_session_id: str | None) -> str:
     if metadata_session_id and getattr(g, "_mds_session_new", None) == metadata_session_id:
         return "none"
     stored = session.get(_MDS_CUSTOM_ENTRIES_SESSION_KEY)

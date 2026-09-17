@@ -47,7 +47,7 @@ def _convert_ctap_credential_descriptor(entry: Any) -> Any:
     return descriptor
 
 
-def _attempt_decode_cbor_map(data: bytes) -> Optional[Mapping[Any, Any]]:
+def _attempt_decode_cbor_map(data: bytes) -> Mapping[Any, Any] | None:
     try:
         decoded = cbor2.loads(data)
     except Exception:  # pragma: no cover - defensive

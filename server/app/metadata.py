@@ -39,17 +39,17 @@ __all__ = ["MetadataDownloadError", "download_metadata_blob", "get_mds_verifier"
            "delete_session_metadata_item", "expand_metadata_entry_payloads",
            "metadata_entry_trust_anchor_status", "maybe_store_uploaded_metadata_file"]
 
-_base_metadata_cache: Optional[MetadataBlobPayload] = None
-_base_metadata_mtime: Optional[float] = None
-_base_metadata_source: Optional[str] = None
-_base_verifier_cache: Optional[MdsAttestationVerifier] = None
-_base_verifier_mtime: Optional[float] = None
-_base_metadata_trust_verified: Optional[bool] = None
+_base_metadata_cache: MetadataBlobPayload | None = None
+_base_metadata_mtime: float | None = None
+_base_metadata_source: str | None = None
+_base_verifier_cache: MdsAttestationVerifier | None = None
+_base_verifier_mtime: float | None = None
+_base_metadata_trust_verified: bool | None = None
 _base_metadata_entry_ids: set[int] = set()
-_base_explorer_snapshot_cache: Optional[dict[str, Any]] = None
-_base_explorer_snapshot_mtime: Optional[tuple[Optional[float], Optional[float]]] = None
-_base_full_snapshot_cache: Optional[dict[str, Any]] = None
-_base_full_snapshot_mtime: Optional[float] = None
+_base_explorer_snapshot_cache: dict[str, Any] | None = None
+_base_explorer_snapshot_mtime: tuple[float | None, float | None] | None = None
+_base_full_snapshot_cache: dict[str, Any] | None = None
+_base_full_snapshot_mtime: float | None = None
 _session_metadata_entry_ids: set[int] = set()
 # Locks live here because the metadata_parts runtime functions execute against
 # this module's globals.
@@ -77,7 +77,7 @@ _SESSION_METADATA_CLEANUP_INTERVAL_HOURS_ENV = "FIDO_SERVER_SESSION_METADATA_CLE
 _SESSION_METADATA_CLEANUP_ASYNC_ENV = "FIDO_SERVER_SESSION_METADATA_CLEANUP_ASYNC"
 
 _session_metadata_last_cleanup: float = 0.0
-_session_cleanup_worker: Optional[threading.Thread] = None
+_session_cleanup_worker: threading.Thread | None = None
 _session_cleanup_pending: bool = False
 _session_cleanup_lock = threading.Lock()
 _METADATA_REPO_FOLDER = "metadata"

@@ -4,7 +4,7 @@ import hashlib
 from typing import Optional, Set
 
 
-def _trusted_ca_subjects() -> Optional[set[str]]:
+def _trusted_ca_subjects() -> set[str] | None:
     subjects = app.config.get("TRUSTED_ATTESTATION_CA_SUBJECTS")
     if isinstance(subjects, set):
         return subjects
@@ -13,7 +13,7 @@ def _trusted_ca_subjects() -> Optional[set[str]]:
     return None
 
 
-def _trusted_ca_fingerprints() -> Optional[set[str]]:
+def _trusted_ca_fingerprints() -> set[str] | None:
     fingerprints = app.config.get("TRUSTED_ATTESTATION_CA_FINGERPRINTS")
     if isinstance(fingerprints, set):
         return {str(fp).upper() for fp in fingerprints if fp}

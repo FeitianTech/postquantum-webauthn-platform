@@ -125,7 +125,7 @@ from .decode_parts import result_runtime as _result_runtime
 from .decode_parts import cbor_runtime as _cbor_runtime
 
 
-def _extract_authenticator_bytes(response: Any, attestation_entry: Any = None) -> Optional[bytes]:
+def _extract_authenticator_bytes(response: Any, attestation_entry: Any = None) -> bytes | None:
     module = sys.modules.get(__name__)
     extract_bytes = getattr(module, "_extract_bytes_from_binary", _extract_bytes_from_binary)
     extract_from_attestation = getattr(
@@ -144,7 +144,7 @@ def _extract_authenticator_bytes(response: Any, attestation_entry: Any = None) -
     return extract_from_attestation(attestation_entry)
 
 
-def _extract_authenticator_bytes_from_attestation(attestation_entry: Any) -> Optional[bytes]:
+def _extract_authenticator_bytes_from_attestation(attestation_entry: Any) -> bytes | None:
     module = sys.modules.get(__name__)
     extract_bytes = getattr(module, "_extract_bytes_from_binary", _extract_bytes_from_binary)
     attestation_class = getattr(module, "AttestationObject", AttestationObject)
@@ -186,7 +186,7 @@ _CTAP_STATUS_MAP: dict[int, str] = {
 
 
 
-def _extract_ctap_prefix(data: bytes) -> tuple[Optional[dict[str, Any]], bytes]:
+def _extract_ctap_prefix(data: bytes) -> tuple[dict[str, Any] | None, bytes]:
     if not data:
         return None, data
     code = data[0]
@@ -262,7 +262,7 @@ _split_get_assertion_trailing_fields = _ctap_repair_leaf._split_get_assertion_tr
 
 def _extract_get_assertion_trailing_from_raw(
     raw_bytes: bytes,
-) -> tuple[Optional[bytes], dict[int, Any]]:
+) -> tuple[bytes | None, dict[int, Any]]:
     original_locate_trailing_offset = _ctap_repair_leaf._locate_get_assertion_trailing_offset
     original_lenient_decode = _ctap_repair_leaf._lenient_decode_from
     try:

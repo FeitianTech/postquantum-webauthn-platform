@@ -27,7 +27,7 @@ _DEFAULT_REPO_NAME = "CredentialLogs"
 _TRUTHY_VALUES = {"1", "true", "yes", "on"}
 
 
-def _is_truthy(value: Optional[str]) -> bool:
+def _is_truthy(value: str | None) -> bool:
     if value is None:
         return False
     return value.strip().lower() in _TRUTHY_VALUES
@@ -91,7 +91,7 @@ def _http_timeout() -> float:
     return value if value > 0 else _DEFAULT_HTTP_TIMEOUT_SECONDS
 
 
-def _request(method: str, url: str, body: Optional[dict[str, Any]] = None) -> tuple[int, bytes]:
+def _request(method: str, url: str, body: dict[str, Any] | None = None) -> tuple[int, bytes]:
     data = None
     if body is not None:
         data = json.dumps(body).encode("utf-8")
@@ -159,7 +159,7 @@ def github_get_json(path: str) -> tuple[dict[str, Any], str]:
     return payload, sha
 
 
-def github_upload_json(path: str, obj: dict[str, Any], sha: Optional[str] = None) -> None:
+def github_upload_json(path: str, obj: dict[str, Any], sha: str | None = None) -> None:
     """Create or replace a JSON file at ``path`` in the credential log repository."""
 
     serialised = json.dumps(obj, ensure_ascii=False, indent=2)
@@ -180,7 +180,7 @@ def github_upload_json(path: str, obj: dict[str, Any], sha: Optional[str] = None
     _request("PUT", url, body)
 
 
-def github_upload_file(path: str, data: bytes, message: str, sha: Optional[str] = None) -> None:
+def github_upload_file(path: str, data: bytes, message: str, sha: str | None = None) -> None:
     """Create or replace a file at ``path`` with ``data`` in the log repository."""
 
     body: dict[str, Any] = {

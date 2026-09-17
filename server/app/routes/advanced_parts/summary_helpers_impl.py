@@ -14,7 +14,7 @@ def _generate_storage_id_impl(advanced_module: Any, credential_id: str) -> str:
 def _summarize_properties_impl(
     advanced_module: Any,
     value: Any,
-) -> Optional[dict[str, Any]]:
+) -> dict[str, Any] | None:
     if not isinstance(value, Mapping):
         return None
 
@@ -29,7 +29,7 @@ def _summarize_properties_impl(
 def _summarize_relying_party_impl(
     advanced_module: Any,
     value: Any,
-) -> Optional[dict[str, Any]]:
+) -> dict[str, Any] | None:
     if not isinstance(value, Mapping):
         return None
 

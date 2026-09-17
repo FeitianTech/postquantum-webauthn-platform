@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from collections.abc import Mapping
 
 
-def _coerce_attestation_certificate_bytes(value: Any) -> Optional[bytes]:
+def _coerce_attestation_certificate_bytes(value: Any) -> bytes | None:
     """Return raw certificate bytes for attestation payload *value*."""
 
     if value in (None, ""):
@@ -76,19 +76,19 @@ def extract_attestation_details(
 ) -> tuple[
     str,
     dict[str, Any],
-    Optional[str],
-    Optional[str],
+    str | None,
+    str | None,
     dict[str, Any],
-    Optional[dict[str, Any]],
+    dict[str, Any] | None,
     list[dict[str, Any]],
 ]:
     """Parse attestation information from a registration response structure."""
     attestation_format = "none"
     attestation_statement: dict[str, Any] = {}
-    attestation_object_b64: Optional[str] = None
-    client_data_b64: Optional[str] = None
+    attestation_object_b64: str | None = None
+    client_data_b64: str | None = None
     client_extension_results: dict[str, Any] = {}
-    attestation_certificate: Optional[dict[str, Any]] = None
+    attestation_certificate: dict[str, Any] | None = None
     attestation_certificates: list[dict[str, Any]] = []
 
     if not isinstance(response, dict):

@@ -7,19 +7,19 @@ def _finalize_metadata_results(
     results: dict[str, Any],
     *,
     metadata_entry: Any,
-    metadata_lookup_source: Optional[str],
+    metadata_lookup_source: str | None,
     verifier: Any,
     credential_aaguid_bytes: bytes,
     certificate_aaguid_bytes: bytes,
-    root_check_details: Optional[dict[str, Optional[bool]]],
-    root_valid: Optional[bool],
+    root_check_details: dict[str, bool | None] | None,
+    root_valid: bool | None,
 ) -> None:
-    metadata_description: Optional[str] = None
-    metadata_aaguid: Optional[str] = None
-    metadata_algorithm_supported: Optional[bool] = None
+    metadata_description: str | None = None
+    metadata_aaguid: str | None = None
+    metadata_algorithm_supported: bool | None = None
     metadata_aaguid_bytes = b""
     metadata_root_certificates_present = False
-    metadata_verification_warning: Optional[str] = None
+    metadata_verification_warning: str | None = None
 
     if metadata_entry is None and credential_aaguid_bytes:
         try:

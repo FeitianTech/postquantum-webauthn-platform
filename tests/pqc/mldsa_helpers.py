@@ -80,7 +80,7 @@ def cose_key(
     parameter_set: str,
     label: str = "default",
     *,
-    key_bytes: Optional[bytes] = None,
+    key_bytes: bytes | None = None,
     kty: int = 7,
 ) -> cose.CoseKey:
     """Return a COSE key holding a real ML-DSA public key."""
@@ -126,15 +126,15 @@ def certificate(
     parameter_set: str,
     *,
     label: str = "attestation",
-    common_name: Optional[str] = None,
-    aaguid: Optional[bytes] = None,
+    common_name: str | None = None,
+    aaguid: bytes | None = None,
     ca: bool = False,
     basic_constraints: bool = True,
-    issuer_parameter_set: Optional[str] = None,
-    issuer_label: Optional[str] = None,
-    issuer_common_name: Optional[str] = None,
-    not_valid_before: Optional[datetime.datetime] = None,
-    not_valid_after: Optional[datetime.datetime] = None,
+    issuer_parameter_set: str | None = None,
+    issuer_label: str | None = None,
+    issuer_common_name: str | None = None,
+    not_valid_before: datetime.datetime | None = None,
+    not_valid_after: datetime.datetime | None = None,
     serial_number: int = 0x5EC0DE,
 ) -> bytes:
     """Build a real ML-DSA-signed certificate and return its DER encoding.

@@ -223,7 +223,7 @@ def advanced_authenticate_begin_impl(advanced_module: Any):
         else:
             processed_extensions[ext_name] = ext_value
 
-    credentials_argument: Optional[list[Any]] = credentials_for_begin if credentials_for_begin else None
+    credentials_argument: list[Any] | None = credentials_for_begin if credentials_for_begin else None
     options, state = temp_server.authenticate_begin(
         credentials_argument,
         user_verification=uv_req,

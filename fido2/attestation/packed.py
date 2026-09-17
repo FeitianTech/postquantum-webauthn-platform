@@ -51,7 +51,7 @@ from cryptography.hazmat.backends import default_backend
 OID_AAGUID = x509.ObjectIdentifier("1.3.6.1.4.1.45724.1.1.4")
 
 
-def _validate_packed_cert(cert, aaguid, *, cert_bytes: Optional[bytes] = None):
+def _validate_packed_cert(cert, aaguid, *, cert_bytes: bytes | None = None):
     # https://www.w3.org/TR/webauthn/#packed-attestation-cert-requirements
     _validate_cert_common(cert)
 

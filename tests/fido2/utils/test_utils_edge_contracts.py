@@ -11,13 +11,13 @@ from fido2 import utils
 
 @dataclass(eq=False, frozen=True)
 class _DemoMapping(utils._DataClassMapping[str]):
-    plain: Optional[int] = None
-    encoded: Optional[int] = field(
+    plain: int | None = None
+    encoded: int | None = field(
         default=None,
         metadata={"serialize": lambda value: f"v:{value}"},
     )
-    nested_map: Optional[Mapping[str, int]] = None
-    list_of_maps: Optional[Sequence[Mapping[str, int]]] = None
+    nested_map: Mapping[str, int] | None = None
+    list_of_maps: Sequence[Mapping[str, int]] | None = None
 
     @classmethod
     def _get_field_key(cls, field):

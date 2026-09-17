@@ -35,7 +35,7 @@ def _resolve_signature_validation(
             attestation_errors.append(f"attestation_error: {exc}")
             signature_valid = False
 
-    pqc_signature_valid: Optional[bool] = None
+    pqc_signature_valid: bool | None = None
     if signature_valid is False and attestation_format_value != "none":
         pqc_outcome = _attempt_pqc_attestation_signature_validation(
             attestation_object, client_data_hash
@@ -84,12 +84,12 @@ def _collect_attestation_trust_path(
 def _evaluate_root_validation(
     results: dict[str, Any],
     *,
-    algorithm: Optional[int],
+    algorithm: int | None,
     attestation_object: Any,
     attestation_result: Any,
     client_data_hash: bytes,
     credential_aaguid_bytes: bytes,
-    signature_valid: Optional[bool],
+    signature_valid: bool | None,
     attestation_format_value: str,
 ) -> dict[str, Any]:
     attestation_trust_path = _collect_attestation_trust_path(
@@ -102,11 +102,11 @@ def _evaluate_root_validation(
         certificate_aaguid_bytes = _extract_certificate_aaguid(attestation_trust_path[0])
 
     metadata_entry = None
-    metadata_lookup_source: Optional[str] = None
+    metadata_lookup_source: str | None = None
     now = datetime.now(timezone.utc)
-    root_valid: Optional[bool] = None
+    root_valid: bool | None = None
     verifier = None
-    root_check_details: Optional[dict[str, Optional[bool]]] = None
+    root_check_details: dict[str, bool | None] | None = None
 
     pqc_registration = isinstance(algorithm, int) and is_pqc_algorithm(algorithm)
     if pqc_registration:

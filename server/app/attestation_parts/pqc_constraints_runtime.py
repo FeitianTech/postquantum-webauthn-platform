@@ -6,7 +6,7 @@ from typing import Any, List, Optional, Tuple
 from collections.abc import Sequence
 
 
-def _normalise_pqc_algorithm_identifier(value: Any) -> Optional[int]:
+def _normalise_pqc_algorithm_identifier(value: Any) -> int | None:
     """Return the COSE identifier for a PQC algorithm when discernible."""
 
     if isinstance(value, int) and is_pqc_algorithm(value):
@@ -52,7 +52,7 @@ def _check_pqc_certificate_constraints(
     now: datetime,
     is_leaf: bool,
     remaining_subordinates: int,
-) -> Optional[str]:
+) -> str | None:
     """Validate expiry, key usage and policy constraints for PQC certificates."""
 
     try:

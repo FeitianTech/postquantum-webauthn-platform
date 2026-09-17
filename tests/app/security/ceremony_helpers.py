@@ -95,7 +95,7 @@ class Authenticator:
         counter: int = 0,
         include_credential: bool = True,
         user_verified: bool = True,
-        cose_key_bytes: Optional[bytes] = None,
+        cose_key_bytes: bytes | None = None,
     ) -> bytes:
         flags = FLAG_UP
         if user_verified:
@@ -121,8 +121,8 @@ class Authenticator:
     def stored_credential_entry(
         self,
         *,
-        declared_algorithm: Optional[int] = None,
-        cose_key_bytes: Optional[bytes] = None,
+        declared_algorithm: int | None = None,
+        cose_key_bytes: bytes | None = None,
         resident: bool = True,
     ) -> dict[str, Any]:
         """Build the client-supplied credential record the advanced tab sends.
@@ -165,7 +165,7 @@ def client_data(
     ).encode("utf-8")
 
 
-def attestation_object(auth_data: bytes, *, fmt: str = "none", att_stmt: Optional[Mapping[str, Any]] = None) -> bytes:
+def attestation_object(auth_data: bytes, *, fmt: str = "none", att_stmt: Mapping[str, Any] | None = None) -> bytes:
     return cbor.encode(
         {"fmt": fmt, "attStmt": dict(att_stmt or {}), "authData": auth_data}
     )
@@ -178,7 +178,7 @@ def registration_payload(
     origin: str = ORIGIN,
     rp_id: str = RP_ID,
     cross_origin: bool = False,
-    cose_key_bytes: Optional[bytes] = None,
+    cose_key_bytes: bytes | None = None,
     counter: int = 0,
 ) -> dict[str, Any]:
     """Build a complete, genuinely-signed registration response."""

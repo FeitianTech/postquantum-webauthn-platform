@@ -56,7 +56,7 @@ class _ChainVerifier(AttestationVerifier):
         super().__init__()
         self._ca = ca
 
-    def ca_lookup(self, attestation_result, auth_data) -> Optional[bytes]:
+    def ca_lookup(self, attestation_result, auth_data) -> bytes | None:
         return self._ca
 
 
@@ -65,8 +65,8 @@ def _register(
     *,
     server: Fido2Server,
     credential_label: str = "credential",
-    statement_signer: Optional[str] = None,
-    x5c: Optional[list[bytes]] = None,
+    statement_signer: str | None = None,
+    x5c: list[bytes] | None = None,
     tamper_signature: bool = False,
 ):
     """Drive a complete registration ceremony and return the stored auth data."""
@@ -119,7 +119,7 @@ def _authenticate(
     server: Fido2Server,
     credential_data,
     credential_label: str = "credential",
-    signing_label: Optional[str] = None,
+    signing_label: str | None = None,
     tamper_signature: bool = False,
     counter: int = 2,
 ):

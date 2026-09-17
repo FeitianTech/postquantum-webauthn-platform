@@ -97,9 +97,9 @@ class AttestationResult:
 class TrustPathEvaluation:
     """Details about verifying the trust path of an attestation."""
 
-    attestation_result: Optional[AttestationResult]
-    ca_certificate: Optional[bytes]
-    chain_valid: Optional[bool]
+    attestation_result: AttestationResult | None
+    ca_certificate: bytes | None
+    chain_valid: bool | None
     errors: list[str]
 
 
@@ -276,13 +276,13 @@ class AttestationVerifier(abc.ABC):
     to verify the trust path from the attestation.
     """
 
-    def __init__(self, attestation_types: Optional[Sequence[Attestation]] = None):
+    def __init__(self, attestation_types: Sequence[Attestation] | None = None):
         self._attestation_types = attestation_types or _default_attestations()
 
     @abc.abstractmethod
     def ca_lookup(
         self, attestation_result: AttestationResult, auth_data: AuthenticatorData
-    ) -> Optional[bytes]:
+    ) -> bytes | None:
         """Lookup a CA certificate to be used to verify a trust path.
 
         :param attestation_result: The result of the attestation
@@ -329,7 +329,7 @@ class AttestationVerifier(abc.ABC):
             return TrustPathEvaluation(attestation_result, None, False, errors)
 
         trust_path = list(attestation_result.trust_path or [])
-        chain_valid: Optional[bool] = None
+        chain_valid: bool | None = None
         try:
             verify_x509_chain(trust_path + [ca])
         except InvalidSignature as exc:

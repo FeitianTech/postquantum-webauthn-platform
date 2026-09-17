@@ -47,8 +47,8 @@ def _coerce_expected_bytes(value: Any) -> bytes:
 
 
 def _resolve_expected_challenge(
-    state: Optional[Mapping[str, Any]],
-    public_key_options: Optional[Mapping[str, Any]],
+    state: Mapping[str, Any] | None,
+    public_key_options: Mapping[str, Any] | None,
 ) -> bytes:
     expected_challenge_bytes = b""
     if isinstance(state, Mapping):
@@ -129,8 +129,8 @@ def _populate_authenticator_data_results(
     results: dict[str, Any],
     *,
     auth_data_obj: Any,
-    state: Optional[Mapping[str, Any]],
-    public_key_options: Optional[Mapping[str, Any]],
+    state: Mapping[str, Any] | None,
+    public_key_options: Mapping[str, Any] | None,
 ) -> dict[str, Any]:
     flags = auth_data_obj.flags
     user_present = bool(flags & AuthenticatorData.FLAG.UP)
@@ -150,10 +150,10 @@ def _populate_authenticator_data_results(
     allowed_algorithms = _collect_allowed_algorithms(public_key_options)
 
     credential_data = getattr(auth_data_obj, "credential_data", None)
-    credential_id_length: Optional[int] = None
-    credential_aaguid: Optional[str] = None
+    credential_id_length: int | None = None
+    credential_aaguid: str | None = None
     credential_aaguid_bytes = b""
-    algorithm: Optional[int] = None
+    algorithm: int | None = None
     cose_key_valid = False
 
     if credential_data is not None:

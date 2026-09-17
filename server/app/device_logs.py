@@ -55,16 +55,16 @@ class RegistrationEvent:
     credential_id: bytes
     public_key_cose: Mapping[Any, Any]
     sign_count: int
-    transports: Optional[Sequence[str]]
-    aaguid: Optional[bytes]
-    device_name_mds: Optional[str]
+    transports: Sequence[str] | None
+    aaguid: bytes | None
+    device_name_mds: str | None
     attestation_format: str
     attestation_object: bytes
     client_data_json: bytes
-    signature_valid: Optional[bool] = None
-    root_valid: Optional[bool] = None
-    rp_id_hash_valid: Optional[bool] = None
-    aaguid_match: Optional[bool] = None
+    signature_valid: bool | None = None
+    root_valid: bool | None = None
+    rp_id_hash_valid: bool | None = None
+    aaguid_match: bool | None = None
 
 
 def to_b64url(data: bytes) -> str:
@@ -84,7 +84,7 @@ def random_shortid(length: int = 8) -> str:
     return secrets.token_hex((length + 1) // 2)[:length]
 
 
-def uuid_bytes_to_str(value: Optional[bytes]) -> str:
+def uuid_bytes_to_str(value: bytes | None) -> str:
     """Convert binary UUID data to a canonical string representation."""
 
     if not value:
@@ -119,7 +119,7 @@ def safe_cbor_decode(data: bytes | str) -> Mapping[str, Any]:
     On failure a dictionary containing ``{"error": "decode_failed"}`` is returned.
     """
 
-    payload: Optional[bytes]
+    payload: bytes | None
     if isinstance(data, (bytes, bytearray, memoryview)):
         payload = bytes(data)
     elif isinstance(data, str):

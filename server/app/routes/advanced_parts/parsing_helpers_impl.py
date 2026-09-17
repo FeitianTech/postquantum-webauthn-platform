@@ -9,7 +9,7 @@ from fido2.cose import CoseKey
 from fido2.webauthn import AttestedCredentialData
 
 
-def _extract_credential_id_impl(_advanced_module: Any, value: Any) -> Optional[bytes]:
+def _extract_credential_id_impl(_advanced_module: Any, value: Any) -> bytes | None:
     credential_id = None
     if isinstance(value, Mapping):
         raw_id = value.get("credential_id")
@@ -22,7 +22,7 @@ def _extract_credential_id_impl(_advanced_module: Any, value: Any) -> Optional[b
     return credential_id
 
 
-def _coerce_optional_bool_impl(_advanced_module: Any, value: Any) -> Optional[bool]:
+def _coerce_optional_bool_impl(_advanced_module: Any, value: Any) -> bool | None:
     if isinstance(value, bool):
         return value
     if value is None:
@@ -46,7 +46,7 @@ def _extract_flag_from_mapping_impl(
     advanced_module: Any,
     mapping: Mapping[str, Any],
     keys: Iterable[str],
-) -> Optional[bool]:
+) -> bool | None:
     for key in keys:
         if key in mapping:
             coerced = advanced_module._coerce_optional_bool(mapping.get(key))

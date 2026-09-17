@@ -86,7 +86,7 @@ _GET_ASSERTION_RESPONSE_LABELS: dict[Any, str] = {
 }
 
 
-def _resolve_ctap_label(label_map: Mapping[Any, str], key: Any) -> Optional[str]:
+def _resolve_ctap_label(label_map: Mapping[Any, str], key: Any) -> str | None:
     if key in label_map:
         return label_map[key]
     key_str = str(key)
@@ -95,7 +95,7 @@ def _resolve_ctap_label(label_map: Mapping[Any, str], key: Any) -> Optional[str]
     return None
 
 
-def _format_ctap_entry_key(key: Any, label: Optional[str]) -> str:
+def _format_ctap_entry_key(key: Any, label: str | None) -> str:
     if isinstance(key, (bytes, bytearray)):
         key_display = bytes(key).hex()
     else:
@@ -120,7 +120,7 @@ def _build_labeled_ctap_map(
         for key in mapping:
             label = _resolve_ctap_label(labels, key)
             formatted_key = _format_ctap_entry_key(key, label)
-            handler: Optional[Callable[[Any], Any]] = None
+            handler: Callable[[Any], Any] | None = None
             if label is not None and label in handlers:
                 handler = handlers[label]
             elif key in handlers:
@@ -144,7 +144,7 @@ def _build_labeled_ctap_map(
         if label is not None and label in seen_labels:
             continue
         formatted_key = _format_ctap_entry_key(missing, label)
-        handler: Optional[Callable[[Any], Any]] = None
+        handler: Callable[[Any], Any] | None = None
         if label is not None and label in handlers:
             handler = handlers[label]
         elif missing in handlers:

@@ -24,14 +24,14 @@ HINT_TO_ATTACHMENT_MAP: dict[str, str] = {
 }
 
 
-def normalize_attachment(value: Any) -> Optional[str]:
+def normalize_attachment(value: Any) -> str | None:
     if not isinstance(value, str):
         return None
     normalized = value.strip().lower()
     return normalized or None
 
 
-def derive_allowed_attachments_from_hints(hints: Optional[Iterable[str]]) -> list[str]:
+def derive_allowed_attachments_from_hints(hints: Iterable[str] | None) -> list[str]:
     allowed: list[str] = []
     if not hints:
         return allowed
@@ -68,7 +68,7 @@ def normalize_attachment_list(raw_values: Any) -> list[str]:
 
 def resolve_effective_attachments(
     hints: Iterable[str],
-    requested_attachment: Optional[str] = None,
+    requested_attachment: str | None = None,
 ) -> list[str]:
     resolved = derive_allowed_attachments_from_hints(hints)
     if resolved:
@@ -81,13 +81,13 @@ def resolve_effective_attachments(
     return []
 
 
-def build_credential_attachment_map() -> dict[bytes, Optional[str]]:
-    attachment_map: dict[bytes, Optional[str]] = {}
+def build_credential_attachment_map() -> dict[bytes, str | None]:
+    attachment_map: dict[bytes, str | None] = {}
     metadata_session_id = ensure_metadata_session_id()
     for email, user_creds in iter_credentials(session_id=metadata_session_id):
         for cred in user_creds:
             credential_data = extract_credential_data(cred)
-            credential_id: Optional[bytes] = None
+            credential_id: bytes | None = None
             if isinstance(credential_data, Mapping):
                 raw_id = credential_data.get('credential_id')
                 if isinstance(raw_id, (bytes, bytearray, memoryview)):
@@ -100,7 +100,7 @@ def build_credential_attachment_map() -> dict[bytes, Optional[str]]:
             if credential_id is None:
                 continue
 
-            attachment_value: Optional[str] = None
+            attachment_value: str | None = None
             if isinstance(cred, Mapping):
                 attachment_value = normalize_attachment(
                     cred.get('authenticator_attachment')

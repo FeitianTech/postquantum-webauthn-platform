@@ -75,13 +75,13 @@ def advanced_register_complete_impl(advanced_module: Any):
         resolved_rp_id = state_ctx["resolvedRpId"]
         auth_data = state_ctx["authData"]
 
-        stored_public_key: Optional[Mapping[str, Any]] = None
+        stored_public_key: Mapping[str, Any] | None = None
         if isinstance(stored_original_request, Mapping):
             stored_public_key = stored_original_request.get("publicKey")
             if not isinstance(stored_public_key, Mapping):
                 stored_public_key = None
 
-        public_key_for_checks: Optional[Mapping[str, Any]] = (
+        public_key_for_checks: Mapping[str, Any] | None = (
             stored_public_key if isinstance(stored_public_key, Mapping) else public_key
         )
 

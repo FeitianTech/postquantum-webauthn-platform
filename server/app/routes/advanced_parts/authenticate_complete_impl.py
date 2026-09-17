@@ -18,7 +18,7 @@ CHALLENGE_SOURCE_CLIENT = "client-supplied"
 CHALLENGE_STATUS_NOT_TRACKED = "not-tracked"
 
 
-def _credential_cose_algorithm(record: Optional[Mapping[str, Any]]) -> Optional[int]:
+def _credential_cose_algorithm(record: Mapping[str, Any] | None) -> int | None:
     """Return the algorithm the credential's own COSE key declares (label 3).
 
     This is deliberately read from the parsed COSE key rather than from the
@@ -42,7 +42,7 @@ def _credential_cose_algorithm(record: Optional[Mapping[str, Any]]) -> Optional[
     return algorithm if isinstance(algorithm, int) else None
 
 
-def _server_supports_algorithm(algorithm: Optional[int]) -> bool:
+def _server_supports_algorithm(algorithm: int | None) -> bool:
     """Return ``True`` when this server can actually verify ``algorithm``."""
 
     if not isinstance(algorithm, int):
@@ -117,7 +117,7 @@ def advanced_authenticate_complete_impl(advanced_module: Any):
                 {"error": "Authenticator attachment is not permitted by the selected hints."}
             )
 
-    raw_credentials_input: Optional[list[Any]] = None
+    raw_credentials_input: list[Any] | None = None
     for field in ("__storedCredentials", "storedCredentials", "credentials"):
         candidate = data.get(field)
         if isinstance(candidate, list):

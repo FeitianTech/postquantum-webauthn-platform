@@ -8,7 +8,7 @@ from collections.abc import Callable, Mapping
 
 
 def _convert_certificate_payload_impl(
-    entry: Mapping[str, Any], cert_bytes: Optional[bytes] = None
+    entry: Mapping[str, Any], cert_bytes: bytes | None = None
 ) -> dict[str, Any]:
     if not isinstance(entry, Mapping):
         return {}
@@ -40,9 +40,9 @@ def _convert_certificate_bytes_impl(
     value: Any,
     *,
     serializer: Callable[[bytes], Any],
-    convert_certificate_payload: Callable[[Mapping[str, Any], Optional[bytes]], dict[str, Any]],
+    convert_certificate_payload: Callable[[Mapping[str, Any], bytes | None], dict[str, Any]],
 ) -> dict[str, Any]:
-    cert_bytes: Optional[bytes] = None
+    cert_bytes: bytes | None = None
     if isinstance(value, (bytes, bytearray)):
         cert_bytes = bytes(value)
     elif isinstance(value, str):
@@ -116,7 +116,7 @@ def _convert_attestation_entry_impl(
     entry: Any,
     *,
     convert_attestation_statement: Callable[[Any], dict[str, Any]],
-    convert_certificate_payload: Callable[[Mapping[str, Any], Optional[bytes]], dict[str, Any]],
+    convert_certificate_payload: Callable[[Mapping[str, Any], bytes | None], dict[str, Any]],
 ) -> dict[str, Any]:
     if not isinstance(entry, Mapping):
         return {}

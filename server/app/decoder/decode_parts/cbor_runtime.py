@@ -31,8 +31,8 @@ def _decode_cbor_sequence(payload: bytes) -> tuple[list[dict[str, Any]], list[An
 def _repair_get_assertion_entries(
     structure: dict[str, Any],
     value: Mapping[Any, Any],
-    raw_bytes: Optional[bytes] = None,
-) -> tuple[dict[str, Any], Mapping[Any, Any], Optional[bytes]]:
+    raw_bytes: bytes | None = None,
+) -> tuple[dict[str, Any], Mapping[Any, Any], bytes | None]:
     if not isinstance(value, dict):
         return structure, value, None
 
@@ -52,8 +52,8 @@ def _repair_get_assertion_entries(
             signature_entry = (idx, entry)
             break
 
-    signature_bytes: Optional[bytes] = None
-    user_value: Optional[Any] = None
+    signature_bytes: bytes | None = None
+    user_value: Any | None = None
 
     if signature_entry is not None:
         idx, entry = signature_entry
@@ -153,7 +153,7 @@ def _repair_get_assertion_entries(
     return structure, recovered_value, signature_bytes
 
 
-def _try_decode_cbor(data: bytes, encoding: str) -> Optional[dict[str, Any]]:
+def _try_decode_cbor(data: bytes, encoding: str) -> dict[str, Any] | None:
     if not data:
         return None
 
@@ -185,7 +185,7 @@ def _try_decode_cbor(data: bytes, encoding: str) -> Optional[dict[str, Any]]:
     extra_structures = structures[1:]
     extra_values = values[1:]
 
-    merged_signature: Optional[bytes] = None
+    merged_signature: bytes | None = None
     classification = "other"
     if isinstance(base_value, Mapping):
         base_structure, base_value, extra_structures, extra_values, merged_signature = _merge_ctap_make_credential(
@@ -257,9 +257,9 @@ def _try_decode_cbor(data: bytes, encoding: str) -> Optional[dict[str, Any]]:
 
     decoded_payload: dict[str, Any] = {}
 
-    expanded_json: Optional[dict[str, Any]] = None
-    ctap_decoded: Optional[dict[str, Any]] = None
-    hex_decoded_value: Optional[Any] = None
+    expanded_json: dict[str, Any] | None = None
+    ctap_decoded: dict[str, Any] | None = None
+    hex_decoded_value: Any | None = None
 
     if isinstance(base_value, Mapping):
         hex_decoded_value = _hex_json_safe(base_value)

@@ -25,8 +25,8 @@ def _prepare_encoder_response(
     base_type: str,
     data: Mapping[str, Any],
     *,
-    qualifier: Optional[str] = None,
-    warnings: Optional[Sequence[str]] = None,
+    qualifier: str | None = None,
+    warnings: Sequence[str] | None = None,
 ) -> dict[str, Any]:
     type_label = base_type
     if qualifier:

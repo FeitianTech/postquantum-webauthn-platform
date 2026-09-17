@@ -260,7 +260,7 @@ def encode_records(records: Any) -> bytes:
     return _encode_records(records)
 
 
-def _decode_records(payload: bytes) -> Optional[list[Any]]:
+def _decode_records(payload: bytes) -> list[Any] | None:
     """Decode a JSON credential payload, or return ``None`` if it is not JSON."""
 
     try:
@@ -276,7 +276,7 @@ def _decode_records(payload: bytes) -> Optional[list[Any]]:
     return None
 
 
-def _load_payload(payload: bytes, *, source: str) -> Optional[list[Any]]:
+def _load_payload(payload: bytes, *, source: str) -> list[Any] | None:
     """Turn stored bytes into a credential list, JSON first, legacy pickle second.
 
     The format is sniffed from the content rather than the file extension so a
@@ -372,7 +372,7 @@ def _candidate_gcs_blob_names(name: str, session_id: str) -> Iterable[str]:
         yield blob_name
 
 
-def _strip_credential_suffix(remainder: str) -> Optional[str]:
+def _strip_credential_suffix(remainder: str) -> str | None:
     for suffix in _CREDENTIAL_SUFFIXES:
         if remainder.endswith(suffix):
             username = remainder[: -len(suffix)]
@@ -412,7 +412,7 @@ def _local_directory(
     session_id: str,
     *,
     create: bool = False,
-    base: Optional[str] = None,
+    base: str | None = None,
 ) -> str:
     cleaned = _validate_session_id(session_id)
     root = _LOCAL_CREDENTIAL_BASE if base is None else base
@@ -435,7 +435,7 @@ def _local_filename(
     *,
     create: bool = False,
     suffix: str = _JSON_SUFFIX,
-    base: Optional[str] = None,
+    base: str | None = None,
 ) -> str:
     root = _LOCAL_CREDENTIAL_BASE if base is None else base
     cleaned_session = _validate_session_id(session_id)
@@ -467,7 +467,7 @@ def _candidate_local_paths(name: str, session_id: str) -> Iterator[str]:
         yield legacy_flat
 
 
-def _resolve_session_id(session_id: Optional[str] = None) -> str:
+def _resolve_session_id(session_id: str | None = None) -> str:
     return resolve_metadata_session_id(session_id)
 
 
@@ -493,7 +493,7 @@ def _discard_superseded_pickle(name: str, session_id: str) -> None:
             pass
 
 
-def savekey(name: str, key: Any, *, session_id: Optional[str] = None) -> None:
+def savekey(name: str, key: Any, *, session_id: str | None = None) -> None:
     payload = _encode_records(key)
     resolved_session = _resolve_session_id(session_id)
     if _using_gcs():
@@ -514,7 +514,7 @@ def savekey(name: str, key: Any, *, session_id: Optional[str] = None) -> None:
     _discard_superseded_pickle(name, resolved_session)
 
 
-def readkey(name: str, *, session_id: Optional[str] = None) -> list[Any]:
+def readkey(name: str, *, session_id: str | None = None) -> list[Any]:
     resolved_session = _resolve_session_id(session_id)
     if _using_gcs():
         for blob_name in _candidate_gcs_blob_names(name, resolved_session):
@@ -544,7 +544,7 @@ def readkey(name: str, *, session_id: Optional[str] = None) -> list[Any]:
     return []
 
 
-def delkey(name: str, *, session_id: Optional[str] = None) -> None:
+def delkey(name: str, *, session_id: str | None = None) -> None:
     resolved_session = _resolve_session_id(session_id)
     if _using_gcs():
         for blob_name in _candidate_gcs_blob_names(name, resolved_session):
@@ -583,7 +583,7 @@ def _iter_local_directory(directory: str) -> Iterable[tuple[str, bytes, str]]:
             yield username, payload, path
 
 
-def iter_credentials(*, session_id: Optional[str] = None) -> Iterator[tuple[str, list[Any]]]:
+def iter_credentials(*, session_id: str | None = None) -> Iterator[tuple[str, list[Any]]]:
     resolved_session = _resolve_session_id(session_id)
     if _using_gcs():
 
@@ -632,7 +632,7 @@ def iter_credentials(*, session_id: Optional[str] = None) -> Iterator[tuple[str,
         yield username, creds
 
 
-def list_credentials(*, session_id: Optional[str] = None) -> dict[str, list[Any]]:
+def list_credentials(*, session_id: str | None = None) -> dict[str, list[Any]]:
     entries: dict[str, list[Any]] = {}
     for username, creds in iter_credentials(session_id=session_id):
         entries[username] = creds

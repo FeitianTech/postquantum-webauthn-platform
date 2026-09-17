@@ -142,11 +142,11 @@ def _generate_storage_id(credential_id: str) -> str:
     return _generate_storage_id_impl(_self_module(), credential_id)
 
 
-def _summarize_properties(value: Any) -> Optional[dict[str, Any]]:
+def _summarize_properties(value: Any) -> dict[str, Any] | None:
     return _summarize_properties_impl(_self_module(), value)
 
 
-def _summarize_relying_party(value: Any) -> Optional[dict[str, Any]]:
+def _summarize_relying_party(value: Any) -> dict[str, Any] | None:
     return _summarize_relying_party_impl(_self_module(), value)
 
 
@@ -154,19 +154,19 @@ def _summarize_stored_credential(stored: Mapping[str, Any], storage_id: str) -> 
     return _summarize_stored_credential_impl(_self_module(), stored, storage_id)
 
 
-def _extract_credential_id(value: Any) -> Optional[bytes]:
+def _extract_credential_id(value: Any) -> bytes | None:
     return _extract_credential_id_impl(_self_module(), value)
 
 
-def _extract_credential_algorithm(value: Any) -> Optional[int]:
+def _extract_credential_algorithm(value: Any) -> int | None:
     return _extract_credential_algorithm_impl(_self_module(), value)
 
 
-def _coerce_optional_bool(value: Any) -> Optional[bool]:
+def _coerce_optional_bool(value: Any) -> bool | None:
     return _coerce_optional_bool_impl(_self_module(), value)
 
 
-def _extract_flag_from_mapping(mapping: Mapping[str, Any], keys: Iterable[str]) -> Optional[bool]:
+def _extract_flag_from_mapping(mapping: Mapping[str, Any], keys: Iterable[str]) -> bool | None:
     return _extract_flag_from_mapping_impl(_self_module(), mapping, keys)
 
 
@@ -186,15 +186,15 @@ def _derive_algorithms_from_credentials(credentials: Iterable[Any]) -> list[Publ
     return _derive_algorithms_from_credentials_impl(_self_module(), credentials)
 
 
-def _lookup_named_cose_algorithm(name: str) -> Optional[int]:
+def _lookup_named_cose_algorithm(name: str) -> int | None:
     return _lookup_named_cose_algorithm_impl(_self_module(), name)
 
 
-def _coerce_cose_algorithm(value: Any) -> Optional[int]:
+def _coerce_cose_algorithm(value: Any) -> int | None:
     return _coerce_cose_algorithm_impl(_self_module(), value)
 
 
-def _is_custom_cose_algorithm(alg_id: Optional[int]) -> bool:
+def _is_custom_cose_algorithm(alg_id: int | None) -> bool:
     return _is_custom_cose_algorithm_impl(_self_module(), alg_id)
 
 
@@ -206,14 +206,14 @@ def _decode_base64url_bytes(value: Any) -> bytes:
     return _decode_base64url_bytes_impl(_self_module(), value)
 
 
-def _extract_assertion_credential_id(response: Mapping[str, Any]) -> Optional[bytes]:
+def _extract_assertion_credential_id(response: Mapping[str, Any]) -> bytes | None:
     return _extract_assertion_credential_id_impl(_self_module(), response)
 
 
 def _extract_requested_assertion_algorithm(
     public_key: Mapping[str, Any],
-    credential_id: Optional[bytes],
-) -> Optional[int]:
+    credential_id: bytes | None,
+) -> int | None:
     return _extract_requested_assertion_algorithm_impl(_self_module(), public_key, credential_id)
 
 
@@ -226,7 +226,7 @@ def _encode_base64url(data: bytes) -> str:
 
 
 def _log_authenticator_attestation_response(
-    attestation_format: Optional[str],
+    attestation_format: str | None,
     auth_data: Any,
     attestation_statement: Any,
     raw_attestation_object: Any,

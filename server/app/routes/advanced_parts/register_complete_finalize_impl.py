@@ -18,7 +18,7 @@ def finalize_registration_completion(
     algoname: str,
     resolved_rp_id: str,
     credential_id_bytes: bytes,
-    aaguid_bytes: Optional[bytes],
+    aaguid_bytes: bytes | None,
     auth_data: Any,
     attestation_format: Any,
     attestation_object_b64: Any,
@@ -57,14 +57,14 @@ def finalize_registration_completion(
 
     summary_credential = advanced_module._summarize_stored_credential(artifact_record, storage_id)
 
-    metadata_description: Optional[str] = None
+    metadata_description: str | None = None
     if isinstance(metadata_summary, Mapping):
         raw_description = metadata_summary.get("description")
         if isinstance(raw_description, str):
             metadata_description = raw_description
 
     transports_field = response.get("transports") if isinstance(response, Mapping) else None
-    transports: Optional[list[str]] = None
+    transports: list[str] | None = None
     if isinstance(transports_field, list):
         transports = [str(item) for item in transports_field if isinstance(item, str)]
 

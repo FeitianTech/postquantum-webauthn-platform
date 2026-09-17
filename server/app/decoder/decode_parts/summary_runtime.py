@@ -20,7 +20,7 @@ def _format_result_summary(result: dict[str, Any]) -> str:
 
     lines = formatter(result)
     return "\n".join(line for line in lines if line is not None).rstrip()
-def _base_type(format_label: Optional[str]) -> str:
+def _base_type(format_label: str | None) -> str:
     if not format_label:
         return "Decoded data"
     separator = format_label.find(" (")
@@ -239,9 +239,9 @@ def _build_certificate_summary_lines(decoded: Any) -> list[str]:
 
 def _extend_with_authenticator_details(
     lines: list[str],
-    auth_details: Optional[Mapping[str, Any]],
-    auth_bytes: Optional[bytes],
-    response_context: Optional[Mapping[str, Any]] = None,
+    auth_details: Mapping[str, Any] | None,
+    auth_bytes: bytes | None,
+    response_context: Mapping[str, Any] | None = None,
 ) -> None:
     data_lines = _build_authenticator_data_lines(auth_bytes, auth_details)
     _append_multiline_field(lines, "Authenticator data", data_lines)
@@ -249,7 +249,7 @@ def _extend_with_authenticator_details(
     rp_hex = None
     flags_info = None
     sign_count = None
-    attested_info: Optional[dict[str, Any]] = None
+    attested_info: dict[str, Any] | None = None
 
     if isinstance(auth_details, Mapping):
         rp_info = auth_details.get("rpIdHash")

@@ -40,7 +40,7 @@ def _load_enabled_mechanisms() -> set[str]:
     }
 
 
-def detect_available_pqc_algorithms() -> tuple[set[int], Optional[str]]:
+def detect_available_pqc_algorithms() -> tuple[set[int], str | None]:
     """Detect the ML-DSA algorithms this build can verify."""
 
     try:
@@ -81,7 +81,7 @@ def is_pqc_algorithm(alg_id: int) -> bool:
     return alg_id in PQC_ALGORITHM_ID_TO_NAME
 
 
-def describe_algorithm(alg_id: Optional[int]) -> str:
+def describe_algorithm(alg_id: int | None) -> str:
     """Return a friendly label for the given COSE algorithm identifier."""
 
     if alg_id is None:
@@ -126,7 +126,7 @@ def describe_algorithm(alg_id: Optional[int]) -> str:
     return f"COSE alg {alg_id}"
 
 
-def log_algorithm_selection(stage: str, alg_id: Optional[int]) -> None:
+def log_algorithm_selection(stage: str, alg_id: int | None) -> None:
     """Log the negotiated algorithm for the registration/authentication flow."""
 
     label = describe_algorithm(alg_id)

@@ -48,7 +48,7 @@ from cryptography.hazmat.primitives import hashes
 from cryptography import x509
 from cryptography.exceptions import InvalidSignature as _InvalidSignature
 from dataclasses import dataclass
-from typing import Tuple, Union, cast
+from typing import cast
 
 import struct
 
@@ -389,9 +389,9 @@ class ATTRIBUTES(IntEnum):
     )
 
 
-_PublicKey = Union[rsa.RSAPublicKey, ec.EllipticCurvePublicKey]
-_Parameters = Union[TpmsRsaParms, TpmsEccParms]
-_Unique = Union[Tpm2bPublicKeyRsa, TpmsEccPoint]
+_PublicKey = rsa.RSAPublicKey | ec.EllipticCurvePublicKey
+_Parameters = TpmsRsaParms | TpmsEccParms
+_Unique = Tpm2bPublicKeyRsa | TpmsEccPoint
 
 
 @dataclass

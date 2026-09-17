@@ -91,7 +91,7 @@ def _resolve_secret_key() -> bytes:
 
     default_path = os.path.join(app.instance_path, "session-secret.key")
 
-    def _read_stored_key() -> Optional[bytes]:
+    def _read_stored_key() -> bytes | None:
         try:
             with open(default_path, "rb") as stored_key:
                 stored_value = stored_key.read()
@@ -175,7 +175,7 @@ def _accepts_gzip() -> bool:
     return "gzip" in accepted.lower()
 
 
-def _append_vary(existing: Optional[str], value: str) -> str:
+def _append_vary(existing: str | None, value: str) -> str:
     tokens = [token.strip() for token in (existing or "").split(",") if token.strip()]
     lowered = {token.lower() for token in tokens}
     if value.lower() not in lowered:
@@ -243,7 +243,7 @@ def _register_after_request_once(flask_app: Flask, handler) -> None:
 _register_after_request_once(app, maybe_compress_response)
 
 
-def _env_flag(name: str) -> Optional[bool]:
+def _env_flag(name: str) -> bool | None:
     """Return ``True`` or ``False`` when the named env var is explicitly set."""
     return parse_env_flag(name)
 
@@ -493,7 +493,7 @@ app.config.setdefault("FIDO_SERVER_RP_NAME", _DEFAULT_RP_NAME)
 app.config.setdefault("FIDO_SERVER_RP_ID", _DEFAULT_RP_ID)
 
 
-def _parse_allowed_origins(raw_value: Optional[str]) -> Optional[tuple[str, ...]]:
+def _parse_allowed_origins(raw_value: str | None) -> tuple[str, ...] | None:
     """Normalise a comma/newline separated allowlist of exact origins."""
 
     if raw_value is None:
@@ -513,7 +513,7 @@ def _parse_allowed_origins(raw_value: Optional[str]) -> Optional[tuple[str, ...]
     return tuple(origins)
 
 
-def normalise_origin(raw_origin: Optional[str]) -> Optional[str]:
+def normalise_origin(raw_origin: str | None) -> str | None:
     """Reduce an origin to its canonical ``scheme://host[:port]`` form."""
 
     if not isinstance(raw_origin, str):
@@ -549,7 +549,7 @@ app.config.setdefault(
 )
 
 
-def get_allowed_origins() -> Optional[tuple[str, ...]]:
+def get_allowed_origins() -> tuple[str, ...] | None:
     """Return the configured exact-origin allowlist, or ``None`` when unset."""
 
     configured = app.config.get("FIDO_SERVER_ALLOWED_ORIGINS")
@@ -565,7 +565,7 @@ def get_allowed_origins() -> Optional[tuple[str, ...]]:
     return None
 
 
-def is_origin_allowed(candidate: Optional[str]) -> bool:
+def is_origin_allowed(candidate: str | None) -> bool:
     """Return ``True`` when ``candidate`` is permitted by the allowlist.
 
     With no allowlist configured every origin is permitted, preserving the
@@ -581,7 +581,7 @@ def is_origin_allowed(candidate: Optional[str]) -> bool:
     return normalised in allowed
 
 
-def extract_client_data_origin(credential_response: Any) -> Optional[str]:
+def extract_client_data_origin(credential_response: Any) -> str | None:
     """Best-effort read of ``clientDataJSON.origin`` from a WebAuthn response.
 
     This is the origin the ceremony actually claims to have happened at, and is
@@ -615,7 +615,7 @@ def extract_client_data_origin(credential_response: Any) -> Optional[str]:
     return origin if isinstance(origin, str) else None
 
 
-def determine_expected_origin(candidate: Optional[str] = None) -> Optional[str]:
+def determine_expected_origin(candidate: str | None = None) -> str | None:
     """Resolve the origin a ceremony must have been performed against.
 
     When an allowlist is configured the expected origin always comes from it,
@@ -644,7 +644,7 @@ if _session_metadata_recover_flag is not None:
     app.config["SESSION_METADATA_RECOVER_ON_START"] = _session_metadata_recover_flag
 
 
-def _parse_trusted_ca_subjects(raw_value: Optional[str]) -> Optional[set[str]]:
+def _parse_trusted_ca_subjects(raw_value: str | None) -> set[str] | None:
     """Normalise a comma or newline separated list of CA subject names."""
 
     if raw_value is None:
@@ -657,7 +657,7 @@ def _parse_trusted_ca_subjects(raw_value: Optional[str]) -> Optional[set[str]]:
     return subjects
 
 
-def _parse_trusted_ca_fingerprints(raw_value: Optional[str]) -> Optional[set[str]]:
+def _parse_trusted_ca_fingerprints(raw_value: str | None) -> set[str] | None:
     """Normalise a list of hexadecimal fingerprints for trusted CA certificates."""
 
     if raw_value is None:
@@ -732,7 +732,7 @@ def warn_if_development_rp_configuration() -> bool:
 warn_if_development_rp_configuration()
 
 
-def determine_rp_id(explicit_id: Optional[str] = None) -> str:
+def determine_rp_id(explicit_id: str | None = None) -> str:
     """Resolve the relying party identifier for the current request.
 
     ``explicit_id`` is honoured only when it is consistent with the configured
@@ -763,7 +763,7 @@ def determine_rp_id(explicit_id: Optional[str] = None) -> str:
     return "localhost"
 
 
-def _resolve_request_host() -> Optional[str]:
+def _resolve_request_host() -> str | None:
     """Return the current request host without port decoration."""
 
     if not has_request_context():
@@ -781,7 +781,7 @@ def _resolve_request_host() -> Optional[str]:
     return None
 
 
-def _normalise_request_host(raw_host: Optional[str]) -> Optional[str]:
+def _normalise_request_host(raw_host: str | None) -> str | None:
     """Normalise a raw host header into a lowercase hostname or IP literal."""
 
     if not isinstance(raw_host, str):
@@ -810,10 +810,10 @@ def _normalise_request_host(raw_host: Optional[str]) -> Optional[str]:
 
 
 def build_rp_entity(
-    rp_data: Optional[Mapping[str, str]] = None,
+    rp_data: Mapping[str, str] | None = None,
     *,
-    rp_id: Optional[str] = None,
-    rp_name: Optional[str] = None,
+    rp_id: str | None = None,
+    rp_name: str | None = None,
 ) -> PublicKeyCredentialRpEntity:
     """Create a ``PublicKeyCredentialRpEntity`` for the active request."""
 
@@ -830,10 +830,10 @@ def build_rp_entity(
 
 
 def create_fido_server(
-    rp_data: Optional[Mapping[str, str]] = None,
+    rp_data: Mapping[str, str] | None = None,
     *,
-    rp_id: Optional[str] = None,
-    rp_name: Optional[str] = None,
+    rp_id: str | None = None,
+    rp_name: str | None = None,
 ) -> Fido2Server:
     """Instantiate a :class:`Fido2Server` bound to the resolved RP ID."""
 

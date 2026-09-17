@@ -101,7 +101,7 @@ def _decode_base64url_bytes(value: Any) -> bytes:
     return _decode_base64url_bytes_impl(_self_module(), value)
 
 
-def _extract_assertion_credential_id(response: Mapping[str, Any]) -> Optional[bytes]:
+def _extract_assertion_credential_id(response: Mapping[str, Any]) -> bytes | None:
     return _extract_assertion_credential_id_impl(_self_module(), response)
 
 

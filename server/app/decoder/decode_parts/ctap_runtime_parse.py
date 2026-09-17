@@ -214,7 +214,7 @@ def _decode_trailing_map(data: bytes) -> dict[Any, Any]:
     return mapping
 
 
-def _extract_lenient_map_entries(raw_bytes: Optional[bytes]) -> list[tuple[Any, Any]]:
+def _extract_lenient_map_entries(raw_bytes: bytes | None) -> list[tuple[Any, Any]]:
     entries: list[tuple[Any, Any]] = []
     if not raw_bytes:
         return entries
@@ -242,7 +242,7 @@ def _extract_lenient_map_entries(raw_bytes: Optional[bytes]) -> list[tuple[Any, 
     return entries
 
 
-def _extract_signature_from_raw_bytes(raw_bytes: bytes) -> Optional[bytes]:
+def _extract_signature_from_raw_bytes(raw_bytes: bytes) -> bytes | None:
     if not raw_bytes:
         return None
     hex_data = raw_bytes.hex()

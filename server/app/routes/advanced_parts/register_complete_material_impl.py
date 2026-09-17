@@ -36,7 +36,7 @@ def build_registration_material(
 
     aaguid_hex = None
     aaguid_guid = None
-    aaguid_bytes: Optional[bytes] = None
+    aaguid_bytes: bytes | None = None
     aaguid_value = getattr(credential_data, "aaguid", None)
     if aaguid_value is not None:
         try:

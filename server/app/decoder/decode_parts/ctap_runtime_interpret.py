@@ -38,7 +38,7 @@ def _build_make_credential_expanded_json(value: Mapping[Any, Any]) -> dict[str, 
     )
 
 
-def _build_get_assertion_expanded_json(value: Mapping[Any, Any], raw_bytes: Optional[bytes] = None) -> dict[str, Any]:
+def _build_get_assertion_expanded_json(value: Mapping[Any, Any], raw_bytes: bytes | None = None) -> dict[str, Any]:
     result = _build_labeled_ctap_map(
         value,
         _GET_ASSERTION_RESPONSE_LABELS,
@@ -49,7 +49,7 @@ def _build_get_assertion_expanded_json(value: Mapping[Any, Any], raw_bytes: Opti
     signature_key = _format_ctap_entry_key(3, _resolve_ctap_label(_GET_ASSERTION_RESPONSE_LABELS, 3))
     auth_key = _format_ctap_entry_key(2, _resolve_ctap_label(_GET_ASSERTION_RESPONSE_LABELS, 2))
     auth_details = result.get(auth_key)
-    auth_trailing_bytes: Optional[bytes] = None
+    auth_trailing_bytes: bytes | None = None
     if isinstance(auth_details, Mapping):
         trailing_hex = auth_details.get("trailingBytesHex")
         if isinstance(trailing_hex, str) and trailing_hex.strip():
@@ -92,7 +92,7 @@ def _build_get_assertion_expanded_json(value: Mapping[Any, Any], raw_bytes: Opti
     return result
 
 
-def _interpret_ctap_cbor_value(value: Any) -> Optional[dict[str, Any]]:
+def _interpret_ctap_cbor_value(value: Any) -> dict[str, Any] | None:
     if isinstance(value, Mapping):
         interpreted = _interpret_make_credential_map(value)
         if interpreted is not None:
@@ -109,7 +109,7 @@ def _interpret_ctap_cbor_value(value: Any) -> Optional[dict[str, Any]]:
     return None
 
 
-def _interpret_make_credential_map(value: Mapping[Any, Any]) -> Optional[dict[str, Any]]:
+def _interpret_make_credential_map(value: Mapping[Any, Any]) -> dict[str, Any] | None:
     fmt = _get_mapping_entry(value, 1, "1", "fmt")
     fmt = fmt if fmt is not _MISSING else None
     auth_data_entry = _get_mapping_entry(value, 2, "2", "authData")
@@ -169,7 +169,7 @@ def _interpret_make_credential_map(value: Mapping[Any, Any]) -> Optional[dict[st
     return interpreted
 
 
-def _interpret_get_assertion_map(value: Mapping[Any, Any]) -> Optional[dict[str, Any]]:
+def _interpret_get_assertion_map(value: Mapping[Any, Any]) -> dict[str, Any] | None:
     if _looks_like_get_assertion_request(value):
         return None
     auth_data_entry = _get_mapping_entry(value, 2, "2", "authData")
@@ -242,7 +242,7 @@ def _interpret_get_assertion_map(value: Mapping[Any, Any]) -> Optional[dict[str,
     return interpreted
 
 
-def _interpret_make_credential_request_map(value: Mapping[Any, Any]) -> Optional[dict[str, Any]]:
+def _interpret_make_credential_request_map(value: Mapping[Any, Any]) -> dict[str, Any] | None:
     if not _looks_like_make_credential_request(value):
         return None
     return _build_labeled_ctap_map(
@@ -252,7 +252,7 @@ def _interpret_make_credential_request_map(value: Mapping[Any, Any]) -> Optional
     )
 
 
-def _interpret_get_assertion_request_map(value: Mapping[Any, Any]) -> Optional[dict[str, Any]]:
+def _interpret_get_assertion_request_map(value: Mapping[Any, Any]) -> dict[str, Any] | None:
     if not _looks_like_get_assertion_request(value):
         return None
     return _build_labeled_ctap_map(

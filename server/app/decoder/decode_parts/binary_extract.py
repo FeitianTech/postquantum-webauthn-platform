@@ -20,8 +20,8 @@ _COSE_ALG_LABELS: dict[int, str] = {
 }
 
 
-def _resolve_cose_algorithm(public_key: Any, fallback: Optional[Any] = None) -> Optional[str]:
-    alg_value: Optional[Any] = None
+def _resolve_cose_algorithm(public_key: Any, fallback: Any | None = None) -> str | None:
+    alg_value: Any | None = None
     if isinstance(public_key, Mapping):
         if 3 in public_key:
             alg_value = public_key[3]
@@ -58,7 +58,7 @@ def _convert_cose_key_for_display(public_key: Any) -> Any:
     return public_key
 
 
-def _decode_base64_field(value: str) -> Optional[bytes]:
+def _decode_base64_field(value: str) -> bytes | None:
     cleaned = value.strip()
     if not cleaned:
         return None
@@ -76,7 +76,7 @@ def _decode_base64_field(value: str) -> Optional[bytes]:
     return None
 
 
-def _extract_hex_from_binary(entry: Any) -> Optional[str]:
+def _extract_hex_from_binary(entry: Any) -> str | None:
     if not isinstance(entry, Mapping):
         return None
     direct_hex = entry.get("hex")
@@ -90,7 +90,7 @@ def _extract_hex_from_binary(entry: Any) -> Optional[str]:
     return None
 
 
-def _extract_bytes_from_binary(entry: Any) -> Optional[bytes]:
+def _extract_bytes_from_binary(entry: Any) -> bytes | None:
     if not isinstance(entry, Mapping):
         return None
     hex_value = _extract_hex_from_binary(entry)
@@ -113,7 +113,7 @@ def _extract_bytes_from_binary(entry: Any) -> Optional[bytes]:
     return None
 
 
-def _extract_authenticator_bytes(response: Any, attestation_entry: Any = None) -> Optional[bytes]:
+def _extract_authenticator_bytes(response: Any, attestation_entry: Any = None) -> bytes | None:
     if isinstance(response, Mapping):
         auth_entry = response.get("authenticatorData")
         auth_bytes = _extract_bytes_from_binary(auth_entry)
@@ -124,7 +124,7 @@ def _extract_authenticator_bytes(response: Any, attestation_entry: Any = None) -
     return _extract_authenticator_bytes_from_attestation(attestation_entry)
 
 
-def _extract_authenticator_bytes_from_attestation(attestation_entry: Any) -> Optional[bytes]:
+def _extract_authenticator_bytes_from_attestation(attestation_entry: Any) -> bytes | None:
     attestation_bytes = _extract_bytes_from_binary(attestation_entry)
     if attestation_bytes is None and isinstance(attestation_entry, Mapping):
         raw_value = attestation_entry.get("raw")

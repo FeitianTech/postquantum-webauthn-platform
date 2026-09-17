@@ -5,8 +5,8 @@ from collections.abc import Mapping
 
 
 def _resolve_uv_required(
-    state: Optional[Mapping[str, Any]],
-    public_key_options: Optional[Mapping[str, Any]],
+    state: Mapping[str, Any] | None,
+    public_key_options: Mapping[str, Any] | None,
 ) -> bool:
     uv_required = False
     if isinstance(state, Mapping):
@@ -15,7 +15,7 @@ def _resolve_uv_required(
             uv_required = True
 
     if not uv_required and isinstance(public_key_options, Mapping):
-        uv_setting: Optional[str] = None
+        uv_setting: str | None = None
         authenticator_selection = public_key_options.get("authenticatorSelection")
         if isinstance(authenticator_selection, Mapping):
             uv_setting = authenticator_selection.get("userVerification")
@@ -28,7 +28,7 @@ def _resolve_uv_required(
 
 
 def _collect_allowed_algorithms(
-    public_key_options: Optional[Mapping[str, Any]],
+    public_key_options: Mapping[str, Any] | None,
 ) -> list[int]:
     allowed_algorithms: list[int] = []
     if isinstance(public_key_options, Mapping):

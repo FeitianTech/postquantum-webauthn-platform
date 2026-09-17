@@ -22,7 +22,7 @@ from .ctap_fields import (
 
 def _encode_ctap_from_decoded(
     decoded: Mapping[str, Any]
-) -> tuple[Optional[dict[int, Any]], Optional[str]]:
+) -> tuple[dict[int, Any] | None, str | None]:
     if not isinstance(decoded, Mapping):
         return None, None
 
@@ -42,7 +42,7 @@ def _encode_ctap_from_decoded(
 
 def _encode_ctap_from_structure(
     structure: Mapping[str, Any]
-) -> tuple[Optional[dict[int, Any]], Optional[str]]:
+) -> tuple[dict[int, Any] | None, str | None]:
     if not isinstance(structure, Mapping):
         return None, None
 
@@ -62,9 +62,9 @@ def _encode_ctap_from_structure(
 
 
 def _determine_ctap_prefix(
-    metadata: Optional[Mapping[str, Any]],
-    kind: Optional[str],
-) -> tuple[Optional[int], Optional[str]]:
+    metadata: Mapping[str, Any] | None,
+    kind: str | None,
+) -> tuple[int | None, str | None]:
     if isinstance(metadata, Mapping):
         code = metadata.get("code")
         if not isinstance(code, int):
