@@ -108,7 +108,7 @@ def test_metadata_lookup_subject_description_and_format_helpers():
     assert attestation_module._extract_common_names(name) == ["Demo CN"]
 
 
-def test_fallback_certificate_serialization_and_unknown_public_key_info_helpers(monkeypatch):
+def test_fallback_certificate_serialization_and_unknown_public_key_info_helpers(monkeypatch, public_key_leaf):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     monkeypatch.setattr(
@@ -138,10 +138,9 @@ def test_fallback_certificate_serialization_and_unknown_public_key_info_helpers(
     assert summary
 
     monkeypatch.setattr(
-        attestation_module,
+        public_key_leaf,
         "_build_unknown_public_key_info",
         lambda _cert, _err: ({"type": "Unknown", "algorithm": {"name": "Unknown"}}, [("Type", "Unknown")]),
-        raising=False,
     )
     fallback = attestation_module._serialize_attestation_certificate_fallback(
         b"\x30\x82\x01\x00",

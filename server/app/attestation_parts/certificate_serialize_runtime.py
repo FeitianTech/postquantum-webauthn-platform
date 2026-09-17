@@ -12,18 +12,13 @@ from cryptography.hazmat.primitives import hashes, serialization
 
 from fido2.cose import describe_mldsa_oid, describe_mldsa_oid_name
 
-from . import encoding_leaf
-from .certificate_extensions_leaf import _serialize_extension_value
-from .certificate_public_key_leaf import (
-    _build_unknown_public_key_info,
-    _serialize_public_key_info,
+from . import (
+    certificate_extensions_leaf,
+    certificate_public_key_leaf,
+    certificate_signature_leaf,
+    certificate_summary_runtime,
+    encoding_leaf,
 )
-from .certificate_signature_leaf import (
-    _derive_certificate_algorithm_info,
-    _extract_common_names,
-    format_x509_name,
-)
-from .certificate_summary_runtime import _build_certificate_summary
 from .runtime_state import EXTENSION_DISPLAY_METADATA
 from .trust_runtime import _certificate_datetime, _ensure_utc_datetime
 
@@ -43,7 +38,7 @@ def _serialize_attestation_certificate_fallback(
         "md5": hashlib.md5(cert_bytes).hexdigest(),
     }
 
-    public_key_info, summary_entries = _build_unknown_public_key_info(cert_bytes, error)
+    public_key_info, summary_entries = certificate_public_key_leaf._build_unknown_public_key_info(cert_bytes, error)
 
     summary_lines = [
         "Unable to parse attestation certificate using cryptography.x509.",
@@ -111,7 +106,7 @@ def serialize_attestation_certificate(cert_bytes: bytes) -> Any:
                 "name": metadata_friendly or default_name or oid,
                 "friendlyName": metadata_friendly,
                 "critical": ext.critical,
-                "value": _serialize_extension_value(ext),
+                "value": certificate_extensions_leaf._serialize_extension_value(ext),
                 "displayHeader": metadata.get("header"),
                 "includeOidInHeader": True if include_oid is None else bool(include_oid),
             }
@@ -153,9 +148,9 @@ def serialize_attestation_certificate(cert_bytes: bytes) -> Any:
         public_key = certificate.public_key()
     except (UnsupportedAlgorithm, ValueError) as exc:
         public_key = None
-        public_key_info, fallback_public_key_summary = _build_unknown_public_key_info(cert_bytes, exc)
+        public_key_info, fallback_public_key_summary = certificate_public_key_leaf._build_unknown_public_key_info(cert_bytes, exc)
     else:
-        public_key_info = _serialize_public_key_info(public_key)
+        public_key_info = certificate_public_key_leaf._serialize_public_key_info(public_key)
 
     signature_bytes = certificate.signature
     signature_lines = encoding_leaf.format_hex_bytes_lines(signature_bytes)
@@ -177,7 +172,7 @@ def serialize_attestation_certificate(cert_bytes: bytes) -> Any:
     serial_decimal = str(certificate.serial_number)
     serial_hex = f"0x{certificate.serial_number:x}"
 
-    summary = _build_certificate_summary(
+    summary = certificate_summary_runtime._build_certificate_summary(
         certificate,
         version_number=version_number,
         version_hex=version_hex,
@@ -202,8 +197,8 @@ def serialize_attestation_certificate(cert_bytes: bytes) -> Any:
         "oid": signature_algorithm_oid,
         "details": signature_algorithm_details,
     }
-    algorithm_info = _derive_certificate_algorithm_info(signature_details)
-    subject_common_names = _extract_common_names(certificate.subject)
+    algorithm_info = certificate_signature_leaf._derive_certificate_algorithm_info(signature_details)
+    subject_common_names = certificate_signature_leaf._extract_common_names(certificate.subject)
 
     def _isoformat(value: datetime) -> str:
         return _ensure_utc_datetime(value).isoformat()
@@ -221,12 +216,12 @@ def serialize_attestation_certificate(cert_bytes: bytes) -> Any:
         "signatureAlgorithm": signature_algorithm,
         "signatureAlgorithmOid": signature_algorithm_oid,
         "signatureAlgorithmDetails": signature_algorithm_details,
-        "issuer": format_x509_name(certificate.issuer),
+        "issuer": certificate_signature_leaf.format_x509_name(certificate.issuer),
         "validity": {
             "notBefore": _isoformat(not_valid_before),
             "notAfter": _isoformat(not_valid_after),
         },
-        "subject": format_x509_name(certificate.subject),
+        "subject": certificate_signature_leaf.format_x509_name(certificate.subject),
         "subjectCommonNames": subject_common_names,
         "publicKeyInfo": public_key_info,
         "algorithmInfo": algorithm_info,
