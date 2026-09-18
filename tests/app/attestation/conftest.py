@@ -72,23 +72,10 @@ def pqc_constraints_runtime():
 
 @pytest.fixture
 def checks():
-    """The fragment that defines the client/authenticator data checks."""
+    """The submodule that runs the attestation checks: client and authenticator
+    data, the attestation signature and root, the policy, and the metadata result."""
 
     return _fragment("checks")
-
-
-@pytest.fixture
-def checks_attestation_runtime():
-    """The fragment that defines the attestation signature and root checks."""
-
-    return _fragment("checks_attestation_runtime")
-
-
-@pytest.fixture
-def checks_metadata_runtime():
-    """The fragment that defines the metadata result finalisation."""
-
-    return _fragment("checks_metadata_runtime")
 
 
 @pytest.fixture
