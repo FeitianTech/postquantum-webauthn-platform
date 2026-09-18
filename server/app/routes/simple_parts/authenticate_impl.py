@@ -8,7 +8,7 @@ from flask import abort, jsonify, request, session
 
 from fido2.webauthn import AuthenticatorData
 
-from ... import attestation
+from ... import attestation, storage
 from ...challenge_registry import (
     CHALLENGE_FRESH,
     CHALLENGE_REPLAYED,
@@ -220,7 +220,7 @@ def authenticate_complete_impl(simple_module: Any):
     if server_record is not None and record_sign_count(server_record) != sign_count:
         server_record[RECORD_SIGN_COUNT_KEY] = sign_count
         try:
-            simple_module.savekey(uname, server_records, session_id=metadata_session_id)
+            storage.savekey(uname, server_records, session_id=metadata_session_id)
         except Exception:
             simple_module.app.logger.exception(
                 "Failed to persist signature counter for %s", authenticated_id

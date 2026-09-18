@@ -6,7 +6,7 @@ from typing import Any
 
 from flask import jsonify, request
 
-from ... import attestation, pqc
+from ... import attestation, pqc, storage
 from .register_complete_finalize_impl import finalize_registration_completion
 from .register_complete_material_impl import build_registration_material
 from .register_complete_setup_impl import prepare_register_complete_inputs
@@ -219,7 +219,7 @@ def advanced_register_complete_impl(advanced_module: Any):
             credential_info["attestationCertificates"] = attestation_certificates_details
             credential_info["properties"]["attestationCertificates"] = attestation_certificates_details
 
-        advanced_module.add_public_key_material(credential_info, getattr(auth_data.credential_data, "public_key", {}))
+        storage.add_public_key_material(credential_info, getattr(auth_data.credential_data, "public_key", {}))
         attestation.augment_aaguid_fields(credential_info)
         if authenticator_extensions_summary:
             credential_info["authenticator_extensions"] = authenticator_extensions_summary

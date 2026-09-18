@@ -164,7 +164,7 @@ def test_simple_authenticate_complete_aborts_when_session_credentials_cannot_be_
     assert response.status_code == 400
 
 
-def test_simple_register_complete_covers_warning_metadata_transport_and_session_fallback_paths(monkeypatch, metadata_module, device_logs_module, attestation_module):
+def test_simple_register_complete_covers_warning_metadata_transport_and_session_fallback_paths(monkeypatch, metadata_module, device_logs_module, attestation_module, storage_module):
     config_module = pytest.importorskip("server.app.config")
     simple_module = pytest.importorskip("server.app.routes.simple")
     pytest.importorskip("server.app.app")
@@ -208,16 +208,16 @@ def test_simple_register_complete_covers_warning_metadata_transport_and_session_
             "warnings": ["  keep me  ", "", {"code": "W1"}, None],
         }
     )
-    monkeypatch.setattr(simple_module, "add_public_key_material", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(storage_module, "add_public_key_material", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(metadata_module, "ensure_metadata_session_id", lambda: "meta-session")
-    monkeypatch.setattr(simple_module, "readkey", lambda *_args, **_kwargs: {"not": "a-list"})
+    monkeypatch.setattr(storage_module, "readkey", lambda *_args, **_kwargs: {"not": "a-list"})
 
     def _savekey(email, credentials, *, session_id=None):
         saved["email"] = email
         saved["credentials"] = credentials
         saved["session_id"] = session_id
 
-    monkeypatch.setattr(simple_module, "savekey", _savekey)
+    monkeypatch.setattr(storage_module, "savekey", _savekey)
     monkeypatch.setattr(device_logs_module, "record_registration_event", lambda event: events.append(event))
 
     with config_module.app.test_client() as client:
@@ -273,9 +273,8 @@ def test_simple_register_complete_covers_warning_metadata_transport_and_session_
     assert event.device_name_mds == "FocusKey Device"
 
 
-def test_simple_credentials_route_covers_scalar_registration_metadata_and_listing_fallbacks(monkeypatch, metadata_module, attestation_module):
+def test_simple_credentials_route_covers_scalar_registration_metadata_and_listing_fallbacks(monkeypatch, metadata_module, attestation_module, storage_module):
     config_module = pytest.importorskip("server.app.config")
-    simple_module = pytest.importorskip("server.app.routes.simple")
     pytest.importorskip("server.app.app")
 
     monkeypatch.setattr(metadata_module, "ensure_metadata_session_id", lambda: "meta-list")
@@ -288,7 +287,7 @@ def test_simple_credentials_route_covers_scalar_registration_metadata_and_listin
         if target.get("aaguid"):
             target.setdefault("aaguidHex", target["aaguid"])
 
-    monkeypatch.setattr(simple_module, "add_public_key_material", _add_public_key_material)
+    monkeypatch.setattr(storage_module, "add_public_key_material", _add_public_key_material)
     monkeypatch.setattr(attestation_module, "augment_aaguid_fields", _augment_aaguid_fields)
 
     dict_backed = {
@@ -332,7 +331,7 @@ def test_simple_credentials_route_covers_scalar_registration_metadata_and_listin
     }
 
     monkeypatch.setattr(
-        simple_module,
+        storage_module,
         "iter_credentials",
         lambda session_id=None: iter(
             [

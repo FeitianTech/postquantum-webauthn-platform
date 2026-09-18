@@ -7,7 +7,7 @@ from typing import Any
 
 from flask import jsonify, session
 
-from ... import attestation, device_logs, metadata
+from ... import attestation, device_logs, metadata, storage
 
 
 def build_stored_credential_context_impl(simple_module: Any, ctx: dict[str, Any]) -> None:
@@ -28,11 +28,11 @@ def build_stored_credential_context_impl(simple_module: Any, ctx: dict[str, Any]
         "publicKeyAlgorithm": ctx["credential_info"].get("publicKeyAlgorithm") or ctx["algo"],
         "signCount": getattr(ctx["auth_data"], "counter", 0),
         "createdAt": ctx["credential_info"]["registration_time"],
-        "clientExtensionOutputs": simple_module.convert_bytes_for_json(ctx["client_extension_results"]),
+        "clientExtensionOutputs": storage.convert_bytes_for_json(ctx["client_extension_results"]),
         "attestationFormat": ctx["attestation_format"],
-        "attestationStatement": simple_module.convert_bytes_for_json(ctx["attestation_statement"]),
-        "properties": simple_module.convert_bytes_for_json(ctx["credential_properties"]),
-        "publicKeyCose": simple_module.convert_bytes_for_json(ctx["cose_public_key"]),
+        "attestationStatement": storage.convert_bytes_for_json(ctx["attestation_statement"]),
+        "properties": storage.convert_bytes_for_json(ctx["credential_properties"]),
+        "publicKeyCose": storage.convert_bytes_for_json(ctx["cose_public_key"]),
         "publicKeyBytes": base64.b64encode(ctx["public_key_bytes"]).decode("ascii"),
         "authenticatorAttachment": ctx["authenticator_attachment_response"],
         "clientDataJSON": ctx["credential_info"].get("client_data_json"),
@@ -50,7 +50,7 @@ def build_stored_credential_context_impl(simple_module: Any, ctx: dict[str, Any]
 
 def _persist_registered_credential_entry_impl(simple_module: Any, ctx: dict[str, Any]) -> Any | None:
     metadata_session_id = metadata.ensure_metadata_session_id()
-    existing_credentials = simple_module.readkey(ctx["uname"], session_id=metadata_session_id)
+    existing_credentials = storage.readkey(ctx["uname"], session_id=metadata_session_id)
 
     credential_entry = {
         "credential_data": ctx["auth_data"].credential_data,
@@ -85,7 +85,7 @@ def _persist_registered_credential_entry_impl(simple_module: Any, ctx: dict[str,
         existing_credentials = [credential_entry]
 
     try:
-        simple_module.savekey(ctx["uname"], existing_credentials, session_id=metadata_session_id)
+        storage.savekey(ctx["uname"], existing_credentials, session_id=metadata_session_id)
     except Exception:
         simple_module.app.logger.exception("Failed to persist registered credential for %s", ctx["uname"])
         return jsonify({"error": "Unable to persist registered credential."}), 500
@@ -165,7 +165,7 @@ def build_register_complete_response_payload_impl(simple_module: Any, ctx: dict[
         "status": "OK",
         "algo": ctx["algoname"],
         **ctx["debug_info"],
-        "storedCredential": simple_module.convert_bytes_for_json(ctx["stored_credential"]),
+        "storedCredential": storage.convert_bytes_for_json(ctx["stored_credential"]),
         "relyingParty": ctx["rp_info"],
     }
     if ctx["warnings"]:

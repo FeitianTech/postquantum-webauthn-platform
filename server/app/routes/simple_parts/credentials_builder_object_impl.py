@@ -4,7 +4,7 @@ import base64
 from collections.abc import Mapping, MutableMapping
 from typing import Any
 
-from ... import attestation
+from ... import attestation, storage
 from ...attachments import normalize_attachment
 from .credentials_builder_dict_impl import add_registration_metadata_impl
 
@@ -56,7 +56,7 @@ def build_credential_info_from_object_credential_data_impl(
         },
         "clientExtensionOutputs": cred.get("client_extension_outputs", {}),
         "attestationFormat": cred.get("attestation_format", "none"),
-        "attestationStatement": simple_module.convert_bytes_for_json(
+        "attestationStatement": storage.convert_bytes_for_json(
             cred.get("attestation_statement", {})
         ),
         "publicKeyAlgorithm": cred_data.public_key[3]
@@ -80,7 +80,7 @@ def build_credential_info_from_object_credential_data_impl(
 
     add_registration_metadata_impl(simple_module, credential_info, cred)
 
-    simple_module.add_public_key_material(credential_info, getattr(cred_data, "public_key", {}))
+    storage.add_public_key_material(credential_info, getattr(cred_data, "public_key", {}))
     if credential_info.get("publicKeyAlgorithm") is not None:
         credential_info["algorithm"] = credential_info["publicKeyAlgorithm"]
 
@@ -132,7 +132,7 @@ def build_credential_info_from_bare_credential_impl(simple_module: Any, email: s
         "properties": {},
     }
 
-    simple_module.add_public_key_material(credential_info, getattr(cred, "public_key", {}))
+    storage.add_public_key_material(credential_info, getattr(cred, "public_key", {}))
     if credential_info.get("publicKeyAlgorithm") is not None:
         credential_info["algorithm"] = credential_info["publicKeyAlgorithm"]
 

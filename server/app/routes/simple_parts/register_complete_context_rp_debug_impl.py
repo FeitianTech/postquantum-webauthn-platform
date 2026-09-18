@@ -8,7 +8,7 @@ from typing import Any
 
 from fido2 import cbor
 
-from ... import attestation
+from ... import attestation, storage
 
 
 def populate_rp_debug_context_impl(simple_module: Any, ctx: dict[str, Any]) -> None:
@@ -54,7 +54,7 @@ def populate_rp_debug_context_impl(simple_module: Any, ctx: dict[str, Any]) -> N
     rp_registration_data = {
         "authenticatorData": ctx["authenticator_data_hex"],
         "authenticatorDataHash": ctx["authenticator_data_hash"],
-        "clientExtensionResults": simple_module.convert_bytes_for_json(ctx["client_extension_results"]),
+        "clientExtensionResults": storage.convert_bytes_for_json(ctx["client_extension_results"]),
         "flags": ctx["flags_dict"],
         "signatureCounter": getattr(ctx["auth_data"], "counter", 0),
         "attestationChecks": ctx["attestation_checks_safe"],
