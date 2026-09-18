@@ -6,7 +6,7 @@ ML-DSA support.  liboqs is no longer required.
 
 from __future__ import annotations
 
-from .config import app
+from ..config import app
 
 # COSE algorithm identifiers mapped to their FIPS 204 parameter set names.
 PQC_ALGORITHM_ID_TO_NAME: dict[int, str] = {

@@ -10,8 +10,8 @@ from fido2.webauthn import (
     PublicKeyCredentialType,
 )
 
-from ... import pqc
 from ...encoding import decode_hex
+from ...webauthn import pqc
 from . import binary, constants
 
 

@@ -198,9 +198,9 @@ def device_logs_module():
 
 @pytest.fixture
 def pqc_module():
-    """``server.app.pqc`` -- post-quantum algorithm discovery and naming."""
+    """``server.app.webauthn.pqc`` -- post-quantum algorithm discovery and naming."""
 
-    return _module("server.app.pqc")
+    return _module("server.app.webauthn.pqc")
 
 
 @pytest.fixture

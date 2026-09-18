@@ -12,7 +12,7 @@ from fido2.attestation.base import _verify_mldsa_certificate_signature
 from fido2.cose import CoseKey, extract_certificate_public_key_info
 
 from .. import metadata
-from ..pqc import PQC_ALGORITHM_ID_TO_NAME, is_pqc_algorithm
+from ..webauthn.pqc import PQC_ALGORITHM_ID_TO_NAME, is_pqc_algorithm
 from . import trust
 
 _PQC_ALGORITHM_NAME_TO_ID = {
