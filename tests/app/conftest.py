@@ -75,7 +75,7 @@ def advanced_authenticate_begin():
 def advanced_authenticate_complete():
     """The fragment that defines the advanced ``/authenticate/complete`` body."""
 
-    return _advanced_fragment("authenticate_complete_impl")
+    return _advanced_fragment("authentication")
 
 
 @pytest.fixture

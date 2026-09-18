@@ -14,7 +14,7 @@ from . import (
     algorithms,
     artifacts,
     authenticate_begin_impl,
-    authenticate_complete_impl,
+    authentication,
     binary,
     constants,
     parsing,
@@ -113,4 +113,4 @@ def advanced_authenticate_begin():
 
 @app.route("/api/advanced/authenticate/complete", methods=["POST"])
 def advanced_authenticate_complete():
-    return authenticate_complete_impl.advanced_authenticate_complete_impl()
+    return authentication.advanced_authenticate_complete_impl()
