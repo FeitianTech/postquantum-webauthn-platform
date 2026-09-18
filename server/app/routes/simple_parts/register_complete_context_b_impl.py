@@ -1,7 +1,11 @@
 from __future__ import annotations
 
+import base64
 from collections.abc import Mapping
+from datetime import datetime, timezone
 from typing import Any
+
+from flask import jsonify, session
 
 
 def build_stored_credential_context_impl(simple_module: Any, ctx: dict[str, Any]) -> None:
@@ -13,12 +17,12 @@ def build_stored_credential_context_impl(simple_module: Any, ctx: dict[str, Any]
         "credentialId": ctx["credential_id_b64"],
         "credentialIdBase64Url": ctx["credential_id_b64u"],
         "credentialIdHex": ctx["credential_id_hex"],
-        "aaguid": simple_module.base64.urlsafe_b64encode(ctx["aaguid_bytes"]).decode("ascii").rstrip("=")
+        "aaguid": base64.urlsafe_b64encode(ctx["aaguid_bytes"]).decode("ascii").rstrip("=")
         if ctx["aaguid_bytes"]
         else None,
         "aaguidHex": ctx["aaguid_bytes"].hex() if ctx["aaguid_bytes"] else None,
-        "publicKey": simple_module.base64.b64encode(ctx["public_key_bytes"]).decode("ascii"),
-        "publicKeyBase64Url": simple_module.base64.urlsafe_b64encode(ctx["public_key_bytes"]).decode("ascii").rstrip("="),
+        "publicKey": base64.b64encode(ctx["public_key_bytes"]).decode("ascii"),
+        "publicKeyBase64Url": base64.urlsafe_b64encode(ctx["public_key_bytes"]).decode("ascii").rstrip("="),
         "publicKeyAlgorithm": ctx["credential_info"].get("publicKeyAlgorithm") or ctx["algo"],
         "signCount": getattr(ctx["auth_data"], "counter", 0),
         "createdAt": ctx["credential_info"]["registration_time"],
@@ -27,7 +31,7 @@ def build_stored_credential_context_impl(simple_module: Any, ctx: dict[str, Any]
         "attestationStatement": simple_module.convert_bytes_for_json(ctx["attestation_statement"]),
         "properties": simple_module.convert_bytes_for_json(ctx["credential_properties"]),
         "publicKeyCose": simple_module.convert_bytes_for_json(ctx["cose_public_key"]),
-        "publicKeyBytes": simple_module.base64.b64encode(ctx["public_key_bytes"]).decode("ascii"),
+        "publicKeyBytes": base64.b64encode(ctx["public_key_bytes"]).decode("ascii"),
         "authenticatorAttachment": ctx["authenticator_attachment_response"],
         "clientDataJSON": ctx["credential_info"].get("client_data_json"),
         "attestationObject": ctx["credential_info"].get("attestation_object"),
@@ -82,13 +86,13 @@ def _persist_registered_credential_entry_impl(simple_module: Any, ctx: dict[str,
         simple_module.savekey(ctx["uname"], existing_credentials, session_id=metadata_session_id)
     except Exception:
         simple_module.app.logger.exception("Failed to persist registered credential for %s", ctx["uname"])
-        return simple_module.jsonify({"error": "Unable to persist registered credential."}), 500
+        return jsonify({"error": "Unable to persist registered credential."}), 500
 
     return None
 
 
 def _update_session_simple_credentials_impl(simple_module: Any, ctx: dict[str, Any]) -> None:
-    session_simple_credentials = simple_module.session.get("simple_credentials")
+    session_simple_credentials = session.get("simple_credentials")
     if isinstance(session_simple_credentials, list):
         new_entry = {
             "credentialId": ctx["stored_credential"]["credentialIdBase64Url"],
@@ -103,7 +107,7 @@ def _update_session_simple_credentials_impl(simple_module: Any, ctx: dict[str, A
             entry for entry in session_simple_credentials if isinstance(entry, Mapping)
         ]
         session_simple_credentials.append(new_entry)
-        simple_module.session["simple_credentials"] = session_simple_credentials
+        session["simple_credentials"] = session_simple_credentials
 
 
 def _record_registration_event_impl(simple_module: Any, ctx: dict[str, Any]) -> None:
@@ -119,7 +123,7 @@ def _record_registration_event_impl(simple_module: Any, ctx: dict[str, Any]) -> 
         transports = [str(item) for item in transports_field if isinstance(item, str)]
 
     event = simple_module.RegistrationEvent(
-        timestamp=simple_module.datetime.now(simple_module.timezone.utc),
+        timestamp=datetime.now(timezone.utc),
         rp_id=ctx["resolved_rp_id"],
         user_id=ctx["user_handle_bytes"],
         user_name=str(ctx["uname"] or ""),

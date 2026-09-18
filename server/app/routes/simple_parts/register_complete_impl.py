@@ -3,6 +3,14 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
+from flask import jsonify, request, session
+
+from ...attachments import normalize_attachment
+from ...challenge_registry import (
+    CHALLENGE_FRESH,
+    CHALLENGE_REPLAYED,
+    consume_ceremony_state,
+)
 from .register_complete_context_authenticator_impl import (
     populate_authenticator_data_context_impl,
 )
@@ -16,8 +24,8 @@ from .register_complete_context_rp_debug_impl import populate_rp_debug_context_i
 
 
 def register_complete_impl(simple_module: Any):
-    uname = simple_module.request.args.get("email")
-    response = simple_module.request.get_json(silent=True) or {}
+    uname = request.args.get("email")
+    response = request.get_json(silent=True) or {}
     credential_response = response.get("response", {}) if isinstance(response, dict) else {}
 
     (
@@ -48,17 +56,17 @@ def register_complete_impl(simple_module: Any):
     if isinstance(response, dict):
         response.pop("__session_state", None)
 
-    rp_id = simple_module.session.get("register_rp_id")
+    rp_id = session.get("register_rp_id")
     # Popping the state is not enough on its own: the session is a client-side
     # cookie, so an earlier copy that still holds this state can be resent.
     # Consuming the challenge server-side is what makes it single-use.
-    state = simple_module.session.pop("state", None)
+    state = session.pop("state", None)
     if state is None:
         # Drop any stale ceremony leftovers so the next attempt starts clean.
-        simple_module.session.pop("register_rp_id", None)
-        simple_module.session.pop("simple_register_public_key", None)
+        session.pop("register_rp_id", None)
+        session.pop("simple_register_public_key", None)
         return (
-            simple_module.jsonify(
+            jsonify(
                 {
                     "error": "Registration state not found or has expired. Please restart the registration process."
                 }
@@ -66,30 +74,30 @@ def register_complete_impl(simple_module: Any):
             400,
         )
 
-    challenge_verdict = simple_module.consume_ceremony_state(state)
-    if challenge_verdict != simple_module.CHALLENGE_FRESH:
-        simple_module.session.pop("register_rp_id", None)
-        simple_module.session.pop("simple_register_public_key", None)
-        if challenge_verdict == simple_module.CHALLENGE_REPLAYED:
+    challenge_verdict = consume_ceremony_state(state)
+    if challenge_verdict != CHALLENGE_FRESH:
+        session.pop("register_rp_id", None)
+        session.pop("simple_register_public_key", None)
+        if challenge_verdict == CHALLENGE_REPLAYED:
             message = (
                 "This registration challenge has already been used. "
                 "Please restart the registration process."
             )
         else:
             message = "Registration challenge has expired. Please restart the registration process."
-        return simple_module.jsonify({"error": message}), 400
+        return jsonify({"error": message}), 400
 
-    public_key_options_for_checks = simple_module.session.pop("simple_register_public_key", None)
+    public_key_options_for_checks = session.pop("simple_register_public_key", None)
     resolved_rp_id = rp_id or simple_module.determine_rp_id()
     server = simple_module.create_fido_server(rp_id=resolved_rp_id)
 
     try:
         auth_data = server.register_complete(state, response)
     except Exception as exc:
-        simple_module.session.pop("register_rp_id", None)
-        return simple_module.jsonify({"error": str(exc)}), 400
+        session.pop("register_rp_id", None)
+        return jsonify({"error": str(exc)}), 400
 
-    authenticator_attachment_response = simple_module.normalize_attachment(
+    authenticator_attachment_response = normalize_attachment(
         response.get("authenticatorAttachment") if isinstance(response, Mapping) else None
     )
 
@@ -100,9 +108,9 @@ def register_complete_impl(simple_module: Any):
     # request's own Origin header, which the caller also controls.
     ceremony_origin = simple_module.extract_client_data_origin(credential_response)
     if not simple_module.is_origin_allowed(ceremony_origin):
-        simple_module.session.pop("register_rp_id", None)
+        session.pop("register_rp_id", None)
         return (
-            simple_module.jsonify(
+            jsonify(
                 {
                     "error": (
                         "Ceremony origin is not permitted by the configured "
@@ -116,7 +124,7 @@ def register_complete_impl(simple_module: Any):
     # determine_expected_origin only echoes a candidate that is itself
     # allowlisted, so this can never become a self-referential comparison.
     expected_origin = simple_module.determine_expected_origin(ceremony_origin) or (
-        simple_module.request.host_url.rstrip("/")
+        request.host_url.rstrip("/")
     )
 
     attestation_checks = simple_module.perform_attestation_checks(
@@ -155,9 +163,9 @@ def register_complete_impl(simple_module: Any):
 
     attestation_errors = attestation_checks.get("errors")
     if isinstance(attestation_errors, list) and attestation_errors:
-        simple_module.session.pop("register_rp_id", None)
+        session.pop("register_rp_id", None)
         return (
-            simple_module.jsonify(
+            jsonify(
                 {
                     "error": "Registration verification failed.",
                     "verified": False,
@@ -173,7 +181,7 @@ def register_complete_impl(simple_module: Any):
     populate_authenticator_data_context_impl(simple_module, ctx)
     populate_rp_debug_context_impl(simple_module, ctx)
 
-    simple_module.session.pop("register_rp_id", None)
+    session.pop("register_rp_id", None)
 
     build_stored_credential_context_impl(simple_module, ctx)
 
@@ -182,4 +190,4 @@ def register_complete_impl(simple_module: Any):
         return persist_response
 
     response_payload = build_register_complete_response_payload_impl(simple_module, ctx)
-    return simple_module.jsonify(response_payload)
+    return jsonify(response_payload)

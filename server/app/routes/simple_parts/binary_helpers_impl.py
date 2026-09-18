@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 from collections.abc import Iterable, Mapping, Sequence
 from typing import Any
 
@@ -17,7 +18,7 @@ def _decode_base64url_bytes_impl(simple_module: Any, value: Any) -> bytes:
             return b""
         padding = "=" * (-len(candidate) % 4)
         try:
-            return simple_module.base64.urlsafe_b64decode(candidate + padding)
+            return base64.urlsafe_b64decode(candidate + padding)
         except Exception:
             return b""
     return b""
@@ -52,12 +53,12 @@ def _decode_binary_value_impl(simple_module: Any, value: Any) -> bytes:
             raise ValueError("empty string")
 
         try:
-            return simple_module.base64.urlsafe_b64decode(simple_module._add_base64_padding(candidate))
+            return base64.urlsafe_b64decode(simple_module._add_base64_padding(candidate))
         except Exception:
             pass
 
         try:
-            return simple_module.base64.b64decode(simple_module._add_base64_padding(candidate))
+            return base64.b64decode(simple_module._add_base64_padding(candidate))
         except Exception:
             pass
 

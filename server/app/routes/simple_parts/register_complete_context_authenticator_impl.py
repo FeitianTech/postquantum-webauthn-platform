@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import base64
+import hashlib
 from typing import Any
 
 
@@ -13,9 +15,9 @@ def populate_authenticator_data_context_impl(simple_module: Any, ctx: dict[str, 
     authenticator_data_hex = ""
     authenticator_data_hash = ""
     if auth_data_bytes:
-        authenticator_data_raw = simple_module.base64.urlsafe_b64encode(auth_data_bytes).decode("utf-8").rstrip("=")
+        authenticator_data_raw = base64.urlsafe_b64encode(auth_data_bytes).decode("utf-8").rstrip("=")
         authenticator_data_hex = auth_data_bytes.hex()
-        authenticator_data_hash = simple_module.hashlib.sha256(auth_data_bytes).hexdigest()
+        authenticator_data_hash = hashlib.sha256(auth_data_bytes).hexdigest()
         ctx["credential_info"]["authenticator_data_raw"] = authenticator_data_raw
         ctx["credential_info"]["authenticator_data_hex"] = authenticator_data_hex
         ctx["credential_info"]["authenticator_data_hash"] = authenticator_data_hash
@@ -53,14 +55,14 @@ def populate_authenticator_data_context_impl(simple_module: Any, ctx: dict[str, 
 
     rp_id_hash_hex = rp_id_hash_bytes.hex() if rp_id_hash_bytes else ""
     rp_id_hash_b64 = (
-        simple_module.base64.urlsafe_b64encode(rp_id_hash_bytes).decode("ascii").rstrip("=")
+        base64.urlsafe_b64encode(rp_id_hash_bytes).decode("ascii").rstrip("=")
         if rp_id_hash_bytes
         else ""
     )
 
-    expected_rp_hash_bytes = simple_module.hashlib.sha256((ctx["resolved_rp_id"] or "").encode("utf-8")).digest()
+    expected_rp_hash_bytes = hashlib.sha256((ctx["resolved_rp_id"] or "").encode("utf-8")).digest()
     expected_rp_hash_hex = expected_rp_hash_bytes.hex()
-    expected_rp_hash_b64 = simple_module.base64.urlsafe_b64encode(expected_rp_hash_bytes).decode("ascii").rstrip("=")
+    expected_rp_hash_b64 = base64.urlsafe_b64encode(expected_rp_hash_bytes).decode("ascii").rstrip("=")
 
     if ctx["attestation_rp_id_hash_valid"] is None:
         ctx["attestation_rp_id_hash_valid"] = rp_id_hash_bytes == expected_rp_hash_bytes

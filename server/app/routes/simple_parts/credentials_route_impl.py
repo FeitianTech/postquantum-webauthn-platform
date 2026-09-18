@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from flask import jsonify, request
+
 from .credentials_builder_dict_impl import (
     build_credential_info_from_dict_credential_data_impl,
 )
@@ -13,7 +15,7 @@ from .credentials_builder_object_impl import (
 
 def list_credentials_impl(simple_module: Any):
     metadata_session_id = simple_module.ensure_metadata_session_id()
-    if simple_module.request.method == "DELETE":
+    if request.method == "DELETE":
         removed = 0
         try:
             for username in list(simple_module.storage_list_credentials(session_id=metadata_session_id).keys()):
@@ -22,7 +24,7 @@ def list_credentials_impl(simple_module: Any):
         except Exception:
             pass
 
-        return simple_module.jsonify({"status": "OK", "removed": removed})
+        return jsonify({"status": "OK", "removed": removed})
 
     credentials: list[dict[str, Any]] = []
 
@@ -60,4 +62,4 @@ def list_credentials_impl(simple_module: Any):
     except Exception:
         pass
 
-    return simple_module.jsonify(credentials)
+    return jsonify(credentials)
