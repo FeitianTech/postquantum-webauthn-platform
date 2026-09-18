@@ -85,7 +85,9 @@ def test_decode_client_binary_handles_recursive_wrappers_and_validation_failures
         advanced_module._decode_client_binary({"base64": "YWI="})
 
 
-def test_algorithm_coercion_handles_blank_values_failed_numeric_extraction_and_pqc_allowlist(monkeypatch):
+def test_algorithm_coercion_handles_blank_values_failed_numeric_extraction_and_pqc_allowlist(
+    monkeypatch, advanced_constants, pqc_module
+):
     advanced_module = pytest.importorskip("server.app.routes.advanced")
 
     assert advanced_module._lookup_named_cose_algorithm("   ") is None
@@ -99,10 +101,10 @@ def test_algorithm_coercion_handles_blank_values_failed_numeric_extraction_and_p
         def finditer(self, _value):
             return [_BadMatch()]
 
-    monkeypatch.setattr(advanced_module, "_COSE_ALGORITHM_NUMERIC_PATTERN", _BadPattern())
+    monkeypatch.setattr(advanced_constants, "COSE_ALGORITHM_NUMERIC_PATTERN", _BadPattern())
     assert advanced_module._coerce_cose_algorithm("custom algorithm -- broken") is None
 
-    monkeypatch.setattr(advanced_module, "PQC_ALGORITHM_ID_TO_NAME", {123456: "PQ-Example"})
+    monkeypatch.setattr(pqc_module, "PQC_ALGORITHM_ID_TO_NAME", {123456: "PQ-Example"})
     assert advanced_module._is_custom_cose_algorithm(123456) is False
 
 

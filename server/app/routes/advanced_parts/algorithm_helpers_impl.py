@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import math
+import re
 from collections.abc import Iterable, Mapping
 from typing import Any
 
@@ -8,12 +10,15 @@ from fido2.webauthn import (
     PublicKeyCredentialType,
 )
 
+from ... import pqc
+from . import constants
+
 
 def _normalize_algorithm_name_key_impl(advanced_module: Any, name: str) -> str:
     base = name.strip().split("(")[0]
     if not base:
         return ""
-    sanitized = advanced_module.re.sub(r"[^A-Z0-9]", "", base.upper())
+    sanitized = re.sub(r"[^A-Z0-9]", "", base.upper())
     if sanitized.startswith("FIDOALG"):
         sanitized = sanitized[len("FIDOALG"):]
     if sanitized.startswith("COSEALG"):
@@ -29,11 +34,11 @@ def _lookup_named_cose_algorithm_impl(
     if not normalized_name:
         return None
 
-    direct_match = advanced_module._COSE_ALGORITHM_NAME_LOOKUP.get(normalized_name)
+    direct_match = constants.COSE_ALGORITHM_NAME_LOOKUP.get(normalized_name)
     if direct_match is not None:
         return direct_match
 
-    for alias_key, alg_value in advanced_module._COSE_ALGORITHM_NAME_LOOKUP.items():
+    for alias_key, alg_value in constants.COSE_ALGORITHM_NAME_LOOKUP.items():
         if normalized_name.endswith(alias_key):
             return alg_value
     return None
@@ -48,7 +53,7 @@ def _coerce_cose_algorithm_impl(
     if isinstance(value, int):
         return value
     if isinstance(value, float):
-        if advanced_module.math.isfinite(value) and value.is_integer():
+        if math.isfinite(value) and value.is_integer():
             return int(value)
         return None
     if isinstance(value, str):
@@ -61,7 +66,7 @@ def _coerce_cose_algorithm_impl(
             normalized_alg = advanced_module._lookup_named_cose_algorithm(stripped)
             if normalized_alg is not None:
                 return normalized_alg
-            matches = list(advanced_module._COSE_ALGORITHM_NUMERIC_PATTERN.finditer(stripped))
+            matches = list(constants.COSE_ALGORITHM_NUMERIC_PATTERN.finditer(stripped))
             if matches:
                 try:
                     return int(matches[-1].group(0), 10)
@@ -111,9 +116,9 @@ def _derive_algorithms_from_credentials_impl(
 def _is_custom_cose_algorithm_impl(advanced_module: Any, alg_id: int | None) -> bool:
     if alg_id is None:
         return False
-    if alg_id in advanced_module._COSE_ALGORITHM_NAME_MAP.values():
+    if alg_id in constants.COSE_ALGORITHM_NAME_MAP.values():
         return False
-    if alg_id in advanced_module.PQC_ALGORITHM_ID_TO_NAME:
+    if alg_id in pqc.PQC_ALGORITHM_ID_TO_NAME:
         return False
     return True
 
