@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from . import result_runtime
+from . import ctap_runtime_parse, result_runtime
 from .ctap_classify import (
     _GET_ASSERTION_REQUEST_LABELS,
     _GET_ASSERTION_RESPONSE_LABELS,
@@ -76,7 +76,7 @@ def _build_get_assertion_expanded_json(value: Mapping[Any, Any], raw_bytes: byte
                 auth_trailing_bytes = None
 
     if result.get(signature_key) is None and auth_trailing_bytes:
-        trailing_map = _decode_trailing_map(auth_trailing_bytes)
+        trailing_map = ctap_runtime_parse._decode_trailing_map(auth_trailing_bytes)
         sig_entry = trailing_map.pop(3, None)
         if sig_entry is not None:
             sig_bytes = _coerce_cbor_bytes(sig_entry)
@@ -85,7 +85,7 @@ def _build_get_assertion_expanded_json(value: Mapping[Any, Any], raw_bytes: byte
         user_entry_trailing = trailing_map.pop(4, None)
         if user_entry_trailing is not None:
             user_key = _format_ctap_entry_key(4, _resolve_ctap_label(_GET_ASSERTION_RESPONSE_LABELS, 4))
-            result[user_key] = _convert_ctap_user(user_entry_trailing)
+            result[user_key] = ctap_runtime_parse._convert_ctap_user(user_entry_trailing)
         number_entry = trailing_map.pop(5, None)
         if number_entry is not None:
             number_key = _format_ctap_entry_key(5, _resolve_ctap_label(_GET_ASSERTION_RESPONSE_LABELS, 5))
@@ -102,7 +102,7 @@ def _build_get_assertion_expanded_json(value: Mapping[Any, Any], raw_bytes: byte
             result["trailingFields"] = {str(k): _hex_json_safe(v) for k, v in trailing_map.items()}
 
     if result.get(signature_key) is None and raw_bytes:
-        sig_bytes = _extract_signature_from_raw_bytes(raw_bytes)
+        sig_bytes = ctap_runtime_parse._extract_signature_from_raw_bytes(raw_bytes)
         if sig_bytes is not None:
             result[signature_key] = sig_bytes.hex()
 
@@ -144,10 +144,10 @@ def _interpret_make_credential_map(value: Mapping[Any, Any]) -> dict[str, Any] |
     interpreted: dict[str, Any] = {}
     interpreted["1 (fmt)"] = fmt
 
-    auth_data_details, auth_trailing = _format_auth_data_for_expanded_json(auth_data_bytes)
+    auth_data_details, auth_trailing = ctap_runtime_parse._format_auth_data_for_expanded_json(auth_data_bytes)
     interpreted["2 (authData)"] = auth_data_details
     if auth_trailing:
-        trailing_map = _decode_trailing_map(auth_trailing)
+        trailing_map = ctap_runtime_parse._decode_trailing_map(auth_trailing)
         if trailing_map:
             interpreted["2 (authData trailing)"] = _hex_json_safe(trailing_map)
 
@@ -202,7 +202,7 @@ def _interpret_get_assertion_map(value: Mapping[Any, Any]) -> dict[str, Any] | N
     if credential_entry is not _MISSING and credential_entry is not None:
         interpreted["1 (credential)"] = _convert_ctap_credential_descriptor(credential_entry)
 
-    auth_data_details, auth_trailing = _format_auth_data_for_expanded_json(auth_data_bytes)
+    auth_data_details, auth_trailing = ctap_runtime_parse._format_auth_data_for_expanded_json(auth_data_bytes)
     interpreted["2 (authData)"] = auth_data_details
 
     if signature_bytes is not None:
@@ -212,7 +212,7 @@ def _interpret_get_assertion_map(value: Mapping[Any, Any]) -> dict[str, Any] | N
 
     user_entry = _get_mapping_entry(value, 4, "4", "user")
     if user_entry is not _MISSING and user_entry is not None:
-        interpreted["4 (user)"] = _convert_ctap_user(user_entry)
+        interpreted["4 (user)"] = ctap_runtime_parse._convert_ctap_user(user_entry)
 
     optional_labels = {
         5: "numberOfCredentials",
@@ -235,7 +235,7 @@ def _interpret_get_assertion_map(value: Mapping[Any, Any]) -> dict[str, Any] | N
         interpreted[f"{key}"] = _hex_json_safe(value[key])
 
     if interpreted.get("3 (signature)") is None and auth_trailing:
-        trailing_map = _decode_trailing_map(auth_trailing)
+        trailing_map = ctap_runtime_parse._decode_trailing_map(auth_trailing)
         sig_entry = trailing_map.pop(3, None)
         if sig_entry is not None:
             sig_bytes = _coerce_cbor_bytes(sig_entry)
@@ -243,7 +243,7 @@ def _interpret_get_assertion_map(value: Mapping[Any, Any]) -> dict[str, Any] | N
                 interpreted["3 (signature)"] = sig_bytes.hex()
         user_entry_trailing = trailing_map.pop(4, None)
         if user_entry_trailing is not None:
-            interpreted["4 (user)"] = _convert_ctap_user(user_entry_trailing)
+            interpreted["4 (user)"] = ctap_runtime_parse._convert_ctap_user(user_entry_trailing)
         number_entry = trailing_map.pop(5, None)
         if number_entry is not None:
             interpreted["5 (numberOfCredentials)"] = _convert_optional_ctap_field(number_entry)

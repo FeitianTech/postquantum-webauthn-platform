@@ -1,5 +1,4 @@
 """CTAP parsing and field conversion helpers."""
-# pyright: reportUndefinedVariable=false  # the sibling runtime helpers still come from the carrier
 from __future__ import annotations
 
 import base64

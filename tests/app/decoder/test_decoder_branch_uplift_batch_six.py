@@ -66,16 +66,16 @@ def test_looks_like_get_assertion_request_rejects_signature_or_authdata_binary_s
     )
 
 
-def test_interpret_get_assertion_map_handles_signature_and_trailing_field_recovery(monkeypatch):
+def test_interpret_get_assertion_map_handles_signature_and_trailing_field_recovery(monkeypatch, ctap_parse_runtime):
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     monkeypatch.setattr(
-        decode_module,
+        ctap_parse_runtime,
         "_format_auth_data_for_expanded_json",
         lambda _auth_data: ({"flags": {}}, b"trailing"),
     )
     monkeypatch.setattr(
-        decode_module,
+        ctap_parse_runtime,
         "_decode_trailing_map",
         lambda _trailing: {3: b"sig", 4: {1: b"u"}, 5: 2, 6: True, 8: {"ok": 1}, 9: "x"},
     )

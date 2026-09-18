@@ -129,7 +129,7 @@ def test_merge_ctap_make_credential_consumes_raw_signature_bytes_in_extra_values
     assert merged_structure["entries"][-1]["keySummary"] == "3"
 
 
-def test_repair_get_assertion_entries_recovers_signature_from_lenient_map_entries(monkeypatch):
+def test_repair_get_assertion_entries_recovers_signature_from_lenient_map_entries(monkeypatch, ctap_parse_runtime):
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     monkeypatch.setattr(
@@ -146,7 +146,7 @@ def test_repair_get_assertion_entries_recovers_signature_from_lenient_map_entrie
     base_structure = {"entries": [], "length": 0, "summary": "map[0]"}
 
     monkeypatch.setattr(
-        decode_module,
+        ctap_parse_runtime,
         "_extract_lenient_map_entries",
         lambda _raw: [(3, bytearray(b"\x01\x02"))],
     )
@@ -159,7 +159,7 @@ def test_repair_get_assertion_entries_recovers_signature_from_lenient_map_entrie
     assert repaired_value_int_key[3] == b"\x01\x02"
 
     monkeypatch.setattr(
-        decode_module,
+        ctap_parse_runtime,
         "_extract_lenient_map_entries",
         lambda _raw: [(3, "not-bytes"), (b"\x99", 1)],
     )
