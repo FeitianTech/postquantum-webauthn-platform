@@ -253,7 +253,7 @@ def simple_register_complete_context_rp_debug():
 def simple_sign_count():
     """The fragment that defines the signature-counter records and regression helpers."""
 
-    return _simple_fragment("sign_count_impl")
+    return _simple_fragment("authenticate")
 
 
 # The sibling packages the fragments import from.
