@@ -18,7 +18,7 @@ _SIMPLE_ALLOWED_ALGORITHMS: tuple[int, ...] = tuple(
     if alg in set(CoseKey.supported_algorithms())
 )
 
-def register_begin_impl(simple_module: Any):
+def register_begin_impl():
     payload = request.get_json(silent=True) or {}
 
     existing_credentials_raw: list[Any] = []

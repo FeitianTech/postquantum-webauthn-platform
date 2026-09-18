@@ -135,22 +135,22 @@ def _parse_client_credentials(raw_credentials: Any) -> tuple[list[AttestedCreden
 
 @app.route("/api/register/begin", methods=["POST"])
 def register_begin():
-    return register_begin_impl.register_begin_impl(_self_module())
+    return register_begin_impl.register_begin_impl()
 
 
 @app.route("/api/register/complete", methods=["POST"])
 def register_complete():
-    return register_complete_impl.register_complete_impl(_self_module())
+    return register_complete_impl.register_complete_impl()
 
 
 @app.route("/api/authenticate/begin", methods=["POST"])
 def authenticate_begin():
-    return authenticate_begin_impl(_self_module())
+    return authenticate_begin_impl()
 
 
 @app.route("/api/authenticate/complete", methods=["POST"])
 def authenticate_complete():
-    return authenticate_complete_impl(_self_module())
+    return authenticate_complete_impl()
 
 
 @app.route("/api/credentials", methods=["GET", "DELETE"])

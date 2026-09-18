@@ -19,7 +19,7 @@ from ...sign_count import SIGN_COUNT_REGRESSED, sign_count_status
 from . import binary_helpers_impl, credential_parsing_impl, sign_count_impl
 
 
-def authenticate_begin_impl(simple_module: Any):
+def authenticate_begin_impl():
     uname = request.args.get("email")
     payload = request.get_json(silent=True) or {}
 
@@ -63,7 +63,7 @@ def _challenge_rejection_message(replayed: bool) -> str:
     return "Authentication challenge has expired. Please restart the authentication flow."
 
 
-def authenticate_complete_impl(simple_module: Any):
+def authenticate_complete_impl():
     response = request.get_json(silent=True)
 
     # Popping the state is not enough on its own: the session is a client-side
