@@ -1,14 +1,14 @@
 """Shared fixtures for the advanced and simple route tests.
 
-Each fixture hands back the ``*_parts`` fragment that *defines* a group of
-helpers, or the ``server.app`` module a fragment imports. Patch there rather than
-on ``server.app.routes.advanced`` / ``server.app.routes.simple``: the fragments
-resolve these names through their own imports, so that is the binding actually
-read. The two route modules re-export the same objects for callers, but a patch
-applied to a re-export is not seen by the fragments.
+Each fixture hands back the route submodule that *defines* a group of helpers, or
+the ``server.app`` module such a submodule imports. Patch there rather than on the
+``server.app.routes.advanced`` / ``server.app.routes.simple`` packages: the
+submodules resolve these names through their own imports, so that is the binding
+actually read. Each package's ``__init__.py`` re-exports the same objects for
+callers, but a patch applied to a re-export is not seen by the submodules.
 
-``raising`` is deliberately left at its default everywhere. These names moved
-module once already; if one moves again the patch must fail loudly rather than
+``raising`` is deliberately left at its default everywhere. These names have moved
+module more than once; if one moves again the patch must fail loudly rather than
 quietly attaching to a dead attribute and leaving the test to pass while
 exercising the real code.
 """
