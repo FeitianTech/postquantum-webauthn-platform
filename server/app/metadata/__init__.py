@@ -16,7 +16,7 @@ from . import (
     runtime_state,
     session_cleanup_runtime,
     session_identity_runtime,
-    session_items_runtime,
+    sessions,
     upload_runtime,
     verifier_runtime,
 )
@@ -30,7 +30,7 @@ __all__ = ["MetadataDownloadError", "download_metadata_blob", "get_mds_verifier"
            "metadata_entry_trust_anchor_status", "maybe_store_uploaded_metadata_file"]
 
 MetadataDownloadError = blob.MetadataDownloadError
-SessionMetadataItem = session_items_runtime.SessionMetadataItem
+SessionMetadataItem = sessions.SessionMetadataItem
 
 # Constants shared with the fragments.
 _METADATA_REPO_FOLDER = runtime_state._METADATA_REPO_FOLDER
@@ -104,12 +104,12 @@ _note_session_activity = session_identity_runtime._note_session_activity
 _validate_session_metadata_filename = session_identity_runtime._validate_session_metadata_filename
 
 # Session metadata item CRUD.
-_prune_session_metadata_directory = session_items_runtime._prune_session_metadata_directory
-_load_session_metadata_info = session_items_runtime._load_session_metadata_info
-save_session_metadata_item = session_items_runtime.save_session_metadata_item
-list_session_metadata_items = session_items_runtime.list_session_metadata_items
-delete_session_metadata_item = session_items_runtime.delete_session_metadata_item
-serialize_session_metadata_item = session_items_runtime.serialize_session_metadata_item
+_prune_session_metadata_directory = sessions._prune_session_metadata_directory
+_load_session_metadata_info = sessions._load_session_metadata_info
+save_session_metadata_item = sessions.save_session_metadata_item
+list_session_metadata_items = sessions.list_session_metadata_items
+delete_session_metadata_item = sessions.delete_session_metadata_item
+serialize_session_metadata_item = sessions.serialize_session_metadata_item
 
 # Effective (base + session) snapshot composition.
 _build_session_snapshot_entry = effective_snapshot_runtime._build_session_snapshot_entry

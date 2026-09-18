@@ -13,11 +13,11 @@ from fido2.mds3 import (
     MetadataBlobPayloadEntry,
 )
 
-from . import blob, entry_payload_runtime, session_items_runtime
+from . import blob, entry_payload_runtime, sessions
 from . import runtime_state as _state
 
 if TYPE_CHECKING:  # annotation-only, so no runtime import edge is needed
-    from .session_items_runtime import SessionMetadataItem
+    from .sessions import SessionMetadataItem
 
 
 def _merge_metadata(
@@ -101,7 +101,7 @@ def get_mds_verifier() -> MdsAttestationVerifier | None:
     """Return an MDS attestation verifier using session metadata when available."""
 
     base_metadata, base_mtime = blob._load_base_metadata()
-    session_items = session_items_runtime.list_session_metadata_items()
+    session_items = sessions.list_session_metadata_items()
 
     if has_request_context():
         # Holding the entry objects on ``g`` keeps their ids valid for the
