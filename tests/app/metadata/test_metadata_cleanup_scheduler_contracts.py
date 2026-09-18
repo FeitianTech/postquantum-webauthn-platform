@@ -7,7 +7,7 @@ import pytest
 
 @pytest.fixture
 def env_runtime(monkeypatch):
-    module = pytest.importorskip("server.app.metadata_parts.env_runtime")
+    module = pytest.importorskip("server.app.metadata.env_runtime")
     monkeypatch.setattr(module, "_SESSION_METADATA_CLEANUP_INTERVAL", timedelta(seconds=1))
     return module
 

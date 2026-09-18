@@ -1,4 +1,4 @@
-"""Shared mutable runtime state for the metadata_parts fragments.
+"""Shared mutable runtime state for the metadata submodules.
 
 This module is the single home for the caches, locks and constants the
 metadata runtime shares. It is deliberately a leaf: it imports nothing from

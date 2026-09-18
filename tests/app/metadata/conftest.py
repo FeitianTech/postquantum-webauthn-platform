@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-# The caches the metadata_parts fragments share, with the value each one holds
+# The caches the metadata submodules share, with the value each one holds
 # on a freshly imported module. Six test modules used to carry their own copy of
 # this list; keeping it in one place means a name that moves again is re-pointed
 # once rather than six times.
@@ -37,7 +37,7 @@ def metadata_runtime_state(monkeypatch):
     while exercising stale state.
     """
 
-    state = pytest.importorskip("server.app.metadata_parts.runtime_state")
+    state = pytest.importorskip("server.app.metadata.runtime_state")
     for name, default in _RUNTIME_STATE_DEFAULTS.items():
         monkeypatch.setattr(state, name, set() if default is frozenset() else default)
     return state
@@ -51,49 +51,49 @@ def identity_runtime():
     these through this module, so this is the binding that is actually read.
     """
 
-    return pytest.importorskip("server.app.metadata_parts.session_identity_runtime")
+    return pytest.importorskip("server.app.metadata.session_identity_runtime")
 
 
 @pytest.fixture
 def payload_runtime():
     """The fragment that defines the entry payload helpers."""
 
-    return pytest.importorskip("server.app.metadata_parts.entry_payload_runtime")
+    return pytest.importorskip("server.app.metadata.entry_payload_runtime")
 
 
 @pytest.fixture
 def snapshot_runtime():
     """The fragment that defines the base/explorer/full snapshot loaders."""
 
-    return pytest.importorskip("server.app.metadata_parts.base_snapshot_runtime")
+    return pytest.importorskip("server.app.metadata.base_snapshot_runtime")
 
 
 @pytest.fixture
 def items_runtime():
     """The fragment that defines the session metadata item helpers."""
 
-    return pytest.importorskip("server.app.metadata_parts.session_items_runtime")
+    return pytest.importorskip("server.app.metadata.session_items_runtime")
 
 
 @pytest.fixture
 def cache_runtime():
     """The fragment that defines the metadata cache helpers."""
 
-    return pytest.importorskip("server.app.metadata_parts.cache_runtime")
+    return pytest.importorskip("server.app.metadata.cache_runtime")
 
 
 @pytest.fixture
 def upload_runtime():
     """The fragment that defines the repository upload helpers."""
 
-    return pytest.importorskip("server.app.metadata_parts.upload_runtime")
+    return pytest.importorskip("server.app.metadata.upload_runtime")
 
 
 @pytest.fixture
 def effective_runtime():
     """The fragment that composes base and session snapshots."""
 
-    return pytest.importorskip("server.app.metadata_parts.effective_snapshot_runtime")
+    return pytest.importorskip("server.app.metadata.effective_snapshot_runtime")
 
 
 @pytest.fixture
@@ -114,11 +114,11 @@ def app_config():
 def cleanup_runtime():
     """The fragment that defines the session cleanup worker and scheduler."""
 
-    return pytest.importorskip("server.app.metadata_parts.session_cleanup_runtime")
+    return pytest.importorskip("server.app.metadata.session_cleanup_runtime")
 
 
 @pytest.fixture
 def verifier_runtime():
     """The fragment that defines the metadata merge and verifier helpers."""
 
-    return pytest.importorskip("server.app.metadata_parts.verifier_runtime")
+    return pytest.importorskip("server.app.metadata.verifier_runtime")

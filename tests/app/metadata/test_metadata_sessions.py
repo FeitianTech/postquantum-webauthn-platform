@@ -64,7 +64,7 @@ def test_note_session_activity_schedules_cleanup(session_metadata_env, monkeypat
     _, metadata = session_metadata_env
 
     calls = []
-    cleanup = pytest.importorskip("server.app.metadata_parts.session_cleanup_runtime")
+    cleanup = pytest.importorskip("server.app.metadata.session_cleanup_runtime")
     monkeypatch.setattr(cleanup, "_touch_session_last_access", lambda sid: calls.append(("touch", sid)))
     monkeypatch.setattr(cleanup, "_schedule_inactive_session_cleanup", lambda: calls.append(("schedule", None)))
     monkeypatch.setattr(
