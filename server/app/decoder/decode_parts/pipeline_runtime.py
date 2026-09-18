@@ -1,13 +1,25 @@
-"""Extracted decode pipeline helper bodies.
-
-These functions are executed via decode.py wrappers that rebind globals to the
-facade module, preserving monkeypatch-driven behavior in tests.
-"""
-# pyright: reportUndefinedVariable=false
+"""Top-level decode pipeline helpers."""
+# pyright: reportUndefinedVariable=false  # the details_runtime and cbor_runtime helpers still come from the carrier
 from __future__ import annotations
 
+import base64
+import binascii
+import json
+import re
+import string
 from collections.abc import Mapping, Sequence
 from typing import Any
+
+from cryptography import x509
+
+from fido2.utils import ByteBuffer
+
+from ...attestation import make_json_safe, serialize_attestation_certificate
+
+_PEM_CERT_PATTERN = re.compile(
+    r"-----BEGIN CERTIFICATE-----\s*(?P<body>.*?)\s*-----END CERTIFICATE-----",
+    re.IGNORECASE | re.DOTALL,
+)
 
 
 def _decode_json_object(value: Any, raw_text: str | None = None) -> dict[str, Any]:
