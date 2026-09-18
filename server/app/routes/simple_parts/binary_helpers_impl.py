@@ -5,11 +5,11 @@ from collections.abc import Iterable, Mapping, Sequence
 from typing import Any
 
 
-def _add_base64_padding_impl(_simple_module: Any, value: str) -> str:
+def _add_base64_padding_impl(value: str) -> str:
     return value + "=" * (-len(value) % 4)
 
 
-def _decode_base64url_bytes_impl(simple_module: Any, value: Any) -> bytes:
+def _decode_base64url_bytes_impl(value: Any) -> bytes:
     if isinstance(value, (bytes, bytearray, memoryview)):
         return bytes(value)
     if isinstance(value, str):
@@ -25,7 +25,7 @@ def _decode_base64url_bytes_impl(simple_module: Any, value: Any) -> bytes:
 
 
 def _extract_assertion_credential_id_impl(
-    simple_module: Any, response: Mapping[str, Any]
+    response: Mapping[str, Any]
 ) -> bytes | None:
     raw_id: Any = None
     if isinstance(response, Mapping):
@@ -35,12 +35,12 @@ def _extract_assertion_credential_id_impl(
         return bytes(raw_id)
 
     if isinstance(raw_id, str):
-        return simple_module._decode_base64url_bytes(raw_id) or None
+        return _decode_base64url_bytes_impl(raw_id) or None
 
     return None
 
 
-def _decode_binary_value_impl(simple_module: Any, value: Any) -> bytes:
+def _decode_binary_value_impl(value: Any) -> bytes:
     if value is None:
         raise ValueError("missing binary value")
 
@@ -53,12 +53,12 @@ def _decode_binary_value_impl(simple_module: Any, value: Any) -> bytes:
             raise ValueError("empty string")
 
         try:
-            return base64.urlsafe_b64decode(simple_module._add_base64_padding(candidate))
+            return base64.urlsafe_b64decode(_add_base64_padding_impl(candidate))
         except Exception:
             pass
 
         try:
-            return base64.b64decode(simple_module._add_base64_padding(candidate))
+            return base64.b64decode(_add_base64_padding_impl(candidate))
         except Exception:
             pass
 
@@ -76,7 +76,7 @@ def _decode_binary_value_impl(simple_module: Any, value: Any) -> bytes:
     raise ValueError("unsupported binary value type")
 
 
-def _select_first_impl(_simple_module: Any, mapping: Mapping[str, Any], keys: Sequence[str]) -> Any:
+def _select_first_impl(mapping: Mapping[str, Any], keys: Sequence[str]) -> Any:
     for key in keys:
         if key in mapping:
             return mapping[key]

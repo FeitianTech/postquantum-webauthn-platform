@@ -106,23 +106,23 @@ def _self_module() -> Any:
 
 
 def _add_base64_padding(value: str) -> str:
-    return _add_base64_padding_impl(_self_module(), value)
+    return _add_base64_padding_impl(value)
 
 
 def _decode_base64url_bytes(value: Any) -> bytes:
-    return _decode_base64url_bytes_impl(_self_module(), value)
+    return _decode_base64url_bytes_impl(value)
 
 
 def _extract_assertion_credential_id(response: Mapping[str, Any]) -> bytes | None:
-    return _extract_assertion_credential_id_impl(_self_module(), response)
+    return _extract_assertion_credential_id_impl(response)
 
 
 def _decode_binary_value(value: Any) -> bytes:
-    return _decode_binary_value_impl(_self_module(), value)
+    return _decode_binary_value_impl(value)
 
 
 def _select_first(mapping: Mapping[str, Any], keys: Sequence[str]) -> Any:
-    return _select_first_impl(_self_module(), mapping, keys)
+    return _select_first_impl(mapping, keys)
 
 
 def _serialize_credential_for_session(entry: Mapping[str, Any]) -> dict[str, Any]:
