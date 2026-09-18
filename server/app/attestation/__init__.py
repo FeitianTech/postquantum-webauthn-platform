@@ -19,7 +19,6 @@ from . import (
     pqc_runtime,
     runtime_state,
     trust,
-    trust_ca_runtime,
 )
 
 __all__ = [
@@ -105,10 +104,10 @@ _find_metadata_entry_for_aaguid = trust._find_metadata_entry_for_aaguid
 _resolve_root_validity = trust._resolve_root_validity
 
 # Trusted-CA allowlist helpers.
-_certificate_fingerprint = trust_ca_runtime._certificate_fingerprint
-_is_trusted_ca_certificate = trust_ca_runtime._is_trusted_ca_certificate
-_trusted_ca_fingerprints = trust_ca_runtime._trusted_ca_fingerprints
-_trusted_ca_subjects = trust_ca_runtime._trusted_ca_subjects
+_certificate_fingerprint = trust._certificate_fingerprint
+_is_trusted_ca_certificate = trust._is_trusted_ca_certificate
+_trusted_ca_fingerprints = trust._trusted_ca_fingerprints
+_trusted_ca_subjects = trust._trusted_ca_subjects
 
 # Classical attestation root evaluation.
 _evaluate_classical_attestation_root = classical_runtime._evaluate_classical_attestation_root

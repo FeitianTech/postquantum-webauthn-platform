@@ -9,7 +9,7 @@ from fido2.cose import CoseKey, extract_certificate_public_key_info
 
 from .. import metadata
 from ..pqc import is_pqc_algorithm
-from . import pqc_constraints_runtime, trust, trust_ca_runtime
+from . import pqc_constraints_runtime, trust
 
 
 def _evaluate_mldsa_attestation_root(
@@ -72,7 +72,7 @@ def _evaluate_mldsa_attestation_root(
     trusted_roots = [
         root
         for root in roots
-        if trust_ca_runtime._is_trusted_ca_certificate(root, allow_subject_parsing=False)
+        if trust._is_trusted_ca_certificate(root, allow_subject_parsing=False)
     ]
     if not trusted_roots:
         errors.append("attestation_root_not_trusted")

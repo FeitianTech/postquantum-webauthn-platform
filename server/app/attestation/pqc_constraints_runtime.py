@@ -11,7 +11,7 @@ from fido2.attestation import InvalidSignature
 from fido2.attestation.base import _verify_mldsa_certificate_signature
 
 from ..pqc import PQC_ALGORITHM_ID_TO_NAME, is_pqc_algorithm
-from . import trust, trust_ca_runtime
+from . import trust
 
 _PQC_ALGORITHM_NAME_TO_ID = {
     name.lower(): alg_id for alg_id, name in PQC_ALGORITHM_ID_TO_NAME.items()
@@ -175,7 +175,7 @@ def _verify_pqc_attestation_chain(
             errors.append(f"pqc_certificate_signature_error: {exc}")
             return False, errors
 
-    if not trust_ca_runtime._is_trusted_ca_certificate(candidate_chain[-1], allow_subject_parsing=False):
+    if not trust._is_trusted_ca_certificate(candidate_chain[-1], allow_subject_parsing=False):
         errors.append("pqc_root_not_in_trusted_list")
         return False, errors
 
