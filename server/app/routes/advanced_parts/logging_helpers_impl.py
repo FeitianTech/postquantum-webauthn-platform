@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from ... import attestation, config, pqc
-from . import binary_helpers_impl
+from . import algorithm_helpers_impl, binary_helpers_impl
 
 
 def _log_authenticator_attestation_response_impl(
@@ -71,9 +71,9 @@ def _log_authenticator_attestation_response_impl(
 
             algorithm_value: int | None = None
             if 3 in public_key_dict:
-                algorithm_value = advanced_module._coerce_cose_algorithm(public_key_dict[3])
+                algorithm_value = algorithm_helpers_impl._coerce_cose_algorithm_impl(public_key_dict[3])
             elif "alg" in public_key_dict:
-                algorithm_value = advanced_module._coerce_cose_algorithm(public_key_dict["alg"])
+                algorithm_value = algorithm_helpers_impl._coerce_cose_algorithm_impl(public_key_dict["alg"])
 
             if algorithm_value is not None:
                 credential_payload["credentialPublicKeyAlgorithm"] = {

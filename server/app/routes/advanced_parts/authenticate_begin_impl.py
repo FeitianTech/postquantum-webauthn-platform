@@ -10,7 +10,7 @@ from fido2.webauthn import UserVerificationRequirement
 from ... import attestation, config
 from ...attachments import resolve_effective_attachments
 from ...challenge_registry import stamp_ceremony_state
-from . import binary_helpers_impl
+from . import algorithm_helpers_impl, binary_helpers_impl
 
 
 def advanced_authenticate_begin_impl(advanced_module: Any):
@@ -191,7 +191,7 @@ def advanced_authenticate_begin_impl(advanced_module: Any):
     else:
         algorithm_source = [record["data"] for record in stored_records if record.get("data") is not None]
 
-    derived_algorithms = advanced_module._derive_algorithms_from_credentials(algorithm_source)
+    derived_algorithms = algorithm_helpers_impl._derive_algorithms_from_credentials_impl(algorithm_source)
     if derived_algorithms:
         temp_server.allowed_algorithms = derived_algorithms
 

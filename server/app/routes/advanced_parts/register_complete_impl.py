@@ -7,7 +7,7 @@ from typing import Any
 from flask import jsonify, request
 
 from ... import attestation, config, pqc, storage
-from . import binary_helpers_impl
+from . import algorithm_helpers_impl, binary_helpers_impl
 from .register_complete_finalize_impl import finalize_registration_completion
 from .register_complete_material_impl import build_registration_material
 from .register_complete_setup_impl import prepare_register_complete_inputs
@@ -242,7 +242,7 @@ def advanced_register_complete_impl(advanced_module: Any):
             except Exception:
                 raw_alg_value = None
 
-        algo = advanced_module._coerce_cose_algorithm(raw_alg_value)
+        algo = algorithm_helpers_impl._coerce_cose_algorithm_impl(raw_alg_value)
         credential_info["publicKeyAlgorithm"] = algo
         algoname = pqc.describe_algorithm(algo)
         pqc.log_algorithm_selection("registration", algo)

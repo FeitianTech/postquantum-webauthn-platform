@@ -151,7 +151,7 @@ def _self_module() -> Any:
 
 
 def _normalize_algorithm_name_key(name: str) -> str:
-    return _normalize_algorithm_name_key_impl(_self_module(), name)
+    return _normalize_algorithm_name_key_impl(name)
 
 
 def _generate_storage_id(credential_id: str) -> str:
@@ -175,7 +175,7 @@ def _extract_credential_id(value: Any) -> bytes | None:
 
 
 def _extract_credential_algorithm(value: Any) -> int | None:
-    return _extract_credential_algorithm_impl(_self_module(), value)
+    return _extract_credential_algorithm_impl(value)
 
 
 def _coerce_optional_bool(value: Any) -> bool | None:
@@ -199,19 +199,19 @@ def _parse_client_supplied_credentials(raw_credentials: Any) -> tuple[list[dict[
 
 
 def _derive_algorithms_from_credentials(credentials: Iterable[Any]) -> list[PublicKeyCredentialParameters]:
-    return _derive_algorithms_from_credentials_impl(_self_module(), credentials)
+    return _derive_algorithms_from_credentials_impl(credentials)
 
 
 def _lookup_named_cose_algorithm(name: str) -> int | None:
-    return _lookup_named_cose_algorithm_impl(_self_module(), name)
+    return _lookup_named_cose_algorithm_impl(name)
 
 
 def _coerce_cose_algorithm(value: Any) -> int | None:
-    return _coerce_cose_algorithm_impl(_self_module(), value)
+    return _coerce_cose_algorithm_impl(value)
 
 
 def _is_custom_cose_algorithm(alg_id: int | None) -> bool:
-    return _is_custom_cose_algorithm_impl(_self_module(), alg_id)
+    return _is_custom_cose_algorithm_impl(alg_id)
 
 
 def _decode_base64url(data: str) -> bytes:
@@ -230,7 +230,7 @@ def _extract_requested_assertion_algorithm(
     public_key: Mapping[str, Any],
     credential_id: bytes | None,
 ) -> int | None:
-    return _extract_requested_assertion_algorithm_impl(_self_module(), public_key, credential_id)
+    return _extract_requested_assertion_algorithm_impl(public_key, credential_id)
 
 
 def _extract_binary_value(value: Any) -> Any:
