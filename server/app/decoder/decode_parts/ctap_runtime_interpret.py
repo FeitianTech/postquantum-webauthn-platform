@@ -1,13 +1,29 @@
-"""Extracted CTAP interpretation and expanded-JSON helper bodies.
-
-These functions are executed via decode.py wrappers that rebind globals to the
-facade module, preserving monkeypatch-driven behavior in tests.
-"""
-# pyright: reportUndefinedVariable=false
+"""CTAP interpretation and expanded-JSON helpers."""
+# pyright: reportUndefinedVariable=false  # the sibling runtime helpers and handler tables are not imported yet
 from __future__ import annotations
 
 from collections.abc import Mapping
 from typing import Any
+
+from .ctap_classify import (
+    _GET_ASSERTION_REQUEST_LABELS,
+    _GET_ASSERTION_RESPONSE_LABELS,
+    _MAKE_CREDENTIAL_REQUEST_LABELS,
+    _MAKE_CREDENTIAL_RESPONSE_LABELS,
+    _build_labeled_ctap_map,
+    _format_ctap_entry_key,
+    _looks_like_get_assertion_request,
+    _looks_like_make_credential_request,
+    _resolve_ctap_label,
+)
+from .ctap_convert_leaf import (
+    _convert_ctap_credential_descriptor,
+    _convert_optional_ctap_field,
+)
+from .key_utils import MISSING as _MISSING
+from .key_utils import coerce_cbor_bytes as _coerce_cbor_bytes
+from .key_utils import get_mapping_entry as _get_mapping_entry
+from .key_utils import hex_json_safe as _hex_json_safe
 
 
 def _build_make_credential_request_expanded_json(
