@@ -54,7 +54,7 @@ def test_start_background_warmup_disabled_does_nothing(startup_module, monkeypat
 def test_run_background_warmup_survives_failures(startup_module, monkeypatch):
     monkeypatch.setattr(startup_module, "_should_warm_cloud_storage_configured", lambda: True)
     monkeypatch.setattr(
-        startup_module.cloud_storage,
+        startup_module.cloud,
         "_ensure_bucket",
         lambda: (_ for _ in ()).throw(RuntimeError("no bucket")),
     )

@@ -5,9 +5,9 @@ from __future__ import annotations
 import os
 import threading
 
-from . import cloud_storage, session_metadata_store
 from .config import app
 from .env_flags import parse_env_flag
+from .storage import cloud, session_metadata
 
 __all__ = ["start_background_warmup", "warm_up_dependencies"]
 
@@ -37,7 +37,7 @@ def background_warmup_enabled() -> bool:
 def _run_background_warmup() -> None:
     if _should_warm_cloud_storage_configured():
         try:
-            cloud_storage._ensure_bucket()
+            cloud._ensure_bucket()
         except Exception:
             app.logger.warning("Background cloud storage warm-up failed.", exc_info=True)
 
@@ -107,7 +107,7 @@ def _should_warm_cloud_storage_for_mode(*, fail_fast: bool) -> bool:
 
 
 def _should_warm_cloud_storage_configured() -> bool:
-    return cloud_storage.gcs_enabled() and bool(os.environ.get("FIDO_SERVER_GCS_BUCKET"))
+    return cloud.gcs_enabled() and bool(os.environ.get("FIDO_SERVER_GCS_BUCKET"))
 
 
 def _should_warm_session_storage(*, fail_fast: bool) -> bool:
@@ -153,7 +153,7 @@ def warm_up_dependencies(
 
     if _should_warm_cloud_storage_for_mode(fail_fast=effective_fail_fast):
         try:
-            cloud_storage.ensure_ready()
+            cloud.ensure_ready()
         except Exception:
             _handle_failure("Failed to verify Google Cloud Storage readiness during startup.")
     elif _should_warm_cloud_storage_configured():
@@ -163,13 +163,13 @@ def warm_up_dependencies(
 
     if _should_warm_session_storage(fail_fast=effective_fail_fast):
         try:
-            session_metadata_store.ensure_session(_STARTUP_SESSION_ID)
-            session_metadata_store.touch_last_access(_STARTUP_SESSION_ID)
+            session_metadata.ensure_session(_STARTUP_SESSION_ID)
+            session_metadata.touch_last_access(_STARTUP_SESSION_ID)
         except Exception:
             _handle_failure("Failed to verify session storage readiness during startup.")
         finally:
             try:
-                session_metadata_store.delete_session(_STARTUP_SESSION_ID)
+                session_metadata.delete_session(_STARTUP_SESSION_ID)
             except Exception:
                 app.logger.warning(
                     "Failed to clean up startup session %s.",

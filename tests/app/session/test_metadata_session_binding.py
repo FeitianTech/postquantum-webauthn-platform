@@ -19,7 +19,7 @@ COOKIE_SALT = "fido.mds.session-cookie.v1"
 def session_env(monkeypatch, tmp_path):
     config = pytest.importorskip("server.app.config")
     metadata = pytest.importorskip("server.app.metadata")
-    session_store = pytest.importorskip("server.app.session_metadata_store")
+    session_store = pytest.importorskip("server.app.storage.session_metadata")
     state = pytest.importorskip("server.app.metadata.state")
     pytest.importorskip("server.app.app")
 

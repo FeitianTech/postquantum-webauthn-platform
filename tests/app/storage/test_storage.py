@@ -93,7 +93,7 @@ setattr(google_auth_exceptions_pkg, "RefreshError", Exception)
 sys.modules.setdefault("google.auth.exceptions", google_auth_exceptions_pkg)
 google_auth_pkg.exceptions = google_auth_exceptions_pkg
 
-storage = importlib.import_module("server.app.storage")
+credentials = importlib.import_module("server.app.storage.credentials")
 
 
 @pytest.fixture(autouse=True)
@@ -101,14 +101,14 @@ def _force_gcs(monkeypatch):
     """Ensure the storage helpers believe GCS is enabled during the tests."""
 
     monkeypatch.setenv("FIDO_SERVER_GCS_BUCKET", "test-bucket")
-    monkeypatch.setattr(storage, "gcs_enabled", lambda: True)
+    monkeypatch.setattr(credentials, "gcs_enabled", lambda: True)
 
 
 def test_readkey_falls_back_to_legacy_gcs(monkeypatch):
     name = "alice@example.com"
     session_id = "session-one"
-    legacy_blob = storage._legacy_credential_blob(name)
-    new_blob = storage._credential_blob(name, session_id)
+    legacy_blob = credentials._legacy_credential_blob(name)
+    new_blob = credentials._credential_blob(name, session_id)
 
     observed = []
 
@@ -118,9 +118,9 @@ def test_readkey_falls_back_to_legacy_gcs(monkeypatch):
             return pickle.dumps([["legacy"]])
         return None
 
-    monkeypatch.setattr(storage, "download_bytes", fake_download)
+    monkeypatch.setattr(credentials, "download_bytes", fake_download)
 
-    result = storage.readkey(name, session_id=session_id)
+    result = credentials.readkey(name, session_id=session_id)
 
     assert result == [["legacy"]]
     assert observed[0] == new_blob
@@ -130,9 +130,9 @@ def test_readkey_falls_back_to_legacy_gcs(monkeypatch):
 def test_iter_credentials_includes_legacy_entries(monkeypatch):
     name = "bob@example.com"
     session_id = "session-two"
-    legacy_blob = storage._legacy_credential_blob(name)
-    legacy_prefix = storage._build_search_prefix(storage._USER_FOLDER_PREFIX)
-    new_prefix = storage._build_search_prefix(storage._credential_prefix(session_id))
+    legacy_blob = credentials._legacy_credential_blob(name)
+    legacy_prefix = credentials._build_search_prefix(credentials._USER_FOLDER_PREFIX)
+    new_prefix = credentials._build_search_prefix(credentials._credential_prefix(session_id))
 
     prefixes = []
 
@@ -146,10 +146,10 @@ def test_iter_credentials_includes_legacy_entries(monkeypatch):
             return pickle.dumps([["from-legacy"]])
         return None
 
-    monkeypatch.setattr(storage, "list_blob_names", fake_list_blob_names)
-    monkeypatch.setattr(storage, "download_bytes", fake_download)
+    monkeypatch.setattr(credentials, "list_blob_names", fake_list_blob_names)
+    monkeypatch.setattr(credentials, "download_bytes", fake_download)
 
-    entries = list(storage.iter_credentials(session_id=session_id))
+    entries = list(credentials.iter_credentials(session_id=session_id))
 
     assert entries == [(name, [["from-legacy"]])]
     assert prefixes[0] == new_prefix
@@ -161,11 +161,11 @@ def test_iter_credentials_skips_nested_legacy_duplicates(monkeypatch):
     primary_name = "dave@example.com"
     legacy_name = "ellen@example.com"
 
-    primary_blob = storage._credential_blob(primary_name, session_id)
-    legacy_blob = storage._legacy_credential_blob(legacy_name)
+    primary_blob = credentials._credential_blob(primary_name, session_id)
+    legacy_blob = credentials._legacy_credential_blob(legacy_name)
 
-    new_prefix = storage._build_search_prefix(storage._credential_prefix(session_id))
-    legacy_prefix = storage._build_search_prefix(storage._USER_FOLDER_PREFIX)
+    new_prefix = credentials._build_search_prefix(credentials._credential_prefix(session_id))
+    legacy_prefix = credentials._build_search_prefix(credentials._USER_FOLDER_PREFIX)
 
     def fake_list_blob_names(prefix: str):
         if prefix == new_prefix:
@@ -179,10 +179,10 @@ def test_iter_credentials_skips_nested_legacy_duplicates(monkeypatch):
         legacy_blob: pickle.dumps([["legacy"]]),
     }
 
-    monkeypatch.setattr(storage, "list_blob_names", fake_list_blob_names)
-    monkeypatch.setattr(storage, "download_bytes", payloads.get)
+    monkeypatch.setattr(credentials, "list_blob_names", fake_list_blob_names)
+    monkeypatch.setattr(credentials, "download_bytes", payloads.get)
 
-    results = dict(storage.iter_credentials(session_id=session_id))
+    results = dict(credentials.iter_credentials(session_id=session_id))
 
     assert results == {
         primary_name: [["primary"]],
@@ -192,8 +192,8 @@ def test_iter_credentials_skips_nested_legacy_duplicates(monkeypatch):
 
 def test_list_credential_blob_names_logs_and_continues(monkeypatch):
     session_id = "session-log"
-    primary_prefix = storage._build_search_prefix(storage._credential_prefix(session_id))
-    legacy_prefix = storage._build_search_prefix(storage._USER_FOLDER_PREFIX)
+    primary_prefix = credentials._build_search_prefix(credentials._credential_prefix(session_id))
+    legacy_prefix = credentials._build_search_prefix(credentials._USER_FOLDER_PREFIX)
 
     failing_called = {"count": 0}
 
@@ -210,47 +210,47 @@ def test_list_credential_blob_names_logs_and_continues(monkeypatch):
 
             return _Generator()
         if prefix == legacy_prefix:
-            return iter([storage._legacy_credential_blob("user@example.com")])
+            return iter([credentials._legacy_credential_blob("user@example.com")])
         return iter([])
 
-    monkeypatch.setattr(storage, "list_blob_names", fake_list_blob_names)
+    monkeypatch.setattr(credentials, "list_blob_names", fake_list_blob_names)
 
     warnings: list[tuple[tuple[object, ...], dict[str, object]]] = []
 
     def _fake_warning(*args, **kwargs):
         warnings.append((args, kwargs))
 
-    monkeypatch.setattr(storage.app.logger, "warning", _fake_warning)
+    monkeypatch.setattr(credentials.app.logger, "warning", _fake_warning)
 
-    results = list(storage._list_credential_blob_names(session_id))
+    results = list(credentials._list_credential_blob_names(session_id))
 
-    assert results == [("user@example.com", storage._legacy_credential_blob("user@example.com"))]
+    assert results == [("user@example.com", credentials._legacy_credential_blob("user@example.com"))]
     assert any("Unable to list credential blobs" in str(call[0][0]) for call in warnings)
 
 
 def test_delkey_attempts_legacy_cleanup(monkeypatch):
     name = "carol@example.com"
     session_id = "session-three"
-    legacy_blob = storage._legacy_credential_blob(name)
-    new_blob = storage._credential_blob(name, session_id)
+    legacy_blob = credentials._legacy_credential_blob(name)
+    new_blob = credentials._credential_blob(name, session_id)
 
     deleted = []
 
     def fake_delete(blob_name: str, *, missing_ok: bool = True):
         deleted.append((blob_name, missing_ok))
 
-    monkeypatch.setattr(storage, "delete_blob", fake_delete)
+    monkeypatch.setattr(credentials, "delete_blob", fake_delete)
 
-    storage.delkey(name, session_id=session_id)
+    credentials.delkey(name, session_id=session_id)
 
     assert deleted[0][0] == new_blob
     assert (legacy_blob, True) in deleted
 
 
 def test_readkey_returns_empty_list_for_corrupted_payload(monkeypatch):
-    monkeypatch.setattr(storage, "download_bytes", lambda _blob_name: b"not-a-valid-pickle")
+    monkeypatch.setattr(credentials, "download_bytes", lambda _blob_name: b"not-a-valid-pickle")
 
-    result = storage.readkey("broken@example.com", session_id="session-corrupt")
+    result = credentials.readkey("broken@example.com", session_id="session-corrupt")
 
     assert result == []
 
@@ -258,17 +258,17 @@ def test_readkey_returns_empty_list_for_corrupted_payload(monkeypatch):
 def test_iter_credentials_skips_corrupted_payload(monkeypatch):
     session_id = "session-corrupt-iter"
     username = "broken@example.com"
-    blob_name = storage._credential_blob(username, session_id)
-    primary_prefix = storage._build_search_prefix(storage._credential_prefix(session_id))
+    blob_name = credentials._credential_blob(username, session_id)
+    primary_prefix = credentials._build_search_prefix(credentials._credential_prefix(session_id))
 
     def fake_list_blob_names(prefix: str):
         if prefix == primary_prefix:
             yield blob_name
 
-    monkeypatch.setattr(storage, "list_blob_names", fake_list_blob_names)
-    monkeypatch.setattr(storage, "download_bytes", lambda _blob_name: b"not-a-valid-pickle")
+    monkeypatch.setattr(credentials, "list_blob_names", fake_list_blob_names)
+    monkeypatch.setattr(credentials, "download_bytes", lambda _blob_name: b"not-a-valid-pickle")
 
-    assert list(storage.iter_credentials(session_id=session_id)) == []
+    assert list(credentials.iter_credentials(session_id=session_id)) == []
 
 
 def test_resolve_session_id_falls_back_to_metadata_session(monkeypatch):
@@ -280,24 +280,24 @@ def test_resolve_session_id_falls_back_to_metadata_session(monkeypatch):
         raising=False,
     )
 
-    assert storage._resolve_session_id("   ") == "fallback-session-id"
+    assert credentials._resolve_session_id("   ") == "fallback-session-id"
 
 
 def test_savekey_uploads_payload_to_session_scoped_gcs_blob(monkeypatch):
     uploads = []
 
     monkeypatch.setattr(
-        storage,
+        credentials,
         "upload_bytes",
         lambda blob_name, payload, *, content_type=None: uploads.append((blob_name, payload, content_type)),
     )
 
     value = [{"credential_data": "saved"}]
-    storage.savekey("alice@example.com", value, session_id="session-save")
+    credentials.savekey("alice@example.com", value, session_id="session-save")
 
     assert len(uploads) == 1
     blob_name, payload, content_type = uploads[0]
-    assert blob_name == storage._credential_blob("alice@example.com", "session-save")
+    assert blob_name == credentials._credential_blob("alice@example.com", "session-save")
     # Credentials are stored as JSON, never pickle: the payload must parse as
     # JSON and must not be loadable as a pickle.
     envelope = json.loads(payload.decode("utf-8"))
@@ -319,9 +319,9 @@ def test_readkey_returns_empty_when_gcs_download_fails_or_missing(monkeypatch):
             raise RuntimeError("temporary failure")
         return None
 
-    monkeypatch.setattr(storage, "download_bytes", fake_download)
+    monkeypatch.setattr(credentials, "download_bytes", fake_download)
 
-    result = storage.readkey("alice@example.com", session_id="session-read")
+    result = credentials.readkey("alice@example.com", session_id="session-read")
 
     assert result == []
     assert len(calls) >= 2
@@ -329,12 +329,12 @@ def test_readkey_returns_empty_when_gcs_download_fails_or_missing(monkeypatch):
 
 def test_delkey_swallows_gcs_delete_exceptions(monkeypatch):
     monkeypatch.setattr(
-        storage,
+        credentials,
         "delete_blob",
         lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("delete failed")),
     )
 
-    storage.delkey("alice@example.com", session_id="session-delete")
+    credentials.delkey("alice@example.com", session_id="session-delete")
 
 
 def test_iter_credentials_gcs_skips_failed_empty_and_non_list_payloads(monkeypatch):
@@ -347,7 +347,7 @@ def test_iter_credentials_gcs_skips_failed_empty_and_non_list_payloads(monkeypat
         ("dave", "blob-d"),
     ]
 
-    monkeypatch.setattr(storage, "_list_credential_blob_names", lambda _sid: blobs)
+    monkeypatch.setattr(credentials, "_list_credential_blob_names", lambda _sid: blobs)
 
     payloads = {
         "blob-a": RuntimeError("download failed"),
@@ -362,8 +362,8 @@ def test_iter_credentials_gcs_skips_failed_empty_and_non_list_payloads(monkeypat
             raise payload
         return payload
 
-    monkeypatch.setattr(storage, "download_bytes", fake_download)
+    monkeypatch.setattr(credentials, "download_bytes", fake_download)
 
-    assert list(storage.iter_credentials(session_id=session_id)) == [
+    assert list(credentials.iter_credentials(session_id=session_id)) == [
         ("dave", [{"ok": True}])
     ]

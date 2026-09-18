@@ -9,7 +9,8 @@ import threading
 import time
 from typing import Any
 
-from .cloud_storage import (
+from .config import _SERVER_RUNTIME_ROOT
+from .storage.cloud import (
     blob_exists,
     build_blob_name,
     delete_blob,
@@ -17,8 +18,7 @@ from .cloud_storage import (
     gcs_enabled,
     upload_bytes,
 )
-from .config import _SERVER_RUNTIME_ROOT
-from .storage_common import (
+from .storage.common import (
     assert_contained_blob_name,
     build_session_root_prefix,
     build_session_scoped_prefix,

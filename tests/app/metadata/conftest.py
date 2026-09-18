@@ -82,7 +82,7 @@ def effective():
 def session_store():
     """The storage module the metadata fragments write through."""
 
-    return pytest.importorskip("server.app.session_metadata_store")
+    return pytest.importorskip("server.app.storage.session_metadata")
 
 
 @pytest.fixture

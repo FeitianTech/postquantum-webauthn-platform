@@ -48,7 +48,7 @@ _server_app_pkg = types.ModuleType("server.app")
 _server_app_pkg.__path__ = [str(_ROOT / "server" / "app")]
 sys.modules.setdefault("server.app", _server_app_pkg)
 
-storage = importlib.import_module("server.app.storage")
+credentials = importlib.import_module("server.app.storage.credentials")
 
 from fido2.cose import ES256  # noqa: E402
 from fido2.webauthn import AttestedCredentialData, AuthenticatorData  # noqa: E402
@@ -94,13 +94,13 @@ def local_store(monkeypatch, tmp_path):
     root.mkdir(parents=True)
     legacy_root.mkdir(parents=True)
 
-    monkeypatch.setattr(storage, "_LOCAL_CREDENTIAL_BASE", str(root))
-    monkeypatch.setattr(storage, "_LEGACY_LOCAL_CREDENTIAL_BASE", str(legacy_root))
-    monkeypatch.setattr(storage, "basepath", str(flat_legacy))
-    monkeypatch.setattr(storage, "_using_gcs", lambda: False)
+    monkeypatch.setattr(credentials, "_LOCAL_CREDENTIAL_BASE", str(root))
+    monkeypatch.setattr(credentials, "_LEGACY_LOCAL_CREDENTIAL_BASE", str(legacy_root))
+    monkeypatch.setattr(credentials, "basepath", str(flat_legacy))
+    monkeypatch.setattr(credentials, "_using_gcs", lambda: False)
 
     return types.SimpleNamespace(
-        storage=storage,
+        storage=credentials,
         root=root,
         legacy_root=legacy_root,
         flat_legacy=flat_legacy,
@@ -110,8 +110,8 @@ def local_store(monkeypatch, tmp_path):
 
 @pytest.fixture
 def gcs_store(monkeypatch):
-    monkeypatch.setattr(storage, "_using_gcs", lambda: True)
-    return storage
+    monkeypatch.setattr(credentials, "_using_gcs", lambda: True)
+    return credentials
 
 
 def _build_attested_credential_data(credential_id: bytes = b"credential-id") -> AttestedCredentialData:
@@ -223,7 +223,7 @@ def test_dotted_name_is_not_confused_with_a_parent_reference(local_store):
 def test_resolve_contained_path_rejects_a_symlink_escape(local_store):
     """Containment is checked after symlink resolution, not just lexically."""
 
-    storage_common = importlib.import_module("server.app.storage_common")
+    storage_common = importlib.import_module("server.app.storage.common")
     root = local_store.root
     outside = local_store.tmp_path / "outside"
     outside.mkdir()
@@ -263,7 +263,7 @@ def test_gcs_object_keys_stay_under_the_configured_prefix(gcs_store, name):
 
 
 def test_assert_contained_blob_name_rejects_escapes():
-    storage_common = importlib.import_module("server.app.storage_common")
+    storage_common = importlib.import_module("server.app.storage.common")
 
     with pytest.raises(ValueError):
         storage_common.assert_contained_blob_name("user-data/../loot", prefix="user-data")
@@ -286,7 +286,7 @@ def test_assert_contained_blob_name_rejects_escapes():
 def test_credential_root_is_not_inside_the_source_tree():
     config = importlib.import_module("server.app.config")
     package_dir = os.path.realpath(config.basepath)
-    root = os.path.realpath(storage._LOCAL_CREDENTIAL_BASE)
+    root = os.path.realpath(credentials._LOCAL_CREDENTIAL_BASE)
 
     assert not root.startswith(package_dir + os.sep)
     assert root != package_dir
@@ -531,10 +531,10 @@ def test_crafted_pickle_payload_is_never_executed_from_gcs(monkeypatch, tmp_path
     marker = tmp_path / "pwned-from-gcs"
     payload = pickle.dumps(_CraftedPickle(str(marker)))
 
-    monkeypatch.setattr(storage, "_using_gcs", lambda: True)
-    monkeypatch.setattr(storage, "download_bytes", lambda _blob: payload)
+    monkeypatch.setattr(credentials, "_using_gcs", lambda: True)
+    monkeypatch.setattr(credentials, "download_bytes", lambda _blob: payload)
 
-    assert storage.readkey("alice@example.com", session_id="session-a") == []
+    assert credentials.readkey("alice@example.com", session_id="session-a") == []
     assert not marker.exists()
 
 
@@ -549,7 +549,7 @@ def test_restricted_unpickler_refuses_disallowed_modules():
     ):
         payload = pickle.dumps(_ReduceTo(module, name))
         with pytest.raises(pickle.UnpicklingError):
-            storage._restricted_pickle_loads(payload)
+            credentials._restricted_pickle_loads(payload)
 
 
 def test_restricted_unpickler_refuses_non_class_globals():
@@ -557,14 +557,14 @@ def test_restricted_unpickler_refuses_non_class_globals():
 
     payload = _global_pickle("fido2.webauthn", "struct")
     with pytest.raises(pickle.UnpicklingError):
-        storage._restricted_pickle_loads(payload)
+        credentials._restricted_pickle_loads(payload)
 
 
 def test_restricted_unpickler_still_loads_fido2_value_classes():
     credential_data = _build_attested_credential_data()
     payload = pickle.dumps([{"credential_data": credential_data}])
 
-    restored = storage._restricted_pickle_loads(payload)
+    restored = credentials._restricted_pickle_loads(payload)
 
     assert isinstance(restored[0]["credential_data"], AttestedCredentialData)
     assert bytes(restored[0]["credential_data"]) == bytes(credential_data)
@@ -619,17 +619,17 @@ def test_real_registration_round_trips_through_the_json_store(monkeypatch, tmp_p
 
     root = tmp_path / "instance" / "session-credentials"
     root.mkdir(parents=True)
-    monkeypatch.setattr(storage, "_LOCAL_CREDENTIAL_BASE", str(root))
-    monkeypatch.setattr(storage, "_LEGACY_LOCAL_CREDENTIAL_BASE", str(tmp_path / "old"))
-    monkeypatch.setattr(storage, "basepath", str(tmp_path / "flat"))
+    monkeypatch.setattr(credentials, "_LOCAL_CREDENTIAL_BASE", str(root))
+    monkeypatch.setattr(credentials, "_LEGACY_LOCAL_CREDENTIAL_BASE", str(tmp_path / "old"))
+    monkeypatch.setattr(credentials, "basepath", str(tmp_path / "flat"))
     (tmp_path / "flat").mkdir()
-    monkeypatch.setattr(storage, "_using_gcs", lambda: False)
+    monkeypatch.setattr(credentials, "_using_gcs", lambda: False)
     monkeypatch.setattr(device_logs_module, "record_registration_event", lambda _event: None)
 
     # Any value the encoder cannot represent is logged; the flow must not need it.
     warnings: list[str] = []
     monkeypatch.setattr(
-        storage.app.logger,
+        credentials.app.logger,
         "warning",
         lambda msg, *args, **kwargs: warnings.append(str(msg) % args if args else str(msg)),
     )

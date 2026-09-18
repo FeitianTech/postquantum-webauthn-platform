@@ -430,12 +430,13 @@ def test_verify_only_checks_the_blob_without_writing_files(stubbed_refresh, caps
 
 
 def test_gcs_upload_publishes_every_snapshot_file(stubbed_refresh, monkeypatch, capsys):
-    from server.app import cloud_storage, mds_provisioning
+    from server.app import mds_provisioning
+    from server.app.storage import cloud
 
     uploaded = {}
-    monkeypatch.setattr(cloud_storage, "gcs_enabled", lambda: True)
+    monkeypatch.setattr(cloud, "gcs_enabled", lambda: True)
     monkeypatch.setattr(
-        cloud_storage,
+        cloud,
         "upload_bytes",
         lambda name, data, content_type=None: uploaded.__setitem__(name, data),
     )
@@ -451,23 +452,23 @@ def test_gcs_upload_publishes_every_snapshot_file(stubbed_refresh, monkeypatch, 
 
 
 def test_gcs_upload_fails_loudly_when_cloud_storage_is_disabled(stubbed_refresh, monkeypatch, capsys):
-    from server.app import cloud_storage
+    from server.app.storage import cloud
 
-    monkeypatch.setattr(cloud_storage, "gcs_enabled", lambda: False)
+    monkeypatch.setattr(cloud, "gcs_enabled", lambda: False)
 
     assert updater.main(["--gcs-upload"]) == 1
     assert "Cloud Storage is disabled" in capsys.readouterr().out
 
 
 def test_gcs_upload_refuses_to_publish_an_incomplete_snapshot(isolated_mds_paths, monkeypatch, capsys):
-    from server.app import cloud_storage
+    from server.app.storage import cloud
 
-    monkeypatch.setattr(cloud_storage, "gcs_enabled", lambda: True)
+    monkeypatch.setattr(cloud, "gcs_enabled", lambda: True)
 
     def _fail(*args, **kwargs):  # pragma: no cover - must not be reached
         raise AssertionError("An incomplete snapshot must not be published.")
 
-    monkeypatch.setattr(cloud_storage, "upload_bytes", _fail)
+    monkeypatch.setattr(cloud, "upload_bytes", _fail)
 
     assert updater._publish_to_cloud_storage() == 1
     assert "is missing; nothing published" in capsys.readouterr().out

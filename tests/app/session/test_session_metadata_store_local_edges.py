@@ -10,7 +10,7 @@ import pytest
 
 @pytest.fixture
 def session_store_local(monkeypatch, tmp_path):
-    session_store = pytest.importorskip("server.app.session_metadata_store")
+    session_store = pytest.importorskip("server.app.storage.session_metadata")
 
     session_dir = tmp_path / "sessions"
     session_dir.mkdir()

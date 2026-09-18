@@ -17,9 +17,9 @@ from itsdangerous import BadSignature, URLSafeTimedSerializer
 
 from fido2.mds3 import MetadataBlobPayloadEntry
 
-from .. import session_metadata_store
 from ..config import app
 from ..env_flags import parse_env_flag
+from ..storage import session_metadata
 from . import entries
 from . import state as _state
 from .state import (
@@ -84,14 +84,14 @@ _SESSION_METADATA_CLEANUP_INTERVAL = _resolve_cleanup_interval()
 
 def _touch_session_last_access(session_id: str) -> None:
     try:
-        session_metadata_store.touch_last_access(session_id)
+        session_metadata.touch_last_access(session_id)
     except Exception:
         pass
 
 
 def _resolve_session_last_access(session_id: str) -> float | None:
     try:
-        return session_metadata_store.resolve_last_access(session_id)
+        return session_metadata.resolve_last_access(session_id)
     except Exception:
         return None
 
@@ -106,7 +106,7 @@ def _maybe_cleanup_inactive_sessions(now: float | None = None) -> None:
     cutoff = current_time - _SESSION_METADATA_INACTIVE_AGE.total_seconds()
 
     try:
-        sessions = session_metadata_store.list_sessions()
+        sessions = session_metadata.list_sessions()
     except Exception:
         return
 
@@ -116,7 +116,7 @@ def _maybe_cleanup_inactive_sessions(now: float | None = None) -> None:
             continue
 
         try:
-            session_metadata_store.delete_session(session_id)
+            session_metadata.delete_session(session_id)
         except Exception as exc:
             app.logger.warning(
                 "Failed to remove inactive metadata session %s: %s", session_id, exc
@@ -316,7 +316,7 @@ def _session_metadata_directory(
 
     if create:
         try:
-            session_metadata_store.ensure_session(normalised)
+            session_metadata.ensure_session(normalised)
         except Exception as exc:
             app.logger.error(
                 "Failed to prepare session metadata storage for %s: %s", normalised, exc
@@ -402,14 +402,14 @@ class SessionMetadataItem:
 
 def _prune_session_metadata_directory(session_id: str) -> None:
     try:
-        session_metadata_store.prune_session(session_id)
+        session_metadata.prune_session(session_id)
     except Exception:
         pass
 
 
 def _load_session_metadata_info(session_id: str, filename: str) -> dict[str, Any]:
     try:
-        payload_bytes = session_metadata_store.read_file(session_id, filename)
+        payload_bytes = session_metadata.read_file(session_id, filename)
     except Exception:
         return {}
 
@@ -448,7 +448,7 @@ def save_session_metadata_item(
     json_payload = json.dumps(serialisable_payload, indent=2, sort_keys=True) + "\n"
 
     try:
-        session_metadata_store.write_file(
+        session_metadata.write_file(
             directory,
             stored_filename,
             json_payload.encode("utf-8"),
@@ -470,7 +470,7 @@ def save_session_metadata_item(
     info_json = json.dumps(info_payload, indent=2, sort_keys=True) + "\n"
     info_filename = f"{stored_filename}{_SESSION_METADATA_INFO_SUFFIX}"
     try:
-        session_metadata_store.write_file(
+        session_metadata.write_file(
             directory,
             info_filename,
             info_json.encode("utf-8"),
@@ -482,7 +482,7 @@ def save_session_metadata_item(
         )
 
     try:
-        mtime = session_metadata_store.file_mtime(directory, stored_filename)
+        mtime = session_metadata.file_mtime(directory, stored_filename)
     except Exception:
         mtime = None
 
@@ -511,7 +511,7 @@ def list_session_metadata_items(session_id: str | None = None) -> list[SessionMe
     try:
         filenames = [
             name
-            for name in session_metadata_store.list_files(directory)
+            for name in session_metadata.list_files(directory)
             if name.endswith(_SESSION_METADATA_SUFFIX)
             and not name.endswith(_SESSION_METADATA_INFO_SUFFIX)
         ]
@@ -521,7 +521,7 @@ def list_session_metadata_items(session_id: str | None = None) -> list[SessionMe
     items: list[SessionMetadataItem] = []
     for filename in sorted(filenames):
         try:
-            payload_bytes = session_metadata_store.read_file(directory, filename)
+            payload_bytes = session_metadata.read_file(directory, filename)
             raw = json.loads(payload_bytes.decode("utf-8")) if payload_bytes else None
         except (ValueError, TypeError, UnicodeDecodeError) as exc:
             app.logger.warning(
@@ -551,7 +551,7 @@ def list_session_metadata_items(session_id: str | None = None) -> list[SessionMe
         )
 
         try:
-            mtime = session_metadata_store.file_mtime(directory, filename)
+            mtime = session_metadata.file_mtime(directory, filename)
         except Exception:
             mtime = None
 
@@ -586,7 +586,7 @@ def delete_session_metadata_item(
     _note_session_activity(active_session, directory=directory)
 
     try:
-        exists = session_metadata_store.file_exists(directory, safe_name)
+        exists = session_metadata.file_exists(directory, safe_name)
     except Exception:
         exists = False
 
@@ -594,7 +594,7 @@ def delete_session_metadata_item(
         return False
 
     try:
-        session_metadata_store.delete_file(directory, safe_name, missing_ok=False)
+        session_metadata.delete_file(directory, safe_name, missing_ok=False)
     except Exception as exc:
         app.logger.error(
             "Failed to delete session metadata %s/%s: %s", directory, safe_name, exc
@@ -602,7 +602,7 @@ def delete_session_metadata_item(
         raise RuntimeError("Failed to delete the uploaded metadata file.") from exc
 
     try:
-        session_metadata_store.delete_file(
+        session_metadata.delete_file(
             directory, f"{safe_name}{_SESSION_METADATA_INFO_SUFFIX}", missing_ok=True
         )
     except Exception:

@@ -5,7 +5,7 @@ from collections.abc import Iterable, Mapping
 from typing import Any
 
 from .metadata import ensure_metadata_session_id
-from .storage import extract_credential_data, iter_credentials
+from .storage.credentials import extract_credential_data, iter_credentials
 
 __all__ = [
     "HINT_TO_ATTACHMENT_MAP",

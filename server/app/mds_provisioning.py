@@ -30,9 +30,9 @@ import os
 import threading
 from pathlib import Path
 
-from . import cloud_storage
 from .config import _FRONTEND_STATIC_ROOT, app
 from .env_flags import parse_env_flag
+from .storage import cloud
 
 __all__ = [
     "SNAPSHOT_FILENAMES",
@@ -77,7 +77,7 @@ def snapshot_path(filename: str) -> Path:
 
 def snapshot_blob_name(filename: str) -> str:
     prefix = os.environ.get(_BLOB_PREFIX_ENV, _DEFAULT_BLOB_PREFIX)
-    return cloud_storage.build_blob_name(filename, prefix=prefix)
+    return cloud.build_blob_name(filename, prefix=prefix)
 
 
 def missing_snapshot_files() -> tuple[str, ...]:
@@ -94,7 +94,7 @@ def upstream_refresh_enabled() -> bool:
         return explicit
     # A deployed service can repopulate its own bucket; a developer should not
     # silently pull 10 MB because a file happens to be missing.
-    return cloud_storage.gcs_enabled()
+    return cloud.gcs_enabled()
 
 
 def write_snapshot_file(filename: str, data: bytes) -> Path:
@@ -120,13 +120,13 @@ def write_snapshot_file(filename: str, data: bytes) -> Path:
 def _download_from_gcs(missing: tuple[str, ...]) -> tuple[str, ...]:
     """Fetch ``missing`` from Cloud Storage; return the names still missing."""
 
-    if not cloud_storage.gcs_enabled():
+    if not cloud.gcs_enabled():
         return missing
 
     remaining: list[str] = []
     for filename in missing:
         try:
-            data = cloud_storage.download_bytes(snapshot_blob_name(filename))
+            data = cloud.download_bytes(snapshot_blob_name(filename))
         except Exception as exc:  # pragma: no cover - network/credential failure
             app.logger.warning(
                 "Could not download MDS snapshot file %s from Cloud Storage: %s",
@@ -167,7 +167,7 @@ def _refresh_from_upstream() -> bool:
 
 
 def _upload_to_gcs(filenames: tuple[str, ...]) -> None:
-    if not cloud_storage.gcs_enabled():
+    if not cloud.gcs_enabled():
         return
 
     for filename in filenames:
@@ -175,7 +175,7 @@ def _upload_to_gcs(filenames: tuple[str, ...]) -> None:
         if not path.is_file():
             continue
         try:
-            cloud_storage.upload_bytes(
+            cloud.upload_bytes(
                 snapshot_blob_name(filename),
                 path.read_bytes(),
                 content_type="application/json" if filename.endswith(".json") else None,

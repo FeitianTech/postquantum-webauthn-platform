@@ -13,7 +13,12 @@ from fido2 import cbor
 from fido2.cose import CoseKey
 from fido2.webauthn import PublicKeyCredentialUserEntity
 
-from ... import attestation, config, device_logs, metadata, storage
+from ... import (
+    attestation,
+    config,
+    device_logs,
+    metadata,
+)
 from ...attachments import normalize_attachment
 from ...challenge_registry import (
     CHALLENGE_FRESH,
@@ -22,6 +27,7 @@ from ...challenge_registry import (
     stamp_ceremony_state,
 )
 from ...encoding import encode_base64, encode_base64url
+from ...storage import credentials
 from .. import binary_helpers
 from . import parsing
 
@@ -107,7 +113,7 @@ def initialize_registration_context(ctx: dict[str, Any]) -> None:
     if ctx["min_pin_length_value"] is not None:
         credential_properties["minPinLength"] = ctx["min_pin_length_value"]
 
-    storage.add_public_key_material(
+    credentials.add_public_key_material(
         credential_info,
         getattr(ctx["auth_data"].credential_data, "public_key", {}),
     )
@@ -249,11 +255,11 @@ def build_stored_credential_context(ctx: dict[str, Any]) -> None:
         "publicKeyAlgorithm": ctx["credential_info"].get("publicKeyAlgorithm") or ctx["algo"],
         "signCount": getattr(ctx["auth_data"], "counter", 0),
         "createdAt": ctx["credential_info"]["registration_time"],
-        "clientExtensionOutputs": storage.convert_bytes_for_json(ctx["client_extension_results"]),
+        "clientExtensionOutputs": credentials.convert_bytes_for_json(ctx["client_extension_results"]),
         "attestationFormat": ctx["attestation_format"],
-        "attestationStatement": storage.convert_bytes_for_json(ctx["attestation_statement"]),
-        "properties": storage.convert_bytes_for_json(ctx["credential_properties"]),
-        "publicKeyCose": storage.convert_bytes_for_json(ctx["cose_public_key"]),
+        "attestationStatement": credentials.convert_bytes_for_json(ctx["attestation_statement"]),
+        "properties": credentials.convert_bytes_for_json(ctx["credential_properties"]),
+        "publicKeyCose": credentials.convert_bytes_for_json(ctx["cose_public_key"]),
         "publicKeyBytes": encode_base64(ctx["public_key_bytes"]),
         "authenticatorAttachment": ctx["authenticator_attachment_response"],
         "clientDataJSON": ctx["credential_info"].get("client_data_json"),
@@ -271,7 +277,7 @@ def build_stored_credential_context(ctx: dict[str, Any]) -> None:
 
 def _persist_registered_credential_entry(ctx: dict[str, Any]) -> Any | None:
     metadata_session_id = metadata.ensure_metadata_session_id()
-    existing_credentials = storage.readkey(ctx["uname"], session_id=metadata_session_id)
+    existing_credentials = credentials.readkey(ctx["uname"], session_id=metadata_session_id)
 
     credential_entry = {
         "credential_data": ctx["auth_data"].credential_data,
@@ -306,7 +312,7 @@ def _persist_registered_credential_entry(ctx: dict[str, Any]) -> Any | None:
         existing_credentials = [credential_entry]
 
     try:
-        storage.savekey(ctx["uname"], existing_credentials, session_id=metadata_session_id)
+        credentials.savekey(ctx["uname"], existing_credentials, session_id=metadata_session_id)
     except Exception:
         config.app.logger.exception("Failed to persist registered credential for %s", ctx["uname"])
         return jsonify({"error": "Unable to persist registered credential."}), 500
@@ -386,7 +392,7 @@ def build_register_complete_response_payload(ctx: dict[str, Any]) -> dict[str, A
         "status": "OK",
         "algo": ctx["algoname"],
         **ctx["debug_info"],
-        "storedCredential": storage.convert_bytes_for_json(ctx["stored_credential"]),
+        "storedCredential": credentials.convert_bytes_for_json(ctx["stored_credential"]),
         "relyingParty": ctx["rp_info"],
     }
     if ctx["warnings"]:
@@ -437,7 +443,7 @@ def populate_rp_debug_context(ctx: dict[str, Any]) -> None:
     rp_registration_data = {
         "authenticatorData": ctx["authenticator_data_hex"],
         "authenticatorDataHash": ctx["authenticator_data_hash"],
-        "clientExtensionResults": storage.convert_bytes_for_json(ctx["client_extension_results"]),
+        "clientExtensionResults": credentials.convert_bytes_for_json(ctx["client_extension_results"]),
         "flags": ctx["flags_dict"],
         "signatureCounter": getattr(ctx["auth_data"], "counter", 0),
         "attestationChecks": ctx["attestation_checks_safe"],

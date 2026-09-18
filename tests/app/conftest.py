@@ -163,9 +163,9 @@ def config_module():
 
 @pytest.fixture
 def storage_module():
-    """``server.app.storage`` -- credential persistence."""
+    """``server.app.storage.credentials`` -- credential persistence."""
 
-    return _module("server.app.storage")
+    return _module("server.app.storage.credentials")
 
 
 @pytest.fixture
