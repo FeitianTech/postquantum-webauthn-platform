@@ -128,11 +128,11 @@ def test_parse_attestation_object_and_extract_attestation_certificate_paths(monk
     assert real_extract_attestation_certificate({"x5c": ["%%%"]}) is None
 
 
-def test_convert_attestation_statement_and_certificate_chain_paths(monkeypatch, result_runtime):
+def test_convert_attestation_statement_and_certificate_chain_paths(monkeypatch, response):
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     monkeypatch.setattr(
-        result_runtime,
+        response,
         "serialize_attestation_certificate",
         lambda cert_bytes: {
             "derBase64": base64.b64encode(cert_bytes).decode("ascii"),

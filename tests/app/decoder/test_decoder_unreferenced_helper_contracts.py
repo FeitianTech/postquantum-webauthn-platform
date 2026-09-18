@@ -162,12 +162,12 @@ def test_expanded_ctap_json_builder_helpers():
     assert get_response_expanded[signature_key] == (b"T" * 32).hex()
 
 
-def test_result_conversion_helpers_for_all_base_payload_types(monkeypatch, conversion_leaf, result_runtime, binary):
+def test_result_conversion_helpers_for_all_base_payload_types(monkeypatch, conversion_leaf, response, binary):
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     monkeypatch.setattr(conversion_leaf, "_build_credential_overview", lambda _d: {"id": "cred"})
-    monkeypatch.setattr(result_runtime, "_convert_attestation_entry", lambda _e: {"fmt": "none"})
-    monkeypatch.setattr(result_runtime, "_build_authenticator_section", lambda *_a, **_k: {"counter": 1})
+    monkeypatch.setattr(response, "_convert_attestation_entry", lambda _e: {"fmt": "none"})
+    monkeypatch.setattr(response, "_build_authenticator_section", lambda *_a, **_k: {"counter": 1})
     monkeypatch.setattr(conversion_leaf, "_convert_client_data_entry", lambda _e: {"type": "webauthn.create"})
     monkeypatch.setattr(conversion_leaf, "_collect_response_extras", lambda _e: {"signature": "aa"})
 

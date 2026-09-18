@@ -8,7 +8,7 @@ from fido2.webauthn import AuthenticatorData
 
 from ...attestation import encode_base64url
 from ...encoding import decode_hex, encode_base64
-from . import cbor_parser, details_runtime, pipeline_runtime, result_runtime
+from . import cbor_parser, details_runtime, pipeline_runtime, response
 from .cbor_parser import _lenient_read_uint
 from .ctap_convert_leaf import (
     _attempt_decode_cbor_map,
@@ -193,7 +193,7 @@ def _format_att_stmt_for_expanded_json(att_stmt: Any) -> dict[str, Any]:
                 else:
                     formatted["sig"] = _hex_json_safe(value)
             elif key == "x5c":
-                formatted["x5c"] = result_runtime._convert_certificate_chain(value)
+                formatted["x5c"] = response._convert_certificate_chain(value)
             else:
                 formatted[key] = _hex_json_safe(value)
         return formatted

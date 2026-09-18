@@ -57,10 +57,10 @@ def details_runtime():
 
 
 @pytest.fixture
-def result_runtime():
+def response():
     """The fragment that defines the decoder payload and result conversion."""
 
-    return _fragment("result_runtime")
+    return _fragment("response")
 
 
 @pytest.fixture
