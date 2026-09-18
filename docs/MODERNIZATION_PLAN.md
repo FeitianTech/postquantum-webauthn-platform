@@ -694,6 +694,74 @@ No module in the repo passes itself into its own fragments or rebinds their glob
 nothing ignored. The next milestone is file-level: re-merging along responsibility lines
 (P2.4) and retiring the duplicated `binary_helpers_impl` pair.
 
+### Phase 9 — M3: unwind the route carriers — DONE (2026-09-18). **M3 COMPLETE.**
+
+| Metric | Before | After |
+|---|---|---|
+| `advanced_module.`/`simple_module.` reads | 498 | **0** |
+| bare `*_module` tokens in `server/` | 581 | **0** |
+| `_self_module()` forwarders | 45 | **0** |
+| `advanced.py` / `simple.py` | 292 / 156 lines | **115 / 74** |
+| `ruff.toml` per-file-ignores | 2 | **0 — section deleted** |
+| `raising=False` repo-wide | 780 | **476** |
+
+Tech-lead verified: all counts zero; F821 still zero **and still gated** (injecting an undefined
+name into `routes/simple.py` fails the gate, reverting returns green); `tests/app/security/`
+**78 passed**; collected test IDs 1708 with 0 added / 0 removed; suites 1708/278, ruff clean.
+**The original Phase-1 forged-registration PoC still returns HTTP 400** — ceremony behaviour
+genuinely unchanged.
+
+**The agent changed the plan mid-phase, correctly.** A per-fragment conversion axis does not
+work here: a test patches a *name on the carrier*, so the moment any ONE fragment stops reading
+`advanced_module.create_fido_server`, that test silently stops affecting it. A patched name has
+to move in **every** fragment at once. Conversion ran by dependency package
+(metadata, credential_artifacts, device_logs, pqc, attestation, storage, config) with the test
+re-point in the same commit.
+
+**Fault injection — the most striking number of the whole milestone.** Of 374 patching tests,
+**225 (60%) were silently absorbed by the carrier before; 0 after, with 377/377 detected at the
+patch line** (downstream detections 149 to 0). Zero-at-patch beforehand was mechanism, not luck:
+`raising=False` *creates* the attribute, so the stub landed in carrier globals and the fragment
+resolved it there.
+
+**Measurement honesty worth recording.** Reproducibility took three attempts. Causes found and
+fixed: stale `__pycache__` (the Phase 8 trap); attributing a helper's patches to every test in
+its file, which inflated "absorbed"; and — a genuinely subtle one — **pytest's `-rf` summary
+lines are truncated to terminal width**, so a path-anchored regex silently missed failures. The
+classifier now reads `--junitxml`. The agent also flagged that the *baseline* number is +/-1
+unstable while the after-state is byte-identical across consecutive runs.
+
+**Three real defects the work exposed:**
+1. `register_begin_impl` had a local `attestation = public_key.get("attestation", "none")`
+   shadowing the new module import; ruff's F401 autofix then deleted the import as unused.
+   **F821 caught it** — the metric earning its keep immediately after being gated.
+2. Patches inside plain test *helpers* were skipped by the re-point tooling, leaving dead no-ops
+   still resolving on the carrier. An audit for "carrier patches no fragment reads" now returns 0.
+3. Pruning dead `advanced_module = pytest.importorskip(...)` locals removed the side effect that
+   **registered the Flask routes** — two files passed in a full run and 405'd standalone. Fixed
+   in `tests/app/conftest.py`; tech-lead spot-checked four route test files running standalone.
+
+## MILESTONE M3 COMPLETE — the structural unlock is done
+
+| | Start of M3 | End of M3 |
+|---|---|---|
+| F821 | 1008 (ungated) | **0, gated** |
+| Namespace carriers | 5 | **0** |
+| `raising=False` | 868 | **476** |
+| ruff per-file-ignores | 5 modules | **0** |
+| Suite | 1708 | 1708 (identical IDs throughout) |
+
+Every module in `server/` now resolves its own names through real imports. Static analysis,
+type checkers and IDEs can see the real call graph for the first time. **File re-merging (M4)
+is now safe** — tools can verify what moves break.
+
+**Found but not fixed:** `advanced_parts/binary_helpers_impl.py` and
+`simple_parts/binary_helpers_impl.py` are duplicate implementations (both define
+`_select_first_impl`, `_decode_base64url_bytes_impl`), neither importing the other. Three
+advanced forwarders have no production caller and exist only for tests:
+`_extract_credential_id`, `_is_custom_cose_algorithm`, `_extract_requested_assertion_algorithm`.
+`encode_parts` still imports five private names from `decode.py` — encoder scope.
+
 ### Local development
 Tests previously ran against the global interpreter, whose packages matched nothing in
 `requirements.txt` (cryptography 44.0.3, fido2 2.1.1, gunicorn 23). A project venv now exists:
