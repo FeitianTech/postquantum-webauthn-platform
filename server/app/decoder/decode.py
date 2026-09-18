@@ -158,54 +158,10 @@ from .decode_parts.summary_leaf import (
     _parse_attested_data,
 )
 
-
-def _extract_authenticator_bytes(response: Any, attestation_entry: Any = None) -> bytes | None:
-    module = sys.modules.get(__name__)
-    extract_bytes = getattr(module, "_extract_bytes_from_binary", _extract_bytes_from_binary)
-    extract_from_attestation = getattr(
-        module,
-        "_extract_authenticator_bytes_from_attestation",
-        _extract_authenticator_bytes_from_attestation,
-    )
-
-    if isinstance(response, Mapping):
-        auth_entry = response.get("authenticatorData")
-        auth_bytes = extract_bytes(auth_entry)
-        if auth_bytes is not None:
-            return auth_bytes
-        if attestation_entry is None:
-            attestation_entry = response.get("attestationObject")
-    return extract_from_attestation(attestation_entry)
-
-
-def _extract_authenticator_bytes_from_attestation(attestation_entry: Any) -> bytes | None:
-    module = sys.modules.get(__name__)
-    extract_bytes = getattr(module, "_extract_bytes_from_binary", _extract_bytes_from_binary)
-    attestation_class = getattr(module, "AttestationObject", AttestationObject)
-
-    attestation_bytes = extract_bytes(attestation_entry)
-    if attestation_bytes is None and isinstance(attestation_entry, Mapping):
-        raw_value = attestation_entry.get("raw")
-        if isinstance(raw_value, str) and raw_value:
-            cleaned = "".join(raw_value.split())
-            padding = (-len(cleaned)) % 4
-            try:
-                attestation_bytes = base64.b64decode(cleaned + "=" * padding)
-            except (ValueError, binascii.Error):
-                attestation_bytes = None
-
-    if attestation_bytes is None:
-        return None
-
-    try:
-        attestation = attestation_class(attestation_bytes)
-    except Exception:
-        return None
-
-    try:
-        return bytes(attestation.auth_data)
-    except Exception:
-        return None
+_extract_authenticator_bytes = binary_extract._extract_authenticator_bytes
+_extract_authenticator_bytes_from_attestation = (
+    binary_extract._extract_authenticator_bytes_from_attestation
+)
 
 __all__ = ["decode_payload_text"]
 

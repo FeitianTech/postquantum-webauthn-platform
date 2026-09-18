@@ -5,12 +5,7 @@ from collections.abc import Mapping
 from typing import Any
 
 from ...attestation import make_json_safe, serialize_attestation_certificate
-from . import summary_runtime
-from .binary_extract import (
-    _extract_authenticator_bytes,
-    _extract_authenticator_bytes_from_attestation,
-    _extract_bytes_from_binary,
-)
+from . import binary_extract, summary_runtime
 from .conversion_cert_leaf import (
     _convert_attestation_entry_impl,
     _convert_attestation_statement_impl,
@@ -179,7 +174,7 @@ def _convert_attestation_object_data(result: Mapping[str, Any]) -> dict[str, Any
 
     authenticator_details = decoded.get("authenticatorData") if isinstance(decoded, Mapping) else None
     authenticator_section = _build_authenticator_data_payload(
-        _extract_authenticator_bytes_from_attestation(decoded),
+        binary_extract._extract_authenticator_bytes_from_attestation(decoded),
         authenticator_details,
         decoded.get("publicKeyAlgorithm") if isinstance(decoded, Mapping) else None,
     )
@@ -196,9 +191,9 @@ def _convert_attestation_object_data(result: Mapping[str, Any]) -> dict[str, Any
 def _convert_authenticator_data_result(result: Mapping[str, Any]) -> dict[str, Any]:
     decoded = result.get("decoded") if isinstance(result.get("decoded"), Mapping) else {}
     result.get("binary")
-    auth_bytes = _extract_bytes_from_binary(result.get("binary"))
+    auth_bytes = binary_extract._extract_bytes_from_binary(result.get("binary"))
     if auth_bytes is None:
-        auth_bytes = _extract_bytes_from_binary(decoded)
+        auth_bytes = binary_extract._extract_bytes_from_binary(decoded)
     authenticator_section = _build_authenticator_data_payload(
         auth_bytes,
         decoded,
@@ -286,7 +281,7 @@ def _build_authenticator_section(
     response_mapping = response if isinstance(response, Mapping) else {}
     attestation_mapping = attestation_entry if isinstance(attestation_entry, Mapping) else {}
 
-    auth_bytes = _extract_authenticator_bytes(response_mapping, attestation_entry)
+    auth_bytes = binary_extract._extract_authenticator_bytes(response_mapping, attestation_entry)
 
     details = None
     auth_entry = response_mapping.get("authenticatorData")
