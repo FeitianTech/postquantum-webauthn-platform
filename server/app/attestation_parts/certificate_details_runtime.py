@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-import base64
-import binascii
 from collections.abc import Mapping
 from typing import Any
 
-from fido2.utils import ByteBuffer, websafe_decode
+from fido2.utils import ByteBuffer
 from fido2.webauthn import RegistrationResponse
 
+from .. import encoding
 from . import certificate_serialize_runtime, encoding_leaf
 
 
@@ -24,51 +23,32 @@ def _coerce_attestation_certificate_bytes(value: Any) -> bytes | None:
         return value.getvalue()
 
     if isinstance(value, str):
-        cleaned = "".join(value.split())
-        if not cleaned:
+        if not value.strip():
             return None
-        padding = (-len(cleaned)) % 4
-        padded = cleaned + ("=" * padding)
-        try:
-            return base64.b64decode(padded)
-        except (binascii.Error, ValueError):
-            try:
-                return websafe_decode(cleaned)
-            except Exception:
-                return None
+        decoded = encoding.try_decode_base64(value)
+        if decoded is None:
+            decoded = encoding.try_decode_base64url(value)
+        return decoded
 
     if isinstance(value, Mapping):
         raw_value = value.get("raw")
         if isinstance(raw_value, str):
-            cleaned = "".join(raw_value.split())
-            try:
-                return bytes.fromhex(cleaned)
-            except ValueError:
-                pass
+            decoded = encoding.try_decode_hex(raw_value)
+            if decoded is not None:
+                return decoded
 
         der_base64 = value.get("derBase64") or value.get("der_base64")
         if isinstance(der_base64, str):
-            cleaned = "".join(der_base64.split())
-            padding = (-len(cleaned)) % 4
-            try:
-                return base64.b64decode(cleaned + ("=" * padding))
-            except (binascii.Error, ValueError):
-                pass
+            decoded = encoding.try_decode_base64(der_base64)
+            if decoded is not None:
+                return decoded
 
         pem_value = value.get("pem")
         if isinstance(pem_value, str):
-            lines = [
-                line.strip()
-                for line in pem_value.splitlines()
-                if "-----" not in line
-            ]
-            body = "".join(lines)
-            if body:
-                padding = (-len(body)) % 4
-                try:
-                    return base64.b64decode(body + ("=" * padding))
-                except (binascii.Error, ValueError):
-                    pass
+            try:
+                return encoding.decode_pem_body(pem_value)
+            except encoding.EncodingError:
+                pass
 
     try:
         return bytes(value)

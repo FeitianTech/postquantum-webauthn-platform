@@ -266,9 +266,11 @@ def test_coerce_attestation_certificate_bytes_and_aaguid_field_cleanup_edges(att
 
     assert attestation_module._coerce_attestation_certificate_bytes({"raw": "zz"}) is None
     assert attestation_module._coerce_attestation_certificate_bytes({"derBase64": "A"}) is None
+    # A PEM body of "@@@" decodes to nothing at all now, rather than to b""
+    # via a decoder that quietly discarded every character in it.
     assert attestation_module._coerce_attestation_certificate_bytes(
         {"pem": "-----BEGIN CERTIFICATE-----\n@@@\n-----END CERTIFICATE-----"}
-    ) == b""
+    ) is None
 
     container = {
         "aaguid": {"raw": "not-aaguid"},

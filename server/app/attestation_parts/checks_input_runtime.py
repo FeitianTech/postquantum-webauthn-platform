@@ -1,14 +1,14 @@
 from __future__ import annotations
 
-import base64
 import hashlib
 from collections.abc import Mapping
 from typing import Any
 
 from fido2.cose import CoseKey
-from fido2.utils import ByteBuffer, websafe_decode
+from fido2.utils import ByteBuffer
 from fido2.webauthn import AuthenticatorData, CollectedClientData
 
+from .. import encoding
 from . import checks_policy_runtime, encoding_leaf
 
 
@@ -20,35 +20,28 @@ def _coerce_expected_bytes(value: Any) -> bytes:
     if isinstance(value, (bytes, bytearray, memoryview)):
         return bytes(value)
     if isinstance(value, str):
-        try:
-            return websafe_decode(value)
-        except Exception:
-            pass
-        try:
-            padded = value + "=" * ((4 - len(value) % 4) % 4)
-            return base64.b64decode(padded)
-        except Exception:
-            pass
-        try:
-            return bytes.fromhex(value)
-        except Exception:
-            pass
+        for decoder in (
+            encoding.try_decode_base64url,
+            encoding.try_decode_base64,
+            encoding.try_decode_hex,
+        ):
+            decoded = decoder(value)
+            if decoded is not None:
+                return decoded
         return value.encode("utf-8")
     if isinstance(value, Mapping):
         if "$base64url" in value:
             return _coerce_expected_bytes(value["$base64url"])
         if "$base64" in value:
             encoded = value["$base64"]
-            try:
-                padded = encoded + "=" * ((4 - len(encoded) % 4) % 4)
-                return base64.b64decode(padded)
-            except Exception:
+            if not isinstance(encoded, str):
                 return b""
+            return encoding.try_decode_base64(encoded) or b""
         if "$hex" in value:
-            try:
-                return bytes.fromhex(value["$hex"])
-            except Exception:
+            hex_value = value["$hex"]
+            if not isinstance(hex_value, str):
                 return b""
+            return encoding.try_decode_hex(hex_value) or b""
     return b""
 
 
