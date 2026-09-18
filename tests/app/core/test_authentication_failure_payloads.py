@@ -8,7 +8,7 @@ def _encode_base64url(data: bytes) -> str:
     return base64.urlsafe_b64encode(data).decode("ascii").rstrip("=")
 
 
-def test_simple_authentication_failure_returns_failed_credential_id(monkeypatch, config_module, simple_credential_parsing):
+def test_simple_authentication_failure_returns_failed_credential_id(monkeypatch, config_module, simple_parsing):
     pytest.importorskip("server.app.app")
 
     credential_id = b"simple-credential-id"
@@ -19,7 +19,7 @@ def test_simple_authentication_failure_returns_failed_credential_id(monkeypatch,
             raise ValueError("Invalid signature.")
 
     monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FailingServer())
-    monkeypatch.setattr(simple_credential_parsing, "_parse_client_credentials_impl", lambda _raw: ([object()], []))
+    monkeypatch.setattr(simple_parsing, "_parse_client_credentials_impl", lambda _raw: ([object()], []))
 
     with config_module.app.test_client() as client:
         with client.session_transaction() as session:
@@ -42,7 +42,7 @@ def test_simple_authentication_failure_returns_failed_credential_id(monkeypatch,
     }
 
 
-def test_advanced_authentication_failure_returns_failed_credential_id(monkeypatch, config_module, advanced_algorithm_helpers, advanced_parsing_helpers):
+def test_advanced_authentication_failure_returns_failed_credential_id(monkeypatch, config_module, advanced_algorithms, advanced_parsing):
     pytest.importorskip("server.app.app")
 
     credential_id = b"advanced-credential-id"
@@ -56,9 +56,9 @@ def test_advanced_authentication_failure_returns_failed_credential_id(monkeypatc
 
     monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FailingServer())
     monkeypatch.setattr(config_module, "determine_rp_id", lambda value=None: value or "example.com")
-    monkeypatch.setattr(advanced_algorithm_helpers, "_derive_algorithms_from_credentials_impl", lambda _credentials: [])
+    monkeypatch.setattr(advanced_algorithms, "_derive_algorithms_from_credentials_impl", lambda _credentials: [])
     monkeypatch.setattr(
-        advanced_parsing_helpers,
+        advanced_parsing,
         "_parse_client_supplied_credentials_impl",
         lambda _raw: (
             [{"id": credential_id, "data": {"public_key": {3: -7}}, "resident": True}],

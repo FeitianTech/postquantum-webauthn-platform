@@ -40,14 +40,7 @@ class _CredentialData:
 
 
 class _AuthData:
-    def __init__(
-        self,
-        *,
-        rp_id: str,
-        flags: int,
-        counter: int = 1,
-        credential_data: _CredentialData | None = None,
-    ):
+    def __init__(self, *, rp_id: str, flags: int, counter: int = 1, credential_data: _CredentialData | None = None):
         self.rp_id_hash = hashlib.sha256(rp_id.encode("utf-8")).digest()
         self.flags = flags
         self.counter = counter
@@ -58,14 +51,7 @@ class _AuthData:
 
 
 class _ClientData:
-    def __init__(
-        self,
-        *,
-        challenge: bytes,
-        origin: str,
-        type_value: str = "webauthn.create",
-        cross_origin: bool = False,
-    ):
+    def __init__(self, *, challenge: bytes, origin: str, type_value: str = "webauthn.create", cross_origin: bool = False):
         self.type = type_value
         self.challenge = challenge
         self.origin = origin

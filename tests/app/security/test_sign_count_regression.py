@@ -126,9 +126,7 @@ def test_simple_sign_count_dropping_to_zero_is_rejected(config_module, credentia
     _assert_cloned_rejection(response, authenticator)
 
 
-def test_simple_persisted_counter_is_what_the_next_assertion_is_compared_to(
-    config_module, credential_store
-):
+def test_simple_persisted_counter_is_what_the_next_assertion_is_compared_to(config_module, credential_store):
     """Replaying the counter of the previous *authentication* is caught.
 
     This fails if the new counter is not persisted, because the comparison
@@ -147,9 +145,7 @@ def test_simple_persisted_counter_is_what_the_next_assertion_is_compared_to(
     assert credential_store(authenticator.credential_id) == 10
 
 
-def test_simple_client_supplied_sign_count_cannot_lower_the_stored_value(
-    config_module, credential_store
-):
+def test_simple_client_supplied_sign_count_cannot_lower_the_stored_value(config_module, credential_store):
     """The browser's copy of signCount is attacker-controlled; the server's wins."""
 
     authenticator = Authenticator()
@@ -191,9 +187,7 @@ def test_simple_increasing_sign_count_succeeds_and_is_persisted(config_module, c
         assert credential_store(authenticator.credential_id) == counter
 
 
-def test_simple_counter_with_base64url_only_characters_is_read_correctly(
-    config_module, credential_store
-):
+def test_simple_counter_with_base64url_only_characters_is_read_correctly(config_module, credential_store):
     """authenticatorData is base64url; a standard-alphabet decode mishandles it.
 
     Counter 0xFBEFBE01 encodes its own bytes as "----AQ". The previous
@@ -252,9 +246,7 @@ def _advanced_authenticate(config_module, authenticator, *, stored_sign_count, c
     [(10, 3), (10, 10), (7, 0)],
     ids=["backwards", "equal", "dropped-to-zero"],
 )
-def test_advanced_reports_regressed_without_rejecting(
-    config_module, advanced_module, stored, received
-):
+def test_advanced_reports_regressed_without_rejecting(config_module, advanced_module, stored, received):
     authenticator = Authenticator()
 
     response = _advanced_authenticate(
@@ -284,9 +276,7 @@ def test_advanced_reports_ok_for_an_increasing_counter(config_module, advanced_m
 
 
 @pytest.mark.parametrize("stored", [0, None], ids=["stored-zero", "stored-absent"])
-def test_advanced_reports_not_supported_for_zero_counters(
-    config_module, advanced_module, stored
-):
+def test_advanced_reports_not_supported_for_zero_counters(config_module, advanced_module, stored):
     authenticator = Authenticator()
 
     response = _advanced_authenticate(

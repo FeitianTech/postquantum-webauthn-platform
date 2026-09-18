@@ -48,9 +48,7 @@ def _register(client, *, host=RP_ID, origin=ORIGIN, client_data_origin=None):
 # --------------------------------------------------------------------------
 
 
-def test_allowlist_rejects_host_header_derived_rp_id_attack(
-    config_module, simple_module, simple_storage, allowed_origins
-):
+def test_allowlist_rejects_host_header_derived_rp_id_attack(config_module, simple_module, simple_storage, allowed_origins):
     """The core Fix 3 case.
 
     With no allowlist the attacker controls the RP ID (via ``Host``) *and* the
@@ -72,9 +70,7 @@ def test_allowlist_rejects_host_header_derived_rp_id_attack(
     assert simple_storage == {}
 
 
-def test_allowlist_rejects_an_unlisted_ceremony_origin(
-    config_module, simple_module, simple_storage, allowed_origins
-):
+def test_allowlist_rejects_an_unlisted_ceremony_origin(config_module, simple_module, simple_storage, allowed_origins):
     """The allowlist gates clientDataJSON.origin, the ceremony's real origin.
 
     The Host header keeps the RP ID consistent so that the library-level origin
@@ -93,9 +89,7 @@ def test_allowlist_rejects_an_unlisted_ceremony_origin(
     assert simple_storage == {}
 
 
-def test_expected_origin_is_not_taken_from_the_request_origin_header(
-    config_module, simple_module, simple_storage
-):
+def test_expected_origin_is_not_taken_from_the_request_origin_header(config_module, simple_module, simple_storage):
     """The self-referential check is gone.
 
     The attacker sets BOTH ``Origin`` and ``clientDataJSON.origin`` to the same
@@ -115,9 +109,7 @@ def test_expected_origin_is_not_taken_from_the_request_origin_header(
     assert simple_storage == {}
 
 
-def test_simple_flow_never_takes_rp_id_from_the_request_body(
-    config_module, simple_module, simple_storage
-):
+def test_simple_flow_never_takes_rp_id_from_the_request_body(config_module, simple_module, simple_storage):
     """A body-supplied ``rp.id``/``rpId`` must have no effect in the simple flow."""
 
     client = config_module.app.test_client()
@@ -142,9 +134,7 @@ def test_simple_flow_never_takes_rp_id_from_the_request_body(
 # --------------------------------------------------------------------------
 
 
-def test_allowlist_permits_a_listed_origin(
-    config_module, simple_module, simple_storage, allowed_origins
-):
+def test_allowlist_permits_a_listed_origin(config_module, simple_module, simple_storage, allowed_origins):
     allowed_origins("http://localhost, https://app.example")
 
     client = config_module.app.test_client()
@@ -155,9 +145,7 @@ def test_allowlist_permits_a_listed_origin(
     assert simple_storage["email"] == "user@example.com"
 
 
-def test_unconfigured_server_still_works_for_local_development(
-    config_module, simple_module, simple_storage
-):
+def test_unconfigured_server_still_works_for_local_development(config_module, simple_module, simple_storage):
     """With nothing configured the dev fallback keeps the demo usable."""
 
     assert config_module.get_allowed_origins() is None
@@ -198,9 +186,7 @@ def test_is_origin_allowed_permits_everything_when_unconfigured(config_module, a
     assert config_module.is_origin_allowed("https://anything.example") is True
 
 
-def test_determine_expected_origin_never_echoes_an_unlisted_candidate(
-    config_module, allowed_origins
-):
+def test_determine_expected_origin_never_echoes_an_unlisted_candidate(config_module, allowed_origins):
     allowed_origins("https://app.example, https://second.example")
 
     # A listed candidate is honoured...
