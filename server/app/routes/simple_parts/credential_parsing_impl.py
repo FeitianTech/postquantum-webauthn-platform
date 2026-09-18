@@ -1,7 +1,12 @@
 from __future__ import annotations
 
+import base64
 from collections.abc import Mapping
 from typing import Any
+
+from fido2 import cbor
+from fido2.cose import CoseKey
+from fido2.webauthn import AttestedCredentialData
 
 _AAGUID_SESSION_FIELD_PRECEDENCE = (
     "aaguid",
@@ -70,17 +75,17 @@ def _serialize_credential_for_session_impl(simple_module: Any, entry: Mapping[st
 
     if aaguid_value is not None:
         aaguid_bytes = simple_module._decode_binary_value(aaguid_value)
-        serialized["aaguid"] = simple_module.base64.urlsafe_b64encode(aaguid_bytes).decode("ascii").rstrip("=")
+        serialized["aaguid"] = base64.urlsafe_b64encode(aaguid_bytes).decode("ascii").rstrip("=")
 
     if credential_id_value is not None:
         credential_id_bytes = simple_module._decode_binary_value(credential_id_value)
         serialized["credentialId"] = (
-            simple_module.base64.urlsafe_b64encode(credential_id_bytes).decode("ascii").rstrip("=")
+            base64.urlsafe_b64encode(credential_id_bytes).decode("ascii").rstrip("=")
         )
 
     if public_key_value is not None:
         public_key_bytes = simple_module._decode_binary_value(public_key_value)
-        serialized["publicKey"] = simple_module.base64.urlsafe_b64encode(public_key_bytes).decode("ascii").rstrip("=")
+        serialized["publicKey"] = base64.urlsafe_b64encode(public_key_bytes).decode("ascii").rstrip("=")
 
     return serialized
 
@@ -119,9 +124,9 @@ def _parse_client_credentials_impl(
             credential_id_bytes = simple_module._decode_binary_value(credential_id_raw)
             public_key_bytes = simple_module._decode_binary_value(public_key_raw)
 
-            cose_key = simple_module.CoseKey.parse(simple_module.cbor.decode(public_key_bytes))
+            cose_key = CoseKey.parse(cbor.decode(public_key_bytes))
 
-            attested = simple_module.AttestedCredentialData.create(
+            attested = AttestedCredentialData.create(
                 aaguid_bytes,
                 credential_id_bytes,
                 cose_key,
@@ -132,15 +137,15 @@ def _parse_client_credentials_impl(
             serialized_entry = simple_module._serialize_credential_for_session(entry)
             serialized_entry.setdefault(
                 "credentialId",
-                simple_module.base64.urlsafe_b64encode(credential_id_bytes).decode("ascii").rstrip("="),
+                base64.urlsafe_b64encode(credential_id_bytes).decode("ascii").rstrip("="),
             )
             serialized_entry.setdefault(
                 "aaguid",
-                simple_module.base64.urlsafe_b64encode(aaguid_bytes).decode("ascii").rstrip("="),
+                base64.urlsafe_b64encode(aaguid_bytes).decode("ascii").rstrip("="),
             )
             serialized_entry.setdefault(
                 "publicKey",
-                simple_module.base64.urlsafe_b64encode(public_key_bytes).decode("ascii").rstrip("="),
+                base64.urlsafe_b64encode(public_key_bytes).decode("ascii").rstrip("="),
             )
             if "signCount" not in serialized_entry and isinstance(entry.get("signCount"), int):
                 serialized_entry["signCount"] = entry["signCount"]

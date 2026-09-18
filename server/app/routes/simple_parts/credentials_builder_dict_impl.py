@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import base64
 from collections.abc import Mapping, MutableMapping
 from typing import Any
+
+from ...attachments import normalize_attachment
 
 
 def add_registration_metadata_impl(
@@ -43,7 +46,7 @@ def build_credential_info_from_dict_credential_data_impl(
 
     properties_source = cred.get("properties")
     properties_copy = properties_source.copy() if isinstance(properties_source, dict) else {}
-    attachment_value = simple_module.normalize_attachment(
+    attachment_value = normalize_attachment(
         cred.get("authenticator_attachment")
         or cred.get("authenticatorAttachment")
         or properties_copy.get("authenticatorAttachment")
@@ -54,10 +57,10 @@ def build_credential_info_from_dict_credential_data_impl(
 
     credential_info = {
         "email": email,
-        "credentialId": simple_module.base64.b64encode(cred_data["credential_id"]).decode("utf-8"),
+        "credentialId": base64.b64encode(cred_data["credential_id"]).decode("utf-8"),
         "userName": user_info.get("name", email),
         "displayName": user_info.get("display_name", email),
-        "userHandle": simple_module.base64.b64encode(
+        "userHandle": base64.b64encode(
             user_info.get("user_handle", cred_data["credential_id"])
         ).decode("utf-8")
         if user_info.get("user_handle")
@@ -138,7 +141,7 @@ def build_credential_info_from_dict_credential_data_impl(
 
     if auth_data_bytes:
         if not raw_authenticator_value:
-            raw_authenticator_value = simple_module.base64.urlsafe_b64encode(auth_data_bytes).decode(
+            raw_authenticator_value = base64.urlsafe_b64encode(auth_data_bytes).decode(
                 "utf-8"
             ).rstrip("=")
         if not authenticator_hex_value:

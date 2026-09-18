@@ -1,12 +1,17 @@
 from __future__ import annotations
 
+import base64
+import uuid
 from collections.abc import Mapping
+from datetime import datetime, timezone
 from typing import Any
+
+from fido2 import cbor
 
 
 def populate_rp_debug_context_impl(simple_module: Any, ctx: dict[str, Any]) -> None:
-    registration_timestamp = simple_module.datetime.fromtimestamp(
-        ctx["credential_info"]["registration_time"], simple_module.timezone.utc
+    registration_timestamp = datetime.fromtimestamp(
+        ctx["credential_info"]["registration_time"], timezone.utc
     ).isoformat()
 
     large_blob_result = False
@@ -24,8 +29,8 @@ def populate_rp_debug_context_impl(simple_module: Any, ctx: dict[str, Any]) -> N
 
     credential_id_bytes = ctx["auth_data"].credential_data.credential_id
     credential_id_hex = credential_id_bytes.hex()
-    credential_id_b64 = simple_module.base64.b64encode(credential_id_bytes).decode("ascii")
-    credential_id_b64u = simple_module.base64.urlsafe_b64encode(credential_id_bytes).decode("ascii").rstrip("=")
+    credential_id_b64 = base64.b64encode(credential_id_bytes).decode("ascii")
+    credential_id_b64u = base64.urlsafe_b64encode(credential_id_bytes).decode("ascii").rstrip("=")
 
     try:
         aaguid_bytes = bytes(ctx["auth_data"].credential_data.aaguid)
@@ -33,15 +38,15 @@ def populate_rp_debug_context_impl(simple_module: Any, ctx: dict[str, Any]) -> N
         aaguid_bytes = b""
 
     cose_public_key = dict(getattr(ctx["auth_data"].credential_data, "public_key", {}))
-    public_key_bytes = simple_module.cbor.encode(cose_public_key)
+    public_key_bytes = cbor.encode(cose_public_key)
 
     user_handle_value = ctx["credential_info"]["user_info"].get("user_handle")
     if isinstance(user_handle_value, (bytes, bytearray, memoryview)):
         user_handle_bytes = bytes(user_handle_value)
     else:
         user_handle_bytes = str(user_handle_value or "").encode("utf-8")
-    user_handle_b64 = simple_module.base64.b64encode(user_handle_bytes).decode("ascii")
-    user_handle_b64u = simple_module.base64.urlsafe_b64encode(user_handle_bytes).decode("ascii").rstrip("=")
+    user_handle_b64 = base64.b64encode(user_handle_bytes).decode("ascii")
+    user_handle_b64u = base64.urlsafe_b64encode(user_handle_bytes).decode("ascii").rstrip("=")
     user_handle_hex = user_handle_bytes.hex()
 
     rp_registration_data = {
@@ -81,7 +86,7 @@ def populate_rp_debug_context_impl(simple_module: Any, ctx: dict[str, Any]) -> N
     if aaguid_bytes:
         rp_info["aaguid"] = {
             "raw": aaguid_bytes.hex(),
-            "guid": str(simple_module.uuid.UUID(bytes=aaguid_bytes)) if len(aaguid_bytes) == 16 else None,
+            "guid": str(uuid.UUID(bytes=aaguid_bytes)) if len(aaguid_bytes) == 16 else None,
         }
 
     ctx["credential_info"]["relying_party"] = simple_module.make_json_safe(rp_info)

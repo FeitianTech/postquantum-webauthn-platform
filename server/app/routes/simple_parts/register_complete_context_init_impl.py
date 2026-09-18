@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import time
+import uuid
 from collections.abc import Mapping
 from typing import Any
 
@@ -39,7 +41,7 @@ def initialize_registration_context_impl(simple_module: Any, ctx: dict[str, Any]
             "display_name": ctx["uname"],
             "user_handle": ctx["uname"].encode("utf-8"),
         },
-        "registration_time": simple_module.time.time(),
+        "registration_time": time.time(),
         "client_data_json": ctx["client_data_json"] or "",
         "attestation_object": ctx["raw_attestation_object"] or "",
         "attestation_object_raw": ctx["raw_attestation_object"] or "",
@@ -114,7 +116,7 @@ def initialize_registration_context_impl(simple_module: Any, ctx: dict[str, Any]
             credential_properties["aaguid"] = aaguid_hex
             credential_properties["aaguidHex"] = aaguid_hex
             try:
-                credential_properties["aaguidGuid"] = str(simple_module.uuid.UUID(bytes=aaguid_bytes))
+                credential_properties["aaguidGuid"] = str(uuid.UUID(bytes=aaguid_bytes))
             except ValueError:
                 pass
 

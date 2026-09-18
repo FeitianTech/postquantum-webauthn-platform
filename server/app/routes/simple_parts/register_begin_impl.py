@@ -3,9 +3,15 @@ from __future__ import annotations
 from collections.abc import Mapping, MutableMapping
 from typing import Any
 
+from flask import jsonify, request, session
+
+from fido2.webauthn import PublicKeyCredentialUserEntity
+
+from ...challenge_registry import stamp_ceremony_state
+
 
 def register_begin_impl(simple_module: Any):
-    payload = simple_module.request.get_json(silent=True) or {}
+    payload = request.get_json(silent=True) or {}
 
     existing_credentials_raw: list[Any] = []
     if isinstance(payload, Mapping):
@@ -15,15 +21,15 @@ def register_begin_impl(simple_module: Any):
 
     credentials, serialized = simple_module._parse_client_credentials(existing_credentials_raw)
     if serialized:
-        simple_module.session["simple_credentials"] = serialized
+        session["simple_credentials"] = serialized
     else:
-        simple_module.session.pop("simple_credentials", None)
+        session.pop("simple_credentials", None)
 
     rp_id = simple_module.determine_rp_id()
     server = simple_module.create_fido_server(rp_id=rp_id)
 
     options, state = server.register_begin(
-        simple_module.PublicKeyCredentialUserEntity(
+        PublicKeyCredentialUserEntity(
             id=b"user_id",
             name="a_user",
             display_name="A. User",
@@ -34,8 +40,8 @@ def register_begin_impl(simple_module: Any):
     )
 
     # Stamped so /complete can refuse a stale state replayed from an old cookie.
-    simple_module.session["state"] = simple_module.stamp_ceremony_state(dict(state))
-    simple_module.session["register_rp_id"] = rp_id
+    session["state"] = stamp_ceremony_state(dict(state))
+    session["register_rp_id"] = rp_id
 
     options_dict = dict(options)
     # The ceremony state (and therefore the challenge) is deliberately NOT
@@ -43,9 +49,9 @@ def register_begin_impl(simple_module: Any):
     # server-side session only.
     public_key_options = options_dict.get("publicKey")
     if isinstance(public_key_options, MutableMapping):
-        simple_module.session["simple_register_public_key"] = simple_module.make_json_safe(public_key_options)
+        session["simple_register_public_key"] = simple_module.make_json_safe(public_key_options)
     else:
-        simple_module.session.pop("simple_register_public_key", None)
+        session.pop("simple_register_public_key", None)
 
     if simple_module._SIMPLE_ALLOWED_ALGORITHMS:
         public_key_options = options_dict.get("publicKey")
@@ -68,4 +74,4 @@ def register_begin_impl(simple_module: Any):
                     allowed_params.append({"type": "public-key", "alg": alg})
             public_key_options["pubKeyCredParams"] = allowed_params
 
-    return simple_module.jsonify(simple_module.make_json_safe(options_dict))
+    return jsonify(simple_module.make_json_safe(options_dict))

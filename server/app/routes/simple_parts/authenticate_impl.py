@@ -1,8 +1,19 @@
 from __future__ import annotations
 
+import base64
 from collections.abc import Mapping
 from typing import Any
 
+from flask import abort, jsonify, request, session
+
+from fido2.webauthn import AuthenticatorData
+
+from ...challenge_registry import (
+    CHALLENGE_FRESH,
+    CHALLENGE_REPLAYED,
+    consume_ceremony_state,
+    stamp_ceremony_state,
+)
 from ...sign_count import SIGN_COUNT_REGRESSED, sign_count_status
 from .sign_count_impl import (
     RECORD_SIGN_COUNT_KEY,
@@ -15,8 +26,8 @@ from .sign_count_impl import (
 
 
 def authenticate_begin_impl(simple_module: Any):
-    uname = simple_module.request.args.get("email")
-    payload = simple_module.request.get_json(silent=True) or {}
+    uname = request.args.get("email")
+    payload = request.get_json(silent=True) or {}
 
     raw_credentials: list[Any] = []
     if isinstance(payload, Mapping):
@@ -27,10 +38,10 @@ def authenticate_begin_impl(simple_module: Any):
     credential_data_list, serialized = simple_module._parse_client_credentials(raw_credentials)
 
     if not credential_data_list:
-        simple_module.abort(404)
+        abort(404)
 
-    simple_module.session["simple_credentials"] = serialized
-    simple_module.session["simple_credentials_email"] = uname
+    session["simple_credentials"] = serialized
+    session["simple_credentials_email"] = uname
 
     rp_id = simple_module.determine_rp_id()
     server = simple_module.create_fido_server(rp_id=rp_id)
@@ -40,13 +51,13 @@ def authenticate_begin_impl(simple_module: Any):
         user_verification="discouraged",
     )
     # Stamped so /complete can refuse a stale state replayed from an old cookie.
-    simple_module.session["state"] = simple_module.stamp_ceremony_state(dict(state))
-    simple_module.session["authenticate_rp_id"] = rp_id
+    session["state"] = stamp_ceremony_state(dict(state))
+    session["authenticate_rp_id"] = rp_id
 
     options_payload = dict(options)
     # The ceremony state (and therefore the challenge) stays server-side.
 
-    return simple_module.jsonify(simple_module.make_json_safe(options_payload))
+    return jsonify(simple_module.make_json_safe(options_payload))
 
 
 def _challenge_rejection_message(replayed: bool) -> str:
@@ -59,32 +70,32 @@ def _challenge_rejection_message(replayed: bool) -> str:
 
 
 def authenticate_complete_impl(simple_module: Any):
-    response = simple_module.request.get_json(silent=True)
+    response = request.get_json(silent=True)
 
     # Popping the state is not enough on its own: the session is a client-side
     # cookie, so an earlier copy that still holds this state can be resent.
     # Consuming the challenge server-side -- before anything can fail -- is
     # what makes it single-use.
-    state = simple_module.session.pop("state", None)
+    state = session.pop("state", None)
     challenge_verdict = (
-        simple_module.consume_ceremony_state(state) if state is not None else None
+        consume_ceremony_state(state) if state is not None else None
     )
 
-    session_credentials = simple_module.session.pop("simple_credentials", [])
+    session_credentials = session.pop("simple_credentials", [])
     credential_data_list, _ = simple_module._parse_client_credentials(session_credentials)
     if not credential_data_list:
-        simple_module.session.pop("authenticate_rp_id", None)
-        simple_module.session.pop("simple_credentials_email", None)
-        simple_module.abort(400)
+        session.pop("authenticate_rp_id", None)
+        session.pop("simple_credentials_email", None)
+        abort(400)
 
     # A client-supplied ``__session_state`` is stripped and ignored: accepting
     # it would let the caller choose the challenge it is verified against.
     if isinstance(response, Mapping):
         response.pop("__session_state", None)
     if state is None:
-        simple_module.session.pop("authenticate_rp_id", None)
+        session.pop("authenticate_rp_id", None)
         return (
-            simple_module.jsonify(
+            jsonify(
                 {
                     "error": "Authentication state not found or has expired. Please restart the authentication flow."
                 }
@@ -92,14 +103,14 @@ def authenticate_complete_impl(simple_module: Any):
             400,
         )
 
-    rp_id = simple_module.session.pop("authenticate_rp_id", None)
-    if challenge_verdict != simple_module.CHALLENGE_FRESH:
-        simple_module.session.pop("simple_credentials_email", None)
+    rp_id = session.pop("authenticate_rp_id", None)
+    if challenge_verdict != CHALLENGE_FRESH:
+        session.pop("simple_credentials_email", None)
         return (
-            simple_module.jsonify(
+            jsonify(
                 {
                     "error": _challenge_rejection_message(
-                        challenge_verdict == simple_module.CHALLENGE_REPLAYED
+                        challenge_verdict == CHALLENGE_REPLAYED
                     )
                 }
             ),
@@ -122,22 +133,22 @@ def authenticate_complete_impl(simple_module: Any):
         credential_id_bytes = simple_module._extract_assertion_credential_id(response_mapping)
         if credential_id_bytes:
             failed_credential_id = (
-                simple_module.base64.urlsafe_b64encode(credential_id_bytes).decode("ascii").rstrip("=")
+                base64.urlsafe_b64encode(credential_id_bytes).decode("ascii").rstrip("=")
             )
 
         response_payload: dict[str, Any] = {"error": str(exc)}
         if failed_credential_id is not None:
             response_payload["failedCredentialId"] = failed_credential_id
 
-        simple_module.session.pop("simple_credentials_email", None)
-        return simple_module.jsonify(response_payload), 400
+        session.pop("simple_credentials_email", None)
+        return jsonify(response_payload), 400
 
     try:
         authenticated_id_bytes = bytes(getattr(matched_credential, "credential_id", b"") or b"")
     except Exception:
         authenticated_id_bytes = b""
     authenticated_id = (
-        simple_module.base64.urlsafe_b64encode(authenticated_id_bytes).decode("ascii").rstrip("=")
+        base64.urlsafe_b64encode(authenticated_id_bytes).decode("ascii").rstrip("=")
         if authenticated_id_bytes
         else None
     )
@@ -152,18 +163,18 @@ def authenticate_complete_impl(simple_module: Any):
         else None
     )
     try:
-        sign_count = simple_module.AuthenticatorData(
+        sign_count = AuthenticatorData(
             simple_module._decode_base64url_bytes(auth_data_value)
         ).counter
     except Exception:
         sign_count = None
 
-    uname = simple_module.request.args.get("email")
-    simple_module.session.pop("simple_credentials_email", None)
+    uname = request.args.get("email")
+    session.pop("simple_credentials_email", None)
 
     if sign_count is None or not authenticated_id_bytes:
         return (
-            simple_module.jsonify(
+            jsonify(
                 {
                     "error": (
                         "The signature counter could not be read from the authenticator "
@@ -191,7 +202,7 @@ def authenticate_complete_impl(simple_module: Any):
             stored_sign_count,
         )
         return (
-            simple_module.jsonify(
+            jsonify(
                 {
                     "error": (
                         f"Signature counter did not increase (stored {stored_sign_count}, "
@@ -214,7 +225,7 @@ def authenticate_complete_impl(simple_module: Any):
                 "Failed to persist signature counter for %s", authenticated_id
             )
             return (
-                simple_module.jsonify({"error": "Unable to persist the signature counter."}),
+                jsonify({"error": "Unable to persist the signature counter."}),
                 500,
             )
 
@@ -229,4 +240,4 @@ def authenticate_complete_impl(simple_module: Any):
     response_payload["authenticatedCredentialId"] = authenticated_id
     response_payload["signCount"] = sign_count
 
-    return simple_module.jsonify(response_payload)
+    return jsonify(response_payload)
