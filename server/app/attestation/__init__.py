@@ -16,7 +16,6 @@ from . import (
     classical_runtime,
     encoding_leaf,
     pqc,
-    pqc_constraints_runtime,
     runtime_state,
     trust,
 )
@@ -43,7 +42,7 @@ app = config.app
 # Constants shared with the fragments.
 AAGUID_EXTENSION_OID = runtime_state.AAGUID_EXTENSION_OID
 EXTENSION_DISPLAY_METADATA = runtime_state.EXTENSION_DISPLAY_METADATA
-_PQC_ALGORITHM_NAME_TO_ID = pqc_constraints_runtime._PQC_ALGORITHM_NAME_TO_ID
+_PQC_ALGORITHM_NAME_TO_ID = pqc._PQC_ALGORITHM_NAME_TO_ID
 CRED_PROTECT_LABELS = aaguid_leaf.CRED_PROTECT_LABELS
 
 # AAGUID, CredProtect, and authenticator extension helpers.
@@ -113,9 +112,9 @@ _trusted_ca_subjects = trust._trusted_ca_subjects
 _evaluate_classical_attestation_root = classical_runtime._evaluate_classical_attestation_root
 
 # PQC certificate constraint checks.
-_check_pqc_certificate_constraints = pqc_constraints_runtime._check_pqc_certificate_constraints
-_normalise_pqc_algorithm_identifier = pqc_constraints_runtime._normalise_pqc_algorithm_identifier
-_verify_pqc_attestation_chain = pqc_constraints_runtime._verify_pqc_attestation_chain
+_check_pqc_certificate_constraints = pqc._check_pqc_certificate_constraints
+_normalise_pqc_algorithm_identifier = pqc._normalise_pqc_algorithm_identifier
+_verify_pqc_attestation_chain = pqc._verify_pqc_attestation_chain
 
 # PQC attestation root and signature evaluation.
 _attempt_pqc_attestation_signature_validation = pqc._attempt_pqc_attestation_signature_validation
