@@ -1057,6 +1057,16 @@ def _convert_ctap_user(entry: Any) -> Any:
     return user
 
 
+# The converter tables the labelled-map builder dispatches through.
+#
+# Two spellings appear below and the difference is load-bearing. An entry that
+# names a function directly captures that object when this module is imported,
+# so a test patching the name later is NOT seen here. An entry wrapped in a
+# lambda resolves the global on every call, so a patch IS seen. These fragments
+# used to live in separate modules and the lambdas also worked around a cycle
+# between them; the cycle is gone now that they share a module, but the
+# patch-visibility difference remains. Do not "simplify" a lambda into a bare
+# reference -- that silently changes what a test exercises.
 _MAKE_CREDENTIAL_REQUEST_HANDLERS: dict[Any, Callable[[Any], Any]] = {
     "clientDataHash": _convert_optional_ctap_field,
     "rp": _hex_json_safe,
