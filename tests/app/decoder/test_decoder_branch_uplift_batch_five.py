@@ -2,7 +2,11 @@ from __future__ import annotations
 
 import base64
 
+import cbor2
 import pytest
+
+from fido2 import cbor
+from fido2.webauthn import AuthenticatorData
 
 
 def test_lenient_decode_from_indefinite_and_float_paths_cover_remaining_edges():
@@ -30,7 +34,7 @@ def test_decode_cbor_sequence_handles_fallback_decoder_and_zero_consumed_paths(m
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     monkeypatch.setattr(
-        decode_module.cbor,
+        cbor,
         "decode_from",
         lambda _payload: (_ for _ in ()).throw(ValueError("bad-cbor")),
     )
@@ -43,7 +47,7 @@ def test_decode_cbor_sequence_handles_fallback_decoder_and_zero_consumed_paths(m
             self._fp.read(1)
             return {"decoded": True}
 
-    monkeypatch.setattr(decode_module.cbor2, "CBORDecoder", _FallbackDecoder)
+    monkeypatch.setattr(cbor2, "CBORDecoder", _FallbackDecoder)
 
     structures, values, consumed, remaining = decode_module._decode_cbor_sequence(b"\x01")
     assert len(structures) == 1
@@ -52,7 +56,7 @@ def test_decode_cbor_sequence_handles_fallback_decoder_and_zero_consumed_paths(m
     assert remaining == b""
 
     monkeypatch.setattr(
-        decode_module.cbor,
+        cbor,
         "decode_from",
         lambda payload: (1, payload),
     )
@@ -67,7 +71,7 @@ def test_decode_cbor_sequence_breaks_when_lenient_fallback_raises(monkeypatch, c
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     monkeypatch.setattr(
-        decode_module.cbor,
+        cbor,
         "decode_from",
         lambda _payload: (_ for _ in ()).throw(ValueError("bad-cbor")),
     )
@@ -79,7 +83,7 @@ def test_decode_cbor_sequence_breaks_when_lenient_fallback_raises(monkeypatch, c
         def decode(self):
             raise ValueError("broken")
 
-    monkeypatch.setattr(decode_module.cbor2, "CBORDecoder", _BrokenDecoder)
+    monkeypatch.setattr(cbor2, "CBORDecoder", _BrokenDecoder)
     monkeypatch.setattr(
         cbor_strict,
         "_decode_cbor_structure",
@@ -136,10 +140,10 @@ def test_split_get_assertion_trailing_fields_handles_incomplete_and_invalid_foll
     assert decode_module._split_get_assertion_trailing_fields(original) == (original, {})
 
     invalid_key_tail = (
-        decode_module.cbor.encode(4)
-        + decode_module.cbor.encode({"id": "u"})
-        + decode_module.cbor.encode(9)
-        + decode_module.cbor.encode(1)
+        cbor.encode(4)
+        + cbor.encode({"id": "u"})
+        + cbor.encode(9)
+        + cbor.encode(1)
     )
     assert decode_module._split_get_assertion_trailing_fields(invalid_key_tail) == (
         invalid_key_tail,
@@ -147,9 +151,9 @@ def test_split_get_assertion_trailing_fields_handles_incomplete_and_invalid_foll
     )
 
     truncated_tail = (
-        decode_module.cbor.encode(4)
-        + decode_module.cbor.encode({"id": "u"})
-        + decode_module.cbor.encode(5)
+        cbor.encode(4)
+        + cbor.encode({"id": "u"})
+        + cbor.encode(5)
     )
     assert decode_module._split_get_assertion_trailing_fields(truncated_tail) == (
         truncated_tail,
@@ -220,7 +224,7 @@ def test_repair_get_assertion_entries_recovers_trailing_fields_and_prunes_byte_k
 def test_parse_authenticator_data_bytes_handles_truncation_and_decode_failures(monkeypatch, cbor_lenient):
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
-    truncated_payload = b"\x00" * 32 + bytes([decode_module.AuthenticatorData.FLAG.AT]) + (1).to_bytes(4, "big")
+    truncated_payload = b"\x00" * 32 + bytes([AuthenticatorData.FLAG.AT]) + (1).to_bytes(4, "big")
     details, trimmed, trailing = decode_module._parse_authenticator_data_bytes(truncated_payload)
     assert "attestedCredentialData" not in details
     assert trimmed == truncated_payload
@@ -228,7 +232,7 @@ def test_parse_authenticator_data_bytes_handles_truncation_and_decode_failures(m
 
     mismatch_payload = (
         b"\x01" * 32
-        + bytes([decode_module.AuthenticatorData.FLAG.AT])
+        + bytes([AuthenticatorData.FLAG.AT])
         + (2).to_bytes(4, "big")
         + (b"\x02" * 16)
         + (4).to_bytes(2, "big")
@@ -239,7 +243,7 @@ def test_parse_authenticator_data_bytes_handles_truncation_and_decode_failures(m
 
     payload_with_bad_cose = (
         b"\x01" * 32
-        + bytes([decode_module.AuthenticatorData.FLAG.AT])
+        + bytes([AuthenticatorData.FLAG.AT])
         + (2).to_bytes(4, "big")
         + (b"\x02" * 16)
         + (2).to_bytes(2, "big")
@@ -262,9 +266,9 @@ def test_parse_authenticator_data_bytes_handles_extension_non_mapping_and_zero_c
 
     extension_payload = (
         b"\x03" * 32
-        + bytes([decode_module.AuthenticatorData.FLAG.ED])
+        + bytes([AuthenticatorData.FLAG.ED])
         + (3).to_bytes(4, "big")
-        + decode_module.cbor.encode(7)
+        + cbor.encode(7)
     )
     details, _, trailing = decode_module._parse_authenticator_data_bytes(extension_payload)
     assert details["extensions"] == 7
@@ -277,7 +281,7 @@ def test_parse_authenticator_data_bytes_handles_extension_non_mapping_and_zero_c
     )
     details, trimmed, trailing = decode_module._parse_authenticator_data_bytes(extension_payload)
     assert trimmed == extension_payload
-    assert trailing == decode_module.cbor.encode(7)
+    assert trailing == cbor.encode(7)
 
 
 def test_extract_lenient_map_entries_and_signature_extraction_guard_paths():

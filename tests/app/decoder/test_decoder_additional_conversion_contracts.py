@@ -57,7 +57,7 @@ def test_convert_optional_and_user_helpers_cover_binary_and_text_paths():
     assert binary_non_text["hex"] == "ff"
 
 
-def test_describe_client_data_from_bytes_success_and_collected_client_data_fallback(monkeypatch):
+def test_describe_client_data_from_bytes_success_and_collected_client_data_fallback(monkeypatch, details_runtime):
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     raw_json = {
@@ -78,7 +78,7 @@ def test_describe_client_data_from_bytes_success_and_collected_client_data_fallb
         def __init__(self, _payload):
             raise ValueError("broken collected client data")
 
-    monkeypatch.setattr(decode_module, "CollectedClientData", _BrokenClientData)
+    monkeypatch.setattr(details_runtime, "CollectedClientData", _BrokenClientData)
     fallback = decode_module._describe_client_data_from_bytes(payload)
     assert fallback["type"] == "webauthn.create"
     assert fallback["challenge"]["raw"] == "AQID"
@@ -97,7 +97,7 @@ def test_describe_authenticator_data_bytes_includes_flags_and_attested_credentia
     assert details["attestedCredentialData"]["credentialId"]["hex"]
 
 
-def test_parse_attestation_object_and_extract_attestation_certificate_paths(monkeypatch):
+def test_parse_attestation_object_and_extract_attestation_certificate_paths(monkeypatch, details_runtime):
     decode_module = pytest.importorskip("server.app.decoder.decode")
     real_extract_attestation_certificate = decode_module._extract_attestation_certificate
 
@@ -107,15 +107,15 @@ def test_parse_attestation_object_and_extract_attestation_certificate_paths(monk
             self.att_stmt = {"x5c": [b"cert-bytes"]}
             self.auth_data = b"auth-data"
 
-    monkeypatch.setattr(decode_module, "AttestationObject", _FakeAttestation)
+    monkeypatch.setattr(details_runtime, "AttestationObject", _FakeAttestation)
     monkeypatch.setattr(
-        decode_module,
+        details_runtime,
         "_describe_authenticator_data_bytes",
         lambda _data: {"flags": {"value": 1}},
     )
-    monkeypatch.setattr(decode_module, "cbor", type("_Cbor", (), {"decode": staticmethod(lambda _d: {"ok": True})})())
+    monkeypatch.setattr(details_runtime, "cbor", type("_Cbor", (), {"decode": staticmethod(lambda _d: {"ok": True})})())
     monkeypatch.setattr(
-        decode_module,
+        details_runtime,
         "_extract_attestation_certificate",
         lambda _stmt: {"parsed": True},
     )
@@ -128,11 +128,11 @@ def test_parse_attestation_object_and_extract_attestation_certificate_paths(monk
     assert real_extract_attestation_certificate({"x5c": ["%%%"]}) is None
 
 
-def test_convert_attestation_statement_and_certificate_chain_paths(monkeypatch):
+def test_convert_attestation_statement_and_certificate_chain_paths(monkeypatch, result_runtime):
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     monkeypatch.setattr(
-        decode_module,
+        result_runtime,
         "serialize_attestation_certificate",
         lambda cert_bytes: {
             "derBase64": base64.b64encode(cert_bytes).decode("ascii"),

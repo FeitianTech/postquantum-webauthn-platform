@@ -38,7 +38,7 @@ def test_binary_extract_helpers_cover_nested_hex_error_and_fallback(monkeypatch,
     assert decode_module._extract_hex_from_binary({"binary": {"hex": "AABB"}}) == "AABB"
 
     monkeypatch.setattr(
-        decode_module.base64,
+        base64,
         "urlsafe_b64decode",
         lambda _value: (_ for _ in ()).throw(ValueError("invalid-base64")),
     )
@@ -242,11 +242,11 @@ def test_ctap_interpretation_variants_cover_request_guard_and_attstmt_bytes(monk
     assert interpreted_assertion["trailingFields"]["10"] == 1
 
 
-def test_try_decode_cbor_warns_for_trailing_bytes_and_records_ignored_padding(monkeypatch):
+def test_try_decode_cbor_warns_for_trailing_bytes_and_records_ignored_padding(monkeypatch, cbor_runtime):
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     monkeypatch.setattr(
-        decode_module,
+        cbor_runtime,
         "_decode_cbor_sequence",
         lambda _payload: ([{"byteLength": 1}], [42], 1, b"\x11\x22"),
     )
@@ -256,7 +256,7 @@ def test_try_decode_cbor_warns_for_trailing_bytes_and_records_ignored_padding(mo
     assert result["decoded"]["ctap"]["trailingBytesHex"] == "1122"
 
     monkeypatch.setattr(
-        decode_module,
+        cbor_runtime,
         "_decode_cbor_sequence",
         lambda _payload: ([{"byteLength": 1}], [42], 1, b"\x00\xff"),
     )

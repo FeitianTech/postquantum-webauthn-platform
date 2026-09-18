@@ -4,6 +4,7 @@ import base64
 
 import cbor2
 import pytest
+from cryptography import x509
 
 
 def test_build_credential_payload_covers_length_string_and_empty_public_key_payload():
@@ -76,7 +77,7 @@ def test_build_subject_key_identifier_lines_handles_extension_bytes_der_failures
 
     class _Extensions:
         def get_extension_for_oid(self, _oid):
-            raise decode_module.x509.ExtensionNotFound("missing", _oid)
+            raise x509.ExtensionNotFound("missing", _oid)
 
     class _Certificate:
         extensions = _Extensions()
@@ -85,7 +86,7 @@ def test_build_subject_key_identifier_lines_handles_extension_bytes_der_failures
             raise RuntimeError("no public key")
 
     monkeypatch.setattr(
-        decode_module.x509,
+        x509,
         "load_der_x509_certificate",
         lambda _value: _Certificate(),
     )
@@ -213,7 +214,7 @@ def test_append_attestation_and_client_data_sections_cover_none_and_mapping_path
     assert any(line.startswith("Client data") for line in lines)
 
 
-def test_build_get_assertion_expanded_json_handles_invalid_trailing_hex(monkeypatch):
+def test_build_get_assertion_expanded_json_handles_invalid_trailing_hex(monkeypatch, ctap_classify):
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     auth_key = decode_module._format_ctap_entry_key(
@@ -226,7 +227,7 @@ def test_build_get_assertion_expanded_json_handles_invalid_trailing_hex(monkeypa
     )
 
     monkeypatch.setattr(
-        decode_module,
+        ctap_classify,
         "_build_labeled_ctap_map",
         lambda *_args, **_kwargs: {
             auth_key: {"trailingBytesHex": "not-hex"},
