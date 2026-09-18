@@ -17,7 +17,7 @@ from flask import abort, jsonify, request, session
 
 from fido2.webauthn import AuthenticatorData
 
-from ... import attestation, config, metadata, storage
+from ... import attestation, config, metadata
 from ...challenge_registry import (
     CHALLENGE_FRESH,
     CHALLENGE_REPLAYED,
@@ -26,6 +26,7 @@ from ...challenge_registry import (
 )
 from ...encoding import encode_base64url
 from ...sign_count import SIGN_COUNT_REGRESSED, sign_count_status
+from ...storage import credentials
 from .. import binary_helpers
 from . import binary, parsing
 
@@ -224,7 +225,7 @@ def authenticate_complete():
     if server_record is not None and record_sign_count(server_record) != sign_count:
         server_record[RECORD_SIGN_COUNT_KEY] = sign_count
         try:
-            storage.savekey(uname, server_records, session_id=metadata_session_id)
+            credentials.savekey(uname, server_records, session_id=metadata_session_id)
         except Exception:
             config.app.logger.exception(
                 "Failed to persist signature counter for %s", authenticated_id
@@ -280,7 +281,7 @@ def load_server_records(uname: Any) -> tuple[list[Any] | None, str | None]:
         return None, None
     try:
         session_id = metadata.ensure_metadata_session_id()
-        records = storage.readkey(uname, session_id=session_id)
+        records = credentials.readkey(uname, session_id=session_id)
     except Exception:
         config.app.logger.warning(
             "Could not read stored credentials for the signature counter check", exc_info=True

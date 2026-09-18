@@ -91,7 +91,7 @@ def _install_google_stubs():
 
 
 _install_google_stubs()
-cloud_storage = importlib.import_module("server.app.cloud_storage")
+cloud = importlib.import_module("server.app.storage.cloud")
 
 
 def test_with_retry_succeeds_after_transient_error(monkeypatch):
@@ -101,37 +101,37 @@ def test_with_retry_succeeds_after_transient_error(monkeypatch):
         def upload_from_string(self, *_args, **_kwargs):
             attempts["count"] += 1
             if attempts["count"] < 2:
-                raise cloud_storage.gcs_exceptions.GoogleAPICallError("retry")
+                raise cloud.gcs_exceptions.GoogleAPICallError("retry")
 
     class _Bucket:
         def blob(self, _name):
             return _Blob()
 
-    monkeypatch.setattr(cloud_storage, "_ensure_bucket", lambda: _Bucket())
+    monkeypatch.setattr(cloud, "_ensure_bucket", lambda: _Bucket())
 
     sleeps = []
-    monkeypatch.setattr(cloud_storage.time, "sleep", lambda delay: sleeps.append(delay))
+    monkeypatch.setattr(cloud.time, "sleep", lambda delay: sleeps.append(delay))
 
-    cloud_storage.upload_bytes("test", b"data")
+    cloud.upload_bytes("test", b"data")
 
     assert attempts["count"] == 2
-    assert sleeps == [cloud_storage._DEFAULT_RETRY_BASE_DELAY]
+    assert sleeps == [cloud._DEFAULT_RETRY_BASE_DELAY]
 
 
 def test_with_retry_raises_after_exhausting_attempts(monkeypatch):
     class _Blob:
         def upload_from_string(self, *_args, **_kwargs):
-            raise cloud_storage.gcs_exceptions.GoogleAPICallError("fail")
+            raise cloud.gcs_exceptions.GoogleAPICallError("fail")
 
     class _Bucket:
         def blob(self, _name):
             return _Blob()
 
-    monkeypatch.setattr(cloud_storage, "_ensure_bucket", lambda: _Bucket())
-    monkeypatch.setattr(cloud_storage.time, "sleep", lambda _delay: None)
+    monkeypatch.setattr(cloud, "_ensure_bucket", lambda: _Bucket())
+    monkeypatch.setattr(cloud.time, "sleep", lambda _delay: None)
 
-    with pytest.raises(cloud_storage.gcs_exceptions.GoogleAPICallError):
-        cloud_storage.upload_bytes("test", b"data")
+    with pytest.raises(cloud.gcs_exceptions.GoogleAPICallError):
+        cloud.upload_bytes("test", b"data")
 
 
 def test_list_blob_names_retries_and_returns_results(monkeypatch):
@@ -146,15 +146,15 @@ def test_list_blob_names_retries_and_returns_results(monkeypatch):
                         return self
 
                     def __next__(self):
-                        raise cloud_storage.gcs_exceptions.RetryError("transient")
+                        raise cloud.gcs_exceptions.RetryError("transient")
 
                 return _Iterator()
             return [types.SimpleNamespace(name="one"), types.SimpleNamespace(name="two")]
 
-    monkeypatch.setattr(cloud_storage, "_ensure_bucket", lambda: _Bucket())
-    monkeypatch.setattr(cloud_storage.time, "sleep", lambda _delay: None)
+    monkeypatch.setattr(cloud, "_ensure_bucket", lambda: _Bucket())
+    monkeypatch.setattr(cloud.time, "sleep", lambda _delay: None)
 
-    names = list(cloud_storage.list_blob_names("prefix"))
+    names = list(cloud.list_blob_names("prefix"))
 
     assert names == ["one", "two"]
     assert call_state["attempt"] == 2
@@ -163,16 +163,16 @@ def test_list_blob_names_retries_and_returns_results(monkeypatch):
 def test_download_bytes_handles_not_found(monkeypatch):
     class _Blob:
         def download_as_bytes(self):
-            raise cloud_storage.gcs_exceptions.NotFound("missing")
+            raise cloud.gcs_exceptions.NotFound("missing")
 
     class _Bucket:
         def blob(self, _name):
             return _Blob()
 
-    monkeypatch.setattr(cloud_storage, "_ensure_bucket", lambda: _Bucket())
-    monkeypatch.setattr(cloud_storage.time, "sleep", lambda _delay: None)
+    monkeypatch.setattr(cloud, "_ensure_bucket", lambda: _Bucket())
+    monkeypatch.setattr(cloud.time, "sleep", lambda _delay: None)
 
-    assert cloud_storage.download_bytes("missing") is None
+    assert cloud.download_bytes("missing") is None
 
 
 @pytest.mark.parametrize(
@@ -197,21 +197,21 @@ def test_env_flag_interprets_values(monkeypatch, raw, expected):
     else:
         monkeypatch.setenv("TEST_FLAG", raw)
 
-    assert cloud_storage._env_flag("TEST_FLAG") is expected
+    assert cloud._env_flag("TEST_FLAG") is expected
 
 
 def test_gcs_enabled_defaults_to_false_when_env_missing(monkeypatch):
     monkeypatch.delenv("FIDO_SERVER_GCS_ENABLED", raising=False)
 
-    assert cloud_storage.gcs_enabled() is False
+    assert cloud.gcs_enabled() is False
 
 
 def test_gcs_enabled_honors_explicit_true_false(monkeypatch):
     monkeypatch.setenv("FIDO_SERVER_GCS_ENABLED", "1")
-    assert cloud_storage.gcs_enabled() is True
+    assert cloud.gcs_enabled() is True
 
     monkeypatch.setenv("FIDO_SERVER_GCS_ENABLED", "false")
-    assert cloud_storage.gcs_enabled() is False
+    assert cloud.gcs_enabled() is False
 
 
 def test_build_client_prefers_service_account_file(monkeypatch):
@@ -233,13 +233,13 @@ def test_build_client_prefers_service_account_file(monkeypatch):
     monkeypatch.delenv("FIDO_SERVER_GCS_CREDENTIALS_JSON", raising=False)
     monkeypatch.delenv("FIDO_SERVER_GCS_PROJECT", raising=False)
     monkeypatch.setattr(
-        cloud_storage.service_account.Credentials,
+        cloud.service_account.Credentials,
         "from_service_account_file",
         _from_file,
     )
-    monkeypatch.setattr(cloud_storage.storage, "Client", _client_factory)
+    monkeypatch.setattr(cloud.storage, "Client", _client_factory)
 
-    client = cloud_storage._build_client()
+    client = cloud._build_client()
 
     assert observed["credentials_file"] == "/tmp/service-account.json"
     assert observed["client_args"] == ()
@@ -260,7 +260,7 @@ def test_build_client_file_credentials_respects_project_override(monkeypatch):
     monkeypatch.setenv("FIDO_SERVER_GCS_PROJECT", "override-project")
     monkeypatch.delenv("FIDO_SERVER_GCS_CREDENTIALS_JSON", raising=False)
     monkeypatch.setattr(
-        cloud_storage.service_account.Credentials,
+        cloud.service_account.Credentials,
         "from_service_account_file",
         lambda _path: _Creds(),
     )
@@ -270,9 +270,9 @@ def test_build_client_file_credentials_respects_project_override(monkeypatch):
         observed["credentials"] = kwargs.get("credentials")
         return "client"
 
-    monkeypatch.setattr(cloud_storage.storage, "Client", _client_factory)
+    monkeypatch.setattr(cloud.storage, "Client", _client_factory)
 
-    assert cloud_storage._build_client() == "client"
+    assert cloud._build_client() == "client"
     assert observed["project"] == "override-project"
     assert isinstance(observed["credentials"], _Creds)
 
@@ -305,13 +305,13 @@ def test_build_client_uses_service_account_info_json(monkeypatch):
         return "json-client"
 
     monkeypatch.setattr(
-        cloud_storage.service_account.Credentials,
+        cloud.service_account.Credentials,
         "from_service_account_info",
         _from_info,
     )
-    monkeypatch.setattr(cloud_storage.storage, "Client", _client_factory)
+    monkeypatch.setattr(cloud.storage, "Client", _client_factory)
 
-    assert cloud_storage._build_client() == "json-client"
+    assert cloud._build_client() == "json-client"
     assert observed["info"]["project_id"] == "json-project"
     assert observed["kwargs"]["project"] == "json-project"
     assert isinstance(observed["kwargs"]["credentials"], _Creds)
@@ -329,9 +329,9 @@ def test_build_client_with_project_override_only(monkeypatch):
         observed["kwargs"] = kwargs
         return "project-client"
 
-    monkeypatch.setattr(cloud_storage.storage, "Client", _client_factory)
+    monkeypatch.setattr(cloud.storage, "Client", _client_factory)
 
-    assert cloud_storage._build_client() == "project-client"
+    assert cloud._build_client() == "project-client"
     assert observed["args"] == ()
     assert observed["kwargs"] == {"project": "override-only"}
 
@@ -348,30 +348,30 @@ def test_build_client_defaults_to_storage_client_without_overrides(monkeypatch):
         observed["kwargs"] = kwargs
         return "default-client"
 
-    monkeypatch.setattr(cloud_storage.storage, "Client", _client_factory)
+    monkeypatch.setattr(cloud.storage, "Client", _client_factory)
 
-    assert cloud_storage._build_client() == "default-client"
+    assert cloud._build_client() == "default-client"
     assert observed["args"] == ()
     assert observed["kwargs"] == {}
 
 
 def test_ensure_bucket_raises_when_gcs_disabled(monkeypatch):
-    monkeypatch.setattr(cloud_storage, "_CLIENT", None)
-    monkeypatch.setattr(cloud_storage, "_BUCKET", None)
-    monkeypatch.setattr(cloud_storage, "gcs_enabled", lambda: False)
+    monkeypatch.setattr(cloud, "_CLIENT", None)
+    monkeypatch.setattr(cloud, "_BUCKET", None)
+    monkeypatch.setattr(cloud, "gcs_enabled", lambda: False)
 
     with pytest.raises(RuntimeError, match="disabled"):
-        cloud_storage._ensure_bucket()
+        cloud._ensure_bucket()
 
 
 def test_ensure_bucket_requires_bucket_configuration(monkeypatch):
-    monkeypatch.setattr(cloud_storage, "_CLIENT", None)
-    monkeypatch.setattr(cloud_storage, "_BUCKET", None)
-    monkeypatch.setattr(cloud_storage, "gcs_enabled", lambda: True)
+    monkeypatch.setattr(cloud, "_CLIENT", None)
+    monkeypatch.setattr(cloud, "_BUCKET", None)
+    monkeypatch.setattr(cloud, "gcs_enabled", lambda: True)
     monkeypatch.delenv("FIDO_SERVER_GCS_BUCKET", raising=False)
 
     with pytest.raises(RuntimeError, match="FIDO_SERVER_GCS_BUCKET"):
-        cloud_storage._ensure_bucket()
+        cloud._ensure_bucket()
 
 
 def test_ensure_bucket_builds_and_caches_bucket(monkeypatch):
@@ -389,14 +389,14 @@ def test_ensure_bucket_builds_and_caches_bucket(monkeypatch):
         build_calls["count"] += 1
         return _Client()
 
-    monkeypatch.setattr(cloud_storage, "_CLIENT", None)
-    monkeypatch.setattr(cloud_storage, "_BUCKET", None)
-    monkeypatch.setattr(cloud_storage, "gcs_enabled", lambda: True)
+    monkeypatch.setattr(cloud, "_CLIENT", None)
+    monkeypatch.setattr(cloud, "_BUCKET", None)
+    monkeypatch.setattr(cloud, "gcs_enabled", lambda: True)
     monkeypatch.setenv("FIDO_SERVER_GCS_BUCKET", "cache-bucket")
-    monkeypatch.setattr(cloud_storage, "_build_client", _build_client)
+    monkeypatch.setattr(cloud, "_build_client", _build_client)
 
-    first = cloud_storage._ensure_bucket()
-    second = cloud_storage._ensure_bucket()
+    first = cloud._ensure_bucket()
+    second = cloud._ensure_bucket()
 
     assert first is bucket_value
     assert second is bucket_value
@@ -416,10 +416,10 @@ def test_ensure_ready_retries_until_bucket_list_succeeds(monkeypatch):
             assert max_results == 1
             return []
 
-    monkeypatch.setattr(cloud_storage, "_ensure_bucket", lambda: _Bucket())
-    monkeypatch.setattr(cloud_storage.time, "sleep", lambda delay: sleeps.append(delay))
+    monkeypatch.setattr(cloud, "_ensure_bucket", lambda: _Bucket())
+    monkeypatch.setattr(cloud.time, "sleep", lambda delay: sleeps.append(delay))
 
-    cloud_storage.ensure_ready(max_attempts=3, retry_delay=0.25)
+    cloud.ensure_ready(max_attempts=3, retry_delay=0.25)
 
     assert calls["count"] == 2
     assert sleeps == [0.25]
@@ -432,11 +432,11 @@ def test_ensure_ready_raises_last_error_after_max_attempts(monkeypatch):
         def list_blobs(self, max_results=1):
             raise RuntimeError("still failing")
 
-    monkeypatch.setattr(cloud_storage, "_ensure_bucket", lambda: _Bucket())
-    monkeypatch.setattr(cloud_storage.time, "sleep", lambda delay: sleeps.append(delay))
+    monkeypatch.setattr(cloud, "_ensure_bucket", lambda: _Bucket())
+    monkeypatch.setattr(cloud.time, "sleep", lambda delay: sleeps.append(delay))
 
     with pytest.raises(RuntimeError, match="still failing"):
-        cloud_storage.ensure_ready(max_attempts=3, retry_delay=0.1)
+        cloud.ensure_ready(max_attempts=3, retry_delay=0.1)
 
     assert sleeps == [0.1, 0.1]
 
@@ -447,12 +447,12 @@ def test_with_retry_does_not_retry_not_found(monkeypatch):
 
     def _operation():
         calls["count"] += 1
-        raise cloud_storage.gcs_exceptions.NotFound("missing")
+        raise cloud.gcs_exceptions.NotFound("missing")
 
-    monkeypatch.setattr(cloud_storage.time, "sleep", lambda delay: sleeps.append(delay))
+    monkeypatch.setattr(cloud.time, "sleep", lambda delay: sleeps.append(delay))
 
-    with pytest.raises(cloud_storage.gcs_exceptions.NotFound):
-        cloud_storage._with_retry(_operation)
+    with pytest.raises(cloud.gcs_exceptions.NotFound):
+        cloud._with_retry(_operation)
 
     assert calls["count"] == 1
     assert sleeps == []
@@ -465,19 +465,19 @@ def test_with_retry_uses_exponential_backoff(monkeypatch):
     def _operation():
         calls["count"] += 1
         if calls["count"] < 3:
-            raise cloud_storage.gcs_exceptions.GoogleAPICallError("transient")
+            raise cloud.gcs_exceptions.GoogleAPICallError("transient")
         return "ok"
 
-    monkeypatch.setattr(cloud_storage.time, "sleep", lambda delay: sleeps.append(delay))
+    monkeypatch.setattr(cloud.time, "sleep", lambda delay: sleeps.append(delay))
 
-    result = cloud_storage._with_retry(_operation)
+    result = cloud._with_retry(_operation)
 
     assert result == "ok"
     assert sleeps == [0.5, 1.0]
 
 
 def test_build_blob_name_normalizes_components_and_prefix():
-    blob = cloud_storage.build_blob_name(
+    blob = cloud.build_blob_name(
         "/session-id/",
         "/credentials/",
         "file.pkl",
@@ -489,22 +489,22 @@ def test_build_blob_name_normalizes_components_and_prefix():
 
 def test_build_blob_name_raises_for_empty_path_components():
     with pytest.raises(ValueError, match="Invalid blob path components"):
-        cloud_storage.build_blob_name("", "/", prefix="/prefix/")
+        cloud.build_blob_name("", "/", prefix="/prefix/")
 
 
 def test_delete_blob_honors_missing_ok_false(monkeypatch):
     class _Blob:
         def delete(self):
-            raise cloud_storage.gcs_exceptions.NotFound("missing")
+            raise cloud.gcs_exceptions.NotFound("missing")
 
     class _Bucket:
         def blob(self, _name):
             return _Blob()
 
-    monkeypatch.setattr(cloud_storage, "_ensure_bucket", lambda: _Bucket())
+    monkeypatch.setattr(cloud, "_ensure_bucket", lambda: _Bucket())
 
-    with pytest.raises(cloud_storage.gcs_exceptions.NotFound):
-        cloud_storage.delete_blob("missing", missing_ok=False)
+    with pytest.raises(cloud.gcs_exceptions.NotFound):
+        cloud.delete_blob("missing", missing_ok=False)
 
 
 def test_blob_exists_casts_result_to_bool(monkeypatch):
@@ -516,9 +516,9 @@ def test_blob_exists_casts_result_to_bool(monkeypatch):
         def blob(self, _name):
             return _Blob()
 
-    monkeypatch.setattr(cloud_storage, "_ensure_bucket", lambda: _Bucket())
+    monkeypatch.setattr(cloud, "_ensure_bucket", lambda: _Bucket())
 
-    assert cloud_storage.blob_exists("any") is True
+    assert cloud.blob_exists("any") is True
 
 
 def test_blob_updated_timestamp_returns_none_when_blob_missing(monkeypatch):
@@ -526,15 +526,15 @@ def test_blob_updated_timestamp_returns_none_when_blob_missing(monkeypatch):
         updated = None
 
         def reload(self):
-            raise cloud_storage.gcs_exceptions.NotFound("missing")
+            raise cloud.gcs_exceptions.NotFound("missing")
 
     class _Bucket:
         def blob(self, _name):
             return _Blob()
 
-    monkeypatch.setattr(cloud_storage, "_ensure_bucket", lambda: _Bucket())
+    monkeypatch.setattr(cloud, "_ensure_bucket", lambda: _Bucket())
 
-    assert cloud_storage.blob_updated_timestamp("missing") is None
+    assert cloud.blob_updated_timestamp("missing") is None
 
 
 def test_blob_updated_timestamp_returns_none_when_updated_unset(monkeypatch):
@@ -548,9 +548,9 @@ def test_blob_updated_timestamp_returns_none_when_updated_unset(monkeypatch):
         def blob(self, _name):
             return _Blob()
 
-    monkeypatch.setattr(cloud_storage, "_ensure_bucket", lambda: _Bucket())
+    monkeypatch.setattr(cloud, "_ensure_bucket", lambda: _Bucket())
 
-    assert cloud_storage.blob_updated_timestamp("existing") is None
+    assert cloud.blob_updated_timestamp("existing") is None
 
 
 def test_blob_updated_timestamp_returns_epoch_seconds(monkeypatch):
@@ -567,9 +567,9 @@ def test_blob_updated_timestamp_returns_epoch_seconds(monkeypatch):
         def blob(self, _name):
             return _Blob()
 
-    monkeypatch.setattr(cloud_storage, "_ensure_bucket", lambda: _Bucket())
+    monkeypatch.setattr(cloud, "_ensure_bucket", lambda: _Bucket())
 
-    assert cloud_storage.blob_updated_timestamp("existing") == updated.timestamp()
+    assert cloud.blob_updated_timestamp("existing") == updated.timestamp()
 
 
 def test_ensure_ready_handles_non_empty_iterator(monkeypatch):
@@ -578,19 +578,19 @@ def test_ensure_ready_handles_non_empty_iterator(monkeypatch):
             assert max_results == 1
             return iter([object()])
 
-    monkeypatch.setattr(cloud_storage, "_ensure_bucket", lambda: _Bucket())
+    monkeypatch.setattr(cloud, "_ensure_bucket", lambda: _Bucket())
 
-    cloud_storage.ensure_ready(max_attempts=1)
+    cloud.ensure_ready(max_attempts=1)
 
 
 def test_with_retry_raises_runtime_when_no_attempts_configured():
     with pytest.raises(RuntimeError, match="failed without raising"):
-        cloud_storage._with_retry(lambda: "ok", max_attempts=0)
+        cloud._with_retry(lambda: "ok", max_attempts=0)
 
 
 def test_normalise_prefix_handles_empty_inputs():
-    assert cloud_storage._normalise_prefix(None) == ""
-    assert cloud_storage._normalise_prefix("///") == ""
+    assert cloud._normalise_prefix(None) == ""
+    assert cloud._normalise_prefix("///") == ""
 
 
 def test_ensure_bucket_reuses_existing_client(monkeypatch):
@@ -603,17 +603,17 @@ def test_ensure_bucket_reuses_existing_client(monkeypatch):
             assert name == "configured-bucket"
             return expected_bucket
 
-    monkeypatch.setattr(cloud_storage, "_CLIENT", _Client())
-    monkeypatch.setattr(cloud_storage, "_BUCKET", None)
-    monkeypatch.setattr(cloud_storage, "gcs_enabled", lambda: True)
+    monkeypatch.setattr(cloud, "_CLIENT", _Client())
+    monkeypatch.setattr(cloud, "_BUCKET", None)
+    monkeypatch.setattr(cloud, "gcs_enabled", lambda: True)
     monkeypatch.setenv("FIDO_SERVER_GCS_BUCKET", "configured-bucket")
     monkeypatch.setattr(
-        cloud_storage,
+        cloud,
         "_build_client",
         lambda: (_ for _ in ()).throw(AssertionError("_build_client should not be called")),
     )
 
-    bucket = cloud_storage._ensure_bucket()
+    bucket = cloud._ensure_bucket()
 
     assert bucket is expected_bucket
     assert calls["bucket"] == 1
@@ -622,22 +622,22 @@ def test_ensure_bucket_reuses_existing_client(monkeypatch):
 def test_delete_blob_ignores_not_found_when_missing_ok_true(monkeypatch):
     class _Blob:
         def delete(self):
-            raise cloud_storage.gcs_exceptions.NotFound("missing")
+            raise cloud.gcs_exceptions.NotFound("missing")
 
     class _Bucket:
         def blob(self, _name):
             return _Blob()
 
-    monkeypatch.setattr(cloud_storage, "_ensure_bucket", lambda: _Bucket())
+    monkeypatch.setattr(cloud, "_ensure_bucket", lambda: _Bucket())
 
-    cloud_storage.delete_blob("missing", missing_ok=True)
+    cloud.delete_blob("missing", missing_ok=True)
 
 
 def test_ensure_ready_with_zero_attempts_returns_without_error(monkeypatch):
     monkeypatch.setattr(
-        cloud_storage,
+        cloud,
         "_ensure_bucket",
         lambda: (_ for _ in ()).throw(AssertionError("_ensure_bucket should not be called")),
     )
 
-    cloud_storage.ensure_ready(max_attempts=0)
+    cloud.ensure_ready(max_attempts=0)

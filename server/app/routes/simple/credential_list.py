@@ -5,9 +5,10 @@ from typing import Any
 
 from flask import jsonify, request
 
-from ... import attestation, metadata, storage
+from ... import attestation, metadata
 from ...attachments import normalize_attachment
 from ...encoding import encode_base64, encode_base64url
+from ...storage import credentials as credential_store
 
 
 def add_registration_metadata(
@@ -76,7 +77,7 @@ def build_credential_info_from_dict_credential_data(
         "flags": auth_data.get("flags", {}),
         "clientExtensionOutputs": cred.get("client_extension_outputs", {}),
         "attestationFormat": cred.get("attestation_format", "none"),
-        "attestationStatement": storage.convert_bytes_for_json(
+        "attestationStatement": credential_store.convert_bytes_for_json(
             cred.get("attestation_statement", {})
         ),
         "publicKeyAlgorithm": cred_data.get("public_key", {}).get(3),
@@ -102,7 +103,7 @@ def build_credential_info_from_dict_credential_data(
 
     add_registration_metadata(credential_info, cred)
 
-    storage.add_public_key_material(credential_info, cred_data.get("public_key", {}))
+    credential_store.add_public_key_material(credential_info, cred_data.get("public_key", {}))
     if credential_info.get("publicKeyAlgorithm") is not None:
         credential_info["algorithm"] = credential_info["publicKeyAlgorithm"]
 
@@ -203,7 +204,7 @@ def build_credential_info_from_object_credential_data(
         },
         "clientExtensionOutputs": cred.get("client_extension_outputs", {}),
         "attestationFormat": cred.get("attestation_format", "none"),
-        "attestationStatement": storage.convert_bytes_for_json(
+        "attestationStatement": credential_store.convert_bytes_for_json(
             cred.get("attestation_statement", {})
         ),
         "publicKeyAlgorithm": cred_data.public_key[3]
@@ -227,7 +228,7 @@ def build_credential_info_from_object_credential_data(
 
     add_registration_metadata(credential_info, cred)
 
-    storage.add_public_key_material(credential_info, getattr(cred_data, "public_key", {}))
+    credential_store.add_public_key_material(credential_info, getattr(cred_data, "public_key", {}))
     if credential_info.get("publicKeyAlgorithm") is not None:
         credential_info["algorithm"] = credential_info["publicKeyAlgorithm"]
 
@@ -279,7 +280,7 @@ def build_credential_info_from_bare_credential(email: str, cred: Any) -> dict[st
         "properties": {},
     }
 
-    storage.add_public_key_material(credential_info, getattr(cred, "public_key", {}))
+    credential_store.add_public_key_material(credential_info, getattr(cred, "public_key", {}))
     if credential_info.get("publicKeyAlgorithm") is not None:
         credential_info["algorithm"] = credential_info["publicKeyAlgorithm"]
 
@@ -293,8 +294,8 @@ def list_credentials():
     if request.method == "DELETE":
         removed = 0
         try:
-            for username in list(storage.list_credentials(session_id=metadata_session_id).keys()):
-                storage.delkey(username, session_id=metadata_session_id)
+            for username in list(credential_store.list_credentials(session_id=metadata_session_id).keys()):
+                credential_store.delkey(username, session_id=metadata_session_id)
                 removed += 1
         except Exception:
             pass
@@ -304,7 +305,7 @@ def list_credentials():
     credentials: list[dict[str, Any]] = []
 
     try:
-        for email, user_creds in storage.iter_credentials(session_id=metadata_session_id):
+        for email, user_creds in credential_store.iter_credentials(session_id=metadata_session_id):
             try:
                 for cred in user_creds:
                     try:

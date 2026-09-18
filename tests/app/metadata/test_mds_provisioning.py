@@ -42,7 +42,7 @@ def test_local_files_are_used_without_touching_cloud_storage(static_root, monkey
     def _fail(*args, **kwargs):  # pragma: no cover - must not be reached
         raise AssertionError("Cloud Storage must not be consulted for local files.")
 
-    monkeypatch.setattr(provisioning.cloud_storage, "download_bytes", _fail)
+    monkeypatch.setattr(provisioning.cloud, "download_bytes", _fail)
 
     assert provisioning.ensure_snapshot_available() == "local"
 
@@ -50,9 +50,9 @@ def test_local_files_are_used_without_touching_cloud_storage(static_root, monkey
 def test_missing_files_are_downloaded_from_cloud_storage(static_root, monkeypatch):
     requested = []
 
-    monkeypatch.setattr(provisioning.cloud_storage, "gcs_enabled", lambda: True)
+    monkeypatch.setattr(provisioning.cloud, "gcs_enabled", lambda: True)
     monkeypatch.setattr(
-        provisioning.cloud_storage,
+        provisioning.cloud,
         "download_bytes",
         lambda name: requested.append(name) or b'{"entries": []}',
     )
@@ -64,9 +64,9 @@ def test_missing_files_are_downloaded_from_cloud_storage(static_root, monkeypatc
 
 def test_provisioning_result_is_reused_within_a_process(static_root, monkeypatch):
     calls = []
-    monkeypatch.setattr(provisioning.cloud_storage, "gcs_enabled", lambda: True)
+    monkeypatch.setattr(provisioning.cloud, "gcs_enabled", lambda: True)
     monkeypatch.setattr(
-        provisioning.cloud_storage,
+        provisioning.cloud,
         "download_bytes",
         lambda name: calls.append(name) or b"{}",
     )
@@ -77,15 +77,15 @@ def test_provisioning_result_is_reused_within_a_process(static_root, monkeypatch
 
 
 def test_snapshot_is_unavailable_without_cloud_storage_or_upstream(static_root, monkeypatch):
-    monkeypatch.setattr(provisioning.cloud_storage, "gcs_enabled", lambda: False)
+    monkeypatch.setattr(provisioning.cloud, "gcs_enabled", lambda: False)
     monkeypatch.setenv("FIDO_SERVER_MDS_FETCH_UPSTREAM", "0")
 
     assert provisioning.ensure_snapshot_available() == "unavailable"
 
 
 def test_a_cloud_storage_gap_falls_through_to_an_upstream_refresh(static_root, monkeypatch):
-    monkeypatch.setattr(provisioning.cloud_storage, "gcs_enabled", lambda: True)
-    monkeypatch.setattr(provisioning.cloud_storage, "download_bytes", lambda name: None)
+    monkeypatch.setattr(provisioning.cloud, "gcs_enabled", lambda: True)
+    monkeypatch.setattr(provisioning.cloud, "download_bytes", lambda name: None)
     monkeypatch.setenv("FIDO_SERVER_MDS_FETCH_UPSTREAM", "1")
 
     published = []
@@ -97,8 +97,8 @@ def test_a_cloud_storage_gap_falls_through_to_an_upstream_refresh(static_root, m
 
 
 def test_a_failed_upstream_refresh_leaves_the_snapshot_unavailable(static_root, monkeypatch):
-    monkeypatch.setattr(provisioning.cloud_storage, "gcs_enabled", lambda: True)
-    monkeypatch.setattr(provisioning.cloud_storage, "download_bytes", lambda name: None)
+    monkeypatch.setattr(provisioning.cloud, "gcs_enabled", lambda: True)
+    monkeypatch.setattr(provisioning.cloud, "download_bytes", lambda name: None)
     monkeypatch.setenv("FIDO_SERVER_MDS_FETCH_UPSTREAM", "1")
     monkeypatch.setattr(provisioning, "_refresh_from_upstream", lambda: False)
 
@@ -106,12 +106,12 @@ def test_a_failed_upstream_refresh_leaves_the_snapshot_unavailable(static_root, 
 
 
 def test_a_cloud_storage_error_does_not_propagate(static_root, monkeypatch):
-    monkeypatch.setattr(provisioning.cloud_storage, "gcs_enabled", lambda: True)
+    monkeypatch.setattr(provisioning.cloud, "gcs_enabled", lambda: True)
 
     def _raise(name):
         raise RuntimeError("bucket unreachable")
 
-    monkeypatch.setattr(provisioning.cloud_storage, "download_bytes", _raise)
+    monkeypatch.setattr(provisioning.cloud, "download_bytes", _raise)
     monkeypatch.setenv("FIDO_SERVER_MDS_FETCH_UPSTREAM", "0")
 
     assert provisioning.ensure_snapshot_available() == "unavailable"
@@ -141,10 +141,10 @@ def test_no_partial_files_are_left_behind(static_root):
 def test_upstream_refresh_defaults_to_the_cloud_storage_setting(monkeypatch):
     monkeypatch.delenv("FIDO_SERVER_MDS_FETCH_UPSTREAM", raising=False)
 
-    monkeypatch.setattr(provisioning.cloud_storage, "gcs_enabled", lambda: True)
+    monkeypatch.setattr(provisioning.cloud, "gcs_enabled", lambda: True)
     assert provisioning.upstream_refresh_enabled() is True
 
-    monkeypatch.setattr(provisioning.cloud_storage, "gcs_enabled", lambda: False)
+    monkeypatch.setattr(provisioning.cloud, "gcs_enabled", lambda: False)
     assert provisioning.upstream_refresh_enabled() is False
 
 
@@ -195,9 +195,9 @@ def test_upstream_refresh_reports_a_build_without_the_updater(static_root, monke
 
 def test_upload_publishes_only_the_files_that_exist(static_root, monkeypatch):
     uploaded = []
-    monkeypatch.setattr(provisioning.cloud_storage, "gcs_enabled", lambda: True)
+    monkeypatch.setattr(provisioning.cloud, "gcs_enabled", lambda: True)
     monkeypatch.setattr(
-        provisioning.cloud_storage,
+        provisioning.cloud,
         "upload_bytes",
         lambda name, data, content_type=None: uploaded.append((name, content_type)),
     )
@@ -213,24 +213,24 @@ def test_upload_publishes_only_the_files_that_exist(static_root, monkeypatch):
 
 
 def test_upload_is_skipped_when_cloud_storage_is_disabled(static_root, monkeypatch):
-    monkeypatch.setattr(provisioning.cloud_storage, "gcs_enabled", lambda: False)
+    monkeypatch.setattr(provisioning.cloud, "gcs_enabled", lambda: False)
 
     def _fail(*args, **kwargs):  # pragma: no cover - must not be reached
         raise AssertionError("Nothing may be uploaded with Cloud Storage disabled.")
 
-    monkeypatch.setattr(provisioning.cloud_storage, "upload_bytes", _fail)
+    monkeypatch.setattr(provisioning.cloud, "upload_bytes", _fail)
     (static_root / "blob.jwt").write_bytes(b"blob")
 
     provisioning._upload_to_gcs(provisioning.SNAPSHOT_FILENAMES)
 
 
 def test_an_upload_error_does_not_propagate(static_root, monkeypatch):
-    monkeypatch.setattr(provisioning.cloud_storage, "gcs_enabled", lambda: True)
+    monkeypatch.setattr(provisioning.cloud, "gcs_enabled", lambda: True)
 
     def _raise(name, data, content_type=None):
         raise RuntimeError("bucket unreachable")
 
-    monkeypatch.setattr(provisioning.cloud_storage, "upload_bytes", _raise)
+    monkeypatch.setattr(provisioning.cloud, "upload_bytes", _raise)
     (static_root / "blob.jwt").write_bytes(b"blob")
 
     provisioning._upload_to_gcs(provisioning.SNAPSHOT_FILENAMES)

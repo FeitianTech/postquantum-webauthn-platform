@@ -1,4 +1,4 @@
-"""Local-storage contract tests for server.app.storage."""
+"""Local-storage contract tests for server.app.storage.credentials."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ import pytest
 
 @pytest.fixture
 def storage_local(monkeypatch, tmp_path):
-    storage = pytest.importorskip("server.app.storage")
+    storage = pytest.importorskip("server.app.storage.credentials")
 
     monkeypatch.setattr(storage, "basepath", str(tmp_path), raising=False)
     monkeypatch.setattr(

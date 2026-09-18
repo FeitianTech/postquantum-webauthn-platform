@@ -307,11 +307,14 @@ def _publish_to_cloud_storage() -> int:
     """Upload the snapshot files to the bucket the server provisions from."""
 
     try:
-        from server.app import cloud_storage, mds_provisioning
+        from server.app import mds_provisioning
+        from server.app.storage import cloud
     except ModuleNotFoundError:  # The image copies server/app to /app/server.
-        from server import cloud_storage, mds_provisioning
+        from server.storage import cloud
 
-    if not cloud_storage.gcs_enabled():
+        from server import mds_provisioning
+
+    if not cloud.gcs_enabled():
         print(
             "::error::Cloud Storage is disabled; set FIDO_SERVER_GCS_ENABLED=1 "
             "and FIDO_SERVER_GCS_BUCKET to publish the snapshot."
@@ -326,7 +329,7 @@ def _publish_to_cloud_storage() -> int:
 
     for filename in mds_provisioning.SNAPSHOT_FILENAMES:
         blob_name = mds_provisioning.snapshot_blob_name(filename)
-        cloud_storage.upload_bytes(
+        cloud.upload_bytes(
             blob_name,
             (FRONTEND_STATIC_DIR / filename).read_bytes(),
             content_type="application/json" if filename.endswith(".json") else None,

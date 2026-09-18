@@ -29,7 +29,6 @@ from ... import (
     device_logs,
     metadata,
     pqc,
-    storage,
 )
 from ...attachments import (
     normalize_attachment,
@@ -37,6 +36,7 @@ from ...attachments import (
     resolve_effective_attachments,
 )
 from ...encoding import decode_hex, encode_base64, encode_base64url
+from ...storage import credentials
 from .. import binary_helpers
 from . import algorithms, binary, summary, tracing
 
@@ -114,7 +114,7 @@ def prepare_register_complete_inputs(
         return None, (jsonify({"error": "Username is required in user.name"}), 400)
 
     metadata_session_id = metadata.ensure_metadata_session_id()
-    storage.readkey(username, session_id=metadata_session_id)
+    credentials.readkey(username, session_id=metadata_session_id)
 
     auth_selection = public_key.get("authenticatorSelection", {})
     if isinstance(auth_selection, Mapping):
@@ -399,7 +399,7 @@ def build_registration_material(
         "registrationData": {
             "authenticatorData": authenticator_data_hex,
             "authenticatorDataHash": authenticator_data_hash,
-            "clientExtensionResults": storage.convert_bytes_for_json(client_extension_results),
+            "clientExtensionResults": credentials.convert_bytes_for_json(client_extension_results),
             "flags": flags_dict,
             "signatureCounter": auth_data.counter,
             "attestationChecks": attestation_checks_safe,
@@ -423,8 +423,8 @@ def build_registration_material(
     user_handle_b64url = encode_base64url(user_handle)
     user_handle_b64 = encode_base64(user_handle)
 
-    stored_properties = storage.convert_bytes_for_json(credential_info.get("properties", {}))
-    stored_extensions = storage.convert_bytes_for_json(client_extension_results)
+    stored_properties = credentials.convert_bytes_for_json(credential_info.get("properties", {}))
+    stored_extensions = credentials.convert_bytes_for_json(client_extension_results)
 
     public_key_b64 = None
     public_key_b64url = None
@@ -462,11 +462,11 @@ def build_registration_material(
         "createdAt": credential_info["registration_time"],
         "clientExtensionOutputs": stored_extensions,
         "attestationFormat": attestation_format,
-        "attestationStatement": storage.convert_bytes_for_json(attestation_statement),
-        "attestationObject": storage.convert_bytes_for_json(credential_info.get("attestation_object")),
+        "attestationStatement": credentials.convert_bytes_for_json(attestation_statement),
+        "attestationObject": credentials.convert_bytes_for_json(credential_info.get("attestation_object")),
         "authenticatorData": authenticator_data_hex,
         "authenticatorDataHash": authenticator_data_hash,
-        "clientDataJSON": storage.convert_bytes_for_json(credential_info.get("client_data_json")),
+        "clientDataJSON": credentials.convert_bytes_for_json(credential_info.get("client_data_json")),
         "relyingParty": attestation.make_json_safe(rp_info),
         "properties": stored_properties,
         "registrationResponse": credential_info.get("registration_response"),
@@ -476,7 +476,7 @@ def build_registration_material(
         "userHandleHex": user_handle.hex(),
     }
 
-    stored_credential = storage.convert_bytes_for_json(
+    stored_credential = credentials.convert_bytes_for_json(
         {k: v for k, v in stored_credential.items() if v is not None}
     )
 
@@ -793,7 +793,7 @@ def advanced_register_complete():
             credential_info["attestationCertificates"] = attestation_certificates_details
             credential_info["properties"]["attestationCertificates"] = attestation_certificates_details
 
-        storage.add_public_key_material(credential_info, getattr(auth_data.credential_data, "public_key", {}))
+        credentials.add_public_key_material(credential_info, getattr(auth_data.credential_data, "public_key", {}))
         attestation.augment_aaguid_fields(credential_info)
         if authenticator_extensions_summary:
             credential_info["authenticator_extensions"] = authenticator_extensions_summary

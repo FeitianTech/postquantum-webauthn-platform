@@ -25,8 +25,10 @@ from typing import Any
 
 from fido2.webauthn import AttestedCredentialData, AuthenticatorData
 
-from . import encoding
-from .cloud_storage import (
+from .. import encoding
+from ..config import app, basepath
+from ..env_flags import parse_env_flag
+from .cloud import (
     build_blob_name,
     delete_blob,
     download_bytes,
@@ -34,9 +36,7 @@ from .cloud_storage import (
     list_blob_names,
     upload_bytes,
 )
-from .config import app, basepath
-from .env_flags import parse_env_flag
-from .storage_common import (
+from .common import (
     assert_contained_blob_name,
     build_session_root_prefix,
     build_session_scoped_prefix,

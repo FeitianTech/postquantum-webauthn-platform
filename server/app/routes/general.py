@@ -34,7 +34,7 @@ from ..metadata import (
 )
 from ..startup import startup_fail_fast_enabled
 from ..static_assets import asset_url
-from ..storage import delkey, encode_records, readkey
+from ..storage.credentials import delkey, encode_records, readkey
 
 _metadata_bootstrap_lock = Lock()
 _metadata_bootstrap_state = {

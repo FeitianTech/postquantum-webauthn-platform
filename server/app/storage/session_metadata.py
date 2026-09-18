@@ -8,7 +8,8 @@ import threading
 import time
 from datetime import timedelta
 
-from .cloud_storage import (
+from ..config import SESSION_METADATA_DIR, app
+from .cloud import (
     blob_exists,
     blob_updated_timestamp,
     build_blob_name,
@@ -18,8 +19,7 @@ from .cloud_storage import (
     list_blob_names,
     upload_bytes,
 )
-from .config import SESSION_METADATA_DIR, app
-from .storage_common import (
+from .common import (
     build_session_root_prefix,
     build_session_scoped_prefix,
     using_gcs_backend,

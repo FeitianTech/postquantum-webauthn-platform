@@ -9,7 +9,7 @@ from typing import Any
 
 from werkzeug.security import safe_join
 
-from .cloud_storage import build_blob_name, normalise_blob_prefix
+from .cloud import build_blob_name, normalise_blob_prefix
 
 __all__ = [
     "assert_contained_blob_name",
@@ -95,7 +95,7 @@ def build_session_scoped_prefix(
 def resolve_metadata_session_id(session_id: str | None = None) -> str:
     """Resolve a session id using metadata fallback with lazy import cycle-avoidance."""
 
-    from .metadata import ensure_metadata_session_id
+    from ..metadata import ensure_metadata_session_id
 
     return resolve_session_id(session_id, ensure_metadata_session_id)
 

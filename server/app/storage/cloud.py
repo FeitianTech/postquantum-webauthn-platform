@@ -9,7 +9,7 @@ import time
 from collections.abc import Callable, Iterable
 from typing import Any, TypeVar
 
-from .env_flags import parse_env_flag
+from ..env_flags import parse_env_flag
 
 __all__ = [
     "blob_exists",

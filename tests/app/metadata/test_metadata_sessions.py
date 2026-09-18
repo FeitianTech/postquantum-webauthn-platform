@@ -7,7 +7,7 @@ from flask import session as flask_session
 @pytest.fixture
 def session_metadata_env(monkeypatch, tmp_path, metadata_state, session_store, app_config):
     metadata = pytest.importorskip("server.app.metadata")
-    session_store = pytest.importorskip("server.app.session_metadata_store")
+    session_store = pytest.importorskip("server.app.storage.session_metadata")
 
     session_dir = tmp_path / "sessions"
     session_dir.mkdir()
