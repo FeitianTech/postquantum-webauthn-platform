@@ -35,14 +35,27 @@ from ..attestation import (
     summarize_authenticator_extensions,
 )
 from .decode_parts import (
+    binary_extract,
     cbor_core,
+    cbor_lenient,
     cbor_runtime,
+    cbor_sequence,
+    cbor_strict,
+    certificate_extensions,
+    certificate_summary,
+    conversion_cert_leaf,
+    conversion_leaf,
+    ctap_classify,
+    ctap_convert_leaf,
     ctap_repair_leaf,
+    ctap_repair_make,
     ctap_runtime_interpret,
     ctap_runtime_parse,
     details_runtime,
+    key_utils,
     pipeline_runtime,
     result_runtime,
+    summary_leaf,
     summary_runtime,
 )
 from .decode_parts.binary_extract import (
