@@ -69,6 +69,19 @@ from ..pqc import (
     log_algorithm_selection,
 )
 from ..storage import add_public_key_material, convert_bytes_for_json, readkey
+from .advanced_parts import (
+    algorithm_helpers_impl,
+    artifacts_impl,
+    authenticate_begin_impl,
+    authenticate_complete_impl,
+    binary_helpers_impl,
+    constants,
+    logging_helpers_impl,
+    parsing_helpers_impl,
+    register_begin_impl,
+    register_complete_impl,
+    summary_helpers_impl,
+)
 from .advanced_parts.algorithm_helpers_impl import (
     _coerce_cose_algorithm_impl,
     _derive_algorithms_from_credentials_impl,
