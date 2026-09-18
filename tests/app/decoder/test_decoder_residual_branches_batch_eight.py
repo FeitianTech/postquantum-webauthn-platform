@@ -128,13 +128,13 @@ def test_collect_attested_info_fallback_paths_without_auth_bytes():
     assert decode_module._collect_attested_info({}, None) == {}
 
 
-def test_binary_extractors_and_authenticator_fallback_paths(monkeypatch):
+def test_binary_extractors_and_authenticator_fallback_paths(monkeypatch, binary_extract):
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     assert decode_module._extract_hex_from_binary({"binary": {"hex": "aabb"}}) == "aabb"
 
     monkeypatch.setattr(
-        decode_module,
+        binary_extract,
         "_extract_authenticator_bytes_from_attestation",
         lambda _entry: b"from-attestation",
     )
