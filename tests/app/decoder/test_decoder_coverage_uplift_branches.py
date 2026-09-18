@@ -55,9 +55,7 @@ def test_parse_cbor_item_covers_simple_and_single_double_precision_float_paths()
     assert double_node["value"] == 1.0
 
 
-def test_decode_cbor_sequence_uses_structure_to_value_when_fallback_structure_parse_succeeds(
-    monkeypatch,
-):
+def test_decode_cbor_sequence_uses_structure_to_value_when_fallback_structure_parse_succeeds(monkeypatch, cbor_strict):
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     monkeypatch.setattr(
@@ -75,7 +73,7 @@ def test_decode_cbor_sequence_uses_structure_to_value_when_fallback_structure_pa
 
     monkeypatch.setattr(decode_module.cbor2, "CBORDecoder", _BrokenDecoder)
     monkeypatch.setattr(
-        decode_module,
+        cbor_strict,
         "_decode_cbor_structure",
         lambda _payload: (
             {

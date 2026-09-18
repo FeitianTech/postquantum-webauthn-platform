@@ -1,7 +1,10 @@
 """Compatibility facade for CBOR parser internals.
 
-This module preserves monkeypatchable symbols expected by decode.py tests while
-forwarding strict/lenient logic into smaller split modules.
+Nothing in the decoder routes through this module any more: each caller reaches
+``cbor_strict`` or ``cbor_lenient`` directly, so a patch applied to the module
+that defines a helper is the one the parser reads. The delegates below resolve
+their target at call time for the same reason -- a plain assignment here would
+bind at import and stop seeing such a patch.
 """
 from __future__ import annotations
 
@@ -11,31 +14,13 @@ from typing import Any
 from . import cbor_lenient as _lenient
 from . import cbor_strict as _strict
 
-_CborDecodingError = _strict._CborDecodingError
-_ensure_cbor_available = _strict._ensure_cbor_available
-_float_summary = _strict._float_summary
-_read_cbor_length = _strict._read_cbor_length
-
 
 def _parse_cbor_item(data: bytes, offset: int) -> tuple[dict[str, Any], int]:
-    original_read_cbor_length = _strict._read_cbor_length
-    original_ensure_cbor_available = _strict._ensure_cbor_available
-    original_float_summary = _strict._float_summary
-    try:
-        _strict._read_cbor_length = _read_cbor_length
-        _strict._ensure_cbor_available = _ensure_cbor_available
-        _strict._float_summary = _float_summary
-        return _strict._parse_cbor_item(data, offset)
-    finally:
-        _strict._read_cbor_length = original_read_cbor_length
-        _strict._ensure_cbor_available = original_ensure_cbor_available
-        _strict._float_summary = original_float_summary
+    return _strict._parse_cbor_item(data, offset)
 
 
 def _decode_cbor_structure(data: bytes) -> tuple[dict[str, Any], int]:
-    node, offset = _parse_cbor_item(data, 0)
-    node.setdefault("byteLength", offset)
-    return node, offset
+    return _strict._decode_cbor_structure(data)
 
 
 def _structure_to_value(node: Mapping[str, Any]) -> Any:

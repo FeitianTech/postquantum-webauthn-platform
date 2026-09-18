@@ -63,7 +63,7 @@ def test_decode_cbor_sequence_handles_fallback_decoder_and_zero_consumed_paths(m
     assert remaining == b"\x01"
 
 
-def test_decode_cbor_sequence_breaks_when_lenient_fallback_raises(monkeypatch):
+def test_decode_cbor_sequence_breaks_when_lenient_fallback_raises(monkeypatch, cbor_strict, cbor_lenient):
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     monkeypatch.setattr(
@@ -81,14 +81,14 @@ def test_decode_cbor_sequence_breaks_when_lenient_fallback_raises(monkeypatch):
 
     monkeypatch.setattr(decode_module.cbor2, "CBORDecoder", _BrokenDecoder)
     monkeypatch.setattr(
-        decode_module,
+        cbor_strict,
         "_decode_cbor_structure",
         lambda _payload: (_ for _ in ()).throw(
             decode_module._CborDecodingError("bad", 0)
         ),
     )
     monkeypatch.setattr(
-        decode_module,
+        cbor_lenient,
         "_lenient_decode_from",
         lambda _payload, _offset=0: (_ for _ in ()).throw(RuntimeError("boom")),
     )
@@ -178,16 +178,16 @@ def test_repair_get_assertion_entries_handles_non_dict_and_non_list_entries_sour
     assert rebuilt_sig is None
 
 
-def test_repair_get_assertion_entries_recovers_trailing_fields_and_prunes_byte_keys(monkeypatch):
+def test_repair_get_assertion_entries_recovers_trailing_fields_and_prunes_byte_keys(monkeypatch, ctap_repair_leaf):
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     monkeypatch.setattr(
-        decode_module,
+        ctap_repair_leaf,
         "_extract_get_assertion_trailing_from_raw",
         lambda _raw: (b"sig-trailing", {5: 99, 7: b"x"}),
     )
     monkeypatch.setattr(
-        decode_module,
+        ctap_repair_leaf,
         "_split_get_assertion_trailing_fields",
         lambda _signature: (b"sig-final", {4: {"id": "split-user"}, 6: True}),
     )
@@ -217,7 +217,7 @@ def test_repair_get_assertion_entries_recovers_trailing_fields_and_prunes_byte_k
     assert repaired_structure["summary"].startswith("map[")
 
 
-def test_parse_authenticator_data_bytes_handles_truncation_and_decode_failures(monkeypatch):
+def test_parse_authenticator_data_bytes_handles_truncation_and_decode_failures(monkeypatch, cbor_lenient):
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     truncated_payload = b"\x00" * 32 + bytes([decode_module.AuthenticatorData.FLAG.AT]) + (1).to_bytes(4, "big")
@@ -248,7 +248,7 @@ def test_parse_authenticator_data_bytes_handles_truncation_and_decode_failures(m
     )
 
     monkeypatch.setattr(
-        decode_module,
+        cbor_lenient,
         "_lenient_decode_from",
         lambda *_args, **_kwargs: (_ for _ in ()).throw(ValueError("decode failure")),
     )
@@ -257,7 +257,7 @@ def test_parse_authenticator_data_bytes_handles_truncation_and_decode_failures(m
     assert details["attestedCredentialData"]["credentialPublicKey"] == "a1"
 
 
-def test_parse_authenticator_data_bytes_handles_extension_non_mapping_and_zero_consumed(monkeypatch):
+def test_parse_authenticator_data_bytes_handles_extension_non_mapping_and_zero_consumed(monkeypatch, cbor_lenient):
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     extension_payload = (
@@ -271,7 +271,7 @@ def test_parse_authenticator_data_bytes_handles_extension_non_mapping_and_zero_c
     assert trailing == b""
 
     monkeypatch.setattr(
-        decode_module,
+        cbor_lenient,
         "_lenient_decode_from",
         lambda *_args, **_kwargs: (None, 0),
     )

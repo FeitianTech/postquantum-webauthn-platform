@@ -60,7 +60,7 @@ def test_locate_get_assertion_trailing_offset_handles_mapping_list_and_fallback(
     assert decode_module._locate_get_assertion_trailing_offset(raw_other, 0) == len(raw_other)
 
 
-def test_extract_get_assertion_trailing_from_raw_short_and_rfind_fallback(monkeypatch):
+def test_extract_get_assertion_trailing_from_raw_short_and_rfind_fallback(monkeypatch, ctap_repair_leaf):
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     assert decode_module._extract_get_assertion_trailing_from_raw(b"") == (None, {})
@@ -68,7 +68,7 @@ def test_extract_get_assertion_trailing_from_raw_short_and_rfind_fallback(monkey
 
     raw = b"\x03\x58\x08ABC" + b"\x40" + b"\x05" + cbor2.dumps(9)
     monkeypatch.setattr(
-        decode_module,
+        ctap_repair_leaf,
         "_locate_get_assertion_trailing_offset",
         lambda _raw, start: start + 3,
     )
