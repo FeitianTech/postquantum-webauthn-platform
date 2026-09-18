@@ -67,7 +67,7 @@ def test_decode_cbor_sequence_handles_fallback_decoder_and_zero_consumed_paths(m
     assert remaining == b"\x01"
 
 
-def test_decode_cbor_sequence_breaks_when_lenient_fallback_raises(monkeypatch, cbor_strict, cbor_lenient):
+def test_decode_cbor_sequence_breaks_when_lenient_fallback_raises(monkeypatch, cbor_parser, cbor_lenient):
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     monkeypatch.setattr(
@@ -85,7 +85,7 @@ def test_decode_cbor_sequence_breaks_when_lenient_fallback_raises(monkeypatch, c
 
     monkeypatch.setattr(cbor2, "CBORDecoder", _BrokenDecoder)
     monkeypatch.setattr(
-        cbor_strict,
+        cbor_parser,
         "_decode_cbor_structure",
         lambda _payload: (_ for _ in ()).throw(
             decode_module._CborDecodingError("bad", 0)

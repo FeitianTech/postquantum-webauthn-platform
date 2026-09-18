@@ -12,9 +12,9 @@ from ... import attestation
 from . import (
     binary,
     cbor_lenient,
+    cbor_parser,
     cbor_runtime,
     cbor_sequence,
-    cbor_strict,
     certificates,
     conversion_leaf,
     ctap_classify,
@@ -68,12 +68,12 @@ _extract_hex_from_binary = binary._extract_hex_from_binary
 _resolve_cose_algorithm = binary._resolve_cose_algorithm
 
 # Strict CBOR parsing primitives.
-_CborDecodingError = cbor_strict._CborDecodingError
-_decode_cbor_structure = cbor_strict._decode_cbor_structure
-_ensure_cbor_available = cbor_strict._ensure_cbor_available
-_float_summary = cbor_strict._float_summary
-_parse_cbor_item = cbor_strict._parse_cbor_item
-_read_cbor_length = cbor_strict._read_cbor_length
+_CborDecodingError = cbor_parser._CborDecodingError
+_decode_cbor_structure = cbor_parser._decode_cbor_structure
+_ensure_cbor_available = cbor_parser._ensure_cbor_available
+_float_summary = cbor_parser._float_summary
+_parse_cbor_item = cbor_parser._parse_cbor_item
+_read_cbor_length = cbor_parser._read_cbor_length
 
 # Lenient CBOR decoding primitives.
 _lenient_decode_from = cbor_lenient._lenient_decode_from
