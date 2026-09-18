@@ -17,7 +17,7 @@ from ...challenge_registry import (
 from ...encoding import encode_base64url
 from ...sign_count import SIGN_COUNT_REGRESSED, sign_count_status
 from .. import binary_helpers
-from . import credential_parsing_impl, sign_count_impl
+from . import parsing, sign_count_impl
 
 
 def authenticate_begin_impl():
@@ -30,7 +30,7 @@ def authenticate_begin_impl():
         if isinstance(candidate_credentials, list):
             raw_credentials = candidate_credentials
 
-    credential_data_list, serialized = credential_parsing_impl._parse_client_credentials_impl(raw_credentials)
+    credential_data_list, serialized = parsing._parse_client_credentials_impl(raw_credentials)
 
     if not credential_data_list:
         abort(404)
@@ -77,7 +77,7 @@ def authenticate_complete_impl():
     )
 
     session_credentials = session.pop("simple_credentials", [])
-    credential_data_list, _ = credential_parsing_impl._parse_client_credentials_impl(session_credentials)
+    credential_data_list, _ = parsing._parse_client_credentials_impl(session_credentials)
     if not credential_data_list:
         session.pop("authenticate_rp_id", None)
         session.pop("simple_credentials_email", None)
