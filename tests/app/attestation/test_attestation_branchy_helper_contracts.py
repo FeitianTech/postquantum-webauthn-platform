@@ -426,7 +426,7 @@ def test_evaluate_classical_attestation_root_forces_chain_false_on_expired_leaf(
     assert outcome["root_valid"] is False
 
 
-def test_attempt_pqc_attestation_signature_validation_covers_trust_path_error_paths(monkeypatch, pqc_runtime, attestation_module):
+def test_attempt_pqc_attestation_signature_validation_covers_trust_path_error_paths(monkeypatch, pqc, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     auth_data = SimpleNamespace(credential_data=SimpleNamespace(public_key={}), __bytes__=lambda self=None: b"auth")
@@ -445,7 +445,7 @@ def test_attempt_pqc_attestation_signature_validation_covers_trust_path_error_pa
 
     monkeypatch.setattr(CoseKey, "for_alg", lambda _alg: (lambda _map: object()))
     monkeypatch.setattr(
-        pqc_runtime,
+        pqc,
         "extract_certificate_public_key_info",
         lambda _cert: (_ for _ in ()).throw(ValueError("bad cert key")),
     )
@@ -456,7 +456,7 @@ def test_attempt_pqc_attestation_signature_validation_covers_trust_path_error_pa
     assert key_error["error"].startswith("pqc_attestation_public_key_error:")
 
     monkeypatch.setattr(
-        pqc_runtime,
+        pqc,
         "extract_certificate_public_key_info",
         lambda _cert: {"subject_public_key": None},
     )
@@ -467,7 +467,7 @@ def test_attempt_pqc_attestation_signature_validation_covers_trust_path_error_pa
     assert missing_key["error"] == "pqc_attestation_public_key_missing"
 
 
-def test_attempt_pqc_attestation_signature_validation_verification_failure_and_success(monkeypatch, pqc_runtime, attestation_module):
+def test_attempt_pqc_attestation_signature_validation_verification_failure_and_success(monkeypatch, pqc, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     class _VerifyFails:
@@ -485,7 +485,7 @@ def test_attempt_pqc_attestation_signature_validation_verification_failure_and_s
             return b"auth-data"
 
     monkeypatch.setattr(
-        pqc_runtime,
+        pqc,
         "extract_certificate_public_key_info",
         lambda _cert: {"subject_public_key": b"public-key"},
     )
