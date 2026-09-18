@@ -72,7 +72,7 @@ def snapshot_runtime():
 def items_runtime():
     """The fragment that defines the session metadata item helpers."""
 
-    return pytest.importorskip("server.app.metadata.session_items_runtime")
+    return pytest.importorskip("server.app.metadata.sessions")
 
 
 @pytest.fixture
