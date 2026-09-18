@@ -9,7 +9,7 @@ from typing import Any
 from fido2.webauthn import AuthenticatorData
 
 from ...attestation import encode_base64url
-from . import result_runtime
+from . import pipeline_runtime, result_runtime
 from .cbor_lenient import _lenient_decode_from, _lenient_read_uint
 from .ctap_convert_leaf import (
     _attempt_decode_cbor_map,
@@ -306,7 +306,7 @@ def _convert_ctap_user(entry: Any) -> Any:
 
     if isinstance(entry, str):
         try:
-            decoded_value, _ = _decode_binary_input(entry)
+            decoded_value, _ = pipeline_runtime._decode_binary_input(entry)
         except ValueError:
             decoded_value = None
         if decoded_value:

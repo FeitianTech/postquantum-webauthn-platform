@@ -1,5 +1,4 @@
 """Client data and authenticator data description helpers for the decoder."""
-# pyright: reportUndefinedVariable=false  # _decode_binary_input still comes from the carrier
 from __future__ import annotations
 
 import base64
@@ -18,6 +17,7 @@ from ...attestation import (
     serialize_attestation_certificate,
     summarize_authenticator_extensions,
 )
+from . import pipeline_runtime
 
 
 def _describe_client_data_from_bytes(data: bytes) -> dict[str, Any]:
@@ -153,7 +153,7 @@ def _build_client_data_details(
         challenge_info: dict[str, Any] = {"raw": challenge_value}
         if isinstance(challenge_value, str):
             try:
-                challenge_bytes, challenge_encoding = _decode_binary_input(challenge_value)
+                challenge_bytes, challenge_encoding = pipeline_runtime._decode_binary_input(challenge_value)
             except ValueError:
                 pass
             else:
