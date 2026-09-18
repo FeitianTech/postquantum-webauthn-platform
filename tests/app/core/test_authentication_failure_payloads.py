@@ -44,7 +44,7 @@ def test_simple_authentication_failure_returns_failed_credential_id(monkeypatch,
     }
 
 
-def test_advanced_authentication_failure_returns_failed_credential_id(monkeypatch, config_module):
+def test_advanced_authentication_failure_returns_failed_credential_id(monkeypatch, config_module, advanced_algorithm_helpers):
     config_module = pytest.importorskip("server.app.config")
     advanced_module = pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
@@ -60,7 +60,7 @@ def test_advanced_authentication_failure_returns_failed_credential_id(monkeypatc
 
     monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FailingServer())
     monkeypatch.setattr(config_module, "determine_rp_id", lambda value=None: value or "example.com")
-    monkeypatch.setattr(advanced_module, "_derive_algorithms_from_credentials", lambda _credentials: [])
+    monkeypatch.setattr(advanced_algorithm_helpers, "_derive_algorithms_from_credentials_impl", lambda _credentials: [])
     monkeypatch.setattr(
         advanced_module,
         "_parse_client_supplied_credentials",

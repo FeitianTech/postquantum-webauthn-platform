@@ -17,7 +17,7 @@ from ...attachments import (
 )
 from ...challenge_registry import consume_ceremony_state
 from ...sign_count import sign_count_status
-from . import binary_helpers_impl
+from . import algorithm_helpers_impl, binary_helpers_impl
 
 #: The ceremony challenge was taken from the server-side Flask session.
 CHALLENGE_SOURCE_SERVER = "server-session"
@@ -252,7 +252,7 @@ def advanced_authenticate_complete_impl(advanced_module: Any):
         resolved_rp_id = config.determine_rp_id(stored_rp_id)
         auth_server = config.create_fido_server(rp_id=resolved_rp_id, rp_name=stored_rp_name)
 
-        derived_algorithms = advanced_module._derive_algorithms_from_credentials(all_credentials)
+        derived_algorithms = algorithm_helpers_impl._derive_algorithms_from_credentials_impl(all_credentials)
         if derived_algorithms:
             auth_server.allowed_algorithms = derived_algorithms
 

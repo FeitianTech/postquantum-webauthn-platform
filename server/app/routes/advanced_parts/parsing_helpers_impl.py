@@ -9,7 +9,7 @@ from fido2.cose import CoseKey
 from fido2.webauthn import AttestedCredentialData
 
 from ...attachments import normalize_attachment
-from . import binary_helpers_impl
+from . import algorithm_helpers_impl, binary_helpers_impl
 
 
 def _extract_credential_id_impl(_advanced_module: Any, value: Any) -> bytes | None:
@@ -111,7 +111,7 @@ def _parse_client_supplied_credentials_impl(
             )
 
             raw_alg_value = entry.get("algorithm") or entry.get("publicKeyAlgorithm")
-            algorithm_value = advanced_module._coerce_cose_algorithm(raw_alg_value)
+            algorithm_value = algorithm_helpers_impl._coerce_cose_algorithm_impl(raw_alg_value)
 
             resident_flag = advanced_module._extract_flag_from_mapping(
                 entry,

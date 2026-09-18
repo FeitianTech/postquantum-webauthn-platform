@@ -10,7 +10,7 @@ from fido2.webauthn import (
 )
 
 from ... import config, pqc
-from . import binary_helpers_impl
+from . import algorithm_helpers_impl, binary_helpers_impl
 
 
 def configure_allowed_algorithms(
@@ -39,12 +39,12 @@ def configure_allowed_algorithms(
                 elif type_value is not None:
                     continue
 
-                alg_value = advanced_module._coerce_cose_algorithm(raw_alg_value)
+                alg_value = algorithm_helpers_impl._coerce_cose_algorithm_impl(raw_alg_value)
                 if alg_value is None:
                     continue
                 normalized_params.append({"type": "public-key", "alg": alg_value})
             else:
-                alg_value = advanced_module._coerce_cose_algorithm(param)
+                alg_value = algorithm_helpers_impl._coerce_cose_algorithm_impl(param)
                 if alg_value is None:
                     continue
                 normalized_params.append({"type": "public-key", "alg": alg_value})

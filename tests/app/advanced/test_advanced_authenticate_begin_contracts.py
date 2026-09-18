@@ -336,7 +336,7 @@ def test_advanced_authenticate_begin_resident_mode_returns_hints_error_when_resi
     assert "No resident key credentials matched the selected hints" in response.get_json()["error"]
 
 
-def test_advanced_authenticate_begin_propagates_algorithms_extensions_and_uv_preferences(monkeypatch):
+def test_advanced_authenticate_begin_propagates_algorithms_extensions_and_uv_preferences(monkeypatch, advanced_algorithm_helpers):
     config_module = pytest.importorskip("server.app.config")
     advanced_module = pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
@@ -352,8 +352,8 @@ def test_advanced_authenticate_begin_propagates_algorithms_extensions_and_uv_pre
 
     expected_algorithms = [types.SimpleNamespace(alg=-7), types.SimpleNamespace(alg=-257)]
     monkeypatch.setattr(
-        advanced_module,
-        "_derive_algorithms_from_credentials",
+        advanced_algorithm_helpers,
+        "_derive_algorithms_from_credentials_impl",
         lambda source: expected_algorithms if list(source) == [records[0]["data"]] else []
     )
 

@@ -166,7 +166,7 @@ def test_advanced_authenticate_complete_missing_state_returns_400(monkeypatch):
             assert "advanced_auth_rp" not in session_state
 
 
-def test_advanced_authenticate_complete_custom_algorithm_does_not_bypass_verification(monkeypatch, config_module):
+def test_advanced_authenticate_complete_custom_algorithm_does_not_bypass_verification(monkeypatch, config_module, advanced_algorithm_helpers):
     """A custom/unknown declared algorithm must never yield status OK."""
 
     config_module = pytest.importorskip("server.app.config")
@@ -185,7 +185,7 @@ def test_advanced_authenticate_complete_custom_algorithm_does_not_bypass_verific
 
     monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FailingServer())
     monkeypatch.setattr(config_module, "determine_rp_id", lambda value=None: value or "example.com")
-    monkeypatch.setattr(advanced_module, "_derive_algorithms_from_credentials", lambda _credentials: [])
+    monkeypatch.setattr(advanced_algorithm_helpers, "_derive_algorithms_from_credentials_impl", lambda _credentials: [])
     monkeypatch.setattr(
         advanced_module,
         "_parse_client_supplied_credentials",
@@ -232,7 +232,7 @@ def test_advanced_authenticate_complete_custom_algorithm_does_not_bypass_verific
     assert "customAlgorithmBypass" not in payload
 
 
-def test_advanced_authenticate_complete_custom_algorithm_bypass_requires_requested_algorithm_match(monkeypatch, config_module):
+def test_advanced_authenticate_complete_custom_algorithm_bypass_requires_requested_algorithm_match(monkeypatch, config_module, advanced_algorithm_helpers):
     config_module = pytest.importorskip("server.app.config")
     advanced_module = pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
@@ -250,7 +250,7 @@ def test_advanced_authenticate_complete_custom_algorithm_bypass_requires_request
 
     monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FailingServer())
     monkeypatch.setattr(config_module, "determine_rp_id", lambda value=None: value or "example.com")
-    monkeypatch.setattr(advanced_module, "_derive_algorithms_from_credentials", lambda _credentials: [])
+    monkeypatch.setattr(advanced_algorithm_helpers, "_derive_algorithms_from_credentials_impl", lambda _credentials: [])
     monkeypatch.setattr(
         advanced_module,
         "_parse_client_supplied_credentials",
@@ -293,7 +293,7 @@ def test_advanced_authenticate_complete_custom_algorithm_bypass_requires_request
     assert payload["failedCredentialId"] == encoded_id
 
 
-def test_advanced_authenticate_complete_custom_algorithm_bypass_rejects_non_signature_errors(monkeypatch, config_module):
+def test_advanced_authenticate_complete_custom_algorithm_bypass_rejects_non_signature_errors(monkeypatch, config_module, advanced_algorithm_helpers):
     config_module = pytest.importorskip("server.app.config")
     advanced_module = pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
@@ -310,7 +310,7 @@ def test_advanced_authenticate_complete_custom_algorithm_bypass_rejects_non_sign
 
     monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FailingServer())
     monkeypatch.setattr(config_module, "determine_rp_id", lambda value=None: value or "example.com")
-    monkeypatch.setattr(advanced_module, "_derive_algorithms_from_credentials", lambda _credentials: [])
+    monkeypatch.setattr(advanced_algorithm_helpers, "_derive_algorithms_from_credentials_impl", lambda _credentials: [])
     monkeypatch.setattr(
         advanced_module,
         "_parse_client_supplied_credentials",

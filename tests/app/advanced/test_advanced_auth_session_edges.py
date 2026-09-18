@@ -12,7 +12,7 @@ class _AuthResult:
         self.public_key = public_key or {3: -7}
 
 
-def test_advanced_authenticate_complete_uses_request_state_fallback(monkeypatch, config_module):
+def test_advanced_authenticate_complete_uses_request_state_fallback(monkeypatch, config_module, advanced_algorithm_helpers):
     config_module = pytest.importorskip("server.app.config")
     advanced_module = pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
@@ -30,7 +30,7 @@ def test_advanced_authenticate_complete_uses_request_state_fallback(monkeypatch,
 
     monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FakeServer())
     monkeypatch.setattr(config_module, "determine_rp_id", lambda value=None: value or "example.com")
-    monkeypatch.setattr(advanced_module, "_derive_algorithms_from_credentials", lambda _credentials: [])
+    monkeypatch.setattr(advanced_algorithm_helpers, "_derive_algorithms_from_credentials_impl", lambda _credentials: [])
     monkeypatch.setattr(
         advanced_module,
         "_parse_client_supplied_credentials",
@@ -69,7 +69,7 @@ def test_advanced_authenticate_complete_uses_request_state_fallback(monkeypatch,
             assert "advanced_auth_rp" not in session_state
 
 
-def test_advanced_authenticate_complete_uses_advanced_rp_when_auth_rp_missing(monkeypatch, config_module):
+def test_advanced_authenticate_complete_uses_advanced_rp_when_auth_rp_missing(monkeypatch, config_module, advanced_algorithm_helpers):
     config_module = pytest.importorskip("server.app.config")
     advanced_module = pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
@@ -97,7 +97,7 @@ def test_advanced_authenticate_complete_uses_advanced_rp_when_auth_rp_missing(mo
         "create_fido_server",
         lambda **kwargs: _FakeServer(rp_id=kwargs.get("rp_id"))
     )
-    monkeypatch.setattr(advanced_module, "_derive_algorithms_from_credentials", lambda _credentials: [])
+    monkeypatch.setattr(advanced_algorithm_helpers, "_derive_algorithms_from_credentials_impl", lambda _credentials: [])
     monkeypatch.setattr(
         advanced_module,
         "_parse_client_supplied_credentials",
@@ -262,7 +262,7 @@ def test_advanced_authenticate_complete_rejects_attachment_not_allowed_by_sessio
             assert "advanced_authenticate_allowed_attachments" not in session_state
 
 
-def test_advanced_authenticate_complete_forwards_hash_algorithm_override(monkeypatch, config_module):
+def test_advanced_authenticate_complete_forwards_hash_algorithm_override(monkeypatch, config_module, advanced_algorithm_helpers):
     config_module = pytest.importorskip("server.app.config")
     advanced_module = pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
@@ -280,7 +280,7 @@ def test_advanced_authenticate_complete_forwards_hash_algorithm_override(monkeyp
 
     monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FakeServer())
     monkeypatch.setattr(config_module, "determine_rp_id", lambda value=None: value or "example.com")
-    monkeypatch.setattr(advanced_module, "_derive_algorithms_from_credentials", lambda _credentials: [])
+    monkeypatch.setattr(advanced_algorithm_helpers, "_derive_algorithms_from_credentials_impl", lambda _credentials: [])
     monkeypatch.setattr(
         advanced_module,
         "_parse_client_supplied_credentials",
@@ -312,7 +312,7 @@ def test_advanced_authenticate_complete_forwards_hash_algorithm_override(monkeyp
     assert captured["hash_algorithm"] == "SHA-512"
 
 
-def test_advanced_authenticate_complete_defaults_hash_algorithm_when_override_invalid(monkeypatch, config_module):
+def test_advanced_authenticate_complete_defaults_hash_algorithm_when_override_invalid(monkeypatch, config_module, advanced_algorithm_helpers):
     config_module = pytest.importorskip("server.app.config")
     advanced_module = pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
@@ -330,7 +330,7 @@ def test_advanced_authenticate_complete_defaults_hash_algorithm_when_override_in
 
     monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FakeServer())
     monkeypatch.setattr(config_module, "determine_rp_id", lambda value=None: value or "example.com")
-    monkeypatch.setattr(advanced_module, "_derive_algorithms_from_credentials", lambda _credentials: [])
+    monkeypatch.setattr(advanced_algorithm_helpers, "_derive_algorithms_from_credentials_impl", lambda _credentials: [])
     monkeypatch.setattr(
         advanced_module,
         "_parse_client_supplied_credentials",
@@ -362,7 +362,7 @@ def test_advanced_authenticate_complete_defaults_hash_algorithm_when_override_in
     assert captured["hash_algorithm"] == "SHA-256"
 
 
-def test_advanced_authenticate_complete_omits_sign_count_for_malformed_authenticator_data(monkeypatch, config_module):
+def test_advanced_authenticate_complete_omits_sign_count_for_malformed_authenticator_data(monkeypatch, config_module, advanced_algorithm_helpers):
     config_module = pytest.importorskip("server.app.config")
     advanced_module = pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
@@ -378,7 +378,7 @@ def test_advanced_authenticate_complete_omits_sign_count_for_malformed_authentic
 
     monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FakeServer())
     monkeypatch.setattr(config_module, "determine_rp_id", lambda value=None: value or "example.com")
-    monkeypatch.setattr(advanced_module, "_derive_algorithms_from_credentials", lambda _credentials: [])
+    monkeypatch.setattr(advanced_algorithm_helpers, "_derive_algorithms_from_credentials_impl", lambda _credentials: [])
     monkeypatch.setattr(
         advanced_module,
         "_parse_client_supplied_credentials",
