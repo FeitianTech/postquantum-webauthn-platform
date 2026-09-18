@@ -45,7 +45,7 @@ def record_sign_count(record: Mapping[str, Any]) -> int | None:
     return _as_counter(getattr(record.get("auth_data"), "counter", None))
 
 
-def load_server_records_impl(simple_module: Any, uname: Any) -> tuple[list[Any] | None, str | None]:
+def load_server_records_impl(uname: Any) -> tuple[list[Any] | None, str | None]:
     """Read the caller's server-side credential records, or ``(None, None)``."""
 
     if not isinstance(uname, str) or not uname:
@@ -73,7 +73,7 @@ def find_server_record_index(records: list[Any] | None, credential_id: bytes) ->
 
 
 def client_supplied_sign_count_impl(
-    simple_module: Any, session_credentials: Iterable[Any], credential_id: bytes
+    session_credentials: Iterable[Any], credential_id: bytes
 ) -> int | None:
     for entry in session_credentials or ():
         if not isinstance(entry, Mapping):

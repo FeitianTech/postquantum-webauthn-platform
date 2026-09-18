@@ -12,16 +12,12 @@ from ...challenge_registry import (
     CHALLENGE_REPLAYED,
     consume_ceremony_state,
 )
-from .register_complete_context_authenticator_impl import (
-    populate_authenticator_data_context_impl,
+from . import (
+    register_complete_context_authenticator_impl,
+    register_complete_context_b_impl,
+    register_complete_context_init_impl,
+    register_complete_context_rp_debug_impl,
 )
-from .register_complete_context_b_impl import (
-    build_register_complete_response_payload_impl,
-    build_stored_credential_context_impl,
-    persist_registration_context_impl,
-)
-from .register_complete_context_init_impl import initialize_registration_context_impl
-from .register_complete_context_rp_debug_impl import populate_rp_debug_context_impl
 
 
 def register_complete_impl(simple_module: Any):
@@ -178,17 +174,17 @@ def register_complete_impl(simple_module: Any):
             400,
         )
 
-    initialize_registration_context_impl(simple_module, ctx)
-    populate_authenticator_data_context_impl(simple_module, ctx)
-    populate_rp_debug_context_impl(simple_module, ctx)
+    register_complete_context_init_impl.initialize_registration_context_impl(ctx)
+    register_complete_context_authenticator_impl.populate_authenticator_data_context_impl(ctx)
+    register_complete_context_rp_debug_impl.populate_rp_debug_context_impl(ctx)
 
     session.pop("register_rp_id", None)
 
-    build_stored_credential_context_impl(simple_module, ctx)
+    register_complete_context_b_impl.build_stored_credential_context_impl(ctx)
 
-    persist_response = persist_registration_context_impl(simple_module, ctx)
+    persist_response = register_complete_context_b_impl.persist_registration_context_impl(ctx)
     if persist_response is not None:
         return persist_response
 
-    response_payload = build_register_complete_response_payload_impl(simple_module, ctx)
+    response_payload = register_complete_context_b_impl.build_register_complete_response_payload_impl(ctx)
     return jsonify(response_payload)

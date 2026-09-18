@@ -5,7 +5,7 @@ import hashlib
 from typing import Any
 
 
-def populate_authenticator_data_context_impl(simple_module: Any, ctx: dict[str, Any]) -> None:
+def populate_authenticator_data_context_impl(ctx: dict[str, Any]) -> None:
     try:
         auth_data_bytes = bytes(ctx["auth_data"])
     except Exception:

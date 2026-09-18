@@ -9,7 +9,7 @@ from ...attachments import normalize_attachment
 
 
 def add_registration_metadata_impl(
-    simple_module: Any, target: dict[str, Any], source: Mapping[str, Any]
+    target: dict[str, Any], source: Mapping[str, Any]
 ) -> None:
     registration_response = source.get("registration_response")
     if registration_response is None:
@@ -39,7 +39,7 @@ def add_registration_metadata_impl(
 
 
 def build_credential_info_from_dict_credential_data_impl(
-    simple_module: Any, email: str, cred: Mapping[str, Any]
+    email: str, cred: Mapping[str, Any]
 ) -> dict[str, Any]:
     cred_data = cred["credential_data"]
     auth_data = cred["auth_data"]
@@ -98,7 +98,7 @@ def build_credential_info_from_dict_credential_data_impl(
         credential_info["attestationCertificates"] = certificates_list
         credential_info["attestation_certificates"] = certificates_list
 
-    add_registration_metadata_impl(simple_module, credential_info, cred)
+    add_registration_metadata_impl(credential_info, cred)
 
     storage.add_public_key_material(credential_info, cred_data.get("public_key", {}))
     if credential_info.get("publicKeyAlgorithm") is not None:

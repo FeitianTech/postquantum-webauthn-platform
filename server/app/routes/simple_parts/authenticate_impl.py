@@ -16,15 +16,7 @@ from ...challenge_registry import (
     stamp_ceremony_state,
 )
 from ...sign_count import SIGN_COUNT_REGRESSED, sign_count_status
-from . import binary_helpers_impl, credential_parsing_impl
-from .sign_count_impl import (
-    RECORD_SIGN_COUNT_KEY,
-    client_supplied_sign_count_impl,
-    find_server_record_index,
-    load_server_records_impl,
-    record_sign_count,
-    resolve_stored_sign_count,
-)
+from . import binary_helpers_impl, credential_parsing_impl, sign_count_impl
 
 
 def authenticate_begin_impl(simple_module: Any):
@@ -187,12 +179,12 @@ def authenticate_complete_impl(simple_module: Any):
             400,
         )
 
-    server_records, metadata_session_id = load_server_records_impl(simple_module, uname)
-    record_index = find_server_record_index(server_records, authenticated_id_bytes)
+    server_records, metadata_session_id = sign_count_impl.load_server_records_impl(uname)
+    record_index = sign_count_impl.find_server_record_index(server_records, authenticated_id_bytes)
     server_record = server_records[record_index] if record_index is not None else None
-    stored_sign_count = resolve_stored_sign_count(
+    stored_sign_count = sign_count_impl.resolve_stored_sign_count(
         server_record,
-        client_supplied_sign_count_impl(simple_module, session_credentials, authenticated_id_bytes),
+        sign_count_impl.client_supplied_sign_count_impl(session_credentials, authenticated_id_bytes),
     )
 
     if sign_count_status(stored_sign_count, sign_count) == SIGN_COUNT_REGRESSED:
@@ -218,8 +210,8 @@ def authenticate_complete_impl(simple_module: Any):
             400,
         )
 
-    if server_record is not None and record_sign_count(server_record) != sign_count:
-        server_record[RECORD_SIGN_COUNT_KEY] = sign_count
+    if server_record is not None and sign_count_impl.record_sign_count(server_record) != sign_count:
+        server_record[sign_count_impl.RECORD_SIGN_COUNT_KEY] = sign_count
         try:
             storage.savekey(uname, server_records, session_id=metadata_session_id)
         except Exception:

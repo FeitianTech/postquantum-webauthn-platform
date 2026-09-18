@@ -5,16 +5,10 @@ from typing import Any
 from flask import jsonify, request
 
 from ... import metadata, storage
-from .credentials_builder_dict_impl import (
-    build_credential_info_from_dict_credential_data_impl,
-)
-from .credentials_builder_object_impl import (
-    build_credential_info_from_bare_credential_impl,
-    build_credential_info_from_object_credential_data_impl,
-)
+from . import credentials_builder_dict_impl, credentials_builder_object_impl
 
 
-def list_credentials_impl(simple_module: Any):
+def list_credentials_impl():
     metadata_session_id = metadata.ensure_metadata_session_id()
     if request.method == "DELETE":
         removed = 0
@@ -36,21 +30,15 @@ def list_credentials_impl(simple_module: Any):
                     try:
                         if isinstance(cred, dict) and "credential_data" in cred:
                             if isinstance(cred["credential_data"], dict):
-                                credential_info = build_credential_info_from_dict_credential_data_impl(
-                                    simple_module,
-                                    email,
+                                credential_info = credentials_builder_dict_impl.build_credential_info_from_dict_credential_data_impl(email,
                                     cred,
                                 )
                             else:
-                                credential_info = build_credential_info_from_object_credential_data_impl(
-                                    simple_module,
-                                    email,
+                                credential_info = credentials_builder_object_impl.build_credential_info_from_object_credential_data_impl(email,
                                     cred,
                                 )
                         else:
-                            credential_info = build_credential_info_from_bare_credential_impl(
-                                simple_module,
-                                email,
+                            credential_info = credentials_builder_object_impl.build_credential_info_from_bare_credential_impl(email,
                                 cred,
                             )
 
