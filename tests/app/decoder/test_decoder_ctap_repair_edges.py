@@ -2,6 +2,8 @@ import hashlib
 
 import pytest
 
+from fido2 import cbor
+
 
 def _build_auth_data_bytes() -> bytes:
     from fido2.cose import CoseKey
@@ -21,7 +23,7 @@ def _build_auth_data_bytes() -> bytes:
 def test_decode_cbor_sequence_decodes_multiple_items():
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
-    payload = decode_module.cbor.encode({"a": 1}) + decode_module.cbor.encode([1, 2, 3])
+    payload = cbor.encode({"a": 1}) + cbor.encode([1, 2, 3])
     structures, values, consumed, remaining = decode_module._decode_cbor_sequence(payload)
 
     assert len(structures) == 2
@@ -95,12 +97,12 @@ def test_extract_and_split_get_assertion_trailing_fields_from_raw_signature_blob
 
     signature = b"S" * 32
     raw_bytes = (
-        decode_module.cbor.encode(3)
-        + decode_module.cbor.encode(signature)
-        + decode_module.cbor.encode(4)
-        + decode_module.cbor.encode({"id": "user"})
-        + decode_module.cbor.encode(5)
-        + decode_module.cbor.encode(2)
+        cbor.encode(3)
+        + cbor.encode(signature)
+        + cbor.encode(4)
+        + cbor.encode({"id": "user"})
+        + cbor.encode(5)
+        + cbor.encode(2)
     )
 
     extracted_signature, trailing_fields = decode_module._extract_get_assertion_trailing_from_raw(raw_bytes)
@@ -110,10 +112,10 @@ def test_extract_and_split_get_assertion_trailing_fields_from_raw_signature_blob
 
     split_signature, split_fields = decode_module._split_get_assertion_trailing_fields(
         signature
-        + decode_module.cbor.encode(4)
-        + decode_module.cbor.encode({"id": "split-user"})
-        + decode_module.cbor.encode(5)
-        + decode_module.cbor.encode(1)
+        + cbor.encode(4)
+        + cbor.encode({"id": "split-user"})
+        + cbor.encode(5)
+        + cbor.encode(1)
     )
     assert split_signature == signature
     assert split_fields[4]["id"] == "split-user"
@@ -136,12 +138,12 @@ def test_repair_get_assertion_entries_recovers_signature_user_and_extra_fields()
     }
 
     raw_bytes = (
-        decode_module.cbor.encode(3)
-        + decode_module.cbor.encode(signature)
-        + decode_module.cbor.encode(4)
-        + decode_module.cbor.encode({"id": "u"})
-        + decode_module.cbor.encode(5)
-        + decode_module.cbor.encode(3)
+        cbor.encode(3)
+        + cbor.encode(signature)
+        + cbor.encode(4)
+        + cbor.encode({"id": "u"})
+        + cbor.encode(5)
+        + cbor.encode(3)
     )
 
     repaired_structure, repaired_value, repaired_signature = decode_module._repair_get_assertion_entries(

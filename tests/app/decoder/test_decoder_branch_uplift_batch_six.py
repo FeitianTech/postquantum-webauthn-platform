@@ -4,6 +4,8 @@ import hashlib
 
 import pytest
 
+from fido2.webauthn import AuthenticatorData
+
 
 def test_build_labeled_ctap_map_resolves_handlers_and_missing_keys_across_all_paths():
     decode_module = pytest.importorskip("server.app.decoder.decode")
@@ -103,9 +105,9 @@ def test_interpret_get_assertion_map_handles_signature_and_trailing_field_recove
 def test_describe_authenticator_data_bytes_includes_extensions_summary_when_mapping_present():
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
-    auth_data = decode_module.AuthenticatorData.create(
+    auth_data = AuthenticatorData.create(
         hashlib.sha256(b"example.com").digest(),
-        decode_module.AuthenticatorData.FLAG.UP | decode_module.AuthenticatorData.FLAG.ED,
+        AuthenticatorData.FLAG.UP | AuthenticatorData.FLAG.ED,
         5,
         b"",
         {"credProtect": 2},
@@ -154,12 +156,12 @@ def test_convert_result_to_data_covers_empty_cbor_and_generic_fallback_paths():
     assert decode_module._convert_result_to_data("SomethingElse", {}) == {}
 
 
-def test_convert_certificate_bytes_and_json_block_formatting_guard_paths(monkeypatch):
+def test_convert_certificate_bytes_and_json_block_formatting_guard_paths(monkeypatch, result_runtime):
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     assert decode_module._convert_certificate_bytes("%%") == {}
 
-    monkeypatch.setattr(decode_module, "serialize_attestation_certificate", lambda _bytes: None)
+    monkeypatch.setattr(result_runtime, "serialize_attestation_certificate", lambda _bytes: None)
     assert decode_module._convert_certificate_bytes(b"\x30\x82\x01\x00") == {}
 
     assert decode_module._format_json_block(None) == []

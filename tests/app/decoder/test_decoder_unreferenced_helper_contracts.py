@@ -162,12 +162,12 @@ def test_expanded_ctap_json_builder_helpers():
     assert get_response_expanded[signature_key] == (b"T" * 32).hex()
 
 
-def test_result_conversion_helpers_for_all_base_payload_types(monkeypatch, conversion_leaf):
+def test_result_conversion_helpers_for_all_base_payload_types(monkeypatch, conversion_leaf, result_runtime, binary_extract):
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     monkeypatch.setattr(conversion_leaf, "_build_credential_overview", lambda _d: {"id": "cred"})
-    monkeypatch.setattr(decode_module, "_convert_attestation_entry", lambda _e: {"fmt": "none"})
-    monkeypatch.setattr(decode_module, "_build_authenticator_section", lambda *_a, **_k: {"counter": 1})
+    monkeypatch.setattr(result_runtime, "_convert_attestation_entry", lambda _e: {"fmt": "none"})
+    monkeypatch.setattr(result_runtime, "_build_authenticator_section", lambda *_a, **_k: {"counter": 1})
     monkeypatch.setattr(conversion_leaf, "_convert_client_data_entry", lambda _e: {"type": "webauthn.create"})
     monkeypatch.setattr(conversion_leaf, "_collect_response_extras", lambda _e: {"signature": "aa"})
 
@@ -180,7 +180,7 @@ def test_result_conversion_helpers_for_all_base_payload_types(monkeypatch, conve
     assert pk_data["clientDataJSON"]["type"] == "webauthn.create"
     assert pk_data["responseDetails"]["signature"] == "aa"
 
-    monkeypatch.setattr(decode_module, "_extract_authenticator_bytes_from_attestation", lambda _e: b"\x00" * 37)
+    monkeypatch.setattr(binary_extract, "_extract_authenticator_bytes_from_attestation", lambda _e: b"\x00" * 37)
     monkeypatch.setattr(conversion_leaf, "_build_authenticator_data_payload", lambda *_a, **_k: {"flags": {"UP": True}})
     att_obj_data = decode_module._convert_attestation_object_data(
         {"decoded": {"extensions": {"credProps": {"rk": True}}}, "binary": {"base64": "AQI="}}
@@ -203,7 +203,7 @@ def test_result_conversion_helpers_for_all_base_payload_types(monkeypatch, conve
     assert cert_result["certificates"][0]["parsedX5c"]["derBase64"] == "AQI="
 
 
-def test_summary_and_extension_helpers_for_rendering_paths(monkeypatch):
+def test_summary_and_extension_helpers_for_rendering_paths(monkeypatch, binary_extract, summary_runtime):
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     lines = []
@@ -253,9 +253,9 @@ def test_summary_and_extension_helpers_for_rendering_paths(monkeypatch):
     assert any("Authenticator extensions" in line for line in lines)
     assert any("Client extensions" in line for line in lines)
 
-    monkeypatch.setattr(decode_module, "_extract_authenticator_bytes", lambda *_a, **_k: b"\x00" * 37)
-    monkeypatch.setattr(decode_module, "_extract_authenticator_bytes_from_attestation", lambda _e: b"\x00" * 37)
-    monkeypatch.setattr(decode_module, "_build_certificate_summary_lines", lambda _d: ["Certificate line"])
+    monkeypatch.setattr(binary_extract, "_extract_authenticator_bytes", lambda *_a, **_k: b"\x00" * 37)
+    monkeypatch.setattr(binary_extract, "_extract_authenticator_bytes_from_attestation", lambda _e: b"\x00" * 37)
+    monkeypatch.setattr(summary_runtime, "_build_certificate_summary_lines", lambda _d: ["Certificate line"])
 
     pk_summary = decode_module._format_public_key_credential_summary(
         {

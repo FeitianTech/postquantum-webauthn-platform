@@ -4,6 +4,9 @@ import hashlib
 
 import pytest
 
+from fido2 import cbor
+from fido2.webauthn import AuthenticatorData
+
 
 def test_build_labeled_ctap_map_covers_seen_key_seen_label_and_string_missing_handler():
     decode_module = pytest.importorskip("server.app.decoder.decode")
@@ -20,25 +23,25 @@ def test_build_labeled_ctap_map_covers_seen_key_seen_label_and_string_missing_ha
     assert result["5 (five)"] is None
 
 
-def test_decoder_residual_helpers_cover_remaining_parse_and_conversion_guards(monkeypatch, cbor_lenient):
+def test_decoder_residual_helpers_cover_remaining_parse_and_conversion_guards(monkeypatch, cbor_lenient, ctap_parse_runtime):
     decode_module = pytest.importorskip("server.app.decoder.decode")
-    auth_data_cls = decode_module.AuthenticatorData
+    auth_data_cls = AuthenticatorData
 
     # _derive_alg_from_auth_data branches.
     monkeypatch.setattr(
-        decode_module,
+        ctap_parse_runtime,
         "AuthenticatorData",
         lambda _raw: (_ for _ in ()).throw(ValueError("bad-auth-data")),
     )
     assert decode_module._derive_alg_from_auth_data(b"bad") is None
 
     monkeypatch.setattr(
-        decode_module,
+        ctap_parse_runtime,
         "AuthenticatorData",
         lambda _raw: type("_Auth", (), {"credential_data": None})(),
     )
     assert decode_module._derive_alg_from_auth_data(b"ok") is None
-    monkeypatch.setattr(decode_module, "AuthenticatorData", auth_data_cls)
+    monkeypatch.setattr(ctap_parse_runtime, "AuthenticatorData", auth_data_cls)
 
     # _extract_attestation_certificate and _convert_certificate_bytes/payload guards.
     assert decode_module._extract_attestation_certificate("not-a-map") is None
@@ -68,20 +71,20 @@ def test_decoder_residual_helpers_cover_remaining_parse_and_conversion_guards(mo
     # _parse_authenticator_data_bytes branch for non-mapping COSE value and extension decode exceptions.
     auth_with_cose_int = (
         b"\x01" * 32
-        + bytes([decode_module.AuthenticatorData.FLAG.AT])
+        + bytes([AuthenticatorData.FLAG.AT])
         + (1).to_bytes(4, "big")
         + (b"\x02" * 16)
         + (0).to_bytes(2, "big")
-        + decode_module.cbor.encode(5)
+        + cbor.encode(5)
     )
     details, _, _ = decode_module._parse_authenticator_data_bytes(auth_with_cose_int)
     assert details["attestedCredentialData"]["credentialPublicKey"] == 5
 
     extension_payload = (
         hashlib.sha256(b"example.com").digest()
-        + bytes([decode_module.AuthenticatorData.FLAG.ED])
+        + bytes([AuthenticatorData.FLAG.ED])
         + (1).to_bytes(4, "big")
-        + decode_module.cbor.encode({"ext": True})
+        + cbor.encode({"ext": True})
     )
 
     monkeypatch.setattr(
@@ -91,7 +94,7 @@ def test_decoder_residual_helpers_cover_remaining_parse_and_conversion_guards(mo
     )
     details, _, trailing = decode_module._parse_authenticator_data_bytes(extension_payload)
     assert "extensions" not in details
-    assert trailing == decode_module.cbor.encode({"ext": True})
+    assert trailing == cbor.encode({"ext": True})
 
     # _format_json_block exception branch.
     assert decode_module._format_json_block(None) == []

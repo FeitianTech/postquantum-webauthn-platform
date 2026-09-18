@@ -3,8 +3,12 @@ from __future__ import annotations
 import base64
 from types import SimpleNamespace
 
+import cbor2
 import pytest
+from cryptography import x509
+from cryptography.x509.oid import ExtensionOID
 
+from fido2 import cbor
 from fido2.utils import ByteBuffer
 
 
@@ -59,7 +63,7 @@ def test_decode_cbor_sequence_uses_structure_to_value_when_fallback_structure_pa
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     monkeypatch.setattr(
-        decode_module.cbor,
+        cbor,
         "decode_from",
         lambda _payload: (_ for _ in ()).throw(ValueError("boom")),
     )
@@ -71,7 +75,7 @@ def test_decode_cbor_sequence_uses_structure_to_value_when_fallback_structure_pa
         def decode(self):
             raise ValueError("boom")
 
-    monkeypatch.setattr(decode_module.cbor2, "CBORDecoder", _BrokenDecoder)
+    monkeypatch.setattr(cbor2, "CBORDecoder", _BrokenDecoder)
     monkeypatch.setattr(
         cbor_strict,
         "_decode_cbor_structure",
@@ -127,16 +131,16 @@ def test_merge_ctap_make_credential_consumes_raw_signature_bytes_in_extra_values
     assert merged_structure["entries"][-1]["keySummary"] == "3"
 
 
-def test_repair_get_assertion_entries_recovers_signature_from_lenient_map_entries(monkeypatch, ctap_parse_runtime):
+def test_repair_get_assertion_entries_recovers_signature_from_lenient_map_entries(monkeypatch, ctap_parse_runtime, ctap_repair_leaf):
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     monkeypatch.setattr(
-        decode_module,
+        ctap_repair_leaf,
         "_extract_get_assertion_trailing_from_raw",
         lambda _raw: (None, {}),
     )
     monkeypatch.setattr(
-        decode_module,
+        ctap_repair_leaf,
         "_split_get_assertion_trailing_fields",
         lambda signature: (signature, {}),
     )
@@ -170,22 +174,22 @@ def test_repair_get_assertion_entries_recovers_signature_from_lenient_map_entrie
     assert repaired_value_bytes_key[3] == b"\x99"
 
 
-def test_try_decode_cbor_merges_assertion_signature_for_direct_get_assertion_classification(monkeypatch, ctap_interpret_runtime):
+def test_try_decode_cbor_merges_assertion_signature_for_direct_get_assertion_classification(monkeypatch, ctap_interpret_runtime, cbor_runtime, ctap_classify):
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     structure = {"byteLength": 1, "entries": [], "length": 0, "summary": "map[0]"}
     monkeypatch.setattr(
-        decode_module,
+        cbor_runtime,
         "_decode_cbor_sequence",
         lambda _payload: ([structure], [{2: b"auth"}], 1, b""),
     )
     monkeypatch.setattr(
-        decode_module,
+        ctap_classify,
         "_classify_ctap_map",
         lambda _value: "get_assertion_output",
     )
     monkeypatch.setattr(
-        decode_module,
+        cbor_runtime,
         "_repair_get_assertion_entries",
         lambda structure, value, raw_bytes=None: (structure, {2: b"auth", 3: b"\xbb"}, b"\xbb"),
     )
@@ -206,22 +210,22 @@ def test_try_decode_cbor_merges_assertion_signature_for_direct_get_assertion_cla
     assert result["decoded"]["expandedJson"]["path"] == "direct"
 
 
-def test_try_decode_cbor_promotes_other_classification_when_repair_finds_signature(monkeypatch, ctap_interpret_runtime):
+def test_try_decode_cbor_promotes_other_classification_when_repair_finds_signature(monkeypatch, ctap_interpret_runtime, cbor_runtime, ctap_classify):
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     structure = {"byteLength": 1, "entries": [], "length": 0, "summary": "map[0]"}
     monkeypatch.setattr(
-        decode_module,
+        cbor_runtime,
         "_decode_cbor_sequence",
         lambda _payload: ([structure], [{2: b"auth"}], 1, b""),
     )
     monkeypatch.setattr(
-        decode_module,
+        ctap_classify,
         "_classify_ctap_map",
         lambda _value: "other",
     )
     monkeypatch.setattr(
-        decode_module,
+        cbor_runtime,
         "_repair_get_assertion_entries",
         lambda structure, value, raw_bytes=None: (structure, {2: b"auth", 3: b"\xaa"}, b"\xaa"),
     )
@@ -278,9 +282,9 @@ def test_build_subject_key_identifier_lines_derives_digest_when_ski_extension_mi
 
     class _Extensions:
         def get_extension_for_oid(self, _oid):
-            raise decode_module.x509.ExtensionNotFound(
+            raise x509.ExtensionNotFound(
                 "missing",
-                decode_module.ExtensionOID.SUBJECT_KEY_IDENTIFIER,
+                ExtensionOID.SUBJECT_KEY_IDENTIFIER,
             )
 
     class _Certificate:
@@ -290,12 +294,12 @@ def test_build_subject_key_identifier_lines_derives_digest_when_ski_extension_mi
             return object()
 
     monkeypatch.setattr(
-        decode_module.x509,
+        x509,
         "load_der_x509_certificate",
         lambda _der: _Certificate(),
     )
     monkeypatch.setattr(
-        decode_module.x509.SubjectKeyIdentifier,
+        x509.SubjectKeyIdentifier,
         "from_public_key",
         lambda _public_key: SimpleNamespace(digest=b"\x01\x23"),
     )
@@ -326,7 +330,7 @@ def test_extract_authenticator_bytes_from_attestation_uses_raw_base64_and_handle
     assert extracted == b"\x11\x22"
 
     monkeypatch.setattr(
-        decode_module.base64,
+        base64,
         "b64decode",
         lambda *_args, **_kwargs: (_ for _ in ()).throw(ValueError("invalid")),
     )
@@ -336,9 +340,7 @@ def test_extract_authenticator_bytes_from_attestation_uses_raw_base64_and_handle
     )
 
 
-def test_extract_attestation_certificate_handles_non_string_chain_entries_and_serializer_errors(
-    monkeypatch,
-):
+def test_extract_attestation_certificate_handles_non_string_chain_entries_and_serializer_errors(monkeypatch, details_runtime):
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     class _BytesEntry:
@@ -346,7 +348,7 @@ def test_extract_attestation_certificate_handles_non_string_chain_entries_and_se
             return b"\x01\x02"
 
     monkeypatch.setattr(
-        decode_module,
+        details_runtime,
         "serialize_attestation_certificate",
         lambda _cert: (_ for _ in ()).throw(RuntimeError("boom")),
     )

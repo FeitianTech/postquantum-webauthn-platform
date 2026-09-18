@@ -89,11 +89,11 @@ def test_remaining_interpret_request_map_helpers():
     assert any("rpId" in key for key in interpreted_get)
 
 
-def test_remaining_certificate_conversion_and_summary_helpers(monkeypatch):
+def test_remaining_certificate_conversion_and_summary_helpers(monkeypatch, result_runtime):
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     monkeypatch.setattr(
-        decode_module,
+        result_runtime,
         "serialize_attestation_certificate",
         lambda cert_bytes: {
             "derBase64": cbor2.dumps(cert_bytes).hex(),
