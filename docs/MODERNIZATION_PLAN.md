@@ -436,6 +436,124 @@ ordering constraint.** `decoder/decode.py` still snapshots 7 names from `attesta
 its own carrier globals — a cross-carrier dependency for the decoder phase.
 Dropped `attestation._HASH_NORMALISE_PATTERN`, an alias nothing read.
 
+### Phase 8 — M3: unwind the `decoder/decode.py` carrier — DONE (2026-09-17), verified
+The third and largest carrier, over 26 commits, and **the one that retires F821**.
+`decode.py` 517 -> **272 lines**, now a re-export shim in the same shape as `attestation.py`.
+
+| Metric | Before | After |
+|---|---|---|
+| F821 repo-wide | 382 | **0** |
+| F821 in `decode_parts` | 366 | **0** |
+| F821 in `decode.py` | 16 | **0** |
+| `ignore = ["F821"]` in ruff.toml | present | **removed** |
+| ruff per-file-ignores | 3 modules | **2** |
+| `# pyright: reportUndefinedVariable=false` markers | 7 | **0** |
+| `raising=False` in `tests/app/decoder/` | 88 | **0** |
+| `raising=False` repo-wide | 868 | **780** |
+| carrier machinery (`types.FunctionType` rebinding) | 79 functions | **0** |
+| global-mutation relays around the CBOR parser | 2 (stacked) | **0** |
+
+**F821 is now gated, unsuppressed, at zero.** It read 1008 before `metadata.py`, 557 before
+`attestation.py`, 382 before this phase. The progress meter has run out, so the `ignore` entry
+and its explanatory comment are gone; the comment now records the history instead. Verified live
+by appending an undefined name and watching the gate fail.
+
+**Collected test IDs diffed across the phase: zero added, zero removed** (1708 before and after),
+despite ~180 patch lines being rewritten and a new `tests/app/decoder/conftest.py` of 19
+fragment fixtures. Suite unchanged at 1708 Python / 278 JS.
+
+**Stage 0 again, and worse than Phase 7.** `decode.py` imported all nine fragment modules under
+`_`-prefixed aliases, so every cross-fragment conversion would have raised `NameError` before
+the rename. A *second* prerequisite showed up mid-phase that Phase 7 did not need: the carrier
+also had to import the *leaf* fragments as modules (`binary_extract`, `summary_leaf`, ...), not
+just names out of them, because a rebound fragment resolves `summary_leaf._append_simple_field`
+in the carrier's globals too. Expect the same for the two route carriers.
+
+**Stage B was empty, and saying so is the point.** `rg '^\s*global '` over
+`server/app/decoder/` returns nothing and the seven rebound fragments had *zero* module-level
+assignments. There were no caches and no locks to relocate, so no `decode_parts/runtime_state.py`
+was created -- unlike the other two `*_parts/` packages. What had to move out of the carrier was
+*code*: `decode_payload_text` -> `pipeline_runtime`, the CTAP prefix table + `_extract_ctap_prefix`
++ `_is_padding_bytes` + `_json_safe_with_stringified_keys` -> `cbor_runtime`, `_PEM_CERT_PATTERN`
+-> `pipeline_runtime`, and the four `*_HANDLERS` converter tables -> `ctap_runtime_interpret`.
+
+**The CBOR global-mutation dance is gone, not relocated.** There were **two** stacked copies:
+`decode._parse_cbor_item` mutated three `cbor_core` globals around its call, and
+`cbor_core._parse_cbor_item` mutated the same three on `cbor_strict`, each restoring in a
+`finally`. `cbor_strict` itself was clean -- the relays existed only to push a carrier-level
+patch down two module boundaries, and under gunicorn's 16 gthreads two concurrent decodes could
+interleave the set/restore. The whole apparatus was held up by **one test and one symbol**
+(`_read_cbor_length`); the `_ensure_cbor_available` and `_float_summary` halves were eight lines
+of never-exercised code. Both relays deleted, both patches moved to the defining module, and
+`cbor_core` is off the call path entirely. Its three pass-throughs stayed *delegating functions*
+rather than becoming assignments: an assignment binds at import and would silently stop seeing a
+`cbor_lenient` patch, which is the exact failure mode this work exists to remove.
+The same one-hop relay over `ctap_repair_leaf` went the same way (held up by
+`_locate_get_assertion_trailing_offset`, one test; its `_lenient_decode_from` half untested).
+
+**Cross-carrier dependency resolved.** The 7 names `decode.py` took from `attestation.py` are
+now ordinary imports in the fragments that use them, and all 7 were verified `is`-identical to
+their defining `attestation_parts` module both before and after.
+
+**Import cycles are real here and were not in Phase 7.** The seven fragments form cycles
+(`pipeline <-> details`, `pipeline -> cbor_runtime -> ctap_parse -> pipeline`). `from . import
+sibling` is safe under them on 3.12 because every use is inside a function body and CPython falls
+back to `sys.modules`. Module-level *attribute* access is not: the `*_HANDLERS` tables cannot hold
+`ctap_runtime_parse` function objects, because a fixture importing that fragment first leaves it
+partially initialised when the table is built. They dispatch through a lambda instead, which also
+keeps a patch on the defining module visible.
+
+**Fault injection — 50 symbols, 144 patch sites.** Method as in Phase 7: rename a symbol at its
+definition *and* every production reference, leaving the test patches on the old name.
+
+| | Before | After |
+|---|---|---|
+| Failures | 165 | **186** |
+| Failures naming the missing symbol | 127 | **186** (100%) |
+| Symbols whose failures never named it | 2 | **0** |
+| Failures the carrier absorbed entirely | 21 | **0** |
+
+The shape differs from Phase 7 and the reason is `raising=False` *creating* the attribute: a
+`setattr(decode_module, "_decode_cbor_sequence", fake, raising=False)` against a symbol that had
+moved installed `fake` into the carrier's globals, the rebound fragment resolved the name there,
+and the test passed exercising the stub as if nothing had moved. That is where the 21 missing
+failures went -- 14 patch sites on that one symbol yielded 9 failures before and 11 after. So the
+honest "before" is not a silent-pass *count* but a silent-pass *mechanism*, and it is closed.
+
+One methodological note worth keeping: the first two sweep runs were not reproducible
+(`_read_cbor_length` reported 174 failures once and 2 the next time). The cause was stale
+`__pycache__` surviving the restore. Clearing it per iteration made two consecutive runs
+byte-identical; the numbers above are from that stable measurement, not the first one.
+
+**`raising=False` audit: 88 -> 0 in `tests/app/decoder/`, 868 -> 780 repo-wide.** Every one of
+the 88 was droppable *before* the unwind -- each patched attribute already existed, so the flags
+masked nothing at the time but would have masked exactly this phase's regressions. They came off
+in commit 2, before any conversion, which is what made the rest self-checking. The new
+`tests/app/decoder/conftest.py` leaves `raising` at its default everywhere for the same reason.
+
+**Found but not fixed:**
+- `decode_parts/cbor_core.py` now has **no importers anywhere** in `server/` or `tests/`. It is
+  left in place because file-level renames and merges are a later milestone; it is a deletion
+  candidate for that one.
+- `encode_parts/handlers_basic.py` and `handlers_cbor.py` import five *private* decoder names
+  (`_binary_summary`, `_describe_authenticator_data_bytes`, `_hex_json_safe`,
+  `_parse_attestation_object`, `_stringify_mapping_keys`) from `decode.py`. The shim keeps them
+  working unchanged, but the encoder should import them from the defining fragments so the shim
+  is a test and public surface only. Encoder scope.
+- The `_CTAP_COMMAND_MAP` / `_CTAP_STATUS_MAP` tables are wrong -- 2 commands and 1 status
+  against roughly 45 status codes in `fido2.ctap`. They moved next to their only caller
+  (`cbor_runtime._extract_ctap_prefix`) so the codec milestone can fix them in one place.
+- `cbor_strict._decode_cbor_structure` was dead (everything used `cbor_core`'s copy); taking
+  `cbor_core` off the call path made it the live one and removed the duplicate.
+- `key_utils`, `ctap_convert_leaf`, `conversion_cert_leaf` and `cbor_sequence` are still reached
+  by name rather than through the module. No test patches anything they define, so there is
+  nothing to intercept, and the sibling leaves already import them that way. Revisit if that
+  changes.
+- One `raising=False` remains on a decoder-package target: `encode._ENCODING_HANDLERS` in
+  `tests/app/encoder/`. The attribute exists, so it is droppable; out of this phase's scope.
+- `routes/advanced.py` and `routes/simple.py` are the last two carriers. They keep their
+  `["F401", "UP035"]` ignores, and the per-file-ignores comment now describes only them.
+
 ### Local development
 Tests previously ran against the global interpreter, whose packages matched nothing in
 `requirements.txt` (cryptography 44.0.3, fido2 2.1.1, gunicorn 23). A project venv now exists:
