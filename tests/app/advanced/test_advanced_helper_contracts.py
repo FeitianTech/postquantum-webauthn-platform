@@ -115,7 +115,8 @@ def test_base64_assertion_and_binary_extraction_helpers():
 
     assert advanced_module._extract_assertion_credential_id({"rawId": encoded}) == b"abc"
     assert advanced_module._extract_assertion_credential_id({"id": b"id-bytes"}) == b"id-bytes"
-    assert advanced_module._extract_assertion_credential_id({"rawId": "%%%"}) == b""
+    # Was b"" here and None on the simple side; the two share one helper now.
+    assert advanced_module._extract_assertion_credential_id({"rawId": "%%%"}) is None
 
     assert advanced_module._extract_binary_value({"$hex": "616263"}) == b"abc"
     assert advanced_module._extract_binary_value({"$base64": "YWJj"}) == b"abc"

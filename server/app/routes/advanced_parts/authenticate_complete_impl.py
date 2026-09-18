@@ -17,6 +17,7 @@ from ...attachments import (
 )
 from ...challenge_registry import consume_ceremony_state
 from ...sign_count import sign_count_status
+from .. import binary_helpers
 from . import algorithm_helpers_impl, binary_helpers_impl, parsing_helpers_impl
 
 #: The ceremony challenge was taken from the server-side Flask session.
@@ -173,7 +174,7 @@ def advanced_authenticate_complete_impl():
     all_credentials = [record["data"] for record in stored_records if record.get("data") is not None]
 
     response_mapping: Mapping[str, Any] = response if isinstance(response, Mapping) else {}
-    credential_id_bytes = binary_helpers_impl._extract_assertion_credential_id_impl(response_mapping)
+    credential_id_bytes = binary_helpers.extract_assertion_credential_id(response_mapping)
     selected_record = credential_lookup.get(credential_id_bytes) if credential_id_bytes else None
 
     if resident_key_only and selected_record is not None and not selected_record.get("resident"):
@@ -272,7 +273,7 @@ def advanced_authenticate_complete_impl():
             # OK. The only distinction made here is a diagnostic one: whether
             # this server can verify the credential's algorithm at all.
             response_mapping = response if isinstance(response, Mapping) else {}
-            credential_id = binary_helpers_impl._extract_assertion_credential_id_impl(response_mapping)
+            credential_id = binary_helpers.extract_assertion_credential_id(response_mapping)
             record = credential_lookup.get(credential_id) if credential_id else None
 
             # Read the algorithm from the credential's own COSE key, not from
@@ -388,7 +389,7 @@ def advanced_authenticate_complete_impl():
         }
         failed_credential_id = credential_id_bytes
         if not failed_credential_id and isinstance(response, Mapping):
-            failed_credential_id = binary_helpers_impl._extract_assertion_credential_id_impl(response)
+            failed_credential_id = binary_helpers.extract_assertion_credential_id(response)
         if failed_credential_id:
             response_payload["failedCredentialId"] = (
                 base64.urlsafe_b64encode(failed_credential_id).decode("ascii").rstrip("=")
