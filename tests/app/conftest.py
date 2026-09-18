@@ -124,7 +124,7 @@ def advanced_register_begin_support():
 def advanced_register_complete():
     """The fragment that defines the advanced ``/register/complete`` body."""
 
-    return _advanced_fragment("register_complete_impl")
+    return _advanced_fragment("registration")
 
 
 @pytest.fixture

@@ -18,7 +18,7 @@ from . import (
     constants,
     parsing,
     register_begin_impl,
-    register_complete_impl,
+    registration,
     summary,
     tracing,
 )
@@ -77,7 +77,7 @@ def advanced_register_begin():
 
 @app.route("/api/advanced/register/complete", methods=["POST"])
 def advanced_register_complete():
-    return register_complete_impl.advanced_register_complete_impl()
+    return registration.advanced_register_complete_impl()
 
 
 @app.route("/api/advanced/credential-artifacts/<string:storage_id>", methods=["GET"])
