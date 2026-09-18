@@ -17,7 +17,7 @@ from ...attachments import (
 )
 from ...challenge_registry import consume_ceremony_state
 from ...sign_count import sign_count_status
-from . import algorithm_helpers_impl, binary_helpers_impl
+from . import algorithm_helpers_impl, binary_helpers_impl, parsing_helpers_impl
 
 #: The ceremony challenge was taken from the server-side Flask session.
 CHALLENGE_SOURCE_SERVER = "server-session"
@@ -138,12 +138,12 @@ def advanced_authenticate_complete_impl(advanced_module: Any):
     stored_records: list[dict[str, Any]] = []
     serialized_credentials: list[dict[str, Any]] = []
     if isinstance(raw_credentials_input, list):
-        stored_records, serialized_credentials = advanced_module._parse_client_supplied_credentials(raw_credentials_input)
+        stored_records, serialized_credentials = parsing_helpers_impl._parse_client_supplied_credentials_impl(raw_credentials_input)
 
     if not stored_records:
         legacy_serialized = session.pop("advanced_auth_credentials", [])
         if legacy_serialized:
-            stored_records, serialized_credentials = advanced_module._parse_client_supplied_credentials(
+            stored_records, serialized_credentials = parsing_helpers_impl._parse_client_supplied_credentials_impl(
                 legacy_serialized,
             )
 

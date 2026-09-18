@@ -10,7 +10,6 @@ from . import algorithm_helpers_impl, binary_helpers_impl
 
 
 def _log_authenticator_attestation_response_impl(
-    advanced_module: Any,
     attestation_format: str | None,
     auth_data: Any,
     attestation_statement: Any,
@@ -106,5 +105,5 @@ def _log_authenticator_attestation_response_impl(
     config.app.logger.info("Authenticator attestation response:\n%s", message)
 
 
-def datetime_from_timestamp_impl(advanced_module: Any, timestamp: float) -> str:
+def datetime_from_timestamp_impl(timestamp: float) -> str:
     return datetime.fromtimestamp(timestamp, timezone.utc).isoformat()

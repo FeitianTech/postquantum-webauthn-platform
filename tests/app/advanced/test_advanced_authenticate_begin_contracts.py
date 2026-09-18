@@ -117,7 +117,7 @@ def test_advanced_authenticate_begin_returns_404_when_no_credentials_detected():
     }
 
 
-def test_advanced_authenticate_begin_uses_allow_credentials_subset_and_dedupes(monkeypatch):
+def test_advanced_authenticate_begin_uses_allow_credentials_subset_and_dedupes(monkeypatch, advanced_parsing_helpers):
     config_module = pytest.importorskip("server.app.config")
     advanced_module = pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
@@ -129,8 +129,8 @@ def test_advanced_authenticate_begin_uses_allow_credentials_subset_and_dedupes(m
     marker_two = object()
 
     monkeypatch.setattr(
-        advanced_module,
-        "_parse_client_supplied_credentials",
+        advanced_parsing_helpers,
+        "_parse_client_supplied_credentials_impl",
         lambda _raw: (
             [
                 _credential_record(cred_one, data=marker_one, attachment="platform"),
@@ -177,7 +177,7 @@ def test_advanced_authenticate_begin_uses_allow_credentials_subset_and_dedupes(m
             assert session_state["advanced_auth_rp"]["id"] == "example.com"
 
 
-def test_advanced_authenticate_begin_falls_back_to_all_records_when_allow_credentials_do_not_match(monkeypatch):
+def test_advanced_authenticate_begin_falls_back_to_all_records_when_allow_credentials_do_not_match(monkeypatch, advanced_parsing_helpers):
     config_module = pytest.importorskip("server.app.config")
     advanced_module = pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
@@ -186,8 +186,8 @@ def test_advanced_authenticate_begin_falls_back_to_all_records_when_allow_creden
     marker_two = object()
 
     monkeypatch.setattr(
-        advanced_module,
-        "_parse_client_supplied_credentials",
+        advanced_parsing_helpers,
+        "_parse_client_supplied_credentials_impl",
         lambda _raw: (
             [
                 _credential_record(b"fallback-one", data=marker_one, attachment="platform"),
@@ -216,16 +216,15 @@ def test_advanced_authenticate_begin_falls_back_to_all_records_when_allow_creden
     assert captured["credentials"] == [marker_one, marker_two]
 
 
-def test_advanced_authenticate_begin_returns_hints_error_when_filtered_allow_credentials_empty(monkeypatch):
+def test_advanced_authenticate_begin_returns_hints_error_when_filtered_allow_credentials_empty(monkeypatch, advanced_parsing_helpers):
     config_module = pytest.importorskip("server.app.config")
-    advanced_module = pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
 
     cred_id = b"platform-only-credential"
 
     monkeypatch.setattr(
-        advanced_module,
-        "_parse_client_supplied_credentials",
+        advanced_parsing_helpers,
+        "_parse_client_supplied_credentials_impl",
         lambda _raw: (
             [_credential_record(cred_id, attachment="platform", resident=True)],
             [_serialized_record(resident=True)],
@@ -249,7 +248,7 @@ def test_advanced_authenticate_begin_returns_hints_error_when_filtered_allow_cre
     assert "No credentials matched the selected hints" in response.get_json()["error"]
 
 
-def test_advanced_authenticate_begin_resident_mode_prefers_resident_records_and_hides_allow_credentials(monkeypatch):
+def test_advanced_authenticate_begin_resident_mode_prefers_resident_records_and_hides_allow_credentials(monkeypatch, advanced_parsing_helpers):
     config_module = pytest.importorskip("server.app.config")
     advanced_module = pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
@@ -258,8 +257,8 @@ def test_advanced_authenticate_begin_resident_mode_prefers_resident_records_and_
     nonresident_marker = object()
 
     monkeypatch.setattr(
-        advanced_module,
-        "_parse_client_supplied_credentials",
+        advanced_parsing_helpers,
+        "_parse_client_supplied_credentials_impl",
         lambda _raw: (
             [
                 _credential_record(b"resident", data=resident_marker, resident=True, attachment="platform"),
@@ -295,14 +294,13 @@ def test_advanced_authenticate_begin_resident_mode_prefers_resident_records_and_
     assert "allowCredentials" not in payload["publicKey"]
 
 
-def test_advanced_authenticate_begin_resident_mode_returns_hints_error_when_resident_candidates_filtered(monkeypatch):
+def test_advanced_authenticate_begin_resident_mode_returns_hints_error_when_resident_candidates_filtered(monkeypatch, advanced_parsing_helpers):
     config_module = pytest.importorskip("server.app.config")
-    advanced_module = pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
 
     monkeypatch.setattr(
-        advanced_module,
-        "_parse_client_supplied_credentials",
+        advanced_parsing_helpers,
+        "_parse_client_supplied_credentials_impl",
         lambda _raw: (
             [
                 _credential_record(
@@ -336,7 +334,7 @@ def test_advanced_authenticate_begin_resident_mode_returns_hints_error_when_resi
     assert "No resident key credentials matched the selected hints" in response.get_json()["error"]
 
 
-def test_advanced_authenticate_begin_propagates_algorithms_extensions_and_uv_preferences(monkeypatch, advanced_algorithm_helpers):
+def test_advanced_authenticate_begin_propagates_algorithms_extensions_and_uv_preferences(monkeypatch, advanced_algorithm_helpers, advanced_parsing_helpers):
     config_module = pytest.importorskip("server.app.config")
     advanced_module = pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
@@ -345,8 +343,8 @@ def test_advanced_authenticate_begin_propagates_algorithms_extensions_and_uv_pre
     serialized = [_serialized_record(resident=True)]
 
     monkeypatch.setattr(
-        advanced_module,
-        "_parse_client_supplied_credentials",
+        advanced_parsing_helpers,
+        "_parse_client_supplied_credentials_impl",
         lambda _raw: (records, serialized)
     )
 
