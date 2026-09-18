@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import base64
-import binascii
 from collections.abc import Mapping, Sequence
 from datetime import datetime, timezone
 from typing import Any
@@ -11,6 +9,7 @@ from cryptography import x509
 from fido2.utils import ByteBuffer
 from fido2.webauthn import Aaguid
 
+from .. import encoding
 from . import encoding_leaf
 from .runtime_state import AAGUID_EXTENSION_OID
 
@@ -85,9 +84,8 @@ def _extract_certificate_aaguid(cert_der: bytes) -> bytes:
         elif isinstance(value, (bytes, bytearray, memoryview)):
             raw_value = bytes(value)
         elif isinstance(candidate, str):
-            try:
-                raw_value = bytes.fromhex(candidate)
-            except ValueError:
+            raw_value = encoding.try_decode_hex(candidate)
+            if raw_value is None:
                 raw_value = candidate.encode("utf-8")
 
     if raw_value is None:
@@ -109,17 +107,12 @@ def _coerce_certificate_bytes(value: Any) -> bytes | None:
         return byte_value
 
     if isinstance(value, str):
-        stripped = "".join(value.split())
-        if not stripped:
+        if not value.strip():
             return None
-        try:
-            padded = stripped + "=" * ((4 - len(stripped) % 4) % 4)
-            return base64.b64decode(padded, validate=True)
-        except (binascii.Error, ValueError):
-            try:
-                return bytes.fromhex(stripped)
-            except ValueError:
-                return None
+        decoded = encoding.try_decode_base64(value)
+        if decoded is None:
+            decoded = encoding.try_decode_hex(value)
+        return decoded
     return None
 
 

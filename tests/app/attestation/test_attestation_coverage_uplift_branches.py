@@ -117,27 +117,21 @@ def test_attempt_pqc_attestation_signature_validation_reports_public_key_constru
     assert outcome["error"].startswith("pqc_attestation_public_key_invalid:")
 
 
-def test_coerce_attestation_certificate_bytes_string_path_uses_websafe_decode_fallback(monkeypatch, details_runtime, attestation_module):
+def test_coerce_attestation_certificate_bytes_string_path_falls_back_to_base64url():
     attestation_module = pytest.importorskip("server.app.attestation")
 
-    monkeypatch.setattr(
-        base64,
-        "b64decode",
-        lambda *_args, **_kwargs: (_ for _ in ()).throw(ValueError("bad-base64")),
-    )
-    monkeypatch.setattr(
-        details_runtime,
-        "websafe_decode",
-        lambda _value: b"\x01\x02",
-    )
-    assert attestation_module._coerce_attestation_certificate_bytes("AQI") == b"\x01\x02"
+    raw = b"\xfb\xef\xbe"
+    standard = base64.b64encode(raw).decode("ascii")
+    urlsafe = base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=")
+    assert "+" in standard or "/" in standard
+    assert "-" in urlsafe or "_" in urlsafe
 
-    monkeypatch.setattr(
-        details_runtime,
-        "websafe_decode",
-        lambda _value: (_ for _ in ()).throw(ValueError("bad-websafe")),
-    )
-    assert attestation_module._coerce_attestation_certificate_bytes("AQI") is None
+    # Standard base64 first, then base64url -- and each reading is exact, so
+    # the fallback recovers the same certificate rather than a shorter one.
+    assert attestation_module._coerce_attestation_certificate_bytes(standard) == raw
+    assert attestation_module._coerce_attestation_certificate_bytes(urlsafe) == raw
+
+    assert attestation_module._coerce_attestation_certificate_bytes("not a certificate!") is None
 
 
 def test_evaluate_mldsa_attestation_root_clears_chain_errors_after_later_success(monkeypatch, trust_runtime, trust_ca_runtime, pqc_constraints_runtime, metadata_module, attestation_module):
@@ -255,16 +249,8 @@ def test_perform_attestation_checks_coerces_string_challenge_via_utf8_fallback_a
         "from_dict",
         lambda _response: _registration(attestation_object, client_data),
     )
-    monkeypatch.setattr(
-        details_runtime,
-        "websafe_decode",
-        lambda _value: (_ for _ in ()).throw(ValueError("bad-websafe")),
-    )
-    monkeypatch.setattr(
-        base64,
-        "b64decode",
-        lambda *_args, **_kwargs: (_ for _ in ()).throw(ValueError("bad-base64")),
-    )
+    # "raw:text:challenge" is not base64, base64url or hex, so the challenge
+    # coercion reaches its UTF-8 fallback without any decoder being stubbed.
 
     class _AttestationVerifier:
         def verify(self, _att_stmt, _auth_data, _client_hash):

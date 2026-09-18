@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-import base64
 from collections.abc import Mapping
 from typing import Any
 
 from fido2.utils import ByteBuffer
+
+from .. import encoding
 
 
 def colon_hex(data: bytes) -> str:
@@ -27,12 +28,10 @@ def format_hex_bytes_lines(data: bytes, bytes_per_line: int = 16) -> list[str]:
 
 
 def format_hex_string_lines(hex_string: str, bytes_per_line: int = 16) -> list[str]:
-    cleaned = "".join(hex_string.split()).replace(":", "")
-    if len(cleaned) % 2:
-        cleaned = "0" + cleaned
-    try:
-        data = bytes.fromhex(cleaned)
-    except ValueError:
+    data = encoding.try_decode_hex(
+        hex_string, allow_separators=True, allow_odd_length=True
+    )
+    if data is None:
         return [hex_string]
     return format_hex_bytes_lines(data, bytes_per_line)
 
@@ -73,7 +72,7 @@ def decode_asn1_octet_string(data: bytes) -> bytes:
 
 def encode_base64url(data: bytes) -> str:
     """Encode bytes as unpadded base64url."""
-    return base64.urlsafe_b64encode(data).rstrip(b"=").decode("ascii")
+    return encoding.encode_base64url(data)
 
 
 def make_json_safe(value: Any) -> Any:
