@@ -176,7 +176,7 @@ def simple_authenticate():
 def simple_binary_helpers():
     """The fragment that defines the base64 padding and binary decode helpers."""
 
-    return _simple_fragment("binary_helpers_impl")
+    return _simple_fragment("binary")
 
 
 @pytest.fixture

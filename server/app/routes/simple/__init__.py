@@ -12,7 +12,7 @@ from ...config import app
 from .. import binary_helpers
 from . import (
     authenticate_impl,
-    binary_helpers_impl,
+    binary,
     credential_parsing_impl,
     credentials_route_impl,
     register_begin_impl,
@@ -39,11 +39,11 @@ __all__ = [
 _SIMPLE_ALLOWED_ALGORITHMS = register_begin_impl._SIMPLE_ALLOWED_ALGORITHMS
 
 # base64 padding and binary decode primitives.
-_add_base64_padding = binary_helpers_impl._add_base64_padding_impl
+_add_base64_padding = binary._add_base64_padding_impl
 _decode_base64url_bytes = binary_helpers.decode_base64url_bytes
-_decode_binary_value = binary_helpers_impl._decode_binary_value_impl
+_decode_binary_value = binary._decode_binary_value_impl
 _extract_assertion_credential_id = binary_helpers.extract_assertion_credential_id
-_select_first = binary_helpers_impl._select_first_impl
+_select_first = binary._select_first_impl
 
 # Session-credential serialisation and parsing.
 _parse_client_credentials = credential_parsing_impl._parse_client_credentials_impl
