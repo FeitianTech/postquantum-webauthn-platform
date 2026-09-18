@@ -51,16 +51,9 @@ def classical_runtime():
 
 @pytest.fixture
 def pqc():
-    """The fragment that defines the PQC attestation root evaluation."""
+    """The fragment that defines the PQC attestation root evaluation. The fragment that defines the PQC certificate constraint checks."""
 
     return _fragment("pqc")
-
-
-@pytest.fixture
-def pqc_constraints_runtime():
-    """The fragment that defines the PQC certificate constraint checks."""
-
-    return _fragment("pqc_constraints_runtime")
 
 
 @pytest.fixture

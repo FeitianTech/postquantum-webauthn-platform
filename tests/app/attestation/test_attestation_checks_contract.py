@@ -249,11 +249,11 @@ def test_verify_pqc_attestation_chain_requires_non_empty_trust_path(attestation_
     assert errors == ["pqc_attestation_chain_missing"]
 
 
-def test_verify_pqc_attestation_chain_returns_constraint_error_early(monkeypatch, pqc_constraints_runtime, attestation_module):
+def test_verify_pqc_attestation_chain_returns_constraint_error_early(monkeypatch, pqc, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     monkeypatch.setattr(
-        pqc_constraints_runtime,
+        pqc,
         "_check_pqc_certificate_constraints",
         lambda *_args, **_kwargs: "pqc_basic_constraints_not_ca: Test CA",
     )
@@ -268,16 +268,16 @@ def test_verify_pqc_attestation_chain_returns_constraint_error_early(monkeypatch
     assert errors == ["pqc_basic_constraints_not_ca: Test CA"]
 
 
-def test_verify_pqc_attestation_chain_reports_untrusted_root(monkeypatch, trust, pqc_constraints_runtime, attestation_module):
+def test_verify_pqc_attestation_chain_reports_untrusted_root(monkeypatch, trust, pqc, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     monkeypatch.setattr(
-        pqc_constraints_runtime,
+        pqc,
         "_check_pqc_certificate_constraints",
         lambda *_args, **_kwargs: None,
     )
     monkeypatch.setattr(
-        pqc_constraints_runtime,
+        pqc,
         "_verify_mldsa_certificate_signature",
         lambda *_args, **_kwargs: None,
     )
@@ -297,11 +297,11 @@ def test_verify_pqc_attestation_chain_reports_untrusted_root(monkeypatch, trust,
     assert errors == ["pqc_root_not_in_trusted_list"]
 
 
-def test_verify_pqc_attestation_chain_invokes_signature_verification_for_each_non_root_link(monkeypatch, trust, pqc_constraints_runtime, attestation_module):
+def test_verify_pqc_attestation_chain_invokes_signature_verification_for_each_non_root_link(monkeypatch, trust, pqc, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     monkeypatch.setattr(
-        pqc_constraints_runtime,
+        pqc,
         "_check_pqc_certificate_constraints",
         lambda *_args, **_kwargs: None,
     )
@@ -317,7 +317,7 @@ def test_verify_pqc_attestation_chain_invokes_signature_verification_for_each_no
         observed_pairs.append((cert_der, issuer_der))
 
     monkeypatch.setattr(
-        pqc_constraints_runtime,
+        pqc,
         "_verify_mldsa_certificate_signature",
         _capture_signature_pair,
     )
@@ -336,11 +336,11 @@ def test_verify_pqc_attestation_chain_invokes_signature_verification_for_each_no
     ]
 
 
-def test_verify_pqc_attestation_chain_reports_invalid_signature_error(monkeypatch, pqc_constraints_runtime, attestation_module):
+def test_verify_pqc_attestation_chain_reports_invalid_signature_error(monkeypatch, pqc, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     monkeypatch.setattr(
-        pqc_constraints_runtime,
+        pqc,
         "_check_pqc_certificate_constraints",
         lambda *_args, **_kwargs: None,
     )
@@ -349,7 +349,7 @@ def test_verify_pqc_attestation_chain_reports_invalid_signature_error(monkeypatc
         raise InvalidSignature("invalid signature")
 
     monkeypatch.setattr(
-        pqc_constraints_runtime,
+        pqc,
         "_verify_mldsa_certificate_signature",
         _raise_invalid_signature,
     )
@@ -365,11 +365,11 @@ def test_verify_pqc_attestation_chain_reports_invalid_signature_error(monkeypatc
     assert errors[0].startswith("pqc_certificate_signature_invalid:")
 
 
-def test_verify_pqc_attestation_chain_reports_unexpected_signature_error(monkeypatch, pqc_constraints_runtime, attestation_module):
+def test_verify_pqc_attestation_chain_reports_unexpected_signature_error(monkeypatch, pqc, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     monkeypatch.setattr(
-        pqc_constraints_runtime,
+        pqc,
         "_check_pqc_certificate_constraints",
         lambda *_args, **_kwargs: None,
     )
@@ -378,7 +378,7 @@ def test_verify_pqc_attestation_chain_reports_unexpected_signature_error(monkeyp
         raise RuntimeError("verifier exploded")
 
     monkeypatch.setattr(
-        pqc_constraints_runtime,
+        pqc,
         "_verify_mldsa_certificate_signature",
         _raise_unexpected_error,
     )
