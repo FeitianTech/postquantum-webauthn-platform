@@ -605,10 +605,94 @@ PRIVATE names from `decode.py` (tech-lead confirmed), so the shim is load-bearin
 production, not just tests — encoder-milestone scope. `cbor_strict._decode_cbor_structure` was
 dead and is now the live copy. One `raising=False` remains on `encode._ENCODING_HANDLERS`.
 
-### M3 status: 3 of 5 carriers unwound. F821 retired as a metric.
-Remaining: `routes/advanced.py` and `routes/simple.py`. They produce **no F821**, so the new
-meter is the `advanced_module.`/`simple_module.` reference count (539 at last audit) and the
-2 remaining `ruff.toml` per-file-ignores.
+### Phase 9 — M3: unwind the `routes/advanced.py` and `routes/simple.py` carriers — DONE (2026-09-18). **M3 COMPLETE.**
+
+These two coupled differently from the other three: no `types.FunctionType` rebinding, but 45
+one-line forwarders shaped `return _foo_impl(_self_module(), ...)`, with the fragments reading
+names off the parameter (`advanced_module.session`, `advanced_module.math`). To ruff that is
+just a parameter, so the coupling produced **no F821 at all** and F821 could not be the meter.
+
+| Metric | Before | After |
+|---|---|---|
+| `advanced_module.` / `simple_module.` attribute reads in `*_parts/` | **498** (296 + 202) | **0** |
+| bare `advanced_module` / `simple_module` tokens in `server/` | **581** | **0** |
+| carrier forwarders (`_self_module()`) | 45 (33 + 12) | **0** |
+| `F401` + `UP035` on the two carriers, unsuppressed | **107** | **0** |
+| `ruff.toml` per-file-ignores | 2 | **0** — the section is gone entirely |
+| `advanced.py` / `simple.py` | 292 / 156 lines | **115 / 74** (route rules + shim) |
+| `raising=False` repo-wide in `tests/` | 780 | **476** (304 dropped: 292 carrier-targeted + 12 same-file collateral) |
+| F821 repo-wide | 0, gated | **0, still gated** — `[lint]` has no `ignore` key |
+
+Suite 1708/278 throughout. **Collected test IDs identical: 1708, 0 added / 0 removed**, across
+~380 rewritten patch lines and a new 30-fixture `tests/app/conftest.py`.
+`tests/app/security/` 78 passed — challenge single-use, signCount regression, origin allowlist
+and the `__session_state` binding all re-verified, with no ceremony behaviour touched.
+
+**The per-fragment plan did not survive contact and had to change.** A test patches a *name* on
+the carrier, so the moment any one fragment stops reading `advanced_module.create_fido_server`
+that test silently stops affecting it. A patched name therefore has to move in **every** fragment
+at once. Conversion ran by dependency package (metadata, credential_artifacts, device_logs, pqc,
+attestation, storage, config), not fragment by fragment, with the test re-point in the same
+commit. Names no test patches (stdlib, Flask, fido2) were free to move in one sweep.
+
+**Externals that tests patch are imported as modules** (`from ... import config`, then
+`config.create_fido_server(...)`), so each keeps one stable patch target whichever fragment a
+flow runs through; everything else is a plain name import. The 11 pre-existing
+`from .sibling import name` statements went too — the arity change forced it — so no name
+anywhere in either package is bound at import time now.
+
+**Three real defects the work exposed, none of them cosmetic:**
+1. `register_begin_impl` had a local `attestation = public_key.get("attestation", "none")`
+   shadowing the new `from ... import attestation`. Ruff's F401 autofix then deleted the import
+   as unused. **F821 caught it** — 2 errors, and the fix was to rename the local.
+2. Patches living in plain test *helpers* (not tests or fixtures) were being skipped by the
+   re-point tooling, leaving them as dead no-ops that still resolved on the carrier. An audit
+   pass for "carrier patches no fragment reads any more" now returns 0.
+3. Pruning the now-unused `advanced_module = pytest.importorskip("server.app.routes.advanced")`
+   locals removed the side effect that **registered the Flask routes**, so two files passed in a
+   full run and 405'd on their own. The fixtures in `tests/app/conftest.py` now import
+   `server.app.app` first. Every file under `tests/app/` was checked to run standalone.
+
+**Fault injection — the sharpest before/after of the five phases.** Method: rename each patched
+symbol at its definition and at every production call site in `server/`, leaving the test patches
+on the old name; then run exactly the tests that patch it, attributing a patch to a test only if
+it is in the test's own body or in a helper/fixture the test actually reaches.
+
+| | Before (`e2c093a`) | After |
+|---|---|---|
+| patching tests | 374 | 377 |
+| detected **at the patch line** | **0** | **377 (100%)** |
+| detected downstream | 149 | 0 |
+| **silently absorbed** | **225 (60%)** | **0** |
+
+Zero at-patch before is the mechanism, not bad luck: `raising=False` *creates* the attribute, so
+a patch against a moved symbol installed its stub into carrier globals, the fragment resolved it
+there, and the test passed against the stub.
+
+**On reproducibility, which took three tries.** The first two sweeps disagreed (346 vs 362
+at-patch) and a third disagreed again. The cause was the Phase 8 trap: stale `__pycache__`.
+Running the injected subprocesses with `PYTHONDONTWRITEBYTECODE=1` and clearing `__pycache__`
+per symbol made the after-state measurement **byte-identical across two consecutive runs**. Two
+earlier measurement bugs are also worth recording because both flattered the result in one
+direction and hurt it in the other: attributing a helper's patches to every test in its file
+inflated "absorbed", and pytest's `-rf` summary lines are *truncated to terminal width*, so a
+regex anchored on the full path silently missed failures — the classifier reads `--junitxml`
+now. The baseline measurement is itself ±1 unstable (225 vs 224 absorbed across two runs); the
+after-state is not.
+
+**Found but not fixed:** `advanced_parts/binary_helpers_impl.py` and
+`simple_parts/binary_helpers_impl.py` are duplicated implementations — both define
+`_select_first_impl` and `_decode_base64url_bytes_impl`, neither imports the other; merging them
+is file-level milestone scope. Three advanced forwarders have no production caller at all and
+exist only for tests: `_extract_credential_id`, `_is_custom_cose_algorithm`,
+`_extract_requested_assertion_algorithm`. `encode_parts` still imports five private names from
+`decode.py` — encoder scope, untouched as instructed.
+
+### M3 status: 5 of 5 carriers unwound. The split-module runtime hack is gone.
+No module in the repo passes itself into its own fragments or rebinds their globals.
+`ruff.toml` has no `[lint.per-file-ignores]` section at all, and F821 is gated at zero with
+nothing ignored. The next milestone is file-level: re-merging along responsibility lines
+(P2.4) and retiring the duplicated `binary_helpers_impl` pair.
 
 ### Local development
 Tests previously ran against the global interpreter, whose packages matched nothing in
