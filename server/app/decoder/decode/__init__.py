@@ -15,9 +15,7 @@ from . import (
     cbor_runtime,
     cbor_sequence,
     cbor_strict,
-    certificate_extensions,
-    certificate_summary,
-    conversion_cert_leaf,
+    certificates,
     conversion_leaf,
     ctap_classify,
     ctap_convert_leaf,
@@ -86,19 +84,19 @@ _structure_to_value = cbor_lenient._structure_to_value
 _decode_cbor_sequence_impl = cbor_sequence._decode_cbor_sequence_impl
 
 # Certificate extension serialisation.
-_DEVICE_IDENTIFIER_NAMES = certificate_extensions._DEVICE_IDENTIFIER_NAMES
-_build_certificate_extensions_lines = certificate_extensions._build_certificate_extensions_lines
-_format_certificate_extension_header = certificate_extensions._format_certificate_extension_header
-_format_certificate_extension_value = certificate_extensions._format_certificate_extension_value
-_format_device_identifier_line = certificate_extensions._format_device_identifier_line
+_DEVICE_IDENTIFIER_NAMES = certificates._DEVICE_IDENTIFIER_NAMES
+_build_certificate_extensions_lines = certificates._build_certificate_extensions_lines
+_format_certificate_extension_header = certificates._format_certificate_extension_header
+_format_certificate_extension_value = certificates._format_certificate_extension_value
+_format_device_identifier_line = certificates._format_device_identifier_line
 
 # Certificate summary line builders.
-_build_fingerprint_lines = certificate_summary._build_fingerprint_lines
-_build_signature_lines = certificate_summary._build_signature_lines
-_build_subject_key_identifier_lines = certificate_summary._build_subject_key_identifier_lines
-_build_subject_public_key_info_lines = certificate_summary._build_subject_public_key_info_lines
-_format_certificate_time = certificate_summary._format_certificate_time
-_format_public_key_point_lines = certificate_summary._format_public_key_point_lines
+_build_fingerprint_lines = certificates._build_fingerprint_lines
+_build_signature_lines = certificates._build_signature_lines
+_build_subject_key_identifier_lines = certificates._build_subject_key_identifier_lines
+_build_subject_public_key_info_lines = certificates._build_subject_public_key_info_lines
+_format_certificate_time = certificates._format_certificate_time
+_format_public_key_point_lines = certificates._format_public_key_point_lines
 
 # Credential payload conversion leaves.
 _build_authenticator_data_payload = conversion_leaf._build_authenticator_data_payload
@@ -109,11 +107,11 @@ _collect_response_extras = conversion_leaf._collect_response_extras
 _convert_client_data_entry = conversion_leaf._convert_client_data_entry
 
 # Certificate conversion leaves.
-_convert_attestation_entry_impl = conversion_cert_leaf._convert_attestation_entry_impl
-_convert_attestation_statement_impl = conversion_cert_leaf._convert_attestation_statement_impl
-_convert_certificate_bytes_impl = conversion_cert_leaf._convert_certificate_bytes_impl
-_convert_certificate_chain_impl = conversion_cert_leaf._convert_certificate_chain_impl
-_convert_certificate_payload_impl = conversion_cert_leaf._convert_certificate_payload_impl
+_convert_attestation_entry_impl = certificates._convert_attestation_entry_impl
+_convert_attestation_statement_impl = certificates._convert_attestation_statement_impl
+_convert_certificate_bytes_impl = certificates._convert_certificate_bytes_impl
+_convert_certificate_chain_impl = certificates._convert_certificate_chain_impl
+_convert_certificate_payload_impl = certificates._convert_certificate_payload_impl
 
 # Summary field formatting leaves.
 _append_multiline_field = summary_leaf._append_multiline_field

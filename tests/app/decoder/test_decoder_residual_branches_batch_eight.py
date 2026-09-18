@@ -54,9 +54,7 @@ def test_build_certificate_summary_lines_handles_partial_fields_and_validity_sha
     assert any(line.startswith("Not Before:") for line in lines)
 
 
-def test_build_subject_key_identifier_lines_handles_extension_bytes_der_failures_and_spki_fallback(
-    monkeypatch,
-):
+def test_build_subject_key_identifier_lines_handles_extension_bytes_der_failures_and_spki_fallback(monkeypatch):
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     ext_lines = decode_module._build_subject_key_identifier_lines(
