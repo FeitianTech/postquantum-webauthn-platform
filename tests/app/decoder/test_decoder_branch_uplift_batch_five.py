@@ -182,16 +182,16 @@ def test_repair_get_assertion_entries_handles_non_dict_and_non_list_entries_sour
     assert rebuilt_sig is None
 
 
-def test_repair_get_assertion_entries_recovers_trailing_fields_and_prunes_byte_keys(monkeypatch, ctap_repair_leaf):
+def test_repair_get_assertion_entries_recovers_trailing_fields_and_prunes_byte_keys(monkeypatch, ctap):
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     monkeypatch.setattr(
-        ctap_repair_leaf,
+        ctap,
         "_extract_get_assertion_trailing_from_raw",
         lambda _raw: (b"sig-trailing", {5: 99, 7: b"x"}),
     )
     monkeypatch.setattr(
-        ctap_repair_leaf,
+        ctap,
         "_split_get_assertion_trailing_fields",
         lambda _signature: (b"sig-final", {4: {"id": "split-user"}, 6: True}),
     )

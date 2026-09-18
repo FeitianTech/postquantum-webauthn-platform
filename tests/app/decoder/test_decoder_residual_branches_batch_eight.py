@@ -212,7 +212,7 @@ def test_append_attestation_and_client_data_sections_cover_none_and_mapping_path
     assert any(line.startswith("Client data") for line in lines)
 
 
-def test_build_get_assertion_expanded_json_handles_invalid_trailing_hex(monkeypatch, ctap_classify):
+def test_build_get_assertion_expanded_json_handles_invalid_trailing_hex(monkeypatch, ctap):
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     auth_key = decode_module._format_ctap_entry_key(
@@ -225,7 +225,7 @@ def test_build_get_assertion_expanded_json_handles_invalid_trailing_hex(monkeypa
     )
 
     monkeypatch.setattr(
-        ctap_classify,
+        ctap,
         "_build_labeled_ctap_map",
         lambda *_args, **_kwargs: {
             auth_key: {"trailingBytesHex": "not-hex"},

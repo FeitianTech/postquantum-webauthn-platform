@@ -30,7 +30,7 @@ def pipeline():
 
 @pytest.fixture
 def ctap():
-    """The fragment that defines CBOR sequence decoding and CTAP repair."""
+    """The fragment that defines CBOR sequence decoding and CTAP repair. The fragment that defines the CTAP map classification and labels. The fragment that defines the CTAP field conversion leaves. The fragment that defines the CTAP trailing-field repair helpers."""
 
     return _fragment("ctap")
 
@@ -39,14 +39,14 @@ def ctap():
 def ctap_parse_runtime():
     """The fragment that defines the CTAP field parsers and converters."""
 
-    return _fragment("ctap_runtime_parse")
+    return _fragment("ctap")
 
 
 @pytest.fixture
 def ctap_interpret_runtime():
     """The fragment that defines the CTAP interpretation and expanded JSON."""
 
-    return _fragment("ctap_runtime_interpret")
+    return _fragment("ctap")
 
 
 @pytest.fixture
@@ -82,27 +82,6 @@ def keys():
     """The fragment that defines the mapping-key and JSON-safety helpers."""
 
     return _fragment("keys")
-
-
-@pytest.fixture
-def ctap_classify():
-    """The fragment that defines the CTAP map classification and labels."""
-
-    return _fragment("ctap_classify")
-
-
-@pytest.fixture
-def ctap_convert_leaf():
-    """The fragment that defines the CTAP field conversion leaves."""
-
-    return _fragment("ctap_convert_leaf")
-
-
-@pytest.fixture
-def ctap_repair_leaf():
-    """The fragment that defines the CTAP trailing-field repair helpers."""
-
-    return _fragment("ctap_repair_leaf")
 
 
 @pytest.fixture
