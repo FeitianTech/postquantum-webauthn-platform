@@ -71,7 +71,14 @@ def test_decode_binary_payload_uses_authenticator_data_path_when_other_binary_de
     assert result["inputEncoding"] == "hex"
 
 
-def test_decode_binary_input_uses_urlsafe_fallback_when_strict_base64_decode_fails(monkeypatch):
+def test_decode_binary_input_has_no_lenient_fallback_when_strict_decoding_fails(monkeypatch):
+    """There is no second, non-validating attempt to fall back to.
+
+    The pipeline used to retry with ``urlsafe_b64decode`` and no ``validate``,
+    which discards characters outside the alphabet -- that is how prose was
+    accepted as base64url. Strict failure is now the end of the road.
+    """
+
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     original_b64decode = base64.b64decode
@@ -81,15 +88,10 @@ def test_decode_binary_input_uses_urlsafe_fallback_when_strict_base64_decode_fai
             raise ValueError("strict decode failed")
         return original_b64decode(*args, **kwargs)
 
-    monkeypatch.setattr(
-        base64,
-        "b64decode",
-        _patched_b64decode,
-    )
+    monkeypatch.setattr(base64, "b64decode", _patched_b64decode)
 
-    data, encoding = decode_module._decode_binary_input("AQID")
-    assert data == b"\x01\x02\x03"
-    assert encoding == "base64url"
+    with pytest.raises(ValueError, match="does not appear to be valid"):
+        decode_module._decode_binary_input("AQID")
 
 
 def test_cbor_parser_handles_indefinite_container_breaks_partial_data_and_parser_failures(monkeypatch, cbor_strict):

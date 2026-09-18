@@ -133,9 +133,14 @@ def test_expand_cbor_value_and_binary_input_decoder_helpers():
     assert expanded["items"][0]["hex"] == "05"
     assert expanded["items"][1]["nested"]["hex"] == "06"
 
-    hex_data, hex_encoding = decode_module._decode_binary_input("abc")
+    hex_data, hex_encoding = decode_module._decode_binary_input("0abc")
     assert hex_data == bytes.fromhex("0abc")
     assert hex_encoding == "hex"
+
+    # "abc" is not silently left-padded to "0abc"; the missing nibble is data
+    # the caller never supplied.
+    with pytest.raises(ValueError, match="does not appear to be valid"):
+        decode_module._decode_binary_input("abc")
 
     with pytest.raises(ValueError, match="No binary data present"):
         decode_module._decode_binary_input("   ")
