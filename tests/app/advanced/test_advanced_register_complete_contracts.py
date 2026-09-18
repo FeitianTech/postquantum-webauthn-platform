@@ -51,7 +51,6 @@ class _FakeAuthData:
 
 
 def test_advanced_register_complete_prefers_session_state_over_request_state(monkeypatch, config_module):
-    config_module = pytest.importorskip("server.app.config")
     pytest.importorskip("server.app.app")
 
     captured = {}
@@ -90,7 +89,6 @@ def test_advanced_register_complete_prefers_session_state_over_request_state(mon
 
 
 def test_advanced_register_complete_uses_request_state_fallback_when_session_missing(monkeypatch, config_module):
-    config_module = pytest.importorskip("server.app.config")
     pytest.importorskip("server.app.app")
 
     captured = {}
@@ -157,7 +155,6 @@ def test_advanced_register_complete_requires_attachment_when_hints_resolve_to_at
 
 
 def test_advanced_register_complete_prefers_session_attachment_scope_over_tampered_request_hints(monkeypatch, metadata_module, attestation_module, storage_module, config_module):
-    config_module = pytest.importorskip("server.app.config")
     pytest.importorskip("server.app.app")
 
     monkeypatch.setattr(metadata_module, "ensure_metadata_session_id", lambda: "session-id")
@@ -198,7 +195,6 @@ def test_advanced_register_complete_prefers_session_attachment_scope_over_tamper
 
 
 def test_advanced_register_complete_success_contract_propagates_warnings_and_records_artifact(monkeypatch, metadata_module, credential_artifacts_module, device_logs_module, attestation_module, storage_module, config_module):
-    config_module = pytest.importorskip("server.app.config")
     pytest.importorskip("server.app.app")
 
     credential_id = b"advanced-register-success"

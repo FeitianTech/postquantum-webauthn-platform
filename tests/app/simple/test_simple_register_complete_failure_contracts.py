@@ -22,7 +22,6 @@ def _register_complete_payload(*, state=None):
 
 
 def test_simple_register_complete_returns_400_and_cleans_state_when_verification_fails(monkeypatch, attestation_module, config_module):
-    config_module = pytest.importorskip("server.app.config")
     pytest.importorskip("server.app.app")
 
     class _FailingServer:
@@ -60,7 +59,6 @@ def test_simple_register_complete_returns_400_and_cleans_state_when_verification
 def test_simple_register_complete_rejects_request_state_fallback_before_verification(monkeypatch, attestation_module, config_module):
     """The request-supplied state must be discarded before any verification."""
 
-    config_module = pytest.importorskip("server.app.config")
     pytest.importorskip("server.app.app")
 
     captured = {}

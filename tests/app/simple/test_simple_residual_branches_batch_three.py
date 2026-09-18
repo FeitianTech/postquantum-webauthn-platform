@@ -127,7 +127,6 @@ def test_serialize_credential_for_session_accepts_hex_aaguid_alias():
     ],
 )
 def test_register_complete_handles_algorithm_and_large_blob_residual_paths(monkeypatch, algorithm: int, expected_name: str, metadata_module, device_logs_module, attestation_module, storage_module, config_module):
-    config_module = pytest.importorskip("server.app.config")
     pytest.importorskip("server.app.app")
 
     auth_data = _RegisterAuthData(algorithm)
@@ -198,7 +197,6 @@ def test_register_complete_handles_algorithm_and_large_blob_residual_paths(monke
 
 
 def test_authenticate_complete_ignores_request_state_and_handles_bad_matched_credential_id(monkeypatch, config_module):
-    config_module = pytest.importorskip("server.app.config")
     simple_module = pytest.importorskip("server.app.routes.simple")
     pytest.importorskip("server.app.app")
 

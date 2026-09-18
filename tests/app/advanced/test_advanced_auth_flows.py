@@ -8,7 +8,6 @@ def _b64url(data: bytes) -> str:
 
 
 def test_advanced_register_begin_falls_back_from_unavailable_pqc(monkeypatch, pqc_module, config_module):
-    config_module = pytest.importorskip("server.app.config")
     pytest.importorskip("server.app.app")
 
     class _FakeServer:
@@ -167,7 +166,6 @@ def test_advanced_authenticate_complete_missing_state_returns_400(monkeypatch, a
 def test_advanced_authenticate_complete_custom_algorithm_does_not_bypass_verification(monkeypatch, config_module, advanced_algorithm_helpers, advanced_parsing_helpers):
     """A custom/unknown declared algorithm must never yield status OK."""
 
-    config_module = pytest.importorskip("server.app.config")
     pytest.importorskip("server.app.app")
 
     credential_id = b"advanced-custom-alg"
@@ -230,7 +228,6 @@ def test_advanced_authenticate_complete_custom_algorithm_does_not_bypass_verific
 
 
 def test_advanced_authenticate_complete_custom_algorithm_bypass_requires_requested_algorithm_match(monkeypatch, config_module, advanced_algorithm_helpers, advanced_parsing_helpers):
-    config_module = pytest.importorskip("server.app.config")
     pytest.importorskip("server.app.app")
 
     credential_id = b"advanced-custom-alg-mismatch"
@@ -290,7 +287,6 @@ def test_advanced_authenticate_complete_custom_algorithm_bypass_requires_request
 
 
 def test_advanced_authenticate_complete_custom_algorithm_bypass_rejects_non_signature_errors(monkeypatch, config_module, advanced_algorithm_helpers, advanced_parsing_helpers):
-    config_module = pytest.importorskip("server.app.config")
     pytest.importorskip("server.app.app")
 
     credential_id = b"advanced-custom-alg-non-signature"

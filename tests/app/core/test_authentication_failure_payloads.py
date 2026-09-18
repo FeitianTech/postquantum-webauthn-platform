@@ -9,7 +9,6 @@ def _encode_base64url(data: bytes) -> str:
 
 
 def test_simple_authentication_failure_returns_failed_credential_id(monkeypatch, config_module):
-    config_module = pytest.importorskip("server.app.config")
     simple_module = pytest.importorskip("server.app.routes.simple")
     pytest.importorskip("server.app.app")
 
@@ -45,7 +44,6 @@ def test_simple_authentication_failure_returns_failed_credential_id(monkeypatch,
 
 
 def test_advanced_authentication_failure_returns_failed_credential_id(monkeypatch, config_module, advanced_algorithm_helpers, advanced_parsing_helpers):
-    config_module = pytest.importorskip("server.app.config")
     pytest.importorskip("server.app.app")
 
     credential_id = b"advanced-credential-id"

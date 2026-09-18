@@ -137,7 +137,6 @@ def test_advanced_register_begin_rejects_invalid_challenge_format():
 
 
 def test_advanced_register_begin_normalizes_rp_and_persists_session_state(monkeypatch, pqc_module, config_module):
-    config_module = pytest.importorskip("server.app.config")
     advanced_module = pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
 

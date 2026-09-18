@@ -88,7 +88,6 @@ def test_simple_validation_helpers_cover_decode_and_assertion_id_fallbacks():
 
 
 def test_simple_register_begin_clears_cached_session_fields_when_client_credentials_are_empty(monkeypatch, config_module):
-    config_module = pytest.importorskip("server.app.config")
     simple_module = pytest.importorskip("server.app.routes.simple")
     pytest.importorskip("server.app.app")
 
@@ -165,7 +164,6 @@ def test_simple_authenticate_complete_aborts_when_session_credentials_cannot_be_
 
 
 def test_simple_register_complete_covers_warning_metadata_transport_and_session_fallback_paths(monkeypatch, metadata_module, device_logs_module, attestation_module, storage_module, config_module):
-    config_module = pytest.importorskip("server.app.config")
     pytest.importorskip("server.app.app")
 
     rp_id = "example.com"
