@@ -65,7 +65,7 @@ def payload_runtime():
 def snapshot_runtime():
     """The fragment that defines the base/explorer/full snapshot loaders."""
 
-    return pytest.importorskip("server.app.metadata.base_snapshot_runtime")
+    return pytest.importorskip("server.app.metadata.blob")
 
 
 @pytest.fixture

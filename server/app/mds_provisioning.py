@@ -46,7 +46,7 @@ __all__ = [
 # Every file tools/update_mds_snapshot.py writes, in one set. The payloads and
 # their .meta.json companions are generated together and describe each other, so
 # they are provisioned together too; mixing generations would make the freshness
-# check in metadata/base_snapshot_runtime.py compare mismatched snapshots.
+# check in metadata/blob.py compare mismatched snapshots.
 SNAPSHOT_FILENAMES = (
     "blob.jwt",
     "fido-mds3.verified.json",
