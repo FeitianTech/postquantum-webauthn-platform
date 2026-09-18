@@ -1,13 +1,31 @@
-"""Extracted decoder payload/result conversion helper bodies.
-
-These functions are executed via decode.py wrappers that rebind globals to the
-facade module, preserving monkeypatch-driven behavior in tests.
-"""
-# pyright: reportUndefinedVariable=false
+"""Decoder payload and result conversion helpers."""
+# pyright: reportUndefinedVariable=false  # _base_type still comes from the carrier
 from __future__ import annotations
 
 from collections.abc import Mapping
 from typing import Any
+
+from ...attestation import make_json_safe, serialize_attestation_certificate
+from .binary_extract import (
+    _extract_authenticator_bytes,
+    _extract_authenticator_bytes_from_attestation,
+    _extract_bytes_from_binary,
+)
+from .conversion_cert_leaf import (
+    _convert_attestation_entry_impl,
+    _convert_attestation_statement_impl,
+    _convert_certificate_bytes_impl,
+    _convert_certificate_chain_impl,
+    _convert_certificate_payload_impl,
+)
+from .conversion_leaf import (
+    _build_authenticator_data_payload,
+    _build_credential_overview,
+    _collect_response_extras,
+    _convert_client_data_entry,
+)
+from .key_utils import hex_json_safe as _hex_json_safe
+from .key_utils import stringify_mapping_keys as _stringify_mapping_keys
 
 
 def _prepare_decoder_response(result: dict[str, Any]) -> dict[str, Any]:
@@ -252,7 +270,7 @@ def _convert_certificate_bytes(value: Any) -> dict[str, Any]:
 
 
 def _convert_certificate_payload(
-    entry: Mapping[str, Any], cert_bytes: Optional[bytes] = None
+    entry: Mapping[str, Any], cert_bytes: bytes | None = None
 ) -> dict[str, Any]:
     payload = _convert_certificate_payload_impl(entry, cert_bytes)
     parsed_entry = payload.get("parsedX5c")
