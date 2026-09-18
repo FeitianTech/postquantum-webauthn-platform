@@ -14,7 +14,7 @@ from cryptography import x509
 from fido2.utils import ByteBuffer
 
 from ...attestation import make_json_safe, serialize_attestation_certificate
-from . import cbor_runtime, details_runtime
+from . import cbor_runtime, details_runtime, result_runtime
 
 _PEM_CERT_PATTERN = re.compile(
     r"-----BEGIN CERTIFICATE-----\s*(?P<body>.*?)\s*-----END CERTIFICATE-----",
@@ -336,3 +336,22 @@ def _expand_cbor_value(value: Any) -> Any:
     if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
         return [_expand_cbor_value(item) for item in value]
     return make_json_safe(value)
+
+
+def decode_payload_text(value: str) -> dict[str, Any]:
+    """Decode ``value`` into a structured representation."""
+
+    trimmed = value.strip()
+    if not trimmed:
+        raise ValueError("Decoder input is empty.")
+
+    parsed_json = _try_parse_json(trimmed)
+    if parsed_json is not None:
+        result = _decode_json_object(parsed_json, raw_text=trimmed)
+    elif _looks_like_pem(trimmed):
+        result = _decode_pem_certificates(trimmed)
+    else:
+        data, encoding = _decode_binary_input(trimmed)
+        result = _decode_binary_payload(data, encoding)
+
+    return result_runtime._prepare_decoder_response(result)
