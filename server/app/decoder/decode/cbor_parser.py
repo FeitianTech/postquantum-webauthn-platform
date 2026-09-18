@@ -6,8 +6,8 @@ import struct
 from collections.abc import Callable, Mapping, Sequence
 from typing import Any
 
-from ...attestation import encode_base64url
 from ...encoding import decode_hex, encode_base64
+from ...webauthn.attestation import encode_base64url
 
 
 class _CborDecodingError(ValueError):

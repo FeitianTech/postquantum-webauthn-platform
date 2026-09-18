@@ -11,8 +11,8 @@ from fido2 import cbor
 from fido2.utils import ByteBuffer
 from fido2.webauthn import AuthenticatorData
 
-from ...attestation import encode_base64url, make_json_safe
 from ...encoding import decode_hex, encode_base64
+from ...webauthn.attestation import encode_base64url, make_json_safe
 from . import cbor_parser, pipeline, response
 from .cbor_parser import (
     _CborDecodingError,

@@ -10,8 +10,8 @@ from cryptography import x509
 from cryptography.x509.oid import ExtensionOID
 
 from ... import encoding
-from ...attestation import format_hex_bytes_lines, format_hex_string_lines
 from ...encoding import encode_base64
+from ...webauthn.attestation import format_hex_bytes_lines, format_hex_string_lines
 
 
 def _format_certificate_time(value: Any) -> str | None:

@@ -82,7 +82,7 @@ def test_packaged_metadata_bootstraps_without_download(packaged_metadata_env):
 
 
 def test_metadata_not_available_is_warning_classical():
-    from server.app import attestation
+    from server.app.webauthn import attestation
 
     attestation_object = type("obj", (), {"att_stmt": {}})()
     attestation_result = type(
@@ -104,7 +104,7 @@ def test_metadata_not_available_is_warning_classical():
 
 
 def test_metadata_not_available_is_warning_pqc():
-    from server.app import attestation
+    from server.app.webauthn import attestation
 
     attestation_object = type("obj", (), {"att_stmt": {}})()
     outcome = attestation._evaluate_mldsa_attestation_root(

@@ -177,9 +177,9 @@ def metadata_module():
 
 @pytest.fixture
 def attestation_module():
-    """``server.app.attestation`` -- attestation checks and JSON-safety helpers."""
+    """``server.app.webauthn.attestation`` -- attestation checks and JSON-safety helpers."""
 
-    return _module("server.app.attestation")
+    return _module("server.app.webauthn.attestation")
 
 
 @pytest.fixture

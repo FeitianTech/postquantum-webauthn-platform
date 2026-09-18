@@ -79,6 +79,6 @@ def certificates():
 
 @pytest.fixture
 def attestation_module():
-    """``server.app.attestation`` -- the decoder fragments import from it."""
+    """``server.app.webauthn.attestation`` -- the decoder fragments import from it."""
 
-    return pytest.importorskip("server.app.attestation")
+    return pytest.importorskip("server.app.webauthn.attestation")

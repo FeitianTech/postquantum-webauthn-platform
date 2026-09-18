@@ -8,7 +8,7 @@ callers of *this module* see, not what the fragments call.
 """
 from __future__ import annotations
 
-from ... import attestation
+from ...webauthn import attestation
 from . import (
     binary,
     cbor_parser,

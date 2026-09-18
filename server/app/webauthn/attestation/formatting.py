@@ -5,7 +5,7 @@ from typing import Any
 
 from fido2.utils import ByteBuffer
 
-from .. import encoding
+from ... import encoding
 
 
 def colon_hex(data: bytes) -> str:

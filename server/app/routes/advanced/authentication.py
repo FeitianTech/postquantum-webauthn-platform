@@ -8,7 +8,7 @@ from flask import jsonify, request, session
 from fido2.cose import CoseKey, UnsupportedKey
 from fido2.webauthn import AuthenticatorData, UserVerificationRequirement
 
-from ... import attestation, config
+from ... import config
 from ...attachments import (
     normalize_attachment,
     normalize_attachment_list,
@@ -16,7 +16,7 @@ from ...attachments import (
 )
 from ...challenge_registry import consume_ceremony_state, stamp_ceremony_state
 from ...encoding import decode_hex, encode_base64url
-from ...webauthn import pqc
+from ...webauthn import attestation, pqc
 from ...webauthn.sign_count import sign_count_status
 from .. import binary_helpers
 from . import algorithms, binary, parsing

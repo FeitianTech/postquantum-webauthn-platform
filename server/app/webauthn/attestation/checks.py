@@ -20,9 +20,9 @@ from fido2.webauthn import (
     RegistrationResponse,
 )
 
-from .. import encoding
-from ..webauthn import metadata
-from ..webauthn.pqc import is_pqc_algorithm
+from ... import encoding
+from .. import metadata
+from ..pqc import is_pqc_algorithm
 from . import classical, formatting, pqc, trust
 
 

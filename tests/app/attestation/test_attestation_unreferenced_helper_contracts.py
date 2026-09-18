@@ -30,7 +30,7 @@ def _self_signed_cert_der() -> bytes:
 
 
 def test_datetime_coercion_bytes_and_leaf_certificate_helpers(attestation_module):
-    attestation_module = pytest.importorskip("server.app.attestation")
+    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
 
     naive = datetime(2026, 1, 1, 12, 0, 0)
     assert attestation_module._ensure_utc_datetime(naive).tzinfo == timezone.utc
@@ -56,7 +56,7 @@ def test_datetime_coercion_bytes_and_leaf_certificate_helpers(attestation_module
 
 
 def test_trusted_ca_config_and_fingerprint_helpers(monkeypatch, attestation_module):
-    attestation_module = pytest.importorskip("server.app.attestation")
+    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
 
     monkeypatch.setitem(attestation_module.app.config, "TRUSTED_ATTESTATION_CA_SUBJECTS", ["CN=Root"])
     monkeypatch.setitem(attestation_module.app.config, "TRUSTED_ATTESTATION_CA_FINGERPRINTS", ("abc", "def"))
@@ -70,7 +70,7 @@ def test_trusted_ca_config_and_fingerprint_helpers(monkeypatch, attestation_modu
 
 
 def test_metadata_lookup_subject_description_and_format_helpers(attestation_module):
-    attestation_module = pytest.importorskip("server.app.attestation")
+    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
 
     verifier = SimpleNamespace(find_entry_by_aaguid=lambda _aaguid: {"ok": True})
     found = attestation_module._find_metadata_entry_for_aaguid(
@@ -109,7 +109,7 @@ def test_metadata_lookup_subject_description_and_format_helpers(attestation_modu
 
 
 def test_fallback_certificate_serialization_and_unknown_public_key_info_helpers(monkeypatch, certificates, attestation_module):
-    attestation_module = pytest.importorskip("server.app.attestation")
+    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
 
     monkeypatch.setattr(
         certificates,
@@ -151,7 +151,7 @@ def test_fallback_certificate_serialization_and_unknown_public_key_info_helpers(
 
 
 def test_public_key_serialization_paths(monkeypatch, attestation_module):
-    attestation_module = pytest.importorskip("server.app.attestation")
+    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
 
     ec_info = attestation_module._serialize_public_key_info(ec.generate_private_key(ec.SECP256R1()).public_key())
     rsa_info = attestation_module._serialize_public_key_info(rsa.generate_private_key(public_exponent=65537, key_size=2048).public_key())

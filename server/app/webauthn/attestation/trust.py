@@ -10,8 +10,8 @@ from cryptography import x509
 from fido2.utils import ByteBuffer
 from fido2.webauthn import Aaguid
 
-from .. import encoding
-from ..config import app
+from ... import encoding
+from ...config import app
 from . import formatting
 from .constants import AAGUID_EXTENSION_OID
 

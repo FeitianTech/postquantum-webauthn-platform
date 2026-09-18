@@ -23,7 +23,6 @@ from fido2.webauthn import (
 )
 
 from ... import (
-    attestation,
     config,
     credential_artifacts,
     device_logs,
@@ -35,7 +34,7 @@ from ...attachments import (
 )
 from ...encoding import decode_hex, encode_base64, encode_base64url
 from ...storage import credentials
-from ...webauthn import metadata, pqc
+from ...webauthn import attestation, metadata, pqc
 from .. import binary_helpers
 from . import algorithms, binary, summary, tracing
 

@@ -5,8 +5,8 @@ from collections.abc import Mapping
 from datetime import datetime, timezone
 from typing import Any
 
-from ... import attestation, config
-from ...webauthn import pqc
+from ... import config
+from ...webauthn import attestation, pqc
 from . import algorithms, binary
 
 
