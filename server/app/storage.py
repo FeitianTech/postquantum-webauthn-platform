@@ -641,11 +641,19 @@ def list_credentials(*, session_id: str | None = None) -> dict[str, list[Any]]:
 def convert_bytes_for_json(obj: Any) -> Any:
     """Recursively convert bytes-like objects to base64 strings for JSON serialization.
 
-    NOTE: this is the *API response* encoding, not the storage encoding. It
-    emits standard base64 (``+``/``/``, padded) because frontend helpers such
-    as ``base64ToHex``/``base64ToUint8Array`` call ``atob`` on these values
-    directly. The on-disk/GCS format uses unpadded base64url; see
-    ``_encode_value``.
+    NOTE: this is the *API response* encoding, not the storage encoding, and it
+    deliberately stays standard base64 (``+``/``/``, padded) while the rest of
+    the server speaks base64url.
+
+    The reason is the receiving end. ``base64ToHex`` and ``base64ToUint8Array``
+    in ``frontend/static/scripts/shared/utils/binary.js`` pass these values
+    straight to ``atob``, and ``atob`` throws on ``-``/``_``. Certificate
+    rendering (``advanced/credential-display/certificate-core.js``) and the
+    credential detail views (``advanced/credentials/utils.js``) both go through
+    those helpers, so switching this function alone would break them; the two
+    have to move together, and that is a frontend change.
+
+    The on-disk/GCS format uses unpadded base64url; see ``_encode_value``.
     """
     if isinstance(obj, (bytes, bytearray, memoryview)):
         return encoding.encode_base64(bytes(obj))
