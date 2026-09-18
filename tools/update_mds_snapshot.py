@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-import base64
 import json
 import sys
 import time
@@ -21,11 +20,13 @@ if str(REPO_ROOT) not in sys.path:
 from fido2.mds3 import parse_blob  # noqa: E402
 
 try:  # A repository checkout.
+    from server.app.encoding import decode_base64  # noqa: E402
     from server.app.mds_snapshot import (  # noqa: E402
         build_bootstrap_snapshot,
         build_explorer_snapshot,
     )
 except ModuleNotFoundError:  # The image copies server/app to /app/server.
+    from server.encoding import decode_base64  # noqa: E402
     from server.mds_snapshot import (  # noqa: E402
         build_bootstrap_snapshot,
         build_explorer_snapshot,
@@ -79,7 +80,7 @@ FIDO_METADATA_TRUST_ROOT_B64 = (
     "N3ec592kD3ZDZopD8p/7DEJ4Y9HiD2971KE9dJeFt0g5QdYg/NA6s/rob8SKunE3"
     "vouXsXgxT7PntgMTzlSdriVZzH81Xwj3QEUxeCp6"
 )
-FIDO_METADATA_TRUST_ROOT_CERT = base64.b64decode(FIDO_METADATA_TRUST_ROOT_B64)
+FIDO_METADATA_TRUST_ROOT_CERT = decode_base64(FIDO_METADATA_TRUST_ROOT_B64)
 
 
 def _parse_http_datetime(value: str | None) -> datetime | None:

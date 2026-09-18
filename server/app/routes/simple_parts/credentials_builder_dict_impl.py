@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-import base64
 from collections.abc import Mapping, MutableMapping
 from typing import Any
 
 from ... import attestation, storage
 from ...attachments import normalize_attachment
-from ...encoding import encode_base64
+from ...encoding import encode_base64, encode_base64url
 
 
 def add_registration_metadata_impl(
@@ -143,9 +142,7 @@ def build_credential_info_from_dict_credential_data_impl(
 
     if auth_data_bytes:
         if not raw_authenticator_value:
-            raw_authenticator_value = base64.urlsafe_b64encode(auth_data_bytes).decode(
-                "utf-8"
-            ).rstrip("=")
+            raw_authenticator_value = encode_base64url(auth_data_bytes)
         if not authenticator_hex_value:
             authenticator_hex_value = auth_data_bytes.hex()
 
