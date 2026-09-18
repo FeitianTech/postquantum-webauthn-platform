@@ -1,7 +1,11 @@
 from __future__ import annotations
 
+import json
 from collections.abc import Mapping
+from datetime import datetime, timezone
 from typing import Any
+
+from flask import jsonify
 
 
 def finalize_registration_completion(
@@ -26,7 +30,7 @@ def finalize_registration_completion(
     user_handle: bytes,
     display_name: str,
 ) -> Any:
-    artifact_record = advanced_module.json.loads(advanced_module.json.dumps(stored_credential))
+    artifact_record = json.loads(json.dumps(stored_credential))
     storage_id_source = (
         artifact_record.get("credentialIdBase64Url")
         or artifact_record.get("credentialIdHex")
@@ -46,14 +50,14 @@ def finalize_registration_completion(
             "Failed to store advanced credential artifact for user %s",
             username,
         )
-        return advanced_module.jsonify({"error": "Unable to persist credential artifact."}), 500
+        return jsonify({"error": "Unable to persist credential artifact."}), 500
 
     if not artifact_stored:
         advanced_module.app.logger.error(
             "Advanced credential artifact was not stored for user %s",
             username,
         )
-        return advanced_module.jsonify({"error": "Unable to persist credential artifact."}), 500
+        return jsonify({"error": "Unable to persist credential artifact."}), 500
 
     summary_credential = advanced_module._summarize_stored_credential(artifact_record, storage_id)
 
@@ -78,7 +82,7 @@ def finalize_registration_completion(
             cose_public_key = {}
 
     event = advanced_module.RegistrationEvent(
-        timestamp=advanced_module.datetime.now(advanced_module.timezone.utc),
+        timestamp=datetime.now(timezone.utc),
         rp_id=resolved_rp_id,
         user_id=user_handle,
         user_name=str(username or ""),
@@ -106,4 +110,4 @@ def finalize_registration_completion(
     if warnings:
         response_payload["warnings"] = warnings
 
-    return advanced_module.jsonify(response_payload)
+    return jsonify(response_payload)

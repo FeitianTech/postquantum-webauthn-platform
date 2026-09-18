@@ -3,27 +3,34 @@ from __future__ import annotations
 from collections.abc import Iterable, Mapping
 from typing import Any
 
+from flask import jsonify, request, session
+
+from fido2.webauthn import UserVerificationRequirement
+
+from ...attachments import resolve_effective_attachments
+from ...challenge_registry import stamp_ceremony_state
+
 
 def advanced_authenticate_begin_impl(advanced_module: Any):
-    data = advanced_module.request.get_json(silent=True)
+    data = request.get_json(silent=True)
 
     if not data or not data.get("publicKey"):
-        return advanced_module.jsonify(
+        return jsonify(
             {"error": "Invalid request: Missing publicKey in CredentialRequestOptions"},
         ), 400
 
     public_key = data["publicKey"]
 
     if not public_key.get("challenge"):
-        return advanced_module.jsonify({"error": "Missing required field: challenge"}), 400
+        return jsonify({"error": "Missing required field: challenge"}), 400
 
     raw_hints = public_key.get("hints")
     hints_list: list[str] = []
     if isinstance(raw_hints, list):
         hints_list = [item for item in raw_hints if isinstance(item, str)]
 
-    allowed_attachment_values = advanced_module.resolve_effective_attachments(hints_list, None)
-    advanced_module.session["advanced_authenticate_allowed_attachments"] = list(allowed_attachment_values)
+    allowed_attachment_values = resolve_effective_attachments(hints_list, None)
+    session["advanced_authenticate_allowed_attachments"] = list(allowed_attachment_values)
 
     challenge_value = public_key.get("challenge", "")
     challenge_bytes = None
@@ -33,9 +40,9 @@ def advanced_authenticate_begin_impl(advanced_module: Any):
             if isinstance(challenge_bytes, str):
                 challenge_bytes = bytes.fromhex(challenge_bytes)
         except (ValueError, TypeError) as exc:
-            return advanced_module.jsonify({"error": f"Invalid challenge format: {exc}"}), 400
+            return jsonify({"error": f"Invalid challenge format: {exc}"}), 400
 
-    stored_rp = advanced_module.session.get("advanced_rp")
+    stored_rp = session.get("advanced_rp")
     stored_rp_id = None
     stored_rp_name = None
     if isinstance(stored_rp, Mapping):
@@ -49,11 +56,11 @@ def advanced_authenticate_begin_impl(advanced_module: Any):
     temp_server.timeout = timeout / 1000.0 if timeout else None
 
     user_verification = public_key.get("userVerification", "preferred")
-    uv_req = advanced_module.UserVerificationRequirement.PREFERRED
+    uv_req = UserVerificationRequirement.PREFERRED
     if user_verification == "required":
-        uv_req = advanced_module.UserVerificationRequirement.REQUIRED
+        uv_req = UserVerificationRequirement.REQUIRED
     elif user_verification == "discouraged":
-        uv_req = advanced_module.UserVerificationRequirement.DISCOURAGED
+        uv_req = UserVerificationRequirement.DISCOURAGED
 
     raw_credentials_input: list[Any] = []
     for field in ("__storedCredentials", "storedCredentials", "credentials"):
@@ -64,7 +71,7 @@ def advanced_authenticate_begin_impl(advanced_module: Any):
 
     stored_records, serialized_credentials = advanced_module._parse_client_supplied_credentials(raw_credentials_input)
     if not stored_records:
-        return advanced_module.jsonify(
+        return jsonify(
             {"error": "No credentials detected. Please register a credential first."},
         ), 404
 
@@ -145,7 +152,7 @@ def advanced_authenticate_begin_impl(advanced_module: Any):
 
     if not credentials_for_begin and not resident_key_only:
         if allowed_attachment_values:
-            return advanced_module.jsonify(
+            return jsonify(
                 {
                     "error": (
                         "No credentials matched the selected hints. "
@@ -153,13 +160,13 @@ def advanced_authenticate_begin_impl(advanced_module: Any):
                     )
                 }
             ), 404
-        return advanced_module.jsonify(
+        return jsonify(
             {"error": "No matching credentials found. Please register first."},
         ), 404
 
     if resident_key_only and resident_records and not credentials_for_begin:
         if allowed_attachment_values:
-            return advanced_module.jsonify(
+            return jsonify(
                 {
                     "error": (
                         "No resident key credentials matched the selected hints. "
@@ -167,7 +174,7 @@ def advanced_authenticate_begin_impl(advanced_module: Any):
                     )
                 }
             ), 404
-        return advanced_module.jsonify(
+        return jsonify(
             {
                 "error": (
                     "No resident key credentials are available. "
@@ -233,9 +240,9 @@ def advanced_authenticate_begin_impl(advanced_module: Any):
 
     # Stamped so /complete can tell a fresh state from one replayed out of an
     # old cookie. The copy echoed to the request editor is left unstamped.
-    advanced_module.session["advanced_auth_state"] = advanced_module.stamp_ceremony_state(dict(state))
-    advanced_module.session["advanced_auth_rp"] = {"id": resolved_rp_id, "name": stored_rp_name}
-    advanced_module.session["advanced_auth_credentials_meta"] = {
+    session["advanced_auth_state"] = stamp_ceremony_state(dict(state))
+    session["advanced_auth_rp"] = {"id": resolved_rp_id, "name": stored_rp_name}
+    session["advanced_auth_credentials_meta"] = {
         "count": len(serialized_credentials),
         "resident_count": sum(1 for entry in serialized_credentials if entry.get("resident")),
     }
@@ -248,4 +255,4 @@ def advanced_authenticate_begin_impl(advanced_module: Any):
         if resident_key_only or allow_list is None:
             public_key_dict.pop("allowCredentials", None)
 
-    return advanced_module.jsonify(advanced_module.make_json_safe(options_payload))
+    return jsonify(advanced_module.make_json_safe(options_payload))

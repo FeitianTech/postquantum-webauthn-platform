@@ -1,7 +1,12 @@
 from __future__ import annotations
 
+import base64
+import hashlib
+import uuid
 from collections.abc import Mapping
 from typing import Any
+
+from fido2 import cbor
 
 
 def build_registration_material(
@@ -26,10 +31,10 @@ def build_registration_material(
     credential_id_bytes = getattr(credential_data, "credential_id", b"") or b""
     credential_id_hex = credential_id_bytes.hex() if credential_id_bytes else None
     credential_id_b64 = (
-        advanced_module.base64.b64encode(credential_id_bytes).decode("ascii") if credential_id_bytes else None
+        base64.b64encode(credential_id_bytes).decode("ascii") if credential_id_bytes else None
     )
     credential_id_b64url = (
-        advanced_module.base64.urlsafe_b64encode(credential_id_bytes).rstrip(b"=").decode("ascii")
+        base64.urlsafe_b64encode(credential_id_bytes).rstrip(b"=").decode("ascii")
         if credential_id_bytes
         else None
     )
@@ -46,7 +51,7 @@ def build_registration_material(
         if aaguid_bytes is not None and len(aaguid_bytes) == 16:
             aaguid_hex = aaguid_bytes.hex()
             try:
-                aaguid_guid = str(advanced_module.uuid.UUID(bytes=aaguid_bytes))
+                aaguid_guid = str(uuid.UUID(bytes=aaguid_bytes))
             except ValueError:
                 aaguid_guid = None
 
@@ -67,7 +72,7 @@ def build_registration_material(
 
     auth_data_bytes = bytes(auth_data)
     authenticator_data_hex = auth_data_bytes.hex()
-    authenticator_data_hash = advanced_module.hashlib.sha256(auth_data_bytes).hexdigest()
+    authenticator_data_hash = hashlib.sha256(auth_data_bytes).hexdigest()
     registration_timestamp = advanced_module.datetime_from_timestamp(credential_info["registration_time"])
 
     rp_id_hash_hex = ""
@@ -78,11 +83,11 @@ def build_registration_material(
         rp_id_hash_bytes = b""
     else:
         rp_id_hash_hex = rp_id_hash_bytes.hex()
-        rp_id_hash_b64 = advanced_module.base64.urlsafe_b64encode(rp_id_hash_bytes).rstrip(b"=").decode("ascii")
+        rp_id_hash_b64 = base64.urlsafe_b64encode(rp_id_hash_bytes).rstrip(b"=").decode("ascii")
 
-    expected_rp_hash_bytes = advanced_module.hashlib.sha256((resolved_rp_id or "").encode("utf-8")).digest()
+    expected_rp_hash_bytes = hashlib.sha256((resolved_rp_id or "").encode("utf-8")).digest()
     expected_rp_hash_hex = expected_rp_hash_bytes.hex()
-    expected_rp_hash_b64 = advanced_module.base64.urlsafe_b64encode(expected_rp_hash_bytes).rstrip(b"=").decode("ascii")
+    expected_rp_hash_b64 = base64.urlsafe_b64encode(expected_rp_hash_bytes).rstrip(b"=").decode("ascii")
 
     if attestation_rp_id_hash_valid is None:
         attestation_rp_id_hash_valid = rp_id_hash_bytes == expected_rp_hash_bytes
@@ -149,8 +154,8 @@ def build_registration_material(
         },
         "residentKey": resident_key_result,
         "userHandle": {
-            "base64": advanced_module.base64.b64encode(user_handle).decode("ascii"),
-            "base64url": advanced_module.base64.urlsafe_b64encode(user_handle).rstrip(b"=").decode("ascii"),
+            "base64": base64.b64encode(user_handle).decode("ascii"),
+            "base64url": base64.urlsafe_b64encode(user_handle).rstrip(b"=").decode("ascii"),
             "hex": user_handle.hex(),
         },
     }
@@ -162,8 +167,8 @@ def build_registration_material(
 
     credential_info["relying_party"] = advanced_module.make_json_safe(rp_info)
 
-    user_handle_b64url = advanced_module.base64.urlsafe_b64encode(user_handle).rstrip(b"=").decode("ascii")
-    user_handle_b64 = advanced_module.base64.b64encode(user_handle).decode("ascii")
+    user_handle_b64url = base64.urlsafe_b64encode(user_handle).rstrip(b"=").decode("ascii")
+    user_handle_b64 = base64.b64encode(user_handle).decode("ascii")
 
     stored_properties = advanced_module.convert_bytes_for_json(credential_info.get("properties", {}))
     stored_extensions = advanced_module.convert_bytes_for_json(client_extension_results)
@@ -173,12 +178,12 @@ def build_registration_material(
     credential_public_key = getattr(auth_data.credential_data, "public_key", None)
     if isinstance(credential_public_key, Mapping):
         try:
-            public_key_cbor_bytes = advanced_module.cbor.encode(dict(credential_public_key))
+            public_key_cbor_bytes = cbor.encode(dict(credential_public_key))
         except Exception:
             public_key_cbor_bytes = None
         if public_key_cbor_bytes:
-            public_key_b64 = advanced_module.base64.b64encode(public_key_cbor_bytes).decode("ascii")
-            public_key_b64url = advanced_module.base64.urlsafe_b64encode(public_key_cbor_bytes).rstrip(b"=").decode("ascii")
+            public_key_b64 = base64.b64encode(public_key_cbor_bytes).decode("ascii")
+            public_key_b64url = base64.urlsafe_b64encode(public_key_cbor_bytes).rstrip(b"=").decode("ascii")
 
     stored_credential: dict[str, Any] = {
         "type": "advanced",
@@ -190,7 +195,7 @@ def build_registration_material(
         "credentialId": credential_id_b64,
         "credentialIdBase64Url": credential_id_b64url,
         "credentialIdHex": credential_id_hex,
-        "aaguid": advanced_module.base64.urlsafe_b64encode(aaguid_bytes).rstrip(b"=").decode("ascii") if aaguid_bytes else None,
+        "aaguid": base64.urlsafe_b64encode(aaguid_bytes).rstrip(b"=").decode("ascii") if aaguid_bytes else None,
         "aaguidHex": aaguid_hex,
         "aaguidGuid": aaguid_guid,
         "publicKeyAlgorithm": credential_info.get("publicKeyAlgorithm"),

@@ -3,6 +3,8 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
+from flask import jsonify, session
+
 #: The ceremony challenge was taken from the server-side Flask session.
 CHALLENGE_SOURCE_SERVER = "server-session"
 #: The ceremony challenge was taken from the request body (request-editor mode).
@@ -21,7 +23,7 @@ def resolve_state_and_registration_server(
     raw_attestation_object: Any,
     trace: dict[str, Any] | None = None,
 ) -> tuple[dict[str, Any] | None, Any | None]:
-    state = advanced_module.session.pop("advanced_state", None)
+    state = session.pop("advanced_state", None)
     challenge_source = CHALLENGE_SOURCE_SERVER if state is not None else None
     if state is None:
         fallback_state = data.get("__session_state")
@@ -35,13 +37,13 @@ def resolve_state_and_registration_server(
     if trace is not None and challenge_source is not None:
         trace["challengeSource"] = challenge_source
 
-    stored_original_request = advanced_module.session.pop("advanced_original_request", None)
+    stored_original_request = session.pop("advanced_original_request", None)
     if stored_original_request is None and isinstance(original_request, Mapping):
         stored_original_request = original_request
 
     if state is None:
         return None, (
-            advanced_module.jsonify(
+            jsonify(
                 {
                     "error": (
                         "Registration state not found or has expired. "
@@ -52,7 +54,7 @@ def resolve_state_and_registration_server(
             400,
         )
 
-    stored_rp = advanced_module.session.pop("advanced_rp", None)
+    stored_rp = session.pop("advanced_rp", None)
     stored_rp_id = None
     stored_rp_name = None
     if isinstance(stored_rp, Mapping):

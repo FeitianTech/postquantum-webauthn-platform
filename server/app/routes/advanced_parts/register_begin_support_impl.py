@@ -3,6 +3,12 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
+from fido2.webauthn import (
+    PublicKeyCredentialDescriptor,
+    PublicKeyCredentialParameters,
+    PublicKeyCredentialType,
+)
+
 
 def configure_allowed_algorithms(
     advanced_module: Any,
@@ -41,8 +47,8 @@ def configure_allowed_algorithms(
                 normalized_params.append({"type": "public-key", "alg": alg_value})
 
             allowed_algorithms.append(
-                advanced_module.PublicKeyCredentialParameters(
-                    type=advanced_module.PublicKeyCredentialType.PUBLIC_KEY,
+                PublicKeyCredentialParameters(
+                    type=PublicKeyCredentialType.PUBLIC_KEY,
                     alg=alg_value,
                 )
             )
@@ -53,24 +59,24 @@ def configure_allowed_algorithms(
             temp_server.allowed_algorithms = allowed_algorithms
     else:
         temp_server.allowed_algorithms = [
-            advanced_module.PublicKeyCredentialParameters(
-                type=advanced_module.PublicKeyCredentialType.PUBLIC_KEY,
+            PublicKeyCredentialParameters(
+                type=PublicKeyCredentialType.PUBLIC_KEY,
                 alg=-50,
             ),
-            advanced_module.PublicKeyCredentialParameters(
-                type=advanced_module.PublicKeyCredentialType.PUBLIC_KEY,
+            PublicKeyCredentialParameters(
+                type=PublicKeyCredentialType.PUBLIC_KEY,
                 alg=-48,
             ),
-            advanced_module.PublicKeyCredentialParameters(
-                type=advanced_module.PublicKeyCredentialType.PUBLIC_KEY,
+            PublicKeyCredentialParameters(
+                type=PublicKeyCredentialType.PUBLIC_KEY,
                 alg=-49,
             ),
-            advanced_module.PublicKeyCredentialParameters(
-                type=advanced_module.PublicKeyCredentialType.PUBLIC_KEY,
+            PublicKeyCredentialParameters(
+                type=PublicKeyCredentialType.PUBLIC_KEY,
                 alg=-7,
             ),
-            advanced_module.PublicKeyCredentialParameters(
-                type=advanced_module.PublicKeyCredentialType.PUBLIC_KEY,
+            PublicKeyCredentialParameters(
+                type=PublicKeyCredentialType.PUBLIC_KEY,
                 alg=-257,
             ),
         ]
@@ -107,8 +113,8 @@ def configure_allowed_algorithms(
     fallback_applied = False
     if not filtered_allowed:
         temp_server.allowed_algorithms = [
-            advanced_module.PublicKeyCredentialParameters(
-                type=advanced_module.PublicKeyCredentialType.PUBLIC_KEY,
+            PublicKeyCredentialParameters(
+                type=PublicKeyCredentialType.PUBLIC_KEY,
                 alg=alg_value,
             )
             for alg_value in (-7, -8, -257)
@@ -136,8 +142,8 @@ def build_exclude_list(advanced_module: Any, public_key: Mapping[str, Any]) -> l
                     cred_id = bytes.fromhex(cred_id)
                 if cred_id:
                     exclude_list.append(
-                        advanced_module.PublicKeyCredentialDescriptor(
-                            type=advanced_module.PublicKeyCredentialType.PUBLIC_KEY,
+                        PublicKeyCredentialDescriptor(
+                            type=PublicKeyCredentialType.PUBLIC_KEY,
                             id=cred_id,
                         )
                     )
