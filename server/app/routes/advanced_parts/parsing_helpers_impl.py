@@ -8,6 +8,8 @@ from fido2 import cbor
 from fido2.cose import CoseKey
 from fido2.webauthn import AttestedCredentialData
 
+from ...attachments import normalize_attachment
+
 
 def _extract_credential_id_impl(_advanced_module: Any, value: Any) -> bytes | None:
     credential_id = None
@@ -101,7 +103,7 @@ def _parse_client_supplied_credentials_impl(
             cose_key = CoseKey.parse(cbor.decode(public_key_bytes))
             attested = AttestedCredentialData.create(aaguid_bytes, credential_id_bytes, cose_key)
 
-            attachment_value = advanced_module.normalize_attachment(
+            attachment_value = normalize_attachment(
                 advanced_module._select_first(entry, ("authenticatorAttachment", "attachment"))
                 or (entry.get("properties") or {}).get("authenticatorAttachment")
                 or (entry.get("properties") or {}).get("authenticator_attachment")
