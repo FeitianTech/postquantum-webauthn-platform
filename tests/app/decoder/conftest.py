@@ -1,6 +1,6 @@
 """Shared fixtures for the decoder runtime tests.
 
-Each fixture hands back the ``decode_parts`` fragment that *defines* a group of
+Each fixture hands back the ``decode`` submodule that *defines* a group of
 helpers. Patch there rather than on ``server.app.decoder.decode``: the fragments
 call each other through these modules, so this is the binding that is actually
 read. ``server.app.decoder.decode`` re-exports the same objects for callers, but
@@ -18,7 +18,7 @@ import pytest
 
 
 def _fragment(name: str):
-    return pytest.importorskip(f"server.app.decoder.decode_parts.{name}")
+    return pytest.importorskip(f"server.app.decoder.decode.{name}")
 
 
 @pytest.fixture
