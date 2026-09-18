@@ -27,7 +27,6 @@ from ... import (
     config,
     credential_artifacts,
     device_logs,
-    metadata,
 )
 from ...attachments import (
     normalize_attachment,
@@ -36,7 +35,7 @@ from ...attachments import (
 )
 from ...encoding import decode_hex, encode_base64, encode_base64url
 from ...storage import credentials
-from ...webauthn import pqc
+from ...webauthn import metadata, pqc
 from .. import binary_helpers
 from . import algorithms, binary, summary, tracing
 

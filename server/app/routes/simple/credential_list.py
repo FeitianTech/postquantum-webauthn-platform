@@ -5,10 +5,11 @@ from typing import Any
 
 from flask import jsonify, request
 
-from ... import attestation, metadata
+from ... import attestation
 from ...attachments import normalize_attachment
 from ...encoding import encode_base64, encode_base64url
 from ...storage import credentials as credential_store
+from ...webauthn import metadata
 
 
 def add_registration_metadata(

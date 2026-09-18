@@ -41,7 +41,7 @@ def test_session_blob_builds_session_scoped_path():
 
 
 def test_validate_session_metadata_filename_accepts_safe_json_name():
-    metadata_module = pytest.importorskip("server.app.metadata")
+    metadata_module = pytest.importorskip("server.app.webauthn.metadata")
 
     assert metadata_module._validate_session_metadata_filename("entry.json") == "entry.json"
 
@@ -58,7 +58,7 @@ def test_validate_session_metadata_filename_accepts_safe_json_name():
     ],
 )
 def test_validate_session_metadata_filename_rejects_unsafe_values(filename):
-    metadata_module = pytest.importorskip("server.app.metadata")
+    metadata_module = pytest.importorskip("server.app.webauthn.metadata")
 
     with pytest.raises(ValueError):
         metadata_module._validate_session_metadata_filename(filename)

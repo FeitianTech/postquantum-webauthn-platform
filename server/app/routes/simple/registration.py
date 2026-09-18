@@ -17,7 +17,6 @@ from ... import (
     attestation,
     config,
     device_logs,
-    metadata,
 )
 from ...attachments import normalize_attachment
 from ...challenge_registry import (
@@ -28,6 +27,7 @@ from ...challenge_registry import (
 )
 from ...encoding import encode_base64, encode_base64url
 from ...storage import credentials
+from ...webauthn import metadata
 from .. import binary_helpers
 from . import parsing
 

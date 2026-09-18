@@ -5,7 +5,7 @@ import pytest
 
 
 def test_resolve_cleanup_interval_prefers_seconds_over_hours(monkeypatch):
-    metadata_module = pytest.importorskip("server.app.metadata")
+    metadata_module = pytest.importorskip("server.app.webauthn.metadata")
 
     monkeypatch.setenv(metadata_module._SESSION_METADATA_CLEANUP_INTERVAL_SECONDS_ENV, "15")
     monkeypatch.setenv(metadata_module._SESSION_METADATA_CLEANUP_INTERVAL_HOURS_ENV, "2")
@@ -16,7 +16,7 @@ def test_resolve_cleanup_interval_prefers_seconds_over_hours(monkeypatch):
 
 
 def test_resolve_cleanup_interval_uses_hours_when_seconds_invalid(monkeypatch):
-    metadata_module = pytest.importorskip("server.app.metadata")
+    metadata_module = pytest.importorskip("server.app.webauthn.metadata")
 
     monkeypatch.setenv(metadata_module._SESSION_METADATA_CLEANUP_INTERVAL_SECONDS_ENV, "not-a-number")
     monkeypatch.setenv(metadata_module._SESSION_METADATA_CLEANUP_INTERVAL_HOURS_ENV, "1.5")
@@ -27,7 +27,7 @@ def test_resolve_cleanup_interval_uses_hours_when_seconds_invalid(monkeypatch):
 
 
 def test_resolve_cleanup_interval_defaults_when_all_config_values_negative(monkeypatch, app_config):
-    metadata_module = pytest.importorskip("server.app.metadata")
+    metadata_module = pytest.importorskip("server.app.webauthn.metadata")
 
     monkeypatch.setenv(metadata_module._SESSION_METADATA_CLEANUP_INTERVAL_SECONDS_ENV, "-3")
     monkeypatch.setenv(metadata_module._SESSION_METADATA_CLEANUP_INTERVAL_HOURS_ENV, "-1")
@@ -38,7 +38,7 @@ def test_resolve_cleanup_interval_defaults_when_all_config_values_negative(monke
 
 
 def test_normalise_session_identifier_rejects_path_separators(monkeypatch):
-    metadata_module = pytest.importorskip("server.app.metadata")
+    metadata_module = pytest.importorskip("server.app.webauthn.metadata")
 
     assert metadata_module._normalise_session_identifier("session/abc") is None
 
@@ -47,7 +47,7 @@ def test_normalise_session_identifier_rejects_path_separators(monkeypatch):
 
 
 def test_normalise_session_identifier_accepts_clean_value_and_rejects_invalid_shapes():
-    metadata_module = pytest.importorskip("server.app.metadata")
+    metadata_module = pytest.importorskip("server.app.webauthn.metadata")
 
     assert (
         metadata_module._normalise_session_identifier(
@@ -61,7 +61,7 @@ def test_normalise_session_identifier_accepts_clean_value_and_rejects_invalid_sh
 
 
 def test_safe_metadata_repo_filename_sanitizes_traversal_and_invalid_input():
-    metadata_module = pytest.importorskip("server.app.metadata")
+    metadata_module = pytest.importorskip("server.app.webauthn.metadata")
 
     assert metadata_module._safe_metadata_repo_filename("../../../etc/passwd") == "passwd"
     assert metadata_module._safe_metadata_repo_filename(" /tmp/demo.json ") == "demo.json"
@@ -70,7 +70,7 @@ def test_safe_metadata_repo_filename_sanitizes_traversal_and_invalid_input():
 
 
 def test_maybe_store_uploaded_metadata_file_returns_false_when_logging_disabled(monkeypatch, uploads):
-    metadata_module = pytest.importorskip("server.app.metadata")
+    metadata_module = pytest.importorskip("server.app.webauthn.metadata")
 
     listed = []
     monkeypatch.setattr(uploads, "is_logging_enabled", lambda: False)
@@ -87,7 +87,7 @@ def test_maybe_store_uploaded_metadata_file_returns_false_when_logging_disabled(
 
 
 def test_maybe_store_uploaded_metadata_file_skips_upload_when_identical_sha_exists(monkeypatch, uploads):
-    metadata_module = pytest.importorskip("server.app.metadata")
+    metadata_module = pytest.importorskip("server.app.webauthn.metadata")
 
     content = b'{"entry":1}'
     blob_sha = "same-blob-sha"
@@ -120,7 +120,7 @@ def test_maybe_store_uploaded_metadata_file_skips_upload_when_identical_sha_exis
 
 
 def test_maybe_store_uploaded_metadata_file_updates_existing_name_with_sha(monkeypatch, uploads):
-    metadata_module = pytest.importorskip("server.app.metadata")
+    metadata_module = pytest.importorskip("server.app.webauthn.metadata")
 
     content = b'{"entry":2}'
     upload_calls = []
@@ -157,7 +157,7 @@ def test_maybe_store_uploaded_metadata_file_updates_existing_name_with_sha(monke
 
 
 def test_maybe_store_uploaded_metadata_file_adds_new_file_with_sanitized_name(monkeypatch, uploads):
-    metadata_module = pytest.importorskip("server.app.metadata")
+    metadata_module = pytest.importorskip("server.app.webauthn.metadata")
 
     content = b'{"entry":3}'
     upload_calls = []

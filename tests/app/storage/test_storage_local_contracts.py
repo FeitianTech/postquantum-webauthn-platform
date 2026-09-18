@@ -64,7 +64,7 @@ def test_resolve_session_id_uses_explicit_value_or_metadata_fallback(storage_loc
 
     assert storage._resolve_session_id("  explicit-session  ") == "explicit-session"
 
-    metadata_module = pytest.importorskip("server.app.metadata")
+    metadata_module = pytest.importorskip("server.app.webauthn.metadata")
     monkeypatch.setattr(
         metadata_module,
         "ensure_metadata_session_id",

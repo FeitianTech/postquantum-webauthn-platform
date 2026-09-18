@@ -10,14 +10,14 @@ from typing import Any
 
 from fido2.mds3 import MetadataBlobPayload
 
-from ..config import (
+from ...config import (
     MDS_EXPLORER_FULL_PATH,
     MDS_EXPLORER_PATH,
     MDS_METADATA_CACHE_PATH,
     MDS_METADATA_VERIFIED_PATH,
     app,
 )
-from ..mds_snapshot import build_bootstrap_snapshot, build_explorer_snapshot
+from ...mds_snapshot import build_bootstrap_snapshot, build_explorer_snapshot
 from . import state as _state
 
 

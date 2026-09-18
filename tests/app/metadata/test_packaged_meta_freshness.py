@@ -10,7 +10,7 @@ import pytest
 
 @pytest.fixture
 def metadata_module(monkeypatch, tmp_path, metadata_state, blob):
-    module = pytest.importorskip("server.app.metadata")
+    module = pytest.importorskip("server.app.webauthn.metadata")
 
     verified_path = tmp_path / "fido-mds3.verified.json"
     explorer_path = tmp_path / "fido-mds3.explorer.json"

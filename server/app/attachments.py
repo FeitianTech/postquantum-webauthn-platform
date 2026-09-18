@@ -4,8 +4,8 @@ from __future__ import annotations
 from collections.abc import Iterable, Mapping
 from typing import Any
 
-from .metadata import ensure_metadata_session_id
 from .storage.credentials import extract_credential_data, iter_credentials
+from .webauthn.metadata import ensure_metadata_session_id
 
 __all__ = [
     "HINT_TO_ATTACHMENT_MAP",

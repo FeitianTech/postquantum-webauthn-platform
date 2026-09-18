@@ -272,7 +272,7 @@ def test_iter_credentials_skips_corrupted_payload(monkeypatch):
 
 
 def test_resolve_session_id_falls_back_to_metadata_session(monkeypatch):
-    metadata_module = importlib.import_module("server.app.metadata")
+    metadata_module = importlib.import_module("server.app.webauthn.metadata")
     monkeypatch.setattr(
         metadata_module,
         "ensure_metadata_session_id",

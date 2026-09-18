@@ -15,7 +15,7 @@ from fido2.mds3 import MetadataBlobPayloadEntry
 
 @pytest.fixture
 def metadata_module(monkeypatch, metadata_state):
-    module = pytest.importorskip("server.app.metadata")
+    module = pytest.importorskip("server.app.webauthn.metadata")
 
 
     return module
@@ -136,7 +136,7 @@ def test_get_session_id_and_ensure_paths_cover_invalid_existing_and_error_branch
 
 
 def test_session_directory_touch_and_resolve_error_paths(metadata_module, monkeypatch, session_store, app_config, sessions):
-    cleanup = pytest.importorskip("server.app.metadata.sessions")
+    cleanup = pytest.importorskip("server.app.webauthn.metadata.sessions")
     schedule_calls = []
     monkeypatch.setattr(
         cleanup,
