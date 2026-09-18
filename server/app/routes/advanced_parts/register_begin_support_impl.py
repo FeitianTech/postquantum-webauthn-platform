@@ -9,6 +9,8 @@ from fido2.webauthn import (
     PublicKeyCredentialType,
 )
 
+from ... import pqc
+
 
 def configure_allowed_algorithms(
     advanced_module: Any,
@@ -87,17 +89,17 @@ def configure_allowed_algorithms(
     ]
     allowed_algorithm_ids = [alg for alg in allowed_algorithm_ids if isinstance(alg, int)]
 
-    pqc_in_allowed = {alg for alg in allowed_algorithm_ids if advanced_module.is_pqc_algorithm(alg)}
+    pqc_in_allowed = {alg for alg in allowed_algorithm_ids if pqc.is_pqc_algorithm(alg)}
     if not pqc_in_allowed:
         return
 
-    pqc_available_ids, pqc_error_message = advanced_module.detect_available_pqc_algorithms()
+    pqc_available_ids, pqc_error_message = pqc.detect_available_pqc_algorithms()
     missing_pqc = pqc_in_allowed - pqc_available_ids
     if not missing_pqc:
         return
 
     missing_names = ", ".join(
-        advanced_module.PQC_ALGORITHM_ID_TO_NAME[alg] for alg in sorted(missing_pqc)
+        pqc.PQC_ALGORITHM_ID_TO_NAME[alg] for alg in sorted(missing_pqc)
     )
     if pqc_error_message:
         advanced_module.app.logger.warning("Post-quantum support unavailable: %s", pqc_error_message)

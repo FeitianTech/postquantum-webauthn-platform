@@ -9,6 +9,7 @@ from flask import jsonify, request, session
 from fido2.cose import CoseKey, UnsupportedKey
 from fido2.webauthn import AuthenticatorData
 
+from ... import pqc
 from ...attachments import (
     normalize_attachment,
     normalize_attachment_list,
@@ -298,7 +299,7 @@ def advanced_authenticate_complete_impl(advanced_module: Any):
                         "NOT verified."
                     ),
                     "algorithm": credential_alg,
-                    "algorithmDescription": advanced_module.describe_algorithm(credential_alg),
+                    "algorithmDescription": pqc.describe_algorithm(credential_alg),
                     "challengeSource": challenge_source,
                     "challengeStatus": challenge_status,
                     "verificationError": str(exc),
@@ -317,7 +318,7 @@ def advanced_authenticate_complete_impl(advanced_module: Any):
             }
             if credential_alg is not None:
                 signature_payload["algorithm"] = credential_alg
-                signature_payload["algorithmDescription"] = advanced_module.describe_algorithm(
+                signature_payload["algorithmDescription"] = pqc.describe_algorithm(
                     credential_alg
                 )
             if failed_credential_id is not None:
@@ -333,7 +334,7 @@ def advanced_authenticate_complete_impl(advanced_module: Any):
             except Exception:
                 auth_alg = None
 
-        advanced_module.log_algorithm_selection("authentication", auth_alg)
+        pqc.log_algorithm_selection("authentication", auth_alg)
 
         debug_info: dict[str, Any] = {"hintsUsed": public_key.get("hints", [])}
 
@@ -354,7 +355,7 @@ def advanced_authenticate_complete_impl(advanced_module: Any):
 
         if auth_alg is not None:
             debug_info["algorithm"] = auth_alg
-            debug_info["algorithmDescription"] = advanced_module.describe_algorithm(auth_alg)
+            debug_info["algorithmDescription"] = pqc.describe_algorithm(auth_alg)
 
         response_payload: dict[str, Any] = {
             "status": "OK",

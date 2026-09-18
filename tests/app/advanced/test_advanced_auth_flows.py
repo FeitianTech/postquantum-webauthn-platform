@@ -7,7 +7,7 @@ def _b64url(data: bytes) -> str:
     return base64.urlsafe_b64encode(data).decode("ascii").rstrip("=")
 
 
-def test_advanced_register_begin_falls_back_from_unavailable_pqc(monkeypatch):
+def test_advanced_register_begin_falls_back_from_unavailable_pqc(monkeypatch, pqc_module):
     config_module = pytest.importorskip("server.app.config")
     advanced_module = pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
@@ -30,7 +30,7 @@ def test_advanced_register_begin_falls_back_from_unavailable_pqc(monkeypatch):
 
     monkeypatch.setattr(advanced_module, "create_fido_server", lambda **_kwargs: _FakeServer())
     monkeypatch.setattr(
-        advanced_module,
+        pqc_module,
         "detect_available_pqc_algorithms",
         lambda: ({-49}, "limited pqc support")
     )

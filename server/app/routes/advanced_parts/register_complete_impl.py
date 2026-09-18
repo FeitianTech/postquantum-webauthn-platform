@@ -6,6 +6,7 @@ from typing import Any
 
 from flask import jsonify, request
 
+from ... import pqc
 from .register_complete_finalize_impl import finalize_registration_completion
 from .register_complete_material_impl import build_registration_material
 from .register_complete_setup_impl import prepare_register_complete_inputs
@@ -242,8 +243,8 @@ def advanced_register_complete_impl(advanced_module: Any):
 
         algo = advanced_module._coerce_cose_algorithm(raw_alg_value)
         credential_info["publicKeyAlgorithm"] = algo
-        algoname = advanced_module.describe_algorithm(algo)
-        advanced_module.log_algorithm_selection("registration", algo)
+        algoname = pqc.describe_algorithm(algo)
+        pqc.log_algorithm_selection("registration", algo)
 
         pub_key_params = public_key.get("pubKeyCredParams", [])
         algorithms_used = [param.get("alg") for param in pub_key_params if isinstance(param, dict) and "alg" in param]

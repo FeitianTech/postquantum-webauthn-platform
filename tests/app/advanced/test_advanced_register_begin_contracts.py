@@ -136,7 +136,7 @@ def test_advanced_register_begin_rejects_invalid_challenge_format():
     assert "Invalid challenge format" in response.get_json()["error"]
 
 
-def test_advanced_register_begin_normalizes_rp_and_persists_session_state(monkeypatch):
+def test_advanced_register_begin_normalizes_rp_and_persists_session_state(monkeypatch, pqc_module):
     config_module = pytest.importorskip("server.app.config")
     advanced_module = pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
@@ -149,7 +149,7 @@ def test_advanced_register_begin_normalizes_rp_and_persists_session_state(monkey
         lambda _rp: types.SimpleNamespace(id="normalized.example", name="Normalized RP")
     )
     monkeypatch.setattr(
-        advanced_module,
+        pqc_module,
         "detect_available_pqc_algorithms",
         lambda: ({-50, -49, -48}, None)
     )
@@ -189,14 +189,14 @@ def test_advanced_register_begin_normalizes_rp_and_persists_session_state(monkey
             }
 
 
-def test_advanced_register_begin_normalizes_pubkeycredparams_and_filters_invalid_entries(monkeypatch):
+def test_advanced_register_begin_normalizes_pubkeycredparams_and_filters_invalid_entries(monkeypatch, pqc_module):
     config_module = pytest.importorskip("server.app.config")
     advanced_module = pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
 
     captured = {}
     monkeypatch.setattr(
-        advanced_module,
+        pqc_module,
         "detect_available_pqc_algorithms",
         lambda: ({-50, -49, -48}, None)
     )
@@ -227,14 +227,14 @@ def test_advanced_register_begin_normalizes_pubkeycredparams_and_filters_invalid
     assert captured["allowed_algorithms"] == [-7, -257, -35, -8]
 
 
-def test_advanced_register_begin_uses_default_algorithms_without_pubkeycredparams(monkeypatch):
+def test_advanced_register_begin_uses_default_algorithms_without_pubkeycredparams(monkeypatch, pqc_module):
     config_module = pytest.importorskip("server.app.config")
     advanced_module = pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
 
     captured = {}
     monkeypatch.setattr(
-        advanced_module,
+        pqc_module,
         "detect_available_pqc_algorithms",
         lambda: ({-50, -49, -48}, None)
     )
@@ -258,14 +258,14 @@ def test_advanced_register_begin_uses_default_algorithms_without_pubkeycredparam
     assert captured["allowed_algorithms"] == [-50, -48, -49, -7, -257]
 
 
-def test_advanced_register_begin_filters_unavailable_pqc_when_classical_algorithms_remain(monkeypatch):
+def test_advanced_register_begin_filters_unavailable_pqc_when_classical_algorithms_remain(monkeypatch, pqc_module):
     config_module = pytest.importorskip("server.app.config")
     advanced_module = pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
 
     captured = {}
     monkeypatch.setattr(
-        advanced_module,
+        pqc_module,
         "detect_available_pqc_algorithms",
         lambda: ({-49}, "limited pqc")
     )
@@ -286,14 +286,14 @@ def test_advanced_register_begin_filters_unavailable_pqc_when_classical_algorith
     assert any("Unsupported PQC algorithms were skipped" in warning for warning in body.get("warnings", []))
 
 
-def test_advanced_register_begin_falls_back_to_classical_when_no_requested_pqc_available(monkeypatch):
+def test_advanced_register_begin_falls_back_to_classical_when_no_requested_pqc_available(monkeypatch, pqc_module):
     config_module = pytest.importorskip("server.app.config")
     advanced_module = pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
 
     captured = {}
     monkeypatch.setattr(
-        advanced_module,
+        pqc_module,
         "detect_available_pqc_algorithms",
         lambda: (set(), "no oqs available")
     )
@@ -311,14 +311,14 @@ def test_advanced_register_begin_falls_back_to_classical_when_no_requested_pqc_a
     assert any("falling back to classical algorithms" in warning for warning in body.get("warnings", []))
 
 
-def test_advanced_register_begin_maps_auth_selection_exclusions_extensions_and_timeout(monkeypatch):
+def test_advanced_register_begin_maps_auth_selection_exclusions_extensions_and_timeout(monkeypatch, pqc_module):
     config_module = pytest.importorskip("server.app.config")
     advanced_module = pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
 
     captured = {}
     monkeypatch.setattr(
-        advanced_module,
+        pqc_module,
         "detect_available_pqc_algorithms",
         lambda: ({-50, -49, -48}, None)
     )
