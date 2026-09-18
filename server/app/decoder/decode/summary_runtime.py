@@ -4,8 +4,8 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from . import binary_extract, certificate_extensions, certificate_summary, summary_leaf
-from .binary_extract import _extract_hex_from_binary
+from . import binary, certificate_extensions, certificate_summary, summary_leaf
+from .binary import _extract_hex_from_binary
 
 
 def _format_result_summary(result: dict[str, Any]) -> str:
@@ -43,7 +43,7 @@ def _format_public_key_credential_summary(result: dict[str, Any]) -> list[str]:
     if auth_details is None and isinstance(authenticator_entry, Mapping):
         auth_details = authenticator_entry.get("details")
 
-    auth_bytes = binary_extract._extract_authenticator_bytes(response, attestation_entry)
+    auth_bytes = binary._extract_authenticator_bytes(response, attestation_entry)
 
     lines: list[str] = [f"Detected type:\t{base_type}"]
     _extend_with_authenticator_details(lines, auth_details, auth_bytes, response)
@@ -63,7 +63,7 @@ def _format_attestation_object_summary(result: dict[str, Any]) -> list[str]:
 
     lines: list[str] = [f"Detected type:\t{base_type}"]
     attestation_entry: dict[str, Any] = {"binary": result.get("binary")} if result.get("binary") else {}
-    auth_bytes = binary_extract._extract_authenticator_bytes_from_attestation(attestation_entry)
+    auth_bytes = binary._extract_authenticator_bytes_from_attestation(attestation_entry)
     _extend_with_authenticator_details(lines, auth_details, auth_bytes)
     _extend_with_authenticator_extensions(lines, auth_details)
     _extend_with_client_extensions(lines, None)
@@ -76,7 +76,7 @@ def _format_attestation_object_summary(result: dict[str, Any]) -> list[str]:
 def _format_authenticator_data_summary(result: dict[str, Any]) -> list[str]:
     base_type = _base_type(result.get("format"))
     decoded = result.get("decoded") if isinstance(result.get("decoded"), Mapping) else {}
-    auth_bytes = binary_extract._extract_bytes_from_binary(result.get("binary"))
+    auth_bytes = binary._extract_bytes_from_binary(result.get("binary"))
 
     lines: list[str] = [f"Detected type:\t{base_type}"]
     _extend_with_authenticator_details(lines, decoded, auth_bytes)

@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from ... import attestation
 from . import (
-    binary_extract,
+    binary,
     cbor_lenient,
     cbor_runtime,
     cbor_sequence,
@@ -26,7 +26,7 @@ from . import (
     ctap_runtime_interpret,
     ctap_runtime_parse,
     details_runtime,
-    key_utils,
+    keys,
     pipeline_runtime,
     result_runtime,
     summary_leaf,
@@ -48,26 +48,26 @@ serialize_attestation_certificate = attestation.serialize_attestation_certificat
 summarize_authenticator_extensions = attestation.summarize_authenticator_extensions
 
 # Mapping-key coercion and JSON-safety helpers.
-_MISSING = key_utils.MISSING
-_coerce_cbor_bytes = key_utils.coerce_cbor_bytes
-_generate_key_variants = key_utils.generate_key_variants
-_get_mapping_entry = key_utils.get_mapping_entry
-_hex_json_safe = key_utils.hex_json_safe
-_int_to_key_bytes = key_utils.int_to_key_bytes
-_key_variant_identity = key_utils.key_variant_identity
-_make_hex_only = key_utils.make_hex_only
-_stringify_mapping_keys = key_utils.stringify_mapping_keys
+_MISSING = keys.MISSING
+_coerce_cbor_bytes = keys.coerce_cbor_bytes
+_generate_key_variants = keys.generate_key_variants
+_get_mapping_entry = keys.get_mapping_entry
+_hex_json_safe = keys.hex_json_safe
+_int_to_key_bytes = keys.int_to_key_bytes
+_key_variant_identity = keys.key_variant_identity
+_make_hex_only = keys.make_hex_only
+_stringify_mapping_keys = keys.stringify_mapping_keys
 
 # Binary, hex and COSE key extraction.
-_convert_cose_key_for_display = binary_extract._convert_cose_key_for_display
-_decode_base64_field = binary_extract._decode_base64_field
-_extract_authenticator_bytes = binary_extract._extract_authenticator_bytes
+_convert_cose_key_for_display = binary._convert_cose_key_for_display
+_decode_base64_field = binary._decode_base64_field
+_extract_authenticator_bytes = binary._extract_authenticator_bytes
 _extract_authenticator_bytes_from_attestation = (
-    binary_extract._extract_authenticator_bytes_from_attestation
+    binary._extract_authenticator_bytes_from_attestation
 )
-_extract_bytes_from_binary = binary_extract._extract_bytes_from_binary
-_extract_hex_from_binary = binary_extract._extract_hex_from_binary
-_resolve_cose_algorithm = binary_extract._resolve_cose_algorithm
+_extract_bytes_from_binary = binary._extract_bytes_from_binary
+_extract_hex_from_binary = binary._extract_hex_from_binary
+_resolve_cose_algorithm = binary._resolve_cose_algorithm
 
 # Strict CBOR parsing primitives.
 _CborDecodingError = cbor_strict._CborDecodingError

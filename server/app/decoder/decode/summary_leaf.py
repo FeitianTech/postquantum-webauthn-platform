@@ -5,7 +5,7 @@ import json
 from collections.abc import Iterable, Mapping
 from typing import Any
 
-from .binary_extract import _convert_cose_key_for_display, _resolve_cose_algorithm
+from .binary import _convert_cose_key_for_display, _resolve_cose_algorithm
 
 
 def _append_simple_field(lines: list[str], label: str, value: Any | None, default: str = "(none)") -> None:

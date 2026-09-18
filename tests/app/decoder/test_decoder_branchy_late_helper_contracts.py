@@ -32,7 +32,7 @@ def test_late_cose_and_base64_helpers_cover_fallback_and_conversion_branches():
     assert decode_module._decode_base64_field("   ") is None
 
 
-def test_binary_extract_helpers_cover_nested_hex_error_and_fallback(monkeypatch, binary_extract):
+def test_binary_extract_helpers_cover_nested_hex_error_and_fallback(monkeypatch, binary):
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     assert decode_module._extract_hex_from_binary({"binary": {"hex": "AABB"}}) == "AABB"
@@ -55,7 +55,7 @@ def test_binary_extract_helpers_cover_nested_hex_error_and_fallback(monkeypatch,
         return b"\x99"
 
     monkeypatch.setattr(
-        binary_extract,
+        binary,
         "_extract_authenticator_bytes_from_attestation",
         _fake_extract,
     )
