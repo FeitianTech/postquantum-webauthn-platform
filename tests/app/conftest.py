@@ -211,7 +211,7 @@ def simple_credentials_route():
 def simple_register_begin():
     """The fragment that defines the simple ``/register/begin`` body."""
 
-    return _simple_fragment("register_begin_impl")
+    return _simple_fragment("registration")
 
 
 @pytest.fixture
@@ -225,28 +225,28 @@ def simple_register_complete():
 def simple_register_complete_context_authenticator():
     """The fragment that defines the authenticator-data context step."""
 
-    return _simple_fragment("register_complete_context_authenticator_impl")
+    return _simple_fragment("registration")
 
 
 @pytest.fixture
 def simple_register_complete_context_b():
     """The fragment that defines the persistence and response-payload context steps."""
 
-    return _simple_fragment("register_complete_context_b_impl")
+    return _simple_fragment("registration")
 
 
 @pytest.fixture
 def simple_register_complete_context_init():
     """The fragment that defines the registration-context initialisation step."""
 
-    return _simple_fragment("register_complete_context_init_impl")
+    return _simple_fragment("registration")
 
 
 @pytest.fixture
 def simple_register_complete_context_rp_debug():
     """The fragment that defines the RP debug payload context step."""
 
-    return _simple_fragment("register_complete_context_rp_debug_impl")
+    return _simple_fragment("registration")
 
 
 @pytest.fixture
