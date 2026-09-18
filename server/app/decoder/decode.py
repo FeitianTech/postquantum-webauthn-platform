@@ -93,7 +93,6 @@ _format_certificate_extension_value = certificate_extensions._format_certificate
 _format_device_identifier_line = certificate_extensions._format_device_identifier_line
 
 # Certificate summary line builders.
-_build_certificate_summary_lines_impl = certificate_summary._build_certificate_summary_lines
 _build_fingerprint_lines = certificate_summary._build_fingerprint_lines
 _build_signature_lines = certificate_summary._build_signature_lines
 _build_subject_key_identifier_lines = certificate_summary._build_subject_key_identifier_lines
