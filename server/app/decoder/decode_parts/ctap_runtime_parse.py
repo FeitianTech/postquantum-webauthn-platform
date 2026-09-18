@@ -9,7 +9,7 @@ from typing import Any
 from fido2.webauthn import AuthenticatorData
 
 from ...attestation import encode_base64url
-from . import pipeline_runtime, result_runtime
+from . import details_runtime, pipeline_runtime, result_runtime
 from .cbor_lenient import _lenient_decode_from, _lenient_read_uint
 from .ctap_convert_leaf import (
     _attempt_decode_cbor_map,
@@ -286,8 +286,8 @@ def _convert_user_text_value(value: Any) -> Any:
     if data_bytes is None:
         return _hex_json_safe(value)
 
-    text_value = _try_decode_utf8(data_bytes)
-    binary_summary = _binary_summary(
+    text_value = details_runtime._try_decode_utf8(data_bytes)
+    binary_summary = details_runtime._binary_summary(
         data_bytes, "utf-8" if text_value is not None else "binary"
     )
     if text_value is None:

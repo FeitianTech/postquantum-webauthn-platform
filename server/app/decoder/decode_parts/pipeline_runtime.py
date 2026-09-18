@@ -15,6 +15,7 @@ from cryptography import x509
 from fido2.utils import ByteBuffer
 
 from ...attestation import make_json_safe, serialize_attestation_certificate
+from . import details_runtime
 
 _PEM_CERT_PATTERN = re.compile(
     r"-----BEGIN CERTIFICATE-----\s*(?P<body>.*?)\s*-----END CERTIFICATE-----",
@@ -23,11 +24,11 @@ _PEM_CERT_PATTERN = re.compile(
 
 
 def _decode_json_object(value: Any, raw_text: str | None = None) -> dict[str, Any]:
-    if isinstance(value, Mapping) and _is_public_key_credential(value):
+    if isinstance(value, Mapping) and details_runtime._is_public_key_credential(value):
         return _decode_public_key_credential(value, raw_text=raw_text)
 
-    if isinstance(value, Mapping) and _is_client_data_dict(value):
-        details = _build_client_data_details(value, raw_text=raw_text)
+    if isinstance(value, Mapping) and details_runtime._is_client_data_dict(value):
+        details = details_runtime._build_client_data_details(value, raw_text=raw_text)
         return {
             "format": "WebAuthn client data (JSON)",
             "inputEncoding": "json",
@@ -72,7 +73,7 @@ def _decode_public_key_credential(
         raw_id, raw_id_encoding = raw_id_bytes
         decoded["rawId"] = {
             "raw": credential.get("rawId"),
-            "binary": _binary_summary(raw_id, raw_id_encoding),
+            "binary": details_runtime._binary_summary(raw_id, raw_id_encoding),
         }
     elif "rawId" in credential:
         decoded["rawId"] = {"raw": credential.get("rawId")}
@@ -95,8 +96,8 @@ def _decode_public_key_credential(
         att_bytes, att_encoding = attestation_entry
         response_details["attestationObject"] = {
             "raw": response_mapping.get("attestationObject"),
-            "binary": _binary_summary(att_bytes, att_encoding),
-            "details": _parse_attestation_object(att_bytes),
+            "binary": details_runtime._binary_summary(att_bytes, att_encoding),
+            "details": details_runtime._parse_attestation_object(att_bytes),
         }
 
     if authenticator_entry:
@@ -105,8 +106,8 @@ def _decode_public_key_credential(
         auth_bytes, auth_encoding = authenticator_entry
         response_details["authenticatorData"] = {
             "raw": response_mapping.get("authenticatorData"),
-            "binary": _binary_summary(auth_bytes, auth_encoding),
-            "details": _describe_authenticator_data_bytes(auth_bytes),
+            "binary": details_runtime._binary_summary(auth_bytes, auth_encoding),
+            "details": details_runtime._describe_authenticator_data_bytes(auth_bytes),
         }
 
     client_data_entry = _decode_binary_field(response_mapping.get("clientDataJSON"))
@@ -114,8 +115,8 @@ def _decode_public_key_credential(
         client_bytes, client_encoding = client_data_entry
         response_details["clientDataJSON"] = {
             "raw": response_mapping.get("clientDataJSON"),
-            "binary": _binary_summary(client_bytes, client_encoding),
-            "details": _describe_client_data_from_bytes(client_bytes),
+            "binary": details_runtime._binary_summary(client_bytes, client_encoding),
+            "details": details_runtime._describe_client_data_from_bytes(client_bytes),
         }
 
     signature_entry = _decode_binary_field(response_mapping.get("signature"))
@@ -123,7 +124,7 @@ def _decode_public_key_credential(
         sig_bytes, sig_encoding = signature_entry
         response_details["signature"] = {
             "raw": response_mapping.get("signature"),
-            "binary": _binary_summary(sig_bytes, sig_encoding),
+            "binary": details_runtime._binary_summary(sig_bytes, sig_encoding),
         }
 
     user_handle_entry = _decode_binary_field(response_mapping.get("userHandle"))
@@ -131,7 +132,7 @@ def _decode_public_key_credential(
         handle_bytes, handle_encoding = user_handle_entry
         response_details["userHandle"] = {
             "raw": response_mapping.get("userHandle"),
-            "binary": _binary_summary(handle_bytes, handle_encoding),
+            "binary": details_runtime._binary_summary(handle_bytes, handle_encoding),
         }
 
     decoded["response"] = response_details
@@ -178,30 +179,30 @@ def _decode_pem_certificates(text: str) -> dict[str, Any]:
 
 
 def _decode_binary_payload(data: bytes, encoding: str) -> dict[str, Any]:
-    text_version = _try_decode_utf8(data)
+    text_version = details_runtime._try_decode_utf8(data)
 
     if text_version and _looks_like_pem(text_version):
         result = _decode_pem_certificates(text_version)
         result["inputEncoding"] = encoding
-        result["binary"] = _binary_summary(data, encoding)
+        result["binary"] = details_runtime._binary_summary(data, encoding)
         return result
 
     if text_version:
         json_obj = _try_parse_json(text_version)
         if json_obj is not None:
-            if isinstance(json_obj, Mapping) and _is_client_data_dict(json_obj):
-                details = _describe_client_data_from_bytes(data)
+            if isinstance(json_obj, Mapping) and details_runtime._is_client_data_dict(json_obj):
+                details = details_runtime._describe_client_data_from_bytes(data)
                 return {
                     "format": "WebAuthn client data (binary)",
                     "inputEncoding": encoding,
                     "decoded": details,
-                    "binary": _binary_summary(data, encoding),
+                    "binary": details_runtime._binary_summary(data, encoding),
                 }
             return {
                 "format": "JSON (binary)",
                 "inputEncoding": encoding,
                 "decoded": json_obj,
-                "binary": _binary_summary(data, encoding),
+                "binary": details_runtime._binary_summary(data, encoding),
             }
 
     certificate_result = _try_decode_certificate_bytes(data, encoding)
@@ -223,7 +224,7 @@ def _decode_binary_payload(data: bytes, encoding: str) -> dict[str, Any]:
     return {
         "format": "Binary data",
         "inputEncoding": encoding,
-        "decoded": _binary_summary(data, encoding),
+        "decoded": details_runtime._binary_summary(data, encoding),
     }
 
 
@@ -291,13 +292,13 @@ def _try_decode_certificate_bytes(data: bytes, encoding: str) -> dict[str, Any] 
         "format": "X.509 certificate (DER)",
         "inputEncoding": encoding,
         "decoded": serialize_attestation_certificate(data),
-        "binary": _binary_summary(data, encoding),
+        "binary": details_runtime._binary_summary(data, encoding),
     }
 
 
 def _try_decode_attestation_object(data: bytes, encoding: str) -> dict[str, Any] | None:
     try:
-        details = _parse_attestation_object(data)
+        details = details_runtime._parse_attestation_object(data)
     except Exception:
         return None
 
@@ -305,13 +306,13 @@ def _try_decode_attestation_object(data: bytes, encoding: str) -> dict[str, Any]
         "format": "Attestation object (CBOR)",
         "inputEncoding": encoding,
         "decoded": details,
-        "binary": _binary_summary(data, encoding),
+        "binary": details_runtime._binary_summary(data, encoding),
     }
 
 
 def _try_decode_authenticator_data(data: bytes, encoding: str) -> dict[str, Any] | None:
     try:
-        details = _describe_authenticator_data_bytes(data)
+        details = details_runtime._describe_authenticator_data_bytes(data)
     except Exception:
         return None
 
@@ -319,15 +320,15 @@ def _try_decode_authenticator_data(data: bytes, encoding: str) -> dict[str, Any]
         "format": "Authenticator data (binary)",
         "inputEncoding": encoding,
         "decoded": details,
-        "binary": _binary_summary(data, encoding),
+        "binary": details_runtime._binary_summary(data, encoding),
     }
 
 
 def _expand_cbor_value(value: Any) -> Any:
     if isinstance(value, ByteBuffer):
-        return _binary_summary(value.getvalue())
+        return details_runtime._binary_summary(value.getvalue())
     if isinstance(value, (bytes, bytearray, memoryview)):
-        return _binary_summary(bytes(value))
+        return details_runtime._binary_summary(bytes(value))
     if isinstance(value, Mapping):
         expanded: dict[str, Any] = {}
         for key, entry in value.items():

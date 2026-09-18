@@ -54,10 +54,10 @@ def test_decode_pem_certificates_skips_decode_errors_and_uses_single_certificate
     assert "certificates" not in result["decoded"]
 
 
-def test_decode_binary_payload_uses_authenticator_data_path_when_other_binary_decoders_fail(monkeypatch):
+def test_decode_binary_payload_uses_authenticator_data_path_when_other_binary_decoders_fail(monkeypatch, details_runtime):
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
-    monkeypatch.setattr(decode_module, "_try_decode_utf8", lambda _data: None)
+    monkeypatch.setattr(details_runtime, "_try_decode_utf8", lambda _data: None)
     monkeypatch.setattr(decode_module, "_try_decode_certificate_bytes", lambda _data, _enc: None)
     monkeypatch.setattr(decode_module, "_try_decode_attestation_object", lambda _data, _enc: None)
     monkeypatch.setattr(
@@ -205,16 +205,16 @@ def test_expand_cbor_value_falls_back_to_make_json_safe_for_unknown_types(monkey
     assert expanded == {"safeType": "_Unknown"}
 
 
-def test_try_decode_authenticator_data_returns_structured_payload_on_success(monkeypatch):
+def test_try_decode_authenticator_data_returns_structured_payload_on_success(monkeypatch, details_runtime):
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     monkeypatch.setattr(
-        decode_module,
+        details_runtime,
         "_describe_authenticator_data_bytes",
         lambda _data: {"parsed": True},
     )
     monkeypatch.setattr(
-        decode_module,
+        details_runtime,
         "_binary_summary",
         lambda data, encoding=None: {"hex": data.hex(), "encoding": encoding},
     )
