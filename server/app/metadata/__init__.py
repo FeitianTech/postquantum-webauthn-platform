@@ -9,7 +9,7 @@ fragment defines -- patching one of these re-exports changes what callers of
 from __future__ import annotations
 
 from . import (
-    base_snapshot_runtime,
+    blob,
     cache_runtime,
     effective_snapshot_runtime,
     entry_payload_runtime,
@@ -79,14 +79,14 @@ _normalise_aaguid = entry_payload_runtime._normalise_aaguid
 _extract_entry_aaguid = entry_payload_runtime._extract_entry_aaguid
 
 # Packaged snapshot loaders.
-load_cached_metadata_snapshot = base_snapshot_runtime.load_cached_metadata_snapshot
-_load_base_metadata = base_snapshot_runtime._load_base_metadata
-_load_verified_metadata_fallback = base_snapshot_runtime._load_verified_metadata_fallback
-_load_verified_metadata_payload = base_snapshot_runtime._load_verified_metadata_payload
-_load_packaged_explorer_meta = base_snapshot_runtime._load_packaged_explorer_meta
-_load_base_explorer_snapshot = base_snapshot_runtime._load_base_explorer_snapshot
-_load_base_full_snapshot = base_snapshot_runtime._load_base_full_snapshot
-load_packaged_explorer_summary = base_snapshot_runtime.load_packaged_explorer_summary
+load_cached_metadata_snapshot = blob.load_cached_metadata_snapshot
+_load_base_metadata = blob._load_base_metadata
+_load_verified_metadata_fallback = blob._load_verified_metadata_fallback
+_load_verified_metadata_payload = blob._load_verified_metadata_payload
+_load_packaged_explorer_meta = blob._load_packaged_explorer_meta
+_load_base_explorer_snapshot = blob._load_base_explorer_snapshot
+_load_base_full_snapshot = blob._load_base_full_snapshot
+load_packaged_explorer_summary = blob.load_packaged_explorer_summary
 
 # Session cleanup worker and scheduling.
 _touch_session_last_access = session_cleanup_runtime._touch_session_last_access
