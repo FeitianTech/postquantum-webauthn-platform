@@ -23,7 +23,7 @@ def _fragment(name: str):
 
 @pytest.fixture
 def pipeline():
-    """The fragment that defines the top-level decode pipeline helpers."""
+    """The fragment that defines the top-level decode pipeline helpers. The fragment that defines the client and authenticator data details."""
 
     return _fragment("pipeline")
 
@@ -47,13 +47,6 @@ def ctap_interpret_runtime():
     """The fragment that defines the CTAP interpretation and expanded JSON."""
 
     return _fragment("ctap_runtime_interpret")
-
-
-@pytest.fixture
-def details_runtime():
-    """The fragment that defines the client and authenticator data details."""
-
-    return _fragment("details_runtime")
 
 
 @pytest.fixture

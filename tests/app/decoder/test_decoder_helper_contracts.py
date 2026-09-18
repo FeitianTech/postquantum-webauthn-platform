@@ -155,12 +155,12 @@ def test_decode_payload_text_dispatches_json_pem_and_binary_paths(monkeypatch, p
     }
 
 
-def test_decode_json_object_handles_client_data_and_plain_json(monkeypatch, details_runtime):
+def test_decode_json_object_handles_client_data_and_plain_json(monkeypatch, pipeline):
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
-    monkeypatch.setattr(details_runtime, "_is_public_key_credential", lambda _v: False)
-    monkeypatch.setattr(details_runtime, "_is_client_data_dict", lambda _v: True)
-    monkeypatch.setattr(details_runtime, "_build_client_data_details", lambda value, raw_text=None: {"built": value, "raw": raw_text})
+    monkeypatch.setattr(pipeline, "_is_public_key_credential", lambda _v: False)
+    monkeypatch.setattr(pipeline, "_is_client_data_dict", lambda _v: True)
+    monkeypatch.setattr(pipeline, "_build_client_data_details", lambda value, raw_text=None: {"built": value, "raw": raw_text})
 
     client_result = decode_module._decode_json_object({"type": "webauthn.get"}, raw_text="raw-json")
     assert client_result == {
@@ -169,7 +169,7 @@ def test_decode_json_object_handles_client_data_and_plain_json(monkeypatch, deta
         "decoded": {"built": {"type": "webauthn.get"}, "raw": "raw-json"},
     }
 
-    monkeypatch.setattr(details_runtime, "_is_client_data_dict", lambda _v: False)
+    monkeypatch.setattr(pipeline, "_is_client_data_dict", lambda _v: False)
     plain_result = decode_module._decode_json_object([1, 2, 3])
     assert plain_result == {
         "format": "JSON",
@@ -220,22 +220,22 @@ def test_decode_binary_field_and_try_parse_json_handle_invalid_inputs(monkeypatc
     assert decode_module._try_parse_json(None) is None
 
 
-def test_decode_binary_payload_prefers_pem_and_json_and_then_binary_fallback(monkeypatch, details_runtime, cbor_runtime, pipeline):
+def test_decode_binary_payload_prefers_pem_and_json_and_then_binary_fallback(monkeypatch, pipeline, cbor_runtime):
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
-    monkeypatch.setattr(details_runtime, "_try_decode_utf8", lambda _data: "-----BEGIN CERTIFICATE-----")
+    monkeypatch.setattr(pipeline, "_try_decode_utf8", lambda _data: "-----BEGIN CERTIFICATE-----")
     monkeypatch.setattr(pipeline, "_looks_like_pem", lambda text: text.startswith("-----BEGIN"))
     monkeypatch.setattr(pipeline, "_decode_pem_certificates", lambda _text: {"format": "X.509 certificate (PEM)", "decoded": {"pem": True}})
-    monkeypatch.setattr(details_runtime, "_binary_summary", lambda _data, _encoding=None: {"hex": "616263"})
+    monkeypatch.setattr(pipeline, "_binary_summary", lambda _data, _encoding=None: {"hex": "616263"})
 
     pem_result = decode_module._decode_binary_payload(b"abc", "base64url")
     assert pem_result["format"] == "X.509 certificate (PEM)"
     assert pem_result["inputEncoding"] == "base64url"
     assert pem_result["binary"] == {"hex": "616263"}
 
-    monkeypatch.setattr(details_runtime, "_try_decode_utf8", lambda _data: '{"k": 1}')
+    monkeypatch.setattr(pipeline, "_try_decode_utf8", lambda _data: '{"k": 1}')
     monkeypatch.setattr(pipeline, "_try_parse_json", lambda _text: {"k": 1})
-    monkeypatch.setattr(details_runtime, "_is_client_data_dict", lambda _obj: False)
+    monkeypatch.setattr(pipeline, "_is_client_data_dict", lambda _obj: False)
 
     json_result = decode_module._decode_binary_payload(b"abc", "hex")
     assert json_result == {
@@ -245,7 +245,7 @@ def test_decode_binary_payload_prefers_pem_and_json_and_then_binary_fallback(mon
         "binary": {"hex": "616263"},
     }
 
-    monkeypatch.setattr(details_runtime, "_try_decode_utf8", lambda _data: None)
+    monkeypatch.setattr(pipeline, "_try_decode_utf8", lambda _data: None)
     monkeypatch.setattr(pipeline, "_try_decode_certificate_bytes", lambda _data, _enc: None)
     monkeypatch.setattr(pipeline, "_try_decode_attestation_object", lambda _data, _enc: None)
     monkeypatch.setattr(pipeline, "_try_decode_authenticator_data", lambda _data, _enc: None)

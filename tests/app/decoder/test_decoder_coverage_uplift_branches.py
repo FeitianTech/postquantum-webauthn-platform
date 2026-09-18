@@ -19,12 +19,12 @@ def test_get_mapping_entry_accepts_bytebuffer_key_variants():
     assert decode_module._get_mapping_entry({"1": "str"}, ByteBuffer(b"\x01")) == "str"
 
 
-def test_decode_public_key_credential_marks_authentication_without_attestation(monkeypatch, details_runtime):
+def test_decode_public_key_credential_marks_authentication_without_attestation(monkeypatch, pipeline):
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     auth_bytes = b"\x00" * 37
     monkeypatch.setattr(
-        details_runtime,
+        pipeline,
         "_describe_authenticator_data_bytes",
         lambda _value: {"parsed": True},
     )
@@ -340,7 +340,7 @@ def test_extract_authenticator_bytes_from_attestation_uses_raw_base64_and_handle
     )
 
 
-def test_extract_attestation_certificate_handles_non_string_chain_entries_and_serializer_errors(monkeypatch, details_runtime):
+def test_extract_attestation_certificate_handles_non_string_chain_entries_and_serializer_errors(monkeypatch, pipeline):
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     class _BytesEntry:
@@ -348,7 +348,7 @@ def test_extract_attestation_certificate_handles_non_string_chain_entries_and_se
             return b"\x01\x02"
 
     monkeypatch.setattr(
-        details_runtime,
+        pipeline,
         "serialize_attestation_certificate",
         lambda _cert: (_ for _ in ()).throw(RuntimeError("boom")),
     )

@@ -17,7 +17,7 @@ from . import (
     ctap_repair_leaf,
     ctap_runtime_interpret,
     ctap_runtime_parse,
-    details_runtime,
+    pipeline,
 )
 from .cbor_parser import (
     _CborDecodingError,
@@ -244,7 +244,7 @@ def _try_decode_cbor(data: bytes, encoding: str) -> dict[str, Any] | None:
             "format": "CBOR",
             "inputEncoding": encoding,
             "decoded": decoded_payload,
-            "binary": details_runtime._binary_summary(data, encoding),
+            "binary": pipeline._binary_summary(data, encoding),
         }
 
     structures, values, consumed_total, remaining = _decode_cbor_sequence(payload)
@@ -389,7 +389,7 @@ def _try_decode_cbor(data: bytes, encoding: str) -> dict[str, Any] | None:
         "format": "CBOR",
         "inputEncoding": encoding,
         "decoded": decoded_payload,
-        "binary": details_runtime._binary_summary(data, encoding),
+        "binary": pipeline._binary_summary(data, encoding),
     }
     if warnings:
         result["malformed"] = warnings

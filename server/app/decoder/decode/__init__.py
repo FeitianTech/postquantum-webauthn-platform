@@ -20,7 +20,6 @@ from . import (
     ctap_repair_make,
     ctap_runtime_interpret,
     ctap_runtime_parse,
-    details_runtime,
     keys,
     pipeline,
     response,
@@ -219,15 +218,15 @@ _interpret_make_credential_request_map = (
 )
 
 # Client data and authenticator data details.
-_binary_summary = details_runtime._binary_summary
-_build_client_data_details = details_runtime._build_client_data_details
-_describe_authenticator_data_bytes = details_runtime._describe_authenticator_data_bytes
-_describe_client_data_from_bytes = details_runtime._describe_client_data_from_bytes
-_extract_attestation_certificate = details_runtime._extract_attestation_certificate
-_is_client_data_dict = details_runtime._is_client_data_dict
-_is_public_key_credential = details_runtime._is_public_key_credential
-_parse_attestation_object = details_runtime._parse_attestation_object
-_try_decode_utf8 = details_runtime._try_decode_utf8
+_binary_summary = pipeline._binary_summary
+_build_client_data_details = pipeline._build_client_data_details
+_describe_authenticator_data_bytes = pipeline._describe_authenticator_data_bytes
+_describe_client_data_from_bytes = pipeline._describe_client_data_from_bytes
+_extract_attestation_certificate = pipeline._extract_attestation_certificate
+_is_client_data_dict = pipeline._is_client_data_dict
+_is_public_key_credential = pipeline._is_public_key_credential
+_parse_attestation_object = pipeline._parse_attestation_object
+_try_decode_utf8 = pipeline._try_decode_utf8
 
 # Decoder payload and result conversion.
 _build_authenticator_section = response._build_authenticator_section
