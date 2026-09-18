@@ -155,19 +155,19 @@ def _normalize_algorithm_name_key(name: str) -> str:
 
 
 def _generate_storage_id(credential_id: str) -> str:
-    return _generate_storage_id_impl(_self_module(), credential_id)
+    return _generate_storage_id_impl(credential_id)
 
 
 def _summarize_properties(value: Any) -> dict[str, Any] | None:
-    return _summarize_properties_impl(_self_module(), value)
+    return _summarize_properties_impl(value)
 
 
 def _summarize_relying_party(value: Any) -> dict[str, Any] | None:
-    return _summarize_relying_party_impl(_self_module(), value)
+    return _summarize_relying_party_impl(value)
 
 
 def _summarize_stored_credential(stored: Mapping[str, Any], storage_id: str) -> dict[str, Any]:
-    return _summarize_stored_credential_impl(_self_module(), stored, storage_id)
+    return _summarize_stored_credential_impl(stored, storage_id)
 
 
 def _extract_credential_id(value: Any) -> bytes | None:
