@@ -69,13 +69,13 @@ def test_safe_metadata_repo_filename_sanitizes_traversal_and_invalid_input():
     assert metadata_module._safe_metadata_repo_filename(None) == "metadata.json"
 
 
-def test_maybe_store_uploaded_metadata_file_returns_false_when_logging_disabled(monkeypatch, upload_runtime):
+def test_maybe_store_uploaded_metadata_file_returns_false_when_logging_disabled(monkeypatch, uploads):
     metadata_module = pytest.importorskip("server.app.metadata")
 
     listed = []
-    monkeypatch.setattr(upload_runtime, "is_logging_enabled", lambda: False)
+    monkeypatch.setattr(uploads, "is_logging_enabled", lambda: False)
     monkeypatch.setattr(
-        upload_runtime,
+        uploads,
         "github_list_directory",
         lambda *_args, **_kwargs: listed.append(True),
     )
@@ -86,17 +86,17 @@ def test_maybe_store_uploaded_metadata_file_returns_false_when_logging_disabled(
     assert listed == []
 
 
-def test_maybe_store_uploaded_metadata_file_skips_upload_when_identical_sha_exists(monkeypatch, upload_runtime):
+def test_maybe_store_uploaded_metadata_file_skips_upload_when_identical_sha_exists(monkeypatch, uploads):
     metadata_module = pytest.importorskip("server.app.metadata")
 
     content = b'{"entry":1}'
     blob_sha = "same-blob-sha"
     upload_calls = []
 
-    monkeypatch.setattr(upload_runtime, "is_logging_enabled", lambda: True)
-    monkeypatch.setattr(upload_runtime, "git_blob_sha", lambda _content: blob_sha)
+    monkeypatch.setattr(uploads, "is_logging_enabled", lambda: True)
+    monkeypatch.setattr(uploads, "git_blob_sha", lambda _content: blob_sha)
     monkeypatch.setattr(
-        upload_runtime,
+        uploads,
         "github_list_directory",
         lambda _folder: [
             {
@@ -108,7 +108,7 @@ def test_maybe_store_uploaded_metadata_file_skips_upload_when_identical_sha_exis
         ],
     )
     monkeypatch.setattr(
-        upload_runtime,
+        uploads,
         "github_upload_file",
         lambda *args, **kwargs: upload_calls.append((args, kwargs)),
     )
@@ -119,16 +119,16 @@ def test_maybe_store_uploaded_metadata_file_skips_upload_when_identical_sha_exis
     assert upload_calls == []
 
 
-def test_maybe_store_uploaded_metadata_file_updates_existing_name_with_sha(monkeypatch, upload_runtime):
+def test_maybe_store_uploaded_metadata_file_updates_existing_name_with_sha(monkeypatch, uploads):
     metadata_module = pytest.importorskip("server.app.metadata")
 
     content = b'{"entry":2}'
     upload_calls = []
 
-    monkeypatch.setattr(upload_runtime, "is_logging_enabled", lambda: True)
-    monkeypatch.setattr(upload_runtime, "git_blob_sha", lambda _content: "new-sha")
+    monkeypatch.setattr(uploads, "is_logging_enabled", lambda: True)
+    monkeypatch.setattr(uploads, "git_blob_sha", lambda _content: "new-sha")
     monkeypatch.setattr(
-        upload_runtime,
+        uploads,
         "github_list_directory",
         lambda _folder: [
             {
@@ -140,7 +140,7 @@ def test_maybe_store_uploaded_metadata_file_updates_existing_name_with_sha(monke
         ],
     )
     monkeypatch.setattr(
-        upload_runtime,
+        uploads,
         "github_upload_file",
         lambda *args, **kwargs: upload_calls.append((args, kwargs)),
     )
@@ -156,17 +156,17 @@ def test_maybe_store_uploaded_metadata_file_updates_existing_name_with_sha(monke
     assert kwargs == {"sha": "old-sha"}
 
 
-def test_maybe_store_uploaded_metadata_file_adds_new_file_with_sanitized_name(monkeypatch, upload_runtime):
+def test_maybe_store_uploaded_metadata_file_adds_new_file_with_sanitized_name(monkeypatch, uploads):
     metadata_module = pytest.importorskip("server.app.metadata")
 
     content = b'{"entry":3}'
     upload_calls = []
 
-    monkeypatch.setattr(upload_runtime, "is_logging_enabled", lambda: True)
-    monkeypatch.setattr(upload_runtime, "git_blob_sha", lambda _content: "fresh-sha")
-    monkeypatch.setattr(upload_runtime, "github_list_directory", lambda _folder: [])
+    monkeypatch.setattr(uploads, "is_logging_enabled", lambda: True)
+    monkeypatch.setattr(uploads, "git_blob_sha", lambda _content: "fresh-sha")
+    monkeypatch.setattr(uploads, "github_list_directory", lambda _folder: [])
     monkeypatch.setattr(
-        upload_runtime,
+        uploads,
         "github_upload_file",
         lambda *args, **kwargs: upload_calls.append((args, kwargs)),
     )

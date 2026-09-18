@@ -20,9 +20,9 @@ from fido2.mds3 import MetadataBlobPayloadEntry
 from .. import session_metadata_store
 from ..config import app
 from ..env_flags import parse_env_flag
-from . import entry_payload_runtime
-from . import runtime_state as _state
-from .runtime_state import (
+from . import entries
+from . import state as _state
+from .state import (
     _SESSION_METADATA_CLEANUP_ASYNC_ENV,
     _SESSION_METADATA_CLEANUP_INTERVAL_HOURS_ENV,
     _SESSION_METADATA_CLEANUP_INTERVAL_SECONDS_ENV,
@@ -437,7 +437,7 @@ def save_session_metadata_item(
     if not directory:
         raise RuntimeError("Unable to resolve session metadata storage path.")
 
-    entry, legal_header, payload = entry_payload_runtime.build_metadata_entry_components(raw_payload)
+    entry, legal_header, payload = entries.build_metadata_entry_components(raw_payload)
 
     try:
         serialisable_payload = json.loads(json.dumps(raw_payload))
@@ -530,7 +530,7 @@ def list_session_metadata_items(session_id: str | None = None) -> list[SessionMe
             continue
 
         try:
-            entry, legal_header, payload = entry_payload_runtime.build_metadata_entry_components(raw)
+            entry, legal_header, payload = entries.build_metadata_entry_components(raw)
         except Exception as exc:  # pylint: disable=broad-except
             app.logger.warning(
                 "Failed to parse session metadata entry from %s/%s: %s",

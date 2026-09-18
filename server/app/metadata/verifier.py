@@ -13,8 +13,8 @@ from fido2.mds3 import (
     MetadataBlobPayloadEntry,
 )
 
-from . import blob, entry_payload_runtime, sessions
-from . import runtime_state as _state
+from . import blob, entries, sessions
+from . import state as _state
 
 if TYPE_CHECKING:  # annotation-only, so no runtime import edge is needed
     from .sessions import SessionMetadataItem
@@ -29,7 +29,7 @@ def _merge_metadata(
 
     for item in session_items:
         entry = item.entry
-        aaguid = entry_payload_runtime._extract_entry_aaguid(entry)
+        aaguid = entries._extract_entry_aaguid(entry)
         if aaguid and aaguid in seen_aaguids:
             continue
         if aaguid:
@@ -39,7 +39,7 @@ def _merge_metadata(
     base_entries: list[MetadataBlobPayloadEntry] = []
     if base_metadata is not None:
         for entry in base_metadata.entries:
-            aaguid = entry_payload_runtime._extract_entry_aaguid(entry)
+            aaguid = entries._extract_entry_aaguid(entry)
             if aaguid and aaguid in seen_aaguids:
                 continue
             base_entries.append(entry)

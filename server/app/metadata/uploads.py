@@ -11,7 +11,7 @@ from ..github_client import (
     github_upload_file,
     is_logging_enabled,
 )
-from .runtime_state import _METADATA_REPO_FOLDER
+from .state import _METADATA_REPO_FOLDER
 
 
 def _safe_metadata_repo_filename(filename: str) -> str:

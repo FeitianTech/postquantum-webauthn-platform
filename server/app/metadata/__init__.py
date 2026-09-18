@@ -10,12 +10,12 @@ from __future__ import annotations
 
 from . import (
     blob,
-    effective_snapshot_runtime,
-    entry_payload_runtime,
-    runtime_state,
+    effective,
+    entries,
     sessions,
-    upload_runtime,
-    verifier_runtime,
+    state,
+    uploads,
+    verifier,
 )
 
 __all__ = ["MetadataDownloadError", "download_metadata_blob", "get_mds_verifier",
@@ -30,20 +30,20 @@ MetadataDownloadError = blob.MetadataDownloadError
 SessionMetadataItem = sessions.SessionMetadataItem
 
 # Constants shared with the fragments.
-_METADATA_REPO_FOLDER = runtime_state._METADATA_REPO_FOLDER
-_METADATA_STATEMENT_REQUIRED_DEFAULTS = runtime_state._METADATA_STATEMENT_REQUIRED_DEFAULTS
-_SESSION_METADATA_CLEANUP_ASYNC_ENV = runtime_state._SESSION_METADATA_CLEANUP_ASYNC_ENV
-_SESSION_METADATA_CLEANUP_INTERVAL_HOURS_ENV = runtime_state._SESSION_METADATA_CLEANUP_INTERVAL_HOURS_ENV
-_SESSION_METADATA_CLEANUP_INTERVAL_SECONDS_ENV = runtime_state._SESSION_METADATA_CLEANUP_INTERVAL_SECONDS_ENV
-_SESSION_METADATA_COOKIE_MAX_AGE = runtime_state._SESSION_METADATA_COOKIE_MAX_AGE
-_SESSION_METADATA_COOKIE_NAME = runtime_state._SESSION_METADATA_COOKIE_NAME
-_SESSION_METADATA_INACTIVE_AGE = runtime_state._SESSION_METADATA_INACTIVE_AGE
-_SESSION_METADATA_INFO_SUFFIX = runtime_state._SESSION_METADATA_INFO_SUFFIX
-_SESSION_METADATA_SESSION_KEY = runtime_state._SESSION_METADATA_SESSION_KEY
-_SESSION_METADATA_SUFFIX = runtime_state._SESSION_METADATA_SUFFIX
-_SESSION_METADATA_TOUCH_KEY = runtime_state._SESSION_METADATA_TOUCH_KEY
-_SESSION_METADATA_TOUCH_THROTTLE_DEFAULT_SECONDS = runtime_state._SESSION_METADATA_TOUCH_THROTTLE_DEFAULT_SECONDS
-_SESSION_METADATA_TOUCH_THROTTLE_ENV = runtime_state._SESSION_METADATA_TOUCH_THROTTLE_ENV
+_METADATA_REPO_FOLDER = state._METADATA_REPO_FOLDER
+_METADATA_STATEMENT_REQUIRED_DEFAULTS = state._METADATA_STATEMENT_REQUIRED_DEFAULTS
+_SESSION_METADATA_CLEANUP_ASYNC_ENV = state._SESSION_METADATA_CLEANUP_ASYNC_ENV
+_SESSION_METADATA_CLEANUP_INTERVAL_HOURS_ENV = state._SESSION_METADATA_CLEANUP_INTERVAL_HOURS_ENV
+_SESSION_METADATA_CLEANUP_INTERVAL_SECONDS_ENV = state._SESSION_METADATA_CLEANUP_INTERVAL_SECONDS_ENV
+_SESSION_METADATA_COOKIE_MAX_AGE = state._SESSION_METADATA_COOKIE_MAX_AGE
+_SESSION_METADATA_COOKIE_NAME = state._SESSION_METADATA_COOKIE_NAME
+_SESSION_METADATA_INACTIVE_AGE = state._SESSION_METADATA_INACTIVE_AGE
+_SESSION_METADATA_INFO_SUFFIX = state._SESSION_METADATA_INFO_SUFFIX
+_SESSION_METADATA_SESSION_KEY = state._SESSION_METADATA_SESSION_KEY
+_SESSION_METADATA_SUFFIX = state._SESSION_METADATA_SUFFIX
+_SESSION_METADATA_TOUCH_KEY = state._SESSION_METADATA_TOUCH_KEY
+_SESSION_METADATA_TOUCH_THROTTLE_DEFAULT_SECONDS = state._SESSION_METADATA_TOUCH_THROTTLE_DEFAULT_SECONDS
+_SESSION_METADATA_TOUCH_THROTTLE_ENV = state._SESSION_METADATA_TOUCH_THROTTLE_ENV
 
 # Cache and HTTP header helpers.
 _parse_http_datetime = blob._parse_http_datetime
@@ -61,18 +61,18 @@ _resolve_cleanup_interval = sessions._resolve_cleanup_interval
 _cleanup_async_enabled = sessions._cleanup_async_enabled
 
 # Repository upload helpers.
-_safe_metadata_repo_filename = upload_runtime._safe_metadata_repo_filename
-maybe_store_uploaded_metadata_file = upload_runtime.maybe_store_uploaded_metadata_file
+_safe_metadata_repo_filename = uploads._safe_metadata_repo_filename
+maybe_store_uploaded_metadata_file = uploads.maybe_store_uploaded_metadata_file
 
 # Entry payload normalisation and expansion.
-_clone_json_value = entry_payload_runtime._clone_json_value
-_normalise_status_reports = entry_payload_runtime._normalise_status_reports
-_normalise_attestation_identifiers = entry_payload_runtime._normalise_attestation_identifiers
-_normalise_metadata_statement = entry_payload_runtime._normalise_metadata_statement
-build_metadata_entry_components = entry_payload_runtime.build_metadata_entry_components
-expand_metadata_entry_payloads = entry_payload_runtime.expand_metadata_entry_payloads
-_normalise_aaguid = entry_payload_runtime._normalise_aaguid
-_extract_entry_aaguid = entry_payload_runtime._extract_entry_aaguid
+_clone_json_value = entries._clone_json_value
+_normalise_status_reports = entries._normalise_status_reports
+_normalise_attestation_identifiers = entries._normalise_attestation_identifiers
+_normalise_metadata_statement = entries._normalise_metadata_statement
+build_metadata_entry_components = entries.build_metadata_entry_components
+expand_metadata_entry_payloads = entries.expand_metadata_entry_payloads
+_normalise_aaguid = entries._normalise_aaguid
+_extract_entry_aaguid = entries._extract_entry_aaguid
 
 # Packaged snapshot loaders.
 load_cached_metadata_snapshot = blob.load_cached_metadata_snapshot
@@ -109,15 +109,15 @@ delete_session_metadata_item = sessions.delete_session_metadata_item
 serialize_session_metadata_item = sessions.serialize_session_metadata_item
 
 # Effective (base + session) snapshot composition.
-_build_session_snapshot_entry = effective_snapshot_runtime._build_session_snapshot_entry
-_session_item_source_info = effective_snapshot_runtime._session_item_source_info
-_entry_matches_lookup = effective_snapshot_runtime._entry_matches_lookup
-_compose_effective_snapshot = effective_snapshot_runtime._compose_effective_snapshot
-load_effective_explorer_snapshot = effective_snapshot_runtime.load_effective_explorer_snapshot
-load_effective_full_snapshot = effective_snapshot_runtime.load_effective_full_snapshot
-resolve_effective_metadata_entry = effective_snapshot_runtime.resolve_effective_metadata_entry
+_build_session_snapshot_entry = effective._build_session_snapshot_entry
+_session_item_source_info = effective._session_item_source_info
+_entry_matches_lookup = effective._entry_matches_lookup
+_compose_effective_snapshot = effective._compose_effective_snapshot
+load_effective_explorer_snapshot = effective.load_effective_explorer_snapshot
+load_effective_full_snapshot = effective.load_effective_full_snapshot
+resolve_effective_metadata_entry = effective.resolve_effective_metadata_entry
 
 # Metadata merge, trust anchor, and verifier.
-_merge_metadata = verifier_runtime._merge_metadata
-metadata_entry_trust_anchor_status = verifier_runtime.metadata_entry_trust_anchor_status
-get_mds_verifier = verifier_runtime.get_mds_verifier
+_merge_metadata = verifier._merge_metadata
+metadata_entry_trust_anchor_status = verifier.metadata_entry_trust_anchor_status
+get_mds_verifier = verifier.get_mds_verifier

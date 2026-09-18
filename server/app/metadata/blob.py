@@ -18,7 +18,7 @@ from ..config import (
     app,
 )
 from ..mds_snapshot import build_bootstrap_snapshot, build_explorer_snapshot
-from . import runtime_state as _state
+from . import state as _state
 
 
 class MetadataDownloadError(Exception):
