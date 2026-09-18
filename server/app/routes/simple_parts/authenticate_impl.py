@@ -16,7 +16,8 @@ from ...challenge_registry import (
     stamp_ceremony_state,
 )
 from ...sign_count import SIGN_COUNT_REGRESSED, sign_count_status
-from . import binary_helpers_impl, credential_parsing_impl, sign_count_impl
+from .. import binary_helpers
+from . import credential_parsing_impl, sign_count_impl
 
 
 def authenticate_begin_impl():
@@ -124,7 +125,7 @@ def authenticate_complete_impl():
         )
     except Exception as exc:
         failed_credential_id = None
-        credential_id_bytes = binary_helpers_impl._extract_assertion_credential_id_impl(response_mapping)
+        credential_id_bytes = binary_helpers.extract_assertion_credential_id(response_mapping)
         if credential_id_bytes:
             failed_credential_id = (
                 base64.urlsafe_b64encode(credential_id_bytes).decode("ascii").rstrip("=")
@@ -158,7 +159,7 @@ def authenticate_complete_impl():
     )
     try:
         sign_count = AuthenticatorData(
-            binary_helpers_impl._decode_base64url_bytes_impl(auth_data_value)
+            binary_helpers.decode_base64url_bytes(auth_data_value)
         ).counter
     except Exception:
         sign_count = None

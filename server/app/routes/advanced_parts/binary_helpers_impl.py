@@ -1,10 +1,34 @@
+"""Advanced-tab binary coercion helpers.
+
+Shared pieces live in :mod:`server.app.routes.binary_helpers`; what stays here
+is the advanced tab's own ``{"$hex": ...}``/``{"$base64": ...}`` wrapper
+handling, which the simple tab does not have.
+"""
 from __future__ import annotations
 
-import base64
-import binascii
 import re
 from collections.abc import Mapping
 from typing import Any
+
+from ... import encoding
+from ..binary_helpers import decode_binary_text
+
+_BASE64URL_STRICT = re.compile(r"[A-Za-z0-9_-]+")
+
+
+def _decode_wrapped_impl(
+    value: Any,
+    decoder: Any,
+    *,
+    error: str = "invalid binary value",
+) -> bytes:
+    stripped = value.strip()
+    if not stripped:
+        raise ValueError("empty binary value")
+    try:
+        return decoder(stripped)
+    except encoding.EncodingError as exc:
+        raise ValueError(error) from exc
 
 
 def _decode_client_binary_impl(value: Any) -> bytes:
@@ -15,24 +39,11 @@ def _decode_client_binary_impl(value: Any) -> bytes:
         return bytes(value)
 
     if isinstance(value, str):
-        stripped = value.strip()
-        if not stripped:
+        if not value.strip():
             raise ValueError("empty binary value")
-
-        for decoder in (
-            lambda candidate: base64.urlsafe_b64decode(
-                candidate + "=" * ((4 - len(candidate) % 4) % 4)
-            ),
-            lambda candidate: base64.b64decode(candidate + "=" * ((4 - len(candidate) % 4) % 4)),
-        ):
-            try:
-                return decoder(stripped)
-            except (ValueError, TypeError, binascii.Error):
-                continue
-
         try:
-            return bytes.fromhex(stripped)
-        except ValueError as exc:
+            return decode_binary_text(value)
+        except encoding.EncodingError as exc:
             raise ValueError("invalid binary value") from exc
 
     if isinstance(value, Mapping):
@@ -42,13 +53,7 @@ def _decode_client_binary_impl(value: Any) -> bytes:
                 hex_candidate = value.get("hex")
 
             if isinstance(hex_candidate, str):
-                stripped = hex_candidate.strip()
-                if not stripped:
-                    raise ValueError("empty binary value")
-                try:
-                    return bytes.fromhex(stripped)
-                except ValueError as exc:
-                    raise ValueError("invalid binary value") from exc
+                return _decode_wrapped_impl(hex_candidate, encoding.decode_hex)
 
             return _decode_client_binary_impl(hex_candidate)
 
@@ -59,15 +64,9 @@ def _decode_client_binary_impl(value: Any) -> bytes:
 
             if isinstance(b64u_candidate, str):
                 stripped = b64u_candidate.strip()
-                if not stripped:
-                    raise ValueError("empty binary value")
-                if not re.fullmatch(r"[A-Za-z0-9_-]+", stripped):
+                if stripped and not _BASE64URL_STRICT.fullmatch(stripped):
                     raise ValueError("invalid binary value")
-                try:
-                    padding = "=" * ((4 - len(stripped) % 4) % 4)
-                    return base64.urlsafe_b64decode(stripped + padding)
-                except (ValueError, TypeError, binascii.Error) as exc:
-                    raise ValueError("invalid binary value") from exc
+                return _decode_wrapped_impl(b64u_candidate, encoding.decode_base64url)
 
             return _decode_client_binary_impl(b64u_candidate)
 
@@ -77,14 +76,7 @@ def _decode_client_binary_impl(value: Any) -> bytes:
                 b64_candidate = value.get("base64")
 
             if isinstance(b64_candidate, str):
-                stripped = b64_candidate.strip()
-                if not stripped:
-                    raise ValueError("empty binary value")
-                try:
-                    padding = "=" * ((4 - len(stripped) % 4) % 4)
-                    return base64.b64decode(stripped + padding)
-                except (ValueError, TypeError, binascii.Error) as exc:
-                    raise ValueError("invalid binary value") from exc
+                return _decode_wrapped_impl(b64_candidate, encoding.decode_base64)
 
             return _decode_client_binary_impl(b64_candidate)
 
@@ -92,38 +84,7 @@ def _decode_client_binary_impl(value: Any) -> bytes:
 
 
 def _decode_base64url_impl(data: str) -> bytes:
-    padding = "=" * ((4 - len(data) % 4) % 4)
-    return base64.urlsafe_b64decode(data + padding)
-
-
-def _decode_base64url_bytes_impl(value: Any) -> bytes:
-    if isinstance(value, (bytes, bytearray, memoryview)):
-        return bytes(value)
-    if isinstance(value, str):
-        try:
-            return _decode_base64url_impl(value)
-        except Exception:
-            return b""
-    return b""
-
-
-def _extract_assertion_credential_id_impl(
-    response: Mapping[str, Any],
-) -> bytes | None:
-    raw_id: Any = None
-    if isinstance(response, Mapping):
-        raw_id = response.get("rawId") or response.get("id")
-
-    if isinstance(raw_id, (bytes, bytearray, memoryview)):
-        return bytes(raw_id)
-
-    if isinstance(raw_id, str):
-        try:
-            return _decode_base64url_impl(raw_id)
-        except (ValueError, TypeError):
-            return None
-
-    return None
+    return encoding.decode_base64url(data)
 
 
 def _extract_binary_value_impl(value: Any) -> Any:
@@ -131,21 +92,19 @@ def _extract_binary_value_impl(value: Any) -> Any:
         return value
     if isinstance(value, dict):
         if "$hex" in value:
-            return bytes.fromhex(value["$hex"])
+            return encoding.decode_hex(value["$hex"])
         if "$base64" in value:
             encoded = value["$base64"]
             if not isinstance(encoded, str):
                 return value
-            padding = "=" * ((4 - len(encoded) % 4) % 4)
-            return base64.b64decode(encoded + padding)
+            return encoding.decode_base64(encoded)
         if "$base64url" in value:
             encoded = value["$base64url"]
             if not isinstance(encoded, str):
                 return value
-            padding = "=" * ((4 - len(encoded) % 4) % 4)
-            return base64.urlsafe_b64decode(encoded + padding)
+            return encoding.decode_base64url(encoded)
     return value
 
 
 def _encode_base64url_impl(data: bytes) -> str:
-    return base64.urlsafe_b64encode(data).rstrip(b"=").decode("ascii")
+    return encoding.encode_base64url(data)

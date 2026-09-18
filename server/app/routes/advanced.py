@@ -9,6 +9,7 @@ callers of *this module* see, not what the fragments call.
 from __future__ import annotations
 
 from ..config import app
+from . import binary_helpers
 from .advanced_parts import (
     algorithm_helpers_impl,
     artifacts_impl,
@@ -44,10 +45,10 @@ _normalize_algorithm_name_key = algorithm_helpers_impl._normalize_algorithm_name
 
 # base64url and binary extraction.
 _decode_base64url = binary_helpers_impl._decode_base64url_impl
-_decode_base64url_bytes = binary_helpers_impl._decode_base64url_bytes_impl
+_decode_base64url_bytes = binary_helpers.decode_base64url_bytes
 _decode_client_binary = binary_helpers_impl._decode_client_binary_impl
 _encode_base64url = binary_helpers_impl._encode_base64url_impl
-_extract_assertion_credential_id = binary_helpers_impl._extract_assertion_credential_id_impl
+_extract_assertion_credential_id = binary_helpers.extract_assertion_credential_id
 _extract_binary_value = binary_helpers_impl._extract_binary_value_impl
 
 # Client-supplied credential parsing.

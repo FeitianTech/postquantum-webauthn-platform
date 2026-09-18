@@ -9,6 +9,7 @@ callers of *this module* see, not what the fragments call.
 from __future__ import annotations
 
 from ..config import app
+from . import binary_helpers
 from .simple_parts import (
     authenticate_impl,
     binary_helpers_impl,
@@ -39,9 +40,9 @@ _SIMPLE_ALLOWED_ALGORITHMS = register_begin_impl._SIMPLE_ALLOWED_ALGORITHMS
 
 # base64 padding and binary decode primitives.
 _add_base64_padding = binary_helpers_impl._add_base64_padding_impl
-_decode_base64url_bytes = binary_helpers_impl._decode_base64url_bytes_impl
+_decode_base64url_bytes = binary_helpers.decode_base64url_bytes
 _decode_binary_value = binary_helpers_impl._decode_binary_value_impl
-_extract_assertion_credential_id = binary_helpers_impl._extract_assertion_credential_id_impl
+_extract_assertion_credential_id = binary_helpers.extract_assertion_credential_id
 _select_first = binary_helpers_impl._select_first_impl
 
 # Session-credential serialisation and parsing.

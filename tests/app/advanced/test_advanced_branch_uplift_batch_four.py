@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import binascii
+import base64
 
 import pytest
 
@@ -57,7 +57,7 @@ def test_summary_helpers_drop_non_mapping_inputs_and_nested_non_mapping_sections
     assert summary["localStorageId"] == "storage-id"
 
 
-def test_decode_client_binary_handles_recursive_wrappers_and_validation_failures(monkeypatch, advanced_binary_helpers):
+def test_decode_client_binary_handles_recursive_wrappers_and_validation_failures():
     advanced_module = pytest.importorskip("server.app.routes.advanced")
 
     assert advanced_module._decode_client_binary({"hex": {"$hex": "6162"}}) == b"ab"
@@ -68,21 +68,18 @@ def test_decode_client_binary_handles_recursive_wrappers_and_validation_failures
     with pytest.raises(ValueError, match="empty binary value"):
         advanced_module._decode_client_binary({"base64url": "   "})
 
-    monkeypatch.setattr(
-        advanced_binary_helpers.base64,
-        "urlsafe_b64decode",
-        lambda *_args, **_kwargs: (_ for _ in ()).throw(binascii.Error("bad b64u"))
-    )
-    with pytest.raises(ValueError, match="invalid binary value"):
-        advanced_module._decode_client_binary({"base64url": "YWI"})
+    # Each wrapper decodes only its own alphabet. A standard-base64 body under
+    # ``$base64url`` is rejected rather than read with ``+``/``/`` translated
+    # away, and vice versa -- that mismatch used to yield different bytes.
+    standard = base64.b64encode(b"\xfb\xef\xbe").decode("ascii")
+    urlsafe = base64.urlsafe_b64encode(b"\xfb\xef\xbe").decode("ascii")
+    assert advanced_module._decode_client_binary({"base64": standard}) == b"\xfb\xef\xbe"
+    assert advanced_module._decode_client_binary({"base64url": urlsafe}) == b"\xfb\xef\xbe"
 
-    monkeypatch.setattr(
-        advanced_binary_helpers.base64,
-        "b64decode",
-        lambda *_args, **_kwargs: (_ for _ in ()).throw(binascii.Error("bad b64"))
-    )
     with pytest.raises(ValueError, match="invalid binary value"):
-        advanced_module._decode_client_binary({"base64": "YWI="})
+        advanced_module._decode_client_binary({"base64url": standard})
+    with pytest.raises(ValueError, match="invalid binary value"):
+        advanced_module._decode_client_binary({"base64": urlsafe})
 
 
 def test_algorithm_coercion_handles_blank_values_failed_numeric_extraction_and_pqc_allowlist(
@@ -108,22 +105,18 @@ def test_algorithm_coercion_handles_blank_values_failed_numeric_extraction_and_p
     assert advanced_module._is_custom_cose_algorithm(123456) is False
 
 
-def test_base64url_and_assertion_algorithm_helpers_degrade_gracefully_on_decode_errors(monkeypatch, advanced_binary_helpers):
+def test_base64url_and_assertion_algorithm_helpers_degrade_gracefully_on_decode_errors():
     advanced_module = pytest.importorskip("server.app.routes.advanced")
 
-    monkeypatch.setattr(
-        advanced_binary_helpers,
-        "_decode_base64url_impl",
-        lambda _value: (_ for _ in ()).throw(ValueError("decode failure"))
-    )
-
-    assert advanced_module._decode_base64url_bytes("broken") == b""
-    assert advanced_module._extract_assertion_credential_id({"rawId": "broken"}) is None
+    # "br*ken" is outside the base64url alphabet, so it is absent rather than
+    # decoded down to whatever characters happen to survive.
+    assert advanced_module._decode_base64url_bytes("br*ken") == b""
+    assert advanced_module._extract_assertion_credential_id({"rawId": "br*ken"}) is None
 
     requested = advanced_module._extract_requested_assertion_algorithm(
         {
             "allowCredentials": [
-                {"type": "public-key", "id": "broken", "alg": "-7"},
+                {"type": "public-key", "id": "br*ken", "alg": "-7"},
             ]
         },
         credential_id=b"target",

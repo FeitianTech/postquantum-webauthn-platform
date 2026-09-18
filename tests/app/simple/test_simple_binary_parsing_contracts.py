@@ -54,16 +54,17 @@ def test_decode_binary_value_decodes_standard_base64_string():
     assert simple_module._decode_binary_value(encoded) == raw
 
 
-def test_decode_binary_value_falls_back_to_hex_when_base64_decoders_fail(monkeypatch, simple_binary_helpers):
+def test_decode_binary_value_falls_back_to_hex_when_base64_decoders_fail():
     simple_module = pytest.importorskip("server.app.routes.simple")
 
-    def _raise_decode_error(*_args, **_kwargs):
-        raise ValueError("decode failure")
+    # Separated or spaced hex cannot be base64, so it reaches the hex reading.
+    assert simple_module._decode_binary_value("41 42 43") == b"ABC"
+    assert simple_module._decode_binary_value("41:42:43") == b"ABC"
 
-    monkeypatch.setattr(simple_binary_helpers.base64, "urlsafe_b64decode", _raise_decode_error)
-    monkeypatch.setattr(simple_binary_helpers.base64, "b64decode", _raise_decode_error)
-
-    assert simple_module._decode_binary_value("414243") == b"ABC"
+    # An unbroken run of hex digits is valid base64 as well, and base64 wins --
+    # the precedence predates the strictness work and is left alone so stored
+    # credential IDs keep decoding to the same bytes.
+    assert simple_module._decode_binary_value("414243") == base64.b64decode("414243==")
 
 
 def test_decode_binary_value_decodes_iterable_of_ints():
