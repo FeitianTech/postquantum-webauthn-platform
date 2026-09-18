@@ -19,6 +19,7 @@ try:  # Python 3.9+
 except ImportError:  # pragma: no cover - fallback for very old Python
     from backports.zoneinfo import ZoneInfo  # type: ignore
 
+from . import encoding
 from .github_client import (
     github_upload_json,
     is_logging_enabled,
@@ -123,15 +124,7 @@ def safe_cbor_decode(data: bytes | str) -> Mapping[str, Any]:
     if isinstance(data, (bytes, bytearray, memoryview)):
         payload = bytes(data)
     elif isinstance(data, str):
-        candidate = data.strip()
-        if not candidate:
-            payload = None
-        else:
-            padding = "=" * (-len(candidate) % 4)
-            try:
-                payload = base64.urlsafe_b64decode(candidate + padding)
-            except Exception:
-                payload = None
+        payload = encoding.try_decode_base64url(data)
     else:
         payload = None
 
