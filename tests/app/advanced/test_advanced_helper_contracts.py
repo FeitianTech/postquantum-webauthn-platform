@@ -123,7 +123,7 @@ def test_base64_assertion_and_binary_extraction_helpers():
     assert advanced_module._extract_binary_value("plain") == "plain"
 
 
-def test_custom_algorithm_detection_and_attestation_logging(monkeypatch):
+def test_custom_algorithm_detection_and_attestation_logging(monkeypatch, config_module):
     advanced_module = pytest.importorskip("server.app.routes.advanced")
 
     assert advanced_module._is_custom_cose_algorithm(None) is False
@@ -133,7 +133,7 @@ def test_custom_algorithm_detection_and_attestation_logging(monkeypatch):
 
     log_calls = []
     monkeypatch.setattr(
-        advanced_module.app.logger,
+        config_module.app.logger,
         "info",
         lambda message, payload: log_calls.append((message, payload))
     )

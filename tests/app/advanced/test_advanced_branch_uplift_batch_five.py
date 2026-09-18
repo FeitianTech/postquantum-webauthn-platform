@@ -80,7 +80,7 @@ def test_register_begin_maps_attestation_modes_and_exercises_pqc_warning_branch(
     warning_messages = []
     monkeypatch.setattr(pqc_module, "detect_available_pqc_algorithms", lambda: (set(), None))
     monkeypatch.setattr(
-        advanced_module.app.logger,
+        config_module.app.logger,
         "warning",
         lambda message, *args: warning_messages.append(message % args if args else message)
     )
