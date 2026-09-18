@@ -198,11 +198,11 @@ def test_merge_trailing_signature_and_payload_helpers_cover_remaining_branches(m
     assert detailed_payload["extensions"] == {"uvm": True}
 
 
-def test_decode_trailing_map_handles_non_progress_and_unhashable_keys(monkeypatch, cbor_lenient):
+def test_decode_trailing_map_handles_non_progress_and_unhashable_keys(monkeypatch, cbor_parser):
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     monkeypatch.setattr(
-        cbor_lenient,
+        cbor_parser,
         "_lenient_decode_from",
         lambda _data, offset=0: (None, offset),
     )
@@ -214,5 +214,5 @@ def test_decode_trailing_map_handles_non_progress_and_unhashable_keys(monkeypatc
         _value, new_offset = key_then_value.pop(0)
         return _value, new_offset
 
-    monkeypatch.setattr(cbor_lenient, "_lenient_decode_from", _sequence_decoder)
+    monkeypatch.setattr(cbor_parser, "_lenient_decode_from", _sequence_decoder)
     assert decode_module._decode_trailing_map(b"\x00\x00") == {"[1]": "value"}

@@ -6,7 +6,7 @@ from typing import Any
 
 from fido2 import cbor
 
-from . import cbor_lenient
+from . import cbor_parser
 from .ctap_repair_make import (
     _derive_alg_from_auth_data,  # noqa: F401  # split-module namespace surface
     _extract_mapping_bytes,  # noqa: F401  # split-module namespace surface
@@ -25,10 +25,10 @@ def _locate_get_assertion_trailing_offset(raw_bytes: bytes, signature_start: int
     for idx in range(search_start, len(raw_bytes)):
         if raw_bytes[idx] != 0x04:
             continue
-        key, after_key = cbor_lenient._lenient_decode_from(raw_bytes, idx)
+        key, after_key = cbor_parser._lenient_decode_from(raw_bytes, idx)
         if key != 4 or after_key <= idx:
             continue
-        value, after_value = cbor_lenient._lenient_decode_from(raw_bytes, after_key)
+        value, after_value = cbor_parser._lenient_decode_from(raw_bytes, after_key)
         if after_value <= after_key:
             continue
         if isinstance(value, Mapping):
@@ -82,10 +82,10 @@ def _extract_get_assertion_trailing_from_raw(
 
     cursor = trailing_offset
     while cursor < len(raw_bytes):
-        key, after_key = cbor_lenient._lenient_decode_from(raw_bytes, cursor)
+        key, after_key = cbor_parser._lenient_decode_from(raw_bytes, cursor)
         if after_key <= cursor or not isinstance(key, int):
             break
-        value, after_value = cbor_lenient._lenient_decode_from(raw_bytes, after_key)
+        value, after_value = cbor_parser._lenient_decode_from(raw_bytes, after_key)
         if after_value <= after_key:
             break
         try:
@@ -102,9 +102,9 @@ def _extract_get_assertion_trailing_from_raw(
     if 5 not in trailing_fields and trailing_offset < len(raw_bytes):
         idx = raw_bytes.rfind(b"\x05", trailing_offset)
         if idx != -1:
-            key_candidate, after_key_candidate = cbor_lenient._lenient_decode_from(raw_bytes, idx)
+            key_candidate, after_key_candidate = cbor_parser._lenient_decode_from(raw_bytes, idx)
             if key_candidate == 5 and after_key_candidate > idx:
-                value_candidate, after_value_candidate = cbor_lenient._lenient_decode_from(
+                value_candidate, after_value_candidate = cbor_parser._lenient_decode_from(
                     raw_bytes, after_key_candidate
                 )
                 if after_value_candidate > after_key_candidate:
@@ -124,11 +124,11 @@ def _split_get_assertion_trailing_fields(
         if signature_bytes[offset] != 0x04:
             continue
 
-        key, after_key = cbor_lenient._lenient_decode_from(signature_bytes, offset)
+        key, after_key = cbor_parser._lenient_decode_from(signature_bytes, offset)
         if key != 4 or after_key <= offset:
             continue
 
-        value, after_value = cbor_lenient._lenient_decode_from(signature_bytes, after_key)
+        value, after_value = cbor_parser._lenient_decode_from(signature_bytes, after_key)
         if after_value <= after_key:
             continue
 
@@ -137,7 +137,7 @@ def _split_get_assertion_trailing_fields(
         success = True
 
         while cursor < len(signature_bytes):
-            next_key, after_next_key = cbor_lenient._lenient_decode_from(signature_bytes, cursor)
+            next_key, after_next_key = cbor_parser._lenient_decode_from(signature_bytes, cursor)
             if (
                 after_next_key <= cursor
                 or next_key is None
@@ -148,7 +148,7 @@ def _split_get_assertion_trailing_fields(
                 success = False
                 break
 
-            next_value, after_next_value = cbor_lenient._lenient_decode_from(signature_bytes, after_next_key)
+            next_value, after_next_value = cbor_parser._lenient_decode_from(signature_bytes, after_next_key)
             if after_next_value <= after_next_key:
                 success = False
                 break

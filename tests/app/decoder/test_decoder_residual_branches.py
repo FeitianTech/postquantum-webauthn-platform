@@ -23,7 +23,7 @@ def test_build_labeled_ctap_map_covers_seen_key_seen_label_and_string_missing_ha
     assert result["5 (five)"] is None
 
 
-def test_decoder_residual_helpers_cover_remaining_parse_and_conversion_guards(monkeypatch, cbor_lenient, ctap_parse_runtime):
+def test_decoder_residual_helpers_cover_remaining_parse_and_conversion_guards(monkeypatch, cbor_parser, ctap_parse_runtime):
     decode_module = pytest.importorskip("server.app.decoder.decode")
     auth_data_cls = AuthenticatorData
 
@@ -88,7 +88,7 @@ def test_decoder_residual_helpers_cover_remaining_parse_and_conversion_guards(mo
     )
 
     monkeypatch.setattr(
-        cbor_lenient,
+        cbor_parser,
         "_lenient_decode_from",
         lambda *_args, **_kwargs: (_ for _ in ()).throw(ValueError("decode-error")),
     )

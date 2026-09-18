@@ -67,7 +67,7 @@ def test_decode_cbor_sequence_handles_fallback_decoder_and_zero_consumed_paths(m
     assert remaining == b"\x01"
 
 
-def test_decode_cbor_sequence_breaks_when_lenient_fallback_raises(monkeypatch, cbor_parser, cbor_lenient):
+def test_decode_cbor_sequence_breaks_when_lenient_fallback_raises(monkeypatch, cbor_parser):
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     monkeypatch.setattr(
@@ -92,7 +92,7 @@ def test_decode_cbor_sequence_breaks_when_lenient_fallback_raises(monkeypatch, c
         ),
     )
     monkeypatch.setattr(
-        cbor_lenient,
+        cbor_parser,
         "_lenient_decode_from",
         lambda _payload, _offset=0: (_ for _ in ()).throw(RuntimeError("boom")),
     )
@@ -221,7 +221,7 @@ def test_repair_get_assertion_entries_recovers_trailing_fields_and_prunes_byte_k
     assert repaired_structure["summary"].startswith("map[")
 
 
-def test_parse_authenticator_data_bytes_handles_truncation_and_decode_failures(monkeypatch, cbor_lenient):
+def test_parse_authenticator_data_bytes_handles_truncation_and_decode_failures(monkeypatch, cbor_parser):
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     truncated_payload = b"\x00" * 32 + bytes([AuthenticatorData.FLAG.AT]) + (1).to_bytes(4, "big")
@@ -252,7 +252,7 @@ def test_parse_authenticator_data_bytes_handles_truncation_and_decode_failures(m
     )
 
     monkeypatch.setattr(
-        cbor_lenient,
+        cbor_parser,
         "_lenient_decode_from",
         lambda *_args, **_kwargs: (_ for _ in ()).throw(ValueError("decode failure")),
     )
@@ -261,7 +261,7 @@ def test_parse_authenticator_data_bytes_handles_truncation_and_decode_failures(m
     assert details["attestedCredentialData"]["credentialPublicKey"] == "a1"
 
 
-def test_parse_authenticator_data_bytes_handles_extension_non_mapping_and_zero_consumed(monkeypatch, cbor_lenient):
+def test_parse_authenticator_data_bytes_handles_extension_non_mapping_and_zero_consumed(monkeypatch, cbor_parser):
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     extension_payload = (
@@ -275,7 +275,7 @@ def test_parse_authenticator_data_bytes_handles_extension_non_mapping_and_zero_c
     assert trailing == b""
 
     monkeypatch.setattr(
-        cbor_lenient,
+        cbor_parser,
         "_lenient_decode_from",
         lambda *_args, **_kwargs: (None, 0),
     )
