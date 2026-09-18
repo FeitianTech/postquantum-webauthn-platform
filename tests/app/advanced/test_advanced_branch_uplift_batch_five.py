@@ -347,7 +347,7 @@ def test_register_complete_returns_400_for_non_mapping_extensions_payload(monkey
         ("custom-policy", "custom-policy"),
     ],
 )
-def test_register_complete_maps_cred_protect_display_and_handles_public_key_alg_fallbacks(monkeypatch, cred_protect_value, expected_display, attestation_module, credential_artifacts_module, device_logs_module, metadata_module, storage_module, config_module, advanced_summary_helpers, advanced_logging_helpers):
+def test_register_complete_maps_cred_protect_display_and_handles_public_key_alg_fallbacks(monkeypatch, cred_protect_value, expected_display, attestation_module, credential_artifacts_module, device_logs_module, metadata_module, storage_module, config_module, advanced_summary_helpers, advanced_logging_helpers, advanced_register_complete_material):
     advanced_module = pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
 
@@ -403,7 +403,7 @@ def test_register_complete_maps_cred_protect_display_and_handles_public_key_alg_
     monkeypatch.setattr(attestation_module, "summarize_authenticator_extensions", lambda _ext: {})
     monkeypatch.setattr(advanced_summary_helpers, "_generate_storage_id_impl", lambda _source: "generated::storage::id")
     monkeypatch.setattr(
-        advanced_module.uuid,
+        advanced_register_complete_material.uuid,
         "UUID",
         lambda **_kwargs: (_ for _ in ()).throw(ValueError("invalid uuid"))
     )

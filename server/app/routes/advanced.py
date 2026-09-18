@@ -1,74 +1,14 @@
-"""Routes for the advanced JSON editor flows."""
+"""Routes for the advanced JSON editor flows.
+
+The implementation lives in :mod:`server.app.routes.advanced_parts`; this module is
+the HTTP face of it -- the Flask rules, plus re-exports of the pieces callers use.
+Each fragment resolves its own names through its own imports, so a name here is the
+same object the fragment defines -- patching one of these re-exports changes what
+callers of *this module* see, not what the fragments call.
+"""
 from __future__ import annotations
 
-import base64
-import binascii
-import hashlib
-import json
-import math
-import re
-import sys
-import time
-import uuid
-from collections.abc import Iterable, Mapping, MutableMapping
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
-
-from flask import jsonify, request, session
-
-from fido2 import cbor
-from fido2.cose import CoseKey
-from fido2.webauthn import (
-    AttestationConveyancePreference,
-    AttestedCredentialData,
-    AuthenticatorAttachment,
-    AuthenticatorData,
-    PublicKeyCredentialDescriptor,
-    PublicKeyCredentialParameters,
-    PublicKeyCredentialType,
-    PublicKeyCredentialUserEntity,
-    ResidentKeyRequirement,
-    UserVerificationRequirement,
-)
-
-from ..attachments import (
-    normalize_attachment,
-    normalize_attachment_list,
-    resolve_effective_attachments,
-)
-from ..attestation import (
-    augment_aaguid_fields,
-    extract_attestation_details,
-    extract_min_pin_length,
-    make_json_safe,
-    perform_attestation_checks,
-    summarize_authenticator_extensions,
-)
-from ..challenge_registry import consume_ceremony_state, stamp_ceremony_state
-from ..config import (
-    app,
-    build_rp_entity,
-    create_fido_server,
-    determine_expected_origin,
-    determine_rp_id,
-    extract_client_data_origin,
-    is_origin_allowed,
-)
-from ..credential_artifacts import (
-    delete_credential_artifact_with_status,
-    load_credential_artifact,
-    store_credential_artifact,
-)
-from ..device_logs import RegistrationEvent, record_registration_event
-from ..metadata import ensure_metadata_session_id
-from ..pqc import (
-    PQC_ALGORITHM_ID_TO_NAME,
-    describe_algorithm,
-    detect_available_pqc_algorithms,
-    is_pqc_algorithm,
-    log_algorithm_selection,
-)
-from ..storage import add_public_key_material, convert_bytes_for_json, readkey
+from ..config import app
 from .advanced_parts import (
     algorithm_helpers_impl,
     artifacts_impl,
@@ -82,222 +22,94 @@ from .advanced_parts import (
     register_complete_impl,
     summary_helpers_impl,
 )
-from .advanced_parts.algorithm_helpers_impl import (
-    _coerce_cose_algorithm_impl,
-    _derive_algorithms_from_credentials_impl,
-    _extract_credential_algorithm_impl,
-    _extract_requested_assertion_algorithm_impl,
-    _is_custom_cose_algorithm_impl,
-    _lookup_named_cose_algorithm_impl,
-    _normalize_algorithm_name_key_impl,
+
+# COSE name tables and the heavy-field key sets.
+_COSE_ALGORITHM_NAME_MAP = constants.COSE_ALGORITHM_NAME_MAP
+_COSE_ALGORITHM_NAME_LOOKUP = constants.COSE_ALGORITHM_NAME_LOOKUP
+_COSE_ALGORITHM_NUMERIC_PATTERN = constants.COSE_ALGORITHM_NUMERIC_PATTERN
+_HEAVY_CREDENTIAL_KEYS = constants.HEAVY_CREDENTIAL_KEYS
+_HEAVY_PROPERTY_KEYS = constants.HEAVY_PROPERTY_KEYS
+_HEAVY_RELYING_PARTY_KEYS = constants.HEAVY_RELYING_PARTY_KEYS
+
+# COSE algorithm coercion and discovery.
+_coerce_cose_algorithm = algorithm_helpers_impl._coerce_cose_algorithm_impl
+_derive_algorithms_from_credentials = algorithm_helpers_impl._derive_algorithms_from_credentials_impl
+_extract_credential_algorithm = algorithm_helpers_impl._extract_credential_algorithm_impl
+_extract_requested_assertion_algorithm = (
+    algorithm_helpers_impl._extract_requested_assertion_algorithm_impl
 )
-from .advanced_parts.artifacts_impl import (
-    api_delete_advanced_credential_artifact_impl,
-    api_get_advanced_credential_artifact_impl,
-    api_get_advanced_credential_artifacts_bulk_impl,
-    api_put_advanced_credential_artifact_impl,
-    api_put_advanced_credential_snapshot_impl,
+_is_custom_cose_algorithm = algorithm_helpers_impl._is_custom_cose_algorithm_impl
+_lookup_named_cose_algorithm = algorithm_helpers_impl._lookup_named_cose_algorithm_impl
+_normalize_algorithm_name_key = algorithm_helpers_impl._normalize_algorithm_name_key_impl
+
+# base64url and binary extraction.
+_decode_base64url = binary_helpers_impl._decode_base64url_impl
+_decode_base64url_bytes = binary_helpers_impl._decode_base64url_bytes_impl
+_decode_client_binary = binary_helpers_impl._decode_client_binary_impl
+_encode_base64url = binary_helpers_impl._encode_base64url_impl
+_extract_assertion_credential_id = binary_helpers_impl._extract_assertion_credential_id_impl
+_extract_binary_value = binary_helpers_impl._extract_binary_value_impl
+
+# Client-supplied credential parsing.
+_coerce_optional_bool = parsing_helpers_impl._coerce_optional_bool_impl
+_extract_credential_id = parsing_helpers_impl._extract_credential_id_impl
+_extract_flag_from_mapping = parsing_helpers_impl._extract_flag_from_mapping_impl
+_parse_client_supplied_credentials = parsing_helpers_impl._parse_client_supplied_credentials_impl
+_select_first = parsing_helpers_impl._select_first_impl
+
+# Stored-credential summaries.
+_generate_storage_id = summary_helpers_impl._generate_storage_id_impl
+_summarize_properties = summary_helpers_impl._summarize_properties_impl
+_summarize_relying_party = summary_helpers_impl._summarize_relying_party_impl
+_summarize_stored_credential = summary_helpers_impl._summarize_stored_credential_impl
+
+# Attestation-response logging.
+_log_authenticator_attestation_response = (
+    logging_helpers_impl._log_authenticator_attestation_response_impl
 )
-from .advanced_parts.authenticate_begin_impl import advanced_authenticate_begin_impl
-from .advanced_parts.authenticate_complete_impl import (
-    advanced_authenticate_complete_impl,
-)
-from .advanced_parts.binary_helpers_impl import (
-    _decode_base64url_bytes_impl,
-    _decode_base64url_impl,
-    _decode_client_binary_impl,
-    _encode_base64url_impl,
-    _extract_assertion_credential_id_impl,
-    _extract_binary_value_impl,
-)
-from .advanced_parts.constants import (
-    COSE_ALGORITHM_NAME_LOOKUP,
-    COSE_ALGORITHM_NAME_MAP,
-    COSE_ALGORITHM_NUMERIC_PATTERN,
-    HEAVY_CREDENTIAL_KEYS,
-    HEAVY_PROPERTY_KEYS,
-    HEAVY_RELYING_PARTY_KEYS,
-)
-from .advanced_parts.logging_helpers_impl import (
-    _log_authenticator_attestation_response_impl,
-    datetime_from_timestamp_impl,
-)
-from .advanced_parts.parsing_helpers_impl import (
-    _coerce_optional_bool_impl,
-    _extract_credential_id_impl,
-    _extract_flag_from_mapping_impl,
-    _parse_client_supplied_credentials_impl,
-    _select_first_impl,
-)
-from .advanced_parts.register_begin_impl import advanced_register_begin_impl
-from .advanced_parts.register_complete_impl import advanced_register_complete_impl
-from .advanced_parts.summary_helpers_impl import (
-    _generate_storage_id_impl,
-    _summarize_properties_impl,
-    _summarize_relying_party_impl,
-    _summarize_stored_credential_impl,
-)
-
-_COSE_ALGORITHM_NAME_MAP = COSE_ALGORITHM_NAME_MAP
-_COSE_ALGORITHM_NAME_LOOKUP = COSE_ALGORITHM_NAME_LOOKUP
-_COSE_ALGORITHM_NUMERIC_PATTERN = COSE_ALGORITHM_NUMERIC_PATTERN
-_HEAVY_CREDENTIAL_KEYS = HEAVY_CREDENTIAL_KEYS
-_HEAVY_PROPERTY_KEYS = HEAVY_PROPERTY_KEYS
-_HEAVY_RELYING_PARTY_KEYS = HEAVY_RELYING_PARTY_KEYS
-
-
-def _self_module() -> Any:
-    return sys.modules[__name__]
-
-
-def _normalize_algorithm_name_key(name: str) -> str:
-    return _normalize_algorithm_name_key_impl(name)
-
-
-def _generate_storage_id(credential_id: str) -> str:
-    return _generate_storage_id_impl(credential_id)
-
-
-def _summarize_properties(value: Any) -> dict[str, Any] | None:
-    return _summarize_properties_impl(value)
-
-
-def _summarize_relying_party(value: Any) -> dict[str, Any] | None:
-    return _summarize_relying_party_impl(value)
-
-
-def _summarize_stored_credential(stored: Mapping[str, Any], storage_id: str) -> dict[str, Any]:
-    return _summarize_stored_credential_impl(stored, storage_id)
-
-
-def _extract_credential_id(value: Any) -> bytes | None:
-    return _extract_credential_id_impl(value)
-
-
-def _extract_credential_algorithm(value: Any) -> int | None:
-    return _extract_credential_algorithm_impl(value)
-
-
-def _coerce_optional_bool(value: Any) -> bool | None:
-    return _coerce_optional_bool_impl(value)
-
-
-def _extract_flag_from_mapping(mapping: Mapping[str, Any], keys: Iterable[str]) -> bool | None:
-    return _extract_flag_from_mapping_impl(mapping, keys)
-
-
-def _select_first(mapping: Mapping[str, Any], keys: Iterable[str]) -> Any:
-    return _select_first_impl(mapping, keys)
-
-
-def _decode_client_binary(value: Any) -> bytes:
-    return _decode_client_binary_impl(value)
-
-
-def _parse_client_supplied_credentials(raw_credentials: Any) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-    return _parse_client_supplied_credentials_impl(raw_credentials)
-
-
-def _derive_algorithms_from_credentials(credentials: Iterable[Any]) -> list[PublicKeyCredentialParameters]:
-    return _derive_algorithms_from_credentials_impl(credentials)
-
-
-def _lookup_named_cose_algorithm(name: str) -> int | None:
-    return _lookup_named_cose_algorithm_impl(name)
-
-
-def _coerce_cose_algorithm(value: Any) -> int | None:
-    return _coerce_cose_algorithm_impl(value)
-
-
-def _is_custom_cose_algorithm(alg_id: int | None) -> bool:
-    return _is_custom_cose_algorithm_impl(alg_id)
-
-
-def _decode_base64url(data: str) -> bytes:
-    return _decode_base64url_impl(data)
-
-
-def _decode_base64url_bytes(value: Any) -> bytes:
-    return _decode_base64url_bytes_impl(value)
-
-
-def _extract_assertion_credential_id(response: Mapping[str, Any]) -> bytes | None:
-    return _extract_assertion_credential_id_impl(response)
-
-
-def _extract_requested_assertion_algorithm(
-    public_key: Mapping[str, Any],
-    credential_id: bytes | None,
-) -> int | None:
-    return _extract_requested_assertion_algorithm_impl(public_key, credential_id)
-
-
-def _extract_binary_value(value: Any) -> Any:
-    return _extract_binary_value_impl(value)
-
-
-def _encode_base64url(data: bytes) -> str:
-    return _encode_base64url_impl(data)
-
-
-def _log_authenticator_attestation_response(
-    attestation_format: str | None,
-    auth_data: Any,
-    attestation_statement: Any,
-    raw_attestation_object: Any,
-) -> None:
-    return _log_authenticator_attestation_response_impl(attestation_format,
-        auth_data,
-        attestation_statement,
-        raw_attestation_object,
-    )
+datetime_from_timestamp = logging_helpers_impl.datetime_from_timestamp_impl
 
 
 @app.route("/api/advanced/register/begin", methods=["POST"])
 def advanced_register_begin():
-    return advanced_register_begin_impl()
+    return register_begin_impl.advanced_register_begin_impl()
 
 
 @app.route("/api/advanced/register/complete", methods=["POST"])
 def advanced_register_complete():
-    return advanced_register_complete_impl()
+    return register_complete_impl.advanced_register_complete_impl()
 
 
 @app.route("/api/advanced/credential-artifacts/<string:storage_id>", methods=["GET"])
 def api_get_advanced_credential_artifact(storage_id: str):
-    return api_get_advanced_credential_artifact_impl(storage_id)
+    return artifacts_impl.api_get_advanced_credential_artifact_impl(storage_id)
 
 
 @app.route("/api/advanced/credential-artifacts/bulk", methods=["POST"])
 def api_get_advanced_credential_artifacts_bulk():
-    return api_get_advanced_credential_artifacts_bulk_impl()
+    return artifacts_impl.api_get_advanced_credential_artifacts_bulk_impl()
 
 
 @app.route("/api/advanced/credential-artifacts/<string:storage_id>", methods=["PUT"])
 def api_put_advanced_credential_artifact(storage_id: str):
-    return api_put_advanced_credential_artifact_impl(storage_id)
+    return artifacts_impl.api_put_advanced_credential_artifact_impl(storage_id)
 
 
 @app.route("/api/advanced/credential-artifacts/<string:storage_id>/snapshot", methods=["PUT"])
 def api_put_advanced_credential_snapshot(storage_id: str):
-    return api_put_advanced_credential_snapshot_impl(storage_id)
+    return artifacts_impl.api_put_advanced_credential_snapshot_impl(storage_id)
 
 
 @app.route("/api/advanced/credential-artifacts/<string:storage_id>", methods=["DELETE"])
 def api_delete_advanced_credential_artifact(storage_id: str):
-    return api_delete_advanced_credential_artifact_impl(storage_id)
-
-
-def datetime_from_timestamp(timestamp: float) -> str:
-    return datetime_from_timestamp_impl(timestamp)
+    return artifacts_impl.api_delete_advanced_credential_artifact_impl(storage_id)
 
 
 @app.route("/api/advanced/authenticate/begin", methods=["POST"])
 def advanced_authenticate_begin():
-    return advanced_authenticate_begin_impl()
+    return authenticate_begin_impl.advanced_authenticate_begin_impl()
 
 
 @app.route("/api/advanced/authenticate/complete", methods=["POST"])
 def advanced_authenticate_complete():
-    return advanced_authenticate_complete_impl()
+    return authenticate_complete_impl.advanced_authenticate_complete_impl()
