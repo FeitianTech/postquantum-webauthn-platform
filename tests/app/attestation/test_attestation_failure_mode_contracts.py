@@ -75,7 +75,7 @@ def _perform_checks(attestation_module, response, state, public_key_options, rp_
     )
 
 
-def test_perform_attestation_checks_unsupported_format_sets_signature_and_root_failure(monkeypatch):
+def test_perform_attestation_checks_unsupported_format_sets_signature_and_root_failure(monkeypatch, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     challenge = b"challenge"
@@ -112,7 +112,7 @@ def test_perform_attestation_checks_unsupported_format_sets_signature_and_root_f
     assert any(error.startswith("unsupported_attestation:") for error in result["errors"])
 
 
-def test_perform_attestation_checks_warns_when_metadata_verifier_unavailable(monkeypatch, metadata_module):
+def test_perform_attestation_checks_warns_when_metadata_verifier_unavailable(monkeypatch, metadata_module, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     challenge = b"metadata-unavailable"
@@ -156,7 +156,7 @@ def test_perform_attestation_checks_warns_when_metadata_verifier_unavailable(mon
     assert "trust_path_missing" in result["errors"]
 
 
-def test_perform_attestation_checks_captures_verifier_evaluation_exception(monkeypatch, metadata_module):
+def test_perform_attestation_checks_captures_verifier_evaluation_exception(monkeypatch, metadata_module, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     challenge = b"verifier-exception"
@@ -204,7 +204,7 @@ def test_perform_attestation_checks_captures_verifier_evaluation_exception(monke
     assert result["root_checks"]["trusted_ca"] is False
 
 
-def test_perform_attestation_checks_flags_algorithm_not_in_metadata_when_root_is_valid(monkeypatch, metadata_module):
+def test_perform_attestation_checks_flags_algorithm_not_in_metadata_when_root_is_valid(monkeypatch, metadata_module, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     challenge = b"metadata-algorithm"
@@ -290,7 +290,7 @@ def test_perform_attestation_checks_flags_algorithm_not_in_metadata_when_root_is
     assert result["root_checks"]["chain"] is True
 
 
-def test_perform_attestation_checks_reports_pqc_algorithm_mismatch_during_fallback(monkeypatch):
+def test_perform_attestation_checks_reports_pqc_algorithm_mismatch_during_fallback(monkeypatch, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     challenge = b"pqc-fallback"

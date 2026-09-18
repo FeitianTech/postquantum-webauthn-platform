@@ -8,6 +8,8 @@ from typing import Any
 
 from fido2 import cbor
 
+from ... import attestation
+
 
 def build_registration_material(
     advanced_module: Any,
@@ -165,7 +167,7 @@ def build_registration_material(
     if attestation_certificates_details:
         rp_info["attestationCertificates"] = attestation_certificates_details
 
-    credential_info["relying_party"] = advanced_module.make_json_safe(rp_info)
+    credential_info["relying_party"] = attestation.make_json_safe(rp_info)
 
     user_handle_b64url = base64.urlsafe_b64encode(user_handle).rstrip(b"=").decode("ascii")
     user_handle_b64 = base64.b64encode(user_handle).decode("ascii")
@@ -214,7 +216,7 @@ def build_registration_material(
         "authenticatorData": authenticator_data_hex,
         "authenticatorDataHash": authenticator_data_hash,
         "clientDataJSON": advanced_module.convert_bytes_for_json(credential_info.get("client_data_json")),
-        "relyingParty": advanced_module.make_json_safe(rp_info),
+        "relyingParty": attestation.make_json_safe(rp_info),
         "properties": stored_properties,
         "registrationResponse": credential_info.get("registration_response"),
         "userHandle": user_handle_b64,

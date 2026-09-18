@@ -93,7 +93,7 @@ class _FakeCertificate:
         self.extensions = _FakeExtensions(extension_map, missing_exception)
 
 
-def test_perform_attestation_checks_reports_core_validation_failures(monkeypatch):
+def test_perform_attestation_checks_reports_core_validation_failures(monkeypatch, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     expected_challenge = b"expected-challenge"
@@ -140,7 +140,7 @@ def test_perform_attestation_checks_reports_core_validation_failures(monkeypatch
     assert "algorithm_not_allowed" in errors
 
 
-def test_perform_attestation_checks_accepts_valid_none_attestation(monkeypatch):
+def test_perform_attestation_checks_accepts_valid_none_attestation(monkeypatch, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     rp_id = "example.com"
@@ -183,7 +183,7 @@ def test_perform_attestation_checks_accepts_valid_none_attestation(monkeypatch):
     assert result["authenticator_data"]["user_verification_satisfied"] is True
 
 
-def test_perform_attestation_checks_returns_registration_parse_error(monkeypatch):
+def test_perform_attestation_checks_returns_registration_parse_error(monkeypatch, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     def _raise_parse_error(_value):
@@ -215,7 +215,7 @@ def test_perform_attestation_checks_returns_registration_parse_error(monkeypatch
         ({"trusted_ca": None, "chain": True, "fido_mds": True}, None),
     ],
 )
-def test_resolve_root_validity_matrix(checks, expected):
+def test_resolve_root_validity_matrix(checks, expected, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     assert attestation_module._resolve_root_validity(checks) is expected
@@ -230,13 +230,13 @@ def test_resolve_root_validity_matrix(checks, expected):
         ({"trusted_ca": None, "chain": True, "fido_mds": False}, None),
     ],
 )
-def test_resolve_root_validity_additional_matrix_cases(checks, expected):
+def test_resolve_root_validity_additional_matrix_cases(checks, expected, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     assert attestation_module._resolve_root_validity(checks) is expected
 
 
-def test_verify_pqc_attestation_chain_requires_non_empty_trust_path():
+def test_verify_pqc_attestation_chain_requires_non_empty_trust_path(attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     valid, errors = attestation_module._verify_pqc_attestation_chain(
@@ -249,7 +249,7 @@ def test_verify_pqc_attestation_chain_requires_non_empty_trust_path():
     assert errors == ["pqc_attestation_chain_missing"]
 
 
-def test_verify_pqc_attestation_chain_returns_constraint_error_early(monkeypatch, pqc_constraints_runtime):
+def test_verify_pqc_attestation_chain_returns_constraint_error_early(monkeypatch, pqc_constraints_runtime, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     monkeypatch.setattr(
@@ -268,7 +268,7 @@ def test_verify_pqc_attestation_chain_returns_constraint_error_early(monkeypatch
     assert errors == ["pqc_basic_constraints_not_ca: Test CA"]
 
 
-def test_verify_pqc_attestation_chain_reports_untrusted_root(monkeypatch, trust_ca_runtime, pqc_constraints_runtime):
+def test_verify_pqc_attestation_chain_reports_untrusted_root(monkeypatch, trust_ca_runtime, pqc_constraints_runtime, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     monkeypatch.setattr(
@@ -297,7 +297,7 @@ def test_verify_pqc_attestation_chain_reports_untrusted_root(monkeypatch, trust_
     assert errors == ["pqc_root_not_in_trusted_list"]
 
 
-def test_verify_pqc_attestation_chain_invokes_signature_verification_for_each_non_root_link(monkeypatch, trust_ca_runtime, pqc_constraints_runtime):
+def test_verify_pqc_attestation_chain_invokes_signature_verification_for_each_non_root_link(monkeypatch, trust_ca_runtime, pqc_constraints_runtime, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     monkeypatch.setattr(
@@ -336,7 +336,7 @@ def test_verify_pqc_attestation_chain_invokes_signature_verification_for_each_no
     ]
 
 
-def test_verify_pqc_attestation_chain_reports_invalid_signature_error(monkeypatch, pqc_constraints_runtime):
+def test_verify_pqc_attestation_chain_reports_invalid_signature_error(monkeypatch, pqc_constraints_runtime, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     monkeypatch.setattr(
@@ -365,7 +365,7 @@ def test_verify_pqc_attestation_chain_reports_invalid_signature_error(monkeypatc
     assert errors[0].startswith("pqc_certificate_signature_invalid:")
 
 
-def test_verify_pqc_attestation_chain_reports_unexpected_signature_error(monkeypatch, pqc_constraints_runtime):
+def test_verify_pqc_attestation_chain_reports_unexpected_signature_error(monkeypatch, pqc_constraints_runtime, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     monkeypatch.setattr(
@@ -394,7 +394,7 @@ def test_verify_pqc_attestation_chain_reports_unexpected_signature_error(monkeyp
     assert errors[0].startswith("pqc_certificate_signature_error:")
 
 
-def test_evaluate_mldsa_attestation_root_reports_missing_metadata_entry():
+def test_evaluate_mldsa_attestation_root_reports_missing_metadata_entry(attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     verifier = type(
@@ -415,7 +415,7 @@ def test_evaluate_mldsa_attestation_root_reports_missing_metadata_entry():
     assert "pqc_metadata_entry_missing" in outcome["errors"]
 
 
-def test_check_pqc_certificate_constraints_rejects_leaf_ca_certificate(monkeypatch):
+def test_check_pqc_certificate_constraints_rejects_leaf_ca_certificate(monkeypatch, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     class _MissingExtension(Exception):
@@ -445,7 +445,7 @@ def test_check_pqc_certificate_constraints_rejects_leaf_ca_certificate(monkeypat
     assert error == "pqc_basic_constraints_leaf_ca: CN=Leaf"
 
 
-def test_check_pqc_certificate_constraints_requires_basic_constraints_for_non_leaf(monkeypatch):
+def test_check_pqc_certificate_constraints_requires_basic_constraints_for_non_leaf(monkeypatch, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     class _MissingExtension(Exception):
@@ -470,7 +470,7 @@ def test_check_pqc_certificate_constraints_requires_basic_constraints_for_non_le
     assert error == "pqc_basic_constraints_missing: CN=Intermediate"
 
 
-def test_check_pqc_certificate_constraints_accepts_path_length_equal_to_remaining(monkeypatch):
+def test_check_pqc_certificate_constraints_accepts_path_length_equal_to_remaining(monkeypatch, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     class _MissingExtension(Exception):
@@ -500,7 +500,7 @@ def test_check_pqc_certificate_constraints_accepts_path_length_equal_to_remainin
     assert error is None
 
 
-def test_check_pqc_certificate_constraints_rejects_negative_policy_constraints(monkeypatch):
+def test_check_pqc_certificate_constraints_rejects_negative_policy_constraints(monkeypatch, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     class _MissingExtension(Exception):
@@ -540,7 +540,7 @@ def test_check_pqc_certificate_constraints_rejects_negative_policy_constraints(m
     assert error == "pqc_policy_constraints_invalid: CN=PolicyInvalid"
 
 
-def test_resolve_root_validity_returns_none_when_all_checks_unknown():
+def test_resolve_root_validity_returns_none_when_all_checks_unknown(attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     assert (
@@ -555,7 +555,7 @@ def test_resolve_root_validity_returns_none_when_all_checks_unknown():
     )
 
 
-def test_evaluate_mldsa_attestation_root_reports_missing_metadata_roots(monkeypatch, trust_runtime):
+def test_evaluate_mldsa_attestation_root_reports_missing_metadata_roots(monkeypatch, trust_runtime, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     fake_entry = {"metadata_statement": {}}
@@ -580,7 +580,7 @@ def test_evaluate_mldsa_attestation_root_reports_missing_metadata_roots(monkeypa
     assert outcome["root_valid"] is None
 
 
-def test_evaluate_mldsa_attestation_root_marks_chain_missing_when_no_x5c(monkeypatch, trust_runtime, trust_ca_runtime):
+def test_evaluate_mldsa_attestation_root_marks_chain_missing_when_no_x5c(monkeypatch, trust_runtime, trust_ca_runtime, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     fake_entry = {"metadata_statement": {}}

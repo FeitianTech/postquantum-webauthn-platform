@@ -42,7 +42,7 @@ class _FakeAuthData:
         return self._raw
 
 
-def test_credentials_get_serializes_dict_backed_entries(monkeypatch, metadata_module):
+def test_credentials_get_serializes_dict_backed_entries(monkeypatch, metadata_module, attestation_module):
     config_module = pytest.importorskip("server.app.config")
     simple_module = pytest.importorskip("server.app.routes.simple")
     pytest.importorskip("server.app.app")
@@ -59,7 +59,7 @@ def test_credentials_get_serializes_dict_backed_entries(monkeypatch, metadata_mo
             target.setdefault("aaguidGuid", "00000000-0000-0000-0000-000000000000")
 
     monkeypatch.setattr(simple_module, "add_public_key_material", _add_public_key_material)
-    monkeypatch.setattr(simple_module, "augment_aaguid_fields", _augment_aaguid_fields)
+    monkeypatch.setattr(attestation_module, "augment_aaguid_fields", _augment_aaguid_fields)
 
     dict_backed = {
         "credential_data": {
@@ -124,7 +124,7 @@ def test_credentials_get_serializes_dict_backed_entries(monkeypatch, metadata_mo
     assert entry["properties"]["authenticatorAttachment"] == "platform"
 
 
-def test_credentials_get_serializes_object_backed_entries_and_derives_authenticator_data(monkeypatch, metadata_module):
+def test_credentials_get_serializes_object_backed_entries_and_derives_authenticator_data(monkeypatch, metadata_module, attestation_module):
     config_module = pytest.importorskip("server.app.config")
     simple_module = pytest.importorskip("server.app.routes.simple")
     pytest.importorskip("server.app.app")
@@ -141,7 +141,7 @@ def test_credentials_get_serializes_object_backed_entries_and_derives_authentica
             target.setdefault("aaguidGuid", "11111111-1111-1111-1111-111111111111")
 
     monkeypatch.setattr(simple_module, "add_public_key_material", _add_public_key_material)
-    monkeypatch.setattr(simple_module, "augment_aaguid_fields", _augment_aaguid_fields)
+    monkeypatch.setattr(attestation_module, "augment_aaguid_fields", _augment_aaguid_fields)
 
     credential_data = _FakeCredentialData(
         credential_id=b"cred-object",
@@ -203,7 +203,7 @@ def test_credentials_get_serializes_object_backed_entries_and_derives_authentica
     assert "authenticatorDataHex" not in entry
 
 
-def test_credentials_get_handles_bare_credential_objects_and_skips_malformed(monkeypatch, metadata_module):
+def test_credentials_get_handles_bare_credential_objects_and_skips_malformed(monkeypatch, metadata_module, attestation_module):
     config_module = pytest.importorskip("server.app.config")
     simple_module = pytest.importorskip("server.app.routes.simple")
     pytest.importorskip("server.app.app")
@@ -219,7 +219,7 @@ def test_credentials_get_handles_bare_credential_objects_and_skips_malformed(mon
             target.setdefault("aaguidHex", target["aaguid"])
 
     monkeypatch.setattr(simple_module, "add_public_key_material", _add_public_key_material)
-    monkeypatch.setattr(simple_module, "augment_aaguid_fields", _augment_aaguid_fields)
+    monkeypatch.setattr(attestation_module, "augment_aaguid_fields", _augment_aaguid_fields)
 
     class _BareCredential:
         def __init__(self):

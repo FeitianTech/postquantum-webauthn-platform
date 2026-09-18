@@ -4,6 +4,7 @@ import base64
 from collections.abc import Mapping, MutableMapping
 from typing import Any
 
+from ... import attestation
 from ...attachments import normalize_attachment
 from .credentials_builder_dict_impl import add_registration_metadata_impl
 
@@ -28,7 +29,7 @@ def build_credential_info_from_object_credential_data_impl(
     rk_from_request = cred.get("request_params", {}).get("resident_key") == "required"
     resident_key_status = rk_from_credprops if rk_from_credprops is not None else rk_from_request
 
-    aaguid_hex = simple_module.coerce_aaguid_hex(getattr(cred_data, "aaguid", None))
+    aaguid_hex = attestation.coerce_aaguid_hex(getattr(cred_data, "aaguid", None))
 
     credential_info = {
         "email": email,
@@ -83,7 +84,7 @@ def build_credential_info_from_object_credential_data_impl(
     if credential_info.get("publicKeyAlgorithm") is not None:
         credential_info["algorithm"] = credential_info["publicKeyAlgorithm"]
 
-    simple_module.augment_aaguid_fields(credential_info)
+    attestation.augment_aaguid_fields(credential_info)
     if isinstance(properties_copy, MutableMapping):
         if credential_info.get("aaguidHex"):
             properties_copy.setdefault("aaguid", credential_info["aaguidHex"])
@@ -96,7 +97,7 @@ def build_credential_info_from_object_credential_data_impl(
 
 
 def build_credential_info_from_bare_credential_impl(simple_module: Any, email: str, cred: Any) -> dict[str, Any]:
-    aaguid_hex = simple_module.coerce_aaguid_hex(getattr(cred, "aaguid", None))
+    aaguid_hex = attestation.coerce_aaguid_hex(getattr(cred, "aaguid", None))
 
     credential_info = {
         "email": email,
@@ -135,6 +136,6 @@ def build_credential_info_from_bare_credential_impl(simple_module: Any, email: s
     if credential_info.get("publicKeyAlgorithm") is not None:
         credential_info["algorithm"] = credential_info["publicKeyAlgorithm"]
 
-    simple_module.augment_aaguid_fields(credential_info)
+    attestation.augment_aaguid_fields(credential_info)
 
     return credential_info

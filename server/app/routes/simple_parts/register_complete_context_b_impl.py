@@ -7,7 +7,7 @@ from typing import Any
 
 from flask import jsonify, session
 
-from ... import device_logs, metadata
+from ... import attestation, device_logs, metadata
 
 
 def build_stored_credential_context_impl(simple_module: Any, ctx: dict[str, Any]) -> None:
@@ -40,7 +40,7 @@ def build_stored_credential_context_impl(simple_module: Any, ctx: dict[str, Any]
         "authenticatorData": ctx["authenticator_data_raw"],
         "authenticatorDataHex": ctx["authenticator_data_hex"],
         "authenticatorDataHash": ctx["authenticator_data_hash"] or None,
-        "relyingParty": simple_module.make_json_safe(ctx["rp_info"]),
+        "relyingParty": attestation.make_json_safe(ctx["rp_info"]),
         "registrationResponse": ctx["credential_info"].get("registration_response"),
     }
 
@@ -75,7 +75,7 @@ def _persist_registered_credential_entry_impl(simple_module: Any, ctx: dict[str,
     }
 
     if ctx["parsed_attestation_object"]:
-        credential_entry["attestation_object_decoded"] = simple_module.make_json_safe(
+        credential_entry["attestation_object_decoded"] = attestation.make_json_safe(
             ctx["parsed_attestation_object"]
         )
 

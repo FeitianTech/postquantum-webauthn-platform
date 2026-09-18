@@ -6,7 +6,7 @@ from typing import Any
 
 from flask import jsonify, request
 
-from ... import pqc
+from ... import attestation, pqc
 from .register_complete_finalize_impl import finalize_registration_completion
 from .register_complete_material_impl import build_registration_material
 from .register_complete_setup_impl import prepare_register_complete_inputs
@@ -108,7 +108,7 @@ def advanced_register_complete_impl(advanced_module: Any):
         expected_origin = advanced_module.determine_expected_origin(ceremony_origin) or (
             request.host_url.rstrip("/")
         )
-        attestation_checks = advanced_module.perform_attestation_checks(
+        attestation_checks = attestation.perform_attestation_checks(
             response if isinstance(response, Mapping) else {},
             state if isinstance(state, Mapping) else None,
             public_key_for_checks,
@@ -121,7 +121,7 @@ def advanced_register_complete_impl(advanced_module: Any):
         attestation_root_valid = attestation_checks.get("root_valid")
         attestation_rp_id_hash_valid = attestation_checks.get("rp_id_hash_valid")
         attestation_aaguid_match = attestation_checks.get("aaguid_match")
-        attestation_checks_safe = advanced_module.make_json_safe(attestation_checks)
+        attestation_checks_safe = attestation.make_json_safe(attestation_checks)
 
         attestation_warnings = attestation_checks.get("warnings")
         if isinstance(attestation_warnings, list):
@@ -160,7 +160,7 @@ def advanced_register_complete_impl(advanced_module: Any):
         if hasattr(auth_data, "extensions"):
             authenticator_extensions = getattr(auth_data, "extensions")
             if isinstance(authenticator_extensions, Mapping):
-                authenticator_extensions_summary = advanced_module.summarize_authenticator_extensions(
+                authenticator_extensions_summary = attestation.summarize_authenticator_extensions(
                     authenticator_extensions
                 )
 
@@ -220,13 +220,13 @@ def advanced_register_complete_impl(advanced_module: Any):
             credential_info["properties"]["attestationCertificates"] = attestation_certificates_details
 
         advanced_module.add_public_key_material(credential_info, getattr(auth_data.credential_data, "public_key", {}))
-        advanced_module.augment_aaguid_fields(credential_info)
+        attestation.augment_aaguid_fields(credential_info)
         if authenticator_extensions_summary:
             credential_info["authenticator_extensions"] = authenticator_extensions_summary
         if attestation_certificate_details is not None:
             credential_info["attestation_certificate"] = attestation_certificate_details
         if isinstance(response, Mapping):
-            credential_info["registration_response"] = advanced_module.make_json_safe(response)
+            credential_info["registration_response"] = attestation.make_json_safe(response)
 
         credential_public_key_value = getattr(auth_data.credential_data, "public_key", None)
         raw_alg_value: Any = None
@@ -306,7 +306,7 @@ def advanced_register_complete_impl(advanced_module: Any):
         )
 
         if authenticator_extensions_summary:
-            material["rpInfo"]["registrationData"]["authenticatorExtensions"] = advanced_module.make_json_safe(
+            material["rpInfo"]["registrationData"]["authenticatorExtensions"] = attestation.make_json_safe(
                 authenticator_extensions_summary
             )
 

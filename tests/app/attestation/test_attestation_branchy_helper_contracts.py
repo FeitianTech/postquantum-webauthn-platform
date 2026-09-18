@@ -83,7 +83,7 @@ def _registration(attestation_object, client_data):
     )
 
 
-def test_perform_attestation_checks_rejects_non_mapping_response():
+def test_perform_attestation_checks_rejects_non_mapping_response(attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     result = attestation_module.perform_attestation_checks(
@@ -98,7 +98,7 @@ def test_perform_attestation_checks_rejects_non_mapping_response():
     assert result["errors"] == ["registration_response_invalid"]
 
 
-def test_perform_attestation_checks_coerces_challenge_from_base64_and_hex_wrappers(monkeypatch, metadata_module):
+def test_perform_attestation_checks_coerces_challenge_from_base64_and_hex_wrappers(monkeypatch, metadata_module, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     flags = int(AuthenticatorData.FLAG.UP | AuthenticatorData.FLAG.AT)
@@ -131,7 +131,7 @@ def test_perform_attestation_checks_coerces_challenge_from_base64_and_hex_wrappe
     assert "challenge_mismatch" not in result["errors"]
 
 
-def test_perform_attestation_checks_accepts_base64url_wrapped_challenge_and_enum_uv(monkeypatch, metadata_module):
+def test_perform_attestation_checks_accepts_base64url_wrapped_challenge_and_enum_uv(monkeypatch, metadata_module, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     flags = int(
@@ -169,7 +169,7 @@ def test_perform_attestation_checks_accepts_base64url_wrapped_challenge_and_enum
     assert result["authenticator_data"]["user_verification_satisfied"] is True
 
 
-def test_perform_attestation_checks_handles_broken_credential_shapes(monkeypatch, metadata_module):
+def test_perform_attestation_checks_handles_broken_credential_shapes(monkeypatch, metadata_module, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     class _BrokenPublicKey:
@@ -217,7 +217,7 @@ def test_perform_attestation_checks_handles_broken_credential_shapes(monkeypatch
     assert any(err.startswith("cose_key_error:") for err in result["errors"])
 
 
-def test_perform_attestation_checks_uses_fallback_metadata_lookup_and_mapping_roots(monkeypatch, metadata_module):
+def test_perform_attestation_checks_uses_fallback_metadata_lookup_and_mapping_roots(monkeypatch, metadata_module, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     class _MetadataAaguid:
@@ -260,7 +260,7 @@ def test_perform_attestation_checks_uses_fallback_metadata_lookup_and_mapping_ro
     assert result["metadata"]["aaguid"] == "00112233-4455-6677-8899-aabbccddeeff"
 
 
-def test_perform_attestation_checks_ignores_metadata_fallback_lookup_exceptions(monkeypatch, metadata_module):
+def test_perform_attestation_checks_ignores_metadata_fallback_lookup_exceptions(monkeypatch, metadata_module, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     class _FailingVerifier:
@@ -291,7 +291,7 @@ def test_perform_attestation_checks_ignores_metadata_fallback_lookup_exceptions(
     assert result["metadata"]["available"] is False
 
 
-def test_evaluate_classical_attestation_root_handles_missing_trust_path_and_metadata():
+def test_evaluate_classical_attestation_root_handles_missing_trust_path_and_metadata(attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     outcome = attestation_module._evaluate_classical_attestation_root(
@@ -308,7 +308,7 @@ def test_evaluate_classical_attestation_root_handles_missing_trust_path_and_meta
     assert outcome["root_valid"] is None
 
 
-def test_evaluate_classical_attestation_root_records_parse_and_verifier_failures(monkeypatch, classical_runtime):
+def test_evaluate_classical_attestation_root_records_parse_and_verifier_failures(monkeypatch, classical_runtime, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     class _FailingVerifier:
@@ -340,7 +340,7 @@ def test_evaluate_classical_attestation_root_records_parse_and_verifier_failures
     assert outcome["checks"]["trusted_ca"] is False
 
 
-def test_evaluate_classical_attestation_root_reports_untrusted_root_and_mds_errors(monkeypatch, trust_runtime, trust_ca_runtime, classical_runtime):
+def test_evaluate_classical_attestation_root_reports_untrusted_root_and_mds_errors(monkeypatch, trust_runtime, trust_ca_runtime, classical_runtime, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     now = datetime.now(timezone.utc)
@@ -381,7 +381,7 @@ def test_evaluate_classical_attestation_root_reports_untrusted_root_and_mds_erro
     assert outcome["metadata_lookup_source"] == "aaguid"
 
 
-def test_evaluate_classical_attestation_root_forces_chain_false_on_expired_leaf(monkeypatch, trust_runtime, trust_ca_runtime, metadata_module, classical_runtime):
+def test_evaluate_classical_attestation_root_forces_chain_false_on_expired_leaf(monkeypatch, trust_runtime, trust_ca_runtime, metadata_module, classical_runtime, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     now = datetime.now(timezone.utc)
@@ -426,7 +426,7 @@ def test_evaluate_classical_attestation_root_forces_chain_false_on_expired_leaf(
     assert outcome["root_valid"] is False
 
 
-def test_attempt_pqc_attestation_signature_validation_covers_trust_path_error_paths(monkeypatch, pqc_runtime):
+def test_attempt_pqc_attestation_signature_validation_covers_trust_path_error_paths(monkeypatch, pqc_runtime, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     auth_data = SimpleNamespace(credential_data=SimpleNamespace(public_key={}), __bytes__=lambda self=None: b"auth")
@@ -467,7 +467,7 @@ def test_attempt_pqc_attestation_signature_validation_covers_trust_path_error_pa
     assert missing_key["error"] == "pqc_attestation_public_key_missing"
 
 
-def test_attempt_pqc_attestation_signature_validation_verification_failure_and_success(monkeypatch, pqc_runtime):
+def test_attempt_pqc_attestation_signature_validation_verification_failure_and_success(monkeypatch, pqc_runtime, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     class _VerifyFails:
@@ -509,7 +509,7 @@ def test_attempt_pqc_attestation_signature_validation_verification_failure_and_s
     assert list(verified["attestation_result"].trust_path) == [b"cert"]
 
 
-def test_attempt_pqc_attestation_signature_validation_covers_no_chain_branches(monkeypatch):
+def test_attempt_pqc_attestation_signature_validation_covers_no_chain_branches(monkeypatch, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     monkeypatch.setattr(CoseKey, "for_alg", lambda _alg: object())
@@ -538,7 +538,7 @@ def test_attempt_pqc_attestation_signature_validation_covers_no_chain_branches(m
     assert parse_error["error"].startswith("pqc_attestation_public_key_parse_error:")
 
 
-def test_numeric_aaguid_and_extension_helpers_cover_fallback_paths():
+def test_numeric_aaguid_and_extension_helpers_cover_fallback_paths(attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     assert attestation_module.coerce_non_negative_int(True) is None
@@ -609,7 +609,7 @@ def test_numeric_aaguid_and_extension_helpers_cover_fallback_paths():
     assert safe["set"] == [_b64url(b"e")]
 
 
-def test_serialize_extension_value_covers_authority_constraints_and_fallback_repr():
+def test_serialize_extension_value_covers_authority_constraints_and_fallback_repr(attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     issuer_name = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "Demo Issuer")])
@@ -668,7 +668,7 @@ def test_serialize_extension_value_covers_authority_constraints_and_fallback_rep
     assert fallback_repr == "<bad-str-value>"
 
 
-def test_format_x509_name_falls_back_to_string_when_rfc4514_fails():
+def test_format_x509_name_falls_back_to_string_when_rfc4514_fails(attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     class _BrokenName:

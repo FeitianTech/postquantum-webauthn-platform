@@ -8,6 +8,8 @@ from typing import Any
 
 from fido2 import cbor
 
+from ... import attestation
+
 
 def populate_rp_debug_context_impl(simple_module: Any, ctx: dict[str, Any]) -> None:
     registration_timestamp = datetime.fromtimestamp(
@@ -89,7 +91,7 @@ def populate_rp_debug_context_impl(simple_module: Any, ctx: dict[str, Any]) -> N
             "guid": str(uuid.UUID(bytes=aaguid_bytes)) if len(aaguid_bytes) == 16 else None,
         }
 
-    ctx["credential_info"]["relying_party"] = simple_module.make_json_safe(rp_info)
+    ctx["credential_info"]["relying_party"] = attestation.make_json_safe(rp_info)
 
     debug_info = {
         "attestationFormat": ctx["attestation_format"],

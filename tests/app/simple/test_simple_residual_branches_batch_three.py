@@ -126,7 +126,7 @@ def test_serialize_credential_for_session_accepts_hex_aaguid_alias():
         (-123, "Other (Classical)"),
     ],
 )
-def test_register_complete_handles_algorithm_and_large_blob_residual_paths(monkeypatch, algorithm: int, expected_name: str, metadata_module, device_logs_module):
+def test_register_complete_handles_algorithm_and_large_blob_residual_paths(monkeypatch, algorithm: int, expected_name: str, metadata_module, device_logs_module, attestation_module):
     config_module = pytest.importorskip("server.app.config")
     simple_module = pytest.importorskip("server.app.routes.simple")
     pytest.importorskip("server.app.app")
@@ -140,7 +140,7 @@ def test_register_complete_handles_algorithm_and_large_blob_residual_paths(monke
         lambda **_kwargs: _RegisterServer(auth_data)
     )
     monkeypatch.setattr(
-        simple_module,
+        attestation_module,
         "extract_attestation_details",
         lambda _response: (
             "none",
@@ -152,9 +152,9 @@ def test_register_complete_handles_algorithm_and_large_blob_residual_paths(monke
             [],
         )
     )
-    monkeypatch.setattr(simple_module, "extract_min_pin_length", lambda _results: None)
+    monkeypatch.setattr(attestation_module, "extract_min_pin_length", lambda _results: None)
     monkeypatch.setattr(
-        simple_module,
+        attestation_module,
         "perform_attestation_checks",
         lambda *_args, **_kwargs: {
             "signature_valid": True,

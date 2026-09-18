@@ -5,6 +5,7 @@ from typing import Any
 
 from flask import jsonify, request, session
 
+from ... import attestation
 from ...attachments import normalize_attachment
 from ...challenge_registry import (
     CHALLENGE_FRESH,
@@ -36,7 +37,7 @@ def register_complete_impl(simple_module: Any):
         parsed_extension_results,
         attestation_certificate_details,
         attestation_certificates_details,
-    ) = simple_module.extract_attestation_details(response)
+    ) = attestation.extract_attestation_details(response)
 
     client_data_json_b64 = credential_response.get("clientDataJSON")
     client_data_json = client_data_json_b64
@@ -49,7 +50,7 @@ def register_complete_impl(simple_module: Any):
         else (response.get("clientExtensionResults", {}) if isinstance(response, dict) else {})
     )
 
-    min_pin_length_value = simple_module.extract_min_pin_length(client_extension_results)
+    min_pin_length_value = attestation.extract_min_pin_length(client_extension_results)
 
     # A client-supplied ``__session_state`` is stripped and ignored: accepting
     # it would let the caller choose the challenge it is verified against.
@@ -127,7 +128,7 @@ def register_complete_impl(simple_module: Any):
         request.host_url.rstrip("/")
     )
 
-    attestation_checks = simple_module.perform_attestation_checks(
+    attestation_checks = attestation.perform_attestation_checks(
         response if isinstance(response, Mapping) else {},
         state if isinstance(state, Mapping) else None,
         public_key_options_for_checks if isinstance(public_key_options_for_checks, Mapping) else None,
@@ -158,7 +159,7 @@ def register_complete_impl(simple_module: Any):
         "attestation_root_valid": attestation_checks.get("root_valid"),
         "attestation_rp_id_hash_valid": attestation_checks.get("rp_id_hash_valid"),
         "attestation_aaguid_match": attestation_checks.get("aaguid_match"),
-        "attestation_checks_safe": simple_module.make_json_safe(attestation_checks),
+        "attestation_checks_safe": attestation.make_json_safe(attestation_checks),
     }
 
     attestation_errors = attestation_checks.get("errors")

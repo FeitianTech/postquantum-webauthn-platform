@@ -13,6 +13,7 @@ from fido2.webauthn import (
     UserVerificationRequirement,
 )
 
+from ... import attestation
 from ...attachments import normalize_attachment, resolve_effective_attachments
 from .register_begin_support_impl import (
     build_exclude_list,
@@ -81,12 +82,12 @@ def advanced_register_begin_impl(advanced_module: Any):
     timeout = public_key.get("timeout", 90000)
     temp_server.timeout = timeout / 1000.0 if timeout else None
 
-    attestation = public_key.get("attestation", "none")
-    if attestation == "direct":
+    attestation_preference = public_key.get("attestation", "none")
+    if attestation_preference == "direct":
         temp_server.attestation = AttestationConveyancePreference.DIRECT
-    elif attestation == "indirect":
+    elif attestation_preference == "indirect":
         temp_server.attestation = AttestationConveyancePreference.INDIRECT
-    elif attestation == "enterprise":
+    elif attestation_preference == "enterprise":
         temp_server.attestation = AttestationConveyancePreference.ENTERPRISE
     else:
         temp_server.attestation = AttestationConveyancePreference.NONE
@@ -184,8 +185,8 @@ def advanced_register_begin_impl(advanced_module: Any):
     session["advanced_original_request"] = data
 
     response_payload = dict(options)
-    response_payload["__session_state"] = advanced_module.make_json_safe(state)
+    response_payload["__session_state"] = attestation.make_json_safe(state)
     if warnings:
         response_payload["warnings"] = warnings
 
-    return jsonify(advanced_module.make_json_safe(response_payload))
+    return jsonify(attestation.make_json_safe(response_payload))

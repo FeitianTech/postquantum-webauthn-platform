@@ -7,6 +7,7 @@ from flask import jsonify, request, session
 
 from fido2.webauthn import UserVerificationRequirement
 
+from ... import attestation
 from ...attachments import resolve_effective_attachments
 from ...challenge_registry import stamp_ceremony_state
 
@@ -248,11 +249,11 @@ def advanced_authenticate_begin_impl(advanced_module: Any):
     }
 
     options_payload = dict(options)
-    options_payload["__session_state"] = advanced_module.make_json_safe(state)
+    options_payload["__session_state"] = attestation.make_json_safe(state)
     public_key_dict = options_payload.get("publicKey")
     if isinstance(public_key_dict, Mapping):
         allow_list = public_key_dict.get("allowCredentials")
         if resident_key_only or allow_list is None:
             public_key_dict.pop("allowCredentials", None)
 
-    return jsonify(advanced_module.make_json_safe(options_payload))
+    return jsonify(attestation.make_json_safe(options_payload))

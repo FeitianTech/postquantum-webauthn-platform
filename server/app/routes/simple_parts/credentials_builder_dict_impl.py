@@ -4,6 +4,7 @@ import base64
 from collections.abc import Mapping, MutableMapping
 from typing import Any
 
+from ... import attestation
 from ...attachments import normalize_attachment
 
 
@@ -15,7 +16,7 @@ def add_registration_metadata_impl(
         registration_response = source.get("registrationResponse")
     if registration_response is not None:
         if isinstance(registration_response, Mapping):
-            target["registrationResponse"] = simple_module.make_json_safe(registration_response)
+            target["registrationResponse"] = attestation.make_json_safe(registration_response)
         else:
             target["registrationResponse"] = registration_response
 
@@ -24,7 +25,7 @@ def add_registration_metadata_impl(
         registration_rp = source.get("relyingParty")
     if registration_rp is not None:
         if isinstance(registration_rp, Mapping):
-            target["relyingParty"] = simple_module.make_json_safe(registration_rp)
+            target["relyingParty"] = attestation.make_json_safe(registration_rp)
         else:
             target["relyingParty"] = registration_rp
 
@@ -32,7 +33,7 @@ def add_registration_metadata_impl(
     if client_data_value is None:
         client_data_value = source.get("clientDataJSON")
     if isinstance(client_data_value, Mapping):
-        target["clientDataJSON"] = simple_module.make_json_safe(client_data_value)
+        target["clientDataJSON"] = attestation.make_json_safe(client_data_value)
     elif isinstance(client_data_value, str) and client_data_value:
         target["clientDataJSON"] = client_data_value
 
@@ -53,7 +54,7 @@ def build_credential_info_from_dict_credential_data_impl(
         or properties_copy.get("authenticator_attachment")
     )
 
-    aaguid_hex = simple_module.coerce_aaguid_hex(cred_data.get("aaguid"))
+    aaguid_hex = attestation.coerce_aaguid_hex(cred_data.get("aaguid"))
 
     credential_info = {
         "email": email,
@@ -103,7 +104,7 @@ def build_credential_info_from_dict_credential_data_impl(
     if credential_info.get("publicKeyAlgorithm") is not None:
         credential_info["algorithm"] = credential_info["publicKeyAlgorithm"]
 
-    simple_module.augment_aaguid_fields(credential_info)
+    attestation.augment_aaguid_fields(credential_info)
     if isinstance(properties_copy, MutableMapping):
         if credential_info.get("aaguidHex"):
             properties_copy.setdefault("aaguid", credential_info["aaguidHex"])
@@ -129,7 +130,7 @@ def build_credential_info_from_dict_credential_data_impl(
     if raw_attestation_value:
         credential_info["attestationObjectRaw"] = raw_attestation_value
     if decoded_attestation_value is not None:
-        credential_info["attestationObjectDecoded"] = simple_module.make_json_safe(decoded_attestation_value)
+        credential_info["attestationObjectDecoded"] = attestation.make_json_safe(decoded_attestation_value)
 
     raw_authenticator_value = cred.get("authenticator_data_raw") or cred.get("authenticatorDataRaw")
     authenticator_hex_value = cred.get("authenticator_data_hex") or cred.get("authenticatorDataHex")

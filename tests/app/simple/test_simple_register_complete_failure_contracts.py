@@ -21,7 +21,7 @@ def _register_complete_payload(*, state=None):
     return payload
 
 
-def test_simple_register_complete_returns_400_and_cleans_state_when_verification_fails(monkeypatch):
+def test_simple_register_complete_returns_400_and_cleans_state_when_verification_fails(monkeypatch, attestation_module):
     config_module = pytest.importorskip("server.app.config")
     simple_module = pytest.importorskip("server.app.routes.simple")
     pytest.importorskip("server.app.app")
@@ -33,7 +33,7 @@ def test_simple_register_complete_returns_400_and_cleans_state_when_verification
     monkeypatch.setattr(simple_module, "determine_rp_id", lambda: "example.com")
     monkeypatch.setattr(simple_module, "create_fido_server", lambda **_kwargs: _FailingServer())
     monkeypatch.setattr(
-        simple_module,
+        attestation_module,
         "extract_attestation_details",
         lambda _response: ("none", {}, None, None, {}, None, [])
     )
@@ -58,7 +58,7 @@ def test_simple_register_complete_returns_400_and_cleans_state_when_verification
             assert "simple_register_public_key" not in session_state
 
 
-def test_simple_register_complete_rejects_request_state_fallback_before_verification(monkeypatch):
+def test_simple_register_complete_rejects_request_state_fallback_before_verification(monkeypatch, attestation_module):
     """The request-supplied state must be discarded before any verification."""
 
     config_module = pytest.importorskip("server.app.config")
@@ -75,7 +75,7 @@ def test_simple_register_complete_rejects_request_state_fallback_before_verifica
     monkeypatch.setattr(simple_module, "determine_rp_id", lambda: "example.com")
     monkeypatch.setattr(simple_module, "create_fido_server", lambda **_kwargs: _FailingServer())
     monkeypatch.setattr(
-        simple_module,
+        attestation_module,
         "extract_attestation_details",
         lambda _response: ("none", {}, None, None, {}, None, [])
     )

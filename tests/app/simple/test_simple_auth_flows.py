@@ -238,7 +238,7 @@ def test_simple_authenticate_complete_missing_state_returns_400(monkeypatch):
             assert session_state.get("simple_credentials_email") == "user@example.com"
 
 
-def test_simple_register_complete_rejects_request_state_fallback(monkeypatch, metadata_module, device_logs_module):
+def test_simple_register_complete_rejects_request_state_fallback(monkeypatch, metadata_module, device_logs_module, attestation_module):
     """A cold /complete with a self-chosen challenge must be rejected."""
 
     config_module = pytest.importorskip("server.app.config")
@@ -273,18 +273,18 @@ def test_simple_register_complete_rejects_request_state_fallback(monkeypatch, me
     monkeypatch.setattr(simple_module, "determine_rp_id", lambda: rp_id)
     monkeypatch.setattr(simple_module, "create_fido_server", lambda **_kwargs: _FakeServer())
     monkeypatch.setattr(
-        simple_module,
+        attestation_module,
         "extract_attestation_details",
         lambda _response: ("none", {}, None, None, {}, None, [])
     )
-    monkeypatch.setattr(simple_module, "perform_attestation_checks", lambda *args, **kwargs: {
+    monkeypatch.setattr(attestation_module, "perform_attestation_checks", lambda *args, **kwargs: {
         "signature_valid": True,
         "root_valid": True,
         "rp_id_hash_valid": True,
         "aaguid_match": True,
         "warnings": [],
     })
-    monkeypatch.setattr(simple_module, "extract_min_pin_length", lambda _ext: None)
+    monkeypatch.setattr(attestation_module, "extract_min_pin_length", lambda _ext: None)
     monkeypatch.setattr(simple_module, "add_public_key_material", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(metadata_module, "ensure_metadata_session_id", lambda: "session-id")
     monkeypatch.setattr(simple_module, "readkey", lambda *_args, **_kwargs: [])

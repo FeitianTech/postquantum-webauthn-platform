@@ -50,9 +50,7 @@ def _registration(attestation_object, client_data):
     )
 
 
-def test_coerce_certificate_bytes_falls_back_to_hex_parsing_when_base64_decode_fails(
-    monkeypatch,
-):
+def test_coerce_certificate_bytes_falls_back_to_hex_parsing_when_base64_decode_fails(monkeypatch, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     monkeypatch.setattr(
@@ -65,7 +63,7 @@ def test_coerce_certificate_bytes_falls_back_to_hex_parsing_when_base64_decode_f
     assert attestation_module._coerce_certificate_bytes("zz") is None
 
 
-def test_extract_certificate_aaguid_handles_non_hex_string_extension_values(monkeypatch):
+def test_extract_certificate_aaguid_handles_non_hex_string_extension_values(monkeypatch, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     class _ExtensionValue:
@@ -91,7 +89,7 @@ def test_extract_certificate_aaguid_handles_non_hex_string_extension_values(monk
     assert extracted == b"Z" * 16
 
 
-def test_attempt_pqc_attestation_signature_validation_reports_public_key_construction_errors(monkeypatch, pqc_runtime):
+def test_attempt_pqc_attestation_signature_validation_reports_public_key_construction_errors(monkeypatch, pqc_runtime, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     monkeypatch.setattr(
@@ -119,7 +117,7 @@ def test_attempt_pqc_attestation_signature_validation_reports_public_key_constru
     assert outcome["error"].startswith("pqc_attestation_public_key_invalid:")
 
 
-def test_coerce_attestation_certificate_bytes_string_path_uses_websafe_decode_fallback(monkeypatch, details_runtime):
+def test_coerce_attestation_certificate_bytes_string_path_uses_websafe_decode_fallback(monkeypatch, details_runtime, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     monkeypatch.setattr(
@@ -142,7 +140,7 @@ def test_coerce_attestation_certificate_bytes_string_path_uses_websafe_decode_fa
     assert attestation_module._coerce_attestation_certificate_bytes("AQI") is None
 
 
-def test_evaluate_mldsa_attestation_root_clears_chain_errors_after_later_success(monkeypatch, trust_runtime, trust_ca_runtime, pqc_constraints_runtime, metadata_module):
+def test_evaluate_mldsa_attestation_root_clears_chain_errors_after_later_success(monkeypatch, trust_runtime, trust_ca_runtime, pqc_constraints_runtime, metadata_module, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     metadata_entry = SimpleNamespace(metadata_statement=SimpleNamespace())
@@ -190,7 +188,7 @@ def test_evaluate_mldsa_attestation_root_clears_chain_errors_after_later_success
     assert "dup" not in outcome["errors"]
 
 
-def test_evaluate_mldsa_attestation_root_deduplicates_chain_errors_when_all_roots_fail(monkeypatch, trust_runtime, trust_ca_runtime, pqc_constraints_runtime, metadata_module):
+def test_evaluate_mldsa_attestation_root_deduplicates_chain_errors_when_all_roots_fail(monkeypatch, trust_runtime, trust_ca_runtime, pqc_constraints_runtime, metadata_module, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     metadata_entry = SimpleNamespace(metadata_statement=SimpleNamespace())
@@ -236,14 +234,14 @@ def test_evaluate_mldsa_attestation_root_deduplicates_chain_errors_when_all_root
     assert outcome["errors"].count("dup") == 1
 
 
-def test_normalise_signature_algorithm_name_covers_ed448_and_dsa_paths():
+def test_normalise_signature_algorithm_name_covers_ed448_and_dsa_paths(attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     assert attestation_module._normalise_signature_algorithm_name("ed448 with shake") == "ED448"
     assert attestation_module._normalise_signature_algorithm_name("dsa-with-sha1") == "DSA"
 
 
-def test_perform_attestation_checks_coerces_string_challenge_via_utf8_fallback_and_records_attestation_error(monkeypatch, pqc_runtime, metadata_module, details_runtime):
+def test_perform_attestation_checks_coerces_string_challenge_via_utf8_fallback_and_records_attestation_error(monkeypatch, pqc_runtime, metadata_module, details_runtime, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     flags = int(AuthenticatorData.FLAG.UP | AuthenticatorData.FLAG.AT)
@@ -298,7 +296,7 @@ def test_perform_attestation_checks_coerces_string_challenge_via_utf8_fallback_a
     assert any(err.startswith("attestation_error:") for err in result["errors"])
 
 
-def test_perform_attestation_checks_falls_back_to_public_key_options_when_state_hex_wrapper_is_invalid(monkeypatch, metadata_module):
+def test_perform_attestation_checks_falls_back_to_public_key_options_when_state_hex_wrapper_is_invalid(monkeypatch, metadata_module, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     flags = int(AuthenticatorData.FLAG.UP | AuthenticatorData.FLAG.AT)
