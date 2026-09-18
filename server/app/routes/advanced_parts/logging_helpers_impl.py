@@ -1,7 +1,11 @@
 from __future__ import annotations
 
+import json
 from collections.abc import Mapping
+from datetime import datetime, timezone
 from typing import Any
+
+from ... import attestation, config, pqc
 
 
 def _log_authenticator_attestation_response_impl(
@@ -62,7 +66,7 @@ def _log_authenticator_attestation_response_impl(
         public_key_value = getattr(credential_data, "public_key", None)
         if isinstance(public_key_value, Mapping):
             public_key_dict = dict(public_key_value)
-            credential_payload["credentialPublicKey"] = advanced_module.make_json_safe(public_key_dict)
+            credential_payload["credentialPublicKey"] = attestation.make_json_safe(public_key_dict)
 
             algorithm_value: int | None = None
             if 3 in public_key_dict:
@@ -73,7 +77,7 @@ def _log_authenticator_attestation_response_impl(
             if algorithm_value is not None:
                 credential_payload["credentialPublicKeyAlgorithm"] = {
                     "id": algorithm_value,
-                    "label": advanced_module.describe_algorithm(algorithm_value),
+                    "label": pqc.describe_algorithm(algorithm_value),
                 }
 
         if credential_payload:
@@ -81,12 +85,12 @@ def _log_authenticator_attestation_response_impl(
 
     extensions_value = getattr(auth_data, "extensions", None)
     if isinstance(extensions_value, Mapping):
-        auth_data_payload["extensions"] = advanced_module.make_json_safe(dict(extensions_value))
+        auth_data_payload["extensions"] = attestation.make_json_safe(dict(extensions_value))
 
     payload["authData"] = auth_data_payload
 
     if attestation_statement:
-        payload["attStmt"] = advanced_module.make_json_safe(attestation_statement)
+        payload["attStmt"] = attestation.make_json_safe(attestation_statement)
 
     if isinstance(raw_attestation_object, (bytes, bytearray, memoryview)):
         payload["rawAttestationObject"] = advanced_module._encode_base64url(bytes(raw_attestation_object))
@@ -94,12 +98,12 @@ def _log_authenticator_attestation_response_impl(
         payload["rawAttestationObject"] = raw_attestation_object
 
     try:
-        message = advanced_module.json.dumps(payload, indent=2, sort_keys=True)
+        message = json.dumps(payload, indent=2, sort_keys=True)
     except TypeError:
         message = str(payload)
 
-    advanced_module.app.logger.info("Authenticator attestation response:\n%s", message)
+    config.app.logger.info("Authenticator attestation response:\n%s", message)
 
 
 def datetime_from_timestamp_impl(advanced_module: Any, timestamp: float) -> str:
-    return advanced_module.datetime.fromtimestamp(timestamp, advanced_module.timezone.utc).isoformat()
+    return datetime.fromtimestamp(timestamp, timezone.utc).isoformat()
