@@ -189,3 +189,20 @@ def test_non_string_input_is_rejected_rather_than_coerced():
     for decoder in (encoding.decode_base64url, encoding.decode_base64, encoding.decode_hex):
         with pytest.raises(encoding.EncodingError):
             decoder(b"QUJD")
+
+
+def test_non_canonical_final_quantum_is_rejected():
+    """``validate=True`` accepts these; re-encoding them changes the bytes.
+
+    ``debug-metadata`` is inside the base64url alphabet and has a legal length,
+    but the unused bits of its last character are not zero, so it is not the
+    encoding of any byte string this module would produce.
+    """
+
+    assert encoding.try_decode_base64url("debug-metadata") is None
+    assert encoding.try_decode_base64("not-bytes") is None
+    assert encoding.try_decode_base64("414243") is None
+
+    # A full final quantum has no spare bits to get wrong, so it decodes.
+    assert encoding.decode_base64("4142") == base64.b64decode("4142")
+    assert encoding.decode_base64url("QUJD") == b"ABC"

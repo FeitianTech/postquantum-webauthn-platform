@@ -64,6 +64,7 @@ _BASE64URL_ALPHABET = re.compile(r"\A[A-Za-z0-9_-]*={0,2}\Z")
 _BASE64_ALPHABET = re.compile(r"\A[A-Za-z0-9+/]*={0,2}\Z")
 _HEX_ALPHABET = re.compile(r"\A[0-9A-Fa-f]*\Z")
 _WHITESPACE = re.compile(r"\s+")
+_URLSAFE_TO_STANDARD = str.maketrans("-_", "+/")
 _PEM_ARMOUR = re.compile(r"^-----(BEGIN|END).*-----$")
 
 #: Encoding labels returned by :func:`sniff`.
@@ -102,16 +103,27 @@ def _pad(value: str) -> str:
 
 
 def _b64_decode_strict(value: str, *, urlsafe: bool) -> bytes:
-    """Decode ``value`` with padding normalised, rejecting stray characters."""
+    """Decode ``value``, rejecting stray characters and non-canonical tails.
+
+    ``validate=True`` checks the alphabet but not the unused bits in the final
+    quantum, so ``debug-metadata`` passes it and decodes to ten bytes that
+    re-encode to something else. The round-trip comparison closes that: the
+    only accepted spelling of a byte string is the one this module emits for
+    it, modulo ``=`` padding.
+    """
 
     body = value.rstrip("=")
     if len(body) % 4 == 1:
         raise EncodingError("invalid base64 length")
-    translated = body.translate(str.maketrans("-_", "+/")) if urlsafe else body
+    translated = body.translate(_URLSAFE_TO_STANDARD) if urlsafe else body
     try:
-        return base64.b64decode(_pad(translated), validate=True)
+        decoded = base64.b64decode(_pad(translated), validate=True)
     except (binascii.Error, ValueError) as exc:
         raise EncodingError(f"invalid base64 data: {exc}") from exc
+
+    if base64.b64encode(decoded).rstrip(b"=").decode("ascii") != translated:
+        raise EncodingError("base64 data has a non-canonical final quantum")
+    return decoded
 
 
 def encode_base64url(data: bytes) -> str:
