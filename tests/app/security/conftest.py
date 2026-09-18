@@ -29,7 +29,7 @@ def advanced_module():
 
 
 @pytest.fixture
-def simple_storage(simple_module, monkeypatch, device_logs_module) -> dict[str, Any]:
+def simple_storage(simple_module, monkeypatch, device_logs_module, storage_module) -> dict[str, Any]:
     """Neutralise simple-flow persistence and capture what it would store."""
 
     saved: dict[str, Any] = {}
@@ -39,8 +39,8 @@ def simple_storage(simple_module, monkeypatch, device_logs_module) -> dict[str, 
         saved["credentials"] = credentials
         saved["session_id"] = session_id
 
-    monkeypatch.setattr(simple_module, "savekey", _savekey)
-    monkeypatch.setattr(simple_module, "readkey", lambda *_a, **_k: [])
+    monkeypatch.setattr(storage_module, "savekey", _savekey)
+    monkeypatch.setattr(storage_module, "readkey", lambda *_a, **_k: [])
     monkeypatch.setattr(device_logs_module, "record_registration_event", lambda _event: None)
     return saved
 

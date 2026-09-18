@@ -238,7 +238,7 @@ def test_simple_authenticate_complete_missing_state_returns_400(monkeypatch):
             assert session_state.get("simple_credentials_email") == "user@example.com"
 
 
-def test_simple_register_complete_rejects_request_state_fallback(monkeypatch, metadata_module, device_logs_module, attestation_module):
+def test_simple_register_complete_rejects_request_state_fallback(monkeypatch, metadata_module, device_logs_module, attestation_module, storage_module):
     """A cold /complete with a self-chosen challenge must be rejected."""
 
     config_module = pytest.importorskip("server.app.config")
@@ -285,16 +285,16 @@ def test_simple_register_complete_rejects_request_state_fallback(monkeypatch, me
         "warnings": [],
     })
     monkeypatch.setattr(attestation_module, "extract_min_pin_length", lambda _ext: None)
-    monkeypatch.setattr(simple_module, "add_public_key_material", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(storage_module, "add_public_key_material", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(metadata_module, "ensure_metadata_session_id", lambda: "session-id")
-    monkeypatch.setattr(simple_module, "readkey", lambda *_args, **_kwargs: [])
+    monkeypatch.setattr(storage_module, "readkey", lambda *_args, **_kwargs: [])
 
     def _fake_savekey(email, credentials, *, session_id=None):
         saved["email"] = email
         saved["credentials"] = credentials
         saved["session_id"] = session_id
 
-    monkeypatch.setattr(simple_module, "savekey", _fake_savekey)
+    monkeypatch.setattr(storage_module, "savekey", _fake_savekey)
     monkeypatch.setattr(device_logs_module, "record_registration_event", lambda _event: None)
 
     request_state = {"challenge": "fallback-register-state"}

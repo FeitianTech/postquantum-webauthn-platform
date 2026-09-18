@@ -5,7 +5,7 @@ import uuid
 from collections.abc import Mapping
 from typing import Any
 
-from ... import attestation
+from ... import attestation, storage
 
 
 def initialize_registration_context_impl(simple_module: Any, ctx: dict[str, Any]) -> None:
@@ -89,7 +89,7 @@ def initialize_registration_context_impl(simple_module: Any, ctx: dict[str, Any]
     if ctx["min_pin_length_value"] is not None:
         credential_properties["minPinLength"] = ctx["min_pin_length_value"]
 
-    simple_module.add_public_key_material(
+    storage.add_public_key_material(
         credential_info,
         getattr(ctx["auth_data"].credential_data, "public_key", {}),
     )

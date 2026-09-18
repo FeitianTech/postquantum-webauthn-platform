@@ -44,7 +44,7 @@ class _SimpleFakeServer:
         return self._auth_data
 
 
-def test_simple_register_complete_returns_500_when_savekey_fails(monkeypatch, metadata_module, device_logs_module, attestation_module):
+def test_simple_register_complete_returns_500_when_savekey_fails(monkeypatch, metadata_module, device_logs_module, attestation_module, storage_module):
     config_module = pytest.importorskip("server.app.config")
     simple_module = pytest.importorskip("server.app.routes.simple")
     pytest.importorskip("server.app.app")
@@ -77,11 +77,11 @@ def test_simple_register_complete_returns_500_when_savekey_fails(monkeypatch, me
         }
     )
     monkeypatch.setattr(attestation_module, "extract_min_pin_length", lambda _ext: None)
-    monkeypatch.setattr(simple_module, "add_public_key_material", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(storage_module, "add_public_key_material", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(metadata_module, "ensure_metadata_session_id", lambda: "session-id")
-    monkeypatch.setattr(simple_module, "readkey", lambda *_args, **_kwargs: [])
+    monkeypatch.setattr(storage_module, "readkey", lambda *_args, **_kwargs: [])
     monkeypatch.setattr(
-        simple_module,
+        storage_module,
         "savekey",
         lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("storage unavailable"))
     )
@@ -108,7 +108,7 @@ def test_simple_register_complete_returns_500_when_savekey_fails(monkeypatch, me
     assert response.get_json() == {"error": "Unable to persist registered credential."}
 
 
-def _install_advanced_register_common_monkeypatches(monkeypatch, advanced_module, metadata_module, auth_data, rp_id, attestation_module):
+def _install_advanced_register_common_monkeypatches(monkeypatch, advanced_module, metadata_module, auth_data, rp_id, attestation_module, storage_module):
     class _AdvancedFakeServer:
         def register_complete(self, *_args, **_kwargs):
             return auth_data
@@ -120,7 +120,7 @@ def _install_advanced_register_common_monkeypatches(monkeypatch, advanced_module
         lambda **_kwargs: _AdvancedFakeServer()
     )
     monkeypatch.setattr(metadata_module, "ensure_metadata_session_id", lambda: "session-id")
-    monkeypatch.setattr(advanced_module, "readkey", lambda *_args, **_kwargs: [])
+    monkeypatch.setattr(storage_module, "readkey", lambda *_args, **_kwargs: [])
     monkeypatch.setattr(
         attestation_module,
         "extract_attestation_details",
@@ -138,7 +138,7 @@ def _install_advanced_register_common_monkeypatches(monkeypatch, advanced_module
         }
     )
     monkeypatch.setattr(attestation_module, "extract_min_pin_length", lambda _ext: None)
-    monkeypatch.setattr(advanced_module, "add_public_key_material", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(storage_module, "add_public_key_material", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(attestation_module, "augment_aaguid_fields", lambda *_args, **_kwargs: None)
 
 
@@ -160,7 +160,7 @@ def _advanced_register_payload(rp_id: str, credential_id: bytes):
     }
 
 
-def test_advanced_register_complete_returns_500_when_artifact_store_returns_false(monkeypatch, metadata_module, credential_artifacts_module, device_logs_module, attestation_module):
+def test_advanced_register_complete_returns_500_when_artifact_store_returns_false(monkeypatch, metadata_module, credential_artifacts_module, device_logs_module, attestation_module, storage_module):
     config_module = pytest.importorskip("server.app.config")
     advanced_module = pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
@@ -172,7 +172,7 @@ def test_advanced_register_complete_returns_500_when_artifact_store_returns_fals
 
     _install_advanced_register_common_monkeypatches(
         monkeypatch, advanced_module, metadata_module, auth_data, rp_id
-    , attestation_module)
+    , attestation_module, storage_module)
     monkeypatch.setattr(credential_artifacts_module, "store_credential_artifact", lambda *_args, **_kwargs: False)
     monkeypatch.setattr(
         device_logs_module,
@@ -200,7 +200,7 @@ def test_advanced_register_complete_returns_500_when_artifact_store_returns_fals
     assert registration_events == []
 
 
-def test_advanced_register_complete_returns_500_when_artifact_store_raises(monkeypatch, metadata_module, credential_artifacts_module, device_logs_module, attestation_module):
+def test_advanced_register_complete_returns_500_when_artifact_store_raises(monkeypatch, metadata_module, credential_artifacts_module, device_logs_module, attestation_module, storage_module):
     config_module = pytest.importorskip("server.app.config")
     advanced_module = pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
@@ -212,7 +212,7 @@ def test_advanced_register_complete_returns_500_when_artifact_store_raises(monke
 
     _install_advanced_register_common_monkeypatches(
         monkeypatch, advanced_module, metadata_module, auth_data, rp_id
-    , attestation_module)
+    , attestation_module, storage_module)
     monkeypatch.setattr(
         credential_artifacts_module,
         "store_credential_artifact",
@@ -244,7 +244,7 @@ def test_advanced_register_complete_returns_500_when_artifact_store_raises(monke
     assert registration_events == []
 
 
-def test_advanced_register_complete_returns_400_when_add_public_key_material_raises(monkeypatch, metadata_module, credential_artifacts_module, device_logs_module, attestation_module):
+def test_advanced_register_complete_returns_400_when_add_public_key_material_raises(monkeypatch, metadata_module, credential_artifacts_module, device_logs_module, attestation_module, storage_module):
     config_module = pytest.importorskip("server.app.config")
     advanced_module = pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
@@ -257,9 +257,9 @@ def test_advanced_register_complete_returns_400_when_add_public_key_material_rai
 
     _install_advanced_register_common_monkeypatches(
         monkeypatch, advanced_module, metadata_module, auth_data, rp_id
-    , attestation_module)
+    , attestation_module, storage_module)
     monkeypatch.setattr(
-        advanced_module,
+        storage_module,
         "add_public_key_material",
         lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("public key material unavailable"))
     )

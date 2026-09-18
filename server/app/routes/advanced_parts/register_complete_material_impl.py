@@ -8,7 +8,7 @@ from typing import Any
 
 from fido2 import cbor
 
-from ... import attestation
+from ... import attestation, storage
 
 
 def build_registration_material(
@@ -148,7 +148,7 @@ def build_registration_material(
         "registrationData": {
             "authenticatorData": authenticator_data_hex,
             "authenticatorDataHash": authenticator_data_hash,
-            "clientExtensionResults": advanced_module.convert_bytes_for_json(client_extension_results),
+            "clientExtensionResults": storage.convert_bytes_for_json(client_extension_results),
             "flags": flags_dict,
             "signatureCounter": auth_data.counter,
             "attestationChecks": attestation_checks_safe,
@@ -172,8 +172,8 @@ def build_registration_material(
     user_handle_b64url = base64.urlsafe_b64encode(user_handle).rstrip(b"=").decode("ascii")
     user_handle_b64 = base64.b64encode(user_handle).decode("ascii")
 
-    stored_properties = advanced_module.convert_bytes_for_json(credential_info.get("properties", {}))
-    stored_extensions = advanced_module.convert_bytes_for_json(client_extension_results)
+    stored_properties = storage.convert_bytes_for_json(credential_info.get("properties", {}))
+    stored_extensions = storage.convert_bytes_for_json(client_extension_results)
 
     public_key_b64 = None
     public_key_b64url = None
@@ -211,11 +211,11 @@ def build_registration_material(
         "createdAt": credential_info["registration_time"],
         "clientExtensionOutputs": stored_extensions,
         "attestationFormat": attestation_format,
-        "attestationStatement": advanced_module.convert_bytes_for_json(attestation_statement),
-        "attestationObject": advanced_module.convert_bytes_for_json(credential_info.get("attestation_object")),
+        "attestationStatement": storage.convert_bytes_for_json(attestation_statement),
+        "attestationObject": storage.convert_bytes_for_json(credential_info.get("attestation_object")),
         "authenticatorData": authenticator_data_hex,
         "authenticatorDataHash": authenticator_data_hash,
-        "clientDataJSON": advanced_module.convert_bytes_for_json(credential_info.get("client_data_json")),
+        "clientDataJSON": storage.convert_bytes_for_json(credential_info.get("client_data_json")),
         "relyingParty": attestation.make_json_safe(rp_info),
         "properties": stored_properties,
         "registrationResponse": credential_info.get("registration_response"),
@@ -225,7 +225,7 @@ def build_registration_material(
         "userHandleHex": user_handle.hex(),
     }
 
-    stored_credential = advanced_module.convert_bytes_for_json(
+    stored_credential = storage.convert_bytes_for_json(
         {k: v for k, v in stored_credential.items() if v is not None}
     )
 

@@ -4,7 +4,7 @@ from typing import Any
 
 from flask import jsonify, request
 
-from ... import metadata
+from ... import metadata, storage
 from .credentials_builder_dict_impl import (
     build_credential_info_from_dict_credential_data_impl,
 )
@@ -19,8 +19,8 @@ def list_credentials_impl(simple_module: Any):
     if request.method == "DELETE":
         removed = 0
         try:
-            for username in list(simple_module.storage_list_credentials(session_id=metadata_session_id).keys()):
-                simple_module.delkey(username, session_id=metadata_session_id)
+            for username in list(storage.list_credentials(session_id=metadata_session_id).keys()):
+                storage.delkey(username, session_id=metadata_session_id)
                 removed += 1
         except Exception:
             pass
@@ -30,7 +30,7 @@ def list_credentials_impl(simple_module: Any):
     credentials: list[dict[str, Any]] = []
 
     try:
-        for email, user_creds in simple_module.iter_credentials(session_id=metadata_session_id):
+        for email, user_creds in storage.iter_credentials(session_id=metadata_session_id):
             try:
                 for cred in user_creds:
                     try:
