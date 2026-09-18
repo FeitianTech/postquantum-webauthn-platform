@@ -34,7 +34,7 @@ def _app():
 
 def _advanced_fragment(name: str):
     _app()
-    return pytest.importorskip(f"server.app.routes.advanced_parts.{name}")
+    return pytest.importorskip(f"server.app.routes.advanced.{name}")
 
 
 def _simple_fragment(name: str):
@@ -47,7 +47,7 @@ def _module(path: str):
     return pytest.importorskip(path)
 
 
-# The advanced_parts fragments.
+# The advanced submodules.
 
 
 @pytest.fixture

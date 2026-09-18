@@ -35,7 +35,7 @@ def shared_binary_helpers():
 @pytest.fixture()
 def advanced_binary_helpers():
     pytest.importorskip("server.app.app")
-    return pytest.importorskip("server.app.routes.advanced_parts.binary_helpers_impl")
+    return pytest.importorskip("server.app.routes.advanced.binary_helpers_impl")
 
 
 @pytest.fixture()
