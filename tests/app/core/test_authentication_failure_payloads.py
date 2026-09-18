@@ -19,7 +19,7 @@ def test_simple_authentication_failure_returns_failed_credential_id(monkeypatch,
             raise ValueError("Invalid signature.")
 
     monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FailingServer())
-    monkeypatch.setattr(simple_parsing, "_parse_client_credentials_impl", lambda _raw: ([object()], []))
+    monkeypatch.setattr(simple_parsing, "_parse_client_credentials", lambda _raw: ([object()], []))
 
     with config_module.app.test_client() as client:
         with client.session_transaction() as session:

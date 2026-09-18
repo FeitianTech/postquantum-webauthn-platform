@@ -26,7 +26,7 @@ from .. import binary_helpers
 from . import parsing
 
 
-def initialize_registration_context_impl(ctx: dict[str, Any]) -> None:
+def initialize_registration_context(ctx: dict[str, Any]) -> None:
     attestation_summary = {
         "signatureValid": ctx["attestation_signature_valid"],
         "rootValid": ctx["attestation_root_valid"],
@@ -147,7 +147,7 @@ def initialize_registration_context_impl(ctx: dict[str, Any]) -> None:
     ctx["credential_properties"] = credential_properties
 
 
-def populate_authenticator_data_context_impl(ctx: dict[str, Any]) -> None:
+def populate_authenticator_data_context(ctx: dict[str, Any]) -> None:
     try:
         auth_data_bytes = bytes(ctx["auth_data"])
     except Exception:
@@ -231,7 +231,7 @@ def populate_authenticator_data_context_impl(ctx: dict[str, Any]) -> None:
     ctx["expected_rp_hash_b64"] = expected_rp_hash_b64
 
 
-def build_stored_credential_context_impl(ctx: dict[str, Any]) -> None:
+def build_stored_credential_context(ctx: dict[str, Any]) -> None:
     stored_credential: dict[str, Any] = {
         "type": "simple",
         "email": ctx["uname"],
@@ -269,7 +269,7 @@ def build_stored_credential_context_impl(ctx: dict[str, Any]) -> None:
     ctx["stored_credential"] = stored_credential
 
 
-def _persist_registered_credential_entry_impl(ctx: dict[str, Any]) -> Any | None:
+def _persist_registered_credential_entry(ctx: dict[str, Any]) -> Any | None:
     metadata_session_id = metadata.ensure_metadata_session_id()
     existing_credentials = storage.readkey(ctx["uname"], session_id=metadata_session_id)
 
@@ -314,7 +314,7 @@ def _persist_registered_credential_entry_impl(ctx: dict[str, Any]) -> Any | None
     return None
 
 
-def _update_session_simple_credentials_impl(ctx: dict[str, Any]) -> None:
+def _update_session_simple_credentials(ctx: dict[str, Any]) -> None:
     session_simple_credentials = session.get("simple_credentials")
     if isinstance(session_simple_credentials, list):
         new_entry = {
@@ -333,7 +333,7 @@ def _update_session_simple_credentials_impl(ctx: dict[str, Any]) -> None:
         session["simple_credentials"] = session_simple_credentials
 
 
-def _record_registration_event_impl(ctx: dict[str, Any]) -> None:
+def _record_registration_event(ctx: dict[str, Any]) -> None:
     metadata_description: str | None = None
     if isinstance(ctx["metadata_summary"], Mapping):
         raw_description = ctx["metadata_summary"].get("description")
@@ -371,17 +371,17 @@ def _record_registration_event_impl(ctx: dict[str, Any]) -> None:
     device_logs.record_registration_event(event)
 
 
-def persist_registration_context_impl(ctx: dict[str, Any]) -> Any | None:
-    persist_response = _persist_registered_credential_entry_impl(ctx)
+def persist_registration_context(ctx: dict[str, Any]) -> Any | None:
+    persist_response = _persist_registered_credential_entry(ctx)
     if persist_response is not None:
         return persist_response
 
-    _update_session_simple_credentials_impl(ctx)
-    _record_registration_event_impl(ctx)
+    _update_session_simple_credentials(ctx)
+    _record_registration_event(ctx)
     return None
 
 
-def build_register_complete_response_payload_impl(ctx: dict[str, Any]) -> dict[str, Any]:
+def build_register_complete_response_payload(ctx: dict[str, Any]) -> dict[str, Any]:
     response_payload: dict[str, Any] = {
         "status": "OK",
         "algo": ctx["algoname"],
@@ -394,7 +394,7 @@ def build_register_complete_response_payload_impl(ctx: dict[str, Any]) -> dict[s
     return response_payload
 
 
-def populate_rp_debug_context_impl(ctx: dict[str, Any]) -> None:
+def populate_rp_debug_context(ctx: dict[str, Any]) -> None:
     registration_timestamp = datetime.fromtimestamp(
         ctx["credential_info"]["registration_time"], timezone.utc
     ).isoformat()
@@ -657,19 +657,19 @@ def register_complete():
             400,
         )
 
-    initialize_registration_context_impl(ctx)
-    populate_authenticator_data_context_impl(ctx)
-    populate_rp_debug_context_impl(ctx)
+    initialize_registration_context(ctx)
+    populate_authenticator_data_context(ctx)
+    populate_rp_debug_context(ctx)
 
     session.pop("register_rp_id", None)
 
-    build_stored_credential_context_impl(ctx)
+    build_stored_credential_context(ctx)
 
-    persist_response = persist_registration_context_impl(ctx)
+    persist_response = persist_registration_context(ctx)
     if persist_response is not None:
         return persist_response
 
-    response_payload = build_register_complete_response_payload_impl(ctx)
+    response_payload = build_register_complete_response_payload(ctx)
     return jsonify(response_payload)
 
 
@@ -688,7 +688,7 @@ def register_begin():
         if isinstance(raw_candidates, list):
             existing_credentials_raw = raw_candidates
 
-    credentials, serialized = parsing._parse_client_credentials_impl(existing_credentials_raw)
+    credentials, serialized = parsing._parse_client_credentials(existing_credentials_raw)
     if serialized:
         session["simple_credentials"] = serialized
     else:

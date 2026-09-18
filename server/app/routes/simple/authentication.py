@@ -30,7 +30,7 @@ from .. import binary_helpers
 from . import binary, parsing
 
 
-def authenticate_begin_impl():
+def authenticate_begin():
     uname = request.args.get("email")
     payload = request.get_json(silent=True) or {}
 
@@ -40,7 +40,7 @@ def authenticate_begin_impl():
         if isinstance(candidate_credentials, list):
             raw_credentials = candidate_credentials
 
-    credential_data_list, serialized = parsing._parse_client_credentials_impl(raw_credentials)
+    credential_data_list, serialized = parsing._parse_client_credentials(raw_credentials)
 
     if not credential_data_list:
         abort(404)
@@ -74,7 +74,7 @@ def _challenge_rejection_message(replayed: bool) -> str:
     return "Authentication challenge has expired. Please restart the authentication flow."
 
 
-def authenticate_complete_impl():
+def authenticate_complete():
     response = request.get_json(silent=True)
 
     # Popping the state is not enough on its own: the session is a client-side
@@ -87,7 +87,7 @@ def authenticate_complete_impl():
     )
 
     session_credentials = session.pop("simple_credentials", [])
-    credential_data_list, _ = parsing._parse_client_credentials_impl(session_credentials)
+    credential_data_list, _ = parsing._parse_client_credentials(session_credentials)
     if not credential_data_list:
         session.pop("authenticate_rp_id", None)
         session.pop("simple_credentials_email", None)
@@ -190,12 +190,12 @@ def authenticate_complete_impl():
             400,
         )
 
-    server_records, metadata_session_id = load_server_records_impl(uname)
+    server_records, metadata_session_id = load_server_records(uname)
     record_index = find_server_record_index(server_records, authenticated_id_bytes)
     server_record = server_records[record_index] if record_index is not None else None
     stored_sign_count = resolve_stored_sign_count(
         server_record,
-        client_supplied_sign_count_impl(session_credentials, authenticated_id_bytes),
+        client_supplied_sign_count(session_credentials, authenticated_id_bytes),
     )
 
     if sign_count_status(stored_sign_count, sign_count) == SIGN_COUNT_REGRESSED:
@@ -273,7 +273,7 @@ def record_sign_count(record: Mapping[str, Any]) -> int | None:
     return _as_counter(getattr(record.get("auth_data"), "counter", None))
 
 
-def load_server_records_impl(uname: Any) -> tuple[list[Any] | None, str | None]:
+def load_server_records(uname: Any) -> tuple[list[Any] | None, str | None]:
     """Read the caller's server-side credential records, or ``(None, None)``."""
 
     if not isinstance(uname, str) or not uname:
@@ -300,7 +300,7 @@ def find_server_record_index(records: list[Any] | None, credential_id: bytes) ->
     return None
 
 
-def client_supplied_sign_count_impl(
+def client_supplied_sign_count(
     session_credentials: Iterable[Any], credential_id: bytes
 ) -> int | None:
     for entry in session_credentials or ():
@@ -310,7 +310,7 @@ def client_supplied_sign_count_impl(
         if raw_id is None:
             continue
         try:
-            entry_id = binary._decode_binary_value_impl(raw_id)
+            entry_id = binary._decode_binary_value(raw_id)
         except Exception:
             continue
         if entry_id == credential_id:

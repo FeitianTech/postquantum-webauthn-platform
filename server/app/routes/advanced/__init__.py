@@ -54,7 +54,7 @@ _coerce_optional_bool = parsing._coerce_optional_bool_impl
 _extract_credential_id = parsing._extract_credential_id_impl
 _extract_flag_from_mapping = parsing._extract_flag_from_mapping_impl
 _parse_client_supplied_credentials = parsing._parse_client_supplied_credentials_impl
-_select_first = parsing._select_first_impl
+_select_first = parsing._select_first
 
 # Stored-credential summaries.
 _generate_storage_id = summary._generate_storage_id_impl

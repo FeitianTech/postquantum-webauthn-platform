@@ -57,7 +57,7 @@ def _extract_flag_from_mapping_impl(
     return None
 
 
-def _select_first_impl(mapping: Mapping[str, Any], keys: Iterable[str]) -> Any:
+def _select_first(mapping: Mapping[str, Any], keys: Iterable[str]) -> Any:
     for key in keys:
         if key in mapping:
             value = mapping[key]
@@ -80,15 +80,15 @@ def _parse_client_supplied_credentials_impl(
             continue
 
         try:
-            aaguid_raw = _select_first_impl(
+            aaguid_raw = _select_first(
                 entry,
                 ("aaguid", "aaguidBase64Url", "aaguidBase64", "aaguidHex"),
             )
-            credential_id_raw = _select_first_impl(
+            credential_id_raw = _select_first(
                 entry,
                 ("credentialId", "credentialID", "credentialIdBase64Url", "id", "rawId"),
             )
-            public_key_raw = _select_first_impl(
+            public_key_raw = _select_first(
                 entry,
                 ("publicKey", "publicKeyBase64", "publicKeyBase64Url", "publicKeyBytes", "publicKeyCbor"),
             )
@@ -103,7 +103,7 @@ def _parse_client_supplied_credentials_impl(
             attested = AttestedCredentialData.create(aaguid_bytes, credential_id_bytes, cose_key)
 
             attachment_value = normalize_attachment(
-                _select_first_impl(entry, ("authenticatorAttachment", "attachment"))
+                _select_first(entry, ("authenticatorAttachment", "attachment"))
                 or (entry.get("properties") or {}).get("authenticatorAttachment")
                 or (entry.get("properties") or {}).get("authenticator_attachment")
             )
