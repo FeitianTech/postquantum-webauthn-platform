@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 
 
-def test_decoder_certificate_summary_and_generic_format_residual_paths(monkeypatch, certificate_summary, certificate_extensions):
+def test_decoder_certificate_summary_and_generic_format_residual_paths(monkeypatch, certificates):
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     generic = decode_module._format_generic_summary(
@@ -14,27 +14,27 @@ def test_decoder_certificate_summary_and_generic_format_residual_paths(monkeypat
     assert decode_module._build_certificate_summary_lines("not-a-map") == []
 
     monkeypatch.setattr(
-        certificate_summary,
+        certificates,
         "_build_subject_public_key_info_lines",
         lambda _info: ["Subject Public Key Info:"],
     )
     monkeypatch.setattr(
-        certificate_extensions,
+        certificates,
         "_build_certificate_extensions_lines",
         lambda _extensions: ["X509v3 extensions:"],
     )
     monkeypatch.setattr(
-        certificate_summary,
+        certificates,
         "_build_signature_lines",
         lambda _signature: ["Signature:"],
     )
     monkeypatch.setattr(
-        certificate_summary,
+        certificates,
         "_build_fingerprint_lines",
         lambda _fingerprints: ["Fingerprint:"],
     )
     monkeypatch.setattr(
-        certificate_summary,
+        certificates,
         "_build_subject_key_identifier_lines",
         lambda _decoded: ["aa:bb"],
     )

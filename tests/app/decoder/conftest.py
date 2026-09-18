@@ -127,17 +127,10 @@ def conversion_leaf():
 
 
 @pytest.fixture
-def certificate_summary():
-    """The fragment that defines the certificate summary line builders."""
+def certificates():
+    """The fragment that defines the certificate summary line builders. The fragment that defines the certificate extension line builders."""
 
-    return _fragment("certificate_summary")
-
-
-@pytest.fixture
-def certificate_extensions():
-    """The fragment that defines the certificate extension line builders."""
-
-    return _fragment("certificate_extensions")
+    return _fragment("certificates")
 
 
 @pytest.fixture

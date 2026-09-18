@@ -6,7 +6,7 @@ from typing import Any
 
 from ...attestation import make_json_safe, serialize_attestation_certificate
 from . import binary, conversion_leaf, summary_runtime
-from .conversion_cert_leaf import (
+from .certificates import (
     _convert_attestation_entry_impl,
     _convert_attestation_statement_impl,
     _convert_certificate_bytes_impl,

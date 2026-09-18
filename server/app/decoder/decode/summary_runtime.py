@@ -4,7 +4,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from . import binary, certificate_extensions, certificate_summary, summary_leaf
+from . import binary, certificates, summary_leaf
 from .binary import _extract_hex_from_binary
 
 
@@ -213,8 +213,8 @@ def _build_certificate_summary_lines(decoded: Any) -> list[str]:
 
     validity = decoded.get("validity")
     if isinstance(validity, Mapping):
-        not_before = certificate_summary._format_certificate_time(validity.get("notBefore"))
-        not_after = certificate_summary._format_certificate_time(validity.get("notAfter"))
+        not_before = certificates._format_certificate_time(validity.get("notBefore"))
+        not_after = certificates._format_certificate_time(validity.get("notAfter"))
         if not_before or not_after:
             lines.append("Validity")
             if not_before:
@@ -226,12 +226,12 @@ def _build_certificate_summary_lines(decoded: Any) -> list[str]:
     if subject:
         lines.append(f"Subject: {subject}")
 
-    lines.extend(certificate_summary._build_subject_public_key_info_lines(decoded.get("publicKeyInfo")))
-    lines.extend(certificate_extensions._build_certificate_extensions_lines(decoded.get("extensions")))
-    lines.extend(certificate_summary._build_signature_lines(decoded.get("signature")))
-    lines.extend(certificate_summary._build_fingerprint_lines(decoded.get("fingerprints")))
+    lines.extend(certificates._build_subject_public_key_info_lines(decoded.get("publicKeyInfo")))
+    lines.extend(certificates._build_certificate_extensions_lines(decoded.get("extensions")))
+    lines.extend(certificates._build_signature_lines(decoded.get("signature")))
+    lines.extend(certificates._build_fingerprint_lines(decoded.get("fingerprints")))
 
-    ski_lines = certificate_summary._build_subject_key_identifier_lines(decoded)
+    ski_lines = certificates._build_subject_key_identifier_lines(decoded)
     if ski_lines:
         lines.append("Subject key identifier:")
         lines.extend(ski_lines)
