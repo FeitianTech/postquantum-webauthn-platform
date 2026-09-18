@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import time
 from collections.abc import Mapping
 from typing import Any
+
+from flask import jsonify, request
 
 from .register_complete_finalize_impl import finalize_registration_completion
 from .register_complete_material_impl import build_registration_material
@@ -13,12 +16,12 @@ from .register_complete_state_impl import (
 
 
 def advanced_register_complete_impl(advanced_module: Any):
-    data = advanced_module.request.get_json(silent=True) or {}
+    data = request.get_json(silent=True) or {}
     prepared, error_response = prepare_register_complete_inputs(advanced_module, data)
     if error_response is not None:
         return error_response
     if prepared is None:
-        return advanced_module.jsonify({"error": "Invalid request"}), 400
+        return jsonify({"error": "Invalid request"}), 400
 
     response = prepared["response"]
     original_request = prepared["originalRequest"]
@@ -63,7 +66,7 @@ def advanced_register_complete_impl(advanced_module: Any):
         if state_error is not None:
             return _with_challenge_source(advanced_module, state_error, state_trace)
         if state_ctx is None:
-            return advanced_module.jsonify(
+            return jsonify(
                 {
                     "error": "Registration state not found",
                     "challengeSource": state_trace["challengeSource"],
@@ -91,7 +94,7 @@ def advanced_register_complete_impl(advanced_module: Any):
             response.get("response") if isinstance(response, Mapping) else None
         )
         if not advanced_module.is_origin_allowed(ceremony_origin):
-            return advanced_module.jsonify(
+            return jsonify(
                 {
                     "error": (
                         "Ceremony origin is not permitted by the configured "
@@ -102,7 +105,7 @@ def advanced_register_complete_impl(advanced_module: Any):
             ), 400
 
         expected_origin = advanced_module.determine_expected_origin(ceremony_origin) or (
-            advanced_module.request.host_url.rstrip("/")
+            request.host_url.rstrip("/")
         )
         attestation_checks = advanced_module.perform_attestation_checks(
             response if isinstance(response, Mapping) else {},
@@ -179,7 +182,7 @@ def advanced_register_complete_impl(advanced_module: Any):
                 "display_name": display_name,
                 "user_handle": user_handle,
             },
-            "registration_time": advanced_module.time.time(),
+            "registration_time": time.time(),
             "client_data_json": client_data_json or "",
             "attestation_object": raw_attestation_object or "",
             "attestation_format": attestation_format,
@@ -328,7 +331,7 @@ def advanced_register_complete_impl(advanced_module: Any):
             display_name=display_name,
         )
     except Exception as exc:
-        return advanced_module.jsonify(
+        return jsonify(
             {
                 "error": str(exc),
                 "challengeSource": state_trace["challengeSource"],
@@ -352,4 +355,4 @@ def _with_challenge_source(
         return error_response
     merged = dict(body)
     merged.setdefault("challengeSource", state_trace.get("challengeSource"))
-    return advanced_module.jsonify(merged), status
+    return jsonify(merged), status

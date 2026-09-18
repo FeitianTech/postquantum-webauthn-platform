@@ -3,6 +3,17 @@ from __future__ import annotations
 from collections.abc import Mapping, MutableMapping
 from typing import Any
 
+from flask import jsonify, request, session
+
+from fido2.webauthn import (
+    AttestationConveyancePreference,
+    AuthenticatorAttachment,
+    PublicKeyCredentialUserEntity,
+    ResidentKeyRequirement,
+    UserVerificationRequirement,
+)
+
+from ...attachments import normalize_attachment, resolve_effective_attachments
 from .register_begin_support_impl import (
     build_exclude_list,
     build_processed_extensions,
@@ -11,10 +22,10 @@ from .register_begin_support_impl import (
 
 
 def advanced_register_begin_impl(advanced_module: Any):
-    data = advanced_module.request.get_json(silent=True)
+    data = request.get_json(silent=True)
 
     if not data or not data.get("publicKey"):
-        return advanced_module.jsonify(
+        return jsonify(
             {"error": "Invalid request: Missing publicKey in CredentialCreationOptions"},
         ), 400
 
@@ -23,18 +34,18 @@ def advanced_register_begin_impl(advanced_module: Any):
     warnings: list[str] = []
 
     if not public_key.get("rp"):
-        return advanced_module.jsonify({"error": "Missing required field: rp"}), 400
+        return jsonify({"error": "Missing required field: rp"}), 400
     if not public_key.get("user"):
-        return advanced_module.jsonify({"error": "Missing required field: user"}), 400
+        return jsonify({"error": "Missing required field: user"}), 400
     if not public_key.get("challenge"):
-        return advanced_module.jsonify({"error": "Missing required field: challenge"}), 400
+        return jsonify({"error": "Missing required field: challenge"}), 400
 
     user_info = public_key["user"]
     username = user_info.get("name", "")
     display_name = user_info.get("displayName", username)
 
     if not username:
-        return advanced_module.jsonify({"error": "Username is required in user.name"}), 400
+        return jsonify({"error": "Username is required in user.name"}), 400
 
     user_id_value = user_info.get("id", "")
     if user_id_value:
@@ -43,7 +54,7 @@ def advanced_register_begin_impl(advanced_module: Any):
             if isinstance(user_id_bytes, str):
                 user_id_bytes = bytes.fromhex(user_id_bytes)
         except (ValueError, TypeError) as exc:
-            return advanced_module.jsonify({"error": f"Invalid user ID format: {exc}"}), 400
+            return jsonify({"error": f"Invalid user ID format: {exc}"}), 400
     else:
         user_id_bytes = username.encode("utf-8")
 
@@ -55,7 +66,7 @@ def advanced_register_begin_impl(advanced_module: Any):
             if isinstance(challenge_bytes, str):
                 challenge_bytes = bytes.fromhex(challenge_bytes)
         except (ValueError, TypeError) as exc:
-            return advanced_module.jsonify({"error": f"Invalid challenge format: {exc}"}), 400
+            return jsonify({"error": f"Invalid challenge format: {exc}"}), 400
 
     rp_input = public_key.get("rp") if isinstance(public_key, Mapping) else None
     rp_entity = advanced_module.build_rp_entity(rp_input)
@@ -72,13 +83,13 @@ def advanced_register_begin_impl(advanced_module: Any):
 
     attestation = public_key.get("attestation", "none")
     if attestation == "direct":
-        temp_server.attestation = advanced_module.AttestationConveyancePreference.DIRECT
+        temp_server.attestation = AttestationConveyancePreference.DIRECT
     elif attestation == "indirect":
-        temp_server.attestation = advanced_module.AttestationConveyancePreference.INDIRECT
+        temp_server.attestation = AttestationConveyancePreference.INDIRECT
     elif attestation == "enterprise":
-        temp_server.attestation = advanced_module.AttestationConveyancePreference.ENTERPRISE
+        temp_server.attestation = AttestationConveyancePreference.ENTERPRISE
     else:
-        temp_server.attestation = advanced_module.AttestationConveyancePreference.NONE
+        temp_server.attestation = AttestationConveyancePreference.NONE
 
     configure_allowed_algorithms(
         advanced_module,
@@ -115,41 +126,41 @@ def advanced_register_begin_impl(advanced_module: Any):
     if isinstance(raw_hints, list):
         hints_list = [item for item in raw_hints if isinstance(item, str)]
 
-    requested_attachment = advanced_module.normalize_attachment(
+    requested_attachment = normalize_attachment(
         auth_selection.get("authenticatorAttachment")
     )
-    allowed_attachment_values = advanced_module.resolve_effective_attachments(
+    allowed_attachment_values = resolve_effective_attachments(
         hints_list,
         requested_attachment,
     )
-    advanced_module.session["advanced_register_allowed_attachments"] = list(allowed_attachment_values)
+    session["advanced_register_allowed_attachments"] = list(allowed_attachment_values)
 
-    uv_req = advanced_module.UserVerificationRequirement.PREFERRED
+    uv_req = UserVerificationRequirement.PREFERRED
     user_verification = auth_selection.get("userVerification", "preferred")
     if user_verification == "required":
-        uv_req = advanced_module.UserVerificationRequirement.REQUIRED
+        uv_req = UserVerificationRequirement.REQUIRED
     elif user_verification == "discouraged":
-        uv_req = advanced_module.UserVerificationRequirement.DISCOURAGED
+        uv_req = UserVerificationRequirement.DISCOURAGED
 
     auth_attachment = None
     attachment_source = requested_attachment
     if not attachment_source and len(allowed_attachment_values) == 1:
         attachment_source = allowed_attachment_values[0]
     if attachment_source == "platform":
-        auth_attachment = advanced_module.AuthenticatorAttachment.PLATFORM
+        auth_attachment = AuthenticatorAttachment.PLATFORM
     elif attachment_source == "cross-platform":
-        auth_attachment = advanced_module.AuthenticatorAttachment.CROSS_PLATFORM
+        auth_attachment = AuthenticatorAttachment.CROSS_PLATFORM
 
-    rk_req = advanced_module.ResidentKeyRequirement.PREFERRED
+    rk_req = ResidentKeyRequirement.PREFERRED
     resident_key = auth_selection.get("residentKey", "preferred")
     if auth_selection.get("requireResidentKey") is True:
-        rk_req = advanced_module.ResidentKeyRequirement.REQUIRED
+        rk_req = ResidentKeyRequirement.REQUIRED
     elif resident_key == "required":
-        rk_req = advanced_module.ResidentKeyRequirement.REQUIRED
+        rk_req = ResidentKeyRequirement.REQUIRED
     elif resident_key == "discouraged":
-        rk_req = advanced_module.ResidentKeyRequirement.DISCOURAGED
+        rk_req = ResidentKeyRequirement.DISCOURAGED
 
-    user_entity = advanced_module.PublicKeyCredentialUserEntity(
+    user_entity = PublicKeyCredentialUserEntity(
         id=user_id_bytes,
         name=username,
         display_name=display_name,
@@ -168,13 +179,13 @@ def advanced_register_begin_impl(advanced_module: Any):
         extensions=processed_extensions if processed_extensions else None,
     )
 
-    advanced_module.session["advanced_state"] = state
-    advanced_module.session["advanced_rp"] = {"id": rp_entity.id, "name": rp_entity.name}
-    advanced_module.session["advanced_original_request"] = data
+    session["advanced_state"] = state
+    session["advanced_rp"] = {"id": rp_entity.id, "name": rp_entity.name}
+    session["advanced_original_request"] = data
 
     response_payload = dict(options)
     response_payload["__session_state"] = advanced_module.make_json_safe(state)
     if warnings:
         response_payload["warnings"] = warnings
 
-    return advanced_module.jsonify(advanced_module.make_json_safe(response_payload))
+    return jsonify(advanced_module.make_json_safe(response_payload))

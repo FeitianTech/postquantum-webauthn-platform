@@ -4,8 +4,17 @@ import base64
 from collections.abc import Mapping
 from typing import Any
 
-from fido2.cose import CoseKey, UnsupportedKey
+from flask import jsonify, request, session
 
+from fido2.cose import CoseKey, UnsupportedKey
+from fido2.webauthn import AuthenticatorData
+
+from ...attachments import (
+    normalize_attachment,
+    normalize_attachment_list,
+    resolve_effective_attachments,
+)
+from ...challenge_registry import consume_ceremony_state
 from ...sign_count import sign_count_status
 
 #: The ceremony challenge was taken from the server-side Flask session.
@@ -54,19 +63,19 @@ def _server_supports_algorithm(algorithm: int | None) -> bool:
 
 
 def advanced_authenticate_complete_impl(advanced_module: Any):
-    data = advanced_module.request.get_json(silent=True) or {}
+    data = request.get_json(silent=True) or {}
 
     # Determined up front (peek, not pop) so that every response below can
     # report it: the advanced flow may be permissive, never silent.
     challenge_source = (
         CHALLENGE_SOURCE_SERVER
-        if advanced_module.session.get("advanced_auth_state") is not None
+        if session.get("advanced_auth_state") is not None
         else CHALLENGE_SOURCE_CLIENT
     )
 
     def _fail(payload: dict[str, Any], status: int = 400):
         payload.setdefault("challengeSource", challenge_source)
-        return advanced_module.jsonify(payload), status
+        return jsonify(payload), status
 
     response = data.get("__assertion_response")
     if not response:
@@ -89,19 +98,19 @@ def advanced_authenticate_complete_impl(advanced_module: Any):
     if isinstance(raw_hints, list):
         hints_list = [item for item in raw_hints if isinstance(item, str)]
 
-    request_allowed_attachments = advanced_module.resolve_effective_attachments(hints_list, None)
+    request_allowed_attachments = resolve_effective_attachments(hints_list, None)
 
-    session_allowed_marker = advanced_module.session.pop("advanced_authenticate_allowed_attachments", None)
+    session_allowed_marker = session.pop("advanced_authenticate_allowed_attachments", None)
     if session_allowed_marker is None:
         allowed_attachments = request_allowed_attachments
     else:
-        allowed_attachments = advanced_module.normalize_attachment_list(session_allowed_marker)
+        allowed_attachments = normalize_attachment_list(session_allowed_marker)
 
     if not allowed_attachments:
         allowed_attachments = request_allowed_attachments
 
     if allowed_attachments:
-        response_attachment = advanced_module.normalize_attachment(
+        response_attachment = normalize_attachment(
             response.get("authenticatorAttachment") if isinstance(response, Mapping) else None
         )
         if response_attachment is None:
@@ -130,7 +139,7 @@ def advanced_authenticate_complete_impl(advanced_module: Any):
         stored_records, serialized_credentials = advanced_module._parse_client_supplied_credentials(raw_credentials_input)
 
     if not stored_records:
-        legacy_serialized = advanced_module.session.pop("advanced_auth_credentials", [])
+        legacy_serialized = session.pop("advanced_auth_credentials", [])
         if legacy_serialized:
             stored_records, serialized_credentials = advanced_module._parse_client_supplied_credentials(
                 legacy_serialized,
@@ -138,7 +147,7 @@ def advanced_authenticate_complete_impl(advanced_module: Any):
 
     if not stored_records:
         if isinstance(raw_credentials_input, list) and raw_credentials_input:
-            advanced_module.session.pop("advanced_auth_credentials_meta", None)
+            session.pop("advanced_auth_credentials_meta", None)
             return _fail(
                 {
                     "error": (
@@ -148,10 +157,10 @@ def advanced_authenticate_complete_impl(advanced_module: Any):
                     )
                 }
             )
-        advanced_module.session.pop("advanced_auth_credentials_meta", None)
+        session.pop("advanced_auth_credentials_meta", None)
         return _fail({"error": "No credentials found"}, 404)
 
-    advanced_module.session.pop("advanced_auth_credentials_meta", None)
+    session.pop("advanced_auth_credentials_meta", None)
 
     credential_lookup: dict[bytes, dict[str, Any]] = {
         bytes(record["id"]): record
@@ -178,20 +187,20 @@ def advanced_authenticate_complete_impl(advanced_module: Any):
             )
         return _fail(response_payload)
 
-    state = advanced_module.session.pop("advanced_auth_state", None)
+    state = session.pop("advanced_auth_state", None)
     if state is not None:
         # The request editor is permissive, so a replayed or stale server
         # challenge is reported via ``challengeStatus`` rather than rejected.
         # It is still consumed, so a replay is always labelled as one.
-        challenge_status = advanced_module.consume_ceremony_state(state)
+        challenge_status = consume_ceremony_state(state)
     else:
         challenge_status = CHALLENGE_STATUS_NOT_TRACKED
         fallback_state = data.get("__session_state")
         if isinstance(fallback_state, Mapping):
             state = fallback_state
     if state is None:
-        advanced_module.session.pop("advanced_auth_rp", None)
-        return advanced_module.jsonify(
+        session.pop("advanced_auth_rp", None)
+        return jsonify(
             {
                 "error": (
                     "Authentication state not found or has expired. "
@@ -206,8 +215,8 @@ def advanced_authenticate_complete_impl(advanced_module: Any):
         response.get("response") if isinstance(response, Mapping) else None
     )
     if not advanced_module.is_origin_allowed(ceremony_origin):
-        advanced_module.session.pop("advanced_auth_rp", None)
-        return advanced_module.jsonify(
+        session.pop("advanced_auth_rp", None)
+        return jsonify(
             {
                 "error": (
                     "Ceremony origin is not permitted by the configured "
@@ -219,14 +228,14 @@ def advanced_authenticate_complete_impl(advanced_module: Any):
         ), 400
 
     try:
-        stored_rp = advanced_module.session.pop("advanced_auth_rp", None)
+        stored_rp = session.pop("advanced_auth_rp", None)
         stored_rp_id = None
         stored_rp_name = None
         if isinstance(stored_rp, Mapping):
             stored_rp_id = stored_rp.get("id")
             stored_rp_name = stored_rp.get("name")
-        elif isinstance(advanced_module.session.get("advanced_rp"), Mapping):
-            fallback_rp = advanced_module.session.get("advanced_rp")
+        elif isinstance(session.get("advanced_rp"), Mapping):
+            fallback_rp = session.get("advanced_rp")
             stored_rp_id = fallback_rp.get("id")
             stored_rp_name = fallback_rp.get("name")
         elif isinstance(public_key, Mapping):
@@ -296,7 +305,7 @@ def advanced_authenticate_complete_impl(advanced_module: Any):
                 }
                 if failed_credential_id is not None:
                     unsupported_payload["failedCredentialId"] = failed_credential_id
-                return advanced_module.jsonify(unsupported_payload), 400
+                return jsonify(unsupported_payload), 400
 
             signature_payload: dict[str, Any] = {
                 "status": "VERIFICATION_FAILED",
@@ -313,7 +322,7 @@ def advanced_authenticate_complete_impl(advanced_module: Any):
                 )
             if failed_credential_id is not None:
                 signature_payload["failedCredentialId"] = failed_credential_id
-            return advanced_module.jsonify(signature_payload), 400
+            return jsonify(signature_payload), 400
         else:
             try:
                 result_public_key = getattr(auth_result, "public_key", None)
@@ -339,7 +348,7 @@ def advanced_authenticate_complete_impl(advanced_module: Any):
             if isinstance(auth_data_b64, str):
                 try:
                     auth_data_bytes = advanced_module._decode_base64url(auth_data_b64)
-                    sign_count_value = advanced_module.AuthenticatorData(auth_data_bytes).counter
+                    sign_count_value = AuthenticatorData(auth_data_bytes).counter
                 except Exception:
                     sign_count_value = None
 
@@ -368,7 +377,7 @@ def advanced_authenticate_complete_impl(advanced_module: Any):
                 stored_sign_count, sign_count_value
             )
 
-        return advanced_module.jsonify(response_payload)
+        return jsonify(response_payload)
     except Exception as exc:
         response_payload: dict[str, Any] = {
             "error": str(exc),
@@ -382,4 +391,4 @@ def advanced_authenticate_complete_impl(advanced_module: Any):
             response_payload["failedCredentialId"] = (
                 base64.urlsafe_b64encode(failed_credential_id).decode("ascii").rstrip("=")
             )
-        return advanced_module.jsonify(response_payload), 400
+        return jsonify(response_payload), 400

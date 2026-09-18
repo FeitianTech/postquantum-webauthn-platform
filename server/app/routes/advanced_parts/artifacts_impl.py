@@ -3,21 +3,23 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
+from flask import jsonify, request
+
 
 def api_get_advanced_credential_artifact_impl(advanced_module: Any, storage_id: str):
     metadata_session_id = advanced_module.ensure_metadata_session_id()
     artifact = advanced_module.load_credential_artifact(storage_id, session_id=metadata_session_id)
     if artifact is None:
-        return advanced_module.jsonify({"error": "Credential artifact not found."}), 404
+        return jsonify({"error": "Credential artifact not found."}), 404
 
-    return advanced_module.jsonify({"storageId": storage_id, "artifact": artifact})
+    return jsonify({"storageId": storage_id, "artifact": artifact})
 
 
 def api_get_advanced_credential_artifacts_bulk_impl(advanced_module: Any):
-    data = advanced_module.request.get_json(silent=True) or {}
+    data = request.get_json(silent=True) or {}
     raw_storage_ids = data.get("storageIds")
     if not isinstance(raw_storage_ids, list):
-        return advanced_module.jsonify({"error": "storageIds must be an array."}), 400
+        return jsonify({"error": "storageIds must be an array."}), 400
 
     storage_ids: list[str] = []
     seen = set()
@@ -37,11 +39,11 @@ def api_get_advanced_credential_artifacts_bulk_impl(advanced_module: Any):
         if artifact is not None:
             artifacts[storage_id] = artifact
 
-    return advanced_module.jsonify({"artifacts": artifacts})
+    return jsonify({"artifacts": artifacts})
 
 
 def api_put_advanced_credential_artifact_impl(advanced_module: Any, storage_id: str):
-    data = advanced_module.request.get_json(silent=True) or {}
+    data = request.get_json(silent=True) or {}
     merge = True
     if isinstance(data, Mapping) and "merge" in data:
         merge = bool(data.get("merge"))
@@ -53,7 +55,7 @@ def api_put_advanced_credential_artifact_impl(advanced_module: Any, storage_id: 
             artifact_payload = candidate
 
     if artifact_payload is None:
-        return advanced_module.jsonify({"error": "Artifact payload must be an object."}), 400
+        return jsonify({"error": "Artifact payload must be an object."}), 400
 
     metadata_session_id = advanced_module.ensure_metadata_session_id()
     if not advanced_module.store_credential_artifact(
@@ -62,16 +64,16 @@ def api_put_advanced_credential_artifact_impl(advanced_module: Any, storage_id: 
         merge=merge,
         session_id=metadata_session_id,
     ):
-        return advanced_module.jsonify({"error": "Unable to store artifact."}), 400
+        return jsonify({"error": "Unable to store artifact."}), 400
 
-    return advanced_module.jsonify({"status": "OK"})
+    return jsonify({"status": "OK"})
 
 
 def api_put_advanced_credential_snapshot_impl(advanced_module: Any, storage_id: str):
-    data = advanced_module.request.get_json(silent=True) or {}
+    data = request.get_json(silent=True) or {}
     snapshot = data.get("snapshot")
     if snapshot is not None and not isinstance(snapshot, Mapping):
-        return advanced_module.jsonify({"error": "Snapshot must be an object."}), 400
+        return jsonify({"error": "Snapshot must be an object."}), 400
 
     payload = {"registrationDetailSnapshot": snapshot}
     metadata_session_id = advanced_module.ensure_metadata_session_id()
@@ -81,14 +83,14 @@ def api_put_advanced_credential_snapshot_impl(advanced_module: Any, storage_id: 
         merge=True,
         session_id=metadata_session_id,
     ):
-        return advanced_module.jsonify({"error": "Unable to store artifact snapshot."}), 400
+        return jsonify({"error": "Unable to store artifact snapshot."}), 400
 
-    return advanced_module.jsonify({"status": "OK"})
+    return jsonify({"status": "OK"})
 
 
 def api_delete_advanced_credential_artifact_impl(advanced_module: Any, storage_id: str):
     if not isinstance(storage_id, str) or not storage_id.strip():
-        return advanced_module.jsonify(
+        return jsonify(
             {"status": "failed", "error": "Invalid storage identifier."},
         ), 400
 
@@ -99,11 +101,11 @@ def api_delete_advanced_credential_artifact_impl(advanced_module: Any, storage_i
     )
 
     if status == "deleted":
-        return advanced_module.jsonify({"status": "deleted"})
+        return jsonify({"status": "deleted"})
 
     if status == "absent":
-        return advanced_module.jsonify({"status": "absent"})
+        return jsonify({"status": "absent"})
 
-    return advanced_module.jsonify(
+    return jsonify(
         {"status": "failed", "error": "Unable to delete credential artifact."},
     ), 500
