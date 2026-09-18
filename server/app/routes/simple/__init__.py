@@ -16,7 +16,7 @@ from . import (
     credential_list,
     parsing,
     register_begin_impl,
-    register_complete_impl,
+    registration,
 )
 
 __all__ = [
@@ -57,7 +57,7 @@ def register_begin():
 
 @app.route("/api/register/complete", methods=["POST"])
 def register_complete():
-    return register_complete_impl.register_complete_impl()
+    return registration.registration()
 
 
 @app.route("/api/authenticate/begin", methods=["POST"])

@@ -218,7 +218,7 @@ def simple_register_begin():
 def simple_register_complete():
     """The fragment that defines the simple ``/register/complete`` body."""
 
-    return _simple_fragment("register_complete_impl")
+    return _simple_fragment("registration")
 
 
 @pytest.fixture
