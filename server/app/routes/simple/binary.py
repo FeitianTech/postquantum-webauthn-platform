@@ -52,7 +52,7 @@ def _decode_binary_value_impl(value: Any) -> bytes:
 def _select_first_impl(mapping: Mapping[str, Any], keys: Sequence[str]) -> Any:
     """Return the value of the first key in *keys* present in *mapping*.
 
-    Unlike ``advanced_parts.parsing_helpers_impl._select_first_impl``, a
+    Unlike ``advanced.parsing_helpers_impl._select_first_impl``, a
     present-but-``None`` value is returned rather than skipped.
     """
 
