@@ -7,7 +7,7 @@ from typing import Any
 
 from flask import jsonify, session
 
-from ... import metadata
+from ... import device_logs, metadata
 
 
 def build_stored_credential_context_impl(simple_module: Any, ctx: dict[str, Any]) -> None:
@@ -124,7 +124,7 @@ def _record_registration_event_impl(simple_module: Any, ctx: dict[str, Any]) -> 
     if isinstance(transports_field, list):
         transports = [str(item) for item in transports_field if isinstance(item, str)]
 
-    event = simple_module.RegistrationEvent(
+    event = device_logs.RegistrationEvent(
         timestamp=datetime.now(timezone.utc),
         rp_id=ctx["resolved_rp_id"],
         user_id=ctx["user_handle_bytes"],
@@ -147,7 +147,7 @@ def _record_registration_event_impl(simple_module: Any, ctx: dict[str, Any]) -> 
         aaguid_match=ctx["attestation_aaguid_match"],
     )
 
-    simple_module.record_registration_event(event)
+    device_logs.record_registration_event(event)
 
 
 def persist_registration_context_impl(simple_module: Any, ctx: dict[str, Any]) -> Any | None:

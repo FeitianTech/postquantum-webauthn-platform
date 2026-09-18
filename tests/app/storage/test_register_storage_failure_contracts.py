@@ -44,7 +44,7 @@ class _SimpleFakeServer:
         return self._auth_data
 
 
-def test_simple_register_complete_returns_500_when_savekey_fails(monkeypatch, metadata_module):
+def test_simple_register_complete_returns_500_when_savekey_fails(monkeypatch, metadata_module, device_logs_module):
     config_module = pytest.importorskip("server.app.config")
     simple_module = pytest.importorskip("server.app.routes.simple")
     pytest.importorskip("server.app.app")
@@ -85,7 +85,7 @@ def test_simple_register_complete_returns_500_when_savekey_fails(monkeypatch, me
         "savekey",
         lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("storage unavailable"))
     )
-    monkeypatch.setattr(simple_module, "record_registration_event", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(device_logs_module, "record_registration_event", lambda *_args, **_kwargs: None)
 
     with config_module.app.test_client() as client:
         with client.session_transaction() as session_state:
@@ -162,7 +162,7 @@ def _advanced_register_payload(rp_id: str, credential_id: bytes):
     }
 
 
-def test_advanced_register_complete_returns_500_when_artifact_store_returns_false(monkeypatch, metadata_module, credential_artifacts_module):
+def test_advanced_register_complete_returns_500_when_artifact_store_returns_false(monkeypatch, metadata_module, credential_artifacts_module, device_logs_module):
     config_module = pytest.importorskip("server.app.config")
     advanced_module = pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
@@ -177,7 +177,7 @@ def test_advanced_register_complete_returns_500_when_artifact_store_returns_fals
     )
     monkeypatch.setattr(credential_artifacts_module, "store_credential_artifact", lambda *_args, **_kwargs: False)
     monkeypatch.setattr(
-        advanced_module,
+        device_logs_module,
         "record_registration_event",
         lambda event: registration_events.append(event)
     )
@@ -202,7 +202,7 @@ def test_advanced_register_complete_returns_500_when_artifact_store_returns_fals
     assert registration_events == []
 
 
-def test_advanced_register_complete_returns_500_when_artifact_store_raises(monkeypatch, metadata_module, credential_artifacts_module):
+def test_advanced_register_complete_returns_500_when_artifact_store_raises(monkeypatch, metadata_module, credential_artifacts_module, device_logs_module):
     config_module = pytest.importorskip("server.app.config")
     advanced_module = pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
@@ -221,7 +221,7 @@ def test_advanced_register_complete_returns_500_when_artifact_store_raises(monke
         lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("artifact store down"))
     )
     monkeypatch.setattr(
-        advanced_module,
+        device_logs_module,
         "record_registration_event",
         lambda event: registration_events.append(event)
     )
@@ -246,7 +246,7 @@ def test_advanced_register_complete_returns_500_when_artifact_store_raises(monke
     assert registration_events == []
 
 
-def test_advanced_register_complete_returns_400_when_add_public_key_material_raises(monkeypatch, metadata_module, credential_artifacts_module):
+def test_advanced_register_complete_returns_400_when_add_public_key_material_raises(monkeypatch, metadata_module, credential_artifacts_module, device_logs_module):
     config_module = pytest.importorskip("server.app.config")
     advanced_module = pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
@@ -271,7 +271,7 @@ def test_advanced_register_complete_returns_400_when_add_public_key_material_rai
         lambda *args, **kwargs: artifact_store_calls.append((args, kwargs)) or True
     )
     monkeypatch.setattr(
-        advanced_module,
+        device_logs_module,
         "record_registration_event",
         lambda event: registration_events.append(event)
     )
