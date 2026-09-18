@@ -196,13 +196,13 @@ def test_register_complete_handles_algorithm_and_large_blob_residual_paths(monke
     assert payload["storedCredential"]["userHandle"] == _b64url(b"string-user-handle")
 
 
-def test_authenticate_complete_ignores_request_state_and_handles_bad_matched_credential_id(monkeypatch, config_module, simple_credential_parsing):
+def test_authenticate_complete_ignores_request_state_and_handles_bad_matched_credential_id(monkeypatch, config_module, simple_parsing):
     pytest.importorskip("server.app.app")
 
     captured = {}
 
     monkeypatch.setattr(
-        simple_credential_parsing,
+        simple_parsing,
         "_parse_client_credentials_impl",
         lambda _raw: ([SimpleNamespace(credential_id=b"\x01")], [{"credentialId": "AQ"}])
     )

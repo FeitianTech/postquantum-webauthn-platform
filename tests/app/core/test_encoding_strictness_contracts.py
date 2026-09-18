@@ -33,13 +33,13 @@ def shared_binary_helpers():
 
 
 @pytest.fixture()
-def advanced_binary_helpers():
+def advanced_binary():
     pytest.importorskip("server.app.app")
     return pytest.importorskip("server.app.routes.advanced.binary")
 
 
 @pytest.fixture()
-def simple_binary_helpers():
+def simple_binary():
     pytest.importorskip("server.app.app")
     return pytest.importorskip("server.app.routes.simple.binary")
 
@@ -78,14 +78,14 @@ def test_decoder_reports_encoding_ambiguity_rather_than_guessing(pipeline):
     assert urlsafe.ambiguous is False
 
 
-def test_advanced_client_binary_rejects_plain_text(advanced_binary_helpers):
+def test_advanced_client_binary_rejects_plain_text(advanced_binary):
     with pytest.raises(ValueError):
-        advanced_binary_helpers._decode_client_binary_impl(PLAIN_TEXT)
+        advanced_binary._decode_client_binary_impl(PLAIN_TEXT)
 
 
-def test_simple_binary_value_rejects_plain_text(simple_binary_helpers):
+def test_simple_binary_value_rejects_plain_text(simple_binary):
     with pytest.raises(ValueError):
-        simple_binary_helpers._decode_binary_value_impl(PLAIN_TEXT)
+        simple_binary._decode_binary_value_impl(PLAIN_TEXT)
 
 
 def test_base64url_helpers_do_not_return_garbage_for_plain_text(shared_binary_helpers):
@@ -100,17 +100,17 @@ def test_base64url_helpers_do_not_return_garbage_for_plain_text(shared_binary_he
         assert route_module._extract_assertion_credential_id({"rawId": PLAIN_TEXT}) is None
 
 
-def test_credential_intake_reads_both_base64_alphabets_exactly(advanced_binary_helpers, simple_binary_helpers):
+def test_credential_intake_reads_both_base64_alphabets_exactly(advanced_binary, simple_binary):
     raw = b"\xfb\xef\xbe\xff\xee\xdd"
     standard = base64.b64encode(raw).decode("ascii").rstrip("=")
     urlsafe = base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=")
     assert "+" in standard or "/" in standard
     assert "-" in urlsafe or "_" in urlsafe
 
-    assert advanced_binary_helpers._decode_client_binary_impl(standard) == raw
-    assert advanced_binary_helpers._decode_client_binary_impl(urlsafe) == raw
-    assert simple_binary_helpers._decode_binary_value_impl(standard) == raw
-    assert simple_binary_helpers._decode_binary_value_impl(urlsafe) == raw
+    assert advanced_binary._decode_client_binary_impl(standard) == raw
+    assert advanced_binary._decode_client_binary_impl(urlsafe) == raw
+    assert simple_binary._decode_binary_value_impl(standard) == raw
+    assert simple_binary._decode_binary_value_impl(urlsafe) == raw
 
 
 def test_mds_certificate_route_decodes_base64url_without_truncation(monkeypatch):

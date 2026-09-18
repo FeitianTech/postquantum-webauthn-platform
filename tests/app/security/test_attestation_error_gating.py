@@ -25,9 +25,7 @@ from .ceremony_helpers import (
 # --------------------------------------------------------------------------
 
 
-def test_simple_register_complete_rejects_cross_origin_registration(
-    config_module, simple_module, simple_storage
-):
+def test_simple_register_complete_rejects_cross_origin_registration(config_module, simple_module, simple_storage):
     """``crossOrigin: true`` produces a real error that must now gate."""
 
     authenticator = Authenticator()
@@ -53,9 +51,7 @@ def test_simple_register_complete_rejects_cross_origin_registration(
     assert simple_storage == {}
 
 
-def test_simple_register_complete_rejects_origin_mismatch(
-    config_module, simple_module, simple_storage
-):
+def test_simple_register_complete_rejects_origin_mismatch(config_module, simple_module, simple_storage):
     """An origin the server did not expect must gate, not just be noted."""
 
     authenticator = Authenticator()
@@ -91,9 +87,7 @@ def test_simple_register_complete_rejects_origin_mismatch(
 # --------------------------------------------------------------------------
 
 
-def test_clean_simple_registration_reports_no_attestation_errors(
-    config_module, simple_module, simple_storage
-):
+def test_clean_simple_registration_reports_no_attestation_errors(config_module, simple_module, simple_storage):
     authenticator = Authenticator()
     client = config_module.app.test_client()
 
@@ -119,9 +113,7 @@ def test_clean_simple_registration_reports_no_attestation_errors(
 # --------------------------------------------------------------------------
 
 
-def test_advanced_register_complete_surfaces_attestation_errors(
-    config_module, advanced_module, advanced_storage
-):
+def test_advanced_register_complete_surfaces_attestation_errors(config_module, advanced_module, advanced_storage):
     """The advanced tab may still complete, but must report what failed."""
 
     authenticator = Authenticator()
@@ -156,9 +148,7 @@ def test_advanced_register_complete_surfaces_attestation_errors(
     assert payload["attestationSummary"]["verified"] is False
 
 
-def test_advanced_register_complete_reports_verified_when_clean(
-    config_module, advanced_module, advanced_storage
-):
+def test_advanced_register_complete_reports_verified_when_clean(config_module, advanced_module, advanced_storage):
     authenticator = Authenticator()
     client = config_module.app.test_client()
     challenge = b"\x52" * 32

@@ -208,14 +208,7 @@ def test_advanced_register_complete_success_contract_propagates_warnings_and_rec
             captured["state"] = state
             return _FakeAuthData(credential_id=credential_id, rp_id=rp_id)
 
-    def _perform_attestation_checks(
-        response,
-        state,
-        public_key_options,
-        auth_data,
-        expected_origin,
-        resolved_rp_id,
-    ):
+    def _perform_attestation_checks(response, state, public_key_options, auth_data, expected_origin, resolved_rp_id):
         captured["attestation_response"] = response
         captured["attestation_state"] = state
         captured["attestation_public_key"] = public_key_options

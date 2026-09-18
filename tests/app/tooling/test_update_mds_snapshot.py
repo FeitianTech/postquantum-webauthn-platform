@@ -450,9 +450,7 @@ def test_gcs_upload_publishes_every_snapshot_file(stubbed_refresh, monkeypatch, 
     assert uploaded["mds/blob.jwt"] == b"a-blob"
 
 
-def test_gcs_upload_fails_loudly_when_cloud_storage_is_disabled(
-    stubbed_refresh, monkeypatch, capsys
-):
+def test_gcs_upload_fails_loudly_when_cloud_storage_is_disabled(stubbed_refresh, monkeypatch, capsys):
     from server.app import cloud_storage
 
     monkeypatch.setattr(cloud_storage, "gcs_enabled", lambda: False)
@@ -461,9 +459,7 @@ def test_gcs_upload_fails_loudly_when_cloud_storage_is_disabled(
     assert "Cloud Storage is disabled" in capsys.readouterr().out
 
 
-def test_gcs_upload_refuses_to_publish_an_incomplete_snapshot(
-    isolated_mds_paths, monkeypatch, capsys
-):
+def test_gcs_upload_refuses_to_publish_an_incomplete_snapshot(isolated_mds_paths, monkeypatch, capsys):
     from server.app import cloud_storage
 
     monkeypatch.setattr(cloud_storage, "gcs_enabled", lambda: True)

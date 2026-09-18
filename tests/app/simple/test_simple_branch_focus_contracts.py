@@ -87,7 +87,7 @@ def test_simple_validation_helpers_cover_decode_and_assertion_id_fallbacks():
     assert simple_module._extract_assertion_credential_id({"id": 12345}) is None
 
 
-def test_simple_register_begin_clears_cached_session_fields_when_client_credentials_are_empty(monkeypatch, config_module, simple_credential_parsing):
+def test_simple_register_begin_clears_cached_session_fields_when_client_credentials_are_empty(monkeypatch, config_module, simple_parsing):
     pytest.importorskip("server.app.app")
 
     class _FakeServer:
@@ -96,7 +96,7 @@ def test_simple_register_begin_clears_cached_session_fields_when_client_credenti
 
     monkeypatch.setattr(config_module, "determine_rp_id", lambda: "example.com")
     monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FakeServer())
-    monkeypatch.setattr(simple_credential_parsing, "_parse_client_credentials_impl", lambda _raw: ([], []))
+    monkeypatch.setattr(simple_parsing, "_parse_client_credentials_impl", lambda _raw: ([], []))
 
     with config_module.app.test_client() as client:
         with client.session_transaction() as session_state:
@@ -141,11 +141,11 @@ def test_simple_register_complete_non_mapping_payload_returns_state_expired_erro
     assert "Registration state not found or has expired" in response.get_json()["error"]
 
 
-def test_simple_authenticate_complete_aborts_when_session_credentials_cannot_be_rebuilt(monkeypatch, simple_credential_parsing):
+def test_simple_authenticate_complete_aborts_when_session_credentials_cannot_be_rebuilt(monkeypatch, simple_parsing):
     config_module = pytest.importorskip("server.app.config")
     pytest.importorskip("server.app.app")
 
-    monkeypatch.setattr(simple_credential_parsing, "_parse_client_credentials_impl", lambda _raw: ([], []))
+    monkeypatch.setattr(simple_parsing, "_parse_client_credentials_impl", lambda _raw: ([], []))
 
     with config_module.app.test_client() as client:
         with client.session_transaction() as session_state:

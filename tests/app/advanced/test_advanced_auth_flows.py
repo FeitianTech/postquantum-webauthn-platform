@@ -76,7 +76,7 @@ def test_advanced_register_complete_rejects_attachment_mismatch():
     assert "Authenticator attachment is not permitted by the selected hints" in response.get_json()["error"]
 
 
-def test_advanced_authenticate_complete_rejects_non_resident_in_resident_mode(monkeypatch, advanced_parsing_helpers):
+def test_advanced_authenticate_complete_rejects_non_resident_in_resident_mode(monkeypatch, advanced_parsing):
     config_module = pytest.importorskip("server.app.config")
     pytest.importorskip("server.app.app")
 
@@ -84,7 +84,7 @@ def test_advanced_authenticate_complete_rejects_non_resident_in_resident_mode(mo
     encoded_id = _b64url(credential_id)
 
     monkeypatch.setattr(
-        advanced_parsing_helpers,
+        advanced_parsing,
         "_parse_client_supplied_credentials_impl",
         lambda _raw: (
             [
@@ -116,7 +116,7 @@ def test_advanced_authenticate_complete_rejects_non_resident_in_resident_mode(mo
     assert payload["failedCredentialId"] == encoded_id
 
 
-def test_advanced_authenticate_complete_missing_state_returns_400(monkeypatch, advanced_parsing_helpers):
+def test_advanced_authenticate_complete_missing_state_returns_400(monkeypatch, advanced_parsing):
     config_module = pytest.importorskip("server.app.config")
     pytest.importorskip("server.app.app")
 
@@ -124,7 +124,7 @@ def test_advanced_authenticate_complete_missing_state_returns_400(monkeypatch, a
     encoded_id = _b64url(credential_id)
 
     monkeypatch.setattr(
-        advanced_parsing_helpers,
+        advanced_parsing,
         "_parse_client_supplied_credentials_impl",
         lambda _raw: (
             [
@@ -163,7 +163,7 @@ def test_advanced_authenticate_complete_missing_state_returns_400(monkeypatch, a
             assert "advanced_auth_rp" not in session_state
 
 
-def test_advanced_authenticate_complete_custom_algorithm_does_not_bypass_verification(monkeypatch, config_module, advanced_algorithm_helpers, advanced_parsing_helpers):
+def test_advanced_authenticate_complete_custom_algorithm_does_not_bypass_verification(monkeypatch, config_module, advanced_algorithms, advanced_parsing):
     """A custom/unknown declared algorithm must never yield status OK."""
 
     pytest.importorskip("server.app.app")
@@ -180,9 +180,9 @@ def test_advanced_authenticate_complete_custom_algorithm_does_not_bypass_verific
 
     monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FailingServer())
     monkeypatch.setattr(config_module, "determine_rp_id", lambda value=None: value or "example.com")
-    monkeypatch.setattr(advanced_algorithm_helpers, "_derive_algorithms_from_credentials_impl", lambda _credentials: [])
+    monkeypatch.setattr(advanced_algorithms, "_derive_algorithms_from_credentials_impl", lambda _credentials: [])
     monkeypatch.setattr(
-        advanced_parsing_helpers,
+        advanced_parsing,
         "_parse_client_supplied_credentials_impl",
         lambda _raw: (
             [
@@ -227,7 +227,7 @@ def test_advanced_authenticate_complete_custom_algorithm_does_not_bypass_verific
     assert "customAlgorithmBypass" not in payload
 
 
-def test_advanced_authenticate_complete_custom_algorithm_bypass_requires_requested_algorithm_match(monkeypatch, config_module, advanced_algorithm_helpers, advanced_parsing_helpers):
+def test_advanced_authenticate_complete_custom_algorithm_bypass_requires_requested_algorithm_match(monkeypatch, config_module, advanced_algorithms, advanced_parsing):
     pytest.importorskip("server.app.app")
 
     credential_id = b"advanced-custom-alg-mismatch"
@@ -243,9 +243,9 @@ def test_advanced_authenticate_complete_custom_algorithm_bypass_requires_request
 
     monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FailingServer())
     monkeypatch.setattr(config_module, "determine_rp_id", lambda value=None: value or "example.com")
-    monkeypatch.setattr(advanced_algorithm_helpers, "_derive_algorithms_from_credentials_impl", lambda _credentials: [])
+    monkeypatch.setattr(advanced_algorithms, "_derive_algorithms_from_credentials_impl", lambda _credentials: [])
     monkeypatch.setattr(
-        advanced_parsing_helpers,
+        advanced_parsing,
         "_parse_client_supplied_credentials_impl",
         lambda _raw: (
             [
@@ -286,7 +286,7 @@ def test_advanced_authenticate_complete_custom_algorithm_bypass_requires_request
     assert payload["failedCredentialId"] == encoded_id
 
 
-def test_advanced_authenticate_complete_custom_algorithm_bypass_rejects_non_signature_errors(monkeypatch, config_module, advanced_algorithm_helpers, advanced_parsing_helpers):
+def test_advanced_authenticate_complete_custom_algorithm_bypass_rejects_non_signature_errors(monkeypatch, config_module, advanced_algorithms, advanced_parsing):
     pytest.importorskip("server.app.app")
 
     credential_id = b"advanced-custom-alg-non-signature"
@@ -301,9 +301,9 @@ def test_advanced_authenticate_complete_custom_algorithm_bypass_rejects_non_sign
 
     monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FailingServer())
     monkeypatch.setattr(config_module, "determine_rp_id", lambda value=None: value or "example.com")
-    monkeypatch.setattr(advanced_algorithm_helpers, "_derive_algorithms_from_credentials_impl", lambda _credentials: [])
+    monkeypatch.setattr(advanced_algorithms, "_derive_algorithms_from_credentials_impl", lambda _credentials: [])
     monkeypatch.setattr(
-        advanced_parsing_helpers,
+        advanced_parsing,
         "_parse_client_supplied_credentials_impl",
         lambda _raw: (
             [

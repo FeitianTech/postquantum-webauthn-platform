@@ -27,9 +27,7 @@ from .ceremony_helpers import (
 # --------------------------------------------------------------------------
 
 
-def test_cold_simple_register_complete_with_self_chosen_challenge_is_rejected(
-    config_module, simple_module, simple_storage
-):
+def test_cold_simple_register_complete_with_self_chosen_challenge_is_rejected(config_module, simple_module, simple_storage):
     """A cold /complete with no session cookie and a self-chosen challenge.
 
     This is the confirmed-exploitable PoC: the attacker never calls /begin, and
@@ -61,9 +59,7 @@ def test_cold_simple_register_complete_with_self_chosen_challenge_is_rejected(
     assert simple_storage == {}
 
 
-def test_cold_simple_authenticate_complete_with_self_chosen_challenge_is_rejected(
-    config_module, simple_module
-):
+def test_cold_simple_authenticate_complete_with_self_chosen_challenge_is_rejected(config_module, simple_module):
     """The same bypass against the authentication ceremony."""
 
     authenticator = Authenticator()
@@ -89,9 +85,7 @@ def test_cold_simple_authenticate_complete_with_self_chosen_challenge_is_rejecte
     assert "state" in body["error"].lower()
 
 
-def test_simple_register_complete_ignores_request_supplied_state(
-    config_module, simple_module, simple_storage
-):
+def test_simple_register_complete_ignores_request_supplied_state(config_module, simple_module, simple_storage):
     """Even with a valid session, the request-supplied state must be ignored."""
 
     authenticator = Authenticator()
@@ -148,9 +142,7 @@ def test_simple_authenticate_begin_does_not_disclose_ceremony_state(config_modul
 # --------------------------------------------------------------------------
 
 
-def test_simple_registration_and_authentication_happy_path(
-    config_module, simple_module, simple_storage
-):
+def test_simple_registration_and_authentication_happy_path(config_module, simple_module, simple_storage):
     authenticator = Authenticator()
     client = config_module.app.test_client()
 
@@ -188,9 +180,7 @@ def test_simple_registration_and_authentication_happy_path(
 # --------------------------------------------------------------------------
 
 
-def test_advanced_register_complete_reports_server_session_challenge_source(
-    config_module, advanced_module, advanced_storage
-):
+def test_advanced_register_complete_reports_server_session_challenge_source(config_module, advanced_module, advanced_storage):
     authenticator = Authenticator()
     client = config_module.app.test_client()
     challenge = b"\x31" * 32
@@ -222,9 +212,7 @@ def test_advanced_register_complete_reports_server_session_challenge_source(
     assert payload["challengeSource"] == "server-session"
 
 
-def test_advanced_register_complete_reports_client_supplied_challenge_source(
-    config_module, advanced_module, advanced_storage
-):
+def test_advanced_register_complete_reports_client_supplied_challenge_source(config_module, advanced_module, advanced_storage):
     """The request editor may supply its own state -- but it is labelled."""
 
     authenticator = Authenticator()
@@ -254,9 +242,7 @@ def test_advanced_register_complete_reports_client_supplied_challenge_source(
     assert payload["challengeSource"] == "client-supplied"
 
 
-def test_advanced_complete_always_reports_challenge_source_even_on_error(
-    config_module, advanced_module
-):
+def test_advanced_complete_always_reports_challenge_source_even_on_error(config_module, advanced_module):
     client = config_module.app.test_client()
 
     response = client.post(
@@ -277,9 +263,7 @@ def test_advanced_complete_always_reports_challenge_source_even_on_error(
     assert "challengeSource" in response.get_json()
 
 
-def test_advanced_authenticate_complete_always_reports_challenge_source(
-    config_module, advanced_module
-):
+def test_advanced_authenticate_complete_always_reports_challenge_source(config_module, advanced_module):
     """Including on the early input-validation errors."""
 
     client = config_module.app.test_client()

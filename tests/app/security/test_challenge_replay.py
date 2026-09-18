@@ -55,9 +55,7 @@ def _complete_simple_authentication(client, payload):
 # --------------------------------------------------------------------------
 
 
-def test_simple_assertion_replayed_with_earlier_cookie_is_rejected(
-    config_module, simple_module, simple_storage
-):
+def test_simple_assertion_replayed_with_earlier_cookie_is_rejected(config_module, simple_module, simple_storage):
     authenticator = Authenticator()
     client = config_module.app.test_client()
 
@@ -80,9 +78,7 @@ def test_simple_assertion_replayed_with_earlier_cookie_is_rejected(
     assert "already been used" in body["error"]
 
 
-def test_simple_challenge_is_consumed_even_when_the_first_attempt_fails(
-    config_module, simple_module, simple_storage
-):
+def test_simple_challenge_is_consumed_even_when_the_first_attempt_fails(config_module, simple_module, simple_storage):
     """A failed completion burns the challenge too; it cannot be retried."""
 
     authenticator = Authenticator()
@@ -106,9 +102,7 @@ def test_simple_challenge_is_consumed_even_when_the_first_attempt_fails(
     assert "already been used" in retry.get_json()["error"]
 
 
-def test_simple_registration_replayed_with_earlier_cookie_is_rejected(
-    config_module, simple_module, simple_storage
-):
+def test_simple_registration_replayed_with_earlier_cookie_is_rejected(config_module, simple_module, simple_storage):
     authenticator = Authenticator()
     client = config_module.app.test_client()
 
@@ -135,9 +129,7 @@ def test_simple_registration_replayed_with_earlier_cookie_is_rejected(
     assert simple_storage == {}
 
 
-def test_simple_state_older_than_the_ttl_is_rejected(
-    config_module, simple_module, simple_storage, monkeypatch
-):
+def test_simple_state_older_than_the_ttl_is_rejected(config_module, simple_module, simple_storage, monkeypatch):
     """A validly signed but stale state is refused, even on first use.
 
     Without this, a replay would succeed again once the registry's record of
@@ -167,9 +159,7 @@ def test_simple_state_older_than_the_ttl_is_rejected(
     assert "expired" in response.get_json()["error"]
 
 
-def test_simple_state_without_issued_at_stamp_is_rejected(
-    config_module, simple_module, simple_storage
-):
+def test_simple_state_without_issued_at_stamp_is_rejected(config_module, simple_module, simple_storage):
     """A state from before stamping existed cannot be told apart from a stale one."""
 
     authenticator = Authenticator()
@@ -194,9 +184,7 @@ def test_simple_state_without_issued_at_stamp_is_rejected(
 # --------------------------------------------------------------------------
 
 
-def test_simple_ceremonies_succeed_back_to_back_and_clear_session_state(
-    config_module, simple_module, simple_storage
-):
+def test_simple_ceremonies_succeed_back_to_back_and_clear_session_state(config_module, simple_module, simple_storage):
     authenticator = Authenticator()
     client = config_module.app.test_client()
 
@@ -244,9 +232,7 @@ def _advanced_complete(client, stored_entry, assertion, challenge, **extra):
     )
 
 
-def test_advanced_replayed_server_challenge_is_reported_as_replayed(
-    config_module, advanced_module
-):
+def test_advanced_replayed_server_challenge_is_reported_as_replayed(config_module, advanced_module):
     authenticator = Authenticator()
     stored_entry = authenticator.stored_credential_entry(declared_algorithm=-7)
     client = config_module.app.test_client()
@@ -290,9 +276,7 @@ def test_advanced_replay_is_reported_on_failure_responses_too(config_module, adv
     assert replay.get_json()["challengeStatus"] == "replayed"
 
 
-def test_advanced_client_supplied_challenge_is_reported_as_not_tracked(
-    config_module, advanced_module
-):
+def test_advanced_client_supplied_challenge_is_reported_as_not_tracked(config_module, advanced_module):
     authenticator = Authenticator()
     stored_entry = authenticator.stored_credential_entry(declared_algorithm=-7)
     challenge = b"\x72" * 32

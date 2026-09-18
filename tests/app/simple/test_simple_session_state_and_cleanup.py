@@ -42,12 +42,12 @@ def test_register_complete_rejects_non_mapping_request_state_fallback(monkeypatc
     assert "Registration state not found or has expired" in response.get_json()["error"]
 
 
-def test_authenticate_complete_invalid_request_state_fallback_returns_400(monkeypatch, simple_credential_parsing):
+def test_authenticate_complete_invalid_request_state_fallback_returns_400(monkeypatch, simple_parsing):
     config_module = pytest.importorskip("server.app.config")
     pytest.importorskip("server.app.app")
 
     monkeypatch.setattr(
-        simple_credential_parsing,
+        simple_parsing,
         "_parse_client_credentials_impl",
         lambda _raw: ([object()], [{"credentialId": "cred-1"}])
     )
@@ -75,7 +75,7 @@ def test_authenticate_complete_invalid_request_state_fallback_returns_400(monkey
             assert session_state.get("simple_credentials_email") == "user@example.com"
 
 
-def test_authenticate_complete_malformed_authenticator_data_is_rejected(monkeypatch, config_module, simple_credential_parsing):
+def test_authenticate_complete_malformed_authenticator_data_is_rejected(monkeypatch, config_module, simple_parsing):
     pytest.importorskip("server.app.app")
 
     credential_id = b"simple-auth-no-sign-count"
@@ -86,7 +86,7 @@ def test_authenticate_complete_malformed_authenticator_data_is_rejected(monkeypa
 
     monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FakeServer())
     monkeypatch.setattr(
-        simple_credential_parsing,
+        simple_parsing,
         "_parse_client_credentials_impl",
         lambda _raw: ([object()], [{"credentialId": _b64url(credential_id)}])
     )

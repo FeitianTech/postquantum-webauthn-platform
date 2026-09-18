@@ -42,9 +42,7 @@ def _authenticate(client, *, stored_entry, assertion, challenge):
 # --------------------------------------------------------------------------
 
 
-def test_wrong_signature_with_custom_declared_algorithm_is_not_ok(
-    config_module, advanced_module
-):
+def test_wrong_signature_with_custom_declared_algorithm_is_not_ok(config_module, advanced_module):
     """A real key + a wrong signature + ``"algorithm": -12345`` must not pass.
 
     The credential's COSE key is a genuine, fully supported ES256 key; only the
@@ -92,9 +90,7 @@ def test_wrong_signature_with_custom_declared_algorithm_is_not_ok(
     assert "customAlgorithmBypass" not in payload
 
 
-def test_wrong_signature_with_ordinary_algorithm_is_not_ok(
-    config_module, advanced_module
-):
+def test_wrong_signature_with_ordinary_algorithm_is_not_ok(config_module, advanced_module):
     """The plain case: a wrong signature on a normally-declared credential."""
 
     authenticator = Authenticator()
@@ -123,9 +119,7 @@ def test_wrong_signature_with_ordinary_algorithm_is_not_ok(
     assert payload["verified"] is False
 
 
-def test_genuinely_unsupported_algorithm_reports_explicit_non_ok_status(
-    config_module, advanced_module
-):
+def test_genuinely_unsupported_algorithm_reports_explicit_non_ok_status(config_module, advanced_module):
     """An algorithm this server cannot verify is reported, but never as OK.
 
     Here the credential's OWN COSE key declares an algorithm the server has no

@@ -47,213 +47,108 @@ def _module(path: str):
     return pytest.importorskip(path)
 
 
-# The advanced submodules.
+# The advanced route submodules.
 
 
 @pytest.fixture
-def advanced_algorithm_helpers():
-    """The fragment that defines the COSE algorithm name, lookup and coercion helpers."""
+def advanced_algorithms():
+    """The submodule that resolves and names COSE algorithms."""
 
     return _advanced_fragment("algorithms")
 
 
 @pytest.fixture
 def advanced_artifacts():
-    """The fragment that defines the credential-artifact route bodies."""
+    """The submodule that serves the credential-artifact routes."""
 
     return _advanced_fragment("artifacts")
 
 
 @pytest.fixture
-def advanced_authenticate_begin():
-    """The fragment that defines the advanced ``/authenticate/begin`` body."""
+def advanced_authentication():
+    """The submodule that serves the advanced authenticate begin and complete bodies."""
 
     return _advanced_fragment("authentication")
 
 
 @pytest.fixture
-def advanced_authenticate_complete():
-    """The fragment that defines the advanced ``/authenticate/complete`` body."""
-
-    return _advanced_fragment("authentication")
-
-
-@pytest.fixture
-def advanced_binary_helpers():
-    """The fragment that defines the base64url and binary extraction helpers."""
+def advanced_binary():
+    """The submodule that decodes base64url and extracts binary values."""
 
     return _advanced_fragment("binary")
 
 
 @pytest.fixture
 def advanced_constants():
-    """The fragment that defines the COSE name tables and the heavy-field key sets."""
+    """The submodule that holds the COSE name tables and heavy-field key sets."""
 
     return _advanced_fragment("constants")
 
 
 @pytest.fixture
-def advanced_logging_helpers():
-    """The fragment that defines the attestation-response logging helpers."""
+def advanced_tracing():
+    """The submodule that records the advanced-flow debug traces."""
 
     return _advanced_fragment("tracing")
 
 
 @pytest.fixture
-def advanced_parsing_helpers():
-    """The fragment that defines the client-supplied credential parsing helpers."""
+def advanced_parsing():
+    """The submodule that parses client-supplied credentials."""
 
     return _advanced_fragment("parsing")
 
 
 @pytest.fixture
-def advanced_register_begin():
-    """The fragment that defines the advanced ``/register/begin`` body."""
+def advanced_registration():
+    """The submodule that serves the advanced register begin and complete bodies."""
 
     return _advanced_fragment("registration")
 
 
 @pytest.fixture
-def advanced_register_begin_support():
-    """The fragment that defines the register-begin algorithm, exclude-list and extension builders."""
-
-    return _advanced_fragment("registration")
-
-
-@pytest.fixture
-def advanced_register_complete():
-    """The fragment that defines the advanced ``/register/complete`` body."""
-
-    return _advanced_fragment("registration")
-
-
-@pytest.fixture
-def advanced_register_complete_finalize():
-    """The fragment that defines the artifact-store and device-log finalisation step."""
-
-    return _advanced_fragment("registration")
-
-
-@pytest.fixture
-def advanced_register_complete_material():
-    """The fragment that defines the registration material builder."""
-
-    return _advanced_fragment("registration")
-
-
-@pytest.fixture
-def advanced_register_complete_setup():
-    """The fragment that defines the register-complete input preparation step."""
-
-    return _advanced_fragment("registration")
-
-
-@pytest.fixture
-def advanced_register_complete_state():
-    """The fragment that defines the register-complete session-state resolution step."""
-
-    return _advanced_fragment("registration")
-
-
-@pytest.fixture
-def advanced_summary_helpers():
-    """The fragment that defines the storage-id and stored-credential summary helpers."""
+def advanced_summary():
+    """The submodule that builds the advanced response summaries."""
 
     return _advanced_fragment("summary")
 
 
-# The simple submodules.
+# The simple route submodules.
 
 
 @pytest.fixture
-def simple_authenticate():
-    """The fragment that defines both simple authentication ceremony bodies."""
+def simple_authentication():
+    """The submodule that serves the simple authenticate bodies and the sign-count check."""
 
     return _simple_fragment("authentication")
 
 
 @pytest.fixture
-def simple_binary_helpers():
-    """The fragment that defines the base64 padding and binary decode helpers."""
+def simple_binary():
+    """The submodule that decodes the simple flow's binary values."""
 
     return _simple_fragment("binary")
 
 
 @pytest.fixture
-def simple_credential_parsing():
-    """The fragment that defines the session-credential serialise and parse helpers."""
+def simple_parsing():
+    """The submodule that parses and serialises session credentials."""
 
     return _simple_fragment("parsing")
 
 
 @pytest.fixture
-def simple_credentials_builder_dict():
-    """The fragment that defines the dict-shaped credential row builder."""
+def simple_credential_list():
+    """The submodule that serves the credential list route and its builders."""
 
     return _simple_fragment("credential_list")
 
 
 @pytest.fixture
-def simple_credentials_builder_object():
-    """The fragment that defines the object-shaped credential row builders."""
-
-    return _simple_fragment("credential_list")
-
-
-@pytest.fixture
-def simple_credentials_route():
-    """The fragment that defines the ``/api/credentials`` body."""
-
-    return _simple_fragment("credential_list")
-
-
-@pytest.fixture
-def simple_register_begin():
-    """The fragment that defines the simple ``/register/begin`` body."""
+def simple_registration():
+    """The submodule that serves the simple register begin and complete bodies."""
 
     return _simple_fragment("registration")
-
-
-@pytest.fixture
-def simple_register_complete():
-    """The fragment that defines the simple ``/register/complete`` body."""
-
-    return _simple_fragment("registration")
-
-
-@pytest.fixture
-def simple_register_complete_context_authenticator():
-    """The fragment that defines the authenticator-data context step."""
-
-    return _simple_fragment("registration")
-
-
-@pytest.fixture
-def simple_register_complete_context_b():
-    """The fragment that defines the persistence and response-payload context steps."""
-
-    return _simple_fragment("registration")
-
-
-@pytest.fixture
-def simple_register_complete_context_init():
-    """The fragment that defines the registration-context initialisation step."""
-
-    return _simple_fragment("registration")
-
-
-@pytest.fixture
-def simple_register_complete_context_rp_debug():
-    """The fragment that defines the RP debug payload context step."""
-
-    return _simple_fragment("registration")
-
-
-@pytest.fixture
-def simple_sign_count():
-    """The fragment that defines the signature-counter records and regression helpers."""
-
-    return _simple_fragment("authentication")
 
 
 # The sibling packages the fragments import from.

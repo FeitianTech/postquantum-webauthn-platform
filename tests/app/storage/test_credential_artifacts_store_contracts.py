@@ -95,9 +95,7 @@ def test_store_credential_artifact_merge_recursively_updates_nested_payload(arti
     }
 
 
-def test_store_credential_artifact_merge_preserves_created_at_and_updates_updated_at(
-    artifact_module, monkeypatch
-):
+def test_store_credential_artifact_merge_preserves_created_at_and_updates_updated_at(artifact_module, monkeypatch):
     time_values = iter([100.0, 250.0])
     monkeypatch.setattr(artifact_module.time, "time", lambda: next(time_values), raising=False)
 
