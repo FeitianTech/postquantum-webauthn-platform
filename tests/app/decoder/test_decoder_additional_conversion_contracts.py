@@ -78,7 +78,7 @@ def test_describe_client_data_from_bytes_success_and_collected_client_data_fallb
         def __init__(self, _payload):
             raise ValueError("broken collected client data")
 
-    monkeypatch.setattr(decode_module, "CollectedClientData", _BrokenClientData, raising=False)
+    monkeypatch.setattr(decode_module, "CollectedClientData", _BrokenClientData)
     fallback = decode_module._describe_client_data_from_bytes(payload)
     assert fallback["type"] == "webauthn.create"
     assert fallback["challenge"]["raw"] == "AQID"
@@ -107,19 +107,17 @@ def test_parse_attestation_object_and_extract_attestation_certificate_paths(monk
             self.att_stmt = {"x5c": [b"cert-bytes"]}
             self.auth_data = b"auth-data"
 
-    monkeypatch.setattr(decode_module, "AttestationObject", _FakeAttestation, raising=False)
+    monkeypatch.setattr(decode_module, "AttestationObject", _FakeAttestation)
     monkeypatch.setattr(
         decode_module,
         "_describe_authenticator_data_bytes",
         lambda _data: {"flags": {"value": 1}},
-        raising=False,
     )
     monkeypatch.setattr(decode_module, "cbor", type("_Cbor", (), {"decode": staticmethod(lambda _d: {"ok": True})})())
     monkeypatch.setattr(
         decode_module,
         "_extract_attestation_certificate",
         lambda _stmt: {"parsed": True},
-        raising=False,
     )
 
     parsed = decode_module._parse_attestation_object(b"\xa1")
@@ -141,7 +139,6 @@ def test_convert_attestation_statement_and_certificate_chain_paths(monkeypatch):
             "pem": "PEM",
             "fingerprints": {"sha256": "x"},
         },
-        raising=False,
     )
 
     details = {

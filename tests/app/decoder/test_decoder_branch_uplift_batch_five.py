@@ -33,7 +33,6 @@ def test_decode_cbor_sequence_handles_fallback_decoder_and_zero_consumed_paths(m
         decode_module.cbor,
         "decode_from",
         lambda _payload: (_ for _ in ()).throw(ValueError("bad-cbor")),
-        raising=False,
     )
 
     class _FallbackDecoder:
@@ -44,7 +43,7 @@ def test_decode_cbor_sequence_handles_fallback_decoder_and_zero_consumed_paths(m
             self._fp.read(1)
             return {"decoded": True}
 
-    monkeypatch.setattr(decode_module.cbor2, "CBORDecoder", _FallbackDecoder, raising=False)
+    monkeypatch.setattr(decode_module.cbor2, "CBORDecoder", _FallbackDecoder)
 
     structures, values, consumed, remaining = decode_module._decode_cbor_sequence(b"\x01")
     assert len(structures) == 1
@@ -56,7 +55,6 @@ def test_decode_cbor_sequence_handles_fallback_decoder_and_zero_consumed_paths(m
         decode_module.cbor,
         "decode_from",
         lambda payload: (1, payload),
-        raising=False,
     )
     structures, values, consumed, remaining = decode_module._decode_cbor_sequence(b"\x01")
     assert structures == []
@@ -72,7 +70,6 @@ def test_decode_cbor_sequence_breaks_when_lenient_fallback_raises(monkeypatch):
         decode_module.cbor,
         "decode_from",
         lambda _payload: (_ for _ in ()).throw(ValueError("bad-cbor")),
-        raising=False,
     )
 
     class _BrokenDecoder:
@@ -82,20 +79,18 @@ def test_decode_cbor_sequence_breaks_when_lenient_fallback_raises(monkeypatch):
         def decode(self):
             raise ValueError("broken")
 
-    monkeypatch.setattr(decode_module.cbor2, "CBORDecoder", _BrokenDecoder, raising=False)
+    monkeypatch.setattr(decode_module.cbor2, "CBORDecoder", _BrokenDecoder)
     monkeypatch.setattr(
         decode_module,
         "_decode_cbor_structure",
         lambda _payload: (_ for _ in ()).throw(
             decode_module._CborDecodingError("bad", 0)
         ),
-        raising=False,
     )
     monkeypatch.setattr(
         decode_module,
         "_lenient_decode_from",
         lambda _payload, _offset=0: (_ for _ in ()).throw(RuntimeError("boom")),
-        raising=False,
     )
 
     structures, values, consumed, remaining = decode_module._decode_cbor_sequence(b"\xa1")
@@ -190,13 +185,11 @@ def test_repair_get_assertion_entries_recovers_trailing_fields_and_prunes_byte_k
         decode_module,
         "_extract_get_assertion_trailing_from_raw",
         lambda _raw: (b"sig-trailing", {5: 99, 7: b"x"}),
-        raising=False,
     )
     monkeypatch.setattr(
         decode_module,
         "_split_get_assertion_trailing_fields",
         lambda _signature: (b"sig-final", {4: {"id": "split-user"}, 6: True}),
-        raising=False,
     )
 
     structure = {
@@ -258,7 +251,6 @@ def test_parse_authenticator_data_bytes_handles_truncation_and_decode_failures(m
         decode_module,
         "_lenient_decode_from",
         lambda *_args, **_kwargs: (_ for _ in ()).throw(ValueError("decode failure")),
-        raising=False,
     )
 
     details, _, _ = decode_module._parse_authenticator_data_bytes(payload_with_bad_cose)
@@ -282,7 +274,6 @@ def test_parse_authenticator_data_bytes_handles_extension_non_mapping_and_zero_c
         decode_module,
         "_lenient_decode_from",
         lambda *_args, **_kwargs: (None, 0),
-        raising=False,
     )
     details, trimmed, trailing = decode_module._parse_authenticator_data_bytes(extension_payload)
     assert trimmed == extension_payload

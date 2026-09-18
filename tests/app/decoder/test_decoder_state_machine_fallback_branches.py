@@ -71,7 +71,6 @@ def test_extract_get_assertion_trailing_from_raw_short_and_rfind_fallback(monkey
         decode_module,
         "_locate_get_assertion_trailing_offset",
         lambda _raw, start: start + 3,
-        raising=False,
     )
 
     signature, trailing_fields = decode_module._extract_get_assertion_trailing_from_raw(raw)
@@ -86,7 +85,6 @@ def test_try_decode_cbor_returns_none_when_no_cbor_structures(monkeypatch):
         decode_module,
         "_decode_cbor_sequence",
         lambda _payload: ([], [], 0, b""),
-        raising=False,
     )
 
     assert decode_module._try_decode_cbor(b"\xa1", "hex") is None

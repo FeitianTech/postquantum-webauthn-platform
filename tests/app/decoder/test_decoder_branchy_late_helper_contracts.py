@@ -58,7 +58,6 @@ def test_binary_extract_helpers_cover_nested_hex_error_and_fallback(monkeypatch)
         decode_module,
         "_extract_authenticator_bytes_from_attestation",
         _fake_extract,
-        raising=False,
     )
 
     assert (
@@ -236,7 +235,6 @@ def test_ctap_interpretation_variants_cover_request_guard_and_attstmt_bytes(monk
         decode_module,
         "_format_auth_data_for_expanded_json",
         lambda _auth: ({"rpIdHash": "00" * 32}, trailing),
-        raising=False,
     )
     interpreted_assertion = decode_module._interpret_get_assertion_map({2: auth_data})
     assert interpreted_assertion is not None
@@ -251,7 +249,6 @@ def test_try_decode_cbor_warns_for_trailing_bytes_and_records_ignored_padding(mo
         decode_module,
         "_decode_cbor_sequence",
         lambda _payload: ([{"byteLength": 1}], [42], 1, b"\x11\x22"),
-        raising=False,
     )
     result = decode_module._try_decode_cbor(b"\x01\xaa", "hex")
     assert result is not None
@@ -262,7 +259,6 @@ def test_try_decode_cbor_warns_for_trailing_bytes_and_records_ignored_padding(mo
         decode_module,
         "_decode_cbor_sequence",
         lambda _payload: ([{"byteLength": 1}], [42], 1, b"\x00\xff"),
-        raising=False,
     )
     result_padding = decode_module._try_decode_cbor(b"\x01\xaa", "hex")
     assert result_padding is not None

@@ -73,13 +73,11 @@ def test_interpret_get_assertion_map_handles_signature_and_trailing_field_recove
         decode_module,
         "_format_auth_data_for_expanded_json",
         lambda _auth_data: ({"flags": {}}, b"trailing"),
-        raising=False,
     )
     monkeypatch.setattr(
         decode_module,
         "_decode_trailing_map",
         lambda _trailing: {3: b"sig", 4: {1: b"u"}, 5: 2, 6: True, 8: {"ok": 1}, 9: "x"},
-        raising=False,
     )
 
     interpreted = decode_module._interpret_get_assertion_map(
@@ -161,7 +159,7 @@ def test_convert_certificate_bytes_and_json_block_formatting_guard_paths(monkeyp
 
     assert decode_module._convert_certificate_bytes("%%") == {}
 
-    monkeypatch.setattr(decode_module, "serialize_attestation_certificate", lambda _bytes: None, raising=False)
+    monkeypatch.setattr(decode_module, "serialize_attestation_certificate", lambda _bytes: None)
     assert decode_module._convert_certificate_bytes(b"\x30\x82\x01\x00") == {}
 
     assert decode_module._format_json_block(None) == []
@@ -205,7 +203,6 @@ def test_decode_trailing_map_handles_non_progress_and_unhashable_keys(monkeypatc
         decode_module,
         "_lenient_decode_from",
         lambda _data, offset=0: (None, offset),
-        raising=False,
     )
     assert decode_module._decode_trailing_map(b"\x01") == {}
 
@@ -215,5 +212,5 @@ def test_decode_trailing_map_handles_non_progress_and_unhashable_keys(monkeypatc
         _value, new_offset = key_then_value.pop(0)
         return _value, new_offset
 
-    monkeypatch.setattr(decode_module, "_lenient_decode_from", _sequence_decoder, raising=False)
+    monkeypatch.setattr(decode_module, "_lenient_decode_from", _sequence_decoder)
     assert decode_module._decode_trailing_map(b"\x00\x00") == {"[1]": "value"}

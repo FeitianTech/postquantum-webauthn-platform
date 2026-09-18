@@ -29,7 +29,6 @@ def test_decoder_residual_helpers_cover_remaining_parse_and_conversion_guards(mo
         decode_module,
         "AuthenticatorData",
         lambda _raw: (_ for _ in ()).throw(ValueError("bad-auth-data")),
-        raising=False,
     )
     assert decode_module._derive_alg_from_auth_data(b"bad") is None
 
@@ -37,10 +36,9 @@ def test_decoder_residual_helpers_cover_remaining_parse_and_conversion_guards(mo
         decode_module,
         "AuthenticatorData",
         lambda _raw: type("_Auth", (), {"credential_data": None})(),
-        raising=False,
     )
     assert decode_module._derive_alg_from_auth_data(b"ok") is None
-    monkeypatch.setattr(decode_module, "AuthenticatorData", auth_data_cls, raising=False)
+    monkeypatch.setattr(decode_module, "AuthenticatorData", auth_data_cls)
 
     # _extract_attestation_certificate and _convert_certificate_bytes/payload guards.
     assert decode_module._extract_attestation_certificate("not-a-map") is None
@@ -90,7 +88,6 @@ def test_decoder_residual_helpers_cover_remaining_parse_and_conversion_guards(mo
         decode_module,
         "_lenient_decode_from",
         lambda *_args, **_kwargs: (_ for _ in ()).throw(ValueError("decode-error")),
-        raising=False,
     )
     details, _, trailing = decode_module._parse_authenticator_data_bytes(extension_payload)
     assert "extensions" not in details
