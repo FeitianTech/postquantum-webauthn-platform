@@ -56,7 +56,7 @@ def _persist_registered_credential_entry_impl(ctx: dict[str, Any]) -> Any | None
     credential_entry = {
         "credential_data": ctx["auth_data"].credential_data,
         "auth_data": ctx["auth_data"],
-        # Advanced on every successful authentication; see sign_count_impl.
+        # Advanced on every successful authentication; see authenticate.
         "sign_count": int(getattr(ctx["auth_data"], "counter", 0)),
         "user_info": ctx["credential_info"]["user_info"],
         "registration_time": ctx["credential_info"]["registration_time"],

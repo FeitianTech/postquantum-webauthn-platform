@@ -1,13 +1,23 @@
+"""Signature-counter regression detection (WebAuthn L3 §7.2 step 21).
+
+Where the "stored" counter comes from
+-------------------------------------
+The simple flow keeps two copies of each credential: the server-side record
+written by ``savekey`` at registration, and the browser's own copy, which it
+sends back as the credential list on ``/authenticate/begin``. The server record
+is authoritative; the browser copy is attacker-controllable, so it may only
+ever make the check *stricter*. The stored value is therefore the larger of the
+two, and a missing copy simply does not contribute."""
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from typing import Any
 
 from flask import abort, jsonify, request, session
 
 from fido2.webauthn import AuthenticatorData
 
-from ... import attestation, config, storage
+from ... import attestation, config, metadata, storage
 from ...challenge_registry import (
     CHALLENGE_FRESH,
     CHALLENGE_REPLAYED,
@@ -17,7 +27,7 @@ from ...challenge_registry import (
 from ...encoding import encode_base64url
 from ...sign_count import SIGN_COUNT_REGRESSED, sign_count_status
 from .. import binary_helpers
-from . import parsing, sign_count_impl
+from . import binary, parsing
 
 
 def authenticate_begin_impl():
@@ -180,12 +190,12 @@ def authenticate_complete_impl():
             400,
         )
 
-    server_records, metadata_session_id = sign_count_impl.load_server_records_impl(uname)
-    record_index = sign_count_impl.find_server_record_index(server_records, authenticated_id_bytes)
+    server_records, metadata_session_id = load_server_records_impl(uname)
+    record_index = find_server_record_index(server_records, authenticated_id_bytes)
     server_record = server_records[record_index] if record_index is not None else None
-    stored_sign_count = sign_count_impl.resolve_stored_sign_count(
+    stored_sign_count = resolve_stored_sign_count(
         server_record,
-        sign_count_impl.client_supplied_sign_count_impl(session_credentials, authenticated_id_bytes),
+        client_supplied_sign_count_impl(session_credentials, authenticated_id_bytes),
     )
 
     if sign_count_status(stored_sign_count, sign_count) == SIGN_COUNT_REGRESSED:
@@ -211,8 +221,8 @@ def authenticate_complete_impl():
             400,
         )
 
-    if server_record is not None and sign_count_impl.record_sign_count(server_record) != sign_count:
-        server_record[sign_count_impl.RECORD_SIGN_COUNT_KEY] = sign_count
+    if server_record is not None and record_sign_count(server_record) != sign_count:
+        server_record[RECORD_SIGN_COUNT_KEY] = sign_count
         try:
             storage.savekey(uname, server_records, session_id=metadata_session_id)
         except Exception:
@@ -236,3 +246,87 @@ def authenticate_complete_impl():
     response_payload["signCount"] = sign_count
 
     return jsonify(response_payload)
+
+
+RECORD_SIGN_COUNT_KEY = "sign_count"
+
+
+def _as_counter(value: Any) -> int | None:
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+        return None
+    return value
+
+
+def record_credential_id(record: Any) -> bytes | None:
+    if not isinstance(record, Mapping):
+        return None
+    credential_id = getattr(record.get("credential_data"), "credential_id", None)
+    if isinstance(credential_id, (bytes, bytearray, memoryview)):
+        return bytes(credential_id)
+    return None
+
+
+def record_sign_count(record: Mapping[str, Any]) -> int | None:
+    counter = _as_counter(record.get(RECORD_SIGN_COUNT_KEY))
+    if counter is not None:
+        return counter
+    return _as_counter(getattr(record.get("auth_data"), "counter", None))
+
+
+def load_server_records_impl(uname: Any) -> tuple[list[Any] | None, str | None]:
+    """Read the caller's server-side credential records, or ``(None, None)``."""
+
+    if not isinstance(uname, str) or not uname:
+        return None, None
+    try:
+        session_id = metadata.ensure_metadata_session_id()
+        records = storage.readkey(uname, session_id=session_id)
+    except Exception:
+        config.app.logger.warning(
+            "Could not read stored credentials for the signature counter check", exc_info=True
+        )
+        return None, None
+    if not isinstance(records, list):
+        return None, None
+    return records, session_id
+
+
+def find_server_record_index(records: list[Any] | None, credential_id: bytes) -> int | None:
+    if not records:
+        return None
+    for index, record in enumerate(records):
+        if record_credential_id(record) == credential_id:
+            return index
+    return None
+
+
+def client_supplied_sign_count_impl(
+    session_credentials: Iterable[Any], credential_id: bytes
+) -> int | None:
+    for entry in session_credentials or ():
+        if not isinstance(entry, Mapping):
+            continue
+        raw_id = entry.get("credentialId")
+        if raw_id is None:
+            continue
+        try:
+            entry_id = binary._decode_binary_value_impl(raw_id)
+        except Exception:
+            continue
+        if entry_id == credential_id:
+            return _as_counter(entry.get("signCount"))
+    return None
+
+
+def resolve_stored_sign_count(
+    server_record: Mapping[str, Any] | None, client_supplied: int | None
+) -> int:
+    candidates = [
+        value
+        for value in (
+            record_sign_count(server_record) if server_record is not None else None,
+            client_supplied,
+        )
+        if value is not None
+    ]
+    return max(candidates) if candidates else 0
