@@ -1,9 +1,33 @@
-"""Extracted summary rendering helper bodies executed via decode.py global rebinding."""
-# pyright: reportUndefinedVariable=false
+"""Summary rendering helpers for the decoder."""
 from __future__ import annotations
 
 from collections.abc import Mapping
 from typing import Any
+
+from .binary_extract import (
+    _extract_authenticator_bytes,
+    _extract_authenticator_bytes_from_attestation,
+    _extract_bytes_from_binary,
+    _extract_hex_from_binary,
+)
+from .certificate_extensions import _build_certificate_extensions_lines
+from .certificate_summary import (
+    _build_fingerprint_lines,
+    _build_signature_lines,
+    _build_subject_key_identifier_lines,
+    _build_subject_public_key_info_lines,
+    _format_certificate_time,
+)
+from .summary_leaf import (
+    _append_multiline_field,
+    _append_simple_field,
+    _build_authenticator_data_lines,
+    _collect_attested_info,
+    _format_boolean,
+    _format_counter_value,
+    _format_flag_line,
+    _format_json_block,
+)
 
 
 def _format_result_summary(result: dict[str, Any]) -> str:
