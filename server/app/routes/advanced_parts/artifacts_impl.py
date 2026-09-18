@@ -5,12 +5,12 @@ from typing import Any
 
 from flask import jsonify, request
 
-from ... import metadata
+from ... import credential_artifacts, metadata
 
 
 def api_get_advanced_credential_artifact_impl(advanced_module: Any, storage_id: str):
     metadata_session_id = metadata.ensure_metadata_session_id()
-    artifact = advanced_module.load_credential_artifact(storage_id, session_id=metadata_session_id)
+    artifact = credential_artifacts.load_credential_artifact(storage_id, session_id=metadata_session_id)
     if artifact is None:
         return jsonify({"error": "Credential artifact not found."}), 404
 
@@ -37,7 +37,7 @@ def api_get_advanced_credential_artifacts_bulk_impl(advanced_module: Any):
     metadata_session_id = metadata.ensure_metadata_session_id()
     artifacts: dict[str, Any] = {}
     for storage_id in storage_ids:
-        artifact = advanced_module.load_credential_artifact(storage_id, session_id=metadata_session_id)
+        artifact = credential_artifacts.load_credential_artifact(storage_id, session_id=metadata_session_id)
         if artifact is not None:
             artifacts[storage_id] = artifact
 
@@ -60,7 +60,7 @@ def api_put_advanced_credential_artifact_impl(advanced_module: Any, storage_id: 
         return jsonify({"error": "Artifact payload must be an object."}), 400
 
     metadata_session_id = metadata.ensure_metadata_session_id()
-    if not advanced_module.store_credential_artifact(
+    if not credential_artifacts.store_credential_artifact(
         storage_id,
         artifact_payload,
         merge=merge,
@@ -79,7 +79,7 @@ def api_put_advanced_credential_snapshot_impl(advanced_module: Any, storage_id: 
 
     payload = {"registrationDetailSnapshot": snapshot}
     metadata_session_id = metadata.ensure_metadata_session_id()
-    if not advanced_module.store_credential_artifact(
+    if not credential_artifacts.store_credential_artifact(
         storage_id,
         payload,
         merge=True,
@@ -97,7 +97,7 @@ def api_delete_advanced_credential_artifact_impl(advanced_module: Any, storage_i
         ), 400
 
     metadata_session_id = metadata.ensure_metadata_session_id()
-    status = advanced_module.delete_credential_artifact_with_status(
+    status = credential_artifacts.delete_credential_artifact_with_status(
         storage_id,
         session_id=metadata_session_id,
     )

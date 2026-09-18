@@ -7,6 +7,8 @@ from typing import Any
 
 from flask import jsonify
 
+from ... import credential_artifacts
+
 
 def finalize_registration_completion(
     advanced_module: Any,
@@ -40,7 +42,7 @@ def finalize_registration_completion(
 
     artifact_payload = {"schemaVersion": 1, "storedCredential": artifact_record}
     try:
-        artifact_stored = advanced_module.store_credential_artifact(
+        artifact_stored = credential_artifacts.store_credential_artifact(
             storage_id,
             artifact_payload,
             session_id=metadata_session_id,

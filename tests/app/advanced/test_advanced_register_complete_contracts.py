@@ -200,7 +200,7 @@ def test_advanced_register_complete_prefers_session_attachment_scope_over_tamper
             assert "advanced_register_allowed_attachments" not in session_store
 
 
-def test_advanced_register_complete_success_contract_propagates_warnings_and_records_artifact(monkeypatch, metadata_module):
+def test_advanced_register_complete_success_contract_propagates_warnings_and_records_artifact(monkeypatch, metadata_module, credential_artifacts_module):
     config_module = pytest.importorskip("server.app.config")
     advanced_module = pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
@@ -270,7 +270,7 @@ def test_advanced_register_complete_success_contract_propagates_warnings_and_rec
     )
     monkeypatch.setattr(advanced_module, "add_public_key_material", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(advanced_module, "augment_aaguid_fields", lambda *_args, **_kwargs: None)
-    monkeypatch.setattr(advanced_module, "store_credential_artifact", _store_credential_artifact)
+    monkeypatch.setattr(credential_artifacts_module, "store_credential_artifact", _store_credential_artifact)
     monkeypatch.setattr(advanced_module, "record_registration_event", lambda _event: None)
 
     with config_module.app.test_client() as client:
