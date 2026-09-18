@@ -44,7 +44,7 @@ class _SimpleFakeServer:
         return self._auth_data
 
 
-def test_simple_register_complete_returns_500_when_savekey_fails(monkeypatch):
+def test_simple_register_complete_returns_500_when_savekey_fails(monkeypatch, metadata_module):
     config_module = pytest.importorskip("server.app.config")
     simple_module = pytest.importorskip("server.app.routes.simple")
     pytest.importorskip("server.app.app")
@@ -78,7 +78,7 @@ def test_simple_register_complete_returns_500_when_savekey_fails(monkeypatch):
     )
     monkeypatch.setattr(simple_module, "extract_min_pin_length", lambda _ext: None)
     monkeypatch.setattr(simple_module, "add_public_key_material", lambda *_args, **_kwargs: None)
-    monkeypatch.setattr(simple_module, "ensure_metadata_session_id", lambda: "session-id")
+    monkeypatch.setattr(metadata_module, "ensure_metadata_session_id", lambda: "session-id")
     monkeypatch.setattr(simple_module, "readkey", lambda *_args, **_kwargs: [])
     monkeypatch.setattr(
         simple_module,
@@ -108,7 +108,9 @@ def test_simple_register_complete_returns_500_when_savekey_fails(monkeypatch):
     assert response.get_json() == {"error": "Unable to persist registered credential."}
 
 
-def _install_advanced_register_common_monkeypatches(monkeypatch, advanced_module, auth_data, rp_id):
+def _install_advanced_register_common_monkeypatches(
+    monkeypatch, advanced_module, metadata_module, auth_data, rp_id
+):
     class _AdvancedFakeServer:
         def register_complete(self, *_args, **_kwargs):
             return auth_data
@@ -119,7 +121,7 @@ def _install_advanced_register_common_monkeypatches(monkeypatch, advanced_module
         "create_fido_server",
         lambda **_kwargs: _AdvancedFakeServer()
     )
-    monkeypatch.setattr(advanced_module, "ensure_metadata_session_id", lambda: "session-id")
+    monkeypatch.setattr(metadata_module, "ensure_metadata_session_id", lambda: "session-id")
     monkeypatch.setattr(advanced_module, "readkey", lambda *_args, **_kwargs: [])
     monkeypatch.setattr(
         advanced_module,
@@ -160,7 +162,7 @@ def _advanced_register_payload(rp_id: str, credential_id: bytes):
     }
 
 
-def test_advanced_register_complete_returns_500_when_artifact_store_returns_false(monkeypatch):
+def test_advanced_register_complete_returns_500_when_artifact_store_returns_false(monkeypatch, metadata_module):
     config_module = pytest.importorskip("server.app.config")
     advanced_module = pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
@@ -170,7 +172,9 @@ def test_advanced_register_complete_returns_500_when_artifact_store_returns_fals
     auth_data = _FakeAuthData(credential_id=credential_id, rp_id=rp_id)
     registration_events = []
 
-    _install_advanced_register_common_monkeypatches(monkeypatch, advanced_module, auth_data, rp_id)
+    _install_advanced_register_common_monkeypatches(
+        monkeypatch, advanced_module, metadata_module, auth_data, rp_id
+    )
     monkeypatch.setattr(advanced_module, "store_credential_artifact", lambda *_args, **_kwargs: False)
     monkeypatch.setattr(
         advanced_module,
@@ -198,7 +202,7 @@ def test_advanced_register_complete_returns_500_when_artifact_store_returns_fals
     assert registration_events == []
 
 
-def test_advanced_register_complete_returns_500_when_artifact_store_raises(monkeypatch):
+def test_advanced_register_complete_returns_500_when_artifact_store_raises(monkeypatch, metadata_module):
     config_module = pytest.importorskip("server.app.config")
     advanced_module = pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
@@ -208,7 +212,9 @@ def test_advanced_register_complete_returns_500_when_artifact_store_raises(monke
     auth_data = _FakeAuthData(credential_id=credential_id, rp_id=rp_id)
     registration_events = []
 
-    _install_advanced_register_common_monkeypatches(monkeypatch, advanced_module, auth_data, rp_id)
+    _install_advanced_register_common_monkeypatches(
+        monkeypatch, advanced_module, metadata_module, auth_data, rp_id
+    )
     monkeypatch.setattr(
         advanced_module,
         "store_credential_artifact",
@@ -240,7 +246,7 @@ def test_advanced_register_complete_returns_500_when_artifact_store_raises(monke
     assert registration_events == []
 
 
-def test_advanced_register_complete_returns_400_when_add_public_key_material_raises(monkeypatch):
+def test_advanced_register_complete_returns_400_when_add_public_key_material_raises(monkeypatch, metadata_module):
     config_module = pytest.importorskip("server.app.config")
     advanced_module = pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
@@ -251,7 +257,9 @@ def test_advanced_register_complete_returns_400_when_add_public_key_material_rai
     registration_events = []
     artifact_store_calls = []
 
-    _install_advanced_register_common_monkeypatches(monkeypatch, advanced_module, auth_data, rp_id)
+    _install_advanced_register_common_monkeypatches(
+        monkeypatch, advanced_module, metadata_module, auth_data, rp_id
+    )
     monkeypatch.setattr(
         advanced_module,
         "add_public_key_material",

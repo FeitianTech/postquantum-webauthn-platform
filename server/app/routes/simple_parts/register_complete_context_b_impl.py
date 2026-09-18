@@ -7,6 +7,8 @@ from typing import Any
 
 from flask import jsonify, session
 
+from ... import metadata
+
 
 def build_stored_credential_context_impl(simple_module: Any, ctx: dict[str, Any]) -> None:
     stored_credential: dict[str, Any] = {
@@ -47,7 +49,7 @@ def build_stored_credential_context_impl(simple_module: Any, ctx: dict[str, Any]
 
 
 def _persist_registered_credential_entry_impl(simple_module: Any, ctx: dict[str, Any]) -> Any | None:
-    metadata_session_id = simple_module.ensure_metadata_session_id()
+    metadata_session_id = metadata.ensure_metadata_session_id()
     existing_credentials = simple_module.readkey(ctx["uname"], session_id=metadata_session_id)
 
     credential_entry = {

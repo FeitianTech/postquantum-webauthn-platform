@@ -5,9 +5,11 @@ from typing import Any
 
 from flask import jsonify, request
 
+from ... import metadata
+
 
 def api_get_advanced_credential_artifact_impl(advanced_module: Any, storage_id: str):
-    metadata_session_id = advanced_module.ensure_metadata_session_id()
+    metadata_session_id = metadata.ensure_metadata_session_id()
     artifact = advanced_module.load_credential_artifact(storage_id, session_id=metadata_session_id)
     if artifact is None:
         return jsonify({"error": "Credential artifact not found."}), 404
@@ -32,7 +34,7 @@ def api_get_advanced_credential_artifacts_bulk_impl(advanced_module: Any):
         seen.add(trimmed)
         storage_ids.append(trimmed)
 
-    metadata_session_id = advanced_module.ensure_metadata_session_id()
+    metadata_session_id = metadata.ensure_metadata_session_id()
     artifacts: dict[str, Any] = {}
     for storage_id in storage_ids:
         artifact = advanced_module.load_credential_artifact(storage_id, session_id=metadata_session_id)
@@ -57,7 +59,7 @@ def api_put_advanced_credential_artifact_impl(advanced_module: Any, storage_id: 
     if artifact_payload is None:
         return jsonify({"error": "Artifact payload must be an object."}), 400
 
-    metadata_session_id = advanced_module.ensure_metadata_session_id()
+    metadata_session_id = metadata.ensure_metadata_session_id()
     if not advanced_module.store_credential_artifact(
         storage_id,
         artifact_payload,
@@ -76,7 +78,7 @@ def api_put_advanced_credential_snapshot_impl(advanced_module: Any, storage_id: 
         return jsonify({"error": "Snapshot must be an object."}), 400
 
     payload = {"registrationDetailSnapshot": snapshot}
-    metadata_session_id = advanced_module.ensure_metadata_session_id()
+    metadata_session_id = metadata.ensure_metadata_session_id()
     if not advanced_module.store_credential_artifact(
         storage_id,
         payload,
@@ -94,7 +96,7 @@ def api_delete_advanced_credential_artifact_impl(advanced_module: Any, storage_i
             {"status": "failed", "error": "Invalid storage identifier."},
         ), 400
 
-    metadata_session_id = advanced_module.ensure_metadata_session_id()
+    metadata_session_id = metadata.ensure_metadata_session_id()
     status = advanced_module.delete_credential_artifact_with_status(
         storage_id,
         session_id=metadata_session_id,

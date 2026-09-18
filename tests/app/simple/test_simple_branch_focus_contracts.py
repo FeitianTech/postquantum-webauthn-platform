@@ -165,7 +165,7 @@ def test_simple_authenticate_complete_aborts_when_session_credentials_cannot_be_
     assert response.status_code == 400
 
 
-def test_simple_register_complete_covers_warning_metadata_transport_and_session_fallback_paths(monkeypatch):
+def test_simple_register_complete_covers_warning_metadata_transport_and_session_fallback_paths(monkeypatch, metadata_module):
     config_module = pytest.importorskip("server.app.config")
     simple_module = pytest.importorskip("server.app.routes.simple")
     pytest.importorskip("server.app.app")
@@ -210,7 +210,7 @@ def test_simple_register_complete_covers_warning_metadata_transport_and_session_
         }
     )
     monkeypatch.setattr(simple_module, "add_public_key_material", lambda *_args, **_kwargs: None)
-    monkeypatch.setattr(simple_module, "ensure_metadata_session_id", lambda: "meta-session")
+    monkeypatch.setattr(metadata_module, "ensure_metadata_session_id", lambda: "meta-session")
     monkeypatch.setattr(simple_module, "readkey", lambda *_args, **_kwargs: {"not": "a-list"})
 
     def _savekey(email, credentials, *, session_id=None):
@@ -274,12 +274,12 @@ def test_simple_register_complete_covers_warning_metadata_transport_and_session_
     assert event.device_name_mds == "FocusKey Device"
 
 
-def test_simple_credentials_route_covers_scalar_registration_metadata_and_listing_fallbacks(monkeypatch):
+def test_simple_credentials_route_covers_scalar_registration_metadata_and_listing_fallbacks(monkeypatch, metadata_module):
     config_module = pytest.importorskip("server.app.config")
     simple_module = pytest.importorskip("server.app.routes.simple")
     pytest.importorskip("server.app.app")
 
-    monkeypatch.setattr(simple_module, "ensure_metadata_session_id", lambda: "meta-list")
+    monkeypatch.setattr(metadata_module, "ensure_metadata_session_id", lambda: "meta-list")
 
     def _add_public_key_material(target, public_key):
         if isinstance(public_key, dict) and 3 in public_key:

@@ -4,6 +4,7 @@ from typing import Any
 
 from flask import jsonify, request
 
+from ... import metadata
 from .credentials_builder_dict_impl import (
     build_credential_info_from_dict_credential_data_impl,
 )
@@ -14,7 +15,7 @@ from .credentials_builder_object_impl import (
 
 
 def list_credentials_impl(simple_module: Any):
-    metadata_session_id = simple_module.ensure_metadata_session_id()
+    metadata_session_id = metadata.ensure_metadata_session_id()
     if request.method == "DELETE":
         removed = 0
         try:

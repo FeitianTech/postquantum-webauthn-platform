@@ -5,6 +5,7 @@ from typing import Any
 
 from flask import jsonify, session
 
+from ... import metadata
 from ...attachments import (
     normalize_attachment,
     normalize_attachment_list,
@@ -85,7 +86,7 @@ def prepare_register_complete_inputs(
     if not username:
         return None, (jsonify({"error": "Username is required in user.name"}), 400)
 
-    metadata_session_id = advanced_module.ensure_metadata_session_id()
+    metadata_session_id = metadata.ensure_metadata_session_id()
     advanced_module.readkey(username, session_id=metadata_session_id)
 
     auth_selection = public_key.get("authenticatorSelection", {})

@@ -14,6 +14,8 @@ from __future__ import annotations
 from collections.abc import Iterable, Mapping
 from typing import Any
 
+from ... import metadata
+
 #: Key under which the server-side credential record keeps its latest counter.
 #: Records written before it existed fall back to the registration-time
 #: ``auth_data.counter``.
@@ -48,7 +50,7 @@ def load_server_records_impl(simple_module: Any, uname: Any) -> tuple[list[Any] 
     if not isinstance(uname, str) or not uname:
         return None, None
     try:
-        session_id = simple_module.ensure_metadata_session_id()
+        session_id = metadata.ensure_metadata_session_id()
         records = simple_module.readkey(uname, session_id=session_id)
     except Exception:
         simple_module.app.logger.warning(
