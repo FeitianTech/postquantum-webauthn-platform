@@ -65,7 +65,7 @@ def result_runtime():
 
 @pytest.fixture
 def summary():
-    """The fragment that defines the summary rendering helpers."""
+    """The fragment that defines the summary rendering helpers. The fragment that defines the summary field formatting leaves."""
 
     return _fragment("summary")
 
@@ -124,13 +124,6 @@ def certificates():
     """The fragment that defines the certificate summary line builders. The fragment that defines the certificate extension line builders."""
 
     return _fragment("certificates")
-
-
-@pytest.fixture
-def summary_leaf():
-    """The fragment that defines the summary field formatting leaves."""
-
-    return _fragment("summary_leaf")
 
 
 @pytest.fixture

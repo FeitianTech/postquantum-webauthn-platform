@@ -26,7 +26,6 @@ from . import (
     pipeline_runtime,
     result_runtime,
     summary,
-    summary_leaf,
 )
 
 __all__ = ["decode_payload_text"]
@@ -112,15 +111,15 @@ _convert_certificate_chain_impl = certificates._convert_certificate_chain_impl
 _convert_certificate_payload_impl = certificates._convert_certificate_payload_impl
 
 # Summary field formatting leaves.
-_append_multiline_field = summary_leaf._append_multiline_field
-_append_simple_field = summary_leaf._append_simple_field
-_build_authenticator_data_lines = summary_leaf._build_authenticator_data_lines
-_collect_attested_info = summary_leaf._collect_attested_info
-_format_boolean = summary_leaf._format_boolean
-_format_counter_value = summary_leaf._format_counter_value
-_format_flag_line = summary_leaf._format_flag_line
-_format_json_block = summary_leaf._format_json_block
-_parse_attested_data = summary_leaf._parse_attested_data
+_append_multiline_field = summary._append_multiline_field
+_append_simple_field = summary._append_simple_field
+_build_authenticator_data_lines = summary._build_authenticator_data_lines
+_collect_attested_info = summary._collect_attested_info
+_format_boolean = summary._format_boolean
+_format_counter_value = summary._format_counter_value
+_format_flag_line = summary._format_flag_line
+_format_json_block = summary._format_json_block
+_parse_attested_data = summary._parse_attested_data
 
 # CTAP map classification and labels.
 _GET_ASSERTION_REQUEST_LABELS = ctap_classify._GET_ASSERTION_REQUEST_LABELS
