@@ -61,10 +61,15 @@ def test_decode_binary_value_falls_back_to_hex_when_base64_decoders_fail():
     assert simple_module._decode_binary_value("41 42 43") == b"ABC"
     assert simple_module._decode_binary_value("41:42:43") == b"ABC"
 
-    # An unbroken run of hex digits is valid base64 as well, and base64 wins --
-    # the precedence predates the strictness work and is left alone so stored
-    # credential IDs keep decoding to the same bytes.
-    assert simple_module._decode_binary_value("414243") == base64.b64decode("414243==")
+    # An unbroken run of hex digits can be valid base64 as well, and base64
+    # still wins where it is: the precedence predates the strictness work and
+    # is left alone so stored credential IDs keep decoding to the same bytes.
+    assert simple_module._decode_binary_value("0000") == base64.b64decode("0000")
+
+    # "414243" is not canonical base64 -- its final quantum carries bits that
+    # re-encode to something else -- so it is no longer accepted as base64 and
+    # falls through to the hex reading it plainly is.
+    assert simple_module._decode_binary_value("414243") == b"ABC"
 
 
 def test_decode_binary_value_decodes_iterable_of_ints():
