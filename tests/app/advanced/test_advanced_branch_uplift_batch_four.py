@@ -182,16 +182,14 @@ def test_attestation_log_falls_back_to_plain_string_payload_when_json_encoding_f
     assert "raw-attestation-object" in log_messages[0]
 
 
-def test_register_begin_accepts_non_mapping_authenticator_selection_and_derives_cross_platform_from_hints(
-    monkeypatch,
-):
+def test_register_begin_accepts_non_mapping_authenticator_selection_and_derives_cross_platform_from_hints(monkeypatch, pqc_module):
     config_module = pytest.importorskip("server.app.config")
     advanced_module = pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
 
     captured = {}
     monkeypatch.setattr(
-        advanced_module,
+        pqc_module,
         "detect_available_pqc_algorithms",
         lambda: ({-50, -49, -48}, None)
     )
@@ -221,14 +219,14 @@ def test_register_begin_accepts_non_mapping_authenticator_selection_and_derives_
             assert session_state["advanced_register_allowed_attachments"] == ["cross-platform"]
 
 
-def test_register_begin_maps_discouraged_uv_require_resident_key_and_extension_aliases(monkeypatch):
+def test_register_begin_maps_discouraged_uv_require_resident_key_and_extension_aliases(monkeypatch, pqc_module):
     config_module = pytest.importorskip("server.app.config")
     advanced_module = pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
 
     captured = {}
     monkeypatch.setattr(
-        advanced_module,
+        pqc_module,
         "detect_available_pqc_algorithms",
         lambda: ({-50, -49, -48}, None)
     )

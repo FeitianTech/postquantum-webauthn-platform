@@ -69,11 +69,7 @@ def test_helper_none_and_non_string_decode_paths():
         ("enterprise", "enterprise"),
     ],
 )
-def test_register_begin_maps_attestation_modes_and_exercises_pqc_warning_branch(
-    monkeypatch,
-    attestation_value,
-    expected_value,
-):
+def test_register_begin_maps_attestation_modes_and_exercises_pqc_warning_branch(monkeypatch, attestation_value, expected_value, pqc_module):
     config_module = pytest.importorskip("server.app.config")
     advanced_module = pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
@@ -82,7 +78,7 @@ def test_register_begin_maps_attestation_modes_and_exercises_pqc_warning_branch(
     _install_register_begin_server(monkeypatch, advanced_module, captured, include_extensions=True)
 
     warning_messages = []
-    monkeypatch.setattr(advanced_module, "detect_available_pqc_algorithms", lambda: (set(), None))
+    monkeypatch.setattr(pqc_module, "detect_available_pqc_algorithms", lambda: (set(), None))
     monkeypatch.setattr(
         advanced_module.app.logger,
         "warning",
