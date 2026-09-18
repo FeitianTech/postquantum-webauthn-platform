@@ -208,7 +208,7 @@ def test_lenient_decode_variants_cover_tag_and_truncated_float_branches():
     assert map_offset == 1
 
 
-def test_ctap_interpretation_variants_cover_request_guard_and_attstmt_bytes(monkeypatch, ctap_parse_runtime):
+def test_ctap_interpretation_variants_cover_request_guard_and_attstmt_bytes(monkeypatch, ctap):
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     auth_data = _auth_header(flags=0x01, sign_count=9)
@@ -232,7 +232,7 @@ def test_ctap_interpretation_variants_cover_request_guard_and_attstmt_bytes(monk
 
     trailing = cbor2.dumps(3) + cbor2.dumps("not-bytes") + cbor2.dumps(10) + cbor2.dumps(1)
     monkeypatch.setattr(
-        ctap_parse_runtime,
+        ctap,
         "_format_auth_data_for_expanded_json",
         lambda _auth: ({"rpIdHash": "00" * 32}, trailing),
     )

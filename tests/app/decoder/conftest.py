@@ -1,15 +1,15 @@
 """Shared fixtures for the decoder runtime tests.
 
-Each fixture hands back the ``decode`` submodule that *defines* a group of
-helpers. Patch there rather than on ``server.app.decoder.decode``: the fragments
-call each other through these modules, so this is the binding that is actually
-read. ``server.app.decoder.decode`` re-exports the same objects for callers, but
-a patch applied to the re-export is not seen by the fragments.
+Each fixture hands back the ``server.app.decoder.decode`` submodule that
+*defines* a group of helpers. Patch there rather than on the package itself: the
+submodules call each other through these module objects, so this is the binding
+actually read. The package re-exports the same objects for callers, but a patch
+applied to a re-export is not seen by the submodules.
 
-``raising`` is deliberately left at its default everywhere. These names moved
-module once already; if one moves again the patch must fail loudly rather than
-quietly attaching to a dead attribute and leaving the test to pass while
-exercising the real code.
+``raising`` is deliberately left at its default everywhere. These names have
+moved module more than once; if one moves again the patch must fail loudly
+rather than quietly attaching to a dead attribute and leaving the test to pass
+while exercising the real code.
 """
 
 from __future__ import annotations
@@ -23,70 +23,56 @@ def _fragment(name: str):
 
 @pytest.fixture
 def pipeline():
-    """The fragment that defines the top-level decode pipeline helpers. The fragment that defines the client and authenticator data details."""
+    """The submodule that drives decoding end to end and builds per-field details."""
 
     return _fragment("pipeline")
 
 
 @pytest.fixture
 def ctap():
-    """The fragment that defines CBOR sequence decoding and CTAP repair. The fragment that defines the CTAP map classification and labels. The fragment that defines the CTAP field conversion leaves. The fragment that defines the CTAP trailing-field repair helpers."""
-
-    return _fragment("ctap")
-
-
-@pytest.fixture
-def ctap_parse_runtime():
-    """The fragment that defines the CTAP field parsers and converters."""
-
-    return _fragment("ctap")
-
-
-@pytest.fixture
-def ctap_interpret_runtime():
-    """The fragment that defines the CTAP interpretation and expanded JSON."""
+    """The submodule that classifies, parses, interprets and repairs CTAP payloads."""
 
     return _fragment("ctap")
 
 
 @pytest.fixture
 def response():
-    """The fragment that defines the decoder payload and result conversion. The fragment that defines the credential payload conversion leaves."""
+    """The submodule that converts a decoded result into the decoder response."""
 
     return _fragment("response")
 
 
 @pytest.fixture
 def summary():
-    """The fragment that defines the summary rendering helpers. The fragment that defines the summary field formatting leaves."""
+    """The submodule that renders the human-readable summary lines."""
 
     return _fragment("summary")
 
 
 @pytest.fixture
 def cbor_parser():
-    """The fragment that defines the strict CBOR parsing primitives. The fragment that defines the lenient CBOR decoding primitives."""
+    """The submodule that parses CBOR: strict, lenient and sequence forms."""
 
     return _fragment("cbor_parser")
 
 
 @pytest.fixture
 def binary():
-    """The fragment that defines the binary and COSE key extractors."""
+    """The submodule that extracts and displays binary payload fields."""
 
     return _fragment("binary")
 
 
 @pytest.fixture
 def keys():
-    """The fragment that defines the mapping-key and JSON-safety helpers."""
+    """The submodule that coerces and varies CBOR mapping keys."""
 
     return _fragment("keys")
 
 
 @pytest.fixture
 def certificates():
-    """The fragment that defines the certificate summary line builders. The fragment that defines the certificate extension line builders."""
+    """The submodule that summarises and converts X.509 certificates."""
 
     return _fragment("certificates")
 
