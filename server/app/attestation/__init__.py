@@ -10,11 +10,11 @@ from __future__ import annotations
 
 from .. import config
 from . import (
-    aaguid_leaf,
+    aaguid,
     certificates,
     checks,
-    classical_runtime,
-    encoding_leaf,
+    classical,
+    formatting,
     pqc,
     runtime_state,
     trust,
@@ -43,24 +43,24 @@ app = config.app
 AAGUID_EXTENSION_OID = runtime_state.AAGUID_EXTENSION_OID
 EXTENSION_DISPLAY_METADATA = runtime_state.EXTENSION_DISPLAY_METADATA
 _PQC_ALGORITHM_NAME_TO_ID = pqc._PQC_ALGORITHM_NAME_TO_ID
-CRED_PROTECT_LABELS = aaguid_leaf.CRED_PROTECT_LABELS
+CRED_PROTECT_LABELS = aaguid.CRED_PROTECT_LABELS
 
 # AAGUID, CredProtect, and authenticator extension helpers.
-augment_aaguid_fields = aaguid_leaf.augment_aaguid_fields
-coerce_aaguid_hex = aaguid_leaf.coerce_aaguid_hex
-coerce_non_negative_int = aaguid_leaf.coerce_non_negative_int
-describe_cred_protect = aaguid_leaf.describe_cred_protect
-extract_min_pin_length = aaguid_leaf.extract_min_pin_length
-normalize_aaguid_string = aaguid_leaf.normalize_aaguid_string
-summarize_authenticator_extensions = aaguid_leaf.summarize_authenticator_extensions
+augment_aaguid_fields = aaguid.augment_aaguid_fields
+coerce_aaguid_hex = aaguid.coerce_aaguid_hex
+coerce_non_negative_int = aaguid.coerce_non_negative_int
+describe_cred_protect = aaguid.describe_cred_protect
+extract_min_pin_length = aaguid.extract_min_pin_length
+normalize_aaguid_string = aaguid.normalize_aaguid_string
+summarize_authenticator_extensions = aaguid.summarize_authenticator_extensions
 
 # Hex, base64url, and JSON encoding helpers.
-colon_hex = encoding_leaf.colon_hex
-decode_asn1_octet_string = encoding_leaf.decode_asn1_octet_string
-encode_base64url = encoding_leaf.encode_base64url
-format_hex_bytes_lines = encoding_leaf.format_hex_bytes_lines
-format_hex_string_lines = encoding_leaf.format_hex_string_lines
-make_json_safe = encoding_leaf.make_json_safe
+colon_hex = formatting.colon_hex
+decode_asn1_octet_string = formatting.decode_asn1_octet_string
+encode_base64url = formatting.encode_base64url
+format_hex_bytes_lines = formatting.format_hex_bytes_lines
+format_hex_string_lines = formatting.format_hex_string_lines
+make_json_safe = formatting.make_json_safe
 
 # X.509 name and signature-algorithm helpers.
 _derive_certificate_algorithm_info = certificates._derive_certificate_algorithm_info
@@ -109,7 +109,7 @@ _trusted_ca_fingerprints = trust._trusted_ca_fingerprints
 _trusted_ca_subjects = trust._trusted_ca_subjects
 
 # Classical attestation root evaluation.
-_evaluate_classical_attestation_root = classical_runtime._evaluate_classical_attestation_root
+_evaluate_classical_attestation_root = classical._evaluate_classical_attestation_root
 
 # PQC certificate constraint checks.
 _check_pqc_certificate_constraints = pqc._check_pqc_certificate_constraints

@@ -23,7 +23,7 @@ from fido2.webauthn import RegistrationResponse
 
 from .. import encoding
 from ..encoding import encode_base64
-from . import encoding_leaf, trust
+from . import formatting, trust
 from .runtime_state import EXTENSION_DISPLAY_METADATA
 
 _HASH_NORMALISE_PATTERN = re.compile(r"sha-?(\d{3})$", re.IGNORECASE)
@@ -175,15 +175,15 @@ def _build_unknown_public_key_info(cert_bytes: bytes, error: Exception) -> tuple
         if candidate:
             raw_bytes = candidate
             info["publicKeyBase64"] = encode_base64(raw_bytes)
-            info["publicKeyHex"] = encoding_leaf.colon_hex(raw_bytes)
-            info["publicKeyHexLines"] = encoding_leaf.format_hex_bytes_lines(raw_bytes)
+            info["publicKeyHex"] = formatting.colon_hex(raw_bytes)
+            info["publicKeyHexLines"] = formatting.format_hex_bytes_lines(raw_bytes)
             key_size_bits = len(raw_bytes) * 8
 
     if isinstance(wrapped_public_key_bytes, (bytes, bytearray)):
         wrapped_bytes = bytes(wrapped_public_key_bytes)
         if wrapped_bytes and (raw_bytes is None or wrapped_bytes != raw_bytes):
             info["wrappedPublicKeyBase64"] = encode_base64(wrapped_bytes)
-            info["wrappedPublicKeyHexLines"] = encoding_leaf.format_hex_bytes_lines(wrapped_bytes)
+            info["wrappedPublicKeyHexLines"] = formatting.format_hex_bytes_lines(wrapped_bytes)
 
     if isinstance(mldsa_details, Mapping):
         length_public_key = mldsa_details.get("public_key_length")
@@ -250,7 +250,7 @@ def _serialize_public_key_info(public_key: Any) -> dict[str, Any]:
             {
                 "type": "ECC",
                 "curve": curve_name,
-                "uncompressedPoint": encoding_leaf.colon_hex(
+                "uncompressedPoint": formatting.colon_hex(
                     public_key.public_bytes(
                         encoding=serialization.Encoding.X962,
                         format=serialization.PublicFormat.UncompressedPoint,
@@ -285,7 +285,7 @@ def _serialize_public_key_info(public_key: Any) -> dict[str, Any]:
         info.update(
             {
                 "type": public_key.__class__.__name__,
-                "publicKeyHex": encoding_leaf.colon_hex(
+                "publicKeyHex": formatting.colon_hex(
                     public_key.public_bytes(
                         encoding=serialization.Encoding.Raw,
                         format=serialization.PublicFormat.Raw,
@@ -341,15 +341,15 @@ def _parse_fido_transport_bitfield(raw_value: bytes) -> list[str]:
 def _serialize_extension_value(ext: Any) -> Any:
     value = ext.value
     if isinstance(value, x509.SubjectKeyIdentifier):
-        hex_lines = encoding_leaf.format_hex_bytes_lines(value.digest)
+        hex_lines = formatting.format_hex_bytes_lines(value.digest)
         return {
-            "Hex value": hex_lines if hex_lines else encoding_leaf.colon_hex(value.digest),
+            "Hex value": hex_lines if hex_lines else formatting.colon_hex(value.digest),
         }
     if isinstance(value, x509.AuthorityKeyIdentifier):
         serialized: dict[str, Any] = {}
         if value.key_identifier:
-            hex_lines = encoding_leaf.format_hex_bytes_lines(value.key_identifier)
-            serialized["Hex value"] = hex_lines if hex_lines else encoding_leaf.colon_hex(value.key_identifier)
+            hex_lines = formatting.format_hex_bytes_lines(value.key_identifier)
+            serialized["Hex value"] = hex_lines if hex_lines else formatting.colon_hex(value.key_identifier)
         if value.authority_cert_serial_number is not None:
             serialized["Authority Cert Serial Number"] = (
                 f"{value.authority_cert_serial_number} "
@@ -371,7 +371,7 @@ def _serialize_extension_value(ext: Any) -> Any:
         oid = ext.oid.dotted_string
 
         if oid == "1.3.6.1.4.1.41482.13.1":
-            version_bytes = encoding_leaf.decode_asn1_octet_string(raw_bytes)
+            version_bytes = formatting.decode_asn1_octet_string(raw_bytes)
             if version_bytes:
                 version_components = "".join(
                     f"{byte}." for byte in version_bytes
@@ -381,7 +381,7 @@ def _serialize_extension_value(ext: Any) -> Any:
             return {"Hex value": raw_hex}
 
         if oid == "1.3.6.1.4.1.41482.2":
-            identifier_bytes = encoding_leaf.decode_asn1_octet_string(raw_bytes)
+            identifier_bytes = formatting.decode_asn1_octet_string(raw_bytes)
             text_value: str | None
             try:
                 text_value = identifier_bytes.decode("ascii").strip()
@@ -394,7 +394,7 @@ def _serialize_extension_value(ext: Any) -> Any:
             return payload
 
         if oid == "1.3.6.1.4.1.41482.1.1":
-            identifier_bytes = encoding_leaf.decode_asn1_octet_string(raw_bytes)
+            identifier_bytes = formatting.decode_asn1_octet_string(raw_bytes)
             try:
                 identifier_text = identifier_bytes.decode("ascii").strip()
             except Exception:  # pragma: no cover - defensive
@@ -405,7 +405,7 @@ def _serialize_extension_value(ext: Any) -> Any:
             return {"Hex value": raw_hex}
 
         if oid == "1.3.6.1.4.1.45724.1.1.4":
-            aaguid_bytes = encoding_leaf.decode_asn1_octet_string(raw_bytes)
+            aaguid_bytes = formatting.decode_asn1_octet_string(raw_bytes)
             if len(aaguid_bytes) == 16:
                 return {"AAGUID": aaguid_bytes.hex()}
             return {"Hex value": raw_hex}
@@ -473,7 +473,7 @@ def _build_certificate_summary(
         pk_summary_entries.append(("Type", "ECC"))
         if public_key.key_size:
             pk_summary_entries.append(("Public-Key", f"({public_key.key_size} bit)"))
-        ecc_point_lines = encoding_leaf.format_hex_bytes_lines(
+        ecc_point_lines = formatting.format_hex_bytes_lines(
             public_key.public_bytes(
                 encoding=serialization.Encoding.X962,
                 format=serialization.PublicFormat.UncompressedPoint,
@@ -490,7 +490,7 @@ def _build_certificate_summary(
             pk_summary_entries.append(("Public-Key", f"({public_key.key_size} bit)"))
         numbers = public_key.public_numbers()
         modulus_bytes = numbers.n.to_bytes((numbers.n.bit_length() + 7) // 8, "big")
-        modulus_lines = encoding_leaf.format_hex_bytes_lines(modulus_bytes)
+        modulus_lines = formatting.format_hex_bytes_lines(modulus_bytes)
         if modulus_lines:
             pk_summary_entries.append(("Modulus", modulus_lines))
         pk_summary_entries.append(("Exponent", str(numbers.e)))
@@ -501,7 +501,7 @@ def _build_certificate_summary(
             encoding=serialization.Encoding.Raw,
             format=serialization.PublicFormat.Raw,
         )
-        raw_lines = encoding_leaf.format_hex_bytes_lines(raw_bytes)
+        raw_lines = formatting.format_hex_bytes_lines(raw_bytes)
         if raw_lines:
             pk_summary_entries.append(("Public Key", raw_lines))
     else:
@@ -592,7 +592,7 @@ def _build_certificate_summary(
             hex_value = fingerprints.get(label)
             if not hex_value:
                 continue
-            colon_lines = encoding_leaf.format_hex_string_lines(hex_value)
+            colon_lines = formatting.format_hex_string_lines(hex_value)
             _append_line(f"    {label.upper()}:")
             for line in colon_lines:
                 _append_line(f"        {line}")
@@ -604,7 +604,7 @@ def _build_certificate_summary(
     except x509.ExtensionNotFound:
         ski_lines: list[str] = []
     else:
-        ski_lines = encoding_leaf.format_hex_bytes_lines(ski_extension.value.digest)
+        ski_lines = formatting.format_hex_bytes_lines(ski_extension.value.digest)
 
     if ski_lines:
         _append_blank_line()
@@ -745,9 +745,9 @@ def serialize_attestation_certificate(cert_bytes: bytes) -> Any:
         public_key_info = _serialize_public_key_info(public_key)
 
     signature_bytes = certificate.signature
-    signature_lines = encoding_leaf.format_hex_bytes_lines(signature_bytes)
+    signature_lines = formatting.format_hex_bytes_lines(signature_bytes)
     signature_hex = signature_bytes.hex()
-    signature_colon = encoding_leaf.colon_hex(signature_bytes)
+    signature_colon = formatting.colon_hex(signature_bytes)
 
     try:
         signature_hash_algorithm = certificate.signature_hash_algorithm
@@ -920,7 +920,7 @@ def extract_attestation_details(
     attestation_object = registration.response.attestation_object
     attestation_format = getattr(attestation_object, "fmt", None) or "none"
     attestation_statement = attestation_object.att_stmt or {}
-    attestation_object_b64 = encoding_leaf.encode_base64url(bytes(attestation_object))
+    attestation_object_b64 = formatting.encode_base64url(bytes(attestation_object))
 
     if isinstance(attestation_statement, Mapping):
         cert_chain = attestation_statement.get("x5c") or []
@@ -951,7 +951,7 @@ def extract_attestation_details(
     client_data = registration.response.client_data
     client_data_b64 = getattr(client_data, "b64", None)
     if client_data_b64 is None:
-        client_data_b64 = encoding_leaf.encode_base64url(bytes(client_data))
+        client_data_b64 = formatting.encode_base64url(bytes(client_data))
 
     extension_outputs = registration.client_extension_results
     if extension_outputs:
