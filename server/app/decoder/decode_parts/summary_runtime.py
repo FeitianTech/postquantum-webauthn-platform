@@ -4,26 +4,8 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from . import binary_extract
+from . import binary_extract, certificate_extensions, certificate_summary, summary_leaf
 from .binary_extract import _extract_hex_from_binary
-from .certificate_extensions import _build_certificate_extensions_lines
-from .certificate_summary import (
-    _build_fingerprint_lines,
-    _build_signature_lines,
-    _build_subject_key_identifier_lines,
-    _build_subject_public_key_info_lines,
-    _format_certificate_time,
-)
-from .summary_leaf import (
-    _append_multiline_field,
-    _append_simple_field,
-    _build_authenticator_data_lines,
-    _collect_attested_info,
-    _format_boolean,
-    _format_counter_value,
-    _format_flag_line,
-    _format_json_block,
-)
 
 
 def _format_result_summary(result: dict[str, Any]) -> str:
@@ -117,10 +99,10 @@ def _format_certificate_summary(result: dict[str, Any]) -> list[str]:
     decoded = result.get("decoded") if isinstance(result.get("decoded"), Mapping) else {}
     certificate_lines = _build_certificate_summary_lines(decoded)
     if not certificate_lines:
-        certificate_lines = _format_json_block(decoded)
+        certificate_lines = summary_leaf._format_json_block(decoded)
 
     lines: list[str] = [f"Detected type:\t{base_type}"]
-    _append_multiline_field(
+    summary_leaf._append_multiline_field(
         lines,
         "Certificate",
         certificate_lines,
@@ -132,9 +114,9 @@ def _format_certificate_summary(result: dict[str, Any]) -> list[str]:
 
 def _format_json_summary(result: dict[str, Any]) -> list[str]:
     decoded = result.get("decoded")
-    json_lines = _format_json_block(decoded)
+    json_lines = summary_leaf._format_json_block(decoded)
     lines: list[str] = ["Detected type:\tJSON"]
-    _append_multiline_field(lines, "JSON", json_lines, indent_str="  ")
+    summary_leaf._append_multiline_field(lines, "JSON", json_lines, indent_str="  ")
     return lines
 
 
@@ -153,12 +135,12 @@ def _format_cbor_summary(result: dict[str, Any]) -> list[str]:
             lines[0] = f"Detected type:\tCBOR ({meaning})"
         code_hex = ctap_info.get("codeHex")
         code_value = code_hex or ctap_info.get("code")
-        _append_simple_field(lines, "CTAP code", code_value)
+        summary_leaf._append_simple_field(lines, "CTAP code", code_value)
         category = ctap_info.get("kind") or ctap_info.get("category")
-        _append_simple_field(lines, "CTAP type", category)
+        summary_leaf._append_simple_field(lines, "CTAP type", category)
         payload_length = ctap_info.get("payloadLength")
         if payload_length is not None:
-            _append_simple_field(lines, "CBOR payload length", payload_length)
+            summary_leaf._append_simple_field(lines, "CBOR payload length", payload_length)
 
     if isinstance(ctap_decoded, Mapping) and ctap_decoded:
         response_labels: list[str] = []
@@ -168,19 +150,19 @@ def _format_cbor_summary(result: dict[str, Any]) -> list[str]:
             response_labels.append("GetAssertion response")
         if response_labels:
             lines.append(f"CTAP interpretation:\t{', '.join(response_labels)}")
-        interpreted_lines = _format_json_block(ctap_decoded)
-        _append_multiline_field(lines, "CTAP decoded", interpreted_lines, indent_str="  ")
+        interpreted_lines = summary_leaf._format_json_block(ctap_decoded)
+        summary_leaf._append_multiline_field(lines, "CTAP decoded", interpreted_lines, indent_str="  ")
 
     if isinstance(expanded_json, Mapping):
-        expanded_lines = _format_json_block(expanded_json)
-        _append_multiline_field(lines, "Expanded JSON", expanded_lines, indent_str="  ")
+        expanded_lines = summary_leaf._format_json_block(expanded_json)
+        summary_leaf._append_multiline_field(lines, "Expanded JSON", expanded_lines, indent_str="  ")
 
     if decoded_value is not None:
-        value_lines = _format_json_block(decoded_value)
-        _append_multiline_field(lines, "Decoded value", value_lines, indent_str="  ")
+        value_lines = summary_leaf._format_json_block(decoded_value)
+        summary_leaf._append_multiline_field(lines, "Decoded value", value_lines, indent_str="  ")
     elif decoded and not expanded_json and not ctap_decoded:
-        json_lines = _format_json_block(decoded)
-        _append_multiline_field(lines, "CBOR", json_lines, indent_str="  ")
+        json_lines = summary_leaf._format_json_block(decoded)
+        summary_leaf._append_multiline_field(lines, "CBOR", json_lines, indent_str="  ")
 
     return lines
 
@@ -191,11 +173,11 @@ def _format_generic_summary(result: dict[str, Any]) -> list[str]:
 
     decoded = result.get("decoded")
     if decoded is not None:
-        _append_multiline_field(lines, "Decoded", _format_json_block(decoded), indent_str="  ")
+        summary_leaf._append_multiline_field(lines, "Decoded", summary_leaf._format_json_block(decoded), indent_str="  ")
     else:
         binary = result.get("binary")
         if binary is not None:
-            _append_multiline_field(lines, "Binary", _format_json_block(binary), indent_str="  ")
+            summary_leaf._append_multiline_field(lines, "Binary", summary_leaf._format_json_block(binary), indent_str="  ")
 
     return lines
 
@@ -231,8 +213,8 @@ def _build_certificate_summary_lines(decoded: Any) -> list[str]:
 
     validity = decoded.get("validity")
     if isinstance(validity, Mapping):
-        not_before = _format_certificate_time(validity.get("notBefore"))
-        not_after = _format_certificate_time(validity.get("notAfter"))
+        not_before = certificate_summary._format_certificate_time(validity.get("notBefore"))
+        not_after = certificate_summary._format_certificate_time(validity.get("notAfter"))
         if not_before or not_after:
             lines.append("Validity")
             if not_before:
@@ -244,12 +226,12 @@ def _build_certificate_summary_lines(decoded: Any) -> list[str]:
     if subject:
         lines.append(f"Subject: {subject}")
 
-    lines.extend(_build_subject_public_key_info_lines(decoded.get("publicKeyInfo")))
-    lines.extend(_build_certificate_extensions_lines(decoded.get("extensions")))
-    lines.extend(_build_signature_lines(decoded.get("signature")))
-    lines.extend(_build_fingerprint_lines(decoded.get("fingerprints")))
+    lines.extend(certificate_summary._build_subject_public_key_info_lines(decoded.get("publicKeyInfo")))
+    lines.extend(certificate_extensions._build_certificate_extensions_lines(decoded.get("extensions")))
+    lines.extend(certificate_summary._build_signature_lines(decoded.get("signature")))
+    lines.extend(certificate_summary._build_fingerprint_lines(decoded.get("fingerprints")))
 
-    ski_lines = _build_subject_key_identifier_lines(decoded)
+    ski_lines = certificate_summary._build_subject_key_identifier_lines(decoded)
     if ski_lines:
         lines.append("Subject key identifier:")
         lines.extend(ski_lines)
@@ -263,8 +245,8 @@ def _extend_with_authenticator_details(
     auth_bytes: bytes | None,
     response_context: Mapping[str, Any] | None = None,
 ) -> None:
-    data_lines = _build_authenticator_data_lines(auth_bytes, auth_details)
-    _append_multiline_field(lines, "Authenticator data", data_lines)
+    data_lines = summary_leaf._build_authenticator_data_lines(auth_bytes, auth_details)
+    summary_leaf._append_multiline_field(lines, "Authenticator data", data_lines)
 
     rp_hex = None
     flags_info = None
@@ -282,24 +264,24 @@ def _extend_with_authenticator_details(
             fallback_alg = None
             if isinstance(response_context, Mapping):
                 fallback_alg = response_context.get("publicKeyAlgorithm")
-            attested_info = _collect_attested_info(attested, auth_bytes, fallback_alg)
+            attested_info = summary_leaf._collect_attested_info(attested, auth_bytes, fallback_alg)
 
-    _append_simple_field(lines, "RP ID hash", rp_hex)
-    flag_line = _format_flag_line(flags_info)
-    _append_multiline_field(
+    summary_leaf._append_simple_field(lines, "RP ID hash", rp_hex)
+    flag_line = summary_leaf._format_flag_line(flags_info)
+    summary_leaf._append_multiline_field(
         lines,
         "Flags",
         [flag_line] if flag_line else [],
         force_multiline=True,
     )
-    _append_simple_field(lines, "Counter", _format_counter_value(sign_count))
+    summary_leaf._append_simple_field(lines, "Counter", summary_leaf._format_counter_value(sign_count))
 
     if attested_info:
-        _append_multiline_field(lines, "Credential data", attested_info.get("credential_lines", []))
-        _append_multiline_field(lines, "AAGUID", attested_info.get("aaguid_lines", []))
-        _append_simple_field(lines, "Credential ID", attested_info.get("credential_id"))
-        _append_simple_field(lines, "Key algorithm", attested_info.get("algorithm"))
-        _append_multiline_field(
+        summary_leaf._append_multiline_field(lines, "Credential data", attested_info.get("credential_lines", []))
+        summary_leaf._append_multiline_field(lines, "AAGUID", attested_info.get("aaguid_lines", []))
+        summary_leaf._append_simple_field(lines, "Credential ID", attested_info.get("credential_id"))
+        summary_leaf._append_simple_field(lines, "Key algorithm", attested_info.get("algorithm"))
+        summary_leaf._append_multiline_field(
             lines,
             "Public key",
             attested_info.get("public_key_lines", []),
@@ -309,29 +291,29 @@ def _extend_with_authenticator_details(
 
 def _extend_with_authenticator_extensions(lines: list[str], auth_details: Any) -> None:
     if not isinstance(auth_details, Mapping):
-        _append_simple_field(lines, "Authenticator extensions", None)
+        summary_leaf._append_simple_field(lines, "Authenticator extensions", None)
         return
 
     extensions = auth_details.get("extensions")
     if not isinstance(extensions, Mapping):
-        _append_simple_field(lines, "Authenticator extensions", None)
+        summary_leaf._append_simple_field(lines, "Authenticator extensions", None)
         return
 
     summary = extensions.get("summary")
     raw_value = extensions.get("raw")
     content = summary if summary is not None else raw_value
     if content is None:
-        _append_simple_field(lines, "Authenticator extensions", None)
+        summary_leaf._append_simple_field(lines, "Authenticator extensions", None)
         return
 
-    _append_multiline_field(lines, "Authenticator extensions", _format_json_block(content), indent_str="  ")
+    summary_leaf._append_multiline_field(lines, "Authenticator extensions", summary_leaf._format_json_block(content), indent_str="  ")
 
 
 def _extend_with_client_extensions(lines: list[str], extensions: Any) -> None:
     if extensions is None:
-        _append_simple_field(lines, "Client extensions", None)
+        summary_leaf._append_simple_field(lines, "Client extensions", None)
         return
-    _append_multiline_field(lines, "Client extensions", _format_json_block(extensions), indent_str="  ")
+    summary_leaf._append_multiline_field(lines, "Client extensions", summary_leaf._format_json_block(extensions), indent_str="  ")
 
 
 def _extend_with_attestation_section(
@@ -342,7 +324,7 @@ def _extend_with_attestation_section(
     include_certificates: bool = True,
 ) -> None:
     att_hex = _extract_hex_from_binary(attestation_entry)
-    _append_simple_field(lines, "Attestation object", att_hex)
+    summary_leaf._append_simple_field(lines, "Attestation object", att_hex)
 
     att_format = None
     certificates = None
@@ -350,7 +332,7 @@ def _extend_with_attestation_section(
         att_format = attestation_details.get("attestationFormat")
         certificates = attestation_details.get("attestationCertificate")
 
-    _append_simple_field(lines, "Att. format", att_format)
+    summary_leaf._append_simple_field(lines, "Att. format", att_format)
 
     if not include_certificates:
         lines.append("Att. certificates:\t")
@@ -361,10 +343,10 @@ def _extend_with_attestation_section(
         if isinstance(summary, str) and summary.strip():
             cert_lines = summary.splitlines()
         else:
-            cert_lines = _format_json_block(certificates)
-        _append_multiline_field(lines, "Att. certificates", cert_lines, indent_str="  ")
+            cert_lines = summary_leaf._format_json_block(certificates)
+        summary_leaf._append_multiline_field(lines, "Att. certificates", cert_lines, indent_str="  ")
     else:
-        _append_simple_field(lines, "Att. certificates", None)
+        summary_leaf._append_simple_field(lines, "Att. certificates", None)
 
 
 def _extend_with_client_data_entry(lines: list[str], client_data_entry: Any) -> None:
@@ -376,17 +358,17 @@ def _extend_with_client_data_entry(lines: list[str], client_data_entry: Any) -> 
 
 def _extend_with_client_data_details(lines: list[str], details: Any) -> None:
     if not isinstance(details, Mapping):
-        _append_simple_field(lines, "Client data", None)
-        _append_simple_field(lines, "Type", None)
-        _append_simple_field(lines, "Challenge", None)
-        _append_simple_field(lines, "Origin", None)
-        _append_simple_field(lines, "Cross-origin", None)
+        summary_leaf._append_simple_field(lines, "Client data", None)
+        summary_leaf._append_simple_field(lines, "Type", None)
+        summary_leaf._append_simple_field(lines, "Challenge", None)
+        summary_leaf._append_simple_field(lines, "Origin", None)
+        summary_leaf._append_simple_field(lines, "Cross-origin", None)
         return
 
     raw_json = details.get("rawJson")
     client_data_lines: list[str]
     if isinstance(raw_json, Mapping):
-        client_data_lines = _format_json_block(raw_json)
+        client_data_lines = summary_leaf._format_json_block(raw_json)
     else:
         raw_text = details.get("rawText")
         if isinstance(raw_text, str) and raw_text.strip():
@@ -397,9 +379,9 @@ def _extend_with_client_data_details(lines: list[str], details: Any) -> None:
                 for key in ("type", "challenge", "origin", "crossOrigin")
                 if key in details
             }
-            client_data_lines = _format_json_block(filtered)
+            client_data_lines = summary_leaf._format_json_block(filtered)
 
-    _append_multiline_field(lines, "Client data", client_data_lines, indent_str="  ")
+    summary_leaf._append_multiline_field(lines, "Client data", client_data_lines, indent_str="  ")
 
     type_value = details.get("type")
     challenge = details.get("challenge")
@@ -409,11 +391,11 @@ def _extend_with_client_data_details(lines: list[str], details: Any) -> None:
         challenge_value = challenge
     origin = details.get("origin")
     cross_origin_value = details.get("crossOrigin")
-    cross_origin_text = _format_boolean(cross_origin_value)
+    cross_origin_text = summary_leaf._format_boolean(cross_origin_value)
     if cross_origin_text is None and cross_origin_value is not None:
         cross_origin_text = str(cross_origin_value)
 
-    _append_simple_field(lines, "Type", type_value)
-    _append_simple_field(lines, "Challenge", challenge_value)
-    _append_simple_field(lines, "Origin", origin)
-    _append_simple_field(lines, "Cross-origin", cross_origin_text)
+    summary_leaf._append_simple_field(lines, "Type", type_value)
+    summary_leaf._append_simple_field(lines, "Challenge", challenge_value)
+    summary_leaf._append_simple_field(lines, "Origin", origin)
+    summary_leaf._append_simple_field(lines, "Cross-origin", cross_origin_text)
