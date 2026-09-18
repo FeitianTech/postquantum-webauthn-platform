@@ -20,7 +20,7 @@ def session_env(monkeypatch, tmp_path):
     config = pytest.importorskip("server.app.config")
     metadata = pytest.importorskip("server.app.metadata")
     session_store = pytest.importorskip("server.app.session_metadata_store")
-    runtime_state = pytest.importorskip("server.app.metadata_parts.runtime_state")
+    runtime_state = pytest.importorskip("server.app.metadata.runtime_state")
     pytest.importorskip("server.app.app")
 
     session_dir = tmp_path / "sessions"

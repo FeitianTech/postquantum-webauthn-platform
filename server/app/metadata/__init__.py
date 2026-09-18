@@ -1,14 +1,14 @@
 """Metadata handling utilities for the WebAuthn demo server.
 
-The implementation lives in :mod:`server.app.metadata_parts`; this module is the
-public face of it and re-exports the pieces callers use. Each fragment resolves
+The implementation lives in this package's submodules; this module is the public
+face of it and re-exports the pieces callers use. Each fragment resolves
 its own names through its own imports, so a name here is the same object the
 fragment defines -- patching one of these re-exports changes what callers of
 *this module* see, not what the fragments call.
 """
 from __future__ import annotations
 
-from .metadata_parts import (
+from . import (
     base_snapshot_runtime,
     cache_runtime,
     effective_snapshot_runtime,
