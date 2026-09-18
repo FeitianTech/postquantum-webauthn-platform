@@ -56,10 +56,10 @@ def test_advanced_authentication_failure_returns_failed_credential_id(monkeypatc
 
     monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FailingServer())
     monkeypatch.setattr(config_module, "determine_rp_id", lambda value=None: value or "example.com")
-    monkeypatch.setattr(advanced_algorithms, "_derive_algorithms_from_credentials_impl", lambda _credentials: [])
+    monkeypatch.setattr(advanced_algorithms, "_derive_algorithms_from_credentials", lambda _credentials: [])
     monkeypatch.setattr(
         advanced_parsing,
-        "_parse_client_supplied_credentials_impl",
+        "_parse_client_supplied_credentials",
         lambda _raw: (
             [{"id": credential_id, "data": {"public_key": {3: -7}}, "resident": True}],
             [],

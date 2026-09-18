@@ -28,10 +28,10 @@ def test_advanced_authenticate_complete_uses_request_state_fallback(monkeypatch,
 
     monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FakeServer())
     monkeypatch.setattr(config_module, "determine_rp_id", lambda value=None: value or "example.com")
-    monkeypatch.setattr(advanced_algorithms, "_derive_algorithms_from_credentials_impl", lambda _credentials: [])
+    monkeypatch.setattr(advanced_algorithms, "_derive_algorithms_from_credentials", lambda _credentials: [])
     monkeypatch.setattr(
         advanced_parsing,
-        "_parse_client_supplied_credentials_impl",
+        "_parse_client_supplied_credentials",
         lambda _raw: (
             [{"id": credential_id, "data": object(), "attachment": None, "algorithm": -7, "resident": True}],
             [],
@@ -93,10 +93,10 @@ def test_advanced_authenticate_complete_uses_advanced_rp_when_auth_rp_missing(mo
         "create_fido_server",
         lambda **kwargs: _FakeServer(rp_id=kwargs.get("rp_id"))
     )
-    monkeypatch.setattr(advanced_algorithms, "_derive_algorithms_from_credentials_impl", lambda _credentials: [])
+    monkeypatch.setattr(advanced_algorithms, "_derive_algorithms_from_credentials", lambda _credentials: [])
     monkeypatch.setattr(
         advanced_parsing,
-        "_parse_client_supplied_credentials_impl",
+        "_parse_client_supplied_credentials",
         lambda _raw: (
             [{"id": credential_id, "data": object(), "attachment": None, "algorithm": -7, "resident": True}],
             [],
@@ -137,7 +137,7 @@ def test_advanced_authenticate_complete_invalid_request_state_fallback_returns_4
 
     monkeypatch.setattr(
         advanced_parsing,
-        "_parse_client_supplied_credentials_impl",
+        "_parse_client_supplied_credentials",
         lambda _raw: (
             [{"id": credential_id, "data": object(), "attachment": None, "algorithm": -7, "resident": True}],
             [],
@@ -177,7 +177,7 @@ def test_advanced_authenticate_complete_reports_cookie_restore_failure(monkeypat
 
     monkeypatch.setattr(
         advanced_parsing,
-        "_parse_client_supplied_credentials_impl",
+        "_parse_client_supplied_credentials",
         lambda _raw: ([], [])
     )
 
@@ -272,10 +272,10 @@ def test_advanced_authenticate_complete_forwards_hash_algorithm_override(monkeyp
 
     monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FakeServer())
     monkeypatch.setattr(config_module, "determine_rp_id", lambda value=None: value or "example.com")
-    monkeypatch.setattr(advanced_algorithms, "_derive_algorithms_from_credentials_impl", lambda _credentials: [])
+    monkeypatch.setattr(advanced_algorithms, "_derive_algorithms_from_credentials", lambda _credentials: [])
     monkeypatch.setattr(
         advanced_parsing,
-        "_parse_client_supplied_credentials_impl",
+        "_parse_client_supplied_credentials",
         lambda _raw: (
             [{"id": credential_id, "data": object(), "attachment": None, "algorithm": -7, "resident": True}],
             [],
@@ -320,10 +320,10 @@ def test_advanced_authenticate_complete_defaults_hash_algorithm_when_override_in
 
     monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FakeServer())
     monkeypatch.setattr(config_module, "determine_rp_id", lambda value=None: value or "example.com")
-    monkeypatch.setattr(advanced_algorithms, "_derive_algorithms_from_credentials_impl", lambda _credentials: [])
+    monkeypatch.setattr(advanced_algorithms, "_derive_algorithms_from_credentials", lambda _credentials: [])
     monkeypatch.setattr(
         advanced_parsing,
-        "_parse_client_supplied_credentials_impl",
+        "_parse_client_supplied_credentials",
         lambda _raw: (
             [{"id": credential_id, "data": object(), "attachment": None, "algorithm": -7, "resident": True}],
             [],
@@ -366,10 +366,10 @@ def test_advanced_authenticate_complete_omits_sign_count_for_malformed_authentic
 
     monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FakeServer())
     monkeypatch.setattr(config_module, "determine_rp_id", lambda value=None: value or "example.com")
-    monkeypatch.setattr(advanced_algorithms, "_derive_algorithms_from_credentials_impl", lambda _credentials: [])
+    monkeypatch.setattr(advanced_algorithms, "_derive_algorithms_from_credentials", lambda _credentials: [])
     monkeypatch.setattr(
         advanced_parsing,
-        "_parse_client_supplied_credentials_impl",
+        "_parse_client_supplied_credentials",
         lambda _raw: (
             [{"id": credential_id, "data": object(), "attachment": None, "algorithm": -7, "resident": True}],
             [],

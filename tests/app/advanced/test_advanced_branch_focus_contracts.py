@@ -82,7 +82,7 @@ def test_advanced_authenticate_begin_returns_no_matching_credentials_for_invalid
 
     monkeypatch.setattr(
         advanced_parsing,
-        "_parse_client_supplied_credentials_impl",
+        "_parse_client_supplied_credentials",
         lambda _raw: (
             [_credential_record("not-bytes", resident=False)],
             [_serialized_record(resident=False)],
@@ -116,7 +116,7 @@ def test_advanced_authenticate_begin_resident_mode_reports_no_resident_keys_when
 
     monkeypatch.setattr(
         advanced_parsing,
-        "_parse_client_supplied_credentials_impl",
+        "_parse_client_supplied_credentials",
         lambda _raw: (
             [_credential_record("not-bytes", resident=True)],
             [_serialized_record(resident=True)],
@@ -151,7 +151,7 @@ def test_advanced_authenticate_begin_uses_algorithm_source_fallback_and_extensio
 
     monkeypatch.setattr(
         advanced_parsing,
-        "_parse_client_supplied_credentials_impl",
+        "_parse_client_supplied_credentials",
         lambda _raw: (
             [_credential_record("not-bytes", data=marker, resident=False)],
             [_serialized_record(resident=False)],
@@ -164,7 +164,7 @@ def test_advanced_authenticate_begin_uses_algorithm_source_fallback_and_extensio
         captured["algorithm_source"] = list(source)
         return [types.SimpleNamespace(alg=-7)]
 
-    monkeypatch.setattr(advanced_algorithms, "_derive_algorithms_from_credentials_impl", _derive)
+    monkeypatch.setattr(advanced_algorithms, "_derive_algorithms_from_credentials", _derive)
 
     _install_fake_auth_begin_server(monkeypatch, advanced_module, captured, config_module)
 
@@ -204,13 +204,13 @@ def test_advanced_authenticate_begin_largeblob_dict_passthrough_when_no_read_or_
 
     monkeypatch.setattr(
         advanced_parsing,
-        "_parse_client_supplied_credentials_impl",
+        "_parse_client_supplied_credentials",
         lambda _raw: (
             [_credential_record(b"credential", resident=True)],
             [_serialized_record(resident=True)],
         )
     )
-    monkeypatch.setattr(advanced_algorithms, "_derive_algorithms_from_credentials_impl", lambda _source: [])
+    monkeypatch.setattr(advanced_algorithms, "_derive_algorithms_from_credentials", lambda _source: [])
 
     captured = {}
     _install_fake_auth_begin_server(monkeypatch, advanced_module, captured, config_module)
@@ -237,13 +237,13 @@ def test_advanced_authenticate_begin_largeblob_non_dict_and_prf_passthrough(monk
 
     monkeypatch.setattr(
         advanced_parsing,
-        "_parse_client_supplied_credentials_impl",
+        "_parse_client_supplied_credentials",
         lambda _raw: (
             [_credential_record(b"credential", resident=True)],
             [_serialized_record(resident=True)],
         )
     )
-    monkeypatch.setattr(advanced_algorithms, "_derive_algorithms_from_credentials_impl", lambda _source: [])
+    monkeypatch.setattr(advanced_algorithms, "_derive_algorithms_from_credentials", lambda _source: [])
 
     captured = {}
     _install_fake_auth_begin_server(monkeypatch, advanced_module, captured, config_module)
@@ -328,10 +328,10 @@ def test_advanced_authenticate_complete_uses_legacy_session_credentials_fallback
         def authenticate_complete(self, *_args, **_kwargs):
             return _AuthResult()
 
-    monkeypatch.setattr(advanced_parsing, "_parse_client_supplied_credentials_impl", _parse)
+    monkeypatch.setattr(advanced_parsing, "_parse_client_supplied_credentials", _parse)
     monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FakeServer())
     monkeypatch.setattr(config_module, "determine_rp_id", lambda value=None: value or "example.com")
-    monkeypatch.setattr(advanced_algorithms, "_derive_algorithms_from_credentials_impl", lambda _source: [])
+    monkeypatch.setattr(advanced_algorithms, "_derive_algorithms_from_credentials", lambda _source: [])
 
     with config_module.app.test_client() as client:
         with client.session_transaction() as session_state:
@@ -423,7 +423,7 @@ def test_advanced_authenticate_complete_uses_request_rpid_sets_algorithms_and_si
 
     monkeypatch.setattr(
         advanced_parsing,
-        "_parse_client_supplied_credentials_impl",
+        "_parse_client_supplied_credentials",
         lambda _raw: (
             [_credential_record(credential_id, resident=True)],
             [_serialized_record(resident=True)],
@@ -431,7 +431,7 @@ def test_advanced_authenticate_complete_uses_request_rpid_sets_algorithms_and_si
     )
     monkeypatch.setattr(config_module, "create_fido_server", _create_fido_server)
     monkeypatch.setattr(config_module, "determine_rp_id", _determine_rp_id)
-    monkeypatch.setattr(advanced_algorithms, "_derive_algorithms_from_credentials_impl", _derive_algorithms)
+    monkeypatch.setattr(advanced_algorithms, "_derive_algorithms_from_credentials", _derive_algorithms)
 
     with config_module.app.test_client() as client:
         with client.session_transaction() as session_state:
@@ -477,7 +477,7 @@ def test_advanced_authenticate_complete_error_path_uses_failed_id_fallback_extra
 
     monkeypatch.setattr(
         advanced_parsing,
-        "_parse_client_supplied_credentials_impl",
+        "_parse_client_supplied_credentials",
         lambda _raw: (
             [_credential_record(credential_id, resident=True)],
             [_serialized_record(resident=True)],
@@ -485,7 +485,7 @@ def test_advanced_authenticate_complete_error_path_uses_failed_id_fallback_extra
     )
     monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FailingServer())
     monkeypatch.setattr(config_module, "determine_rp_id", lambda value=None: value or "example.com")
-    monkeypatch.setattr(advanced_algorithms, "_derive_algorithms_from_credentials_impl", lambda _source: [])
+    monkeypatch.setattr(advanced_algorithms, "_derive_algorithms_from_credentials", lambda _source: [])
 
     with config_module.app.test_client() as client:
         with client.session_transaction() as session_state:

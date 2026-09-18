@@ -85,7 +85,7 @@ def test_advanced_authenticate_complete_rejects_non_resident_in_resident_mode(mo
 
     monkeypatch.setattr(
         advanced_parsing,
-        "_parse_client_supplied_credentials_impl",
+        "_parse_client_supplied_credentials",
         lambda _raw: (
             [
                 {
@@ -125,7 +125,7 @@ def test_advanced_authenticate_complete_missing_state_returns_400(monkeypatch, a
 
     monkeypatch.setattr(
         advanced_parsing,
-        "_parse_client_supplied_credentials_impl",
+        "_parse_client_supplied_credentials",
         lambda _raw: (
             [
                 {
@@ -180,10 +180,10 @@ def test_advanced_authenticate_complete_custom_algorithm_does_not_bypass_verific
 
     monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FailingServer())
     monkeypatch.setattr(config_module, "determine_rp_id", lambda value=None: value or "example.com")
-    monkeypatch.setattr(advanced_algorithms, "_derive_algorithms_from_credentials_impl", lambda _credentials: [])
+    monkeypatch.setattr(advanced_algorithms, "_derive_algorithms_from_credentials", lambda _credentials: [])
     monkeypatch.setattr(
         advanced_parsing,
-        "_parse_client_supplied_credentials_impl",
+        "_parse_client_supplied_credentials",
         lambda _raw: (
             [
                 {
@@ -243,10 +243,10 @@ def test_advanced_authenticate_complete_custom_algorithm_bypass_requires_request
 
     monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FailingServer())
     monkeypatch.setattr(config_module, "determine_rp_id", lambda value=None: value or "example.com")
-    monkeypatch.setattr(advanced_algorithms, "_derive_algorithms_from_credentials_impl", lambda _credentials: [])
+    monkeypatch.setattr(advanced_algorithms, "_derive_algorithms_from_credentials", lambda _credentials: [])
     monkeypatch.setattr(
         advanced_parsing,
-        "_parse_client_supplied_credentials_impl",
+        "_parse_client_supplied_credentials",
         lambda _raw: (
             [
                 {
@@ -301,10 +301,10 @@ def test_advanced_authenticate_complete_custom_algorithm_bypass_rejects_non_sign
 
     monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FailingServer())
     monkeypatch.setattr(config_module, "determine_rp_id", lambda value=None: value or "example.com")
-    monkeypatch.setattr(advanced_algorithms, "_derive_algorithms_from_credentials_impl", lambda _credentials: [])
+    monkeypatch.setattr(advanced_algorithms, "_derive_algorithms_from_credentials", lambda _credentials: [])
     monkeypatch.setattr(
         advanced_parsing,
-        "_parse_client_supplied_credentials_impl",
+        "_parse_client_supplied_credentials",
         lambda _raw: (
             [
                 {

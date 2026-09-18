@@ -247,7 +247,7 @@ def resolve_state_and_registration_server(
     register_server = config.create_fido_server(rp_id=resolved_rp_id, rp_name=stored_rp_name)
     auth_data = register_server.register_complete(state, response)
 
-    tracing._log_authenticator_attestation_response_impl(
+    tracing._log_authenticator_attestation_response(
         attestation_format,
         auth_data,
         attestation_statement,
@@ -326,7 +326,7 @@ def build_registration_material(
     auth_data_bytes = bytes(auth_data)
     authenticator_data_hex = auth_data_bytes.hex()
     authenticator_data_hash = hashlib.sha256(auth_data_bytes).hexdigest()
-    registration_timestamp = tracing.datetime_from_timestamp_impl(credential_info["registration_time"])
+    registration_timestamp = tracing.datetime_from_timestamp(credential_info["registration_time"])
 
     rp_id_hash_hex = ""
     rp_id_hash_b64 = ""
@@ -515,7 +515,7 @@ def finalize_registration_completion(
         or artifact_record.get("credentialIdHex")
         or ""
     )
-    storage_id = summary._generate_storage_id_impl(str(storage_id_source))
+    storage_id = summary._generate_storage_id(str(storage_id_source))
 
     artifact_payload = {"schemaVersion": 1, "storedCredential": artifact_record}
     try:
@@ -538,7 +538,7 @@ def finalize_registration_completion(
         )
         return jsonify({"error": "Unable to persist credential artifact."}), 500
 
-    summary_credential = summary._summarize_stored_credential_impl(artifact_record, storage_id)
+    summary_credential = summary._summarize_stored_credential(artifact_record, storage_id)
 
     metadata_description: str | None = None
     if isinstance(metadata_summary, Mapping):
@@ -592,7 +592,7 @@ def finalize_registration_completion(
     return jsonify(response_payload)
 
 
-def advanced_register_complete_impl():
+def advanced_register_complete():
     data = request.get_json(silent=True) or {}
     prepared, error_response = prepare_register_complete_inputs(data)
     if error_response is not None:
@@ -741,7 +741,7 @@ def advanced_register_complete_impl():
         user_id_value = user_info.get("id", "")
         if user_id_value:
             try:
-                user_handle = binary._extract_binary_value_impl(user_id_value)
+                user_handle = binary._extract_binary_value(user_id_value)
                 if isinstance(user_handle, str):
                     user_handle = decode_hex(user_handle)
             except (ValueError, TypeError):
@@ -815,7 +815,7 @@ def advanced_register_complete_impl():
             except Exception:
                 raw_alg_value = None
 
-        algo = algorithms._coerce_cose_algorithm_impl(raw_alg_value)
+        algo = algorithms._coerce_cose_algorithm(raw_alg_value)
         credential_info["publicKeyAlgorithm"] = algo
         algoname = pqc.describe_algorithm(algo)
         pqc.log_algorithm_selection("registration", algo)
@@ -953,12 +953,12 @@ def configure_allowed_algorithms(
                 elif type_value is not None:
                     continue
 
-                alg_value = algorithms._coerce_cose_algorithm_impl(raw_alg_value)
+                alg_value = algorithms._coerce_cose_algorithm(raw_alg_value)
                 if alg_value is None:
                     continue
                 normalized_params.append({"type": "public-key", "alg": alg_value})
             else:
-                alg_value = algorithms._coerce_cose_algorithm_impl(param)
+                alg_value = algorithms._coerce_cose_algorithm(param)
                 if alg_value is None:
                     continue
                 normalized_params.append({"type": "public-key", "alg": alg_value})
@@ -1054,7 +1054,7 @@ def build_exclude_list(public_key: Mapping[str, Any]) -> list[Any]:
     if isinstance(exclude_credentials, list):
         for exclude_cred in exclude_credentials:
             if isinstance(exclude_cred, dict) and exclude_cred.get("type") == "public-key":
-                cred_id = binary._extract_binary_value_impl(exclude_cred.get("id", ""))
+                cred_id = binary._extract_binary_value(exclude_cred.get("id", ""))
                 if isinstance(cred_id, str):
                     cred_id = decode_hex(cred_id)
                 if cred_id:
@@ -1104,12 +1104,12 @@ def build_processed_extensions(public_key: Mapping[str, Any]) -> dict[str, Any]:
                 processed_eval = {}
                 if isinstance(prf_eval, dict):
                     if "first" in prf_eval:
-                        first_value = binary._extract_binary_value_impl(prf_eval["first"])
+                        first_value = binary._extract_binary_value(prf_eval["first"])
                         if isinstance(first_value, str):
                             first_value = decode_hex(first_value)
                         processed_eval["first"] = first_value
                     if "second" in prf_eval:
-                        second_value = binary._extract_binary_value_impl(prf_eval["second"])
+                        second_value = binary._extract_binary_value(prf_eval["second"])
                         if isinstance(second_value, str):
                             second_value = decode_hex(second_value)
                         processed_eval["second"] = second_value
@@ -1122,7 +1122,7 @@ def build_processed_extensions(public_key: Mapping[str, Any]) -> dict[str, Any]:
     return processed_extensions
 
 
-def advanced_register_begin_impl():
+def advanced_register_begin():
     data = request.get_json(silent=True)
 
     if not data or not data.get("publicKey"):
@@ -1151,7 +1151,7 @@ def advanced_register_begin_impl():
     user_id_value = user_info.get("id", "")
     if user_id_value:
         try:
-            user_id_bytes = binary._extract_binary_value_impl(user_id_value)
+            user_id_bytes = binary._extract_binary_value(user_id_value)
             if isinstance(user_id_bytes, str):
                 user_id_bytes = decode_hex(user_id_bytes)
         except (ValueError, TypeError) as exc:
@@ -1163,7 +1163,7 @@ def advanced_register_begin_impl():
     challenge_bytes = None
     if challenge_value:
         try:
-            challenge_bytes = binary._extract_binary_value_impl(challenge_value)
+            challenge_bytes = binary._extract_binary_value(challenge_value)
             if isinstance(challenge_bytes, str):
                 challenge_bytes = decode_hex(challenge_bytes)
         except (ValueError, TypeError) as exc:

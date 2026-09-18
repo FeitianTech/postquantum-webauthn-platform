@@ -274,7 +274,7 @@ def test_advanced_authenticate_complete_accepts_storedcredentials_without_dunder
 
     monkeypatch.setattr(config_module, "determine_rp_id", lambda value=None: value or "example.com")
     monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FakeServer())
-    monkeypatch.setattr(advanced_algorithms, "_derive_algorithms_from_credentials_impl", lambda _credentials: [])
+    monkeypatch.setattr(advanced_algorithms, "_derive_algorithms_from_credentials", lambda _credentials: [])
 
     with config_module.app.test_client() as client:
         with client.session_transaction() as session_state:
@@ -311,7 +311,7 @@ def test_advanced_authenticate_complete_accepts_credentials_fallback_field(monke
 
     monkeypatch.setattr(config_module, "determine_rp_id", lambda value=None: value or "example.com")
     monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FakeServer())
-    monkeypatch.setattr(advanced_algorithms, "_derive_algorithms_from_credentials_impl", lambda _credentials: [])
+    monkeypatch.setattr(advanced_algorithms, "_derive_algorithms_from_credentials", lambda _credentials: [])
 
     with config_module.app.test_client() as client:
         with client.session_transaction() as session_state:
