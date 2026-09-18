@@ -9,7 +9,7 @@ import json
 from collections.abc import Callable
 from typing import Any
 
-from cbor2 import (  # noqa: F401  # split-module namespace surface
+from cbor2 import (  # noqa: F401  # re-exported for callers and tests
     CBORSimpleValue,
     CBORTag,
     undefined,
@@ -18,66 +18,66 @@ from cbor2 import (  # noqa: F401  # split-module namespace surface
 # Many imported names are intentionally re-exported for callers and tests that
 # reach encoder internals directly via `server.app.decoder.encode`.
 from .binary_decode import (
-    _maybe_decode_bytes,  # noqa: F401  # split-module namespace surface
-    _require_bytes,  # noqa: F401  # split-module namespace surface
-    _require_certificate_bytes,  # noqa: F401  # split-module namespace surface
+    _maybe_decode_bytes,  # noqa: F401  # re-exported for callers and tests
+    _require_bytes,  # noqa: F401  # re-exported for callers and tests
+    _require_certificate_bytes,  # noqa: F401  # re-exported for callers and tests
 )
 from .binary_extract import (
-    _determine_pem_label,  # noqa: F401  # split-module namespace surface
-    _extract_binary_input,  # noqa: F401  # split-module namespace surface
-    _extract_generic_binary_payload,  # noqa: F401  # split-module namespace surface
-    _normalize_pem_label,  # noqa: F401  # split-module namespace surface
+    _determine_pem_label,  # noqa: F401  # re-exported for callers and tests
+    _extract_binary_input,  # noqa: F401  # re-exported for callers and tests
+    _extract_generic_binary_payload,  # noqa: F401  # re-exported for callers and tests
+    _normalize_pem_label,  # noqa: F401  # re-exported for callers and tests
 )
 from .cbor_canonical import (
-    _CanonicalCBOREncoder,  # noqa: F401  # split-module namespace surface
-    _encode_canonical_float,  # noqa: F401  # split-module namespace surface
-    _encode_major_type_with_length,  # noqa: F401  # split-module namespace surface
-    _encode_unsigned_integer,  # noqa: F401  # split-module namespace surface
+    _CanonicalCBOREncoder,  # noqa: F401  # re-exported for callers and tests
+    _encode_canonical_float,  # noqa: F401  # re-exported for callers and tests
+    _encode_major_type_with_length,  # noqa: F401  # re-exported for callers and tests
+    _encode_unsigned_integer,  # noqa: F401  # re-exported for callers and tests
 )
 from .ctap_encode import (
-    _determine_ctap_prefix,  # noqa: F401  # split-module namespace surface
-    _encode_ctap_from_decoded,  # noqa: F401  # split-module namespace surface
-    _encode_ctap_from_structure,  # noqa: F401  # split-module namespace surface
-    _encode_get_assertion_request,  # noqa: F401  # split-module namespace surface
-    _encode_get_assertion_response,  # noqa: F401  # split-module namespace surface
-    _encode_make_credential_request,  # noqa: F401  # split-module namespace surface
-    _encode_make_credential_response,  # noqa: F401  # split-module namespace surface
+    _determine_ctap_prefix,  # noqa: F401  # re-exported for callers and tests
+    _encode_ctap_from_decoded,  # noqa: F401  # re-exported for callers and tests
+    _encode_ctap_from_structure,  # noqa: F401  # re-exported for callers and tests
+    _encode_get_assertion_request,  # noqa: F401  # re-exported for callers and tests
+    _encode_get_assertion_response,  # noqa: F401  # re-exported for callers and tests
+    _encode_make_credential_request,  # noqa: F401  # re-exported for callers and tests
+    _encode_make_credential_response,  # noqa: F401  # re-exported for callers and tests
 )
 from .ctap_fields import (
-    _ctap_key_matches,  # noqa: F401  # split-module namespace surface
-    _encode_allow_list,  # noqa: F401  # split-module namespace surface
-    _encode_attestation_statement,  # noqa: F401  # split-module namespace surface
-    _encode_credential_descriptor,  # noqa: F401  # split-module namespace surface
-    _encode_ctap_user,  # noqa: F401  # split-module namespace surface
-    _ensure_bool,  # noqa: F401  # split-module namespace surface
-    _ensure_int,  # noqa: F401  # split-module namespace surface
-    _ensure_text,  # noqa: F401  # split-module namespace surface
-    _get_ctap_field_value,  # noqa: F401  # split-module namespace surface
-    _require_mapping,  # noqa: F401  # split-module namespace surface
+    _ctap_key_matches,  # noqa: F401  # re-exported for callers and tests
+    _encode_allow_list,  # noqa: F401  # re-exported for callers and tests
+    _encode_attestation_statement,  # noqa: F401  # re-exported for callers and tests
+    _encode_credential_descriptor,  # noqa: F401  # re-exported for callers and tests
+    _encode_ctap_user,  # noqa: F401  # re-exported for callers and tests
+    _ensure_bool,  # noqa: F401  # re-exported for callers and tests
+    _ensure_int,  # noqa: F401  # re-exported for callers and tests
+    _ensure_text,  # noqa: F401  # re-exported for callers and tests
+    _get_ctap_field_value,  # noqa: F401  # re-exported for callers and tests
+    _require_mapping,  # noqa: F401  # re-exported for callers and tests
 )
 from .ctap_numeric import (
-    _classify_ctap_numeric_mapping,  # noqa: F401  # split-module namespace surface
-    _coerce_ctap_numeric_key,  # noqa: F401  # split-module namespace surface
-    _extract_ctap_numeric_payload,  # noqa: F401  # split-module namespace surface
-    _normalize_ctap_extra_value,  # noqa: F401  # split-module namespace surface
-    _sanitize_ctap_numeric_mapping,  # noqa: F401  # split-module namespace surface
-    _sanitize_nested_extra_key,  # noqa: F401  # split-module namespace surface
+    _classify_ctap_numeric_mapping,  # noqa: F401  # re-exported for callers and tests
+    _coerce_ctap_numeric_key,  # noqa: F401  # re-exported for callers and tests
+    _extract_ctap_numeric_payload,  # noqa: F401  # re-exported for callers and tests
+    _normalize_ctap_extra_value,  # noqa: F401  # re-exported for callers and tests
+    _sanitize_ctap_numeric_mapping,  # noqa: F401  # re-exported for callers and tests
+    _sanitize_nested_extra_key,  # noqa: F401  # re-exported for callers and tests
 )
 from .handlers_basic import (
     _encode_attestation_object,
     _encode_authenticator_data,
-    _encode_base64_value,  # noqa: F401  # split-module namespace surface
-    _encode_base64url_value,  # noqa: F401  # split-module namespace surface
-    _encode_binary_value,  # noqa: F401  # split-module namespace surface
+    _encode_base64_value,  # noqa: F401  # re-exported for callers and tests
+    _encode_base64url_value,  # noqa: F401  # re-exported for callers and tests
+    _encode_binary_value,  # noqa: F401  # re-exported for callers and tests
     _encode_client_data,
     _encode_der_value,
-    _encode_hex_value,  # noqa: F401  # split-module namespace surface
+    _encode_hex_value,  # noqa: F401  # re-exported for callers and tests
     _encode_json_value,
     _encode_pem_value,
     _encode_public_key_credential,
     _encode_x509_certificate,
     _normalize_encoding_format,
-    _prepare_encoder_response,  # noqa: F401  # split-module namespace surface
+    _prepare_encoder_response,  # noqa: F401  # re-exported for callers and tests
 )
 from .handlers_cbor import (
     _encode_cbor_value,
