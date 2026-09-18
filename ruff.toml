@@ -45,21 +45,12 @@ select = ["E4", "E7", "E9", "F", "I", "UP006", "UP007", "UP035", "UP045"]
 # rebinding was removed. `server/app/metadata_parts/`,
 # `server/app/attestation_parts/` and `server/app/decoder/decode_parts/` all
 # resolve their own names through real imports and stay at zero.
-
-[lint.per-file-ignores]
-# F401 is structurally wrong in the two remaining "parent" modules of the
-# split-module layout. Each one is a namespace carrier for its `*_parts/`
-# fragments: routes/advanced.py and routes/simple.py pass themselves
-# (`_self_module()`) into their fragments, which then read names straight off the
-# module (e.g. `advanced_module.request.get_json(...)`). So the parent imports
-# names its own body never mentions, ruff reports them unused, and deleting them
-# breaks the app at runtime. UP035 is ignored here for the same reason: the
-# fragments still write `Dict`/`List`/`Set`/`Tuple` and resolve them through the
-# parent, so the parent has to keep the legacy `typing` names until those
-# fragments can import their own.
 #
-# metadata.py, attestation.py and decoder/decode.py used to need these ignores.
-# None does now: each is a thin re-export of its `*_parts/` package, every name
-# it exposes is a plain assignment, and nothing any of them imports is unused.
-"server/app/routes/advanced.py" = ["F401", "UP035"]
-"server/app/routes/simple.py" = ["F401", "UP035"]
+# `routes/advanced.py` and `routes/simple.py` were the last two carriers, and they
+# coupled differently: rather than rebinding, they passed themselves into their
+# fragments (`_self_module()`) and the fragments read names off the parameter. That
+# shape produces no F821 at all -- to ruff the parameter is just a parameter -- so
+# F821 could not measure it. The meters there were the 498 `advanced_module.` /
+# `simple_module.` reads and the 107 F401/UP035 findings the two per-file-ignores
+# for those files were suppressing. Both are now zero, the ignores are gone, and this
+# file has no [lint.per-file-ignores] section left at all.
