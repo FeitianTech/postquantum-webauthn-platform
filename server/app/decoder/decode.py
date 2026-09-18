@@ -328,10 +328,7 @@ def _install_runtime_bindings(bindings: Mapping[str, Callable[..., Any]]) -> Non
 
 _RUNTIME_REBOUND_CACHE: dict[Callable[..., Any], Callable[..., Any]] = {}
 
-_PEM_CERT_PATTERN = re.compile(
-    r"-----BEGIN CERTIFICATE-----\s*(?P<body>.*?)\s*-----END CERTIFICATE-----",
-    re.IGNORECASE | re.DOTALL,
-)
+_PEM_CERT_PATTERN = pipeline_runtime._PEM_CERT_PATTERN
 
 
 def decode_payload_text(value: str) -> dict[str, Any]:
