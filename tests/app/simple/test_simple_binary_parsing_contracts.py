@@ -54,14 +54,14 @@ def test_decode_binary_value_decodes_standard_base64_string():
     assert simple_module._decode_binary_value(encoded) == raw
 
 
-def test_decode_binary_value_falls_back_to_hex_when_base64_decoders_fail(monkeypatch):
+def test_decode_binary_value_falls_back_to_hex_when_base64_decoders_fail(monkeypatch, simple_binary_helpers):
     simple_module = pytest.importorskip("server.app.routes.simple")
 
     def _raise_decode_error(*_args, **_kwargs):
         raise ValueError("decode failure")
 
-    monkeypatch.setattr(simple_module.base64, "urlsafe_b64decode", _raise_decode_error)
-    monkeypatch.setattr(simple_module.base64, "b64decode", _raise_decode_error)
+    monkeypatch.setattr(simple_binary_helpers.base64, "urlsafe_b64decode", _raise_decode_error)
+    monkeypatch.setattr(simple_binary_helpers.base64, "b64decode", _raise_decode_error)
 
     assert simple_module._decode_binary_value("414243") == b"ABC"
 
