@@ -15,7 +15,6 @@ from . import (
     binary,
     credential_list,
     parsing,
-    register_begin_impl,
     registration,
 )
 
@@ -36,7 +35,7 @@ __all__ = [
 ]
 
 # The COSE algorithms the simple flow offers, filtered by what fido2 supports.
-_SIMPLE_ALLOWED_ALGORITHMS = register_begin_impl._SIMPLE_ALLOWED_ALGORITHMS
+_SIMPLE_ALLOWED_ALGORITHMS = registration._SIMPLE_ALLOWED_ALGORITHMS
 
 # base64 padding and binary decode primitives.
 _add_base64_padding = binary._add_base64_padding_impl
@@ -52,7 +51,7 @@ _serialize_credential_for_session = parsing._serialize_credential_for_session_im
 
 @app.route("/api/register/begin", methods=["POST"])
 def register_begin():
-    return register_begin_impl.register_begin_impl()
+    return registration.registration()
 
 
 @app.route("/api/register/complete", methods=["POST"])
