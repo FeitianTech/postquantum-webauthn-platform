@@ -1,5 +1,4 @@
 """CBOR sequence decoding and CTAP repair helpers."""
-# pyright: reportUndefinedVariable=false  # the sibling runtime helpers and carrier bodies are not imported yet
 from __future__ import annotations
 
 from collections.abc import Mapping
@@ -11,7 +10,7 @@ import cbor2
 from fido2 import cbor
 
 from ...attestation import make_json_safe
-from . import ctap_runtime_parse, details_runtime
+from . import ctap_runtime_interpret, ctap_runtime_parse, details_runtime
 from .cbor_lenient import _lenient_decode_from, _structure_to_value
 from .cbor_sequence import _decode_cbor_sequence_impl
 from .cbor_strict import _CborDecodingError, _decode_cbor_structure
@@ -332,18 +331,18 @@ def _try_decode_cbor(data: bytes, encoding: str) -> dict[str, Any] | None:
 
     if isinstance(base_value, Mapping):
         hex_decoded_value = _hex_json_safe(base_value)
-        interpreted = _interpret_ctap_cbor_value(base_value)
+        interpreted = ctap_runtime_interpret._interpret_ctap_cbor_value(base_value)
         if interpreted is not None:
             ctap_decoded = _stringify_mapping_keys(_hex_json_safe(interpreted))
 
         if classification == "make_credential_output":
-            expanded_json = _build_make_credential_expanded_json(base_value)
+            expanded_json = ctap_runtime_interpret._build_make_credential_expanded_json(base_value)
         elif classification == "get_assertion_output":
-            expanded_json = _build_get_assertion_expanded_json(base_value, primary_bytes)
+            expanded_json = ctap_runtime_interpret._build_get_assertion_expanded_json(base_value, primary_bytes)
         elif classification == "make_credential_input":
-            expanded_json = _build_make_credential_request_expanded_json(base_value)
+            expanded_json = ctap_runtime_interpret._build_make_credential_request_expanded_json(base_value)
         elif classification == "get_assertion_input":
-            expanded_json = _build_get_assertion_request_expanded_json(base_value)
+            expanded_json = ctap_runtime_interpret._build_get_assertion_request_expanded_json(base_value)
     elif base_value is not None:
         hex_decoded_value = _hex_json_safe(base_value)
 

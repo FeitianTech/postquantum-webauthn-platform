@@ -172,9 +172,7 @@ def test_repair_get_assertion_entries_recovers_signature_from_lenient_map_entrie
     assert repaired_value_bytes_key[3] == b"\x99"
 
 
-def test_try_decode_cbor_merges_assertion_signature_for_direct_get_assertion_classification(
-    monkeypatch,
-):
+def test_try_decode_cbor_merges_assertion_signature_for_direct_get_assertion_classification(monkeypatch, ctap_interpret_runtime):
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     structure = {"byteLength": 1, "entries": [], "length": 0, "summary": "map[0]"}
@@ -194,12 +192,12 @@ def test_try_decode_cbor_merges_assertion_signature_for_direct_get_assertion_cla
         lambda structure, value, raw_bytes=None: (structure, {2: b"auth", 3: b"\xbb"}, b"\xbb"),
     )
     monkeypatch.setattr(
-        decode_module,
+        ctap_interpret_runtime,
         "_build_get_assertion_expanded_json",
         lambda _value, _raw: {"path": "direct"},
     )
     monkeypatch.setattr(
-        decode_module,
+        ctap_interpret_runtime,
         "_interpret_ctap_cbor_value",
         lambda _value: None,
     )
@@ -210,7 +208,7 @@ def test_try_decode_cbor_merges_assertion_signature_for_direct_get_assertion_cla
     assert result["decoded"]["expandedJson"]["path"] == "direct"
 
 
-def test_try_decode_cbor_promotes_other_classification_when_repair_finds_signature(monkeypatch):
+def test_try_decode_cbor_promotes_other_classification_when_repair_finds_signature(monkeypatch, ctap_interpret_runtime):
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     structure = {"byteLength": 1, "entries": [], "length": 0, "summary": "map[0]"}
@@ -230,12 +228,12 @@ def test_try_decode_cbor_promotes_other_classification_when_repair_finds_signatu
         lambda structure, value, raw_bytes=None: (structure, {2: b"auth", 3: b"\xaa"}, b"\xaa"),
     )
     monkeypatch.setattr(
-        decode_module,
+        ctap_interpret_runtime,
         "_build_get_assertion_expanded_json",
         lambda _value, _raw: {"path": "promoted"},
     )
     monkeypatch.setattr(
-        decode_module,
+        ctap_interpret_runtime,
         "_interpret_ctap_cbor_value",
         lambda _value: None,
     )
