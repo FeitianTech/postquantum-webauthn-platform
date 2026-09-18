@@ -8,7 +8,7 @@ from flask import jsonify, request
 from ... import credential_artifacts, metadata
 
 
-def api_get_advanced_credential_artifact_impl(advanced_module: Any, storage_id: str):
+def api_get_advanced_credential_artifact_impl(storage_id: str):
     metadata_session_id = metadata.ensure_metadata_session_id()
     artifact = credential_artifacts.load_credential_artifact(storage_id, session_id=metadata_session_id)
     if artifact is None:
@@ -17,7 +17,7 @@ def api_get_advanced_credential_artifact_impl(advanced_module: Any, storage_id: 
     return jsonify({"storageId": storage_id, "artifact": artifact})
 
 
-def api_get_advanced_credential_artifacts_bulk_impl(advanced_module: Any):
+def api_get_advanced_credential_artifacts_bulk_impl():
     data = request.get_json(silent=True) or {}
     raw_storage_ids = data.get("storageIds")
     if not isinstance(raw_storage_ids, list):
@@ -44,7 +44,7 @@ def api_get_advanced_credential_artifacts_bulk_impl(advanced_module: Any):
     return jsonify({"artifacts": artifacts})
 
 
-def api_put_advanced_credential_artifact_impl(advanced_module: Any, storage_id: str):
+def api_put_advanced_credential_artifact_impl(storage_id: str):
     data = request.get_json(silent=True) or {}
     merge = True
     if isinstance(data, Mapping) and "merge" in data:
@@ -71,7 +71,7 @@ def api_put_advanced_credential_artifact_impl(advanced_module: Any, storage_id: 
     return jsonify({"status": "OK"})
 
 
-def api_put_advanced_credential_snapshot_impl(advanced_module: Any, storage_id: str):
+def api_put_advanced_credential_snapshot_impl(storage_id: str):
     data = request.get_json(silent=True) or {}
     snapshot = data.get("snapshot")
     if snapshot is not None and not isinstance(snapshot, Mapping):
@@ -90,7 +90,7 @@ def api_put_advanced_credential_snapshot_impl(advanced_module: Any, storage_id: 
     return jsonify({"status": "OK"})
 
 
-def api_delete_advanced_credential_artifact_impl(advanced_module: Any, storage_id: str):
+def api_delete_advanced_credential_artifact_impl(storage_id: str):
     if not isinstance(storage_id, str) or not storage_id.strip():
         return jsonify(
             {"status": "failed", "error": "Invalid storage identifier."},

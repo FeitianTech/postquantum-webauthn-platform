@@ -64,7 +64,7 @@ def _server_supports_algorithm(algorithm: int | None) -> bool:
         return False
 
 
-def advanced_authenticate_complete_impl(advanced_module: Any):
+def advanced_authenticate_complete_impl():
     data = request.get_json(silent=True) or {}
 
     # Determined up front (peek, not pop) so that every response below can

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, MutableMapping
-from typing import Any
 
 from flask import jsonify, request, session
 
@@ -18,7 +17,7 @@ from ...attachments import normalize_attachment, resolve_effective_attachments
 from . import binary_helpers_impl, register_begin_support_impl
 
 
-def advanced_register_begin_impl(advanced_module: Any):
+def advanced_register_begin_impl():
     data = request.get_json(silent=True)
 
     if not data or not data.get("publicKey"):
