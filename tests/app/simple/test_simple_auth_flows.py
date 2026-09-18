@@ -238,7 +238,7 @@ def test_simple_authenticate_complete_missing_state_returns_400(monkeypatch):
             assert session_state.get("simple_credentials_email") == "user@example.com"
 
 
-def test_simple_register_complete_rejects_request_state_fallback(monkeypatch, metadata_module):
+def test_simple_register_complete_rejects_request_state_fallback(monkeypatch, metadata_module, device_logs_module):
     """A cold /complete with a self-chosen challenge must be rejected."""
 
     config_module = pytest.importorskip("server.app.config")
@@ -295,7 +295,7 @@ def test_simple_register_complete_rejects_request_state_fallback(monkeypatch, me
         saved["session_id"] = session_id
 
     monkeypatch.setattr(simple_module, "savekey", _fake_savekey)
-    monkeypatch.setattr(simple_module, "record_registration_event", lambda _event: None)
+    monkeypatch.setattr(device_logs_module, "record_registration_event", lambda _event: None)
 
     request_state = {"challenge": "fallback-register-state"}
 

@@ -604,7 +604,7 @@ def _resolve_for_pickle(module: str, name: str):
 # --------------------------------------------------------------------------
 
 
-def test_real_registration_round_trips_through_the_json_store(monkeypatch, tmp_path):
+def test_real_registration_round_trips_through_the_json_store(monkeypatch, tmp_path, device_logs_module):
     """A genuinely-signed registration must persist and read back intact.
 
     The unit tests above pin the codec; this one proves the codec covers what
@@ -615,7 +615,6 @@ def test_real_registration_round_trips_through_the_json_store(monkeypatch, tmp_p
 
     pytest.importorskip("server.app.app")
     config_module = pytest.importorskip("server.app.config")
-    simple_module = pytest.importorskip("server.app.routes.simple")
     ceremony = pytest.importorskip("tests.app.security.ceremony_helpers")
 
     root = tmp_path / "instance" / "session-credentials"
@@ -625,7 +624,7 @@ def test_real_registration_round_trips_through_the_json_store(monkeypatch, tmp_p
     monkeypatch.setattr(storage, "basepath", str(tmp_path / "flat"))
     (tmp_path / "flat").mkdir()
     monkeypatch.setattr(storage, "_using_gcs", lambda: False)
-    monkeypatch.setattr(simple_module, "record_registration_event", lambda _event: None)
+    monkeypatch.setattr(device_logs_module, "record_registration_event", lambda _event: None)
 
     # Any value the encoder cannot represent is logged; the flow must not need it.
     warnings: list[str] = []

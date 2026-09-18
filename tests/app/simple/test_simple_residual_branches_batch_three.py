@@ -126,7 +126,7 @@ def test_serialize_credential_for_session_accepts_hex_aaguid_alias():
         (-123, "Other (Classical)"),
     ],
 )
-def test_register_complete_handles_algorithm_and_large_blob_residual_paths(monkeypatch, algorithm: int, expected_name: str, metadata_module):
+def test_register_complete_handles_algorithm_and_large_blob_residual_paths(monkeypatch, algorithm: int, expected_name: str, metadata_module, device_logs_module):
     config_module = pytest.importorskip("server.app.config")
     simple_module = pytest.importorskip("server.app.routes.simple")
     pytest.importorskip("server.app.app")
@@ -173,7 +173,7 @@ def test_register_complete_handles_algorithm_and_large_blob_residual_paths(monke
     monkeypatch.setattr(metadata_module, "ensure_metadata_session_id", lambda: "meta-session")
     monkeypatch.setattr(simple_module, "readkey", lambda *_args, **_kwargs: [])
     monkeypatch.setattr(simple_module, "savekey", lambda *_args, **_kwargs: None)
-    monkeypatch.setattr(simple_module, "record_registration_event", lambda _event: None)
+    monkeypatch.setattr(device_logs_module, "record_registration_event", lambda _event: None)
 
     with config_module.app.test_client() as client:
         with client.session_transaction() as session_state:

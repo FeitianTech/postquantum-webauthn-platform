@@ -7,7 +7,7 @@ from typing import Any
 
 from flask import jsonify
 
-from ... import credential_artifacts
+from ... import credential_artifacts, device_logs
 
 
 def finalize_registration_completion(
@@ -83,7 +83,7 @@ def finalize_registration_completion(
         except Exception:
             cose_public_key = {}
 
-    event = advanced_module.RegistrationEvent(
+    event = device_logs.RegistrationEvent(
         timestamp=datetime.now(timezone.utc),
         rp_id=resolved_rp_id,
         user_id=user_handle,
@@ -100,7 +100,7 @@ def finalize_registration_completion(
         client_data_json=advanced_module._decode_base64url_bytes(client_data_json_b64),
     )
 
-    advanced_module.record_registration_event(event)
+    device_logs.record_registration_event(event)
 
     response_payload: dict[str, Any] = {
         "status": "OK",

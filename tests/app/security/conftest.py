@@ -29,7 +29,7 @@ def advanced_module():
 
 
 @pytest.fixture
-def simple_storage(simple_module, monkeypatch) -> dict[str, Any]:
+def simple_storage(simple_module, monkeypatch, device_logs_module) -> dict[str, Any]:
     """Neutralise simple-flow persistence and capture what it would store."""
 
     saved: dict[str, Any] = {}
@@ -41,12 +41,12 @@ def simple_storage(simple_module, monkeypatch) -> dict[str, Any]:
 
     monkeypatch.setattr(simple_module, "savekey", _savekey)
     monkeypatch.setattr(simple_module, "readkey", lambda *_a, **_k: [])
-    monkeypatch.setattr(simple_module, "record_registration_event", lambda _event: None)
+    monkeypatch.setattr(device_logs_module, "record_registration_event", lambda _event: None)
     return saved
 
 
 @pytest.fixture
-def advanced_storage(advanced_module, monkeypatch, credential_artifacts_module) -> list[Any]:
+def advanced_storage(advanced_module, monkeypatch, credential_artifacts_module, device_logs_module) -> list[Any]:
     """Neutralise advanced-flow persistence and capture stored artifacts."""
 
     stored: list[Any] = []
@@ -56,7 +56,7 @@ def advanced_storage(advanced_module, monkeypatch, credential_artifacts_module) 
         return True
 
     monkeypatch.setattr(credential_artifacts_module, "store_credential_artifact", _store)
-    monkeypatch.setattr(advanced_module, "record_registration_event", lambda _event: None)
+    monkeypatch.setattr(device_logs_module, "record_registration_event", lambda _event: None)
     return stored
 
 

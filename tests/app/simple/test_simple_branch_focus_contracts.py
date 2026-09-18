@@ -165,7 +165,7 @@ def test_simple_authenticate_complete_aborts_when_session_credentials_cannot_be_
     assert response.status_code == 400
 
 
-def test_simple_register_complete_covers_warning_metadata_transport_and_session_fallback_paths(monkeypatch, metadata_module):
+def test_simple_register_complete_covers_warning_metadata_transport_and_session_fallback_paths(monkeypatch, metadata_module, device_logs_module):
     config_module = pytest.importorskip("server.app.config")
     simple_module = pytest.importorskip("server.app.routes.simple")
     pytest.importorskip("server.app.app")
@@ -219,7 +219,7 @@ def test_simple_register_complete_covers_warning_metadata_transport_and_session_
         saved["session_id"] = session_id
 
     monkeypatch.setattr(simple_module, "savekey", _savekey)
-    monkeypatch.setattr(simple_module, "record_registration_event", lambda event: events.append(event))
+    monkeypatch.setattr(device_logs_module, "record_registration_event", lambda event: events.append(event))
 
     with config_module.app.test_client() as client:
         with client.session_transaction() as session_state:
