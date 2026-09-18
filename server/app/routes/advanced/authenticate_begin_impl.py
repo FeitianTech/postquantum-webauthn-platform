@@ -11,7 +11,7 @@ from ... import attestation, config
 from ...attachments import resolve_effective_attachments
 from ...challenge_registry import stamp_ceremony_state
 from ...encoding import decode_hex
-from . import algorithm_helpers_impl, binary_helpers_impl, parsing_helpers_impl
+from . import algorithms, binary, parsing
 
 
 def advanced_authenticate_begin_impl():
@@ -39,7 +39,7 @@ def advanced_authenticate_begin_impl():
     challenge_bytes = None
     if challenge_value:
         try:
-            challenge_bytes = binary_helpers_impl._extract_binary_value_impl(challenge_value)
+            challenge_bytes = binary._extract_binary_value_impl(challenge_value)
             if isinstance(challenge_bytes, str):
                 challenge_bytes = decode_hex(challenge_bytes)
         except (ValueError, TypeError) as exc:
@@ -72,7 +72,7 @@ def advanced_authenticate_begin_impl():
             raw_credentials_input = candidate
             break
 
-    stored_records, serialized_credentials = parsing_helpers_impl._parse_client_supplied_credentials_impl(raw_credentials_input)
+    stored_records, serialized_credentials = parsing._parse_client_supplied_credentials_impl(raw_credentials_input)
     if not stored_records:
         return jsonify(
             {"error": "No credentials detected. Please register a credential first."},
@@ -97,7 +97,7 @@ def advanced_authenticate_begin_impl():
             if not isinstance(allow_cred, dict) or allow_cred.get("type") != "public-key":
                 continue
 
-            cred_id = binary_helpers_impl._extract_binary_value_impl(allow_cred.get("id", ""))
+            cred_id = binary._extract_binary_value_impl(allow_cred.get("id", ""))
             if isinstance(cred_id, str):
                 try:
                     cred_id = decode_hex(cred_id)
@@ -192,7 +192,7 @@ def advanced_authenticate_begin_impl():
     else:
         algorithm_source = [record["data"] for record in stored_records if record.get("data") is not None]
 
-    derived_algorithms = algorithm_helpers_impl._derive_algorithms_from_credentials_impl(algorithm_source)
+    derived_algorithms = algorithms._derive_algorithms_from_credentials_impl(algorithm_source)
     if derived_algorithms:
         temp_server.allowed_algorithms = derived_algorithms
 
@@ -204,7 +204,7 @@ def advanced_authenticate_begin_impl():
                 if ext_value.get("read"):
                     processed_extensions["largeBlob"] = {"read": True}
                 elif ext_value.get("write"):
-                    write_value = binary_helpers_impl._extract_binary_value_impl(ext_value["write"])
+                    write_value = binary._extract_binary_value_impl(ext_value["write"])
                     if isinstance(write_value, str):
                         write_value = decode_hex(write_value)
                     processed_extensions["largeBlob"] = {"write": write_value}
@@ -217,12 +217,12 @@ def advanced_authenticate_begin_impl():
                 prf_eval = ext_value["eval"]
                 processed_eval = {}
                 if "first" in prf_eval:
-                    first_value = binary_helpers_impl._extract_binary_value_impl(prf_eval["first"])
+                    first_value = binary._extract_binary_value_impl(prf_eval["first"])
                     if isinstance(first_value, str):
                         first_value = decode_hex(first_value)
                     processed_eval["first"] = first_value
                 if "second" in prf_eval:
-                    second_value = binary_helpers_impl._extract_binary_value_impl(prf_eval["second"])
+                    second_value = binary._extract_binary_value_impl(prf_eval["second"])
                     if isinstance(second_value, str):
                         second_value = decode_hex(second_value)
                     processed_eval["second"] = second_value

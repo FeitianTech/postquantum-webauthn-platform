@@ -54,14 +54,14 @@ def _module(path: str):
 def advanced_algorithm_helpers():
     """The fragment that defines the COSE algorithm name, lookup and coercion helpers."""
 
-    return _advanced_fragment("algorithm_helpers_impl")
+    return _advanced_fragment("algorithms")
 
 
 @pytest.fixture
 def advanced_artifacts():
     """The fragment that defines the credential-artifact route bodies."""
 
-    return _advanced_fragment("artifacts_impl")
+    return _advanced_fragment("artifacts")
 
 
 @pytest.fixture
@@ -82,7 +82,7 @@ def advanced_authenticate_complete():
 def advanced_binary_helpers():
     """The fragment that defines the base64url and binary extraction helpers."""
 
-    return _advanced_fragment("binary_helpers_impl")
+    return _advanced_fragment("binary")
 
 
 @pytest.fixture
@@ -96,14 +96,14 @@ def advanced_constants():
 def advanced_logging_helpers():
     """The fragment that defines the attestation-response logging helpers."""
 
-    return _advanced_fragment("logging_helpers_impl")
+    return _advanced_fragment("tracing")
 
 
 @pytest.fixture
 def advanced_parsing_helpers():
     """The fragment that defines the client-supplied credential parsing helpers."""
 
-    return _advanced_fragment("parsing_helpers_impl")
+    return _advanced_fragment("parsing")
 
 
 @pytest.fixture
@@ -159,7 +159,7 @@ def advanced_register_complete_state():
 def advanced_summary_helpers():
     """The fragment that defines the storage-id and stored-credential summary helpers."""
 
-    return _advanced_fragment("summary_helpers_impl")
+    return _advanced_fragment("summary")
 
 
 # The simple submodules.

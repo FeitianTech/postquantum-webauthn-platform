@@ -6,7 +6,7 @@ from typing import Any
 from flask import jsonify, session
 
 from ... import config
-from . import logging_helpers_impl
+from . import tracing
 
 #: The ceremony challenge was taken from the server-side Flask session.
 CHALLENGE_SOURCE_SERVER = "server-session"
@@ -75,7 +75,7 @@ def resolve_state_and_registration_server(
     register_server = config.create_fido_server(rp_id=resolved_rp_id, rp_name=stored_rp_name)
     auth_data = register_server.register_complete(state, response)
 
-    logging_helpers_impl._log_authenticator_attestation_response_impl(
+    tracing._log_authenticator_attestation_response_impl(
         attestation_format,
         auth_data,
         attestation_statement,

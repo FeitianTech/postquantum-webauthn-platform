@@ -18,7 +18,7 @@ from ...challenge_registry import consume_ceremony_state
 from ...encoding import encode_base64url
 from ...sign_count import sign_count_status
 from .. import binary_helpers
-from . import algorithm_helpers_impl, binary_helpers_impl, parsing_helpers_impl
+from . import algorithms, binary, parsing
 
 #: The ceremony challenge was taken from the server-side Flask session.
 CHALLENGE_SOURCE_SERVER = "server-session"
@@ -139,12 +139,12 @@ def advanced_authenticate_complete_impl():
     stored_records: list[dict[str, Any]] = []
     serialized_credentials: list[dict[str, Any]] = []
     if isinstance(raw_credentials_input, list):
-        stored_records, serialized_credentials = parsing_helpers_impl._parse_client_supplied_credentials_impl(raw_credentials_input)
+        stored_records, serialized_credentials = parsing._parse_client_supplied_credentials_impl(raw_credentials_input)
 
     if not stored_records:
         legacy_serialized = session.pop("advanced_auth_credentials", [])
         if legacy_serialized:
-            stored_records, serialized_credentials = parsing_helpers_impl._parse_client_supplied_credentials_impl(
+            stored_records, serialized_credentials = parsing._parse_client_supplied_credentials_impl(
                 legacy_serialized,
             )
 
@@ -253,7 +253,7 @@ def advanced_authenticate_complete_impl():
         resolved_rp_id = config.determine_rp_id(stored_rp_id)
         auth_server = config.create_fido_server(rp_id=resolved_rp_id, rp_name=stored_rp_name)
 
-        derived_algorithms = algorithm_helpers_impl._derive_algorithms_from_credentials_impl(all_credentials)
+        derived_algorithms = algorithms._derive_algorithms_from_credentials_impl(all_credentials)
         if derived_algorithms:
             auth_server.allowed_algorithms = derived_algorithms
 
@@ -350,7 +350,7 @@ def advanced_authenticate_complete_impl():
             auth_data_b64 = credential_response.get("authenticatorData")
             if isinstance(auth_data_b64, str):
                 try:
-                    auth_data_bytes = binary_helpers_impl._decode_base64url_impl(auth_data_b64)
+                    auth_data_bytes = binary._decode_base64url_impl(auth_data_b64)
                     sign_count_value = AuthenticatorData(auth_data_bytes).counter
                 except Exception:
                     sign_count_value = None
