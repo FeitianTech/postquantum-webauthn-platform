@@ -60,7 +60,7 @@ def summary_runtime():
 def serialize_runtime():
     """The fragment that defines ``serialize_attestation_certificate``."""
 
-    return _fragment("certificate_serialize_runtime")
+    return _fragment("certificates")
 
 
 @pytest.fixture
