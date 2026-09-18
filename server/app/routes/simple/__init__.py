@@ -13,7 +13,7 @@ from .. import binary_helpers
 from . import (
     authenticate,
     binary,
-    credentials_route_impl,
+    credential_list,
     parsing,
     register_begin_impl,
     register_complete_impl,
@@ -72,4 +72,4 @@ def authenticate_complete():
 
 @app.route("/api/credentials", methods=["GET", "DELETE"])
 def list_credentials():
-    return credentials_route_impl.list_credentials_impl()
+    return credential_list.list_credentials_impl()
