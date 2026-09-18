@@ -11,64 +11,6 @@ from cryptography.x509.oid import ExtensionOID
 
 from ... import encoding
 from ...attestation import format_hex_bytes_lines, format_hex_string_lines
-from .certificate_extensions import _build_certificate_extensions_lines
-
-
-def _build_certificate_summary_lines(decoded: Any) -> list[str]:
-    if not isinstance(decoded, Mapping):
-        return []
-
-    lines: list[str] = []
-
-    version = decoded.get("version")
-    if isinstance(version, Mapping):
-        display = version.get("display")
-        if display:
-            lines.append(f"Version: {display}")
-
-    serial = decoded.get("serialNumber")
-    if isinstance(serial, Mapping):
-        decimal = serial.get("decimal")
-        hex_value = serial.get("hex")
-        if decimal and hex_value:
-            lines.append(f"Certificate Serial Number: {decimal} ({hex_value})")
-        elif decimal:
-            lines.append(f"Certificate Serial Number: {decimal}")
-
-    signature_algorithm = decoded.get("signatureAlgorithm")
-    if signature_algorithm:
-        lines.append(f"Signature Algorithm: {signature_algorithm}")
-
-    issuer = decoded.get("issuer")
-    if issuer:
-        lines.append(f"Issuer: {issuer}")
-
-    validity = decoded.get("validity")
-    if isinstance(validity, Mapping):
-        not_before = _format_certificate_time(validity.get("notBefore"))
-        not_after = _format_certificate_time(validity.get("notAfter"))
-        if not_before or not_after:
-            lines.append("Validity")
-            if not_before:
-                lines.append(f"Not Before: {not_before}")
-            if not_after:
-                lines.append(f"Not After: {not_after}")
-
-    subject = decoded.get("subject")
-    if subject:
-        lines.append(f"Subject: {subject}")
-
-    lines.extend(_build_subject_public_key_info_lines(decoded.get("publicKeyInfo")))
-    lines.extend(_build_certificate_extensions_lines(decoded.get("extensions")))
-    lines.extend(_build_signature_lines(decoded.get("signature")))
-    lines.extend(_build_fingerprint_lines(decoded.get("fingerprints")))
-
-    ski_lines = _build_subject_key_identifier_lines(decoded)
-    if ski_lines:
-        lines.append("Subject key identifier:")
-        lines.extend(ski_lines)
-
-    return [line for line in lines if line is not None]
 
 
 def _format_certificate_time(value: Any) -> str | None:
