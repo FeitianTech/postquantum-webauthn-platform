@@ -340,7 +340,7 @@ def test_evaluate_classical_attestation_root_records_parse_and_verifier_failures
     assert outcome["checks"]["trusted_ca"] is False
 
 
-def test_evaluate_classical_attestation_root_reports_untrusted_root_and_mds_errors(monkeypatch, trust, trust_ca_runtime, classical_runtime, attestation_module):
+def test_evaluate_classical_attestation_root_reports_untrusted_root_and_mds_errors(monkeypatch, trust, classical_runtime, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     now = datetime.now(timezone.utc)
@@ -364,7 +364,7 @@ def test_evaluate_classical_attestation_root_reports_untrusted_root_and_mds_erro
     monkeypatch.setattr(classical_runtime, "verify_x509_chain", lambda _chain: None)
     monkeypatch.setattr(x509, "load_der_x509_certificate", lambda _der: valid_cert)
     monkeypatch.setattr(trust, "_collect_metadata_root_certificates", lambda _entry: [b"meta-root"])
-    monkeypatch.setattr(trust_ca_runtime, "_is_trusted_ca_certificate", lambda _root: False)
+    monkeypatch.setattr(trust, "_is_trusted_ca_certificate", lambda _root: False)
 
     verifier = SimpleNamespace(evaluate_attestation=lambda _obj, _hash: evaluation)
     outcome = attestation_module._evaluate_classical_attestation_root(
@@ -381,7 +381,7 @@ def test_evaluate_classical_attestation_root_reports_untrusted_root_and_mds_erro
     assert outcome["metadata_lookup_source"] == "aaguid"
 
 
-def test_evaluate_classical_attestation_root_forces_chain_false_on_expired_leaf(monkeypatch, trust, trust_ca_runtime, metadata_module, classical_runtime, attestation_module):
+def test_evaluate_classical_attestation_root_forces_chain_false_on_expired_leaf(monkeypatch, trust, metadata_module, classical_runtime, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     now = datetime.now(timezone.utc)
@@ -406,7 +406,7 @@ def test_evaluate_classical_attestation_root_forces_chain_false_on_expired_leaf(
     monkeypatch.setattr(classical_runtime, "verify_x509_chain", lambda _chain: None)
     monkeypatch.setattr(x509, "load_der_x509_certificate", lambda _der: expired_cert)
     monkeypatch.setattr(trust, "_collect_metadata_root_certificates", lambda _entry: [])
-    monkeypatch.setattr(trust_ca_runtime, "_is_trusted_ca_certificate", lambda _root: True)
+    monkeypatch.setattr(trust, "_is_trusted_ca_certificate", lambda _root: True)
     monkeypatch.setattr(metadata_module, "metadata_entry_trust_anchor_status", lambda _entry: False)
 
     verifier = SimpleNamespace(evaluate_attestation=lambda _obj, _hash: evaluation)

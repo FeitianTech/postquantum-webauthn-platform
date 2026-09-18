@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 from collections.abc import Mapping, Sequence
 from datetime import datetime, timezone
 from typing import Any
@@ -10,8 +11,55 @@ from fido2.utils import ByteBuffer
 from fido2.webauthn import Aaguid
 
 from .. import encoding
+from ..config import app
 from . import encoding_leaf
 from .runtime_state import AAGUID_EXTENSION_OID
+
+
+def _trusted_ca_subjects() -> set[str] | None:
+    subjects = app.config.get("TRUSTED_ATTESTATION_CA_SUBJECTS")
+    if isinstance(subjects, set):
+        return subjects
+    if isinstance(subjects, (list, tuple)):
+        return {str(subject) for subject in subjects if subject}
+    return None
+
+
+def _trusted_ca_fingerprints() -> set[str] | None:
+    fingerprints = app.config.get("TRUSTED_ATTESTATION_CA_FINGERPRINTS")
+    if isinstance(fingerprints, set):
+        return {str(fp).upper() for fp in fingerprints if fp}
+    if isinstance(fingerprints, (list, tuple)):
+        return {str(fp).upper() for fp in fingerprints if fp}
+    return None
+
+
+def _certificate_fingerprint(cert_bytes: bytes) -> str:
+    return hashlib.sha256(cert_bytes).hexdigest().upper()
+
+
+def _is_trusted_ca_certificate(cert_bytes: bytes, *, allow_subject_parsing: bool = True) -> bool:
+    subjects = _trusted_ca_subjects()
+    fingerprints = _trusted_ca_fingerprints()
+
+    if not subjects and not fingerprints:
+        return True
+
+    if fingerprints:
+        fingerprint = _certificate_fingerprint(cert_bytes)
+        if fingerprint in fingerprints:
+            return True
+
+    if allow_subject_parsing and subjects:
+        try:
+            cert = x509.load_der_x509_certificate(cert_bytes)
+        except Exception:
+            return False
+        subject_value = cert.subject.rfc4514_string()
+        if subject_value in subjects:
+            return True
+
+    return False
 
 
 def _ensure_utc_datetime(value: datetime) -> datetime:

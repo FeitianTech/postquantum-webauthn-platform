@@ -134,7 +134,7 @@ def test_coerce_attestation_certificate_bytes_string_path_falls_back_to_base64ur
     assert attestation_module._coerce_attestation_certificate_bytes("not a certificate!") is None
 
 
-def test_evaluate_mldsa_attestation_root_clears_chain_errors_after_later_success(monkeypatch, trust, trust_ca_runtime, pqc_constraints_runtime, metadata_module, attestation_module):
+def test_evaluate_mldsa_attestation_root_clears_chain_errors_after_later_success(monkeypatch, trust, pqc_constraints_runtime, metadata_module, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     metadata_entry = SimpleNamespace(metadata_statement=SimpleNamespace())
@@ -149,7 +149,7 @@ def test_evaluate_mldsa_attestation_root_clears_chain_errors_after_later_success
         lambda _entry: [b"root-a", b"root-b"],
     )
     monkeypatch.setattr(
-        trust_ca_runtime,
+        trust,
         "_is_trusted_ca_certificate",
         lambda _root, allow_subject_parsing=False: True,
     )
@@ -182,7 +182,7 @@ def test_evaluate_mldsa_attestation_root_clears_chain_errors_after_later_success
     assert "dup" not in outcome["errors"]
 
 
-def test_evaluate_mldsa_attestation_root_deduplicates_chain_errors_when_all_roots_fail(monkeypatch, trust, trust_ca_runtime, pqc_constraints_runtime, metadata_module, attestation_module):
+def test_evaluate_mldsa_attestation_root_deduplicates_chain_errors_when_all_roots_fail(monkeypatch, trust, pqc_constraints_runtime, metadata_module, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     metadata_entry = SimpleNamespace(metadata_statement=SimpleNamespace())
@@ -197,7 +197,7 @@ def test_evaluate_mldsa_attestation_root_deduplicates_chain_errors_when_all_root
         lambda _entry: [b"root-a", b"root-b"],
     )
     monkeypatch.setattr(
-        trust_ca_runtime,
+        trust,
         "_is_trusted_ca_certificate",
         lambda _root, allow_subject_parsing=False: True,
     )
