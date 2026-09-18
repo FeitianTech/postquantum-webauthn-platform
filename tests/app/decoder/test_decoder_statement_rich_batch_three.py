@@ -28,7 +28,7 @@ def _build_attested_auth_data(sign_count: int = 1) -> bytes:
     return bytes(auth_data)
 
 
-def test_try_decode_cbor_make_credential_output_merges_trailing_signature_and_builds_expanded_json(monkeypatch, cbor_runtime):
+def test_try_decode_cbor_make_credential_output_merges_trailing_signature_and_builds_expanded_json(monkeypatch, ctap):
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     auth_data = _build_attested_auth_data(sign_count=2)
@@ -47,7 +47,7 @@ def test_try_decode_cbor_make_credential_output_merges_trailing_signature_and_bu
     }
 
     monkeypatch.setattr(
-        cbor_runtime,
+        ctap,
         "_decode_cbor_sequence",
         lambda _payload: (
             [base_structure],
@@ -67,7 +67,7 @@ def test_try_decode_cbor_make_credential_output_merges_trailing_signature_and_bu
     assert any("attStmt" in key for key in decoded["expandedJson"])
 
 
-def test_try_decode_cbor_status_fallback_promotes_get_assertion_and_records_trailing_warning(monkeypatch, cbor_runtime):
+def test_try_decode_cbor_status_fallback_promotes_get_assertion_and_records_trailing_warning(monkeypatch, ctap):
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     auth_data = _build_attested_auth_data(sign_count=3)
@@ -79,7 +79,7 @@ def test_try_decode_cbor_status_fallback_promotes_get_assertion_and_records_trai
     }
 
     monkeypatch.setattr(
-        cbor_runtime,
+        ctap,
         "_decode_cbor_sequence",
         lambda _payload: (
             [base_structure],
@@ -89,7 +89,7 @@ def test_try_decode_cbor_status_fallback_promotes_get_assertion_and_records_trai
         ),
     )
     monkeypatch.setattr(
-        cbor_runtime,
+        ctap,
         "_repair_get_assertion_entries",
         lambda structure, value, raw_bytes=None: (structure, value, None),
     )

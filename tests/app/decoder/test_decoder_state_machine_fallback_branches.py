@@ -78,11 +78,11 @@ def test_extract_get_assertion_trailing_from_raw_short_and_rfind_fallback(monkey
     assert trailing_fields[5] == 9
 
 
-def test_try_decode_cbor_returns_none_when_no_cbor_structures(monkeypatch, cbor_runtime):
+def test_try_decode_cbor_returns_none_when_no_cbor_structures(monkeypatch, ctap):
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     monkeypatch.setattr(
-        cbor_runtime,
+        ctap,
         "_decode_cbor_sequence",
         lambda _payload: ([], [], 0, b""),
     )

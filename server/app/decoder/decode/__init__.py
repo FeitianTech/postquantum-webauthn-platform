@@ -12,8 +12,8 @@ from ... import attestation
 from . import (
     binary,
     cbor_parser,
-    cbor_runtime,
     certificates,
+    ctap,
     ctap_classify,
     ctap_convert_leaf,
     ctap_repair_leaf,
@@ -170,14 +170,14 @@ _try_decode_certificate_bytes = pipeline._try_decode_certificate_bytes
 _try_parse_json = pipeline._try_parse_json
 
 # CBOR sequence decoding and CTAP repair.
-_CTAP_COMMAND_MAP = cbor_runtime._CTAP_COMMAND_MAP
-_CTAP_STATUS_MAP = cbor_runtime._CTAP_STATUS_MAP
-_decode_cbor_sequence = cbor_runtime._decode_cbor_sequence
-_extract_ctap_prefix = cbor_runtime._extract_ctap_prefix
-_is_padding_bytes = cbor_runtime._is_padding_bytes
-_json_safe_with_stringified_keys = cbor_runtime._json_safe_with_stringified_keys
-_repair_get_assertion_entries = cbor_runtime._repair_get_assertion_entries
-_try_decode_cbor = cbor_runtime._try_decode_cbor
+_CTAP_COMMAND_MAP = ctap._CTAP_COMMAND_MAP
+_CTAP_STATUS_MAP = ctap._CTAP_STATUS_MAP
+_decode_cbor_sequence = ctap._decode_cbor_sequence
+_extract_ctap_prefix = ctap._extract_ctap_prefix
+_is_padding_bytes = ctap._is_padding_bytes
+_json_safe_with_stringified_keys = ctap._json_safe_with_stringified_keys
+_repair_get_assertion_entries = ctap._repair_get_assertion_entries
+_try_decode_cbor = ctap._try_decode_cbor
 
 # CTAP field parsers and converters.
 _convert_att_stmt_field = ctap_runtime_parse._convert_att_stmt_field
