@@ -492,10 +492,7 @@ def test_file_exists_returns_false_for_invalid_local_directory(session_store_loc
     assert session_store.file_exists("session-a", "entry.json") is False
 
 
-def test_local_resolve_last_access_skips_entries_with_stat_errors_and_returns_none_when_directory_mtime_fails(
-    session_store_local,
-    monkeypatch,
-):
+def test_local_resolve_last_access_skips_entries_with_stat_errors_and_returns_none_when_directory_mtime_fails(session_store_local, monkeypatch):
     session_store, _ = session_store_local
 
     marker_suffix = os.path.join("session-a", session_store._LAST_ACCESS_BLOB)
@@ -617,10 +614,7 @@ def test_session_is_empty_reflects_list_files_results(session_store_local, monke
     assert session_store.session_is_empty("session-a") is False
 
 
-def test_local_resolve_last_access_keeps_existing_latest_when_next_candidate_is_older(
-    session_store_local,
-    monkeypatch,
-):
+def test_local_resolve_last_access_keeps_existing_latest_when_next_candidate_is_older(session_store_local, monkeypatch):
     session_store, _ = session_store_local
 
     marker_suffix = os.path.join("session-a", session_store._LAST_ACCESS_BLOB)

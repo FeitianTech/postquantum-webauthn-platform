@@ -28,7 +28,7 @@ _RUNTIME_STATE_DEFAULTS = {
 
 
 @pytest.fixture
-def metadata_runtime_state(monkeypatch):
+def metadata_state(monkeypatch):
     """Reset the shared metadata runtime caches for the duration of one test.
 
     ``raising`` is deliberately left at its default. These names moved here from
@@ -44,40 +44,22 @@ def metadata_runtime_state(monkeypatch):
 
 
 @pytest.fixture
-def identity_runtime():
-    """The fragment that defines the session identity helpers.
-
-    Patch here rather than on ``server.app.metadata``: the other fragments call
-    these through this module, so this is the binding that is actually read.
-    """
+def sessions():
+    """The fragment that defines the session identity helpers. Patch here rather than on ``server.app.metadata``: the other fragments call these through this module, so this is the binding that is actually read. The fragment that defines the session metadata item helpers. The fragment that defines the session cleanup worker and scheduler."""
 
     return pytest.importorskip("server.app.metadata.sessions")
 
 
 @pytest.fixture
-def payload_runtime():
+def entries():
     """The fragment that defines the entry payload helpers."""
 
     return pytest.importorskip("server.app.metadata.entries")
 
 
 @pytest.fixture
-def snapshot_runtime():
-    """The fragment that defines the base/explorer/full snapshot loaders."""
-
-    return pytest.importorskip("server.app.metadata.blob")
-
-
-@pytest.fixture
-def items_runtime():
-    """The fragment that defines the session metadata item helpers."""
-
-    return pytest.importorskip("server.app.metadata.sessions")
-
-
-@pytest.fixture
 def blob():
-    """The fragment that defines the metadata cache helpers."""
+    """The fragment that defines the base/explorer/full snapshot loaders. The fragment that defines the metadata cache helpers."""
 
     return pytest.importorskip("server.app.metadata.blob")
 
@@ -90,7 +72,7 @@ def uploads():
 
 
 @pytest.fixture
-def effective_runtime():
+def effective():
     """The fragment that composes base and session snapshots."""
 
     return pytest.importorskip("server.app.metadata.effective")
@@ -108,13 +90,6 @@ def app_config():
     """The app config module, for the Flask app and its logger."""
 
     return pytest.importorskip("server.app.config")
-
-
-@pytest.fixture
-def cleanup_runtime():
-    """The fragment that defines the session cleanup worker and scheduler."""
-
-    return pytest.importorskip("server.app.metadata.sessions")
 
 
 @pytest.fixture

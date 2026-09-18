@@ -5,7 +5,7 @@ from flask import session as flask_session
 
 
 @pytest.fixture
-def session_metadata_env(monkeypatch, tmp_path, metadata_runtime_state, session_store, app_config):
+def session_metadata_env(monkeypatch, tmp_path, metadata_state, session_store, app_config):
     metadata = pytest.importorskip("server.app.metadata")
     session_store = pytest.importorskip("server.app.session_metadata_store")
 
@@ -60,7 +60,7 @@ def test_runtime_metadata_download_disabled():
         metadata.download_metadata_blob()
 
 
-def test_note_session_activity_schedules_cleanup(session_metadata_env, monkeypatch, cleanup_runtime):
+def test_note_session_activity_schedules_cleanup(session_metadata_env, monkeypatch, sessions):
     _, metadata = session_metadata_env
 
     calls = []
@@ -68,7 +68,7 @@ def test_note_session_activity_schedules_cleanup(session_metadata_env, monkeypat
     monkeypatch.setattr(cleanup, "_touch_session_last_access", lambda sid: calls.append(("touch", sid)))
     monkeypatch.setattr(cleanup, "_schedule_inactive_session_cleanup", lambda: calls.append(("schedule", None)))
     monkeypatch.setattr(
-        cleanup_runtime,
+        sessions,
         "_maybe_cleanup_inactive_sessions",
         lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("inline cleanup should not run")),
     )
@@ -78,7 +78,7 @@ def test_note_session_activity_schedules_cleanup(session_metadata_env, monkeypat
     assert calls == [("touch", "session-123"), ("schedule", None)]
 
 
-def test_resolve_effective_metadata_entry_accepts_hyphenated_aaguid(monkeypatch, snapshot_runtime, items_runtime):
+def test_resolve_effective_metadata_entry_accepts_hyphenated_aaguid(monkeypatch, blob, sessions):
     metadata = pytest.importorskip("server.app.metadata")
 
     base_entry = {
@@ -90,14 +90,14 @@ def test_resolve_effective_metadata_entry_accepts_hyphenated_aaguid(monkeypatch,
         "statusReports": [],
     }
 
-    monkeypatch.setattr(items_runtime, "list_session_metadata_items", lambda: [])
+    monkeypatch.setattr(sessions, "list_session_metadata_items", lambda: [])
     monkeypatch.setattr(
-        snapshot_runtime,
+        blob,
         "load_packaged_explorer_summary",
         lambda: {"generatedAt": "2026-04-02T00:00:00+00:00", "no": 1},
     )
     monkeypatch.setattr(
-        snapshot_runtime,
+        blob,
         "_load_base_metadata",
         lambda: (SimpleNamespace(entries=[base_entry]), "packaged"),
     )
@@ -111,7 +111,7 @@ def test_resolve_effective_metadata_entry_accepts_hyphenated_aaguid(monkeypatch,
     assert resolved["metadataStatement"]["description"] == "Packaged authenticator"
 
 
-def test_load_effective_full_snapshot_prefers_session_entry(monkeypatch, snapshot_runtime, items_runtime):
+def test_load_effective_full_snapshot_prefers_session_entry(monkeypatch, blob, sessions):
     metadata = pytest.importorskip("server.app.metadata")
 
     base_snapshot = {
@@ -145,8 +145,8 @@ def test_load_effective_full_snapshot_prefers_session_entry(monkeypatch, snapsho
         mtime=None,
     )
 
-    monkeypatch.setattr(snapshot_runtime, "_load_base_full_snapshot", lambda: (base_snapshot, 1.0))
-    monkeypatch.setattr(items_runtime, "list_session_metadata_items", lambda: [session_item])
+    monkeypatch.setattr(blob, "_load_base_full_snapshot", lambda: (base_snapshot, 1.0))
+    monkeypatch.setattr(sessions, "list_session_metadata_items", lambda: [session_item])
 
     snapshot = metadata.load_effective_full_snapshot()
 

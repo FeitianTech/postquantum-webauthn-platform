@@ -71,7 +71,7 @@ def test_metadata_normalisation_helpers_cover_status_identifiers_and_defaults():
     assert isinstance(statement["attestationRootCertificates"], list)
 
 
-def test_aaguid_extraction_merge_and_source_info_helpers(monkeypatch, payload_runtime):
+def test_aaguid_extraction_merge_and_source_info_helpers(monkeypatch, entries):
     metadata_module = pytest.importorskip("server.app.metadata")
 
     session_payload = _entry_payload(
@@ -124,7 +124,7 @@ def test_aaguid_extraction_merge_and_source_info_helpers(monkeypatch, payload_ru
     )
 
     monkeypatch.setattr(
-        payload_runtime,
+        entries,
         "_extract_entry_aaguid",
         lambda entry: metadata_module._normalise_aaguid(str(getattr(entry, "aaguid", ""))),
     )
