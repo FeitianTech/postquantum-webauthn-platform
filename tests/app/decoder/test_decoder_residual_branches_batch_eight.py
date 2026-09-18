@@ -151,7 +151,7 @@ def test_binary_extractors_and_authenticator_fallback_paths(monkeypatch, binary_
     )
 
 
-def test_append_authenticator_section_uses_response_context_public_key_algorithm(monkeypatch):
+def test_append_authenticator_section_uses_response_context_public_key_algorithm(monkeypatch, summary_leaf):
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     captured = {}
@@ -166,7 +166,7 @@ def test_append_authenticator_section_uses_response_context_public_key_algorithm
             "public_key_lines": ["pk"],
         }
 
-    monkeypatch.setattr(decode_module, "_collect_attested_info", _collect)
+    monkeypatch.setattr(summary_leaf, "_collect_attested_info", _collect)
 
     lines = []
     decode_module._extend_with_authenticator_details(

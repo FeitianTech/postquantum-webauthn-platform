@@ -4,18 +4,7 @@ from __future__ import annotations
 from collections.abc import Callable, Mapping
 from typing import Any
 
-from . import ctap_runtime_parse, result_runtime
-from .ctap_classify import (
-    _GET_ASSERTION_REQUEST_LABELS,
-    _GET_ASSERTION_RESPONSE_LABELS,
-    _MAKE_CREDENTIAL_REQUEST_LABELS,
-    _MAKE_CREDENTIAL_RESPONSE_LABELS,
-    _build_labeled_ctap_map,
-    _format_ctap_entry_key,
-    _looks_like_get_assertion_request,
-    _looks_like_make_credential_request,
-    _resolve_ctap_label,
-)
+from . import ctap_classify, ctap_runtime_parse, result_runtime
 from .ctap_convert_leaf import (
     _convert_ctap_credential_descriptor,
     _convert_optional_ctap_field,
@@ -81,9 +70,9 @@ _GET_ASSERTION_RESPONSE_HANDLERS: dict[Any, Callable[[Any], Any]] = {
 def _build_make_credential_request_expanded_json(
     value: Mapping[Any, Any]
 ) -> dict[str, Any]:
-    return _build_labeled_ctap_map(
+    return ctap_classify._build_labeled_ctap_map(
         value,
-        _MAKE_CREDENTIAL_REQUEST_LABELS,
+        ctap_classify._MAKE_CREDENTIAL_REQUEST_LABELS,
         _MAKE_CREDENTIAL_REQUEST_HANDLERS,
     )
 
@@ -91,31 +80,31 @@ def _build_make_credential_request_expanded_json(
 def _build_get_assertion_request_expanded_json(
     value: Mapping[Any, Any]
 ) -> dict[str, Any]:
-    return _build_labeled_ctap_map(
+    return ctap_classify._build_labeled_ctap_map(
         value,
-        _GET_ASSERTION_REQUEST_LABELS,
+        ctap_classify._GET_ASSERTION_REQUEST_LABELS,
         _GET_ASSERTION_REQUEST_HANDLERS,
     )
 
 
 def _build_make_credential_expanded_json(value: Mapping[Any, Any]) -> dict[str, Any]:
-    return _build_labeled_ctap_map(
+    return ctap_classify._build_labeled_ctap_map(
         value,
-        _MAKE_CREDENTIAL_RESPONSE_LABELS,
+        ctap_classify._MAKE_CREDENTIAL_RESPONSE_LABELS,
         _MAKE_CREDENTIAL_RESPONSE_HANDLERS,
     )
 
 
 def _build_get_assertion_expanded_json(value: Mapping[Any, Any], raw_bytes: bytes | None = None) -> dict[str, Any]:
-    result = _build_labeled_ctap_map(
+    result = ctap_classify._build_labeled_ctap_map(
         value,
-        _GET_ASSERTION_RESPONSE_LABELS,
+        ctap_classify._GET_ASSERTION_RESPONSE_LABELS,
         _GET_ASSERTION_RESPONSE_HANDLERS,
         missing_keys=(3,),
     )
 
-    signature_key = _format_ctap_entry_key(3, _resolve_ctap_label(_GET_ASSERTION_RESPONSE_LABELS, 3))
-    auth_key = _format_ctap_entry_key(2, _resolve_ctap_label(_GET_ASSERTION_RESPONSE_LABELS, 2))
+    signature_key = ctap_classify._format_ctap_entry_key(3, ctap_classify._resolve_ctap_label(ctap_classify._GET_ASSERTION_RESPONSE_LABELS, 3))
+    auth_key = ctap_classify._format_ctap_entry_key(2, ctap_classify._resolve_ctap_label(ctap_classify._GET_ASSERTION_RESPONSE_LABELS, 2))
     auth_details = result.get(auth_key)
     auth_trailing_bytes: bytes | None = None
     if isinstance(auth_details, Mapping):
@@ -135,19 +124,19 @@ def _build_get_assertion_expanded_json(value: Mapping[Any, Any], raw_bytes: byte
                 result[signature_key] = sig_bytes.hex()
         user_entry_trailing = trailing_map.pop(4, None)
         if user_entry_trailing is not None:
-            user_key = _format_ctap_entry_key(4, _resolve_ctap_label(_GET_ASSERTION_RESPONSE_LABELS, 4))
+            user_key = ctap_classify._format_ctap_entry_key(4, ctap_classify._resolve_ctap_label(ctap_classify._GET_ASSERTION_RESPONSE_LABELS, 4))
             result[user_key] = ctap_runtime_parse._convert_ctap_user(user_entry_trailing)
         number_entry = trailing_map.pop(5, None)
         if number_entry is not None:
-            number_key = _format_ctap_entry_key(5, _resolve_ctap_label(_GET_ASSERTION_RESPONSE_LABELS, 5))
+            number_key = ctap_classify._format_ctap_entry_key(5, ctap_classify._resolve_ctap_label(ctap_classify._GET_ASSERTION_RESPONSE_LABELS, 5))
             result[number_key] = _convert_optional_ctap_field(number_entry)
         user_selected_entry = trailing_map.pop(6, None)
         if user_selected_entry is not None:
-            selected_key = _format_ctap_entry_key(6, _resolve_ctap_label(_GET_ASSERTION_RESPONSE_LABELS, 6))
+            selected_key = ctap_classify._format_ctap_entry_key(6, ctap_classify._resolve_ctap_label(ctap_classify._GET_ASSERTION_RESPONSE_LABELS, 6))
             result[selected_key] = _convert_optional_ctap_field(user_selected_entry)
         extensions_entry = trailing_map.pop(8, None)
         if extensions_entry is not None:
-            extensions_key = _format_ctap_entry_key(8, _resolve_ctap_label(_GET_ASSERTION_RESPONSE_LABELS, 8))
+            extensions_key = ctap_classify._format_ctap_entry_key(8, ctap_classify._resolve_ctap_label(ctap_classify._GET_ASSERTION_RESPONSE_LABELS, 8))
             result[extensions_key] = _convert_optional_ctap_field(extensions_entry)
         if trailing_map:
             result["trailingFields"] = {str(k): _hex_json_safe(v) for k, v in trailing_map.items()}
@@ -238,7 +227,7 @@ def _interpret_make_credential_map(value: Mapping[Any, Any]) -> dict[str, Any] |
 
 
 def _interpret_get_assertion_map(value: Mapping[Any, Any]) -> dict[str, Any] | None:
-    if _looks_like_get_assertion_request(value):
+    if ctap_classify._looks_like_get_assertion_request(value):
         return None
     auth_data_entry = _get_mapping_entry(value, 2, "2", "authData")
     signature_entry = _get_mapping_entry(value, 3, "3", "signature")
@@ -311,20 +300,20 @@ def _interpret_get_assertion_map(value: Mapping[Any, Any]) -> dict[str, Any] | N
 
 
 def _interpret_make_credential_request_map(value: Mapping[Any, Any]) -> dict[str, Any] | None:
-    if not _looks_like_make_credential_request(value):
+    if not ctap_classify._looks_like_make_credential_request(value):
         return None
-    return _build_labeled_ctap_map(
+    return ctap_classify._build_labeled_ctap_map(
         value,
-        _MAKE_CREDENTIAL_REQUEST_LABELS,
+        ctap_classify._MAKE_CREDENTIAL_REQUEST_LABELS,
         _MAKE_CREDENTIAL_REQUEST_HANDLERS,
     )
 
 
 def _interpret_get_assertion_request_map(value: Mapping[Any, Any]) -> dict[str, Any] | None:
-    if not _looks_like_get_assertion_request(value):
+    if not ctap_classify._looks_like_get_assertion_request(value):
         return None
-    return _build_labeled_ctap_map(
+    return ctap_classify._build_labeled_ctap_map(
         value,
-        _GET_ASSERTION_REQUEST_LABELS,
+        ctap_classify._GET_ASSERTION_REQUEST_LABELS,
         _GET_ASSERTION_REQUEST_HANDLERS,
     )

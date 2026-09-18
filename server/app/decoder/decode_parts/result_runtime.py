@@ -5,19 +5,13 @@ from collections.abc import Mapping
 from typing import Any
 
 from ...attestation import make_json_safe, serialize_attestation_certificate
-from . import binary_extract, summary_runtime
+from . import binary_extract, conversion_leaf, summary_runtime
 from .conversion_cert_leaf import (
     _convert_attestation_entry_impl,
     _convert_attestation_statement_impl,
     _convert_certificate_bytes_impl,
     _convert_certificate_chain_impl,
     _convert_certificate_payload_impl,
-)
-from .conversion_leaf import (
-    _build_authenticator_data_payload,
-    _build_credential_overview,
-    _collect_response_extras,
-    _convert_client_data_entry,
 )
 from .key_utils import hex_json_safe as _hex_json_safe
 from .key_utils import stringify_mapping_keys as _stringify_mapping_keys
@@ -126,7 +120,7 @@ def _convert_public_key_credential_data(result: Mapping[str, Any]) -> dict[str, 
 
     payload: dict[str, Any] = {}
 
-    credential_overview = _build_credential_overview(decoded)
+    credential_overview = conversion_leaf._build_credential_overview(decoded)
     if credential_overview:
         payload["credential"] = credential_overview
 
@@ -141,7 +135,7 @@ def _convert_public_key_credential_data(result: Mapping[str, Any]) -> dict[str, 
     if authenticator_section:
         payload["authenticatorData"] = authenticator_section
 
-    client_data_section = _convert_client_data_entry(
+    client_data_section = conversion_leaf._convert_client_data_entry(
         response.get("clientDataJSON") if isinstance(response, Mapping) else None
     )
     if client_data_section:
@@ -151,7 +145,7 @@ def _convert_public_key_credential_data(result: Mapping[str, Any]) -> dict[str, 
     if client_extensions is not None:
         payload["clientExtensionResults"] = make_json_safe(client_extensions)
 
-    response_extras = _collect_response_extras(response)
+    response_extras = conversion_leaf._collect_response_extras(response)
     if response_extras:
         payload["responseDetails"] = response_extras
 
@@ -173,7 +167,7 @@ def _convert_attestation_object_data(result: Mapping[str, Any]) -> dict[str, Any
         payload["attestationObject"] = attestation_section
 
     authenticator_details = decoded.get("authenticatorData") if isinstance(decoded, Mapping) else None
-    authenticator_section = _build_authenticator_data_payload(
+    authenticator_section = conversion_leaf._build_authenticator_data_payload(
         binary_extract._extract_authenticator_bytes_from_attestation(decoded),
         authenticator_details,
         decoded.get("publicKeyAlgorithm") if isinstance(decoded, Mapping) else None,
@@ -194,7 +188,7 @@ def _convert_authenticator_data_result(result: Mapping[str, Any]) -> dict[str, A
     auth_bytes = binary_extract._extract_bytes_from_binary(result.get("binary"))
     if auth_bytes is None:
         auth_bytes = binary_extract._extract_bytes_from_binary(decoded)
-    authenticator_section = _build_authenticator_data_payload(
+    authenticator_section = conversion_leaf._build_authenticator_data_payload(
         auth_bytes,
         decoded,
         decoded.get("publicKeyAlgorithm") if isinstance(decoded, Mapping) else None,
@@ -204,7 +198,7 @@ def _convert_authenticator_data_result(result: Mapping[str, Any]) -> dict[str, A
 
 def _convert_client_data_result(result: Mapping[str, Any]) -> dict[str, Any]:
     decoded = result.get("decoded") if isinstance(result.get("decoded"), Mapping) else {}
-    return _convert_client_data_entry(decoded) or {}
+    return conversion_leaf._convert_client_data_entry(decoded) or {}
 
 
 def _convert_certificate_result(result: Mapping[str, Any]) -> dict[str, Any]:
@@ -294,4 +288,4 @@ def _build_authenticator_section(
     if isinstance(response_mapping, Mapping):
         fallback_alg = response_mapping.get("publicKeyAlgorithm")
 
-    return _build_authenticator_data_payload(auth_bytes, details, fallback_alg)
+    return conversion_leaf._build_authenticator_data_payload(auth_bytes, details, fallback_alg)
