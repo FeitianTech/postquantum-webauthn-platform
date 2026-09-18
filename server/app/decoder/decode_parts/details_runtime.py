@@ -1,8 +1,6 @@
 """Client data and authenticator data description helpers for the decoder."""
 from __future__ import annotations
 
-import base64
-import binascii
 import json
 from collections.abc import Mapping, Sequence
 from typing import Any
@@ -17,6 +15,7 @@ from ...attestation import (
     serialize_attestation_certificate,
     summarize_authenticator_extensions,
 )
+from ...encoding import encode_base64, try_decode_base64
 from . import pipeline_runtime
 
 
@@ -118,12 +117,7 @@ def _extract_attestation_certificate(att_stmt: Mapping[str, Any]) -> dict[str, A
     cert_bytes: bytes | None
 
     if isinstance(first_entry, str):
-        cleaned = "".join(first_entry.split())
-        padding = (-len(cleaned)) % 4
-        try:
-            cert_bytes = base64.b64decode(cleaned + "=" * padding)
-        except (ValueError, binascii.Error):
-            cert_bytes = None
+        cert_bytes = try_decode_base64(first_entry)
     else:
         try:
             cert_bytes = bytes(first_entry)
@@ -184,7 +178,7 @@ def _build_client_data_details(
 def _binary_summary(data: bytes, encoding: str | None = None) -> dict[str, Any]:
     summary = {
         "length": len(data),
-        "base64": base64.b64encode(data).decode("ascii"),
+        "base64": encode_base64(data),
         "base64url": encode_base64url(data),
         "hex": data.hex(),
         "colonHex": colon_hex(data),

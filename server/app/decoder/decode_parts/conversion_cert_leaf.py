@@ -2,9 +2,10 @@
 from __future__ import annotations
 
 import base64
-import binascii
 from collections.abc import Callable, Mapping
 from typing import Any
+
+from ... import encoding
 
 
 def _convert_certificate_payload_impl(
@@ -18,10 +19,7 @@ def _convert_certificate_payload_impl(
     if cert_bytes is None:
         der_base64 = entry.get("derBase64")
         if isinstance(der_base64, str):
-            try:
-                cert_bytes = base64.b64decode(der_base64)
-            except (ValueError, binascii.Error):
-                cert_bytes = None
+            cert_bytes = encoding.try_decode_base64(der_base64)
 
     if cert_bytes is not None:
         payload["raw"] = cert_bytes.hex()
@@ -46,12 +44,7 @@ def _convert_certificate_bytes_impl(
     if isinstance(value, (bytes, bytearray)):
         cert_bytes = bytes(value)
     elif isinstance(value, str):
-        cleaned = "".join(value.split())
-        padding = (-len(cleaned)) % 4
-        try:
-            cert_bytes = base64.b64decode(cleaned + "=" * padding)
-        except (ValueError, binascii.Error):
-            cert_bytes = None
+        cert_bytes = encoding.try_decode_base64(value)
     elif isinstance(value, Mapping):
         return convert_certificate_payload(value, cert_bytes)
 
