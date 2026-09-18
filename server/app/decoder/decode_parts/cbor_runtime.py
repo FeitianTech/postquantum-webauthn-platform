@@ -10,6 +10,7 @@ import cbor2
 
 from fido2 import cbor
 
+from ...attestation import make_json_safe
 from .cbor_lenient import _lenient_decode_from, _structure_to_value
 from .cbor_sequence import _decode_cbor_sequence_impl
 from .cbor_strict import _CborDecodingError, _decode_cbor_structure
@@ -29,6 +30,52 @@ from .key_utils import coerce_cbor_bytes as _coerce_cbor_bytes
 from .key_utils import get_mapping_entry as _get_mapping_entry
 from .key_utils import hex_json_safe as _hex_json_safe
 from .key_utils import stringify_mapping_keys as _stringify_mapping_keys
+
+_CTAP_COMMAND_MAP: dict[int, str] = {
+    0x01: "AuthenticatorMakeCredential command",
+    0x02: "AuthenticatorGetAssertion command",
+}
+
+_CTAP_STATUS_MAP: dict[int, str] = {
+    0x00: "Success status",
+}
+
+
+def _extract_ctap_prefix(data: bytes) -> tuple[dict[str, Any] | None, bytes]:
+    if not data:
+        return None, data
+    code = data[0]
+    if code in _CTAP_COMMAND_MAP:
+        return (
+            {
+                "code": code,
+                "codeHex": f"0x{code:02x}",
+                "meaning": _CTAP_COMMAND_MAP[code],
+                "kind": "command",
+            },
+            data[1:],
+        )
+    if code in _CTAP_STATUS_MAP:
+        return (
+            {
+                "code": code,
+                "codeHex": f"0x{code:02x}",
+                "meaning": _CTAP_STATUS_MAP[code],
+                "kind": "status",
+            },
+            data[1:],
+        )
+    return None, data
+
+
+def _is_padding_bytes(data: bytes) -> bool:
+    if not data:
+        return True
+    return all(byte in (0x00, 0xFF) for byte in data)
+
+
+def _json_safe_with_stringified_keys(value: Any) -> Any:
+    return _stringify_mapping_keys(make_json_safe(value))
 
 
 def _decode_cbor_sequence(payload: bytes) -> tuple[list[dict[str, Any]], list[Any], int, bytes]:

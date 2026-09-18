@@ -119,10 +119,10 @@ def test_stringify_and_hex_helpers_convert_nested_values():
     assert decode_module._hex_json_safe(payload) == hex_only
 
 
-def test_json_safe_with_stringified_keys_wraps_make_json_safe(monkeypatch):
+def test_json_safe_with_stringified_keys_wraps_make_json_safe(monkeypatch, cbor_runtime):
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
-    monkeypatch.setattr(decode_module, "make_json_safe", lambda _value: {1: "ok", 2: "yes"})
+    monkeypatch.setattr(cbor_runtime, "make_json_safe", lambda _value: {1: "ok", 2: "yes"})
 
     assert decode_module._json_safe_with_stringified_keys(object()) == {"1": "ok", "2": "yes"}
 
