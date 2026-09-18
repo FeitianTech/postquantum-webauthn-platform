@@ -66,23 +66,34 @@ Flask app setup starts in:
 
 Main route modules:
 
-- `server/app/routes/simple.py`
-  Simple WebAuthn begin/complete endpoints.
-- `server/app/routes/advanced.py`
-  Advanced WebAuthn begin/complete endpoints, algorithm handling, request validation, metadata-heavy flows.
+- `server/app/routes/simple/`
+  Simple WebAuthn begin/complete endpoints. `__init__.py` holds the Flask rules;
+  `registration.py`, `authentication.py` and `credential_list.py` hold the bodies.
+- `server/app/routes/advanced/`
+  Advanced WebAuthn begin/complete endpoints, algorithm handling, request
+  validation, metadata-heavy flows. Same shape: rules in `__init__.py`, bodies in
+  `registration.py`, `authentication.py`, `artifacts.py`.
 - `server/app/routes/general.py`
   Index page, metadata bootstrap helpers, decoder endpoints, misc app routes.
 
 Related backend modules:
 
-- `server/app/attestation.py`
-  Attestation parsing and validation helpers.
-- `server/app/storage.py`
-  Persistent credential storage helpers.
-- `server/app/metadata.py`
-  Metadata cache/bootstrap logic.
+- `server/app/webauthn/attestation/`
+  Attestation parsing and validation. `certificates.py`, `checks.py`, `trust.py`,
+  `pqc.py`, `classical.py`.
+- `server/app/webauthn/metadata/`
+  FIDO MDS resolution: `blob.py`, `snapshots` via `effective.py`, `sessions.py`.
+- `server/app/webauthn/pqc.py`
+  The ML-DSA adapter.
+- `server/app/storage/`
+  Persistence: `credentials.py`, `session_metadata.py`, `cloud.py`, `common.py`.
 - `server/app/decoder/`
-  Decoder/encoder logic used by the developer tooling UI.
+  Decoder/encoder logic used by the developer tooling UI: `decode/` and `encode/`.
+
+Each of these packages keeps its public surface in `__init__.py` and its
+implementation in submodules named for what they do. Import the submodule you
+need; patch there rather than on the package's re-export, because the submodules
+call each other through module objects.
 
 ## How Data Flows
 
@@ -103,10 +114,10 @@ The saved credential cards shown in simple and advanced tabs are rendered by the
   `frontend/static/styles/shared/layout.css`
 - Simple auth UX:
   `frontend/static/scripts/simple/auth-simple.js`
-  `server/app/routes/simple.py`
+  `server/app/routes/simple/`
 - Advanced auth UX:
   `frontend/static/scripts/advanced/auth/advanced.js`
-  `server/app/routes/advanced.py`
+  `server/app/routes/advanced/`
 - JSON editor or advanced request shaping:
   `frontend/static/scripts/advanced/editor/index.js`
   `frontend/static/scripts/advanced/auth/forms.js`
@@ -144,13 +155,14 @@ If you are changing only UI logic plus lightweight server responses, prefer targ
   `uv.lock` and the venv, so do not `uv add` it.
 - CI fails on any violation of the gated set (`E4`, `E7`, `E9`, `F`, `I`,
   `UP006/UP007/UP035/UP045`). It is at zero; keep it there.
-- `F821` is off on purpose and `F401`/`UP035` are ignored in the four remaining
-  split-module namespace carriers. `ruff.toml` explains why; read it before
-  changing either. `server/app/metadata.py` was the first carrier unwound and is
-  no longer one of them: `metadata_parts/` resolves its own names through real
-  imports, its shared caches live in `metadata_parts/runtime_state.py`, and its
-  F821 count is zero and gated by nothing but that fact -- do not reintroduce
-  globals rebinding there.
+- `F821` is gated at zero with nothing ignored, and `ruff.toml` has no
+  `[lint.per-file-ignores]` section at all. Every module imports the names it
+  uses; the old "carrier" modules that rebuilt their fragments' functions against
+  their own globals are gone. Read `ruff.toml` before changing this, and do not
+  reintroduce globals rebinding anywhere.
+- The only `# noqa: F401` markers left are in
+  `server/app/decoder/encode/__init__.py`, where the package deliberately
+  re-exports encoder internals for callers and tests.
 - Do not run `ruff format` -- the repo is not format-clean and it would rewrite
   about 69% of the files.
 
@@ -217,7 +229,8 @@ If you are changing only UI logic plus lightweight server responses, prefer targ
 - Global functions are intentionally exposed from `frontend/static/scripts/main.js` for template event handlers.
 - The simple and advanced tabs share the saved credential display, so re-render logic can have cross-tab side effects.
 - Flask session state matters in begin/complete flows. Be careful not to break the fallback `__session_state` handling.
-- `server/app/routes/advanced.py` is large. Search before editing and make the smallest safe change.
+- `server/app/routes/advanced/registration.py` is large (about 1,300 lines). Search
+  before editing and make the smallest safe change.
 - The local `fido2/` directory is part of the repo. Do not assume behavior matches the latest upstream package.
 
 ## Good First Step For Most Tasks
