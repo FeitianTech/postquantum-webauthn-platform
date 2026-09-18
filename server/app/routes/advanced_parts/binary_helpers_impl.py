@@ -6,14 +6,11 @@ handling, which the simple tab does not have.
 """
 from __future__ import annotations
 
-import re
 from collections.abc import Mapping
 from typing import Any
 
 from ... import encoding
 from ..binary_helpers import decode_binary_text
-
-_BASE64URL_STRICT = re.compile(r"[A-Za-z0-9_-]+")
 
 
 def _decode_wrapped_impl(
@@ -63,9 +60,6 @@ def _decode_client_binary_impl(value: Any) -> bytes:
                 b64u_candidate = value.get("base64url")
 
             if isinstance(b64u_candidate, str):
-                stripped = b64u_candidate.strip()
-                if stripped and not _BASE64URL_STRICT.fullmatch(stripped):
-                    raise ValueError("invalid binary value")
                 return _decode_wrapped_impl(b64u_candidate, encoding.decode_base64url)
 
             return _decode_client_binary_impl(b64u_candidate)
