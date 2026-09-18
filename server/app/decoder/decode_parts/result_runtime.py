@@ -1,11 +1,11 @@
 """Decoder payload and result conversion helpers."""
-# pyright: reportUndefinedVariable=false  # _base_type still comes from the carrier
 from __future__ import annotations
 
 from collections.abc import Mapping
 from typing import Any
 
 from ...attestation import make_json_safe, serialize_attestation_certificate
+from . import summary_runtime
 from .binary_extract import (
     _extract_authenticator_bytes,
     _extract_authenticator_bytes_from_attestation,
@@ -33,7 +33,7 @@ def _prepare_decoder_response(result: dict[str, Any]) -> dict[str, Any]:
 
 
 def _build_decoder_payload(result: dict[str, Any]) -> dict[str, Any]:
-    base_type = _base_type(result.get("format"))
+    base_type = summary_runtime._base_type(result.get("format"))
     data = _convert_result_to_data(base_type, result)
     malformed = result.get("malformed")
     if not isinstance(malformed, list):
