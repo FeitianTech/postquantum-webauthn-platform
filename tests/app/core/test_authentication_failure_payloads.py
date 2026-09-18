@@ -8,8 +8,7 @@ def _encode_base64url(data: bytes) -> str:
     return base64.urlsafe_b64encode(data).decode("ascii").rstrip("=")
 
 
-def test_simple_authentication_failure_returns_failed_credential_id(monkeypatch, config_module):
-    simple_module = pytest.importorskip("server.app.routes.simple")
+def test_simple_authentication_failure_returns_failed_credential_id(monkeypatch, config_module, simple_credential_parsing):
     pytest.importorskip("server.app.app")
 
     credential_id = b"simple-credential-id"
@@ -20,7 +19,7 @@ def test_simple_authentication_failure_returns_failed_credential_id(monkeypatch,
             raise ValueError("Invalid signature.")
 
     monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FailingServer())
-    monkeypatch.setattr(simple_module, "_parse_client_credentials", lambda _raw: ([object()], []))
+    monkeypatch.setattr(simple_credential_parsing, "_parse_client_credentials_impl", lambda _raw: ([object()], []))
 
     with config_module.app.test_client() as client:
         with client.session_transaction() as session:

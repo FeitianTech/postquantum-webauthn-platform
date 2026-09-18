@@ -16,7 +16,7 @@ from ...challenge_registry import (
     stamp_ceremony_state,
 )
 from ...sign_count import SIGN_COUNT_REGRESSED, sign_count_status
-from . import binary_helpers_impl
+from . import binary_helpers_impl, credential_parsing_impl
 from .sign_count_impl import (
     RECORD_SIGN_COUNT_KEY,
     client_supplied_sign_count_impl,
@@ -37,7 +37,7 @@ def authenticate_begin_impl(simple_module: Any):
         if isinstance(candidate_credentials, list):
             raw_credentials = candidate_credentials
 
-    credential_data_list, serialized = simple_module._parse_client_credentials(raw_credentials)
+    credential_data_list, serialized = credential_parsing_impl._parse_client_credentials_impl(raw_credentials)
 
     if not credential_data_list:
         abort(404)
@@ -84,7 +84,7 @@ def authenticate_complete_impl(simple_module: Any):
     )
 
     session_credentials = session.pop("simple_credentials", [])
-    credential_data_list, _ = simple_module._parse_client_credentials(session_credentials)
+    credential_data_list, _ = credential_parsing_impl._parse_client_credentials_impl(session_credentials)
     if not credential_data_list:
         session.pop("authenticate_rp_id", None)
         session.pop("simple_credentials_email", None)

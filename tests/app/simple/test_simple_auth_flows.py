@@ -41,8 +41,7 @@ class _MatchedCredential:
         self.credential_id = credential_id
 
 
-def test_simple_register_begin_persists_state_and_filters_algorithms(monkeypatch, config_module, simple_register_begin):
-    simple_module = pytest.importorskip("server.app.routes.simple")
+def test_simple_register_begin_persists_state_and_filters_algorithms(monkeypatch, config_module, simple_register_begin, simple_credential_parsing):
     pytest.importorskip("server.app.app")
 
     state = {"challenge": "register-state"}
@@ -67,8 +66,8 @@ def test_simple_register_begin_persists_state_and_filters_algorithms(monkeypatch
     monkeypatch.setattr(config_module, "determine_rp_id", lambda: "example.com")
     monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FakeServer())
     monkeypatch.setattr(
-        simple_module,
-        "_parse_client_credentials",
+        simple_credential_parsing,
+        "_parse_client_credentials_impl",
         lambda _raw: ([], [{"credentialId": "cred-1", "publicKey": "pk-1", "aaguid": "ag-1"}])
     )
 
@@ -98,12 +97,11 @@ def test_simple_register_begin_persists_state_and_filters_algorithms(monkeypatch
             assert "simple_register_public_key" in session_state
 
 
-def test_simple_authenticate_begin_requires_valid_credentials(monkeypatch):
+def test_simple_authenticate_begin_requires_valid_credentials(monkeypatch, simple_credential_parsing):
     config_module = pytest.importorskip("server.app.config")
-    simple_module = pytest.importorskip("server.app.routes.simple")
     pytest.importorskip("server.app.app")
 
-    monkeypatch.setattr(simple_module, "_parse_client_credentials", lambda _raw: ([], []))
+    monkeypatch.setattr(simple_credential_parsing, "_parse_client_credentials_impl", lambda _raw: ([], []))
 
     with config_module.app.test_client() as client:
         response = client.post(
@@ -114,8 +112,7 @@ def test_simple_authenticate_begin_requires_valid_credentials(monkeypatch):
     assert response.status_code == 404
 
 
-def test_simple_authenticate_complete_success_returns_sign_count(monkeypatch, config_module):
-    simple_module = pytest.importorskip("server.app.routes.simple")
+def test_simple_authenticate_complete_success_returns_sign_count(monkeypatch, config_module, simple_credential_parsing):
     pytest.importorskip("server.app.app")
 
     credential_id = b"simple-auth-success"
@@ -128,8 +125,8 @@ def test_simple_authenticate_complete_success_returns_sign_count(monkeypatch, co
 
     monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FakeServer())
     monkeypatch.setattr(
-        simple_module,
-        "_parse_client_credentials",
+        simple_credential_parsing,
+        "_parse_client_credentials_impl",
         lambda _raw: ([object()], [{"credentialId": _b64url(credential_id)}])
     )
 
@@ -163,10 +160,9 @@ def test_simple_authenticate_complete_success_returns_sign_count(monkeypatch, co
             assert "simple_credentials_email" not in session_state
 
 
-def test_simple_authenticate_complete_rejects_request_state_fallback(monkeypatch, config_module):
+def test_simple_authenticate_complete_rejects_request_state_fallback(monkeypatch, config_module, simple_credential_parsing):
     """A client-supplied ``__session_state`` must never become the challenge."""
 
-    simple_module = pytest.importorskip("server.app.routes.simple")
     pytest.importorskip("server.app.app")
 
     credential_id = b"simple-auth-fallback"
@@ -179,8 +175,8 @@ def test_simple_authenticate_complete_rejects_request_state_fallback(monkeypatch
 
     monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FakeServer())
     monkeypatch.setattr(
-        simple_module,
-        "_parse_client_credentials",
+        simple_credential_parsing,
+        "_parse_client_credentials_impl",
         lambda _raw: ([object()], [{"credentialId": _b64url(credential_id)}])
     )
 
@@ -205,14 +201,13 @@ def test_simple_authenticate_complete_rejects_request_state_fallback(monkeypatch
         assert "state" not in captured
 
 
-def test_simple_authenticate_complete_missing_state_returns_400(monkeypatch):
+def test_simple_authenticate_complete_missing_state_returns_400(monkeypatch, simple_credential_parsing):
     config_module = pytest.importorskip("server.app.config")
-    simple_module = pytest.importorskip("server.app.routes.simple")
     pytest.importorskip("server.app.app")
 
     monkeypatch.setattr(
-        simple_module,
-        "_parse_client_credentials",
+        simple_credential_parsing,
+        "_parse_client_credentials_impl",
         lambda _raw: ([object()], [{"credentialId": "cred-1"}])
     )
 
