@@ -155,4 +155,4 @@ def authenticate_complete():
 
 @app.route("/api/credentials", methods=["GET", "DELETE"])
 def list_credentials():
-    return list_credentials_impl(_self_module())
+    return list_credentials_impl()

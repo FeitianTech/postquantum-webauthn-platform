@@ -8,7 +8,7 @@ from typing import Any
 from ... import attestation, storage
 
 
-def initialize_registration_context_impl(simple_module: Any, ctx: dict[str, Any]) -> None:
+def initialize_registration_context_impl(ctx: dict[str, Any]) -> None:
     attestation_summary = {
         "signatureValid": ctx["attestation_signature_valid"],
         "rootValid": ctx["attestation_root_valid"],

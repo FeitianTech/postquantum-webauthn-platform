@@ -11,7 +11,7 @@ from ... import attestation, config, device_logs, metadata, storage
 from . import binary_helpers_impl
 
 
-def build_stored_credential_context_impl(simple_module: Any, ctx: dict[str, Any]) -> None:
+def build_stored_credential_context_impl(ctx: dict[str, Any]) -> None:
     stored_credential: dict[str, Any] = {
         "type": "simple",
         "email": ctx["uname"],
@@ -49,7 +49,7 @@ def build_stored_credential_context_impl(simple_module: Any, ctx: dict[str, Any]
     ctx["stored_credential"] = stored_credential
 
 
-def _persist_registered_credential_entry_impl(simple_module: Any, ctx: dict[str, Any]) -> Any | None:
+def _persist_registered_credential_entry_impl(ctx: dict[str, Any]) -> Any | None:
     metadata_session_id = metadata.ensure_metadata_session_id()
     existing_credentials = storage.readkey(ctx["uname"], session_id=metadata_session_id)
 
@@ -94,7 +94,7 @@ def _persist_registered_credential_entry_impl(simple_module: Any, ctx: dict[str,
     return None
 
 
-def _update_session_simple_credentials_impl(simple_module: Any, ctx: dict[str, Any]) -> None:
+def _update_session_simple_credentials_impl(ctx: dict[str, Any]) -> None:
     session_simple_credentials = session.get("simple_credentials")
     if isinstance(session_simple_credentials, list):
         new_entry = {
@@ -113,7 +113,7 @@ def _update_session_simple_credentials_impl(simple_module: Any, ctx: dict[str, A
         session["simple_credentials"] = session_simple_credentials
 
 
-def _record_registration_event_impl(simple_module: Any, ctx: dict[str, Any]) -> None:
+def _record_registration_event_impl(ctx: dict[str, Any]) -> None:
     metadata_description: str | None = None
     if isinstance(ctx["metadata_summary"], Mapping):
         raw_description = ctx["metadata_summary"].get("description")
@@ -151,17 +151,17 @@ def _record_registration_event_impl(simple_module: Any, ctx: dict[str, Any]) -> 
     device_logs.record_registration_event(event)
 
 
-def persist_registration_context_impl(simple_module: Any, ctx: dict[str, Any]) -> Any | None:
-    persist_response = _persist_registered_credential_entry_impl(simple_module, ctx)
+def persist_registration_context_impl(ctx: dict[str, Any]) -> Any | None:
+    persist_response = _persist_registered_credential_entry_impl(ctx)
     if persist_response is not None:
         return persist_response
 
-    _update_session_simple_credentials_impl(simple_module, ctx)
-    _record_registration_event_impl(simple_module, ctx)
+    _update_session_simple_credentials_impl(ctx)
+    _record_registration_event_impl(ctx)
     return None
 
 
-def build_register_complete_response_payload_impl(simple_module: Any, ctx: dict[str, Any]) -> dict[str, Any]:
+def build_register_complete_response_payload_impl(ctx: dict[str, Any]) -> dict[str, Any]:
     response_payload: dict[str, Any] = {
         "status": "OK",
         "algo": ctx["algoname"],

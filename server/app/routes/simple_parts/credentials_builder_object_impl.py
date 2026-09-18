@@ -6,11 +6,11 @@ from typing import Any
 
 from ... import attestation, storage
 from ...attachments import normalize_attachment
-from .credentials_builder_dict_impl import add_registration_metadata_impl
+from . import credentials_builder_dict_impl
 
 
 def build_credential_info_from_object_credential_data_impl(
-    simple_module: Any, email: str, cred: Mapping[str, Any]
+    email: str, cred: Mapping[str, Any]
 ) -> dict[str, Any]:
     cred_data = cred["credential_data"]
     auth_data = cred["auth_data"]
@@ -78,7 +78,7 @@ def build_credential_info_from_object_credential_data_impl(
     if attachment_value is not None:
         properties_copy["authenticatorAttachment"] = attachment_value
 
-    add_registration_metadata_impl(simple_module, credential_info, cred)
+    credentials_builder_dict_impl.add_registration_metadata_impl(credential_info, cred)
 
     storage.add_public_key_material(credential_info, getattr(cred_data, "public_key", {}))
     if credential_info.get("publicKeyAlgorithm") is not None:
@@ -96,7 +96,7 @@ def build_credential_info_from_object_credential_data_impl(
     return credential_info
 
 
-def build_credential_info_from_bare_credential_impl(simple_module: Any, email: str, cred: Any) -> dict[str, Any]:
+def build_credential_info_from_bare_credential_impl(email: str, cred: Any) -> dict[str, Any]:
     aaguid_hex = attestation.coerce_aaguid_hex(getattr(cred, "aaguid", None))
 
     credential_info = {

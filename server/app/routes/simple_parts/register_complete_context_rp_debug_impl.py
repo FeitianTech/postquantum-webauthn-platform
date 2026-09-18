@@ -11,7 +11,7 @@ from fido2 import cbor
 from ... import attestation, storage
 
 
-def populate_rp_debug_context_impl(simple_module: Any, ctx: dict[str, Any]) -> None:
+def populate_rp_debug_context_impl(ctx: dict[str, Any]) -> None:
     registration_timestamp = datetime.fromtimestamp(
         ctx["credential_info"]["registration_time"], timezone.utc
     ).isoformat()
