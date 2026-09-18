@@ -56,6 +56,14 @@ from ..storage import (
 from ..storage import (
     list_credentials as storage_list_credentials,
 )
+from .simple_parts import (
+    authenticate_impl,
+    binary_helpers_impl,
+    credential_parsing_impl,
+    credentials_route_impl,
+    register_begin_impl,
+    register_complete_impl,
+)
 from .simple_parts.authenticate_impl import (
     authenticate_begin_impl,
     authenticate_complete_impl,
@@ -72,8 +80,6 @@ from .simple_parts.credential_parsing_impl import (
     _serialize_credential_for_session_impl,
 )
 from .simple_parts.credentials_route_impl import list_credentials_impl
-from .simple_parts.register_begin_impl import register_begin_impl
-from .simple_parts.register_complete_impl import register_complete_impl
 
 _SIMPLE_ALLOWED_ALGORITHMS: tuple[int, ...] = tuple(
     alg
@@ -133,12 +139,12 @@ def _parse_client_credentials(raw_credentials: Any) -> tuple[list[AttestedCreden
 
 @app.route("/api/register/begin", methods=["POST"])
 def register_begin():
-    return register_begin_impl(_self_module())
+    return register_begin_impl.register_begin_impl(_self_module())
 
 
 @app.route("/api/register/complete", methods=["POST"])
 def register_complete():
-    return register_complete_impl(_self_module())
+    return register_complete_impl.register_complete_impl(_self_module())
 
 
 @app.route("/api/authenticate/begin", methods=["POST"])
