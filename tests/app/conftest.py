@@ -190,7 +190,7 @@ def simple_credential_parsing():
 def simple_credentials_builder_dict():
     """The fragment that defines the dict-shaped credential row builder."""
 
-    return _simple_fragment("credentials_builder_dict_impl")
+    return _simple_fragment("credential_list")
 
 
 @pytest.fixture

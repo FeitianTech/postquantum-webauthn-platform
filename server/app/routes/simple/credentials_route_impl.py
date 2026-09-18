@@ -5,7 +5,7 @@ from typing import Any
 from flask import jsonify, request
 
 from ... import metadata, storage
-from . import credentials_builder_dict_impl, credentials_builder_object_impl
+from . import credential_list, credentials_builder_object_impl
 
 
 def list_credentials_impl():
@@ -30,7 +30,7 @@ def list_credentials_impl():
                     try:
                         if isinstance(cred, dict) and "credential_data" in cred:
                             if isinstance(cred["credential_data"], dict):
-                                credential_info = credentials_builder_dict_impl.build_credential_info_from_dict_credential_data_impl(email,
+                                credential_info = credential_list.build_credential_info_from_dict_credential_data_impl(email,
                                     cred,
                                 )
                             else:

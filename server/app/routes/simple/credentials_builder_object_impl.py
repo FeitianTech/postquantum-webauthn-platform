@@ -6,7 +6,7 @@ from typing import Any
 from ... import attestation, storage
 from ...attachments import normalize_attachment
 from ...encoding import encode_base64
-from . import credentials_builder_dict_impl
+from . import credential_list
 
 
 def build_credential_info_from_object_credential_data_impl(
@@ -78,7 +78,7 @@ def build_credential_info_from_object_credential_data_impl(
     if attachment_value is not None:
         properties_copy["authenticatorAttachment"] = attachment_value
 
-    credentials_builder_dict_impl.add_registration_metadata_impl(credential_info, cred)
+    credential_list.add_registration_metadata_impl(credential_info, cred)
 
     storage.add_public_key_material(credential_info, getattr(cred_data, "public_key", {}))
     if credential_info.get("publicKeyAlgorithm") is not None:
