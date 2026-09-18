@@ -1,6 +1,6 @@
 """Binary helpers shared by the simple and advanced credential intake paths.
 
-``advanced_parts/binary_helpers_impl.py`` and ``simple/binary_helpers_impl.py``
+``advanced/binary_helpers_impl.py`` and ``simple/binary_helpers_impl.py``
 each carried their own copy of these, and the copies had drifted: one stripped
 surrounding whitespace and the other did not, and both decoded with
 ``validate=False``, so prose pasted into a ``rawId`` produced junk bytes instead
