@@ -8,6 +8,8 @@ from fido2 import cbor
 from fido2.cose import CoseKey
 from fido2.webauthn import AttestedCredentialData
 
+from . import binary_helpers_impl
+
 _AAGUID_SESSION_FIELD_PRECEDENCE = (
     "aaguid",
     "aaguidBase64",
@@ -59,32 +61,32 @@ def _serialize_credential_for_session_impl(simple_module: Any, entry: Mapping[st
         if source_key in entry:
             serialized[dest_key] = entry[source_key]
 
-    aaguid_value = simple_module._select_first(entry, _AAGUID_SESSION_FIELD_PRECEDENCE)
+    aaguid_value = binary_helpers_impl._select_first_impl(entry, _AAGUID_SESSION_FIELD_PRECEDENCE)
     if aaguid_value is None and "aaguidHex" in entry:
         aaguid_value = entry["aaguidHex"]
 
-    credential_id_value = simple_module._select_first(
+    credential_id_value = binary_helpers_impl._select_first_impl(
         entry,
         _CREDENTIAL_ID_SESSION_FIELD_PRECEDENCE,
     )
 
-    public_key_value = simple_module._select_first(
+    public_key_value = binary_helpers_impl._select_first_impl(
         entry,
         _PUBLIC_KEY_FIELD_PRECEDENCE,
     )
 
     if aaguid_value is not None:
-        aaguid_bytes = simple_module._decode_binary_value(aaguid_value)
+        aaguid_bytes = binary_helpers_impl._decode_binary_value_impl(aaguid_value)
         serialized["aaguid"] = base64.urlsafe_b64encode(aaguid_bytes).decode("ascii").rstrip("=")
 
     if credential_id_value is not None:
-        credential_id_bytes = simple_module._decode_binary_value(credential_id_value)
+        credential_id_bytes = binary_helpers_impl._decode_binary_value_impl(credential_id_value)
         serialized["credentialId"] = (
             base64.urlsafe_b64encode(credential_id_bytes).decode("ascii").rstrip("=")
         )
 
     if public_key_value is not None:
-        public_key_bytes = simple_module._decode_binary_value(public_key_value)
+        public_key_bytes = binary_helpers_impl._decode_binary_value_impl(public_key_value)
         serialized["publicKey"] = base64.urlsafe_b64encode(public_key_bytes).decode("ascii").rstrip("=")
 
     return serialized
@@ -104,15 +106,15 @@ def _parse_client_credentials_impl(
             continue
 
         try:
-            aaguid_raw = simple_module._select_first(
+            aaguid_raw = binary_helpers_impl._select_first_impl(
                 entry,
                 _AAGUID_PARSE_FIELD_PRECEDENCE,
             )
-            credential_id_raw = simple_module._select_first(
+            credential_id_raw = binary_helpers_impl._select_first_impl(
                 entry,
                 _CREDENTIAL_ID_PARSE_FIELD_PRECEDENCE,
             )
-            public_key_raw = simple_module._select_first(
+            public_key_raw = binary_helpers_impl._select_first_impl(
                 entry,
                 _PUBLIC_KEY_FIELD_PRECEDENCE,
             )
@@ -120,9 +122,9 @@ def _parse_client_credentials_impl(
             if aaguid_raw is None or credential_id_raw is None or public_key_raw is None:
                 continue
 
-            aaguid_bytes = simple_module._decode_binary_value(aaguid_raw)
-            credential_id_bytes = simple_module._decode_binary_value(credential_id_raw)
-            public_key_bytes = simple_module._decode_binary_value(public_key_raw)
+            aaguid_bytes = binary_helpers_impl._decode_binary_value_impl(aaguid_raw)
+            credential_id_bytes = binary_helpers_impl._decode_binary_value_impl(credential_id_raw)
+            public_key_bytes = binary_helpers_impl._decode_binary_value_impl(public_key_raw)
 
             cose_key = CoseKey.parse(cbor.decode(public_key_bytes))
 

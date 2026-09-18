@@ -8,6 +8,7 @@ from typing import Any
 from flask import jsonify, session
 
 from ... import attestation, config, device_logs, metadata, storage
+from . import binary_helpers_impl
 
 
 def build_stored_credential_context_impl(simple_module: Any, ctx: dict[str, Any]) -> None:
@@ -139,8 +140,8 @@ def _record_registration_event_impl(simple_module: Any, ctx: dict[str, Any]) -> 
         aaguid=ctx["aaguid_bytes"] or None,
         device_name_mds=metadata_description,
         attestation_format=str(ctx["attestation_format"] or ""),
-        attestation_object=simple_module._decode_base64url_bytes(ctx["raw_attestation_object_b64"]),
-        client_data_json=simple_module._decode_base64url_bytes(ctx["client_data_json_b64"]),
+        attestation_object=binary_helpers_impl._decode_base64url_bytes_impl(ctx["raw_attestation_object_b64"]),
+        client_data_json=binary_helpers_impl._decode_base64url_bytes_impl(ctx["client_data_json_b64"]),
         signature_valid=ctx["attestation_signature_valid"],
         root_valid=ctx["attestation_root_valid"],
         rp_id_hash_valid=ctx["attestation_rp_id_hash_valid"],

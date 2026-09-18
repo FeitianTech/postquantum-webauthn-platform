@@ -15,6 +15,7 @@ from collections.abc import Iterable, Mapping
 from typing import Any
 
 from ... import config, metadata, storage
+from . import binary_helpers_impl
 
 #: Key under which the server-side credential record keeps its latest counter.
 #: Records written before it existed fall back to the registration-time
@@ -81,7 +82,7 @@ def client_supplied_sign_count_impl(
         if raw_id is None:
             continue
         try:
-            entry_id = simple_module._decode_binary_value(raw_id)
+            entry_id = binary_helpers_impl._decode_binary_value_impl(raw_id)
         except Exception:
             continue
         if entry_id == credential_id:
