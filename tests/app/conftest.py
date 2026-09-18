@@ -197,14 +197,14 @@ def simple_credentials_builder_dict():
 def simple_credentials_builder_object():
     """The fragment that defines the object-shaped credential row builders."""
 
-    return _simple_fragment("credentials_builder_object_impl")
+    return _simple_fragment("credential_list")
 
 
 @pytest.fixture
 def simple_credentials_route():
     """The fragment that defines the ``/api/credentials`` body."""
 
-    return _simple_fragment("credentials_route_impl")
+    return _simple_fragment("credential_list")
 
 
 @pytest.fixture
