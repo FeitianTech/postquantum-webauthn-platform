@@ -46,7 +46,7 @@ def simple_storage(simple_module, monkeypatch) -> dict[str, Any]:
 
 
 @pytest.fixture
-def advanced_storage(advanced_module, monkeypatch) -> list[Any]:
+def advanced_storage(advanced_module, monkeypatch, credential_artifacts_module) -> list[Any]:
     """Neutralise advanced-flow persistence and capture stored artifacts."""
 
     stored: list[Any] = []
@@ -55,7 +55,7 @@ def advanced_storage(advanced_module, monkeypatch) -> list[Any]:
         stored.append((storage_id, payload, session_id))
         return True
 
-    monkeypatch.setattr(advanced_module, "store_credential_artifact", _store)
+    monkeypatch.setattr(credential_artifacts_module, "store_credential_artifact", _store)
     monkeypatch.setattr(advanced_module, "record_registration_event", lambda _event: None)
     return stored
 
