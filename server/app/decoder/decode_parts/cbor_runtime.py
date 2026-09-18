@@ -11,7 +11,7 @@ import cbor2
 from fido2 import cbor
 
 from ...attestation import make_json_safe
-from . import details_runtime
+from . import ctap_runtime_parse, details_runtime
 from .cbor_lenient import _lenient_decode_from, _structure_to_value
 from .cbor_sequence import _decode_cbor_sequence_impl
 from .cbor_strict import _CborDecodingError, _decode_cbor_structure
@@ -151,7 +151,7 @@ def _repair_get_assertion_entries(
             user_value = raw_field_map.get(4)
 
     if signature_bytes is None and raw_bytes:
-        for raw_key, raw_value in _extract_lenient_map_entries(raw_bytes):
+        for raw_key, raw_value in ctap_runtime_parse._extract_lenient_map_entries(raw_bytes):
             if isinstance(raw_key, int) and raw_key == 3:
                 candidate_bytes = _coerce_cbor_bytes(raw_value)
                 if candidate_bytes is not None:
