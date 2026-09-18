@@ -14,12 +14,6 @@ from . import (
     cbor_parser,
     certificates,
     ctap,
-    ctap_classify,
-    ctap_convert_leaf,
-    ctap_repair_leaf,
-    ctap_repair_make,
-    ctap_runtime_interpret,
-    ctap_runtime_parse,
     keys,
     pipeline,
     response,
@@ -120,39 +114,39 @@ _format_json_block = summary._format_json_block
 _parse_attested_data = summary._parse_attested_data
 
 # CTAP map classification and labels.
-_GET_ASSERTION_REQUEST_LABELS = ctap_classify._GET_ASSERTION_REQUEST_LABELS
-_GET_ASSERTION_RESPONSE_LABELS = ctap_classify._GET_ASSERTION_RESPONSE_LABELS
-_MAKE_CREDENTIAL_REQUEST_LABELS = ctap_classify._MAKE_CREDENTIAL_REQUEST_LABELS
-_MAKE_CREDENTIAL_RESPONSE_LABELS = ctap_classify._MAKE_CREDENTIAL_RESPONSE_LABELS
-_build_labeled_ctap_map = ctap_classify._build_labeled_ctap_map
-_classify_ctap_map = ctap_classify._classify_ctap_map
-_format_ctap_entry_key = ctap_classify._format_ctap_entry_key
-_looks_like_get_assertion_output = ctap_classify._looks_like_get_assertion_output
-_looks_like_get_assertion_request = ctap_classify._looks_like_get_assertion_request
-_looks_like_make_credential_output = ctap_classify._looks_like_make_credential_output
-_looks_like_make_credential_request = ctap_classify._looks_like_make_credential_request
-_resolve_ctap_label = ctap_classify._resolve_ctap_label
+_GET_ASSERTION_REQUEST_LABELS = ctap._GET_ASSERTION_REQUEST_LABELS
+_GET_ASSERTION_RESPONSE_LABELS = ctap._GET_ASSERTION_RESPONSE_LABELS
+_MAKE_CREDENTIAL_REQUEST_LABELS = ctap._MAKE_CREDENTIAL_REQUEST_LABELS
+_MAKE_CREDENTIAL_RESPONSE_LABELS = ctap._MAKE_CREDENTIAL_RESPONSE_LABELS
+_build_labeled_ctap_map = ctap._build_labeled_ctap_map
+_classify_ctap_map = ctap._classify_ctap_map
+_format_ctap_entry_key = ctap._format_ctap_entry_key
+_looks_like_get_assertion_output = ctap._looks_like_get_assertion_output
+_looks_like_get_assertion_request = ctap._looks_like_get_assertion_request
+_looks_like_make_credential_output = ctap._looks_like_make_credential_output
+_looks_like_make_credential_request = ctap._looks_like_make_credential_request
+_resolve_ctap_label = ctap._resolve_ctap_label
 
 # CTAP field conversion leaves.
-_attempt_decode_cbor_map = ctap_convert_leaf._attempt_decode_cbor_map
-_convert_ctap_credential_descriptor = ctap_convert_leaf._convert_ctap_credential_descriptor
-_convert_optional_ctap_field = ctap_convert_leaf._convert_optional_ctap_field
-_normalize_user_mapping = ctap_convert_leaf._normalize_user_mapping
+_attempt_decode_cbor_map = ctap._attempt_decode_cbor_map
+_convert_ctap_credential_descriptor = ctap._convert_ctap_credential_descriptor
+_convert_optional_ctap_field = ctap._convert_optional_ctap_field
+_normalize_user_mapping = ctap._normalize_user_mapping
 
 # CTAP trailing-field repair helpers.
 _extract_get_assertion_trailing_from_raw = (
-    ctap_repair_leaf._extract_get_assertion_trailing_from_raw
+    ctap._extract_get_assertion_trailing_from_raw
 )
-_locate_get_assertion_trailing_offset = ctap_repair_leaf._locate_get_assertion_trailing_offset
-_split_get_assertion_trailing_fields = ctap_repair_leaf._split_get_assertion_trailing_fields
+_locate_get_assertion_trailing_offset = ctap._locate_get_assertion_trailing_offset
+_split_get_assertion_trailing_fields = ctap._split_get_assertion_trailing_fields
 
 # CTAP make-credential repair helpers.
-_derive_alg_from_auth_data = ctap_repair_make._derive_alg_from_auth_data
-_extract_mapping_bytes = ctap_repair_make._extract_mapping_bytes
-_extract_mapping_string = ctap_repair_make._extract_mapping_string
-_merge_ctap_make_credential = ctap_repair_make._merge_ctap_make_credential
-_merge_trailing_signature = ctap_repair_make._merge_trailing_signature
-_repair_make_credential_entries = ctap_repair_make._repair_make_credential_entries
+_derive_alg_from_auth_data = ctap._derive_alg_from_auth_data
+_extract_mapping_bytes = ctap._extract_mapping_bytes
+_extract_mapping_string = ctap._extract_mapping_string
+_merge_ctap_make_credential = ctap._merge_ctap_make_credential
+_merge_trailing_signature = ctap._merge_trailing_signature
+_repair_make_credential_entries = ctap._repair_make_credential_entries
 
 # Top-level decode pipeline helpers.
 _PEM_CERT_PATTERN = pipeline._PEM_CERT_PATTERN
@@ -180,41 +174,41 @@ _repair_get_assertion_entries = ctap._repair_get_assertion_entries
 _try_decode_cbor = ctap._try_decode_cbor
 
 # CTAP field parsers and converters.
-_convert_att_stmt_field = ctap_runtime_parse._convert_att_stmt_field
-_convert_auth_data_field = ctap_runtime_parse._convert_auth_data_field
-_convert_ctap_allow_list = ctap_runtime_parse._convert_ctap_allow_list
-_convert_ctap_user = ctap_runtime_parse._convert_ctap_user
-_convert_ctap_user_field = ctap_runtime_parse._convert_ctap_user_field
-_convert_pub_key_cred_params = ctap_runtime_parse._convert_pub_key_cred_params
-_convert_signature_field = ctap_runtime_parse._convert_signature_field
-_convert_user_text_value = ctap_runtime_parse._convert_user_text_value
-_decode_trailing_map = ctap_runtime_parse._decode_trailing_map
-_extract_lenient_map_entries = ctap_runtime_parse._extract_lenient_map_entries
-_extract_signature_from_raw_bytes = ctap_runtime_parse._extract_signature_from_raw_bytes
-_format_att_stmt_for_expanded_json = ctap_runtime_parse._format_att_stmt_for_expanded_json
-_format_auth_data_for_expanded_json = ctap_runtime_parse._format_auth_data_for_expanded_json
-_parse_authenticator_data_bytes = ctap_runtime_parse._parse_authenticator_data_bytes
-_summarize_bytes_for_json = ctap_runtime_parse._summarize_bytes_for_json
+_convert_att_stmt_field = ctap._convert_att_stmt_field
+_convert_auth_data_field = ctap._convert_auth_data_field
+_convert_ctap_allow_list = ctap._convert_ctap_allow_list
+_convert_ctap_user = ctap._convert_ctap_user
+_convert_ctap_user_field = ctap._convert_ctap_user_field
+_convert_pub_key_cred_params = ctap._convert_pub_key_cred_params
+_convert_signature_field = ctap._convert_signature_field
+_convert_user_text_value = ctap._convert_user_text_value
+_decode_trailing_map = ctap._decode_trailing_map
+_extract_lenient_map_entries = ctap._extract_lenient_map_entries
+_extract_signature_from_raw_bytes = ctap._extract_signature_from_raw_bytes
+_format_att_stmt_for_expanded_json = ctap._format_att_stmt_for_expanded_json
+_format_auth_data_for_expanded_json = ctap._format_auth_data_for_expanded_json
+_parse_authenticator_data_bytes = ctap._parse_authenticator_data_bytes
+_summarize_bytes_for_json = ctap._summarize_bytes_for_json
 
 # CTAP interpretation and expanded JSON.
-_GET_ASSERTION_REQUEST_HANDLERS = ctap_runtime_interpret._GET_ASSERTION_REQUEST_HANDLERS
-_GET_ASSERTION_RESPONSE_HANDLERS = ctap_runtime_interpret._GET_ASSERTION_RESPONSE_HANDLERS
-_MAKE_CREDENTIAL_REQUEST_HANDLERS = ctap_runtime_interpret._MAKE_CREDENTIAL_REQUEST_HANDLERS
-_MAKE_CREDENTIAL_RESPONSE_HANDLERS = ctap_runtime_interpret._MAKE_CREDENTIAL_RESPONSE_HANDLERS
-_build_get_assertion_expanded_json = ctap_runtime_interpret._build_get_assertion_expanded_json
+_GET_ASSERTION_REQUEST_HANDLERS = ctap._GET_ASSERTION_REQUEST_HANDLERS
+_GET_ASSERTION_RESPONSE_HANDLERS = ctap._GET_ASSERTION_RESPONSE_HANDLERS
+_MAKE_CREDENTIAL_REQUEST_HANDLERS = ctap._MAKE_CREDENTIAL_REQUEST_HANDLERS
+_MAKE_CREDENTIAL_RESPONSE_HANDLERS = ctap._MAKE_CREDENTIAL_RESPONSE_HANDLERS
+_build_get_assertion_expanded_json = ctap._build_get_assertion_expanded_json
 _build_get_assertion_request_expanded_json = (
-    ctap_runtime_interpret._build_get_assertion_request_expanded_json
+    ctap._build_get_assertion_request_expanded_json
 )
-_build_make_credential_expanded_json = ctap_runtime_interpret._build_make_credential_expanded_json
+_build_make_credential_expanded_json = ctap._build_make_credential_expanded_json
 _build_make_credential_request_expanded_json = (
-    ctap_runtime_interpret._build_make_credential_request_expanded_json
+    ctap._build_make_credential_request_expanded_json
 )
-_interpret_ctap_cbor_value = ctap_runtime_interpret._interpret_ctap_cbor_value
-_interpret_get_assertion_map = ctap_runtime_interpret._interpret_get_assertion_map
-_interpret_get_assertion_request_map = ctap_runtime_interpret._interpret_get_assertion_request_map
-_interpret_make_credential_map = ctap_runtime_interpret._interpret_make_credential_map
+_interpret_ctap_cbor_value = ctap._interpret_ctap_cbor_value
+_interpret_get_assertion_map = ctap._interpret_get_assertion_map
+_interpret_get_assertion_request_map = ctap._interpret_get_assertion_request_map
+_interpret_make_credential_map = ctap._interpret_make_credential_map
 _interpret_make_credential_request_map = (
-    ctap_runtime_interpret._interpret_make_credential_request_map
+    ctap._interpret_make_credential_request_map
 )
 
 # Client data and authenticator data details.
