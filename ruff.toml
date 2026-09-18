@@ -37,48 +37,29 @@ target-version = "py312"
 #     They are worth adopting, but one rule group at a time with the suite green.
 select = ["E4", "E7", "E9", "F", "I", "UP006", "UP007", "UP035", "UP045"]
 
-# F821 stays off on purpose. The remaining 382 hits come from the split-module
-# runtime hack described under [lint.per-file-ignores] below: decoder/decode.py
-# rebuilds its fragments' functions against the parent's
-# globals, so the fragments genuinely do not import the names they use, and
-# those `*_parts/` files are undefined-name soup by design. Turning F821 on now
-# would mean 382 permanent suppressions and would destroy the one number that
-# tells us whether the hack is being unwound. It is our progress meter: it comes
-# on, unsuppressed, in the milestone that removes the last rebinding.
-#
-# It was 1008 until metadata.py was unwound, and 557 until attestation.py was.
-# `server/app/metadata_parts/` and `server/app/attestation_parts/` are both at
-# zero and stay there: every fragment resolves its own names through real
-# imports, and the shared metadata caches live in
-# `metadata_parts/runtime_state.py`.
-# Measure progress with:
-#   uvx ruff@0.16.8 check server fido2 tools --select F821 --no-cache \
-#     --isolated --target-version py312 | grep -c F821
-ignore = ["F821"]
+# F821 is gated, with nothing ignored. It was the progress meter for the
+# split-module runtime hack, where a "carrier" module rebuilt its `*_parts/`
+# fragments' functions against its own globals so the fragments never imported
+# the names they used. It read 1008 before `metadata.py` was unwound, 557 before
+# `attestation.py`, 382 before `decoder/decode.py`, and 0 once the last
+# rebinding was removed. `server/app/metadata_parts/`,
+# `server/app/attestation_parts/` and `server/app/decoder/decode_parts/` all
+# resolve their own names through real imports and stay at zero.
 
 [lint.per-file-ignores]
-# F401 is structurally wrong in the three remaining "parent" modules of the
+# F401 is structurally wrong in the two remaining "parent" modules of the
 # split-module layout. Each one is a namespace carrier for its `*_parts/`
-# fragments:
+# fragments: routes/advanced.py and routes/simple.py pass themselves
+# (`_self_module()`) into their fragments, which then read names straight off the
+# module (e.g. `advanced_module.request.get_json(...)`). So the parent imports
+# names its own body never mentions, ruff reports them unused, and deleting them
+# breaks the app at runtime. UP035 is ignored here for the same reason: the
+# fragments still write `Dict`/`List`/`Set`/`Tuple` and resolve them through the
+# parent, so the parent has to keep the legacy `typing` names until those
+# fragments can import their own.
 #
-#   * decoder/decode.py rebuilds fragment functions with
-#     `types.FunctionType(func.__code__, globals(), ...)`, so the parent's module
-#     globals are the namespace those functions resolve against;
-#   * routes/advanced.py and routes/simple.py pass themselves (`_self_module()`)
-#     into their fragments, which then read names straight off the module
-#     (e.g. `advanced_module.request.get_json(...)`).
-#
-# Either way the parent imports names its own body never mentions, ruff reports
-# them unused, and deleting them breaks the app at runtime. UP035 is ignored
-# here for the same reason: the fragments still write `Dict`/`List`/`Set`/
-# `Tuple` and resolve them through the parent, so the parent has to keep the
-# legacy `typing` names until those fragments can import their own. This is the
-# same debt F821 tracks (see the `ignore` note above) and it is
-# retired in the same milestone, not by suppressing it name by name here.
-#
-# metadata.py and attestation.py used to need these ignores. Neither does now:
-# each is a thin re-export of its `*_parts/` package, every name in its `__all__`
-# is a plain assignment, and nothing either imports is unused.
-"server/app/decoder/decode.py" = ["F401", "UP035"]
+# metadata.py, attestation.py and decoder/decode.py used to need these ignores.
+# None does now: each is a thin re-export of its `*_parts/` package, every name
+# it exposes is a plain assignment, and nothing any of them imports is unused.
 "server/app/routes/advanced.py" = ["F401", "UP035"]
 "server/app/routes/simple.py" = ["F401", "UP035"]
