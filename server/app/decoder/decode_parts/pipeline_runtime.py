@@ -1,11 +1,8 @@
 """Top-level decode pipeline helpers."""
 from __future__ import annotations
 
-import base64
-import binascii
 import json
 import re
-import string
 from collections.abc import Mapping, Sequence
 from typing import Any
 
@@ -14,6 +11,7 @@ from cryptography import x509
 from fido2.utils import ByteBuffer
 
 from ...attestation import make_json_safe, serialize_attestation_certificate
+from ...encoding import EncodingError, SniffResult, sniff, try_decode_base64
 from . import cbor_runtime, details_runtime, result_runtime
 
 _PEM_CERT_PATTERN = re.compile(
@@ -146,12 +144,8 @@ def _decode_public_key_credential(
 def _decode_pem_certificates(text: str) -> dict[str, Any]:
     certificates = []
     for match in _PEM_CERT_PATTERN.finditer(text):
-        body = re.sub(r"[^A-Za-z0-9+/=]", "", match.group("body"))
-        if not body:
-            continue
-        try:
-            cert_bytes = base64.b64decode(body)
-        except (ValueError, binascii.Error):
+        cert_bytes = try_decode_base64(match.group("body"))
+        if cert_bytes is None:
             continue
         certificates.append(cert_bytes)
 
@@ -227,36 +221,30 @@ def _decode_binary_payload(data: bytes, encoding: str) -> dict[str, Any]:
     }
 
 
-def _decode_binary_input(value: str) -> tuple[bytes, str]:
-    cleaned = "".join(value.split())
-    if not cleaned:
+def _sniff_binary_input(value: str) -> SniffResult:
+    """Decode decoder input and report which encoding actually matched.
+
+    The label comes from the decoder that succeeded, not from scanning the
+    input for ``-``/``_``: a base64url payload that happens to use none of
+    those characters is byte-identical to the same text read as standard
+    base64, and :attr:`~server.app.encoding.SniffResult.ambiguous` says so
+    instead of the pipeline picking one and asserting it.
+    """
+
+    if not "".join(value.split()):
         raise ValueError("No binary data present.")
 
-    hex_candidate = re.sub(r"0x", "", cleaned, flags=re.IGNORECASE).replace(":", "")
-    if hex_candidate and all(char in string.hexdigits for char in hex_candidate):
-        if len(hex_candidate) % 2:
-            hex_candidate = "0" + hex_candidate
-        return bytes.fromhex(hex_candidate), "hex"
-
-    has_url_chars = any(char in "-_" for char in cleaned)
-    base64_candidate = cleaned.replace("-", "+").replace("_", "/")
-    padding = (-len(base64_candidate)) % 4
-    if padding:
-        base64_candidate += "=" * padding
     try:
-        decoded = base64.b64decode(base64_candidate, validate=True)
-        return decoded, "base64url" if has_url_chars else "base64"
-    except (ValueError, binascii.Error):
-        pass
-
-    padding = (-len(cleaned)) % 4
-    try:
-        decoded = base64.urlsafe_b64decode(cleaned + "=" * padding)
-        return decoded, "base64url"
-    except (ValueError, binascii.Error) as exc:
+        return sniff(value)
+    except EncodingError as exc:
         raise ValueError(
             "Input does not appear to be valid base64, base64url, or hexadecimal data."
         ) from exc
+
+
+def _decode_binary_input(value: str) -> tuple[bytes, str]:
+    result = _sniff_binary_input(value)
+    return result.data, result.encoding
 
 
 def _decode_binary_field(value: Any) -> tuple[bytes, str] | None:
