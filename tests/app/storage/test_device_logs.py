@@ -289,14 +289,12 @@ def test_safe_cbor_decode_rejects_invalid_base64url_string():
     assert device_logs.safe_cbor_decode("***") == {"error": "decode_failed"}
 
 
-def test_safe_cbor_decode_handles_base64_decoder_exceptions(monkeypatch):
-    monkeypatch.setattr(
-        device_logs.base64,
-        "urlsafe_b64decode",
-        lambda _value: (_ for _ in ()).throw(ValueError("invalid-base64")),
-    )
-
-    assert device_logs.safe_cbor_decode("abc") == {"error": "decode_failed"}
+def test_safe_cbor_decode_reports_failure_for_strings_that_are_not_base64url():
+    # Standard base64 with "+"/"/" is not base64url and is refused outright,
+    # rather than being decoded through a translation that changes the bytes.
+    assert device_logs.safe_cbor_decode("ab+/") == {"error": "decode_failed"}
+    assert device_logs.safe_cbor_decode("not base64url") == {"error": "decode_failed"}
+    assert device_logs.safe_cbor_decode("   ") == {"error": "decode_failed"}
 
 
 def test_safe_cbor_decode_wraps_non_mapping_values_under_value_key():

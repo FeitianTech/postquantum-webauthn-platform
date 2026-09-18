@@ -6,6 +6,7 @@ from typing import Any
 
 from ... import attestation, storage
 from ...attachments import normalize_attachment
+from ...encoding import encode_base64
 
 
 def add_registration_metadata_impl(
@@ -58,12 +59,12 @@ def build_credential_info_from_dict_credential_data_impl(
 
     credential_info = {
         "email": email,
-        "credentialId": base64.b64encode(cred_data["credential_id"]).decode("utf-8"),
+        "credentialId": encode_base64(cred_data["credential_id"]),
         "userName": user_info.get("name", email),
         "displayName": user_info.get("display_name", email),
-        "userHandle": base64.b64encode(
+        "userHandle": encode_base64(
             user_info.get("user_handle", cred_data["credential_id"])
-        ).decode("utf-8")
+        )
         if user_info.get("user_handle")
         else None,
         "algorithm": cred_data.get("public_key", {}).get(3, "Unknown"),

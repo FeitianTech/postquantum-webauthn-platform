@@ -10,6 +10,7 @@ from fido2.webauthn import (
 )
 
 from ... import config, pqc
+from ...encoding import decode_hex
 from . import algorithm_helpers_impl, binary_helpers_impl
 
 
@@ -141,7 +142,7 @@ def build_exclude_list(public_key: Mapping[str, Any]) -> list[Any]:
             if isinstance(exclude_cred, dict) and exclude_cred.get("type") == "public-key":
                 cred_id = binary_helpers_impl._extract_binary_value_impl(exclude_cred.get("id", ""))
                 if isinstance(cred_id, str):
-                    cred_id = bytes.fromhex(cred_id)
+                    cred_id = decode_hex(cred_id)
                 if cred_id:
                     exclude_list.append(
                         PublicKeyCredentialDescriptor(
@@ -191,12 +192,12 @@ def build_processed_extensions(public_key: Mapping[str, Any]) -> dict[str, Any]:
                     if "first" in prf_eval:
                         first_value = binary_helpers_impl._extract_binary_value_impl(prf_eval["first"])
                         if isinstance(first_value, str):
-                            first_value = bytes.fromhex(first_value)
+                            first_value = decode_hex(first_value)
                         processed_eval["first"] = first_value
                     if "second" in prf_eval:
                         second_value = binary_helpers_impl._extract_binary_value_impl(prf_eval["second"])
                         if isinstance(second_value, str):
-                            second_value = bytes.fromhex(second_value)
+                            second_value = decode_hex(second_value)
                         processed_eval["second"] = second_value
                 processed_extensions["prf"] = {"eval": processed_eval} if processed_eval else ext_value
             else:

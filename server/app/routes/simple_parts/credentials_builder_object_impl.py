@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-import base64
 from collections.abc import Mapping, MutableMapping
 from typing import Any
 
 from ... import attestation, storage
 from ...attachments import normalize_attachment
+from ...encoding import encode_base64
 from . import credentials_builder_dict_impl
 
 
@@ -33,10 +33,10 @@ def build_credential_info_from_object_credential_data_impl(
 
     credential_info = {
         "email": email,
-        "credentialId": base64.b64encode(cred_data.credential_id).decode("utf-8"),
+        "credentialId": encode_base64(cred_data.credential_id),
         "userName": user_info.get("name", email),
         "displayName": user_info.get("display_name", email),
-        "userHandle": base64.b64encode(user_info.get("user_handle")).decode("utf-8")
+        "userHandle": encode_base64(user_info.get("user_handle"))
         if user_info.get("user_handle")
         else None,
         "algorithm": cred_data.public_key[3]
@@ -101,7 +101,7 @@ def build_credential_info_from_bare_credential_impl(email: str, cred: Any) -> di
 
     credential_info = {
         "email": email,
-        "credentialId": base64.b64encode(cred.credential_id).decode("utf-8"),
+        "credentialId": encode_base64(cred.credential_id),
         "userName": email,
         "displayName": email,
         "userHandle": None,

@@ -1,13 +1,13 @@
 """CTAP parsing and field conversion helpers."""
 from __future__ import annotations
 
-import base64
 from collections.abc import Mapping, Sequence
 from typing import Any
 
 from fido2.webauthn import AuthenticatorData
 
 from ...attestation import encode_base64url
+from ...encoding import decode_hex, encode_base64
 from . import cbor_lenient, details_runtime, pipeline_runtime, result_runtime
 from .cbor_lenient import _lenient_read_uint
 from .ctap_convert_leaf import (
@@ -69,7 +69,7 @@ def _summarize_bytes_for_json(data: bytes) -> dict[str, Any]:
     return {
         "length": len(data),
         "hex": data.hex(),
-        "base64": base64.b64encode(data).decode("ascii"),
+        "base64": encode_base64(data),
         "base64url": encode_base64url(data),
     }
 
@@ -271,7 +271,7 @@ def _extract_signature_from_raw_bytes(raw_bytes: bytes) -> bytes | None:
         if end > len(hex_data):
             continue
         try:
-            return bytes.fromhex(hex_data[start:end])
+            return decode_hex(hex_data[start:end])
         except ValueError:
             continue
     return None

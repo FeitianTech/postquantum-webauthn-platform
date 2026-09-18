@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import base64
 from collections.abc import Mapping
 from datetime import datetime, timezone
 from typing import Any
@@ -8,6 +7,7 @@ from typing import Any
 from flask import jsonify, session
 
 from ... import attestation, config, device_logs, metadata, storage
+from ...encoding import encode_base64, encode_base64url
 from .. import binary_helpers
 
 
@@ -20,12 +20,12 @@ def build_stored_credential_context_impl(ctx: dict[str, Any]) -> None:
         "credentialId": ctx["credential_id_b64"],
         "credentialIdBase64Url": ctx["credential_id_b64u"],
         "credentialIdHex": ctx["credential_id_hex"],
-        "aaguid": base64.urlsafe_b64encode(ctx["aaguid_bytes"]).decode("ascii").rstrip("=")
+        "aaguid": encode_base64url(ctx["aaguid_bytes"])
         if ctx["aaguid_bytes"]
         else None,
         "aaguidHex": ctx["aaguid_bytes"].hex() if ctx["aaguid_bytes"] else None,
-        "publicKey": base64.b64encode(ctx["public_key_bytes"]).decode("ascii"),
-        "publicKeyBase64Url": base64.urlsafe_b64encode(ctx["public_key_bytes"]).decode("ascii").rstrip("="),
+        "publicKey": encode_base64(ctx["public_key_bytes"]),
+        "publicKeyBase64Url": encode_base64url(ctx["public_key_bytes"]),
         "publicKeyAlgorithm": ctx["credential_info"].get("publicKeyAlgorithm") or ctx["algo"],
         "signCount": getattr(ctx["auth_data"], "counter", 0),
         "createdAt": ctx["credential_info"]["registration_time"],
@@ -34,7 +34,7 @@ def build_stored_credential_context_impl(ctx: dict[str, Any]) -> None:
         "attestationStatement": storage.convert_bytes_for_json(ctx["attestation_statement"]),
         "properties": storage.convert_bytes_for_json(ctx["credential_properties"]),
         "publicKeyCose": storage.convert_bytes_for_json(ctx["cose_public_key"]),
-        "publicKeyBytes": base64.b64encode(ctx["public_key_bytes"]).decode("ascii"),
+        "publicKeyBytes": encode_base64(ctx["public_key_bytes"]),
         "authenticatorAttachment": ctx["authenticator_attachment_response"],
         "clientDataJSON": ctx["credential_info"].get("client_data_json"),
         "attestationObject": ctx["credential_info"].get("attestation_object"),

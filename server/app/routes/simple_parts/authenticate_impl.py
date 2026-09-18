@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import base64
 from collections.abc import Mapping
 from typing import Any
 
@@ -15,6 +14,7 @@ from ...challenge_registry import (
     consume_ceremony_state,
     stamp_ceremony_state,
 )
+from ...encoding import encode_base64url
 from ...sign_count import SIGN_COUNT_REGRESSED, sign_count_status
 from .. import binary_helpers
 from . import credential_parsing_impl, sign_count_impl
@@ -128,7 +128,7 @@ def authenticate_complete_impl():
         credential_id_bytes = binary_helpers.extract_assertion_credential_id(response_mapping)
         if credential_id_bytes:
             failed_credential_id = (
-                base64.urlsafe_b64encode(credential_id_bytes).decode("ascii").rstrip("=")
+                encode_base64url(credential_id_bytes)
             )
 
         response_payload: dict[str, Any] = {"error": str(exc)}
@@ -143,7 +143,7 @@ def authenticate_complete_impl():
     except Exception:
         authenticated_id_bytes = b""
     authenticated_id = (
-        base64.urlsafe_b64encode(authenticated_id_bytes).decode("ascii").rstrip("=")
+        encode_base64url(authenticated_id_bytes)
         if authenticated_id_bytes
         else None
     )

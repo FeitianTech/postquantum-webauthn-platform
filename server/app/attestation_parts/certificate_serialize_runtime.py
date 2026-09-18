@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import base64
 import hashlib
 import textwrap
 from datetime import datetime
@@ -12,6 +11,7 @@ from cryptography.hazmat.primitives import hashes, serialization
 
 from fido2.cose import describe_mldsa_oid, describe_mldsa_oid_name
 
+from ..encoding import encode_base64
 from . import (
     certificate_extensions_leaf,
     certificate_public_key_leaf,
@@ -28,7 +28,7 @@ def _serialize_attestation_certificate_fallback(
 ) -> dict[str, Any]:
     """Return certificate metadata when DER parsing fails."""
 
-    der_base64 = base64.b64encode(cert_bytes).decode("ascii")
+    der_base64 = encode_base64(cert_bytes)
     pem_body = "\n".join(textwrap.wrap(der_base64, 64))
     pem = f"-----BEGIN CERTIFICATE-----\n{pem_body}\n-----END CERTIFICATE-----"
 
@@ -119,7 +119,7 @@ def serialize_attestation_certificate(cert_bytes: bytes) -> Any:
     }
 
     der_bytes = certificate.public_bytes(serialization.Encoding.DER)
-    der_base64 = base64.b64encode(der_bytes).decode("ascii")
+    der_base64 = encode_base64(der_bytes)
     pem_body = "\n".join(textwrap.wrap(der_base64, 64))
     pem = f"-----BEGIN CERTIFICATE-----\n{pem_body}\n-----END CERTIFICATE-----"
 

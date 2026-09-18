@@ -1,7 +1,6 @@
 """GitHub-based logging for WebAuthn device registrations."""
 from __future__ import annotations
 
-import base64
 import logging
 import os
 import secrets
@@ -20,6 +19,7 @@ except ImportError:  # pragma: no cover - fallback for very old Python
     from backports.zoneinfo import ZoneInfo  # type: ignore
 
 from . import encoding
+from .encoding import encode_base64url
 from .github_client import (
     github_upload_json,
     is_logging_enabled,
@@ -73,7 +73,7 @@ def to_b64url(data: bytes) -> str:
 
     if not data:
         return ""
-    return base64.urlsafe_b64encode(data).decode("ascii").rstrip("=")
+    return encode_base64url(data)
 
 
 def random_shortid(length: int = 8) -> str:

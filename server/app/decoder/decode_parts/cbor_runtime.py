@@ -10,6 +10,7 @@ import cbor2
 from fido2 import cbor
 
 from ...attestation import make_json_safe
+from ...encoding import decode_hex
 from . import (
     cbor_lenient,
     cbor_strict,
@@ -133,7 +134,7 @@ def _repair_get_assertion_entries(
             hex_value = key_info.get("hex")
             if isinstance(hex_value, str):
                 try:
-                    signature_bytes = bytes.fromhex(hex_value)
+                    signature_bytes = decode_hex(hex_value)
                 except ValueError:
                     signature_bytes = None
         value_node = entry.get("value")

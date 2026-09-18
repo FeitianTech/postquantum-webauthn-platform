@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import base64
 import hashlib
 import uuid
 from collections.abc import Mapping
@@ -9,6 +8,7 @@ from typing import Any
 from fido2 import cbor
 
 from ... import attestation, storage
+from ...encoding import encode_base64, encode_base64url
 from . import logging_helpers_impl
 
 
@@ -33,10 +33,10 @@ def build_registration_material(
     credential_id_bytes = getattr(credential_data, "credential_id", b"") or b""
     credential_id_hex = credential_id_bytes.hex() if credential_id_bytes else None
     credential_id_b64 = (
-        base64.b64encode(credential_id_bytes).decode("ascii") if credential_id_bytes else None
+        encode_base64(credential_id_bytes) if credential_id_bytes else None
     )
     credential_id_b64url = (
-        base64.urlsafe_b64encode(credential_id_bytes).rstrip(b"=").decode("ascii")
+        encode_base64url(credential_id_bytes)
         if credential_id_bytes
         else None
     )
@@ -85,11 +85,11 @@ def build_registration_material(
         rp_id_hash_bytes = b""
     else:
         rp_id_hash_hex = rp_id_hash_bytes.hex()
-        rp_id_hash_b64 = base64.urlsafe_b64encode(rp_id_hash_bytes).rstrip(b"=").decode("ascii")
+        rp_id_hash_b64 = encode_base64url(rp_id_hash_bytes)
 
     expected_rp_hash_bytes = hashlib.sha256((resolved_rp_id or "").encode("utf-8")).digest()
     expected_rp_hash_hex = expected_rp_hash_bytes.hex()
-    expected_rp_hash_b64 = base64.urlsafe_b64encode(expected_rp_hash_bytes).rstrip(b"=").decode("ascii")
+    expected_rp_hash_b64 = encode_base64url(expected_rp_hash_bytes)
 
     if attestation_rp_id_hash_valid is None:
         attestation_rp_id_hash_valid = rp_id_hash_bytes == expected_rp_hash_bytes
@@ -156,8 +156,8 @@ def build_registration_material(
         },
         "residentKey": resident_key_result,
         "userHandle": {
-            "base64": base64.b64encode(user_handle).decode("ascii"),
-            "base64url": base64.urlsafe_b64encode(user_handle).rstrip(b"=").decode("ascii"),
+            "base64": encode_base64(user_handle),
+            "base64url": encode_base64url(user_handle),
             "hex": user_handle.hex(),
         },
     }
@@ -169,8 +169,8 @@ def build_registration_material(
 
     credential_info["relying_party"] = attestation.make_json_safe(rp_info)
 
-    user_handle_b64url = base64.urlsafe_b64encode(user_handle).rstrip(b"=").decode("ascii")
-    user_handle_b64 = base64.b64encode(user_handle).decode("ascii")
+    user_handle_b64url = encode_base64url(user_handle)
+    user_handle_b64 = encode_base64(user_handle)
 
     stored_properties = storage.convert_bytes_for_json(credential_info.get("properties", {}))
     stored_extensions = storage.convert_bytes_for_json(client_extension_results)
@@ -184,8 +184,8 @@ def build_registration_material(
         except Exception:
             public_key_cbor_bytes = None
         if public_key_cbor_bytes:
-            public_key_b64 = base64.b64encode(public_key_cbor_bytes).decode("ascii")
-            public_key_b64url = base64.urlsafe_b64encode(public_key_cbor_bytes).rstrip(b"=").decode("ascii")
+            public_key_b64 = encode_base64(public_key_cbor_bytes)
+            public_key_b64url = encode_base64url(public_key_cbor_bytes)
 
     stored_credential: dict[str, Any] = {
         "type": "advanced",
@@ -197,7 +197,7 @@ def build_registration_material(
         "credentialId": credential_id_b64,
         "credentialIdBase64Url": credential_id_b64url,
         "credentialIdHex": credential_id_hex,
-        "aaguid": base64.urlsafe_b64encode(aaguid_bytes).rstrip(b"=").decode("ascii") if aaguid_bytes else None,
+        "aaguid": encode_base64url(aaguid_bytes) if aaguid_bytes else None,
         "aaguidHex": aaguid_hex,
         "aaguidGuid": aaguid_guid,
         "publicKeyAlgorithm": credential_info.get("publicKeyAlgorithm"),

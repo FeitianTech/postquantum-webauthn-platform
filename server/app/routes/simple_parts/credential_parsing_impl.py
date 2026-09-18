@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import base64
 from collections.abc import Mapping
 from typing import Any
 
@@ -8,6 +7,7 @@ from fido2 import cbor
 from fido2.cose import CoseKey
 from fido2.webauthn import AttestedCredentialData
 
+from ...encoding import encode_base64url
 from . import binary_helpers_impl
 
 _AAGUID_SESSION_FIELD_PRECEDENCE = (
@@ -77,17 +77,17 @@ def _serialize_credential_for_session_impl(entry: Mapping[str, Any]) -> dict[str
 
     if aaguid_value is not None:
         aaguid_bytes = binary_helpers_impl._decode_binary_value_impl(aaguid_value)
-        serialized["aaguid"] = base64.urlsafe_b64encode(aaguid_bytes).decode("ascii").rstrip("=")
+        serialized["aaguid"] = encode_base64url(aaguid_bytes)
 
     if credential_id_value is not None:
         credential_id_bytes = binary_helpers_impl._decode_binary_value_impl(credential_id_value)
         serialized["credentialId"] = (
-            base64.urlsafe_b64encode(credential_id_bytes).decode("ascii").rstrip("=")
+            encode_base64url(credential_id_bytes)
         )
 
     if public_key_value is not None:
         public_key_bytes = binary_helpers_impl._decode_binary_value_impl(public_key_value)
-        serialized["publicKey"] = base64.urlsafe_b64encode(public_key_bytes).decode("ascii").rstrip("=")
+        serialized["publicKey"] = encode_base64url(public_key_bytes)
 
     return serialized
 
@@ -139,15 +139,15 @@ def _parse_client_credentials_impl(
             serialized_entry = _serialize_credential_for_session_impl(entry)
             serialized_entry.setdefault(
                 "credentialId",
-                base64.urlsafe_b64encode(credential_id_bytes).decode("ascii").rstrip("="),
+                encode_base64url(credential_id_bytes),
             )
             serialized_entry.setdefault(
                 "aaguid",
-                base64.urlsafe_b64encode(aaguid_bytes).decode("ascii").rstrip("="),
+                encode_base64url(aaguid_bytes),
             )
             serialized_entry.setdefault(
                 "publicKey",
-                base64.urlsafe_b64encode(public_key_bytes).decode("ascii").rstrip("="),
+                encode_base64url(public_key_bytes),
             )
             if "signCount" not in serialized_entry and isinstance(entry.get("signCount"), int):
                 serialized_entry["signCount"] = entry["signCount"]
