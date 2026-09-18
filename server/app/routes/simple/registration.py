@@ -14,7 +14,6 @@ from fido2.cose import CoseKey
 from fido2.webauthn import PublicKeyCredentialUserEntity
 
 from ... import (
-    attestation,
     config,
     device_logs,
 )
@@ -27,7 +26,7 @@ from ...challenge_registry import (
 )
 from ...encoding import encode_base64, encode_base64url
 from ...storage import credentials
-from ...webauthn import metadata
+from ...webauthn import attestation, metadata
 from .. import binary_helpers
 from . import parsing
 

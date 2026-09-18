@@ -1,9 +1,9 @@
 """Shared fixtures for the attestation runtime tests.
 
 Each fixture hands back the ``attestation`` submodule that *defines* a
-group of helpers. Patch there rather than on ``server.app.attestation``: the
+group of helpers. Patch there rather than on ``server.app.webauthn.attestation``: the
 fragments call each other through these modules, so this is the binding that is
-actually read. ``server.app.attestation`` re-exports the same objects for
+actually read. ``server.app.webauthn.attestation`` re-exports the same objects for
 callers, but a patch applied to the re-export is not seen by the fragments.
 
 ``raising`` is deliberately left at its default everywhere. These names moved
@@ -18,7 +18,7 @@ import pytest
 
 
 def _fragment(name: str):
-    return pytest.importorskip(f"server.app.attestation.{name}")
+    return pytest.importorskip(f"server.app.webauthn.attestation.{name}")
 
 
 @pytest.fixture

@@ -51,7 +51,7 @@ def _registration(attestation_object, client_data):
 
 
 def test_coerce_certificate_bytes_falls_back_to_hex_parsing_when_base64_decode_fails(monkeypatch, attestation_module):
-    attestation_module = pytest.importorskip("server.app.attestation")
+    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
 
     monkeypatch.setattr(
         base64,
@@ -64,7 +64,7 @@ def test_coerce_certificate_bytes_falls_back_to_hex_parsing_when_base64_decode_f
 
 
 def test_extract_certificate_aaguid_handles_non_hex_string_extension_values(monkeypatch, attestation_module):
-    attestation_module = pytest.importorskip("server.app.attestation")
+    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
 
     class _ExtensionValue:
         value = "Z" * 16
@@ -90,7 +90,7 @@ def test_extract_certificate_aaguid_handles_non_hex_string_extension_values(monk
 
 
 def test_attempt_pqc_attestation_signature_validation_reports_public_key_construction_errors(monkeypatch, pqc, attestation_module):
-    attestation_module = pytest.importorskip("server.app.attestation")
+    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
 
     monkeypatch.setattr(
         pqc,
@@ -118,7 +118,7 @@ def test_attempt_pqc_attestation_signature_validation_reports_public_key_constru
 
 
 def test_coerce_attestation_certificate_bytes_string_path_falls_back_to_base64url():
-    attestation_module = pytest.importorskip("server.app.attestation")
+    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
 
     raw = b"\xfb\xef\xbe"
     standard = base64.b64encode(raw).decode("ascii")
@@ -135,7 +135,7 @@ def test_coerce_attestation_certificate_bytes_string_path_falls_back_to_base64ur
 
 
 def test_evaluate_mldsa_attestation_root_clears_chain_errors_after_later_success(monkeypatch, trust, pqc, metadata_module, attestation_module):
-    attestation_module = pytest.importorskip("server.app.attestation")
+    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
 
     metadata_entry = SimpleNamespace(metadata_statement=SimpleNamespace())
     monkeypatch.setattr(
@@ -183,7 +183,7 @@ def test_evaluate_mldsa_attestation_root_clears_chain_errors_after_later_success
 
 
 def test_evaluate_mldsa_attestation_root_deduplicates_chain_errors_when_all_roots_fail(monkeypatch, trust, pqc, metadata_module, attestation_module):
-    attestation_module = pytest.importorskip("server.app.attestation")
+    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
 
     metadata_entry = SimpleNamespace(metadata_statement=SimpleNamespace())
     monkeypatch.setattr(
@@ -229,14 +229,14 @@ def test_evaluate_mldsa_attestation_root_deduplicates_chain_errors_when_all_root
 
 
 def test_normalise_signature_algorithm_name_covers_ed448_and_dsa_paths(attestation_module):
-    attestation_module = pytest.importorskip("server.app.attestation")
+    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
 
     assert attestation_module._normalise_signature_algorithm_name("ed448 with shake") == "ED448"
     assert attestation_module._normalise_signature_algorithm_name("dsa-with-sha1") == "DSA"
 
 
 def test_perform_attestation_checks_coerces_string_challenge_via_utf8_fallback_and_records_attestation_error(monkeypatch, pqc, metadata_module, certificates, attestation_module):
-    attestation_module = pytest.importorskip("server.app.attestation")
+    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
 
     flags = int(AuthenticatorData.FLAG.UP | AuthenticatorData.FLAG.AT)
     auth_data = _AuthData(rp_id="example.com", flags=flags)
@@ -283,7 +283,7 @@ def test_perform_attestation_checks_coerces_string_challenge_via_utf8_fallback_a
 
 
 def test_perform_attestation_checks_falls_back_to_public_key_options_when_state_hex_wrapper_is_invalid(monkeypatch, metadata_module, attestation_module):
-    attestation_module = pytest.importorskip("server.app.attestation")
+    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
 
     flags = int(AuthenticatorData.FLAG.UP | AuthenticatorData.FLAG.AT)
     auth_data = _AuthData(rp_id="example.com", flags=flags)

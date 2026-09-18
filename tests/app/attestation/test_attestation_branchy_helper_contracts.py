@@ -70,7 +70,7 @@ def _registration(attestation_object, client_data):
 
 
 def test_perform_attestation_checks_rejects_non_mapping_response(attestation_module):
-    attestation_module = pytest.importorskip("server.app.attestation")
+    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
 
     result = attestation_module.perform_attestation_checks(
         response=["not-a-mapping"],
@@ -85,7 +85,7 @@ def test_perform_attestation_checks_rejects_non_mapping_response(attestation_mod
 
 
 def test_perform_attestation_checks_coerces_challenge_from_base64_and_hex_wrappers(monkeypatch, metadata_module, attestation_module):
-    attestation_module = pytest.importorskip("server.app.attestation")
+    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
 
     flags = int(AuthenticatorData.FLAG.UP | AuthenticatorData.FLAG.AT)
     auth_data = _AuthData(rp_id="example.com", flags=flags)
@@ -118,7 +118,7 @@ def test_perform_attestation_checks_coerces_challenge_from_base64_and_hex_wrappe
 
 
 def test_perform_attestation_checks_accepts_base64url_wrapped_challenge_and_enum_uv(monkeypatch, metadata_module, attestation_module):
-    attestation_module = pytest.importorskip("server.app.attestation")
+    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
 
     flags = int(
         AuthenticatorData.FLAG.UP
@@ -156,7 +156,7 @@ def test_perform_attestation_checks_accepts_base64url_wrapped_challenge_and_enum
 
 
 def test_perform_attestation_checks_handles_broken_credential_shapes(monkeypatch, metadata_module, attestation_module):
-    attestation_module = pytest.importorskip("server.app.attestation")
+    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
 
     class _BrokenPublicKey:
         def __iter__(self):
@@ -204,7 +204,7 @@ def test_perform_attestation_checks_handles_broken_credential_shapes(monkeypatch
 
 
 def test_perform_attestation_checks_uses_fallback_metadata_lookup_and_mapping_roots(monkeypatch, metadata_module, attestation_module):
-    attestation_module = pytest.importorskip("server.app.attestation")
+    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
 
     class _MetadataAaguid:
         def __str__(self):
@@ -247,7 +247,7 @@ def test_perform_attestation_checks_uses_fallback_metadata_lookup_and_mapping_ro
 
 
 def test_perform_attestation_checks_ignores_metadata_fallback_lookup_exceptions(monkeypatch, metadata_module, attestation_module):
-    attestation_module = pytest.importorskip("server.app.attestation")
+    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
 
     class _FailingVerifier:
         def find_entry_by_aaguid(self, _aaguid):
@@ -278,7 +278,7 @@ def test_perform_attestation_checks_ignores_metadata_fallback_lookup_exceptions(
 
 
 def test_evaluate_classical_attestation_root_handles_missing_trust_path_and_metadata(attestation_module):
-    attestation_module = pytest.importorskip("server.app.attestation")
+    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
 
     outcome = attestation_module._evaluate_classical_attestation_root(
         SimpleNamespace(att_stmt={}),
@@ -295,7 +295,7 @@ def test_evaluate_classical_attestation_root_handles_missing_trust_path_and_meta
 
 
 def test_evaluate_classical_attestation_root_records_parse_and_verifier_failures(monkeypatch, classical, attestation_module):
-    attestation_module = pytest.importorskip("server.app.attestation")
+    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
 
     class _FailingVerifier:
         def evaluate_attestation(self, _att_obj, _client_hash):
@@ -327,7 +327,7 @@ def test_evaluate_classical_attestation_root_records_parse_and_verifier_failures
 
 
 def test_evaluate_classical_attestation_root_reports_untrusted_root_and_mds_errors(monkeypatch, trust, classical, attestation_module):
-    attestation_module = pytest.importorskip("server.app.attestation")
+    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
 
     now = datetime.now(timezone.utc)
     valid_cert = SimpleNamespace(
@@ -368,7 +368,7 @@ def test_evaluate_classical_attestation_root_reports_untrusted_root_and_mds_erro
 
 
 def test_evaluate_classical_attestation_root_forces_chain_false_on_expired_leaf(monkeypatch, trust, metadata_module, classical, attestation_module):
-    attestation_module = pytest.importorskip("server.app.attestation")
+    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
 
     now = datetime.now(timezone.utc)
     expired_cert = SimpleNamespace(
@@ -413,7 +413,7 @@ def test_evaluate_classical_attestation_root_forces_chain_false_on_expired_leaf(
 
 
 def test_attempt_pqc_attestation_signature_validation_covers_trust_path_error_paths(monkeypatch, pqc, attestation_module):
-    attestation_module = pytest.importorskip("server.app.attestation")
+    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
 
     auth_data = SimpleNamespace(credential_data=SimpleNamespace(public_key={}), __bytes__=lambda self=None: b"auth")
 
@@ -454,7 +454,7 @@ def test_attempt_pqc_attestation_signature_validation_covers_trust_path_error_pa
 
 
 def test_attempt_pqc_attestation_signature_validation_verification_failure_and_success(monkeypatch, pqc, attestation_module):
-    attestation_module = pytest.importorskip("server.app.attestation")
+    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
 
     class _VerifyFails:
         def verify(self, _message, _signature):
@@ -496,7 +496,7 @@ def test_attempt_pqc_attestation_signature_validation_verification_failure_and_s
 
 
 def test_attempt_pqc_attestation_signature_validation_covers_no_chain_branches(monkeypatch, attestation_module):
-    attestation_module = pytest.importorskip("server.app.attestation")
+    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
 
     monkeypatch.setattr(CoseKey, "for_alg", lambda _alg: object())
 
@@ -525,7 +525,7 @@ def test_attempt_pqc_attestation_signature_validation_covers_no_chain_branches(m
 
 
 def test_numeric_aaguid_and_extension_helpers_cover_fallback_paths(attestation_module):
-    attestation_module = pytest.importorskip("server.app.attestation")
+    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
 
     assert attestation_module.coerce_non_negative_int(True) is None
     assert attestation_module.coerce_non_negative_int(-1) is None
@@ -596,7 +596,7 @@ def test_numeric_aaguid_and_extension_helpers_cover_fallback_paths(attestation_m
 
 
 def test_serialize_extension_value_covers_authority_constraints_and_fallback_repr(attestation_module):
-    attestation_module = pytest.importorskip("server.app.attestation")
+    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
 
     issuer_name = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "Demo Issuer")])
     aki = x509.AuthorityKeyIdentifier(
@@ -655,7 +655,7 @@ def test_serialize_extension_value_covers_authority_constraints_and_fallback_rep
 
 
 def test_format_x509_name_falls_back_to_string_when_rfc4514_fails(attestation_module):
-    attestation_module = pytest.importorskip("server.app.attestation")
+    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
 
     class _BrokenName:
         def rfc4514_string(self):

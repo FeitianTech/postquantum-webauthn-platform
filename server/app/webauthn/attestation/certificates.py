@@ -21,8 +21,8 @@ from fido2.cose import (
 from fido2.utils import ByteBuffer
 from fido2.webauthn import RegistrationResponse
 
-from .. import encoding
-from ..encoding import encode_base64
+from ... import encoding
+from ...encoding import encode_base64
 from . import formatting, trust
 from .constants import EXTENSION_DISPLAY_METADATA
 

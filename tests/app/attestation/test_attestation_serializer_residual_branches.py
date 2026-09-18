@@ -10,7 +10,7 @@ from cryptography.exceptions import UnsupportedAlgorithm
 
 
 def test_attestation_helper_residual_branches(monkeypatch, certificates, attestation_module):
-    attestation_module = pytest.importorskip("server.app.attestation")
+    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
 
     assert attestation_module._normalise_pqc_algorithm_identifier("   ") is None
     assert (
@@ -82,7 +82,7 @@ def test_attestation_helper_residual_branches(monkeypatch, certificates, attesta
 
 
 def test_serialize_attestation_certificate_mocked_certificate_residual_paths(monkeypatch, certificates, attestation_module):
-    attestation_module = pytest.importorskip("server.app.attestation")
+    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
 
     class _Extensions(list):
         def get_extension_for_oid(self, oid):

@@ -5,7 +5,7 @@ import pytest
 
 
 def test_decode_asn1_octet_string_unwraps_nested_octet_strings(attestation_module):
-    attestation_module = pytest.importorskip("server.app.attestation")
+    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
 
     payload = b"\x04\x04\x04\x02\xaa\xbb"
 
@@ -15,7 +15,7 @@ def test_decode_asn1_octet_string_unwraps_nested_octet_strings(attestation_modul
 
 
 def test_decode_asn1_octet_string_stops_on_truncated_long_form_length(attestation_module):
-    attestation_module = pytest.importorskip("server.app.attestation")
+    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
 
     payload = b"\x04\x82\x00"
 
@@ -25,7 +25,7 @@ def test_decode_asn1_octet_string_stops_on_truncated_long_form_length(attestatio
 
 
 def test_decode_asn1_octet_string_stops_on_indefinite_length_marker(attestation_module):
-    attestation_module = pytest.importorskip("server.app.attestation")
+    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
 
     payload = b"\x04\x80\xaa\xbb"
 
@@ -35,13 +35,13 @@ def test_decode_asn1_octet_string_stops_on_indefinite_length_marker(attestation_
 
 
 def test_serialize_attestation_certificate_returns_none_for_empty_bytes(attestation_module):
-    attestation_module = pytest.importorskip("server.app.attestation")
+    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
 
     assert attestation_module.serialize_attestation_certificate(b"") is None
 
 
 def test_serialize_attestation_certificate_returns_fallback_shape_for_malformed_der(attestation_module):
-    attestation_module = pytest.importorskip("server.app.attestation")
+    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
 
     malformed_der = b"\x30\x82\x01\x00"
 
@@ -64,7 +64,7 @@ def test_serialize_attestation_certificate_returns_fallback_shape_for_malformed_
 
 
 def test_coerce_attestation_certificate_bytes_supports_raw_hex_mapping(attestation_module):
-    attestation_module = pytest.importorskip("server.app.attestation")
+    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
 
     cert_bytes = b"\x30\x82\x01\x00"
     coerced = attestation_module._coerce_attestation_certificate_bytes(
@@ -75,7 +75,7 @@ def test_coerce_attestation_certificate_bytes_supports_raw_hex_mapping(attestati
 
 
 def test_coerce_attestation_certificate_bytes_supports_der_base64_mapping(attestation_module):
-    attestation_module = pytest.importorskip("server.app.attestation")
+    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
 
     cert_bytes = b"\x30\x82\x01\x00"
     coerced = attestation_module._coerce_attestation_certificate_bytes(
@@ -86,7 +86,7 @@ def test_coerce_attestation_certificate_bytes_supports_der_base64_mapping(attest
 
 
 def test_coerce_attestation_certificate_bytes_supports_pem_mapping(attestation_module):
-    attestation_module = pytest.importorskip("server.app.attestation")
+    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
 
     cert_bytes = b"\x30\x82\x01\x00"
     body = base64.b64encode(cert_bytes).decode("ascii")
@@ -98,7 +98,7 @@ def test_coerce_attestation_certificate_bytes_supports_pem_mapping(attestation_m
 
 
 def test_coerce_attestation_certificate_bytes_returns_none_for_invalid_input(attestation_module):
-    attestation_module = pytest.importorskip("server.app.attestation")
+    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
 
     assert attestation_module._coerce_attestation_certificate_bytes(None) is None
     assert attestation_module._coerce_attestation_certificate_bytes("") is None

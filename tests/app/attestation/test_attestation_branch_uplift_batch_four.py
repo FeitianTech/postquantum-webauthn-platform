@@ -10,7 +10,7 @@ from fido2.webauthn import Aaguid
 
 
 def test_hex_format_helpers_cover_empty_odd_and_invalid_inputs(attestation_module):
-    attestation_module = pytest.importorskip("server.app.attestation")
+    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
 
     assert attestation_module.format_hex_bytes_lines(b"") == []
     assert attestation_module.format_hex_string_lines("abc", bytes_per_line=2) == ["0a:bc"]
@@ -18,7 +18,7 @@ def test_hex_format_helpers_cover_empty_odd_and_invalid_inputs(attestation_modul
 
 
 def test_extract_certificate_aaguid_handles_missing_and_nonstandard_extension_shapes(monkeypatch, formatting, attestation_module):
-    attestation_module = pytest.importorskip("server.app.attestation")
+    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
 
     assert attestation_module._extract_certificate_aaguid(b"") == b""
 
@@ -80,7 +80,7 @@ def test_extract_certificate_aaguid_handles_missing_and_nonstandard_extension_sh
 
 
 def test_coerce_certificate_bytes_and_leaf_extraction_non_mapping_paths(attestation_module):
-    attestation_module = pytest.importorskip("server.app.attestation")
+    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
 
     assert attestation_module._coerce_certificate_bytes(12345) is None
 
@@ -89,7 +89,7 @@ def test_coerce_certificate_bytes_and_leaf_extraction_non_mapping_paths(attestat
 
 
 def test_collect_metadata_roots_handles_singleton_and_missing_candidates(attestation_module):
-    attestation_module = pytest.importorskip("server.app.attestation")
+    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
 
     metadata_entry = {
         "attestationRootCertificates": "AQID",
@@ -101,7 +101,7 @@ def test_collect_metadata_roots_handles_singleton_and_missing_candidates(attesta
 
 
 def test_trusted_ca_helpers_cover_list_configs_and_subject_parse_failure(monkeypatch, trust, attestation_module):
-    attestation_module = pytest.importorskip("server.app.attestation")
+    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
 
     monkeypatch.setitem(
         attestation_module.app.config,
@@ -132,7 +132,7 @@ def test_trusted_ca_helpers_cover_list_configs_and_subject_parse_failure(monkeyp
 
 
 def test_find_metadata_entry_for_aaguid_handles_parse_and_lookup_failures(monkeypatch, attestation_module):
-    attestation_module = pytest.importorskip("server.app.attestation")
+    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
 
     monkeypatch.setattr(
         Aaguid,
@@ -151,7 +151,7 @@ def test_find_metadata_entry_for_aaguid_handles_parse_and_lookup_failures(monkey
 
 
 def test_check_pqc_certificate_constraints_reports_validity_basic_constraints_and_usage_errors(monkeypatch, trust, attestation_module):
-    attestation_module = pytest.importorskip("server.app.attestation")
+    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
 
     now = datetime.now(timezone.utc)
 
@@ -264,7 +264,7 @@ def test_check_pqc_certificate_constraints_reports_validity_basic_constraints_an
 
 
 def test_evaluate_mldsa_attestation_root_covers_untrusted_root_and_fido_status_paths(monkeypatch, trust, metadata_module, attestation_module):
-    attestation_module = pytest.importorskip("server.app.attestation")
+    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
 
     metadata_entry = SimpleNamespace(metadata_statement=SimpleNamespace())
     monkeypatch.setattr(trust, "_find_metadata_entry_for_aaguid", lambda *_args, **_kwargs: metadata_entry)
@@ -294,7 +294,7 @@ def test_evaluate_mldsa_attestation_root_covers_untrusted_root_and_fido_status_p
 
 
 def test_attempt_pqc_signature_validation_skips_non_mapping_statements(attestation_module):
-    attestation_module = pytest.importorskip("server.app.attestation")
+    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
 
     outcome = attestation_module._attempt_pqc_attestation_signature_validation(
         SimpleNamespace(att_stmt=["not-a-mapping"]),

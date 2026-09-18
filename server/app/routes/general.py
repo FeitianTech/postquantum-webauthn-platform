@@ -12,7 +12,6 @@ from typing import Any
 from flask import abort, g, jsonify, render_template, request, send_file, session
 
 from .. import encoding
-from ..attestation import serialize_attestation_certificate
 from ..config import MDS_METADATA_VERIFIED_PATH, app
 from ..decoder import decode_payload_text, encode_payload_text
 from ..env_flags import parse_env_flag
@@ -20,6 +19,7 @@ from ..mds_provisioning import ensure_snapshot_available
 from ..startup import startup_fail_fast_enabled
 from ..static_assets import asset_url
 from ..storage.credentials import delkey, encode_records, readkey
+from ..webauthn.attestation import serialize_attestation_certificate
 from ..webauthn.metadata import (
     _load_base_metadata,
     delete_session_metadata_item,

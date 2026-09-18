@@ -28,7 +28,7 @@ MLDSA44_ALG = -48
 
 @pytest.fixture
 def attestation_module():
-    return pytest.importorskip("server.app.attestation")
+    return pytest.importorskip("server.app.webauthn.attestation")
 
 
 def _packed_registration_response(authenticator, *, challenge, attestation_alg):

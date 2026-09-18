@@ -12,19 +12,19 @@ from fido2 import cbor
 from fido2.utils import ByteBuffer
 from fido2.webauthn import AttestationObject, AuthenticatorData, CollectedClientData
 
-from ...attestation import (
-    colon_hex,
-    encode_base64url,
-    make_json_safe,
-    serialize_attestation_certificate,
-    summarize_authenticator_extensions,
-)
 from ...encoding import (
     EncodingError,
     SniffResult,
     encode_base64,
     sniff,
     try_decode_base64,
+)
+from ...webauthn.attestation import (
+    colon_hex,
+    encode_base64url,
+    make_json_safe,
+    serialize_attestation_certificate,
+    summarize_authenticator_extensions,
 )
 from . import ctap, response
 

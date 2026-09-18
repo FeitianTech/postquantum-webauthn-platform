@@ -54,7 +54,11 @@ jobs:
 
           modules = [
               "server.app.app",
-              "server.app.metadata",
+              "server.app.webauthn.attestation",
+              "server.app.webauthn.metadata",
+              "server.app.decoder.decode",
+              "server.app.decoder.encode",
+              "server.app.storage.credentials",
               "server.app.routes.advanced",
               "server.app.routes.general",
               "server.app.routes.simple",

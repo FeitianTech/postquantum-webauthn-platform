@@ -42,7 +42,7 @@ def _registration_for(attestation_object, client_data, *, extensions=None):
 
 
 def test_perform_attestation_checks_reports_client_authenticator_mismatches(monkeypatch, attestation_module):
-    attestation_module = pytest.importorskip("server.app.attestation")
+    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
 
     auth_data = _FakeAuthData(rp_id="wrong.example", flags=0, counter=0, alg=-7)
     attestation_object = SimpleNamespace(fmt="none", att_stmt={}, auth_data=auth_data)
@@ -84,7 +84,7 @@ def test_perform_attestation_checks_reports_client_authenticator_mismatches(monk
 
 
 def test_perform_attestation_checks_classical_success_path_populates_metadata(monkeypatch, classical, metadata_module, attestation_module):
-    attestation_module = pytest.importorskip("server.app.attestation")
+    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
 
     flags = int(AuthenticatorData.FLAG.UP | AuthenticatorData.FLAG.AT)
     auth_data = _FakeAuthData(rp_id="example.com", flags=flags, counter=7, alg=-7)
@@ -146,7 +146,7 @@ def test_perform_attestation_checks_classical_success_path_populates_metadata(mo
 
 
 def test_perform_attestation_checks_uses_pqc_fallback_when_signature_verification_fails(monkeypatch, classical, pqc, metadata_module, attestation_module):
-    attestation_module = pytest.importorskip("server.app.attestation")
+    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
 
     flags = int(AuthenticatorData.FLAG.UP | AuthenticatorData.FLAG.AT)
     auth_data = _FakeAuthData(rp_id="example.com", flags=flags, counter=1, alg=-7)
@@ -211,7 +211,7 @@ def test_perform_attestation_checks_uses_pqc_fallback_when_signature_verificatio
 
 
 def test_perform_attestation_checks_pqc_branch_surfaces_root_check_details(monkeypatch, pqc, metadata_module, attestation_module):
-    attestation_module = pytest.importorskip("server.app.attestation")
+    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
 
     flags = int(AuthenticatorData.FLAG.UP | AuthenticatorData.FLAG.AT)
     auth_data = _FakeAuthData(rp_id="example.com", flags=flags, counter=2, alg=-49)

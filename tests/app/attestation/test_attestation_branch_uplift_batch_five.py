@@ -57,7 +57,7 @@ def _registration(attestation_object, client_data, extension_results):
 
 
 def test_extract_attestation_details_handles_non_dict_and_certificate_edge_cases(monkeypatch, certificates, attestation_module):
-    attestation_module = pytest.importorskip("server.app.attestation")
+    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
 
     defaults = attestation_module.extract_attestation_details(["not-a-dict"])
     assert defaults[0] == "none"
@@ -98,7 +98,7 @@ def test_extract_attestation_details_handles_non_dict_and_certificate_edge_cases
 
 
 def test_extract_attestation_details_keeps_non_mapping_extension_outputs(monkeypatch, attestation_module):
-    attestation_module = pytest.importorskip("server.app.attestation")
+    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
 
     attestation_object = _AttestationObject(fmt="none", att_stmt={}, auth_data=SimpleNamespace())
     registration = _registration(attestation_object, _ClientData(b"challenge"), ["raw-extension"])
@@ -114,7 +114,7 @@ def test_extract_attestation_details_keeps_non_mapping_extension_outputs(monkeyp
 
 
 def test_serialize_extension_value_unrecognized_oid_fallback_paths(monkeypatch, formatting, attestation_module):
-    attestation_module = pytest.importorskip("server.app.attestation")
+    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
 
     firmware_oid = ObjectIdentifier("1.3.6.1.4.1.41482.13.1")
     security_key_oid = ObjectIdentifier("1.3.6.1.4.1.41482.1.1")
@@ -148,7 +148,7 @@ def test_serialize_extension_value_unrecognized_oid_fallback_paths(monkeypatch, 
 
 
 def test_perform_attestation_checks_challenge_coercion_and_uv_requirement_paths(monkeypatch, attestation_module):
-    attestation_module = pytest.importorskip("server.app.attestation")
+    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
 
     auth_data_override = AuthenticatorData.create(
         hashlib.sha256(b"example.com").digest(),
@@ -187,7 +187,7 @@ def test_perform_attestation_checks_challenge_coercion_and_uv_requirement_paths(
 
 
 def test_perform_attestation_checks_classical_lookup_and_aaguid_parse_failure_paths(monkeypatch, classical, metadata_module, attestation_module):
-    attestation_module = pytest.importorskip("server.app.attestation")
+    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
 
     class _SparsePublicKey(dict):
         def __iter__(self):
@@ -262,7 +262,7 @@ def test_perform_attestation_checks_classical_lookup_and_aaguid_parse_failure_pa
 
 
 def test_coerce_attestation_certificate_bytes_and_aaguid_field_cleanup_edges(attestation_module):
-    attestation_module = pytest.importorskip("server.app.attestation")
+    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
 
     assert attestation_module._coerce_attestation_certificate_bytes({"raw": "zz"}) is None
     assert attestation_module._coerce_attestation_certificate_bytes({"derBase64": "A"}) is None
