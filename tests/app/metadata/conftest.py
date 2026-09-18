@@ -76,10 +76,10 @@ def items_runtime():
 
 
 @pytest.fixture
-def cache_runtime():
+def blob():
     """The fragment that defines the metadata cache helpers."""
 
-    return pytest.importorskip("server.app.metadata.cache_runtime")
+    return pytest.importorskip("server.app.metadata.blob")
 
 
 @pytest.fixture
