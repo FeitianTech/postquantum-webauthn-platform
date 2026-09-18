@@ -41,7 +41,7 @@ class _MatchedCredential:
         self.credential_id = credential_id
 
 
-def test_simple_register_begin_persists_state_and_filters_algorithms(monkeypatch):
+def test_simple_register_begin_persists_state_and_filters_algorithms(monkeypatch, config_module):
     config_module = pytest.importorskip("server.app.config")
     simple_module = pytest.importorskip("server.app.routes.simple")
     pytest.importorskip("server.app.app")
@@ -65,8 +65,8 @@ def test_simple_register_begin_persists_state_and_filters_algorithms(monkeypatch
             )
 
     monkeypatch.setattr(simple_module, "_SIMPLE_ALLOWED_ALGORITHMS", (-257, -7))
-    monkeypatch.setattr(simple_module, "determine_rp_id", lambda: "example.com")
-    monkeypatch.setattr(simple_module, "create_fido_server", lambda **_kwargs: _FakeServer())
+    monkeypatch.setattr(config_module, "determine_rp_id", lambda: "example.com")
+    monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FakeServer())
     monkeypatch.setattr(
         simple_module,
         "_parse_client_credentials",
@@ -115,7 +115,7 @@ def test_simple_authenticate_begin_requires_valid_credentials(monkeypatch):
     assert response.status_code == 404
 
 
-def test_simple_authenticate_complete_success_returns_sign_count(monkeypatch):
+def test_simple_authenticate_complete_success_returns_sign_count(monkeypatch, config_module):
     config_module = pytest.importorskip("server.app.config")
     simple_module = pytest.importorskip("server.app.routes.simple")
     pytest.importorskip("server.app.app")
@@ -128,7 +128,7 @@ def test_simple_authenticate_complete_success_returns_sign_count(monkeypatch):
         def authenticate_complete(self, *_args, **_kwargs):
             return _MatchedCredential(credential_id)
 
-    monkeypatch.setattr(simple_module, "create_fido_server", lambda **_kwargs: _FakeServer())
+    monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FakeServer())
     monkeypatch.setattr(
         simple_module,
         "_parse_client_credentials",
@@ -165,7 +165,7 @@ def test_simple_authenticate_complete_success_returns_sign_count(monkeypatch):
             assert "simple_credentials_email" not in session_state
 
 
-def test_simple_authenticate_complete_rejects_request_state_fallback(monkeypatch):
+def test_simple_authenticate_complete_rejects_request_state_fallback(monkeypatch, config_module):
     """A client-supplied ``__session_state`` must never become the challenge."""
 
     config_module = pytest.importorskip("server.app.config")
@@ -180,7 +180,7 @@ def test_simple_authenticate_complete_rejects_request_state_fallback(monkeypatch
             captured["state"] = state
             return _MatchedCredential(credential_id)
 
-    monkeypatch.setattr(simple_module, "create_fido_server", lambda **_kwargs: _FakeServer())
+    monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FakeServer())
     monkeypatch.setattr(
         simple_module,
         "_parse_client_credentials",
@@ -238,11 +238,10 @@ def test_simple_authenticate_complete_missing_state_returns_400(monkeypatch):
             assert session_state.get("simple_credentials_email") == "user@example.com"
 
 
-def test_simple_register_complete_rejects_request_state_fallback(monkeypatch, metadata_module, device_logs_module, attestation_module, storage_module):
+def test_simple_register_complete_rejects_request_state_fallback(monkeypatch, metadata_module, device_logs_module, attestation_module, storage_module, config_module):
     """A cold /complete with a self-chosen challenge must be rejected."""
 
     config_module = pytest.importorskip("server.app.config")
-    simple_module = pytest.importorskip("server.app.routes.simple")
     pytest.importorskip("server.app.app")
 
     rp_id = "example.com"
@@ -270,8 +269,8 @@ def test_simple_register_complete_rejects_request_state_fallback(monkeypatch, me
             captured["state"] = state
             return fake_auth_data
 
-    monkeypatch.setattr(simple_module, "determine_rp_id", lambda: rp_id)
-    monkeypatch.setattr(simple_module, "create_fido_server", lambda **_kwargs: _FakeServer())
+    monkeypatch.setattr(config_module, "determine_rp_id", lambda: rp_id)
+    monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FakeServer())
     monkeypatch.setattr(
         attestation_module,
         "extract_attestation_details",

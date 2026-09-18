@@ -9,7 +9,7 @@ from flask import jsonify, request, session
 from fido2.cose import CoseKey, UnsupportedKey
 from fido2.webauthn import AuthenticatorData
 
-from ... import pqc
+from ... import config, pqc
 from ...attachments import (
     normalize_attachment,
     normalize_attachment_list,
@@ -212,10 +212,10 @@ def advanced_authenticate_complete_impl(advanced_module: Any):
             }
         ), 400
 
-    ceremony_origin = advanced_module.extract_client_data_origin(
+    ceremony_origin = config.extract_client_data_origin(
         response.get("response") if isinstance(response, Mapping) else None
     )
-    if not advanced_module.is_origin_allowed(ceremony_origin):
+    if not config.is_origin_allowed(ceremony_origin):
         session.pop("advanced_auth_rp", None)
         return jsonify(
             {
@@ -248,8 +248,8 @@ def advanced_authenticate_complete_impl(advanced_module: Any):
             if stored_rp_id is None and isinstance(rp_id_candidate, str):
                 stored_rp_id = rp_id_candidate
 
-        resolved_rp_id = advanced_module.determine_rp_id(stored_rp_id)
-        auth_server = advanced_module.create_fido_server(rp_id=resolved_rp_id, rp_name=stored_rp_name)
+        resolved_rp_id = config.determine_rp_id(stored_rp_id)
+        auth_server = config.create_fido_server(rp_id=resolved_rp_id, rp_name=stored_rp_name)
 
         derived_algorithms = advanced_module._derive_algorithms_from_credentials(all_credentials)
         if derived_algorithms:
@@ -284,7 +284,7 @@ def advanced_authenticate_complete_impl(advanced_module: Any):
                 )
 
             if credential_alg is not None and not _server_supports_algorithm(credential_alg):
-                advanced_module.app.logger.warning(
+                config.app.logger.warning(
                     "Assertion uses COSE algorithm %d which this server cannot verify; "
                     "no signature verification was performed.",
                     credential_alg,

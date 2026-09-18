@@ -19,7 +19,7 @@ def _base_register_begin_payload() -> dict:
     }
 
 
-def _install_fake_register_server(monkeypatch, advanced_module, captured: dict):
+def _install_fake_register_server(monkeypatch, advanced_module, captured: dict, config_module):
     class _FakeServer:
         def __init__(self):
             self.allowed_algorithms = []
@@ -31,7 +31,7 @@ def _install_fake_register_server(monkeypatch, advanced_module, captured: dict):
             captured["kwargs"] = kwargs
             return {"publicKey": {"challenge": "AQID"}}, {"challenge": "state-token"}
 
-    monkeypatch.setattr(advanced_module, "create_fido_server", lambda **_kwargs: _FakeServer())
+    monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FakeServer())
 
 
 def test_summary_helpers_drop_non_mapping_inputs_and_nested_non_mapping_sections():
@@ -193,7 +193,7 @@ def test_register_begin_accepts_non_mapping_authenticator_selection_and_derives_
         "detect_available_pqc_algorithms",
         lambda: ({-50, -49, -48}, None)
     )
-    _install_fake_register_server(monkeypatch, advanced_module, captured)
+    _install_fake_register_server(monkeypatch, advanced_module, captured, config_module)
 
     payload = _base_register_begin_payload()
     payload["publicKey"]["authenticatorSelection"] = "unexpected-shape"
@@ -230,7 +230,7 @@ def test_register_begin_maps_discouraged_uv_require_resident_key_and_extension_a
         "detect_available_pqc_algorithms",
         lambda: ({-50, -49, -48}, None)
     )
-    _install_fake_register_server(monkeypatch, advanced_module, captured)
+    _install_fake_register_server(monkeypatch, advanced_module, captured, config_module)
 
     payload = _base_register_begin_payload()
     payload["publicKey"]["user"]["id"] = "01020304"

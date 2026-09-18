@@ -50,9 +50,8 @@ class _FakeAuthData:
         return self.rp_id_hash + bytes([self.flags]) + int(self.counter).to_bytes(4, "big")
 
 
-def test_advanced_register_complete_prefers_session_state_over_request_state(monkeypatch):
+def test_advanced_register_complete_prefers_session_state_over_request_state(monkeypatch, config_module):
     config_module = pytest.importorskip("server.app.config")
-    advanced_module = pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
 
     captured = {}
@@ -62,8 +61,8 @@ def test_advanced_register_complete_prefers_session_state_over_request_state(mon
             captured["state"] = state
             raise ValueError("register failure")
 
-    monkeypatch.setattr(advanced_module, "create_fido_server", lambda **_kwargs: _FailingServer())
-    monkeypatch.setattr(advanced_module, "determine_rp_id", lambda value=None: value or "example.com")
+    monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FailingServer())
+    monkeypatch.setattr(config_module, "determine_rp_id", lambda value=None: value or "example.com")
 
     session_state = {"challenge": "session-state"}
     request_state = {"challenge": "request-state"}
@@ -90,9 +89,8 @@ def test_advanced_register_complete_prefers_session_state_over_request_state(mon
             assert "advanced_rp" not in session_store
 
 
-def test_advanced_register_complete_uses_request_state_fallback_when_session_missing(monkeypatch):
+def test_advanced_register_complete_uses_request_state_fallback_when_session_missing(monkeypatch, config_module):
     config_module = pytest.importorskip("server.app.config")
-    advanced_module = pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
 
     captured = {}
@@ -102,8 +100,8 @@ def test_advanced_register_complete_uses_request_state_fallback_when_session_mis
             captured["state"] = state
             raise ValueError("register fallback failure")
 
-    monkeypatch.setattr(advanced_module, "create_fido_server", lambda **_kwargs: _FailingServer())
-    monkeypatch.setattr(advanced_module, "determine_rp_id", lambda value=None: value or "example.com")
+    monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FailingServer())
+    monkeypatch.setattr(config_module, "determine_rp_id", lambda value=None: value or "example.com")
 
     fallback_state = {"challenge": "request-fallback-state"}
 
@@ -158,9 +156,8 @@ def test_advanced_register_complete_requires_attachment_when_hints_resolve_to_at
     assert "Authenticator attachment could not be determined" in response.get_json()["error"]
 
 
-def test_advanced_register_complete_prefers_session_attachment_scope_over_tampered_request_hints(monkeypatch, metadata_module, attestation_module, storage_module):
+def test_advanced_register_complete_prefers_session_attachment_scope_over_tampered_request_hints(monkeypatch, metadata_module, attestation_module, storage_module, config_module):
     config_module = pytest.importorskip("server.app.config")
-    advanced_module = pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
 
     monkeypatch.setattr(metadata_module, "ensure_metadata_session_id", lambda: "session-id")
@@ -175,8 +172,8 @@ def test_advanced_register_complete_prefers_session_attachment_scope_over_tamper
         def register_complete(self, *_args, **_kwargs):
             raise ValueError("register reached")
 
-    monkeypatch.setattr(advanced_module, "create_fido_server", lambda **_kwargs: _FailingServer())
-    monkeypatch.setattr(advanced_module, "determine_rp_id", lambda value=None: value or "example.com")
+    monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FailingServer())
+    monkeypatch.setattr(config_module, "determine_rp_id", lambda value=None: value or "example.com")
 
     with config_module.app.test_client() as client:
         with client.session_transaction() as session_store:
@@ -200,9 +197,8 @@ def test_advanced_register_complete_prefers_session_attachment_scope_over_tamper
             assert "advanced_register_allowed_attachments" not in session_store
 
 
-def test_advanced_register_complete_success_contract_propagates_warnings_and_records_artifact(monkeypatch, metadata_module, credential_artifacts_module, device_logs_module, attestation_module, storage_module):
+def test_advanced_register_complete_success_contract_propagates_warnings_and_records_artifact(monkeypatch, metadata_module, credential_artifacts_module, device_logs_module, attestation_module, storage_module, config_module):
     config_module = pytest.importorskip("server.app.config")
-    advanced_module = pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
 
     credential_id = b"advanced-register-success"
@@ -250,8 +246,8 @@ def test_advanced_register_complete_success_contract_propagates_warnings_and_rec
         )
         return True
 
-    monkeypatch.setattr(advanced_module, "create_fido_server", lambda **_kwargs: _FakeServer())
-    monkeypatch.setattr(advanced_module, "determine_rp_id", lambda value=None: value or rp_id)
+    monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FakeServer())
+    monkeypatch.setattr(config_module, "determine_rp_id", lambda value=None: value or rp_id)
     monkeypatch.setattr(metadata_module, "ensure_metadata_session_id", lambda: "session-id")
     monkeypatch.setattr(storage_module, "readkey", lambda *_args, **_kwargs: [])
     monkeypatch.setattr(attestation_module, "perform_attestation_checks", _perform_attestation_checks)

@@ -8,7 +8,7 @@ from flask import abort, jsonify, request, session
 
 from fido2.webauthn import AuthenticatorData
 
-from ... import attestation, storage
+from ... import attestation, config, storage
 from ...challenge_registry import (
     CHALLENGE_FRESH,
     CHALLENGE_REPLAYED,
@@ -44,8 +44,8 @@ def authenticate_begin_impl(simple_module: Any):
     session["simple_credentials"] = serialized
     session["simple_credentials_email"] = uname
 
-    rp_id = simple_module.determine_rp_id()
-    server = simple_module.create_fido_server(rp_id=rp_id)
+    rp_id = config.determine_rp_id()
+    server = config.create_fido_server(rp_id=rp_id)
 
     options, state = server.authenticate_begin(
         credential_data_list,
@@ -118,7 +118,7 @@ def authenticate_complete_impl(simple_module: Any):
             400,
         )
 
-    server = simple_module.create_fido_server(rp_id=rp_id)
+    server = config.create_fido_server(rp_id=rp_id)
 
     response_mapping: Mapping[str, Any]
     response_mapping = response if isinstance(response, Mapping) else {}
@@ -195,7 +195,7 @@ def authenticate_complete_impl(simple_module: Any):
     )
 
     if sign_count_status(stored_sign_count, sign_count) == SIGN_COUNT_REGRESSED:
-        simple_module.app.logger.warning(
+        config.app.logger.warning(
             "Rejected assertion for credential %s: signature counter %d did not "
             "increase past stored %d (possible cloned authenticator)",
             authenticated_id,
@@ -222,7 +222,7 @@ def authenticate_complete_impl(simple_module: Any):
         try:
             storage.savekey(uname, server_records, session_id=metadata_session_id)
         except Exception:
-            simple_module.app.logger.exception(
+            config.app.logger.exception(
                 "Failed to persist signature counter for %s", authenticated_id
             )
             return (

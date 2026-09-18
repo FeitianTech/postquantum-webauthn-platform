@@ -14,7 +14,7 @@ from __future__ import annotations
 from collections.abc import Iterable, Mapping
 from typing import Any
 
-from ... import metadata, storage
+from ... import config, metadata, storage
 
 #: Key under which the server-side credential record keeps its latest counter.
 #: Records written before it existed fall back to the registration-time
@@ -53,7 +53,7 @@ def load_server_records_impl(simple_module: Any, uname: Any) -> tuple[list[Any] 
         session_id = metadata.ensure_metadata_session_id()
         records = storage.readkey(uname, session_id=session_id)
     except Exception:
-        simple_module.app.logger.warning(
+        config.app.logger.warning(
             "Could not read stored credentials for the signature counter check", exc_info=True
         )
         return None, None

@@ -87,7 +87,7 @@ def test_simple_validation_helpers_cover_decode_and_assertion_id_fallbacks():
     assert simple_module._extract_assertion_credential_id({"id": 12345}) is None
 
 
-def test_simple_register_begin_clears_cached_session_fields_when_client_credentials_are_empty(monkeypatch):
+def test_simple_register_begin_clears_cached_session_fields_when_client_credentials_are_empty(monkeypatch, config_module):
     config_module = pytest.importorskip("server.app.config")
     simple_module = pytest.importorskip("server.app.routes.simple")
     pytest.importorskip("server.app.app")
@@ -96,8 +96,8 @@ def test_simple_register_begin_clears_cached_session_fields_when_client_credenti
         def register_begin(self, *_args, **_kwargs):
             return {"publicKey": "not-a-mapping"}, {"challenge": "simple-register-state"}
 
-    monkeypatch.setattr(simple_module, "determine_rp_id", lambda: "example.com")
-    monkeypatch.setattr(simple_module, "create_fido_server", lambda **_kwargs: _FakeServer())
+    monkeypatch.setattr(config_module, "determine_rp_id", lambda: "example.com")
+    monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FakeServer())
     monkeypatch.setattr(simple_module, "_parse_client_credentials", lambda _raw: ([], []))
 
     with config_module.app.test_client() as client:
@@ -164,9 +164,8 @@ def test_simple_authenticate_complete_aborts_when_session_credentials_cannot_be_
     assert response.status_code == 400
 
 
-def test_simple_register_complete_covers_warning_metadata_transport_and_session_fallback_paths(monkeypatch, metadata_module, device_logs_module, attestation_module, storage_module):
+def test_simple_register_complete_covers_warning_metadata_transport_and_session_fallback_paths(monkeypatch, metadata_module, device_logs_module, attestation_module, storage_module, config_module):
     config_module = pytest.importorskip("server.app.config")
-    simple_module = pytest.importorskip("server.app.routes.simple")
     pytest.importorskip("server.app.app")
 
     rp_id = "example.com"
@@ -176,9 +175,9 @@ def test_simple_register_complete_covers_warning_metadata_transport_and_session_
     saved = {}
     events = []
 
-    monkeypatch.setattr(simple_module, "determine_rp_id", lambda: rp_id)
+    monkeypatch.setattr(config_module, "determine_rp_id", lambda: rp_id)
     monkeypatch.setattr(
-        simple_module,
+        config_module,
         "create_fido_server",
         lambda **_kwargs: _RegisterServer(auth_data)
     )

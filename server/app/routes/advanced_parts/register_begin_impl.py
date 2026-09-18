@@ -13,7 +13,7 @@ from fido2.webauthn import (
     UserVerificationRequirement,
 )
 
-from ... import attestation
+from ... import attestation, config
 from ...attachments import normalize_attachment, resolve_effective_attachments
 from .register_begin_support_impl import (
     build_exclude_list,
@@ -70,14 +70,14 @@ def advanced_register_begin_impl(advanced_module: Any):
             return jsonify({"error": f"Invalid challenge format: {exc}"}), 400
 
     rp_input = public_key.get("rp") if isinstance(public_key, Mapping) else None
-    rp_entity = advanced_module.build_rp_entity(rp_input)
+    rp_entity = config.build_rp_entity(rp_input)
     sanitized_rp = {"id": rp_entity.id, "name": rp_entity.name}
     if isinstance(rp_input, Mapping):
         sanitized_rp.update({k: v for k, v in rp_input.items() if k not in {"id", "name"}})
     if isinstance(public_key, MutableMapping):
         public_key["rp"] = sanitized_rp
 
-    temp_server = advanced_module.create_fido_server(rp_data=sanitized_rp)
+    temp_server = config.create_fido_server(rp_data=sanitized_rp)
 
     timeout = public_key.get("timeout", 90000)
     temp_server.timeout = timeout / 1000.0 if timeout else None
@@ -112,7 +112,7 @@ def advanced_register_begin_impl(advanced_module: Any):
         if getattr(param, "alg", None) is not None
     ]
 
-    advanced_module.app.logger.info(
+    config.app.logger.info(
         "Advanced registration request will advertise algorithms: %s",
         [entry.get("alg") for entry in public_key["pubKeyCredParams"]],
     )

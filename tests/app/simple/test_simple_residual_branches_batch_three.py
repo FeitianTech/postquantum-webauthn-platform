@@ -126,16 +126,15 @@ def test_serialize_credential_for_session_accepts_hex_aaguid_alias():
         (-123, "Other (Classical)"),
     ],
 )
-def test_register_complete_handles_algorithm_and_large_blob_residual_paths(monkeypatch, algorithm: int, expected_name: str, metadata_module, device_logs_module, attestation_module, storage_module):
+def test_register_complete_handles_algorithm_and_large_blob_residual_paths(monkeypatch, algorithm: int, expected_name: str, metadata_module, device_logs_module, attestation_module, storage_module, config_module):
     config_module = pytest.importorskip("server.app.config")
-    simple_module = pytest.importorskip("server.app.routes.simple")
     pytest.importorskip("server.app.app")
 
     auth_data = _RegisterAuthData(algorithm)
 
-    monkeypatch.setattr(simple_module, "determine_rp_id", lambda: "example.com")
+    monkeypatch.setattr(config_module, "determine_rp_id", lambda: "example.com")
     monkeypatch.setattr(
-        simple_module,
+        config_module,
         "create_fido_server",
         lambda **_kwargs: _RegisterServer(auth_data)
     )
@@ -198,9 +197,7 @@ def test_register_complete_handles_algorithm_and_large_blob_residual_paths(monke
     assert payload["storedCredential"]["userHandle"] == _b64url(b"string-user-handle")
 
 
-def test_authenticate_complete_ignores_request_state_and_handles_bad_matched_credential_id(
-    monkeypatch,
-):
+def test_authenticate_complete_ignores_request_state_and_handles_bad_matched_credential_id(monkeypatch, config_module):
     config_module = pytest.importorskip("server.app.config")
     simple_module = pytest.importorskip("server.app.routes.simple")
     pytest.importorskip("server.app.app")
@@ -213,7 +210,7 @@ def test_authenticate_complete_ignores_request_state_and_handles_bad_matched_cre
         lambda _raw: ([SimpleNamespace(credential_id=b"\x01")], [{"credentialId": "AQ"}])
     )
     monkeypatch.setattr(
-        simple_module,
+        config_module,
         "create_fido_server",
         lambda **_kwargs: _AuthenticationServer(captured)
     )

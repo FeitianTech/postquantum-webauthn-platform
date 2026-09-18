@@ -8,7 +8,7 @@ def _encode_base64url(data: bytes) -> str:
     return base64.urlsafe_b64encode(data).decode("ascii").rstrip("=")
 
 
-def test_simple_authentication_failure_returns_failed_credential_id(monkeypatch):
+def test_simple_authentication_failure_returns_failed_credential_id(monkeypatch, config_module):
     config_module = pytest.importorskip("server.app.config")
     simple_module = pytest.importorskip("server.app.routes.simple")
     pytest.importorskip("server.app.app")
@@ -20,7 +20,7 @@ def test_simple_authentication_failure_returns_failed_credential_id(monkeypatch)
         def authenticate_complete(self, *_args, **_kwargs):
             raise ValueError("Invalid signature.")
 
-    monkeypatch.setattr(simple_module, "create_fido_server", lambda **_kwargs: _FailingServer())
+    monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FailingServer())
     monkeypatch.setattr(simple_module, "_parse_client_credentials", lambda _raw: ([object()], []))
 
     with config_module.app.test_client() as client:
@@ -44,7 +44,7 @@ def test_simple_authentication_failure_returns_failed_credential_id(monkeypatch)
     }
 
 
-def test_advanced_authentication_failure_returns_failed_credential_id(monkeypatch):
+def test_advanced_authentication_failure_returns_failed_credential_id(monkeypatch, config_module):
     config_module = pytest.importorskip("server.app.config")
     advanced_module = pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
@@ -58,8 +58,8 @@ def test_advanced_authentication_failure_returns_failed_credential_id(monkeypatc
         def authenticate_complete(self, *_args, **_kwargs):
             raise ValueError("Invalid signature.")
 
-    monkeypatch.setattr(advanced_module, "create_fido_server", lambda **_kwargs: _FailingServer())
-    monkeypatch.setattr(advanced_module, "determine_rp_id", lambda value=None: value or "example.com")
+    monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FailingServer())
+    monkeypatch.setattr(config_module, "determine_rp_id", lambda value=None: value or "example.com")
     monkeypatch.setattr(advanced_module, "_derive_algorithms_from_credentials", lambda _credentials: [])
     monkeypatch.setattr(
         advanced_module,

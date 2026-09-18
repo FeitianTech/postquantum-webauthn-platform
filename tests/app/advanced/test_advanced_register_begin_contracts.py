@@ -18,7 +18,7 @@ def _base_payload():
     }
 
 
-def _install_fake_register_server(monkeypatch, advanced_module, captured):
+def _install_fake_register_server(monkeypatch, advanced_module, captured, config_module):
     class _FakeServer:
         def __init__(self):
             self.allowed_algorithms = []
@@ -51,7 +51,7 @@ def _install_fake_register_server(monkeypatch, advanced_module, captured):
         captured["create_fido_server_kwargs"] = kwargs
         return _FakeServer()
 
-    monkeypatch.setattr(advanced_module, "create_fido_server", _create_fido_server)
+    monkeypatch.setattr(config_module, "create_fido_server", _create_fido_server)
 
 
 def test_advanced_register_begin_requires_public_key_payload():
@@ -136,7 +136,7 @@ def test_advanced_register_begin_rejects_invalid_challenge_format():
     assert "Invalid challenge format" in response.get_json()["error"]
 
 
-def test_advanced_register_begin_normalizes_rp_and_persists_session_state(monkeypatch, pqc_module):
+def test_advanced_register_begin_normalizes_rp_and_persists_session_state(monkeypatch, pqc_module, config_module):
     config_module = pytest.importorskip("server.app.config")
     advanced_module = pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
@@ -144,7 +144,7 @@ def test_advanced_register_begin_normalizes_rp_and_persists_session_state(monkey
     captured = {}
 
     monkeypatch.setattr(
-        advanced_module,
+        config_module,
         "build_rp_entity",
         lambda _rp: types.SimpleNamespace(id="normalized.example", name="Normalized RP")
     )
@@ -153,7 +153,7 @@ def test_advanced_register_begin_normalizes_rp_and_persists_session_state(monkey
         "detect_available_pqc_algorithms",
         lambda: ({-50, -49, -48}, None)
     )
-    _install_fake_register_server(monkeypatch, advanced_module, captured)
+    _install_fake_register_server(monkeypatch, advanced_module, captured, config_module)
 
     payload = _base_payload()
     payload["publicKey"]["rp"] = {
@@ -200,7 +200,7 @@ def test_advanced_register_begin_normalizes_pubkeycredparams_and_filters_invalid
         "detect_available_pqc_algorithms",
         lambda: ({-50, -49, -48}, None)
     )
-    _install_fake_register_server(monkeypatch, advanced_module, captured)
+    _install_fake_register_server(monkeypatch, advanced_module, captured, config_module)
 
     payload = _base_payload()
     payload["publicKey"]["pubKeyCredParams"] = [
@@ -238,7 +238,7 @@ def test_advanced_register_begin_uses_default_algorithms_without_pubkeycredparam
         "detect_available_pqc_algorithms",
         lambda: ({-50, -49, -48}, None)
     )
-    _install_fake_register_server(monkeypatch, advanced_module, captured)
+    _install_fake_register_server(monkeypatch, advanced_module, captured, config_module)
 
     payload = _base_payload()
     payload["publicKey"].pop("pubKeyCredParams")
@@ -269,7 +269,7 @@ def test_advanced_register_begin_filters_unavailable_pqc_when_classical_algorith
         "detect_available_pqc_algorithms",
         lambda: ({-49}, "limited pqc")
     )
-    _install_fake_register_server(monkeypatch, advanced_module, captured)
+    _install_fake_register_server(monkeypatch, advanced_module, captured, config_module)
 
     payload = _base_payload()
     payload["publicKey"]["pubKeyCredParams"] = [
@@ -297,7 +297,7 @@ def test_advanced_register_begin_falls_back_to_classical_when_no_requested_pqc_a
         "detect_available_pqc_algorithms",
         lambda: (set(), "no oqs available")
     )
-    _install_fake_register_server(monkeypatch, advanced_module, captured)
+    _install_fake_register_server(monkeypatch, advanced_module, captured, config_module)
 
     payload = _base_payload()
     payload["publicKey"]["pubKeyCredParams"] = [{"type": "public-key", "alg": -50}]
@@ -322,7 +322,7 @@ def test_advanced_register_begin_maps_auth_selection_exclusions_extensions_and_t
         "detect_available_pqc_algorithms",
         lambda: ({-50, -49, -48}, None)
     )
-    _install_fake_register_server(monkeypatch, advanced_module, captured)
+    _install_fake_register_server(monkeypatch, advanced_module, captured, config_module)
 
     payload = _base_payload()
     payload["publicKey"].update(

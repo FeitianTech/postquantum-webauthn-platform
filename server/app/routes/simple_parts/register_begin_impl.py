@@ -7,7 +7,7 @@ from flask import jsonify, request, session
 
 from fido2.webauthn import PublicKeyCredentialUserEntity
 
-from ... import attestation
+from ... import attestation, config
 from ...challenge_registry import stamp_ceremony_state
 
 
@@ -26,8 +26,8 @@ def register_begin_impl(simple_module: Any):
     else:
         session.pop("simple_credentials", None)
 
-    rp_id = simple_module.determine_rp_id()
-    server = simple_module.create_fido_server(rp_id=rp_id)
+    rp_id = config.determine_rp_id()
+    server = config.create_fido_server(rp_id=rp_id)
 
     options, state = server.register_begin(
         PublicKeyCredentialUserEntity(

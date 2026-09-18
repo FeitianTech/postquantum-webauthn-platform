@@ -28,7 +28,7 @@ def _serialized_record(*, resident=False):
     }
 
 
-def _install_fake_auth_begin_server(monkeypatch, advanced_module, captured, *, include_allow_credentials=True):
+def _install_fake_auth_begin_server(monkeypatch, advanced_module, captured, config_module, *, include_allow_credentials=True):
     class _FakeServer:
         def __init__(self):
             self.allowed_algorithms = []
@@ -48,9 +48,9 @@ def _install_fake_auth_begin_server(monkeypatch, advanced_module, captured, *, i
 
             return {"publicKey": public_key}, {"challenge": "state-token"}
 
-    monkeypatch.setattr(advanced_module, "create_fido_server", lambda **_kwargs: _FakeServer())
+    monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FakeServer())
     monkeypatch.setattr(
-        advanced_module,
+        config_module,
         "determine_rp_id",
         lambda value=None: value or "example.com"
     )
@@ -141,7 +141,7 @@ def test_advanced_authenticate_begin_uses_allow_credentials_subset_and_dedupes(m
     )
 
     captured = {}
-    _install_fake_auth_begin_server(monkeypatch, advanced_module, captured)
+    _install_fake_auth_begin_server(monkeypatch, advanced_module, captured, config_module)
 
     request_payload = {
         "publicKey": {
@@ -198,7 +198,7 @@ def test_advanced_authenticate_begin_falls_back_to_all_records_when_allow_creden
     )
 
     captured = {}
-    _install_fake_auth_begin_server(monkeypatch, advanced_module, captured)
+    _install_fake_auth_begin_server(monkeypatch, advanced_module, captured, config_module)
 
     with config_module.app.test_client() as client:
         response = client.post(
@@ -275,7 +275,7 @@ def test_advanced_authenticate_begin_resident_mode_prefers_resident_records_and_
     )
 
     captured = {}
-    _install_fake_auth_begin_server(monkeypatch, advanced_module, captured, include_allow_credentials=True)
+    _install_fake_auth_begin_server(monkeypatch, advanced_module, captured, config_module, include_allow_credentials=True)
 
     with config_module.app.test_client() as client:
         response = client.post(
@@ -358,7 +358,7 @@ def test_advanced_authenticate_begin_propagates_algorithms_extensions_and_uv_pre
     )
 
     captured = {}
-    _install_fake_auth_begin_server(monkeypatch, advanced_module, captured)
+    _install_fake_auth_begin_server(monkeypatch, advanced_module, captured, config_module)
 
     with config_module.app.test_client() as client:
         response = client.post(
