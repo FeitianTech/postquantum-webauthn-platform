@@ -1,5 +1,4 @@
 """Top-level decode pipeline helpers."""
-# pyright: reportUndefinedVariable=false  # the details_runtime and cbor_runtime helpers still come from the carrier
 from __future__ import annotations
 
 import base64
@@ -15,7 +14,7 @@ from cryptography import x509
 from fido2.utils import ByteBuffer
 
 from ...attestation import make_json_safe, serialize_attestation_certificate
-from . import details_runtime
+from . import cbor_runtime, details_runtime
 
 _PEM_CERT_PATTERN = re.compile(
     r"-----BEGIN CERTIFICATE-----\s*(?P<body>.*?)\s*-----END CERTIFICATE-----",
@@ -217,7 +216,7 @@ def _decode_binary_payload(data: bytes, encoding: str) -> dict[str, Any]:
     if authenticator_result is not None:
         return authenticator_result
 
-    cbor_result = _try_decode_cbor(data, encoding)
+    cbor_result = cbor_runtime._try_decode_cbor(data, encoding)
     if cbor_result is not None:
         return cbor_result
 
