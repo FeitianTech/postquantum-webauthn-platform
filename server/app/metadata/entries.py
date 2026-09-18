@@ -8,7 +8,7 @@ from typing import Any
 
 from fido2.mds3 import MetadataBlobPayloadEntry
 
-from .runtime_state import _METADATA_STATEMENT_REQUIRED_DEFAULTS
+from .state import _METADATA_STATEMENT_REQUIRED_DEFAULTS
 
 
 def _clone_json_value(value: Any) -> Any:

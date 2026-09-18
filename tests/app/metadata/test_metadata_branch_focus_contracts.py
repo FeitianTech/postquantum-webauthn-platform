@@ -197,7 +197,7 @@ def test_session_directory_touch_and_resolve_error_paths(metadata_module, monkey
     assert schedule_calls == [True]
 
 
-def test_env_interval_upload_and_normalisation_error_edges(metadata_module, monkeypatch, upload_runtime, app_config):
+def test_env_interval_upload_and_normalisation_error_edges(metadata_module, monkeypatch, uploads, app_config):
     monkeypatch.setenv("TEST_ENV_BOOL", " YES ")
     assert metadata_module._env_flag("TEST_ENV_BOOL") is True
 
@@ -214,11 +214,11 @@ def test_env_interval_upload_and_normalisation_error_edges(metadata_module, monk
     assert metadata_module._resolve_cleanup_interval() == timedelta(hours=6)
     assert len(warnings) >= 2
 
-    uploads = []
-    monkeypatch.setattr(upload_runtime, "is_logging_enabled", lambda: True)
-    monkeypatch.setattr(upload_runtime, "git_blob_sha", lambda _content: "new-sha")
+    recorded = []
+    monkeypatch.setattr(uploads, "is_logging_enabled", lambda: True)
+    monkeypatch.setattr(uploads, "git_blob_sha", lambda _content: "new-sha")
     monkeypatch.setattr(
-        upload_runtime,
+        uploads,
         "github_list_directory",
         lambda _folder: [
             123,
@@ -227,14 +227,14 @@ def test_env_interval_upload_and_normalisation_error_edges(metadata_module, monk
         ],
     )
     monkeypatch.setattr(
-        upload_runtime,
+        uploads,
         "github_upload_file",
-        lambda *args, **kwargs: uploads.append((args, kwargs)),
+        lambda *args, **kwargs: recorded.append((args, kwargs)),
     )
 
     assert metadata_module.maybe_store_uploaded_metadata_file("target.json", b"{}") is True
-    assert uploads[0][0][0] == "metadata/target.json"
-    assert uploads[0][1] == {"sha": "old-sha"}
+    assert recorded[0][0][0] == "metadata/target.json"
+    assert recorded[0][1] == {"sha": "old-sha"}
 
 
 def test_build_expand_extract_and_merge_error_branches(metadata_module, monkeypatch, payload_runtime):
@@ -618,7 +618,7 @@ def test_cache_and_bootstrap_fallback_helpers(metadata_module, monkeypatch, tmp_
 
 
 def test_lookup_compose_resolve_trust_and_verifier_edge_paths(
-    metadata_module, metadata_runtime_state, monkeypatch, snapshot_runtime, items_runtime, effective_runtime, verifier_runtime):
+    metadata_module, metadata_runtime_state, monkeypatch, snapshot_runtime, items_runtime, effective_runtime, verifier):
     assert (
         metadata_module._entry_matches_lookup(
             {"metadataStatement": 123},
@@ -724,14 +724,14 @@ def test_lookup_compose_resolve_trust_and_verifier_edge_paths(
     monkeypatch.setattr(snapshot_runtime, "_load_base_metadata", lambda: (None, 88.0))
     monkeypatch.setattr(items_runtime, "list_session_metadata_items", lambda: [SimpleNamespace(entry=entry)])
     monkeypatch.setattr(
-        verifier_runtime,
+        verifier,
         "_merge_metadata",
         lambda base_metadata, session_items: {
             "base": base_metadata,
             "count": len(session_items),
         },
     )
-    monkeypatch.setattr(verifier_runtime, "MdsAttestationVerifier", _FakeVerifier)
+    monkeypatch.setattr(verifier, "MdsAttestationVerifier", _FakeVerifier)
 
     metadata_module.get_mds_verifier()
     assert created == [{"base": None, "count": 1}]

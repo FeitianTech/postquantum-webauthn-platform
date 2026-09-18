@@ -1,4 +1,4 @@
-"""Shared mutable runtime state for the metadata submodules.
+"""The mutable state the metadata submodules share: caches, locks and settings.
 
 This module is the single home for the caches, locks and constants the
 metadata runtime shares. It is deliberately a leaf: it imports nothing from
@@ -6,7 +6,7 @@ metadata runtime shares. It is deliberately a leaf: it imports nothing from
 depend on it without creating a cycle.
 
 Fragments reach the mutable entries through the module
-(``runtime_state._base_metadata_cache = ...``) rather than by importing the
+(``state._base_metadata_cache = ...``) rather than by importing the
 name, because a ``from ... import`` binding cannot be rebound for other
 readers. The constants below are safe to import by name.
 """

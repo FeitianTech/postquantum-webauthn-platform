@@ -37,7 +37,7 @@ def metadata_runtime_state(monkeypatch):
     while exercising stale state.
     """
 
-    state = pytest.importorskip("server.app.metadata.runtime_state")
+    state = pytest.importorskip("server.app.metadata.state")
     for name, default in _RUNTIME_STATE_DEFAULTS.items():
         monkeypatch.setattr(state, name, set() if default is frozenset() else default)
     return state
@@ -58,7 +58,7 @@ def identity_runtime():
 def payload_runtime():
     """The fragment that defines the entry payload helpers."""
 
-    return pytest.importorskip("server.app.metadata.entry_payload_runtime")
+    return pytest.importorskip("server.app.metadata.entries")
 
 
 @pytest.fixture
@@ -83,17 +83,17 @@ def blob():
 
 
 @pytest.fixture
-def upload_runtime():
+def uploads():
     """The fragment that defines the repository upload helpers."""
 
-    return pytest.importorskip("server.app.metadata.upload_runtime")
+    return pytest.importorskip("server.app.metadata.uploads")
 
 
 @pytest.fixture
 def effective_runtime():
     """The fragment that composes base and session snapshots."""
 
-    return pytest.importorskip("server.app.metadata.effective_snapshot_runtime")
+    return pytest.importorskip("server.app.metadata.effective")
 
 
 @pytest.fixture
@@ -118,7 +118,7 @@ def cleanup_runtime():
 
 
 @pytest.fixture
-def verifier_runtime():
+def verifier():
     """The fragment that defines the metadata merge and verifier helpers."""
 
-    return pytest.importorskip("server.app.metadata.verifier_runtime")
+    return pytest.importorskip("server.app.metadata.verifier")

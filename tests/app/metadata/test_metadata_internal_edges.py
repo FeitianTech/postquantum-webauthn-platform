@@ -31,29 +31,29 @@ def test_env_flag_cleanup_async_and_interval_resolution(metadata_module, monkeyp
     assert metadata_module._resolve_cleanup_interval().total_seconds() == 2 * 3600
 
 
-def test_safe_filename_and_upload_flow_handles_skip_update_and_disabled_logging(metadata_module, monkeypatch, upload_runtime):
+def test_safe_filename_and_upload_flow_handles_skip_update_and_disabled_logging(metadata_module, monkeypatch, uploads):
     content = b"metadata-payload"
 
-    uploads = []
-    monkeypatch.setattr(upload_runtime, "is_logging_enabled", lambda: True)
-    monkeypatch.setattr(upload_runtime, "git_blob_sha", lambda _content: "sha-content")
+    recorded = []
+    monkeypatch.setattr(uploads, "is_logging_enabled", lambda: True)
+    monkeypatch.setattr(uploads, "git_blob_sha", lambda _content: "sha-content")
 
     monkeypatch.setattr(
-        upload_runtime,
+        uploads,
         "github_list_directory",
         lambda _folder: [{"type": "file", "name": "metadata.json", "sha": "sha-content"}],
     )
     monkeypatch.setattr(
-        upload_runtime,
+        uploads,
         "github_upload_file",
-        lambda *args, **kwargs: uploads.append((args, kwargs)),
+        lambda *args, **kwargs: recorded.append((args, kwargs)),
     )
 
     assert metadata_module.maybe_store_uploaded_metadata_file("metadata.json", content) is False
-    assert uploads == []
+    assert recorded == []
 
     monkeypatch.setattr(
-        upload_runtime,
+        uploads,
         "github_list_directory",
         lambda _folder: [
             {
@@ -66,11 +66,11 @@ def test_safe_filename_and_upload_flow_handles_skip_update_and_disabled_logging(
     )
 
     assert metadata_module.maybe_store_uploaded_metadata_file(" metadata.json ", content) is True
-    assert uploads and uploads[-1][0][0] == "metadata/metadata.json"
-    assert uploads[-1][0][2] == "metadata: update metadata.json"
-    assert uploads[-1][1]["sha"] == "old-sha"
+    assert recorded and recorded[-1][0][0] == "metadata/metadata.json"
+    assert recorded[-1][0][2] == "metadata: update metadata.json"
+    assert recorded[-1][1]["sha"] == "old-sha"
 
-    monkeypatch.setattr(upload_runtime, "is_logging_enabled", lambda: False)
+    monkeypatch.setattr(uploads, "is_logging_enabled", lambda: False)
     assert metadata_module.maybe_store_uploaded_metadata_file("metadata.json", content) is False
 
 
@@ -222,7 +222,7 @@ def test_load_base_explorer_snapshot_prefers_packaged_explorer_when_newer(metada
     assert marker is not None
 
 
-def test_load_packaged_explorer_summary_and_get_mds_verifier_cache_paths(metadata_module, monkeypatch, snapshot_runtime, items_runtime, verifier_runtime):
+def test_load_packaged_explorer_summary_and_get_mds_verifier_cache_paths(metadata_module, monkeypatch, snapshot_runtime, items_runtime, verifier):
     monkeypatch.setattr(snapshot_runtime, "_load_packaged_explorer_meta", lambda: None)
     monkeypatch.setattr(snapshot_runtime, "_load_base_explorer_snapshot", lambda: (None, None))
     monkeypatch.setattr(
@@ -249,7 +249,7 @@ def test_load_packaged_explorer_summary_and_get_mds_verifier_cache_paths(metadat
     fake_metadata = SimpleNamespace(entries=[])
     monkeypatch.setattr(snapshot_runtime, "_load_base_metadata", lambda: (fake_metadata, 123.0))
     monkeypatch.setattr(items_runtime, "list_session_metadata_items", lambda: [])
-    monkeypatch.setattr(verifier_runtime, "MdsAttestationVerifier", _FakeVerifier)
+    monkeypatch.setattr(verifier, "MdsAttestationVerifier", _FakeVerifier)
 
     first = metadata_module.get_mds_verifier()
     second = metadata_module.get_mds_verifier()
