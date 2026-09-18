@@ -29,10 +29,10 @@ def pipeline():
 
 
 @pytest.fixture
-def cbor_runtime():
+def ctap():
     """The fragment that defines CBOR sequence decoding and CTAP repair."""
 
-    return _fragment("cbor_runtime")
+    return _fragment("ctap")
 
 
 @pytest.fixture

@@ -174,12 +174,12 @@ def test_repair_get_assertion_entries_recovers_signature_from_lenient_map_entrie
     assert repaired_value_bytes_key[3] == b"\x99"
 
 
-def test_try_decode_cbor_merges_assertion_signature_for_direct_get_assertion_classification(monkeypatch, ctap_interpret_runtime, cbor_runtime, ctap_classify):
+def test_try_decode_cbor_merges_assertion_signature_for_direct_get_assertion_classification(monkeypatch, ctap_interpret_runtime, ctap, ctap_classify):
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     structure = {"byteLength": 1, "entries": [], "length": 0, "summary": "map[0]"}
     monkeypatch.setattr(
-        cbor_runtime,
+        ctap,
         "_decode_cbor_sequence",
         lambda _payload: ([structure], [{2: b"auth"}], 1, b""),
     )
@@ -189,7 +189,7 @@ def test_try_decode_cbor_merges_assertion_signature_for_direct_get_assertion_cla
         lambda _value: "get_assertion_output",
     )
     monkeypatch.setattr(
-        cbor_runtime,
+        ctap,
         "_repair_get_assertion_entries",
         lambda structure, value, raw_bytes=None: (structure, {2: b"auth", 3: b"\xbb"}, b"\xbb"),
     )
@@ -210,12 +210,12 @@ def test_try_decode_cbor_merges_assertion_signature_for_direct_get_assertion_cla
     assert result["decoded"]["expandedJson"]["path"] == "direct"
 
 
-def test_try_decode_cbor_promotes_other_classification_when_repair_finds_signature(monkeypatch, ctap_interpret_runtime, cbor_runtime, ctap_classify):
+def test_try_decode_cbor_promotes_other_classification_when_repair_finds_signature(monkeypatch, ctap_interpret_runtime, ctap, ctap_classify):
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     structure = {"byteLength": 1, "entries": [], "length": 0, "summary": "map[0]"}
     monkeypatch.setattr(
-        cbor_runtime,
+        ctap,
         "_decode_cbor_sequence",
         lambda _payload: ([structure], [{2: b"auth"}], 1, b""),
     )
@@ -225,7 +225,7 @@ def test_try_decode_cbor_promotes_other_classification_when_repair_finds_signatu
         lambda _value: "other",
     )
     monkeypatch.setattr(
-        cbor_runtime,
+        ctap,
         "_repair_get_assertion_entries",
         lambda structure, value, raw_bytes=None: (structure, {2: b"auth", 3: b"\xaa"}, b"\xaa"),
     )

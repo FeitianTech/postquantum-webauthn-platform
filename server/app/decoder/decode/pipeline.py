@@ -26,7 +26,7 @@ from ...encoding import (
     sniff,
     try_decode_base64,
 )
-from . import cbor_runtime, response
+from . import ctap, response
 
 _PEM_CERT_PATTERN = re.compile(
     r"-----BEGIN CERTIFICATE-----\s*(?P<body>.*?)\s*-----END CERTIFICATE-----",
@@ -224,7 +224,7 @@ def _decode_binary_payload(data: bytes, encoding: str) -> dict[str, Any]:
     if authenticator_result is not None:
         return authenticator_result
 
-    cbor_result = cbor_runtime._try_decode_cbor(data, encoding)
+    cbor_result = ctap._try_decode_cbor(data, encoding)
     if cbor_result is not None:
         return cbor_result
 
