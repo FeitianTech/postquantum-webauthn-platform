@@ -57,7 +57,7 @@ def register_begin():
 
 @app.route("/api/register/complete", methods=["POST"])
 def register_complete():
-    return registration.registration()
+    return registration.register_complete()
 
 
 @app.route("/api/authenticate/begin", methods=["POST"])
