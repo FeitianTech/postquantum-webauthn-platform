@@ -76,7 +76,7 @@ def test_authenticate_complete_invalid_request_state_fallback_returns_400(monkey
             assert session_state.get("simple_credentials_email") == "user@example.com"
 
 
-def test_authenticate_complete_malformed_authenticator_data_is_rejected(monkeypatch):
+def test_authenticate_complete_malformed_authenticator_data_is_rejected(monkeypatch, config_module):
     config_module = pytest.importorskip("server.app.config")
     simple_module = pytest.importorskip("server.app.routes.simple")
     pytest.importorskip("server.app.app")
@@ -87,7 +87,7 @@ def test_authenticate_complete_malformed_authenticator_data_is_rejected(monkeypa
         def authenticate_complete(self, *_args, **_kwargs):
             return _MatchedCredential(credential_id)
 
-    monkeypatch.setattr(simple_module, "create_fido_server", lambda **_kwargs: _FakeServer())
+    monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FakeServer())
     monkeypatch.setattr(
         simple_module,
         "_parse_client_credentials",

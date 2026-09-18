@@ -21,17 +21,16 @@ def _register_complete_payload(*, state=None):
     return payload
 
 
-def test_simple_register_complete_returns_400_and_cleans_state_when_verification_fails(monkeypatch, attestation_module):
+def test_simple_register_complete_returns_400_and_cleans_state_when_verification_fails(monkeypatch, attestation_module, config_module):
     config_module = pytest.importorskip("server.app.config")
-    simple_module = pytest.importorskip("server.app.routes.simple")
     pytest.importorskip("server.app.app")
 
     class _FailingServer:
         def register_complete(self, *_args, **_kwargs):
             raise ValueError("register verification failed")
 
-    monkeypatch.setattr(simple_module, "determine_rp_id", lambda: "example.com")
-    monkeypatch.setattr(simple_module, "create_fido_server", lambda **_kwargs: _FailingServer())
+    monkeypatch.setattr(config_module, "determine_rp_id", lambda: "example.com")
+    monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FailingServer())
     monkeypatch.setattr(
         attestation_module,
         "extract_attestation_details",
@@ -58,11 +57,10 @@ def test_simple_register_complete_returns_400_and_cleans_state_when_verification
             assert "simple_register_public_key" not in session_state
 
 
-def test_simple_register_complete_rejects_request_state_fallback_before_verification(monkeypatch, attestation_module):
+def test_simple_register_complete_rejects_request_state_fallback_before_verification(monkeypatch, attestation_module, config_module):
     """The request-supplied state must be discarded before any verification."""
 
     config_module = pytest.importorskip("server.app.config")
-    simple_module = pytest.importorskip("server.app.routes.simple")
     pytest.importorskip("server.app.app")
 
     captured = {}
@@ -72,8 +70,8 @@ def test_simple_register_complete_rejects_request_state_fallback_before_verifica
             captured["state"] = state
             raise ValueError("fallback verification failed")
 
-    monkeypatch.setattr(simple_module, "determine_rp_id", lambda: "example.com")
-    monkeypatch.setattr(simple_module, "create_fido_server", lambda **_kwargs: _FailingServer())
+    monkeypatch.setattr(config_module, "determine_rp_id", lambda: "example.com")
+    monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FailingServer())
     monkeypatch.setattr(
         attestation_module,
         "extract_attestation_details",

@@ -12,7 +12,7 @@ class _AuthResult:
         self.public_key = public_key or {3: -7}
 
 
-def test_advanced_authenticate_complete_uses_request_state_fallback(monkeypatch):
+def test_advanced_authenticate_complete_uses_request_state_fallback(monkeypatch, config_module):
     config_module = pytest.importorskip("server.app.config")
     advanced_module = pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
@@ -28,8 +28,8 @@ def test_advanced_authenticate_complete_uses_request_state_fallback(monkeypatch)
             captured["state"] = state
             return _AuthResult()
 
-    monkeypatch.setattr(advanced_module, "create_fido_server", lambda **_kwargs: _FakeServer())
-    monkeypatch.setattr(advanced_module, "determine_rp_id", lambda value=None: value or "example.com")
+    monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FakeServer())
+    monkeypatch.setattr(config_module, "determine_rp_id", lambda value=None: value or "example.com")
     monkeypatch.setattr(advanced_module, "_derive_algorithms_from_credentials", lambda _credentials: [])
     monkeypatch.setattr(
         advanced_module,
@@ -69,7 +69,7 @@ def test_advanced_authenticate_complete_uses_request_state_fallback(monkeypatch)
             assert "advanced_auth_rp" not in session_state
 
 
-def test_advanced_authenticate_complete_uses_advanced_rp_when_auth_rp_missing(monkeypatch):
+def test_advanced_authenticate_complete_uses_advanced_rp_when_auth_rp_missing(monkeypatch, config_module):
     config_module = pytest.importorskip("server.app.config")
     advanced_module = pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
@@ -91,9 +91,9 @@ def test_advanced_authenticate_complete_uses_advanced_rp_when_auth_rp_missing(mo
         captured["determine_rp_id_arg"] = value
         return value or "default.example"
 
-    monkeypatch.setattr(advanced_module, "determine_rp_id", _determine_rp_id)
+    monkeypatch.setattr(config_module, "determine_rp_id", _determine_rp_id)
     monkeypatch.setattr(
-        advanced_module,
+        config_module,
         "create_fido_server",
         lambda **kwargs: _FakeServer(rp_id=kwargs.get("rp_id"))
     )
@@ -262,7 +262,7 @@ def test_advanced_authenticate_complete_rejects_attachment_not_allowed_by_sessio
             assert "advanced_authenticate_allowed_attachments" not in session_state
 
 
-def test_advanced_authenticate_complete_forwards_hash_algorithm_override(monkeypatch):
+def test_advanced_authenticate_complete_forwards_hash_algorithm_override(monkeypatch, config_module):
     config_module = pytest.importorskip("server.app.config")
     advanced_module = pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
@@ -278,8 +278,8 @@ def test_advanced_authenticate_complete_forwards_hash_algorithm_override(monkeyp
             captured["hash_algorithm"] = kwargs.get("hash_algorithm")
             return _AuthResult({3: -7})
 
-    monkeypatch.setattr(advanced_module, "create_fido_server", lambda **_kwargs: _FakeServer())
-    monkeypatch.setattr(advanced_module, "determine_rp_id", lambda value=None: value or "example.com")
+    monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FakeServer())
+    monkeypatch.setattr(config_module, "determine_rp_id", lambda value=None: value or "example.com")
     monkeypatch.setattr(advanced_module, "_derive_algorithms_from_credentials", lambda _credentials: [])
     monkeypatch.setattr(
         advanced_module,
@@ -312,7 +312,7 @@ def test_advanced_authenticate_complete_forwards_hash_algorithm_override(monkeyp
     assert captured["hash_algorithm"] == "SHA-512"
 
 
-def test_advanced_authenticate_complete_defaults_hash_algorithm_when_override_invalid(monkeypatch):
+def test_advanced_authenticate_complete_defaults_hash_algorithm_when_override_invalid(monkeypatch, config_module):
     config_module = pytest.importorskip("server.app.config")
     advanced_module = pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
@@ -328,8 +328,8 @@ def test_advanced_authenticate_complete_defaults_hash_algorithm_when_override_in
             captured["hash_algorithm"] = kwargs.get("hash_algorithm")
             return _AuthResult({3: -7})
 
-    monkeypatch.setattr(advanced_module, "create_fido_server", lambda **_kwargs: _FakeServer())
-    monkeypatch.setattr(advanced_module, "determine_rp_id", lambda value=None: value or "example.com")
+    monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FakeServer())
+    monkeypatch.setattr(config_module, "determine_rp_id", lambda value=None: value or "example.com")
     monkeypatch.setattr(advanced_module, "_derive_algorithms_from_credentials", lambda _credentials: [])
     monkeypatch.setattr(
         advanced_module,
@@ -362,7 +362,7 @@ def test_advanced_authenticate_complete_defaults_hash_algorithm_when_override_in
     assert captured["hash_algorithm"] == "SHA-256"
 
 
-def test_advanced_authenticate_complete_omits_sign_count_for_malformed_authenticator_data(monkeypatch):
+def test_advanced_authenticate_complete_omits_sign_count_for_malformed_authenticator_data(monkeypatch, config_module):
     config_module = pytest.importorskip("server.app.config")
     advanced_module = pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
@@ -376,8 +376,8 @@ def test_advanced_authenticate_complete_omits_sign_count_for_malformed_authentic
         def authenticate_complete(self, *_args, **_kwargs):
             return _AuthResult({3: -7})
 
-    monkeypatch.setattr(advanced_module, "create_fido_server", lambda **_kwargs: _FakeServer())
-    monkeypatch.setattr(advanced_module, "determine_rp_id", lambda value=None: value or "example.com")
+    monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FakeServer())
+    monkeypatch.setattr(config_module, "determine_rp_id", lambda value=None: value or "example.com")
     monkeypatch.setattr(advanced_module, "_derive_algorithms_from_credentials", lambda _credentials: [])
     monkeypatch.setattr(
         advanced_module,

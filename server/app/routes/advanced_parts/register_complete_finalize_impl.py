@@ -7,7 +7,7 @@ from typing import Any
 
 from flask import jsonify
 
-from ... import credential_artifacts, device_logs
+from ... import config, credential_artifacts, device_logs
 
 
 def finalize_registration_completion(
@@ -48,14 +48,14 @@ def finalize_registration_completion(
             session_id=metadata_session_id,
         )
     except Exception:
-        advanced_module.app.logger.exception(
+        config.app.logger.exception(
             "Failed to store advanced credential artifact for user %s",
             username,
         )
         return jsonify({"error": "Unable to persist credential artifact."}), 500
 
     if not artifact_stored:
-        advanced_module.app.logger.error(
+        config.app.logger.error(
             "Advanced credential artifact was not stored for user %s",
             username,
         )

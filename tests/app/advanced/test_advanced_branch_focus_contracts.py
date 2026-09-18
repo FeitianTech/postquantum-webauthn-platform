@@ -40,7 +40,7 @@ def _serialized_record(*, resident=False):
     }
 
 
-def _install_fake_auth_begin_server(monkeypatch, advanced_module, captured):
+def _install_fake_auth_begin_server(monkeypatch, advanced_module, captured, config_module):
     class _FakeServer:
         def __init__(self):
             self.allowed_algorithms = []
@@ -59,9 +59,9 @@ def _install_fake_auth_begin_server(monkeypatch, advanced_module, captured):
                 }
             }, {"challenge": "state-token"}
 
-    monkeypatch.setattr(advanced_module, "create_fido_server", lambda **_kwargs: _FakeServer())
+    monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FakeServer())
     monkeypatch.setattr(
-        advanced_module,
+        config_module,
         "determine_rp_id",
         lambda value=None: value or "example.com"
     )
@@ -97,7 +97,7 @@ def test_advanced_authenticate_begin_returns_no_matching_credentials_for_invalid
     )
 
     captured = {}
-    _install_fake_auth_begin_server(monkeypatch, advanced_module, captured)
+    _install_fake_auth_begin_server(monkeypatch, advanced_module, captured, config_module)
 
     with config_module.app.test_client() as client:
         response = client.post(
@@ -131,7 +131,7 @@ def test_advanced_authenticate_begin_resident_mode_reports_no_resident_keys_when
     )
 
     captured = {}
-    _install_fake_auth_begin_server(monkeypatch, advanced_module, captured)
+    _install_fake_auth_begin_server(monkeypatch, advanced_module, captured, config_module)
 
     with config_module.app.test_client() as client:
         response = client.post(
@@ -173,7 +173,7 @@ def test_advanced_authenticate_begin_uses_algorithm_source_fallback_and_extensio
 
     monkeypatch.setattr(advanced_module, "_derive_algorithms_from_credentials", _derive)
 
-    _install_fake_auth_begin_server(monkeypatch, advanced_module, captured)
+    _install_fake_auth_begin_server(monkeypatch, advanced_module, captured, config_module)
 
     with config_module.app.test_client() as client:
         response = client.post(
@@ -220,7 +220,7 @@ def test_advanced_authenticate_begin_largeblob_dict_passthrough_when_no_read_or_
     monkeypatch.setattr(advanced_module, "_derive_algorithms_from_credentials", lambda _source: [])
 
     captured = {}
-    _install_fake_auth_begin_server(monkeypatch, advanced_module, captured)
+    _install_fake_auth_begin_server(monkeypatch, advanced_module, captured, config_module)
 
     with config_module.app.test_client() as client:
         response = client.post(
@@ -253,7 +253,7 @@ def test_advanced_authenticate_begin_largeblob_non_dict_and_prf_passthrough(monk
     monkeypatch.setattr(advanced_module, "_derive_algorithms_from_credentials", lambda _source: [])
 
     captured = {}
-    _install_fake_auth_begin_server(monkeypatch, advanced_module, captured)
+    _install_fake_auth_begin_server(monkeypatch, advanced_module, captured, config_module)
 
     with config_module.app.test_client() as client:
         response = client.post(
@@ -311,7 +311,7 @@ def test_advanced_authenticate_complete_requires_public_key_payload():
     }
 
 
-def test_advanced_authenticate_complete_uses_legacy_session_credentials_fallback(monkeypatch):
+def test_advanced_authenticate_complete_uses_legacy_session_credentials_fallback(monkeypatch, config_module):
     advanced_module = pytest.importorskip("server.app.routes.advanced")
     config_module = pytest.importorskip("server.app.config")
 
@@ -338,8 +338,8 @@ def test_advanced_authenticate_complete_uses_legacy_session_credentials_fallback
             return _AuthResult()
 
     monkeypatch.setattr(advanced_module, "_parse_client_supplied_credentials", _parse)
-    monkeypatch.setattr(advanced_module, "create_fido_server", lambda **_kwargs: _FakeServer())
-    monkeypatch.setattr(advanced_module, "determine_rp_id", lambda value=None: value or "example.com")
+    monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FakeServer())
+    monkeypatch.setattr(config_module, "determine_rp_id", lambda value=None: value or "example.com")
     monkeypatch.setattr(advanced_module, "_derive_algorithms_from_credentials", lambda _source: [])
 
     with config_module.app.test_client() as client:
@@ -392,7 +392,7 @@ def test_advanced_authenticate_complete_returns_404_when_no_credentials_found_an
             assert "advanced_auth_credentials_meta" not in session_state
 
 
-def test_advanced_authenticate_complete_uses_request_rpid_sets_algorithms_and_sign_count(monkeypatch):
+def test_advanced_authenticate_complete_uses_request_rpid_sets_algorithms_and_sign_count(monkeypatch, config_module):
     advanced_module = pytest.importorskip("server.app.routes.advanced")
     config_module = pytest.importorskip("server.app.config")
 
@@ -440,8 +440,8 @@ def test_advanced_authenticate_complete_uses_request_rpid_sets_algorithms_and_si
             [_serialized_record(resident=True)],
         )
     )
-    monkeypatch.setattr(advanced_module, "create_fido_server", _create_fido_server)
-    monkeypatch.setattr(advanced_module, "determine_rp_id", _determine_rp_id)
+    monkeypatch.setattr(config_module, "create_fido_server", _create_fido_server)
+    monkeypatch.setattr(config_module, "determine_rp_id", _determine_rp_id)
     monkeypatch.setattr(advanced_module, "_derive_algorithms_from_credentials", _derive_algorithms)
 
     with config_module.app.test_client() as client:
@@ -475,7 +475,7 @@ def test_advanced_authenticate_complete_uses_request_rpid_sets_algorithms_and_si
     assert captured["server_allowed_algorithms"] == [-7]
 
 
-def test_advanced_authenticate_complete_error_path_uses_failed_id_fallback_extractor(monkeypatch):
+def test_advanced_authenticate_complete_error_path_uses_failed_id_fallback_extractor(monkeypatch, config_module):
     advanced_module = pytest.importorskip("server.app.routes.advanced")
     config_module = pytest.importorskip("server.app.config")
 
@@ -496,8 +496,8 @@ def test_advanced_authenticate_complete_error_path_uses_failed_id_fallback_extra
             [_serialized_record(resident=True)],
         )
     )
-    monkeypatch.setattr(advanced_module, "create_fido_server", lambda **_kwargs: _FailingServer())
-    monkeypatch.setattr(advanced_module, "determine_rp_id", lambda value=None: value or "example.com")
+    monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FailingServer())
+    monkeypatch.setattr(config_module, "determine_rp_id", lambda value=None: value or "example.com")
     monkeypatch.setattr(advanced_module, "_derive_algorithms_from_credentials", lambda _source: [])
 
     with config_module.app.test_client() as client:

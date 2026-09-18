@@ -20,7 +20,7 @@ def _register_begin_payload() -> dict:
     }
 
 
-def _install_register_begin_server(monkeypatch, advanced_module, captured: dict, *, include_extensions=False):
+def _install_register_begin_server(monkeypatch, advanced_module, captured: dict, config_module, *, include_extensions=False):
     class _FakeServer:
         def __init__(self):
             self.allowed_algorithms = []
@@ -36,10 +36,10 @@ def _install_register_begin_server(monkeypatch, advanced_module, captured: dict,
                 public_key["extensions"] = {"largeBlob": {"support": "preferred"}}
             return {"publicKey": public_key}, {"challenge": "state-token"}
 
-    monkeypatch.setattr(advanced_module, "create_fido_server", lambda **_kwargs: _FakeServer())
+    monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FakeServer())
 
 
-def _install_register_complete_defaults(monkeypatch, advanced_module, attestation_module, credential_artifacts_module, device_logs_module, metadata_module, storage_module):
+def _install_register_complete_defaults(monkeypatch, advanced_module, attestation_module, credential_artifacts_module, device_logs_module, metadata_module, storage_module, config_module):
     monkeypatch.setattr(metadata_module, "ensure_metadata_session_id", lambda: "session-id")
     monkeypatch.setattr(storage_module, "readkey", lambda *_args, **_kwargs: [])
     monkeypatch.setattr(storage_module, "add_public_key_material", lambda *_args, **_kwargs: None)
@@ -51,7 +51,7 @@ def _install_register_complete_defaults(monkeypatch, advanced_module, attestatio
         "_log_authenticator_attestation_response",
         lambda *_args, **_kwargs: None
     )
-    monkeypatch.setattr(advanced_module, "determine_rp_id", lambda value=None: value or "example.com")
+    monkeypatch.setattr(config_module, "determine_rp_id", lambda value=None: value or "example.com")
 
 
 def test_helper_none_and_non_string_decode_paths():
@@ -75,7 +75,7 @@ def test_register_begin_maps_attestation_modes_and_exercises_pqc_warning_branch(
     pytest.importorskip("server.app.app")
 
     captured = {}
-    _install_register_begin_server(monkeypatch, advanced_module, captured, include_extensions=True)
+    _install_register_begin_server(monkeypatch, advanced_module, captured, config_module, include_extensions=True)
 
     warning_messages = []
     monkeypatch.setattr(pqc_module, "detect_available_pqc_algorithms", lambda: (set(), None))
@@ -146,12 +146,12 @@ def test_register_complete_validates_required_payload_and_username_fields():
         assert missing_username.get_json() == {"error": "Username is required in user.name"}
 
 
-def test_register_complete_hits_non_mapping_fallback_paths_and_keeps_response_contract(monkeypatch, attestation_module, credential_artifacts_module, device_logs_module, metadata_module, storage_module):
+def test_register_complete_hits_non_mapping_fallback_paths_and_keeps_response_contract(monkeypatch, attestation_module, credential_artifacts_module, device_logs_module, metadata_module, storage_module, config_module):
     config_module = pytest.importorskip("server.app.config")
     advanced_module = pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
 
-    _install_register_complete_defaults(monkeypatch, advanced_module, attestation_module, credential_artifacts_module, device_logs_module, metadata_module, storage_module)
+    _install_register_complete_defaults(monkeypatch, advanced_module, attestation_module, credential_artifacts_module, device_logs_module, metadata_module, storage_module, config_module)
 
     class _BadBytes:
         def __bytes__(self):
@@ -192,7 +192,7 @@ def test_register_complete_hits_non_mapping_fallback_paths_and_keeps_response_co
         def register_complete(self, _state, _response):
             return _AuthData()
 
-    monkeypatch.setattr(advanced_module, "create_fido_server", lambda **_kwargs: _Server())
+    monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _Server())
     monkeypatch.setattr(
         attestation_module,
         "extract_attestation_details",
@@ -265,12 +265,12 @@ def test_register_complete_hits_non_mapping_fallback_paths_and_keeps_response_co
     assert body["relyingParty"]["registrationData"]["authenticatorExtensions"] == {"ext": True}
 
 
-def test_register_complete_returns_400_for_non_mapping_extensions_payload(monkeypatch, attestation_module, credential_artifacts_module, device_logs_module, metadata_module, storage_module):
+def test_register_complete_returns_400_for_non_mapping_extensions_payload(monkeypatch, attestation_module, credential_artifacts_module, device_logs_module, metadata_module, storage_module, config_module):
     config_module = pytest.importorskip("server.app.config")
     advanced_module = pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
 
-    _install_register_complete_defaults(monkeypatch, advanced_module, attestation_module, credential_artifacts_module, device_logs_module, metadata_module, storage_module)
+    _install_register_complete_defaults(monkeypatch, advanced_module, attestation_module, credential_artifacts_module, device_logs_module, metadata_module, storage_module, config_module)
 
     class _CredentialData:
         credential_id = b"cred-id"
@@ -300,7 +300,7 @@ def test_register_complete_returns_400_for_non_mapping_extensions_payload(monkey
         def register_complete(self, _state, _response):
             return _AuthData()
 
-    monkeypatch.setattr(advanced_module, "create_fido_server", lambda **_kwargs: _Server())
+    monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _Server())
     monkeypatch.setattr(
         attestation_module,
         "extract_attestation_details",
@@ -349,12 +349,12 @@ def test_register_complete_returns_400_for_non_mapping_extensions_payload(monkey
         ("custom-policy", "custom-policy"),
     ],
 )
-def test_register_complete_maps_cred_protect_display_and_handles_public_key_alg_fallbacks(monkeypatch, cred_protect_value, expected_display, attestation_module, credential_artifacts_module, device_logs_module, metadata_module, storage_module):
+def test_register_complete_maps_cred_protect_display_and_handles_public_key_alg_fallbacks(monkeypatch, cred_protect_value, expected_display, attestation_module, credential_artifacts_module, device_logs_module, metadata_module, storage_module, config_module):
     config_module = pytest.importorskip("server.app.config")
     advanced_module = pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
 
-    _install_register_complete_defaults(monkeypatch, advanced_module, attestation_module, credential_artifacts_module, device_logs_module, metadata_module, storage_module)
+    _install_register_complete_defaults(monkeypatch, advanced_module, attestation_module, credential_artifacts_module, device_logs_module, metadata_module, storage_module, config_module)
 
     class _CredentialData:
         credential_id = b"cred-two"
@@ -384,7 +384,7 @@ def test_register_complete_maps_cred_protect_display_and_handles_public_key_alg_
         def register_complete(self, _state, _response):
             return _AuthData()
 
-    monkeypatch.setattr(advanced_module, "create_fido_server", lambda **_kwargs: _Server())
+    monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _Server())
     monkeypatch.setattr(
         attestation_module,
         "extract_attestation_details",
@@ -436,7 +436,7 @@ def test_register_complete_maps_cred_protect_display_and_handles_public_key_alg_
     assert body["credProtectUsed"] == expected_display
 
 
-def test_authenticate_begin_uses_stored_rp_required_uv_and_skips_invalid_allow_credentials(monkeypatch):
+def test_authenticate_begin_uses_stored_rp_required_uv_and_skips_invalid_allow_credentials(monkeypatch, config_module):
     config_module = pytest.importorskip("server.app.config")
     advanced_module = pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
@@ -478,8 +478,8 @@ def test_authenticate_begin_uses_stored_rp_required_uv_and_skips_invalid_allow_c
                 }
             }, {"challenge": "state-token"}
 
-    monkeypatch.setattr(advanced_module, "create_fido_server", lambda **_kwargs: _Server())
-    monkeypatch.setattr(advanced_module, "determine_rp_id", lambda value=None: value or "example.com")
+    monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _Server())
+    monkeypatch.setattr(config_module, "determine_rp_id", lambda value=None: value or "example.com")
 
     with config_module.app.test_client() as client:
         with client.session_transaction() as session_state:

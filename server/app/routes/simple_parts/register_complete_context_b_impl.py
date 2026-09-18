@@ -7,7 +7,7 @@ from typing import Any
 
 from flask import jsonify, session
 
-from ... import attestation, device_logs, metadata, storage
+from ... import attestation, config, device_logs, metadata, storage
 
 
 def build_stored_credential_context_impl(simple_module: Any, ctx: dict[str, Any]) -> None:
@@ -87,7 +87,7 @@ def _persist_registered_credential_entry_impl(simple_module: Any, ctx: dict[str,
     try:
         storage.savekey(ctx["uname"], existing_credentials, session_id=metadata_session_id)
     except Exception:
-        simple_module.app.logger.exception("Failed to persist registered credential for %s", ctx["uname"])
+        config.app.logger.exception("Failed to persist registered credential for %s", ctx["uname"])
         return jsonify({"error": "Unable to persist registered credential."}), 500
 
     return None

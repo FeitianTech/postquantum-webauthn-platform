@@ -5,7 +5,7 @@ from typing import Any
 
 from flask import jsonify, request, session
 
-from ... import attestation
+from ... import attestation, config
 from ...attachments import normalize_attachment
 from ...challenge_registry import (
     CHALLENGE_FRESH,
@@ -89,8 +89,8 @@ def register_complete_impl(simple_module: Any):
         return jsonify({"error": message}), 400
 
     public_key_options_for_checks = session.pop("simple_register_public_key", None)
-    resolved_rp_id = rp_id or simple_module.determine_rp_id()
-    server = simple_module.create_fido_server(rp_id=resolved_rp_id)
+    resolved_rp_id = rp_id or config.determine_rp_id()
+    server = config.create_fido_server(rp_id=resolved_rp_id)
 
     try:
         auth_data = server.register_complete(state, response)
@@ -107,8 +107,8 @@ def register_complete_impl(simple_module: Any):
 
     # The origin the ceremony claims, read from clientDataJSON -- NOT from the
     # request's own Origin header, which the caller also controls.
-    ceremony_origin = simple_module.extract_client_data_origin(credential_response)
-    if not simple_module.is_origin_allowed(ceremony_origin):
+    ceremony_origin = config.extract_client_data_origin(credential_response)
+    if not config.is_origin_allowed(ceremony_origin):
         session.pop("register_rp_id", None)
         return (
             jsonify(
@@ -124,7 +124,7 @@ def register_complete_impl(simple_module: Any):
 
     # determine_expected_origin only echoes a candidate that is itself
     # allowlisted, so this can never become a self-referential comparison.
-    expected_origin = simple_module.determine_expected_origin(ceremony_origin) or (
+    expected_origin = config.determine_expected_origin(ceremony_origin) or (
         request.host_url.rstrip("/")
     )
 

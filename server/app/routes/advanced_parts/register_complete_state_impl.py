@@ -5,6 +5,8 @@ from typing import Any
 
 from flask import jsonify, session
 
+from ... import config
+
 #: The ceremony challenge was taken from the server-side Flask session.
 CHALLENGE_SOURCE_SERVER = "server-session"
 #: The ceremony challenge was taken from the request body (request-editor mode).
@@ -69,8 +71,8 @@ def resolve_state_and_registration_server(
         if stored_rp_id is None and isinstance(rp_id_candidate, str):
             stored_rp_id = rp_id_candidate
 
-    resolved_rp_id = advanced_module.determine_rp_id(stored_rp_id)
-    register_server = advanced_module.create_fido_server(rp_id=resolved_rp_id, rp_name=stored_rp_name)
+    resolved_rp_id = config.determine_rp_id(stored_rp_id)
+    register_server = config.create_fido_server(rp_id=resolved_rp_id, rp_name=stored_rp_name)
     auth_data = register_server.register_complete(state, response)
 
     advanced_module._log_authenticator_attestation_response(

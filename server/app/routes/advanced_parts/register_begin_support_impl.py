@@ -9,7 +9,7 @@ from fido2.webauthn import (
     PublicKeyCredentialType,
 )
 
-from ... import pqc
+from ... import config, pqc
 
 
 def configure_allowed_algorithms(
@@ -102,9 +102,9 @@ def configure_allowed_algorithms(
         pqc.PQC_ALGORITHM_ID_TO_NAME[alg] for alg in sorted(missing_pqc)
     )
     if pqc_error_message:
-        advanced_module.app.logger.warning("Post-quantum support unavailable: %s", pqc_error_message)
+        config.app.logger.warning("Post-quantum support unavailable: %s", pqc_error_message)
     else:
-        advanced_module.app.logger.warning(
+        config.app.logger.warning(
             "Post-quantum algorithms requested (%s) but not available in this environment.",
             missing_names,
         )

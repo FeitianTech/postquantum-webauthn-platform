@@ -6,7 +6,7 @@ from typing import Any
 
 from flask import jsonify, request
 
-from ... import attestation, pqc, storage
+from ... import attestation, config, pqc, storage
 from .register_complete_finalize_impl import finalize_registration_completion
 from .register_complete_material_impl import build_registration_material
 from .register_complete_setup_impl import prepare_register_complete_inputs
@@ -91,10 +91,10 @@ def advanced_register_complete_impl(advanced_module: Any):
 
         # The origin the ceremony claims, read from clientDataJSON -- NOT from
         # the request's own Origin header, which the caller also controls.
-        ceremony_origin = advanced_module.extract_client_data_origin(
+        ceremony_origin = config.extract_client_data_origin(
             response.get("response") if isinstance(response, Mapping) else None
         )
-        if not advanced_module.is_origin_allowed(ceremony_origin):
+        if not config.is_origin_allowed(ceremony_origin):
             return jsonify(
                 {
                     "error": (
@@ -105,7 +105,7 @@ def advanced_register_complete_impl(advanced_module: Any):
                 }
             ), 400
 
-        expected_origin = advanced_module.determine_expected_origin(ceremony_origin) or (
+        expected_origin = config.determine_expected_origin(ceremony_origin) or (
             request.host_url.rstrip("/")
         )
         attestation_checks = attestation.perform_attestation_checks(

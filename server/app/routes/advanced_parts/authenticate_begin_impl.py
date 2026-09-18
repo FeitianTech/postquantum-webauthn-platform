@@ -7,7 +7,7 @@ from flask import jsonify, request, session
 
 from fido2.webauthn import UserVerificationRequirement
 
-from ... import attestation
+from ... import attestation, config
 from ...attachments import resolve_effective_attachments
 from ...challenge_registry import stamp_ceremony_state
 
@@ -50,8 +50,8 @@ def advanced_authenticate_begin_impl(advanced_module: Any):
         stored_rp_id = stored_rp.get("id")
         stored_rp_name = stored_rp.get("name")
 
-    resolved_rp_id = advanced_module.determine_rp_id(stored_rp_id)
-    temp_server = advanced_module.create_fido_server(rp_id=resolved_rp_id, rp_name=stored_rp_name)
+    resolved_rp_id = config.determine_rp_id(stored_rp_id)
+    temp_server = config.create_fido_server(rp_id=resolved_rp_id, rp_name=stored_rp_name)
 
     timeout = public_key.get("timeout", 90000)
     temp_server.timeout = timeout / 1000.0 if timeout else None

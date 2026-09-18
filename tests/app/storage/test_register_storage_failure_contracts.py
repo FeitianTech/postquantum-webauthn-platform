@@ -44,9 +44,8 @@ class _SimpleFakeServer:
         return self._auth_data
 
 
-def test_simple_register_complete_returns_500_when_savekey_fails(monkeypatch, metadata_module, device_logs_module, attestation_module, storage_module):
+def test_simple_register_complete_returns_500_when_savekey_fails(monkeypatch, metadata_module, device_logs_module, attestation_module, storage_module, config_module):
     config_module = pytest.importorskip("server.app.config")
-    simple_module = pytest.importorskip("server.app.routes.simple")
     pytest.importorskip("server.app.app")
 
     credential_id = b"simple-savekey-fail"
@@ -54,9 +53,9 @@ def test_simple_register_complete_returns_500_when_savekey_fails(monkeypatch, me
 
     auth_data = _FakeAuthData(credential_id=credential_id, rp_id=rp_id)
 
-    monkeypatch.setattr(simple_module, "determine_rp_id", lambda: rp_id)
+    monkeypatch.setattr(config_module, "determine_rp_id", lambda: rp_id)
     monkeypatch.setattr(
-        simple_module,
+        config_module,
         "create_fido_server",
         lambda **_kwargs: _SimpleFakeServer(auth_data)
     )
@@ -108,14 +107,14 @@ def test_simple_register_complete_returns_500_when_savekey_fails(monkeypatch, me
     assert response.get_json() == {"error": "Unable to persist registered credential."}
 
 
-def _install_advanced_register_common_monkeypatches(monkeypatch, advanced_module, metadata_module, auth_data, rp_id, attestation_module, storage_module):
+def _install_advanced_register_common_monkeypatches(monkeypatch, advanced_module, metadata_module, auth_data, rp_id, attestation_module, storage_module, config_module):
     class _AdvancedFakeServer:
         def register_complete(self, *_args, **_kwargs):
             return auth_data
 
-    monkeypatch.setattr(advanced_module, "determine_rp_id", lambda value=None: value or rp_id)
+    monkeypatch.setattr(config_module, "determine_rp_id", lambda value=None: value or rp_id)
     monkeypatch.setattr(
-        advanced_module,
+        config_module,
         "create_fido_server",
         lambda **_kwargs: _AdvancedFakeServer()
     )
@@ -172,7 +171,7 @@ def test_advanced_register_complete_returns_500_when_artifact_store_returns_fals
 
     _install_advanced_register_common_monkeypatches(
         monkeypatch, advanced_module, metadata_module, auth_data, rp_id
-    , attestation_module, storage_module)
+    , attestation_module, storage_module, config_module)
     monkeypatch.setattr(credential_artifacts_module, "store_credential_artifact", lambda *_args, **_kwargs: False)
     monkeypatch.setattr(
         device_logs_module,
@@ -212,7 +211,7 @@ def test_advanced_register_complete_returns_500_when_artifact_store_raises(monke
 
     _install_advanced_register_common_monkeypatches(
         monkeypatch, advanced_module, metadata_module, auth_data, rp_id
-    , attestation_module, storage_module)
+    , attestation_module, storage_module, config_module)
     monkeypatch.setattr(
         credential_artifacts_module,
         "store_credential_artifact",
@@ -257,7 +256,7 @@ def test_advanced_register_complete_returns_400_when_add_public_key_material_rai
 
     _install_advanced_register_common_monkeypatches(
         monkeypatch, advanced_module, metadata_module, auth_data, rp_id
-    , attestation_module, storage_module)
+    , attestation_module, storage_module, config_module)
     monkeypatch.setattr(
         storage_module,
         "add_public_key_material",
