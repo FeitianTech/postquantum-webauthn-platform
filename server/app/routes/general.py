@@ -1,8 +1,6 @@
 """General application routes."""
 from __future__ import annotations
 
-import base64
-import binascii
 import io
 import json
 import os
@@ -13,6 +11,7 @@ from typing import Any
 
 from flask import abort, g, jsonify, render_template, request, send_file, session
 
+from .. import encoding
 from ..attestation import serialize_attestation_certificate
 from ..config import MDS_METADATA_VERIFIED_PATH, app
 from ..decoder import decode_payload_text, encode_payload_text
@@ -455,14 +454,13 @@ def api_decode_mds_certificate():
     if not certificate_value or not isinstance(certificate_value, str):
         return jsonify({"error": "Certificate is required."}), 400
 
-    cleaned = "".join(certificate_value.split())
-    padding = len(cleaned) % 4
-    if padding:
-        cleaned += "=" * (4 - padding)
-
-    try:
-        certificate_bytes = base64.b64decode(cleaned)
-    except (ValueError, binascii.Error):
+    # MDS ships standard base64, but the box accepts a paste from anywhere, so
+    # base64url is read as base64url rather than being fed to a standard
+    # decoder that drops its ``-``/``_`` and returns a shorter, wrong DER.
+    certificate_bytes = encoding.try_decode_base64(certificate_value)
+    if certificate_bytes is None:
+        certificate_bytes = encoding.try_decode_base64url(certificate_value)
+    if certificate_bytes is None:
         return jsonify({"error": "Invalid certificate encoding."}), 400
 
     try:
