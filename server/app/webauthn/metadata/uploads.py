@@ -4,8 +4,8 @@ from __future__ import annotations
 import os
 from collections.abc import Mapping
 
-from ..config import app
-from ..github_client import (
+from ...config import app
+from ...github_client import (
     git_blob_sha,
     github_list_directory,
     github_upload_file,

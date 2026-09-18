@@ -32,7 +32,7 @@ def _entry_payload(*, aaguid: str, description: str):
 
 
 def test_metadata_normalisation_helpers_cover_status_identifiers_and_defaults():
-    metadata_module = pytest.importorskip("server.app.metadata")
+    metadata_module = pytest.importorskip("server.app.webauthn.metadata")
 
     reports = metadata_module._normalise_status_reports(
         {
@@ -72,7 +72,7 @@ def test_metadata_normalisation_helpers_cover_status_identifiers_and_defaults():
 
 
 def test_aaguid_extraction_merge_and_source_info_helpers(monkeypatch, entries):
-    metadata_module = pytest.importorskip("server.app.metadata")
+    metadata_module = pytest.importorskip("server.app.webauthn.metadata")
 
     session_payload = _entry_payload(
         aaguid="AAAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAAAA",
@@ -142,7 +142,7 @@ def test_aaguid_extraction_merge_and_source_info_helpers(monkeypatch, entries):
 
 
 def test_cache_cleaning_formatting_and_store_helper(tmp_path, monkeypatch, blob):
-    metadata_module = pytest.importorskip("server.app.metadata")
+    metadata_module = pytest.importorskip("server.app.webauthn.metadata")
 
     assert metadata_module._clean_metadata_cache_value("  etag-value  ") == "etag-value"
     assert metadata_module._clean_metadata_cache_value("   ") is None
@@ -168,7 +168,7 @@ def test_cache_cleaning_formatting_and_store_helper(tmp_path, monkeypatch, blob)
 
 
 def test_prune_helper_and_request_session_identifier_paths(monkeypatch, session_store, app_config):
-    metadata_module = pytest.importorskip("server.app.metadata")
+    metadata_module = pytest.importorskip("server.app.webauthn.metadata")
     config_module = pytest.importorskip("server.app.config")
 
     monkeypatch.setattr(

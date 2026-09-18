@@ -151,7 +151,7 @@ def test_resolve_session_id_prefers_explicit_value(artifact_module):
 
 
 def test_resolve_session_id_falls_back_to_metadata_session(monkeypatch, artifact_module):
-    metadata_module = pytest.importorskip("server.app.metadata")
+    metadata_module = pytest.importorskip("server.app.webauthn.metadata")
     monkeypatch.setattr(
         metadata_module,
         "ensure_metadata_session_id",
@@ -314,7 +314,7 @@ def test_using_gcs_depends_on_flag_and_bucket(monkeypatch):
 
 
 def test_resolve_session_id_falls_back_for_non_string(monkeypatch, artifact_module):
-    metadata_module = pytest.importorskip("server.app.metadata")
+    metadata_module = pytest.importorskip("server.app.webauthn.metadata")
     monkeypatch.setattr(
         metadata_module,
         "ensure_metadata_session_id",

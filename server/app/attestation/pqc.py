@@ -11,7 +11,7 @@ from fido2.attestation import AttestationResult, AttestationType, InvalidSignatu
 from fido2.attestation.base import _verify_mldsa_certificate_signature
 from fido2.cose import CoseKey, extract_certificate_public_key_info
 
-from .. import metadata
+from ..webauthn import metadata
 from ..webauthn.pqc import PQC_ALGORITHM_ID_TO_NAME, is_pqc_algorithm
 from . import trust
 

@@ -18,9 +18,9 @@ COOKIE_SALT = "fido.mds.session-cookie.v1"
 @pytest.fixture
 def session_env(monkeypatch, tmp_path):
     config = pytest.importorskip("server.app.config")
-    metadata = pytest.importorskip("server.app.metadata")
+    metadata = pytest.importorskip("server.app.webauthn.metadata")
     session_store = pytest.importorskip("server.app.storage.session_metadata")
-    state = pytest.importorskip("server.app.metadata.state")
+    state = pytest.importorskip("server.app.webauthn.metadata.state")
     pytest.importorskip("server.app.app")
 
     session_dir = tmp_path / "sessions"

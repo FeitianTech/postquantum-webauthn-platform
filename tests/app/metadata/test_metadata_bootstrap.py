@@ -9,7 +9,7 @@ import pytest
 @pytest.fixture
 def packaged_metadata_env(monkeypatch, tmp_path, metadata_state, blob):
     general_module = pytest.importorskip("server.app.routes.general")
-    metadata_module = pytest.importorskip("server.app.metadata")
+    metadata_module = pytest.importorskip("server.app.webauthn.metadata")
 
     verified_path = tmp_path / "fido-mds3.verified.json"
     cache_path = tmp_path / "fido-mds3.verified.json.meta.json"

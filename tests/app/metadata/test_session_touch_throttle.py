@@ -10,8 +10,8 @@ from flask import session
 
 @pytest.fixture
 def touch_env(monkeypatch, app_config, sessions):
-    metadata = pytest.importorskip("server.app.metadata")
-    cleanup = pytest.importorskip("server.app.metadata.sessions")
+    metadata = pytest.importorskip("server.app.webauthn.metadata")
+    cleanup = pytest.importorskip("server.app.webauthn.metadata.sessions")
 
     calls = []
     monkeypatch.setattr(cleanup, "_touch_session_last_access", lambda sid: calls.append(sid))

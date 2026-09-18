@@ -58,7 +58,7 @@ def test_run_background_warmup_survives_failures(startup_module, monkeypatch):
         "_ensure_bucket",
         lambda: (_ for _ in ()).throw(RuntimeError("no bucket")),
     )
-    metadata = pytest.importorskip("server.app.metadata")
+    metadata = pytest.importorskip("server.app.webauthn.metadata")
     monkeypatch.setattr(
         metadata,
         "load_cached_metadata_snapshot",

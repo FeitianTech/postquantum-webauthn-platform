@@ -32,12 +32,12 @@ def metadata_state(monkeypatch):
     """Reset the shared metadata runtime caches for the duration of one test.
 
     ``raising`` is deliberately left at its default. These names moved here from
-    ``server.app.metadata`` once already; if one moves again, the patch must fail
+    ``server.app.webauthn.metadata`` once already; if one moves again, the patch must fail
     loudly rather than quietly resetting nothing and leaving the test to pass
     while exercising stale state.
     """
 
-    state = pytest.importorskip("server.app.metadata.state")
+    state = pytest.importorskip("server.app.webauthn.metadata.state")
     for name, default in _RUNTIME_STATE_DEFAULTS.items():
         monkeypatch.setattr(state, name, set() if default is frozenset() else default)
     return state
@@ -45,37 +45,37 @@ def metadata_state(monkeypatch):
 
 @pytest.fixture
 def sessions():
-    """The fragment that defines the session identity helpers. Patch here rather than on ``server.app.metadata``: the other fragments call these through this module, so this is the binding that is actually read. The fragment that defines the session metadata item helpers. The fragment that defines the session cleanup worker and scheduler."""
+    """The fragment that defines the session identity helpers. Patch here rather than on ``server.app.webauthn.metadata``: the other fragments call these through this module, so this is the binding that is actually read. The fragment that defines the session metadata item helpers. The fragment that defines the session cleanup worker and scheduler."""
 
-    return pytest.importorskip("server.app.metadata.sessions")
+    return pytest.importorskip("server.app.webauthn.metadata.sessions")
 
 
 @pytest.fixture
 def entries():
     """The fragment that defines the entry payload helpers."""
 
-    return pytest.importorskip("server.app.metadata.entries")
+    return pytest.importorskip("server.app.webauthn.metadata.entries")
 
 
 @pytest.fixture
 def blob():
     """The fragment that defines the base/explorer/full snapshot loaders. The fragment that defines the metadata cache helpers."""
 
-    return pytest.importorskip("server.app.metadata.blob")
+    return pytest.importorskip("server.app.webauthn.metadata.blob")
 
 
 @pytest.fixture
 def uploads():
     """The fragment that defines the repository upload helpers."""
 
-    return pytest.importorskip("server.app.metadata.uploads")
+    return pytest.importorskip("server.app.webauthn.metadata.uploads")
 
 
 @pytest.fixture
 def effective():
     """The fragment that composes base and session snapshots."""
 
-    return pytest.importorskip("server.app.metadata.effective")
+    return pytest.importorskip("server.app.webauthn.metadata.effective")
 
 
 @pytest.fixture
@@ -96,4 +96,4 @@ def app_config():
 def verifier():
     """The fragment that defines the metadata merge and verifier helpers."""
 
-    return pytest.importorskip("server.app.metadata.verifier")
+    return pytest.importorskip("server.app.webauthn.metadata.verifier")

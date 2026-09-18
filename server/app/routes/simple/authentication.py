@@ -17,7 +17,7 @@ from flask import abort, jsonify, request, session
 
 from fido2.webauthn import AuthenticatorData
 
-from ... import attestation, config, metadata
+from ... import attestation, config
 from ...challenge_registry import (
     CHALLENGE_FRESH,
     CHALLENGE_REPLAYED,
@@ -26,6 +26,7 @@ from ...challenge_registry import (
 )
 from ...encoding import encode_base64url
 from ...storage import credentials
+from ...webauthn import metadata
 from ...webauthn.sign_count import SIGN_COUNT_REGRESSED, sign_count_status
 from .. import binary_helpers
 from . import binary, parsing

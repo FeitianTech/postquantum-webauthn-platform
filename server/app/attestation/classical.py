@@ -8,7 +8,7 @@ from cryptography import x509
 from fido2.attestation import InvalidSignature, verify_x509_chain
 from fido2.attestation.base import TrustPathEvaluation
 
-from .. import metadata
+from ..webauthn import metadata
 from . import trust
 
 

@@ -66,6 +66,6 @@ def checks():
 
 @pytest.fixture
 def metadata_module():
-    """``server.app.metadata`` -- the fragments call into it through the module."""
+    """``server.app.webauthn.metadata`` -- the fragments call into it through the module."""
 
-    return pytest.importorskip("server.app.metadata")
+    return pytest.importorskip("server.app.webauthn.metadata")

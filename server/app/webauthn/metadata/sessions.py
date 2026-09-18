@@ -17,9 +17,9 @@ from itsdangerous import BadSignature, URLSafeTimedSerializer
 
 from fido2.mds3 import MetadataBlobPayloadEntry
 
-from ..config import app
-from ..env_flags import parse_env_flag
-from ..storage import session_metadata
+from ...config import app
+from ...env_flags import parse_env_flag
+from ...storage import session_metadata
 from . import entries
 from . import state as _state
 from .state import (

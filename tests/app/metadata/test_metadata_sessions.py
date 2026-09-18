@@ -6,7 +6,7 @@ from flask import session as flask_session
 
 @pytest.fixture
 def session_metadata_env(monkeypatch, tmp_path, metadata_state, session_store, app_config):
-    metadata = pytest.importorskip("server.app.metadata")
+    metadata = pytest.importorskip("server.app.webauthn.metadata")
     session_store = pytest.importorskip("server.app.storage.session_metadata")
 
     session_dir = tmp_path / "sessions"
@@ -55,7 +55,7 @@ def test_session_metadata_is_isolated(session_metadata_env):
 
 
 def test_runtime_metadata_download_disabled():
-    metadata = pytest.importorskip("server.app.metadata")
+    metadata = pytest.importorskip("server.app.webauthn.metadata")
     with pytest.raises(RuntimeError):
         metadata.download_metadata_blob()
 
@@ -64,7 +64,7 @@ def test_note_session_activity_schedules_cleanup(session_metadata_env, monkeypat
     _, metadata = session_metadata_env
 
     calls = []
-    cleanup = pytest.importorskip("server.app.metadata.sessions")
+    cleanup = pytest.importorskip("server.app.webauthn.metadata.sessions")
     monkeypatch.setattr(cleanup, "_touch_session_last_access", lambda sid: calls.append(("touch", sid)))
     monkeypatch.setattr(cleanup, "_schedule_inactive_session_cleanup", lambda: calls.append(("schedule", None)))
     monkeypatch.setattr(
@@ -79,7 +79,7 @@ def test_note_session_activity_schedules_cleanup(session_metadata_env, monkeypat
 
 
 def test_resolve_effective_metadata_entry_accepts_hyphenated_aaguid(monkeypatch, blob, sessions):
-    metadata = pytest.importorskip("server.app.metadata")
+    metadata = pytest.importorskip("server.app.webauthn.metadata")
 
     base_entry = {
         "aaguid": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
@@ -112,7 +112,7 @@ def test_resolve_effective_metadata_entry_accepts_hyphenated_aaguid(monkeypatch,
 
 
 def test_load_effective_full_snapshot_prefers_session_entry(monkeypatch, blob, sessions):
-    metadata = pytest.importorskip("server.app.metadata")
+    metadata = pytest.importorskip("server.app.webauthn.metadata")
 
     base_snapshot = {
         "meta": {"entryCount": 1, "source": "packaged"},

@@ -5,7 +5,7 @@ import pytest
 
 @pytest.fixture
 def metadata_local_env(monkeypatch, tmp_path, metadata_state, session_store, app_config):
-    metadata = pytest.importorskip("server.app.metadata")
+    metadata = pytest.importorskip("server.app.webauthn.metadata")
     session_store = pytest.importorskip("server.app.storage.session_metadata")
     session_dir = tmp_path / "session-metadata"
     session_dir.mkdir()

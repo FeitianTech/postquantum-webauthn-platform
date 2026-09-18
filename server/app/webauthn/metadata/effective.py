@@ -5,7 +5,7 @@ from collections.abc import Mapping
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
-from ..mds_snapshot import build_entry_id, build_explorer_entry, normalise_aaguid_key
+from ...mds_snapshot import build_entry_id, build_explorer_entry, normalise_aaguid_key
 from . import blob, sessions
 
 if TYPE_CHECKING:  # annotation-only, so no runtime import edge is needed

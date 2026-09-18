@@ -170,9 +170,9 @@ def storage_module():
 
 @pytest.fixture
 def metadata_module():
-    """``server.app.metadata`` -- the metadata session identity."""
+    """``server.app.webauthn.metadata`` -- the metadata session identity."""
 
-    return _module("server.app.metadata")
+    return _module("server.app.webauthn.metadata")
 
 
 @pytest.fixture

@@ -5,7 +5,8 @@ from typing import Any
 
 from flask import jsonify, request
 
-from ... import credential_artifacts, metadata
+from ... import credential_artifacts
+from ...webauthn import metadata
 
 
 def api_get_advanced_credential_artifact(storage_id: str):
