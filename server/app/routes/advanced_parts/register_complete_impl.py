@@ -17,7 +17,7 @@ from . import (
 )
 
 
-def advanced_register_complete_impl(advanced_module: Any):
+def advanced_register_complete_impl():
     data = request.get_json(silent=True) or {}
     prepared, error_response = register_complete_setup_impl.prepare_register_complete_inputs(data)
     if error_response is not None:
@@ -64,7 +64,7 @@ def advanced_register_complete_impl(advanced_module: Any):
             trace=state_trace,
         )
         if state_error is not None:
-            return _with_challenge_source(advanced_module, state_error, state_trace)
+            return _with_challenge_source(state_error, state_trace)
         if state_ctx is None:
             return jsonify(
                 {
@@ -336,7 +336,6 @@ def advanced_register_complete_impl(advanced_module: Any):
 
 
 def _with_challenge_source(
-    advanced_module: Any,
     error_response: Any,
     state_trace: Mapping[str, Any],
 ) -> Any:

@@ -13,7 +13,7 @@ from ...challenge_registry import stamp_ceremony_state
 from . import algorithm_helpers_impl, binary_helpers_impl, parsing_helpers_impl
 
 
-def advanced_authenticate_begin_impl(advanced_module: Any):
+def advanced_authenticate_begin_impl():
     data = request.get_json(silent=True)
 
     if not data or not data.get("publicKey"):

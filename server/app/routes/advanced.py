@@ -256,37 +256,37 @@ def _log_authenticator_attestation_response(
 
 @app.route("/api/advanced/register/begin", methods=["POST"])
 def advanced_register_begin():
-    return advanced_register_begin_impl(_self_module())
+    return advanced_register_begin_impl()
 
 
 @app.route("/api/advanced/register/complete", methods=["POST"])
 def advanced_register_complete():
-    return advanced_register_complete_impl(_self_module())
+    return advanced_register_complete_impl()
 
 
 @app.route("/api/advanced/credential-artifacts/<string:storage_id>", methods=["GET"])
 def api_get_advanced_credential_artifact(storage_id: str):
-    return api_get_advanced_credential_artifact_impl(_self_module(), storage_id)
+    return api_get_advanced_credential_artifact_impl(storage_id)
 
 
 @app.route("/api/advanced/credential-artifacts/bulk", methods=["POST"])
 def api_get_advanced_credential_artifacts_bulk():
-    return api_get_advanced_credential_artifacts_bulk_impl(_self_module())
+    return api_get_advanced_credential_artifacts_bulk_impl()
 
 
 @app.route("/api/advanced/credential-artifacts/<string:storage_id>", methods=["PUT"])
 def api_put_advanced_credential_artifact(storage_id: str):
-    return api_put_advanced_credential_artifact_impl(_self_module(), storage_id)
+    return api_put_advanced_credential_artifact_impl(storage_id)
 
 
 @app.route("/api/advanced/credential-artifacts/<string:storage_id>/snapshot", methods=["PUT"])
 def api_put_advanced_credential_snapshot(storage_id: str):
-    return api_put_advanced_credential_snapshot_impl(_self_module(), storage_id)
+    return api_put_advanced_credential_snapshot_impl(storage_id)
 
 
 @app.route("/api/advanced/credential-artifacts/<string:storage_id>", methods=["DELETE"])
 def api_delete_advanced_credential_artifact(storage_id: str):
-    return api_delete_advanced_credential_artifact_impl(_self_module(), storage_id)
+    return api_delete_advanced_credential_artifact_impl(storage_id)
 
 
 def datetime_from_timestamp(timestamp: float) -> str:
@@ -295,9 +295,9 @@ def datetime_from_timestamp(timestamp: float) -> str:
 
 @app.route("/api/advanced/authenticate/begin", methods=["POST"])
 def advanced_authenticate_begin():
-    return advanced_authenticate_begin_impl(_self_module())
+    return advanced_authenticate_begin_impl()
 
 
 @app.route("/api/advanced/authenticate/complete", methods=["POST"])
 def advanced_authenticate_complete():
-    return advanced_authenticate_complete_impl(_self_module())
+    return advanced_authenticate_complete_impl()
