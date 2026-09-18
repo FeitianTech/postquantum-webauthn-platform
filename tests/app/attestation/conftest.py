@@ -29,45 +29,10 @@ def encoding_leaf():
 
 
 @pytest.fixture
-def signature_leaf():
-    """The fragment that defines the X.509 name and algorithm helpers."""
-
-    return _fragment("certificate_signature_leaf")
-
-
-@pytest.fixture
-def extensions_leaf():
-    """The fragment that defines the certificate extension serializers."""
-
-    return _fragment("certificate_extensions_leaf")
-
-
-@pytest.fixture
-def public_key_leaf():
-    """The fragment that defines the public-key serializers."""
-
-    return _fragment("certificate_public_key_leaf")
-
-
-@pytest.fixture
-def summary_runtime():
-    """The fragment that defines the certificate summary builder."""
-
-    return _fragment("certificate_summary_runtime")
-
-
-@pytest.fixture
-def serialize_runtime():
-    """The fragment that defines ``serialize_attestation_certificate``."""
+def certificates():
+    """The submodule that serializes, summarises and details X.509 certificates."""
 
     return _fragment("certificates")
-
-
-@pytest.fixture
-def details_runtime():
-    """The fragment that defines ``extract_attestation_details``."""
-
-    return _fragment("certificate_details_runtime")
 
 
 @pytest.fixture

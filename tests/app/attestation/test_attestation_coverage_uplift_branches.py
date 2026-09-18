@@ -235,7 +235,7 @@ def test_normalise_signature_algorithm_name_covers_ed448_and_dsa_paths(attestati
     assert attestation_module._normalise_signature_algorithm_name("dsa-with-sha1") == "DSA"
 
 
-def test_perform_attestation_checks_coerces_string_challenge_via_utf8_fallback_and_records_attestation_error(monkeypatch, pqc_runtime, metadata_module, details_runtime, attestation_module):
+def test_perform_attestation_checks_coerces_string_challenge_via_utf8_fallback_and_records_attestation_error(monkeypatch, pqc_runtime, metadata_module, certificates, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     flags = int(AuthenticatorData.FLAG.UP | AuthenticatorData.FLAG.AT)

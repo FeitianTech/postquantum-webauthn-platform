@@ -56,7 +56,7 @@ def _registration(attestation_object, client_data, extension_results):
     )
 
 
-def test_extract_attestation_details_handles_non_dict_and_certificate_edge_cases(monkeypatch, serialize_runtime, details_runtime, attestation_module):
+def test_extract_attestation_details_handles_non_dict_and_certificate_edge_cases(monkeypatch, certificates, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     defaults = attestation_module.extract_attestation_details(["not-a-dict"])
@@ -80,12 +80,12 @@ def test_extract_attestation_details_handles_non_dict_and_certificate_edge_cases
         lambda _response: registration,
     )
     monkeypatch.setattr(
-        details_runtime,
+        certificates,
         "_coerce_attestation_certificate_bytes",
         lambda entry: None if entry == "bad" else b"cert-bytes",
     )
     monkeypatch.setattr(
-        serialize_runtime,
+        certificates,
         "serialize_attestation_certificate",
         lambda _cert: None,
     )

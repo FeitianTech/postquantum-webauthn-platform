@@ -11,11 +11,6 @@ from __future__ import annotations
 from .. import config
 from . import (
     aaguid_leaf,
-    certificate_details_runtime,
-    certificate_extensions_leaf,
-    certificate_public_key_leaf,
-    certificate_signature_leaf,
-    certificate_summary_runtime,
     certificates,
     checks_attestation_runtime,
     checks_input_runtime,
@@ -74,31 +69,31 @@ format_hex_string_lines = encoding_leaf.format_hex_string_lines
 make_json_safe = encoding_leaf.make_json_safe
 
 # X.509 name and signature-algorithm helpers.
-_derive_certificate_algorithm_info = certificate_signature_leaf._derive_certificate_algorithm_info
-_extract_common_names = certificate_signature_leaf._extract_common_names
-_format_algorithm_component = certificate_signature_leaf._format_algorithm_component
-_format_hash_value = certificate_signature_leaf._format_hash_value
-_normalise_signature_algorithm_name = certificate_signature_leaf._normalise_signature_algorithm_name
-format_x509_name = certificate_signature_leaf.format_x509_name
+_derive_certificate_algorithm_info = certificates._derive_certificate_algorithm_info
+_extract_common_names = certificates._extract_common_names
+_format_algorithm_component = certificates._format_algorithm_component
+_format_hash_value = certificates._format_hash_value
+_normalise_signature_algorithm_name = certificates._normalise_signature_algorithm_name
+format_x509_name = certificates.format_x509_name
 
 # Certificate extension serialisation.
-_parse_fido_transport_bitfield = certificate_extensions_leaf._parse_fido_transport_bitfield
-_serialize_extension_value = certificate_extensions_leaf._serialize_extension_value
+_parse_fido_transport_bitfield = certificates._parse_fido_transport_bitfield
+_serialize_extension_value = certificates._serialize_extension_value
 
 # Public-key serialisation.
-_build_unknown_public_key_info = certificate_public_key_leaf._build_unknown_public_key_info
-_serialize_public_key_info = certificate_public_key_leaf._serialize_public_key_info
+_build_unknown_public_key_info = certificates._build_unknown_public_key_info
+_serialize_public_key_info = certificates._serialize_public_key_info
 
 # Certificate summary composition.
-_build_certificate_summary = certificate_summary_runtime._build_certificate_summary
+_build_certificate_summary = certificates._build_certificate_summary
 
 # Full certificate serialisation.
 _serialize_attestation_certificate_fallback = certificates._serialize_attestation_certificate_fallback
 serialize_attestation_certificate = certificates.serialize_attestation_certificate
 
 # Attestation payload certificate extraction.
-_coerce_attestation_certificate_bytes = certificate_details_runtime._coerce_attestation_certificate_bytes
-extract_attestation_details = certificate_details_runtime.extract_attestation_details
+_coerce_attestation_certificate_bytes = certificates._coerce_attestation_certificate_bytes
+extract_attestation_details = certificates.extract_attestation_details
 
 # Trust-path, AAGUID, and certificate validity helpers.
 _certificate_datetime = trust_runtime._certificate_datetime
