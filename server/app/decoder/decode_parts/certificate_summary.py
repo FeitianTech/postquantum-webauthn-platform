@@ -1,10 +1,7 @@
 """Certificate summary and key/fingerprint rendering helpers."""
 from __future__ import annotations
 
-import base64
-import binascii
 import hashlib
-import re
 from collections.abc import Mapping
 from datetime import datetime, timezone
 from typing import Any
@@ -12,6 +9,7 @@ from typing import Any
 from cryptography import x509
 from cryptography.x509.oid import ExtensionOID
 
+from ... import encoding
 from ...attestation import format_hex_bytes_lines, format_hex_string_lines
 from .certificate_extensions import _build_certificate_extensions_lines
 
@@ -188,10 +186,7 @@ def _build_subject_key_identifier_lines(decoded: Mapping[str, Any]) -> list[str]
     if isinstance(decoded, Mapping):
         der_b64 = decoded.get("derBase64")
         if isinstance(der_b64, str) and der_b64.strip():
-            try:
-                der_bytes = base64.b64decode(der_b64, validate=True)
-            except (ValueError, binascii.Error):
-                der_bytes = None
+            der_bytes = encoding.try_decode_base64(der_b64)
             if der_bytes:
                 try:
                     certificate = x509.load_der_x509_certificate(der_bytes)
@@ -220,12 +215,8 @@ def _build_subject_key_identifier_lines(decoded: Mapping[str, Any]) -> list[str]
     if isinstance(public_key_info, Mapping):
         spki_b64 = public_key_info.get("subjectPublicKeyInfoBase64")
         if isinstance(spki_b64, str) and spki_b64.strip():
-            cleaned = re.sub(r"\s+", "", spki_b64)
-            try:
-                spki_bytes = base64.b64decode(cleaned, validate=True)
-            except (ValueError, binascii.Error):
-                pass
-            else:
+            spki_bytes = encoding.try_decode_base64(spki_b64)
+            if spki_bytes is not None:
                 digest = hashlib.sha1(spki_bytes).digest()
                 return format_hex_bytes_lines(digest)
 

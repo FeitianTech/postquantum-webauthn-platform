@@ -1,12 +1,12 @@
 """Binary/COSE/authenticator extraction utilities for decoder internals."""
 from __future__ import annotations
 
-import base64
-import binascii
 from collections.abc import Mapping
 from typing import Any
 
 from fido2.webauthn import AttestationObject
+
+from ... import encoding
 
 _COSE_ALG_LABELS: dict[int, str] = {
     -8: "EdDSA",
@@ -59,21 +59,19 @@ def _convert_cose_key_for_display(public_key: Any) -> Any:
 
 
 def _decode_base64_field(value: str) -> bytes | None:
+    """Decode a COSE display field that may be base64 or base64url.
+
+    The round-trip check the open-coded version needed is gone: strict
+    decoding already refuses anything that would not re-encode to the input.
+    """
+
     cleaned = value.strip()
     if not cleaned:
         return None
-    normalized = cleaned.replace('-', '+').replace('_', '/')
-    padding = (-len(normalized)) % 4
-    try:
-        decoded = base64.b64decode(normalized + '=' * padding)
-    except (ValueError, binascii.Error):
-        return None
-
-    if base64.urlsafe_b64encode(decoded).rstrip(b'=') == cleaned.encode('ascii').rstrip(b'='):
-        return decoded
-    if base64.b64encode(decoded).rstrip(b'=') == normalized.encode('ascii').rstrip(b'='):
-        return decoded
-    return None
+    decoded = encoding.try_decode_base64url(cleaned)
+    if decoded is None:
+        decoded = encoding.try_decode_base64(cleaned)
+    return decoded
 
 
 def _extract_hex_from_binary(entry: Any) -> str | None:
@@ -95,20 +93,13 @@ def _extract_bytes_from_binary(entry: Any) -> bytes | None:
         return None
     hex_value = _extract_hex_from_binary(entry)
     if isinstance(hex_value, str):
-        cleaned = "".join(hex_value.split())
-        try:
-            return bytes.fromhex(cleaned)
-        except ValueError:
-            pass
+        decoded = encoding.try_decode_hex(hex_value)
+        if decoded is not None:
+            return decoded
 
     raw_value = entry.get("raw")
     if isinstance(raw_value, str) and raw_value:
-        cleaned = "".join(raw_value.split())
-        padding = (-len(cleaned)) % 4
-        try:
-            return base64.urlsafe_b64decode(cleaned + "=" * padding)
-        except (ValueError, binascii.Error):
-            return None
+        return encoding.try_decode_base64url(raw_value)
 
     return None
 
@@ -129,12 +120,7 @@ def _extract_authenticator_bytes_from_attestation(attestation_entry: Any) -> byt
     if attestation_bytes is None and isinstance(attestation_entry, Mapping):
         raw_value = attestation_entry.get("raw")
         if isinstance(raw_value, str) and raw_value:
-            cleaned = "".join(raw_value.split())
-            padding = (-len(cleaned)) % 4
-            try:
-                attestation_bytes = base64.b64decode(cleaned + "=" * padding)
-            except (ValueError, binascii.Error):
-                attestation_bytes = None
+            attestation_bytes = encoding.try_decode_base64(raw_value)
 
     if attestation_bytes is None:
         return None
