@@ -1,8 +1,7 @@
 """CTAP interpretation and expanded-JSON helpers."""
-# pyright: reportUndefinedVariable=false  # the sibling runtime helpers and handler tables are not imported yet
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from typing import Any
 
 from . import ctap_runtime_parse, result_runtime
@@ -25,6 +24,58 @@ from .key_utils import MISSING as _MISSING
 from .key_utils import coerce_cbor_bytes as _coerce_cbor_bytes
 from .key_utils import get_mapping_entry as _get_mapping_entry
 from .key_utils import hex_json_safe as _hex_json_safe
+
+# The converter tables the labelled-map builder dispatches through.
+#
+# The ``ctap_runtime_parse`` entries go through a lambda rather than holding the
+# function object: this module and ``ctap_runtime_parse`` import each other, so
+# that module can still be partially initialised when this table is built, and
+# resolving on every call is also what keeps a patch on the defining module
+# visible here.
+_MAKE_CREDENTIAL_REQUEST_HANDLERS: dict[Any, Callable[[Any], Any]] = {
+    "clientDataHash": _convert_optional_ctap_field,
+    "rp": _hex_json_safe,
+    "user": lambda value: ctap_runtime_parse._convert_ctap_user_field(value),
+    "pubKeyCredParams": lambda value: ctap_runtime_parse._convert_pub_key_cred_params(value),
+    "excludeList": lambda value: ctap_runtime_parse._convert_ctap_allow_list(value),
+    "extensions": _hex_json_safe,
+    "options": _hex_json_safe,
+    "pinUvAuthParam": _convert_optional_ctap_field,
+    "pinUvAuthProtocol": _hex_json_safe,
+    "enterpriseAttestation": _hex_json_safe,
+    "largeBlobKey": _convert_optional_ctap_field,
+}
+
+_GET_ASSERTION_REQUEST_HANDLERS: dict[Any, Callable[[Any], Any]] = {
+    "rpId": _hex_json_safe,
+    "clientDataHash": _convert_optional_ctap_field,
+    "allowList": lambda value: ctap_runtime_parse._convert_ctap_allow_list(value),
+    "extensions": _hex_json_safe,
+    "options": _hex_json_safe,
+    "pinUvAuthParam": _convert_optional_ctap_field,
+    "pinUvAuthProtocol": _hex_json_safe,
+    "largeBlobKey": _convert_optional_ctap_field,
+}
+
+_MAKE_CREDENTIAL_RESPONSE_HANDLERS: dict[Any, Callable[[Any], Any]] = {
+    "fmt": _hex_json_safe,
+    "authData": lambda value: ctap_runtime_parse._convert_auth_data_field(value),
+    "attStmt": lambda value: ctap_runtime_parse._convert_att_stmt_field(value),
+    "epAtt": _convert_optional_ctap_field,
+    "largeBlobKey": _convert_optional_ctap_field,
+    "extensions": _convert_optional_ctap_field,
+}
+
+_GET_ASSERTION_RESPONSE_HANDLERS: dict[Any, Callable[[Any], Any]] = {
+    "credential": _convert_ctap_credential_descriptor,
+    "authData": lambda value: ctap_runtime_parse._convert_auth_data_field(value),
+    "signature": lambda value: ctap_runtime_parse._convert_signature_field(value),
+    "user": lambda value: ctap_runtime_parse._convert_ctap_user_field(value),
+    "numberOfCredentials": _convert_optional_ctap_field,
+    "userSelected": _convert_optional_ctap_field,
+    "largeBlobKey": _convert_optional_ctap_field,
+    "extensions": _convert_optional_ctap_field,
+}
 
 
 def _build_make_credential_request_expanded_json(
