@@ -1,15 +1,15 @@
 """Attestation and credential helper utilities.
 
-The implementation lives in :mod:`server.app.attestation_parts`; this module is
-the public face of it and re-exports the pieces callers use. Each fragment
+The implementation lives in this package's submodules; this module is the public
+face of it and re-exports the pieces callers use. Each fragment
 resolves its own names through its own imports, so a name here is the same
 object the fragment defines -- patching one of these re-exports changes what
 callers of *this module* see, not what the fragments call.
 """
 from __future__ import annotations
 
-from . import config
-from .attestation_parts import (
+from .. import config
+from . import (
     aaguid_leaf,
     certificate_details_runtime,
     certificate_extensions_leaf,
