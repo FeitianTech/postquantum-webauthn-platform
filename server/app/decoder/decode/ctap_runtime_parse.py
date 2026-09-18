@@ -16,10 +16,10 @@ from .ctap_convert_leaf import (
     _convert_optional_ctap_field,
     _normalize_user_mapping,
 )
-from .key_utils import MISSING as _MISSING
-from .key_utils import coerce_cbor_bytes as _coerce_cbor_bytes
-from .key_utils import get_mapping_entry as _get_mapping_entry
-from .key_utils import hex_json_safe as _hex_json_safe
+from .keys import MISSING as _MISSING
+from .keys import coerce_cbor_bytes as _coerce_cbor_bytes
+from .keys import get_mapping_entry as _get_mapping_entry
+from .keys import hex_json_safe as _hex_json_safe
 
 
 def _convert_ctap_allow_list(entry: Any) -> Any:

@@ -5,7 +5,7 @@ from collections.abc import Mapping
 from typing import Any
 
 from ...attestation import make_json_safe, serialize_attestation_certificate
-from . import binary_extract, conversion_leaf, summary_runtime
+from . import binary, conversion_leaf, summary_runtime
 from .conversion_cert_leaf import (
     _convert_attestation_entry_impl,
     _convert_attestation_statement_impl,
@@ -13,8 +13,8 @@ from .conversion_cert_leaf import (
     _convert_certificate_chain_impl,
     _convert_certificate_payload_impl,
 )
-from .key_utils import hex_json_safe as _hex_json_safe
-from .key_utils import stringify_mapping_keys as _stringify_mapping_keys
+from .keys import hex_json_safe as _hex_json_safe
+from .keys import stringify_mapping_keys as _stringify_mapping_keys
 
 
 def _prepare_decoder_response(result: dict[str, Any]) -> dict[str, Any]:
@@ -168,7 +168,7 @@ def _convert_attestation_object_data(result: Mapping[str, Any]) -> dict[str, Any
 
     authenticator_details = decoded.get("authenticatorData") if isinstance(decoded, Mapping) else None
     authenticator_section = conversion_leaf._build_authenticator_data_payload(
-        binary_extract._extract_authenticator_bytes_from_attestation(decoded),
+        binary._extract_authenticator_bytes_from_attestation(decoded),
         authenticator_details,
         decoded.get("publicKeyAlgorithm") if isinstance(decoded, Mapping) else None,
     )
@@ -185,9 +185,9 @@ def _convert_attestation_object_data(result: Mapping[str, Any]) -> dict[str, Any
 def _convert_authenticator_data_result(result: Mapping[str, Any]) -> dict[str, Any]:
     decoded = result.get("decoded") if isinstance(result.get("decoded"), Mapping) else {}
     result.get("binary")
-    auth_bytes = binary_extract._extract_bytes_from_binary(result.get("binary"))
+    auth_bytes = binary._extract_bytes_from_binary(result.get("binary"))
     if auth_bytes is None:
-        auth_bytes = binary_extract._extract_bytes_from_binary(decoded)
+        auth_bytes = binary._extract_bytes_from_binary(decoded)
     authenticator_section = conversion_leaf._build_authenticator_data_payload(
         auth_bytes,
         decoded,
@@ -275,7 +275,7 @@ def _build_authenticator_section(
     response_mapping = response if isinstance(response, Mapping) else {}
     attestation_mapping = attestation_entry if isinstance(attestation_entry, Mapping) else {}
 
-    auth_bytes = binary_extract._extract_authenticator_bytes(response_mapping, attestation_entry)
+    auth_bytes = binary._extract_authenticator_bytes(response_mapping, attestation_entry)
 
     details = None
     auth_entry = response_mapping.get("authenticatorData")

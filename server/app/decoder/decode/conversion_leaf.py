@@ -6,7 +6,7 @@ from collections.abc import Mapping
 from typing import Any
 
 from ...attestation import make_json_safe
-from .binary_extract import (
+from .binary import (
     _convert_cose_key_for_display,
     _resolve_cose_algorithm,
 )

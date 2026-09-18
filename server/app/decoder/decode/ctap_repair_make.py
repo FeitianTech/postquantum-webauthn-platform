@@ -9,9 +9,9 @@ from fido2.webauthn import AuthenticatorData
 
 from ...encoding import decode_hex
 from . import cbor_strict
-from .key_utils import MISSING
-from .key_utils import coerce_cbor_bytes as _coerce_cbor_bytes
-from .key_utils import get_mapping_entry as _get_mapping_entry
+from .keys import MISSING
+from .keys import coerce_cbor_bytes as _coerce_cbor_bytes
+from .keys import get_mapping_entry as _get_mapping_entry
 
 
 def _merge_ctap_make_credential(

@@ -5,10 +5,10 @@ from collections.abc import Callable, Mapping, Sequence
 from typing import Any
 
 from .ctap_repair_leaf import _extract_mapping_bytes, _extract_mapping_string
-from .key_utils import MISSING
-from .key_utils import coerce_cbor_bytes as _coerce_cbor_bytes
-from .key_utils import get_mapping_entry as _get_mapping_entry
-from .key_utils import hex_json_safe as _hex_json_safe
+from .keys import MISSING
+from .keys import coerce_cbor_bytes as _coerce_cbor_bytes
+from .keys import get_mapping_entry as _get_mapping_entry
+from .keys import hex_json_safe as _hex_json_safe
 
 _MAKE_CREDENTIAL_REQUEST_LABELS: dict[Any, str] = {
     1: "clientDataHash",

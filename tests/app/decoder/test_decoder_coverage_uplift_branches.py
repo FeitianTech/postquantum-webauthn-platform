@@ -310,11 +310,11 @@ def test_build_subject_key_identifier_lines_derives_digest_when_ski_extension_mi
     assert result == decode_module.format_hex_bytes_lines(b"\x01\x23")
 
 
-def test_extract_authenticator_bytes_from_attestation_uses_raw_base64_and_handles_decode_failure(monkeypatch, binary_extract):
+def test_extract_authenticator_bytes_from_attestation_uses_raw_base64_and_handles_decode_failure(monkeypatch, binary):
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     monkeypatch.setattr(
-        binary_extract,
+        binary,
         "_extract_bytes_from_binary",
         lambda _entry: None,
     )
@@ -323,7 +323,7 @@ def test_extract_authenticator_bytes_from_attestation_uses_raw_base64_and_handle
         def __init__(self, _raw):
             self.auth_data = b"\x11\x22"
 
-    monkeypatch.setattr(binary_extract, "AttestationObject", _FakeAttestation)
+    monkeypatch.setattr(binary, "AttestationObject", _FakeAttestation)
     extracted = decode_module._extract_authenticator_bytes_from_attestation(
         {"raw": " AQI= "}
     )

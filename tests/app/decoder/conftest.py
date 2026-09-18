@@ -85,17 +85,17 @@ def cbor_lenient():
 
 
 @pytest.fixture
-def binary_extract():
+def binary():
     """The fragment that defines the binary and COSE key extractors."""
 
-    return _fragment("binary_extract")
+    return _fragment("binary")
 
 
 @pytest.fixture
-def key_utils():
+def keys():
     """The fragment that defines the mapping-key and JSON-safety helpers."""
 
-    return _fragment("key_utils")
+    return _fragment("keys")
 
 
 @pytest.fixture
