@@ -1,7 +1,6 @@
 """Configuration and application setup for the demo WebAuthn server."""
 from __future__ import annotations
 
-import base64
 import gzip
 import ipaddress
 import json
@@ -23,6 +22,7 @@ import fido2.features
 from fido2.server import Fido2Server
 from fido2.webauthn import PublicKeyCredentialRpEntity
 
+from . import encoding
 from .env_flags import parse_env_flag
 
 # Enable webauthn-json mapping if available (compatible across fido2 versions)
@@ -596,14 +596,11 @@ def extract_client_data_origin(credential_response: Any) -> str | None:
     if not isinstance(raw, str) or not raw:
         return None
 
-    try:
-        padded = raw + "=" * (-len(raw) % 4)
-        decoded = base64.urlsafe_b64decode(padded)
-    except Exception:
-        try:
-            decoded = base64.b64decode(raw + "=" * (-len(raw) % 4))
-        except Exception:
-            return None
+    decoded = encoding.try_decode_base64url(raw)
+    if decoded is None:
+        decoded = encoding.try_decode_base64(raw)
+    if decoded is None:
+        return None
 
     try:
         parsed = json.loads(decoded.decode("utf-8"))
@@ -897,7 +894,7 @@ FIDO_METADATA_TRUST_ROOT_B64 = (
     "N3ec592kD3ZDZopD8p/7DEJ4Y9HiD2971KE9dJeFt0g5QdYg/NA6s/rob8SKunE3"
     "vouXsXgxT7PntgMTzlSdriVZzH81Xwj3QEUxeCp6"
 )
-FIDO_METADATA_TRUST_ROOT_CERT = base64.b64decode(FIDO_METADATA_TRUST_ROOT_B64)
+FIDO_METADATA_TRUST_ROOT_CERT = encoding.decode_base64(FIDO_METADATA_TRUST_ROOT_B64)
 FIDO_METADATA_TRUST_ROOT_PEM = ssl.DER_cert_to_PEM_cert(FIDO_METADATA_TRUST_ROOT_CERT)
 
 MDS_TLS_ADDITIONAL_TRUST_ANCHORS_PEM = textwrap.dedent(

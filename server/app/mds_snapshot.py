@@ -1,7 +1,6 @@
 """Helpers for building fast FIDO MDS explorer snapshots."""
 from __future__ import annotations
 
-import base64
 import hashlib
 import json
 from collections.abc import Mapping, Sequence
@@ -11,6 +10,8 @@ from typing import Any
 from cryptography import x509
 from cryptography.exceptions import UnsupportedAlgorithm
 from cryptography.x509.oid import NameOID
+
+from . import encoding
 
 __all__ = [
     "build_entry_id",
@@ -393,14 +394,10 @@ def _decode_der_certificate(value: Any) -> bytes | None:
     if not isinstance(value, str):
         return None
 
-    cleaned = "".join(value.split())
-    if not cleaned:
+    if not value.strip():
         return None
 
-    try:
-        return base64.b64decode(cleaned + "=" * ((4 - len(cleaned) % 4) % 4))
-    except Exception:  # pragma: no cover - defensive
-        return None
+    return encoding.try_decode_base64(value)
 
 
 def _summarise_attestation_certificates(certificates: Sequence[Any]) -> tuple[list[str], list[str]]:

@@ -10,6 +10,10 @@ from typing import Any
 from urllib import error as urllib_error
 from urllib import request as urllib_request
 
+# ``encoding`` is a local here (the GitHub response field), so the decoder is
+# imported by name rather than shadowing :mod:`server.app.encoding`.
+from .encoding import decode_base64
+
 __all__ = [
     "credential_log_repository",
     "github_get_json",
@@ -149,7 +153,7 @@ def github_get_json(path: str) -> tuple[dict[str, Any], str]:
     if encoding != "base64" or not isinstance(content_encoded, str):
         raise RuntimeError(f"Unexpected response fetching {path}")
 
-    decoded_bytes = base64.b64decode(content_encoded)
+    decoded_bytes = decode_base64(content_encoded)
     payload = json.loads(decoded_bytes.decode("utf-8"))
     sha = response.get("sha")
     if not isinstance(sha, str):

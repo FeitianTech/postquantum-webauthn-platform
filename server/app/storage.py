@@ -16,7 +16,6 @@ allowlist of FIDO2 value classes.
 """
 from __future__ import annotations
 
-import base64
 import io
 import json
 import os
@@ -26,6 +25,7 @@ from typing import Any
 
 from fido2.webauthn import AttestedCredentialData, AuthenticatorData
 
+from . import encoding
 from .cloud_storage import (
     build_blob_name,
     delete_blob,
@@ -145,12 +145,11 @@ def _restricted_pickle_loads(payload: bytes) -> Any:
 
 
 def _b64u_encode(data: bytes) -> str:
-    return base64.urlsafe_b64encode(bytes(data)).rstrip(b"=").decode("ascii")
+    return encoding.encode_base64url(data)
 
 
 def _b64u_decode(value: str) -> bytes:
-    padding = "=" * (-len(value) % 4)
-    return base64.urlsafe_b64decode(value + padding)
+    return encoding.decode_base64url(value)
 
 
 def _encode_value(value: Any) -> Any:
@@ -649,7 +648,7 @@ def convert_bytes_for_json(obj: Any) -> Any:
     ``_encode_value``.
     """
     if isinstance(obj, (bytes, bytearray, memoryview)):
-        return base64.b64encode(bytes(obj)).decode('utf-8')
+        return encoding.encode_base64(bytes(obj))
     if isinstance(obj, dict):
         return {k: convert_bytes_for_json(v) for k, v in obj.items()}
     if isinstance(obj, list):
