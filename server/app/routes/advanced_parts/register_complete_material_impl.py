@@ -13,7 +13,6 @@ from . import logging_helpers_impl
 
 
 def build_registration_material(
-    advanced_module: Any,
     *,
     auth_data: Any,
     attestation_format: Any,

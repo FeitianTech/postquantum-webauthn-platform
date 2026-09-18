@@ -15,7 +15,6 @@ CHALLENGE_SOURCE_CLIENT = "client-supplied"
 
 
 def resolve_state_and_registration_server(
-    advanced_module: Any,
     *,
     data: Mapping[str, Any],
     original_request: Mapping[str, Any],

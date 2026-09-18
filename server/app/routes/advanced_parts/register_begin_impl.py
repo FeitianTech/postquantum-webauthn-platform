@@ -15,12 +15,7 @@ from fido2.webauthn import (
 
 from ... import attestation, config
 from ...attachments import normalize_attachment, resolve_effective_attachments
-from . import binary_helpers_impl
-from .register_begin_support_impl import (
-    build_exclude_list,
-    build_processed_extensions,
-    configure_allowed_algorithms,
-)
+from . import binary_helpers_impl, register_begin_support_impl
 
 
 def advanced_register_begin_impl(advanced_module: Any):
@@ -93,9 +88,7 @@ def advanced_register_begin_impl(advanced_module: Any):
     else:
         temp_server.attestation = AttestationConveyancePreference.NONE
 
-    configure_allowed_algorithms(
-        advanced_module,
-        public_key,
+    register_begin_support_impl.configure_allowed_algorithms(public_key,
         temp_server,
         warnings,
     )
@@ -168,8 +161,8 @@ def advanced_register_begin_impl(advanced_module: Any):
         display_name=display_name,
     )
 
-    exclude_list = build_exclude_list(advanced_module, public_key)
-    processed_extensions = build_processed_extensions(advanced_module, public_key)
+    exclude_list = register_begin_support_impl.build_exclude_list(public_key)
+    processed_extensions = register_begin_support_impl.build_processed_extensions(public_key)
 
     options, state = temp_server.register_begin(
         user_entity,

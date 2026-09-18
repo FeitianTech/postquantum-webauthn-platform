@@ -14,7 +14,6 @@ from ...attachments import (
 
 
 def prepare_register_complete_inputs(
-    advanced_module: Any,
     data: Mapping[str, Any],
 ) -> tuple[dict[str, Any] | None, Any | None]:
     response = data.get("__credential_response")
