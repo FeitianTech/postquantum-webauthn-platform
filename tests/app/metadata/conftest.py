@@ -51,7 +51,7 @@ def identity_runtime():
     these through this module, so this is the binding that is actually read.
     """
 
-    return pytest.importorskip("server.app.metadata.session_identity_runtime")
+    return pytest.importorskip("server.app.metadata.sessions")
 
 
 @pytest.fixture
@@ -114,7 +114,7 @@ def app_config():
 def cleanup_runtime():
     """The fragment that defines the session cleanup worker and scheduler."""
 
-    return pytest.importorskip("server.app.metadata.session_cleanup_runtime")
+    return pytest.importorskip("server.app.metadata.sessions")
 
 
 @pytest.fixture

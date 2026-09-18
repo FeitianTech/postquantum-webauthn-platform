@@ -6,22 +6,22 @@ import pytest
 
 
 @pytest.fixture
-def env_runtime(monkeypatch):
-    module = pytest.importorskip("server.app.metadata.env_runtime")
+def sessions(monkeypatch):
+    module = pytest.importorskip("server.app.metadata.sessions")
     monkeypatch.setattr(module, "_SESSION_METADATA_CLEANUP_INTERVAL", timedelta(seconds=1))
     return module
 
 
 @pytest.fixture
-def metadata_module(monkeypatch, metadata_runtime_state, env_runtime):
+def metadata_module(monkeypatch, metadata_runtime_state, sessions):
     return pytest.importorskip("server.app.metadata")
 
 
-def test_schedule_inactive_session_cleanup_runs_inline_when_async_disabled(metadata_module, monkeypatch, metadata_runtime_state, env_runtime, cleanup_runtime):
+def test_schedule_inactive_session_cleanup_runs_inline_when_async_disabled(metadata_module, monkeypatch, metadata_runtime_state, sessions, cleanup_runtime):
     observed_now = []
 
     monkeypatch.setattr(time, "time", lambda: 100.0)
-    monkeypatch.setattr(env_runtime, "_cleanup_async_enabled", lambda: False)
+    monkeypatch.setattr(sessions, "_cleanup_async_enabled", lambda: False)
     monkeypatch.setattr(
         cleanup_runtime,
         "_maybe_cleanup_inactive_sessions",
@@ -35,7 +35,7 @@ def test_schedule_inactive_session_cleanup_runs_inline_when_async_disabled(metad
     assert metadata_runtime_state._session_cleanup_pending is False
 
 
-def test_schedule_inactive_session_cleanup_marks_pending_when_worker_alive(metadata_module, monkeypatch, metadata_runtime_state, env_runtime, cleanup_runtime):
+def test_schedule_inactive_session_cleanup_marks_pending_when_worker_alive(metadata_module, monkeypatch, metadata_runtime_state, sessions, cleanup_runtime):
     class _AliveWorker:
         def is_alive(self):
             return True
@@ -43,7 +43,7 @@ def test_schedule_inactive_session_cleanup_marks_pending_when_worker_alive(metad
     alive_worker = _AliveWorker()
 
     monkeypatch.setattr(time, "time", lambda: 100.0)
-    monkeypatch.setattr(env_runtime, "_cleanup_async_enabled", lambda: True)
+    monkeypatch.setattr(sessions, "_cleanup_async_enabled", lambda: True)
     monkeypatch.setattr(metadata_runtime_state, "_session_cleanup_worker", alive_worker)
     monkeypatch.setattr(
         cleanup_runtime,
@@ -60,7 +60,7 @@ def test_schedule_inactive_session_cleanup_marks_pending_when_worker_alive(metad
 
 
 def test_schedule_inactive_session_cleanup_falls_back_inline_when_thread_start_fails(
-    metadata_module, monkeypatch, metadata_runtime_state, env_runtime, cleanup_runtime):
+    metadata_module, monkeypatch, metadata_runtime_state, sessions, cleanup_runtime):
     observed_now = []
 
     class _FailingThread:
@@ -74,7 +74,7 @@ def test_schedule_inactive_session_cleanup_falls_back_inline_when_thread_start_f
             return False
 
     monkeypatch.setattr(time, "time", lambda: 250.0)
-    monkeypatch.setattr(env_runtime, "_cleanup_async_enabled", lambda: True)
+    monkeypatch.setattr(sessions, "_cleanup_async_enabled", lambda: True)
     monkeypatch.setattr(threading, "Thread", _FailingThread, raising=False)
     monkeypatch.setattr(
         cleanup_runtime,
@@ -108,12 +108,12 @@ def test_run_inactive_session_cleanup_worker_drains_pending_before_teardown(meta
 
 
 def test_maybe_cleanup_inactive_sessions_deletes_only_stale_and_continues_on_delete_errors(
-    metadata_module, monkeypatch, metadata_runtime_state, env_runtime, session_store, app_config, cleanup_runtime):
+    metadata_module, monkeypatch, metadata_runtime_state, sessions, session_store, app_config, cleanup_runtime):
     now = 2_000_000.0
 
     monkeypatch.setattr(metadata_runtime_state, "_session_metadata_last_cleanup", 0.0)
     monkeypatch.setattr(
-        env_runtime,
+        sessions,
         "_SESSION_METADATA_CLEANUP_INTERVAL",
         timedelta(seconds=1),
     )
