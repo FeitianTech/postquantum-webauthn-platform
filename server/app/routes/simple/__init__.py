@@ -1,16 +1,16 @@
 """Routes for the basic registration and authentication flows.
 
-The implementation lives in :mod:`server.app.routes.simple_parts`; this module is
-the HTTP face of it -- the Flask rules, plus re-exports of the pieces callers use.
-Each fragment resolves its own names through its own imports, so a name here is the
-same object the fragment defines -- patching one of these re-exports changes what
-callers of *this module* see, not what the fragments call.
+The implementation lives in this package's submodules; this module is the HTTP
+face of it -- the Flask rules, plus re-exports of the pieces callers use. Each
+submodule resolves its own names through its own imports, so a name here is the
+same object the submodule defines -- patching one of these re-exports changes what
+callers of *this package* see, not what the submodules call.
 """
 from __future__ import annotations
 
-from ..config import app
-from . import binary_helpers
-from .simple_parts import (
+from ...config import app
+from .. import binary_helpers
+from . import (
     authenticate_impl,
     binary_helpers_impl,
     credential_parsing_impl,
