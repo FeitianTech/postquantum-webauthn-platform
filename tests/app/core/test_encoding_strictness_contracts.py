@@ -41,7 +41,7 @@ def advanced_binary_helpers():
 @pytest.fixture()
 def simple_binary_helpers():
     pytest.importorskip("server.app.app")
-    return pytest.importorskip("server.app.routes.simple.binary_helpers_impl")
+    return pytest.importorskip("server.app.routes.simple.binary")
 
 
 def test_decoder_rejects_plain_english_text(pipeline):
