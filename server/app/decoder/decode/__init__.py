@@ -22,7 +22,7 @@ from . import (
     ctap_runtime_parse,
     details_runtime,
     keys,
-    pipeline_runtime,
+    pipeline,
     response,
     summary,
 )
@@ -30,7 +30,7 @@ from . import (
 __all__ = ["decode_payload_text"]
 
 # The decoder entry point.
-decode_payload_text = pipeline_runtime.decode_payload_text
+decode_payload_text = pipeline.decode_payload_text
 
 # Encoding helpers shared with the attestation package.
 colon_hex = attestation.colon_hex
@@ -156,19 +156,19 @@ _merge_trailing_signature = ctap_repair_make._merge_trailing_signature
 _repair_make_credential_entries = ctap_repair_make._repair_make_credential_entries
 
 # Top-level decode pipeline helpers.
-_PEM_CERT_PATTERN = pipeline_runtime._PEM_CERT_PATTERN
-_decode_binary_field = pipeline_runtime._decode_binary_field
-_decode_binary_input = pipeline_runtime._decode_binary_input
-_decode_binary_payload = pipeline_runtime._decode_binary_payload
-_decode_json_object = pipeline_runtime._decode_json_object
-_decode_pem_certificates = pipeline_runtime._decode_pem_certificates
-_decode_public_key_credential = pipeline_runtime._decode_public_key_credential
-_expand_cbor_value = pipeline_runtime._expand_cbor_value
-_looks_like_pem = pipeline_runtime._looks_like_pem
-_try_decode_attestation_object = pipeline_runtime._try_decode_attestation_object
-_try_decode_authenticator_data = pipeline_runtime._try_decode_authenticator_data
-_try_decode_certificate_bytes = pipeline_runtime._try_decode_certificate_bytes
-_try_parse_json = pipeline_runtime._try_parse_json
+_PEM_CERT_PATTERN = pipeline._PEM_CERT_PATTERN
+_decode_binary_field = pipeline._decode_binary_field
+_decode_binary_input = pipeline._decode_binary_input
+_decode_binary_payload = pipeline._decode_binary_payload
+_decode_json_object = pipeline._decode_json_object
+_decode_pem_certificates = pipeline._decode_pem_certificates
+_decode_public_key_credential = pipeline._decode_public_key_credential
+_expand_cbor_value = pipeline._expand_cbor_value
+_looks_like_pem = pipeline._looks_like_pem
+_try_decode_attestation_object = pipeline._try_decode_attestation_object
+_try_decode_authenticator_data = pipeline._try_decode_authenticator_data
+_try_decode_certificate_bytes = pipeline._try_decode_certificate_bytes
+_try_parse_json = pipeline._try_parse_json
 
 # CBOR sequence decoding and CTAP repair.
 _CTAP_COMMAND_MAP = cbor_runtime._CTAP_COMMAND_MAP

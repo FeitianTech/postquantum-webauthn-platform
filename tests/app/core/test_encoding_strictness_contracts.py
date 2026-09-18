@@ -21,9 +21,9 @@ PLAIN_TEXT = "Hello, this is plain text!"
 
 
 @pytest.fixture()
-def pipeline_runtime():
+def pipeline():
     pytest.importorskip("server.app.app")
-    return pytest.importorskip("server.app.decoder.decode.pipeline_runtime")
+    return pytest.importorskip("server.app.decoder.decode.pipeline")
 
 
 @pytest.fixture()
@@ -44,34 +44,34 @@ def simple_binary_helpers():
     return pytest.importorskip("server.app.routes.simple_parts.binary_helpers_impl")
 
 
-def test_decoder_rejects_plain_english_text(pipeline_runtime):
+def test_decoder_rejects_plain_english_text(pipeline):
     """Prose is not base64url, and must not be reported as decoded CBOR."""
 
     with pytest.raises(ValueError):
-        pipeline_runtime._decode_binary_input(PLAIN_TEXT)
+        pipeline._decode_binary_input(PLAIN_TEXT)
 
     decode = pytest.importorskip("server.app.decoder.decode")
     with pytest.raises(ValueError):
         decode.decode_payload_text(PLAIN_TEXT)
 
 
-def test_decoder_rejects_odd_length_hex_instead_of_left_padding_it(pipeline_runtime):
+def test_decoder_rejects_odd_length_hex_instead_of_left_padding_it(pipeline):
     """``abc`` is not ``0abc``; guessing a leading nibble invents data."""
 
     with pytest.raises(ValueError):
-        pipeline_runtime._decode_binary_input("abc")
+        pipeline._decode_binary_input("abc")
 
-    assert pipeline_runtime._decode_binary_input("0abc") == (b"\x0a\xbc", "hex")
+    assert pipeline._decode_binary_input("0abc") == (b"\x0a\xbc", "hex")
 
 
-def test_decoder_reports_encoding_ambiguity_rather_than_guessing(pipeline_runtime):
+def test_decoder_reports_encoding_ambiguity_rather_than_guessing(pipeline):
     """A dash-free payload is valid under both base64 alphabets; say so."""
 
-    ambiguous = pipeline_runtime._sniff_binary_input("QUJD")
+    ambiguous = pipeline._sniff_binary_input("QUJD")
     assert ambiguous.data == b"ABC"
     assert ambiguous.ambiguous is True
 
-    urlsafe = pipeline_runtime._sniff_binary_input(
+    urlsafe = pipeline._sniff_binary_input(
         base64.urlsafe_b64encode(b"\xfb\xef\xbe").decode("ascii").rstrip("=")
     )
     assert urlsafe.encoding == "base64url"

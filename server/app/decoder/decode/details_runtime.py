@@ -16,7 +16,7 @@ from ...attestation import (
     summarize_authenticator_extensions,
 )
 from ...encoding import encode_base64, try_decode_base64
-from . import pipeline_runtime
+from . import pipeline
 
 
 def _describe_client_data_from_bytes(data: bytes) -> dict[str, Any]:
@@ -147,7 +147,7 @@ def _build_client_data_details(
         challenge_info: dict[str, Any] = {"raw": challenge_value}
         if isinstance(challenge_value, str):
             try:
-                challenge_bytes, challenge_encoding = pipeline_runtime._decode_binary_input(challenge_value)
+                challenge_bytes, challenge_encoding = pipeline._decode_binary_input(challenge_value)
             except ValueError:
                 pass
             else:
