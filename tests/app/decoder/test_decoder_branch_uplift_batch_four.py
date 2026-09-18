@@ -13,7 +13,7 @@ def _pem_block(der_bytes: bytes) -> str:
     return f"-----BEGIN CERTIFICATE-----\n{wrapped}\n-----END CERTIFICATE-----"
 
 
-def test_decode_public_key_credential_includes_signature_and_user_handle_summaries(monkeypatch, pipeline_runtime):
+def test_decode_public_key_credential_includes_signature_and_user_handle_summaries(monkeypatch, pipeline):
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     def _decode_binary(value):
@@ -23,7 +23,7 @@ def test_decode_public_key_credential_includes_signature_and_user_handle_summari
             return b"\x01\x02", "base64url"
         return None
 
-    monkeypatch.setattr(pipeline_runtime, "_decode_binary_field", _decode_binary)
+    monkeypatch.setattr(pipeline, "_decode_binary_field", _decode_binary)
 
     result = decode_module._decode_public_key_credential(
         {
@@ -54,14 +54,14 @@ def test_decode_pem_certificates_skips_decode_errors_and_uses_single_certificate
     assert "certificates" not in result["decoded"]
 
 
-def test_decode_binary_payload_uses_authenticator_data_path_when_other_binary_decoders_fail(monkeypatch, details_runtime, pipeline_runtime):
+def test_decode_binary_payload_uses_authenticator_data_path_when_other_binary_decoders_fail(monkeypatch, details_runtime, pipeline):
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     monkeypatch.setattr(details_runtime, "_try_decode_utf8", lambda _data: None)
-    monkeypatch.setattr(pipeline_runtime, "_try_decode_certificate_bytes", lambda _data, _enc: None)
-    monkeypatch.setattr(pipeline_runtime, "_try_decode_attestation_object", lambda _data, _enc: None)
+    monkeypatch.setattr(pipeline, "_try_decode_certificate_bytes", lambda _data, _enc: None)
+    monkeypatch.setattr(pipeline, "_try_decode_attestation_object", lambda _data, _enc: None)
     monkeypatch.setattr(
-        pipeline_runtime,
+        pipeline,
         "_try_decode_authenticator_data",
         lambda _data, enc: {"format": "Authenticator data (binary)", "inputEncoding": enc},
     )
@@ -191,14 +191,14 @@ def test_parse_simple_major_type_values_and_structure_to_value_fallback_branches
     assert tagged == {"tag": 33, "value": 42}
 
 
-def test_expand_cbor_value_falls_back_to_make_json_safe_for_unknown_types(monkeypatch, pipeline_runtime):
+def test_expand_cbor_value_falls_back_to_make_json_safe_for_unknown_types(monkeypatch, pipeline):
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     class _Unknown:
         pass
 
     monkeypatch.setattr(
-        pipeline_runtime,
+        pipeline,
         "make_json_safe",
         lambda value: {"safeType": type(value).__name__},
     )

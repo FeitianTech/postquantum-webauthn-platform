@@ -22,10 +22,10 @@ def _fragment(name: str):
 
 
 @pytest.fixture
-def pipeline_runtime():
+def pipeline():
     """The fragment that defines the top-level decode pipeline helpers."""
 
-    return _fragment("pipeline_runtime")
+    return _fragment("pipeline")
 
 
 @pytest.fixture
