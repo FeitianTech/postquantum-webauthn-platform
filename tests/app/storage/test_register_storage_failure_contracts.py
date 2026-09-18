@@ -45,7 +45,6 @@ class _SimpleFakeServer:
 
 
 def test_simple_register_complete_returns_500_when_savekey_fails(monkeypatch, metadata_module, device_logs_module, attestation_module, storage_module, config_module):
-    config_module = pytest.importorskip("server.app.config")
     pytest.importorskip("server.app.app")
 
     credential_id = b"simple-savekey-fail"

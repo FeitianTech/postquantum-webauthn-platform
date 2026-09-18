@@ -13,7 +13,6 @@ class _AuthResult:
 
 
 def test_advanced_authenticate_complete_uses_request_state_fallback(monkeypatch, config_module, advanced_algorithm_helpers, advanced_parsing_helpers):
-    config_module = pytest.importorskip("server.app.config")
     pytest.importorskip("server.app.app")
 
     credential_id = b"advanced-fallback-state"
@@ -69,7 +68,6 @@ def test_advanced_authenticate_complete_uses_request_state_fallback(monkeypatch,
 
 
 def test_advanced_authenticate_complete_uses_advanced_rp_when_auth_rp_missing(monkeypatch, config_module, advanced_algorithm_helpers, advanced_parsing_helpers):
-    config_module = pytest.importorskip("server.app.config")
     pytest.importorskip("server.app.app")
 
     credential_id = b"advanced-rp-fallback"
@@ -259,7 +257,6 @@ def test_advanced_authenticate_complete_rejects_attachment_not_allowed_by_sessio
 
 
 def test_advanced_authenticate_complete_forwards_hash_algorithm_override(monkeypatch, config_module, advanced_algorithm_helpers, advanced_parsing_helpers):
-    config_module = pytest.importorskip("server.app.config")
     pytest.importorskip("server.app.app")
 
     credential_id = b"advanced-hash-forward"
@@ -308,7 +305,6 @@ def test_advanced_authenticate_complete_forwards_hash_algorithm_override(monkeyp
 
 
 def test_advanced_authenticate_complete_defaults_hash_algorithm_when_override_invalid(monkeypatch, config_module, advanced_algorithm_helpers, advanced_parsing_helpers):
-    config_module = pytest.importorskip("server.app.config")
     pytest.importorskip("server.app.app")
 
     credential_id = b"advanced-hash-default"
@@ -357,7 +353,6 @@ def test_advanced_authenticate_complete_defaults_hash_algorithm_when_override_in
 
 
 def test_advanced_authenticate_complete_omits_sign_count_for_malformed_authenticator_data(monkeypatch, config_module, advanced_algorithm_helpers, advanced_parsing_helpers):
-    config_module = pytest.importorskip("server.app.config")
     pytest.importorskip("server.app.app")
 
     credential_id = b"advanced-malformed-authdata"

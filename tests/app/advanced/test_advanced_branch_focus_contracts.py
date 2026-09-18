@@ -312,7 +312,6 @@ def test_advanced_authenticate_complete_requires_public_key_payload():
 
 
 def test_advanced_authenticate_complete_uses_legacy_session_credentials_fallback(monkeypatch, config_module, advanced_algorithm_helpers, advanced_parsing_helpers):
-    config_module = pytest.importorskip("server.app.config")
 
     credential_id = b"legacy-credential"
     encoded_id = _b64url(credential_id)
@@ -392,7 +391,6 @@ def test_advanced_authenticate_complete_returns_404_when_no_credentials_found_an
 
 
 def test_advanced_authenticate_complete_uses_request_rpid_sets_algorithms_and_sign_count(monkeypatch, config_module, advanced_algorithm_helpers, advanced_parsing_helpers):
-    config_module = pytest.importorskip("server.app.config")
 
     credential_id = b"request-rpid-credential"
     encoded_id = _b64url(credential_id)
@@ -474,7 +472,6 @@ def test_advanced_authenticate_complete_uses_request_rpid_sets_algorithms_and_si
 
 
 def test_advanced_authenticate_complete_error_path_uses_failed_id_fallback_extractor(monkeypatch, config_module, advanced_algorithm_helpers, advanced_parsing_helpers):
-    config_module = pytest.importorskip("server.app.config")
 
     credential_id = b"error-fallback-credential"
     encoded_id = _b64url(credential_id)
