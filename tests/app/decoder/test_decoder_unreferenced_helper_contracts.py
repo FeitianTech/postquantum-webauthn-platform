@@ -203,7 +203,7 @@ def test_result_conversion_helpers_for_all_base_payload_types(monkeypatch, conve
     assert cert_result["certificates"][0]["parsedX5c"]["derBase64"] == "AQI="
 
 
-def test_summary_and_extension_helpers_for_rendering_paths(monkeypatch, binary, summary_runtime):
+def test_summary_and_extension_helpers_for_rendering_paths(monkeypatch, binary, summary):
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     lines = []
@@ -255,7 +255,7 @@ def test_summary_and_extension_helpers_for_rendering_paths(monkeypatch, binary, 
 
     monkeypatch.setattr(binary, "_extract_authenticator_bytes", lambda *_a, **_k: b"\x00" * 37)
     monkeypatch.setattr(binary, "_extract_authenticator_bytes_from_attestation", lambda _e: b"\x00" * 37)
-    monkeypatch.setattr(summary_runtime, "_build_certificate_summary_lines", lambda _d: ["Certificate line"])
+    monkeypatch.setattr(summary, "_build_certificate_summary_lines", lambda _d: ["Certificate line"])
 
     pk_summary = decode_module._format_public_key_credential_summary(
         {

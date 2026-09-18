@@ -64,10 +64,10 @@ def result_runtime():
 
 
 @pytest.fixture
-def summary_runtime():
+def summary():
     """The fragment that defines the summary rendering helpers."""
 
-    return _fragment("summary_runtime")
+    return _fragment("summary")
 
 
 @pytest.fixture
