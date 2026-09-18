@@ -5,11 +5,17 @@ from typing import Any
 
 from flask import jsonify, request, session
 
+from fido2.cose import CoseKey
 from fido2.webauthn import PublicKeyCredentialUserEntity
 
 from ... import attestation, config
 from ...challenge_registry import stamp_ceremony_state
 
+_SIMPLE_ALLOWED_ALGORITHMS: tuple[int, ...] = tuple(
+    alg
+    for alg in (-50, -49, -48, -8, -7, -257, -35)
+    if alg in set(CoseKey.supported_algorithms())
+)
 
 def register_begin_impl(simple_module: Any):
     payload = request.get_json(silent=True) or {}
@@ -54,7 +60,7 @@ def register_begin_impl(simple_module: Any):
     else:
         session.pop("simple_register_public_key", None)
 
-    if simple_module._SIMPLE_ALLOWED_ALGORITHMS:
+    if _SIMPLE_ALLOWED_ALGORITHMS:
         public_key_options = options_dict.get("publicKey")
         if isinstance(public_key_options, MutableMapping):
             params = public_key_options.get("pubKeyCredParams")
@@ -64,11 +70,11 @@ def register_begin_impl(simple_module: Any):
                 for param in params:
                     if isinstance(param, MutableMapping):
                         alg_value = param.get("alg")
-                        if isinstance(alg_value, int) and alg_value in simple_module._SIMPLE_ALLOWED_ALGORITHMS:
+                        if isinstance(alg_value, int) and alg_value in _SIMPLE_ALLOWED_ALGORITHMS:
                             cloned = dict(param)
                             cloned["type"] = "public-key"
                             existing_param_map[alg_value] = cloned
-            for alg in simple_module._SIMPLE_ALLOWED_ALGORITHMS:
+            for alg in _SIMPLE_ALLOWED_ALGORITHMS:
                 if alg in existing_param_map:
                     allowed_params.append(existing_param_map[alg])
                 else:

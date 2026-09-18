@@ -81,11 +81,7 @@ from .simple_parts.credential_parsing_impl import (
 )
 from .simple_parts.credentials_route_impl import list_credentials_impl
 
-_SIMPLE_ALLOWED_ALGORITHMS: tuple[int, ...] = tuple(
-    alg
-    for alg in (-50, -49, -48, -8, -7, -257, -35)
-    if alg in set(CoseKey.supported_algorithms())
-)
+_SIMPLE_ALLOWED_ALGORITHMS = register_begin_impl._SIMPLE_ALLOWED_ALGORITHMS
 
 
 __all__ = [
