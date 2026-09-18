@@ -532,7 +532,7 @@ in commit 2, before any conversion, which is what made the rest self-checking. T
 `tests/app/decoder/conftest.py` leaves `raising` at its default everywhere for the same reason.
 
 **Found but not fixed:**
-- `decode_parts/cbor_core.py` now has **no importers anywhere** in `server/` or `tests/`. It is
+- `decode_parts/cbor_core.py` had **no importers anywhere** in `server/` or `tests/`. It has since been deleted. It was
   left in place because file-level renames and merges are a later milestone; it is a deletion
   candidate for that one.
 - `encode_parts/handlers_basic.py` and `handlers_cbor.py` import five *private* decoder names
@@ -1077,24 +1077,33 @@ Consequences, verified by execution:
   `NameError: name '_SESSION_METADATA_CLEANUP_ASYNC_ENV' is not defined`.
 - **163 cross-module calls** whose callee lives in a sibling that is never imported
   (decode_parts 90, attestation_parts 55, metadata_parts 18).
-- 7 modules carry `# pyright: reportUndefinedVariable=false` as a self-admission.
+- 7 modules carried `# pyright: reportUndefinedVariable=false` (all removed since) as a self-admission.
 - Routes use a parallel hack: 33 one-line forwarders passing `sys.modules[__name__]`
   back into their own fragments — **539 references** to `advanced_module`/`simple_module`.
 
 No type checker, IDE or linter can see any of this. Until it is reversed, no tool can
 tell you what a file move broke.
 
-### P2.1. The split is mechanical, not semantic
-- **73 of 87 parts modules (83%) have exactly one importer. Zero are imported by any test.**
-- **All 87 are ≤400 LOC (max 398)** while 5 *unsplit* server files exceed 400 (up to
-  `mds_snapshot.py` at 698). The ceiling applies only to files that were split — a line
+### P2.1. The split was mechanical, not semantic — DONE, re-merged
+Measured before the re-merge:
+- **33 of 90 parts modules had exactly one importer. Zero were imported by any test.**
+- **All were ≤400 LOC (max 401)** while 5 *unsplit* server files exceeded 400 (up to
+  `config.py` at 1005). The ceiling applied only to files that were split — a line
   budget, not a design.
 - 23 commits titled `refactor: split …` over 2026-04-08→10.
-- 14,720 of 20,645 server LOC (71%) now live in `*_parts/`; 849 of the 1,523 façade LOC
-  (55%) is pure plumbing.
+- 15,752 of 22,770 server LOC lived in `*_parts/`; 866 façade LOC was pure plumbing.
+- Suffixes that named a mechanism rather than a responsibility: 28 `_runtime`, 28
+  `_impl`, 10 `_leaf` files, plus 62 functions.
 
-Genuine exceptions — leave alone: `encode_parts` (fan-in 3-8), `shared/storage/local`,
-`decoder/codec`.
+After: the six `*_parts/` packages are gone. Each façade became its package's
+`__init__.py` and the fragments were merged along responsibility lines. `server/`
+went from **126 to 76 `.py` files**; no file, function or fixture carries a
+`_runtime`/`_impl`/`_leaf` suffix except the six noted in P2.6.
+
+Kept separate on purpose: `decoder/encode/` (all 9 submodules — already named for
+responsibilities), `webauthn/metadata/state.py` (shared mutable caches and locks;
+it is a deliberate leaf), `webauthn/attestation/formatting.py` and `constants.py`,
+`decoder/decode/{binary,keys}.py`, `routes/binary_helpers.py`, and `encoding.py`.
 
 ### P2.2. `config.py` is a god module (563 LOC, 13 concerns)
 Flask app singleton + session-secret persistence + embedded PEM trust anchors + RP-ID
@@ -1105,23 +1114,52 @@ works, because tests reload it. `tests/conftest.py` has **no app fixture**; 146
 `app.logger`. Extract `create_app()`.
 
 ### P2.3. Container layout — 1 line, removes 3 hacks
-`Dockerfile:70` `COPY server/app /app/server` collapses a directory level, so `server.app`
+`Dockerfile:62` `COPY server/app /app/server` collapses a directory level, so `server.app`
 means a package in a checkout and a module in the image. Fix to `COPY server /app/server`,
 which deletes the `gunicorn.conf.py:23-26` dual-import fallback, the
 `server/app/__init__.py:9-20` `__getattr__` shim, and the `fido2`-directory probe at
 `app.py:13-24`. Already caused commit `4491f6a`.
 
-### P2.4. Target layout
+### P2.4. Layout — as shipped
 ```
 server/app/
-  config/     settings.py, rp.py, secrets.py, trust_anchors.py
-  wsgi.py     create_app()
-  encoding.py THE base64url/hex module (kills 16 decoders, 7 encoders)
-  webauthn/   attestation.py, trust.py, pqc.py, metadata.py
-  decoder/    cbor.py, ctap.py, certificates.py, summary.py
-  routes/     simple.py, advanced.py, general.py  (thin)
-  storage/    credentials.py, sessions.py, cloud.py
+  encoding.py            THE base64url/hex module (42 importers)
+  config.py app.py startup.py static_assets.py env_flags.py
+  challenge_registry.py attachments.py device_logs.py github_client.py
+  credential_artifacts.py mds_snapshot.py mds_provisioning.py
+  webauthn/
+    pqc.py               ML-DSA adapter
+    sign_count.py        WebAuthn L3 §7.2 step 21
+    attestation/         __init__ (public surface) + certificates, checks, trust,
+                         pqc, classical, aaguid, formatting, constants
+    metadata/            __init__ + blob, effective, entries, sessions, uploads, state
+  decoder/
+    decode/              __init__ + cbor_parser, ctap, pipeline, response,
+                         summary, certificates, binary, keys
+    encode/              __init__ + the 9 encoder submodules, unchanged
+  routes/
+    simple/              __init__ (Flask rules) + registration, authentication,
+                         credential_list, parsing, binary
+    advanced/            __init__ (Flask rules) + registration, authentication,
+                         artifacts, algorithms, parsing, summary, tracing,
+                         constants, binary
+    general.py binary_helpers.py
+  storage/               credentials, session_metadata, cloud, common
 ```
+Still open from the original sketch: splitting `config.py` (1005 LOC) into a
+`config/` package and extracting `create_app()` into `wsgi.py`. Both are *splits*,
+not merges, and `create_app()` changes behaviour, so neither was in scope here.
+
+### P2.6. Suffixes that are load-bearing and stayed
+Six functions keep `_impl` because it distinguishes a parameterised implementation
+from its same-named bound wrapper, and dropping it collides:
+`decoder/decode/certificates.py` (`_convert_certificate_payload_impl`,
+`_convert_certificate_bytes_impl`, `_convert_certificate_chain_impl`,
+`_convert_attestation_statement_impl`, `_convert_attestation_entry_impl`) and
+`decoder/decode/cbor_parser.py` (`_decode_cbor_sequence_impl`). Resolving the clash
+would mean restructuring the injection, which is a behaviour change.
+`webauthn/attestation/trust.py:_extract_attestation_leaf` merely ends in the word
+"leaf" — a leaf certificate — and is not a suffix at all.
 
 ### P2.5. Dead code — NOT this repo's problem
 Python: ~2 LOC prod-dead. JS: 31 unused exports, ~754 LOC. Commented-out code:
