@@ -7,6 +7,7 @@ from typing import Any
 from fido2 import cbor
 from fido2.webauthn import AuthenticatorData
 
+from ...encoding import decode_hex
 from . import cbor_strict
 from .key_utils import MISSING
 from .key_utils import coerce_cbor_bytes as _coerce_cbor_bytes
@@ -138,7 +139,7 @@ def _repair_make_credential_entries(
         hex_value = signature_key.get("hex")
         if isinstance(hex_value, str):
             try:
-                signature_bytes = bytes.fromhex(hex_value)
+                signature_bytes = decode_hex(hex_value)
             except ValueError:
                 signature_bytes = None
 

@@ -1,7 +1,6 @@
 """Helpers for interacting with the GitHub credential log repository."""
 from __future__ import annotations
 
-import base64
 import hashlib
 import json
 import os
@@ -12,7 +11,7 @@ from urllib import request as urllib_request
 
 # ``encoding`` is a local here (the GitHub response field), so the decoder is
 # imported by name rather than shadowing :mod:`server.app.encoding`.
-from .encoding import decode_base64
+from .encoding import decode_base64, encode_base64
 
 __all__ = [
     "credential_log_repository",
@@ -126,7 +125,7 @@ def _request(method: str, url: str, body: dict[str, Any] | None = None) -> tuple
 
 
 def _encode_content(data: bytes) -> str:
-    return base64.b64encode(data).decode("ascii")
+    return encode_base64(data)
 
 
 def git_blob_sha(data: bytes) -> str:

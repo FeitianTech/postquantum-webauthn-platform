@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import base64
 import uuid
 from collections.abc import Mapping
 from datetime import datetime, timezone
@@ -9,6 +8,7 @@ from typing import Any
 from fido2 import cbor
 
 from ... import attestation, storage
+from ...encoding import encode_base64, encode_base64url
 
 
 def populate_rp_debug_context_impl(ctx: dict[str, Any]) -> None:
@@ -31,8 +31,8 @@ def populate_rp_debug_context_impl(ctx: dict[str, Any]) -> None:
 
     credential_id_bytes = ctx["auth_data"].credential_data.credential_id
     credential_id_hex = credential_id_bytes.hex()
-    credential_id_b64 = base64.b64encode(credential_id_bytes).decode("ascii")
-    credential_id_b64u = base64.urlsafe_b64encode(credential_id_bytes).decode("ascii").rstrip("=")
+    credential_id_b64 = encode_base64(credential_id_bytes)
+    credential_id_b64u = encode_base64url(credential_id_bytes)
 
     try:
         aaguid_bytes = bytes(ctx["auth_data"].credential_data.aaguid)
@@ -47,8 +47,8 @@ def populate_rp_debug_context_impl(ctx: dict[str, Any]) -> None:
         user_handle_bytes = bytes(user_handle_value)
     else:
         user_handle_bytes = str(user_handle_value or "").encode("utf-8")
-    user_handle_b64 = base64.b64encode(user_handle_bytes).decode("ascii")
-    user_handle_b64u = base64.urlsafe_b64encode(user_handle_bytes).decode("ascii").rstrip("=")
+    user_handle_b64 = encode_base64(user_handle_bytes)
+    user_handle_b64u = encode_base64url(user_handle_bytes)
     user_handle_hex = user_handle_bytes.hex()
 
     rp_registration_data = {

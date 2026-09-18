@@ -10,6 +10,7 @@ from fido2.webauthn import UserVerificationRequirement
 from ... import attestation, config
 from ...attachments import resolve_effective_attachments
 from ...challenge_registry import stamp_ceremony_state
+from ...encoding import decode_hex
 from . import algorithm_helpers_impl, binary_helpers_impl, parsing_helpers_impl
 
 
@@ -40,7 +41,7 @@ def advanced_authenticate_begin_impl():
         try:
             challenge_bytes = binary_helpers_impl._extract_binary_value_impl(challenge_value)
             if isinstance(challenge_bytes, str):
-                challenge_bytes = bytes.fromhex(challenge_bytes)
+                challenge_bytes = decode_hex(challenge_bytes)
         except (ValueError, TypeError) as exc:
             return jsonify({"error": f"Invalid challenge format: {exc}"}), 400
 
@@ -99,7 +100,7 @@ def advanced_authenticate_begin_impl():
             cred_id = binary_helpers_impl._extract_binary_value_impl(allow_cred.get("id", ""))
             if isinstance(cred_id, str):
                 try:
-                    cred_id = bytes.fromhex(cred_id)
+                    cred_id = decode_hex(cred_id)
                 except ValueError:
                     continue
 
@@ -205,7 +206,7 @@ def advanced_authenticate_begin_impl():
                 elif ext_value.get("write"):
                     write_value = binary_helpers_impl._extract_binary_value_impl(ext_value["write"])
                     if isinstance(write_value, str):
-                        write_value = bytes.fromhex(write_value)
+                        write_value = decode_hex(write_value)
                     processed_extensions["largeBlob"] = {"write": write_value}
                 else:
                     processed_extensions["largeBlob"] = ext_value
@@ -218,12 +219,12 @@ def advanced_authenticate_begin_impl():
                 if "first" in prf_eval:
                     first_value = binary_helpers_impl._extract_binary_value_impl(prf_eval["first"])
                     if isinstance(first_value, str):
-                        first_value = bytes.fromhex(first_value)
+                        first_value = decode_hex(first_value)
                     processed_eval["first"] = first_value
                 if "second" in prf_eval:
                     second_value = binary_helpers_impl._extract_binary_value_impl(prf_eval["second"])
                     if isinstance(second_value, str):
-                        second_value = bytes.fromhex(second_value)
+                        second_value = decode_hex(second_value)
                     processed_eval["second"] = second_value
                 if processed_eval:
                     processed_extensions["prf"] = {"eval": processed_eval}

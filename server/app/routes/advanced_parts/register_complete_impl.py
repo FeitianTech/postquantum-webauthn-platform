@@ -7,6 +7,7 @@ from typing import Any
 from flask import jsonify, request
 
 from ... import attestation, config, pqc, storage
+from ...encoding import decode_hex
 from . import (
     algorithm_helpers_impl,
     binary_helpers_impl,
@@ -168,7 +169,7 @@ def advanced_register_complete_impl():
             try:
                 user_handle = binary_helpers_impl._extract_binary_value_impl(user_id_value)
                 if isinstance(user_handle, str):
-                    user_handle = bytes.fromhex(user_handle)
+                    user_handle = decode_hex(user_handle)
             except (ValueError, TypeError):
                 user_handle = username.encode("utf-8")
         else:

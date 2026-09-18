@@ -4,6 +4,7 @@ from __future__ import annotations
 from collections.abc import Callable, Mapping
 from typing import Any
 
+from ...encoding import decode_hex
 from . import ctap_classify, ctap_runtime_parse, result_runtime
 from .ctap_convert_leaf import (
     _convert_ctap_credential_descriptor,
@@ -111,7 +112,7 @@ def _build_get_assertion_expanded_json(value: Mapping[Any, Any], raw_bytes: byte
         trailing_hex = auth_details.get("trailingBytesHex")
         if isinstance(trailing_hex, str) and trailing_hex.strip():
             try:
-                auth_trailing_bytes = bytes.fromhex(trailing_hex)
+                auth_trailing_bytes = decode_hex(trailing_hex)
             except ValueError:
                 auth_trailing_bytes = None
 

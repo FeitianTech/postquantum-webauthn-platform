@@ -1,12 +1,12 @@
 """Strict CBOR parsing primitives for decoder internals."""
 from __future__ import annotations
 
-import base64
 import math
 import struct
 from typing import Any
 
 from ...attestation import encode_base64url
+from ...encoding import decode_hex, encode_base64
 
 
 class _CborDecodingError(ValueError):
@@ -112,7 +112,7 @@ def _parse_cbor_item(data: bytes, offset: int) -> tuple[dict[str, Any], int]:
                     )
                 segments.append(segment)
                 segment_hex = segment.get("hex")
-                segment_data = bytes.fromhex(segment_hex) if isinstance(segment_hex, str) else b""
+                segment_data = decode_hex(segment_hex) if isinstance(segment_hex, str) else b""
                 raw_segments.append(segment_data)
             raw = b"".join(raw_segments)
             node = {
@@ -120,7 +120,7 @@ def _parse_cbor_item(data: bytes, offset: int) -> tuple[dict[str, Any], int]:
                 "type": "byte string",
                 "length": len(raw),
                 "hex": raw.hex(),
-                "base64": base64.b64encode(raw).decode("ascii"),
+                "base64": encode_base64(raw),
                 "base64url": encode_base64url(raw),
                 "indefinite": True,
                 "chunks": segments,
@@ -138,7 +138,7 @@ def _parse_cbor_item(data: bytes, offset: int) -> tuple[dict[str, Any], int]:
                 "type": "byte string",
                 "length": length,
                 "hex": raw.hex(),
-                "base64": base64.b64encode(raw).decode("ascii"),
+                "base64": encode_base64(raw),
                 "base64url": encode_base64url(raw),
                 "truncated": True,
             }
@@ -151,7 +151,7 @@ def _parse_cbor_item(data: bytes, offset: int) -> tuple[dict[str, Any], int]:
             "type": "byte string",
             "length": length,
             "hex": raw.hex(),
-            "base64": base64.b64encode(raw).decode("ascii"),
+            "base64": encode_base64(raw),
             "base64url": encode_base64url(raw),
         }
         node["summary"] = f"bytes[{length}]"

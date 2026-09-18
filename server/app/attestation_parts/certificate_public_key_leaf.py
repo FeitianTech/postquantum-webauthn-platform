@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import base64
 from collections.abc import Mapping
 from typing import Any
 
@@ -9,6 +8,7 @@ from cryptography.hazmat.primitives.asymmetric import ec, ed448, ed25519, rsa
 
 from fido2.cose import extract_certificate_public_key_info
 
+from ..encoding import encode_base64
 from . import encoding_leaf
 
 
@@ -51,7 +51,7 @@ def _build_unknown_public_key_info(cert_bytes: bytes, error: Exception) -> tuple
     }
 
     if isinstance(spki_bytes, (bytes, bytearray)) and spki_bytes:
-        info["subjectPublicKeyInfoBase64"] = base64.b64encode(bytes(spki_bytes)).decode("ascii")
+        info["subjectPublicKeyInfoBase64"] = encode_base64(bytes(spki_bytes))
 
     key_size_bits: int | None = None
     raw_bytes: bytes | None = None
@@ -59,7 +59,7 @@ def _build_unknown_public_key_info(cert_bytes: bytes, error: Exception) -> tuple
         candidate = bytes(public_key_bytes)
         if candidate:
             raw_bytes = candidate
-            info["publicKeyBase64"] = base64.b64encode(raw_bytes).decode("ascii")
+            info["publicKeyBase64"] = encode_base64(raw_bytes)
             info["publicKeyHex"] = encoding_leaf.colon_hex(raw_bytes)
             info["publicKeyHexLines"] = encoding_leaf.format_hex_bytes_lines(raw_bytes)
             key_size_bits = len(raw_bytes) * 8
@@ -67,7 +67,7 @@ def _build_unknown_public_key_info(cert_bytes: bytes, error: Exception) -> tuple
     if isinstance(wrapped_public_key_bytes, (bytes, bytearray)):
         wrapped_bytes = bytes(wrapped_public_key_bytes)
         if wrapped_bytes and (raw_bytes is None or wrapped_bytes != raw_bytes):
-            info["wrappedPublicKeyBase64"] = base64.b64encode(wrapped_bytes).decode("ascii")
+            info["wrappedPublicKeyBase64"] = encode_base64(wrapped_bytes)
             info["wrappedPublicKeyHexLines"] = encoding_leaf.format_hex_bytes_lines(wrapped_bytes)
 
     if isinstance(mldsa_details, Mapping):
@@ -118,12 +118,12 @@ def _serialize_public_key_info(public_key: Any) -> dict[str, Any]:
     info = {
         "type": public_key.__class__.__name__,
         "keySize": getattr(public_key, "key_size", None),
-        "subjectPublicKeyInfoBase64": base64.b64encode(
+        "subjectPublicKeyInfoBase64": encode_base64(
             public_key.public_bytes(
                 encoding=serialization.Encoding.DER,
                 format=serialization.PublicFormat.SubjectPublicKeyInfo,
             )
-        ).decode("ascii"),
+        ),
         "algorithm": {
             "name": None,
         },

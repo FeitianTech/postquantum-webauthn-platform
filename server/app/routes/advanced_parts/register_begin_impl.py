@@ -14,6 +14,7 @@ from fido2.webauthn import (
 
 from ... import attestation, config
 from ...attachments import normalize_attachment, resolve_effective_attachments
+from ...encoding import decode_hex
 from . import binary_helpers_impl, register_begin_support_impl
 
 
@@ -48,7 +49,7 @@ def advanced_register_begin_impl():
         try:
             user_id_bytes = binary_helpers_impl._extract_binary_value_impl(user_id_value)
             if isinstance(user_id_bytes, str):
-                user_id_bytes = bytes.fromhex(user_id_bytes)
+                user_id_bytes = decode_hex(user_id_bytes)
         except (ValueError, TypeError) as exc:
             return jsonify({"error": f"Invalid user ID format: {exc}"}), 400
     else:
@@ -60,7 +61,7 @@ def advanced_register_begin_impl():
         try:
             challenge_bytes = binary_helpers_impl._extract_binary_value_impl(challenge_value)
             if isinstance(challenge_bytes, str):
-                challenge_bytes = bytes.fromhex(challenge_bytes)
+                challenge_bytes = decode_hex(challenge_bytes)
         except (ValueError, TypeError) as exc:
             return jsonify({"error": f"Invalid challenge format: {exc}"}), 400
 

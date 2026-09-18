@@ -5,6 +5,8 @@ import struct
 from collections.abc import Mapping, Sequence
 from typing import Any
 
+from ...encoding import decode_hex
+
 
 def _structure_to_value(node: Mapping[str, Any]) -> Any:
     major_type = node.get("majorType")
@@ -23,7 +25,7 @@ def _structure_to_value(node: Mapping[str, Any]) -> Any:
         hex_value = node.get("hex")
         if isinstance(hex_value, str):
             try:
-                return bytes.fromhex(hex_value)
+                return decode_hex(hex_value)
             except ValueError:
                 return b""
         chunks = node.get("chunks")

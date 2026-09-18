@@ -1,11 +1,11 @@
 """Implementation helpers for certificate/attestation conversion wrappers."""
 from __future__ import annotations
 
-import base64
 from collections.abc import Callable, Mapping
 from typing import Any
 
 from ... import encoding
+from ...encoding import encode_base64
 
 
 def _convert_certificate_payload_impl(
@@ -56,7 +56,7 @@ def _convert_certificate_bytes_impl(
         return {}
 
     parsed_copy = dict(parsed)
-    parsed_copy["derBase64"] = parsed.get("derBase64") or base64.b64encode(cert_bytes).decode("ascii")
+    parsed_copy["derBase64"] = parsed.get("derBase64") or encode_base64(cert_bytes)
     parsed_copy.setdefault("pem", parsed.get("pem"))
     return convert_certificate_payload(parsed_copy, cert_bytes)
 

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import base64
 from collections.abc import Iterable, Mapping
 from typing import Any
 
@@ -9,6 +8,7 @@ from fido2.cose import CoseKey
 from fido2.webauthn import AttestedCredentialData
 
 from ...attachments import normalize_attachment
+from ...encoding import encode_base64url
 from . import algorithm_helpers_impl, binary_helpers_impl
 
 
@@ -149,13 +149,13 @@ def _parse_client_supplied_credentials_impl(
             )
 
             serialized_entry: dict[str, Any] = {
-                "credentialId": base64.urlsafe_b64encode(credential_id_bytes).decode("ascii").rstrip("="),
-                "publicKey": base64.urlsafe_b64encode(public_key_bytes).decode("ascii").rstrip("="),
+                "credentialId": encode_base64url(credential_id_bytes),
+                "publicKey": encode_base64url(public_key_bytes),
                 "signCount": int(entry.get("signCount")) if isinstance(entry.get("signCount"), int) else 0,
                 "resident": bool(resident_flag),
             }
             if aaguid_bytes:
-                serialized_entry["aaguid"] = base64.urlsafe_b64encode(aaguid_bytes).decode("ascii").rstrip("=")
+                serialized_entry["aaguid"] = encode_base64url(aaguid_bytes)
             if attachment_value:
                 serialized_entry["authenticatorAttachment"] = attachment_value
             if algorithm_value is not None:

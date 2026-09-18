@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import base64
 from collections.abc import Mapping
 from typing import Any
 
@@ -16,6 +15,7 @@ from ...attachments import (
     resolve_effective_attachments,
 )
 from ...challenge_registry import consume_ceremony_state
+from ...encoding import encode_base64url
 from ...sign_count import sign_count_status
 from .. import binary_helpers
 from . import algorithm_helpers_impl, binary_helpers_impl, parsing_helpers_impl
@@ -186,7 +186,7 @@ def advanced_authenticate_complete_impl():
         }
         if credential_id_bytes:
             response_payload["failedCredentialId"] = (
-                base64.urlsafe_b64encode(credential_id_bytes).decode("ascii").rstrip("=")
+                encode_base64url(credential_id_bytes)
             )
         return _fail(response_payload)
 
@@ -282,7 +282,7 @@ def advanced_authenticate_complete_impl():
             failed_credential_id = None
             if credential_id:
                 failed_credential_id = (
-                    base64.urlsafe_b64encode(credential_id).decode("ascii").rstrip("=")
+                    encode_base64url(credential_id)
                 )
 
             if credential_alg is not None and not _server_supports_algorithm(credential_alg):
@@ -342,7 +342,7 @@ def advanced_authenticate_complete_impl():
 
         authenticated_id = None
         if credential_id_bytes:
-            authenticated_id = base64.urlsafe_b64encode(credential_id_bytes).decode("ascii").rstrip("=")
+            authenticated_id = encode_base64url(credential_id_bytes)
 
         sign_count_value = None
         credential_response = response.get("response", {}) if isinstance(response, Mapping) else {}
@@ -392,6 +392,6 @@ def advanced_authenticate_complete_impl():
             failed_credential_id = binary_helpers.extract_assertion_credential_id(response)
         if failed_credential_id:
             response_payload["failedCredentialId"] = (
-                base64.urlsafe_b64encode(failed_credential_id).decode("ascii").rstrip("=")
+                encode_base64url(failed_credential_id)
             )
         return jsonify(response_payload), 400
