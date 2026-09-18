@@ -15,12 +15,12 @@ def test_get_mapping_entry_accepts_bytebuffer_key_variants():
     assert decode_module._get_mapping_entry({"1": "str"}, ByteBuffer(b"\x01")) == "str"
 
 
-def test_decode_public_key_credential_marks_authentication_without_attestation(monkeypatch):
+def test_decode_public_key_credential_marks_authentication_without_attestation(monkeypatch, details_runtime):
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     auth_bytes = b"\x00" * 37
     monkeypatch.setattr(
-        decode_module,
+        details_runtime,
         "_describe_authenticator_data_bytes",
         lambda _value: {"parsed": True},
     )

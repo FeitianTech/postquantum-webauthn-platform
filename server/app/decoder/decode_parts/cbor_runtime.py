@@ -11,6 +11,7 @@ import cbor2
 from fido2 import cbor
 
 from ...attestation import make_json_safe
+from . import details_runtime
 from .cbor_lenient import _lenient_decode_from, _structure_to_value
 from .cbor_sequence import _decode_cbor_sequence_impl
 from .cbor_strict import _CborDecodingError, _decode_cbor_structure
@@ -239,7 +240,7 @@ def _try_decode_cbor(data: bytes, encoding: str) -> dict[str, Any] | None:
             "format": "CBOR",
             "inputEncoding": encoding,
             "decoded": decoded_payload,
-            "binary": _binary_summary(data, encoding),
+            "binary": details_runtime._binary_summary(data, encoding),
         }
 
     structures, values, consumed_total, remaining = _decode_cbor_sequence(payload)
@@ -384,7 +385,7 @@ def _try_decode_cbor(data: bytes, encoding: str) -> dict[str, Any] | None:
         "format": "CBOR",
         "inputEncoding": encoding,
         "decoded": decoded_payload,
-        "binary": _binary_summary(data, encoding),
+        "binary": details_runtime._binary_summary(data, encoding),
     }
     if warnings:
         result["malformed"] = warnings
