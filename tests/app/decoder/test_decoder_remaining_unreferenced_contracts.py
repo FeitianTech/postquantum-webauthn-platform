@@ -100,7 +100,6 @@ def test_remaining_certificate_conversion_and_summary_helpers(monkeypatch):
             "pem": "PEM",
             "subject": "CN=Demo",
         },
-        raising=False,
     )
 
     chain = decode_module._convert_certificate_chain([b"\x01\x02", "AQI=", {"derBase64": "AQI="}])

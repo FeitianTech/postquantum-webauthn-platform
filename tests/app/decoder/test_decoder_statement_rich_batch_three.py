@@ -57,7 +57,6 @@ def test_try_decode_cbor_make_credential_output_merges_trailing_signature_and_bu
             1,
             trailing_signature,
         ),
-        raising=False,
     )
 
     result = decode_module._try_decode_cbor(b"\x00\xa0", "hex")
@@ -92,13 +91,11 @@ def test_try_decode_cbor_status_fallback_promotes_get_assertion_and_records_trai
             1,
             b"\x12\x34",
         ),
-        raising=False,
     )
     monkeypatch.setattr(
         decode_module,
         "_repair_get_assertion_entries",
         lambda structure, value, raw_bytes=None: (structure, value, None),
-        raising=False,
     )
 
     result = decode_module._try_decode_cbor(b"\x00\xa0", "hex")

@@ -88,7 +88,6 @@ def test_build_subject_key_identifier_lines_handles_extension_bytes_der_failures
         decode_module.x509,
         "load_der_x509_certificate",
         lambda _value: _Certificate(),
-        raising=False,
     )
 
     assert (
@@ -138,7 +137,6 @@ def test_binary_extractors_and_authenticator_fallback_paths(monkeypatch):
         decode_module,
         "_extract_authenticator_bytes_from_attestation",
         lambda _entry: b"from-attestation",
-        raising=False,
     )
 
     assert (
@@ -168,7 +166,7 @@ def test_append_authenticator_section_uses_response_context_public_key_algorithm
             "public_key_lines": ["pk"],
         }
 
-    monkeypatch.setattr(decode_module, "_collect_attested_info", _collect, raising=False)
+    monkeypatch.setattr(decode_module, "_collect_attested_info", _collect)
 
     lines = []
     decode_module._extend_with_authenticator_details(
@@ -234,7 +232,6 @@ def test_build_get_assertion_expanded_json_handles_invalid_trailing_hex(monkeypa
             auth_key: {"trailingBytesHex": "not-hex"},
             sig_key: None,
         },
-        raising=False,
     )
 
     result = decode_module._build_get_assertion_expanded_json({2: b"auth"})

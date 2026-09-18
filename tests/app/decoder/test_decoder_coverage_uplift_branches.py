@@ -23,7 +23,6 @@ def test_decode_public_key_credential_marks_authentication_without_attestation(m
         decode_module,
         "_describe_authenticator_data_bytes",
         lambda _value: {"parsed": True},
-        raising=False,
     )
 
     credential = {
@@ -65,7 +64,6 @@ def test_decode_cbor_sequence_uses_structure_to_value_when_fallback_structure_pa
         decode_module.cbor,
         "decode_from",
         lambda _payload: (_ for _ in ()).throw(ValueError("boom")),
-        raising=False,
     )
 
     class _BrokenDecoder:
@@ -75,7 +73,7 @@ def test_decode_cbor_sequence_uses_structure_to_value_when_fallback_structure_pa
         def decode(self):
             raise ValueError("boom")
 
-    monkeypatch.setattr(decode_module.cbor2, "CBORDecoder", _BrokenDecoder, raising=False)
+    monkeypatch.setattr(decode_module.cbor2, "CBORDecoder", _BrokenDecoder)
     monkeypatch.setattr(
         decode_module,
         "_decode_cbor_structure",
@@ -89,7 +87,6 @@ def test_decode_cbor_sequence_uses_structure_to_value_when_fallback_structure_pa
             },
             1,
         ),
-        raising=False,
     )
 
     structures, values, consumed, remaining = decode_module._decode_cbor_sequence(b"\x01")
@@ -139,13 +136,11 @@ def test_repair_get_assertion_entries_recovers_signature_from_lenient_map_entrie
         decode_module,
         "_extract_get_assertion_trailing_from_raw",
         lambda _raw: (None, {}),
-        raising=False,
     )
     monkeypatch.setattr(
         decode_module,
         "_split_get_assertion_trailing_fields",
         lambda signature: (signature, {}),
-        raising=False,
     )
 
     base_structure = {"entries": [], "length": 0, "summary": "map[0]"}
@@ -154,7 +149,6 @@ def test_repair_get_assertion_entries_recovers_signature_from_lenient_map_entrie
         decode_module,
         "_extract_lenient_map_entries",
         lambda _raw: [(3, bytearray(b"\x01\x02"))],
-        raising=False,
     )
     _, repaired_value_int_key, repaired_sig_int_key = decode_module._repair_get_assertion_entries(
         dict(base_structure),
@@ -168,7 +162,6 @@ def test_repair_get_assertion_entries_recovers_signature_from_lenient_map_entrie
         decode_module,
         "_extract_lenient_map_entries",
         lambda _raw: [(3, "not-bytes"), (b"\x99", 1)],
-        raising=False,
     )
     _, repaired_value_bytes_key, repaired_sig_bytes_key = decode_module._repair_get_assertion_entries(
         dict(base_structure),
@@ -189,31 +182,26 @@ def test_try_decode_cbor_merges_assertion_signature_for_direct_get_assertion_cla
         decode_module,
         "_decode_cbor_sequence",
         lambda _payload: ([structure], [{2: b"auth"}], 1, b""),
-        raising=False,
     )
     monkeypatch.setattr(
         decode_module,
         "_classify_ctap_map",
         lambda _value: "get_assertion_output",
-        raising=False,
     )
     monkeypatch.setattr(
         decode_module,
         "_repair_get_assertion_entries",
         lambda structure, value, raw_bytes=None: (structure, {2: b"auth", 3: b"\xbb"}, b"\xbb"),
-        raising=False,
     )
     monkeypatch.setattr(
         decode_module,
         "_build_get_assertion_expanded_json",
         lambda _value, _raw: {"path": "direct"},
-        raising=False,
     )
     monkeypatch.setattr(
         decode_module,
         "_interpret_ctap_cbor_value",
         lambda _value: None,
-        raising=False,
     )
 
     result = decode_module._try_decode_cbor(b"\x00\xa0", "hex")
@@ -230,31 +218,26 @@ def test_try_decode_cbor_promotes_other_classification_when_repair_finds_signatu
         decode_module,
         "_decode_cbor_sequence",
         lambda _payload: ([structure], [{2: b"auth"}], 1, b""),
-        raising=False,
     )
     monkeypatch.setattr(
         decode_module,
         "_classify_ctap_map",
         lambda _value: "other",
-        raising=False,
     )
     monkeypatch.setattr(
         decode_module,
         "_repair_get_assertion_entries",
         lambda structure, value, raw_bytes=None: (structure, {2: b"auth", 3: b"\xaa"}, b"\xaa"),
-        raising=False,
     )
     monkeypatch.setattr(
         decode_module,
         "_build_get_assertion_expanded_json",
         lambda _value, _raw: {"path": "promoted"},
-        raising=False,
     )
     monkeypatch.setattr(
         decode_module,
         "_interpret_ctap_cbor_value",
         lambda _value: None,
-        raising=False,
     )
 
     result = decode_module._try_decode_cbor(b"\xa0", "hex")
@@ -314,13 +297,11 @@ def test_build_subject_key_identifier_lines_derives_digest_when_ski_extension_mi
         decode_module.x509,
         "load_der_x509_certificate",
         lambda _der: _Certificate(),
-        raising=False,
     )
     monkeypatch.setattr(
         decode_module.x509.SubjectKeyIdentifier,
         "from_public_key",
         lambda _public_key: SimpleNamespace(digest=b"\x01\x23"),
-        raising=False,
     )
 
     result = decode_module._build_subject_key_identifier_lines(
@@ -338,14 +319,13 @@ def test_extract_authenticator_bytes_from_attestation_uses_raw_base64_and_handle
         decode_module,
         "_extract_bytes_from_binary",
         lambda _entry: None,
-        raising=False,
     )
 
     class _FakeAttestation:
         def __init__(self, _raw):
             self.auth_data = b"\x11\x22"
 
-    monkeypatch.setattr(decode_module, "AttestationObject", _FakeAttestation, raising=False)
+    monkeypatch.setattr(decode_module, "AttestationObject", _FakeAttestation)
     extracted = decode_module._extract_authenticator_bytes_from_attestation(
         {"raw": " AQI= "}
     )
@@ -355,7 +335,6 @@ def test_extract_authenticator_bytes_from_attestation_uses_raw_base64_and_handle
         decode_module.base64,
         "b64decode",
         lambda *_args, **_kwargs: (_ for _ in ()).throw(ValueError("invalid")),
-        raising=False,
     )
     assert (
         decode_module._extract_authenticator_bytes_from_attestation({"raw": "AQI="})
@@ -376,7 +355,6 @@ def test_extract_attestation_certificate_handles_non_string_chain_entries_and_se
         decode_module,
         "serialize_attestation_certificate",
         lambda _cert: (_ for _ in ()).throw(RuntimeError("boom")),
-        raising=False,
     )
     assert decode_module._extract_attestation_certificate({"x5c": [_BytesEntry()]}) is None
 

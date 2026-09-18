@@ -23,7 +23,7 @@ def test_decode_public_key_credential_includes_signature_and_user_handle_summari
             return b"\x01\x02", "base64url"
         return None
 
-    monkeypatch.setattr(decode_module, "_decode_binary_field", _decode_binary, raising=False)
+    monkeypatch.setattr(decode_module, "_decode_binary_field", _decode_binary)
 
     result = decode_module._decode_public_key_credential(
         {
@@ -57,14 +57,13 @@ def test_decode_pem_certificates_skips_decode_errors_and_uses_single_certificate
 def test_decode_binary_payload_uses_authenticator_data_path_when_other_binary_decoders_fail(monkeypatch):
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
-    monkeypatch.setattr(decode_module, "_try_decode_utf8", lambda _data: None, raising=False)
-    monkeypatch.setattr(decode_module, "_try_decode_certificate_bytes", lambda _data, _enc: None, raising=False)
-    monkeypatch.setattr(decode_module, "_try_decode_attestation_object", lambda _data, _enc: None, raising=False)
+    monkeypatch.setattr(decode_module, "_try_decode_utf8", lambda _data: None)
+    monkeypatch.setattr(decode_module, "_try_decode_certificate_bytes", lambda _data, _enc: None)
+    monkeypatch.setattr(decode_module, "_try_decode_attestation_object", lambda _data, _enc: None)
     monkeypatch.setattr(
         decode_module,
         "_try_decode_authenticator_data",
         lambda _data, enc: {"format": "Authenticator data (binary)", "inputEncoding": enc},
-        raising=False,
     )
 
     result = decode_module._decode_binary_payload(b"raw", "hex")
@@ -86,7 +85,6 @@ def test_decode_binary_input_uses_urlsafe_fallback_when_strict_base64_decode_fai
         decode_module.base64,
         "b64decode",
         _patched_b64decode,
-        raising=False,
     )
 
     data, encoding = decode_module._decode_binary_input("AQID")
@@ -138,7 +136,6 @@ def test_cbor_parser_handles_indefinite_container_breaks_partial_data_and_parser
         decode_module,
         "_read_cbor_length",
         lambda *_args, **_kwargs: (None, 1),
-        raising=False,
     )
     with pytest.raises(decode_module._CborDecodingError, match="Invalid indefinite length for unsigned integer"):
         decode_module._parse_cbor_item(b"\x00", 0)
@@ -202,7 +199,6 @@ def test_expand_cbor_value_falls_back_to_make_json_safe_for_unknown_types(monkey
         decode_module,
         "make_json_safe",
         lambda value: {"safeType": type(value).__name__},
-        raising=False,
     )
 
     expanded = decode_module._expand_cbor_value(_Unknown())
@@ -216,13 +212,11 @@ def test_try_decode_authenticator_data_returns_structured_payload_on_success(mon
         decode_module,
         "_describe_authenticator_data_bytes",
         lambda _data: {"parsed": True},
-        raising=False,
     )
     monkeypatch.setattr(
         decode_module,
         "_binary_summary",
         lambda data, encoding=None: {"hex": data.hex(), "encoding": encoding},
-        raising=False,
     )
 
     result = decode_module._try_decode_authenticator_data(b"\x01\x02", "hex")

@@ -17,31 +17,26 @@ def test_decoder_certificate_summary_and_generic_format_residual_paths(monkeypat
         decode_module,
         "_build_subject_public_key_info_lines",
         lambda _info: ["Subject Public Key Info:"],
-        raising=False,
     )
     monkeypatch.setattr(
         decode_module,
         "_build_certificate_extensions_lines",
         lambda _extensions: ["X509v3 extensions:"],
-        raising=False,
     )
     monkeypatch.setattr(
         decode_module,
         "_build_signature_lines",
         lambda _signature: ["Signature:"],
-        raising=False,
     )
     monkeypatch.setattr(
         decode_module,
         "_build_fingerprint_lines",
         lambda _fingerprints: ["Fingerprint:"],
-        raising=False,
     )
     monkeypatch.setattr(
         decode_module,
         "_build_subject_key_identifier_lines",
         lambda _decoded: ["aa:bb"],
-        raising=False,
     )
 
     summary_lines = decode_module._build_certificate_summary_lines(
