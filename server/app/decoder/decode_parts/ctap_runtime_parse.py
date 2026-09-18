@@ -1,13 +1,25 @@
-"""Extracted CTAP parsing and conversion helper function bodies.
-
-These functions are executed via decode.py wrappers that rebind globals to the
-facade module, preserving monkeypatch-driven behavior in tests.
-"""
-# pyright: reportUndefinedVariable=false
+"""CTAP parsing and field conversion helpers."""
+# pyright: reportUndefinedVariable=false  # the sibling runtime helpers still come from the carrier
 from __future__ import annotations
 
+import base64
 from collections.abc import Mapping, Sequence
 from typing import Any
+
+from fido2.webauthn import AuthenticatorData
+
+from ...attestation import encode_base64url
+from .cbor_lenient import _lenient_decode_from, _lenient_read_uint
+from .ctap_convert_leaf import (
+    _attempt_decode_cbor_map,
+    _convert_ctap_credential_descriptor,
+    _convert_optional_ctap_field,
+    _normalize_user_mapping,
+)
+from .key_utils import MISSING as _MISSING
+from .key_utils import coerce_cbor_bytes as _coerce_cbor_bytes
+from .key_utils import get_mapping_entry as _get_mapping_entry
+from .key_utils import hex_json_safe as _hex_json_safe
 
 
 def _convert_ctap_allow_list(entry: Any) -> Any:
