@@ -67,7 +67,7 @@ def test_simple_register_begin_persists_state_and_filters_algorithms(monkeypatch
     monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FakeServer())
     monkeypatch.setattr(
         simple_parsing,
-        "_parse_client_credentials_impl",
+        "_parse_client_credentials",
         lambda _raw: ([], [{"credentialId": "cred-1", "publicKey": "pk-1", "aaguid": "ag-1"}])
     )
 
@@ -101,7 +101,7 @@ def test_simple_authenticate_begin_requires_valid_credentials(monkeypatch, simpl
     config_module = pytest.importorskip("server.app.config")
     pytest.importorskip("server.app.app")
 
-    monkeypatch.setattr(simple_parsing, "_parse_client_credentials_impl", lambda _raw: ([], []))
+    monkeypatch.setattr(simple_parsing, "_parse_client_credentials", lambda _raw: ([], []))
 
     with config_module.app.test_client() as client:
         response = client.post(
@@ -126,7 +126,7 @@ def test_simple_authenticate_complete_success_returns_sign_count(monkeypatch, co
     monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FakeServer())
     monkeypatch.setattr(
         simple_parsing,
-        "_parse_client_credentials_impl",
+        "_parse_client_credentials",
         lambda _raw: ([object()], [{"credentialId": _b64url(credential_id)}])
     )
 
@@ -176,7 +176,7 @@ def test_simple_authenticate_complete_rejects_request_state_fallback(monkeypatch
     monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FakeServer())
     monkeypatch.setattr(
         simple_parsing,
-        "_parse_client_credentials_impl",
+        "_parse_client_credentials",
         lambda _raw: ([object()], [{"credentialId": _b64url(credential_id)}])
     )
 
@@ -207,7 +207,7 @@ def test_simple_authenticate_complete_missing_state_returns_400(monkeypatch, sim
 
     monkeypatch.setattr(
         simple_parsing,
-        "_parse_client_credentials_impl",
+        "_parse_client_credentials",
         lambda _raw: ([object()], [{"credentialId": "cred-1"}])
     )
 

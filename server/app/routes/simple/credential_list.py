@@ -10,7 +10,7 @@ from ...attachments import normalize_attachment
 from ...encoding import encode_base64, encode_base64url
 
 
-def add_registration_metadata_impl(
+def add_registration_metadata(
     target: dict[str, Any], source: Mapping[str, Any]
 ) -> None:
     registration_response = source.get("registration_response")
@@ -40,7 +40,7 @@ def add_registration_metadata_impl(
         target["clientDataJSON"] = client_data_value
 
 
-def build_credential_info_from_dict_credential_data_impl(
+def build_credential_info_from_dict_credential_data(
     email: str, cred: Mapping[str, Any]
 ) -> dict[str, Any]:
     cred_data = cred["credential_data"]
@@ -100,7 +100,7 @@ def build_credential_info_from_dict_credential_data_impl(
         credential_info["attestationCertificates"] = certificates_list
         credential_info["attestation_certificates"] = certificates_list
 
-    add_registration_metadata_impl(credential_info, cred)
+    add_registration_metadata(credential_info, cred)
 
     storage.add_public_key_material(credential_info, cred_data.get("public_key", {}))
     if credential_info.get("publicKeyAlgorithm") is not None:
@@ -156,7 +156,7 @@ def build_credential_info_from_dict_credential_data_impl(
     return credential_info
 
 
-def build_credential_info_from_object_credential_data_impl(
+def build_credential_info_from_object_credential_data(
     email: str, cred: Mapping[str, Any]
 ) -> dict[str, Any]:
     cred_data = cred["credential_data"]
@@ -225,7 +225,7 @@ def build_credential_info_from_object_credential_data_impl(
     if attachment_value is not None:
         properties_copy["authenticatorAttachment"] = attachment_value
 
-    add_registration_metadata_impl(credential_info, cred)
+    add_registration_metadata(credential_info, cred)
 
     storage.add_public_key_material(credential_info, getattr(cred_data, "public_key", {}))
     if credential_info.get("publicKeyAlgorithm") is not None:
@@ -243,7 +243,7 @@ def build_credential_info_from_object_credential_data_impl(
     return credential_info
 
 
-def build_credential_info_from_bare_credential_impl(email: str, cred: Any) -> dict[str, Any]:
+def build_credential_info_from_bare_credential(email: str, cred: Any) -> dict[str, Any]:
     aaguid_hex = attestation.coerce_aaguid_hex(getattr(cred, "aaguid", None))
 
     credential_info = {
@@ -288,7 +288,7 @@ def build_credential_info_from_bare_credential_impl(email: str, cred: Any) -> di
     return credential_info
 
 
-def list_credentials_impl():
+def list_credentials():
     metadata_session_id = metadata.ensure_metadata_session_id()
     if request.method == "DELETE":
         removed = 0
@@ -310,15 +310,15 @@ def list_credentials_impl():
                     try:
                         if isinstance(cred, dict) and "credential_data" in cred:
                             if isinstance(cred["credential_data"], dict):
-                                credential_info = build_credential_info_from_dict_credential_data_impl(email,
+                                credential_info = build_credential_info_from_dict_credential_data(email,
                                     cred,
                                 )
                             else:
-                                credential_info = build_credential_info_from_object_credential_data_impl(email,
+                                credential_info = build_credential_info_from_object_credential_data(email,
                                     cred,
                                 )
                         else:
-                            credential_info = build_credential_info_from_bare_credential_impl(email,
+                            credential_info = build_credential_info_from_bare_credential(email,
                                 cred,
                             )
 

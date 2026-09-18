@@ -15,7 +15,7 @@ from ... import encoding
 from ..binary_helpers import decode_binary_text
 
 
-def _add_base64_padding_impl(value: str) -> str:
+def _add_base64_padding(value: str) -> str:
     """Pad *value* to a multiple of four characters.
 
     Retained because ``simple.__all__`` exports it; the decoders no longer need
@@ -25,7 +25,7 @@ def _add_base64_padding_impl(value: str) -> str:
     return value + "=" * (-len(value) % 4)
 
 
-def _decode_binary_value_impl(value: Any) -> bytes:
+def _decode_binary_value(value: Any) -> bytes:
     if value is None:
         raise ValueError("missing binary value")
 
@@ -49,7 +49,7 @@ def _decode_binary_value_impl(value: Any) -> bytes:
     raise ValueError("unsupported binary value type")
 
 
-def _select_first_impl(mapping: Mapping[str, Any], keys: Sequence[str]) -> Any:
+def _select_first(mapping: Mapping[str, Any], keys: Sequence[str]) -> Any:
     """Return the value of the first key in *keys* present in *mapping*.
 
     Unlike ``advanced.parsing_helpers_impl._select_first_impl``, a

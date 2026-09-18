@@ -203,7 +203,7 @@ def test_authenticate_complete_ignores_request_state_and_handles_bad_matched_cre
 
     monkeypatch.setattr(
         simple_parsing,
-        "_parse_client_credentials_impl",
+        "_parse_client_credentials",
         lambda _raw: ([SimpleNamespace(credential_id=b"\x01")], [{"credentialId": "AQ"}])
     )
     monkeypatch.setattr(

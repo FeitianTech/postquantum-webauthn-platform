@@ -48,7 +48,7 @@ def test_authenticate_complete_invalid_request_state_fallback_returns_400(monkey
 
     monkeypatch.setattr(
         simple_parsing,
-        "_parse_client_credentials_impl",
+        "_parse_client_credentials",
         lambda _raw: ([object()], [{"credentialId": "cred-1"}])
     )
 
@@ -87,7 +87,7 @@ def test_authenticate_complete_malformed_authenticator_data_is_rejected(monkeypa
     monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FakeServer())
     monkeypatch.setattr(
         simple_parsing,
-        "_parse_client_credentials_impl",
+        "_parse_client_credentials",
         lambda _raw: ([object()], [{"credentialId": _b64url(credential_id)}])
     )
 

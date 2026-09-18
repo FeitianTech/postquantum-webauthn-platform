@@ -38,15 +38,15 @@ __all__ = [
 _SIMPLE_ALLOWED_ALGORITHMS = registration._SIMPLE_ALLOWED_ALGORITHMS
 
 # base64 padding and binary decode primitives.
-_add_base64_padding = binary._add_base64_padding_impl
+_add_base64_padding = binary._add_base64_padding
 _decode_base64url_bytes = binary_helpers.decode_base64url_bytes
-_decode_binary_value = binary._decode_binary_value_impl
+_decode_binary_value = binary._decode_binary_value
 _extract_assertion_credential_id = binary_helpers.extract_assertion_credential_id
-_select_first = binary._select_first_impl
+_select_first = binary._select_first
 
 # Session-credential serialisation and parsing.
-_parse_client_credentials = parsing._parse_client_credentials_impl
-_serialize_credential_for_session = parsing._serialize_credential_for_session_impl
+_parse_client_credentials = parsing._parse_client_credentials
+_serialize_credential_for_session = parsing._serialize_credential_for_session
 
 
 @app.route("/api/register/begin", methods=["POST"])
@@ -61,14 +61,14 @@ def register_complete():
 
 @app.route("/api/authenticate/begin", methods=["POST"])
 def authenticate_begin():
-    return authentication.authenticate_begin_impl()
+    return authentication.authenticate_begin()
 
 
 @app.route("/api/authenticate/complete", methods=["POST"])
 def authenticate_complete():
-    return authentication.authenticate_complete_impl()
+    return authentication.authenticate_complete()
 
 
 @app.route("/api/credentials", methods=["GET", "DELETE"])
 def list_credentials():
-    return credential_list.list_credentials_impl()
+    return credential_list.list_credentials()

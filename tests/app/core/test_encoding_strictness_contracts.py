@@ -85,7 +85,7 @@ def test_advanced_client_binary_rejects_plain_text(advanced_binary):
 
 def test_simple_binary_value_rejects_plain_text(simple_binary):
     with pytest.raises(ValueError):
-        simple_binary._decode_binary_value_impl(PLAIN_TEXT)
+        simple_binary._decode_binary_value(PLAIN_TEXT)
 
 
 def test_base64url_helpers_do_not_return_garbage_for_plain_text(shared_binary_helpers):
@@ -109,8 +109,8 @@ def test_credential_intake_reads_both_base64_alphabets_exactly(advanced_binary, 
 
     assert advanced_binary._decode_client_binary_impl(standard) == raw
     assert advanced_binary._decode_client_binary_impl(urlsafe) == raw
-    assert simple_binary._decode_binary_value_impl(standard) == raw
-    assert simple_binary._decode_binary_value_impl(urlsafe) == raw
+    assert simple_binary._decode_binary_value(standard) == raw
+    assert simple_binary._decode_binary_value(urlsafe) == raw
 
 
 def test_mds_certificate_route_decodes_base64url_without_truncation(monkeypatch):
