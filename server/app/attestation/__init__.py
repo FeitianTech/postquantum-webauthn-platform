@@ -14,9 +14,9 @@ from . import (
     certificates,
     checks,
     classical,
+    constants,
     formatting,
     pqc,
-    runtime_state,
     trust,
 )
 
@@ -40,8 +40,8 @@ __all__ = [
 app = config.app
 
 # Constants shared with the fragments.
-AAGUID_EXTENSION_OID = runtime_state.AAGUID_EXTENSION_OID
-EXTENSION_DISPLAY_METADATA = runtime_state.EXTENSION_DISPLAY_METADATA
+AAGUID_EXTENSION_OID = constants.AAGUID_EXTENSION_OID
+EXTENSION_DISPLAY_METADATA = constants.EXTENSION_DISPLAY_METADATA
 _PQC_ALGORITHM_NAME_TO_ID = pqc._PQC_ALGORITHM_NAME_TO_ID
 CRED_PROTECT_LABELS = aaguid.CRED_PROTECT_LABELS
 

@@ -24,7 +24,7 @@ from fido2.webauthn import RegistrationResponse
 from .. import encoding
 from ..encoding import encode_base64
 from . import formatting, trust
-from .runtime_state import EXTENSION_DISPLAY_METADATA
+from .constants import EXTENSION_DISPLAY_METADATA
 
 _HASH_NORMALISE_PATTERN = re.compile(r"sha-?(\d{3})$", re.IGNORECASE)
 
