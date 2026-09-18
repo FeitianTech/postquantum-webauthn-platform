@@ -196,48 +196,10 @@ def _extract_authenticator_bytes_from_attestation(attestation_entry: Any) -> byt
 
 __all__ = ["decode_payload_text"]
 
-_CTAP_COMMAND_MAP: dict[int, str] = {
-    0x01: "AuthenticatorMakeCredential command",
-    0x02: "AuthenticatorGetAssertion command",
-}
-
-_CTAP_STATUS_MAP: dict[int, str] = {
-    0x00: "Success status",
-}
-
-
-
-def _extract_ctap_prefix(data: bytes) -> tuple[dict[str, Any] | None, bytes]:
-    if not data:
-        return None, data
-    code = data[0]
-    if code in _CTAP_COMMAND_MAP:
-        return (
-            {
-                "code": code,
-                "codeHex": f"0x{code:02x}",
-                "meaning": _CTAP_COMMAND_MAP[code],
-                "kind": "command",
-            },
-            data[1:],
-        )
-    if code in _CTAP_STATUS_MAP:
-        return (
-            {
-                "code": code,
-                "codeHex": f"0x{code:02x}",
-                "meaning": _CTAP_STATUS_MAP[code],
-                "kind": "status",
-            },
-            data[1:],
-        )
-    return None, data
-
-
-def _is_padding_bytes(data: bytes) -> bool:
-    if not data:
-        return True
-    return all(byte in (0x00, 0xFF) for byte in data)
+_CTAP_COMMAND_MAP = cbor_runtime._CTAP_COMMAND_MAP
+_CTAP_STATUS_MAP = cbor_runtime._CTAP_STATUS_MAP
+_extract_ctap_prefix = cbor_runtime._extract_ctap_prefix
+_is_padding_bytes = cbor_runtime._is_padding_bytes
 
 
 # Compatibility shims for tests and callers that monkeypatch decoder-local helpers.
@@ -296,8 +258,7 @@ def _extract_get_assertion_trailing_from_raw(
 
 
 
-def _json_safe_with_stringified_keys(value: Any) -> Any:
-    return _stringify_mapping_keys(make_json_safe(value))
+_json_safe_with_stringified_keys = cbor_runtime._json_safe_with_stringified_keys
 
 
 def _run_with_decode_globals(func: Callable[..., Any], *args: Any, **kwargs: Any) -> Any:
