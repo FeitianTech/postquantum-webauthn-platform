@@ -11,7 +11,7 @@ from __future__ import annotations
 from ...config import app
 from .. import binary_helpers
 from . import (
-    authenticate_impl,
+    authenticate,
     binary,
     credentials_route_impl,
     parsing,
@@ -62,12 +62,12 @@ def register_complete():
 
 @app.route("/api/authenticate/begin", methods=["POST"])
 def authenticate_begin():
-    return authenticate_impl.authenticate_begin_impl()
+    return authenticate.authenticate_begin_impl()
 
 
 @app.route("/api/authenticate/complete", methods=["POST"])
 def authenticate_complete():
-    return authenticate_impl.authenticate_complete_impl()
+    return authenticate.authenticate_complete_impl()
 
 
 @app.route("/api/credentials", methods=["GET", "DELETE"])
