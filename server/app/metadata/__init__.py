@@ -12,10 +12,7 @@ from . import (
     blob,
     effective_snapshot_runtime,
     entry_payload_runtime,
-    env_runtime,
     runtime_state,
-    session_cleanup_runtime,
-    session_identity_runtime,
     sessions,
     upload_runtime,
     verifier_runtime,
@@ -59,9 +56,9 @@ store_metadata_cache_entry = blob.store_metadata_cache_entry
 download_metadata_blob = blob.download_metadata_blob
 
 # Environment and cleanup interval helpers.
-_env_flag = env_runtime._env_flag
-_resolve_cleanup_interval = env_runtime._resolve_cleanup_interval
-_cleanup_async_enabled = env_runtime._cleanup_async_enabled
+_env_flag = sessions._env_flag
+_resolve_cleanup_interval = sessions._resolve_cleanup_interval
+_cleanup_async_enabled = sessions._cleanup_async_enabled
 
 # Repository upload helpers.
 _safe_metadata_repo_filename = upload_runtime._safe_metadata_repo_filename
@@ -88,20 +85,20 @@ _load_base_full_snapshot = blob._load_base_full_snapshot
 load_packaged_explorer_summary = blob.load_packaged_explorer_summary
 
 # Session cleanup worker and scheduling.
-_touch_session_last_access = session_cleanup_runtime._touch_session_last_access
-_resolve_session_last_access = session_cleanup_runtime._resolve_session_last_access
-_maybe_cleanup_inactive_sessions = session_cleanup_runtime._maybe_cleanup_inactive_sessions
-_run_inactive_session_cleanup_worker = session_cleanup_runtime._run_inactive_session_cleanup_worker
-_schedule_inactive_session_cleanup = session_cleanup_runtime._schedule_inactive_session_cleanup
+_touch_session_last_access = sessions._touch_session_last_access
+_resolve_session_last_access = sessions._resolve_session_last_access
+_maybe_cleanup_inactive_sessions = sessions._maybe_cleanup_inactive_sessions
+_run_inactive_session_cleanup_worker = sessions._run_inactive_session_cleanup_worker
+_schedule_inactive_session_cleanup = sessions._schedule_inactive_session_cleanup
 
 # Session identifier, cookie, and directory helpers.
-_normalise_session_identifier = session_identity_runtime._normalise_session_identifier
-_schedule_session_cookie = session_identity_runtime._schedule_session_cookie
-_get_metadata_session_id = session_identity_runtime._get_metadata_session_id
-ensure_metadata_session_id = session_identity_runtime.ensure_metadata_session_id
-_session_metadata_directory = session_identity_runtime._session_metadata_directory
-_note_session_activity = session_identity_runtime._note_session_activity
-_validate_session_metadata_filename = session_identity_runtime._validate_session_metadata_filename
+_normalise_session_identifier = sessions._normalise_session_identifier
+_schedule_session_cookie = sessions._schedule_session_cookie
+_get_metadata_session_id = sessions._get_metadata_session_id
+ensure_metadata_session_id = sessions.ensure_metadata_session_id
+_session_metadata_directory = sessions._session_metadata_directory
+_note_session_activity = sessions._note_session_activity
+_validate_session_metadata_filename = sessions._validate_session_metadata_filename
 
 # Session metadata item CRUD.
 _prune_session_metadata_directory = sessions._prune_session_metadata_directory
