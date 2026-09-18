@@ -292,23 +292,7 @@ _RUNTIME_REBOUND_CACHE: dict[Callable[..., Any], Callable[..., Any]] = {}
 _PEM_CERT_PATTERN = pipeline_runtime._PEM_CERT_PATTERN
 
 
-def decode_payload_text(value: str) -> dict[str, Any]:
-    """Decode ``value`` into a structured representation."""
-
-    trimmed = value.strip()
-    if not trimmed:
-        raise ValueError("Decoder input is empty.")
-
-    parsed_json = _try_parse_json(trimmed)
-    if parsed_json is not None:
-        result = _decode_json_object(parsed_json, raw_text=trimmed)
-    elif _looks_like_pem(trimmed):
-        result = _decode_pem_certificates(trimmed)
-    else:
-        data, encoding = _decode_binary_input(trimmed)
-        result = _decode_binary_payload(data, encoding)
-
-    return _prepare_decoder_response(result)
+decode_payload_text = pipeline_runtime.decode_payload_text
 
 
 _PIPELINE_RUNTIME_BINDINGS: dict[str, Callable[..., Any]] = {
