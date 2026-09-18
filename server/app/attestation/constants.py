@@ -1,4 +1,4 @@
-"""Shared constants for the attestation submodules.
+"""The constant lookup tables the attestation submodules share.
 
 This module is the single home for the constants the attestation runtime
 shares between fragments and re-exports through :mod:`server.app.attestation`.

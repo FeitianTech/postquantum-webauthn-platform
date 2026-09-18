@@ -13,7 +13,7 @@ from fido2.webauthn import Aaguid
 from .. import encoding
 from ..config import app
 from . import formatting
-from .runtime_state import AAGUID_EXTENSION_OID
+from .constants import AAGUID_EXTENSION_OID
 
 
 def _trusted_ca_subjects() -> set[str] | None:
