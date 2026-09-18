@@ -169,7 +169,7 @@ def advanced_summary_helpers():
 def simple_authenticate():
     """The fragment that defines both simple authentication ceremony bodies."""
 
-    return _simple_fragment("authenticate_impl")
+    return _simple_fragment("authenticate")
 
 
 @pytest.fixture
