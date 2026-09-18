@@ -96,9 +96,9 @@ def test_save_session_metadata_item_runtime_warning_and_mtime_fallback(metadata_
     assert saved.original_filename == "demo.json"
 
 
-def test_metadata_cache_and_verified_fallback_residual_error_paths(metadata_module, monkeypatch, snapshot_runtime, cache_runtime):
+def test_metadata_cache_and_verified_fallback_residual_error_paths(metadata_module, monkeypatch, snapshot_runtime, blob):
     monkeypatch.setattr(
-        cache_runtime,
+        blob,
         "open",  # shadows the builtin; the module has none
         lambda *_args, **_kwargs: (_ for _ in ()).throw(OSError("open-failure")),
         raising=False,

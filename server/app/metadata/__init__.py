@@ -10,7 +10,6 @@ from __future__ import annotations
 
 from . import (
     blob,
-    cache_runtime,
     effective_snapshot_runtime,
     entry_payload_runtime,
     env_runtime,
@@ -30,7 +29,7 @@ __all__ = ["MetadataDownloadError", "download_metadata_blob", "get_mds_verifier"
            "delete_session_metadata_item", "expand_metadata_entry_payloads",
            "metadata_entry_trust_anchor_status", "maybe_store_uploaded_metadata_file"]
 
-MetadataDownloadError = cache_runtime.MetadataDownloadError
+MetadataDownloadError = blob.MetadataDownloadError
 SessionMetadataItem = session_items_runtime.SessionMetadataItem
 
 # Constants shared with the fragments.
@@ -50,14 +49,14 @@ _SESSION_METADATA_TOUCH_THROTTLE_DEFAULT_SECONDS = runtime_state._SESSION_METADA
 _SESSION_METADATA_TOUCH_THROTTLE_ENV = runtime_state._SESSION_METADATA_TOUCH_THROTTLE_ENV
 
 # Cache and HTTP header helpers.
-_parse_http_datetime = cache_runtime._parse_http_datetime
-_format_last_modified = cache_runtime._format_last_modified
-format_last_modified_header = cache_runtime.format_last_modified_header
-_clean_metadata_cache_value = cache_runtime._clean_metadata_cache_value
-load_metadata_cache_entry = cache_runtime.load_metadata_cache_entry
-_store_metadata_cache_entry = cache_runtime._store_metadata_cache_entry
-store_metadata_cache_entry = cache_runtime.store_metadata_cache_entry
-download_metadata_blob = cache_runtime.download_metadata_blob
+_parse_http_datetime = blob._parse_http_datetime
+_format_last_modified = blob._format_last_modified
+format_last_modified_header = blob.format_last_modified_header
+_clean_metadata_cache_value = blob._clean_metadata_cache_value
+load_metadata_cache_entry = blob.load_metadata_cache_entry
+_store_metadata_cache_entry = blob._store_metadata_cache_entry
+store_metadata_cache_entry = blob.store_metadata_cache_entry
+download_metadata_blob = blob.download_metadata_blob
 
 # Environment and cleanup interval helpers.
 _env_flag = env_runtime._env_flag

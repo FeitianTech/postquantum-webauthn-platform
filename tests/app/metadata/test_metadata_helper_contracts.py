@@ -141,7 +141,7 @@ def test_aaguid_extraction_merge_and_source_info_helpers(monkeypatch, payload_ru
     assert "modifiedAt" in source_info
 
 
-def test_cache_cleaning_formatting_and_store_helper(tmp_path, monkeypatch, cache_runtime):
+def test_cache_cleaning_formatting_and_store_helper(tmp_path, monkeypatch, blob):
     metadata_module = pytest.importorskip("server.app.metadata")
 
     assert metadata_module._clean_metadata_cache_value("  etag-value  ") == "etag-value"
@@ -152,7 +152,7 @@ def test_cache_cleaning_formatting_and_store_helper(tmp_path, monkeypatch, cache
     assert metadata_module._format_last_modified("not-a-date") == "not-a-date"
 
     cache_path = tmp_path / "cache" / "metadata-cache.json"
-    monkeypatch.setattr(cache_runtime, "MDS_METADATA_CACHE_PATH", str(cache_path))
+    monkeypatch.setattr(blob, "MDS_METADATA_CACHE_PATH", str(cache_path))
 
     metadata_module._store_metadata_cache_entry(
         last_modified_header="Wed, 21 Oct 2015 07:28:00 GMT",

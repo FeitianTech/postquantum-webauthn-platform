@@ -9,7 +9,7 @@ import pytest
 
 
 @pytest.fixture
-def metadata_module(monkeypatch, tmp_path, metadata_runtime_state, cache_runtime, snapshot_runtime):
+def metadata_module(monkeypatch, tmp_path, metadata_runtime_state, blob, snapshot_runtime):
     module = pytest.importorskip("server.app.metadata")
 
     verified_path = tmp_path / "fido-mds3.verified.json"
@@ -33,7 +33,7 @@ def metadata_module(monkeypatch, tmp_path, metadata_runtime_state, cache_runtime
         "build_explorer_snapshot",
         lambda payload, cache: builds.append(1) or {"entries": [], "meta": {"source": "rebuilt"}},
     )
-    monkeypatch.setattr(cache_runtime, "load_metadata_cache_entry", lambda: None)
+    monkeypatch.setattr(blob, "load_metadata_cache_entry", lambda: None)
 
     module._test_paths = (verified_path, explorer_path)
     module._test_builds = builds

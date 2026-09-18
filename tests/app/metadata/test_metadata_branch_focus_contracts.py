@@ -318,7 +318,7 @@ class _NotJSONSerializable:
     pass
 
 
-def test_save_list_delete_serialize_and_datetime_edge_paths(metadata_module, monkeypatch, identity_runtime, payload_runtime, cache_runtime, session_store, items_runtime):
+def test_save_list_delete_serialize_and_datetime_edge_paths(metadata_module, monkeypatch, identity_runtime, payload_runtime, blob, session_store, items_runtime):
     monkeypatch.setattr(identity_runtime, "ensure_metadata_session_id", lambda: "session-a")
     monkeypatch.setattr(identity_runtime, "_session_metadata_directory", lambda *_args, **_kwargs: "session-a")
     monkeypatch.setattr(
@@ -436,7 +436,7 @@ def test_save_list_delete_serialize_and_datetime_edge_paths(metadata_module, mon
     assert error.retry_after == "60"
 
     assert metadata_module._parse_http_datetime(None) is None
-    monkeypatch.setattr(cache_runtime, "parsedate_to_datetime", lambda _value: datetime(2026, 1, 1, 0, 0, 0))
+    monkeypatch.setattr(blob, "parsedate_to_datetime", lambda _value: datetime(2026, 1, 1, 0, 0, 0))
     parsed = metadata_module._parse_http_datetime("Wed, 01 Jan 2026 00:00:00 GMT")
     assert parsed is not None and parsed.tzinfo is not None
 
@@ -444,9 +444,9 @@ def test_save_list_delete_serialize_and_datetime_edge_paths(metadata_module, mon
     assert metadata_module.format_last_modified_header("Thu, 01 Jan 1970 00:00:00 GMT") == "2026-01-01T00:00:00+00:00"
 
 
-def test_cache_and_bootstrap_fallback_helpers(metadata_module, monkeypatch, tmp_path, metadata_runtime_state, snapshot_runtime, cache_runtime, effective_runtime):
+def test_cache_and_bootstrap_fallback_helpers(metadata_module, monkeypatch, tmp_path, metadata_runtime_state, snapshot_runtime, blob, effective_runtime):
     cache_path = tmp_path / "cache" / "metadata-cache.json"
-    monkeypatch.setattr(cache_runtime, "MDS_METADATA_CACHE_PATH", str(cache_path))
+    monkeypatch.setattr(blob, "MDS_METADATA_CACHE_PATH", str(cache_path))
 
     cache_path.parent.mkdir(parents=True, exist_ok=True)
     cache_path.write_text("[]", encoding="utf-8")
@@ -481,7 +481,7 @@ def test_cache_and_bootstrap_fallback_helpers(metadata_module, monkeypatch, tmp_
 
     wrapper_calls = []
     monkeypatch.setattr(
-        cache_runtime,
+        blob,
         "_store_metadata_cache_entry",
         lambda **kwargs: wrapper_calls.append(kwargs),
     )
@@ -553,7 +553,7 @@ def test_cache_and_bootstrap_fallback_helpers(metadata_module, monkeypatch, tmp_
     monkeypatch.setattr(snapshot_runtime, "MDS_EXPLORER_PATH", str(explorer_path))
     monkeypatch.setattr(metadata_runtime_state, "_base_explorer_snapshot_cache", None)
     monkeypatch.setattr(metadata_runtime_state, "_base_explorer_snapshot_mtime", None)
-    monkeypatch.setattr(cache_runtime, "load_metadata_cache_entry", lambda: {"etag": "x"})
+    monkeypatch.setattr(blob, "load_metadata_cache_entry", lambda: {"etag": "x"})
     monkeypatch.setattr(
         snapshot_runtime,
         "build_explorer_snapshot",
@@ -590,7 +590,7 @@ def test_cache_and_bootstrap_fallback_helpers(metadata_module, monkeypatch, tmp_
     assert metadata_module.load_packaged_explorer_summary() == {}
 
     monkeypatch.setattr(snapshot_runtime, "_load_verified_metadata_payload", lambda: verified_payload)
-    monkeypatch.setattr(cache_runtime, "load_metadata_cache_entry", lambda: {})
+    monkeypatch.setattr(blob, "load_metadata_cache_entry", lambda: {})
     monkeypatch.setattr(
         snapshot_runtime,
         "build_explorer_snapshot",
