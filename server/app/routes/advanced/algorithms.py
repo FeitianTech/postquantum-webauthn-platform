@@ -15,7 +15,7 @@ from ...encoding import decode_hex
 from . import binary, constants
 
 
-def _normalize_algorithm_name_key_impl(name: str) -> str:
+def _normalize_algorithm_name_key(name: str) -> str:
     base = name.strip().split("(")[0]
     if not base:
         return ""
@@ -27,10 +27,10 @@ def _normalize_algorithm_name_key_impl(name: str) -> str:
     return sanitized
 
 
-def _lookup_named_cose_algorithm_impl(
+def _lookup_named_cose_algorithm(
     name: str,
 ) -> int | None:
-    normalized_name = _normalize_algorithm_name_key_impl(name)
+    normalized_name = _normalize_algorithm_name_key(name)
     if not normalized_name:
         return None
 
@@ -44,7 +44,7 @@ def _lookup_named_cose_algorithm_impl(
     return None
 
 
-def _coerce_cose_algorithm_impl(
+def _coerce_cose_algorithm(
     value: Any,
 ) -> int | None:
     if isinstance(value, bool):
@@ -62,7 +62,7 @@ def _coerce_cose_algorithm_impl(
         try:
             return int(stripped, 10)
         except ValueError:
-            normalized_alg = _lookup_named_cose_algorithm_impl(stripped)
+            normalized_alg = _lookup_named_cose_algorithm(stripped)
             if normalized_alg is not None:
                 return normalized_alg
             matches = list(constants.COSE_ALGORITHM_NUMERIC_PATTERN.finditer(stripped))
@@ -75,7 +75,7 @@ def _coerce_cose_algorithm_impl(
     return None
 
 
-def _extract_credential_algorithm_impl(value: Any) -> int | None:
+def _extract_credential_algorithm(value: Any) -> int | None:
     if isinstance(value, Mapping):
         public_key_value = value.get("public_key") or value.get("publicKey")
     else:
@@ -92,15 +92,15 @@ def _extract_credential_algorithm_impl(value: Any) -> int | None:
         except Exception:
             raw_alg = getattr(public_key_value, "alg", None)
 
-    return _coerce_cose_algorithm_impl(raw_alg)
+    return _coerce_cose_algorithm(raw_alg)
 
 
-def _derive_algorithms_from_credentials_impl(
+def _derive_algorithms_from_credentials(
     credentials: Iterable[Any],
 ) -> list[PublicKeyCredentialParameters]:
     seen: dict[int, PublicKeyCredentialParameters] = {}
     for credential in credentials:
-        alg_value = _extract_credential_algorithm_impl(credential)
+        alg_value = _extract_credential_algorithm(credential)
         if alg_value is None or alg_value in seen:
             continue
         seen[alg_value] = PublicKeyCredentialParameters(
@@ -111,7 +111,7 @@ def _derive_algorithms_from_credentials_impl(
     return list(seen.values())
 
 
-def _is_custom_cose_algorithm_impl(alg_id: int | None) -> bool:
+def _is_custom_cose_algorithm(alg_id: int | None) -> bool:
     if alg_id is None:
         return False
     if alg_id in constants.COSE_ALGORITHM_NAME_MAP.values():
@@ -121,11 +121,11 @@ def _is_custom_cose_algorithm_impl(alg_id: int | None) -> bool:
     return True
 
 
-def _extract_requested_assertion_algorithm_impl(
+def _extract_requested_assertion_algorithm(
     public_key: Mapping[str, Any],
     credential_id: bytes | None,
 ) -> int | None:
-    requested_alg = _coerce_cose_algorithm_impl(public_key.get("alg"))
+    requested_alg = _coerce_cose_algorithm(public_key.get("alg"))
     if isinstance(requested_alg, int):
         return requested_alg
 
@@ -138,17 +138,17 @@ def _extract_requested_assertion_algorithm_impl(
         if not isinstance(entry, Mapping):
             continue
 
-        entry_alg = _coerce_cose_algorithm_impl(entry.get("alg"))
+        entry_alg = _coerce_cose_algorithm(entry.get("alg"))
         if entry_alg is None:
             continue
 
-        entry_id = binary._extract_binary_value_impl(entry.get("id"))
+        entry_id = binary._extract_binary_value(entry.get("id"))
         if isinstance(entry_id, str):
             try:
                 entry_id = decode_hex(entry_id)
             except ValueError:
                 try:
-                    entry_id = binary._decode_base64url_impl(entry_id)
+                    entry_id = binary._decode_base64url(entry_id)
                 except (ValueError, TypeError):
                     entry_id = None
 

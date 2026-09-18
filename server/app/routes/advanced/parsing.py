@@ -12,7 +12,7 @@ from ...encoding import encode_base64url
 from . import algorithms, binary
 
 
-def _extract_credential_id_impl(value: Any) -> bytes | None:
+def _extract_credential_id(value: Any) -> bytes | None:
     credential_id = None
     if isinstance(value, Mapping):
         raw_id = value.get("credential_id")
@@ -25,7 +25,7 @@ def _extract_credential_id_impl(value: Any) -> bytes | None:
     return credential_id
 
 
-def _coerce_optional_bool_impl(value: Any) -> bool | None:
+def _coerce_optional_bool(value: Any) -> bool | None:
     if isinstance(value, bool):
         return value
     if value is None:
@@ -45,13 +45,13 @@ def _coerce_optional_bool_impl(value: Any) -> bool | None:
     return None
 
 
-def _extract_flag_from_mapping_impl(
+def _extract_flag_from_mapping(
     mapping: Mapping[str, Any],
     keys: Iterable[str],
 ) -> bool | None:
     for key in keys:
         if key in mapping:
-            coerced = _coerce_optional_bool_impl(mapping.get(key))
+            coerced = _coerce_optional_bool(mapping.get(key))
             if coerced is not None:
                 return coerced
     return None
@@ -66,7 +66,7 @@ def _select_first(mapping: Mapping[str, Any], keys: Iterable[str]) -> Any:
     return None
 
 
-def _parse_client_supplied_credentials_impl(
+def _parse_client_supplied_credentials(
     raw_credentials: Any,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     if not isinstance(raw_credentials, list):
@@ -95,9 +95,9 @@ def _parse_client_supplied_credentials_impl(
             if credential_id_raw is None or public_key_raw is None:
                 continue
 
-            aaguid_bytes = b"\x00" * 16 if aaguid_raw is None else binary._decode_client_binary_impl(aaguid_raw)
-            credential_id_bytes = binary._decode_client_binary_impl(credential_id_raw)
-            public_key_bytes = binary._decode_client_binary_impl(public_key_raw)
+            aaguid_bytes = b"\x00" * 16 if aaguid_raw is None else binary._decode_client_binary(aaguid_raw)
+            credential_id_bytes = binary._decode_client_binary(credential_id_raw)
+            public_key_bytes = binary._decode_client_binary(public_key_raw)
 
             cose_key = CoseKey.parse(cbor.decode(public_key_bytes))
             attested = AttestedCredentialData.create(aaguid_bytes, credential_id_bytes, cose_key)
@@ -109,16 +109,16 @@ def _parse_client_supplied_credentials_impl(
             )
 
             raw_alg_value = entry.get("algorithm") or entry.get("publicKeyAlgorithm")
-            algorithm_value = algorithms._coerce_cose_algorithm_impl(raw_alg_value)
+            algorithm_value = algorithms._coerce_cose_algorithm(raw_alg_value)
 
-            resident_flag = _extract_flag_from_mapping_impl(
+            resident_flag = _extract_flag_from_mapping(
                 entry,
                 ("resident", "residentKey", "discoverable"),
             )
             if resident_flag is None:
                 properties = entry.get("properties")
                 if isinstance(properties, Mapping):
-                    resident_flag = _extract_flag_from_mapping_impl(
+                    resident_flag = _extract_flag_from_mapping(
                         properties,
                         ("resident", "residentKey", "discoverable", "actualResidentKey"),
                     )
@@ -128,7 +128,7 @@ def _parse_client_supplied_credentials_impl(
                 if isinstance(client_outputs, Mapping):
                     cred_props_value = client_outputs.get("credProps")
                     if isinstance(cred_props_value, Mapping):
-                        resident_flag = _coerce_optional_bool_impl(cred_props_value.get("rk"))
+                        resident_flag = _coerce_optional_bool(cred_props_value.get("rk"))
                     elif isinstance(cred_props_value, bool):
                         resident_flag = cred_props_value
 

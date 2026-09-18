@@ -13,7 +13,7 @@ from ... import encoding
 from ..binary_helpers import decode_binary_text
 
 
-def _decode_wrapped_impl(
+def _decode_wrapped(
     value: Any,
     decoder: Any,
     *,
@@ -28,7 +28,7 @@ def _decode_wrapped_impl(
         raise ValueError(error) from exc
 
 
-def _decode_client_binary_impl(value: Any) -> bytes:
+def _decode_client_binary(value: Any) -> bytes:
     if value is None:
         raise ValueError("missing binary value")
 
@@ -50,9 +50,9 @@ def _decode_client_binary_impl(value: Any) -> bytes:
                 hex_candidate = value.get("hex")
 
             if isinstance(hex_candidate, str):
-                return _decode_wrapped_impl(hex_candidate, encoding.decode_hex)
+                return _decode_wrapped(hex_candidate, encoding.decode_hex)
 
-            return _decode_client_binary_impl(hex_candidate)
+            return _decode_client_binary(hex_candidate)
 
         if "$base64url" in value or "base64url" in value:
             b64u_candidate = value.get("$base64url")
@@ -60,9 +60,9 @@ def _decode_client_binary_impl(value: Any) -> bytes:
                 b64u_candidate = value.get("base64url")
 
             if isinstance(b64u_candidate, str):
-                return _decode_wrapped_impl(b64u_candidate, encoding.decode_base64url)
+                return _decode_wrapped(b64u_candidate, encoding.decode_base64url)
 
-            return _decode_client_binary_impl(b64u_candidate)
+            return _decode_client_binary(b64u_candidate)
 
         if "$base64" in value or "base64" in value:
             b64_candidate = value.get("$base64")
@@ -70,18 +70,18 @@ def _decode_client_binary_impl(value: Any) -> bytes:
                 b64_candidate = value.get("base64")
 
             if isinstance(b64_candidate, str):
-                return _decode_wrapped_impl(b64_candidate, encoding.decode_base64)
+                return _decode_wrapped(b64_candidate, encoding.decode_base64)
 
-            return _decode_client_binary_impl(b64_candidate)
+            return _decode_client_binary(b64_candidate)
 
     raise ValueError("unsupported binary value type")
 
 
-def _decode_base64url_impl(data: str) -> bytes:
+def _decode_base64url(data: str) -> bytes:
     return encoding.decode_base64url(data)
 
 
-def _extract_binary_value_impl(value: Any) -> Any:
+def _extract_binary_value(value: Any) -> Any:
     if isinstance(value, str):
         return value
     if isinstance(value, dict):
@@ -100,5 +100,5 @@ def _extract_binary_value_impl(value: Any) -> Any:
     return value
 
 
-def _encode_base64url_impl(data: bytes) -> str:
+def _encode_base64url(data: bytes) -> str:
     return encoding.encode_base64url(data)

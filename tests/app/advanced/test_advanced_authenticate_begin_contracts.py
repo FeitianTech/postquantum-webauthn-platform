@@ -123,7 +123,7 @@ def test_advanced_authenticate_begin_uses_allow_credentials_subset_and_dedupes(m
 
     monkeypatch.setattr(
         advanced_parsing,
-        "_parse_client_supplied_credentials_impl",
+        "_parse_client_supplied_credentials",
         lambda _raw: (
             [
                 _credential_record(cred_one, data=marker_one, attachment="platform"),
@@ -180,7 +180,7 @@ def test_advanced_authenticate_begin_falls_back_to_all_records_when_allow_creden
 
     monkeypatch.setattr(
         advanced_parsing,
-        "_parse_client_supplied_credentials_impl",
+        "_parse_client_supplied_credentials",
         lambda _raw: (
             [
                 _credential_record(b"fallback-one", data=marker_one, attachment="platform"),
@@ -217,7 +217,7 @@ def test_advanced_authenticate_begin_returns_hints_error_when_filtered_allow_cre
 
     monkeypatch.setattr(
         advanced_parsing,
-        "_parse_client_supplied_credentials_impl",
+        "_parse_client_supplied_credentials",
         lambda _raw: (
             [_credential_record(cred_id, attachment="platform", resident=True)],
             [_serialized_record(resident=True)],
@@ -251,7 +251,7 @@ def test_advanced_authenticate_begin_resident_mode_prefers_resident_records_and_
 
     monkeypatch.setattr(
         advanced_parsing,
-        "_parse_client_supplied_credentials_impl",
+        "_parse_client_supplied_credentials",
         lambda _raw: (
             [
                 _credential_record(b"resident", data=resident_marker, resident=True, attachment="platform"),
@@ -293,7 +293,7 @@ def test_advanced_authenticate_begin_resident_mode_returns_hints_error_when_resi
 
     monkeypatch.setattr(
         advanced_parsing,
-        "_parse_client_supplied_credentials_impl",
+        "_parse_client_supplied_credentials",
         lambda _raw: (
             [
                 _credential_record(
@@ -337,14 +337,14 @@ def test_advanced_authenticate_begin_propagates_algorithms_extensions_and_uv_pre
 
     monkeypatch.setattr(
         advanced_parsing,
-        "_parse_client_supplied_credentials_impl",
+        "_parse_client_supplied_credentials",
         lambda _raw: (records, serialized)
     )
 
     expected_algorithms = [types.SimpleNamespace(alg=-7), types.SimpleNamespace(alg=-257)]
     monkeypatch.setattr(
         advanced_algorithms,
-        "_derive_algorithms_from_credentials_impl",
+        "_derive_algorithms_from_credentials",
         lambda source: expected_algorithms if list(source) == [records[0]["data"]] else []
     )
 

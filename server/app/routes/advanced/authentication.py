@@ -21,7 +21,7 @@ from .. import binary_helpers
 from . import algorithms, binary, parsing
 
 
-def advanced_authenticate_begin_impl():
+def advanced_authenticate_begin():
     data = request.get_json(silent=True)
 
     if not data or not data.get("publicKey"):
@@ -46,7 +46,7 @@ def advanced_authenticate_begin_impl():
     challenge_bytes = None
     if challenge_value:
         try:
-            challenge_bytes = binary._extract_binary_value_impl(challenge_value)
+            challenge_bytes = binary._extract_binary_value(challenge_value)
             if isinstance(challenge_bytes, str):
                 challenge_bytes = decode_hex(challenge_bytes)
         except (ValueError, TypeError) as exc:
@@ -79,7 +79,7 @@ def advanced_authenticate_begin_impl():
             raw_credentials_input = candidate
             break
 
-    stored_records, serialized_credentials = parsing._parse_client_supplied_credentials_impl(raw_credentials_input)
+    stored_records, serialized_credentials = parsing._parse_client_supplied_credentials(raw_credentials_input)
     if not stored_records:
         return jsonify(
             {"error": "No credentials detected. Please register a credential first."},
@@ -104,7 +104,7 @@ def advanced_authenticate_begin_impl():
             if not isinstance(allow_cred, dict) or allow_cred.get("type") != "public-key":
                 continue
 
-            cred_id = binary._extract_binary_value_impl(allow_cred.get("id", ""))
+            cred_id = binary._extract_binary_value(allow_cred.get("id", ""))
             if isinstance(cred_id, str):
                 try:
                     cred_id = decode_hex(cred_id)
@@ -199,7 +199,7 @@ def advanced_authenticate_begin_impl():
     else:
         algorithm_source = [record["data"] for record in stored_records if record.get("data") is not None]
 
-    derived_algorithms = algorithms._derive_algorithms_from_credentials_impl(algorithm_source)
+    derived_algorithms = algorithms._derive_algorithms_from_credentials(algorithm_source)
     if derived_algorithms:
         temp_server.allowed_algorithms = derived_algorithms
 
@@ -211,7 +211,7 @@ def advanced_authenticate_begin_impl():
                 if ext_value.get("read"):
                     processed_extensions["largeBlob"] = {"read": True}
                 elif ext_value.get("write"):
-                    write_value = binary._extract_binary_value_impl(ext_value["write"])
+                    write_value = binary._extract_binary_value(ext_value["write"])
                     if isinstance(write_value, str):
                         write_value = decode_hex(write_value)
                     processed_extensions["largeBlob"] = {"write": write_value}
@@ -224,12 +224,12 @@ def advanced_authenticate_begin_impl():
                 prf_eval = ext_value["eval"]
                 processed_eval = {}
                 if "first" in prf_eval:
-                    first_value = binary._extract_binary_value_impl(prf_eval["first"])
+                    first_value = binary._extract_binary_value(prf_eval["first"])
                     if isinstance(first_value, str):
                         first_value = decode_hex(first_value)
                     processed_eval["first"] = first_value
                 if "second" in prf_eval:
-                    second_value = binary._extract_binary_value_impl(prf_eval["second"])
+                    second_value = binary._extract_binary_value(prf_eval["second"])
                     if isinstance(second_value, str):
                         second_value = decode_hex(second_value)
                     processed_eval["second"] = second_value
@@ -312,7 +312,7 @@ def _server_supports_algorithm(algorithm: int | None) -> bool:
         return False
 
 
-def advanced_authenticate_complete_impl():
+def advanced_authenticate_complete():
     data = request.get_json(silent=True) or {}
 
     # Determined up front (peek, not pop) so that every response below can
@@ -386,12 +386,12 @@ def advanced_authenticate_complete_impl():
     stored_records: list[dict[str, Any]] = []
     serialized_credentials: list[dict[str, Any]] = []
     if isinstance(raw_credentials_input, list):
-        stored_records, serialized_credentials = parsing._parse_client_supplied_credentials_impl(raw_credentials_input)
+        stored_records, serialized_credentials = parsing._parse_client_supplied_credentials(raw_credentials_input)
 
     if not stored_records:
         legacy_serialized = session.pop("advanced_auth_credentials", [])
         if legacy_serialized:
-            stored_records, serialized_credentials = parsing._parse_client_supplied_credentials_impl(
+            stored_records, serialized_credentials = parsing._parse_client_supplied_credentials(
                 legacy_serialized,
             )
 
@@ -500,7 +500,7 @@ def advanced_authenticate_complete_impl():
         resolved_rp_id = config.determine_rp_id(stored_rp_id)
         auth_server = config.create_fido_server(rp_id=resolved_rp_id, rp_name=stored_rp_name)
 
-        derived_algorithms = algorithms._derive_algorithms_from_credentials_impl(all_credentials)
+        derived_algorithms = algorithms._derive_algorithms_from_credentials(all_credentials)
         if derived_algorithms:
             auth_server.allowed_algorithms = derived_algorithms
 
@@ -597,7 +597,7 @@ def advanced_authenticate_complete_impl():
             auth_data_b64 = credential_response.get("authenticatorData")
             if isinstance(auth_data_b64, str):
                 try:
-                    auth_data_bytes = binary._decode_base64url_impl(auth_data_b64)
+                    auth_data_bytes = binary._decode_base64url(auth_data_b64)
                     sign_count_value = AuthenticatorData(auth_data_bytes).counter
                 except Exception:
                     sign_count_value = None

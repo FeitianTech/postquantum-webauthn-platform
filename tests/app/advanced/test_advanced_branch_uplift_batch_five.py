@@ -48,7 +48,7 @@ def _install_register_complete_defaults(monkeypatch, advanced_module, attestatio
     monkeypatch.setattr(credential_artifacts_module, "store_credential_artifact", lambda *_args, **_kwargs: True)
     monkeypatch.setattr(
         advanced_tracing,
-        "_log_authenticator_attestation_response_impl",
+        "_log_authenticator_attestation_response",
         lambda *_args, **_kwargs: None
     )
     monkeypatch.setattr(config_module, "determine_rp_id", lambda value=None: value or "example.com")
@@ -401,7 +401,7 @@ def test_register_complete_maps_cred_protect_display_and_handles_public_key_alg_
         }
     )
     monkeypatch.setattr(attestation_module, "summarize_authenticator_extensions", lambda _ext: {})
-    monkeypatch.setattr(advanced_summary, "_generate_storage_id_impl", lambda _source: "generated::storage::id")
+    monkeypatch.setattr(advanced_summary, "_generate_storage_id", lambda _source: "generated::storage::id")
     monkeypatch.setattr(
         advanced_registration.uuid,
         "UUID",
@@ -439,7 +439,7 @@ def test_authenticate_begin_uses_stored_rp_required_uv_and_skips_invalid_allow_c
     marker = object()
     monkeypatch.setattr(
         advanced_parsing,
-        "_parse_client_supplied_credentials_impl",
+        "_parse_client_supplied_credentials",
         lambda _raw: (
             [
                 {

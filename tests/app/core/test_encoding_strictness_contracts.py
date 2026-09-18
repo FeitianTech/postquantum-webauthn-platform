@@ -80,7 +80,7 @@ def test_decoder_reports_encoding_ambiguity_rather_than_guessing(pipeline):
 
 def test_advanced_client_binary_rejects_plain_text(advanced_binary):
     with pytest.raises(ValueError):
-        advanced_binary._decode_client_binary_impl(PLAIN_TEXT)
+        advanced_binary._decode_client_binary(PLAIN_TEXT)
 
 
 def test_simple_binary_value_rejects_plain_text(simple_binary):
@@ -107,8 +107,8 @@ def test_credential_intake_reads_both_base64_alphabets_exactly(advanced_binary, 
     assert "+" in standard or "/" in standard
     assert "-" in urlsafe or "_" in urlsafe
 
-    assert advanced_binary._decode_client_binary_impl(standard) == raw
-    assert advanced_binary._decode_client_binary_impl(urlsafe) == raw
+    assert advanced_binary._decode_client_binary(standard) == raw
+    assert advanced_binary._decode_client_binary(urlsafe) == raw
     assert simple_binary._decode_binary_value(standard) == raw
     assert simple_binary._decode_binary_value(urlsafe) == raw
 
