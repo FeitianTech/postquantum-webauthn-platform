@@ -14,9 +14,9 @@ from . import (
     certificate_details_runtime,
     certificate_extensions_leaf,
     certificate_public_key_leaf,
-    certificate_serialize_runtime,
     certificate_signature_leaf,
     certificate_summary_runtime,
+    certificates,
     checks_attestation_runtime,
     checks_input_runtime,
     checks_metadata_runtime,
@@ -93,8 +93,8 @@ _serialize_public_key_info = certificate_public_key_leaf._serialize_public_key_i
 _build_certificate_summary = certificate_summary_runtime._build_certificate_summary
 
 # Full certificate serialisation.
-_serialize_attestation_certificate_fallback = certificate_serialize_runtime._serialize_attestation_certificate_fallback
-serialize_attestation_certificate = certificate_serialize_runtime.serialize_attestation_certificate
+_serialize_attestation_certificate_fallback = certificates._serialize_attestation_certificate_fallback
+serialize_attestation_certificate = certificates.serialize_attestation_certificate
 
 # Attestation payload certificate extraction.
 _coerce_attestation_certificate_bytes = certificate_details_runtime._coerce_attestation_certificate_bytes
