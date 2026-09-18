@@ -6,8 +6,8 @@ from typing import Any
 from fido2.webauthn import AuthenticatorData, RegistrationResponse
 
 from . import (
+    checks,
     checks_attestation_runtime,
-    checks_input_runtime,
     checks_metadata_runtime,
     encoding_leaf,
 )
@@ -57,17 +57,17 @@ def perform_attestation_checks(
     else:
         auth_data_obj = attestation_object.auth_data
 
-    expected_challenge_bytes = checks_input_runtime._resolve_expected_challenge(state, public_key_options)
-    checks_input_runtime._populate_client_data_results(
+    expected_challenge_bytes = checks._resolve_expected_challenge(state, public_key_options)
+    checks._populate_client_data_results(
         results,
         client_data=client_data,
         expected_challenge_bytes=expected_challenge_bytes,
         expected_origin=expected_origin,
     )
 
-    checks_input_runtime._populate_rp_id_hash_result(results, auth_data_obj=auth_data_obj, rp_id=rp_id)
+    checks._populate_rp_id_hash_result(results, auth_data_obj=auth_data_obj, rp_id=rp_id)
 
-    auth_ctx = checks_input_runtime._populate_authenticator_data_results(
+    auth_ctx = checks._populate_authenticator_data_results(
         results,
         auth_data_obj=auth_data_obj,
         state=state,

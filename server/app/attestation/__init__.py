@@ -12,8 +12,8 @@ from .. import config
 from . import (
     aaguid_leaf,
     certificates,
+    checks,
     checks_attestation_runtime,
-    checks_input_runtime,
     checks_metadata_runtime,
     checks_policy_runtime,
     checks_runtime,
@@ -131,11 +131,11 @@ _collect_allowed_algorithms = checks_policy_runtime._collect_allowed_algorithms
 _resolve_uv_required = checks_policy_runtime._resolve_uv_required
 
 # Client data and authenticator data checks.
-_coerce_expected_bytes = checks_input_runtime._coerce_expected_bytes
-_populate_authenticator_data_results = checks_input_runtime._populate_authenticator_data_results
-_populate_client_data_results = checks_input_runtime._populate_client_data_results
-_populate_rp_id_hash_result = checks_input_runtime._populate_rp_id_hash_result
-_resolve_expected_challenge = checks_input_runtime._resolve_expected_challenge
+_coerce_expected_bytes = checks._coerce_expected_bytes
+_populate_authenticator_data_results = checks._populate_authenticator_data_results
+_populate_client_data_results = checks._populate_client_data_results
+_populate_rp_id_hash_result = checks._populate_rp_id_hash_result
+_resolve_expected_challenge = checks._resolve_expected_challenge
 
 # Attestation signature and root checks.
 _collect_attestation_trust_path = checks_attestation_runtime._collect_attestation_trust_path
