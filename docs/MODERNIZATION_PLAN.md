@@ -554,6 +554,62 @@ in commit 2, before any conversion, which is what made the rest self-checking. T
 - `routes/advanced.py` and `routes/simple.py` are the last two carriers. They keep their
   `["F401", "UP035"]` ignores, and the per-file-ignores comment now describes only them.
 
+### Phase 8 — M3: unwind the `decoder` carrier — DONE (2026-09-17). **F821 IS ZERO.**
+
+| Metric | Before | After |
+|---|---|---|
+| **F821 repo-wide** | **382** | **0** |
+| F821 `decode_parts` / `decode.py` | 366 / 16 | 0 / 0 |
+| `decode.py` | 517 lines | **272** (shim) |
+| `# pyright: reportUndefinedVariable=false` | 7 | **0** |
+| `raising=False` in decoder tests | 88 | **0** (868 to 780 repo-wide) |
+| ruff carrier ignores | 3 | **2** |
+
+**`ignore = ["F821"]` is GONE from ruff.toml and the rule is genuinely enforced.** Tech-lead
+verified live: appending `return _this_name_does_not_exist_anywhere` to a fragment makes
+`uvx ruff check .` fail with 1 error; removing it returns to green. A zero count with the rule
+ungated would have been meaningless — it is gated.
+
+Collected test IDs identical (1708, 0 added / 0 removed) despite ~180 rewritten patch lines and
+a new 19-fixture `tests/app/decoder/conftest.py`. Suite 1708/278, ruff green.
+Stage B was empty again — no caches, locks or `global` statements anywhere in the decoder.
+
+**`cbor_core` fully retired.** There were TWO stacked relays (`decode` -> `cbor_core` ->
+`cbor_strict`), held up by one test and one symbol. It is now off the call path with **zero
+importers anywhere** (tech-lead confirmed) — a deletion candidate for the file-level milestone.
+The thread-unsafe `_parse_cbor_item` global-mutation hack is gone. The tech lead's correction
+held: its pass-throughs stayed *delegating functions*; an assignment would have rebound at
+import time and silently defeated patches on the definition.
+
+**Process improvements worth carrying to the route carriers:**
+1. **Drop `raising=False` FIRST, before any conversion.** The agent did this in commit 2. All 88
+   were droppable already, so they masked nothing at that point — but they *would* have masked
+   exactly this phase's regressions. It made the rest of the work self-checking and caught real
+   silent passes later. Do this first in Phase 9.
+2. **Stage 0 is bigger than Phase 7 suggested.** All nine fragments were imported under aliases
+   (`_cbor_core`, `_pipeline_runtime`, ...), and a SECOND prerequisite appeared: the carrier also
+   had to import the *leaf* fragments as modules, because a rebound fragment resolves
+   `summary_leaf._append_simple_field` in carrier globals too. Expect both for the routes.
+3. The intra-module sibling-call ordering constraint held exactly as predicted — 54 calls could
+   not move until the carrier died.
+
+**Fault injection, 50 symbols / 144 sites:** failures 165 to 186, failures *naming the missing
+symbol* 127 to **186 (100%)**, failures the carrier silently absorbed **21 to 0**. The agent
+explained the shape honestly: `raising=False` *creates* the attribute, so a patch against a
+moved symbol installed the stub into carrier globals and the test passed as if nothing moved.
+It also disclosed that its first two measurement sweeps were not reproducible (stale
+`__pycache__`) and reported only numbers confirmed byte-identical across consecutive runs.
+
+**Found but not fixed:** `encode_parts/handlers_basic.py:9` and `handlers_cbor.py:7` import five
+PRIVATE names from `decode.py` (tech-lead confirmed), so the shim is load-bearing for
+production, not just tests — encoder-milestone scope. `cbor_strict._decode_cbor_structure` was
+dead and is now the live copy. One `raising=False` remains on `encode._ENCODING_HANDLERS`.
+
+### M3 status: 3 of 5 carriers unwound. F821 retired as a metric.
+Remaining: `routes/advanced.py` and `routes/simple.py`. They produce **no F821**, so the new
+meter is the `advanced_module.`/`simple_module.` reference count (539 at last audit) and the
+2 remaining `ruff.toml` per-file-ignores.
+
 ### Local development
 Tests previously ran against the global interpreter, whose packages matched nothing in
 `requirements.txt` (cryptography 44.0.3, fido2 2.1.1, gunicorn 23). A project venv now exists:
