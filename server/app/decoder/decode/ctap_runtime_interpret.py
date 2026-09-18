@@ -5,7 +5,7 @@ from collections.abc import Callable, Mapping
 from typing import Any
 
 from ...encoding import decode_hex
-from . import ctap_classify, ctap_runtime_parse, result_runtime
+from . import ctap_classify, ctap_runtime_parse, response
 from .ctap_convert_leaf import (
     _convert_ctap_credential_descriptor,
     _convert_optional_ctap_field,
@@ -193,7 +193,7 @@ def _interpret_make_credential_map(value: Mapping[Any, Any]) -> dict[str, Any] |
             interpreted["2 (authData trailing)"] = _hex_json_safe(trailing_map)
 
     if isinstance(att_stmt_map, Mapping):
-        att_stmt_details = result_runtime._convert_attestation_statement({"attestationStatement": att_stmt_map})
+        att_stmt_details = response._convert_attestation_statement({"attestationStatement": att_stmt_map})
         sig_value = att_stmt_map.get("sig")
         sig_bytes = _coerce_cbor_bytes(sig_value)
         if sig_bytes is not None:

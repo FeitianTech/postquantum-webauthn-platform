@@ -127,7 +127,7 @@ def test_json_safe_with_stringified_keys_wraps_make_json_safe(monkeypatch, cbor_
     assert decode_module._json_safe_with_stringified_keys(object()) == {"1": "ok", "2": "yes"}
 
 
-def test_decode_payload_text_dispatches_json_pem_and_binary_paths(monkeypatch, pipeline_runtime, result_runtime):
+def test_decode_payload_text_dispatches_json_pem_and_binary_paths(monkeypatch, pipeline_runtime, response):
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     with pytest.raises(ValueError, match="Decoder input is empty"):
@@ -135,7 +135,7 @@ def test_decode_payload_text_dispatches_json_pem_and_binary_paths(monkeypatch, p
 
     monkeypatch.setattr(pipeline_runtime, "_try_parse_json", lambda _v: {"a": 1})
     monkeypatch.setattr(pipeline_runtime, "_decode_json_object", lambda value, raw_text=None: {"kind": "json", "raw": raw_text, "value": value})
-    monkeypatch.setattr(result_runtime, "_prepare_decoder_response", lambda result: {"wrapped": result})
+    monkeypatch.setattr(response, "_prepare_decoder_response", lambda result: {"wrapped": result})
     assert decode_module.decode_payload_text(" {\"a\": 1} ") == {
         "wrapped": {"kind": "json", "raw": '{"a": 1}', "value": {"a": 1}}
     }
@@ -143,13 +143,13 @@ def test_decode_payload_text_dispatches_json_pem_and_binary_paths(monkeypatch, p
     monkeypatch.setattr(pipeline_runtime, "_try_parse_json", lambda _v: None)
     monkeypatch.setattr(pipeline_runtime, "_looks_like_pem", lambda _v: True)
     monkeypatch.setattr(pipeline_runtime, "_decode_pem_certificates", lambda _v: {"kind": "pem"})
-    monkeypatch.setattr(result_runtime, "_prepare_decoder_response", lambda result: {"pem": result})
+    monkeypatch.setattr(response, "_prepare_decoder_response", lambda result: {"pem": result})
     assert decode_module.decode_payload_text("-----BEGIN CERTIFICATE-----") == {"pem": {"kind": "pem"}}
 
     monkeypatch.setattr(pipeline_runtime, "_looks_like_pem", lambda _v: False)
     monkeypatch.setattr(pipeline_runtime, "_decode_binary_input", lambda _v: (b"\x01\x02", "hex"))
     monkeypatch.setattr(pipeline_runtime, "_decode_binary_payload", lambda data, encoding: {"kind": "bin", "data": data, "encoding": encoding})
-    monkeypatch.setattr(result_runtime, "_prepare_decoder_response", lambda result: {"bin": result})
+    monkeypatch.setattr(response, "_prepare_decoder_response", lambda result: {"bin": result})
     assert decode_module.decode_payload_text("0102") == {
         "bin": {"kind": "bin", "data": b"\x01\x02", "encoding": "hex"}
     }

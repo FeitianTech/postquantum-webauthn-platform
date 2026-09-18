@@ -12,7 +12,7 @@ from fido2.utils import ByteBuffer
 
 from ...attestation import make_json_safe, serialize_attestation_certificate
 from ...encoding import EncodingError, SniffResult, sniff, try_decode_base64
-from . import cbor_runtime, details_runtime, result_runtime
+from . import cbor_runtime, details_runtime, response
 
 _PEM_CERT_PATTERN = re.compile(
     r"-----BEGIN CERTIFICATE-----\s*(?P<body>.*?)\s*-----END CERTIFICATE-----",
@@ -342,4 +342,4 @@ def decode_payload_text(value: str) -> dict[str, Any]:
         data, encoding = _decode_binary_input(trimmed)
         result = _decode_binary_payload(data, encoding)
 
-    return result_runtime._prepare_decoder_response(result)
+    return response._prepare_decoder_response(result)

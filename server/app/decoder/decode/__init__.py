@@ -24,7 +24,7 @@ from . import (
     details_runtime,
     keys,
     pipeline_runtime,
-    result_runtime,
+    response,
     summary,
 )
 
@@ -231,20 +231,20 @@ _parse_attestation_object = details_runtime._parse_attestation_object
 _try_decode_utf8 = details_runtime._try_decode_utf8
 
 # Decoder payload and result conversion.
-_build_authenticator_section = result_runtime._build_authenticator_section
-_build_decoder_payload = result_runtime._build_decoder_payload
-_convert_attestation_entry = result_runtime._convert_attestation_entry
-_convert_attestation_object_data = result_runtime._convert_attestation_object_data
-_convert_attestation_statement = result_runtime._convert_attestation_statement
-_convert_authenticator_data_result = result_runtime._convert_authenticator_data_result
-_convert_certificate_bytes = result_runtime._convert_certificate_bytes
-_convert_certificate_chain = result_runtime._convert_certificate_chain
-_convert_certificate_payload = result_runtime._convert_certificate_payload
-_convert_certificate_result = result_runtime._convert_certificate_result
-_convert_client_data_result = result_runtime._convert_client_data_result
-_convert_public_key_credential_data = result_runtime._convert_public_key_credential_data
-_convert_result_to_data = result_runtime._convert_result_to_data
-_prepare_decoder_response = result_runtime._prepare_decoder_response
+_build_authenticator_section = response._build_authenticator_section
+_build_decoder_payload = response._build_decoder_payload
+_convert_attestation_entry = response._convert_attestation_entry
+_convert_attestation_object_data = response._convert_attestation_object_data
+_convert_attestation_statement = response._convert_attestation_statement
+_convert_authenticator_data_result = response._convert_authenticator_data_result
+_convert_certificate_bytes = response._convert_certificate_bytes
+_convert_certificate_chain = response._convert_certificate_chain
+_convert_certificate_payload = response._convert_certificate_payload
+_convert_certificate_result = response._convert_certificate_result
+_convert_client_data_result = response._convert_client_data_result
+_convert_public_key_credential_data = response._convert_public_key_credential_data
+_convert_result_to_data = response._convert_result_to_data
+_prepare_decoder_response = response._prepare_decoder_response
 
 # Summary rendering.
 _base_type = summary._base_type
