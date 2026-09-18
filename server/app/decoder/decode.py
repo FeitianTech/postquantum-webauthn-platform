@@ -372,50 +372,10 @@ _install_runtime_bindings(
 )
 
 
-_MAKE_CREDENTIAL_REQUEST_HANDLERS: dict[Any, Callable[[Any], Any]] = {
-    "clientDataHash": _convert_optional_ctap_field,
-    "rp": _hex_json_safe,
-    "user": _convert_ctap_user_field,
-    "pubKeyCredParams": _convert_pub_key_cred_params,
-    "excludeList": _convert_ctap_allow_list,
-    "extensions": _hex_json_safe,
-    "options": _hex_json_safe,
-    "pinUvAuthParam": _convert_optional_ctap_field,
-    "pinUvAuthProtocol": _hex_json_safe,
-    "enterpriseAttestation": _hex_json_safe,
-    "largeBlobKey": _convert_optional_ctap_field,
-}
-
-_GET_ASSERTION_REQUEST_HANDLERS: dict[Any, Callable[[Any], Any]] = {
-    "rpId": _hex_json_safe,
-    "clientDataHash": _convert_optional_ctap_field,
-    "allowList": _convert_ctap_allow_list,
-    "extensions": _hex_json_safe,
-    "options": _hex_json_safe,
-    "pinUvAuthParam": _convert_optional_ctap_field,
-    "pinUvAuthProtocol": _hex_json_safe,
-    "largeBlobKey": _convert_optional_ctap_field,
-}
-
-_MAKE_CREDENTIAL_RESPONSE_HANDLERS: dict[Any, Callable[[Any], Any]] = {
-    "fmt": _hex_json_safe,
-    "authData": _convert_auth_data_field,
-    "attStmt": _convert_att_stmt_field,
-    "epAtt": _convert_optional_ctap_field,
-    "largeBlobKey": _convert_optional_ctap_field,
-    "extensions": _convert_optional_ctap_field,
-}
-
-_GET_ASSERTION_RESPONSE_HANDLERS: dict[Any, Callable[[Any], Any]] = {
-    "credential": _convert_ctap_credential_descriptor,
-    "authData": _convert_auth_data_field,
-    "signature": _convert_signature_field,
-    "user": _convert_ctap_user_field,
-    "numberOfCredentials": _convert_optional_ctap_field,
-    "userSelected": _convert_optional_ctap_field,
-    "largeBlobKey": _convert_optional_ctap_field,
-    "extensions": _convert_optional_ctap_field,
-}
+_MAKE_CREDENTIAL_REQUEST_HANDLERS = ctap_runtime_interpret._MAKE_CREDENTIAL_REQUEST_HANDLERS
+_GET_ASSERTION_REQUEST_HANDLERS = ctap_runtime_interpret._GET_ASSERTION_REQUEST_HANDLERS
+_MAKE_CREDENTIAL_RESPONSE_HANDLERS = ctap_runtime_interpret._MAKE_CREDENTIAL_RESPONSE_HANDLERS
+_GET_ASSERTION_RESPONSE_HANDLERS = ctap_runtime_interpret._GET_ASSERTION_RESPONSE_HANDLERS
 
 _DETAILS_RUNTIME_BINDINGS: dict[str, Callable[..., Any]] = {
     "_describe_client_data_from_bytes": details_runtime._describe_client_data_from_bytes,
