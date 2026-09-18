@@ -9,6 +9,7 @@ from fido2.cose import CoseKey
 from fido2.webauthn import AttestedCredentialData
 
 from ...attachments import normalize_attachment
+from . import binary_helpers_impl
 
 
 def _extract_credential_id_impl(_advanced_module: Any, value: Any) -> bytes | None:
@@ -96,9 +97,9 @@ def _parse_client_supplied_credentials_impl(
             if credential_id_raw is None or public_key_raw is None:
                 continue
 
-            aaguid_bytes = b"\x00" * 16 if aaguid_raw is None else advanced_module._decode_client_binary(aaguid_raw)
-            credential_id_bytes = advanced_module._decode_client_binary(credential_id_raw)
-            public_key_bytes = advanced_module._decode_client_binary(public_key_raw)
+            aaguid_bytes = b"\x00" * 16 if aaguid_raw is None else binary_helpers_impl._decode_client_binary_impl(aaguid_raw)
+            credential_id_bytes = binary_helpers_impl._decode_client_binary_impl(credential_id_raw)
+            public_key_bytes = binary_helpers_impl._decode_client_binary_impl(public_key_raw)
 
             cose_key = CoseKey.parse(cbor.decode(public_key_bytes))
             attested = AttestedCredentialData.create(aaguid_bytes, credential_id_bytes, cose_key)

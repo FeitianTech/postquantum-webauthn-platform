@@ -191,7 +191,7 @@ def _select_first(mapping: Mapping[str, Any], keys: Iterable[str]) -> Any:
 
 
 def _decode_client_binary(value: Any) -> bytes:
-    return _decode_client_binary_impl(_self_module(), value)
+    return _decode_client_binary_impl(value)
 
 
 def _parse_client_supplied_credentials(raw_credentials: Any) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
@@ -215,15 +215,15 @@ def _is_custom_cose_algorithm(alg_id: int | None) -> bool:
 
 
 def _decode_base64url(data: str) -> bytes:
-    return _decode_base64url_impl(_self_module(), data)
+    return _decode_base64url_impl(data)
 
 
 def _decode_base64url_bytes(value: Any) -> bytes:
-    return _decode_base64url_bytes_impl(_self_module(), value)
+    return _decode_base64url_bytes_impl(value)
 
 
 def _extract_assertion_credential_id(response: Mapping[str, Any]) -> bytes | None:
-    return _extract_assertion_credential_id_impl(_self_module(), response)
+    return _extract_assertion_credential_id_impl(response)
 
 
 def _extract_requested_assertion_algorithm(
@@ -234,11 +234,11 @@ def _extract_requested_assertion_algorithm(
 
 
 def _extract_binary_value(value: Any) -> Any:
-    return _extract_binary_value_impl(_self_module(), value)
+    return _extract_binary_value_impl(value)
 
 
 def _encode_base64url(data: bytes) -> str:
-    return _encode_base64url_impl(_self_module(), data)
+    return _encode_base64url_impl(data)
 
 
 def _log_authenticator_attestation_response(

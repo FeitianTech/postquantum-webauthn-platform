@@ -10,6 +10,7 @@ from fido2.webauthn import (
 )
 
 from ... import config, pqc
+from . import binary_helpers_impl
 
 
 def configure_allowed_algorithms(
@@ -139,7 +140,7 @@ def build_exclude_list(advanced_module: Any, public_key: Mapping[str, Any]) -> l
     if isinstance(exclude_credentials, list):
         for exclude_cred in exclude_credentials:
             if isinstance(exclude_cred, dict) and exclude_cred.get("type") == "public-key":
-                cred_id = advanced_module._extract_binary_value(exclude_cred.get("id", ""))
+                cred_id = binary_helpers_impl._extract_binary_value_impl(exclude_cred.get("id", ""))
                 if isinstance(cred_id, str):
                     cred_id = bytes.fromhex(cred_id)
                 if cred_id:
@@ -189,12 +190,12 @@ def build_processed_extensions(advanced_module: Any, public_key: Mapping[str, An
                 processed_eval = {}
                 if isinstance(prf_eval, dict):
                     if "first" in prf_eval:
-                        first_value = advanced_module._extract_binary_value(prf_eval["first"])
+                        first_value = binary_helpers_impl._extract_binary_value_impl(prf_eval["first"])
                         if isinstance(first_value, str):
                             first_value = bytes.fromhex(first_value)
                         processed_eval["first"] = first_value
                     if "second" in prf_eval:
-                        second_value = advanced_module._extract_binary_value(prf_eval["second"])
+                        second_value = binary_helpers_impl._extract_binary_value_impl(prf_eval["second"])
                         if isinstance(second_value, str):
                             second_value = bytes.fromhex(second_value)
                         processed_eval["second"] = second_value

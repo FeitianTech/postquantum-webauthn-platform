@@ -15,6 +15,7 @@ from fido2.webauthn import (
 
 from ... import attestation, config
 from ...attachments import normalize_attachment, resolve_effective_attachments
+from . import binary_helpers_impl
 from .register_begin_support_impl import (
     build_exclude_list,
     build_processed_extensions,
@@ -51,7 +52,7 @@ def advanced_register_begin_impl(advanced_module: Any):
     user_id_value = user_info.get("id", "")
     if user_id_value:
         try:
-            user_id_bytes = advanced_module._extract_binary_value(user_id_value)
+            user_id_bytes = binary_helpers_impl._extract_binary_value_impl(user_id_value)
             if isinstance(user_id_bytes, str):
                 user_id_bytes = bytes.fromhex(user_id_bytes)
         except (ValueError, TypeError) as exc:
@@ -63,7 +64,7 @@ def advanced_register_begin_impl(advanced_module: Any):
     challenge_bytes = None
     if challenge_value:
         try:
-            challenge_bytes = advanced_module._extract_binary_value(challenge_value)
+            challenge_bytes = binary_helpers_impl._extract_binary_value_impl(challenge_value)
             if isinstance(challenge_bytes, str):
                 challenge_bytes = bytes.fromhex(challenge_bytes)
         except (ValueError, TypeError) as exc:
