@@ -2,14 +2,176 @@ from __future__ import annotations
 
 import hashlib
 from collections.abc import Mapping
+from datetime import datetime, timezone
 from typing import Any
 
+from fido2.attestation import (
+    Attestation,
+    InvalidData,
+    InvalidSignature,
+    UnsupportedType,
+)
 from fido2.cose import CoseKey
 from fido2.utils import ByteBuffer
-from fido2.webauthn import AuthenticatorData, CollectedClientData
+from fido2.webauthn import (
+    Aaguid,
+    AuthenticatorData,
+    CollectedClientData,
+    RegistrationResponse,
+)
 
-from .. import encoding
-from . import checks_policy_runtime, encoding_leaf
+from .. import encoding, metadata
+from ..pqc import is_pqc_algorithm
+from . import classical_runtime, encoding_leaf, pqc_runtime, trust_runtime
+
+
+def _resolve_uv_required(
+    state: Mapping[str, Any] | None,
+    public_key_options: Mapping[str, Any] | None,
+) -> bool:
+    uv_required = False
+    if isinstance(state, Mapping):
+        state_uv = state.get("user_verification")
+        if getattr(state_uv, "value", None) == "required" or state_uv == "required":
+            uv_required = True
+
+    if not uv_required and isinstance(public_key_options, Mapping):
+        uv_setting: str | None = None
+        authenticator_selection = public_key_options.get("authenticatorSelection")
+        if isinstance(authenticator_selection, Mapping):
+            uv_setting = authenticator_selection.get("userVerification")
+        if not uv_setting:
+            uv_setting = public_key_options.get("userVerification")
+        if isinstance(uv_setting, str) and uv_setting.lower() == "required":
+            uv_required = True
+
+    return uv_required
+
+
+def _collect_allowed_algorithms(
+    public_key_options: Mapping[str, Any] | None,
+) -> list[int]:
+    allowed_algorithms: list[int] = []
+    if isinstance(public_key_options, Mapping):
+        params = public_key_options.get("pubKeyCredParams")
+        if isinstance(params, list):
+            for param in params:
+                if isinstance(param, Mapping) and isinstance(param.get("alg"), int):
+                    allowed_algorithms.append(param["alg"])
+    return allowed_algorithms
+
+
+def _finalize_metadata_results(
+    results: dict[str, Any],
+    *,
+    metadata_entry: Any,
+    metadata_lookup_source: str | None,
+    verifier: Any,
+    credential_aaguid_bytes: bytes,
+    certificate_aaguid_bytes: bytes,
+    root_check_details: dict[str, bool | None] | None,
+    root_valid: bool | None,
+) -> None:
+    metadata_description: str | None = None
+    metadata_aaguid: str | None = None
+    metadata_algorithm_supported: bool | None = None
+    metadata_aaguid_bytes = b""
+    metadata_root_certificates_present = False
+    metadata_verification_warning: str | None = None
+
+    if metadata_entry is None and credential_aaguid_bytes:
+        try:
+            aaguid_obj = Aaguid.fromhex(credential_aaguid_bytes.hex())
+        except Exception:
+            aaguid_obj = None
+        if aaguid_obj is not None:
+            if verifier is None:
+                verifier = metadata.get_mds_verifier()
+            if verifier is not None:
+                try:
+                    fallback_entry = verifier.find_entry_by_aaguid(aaguid_obj)
+                except Exception:
+                    None
+                else:
+                    if fallback_entry is not None:
+                        metadata_entry = fallback_entry
+                        metadata_lookup_source = "aaguid"
+
+    if metadata_entry is not None:
+        metadata_statement = getattr(metadata_entry, "metadata_statement", None)
+        if getattr(metadata_statement, "description", None):
+            metadata_description = metadata_statement.description
+        authenticator_info = getattr(
+            metadata_statement,
+            "authenticator_get_info",
+            None,
+        )
+        root_certs = getattr(
+            metadata_statement,
+            "attestation_root_certificates",
+            None,
+        )
+        if not root_certs and isinstance(metadata_statement, dict):
+            root_certs = metadata_statement.get("attestation_root_certificates") or metadata_statement.get(
+                "attestationRootCertificates"
+            )
+        if isinstance(root_certs, (list, tuple, set)):
+            metadata_root_certificates_present = any(bool(cert) for cert in root_certs)
+        elif root_certs:
+            metadata_root_certificates_present = True
+        algorithm = results["authenticator_data"].get("algorithm")
+        if (
+            isinstance(authenticator_info, dict)
+            and isinstance(algorithm, int)
+        ):
+            alg_list = authenticator_info.get("algorithms")
+            if isinstance(alg_list, (list, tuple)):
+                numeric_algs = [alg for alg in alg_list if isinstance(alg, int)]
+                if numeric_algs:
+                    metadata_algorithm_supported = algorithm in numeric_algs
+        entry_aaguid = getattr(metadata_entry, "aaguid", None)
+        if entry_aaguid is not None:
+            try:
+                metadata_aaguid = str(entry_aaguid)
+                metadata_aaguid_bytes = bytes(entry_aaguid)  # noqa: F841  # FIXME: computed but never compared, unlike the credential/certificate aaguids
+            except Exception:
+                pass
+
+    credential_aaguid_value = credential_aaguid_bytes if credential_aaguid_bytes else None
+    certificate_aaguid_value = certificate_aaguid_bytes if certificate_aaguid_bytes else None
+
+    if credential_aaguid_value and certificate_aaguid_value:
+        results["aaguid_match"] = (
+            credential_aaguid_value == certificate_aaguid_value
+        )
+    else:
+        results["aaguid_match"] = None
+
+    results["metadata"] = {
+        "available": metadata_entry is not None,
+        "description": metadata_description,
+        "aaguid": metadata_aaguid,
+        "algorithm_supported": metadata_algorithm_supported,
+        "root_certificates_present": metadata_root_certificates_present,
+    }
+
+    if metadata_lookup_source:
+        results["metadata"]["source"] = metadata_lookup_source
+    if metadata_verification_warning:
+        results["metadata"]["verification_warning"] = metadata_verification_warning
+
+    # The AAGUID exposed during registration originates from the attestation
+    # object. Metadata mismatches are surfaced through ``results["metadata"]``,
+    # while ``results["aaguid_match"]`` only reflects whether the authenticator
+    # data and attestation certificate agree.
+    if metadata_algorithm_supported is False:
+        results["errors"].append("algorithm_not_in_metadata")
+
+    if root_check_details:
+        results["root_checks"] = root_check_details
+
+    if root_valid is not None:
+        results["root_valid"] = root_valid
 
 
 def _coerce_expected_bytes(value: Any) -> bytes:
@@ -136,7 +298,7 @@ def _populate_authenticator_data_results(
     user_verified = bool(flags & AuthenticatorData.FLAG.UV)
     attested_credential_included = bool(flags & AuthenticatorData.FLAG.AT)
 
-    uv_required = checks_policy_runtime._resolve_uv_required(state, public_key_options)
+    uv_required = _resolve_uv_required(state, public_key_options)
     uv_satisfied = user_verified or not uv_required
 
     if not user_present:
@@ -146,7 +308,7 @@ def _populate_authenticator_data_results(
     if not attested_credential_included:
         results["errors"].append("attested_credential_data_missing")
 
-    allowed_algorithms = checks_policy_runtime._collect_allowed_algorithms(public_key_options)
+    allowed_algorithms = _collect_allowed_algorithms(public_key_options)
 
     credential_data = getattr(auth_data_obj, "credential_data", None)
     credential_id_length: int | None = None
@@ -219,3 +381,261 @@ def _populate_authenticator_data_results(
         "allowed_algorithms": allowed_algorithms,
         "uv_required": uv_required,
     }
+
+
+def _resolve_signature_validation(
+    attestation_object: Any,
+    client_data_hash: bytes,
+) -> dict[str, Any]:
+    attestation_format_value = (attestation_object.fmt or "").lower()
+    attestation_result = None
+    attestation_errors: list[str] = []
+
+    if attestation_format_value == "none":
+        signature_valid = None
+    else:
+        try:
+            attestation_cls = Attestation.for_type(attestation_object.fmt)
+            attestation_instance = attestation_cls()
+            attestation_result = attestation_instance.verify(
+                attestation_object.att_stmt,
+                attestation_object.auth_data,
+                client_data_hash,
+            )
+            signature_valid = True
+        except UnsupportedType as exc:
+            attestation_errors.append(f"unsupported_attestation: {exc}")
+            signature_valid = False
+        except (InvalidSignature, InvalidData) as exc:
+            attestation_errors.append(f"attestation_invalid: {exc}")
+            signature_valid = False
+        except Exception as exc:
+            attestation_errors.append(f"attestation_error: {exc}")
+            signature_valid = False
+
+    pqc_signature_valid: bool | None = None
+    if signature_valid is False and attestation_format_value != "none":
+        pqc_outcome = pqc_runtime._attempt_pqc_attestation_signature_validation(
+            attestation_object, client_data_hash
+        )
+        if pqc_outcome.get("attempted"):
+            pqc_error = pqc_outcome.get("error")
+            if pqc_outcome.get("success"):
+                # The PQC fallback checks the attestation SIGNATURE only; it
+                # skips the packed-attestation certificate policy checks
+                # (Subject OU, AAGUID extension match, Basic Constraints).
+                # It is therefore reported as its own result and must never
+                # overwrite the overall verdict or erase the errors that the
+                # full verification produced.
+                pqc_signature_valid = True
+                attestation_result = pqc_outcome.get("attestation_result")
+            else:
+                pqc_signature_valid = False
+                if pqc_error:
+                    attestation_errors.append(str(pqc_error))
+
+    return {
+        "attestation_format_value": attestation_format_value,
+        "signature_valid": signature_valid,
+        "pqc_signature_valid": pqc_signature_valid,
+        "attestation_result": attestation_result,
+        "attestation_errors": attestation_errors,
+    }
+
+
+def _collect_attestation_trust_path(
+    attestation_result: Any,
+    attestation_object: Any,
+) -> list[bytes]:
+    attestation_trust_path: list[bytes] = []
+    if attestation_result is not None:
+        trust_path_candidate = getattr(attestation_result, "trust_path", None)
+        if trust_path_candidate:
+            attestation_trust_path = list(trust_path_candidate)
+    if not attestation_trust_path and isinstance(attestation_object.att_stmt, Mapping):
+        attestation_trust_path = trust_runtime._collect_trust_path_entries(
+            attestation_object.att_stmt.get("x5c")
+        )
+    return attestation_trust_path
+
+
+def _evaluate_root_validation(
+    results: dict[str, Any],
+    *,
+    algorithm: int | None,
+    attestation_object: Any,
+    attestation_result: Any,
+    client_data_hash: bytes,
+    credential_aaguid_bytes: bytes,
+    signature_valid: bool | None,
+    attestation_format_value: str,
+) -> dict[str, Any]:
+    attestation_trust_path = _collect_attestation_trust_path(
+        attestation_result,
+        attestation_object,
+    )
+
+    certificate_aaguid_bytes = b""
+    if attestation_trust_path:
+        certificate_aaguid_bytes = trust_runtime._extract_certificate_aaguid(attestation_trust_path[0])
+
+    metadata_entry = None
+    metadata_lookup_source: str | None = None
+    now = datetime.now(timezone.utc)
+    root_valid: bool | None = None
+    verifier = None
+    root_check_details: dict[str, bool | None] | None = None
+
+    pqc_registration = isinstance(algorithm, int) and is_pqc_algorithm(algorithm)
+    if pqc_registration:
+        verifier = metadata.get_mds_verifier()
+        pqc_outcome = pqc_runtime._evaluate_mldsa_attestation_root(
+            attestation_object,
+            credential_aaguid_bytes,
+            verifier,
+            now,
+        )
+        root_valid = pqc_outcome.get("root_valid")
+        metadata_entry = pqc_outcome.get("metadata_entry") or metadata_entry
+        metadata_lookup_source = pqc_outcome.get("metadata_lookup_source")
+        root_check_details = pqc_outcome.get("checks")
+        pqc_errors = pqc_outcome.get("errors") or []
+        pqc_warnings = pqc_outcome.get("warnings") or []
+        if pqc_errors:
+            results["errors"].extend(str(err) for err in pqc_errors)
+        if pqc_warnings:
+            results["warnings"].extend(str(warn) for warn in pqc_warnings)
+    elif signature_valid and attestation_result is not None:
+        verifier = metadata.get_mds_verifier()
+        classical_outcome = classical_runtime._evaluate_classical_attestation_root(
+            attestation_object,
+            attestation_result,
+            client_data_hash,
+            verifier,
+            now,
+        )
+        root_valid = classical_outcome.get("root_valid")
+        if classical_outcome.get("metadata_entry") is not None:
+            metadata_entry = classical_outcome.get("metadata_entry")
+            metadata_lookup_source = classical_outcome.get("metadata_lookup_source")
+        elif classical_outcome.get("metadata_lookup_source"):
+            metadata_lookup_source = classical_outcome.get("metadata_lookup_source")
+        root_check_details = classical_outcome.get("checks")
+        class_errors = classical_outcome.get("errors") or []
+        class_warnings = classical_outcome.get("warnings") or []
+        if class_errors:
+            results["errors"].extend(str(err) for err in class_errors)
+        if class_warnings:
+            results["warnings"].extend(str(warn) for warn in class_warnings)
+    elif signature_valid is False and attestation_format_value != "none":
+        results["errors"].append("attestation_signature_invalid")
+        root_valid = False
+
+    return {
+        "root_valid": root_valid,
+        "metadata_entry": metadata_entry,
+        "metadata_lookup_source": metadata_lookup_source,
+        "root_check_details": root_check_details,
+        "verifier": verifier,
+        "certificate_aaguid_bytes": certificate_aaguid_bytes,
+    }
+
+
+def perform_attestation_checks(
+    response: Mapping[str, Any],
+    state: Mapping[str, Any] | None,
+    public_key_options: Mapping[str, Any] | None,
+    auth_data: Any | None,
+    expected_origin: str,
+    rp_id: str,
+) -> dict[str, Any]:
+    """Execute a comprehensive set of attestation validation checks."""
+
+    results: dict[str, Any] = {
+        "attestation_format": None,
+        "signature_valid": None,
+        "pqc_signature_valid": None,
+        "root_valid": None,
+        "rp_id_hash_valid": None,
+        "aaguid_match": None,
+        "client_data": {},
+        "authenticator_data": {},
+        "metadata": {},
+        "hash_binding": {},
+        "errors": [],
+        "warnings": [],
+    }
+
+    if not isinstance(response, Mapping):
+        results["errors"].append("registration_response_invalid")
+        return results
+
+    try:
+        registration = RegistrationResponse.from_dict(response)
+    except Exception as exc:
+        results["errors"].append(f"registration_parse_error: {exc}")
+        return results
+
+    client_data = registration.response.client_data
+    attestation_object = registration.response.attestation_object
+    results["attestation_format"] = attestation_object.fmt
+
+    if isinstance(auth_data, AuthenticatorData):
+        auth_data_obj = auth_data
+    else:
+        auth_data_obj = attestation_object.auth_data
+
+    expected_challenge_bytes = _resolve_expected_challenge(state, public_key_options)
+    _populate_client_data_results(
+        results,
+        client_data=client_data,
+        expected_challenge_bytes=expected_challenge_bytes,
+        expected_origin=expected_origin,
+    )
+
+    _populate_rp_id_hash_result(results, auth_data_obj=auth_data_obj, rp_id=rp_id)
+
+    auth_ctx = _populate_authenticator_data_results(
+        results,
+        auth_data_obj=auth_data_obj,
+        state=state,
+        public_key_options=public_key_options,
+    )
+
+    client_data_hash = client_data.hash
+    verification_data = bytes(auth_data_obj) + client_data_hash
+    results["hash_binding"] = {
+        "client_data_hash": encoding_leaf.encode_base64url(client_data_hash),
+        "verification_data": encoding_leaf.encode_base64url(verification_data),
+    }
+
+    signature_ctx = _resolve_signature_validation(attestation_object, client_data_hash)
+    for error_message in signature_ctx["attestation_errors"]:
+        results["errors"].append(error_message)
+
+    results["signature_valid"] = signature_ctx["signature_valid"]
+    results["pqc_signature_valid"] = signature_ctx.get("pqc_signature_valid")
+
+    root_ctx = _evaluate_root_validation(
+        results,
+        algorithm=auth_ctx["algorithm"],
+        attestation_object=attestation_object,
+        attestation_result=signature_ctx["attestation_result"],
+        client_data_hash=client_data_hash,
+        credential_aaguid_bytes=auth_ctx["credential_aaguid_bytes"],
+        signature_valid=signature_ctx["signature_valid"],
+        attestation_format_value=signature_ctx["attestation_format_value"],
+    )
+
+    _finalize_metadata_results(
+        results,
+        metadata_entry=root_ctx["metadata_entry"],
+        metadata_lookup_source=root_ctx["metadata_lookup_source"],
+        verifier=root_ctx["verifier"],
+        credential_aaguid_bytes=auth_ctx["credential_aaguid_bytes"],
+        certificate_aaguid_bytes=root_ctx["certificate_aaguid_bytes"],
+        root_check_details=root_ctx["root_check_details"],
+        root_valid=root_ctx["root_valid"],
+    )
+
+    return results

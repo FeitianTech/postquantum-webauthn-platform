@@ -13,10 +13,6 @@ from . import (
     aaguid_leaf,
     certificates,
     checks,
-    checks_attestation_runtime,
-    checks_metadata_runtime,
-    checks_policy_runtime,
-    checks_runtime,
     classical_runtime,
     encoding_leaf,
     pqc_constraints_runtime,
@@ -127,8 +123,8 @@ _attempt_pqc_attestation_signature_validation = pqc_runtime._attempt_pqc_attesta
 _evaluate_mldsa_attestation_root = pqc_runtime._evaluate_mldsa_attestation_root
 
 # Registration policy resolution.
-_collect_allowed_algorithms = checks_policy_runtime._collect_allowed_algorithms
-_resolve_uv_required = checks_policy_runtime._resolve_uv_required
+_collect_allowed_algorithms = checks._collect_allowed_algorithms
+_resolve_uv_required = checks._resolve_uv_required
 
 # Client data and authenticator data checks.
 _coerce_expected_bytes = checks._coerce_expected_bytes
@@ -138,12 +134,12 @@ _populate_rp_id_hash_result = checks._populate_rp_id_hash_result
 _resolve_expected_challenge = checks._resolve_expected_challenge
 
 # Attestation signature and root checks.
-_collect_attestation_trust_path = checks_attestation_runtime._collect_attestation_trust_path
-_evaluate_root_validation = checks_attestation_runtime._evaluate_root_validation
-_resolve_signature_validation = checks_attestation_runtime._resolve_signature_validation
+_collect_attestation_trust_path = checks._collect_attestation_trust_path
+_evaluate_root_validation = checks._evaluate_root_validation
+_resolve_signature_validation = checks._resolve_signature_validation
 
 # Metadata result finalisation.
-_finalize_metadata_results = checks_metadata_runtime._finalize_metadata_results
+_finalize_metadata_results = checks._finalize_metadata_results
 
 # The attestation check orchestrator.
-perform_attestation_checks = checks_runtime.perform_attestation_checks
+perform_attestation_checks = checks.perform_attestation_checks
