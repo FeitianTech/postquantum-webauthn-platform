@@ -14,7 +14,6 @@ from . import (
     cbor_parser,
     cbor_runtime,
     certificates,
-    conversion_leaf,
     ctap_classify,
     ctap_convert_leaf,
     ctap_repair_leaf,
@@ -96,12 +95,12 @@ _format_certificate_time = certificates._format_certificate_time
 _format_public_key_point_lines = certificates._format_public_key_point_lines
 
 # Credential payload conversion leaves.
-_build_authenticator_data_payload = conversion_leaf._build_authenticator_data_payload
-_build_credential_overview = conversion_leaf._build_credential_overview
-_build_credential_payload = conversion_leaf._build_credential_payload
-_build_flag_payload = conversion_leaf._build_flag_payload
-_collect_response_extras = conversion_leaf._collect_response_extras
-_convert_client_data_entry = conversion_leaf._convert_client_data_entry
+_build_authenticator_data_payload = response._build_authenticator_data_payload
+_build_credential_overview = response._build_credential_overview
+_build_credential_payload = response._build_credential_payload
+_build_flag_payload = response._build_flag_payload
+_collect_response_extras = response._collect_response_extras
+_convert_client_data_entry = response._convert_client_data_entry
 
 # Certificate conversion leaves.
 _convert_attestation_entry_impl = certificates._convert_attestation_entry_impl

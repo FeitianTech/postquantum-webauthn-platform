@@ -58,7 +58,7 @@ def details_runtime():
 
 @pytest.fixture
 def response():
-    """The fragment that defines the decoder payload and result conversion."""
+    """The fragment that defines the decoder payload and result conversion. The fragment that defines the credential payload conversion leaves."""
 
     return _fragment("response")
 
@@ -110,13 +110,6 @@ def ctap_repair_leaf():
     """The fragment that defines the CTAP trailing-field repair helpers."""
 
     return _fragment("ctap_repair_leaf")
-
-
-@pytest.fixture
-def conversion_leaf():
-    """The fragment that defines the credential payload conversion leaves."""
-
-    return _fragment("conversion_leaf")
 
 
 @pytest.fixture
