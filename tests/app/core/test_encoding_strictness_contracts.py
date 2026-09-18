@@ -100,9 +100,7 @@ def test_base64url_helpers_do_not_return_garbage_for_plain_text(shared_binary_he
         assert route_module._extract_assertion_credential_id({"rawId": PLAIN_TEXT}) is None
 
 
-def test_credential_intake_reads_both_base64_alphabets_exactly(
-    advanced_binary_helpers, simple_binary_helpers
-):
+def test_credential_intake_reads_both_base64_alphabets_exactly(advanced_binary_helpers, simple_binary_helpers):
     raw = b"\xfb\xef\xbe\xff\xee\xdd"
     standard = base64.b64encode(raw).decode("ascii").rstrip("=")
     urlsafe = base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=")

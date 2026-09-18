@@ -131,7 +131,7 @@ def test_merge_ctap_make_credential_consumes_raw_signature_bytes_in_extra_values
     assert merged_structure["entries"][-1]["keySummary"] == "3"
 
 
-def test_repair_get_assertion_entries_recovers_signature_from_lenient_map_entries(monkeypatch, ctap_parse_runtime, ctap):
+def test_repair_get_assertion_entries_recovers_signature_from_lenient_map_entries(monkeypatch, ctap):
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     monkeypatch.setattr(
@@ -148,7 +148,7 @@ def test_repair_get_assertion_entries_recovers_signature_from_lenient_map_entrie
     base_structure = {"entries": [], "length": 0, "summary": "map[0]"}
 
     monkeypatch.setattr(
-        ctap_parse_runtime,
+        ctap,
         "_extract_lenient_map_entries",
         lambda _raw: [(3, bytearray(b"\x01\x02"))],
     )
@@ -161,7 +161,7 @@ def test_repair_get_assertion_entries_recovers_signature_from_lenient_map_entrie
     assert repaired_value_int_key[3] == b"\x01\x02"
 
     monkeypatch.setattr(
-        ctap_parse_runtime,
+        ctap,
         "_extract_lenient_map_entries",
         lambda _raw: [(3, "not-bytes"), (b"\x99", 1)],
     )
@@ -174,7 +174,7 @@ def test_repair_get_assertion_entries_recovers_signature_from_lenient_map_entrie
     assert repaired_value_bytes_key[3] == b"\x99"
 
 
-def test_try_decode_cbor_merges_assertion_signature_for_direct_get_assertion_classification(monkeypatch, ctap_interpret_runtime, ctap):
+def test_try_decode_cbor_merges_assertion_signature_for_direct_get_assertion_classification(monkeypatch, ctap):
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     structure = {"byteLength": 1, "entries": [], "length": 0, "summary": "map[0]"}
@@ -194,12 +194,12 @@ def test_try_decode_cbor_merges_assertion_signature_for_direct_get_assertion_cla
         lambda structure, value, raw_bytes=None: (structure, {2: b"auth", 3: b"\xbb"}, b"\xbb"),
     )
     monkeypatch.setattr(
-        ctap_interpret_runtime,
+        ctap,
         "_build_get_assertion_expanded_json",
         lambda _value, _raw: {"path": "direct"},
     )
     monkeypatch.setattr(
-        ctap_interpret_runtime,
+        ctap,
         "_interpret_ctap_cbor_value",
         lambda _value: None,
     )
@@ -210,7 +210,7 @@ def test_try_decode_cbor_merges_assertion_signature_for_direct_get_assertion_cla
     assert result["decoded"]["expandedJson"]["path"] == "direct"
 
 
-def test_try_decode_cbor_promotes_other_classification_when_repair_finds_signature(monkeypatch, ctap_interpret_runtime, ctap):
+def test_try_decode_cbor_promotes_other_classification_when_repair_finds_signature(monkeypatch, ctap):
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     structure = {"byteLength": 1, "entries": [], "length": 0, "summary": "map[0]"}
@@ -230,12 +230,12 @@ def test_try_decode_cbor_promotes_other_classification_when_repair_finds_signatu
         lambda structure, value, raw_bytes=None: (structure, {2: b"auth", 3: b"\xaa"}, b"\xaa"),
     )
     monkeypatch.setattr(
-        ctap_interpret_runtime,
+        ctap,
         "_build_get_assertion_expanded_json",
         lambda _value, _raw: {"path": "promoted"},
     )
     monkeypatch.setattr(
-        ctap_interpret_runtime,
+        ctap,
         "_interpret_ctap_cbor_value",
         lambda _value: None,
     )
