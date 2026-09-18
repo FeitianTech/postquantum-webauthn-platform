@@ -40,13 +40,11 @@ select = ["E4", "E7", "E9", "F", "I", "UP006", "UP007", "UP035", "UP045"]
 # F821 is gated, with nothing ignored. It was the progress meter for the
 # split-module runtime hack, where a "carrier" module rebuilt its `*_parts/`
 # fragments' functions against its own globals so the fragments never imported
-# the names they used. It read 1008 before `metadata.py` was unwound, 557 before
-# `attestation.py`, 382 before `decoder/decode.py`, and 0 once the last
-# rebinding was removed. `server/app/metadata_parts/`,
-# `server/app/attestation_parts/` and `server/app/decoder/decode_parts/` all
-# resolve their own names through real imports and stay at zero.
+# the names they used. It read 1008 before `metadata` was unwound, 557 before
+# `attestation`, 382 before `decoder/decode`, and 0 once the last rebinding was
+# removed.
 #
-# `routes/advanced.py` and `routes/simple.py` were the last two carriers, and they
+# `routes/advanced` and `routes/simple` were the last two carriers, and they
 # coupled differently: rather than rebinding, they passed themselves into their
 # fragments (`_self_module()`) and the fragments read names off the parameter. That
 # shape produces no F821 at all -- to ruff the parameter is just a parameter -- so
@@ -54,3 +52,9 @@ select = ["E4", "E7", "E9", "F", "I", "UP006", "UP007", "UP035", "UP045"]
 # `simple_module.` reads and the 107 F401/UP035 findings the two per-file-ignores
 # for those files were suppressing. Both are now zero, the ignores are gone, and this
 # file has no [lint.per-file-ignores] section left at all.
+#
+# The `*_parts/` packages themselves are gone too: each carrier is now a package
+# whose `__init__.py` IS the public surface and whose submodules are named for
+# what they do (`webauthn/attestation/{certificates,checks,trust,pqc}.py`,
+# `decoder/decode/{cbor_parser,ctap,pipeline}.py`, and so on). F821 stays at zero
+# because every submodule imports what it uses.
