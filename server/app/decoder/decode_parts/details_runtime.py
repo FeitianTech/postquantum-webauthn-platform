@@ -1,13 +1,23 @@
-"""Extracted client/authenticator details helper bodies.
-
-These functions are executed via decode.py wrappers that rebind globals to the
-facade module, preserving monkeypatch-driven behavior in tests.
-"""
-# pyright: reportUndefinedVariable=false
+"""Client data and authenticator data description helpers for the decoder."""
+# pyright: reportUndefinedVariable=false  # _decode_binary_input still comes from the carrier
 from __future__ import annotations
 
-from collections.abc import Mapping
+import base64
+import binascii
+import json
+from collections.abc import Mapping, Sequence
 from typing import Any
+
+from fido2 import cbor
+from fido2.webauthn import AttestationObject, AuthenticatorData, CollectedClientData
+
+from ...attestation import (
+    colon_hex,
+    encode_base64url,
+    make_json_safe,
+    serialize_attestation_certificate,
+    summarize_authenticator_extensions,
+)
 
 
 def _describe_client_data_from_bytes(data: bytes) -> dict[str, Any]:
