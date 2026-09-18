@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
+from . import result_runtime
 from .ctap_classify import (
     _GET_ASSERTION_REQUEST_LABELS,
     _GET_ASSERTION_RESPONSE_LABELS,
@@ -151,7 +152,7 @@ def _interpret_make_credential_map(value: Mapping[Any, Any]) -> dict[str, Any] |
             interpreted["2 (authData trailing)"] = _hex_json_safe(trailing_map)
 
     if isinstance(att_stmt_map, Mapping):
-        att_stmt_details = _convert_attestation_statement({"attestationStatement": att_stmt_map})
+        att_stmt_details = result_runtime._convert_attestation_statement({"attestationStatement": att_stmt_map})
         sig_value = att_stmt_map.get("sig")
         sig_bytes = _coerce_cbor_bytes(sig_value)
         if sig_bytes is not None:
