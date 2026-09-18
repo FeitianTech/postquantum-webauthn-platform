@@ -71,10 +71,10 @@ def pqc_constraints_runtime():
 
 
 @pytest.fixture
-def checks_input_runtime():
+def checks():
     """The fragment that defines the client/authenticator data checks."""
 
-    return _fragment("checks_input_runtime")
+    return _fragment("checks")
 
 
 @pytest.fixture
