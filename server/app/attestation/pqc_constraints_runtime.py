@@ -11,7 +11,7 @@ from fido2.attestation import InvalidSignature
 from fido2.attestation.base import _verify_mldsa_certificate_signature
 
 from ..pqc import PQC_ALGORITHM_ID_TO_NAME, is_pqc_algorithm
-from . import trust_ca_runtime, trust_runtime
+from . import trust, trust_ca_runtime
 
 _PQC_ALGORITHM_NAME_TO_ID = {
     name.lower(): alg_id for alg_id, name in PQC_ALGORITHM_ID_TO_NAME.items()
@@ -72,9 +72,9 @@ def _check_pqc_certificate_constraints(
     except Exception as exc:
         return f"pqc_certificate_parse_error: {exc}"
 
-    subject = trust_runtime._describe_certificate_subject(cert)
-    not_before = trust_runtime._certificate_datetime(cert, "not_valid_before")
-    not_after = trust_runtime._certificate_datetime(cert, "not_valid_after")
+    subject = trust._describe_certificate_subject(cert)
+    not_before = trust._certificate_datetime(cert, "not_valid_before")
+    not_after = trust._certificate_datetime(cert, "not_valid_after")
     if now < not_before or now > not_after:
         return f"pqc_certificate_out_of_validity: {subject}"
 

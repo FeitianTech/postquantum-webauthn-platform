@@ -9,7 +9,7 @@ from fido2.attestation import InvalidSignature, verify_x509_chain
 from fido2.attestation.base import TrustPathEvaluation
 
 from .. import metadata
-from . import trust_ca_runtime, trust_runtime
+from . import trust, trust_ca_runtime
 
 
 def _evaluate_classical_attestation_root(
@@ -55,8 +55,8 @@ def _evaluate_classical_attestation_root(
             chain_valid_dates = False
             continue
 
-        not_before = trust_runtime._certificate_datetime(cert, "not_valid_before")
-        not_after = trust_runtime._certificate_datetime(cert, "not_valid_after")
+        not_before = trust._certificate_datetime(cert, "not_valid_before")
+        not_after = trust._certificate_datetime(cert, "not_valid_after")
         if now < not_before or now > not_after:
             chain_valid_dates = False
             errors.append(
@@ -87,7 +87,7 @@ def _evaluate_classical_attestation_root(
     if trust_details is not None and trust_details.ca_certificate:
         candidate_roots.append(trust_details.ca_certificate)
     if metadata_entry is not None:
-        candidate_roots.extend(trust_runtime._collect_metadata_root_certificates(metadata_entry))
+        candidate_roots.extend(trust._collect_metadata_root_certificates(metadata_entry))
     elif not metadata_unavailable:
         errors.append("metadata_entry_missing")
 
@@ -127,7 +127,7 @@ def _evaluate_classical_attestation_root(
         checks["chain"] = chain_valid
 
     return {
-        "root_valid": trust_runtime._resolve_root_validity(checks),
+        "root_valid": trust._resolve_root_validity(checks),
         "metadata_entry": metadata_entry,
         "metadata_lookup_source": metadata_lookup_source,
         "warnings": warnings,

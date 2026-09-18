@@ -134,17 +134,17 @@ def test_coerce_attestation_certificate_bytes_string_path_falls_back_to_base64ur
     assert attestation_module._coerce_attestation_certificate_bytes("not a certificate!") is None
 
 
-def test_evaluate_mldsa_attestation_root_clears_chain_errors_after_later_success(monkeypatch, trust_runtime, trust_ca_runtime, pqc_constraints_runtime, metadata_module, attestation_module):
+def test_evaluate_mldsa_attestation_root_clears_chain_errors_after_later_success(monkeypatch, trust, trust_ca_runtime, pqc_constraints_runtime, metadata_module, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     metadata_entry = SimpleNamespace(metadata_statement=SimpleNamespace())
     monkeypatch.setattr(
-        trust_runtime,
+        trust,
         "_find_metadata_entry_for_aaguid",
         lambda _verifier, _aaguid: metadata_entry,
     )
     monkeypatch.setattr(
-        trust_runtime,
+        trust,
         "_collect_metadata_root_certificates",
         lambda _entry: [b"root-a", b"root-b"],
     )
@@ -159,7 +159,7 @@ def test_evaluate_mldsa_attestation_root_clears_chain_errors_after_later_success
         lambda _entry: None,
     )
     monkeypatch.setattr(
-        trust_runtime,
+        trust,
         "_collect_trust_path_entries",
         lambda _x5c: [b"leaf"],
     )
@@ -182,17 +182,17 @@ def test_evaluate_mldsa_attestation_root_clears_chain_errors_after_later_success
     assert "dup" not in outcome["errors"]
 
 
-def test_evaluate_mldsa_attestation_root_deduplicates_chain_errors_when_all_roots_fail(monkeypatch, trust_runtime, trust_ca_runtime, pqc_constraints_runtime, metadata_module, attestation_module):
+def test_evaluate_mldsa_attestation_root_deduplicates_chain_errors_when_all_roots_fail(monkeypatch, trust, trust_ca_runtime, pqc_constraints_runtime, metadata_module, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     metadata_entry = SimpleNamespace(metadata_statement=SimpleNamespace())
     monkeypatch.setattr(
-        trust_runtime,
+        trust,
         "_find_metadata_entry_for_aaguid",
         lambda _verifier, _aaguid: metadata_entry,
     )
     monkeypatch.setattr(
-        trust_runtime,
+        trust,
         "_collect_metadata_root_certificates",
         lambda _entry: [b"root-a", b"root-b"],
     )
@@ -207,7 +207,7 @@ def test_evaluate_mldsa_attestation_root_deduplicates_chain_errors_when_all_root
         lambda _entry: None,
     )
     monkeypatch.setattr(
-        trust_runtime,
+        trust,
         "_collect_trust_path_entries",
         lambda _x5c: [b"leaf"],
     )

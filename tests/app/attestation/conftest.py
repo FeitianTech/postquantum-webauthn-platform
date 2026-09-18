@@ -36,10 +36,10 @@ def certificates():
 
 
 @pytest.fixture
-def trust_runtime():
+def trust():
     """The fragment that defines the trust-path and certificate helpers."""
 
-    return _fragment("trust_runtime")
+    return _fragment("trust")
 
 
 @pytest.fixture
