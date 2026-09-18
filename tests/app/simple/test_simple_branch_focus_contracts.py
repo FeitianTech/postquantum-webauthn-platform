@@ -123,13 +123,12 @@ def test_simple_register_begin_clears_cached_session_fields_when_client_credenti
             assert "simple_register_public_key" not in session_state
 
 
-def test_simple_register_complete_non_mapping_payload_returns_state_expired_error(monkeypatch):
+def test_simple_register_complete_non_mapping_payload_returns_state_expired_error(monkeypatch, attestation_module):
     config_module = pytest.importorskip("server.app.config")
-    simple_module = pytest.importorskip("server.app.routes.simple")
     pytest.importorskip("server.app.app")
 
     monkeypatch.setattr(
-        simple_module,
+        attestation_module,
         "extract_attestation_details",
         lambda _response: ("none", {}, None, None, {}, None, [])
     )
@@ -165,7 +164,7 @@ def test_simple_authenticate_complete_aborts_when_session_credentials_cannot_be_
     assert response.status_code == 400
 
 
-def test_simple_register_complete_covers_warning_metadata_transport_and_session_fallback_paths(monkeypatch, metadata_module, device_logs_module):
+def test_simple_register_complete_covers_warning_metadata_transport_and_session_fallback_paths(monkeypatch, metadata_module, device_logs_module, attestation_module):
     config_module = pytest.importorskip("server.app.config")
     simple_module = pytest.importorskip("server.app.routes.simple")
     pytest.importorskip("server.app.app")
@@ -184,7 +183,7 @@ def test_simple_register_complete_covers_warning_metadata_transport_and_session_
         lambda **_kwargs: _RegisterServer(auth_data)
     )
     monkeypatch.setattr(
-        simple_module,
+        attestation_module,
         "extract_attestation_details",
         lambda _response: (
             "packed",
@@ -196,9 +195,9 @@ def test_simple_register_complete_covers_warning_metadata_transport_and_session_
             [{"subject": "CN=Intermediate"}],
         )
     )
-    monkeypatch.setattr(simple_module, "extract_min_pin_length", lambda _results: 6)
+    monkeypatch.setattr(attestation_module, "extract_min_pin_length", lambda _results: 6)
     monkeypatch.setattr(
-        simple_module,
+        attestation_module,
         "perform_attestation_checks",
         lambda *_args, **_kwargs: {
             "signature_valid": False,
@@ -274,7 +273,7 @@ def test_simple_register_complete_covers_warning_metadata_transport_and_session_
     assert event.device_name_mds == "FocusKey Device"
 
 
-def test_simple_credentials_route_covers_scalar_registration_metadata_and_listing_fallbacks(monkeypatch, metadata_module):
+def test_simple_credentials_route_covers_scalar_registration_metadata_and_listing_fallbacks(monkeypatch, metadata_module, attestation_module):
     config_module = pytest.importorskip("server.app.config")
     simple_module = pytest.importorskip("server.app.routes.simple")
     pytest.importorskip("server.app.app")
@@ -290,7 +289,7 @@ def test_simple_credentials_route_covers_scalar_registration_metadata_and_listin
             target.setdefault("aaguidHex", target["aaguid"])
 
     monkeypatch.setattr(simple_module, "add_public_key_material", _add_public_key_material)
-    monkeypatch.setattr(simple_module, "augment_aaguid_fields", _augment_aaguid_fields)
+    monkeypatch.setattr(attestation_module, "augment_aaguid_fields", _augment_aaguid_fields)
 
     dict_backed = {
         "credential_data": {

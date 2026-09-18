@@ -158,7 +158,7 @@ def test_advanced_register_complete_requires_attachment_when_hints_resolve_to_at
     assert "Authenticator attachment could not be determined" in response.get_json()["error"]
 
 
-def test_advanced_register_complete_prefers_session_attachment_scope_over_tampered_request_hints(monkeypatch, metadata_module):
+def test_advanced_register_complete_prefers_session_attachment_scope_over_tampered_request_hints(monkeypatch, metadata_module, attestation_module):
     config_module = pytest.importorskip("server.app.config")
     advanced_module = pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
@@ -166,7 +166,7 @@ def test_advanced_register_complete_prefers_session_attachment_scope_over_tamper
     monkeypatch.setattr(metadata_module, "ensure_metadata_session_id", lambda: "session-id")
     monkeypatch.setattr(advanced_module, "readkey", lambda *_args, **_kwargs: [])
     monkeypatch.setattr(
-        advanced_module,
+        attestation_module,
         "extract_attestation_details",
         lambda _response: ("none", {}, None, None, {}, None, [])
     )
@@ -200,7 +200,7 @@ def test_advanced_register_complete_prefers_session_attachment_scope_over_tamper
             assert "advanced_register_allowed_attachments" not in session_store
 
 
-def test_advanced_register_complete_success_contract_propagates_warnings_and_records_artifact(monkeypatch, metadata_module, credential_artifacts_module, device_logs_module):
+def test_advanced_register_complete_success_contract_propagates_warnings_and_records_artifact(monkeypatch, metadata_module, credential_artifacts_module, device_logs_module, attestation_module):
     config_module = pytest.importorskip("server.app.config")
     advanced_module = pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
@@ -254,9 +254,9 @@ def test_advanced_register_complete_success_contract_propagates_warnings_and_rec
     monkeypatch.setattr(advanced_module, "determine_rp_id", lambda value=None: value or rp_id)
     monkeypatch.setattr(metadata_module, "ensure_metadata_session_id", lambda: "session-id")
     monkeypatch.setattr(advanced_module, "readkey", lambda *_args, **_kwargs: [])
-    monkeypatch.setattr(advanced_module, "perform_attestation_checks", _perform_attestation_checks)
+    monkeypatch.setattr(attestation_module, "perform_attestation_checks", _perform_attestation_checks)
     monkeypatch.setattr(
-        advanced_module,
+        attestation_module,
         "extract_attestation_details",
         lambda _response: (
             "none",
@@ -269,7 +269,7 @@ def test_advanced_register_complete_success_contract_propagates_warnings_and_rec
         )
     )
     monkeypatch.setattr(advanced_module, "add_public_key_material", lambda *_args, **_kwargs: None)
-    monkeypatch.setattr(advanced_module, "augment_aaguid_fields", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(attestation_module, "augment_aaguid_fields", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(credential_artifacts_module, "store_credential_artifact", _store_credential_artifact)
     monkeypatch.setattr(device_logs_module, "record_registration_event", lambda _event: None)
 

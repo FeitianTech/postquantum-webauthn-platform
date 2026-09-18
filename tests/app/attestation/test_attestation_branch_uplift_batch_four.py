@@ -9,7 +9,7 @@ from cryptography import x509
 from fido2.webauthn import Aaguid
 
 
-def test_hex_format_helpers_cover_empty_odd_and_invalid_inputs():
+def test_hex_format_helpers_cover_empty_odd_and_invalid_inputs(attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     assert attestation_module.format_hex_bytes_lines(b"") == []
@@ -17,7 +17,7 @@ def test_hex_format_helpers_cover_empty_odd_and_invalid_inputs():
     assert attestation_module.format_hex_string_lines("zz") == ["zz"]
 
 
-def test_extract_certificate_aaguid_handles_missing_and_nonstandard_extension_shapes(monkeypatch, encoding_leaf):
+def test_extract_certificate_aaguid_handles_missing_and_nonstandard_extension_shapes(monkeypatch, encoding_leaf, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     assert attestation_module._extract_certificate_aaguid(b"") == b""
@@ -79,7 +79,7 @@ def test_extract_certificate_aaguid_handles_missing_and_nonstandard_extension_sh
     assert attestation_module._extract_certificate_aaguid(b"cert") == b""
 
 
-def test_coerce_certificate_bytes_and_leaf_extraction_non_mapping_paths():
+def test_coerce_certificate_bytes_and_leaf_extraction_non_mapping_paths(attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     assert attestation_module._coerce_certificate_bytes(12345) is None
@@ -88,7 +88,7 @@ def test_coerce_certificate_bytes_and_leaf_extraction_non_mapping_paths():
     assert attestation_module._extract_attestation_leaf_certificate(attestation_object) is None
 
 
-def test_collect_metadata_roots_handles_singleton_and_missing_candidates():
+def test_collect_metadata_roots_handles_singleton_and_missing_candidates(attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     metadata_entry = {
@@ -100,7 +100,7 @@ def test_collect_metadata_roots_handles_singleton_and_missing_candidates():
     assert attestation_module._collect_metadata_root_certificates({"other": "value"}) == []
 
 
-def test_trusted_ca_helpers_cover_list_configs_and_subject_parse_failure(monkeypatch, trust_ca_runtime):
+def test_trusted_ca_helpers_cover_list_configs_and_subject_parse_failure(monkeypatch, trust_ca_runtime, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     monkeypatch.setitem(
@@ -131,7 +131,7 @@ def test_trusted_ca_helpers_cover_list_configs_and_subject_parse_failure(monkeyp
     assert attestation_module._is_trusted_ca_certificate(b"cert", allow_subject_parsing=True) is False
 
 
-def test_find_metadata_entry_for_aaguid_handles_parse_and_lookup_failures(monkeypatch):
+def test_find_metadata_entry_for_aaguid_handles_parse_and_lookup_failures(monkeypatch, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     monkeypatch.setattr(
@@ -150,7 +150,7 @@ def test_find_metadata_entry_for_aaguid_handles_parse_and_lookup_failures(monkey
     assert attestation_module._find_metadata_entry_for_aaguid(_Verifier(), b"\x00" * 16) is None
 
 
-def test_check_pqc_certificate_constraints_reports_validity_basic_constraints_and_usage_errors(monkeypatch, trust_runtime):
+def test_check_pqc_certificate_constraints_reports_validity_basic_constraints_and_usage_errors(monkeypatch, trust_runtime, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     now = datetime.now(timezone.utc)
@@ -263,7 +263,7 @@ def test_check_pqc_certificate_constraints_reports_validity_basic_constraints_an
     )
 
 
-def test_evaluate_mldsa_attestation_root_covers_untrusted_root_and_fido_status_paths(monkeypatch, trust_runtime, trust_ca_runtime, metadata_module):
+def test_evaluate_mldsa_attestation_root_covers_untrusted_root_and_fido_status_paths(monkeypatch, trust_runtime, trust_ca_runtime, metadata_module, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     metadata_entry = SimpleNamespace(metadata_statement=SimpleNamespace())
@@ -293,7 +293,7 @@ def test_evaluate_mldsa_attestation_root_covers_untrusted_root_and_fido_status_p
     assert "pqc_metadata_not_fido_trusted" in fido_false["errors"]
 
 
-def test_attempt_pqc_signature_validation_skips_non_mapping_statements():
+def test_attempt_pqc_signature_validation_skips_non_mapping_statements(attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     outcome = attestation_module._attempt_pqc_attestation_signature_validation(

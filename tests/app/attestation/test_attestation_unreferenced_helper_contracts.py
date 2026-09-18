@@ -29,7 +29,7 @@ def _self_signed_cert_der() -> bytes:
     return cert.public_bytes(serialization.Encoding.DER)
 
 
-def test_datetime_coercion_bytes_and_leaf_certificate_helpers():
+def test_datetime_coercion_bytes_and_leaf_certificate_helpers(attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     naive = datetime(2026, 1, 1, 12, 0, 0)
@@ -55,7 +55,7 @@ def test_datetime_coercion_bytes_and_leaf_certificate_helpers():
     assert attestation_module._extract_attestation_leaf_certificate(SimpleNamespace(att_stmt={"x5c": []})) is None
 
 
-def test_trusted_ca_config_and_fingerprint_helpers(monkeypatch):
+def test_trusted_ca_config_and_fingerprint_helpers(monkeypatch, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     monkeypatch.setitem(attestation_module.app.config, "TRUSTED_ATTESTATION_CA_SUBJECTS", ["CN=Root"])
@@ -69,7 +69,7 @@ def test_trusted_ca_config_and_fingerprint_helpers(monkeypatch):
     assert fingerprint == fingerprint.upper()
 
 
-def test_metadata_lookup_subject_description_and_format_helpers():
+def test_metadata_lookup_subject_description_and_format_helpers(attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     verifier = SimpleNamespace(find_entry_by_aaguid=lambda _aaguid: {"ok": True})
@@ -108,7 +108,7 @@ def test_metadata_lookup_subject_description_and_format_helpers():
     assert attestation_module._extract_common_names(name) == ["Demo CN"]
 
 
-def test_fallback_certificate_serialization_and_unknown_public_key_info_helpers(monkeypatch, public_key_leaf):
+def test_fallback_certificate_serialization_and_unknown_public_key_info_helpers(monkeypatch, public_key_leaf, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     monkeypatch.setattr(
@@ -150,7 +150,7 @@ def test_fallback_certificate_serialization_and_unknown_public_key_info_helpers(
     assert "Fingerprints" in fallback["summary"]
 
 
-def test_public_key_serialization_paths(monkeypatch):
+def test_public_key_serialization_paths(monkeypatch, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     ec_info = attestation_module._serialize_public_key_info(ec.generate_private_key(ec.SECP256R1()).public_key())

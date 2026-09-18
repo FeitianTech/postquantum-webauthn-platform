@@ -28,7 +28,7 @@ def _self_signed_cert_der() -> bytes:
     return cert.public_bytes(serialization.Encoding.DER)
 
 
-def test_normalise_pqc_algorithm_identifier_handles_numeric_name_and_embedded_values():
+def test_normalise_pqc_algorithm_identifier_handles_numeric_name_and_embedded_values(attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     assert attestation_module._normalise_pqc_algorithm_identifier(-49) == -49
@@ -38,7 +38,7 @@ def test_normalise_pqc_algorithm_identifier_handles_numeric_name_and_embedded_va
     assert attestation_module._normalise_pqc_algorithm_identifier("not-an-alg") is None
 
 
-def test_collect_trust_path_entries_and_certificate_bytes_coercion_helpers():
+def test_collect_trust_path_entries_and_certificate_bytes_coercion_helpers(attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     trust_path = attestation_module._collect_trust_path_entries(
@@ -53,7 +53,7 @@ def test_collect_trust_path_entries_and_certificate_bytes_coercion_helpers():
     assert attestation_module._coerce_certificate_bytes("   ") is None
 
 
-def test_collect_metadata_root_certificates_supports_object_and_mapping_shapes():
+def test_collect_metadata_root_certificates_supports_object_and_mapping_shapes(attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     root_a = b"root-a"
@@ -78,7 +78,7 @@ def test_collect_metadata_root_certificates_supports_object_and_mapping_shapes()
     assert roots_map == [root_a, root_b]
 
 
-def test_is_trusted_ca_certificate_uses_fingerprint_and_subject_allowlists(monkeypatch):
+def test_is_trusted_ca_certificate_uses_fingerprint_and_subject_allowlists(monkeypatch, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     cert_der = _self_signed_cert_der()
@@ -118,7 +118,7 @@ def test_is_trusted_ca_certificate_uses_fingerprint_and_subject_allowlists(monke
     assert attestation_module._is_trusted_ca_certificate(cert_der) is False
 
 
-def test_resolve_root_validity_handles_partial_success_and_failures():
+def test_resolve_root_validity_handles_partial_success_and_failures(attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     assert (
@@ -141,7 +141,7 @@ def test_resolve_root_validity_handles_partial_success_and_failures():
     )
 
 
-def test_serialize_extension_value_handles_known_unrecognized_oids_and_transport_bits():
+def test_serialize_extension_value_handles_known_unrecognized_oids_and_transport_bits(attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     device_oid = ObjectIdentifier("1.3.6.1.4.1.41482.2")
@@ -163,7 +163,7 @@ def test_serialize_extension_value_handles_known_unrecognized_oids_and_transport
     assert transport_value["Transports"] == "USB NFC"
 
 
-def test_parse_fido_transport_bitfield_supports_plain_and_der_bitstring_encodings():
+def test_parse_fido_transport_bitfield_supports_plain_and_der_bitstring_encodings(attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     assert attestation_module._parse_fido_transport_bitfield(b"\x03") == ["USB", "NFC"]
@@ -174,7 +174,7 @@ def test_parse_fido_transport_bitfield_supports_plain_and_der_bitstring_encoding
     assert attestation_module._parse_fido_transport_bitfield(b"") == []
 
 
-def test_coerce_attestation_certificate_bytes_handles_mapping_variants():
+def test_coerce_attestation_certificate_bytes_handles_mapping_variants(attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     cert_bytes = b"\x30\x82\x01\x00"
@@ -195,7 +195,7 @@ def test_coerce_attestation_certificate_bytes_handles_mapping_variants():
     assert attestation_module._coerce_attestation_certificate_bytes(ByteBuffer(cert_bytes)) == cert_bytes
 
 
-def test_attempt_pqc_attestation_signature_validation_reports_missing_sig_and_algorithm_mismatch():
+def test_attempt_pqc_attestation_signature_validation_reports_missing_sig_and_algorithm_mismatch(attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     missing_sig_attestation = SimpleNamespace(att_stmt={"alg": -49}, auth_data=SimpleNamespace())
@@ -227,7 +227,7 @@ def test_attempt_pqc_attestation_signature_validation_reports_missing_sig_and_al
     assert mismatch["error"] == "pqc_attestation_algorithm_mismatch"
 
 
-def test_check_pqc_certificate_constraints_returns_parse_error_for_invalid_der():
+def test_check_pqc_certificate_constraints_returns_parse_error_for_invalid_der(attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     error = attestation_module._check_pqc_certificate_constraints(

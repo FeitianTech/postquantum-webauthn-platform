@@ -13,13 +13,12 @@ class _MatchedCredential:
         self.credential_id = credential_id
 
 
-def test_register_complete_rejects_non_mapping_request_state_fallback(monkeypatch):
+def test_register_complete_rejects_non_mapping_request_state_fallback(monkeypatch, attestation_module):
     config_module = pytest.importorskip("server.app.config")
-    simple_module = pytest.importorskip("server.app.routes.simple")
     pytest.importorskip("server.app.app")
 
     monkeypatch.setattr(
-        simple_module,
+        attestation_module,
         "extract_attestation_details",
         lambda _response: ("none", {}, None, None, {}, None, [])
     )

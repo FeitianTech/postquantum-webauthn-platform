@@ -8,6 +8,7 @@ from flask import abort, jsonify, request, session
 
 from fido2.webauthn import AuthenticatorData
 
+from ... import attestation
 from ...challenge_registry import (
     CHALLENGE_FRESH,
     CHALLENGE_REPLAYED,
@@ -57,7 +58,7 @@ def authenticate_begin_impl(simple_module: Any):
     options_payload = dict(options)
     # The ceremony state (and therefore the challenge) stays server-side.
 
-    return jsonify(simple_module.make_json_safe(options_payload))
+    return jsonify(attestation.make_json_safe(options_payload))
 
 
 def _challenge_rejection_message(replayed: bool) -> str:

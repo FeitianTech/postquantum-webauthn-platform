@@ -56,7 +56,7 @@ def _registration(attestation_object, client_data, extension_results):
     )
 
 
-def test_extract_attestation_details_handles_non_dict_and_certificate_edge_cases(monkeypatch, serialize_runtime, details_runtime):
+def test_extract_attestation_details_handles_non_dict_and_certificate_edge_cases(monkeypatch, serialize_runtime, details_runtime, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     defaults = attestation_module.extract_attestation_details(["not-a-dict"])
@@ -97,7 +97,7 @@ def test_extract_attestation_details_handles_non_dict_and_certificate_edge_cases
     assert extracted[4] == {"ext": True}
 
 
-def test_extract_attestation_details_keeps_non_mapping_extension_outputs(monkeypatch):
+def test_extract_attestation_details_keeps_non_mapping_extension_outputs(monkeypatch, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     attestation_object = _AttestationObject(fmt="none", att_stmt={}, auth_data=SimpleNamespace())
@@ -113,7 +113,7 @@ def test_extract_attestation_details_keeps_non_mapping_extension_outputs(monkeyp
     assert extracted[4] == ["raw-extension"]
 
 
-def test_serialize_extension_value_unrecognized_oid_fallback_paths(monkeypatch, encoding_leaf):
+def test_serialize_extension_value_unrecognized_oid_fallback_paths(monkeypatch, encoding_leaf, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     firmware_oid = ObjectIdentifier("1.3.6.1.4.1.41482.13.1")
@@ -147,7 +147,7 @@ def test_serialize_extension_value_unrecognized_oid_fallback_paths(monkeypatch, 
     assert "Hex value" in attestation_module._serialize_extension_value(aaguid_ext)
 
 
-def test_perform_attestation_checks_challenge_coercion_and_uv_requirement_paths(monkeypatch):
+def test_perform_attestation_checks_challenge_coercion_and_uv_requirement_paths(monkeypatch, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     auth_data_override = AuthenticatorData.create(
@@ -186,7 +186,7 @@ def test_perform_attestation_checks_challenge_coercion_and_uv_requirement_paths(
     assert result["authenticator_data"]["user_verification_required"] is True
 
 
-def test_perform_attestation_checks_classical_lookup_and_aaguid_parse_failure_paths(monkeypatch, classical_runtime, metadata_module):
+def test_perform_attestation_checks_classical_lookup_and_aaguid_parse_failure_paths(monkeypatch, classical_runtime, metadata_module, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     class _SparsePublicKey(dict):
@@ -261,7 +261,7 @@ def test_perform_attestation_checks_classical_lookup_and_aaguid_parse_failure_pa
     assert result["authenticator_data"]["algorithm"] == -7
 
 
-def test_coerce_attestation_certificate_bytes_and_aaguid_field_cleanup_edges():
+def test_coerce_attestation_certificate_bytes_and_aaguid_field_cleanup_edges(attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     assert attestation_module._coerce_attestation_certificate_bytes({"raw": "zz"}) is None

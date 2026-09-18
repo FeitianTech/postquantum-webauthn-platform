@@ -9,7 +9,7 @@ from cryptography import x509
 from cryptography.exceptions import UnsupportedAlgorithm
 
 
-def test_attestation_helper_residual_branches(monkeypatch, public_key_leaf):
+def test_attestation_helper_residual_branches(monkeypatch, public_key_leaf, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     assert attestation_module._normalise_pqc_algorithm_identifier("   ") is None
@@ -81,7 +81,7 @@ def test_attestation_helper_residual_branches(monkeypatch, public_key_leaf):
     assert "Nested:" in fallback["summary"]
 
 
-def test_serialize_attestation_certificate_mocked_certificate_residual_paths(monkeypatch, extensions_leaf, public_key_leaf, serialize_runtime):
+def test_serialize_attestation_certificate_mocked_certificate_residual_paths(monkeypatch, extensions_leaf, public_key_leaf, serialize_runtime, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     class _Extensions(list):

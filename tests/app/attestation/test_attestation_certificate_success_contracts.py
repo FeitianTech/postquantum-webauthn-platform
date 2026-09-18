@@ -51,7 +51,7 @@ def _build_certificate(
     return cert.public_bytes(serialization.Encoding.DER)
 
 
-def test_serialize_attestation_certificate_rsa_success_path_includes_extensions_and_summary():
+def test_serialize_attestation_certificate_rsa_success_path_includes_extensions_and_summary(attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     custom_device_identifier = x509.UnrecognizedExtension(
@@ -83,7 +83,7 @@ def test_serialize_attestation_certificate_rsa_success_path_includes_extensions_
     assert any(ext["oid"] == "1.3.6.1.4.1.45724.2.1.1" for ext in result["extensions"])
 
 
-def test_serialize_attestation_certificate_handles_ec_and_ed25519_public_key_variants():
+def test_serialize_attestation_certificate_handles_ec_and_ed25519_public_key_variants(attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     ec_cert = _build_certificate(
@@ -105,7 +105,7 @@ def test_serialize_attestation_certificate_handles_ec_and_ed25519_public_key_var
     assert ed_result["publicKeyInfo"]["algorithm"]["name"] == "EdDSA"
 
 
-def test_extract_attestation_details_populates_chain_and_extension_outputs(monkeypatch):
+def test_extract_attestation_details_populates_chain_and_extension_outputs(monkeypatch, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     cert_bytes = _build_certificate(
@@ -160,7 +160,7 @@ def test_extract_attestation_details_populates_chain_and_extension_outputs(monke
     assert attestation_certificates and isinstance(attestation_certificates[0], dict)
 
 
-def test_extract_certificate_aaguid_reads_aaguid_extension_bytes():
+def test_extract_certificate_aaguid_reads_aaguid_extension_bytes(attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     aaguid = bytes.fromhex("00112233445566778899aabbccddeeff")
@@ -175,7 +175,7 @@ def test_extract_certificate_aaguid_reads_aaguid_extension_bytes():
     assert attestation_module._extract_certificate_aaguid(b"not-a-cert") == b""
 
 
-def test_serialize_extension_value_handles_known_extension_types_from_real_certificate():
+def test_serialize_extension_value_handles_known_extension_types_from_real_certificate(attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     cert_bytes = _build_certificate(
@@ -196,7 +196,7 @@ def test_serialize_extension_value_handles_known_extension_types_from_real_certi
     assert "2.5.29.19" in extension_values
 
 
-def test_derive_certificate_algorithm_info_formats_signature_components_consistently():
+def test_derive_certificate_algorithm_info_formats_signature_components_consistently(attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     assert (

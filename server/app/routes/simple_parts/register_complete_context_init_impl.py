@@ -5,6 +5,8 @@ import uuid
 from collections.abc import Mapping
 from typing import Any
 
+from ... import attestation
+
 
 def initialize_registration_context_impl(simple_module: Any, ctx: dict[str, Any]) -> None:
     attestation_summary = {
@@ -93,7 +95,7 @@ def initialize_registration_context_impl(simple_module: Any, ctx: dict[str, Any]
     )
 
     if ctx["parsed_attestation_object"]:
-        credential_info["attestation_object_decoded"] = simple_module.make_json_safe(
+        credential_info["attestation_object_decoded"] = attestation.make_json_safe(
             ctx["parsed_attestation_object"]
         )
 
@@ -102,7 +104,7 @@ def initialize_registration_context_impl(simple_module: Any, ctx: dict[str, Any]
         credential_properties["attestationCertificates"] = ctx["attestation_certificates_details"]
 
     if isinstance(ctx["response"], Mapping):
-        credential_info["registration_response"] = simple_module.make_json_safe(ctx["response"])
+        credential_info["registration_response"] = attestation.make_json_safe(ctx["response"])
 
     credential_data = ctx["auth_data"].credential_data
     aaguid_value = getattr(credential_data, "aaguid", None)

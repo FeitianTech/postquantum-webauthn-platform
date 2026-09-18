@@ -7,6 +7,7 @@ from flask import jsonify, request, session
 
 from fido2.webauthn import PublicKeyCredentialUserEntity
 
+from ... import attestation
 from ...challenge_registry import stamp_ceremony_state
 
 
@@ -49,7 +50,7 @@ def register_begin_impl(simple_module: Any):
     # server-side session only.
     public_key_options = options_dict.get("publicKey")
     if isinstance(public_key_options, MutableMapping):
-        session["simple_register_public_key"] = simple_module.make_json_safe(public_key_options)
+        session["simple_register_public_key"] = attestation.make_json_safe(public_key_options)
     else:
         session.pop("simple_register_public_key", None)
 
@@ -74,4 +75,4 @@ def register_begin_impl(simple_module: Any):
                     allowed_params.append({"type": "public-key", "alg": alg})
             public_key_options["pubKeyCredParams"] = allowed_params
 
-    return jsonify(simple_module.make_json_safe(options_dict))
+    return jsonify(attestation.make_json_safe(options_dict))

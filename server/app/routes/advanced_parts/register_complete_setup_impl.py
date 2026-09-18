@@ -5,7 +5,7 @@ from typing import Any
 
 from flask import jsonify, session
 
-from ... import metadata
+from ... import attestation, metadata
 from ...attachments import (
     normalize_attachment,
     normalize_attachment_list,
@@ -111,7 +111,7 @@ def prepare_register_complete_inputs(
         parsed_extension_results,
         attestation_certificate_details,
         attestation_certificates_details,
-    ) = advanced_module.extract_attestation_details(response)
+    ) = attestation.extract_attestation_details(response)
 
     attestation_object_b64 = credential_response.get("attestationObject")
     raw_attestation_object = parsed_attestation_object or attestation_object_b64
@@ -124,7 +124,7 @@ def prepare_register_complete_inputs(
         else (response.get("clientExtensionResults", {}) if isinstance(response, dict) else {})
     )
 
-    min_pin_length_value = advanced_module.extract_min_pin_length(client_extension_results)
+    min_pin_length_value = attestation.extract_min_pin_length(client_extension_results)
     authenticator_attachment_response = normalize_attachment(
         response.get("authenticatorAttachment") if isinstance(response, Mapping) else None
     )
