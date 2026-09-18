@@ -51,7 +51,7 @@ _serialize_credential_for_session = parsing._serialize_credential_for_session_im
 
 @app.route("/api/register/begin", methods=["POST"])
 def register_begin():
-    return registration.registration()
+    return registration.register_begin()
 
 
 @app.route("/api/register/complete", methods=["POST"])
