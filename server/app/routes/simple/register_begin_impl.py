@@ -10,7 +10,7 @@ from fido2.webauthn import PublicKeyCredentialUserEntity
 
 from ... import attestation, config
 from ...challenge_registry import stamp_ceremony_state
-from . import credential_parsing_impl
+from . import parsing
 
 _SIMPLE_ALLOWED_ALGORITHMS: tuple[int, ...] = tuple(
     alg
@@ -27,7 +27,7 @@ def register_begin_impl():
         if isinstance(raw_candidates, list):
             existing_credentials_raw = raw_candidates
 
-    credentials, serialized = credential_parsing_impl._parse_client_credentials_impl(existing_credentials_raw)
+    credentials, serialized = parsing._parse_client_credentials_impl(existing_credentials_raw)
     if serialized:
         session["simple_credentials"] = serialized
     else:

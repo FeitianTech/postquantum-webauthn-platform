@@ -183,7 +183,7 @@ def simple_binary_helpers():
 def simple_credential_parsing():
     """The fragment that defines the session-credential serialise and parse helpers."""
 
-    return _simple_fragment("credential_parsing_impl")
+    return _simple_fragment("parsing")
 
 
 @pytest.fixture

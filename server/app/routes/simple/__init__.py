@@ -13,8 +13,8 @@ from .. import binary_helpers
 from . import (
     authenticate_impl,
     binary,
-    credential_parsing_impl,
     credentials_route_impl,
+    parsing,
     register_begin_impl,
     register_complete_impl,
 )
@@ -46,8 +46,8 @@ _extract_assertion_credential_id = binary_helpers.extract_assertion_credential_i
 _select_first = binary._select_first_impl
 
 # Session-credential serialisation and parsing.
-_parse_client_credentials = credential_parsing_impl._parse_client_credentials_impl
-_serialize_credential_for_session = credential_parsing_impl._serialize_credential_for_session_impl
+_parse_client_credentials = parsing._parse_client_credentials_impl
+_serialize_credential_for_session = parsing._serialize_credential_for_session_impl
 
 
 @app.route("/api/register/begin", methods=["POST"])
