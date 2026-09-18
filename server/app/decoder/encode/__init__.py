@@ -1,4 +1,8 @@
-"""Encoding helpers for the codec pipeline."""
+"""Encoding helpers for the codec pipeline.
+
+The implementation lives in this package's submodules; this module is the public
+face of it and re-exports the pieces callers and tests reach for.
+"""
 from __future__ import annotations
 
 import json
@@ -11,27 +15,26 @@ from cbor2 import (  # noqa: F401  # split-module namespace surface
     undefined,
 )
 
-# NOTE: This module is a compatibility facade. Many imported names are
-# intentionally re-exported for callers/tests that access encoder internals
-# directly via `server.app.decoder.encode`.
-from .encode_parts.binary_decode import (
+# Many imported names are intentionally re-exported for callers and tests that
+# reach encoder internals directly via `server.app.decoder.encode`.
+from .binary_decode import (
     _maybe_decode_bytes,  # noqa: F401  # split-module namespace surface
     _require_bytes,  # noqa: F401  # split-module namespace surface
     _require_certificate_bytes,  # noqa: F401  # split-module namespace surface
 )
-from .encode_parts.binary_extract import (
+from .binary_extract import (
     _determine_pem_label,  # noqa: F401  # split-module namespace surface
     _extract_binary_input,  # noqa: F401  # split-module namespace surface
     _extract_generic_binary_payload,  # noqa: F401  # split-module namespace surface
     _normalize_pem_label,  # noqa: F401  # split-module namespace surface
 )
-from .encode_parts.cbor_canonical import (
+from .cbor_canonical import (
     _CanonicalCBOREncoder,  # noqa: F401  # split-module namespace surface
     _encode_canonical_float,  # noqa: F401  # split-module namespace surface
     _encode_major_type_with_length,  # noqa: F401  # split-module namespace surface
     _encode_unsigned_integer,  # noqa: F401  # split-module namespace surface
 )
-from .encode_parts.ctap_encode import (
+from .ctap_encode import (
     _determine_ctap_prefix,  # noqa: F401  # split-module namespace surface
     _encode_ctap_from_decoded,  # noqa: F401  # split-module namespace surface
     _encode_ctap_from_structure,  # noqa: F401  # split-module namespace surface
@@ -40,7 +43,7 @@ from .encode_parts.ctap_encode import (
     _encode_make_credential_request,  # noqa: F401  # split-module namespace surface
     _encode_make_credential_response,  # noqa: F401  # split-module namespace surface
 )
-from .encode_parts.ctap_fields import (
+from .ctap_fields import (
     _ctap_key_matches,  # noqa: F401  # split-module namespace surface
     _encode_allow_list,  # noqa: F401  # split-module namespace surface
     _encode_attestation_statement,  # noqa: F401  # split-module namespace surface
@@ -52,7 +55,7 @@ from .encode_parts.ctap_fields import (
     _get_ctap_field_value,  # noqa: F401  # split-module namespace surface
     _require_mapping,  # noqa: F401  # split-module namespace surface
 )
-from .encode_parts.ctap_numeric import (
+from .ctap_numeric import (
     _classify_ctap_numeric_mapping,  # noqa: F401  # split-module namespace surface
     _coerce_ctap_numeric_key,  # noqa: F401  # split-module namespace surface
     _extract_ctap_numeric_payload,  # noqa: F401  # split-module namespace surface
@@ -60,7 +63,7 @@ from .encode_parts.ctap_numeric import (
     _sanitize_ctap_numeric_mapping,  # noqa: F401  # split-module namespace surface
     _sanitize_nested_extra_key,  # noqa: F401  # split-module namespace surface
 )
-from .encode_parts.handlers_basic import (
+from .handlers_basic import (
     _encode_attestation_object,
     _encode_authenticator_data,
     _encode_base64_value,  # noqa: F401  # split-module namespace surface
@@ -76,7 +79,7 @@ from .encode_parts.handlers_basic import (
     _normalize_encoding_format,
     _prepare_encoder_response,  # noqa: F401  # split-module namespace surface
 )
-from .encode_parts.handlers_cbor import (
+from .handlers_cbor import (
     _encode_cbor_value,
     _encode_cose_value,
     _encode_ctap_webauthn_value,
