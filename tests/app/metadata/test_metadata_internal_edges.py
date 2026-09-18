@@ -9,7 +9,7 @@ from fido2.mds3 import MetadataBlobPayloadEntry
 
 
 @pytest.fixture
-def metadata_module(monkeypatch, metadata_runtime_state):
+def metadata_module(monkeypatch, metadata_state):
     module = pytest.importorskip("server.app.metadata")
 
 
@@ -150,13 +150,13 @@ def test_build_metadata_entry_components_and_expand_payloads(metadata_module):
         metadata_module.expand_metadata_entry_payloads({"entries": ["bad-entry"]})
 
 
-def test_entry_lookup_and_snapshot_composition_deduplicate_by_aaguid(metadata_module, monkeypatch, items_runtime, effective_runtime):
+def test_entry_lookup_and_snapshot_composition_deduplicate_by_aaguid(metadata_module, monkeypatch, sessions, effective):
     payload = {
         "aaguid": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
         "aaid": "A1B2#0001",
         "metadataStatement": {"description": "Entry"},
     }
-    entry_id = effective_runtime.build_entry_id(payload)
+    entry_id = effective.build_entry_id(payload)
 
     assert metadata_module._entry_matches_lookup(payload, entry_id=entry_id) is True
     assert (
@@ -175,9 +175,9 @@ def test_entry_lookup_and_snapshot_composition_deduplicate_by_aaguid(metadata_mo
         ],
     }
 
-    monkeypatch.setattr(items_runtime, "list_session_metadata_items", lambda: [object()])
+    monkeypatch.setattr(sessions, "list_session_metadata_items", lambda: [object()])
     monkeypatch.setattr(
-        effective_runtime,
+        effective,
         "_build_session_snapshot_entry",
         lambda *_args, **_kwargs: {
             "entryId": "session-1",
@@ -194,7 +194,7 @@ def test_entry_lookup_and_snapshot_composition_deduplicate_by_aaguid(metadata_mo
     assert [entry["entryId"] for entry in snapshot["entries"]] == ["session-1", "base-2"]
 
 
-def test_load_base_explorer_snapshot_prefers_packaged_explorer_when_newer(metadata_module, monkeypatch, tmp_path, metadata_runtime_state, snapshot_runtime):
+def test_load_base_explorer_snapshot_prefers_packaged_explorer_when_newer(metadata_module, monkeypatch, tmp_path, metadata_state, blob):
     verified_path = tmp_path / "verified.json"
     explorer_path = tmp_path / "explorer.json"
 
@@ -211,10 +211,10 @@ def test_load_base_explorer_snapshot_prefers_packaged_explorer_when_newer(metada
     os.utime(verified_path, (now - 10, now - 10))
     os.utime(explorer_path, (now, now))
 
-    monkeypatch.setattr(snapshot_runtime, "MDS_METADATA_VERIFIED_PATH", str(verified_path))
-    monkeypatch.setattr(snapshot_runtime, "MDS_EXPLORER_PATH", str(explorer_path))
-    monkeypatch.setattr(metadata_runtime_state, "_base_explorer_snapshot_cache", None)
-    monkeypatch.setattr(metadata_runtime_state, "_base_explorer_snapshot_mtime", None)
+    monkeypatch.setattr(blob, "MDS_METADATA_VERIFIED_PATH", str(verified_path))
+    monkeypatch.setattr(blob, "MDS_EXPLORER_PATH", str(explorer_path))
+    monkeypatch.setattr(metadata_state, "_base_explorer_snapshot_cache", None)
+    monkeypatch.setattr(metadata_state, "_base_explorer_snapshot_mtime", None)
 
     snapshot, marker = metadata_module._load_base_explorer_snapshot()
 
@@ -222,16 +222,16 @@ def test_load_base_explorer_snapshot_prefers_packaged_explorer_when_newer(metada
     assert marker is not None
 
 
-def test_load_packaged_explorer_summary_and_get_mds_verifier_cache_paths(metadata_module, monkeypatch, snapshot_runtime, items_runtime, verifier):
-    monkeypatch.setattr(snapshot_runtime, "_load_packaged_explorer_meta", lambda: None)
-    monkeypatch.setattr(snapshot_runtime, "_load_base_explorer_snapshot", lambda: (None, None))
+def test_load_packaged_explorer_summary_and_get_mds_verifier_cache_paths(metadata_module, monkeypatch, blob, sessions, verifier):
+    monkeypatch.setattr(blob, "_load_packaged_explorer_meta", lambda: None)
+    monkeypatch.setattr(blob, "_load_base_explorer_snapshot", lambda: (None, None))
     monkeypatch.setattr(
-        snapshot_runtime,
+        blob,
         "_load_verified_metadata_payload",
         lambda: {"legalHeader": "L", "no": 1, "nextUpdate": "2099-01-01", "entries": []},
     )
     monkeypatch.setattr(
-        snapshot_runtime,
+        blob,
         "build_explorer_snapshot",
         lambda payload, _cache: {"meta": {"entryCount": len(payload.get("entries", []))}},
     )
@@ -247,8 +247,8 @@ def test_load_packaged_explorer_summary_and_get_mds_verifier_cache_paths(metadat
             created.append(metadata)
 
     fake_metadata = SimpleNamespace(entries=[])
-    monkeypatch.setattr(snapshot_runtime, "_load_base_metadata", lambda: (fake_metadata, 123.0))
-    monkeypatch.setattr(items_runtime, "list_session_metadata_items", lambda: [])
+    monkeypatch.setattr(blob, "_load_base_metadata", lambda: (fake_metadata, 123.0))
+    monkeypatch.setattr(sessions, "list_session_metadata_items", lambda: [])
     monkeypatch.setattr(verifier, "MdsAttestationVerifier", _FakeVerifier)
 
     first = metadata_module.get_mds_verifier()
@@ -258,7 +258,7 @@ def test_load_packaged_explorer_summary_and_get_mds_verifier_cache_paths(metadat
     assert created == [fake_metadata]
 
 
-def test_metadata_entry_trust_anchor_status_uses_session_and_base_entry_sets(metadata_module, metadata_runtime_state):
+def test_metadata_entry_trust_anchor_status_uses_session_and_base_entry_sets(metadata_module, metadata_state):
     entry = MetadataBlobPayloadEntry.from_dict(
         {
             "statusReports": [],
@@ -279,12 +279,12 @@ def test_metadata_entry_trust_anchor_status_uses_session_and_base_entry_sets(met
         }
     )
 
-    metadata_runtime_state._session_metadata_entry_ids = {id(entry)}
-    metadata_runtime_state._base_metadata_entry_ids = set()
-    metadata_runtime_state._base_metadata_trust_verified = True
+    metadata_state._session_metadata_entry_ids = {id(entry)}
+    metadata_state._base_metadata_entry_ids = set()
+    metadata_state._base_metadata_trust_verified = True
     assert metadata_module.metadata_entry_trust_anchor_status(entry) is False
 
-    metadata_runtime_state._session_metadata_entry_ids = set()
-    metadata_runtime_state._base_metadata_entry_ids = {id(entry)}
-    metadata_runtime_state._base_metadata_trust_verified = True
+    metadata_state._session_metadata_entry_ids = set()
+    metadata_state._base_metadata_entry_ids = {id(entry)}
+    metadata_state._base_metadata_trust_verified = True
     assert metadata_module.metadata_entry_trust_anchor_status(entry) is True

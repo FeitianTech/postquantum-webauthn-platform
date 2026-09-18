@@ -4,7 +4,7 @@ import pytest
 
 
 @pytest.fixture
-def metadata_local_env(monkeypatch, tmp_path, metadata_runtime_state, session_store, app_config):
+def metadata_local_env(monkeypatch, tmp_path, metadata_state, session_store, app_config):
     metadata = pytest.importorskip("server.app.metadata")
     session_store = pytest.importorskip("server.app.session_metadata_store")
     session_dir = tmp_path / "session-metadata"
@@ -72,8 +72,7 @@ def test_save_session_metadata_item_surfaces_storage_failures(metadata_local_env
     assert calls == ["write"]
 
 
-def test_list_session_metadata_items_skips_invalid_payloads_and_returns_valid_entries(
-    metadata_local_env, session_store):
+def test_list_session_metadata_items_skips_invalid_payloads_and_returns_valid_entries(metadata_local_env, session_store):
     metadata, session_store, app = metadata_local_env
 
     with app.test_request_context("/"):
@@ -105,8 +104,7 @@ def test_list_session_metadata_items_skips_invalid_payloads_and_returns_valid_en
     assert items[0].payload["metadataStatement"]["description"] == "valid"
 
 
-def test_delete_session_metadata_item_validates_session_filename_and_storage_errors(
-    metadata_local_env, monkeypatch, session_store):
+def test_delete_session_metadata_item_validates_session_filename_and_storage_errors(metadata_local_env, monkeypatch, session_store):
     metadata, session_store, app = metadata_local_env
 
     with pytest.raises(ValueError, match="No active metadata session"):
@@ -134,11 +132,11 @@ def test_delete_session_metadata_item_validates_session_filename_and_storage_err
             metadata.delete_session_metadata_item("present.json", session_id=session_id)
 
 
-def test_load_verified_metadata_helpers_handle_invalid_and_missing_payloads(metadata_local_env, monkeypatch, tmp_path, snapshot_runtime, session_store):
+def test_load_verified_metadata_helpers_handle_invalid_and_missing_payloads(metadata_local_env, monkeypatch, tmp_path, blob, session_store):
     metadata, _session_store, _app = metadata_local_env
 
     verified_path = tmp_path / "verified.json"
-    monkeypatch.setattr(snapshot_runtime, "MDS_METADATA_VERIFIED_PATH", str(verified_path))
+    monkeypatch.setattr(blob, "MDS_METADATA_VERIFIED_PATH", str(verified_path))
 
     assert metadata._load_verified_metadata_payload() is None
 
