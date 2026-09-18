@@ -5,7 +5,7 @@ from __future__ import annotations
 
 def test_pqc_algorithm_id_to_name_mapping():
     """Test that PQC algorithm constants are correctly defined."""
-    from server.app import pqc
+    from server.app.webauthn import pqc
     
     assert pqc.PQC_ALGORITHM_ID_TO_NAME == {
         -50: "ML-DSA-87",
@@ -16,7 +16,7 @@ def test_pqc_algorithm_id_to_name_mapping():
 
 def test_is_pqc_algorithm_recognizes_pqc():
     """Test that PQC algorithms are correctly identified."""
-    from server.app import pqc
+    from server.app.webauthn import pqc
     
     assert pqc.is_pqc_algorithm(-48) is True
     assert pqc.is_pqc_algorithm(-49) is True
@@ -25,7 +25,7 @@ def test_is_pqc_algorithm_recognizes_pqc():
 
 def test_is_pqc_algorithm_rejects_non_pqc():
     """Test that non-PQC algorithms are correctly rejected."""
-    from server.app import pqc
+    from server.app.webauthn import pqc
     
     assert pqc.is_pqc_algorithm(-7) is False
     assert pqc.is_pqc_algorithm(-8) is False
@@ -34,7 +34,7 @@ def test_is_pqc_algorithm_rejects_non_pqc():
 
 def test_describe_algorithm_for_pqc():
     """Test algorithm description for PQC algorithms."""
-    from server.app import pqc
+    from server.app.webauthn import pqc
     
     assert pqc.describe_algorithm(-48) == "ML-DSA-44 (PQC)"
     assert pqc.describe_algorithm(-49) == "ML-DSA-65 (PQC)"
@@ -43,7 +43,7 @@ def test_describe_algorithm_for_pqc():
 
 def test_describe_algorithm_for_eddsa():
     """Test algorithm description for EdDSA variants."""
-    from server.app import pqc
+    from server.app.webauthn import pqc
     
     assert pqc.describe_algorithm(-8) == "EdDSA"
     assert pqc.describe_algorithm(-19) == "Ed25519"
@@ -52,7 +52,7 @@ def test_describe_algorithm_for_eddsa():
 
 def test_describe_algorithm_for_ecdsa():
     """Test algorithm description for ECDSA variants."""
-    from server.app import pqc
+    from server.app.webauthn import pqc
     
     assert pqc.describe_algorithm(-7) == "ES256 (ECDSA)"
     assert pqc.describe_algorithm(-9) == "ESP256 (ECDSA)"
@@ -65,7 +65,7 @@ def test_describe_algorithm_for_ecdsa():
 
 def test_describe_algorithm_for_rsa():
     """Test algorithm description for RSA variants."""
-    from server.app import pqc
+    from server.app.webauthn import pqc
     
     assert pqc.describe_algorithm(-37) == "PS256 (RSA-PSS)"
     assert pqc.describe_algorithm(-38) == "PS384 (RSA-PSS)"
@@ -78,7 +78,7 @@ def test_describe_algorithm_for_rsa():
 
 def test_describe_algorithm_for_unknown():
     """Test algorithm description for unknown algorithms."""
-    from server.app import pqc
+    from server.app.webauthn import pqc
     
     assert pqc.describe_algorithm(None) == "Unknown"
     assert pqc.describe_algorithm(-999) == "COSE alg -999"
@@ -87,7 +87,7 @@ def test_describe_algorithm_for_unknown():
 
 def test_detect_available_pqc_algorithms_all_available():
     """cryptography ships all three ML-DSA parameter sets, so all are offered."""
-    from server.app import pqc
+    from server.app.webauthn import pqc
 
     available, error = pqc.detect_available_pqc_algorithms()
 
@@ -97,7 +97,7 @@ def test_detect_available_pqc_algorithms_all_available():
 
 def test_detect_available_pqc_algorithms_partial_available(monkeypatch):
     """A build missing a parameter set offers the rest and names the gap."""
-    from server.app import pqc
+    from server.app.webauthn import pqc
 
     monkeypatch.setattr(
         pqc, "_load_enabled_mechanisms", lambda: {"ML-DSA-44", "ML-DSA-65"}
@@ -111,7 +111,7 @@ def test_detect_available_pqc_algorithms_partial_available(monkeypatch):
 
 def test_detect_available_pqc_algorithms_none_available(monkeypatch):
     """With no ML-DSA support at all, every parameter set is reported missing."""
-    from server.app import pqc
+    from server.app.webauthn import pqc
 
     monkeypatch.setattr(pqc, "_load_enabled_mechanisms", lambda: set())
     available, error = pqc.detect_available_pqc_algorithms()
@@ -124,7 +124,7 @@ def test_detect_available_pqc_algorithms_none_available(monkeypatch):
 
 def test_detect_available_pqc_algorithms_import_error(monkeypatch):
     """A cryptography build without the mldsa module degrades with guidance."""
-    from server.app import pqc
+    from server.app.webauthn import pqc
 
     def _raise():
         raise ImportError("no mldsa module")
@@ -141,15 +141,15 @@ def test_detect_available_pqc_algorithms_import_error(monkeypatch):
 
 def test_load_enabled_mechanisms_reports_cryptography_support():
     """The probe reads real cryptography key classes, not a stubbed module."""
-    from server.app import pqc
+    from server.app.webauthn import pqc
 
     assert pqc._load_enabled_mechanisms() == {"ML-DSA-44", "ML-DSA-65", "ML-DSA-87"}
 
 
 def test_log_algorithm_selection_with_none(monkeypatch):
     """Test logging when no algorithm is selected."""
-    from server.app import pqc
     from server.app.config import app
+    from server.app.webauthn import pqc
     
     logged = []
     monkeypatch.setattr(app.logger, "info", lambda msg, *args: logged.append((msg, args)))
@@ -163,8 +163,8 @@ def test_log_algorithm_selection_with_none(monkeypatch):
 
 def test_log_algorithm_selection_with_pqc(monkeypatch):
     """Test logging when a PQC algorithm is selected."""
-    from server.app import pqc
     from server.app.config import app
+    from server.app.webauthn import pqc
     
     logged = []
     monkeypatch.setattr(app.logger, "info", lambda msg, *args: logged.append((msg, args)))
@@ -178,8 +178,8 @@ def test_log_algorithm_selection_with_pqc(monkeypatch):
 
 def test_log_algorithm_selection_with_classical(monkeypatch):
     """Test logging when a classical algorithm is selected."""
-    from server.app import pqc
     from server.app.config import app
+    from server.app.webauthn import pqc
     
     logged = []
     monkeypatch.setattr(app.logger, "info", lambda msg, *args: logged.append((msg, args)))

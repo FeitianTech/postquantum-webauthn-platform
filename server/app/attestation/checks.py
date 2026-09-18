@@ -21,7 +21,7 @@ from fido2.webauthn import (
 )
 
 from .. import encoding, metadata
-from ..pqc import is_pqc_algorithm
+from ..webauthn.pqc import is_pqc_algorithm
 from . import classical, formatting, pqc, trust
 
 
