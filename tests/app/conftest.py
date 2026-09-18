@@ -68,7 +68,7 @@ def advanced_artifacts():
 def advanced_authenticate_begin():
     """The fragment that defines the advanced ``/authenticate/begin`` body."""
 
-    return _advanced_fragment("authenticate_begin_impl")
+    return _advanced_fragment("authentication")
 
 
 @pytest.fixture

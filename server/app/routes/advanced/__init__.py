@@ -13,7 +13,6 @@ from .. import binary_helpers
 from . import (
     algorithms,
     artifacts,
-    authenticate_begin_impl,
     authentication,
     binary,
     constants,
@@ -108,7 +107,7 @@ def api_delete_advanced_credential_artifact(storage_id: str):
 
 @app.route("/api/advanced/authenticate/begin", methods=["POST"])
 def advanced_authenticate_begin():
-    return authenticate_begin_impl.advanced_authenticate_begin_impl()
+    return authentication.advanced_authenticate_begin_impl()
 
 
 @app.route("/api/advanced/authenticate/complete", methods=["POST"])
