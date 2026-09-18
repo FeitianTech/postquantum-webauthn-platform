@@ -7,7 +7,7 @@ from typing import Any
 from fido2 import cbor
 from fido2.webauthn import AuthenticatorData
 
-from .cbor_core import _decode_cbor_structure
+from . import cbor_strict
 from .key_utils import MISSING
 from .key_utils import coerce_cbor_bytes as _coerce_cbor_bytes
 from .key_utils import get_mapping_entry as _get_mapping_entry
@@ -94,7 +94,7 @@ def _merge_ctap_make_credential(
             if isinstance(att_structure_override, Mapping):
                 att_structure = att_structure_override
             else:
-                att_structure, _ = _decode_cbor_structure(cbor.encode(att_stmt))
+                att_structure, _ = cbor_strict._decode_cbor_structure(cbor.encode(att_stmt))
 
             entries = structure.get("entries")
             if isinstance(entries, list) and entries:
@@ -170,7 +170,7 @@ def _repair_make_credential_entries(
 
     if signature_bytes is not None:
         polished_value[3] = {"sig": signature_bytes, "alg": default_alg}
-        att_stmt_structure, _ = _decode_cbor_structure(
+        att_stmt_structure, _ = cbor_strict._decode_cbor_structure(
             cbor.encode({"sig": signature_bytes, "alg": default_alg})
         )
         if isinstance(entries, list):
@@ -233,7 +233,7 @@ def _merge_trailing_signature(
     if alg_value is not None:
         att_stmt["alg"] = alg_value
 
-    att_structure, _ = _decode_cbor_structure(cbor.encode(att_stmt))
+    att_structure, _ = cbor_strict._decode_cbor_structure(cbor.encode(att_stmt))
 
     updated_structure = dict(structure)
     entries_source = structure.get("entries")

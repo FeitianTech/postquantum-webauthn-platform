@@ -171,35 +171,16 @@ _extract_ctap_prefix = cbor_runtime._extract_ctap_prefix
 _is_padding_bytes = cbor_runtime._is_padding_bytes
 
 
-# Compatibility shims for tests and callers that monkeypatch decoder-local helpers.
-_CborDecodingError = cbor_core._CborDecodingError
-_ensure_cbor_available = cbor_core._ensure_cbor_available
-_float_summary = cbor_core._float_summary
-_read_cbor_length = cbor_core._read_cbor_length
-_lenient_read_uint = cbor_core._lenient_read_uint
-_lenient_decode_from = cbor_core._lenient_decode_from
-_structure_to_value = cbor_core._structure_to_value
-
-
-def _parse_cbor_item(data: bytes, offset: int) -> tuple[dict[str, Any], int]:
-    original_read_cbor_length = cbor_core._read_cbor_length
-    original_ensure_cbor_available = cbor_core._ensure_cbor_available
-    original_float_summary = cbor_core._float_summary
-    try:
-        cbor_core._read_cbor_length = _read_cbor_length
-        cbor_core._ensure_cbor_available = _ensure_cbor_available
-        cbor_core._float_summary = _float_summary
-        return cbor_core._parse_cbor_item(data, offset)
-    finally:
-        cbor_core._read_cbor_length = original_read_cbor_length
-        cbor_core._ensure_cbor_available = original_ensure_cbor_available
-        cbor_core._float_summary = original_float_summary
-
-
-def _decode_cbor_structure(data: bytes) -> tuple[dict[str, Any], int]:
-    node, offset = _parse_cbor_item(data, 0)
-    node.setdefault("byteLength", offset)
-    return node, offset
+# Re-exports of the CBOR primitives, from the modules that define them.
+_CborDecodingError = cbor_strict._CborDecodingError
+_ensure_cbor_available = cbor_strict._ensure_cbor_available
+_float_summary = cbor_strict._float_summary
+_read_cbor_length = cbor_strict._read_cbor_length
+_parse_cbor_item = cbor_strict._parse_cbor_item
+_decode_cbor_structure = cbor_strict._decode_cbor_structure
+_lenient_read_uint = cbor_lenient._lenient_read_uint
+_lenient_decode_from = cbor_lenient._lenient_decode_from
+_structure_to_value = cbor_lenient._structure_to_value
 
 
 _derive_alg_from_auth_data = ctap_repair_leaf._derive_alg_from_auth_data
@@ -212,21 +193,9 @@ _repair_make_credential_entries = ctap_repair_leaf._repair_make_credential_entri
 _split_get_assertion_trailing_fields = ctap_repair_leaf._split_get_assertion_trailing_fields
 
 
-def _extract_get_assertion_trailing_from_raw(
-    raw_bytes: bytes,
-) -> tuple[bytes | None, dict[int, Any]]:
-    original_locate_trailing_offset = ctap_repair_leaf._locate_get_assertion_trailing_offset
-    original_lenient_decode = ctap_repair_leaf._lenient_decode_from
-    try:
-        ctap_repair_leaf._locate_get_assertion_trailing_offset = _locate_get_assertion_trailing_offset
-        ctap_repair_leaf._lenient_decode_from = _lenient_decode_from
-        return ctap_repair_leaf._extract_get_assertion_trailing_from_raw(raw_bytes)
-    finally:
-        ctap_repair_leaf._locate_get_assertion_trailing_offset = original_locate_trailing_offset
-        ctap_repair_leaf._lenient_decode_from = original_lenient_decode
-
-
-
+_extract_get_assertion_trailing_from_raw = (
+    ctap_repair_leaf._extract_get_assertion_trailing_from_raw
+)
 _json_safe_with_stringified_keys = cbor_runtime._json_safe_with_stringified_keys
 
 

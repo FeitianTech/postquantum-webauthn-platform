@@ -10,15 +10,18 @@ import cbor2
 from fido2 import cbor
 
 from ...attestation import make_json_safe
-from . import ctap_runtime_interpret, ctap_runtime_parse, details_runtime
-from .cbor_lenient import _lenient_decode_from, _structure_to_value
-from .cbor_sequence import _decode_cbor_sequence_impl
-from .cbor_strict import _CborDecodingError, _decode_cbor_structure
-from .ctap_classify import _classify_ctap_map
-from .ctap_repair_leaf import (
-    _extract_get_assertion_trailing_from_raw,
-    _split_get_assertion_trailing_fields,
+from . import (
+    cbor_lenient,
+    cbor_strict,
+    ctap_classify,
+    ctap_repair_leaf,
+    ctap_runtime_interpret,
+    ctap_runtime_parse,
+    details_runtime,
 )
+from .cbor_lenient import _structure_to_value
+from .cbor_sequence import _decode_cbor_sequence_impl
+from .cbor_strict import _CborDecodingError
 from .ctap_repair_make import (
     _extract_mapping_bytes,
     _extract_mapping_string,
@@ -88,9 +91,9 @@ def _decode_cbor_sequence(payload: bytes) -> tuple[list[dict[str, Any]], list[An
         payload,
         cbor_decode_from=cbor.decode_from,
         cbor_decoder_factory=_cbor2_decode_with_consumed,
-        decode_cbor_structure=_decode_cbor_structure,
+        decode_cbor_structure=cbor_strict._decode_cbor_structure,
         structure_to_value=_structure_to_value,
-        lenient_decode_from=lambda data, offset=0: _lenient_decode_from(data, offset),
+        lenient_decode_from=lambda data, offset=0: cbor_lenient._lenient_decode_from(data, offset),
         json_safe_with_stringified_keys=_json_safe_with_stringified_keys,
         cbor_error_type=_CborDecodingError,
     )
@@ -142,7 +145,7 @@ def _repair_get_assertion_entries(
     recovered_fields: dict[int, Any] = {}
 
     if raw_bytes:
-        raw_signature, raw_field_map = _extract_get_assertion_trailing_from_raw(raw_bytes)
+        raw_signature, raw_field_map = ctap_repair_leaf._extract_get_assertion_trailing_from_raw(raw_bytes)
         if raw_signature is not None:
             signature_bytes = raw_signature
         recovered_fields.update(raw_field_map)
@@ -166,7 +169,7 @@ def _repair_get_assertion_entries(
                     break
 
     if signature_bytes is not None:
-        signature_bytes, trailing_fields = _split_get_assertion_trailing_fields(signature_bytes)
+        signature_bytes, trailing_fields = ctap_repair_leaf._split_get_assertion_trailing_fields(signature_bytes)
         if user_value is None and 4 in trailing_fields:
             user_value = trailing_fields.pop(4)
         for key, value in trailing_fields.items():
@@ -176,7 +179,7 @@ def _repair_get_assertion_entries(
         for key in bytes_keys:
             recovered_value.pop(key, None)
         recovered_value[3] = signature_bytes
-        sig_structure, _ = _decode_cbor_structure(cbor.encode(signature_bytes))
+        sig_structure, _ = cbor_strict._decode_cbor_structure(cbor.encode(signature_bytes))
         entries.append(
             {
                 "keySummary": "3",
@@ -188,7 +191,7 @@ def _repair_get_assertion_entries(
 
     if user_value is not None:
         recovered_value[4] = user_value
-        user_structure, _ = _decode_cbor_structure(cbor.encode(user_value))
+        user_structure, _ = cbor_strict._decode_cbor_structure(cbor.encode(user_value))
         entries.append(
             {
                 "keySummary": "4",
@@ -205,7 +208,7 @@ def _repair_get_assertion_entries(
             continue
         field_value = recovered_fields[key]
         recovered_value[key] = field_value
-        field_structure, _ = _decode_cbor_structure(cbor.encode(field_value))
+        field_structure, _ = cbor_strict._decode_cbor_structure(cbor.encode(field_value))
         entries.append(
             {
                 "keySummary": str(key),
@@ -288,9 +291,9 @@ def _try_decode_cbor(data: bytes, encoding: str) -> dict[str, Any] | None:
                     consumed_total += len(signature_bytes)
                 extra_values = []
             else:
-                classification = _classify_ctap_map(working_value)
+                classification = ctap_classify._classify_ctap_map(working_value)
         else:
-            classification = _classify_ctap_map(working_value)
+            classification = ctap_classify._classify_ctap_map(working_value)
 
         if classification == "get_assertion_output":
             base_structure, working_value, assertion_sig = _repair_get_assertion_entries(
