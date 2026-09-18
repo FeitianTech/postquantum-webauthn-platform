@@ -5,7 +5,7 @@ from collections.abc import Mapping
 from typing import Any
 
 from ...attestation import make_json_safe, serialize_attestation_certificate
-from . import binary, conversion_leaf, summary_runtime
+from . import binary, conversion_leaf, summary
 from .certificates import (
     _convert_attestation_entry_impl,
     _convert_attestation_statement_impl,
@@ -22,7 +22,7 @@ def _prepare_decoder_response(result: dict[str, Any]) -> dict[str, Any]:
 
 
 def _build_decoder_payload(result: dict[str, Any]) -> dict[str, Any]:
-    base_type = summary_runtime._base_type(result.get("format"))
+    base_type = summary._base_type(result.get("format"))
     data = _convert_result_to_data(base_type, result)
     malformed = result.get("malformed")
     if not isinstance(malformed, list):

@@ -25,8 +25,8 @@ from . import (
     keys,
     pipeline_runtime,
     result_runtime,
+    summary,
     summary_leaf,
-    summary_runtime,
 )
 
 __all__ = ["decode_payload_text"]
@@ -248,20 +248,20 @@ _convert_result_to_data = result_runtime._convert_result_to_data
 _prepare_decoder_response = result_runtime._prepare_decoder_response
 
 # Summary rendering.
-_base_type = summary_runtime._base_type
-_build_certificate_summary_lines = summary_runtime._build_certificate_summary_lines
-_extend_with_attestation_section = summary_runtime._extend_with_attestation_section
-_extend_with_authenticator_details = summary_runtime._extend_with_authenticator_details
-_extend_with_authenticator_extensions = summary_runtime._extend_with_authenticator_extensions
-_extend_with_client_data_details = summary_runtime._extend_with_client_data_details
-_extend_with_client_data_entry = summary_runtime._extend_with_client_data_entry
-_extend_with_client_extensions = summary_runtime._extend_with_client_extensions
-_format_attestation_object_summary = summary_runtime._format_attestation_object_summary
-_format_authenticator_data_summary = summary_runtime._format_authenticator_data_summary
-_format_cbor_summary = summary_runtime._format_cbor_summary
-_format_certificate_summary = summary_runtime._format_certificate_summary
-_format_client_data_summary = summary_runtime._format_client_data_summary
-_format_generic_summary = summary_runtime._format_generic_summary
-_format_json_summary = summary_runtime._format_json_summary
-_format_public_key_credential_summary = summary_runtime._format_public_key_credential_summary
-_format_result_summary = summary_runtime._format_result_summary
+_base_type = summary._base_type
+_build_certificate_summary_lines = summary._build_certificate_summary_lines
+_extend_with_attestation_section = summary._extend_with_attestation_section
+_extend_with_authenticator_details = summary._extend_with_authenticator_details
+_extend_with_authenticator_extensions = summary._extend_with_authenticator_extensions
+_extend_with_client_data_details = summary._extend_with_client_data_details
+_extend_with_client_data_entry = summary._extend_with_client_data_entry
+_extend_with_client_extensions = summary._extend_with_client_extensions
+_format_attestation_object_summary = summary._format_attestation_object_summary
+_format_authenticator_data_summary = summary._format_authenticator_data_summary
+_format_cbor_summary = summary._format_cbor_summary
+_format_certificate_summary = summary._format_certificate_summary
+_format_client_data_summary = summary._format_client_data_summary
+_format_generic_summary = summary._format_generic_summary
+_format_json_summary = summary._format_json_summary
+_format_public_key_credential_summary = summary._format_public_key_credential_summary
+_format_result_summary = summary._format_result_summary
