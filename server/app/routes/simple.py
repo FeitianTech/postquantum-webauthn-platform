@@ -126,11 +126,11 @@ def _select_first(mapping: Mapping[str, Any], keys: Sequence[str]) -> Any:
 
 
 def _serialize_credential_for_session(entry: Mapping[str, Any]) -> dict[str, Any]:
-    return _serialize_credential_for_session_impl(_self_module(), entry)
+    return _serialize_credential_for_session_impl(entry)
 
 
 def _parse_client_credentials(raw_credentials: Any) -> tuple[list[AttestedCredentialData], list[dict[str, Any]]]:
-    return _parse_client_credentials_impl(_self_module(), raw_credentials)
+    return _parse_client_credentials_impl(raw_credentials)
 
 
 @app.route("/api/register/begin", methods=["POST"])
