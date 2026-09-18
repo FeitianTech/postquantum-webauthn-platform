@@ -20,7 +20,7 @@ from . import (
 )
 
 
-def register_complete_impl(simple_module: Any):
+def register_complete_impl():
     uname = request.args.get("email")
     response = request.get_json(silent=True) or {}
     credential_response = response.get("response", {}) if isinstance(response, dict) else {}
