@@ -169,7 +169,7 @@ def advanced_summary_helpers():
 def simple_authenticate():
     """The fragment that defines both simple authentication ceremony bodies."""
 
-    return _simple_fragment("authenticate")
+    return _simple_fragment("authentication")
 
 
 @pytest.fixture
@@ -253,7 +253,7 @@ def simple_register_complete_context_rp_debug():
 def simple_sign_count():
     """The fragment that defines the signature-counter records and regression helpers."""
 
-    return _simple_fragment("authenticate")
+    return _simple_fragment("authentication")
 
 
 # The sibling packages the fragments import from.
