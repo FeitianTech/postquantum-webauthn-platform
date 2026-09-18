@@ -25,8 +25,8 @@ from ...challenge_registry import (
     stamp_ceremony_state,
 )
 from ...encoding import encode_base64url
-from ...sign_count import SIGN_COUNT_REGRESSED, sign_count_status
 from ...storage import credentials
+from ...webauthn.sign_count import SIGN_COUNT_REGRESSED, sign_count_status
 from .. import binary_helpers
 from . import binary, parsing
 
