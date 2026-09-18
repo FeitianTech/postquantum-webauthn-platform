@@ -8,7 +8,7 @@ from typing import Any
 from . import constants
 
 
-def _generate_storage_id_impl(advanced_module: Any, credential_id: str) -> str:
+def _generate_storage_id_impl(credential_id: str) -> str:
     base = credential_id[:24] if credential_id else uuid.uuid4().hex
     timestamp = format(int(time.time() * 1000), "x")
     random_segment = uuid.uuid4().hex
@@ -16,7 +16,6 @@ def _generate_storage_id_impl(advanced_module: Any, credential_id: str) -> str:
 
 
 def _summarize_properties_impl(
-    advanced_module: Any,
     value: Any,
 ) -> dict[str, Any] | None:
     if not isinstance(value, Mapping):
@@ -31,7 +30,6 @@ def _summarize_properties_impl(
 
 
 def _summarize_relying_party_impl(
-    advanced_module: Any,
     value: Any,
 ) -> dict[str, Any] | None:
     if not isinstance(value, Mapping):
@@ -46,7 +44,6 @@ def _summarize_relying_party_impl(
 
 
 def _summarize_stored_credential_impl(
-    advanced_module: Any,
     stored: Mapping[str, Any],
     storage_id: str,
 ) -> dict[str, Any]:
@@ -57,13 +54,13 @@ def _summarize_stored_credential_impl(
             continue
         summary[key] = value
 
-    properties_summary = advanced_module._summarize_properties(summary.get("properties"))
+    properties_summary = _summarize_properties_impl(summary.get("properties"))
     if properties_summary is not None:
         summary["properties"] = properties_summary
     elif "properties" in summary:
         summary.pop("properties")
 
-    relying_party_summary = advanced_module._summarize_relying_party(summary.get("relyingParty"))
+    relying_party_summary = _summarize_relying_party_impl(summary.get("relyingParty"))
     if relying_party_summary is not None:
         summary["relyingParty"] = relying_party_summary
     elif "relyingParty" in summary:

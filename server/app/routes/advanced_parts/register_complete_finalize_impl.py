@@ -8,7 +8,7 @@ from typing import Any
 from flask import jsonify
 
 from ... import config, credential_artifacts, device_logs
-from . import binary_helpers_impl
+from . import binary_helpers_impl, summary_helpers_impl
 
 
 def finalize_registration_completion(
@@ -39,7 +39,7 @@ def finalize_registration_completion(
         or artifact_record.get("credentialIdHex")
         or ""
     )
-    storage_id = advanced_module._generate_storage_id(str(storage_id_source))
+    storage_id = summary_helpers_impl._generate_storage_id_impl(str(storage_id_source))
 
     artifact_payload = {"schemaVersion": 1, "storedCredential": artifact_record}
     try:
@@ -62,7 +62,7 @@ def finalize_registration_completion(
         )
         return jsonify({"error": "Unable to persist credential artifact."}), 500
 
-    summary_credential = advanced_module._summarize_stored_credential(artifact_record, storage_id)
+    summary_credential = summary_helpers_impl._summarize_stored_credential_impl(artifact_record, storage_id)
 
     metadata_description: str | None = None
     if isinstance(metadata_summary, Mapping):
