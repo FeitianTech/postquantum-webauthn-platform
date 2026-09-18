@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from ... import attestation, config, pqc
-from . import algorithm_helpers_impl, binary_helpers_impl
+from . import algorithms, binary
 
 
 def _log_authenticator_attestation_response_impl(
@@ -60,7 +60,7 @@ def _log_authenticator_attestation_response_impl(
         credential_id_value = getattr(credential_data, "credential_id", None)
         if isinstance(credential_id_value, (bytes, bytearray, memoryview)):
             credential_id_bytes = bytes(credential_id_value)
-            credential_payload["credentialId"] = binary_helpers_impl._encode_base64url_impl(credential_id_bytes)
+            credential_payload["credentialId"] = binary._encode_base64url_impl(credential_id_bytes)
             credential_payload["credentialIdLength"] = len(credential_id_bytes)
 
         public_key_value = getattr(credential_data, "public_key", None)
@@ -70,9 +70,9 @@ def _log_authenticator_attestation_response_impl(
 
             algorithm_value: int | None = None
             if 3 in public_key_dict:
-                algorithm_value = algorithm_helpers_impl._coerce_cose_algorithm_impl(public_key_dict[3])
+                algorithm_value = algorithms._coerce_cose_algorithm_impl(public_key_dict[3])
             elif "alg" in public_key_dict:
-                algorithm_value = algorithm_helpers_impl._coerce_cose_algorithm_impl(public_key_dict["alg"])
+                algorithm_value = algorithms._coerce_cose_algorithm_impl(public_key_dict["alg"])
 
             if algorithm_value is not None:
                 credential_payload["credentialPublicKeyAlgorithm"] = {
@@ -93,7 +93,7 @@ def _log_authenticator_attestation_response_impl(
         payload["attStmt"] = attestation.make_json_safe(attestation_statement)
 
     if isinstance(raw_attestation_object, (bytes, bytearray, memoryview)):
-        payload["rawAttestationObject"] = binary_helpers_impl._encode_base64url_impl(bytes(raw_attestation_object))
+        payload["rawAttestationObject"] = binary._encode_base64url_impl(bytes(raw_attestation_object))
     elif isinstance(raw_attestation_object, str):
         payload["rawAttestationObject"] = raw_attestation_object
 

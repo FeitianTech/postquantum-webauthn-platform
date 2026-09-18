@@ -12,7 +12,7 @@ from fido2.webauthn import (
 
 from ... import pqc
 from ...encoding import decode_hex
-from . import binary_helpers_impl, constants
+from . import binary, constants
 
 
 def _normalize_algorithm_name_key_impl(name: str) -> str:
@@ -142,13 +142,13 @@ def _extract_requested_assertion_algorithm_impl(
         if entry_alg is None:
             continue
 
-        entry_id = binary_helpers_impl._extract_binary_value_impl(entry.get("id"))
+        entry_id = binary._extract_binary_value_impl(entry.get("id"))
         if isinstance(entry_id, str):
             try:
                 entry_id = decode_hex(entry_id)
             except ValueError:
                 try:
-                    entry_id = binary_helpers_impl._decode_base64url_impl(entry_id)
+                    entry_id = binary._decode_base64url_impl(entry_id)
                 except (ValueError, TypeError):
                     entry_id = None
 

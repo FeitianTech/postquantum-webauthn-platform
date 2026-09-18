@@ -9,8 +9,8 @@ from flask import jsonify, request
 from ... import attestation, config, pqc, storage
 from ...encoding import decode_hex
 from . import (
-    algorithm_helpers_impl,
-    binary_helpers_impl,
+    algorithms,
+    binary,
     register_complete_finalize_impl,
     register_complete_material_impl,
     register_complete_setup_impl,
@@ -167,7 +167,7 @@ def advanced_register_complete_impl():
         user_id_value = user_info.get("id", "")
         if user_id_value:
             try:
-                user_handle = binary_helpers_impl._extract_binary_value_impl(user_id_value)
+                user_handle = binary._extract_binary_value_impl(user_id_value)
                 if isinstance(user_handle, str):
                     user_handle = decode_hex(user_handle)
             except (ValueError, TypeError):
@@ -241,7 +241,7 @@ def advanced_register_complete_impl():
             except Exception:
                 raw_alg_value = None
 
-        algo = algorithm_helpers_impl._coerce_cose_algorithm_impl(raw_alg_value)
+        algo = algorithms._coerce_cose_algorithm_impl(raw_alg_value)
         credential_info["publicKeyAlgorithm"] = algo
         algoname = pqc.describe_algorithm(algo)
         pqc.log_algorithm_selection("registration", algo)

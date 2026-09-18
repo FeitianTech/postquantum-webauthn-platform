@@ -11,7 +11,7 @@ from fido2.webauthn import (
 
 from ... import config, pqc
 from ...encoding import decode_hex
-from . import algorithm_helpers_impl, binary_helpers_impl
+from . import algorithms, binary
 
 
 def configure_allowed_algorithms(
@@ -39,12 +39,12 @@ def configure_allowed_algorithms(
                 elif type_value is not None:
                     continue
 
-                alg_value = algorithm_helpers_impl._coerce_cose_algorithm_impl(raw_alg_value)
+                alg_value = algorithms._coerce_cose_algorithm_impl(raw_alg_value)
                 if alg_value is None:
                     continue
                 normalized_params.append({"type": "public-key", "alg": alg_value})
             else:
-                alg_value = algorithm_helpers_impl._coerce_cose_algorithm_impl(param)
+                alg_value = algorithms._coerce_cose_algorithm_impl(param)
                 if alg_value is None:
                     continue
                 normalized_params.append({"type": "public-key", "alg": alg_value})
@@ -140,7 +140,7 @@ def build_exclude_list(public_key: Mapping[str, Any]) -> list[Any]:
     if isinstance(exclude_credentials, list):
         for exclude_cred in exclude_credentials:
             if isinstance(exclude_cred, dict) and exclude_cred.get("type") == "public-key":
-                cred_id = binary_helpers_impl._extract_binary_value_impl(exclude_cred.get("id", ""))
+                cred_id = binary._extract_binary_value_impl(exclude_cred.get("id", ""))
                 if isinstance(cred_id, str):
                     cred_id = decode_hex(cred_id)
                 if cred_id:
@@ -190,12 +190,12 @@ def build_processed_extensions(public_key: Mapping[str, Any]) -> dict[str, Any]:
                 processed_eval = {}
                 if isinstance(prf_eval, dict):
                     if "first" in prf_eval:
-                        first_value = binary_helpers_impl._extract_binary_value_impl(prf_eval["first"])
+                        first_value = binary._extract_binary_value_impl(prf_eval["first"])
                         if isinstance(first_value, str):
                             first_value = decode_hex(first_value)
                         processed_eval["first"] = first_value
                     if "second" in prf_eval:
-                        second_value = binary_helpers_impl._extract_binary_value_impl(prf_eval["second"])
+                        second_value = binary._extract_binary_value_impl(prf_eval["second"])
                         if isinstance(second_value, str):
                             second_value = decode_hex(second_value)
                         processed_eval["second"] = second_value
