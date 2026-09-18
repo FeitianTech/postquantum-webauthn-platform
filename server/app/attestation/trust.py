@@ -12,7 +12,7 @@ from fido2.webauthn import Aaguid
 
 from .. import encoding
 from ..config import app
-from . import encoding_leaf
+from . import formatting
 from .runtime_state import AAGUID_EXTENSION_OID
 
 
@@ -139,7 +139,7 @@ def _extract_certificate_aaguid(cert_der: bytes) -> bytes:
     if raw_value is None:
         return b""
 
-    decoded = encoding_leaf.decode_asn1_octet_string(raw_value)
+    decoded = formatting.decode_asn1_octet_string(raw_value)
     if len(decoded) == 16:
         return decoded
     if len(raw_value) == 16:

@@ -113,7 +113,7 @@ def test_extract_attestation_details_keeps_non_mapping_extension_outputs(monkeyp
     assert extracted[4] == ["raw-extension"]
 
 
-def test_serialize_extension_value_unrecognized_oid_fallback_paths(monkeypatch, encoding_leaf, attestation_module):
+def test_serialize_extension_value_unrecognized_oid_fallback_paths(monkeypatch, formatting, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     firmware_oid = ObjectIdentifier("1.3.6.1.4.1.41482.13.1")
@@ -127,7 +127,7 @@ def test_serialize_extension_value_unrecognized_oid_fallback_paths(monkeypatch, 
             return b"\xff\xfe"
         return b"short"
 
-    monkeypatch.setattr(encoding_leaf, "decode_asn1_octet_string", _decode_stub)
+    monkeypatch.setattr(formatting, "decode_asn1_octet_string", _decode_stub)
 
     firmware_ext = SimpleNamespace(
         oid=firmware_oid,
@@ -186,7 +186,7 @@ def test_perform_attestation_checks_challenge_coercion_and_uv_requirement_paths(
     assert result["authenticator_data"]["user_verification_required"] is True
 
 
-def test_perform_attestation_checks_classical_lookup_and_aaguid_parse_failure_paths(monkeypatch, classical_runtime, metadata_module, attestation_module):
+def test_perform_attestation_checks_classical_lookup_and_aaguid_parse_failure_paths(monkeypatch, classical, metadata_module, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     class _SparsePublicKey(dict):
@@ -230,7 +230,7 @@ def test_perform_attestation_checks_classical_lookup_and_aaguid_parse_failure_pa
     )
     monkeypatch.setattr(metadata_module, "get_mds_verifier", lambda: object())
     monkeypatch.setattr(
-        classical_runtime,
+        classical,
         "_evaluate_classical_attestation_root",
         lambda *_args, **_kwargs: {
             "root_valid": None,

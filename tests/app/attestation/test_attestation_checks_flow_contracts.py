@@ -83,7 +83,7 @@ def test_perform_attestation_checks_reports_client_authenticator_mismatches(monk
     assert "attested_credential_data_missing" in result["errors"]
 
 
-def test_perform_attestation_checks_classical_success_path_populates_metadata(monkeypatch, classical_runtime, metadata_module, attestation_module):
+def test_perform_attestation_checks_classical_success_path_populates_metadata(monkeypatch, classical, metadata_module, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     flags = int(AuthenticatorData.FLAG.UP | AuthenticatorData.FLAG.AT)
@@ -115,7 +115,7 @@ def test_perform_attestation_checks_classical_success_path_populates_metadata(mo
     monkeypatch.setattr(Attestation, "for_type", lambda _fmt: (lambda: _FakeAttestation()))
     monkeypatch.setattr(metadata_module, "get_mds_verifier", lambda: object())
     monkeypatch.setattr(
-        classical_runtime,
+        classical,
         "_evaluate_classical_attestation_root",
         lambda *_args, **_kwargs: {
             "root_valid": True,
@@ -145,7 +145,7 @@ def test_perform_attestation_checks_classical_success_path_populates_metadata(mo
     assert result["metadata"]["source"] == "aaguid"
 
 
-def test_perform_attestation_checks_uses_pqc_fallback_when_signature_verification_fails(monkeypatch, classical_runtime, pqc, metadata_module, attestation_module):
+def test_perform_attestation_checks_uses_pqc_fallback_when_signature_verification_fails(monkeypatch, classical, pqc, metadata_module, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     flags = int(AuthenticatorData.FLAG.UP | AuthenticatorData.FLAG.AT)
@@ -180,7 +180,7 @@ def test_perform_attestation_checks_uses_pqc_fallback_when_signature_verificatio
     )
     monkeypatch.setattr(metadata_module, "get_mds_verifier", lambda: object())
     monkeypatch.setattr(
-        classical_runtime,
+        classical,
         "_evaluate_classical_attestation_root",
         lambda *_args, **_kwargs: {
             "root_valid": None,

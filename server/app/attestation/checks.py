@@ -22,7 +22,7 @@ from fido2.webauthn import (
 
 from .. import encoding, metadata
 from ..pqc import is_pqc_algorithm
-from . import classical_runtime, encoding_leaf, pqc, trust
+from . import classical, formatting, pqc, trust
 
 
 def _resolve_uv_required(
@@ -243,9 +243,9 @@ def _populate_client_data_results(
         "expected_type": CollectedClientData.TYPE.CREATE.value,
         "type_valid": client_data.type
         == CollectedClientData.TYPE.CREATE.value,
-        "challenge": encoding_leaf.encode_base64url(client_data.challenge),
+        "challenge": formatting.encode_base64url(client_data.challenge),
         "expected_challenge": (
-            encoding_leaf.encode_base64url(expected_challenge_bytes)
+            formatting.encode_base64url(expected_challenge_bytes)
             if expected_challenge_bytes
             else None
         ),
@@ -507,7 +507,7 @@ def _evaluate_root_validation(
             results["warnings"].extend(str(warn) for warn in pqc_warnings)
     elif signature_valid and attestation_result is not None:
         verifier = metadata.get_mds_verifier()
-        classical_outcome = classical_runtime._evaluate_classical_attestation_root(
+        classical_outcome = classical._evaluate_classical_attestation_root(
             attestation_object,
             attestation_result,
             client_data_hash,
@@ -605,8 +605,8 @@ def perform_attestation_checks(
     client_data_hash = client_data.hash
     verification_data = bytes(auth_data_obj) + client_data_hash
     results["hash_binding"] = {
-        "client_data_hash": encoding_leaf.encode_base64url(client_data_hash),
-        "verification_data": encoding_leaf.encode_base64url(verification_data),
+        "client_data_hash": formatting.encode_base64url(client_data_hash),
+        "verification_data": formatting.encode_base64url(verification_data),
     }
 
     signature_ctx = _resolve_signature_validation(attestation_object, client_data_hash)

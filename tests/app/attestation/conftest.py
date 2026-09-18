@@ -22,10 +22,10 @@ def _fragment(name: str):
 
 
 @pytest.fixture
-def encoding_leaf():
+def formatting():
     """The fragment that defines the hex/base64url encoding helpers."""
 
-    return _fragment("encoding_leaf")
+    return _fragment("formatting")
 
 
 @pytest.fixture
@@ -43,10 +43,10 @@ def trust():
 
 
 @pytest.fixture
-def classical_runtime():
+def classical():
     """The fragment that defines the classical attestation root evaluation."""
 
-    return _fragment("classical_runtime")
+    return _fragment("classical")
 
 
 @pytest.fixture
