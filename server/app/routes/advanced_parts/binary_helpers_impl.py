@@ -7,7 +7,7 @@ from collections.abc import Mapping
 from typing import Any
 
 
-def _decode_client_binary_impl(_advanced_module: Any, value: Any) -> bytes:
+def _decode_client_binary_impl(value: Any) -> bytes:
     if value is None:
         raise ValueError("missing binary value")
 
@@ -50,7 +50,7 @@ def _decode_client_binary_impl(_advanced_module: Any, value: Any) -> bytes:
                 except ValueError as exc:
                     raise ValueError("invalid binary value") from exc
 
-            return _decode_client_binary_impl(_advanced_module, hex_candidate)
+            return _decode_client_binary_impl(hex_candidate)
 
         if "$base64url" in value or "base64url" in value:
             b64u_candidate = value.get("$base64url")
@@ -69,7 +69,7 @@ def _decode_client_binary_impl(_advanced_module: Any, value: Any) -> bytes:
                 except (ValueError, TypeError, binascii.Error) as exc:
                     raise ValueError("invalid binary value") from exc
 
-            return _decode_client_binary_impl(_advanced_module, b64u_candidate)
+            return _decode_client_binary_impl(b64u_candidate)
 
         if "$base64" in value or "base64" in value:
             b64_candidate = value.get("$base64")
@@ -86,29 +86,28 @@ def _decode_client_binary_impl(_advanced_module: Any, value: Any) -> bytes:
                 except (ValueError, TypeError, binascii.Error) as exc:
                     raise ValueError("invalid binary value") from exc
 
-            return _decode_client_binary_impl(_advanced_module, b64_candidate)
+            return _decode_client_binary_impl(b64_candidate)
 
     raise ValueError("unsupported binary value type")
 
 
-def _decode_base64url_impl(_advanced_module: Any, data: str) -> bytes:
+def _decode_base64url_impl(data: str) -> bytes:
     padding = "=" * ((4 - len(data) % 4) % 4)
     return base64.urlsafe_b64decode(data + padding)
 
 
-def _decode_base64url_bytes_impl(advanced_module: Any, value: Any) -> bytes:
+def _decode_base64url_bytes_impl(value: Any) -> bytes:
     if isinstance(value, (bytes, bytearray, memoryview)):
         return bytes(value)
     if isinstance(value, str):
         try:
-            return advanced_module._decode_base64url(value)
+            return _decode_base64url_impl(value)
         except Exception:
             return b""
     return b""
 
 
 def _extract_assertion_credential_id_impl(
-    advanced_module: Any,
     response: Mapping[str, Any],
 ) -> bytes | None:
     raw_id: Any = None
@@ -120,14 +119,14 @@ def _extract_assertion_credential_id_impl(
 
     if isinstance(raw_id, str):
         try:
-            return advanced_module._decode_base64url(raw_id)
+            return _decode_base64url_impl(raw_id)
         except (ValueError, TypeError):
             return None
 
     return None
 
 
-def _extract_binary_value_impl(_advanced_module: Any, value: Any) -> Any:
+def _extract_binary_value_impl(value: Any) -> Any:
     if isinstance(value, str):
         return value
     if isinstance(value, dict):
@@ -148,5 +147,5 @@ def _extract_binary_value_impl(_advanced_module: Any, value: Any) -> Any:
     return value
 
 
-def _encode_base64url_impl(_advanced_module: Any, data: bytes) -> str:
+def _encode_base64url_impl(data: bytes) -> str:
     return base64.urlsafe_b64encode(data).rstrip(b"=").decode("ascii")

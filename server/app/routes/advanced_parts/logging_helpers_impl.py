@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from ... import attestation, config, pqc
+from . import binary_helpers_impl
 
 
 def _log_authenticator_attestation_response_impl(
@@ -60,7 +61,7 @@ def _log_authenticator_attestation_response_impl(
         credential_id_value = getattr(credential_data, "credential_id", None)
         if isinstance(credential_id_value, (bytes, bytearray, memoryview)):
             credential_id_bytes = bytes(credential_id_value)
-            credential_payload["credentialId"] = advanced_module._encode_base64url(credential_id_bytes)
+            credential_payload["credentialId"] = binary_helpers_impl._encode_base64url_impl(credential_id_bytes)
             credential_payload["credentialIdLength"] = len(credential_id_bytes)
 
         public_key_value = getattr(credential_data, "public_key", None)
@@ -93,7 +94,7 @@ def _log_authenticator_attestation_response_impl(
         payload["attStmt"] = attestation.make_json_safe(attestation_statement)
 
     if isinstance(raw_attestation_object, (bytes, bytearray, memoryview)):
-        payload["rawAttestationObject"] = advanced_module._encode_base64url(bytes(raw_attestation_object))
+        payload["rawAttestationObject"] = binary_helpers_impl._encode_base64url_impl(bytes(raw_attestation_object))
     elif isinstance(raw_attestation_object, str):
         payload["rawAttestationObject"] = raw_attestation_object
 

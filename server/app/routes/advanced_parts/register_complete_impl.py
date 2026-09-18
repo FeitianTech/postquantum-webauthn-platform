@@ -7,6 +7,7 @@ from typing import Any
 from flask import jsonify, request
 
 from ... import attestation, config, pqc, storage
+from . import binary_helpers_impl
 from .register_complete_finalize_impl import finalize_registration_completion
 from .register_complete_material_impl import build_registration_material
 from .register_complete_setup_impl import prepare_register_complete_inputs
@@ -167,7 +168,7 @@ def advanced_register_complete_impl(advanced_module: Any):
         user_id_value = user_info.get("id", "")
         if user_id_value:
             try:
-                user_handle = advanced_module._extract_binary_value(user_id_value)
+                user_handle = binary_helpers_impl._extract_binary_value_impl(user_id_value)
                 if isinstance(user_handle, str):
                     user_handle = bytes.fromhex(user_handle)
             except (ValueError, TypeError):

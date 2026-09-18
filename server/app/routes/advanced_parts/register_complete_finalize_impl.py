@@ -8,6 +8,7 @@ from typing import Any
 from flask import jsonify
 
 from ... import config, credential_artifacts, device_logs
+from . import binary_helpers_impl
 
 
 def finalize_registration_completion(
@@ -96,8 +97,8 @@ def finalize_registration_completion(
         aaguid=aaguid_bytes or None,
         device_name_mds=metadata_description,
         attestation_format=str(attestation_format or ""),
-        attestation_object=advanced_module._decode_base64url_bytes(attestation_object_b64),
-        client_data_json=advanced_module._decode_base64url_bytes(client_data_json_b64),
+        attestation_object=binary_helpers_impl._decode_base64url_bytes_impl(attestation_object_b64),
+        client_data_json=binary_helpers_impl._decode_base64url_bytes_impl(client_data_json_b64),
     )
 
     device_logs.record_registration_event(event)

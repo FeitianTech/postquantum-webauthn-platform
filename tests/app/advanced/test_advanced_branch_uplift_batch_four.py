@@ -108,12 +108,12 @@ def test_algorithm_coercion_handles_blank_values_failed_numeric_extraction_and_p
     assert advanced_module._is_custom_cose_algorithm(123456) is False
 
 
-def test_base64url_and_assertion_algorithm_helpers_degrade_gracefully_on_decode_errors(monkeypatch):
+def test_base64url_and_assertion_algorithm_helpers_degrade_gracefully_on_decode_errors(monkeypatch, advanced_binary_helpers):
     advanced_module = pytest.importorskip("server.app.routes.advanced")
 
     monkeypatch.setattr(
-        advanced_module,
-        "_decode_base64url",
+        advanced_binary_helpers,
+        "_decode_base64url_impl",
         lambda _value: (_ for _ in ()).throw(ValueError("decode failure"))
     )
 
