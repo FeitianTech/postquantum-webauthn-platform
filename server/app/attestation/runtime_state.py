@@ -1,4 +1,4 @@
-"""Shared constants for the attestation_parts fragments.
+"""Shared constants for the attestation submodules.
 
 This module is the single home for the constants the attestation runtime
 shares between fragments and re-exports through :mod:`server.app.attestation`.
