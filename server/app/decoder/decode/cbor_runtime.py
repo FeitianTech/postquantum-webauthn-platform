@@ -12,7 +12,6 @@ from fido2 import cbor
 from ...attestation import make_json_safe
 from ...encoding import decode_hex
 from . import (
-    cbor_lenient,
     cbor_parser,
     ctap_classify,
     ctap_repair_leaf,
@@ -20,9 +19,11 @@ from . import (
     ctap_runtime_parse,
     details_runtime,
 )
-from .cbor_lenient import _structure_to_value
-from .cbor_parser import _CborDecodingError
-from .cbor_sequence import _decode_cbor_sequence_impl
+from .cbor_parser import (
+    _CborDecodingError,
+    _decode_cbor_sequence_impl,
+    _structure_to_value,
+)
 from .ctap_repair_make import (
     _extract_mapping_bytes,
     _extract_mapping_string,
@@ -94,7 +95,7 @@ def _decode_cbor_sequence(payload: bytes) -> tuple[list[dict[str, Any]], list[An
         cbor_decoder_factory=_cbor2_decode_with_consumed,
         decode_cbor_structure=cbor_parser._decode_cbor_structure,
         structure_to_value=_structure_to_value,
-        lenient_decode_from=lambda data, offset=0: cbor_lenient._lenient_decode_from(data, offset),
+        lenient_decode_from=lambda data, offset=0: cbor_parser._lenient_decode_from(data, offset),
         json_safe_with_stringified_keys=_json_safe_with_stringified_keys,
         cbor_error_type=_CborDecodingError,
     )

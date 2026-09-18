@@ -8,8 +8,8 @@ from fido2.webauthn import AuthenticatorData
 
 from ...attestation import encode_base64url
 from ...encoding import decode_hex, encode_base64
-from . import cbor_lenient, details_runtime, pipeline_runtime, result_runtime
-from .cbor_lenient import _lenient_read_uint
+from . import cbor_parser, details_runtime, pipeline_runtime, result_runtime
+from .cbor_parser import _lenient_read_uint
 from .ctap_convert_leaf import (
     _attempt_decode_cbor_map,
     _convert_ctap_credential_descriptor,
@@ -102,7 +102,7 @@ def _parse_authenticator_data_bytes(data: bytes) -> tuple[dict[str, Any], bytes,
     details["signCount"] = sign_count
 
     def _decode_cbor_item(buffer: bytes) -> tuple[Any, int]:
-        value, consumed = cbor_lenient._lenient_decode_from(buffer, 0)
+        value, consumed = cbor_parser._lenient_decode_from(buffer, 0)
         return value, consumed
 
     at_flag = bool(flags_byte & AuthenticatorData.FLAG.AT)
@@ -211,11 +211,11 @@ def _decode_trailing_map(data: bytes) -> dict[Any, Any]:
     mapping: dict[Any, Any] = {}
     offset = 0
     while offset < len(data):
-        key, new_offset = cbor_lenient._lenient_decode_from(data, offset)
+        key, new_offset = cbor_parser._lenient_decode_from(data, offset)
         if new_offset <= offset:
             break
         offset = new_offset
-        value, new_offset = cbor_lenient._lenient_decode_from(data, offset)
+        value, new_offset = cbor_parser._lenient_decode_from(data, offset)
         if new_offset <= offset:
             break
         offset = new_offset
@@ -239,11 +239,11 @@ def _extract_lenient_map_entries(raw_bytes: bytes | None) -> list[tuple[Any, Any
     offset += 1
     length, offset = _lenient_read_uint(info, raw_bytes, offset)
     for _ in range(length):
-        key, new_offset = cbor_lenient._lenient_decode_from(raw_bytes, offset)
+        key, new_offset = cbor_parser._lenient_decode_from(raw_bytes, offset)
         if new_offset <= offset:
             break
         offset = new_offset
-        value, new_offset = cbor_lenient._lenient_decode_from(raw_bytes, offset)
+        value, new_offset = cbor_parser._lenient_decode_from(raw_bytes, offset)
         if new_offset <= offset:
             entries.append((key, None))
             break

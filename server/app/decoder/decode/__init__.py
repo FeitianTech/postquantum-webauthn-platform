@@ -11,10 +11,8 @@ from __future__ import annotations
 from ... import attestation
 from . import (
     binary,
-    cbor_lenient,
     cbor_parser,
     cbor_runtime,
-    cbor_sequence,
     certificates,
     conversion_leaf,
     ctap_classify,
@@ -76,12 +74,12 @@ _parse_cbor_item = cbor_parser._parse_cbor_item
 _read_cbor_length = cbor_parser._read_cbor_length
 
 # Lenient CBOR decoding primitives.
-_lenient_decode_from = cbor_lenient._lenient_decode_from
-_lenient_read_uint = cbor_lenient._lenient_read_uint
-_structure_to_value = cbor_lenient._structure_to_value
+_lenient_decode_from = cbor_parser._lenient_decode_from
+_lenient_read_uint = cbor_parser._lenient_read_uint
+_structure_to_value = cbor_parser._structure_to_value
 
 # CBOR sequence decoding.
-_decode_cbor_sequence_impl = cbor_sequence._decode_cbor_sequence_impl
+_decode_cbor_sequence_impl = cbor_parser._decode_cbor_sequence_impl
 
 # Certificate extension serialisation.
 _DEVICE_IDENTIFIER_NAMES = certificates._DEVICE_IDENTIFIER_NAMES
