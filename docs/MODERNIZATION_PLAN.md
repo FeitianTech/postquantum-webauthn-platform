@@ -762,6 +762,59 @@ advanced forwarders have no production caller and exist only for tests:
 `_extract_credential_id`, `_is_custom_cose_algorithm`, `_extract_requested_assertion_algorithm`.
 `encode_parts` still imports five private names from `decode.py` — encoder scope.
 
+### Phase 10 — M4: one encoding module — DONE (2026-09-18), verified
+New `server/app/encoding.py` with an explicit API (strict base64url/base64/hex, `decode_pem_body`,
+`sniff` returning a `SniffResult` that records which encoding matched plus `ambiguous`/`lenient`
+flags). Leniency and odd-length-hex padding must be asked for by name.
+
+| Metric | Before | After |
+|---|---|---|
+| Decode call sites outside the module | **77** (30 files) | **0** |
+| Encode call sites | 65 | **0** |
+| Decoders each deciding strictness alone | 21 | **1 module** |
+| pytest | 1708 | **1860 passed, 4 skipped** |
+
+Tech-lead verified: suites 1860/278, ruff clean, `tests/app/security/` 78 passed, and
+**`POST /api/decode` now returns 422 for prose, odd-length hex and mixed alphabets** instead of a
+wrong 200. The single most embarrassing defect in the original audit — a CTAP decoder that
+answered `success: true` for plain English — is closed.
+
+**A finding the agent added beyond the brief, and it matters.** `validate=True` does NOT reject a
+final quantum whose unused bits are non-zero. Verified: `"debug-metadata"` decodes to 10 bytes but
+re-encodes to `"debug-metadatQ"` — it does not round-trip. The module now decodes, re-encodes and
+requires equality modulo padding. That is the class of bug that silently corrupts a credential ID.
+
+### Corrections to MY OWN audit — both were my errors
+- **Finding 3 mechanism: WRONG.** I claimed `urlsafe_b64decode` before `b64decode` makes standard
+  base64 containing `+`/`/` decode to wrong bytes. It does not: `urlsafe_b64decode` translates only
+  `-_` to `+/`, and `+`/`/` are already standard-alphabet, so they pass through and decode
+  correctly. The agent disproved it with 200k randomized payloads; I reproduced it independently —
+  **0 mismatches**. The REAL bug in those files was `validate=False` silently dropping
+  out-of-alphabet characters, so a credential ID of `"Hello, this is plain text!"` returned 15 junk
+  bytes. Fixed. The agent kept the refutation as a passing test.
+- **Finding 4: half wrong.** `_decode_base64url_bytes_impl` genuinely was duplicated with drifted
+  behaviour (deduplicated into `routes/binary_helpers.py`). But `_select_first_impl` is NOT a
+  duplicate — verified: the copies live in `simple_parts/binary_helpers_impl.py` and
+  `advanced_parts/parsing_helpers_impl.py`, with different signatures and different `None`
+  handling pinned by an existing test. The agent left both and documented why rather than churning.
+
+**Externally visible changes:** `/api/decode` 422 for unparseable input; MDS certificate route now
+decodes base64url certificates whole (were truncated); WebAuthn intake returns absent rather than
+junk bytes for out-of-alphabet `rawId`/`id`; spaced/colon hex now decodes as hex. The origin
+allowlist fails **closed** — unparseable `clientDataJSON` yields `None` then 400, strictly tighter.
+Precedence narrowing: `"414243"` is not canonical base64 so it now reads as hex.
+
+**`convert_bytes_for_json` deliberately left as standard base64.** Verified coupling: `binary.js`
+`base64ToHex`/`base64ToUint8Array` pass the value to bare `atob`, which throws on `-`/`_`;
+certificate rendering and credential detail views both route through them. Server and frontend must
+move together — queued for the frontend milestone. It now flows through `encoding.encode_base64`,
+so the flip is a one-line change when we do it.
+
+**Found but not fixed:** the decoder pipeline's hex-before-base64 precedence is genuinely lossy
+(`"AAEC"` is valid as both, with different bytes) — inherited, now pinned by a test with a comment.
+`fido2/websafe_decode` is still non-validating (vendored, out of scope). `sniff`'s `ambiguous` flag
+has no consumer — surfacing it in the decoder response would be frontend-visible.
+
 ### Local development
 Tests previously ran against the global interpreter, whose packages matched nothing in
 `requirements.txt` (cryptography 44.0.3, fido2 2.1.1, gunicorn 23). A project venv now exists:
