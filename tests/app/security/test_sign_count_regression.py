@@ -35,9 +35,7 @@ def credential_store(simple_module, tmp_path, monkeypatch):
     monkeypatch.delenv("FIDO_SERVER_GCS_ENABLED", raising=False)
     monkeypatch.setattr(storage, "_LOCAL_CREDENTIAL_BASE", str(tmp_path / "credentials"))
     monkeypatch.setattr(storage, "_LEGACY_LOCAL_CREDENTIAL_BASE", str(tmp_path / "legacy"))
-    monkeypatch.setattr(
-        simple_module, "record_registration_event", lambda _event: None, raising=False
-    )
+    monkeypatch.setattr(simple_module, "record_registration_event", lambda _event: None)
 
     def _stored_counter(credential_id: bytes):
         base = tmp_path / "credentials"

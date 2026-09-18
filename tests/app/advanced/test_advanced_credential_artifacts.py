@@ -5,7 +5,7 @@ def test_bulk_credential_artifact_route_returns_requested_items(monkeypatch):
     advanced_module = pytest.importorskip("server.app.routes.advanced")
     config_module = pytest.importorskip("server.app.config")
 
-    monkeypatch.setattr(advanced_module, "ensure_metadata_session_id", lambda: "session-id", raising=False)
+    monkeypatch.setattr(advanced_module, "ensure_metadata_session_id", lambda: "session-id")
 
     def _load(storage_id, *, session_id=None):
         assert session_id == "session-id"
@@ -13,7 +13,7 @@ def test_bulk_credential_artifact_route_returns_requested_items(monkeypatch):
             return {"registrationDetailSnapshot": {"html": "<p>ready</p>"}}
         return None
 
-    monkeypatch.setattr(advanced_module, "load_credential_artifact", _load, raising=False)
+    monkeypatch.setattr(advanced_module, "load_credential_artifact", _load)
 
     with config_module.app.test_client() as client:
         response = client.post(
@@ -33,7 +33,7 @@ def test_bulk_credential_artifact_route_requires_array(monkeypatch):
     advanced_module = pytest.importorskip("server.app.routes.advanced")
     config_module = pytest.importorskip("server.app.config")
 
-    monkeypatch.setattr(advanced_module, "ensure_metadata_session_id", lambda: "session-id", raising=False)
+    monkeypatch.setattr(advanced_module, "ensure_metadata_session_id", lambda: "session-id")
 
     with config_module.app.test_client() as client:
         response = client.post(
@@ -49,7 +49,7 @@ def test_bulk_credential_artifact_route_trims_dedupes_and_ignores_invalid_ids(mo
     advanced_module = pytest.importorskip("server.app.routes.advanced")
     config_module = pytest.importorskip("server.app.config")
 
-    monkeypatch.setattr(advanced_module, "ensure_metadata_session_id", lambda: "session-id", raising=False)
+    monkeypatch.setattr(advanced_module, "ensure_metadata_session_id", lambda: "session-id")
 
     observed_storage_ids = []
 
@@ -62,7 +62,7 @@ def test_bulk_credential_artifact_route_trims_dedupes_and_ignores_invalid_ids(mo
             return {"storedCredential": {"id": "cred-2"}}
         return None
 
-    monkeypatch.setattr(advanced_module, "load_credential_artifact", _load, raising=False)
+    monkeypatch.setattr(advanced_module, "load_credential_artifact", _load)
 
     with config_module.app.test_client() as client:
         response = client.post(
@@ -86,14 +86,13 @@ def test_get_credential_artifact_route_returns_payload(monkeypatch):
     advanced_module = pytest.importorskip("server.app.routes.advanced")
     config_module = pytest.importorskip("server.app.config")
 
-    monkeypatch.setattr(advanced_module, "ensure_metadata_session_id", lambda: "session-id", raising=False)
+    monkeypatch.setattr(advanced_module, "ensure_metadata_session_id", lambda: "session-id")
     monkeypatch.setattr(
         advanced_module,
         "load_credential_artifact",
         lambda storage_id, *, session_id=None: (
             {"storedCredential": {"id": storage_id}} if session_id == "session-id" else None
-        ),
-        raising=False,
+        )
     )
 
     with config_module.app.test_client() as client:
@@ -110,13 +109,8 @@ def test_get_credential_artifact_route_returns_404_when_missing(monkeypatch):
     advanced_module = pytest.importorskip("server.app.routes.advanced")
     config_module = pytest.importorskip("server.app.config")
 
-    monkeypatch.setattr(advanced_module, "ensure_metadata_session_id", lambda: "session-id", raising=False)
-    monkeypatch.setattr(
-        advanced_module,
-        "load_credential_artifact",
-        lambda *_args, **_kwargs: None,
-        raising=False,
-    )
+    monkeypatch.setattr(advanced_module, "ensure_metadata_session_id", lambda: "session-id")
+    monkeypatch.setattr(advanced_module, "load_credential_artifact", lambda *_args, **_kwargs: None)
 
     with config_module.app.test_client() as client:
         response = client.get("/api/advanced/credential-artifacts/missing")
@@ -143,7 +137,7 @@ def test_put_credential_artifact_route_defaults_merge_true(monkeypatch):
     advanced_module = pytest.importorskip("server.app.routes.advanced")
     config_module = pytest.importorskip("server.app.config")
 
-    monkeypatch.setattr(advanced_module, "ensure_metadata_session_id", lambda: "session-id", raising=False)
+    monkeypatch.setattr(advanced_module, "ensure_metadata_session_id", lambda: "session-id")
 
     captured = {}
 
@@ -154,7 +148,7 @@ def test_put_credential_artifact_route_defaults_merge_true(monkeypatch):
         captured["session_id"] = session_id
         return True
 
-    monkeypatch.setattr(advanced_module, "store_credential_artifact", _store, raising=False)
+    monkeypatch.setattr(advanced_module, "store_credential_artifact", _store)
 
     with config_module.app.test_client() as client:
         response = client.put(
@@ -176,7 +170,7 @@ def test_put_credential_artifact_route_supports_payload_alias_and_merge_override
     advanced_module = pytest.importorskip("server.app.routes.advanced")
     config_module = pytest.importorskip("server.app.config")
 
-    monkeypatch.setattr(advanced_module, "ensure_metadata_session_id", lambda: "session-id", raising=False)
+    monkeypatch.setattr(advanced_module, "ensure_metadata_session_id", lambda: "session-id")
 
     captured = {}
 
@@ -187,7 +181,7 @@ def test_put_credential_artifact_route_supports_payload_alias_and_merge_override
         captured["session_id"] = session_id
         return True
 
-    monkeypatch.setattr(advanced_module, "store_credential_artifact", _store, raising=False)
+    monkeypatch.setattr(advanced_module, "store_credential_artifact", _store)
 
     with config_module.app.test_client() as client:
         response = client.put(
@@ -209,12 +203,11 @@ def test_put_credential_artifact_route_returns_400_when_store_fails(monkeypatch)
     advanced_module = pytest.importorskip("server.app.routes.advanced")
     config_module = pytest.importorskip("server.app.config")
 
-    monkeypatch.setattr(advanced_module, "ensure_metadata_session_id", lambda: "session-id", raising=False)
+    monkeypatch.setattr(advanced_module, "ensure_metadata_session_id", lambda: "session-id")
     monkeypatch.setattr(
         advanced_module,
         "store_credential_artifact",
-        lambda *_args, **_kwargs: False,
-        raising=False,
+        lambda *_args, **_kwargs: False
     )
 
     with config_module.app.test_client() as client:
@@ -245,7 +238,7 @@ def test_put_snapshot_route_stores_snapshot_using_merge(monkeypatch):
     advanced_module = pytest.importorskip("server.app.routes.advanced")
     config_module = pytest.importorskip("server.app.config")
 
-    monkeypatch.setattr(advanced_module, "ensure_metadata_session_id", lambda: "session-id", raising=False)
+    monkeypatch.setattr(advanced_module, "ensure_metadata_session_id", lambda: "session-id")
 
     captured = {}
 
@@ -256,7 +249,7 @@ def test_put_snapshot_route_stores_snapshot_using_merge(monkeypatch):
         captured["session_id"] = session_id
         return True
 
-    monkeypatch.setattr(advanced_module, "store_credential_artifact", _store, raising=False)
+    monkeypatch.setattr(advanced_module, "store_credential_artifact", _store)
 
     snapshot = {"html": "<section>snapshot</section>"}
 
@@ -300,12 +293,11 @@ def test_delete_credential_artifact_route_reports_status(
     advanced_module = pytest.importorskip("server.app.routes.advanced")
     config_module = pytest.importorskip("server.app.config")
 
-    monkeypatch.setattr(advanced_module, "ensure_metadata_session_id", lambda: "session-id", raising=False)
+    monkeypatch.setattr(advanced_module, "ensure_metadata_session_id", lambda: "session-id")
     monkeypatch.setattr(
         advanced_module,
         "delete_credential_artifact_with_status",
-        lambda storage_id, *, session_id=None: delete_status,
-        raising=False,
+        lambda storage_id, *, session_id=None: delete_status
     )
 
     with config_module.app.test_client() as client:

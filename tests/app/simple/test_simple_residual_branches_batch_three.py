@@ -135,12 +135,11 @@ def test_register_complete_handles_algorithm_and_large_blob_residual_paths(
 
     auth_data = _RegisterAuthData(algorithm)
 
-    monkeypatch.setattr(simple_module, "determine_rp_id", lambda: "example.com", raising=False)
+    monkeypatch.setattr(simple_module, "determine_rp_id", lambda: "example.com")
     monkeypatch.setattr(
         simple_module,
         "create_fido_server",
-        lambda **_kwargs: _RegisterServer(auth_data),
-        raising=False,
+        lambda **_kwargs: _RegisterServer(auth_data)
     )
     monkeypatch.setattr(
         simple_module,
@@ -153,10 +152,9 @@ def test_register_complete_handles_algorithm_and_large_blob_residual_paths(
             {"largeBlob": {"blob": "present"}},
             None,
             [],
-        ),
-        raising=False,
+        )
     )
-    monkeypatch.setattr(simple_module, "extract_min_pin_length", lambda _results: None, raising=False)
+    monkeypatch.setattr(simple_module, "extract_min_pin_length", lambda _results: None)
     monkeypatch.setattr(
         simple_module,
         "perform_attestation_checks",
@@ -167,18 +165,17 @@ def test_register_complete_handles_algorithm_and_large_blob_residual_paths(
             "aaguid_match": None,
             "metadata": {"description": 123},
             "warnings": [],
-        },
-        raising=False,
+        }
     )
 
     def _mutate_user_handle(credential_info, _public_key):
         credential_info["user_info"]["user_handle"] = "string-user-handle"
 
-    monkeypatch.setattr(simple_module, "add_public_key_material", _mutate_user_handle, raising=False)
-    monkeypatch.setattr(simple_module, "ensure_metadata_session_id", lambda: "meta-session", raising=False)
-    monkeypatch.setattr(simple_module, "readkey", lambda *_args, **_kwargs: [], raising=False)
-    monkeypatch.setattr(simple_module, "savekey", lambda *_args, **_kwargs: None, raising=False)
-    monkeypatch.setattr(simple_module, "record_registration_event", lambda _event: None, raising=False)
+    monkeypatch.setattr(simple_module, "add_public_key_material", _mutate_user_handle)
+    monkeypatch.setattr(simple_module, "ensure_metadata_session_id", lambda: "meta-session")
+    monkeypatch.setattr(simple_module, "readkey", lambda *_args, **_kwargs: [])
+    monkeypatch.setattr(simple_module, "savekey", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(simple_module, "record_registration_event", lambda _event: None)
 
     with config_module.app.test_client() as client:
         with client.session_transaction() as session_state:
@@ -215,14 +212,12 @@ def test_authenticate_complete_ignores_request_state_and_handles_bad_matched_cre
     monkeypatch.setattr(
         simple_module,
         "_parse_client_credentials",
-        lambda _raw: ([SimpleNamespace(credential_id=b"\x01")], [{"credentialId": "AQ"}]),
-        raising=False,
+        lambda _raw: ([SimpleNamespace(credential_id=b"\x01")], [{"credentialId": "AQ"}])
     )
     monkeypatch.setattr(
         simple_module,
         "create_fido_server",
-        lambda **_kwargs: _AuthenticationServer(captured),
-        raising=False,
+        lambda **_kwargs: _AuthenticationServer(captured)
     )
 
     with config_module.app.test_client() as client:

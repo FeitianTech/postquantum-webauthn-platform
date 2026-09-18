@@ -20,8 +20,8 @@ def test_simple_authentication_failure_returns_failed_credential_id(monkeypatch)
         def authenticate_complete(self, *_args, **_kwargs):
             raise ValueError("Invalid signature.")
 
-    monkeypatch.setattr(simple_module, "create_fido_server", lambda **_kwargs: _FailingServer(), raising=False)
-    monkeypatch.setattr(simple_module, "_parse_client_credentials", lambda _raw: ([object()], []), raising=False)
+    monkeypatch.setattr(simple_module, "create_fido_server", lambda **_kwargs: _FailingServer())
+    monkeypatch.setattr(simple_module, "_parse_client_credentials", lambda _raw: ([object()], []))
 
     with config_module.app.test_client() as client:
         with client.session_transaction() as session:
@@ -58,17 +58,16 @@ def test_advanced_authentication_failure_returns_failed_credential_id(monkeypatc
         def authenticate_complete(self, *_args, **_kwargs):
             raise ValueError("Invalid signature.")
 
-    monkeypatch.setattr(advanced_module, "create_fido_server", lambda **_kwargs: _FailingServer(), raising=False)
-    monkeypatch.setattr(advanced_module, "determine_rp_id", lambda value=None: value or "example.com", raising=False)
-    monkeypatch.setattr(advanced_module, "_derive_algorithms_from_credentials", lambda _credentials: [], raising=False)
+    monkeypatch.setattr(advanced_module, "create_fido_server", lambda **_kwargs: _FailingServer())
+    monkeypatch.setattr(advanced_module, "determine_rp_id", lambda value=None: value or "example.com")
+    monkeypatch.setattr(advanced_module, "_derive_algorithms_from_credentials", lambda _credentials: [])
     monkeypatch.setattr(
         advanced_module,
         "_parse_client_supplied_credentials",
         lambda _raw: (
             [{"id": credential_id, "data": {"public_key": {3: -7}}, "resident": True}],
             [],
-        ),
-        raising=False,
+        )
     )
 
     with config_module.app.test_client() as client:

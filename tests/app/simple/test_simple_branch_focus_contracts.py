@@ -96,9 +96,9 @@ def test_simple_register_begin_clears_cached_session_fields_when_client_credenti
         def register_begin(self, *_args, **_kwargs):
             return {"publicKey": "not-a-mapping"}, {"challenge": "simple-register-state"}
 
-    monkeypatch.setattr(simple_module, "determine_rp_id", lambda: "example.com", raising=False)
-    monkeypatch.setattr(simple_module, "create_fido_server", lambda **_kwargs: _FakeServer(), raising=False)
-    monkeypatch.setattr(simple_module, "_parse_client_credentials", lambda _raw: ([], []), raising=False)
+    monkeypatch.setattr(simple_module, "determine_rp_id", lambda: "example.com")
+    monkeypatch.setattr(simple_module, "create_fido_server", lambda **_kwargs: _FakeServer())
+    monkeypatch.setattr(simple_module, "_parse_client_credentials", lambda _raw: ([], []))
 
     with config_module.app.test_client() as client:
         with client.session_transaction() as session_state:
@@ -131,8 +131,7 @@ def test_simple_register_complete_non_mapping_payload_returns_state_expired_erro
     monkeypatch.setattr(
         simple_module,
         "extract_attestation_details",
-        lambda _response: ("none", {}, None, None, {}, None, []),
-        raising=False,
+        lambda _response: ("none", {}, None, None, {}, None, [])
     )
 
     with config_module.app.test_client() as client:
@@ -150,7 +149,7 @@ def test_simple_authenticate_complete_aborts_when_session_credentials_cannot_be_
     simple_module = pytest.importorskip("server.app.routes.simple")
     pytest.importorskip("server.app.app")
 
-    monkeypatch.setattr(simple_module, "_parse_client_credentials", lambda _raw: ([], []), raising=False)
+    monkeypatch.setattr(simple_module, "_parse_client_credentials", lambda _raw: ([], []))
 
     with config_module.app.test_client() as client:
         with client.session_transaction() as session_state:
@@ -178,12 +177,11 @@ def test_simple_register_complete_covers_warning_metadata_transport_and_session_
     saved = {}
     events = []
 
-    monkeypatch.setattr(simple_module, "determine_rp_id", lambda: rp_id, raising=False)
+    monkeypatch.setattr(simple_module, "determine_rp_id", lambda: rp_id)
     monkeypatch.setattr(
         simple_module,
         "create_fido_server",
-        lambda **_kwargs: _RegisterServer(auth_data),
-        raising=False,
+        lambda **_kwargs: _RegisterServer(auth_data)
     )
     monkeypatch.setattr(
         simple_module,
@@ -196,10 +194,9 @@ def test_simple_register_complete_covers_warning_metadata_transport_and_session_
             {"largeBlob": "written"},
             {"subject": "CN=Leaf"},
             [{"subject": "CN=Intermediate"}],
-        ),
-        raising=False,
+        )
     )
-    monkeypatch.setattr(simple_module, "extract_min_pin_length", lambda _results: 6, raising=False)
+    monkeypatch.setattr(simple_module, "extract_min_pin_length", lambda _results: 6)
     monkeypatch.setattr(
         simple_module,
         "perform_attestation_checks",
@@ -210,20 +207,19 @@ def test_simple_register_complete_covers_warning_metadata_transport_and_session_
             "aaguid_match": None,
             "metadata": {"description": "FocusKey Device"},
             "warnings": ["  keep me  ", "", {"code": "W1"}, None],
-        },
-        raising=False,
+        }
     )
-    monkeypatch.setattr(simple_module, "add_public_key_material", lambda *_args, **_kwargs: None, raising=False)
-    monkeypatch.setattr(simple_module, "ensure_metadata_session_id", lambda: "meta-session", raising=False)
-    monkeypatch.setattr(simple_module, "readkey", lambda *_args, **_kwargs: {"not": "a-list"}, raising=False)
+    monkeypatch.setattr(simple_module, "add_public_key_material", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(simple_module, "ensure_metadata_session_id", lambda: "meta-session")
+    monkeypatch.setattr(simple_module, "readkey", lambda *_args, **_kwargs: {"not": "a-list"})
 
     def _savekey(email, credentials, *, session_id=None):
         saved["email"] = email
         saved["credentials"] = credentials
         saved["session_id"] = session_id
 
-    monkeypatch.setattr(simple_module, "savekey", _savekey, raising=False)
-    monkeypatch.setattr(simple_module, "record_registration_event", lambda event: events.append(event), raising=False)
+    monkeypatch.setattr(simple_module, "savekey", _savekey)
+    monkeypatch.setattr(simple_module, "record_registration_event", lambda event: events.append(event))
 
     with config_module.app.test_client() as client:
         with client.session_transaction() as session_state:
@@ -283,7 +279,7 @@ def test_simple_credentials_route_covers_scalar_registration_metadata_and_listin
     simple_module = pytest.importorskip("server.app.routes.simple")
     pytest.importorskip("server.app.app")
 
-    monkeypatch.setattr(simple_module, "ensure_metadata_session_id", lambda: "meta-list", raising=False)
+    monkeypatch.setattr(simple_module, "ensure_metadata_session_id", lambda: "meta-list")
 
     def _add_public_key_material(target, public_key):
         if isinstance(public_key, dict) and 3 in public_key:
@@ -293,8 +289,8 @@ def test_simple_credentials_route_covers_scalar_registration_metadata_and_listin
         if target.get("aaguid"):
             target.setdefault("aaguidHex", target["aaguid"])
 
-    monkeypatch.setattr(simple_module, "add_public_key_material", _add_public_key_material, raising=False)
-    monkeypatch.setattr(simple_module, "augment_aaguid_fields", _augment_aaguid_fields, raising=False)
+    monkeypatch.setattr(simple_module, "add_public_key_material", _add_public_key_material)
+    monkeypatch.setattr(simple_module, "augment_aaguid_fields", _augment_aaguid_fields)
 
     dict_backed = {
         "credential_data": {
@@ -344,8 +340,7 @@ def test_simple_credentials_route_covers_scalar_registration_metadata_and_listin
                 ("broken@example.com", None),
                 ("mixed@example.com", [dict_backed, object_backed]),
             ]
-        ),
-        raising=False,
+        )
     )
 
     with config_module.app.test_client() as client:

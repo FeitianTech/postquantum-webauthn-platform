@@ -48,17 +48,11 @@ def _install_fake_auth_begin_server(monkeypatch, advanced_module, captured, *, i
 
             return {"publicKey": public_key}, {"challenge": "state-token"}
 
-    monkeypatch.setattr(
-        advanced_module,
-        "create_fido_server",
-        lambda **_kwargs: _FakeServer(),
-        raising=False,
-    )
+    monkeypatch.setattr(advanced_module, "create_fido_server", lambda **_kwargs: _FakeServer())
     monkeypatch.setattr(
         advanced_module,
         "determine_rp_id",
-        lambda value=None: value or "example.com",
-        raising=False,
+        lambda value=None: value or "example.com"
     )
 
 
@@ -143,8 +137,7 @@ def test_advanced_authenticate_begin_uses_allow_credentials_subset_and_dedupes(m
                 _credential_record(cred_two, data=marker_two, attachment="cross-platform"),
             ],
             [_serialized_record(resident=True), _serialized_record(resident=False)],
-        ),
-        raising=False,
+        )
     )
 
     captured = {}
@@ -201,8 +194,7 @@ def test_advanced_authenticate_begin_falls_back_to_all_records_when_allow_creden
                 _credential_record(b"fallback-two", data=marker_two, attachment="cross-platform"),
             ],
             [_serialized_record(resident=False), _serialized_record(resident=False)],
-        ),
-        raising=False,
+        )
     )
 
     captured = {}
@@ -237,8 +229,7 @@ def test_advanced_authenticate_begin_returns_hints_error_when_filtered_allow_cre
         lambda _raw: (
             [_credential_record(cred_id, attachment="platform", resident=True)],
             [_serialized_record(resident=True)],
-        ),
-        raising=False,
+        )
     )
 
     with config_module.app.test_client() as client:
@@ -280,8 +271,7 @@ def test_advanced_authenticate_begin_resident_mode_prefers_resident_records_and_
                 ),
             ],
             [_serialized_record(resident=True), _serialized_record(resident=False)],
-        ),
-        raising=False,
+        )
     )
 
     captured = {}
@@ -327,8 +317,7 @@ def test_advanced_authenticate_begin_resident_mode_returns_hints_error_when_resi
                 ),
             ],
             [_serialized_record(resident=True), _serialized_record(resident=False)],
-        ),
-        raising=False,
+        )
     )
 
     with config_module.app.test_client() as client:
@@ -358,16 +347,14 @@ def test_advanced_authenticate_begin_propagates_algorithms_extensions_and_uv_pre
     monkeypatch.setattr(
         advanced_module,
         "_parse_client_supplied_credentials",
-        lambda _raw: (records, serialized),
-        raising=False,
+        lambda _raw: (records, serialized)
     )
 
     expected_algorithms = [types.SimpleNamespace(alg=-7), types.SimpleNamespace(alg=-257)]
     monkeypatch.setattr(
         advanced_module,
         "_derive_algorithms_from_credentials",
-        lambda source: expected_algorithms if list(source) == [records[0]["data"]] else [],
-        raising=False,
+        lambda source: expected_algorithms if list(source) == [records[0]["data"]] else []
     )
 
     captured = {}

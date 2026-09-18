@@ -28,17 +28,16 @@ def test_advanced_authenticate_complete_uses_request_state_fallback(monkeypatch)
             captured["state"] = state
             return _AuthResult()
 
-    monkeypatch.setattr(advanced_module, "create_fido_server", lambda **_kwargs: _FakeServer(), raising=False)
-    monkeypatch.setattr(advanced_module, "determine_rp_id", lambda value=None: value or "example.com", raising=False)
-    monkeypatch.setattr(advanced_module, "_derive_algorithms_from_credentials", lambda _credentials: [], raising=False)
+    monkeypatch.setattr(advanced_module, "create_fido_server", lambda **_kwargs: _FakeServer())
+    monkeypatch.setattr(advanced_module, "determine_rp_id", lambda value=None: value or "example.com")
+    monkeypatch.setattr(advanced_module, "_derive_algorithms_from_credentials", lambda _credentials: [])
     monkeypatch.setattr(
         advanced_module,
         "_parse_client_supplied_credentials",
         lambda _raw: (
             [{"id": credential_id, "data": object(), "attachment": None, "algorithm": -7, "resident": True}],
             [],
-        ),
-        raising=False,
+        )
     )
 
     fallback_state = {"challenge": "fallback-state"}
@@ -92,22 +91,20 @@ def test_advanced_authenticate_complete_uses_advanced_rp_when_auth_rp_missing(mo
         captured["determine_rp_id_arg"] = value
         return value or "default.example"
 
-    monkeypatch.setattr(advanced_module, "determine_rp_id", _determine_rp_id, raising=False)
+    monkeypatch.setattr(advanced_module, "determine_rp_id", _determine_rp_id)
     monkeypatch.setattr(
         advanced_module,
         "create_fido_server",
-        lambda **kwargs: _FakeServer(rp_id=kwargs.get("rp_id")),
-        raising=False,
+        lambda **kwargs: _FakeServer(rp_id=kwargs.get("rp_id"))
     )
-    monkeypatch.setattr(advanced_module, "_derive_algorithms_from_credentials", lambda _credentials: [], raising=False)
+    monkeypatch.setattr(advanced_module, "_derive_algorithms_from_credentials", lambda _credentials: [])
     monkeypatch.setattr(
         advanced_module,
         "_parse_client_supplied_credentials",
         lambda _raw: (
             [{"id": credential_id, "data": object(), "attachment": None, "algorithm": -7, "resident": True}],
             [],
-        ),
-        raising=False,
+        )
     )
 
     with config_module.app.test_client() as client:
@@ -149,8 +146,7 @@ def test_advanced_authenticate_complete_invalid_request_state_fallback_returns_4
         lambda _raw: (
             [{"id": credential_id, "data": object(), "attachment": None, "algorithm": -7, "resident": True}],
             [],
-        ),
-        raising=False,
+        )
     )
 
     with config_module.app.test_client() as client:
@@ -188,8 +184,7 @@ def test_advanced_authenticate_complete_reports_cookie_restore_failure(monkeypat
     monkeypatch.setattr(
         advanced_module,
         "_parse_client_supplied_credentials",
-        lambda _raw: ([], []),
-        raising=False,
+        lambda _raw: ([], [])
     )
 
     with config_module.app.test_client() as client:
@@ -283,17 +278,16 @@ def test_advanced_authenticate_complete_forwards_hash_algorithm_override(monkeyp
             captured["hash_algorithm"] = kwargs.get("hash_algorithm")
             return _AuthResult({3: -7})
 
-    monkeypatch.setattr(advanced_module, "create_fido_server", lambda **_kwargs: _FakeServer(), raising=False)
-    monkeypatch.setattr(advanced_module, "determine_rp_id", lambda value=None: value or "example.com", raising=False)
-    monkeypatch.setattr(advanced_module, "_derive_algorithms_from_credentials", lambda _credentials: [], raising=False)
+    monkeypatch.setattr(advanced_module, "create_fido_server", lambda **_kwargs: _FakeServer())
+    monkeypatch.setattr(advanced_module, "determine_rp_id", lambda value=None: value or "example.com")
+    monkeypatch.setattr(advanced_module, "_derive_algorithms_from_credentials", lambda _credentials: [])
     monkeypatch.setattr(
         advanced_module,
         "_parse_client_supplied_credentials",
         lambda _raw: (
             [{"id": credential_id, "data": object(), "attachment": None, "algorithm": -7, "resident": True}],
             [],
-        ),
-        raising=False,
+        )
     )
 
     with config_module.app.test_client() as client:
@@ -334,17 +328,16 @@ def test_advanced_authenticate_complete_defaults_hash_algorithm_when_override_in
             captured["hash_algorithm"] = kwargs.get("hash_algorithm")
             return _AuthResult({3: -7})
 
-    monkeypatch.setattr(advanced_module, "create_fido_server", lambda **_kwargs: _FakeServer(), raising=False)
-    monkeypatch.setattr(advanced_module, "determine_rp_id", lambda value=None: value or "example.com", raising=False)
-    monkeypatch.setattr(advanced_module, "_derive_algorithms_from_credentials", lambda _credentials: [], raising=False)
+    monkeypatch.setattr(advanced_module, "create_fido_server", lambda **_kwargs: _FakeServer())
+    monkeypatch.setattr(advanced_module, "determine_rp_id", lambda value=None: value or "example.com")
+    monkeypatch.setattr(advanced_module, "_derive_algorithms_from_credentials", lambda _credentials: [])
     monkeypatch.setattr(
         advanced_module,
         "_parse_client_supplied_credentials",
         lambda _raw: (
             [{"id": credential_id, "data": object(), "attachment": None, "algorithm": -7, "resident": True}],
             [],
-        ),
-        raising=False,
+        )
     )
 
     with config_module.app.test_client() as client:
@@ -383,17 +376,16 @@ def test_advanced_authenticate_complete_omits_sign_count_for_malformed_authentic
         def authenticate_complete(self, *_args, **_kwargs):
             return _AuthResult({3: -7})
 
-    monkeypatch.setattr(advanced_module, "create_fido_server", lambda **_kwargs: _FakeServer(), raising=False)
-    monkeypatch.setattr(advanced_module, "determine_rp_id", lambda value=None: value or "example.com", raising=False)
-    monkeypatch.setattr(advanced_module, "_derive_algorithms_from_credentials", lambda _credentials: [], raising=False)
+    monkeypatch.setattr(advanced_module, "create_fido_server", lambda **_kwargs: _FakeServer())
+    monkeypatch.setattr(advanced_module, "determine_rp_id", lambda value=None: value or "example.com")
+    monkeypatch.setattr(advanced_module, "_derive_algorithms_from_credentials", lambda _credentials: [])
     monkeypatch.setattr(
         advanced_module,
         "_parse_client_supplied_credentials",
         lambda _raw: (
             [{"id": credential_id, "data": object(), "attachment": None, "algorithm": -7, "resident": True}],
             [],
-        ),
-        raising=False,
+        )
     )
 
     with config_module.app.test_client() as client:

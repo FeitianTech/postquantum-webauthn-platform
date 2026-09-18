@@ -30,13 +30,12 @@ def test_simple_register_complete_returns_400_and_cleans_state_when_verification
         def register_complete(self, *_args, **_kwargs):
             raise ValueError("register verification failed")
 
-    monkeypatch.setattr(simple_module, "determine_rp_id", lambda: "example.com", raising=False)
-    monkeypatch.setattr(simple_module, "create_fido_server", lambda **_kwargs: _FailingServer(), raising=False)
+    monkeypatch.setattr(simple_module, "determine_rp_id", lambda: "example.com")
+    monkeypatch.setattr(simple_module, "create_fido_server", lambda **_kwargs: _FailingServer())
     monkeypatch.setattr(
         simple_module,
         "extract_attestation_details",
-        lambda _response: ("none", {}, None, None, {}, None, []),
-        raising=False,
+        lambda _response: ("none", {}, None, None, {}, None, [])
     )
 
     with config_module.app.test_client() as client:
@@ -73,13 +72,12 @@ def test_simple_register_complete_rejects_request_state_fallback_before_verifica
             captured["state"] = state
             raise ValueError("fallback verification failed")
 
-    monkeypatch.setattr(simple_module, "determine_rp_id", lambda: "example.com", raising=False)
-    monkeypatch.setattr(simple_module, "create_fido_server", lambda **_kwargs: _FailingServer(), raising=False)
+    monkeypatch.setattr(simple_module, "determine_rp_id", lambda: "example.com")
+    monkeypatch.setattr(simple_module, "create_fido_server", lambda **_kwargs: _FailingServer())
     monkeypatch.setattr(
         simple_module,
         "extract_attestation_details",
-        lambda _response: ("none", {}, None, None, {}, None, []),
-        raising=False,
+        lambda _response: ("none", {}, None, None, {}, None, [])
     )
 
     fallback_state = {"challenge": "request-fallback-state"}

@@ -31,12 +31,7 @@ def _install_fake_register_server(monkeypatch, advanced_module, captured: dict):
             captured["kwargs"] = kwargs
             return {"publicKey": {"challenge": "AQID"}}, {"challenge": "state-token"}
 
-    monkeypatch.setattr(
-        advanced_module,
-        "create_fido_server",
-        lambda **_kwargs: _FakeServer(),
-        raising=False,
-    )
+    monkeypatch.setattr(advanced_module, "create_fido_server", lambda **_kwargs: _FakeServer())
 
 
 def test_summary_helpers_drop_non_mapping_inputs_and_nested_non_mapping_sections():
@@ -76,8 +71,7 @@ def test_decode_client_binary_handles_recursive_wrappers_and_validation_failures
     monkeypatch.setattr(
         advanced_module.base64,
         "urlsafe_b64decode",
-        lambda *_args, **_kwargs: (_ for _ in ()).throw(binascii.Error("bad b64u")),
-        raising=False,
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(binascii.Error("bad b64u"))
     )
     with pytest.raises(ValueError, match="invalid binary value"):
         advanced_module._decode_client_binary({"base64url": "YWI"})
@@ -85,8 +79,7 @@ def test_decode_client_binary_handles_recursive_wrappers_and_validation_failures
     monkeypatch.setattr(
         advanced_module.base64,
         "b64decode",
-        lambda *_args, **_kwargs: (_ for _ in ()).throw(binascii.Error("bad b64")),
-        raising=False,
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(binascii.Error("bad b64"))
     )
     with pytest.raises(ValueError, match="invalid binary value"):
         advanced_module._decode_client_binary({"base64": "YWI="})
@@ -106,20 +99,10 @@ def test_algorithm_coercion_handles_blank_values_failed_numeric_extraction_and_p
         def finditer(self, _value):
             return [_BadMatch()]
 
-    monkeypatch.setattr(
-        advanced_module,
-        "_COSE_ALGORITHM_NUMERIC_PATTERN",
-        _BadPattern(),
-        raising=False,
-    )
+    monkeypatch.setattr(advanced_module, "_COSE_ALGORITHM_NUMERIC_PATTERN", _BadPattern())
     assert advanced_module._coerce_cose_algorithm("custom algorithm -- broken") is None
 
-    monkeypatch.setattr(
-        advanced_module,
-        "PQC_ALGORITHM_ID_TO_NAME",
-        {123456: "PQ-Example"},
-        raising=False,
-    )
+    monkeypatch.setattr(advanced_module, "PQC_ALGORITHM_ID_TO_NAME", {123456: "PQ-Example"})
     assert advanced_module._is_custom_cose_algorithm(123456) is False
 
 
@@ -129,8 +112,7 @@ def test_base64url_and_assertion_algorithm_helpers_degrade_gracefully_on_decode_
     monkeypatch.setattr(
         advanced_module,
         "_decode_base64url",
-        lambda _value: (_ for _ in ()).throw(ValueError("decode failure")),
-        raising=False,
+        lambda _value: (_ for _ in ()).throw(ValueError("decode failure"))
     )
 
     assert advanced_module._decode_base64url_bytes("broken") == b""
@@ -178,14 +160,12 @@ def test_attestation_log_falls_back_to_plain_string_payload_when_json_encoding_f
     monkeypatch.setattr(
         advanced_module.app.logger,
         "info",
-        lambda _template, payload: log_messages.append(payload),
-        raising=False,
+        lambda _template, payload: log_messages.append(payload)
     )
     monkeypatch.setattr(
         advanced_module.json,
         "dumps",
-        lambda *_args, **_kwargs: (_ for _ in ()).throw(TypeError("serialization blocked")),
-        raising=False,
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(TypeError("serialization blocked"))
     )
 
     advanced_module._log_authenticator_attestation_response(
@@ -211,8 +191,7 @@ def test_register_begin_accepts_non_mapping_authenticator_selection_and_derives_
     monkeypatch.setattr(
         advanced_module,
         "detect_available_pqc_algorithms",
-        lambda: ({-50, -49, -48}, None),
-        raising=False,
+        lambda: ({-50, -49, -48}, None)
     )
     _install_fake_register_server(monkeypatch, advanced_module, captured)
 
@@ -249,8 +228,7 @@ def test_register_begin_maps_discouraged_uv_require_resident_key_and_extension_a
     monkeypatch.setattr(
         advanced_module,
         "detect_available_pqc_algorithms",
-        lambda: ({-50, -49, -48}, None),
-        raising=False,
+        lambda: ({-50, -49, -48}, None)
     )
     _install_fake_register_server(monkeypatch, advanced_module, captured)
 

@@ -135,8 +135,7 @@ def test_custom_algorithm_detection_and_attestation_logging(monkeypatch):
     monkeypatch.setattr(
         advanced_module.app.logger,
         "info",
-        lambda message, payload: log_calls.append((message, payload)),
-        raising=False,
+        lambda message, payload: log_calls.append((message, payload))
     )
 
     class _Flag:
