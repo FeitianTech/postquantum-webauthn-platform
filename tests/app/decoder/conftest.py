@@ -71,10 +71,10 @@ def summary_runtime():
 
 
 @pytest.fixture
-def cbor_strict():
+def cbor_parser():
     """The fragment that defines the strict CBOR parsing primitives."""
 
-    return _fragment("cbor_strict")
+    return _fragment("cbor_parser")
 
 
 @pytest.fixture

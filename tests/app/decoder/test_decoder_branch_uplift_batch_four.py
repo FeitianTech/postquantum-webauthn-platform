@@ -94,7 +94,7 @@ def test_decode_binary_input_has_no_lenient_fallback_when_strict_decoding_fails(
         decode_module._decode_binary_input("AQID")
 
 
-def test_cbor_parser_handles_indefinite_container_breaks_partial_data_and_parser_failures(monkeypatch, cbor_strict):
+def test_cbor_parser_handles_indefinite_container_breaks_partial_data_and_parser_failures(monkeypatch, cbor_parser):
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     assert decode_module._read_cbor_length(25, b"\x00\x01", 0) == (1, 2)
@@ -135,7 +135,7 @@ def test_cbor_parser_handles_indefinite_container_breaks_partial_data_and_parser
     assert map_definite_parse_error["entries"] == []
 
     monkeypatch.setattr(
-        cbor_strict,
+        cbor_parser,
         "_read_cbor_length",
         lambda *_args, **_kwargs: (None, 1),
     )

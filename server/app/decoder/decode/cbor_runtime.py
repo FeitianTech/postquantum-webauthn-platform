@@ -13,7 +13,7 @@ from ...attestation import make_json_safe
 from ...encoding import decode_hex
 from . import (
     cbor_lenient,
-    cbor_strict,
+    cbor_parser,
     ctap_classify,
     ctap_repair_leaf,
     ctap_runtime_interpret,
@@ -21,8 +21,8 @@ from . import (
     details_runtime,
 )
 from .cbor_lenient import _structure_to_value
+from .cbor_parser import _CborDecodingError
 from .cbor_sequence import _decode_cbor_sequence_impl
-from .cbor_strict import _CborDecodingError
 from .ctap_repair_make import (
     _extract_mapping_bytes,
     _extract_mapping_string,
@@ -92,7 +92,7 @@ def _decode_cbor_sequence(payload: bytes) -> tuple[list[dict[str, Any]], list[An
         payload,
         cbor_decode_from=cbor.decode_from,
         cbor_decoder_factory=_cbor2_decode_with_consumed,
-        decode_cbor_structure=cbor_strict._decode_cbor_structure,
+        decode_cbor_structure=cbor_parser._decode_cbor_structure,
         structure_to_value=_structure_to_value,
         lenient_decode_from=lambda data, offset=0: cbor_lenient._lenient_decode_from(data, offset),
         json_safe_with_stringified_keys=_json_safe_with_stringified_keys,
@@ -180,7 +180,7 @@ def _repair_get_assertion_entries(
         for key in bytes_keys:
             recovered_value.pop(key, None)
         recovered_value[3] = signature_bytes
-        sig_structure, _ = cbor_strict._decode_cbor_structure(cbor.encode(signature_bytes))
+        sig_structure, _ = cbor_parser._decode_cbor_structure(cbor.encode(signature_bytes))
         entries.append(
             {
                 "keySummary": "3",
@@ -192,7 +192,7 @@ def _repair_get_assertion_entries(
 
     if user_value is not None:
         recovered_value[4] = user_value
-        user_structure, _ = cbor_strict._decode_cbor_structure(cbor.encode(user_value))
+        user_structure, _ = cbor_parser._decode_cbor_structure(cbor.encode(user_value))
         entries.append(
             {
                 "keySummary": "4",
@@ -209,7 +209,7 @@ def _repair_get_assertion_entries(
             continue
         field_value = recovered_fields[key]
         recovered_value[key] = field_value
-        field_structure, _ = cbor_strict._decode_cbor_structure(cbor.encode(field_value))
+        field_structure, _ = cbor_parser._decode_cbor_structure(cbor.encode(field_value))
         entries.append(
             {
                 "keySummary": str(key),
