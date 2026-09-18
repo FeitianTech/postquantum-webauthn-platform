@@ -7,19 +7,19 @@ from typing import Any
 from flask import jsonify, request
 
 from ... import attestation, config, pqc, storage
-from . import algorithm_helpers_impl, binary_helpers_impl
-from .register_complete_finalize_impl import finalize_registration_completion
-from .register_complete_material_impl import build_registration_material
-from .register_complete_setup_impl import prepare_register_complete_inputs
-from .register_complete_state_impl import (
-    CHALLENGE_SOURCE_CLIENT,
-    resolve_state_and_registration_server,
+from . import (
+    algorithm_helpers_impl,
+    binary_helpers_impl,
+    register_complete_finalize_impl,
+    register_complete_material_impl,
+    register_complete_setup_impl,
+    register_complete_state_impl,
 )
 
 
 def advanced_register_complete_impl(advanced_module: Any):
     data = request.get_json(silent=True) or {}
-    prepared, error_response = prepare_register_complete_inputs(advanced_module, data)
+    prepared, error_response = register_complete_setup_impl.prepare_register_complete_inputs(data)
     if error_response is not None:
         return error_response
     if prepared is None:
@@ -51,12 +51,10 @@ def advanced_register_complete_impl(advanced_module: Any):
 
     # Always reported, even on the error paths below: the advanced flow is
     # allowed to be permissive, but never allowed to be silent about it.
-    state_trace: dict[str, Any] = {"challengeSource": CHALLENGE_SOURCE_CLIENT}
+    state_trace: dict[str, Any] = {"challengeSource": register_complete_state_impl.CHALLENGE_SOURCE_CLIENT}
 
     try:
-        state_ctx, state_error = resolve_state_and_registration_server(
-            advanced_module,
-            data=data,
+        state_ctx, state_error = register_complete_state_impl.resolve_state_and_registration_server(data=data,
             original_request=original_request,
             public_key=public_key,
             response=response if isinstance(response, Mapping) else {},
@@ -288,9 +286,7 @@ def advanced_register_complete_impl(advanced_module: Any):
             enforce_requested = extensions_requested.get("enforceCredProtect")
         debug_info["enforceCredProtectUsed"] = bool(enforce_requested)
 
-        material = build_registration_material(
-            advanced_module,
-            auth_data=auth_data,
+        material = register_complete_material_impl.build_registration_material(auth_data=auth_data,
             attestation_format=attestation_format,
             attestation_statement=attestation_statement,
             attestation_certificate_details=attestation_certificate_details,
@@ -311,9 +307,7 @@ def advanced_register_complete_impl(advanced_module: Any):
                 authenticator_extensions_summary
             )
 
-        return finalize_registration_completion(
-            advanced_module,
-            stored_credential=material["storedCredential"],
+        return register_complete_finalize_impl.finalize_registration_completion(stored_credential=material["storedCredential"],
             rp_info=material["rpInfo"],
             metadata_summary=metadata_summary,
             response=response,

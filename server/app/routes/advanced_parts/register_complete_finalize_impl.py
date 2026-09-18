@@ -12,7 +12,6 @@ from . import binary_helpers_impl, summary_helpers_impl
 
 
 def finalize_registration_completion(
-    advanced_module: Any,
     *,
     stored_credential: dict[str, Any],
     rp_info: dict[str, Any],

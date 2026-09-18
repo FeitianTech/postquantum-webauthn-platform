@@ -14,7 +14,6 @@ from . import algorithm_helpers_impl, binary_helpers_impl
 
 
 def configure_allowed_algorithms(
-    advanced_module: Any,
     public_key: Mapping[str, Any],
     temp_server: Any,
     warnings: list[str],
@@ -134,7 +133,7 @@ def configure_allowed_algorithms(
         warnings.append(f"Unsupported PQC algorithms were skipped ({missing_names}).")
 
 
-def build_exclude_list(advanced_module: Any, public_key: Mapping[str, Any]) -> list[Any]:
+def build_exclude_list(public_key: Mapping[str, Any]) -> list[Any]:
     exclude_list = []
     exclude_credentials = public_key.get("excludeCredentials") if "excludeCredentials" in public_key else None
     if isinstance(exclude_credentials, list):
@@ -153,7 +152,7 @@ def build_exclude_list(advanced_module: Any, public_key: Mapping[str, Any]) -> l
     return exclude_list
 
 
-def build_processed_extensions(advanced_module: Any, public_key: Mapping[str, Any]) -> dict[str, Any]:
+def build_processed_extensions(public_key: Mapping[str, Any]) -> dict[str, Any]:
     extensions = public_key.get("extensions", {})
     processed_extensions: dict[str, Any] = {}
 
