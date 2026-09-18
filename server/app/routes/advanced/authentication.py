@@ -16,7 +16,7 @@ from ...attachments import (
 )
 from ...challenge_registry import consume_ceremony_state, stamp_ceremony_state
 from ...encoding import decode_hex, encode_base64url
-from ...sign_count import sign_count_status
+from ...webauthn.sign_count import sign_count_status
 from .. import binary_helpers
 from . import algorithms, binary, parsing
 
