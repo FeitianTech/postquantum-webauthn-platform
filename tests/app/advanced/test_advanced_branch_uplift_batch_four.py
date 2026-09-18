@@ -131,7 +131,7 @@ def test_base64url_and_assertion_algorithm_helpers_degrade_gracefully_on_decode_
     assert requested is None
 
 
-def test_attestation_log_falls_back_to_plain_string_payload_when_json_encoding_fails(monkeypatch, advanced_logging_helpers):
+def test_attestation_log_falls_back_to_plain_string_payload_when_json_encoding_fails(monkeypatch, advanced_logging_helpers, config_module):
     advanced_module = pytest.importorskip("server.app.routes.advanced")
 
     class _Flag:
@@ -160,7 +160,7 @@ def test_attestation_log_falls_back_to_plain_string_payload_when_json_encoding_f
 
     log_messages = []
     monkeypatch.setattr(
-        advanced_module.app.logger,
+        config_module.app.logger,
         "info",
         lambda _template, payload: log_messages.append(payload)
     )
