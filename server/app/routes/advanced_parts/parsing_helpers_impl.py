@@ -12,7 +12,7 @@ from ...attachments import normalize_attachment
 from . import algorithm_helpers_impl, binary_helpers_impl
 
 
-def _extract_credential_id_impl(_advanced_module: Any, value: Any) -> bytes | None:
+def _extract_credential_id_impl(value: Any) -> bytes | None:
     credential_id = None
     if isinstance(value, Mapping):
         raw_id = value.get("credential_id")
@@ -25,7 +25,7 @@ def _extract_credential_id_impl(_advanced_module: Any, value: Any) -> bytes | No
     return credential_id
 
 
-def _coerce_optional_bool_impl(_advanced_module: Any, value: Any) -> bool | None:
+def _coerce_optional_bool_impl(value: Any) -> bool | None:
     if isinstance(value, bool):
         return value
     if value is None:
@@ -46,19 +46,18 @@ def _coerce_optional_bool_impl(_advanced_module: Any, value: Any) -> bool | None
 
 
 def _extract_flag_from_mapping_impl(
-    advanced_module: Any,
     mapping: Mapping[str, Any],
     keys: Iterable[str],
 ) -> bool | None:
     for key in keys:
         if key in mapping:
-            coerced = advanced_module._coerce_optional_bool(mapping.get(key))
+            coerced = _coerce_optional_bool_impl(mapping.get(key))
             if coerced is not None:
                 return coerced
     return None
 
 
-def _select_first_impl(_advanced_module: Any, mapping: Mapping[str, Any], keys: Iterable[str]) -> Any:
+def _select_first_impl(mapping: Mapping[str, Any], keys: Iterable[str]) -> Any:
     for key in keys:
         if key in mapping:
             value = mapping[key]
@@ -68,7 +67,6 @@ def _select_first_impl(_advanced_module: Any, mapping: Mapping[str, Any], keys: 
 
 
 def _parse_client_supplied_credentials_impl(
-    advanced_module: Any,
     raw_credentials: Any,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     if not isinstance(raw_credentials, list):
@@ -82,15 +80,15 @@ def _parse_client_supplied_credentials_impl(
             continue
 
         try:
-            aaguid_raw = advanced_module._select_first(
+            aaguid_raw = _select_first_impl(
                 entry,
                 ("aaguid", "aaguidBase64Url", "aaguidBase64", "aaguidHex"),
             )
-            credential_id_raw = advanced_module._select_first(
+            credential_id_raw = _select_first_impl(
                 entry,
                 ("credentialId", "credentialID", "credentialIdBase64Url", "id", "rawId"),
             )
-            public_key_raw = advanced_module._select_first(
+            public_key_raw = _select_first_impl(
                 entry,
                 ("publicKey", "publicKeyBase64", "publicKeyBase64Url", "publicKeyBytes", "publicKeyCbor"),
             )
@@ -105,7 +103,7 @@ def _parse_client_supplied_credentials_impl(
             attested = AttestedCredentialData.create(aaguid_bytes, credential_id_bytes, cose_key)
 
             attachment_value = normalize_attachment(
-                advanced_module._select_first(entry, ("authenticatorAttachment", "attachment"))
+                _select_first_impl(entry, ("authenticatorAttachment", "attachment"))
                 or (entry.get("properties") or {}).get("authenticatorAttachment")
                 or (entry.get("properties") or {}).get("authenticator_attachment")
             )
@@ -113,14 +111,14 @@ def _parse_client_supplied_credentials_impl(
             raw_alg_value = entry.get("algorithm") or entry.get("publicKeyAlgorithm")
             algorithm_value = algorithm_helpers_impl._coerce_cose_algorithm_impl(raw_alg_value)
 
-            resident_flag = advanced_module._extract_flag_from_mapping(
+            resident_flag = _extract_flag_from_mapping_impl(
                 entry,
                 ("resident", "residentKey", "discoverable"),
             )
             if resident_flag is None:
                 properties = entry.get("properties")
                 if isinstance(properties, Mapping):
-                    resident_flag = advanced_module._extract_flag_from_mapping(
+                    resident_flag = _extract_flag_from_mapping_impl(
                         properties,
                         ("resident", "residentKey", "discoverable", "actualResidentKey"),
                     )
@@ -130,7 +128,7 @@ def _parse_client_supplied_credentials_impl(
                 if isinstance(client_outputs, Mapping):
                     cred_props_value = client_outputs.get("credProps")
                     if isinstance(cred_props_value, Mapping):
-                        resident_flag = advanced_module._coerce_optional_bool(cred_props_value.get("rk"))
+                        resident_flag = _coerce_optional_bool_impl(cred_props_value.get("rk"))
                     elif isinstance(cred_props_value, bool):
                         resident_flag = cred_props_value
 

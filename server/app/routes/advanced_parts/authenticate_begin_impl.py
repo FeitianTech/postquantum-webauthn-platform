@@ -10,7 +10,7 @@ from fido2.webauthn import UserVerificationRequirement
 from ... import attestation, config
 from ...attachments import resolve_effective_attachments
 from ...challenge_registry import stamp_ceremony_state
-from . import algorithm_helpers_impl, binary_helpers_impl
+from . import algorithm_helpers_impl, binary_helpers_impl, parsing_helpers_impl
 
 
 def advanced_authenticate_begin_impl(advanced_module: Any):
@@ -71,7 +71,7 @@ def advanced_authenticate_begin_impl(advanced_module: Any):
             raw_credentials_input = candidate
             break
 
-    stored_records, serialized_credentials = advanced_module._parse_client_supplied_credentials(raw_credentials_input)
+    stored_records, serialized_credentials = parsing_helpers_impl._parse_client_supplied_credentials_impl(raw_credentials_input)
     if not stored_records:
         return jsonify(
             {"error": "No credentials detected. Please register a credential first."},

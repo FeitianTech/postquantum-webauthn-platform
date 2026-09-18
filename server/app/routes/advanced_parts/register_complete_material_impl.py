@@ -9,6 +9,7 @@ from typing import Any
 from fido2 import cbor
 
 from ... import attestation, storage
+from . import logging_helpers_impl
 
 
 def build_registration_material(
@@ -75,7 +76,7 @@ def build_registration_material(
     auth_data_bytes = bytes(auth_data)
     authenticator_data_hex = auth_data_bytes.hex()
     authenticator_data_hash = hashlib.sha256(auth_data_bytes).hexdigest()
-    registration_timestamp = advanced_module.datetime_from_timestamp(credential_info["registration_time"])
+    registration_timestamp = logging_helpers_impl.datetime_from_timestamp_impl(credential_info["registration_time"])
 
     rp_id_hash_hex = ""
     rp_id_hash_b64 = ""

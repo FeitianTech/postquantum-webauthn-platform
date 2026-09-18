@@ -171,7 +171,7 @@ def _summarize_stored_credential(stored: Mapping[str, Any], storage_id: str) -> 
 
 
 def _extract_credential_id(value: Any) -> bytes | None:
-    return _extract_credential_id_impl(_self_module(), value)
+    return _extract_credential_id_impl(value)
 
 
 def _extract_credential_algorithm(value: Any) -> int | None:
@@ -179,15 +179,15 @@ def _extract_credential_algorithm(value: Any) -> int | None:
 
 
 def _coerce_optional_bool(value: Any) -> bool | None:
-    return _coerce_optional_bool_impl(_self_module(), value)
+    return _coerce_optional_bool_impl(value)
 
 
 def _extract_flag_from_mapping(mapping: Mapping[str, Any], keys: Iterable[str]) -> bool | None:
-    return _extract_flag_from_mapping_impl(_self_module(), mapping, keys)
+    return _extract_flag_from_mapping_impl(mapping, keys)
 
 
 def _select_first(mapping: Mapping[str, Any], keys: Iterable[str]) -> Any:
-    return _select_first_impl(_self_module(), mapping, keys)
+    return _select_first_impl(mapping, keys)
 
 
 def _decode_client_binary(value: Any) -> bytes:
@@ -195,7 +195,7 @@ def _decode_client_binary(value: Any) -> bytes:
 
 
 def _parse_client_supplied_credentials(raw_credentials: Any) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-    return _parse_client_supplied_credentials_impl(_self_module(), raw_credentials)
+    return _parse_client_supplied_credentials_impl(raw_credentials)
 
 
 def _derive_algorithms_from_credentials(credentials: Iterable[Any]) -> list[PublicKeyCredentialParameters]:
@@ -247,9 +247,7 @@ def _log_authenticator_attestation_response(
     attestation_statement: Any,
     raw_attestation_object: Any,
 ) -> None:
-    return _log_authenticator_attestation_response_impl(
-        _self_module(),
-        attestation_format,
+    return _log_authenticator_attestation_response_impl(attestation_format,
         auth_data,
         attestation_statement,
         raw_attestation_object,
@@ -292,7 +290,7 @@ def api_delete_advanced_credential_artifact(storage_id: str):
 
 
 def datetime_from_timestamp(timestamp: float) -> str:
-    return datetime_from_timestamp_impl(_self_module(), timestamp)
+    return datetime_from_timestamp_impl(timestamp)
 
 
 @app.route("/api/advanced/authenticate/begin", methods=["POST"])

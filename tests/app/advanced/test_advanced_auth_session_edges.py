@@ -12,9 +12,8 @@ class _AuthResult:
         self.public_key = public_key or {3: -7}
 
 
-def test_advanced_authenticate_complete_uses_request_state_fallback(monkeypatch, config_module, advanced_algorithm_helpers):
+def test_advanced_authenticate_complete_uses_request_state_fallback(monkeypatch, config_module, advanced_algorithm_helpers, advanced_parsing_helpers):
     config_module = pytest.importorskip("server.app.config")
-    advanced_module = pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
 
     credential_id = b"advanced-fallback-state"
@@ -32,8 +31,8 @@ def test_advanced_authenticate_complete_uses_request_state_fallback(monkeypatch,
     monkeypatch.setattr(config_module, "determine_rp_id", lambda value=None: value or "example.com")
     monkeypatch.setattr(advanced_algorithm_helpers, "_derive_algorithms_from_credentials_impl", lambda _credentials: [])
     monkeypatch.setattr(
-        advanced_module,
-        "_parse_client_supplied_credentials",
+        advanced_parsing_helpers,
+        "_parse_client_supplied_credentials_impl",
         lambda _raw: (
             [{"id": credential_id, "data": object(), "attachment": None, "algorithm": -7, "resident": True}],
             [],
@@ -69,9 +68,8 @@ def test_advanced_authenticate_complete_uses_request_state_fallback(monkeypatch,
             assert "advanced_auth_rp" not in session_state
 
 
-def test_advanced_authenticate_complete_uses_advanced_rp_when_auth_rp_missing(monkeypatch, config_module, advanced_algorithm_helpers):
+def test_advanced_authenticate_complete_uses_advanced_rp_when_auth_rp_missing(monkeypatch, config_module, advanced_algorithm_helpers, advanced_parsing_helpers):
     config_module = pytest.importorskip("server.app.config")
-    advanced_module = pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
 
     credential_id = b"advanced-rp-fallback"
@@ -99,8 +97,8 @@ def test_advanced_authenticate_complete_uses_advanced_rp_when_auth_rp_missing(mo
     )
     monkeypatch.setattr(advanced_algorithm_helpers, "_derive_algorithms_from_credentials_impl", lambda _credentials: [])
     monkeypatch.setattr(
-        advanced_module,
-        "_parse_client_supplied_credentials",
+        advanced_parsing_helpers,
+        "_parse_client_supplied_credentials_impl",
         lambda _raw: (
             [{"id": credential_id, "data": object(), "attachment": None, "algorithm": -7, "resident": True}],
             [],
@@ -132,17 +130,16 @@ def test_advanced_authenticate_complete_uses_advanced_rp_when_auth_rp_missing(mo
         assert captured["server_rp_id"] == "fallback.example"
 
 
-def test_advanced_authenticate_complete_invalid_request_state_fallback_returns_400(monkeypatch):
+def test_advanced_authenticate_complete_invalid_request_state_fallback_returns_400(monkeypatch, advanced_parsing_helpers):
     config_module = pytest.importorskip("server.app.config")
-    advanced_module = pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
 
     credential_id = b"advanced-invalid-fallback"
     encoded_id = _b64url(credential_id)
 
     monkeypatch.setattr(
-        advanced_module,
-        "_parse_client_supplied_credentials",
+        advanced_parsing_helpers,
+        "_parse_client_supplied_credentials_impl",
         lambda _raw: (
             [{"id": credential_id, "data": object(), "attachment": None, "algorithm": -7, "resident": True}],
             [],
@@ -176,14 +173,13 @@ def test_advanced_authenticate_complete_invalid_request_state_fallback_returns_4
             assert "advanced_auth_rp" not in session_state
 
 
-def test_advanced_authenticate_complete_reports_cookie_restore_failure(monkeypatch):
+def test_advanced_authenticate_complete_reports_cookie_restore_failure(monkeypatch, advanced_parsing_helpers):
     config_module = pytest.importorskip("server.app.config")
-    advanced_module = pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
 
     monkeypatch.setattr(
-        advanced_module,
-        "_parse_client_supplied_credentials",
+        advanced_parsing_helpers,
+        "_parse_client_supplied_credentials_impl",
         lambda _raw: ([], [])
     )
 
@@ -262,9 +258,8 @@ def test_advanced_authenticate_complete_rejects_attachment_not_allowed_by_sessio
             assert "advanced_authenticate_allowed_attachments" not in session_state
 
 
-def test_advanced_authenticate_complete_forwards_hash_algorithm_override(monkeypatch, config_module, advanced_algorithm_helpers):
+def test_advanced_authenticate_complete_forwards_hash_algorithm_override(monkeypatch, config_module, advanced_algorithm_helpers, advanced_parsing_helpers):
     config_module = pytest.importorskip("server.app.config")
-    advanced_module = pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
 
     credential_id = b"advanced-hash-forward"
@@ -282,8 +277,8 @@ def test_advanced_authenticate_complete_forwards_hash_algorithm_override(monkeyp
     monkeypatch.setattr(config_module, "determine_rp_id", lambda value=None: value or "example.com")
     monkeypatch.setattr(advanced_algorithm_helpers, "_derive_algorithms_from_credentials_impl", lambda _credentials: [])
     monkeypatch.setattr(
-        advanced_module,
-        "_parse_client_supplied_credentials",
+        advanced_parsing_helpers,
+        "_parse_client_supplied_credentials_impl",
         lambda _raw: (
             [{"id": credential_id, "data": object(), "attachment": None, "algorithm": -7, "resident": True}],
             [],
@@ -312,9 +307,8 @@ def test_advanced_authenticate_complete_forwards_hash_algorithm_override(monkeyp
     assert captured["hash_algorithm"] == "SHA-512"
 
 
-def test_advanced_authenticate_complete_defaults_hash_algorithm_when_override_invalid(monkeypatch, config_module, advanced_algorithm_helpers):
+def test_advanced_authenticate_complete_defaults_hash_algorithm_when_override_invalid(monkeypatch, config_module, advanced_algorithm_helpers, advanced_parsing_helpers):
     config_module = pytest.importorskip("server.app.config")
-    advanced_module = pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
 
     credential_id = b"advanced-hash-default"
@@ -332,8 +326,8 @@ def test_advanced_authenticate_complete_defaults_hash_algorithm_when_override_in
     monkeypatch.setattr(config_module, "determine_rp_id", lambda value=None: value or "example.com")
     monkeypatch.setattr(advanced_algorithm_helpers, "_derive_algorithms_from_credentials_impl", lambda _credentials: [])
     monkeypatch.setattr(
-        advanced_module,
-        "_parse_client_supplied_credentials",
+        advanced_parsing_helpers,
+        "_parse_client_supplied_credentials_impl",
         lambda _raw: (
             [{"id": credential_id, "data": object(), "attachment": None, "algorithm": -7, "resident": True}],
             [],
@@ -362,9 +356,8 @@ def test_advanced_authenticate_complete_defaults_hash_algorithm_when_override_in
     assert captured["hash_algorithm"] == "SHA-256"
 
 
-def test_advanced_authenticate_complete_omits_sign_count_for_malformed_authenticator_data(monkeypatch, config_module, advanced_algorithm_helpers):
+def test_advanced_authenticate_complete_omits_sign_count_for_malformed_authenticator_data(monkeypatch, config_module, advanced_algorithm_helpers, advanced_parsing_helpers):
     config_module = pytest.importorskip("server.app.config")
-    advanced_module = pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
 
     credential_id = b"advanced-malformed-authdata"
@@ -380,8 +373,8 @@ def test_advanced_authenticate_complete_omits_sign_count_for_malformed_authentic
     monkeypatch.setattr(config_module, "determine_rp_id", lambda value=None: value or "example.com")
     monkeypatch.setattr(advanced_algorithm_helpers, "_derive_algorithms_from_credentials_impl", lambda _credentials: [])
     monkeypatch.setattr(
-        advanced_module,
-        "_parse_client_supplied_credentials",
+        advanced_parsing_helpers,
+        "_parse_client_supplied_credentials_impl",
         lambda _raw: (
             [{"id": credential_id, "data": object(), "attachment": None, "algorithm": -7, "resident": True}],
             [],
