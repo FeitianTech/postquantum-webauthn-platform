@@ -94,12 +94,10 @@ def local_store(monkeypatch, tmp_path):
     root.mkdir(parents=True)
     legacy_root.mkdir(parents=True)
 
-    monkeypatch.setattr(storage, "_LOCAL_CREDENTIAL_BASE", str(root), raising=False)
-    monkeypatch.setattr(
-        storage, "_LEGACY_LOCAL_CREDENTIAL_BASE", str(legacy_root), raising=False
-    )
-    monkeypatch.setattr(storage, "basepath", str(flat_legacy), raising=False)
-    monkeypatch.setattr(storage, "_using_gcs", lambda: False, raising=False)
+    monkeypatch.setattr(storage, "_LOCAL_CREDENTIAL_BASE", str(root))
+    monkeypatch.setattr(storage, "_LEGACY_LOCAL_CREDENTIAL_BASE", str(legacy_root))
+    monkeypatch.setattr(storage, "basepath", str(flat_legacy))
+    monkeypatch.setattr(storage, "_using_gcs", lambda: False)
 
     return types.SimpleNamespace(
         storage=storage,
@@ -112,7 +110,7 @@ def local_store(monkeypatch, tmp_path):
 
 @pytest.fixture
 def gcs_store(monkeypatch):
-    monkeypatch.setattr(storage, "_using_gcs", lambda: True, raising=False)
+    monkeypatch.setattr(storage, "_using_gcs", lambda: True)
     return storage
 
 
@@ -533,8 +531,8 @@ def test_crafted_pickle_payload_is_never_executed_from_gcs(monkeypatch, tmp_path
     marker = tmp_path / "pwned-from-gcs"
     payload = pickle.dumps(_CraftedPickle(str(marker)))
 
-    monkeypatch.setattr(storage, "_using_gcs", lambda: True, raising=False)
-    monkeypatch.setattr(storage, "download_bytes", lambda _blob: payload, raising=False)
+    monkeypatch.setattr(storage, "_using_gcs", lambda: True)
+    monkeypatch.setattr(storage, "download_bytes", lambda _blob: payload)
 
     assert storage.readkey("alice@example.com", session_id="session-a") == []
     assert not marker.exists()
@@ -622,16 +620,12 @@ def test_real_registration_round_trips_through_the_json_store(monkeypatch, tmp_p
 
     root = tmp_path / "instance" / "session-credentials"
     root.mkdir(parents=True)
-    monkeypatch.setattr(storage, "_LOCAL_CREDENTIAL_BASE", str(root), raising=False)
-    monkeypatch.setattr(
-        storage, "_LEGACY_LOCAL_CREDENTIAL_BASE", str(tmp_path / "old"), raising=False
-    )
-    monkeypatch.setattr(storage, "basepath", str(tmp_path / "flat"), raising=False)
+    monkeypatch.setattr(storage, "_LOCAL_CREDENTIAL_BASE", str(root))
+    monkeypatch.setattr(storage, "_LEGACY_LOCAL_CREDENTIAL_BASE", str(tmp_path / "old"))
+    monkeypatch.setattr(storage, "basepath", str(tmp_path / "flat"))
     (tmp_path / "flat").mkdir()
-    monkeypatch.setattr(storage, "_using_gcs", lambda: False, raising=False)
-    monkeypatch.setattr(
-        simple_module, "record_registration_event", lambda _event: None, raising=False
-    )
+    monkeypatch.setattr(storage, "_using_gcs", lambda: False)
+    monkeypatch.setattr(simple_module, "record_registration_event", lambda _event: None)
 
     # Any value the encoder cannot represent is logged; the flow must not need it.
     warnings: list[str] = []

@@ -21,8 +21,7 @@ def test_register_complete_rejects_non_mapping_request_state_fallback(monkeypatc
     monkeypatch.setattr(
         simple_module,
         "extract_attestation_details",
-        lambda _response: ("none", {}, None, None, {}, None, []),
-        raising=False,
+        lambda _response: ("none", {}, None, None, {}, None, [])
     )
 
     with config_module.app.test_client() as client:
@@ -52,8 +51,7 @@ def test_authenticate_complete_invalid_request_state_fallback_returns_400(monkey
     monkeypatch.setattr(
         simple_module,
         "_parse_client_credentials",
-        lambda _raw: ([object()], [{"credentialId": "cred-1"}]),
-        raising=False,
+        lambda _raw: ([object()], [{"credentialId": "cred-1"}])
     )
 
     with config_module.app.test_client() as client:
@@ -90,12 +88,11 @@ def test_authenticate_complete_malformed_authenticator_data_is_rejected(monkeypa
         def authenticate_complete(self, *_args, **_kwargs):
             return _MatchedCredential(credential_id)
 
-    monkeypatch.setattr(simple_module, "create_fido_server", lambda **_kwargs: _FakeServer(), raising=False)
+    monkeypatch.setattr(simple_module, "create_fido_server", lambda **_kwargs: _FakeServer())
     monkeypatch.setattr(
         simple_module,
         "_parse_client_credentials",
-        lambda _raw: ([object()], [{"credentialId": _b64url(credential_id)}]),
-        raising=False,
+        lambda _raw: ([object()], [{"credentialId": _b64url(credential_id)}])
     )
 
     with config_module.app.test_client() as client:

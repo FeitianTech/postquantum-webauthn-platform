@@ -47,7 +47,7 @@ def test_credentials_get_serializes_dict_backed_entries(monkeypatch):
     simple_module = pytest.importorskip("server.app.routes.simple")
     pytest.importorskip("server.app.app")
 
-    monkeypatch.setattr(simple_module, "ensure_metadata_session_id", lambda: "session-dict", raising=False)
+    monkeypatch.setattr(simple_module, "ensure_metadata_session_id", lambda: "session-dict")
 
     def _add_public_key_material(target, public_key):
         if isinstance(public_key, dict) and 3 in public_key:
@@ -58,8 +58,8 @@ def test_credentials_get_serializes_dict_backed_entries(monkeypatch):
             target.setdefault("aaguidHex", target["aaguid"])
             target.setdefault("aaguidGuid", "00000000-0000-0000-0000-000000000000")
 
-    monkeypatch.setattr(simple_module, "add_public_key_material", _add_public_key_material, raising=False)
-    monkeypatch.setattr(simple_module, "augment_aaguid_fields", _augment_aaguid_fields, raising=False)
+    monkeypatch.setattr(simple_module, "add_public_key_material", _add_public_key_material)
+    monkeypatch.setattr(simple_module, "augment_aaguid_fields", _augment_aaguid_fields)
 
     dict_backed = {
         "credential_data": {
@@ -93,8 +93,7 @@ def test_credentials_get_serializes_dict_backed_entries(monkeypatch):
     monkeypatch.setattr(
         simple_module,
         "iter_credentials",
-        lambda session_id=None: iter([("dict@example.com", [dict_backed])]),
-        raising=False,
+        lambda session_id=None: iter([("dict@example.com", [dict_backed])])
     )
 
     with config_module.app.test_client() as client:
@@ -130,7 +129,7 @@ def test_credentials_get_serializes_object_backed_entries_and_derives_authentica
     simple_module = pytest.importorskip("server.app.routes.simple")
     pytest.importorskip("server.app.app")
 
-    monkeypatch.setattr(simple_module, "ensure_metadata_session_id", lambda: "session-object", raising=False)
+    monkeypatch.setattr(simple_module, "ensure_metadata_session_id", lambda: "session-object")
 
     def _add_public_key_material(target, public_key):
         if isinstance(public_key, dict) and 3 in public_key:
@@ -141,8 +140,8 @@ def test_credentials_get_serializes_object_backed_entries_and_derives_authentica
             target.setdefault("aaguidHex", target["aaguid"])
             target.setdefault("aaguidGuid", "11111111-1111-1111-1111-111111111111")
 
-    monkeypatch.setattr(simple_module, "add_public_key_material", _add_public_key_material, raising=False)
-    monkeypatch.setattr(simple_module, "augment_aaguid_fields", _augment_aaguid_fields, raising=False)
+    monkeypatch.setattr(simple_module, "add_public_key_material", _add_public_key_material)
+    monkeypatch.setattr(simple_module, "augment_aaguid_fields", _augment_aaguid_fields)
 
     credential_data = _FakeCredentialData(
         credential_id=b"cred-object",
@@ -179,8 +178,7 @@ def test_credentials_get_serializes_object_backed_entries_and_derives_authentica
     monkeypatch.setattr(
         simple_module,
         "iter_credentials",
-        lambda session_id=None: iter([("object@example.com", [object_backed])]),
-        raising=False,
+        lambda session_id=None: iter([("object@example.com", [object_backed])])
     )
 
     with config_module.app.test_client() as client:
@@ -210,7 +208,7 @@ def test_credentials_get_handles_bare_credential_objects_and_skips_malformed(mon
     simple_module = pytest.importorskip("server.app.routes.simple")
     pytest.importorskip("server.app.app")
 
-    monkeypatch.setattr(simple_module, "ensure_metadata_session_id", lambda: "session-bare", raising=False)
+    monkeypatch.setattr(simple_module, "ensure_metadata_session_id", lambda: "session-bare")
 
     def _add_public_key_material(target, public_key):
         if isinstance(public_key, dict) and 3 in public_key:
@@ -220,8 +218,8 @@ def test_credentials_get_handles_bare_credential_objects_and_skips_malformed(mon
         if target.get("aaguid"):
             target.setdefault("aaguidHex", target["aaguid"])
 
-    monkeypatch.setattr(simple_module, "add_public_key_material", _add_public_key_material, raising=False)
-    monkeypatch.setattr(simple_module, "augment_aaguid_fields", _augment_aaguid_fields, raising=False)
+    monkeypatch.setattr(simple_module, "add_public_key_material", _add_public_key_material)
+    monkeypatch.setattr(simple_module, "augment_aaguid_fields", _augment_aaguid_fields)
 
     class _BareCredential:
         def __init__(self):
@@ -234,8 +232,7 @@ def test_credentials_get_handles_bare_credential_objects_and_skips_malformed(mon
     monkeypatch.setattr(
         simple_module,
         "iter_credentials",
-        lambda session_id=None: iter([("bare@example.com", [object(), bare])]),
-        raising=False,
+        lambda session_id=None: iter([("bare@example.com", [object(), bare])])
     )
 
     with config_module.app.test_client() as client:
@@ -258,12 +255,12 @@ def test_credentials_get_returns_empty_list_when_storage_iteration_fails(monkeyp
     simple_module = pytest.importorskip("server.app.routes.simple")
     pytest.importorskip("server.app.app")
 
-    monkeypatch.setattr(simple_module, "ensure_metadata_session_id", lambda: "session-fail", raising=False)
+    monkeypatch.setattr(simple_module, "ensure_metadata_session_id", lambda: "session-fail")
 
     def _raise_iter_failure(*_args, **_kwargs):
         raise RuntimeError("storage unavailable")
 
-    monkeypatch.setattr(simple_module, "iter_credentials", _raise_iter_failure, raising=False)
+    monkeypatch.setattr(simple_module, "iter_credentials", _raise_iter_failure)
 
     with config_module.app.test_client() as client:
         response = client.get("/api/credentials")
@@ -277,12 +274,11 @@ def test_credentials_delete_removes_all_usernames_and_reports_count(monkeypatch)
     simple_module = pytest.importorskip("server.app.routes.simple")
     pytest.importorskip("server.app.app")
 
-    monkeypatch.setattr(simple_module, "ensure_metadata_session_id", lambda: "session-delete", raising=False)
+    monkeypatch.setattr(simple_module, "ensure_metadata_session_id", lambda: "session-delete")
     monkeypatch.setattr(
         simple_module,
         "storage_list_credentials",
-        lambda session_id=None: {"alice@example.com": [], "bob@example.com": []},
-        raising=False,
+        lambda session_id=None: {"alice@example.com": [], "bob@example.com": []}
     )
 
     observed = []
@@ -290,7 +286,7 @@ def test_credentials_delete_removes_all_usernames_and_reports_count(monkeypatch)
     def _delkey(username, *, session_id=None):
         observed.append((username, session_id))
 
-    monkeypatch.setattr(simple_module, "delkey", _delkey, raising=False)
+    monkeypatch.setattr(simple_module, "delkey", _delkey)
 
     with config_module.app.test_client() as client:
         response = client.delete("/api/credentials")
@@ -308,12 +304,12 @@ def test_credentials_delete_returns_zero_when_listing_credentials_raises(monkeyp
     simple_module = pytest.importorskip("server.app.routes.simple")
     pytest.importorskip("server.app.app")
 
-    monkeypatch.setattr(simple_module, "ensure_metadata_session_id", lambda: "session-delete-fail", raising=False)
+    monkeypatch.setattr(simple_module, "ensure_metadata_session_id", lambda: "session-delete-fail")
 
     def _raise_list_failure(*_args, **_kwargs):
         raise RuntimeError("list failed")
 
-    monkeypatch.setattr(simple_module, "storage_list_credentials", _raise_list_failure, raising=False)
+    monkeypatch.setattr(simple_module, "storage_list_credentials", _raise_list_failure)
 
     with config_module.app.test_client() as client:
         response = client.delete("/api/credentials")

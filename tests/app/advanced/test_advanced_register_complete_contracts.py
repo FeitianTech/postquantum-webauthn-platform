@@ -62,8 +62,8 @@ def test_advanced_register_complete_prefers_session_state_over_request_state(mon
             captured["state"] = state
             raise ValueError("register failure")
 
-    monkeypatch.setattr(advanced_module, "create_fido_server", lambda **_kwargs: _FailingServer(), raising=False)
-    monkeypatch.setattr(advanced_module, "determine_rp_id", lambda value=None: value or "example.com", raising=False)
+    monkeypatch.setattr(advanced_module, "create_fido_server", lambda **_kwargs: _FailingServer())
+    monkeypatch.setattr(advanced_module, "determine_rp_id", lambda value=None: value or "example.com")
 
     session_state = {"challenge": "session-state"}
     request_state = {"challenge": "request-state"}
@@ -102,8 +102,8 @@ def test_advanced_register_complete_uses_request_state_fallback_when_session_mis
             captured["state"] = state
             raise ValueError("register fallback failure")
 
-    monkeypatch.setattr(advanced_module, "create_fido_server", lambda **_kwargs: _FailingServer(), raising=False)
-    monkeypatch.setattr(advanced_module, "determine_rp_id", lambda value=None: value or "example.com", raising=False)
+    monkeypatch.setattr(advanced_module, "create_fido_server", lambda **_kwargs: _FailingServer())
+    monkeypatch.setattr(advanced_module, "determine_rp_id", lambda value=None: value or "example.com")
 
     fallback_state = {"challenge": "request-fallback-state"}
 
@@ -163,21 +163,20 @@ def test_advanced_register_complete_prefers_session_attachment_scope_over_tamper
     advanced_module = pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
 
-    monkeypatch.setattr(advanced_module, "ensure_metadata_session_id", lambda: "session-id", raising=False)
-    monkeypatch.setattr(advanced_module, "readkey", lambda *_args, **_kwargs: [], raising=False)
+    monkeypatch.setattr(advanced_module, "ensure_metadata_session_id", lambda: "session-id")
+    monkeypatch.setattr(advanced_module, "readkey", lambda *_args, **_kwargs: [])
     monkeypatch.setattr(
         advanced_module,
         "extract_attestation_details",
-        lambda _response: ("none", {}, None, None, {}, None, []),
-        raising=False,
+        lambda _response: ("none", {}, None, None, {}, None, [])
     )
 
     class _FailingServer:
         def register_complete(self, *_args, **_kwargs):
             raise ValueError("register reached")
 
-    monkeypatch.setattr(advanced_module, "create_fido_server", lambda **_kwargs: _FailingServer(), raising=False)
-    monkeypatch.setattr(advanced_module, "determine_rp_id", lambda value=None: value or "example.com", raising=False)
+    monkeypatch.setattr(advanced_module, "create_fido_server", lambda **_kwargs: _FailingServer())
+    monkeypatch.setattr(advanced_module, "determine_rp_id", lambda value=None: value or "example.com")
 
     with config_module.app.test_client() as client:
         with client.session_transaction() as session_store:
@@ -251,11 +250,11 @@ def test_advanced_register_complete_success_contract_propagates_warnings_and_rec
         )
         return True
 
-    monkeypatch.setattr(advanced_module, "create_fido_server", lambda **_kwargs: _FakeServer(), raising=False)
-    monkeypatch.setattr(advanced_module, "determine_rp_id", lambda value=None: value or rp_id, raising=False)
-    monkeypatch.setattr(advanced_module, "ensure_metadata_session_id", lambda: "session-id", raising=False)
-    monkeypatch.setattr(advanced_module, "readkey", lambda *_args, **_kwargs: [], raising=False)
-    monkeypatch.setattr(advanced_module, "perform_attestation_checks", _perform_attestation_checks, raising=False)
+    monkeypatch.setattr(advanced_module, "create_fido_server", lambda **_kwargs: _FakeServer())
+    monkeypatch.setattr(advanced_module, "determine_rp_id", lambda value=None: value or rp_id)
+    monkeypatch.setattr(advanced_module, "ensure_metadata_session_id", lambda: "session-id")
+    monkeypatch.setattr(advanced_module, "readkey", lambda *_args, **_kwargs: [])
+    monkeypatch.setattr(advanced_module, "perform_attestation_checks", _perform_attestation_checks)
     monkeypatch.setattr(
         advanced_module,
         "extract_attestation_details",
@@ -267,13 +266,12 @@ def test_advanced_register_complete_success_contract_propagates_warnings_and_rec
             {"credProps": {"rk": True}},
             None,
             [],
-        ),
-        raising=False,
+        )
     )
-    monkeypatch.setattr(advanced_module, "add_public_key_material", lambda *_args, **_kwargs: None, raising=False)
-    monkeypatch.setattr(advanced_module, "augment_aaguid_fields", lambda *_args, **_kwargs: None, raising=False)
-    monkeypatch.setattr(advanced_module, "store_credential_artifact", _store_credential_artifact, raising=False)
-    monkeypatch.setattr(advanced_module, "record_registration_event", lambda _event: None, raising=False)
+    monkeypatch.setattr(advanced_module, "add_public_key_material", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(advanced_module, "augment_aaguid_fields", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(advanced_module, "store_credential_artifact", _store_credential_artifact)
+    monkeypatch.setattr(advanced_module, "record_registration_event", lambda _event: None)
 
     with config_module.app.test_client() as client:
         with client.session_transaction() as session_store:

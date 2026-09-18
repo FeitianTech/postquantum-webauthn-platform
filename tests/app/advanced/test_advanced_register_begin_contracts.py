@@ -51,12 +51,7 @@ def _install_fake_register_server(monkeypatch, advanced_module, captured):
         captured["create_fido_server_kwargs"] = kwargs
         return _FakeServer()
 
-    monkeypatch.setattr(
-        advanced_module,
-        "create_fido_server",
-        _create_fido_server,
-        raising=False,
-    )
+    monkeypatch.setattr(advanced_module, "create_fido_server", _create_fido_server)
 
 
 def test_advanced_register_begin_requires_public_key_payload():
@@ -151,14 +146,12 @@ def test_advanced_register_begin_normalizes_rp_and_persists_session_state(monkey
     monkeypatch.setattr(
         advanced_module,
         "build_rp_entity",
-        lambda _rp: types.SimpleNamespace(id="normalized.example", name="Normalized RP"),
-        raising=False,
+        lambda _rp: types.SimpleNamespace(id="normalized.example", name="Normalized RP")
     )
     monkeypatch.setattr(
         advanced_module,
         "detect_available_pqc_algorithms",
-        lambda: ({-50, -49, -48}, None),
-        raising=False,
+        lambda: ({-50, -49, -48}, None)
     )
     _install_fake_register_server(monkeypatch, advanced_module, captured)
 
@@ -205,8 +198,7 @@ def test_advanced_register_begin_normalizes_pubkeycredparams_and_filters_invalid
     monkeypatch.setattr(
         advanced_module,
         "detect_available_pqc_algorithms",
-        lambda: ({-50, -49, -48}, None),
-        raising=False,
+        lambda: ({-50, -49, -48}, None)
     )
     _install_fake_register_server(monkeypatch, advanced_module, captured)
 
@@ -244,8 +236,7 @@ def test_advanced_register_begin_uses_default_algorithms_without_pubkeycredparam
     monkeypatch.setattr(
         advanced_module,
         "detect_available_pqc_algorithms",
-        lambda: ({-50, -49, -48}, None),
-        raising=False,
+        lambda: ({-50, -49, -48}, None)
     )
     _install_fake_register_server(monkeypatch, advanced_module, captured)
 
@@ -276,8 +267,7 @@ def test_advanced_register_begin_filters_unavailable_pqc_when_classical_algorith
     monkeypatch.setattr(
         advanced_module,
         "detect_available_pqc_algorithms",
-        lambda: ({-49}, "limited pqc"),
-        raising=False,
+        lambda: ({-49}, "limited pqc")
     )
     _install_fake_register_server(monkeypatch, advanced_module, captured)
 
@@ -305,8 +295,7 @@ def test_advanced_register_begin_falls_back_to_classical_when_no_requested_pqc_a
     monkeypatch.setattr(
         advanced_module,
         "detect_available_pqc_algorithms",
-        lambda: (set(), "no oqs available"),
-        raising=False,
+        lambda: (set(), "no oqs available")
     )
     _install_fake_register_server(monkeypatch, advanced_module, captured)
 
@@ -331,8 +320,7 @@ def test_advanced_register_begin_maps_auth_selection_exclusions_extensions_and_t
     monkeypatch.setattr(
         advanced_module,
         "detect_available_pqc_algorithms",
-        lambda: ({-50, -49, -48}, None),
-        raising=False,
+        lambda: ({-50, -49, -48}, None)
     )
     _install_fake_register_server(monkeypatch, advanced_module, captured)
 

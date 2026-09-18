@@ -64,14 +64,13 @@ def test_simple_register_begin_persists_state_and_filters_algorithms(monkeypatch
                 state,
             )
 
-    monkeypatch.setattr(simple_module, "_SIMPLE_ALLOWED_ALGORITHMS", (-257, -7), raising=False)
-    monkeypatch.setattr(simple_module, "determine_rp_id", lambda: "example.com", raising=False)
-    monkeypatch.setattr(simple_module, "create_fido_server", lambda **_kwargs: _FakeServer(), raising=False)
+    monkeypatch.setattr(simple_module, "_SIMPLE_ALLOWED_ALGORITHMS", (-257, -7))
+    monkeypatch.setattr(simple_module, "determine_rp_id", lambda: "example.com")
+    monkeypatch.setattr(simple_module, "create_fido_server", lambda **_kwargs: _FakeServer())
     monkeypatch.setattr(
         simple_module,
         "_parse_client_credentials",
-        lambda _raw: ([], [{"credentialId": "cred-1", "publicKey": "pk-1", "aaguid": "ag-1"}]),
-        raising=False,
+        lambda _raw: ([], [{"credentialId": "cred-1", "publicKey": "pk-1", "aaguid": "ag-1"}])
     )
 
     with config_module.app.test_client() as client:
@@ -105,7 +104,7 @@ def test_simple_authenticate_begin_requires_valid_credentials(monkeypatch):
     simple_module = pytest.importorskip("server.app.routes.simple")
     pytest.importorskip("server.app.app")
 
-    monkeypatch.setattr(simple_module, "_parse_client_credentials", lambda _raw: ([], []), raising=False)
+    monkeypatch.setattr(simple_module, "_parse_client_credentials", lambda _raw: ([], []))
 
     with config_module.app.test_client() as client:
         response = client.post(
@@ -129,12 +128,11 @@ def test_simple_authenticate_complete_success_returns_sign_count(monkeypatch):
         def authenticate_complete(self, *_args, **_kwargs):
             return _MatchedCredential(credential_id)
 
-    monkeypatch.setattr(simple_module, "create_fido_server", lambda **_kwargs: _FakeServer(), raising=False)
+    monkeypatch.setattr(simple_module, "create_fido_server", lambda **_kwargs: _FakeServer())
     monkeypatch.setattr(
         simple_module,
         "_parse_client_credentials",
-        lambda _raw: ([object()], [{"credentialId": _b64url(credential_id)}]),
-        raising=False,
+        lambda _raw: ([object()], [{"credentialId": _b64url(credential_id)}])
     )
 
     with config_module.app.test_client() as client:
@@ -182,12 +180,11 @@ def test_simple_authenticate_complete_rejects_request_state_fallback(monkeypatch
             captured["state"] = state
             return _MatchedCredential(credential_id)
 
-    monkeypatch.setattr(simple_module, "create_fido_server", lambda **_kwargs: _FakeServer(), raising=False)
+    monkeypatch.setattr(simple_module, "create_fido_server", lambda **_kwargs: _FakeServer())
     monkeypatch.setattr(
         simple_module,
         "_parse_client_credentials",
-        lambda _raw: ([object()], [{"credentialId": _b64url(credential_id)}]),
-        raising=False,
+        lambda _raw: ([object()], [{"credentialId": _b64url(credential_id)}])
     )
 
     with config_module.app.test_client() as client:
@@ -219,8 +216,7 @@ def test_simple_authenticate_complete_missing_state_returns_400(monkeypatch):
     monkeypatch.setattr(
         simple_module,
         "_parse_client_credentials",
-        lambda _raw: ([object()], [{"credentialId": "cred-1"}]),
-        raising=False,
+        lambda _raw: ([object()], [{"credentialId": "cred-1"}])
     )
 
     with config_module.app.test_client() as client:
@@ -274,13 +270,12 @@ def test_simple_register_complete_rejects_request_state_fallback(monkeypatch):
             captured["state"] = state
             return fake_auth_data
 
-    monkeypatch.setattr(simple_module, "determine_rp_id", lambda: rp_id, raising=False)
-    monkeypatch.setattr(simple_module, "create_fido_server", lambda **_kwargs: _FakeServer(), raising=False)
+    monkeypatch.setattr(simple_module, "determine_rp_id", lambda: rp_id)
+    monkeypatch.setattr(simple_module, "create_fido_server", lambda **_kwargs: _FakeServer())
     monkeypatch.setattr(
         simple_module,
         "extract_attestation_details",
-        lambda _response: ("none", {}, None, None, {}, None, []),
-        raising=False,
+        lambda _response: ("none", {}, None, None, {}, None, [])
     )
     monkeypatch.setattr(simple_module, "perform_attestation_checks", lambda *args, **kwargs: {
         "signature_valid": True,
@@ -288,19 +283,19 @@ def test_simple_register_complete_rejects_request_state_fallback(monkeypatch):
         "rp_id_hash_valid": True,
         "aaguid_match": True,
         "warnings": [],
-    }, raising=False)
-    monkeypatch.setattr(simple_module, "extract_min_pin_length", lambda _ext: None, raising=False)
-    monkeypatch.setattr(simple_module, "add_public_key_material", lambda *_args, **_kwargs: None, raising=False)
-    monkeypatch.setattr(simple_module, "ensure_metadata_session_id", lambda: "session-id", raising=False)
-    monkeypatch.setattr(simple_module, "readkey", lambda *_args, **_kwargs: [], raising=False)
+    })
+    monkeypatch.setattr(simple_module, "extract_min_pin_length", lambda _ext: None)
+    monkeypatch.setattr(simple_module, "add_public_key_material", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(simple_module, "ensure_metadata_session_id", lambda: "session-id")
+    monkeypatch.setattr(simple_module, "readkey", lambda *_args, **_kwargs: [])
 
     def _fake_savekey(email, credentials, *, session_id=None):
         saved["email"] = email
         saved["credentials"] = credentials
         saved["session_id"] = session_id
 
-    monkeypatch.setattr(simple_module, "savekey", _fake_savekey, raising=False)
-    monkeypatch.setattr(simple_module, "record_registration_event", lambda _event: None, raising=False)
+    monkeypatch.setattr(simple_module, "savekey", _fake_savekey)
+    monkeypatch.setattr(simple_module, "record_registration_event", lambda _event: None)
 
     request_state = {"challenge": "fallback-register-state"}
 

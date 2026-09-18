@@ -28,12 +28,11 @@ def test_advanced_register_begin_falls_back_from_unavailable_pqc(monkeypatch):
             ]
             return {"publicKey": {"challenge": "AQID", "pubKeyCredParams": params}}, {"challenge": "adv-state"}
 
-    monkeypatch.setattr(advanced_module, "create_fido_server", lambda **_kwargs: _FakeServer(), raising=False)
+    monkeypatch.setattr(advanced_module, "create_fido_server", lambda **_kwargs: _FakeServer())
     monkeypatch.setattr(
         advanced_module,
         "detect_available_pqc_algorithms",
-        lambda: ({-49}, "limited pqc support"),
-        raising=False,
+        lambda: ({-49}, "limited pqc support")
     )
 
     request_payload = {
@@ -101,8 +100,7 @@ def test_advanced_authenticate_complete_rejects_non_resident_in_resident_mode(mo
                 }
             ],
             [],
-        ),
-        raising=False,
+        )
     )
 
     with config_module.app.test_client() as client:
@@ -143,8 +141,7 @@ def test_advanced_authenticate_complete_missing_state_returns_400(monkeypatch):
                 }
             ],
             [],
-        ),
-        raising=False,
+        )
     )
 
     with config_module.app.test_client() as client:
@@ -187,9 +184,9 @@ def test_advanced_authenticate_complete_custom_algorithm_does_not_bypass_verific
         def authenticate_complete(self, *_args, **_kwargs):
             raise ValueError("Invalid signature.")
 
-    monkeypatch.setattr(advanced_module, "create_fido_server", lambda **_kwargs: _FailingServer(), raising=False)
-    monkeypatch.setattr(advanced_module, "determine_rp_id", lambda value=None: value or "example.com", raising=False)
-    monkeypatch.setattr(advanced_module, "_derive_algorithms_from_credentials", lambda _credentials: [], raising=False)
+    monkeypatch.setattr(advanced_module, "create_fido_server", lambda **_kwargs: _FailingServer())
+    monkeypatch.setattr(advanced_module, "determine_rp_id", lambda value=None: value or "example.com")
+    monkeypatch.setattr(advanced_module, "_derive_algorithms_from_credentials", lambda _credentials: [])
     monkeypatch.setattr(
         advanced_module,
         "_parse_client_supplied_credentials",
@@ -204,8 +201,7 @@ def test_advanced_authenticate_complete_custom_algorithm_does_not_bypass_verific
                 }
             ],
             [],
-        ),
-        raising=False,
+        )
     )
 
     with config_module.app.test_client() as client:
@@ -253,9 +249,9 @@ def test_advanced_authenticate_complete_custom_algorithm_bypass_requires_request
         def authenticate_complete(self, *_args, **_kwargs):
             raise ValueError("Invalid signature.")
 
-    monkeypatch.setattr(advanced_module, "create_fido_server", lambda **_kwargs: _FailingServer(), raising=False)
-    monkeypatch.setattr(advanced_module, "determine_rp_id", lambda value=None: value or "example.com", raising=False)
-    monkeypatch.setattr(advanced_module, "_derive_algorithms_from_credentials", lambda _credentials: [], raising=False)
+    monkeypatch.setattr(advanced_module, "create_fido_server", lambda **_kwargs: _FailingServer())
+    monkeypatch.setattr(advanced_module, "determine_rp_id", lambda value=None: value or "example.com")
+    monkeypatch.setattr(advanced_module, "_derive_algorithms_from_credentials", lambda _credentials: [])
     monkeypatch.setattr(
         advanced_module,
         "_parse_client_supplied_credentials",
@@ -270,8 +266,7 @@ def test_advanced_authenticate_complete_custom_algorithm_bypass_requires_request
                 }
             ],
             [],
-        ),
-        raising=False,
+        )
     )
 
     with config_module.app.test_client() as client:
@@ -314,9 +309,9 @@ def test_advanced_authenticate_complete_custom_algorithm_bypass_rejects_non_sign
         def authenticate_complete(self, *_args, **_kwargs):
             raise ValueError("backend timeout")
 
-    monkeypatch.setattr(advanced_module, "create_fido_server", lambda **_kwargs: _FailingServer(), raising=False)
-    monkeypatch.setattr(advanced_module, "determine_rp_id", lambda value=None: value or "example.com", raising=False)
-    monkeypatch.setattr(advanced_module, "_derive_algorithms_from_credentials", lambda _credentials: [], raising=False)
+    monkeypatch.setattr(advanced_module, "create_fido_server", lambda **_kwargs: _FailingServer())
+    monkeypatch.setattr(advanced_module, "determine_rp_id", lambda value=None: value or "example.com")
+    monkeypatch.setattr(advanced_module, "_derive_algorithms_from_credentials", lambda _credentials: [])
     monkeypatch.setattr(
         advanced_module,
         "_parse_client_supplied_credentials",
@@ -331,8 +326,7 @@ def test_advanced_authenticate_complete_custom_algorithm_bypass_rejects_non_sign
                 }
             ],
             [],
-        ),
-        raising=False,
+        )
     )
 
     with config_module.app.test_client() as client:

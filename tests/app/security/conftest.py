@@ -39,11 +39,9 @@ def simple_storage(simple_module, monkeypatch) -> dict[str, Any]:
         saved["credentials"] = credentials
         saved["session_id"] = session_id
 
-    monkeypatch.setattr(simple_module, "savekey", _savekey, raising=False)
-    monkeypatch.setattr(simple_module, "readkey", lambda *_a, **_k: [], raising=False)
-    monkeypatch.setattr(
-        simple_module, "record_registration_event", lambda _event: None, raising=False
-    )
+    monkeypatch.setattr(simple_module, "savekey", _savekey)
+    monkeypatch.setattr(simple_module, "readkey", lambda *_a, **_k: [])
+    monkeypatch.setattr(simple_module, "record_registration_event", lambda _event: None)
     return saved
 
 
@@ -57,12 +55,8 @@ def advanced_storage(advanced_module, monkeypatch) -> list[Any]:
         stored.append((storage_id, payload, session_id))
         return True
 
-    monkeypatch.setattr(
-        advanced_module, "store_credential_artifact", _store, raising=False
-    )
-    monkeypatch.setattr(
-        advanced_module, "record_registration_event", lambda _event: None, raising=False
-    )
+    monkeypatch.setattr(advanced_module, "store_credential_artifact", _store)
+    monkeypatch.setattr(advanced_module, "record_registration_event", lambda _event: None)
     return stored
 
 

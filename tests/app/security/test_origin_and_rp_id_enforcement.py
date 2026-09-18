@@ -220,7 +220,7 @@ def test_development_fallback_warning_is_emitted_once(config_module, monkeypatch
         "warning",
         lambda msg, *args: warnings.append(msg % args if args else msg),
     )
-    monkeypatch.setattr(config_module, "_RP_CONFIGURATION_WARNING_EMITTED", False, raising=False)
+    monkeypatch.setattr(config_module, "_RP_CONFIGURATION_WARNING_EMITTED", False)
     monkeypatch.setitem(config_module.app.config, "FIDO_SERVER_RP_ID", None)
     monkeypatch.setitem(config_module.app.config, "FIDO_SERVER_ALLOWED_ORIGINS", None)
 

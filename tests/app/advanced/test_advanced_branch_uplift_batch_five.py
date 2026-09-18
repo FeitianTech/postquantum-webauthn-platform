@@ -36,28 +36,22 @@ def _install_register_begin_server(monkeypatch, advanced_module, captured: dict,
                 public_key["extensions"] = {"largeBlob": {"support": "preferred"}}
             return {"publicKey": public_key}, {"challenge": "state-token"}
 
-    monkeypatch.setattr(
-        advanced_module,
-        "create_fido_server",
-        lambda **_kwargs: _FakeServer(),
-        raising=False,
-    )
+    monkeypatch.setattr(advanced_module, "create_fido_server", lambda **_kwargs: _FakeServer())
 
 
 def _install_register_complete_defaults(monkeypatch, advanced_module):
-    monkeypatch.setattr(advanced_module, "ensure_metadata_session_id", lambda: "session-id", raising=False)
-    monkeypatch.setattr(advanced_module, "readkey", lambda *_args, **_kwargs: [], raising=False)
-    monkeypatch.setattr(advanced_module, "add_public_key_material", lambda *_args, **_kwargs: None, raising=False)
-    monkeypatch.setattr(advanced_module, "augment_aaguid_fields", lambda *_args, **_kwargs: None, raising=False)
-    monkeypatch.setattr(advanced_module, "record_registration_event", lambda _event: None, raising=False)
-    monkeypatch.setattr(advanced_module, "store_credential_artifact", lambda *_args, **_kwargs: True, raising=False)
+    monkeypatch.setattr(advanced_module, "ensure_metadata_session_id", lambda: "session-id")
+    monkeypatch.setattr(advanced_module, "readkey", lambda *_args, **_kwargs: [])
+    monkeypatch.setattr(advanced_module, "add_public_key_material", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(advanced_module, "augment_aaguid_fields", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(advanced_module, "record_registration_event", lambda _event: None)
+    monkeypatch.setattr(advanced_module, "store_credential_artifact", lambda *_args, **_kwargs: True)
     monkeypatch.setattr(
         advanced_module,
         "_log_authenticator_attestation_response",
-        lambda *_args, **_kwargs: None,
-        raising=False,
+        lambda *_args, **_kwargs: None
     )
-    monkeypatch.setattr(advanced_module, "determine_rp_id", lambda value=None: value or "example.com", raising=False)
+    monkeypatch.setattr(advanced_module, "determine_rp_id", lambda value=None: value or "example.com")
 
 
 def test_helper_none_and_non_string_decode_paths():
@@ -88,17 +82,11 @@ def test_register_begin_maps_attestation_modes_and_exercises_pqc_warning_branch(
     _install_register_begin_server(monkeypatch, advanced_module, captured, include_extensions=True)
 
     warning_messages = []
-    monkeypatch.setattr(
-        advanced_module,
-        "detect_available_pqc_algorithms",
-        lambda: (set(), None),
-        raising=False,
-    )
+    monkeypatch.setattr(advanced_module, "detect_available_pqc_algorithms", lambda: (set(), None))
     monkeypatch.setattr(
         advanced_module.app.logger,
         "warning",
-        lambda message, *args: warning_messages.append(message % args if args else message),
-        raising=False,
+        lambda message, *args: warning_messages.append(message % args if args else message)
     )
 
     payload = _register_begin_payload()
@@ -208,7 +196,7 @@ def test_register_complete_hits_non_mapping_fallback_paths_and_keeps_response_co
         def register_complete(self, _state, _response):
             return _AuthData()
 
-    monkeypatch.setattr(advanced_module, "create_fido_server", lambda **_kwargs: _Server(), raising=False)
+    monkeypatch.setattr(advanced_module, "create_fido_server", lambda **_kwargs: _Server())
     monkeypatch.setattr(
         advanced_module,
         "extract_attestation_details",
@@ -220,10 +208,9 @@ def test_register_complete_hits_non_mapping_fallback_paths_and_keeps_response_co
             {"credProps": True, "largeBlob": True},
             {"certificate": True},
             [{"chain": 1}],
-        ),
-        raising=False,
+        )
     )
-    monkeypatch.setattr(advanced_module, "extract_min_pin_length", lambda _results: 6, raising=False)
+    monkeypatch.setattr(advanced_module, "extract_min_pin_length", lambda _results: 6)
     monkeypatch.setattr(
         advanced_module,
         "perform_attestation_checks",
@@ -234,14 +221,12 @@ def test_register_complete_hits_non_mapping_fallback_paths_and_keeps_response_co
             "aaguid_match": True,
             "metadata": {"description": 7},
             "warnings": [],
-        },
-        raising=False,
+        }
     )
     monkeypatch.setattr(
         advanced_module,
         "summarize_authenticator_extensions",
-        lambda _extensions: {"ext": True},
-        raising=False,
+        lambda _extensions: {"ext": True}
     )
 
     with config_module.app.test_client() as client:
@@ -319,14 +304,13 @@ def test_register_complete_returns_400_for_non_mapping_extensions_payload(monkey
         def register_complete(self, _state, _response):
             return _AuthData()
 
-    monkeypatch.setattr(advanced_module, "create_fido_server", lambda **_kwargs: _Server(), raising=False)
+    monkeypatch.setattr(advanced_module, "create_fido_server", lambda **_kwargs: _Server())
     monkeypatch.setattr(
         advanced_module,
         "extract_attestation_details",
-        lambda _response: ("none", {}, None, None, {}, None, []),
-        raising=False,
+        lambda _response: ("none", {}, None, None, {}, None, [])
     )
-    monkeypatch.setattr(advanced_module, "extract_min_pin_length", lambda _results: None, raising=False)
+    monkeypatch.setattr(advanced_module, "extract_min_pin_length", lambda _results: None)
     monkeypatch.setattr(
         advanced_module,
         "perform_attestation_checks",
@@ -337,8 +321,7 @@ def test_register_complete_returns_400_for_non_mapping_extensions_payload(monkey
             "aaguid_match": True,
             "metadata": {},
             "warnings": [],
-        },
-        raising=False,
+        }
     )
 
     with config_module.app.test_client() as client:
@@ -409,14 +392,13 @@ def test_register_complete_maps_cred_protect_display_and_handles_public_key_alg_
         def register_complete(self, _state, _response):
             return _AuthData()
 
-    monkeypatch.setattr(advanced_module, "create_fido_server", lambda **_kwargs: _Server(), raising=False)
+    monkeypatch.setattr(advanced_module, "create_fido_server", lambda **_kwargs: _Server())
     monkeypatch.setattr(
         advanced_module,
         "extract_attestation_details",
-        lambda _response: ("none", {}, None, None, {"largeBlob": {"supported": True}}, None, []),
-        raising=False,
+        lambda _response: ("none", {}, None, None, {"largeBlob": {"supported": True}}, None, [])
     )
-    monkeypatch.setattr(advanced_module, "extract_min_pin_length", lambda _results: None, raising=False)
+    monkeypatch.setattr(advanced_module, "extract_min_pin_length", lambda _results: None)
     monkeypatch.setattr(
         advanced_module,
         "perform_attestation_checks",
@@ -427,16 +409,14 @@ def test_register_complete_maps_cred_protect_display_and_handles_public_key_alg_
             "aaguid_match": True,
             "metadata": {},
             "warnings": [],
-        },
-        raising=False,
+        }
     )
-    monkeypatch.setattr(advanced_module, "summarize_authenticator_extensions", lambda _ext: {}, raising=False)
-    monkeypatch.setattr(advanced_module, "_generate_storage_id", lambda _source: "generated::storage::id", raising=False)
+    monkeypatch.setattr(advanced_module, "summarize_authenticator_extensions", lambda _ext: {})
+    monkeypatch.setattr(advanced_module, "_generate_storage_id", lambda _source: "generated::storage::id")
     monkeypatch.setattr(
         advanced_module.uuid,
         "UUID",
-        lambda **_kwargs: (_ for _ in ()).throw(ValueError("invalid uuid")),
-        raising=False,
+        lambda **_kwargs: (_ for _ in ()).throw(ValueError("invalid uuid"))
     )
 
     with config_module.app.test_client() as client:
@@ -484,8 +464,7 @@ def test_authenticate_begin_uses_stored_rp_required_uv_and_skips_invalid_allow_c
                 }
             ],
             [{"credentialId": "cred", "publicKey": "pk", "resident": True}],
-        ),
-        raising=False,
+        )
     )
 
     captured = {}
@@ -507,8 +486,8 @@ def test_authenticate_begin_uses_stored_rp_required_uv_and_skips_invalid_allow_c
                 }
             }, {"challenge": "state-token"}
 
-    monkeypatch.setattr(advanced_module, "create_fido_server", lambda **_kwargs: _Server(), raising=False)
-    monkeypatch.setattr(advanced_module, "determine_rp_id", lambda value=None: value or "example.com", raising=False)
+    monkeypatch.setattr(advanced_module, "create_fido_server", lambda **_kwargs: _Server())
+    monkeypatch.setattr(advanced_module, "determine_rp_id", lambda value=None: value or "example.com")
 
     with config_module.app.test_client() as client:
         with client.session_transaction() as session_state:
