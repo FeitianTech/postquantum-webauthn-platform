@@ -34,15 +34,17 @@ from ..attestation import (
     serialize_attestation_certificate,
     summarize_authenticator_extensions,
 )
-from .decode_parts import cbor_core as _cbor_core
-from .decode_parts import cbor_runtime as _cbor_runtime
-from .decode_parts import ctap_repair_leaf as _ctap_repair_leaf
-from .decode_parts import ctap_runtime_interpret as _ctap_runtime_interpret
-from .decode_parts import ctap_runtime_parse as _ctap_runtime_parse
-from .decode_parts import details_runtime as _details_runtime
-from .decode_parts import pipeline_runtime as _pipeline_runtime
-from .decode_parts import result_runtime as _result_runtime
-from .decode_parts import summary_runtime as _summary_runtime
+from .decode_parts import (
+    cbor_core,
+    cbor_runtime,
+    ctap_repair_leaf,
+    ctap_runtime_interpret,
+    ctap_runtime_parse,
+    details_runtime,
+    pipeline_runtime,
+    result_runtime,
+    summary_runtime,
+)
 from .decode_parts.binary_extract import (
     _convert_cose_key_for_display,
     _decode_base64_field,
@@ -239,28 +241,28 @@ def _is_padding_bytes(data: bytes) -> bool:
 
 
 # Compatibility shims for tests and callers that monkeypatch decoder-local helpers.
-_CborDecodingError = _cbor_core._CborDecodingError
-_ensure_cbor_available = _cbor_core._ensure_cbor_available
-_float_summary = _cbor_core._float_summary
-_read_cbor_length = _cbor_core._read_cbor_length
-_lenient_read_uint = _cbor_core._lenient_read_uint
-_lenient_decode_from = _cbor_core._lenient_decode_from
-_structure_to_value = _cbor_core._structure_to_value
+_CborDecodingError = cbor_core._CborDecodingError
+_ensure_cbor_available = cbor_core._ensure_cbor_available
+_float_summary = cbor_core._float_summary
+_read_cbor_length = cbor_core._read_cbor_length
+_lenient_read_uint = cbor_core._lenient_read_uint
+_lenient_decode_from = cbor_core._lenient_decode_from
+_structure_to_value = cbor_core._structure_to_value
 
 
 def _parse_cbor_item(data: bytes, offset: int) -> tuple[dict[str, Any], int]:
-    original_read_cbor_length = _cbor_core._read_cbor_length
-    original_ensure_cbor_available = _cbor_core._ensure_cbor_available
-    original_float_summary = _cbor_core._float_summary
+    original_read_cbor_length = cbor_core._read_cbor_length
+    original_ensure_cbor_available = cbor_core._ensure_cbor_available
+    original_float_summary = cbor_core._float_summary
     try:
-        _cbor_core._read_cbor_length = _read_cbor_length
-        _cbor_core._ensure_cbor_available = _ensure_cbor_available
-        _cbor_core._float_summary = _float_summary
-        return _cbor_core._parse_cbor_item(data, offset)
+        cbor_core._read_cbor_length = _read_cbor_length
+        cbor_core._ensure_cbor_available = _ensure_cbor_available
+        cbor_core._float_summary = _float_summary
+        return cbor_core._parse_cbor_item(data, offset)
     finally:
-        _cbor_core._read_cbor_length = original_read_cbor_length
-        _cbor_core._ensure_cbor_available = original_ensure_cbor_available
-        _cbor_core._float_summary = original_float_summary
+        cbor_core._read_cbor_length = original_read_cbor_length
+        cbor_core._ensure_cbor_available = original_ensure_cbor_available
+        cbor_core._float_summary = original_float_summary
 
 
 def _decode_cbor_structure(data: bytes) -> tuple[dict[str, Any], int]:
@@ -269,28 +271,28 @@ def _decode_cbor_structure(data: bytes) -> tuple[dict[str, Any], int]:
     return node, offset
 
 
-_derive_alg_from_auth_data = _ctap_repair_leaf._derive_alg_from_auth_data
-_extract_mapping_bytes = _ctap_repair_leaf._extract_mapping_bytes
-_extract_mapping_string = _ctap_repair_leaf._extract_mapping_string
-_locate_get_assertion_trailing_offset = _ctap_repair_leaf._locate_get_assertion_trailing_offset
-_merge_ctap_make_credential = _ctap_repair_leaf._merge_ctap_make_credential
-_merge_trailing_signature = _ctap_repair_leaf._merge_trailing_signature
-_repair_make_credential_entries = _ctap_repair_leaf._repair_make_credential_entries
-_split_get_assertion_trailing_fields = _ctap_repair_leaf._split_get_assertion_trailing_fields
+_derive_alg_from_auth_data = ctap_repair_leaf._derive_alg_from_auth_data
+_extract_mapping_bytes = ctap_repair_leaf._extract_mapping_bytes
+_extract_mapping_string = ctap_repair_leaf._extract_mapping_string
+_locate_get_assertion_trailing_offset = ctap_repair_leaf._locate_get_assertion_trailing_offset
+_merge_ctap_make_credential = ctap_repair_leaf._merge_ctap_make_credential
+_merge_trailing_signature = ctap_repair_leaf._merge_trailing_signature
+_repair_make_credential_entries = ctap_repair_leaf._repair_make_credential_entries
+_split_get_assertion_trailing_fields = ctap_repair_leaf._split_get_assertion_trailing_fields
 
 
 def _extract_get_assertion_trailing_from_raw(
     raw_bytes: bytes,
 ) -> tuple[bytes | None, dict[int, Any]]:
-    original_locate_trailing_offset = _ctap_repair_leaf._locate_get_assertion_trailing_offset
-    original_lenient_decode = _ctap_repair_leaf._lenient_decode_from
+    original_locate_trailing_offset = ctap_repair_leaf._locate_get_assertion_trailing_offset
+    original_lenient_decode = ctap_repair_leaf._lenient_decode_from
     try:
-        _ctap_repair_leaf._locate_get_assertion_trailing_offset = _locate_get_assertion_trailing_offset
-        _ctap_repair_leaf._lenient_decode_from = _lenient_decode_from
-        return _ctap_repair_leaf._extract_get_assertion_trailing_from_raw(raw_bytes)
+        ctap_repair_leaf._locate_get_assertion_trailing_offset = _locate_get_assertion_trailing_offset
+        ctap_repair_leaf._lenient_decode_from = _lenient_decode_from
+        return ctap_repair_leaf._extract_get_assertion_trailing_from_raw(raw_bytes)
     finally:
-        _ctap_repair_leaf._locate_get_assertion_trailing_offset = original_locate_trailing_offset
-        _ctap_repair_leaf._lenient_decode_from = original_lenient_decode
+        ctap_repair_leaf._locate_get_assertion_trailing_offset = original_locate_trailing_offset
+        ctap_repair_leaf._lenient_decode_from = original_lenient_decode
 
 
 
@@ -352,54 +354,54 @@ def decode_payload_text(value: str) -> dict[str, Any]:
 
 
 _PIPELINE_RUNTIME_BINDINGS: dict[str, Callable[..., Any]] = {
-    "_decode_json_object": _pipeline_runtime._decode_json_object,
-    "_decode_public_key_credential": _pipeline_runtime._decode_public_key_credential,
-    "_decode_pem_certificates": _pipeline_runtime._decode_pem_certificates,
-    "_decode_binary_payload": _pipeline_runtime._decode_binary_payload,
-    "_decode_binary_input": _pipeline_runtime._decode_binary_input,
-    "_decode_binary_field": _pipeline_runtime._decode_binary_field,
-    "_try_parse_json": _pipeline_runtime._try_parse_json,
-    "_looks_like_pem": _pipeline_runtime._looks_like_pem,
-    "_try_decode_certificate_bytes": _pipeline_runtime._try_decode_certificate_bytes,
-    "_try_decode_attestation_object": _pipeline_runtime._try_decode_attestation_object,
-    "_try_decode_authenticator_data": _pipeline_runtime._try_decode_authenticator_data,
-    "_expand_cbor_value": _pipeline_runtime._expand_cbor_value,
+    "_decode_json_object": pipeline_runtime._decode_json_object,
+    "_decode_public_key_credential": pipeline_runtime._decode_public_key_credential,
+    "_decode_pem_certificates": pipeline_runtime._decode_pem_certificates,
+    "_decode_binary_payload": pipeline_runtime._decode_binary_payload,
+    "_decode_binary_input": pipeline_runtime._decode_binary_input,
+    "_decode_binary_field": pipeline_runtime._decode_binary_field,
+    "_try_parse_json": pipeline_runtime._try_parse_json,
+    "_looks_like_pem": pipeline_runtime._looks_like_pem,
+    "_try_decode_certificate_bytes": pipeline_runtime._try_decode_certificate_bytes,
+    "_try_decode_attestation_object": pipeline_runtime._try_decode_attestation_object,
+    "_try_decode_authenticator_data": pipeline_runtime._try_decode_authenticator_data,
+    "_expand_cbor_value": pipeline_runtime._expand_cbor_value,
 }
 
 _CBOR_RUNTIME_BINDINGS: dict[str, Callable[..., Any]] = {
-    "_decode_cbor_sequence": _cbor_runtime._decode_cbor_sequence,
-    "_repair_get_assertion_entries": _cbor_runtime._repair_get_assertion_entries,
-    "_try_decode_cbor": _cbor_runtime._try_decode_cbor,
+    "_decode_cbor_sequence": cbor_runtime._decode_cbor_sequence,
+    "_repair_get_assertion_entries": cbor_runtime._repair_get_assertion_entries,
+    "_try_decode_cbor": cbor_runtime._try_decode_cbor,
 }
 
 _CTAP_PARSE_RUNTIME_BINDINGS: dict[str, Callable[..., Any]] = {
-    "_convert_ctap_allow_list": _ctap_runtime_parse._convert_ctap_allow_list,
-    "_convert_pub_key_cred_params": _ctap_runtime_parse._convert_pub_key_cred_params,
-    "_convert_auth_data_field": _ctap_runtime_parse._convert_auth_data_field,
-    "_convert_signature_field": _ctap_runtime_parse._convert_signature_field,
-    "_convert_att_stmt_field": _ctap_runtime_parse._convert_att_stmt_field,
-    "_convert_ctap_user_field": _ctap_runtime_parse._convert_ctap_user_field,
-    "_summarize_bytes_for_json": _ctap_runtime_parse._summarize_bytes_for_json,
-    "_parse_authenticator_data_bytes": _ctap_runtime_parse._parse_authenticator_data_bytes,
-    "_format_auth_data_for_expanded_json": _ctap_runtime_parse._format_auth_data_for_expanded_json,
-    "_format_att_stmt_for_expanded_json": _ctap_runtime_parse._format_att_stmt_for_expanded_json,
-    "_decode_trailing_map": _ctap_runtime_parse._decode_trailing_map,
-    "_extract_lenient_map_entries": _ctap_runtime_parse._extract_lenient_map_entries,
-    "_extract_signature_from_raw_bytes": _ctap_runtime_parse._extract_signature_from_raw_bytes,
-    "_convert_user_text_value": _ctap_runtime_parse._convert_user_text_value,
-    "_convert_ctap_user": _ctap_runtime_parse._convert_ctap_user,
+    "_convert_ctap_allow_list": ctap_runtime_parse._convert_ctap_allow_list,
+    "_convert_pub_key_cred_params": ctap_runtime_parse._convert_pub_key_cred_params,
+    "_convert_auth_data_field": ctap_runtime_parse._convert_auth_data_field,
+    "_convert_signature_field": ctap_runtime_parse._convert_signature_field,
+    "_convert_att_stmt_field": ctap_runtime_parse._convert_att_stmt_field,
+    "_convert_ctap_user_field": ctap_runtime_parse._convert_ctap_user_field,
+    "_summarize_bytes_for_json": ctap_runtime_parse._summarize_bytes_for_json,
+    "_parse_authenticator_data_bytes": ctap_runtime_parse._parse_authenticator_data_bytes,
+    "_format_auth_data_for_expanded_json": ctap_runtime_parse._format_auth_data_for_expanded_json,
+    "_format_att_stmt_for_expanded_json": ctap_runtime_parse._format_att_stmt_for_expanded_json,
+    "_decode_trailing_map": ctap_runtime_parse._decode_trailing_map,
+    "_extract_lenient_map_entries": ctap_runtime_parse._extract_lenient_map_entries,
+    "_extract_signature_from_raw_bytes": ctap_runtime_parse._extract_signature_from_raw_bytes,
+    "_convert_user_text_value": ctap_runtime_parse._convert_user_text_value,
+    "_convert_ctap_user": ctap_runtime_parse._convert_ctap_user,
 }
 
 _CTAP_INTERPRET_RUNTIME_BINDINGS: dict[str, Callable[..., Any]] = {
-    "_build_make_credential_request_expanded_json": _ctap_runtime_interpret._build_make_credential_request_expanded_json,
-    "_build_get_assertion_request_expanded_json": _ctap_runtime_interpret._build_get_assertion_request_expanded_json,
-    "_build_make_credential_expanded_json": _ctap_runtime_interpret._build_make_credential_expanded_json,
-    "_build_get_assertion_expanded_json": _ctap_runtime_interpret._build_get_assertion_expanded_json,
-    "_interpret_ctap_cbor_value": _ctap_runtime_interpret._interpret_ctap_cbor_value,
-    "_interpret_make_credential_map": _ctap_runtime_interpret._interpret_make_credential_map,
-    "_interpret_get_assertion_map": _ctap_runtime_interpret._interpret_get_assertion_map,
-    "_interpret_make_credential_request_map": _ctap_runtime_interpret._interpret_make_credential_request_map,
-    "_interpret_get_assertion_request_map": _ctap_runtime_interpret._interpret_get_assertion_request_map,
+    "_build_make_credential_request_expanded_json": ctap_runtime_interpret._build_make_credential_request_expanded_json,
+    "_build_get_assertion_request_expanded_json": ctap_runtime_interpret._build_get_assertion_request_expanded_json,
+    "_build_make_credential_expanded_json": ctap_runtime_interpret._build_make_credential_expanded_json,
+    "_build_get_assertion_expanded_json": ctap_runtime_interpret._build_get_assertion_expanded_json,
+    "_interpret_ctap_cbor_value": ctap_runtime_interpret._interpret_ctap_cbor_value,
+    "_interpret_make_credential_map": ctap_runtime_interpret._interpret_make_credential_map,
+    "_interpret_get_assertion_map": ctap_runtime_interpret._interpret_get_assertion_map,
+    "_interpret_make_credential_request_map": ctap_runtime_interpret._interpret_make_credential_request_map,
+    "_interpret_get_assertion_request_map": ctap_runtime_interpret._interpret_get_assertion_request_map,
 }
 
 _install_runtime_bindings(
@@ -458,52 +460,52 @@ _GET_ASSERTION_RESPONSE_HANDLERS: dict[Any, Callable[[Any], Any]] = {
 }
 
 _DETAILS_RUNTIME_BINDINGS: dict[str, Callable[..., Any]] = {
-    "_describe_client_data_from_bytes": _details_runtime._describe_client_data_from_bytes,
-    "_describe_authenticator_data_bytes": _details_runtime._describe_authenticator_data_bytes,
-    "_parse_attestation_object": _details_runtime._parse_attestation_object,
-    "_extract_attestation_certificate": _details_runtime._extract_attestation_certificate,
-    "_build_client_data_details": _details_runtime._build_client_data_details,
-    "_binary_summary": _details_runtime._binary_summary,
-    "_try_decode_utf8": _details_runtime._try_decode_utf8,
-    "_is_public_key_credential": _details_runtime._is_public_key_credential,
-    "_is_client_data_dict": _details_runtime._is_client_data_dict,
+    "_describe_client_data_from_bytes": details_runtime._describe_client_data_from_bytes,
+    "_describe_authenticator_data_bytes": details_runtime._describe_authenticator_data_bytes,
+    "_parse_attestation_object": details_runtime._parse_attestation_object,
+    "_extract_attestation_certificate": details_runtime._extract_attestation_certificate,
+    "_build_client_data_details": details_runtime._build_client_data_details,
+    "_binary_summary": details_runtime._binary_summary,
+    "_try_decode_utf8": details_runtime._try_decode_utf8,
+    "_is_public_key_credential": details_runtime._is_public_key_credential,
+    "_is_client_data_dict": details_runtime._is_client_data_dict,
 }
 
 _RESULT_RUNTIME_BINDINGS: dict[str, Callable[..., Any]] = {
-    "_prepare_decoder_response": _result_runtime._prepare_decoder_response,
-    "_build_decoder_payload": _result_runtime._build_decoder_payload,
-    "_convert_result_to_data": _result_runtime._convert_result_to_data,
-    "_convert_public_key_credential_data": _result_runtime._convert_public_key_credential_data,
-    "_convert_attestation_object_data": _result_runtime._convert_attestation_object_data,
-    "_convert_authenticator_data_result": _result_runtime._convert_authenticator_data_result,
-    "_convert_client_data_result": _result_runtime._convert_client_data_result,
-    "_convert_certificate_result": _result_runtime._convert_certificate_result,
-    "_convert_attestation_entry": _result_runtime._convert_attestation_entry,
-    "_convert_attestation_statement": _result_runtime._convert_attestation_statement,
-    "_convert_certificate_chain": _result_runtime._convert_certificate_chain,
-    "_convert_certificate_bytes": _result_runtime._convert_certificate_bytes,
-    "_convert_certificate_payload": _result_runtime._convert_certificate_payload,
-    "_build_authenticator_section": _result_runtime._build_authenticator_section,
+    "_prepare_decoder_response": result_runtime._prepare_decoder_response,
+    "_build_decoder_payload": result_runtime._build_decoder_payload,
+    "_convert_result_to_data": result_runtime._convert_result_to_data,
+    "_convert_public_key_credential_data": result_runtime._convert_public_key_credential_data,
+    "_convert_attestation_object_data": result_runtime._convert_attestation_object_data,
+    "_convert_authenticator_data_result": result_runtime._convert_authenticator_data_result,
+    "_convert_client_data_result": result_runtime._convert_client_data_result,
+    "_convert_certificate_result": result_runtime._convert_certificate_result,
+    "_convert_attestation_entry": result_runtime._convert_attestation_entry,
+    "_convert_attestation_statement": result_runtime._convert_attestation_statement,
+    "_convert_certificate_chain": result_runtime._convert_certificate_chain,
+    "_convert_certificate_bytes": result_runtime._convert_certificate_bytes,
+    "_convert_certificate_payload": result_runtime._convert_certificate_payload,
+    "_build_authenticator_section": result_runtime._build_authenticator_section,
 }
 
 _SUMMARY_RUNTIME_BINDINGS: dict[str, Callable[..., Any]] = {
-    "_format_result_summary": _summary_runtime._format_result_summary,
-    "_base_type": _summary_runtime._base_type,
-    "_format_public_key_credential_summary": _summary_runtime._format_public_key_credential_summary,
-    "_format_attestation_object_summary": _summary_runtime._format_attestation_object_summary,
-    "_format_authenticator_data_summary": _summary_runtime._format_authenticator_data_summary,
-    "_format_client_data_summary": _summary_runtime._format_client_data_summary,
-    "_format_certificate_summary": _summary_runtime._format_certificate_summary,
-    "_format_json_summary": _summary_runtime._format_json_summary,
-    "_format_cbor_summary": _summary_runtime._format_cbor_summary,
-    "_format_generic_summary": _summary_runtime._format_generic_summary,
-    "_build_certificate_summary_lines": _summary_runtime._build_certificate_summary_lines,
-    "_extend_with_authenticator_details": _summary_runtime._extend_with_authenticator_details,
-    "_extend_with_authenticator_extensions": _summary_runtime._extend_with_authenticator_extensions,
-    "_extend_with_client_extensions": _summary_runtime._extend_with_client_extensions,
-    "_extend_with_attestation_section": _summary_runtime._extend_with_attestation_section,
-    "_extend_with_client_data_entry": _summary_runtime._extend_with_client_data_entry,
-    "_extend_with_client_data_details": _summary_runtime._extend_with_client_data_details,
+    "_format_result_summary": summary_runtime._format_result_summary,
+    "_base_type": summary_runtime._base_type,
+    "_format_public_key_credential_summary": summary_runtime._format_public_key_credential_summary,
+    "_format_attestation_object_summary": summary_runtime._format_attestation_object_summary,
+    "_format_authenticator_data_summary": summary_runtime._format_authenticator_data_summary,
+    "_format_client_data_summary": summary_runtime._format_client_data_summary,
+    "_format_certificate_summary": summary_runtime._format_certificate_summary,
+    "_format_json_summary": summary_runtime._format_json_summary,
+    "_format_cbor_summary": summary_runtime._format_cbor_summary,
+    "_format_generic_summary": summary_runtime._format_generic_summary,
+    "_build_certificate_summary_lines": summary_runtime._build_certificate_summary_lines,
+    "_extend_with_authenticator_details": summary_runtime._extend_with_authenticator_details,
+    "_extend_with_authenticator_extensions": summary_runtime._extend_with_authenticator_extensions,
+    "_extend_with_client_extensions": summary_runtime._extend_with_client_extensions,
+    "_extend_with_attestation_section": summary_runtime._extend_with_attestation_section,
+    "_extend_with_client_data_entry": summary_runtime._extend_with_client_data_entry,
+    "_extend_with_client_data_details": summary_runtime._extend_with_client_data_details,
 }
 
 _install_runtime_bindings(
