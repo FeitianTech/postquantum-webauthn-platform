@@ -67,11 +67,11 @@ def _install_fake_auth_begin_server(monkeypatch, advanced_module, captured):
     )
 
 
-def test_advanced_put_snapshot_route_returns_400_when_store_fails(monkeypatch):
+def test_advanced_put_snapshot_route_returns_400_when_store_fails(monkeypatch, metadata_module):
     advanced_module = pytest.importorskip("server.app.routes.advanced")
     config_module = pytest.importorskip("server.app.config")
 
-    monkeypatch.setattr(advanced_module, "ensure_metadata_session_id", lambda: "session-id")
+    monkeypatch.setattr(metadata_module, "ensure_metadata_session_id", lambda: "session-id")
     monkeypatch.setattr(advanced_module, "store_credential_artifact", lambda *_args, **_kwargs: False)
 
     with config_module.app.test_client() as client:

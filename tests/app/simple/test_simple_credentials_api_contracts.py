@@ -42,12 +42,12 @@ class _FakeAuthData:
         return self._raw
 
 
-def test_credentials_get_serializes_dict_backed_entries(monkeypatch):
+def test_credentials_get_serializes_dict_backed_entries(monkeypatch, metadata_module):
     config_module = pytest.importorskip("server.app.config")
     simple_module = pytest.importorskip("server.app.routes.simple")
     pytest.importorskip("server.app.app")
 
-    monkeypatch.setattr(simple_module, "ensure_metadata_session_id", lambda: "session-dict")
+    monkeypatch.setattr(metadata_module, "ensure_metadata_session_id", lambda: "session-dict")
 
     def _add_public_key_material(target, public_key):
         if isinstance(public_key, dict) and 3 in public_key:
@@ -124,12 +124,12 @@ def test_credentials_get_serializes_dict_backed_entries(monkeypatch):
     assert entry["properties"]["authenticatorAttachment"] == "platform"
 
 
-def test_credentials_get_serializes_object_backed_entries_and_derives_authenticator_data(monkeypatch):
+def test_credentials_get_serializes_object_backed_entries_and_derives_authenticator_data(monkeypatch, metadata_module):
     config_module = pytest.importorskip("server.app.config")
     simple_module = pytest.importorskip("server.app.routes.simple")
     pytest.importorskip("server.app.app")
 
-    monkeypatch.setattr(simple_module, "ensure_metadata_session_id", lambda: "session-object")
+    monkeypatch.setattr(metadata_module, "ensure_metadata_session_id", lambda: "session-object")
 
     def _add_public_key_material(target, public_key):
         if isinstance(public_key, dict) and 3 in public_key:
@@ -203,12 +203,12 @@ def test_credentials_get_serializes_object_backed_entries_and_derives_authentica
     assert "authenticatorDataHex" not in entry
 
 
-def test_credentials_get_handles_bare_credential_objects_and_skips_malformed(monkeypatch):
+def test_credentials_get_handles_bare_credential_objects_and_skips_malformed(monkeypatch, metadata_module):
     config_module = pytest.importorskip("server.app.config")
     simple_module = pytest.importorskip("server.app.routes.simple")
     pytest.importorskip("server.app.app")
 
-    monkeypatch.setattr(simple_module, "ensure_metadata_session_id", lambda: "session-bare")
+    monkeypatch.setattr(metadata_module, "ensure_metadata_session_id", lambda: "session-bare")
 
     def _add_public_key_material(target, public_key):
         if isinstance(public_key, dict) and 3 in public_key:
@@ -250,12 +250,12 @@ def test_credentials_get_handles_bare_credential_objects_and_skips_malformed(mon
     assert entry["algorithm"] == -7
 
 
-def test_credentials_get_returns_empty_list_when_storage_iteration_fails(monkeypatch):
+def test_credentials_get_returns_empty_list_when_storage_iteration_fails(monkeypatch, metadata_module):
     config_module = pytest.importorskip("server.app.config")
     simple_module = pytest.importorskip("server.app.routes.simple")
     pytest.importorskip("server.app.app")
 
-    monkeypatch.setattr(simple_module, "ensure_metadata_session_id", lambda: "session-fail")
+    monkeypatch.setattr(metadata_module, "ensure_metadata_session_id", lambda: "session-fail")
 
     def _raise_iter_failure(*_args, **_kwargs):
         raise RuntimeError("storage unavailable")
@@ -269,12 +269,12 @@ def test_credentials_get_returns_empty_list_when_storage_iteration_fails(monkeyp
     assert response.get_json() == []
 
 
-def test_credentials_delete_removes_all_usernames_and_reports_count(monkeypatch):
+def test_credentials_delete_removes_all_usernames_and_reports_count(monkeypatch, metadata_module):
     config_module = pytest.importorskip("server.app.config")
     simple_module = pytest.importorskip("server.app.routes.simple")
     pytest.importorskip("server.app.app")
 
-    monkeypatch.setattr(simple_module, "ensure_metadata_session_id", lambda: "session-delete")
+    monkeypatch.setattr(metadata_module, "ensure_metadata_session_id", lambda: "session-delete")
     monkeypatch.setattr(
         simple_module,
         "storage_list_credentials",
@@ -299,12 +299,12 @@ def test_credentials_delete_removes_all_usernames_and_reports_count(monkeypatch)
     ]
 
 
-def test_credentials_delete_returns_zero_when_listing_credentials_raises(monkeypatch):
+def test_credentials_delete_returns_zero_when_listing_credentials_raises(monkeypatch, metadata_module):
     config_module = pytest.importorskip("server.app.config")
     simple_module = pytest.importorskip("server.app.routes.simple")
     pytest.importorskip("server.app.app")
 
-    monkeypatch.setattr(simple_module, "ensure_metadata_session_id", lambda: "session-delete-fail")
+    monkeypatch.setattr(metadata_module, "ensure_metadata_session_id", lambda: "session-delete-fail")
 
     def _raise_list_failure(*_args, **_kwargs):
         raise RuntimeError("list failed")
