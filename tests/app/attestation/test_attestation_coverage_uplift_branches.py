@@ -89,11 +89,11 @@ def test_extract_certificate_aaguid_handles_non_hex_string_extension_values(monk
     assert extracted == b"Z" * 16
 
 
-def test_attempt_pqc_attestation_signature_validation_reports_public_key_construction_errors(monkeypatch, pqc_runtime, attestation_module):
+def test_attempt_pqc_attestation_signature_validation_reports_public_key_construction_errors(monkeypatch, pqc, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     monkeypatch.setattr(
-        pqc_runtime,
+        pqc,
         "extract_certificate_public_key_info",
         lambda _cert: {"subject_public_key": b"pub"},
     )
@@ -235,7 +235,7 @@ def test_normalise_signature_algorithm_name_covers_ed448_and_dsa_paths(attestati
     assert attestation_module._normalise_signature_algorithm_name("dsa-with-sha1") == "DSA"
 
 
-def test_perform_attestation_checks_coerces_string_challenge_via_utf8_fallback_and_records_attestation_error(monkeypatch, pqc_runtime, metadata_module, certificates, attestation_module):
+def test_perform_attestation_checks_coerces_string_challenge_via_utf8_fallback_and_records_attestation_error(monkeypatch, pqc, metadata_module, certificates, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     flags = int(AuthenticatorData.FLAG.UP | AuthenticatorData.FLAG.AT)
@@ -262,7 +262,7 @@ def test_perform_attestation_checks_coerces_string_challenge_via_utf8_fallback_a
         lambda _fmt: _AttestationVerifier,
     )
     monkeypatch.setattr(
-        pqc_runtime,
+        pqc,
         "_attempt_pqc_attestation_signature_validation",
         lambda _att_obj, _client_hash: {"attempted": False, "success": False, "error": None},
     )

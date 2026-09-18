@@ -15,8 +15,8 @@ from . import (
     checks,
     classical_runtime,
     encoding_leaf,
+    pqc,
     pqc_constraints_runtime,
-    pqc_runtime,
     runtime_state,
     trust,
 )
@@ -118,8 +118,8 @@ _normalise_pqc_algorithm_identifier = pqc_constraints_runtime._normalise_pqc_alg
 _verify_pqc_attestation_chain = pqc_constraints_runtime._verify_pqc_attestation_chain
 
 # PQC attestation root and signature evaluation.
-_attempt_pqc_attestation_signature_validation = pqc_runtime._attempt_pqc_attestation_signature_validation
-_evaluate_mldsa_attestation_root = pqc_runtime._evaluate_mldsa_attestation_root
+_attempt_pqc_attestation_signature_validation = pqc._attempt_pqc_attestation_signature_validation
+_evaluate_mldsa_attestation_root = pqc._evaluate_mldsa_attestation_root
 
 # Registration policy resolution.
 _collect_allowed_algorithms = checks._collect_allowed_algorithms

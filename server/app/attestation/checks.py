@@ -22,7 +22,7 @@ from fido2.webauthn import (
 
 from .. import encoding, metadata
 from ..pqc import is_pqc_algorithm
-from . import classical_runtime, encoding_leaf, pqc_runtime, trust
+from . import classical_runtime, encoding_leaf, pqc, trust
 
 
 def _resolve_uv_required(
@@ -415,7 +415,7 @@ def _resolve_signature_validation(
 
     pqc_signature_valid: bool | None = None
     if signature_valid is False and attestation_format_value != "none":
-        pqc_outcome = pqc_runtime._attempt_pqc_attestation_signature_validation(
+        pqc_outcome = pqc._attempt_pqc_attestation_signature_validation(
             attestation_object, client_data_hash
         )
         if pqc_outcome.get("attempted"):
@@ -489,7 +489,7 @@ def _evaluate_root_validation(
     pqc_registration = isinstance(algorithm, int) and is_pqc_algorithm(algorithm)
     if pqc_registration:
         verifier = metadata.get_mds_verifier()
-        pqc_outcome = pqc_runtime._evaluate_mldsa_attestation_root(
+        pqc_outcome = pqc._evaluate_mldsa_attestation_root(
             attestation_object,
             credential_aaguid_bytes,
             verifier,

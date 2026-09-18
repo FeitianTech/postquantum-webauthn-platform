@@ -50,10 +50,10 @@ def classical_runtime():
 
 
 @pytest.fixture
-def pqc_runtime():
+def pqc():
     """The fragment that defines the PQC attestation root evaluation."""
 
-    return _fragment("pqc_runtime")
+    return _fragment("pqc")
 
 
 @pytest.fixture

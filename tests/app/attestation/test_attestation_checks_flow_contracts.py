@@ -145,7 +145,7 @@ def test_perform_attestation_checks_classical_success_path_populates_metadata(mo
     assert result["metadata"]["source"] == "aaguid"
 
 
-def test_perform_attestation_checks_uses_pqc_fallback_when_signature_verification_fails(monkeypatch, classical_runtime, pqc_runtime, metadata_module, attestation_module):
+def test_perform_attestation_checks_uses_pqc_fallback_when_signature_verification_fails(monkeypatch, classical_runtime, pqc, metadata_module, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     flags = int(AuthenticatorData.FLAG.UP | AuthenticatorData.FLAG.AT)
@@ -169,7 +169,7 @@ def test_perform_attestation_checks_uses_pqc_fallback_when_signature_verificatio
     )
     monkeypatch.setattr(Attestation, "for_type", lambda _fmt: (lambda: _FailingAttestation()))
     monkeypatch.setattr(
-        pqc_runtime,
+        pqc,
         "_attempt_pqc_attestation_signature_validation",
         lambda *_args, **_kwargs: {
             "attempted": True,
@@ -210,7 +210,7 @@ def test_perform_attestation_checks_uses_pqc_fallback_when_signature_verificatio
     assert "attestation_invalid" in "\n".join(result["errors"])
 
 
-def test_perform_attestation_checks_pqc_branch_surfaces_root_check_details(monkeypatch, pqc_runtime, metadata_module, attestation_module):
+def test_perform_attestation_checks_pqc_branch_surfaces_root_check_details(monkeypatch, pqc, metadata_module, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     flags = int(AuthenticatorData.FLAG.UP | AuthenticatorData.FLAG.AT)
@@ -230,7 +230,7 @@ def test_perform_attestation_checks_pqc_branch_surfaces_root_check_details(monke
     )
     monkeypatch.setattr(metadata_module, "get_mds_verifier", lambda: object())
     monkeypatch.setattr(
-        pqc_runtime,
+        pqc,
         "_evaluate_mldsa_attestation_root",
         lambda *_args, **_kwargs: {
             "root_valid": False,
