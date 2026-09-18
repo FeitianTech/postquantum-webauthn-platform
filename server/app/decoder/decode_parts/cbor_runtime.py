@@ -1,13 +1,34 @@
-"""Extracted CBOR-sequence and CTAP repair/decode helper bodies.
-
-These functions are executed via decode.py wrappers that rebind globals to the
-facade module, preserving monkeypatch-driven behavior in tests.
-"""
-# pyright: reportUndefinedVariable=false
+"""CBOR sequence decoding and CTAP repair helpers."""
+# pyright: reportUndefinedVariable=false  # the sibling runtime helpers and carrier bodies are not imported yet
 from __future__ import annotations
 
 from collections.abc import Mapping
+from io import BytesIO
 from typing import Any
+
+import cbor2
+
+from fido2 import cbor
+
+from .cbor_lenient import _lenient_decode_from, _structure_to_value
+from .cbor_sequence import _decode_cbor_sequence_impl
+from .cbor_strict import _CborDecodingError, _decode_cbor_structure
+from .ctap_classify import _classify_ctap_map
+from .ctap_repair_leaf import (
+    _extract_get_assertion_trailing_from_raw,
+    _split_get_assertion_trailing_fields,
+)
+from .ctap_repair_make import (
+    _extract_mapping_bytes,
+    _extract_mapping_string,
+    _merge_ctap_make_credential,
+    _merge_trailing_signature,
+    _repair_make_credential_entries,
+)
+from .key_utils import coerce_cbor_bytes as _coerce_cbor_bytes
+from .key_utils import get_mapping_entry as _get_mapping_entry
+from .key_utils import hex_json_safe as _hex_json_safe
+from .key_utils import stringify_mapping_keys as _stringify_mapping_keys
 
 
 def _decode_cbor_sequence(payload: bytes) -> tuple[list[dict[str, Any]], list[Any], int, bytes]:
