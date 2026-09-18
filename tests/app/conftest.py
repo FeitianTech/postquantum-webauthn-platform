@@ -110,14 +110,14 @@ def advanced_parsing_helpers():
 def advanced_register_begin():
     """The fragment that defines the advanced ``/register/begin`` body."""
 
-    return _advanced_fragment("register_begin_impl")
+    return _advanced_fragment("registration")
 
 
 @pytest.fixture
 def advanced_register_begin_support():
     """The fragment that defines the register-begin algorithm, exclude-list and extension builders."""
 
-    return _advanced_fragment("register_begin_support_impl")
+    return _advanced_fragment("registration")
 
 
 @pytest.fixture
@@ -131,28 +131,28 @@ def advanced_register_complete():
 def advanced_register_complete_finalize():
     """The fragment that defines the artifact-store and device-log finalisation step."""
 
-    return _advanced_fragment("register_complete_finalize_impl")
+    return _advanced_fragment("registration")
 
 
 @pytest.fixture
 def advanced_register_complete_material():
     """The fragment that defines the registration material builder."""
 
-    return _advanced_fragment("register_complete_material_impl")
+    return _advanced_fragment("registration")
 
 
 @pytest.fixture
 def advanced_register_complete_setup():
     """The fragment that defines the register-complete input preparation step."""
 
-    return _advanced_fragment("register_complete_setup_impl")
+    return _advanced_fragment("registration")
 
 
 @pytest.fixture
 def advanced_register_complete_state():
     """The fragment that defines the register-complete session-state resolution step."""
 
-    return _advanced_fragment("register_complete_state_impl")
+    return _advanced_fragment("registration")
 
 
 @pytest.fixture

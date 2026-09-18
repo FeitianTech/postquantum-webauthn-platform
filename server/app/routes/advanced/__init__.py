@@ -17,7 +17,6 @@ from . import (
     binary,
     constants,
     parsing,
-    register_begin_impl,
     registration,
     summary,
     tracing,
@@ -72,7 +71,7 @@ datetime_from_timestamp = tracing.datetime_from_timestamp_impl
 
 @app.route("/api/advanced/register/begin", methods=["POST"])
 def advanced_register_begin():
-    return register_begin_impl.advanced_register_begin_impl()
+    return registration.advanced_register_begin_impl()
 
 
 @app.route("/api/advanced/register/complete", methods=["POST"])
