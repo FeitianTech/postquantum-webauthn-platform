@@ -555,7 +555,7 @@ def test_resolve_root_validity_returns_none_when_all_checks_unknown(attestation_
     )
 
 
-def test_evaluate_mldsa_attestation_root_reports_missing_metadata_roots(monkeypatch, trust_runtime, attestation_module):
+def test_evaluate_mldsa_attestation_root_reports_missing_metadata_roots(monkeypatch, trust, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     fake_entry = {"metadata_statement": {}}
@@ -566,7 +566,7 @@ def test_evaluate_mldsa_attestation_root_reports_missing_metadata_roots(monkeypa
     )()
     attestation_object = type("_AttestationObject", (), {"att_stmt": {}})()
 
-    monkeypatch.setattr(trust_runtime, "_collect_metadata_root_certificates", lambda _entry: [])
+    monkeypatch.setattr(trust, "_collect_metadata_root_certificates", lambda _entry: [])
 
     outcome = attestation_module._evaluate_mldsa_attestation_root(
         attestation_object,
@@ -580,7 +580,7 @@ def test_evaluate_mldsa_attestation_root_reports_missing_metadata_roots(monkeypa
     assert outcome["root_valid"] is None
 
 
-def test_evaluate_mldsa_attestation_root_marks_chain_missing_when_no_x5c(monkeypatch, trust_runtime, trust_ca_runtime, attestation_module):
+def test_evaluate_mldsa_attestation_root_marks_chain_missing_when_no_x5c(monkeypatch, trust, trust_ca_runtime, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     fake_entry = {"metadata_statement": {}}
@@ -591,7 +591,7 @@ def test_evaluate_mldsa_attestation_root_marks_chain_missing_when_no_x5c(monkeyp
     )()
     attestation_object = type("_AttestationObject", (), {"att_stmt": {}})()
 
-    monkeypatch.setattr(trust_runtime, "_collect_metadata_root_certificates", lambda _entry: [b"trusted-root"])
+    monkeypatch.setattr(trust, "_collect_metadata_root_certificates", lambda _entry: [b"trusted-root"])
     monkeypatch.setattr(trust_ca_runtime, "_is_trusted_ca_certificate", lambda *_args, **_kwargs: True)
 
     outcome = attestation_module._evaluate_mldsa_attestation_root(

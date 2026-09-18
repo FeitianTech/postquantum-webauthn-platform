@@ -18,8 +18,8 @@ from . import (
     pqc_constraints_runtime,
     pqc_runtime,
     runtime_state,
+    trust,
     trust_ca_runtime,
-    trust_runtime,
 )
 
 __all__ = [
@@ -92,17 +92,17 @@ _coerce_attestation_certificate_bytes = certificates._coerce_attestation_certifi
 extract_attestation_details = certificates.extract_attestation_details
 
 # Trust-path, AAGUID, and certificate validity helpers.
-_certificate_datetime = trust_runtime._certificate_datetime
-_coerce_bytes = trust_runtime._coerce_bytes
-_coerce_certificate_bytes = trust_runtime._coerce_certificate_bytes
-_collect_metadata_root_certificates = trust_runtime._collect_metadata_root_certificates
-_collect_trust_path_entries = trust_runtime._collect_trust_path_entries
-_describe_certificate_subject = trust_runtime._describe_certificate_subject
-_ensure_utc_datetime = trust_runtime._ensure_utc_datetime
-_extract_attestation_leaf_certificate = trust_runtime._extract_attestation_leaf_certificate
-_extract_certificate_aaguid = trust_runtime._extract_certificate_aaguid
-_find_metadata_entry_for_aaguid = trust_runtime._find_metadata_entry_for_aaguid
-_resolve_root_validity = trust_runtime._resolve_root_validity
+_certificate_datetime = trust._certificate_datetime
+_coerce_bytes = trust._coerce_bytes
+_coerce_certificate_bytes = trust._coerce_certificate_bytes
+_collect_metadata_root_certificates = trust._collect_metadata_root_certificates
+_collect_trust_path_entries = trust._collect_trust_path_entries
+_describe_certificate_subject = trust._describe_certificate_subject
+_ensure_utc_datetime = trust._ensure_utc_datetime
+_extract_attestation_leaf_certificate = trust._extract_attestation_leaf_certificate
+_extract_certificate_aaguid = trust._extract_certificate_aaguid
+_find_metadata_entry_for_aaguid = trust._find_metadata_entry_for_aaguid
+_resolve_root_validity = trust._resolve_root_validity
 
 # Trusted-CA allowlist helpers.
 _certificate_fingerprint = trust_ca_runtime._certificate_fingerprint

@@ -23,7 +23,7 @@ from fido2.webauthn import RegistrationResponse
 
 from .. import encoding
 from ..encoding import encode_base64
-from . import encoding_leaf, trust_runtime
+from . import encoding_leaf, trust
 from .runtime_state import EXTENSION_DISPLAY_METADATA
 
 _HASH_NORMALISE_PATTERN = re.compile(r"sha-?(\d{3})$", re.IGNORECASE)
@@ -449,7 +449,7 @@ def _build_certificate_summary(
             summary_lines.append("")
 
     def _isoformat(value: datetime) -> str:
-        return trust_runtime._ensure_utc_datetime(value).isoformat()
+        return trust._ensure_utc_datetime(value).isoformat()
 
     _append_line(f"Version: {version_number} ({version_hex})")
     _append_line(
@@ -682,8 +682,8 @@ def serialize_attestation_certificate(cert_bytes: bytes) -> Any:
     version_number = certificate.version.value + 1
     version_hex = f"0x{certificate.version.value:x}"
 
-    not_valid_before = trust_runtime._certificate_datetime(certificate, "not_valid_before")
-    not_valid_after = trust_runtime._certificate_datetime(certificate, "not_valid_after")
+    not_valid_before = trust._certificate_datetime(certificate, "not_valid_before")
+    not_valid_after = trust._certificate_datetime(certificate, "not_valid_after")
 
     extensions = []
     for ext in certificate.extensions:
@@ -793,7 +793,7 @@ def serialize_attestation_certificate(cert_bytes: bytes) -> Any:
     subject_common_names = _extract_common_names(certificate.subject)
 
     def _isoformat(value: datetime) -> str:
-        return trust_runtime._ensure_utc_datetime(value).isoformat()
+        return trust._ensure_utc_datetime(value).isoformat()
 
     return {
         "version": {

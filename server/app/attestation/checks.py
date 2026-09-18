@@ -22,7 +22,7 @@ from fido2.webauthn import (
 
 from .. import encoding, metadata
 from ..pqc import is_pqc_algorithm
-from . import classical_runtime, encoding_leaf, pqc_runtime, trust_runtime
+from . import classical_runtime, encoding_leaf, pqc_runtime, trust
 
 
 def _resolve_uv_required(
@@ -453,7 +453,7 @@ def _collect_attestation_trust_path(
         if trust_path_candidate:
             attestation_trust_path = list(trust_path_candidate)
     if not attestation_trust_path and isinstance(attestation_object.att_stmt, Mapping):
-        attestation_trust_path = trust_runtime._collect_trust_path_entries(
+        attestation_trust_path = trust._collect_trust_path_entries(
             attestation_object.att_stmt.get("x5c")
         )
     return attestation_trust_path
@@ -477,7 +477,7 @@ def _evaluate_root_validation(
 
     certificate_aaguid_bytes = b""
     if attestation_trust_path:
-        certificate_aaguid_bytes = trust_runtime._extract_certificate_aaguid(attestation_trust_path[0])
+        certificate_aaguid_bytes = trust._extract_certificate_aaguid(attestation_trust_path[0])
 
     metadata_entry = None
     metadata_lookup_source: str | None = None

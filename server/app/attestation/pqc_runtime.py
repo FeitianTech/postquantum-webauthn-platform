@@ -9,7 +9,7 @@ from fido2.cose import CoseKey, extract_certificate_public_key_info
 
 from .. import metadata
 from ..pqc import is_pqc_algorithm
-from . import pqc_constraints_runtime, trust_ca_runtime, trust_runtime
+from . import pqc_constraints_runtime, trust, trust_ca_runtime
 
 
 def _evaluate_mldsa_attestation_root(
@@ -41,12 +41,12 @@ def _evaluate_mldsa_attestation_root(
             "checks": checks,
         }
 
-    metadata_entry = trust_runtime._find_metadata_entry_for_aaguid(verifier, aaguid_bytes)
+    metadata_entry = trust._find_metadata_entry_for_aaguid(verifier, aaguid_bytes)
     if metadata_entry is None:
         checks["trusted_ca"] = False
         errors.append("pqc_metadata_entry_missing")
         return {
-            "root_valid": trust_runtime._resolve_root_validity(checks),
+            "root_valid": trust._resolve_root_validity(checks),
             "metadata_entry": None,
             "metadata_lookup_source": None,
             "warnings": warnings,
@@ -56,12 +56,12 @@ def _evaluate_mldsa_attestation_root(
 
     metadata_lookup_source = "aaguid"
 
-    roots = trust_runtime._collect_metadata_root_certificates(metadata_entry)
+    roots = trust._collect_metadata_root_certificates(metadata_entry)
     if not roots:
         errors.append("pqc_metadata_root_missing")
         checks["trusted_ca"] = False
         return {
-            "root_valid": trust_runtime._resolve_root_validity(checks),
+            "root_valid": trust._resolve_root_validity(checks),
             "metadata_entry": metadata_entry,
             "metadata_lookup_source": metadata_lookup_source,
             "warnings": warnings,
@@ -78,7 +78,7 @@ def _evaluate_mldsa_attestation_root(
         errors.append("attestation_root_not_trusted")
         checks["trusted_ca"] = False
         return {
-            "root_valid": trust_runtime._resolve_root_validity(checks),
+            "root_valid": trust._resolve_root_validity(checks),
             "metadata_entry": metadata_entry,
             "metadata_lookup_source": metadata_lookup_source,
             "warnings": warnings,
@@ -98,7 +98,7 @@ def _evaluate_mldsa_attestation_root(
     att_stmt = getattr(attestation_object, "att_stmt", None)
     trust_path: Sequence[bytes] = []
     if isinstance(att_stmt, Mapping):
-        trust_path = trust_runtime._collect_trust_path_entries(att_stmt.get("x5c"))
+        trust_path = trust._collect_trust_path_entries(att_stmt.get("x5c"))
 
     if not trust_path:
         checks["chain"] = False
@@ -125,7 +125,7 @@ def _evaluate_mldsa_attestation_root(
                     errors.append(err)
 
     return {
-        "root_valid": trust_runtime._resolve_root_validity(checks),
+        "root_valid": trust._resolve_root_validity(checks),
         "metadata_entry": metadata_entry,
         "metadata_lookup_source": metadata_lookup_source,
         "warnings": warnings,
@@ -154,7 +154,7 @@ def _attempt_pqc_attestation_signature_validation(
     if algorithm is None or not is_pqc_algorithm(algorithm):
         return outcome
 
-    signature = trust_runtime._coerce_bytes(statement.get("sig"))
+    signature = trust._coerce_bytes(statement.get("sig"))
     if not signature:
         outcome["attempted"] = True
         outcome["error"] = "pqc_attestation_missing_signature"
@@ -167,7 +167,7 @@ def _attempt_pqc_attestation_signature_validation(
         outcome["error"] = f"pqc_attestation_unsupported_algorithm: {exc}"
         return outcome
 
-    trust_path = trust_runtime._collect_trust_path_entries(statement.get("x5c"))
+    trust_path = trust._collect_trust_path_entries(statement.get("x5c"))
     attestation_type = AttestationType.SELF
 
     if trust_path:
@@ -180,7 +180,7 @@ def _attempt_pqc_attestation_signature_validation(
             outcome["error"] = f"pqc_attestation_public_key_error: {exc}"
             return outcome
 
-        public_key_bytes = trust_runtime._coerce_bytes(info.get("subject_public_key"))
+        public_key_bytes = trust._coerce_bytes(info.get("subject_public_key"))
         if public_key_bytes is None:
             outcome["attempted"] = True
             outcome["error"] = "pqc_attestation_public_key_missing"

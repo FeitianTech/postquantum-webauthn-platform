@@ -150,7 +150,7 @@ def test_find_metadata_entry_for_aaguid_handles_parse_and_lookup_failures(monkey
     assert attestation_module._find_metadata_entry_for_aaguid(_Verifier(), b"\x00" * 16) is None
 
 
-def test_check_pqc_certificate_constraints_reports_validity_basic_constraints_and_usage_errors(monkeypatch, trust_runtime, attestation_module):
+def test_check_pqc_certificate_constraints_reports_validity_basic_constraints_and_usage_errors(monkeypatch, trust, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     now = datetime.now(timezone.utc)
@@ -172,7 +172,7 @@ def test_check_pqc_certificate_constraints_reports_validity_basic_constraints_an
 
     # Out-of-validity branch.
     monkeypatch.setattr(
-        trust_runtime,
+        trust,
         "_certificate_datetime",
         lambda _cert, attr: now + timedelta(days=1) if attr == "not_valid_before" else now + timedelta(days=2),
     )
@@ -186,7 +186,7 @@ def test_check_pqc_certificate_constraints_reports_validity_basic_constraints_an
 
     # CA required branch.
     monkeypatch.setattr(
-        trust_runtime,
+        trust,
         "_certificate_datetime",
         lambda _cert, _attr: now,
     )
@@ -263,12 +263,12 @@ def test_check_pqc_certificate_constraints_reports_validity_basic_constraints_an
     )
 
 
-def test_evaluate_mldsa_attestation_root_covers_untrusted_root_and_fido_status_paths(monkeypatch, trust_runtime, trust_ca_runtime, metadata_module, attestation_module):
+def test_evaluate_mldsa_attestation_root_covers_untrusted_root_and_fido_status_paths(monkeypatch, trust, trust_ca_runtime, metadata_module, attestation_module):
     attestation_module = pytest.importorskip("server.app.attestation")
 
     metadata_entry = SimpleNamespace(metadata_statement=SimpleNamespace())
-    monkeypatch.setattr(trust_runtime, "_find_metadata_entry_for_aaguid", lambda *_args, **_kwargs: metadata_entry)
-    monkeypatch.setattr(trust_runtime, "_collect_metadata_root_certificates", lambda _entry: [b"root"])
+    monkeypatch.setattr(trust, "_find_metadata_entry_for_aaguid", lambda *_args, **_kwargs: metadata_entry)
+    monkeypatch.setattr(trust, "_collect_metadata_root_certificates", lambda _entry: [b"root"])
     monkeypatch.setattr(trust_ca_runtime, "_is_trusted_ca_certificate", lambda *_args, **_kwargs: False)
 
     untrusted = attestation_module._evaluate_mldsa_attestation_root(
@@ -281,7 +281,7 @@ def test_evaluate_mldsa_attestation_root_covers_untrusted_root_and_fido_status_p
 
     monkeypatch.setattr(trust_ca_runtime, "_is_trusted_ca_certificate", lambda *_args, **_kwargs: True)
     monkeypatch.setattr(metadata_module, "metadata_entry_trust_anchor_status", lambda _entry: False)
-    monkeypatch.setattr(trust_runtime, "_collect_trust_path_entries", lambda _x5c: [])
+    monkeypatch.setattr(trust, "_collect_trust_path_entries", lambda _x5c: [])
 
     fido_false = attestation_module._evaluate_mldsa_attestation_root(
         SimpleNamespace(att_stmt={"x5c": [b"leaf"]}),
