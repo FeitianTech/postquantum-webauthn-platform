@@ -1,15 +1,15 @@
 """Utilities for decoding WebAuthn-related payloads for the demo decoder.
 
-The implementation lives in :mod:`server.app.decoder.decode_parts`; this module is
-the public face of it and re-exports the pieces callers use. Each fragment
+The implementation lives in this package's submodules; this module is the public
+face of it and re-exports the pieces callers use. Each fragment
 resolves its own names through its own imports, so a name here is the same
 object the fragment defines -- patching one of these re-exports changes what
 callers of *this module* see, not what the fragments call.
 """
 from __future__ import annotations
 
-from .. import attestation
-from .decode_parts import (
+from ... import attestation
+from . import (
     binary_extract,
     cbor_lenient,
     cbor_runtime,

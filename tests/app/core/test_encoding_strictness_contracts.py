@@ -23,7 +23,7 @@ PLAIN_TEXT = "Hello, this is plain text!"
 @pytest.fixture()
 def pipeline_runtime():
     pytest.importorskip("server.app.app")
-    return pytest.importorskip("server.app.decoder.decode_parts.pipeline_runtime")
+    return pytest.importorskip("server.app.decoder.decode.pipeline_runtime")
 
 
 @pytest.fixture()
