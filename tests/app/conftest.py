@@ -39,7 +39,7 @@ def _advanced_fragment(name: str):
 
 def _simple_fragment(name: str):
     _app()
-    return pytest.importorskip(f"server.app.routes.simple_parts.{name}")
+    return pytest.importorskip(f"server.app.routes.simple.{name}")
 
 
 def _module(path: str):
@@ -162,7 +162,7 @@ def advanced_summary_helpers():
     return _advanced_fragment("summary_helpers_impl")
 
 
-# The simple_parts fragments.
+# The simple submodules.
 
 
 @pytest.fixture
