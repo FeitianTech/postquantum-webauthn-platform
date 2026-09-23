@@ -73,5 +73,9 @@ images:
 
 options:
   logging: CLOUD_LOGGING_ONLY
+  # The production trigger defines substitutions (_AR_HOSTNAME, _SERVICE_NAME, ...)
+  # that this file does not use. Cloud Build rejects a build with unused
+  # substitutions unless they are allowed loosely.
+  substitutionOption: ALLOW_LOOSE
 
 timeout: 1500s
