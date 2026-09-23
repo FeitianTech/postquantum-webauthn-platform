@@ -12,7 +12,7 @@ from collections.abc import Mapping
 from typing import Any
 from urllib.parse import urlsplit
 
-from flask import has_request_context, request
+from flask import current_app, has_request_context, request
 
 from .. import encoding
 from .application import app
@@ -75,9 +75,15 @@ app.config.setdefault(
 
 
 def get_allowed_origins() -> tuple[str, ...] | None:
-    """Return the configured exact-origin allowlist, or ``None`` when unset."""
+    """Return the current app's exact-origin allowlist, or ``None`` when unset."""
 
-    configured = app.config.get("FIDO_SERVER_ALLOWED_ORIGINS")
+    return allowed_origins_from_config(current_app.config)
+
+
+def allowed_origins_from_config(config: Mapping[str, Any]) -> tuple[str, ...] | None:
+    """Return the exact-origin allowlist configured in ``config``, or ``None``."""
+
+    configured = config.get("FIDO_SERVER_ALLOWED_ORIGINS")
     if isinstance(configured, str):
         return _parse_allowed_origins(configured)
     if isinstance(configured, (list, tuple, set, frozenset)):

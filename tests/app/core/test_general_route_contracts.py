@@ -471,9 +471,10 @@ def test_general_helper_bootstrap_and_empty_snapshot_branches(monkeypatch):
 
     load_calls = []
     monkeypatch.setattr(general_module, "_load_cached_metadata_snapshot_if_available", lambda: load_calls.append("load"), raising=False)
-    monkeypatch.setattr(general_module.app, "debug", True, raising=False)
+    monkeypatch.setattr(config_module.app, "debug", True, raising=False)
     monkeypatch.delenv("WERKZEUG_RUN_MAIN", raising=False)
-    general_module.ensure_metadata_bootstrapped(skip_if_reloader_parent=True)
+    with config_module.app.app_context():
+        general_module.ensure_metadata_bootstrapped(skip_if_reloader_parent=True)
     assert load_calls == []
 
     today = general_module._bootstrap_marker_for_today()
@@ -488,7 +489,7 @@ def test_general_helper_bootstrap_and_empty_snapshot_branches(monkeypatch):
         },
         raising=False,
     )
-    monkeypatch.setattr(general_module.app, "debug", False, raising=False)
+    monkeypatch.setattr(config_module.app, "debug", False, raising=False)
     load_calls.clear()
     monkeypatch.setattr(general_module, "_load_cached_metadata_snapshot_if_available", lambda: load_calls.append("load"), raising=False)
     monkeypatch.setattr(

@@ -80,6 +80,7 @@ def test_collect_metadata_root_certificates_supports_object_and_mapping_shapes(a
 
 def test_is_trusted_ca_certificate_uses_fingerprint_and_subject_allowlists(monkeypatch, attestation_module):
     attestation_module = pytest.importorskip("server.app.webauthn.attestation")
+    app = pytest.importorskip("server.app.config").app
 
     cert_der = _self_signed_cert_der()
     certificate = x509.load_der_x509_certificate(cert_der)
@@ -87,35 +88,38 @@ def test_is_trusted_ca_certificate_uses_fingerprint_and_subject_allowlists(monke
     fingerprint = hashlib.sha256(cert_der).hexdigest().upper()
 
     monkeypatch.setitem(
-        attestation_module.app.config,
+        app.config,
         "TRUSTED_ATTESTATION_CA_FINGERPRINTS",
         {fingerprint},
     )
     monkeypatch.setitem(
-        attestation_module.app.config,
+        app.config,
         "TRUSTED_ATTESTATION_CA_SUBJECTS",
         set(),
     )
-    assert attestation_module._is_trusted_ca_certificate(cert_der) is True
+    with app.app_context():
+        assert attestation_module._is_trusted_ca_certificate(cert_der) is True
 
     monkeypatch.setitem(
-        attestation_module.app.config,
+        app.config,
         "TRUSTED_ATTESTATION_CA_FINGERPRINTS",
         {"NOT-A-MATCH"},
     )
     monkeypatch.setitem(
-        attestation_module.app.config,
+        app.config,
         "TRUSTED_ATTESTATION_CA_SUBJECTS",
         {subject},
     )
-    assert attestation_module._is_trusted_ca_certificate(cert_der) is True
+    with app.app_context():
+        assert attestation_module._is_trusted_ca_certificate(cert_der) is True
 
     monkeypatch.setitem(
-        attestation_module.app.config,
+        app.config,
         "TRUSTED_ATTESTATION_CA_SUBJECTS",
         {"CN=other"},
     )
-    assert attestation_module._is_trusted_ca_certificate(cert_der) is False
+    with app.app_context():
+        assert attestation_module._is_trusted_ca_certificate(cert_der) is False
 
 
 def test_resolve_root_validity_handles_partial_success_and_failures(attestation_module):

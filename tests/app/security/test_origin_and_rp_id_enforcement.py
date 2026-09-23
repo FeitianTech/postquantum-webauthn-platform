@@ -148,7 +148,8 @@ def test_allowlist_permits_a_listed_origin(config_module, simple_module, simple_
 def test_unconfigured_server_still_works_for_local_development(config_module, simple_module, simple_storage):
     """With nothing configured the dev fallback keeps the demo usable."""
 
-    assert config_module.get_allowed_origins() is None
+    with config_module.app.app_context():
+        assert config_module.get_allowed_origins() is None
 
     client = config_module.app.test_client()
     response = _register(client)
@@ -178,25 +179,28 @@ def test_unconfigured_server_still_works_for_local_development(config_module, si
 )
 def test_is_origin_allowed_is_an_exact_match(config_module, allowed_origins, candidate, expected):
     allowed_origins("https://app.example")
-    assert config_module.is_origin_allowed(candidate) is expected
+    with config_module.app.app_context():
+        assert config_module.is_origin_allowed(candidate) is expected
 
 
 def test_is_origin_allowed_permits_everything_when_unconfigured(config_module, allowed_origins):
     allowed_origins(None)
-    assert config_module.is_origin_allowed("https://anything.example") is True
+    with config_module.app.app_context():
+        assert config_module.is_origin_allowed("https://anything.example") is True
 
 
 def test_determine_expected_origin_never_echoes_an_unlisted_candidate(config_module, allowed_origins):
     allowed_origins("https://app.example, https://second.example")
 
-    # A listed candidate is honoured...
-    assert config_module.determine_expected_origin("https://second.example") == (
-        "https://second.example"
-    )
-    # ...but an unlisted one falls back to the allowlist, never to itself.
-    assert config_module.determine_expected_origin("https://evil.example") == (
-        "https://app.example"
-    )
+    with config_module.app.app_context():
+        # A listed candidate is honoured...
+        assert config_module.determine_expected_origin("https://second.example") == (
+            "https://second.example"
+        )
+        # ...but an unlisted one falls back to the allowlist, never to itself.
+        assert config_module.determine_expected_origin("https://evil.example") == (
+            "https://app.example"
+        )
 
 
 def test_development_fallback_warning_is_emitted_once(config_module, monkeypatch):
@@ -212,11 +216,11 @@ def test_development_fallback_warning_is_emitted_once(config_module, monkeypatch
     monkeypatch.setitem(config_module.app.config, "FIDO_SERVER_RP_ID", None)
     monkeypatch.setitem(config_module.app.config, "FIDO_SERVER_ALLOWED_ORIGINS", None)
 
-    assert config_module.warn_if_development_rp_configuration() is True
+    assert config_module.warn_if_development_rp_configuration(config_module.app) is True
     assert len(warnings) == 1
     assert "DEVELOPMENT-ONLY" in warnings[0]
     assert "FIDO_SERVER_ALLOWED_ORIGINS" in warnings[0]
 
     # Emitted once, not on every call.
-    assert config_module.warn_if_development_rp_configuration() is False
+    assert config_module.warn_if_development_rp_configuration(config_module.app) is False
     assert len(warnings) == 1

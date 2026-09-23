@@ -58,11 +58,13 @@ def test_datetime_coercion_bytes_and_leaf_certificate_helpers(attestation_module
 def test_trusted_ca_config_and_fingerprint_helpers(monkeypatch, attestation_module):
     attestation_module = pytest.importorskip("server.app.webauthn.attestation")
 
-    monkeypatch.setitem(attestation_module.app.config, "TRUSTED_ATTESTATION_CA_SUBJECTS", ["CN=Root"])
-    monkeypatch.setitem(attestation_module.app.config, "TRUSTED_ATTESTATION_CA_FINGERPRINTS", ("abc", "def"))
+    app = pytest.importorskip("server.app.config").app
+    monkeypatch.setitem(app.config, "TRUSTED_ATTESTATION_CA_SUBJECTS", ["CN=Root"])
+    monkeypatch.setitem(app.config, "TRUSTED_ATTESTATION_CA_FINGERPRINTS", ("abc", "def"))
 
-    assert attestation_module._trusted_ca_subjects() == {"CN=Root"}
-    assert attestation_module._trusted_ca_fingerprints() == {"ABC", "DEF"}
+    with app.app_context():
+        assert attestation_module._trusted_ca_subjects() == {"CN=Root"}
+        assert attestation_module._trusted_ca_fingerprints() == {"ABC", "DEF"}
 
     fingerprint = attestation_module._certificate_fingerprint(b"cert")
     assert isinstance(fingerprint, str)

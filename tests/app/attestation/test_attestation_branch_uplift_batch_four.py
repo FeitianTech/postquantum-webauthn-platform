@@ -102,20 +102,22 @@ def test_collect_metadata_roots_handles_singleton_and_missing_candidates(attesta
 
 def test_trusted_ca_helpers_cover_list_configs_and_subject_parse_failure(monkeypatch, trust, attestation_module):
     attestation_module = pytest.importorskip("server.app.webauthn.attestation")
+    app = pytest.importorskip("server.app.config").app
 
     monkeypatch.setitem(
-        attestation_module.app.config,
+        app.config,
         "TRUSTED_ATTESTATION_CA_SUBJECTS",
         ["CN=Root A", "CN=Root B"],
     )
     monkeypatch.setitem(
-        attestation_module.app.config,
+        app.config,
         "TRUSTED_ATTESTATION_CA_FINGERPRINTS",
         ["aa", "bb"],
     )
 
-    assert attestation_module._trusted_ca_subjects() == {"CN=Root A", "CN=Root B"}
-    assert attestation_module._trusted_ca_fingerprints() == {"AA", "BB"}
+    with app.app_context():
+        assert attestation_module._trusted_ca_subjects() == {"CN=Root A", "CN=Root B"}
+        assert attestation_module._trusted_ca_fingerprints() == {"AA", "BB"}
 
     monkeypatch.setattr(
         trust,
@@ -128,7 +130,8 @@ def test_trusted_ca_helpers_cover_list_configs_and_subject_parse_failure(monkeyp
         lambda _der: (_ for _ in ()).throw(ValueError("cannot parse subject")),
     )
 
-    assert attestation_module._is_trusted_ca_certificate(b"cert", allow_subject_parsing=True) is False
+    with app.app_context():
+        assert attestation_module._is_trusted_ca_certificate(b"cert", allow_subject_parsing=True) is False
 
 
 def test_find_metadata_entry_for_aaguid_handles_parse_and_lookup_failures(monkeypatch, attestation_module):

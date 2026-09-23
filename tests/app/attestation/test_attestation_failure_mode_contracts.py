@@ -274,13 +274,15 @@ def test_perform_attestation_checks_flags_algorithm_not_in_metadata_when_root_is
     monkeypatch.setattr(Attestation, "for_type", lambda _fmt: _PassingAttestation)
     monkeypatch.setattr(metadata_module, "get_mds_verifier", lambda: _Verifier())
 
-    result = _perform_checks(
-        attestation_module,
-        response={"raw": "value"},
-        state={"challenge": _b64url(challenge), "user_verification": "required"},
-        public_key_options={"pubKeyCredParams": [{"alg": -7}]},
-        rp_id=rp_id,
-    )
+    # The trusted-CA allowlist is read from the current app.
+    with pytest.importorskip("server.app.config").app.app_context():
+        result = _perform_checks(
+            attestation_module,
+            response={"raw": "value"},
+            state={"challenge": _b64url(challenge), "user_verification": "required"},
+            public_key_options={"pubKeyCredParams": [{"alg": -7}]},
+            rp_id=rp_id,
+        )
 
     assert result["signature_valid"] is True
     assert result["root_valid"] is True

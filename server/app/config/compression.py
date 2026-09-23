@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import gzip
 
-from flask import Flask, has_request_context, request
+from flask import Flask, current_app, has_request_context, request
 
 from .application import app
 
@@ -65,7 +65,7 @@ def maybe_compress_response(response):
     except Exception:  # pragma: no cover - depends on response type
         return response
 
-    min_size = app.config.get("RESPONSE_COMPRESSION_MIN_SIZE", _DEFAULT_COMPRESSION_MIN_SIZE)
+    min_size = current_app.config.get("RESPONSE_COMPRESSION_MIN_SIZE", _DEFAULT_COMPRESSION_MIN_SIZE)
     if not payload or len(payload) < int(min_size):
         return response
 

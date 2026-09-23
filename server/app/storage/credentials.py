@@ -27,7 +27,8 @@ from typing import Any
 from fido2.webauthn import AttestedCredentialData, AuthenticatorData
 
 from .. import encoding
-from ..config import app, basepath
+from ..config import basepath
+from ..config.paths import INSTANCE_ROOT
 from ..env_flags import parse_env_flag
 from .cloud import (
     build_blob_name,
@@ -76,7 +77,7 @@ _USER_CREDENTIAL_SUBDIR = os.environ.get(
 # deployments that mount a volume somewhere else.
 _LOCAL_CREDENTIAL_BASE = os.environ.get(
     "FIDO_SERVER_CREDENTIAL_DIR",
-    os.path.join(app.instance_path, "session-credentials"),
+    os.path.join(INSTANCE_ROOT, "session-credentials"),
 )
 # Where the store used to live, inside the source tree. Still read so an
 # existing deployment does not lose its credentials on upgrade; never written.

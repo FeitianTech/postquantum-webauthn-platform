@@ -8,7 +8,6 @@ callers of *this module* see, not what the fragments call.
 """
 from __future__ import annotations
 
-from ... import config
 from . import (
     aaguid,
     certificates,
@@ -35,9 +34,6 @@ __all__ = [
     "serialize_attestation_certificate",
     "summarize_authenticator_extensions",
 ]
-
-# The Flask application, reached by the trusted-CA helpers through ``config``.
-app = config.app
 
 # Constants shared with the fragments.
 AAGUID_EXTENSION_OID = constants.AAGUID_EXTENSION_OID

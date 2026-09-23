@@ -14,12 +14,18 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-from flask import after_this_request, g, has_request_context, request, session
+from flask import (
+    after_this_request,
+    current_app,
+    g,
+    has_request_context,
+    request,
+    session,
+)
 from itsdangerous import BadSignature, URLSafeTimedSerializer
 
 from fido2.mds3 import MetadataBlobPayloadEntry
 
-from ...config import app
 from ...env_flags import parse_env_flag
 from ...storage import session_metadata
 from . import entries
@@ -212,7 +218,7 @@ def _normalise_session_identifier(value: Any) -> str | None:
     return trimmed
 
 
-# Salt for the metadata-session recovery cookie; the key is ``app.secret_key``.
+# Salt for the metadata-session recovery cookie; the key is the app's ``secret_key``.
 
 
 def _schedule_session_cookie(identifier: str) -> None:
@@ -236,7 +242,7 @@ def _schedule_session_cookie(identifier: str) -> None:
     # lets anyone who can set a cookie point themselves at another visitor's
     # namespace, so the value that leaves the server is signed with the
     # application secret and the signature is re-checked on the way back in.
-    secret = app.secret_key
+    secret = current_app.secret_key
     if not secret:
         return
 
@@ -283,7 +289,7 @@ def _get_metadata_session_id(*, create: bool = False) -> str | None:
     # and credential artifacts.
     cookie_identifier = None
     raw_cookie = request.cookies.get(_SESSION_METADATA_COOKIE_NAME)
-    secret = app.secret_key
+    secret = current_app.secret_key
     if isinstance(raw_cookie, str) and raw_cookie and secret:
         try:
             unsealed = URLSafeTimedSerializer(
