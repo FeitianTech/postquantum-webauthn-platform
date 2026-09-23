@@ -235,7 +235,7 @@ def test_summary_and_extension_helpers_for_rendering_paths(monkeypatch, binary, 
     assert decode_module._build_authenticator_data_lines(auth_bytes, None)
     assert decode_module._parse_attested_data(auth_bytes)
 
-    assert decode_module._resolve_cose_algorithm({3: -7}) == "ES256"
+    assert decode_module._resolve_cose_algorithm({3: -7}) == "ES256 (ECDSA)"
     converted_cose = decode_module._convert_cose_key_for_display({-2: base64.urlsafe_b64encode(b"abc").decode("ascii")})
     assert converted_cose[-2] == "616263"
 

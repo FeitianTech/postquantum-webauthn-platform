@@ -13,10 +13,10 @@ def _auth_header(flags: int = 0x01, sign_count: int = 1) -> bytes:
 def test_late_cose_and_base64_helpers_cover_fallback_and_conversion_branches():
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
-    assert decode_module._resolve_cose_algorithm({"3": "-257"}) == "RS256"
+    assert decode_module._resolve_cose_algorithm({"3": "-257"}) == "RS256 (RSA)"
     assert decode_module._resolve_cose_algorithm({"alg": "custom-alg"}) == "custom-alg"
-    assert decode_module._resolve_cose_algorithm({}, {"publicKeyAlgorithm": -259}) == "RS512"
-    assert decode_module._resolve_cose_algorithm({}, -999) == "-999"
+    assert decode_module._resolve_cose_algorithm({}, {"publicKeyAlgorithm": -259}) == "RS512 (RSA)"
+    assert decode_module._resolve_cose_algorithm({}, -999) == "COSE alg -999"
     assert decode_module._resolve_cose_algorithm({}, None) is None
 
     converted = decode_module._convert_cose_key_for_display([
@@ -108,7 +108,7 @@ def test_parse_and_collect_attested_info_cover_truncated_and_fallback_paths():
     )
     assert info["credential_id"] == "beef"
     assert "0002" in info["credential_lines"]
-    assert info["algorithm"] == "ES256"
+    assert info["algorithm"] == "ES256 (ECDSA)"
 
     info_from_parsed = decode_module._collect_attested_info(
         {"publicKey": {3: -7}},

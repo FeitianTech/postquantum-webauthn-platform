@@ -121,7 +121,7 @@ def test_collect_attested_info_fallback_paths_without_auth_bytes():
     )
 
     assert info["credential_id"] == "cafe"
-    assert info["algorithm"] == "ES256"
+    assert info["algorithm"] == "ES256 (ECDSA)"
     assert "00112233445566778899aabbccddeeff" in info["credential_lines"]
 
     assert decode_module._collect_attested_info({}, None) == {}

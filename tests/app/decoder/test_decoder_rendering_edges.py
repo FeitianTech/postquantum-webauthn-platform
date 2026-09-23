@@ -100,7 +100,7 @@ def test_collect_attested_info_uses_fallback_details_without_raw_auth_bytes():
     info = decode_module._collect_attested_info(attested, None, fallback_alg=-7)
 
     assert info["credential_id"] == "10203040"
-    assert info["algorithm"] == "ES256"
+    assert info["algorithm"] == "ES256 (ECDSA)"
     assert any("010203" in line for line in info["public_key_lines"])
 
 
@@ -116,7 +116,7 @@ def test_build_authenticator_data_payload_falls_back_to_raw_bytes_when_details_a
     assert payload["counter"] == 7
     assert payload["credential"]["credentialIdLength"] == "0004"
     assert payload["credential"]["credentialId"] == "10203040"
-    assert payload["credential"]["publicKey"]["alg"] == "ES256"
+    assert payload["credential"]["publicKey"]["alg"] == "ES256 (ECDSA)"
 
 
 def test_extend_with_attestation_section_renders_certificate_multiline_summary():
