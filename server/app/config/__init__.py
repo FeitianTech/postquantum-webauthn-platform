@@ -26,7 +26,7 @@ from ..mds_trust import (
     FIDO_METADATA_TRUST_ROOT_PEM,
     MDS_TLS_ADDITIONAL_TRUST_ANCHORS_PEM,
 )
-from . import paths
+from . import application, paths
 
 # Enable webauthn-json mapping if available (compatible across fido2 versions)
 try:  # pragma: no cover - compatibility shim
@@ -42,18 +42,7 @@ _FRONTEND_STATIC_ROOT = paths._FRONTEND_STATIC_ROOT
 _SERVER_RUNTIME_ROOT = paths._SERVER_RUNTIME_ROOT
 basepath = paths.basepath
 
-_existing_app = globals().get("app")
-if isinstance(_existing_app, Flask):
-    app = _existing_app
-else:
-    # Rooted at server/app, as when this was config.py; the name is unchanged.
-    app = Flask(
-        __name__,
-        root_path=basepath,
-        static_folder=str(_FRONTEND_STATIC_ROOT),
-        static_url_path="",
-        template_folder=str(paths._FRONTEND_TEMPLATE_ROOT),
-    )
+app = application.app
 
 
 def _resolve_secret_key() -> bytes:
