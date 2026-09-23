@@ -7,26 +7,34 @@ defines -- patching one of these re-exports changes what callers of *this module
 see (the routes reach ``create_fido_server`` and ``determine_rp_id`` through it),
 not what the submodules call.
 
-Importing the package configures the one Flask ``app``:
+Importing the package configures nothing and writes nothing.
+``server.app.factory.create_app()`` builds an app from these submodules: the
+``config_from_env()`` ones supply settings, the ``init_app()`` ones configure the
+app, in the order ``factory.INIT_STEPS`` fixes.
 
-- ``paths``: the project, frontend and runtime locations, and ``basepath``.
-- ``application``: the Flask singleton itself.
-- ``session_secret``: the session secret. Resolved on import, and may write
-  ``<instance_path>/session-secret.key``.
-- ``compression``: the gzip ``after_request`` handler.
+- ``paths``: the project, frontend, runtime and instance locations, and ``basepath``.
+- ``application``: ``build_app()``, the bare Flask object.
+- ``logs``: attaches the handler every module logger reaches stderr through.
+- ``session_secret``: the session secret. May write
+  ``<instance_path>/session-secret.key`` when an app is built.
 - ``proxy``: ``ProxyFix`` when the forwarded headers are trusted (never
   ``X-Forwarded-Host``).
-- ``session_cookie``: the session cookie's flags and lifetime.
+- ``compression``: the gzip ``after_request`` handler.
 - ``security_headers``: CSP, Permissions-Policy, HSTS and friends. Its
   ``after_request`` handler is registered after ``compression``'s, and Flask runs
   them in reverse, so the headers are set before the body is compressed.
+- ``session_cookie``: the session cookie's flags and lifetime.
 - ``origins``: the exact-origin allowlist and the origin helpers.
 - ``attestation_trust``: operator-trusted attestation CAs.
 - ``mds``: where the MDS snapshot and the session metadata live.
 - ``relying_party``: the RP ID and name, and ``create_fido_server``.
 
+``app`` is still an attribute of this package, for callers written against the
+old import-time singleton: reading it returns the application ``server.app.app``
+builds (see ``__getattr__``). Nothing in ``server/`` reads it.
+
 The MDS trust anchors live in ``server.app.mds_trust``, outside this package, so
-the snapshot updater can import them without building the app.
+the snapshot updater can import them without anything from Flask.
 """
 from __future__ import annotations
 
@@ -35,21 +43,14 @@ from ..mds_trust import (
     FIDO_METADATA_TRUST_ROOT_CERT,
 )
 from . import (
-    application,
-    attestation_trust,
-    compression,
     mds,
     origins,
     paths,
-    proxy,
     relying_party,
     security_headers,
-    session_cookie,
-    session_secret,
 )
 
 __all__ = [
-    "app",
     "basepath",
     "build_rp_entity",
     "set_security_headers",
@@ -71,18 +72,6 @@ __all__ = [
     "SESSION_METADATA_DIR",
     "FIDO_METADATA_TRUST_ROOT_CERT",
 ]
-
-# The Flask application.
-app = application.app
-
-# Imported for what importing them does to ``app``; nothing is re-exported.
-_APP_CONFIGURING_MODULES = (
-    attestation_trust,
-    compression,
-    proxy,
-    session_cookie,
-    session_secret,
-)
 
 # Filesystem locations. The three private roots are imported by static_assets,
 # mds_provisioning and credential_artifacts.
@@ -118,3 +107,18 @@ set_security_headers = security_headers.set_security_headers
 
 # Kept for its importers; the submodules call ``parse_env_flag`` directly.
 _env_flag = parse_env_flag
+
+
+def __getattr__(name: str):
+    """Resolve ``config.app`` to the application ``server.app.app`` builds.
+
+    Looked up on each read, not cached here, so the entry point stays the one
+    owner of that app. Reading it the first time imports ``server.app.app``,
+    which runs ``create_app()``.
+    """
+
+    if name == "app":
+        from ..app import app
+
+        return app
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

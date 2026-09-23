@@ -1,7 +1,7 @@
 """The exact-origin allowlist (``FIDO_SERVER_ALLOWED_ORIGINS``) and origin helpers.
 
-The allowlist is parsed into ``app.config`` when this module is imported. With no
-allowlist every origin is accepted, which is the development-only fallback.
+``create_app()`` parses the allowlist into ``app.config``. With no allowlist every
+origin is accepted, which is the development-only fallback.
 """
 from __future__ import annotations
 
@@ -15,7 +15,6 @@ from urllib.parse import urlsplit
 from flask import current_app, has_request_context, request
 
 from .. import encoding
-from .application import app
 
 
 def _parse_allowed_origins(raw_value: str | None) -> tuple[str, ...] | None:
@@ -68,10 +67,14 @@ def normalise_origin(raw_origin: str | None) -> str | None:
     return f"{scheme}://{hostname}:{port}"
 
 
-app.config.setdefault(
-    "FIDO_SERVER_ALLOWED_ORIGINS",
-    _parse_allowed_origins(os.environ.get("FIDO_SERVER_ALLOWED_ORIGINS")),
-)
+def config_from_env() -> dict[str, Any]:
+    """The allowlist setting ``create_app()`` puts into ``app.config``."""
+
+    return {
+        "FIDO_SERVER_ALLOWED_ORIGINS": _parse_allowed_origins(
+            os.environ.get("FIDO_SERVER_ALLOWED_ORIGINS")
+        ),
+    }
 
 
 def get_allowed_origins() -> tuple[str, ...] | None:

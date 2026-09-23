@@ -1,15 +1,13 @@
 """Gzip for dynamic responses the client accepts it for.
 
-Registered as an ``after_request`` handler when imported. Static assets are
-precompressed at build time instead.
+``create_app()`` registers it as an ``after_request`` handler with ``init_app``.
+Static assets are precompressed at build time instead.
 """
 from __future__ import annotations
 
 import gzip
 
 from flask import Flask, current_app, has_request_context, request
-
-from .application import app
 
 _COMPRESSIBLE_MIMETYPES = {
     "application/javascript",
@@ -100,4 +98,7 @@ def _register_after_request_once(flask_app: Flask, handler) -> None:
     flask_app.after_request(handler)
 
 
-_register_after_request_once(app, maybe_compress_response)
+def init_app(app: Flask) -> None:
+    """Register ``maybe_compress_response`` as an ``after_request`` handler."""
+
+    _register_after_request_once(app, maybe_compress_response)

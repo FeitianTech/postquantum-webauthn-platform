@@ -1,12 +1,12 @@
-"""The Flask session cookie's flags and lifetime, applied to ``app.config`` on import."""
+"""The Flask session cookie's flags and lifetime, which ``create_app()`` applies."""
 from __future__ import annotations
 
 import os
 from datetime import timedelta
+from typing import Any
 
 from ..env_flags import parse_env_flag
 from . import proxy
-from .application import app
 
 # Session state here is short-lived ceremony state (WebAuthn challenges and the
 # metadata-session pointer), not a signed-in user session, so the 31-day Flask
@@ -42,11 +42,17 @@ def _resolve_session_cookie_secure() -> bool:
     return proxy._running_behind_managed_proxy()
 
 
-app.config.update(
-    SESSION_COOKIE_HTTPONLY=True,
-    SESSION_COOKIE_SECURE=_resolve_session_cookie_secure(),
-    # WebAuthn ceremonies are same-site fetches from our own page, so "Lax" costs
-    # nothing and keeps the cookie off cross-site POSTs.
-    SESSION_COOKIE_SAMESITE="Lax",
-    PERMANENT_SESSION_LIFETIME=timedelta(seconds=_resolve_session_lifetime_seconds()),
-)
+def config_from_env() -> dict[str, Any]:
+    """The cookie settings ``create_app()`` puts into ``app.config``.
+
+    They replace Flask's own defaults for the same keys.
+    """
+
+    return {
+        "SESSION_COOKIE_HTTPONLY": True,
+        "SESSION_COOKIE_SECURE": _resolve_session_cookie_secure(),
+        # WebAuthn ceremonies are same-site fetches from our own page, so "Lax"
+        # costs nothing and keeps the cookie off cross-site POSTs.
+        "SESSION_COOKIE_SAMESITE": "Lax",
+        "PERMANENT_SESSION_LIFETIME": timedelta(seconds=_resolve_session_lifetime_seconds()),
+    }

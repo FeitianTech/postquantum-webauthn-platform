@@ -1,9 +1,10 @@
 """The relying party: its ID and name, and the ``Fido2Server`` bound to them.
 
-Importing this switches fido2's WebAuthn data classes to their JSON mapping, puts
-the RP name/ID defaults into ``app.config``, and warns once when neither an RP ID nor
-an origin allowlist is configured. ``create_fido_server`` builds a ``Fido2Server``
-per request.
+Importing this switches fido2's WebAuthn data classes to their JSON mapping -- a
+process-wide switch that can only be set once. ``create_app()`` puts the RP
+name/ID defaults into ``app.config`` and, through ``init_app``, warns once when
+neither an RP ID nor an origin allowlist is configured. ``create_fido_server``
+builds a ``Fido2Server`` per request.
 """
 from __future__ import annotations
 
@@ -11,6 +12,7 @@ import ipaddress
 import logging
 import os
 from collections.abc import Mapping
+from typing import Any
 from urllib.parse import urlsplit
 
 from flask import Flask, current_app, has_request_context, request
@@ -20,7 +22,6 @@ from fido2.server import Fido2Server
 from fido2.webauthn import PublicKeyCredentialRpEntity
 
 from . import origins
-from .application import app
 
 logger = logging.getLogger(__name__)
 
@@ -33,10 +34,15 @@ except Exception:  # pragma: no cover - compatibility shim
     except Exception:  # pragma: no cover - compatibility shim
         pass
 
-_DEFAULT_RP_NAME = os.environ.get("FIDO_SERVER_RP_NAME", "Demo server")
-_DEFAULT_RP_ID = os.environ.get("FIDO_SERVER_RP_ID")
-app.config.setdefault("FIDO_SERVER_RP_NAME", _DEFAULT_RP_NAME)
-app.config.setdefault("FIDO_SERVER_RP_ID", _DEFAULT_RP_ID)
+
+
+def config_from_env() -> dict[str, Any]:
+    """The RP settings ``create_app()`` puts into ``app.config``."""
+
+    return {
+        "FIDO_SERVER_RP_NAME": os.environ.get("FIDO_SERVER_RP_NAME", "Demo server"),
+        "FIDO_SERVER_RP_ID": os.environ.get("FIDO_SERVER_RP_ID"),
+    }
 
 
 _RP_CONFIGURATION_WARNING_EMITTED = False
@@ -77,7 +83,10 @@ def warn_if_development_rp_configuration(flask_app: Flask) -> bool:
     return True
 
 
-warn_if_development_rp_configuration(app)
+def init_app(app: Flask) -> None:
+    """Warn if ``app`` falls back to the development-only RP configuration."""
+
+    warn_if_development_rp_configuration(app)
 
 
 def determine_rp_id(explicit_id: str | None = None) -> str:

@@ -1,9 +1,9 @@
-"""The Flask session secret, resolved when this module is imported.
+"""The Flask session secret, resolved by ``create_app()`` through ``init_app``.
 
-In order: ``FIDO_SERVER_SECRET_KEY``, the file named by
-``FIDO_SERVER_SECRET_KEY_FILE``, then ``<instance_path>/session-secret.key`` --
-which is generated and written on first use, so importing this module can write
-to disk.
+In order: a ``SECRET_KEY`` passed to ``create_app()``, ``FIDO_SERVER_SECRET_KEY``,
+the file named by ``FIDO_SERVER_SECRET_KEY_FILE``, then
+``<instance_path>/session-secret.key`` -- which is generated and written on first
+use. Importing this module writes nothing; building an app can.
 """
 from __future__ import annotations
 
@@ -11,13 +11,13 @@ import logging
 import os
 import tempfile
 
-from .application import app
+from flask import Flask
 
 logger = logging.getLogger(__name__)
 
 
-def _resolve_secret_key() -> bytes:
-    """Return the Flask session secret."""
+def _resolve_secret_key(app: Flask) -> bytes:
+    """Return the session secret for ``app``, generating a local one if need be."""
 
     env_value = os.environ.get("FIDO_SERVER_SECRET_KEY")
     if isinstance(env_value, str) and env_value:
@@ -95,4 +95,8 @@ def _resolve_secret_key() -> bytes:
     return secret
 
 
-app.secret_key = _resolve_secret_key()
+def init_app(app: Flask) -> None:
+    """Set ``app.secret_key`` unless the caller configured one."""
+
+    if not app.config.get("SECRET_KEY"):
+        app.secret_key = _resolve_secret_key(app)

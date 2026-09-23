@@ -1,4 +1,4 @@
-"""Operator-trusted attestation CAs, parsed into ``app.config`` when imported.
+"""Operator-trusted attestation CAs, read from the environment by ``create_app()``.
 
 ``FIDO_SERVER_TRUSTED_ATTESTATION_CA_SUBJECTS`` and
 ``FIDO_SERVER_TRUSTED_ATTESTATION_CA_FINGERPRINTS`` become
@@ -8,8 +8,7 @@ from __future__ import annotations
 
 import os
 import re
-
-from .application import app
+from typing import Any
 
 
 def _parse_trusted_ca_subjects(raw_value: str | None) -> set[str] | None:
@@ -45,15 +44,14 @@ def _parse_trusted_ca_fingerprints(raw_value: str | None) -> set[str] | None:
     return fingerprints
 
 
-app.config.setdefault(
-    "TRUSTED_ATTESTATION_CA_SUBJECTS",
-    _parse_trusted_ca_subjects(
-        os.environ.get("FIDO_SERVER_TRUSTED_ATTESTATION_CA_SUBJECTS")
-    ),
-)
-app.config.setdefault(
-    "TRUSTED_ATTESTATION_CA_FINGERPRINTS",
-    _parse_trusted_ca_fingerprints(
-        os.environ.get("FIDO_SERVER_TRUSTED_ATTESTATION_CA_FINGERPRINTS")
-    ),
-)
+def config_from_env() -> dict[str, Any]:
+    """The trusted-CA settings ``create_app()`` puts into ``app.config``."""
+
+    return {
+        "TRUSTED_ATTESTATION_CA_SUBJECTS": _parse_trusted_ca_subjects(
+            os.environ.get("FIDO_SERVER_TRUSTED_ATTESTATION_CA_SUBJECTS")
+        ),
+        "TRUSTED_ATTESTATION_CA_FINGERPRINTS": _parse_trusted_ca_fingerprints(
+            os.environ.get("FIDO_SERVER_TRUSTED_ATTESTATION_CA_FINGERPRINTS")
+        ),
+    }

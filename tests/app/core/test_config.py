@@ -121,20 +121,15 @@ def test_env_flag_with_true_values():
 
 def test_resolve_secret_key_from_env():
     """Test secret key resolution from environment variable."""
-    # Note: This test may not work because the module is already loaded
-    # But it tests the code path
-    test_key = "test-secret-key"
-    
-    with mock.patch.dict(os.environ, {"FIDO_SERVER_SECRET_KEY": test_key}, clear=False):
-        # Import after setting env var
-        import importlib
+    from server.app.factory import create_app
 
-        from server.app import config
-        from server.app.config import session_secret
-        importlib.reload(session_secret)
-        
-        # The key should be set
-        assert config.app.secret_key is not None
+    test_key = "test-secret-key"
+
+    with mock.patch.dict(os.environ, {"FIDO_SERVER_SECRET_KEY": test_key}, clear=False):
+        # The environment is read when the app is built.
+        app = create_app()
+
+    assert app.secret_key == test_key.encode("utf-8")
 
 
 def test_resolve_secret_key_from_file(tmp_path):
@@ -144,21 +139,18 @@ def test_resolve_secret_key_from_file(tmp_path):
     secret_content = b"file-secret-key-content"
     secret_file.write_bytes(secret_content)
     
+    from server.app.factory import create_app
+
     with mock.patch.dict(os.environ, {
         "FIDO_SERVER_SECRET_KEY_FILE": str(secret_file)
     }, clear=False):
         # Clear the direct env key
         if "FIDO_SERVER_SECRET_KEY" in os.environ:
             del os.environ["FIDO_SERVER_SECRET_KEY"]
-        
-        import importlib
 
-        from server.app import config
-        from server.app.config import session_secret
-        importlib.reload(session_secret)
-        
-        # The key should be set
-        assert config.app.secret_key is not None
+        app = create_app()
+
+    assert app.secret_key == secret_content
 
 
 def test_resolve_secret_key_generates_and_stores(tmp_path, monkeypatch):
@@ -176,22 +168,14 @@ def test_resolve_secret_key_generates_and_stores(tmp_path, monkeypatch):
     
     with mock.patch.dict(os.environ, env_clear, clear=False):
         from server.app.config.session_secret import _resolve_secret_key
-        
-        # Mock the app.instance_path
-        with mock.patch("server.app.config.session_secret.app") as mock_app:
-            mock_app.instance_path = str(instance_path)
-            mock_app.logger = mock.MagicMock()
-            
-            secret = _resolve_secret_key()
-            
-            # Should have generated a key
-            assert secret is not None
-            assert len(secret) > 0
-            
-            # Should have tried to store it
-            expected_path = instance_path / "session-secret.key"  # noqa: F841  # FIXME: expectation is built but never asserted
-            # File may or may not exist depending on write permissions
-            # but the secret should be valid
+
+        secret = _resolve_secret_key(types.SimpleNamespace(instance_path=str(instance_path)))
+
+        # Should have generated a key and stored it for the next start.
+        assert len(secret) == 32
+        assert (instance_path / "session-secret.key").read_bytes() == secret
+        # A second resolution reads the stored key instead of generating one.
+        assert _resolve_secret_key(types.SimpleNamespace(instance_path=str(instance_path))) == secret
 
 
 def test_parse_trusted_ca_subjects():
