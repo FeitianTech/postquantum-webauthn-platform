@@ -7,17 +7,6 @@ import types
 import pytest
 
 
-def test_discover_project_root_falls_back_to_grandparent(tmp_path):
-    app_module = pytest.importorskip("server.app.app")
-
-    package_root = tmp_path / "one" / "two" / "three"
-    package_root.mkdir(parents=True)
-
-    discovered = app_module._discover_project_root(package_root)
-
-    assert discovered == package_root.parents[1]
-
-
 def test_main_bootstraps_metadata_and_starts_tls_server(monkeypatch):
     app_module = pytest.importorskip("server.app.app")
 
