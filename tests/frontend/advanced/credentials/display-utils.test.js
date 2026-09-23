@@ -38,4 +38,11 @@ describe('display-utils', () => {
     expect(escapeHtml(null)).toBe('');
     expect(escapeHtml(`'"<&>`)).toBe('&#39;&quot;&lt;&amp;&gt;');
   });
+
+  it('labels COSE key types from the IANA registry', () => {
+    // 7 is AKP, the key type ML-DSA keys use; the parameter set comes from alg.
+    expect(describeCoseKeyType(5)).toBe('HSS-LMS (5)');
+    expect(describeCoseKeyType(6)).toBe('WalnutDSA (6)');
+    expect(describeCoseKeyType(7)).toBe('AKP (7)');
+  });
 });
