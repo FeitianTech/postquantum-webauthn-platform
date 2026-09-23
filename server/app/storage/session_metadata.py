@@ -450,7 +450,3 @@ def file_exists(session_id: str, name: str) -> bool:
     if not directory:
         return False
     return os.path.isfile(os.path.join(directory, name))
-
-
-# Ensure the base directory exists for local development environments.
-os.makedirs(SESSION_METADATA_DIR, exist_ok=True)

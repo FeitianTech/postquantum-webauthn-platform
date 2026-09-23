@@ -642,3 +642,20 @@ def test_local_resolve_last_access_keeps_existing_latest_when_next_candidate_is_
     monkeypatch.setattr(session_store.os, "scandir", lambda _directory: _Scandir())
 
     assert session_store._local_resolve_last_access("/tmp/session-a") == 50.0
+
+
+def test_local_store_creates_its_base_directory_on_first_write(session_store_local, monkeypatch):
+    """Importing the store creates nothing; the first write creates the base."""
+
+    session_store, session_dir = session_store_local
+    base = session_dir / "not-created-yet"
+    monkeypatch.setattr(session_store, "SESSION_METADATA_DIR", str(base), raising=False)
+
+    assert session_store.list_sessions() == []
+    assert not session_store.file_exists("session-a", "entry.json")
+    assert not base.exists()
+
+    session_store.write_file("session-a", "entry.json", b"{}")
+
+    assert (base / "session-a" / "entry.json").read_bytes() == b"{}"
+    assert session_store.list_sessions() == ["session-a"]
