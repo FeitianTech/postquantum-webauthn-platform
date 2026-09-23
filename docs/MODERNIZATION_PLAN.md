@@ -998,6 +998,50 @@ idiomatic. Split correctly: **risky attr-patches 417 -> 419 -> 417 (flat)**; ben
 Remaining risky sites: `app/session` 104, `app/metadata` 83, `app/core` 74, `app/storage` 30, and 110 in
 vendored `fido2` tests.
 
+### Phase 14 — M5a: codec labels, tables and canonical encoding — DONE (2026-09-24), verified
+8 commits. COSE algorithm names now come only from `webauthn/pqc.py::describe_algorithm`; COSE key types
+and curves from two small IANA tables; one new `server/app/decoder/ctap_tables.py` (request parameters,
+response members, commands, statuses — derived from the vendored fido2's `Ctap2` signatures, response
+dataclasses, `Ctap2.CMD` and `CtapError.ERR`) is read by both decoder and encoder; encoder bytes come only
+from `encode/cbor_canonical.py`, CTAP2-canonical, with the cbor2 fallback removed.
+
+Tech-lead verification through the real endpoints:
+- An ES384 credential key inside an attestation object now reads `ES384 (ECDSA)` on `P-384`
+  (was `ES256K`); ML-DSA-44 reads `ML-DSA-44 (PQC)`, `AKP (7)`, `parameterSet`; a truncated ML-DSA-65 key
+  is flagged with `publicKeyBytesExpected: 1952`.
+- makeCredential parameter 0x0B reads `attestationFormatsPreference`; `largeBlobKey` appears nowhere.
+- `31` and `0x31` decode as `PIN_INVALID status`; `04` as `GET_INFO command or INVALID_SEQ status`.
+- **Encoder ordering checked against an independent implementation of the CTAP2 rule**: `{24:0,"":0}`
+  -> `a2 1818 00 6000`, and **0 mismatches over 2000 random maps** mixing positive, negative and text keys.
+- **CTAP 2.2 field numbers checked against the published Proposed Standard (2025-07-14)**, since the agent
+  cited them from memory: makeCredential request 0x0B `attestationFormatsPreference` (6.1), makeCredential
+  response 0x06 `unsignedExtensionOutputs`, getAssertion request ends at 0x07 `pinUvAuthProtocol` (no 0x08,
+  6.2), getAssertion response 0x08 `unsignedExtensionOutputs`, and the canonical key-sort rule verbatim.
+  All correct.
+- **New tests: 151; on the pre-change code 138 fail, 5 cannot load (they test the new module), 8 pass**
+  (controls such as "a non-CTAP byte still reads as JSON"). The report omitted this number; measured by the
+  tech lead per file, since one import error aborts a combined run.
+- Suites 1880 -> **2031** passed / 4 skipped, vitest 278, ruff clean, security 78.
+
+**Extra defect the agent found:** the encoder ignored the kind named in `ctapDecoded` and re-sorted fields by
+number, so a decoded makeCredential request, getAssertion request or getAssertion response could not be
+re-encoded at all — and it wrote `"8 (largeBlobKey)"` out as CBOR key 0x05. All four kinds now round-trip
+byte for byte.
+
+**Deliberate input-format change:** a whole input of exactly two hex digits that names a CTAP code is now read
+as that byte, not a JSON number (`"10"`, `"99"` stay JSON), so PIN errors 0x30-0x39 typed as hex are named.
+
+**Frontend tables found (not edited, queued):** `advanced/constants.js:29` labels kty 7 `'ML-DSA (7)'`
+(should be `AKP`), kty 5/6 missing; **`decoder/codec/labels.js:17` strips the minus sign, so COSE labels
+-1/-2/-3 display as 1/2/3** in the decoder UI. The frontend has no CTAP tables and reads none of the changed
+fields, so the server changes break nothing there.
+
+**Found but not fixed:** a getAssertion request without an allowList still decodes as a makeCredential
+*response* (the `ctapDecoded` builder ignores the command byte); the `cose` encoder format is broken; the
+encoder's decoded-JSON path silently drops unknown fields; the vendored `fido2.cbor` sorts by first byte,
+which differs from the CTAP2 rule for array/map keys (the spec notes exactly this); importing `ctap_tables`
+loads `fido2.hid` and the platform HID backend into the web server.
+
 ### Local development
 Tests previously ran against the global interpreter, whose packages matched nothing in
 `requirements.txt` (cryptography 44.0.3, fido2 2.1.1, gunicorn 23). A project venv now exists:
