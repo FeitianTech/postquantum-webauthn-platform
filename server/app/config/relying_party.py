@@ -8,6 +8,7 @@ per request.
 from __future__ import annotations
 
 import ipaddress
+import logging
 import os
 from collections.abc import Mapping
 from urllib.parse import urlsplit
@@ -20,6 +21,8 @@ from fido2.webauthn import PublicKeyCredentialRpEntity
 
 from . import origins
 from .application import app
+
+logger = logging.getLogger(__name__)
 
 # Enable webauthn-json mapping if available (compatible across fido2 versions)
 try:  # pragma: no cover - compatibility shim
@@ -64,7 +67,7 @@ def warn_if_development_rp_configuration() -> bool:
     if not has_allowlist:
         missing.append("FIDO_SERVER_ALLOWED_ORIGINS")
 
-    app.logger.warning(
+    logger.warning(
         "%s not configured; falling back to Host-header derived RP ID and an "
         "unrestricted origin policy. This is a DEVELOPMENT-ONLY fallback -- set "
         "both before deploying.",
