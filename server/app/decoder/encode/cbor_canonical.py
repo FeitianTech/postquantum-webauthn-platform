@@ -1,4 +1,12 @@
-"""Canonical CBOR serialization helpers for encoder flows."""
+"""CTAP2-canonical CBOR serialization for encoder flows.
+
+CTAP2 sorts map keys by major type, then by the length of the encoded key, then
+bytewise (CTAP 2.2 section 8, "CTAP2 canonical CBOR encoding form"). That is
+not RFC 7049's canonical order, which sorts by length first and is what
+``cbor2.dumps(canonical=True)`` writes: ``{24: 0, "": 0}`` is ``a2 1818 00 6000``
+in CTAP2 and ``a2 6000 1818 00`` in RFC 7049. Every byte the encoder emits
+comes from ``_CanonicalCBOREncoder``; nothing is handed to cbor2 to serialise.
+"""
 from __future__ import annotations
 
 import math
@@ -6,14 +14,13 @@ import struct
 from collections.abc import Iterable, Mapping
 from typing import Any
 
-import cbor2
 from cbor2 import CBORSimpleValue, CBORTag, undefined
 
 
 def _canonical_cbor_dumps(value: Any) -> bytes:
-    """Serialize *value* using strict canonical CBOR rules."""
+    """Serialize *value* in CTAP2 canonical CBOR."""
 
-    return cbor2.dumps(value, canonical=True)
+    return _CanonicalCBOREncoder().encode(value)
 
 
 def _canonicalize_cbor_structure(value: Any) -> Any:
@@ -72,9 +79,7 @@ class _CanonicalCBOREncoder:
         if isinstance(value, CBORSimpleValue):
             return self._encode_cbor_simple_value(value)
 
-        # Fall back to cbor2 for less common types (e.g. decimal.Decimal, datetime).
-        # The canonical flag preserves determinism while allowing extended values.
-        return cbor2.dumps(value, canonical=True)
+        raise ValueError(f"No canonical CBOR encoding for {type(value).__name__} values.")
 
     def _encode_array(self, values: Iterable[Any]) -> bytes:
         encoded_items = [self._encode(item) for item in values]
@@ -116,7 +121,8 @@ class _CanonicalCBOREncoder:
             seen_keys.add(encoded_key)
             encoded_items.append((encoded_key, key, value))
 
-        encoded_items.sort(key=lambda item: (len(item[0]), item[0]))
+        # Major type (the top three bits of the first byte), then length, then bytes.
+        encoded_items.sort(key=lambda item: (item[0][0] >> 5, len(item[0]), item[0]))
         return encoded_items
 
     def _encode_tag(self, tag: CBORTag) -> bytes:
