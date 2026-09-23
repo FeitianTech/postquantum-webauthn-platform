@@ -9,7 +9,7 @@ from unittest import mock
 from flask import Flask
 
 import server.app.config as config_module
-from server.app.config import compression, paths, session_secret
+from server.app.config import attestation_trust, compression, paths, session_secret
 
 
 def test_discover_project_root_fallback_when_frontend_not_found(monkeypatch):
@@ -163,11 +163,11 @@ def test_register_after_request_once_guard_paths(monkeypatch):
 
 
 def test_parse_fingerprints_and_host_normalization_branches(monkeypatch):
-    assert config_module._parse_trusted_ca_fingerprints(None) is None
-    assert config_module._parse_trusted_ca_fingerprints("ab:cd") is None
+    assert attestation_trust._parse_trusted_ca_fingerprints(None) is None
+    assert attestation_trust._parse_trusted_ca_fingerprints("ab:cd") is None
 
     long_fp = ":".join(["aa"] * 20)
-    parsed = config_module._parse_trusted_ca_fingerprints(f"{long_fp}, short")
+    parsed = attestation_trust._parse_trusted_ca_fingerprints(f"{long_fp}, short")
     assert parsed == {"AA" * 20}
 
     monkeypatch.setitem(config_module.app.config, "FIDO_SERVER_RP_ID", "  configured.example  ")

@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import ipaddress
 import os
-import re
 from collections.abc import Mapping
 from urllib.parse import urlsplit
 
@@ -21,6 +20,7 @@ from ..mds_trust import (
 )
 from . import (
     application,
+    attestation_trust,
     compression,
     origins,
     paths,
@@ -47,7 +47,13 @@ basepath = paths.basepath
 app = application.app
 
 # Imported for what importing them does to ``app``; nothing is re-exported.
-_APP_CONFIGURING_MODULES = (compression, proxy, session_cookie, session_secret)
+_APP_CONFIGURING_MODULES = (
+    attestation_trust,
+    compression,
+    proxy,
+    session_cookie,
+    session_secret,
+)
 
 
 def _env_flag(name: str) -> bool | None:
@@ -73,53 +79,6 @@ normalise_origin = origins.normalise_origin
 _session_metadata_recover_flag = _env_flag("FIDO_SERVER_SESSION_METADATA_RECOVER")
 if _session_metadata_recover_flag is not None:
     app.config["SESSION_METADATA_RECOVER_ON_START"] = _session_metadata_recover_flag
-
-
-def _parse_trusted_ca_subjects(raw_value: str | None) -> set[str] | None:
-    """Normalise a comma or newline separated list of CA subject names."""
-
-    if raw_value is None:
-        return None
-
-    components = re.split(r"[,;\n]+", raw_value)
-    subjects = {component.strip() for component in components if component.strip()}
-    if not subjects:
-        return None
-    return subjects
-
-
-def _parse_trusted_ca_fingerprints(raw_value: str | None) -> set[str] | None:
-    """Normalise a list of hexadecimal fingerprints for trusted CA certificates."""
-
-    if raw_value is None:
-        return None
-
-    components = re.split(r"[,;\n]+", raw_value)
-    fingerprints = set()
-    for component in components:
-        cleaned = re.sub(r"[^0-9a-fA-F]", "", component)
-        if cleaned:
-            normalised = cleaned.upper()
-            # Require at least 20 bytes / 40 hex characters to avoid trivial matches.
-            if len(normalised) >= 40:
-                fingerprints.add(normalised)
-    if not fingerprints:
-        return None
-    return fingerprints
-
-
-app.config.setdefault(
-    "TRUSTED_ATTESTATION_CA_SUBJECTS",
-    _parse_trusted_ca_subjects(
-        os.environ.get("FIDO_SERVER_TRUSTED_ATTESTATION_CA_SUBJECTS")
-    ),
-)
-app.config.setdefault(
-    "TRUSTED_ATTESTATION_CA_FINGERPRINTS",
-    _parse_trusted_ca_fingerprints(
-        os.environ.get("FIDO_SERVER_TRUSTED_ATTESTATION_CA_FINGERPRINTS")
-    ),
-)
 
 
 _RP_CONFIGURATION_WARNING_EMITTED = False
