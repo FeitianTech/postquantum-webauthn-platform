@@ -78,7 +78,8 @@ def test_canonical_encoder_dispatches_supported_core_types_and_tag_rules():
     assert encoder._encode(b"AB") == b"\x42AB"
     assert encoder._encode("ok") == b"\x62ok"
     assert encoder._encode(encode_module.CBORSimpleValue(5)) == bytes([0xE5])
-    assert isinstance(encoder._encode(Decimal("1.5")), bytes)
+    with pytest.raises(ValueError, match="Decimal"):
+        encoder._encode(Decimal("1.5"))
 
     assert encoder._encode_tag(encode_module.CBORTag(1, 2)) == b"\xc1\x02"
 
