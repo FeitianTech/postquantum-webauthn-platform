@@ -59,7 +59,10 @@ RUN apt-get update && \
 
 # Copy Python packages from builder
 COPY --from=builder /install /usr/local
-COPY server/app /app/server
+# The same path as in a checkout, so server.app is the same package in both and
+# every module has one import path. Only server/app, not server/: server/runtime
+# holds local credential artifacts and .dockerignore does not exclude it.
+COPY server/app /app/server/app
 COPY frontend /app/frontend
 COPY gunicorn.conf.py /app/gunicorn.conf.py
 COPY tools/build_static_assets.py /tmp/build_static_assets.py
@@ -79,4 +82,4 @@ RUN rm -rf /usr/local/lib/python3.12/ensurepip \
 WORKDIR /app
 ENV PYTHONPATH=/app:${PYTHONPATH}
 
-CMD ["gunicorn", "-c", "/app/gunicorn.conf.py", "server.app:app"]
+CMD ["gunicorn", "-c", "/app/gunicorn.conf.py", "server.app.app:app"]
