@@ -33,5 +33,10 @@ _SERVER_RUNTIME_ROOT = Path(
         str(_PROJECT_ROOT / "server" / "runtime"),
     )
 )
+# Where Flask would put the instance folder for an app in the ``server`` package:
+# next to ``server/``. Passed to Flask explicitly so the session secret and the
+# local credential store stay where they are whatever the app is named, and so
+# modules that need the path do not need the app.
+INSTANCE_ROOT = str(_PACKAGE_ROOT.parents[1] / "instance")
 # Save credentials next to the server.app package, regardless of CWD.
 basepath = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
