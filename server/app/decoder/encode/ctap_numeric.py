@@ -7,6 +7,7 @@ from typing import Any
 
 from .binary_decode import _maybe_decode_bytes
 from .constants import _CTAP_LABELED_KEY_PATTERN
+from .ctap_fields import _reject_misnamed_request_fields
 
 
 def _extract_ctap_numeric_payload(parsed: Any) -> tuple[dict[int, Any], str]:
@@ -64,6 +65,7 @@ def _extract_ctap_numeric_payload(parsed: Any) -> tuple[dict[int, Any], str]:
                     if classification_error is None:
                         classification_error = exc
                 else:
+                    _reject_misnamed_numbered_fields(candidate, ctap_type)
                     return salvage_map, ctap_type
 
             if salvage_error is not None and classification_error is None:
@@ -75,6 +77,7 @@ def _extract_ctap_numeric_payload(parsed: Any) -> tuple[dict[int, Any], str]:
                 if classification_error is None:
                     classification_error = exc
             else:
+                _reject_misnamed_numbered_fields(candidate, ctap_type)
                 return numeric_map, ctap_type
 
         if isinstance(candidate, Mapping):
@@ -87,6 +90,13 @@ def _extract_ctap_numeric_payload(parsed: Any) -> tuple[dict[int, Any], str]:
     raise ValueError(
         "Unable to locate CTAP/WebAuthn numeric-keyed fields in input JSON."
     )
+
+
+def _reject_misnamed_numbered_fields(candidate: Mapping[Any, Any], ctap_type: str) -> None:
+    # The numbers are what gets encoded; the names riding along with them
+    # ("08 (largeBlobKey)") still have to be the ones CTAP gives those numbers.
+    if ctap_type.endswith("Request"):
+        _reject_misnamed_request_fields(candidate, ctap_type, bare_names=False)
 
 
 def _sanitize_ctap_numeric_mapping(parsed: Mapping[Any, Any]) -> dict[int, Any]:

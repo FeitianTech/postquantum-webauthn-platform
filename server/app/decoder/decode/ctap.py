@@ -13,6 +13,7 @@ from fido2.webauthn import AuthenticatorData
 
 from ...encoding import decode_hex, encode_base64
 from ...webauthn.attestation import encode_base64url, make_json_safe
+from .. import ctap_tables
 from . import cbor_parser, pipeline, response
 from .cbor_parser import (
     _CborDecodingError,
@@ -509,83 +510,18 @@ def _normalize_user_mapping(entry: Mapping[Any, Any]) -> Mapping[Any, Any]:
     return normalized
 
 
-_MAKE_CREDENTIAL_REQUEST_LABELS: dict[Any, str] = {
-    1: "clientDataHash",
-    "clientDataHash": "clientDataHash",
-    2: "rp",
-    "rp": "rp",
-    3: "user",
-    "user": "user",
-    4: "pubKeyCredParams",
-    "pubKeyCredParams": "pubKeyCredParams",
-    5: "excludeList",
-    "excludeList": "excludeList",
-    6: "extensions",
-    "extensions": "extensions",
-    7: "options",
-    "options": "options",
-    8: "pinUvAuthParam",
-    "pinUvAuthParam": "pinUvAuthParam",
-    9: "pinUvAuthProtocol",
-    "pinUvAuthProtocol": "pinUvAuthProtocol",
-    10: "enterpriseAttestation",
-    "enterpriseAttestation": "enterpriseAttestation",
-    11: "largeBlobKey",
-    "largeBlobKey": "largeBlobKey",
-}
+def _labels(members: Mapping[int, str]) -> dict[Any, str]:
+    """Look a CTAP member up by its number or by its name; input maps use either."""
 
-_GET_ASSERTION_REQUEST_LABELS: dict[Any, str] = {
-    1: "rpId",
-    "rpId": "rpId",
-    2: "clientDataHash",
-    "clientDataHash": "clientDataHash",
-    3: "allowList",
-    "allowList": "allowList",
-    4: "extensions",
-    "extensions": "extensions",
-    5: "options",
-    "options": "options",
-    6: "pinUvAuthParam",
-    "pinUvAuthParam": "pinUvAuthParam",
-    7: "pinUvAuthProtocol",
-    "pinUvAuthProtocol": "pinUvAuthProtocol",
-    8: "largeBlobKey",
-    "largeBlobKey": "largeBlobKey",
-}
+    labels: dict[Any, str] = dict(members)
+    labels.update((name, name) for name in members.values())
+    return labels
 
-_MAKE_CREDENTIAL_RESPONSE_LABELS: dict[Any, str] = {
-    1: "fmt",
-    "fmt": "fmt",
-    2: "authData",
-    "authData": "authData",
-    3: "attStmt",
-    "attStmt": "attStmt",
-    4: "epAtt",
-    "epAtt": "epAtt",
-    5: "largeBlobKey",
-    "largeBlobKey": "largeBlobKey",
-    6: "extensions",
-    "extensions": "extensions",
-}
 
-_GET_ASSERTION_RESPONSE_LABELS: dict[Any, str] = {
-    1: "credential",
-    "credential": "credential",
-    2: "authData",
-    "authData": "authData",
-    3: "signature",
-    "signature": "signature",
-    4: "user",
-    "user": "user",
-    5: "numberOfCredentials",
-    "numberOfCredentials": "numberOfCredentials",
-    6: "userSelected",
-    "userSelected": "userSelected",
-    7: "largeBlobKey",
-    "largeBlobKey": "largeBlobKey",
-    8: "extensions",
-    "extensions": "extensions",
-}
+_MAKE_CREDENTIAL_REQUEST_LABELS = _labels(ctap_tables.MAKE_CREDENTIAL_PARAMETERS)
+_GET_ASSERTION_REQUEST_LABELS = _labels(ctap_tables.GET_ASSERTION_PARAMETERS)
+_MAKE_CREDENTIAL_RESPONSE_LABELS = _labels(ctap_tables.MAKE_CREDENTIAL_RESPONSE)
+_GET_ASSERTION_RESPONSE_LABELS = _labels(ctap_tables.GET_ASSERTION_RESPONSE)
 
 
 def _resolve_ctap_label(label_map: Mapping[Any, str], key: Any) -> str | None:
@@ -1078,7 +1014,7 @@ _MAKE_CREDENTIAL_REQUEST_HANDLERS: dict[Any, Callable[[Any], Any]] = {
     "pinUvAuthParam": _convert_optional_ctap_field,
     "pinUvAuthProtocol": _hex_json_safe,
     "enterpriseAttestation": _hex_json_safe,
-    "largeBlobKey": _convert_optional_ctap_field,
+    "attestationFormatsPreference": _hex_json_safe,
 }
 
 _GET_ASSERTION_REQUEST_HANDLERS: dict[Any, Callable[[Any], Any]] = {
@@ -1089,7 +1025,6 @@ _GET_ASSERTION_REQUEST_HANDLERS: dict[Any, Callable[[Any], Any]] = {
     "options": _hex_json_safe,
     "pinUvAuthParam": _convert_optional_ctap_field,
     "pinUvAuthProtocol": _hex_json_safe,
-    "largeBlobKey": _convert_optional_ctap_field,
 }
 
 _MAKE_CREDENTIAL_RESPONSE_HANDLERS: dict[Any, Callable[[Any], Any]] = {
@@ -1098,7 +1033,7 @@ _MAKE_CREDENTIAL_RESPONSE_HANDLERS: dict[Any, Callable[[Any], Any]] = {
     "attStmt": lambda value: _convert_att_stmt_field(value),
     "epAtt": _convert_optional_ctap_field,
     "largeBlobKey": _convert_optional_ctap_field,
-    "extensions": _convert_optional_ctap_field,
+    "unsignedExtensionOutputs": _convert_optional_ctap_field,
 }
 
 _GET_ASSERTION_RESPONSE_HANDLERS: dict[Any, Callable[[Any], Any]] = {
@@ -1109,7 +1044,7 @@ _GET_ASSERTION_RESPONSE_HANDLERS: dict[Any, Callable[[Any], Any]] = {
     "numberOfCredentials": _convert_optional_ctap_field,
     "userSelected": _convert_optional_ctap_field,
     "largeBlobKey": _convert_optional_ctap_field,
-    "extensions": _convert_optional_ctap_field,
+    "unsignedExtensionOutputs": _convert_optional_ctap_field,
 }
 
 
@@ -1250,12 +1185,10 @@ def _interpret_make_credential_map(value: Mapping[Any, Any]) -> dict[str, Any] |
         else:
             interpreted["3 (attStmt)"] = _hex_json_safe(att_stmt_entry)
 
-    optional_labels = {
-        4: "epAtt",
-        5: "largeBlobKey",
-        6: "extensions",
-    }
-    for key, label in optional_labels.items():
+    members = ctap_tables.MAKE_CREDENTIAL_RESPONSE
+    for key, label in members.items():
+        if key <= 3:
+            continue
         candidate = _get_mapping_entry(value, key)
         if candidate is _MISSING:
             continue
@@ -1264,7 +1197,7 @@ def _interpret_make_credential_map(value: Mapping[Any, Any]) -> dict[str, Any] |
     extra_keys = [
         key
         for key in value.keys()
-        if isinstance(key, int) and key not in {1, 2, 3, 4, 5, 6}
+        if isinstance(key, int) and key not in members
     ]
     for key in sorted(extra_keys):
         interpreted[f"{key}"] = _hex_json_safe(value[key])
@@ -1300,13 +1233,10 @@ def _interpret_get_assertion_map(value: Mapping[Any, Any]) -> dict[str, Any] | N
     if user_entry is not _MISSING and user_entry is not None:
         interpreted["4 (user)"] = _convert_ctap_user(user_entry)
 
-    optional_labels = {
-        5: "numberOfCredentials",
-        6: "userSelected",
-        7: "largeBlobKey",
-        8: "extensions",
-    }
-    for key, label in optional_labels.items():
+    members = ctap_tables.GET_ASSERTION_RESPONSE
+    for key, label in members.items():
+        if key <= 4:
+            continue
         candidate = _get_mapping_entry(value, key)
         if candidate is _MISSING:
             continue
@@ -1315,7 +1245,7 @@ def _interpret_get_assertion_map(value: Mapping[Any, Any]) -> dict[str, Any] | N
     extra_keys = [
         key
         for key in value.keys()
-        if isinstance(key, int) and key not in {1, 2, 3, 4, 5, 6, 7, 8}
+        if isinstance(key, int) and key not in members
     ]
     for key in sorted(extra_keys):
         interpreted[f"{key}"] = _hex_json_safe(value[key])
@@ -1332,13 +1262,13 @@ def _interpret_get_assertion_map(value: Mapping[Any, Any]) -> dict[str, Any] | N
             interpreted["4 (user)"] = _convert_ctap_user(user_entry_trailing)
         number_entry = trailing_map.pop(5, None)
         if number_entry is not None:
-            interpreted["5 (numberOfCredentials)"] = _convert_optional_ctap_field(number_entry)
+            interpreted[_format_ctap_entry_key(5, members[5])] = _convert_optional_ctap_field(number_entry)
         user_selected_entry = trailing_map.pop(6, None)
         if user_selected_entry is not None:
-            interpreted["6 (userSelected)"] = _convert_optional_ctap_field(user_selected_entry)
+            interpreted[_format_ctap_entry_key(6, members[6])] = _convert_optional_ctap_field(user_selected_entry)
         extensions_entry = trailing_map.pop(8, None)
         if extensions_entry is not None:
-            interpreted["8 (extensions)"] = _convert_optional_ctap_field(extensions_entry)
+            interpreted[_format_ctap_entry_key(8, members[8])] = _convert_optional_ctap_field(extensions_entry)
         if trailing_map:
             interpreted["trailingFields"] = _hex_json_safe(trailing_map)
 

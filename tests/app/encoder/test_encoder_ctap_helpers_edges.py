@@ -30,7 +30,7 @@ def test_encode_make_credential_request_full_structure():
         "8 (pinUvAuthParam)": {"hex": "aabb"},
         "9 (pinUvAuthProtocol)": "1",
         "10 (enterpriseAttestation)": 1,
-        "11 (largeBlobKey)": {"bytes": [1, 2, 3]},
+        "11 (attestationFormatsPreference)": ["packed", "none"],
     }
 
     mapping = encode_module._encode_make_credential_request(structure)
@@ -41,7 +41,7 @@ def test_encode_make_credential_request_full_structure():
     assert mapping[4][0]["alg"] == -7
     assert mapping[8] == b"\xaa\xbb"
     assert mapping[9] == 1
-    assert mapping[11] == b"\x01\x02\x03"
+    assert mapping[11] == ["packed", "none"]
 
 
 def test_encode_get_assertion_request_and_response_full_structures():
@@ -56,7 +56,6 @@ def test_encode_get_assertion_request_and_response_full_structures():
             "options": {"uv": True},
             "pinUvAuthParam": _b64url(b"\x03\x04"),
             "pinUvAuthProtocol": "1",
-            "largeBlobKey": {"bytes": [4, 5, 6]},
         }
     )
     assert request_mapping[1] == "example.com"
@@ -73,7 +72,7 @@ def test_encode_get_assertion_request_and_response_full_structures():
             "numberOfCredentials": "2",
             "userSelected": "true",
             "largeBlobKey": {"hex": "a1a2"},
-            "extensions": {"credBlob": {"bytes": [1, 2]}},
+            "unsignedExtensionOutputs": {"credBlob": {"bytes": [1, 2]}},
         }
     )
     assert response_mapping[2] == b"\xaa" * 37
@@ -97,7 +96,7 @@ def test_encode_make_credential_response_and_attestation_statement_edges():
             },
             "epAtt": False,
             "largeBlobKey": _b64url(b"\x33"),
-            "extensions": {"credProps": {"rk": True}},
+            "unsignedExtensionOutputs": {"credProps": {"rk": True}},
         }
     )
 

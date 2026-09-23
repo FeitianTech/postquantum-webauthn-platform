@@ -15,9 +15,15 @@ from .ctap_fields import (
     _ensure_bool,
     _ensure_int,
     _ensure_text,
-    _get_ctap_field_value,
+    _get_ctap_member,
+    _reject_misnamed_request_fields,
     _require_mapping,
 )
+
+_MAKE_CREDENTIAL_REQUEST = "makeCredentialRequest"
+_GET_ASSERTION_REQUEST = "getAssertionRequest"
+_MAKE_CREDENTIAL_RESPONSE = "makeCredentialResponse"
+_GET_ASSERTION_RESPONSE = "getAssertionResponse"
 
 
 def _encode_ctap_from_decoded(
@@ -29,10 +35,10 @@ def _encode_ctap_from_decoded(
     # The decoder has already said which CTAP map this is; classifying the
     # fields again could read a request as a response.
     encoders = {
-        "makeCredentialRequest": _encode_make_credential_request,
-        "getAssertionRequest": _encode_get_assertion_request,
-        "makeCredentialResponse": _encode_make_credential_response,
-        "getAssertionResponse": _encode_get_assertion_response,
+        _MAKE_CREDENTIAL_REQUEST: _encode_make_credential_request,
+        _GET_ASSERTION_REQUEST: _encode_get_assertion_request,
+        _MAKE_CREDENTIAL_RESPONSE: _encode_make_credential_response,
+        _GET_ASSERTION_RESPONSE: _encode_get_assertion_response,
     }
     for key, encoder in encoders.items():
         entry = decoded.get(key)
@@ -47,17 +53,20 @@ def _encode_ctap_from_structure(
     if not isinstance(structure, Mapping):
         return None, None
 
-    if _get_ctap_field_value(structure, "fmt", 1) is not None and _get_ctap_field_value(structure, "authData", 2) is not None:
-        return _encode_make_credential_response(structure), "makeCredentialResponse"
+    def present(kind: str, number: int) -> bool:
+        return _get_ctap_member(structure, kind, number) is not None
 
-    if _get_ctap_field_value(structure, "credential", 1) is not None or _get_ctap_field_value(structure, "signature", 3) is not None:
-        return _encode_get_assertion_response(structure), "getAssertionResponse"
+    if present(_MAKE_CREDENTIAL_RESPONSE, 1) and present(_MAKE_CREDENTIAL_RESPONSE, 2):
+        return _encode_make_credential_response(structure), _MAKE_CREDENTIAL_RESPONSE
 
-    if _get_ctap_field_value(structure, "rp", 2) is not None and _get_ctap_field_value(structure, "user", 3) is not None:
-        return _encode_make_credential_request(structure), "makeCredentialRequest"
+    if present(_GET_ASSERTION_RESPONSE, 1) or present(_GET_ASSERTION_RESPONSE, 3):
+        return _encode_get_assertion_response(structure), _GET_ASSERTION_RESPONSE
 
-    if _get_ctap_field_value(structure, "rpId", 1) is not None and _get_ctap_field_value(structure, "clientDataHash", 2) is not None:
-        return _encode_get_assertion_request(structure), "getAssertionRequest"
+    if present(_MAKE_CREDENTIAL_REQUEST, 2) and present(_MAKE_CREDENTIAL_REQUEST, 3):
+        return _encode_make_credential_request(structure), _MAKE_CREDENTIAL_REQUEST
+
+    if present(_GET_ASSERTION_REQUEST, 1) and present(_GET_ASSERTION_REQUEST, 2):
+        return _encode_get_assertion_request(structure), _GET_ASSERTION_REQUEST
 
     return None, None
 
@@ -86,140 +95,148 @@ def _determine_ctap_prefix(
 
 
 def _encode_make_credential_request(structure: Mapping[str, Any]) -> dict[int, Any]:
+    _reject_misnamed_request_fields(structure, _MAKE_CREDENTIAL_REQUEST)
+
+    def member(number: int) -> Any:
+        return _get_ctap_member(structure, _MAKE_CREDENTIAL_REQUEST, number)
+
     mapping: dict[int, Any] = {}
 
-    mapping[1] = _require_bytes(_get_ctap_field_value(structure, "clientDataHash", 1), "clientDataHash")
-    mapping[2] = _restore_generic_structure(
-        _require_mapping(_get_ctap_field_value(structure, "rp", 2), "rp")
-    )
-    mapping[3] = _encode_ctap_user(_get_ctap_field_value(structure, "user", 3))
+    mapping[1] = _require_bytes(member(1), "clientDataHash")
+    mapping[2] = _restore_generic_structure(_require_mapping(member(2), "rp"))
+    mapping[3] = _encode_ctap_user(member(3))
 
-    params = _get_ctap_field_value(structure, "pubKeyCredParams", 4)
+    params = member(4)
     if params is None:
         raise ValueError("MakeCredential request requires pubKeyCredParams.")
     mapping[4] = _restore_generic_structure(params)
 
-    exclude_list = _get_ctap_field_value(structure, "excludeList", 5)
+    exclude_list = member(5)
     if exclude_list is not None:
         mapping[5] = _encode_allow_list(exclude_list)
 
-    extensions = _get_ctap_field_value(structure, "extensions", 6)
+    extensions = member(6)
     if extensions is not None:
         mapping[6] = _restore_generic_structure(extensions)
 
-    options = _get_ctap_field_value(structure, "options", 7)
+    options = member(7)
     if options is not None:
         mapping[7] = _restore_generic_structure(options)
 
-    pin_param = _get_ctap_field_value(structure, "pinUvAuthParam", 8)
+    pin_param = member(8)
     if pin_param is not None:
         mapping[8] = _require_bytes(pin_param, "pinUvAuthParam")
 
-    pin_protocol = _get_ctap_field_value(structure, "pinUvAuthProtocol", 9)
+    pin_protocol = member(9)
     if pin_protocol is not None:
         mapping[9] = _ensure_int(pin_protocol, "pinUvAuthProtocol")
 
-    enterprise_attestation = _get_ctap_field_value(structure, "enterpriseAttestation", 10)
+    enterprise_attestation = member(10)
     if enterprise_attestation is not None:
         mapping[10] = _restore_generic_structure(enterprise_attestation)
 
-    large_blob_key = _get_ctap_field_value(structure, "largeBlobKey", 11)
-    if large_blob_key is not None:
-        mapping[11] = _require_bytes(large_blob_key, "largeBlobKey")
+    formats = member(11)
+    if formats is not None:
+        if not isinstance(formats, list):
+            raise ValueError("attestationFormatsPreference must be an array of attestation format strings.")
+        mapping[11] = [_ensure_text(entry, "attestationFormatsPreference entry") for entry in formats]
 
     return mapping
 
 
 def _encode_get_assertion_request(structure: Mapping[str, Any]) -> dict[int, Any]:
+    _reject_misnamed_request_fields(structure, _GET_ASSERTION_REQUEST)
+
+    def member(number: int) -> Any:
+        return _get_ctap_member(structure, _GET_ASSERTION_REQUEST, number)
+
     mapping: dict[int, Any] = {}
 
-    mapping[1] = _ensure_text(
-        _get_ctap_field_value(structure, "rpId", 1), "rpId"
-    )
-    mapping[2] = _require_bytes(
-        _get_ctap_field_value(structure, "clientDataHash", 2), "clientDataHash"
-    )
+    mapping[1] = _ensure_text(member(1), "rpId")
+    mapping[2] = _require_bytes(member(2), "clientDataHash")
 
-    allow_list = _get_ctap_field_value(structure, "allowList", 3)
+    allow_list = member(3)
     if allow_list is not None:
         mapping[3] = _encode_allow_list(allow_list)
 
-    extensions = _get_ctap_field_value(structure, "extensions", 4)
+    extensions = member(4)
     if extensions is not None:
         mapping[4] = _restore_generic_structure(extensions)
 
-    options = _get_ctap_field_value(structure, "options", 5)
+    options = member(5)
     if options is not None:
         mapping[5] = _restore_generic_structure(options)
 
-    pin_param = _get_ctap_field_value(structure, "pinUvAuthParam", 6)
+    pin_param = member(6)
     if pin_param is not None:
         mapping[6] = _require_bytes(pin_param, "pinUvAuthParam")
 
-    pin_protocol = _get_ctap_field_value(structure, "pinUvAuthProtocol", 7)
+    pin_protocol = member(7)
     if pin_protocol is not None:
         mapping[7] = _ensure_int(pin_protocol, "pinUvAuthProtocol")
-
-    large_blob_key = _get_ctap_field_value(structure, "largeBlobKey", 8)
-    if large_blob_key is not None:
-        mapping[8] = _require_bytes(large_blob_key, "largeBlobKey")
 
     return mapping
 
 
 def _encode_make_credential_response(structure: Mapping[str, Any]) -> dict[int, Any]:
+    def member(number: int) -> Any:
+        return _get_ctap_member(structure, _MAKE_CREDENTIAL_RESPONSE, number)
+
     mapping: dict[int, Any] = {}
 
-    mapping[1] = _ensure_text(_get_ctap_field_value(structure, "fmt", 1), "fmt")
-    mapping[2] = _require_bytes(_get_ctap_field_value(structure, "authData", 2), "authData")
+    mapping[1] = _ensure_text(member(1), "fmt")
+    mapping[2] = _require_bytes(member(2), "authData")
 
-    att_stmt = _get_ctap_field_value(structure, "attStmt", 3)
+    att_stmt = member(3)
     if att_stmt is not None:
         mapping[3] = _encode_attestation_statement(att_stmt)
 
-    ep_att = _get_ctap_field_value(structure, "epAtt", 4)
+    ep_att = member(4)
     if ep_att is not None:
         mapping[4] = _restore_generic_structure(ep_att)
 
-    large_blob_key = _get_ctap_field_value(structure, "largeBlobKey", 5)
+    large_blob_key = member(5)
     if large_blob_key is not None:
         mapping[5] = _require_bytes(large_blob_key, "largeBlobKey")
 
-    extensions = _get_ctap_field_value(structure, "extensions", 6)
-    if extensions is not None:
-        mapping[6] = _restore_generic_structure(extensions)
+    unsigned_extension_outputs = member(6)
+    if unsigned_extension_outputs is not None:
+        mapping[6] = _restore_generic_structure(unsigned_extension_outputs)
 
     return mapping
 
 
 def _encode_get_assertion_response(structure: Mapping[str, Any]) -> dict[int, Any]:
+    def member(number: int) -> Any:
+        return _get_ctap_member(structure, _GET_ASSERTION_RESPONSE, number)
+
     mapping: dict[int, Any] = {}
 
-    credential = _get_ctap_field_value(structure, "credential", 1)
+    credential = member(1)
     if credential is not None:
         mapping[1] = _encode_credential_descriptor(credential)
 
-    mapping[2] = _require_bytes(_get_ctap_field_value(structure, "authData", 2), "authData")
-    mapping[3] = _require_bytes(_get_ctap_field_value(structure, "signature", 3), "signature")
+    mapping[2] = _require_bytes(member(2), "authData")
+    mapping[3] = _require_bytes(member(3), "signature")
 
-    user = _get_ctap_field_value(structure, "user", 4)
+    user = member(4)
     if user is not None:
         mapping[4] = _encode_ctap_user(user)
 
-    number_of_credentials = _get_ctap_field_value(structure, "numberOfCredentials", 5)
+    number_of_credentials = member(5)
     if number_of_credentials is not None:
         mapping[5] = _ensure_int(number_of_credentials, "numberOfCredentials")
 
-    user_selected = _get_ctap_field_value(structure, "userSelected", 6)
+    user_selected = member(6)
     if user_selected is not None:
         mapping[6] = _ensure_bool(user_selected, "userSelected")
 
-    large_blob_key = _get_ctap_field_value(structure, "largeBlobKey", 7)
+    large_blob_key = member(7)
     if large_blob_key is not None:
         mapping[7] = _require_bytes(large_blob_key, "largeBlobKey")
 
-    extensions = _get_ctap_field_value(structure, "extensions", 8)
-    if extensions is not None:
-        mapping[8] = _restore_generic_structure(extensions)
+    unsigned_extension_outputs = member(8)
+    if unsigned_extension_outputs is not None:
+        mapping[8] = _restore_generic_structure(unsigned_extension_outputs)
 
     return mapping

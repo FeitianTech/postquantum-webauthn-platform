@@ -94,7 +94,7 @@ def test_interpret_get_assertion_map_handles_signature_and_trailing_field_recove
     assert interpreted["4 (user)"] == {"id": "75"}
     assert interpreted["5 (numberOfCredentials)"] == 2
     assert interpreted["6 (userSelected)"] is True
-    assert interpreted["8 (extensions)"] == {"ok": 1}
+    assert interpreted["8 (unsignedExtensionOutputs)"] == {"ok": 1}
     assert interpreted["trailingFields"] == {"9": "x"}
     assert interpreted["99"] == "extra"
 
