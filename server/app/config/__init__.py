@@ -20,9 +20,9 @@ import fido2.features
 from fido2.server import Fido2Server
 from fido2.webauthn import PublicKeyCredentialRpEntity
 
-from . import encoding
-from .env_flags import parse_env_flag
-from .mds_trust import (
+from .. import encoding
+from ..env_flags import parse_env_flag
+from ..mds_trust import (
     FIDO_METADATA_TRUST_ROOT_CERT,
     FIDO_METADATA_TRUST_ROOT_PEM,
     MDS_TLS_ADDITIONAL_TRUST_ANCHORS_PEM,
@@ -37,7 +37,8 @@ except Exception:  # pragma: no cover - compatibility shim
     except Exception:  # pragma: no cover - compatibility shim
         pass
 
-_PACKAGE_ROOT = Path(__file__).resolve().parent
+# server/app, the package this config package lives in.
+_PACKAGE_ROOT = Path(__file__).resolve().parents[1]
 
 
 def _discover_project_root(package_root: Path) -> Path:
@@ -61,13 +62,17 @@ _SERVER_RUNTIME_ROOT = Path(
         str(_PROJECT_ROOT / "server" / "runtime"),
     )
 )
+# Save credentials next to the server.app package, regardless of CWD.
+basepath = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
 
 _existing_app = globals().get("app")
 if isinstance(_existing_app, Flask):
     app = _existing_app
 else:
+    # Rooted at server/app, as when this was config.py; the name is unchanged.
     app = Flask(
         __name__,
+        root_path=basepath,
         static_folder=str(_FRONTEND_STATIC_ROOT),
         static_url_path="",
         template_folder=str(_FRONTEND_TEMPLATE_ROOT),
@@ -844,9 +849,6 @@ def create_fido_server(
 
 rp = build_rp_entity()
 server = Fido2Server(rp)
-
-# Save credentials next to this module, regardless of CWD.
-basepath = os.path.abspath(os.path.dirname(__file__))
 
 MDS_METADATA_URL = "https://mds3.fidoalliance.org/"
 MDS_METADATA_FILENAME = "blob.jwt"
