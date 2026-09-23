@@ -5,7 +5,7 @@ import io
 from types import SimpleNamespace
 
 import server.app.config as config_module
-from server.app.config import compression, session_secret
+from server.app.config import compression, mds, session_secret
 
 
 def test_resolve_secret_key_reads_empty_stored_key_and_generates(monkeypatch):
@@ -46,7 +46,7 @@ def test_maybe_compress_response_returns_early_for_small_payload():
 
 def test_config_reload_applies_session_metadata_recover_env(monkeypatch):
     monkeypatch.setenv("FIDO_SERVER_SESSION_METADATA_RECOVER", "1")
-    reloaded = importlib.reload(config_module)
+    reloaded = importlib.reload(mds)
 
     assert reloaded.app.config["SESSION_METADATA_RECOVER_ON_START"] is True
 

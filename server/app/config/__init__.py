@@ -22,6 +22,7 @@ from . import (
     application,
     attestation_trust,
     compression,
+    mds,
     origins,
     paths,
     proxy,
@@ -56,9 +57,8 @@ _APP_CONFIGURING_MODULES = (
 )
 
 
-def _env_flag(name: str) -> bool | None:
-    """Return ``True`` or ``False`` when the named env var is explicitly set."""
-    return parse_env_flag(name)
+# Kept for its importers; the submodules call ``parse_env_flag`` directly.
+_env_flag = parse_env_flag
 
 
 set_security_headers = security_headers.set_security_headers
@@ -75,11 +75,6 @@ extract_client_data_origin = origins.extract_client_data_origin
 get_allowed_origins = origins.get_allowed_origins
 is_origin_allowed = origins.is_origin_allowed
 normalise_origin = origins.normalise_origin
-
-_session_metadata_recover_flag = _env_flag("FIDO_SERVER_SESSION_METADATA_RECOVER")
-if _session_metadata_recover_flag is not None:
-    app.config["SESSION_METADATA_RECOVER_ON_START"] = _session_metadata_recover_flag
-
 
 _RP_CONFIGURATION_WARNING_EMITTED = False
 
@@ -234,23 +229,15 @@ def create_fido_server(
 rp = build_rp_entity()
 server = Fido2Server(rp)
 
-MDS_METADATA_URL = "https://mds3.fidoalliance.org/"
-MDS_METADATA_FILENAME = "blob.jwt"
-MDS_METADATA_PATH = os.path.join(str(_FRONTEND_STATIC_ROOT), MDS_METADATA_FILENAME)
-MDS_METADATA_VERIFIED_PATH = os.path.join(
-    str(_FRONTEND_STATIC_ROOT), "fido-mds3.verified.json"
-)
-MDS_METADATA_CACHE_PATH = MDS_METADATA_VERIFIED_PATH + ".meta.json"
-MDS_EXPLORER_PATH = os.path.join(str(_FRONTEND_STATIC_ROOT), "fido-mds3.explorer.json")
-MDS_EXPLORER_META_PATH = MDS_EXPLORER_PATH + ".meta.json"
-# Explorer snapshot with inline details, served to browsers as a static file.
-MDS_EXPLORER_FULL_PATH = os.path.join(
-    str(_FRONTEND_STATIC_ROOT), "fido-mds3.explorer.full.json"
-)
-SESSION_METADATA_DIR = os.environ.get(
-    "FIDO_SERVER_SESSION_METADATA_DIR",
-    os.path.join(str(_SERVER_RUNTIME_ROOT), "session-metadata"),
-)
+MDS_EXPLORER_FULL_PATH = mds.MDS_EXPLORER_FULL_PATH
+MDS_EXPLORER_META_PATH = mds.MDS_EXPLORER_META_PATH
+MDS_EXPLORER_PATH = mds.MDS_EXPLORER_PATH
+MDS_METADATA_CACHE_PATH = mds.MDS_METADATA_CACHE_PATH
+MDS_METADATA_FILENAME = mds.MDS_METADATA_FILENAME
+MDS_METADATA_PATH = mds.MDS_METADATA_PATH
+MDS_METADATA_URL = mds.MDS_METADATA_URL
+MDS_METADATA_VERIFIED_PATH = mds.MDS_METADATA_VERIFIED_PATH
+SESSION_METADATA_DIR = mds.SESSION_METADATA_DIR
 
 __all__ = [
     "app",
