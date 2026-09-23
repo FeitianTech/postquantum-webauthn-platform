@@ -34,8 +34,6 @@ from __future__ import annotations
 from ..env_flags import parse_env_flag
 from ..mds_trust import (
     FIDO_METADATA_TRUST_ROOT_CERT,
-    FIDO_METADATA_TRUST_ROOT_PEM,
-    MDS_TLS_ADDITIONAL_TRUST_ANCHORS_PEM,
 )
 from . import (
     application,
@@ -75,8 +73,6 @@ __all__ = [
     "MDS_METADATA_URL",
     "SESSION_METADATA_DIR",
     "FIDO_METADATA_TRUST_ROOT_CERT",
-    "FIDO_METADATA_TRUST_ROOT_PEM",
-    "MDS_TLS_ADDITIONAL_TRUST_ANCHORS_PEM",
 ]
 
 # The Flask application.
