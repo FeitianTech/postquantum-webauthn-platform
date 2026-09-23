@@ -912,6 +912,55 @@ MDS snapshot workflow re-ran successfully.
    runs its own tests, so production was never at risk — but the scheduled MDS workflow failed daily
    from 09-19 with nobody noticing, which is a monitoring gap too.
 
+### Phase 13 — `create_app()` factory — DONE (2026-09-23), verified
+21 commits. `server/app/factory.py::create_app(config=None)` builds a fresh app from each config
+submodule's `config_from_env()` plus overrides, then runs `INIT_STEPS` in a pinned order:
+logs, secret, ProxyFix, gzip, security headers, static assets, blueprints, RP warning. Routes moved to
+four blueprints (`general`, `simple`, `advanced`, `static_assets`); `server.app.app:app = create_app()`
+keeps the gunicorn target unchanged. Non-web modules log via `logging.getLogger(__name__)`; request
+code reads settings via `current_app`. Dead `rp`/`server` singletons deleted.
+`config.app` survives only as a lazy alias for the ~230 legacy test references; a test fails if any
+server module reads it.
+
+Tech-lead verification:
+- Suites 1880 passed / 4 skipped, vitest 278, ruff clean, `tests/app/security/` 78.
+- **URL map: 31 rules and methods, 0 diff** vs `a647ad41`. All 30 app endpoints gained a blueprint
+  prefix; 0 `url_for` anywhere, so nothing referenced the old names.
+- **Headers and cookies: 0 diff lines** across `/` and `/health`, http/https, dev and Cloud Run mode;
+  spoofed `X-Forwarded-Host` still yields the real RP ID.
+- **No disk writes on import:** importing all 90 non-entry-point modules in a clean `git archive`
+  (bytecode off) leaves the tree byte-identical. The same probe on `origin/main` writes
+  `instance/session-secret.key` and creates `server/runtime/session-metadata` — the two import-time
+  side effects the agent found (I had briefed only one).
+- **Fail-closed:** `K_SERVICE` set with no secret -> `RuntimeError: Refusing to start ...`; with a
+  secret -> starts, 31 rules. Dev keeps generate-and-persist (mode 0600).
+- **Pre-push production check:** the live `pqcwebauthn` service (project `feitian-project`) has
+  `FIDO_SERVER_SECRET_KEY` from Secret Manager `pqcwebauthn-session-key`, version 1 `enabled`. Values
+  were not read. Cloud Run will not shift traffic to a revision that fails to start, so even the worst
+  case keeps the current revision serving.
+
+**Part A — build reproducibility.** Root `pyproject.toml` pins `poetry-core==2.5.0` exactly; a test
+enforces an exact pin. Dependabot CANNOT see it (dependabot-core skips `[build-system]` in a Poetry
+project), so a weekly `update-build-backend.yml` builds fido2 with the new release through uv and pip,
+runs pytest, and only then opens a bot PR — a breaking release fails that job while `main` stays green.
+Scheduled-run failures are now surfaced: `ci-scheduled-runs.yml` (`actions: read` only) posts a warning
+annotation on every push/PR while any scheduled workflow's latest run on `main` has failed. Issues are
+disabled on this repo, so it warns rather than opening one. Replayed against history it would have
+flagged the MDS failures AND a `ci-security` scheduled failure on 09-21 that also went unnoticed.
+Removed unused trust anchors including the Baltimore root that expired 2025-05-12.
+
+**Corrections to my briefing:** only 3 of the 19 `reload` matches were app reloads (13 reload
+`fido2.features`, 3 are fake `Blob.reload()` methods); ~230 test references go through
+`config_module.app`, hence the lazy alias; there were TWO import-time disk writes, not one.
+
+**Found but not fixed:** `SESSION_METADATA_RECOVER_ON_START` is set but never read; `print()` instead of
+logging at `certificates.py:909` and `device_logs.py:201,207`; images pinned by tag not digest (trivy,
+uv, `python:3.12-slim`); builder `pip` unpinned; `setup-uv` `version:` and `uvx` pins invisible to
+Dependabot.
+
+**Still open from the original audit:** the live service runs with `GITHUB_TOKEN`, so every production
+registration is logged to the hardcoded personal repo `rainzhang05/CredentialLogs`.
+
 ### Local development
 Tests previously ran against the global interpreter, whose packages matched nothing in
 `requirements.txt` (cryptography 44.0.3, fido2 2.1.1, gunicorn 23). A project venv now exists:
