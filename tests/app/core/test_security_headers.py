@@ -11,6 +11,7 @@ import pytest
 config_module = pytest.importorskip("server.app.config")
 config_paths = pytest.importorskip("server.app.config.paths")
 config_proxy = pytest.importorskip("server.app.config.proxy")
+config_session_cookie = pytest.importorskip("server.app.config.session_cookie")
 app_module = pytest.importorskip("server.app.app")
 
 app = config_module.app
@@ -227,16 +228,16 @@ def test_issued_session_cookie_carries_the_flags(client):
 )
 def test_session_cookie_secure_follows_the_env_override(monkeypatch, env_value, expected):
     monkeypatch.setenv("FIDO_SERVER_SESSION_COOKIE_SECURE", env_value)
-    assert config_module._resolve_session_cookie_secure() is expected
+    assert config_session_cookie._resolve_session_cookie_secure() is expected
 
 
 def test_session_cookie_secure_defaults_on_for_cloud_run(monkeypatch):
     monkeypatch.delenv("FIDO_SERVER_SESSION_COOKIE_SECURE", raising=False)
     monkeypatch.delenv("K_SERVICE", raising=False)
-    assert config_module._resolve_session_cookie_secure() is False
+    assert config_session_cookie._resolve_session_cookie_secure() is False
 
     monkeypatch.setenv("K_SERVICE", "pqc-webauthn")
-    assert config_module._resolve_session_cookie_secure() is True
+    assert config_session_cookie._resolve_session_cookie_secure() is True
 
 
 @pytest.mark.parametrize(
@@ -245,7 +246,7 @@ def test_session_cookie_secure_defaults_on_for_cloud_run(monkeypatch):
 )
 def test_session_lifetime_env_parsing(monkeypatch, raw, expected):
     monkeypatch.setenv("FIDO_SERVER_SESSION_LIFETIME_SECONDS", raw)
-    assert config_module._resolve_session_lifetime_seconds() == expected
+    assert config_session_cookie._resolve_session_lifetime_seconds() == expected
 
 
 # --------------------------------------------------------------------------
