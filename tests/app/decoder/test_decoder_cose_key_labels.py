@@ -149,3 +149,10 @@ def test_okp_keys_and_unregistered_values_are_named_without_guessing():
     assert binary._describe_cose_key({1: 42}) == {"keyType": "COSE kty 42"}
     assert binary._describe_cose_key({3: -7}) == {}
     assert binary._describe_cose_key("not a key") == {}
+
+
+def test_key_parameters_of_the_wrong_type_are_left_undescribed():
+    assert binary._describe_cose_key({1: True}) == {}
+    assert binary._describe_cose_key({1: "seven"}) == {}
+    assert binary._describe_cose_key({1: "7", 3: "-48", -1: 5}) == {"keyType": "AKP (7)", "parameterSet": "ML-DSA-44"}
+    assert binary._describe_cose_key({1: 3, -1: None}) == {"keyType": "RSA (3)"}
