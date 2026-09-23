@@ -499,7 +499,7 @@ def test_warm_up_dependencies_logs_cleanup_warning_when_delete_fails(monkeypatch
     )
 
     warnings = []
-    monkeypatch.setattr(startup.app.logger, "warning", lambda *args, **kwargs: warnings.append((args, kwargs)))
+    monkeypatch.setattr(startup.logger, "warning", lambda *args, **kwargs: warnings.append((args, kwargs)))
 
     startup.warm_up_dependencies(fail_fast=False)
 

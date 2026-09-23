@@ -629,7 +629,7 @@ def test_real_registration_round_trips_through_the_json_store(monkeypatch, tmp_p
     # Any value the encoder cannot represent is logged; the flow must not need it.
     warnings: list[str] = []
     monkeypatch.setattr(
-        credentials.app.logger,
+        credentials.logger,
         "warning",
         lambda msg, *args, **kwargs: warnings.append(str(msg) % args if args else str(msg)),
     )

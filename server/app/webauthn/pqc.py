@@ -6,7 +6,9 @@ ML-DSA support.  liboqs is no longer required.
 
 from __future__ import annotations
 
-from ..config import app
+import logging
+
+logger = logging.getLogger(__name__)
 
 # COSE algorithm identifiers mapped to their FIPS 204 parameter set names.
 PQC_ALGORITHM_ID_TO_NAME: dict[int, str] = {
@@ -48,7 +50,7 @@ def detect_available_pqc_algorithms() -> tuple[set[int], str | None]:
             "Install cryptography>=49."
         )
     except Exception as exc:  # pragma: no cover - defensive logging path
-        app.logger.exception("Failed to enumerate ML-DSA mechanisms: %s", exc)
+        logger.exception("Failed to enumerate ML-DSA mechanisms: %s", exc)
         return set(), "Unable to determine which post-quantum algorithms are available."
 
     available_ids = {
@@ -128,16 +130,16 @@ def log_algorithm_selection(stage: str, alg_id: int | None) -> None:
 
     label = describe_algorithm(alg_id)
     if alg_id is None:
-        app.logger.info("No signature algorithm associated with %s stage.", stage)
+        logger.info("No signature algorithm associated with %s stage.", stage)
     elif is_pqc_algorithm(alg_id):
-        app.logger.info(
+        logger.info(
             "Using post-quantum algorithm %s (COSE %d) during %s.",
             label,
             alg_id,
             stage,
         )
     else:
-        app.logger.info(
+        logger.info(
             "Using classical algorithm %s (COSE %d) during %s.", label, alg_id, stage
         )
 

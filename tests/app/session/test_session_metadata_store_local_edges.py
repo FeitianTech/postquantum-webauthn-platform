@@ -56,7 +56,7 @@ def test_local_session_directory_logs_and_raises_on_create_failure(session_store
     session_store, _ = session_store_local
 
     errors = []
-    monkeypatch.setattr(session_store.app.logger, "error", lambda *args, **kwargs: errors.append((args, kwargs)))
+    monkeypatch.setattr(session_store.logger, "error", lambda *args, **kwargs: errors.append((args, kwargs)))
     monkeypatch.setattr(
         session_store.os,
         "makedirs",
@@ -180,7 +180,7 @@ def test_local_cleanup_logs_warning_when_stale_directory_removal_fails(session_s
     )
 
     warnings = []
-    monkeypatch.setattr(session_store.app.logger, "warning", lambda *args, **kwargs: warnings.append((args, kwargs)))
+    monkeypatch.setattr(session_store.logger, "warning", lambda *args, **kwargs: warnings.append((args, kwargs)))
 
     now = session_store._LOCAL_INACTIVE_AGE.total_seconds() + 1000.0
     session_store._local_maybe_cleanup(now=now)
@@ -251,7 +251,7 @@ def test_list_sessions_gcs_logs_and_returns_empty_on_errors(session_store_local,
     )
 
     warnings = []
-    monkeypatch.setattr(session_store.app.logger, "warning", lambda *args, **kwargs: warnings.append((args, kwargs)))
+    monkeypatch.setattr(session_store.logger, "warning", lambda *args, **kwargs: warnings.append((args, kwargs)))
 
     assert session_store.list_sessions() == []
     assert warnings

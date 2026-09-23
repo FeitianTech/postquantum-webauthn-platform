@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import logging
 import os
 import threading
 
-from .config import app
 from .env_flags import parse_env_flag
 from .storage import cloud, session_metadata
+
+logger = logging.getLogger(__name__)
 
 __all__ = ["start_background_warmup", "warm_up_dependencies"]
 
@@ -39,7 +41,7 @@ def _run_background_warmup() -> None:
         try:
             cloud._ensure_bucket()
         except Exception:
-            app.logger.warning("Background cloud storage warm-up failed.", exc_info=True)
+            logger.warning("Background cloud storage warm-up failed.", exc_info=True)
 
     # The MDS snapshot is provisioned at runtime rather than shipped in the
     # image, so a cold instance fetches it here instead of on the first request.
@@ -48,14 +50,14 @@ def _run_background_warmup() -> None:
 
         ensure_snapshot_available()
     except Exception:
-        app.logger.warning("Background MDS snapshot provisioning failed.", exc_info=True)
+        logger.warning("Background MDS snapshot provisioning failed.", exc_info=True)
 
     try:
         from .webauthn.metadata import load_cached_metadata_snapshot
 
         load_cached_metadata_snapshot()
     except Exception:
-        app.logger.warning("Background metadata warm-up failed.", exc_info=True)
+        logger.warning("Background metadata warm-up failed.", exc_info=True)
 
 
 def start_background_warmup() -> threading.Thread | None:
@@ -131,13 +133,13 @@ def warm_up_dependencies(
     effective_fail_fast = startup_fail_fast_enabled() if fail_fast is None else bool(fail_fast)
     startup_mode = "strict" if effective_fail_fast else "fast"
 
-    app.logger.info("Performing server startup checks (mode=%s).", startup_mode)
+    logger.info("Performing server startup checks (mode=%s).", startup_mode)
 
     def _handle_failure(message: str) -> None:
         if effective_fail_fast:
-            app.logger.exception(message)
+            logger.exception(message)
             raise
-        app.logger.warning(message, exc_info=True)
+        logger.warning(message, exc_info=True)
 
     if _should_warm_metadata(fail_fast=effective_fail_fast):
         try:
@@ -147,7 +149,7 @@ def warm_up_dependencies(
         except Exception:
             _handle_failure("Failed to bootstrap FIDO metadata during startup.")
     else:
-        app.logger.info(
+        logger.info(
             "Skipping startup metadata bootstrap; metadata will load lazily on demand."
         )
 
@@ -157,7 +159,7 @@ def warm_up_dependencies(
         except Exception:
             _handle_failure("Failed to verify Google Cloud Storage readiness during startup.")
     elif _should_warm_cloud_storage_configured():
-        app.logger.info(
+        logger.info(
             "Skipping startup Google Cloud Storage readiness check; storage will be verified lazily."
         )
 
@@ -171,12 +173,12 @@ def warm_up_dependencies(
             try:
                 session_metadata.delete_session(_STARTUP_SESSION_ID)
             except Exception:
-                app.logger.warning(
+                logger.warning(
                     "Failed to clean up startup session %s.",
                     _STARTUP_SESSION_ID,
                     exc_info=True,
                 )
     else:
-        app.logger.info(
+        logger.info(
             "Skipping startup session storage probe; storage health checks will run lazily."
         )

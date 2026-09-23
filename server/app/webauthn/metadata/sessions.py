@@ -1,7 +1,9 @@
 """Environment and cleanup interval helpers for metadata runtime."""
 from __future__ import annotations
 
+import functools
 import json
+import logging
 import os
 import secrets
 import threading
@@ -37,6 +39,8 @@ from .state import (
     _SESSION_METADATA_TOUCH_THROTTLE_ENV,
 )
 
+logger = logging.getLogger(__name__)
+
 
 def _env_flag(name: str) -> bool | None:
     return parse_env_flag(name)
@@ -50,7 +54,7 @@ def _resolve_cleanup_interval() -> timedelta:
             if seconds >= 0:
                 return timedelta(seconds=seconds)
         except ValueError:
-            app.logger.warning(
+            logger.warning(
                 "Invalid value for %s: %r",
                 _SESSION_METADATA_CLEANUP_INTERVAL_SECONDS_ENV,
                 raw_seconds,
@@ -63,7 +67,7 @@ def _resolve_cleanup_interval() -> timedelta:
             if hours >= 0:
                 return timedelta(hours=hours)
         except ValueError:
-            app.logger.warning(
+            logger.warning(
                 "Invalid value for %s: %r",
                 _SESSION_METADATA_CLEANUP_INTERVAL_HOURS_ENV,
                 raw_hours,
@@ -79,7 +83,21 @@ def _cleanup_async_enabled() -> bool:
     return explicit
 
 
-_SESSION_METADATA_CLEANUP_INTERVAL = _resolve_cleanup_interval()
+# Resolved on first use rather than at import: an invalid value is logged, and at
+# import time the app -- and so the log handler -- may not exist yet. Tests set
+# this to a timedelta to override it.
+_SESSION_METADATA_CLEANUP_INTERVAL: timedelta | None = None
+
+
+@functools.cache
+def _configured_cleanup_interval() -> timedelta:
+    return _resolve_cleanup_interval()
+
+
+def _cleanup_interval() -> timedelta:
+    if _SESSION_METADATA_CLEANUP_INTERVAL is not None:
+        return _SESSION_METADATA_CLEANUP_INTERVAL
+    return _configured_cleanup_interval()
 
 
 def _touch_session_last_access(session_id: str) -> None:
@@ -99,7 +117,7 @@ def _resolve_session_last_access(session_id: str) -> float | None:
 def _maybe_cleanup_inactive_sessions(now: float | None = None) -> None:
     current_time = now or time.time()
     with _state._session_cleanup_lock:
-        if current_time - _state._session_metadata_last_cleanup < _SESSION_METADATA_CLEANUP_INTERVAL.total_seconds():
+        if current_time - _state._session_metadata_last_cleanup < _cleanup_interval().total_seconds():
             return
         _state._session_metadata_last_cleanup = current_time
 
@@ -118,7 +136,7 @@ def _maybe_cleanup_inactive_sessions(now: float | None = None) -> None:
         try:
             session_metadata.delete_session(session_id)
         except Exception as exc:
-            app.logger.warning(
+            logger.warning(
                 "Failed to remove inactive metadata session %s: %s", session_id, exc
             )
 
@@ -128,7 +146,7 @@ def _run_inactive_session_cleanup_worker() -> None:
         try:
             _maybe_cleanup_inactive_sessions()
         except Exception as exc:  # pragma: no cover - defensive logging
-            app.logger.warning(
+            logger.warning(
                 "Unexpected failure while cleaning inactive metadata sessions: %s",
                 exc,
                 exc_info=True,
@@ -147,7 +165,7 @@ def _schedule_inactive_session_cleanup() -> None:
     current_time = time.time()
     if (
         current_time - _state._session_metadata_last_cleanup
-        < _SESSION_METADATA_CLEANUP_INTERVAL.total_seconds()
+        < _cleanup_interval().total_seconds()
     ):
         return
 
@@ -318,7 +336,7 @@ def _session_metadata_directory(
         try:
             session_metadata.ensure_session(normalised)
         except Exception as exc:
-            app.logger.error(
+            logger.error(
                 "Failed to prepare session metadata storage for %s: %s", normalised, exc
             )
             raise
@@ -455,7 +473,7 @@ def save_session_metadata_item(
             content_type="application/json",
         )
     except Exception as exc:
-        app.logger.error(
+        logger.error(
             "Failed to store session metadata %s: %s", stored_filename, exc
         )
         raise RuntimeError("Failed to store uploaded metadata on the server.") from exc
@@ -477,7 +495,7 @@ def save_session_metadata_item(
             content_type="application/json",
         )
     except Exception as exc:
-        app.logger.warning(
+        logger.warning(
             "Failed to store session metadata info for %s: %s", stored_filename, exc
         )
 
@@ -524,7 +542,7 @@ def list_session_metadata_items(session_id: str | None = None) -> list[SessionMe
             payload_bytes = session_metadata.read_file(directory, filename)
             raw = json.loads(payload_bytes.decode("utf-8")) if payload_bytes else None
         except (ValueError, TypeError, UnicodeDecodeError) as exc:
-            app.logger.warning(
+            logger.warning(
                 "Failed to load session metadata from %s/%s: %s", directory, filename, exc
             )
             continue
@@ -532,7 +550,7 @@ def list_session_metadata_items(session_id: str | None = None) -> list[SessionMe
         try:
             entry, legal_header, payload = entries.build_metadata_entry_components(raw)
         except Exception as exc:  # pylint: disable=broad-except
-            app.logger.warning(
+            logger.warning(
                 "Failed to parse session metadata entry from %s/%s: %s",
                 directory,
                 filename,
@@ -596,7 +614,7 @@ def delete_session_metadata_item(
     try:
         session_metadata.delete_file(directory, safe_name, missing_ok=False)
     except Exception as exc:
-        app.logger.error(
+        logger.error(
             "Failed to delete session metadata %s/%s: %s", directory, safe_name, exc
         )
         raise RuntimeError("Failed to delete the uploaded metadata file.") from exc
