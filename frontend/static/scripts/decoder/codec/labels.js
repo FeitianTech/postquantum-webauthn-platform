@@ -13,7 +13,11 @@ export function formatKey(key) {
         return key;
     }
 
-    const spaced = key
+    // A leading minus before a digit is a sign, not a separator: COSE labels
+    // -1, -2 and -3 are different keys from 1, 2 and 3.
+    const sign = /^-\d/.test(key) ? '-' : '';
+    const spaced = sign + key
+        .slice(sign.length)
         .replace(/[_-]+/g, ' ')
         .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
         .trim();

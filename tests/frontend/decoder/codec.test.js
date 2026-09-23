@@ -338,6 +338,26 @@ describe('codec UI', () => {
     }
   });
 
+  it('shows negative COSE labels with their minus sign', async () => {
+    document.getElementById('decoder-input').value = 'a501020326200121';
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: vi.fn().mockResolvedValue({
+        success: true,
+        type: 'CBOR',
+        data: {
+          decodedValue: { '1': 2, '3': -7, '-1': 1, '-2': 'aa', '-3': 'bb' },
+        },
+      }),
+    });
+
+    await processCodec('decode');
+    const labels = Array.from(document.querySelectorAll('#decoded-content dt')).map((dt) => dt.textContent);
+    expect(labels).toEqual(expect.arrayContaining(['1', '3', '-1', '-2', '-3']));
+    expect(labels.filter((label) => label === '1')).toHaveLength(1);
+  });
+
   it('renders decodedValue labels and rejects boolean payloads for binary encode formats', async () => {
     document.getElementById('decoder-input').value = 'AQID';
     fetch.mockResolvedValueOnce({
