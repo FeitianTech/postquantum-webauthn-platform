@@ -36,3 +36,11 @@ frontend/static/fido-mds3.explorer.json
 frontend/static/fido-mds3.explorer.json.meta.json
 frontend/static/fido-mds3.explorer.full.json
 frontend/static/fido-mds3.explorer.full.json.meta.json
+
+# Local runtime state: stored credential artifacts, session metadata and the
+# persisted session secret. None of it is copied into the image, but without
+# these lines a local `docker build` still sends it to the daemon as context.
+server/runtime
+instance
+node_modules
+coverage
