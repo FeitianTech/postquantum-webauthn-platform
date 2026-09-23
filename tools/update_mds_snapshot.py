@@ -18,19 +18,11 @@ if str(REPO_ROOT) not in sys.path:
 
 # Imported after the sys.path bootstrap above.
 from fido2.mds3 import parse_blob  # noqa: E402
-
-try:  # A repository checkout.
-    from server.app.encoding import decode_base64  # noqa: E402
-    from server.app.mds_snapshot import (  # noqa: E402
-        build_bootstrap_snapshot,
-        build_explorer_snapshot,
-    )
-except ModuleNotFoundError:  # The image copies server/app to /app/server.
-    from server.encoding import decode_base64  # noqa: E402
-    from server.mds_snapshot import (  # noqa: E402
-        build_bootstrap_snapshot,
-        build_explorer_snapshot,
-    )
+from server.app.encoding import decode_base64  # noqa: E402
+from server.app.mds_snapshot import (  # noqa: E402
+    build_bootstrap_snapshot,
+    build_explorer_snapshot,
+)
 
 FRONTEND_STATIC_DIR = REPO_ROOT / "frontend" / "static"
 
@@ -306,13 +298,8 @@ def _write_cache_state(cache_state: dict[str, object]) -> bool:
 def _publish_to_cloud_storage() -> int:
     """Upload the snapshot files to the bucket the server provisions from."""
 
-    try:
-        from server.app import mds_provisioning
-        from server.app.storage import cloud
-    except ModuleNotFoundError:  # The image copies server/app to /app/server.
-        from server.storage import cloud
-
-        from server import mds_provisioning
+    from server.app import mds_provisioning
+    from server.app.storage import cloud
 
     if not cloud.gcs_enabled():
         print(
