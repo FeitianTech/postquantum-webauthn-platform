@@ -141,12 +141,8 @@ _locate_get_assertion_trailing_offset = ctap._locate_get_assertion_trailing_offs
 _split_get_assertion_trailing_fields = ctap._split_get_assertion_trailing_fields
 
 # CTAP make-credential repair helpers.
-_derive_alg_from_auth_data = ctap._derive_alg_from_auth_data
 _extract_mapping_bytes = ctap._extract_mapping_bytes
 _extract_mapping_string = ctap._extract_mapping_string
-_merge_ctap_make_credential = ctap._merge_ctap_make_credential
-_merge_trailing_signature = ctap._merge_trailing_signature
-_repair_make_credential_entries = ctap._repair_make_credential_entries
 
 # Top-level decode pipeline helpers.
 _PEM_CERT_PATTERN = pipeline._PEM_CERT_PATTERN

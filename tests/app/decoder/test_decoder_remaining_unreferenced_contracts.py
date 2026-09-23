@@ -43,9 +43,6 @@ def test_remaining_cbor_key_float_and_lenient_helpers():
     trailing_offset = decode_module._locate_get_assertion_trailing_offset(raw, signature_start)
     assert trailing_offset >= signature_start
 
-    assert decode_module._derive_alg_from_auth_data(None) is None
-    assert decode_module._derive_alg_from_auth_data(_auth_data_bytes()) is None
-
 
 def test_remaining_mapping_and_auth_data_format_helpers():
     decode_module = pytest.importorskip("server.app.decoder.decode")
