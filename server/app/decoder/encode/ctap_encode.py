@@ -26,17 +26,18 @@ def _encode_ctap_from_decoded(
     if not isinstance(decoded, Mapping):
         return None, None
 
-    for key in (
-        "makeCredentialRequest",
-        "getAssertionRequest",
-        "makeCredentialResponse",
-        "getAssertionResponse",
-    ):
+    # The decoder has already said which CTAP map this is; classifying the
+    # fields again could read a request as a response.
+    encoders = {
+        "makeCredentialRequest": _encode_make_credential_request,
+        "getAssertionRequest": _encode_get_assertion_request,
+        "makeCredentialResponse": _encode_make_credential_response,
+        "getAssertionResponse": _encode_get_assertion_response,
+    }
+    for key, encoder in encoders.items():
         entry = decoded.get(key)
         if isinstance(entry, Mapping):
-            encoded_map, kind = _encode_ctap_from_structure(entry)
-            if encoded_map is not None:
-                return encoded_map, key
+            return encoder(entry), key
     return None, None
 
 
