@@ -80,7 +80,7 @@ def test_build_get_assertion_expanded_json_recovers_signature_and_optional_trail
     assert result["4 (user)"]["id"] == "01"
     assert result["5 (numberOfCredentials)"] == 2
     assert result["6 (userSelected)"] is True
-    assert result["8 (extensions)"]["uvm"] is True
+    assert result["8 (unsignedExtensionOutputs)"]["uvm"] is True
     assert result["trailingFields"]["9"] == "bb"
 
 
@@ -107,7 +107,7 @@ def test_interpret_get_assertion_map_uses_trailing_signature_when_primary_signat
     assert interpreted["3 (signature)"] == "1122"
     assert interpreted["4 (user)"]["id"] == "02"
     assert interpreted["7 (largeBlobKey)"] == "0a"
-    assert interpreted["8 (extensions)"]["credBlob"] == "ff"
+    assert interpreted["8 (unsignedExtensionOutputs)"]["credBlob"] == "ff"
     assert interpreted["trailingFields"]["10"] == "cc"
 
 
@@ -132,7 +132,7 @@ def test_interpret_make_credential_map_handles_attstmt_optional_fields_and_extra
     assert interpreted["3 (attStmt)"]["sig"] == "0102"
     assert interpreted["4 (epAtt)"] == "05"
     assert interpreted["5 (largeBlobKey)"] == "06"
-    assert interpreted["6 (extensions)"]["example"] == "07"
+    assert interpreted["6 (unsignedExtensionOutputs)"]["example"] == "07"
     assert interpreted["99"] == "08"
     assert interpreted["2 (authData trailing)"]["7"] == "99"
 

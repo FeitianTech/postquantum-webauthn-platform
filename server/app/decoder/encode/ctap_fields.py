@@ -10,7 +10,56 @@ from .binary_decode import (
     _require_certificate_bytes,
 )
 from .binary_extract import _restore_generic_structure
-from .constants import _CTAP_LABELED_KEY_PATTERN
+from .constants import _CTAP_FIELD_LABELS, _CTAP_LABELED_KEY_PATTERN
+
+
+def _reject_misnamed_request_fields(
+    structure: Mapping[Any, Any],
+    kind: str,
+    *,
+    bare_names: bool = True,
+) -> None:
+    """Refuse a request field that CTAP 2.2 does not call by the name it carries.
+
+    An authenticator is sent the number, never the name. "8 (largeBlobKey)" in a
+    getAssertion request names a parameter CTAP does not define, and
+    "11 (largeBlobKey)" in a makeCredential request names something other than
+    attestationFormatsPreference; encoding either would hand the authenticator a
+    field its author did not mean. A bare number is a raw field the author asked
+    for on purpose and is left alone.
+    """
+
+    members = _CTAP_FIELD_LABELS[kind]
+    command = kind.removesuffix("Request")
+    known_names = {name.lower() for name in members.values()}
+    for key in structure:
+        if not isinstance(key, str):
+            continue
+        text = key.strip()
+        match = _CTAP_LABELED_KEY_PATTERN.match(text)
+        if match:
+            number = int(match.group(1))
+            name = match.group(2).strip()
+            expected = members.get(number)
+            if expected is None:
+                raise ValueError(f"CTAP 2.2 {command} has no parameter 0x{number:02x} ({name}).")
+            if name.lower() != expected.lower():
+                raise ValueError(f"CTAP 2.2 {command} parameter 0x{number:02x} is {expected}, not {name}.")
+        elif bare_names and not _is_bare_number(text) and text.lower() not in known_names:
+            raise ValueError(f"CTAP 2.2 {command} has no parameter named {text}.")
+
+
+def _is_bare_number(text: str) -> bool:
+    lowered = text.lower()
+    if lowered.startswith("0x"):
+        return all(char in "0123456789abcdef" for char in lowered[2:]) and len(lowered) > 2
+    return lowered.isdigit()
+
+
+def _get_ctap_member(structure: Mapping[str, Any], kind: str, number: int) -> Any:
+    """Look up member ``number`` of a ``kind`` map under the name the CTAP table gives it."""
+
+    return _get_ctap_field_value(structure, _CTAP_FIELD_LABELS[kind][number], number)
 
 
 def _get_ctap_field_value(

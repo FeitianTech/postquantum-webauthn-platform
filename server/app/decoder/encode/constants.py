@@ -4,50 +4,15 @@ from __future__ import annotations
 import re
 from collections.abc import Sequence
 
+from .. import ctap_tables
+
 _CTAP_LABELED_KEY_PATTERN = re.compile(r"^\s*(-?\d+)\s*\(([^)]+)\)\s*$")
 
 _CTAP_FIELD_LABELS: dict[str, dict[int, str]] = {
-    "makeCredentialRequest": {
-        1: "clientDataHash",
-        2: "rp",
-        3: "user",
-        4: "pubKeyCredParams",
-        5: "excludeList",
-        6: "extensions",
-        7: "options",
-        8: "pinUvAuthParam",
-        9: "pinUvAuthProtocol",
-        10: "enterpriseAttestation",
-        11: "largeBlobKey",
-    },
-    "getAssertionRequest": {
-        1: "rpId",
-        2: "clientDataHash",
-        3: "allowList",
-        4: "extensions",
-        5: "options",
-        6: "pinUvAuthParam",
-        7: "pinUvAuthProtocol",
-        8: "largeBlobKey",
-    },
-    "makeCredentialResponse": {
-        1: "fmt",
-        2: "authData",
-        3: "attStmt",
-        4: "epAtt",
-        5: "largeBlobKey",
-        6: "extensions",
-    },
-    "getAssertionResponse": {
-        1: "credential",
-        2: "authData",
-        3: "signature",
-        4: "user",
-        5: "numberOfCredentials",
-        6: "userSelected",
-        7: "largeBlobKey",
-        8: "extensions",
-    },
+    "makeCredentialRequest": ctap_tables.MAKE_CREDENTIAL_PARAMETERS,
+    "getAssertionRequest": ctap_tables.GET_ASSERTION_PARAMETERS,
+    "makeCredentialResponse": ctap_tables.MAKE_CREDENTIAL_RESPONSE,
+    "getAssertionResponse": ctap_tables.GET_ASSERTION_RESPONSE,
 }
 
 _CTAP_REQUIRED_FIELDS: dict[str, Sequence[int]] = {
