@@ -86,3 +86,66 @@ def test_the_decoder_keeps_no_algorithm_table_of_its_own():
 )
 def test_api_decode_names_the_credential_algorithm(client, make_key, expected):
     assert _decoded_public_key(client, make_key())["alg"] == expected
+
+
+# ---------------------------------------------------------------------------
+# COSE key types. ML-DSA keys are kty 7 (AKP) with the public key at label -1;
+# the decoder names every key type and the parameter that sizes it.
+
+
+def test_api_decode_describes_an_ml_dsa_akp_key(client):
+    for key_class, private_class, parameter_set, length in (
+        (MLDSA44, mldsa.MLDSA44PrivateKey, "ML-DSA-44", 1312),
+        (MLDSA65, mldsa.MLDSA65PrivateKey, "ML-DSA-65", 1952),
+        (MLDSA87, mldsa.MLDSA87PrivateKey, "ML-DSA-87", 2592),
+    ):
+        public_key = _decoded_public_key(
+            client, key_class.from_cryptography_key(private_class.generate().public_key())
+        )
+        assert public_key["keyType"] == "AKP (7)"
+        assert public_key["parameterSet"] == parameter_set
+        assert public_key["publicKeyBytes"] == length
+        assert "publicKeyBytesExpected" not in public_key
+
+
+def test_api_decode_describes_ec2_and_rsa_keys_the_same_way(client):
+    p256 = _decoded_public_key(client, ES256.from_cryptography_key(ec.generate_private_key(ec.SECP256R1()).public_key()))
+    assert (p256["keyType"], p256["curve"]) == ("EC2 (2)", "P-256 (1)")
+
+    p384 = _decoded_public_key(client, ES384.from_cryptography_key(ec.generate_private_key(ec.SECP384R1()).public_key()))
+    assert (p384["keyType"], p384["curve"]) == ("EC2 (2)", "P-384 (2)")
+
+    rsa_key = _decoded_public_key(client, PS256.from_cryptography_key(rsa.generate_private_key(65537, 2048).public_key()))
+    assert (rsa_key["keyType"], rsa_key["modulusBits"]) == ("RSA (3)", 2048)
+
+
+def test_an_akp_key_of_the_wrong_length_says_what_fips_204_expects():
+    described = binary._describe_cose_key({1: 7, 3: -48, -1: b"\x00" * 100})
+    assert described == {
+        "keyType": "AKP (7)",
+        "parameterSet": "ML-DSA-44",
+        "publicKeyBytes": 100,
+        "publicKeyBytesExpected": 1312,
+    }
+
+
+def test_an_akp_key_reads_json_safe_string_labels_and_base64url_values():
+    described = binary._describe_cose_key({"1": 7, "3": -49, "-1": "AAEC"})
+    assert described["parameterSet"] == "ML-DSA-65"
+    assert described["publicKeyBytes"] == 3
+
+
+def test_an_akp_key_without_an_ml_dsa_algorithm_names_no_parameter_set():
+    described = binary._describe_cose_key({1: 7, 3: -7, -1: b"\x01\x02"})
+    assert described == {"keyType": "AKP (7)", "publicKeyBytes": 2}
+
+
+def test_okp_keys_and_unregistered_values_are_named_without_guessing():
+    assert binary._describe_cose_key({1: 1, 3: -8, -1: 6, -2: b"\x00" * 32}) == {
+        "keyType": "OKP (1)",
+        "curve": "Ed25519 (6)",
+    }
+    assert binary._describe_cose_key({1: 2, -1: 99}) == {"keyType": "EC2 (2)", "curve": "COSE crv 99"}
+    assert binary._describe_cose_key({1: 42}) == {"keyType": "COSE kty 42"}
+    assert binary._describe_cose_key({3: -7}) == {}
+    assert binary._describe_cose_key("not a key") == {}

@@ -7,7 +7,11 @@ from typing import Any
 
 from ...webauthn.attestation import make_json_safe, serialize_attestation_certificate
 from . import binary, summary
-from .binary import _convert_cose_key_for_display, _resolve_cose_algorithm
+from .binary import (
+    _convert_cose_key_for_display,
+    _describe_cose_key,
+    _resolve_cose_algorithm,
+)
 from .certificates import (
     _convert_attestation_entry_impl,
     _convert_attestation_statement_impl,
@@ -522,6 +526,7 @@ def _build_credential_payload(
         alg_label = _resolve_cose_algorithm({}, fallback_alg)
     if alg_label is not None:
         public_key_payload["alg"] = alg_label
+    public_key_payload.update(_describe_cose_key(cose_key))
     if public_key_raw_hex:
         public_key_payload["raw"] = public_key_raw_hex
     if not public_key_payload:
