@@ -1,13 +1,15 @@
 from __future__ import annotations
 
 import json
+import logging
 from collections.abc import Mapping
 from datetime import datetime, timezone
 from typing import Any
 
-from ... import config
 from ...webauthn import attestation, pqc
 from . import algorithms, binary
+
+logger = logging.getLogger(__name__)
 
 
 def _log_authenticator_attestation_response(
@@ -103,7 +105,7 @@ def _log_authenticator_attestation_response(
     except TypeError:
         message = str(payload)
 
-    config.app.logger.info("Authenticator attestation response:\n%s", message)
+    logger.info("Authenticator attestation response:\n%s", message)
 
 
 def datetime_from_timestamp(timestamp: float) -> str:

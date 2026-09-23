@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import logging
 import time
 import uuid
 from collections.abc import Mapping, MutableMapping
@@ -29,6 +30,8 @@ from ...storage import credentials
 from ...webauthn import attestation, metadata
 from .. import binary_helpers
 from . import parsing
+
+logger = logging.getLogger(__name__)
 
 
 def initialize_registration_context(ctx: dict[str, Any]) -> None:
@@ -313,7 +316,7 @@ def _persist_registered_credential_entry(ctx: dict[str, Any]) -> Any | None:
     try:
         credentials.savekey(ctx["uname"], existing_credentials, session_id=metadata_session_id)
     except Exception:
-        config.app.logger.exception("Failed to persist registered credential for %s", ctx["uname"])
+        logger.exception("Failed to persist registered credential for %s", ctx["uname"])
         return jsonify({"error": "Unable to persist registered credential."}), 500
 
     return None

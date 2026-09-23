@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from collections.abc import Iterable, Mapping
 from typing import Any
 
@@ -20,6 +21,8 @@ from ...webauthn import attestation, pqc
 from ...webauthn.sign_count import sign_count_status
 from .. import binary_helpers
 from . import algorithms, binary, parsing
+
+logger = logging.getLogger(__name__)
 
 
 def advanced_authenticate_begin():
@@ -534,7 +537,7 @@ def advanced_authenticate_complete():
                 )
 
             if credential_alg is not None and not _server_supports_algorithm(credential_alg):
-                config.app.logger.warning(
+                logger.warning(
                     "Assertion uses COSE algorithm %d which this server cannot verify; "
                     "no signature verification was performed.",
                     credential_alg,

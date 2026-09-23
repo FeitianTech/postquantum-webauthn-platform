@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import io
 import json
+import logging
 import os
 from collections.abc import Mapping
 from datetime import datetime, timezone
@@ -35,6 +36,8 @@ from ..webauthn.metadata import (
     save_session_metadata_item,
     serialize_session_metadata_item,
 )
+
+logger = logging.getLogger(__name__)
 
 _metadata_bootstrap_lock = Lock()
 _metadata_bootstrap_state = {
@@ -81,7 +84,7 @@ def _load_cached_metadata_snapshot_if_available() -> None:
     try:
         cached = load_cached_metadata_snapshot()
     except Exception as exc:  # pragma: no cover - defensive
-        app.logger.warning("Failed to load cached FIDO MDS metadata snapshot: %s", exc)
+        logger.warning("Failed to load cached FIDO MDS metadata snapshot: %s", exc)
         return
 
     if not cached:
@@ -90,7 +93,7 @@ def _load_cached_metadata_snapshot_if_available() -> None:
     with _metadata_bootstrap_lock:
         if not _metadata_bootstrap_state.get("cache_loaded"):
             _metadata_bootstrap_state["cache_loaded"] = True
-            app.logger.info("Loaded cached FIDO MDS metadata snapshot from disk.")
+            logger.info("Loaded cached FIDO MDS metadata snapshot from disk.")
 
 
 _existing_marker = os.environ.get(_METADATA_BOOTSTRAP_ENV_FLAG)
@@ -122,12 +125,12 @@ def ensure_metadata_bootstrapped(skip_if_reloader_parent: bool = True) -> None:
 
     metadata, _ = _load_base_metadata()
     if metadata is not None:
-        app.logger.info(
+        logger.info(
             "Loaded packaged FIDO MDS metadata snapshot (%d entries).",
             len(metadata.entries),
         )
     else:
-        app.logger.warning(
+        logger.warning(
             "Packaged FIDO MDS metadata snapshot not found at %s.",
             MDS_METADATA_VERIFIED_PATH,
         )
@@ -271,7 +274,7 @@ def api_get_verified_metadata():
     except FileNotFoundError:
         return jsonify({"error": "Verified metadata snapshot is not available."}), 404
     except json.JSONDecodeError as exc:
-        app.logger.error("Invalid verified metadata snapshot: %s", exc)
+        logger.error("Invalid verified metadata snapshot: %s", exc)
         return jsonify({"error": "Verified metadata snapshot is corrupted."}), 500
 
     return jsonify(payload)
@@ -392,7 +395,7 @@ def _perform_decode(decoder_input: str):
     except ValueError as exc:
         return {"error": str(exc)}, 422
     except Exception as exc:  # pylint: disable=broad-except
-        app.logger.exception("Failed to decode payload: %s", exc)
+        logger.exception("Failed to decode payload: %s", exc)
         return {"error": "Unable to decode payload."}, 500
 
 
@@ -402,7 +405,7 @@ def _perform_encode(encoder_input: str, target_format: str):
     except ValueError as exc:
         return {"error": str(exc)}, 422
     except Exception as exc:  # pylint: disable=broad-except
-        app.logger.exception("Failed to encode payload: %s", exc)
+        logger.exception("Failed to encode payload: %s", exc)
         return {"error": "Unable to encode payload."}, 500
 
 

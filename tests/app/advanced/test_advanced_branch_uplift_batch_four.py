@@ -151,7 +151,7 @@ def test_attestation_log_falls_back_to_plain_string_payload_when_json_encoding_f
 
     log_messages = []
     monkeypatch.setattr(
-        config_module.app.logger,
+        advanced_tracing.logger,
         "info",
         lambda _template, payload: log_messages.append(payload)
     )
