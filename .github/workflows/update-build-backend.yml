@@ -1,0 +1,107 @@
+name: Update Build Backend
+
+on:
+  schedule:
+    - cron: '0 4 * * 1'  # Mondays at 04:00 UTC
+  workflow_dispatch:
+
+# The root pyproject.toml pins poetry-core exactly, because uv.lock does not lock
+# build requirements and a floating range let poetry-core 2.5.0 break an
+# unchanged commit. Dependabot cannot bump that pin: it skips [build-system] in a
+# Poetry project. This job does it instead, and tests the new release before it
+# proposes anything, so a release that breaks the build fails here (which
+# ci-scheduled-runs.yml then flags) instead of on main.
+#
+# contents: write pushes the bot branch only; main is reached through a
+# reviewed pull request.
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: update-build-backend
+  cancel-in-progress: true
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.12'
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          version: "0.12.15"
+
+      - name: Compare the pin with the latest poetry-core release
+        id: bump
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import re
+          import urllib.request
+          from pathlib import Path
+
+          path = Path("pyproject.toml")
+          text = path.read_text(encoding="utf-8")
+          pins = re.findall(r'"poetry-core==([^"]+)"', text)
+          if len(pins) != 1:
+              raise SystemExit(f"expected exactly one poetry-core pin, found {pins}")
+          current = pins[0]
+
+          with urllib.request.urlopen("https://pypi.org/pypi/poetry-core/json", timeout=60) as resp:
+              latest = json.load(resp)["info"]["version"]
+          if not re.fullmatch(r"\d+(\.\d+)*", latest):
+              raise SystemExit(f"unexpected poetry-core version from PyPI: {latest!r}")
+          print(f"pinned {current}, latest {latest}")
+
+          changed = latest != current
+          if changed:
+              path.write_text(
+                  text.replace(f'"poetry-core=={current}"', f'"poetry-core=={latest}"'),
+                  encoding="utf-8",
+              )
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as out:
+              out.write(f"current={current}\nlatest={latest}\nchanged={str(changed).lower()}\n")
+          PY
+
+      # The backend's only job is to build the vendored fido2 package. Build it
+      # the way CI and local venvs do, and run the suite against that build.
+      - name: Build with uv and run the tests
+        if: steps.bump.outputs.changed == 'true'
+        run: |
+          uv sync --locked --python 3.12
+          .venv/bin/python -m pytest -q
+
+      # The Dockerfile installs fido2 with pip, which rejects metadata uv might not.
+      - name: Build with pip, as the Dockerfile does
+        if: steps.bump.outputs.changed == 'true'
+        run: python -m pip install --no-deps --target "$RUNNER_TEMP/fido2-pip-build" .
+
+      - name: Open a pull request with the new pin
+        if: steps.bump.outputs.changed == 'true'
+        uses: ./.github/actions/open-bot-pr
+        with:
+          branch: bot/build-backend
+          commit-message: "Pin the poetry-core build backend to ${{ steps.bump.outputs.latest }}"
+          paths: pyproject.toml
+          title: "Pin the poetry-core build backend to ${{ steps.bump.outputs.latest }}"
+          body: |
+            poetry-core ${{ steps.bump.outputs.latest }} is out; `pyproject.toml` pins
+            ${{ steps.bump.outputs.current }}.
+
+            Before opening this, the scheduled job built the vendored fido2
+            package with the new release through `uv sync --locked` and through
+            `pip install .` (the Dockerfile's path), and ran pytest against it.
+
+            Only `pyproject.toml` is touched.
+          token: ${{ secrets.BOT_PR_TOKEN || secrets.GITHUB_TOKEN }}
