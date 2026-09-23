@@ -7,10 +7,13 @@ to disk.
 """
 from __future__ import annotations
 
+import logging
 import os
 import tempfile
 
 from .application import app
+
+logger = logging.getLogger(__name__)
 
 
 def _resolve_secret_key() -> bytes:
@@ -28,7 +31,7 @@ def _resolve_secret_key() -> bytes:
                 if file_value:
                     return file_value
         except OSError as exc:  # pragma: no cover - depends on deployment
-            app.logger.warning(
+            logger.warning(
                 "Unable to read secret key file %s: %s", file_path, exc
             )
 
@@ -55,7 +58,7 @@ def _resolve_secret_key() -> bytes:
     try:
         os.makedirs(os.path.dirname(default_path), exist_ok=True)
     except OSError as exc:  # pragma: no cover - depends on deployment
-        app.logger.warning("Unable to store generated session secret: %s", exc)
+        logger.warning("Unable to store generated session secret: %s", exc)
         return secret
 
     try:
@@ -63,7 +66,7 @@ def _resolve_secret_key() -> bytes:
             prefix="session-secret.", dir=os.path.dirname(default_path)
         )
     except OSError as exc:  # pragma: no cover - depends on deployment
-        app.logger.warning("Unable to store generated session secret: %s", exc)
+        logger.warning("Unable to store generated session secret: %s", exc)
         return secret
     try:
         with os.fdopen(fd, "wb") as target:
@@ -73,7 +76,7 @@ def _resolve_secret_key() -> bytes:
         try:
             os.replace(temp_path, default_path)
         except OSError as exc:  # pragma: no cover - depends on deployment
-            app.logger.warning("Unable to store generated session secret: %s", exc)
+            logger.warning("Unable to store generated session secret: %s", exc)
             try:
                 os.unlink(temp_path)
             except OSError:

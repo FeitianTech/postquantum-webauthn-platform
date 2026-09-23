@@ -200,14 +200,14 @@ def test_determine_expected_origin_never_echoes_an_unlisted_candidate(config_mod
 
 
 def test_development_fallback_warning_is_emitted_once(config_module, monkeypatch):
+    from server.app.config import relying_party
+
     warnings = []
     monkeypatch.setattr(
-        config_module.app.logger,
+        relying_party.logger,
         "warning",
         lambda msg, *args: warnings.append(msg % args if args else msg),
     )
-    from server.app.config import relying_party
-
     monkeypatch.setattr(relying_party, "_RP_CONFIGURATION_WARNING_EMITTED", False)
     monkeypatch.setitem(config_module.app.config, "FIDO_SERVER_RP_ID", None)
     monkeypatch.setitem(config_module.app.config, "FIDO_SERVER_ALLOWED_ORIGINS", None)
