@@ -13,6 +13,7 @@ config_paths = pytest.importorskip("server.app.config.paths")
 config_proxy = pytest.importorskip("server.app.config.proxy")
 config_session_cookie = pytest.importorskip("server.app.config.session_cookie")
 config_security_headers = pytest.importorskip("server.app.config.security_headers")
+config_relying_party = pytest.importorskip("server.app.config.relying_party")
 app_module = pytest.importorskip("server.app.app")
 
 app = config_module.app
@@ -327,7 +328,7 @@ def test_rp_id_derivation_ignores_forwarded_host_header():
         headers={"X-Forwarded-Host": "attacker.example"},
     ):
         assert config_module.determine_rp_id() == "real.example"
-        assert config_module._resolve_request_host() == "real.example"
+        assert config_relying_party._resolve_request_host() == "real.example"
 
 
 def test_app_module_exposes_the_hardened_app():
