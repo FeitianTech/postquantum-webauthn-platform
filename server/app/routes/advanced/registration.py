@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import time
 import uuid
 from collections.abc import Mapping, MutableMapping
@@ -37,6 +38,8 @@ from ...storage import credentials
 from ...webauthn import attestation, metadata, pqc
 from .. import binary_helpers
 from . import algorithms, binary, summary, tracing
+
+logger = logging.getLogger(__name__)
 
 
 def prepare_register_complete_inputs(
@@ -523,14 +526,14 @@ def finalize_registration_completion(
             session_id=metadata_session_id,
         )
     except Exception:
-        config.app.logger.exception(
+        logger.exception(
             "Failed to store advanced credential artifact for user %s",
             username,
         )
         return jsonify({"error": "Unable to persist credential artifact."}), 500
 
     if not artifact_stored:
-        config.app.logger.error(
+        logger.error(
             "Advanced credential artifact was not stored for user %s",
             username,
         )
@@ -1015,9 +1018,9 @@ def configure_allowed_algorithms(
         pqc.PQC_ALGORITHM_ID_TO_NAME[alg] for alg in sorted(missing_pqc)
     )
     if pqc_error_message:
-        config.app.logger.warning("Post-quantum support unavailable: %s", pqc_error_message)
+        logger.warning("Post-quantum support unavailable: %s", pqc_error_message)
     else:
-        config.app.logger.warning(
+        logger.warning(
             "Post-quantum algorithms requested (%s) but not available in this environment.",
             missing_names,
         )
@@ -1208,7 +1211,7 @@ def advanced_register_begin():
         if getattr(param, "alg", None) is not None
     ]
 
-    config.app.logger.info(
+    logger.info(
         "Advanced registration request will advertise algorithms: %s",
         [entry.get("alg") for entry in public_key["pubKeyCredParams"]],
     )

@@ -132,9 +132,10 @@ def test_custom_algorithm_detection_and_attestation_logging(monkeypatch, config_
     assert advanced_module._is_custom_cose_algorithm(-50) is False
     assert advanced_module._is_custom_cose_algorithm(-99999) is True
 
+    tracing_module = pytest.importorskip("server.app.routes.advanced.tracing")
     log_calls = []
     monkeypatch.setattr(
-        config_module.app.logger,
+        tracing_module.logger,
         "info",
         lambda message, payload: log_calls.append((message, payload))
     )

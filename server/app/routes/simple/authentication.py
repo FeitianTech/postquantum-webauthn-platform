@@ -10,6 +10,7 @@ ever make the check *stricter*. The stored value is therefore the larger of the
 two, and a missing copy simply does not contribute."""
 from __future__ import annotations
 
+import logging
 from collections.abc import Iterable, Mapping
 from typing import Any
 
@@ -30,6 +31,8 @@ from ...webauthn import attestation, metadata
 from ...webauthn.sign_count import SIGN_COUNT_REGRESSED, sign_count_status
 from .. import binary_helpers
 from . import binary, parsing
+
+logger = logging.getLogger(__name__)
 
 
 def authenticate_begin():
@@ -201,7 +204,7 @@ def authenticate_complete():
     )
 
     if sign_count_status(stored_sign_count, sign_count) == SIGN_COUNT_REGRESSED:
-        config.app.logger.warning(
+        logger.warning(
             "Rejected assertion for credential %s: signature counter %d did not "
             "increase past stored %d (possible cloned authenticator)",
             authenticated_id,
@@ -228,7 +231,7 @@ def authenticate_complete():
         try:
             credentials.savekey(uname, server_records, session_id=metadata_session_id)
         except Exception:
-            config.app.logger.exception(
+            logger.exception(
                 "Failed to persist signature counter for %s", authenticated_id
             )
             return (
@@ -284,7 +287,7 @@ def load_server_records(uname: Any) -> tuple[list[Any] | None, str | None]:
         session_id = metadata.ensure_metadata_session_id()
         records = credentials.readkey(uname, session_id=session_id)
     except Exception:
-        config.app.logger.warning(
+        logger.warning(
             "Could not read stored credentials for the signature counter check", exc_info=True
         )
         return None, None
