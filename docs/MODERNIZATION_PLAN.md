@@ -864,6 +864,54 @@ thresholds unchanged, `npm audit` now **0 vulnerabilities** at `moderate`. Two o
 open in Phase 5 (`npm install` drift; the moderate `@vitest/mocker` advisory blocked on vitest).
 **Process fix:** on every push, compare the push base to my previous tip and review anything in between.
 
+### Phase 12 — split `config.py`, one import path per module — DONE (2026-09-23), verified
+**Part A — container layout.** Image now copies `server/app` to `/app/server/app`; CMD is
+`gunicorn ... server.app.app:app`, the same path as a checkout. Removed every dual-import fallback:
+`gunicorn.conf.py`, two in `tools/update_mds_snapshot.py`, the lazy `__getattr__` shim in
+`server/app/__init__.py`, the `fido2/` probe and script-mode branch in `app.py`, and a bare
+`import update_mds_snapshot` fallback in `mds_provisioning.py`. Tech lead grep: **zero** remaining.
+(Chose `COPY server/app` not `COPY server` because `server/runtime/` held 20 local credential files.)
+
+**Part B — `config.py` (1005 lines) -> `server/app/config/` package of 12 modules**, largest
+`relying_party.py` at 190: `application`, `session_secret`, `compression`, `proxy`, `session_cookie`,
+`security_headers`, `origins`, `attestation_trust`, `mds`, `relying_party`, `paths`, plus a
+re-export `__init__` with `__all__` unchanged. The MDS trust root was duplicated in `config.py` and the
+updater; it now lives once in the leaf `server/app/mds_trust.py`, which the updater imports without
+building the app or writing the session secret.
+
+Tech-lead verification:
+- Suites 1857 passed / 4 skipped, vitest 278, ruff clean, F821 0, `tests/app/security/` 78.
+- **Response headers and cookies captured before (`7f2e8d52`) and after, for `/` and `/health` over
+  http and https in both dev and Cloud Run mode: 0 diff lines across all 8 responses.** CSP, HSTS,
+  Permissions-Policy, `session` (`HttpOnly; SameSite=Lax; Secure`) and `fido.mds.session` identical.
+- `ProxyFix` still `x_for=1, x_proto=1, x_host=0`; spoofed `X-Forwarded-Host` still yields the real
+  RP ID.
+- Test IDs 1864 -> 1861: exactly the three the agent named, each testing a deleted shim.
+- The first real `docker build` of the new layout ran in CI (daemon down locally): green.
+
+Tech lead follow-up commit `dc6152fa`: `.dockerignore` now excludes `server/runtime`, `instance`
+(the session secret), `node_modules` and `coverage`. None was copied into the image, but a local
+build shipped them to the daemon as context.
+
+### CI incident — main red 2026-09-23 (external cause), resolved in `85935b60`
+Last green CI was `9827b4db` on 09-18. **poetry-core 2.5.0 was published 09-19** (confirmed on PyPI)
+and renders the vendored fido2's `pyscard = "^1.9 || ^2"` as `pyscard (>=1.9,<2.0 || >=2,<3)`, which
+uv and pip reject as invalid metadata. That broke `uv sync`, `docker build`, the image scan, the audit
+export and the scheduled MDS workflow. First failing push was the tech lead's `7f2e8d52` simply
+because nothing was pushed between 09-18 and 09-23. Fix: the identical range written out,
+`>=1.9,<3` (uv.lock unchanged). Confirmed via `gh`: all five workflows green on `85935b60`, and the
+MDS snapshot workflow re-ran successfully.
+
+**Lessons, both mine:**
+1. I had not been reading GitHub Actions results at all — the GitHub connector was down and I did not
+   try the `gh` CLI, which works. **From now on every push is followed by a `gh run` check.**
+2. The deeper cause is that the BUILD BACKEND floats: `[build-system] requires = ["poetry-core>=1.0.0"]`,
+   and `uv.lock` does not lock build-system requirements. So a third-party release can break a build
+   of an unchanged commit — a hole in the Phase 3 "reproducible builds" claim. Queued: pin the build
+   backend so such breaks arrive as a failing Dependabot PR instead of a red `main`. Note Cloud Build
+   runs its own tests, so production was never at risk — but the scheduled MDS workflow failed daily
+   from 09-19 with nobody noticing, which is a monitoring gap too.
+
 ### Local development
 Tests previously ran against the global interpreter, whose packages matched nothing in
 `requirements.txt` (cryptography 44.0.3, fido2 2.1.1, gunicorn 23). A project venv now exists:
