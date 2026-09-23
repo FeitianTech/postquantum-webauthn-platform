@@ -28,43 +28,25 @@ def _build_attested_auth_data(sign_count: int = 1) -> bytes:
     return bytes(auth_data)
 
 
-def test_try_decode_cbor_make_credential_output_merges_trailing_signature_and_builds_expanded_json(monkeypatch, ctap):
+def test_try_decode_cbor_reports_bytes_after_a_make_credential_response_and_keeps_its_att_stmt():
+    # Bytes after the response are reported. They are not a signature: the
+    # attStmt is shown exactly as the authenticator sent it.
     decode_module = pytest.importorskip("server.app.decoder.decode")
+    from fido2 import cbor
 
     auth_data = _build_attested_auth_data(sign_count=2)
-    trailing_signature = b"\xaa\xbb\xcc\xdd"
-    base_structure = {
-        "byteLength": 1,
-        "summary": "map[3]",
-        "length": 3,
-        "entries": [
-            {
-                "keySummary": "fmt",
-                "key": {"majorType": 3, "type": "text string", "value": "fmt", "summary": '"fmt"'},
-                "value": {"majorType": 3, "type": "text string", "value": "packed", "summary": '"packed"'},
-            }
-        ],
-    }
+    response_map = {1: "packed", 2: auth_data, 3: {"alg": -7, "sig": b"\x01\x02"}}
+    data = b"\x00" + cbor.encode(response_map) + b"\xaa\xbb\xcc\xdd"
 
-    monkeypatch.setattr(
-        ctap,
-        "_decode_cbor_sequence",
-        lambda _payload: (
-            [base_structure],
-            [{"fmt": "packed", "authData": auth_data, "attStmt": {"sig": b"\x01\x02"}}],
-            1,
-            trailing_signature,
-        ),
-    )
+    result = decode_module._try_decode_cbor(data, "hex")
 
-    result = decode_module._try_decode_cbor(b"\x00\xa0", "hex")
-
-    assert result is not None
     decoded = result["decoded"]
     assert decoded["ctap"]["kind"] == "status"
-    assert decoded["ctap"]["signatureLength"] == len(trailing_signature)
-    assert "expandedJson" in decoded
-    assert any("attStmt" in key for key in decoded["expandedJson"])
+    assert "signatureLength" not in decoded["ctap"]
+    att_stmt = decoded["ctapDecoded"]["makeCredentialResponse"]["3 (attStmt)"]
+    assert att_stmt["alg"] == -7
+    assert att_stmt["sig"] == "0102"
+    assert result["malformed"]
 
 
 def test_try_decode_cbor_status_fallback_promotes_get_assertion_and_records_trailing_warning(monkeypatch, ctap):

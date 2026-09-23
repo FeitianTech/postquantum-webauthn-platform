@@ -173,13 +173,8 @@ def test_convert_certificate_bytes_and_json_block_formatting_guard_paths(monkeyp
     assert decode_module._format_json_block(_Unserializable()) == ["unserializable-value"]
 
 
-def test_merge_trailing_signature_and_payload_helpers_cover_remaining_branches(monkeypatch):
+def test_build_authenticator_data_payload_covers_non_mapping_and_partial_details():
     decode_module = pytest.importorskip("server.app.decoder.decode")
-
-    assert decode_module._merge_trailing_signature({}, {1: "packed", 2: b"auth"}, b"\x00\x00") is None
-    assert decode_module._merge_trailing_signature({}, {1: "none", 2: b"auth"}, b"sig") is None
-    assert decode_module._merge_trailing_signature({}, {1: "packed", 2: b"auth", 3: b"sig"}, b"sig") is None
-    assert decode_module._merge_trailing_signature([], {1: "packed", 2: b"auth"}, b"sig") is None
 
     payload = decode_module._build_authenticator_data_payload(None, "not-a-map")
     assert payload == {}

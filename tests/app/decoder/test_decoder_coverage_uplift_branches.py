@@ -98,39 +98,6 @@ def test_decode_cbor_sequence_uses_structure_to_value_when_fallback_structure_pa
     assert remaining == b""
 
 
-def test_merge_ctap_make_credential_consumes_raw_signature_bytes_in_extra_values():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
-    structure = {
-        "entries": [
-            {
-                "keySummary": "3",
-                "key": {"majorType": 0, "value": 3},
-                "value": {"summary": "placeholder"},
-            }
-        ],
-        "length": 1,
-        "summary": "map[1]",
-    }
-    value = {"al&": "sig"}
-
-    merged_structure, merged_value, extra_structures, extra_values, signature = (
-        decode_module._merge_ctap_make_credential(
-            structure,
-            value,
-            [{"summary": "attStmt"}],
-            [memoryview(b"\xaa\xbb\xcc")],
-        )
-    )
-
-    assert signature == b"\xaa\xbb\xcc"
-    assert merged_value[3]["sig"] == b"\xaa\xbb\xcc"
-    assert merged_value[3]["alg"] == -7
-    assert extra_structures == []
-    assert extra_values == []
-    assert merged_structure["entries"][-1]["keySummary"] == "3"
-
-
 def test_repair_get_assertion_entries_recovers_signature_from_lenient_map_entries(monkeypatch, ctap):
     decode_module = pytest.importorskip("server.app.decoder.decode")
 

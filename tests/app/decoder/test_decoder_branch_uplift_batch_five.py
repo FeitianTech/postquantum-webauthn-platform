@@ -104,35 +104,6 @@ def test_decode_cbor_sequence_breaks_when_lenient_fallback_raises(monkeypatch, c
     assert remaining == b"\xa1"
 
 
-def test_repair_make_credential_entries_handles_non_dict_and_signature_cleanup_paths():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
-    structure = {"entries": []}
-    passthrough_structure, passthrough_value, signature = decode_module._repair_make_credential_entries(
-        structure,
-        ["not-a-dict"],
-    )
-    assert passthrough_structure == structure
-    assert passthrough_value == ["not-a-dict"]
-    assert signature is None
-
-    structure = {
-        "entries": [
-            {"key": "invalid"},
-            {"key": {"majorType": 2, "hex": "zz"}, "value": {"summary": "sig"}},
-        ]
-    }
-    repaired_structure, repaired_value, repaired_sig = decode_module._repair_make_credential_entries(
-        structure,
-        {b"drop-me": "x", 13: [b"part", {"alg": -7}]},
-    )
-
-    assert repaired_sig == b"part"
-    assert b"drop-me" not in repaired_value
-    assert repaired_value[3]["alg"] == -7
-    assert repaired_structure["summary"].startswith("map[")
-
-
 def test_split_get_assertion_trailing_fields_handles_incomplete_and_invalid_followups():
     decode_module = pytest.importorskip("server.app.decoder.decode")
 

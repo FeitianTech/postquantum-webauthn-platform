@@ -25,24 +25,6 @@ def test_build_labeled_ctap_map_covers_seen_key_seen_label_and_string_missing_ha
 
 def test_decoder_residual_helpers_cover_remaining_parse_and_conversion_guards(monkeypatch, cbor_parser, ctap):
     decode_module = pytest.importorskip("server.app.decoder.decode")
-    auth_data_cls = AuthenticatorData
-
-    # _derive_alg_from_auth_data branches.
-    monkeypatch.setattr(
-        ctap,
-        "AuthenticatorData",
-        lambda _raw: (_ for _ in ()).throw(ValueError("bad-auth-data")),
-    )
-    assert decode_module._derive_alg_from_auth_data(b"bad") is None
-
-    monkeypatch.setattr(
-        ctap,
-        "AuthenticatorData",
-        lambda _raw: type("_Auth", (), {"credential_data": None})(),
-    )
-    assert decode_module._derive_alg_from_auth_data(b"ok") is None
-    monkeypatch.setattr(ctap, "AuthenticatorData", auth_data_cls)
-
     # _extract_attestation_certificate and _convert_certificate_bytes/payload guards.
     assert decode_module._extract_attestation_certificate("not-a-map") is None
     assert decode_module._extract_attestation_certificate({"x5c": ["A"]}) is None
