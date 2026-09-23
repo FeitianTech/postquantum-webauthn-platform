@@ -31,7 +31,7 @@ include = [
 [tool.poetry.dependencies]
 python = "^3.12"
 cryptography = ">=49"      # native ML-DSA-44/65/87 sign/verify and ML-DSA x509
-pyscard = {version = "^1.9 || ^2", optional = true}
+pyscard = {version = ">=1.9,<3", optional = true}  # was "^1.9 || ^2"; poetry-core 2.5 renders that union as invalid PEP 508
 
 [tool.poetry.extras]
 pcsc = ["pyscard"]
