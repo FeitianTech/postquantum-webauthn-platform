@@ -10,6 +10,7 @@ import pytest
 
 config_module = pytest.importorskip("server.app.config")
 config_paths = pytest.importorskip("server.app.config.paths")
+config_proxy = pytest.importorskip("server.app.config.proxy")
 app_module = pytest.importorskip("server.app.app")
 
 app = config_module.app
@@ -255,22 +256,22 @@ def test_session_lifetime_env_parsing(monkeypatch, raw, expected):
 def test_trust_proxy_defaults_to_the_cloud_run_signal(monkeypatch):
     monkeypatch.delenv("FIDO_SERVER_TRUST_PROXY", raising=False)
     monkeypatch.delenv("K_SERVICE", raising=False)
-    assert config_module._should_trust_proxy_headers() is False
+    assert config_proxy._should_trust_proxy_headers() is False
 
     monkeypatch.setenv("K_SERVICE", "pqc-webauthn")
-    assert config_module._should_trust_proxy_headers() is True
+    assert config_proxy._should_trust_proxy_headers() is True
 
     monkeypatch.setenv("FIDO_SERVER_TRUST_PROXY", "0")
-    assert config_module._should_trust_proxy_headers() is False
+    assert config_proxy._should_trust_proxy_headers() is False
 
 
 def test_apply_proxy_fix_is_idempotent():
     from flask import Flask
 
     probe = Flask(__name__)
-    assert config_module._apply_proxy_fix(probe) is True
+    assert config_proxy._apply_proxy_fix(probe) is True
     wrapped = probe.wsgi_app
-    assert config_module._apply_proxy_fix(probe) is False
+    assert config_proxy._apply_proxy_fix(probe) is False
     assert probe.wsgi_app is wrapped
 
 
@@ -295,7 +296,7 @@ def test_proxy_fix_does_not_let_x_forwarded_host_steer_the_rp_id():
             secure=request.is_secure,
         )
 
-    config_module._apply_proxy_fix(probe)
+    config_proxy._apply_proxy_fix(probe)
 
     response = probe.test_client().get(
         "/whoami",
