@@ -11,7 +11,6 @@ from typing import Any
 from urllib.parse import urlsplit
 
 from flask import Flask, has_request_context, request
-from werkzeug.middleware.proxy_fix import ProxyFix
 
 import fido2.features
 from fido2.server import Fido2Server
@@ -24,7 +23,7 @@ from ..mds_trust import (
     FIDO_METADATA_TRUST_ROOT_PEM,
     MDS_TLS_ADDITIONAL_TRUST_ANCHORS_PEM,
 )
-from . import application, compression, paths, session_secret
+from . import application, compression, paths, proxy, session_secret
 
 # Enable webauthn-json mapping if available (compatible across fido2 versions)
 try:  # pragma: no cover - compatibility shim
@@ -43,78 +42,12 @@ basepath = paths.basepath
 app = application.app
 
 # Imported for what importing them does to ``app``; nothing is re-exported.
-_APP_CONFIGURING_MODULES = (compression, session_secret)
+_APP_CONFIGURING_MODULES = (compression, proxy, session_secret)
 
 
 def _env_flag(name: str) -> bool | None:
     """Return ``True`` or ``False`` when the named env var is explicitly set."""
     return parse_env_flag(name)
-
-
-# ---------------------------------------------------------------------------
-# Transport hardening: reverse proxy, session cookie, security headers.
-# ---------------------------------------------------------------------------
-
-_PROXY_FIX_MARKER = "_postquantum_proxy_fix"
-
-
-def _running_behind_managed_proxy() -> bool:
-    """Return ``True`` when the platform terminates TLS in front of this process.
-
-    Cloud Run sets ``K_SERVICE``; the rest of the codebase already treats that as
-    the "running on Cloud Run" signal (see ``startup.py`` and ``device_logs.py``).
-    """
-
-    return bool(os.environ.get("K_SERVICE"))
-
-
-def _should_trust_proxy_headers() -> bool:
-    """Return ``True`` when ``X-Forwarded-*`` headers may be believed."""
-
-    explicit = _env_flag("FIDO_SERVER_TRUST_PROXY")
-    if explicit is not None:
-        return explicit
-    return _running_behind_managed_proxy()
-
-
-def _apply_proxy_fix(flask_app: Flask) -> bool:
-    """Honour the forwarded scheme/client IP, but never the forwarded host.
-
-    Cloud Run speaks plain HTTP to the container, so ``request.is_secure`` and
-    ``request.scheme`` are wrong -- HSTS would never be emitted and a ``Secure``
-    session cookie would look unnecessary -- unless ``X-Forwarded-Proto`` is
-    honoured.
-
-    ``x_host``, ``x_port`` and ``x_prefix`` are deliberately left at ``0``.  When
-    no ``FIDO_SERVER_RP_ID`` is configured this app derives the WebAuthn RP ID
-    from the request ``Host`` header (``determine_rp_id`` ->
-    ``_resolve_request_host``), and ``request.headers["Host"]`` is a live view of
-    ``environ["HTTP_HOST"]`` -- precisely the value ``ProxyFix(x_host=1)``
-    overwrites from the client-supplied ``X-Forwarded-Host``.  Trusting it would
-    hand an attacker control of the RP ID and of the expected origin derived from
-    ``request.host_url``, reintroducing the Host-header injection the RP ID
-    configuration exists to prevent.  Cloud Run forwards the original ``Host``
-    unchanged, so only the scheme and the client IP need correcting.
-    """
-
-    if getattr(flask_app.wsgi_app, _PROXY_FIX_MARKER, False):
-        return False
-
-    wrapped = ProxyFix(
-        flask_app.wsgi_app,
-        x_for=1,
-        x_proto=1,
-        x_host=0,
-        x_port=0,
-        x_prefix=0,
-    )
-    setattr(wrapped, _PROXY_FIX_MARKER, True)
-    flask_app.wsgi_app = wrapped
-    return True
-
-
-if _should_trust_proxy_headers():
-    _apply_proxy_fix(app)
 
 
 # Session state here is short-lived ceremony state (WebAuthn challenges and the
@@ -148,7 +81,7 @@ def _resolve_session_cookie_secure() -> bool:
     explicit = _env_flag("FIDO_SERVER_SESSION_COOKIE_SECURE")
     if explicit is not None:
         return explicit
-    return _running_behind_managed_proxy()
+    return proxy._running_behind_managed_proxy()
 
 
 app.config.update(
