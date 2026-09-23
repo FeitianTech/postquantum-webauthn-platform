@@ -5,7 +5,7 @@ import io
 from types import SimpleNamespace
 
 import server.app.config as config_module
-from server.app.config import compression, mds, session_secret
+from server.app.config import compression, mds, relying_party, session_secret
 
 
 def test_resolve_secret_key_reads_empty_stored_key_and_generates(monkeypatch):
@@ -59,12 +59,12 @@ def test_determine_rp_id_handles_missing_host_and_loopback_fallback(monkeypatch)
     ):
         assert config_module.determine_rp_id() == "localhost"
 
-    monkeypatch.setattr(config_module.ipaddress, "ip_address", lambda _value: (_ for _ in ()).throw(ValueError("bad")))
+    monkeypatch.setattr(relying_party.ipaddress, "ip_address", lambda _value: (_ for _ in ()).throw(ValueError("bad")))
     with config_module.app.test_request_context("/", headers={"Host": "::1"}):
         assert config_module.determine_rp_id() == "localhost"
 
 
 def test_normalise_request_host_returns_raw_value_when_urlsplit_has_no_hostname(monkeypatch):
-    monkeypatch.setattr(config_module, "urlsplit", lambda _value: SimpleNamespace(hostname=None), raising=False)
+    monkeypatch.setattr(relying_party, "urlsplit", lambda _value: SimpleNamespace(hostname=None), raising=False)
 
-    assert config_module._normalise_request_host("host-without-parse") == "host-without-parse"
+    assert relying_party._normalise_request_host("host-without-parse") == "host-without-parse"

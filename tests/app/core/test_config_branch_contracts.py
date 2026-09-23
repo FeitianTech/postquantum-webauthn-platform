@@ -9,7 +9,13 @@ from unittest import mock
 from flask import Flask
 
 import server.app.config as config_module
-from server.app.config import attestation_trust, compression, paths, session_secret
+from server.app.config import (
+    attestation_trust,
+    compression,
+    paths,
+    relying_party,
+    session_secret,
+)
 
 
 def test_discover_project_root_fallback_when_frontend_not_found(monkeypatch):
@@ -173,25 +179,25 @@ def test_parse_fingerprints_and_host_normalization_branches(monkeypatch):
     monkeypatch.setitem(config_module.app.config, "FIDO_SERVER_RP_ID", "  configured.example  ")
     assert config_module.determine_rp_id() == "configured.example"
 
-    assert config_module._normalise_request_host(None) is None
-    assert config_module._normalise_request_host("   ") is None
-    assert config_module._normalise_request_host("[2001:db8::1]:8443") == "2001:db8::1"
-    assert config_module._normalise_request_host("2001:db8::1") == "2001:db8::1"
-    assert config_module._normalise_request_host("Example.COM:8443") == "example.com"
-    assert config_module._normalise_request_host("bad host") == "bad host"
+    assert relying_party._normalise_request_host(None) is None
+    assert relying_party._normalise_request_host("   ") is None
+    assert relying_party._normalise_request_host("[2001:db8::1]:8443") == "2001:db8::1"
+    assert relying_party._normalise_request_host("2001:db8::1") == "2001:db8::1"
+    assert relying_party._normalise_request_host("Example.COM:8443") == "example.com"
+    assert relying_party._normalise_request_host("bad host") == "bad host"
 
-    assert config_module._resolve_request_host() is None
+    assert relying_party._resolve_request_host() is None
 
     with config_module.app.test_request_context(
         "/",
         headers={"Host": ""},
         environ_overrides={"HTTP_HOST": "api.example", "SERVER_NAME": "fallback.example"},
     ):
-        assert config_module._resolve_request_host() == "api.example"
+        assert relying_party._resolve_request_host() == "api.example"
 
     with config_module.app.test_request_context(
         "/",
         headers={"Host": ""},
         environ_overrides={"HTTP_HOST": "", "SERVER_NAME": ""},
     ):
-        assert config_module._resolve_request_host() is None
+        assert relying_party._resolve_request_host() is None
