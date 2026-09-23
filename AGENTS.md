@@ -62,32 +62,56 @@ Important templates:
 Flask app setup starts in:
 
 - `server/app/app.py`
-  The WSGI entry point, `server.app.app:app`, in a checkout and in the image alike:
-  the Dockerfile copies `server/app` to `/app/server/app`, so every module has one
-  import path. Do not add `server.X` / `server.app.X` fallbacks.
+  The WSGI entry point, `server.app.app:app = create_app()`, in a checkout and in
+  the image alike: the Dockerfile copies `server/app` to `/app/server/app`, so every
+  module has one import path. Do not add `server.X` / `server.app.X` fallbacks.
+- `server/app/factory.py`
+  `create_app(config=None)` builds a fresh, fully configured app: settings from
+  each config submodule's `config_from_env()`, then the `config` overrides, then
+  `INIT_STEPS` in order (logging, secret, ProxyFix, gzip, security headers, static
+  assets, blueprints, RP warning). `tests/app/core/test_app_factory.py` pins the
+  order; changing it is a behaviour change.
 - `server/app/config/`
-  The Flask app and everything that configures it on import: `application.py`
-  (the singleton), `session_secret.py`, `compression.py`, `proxy.py`,
+  What `create_app()` is built from: `application.py` (`build_app()`),
+  `logs.py`, `session_secret.py`, `compression.py`, `proxy.py`,
   `session_cookie.py`, `security_headers.py`, `origins.py`, `attestation_trust.py`,
-  `mds.py`, `relying_party.py` (RP ID, `create_fido_server`), `paths.py`. The routes
-  call `config.create_fido_server` / `config.determine_rp_id` through the package,
-  so route tests patch those on the package; patch every other name in its
-  submodule.
+  `mds.py`, `relying_party.py` (RP ID, `create_fido_server`), `paths.py`. Importing
+  it configures nothing. The routes call `config.create_fido_server` /
+  `config.determine_rp_id` through the package, so route tests patch those on the
+  package; patch every other name in its submodule.
+- `config.app` is a lazy alias for `server.app.app.app`, kept so the tests written
+  against the old singleton still work. Nothing in `server/` may read it
+  (a test enforces that): request code uses `flask.current_app`, and code outside
+  a request takes the app as an argument.
+- Importing any module under `server/app`, except the entry point, must not write
+  to disk. `tests/app/core/test_import_side_effects.py` imports every module
+  under an audit hook and fails on any write.
+- Log with `logger = logging.getLogger(__name__)`, never `app.logger`. The app is
+  named `server.app`, so module loggers are children of `app.logger` and reach
+  the stderr handler `config/logs.py` makes sure exists;
+  `tests/app/core/test_logging_reaches_stderr.py` checks that under gunicorn.
+- On Cloud Run (`K_SERVICE` set) the app refuses to start without
+  `FIDO_SERVER_SECRET_KEY` or a readable `FIDO_SERVER_SECRET_KEY_FILE`; only local
+  development generates and persists `instance/session-secret.key`.
 - `server/app/mds_trust.py`
-  The MDS trust anchors. A leaf on purpose: `tools/update_mds_snapshot.py` imports
-  it without building the app.
+  The MDS trust anchor. A leaf on purpose: `tools/update_mds_snapshot.py` imports
+  it without anything from Flask.
 
 Main route modules:
 
 - `server/app/routes/simple/`
-  Simple WebAuthn begin/complete endpoints. `__init__.py` holds the Flask rules;
-  `registration.py`, `authentication.py` and `credential_list.py` hold the bodies.
+  Simple WebAuthn begin/complete endpoints. `__init__.py` holds the Flask rules on
+  the `simple` blueprint (`bp`); `registration.py`, `authentication.py` and
+  `credential_list.py` hold the bodies.
 - `server/app/routes/advanced/`
   Advanced WebAuthn begin/complete endpoints, algorithm handling, request
-  validation, metadata-heavy flows. Same shape: rules in `__init__.py`, bodies in
-  `registration.py`, `authentication.py`, `artifacts.py`.
+  validation, metadata-heavy flows. Same shape: rules on the `advanced` blueprint
+  in `__init__.py`, bodies in `registration.py`, `authentication.py`, `artifacts.py`.
 - `server/app/routes/general.py`
-  Index page, metadata bootstrap helpers, decoder endpoints, misc app routes.
+  Index page, metadata bootstrap helpers, decoder endpoints, misc app routes, on
+  the `general` blueprint. `static_assets.py` has its own `static_assets`
+  blueprint. Endpoint names are therefore `general.index`, `simple.register_begin`
+  and so on; nothing refers to them today (no `url_for`).
 
 Related backend modules:
 
@@ -159,6 +183,11 @@ Repo test layout:
   Hardware tests. These are skipped unless explicitly enabled.
 
 If you are changing only UI logic plus lightweight server responses, prefer targeted tests over the full suite first.
+
+For a test that needs an app configured differently, use the `make_app` fixture in
+`tests/app/conftest.py` (or `app` / `client`): it calls `create_app()` with a fixed
+test secret, reading the environment at that moment, so `monkeypatch.setenv` before
+it configures that app and no other. Do not `importlib.reload` config modules.
 
 ## Linting
 
