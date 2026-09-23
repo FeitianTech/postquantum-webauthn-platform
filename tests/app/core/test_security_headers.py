@@ -12,6 +12,7 @@ config_module = pytest.importorskip("server.app.config")
 config_paths = pytest.importorskip("server.app.config.paths")
 config_proxy = pytest.importorskip("server.app.config.proxy")
 config_session_cookie = pytest.importorskip("server.app.config.session_cookie")
+config_security_headers = pytest.importorskip("server.app.config.security_headers")
 app_module = pytest.importorskip("server.app.app")
 
 app = config_module.app
@@ -107,7 +108,8 @@ def test_csp_script_src_is_documented_as_not_strict(client):
     """The 125 inline on*= handlers still force 'unsafe-inline' for scripts.
 
     This test exists to fail loudly if the templates are cleaned up (or if the
-    policy is tightened) so the TODO in config.py gets retired deliberately.
+    policy is tightened) so the TODO in config/security_headers.py gets retired
+    deliberately.
     """
 
     csp = _parse_csp(client.get("/").headers["Content-Security-Policy"])
@@ -125,7 +127,7 @@ def test_csp_script_src_is_documented_as_not_strict(client):
 
     assert inline_handlers > 0, (
         "No inline on*= handlers remain -- drop 'unsafe-inline' from script-src "
-        "and retire the TODO(csp-strict) note in server/app/config.py."
+        "and retire the TODO(csp-strict) note in server/app/config/security_headers.py."
     )
 
 
@@ -142,11 +144,11 @@ def test_headers_handler_is_registered_exactly_once():
     marked = [
         handler
         for handler in handlers
-        if getattr(handler, config_module._SECURITY_HEADERS_MARKER, False)
+        if getattr(handler, config_security_headers._SECURITY_HEADERS_MARKER, False)
     ]
     assert len(marked) == 1
 
-    config_module._register_security_headers_once(
+    config_security_headers._register_security_headers_once(
         app, config_module.set_security_headers
     )
     assert len(app.after_request_funcs.get(None, [])) == len(handlers)
