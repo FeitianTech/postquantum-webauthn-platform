@@ -331,6 +331,45 @@ def test_rp_id_derivation_ignores_forwarded_host_header():
         assert config_relying_party._resolve_request_host() == "real.example"
 
 
+def test_spoofed_forwarded_host_cannot_steer_the_rp_id_end_to_end(monkeypatch, make_app):
+    """Through the real WSGI stack, so ProxyFix is in the path this time.
+
+    The two tests above call ``_apply_proxy_fix`` on a probe app and use a
+    ``test_request_context``, which bypasses ``wsgi_app``. Here an app built the
+    way production builds it (``K_SERVICE`` set) serves a ceremony request that
+    carries a spoofed ``X-Forwarded-Host``.
+    """
+
+    from werkzeug.middleware.proxy_fix import ProxyFix
+
+    monkeypatch.setenv("K_SERVICE", "pqcwebauthn")
+    monkeypatch.delenv("FIDO_SERVER_TRUST_PROXY", raising=False)
+    # No configured RP ID or allowlist: the RP ID comes from the Host header.
+    hardened = make_app({"FIDO_SERVER_RP_ID": None, "FIDO_SERVER_ALLOWED_ORIGINS": None})
+    assert isinstance(hardened.wsgi_app, ProxyFix)
+
+    response = hardened.test_client().post(
+        "/api/register/begin",
+        json={},
+        base_url="http://real.example",
+        headers={
+            "Host": "real.example",
+            "X-Forwarded-Host": "attacker.example",
+            "X-Forwarded-Proto": "https",
+            "X-Forwarded-For": "203.0.113.9",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.get_json()["publicKey"]["rp"]["id"] == "real.example"
+    # The forwarded scheme is honoured: HSTS and a Secure session cookie.
+    assert response.headers["Strict-Transport-Security"].startswith("max-age=")
+    session_cookie = next(
+        value for value in response.headers.getlist("Set-Cookie") if value.startswith("session=")
+    )
+    assert "Secure" in session_cookie
+
+
 def test_app_module_exposes_the_hardened_app():
     assert app_module.app is app
     assert "set_security_headers" in config_module.__all__
