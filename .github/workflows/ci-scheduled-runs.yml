@@ -1,0 +1,83 @@
+name: CI / Scheduled runs
+
+on:
+  # push is filtered to main so a same-repo PR is checked once (by
+  # pull_request) instead of twice; main still gets a post-merge run.
+  push:
+    branches: [main]
+  pull_request:
+
+# Scheduled workflows fail where nobody looks: the MDS canary failed daily from
+# 2026-09-19 until a push happened to break main as well. This job puts a
+# warning on every push and pull request while a scheduled workflow's latest run
+# has failed. It only reads run history -- no checkout, nothing from the
+# repository executes -- and it never fails the build itself. (Issues are
+# disabled on this repository, so there is nowhere to open one.)
+permissions:
+  actions: read
+
+concurrency:
+  group: ci-scheduled-runs-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  scheduled-runs:
+    name: Scheduled workflow health
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Warn about failing scheduled workflows
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          set -euo pipefail
+
+          # "<workflow file> <events whose runs count>". Only runs on ${BRANCH}
+          # are read, so pull-request runs never count. A manual re-run after a
+          # fix counts, and so does a ci-security push to ${BRANCH}: it runs the
+          # same gates as the weekly schedule.
+          checks=(
+            "update-fido-mds.yml schedule,workflow_dispatch"
+            "update-footer-year.yml schedule,workflow_dispatch"
+            "update-build-backend.yml schedule,workflow_dispatch"
+            "ci-security.yml schedule,workflow_dispatch,push"
+          )
+
+          {
+            echo "### Scheduled workflows on ${BRANCH}"
+            echo
+            echo "| Workflow | Latest run | Result |"
+            echo "|---|---|---|"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          for entry in "${checks[@]}"; do
+            read -r workflow events <<< "$entry"
+            if ! runs=$(gh run list --repo "$REPO" --workflow "$workflow" --branch "$BRANCH" \
+                --limit 50 --json event,status,conclusion,url,createdAt); then
+              echo "::warning title=Scheduled workflow unreadable::Could not read the runs of ${workflow}."
+              echo "| ${workflow} | - | could not read runs |" >> "$GITHUB_STEP_SUMMARY"
+              continue
+            fi
+            # The newest finished run of a counted event; cancelled and skipped
+            # runs say nothing about health, so they are passed over.
+            latest=$(jq -c --arg events "$events" '
+              [ .[]
+                | select(.status == "completed")
+                | select(.conclusion != "cancelled" and .conclusion != "skipped")
+                | select(.event as $e | ($events | split(",")) | index($e))
+              ][0] // empty' <<< "$runs")
+            if [ -z "$latest" ]; then
+              echo "| ${workflow} | - | no finished run yet |" >> "$GITHUB_STEP_SUMMARY"
+              continue
+            fi
+            conclusion=$(jq -r '.conclusion' <<< "$latest")
+            created=$(jq -r '.createdAt' <<< "$latest")
+            url=$(jq -r '.url' <<< "$latest")
+            echo "| ${workflow} | [${created}](${url}) | ${conclusion} |" >> "$GITHUB_STEP_SUMMARY"
+            if [ "$conclusion" != "success" ]; then
+              echo "::warning title=Scheduled workflow failing::${workflow}: latest run ${conclusion} at ${created} - ${url}"
+            fi
+          done
