@@ -170,3 +170,13 @@ def test_the_encoder_writes_unsigned_extension_outputs_at_the_response_members_n
     result = _encode({"ctapDecoded": {"getAssertionResponse": structure}})
 
     assert cbor.decode(bytes.fromhex(result["data"]["binary"]["hex"])[1:])[8] == {"x": 1}
+
+
+def test_request_fields_named_only_by_number_are_not_refused():
+    encode_module = pytest.importorskip("server.app.decoder.encode")
+
+    mapping = encode_module._encode_get_assertion_request({1: "example.com", 2: "22" * 32, "0x0c": "raw"})
+
+    assert (mapping[1], mapping[2]) == ("example.com", b"\x22" * 32)
+    with pytest.raises(ValueError, match="no parameter named 0xzz"):
+        encode_module._encode_get_assertion_request({1: "example.com", 2: "22" * 32, "0xzz": "raw"})
