@@ -9,7 +9,6 @@ import re
 import tempfile
 from collections.abc import Mapping
 from datetime import timedelta
-from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
@@ -27,6 +26,7 @@ from ..mds_trust import (
     FIDO_METADATA_TRUST_ROOT_PEM,
     MDS_TLS_ADDITIONAL_TRUST_ANCHORS_PEM,
 )
+from . import paths
 
 # Enable webauthn-json mapping if available (compatible across fido2 versions)
 try:  # pragma: no cover - compatibility shim
@@ -37,33 +37,10 @@ except Exception:  # pragma: no cover - compatibility shim
     except Exception:  # pragma: no cover - compatibility shim
         pass
 
-# server/app, the package this config package lives in.
-_PACKAGE_ROOT = Path(__file__).resolve().parents[1]
-
-
-def _discover_project_root(package_root: Path) -> Path:
-    """Locate the repository/application root across supported layouts."""
-
-    for candidate in package_root.parents:
-        if (candidate / "frontend").is_dir():
-            return candidate
-
-    # Fallback keeps previous behavior for environments without frontend files.
-    return package_root.parents[1]
-
-
-_PROJECT_ROOT = _discover_project_root(_PACKAGE_ROOT)
-_FRONTEND_ROOT = _PROJECT_ROOT / "frontend"
-_FRONTEND_STATIC_ROOT = _FRONTEND_ROOT / "static"
-_FRONTEND_TEMPLATE_ROOT = _FRONTEND_ROOT / "templates"
-_SERVER_RUNTIME_ROOT = Path(
-    os.environ.get(
-        "FIDO_SERVER_RUNTIME_ROOT",
-        str(_PROJECT_ROOT / "server" / "runtime"),
-    )
-)
-# Save credentials next to the server.app package, regardless of CWD.
-basepath = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
+_FRONTEND_ROOT = paths._FRONTEND_ROOT
+_FRONTEND_STATIC_ROOT = paths._FRONTEND_STATIC_ROOT
+_SERVER_RUNTIME_ROOT = paths._SERVER_RUNTIME_ROOT
+basepath = paths.basepath
 
 _existing_app = globals().get("app")
 if isinstance(_existing_app, Flask):
@@ -75,7 +52,7 @@ else:
         root_path=basepath,
         static_folder=str(_FRONTEND_STATIC_ROOT),
         static_url_path="",
-        template_folder=str(_FRONTEND_TEMPLATE_ROOT),
+        template_folder=str(paths._FRONTEND_TEMPLATE_ROOT),
     )
 
 

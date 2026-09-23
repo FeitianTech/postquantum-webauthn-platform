@@ -9,13 +9,14 @@ from unittest import mock
 from flask import Flask
 
 import server.app.config as config_module
+from server.app.config import paths
 
 
 def test_discover_project_root_fallback_when_frontend_not_found(monkeypatch):
     monkeypatch.setattr(Path, "is_dir", lambda self: False, raising=False)
 
     package_root = Path("/tmp/postquantum/server/app")
-    assert config_module._discover_project_root(package_root) == package_root.parents[1]
+    assert paths._discover_project_root(package_root) == package_root.parents[1]
 
 
 def test_resolve_secret_key_handles_read_oserror_and_makedirs_failure(monkeypatch):

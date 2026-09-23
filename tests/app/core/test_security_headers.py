@@ -9,6 +9,7 @@ from datetime import timedelta
 import pytest
 
 config_module = pytest.importorskip("server.app.config")
+config_paths = pytest.importorskip("server.app.config.paths")
 app_module = pytest.importorskip("server.app.app")
 
 app = config_module.app
@@ -110,7 +111,7 @@ def test_csp_script_src_is_documented_as_not_strict(client):
     csp = _parse_csp(client.get("/").headers["Content-Security-Policy"])
     assert csp["script-src"] == ["'self'", "'unsafe-inline'"]
 
-    template_root = config_module._FRONTEND_TEMPLATE_ROOT
+    template_root = config_paths._FRONTEND_TEMPLATE_ROOT
     handler_pattern = re.compile(r"\son[a-zA-Z]+\s*=\s*\"")
     inline_handlers = 0
     for dirpath, _dirnames, filenames in os.walk(template_root):
