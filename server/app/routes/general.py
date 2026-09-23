@@ -11,6 +11,7 @@ from threading import Lock
 from typing import Any
 
 from flask import (
+    Blueprint,
     abort,
     current_app,
     g,
@@ -23,7 +24,7 @@ from flask import (
 )
 
 from .. import encoding
-from ..config import MDS_METADATA_VERIFIED_PATH, app
+from ..config import MDS_METADATA_VERIFIED_PATH
 from ..decoder import decode_payload_text, encode_payload_text
 from ..env_flags import parse_env_flag
 from ..mds_provisioning import ensure_snapshot_available
@@ -48,6 +49,9 @@ from ..webauthn.metadata import (
 )
 
 logger = logging.getLogger(__name__)
+
+# The HTTP rules, registered on the app by server.app.app.
+bp = Blueprint("general", __name__)
 
 _metadata_bootstrap_lock = Lock()
 _metadata_bootstrap_state = {
@@ -151,7 +155,7 @@ def ensure_metadata_bootstrapped(skip_if_reloader_parent: bool = True) -> None:
     _mark_bootstrap_completed_for_today()
 
 
-@app.route("/health")
+@bp.route("/health")
 def health():
     """Cheap liveness endpoint that touches no session or storage state.
 
@@ -163,7 +167,7 @@ def health():
     return response
 
 
-@app.route("/")
+@bp.route("/")
 def index():
     return index_html()
 
@@ -194,7 +198,7 @@ def _initial_custom_entries_state(metadata_session_id: str | None) -> str:
     return stored if stored in ("none", "present") else "unknown"
 
 
-@app.route("/index.html")
+@bp.route("/index.html")
 def index_html():
     if _should_bootstrap_metadata_on_index():
         ensure_metadata_bootstrapped(skip_if_reloader_parent=False)
@@ -220,7 +224,7 @@ def _no_store_json_response(payload: Mapping[str, Any], status: int = 200):
     return response
 
 
-@app.route("/api/mds/metadata/explorer", methods=["GET"])
+@bp.route("/api/mds/metadata/explorer", methods=["GET"])
 def api_get_explorer_metadata():
     ensure_metadata_session_id()
     snapshot = load_effective_explorer_snapshot()
@@ -233,7 +237,7 @@ def api_get_explorer_metadata():
     return _no_store_json_response(snapshot)
 
 
-@app.route("/api/mds/metadata/explorer/full", methods=["GET"])
+@bp.route("/api/mds/metadata/explorer/full", methods=["GET"])
 def api_get_full_explorer_metadata():
     ensure_metadata_session_id()
     snapshot = load_effective_full_snapshot()
@@ -246,7 +250,7 @@ def api_get_full_explorer_metadata():
     return _no_store_json_response(snapshot)
 
 
-@app.route("/api/mds/metadata/resolve", methods=["GET"])
+@bp.route("/api/mds/metadata/resolve", methods=["GET"])
 def api_resolve_metadata_entry():
     ensure_metadata_session_id()
 
@@ -278,7 +282,7 @@ def api_resolve_metadata_entry():
     return _no_store_json_response({"entry": resolved})
 
 
-@app.route("/api/mds/metadata/base", methods=["GET"])
+@bp.route("/api/mds/metadata/base", methods=["GET"])
 def api_get_verified_metadata():
     metadata_path = MDS_METADATA_VERIFIED_PATH
     try:
@@ -293,14 +297,14 @@ def api_get_verified_metadata():
     return jsonify(payload)
 
 
-@app.route("/api/mds/metadata/custom", methods=["GET"])
+@bp.route("/api/mds/metadata/custom", methods=["GET"])
 def api_list_custom_metadata():
     ensure_metadata_session_id()
     items = [serialize_session_metadata_item(item) for item in list_session_metadata_items()]
     return jsonify({"items": items})
 
 
-@app.route("/api/mds/metadata/upload", methods=["POST"])
+@bp.route("/api/mds/metadata/upload", methods=["POST"])
 def api_upload_custom_metadata():
     ensure_metadata_session_id()
 
@@ -381,7 +385,7 @@ def api_upload_custom_metadata():
     return _no_store_json_response(response, status=status_code)
 
 
-@app.route("/api/mds/metadata/custom/<string:stored_filename>", methods=["DELETE"])
+@bp.route("/api/mds/metadata/custom/<string:stored_filename>", methods=["DELETE"])
 def api_delete_custom_metadata(stored_filename: str):
     ensure_metadata_session_id()
     try:
@@ -422,7 +426,7 @@ def _perform_encode(encoder_input: str, target_format: str):
         return {"error": "Unable to encode payload."}, 500
 
 
-@app.route("/api/codec", methods=["POST"])
+@bp.route("/api/codec", methods=["POST"])
 def api_codec_payload():
     if not request.is_json:
         return jsonify({"error": "Expected JSON payload."}), 400
@@ -446,7 +450,7 @@ def api_codec_payload():
     return jsonify(result), status
 
 
-@app.route("/api/decode", methods=["POST"])
+@bp.route("/api/decode", methods=["POST"])
 def api_decode_payload():
     if not request.is_json:
         return jsonify({"error": "Expected JSON payload."}), 400
@@ -460,7 +464,7 @@ def api_decode_payload():
     return jsonify(result), status
 
 
-@app.route("/api/mds/decode-certificate", methods=["POST"])
+@bp.route("/api/mds/decode-certificate", methods=["POST"])
 def api_decode_mds_certificate():
     if not request.is_json:
         return jsonify({"error": "Expected JSON payload."}), 400
@@ -487,7 +491,7 @@ def api_decode_mds_certificate():
     return jsonify({"details": details})
 
 
-@app.route("/api/deletepub", methods=["POST"])
+@bp.route("/api/deletepub", methods=["POST"])
 def deletepub():
     response = request.get_json(silent=True) or {}
     email = response.get("email")
@@ -498,7 +502,7 @@ def deletepub():
     return jsonify({"status": "OK"})
 
 
-@app.route("/api/downloadcred", methods=["GET"])
+@bp.route("/api/downloadcred", methods=["GET"])
 def downloadcred():
     name = request.args.get("email")
     if not name:

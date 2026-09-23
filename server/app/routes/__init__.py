@@ -1,6 +1,6 @@
 """Route registrations for the WebAuthn demo server."""
 
-# Import submodules to register routes via decorators.
+# Each module defines a Blueprint, ``bp``, that the app registers.
 from . import (
     advanced,
     general,

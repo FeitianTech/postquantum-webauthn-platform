@@ -8,7 +8,8 @@ callers of *this package* see, not what the submodules call.
 """
 from __future__ import annotations
 
-from ...config import app
+from flask import Blueprint
+
 from .. import binary_helpers
 from . import (
     authentication,
@@ -49,26 +50,30 @@ _parse_client_credentials = parsing._parse_client_credentials
 _serialize_credential_for_session = parsing._serialize_credential_for_session
 
 
-@app.route("/api/register/begin", methods=["POST"])
+# The HTTP rules, registered on the app by server.app.app.
+bp = Blueprint("simple", __name__)
+
+
+@bp.route("/api/register/begin", methods=["POST"])
 def register_begin():
     return registration.register_begin()
 
 
-@app.route("/api/register/complete", methods=["POST"])
+@bp.route("/api/register/complete", methods=["POST"])
 def register_complete():
     return registration.register_complete()
 
 
-@app.route("/api/authenticate/begin", methods=["POST"])
+@bp.route("/api/authenticate/begin", methods=["POST"])
 def authenticate_begin():
     return authentication.authenticate_begin()
 
 
-@app.route("/api/authenticate/complete", methods=["POST"])
+@bp.route("/api/authenticate/complete", methods=["POST"])
 def authenticate_complete():
     return authentication.authenticate_complete()
 
 
-@app.route("/api/credentials", methods=["GET", "DELETE"])
+@bp.route("/api/credentials", methods=["GET", "DELETE"])
 def list_credentials():
     return credential_list.list_credentials()

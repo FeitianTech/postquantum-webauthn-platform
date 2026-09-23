@@ -5,8 +5,9 @@ from . import static_assets
 from .config import app
 from .routes import advanced, general, simple
 
-# Importing these modules is what registers their endpoints with the Flask app.
-_ENDPOINT_MODULES = (static_assets, advanced, general, simple)
+static_assets.init_app(app)
+for _blueprint in (advanced.bp, general.bp, simple.bp):
+    app.register_blueprint(_blueprint)
 
 
 def main() -> None:
