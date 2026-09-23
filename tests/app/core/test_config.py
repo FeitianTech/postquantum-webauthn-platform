@@ -196,7 +196,7 @@ def test_resolve_secret_key_generates_and_stores(tmp_path, monkeypatch):
 
 def test_parse_trusted_ca_subjects():
     """Test parsing of trusted CA subjects."""
-    from server.app.config import _parse_trusted_ca_subjects
+    from server.app.config.attestation_trust import _parse_trusted_ca_subjects
     
     # Test None input
     assert _parse_trusted_ca_subjects(None) is None
