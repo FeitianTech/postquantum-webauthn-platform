@@ -5,7 +5,7 @@ import io
 from types import SimpleNamespace
 
 import server.app.config as config_module
-from server.app.config import session_secret
+from server.app.config import compression, session_secret
 
 
 def test_resolve_secret_key_reads_empty_stored_key_and_generates(monkeypatch):
@@ -38,7 +38,7 @@ def test_maybe_compress_response_returns_early_for_small_payload():
     with app.test_request_context("/", headers={"Accept-Encoding": "gzip"}):
         app.config["RESPONSE_COMPRESSION_MIN_SIZE"] = 64
         response = app.response_class(b"tiny", status=200, mimetype="text/plain")
-        compressed = config_module.maybe_compress_response(response)
+        compressed = compression.maybe_compress_response(response)
 
     assert compressed.headers.get("Content-Encoding") is None
     assert compressed.get_data() == b"tiny"

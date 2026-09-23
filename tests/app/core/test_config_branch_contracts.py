@@ -9,7 +9,7 @@ from unittest import mock
 from flask import Flask
 
 import server.app.config as config_module
-from server.app.config import paths, session_secret
+from server.app.config import compression, paths, session_secret
 
 
 def test_discover_project_root_fallback_when_frontend_not_found(monkeypatch):
@@ -95,7 +95,7 @@ def test_resolve_secret_key_replace_failure_cleanup_paths(monkeypatch):
 def test_response_compression_paths_and_accepts_gzip_guard(monkeypatch):
     app = config_module.app
 
-    assert config_module._accepts_gzip() is False
+    assert compression._accepts_gzip() is False
 
     with app.test_request_context("/", headers={"Accept-Encoding": "gzip"}):
         app.config["RESPONSE_COMPRESSION_MIN_SIZE"] = 1
@@ -106,7 +106,7 @@ def test_response_compression_paths_and_accepts_gzip_guard(monkeypatch):
         response.headers["ETag"] = "etag"
         response.headers["Content-MD5"] = "digest"
 
-        compressed = config_module.maybe_compress_response(response)
+        compressed = compression.maybe_compress_response(response)
         assert compressed.headers["Content-Encoding"] == "gzip"
         assert "Accept-Encoding" in compressed.headers["Vary"]
         assert compressed.direct_passthrough is False
@@ -115,27 +115,27 @@ def test_response_compression_paths_and_accepts_gzip_guard(monkeypatch):
         assert gzip.decompress(compressed.get_data()) == payload
 
         monkeypatch.setattr(
-            config_module.gzip,
+            compression.gzip,
             "compress",
             lambda data, compresslevel=6: data + b"not-smaller",
         )
         unchanged = app.response_class(payload, status=200, mimetype="text/plain")
-        assert config_module.maybe_compress_response(unchanged).headers.get("Content-Encoding") is None
+        assert compression.maybe_compress_response(unchanged).headers.get("Content-Encoding") is None
 
         already_encoded = app.response_class(payload, status=200, mimetype="text/plain")
         already_encoded.headers["Content-Encoding"] = "br"
-        assert config_module.maybe_compress_response(already_encoded) is already_encoded
+        assert compression.maybe_compress_response(already_encoded) is already_encoded
 
         non_2xx = app.response_class(payload, status=304, mimetype="text/plain")
-        assert config_module.maybe_compress_response(non_2xx) is non_2xx
+        assert compression.maybe_compress_response(non_2xx) is non_2xx
 
         non_text = app.response_class(payload, status=200, mimetype="application/octet-stream")
-        assert config_module.maybe_compress_response(non_text) is non_text
+        assert compression.maybe_compress_response(non_text) is non_text
 
 
 def test_register_after_request_once_guard_paths(monkeypatch):
     flask_app = Flask("config-branch-guards")
-    marker = config_module._RESPONSE_COMPRESSION_MARKER
+    marker = compression._RESPONSE_COMPRESSION_MARKER
 
     calls = []
     monkeypatch.setattr(flask_app, "after_request", lambda handler: calls.append(handler), raising=False)
@@ -146,19 +146,19 @@ def test_register_after_request_once_guard_paths(monkeypatch):
     setattr(existing, marker, True)
     flask_app.after_request_funcs.setdefault(None, []).append(existing)
 
-    config_module._register_after_request_once(flask_app, lambda response: response)
+    compression._register_after_request_once(flask_app, lambda response: response)
     assert calls == []
 
     flask_app.after_request_funcs[None] = []
     monkeypatch.setattr(flask_app, "_got_first_request", True, raising=False)
-    config_module._register_after_request_once(flask_app, lambda response: response)
+    compression._register_after_request_once(flask_app, lambda response: response)
     assert calls == []
 
     monkeypatch.setattr(flask_app, "_got_first_request", False, raising=False)
     def handler(response):
         return response
 
-    config_module._register_after_request_once(flask_app, handler)
+    compression._register_after_request_once(flask_app, handler)
     assert calls == [handler]
 
 
