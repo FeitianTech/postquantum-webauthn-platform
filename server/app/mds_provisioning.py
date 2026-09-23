@@ -150,14 +150,11 @@ def _refresh_from_upstream() -> bool:
     try:
         from tools import update_mds_snapshot
     except ImportError:
-        try:
-            import update_mds_snapshot  # type: ignore[no-redef]
-        except ImportError:
-            app.logger.warning(
-                "The MDS snapshot updater is not packaged with this build; "
-                "cannot refresh the snapshot from the FIDO Alliance."
-            )
-            return False
+        app.logger.warning(
+            "The MDS snapshot updater is not packaged with this build; "
+            "cannot refresh the snapshot from the FIDO Alliance."
+        )
+        return False
 
     try:
         return update_mds_snapshot.main() == 0
