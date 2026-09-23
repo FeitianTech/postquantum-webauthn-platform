@@ -10,12 +10,12 @@ from __future__ import annotations
 import mimetypes
 import os
 
-from flask import abort, request, send_file
+from flask import Blueprint, Flask, abort, request, send_file
 from werkzeug.security import safe_join
 
-from .config import _FRONTEND_ROOT, _FRONTEND_STATIC_ROOT, app
+from .config import _FRONTEND_ROOT, _FRONTEND_STATIC_ROOT
 
-__all__ = ["BUILD_ID", "asset_url"]
+__all__ = ["BUILD_ID", "asset_url", "bp", "init_app"]
 
 _BUILD_ID_ENV = "FIDO_SERVER_BUILD_ID"
 _DEV_BUILD_ID = "dev"
@@ -55,21 +55,32 @@ def asset_url(filename: str) -> str:
     return f"/assets/{BUILD_ID}/{filename.lstrip('/')}"
 
 
-app.jinja_env.globals["asset_url"] = asset_url
-
-
 def _is_private_static_file(filename: str) -> bool:
     return filename.strip("/") in _PRIVATE_STATIC_FILES
 
 
-@app.before_request
 def _hide_private_static_files():
     if _is_private_static_file(request.path):
         abort(404)
     return None
 
 
-@app.route("/assets/<build_id>/<path:filename>")
+bp = Blueprint("static_assets", __name__)
+
+
+def init_app(app: Flask) -> None:
+    """Serve versioned assets, hide the private MDS files, expose ``asset_url``.
+
+    The hook is registered on the app, not the blueprint, because the private
+    files would otherwise be served by Flask's own ``static`` rule.
+    """
+
+    app.before_request(_hide_private_static_files)
+    app.jinja_env.globals["asset_url"] = asset_url
+    app.register_blueprint(bp)
+
+
+@bp.route("/assets/<build_id>/<path:filename>")
 def versioned_static_asset(build_id: str, filename: str):
     if _is_private_static_file(filename):
         abort(404)

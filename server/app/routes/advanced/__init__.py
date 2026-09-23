@@ -8,7 +8,8 @@ callers of *this package* see, not what the submodules call.
 """
 from __future__ import annotations
 
-from ...config import app
+from flask import Blueprint
+
 from .. import binary_helpers
 from . import (
     algorithms,
@@ -69,46 +70,50 @@ _log_authenticator_attestation_response = (
 datetime_from_timestamp = tracing.datetime_from_timestamp
 
 
-@app.route("/api/advanced/register/begin", methods=["POST"])
+# The HTTP rules, registered on the app by server.app.app.
+bp = Blueprint("advanced", __name__)
+
+
+@bp.route("/api/advanced/register/begin", methods=["POST"])
 def advanced_register_begin():
     return registration.advanced_register_begin()
 
 
-@app.route("/api/advanced/register/complete", methods=["POST"])
+@bp.route("/api/advanced/register/complete", methods=["POST"])
 def advanced_register_complete():
     return registration.advanced_register_complete()
 
 
-@app.route("/api/advanced/credential-artifacts/<string:storage_id>", methods=["GET"])
+@bp.route("/api/advanced/credential-artifacts/<string:storage_id>", methods=["GET"])
 def api_get_advanced_credential_artifact(storage_id: str):
     return artifacts.api_get_advanced_credential_artifact(storage_id)
 
 
-@app.route("/api/advanced/credential-artifacts/bulk", methods=["POST"])
+@bp.route("/api/advanced/credential-artifacts/bulk", methods=["POST"])
 def api_get_advanced_credential_artifacts_bulk():
     return artifacts.api_get_advanced_credential_artifacts_bulk()
 
 
-@app.route("/api/advanced/credential-artifacts/<string:storage_id>", methods=["PUT"])
+@bp.route("/api/advanced/credential-artifacts/<string:storage_id>", methods=["PUT"])
 def api_put_advanced_credential_artifact(storage_id: str):
     return artifacts.api_put_advanced_credential_artifact(storage_id)
 
 
-@app.route("/api/advanced/credential-artifacts/<string:storage_id>/snapshot", methods=["PUT"])
+@bp.route("/api/advanced/credential-artifacts/<string:storage_id>/snapshot", methods=["PUT"])
 def api_put_advanced_credential_snapshot(storage_id: str):
     return artifacts.api_put_advanced_credential_snapshot(storage_id)
 
 
-@app.route("/api/advanced/credential-artifacts/<string:storage_id>", methods=["DELETE"])
+@bp.route("/api/advanced/credential-artifacts/<string:storage_id>", methods=["DELETE"])
 def api_delete_advanced_credential_artifact(storage_id: str):
     return artifacts.api_delete_advanced_credential_artifact(storage_id)
 
 
-@app.route("/api/advanced/authenticate/begin", methods=["POST"])
+@bp.route("/api/advanced/authenticate/begin", methods=["POST"])
 def advanced_authenticate_begin():
     return authentication.advanced_authenticate_begin()
 
 
-@app.route("/api/advanced/authenticate/complete", methods=["POST"])
+@bp.route("/api/advanced/authenticate/complete", methods=["POST"])
 def advanced_authenticate_complete():
     return authentication.advanced_authenticate_complete()
