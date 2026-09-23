@@ -62,7 +62,20 @@ Important templates:
 Flask app setup starts in:
 
 - `server/app/app.py`
-- `server/app/config.py`
+  The WSGI entry point, `server.app.app:app`, in a checkout and in the image alike:
+  the Dockerfile copies `server/app` to `/app/server/app`, so every module has one
+  import path. Do not add `server.X` / `server.app.X` fallbacks.
+- `server/app/config/`
+  The Flask app and everything that configures it on import: `application.py`
+  (the singleton), `session_secret.py`, `compression.py`, `proxy.py`,
+  `session_cookie.py`, `security_headers.py`, `origins.py`, `attestation_trust.py`,
+  `mds.py`, `relying_party.py` (RP ID, `create_fido_server`), `paths.py`. The routes
+  call `config.create_fido_server` / `config.determine_rp_id` through the package,
+  so route tests patch those on the package; patch every other name in its
+  submodule.
+- `server/app/mds_trust.py`
+  The MDS trust anchors. A leaf on purpose: `tools/update_mds_snapshot.py` imports
+  it without building the app.
 
 Main route modules:
 
