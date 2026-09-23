@@ -173,7 +173,8 @@ def test_try_decode_cbor_handles_ctap_prefix_without_payload():
     assert result is not None
     assert result["format"] == "CBOR"
     assert result["decoded"]["decodedValue"]["summary"] == "Empty CBOR payload"
-    assert result["decoded"]["ctap"]["kind"] == "command"
+    # Alone, 0x01 is MAKE_CREDENTIAL without parameters or the INVALID_COMMAND status.
+    assert result["decoded"]["ctap"]["kind"] == "command or status"
     assert result["decoded"]["ctap"]["payloadLength"] == 0
 
 

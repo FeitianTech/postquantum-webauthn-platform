@@ -7,7 +7,8 @@ differently from it:
 * a command's parameters are numbered in the order ``Ctap2`` passes them to
   ``args()``, which numbers from 1;
 * a response's members are numbered in the field order of its dataclass, which
-  ``_CborDataObject`` numbers from 1.
+  ``_CborDataObject`` numbers from 1;
+* command bytes are ``Ctap2.CMD`` and status bytes ``CtapError.ERR``.
 
 ``fido2`` spells the names in snake_case; the codec shows the CTAP names, which
 ``_CTAP_NAMES`` gives. Where CTAP 2.2 defines a member the vendored ``fido2``
@@ -19,7 +20,14 @@ import inspect
 from collections.abc import Callable
 from dataclasses import fields
 
+from fido2.ctap import CtapError
 from fido2.ctap2.base import AssertionResponse, AttestationResponse, Ctap2
+
+COMMANDS: dict[int, str] = {int(command): command.name for command in Ctap2.CMD}
+STATUSES: dict[int, str] = {int(status): status.name for status in CtapError.ERR}
+SUCCESS: int = int(CtapError.ERR.SUCCESS)
+MAKE_CREDENTIAL: int = int(Ctap2.CMD.MAKE_CREDENTIAL)
+GET_ASSERTION: int = int(Ctap2.CMD.GET_ASSERTION)
 
 _CTAP_NAMES: dict[str, str] = {
     # authenticatorMakeCredential / authenticatorGetAssertion parameters

@@ -16,7 +16,8 @@ def test_extract_ctap_prefix_handles_empty_command_status_and_unknown_codes():
     assert prefix == {
         "code": 1,
         "codeHex": "0x01",
-        "meaning": "AuthenticatorMakeCredential command",
+        "command": "MAKE_CREDENTIAL",
+        "meaning": "MAKE_CREDENTIAL command",
         "kind": "command",
     }
     assert remaining == b"\xaa\xbb"
@@ -25,7 +26,8 @@ def test_extract_ctap_prefix_handles_empty_command_status_and_unknown_codes():
     assert prefix == {
         "code": 0,
         "codeHex": "0x00",
-        "meaning": "Success status",
+        "status": "SUCCESS",
+        "meaning": "SUCCESS status",
         "kind": "status",
     }
     assert remaining == b"\xcc"
