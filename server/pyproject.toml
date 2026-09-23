@@ -28,7 +28,7 @@ dev = [
 ]
 
 [tool.uv]
-# Not a distributable package: the app runs from source (gunicorn server.app:app),
+# Not a distributable package: the app runs from source (gunicorn server.app.app:app),
 # so uv installs only its dependencies.
 package = false
 
