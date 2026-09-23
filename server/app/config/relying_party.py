@@ -1,9 +1,9 @@
 """The relying party: its ID and name, and the ``Fido2Server`` bound to them.
 
 Importing this switches fido2's WebAuthn data classes to their JSON mapping, puts
-the RP name/ID defaults into ``app.config``, warns once when neither an RP ID nor
-an origin allowlist is configured, and builds the module-level ``rp`` and
-``server``.
+the RP name/ID defaults into ``app.config``, and warns once when neither an RP ID nor
+an origin allowlist is configured. ``create_fido_server`` builds a ``Fido2Server``
+per request.
 """
 from __future__ import annotations
 
@@ -185,6 +185,3 @@ def create_fido_server(
     entity = build_rp_entity(rp_data, rp_id=rp_id, rp_name=rp_name)
     return Fido2Server(entity)
 
-
-rp = build_rp_entity()
-server = Fido2Server(rp)

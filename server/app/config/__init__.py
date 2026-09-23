@@ -23,8 +23,7 @@ Importing the package configures the one Flask ``app``:
 - ``origins``: the exact-origin allowlist and the origin helpers.
 - ``attestation_trust``: operator-trusted attestation CAs.
 - ``mds``: where the MDS snapshot and the session metadata live.
-- ``relying_party``: the RP ID and name, ``create_fido_server``, and the ``rp``
-  and ``server`` singletons.
+- ``relying_party``: the RP ID and name, and ``create_fido_server``.
 
 The MDS trust anchors live in ``server.app.mds_trust``, outside this package, so
 the snapshot updater can import them without building the app.
@@ -62,8 +61,6 @@ __all__ = [
     "is_origin_allowed",
     "normalise_origin",
     "warn_if_development_rp_configuration",
-    "rp",
-    "server",
     "MDS_METADATA_CACHE_PATH",
     "MDS_EXPLORER_META_PATH",
     "MDS_EXPLORER_PATH",
@@ -108,8 +105,6 @@ build_rp_entity = relying_party.build_rp_entity
 create_fido_server = relying_party.create_fido_server
 determine_rp_id = relying_party.determine_rp_id
 warn_if_development_rp_configuration = relying_party.warn_if_development_rp_configuration
-rp = relying_party.rp
-server = relying_party.server
 
 # The origin policy.
 determine_expected_origin = origins.determine_expected_origin
