@@ -815,6 +815,55 @@ so the flip is a one-line change when we do it.
 `fido2/websafe_decode` is still non-validating (vendored, out of scope). `sniff`'s `ambiguous` flag
 has no consumer — surfacing it in the decoder response would be frontend-visible.
 
+### Phase 11 — M4: re-merge the fragment sprawl — DONE (2026-09-22), verified
+67 commits, all bare-subject. `server/` **126 -> 78** `.py` files; all six `*_parts/` packages gone;
+**zero** files carry a `_runtime`/`_impl`/`_leaf` suffix. New layout: `webauthn/{attestation,metadata,pqc}`,
+`decoder/{decode,encode}`, `routes/{simple,advanced}` packages, `storage/`. Each facade became its
+package's `__init__.py`, re-exporting the same function objects.
+
+Tech-lead verification:
+- Suites 1860 passed / 4 skipped, vitest 278, ruff clean, F821 0, `tests/app/security/` 78.
+- **Flask URL map byte-identical (31 rules)** vs `origin/main` — the mid-phase bare-name sweep that
+  rewrote a route to `/api/authentication/begin` is confirmed fixed.
+- **Collected test IDs identical (1864, 0/0)** and **the same 4 skips with identical reasons**. The agent
+  caught 15 tests silently skipping mid-phase (`1845 passed, 19 skipped` with collection still at 1864) —
+  the `importorskip` hazard; collection parity alone would have missed it.
+- **Container layout simulated** (Docker daemon was down): copied `server/app` to `server/` as the
+  Dockerfile does; all 11 relocated modules import, and the gunicorn target `server.app:app` resolves to a
+  Flask app with 31 rules.
+
+Deviations the agent made, all justified: the approved metadata grouping was cyclic
+(`blob -> sessions -> snapshots -> blob`), so it split into 7 acyclic modules; all seven CTAP fragments
+merged into one `ctap.py` because they imported each other in a cycle — that plus `pipeline` removed
+**two pre-existing import cycles**; three renames to avoid collisions (`cbor.py` vs `fido2.cbor` ->
+`cbor_parser.py`, `result.py` vs a local -> `response.py`, `register_begin.py` vs a Flask view ->
+`registration.py`). Six `_impl` suffixes on *functions* are load-bearing (they distinguish a
+parameterised implementation from its same-named wrapper) and were left rather than restructure DI.
+
+Agent disclosed one process error: a gate result piped through `grep` in an `&&` chain masked the exit
+status and **one red commit landed** before being reverted; replaced with a wrapper that cannot be bypassed
+that way. (The tech lead hit the same `grep`-exit-code trap repeatedly in this session.) Two corrections to
+its own earlier analysis: 39 import-time function captures exist (not zero — its grep missed dict literals),
+and the two `_build_certificate_summary_lines` copies were not identical (the unreachable one is deleted).
+
+**NEW CONCERN — big files.** Files over 800 LOC went **1 -> 4**: `decoder/decode/ctap.py` 1725,
+`routes/advanced/registration.py` 1288, `config.py` 1005 (pre-existing), `webauthn/attestation/certificates.py`
+973. The fix is splitting along REAL seams, never by line count (that was the original disease). Plan:
+`ctap.py` after M5 rewrites it; `config.py` in the `create_app()` phase; `advanced/registration.py` and
+`certificates.py` in a later structure pass.
+
+### Process gap (tech lead's) — six commits reached `origin/main` unreviewed
+Between the Phase 5 push (base `1dfd244`) and the Phase 6 push (base `d83e5b7`), `origin/main` advanced by
+six commits I did not push and did not review — the push base silently changed. They were fixes from the
+first real GitHub CI run on Linux: remove coverage badges and their workflow (`3462911d`); omit the
+macOS-only `fido2/hid/macos.py` from coverage so the floor holds on Linux (`69f3974f`); vitest 5 + jsdom 30,
+npm audit tightened `high -> moderate` (`64e07c10`); stop Dependabot bumping vendored fido2 (`9f515278`);
+all rolldown platform bindings in the lock + `npm ci` everywhere (`5b069ea9`); Node 22 (`d83e5b70`).
+**Reviewed retroactively 2026-09-22: sound.** No gate was loosened — coverage floor still 95, vitest
+thresholds unchanged, `npm audit` now **0 vulnerabilities** at `moderate`. Two of them close issues left
+open in Phase 5 (`npm install` drift; the moderate `@vitest/mocker` advisory blocked on vitest).
+**Process fix:** on every push, compare the push base to my previous tip and review anything in between.
+
 ### Local development
 Tests previously ran against the global interpreter, whose packages matched nothing in
 `requirements.txt` (cryptography 44.0.3, fido2 2.1.1, gunicorn 23). A project venv now exists:
