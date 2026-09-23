@@ -126,6 +126,11 @@ Related backend modules:
   Persistence: `credentials.py`, `session_metadata.py`, `cloud.py`, `common.py`.
 - `server/app/decoder/`
   Decoder/encoder logic used by the developer tooling UI: `decode/` and `encode/`.
+  `ctap_tables.py` is the one CTAP table both read (command and status bytes,
+  request parameters, response members), derived from the vendored `fido2`; COSE
+  algorithm names come from `webauthn/pqc.py`'s `describe_algorithm`. Do not add
+  another copy of either. Encoder bytes come only from `encode/cbor_canonical.py`,
+  which writes CTAP2-canonical CBOR; do not serialise encoder output with cbor2.
 
 Each of these packages keeps its public surface in `__init__.py` and its
 implementation in submodules named for what they do. Import the submodule you
