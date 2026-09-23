@@ -32,22 +32,21 @@ def _get_ctap_field_value(
 def _ctap_key_matches(key: Any, candidates: Iterable[str]) -> bool:
     key_str = str(key).strip()
     key_lower = key_str.lower()
-    normalized_candidates = {candidate.strip() for candidate in candidates}
-    normalized_lower = {candidate.lower() for candidate in normalized_candidates}
-
-    if key_str in normalized_candidates or key_lower in normalized_lower:
-        return True
+    normalized_lower = {candidate.strip().lower() for candidate in candidates}
 
     if isinstance(key, str):
         match = _CTAP_LABELED_KEY_PATTERN.match(key)
         if match:
-            number = match.group(1).strip()
-            label = match.group(2).strip()
-            if number in normalized_candidates or number.lower() in normalized_lower:
-                return True
-            if label in normalized_candidates or label.lower() in normalized_lower:
-                return True
-    return False
+            # "N (label)" names its field twice. It is that field only when both
+            # agree: "1 (rpId)" is not a makeCredential response's "1 (fmt)".
+            number = int(match.group(1))
+            label = match.group(2).strip().lower()
+            numbers = {
+                int(candidate) for candidate in normalized_lower if candidate.lstrip("-").isdigit()
+            }
+            return label in normalized_lower and (not numbers or number in numbers)
+
+    return key_lower in normalized_lower
 
 
 def _require_mapping(value: Any, field_name: str) -> Mapping[str, Any]:
