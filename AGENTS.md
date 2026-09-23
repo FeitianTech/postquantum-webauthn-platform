@@ -187,6 +187,13 @@ If you are changing only UI logic plus lightweight server responses, prefer targ
 - Add or change a dependency: edit `server/pyproject.toml`, run `uv lock`, commit both files.
   A stale lock fails the Docker build and CI.
 - The root `pyproject.toml` is the vendored `fido2/` library's manifest, not the app's.
+- Its build backend is pinned exactly (`poetry-core==X.Y.Z`): `uv.lock` does not lock
+  build requirements, so a range lets a new release break an unchanged commit, as
+  poetry-core 2.5.0 did on 2026-09-23. Keep it an exact pin;
+  `tests/app/tooling/test_build_backend_pin.py` enforces that. Dependabot cannot bump
+  it (it skips `[build-system]` in a Poetry project), so
+  `.github/workflows/update-build-backend.yml` checks PyPI weekly, builds fido2 with
+  the new release through uv and pip, runs pytest, and only then opens a bot PR.
 
 ## CI, Deploys And Bots
 
@@ -200,12 +207,19 @@ If you are changing only UI logic plus lightweight server responses, prefer targ
 - Every action is pinned to a commit SHA with the version in a trailing comment.
   Dependabot bumps both. Do not reintroduce a floating tag -- and note that
   `astral-sh/setup-uv` publishes no floating major tag at all.
-- No workflow pushes to `main`. `update-footer-year.yml` commits to a bot branch
-  through `.github/actions/open-bot-pr` and opens a pull request, staging an
-  explicit path list rather than `git add -A`. GitHub does not start workflow
+- No workflow pushes to `main`. `update-footer-year.yml` and
+  `update-build-backend.yml` commit to a bot branch through
+  `.github/actions/open-bot-pr` and open a pull request, staging an explicit path
+  list rather than `git add -A`. GitHub does not start workflow
   runs for events signed by `GITHUB_TOKEN`, so set a `BOT_PR_TOKEN` secret if
   those pull requests should get CI automatically. Enforcement still depends on
   branch protection on `main`, which lives in repository settings, not here.
+- Scheduled workflows (`update-fido-mds.yml`, `update-footer-year.yml`,
+  `update-build-backend.yml`, and `ci-security.yml`'s weekly run) fail where nobody
+  looks. `ci-scheduled-runs.yml` reads their latest run on `main` on every push and
+  pull request and emits a warning annotation while one has failed. It holds only
+  `actions: read` and never fails the build. Issues are disabled on this
+  repository, so it does not open one. Add any new scheduled workflow to its list.
 - Coverage is a gate, not a published number: the floors in `.coveragerc` and
   `vitest.config.mjs` fail CI, and there is no coverage badge or badge workflow.
   Do not add one back.
