@@ -170,7 +170,7 @@ def test_build_authenticator_payload_flag_and_credential_helpers_cover_fallback_
     assert payload["flags"]["UP"] is True
     assert payload["flags"]["AT"] is True
     assert payload["counter"] == 9
-    assert payload["credential"]["publicKey"]["alg"] == "ES256"
+    assert payload["credential"]["publicKey"]["alg"] == "ES256 (ECDSA)"
 
     assert decode_module._build_flag_payload(None, None, auth_byte_length=12) == {}
     mapped_flags = decode_module._build_flag_payload(
@@ -202,7 +202,7 @@ def test_build_authenticator_payload_flag_and_credential_helpers_cover_fallback_
         fallback_alg=-7,
     )
     assert credential_only["credentialId"] == "abcd"
-    assert credential_only["publicKey"]["alg"] == "ES256"
+    assert credential_only["publicKey"]["alg"] == "ES256 (ECDSA)"
 
 
 def test_client_data_entry_response_extras_and_base_type_helpers():

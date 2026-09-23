@@ -194,7 +194,7 @@ def test_build_authenticator_data_payload_uses_bytes_and_details_to_build_creden
     assert payload["flags"]["AT"] is True
     assert payload["credential"]["credentialIdLength"] == "0004"
     assert payload["credential"]["credentialId"] == "10203040"
-    assert payload["credential"]["publicKey"]["alg"] == "ES256"
+    assert payload["credential"]["publicKey"]["alg"] == "ES256 (ECDSA)"
 
 
 def test_extend_with_client_data_details_outputs_defaults_and_structured_fields():

@@ -7,17 +7,7 @@ from typing import Any
 from fido2.webauthn import AttestationObject
 
 from ... import encoding
-
-_COSE_ALG_LABELS: dict[int, str] = {
-    -8: "EdDSA",
-    -7: "ES256",
-    -35: "ES256K",
-    -36: "ES384",
-    -37: "ES512",
-    -257: "RS256",
-    -258: "RS384",
-    -259: "RS512",
-}
+from ...webauthn import pqc
 
 
 def _resolve_cose_algorithm(public_key: Any, fallback: Any | None = None) -> str | None:
@@ -43,7 +33,7 @@ def _resolve_cose_algorithm(public_key: Any, fallback: Any | None = None) -> str
         alg_int = int(alg_value)
     except (TypeError, ValueError):
         return str(alg_value)
-    return _COSE_ALG_LABELS.get(alg_int, str(alg_int))
+    return pqc.describe_algorithm(alg_int)
 
 
 def _convert_cose_key_for_display(public_key: Any) -> Any:

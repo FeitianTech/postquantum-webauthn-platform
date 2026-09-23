@@ -161,7 +161,7 @@ def test_format_public_key_credential_summary_uses_response_fallback_algorithm_a
     assert "Detected type:\tPublicKeyCredential" in summary_lines
     assert f"RP ID hash:\t{rp_hash}" in summary_lines
     assert "Counter:\t0x00000005=5" in summary_lines
-    assert "Key algorithm:\tRS256" in summary_lines
+    assert "Key algorithm:\tRS256 (RSA)" in summary_lines
     assert any(line.startswith("Client extensions:\t") for line in summary_lines)
     assert "Att. certificates:\t" in summary_lines
 
