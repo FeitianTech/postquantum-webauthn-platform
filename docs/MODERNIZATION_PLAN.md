@@ -961,6 +961,43 @@ Dependabot.
 **Still open from the original audit:** the live service runs with `GITHUB_TOKEN`, so every production
 registration is logged to the hardcoded personal repo `rainzhang05/CredentialLogs`.
 
+### Phase 13 deploy — verified in production (2026-09-23)
+Cloud Build `3236ce10` SUCCESS; revision `pqcwebauthn-00428-9qw` ready and serving 100%; `/health` 200 on
+both `run.app` and `webauthnlab.tech`; live `/` serves CSP, HSTS, X-Frame-Options, Permissions-Policy and
+correctly flagged cookies. The fail-closed secret check shipped without incident. GitHub CI green on all
+six workflows including the new `Scheduled runs` check.
+
+### CRITICAL — the Cloud Build test gate has NEVER run
+Found while watching this deploy. The production trigger `postquantum-webauthn-platform`
+(project `feitian-project`) uses an **inline build config** with three steps — Build, Push, Deploy — and
+**ignores the repository's `cloudbuild.yaml`**. So the Python and frontend test steps Phase 5 added (and the
+Node 22 change to that file) have never executed: **every push to `main` has deployed to production
+untested.** The tech lead "verified" the gate in Phase 5 by reading `cloudbuild.yaml` and never checked
+what the trigger actually runs. Lesson: verify the deploy path by what the platform executes, not by what
+the repo says.
+
+Mitigating facts: the inline Build step runs the same Dockerfile, so an image that fails to build still
+cannot deploy (that is what protected production during the poetry-core incident); and Cloud Run does not
+shift traffic to a revision that fails to start.
+
+Compared line by line: the inline and repo configs build and deploy the **same image to the same service
+with the same command**; the repo file only adds the two test steps. Differences are cosmetic
+(`--no-cache`, a `gcb-trigger-id` label). One real blocker was fixed pre-emptively in `4ee40e5a`: the
+trigger defines substitutions the repo file does not use, which Cloud Build rejects unless
+`substitutionOption: ALLOW_LOOSE` — now set, inert until the switch.
+
+**Operator action (needs owner approval — persistent cloud config):** point the trigger at the file:
+`gcloud builds triggers update github postquantum-webauthn-platform --project feitian-project --build-config=cloudbuild.yaml`
+then confirm the next push runs five steps. Full trigger JSON is backed up for rollback. Also noted: the
+trigger runs as the default compute service account, which has broad default permissions.
+
+### Metric correction — `raising=False`
+The raw count rose 476 -> 486, which looked like regression. It is not: the risky form is
+`setattr(..., raising=False)` (silently creates a missing attribute); `delenv(..., raising=False)` is
+idiomatic. Split correctly: **risky attr-patches 417 -> 419 -> 417 (flat)**; benign env/dict 59 -> 69.
+Remaining risky sites: `app/session` 104, `app/metadata` 83, `app/core` 74, `app/storage` 30, and 110 in
+vendored `fido2` tests.
+
 ### Local development
 Tests previously ran against the global interpreter, whose packages matched nothing in
 `requirements.txt` (cryptography 44.0.3, fido2 2.1.1, gunicorn 23). A project venv now exists:
