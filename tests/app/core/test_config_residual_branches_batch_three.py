@@ -5,18 +5,19 @@ import io
 from types import SimpleNamespace
 
 import server.app.config as config_module
+from server.app.config import session_secret
 
 
 def test_resolve_secret_key_reads_empty_stored_key_and_generates(monkeypatch):
     fake_app = SimpleNamespace(instance_path="/virtual-instance", logger=SimpleNamespace(warning=lambda *a, **k: None))
-    monkeypatch.setattr(config_module, "app", fake_app, raising=False)
+    monkeypatch.setattr(session_secret, "app", fake_app, raising=False)
 
     monkeypatch.delenv("FIDO_SERVER_SECRET_KEY", raising=False)
     monkeypatch.delenv("FIDO_SERVER_SECRET_KEY_FILE", raising=False)
-    monkeypatch.setattr(config_module.os, "urandom", lambda size: b"Z" * size)
-    monkeypatch.setattr(config_module.os, "makedirs", lambda *_a, **_k: None)
+    monkeypatch.setattr(session_secret.os, "urandom", lambda size: b"Z" * size)
+    monkeypatch.setattr(session_secret.os, "makedirs", lambda *_a, **_k: None)
     monkeypatch.setattr(
-        config_module.tempfile,
+        session_secret.tempfile,
         "mkstemp",
         lambda **_kwargs: (_ for _ in ()).throw(OSError("skip write")),
     )
@@ -26,9 +27,9 @@ def test_resolve_secret_key_reads_empty_stored_key_and_generates(monkeypatch):
             return io.BytesIO(b"")
         raise AssertionError(f"unexpected open mode: {mode} for {path}")
 
-    monkeypatch.setattr(config_module, "open", _open_empty_read, raising=False)
+    monkeypatch.setattr(session_secret, "open", _open_empty_read, raising=False)
 
-    assert config_module._resolve_secret_key() == b"Z" * 32
+    assert session_secret._resolve_secret_key() == b"Z" * 32
 
 
 def test_maybe_compress_response_returns_early_for_small_payload():

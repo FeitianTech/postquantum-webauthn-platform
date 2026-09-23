@@ -130,7 +130,8 @@ def test_resolve_secret_key_from_env():
         import importlib
 
         from server.app import config
-        importlib.reload(config)
+        from server.app.config import session_secret
+        importlib.reload(session_secret)
         
         # The key should be set
         assert config.app.secret_key is not None
@@ -153,7 +154,8 @@ def test_resolve_secret_key_from_file(tmp_path):
         import importlib
 
         from server.app import config
-        importlib.reload(config)
+        from server.app.config import session_secret
+        importlib.reload(session_secret)
         
         # The key should be set
         assert config.app.secret_key is not None
@@ -173,10 +175,10 @@ def test_resolve_secret_key_generates_and_stores(tmp_path, monkeypatch):
         env_clear["FIDO_SERVER_SECRET_KEY_FILE"] = None
     
     with mock.patch.dict(os.environ, env_clear, clear=False):
-        from server.app.config import _resolve_secret_key
+        from server.app.config.session_secret import _resolve_secret_key
         
         # Mock the app.instance_path
-        with mock.patch("server.app.config.app") as mock_app:
+        with mock.patch("server.app.config.session_secret.app") as mock_app:
             mock_app.instance_path = str(instance_path)
             mock_app.logger = mock.MagicMock()
             

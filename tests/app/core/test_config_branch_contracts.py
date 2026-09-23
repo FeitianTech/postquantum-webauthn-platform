@@ -9,7 +9,7 @@ from unittest import mock
 from flask import Flask
 
 import server.app.config as config_module
-from server.app.config import paths
+from server.app.config import paths, session_secret
 
 
 def test_discover_project_root_fallback_when_frontend_not_found(monkeypatch):
@@ -21,7 +21,7 @@ def test_discover_project_root_fallback_when_frontend_not_found(monkeypatch):
 
 def test_resolve_secret_key_handles_read_oserror_and_makedirs_failure(monkeypatch):
     fake_app = types.SimpleNamespace(instance_path="/virtual-instance", logger=mock.Mock())
-    monkeypatch.setattr(config_module, "app", fake_app, raising=False)
+    monkeypatch.setattr(session_secret, "app", fake_app, raising=False)
 
     monkeypatch.delenv("FIDO_SERVER_SECRET_KEY", raising=False)
     monkeypatch.delenv("FIDO_SERVER_SECRET_KEY_FILE", raising=False)
@@ -35,15 +35,15 @@ def test_resolve_secret_key_handles_read_oserror_and_makedirs_failure(monkeypatc
         raise OSError("mkdir failure")
 
     monkeypatch.setattr(builtins, "open", _open_read_error)
-    monkeypatch.setattr(config_module.os, "urandom", lambda size: b"S" * size)
-    monkeypatch.setattr(config_module.os, "makedirs", _raise_makedirs)
+    monkeypatch.setattr(session_secret.os, "urandom", lambda size: b"S" * size)
+    monkeypatch.setattr(session_secret.os, "makedirs", _raise_makedirs)
 
-    assert config_module._resolve_secret_key() == b"S" * 32
+    assert session_secret._resolve_secret_key() == b"S" * 32
 
 
 def test_resolve_secret_key_replace_failure_cleanup_paths(monkeypatch):
     fake_app = types.SimpleNamespace(instance_path="/virtual-instance", logger=mock.Mock())
-    monkeypatch.setattr(config_module, "app", fake_app, raising=False)
+    monkeypatch.setattr(session_secret, "app", fake_app, raising=False)
 
     monkeypatch.delenv("FIDO_SERVER_SECRET_KEY", raising=False)
     monkeypatch.delenv("FIDO_SERVER_SECRET_KEY_FILE", raising=False)
@@ -79,16 +79,16 @@ def test_resolve_secret_key_replace_failure_cleanup_paths(monkeypatch):
         raise OSError("unlink failed")
 
     monkeypatch.setattr(builtins, "open", _open_missing)
-    monkeypatch.setattr(config_module.os, "urandom", lambda size: b"T" * size)
-    monkeypatch.setattr(config_module.os, "makedirs", lambda *_args, **_kwargs: None)
-    monkeypatch.setattr(config_module.tempfile, "mkstemp", lambda **_kwargs: (42, "/tmp/session-secret.tmp"))
-    monkeypatch.setattr(config_module.os, "fdopen", lambda _fd, _mode: _DummyTarget())
-    monkeypatch.setattr(config_module.os, "fsync", lambda _fd: None)
-    monkeypatch.setattr(config_module.os, "replace", _replace_failure)
-    monkeypatch.setattr(config_module.os.path, "exists", lambda _path: True)
-    monkeypatch.setattr(config_module.os, "unlink", _unlink_failure)
+    monkeypatch.setattr(session_secret.os, "urandom", lambda size: b"T" * size)
+    monkeypatch.setattr(session_secret.os, "makedirs", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(session_secret.tempfile, "mkstemp", lambda **_kwargs: (42, "/tmp/session-secret.tmp"))
+    monkeypatch.setattr(session_secret.os, "fdopen", lambda _fd, _mode: _DummyTarget())
+    monkeypatch.setattr(session_secret.os, "fsync", lambda _fd: None)
+    monkeypatch.setattr(session_secret.os, "replace", _replace_failure)
+    monkeypatch.setattr(session_secret.os.path, "exists", lambda _path: True)
+    monkeypatch.setattr(session_secret.os, "unlink", _unlink_failure)
 
-    assert config_module._resolve_secret_key() == b"T" * 32
+    assert session_secret._resolve_secret_key() == b"T" * 32
     assert unlink_calls
 
 
