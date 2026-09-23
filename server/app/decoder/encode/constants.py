@@ -23,8 +23,8 @@ _CTAP_REQUIRED_FIELDS: dict[str, Sequence[int]] = {
 }
 
 _CTAP_PREFIX_DETAILS: dict[str, tuple[int, str]] = {
-    "makeCredentialRequest": (0x01, "command"),
-    "getAssertionRequest": (0x02, "command"),
-    "makeCredentialResponse": (0x00, "status"),
-    "getAssertionResponse": (0x00, "status"),
+    "makeCredentialRequest": (ctap_tables.MAKE_CREDENTIAL, "command"),
+    "getAssertionRequest": (ctap_tables.GET_ASSERTION, "command"),
+    "makeCredentialResponse": (ctap_tables.SUCCESS, "status"),
+    "getAssertionResponse": (ctap_tables.SUCCESS, "status"),
 }

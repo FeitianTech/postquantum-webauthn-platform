@@ -164,8 +164,6 @@ _try_decode_certificate_bytes = pipeline._try_decode_certificate_bytes
 _try_parse_json = pipeline._try_parse_json
 
 # CBOR sequence decoding and CTAP repair.
-_CTAP_COMMAND_MAP = ctap._CTAP_COMMAND_MAP
-_CTAP_STATUS_MAP = ctap._CTAP_STATUS_MAP
 _decode_cbor_sequence = ctap._decode_cbor_sequence
 _extract_ctap_prefix = ctap._extract_ctap_prefix
 _is_padding_bytes = ctap._is_padding_bytes

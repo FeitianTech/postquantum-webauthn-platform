@@ -186,6 +186,12 @@ def _decode_pem_certificates(text: str) -> dict[str, Any]:
 
 
 def _decode_binary_payload(data: bytes, encoding: str) -> dict[str, Any]:
+    # A single byte CTAP names is a status or command byte. Read as text it is
+    # at most an ASCII digit, which would otherwise be shown as a JSON number:
+    # 0x31 (PIN_INVALID) as 1.
+    if len(data) == 1 and ctap._extract_ctap_prefix(data)[0] is not None:
+        return ctap._try_decode_cbor(data, encoding)
+
     text_version = _try_decode_utf8(data)
 
     if text_version and _looks_like_pem(text_version):
@@ -347,7 +353,7 @@ def decode_payload_text(value: str) -> dict[str, Any]:
     if not trimmed:
         raise ValueError("Decoder input is empty.")
 
-    parsed_json = _try_parse_json(trimmed)
+    parsed_json = None if _is_lone_ctap_byte_hex(trimmed) else _try_parse_json(trimmed)
     if parsed_json is not None:
         result = _decode_json_object(parsed_json, raw_text=trimmed)
     elif _looks_like_pem(trimmed):
@@ -357,6 +363,18 @@ def decode_payload_text(value: str) -> dict[str, Any]:
         result = _decode_binary_payload(data, encoding)
 
     return response._prepare_decoder_response(result)
+
+
+def _is_lone_ctap_byte_hex(text: str) -> bool:
+    # "31" is valid JSON, but as the whole input to this decoder it is the byte
+    # 0x31, PIN_INVALID: a two-digit JSON number would tell nobody anything.
+    if len(text) != 2:
+        return False
+    try:
+        data = bytes.fromhex(text)
+    except ValueError:
+        return False
+    return ctap._extract_ctap_prefix(data)[0] is not None
 
 
 def _describe_client_data_from_bytes(data: bytes) -> dict[str, Any]:
