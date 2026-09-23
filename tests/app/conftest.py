@@ -15,7 +15,46 @@ exercising the real code.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
+from typing import Any
+
 import pytest
+
+# Every app a test builds gets this secret, so building one never reads or
+# writes instance/session-secret.key.
+TEST_SECRET_KEY = "test-session-secret-0123456789abcdef"
+
+
+@pytest.fixture
+def make_app():
+    """Build a fresh app with ``create_app()``; keyword arguments override config.
+
+    The environment is read when the app is built, so ``monkeypatch.setenv``
+    before calling this configures that app and no other.
+    """
+
+    factory = pytest.importorskip("server.app.factory")
+
+    def _make(config: Mapping[str, Any] | None = None):
+        return factory.create_app(
+            {"TESTING": True, "SECRET_KEY": TEST_SECRET_KEY, **(config or {})}
+        )
+
+    return _make
+
+
+@pytest.fixture
+def app(make_app):
+    """A fresh app, built with the test configuration."""
+
+    return make_app()
+
+
+@pytest.fixture
+def client(app):
+    """A test client for ``app``."""
+
+    return app.test_client()
 
 
 def _app():

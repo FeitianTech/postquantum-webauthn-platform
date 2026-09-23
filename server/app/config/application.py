@@ -1,11 +1,10 @@
-"""The Flask application singleton.
-
-Every other config submodule configures this one object as it is imported; the
-re-import guard keeps it the same object if this module is reloaded.
+"""The bare Flask object that ``create_app()`` configures.
 
 The app is named ``server.app`` so that ``app.logger`` is the parent of every
-module's ``logging.getLogger(__name__)``: their records propagate to the stderr
-handler Flask gives ``app.logger`` (see the read of it below).
+module's ``logging.getLogger(__name__)``: their records propagate to the handler
+Flask gives ``app.logger`` (see ``logs``). The instance folder is fixed rather
+than derived from the name, so the session secret and the local credential
+store stay where they are.
 """
 from __future__ import annotations
 
@@ -18,12 +17,11 @@ from .paths import (
     basepath,
 )
 
-_existing_app = globals().get("app")
-if isinstance(_existing_app, Flask):
-    app = _existing_app
-else:
-    # Rooted at server/app. The name is also the logger's name.
-    app = Flask(
+
+def build_app() -> Flask:
+    """Return a new, unconfigured Flask app rooted at ``server/app``."""
+
+    return Flask(
         "server.app",
         root_path=basepath,
         instance_path=INSTANCE_ROOT,
@@ -31,7 +29,3 @@ else:
         static_url_path="",
         template_folder=str(_FRONTEND_TEMPLATE_ROOT),
     )
-    # Flask attaches its stderr handler to app.logger the first time it is read,
-    # unless a handler for its level is already configured. Read it before
-    # anything logs, so module loggers never fall through to logging.lastResort.
-    app.logger

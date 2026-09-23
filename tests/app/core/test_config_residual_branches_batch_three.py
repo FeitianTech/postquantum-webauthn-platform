@@ -1,16 +1,14 @@
 from __future__ import annotations
 
-import importlib
 import io
 from types import SimpleNamespace
 
 import server.app.config as config_module
-from server.app.config import compression, mds, relying_party, session_secret
+from server.app.config import compression, relying_party, session_secret
 
 
 def test_resolve_secret_key_reads_empty_stored_key_and_generates(monkeypatch):
-    fake_app = SimpleNamespace(instance_path="/virtual-instance", logger=SimpleNamespace(warning=lambda *a, **k: None))
-    monkeypatch.setattr(session_secret, "app", fake_app, raising=False)
+    fake_app = SimpleNamespace(instance_path="/virtual-instance")
 
     monkeypatch.delenv("FIDO_SERVER_SECRET_KEY", raising=False)
     monkeypatch.delenv("FIDO_SERVER_SECRET_KEY_FILE", raising=False)
@@ -29,7 +27,7 @@ def test_resolve_secret_key_reads_empty_stored_key_and_generates(monkeypatch):
 
     monkeypatch.setattr(session_secret, "open", _open_empty_read, raising=False)
 
-    assert session_secret._resolve_secret_key() == b"Z" * 32
+    assert session_secret._resolve_secret_key(fake_app) == b"Z" * 32
 
 
 def test_maybe_compress_response_returns_early_for_small_payload():
@@ -44,11 +42,14 @@ def test_maybe_compress_response_returns_early_for_small_payload():
     assert compressed.get_data() == b"tiny"
 
 
-def test_config_reload_applies_session_metadata_recover_env(monkeypatch):
+def test_create_app_applies_session_metadata_recover_env(monkeypatch, make_app):
     monkeypatch.setenv("FIDO_SERVER_SESSION_METADATA_RECOVER", "1")
-    reloaded = importlib.reload(mds)
 
-    assert reloaded.app.config["SESSION_METADATA_RECOVER_ON_START"] is True
+    assert make_app().config["SESSION_METADATA_RECOVER_ON_START"] is True
+
+    monkeypatch.delenv("FIDO_SERVER_SESSION_METADATA_RECOVER")
+
+    assert "SESSION_METADATA_RECOVER_ON_START" not in make_app().config
 
 
 def test_determine_rp_id_handles_missing_host_and_loopback_fallback(monkeypatch):

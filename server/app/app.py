@@ -1,13 +1,11 @@
 """Application entry point for the WebAuthn demo server."""
 from __future__ import annotations
 
-from . import static_assets
-from .config import app
-from .routes import advanced, general, simple
+from .factory import create_app
+from .routes import general
 
-static_assets.init_app(app)
-for _blueprint in (advanced.bp, general.bp, simple.bp):
-    app.register_blueprint(_blueprint)
+# The WSGI application, ``server.app.app:app``. Importing this module builds it.
+app = create_app()
 
 
 def main() -> None:

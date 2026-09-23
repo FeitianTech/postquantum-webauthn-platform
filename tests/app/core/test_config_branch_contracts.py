@@ -4,7 +4,6 @@ import builtins
 import gzip
 import types
 from pathlib import Path
-from unittest import mock
 
 from flask import Flask
 
@@ -26,8 +25,7 @@ def test_discover_project_root_fallback_when_frontend_not_found(monkeypatch):
 
 
 def test_resolve_secret_key_handles_read_oserror_and_makedirs_failure(monkeypatch):
-    fake_app = types.SimpleNamespace(instance_path="/virtual-instance", logger=mock.Mock())
-    monkeypatch.setattr(session_secret, "app", fake_app, raising=False)
+    fake_app = types.SimpleNamespace(instance_path="/virtual-instance")
 
     monkeypatch.delenv("FIDO_SERVER_SECRET_KEY", raising=False)
     monkeypatch.delenv("FIDO_SERVER_SECRET_KEY_FILE", raising=False)
@@ -44,12 +42,11 @@ def test_resolve_secret_key_handles_read_oserror_and_makedirs_failure(monkeypatc
     monkeypatch.setattr(session_secret.os, "urandom", lambda size: b"S" * size)
     monkeypatch.setattr(session_secret.os, "makedirs", _raise_makedirs)
 
-    assert session_secret._resolve_secret_key() == b"S" * 32
+    assert session_secret._resolve_secret_key(fake_app) == b"S" * 32
 
 
 def test_resolve_secret_key_replace_failure_cleanup_paths(monkeypatch):
-    fake_app = types.SimpleNamespace(instance_path="/virtual-instance", logger=mock.Mock())
-    monkeypatch.setattr(session_secret, "app", fake_app, raising=False)
+    fake_app = types.SimpleNamespace(instance_path="/virtual-instance")
 
     monkeypatch.delenv("FIDO_SERVER_SECRET_KEY", raising=False)
     monkeypatch.delenv("FIDO_SERVER_SECRET_KEY_FILE", raising=False)
@@ -94,7 +91,7 @@ def test_resolve_secret_key_replace_failure_cleanup_paths(monkeypatch):
     monkeypatch.setattr(session_secret.os.path, "exists", lambda _path: True)
     monkeypatch.setattr(session_secret.os, "unlink", _unlink_failure)
 
-    assert session_secret._resolve_secret_key() == b"T" * 32
+    assert session_secret._resolve_secret_key(fake_app) == b"T" * 32
     assert unlink_calls
 
 

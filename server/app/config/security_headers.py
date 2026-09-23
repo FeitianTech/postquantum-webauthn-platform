@@ -1,16 +1,15 @@
 """Response security headers: CSP, Permissions-Policy, HSTS and friends.
 
-The defaults land in ``app.config`` and the handler is registered as an
-``after_request`` handler when this module is imported. Flask runs those handlers
-in reverse, so this one, registered after ``compression``'s, runs before it.
+``create_app()`` puts the defaults into ``app.config`` and registers the handler
+with ``init_app``. Flask runs ``after_request`` handlers in reverse, so this one,
+registered after ``compression``'s, runs before it.
 """
 from __future__ import annotations
 
 import os
+from typing import Any
 
 from flask import Flask, current_app, has_request_context, request
-
-from .application import app
 
 _SECURITY_HEADERS_MARKER = "_postquantum_security_headers"
 
@@ -80,20 +79,19 @@ _DEFAULT_PERMISSIONS_POLICY = ", ".join(
 
 _DEFAULT_STRICT_TRANSPORT_SECURITY = "max-age=31536000; includeSubDomains"
 
-app.config.setdefault(
-    "CONTENT_SECURITY_POLICY",
-    os.environ.get("FIDO_SERVER_CONTENT_SECURITY_POLICY")
-    or _DEFAULT_CONTENT_SECURITY_POLICY,
-)
-app.config.setdefault(
-    "PERMISSIONS_POLICY",
-    os.environ.get("FIDO_SERVER_PERMISSIONS_POLICY") or _DEFAULT_PERMISSIONS_POLICY,
-)
-app.config.setdefault(
-    "STRICT_TRANSPORT_SECURITY",
-    os.environ.get("FIDO_SERVER_STRICT_TRANSPORT_SECURITY")
-    or _DEFAULT_STRICT_TRANSPORT_SECURITY,
-)
+
+
+def config_from_env() -> dict[str, Any]:
+    """The header policies ``create_app()`` puts into ``app.config``."""
+
+    return {
+        "CONTENT_SECURITY_POLICY": os.environ.get("FIDO_SERVER_CONTENT_SECURITY_POLICY")
+        or _DEFAULT_CONTENT_SECURITY_POLICY,
+        "PERMISSIONS_POLICY": os.environ.get("FIDO_SERVER_PERMISSIONS_POLICY")
+        or _DEFAULT_PERMISSIONS_POLICY,
+        "STRICT_TRANSPORT_SECURITY": os.environ.get("FIDO_SERVER_STRICT_TRANSPORT_SECURITY")
+        or _DEFAULT_STRICT_TRANSPORT_SECURITY,
+    }
 
 
 def set_security_headers(response):
@@ -138,4 +136,7 @@ def _register_security_headers_once(flask_app: Flask, handler) -> None:
     flask_app.after_request(handler)
 
 
-_register_security_headers_once(app, set_security_headers)
+def init_app(app: Flask) -> None:
+    """Register ``set_security_headers`` as an ``after_request`` handler."""
+
+    _register_security_headers_once(app, set_security_headers)

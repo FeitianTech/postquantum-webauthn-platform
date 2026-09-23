@@ -1,6 +1,7 @@
 """Which ``X-Forwarded-*`` headers to believe, and the ``ProxyFix`` that applies it.
 
-Applied to ``app.wsgi_app`` when imported, if the proxy is trusted.
+``create_app()`` applies it to ``app.wsgi_app`` with ``init_app``, if the proxy is
+trusted.
 """
 from __future__ import annotations
 
@@ -10,7 +11,6 @@ from flask import Flask
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 from ..env_flags import parse_env_flag
-from .application import app
 
 _PROXY_FIX_MARKER = "_postquantum_proxy_fix"
 
@@ -70,5 +70,8 @@ def _apply_proxy_fix(flask_app: Flask) -> bool:
     return True
 
 
-if _should_trust_proxy_headers():
-    _apply_proxy_fix(app)
+def init_app(app: Flask) -> None:
+    """Wrap ``app.wsgi_app`` in ``ProxyFix`` when the forwarded headers are trusted."""
+
+    if _should_trust_proxy_headers():
+        _apply_proxy_fix(app)

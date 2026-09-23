@@ -1,19 +1,25 @@
 """Where the FIDO MDS snapshot and the per-session metadata uploads live.
 
-Importing this also applies ``FIDO_SERVER_SESSION_METADATA_RECOVER`` to
+``create_app()`` applies ``FIDO_SERVER_SESSION_METADATA_RECOVER`` to
 ``app.config["SESSION_METADATA_RECOVER_ON_START"]`` when it is set.
 """
 from __future__ import annotations
 
 import os
+from typing import Any
 
 from ..env_flags import parse_env_flag
-from .application import app
 from .paths import _FRONTEND_STATIC_ROOT, _SERVER_RUNTIME_ROOT
 
-_session_metadata_recover_flag = parse_env_flag("FIDO_SERVER_SESSION_METADATA_RECOVER")
-if _session_metadata_recover_flag is not None:
-    app.config["SESSION_METADATA_RECOVER_ON_START"] = _session_metadata_recover_flag
+
+def config_from_env() -> dict[str, Any]:
+    """The session-metadata setting ``create_app()`` puts into ``app.config``, if set."""
+
+    recover = parse_env_flag("FIDO_SERVER_SESSION_METADATA_RECOVER")
+    if recover is None:
+        return {}
+    return {"SESSION_METADATA_RECOVER_ON_START": recover}
+
 
 MDS_METADATA_URL = "https://mds3.fidoalliance.org/"
 MDS_METADATA_FILENAME = "blob.jwt"
