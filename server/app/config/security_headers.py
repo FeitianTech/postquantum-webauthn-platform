@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import os
 
-from flask import Flask, has_request_context, request
+from flask import Flask, current_app, has_request_context, request
 
 from .application import app
 
@@ -105,18 +105,18 @@ def set_security_headers(response):
     headers.setdefault("X-Frame-Options", "DENY")
     headers.setdefault("Referrer-Policy", "no-referrer")
 
-    policy = app.config.get("CONTENT_SECURITY_POLICY")
+    policy = current_app.config.get("CONTENT_SECURITY_POLICY")
     if policy:
         headers.setdefault("Content-Security-Policy", policy)
 
-    permissions_policy = app.config.get("PERMISSIONS_POLICY")
+    permissions_policy = current_app.config.get("PERMISSIONS_POLICY")
     if permissions_policy:
         headers.setdefault("Permissions-Policy", permissions_policy)
 
     # HSTS is meaningless on a plain-HTTP response and actively harmful in a
     # local http:// workflow, so it is emitted only for requests that actually
     # arrived over TLS (which needs ProxyFix behind Cloud Run, see above).
-    hsts = app.config.get("STRICT_TRANSPORT_SECURITY")
+    hsts = current_app.config.get("STRICT_TRANSPORT_SECURITY")
     if hsts and has_request_context() and request.is_secure:
         headers.setdefault("Strict-Transport-Security", hsts)
 

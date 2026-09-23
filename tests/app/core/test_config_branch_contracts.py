@@ -177,7 +177,8 @@ def test_parse_fingerprints_and_host_normalization_branches(monkeypatch):
     assert parsed == {"AA" * 20}
 
     monkeypatch.setitem(config_module.app.config, "FIDO_SERVER_RP_ID", "  configured.example  ")
-    assert config_module.determine_rp_id() == "configured.example"
+    with config_module.app.app_context():
+        assert config_module.determine_rp_id() == "configured.example"
 
     assert relying_party._normalise_request_host(None) is None
     assert relying_party._normalise_request_host("   ") is None

@@ -13,7 +13,7 @@ import os
 from collections.abc import Mapping
 from urllib.parse import urlsplit
 
-from flask import has_request_context, request
+from flask import Flask, current_app, has_request_context, request
 
 import fido2.features
 from fido2.server import Fido2Server
@@ -42,7 +42,7 @@ app.config.setdefault("FIDO_SERVER_RP_ID", _DEFAULT_RP_ID)
 _RP_CONFIGURATION_WARNING_EMITTED = False
 
 
-def warn_if_development_rp_configuration() -> bool:
+def warn_if_development_rp_configuration(flask_app: Flask) -> bool:
     """Warn once when neither an explicit RP ID nor an origin allowlist is set.
 
     Without either, the RP ID is derived from the request ``Host`` header and
@@ -53,9 +53,9 @@ def warn_if_development_rp_configuration() -> bool:
     if _RP_CONFIGURATION_WARNING_EMITTED:
         return False
 
-    configured_id = app.config.get("FIDO_SERVER_RP_ID")
+    configured_id = flask_app.config.get("FIDO_SERVER_RP_ID")
     has_rp_id = isinstance(configured_id, str) and bool(configured_id.strip())
-    has_allowlist = bool(origins.get_allowed_origins())
+    has_allowlist = bool(origins.allowed_origins_from_config(flask_app.config))
 
     if has_rp_id and has_allowlist:
         _RP_CONFIGURATION_WARNING_EMITTED = True
@@ -77,7 +77,7 @@ def warn_if_development_rp_configuration() -> bool:
     return True
 
 
-warn_if_development_rp_configuration()
+warn_if_development_rp_configuration(app)
 
 
 def determine_rp_id(explicit_id: str | None = None) -> str:
@@ -91,7 +91,7 @@ def determine_rp_id(explicit_id: str | None = None) -> str:
     if explicit_id:
         return explicit_id
 
-    configured_id = app.config.get("FIDO_SERVER_RP_ID")
+    configured_id = current_app.config.get("FIDO_SERVER_RP_ID")
     if isinstance(configured_id, str) and configured_id.strip():
         return configured_id.strip()
 
@@ -170,7 +170,7 @@ def build_rp_entity(
     rp_name_value = (
         rp_name
         or (rp_data or {}).get("name")
-        or app.config.get("FIDO_SERVER_RP_NAME")
+        or current_app.config.get("FIDO_SERVER_RP_NAME")
         or "Demo server"
     )
 

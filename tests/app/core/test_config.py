@@ -276,57 +276,60 @@ def test_mds_metadata_url():
 def test_create_fido_server():
     """Test that create_fido_server function works."""
     from fido2.server import Fido2Server
-    from server.app.config import create_fido_server
+    from server.app.config import app, create_fido_server
     
-    # Should create a Fido2Server instance
-    server = create_fido_server()
-    assert isinstance(server, Fido2Server)
+    with app.app_context():
+        # Should create a Fido2Server instance
+        server = create_fido_server()
+        assert isinstance(server, Fido2Server)
     
-    # Should have an RP entity
-    assert server.rp is not None
-    assert server.rp.name is not None
+        # Should have an RP entity
+        assert server.rp is not None
+        assert server.rp.name is not None
     
-    # Test with explicit rp_id
-    server = create_fido_server(rp_id="example.com")
-    assert server.rp.id == "example.com"
+        # Test with explicit rp_id
+        server = create_fido_server(rp_id="example.com")
+        assert server.rp.id == "example.com"
     
-    # Test with explicit rp_name
-    server = create_fido_server(rp_name="Test Server")
-    assert server.rp.name == "Test Server"
+        # Test with explicit rp_name
+        server = create_fido_server(rp_name="Test Server")
+        assert server.rp.name == "Test Server"
 
 
 def test_build_rp_entity():
     """Test build_rp_entity function."""
     from fido2.webauthn import PublicKeyCredentialRpEntity
-    from server.app.config import build_rp_entity
+    from server.app.config import app, build_rp_entity
     
-    # Test with explicit rp_id
-    rp = build_rp_entity(rp_id="example.com")
-    assert isinstance(rp, PublicKeyCredentialRpEntity)
-    assert rp.id == "example.com"
+    with app.app_context():
+        # Test with explicit rp_id
+        rp = build_rp_entity(rp_id="example.com")
+        assert isinstance(rp, PublicKeyCredentialRpEntity)
+        assert rp.id == "example.com"
     
-    # Test with rp_data dict
-    rp = build_rp_entity({"id": "test.com", "name": "Test RP"})
-    assert isinstance(rp, PublicKeyCredentialRpEntity)
-    assert rp.id == "test.com"
-    assert rp.name == "Test RP"
+        # Test with rp_data dict
+        rp = build_rp_entity({"id": "test.com", "name": "Test RP"})
+        assert isinstance(rp, PublicKeyCredentialRpEntity)
+        assert rp.id == "test.com"
+        assert rp.name == "Test RP"
     
-    # Test with explicit rp_name
-    rp = build_rp_entity(rp_name="Custom Server")
-    assert rp.name == "Custom Server"
+        # Test with explicit rp_name
+        rp = build_rp_entity(rp_name="Custom Server")
+        assert rp.name == "Custom Server"
 
 
 def test_determine_rp_id():
     """Test determine_rp_id function."""
-    from server.app.config import determine_rp_id
+    from server.app.config import app, determine_rp_id
     
-    # Test with explicit ID
-    rp_id = determine_rp_id("example.com")
-    assert rp_id == "example.com"
+    with app.app_context():
+        # Test with explicit ID
+        rp_id = determine_rp_id("example.com")
+        assert rp_id == "example.com"
     
-    # Test without request context (should return localhost)
-    rp_id = determine_rp_id()
-    assert rp_id == "localhost"
+        # Test without a request context (should return localhost)
+        rp_id = determine_rp_id()
+        assert rp_id == "localhost"
 
 
 def test_determine_rp_id_with_request_context():

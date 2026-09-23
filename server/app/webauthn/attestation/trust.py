@@ -6,18 +6,18 @@ from datetime import datetime, timezone
 from typing import Any
 
 from cryptography import x509
+from flask import current_app
 
 from fido2.utils import ByteBuffer
 from fido2.webauthn import Aaguid
 
 from ... import encoding
-from ...config import app
 from . import formatting
 from .constants import AAGUID_EXTENSION_OID
 
 
 def _trusted_ca_subjects() -> set[str] | None:
-    subjects = app.config.get("TRUSTED_ATTESTATION_CA_SUBJECTS")
+    subjects = current_app.config.get("TRUSTED_ATTESTATION_CA_SUBJECTS")
     if isinstance(subjects, set):
         return subjects
     if isinstance(subjects, (list, tuple)):
@@ -26,7 +26,7 @@ def _trusted_ca_subjects() -> set[str] | None:
 
 
 def _trusted_ca_fingerprints() -> set[str] | None:
-    fingerprints = app.config.get("TRUSTED_ATTESTATION_CA_FINGERPRINTS")
+    fingerprints = current_app.config.get("TRUSTED_ATTESTATION_CA_FINGERPRINTS")
     if isinstance(fingerprints, set):
         return {str(fp).upper() for fp in fingerprints if fp}
     if isinstance(fingerprints, (list, tuple)):

@@ -10,7 +10,17 @@ from datetime import datetime, timezone
 from threading import Lock
 from typing import Any
 
-from flask import abort, g, jsonify, render_template, request, send_file, session
+from flask import (
+    abort,
+    current_app,
+    g,
+    has_app_context,
+    jsonify,
+    render_template,
+    request,
+    send_file,
+    session,
+)
 
 from .. import encoding
 from ..config import MDS_METADATA_VERIFIED_PATH, app
@@ -106,7 +116,10 @@ if _existing_marker:
 def ensure_metadata_bootstrapped(skip_if_reloader_parent: bool = True) -> None:
     """Ensure the MDS metadata cache is refreshed once per server process."""
 
-    if skip_if_reloader_parent and app.debug and os.environ.get("WERKZEUG_RUN_MAIN") != "true":
+    # Outside an app context (main() before app.run, the warm-up) there is no
+    # reloader parent to skip.
+    debug = has_app_context() and current_app.debug
+    if skip_if_reloader_parent and debug and os.environ.get("WERKZEUG_RUN_MAIN") != "true":
         return
 
     # The snapshot is not tracked in git nor baked into the image, so make sure
@@ -145,7 +158,7 @@ def health():
     Not ``/healthz``: Cloud Run reserves URL paths ending in ``z``.
     """
 
-    response = app.response_class("ok", mimetype="text/plain")
+    response = current_app.response_class("ok", mimetype="text/plain")
     response.headers["Cache-Control"] = "no-store"
     return response
 
