@@ -26,7 +26,9 @@ export const COSE_KEY_TYPE_LABELS = {
     '2': 'EC2 (2)',
     '3': 'RSA (3)',
     '4': 'Symmetric (4)',
-    '7': 'ML-DSA (7)'
+    '5': 'HSS-LMS (5)',
+    '6': 'WalnutDSA (6)',
+    '7': 'AKP (7)'
 };
 
 export const HINT_ATTACHMENT_MAP = {
