@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 from collections.abc import Mapping
 from datetime import datetime, timezone
@@ -15,10 +16,11 @@ from ...config import (
     MDS_EXPLORER_PATH,
     MDS_METADATA_CACHE_PATH,
     MDS_METADATA_VERIFIED_PATH,
-    app,
 )
 from ...mds_snapshot import build_bootstrap_snapshot, build_explorer_snapshot
 from . import state as _state
+
+logger = logging.getLogger(__name__)
 
 
 class MetadataDownloadError(Exception):
@@ -230,7 +232,7 @@ def _load_verified_metadata_fallback() -> tuple[MetadataBlobPayload | None, floa
     except FileNotFoundError:
         return None, fallback_mtime
     except (OSError, json.JSONDecodeError) as exc:
-        app.logger.warning(
+        logger.warning(
             "Unable to load verified metadata fallback %s: %s",
             MDS_METADATA_VERIFIED_PATH,
             exc,
@@ -240,7 +242,7 @@ def _load_verified_metadata_fallback() -> tuple[MetadataBlobPayload | None, floa
     try:
         return MetadataBlobPayload.from_dict(payload), fallback_mtime
     except Exception as exc:  # pylint: disable=broad-except
-        app.logger.warning(
+        logger.warning(
             "Verified metadata fallback %s is invalid: %s",
             MDS_METADATA_VERIFIED_PATH,
             exc,

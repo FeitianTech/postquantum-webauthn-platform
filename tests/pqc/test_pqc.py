@@ -148,11 +148,10 @@ def test_load_enabled_mechanisms_reports_cryptography_support():
 
 def test_log_algorithm_selection_with_none(monkeypatch):
     """Test logging when no algorithm is selected."""
-    from server.app.config import app
     from server.app.webauthn import pqc
     
     logged = []
-    monkeypatch.setattr(app.logger, "info", lambda msg, *args: logged.append((msg, args)))
+    monkeypatch.setattr(pqc.logger, "info", lambda msg, *args: logged.append((msg, args)))
     
     pqc.log_algorithm_selection("registration", None)
     
@@ -163,11 +162,10 @@ def test_log_algorithm_selection_with_none(monkeypatch):
 
 def test_log_algorithm_selection_with_pqc(monkeypatch):
     """Test logging when a PQC algorithm is selected."""
-    from server.app.config import app
     from server.app.webauthn import pqc
     
     logged = []
-    monkeypatch.setattr(app.logger, "info", lambda msg, *args: logged.append((msg, args)))
+    monkeypatch.setattr(pqc.logger, "info", lambda msg, *args: logged.append((msg, args)))
     
     pqc.log_algorithm_selection("authentication", -48)
     
@@ -178,11 +176,10 @@ def test_log_algorithm_selection_with_pqc(monkeypatch):
 
 def test_log_algorithm_selection_with_classical(monkeypatch):
     """Test logging when a classical algorithm is selected."""
-    from server.app.config import app
     from server.app.webauthn import pqc
     
     logged = []
-    monkeypatch.setattr(app.logger, "info", lambda msg, *args: logged.append((msg, args)))
+    monkeypatch.setattr(pqc.logger, "info", lambda msg, *args: logged.append((msg, args)))
     
     pqc.log_algorithm_selection("registration", -7)
     

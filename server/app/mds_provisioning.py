@@ -26,13 +26,16 @@ is available, exactly as they already did for a missing snapshot.
 from __future__ import annotations
 
 import gzip
+import logging
 import os
 import threading
 from pathlib import Path
 
-from .config import _FRONTEND_STATIC_ROOT, app
+from .config import _FRONTEND_STATIC_ROOT
 from .env_flags import parse_env_flag
 from .storage import cloud
+
+logger = logging.getLogger(__name__)
 
 __all__ = [
     "SNAPSHOT_FILENAMES",
@@ -128,7 +131,7 @@ def _download_from_gcs(missing: tuple[str, ...]) -> tuple[str, ...]:
         try:
             data = cloud.download_bytes(snapshot_blob_name(filename))
         except Exception as exc:  # pragma: no cover - network/credential failure
-            app.logger.warning(
+            logger.warning(
                 "Could not download MDS snapshot file %s from Cloud Storage: %s",
                 filename,
                 exc,
@@ -150,7 +153,7 @@ def _refresh_from_upstream() -> bool:
     try:
         from tools import update_mds_snapshot
     except ImportError:
-        app.logger.warning(
+        logger.warning(
             "The MDS snapshot updater is not packaged with this build; "
             "cannot refresh the snapshot from the FIDO Alliance."
         )
@@ -159,7 +162,7 @@ def _refresh_from_upstream() -> bool:
     try:
         return update_mds_snapshot.main() == 0
     except Exception as exc:  # pragma: no cover - network/parse failure
-        app.logger.warning("Refreshing the MDS snapshot from upstream failed: %s", exc)
+        logger.warning("Refreshing the MDS snapshot from upstream failed: %s", exc)
         return False
 
 
@@ -178,7 +181,7 @@ def _upload_to_gcs(filenames: tuple[str, ...]) -> None:
                 content_type="application/json" if filename.endswith(".json") else None,
             )
         except Exception as exc:  # pragma: no cover - network/credential failure
-            app.logger.warning(
+            logger.warning(
                 "Could not publish MDS snapshot file %s to Cloud Storage: %s",
                 filename,
                 exc,
@@ -201,7 +204,7 @@ def ensure_snapshot_available(*, force: bool = False) -> str:
         if not missing:
             source = "local"
         else:
-            app.logger.info(
+            logger.info(
                 "MDS snapshot files missing locally (%s); provisioning.",
                 ", ".join(missing),
             )
@@ -218,12 +221,12 @@ def ensure_snapshot_available(*, force: bool = False) -> str:
         _provision_state["source"] = source
 
     if source == "unavailable":
-        app.logger.warning(
+        logger.warning(
             "No FIDO MDS snapshot is available. Run "
             "'python tools/update_mds_snapshot.py' to create one locally, or "
             "publish one to the configured Cloud Storage bucket."
         )
     elif source != "local":
-        app.logger.info("Provisioned the FIDO MDS snapshot from %s.", source)
+        logger.info("Provisioned the FIDO MDS snapshot from %s.", source)
 
     return source

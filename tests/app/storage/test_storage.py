@@ -220,7 +220,7 @@ def test_list_credential_blob_names_logs_and_continues(monkeypatch):
     def _fake_warning(*args, **kwargs):
         warnings.append((args, kwargs))
 
-    monkeypatch.setattr(credentials.app.logger, "warning", _fake_warning)
+    monkeypatch.setattr(credentials.logger, "warning", _fake_warning)
 
     results = list(credentials._list_credential_blob_names(session_id))
 

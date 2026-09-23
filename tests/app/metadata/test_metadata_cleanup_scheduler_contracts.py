@@ -150,7 +150,7 @@ def test_maybe_cleanup_inactive_sessions_deletes_only_stale_and_continues_on_del
 
     warnings = []
     monkeypatch.setattr(
-        app_config.app.logger,
+        sessions.logger,
         "warning",
         lambda *args, **kwargs: warnings.append((args, kwargs)),
         raising=False,

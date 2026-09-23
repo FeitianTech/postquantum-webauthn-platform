@@ -149,7 +149,7 @@ def test_session_directory_touch_and_resolve_error_paths(metadata_module, monkey
 
     errors = []
     monkeypatch.setattr(
-        app_config.app.logger,
+        sessions.logger,
         "error",
         lambda *args, **kwargs: errors.append((args, kwargs)),
         raising=False,
@@ -196,13 +196,13 @@ def test_session_directory_touch_and_resolve_error_paths(metadata_module, monkey
     assert schedule_calls == [True]
 
 
-def test_env_interval_upload_and_normalisation_error_edges(metadata_module, monkeypatch, uploads, app_config):
+def test_env_interval_upload_and_normalisation_error_edges(metadata_module, monkeypatch, uploads, sessions):
     monkeypatch.setenv("TEST_ENV_BOOL", " YES ")
     assert metadata_module._env_flag("TEST_ENV_BOOL") is True
 
     warnings = []
     monkeypatch.setattr(
-        app_config.app.logger,
+        sessions.logger,
         "warning",
         lambda *args, **kwargs: warnings.append((args, kwargs)),
         raising=False,

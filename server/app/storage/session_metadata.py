@@ -2,13 +2,14 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import shutil
 import threading
 import time
 from datetime import timedelta
 
-from ..config import SESSION_METADATA_DIR, app
+from ..config import SESSION_METADATA_DIR
 from .cloud import (
     blob_exists,
     blob_updated_timestamp,
@@ -24,6 +25,8 @@ from .common import (
     build_session_scoped_prefix,
     using_gcs_backend,
 )
+
+logger = logging.getLogger(__name__)
 
 __all__ = [
     "delete_file",
@@ -122,7 +125,7 @@ def _local_session_directory(session_id: str, *, create: bool = False) -> str | 
         try:
             os.makedirs(directory, exist_ok=True)
         except OSError as exc:
-            app.logger.error("Failed to prepare session metadata directory %s: %s", directory, exc)
+            logger.error("Failed to prepare session metadata directory %s: %s", directory, exc)
             raise
         _local_touch_last_access(directory)
 
@@ -199,7 +202,7 @@ def _local_maybe_cleanup(now: float | None = None) -> None:
         try:
             shutil.rmtree(directory)
         except OSError as exc:
-            app.logger.warning("Failed to remove inactive metadata session %s: %s", directory, exc)
+            logger.warning("Failed to remove inactive metadata session %s: %s", directory, exc)
 
 
 def _local_note_activity(session_id: str) -> None:
@@ -230,7 +233,7 @@ def list_sessions() -> list[str]:
                 if session_component:
                     seen.add(session_component)
         except Exception as exc:  # pragma: no cover - depends on storage backend
-            app.logger.warning("Unable to list session metadata blobs: %s", exc)
+            logger.warning("Unable to list session metadata blobs: %s", exc)
         return sorted(seen)
 
     try:
@@ -304,7 +307,7 @@ def list_files(session_id: str) -> list[str]:
                     continue
                 names.append(remainder)
         except Exception as exc:  # pragma: no cover - depends on storage backend
-            app.logger.warning("Unable to list metadata files for %s: %s", session_id, exc)
+            logger.warning("Unable to list metadata files for %s: %s", session_id, exc)
         return sorted(names)
 
     directory = _local_session_directory(session_id)
@@ -414,7 +417,7 @@ def delete_session(session_id: str) -> None:
             for blob_name in list_blob_names(prefix):
                 to_delete.append(blob_name)
         except Exception as exc:  # pragma: no cover - depends on storage backend
-            app.logger.warning(
+            logger.warning(
                 "Unable to enumerate metadata for deletion under %s: %s", prefix, exc
             )
         for blob_name in to_delete:
@@ -428,7 +431,7 @@ def delete_session(session_id: str) -> None:
     try:
         shutil.rmtree(directory)
     except OSError as exc:
-        app.logger.warning("Failed to remove metadata session %s: %s", directory, exc)
+        logger.warning("Failed to remove metadata session %s: %s", directory, exc)
 
 
 def prune_session(session_id: str) -> None:

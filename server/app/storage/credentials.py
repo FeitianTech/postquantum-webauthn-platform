@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import io
 import json
+import logging
 import os
 import pickle
 from collections.abc import Iterable, Iterator
@@ -45,6 +46,8 @@ from .common import (
     using_gcs_backend,
     validate_storage_component,
 )
+
+logger = logging.getLogger(__name__)
 
 __all__ = [
     "add_public_key_material",
@@ -190,7 +193,7 @@ def _encode_value(value: Any) -> Any:
     if isinstance(value, (set, frozenset)):
         return {_TYPE_KEY: _T_SET, _VALUE_KEY: [_encode_value(item) for item in value]}
 
-    app.logger.warning(
+    logger.warning(
         "Credential record contains unsupported type %s; storing its text form",
         type(value).__name__,
     )
@@ -290,13 +293,13 @@ def _load_payload(payload: bytes, *, source: str) -> list[Any] | None:
         return decoded
 
     if not _legacy_pickle_reads_enabled():
-        app.logger.warning("Ignoring non-JSON credential payload at %s", source)
+        logger.warning("Ignoring non-JSON credential payload at %s", source)
         return None
 
     try:
         legacy = _restricted_pickle_loads(payload)
     except Exception as exc:
-        app.logger.warning("Unable to read legacy credential payload at %s: %s", source, exc)
+        logger.warning("Unable to read legacy credential payload at %s: %s", source, exc)
         return None
 
     return legacy if isinstance(legacy, list) else None
@@ -402,7 +405,7 @@ def _list_credential_blob_names(session_id: str) -> Iterable[tuple[str, str]]:
                 seen_users.add(username)
                 yield username, blob_name
         except Exception as exc:  # pragma: no cover - depends on storage backend
-            app.logger.warning(
+            logger.warning(
                 "Unable to list credential blobs under %s: %s", search_prefix, exc
             )
 
@@ -607,7 +610,7 @@ def iter_credentials(*, session_id: str | None = None) -> Iterator[tuple[str, li
                 try:
                     directory = _local_directory(resolved_session, base=base)
                 except ValueError as exc:
-                    app.logger.warning(
+                    logger.warning(
                         "Refusing to list credentials for session %r under %s: %s",
                         resolved_session,
                         base,
