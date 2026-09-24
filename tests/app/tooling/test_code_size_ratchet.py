@@ -41,7 +41,7 @@ LONG_FUNCTIONS: dict[str, int] = {
 
 LONG_MODULES: dict[str, int] = {
     # At its limit: new decoder code goes in a module named for what it does.
-    "server/app/decoder/decode/ctap.py": 811,
+    "server/app/decoder/decode/ctap.py": 769,
     "server/app/decoder/decode/pipeline.py": 763,
 }
 
