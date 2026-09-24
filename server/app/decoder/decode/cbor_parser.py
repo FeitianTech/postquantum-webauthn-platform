@@ -520,24 +520,7 @@ def _structure_to_value(node: Mapping[str, Any]) -> Any:
         return [_structure_to_value(item) for item in items]
 
     if major_type == 5:
-        entries = node.get("entries")
-        if not isinstance(entries, Sequence):
-            return {}
-        result: dict[Any, Any] = {}
-        for entry in entries:
-            if not isinstance(entry, Mapping):
-                continue
-            key_node = entry.get("key")
-            value_node = entry.get("value")
-            if not isinstance(key_node, Mapping):
-                continue
-            key = _map_key(key_node)
-            result[key] = (
-                _structure_to_value(value_node)
-                if isinstance(value_node, Mapping)
-                else value_node
-            )
-        return result
+        return _map_value(node)
 
     if major_type == 6:
         tagged_value = node.get("value")
@@ -549,3 +532,26 @@ def _structure_to_value(node: Mapping[str, Any]) -> Any:
         return {"tag": node.get("tag"), "value": converted}
 
     return node.get("value")
+
+
+def _map_value(node: Mapping[str, Any]) -> dict[Any, Any]:
+    """A map node's entries as a dict: each key by ``_map_key``, a later entry replacing an earlier one."""
+
+    entries = node.get("entries")
+    if not isinstance(entries, Sequence):
+        return {}
+    result: dict[Any, Any] = {}
+    for entry in entries:
+        if not isinstance(entry, Mapping):
+            continue
+        key_node = entry.get("key")
+        value_node = entry.get("value")
+        if not isinstance(key_node, Mapping):
+            continue
+        key = _map_key(key_node)
+        result[key] = (
+            _structure_to_value(value_node)
+            if isinstance(value_node, Mapping)
+            else value_node
+        )
+    return result
