@@ -63,6 +63,8 @@ def test_try_decode_cbor_does_not_call_a_status_prefixed_auth_data_map_a_get_ass
     decoded = result["decoded"]
     assert decoded["ctap"]["kind"] == "status"
     assert "expandedJson" not in decoded
+    assert "ctapDecoded" not in decoded
+    assert "decodedValue" in decoded
     assert result["malformed"]
 
 
