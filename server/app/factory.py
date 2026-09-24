@@ -18,7 +18,6 @@ from .config import (
     attestation_trust,
     compression,
     logs,
-    mds,
     origins,
     proxy,
     relying_party,
@@ -37,7 +36,6 @@ CONFIG_SOURCES = (
     relying_party,
     security_headers,
     session_cookie,
-    mds,
 )
 
 

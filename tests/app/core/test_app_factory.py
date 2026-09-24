@@ -12,7 +12,6 @@ from server.app.config import (
     attestation_trust,
     compression,
     logs,
-    mds,
     origins,
     proxy,
     relying_party,
@@ -43,7 +42,6 @@ def test_init_steps_are_pinned_in_order():
         relying_party,
         security_headers,
         session_cookie,
-        mds,
     )
 
 
