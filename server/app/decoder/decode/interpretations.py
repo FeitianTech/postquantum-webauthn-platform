@@ -168,7 +168,7 @@ def _add_auth_data(
     if not isinstance(auth_data, bytes):
         return
     found = authenticator_data_findings.extensions(auth_data)
-    if found is MISSING:
+    if found is MISSING or found == {}:
         return
     blocks.append(extensions.block(found, role=role, location=_AUTH_DATA_LOCATION, path=f"{path}<extensions>", basis=basis))
     if source:
@@ -176,7 +176,8 @@ def _add_auth_data(
 
 
 def _add(blocks: list[dict[str, Any]], value: Any, role: str, location: str, path: str) -> None:
-    if value is None or value is MISSING:
+    # An empty map has nothing to interpret, so it adds nothing.
+    if value is None or value is MISSING or value == {}:
         return
     blocks.append(extensions.block(value, role=role, location=location, path=path))
 
