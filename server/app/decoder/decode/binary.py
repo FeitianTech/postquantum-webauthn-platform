@@ -8,31 +8,12 @@ from fido2.cose import _get_mldsa_parameter_details
 
 from ... import encoding
 from ...webauthn import pqc
+from .. import cose_tables
 from . import cbor_parser
 
-# The IANA "COSE Key Types" registry. 7 is AKP, the algorithm key pair type
-# ML-DSA keys use: the parameter set comes from alg (3), the key from pub (-1).
-_COSE_KEY_TYPES: dict[int, str] = {
-    1: "OKP",
-    2: "EC2",
-    3: "RSA",
-    4: "Symmetric",
-    5: "HSS-LMS",
-    6: "WalnutDSA",
-    7: "AKP",
-}
-
-# The IANA "COSE Elliptic Curves" registry.
-_COSE_CURVES: dict[int, str] = {
-    1: "P-256",
-    2: "P-384",
-    3: "P-521",
-    4: "X25519",
-    5: "X448",
-    6: "Ed25519",
-    7: "Ed448",
-    8: "secp256k1",
-}
+# One registry, shared with the encoder.
+_COSE_KEY_TYPES = cose_tables.KEY_TYPES
+_COSE_CURVES = cose_tables.CURVES
 
 
 def _resolve_cose_algorithm(public_key: Any, fallback: Any | None = None) -> str | None:
