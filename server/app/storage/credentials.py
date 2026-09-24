@@ -16,8 +16,6 @@ allowlist of FIDO2 value classes.
 """
 from __future__ import annotations
 
-import contextlib
-import fcntl
 import hashlib
 import io
 import json
@@ -47,6 +45,9 @@ from .common import (
     assert_contained_blob_name,
     build_session_root_prefix,
     build_session_scoped_prefix,
+    file_digest,
+    file_lock,
+    replace_file,
     resolve_contained_path,
     resolve_metadata_session_id,
     using_gcs_backend,
@@ -503,43 +504,6 @@ def _discard_superseded_pickle(name: str, session_id: str) -> None:
             pass
 
 
-@contextlib.contextmanager
-def _locked(path: str) -> Iterator[None]:
-    """Hold an exclusive ``flock`` on ``path``'s ``.lock`` file.
-
-    One writer at a time for that file, across threads and across the server's
-    worker processes on this host. The lock file is never removed: unlinking a
-    lock another process is waiting on would split the queue in two.
-    """
-
-    with open(f"{path}.lock", "a") as lock:
-        fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
-        try:
-            yield
-        finally:
-            fcntl.flock(lock.fileno(), fcntl.LOCK_UN)
-
-
-def _replace_file(path: str, payload: bytes) -> None:
-    # Write-then-rename so concurrent readers never see a truncated file.
-    tmp_path = f"{path}.tmp.{os.urandom(6).hex()}"
-    try:
-        with open(tmp_path, "wb") as f:
-            f.write(payload)
-        os.replace(tmp_path, path)
-    finally:
-        if os.path.exists(tmp_path):
-            os.remove(tmp_path)
-
-
-def _file_digest(path: str) -> str | None:
-    try:
-        with open(path, "rb") as f:
-            return hashlib.sha256(f.read()).hexdigest()
-    except FileNotFoundError:
-        return None
-
-
 def savekey(name: str, key: Any, *, session_id: str | None = None) -> None:
     payload = _encode_records(key)
     resolved_session = _resolve_session_id(session_id)
@@ -548,8 +512,8 @@ def savekey(name: str, key: Any, *, session_id: str | None = None) -> None:
         upload_bytes(blob_name, payload, content_type="application/json")
     else:
         path = _local_filename(name, resolved_session, create=True)
-        with _locked(path):
-            _replace_file(path, payload)
+        with file_lock(path):
+            replace_file(path, payload)
 
     _discard_superseded_pickle(name, resolved_session)
 
@@ -601,10 +565,10 @@ def save_if_unchanged(name: str, key: Any, version: Any, *, session_id: str | No
         )
     else:
         path = _local_filename(name, resolved_session, create=True)
-        with _locked(path):
-            written = _file_digest(path) == version
+        with file_lock(path):
+            written = file_digest(path) == version
             if written:
-                _replace_file(path, payload)
+                replace_file(path, payload)
 
     if written:
         _discard_superseded_pickle(name, resolved_session)
