@@ -20,7 +20,7 @@ def _auth_data_bytes() -> bytes:
     return bytes(auth_data)
 
 
-def test_remaining_cbor_key_float_and_lenient_helpers():
+def test_remaining_cbor_key_float_and_structure_helpers():
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     assert decode_module._key_variant_identity(b"x") == ("bytes", b"x")

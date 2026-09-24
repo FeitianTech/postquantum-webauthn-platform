@@ -99,7 +99,9 @@ def test_simple_values_and_floats_decode_to_what_they_are(hex_text, expected):
 
 
 def test_a_float_consumes_its_payload_so_the_next_item_is_read_in_place():
-    # [1.5, 7]: fido2.cbor read the float as False and then its 4 bytes as items.
+    # [1.5, 7]. fido2.cbor alone reads the float as False and its four payload
+    # bytes as the next items; the old chain only got this right by falling
+    # through to cbor2 when fido2.cbor then choked.
     assert _decode("82fa3fc0000007")["data"]["decodedValue"] == [1.5, 7]
 
 
