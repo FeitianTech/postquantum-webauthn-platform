@@ -344,7 +344,9 @@ def _sniff_binary_input(value: str) -> SniffResult:
 
 def _decode_binary_input(value: str) -> tuple[bytes, str]:
     result = _sniff_binary_input(value)
-    return result.data, result.encoding
+    # Text in the alphabet base64 and base64url share decodes to the same bytes
+    # in either: the label says both rather than asserting one.
+    return result.data, "base64 or base64url" if result.ambiguous else result.encoding
 
 
 def _decode_binary_field(value: Any) -> tuple[bytes, str] | None:

@@ -7,6 +7,8 @@ finding names the reading that was not taken.
 """
 from __future__ import annotations
 
+import json
+
 import pytest
 
 from server.app.decoder import decode_payload_text
@@ -112,3 +114,23 @@ def test_the_endpoint_reads_digit_hex_as_cbor(client):
 )
 def test_is_one_ctap_message(data, expected):
     assert ambiguous_input.is_one_ctap_message(data) is expected
+
+
+# encoding.sniff() flags text that base64 and base64url both read, to the same
+# bytes. A binary field's "encoding" says so instead of asserting "base64".
+
+
+@pytest.mark.parametrize(
+    ("raw_id", "encoding"),
+    [
+        ("BwcHBwcHBwcHBwcHBwcHBw", "base64 or base64url"),  # letters and digits only
+        ("-wcHBwcHBwcHBwcHBwcHBw", "base64url"),
+        ("+wcHBwcHBwcHBwcHBwcHBw", "base64"),
+    ],
+)
+def test_a_binary_field_names_every_alphabet_that_reads_it(raw_id, encoding):
+    credential = {"id": raw_id, "rawId": raw_id, "type": "public-key", "response": {"signature": "MEQCIA"}}
+
+    result = decode_payload_text(json.dumps(credential))
+
+    assert result["data"]["credential"]["rawId"]["binary"]["encoding"] == encoding
