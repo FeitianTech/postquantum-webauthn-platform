@@ -13,13 +13,7 @@ from flask import jsonify, request, session
 
 from fido2 import cbor
 from fido2.webauthn import (
-    AttestationConveyancePreference,
-    AuthenticatorAttachment,
-    PublicKeyCredentialDescriptor,
-    PublicKeyCredentialType,
     PublicKeyCredentialUserEntity,
-    ResidentKeyRequirement,
-    UserVerificationRequirement,
 )
 
 from ... import (
@@ -38,7 +32,7 @@ from ...encoding import encode_base64, encode_base64url
 from ...storage import credentials
 from ...webauthn import attestation, metadata, pqc
 from .. import binary_helpers
-from . import algorithms, binary, constants, summary, tracing
+from . import algorithms, binary, constants, registration_options, summary, tracing
 
 logger = logging.getLogger(__name__)
 
@@ -919,139 +913,15 @@ def _with_challenge_source(
     return jsonify(merged), status
 
 
-def build_exclude_list(public_key: Mapping[str, Any]) -> list[Any]:
-    exclude_list = []
-    exclude_credentials = public_key.get("excludeCredentials") if "excludeCredentials" in public_key else None
-    if isinstance(exclude_credentials, list):
-        for exclude_cred in exclude_credentials:
-            if isinstance(exclude_cred, dict) and exclude_cred.get("type") == "public-key":
-                cred_id = binary._decode_request_binary(exclude_cred.get("id", ""))
-                if cred_id:
-                    exclude_list.append(
-                        PublicKeyCredentialDescriptor(
-                            type=PublicKeyCredentialType.PUBLIC_KEY,
-                            id=cred_id,
-                        )
-                    )
-    return exclude_list
-
-
-def build_processed_extensions(public_key: Mapping[str, Any]) -> dict[str, Any]:
-    extensions = public_key.get("extensions", {})
-    processed_extensions: dict[str, Any] = {}
-
-    for ext_name, ext_value in extensions.items():
-        if ext_name == "credProps":
-            processed_extensions["credProps"] = bool(ext_value)
-        elif ext_name == "minPinLength":
-            processed_extensions["minPinLength"] = bool(ext_value)
-        elif ext_name in ("credProtect", "credentialProtectionPolicy"):
-            if isinstance(ext_value, int):
-                protect_map = {
-                    1: "userVerificationOptional",
-                    2: "userVerificationOptionalWithCredentialIDList",
-                    3: "userVerificationRequired",
-                }
-                processed_extensions["credentialProtectionPolicy"] = protect_map.get(ext_value, ext_value)
-            elif isinstance(ext_value, str):
-                alias_map = {
-                    "userVerificationOptional": "userVerificationOptional",
-                    "userVerificationOptionalWithCredentialIDList": "userVerificationOptionalWithCredentialIDList",
-                    "userVerificationOptionalWithCredentialIdList": "userVerificationOptionalWithCredentialIDList",
-                    "userVerificationRequired": "userVerificationRequired",
-                }
-                processed_extensions["credentialProtectionPolicy"] = alias_map.get(ext_value, ext_value)
-            else:
-                processed_extensions["credentialProtectionPolicy"] = ext_value
-        elif ext_name in ("enforceCredProtect", "enforceCredentialProtectionPolicy"):
-            processed_extensions["enforceCredentialProtectionPolicy"] = bool(ext_value)
-        elif ext_name == "largeBlob":
-            processed_extensions["largeBlob"] = {"support": ext_value} if isinstance(ext_value, str) else ext_value
-        elif ext_name == "prf":
-            if isinstance(ext_value, dict) and "eval" in ext_value:
-                prf_eval = ext_value["eval"]
-                processed_eval = {}
-                if isinstance(prf_eval, dict):
-                    if "first" in prf_eval:
-                        first_value = binary._decode_request_binary(prf_eval["first"])
-                        processed_eval["first"] = first_value
-                    if "second" in prf_eval:
-                        second_value = binary._decode_request_binary(prf_eval["second"])
-                        processed_eval["second"] = second_value
-                processed_extensions["prf"] = {"eval": processed_eval} if processed_eval else ext_value
-            else:
-                processed_extensions["prf"] = ext_value
-        else:
-            processed_extensions[ext_name] = ext_value
-
-    return processed_extensions
-
-
 def advanced_register_begin():
     data = request.get_json(silent=True)
-
-    if not data or not data.get("publicKey"):
-        return jsonify(
-            {"error": "Invalid request: Missing publicKey in CredentialCreationOptions"},
-        ), 400
-
-    public_key = data["publicKey"]
+    begin_request, error_response = registration_options.parse_begin_request(data)
+    if error_response is not None:
+        return error_response
+    public_key = begin_request.public_key
 
     warnings: list[str] = []
-
-    if not public_key.get("rp"):
-        return jsonify({"error": "Missing required field: rp"}), 400
-    if not public_key.get("user"):
-        return jsonify({"error": "Missing required field: user"}), 400
-    if not public_key.get("challenge"):
-        return jsonify({"error": "Missing required field: challenge"}), 400
-
-    user_info = public_key["user"]
-    username = user_info.get("name", "")
-    display_name = user_info.get("displayName", username)
-
-    if not username:
-        return jsonify({"error": "Username is required in user.name"}), 400
-
-    user_id_value = user_info.get("id", "")
-    if user_id_value:
-        try:
-            user_id_bytes = binary._decode_request_binary(user_id_value)
-        except (ValueError, TypeError) as exc:
-            return jsonify({"error": f"Invalid user ID format: {exc}"}), 400
-    else:
-        user_id_bytes = username.encode("utf-8")
-
-    challenge_value = public_key.get("challenge", "")
-    challenge_bytes = None
-    if challenge_value:
-        try:
-            challenge_bytes = binary._decode_request_binary(challenge_value)
-        except (ValueError, TypeError) as exc:
-            return jsonify({"error": f"Invalid challenge format: {exc}"}), 400
-
-    rp_input = public_key.get("rp") if isinstance(public_key, Mapping) else None
-    rp_entity = config.build_rp_entity(rp_input)
-    sanitized_rp = {"id": rp_entity.id, "name": rp_entity.name}
-    if isinstance(rp_input, Mapping):
-        sanitized_rp.update({k: v for k, v in rp_input.items() if k not in {"id", "name"}})
-    if isinstance(public_key, MutableMapping):
-        public_key["rp"] = sanitized_rp
-
-    temp_server = config.create_fido_server(rp_data=sanitized_rp)
-
-    timeout = public_key.get("timeout", 90000)
-    temp_server.timeout = timeout / 1000.0 if timeout else None
-
-    attestation_preference = public_key.get("attestation", "none")
-    if attestation_preference == "direct":
-        temp_server.attestation = AttestationConveyancePreference.DIRECT
-    elif attestation_preference == "indirect":
-        temp_server.attestation = AttestationConveyancePreference.INDIRECT
-    elif attestation_preference == "enterprise":
-        temp_server.attestation = AttestationConveyancePreference.ENTERPRISE
-    else:
-        temp_server.attestation = AttestationConveyancePreference.NONE
+    temp_server, rp_entity = registration_options.registration_server(public_key)
 
     algorithms.configure_allowed_algorithms(public_key, temp_server, warnings)
     public_key["pubKeyCredParams"] = algorithms.advertised_algorithm_params(temp_server)
@@ -1061,66 +931,25 @@ def advanced_register_begin():
         [entry.get("alg") for entry in public_key["pubKeyCredParams"]],
     )
 
-    auth_selection = public_key.get("authenticatorSelection", {})
-    if not isinstance(auth_selection, dict):
-        auth_selection = {}
-        public_key["authenticatorSelection"] = auth_selection
-
-    raw_hints = public_key.get("hints")
-    hints_list: list[str] = []
-    if isinstance(raw_hints, list):
-        hints_list = [item for item in raw_hints if isinstance(item, str)]
-
-    requested_attachment = normalize_attachment(
-        auth_selection.get("authenticatorAttachment")
-    )
-    allowed_attachment_values = resolve_effective_attachments(
-        hints_list,
-        requested_attachment,
-    )
-    session["advanced_register_allowed_attachments"] = list(allowed_attachment_values)
-
-    uv_req = UserVerificationRequirement.PREFERRED
-    user_verification = auth_selection.get("userVerification", "preferred")
-    if user_verification == "required":
-        uv_req = UserVerificationRequirement.REQUIRED
-    elif user_verification == "discouraged":
-        uv_req = UserVerificationRequirement.DISCOURAGED
-
-    auth_attachment = None
-    attachment_source = requested_attachment
-    if not attachment_source and len(allowed_attachment_values) == 1:
-        attachment_source = allowed_attachment_values[0]
-    if attachment_source == "platform":
-        auth_attachment = AuthenticatorAttachment.PLATFORM
-    elif attachment_source == "cross-platform":
-        auth_attachment = AuthenticatorAttachment.CROSS_PLATFORM
-
-    rk_req = ResidentKeyRequirement.PREFERRED
-    resident_key = auth_selection.get("residentKey", "preferred")
-    if auth_selection.get("requireResidentKey") is True:
-        rk_req = ResidentKeyRequirement.REQUIRED
-    elif resident_key == "required":
-        rk_req = ResidentKeyRequirement.REQUIRED
-    elif resident_key == "discouraged":
-        rk_req = ResidentKeyRequirement.DISCOURAGED
+    selection = registration_options.authenticator_selection(public_key)
+    session["advanced_register_allowed_attachments"] = list(selection.allowed_attachments)
 
     user_entity = PublicKeyCredentialUserEntity(
-        id=user_id_bytes,
-        name=username,
-        display_name=display_name,
+        id=begin_request.user_id,
+        name=begin_request.username,
+        display_name=begin_request.display_name,
     )
 
-    exclude_list = build_exclude_list(public_key)
-    processed_extensions = build_processed_extensions(public_key)
+    exclude_list = registration_options.build_exclude_list(public_key)
+    processed_extensions = registration_options.build_processed_extensions(public_key)
 
     options, state = temp_server.register_begin(
         user_entity,
         exclude_list,
-        user_verification=uv_req,
-        authenticator_attachment=auth_attachment,
-        resident_key_requirement=rk_req,
-        challenge=challenge_bytes,
+        user_verification=selection.user_verification,
+        authenticator_attachment=selection.attachment,
+        resident_key_requirement=selection.resident_key,
+        challenge=begin_request.challenge,
         extensions=processed_extensions if processed_extensions else None,
     )
 
