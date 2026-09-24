@@ -784,7 +784,7 @@ def _is_padding_bytes(data: bytes) -> bool:
     return all(byte in (0x00, 0xFF) for byte in data)
 
 
-def _try_decode_cbor(data: bytes, encoding: str) -> dict[str, Any] | None:
+def _try_decode_cbor(data: bytes, encoding: str, *, lenient: bool = False) -> dict[str, Any] | None:
     if not data:
         return None
 
@@ -805,10 +805,11 @@ def _try_decode_cbor(data: bytes, encoding: str) -> dict[str, Any] | None:
             "binary": pipeline._binary_summary(data, encoding),
         }
 
-    # One item, parsed strictly. A payload that is not well-formed raises with
-    # its offset, counted from the first input byte, prefix included.
+    # One item, parsed strictly unless the caller asked for lenient parsing. A
+    # payload that is not well-formed raises with its offset, counted from the
+    # first input byte, prefix included.
     start = len(data) - len(payload)
-    node, end, _skipped = cbor_parser.decode_item(data, start)
+    node, end, skipped = cbor_parser.decode_item(data, start, lenient=lenient)
     base_value = _structure_to_value(node)
     consumed_total = end - start
     remaining = data[end:]
@@ -847,7 +848,7 @@ def _try_decode_cbor(data: bytes, encoding: str) -> dict[str, Any] | None:
     if ctap_decoded is None:
         decoded_payload["decodedValue"] = _stringify_mapping_keys(_hex_json_safe(hex_decoded_value))
 
-    findings = canonical.check(node, data) + _trailing_findings(data, end)
+    findings = canonical.check(node, data) + skipped + _trailing_findings(data, end)
 
     if ctap_details is not None:
         ctap_details["payloadLength"] = consumed_total
@@ -862,6 +863,7 @@ def _try_decode_cbor(data: bytes, encoding: str) -> dict[str, Any] | None:
         "inputEncoding": encoding,
         "decoded": decoded_payload,
         "binary": pipeline._binary_summary(data, encoding),
+        "decodeMode": "lenient" if lenient else "strict",
     }
     _attach_findings(result, findings)
     return result

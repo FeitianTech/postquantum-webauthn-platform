@@ -185,12 +185,12 @@ def _decode_pem_certificates(text: str) -> dict[str, Any]:
     }
 
 
-def _decode_binary_payload(data: bytes, encoding: str) -> dict[str, Any]:
+def _decode_binary_payload(data: bytes, encoding: str, *, lenient: bool = False) -> dict[str, Any]:
     # A single byte CTAP names is a status or command byte. Read as text it is
     # at most an ASCII digit, which would otherwise be shown as a JSON number:
     # 0x31 (PIN_INVALID) as 1.
     if len(data) == 1 and ctap._extract_ctap_prefix(data)[0] is not None:
-        return ctap._try_decode_cbor(data, encoding)
+        return ctap._try_decode_cbor(data, encoding, lenient=lenient)
 
     text_version = _try_decode_utf8(data)
 
@@ -231,8 +231,9 @@ def _decode_binary_payload(data: bytes, encoding: str) -> dict[str, Any]:
         return authenticator_result
 
     # Whatever is left is read as CBOR, strictly: input that is not
-    # well-formed CBOR fails here, with the offset where it goes wrong.
-    return ctap._try_decode_cbor(data, encoding)
+    # well-formed CBOR fails here, with the offset where it goes wrong. Only a
+    # request for lenient decoding reads past that, and it lists what it skipped.
+    return ctap._try_decode_cbor(data, encoding, lenient=lenient)
 
 
 def _sniff_binary_input(value: str) -> SniffResult:
@@ -342,8 +343,13 @@ def _expand_cbor_value(value: Any) -> Any:
     return make_json_safe(value)
 
 
-def decode_payload_text(value: str) -> dict[str, Any]:
-    """Decode ``value`` into a structured representation."""
+def decode_payload_text(value: str, *, lenient: bool = False) -> dict[str, Any]:
+    """Decode ``value`` into a structured representation.
+
+    CBOR is parsed strictly. ``lenient`` asks for a best-effort parse of CBOR
+    that is not well-formed; the response then says so (``decodeMode``) and
+    lists each item it kept partially or stepped over.
+    """
 
     trimmed = value.strip()
     if not trimmed:
@@ -356,7 +362,7 @@ def decode_payload_text(value: str) -> dict[str, Any]:
         result = _decode_pem_certificates(trimmed)
     else:
         data, encoding = _decode_binary_input(trimmed)
-        result = _decode_binary_payload(data, encoding)
+        result = _decode_binary_payload(data, encoding, lenient=lenient)
 
     return response._prepare_decoder_response(result)
 

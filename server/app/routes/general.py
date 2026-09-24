@@ -406,9 +406,9 @@ def api_delete_custom_metadata(stored_filename: str):
     )
 
 
-def _perform_decode(decoder_input: str):
+def _perform_decode(decoder_input: str, *, lenient: bool = False):
     try:
-        return decode_payload_text(decoder_input), 200
+        return decode_payload_text(decoder_input, lenient=lenient), 200
     except ValueError as exc:
         body = {"error": str(exc)}
         # A CBOR parse error says where the input stops being well-formed.
@@ -451,7 +451,11 @@ def api_codec_payload():
         result, status = _perform_encode(codec_input, target_format)
         return jsonify(result), status
 
-    result, status = _perform_decode(codec_input)
+    lenient = payload.get("lenient", False)
+    if not isinstance(lenient, bool):
+        return jsonify({"error": "lenient must be true or false."}), 400
+
+    result, status = _perform_decode(codec_input, lenient=lenient)
     return jsonify(result), status
 
 
@@ -465,7 +469,11 @@ def api_decode_payload():
     if not isinstance(decoder_input, str) or not decoder_input.strip():
         return jsonify({"error": "Decoder payload must be a non-empty string."}), 400
 
-    result, status = _perform_decode(decoder_input)
+    lenient = payload.get("lenient", False)
+    if not isinstance(lenient, bool):
+        return jsonify({"error": "lenient must be true or false."}), 400
+
+    result, status = _perform_decode(decoder_input, lenient=lenient)
     return jsonify(result), status
 
 

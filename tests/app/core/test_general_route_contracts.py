@@ -67,7 +67,7 @@ def test_decode_and_certificate_routes_cover_error_and_success_paths(monkeypatch
     config_module = pytest.importorskip("server.app.config")
     pytest.importorskip("server.app.app")
 
-    def _fake_decode(payload_text):
+    def _fake_decode(payload_text, **_options):
         if payload_text == "bad":
             raise ValueError("bad payload")
         if payload_text == "boom":
