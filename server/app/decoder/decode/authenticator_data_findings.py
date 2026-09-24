@@ -2,8 +2,10 @@
 
 Authenticator data (WebAuthn L3 section 6.1) is a byte string with a 37-byte
 header, then the attested credential data its AT flag announces and the
-extensions its ED flag announces (section 6.5.1). Bytes after those belong to
-nothing; they are reported here, never decoded and never dropped.
+extensions its ED flag announces (section 6.5.1). The credential public key and
+the extensions are CBOR, and get the same canonical-form check as the message
+around them. Bytes after those belong to nothing; they are reported here, never
+decoded and never dropped.
 
 Offsets count from the start of the decoder input, like every other finding.
 Paths continue the path of the authData byte string.
@@ -15,6 +17,7 @@ from typing import Any
 
 from fido2.webauthn import AuthenticatorData
 
+from . import canonical
 from .cbor_parser import _CborDecodingError, decode_item
 from .keys import key_identity
 
@@ -40,7 +43,7 @@ def for_member(root: Mapping[str, Any], data: bytes, keys: Sequence[Any]) -> lis
 
 
 def check(auth_data: bytes, base_offset: int, path: str) -> list[dict[str, Any]]:
-    """Report the bytes after what ``auth_data``'s flags account for."""
+    """Check the CBOR items in ``auth_data`` and report bytes after them."""
 
     if len(auth_data) < _HEADER_LENGTH:
         return []
@@ -55,9 +58,13 @@ def check(auth_data: bytes, base_offset: int, path: str) -> list[dict[str, Any]]
             offset += 18 + id_length
             if offset > len(auth_data):
                 return findings
-            _node, offset, _ = decode_item(auth_data, offset)
+            node, offset, _ = decode_item(auth_data, offset)
+            findings += canonical.relocate(
+                canonical.check(node, auth_data), base_offset, f"{path}<credentialPublicKey>"
+            )
         if flags & AuthenticatorData.FLAG.ED:
-            _node, offset, _ = decode_item(auth_data, offset)
+            node, offset, _ = decode_item(auth_data, offset)
+            findings += canonical.relocate(canonical.check(node, auth_data), base_offset, f"{path}<extensions>")
     except _CborDecodingError:
         # Where the embedded CBOR stops being well-formed, the decoded view says so.
         return findings

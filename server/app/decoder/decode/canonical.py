@@ -42,6 +42,19 @@ def check(node: Mapping[str, Any], data: bytes) -> list[dict[str, Any]]:
     return findings
 
 
+def relocate(findings: list[dict[str, Any]], base_offset: int, path_prefix: str) -> list[dict[str, Any]]:
+    """Rebase findings about CBOR held in a byte string onto the input around it.
+
+    ``base_offset`` is where the byte string's content starts in the input and
+    ``path_prefix`` names the item inside it, e.g. ``${2}<credentialPublicKey>``.
+    """
+
+    return [
+        {**finding, "offset": finding["offset"] + base_offset, "path": path_prefix + finding["path"][1:]}
+        for finding in findings
+    ]
+
+
 def _finding(code: str, offset: int, path: str, message: str) -> dict[str, Any]:
     return {"code": code, "category": "canonical", "offset": offset, "path": path, "message": message}
 

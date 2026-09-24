@@ -26,7 +26,7 @@ from ...webauthn.attestation import (
     serialize_attestation_certificate,
     summarize_authenticator_extensions,
 )
-from . import canonical, cbor_parser, ctap, response
+from . import authenticator_data_findings, canonical, cbor_parser, ctap, response
 
 _PEM_CERT_PATTERN = re.compile(
     r"-----BEGIN CERTIFICATE-----\s*(?P<body>.*?)\s*-----END CERTIFICATE-----",
@@ -310,7 +310,8 @@ def _try_decode_attestation_object(data: bytes, encoding: str) -> dict[str, Any]
         "decoded": details,
         "binary": _binary_summary(data, encoding),
     }
-    ctap._attach_findings(result, canonical.check(node, data) + ctap._trailing_findings(data, end))
+    findings = canonical.check(node, data) + ctap._trailing_findings(data, end)
+    ctap._attach_findings(result, findings + authenticator_data_findings.for_member(node, data, ("authData",)))
     return result
 
 
@@ -320,12 +321,14 @@ def _try_decode_authenticator_data(data: bytes, encoding: str) -> dict[str, Any]
     except Exception:
         return None
 
-    return {
+    result = {
         "format": "Authenticator data (binary)",
         "inputEncoding": encoding,
         "decoded": details,
         "binary": _binary_summary(data, encoding),
     }
+    ctap._attach_findings(result, authenticator_data_findings.check(data, 0, "$"))
+    return result
 
 
 def _expand_cbor_value(value: Any) -> Any:
