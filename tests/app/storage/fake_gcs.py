@@ -100,6 +100,10 @@ def install(monkeypatch, *stores) -> Bucket:
         NotFound=NotFound, PreconditionFailed=PreconditionFailed, GoogleAPICallError=OSError, RetryError=OSError
     )
     monkeypatch.setitem(vars(cloud), "gcs_exceptions", exceptions)
+    # The retryable-error tuple is cached from whichever exceptions module is in
+    # place when a retry is first considered; computed from these stand-ins, it
+    # must not outlive the test and leave other modules' stubs unretried.
+    monkeypatch.setattr(cloud, "_RETRYABLE_EXCEPTIONS_CACHE", None)
     monkeypatch.setattr(cloud, "_ensure_bucket", lambda: bucket)
     for store in stores:
         monkeypatch.setattr(store, "_using_gcs", lambda: True)
