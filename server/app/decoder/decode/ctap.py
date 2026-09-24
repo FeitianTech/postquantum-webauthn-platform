@@ -237,16 +237,49 @@ def _looks_like_get_assertion_output(value: Mapping[Any, Any]) -> bool:
     return auth_data_bytes is not None and signature_bytes is not None
 
 
-def _classify_ctap_map(value: Mapping[Any, Any]) -> str:
+def _classify_ctap_response(value: Mapping[Any, Any]) -> str:
     if _looks_like_make_credential_output(value):
         return "make_credential_output"
     if _looks_like_get_assertion_output(value):
         return "get_assertion_output"
+    return "other"
+
+
+def _classify_ctap_map(value: Mapping[Any, Any]) -> str:
+    classification = _classify_ctap_response(value)
+    if classification != "other":
+        return classification
     if _looks_like_make_credential_request(value):
         return "make_credential_input"
     if _looks_like_get_assertion_request(value):
         return "get_assertion_input"
     return "other"
+
+
+# A command byte says which request its parameters are, whatever their shape.
+_REQUEST_KIND_BY_COMMAND = {
+    "MAKE_CREDENTIAL": "make_credential_input",
+    "GET_ASSERTION": "get_assertion_input",
+}
+
+
+def _classify_ctap_payload(value: Any, prefix: Mapping[str, Any] | None) -> str:
+    """Name the CTAP message ``value`` is, reading the byte before it first.
+
+    A command byte decides: its parameters are that command's request. A
+    status byte says only that this is a response, not to which command, so
+    the response shapes are the only candidates. With no prefix byte, all four
+    shapes are.
+    """
+
+    if not isinstance(value, Mapping):
+        return "other"
+    kind = prefix.get("kind") if isinstance(prefix, Mapping) else None
+    if kind == "command":
+        return _REQUEST_KIND_BY_COMMAND.get(prefix.get("command"), "other")
+    if kind == "status":
+        return _classify_ctap_response(value)
+    return _classify_ctap_map(value)
 
 
 def _convert_ctap_allow_list(entry: Any) -> Any:
@@ -581,21 +614,21 @@ def _build_get_assertion_expanded_json(value: Mapping[Any, Any]) -> dict[str, An
     )
 
 
-def _interpret_ctap_cbor_value(value: Any) -> dict[str, Any] | None:
-    if isinstance(value, Mapping):
-        interpreted = _interpret_make_credential_map(value)
-        if interpreted is not None:
-            return {"makeCredentialResponse": interpreted}
-        interpreted = _interpret_get_assertion_map(value)
-        if interpreted is not None:
-            return {"getAssertionResponse": interpreted}
-        interpreted = _interpret_make_credential_request_map(value)
-        if interpreted is not None:
-            return {"makeCredentialRequest": interpreted}
-        interpreted = _interpret_get_assertion_request_map(value)
-        if interpreted is not None:
-            return {"getAssertionRequest": interpreted}
-    return None
+def _interpret_ctap_cbor_value(
+    value: Any, prefix: Mapping[str, Any] | None = None
+) -> dict[str, Any] | None:
+    return _interpret_ctap_kind(value, _classify_ctap_payload(value, prefix))
+
+
+def _interpret_ctap_kind(value: Any, classification: str) -> dict[str, Any] | None:
+    interpreter = _CTAP_INTERPRETERS.get(classification)
+    if interpreter is None:
+        return None
+    name, interpret = interpreter
+    interpreted = interpret(value)
+    if interpreted is None:
+        return None
+    return {name: interpreted}
 
 
 def _interpret_make_credential_map(value: Mapping[Any, Any]) -> dict[str, Any] | None:
@@ -720,6 +753,17 @@ def _interpret_get_assertion_request_map(value: Mapping[Any, Any]) -> dict[str, 
     )
 
 
+# What ``ctapDecoded`` calls each kind, and how it reads one. Requests are read
+# with the labelled-map builders, which do not second-guess the shape: the
+# command byte, or the classification, already said what they are.
+_CTAP_INTERPRETERS: dict[str, tuple[str, Callable[[Mapping[Any, Any]], dict[str, Any] | None]]] = {
+    "make_credential_output": ("makeCredentialResponse", _interpret_make_credential_map),
+    "get_assertion_output": ("getAssertionResponse", _interpret_get_assertion_map),
+    "make_credential_input": ("makeCredentialRequest", _build_make_credential_request_expanded_json),
+    "get_assertion_input": ("getAssertionRequest", _build_get_assertion_request_expanded_json),
+}
+
+
 def _extract_ctap_prefix(data: bytes) -> tuple[dict[str, Any] | None, bytes]:
     """Read the CTAP command or status byte ``data`` starts with.
 
@@ -813,7 +857,7 @@ def _try_decode_cbor(data: bytes, encoding: str) -> dict[str, Any] | None:
     base_value = values[0]
     extra_values = values[1:]
 
-    classification = _classify_ctap_map(base_value) if isinstance(base_value, Mapping) else "other"
+    classification = _classify_ctap_payload(base_value, ctap_details)
 
     decoded_payload: dict[str, Any] = {}
 
@@ -823,7 +867,7 @@ def _try_decode_cbor(data: bytes, encoding: str) -> dict[str, Any] | None:
 
     if isinstance(base_value, Mapping):
         hex_decoded_value = _hex_json_safe(base_value)
-        interpreted = _interpret_ctap_cbor_value(base_value)
+        interpreted = _interpret_ctap_kind(base_value, classification)
         if interpreted is not None:
             ctap_decoded = _stringify_mapping_keys(_hex_json_safe(interpreted))
 

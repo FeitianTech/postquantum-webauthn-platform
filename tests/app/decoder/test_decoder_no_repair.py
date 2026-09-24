@@ -64,8 +64,9 @@ def test_the_es256_dump_with_a_lost_byte_is_not_given_an_att_stmt():
     # The text key the lost byte produced is shown as it was read.
     assert ("al&", "sig") in items
     # No attestation statement, algorithm or signature is made up for it.
-    assert all(item is None for key, item in items if "attStmt" in str(key))
+    assert not any("attStmt" in str(key) for key, _ in items)
     assert not any(key == "alg" for key, _ in items)
+    assert result["type"] == "CBOR (SUCCESS status)"
     assert "signatureLength" not in result["data"].get("ctap", {})
     # The 71 bytes after the map are reported, not folded into a signature.
     assert result["malformed"]
@@ -85,7 +86,7 @@ def test_a_byte_string_map_key_is_not_turned_into_an_ml_dsa_87_att_stmt():
     result = _decode((b"\x00" + body).hex())
 
     items = list(_walk_items(result["data"]))
-    assert all(item is None for key, item in items if "attStmt" in str(key))
+    assert not any("attStmt" in str(key) for key, _ in items)
     serialized = json.dumps(result)
     assert "-50" not in serialized
     assert "ML-DSA" not in serialized
@@ -110,3 +111,4 @@ def test_the_get_assertion_dump_with_a_lost_byte_is_not_given_a_signature():
     items = list(_walk_items(result))
     assert not any("signature" in str(key) and item is not None for key, item in items)
     assert "signatureLength" not in result["data"].get("ctap", {})
+    assert "GetAssertion response" not in result["type"]

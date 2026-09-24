@@ -207,11 +207,6 @@ def test_try_decode_cbor_interprets_prefixed_get_assertion_request_payload():
     assert result["format"] == "CBOR"
     decoded = result["decoded"]
     assert decoded["ctap"]["kind"] == "command"
-    assert "ctapDecoded" in decoded
-    ctap_decoded = decoded["ctapDecoded"]
-    assert "getAssertionRequest" in ctap_decoded or "makeCredentialResponse" in ctap_decoded
-    if "getAssertionRequest" in ctap_decoded:
-        assert ctap_decoded["getAssertionRequest"]["1 (rpId)"] == "example.com"
-    else:
-        assert ctap_decoded["makeCredentialResponse"]["1 (fmt)"] == "example.com"
+    assert list(decoded["ctapDecoded"]) == ["getAssertionRequest"]
+    assert decoded["ctapDecoded"]["getAssertionRequest"]["1 (rpId)"] == "example.com"
     assert decoded["expandedJson"]["2 (clientDataHash)"] == (b"\x22" * 32).hex()
