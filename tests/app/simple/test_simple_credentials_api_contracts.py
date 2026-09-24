@@ -92,14 +92,14 @@ def test_credentials_get_serializes_dict_backed_entries(monkeypatch, metadata_mo
     monkeypatch.setattr(
         storage_module,
         "iter_credentials",
-        lambda session_id=None: iter([("dict@example.com", [dict_backed])])
+        lambda session_id=None, **_kwargs: iter([("dict@example.com", [dict_backed])])
     )
 
     with config_module.app.test_client() as client:
         response = client.get("/api/credentials")
 
     assert response.status_code == 200
-    payload = response.get_json()
+    payload = response.get_json()["credentials"]
     assert len(payload) == 1
 
     entry = payload[0]
@@ -176,14 +176,14 @@ def test_credentials_get_serializes_object_backed_entries_and_derives_authentica
     monkeypatch.setattr(
         storage_module,
         "iter_credentials",
-        lambda session_id=None: iter([("object@example.com", [object_backed])])
+        lambda session_id=None, **_kwargs: iter([("object@example.com", [object_backed])])
     )
 
     with config_module.app.test_client() as client:
         response = client.get("/api/credentials")
 
     assert response.status_code == 200
-    payload = response.get_json()
+    payload = response.get_json()["credentials"]
     assert len(payload) == 1
 
     entry = payload[0]
@@ -229,14 +229,14 @@ def test_credentials_get_handles_bare_credential_objects_and_skips_malformed(mon
     monkeypatch.setattr(
         storage_module,
         "iter_credentials",
-        lambda session_id=None: iter([("bare@example.com", [object(), bare])])
+        lambda session_id=None, **_kwargs: iter([("bare@example.com", [object(), bare])])
     )
 
     with config_module.app.test_client() as client:
         response = client.get("/api/credentials")
 
     assert response.status_code == 200
-    payload = response.get_json()
+    payload = response.get_json()["credentials"]
     assert len(payload) == 1
 
     entry = payload[0]
@@ -274,7 +274,7 @@ def test_credentials_delete_removes_all_usernames_and_reports_count(monkeypatch,
     monkeypatch.setattr(
         storage_module,
         "list_credentials",
-        lambda session_id=None: {"alice@example.com": [], "bob@example.com": []}
+        lambda session_id=None, **_kwargs: {"alice@example.com": [], "bob@example.com": []}
     )
 
     observed = []

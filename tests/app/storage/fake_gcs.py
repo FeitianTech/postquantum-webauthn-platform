@@ -4,6 +4,7 @@ Conditional uploads (``if_generation_match``) are checked and applied under one
 lock, as GCS does server-side, so threads racing them see exactly one winner.
 ``on_download`` hooks run after a download has read an object: a test uses one
 to have "another instance" write between a request's read and its write.
+``failing`` maps an object name to the error its downloads raise.
 """
 from __future__ import annotations
 
@@ -25,16 +26,26 @@ class PreconditionFailed(Exception):
     pass
 
 
+class ServiceUnavailable(Exception):
+    """A GCS error the client does not retry here, so a failing read fails at once."""
+
+
 class Bucket:
     def __init__(self) -> None:
         self.objects: dict[str, tuple[bytes, int]] = {}
         self.next_generation = 1
         self.upload_retries: list[object] = []
         self.on_download: list[Callable[[str], None]] = []
+        self.failing: dict[str, Exception] = {}
         self.lock = threading.Lock()
 
     def blob(self, name: str) -> Blob:
         return Blob(self, name)
+
+    def list_blobs(self, prefix: str = "", max_results: int | None = None) -> list[Blob]:
+        with self.lock:
+            names = sorted(name for name in self.objects if name.startswith(prefix))
+        return [Blob(self, name) for name in names[:max_results]]
 
     def put(self, name: str, data: bytes) -> None:
         """Write ``name`` directly, as another server instance would."""
@@ -51,6 +62,8 @@ class Blob:
         self.generation = None
 
     def download_as_bytes(self) -> bytes:
+        if self.name in self.bucket.failing:
+            raise self.bucket.failing[self.name]
         with self.bucket.lock:
             if self.name not in self.bucket.objects:
                 raise NotFound(self.name)

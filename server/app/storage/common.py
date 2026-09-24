@@ -16,6 +16,7 @@ from .cloud import build_blob_name, normalise_blob_prefix
 
 __all__ = [
     "InvalidStorageIdentifier",
+    "StorageReadError",
     "assert_contained_blob_name",
     "build_session_root_prefix",
     "build_session_scoped_prefix",
@@ -41,6 +42,16 @@ class InvalidStorageIdentifier(ValueError):
 
     Raised before anything is touched. A route that hands storage such a name
     has a bad request, not a server fault: the app answers 400 for it.
+    """
+
+
+class StorageReadError(OSError):
+    """The store could not be read: an I/O or Cloud Storage error, raised from it.
+
+    Not "nothing is stored" -- a copy that is not there is not an error -- and
+    not content that cannot be decoded, which is skipped with a warning. A
+    caller must not answer as if there were fewer records, or none: the app
+    answers 503.
     """
 
 

@@ -545,3 +545,21 @@ def test_build_credential_attachment_map_handles_non_mapping_credentials(monkeyp
     result = attachments.build_credential_attachment_map()
 
     assert result == {b"cred-object": None}
+
+
+def test_build_credential_attachment_map_raises_when_the_store_cannot_be_read(monkeypatch):
+    from server.app import attachments
+    from server.app.storage.common import StorageReadError
+
+    monkeypatch.setattr(attachments, "ensure_metadata_session_id", lambda: "test-session")
+
+    def _iterate(**_kwargs):
+        yield "user1@example.com", [{"credential_id": b"cred-1", "authenticator_attachment": "platform"}]
+        raise StorageReadError("Could not read user-data/test-session/credentials/user2@example.com_credential_data.json")
+
+    monkeypatch.setattr(attachments, "iter_credentials", _iterate)
+    monkeypatch.setattr(attachments, "extract_credential_data", lambda cred: cred)
+
+    # A map holding user1's credential alone would pass for the whole store.
+    with pytest.raises(StorageReadError):
+        attachments.build_credential_attachment_map()

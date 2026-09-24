@@ -33,6 +33,7 @@ from .cloud import (
     upload_bytes_if_generation,
 )
 from .common import (
+    StorageReadError,
     assert_contained_blob_name,
     build_session_root_prefix,
     build_session_scoped_prefix,
@@ -48,6 +49,7 @@ from .common import (
 logger = logging.getLogger(__name__)
 
 __all__ = [
+    "CredentialsUndecodable",
     "add_public_key_material",
     "convert_bytes_for_json",
     "delkey",
@@ -84,6 +86,15 @@ _LEGACY_LOCAL_CREDENTIAL_BASE = os.path.join(basepath, "session-credentials")
 _JSON_SUFFIX = "_credential_data.json"
 _PICKLE_SUFFIX = "_credential_data.pkl"
 _CREDENTIAL_SUFFIXES = (_JSON_SUFFIX, _PICKLE_SUFFIX)
+
+
+class CredentialsUndecodable(Exception):
+    """The current copy of a user's credentials exists, but its content does not decode.
+
+    Raised by :func:`read_for_update` alone: the save that follows would replace
+    a copy nobody could read. Reads that only show records skip it with a warning.
+    """
+
 
 def _using_gcs() -> bool:
     return using_gcs_backend(gcs_enabled)
@@ -175,19 +186,19 @@ def _list_credential_blob_names(session_id: str) -> Iterable[tuple[str, str]]:
     seen_users = set()
     for search_prefix in search_prefixes:
         try:
-            for blob_name in list_blob_names(search_prefix):
-                remainder = blob_name[len(search_prefix) :] if search_prefix else blob_name
-                if search_prefix == legacy_prefix and "/" in remainder.strip("/"):
-                    continue
-                username = _strip_credential_suffix(remainder)
-                if not username or username in seen_users:
-                    continue
-                seen_users.add(username)
-                yield username, blob_name
-        except Exception as exc:  # pragma: no cover - depends on storage backend
-            logger.warning(
-                "Unable to list credential blobs under %s: %s", search_prefix, exc
-            )
+            blob_names = list(list_blob_names(search_prefix))
+        except Exception as exc:
+            # A listing that stopped part-way must not pass for a shorter one.
+            raise StorageReadError(f"Could not list the credentials under {search_prefix}") from exc
+        for blob_name in blob_names:
+            remainder = blob_name[len(search_prefix) :] if search_prefix else blob_name
+            if search_prefix == legacy_prefix and "/" in remainder.strip("/"):
+                continue
+            username = _strip_credential_suffix(remainder)
+            if not username or username in seen_users:
+                continue
+            seen_users.add(username)
+            yield username, blob_name
 
 
 def _local_directory(
@@ -294,27 +305,29 @@ def read_for_update(name: str, *, session_id: str | None = None) -> tuple[list[A
 
     The version is opaque: the object's generation on GCS (0 when there is no
     object), the SHA-256 of the file locally (``None`` when there is no file).
-    Hand it to :func:`save_if_unchanged`.
+    Hand it to :func:`save_if_unchanged`. A current copy that does not decode
+    raises :class:`CredentialsUndecodable` rather than reading as ``[]``.
     """
 
     resolved_session = _resolve_session_id(session_id)
     if _using_gcs():
         source = _credential_blob(name, resolved_session)
-        payload, version = download_bytes_with_generation(source)
+        try:
+            payload, version = download_bytes_with_generation(source)
+        except Exception as exc:
+            raise StorageReadError(f"Could not read {source}") from exc
     else:
         source = _local_filename(name, resolved_session)
-        try:
-            with open(source, "rb") as f:
-                payload = f.read()
-        except FileNotFoundError:
-            payload = None
+        payload = _read_local_copy(source)
         version = hashlib.sha256(payload).hexdigest() if payload is not None else None
 
-    records = record_format.load_payload(payload, source=source) if payload else None
-    if records is None:
+    if payload is None:
         # No current copy: the records, if any, are a legacy one's.
-        records = readkey(name, session_id=resolved_session)
-    return records, version
+        return readkey(name, session_id=resolved_session), version
+    try:
+        return record_format.decode_payload(payload), version
+    except record_format.UndecodableRecords as exc:
+        raise CredentialsUndecodable(f"Could not decode {source}: {exc}") from None
 
 
 def save_if_unchanged(name: str, key: Any, version: Any, *, session_id: str | None = None) -> bool:
@@ -346,33 +359,56 @@ def save_if_unchanged(name: str, key: Any, version: Any, *, session_id: str | No
     return written
 
 
+def _read_local_copy(path: str) -> bytes | None:
+    """One stored file's bytes; ``None`` when there is no such file. Any other failure raises."""
+
+    try:
+        with open(path, "rb") as f:
+            return f.read()
+    except FileNotFoundError:
+        return None
+    except OSError as exc:
+        raise StorageReadError(f"Could not read {path}") from exc
+
+
+def _read_gcs_copy(blob_name: str) -> bytes | None:
+    """One stored object's bytes; ``None`` when there is no such object. Any other failure raises."""
+
+    try:
+        return download_bytes(blob_name)
+    except Exception as exc:
+        raise StorageReadError(f"Could not read {blob_name}") from exc
+
+
+def _decode_copy(payload: bytes, source: str) -> list[Any] | None:
+    """The records in one stored copy; ``None``, with a warning naming it, when they do not decode."""
+
+    try:
+        return record_format.decode_payload(payload)
+    except record_format.UndecodableRecords as exc:
+        # The reason, never the content: this is the one line an operator gets.
+        logger.warning("Skipped undecodable credential data at %s: %s", source, exc)
+        return None
+
+
 def readkey(name: str, *, session_id: str | None = None) -> list[Any]:
+    """``name``'s credentials: the first copy that exists, ``[]`` when none does.
+
+    Older copies are read only when no newer one exists. A copy that cannot be
+    read raises :class:`StorageReadError`: going on to an older copy, or to
+    ``[]``, would answer with stale records or none. A copy whose content does
+    not decode is skipped with a warning naming it, and reads as ``[]``.
+    """
+
     resolved_session = _resolve_session_id(session_id)
     if _using_gcs():
-        for blob_name in _candidate_gcs_blob_names(name, resolved_session):
-            try:
-                payload = download_bytes(blob_name)
-            except Exception:
-                payload = None
-            if not payload:
-                continue
-            creds = record_format.load_payload(payload, source=blob_name)
-            if creds is not None:
-                return creds
-        return []
-
-    for path in _candidate_local_paths(name, resolved_session):
-        try:
-            with open(path, "rb") as f:
-                payload = f.read()
-        except Exception:
-            continue
-        if not payload:
-            continue
-        creds = record_format.load_payload(payload, source=path)
-        if creds is not None:
-            return creds
-
+        candidates, read = _candidate_gcs_blob_names(name, resolved_session), _read_gcs_copy
+    else:
+        candidates, read = _candidate_local_paths(name, resolved_session), _read_local_copy
+    for source in candidates:
+        payload = read(source)
+        if payload is not None:
+            return _decode_copy(payload, source) or []
     return []
 
 
@@ -415,8 +451,10 @@ def delkey(name: str, *, session_id: str | None = None) -> None:
 def _iter_local_directory(directory: str) -> Iterable[tuple[str, bytes, str]]:
     try:
         entries = os.listdir(directory)
-    except OSError:
+    except FileNotFoundError:
         return
+    except OSError as exc:
+        raise StorageReadError(f"Could not list {directory}") from exc
 
     # Sorted so a directory holding both formats for one user resolves
     # deterministically: "..._credential_data.json" sorts before "....pkl".
@@ -425,69 +463,72 @@ def _iter_local_directory(directory: str) -> Iterable[tuple[str, bytes, str]]:
         if not username:
             continue
         path = os.path.join(directory, entry)
-        try:
-            with open(path, "rb") as f:
-                payload = f.read()
-        except Exception:
-            continue
-        if payload:
+        payload = _read_local_copy(path)
+        if payload is not None:
             yield username, payload, path
 
 
-def iter_credentials(*, session_id: str | None = None) -> Iterator[tuple[str, list[Any]]]:
+def _local_copies(session_id: str) -> Iterable[tuple[str, bytes, str]]:
+    directories = [_LOCAL_CREDENTIAL_BASE]
+    if _LEGACY_LOCAL_CREDENTIAL_BASE != _LOCAL_CREDENTIAL_BASE:
+        directories.append(_LEGACY_LOCAL_CREDENTIAL_BASE)
+
+    for base in directories:
+        try:
+            directory = _local_directory(session_id, base=base)
+        except ValueError as exc:
+            logger.warning(
+                "Refusing to list credentials for session %r under %s: %s",
+                session_id,
+                base,
+                exc,
+            )
+            continue
+        yield from _iter_local_directory(directory)
+
+    yield from _iter_local_directory(basepath)
+
+
+def _gcs_copies(session_id: str) -> Iterable[tuple[str, bytes, str]]:
+    for username, blob_name in _list_credential_blob_names(session_id):
+        payload = _read_gcs_copy(blob_name)
+        if payload is not None:
+            yield username, payload, blob_name
+
+
+def iter_credentials(
+    *, session_id: str | None = None, undecodable: list[str] | None = None
+) -> Iterator[tuple[str, list[Any]]]:
+    """Each user's credentials in the session, ``(username, records)``, from the first copy that exists.
+
+    A listing or a copy that cannot be read raises :class:`StorageReadError`: a
+    listing that stopped part-way must not pass for a shorter one. A copy whose
+    content does not decode is skipped with a warning naming it, and its
+    username appended to ``undecodable`` when that list is given.
+    """
+
     resolved_session = _resolve_session_id(session_id)
-    if _using_gcs():
-
-        def _download_blob_items() -> Iterable[tuple[str, bytes, str]]:
-            for username, blob_name in _list_credential_blob_names(resolved_session):
-                try:
-                    payload = download_bytes(blob_name)
-                except Exception:
-                    continue
-                if payload:
-                    yield username, payload, blob_name
-
-        sources: Iterable[tuple[str, bytes, str]] = _download_blob_items()
-    else:
-
-        def _read_local_items() -> Iterable[tuple[str, bytes, str]]:
-            directories = [_LOCAL_CREDENTIAL_BASE]
-            if _LEGACY_LOCAL_CREDENTIAL_BASE != _LOCAL_CREDENTIAL_BASE:
-                directories.append(_LEGACY_LOCAL_CREDENTIAL_BASE)
-
-            for base in directories:
-                try:
-                    directory = _local_directory(resolved_session, base=base)
-                except ValueError as exc:
-                    logger.warning(
-                        "Refusing to list credentials for session %r under %s: %s",
-                        resolved_session,
-                        base,
-                        exc,
-                    )
-                    continue
-                yield from _iter_local_directory(directory)
-
-            yield from _iter_local_directory(basepath)
-
-        sources = _read_local_items()
+    sources = _gcs_copies(resolved_session) if _using_gcs() else _local_copies(resolved_session)
 
     seen_users = set()
     for username, payload, source in sources:
         if username in seen_users:
             continue
-        creds = record_format.load_payload(payload, source=source)
-        if creds is None:
-            continue
+        # The first copy that exists is the user's, decodable or not: an older
+        # one standing in for it would show stale records as current.
         seen_users.add(username)
+        creds = _decode_copy(payload, source)
+        if creds is None:
+            if undecodable is not None:
+                undecodable.append(username)
+            continue
         yield username, creds
 
 
-def list_credentials(*, session_id: str | None = None) -> dict[str, list[Any]]:
-    entries: dict[str, list[Any]] = {}
-    for username, creds in iter_credentials(session_id=session_id):
-        entries[username] = creds
-    return entries
+def list_credentials(
+    *, session_id: str | None = None, undecodable: list[str] | None = None
+) -> dict[str, list[Any]]:
+    return dict(iter_credentials(session_id=session_id, undecodable=undecodable))
 
 
 def convert_bytes_for_json(obj: Any) -> Any:

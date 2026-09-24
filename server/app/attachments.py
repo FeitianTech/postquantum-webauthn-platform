@@ -84,6 +84,14 @@ def resolve_effective_attachments(
 
 
 def build_credential_attachment_map() -> dict[bytes, str | None]:
+    """Each of the session's stored credentials, by id, and the attachment recorded for it.
+
+    A store that cannot be read raises ``StorageReadError`` out of here rather
+    than giving a map without some credentials: a missing id would read as
+    "no attachment recorded", and a hint check would pass on it. A copy that
+    does not decode is left out; the store logs it.
+    """
+
     attachment_map: dict[bytes, str | None] = {}
     metadata_session_id = ensure_metadata_session_id()
     for email, user_creds in iter_credentials(session_id=metadata_session_id):

@@ -666,8 +666,7 @@ def test_real_registration_round_trips_through_the_json_store(monkeypatch, tmp_p
     # The route reads it back through the same session cookie the client holds.
     listed = client.get("/api/credentials")
     assert listed.status_code == 200
-    entries = listed.get_json()
-    records = entries["credentials"] if isinstance(entries, dict) else entries
+    records = listed.get_json()["credentials"]
     assert len(records) == 1
     rendered = records[0]
     assert rendered["email"] == "alice@example.com"

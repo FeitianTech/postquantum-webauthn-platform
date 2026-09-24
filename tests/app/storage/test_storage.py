@@ -94,6 +94,7 @@ sys.modules.setdefault("google.auth.exceptions", google_auth_exceptions_pkg)
 google_auth_pkg.exceptions = google_auth_exceptions_pkg
 
 credentials = importlib.import_module("server.app.storage.credentials")
+StorageReadError = importlib.import_module("server.app.storage.common").StorageReadError
 
 
 @pytest.fixture(autouse=True)
@@ -190,16 +191,13 @@ def test_iter_credentials_skips_nested_legacy_duplicates(monkeypatch):
     }
 
 
-def test_list_credential_blob_names_logs_and_continues(monkeypatch):
+def test_a_failed_listing_raises_instead_of_listing_the_rest(monkeypatch):
     session_id = "session-log"
     primary_prefix = credentials._build_search_prefix(credentials._credential_prefix(session_id))
     legacy_prefix = credentials._build_search_prefix(credentials._USER_FOLDER_PREFIX)
 
-    failing_called = {"count": 0}
-
     def fake_list_blob_names(prefix: str):
-        if prefix == primary_prefix and failing_called["count"] == 0:
-            failing_called["count"] += 1
+        if prefix == primary_prefix:
 
             class _Generator:
                 def __iter__(self):
@@ -215,17 +213,10 @@ def test_list_credential_blob_names_logs_and_continues(monkeypatch):
 
     monkeypatch.setattr(credentials, "list_blob_names", fake_list_blob_names)
 
-    warnings: list[tuple[tuple[object, ...], dict[str, object]]] = []
-
-    def _fake_warning(*args, **kwargs):
-        warnings.append((args, kwargs))
-
-    monkeypatch.setattr(credentials.logger, "warning", _fake_warning)
-
-    results = list(credentials._list_credential_blob_names(session_id))
-
-    assert results == [("user@example.com", credentials._legacy_credential_blob("user@example.com"))]
-    assert any("Unable to list credential blobs" in str(call[0][0]) for call in warnings)
+    # Listing only the legacy prefix would pass for a store with fewer users.
+    with pytest.raises(StorageReadError, match="Could not list") as raised:
+        list(credentials._list_credential_blob_names(session_id))
+    assert isinstance(raised.value.__cause__, RuntimeError)
 
 
 def test_delkey_attempts_legacy_cleanup(monkeypatch):
@@ -309,21 +300,27 @@ def test_savekey_uploads_payload_to_session_scoped_gcs_blob(monkeypatch):
         pickle.loads(payload)
 
 
-def test_readkey_returns_empty_when_gcs_download_fails_or_missing(monkeypatch):
+def test_readkey_raises_when_a_gcs_download_fails(monkeypatch):
     calls = []
 
     def fake_download(blob_name: str):
         calls.append(blob_name)
-        if len(calls) == 1:
-            raise RuntimeError("temporary failure")
-        return None
+        raise RuntimeError("temporary failure")
 
     monkeypatch.setattr(credentials, "download_bytes", fake_download)
 
-    result = credentials.readkey("alice@example.com", session_id="session-read")
+    # Not on to the legacy copies, and not []: either would answer with stale records or none.
+    with pytest.raises(StorageReadError):
+        credentials.readkey("alice@example.com", session_id="session-read")
+    assert len(calls) == 1
 
-    assert result == []
-    assert len(calls) >= 2
+
+def test_readkey_reads_past_copies_that_are_not_there(monkeypatch):
+    calls = []
+    monkeypatch.setattr(credentials, "download_bytes", lambda blob_name: calls.append(blob_name))
+
+    assert credentials.readkey("alice@example.com", session_id="session-read") == []
+    assert len(calls) == 4
 
 
 def test_delkey_raises_when_a_gcs_delete_fails(monkeypatch):
@@ -339,7 +336,7 @@ def test_delkey_raises_when_a_gcs_delete_fails(monkeypatch):
         credentials.delkey("alice@example.com", session_id="session-delete")
 
 
-def test_iter_credentials_gcs_skips_failed_empty_and_non_list_payloads(monkeypatch):
+def test_iter_credentials_gcs_raises_on_a_failed_download_and_counts_undecodable_payloads(monkeypatch):
     session_id = "session-iter"
 
     blobs = [
@@ -366,6 +363,12 @@ def test_iter_credentials_gcs_skips_failed_empty_and_non_list_payloads(monkeypat
 
     monkeypatch.setattr(credentials, "download_bytes", fake_download)
 
-    assert list(credentials.iter_credentials(session_id=session_id)) == [
+    with pytest.raises(StorageReadError, match="blob-a"):
+        list(credentials.iter_credentials(session_id=session_id))
+
+    payloads["blob-a"] = None
+    undecodable: list[str] = []
+    assert list(credentials.iter_credentials(session_id=session_id, undecodable=undecodable)) == [
         ("dave", [{"ok": True}])
     ]
+    assert undecodable == ["bob", "carol"]

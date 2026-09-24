@@ -9,6 +9,7 @@ from flask import jsonify, request
 from ...attachments import normalize_attachment
 from ...encoding import encode_base64, encode_base64url
 from ...storage import credentials as credential_store
+from ...storage.common import StorageReadError
 from ...webauthn import attestation, metadata
 from . import authentication
 
@@ -318,14 +319,19 @@ def list_credentials():
 
     # Read everything first: a store that fails part-way is a failure, never a
     # shorter list, and never an empty one that reads as "no credentials".
+    undecodable: list[str] = []
     try:
-        stored = list(credential_store.iter_credentials(session_id=metadata_session_id))
+        stored = list(credential_store.iter_credentials(session_id=metadata_session_id, undecodable=undecodable))
+    except StorageReadError as exc:
+        logger.warning("Could not read the stored credentials to list them: %s (%r)", exc, exc.__cause__)
+        return jsonify({"error": "The stored credentials could not be read, so none are listed."}), 503
     except Exception:
         logger.exception("Could not read the stored credentials")
         return jsonify({"error": "The stored credentials could not be read, so none are listed."}), 500
 
     credentials: list[dict[str, Any]] = []
-    unreadable = 0
+    # Each copy the store could not decode, then each record that cannot be shown.
+    unreadable = len(undecodable)
     for email, user_creds in stored:
         if not isinstance(user_creds, list):
             unreadable += 1
@@ -338,21 +344,31 @@ def list_credentials():
                 unreadable += 1
                 logger.warning("Skipped a stored credential for %s that could not be read: %r", email, exc)
 
-    response = jsonify(credentials)
+    body: dict[str, Any] = {"credentials": credentials}
     if unreadable:
-        # The body stays a list; the count of records left out goes beside it.
+        body["unreadableCount"] = unreadable
+    response = jsonify(body)
+    if unreadable:
         response.headers["X-Unreadable-Credentials"] = str(unreadable)
     return response
 
 
 def delete_all_credentials(metadata_session_id: str):
+    undecodable: list[str] = []
     try:
-        usernames = list(credential_store.list_credentials(session_id=metadata_session_id))
+        usernames = list(credential_store.list_credentials(session_id=metadata_session_id, undecodable=undecodable))
+    except StorageReadError as exc:
+        logger.warning("Could not read the stored credentials to delete them: %s (%r)", exc, exc.__cause__)
+        return jsonify(
+            {"status": "error", "removed": 0, "error": "The stored credentials could not be read, so none were deleted."}
+        ), 503
     except Exception:
         logger.exception("Could not read the stored credentials to delete them")
         return jsonify(
             {"status": "error", "removed": 0, "error": "The stored credentials could not be read, so none were deleted."}
         ), 500
+    # "All" includes a user whose copy could not be decoded.
+    usernames += [name for name in dict.fromkeys(undecodable) if name not in usernames]
 
     removed = 0
     failed: list[str] = []
