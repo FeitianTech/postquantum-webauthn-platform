@@ -77,12 +77,14 @@ def test_simple_register_complete_returns_500_when_savekey_fails(monkeypatch, me
     monkeypatch.setattr(attestation_module, "extract_min_pin_length", lambda _ext: None)
     monkeypatch.setattr(storage_module, "add_public_key_material", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(metadata_module, "ensure_metadata_session_id", lambda: "session-id")
-    monkeypatch.setattr(storage_module, "readkey", lambda *_args, **_kwargs: [])
+    monkeypatch.setattr(storage_module, "read_for_update", lambda *_args, **_kwargs: ([], None))
     monkeypatch.setattr(
         storage_module,
-        "savekey",
+        "save_if_unchanged",
         lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("storage unavailable"))
     )
+    # Read again after the failed save, to tell a write that landed from one that did not.
+    monkeypatch.setattr(storage_module, "readkey", lambda *_args, **_kwargs: [])
     monkeypatch.setattr(device_logs_module, "record_registration_event", lambda *_args, **_kwargs: None)
 
     with config_module.app.test_client() as client:
@@ -118,7 +120,6 @@ def _install_advanced_register_common_monkeypatches(monkeypatch, advanced_module
         lambda **_kwargs: _AdvancedFakeServer()
     )
     monkeypatch.setattr(metadata_module, "ensure_metadata_session_id", lambda: "session-id")
-    monkeypatch.setattr(storage_module, "readkey", lambda *_args, **_kwargs: [])
     monkeypatch.setattr(
         attestation_module,
         "extract_attestation_details",

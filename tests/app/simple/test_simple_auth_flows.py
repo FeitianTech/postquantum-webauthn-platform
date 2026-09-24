@@ -277,14 +277,15 @@ def test_simple_register_complete_rejects_request_state_fallback(monkeypatch, me
     monkeypatch.setattr(attestation_module, "extract_min_pin_length", lambda _ext: None)
     monkeypatch.setattr(storage_module, "add_public_key_material", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(metadata_module, "ensure_metadata_session_id", lambda: "session-id")
-    monkeypatch.setattr(storage_module, "readkey", lambda *_args, **_kwargs: [])
+    monkeypatch.setattr(storage_module, "read_for_update", lambda *_args, **_kwargs: ([], None))
 
-    def _fake_savekey(email, credentials, *, session_id=None):
+    def _fake_save_if_unchanged(email, credentials, version, *, session_id=None):
         saved["email"] = email
         saved["credentials"] = credentials
         saved["session_id"] = session_id
+        return True
 
-    monkeypatch.setattr(storage_module, "savekey", _fake_savekey)
+    monkeypatch.setattr(storage_module, "save_if_unchanged", _fake_save_if_unchanged)
     monkeypatch.setattr(device_logs_module, "record_registration_event", lambda _event: None)
 
     request_state = {"challenge": "fallback-register-state"}

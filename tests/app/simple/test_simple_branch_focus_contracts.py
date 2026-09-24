@@ -205,14 +205,15 @@ def test_simple_register_complete_covers_warning_metadata_transport_and_session_
     )
     monkeypatch.setattr(storage_module, "add_public_key_material", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(metadata_module, "ensure_metadata_session_id", lambda: "meta-session")
-    monkeypatch.setattr(storage_module, "readkey", lambda *_args, **_kwargs: {"not": "a-list"})
+    monkeypatch.setattr(storage_module, "read_for_update", lambda *_args, **_kwargs: ([], None))
 
-    def _savekey(email, credentials, *, session_id=None):
+    def _save_if_unchanged(email, credentials, version, *, session_id=None):
         saved["email"] = email
         saved["credentials"] = credentials
         saved["session_id"] = session_id
+        return True
 
-    monkeypatch.setattr(storage_module, "savekey", _savekey)
+    monkeypatch.setattr(storage_module, "save_if_unchanged", _save_if_unchanged)
     monkeypatch.setattr(device_logs_module, "record_registration_event", lambda event: events.append(event))
 
     with config_module.app.test_client() as client:
