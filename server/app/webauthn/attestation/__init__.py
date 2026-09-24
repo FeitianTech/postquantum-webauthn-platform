@@ -12,6 +12,7 @@ from . import (
     aaguid,
     certificate_extensions,
     certificate_names,
+    certificate_public_keys,
     certificates,
     checks,
     classical,
@@ -73,8 +74,8 @@ _parse_fido_transport_bitfield = certificate_extensions._parse_fido_transport_bi
 _serialize_extension_value = certificate_extensions._serialize_extension_value
 
 # Public-key serialisation.
-_build_unknown_public_key_info = certificates._build_unknown_public_key_info
-_serialize_public_key_info = certificates._serialize_public_key_info
+_build_unknown_public_key_info = certificate_public_keys._build_unknown_public_key_info
+_serialize_public_key_info = certificate_public_keys._serialize_public_key_info
 
 # Certificate summary composition.
 _build_certificate_summary = certificates._build_certificate_summary
