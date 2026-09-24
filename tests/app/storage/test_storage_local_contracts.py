@@ -7,6 +7,7 @@ import pickle
 
 import pytest
 
+from server.app.storage import record_format
 from server.app.storage.common import StorageReadError
 
 
@@ -20,6 +21,8 @@ def storage_local(monkeypatch, tmp_path):
         "_LOCAL_CREDENTIAL_BASE",
         str(tmp_path / "session-credentials"),
     )
+    # Computed at import from the real source tree; patching basepath does not move it.
+    monkeypatch.setattr(storage, "_LEGACY_LOCAL_CREDENTIAL_BASE", str(tmp_path / "legacy"))
     monkeypatch.setattr(storage, "_using_gcs", lambda: False)
 
     os.makedirs(storage._LOCAL_CREDENTIAL_BASE, exist_ok=True)
@@ -156,6 +159,22 @@ def test_local_readkey_falls_back_to_legacy_file(storage_local):
         handle.write(pickle.dumps(legacy_payload))
 
     assert storage.readkey("alice", session_id="session-a") == legacy_payload
+
+
+def test_the_session_scoped_legacy_store_is_read_from_the_test_directory(storage_local):
+    # The legacy store once lived in server/app/session-credentials/. Reading it
+    # from there would read, and delkey would remove, the checkout's own files.
+    storage, tmp_path = storage_local
+    legacy_base = str(tmp_path / "legacy")
+    assert storage._LEGACY_LOCAL_CREDENTIAL_BASE == legacy_base
+
+    path = storage._local_filename("alice", "session-a", create=True, base=legacy_base)
+    with open(path, "wb") as handle:
+        handle.write(record_format.encode_records([{"where": "legacy session store"}]))
+
+    assert storage.readkey("alice", session_id="session-a") == [{"where": "legacy session store"}]
+    storage.delkey("alice", session_id="session-a")
+    assert not os.path.exists(path)
 
 
 def test_local_readkey_returns_empty_for_non_list_or_corrupt_pickle(storage_local):
