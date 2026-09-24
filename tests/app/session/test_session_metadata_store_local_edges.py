@@ -223,15 +223,8 @@ def test_list_sessions_gcs_extracts_unique_session_ids(session_store_local, monk
     monkeypatch.setattr(session_store, "_base_prefix", lambda: "user-data/")
     monkeypatch.setattr(
         session_store,
-        "list_blob_names",
-        lambda _prefix: iter(
-            [
-                "user-data/session-b/metadata/a.json",
-                "user-data/session-a/.last-access",
-                "user-data/session-b/metadata/b.json",
-                "user-data/",
-            ]
-        ),
+        "list_prefixes",
+        lambda _prefix: ["user-data/session-a/", "user-data/session-b/"],
     )
 
     assert session_store.list_sessions() == ["session-a", "session-b"]
@@ -243,7 +236,7 @@ def test_list_sessions_gcs_logs_and_returns_empty_on_errors(session_store_local,
     monkeypatch.setattr(session_store, "_using_gcs", lambda: True)
     monkeypatch.setattr(
         session_store,
-        "list_blob_names",
+        "list_prefixes",
         lambda _prefix: (_ for _ in ()).throw(RuntimeError("boom")),
     )
 
@@ -532,8 +525,8 @@ def test_list_sessions_gcs_skips_empty_session_components(session_store_local, m
     monkeypatch.setattr(session_store, "_base_prefix", lambda: "user-data/")
     monkeypatch.setattr(
         session_store,
-        "list_blob_names",
-        lambda _prefix: iter(["user-data//metadata/a.json", "user-data/session-a/metadata/b.json"]),
+        "list_prefixes",
+        lambda _prefix: ["user-data//", "user-data/session-a/"],
     )
 
     assert session_store.list_sessions() == ["session-a"]

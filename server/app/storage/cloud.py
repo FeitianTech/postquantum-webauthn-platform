@@ -322,6 +322,25 @@ def list_blob_names(prefix: str, *, delimiter: str | None = None) -> Iterable[st
         yield name
 
 
+def list_prefixes(prefix: str) -> list[str]:
+    """The "folders" directly under ``prefix``: each ``<prefix><name>/`` that holds an object.
+
+    Listed with a "/" delimiter, so Cloud Storage returns each folder once
+    instead of every object in it. The client fills ``prefixes`` only as the
+    listing's pages are read, so the listing is read to the end first.
+    """
+
+    bucket = _ensure_bucket()
+
+    def _list() -> list[str]:
+        iterator = bucket.list_blobs(prefix=prefix, delimiter="/")
+        for _blob in iterator:
+            pass
+        return sorted(iterator.prefixes)
+
+    return _with_retry(_list)
+
+
 def blob_exists(blob_name: str) -> bool:
     bucket = _ensure_bucket()
     blob = bucket.blob(blob_name)
