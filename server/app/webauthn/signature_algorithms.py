@@ -43,15 +43,27 @@ def format_hash_name(value: Any) -> str:
     return text.replace("-", "").replace(" ", "").upper()
 
 
+# RSASSA-PSS (RFC 4055): cryptography names it "rsassaPss", others "RSASSA-PSS".
+_RSASSA_PSS_OID = "1.2.840.113549.1.1.10"
+
+
 def normalise_signature_algorithm_name(name: str) -> str:
+    """The algorithm part of a signature's spelling, from its name or dotted OID.
+
+    RSASSA-PSS is told from PKCS#1 v1.5 by name or OID; its hash is the one its
+    parameters name, which the callers read from the certificate and pass to
+    :func:`join_algorithm_info`.
+    """
+
     text = (name or "").strip()
     if not text:
         return ""
 
     lowered = text.lower()
+    compact = lowered.replace("-", "").replace("_", "").replace(" ", "")
     if "ecdsa" in lowered:
         return "ECDSA"
-    if "rsassa-pss" in lowered:
+    if "rsassapss" in compact or text == _RSASSA_PSS_OID:
         return "RSASSA-PSS"
     if "rsa" in lowered:
         return "RSASSA-PKCS1-v1_5"

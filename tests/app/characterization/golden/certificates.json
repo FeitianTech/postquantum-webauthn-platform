@@ -2367,7 +2367,7 @@
    "curve": "secp256r1",
    "uncompressedPoint": "04:d8:c0:4e:45:df:9e:27:bc:3c:56:d7:11:51:c1:4b:9d:03:f5:76:e7:f6:c0:db:72:32:d3:5a:71:c0:d5:02:dc:a1:ff:2c:48:9f:40:3f:77:6e:00:93:8c:24:e1:fd:92:98:87:d6:70:a0:77:ae:3a:cf:77:8d:9f:eb:3c:01:1f"
   },
-  "algorithmInfo": "RSASSA-PKCS1-v1_5_SHA256",
+  "algorithmInfo": "RSASSA-PSS_SHA256",
   "extensions": [],
   "fingerprints": {
    "sha256": "a75415351f02d233143ea2bd106ec21e0b2e648d1666631754a32c047dbc215e",
