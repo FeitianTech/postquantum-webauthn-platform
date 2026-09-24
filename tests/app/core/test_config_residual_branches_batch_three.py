@@ -42,12 +42,9 @@ def test_maybe_compress_response_returns_early_for_small_payload():
     assert compressed.get_data() == b"tiny"
 
 
-def test_create_app_applies_session_metadata_recover_env(monkeypatch, make_app):
+def test_the_unread_session_metadata_recover_setting_is_gone(monkeypatch, make_app):
+    # Nothing ever read app.config["SESSION_METADATA_RECOVER_ON_START"].
     monkeypatch.setenv("FIDO_SERVER_SESSION_METADATA_RECOVER", "1")
-
-    assert make_app().config["SESSION_METADATA_RECOVER_ON_START"] is True
-
-    monkeypatch.delenv("FIDO_SERVER_SESSION_METADATA_RECOVER")
 
     assert "SESSION_METADATA_RECOVER_ON_START" not in make_app().config
 
