@@ -76,7 +76,6 @@ def _finalize_metadata_results(
     metadata_description: str | None = None
     metadata_aaguid: str | None = None
     metadata_algorithm_supported: bool | None = None
-    metadata_aaguid_bytes = b""
     metadata_root_certificates_present = False
     metadata_verification_warning: str | None = None
 
@@ -130,11 +129,15 @@ def _finalize_metadata_results(
                 numeric_algs = [alg for alg in alg_list if isinstance(alg, int)]
                 if numeric_algs:
                     metadata_algorithm_supported = algorithm in numeric_algs
+        # Reported, not compared with the credential's AAGUID: every entry here
+        # was looked up by that AAGUID (fido2's ca_lookup whenever there is one,
+        # the PQC path and the fallback above), so they cannot differ. The one
+        # other lookup, by certificate chain, runs only for a credential with no
+        # AAGUID -- fido-u2f's is zero by definition -- where they always would.
         entry_aaguid = getattr(metadata_entry, "aaguid", None)
         if entry_aaguid is not None:
             try:
                 metadata_aaguid = str(entry_aaguid)
-                metadata_aaguid_bytes = bytes(entry_aaguid)  # noqa: F841  # FIXME: computed but never compared, unlike the credential/certificate aaguids
             except Exception:
                 pass
 
